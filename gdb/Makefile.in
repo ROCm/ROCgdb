@@ -1698,6 +1698,7 @@ ALLDEPFILES = \
 	alpha-netbsd-tdep.c \
 	alpha-obsd-tdep.c \
 	alpha-tdep.c \
+	amd-dbgapi-mingw-hdep.c \
 	amd-dbgapi-posix-hdep.c \
 	amd-dbgapi-target.c \
 	amd64-bsd-nat.c \

@@ -32,6 +32,10 @@ extern void amd_dbgapi_notifier_clear (amd_dbgapi_notifier_t notifier);
 /* Get the file descriptor associated with the notifier.  */
 extern int amd_dbgapi_notifier_get_fd (amd_dbgapi_notifier_t notifier);
 
+/* Ensure that we do not keep a reference to the notifier NOTIFIER which
+   is about to get invalidated.  */
+extern void amd_dbgapi_notifier_release (amd_dbgapi_notifier_t notifier);
+
 /* Get the amd-dbgapi shared library file path.  */
 extern const char *get_dbgapi_library_file_path ();
 

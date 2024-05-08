@@ -25106,6 +25106,9 @@ $as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
       *linux*)
 	gdb_host_obs="${gdb_host_obs} amd-dbgapi-posix-hdep.o"
 	;;
+      *mingw*)
+	gdb_host_obs="${gdb_host_obs} amd-dbgapi-mingw-hdep.o"
+	;;
       *)
 	as_fn_error $? "amd-dbgapi not supported for host ${gdb_host}" "$LINENO" 5
 	;;

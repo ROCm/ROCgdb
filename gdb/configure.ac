@@ -301,6 +301,9 @@ if test "$gdb_require_amd_dbgapi" = true \
       *linux*)
 	gdb_host_obs="${gdb_host_obs} amd-dbgapi-posix-hdep.o"
 	;;
+      *mingw*)
+	gdb_host_obs="${gdb_host_obs} amd-dbgapi-mingw-hdep.o"
+	;;
       *)
 	AC_MSG_ERROR([amd-dbgapi not supported for host ${gdb_host}])
 	;;

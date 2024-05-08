@@ -2340,6 +2340,7 @@ detach_amd_dbgapi (inferior *inf)
   if (info->notifier != null_amd_dbgapi_notifier)
     {
       delete_file_handler (amd_dbgapi_notifier_get_fd (info->notifier));
+      amd_dbgapi_notifier_release (info->notifier);
       info->notifier = null_amd_dbgapi_notifier;
     }
 
