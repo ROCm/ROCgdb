@@ -55,8 +55,7 @@ Building ROCgdb has the following prerequisites:
 
    ````shell
    apt install bison flex gcc make ncurses-dev texinfo g++ zlib1g-dev \
-     libexpat-dev python3-dev liblzma-dev libgmp-dev libmpfr-dev \
-     libbabeltrace-dev libbabeltrace-ctf-dev
+     libexpat-dev python3-dev liblzma-dev libgmp-dev libmpfr-dev
    ````
 
 4. For CentOS 8.1, RHEL 8.1 and RHEL 9.1 the following adds the needed
@@ -65,16 +64,14 @@ Building ROCgdb has the following prerequisites:
    ````shell
    yum install -y epel-release centos-release-scl bison flex gcc make \
      texinfo texinfo-tex gcc-c++ zlib-devel expat-devel python3-devel \
-     xz-devel gmp-devel mpfr-devel libbabeltrace-devel ncurses-devel
-   wget http://repo.okay.com.mx/centos/8/x86_64/release/libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm \
-   && rpm -ivh --nodeps libbabeltrace-devel-1.5.4-2.el8.x86_64.rpm
+     xz-devel gmp-devel mpfr-devel ncurses-devel
    ````
 
 5. For SLES 15 Service Pack 1 the following adds the needed packages:
 
    ````shell
    zypper in bison flex gcc make texinfo gcc-c++ zlib-devel libexpat-devel \
-     python3-devel xz-devel gmp-devel mpfr-devel babeltrace-devel ncurses-devel
+     python3-devel xz-devel gmp-devel mpfr-devel ncurses-devel
    ````
 
 An example command-line to build ROCgdb on Linux is:
@@ -87,7 +84,7 @@ cd build
   --enable-64-bit-bfd --enable-targets="x86_64-linux-gnu,amdgcn-amd-amdhsa" \
   --disable-ld --disable-gas --disable-gdbserver --disable-sim --enable-tui \
   --disable-gdbtk --disable-gprofng --disable-shared --with-expat \
-  --with-system-zlib --without-guile --with-babeltrace --with-lzma \
+  --with-system-zlib --without-guile --without-babeltrace --with-lzma \
   --with-python=python3
 make
 ````
