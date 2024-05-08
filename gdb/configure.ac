@@ -295,6 +295,16 @@ if test "$gdb_require_amd_dbgapi" = true \
     if test "$all_targets" = true; then
       TARGET_OBS="$TARGET_OBS \$(ALL_AMD_DBGAPI_TARGET_OBS)"
     fi
+
+    # Include the host specific implementation.
+    case ${gdb_host} in
+      *linux*)
+	gdb_host_obs="${gdb_host_obs} amd-dbgapi-posix-hdep.o"
+	;;
+      *)
+	AC_MSG_ERROR([amd-dbgapi not supported for host ${gdb_host}])
+	;;
+    esac
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
     # amd-dbgapi was not found and...
     #

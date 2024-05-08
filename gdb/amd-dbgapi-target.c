@@ -20,6 +20,7 @@
 
 
 #include "amd-dbgapi-target.h"
+#include "amd-dbgapi-hdep.h"
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
@@ -45,7 +46,6 @@
 #include "bfd/elf-bfd.h"
 #include "elf/amdgpu.h"
 
-#include <dlfcn.h>
 #include <map>
 #include <sstream>
 
@@ -3301,15 +3301,6 @@ get_effective_precise_memory_mode ()
     = get_amd_dbgapi_inferior_info (current_inferior ());
   return info->precise_memory.enabled;
 };
-
-static const char *
-get_dbgapi_library_file_path ()
-{
-  Dl_info dl_info{};
-  if (!dladdr ((void*) amd_dbgapi_get_version, &dl_info))
-    return "";
-  return dl_info.dli_fname;
-}
 
 static void
 show_dbgapi_version (const char *args, int from_tty)
