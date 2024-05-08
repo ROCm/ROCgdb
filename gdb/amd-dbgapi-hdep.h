@@ -21,6 +21,17 @@
 #ifndef GDB_AMD_DBGAPI_HDEP_H
 #define GDB_AMD_DBGAPI_HDEP_H
 
+#include <amd-dbgapi/amd-dbgapi.h>
+
+/* Null amd_dbgapi_notifier_t.  */
+extern const amd_dbgapi_notifier_t null_amd_dbgapi_notifier;
+
+/* Clear the notifier.  */
+extern void amd_dbgapi_notifier_clear (amd_dbgapi_notifier_t notifier);
+
+/* Get the file descriptor associated with the notifier.  */
+extern int amd_dbgapi_notifier_get_fd (amd_dbgapi_notifier_t notifier);
+
 /* Get the amd-dbgapi shared library file path.  */
 extern const char *get_dbgapi_library_file_path ();
 

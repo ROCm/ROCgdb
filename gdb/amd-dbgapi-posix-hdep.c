@@ -1,8 +1,8 @@
 /* Posix implementation of the host dependent utilities for the amd-dbgapi
    target.
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2024 Free Software Foundation, Inc.
+   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -22,6 +22,31 @@
 #include "amd-dbgapi-hdep.h"
 #include <amd-dbgapi/amd-dbgapi.h>
 #include <dlfcn.h>
+
+/* See amd-dbgapi-hdep.h.  */
+const amd_dbgapi_notifier_t null_amd_dbgapi_notifier = -1;
+
+/* See amd-dbgapi-hdep.h.  */
+void
+amd_dbgapi_notifier_clear (amd_dbgapi_notifier_t notifier)
+{
+  int ret;
+
+  /* Drain the notifier pipe.  */
+  do
+    {
+      char buf;
+      ret = read (notifier, &buf, 1);
+    }
+  while (ret >= 0 || (ret == -1 && errno == EINTR));
+}
+
+/* See amd-dbgapi-hdep.h.  */
+int
+amd_dbgapi_notifier_get_fd (amd_dbgapi_notifier_t notifier)
+{
+  return notifier;
+}
 
 /* See amd-dbgapi-hdep.h.  */
 const char *
