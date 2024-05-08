@@ -19,6 +19,7 @@
 
 
 #include "amd-dbgapi-target.h"
+#include "amd-dbgapi-hdep.h"
 #include "amdgpu-tdep.h"
 #include "async-event.h"
 #include "breakpoint.h"
@@ -203,7 +204,7 @@ struct amd_dbgapi_inferior_info
   amd_dbgapi_process_id_t process_id = AMD_DBGAPI_PROCESS_NONE;
 
   /* The amd_dbgapi_notifier_t for this inferior.  */
-  amd_dbgapi_notifier_t notifier = -1;
+  amd_dbgapi_notifier_t notifier = null_amd_dbgapi_notifier;
 
   /* The status of the inferior's runtime support.  */
   amd_dbgapi_runtime_state_t runtime_state = AMD_DBGAPI_RUNTIME_STATE_UNLOADED;
@@ -1205,15 +1206,8 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 {
   amd_dbgapi_inferior_info &info
     = *static_cast<amd_dbgapi_inferior_info *> (client_data);
-  int ret;
 
-  /* Drain the notifier pipe.  */
-  do
-    {
-      char buf;
-      ret = read (info.notifier, &buf, 1);
-    }
-  while (ret >= 0 || (ret == -1 && errno == EINTR));
+  amd_dbgapi_notifier_clear (info.notifier);
 
   if (info.inf->target_is_pushed (&the_amd_dbgapi_target))
     {
@@ -1315,8 +1309,9 @@ amd_dbgapi_target::async (bool enable)
 	{
 	  amd_dbgapi_inferior_info &info = get_amd_dbgapi_inferior_info (inf);
 
-	  if (info.notifier != -1)
-	    add_file_handler (info.notifier, dbgapi_notifier_handler, &info,
+	  if (info.notifier != null_amd_dbgapi_notifier)
+	    add_file_handler (amd_dbgapi_notifier_get_fd (info.notifier),
+			      dbgapi_notifier_handler, &info,
 			      string_printf ("amd-dbgapi notifier for pid %d",
 					     inf->pid));
 	}
@@ -1339,8 +1334,8 @@ amd_dbgapi_target::async (bool enable)
 	  const amd_dbgapi_inferior_info &info
 	    = get_amd_dbgapi_inferior_info (inf);
 
-	  if (info.notifier != -1)
-	    delete_file_handler (info.notifier);
+	  if (info.notifier != null_amd_dbgapi_notifier)
+	    delete_file_handler (amd_dbgapi_notifier_get_fd (info.notifier));
 	}
 
       delete_async_event_handler (&amd_dbgapi_async_event_handler);
@@ -1879,7 +1874,8 @@ attach_amd_dbgapi (inferior *inf)
     }
 
   amd_dbgapi_debug_printf ("process_id = %" PRIu64 ", notifier fd = %d",
-			   info.process_id.handle, info.notifier);
+			   info.process_id.handle,
+			   amd_dbgapi_notifier_get_fd (info.notifier));
 
   set_process_memory_precision (info);
 
@@ -1888,8 +1884,8 @@ attach_amd_dbgapi (inferior *inf)
      target.  */
   dbgapi_notifier_handler (0, &info);
 
-  add_file_handler (info.notifier, dbgapi_notifier_handler, &info,
-		    "amd-dbgapi notifier");
+  add_file_handler (amd_dbgapi_notifier_get_fd (info.notifier),
+		    dbgapi_notifier_handler, &info, "amd-dbgapi notifier");
 }
 
 static void maybe_reset_amd_dbgapi ();
@@ -1917,8 +1913,8 @@ detach_amd_dbgapi (inferior *inf)
     warning (_("amd-dbgapi: could not detach from process %d (%s)"),
 	     inf->pid, get_status_string (status));
 
-  gdb_assert (info.notifier != -1);
-  delete_file_handler (info.notifier);
+  gdb_assert (info.notifier != null_amd_dbgapi_notifier);
+  delete_file_handler (amd_dbgapi_notifier_get_fd (info.notifier));
 
   /* This is a noop if the target is not pushed.  */
   inf->unpush_target (&the_amd_dbgapi_target);
