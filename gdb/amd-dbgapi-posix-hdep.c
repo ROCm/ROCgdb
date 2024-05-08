@@ -46,3 +46,10 @@ amd_dbgapi_notifier_get_fd (amd_dbgapi_notifier_t notifier)
 {
   return notifier;
 }
+
+/* See amd-dbgapi-hdep.h.  */
+void
+amd_dbgapi_notifier_release (amd_dbgapi_notifier_t notifier)
+{
+  /* Nothing to do.  */
+}

@@ -1915,6 +1915,7 @@ detach_amd_dbgapi (inferior *inf)
 
   gdb_assert (info.notifier != null_amd_dbgapi_notifier);
   delete_file_handler (amd_dbgapi_notifier_get_fd (info.notifier));
+  amd_dbgapi_notifier_release (info.notifier);
 
   /* This is a noop if the target is not pushed.  */
   inf->unpush_target (&the_amd_dbgapi_target);
