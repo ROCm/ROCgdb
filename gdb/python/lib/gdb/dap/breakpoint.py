@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 from contextlib import contextmanager
 
@@ -116,7 +115,7 @@ def _breakpoint_descriptor(bp):
 
             result.update(
                 {
-                    "source": make_source(filename, os.path.basename(filename)),
+                    "source": make_source(filename),
                     "line": line,
                 }
             )
@@ -277,7 +276,6 @@ def _rewrite_src_breakpoint(
     }
 
 
-# FIXME we do not specify a type for 'source'.
 @request("setBreakpoints")
 @capability("supportsHitConditionalBreakpoints")
 @capability("supportsConditionalBreakpoints")
