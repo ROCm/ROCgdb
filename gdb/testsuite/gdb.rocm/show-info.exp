@@ -129,12 +129,13 @@ set file_path "(\\/\[^/ ]*)+\\/?"
 set range_specifier (#|\\?)offset=(${number})&size=(${number})
 set memory_uri "memory:\\/\\/$process_id$range_specifier"
 set file_uri "file://$file_path\($range_specifier\)?"
+set code_object_uri "\($memory_uri\)|\($file_uri\)"
 
 gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
     "From\\s+To\\s+Syms\\s+Read\\s+Shared Object Library" \
     "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_path" \
-    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$memory_uri" \
-    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_uri"
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$code_object_uri" \
+    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$code_object_uri"
 ]
 
 #Test6
