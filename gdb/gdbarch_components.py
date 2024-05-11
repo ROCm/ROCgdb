@@ -1159,7 +1159,7 @@ is not used.
 )
 
 Function(
-    type="int",
+    type="bool",
     name="inner_than",
     params=[("CORE_ADDR", "lhs"), ("CORE_ADDR", "rhs")],
 )
