@@ -1,0 +1,120 @@
+# Copyright 2024 Free Software Foundation, Inc.
+# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that when a program allocates shared memory, the content of the
+# memory is not lost when reaching a breakpoint.
+
+load_lib rocm.exp
+
+# Python support is required to use $_streq.
+require allow_hipcc_tests allow_python_tests
+
+standard_testfile .cpp -size.cpp
+
+proc get_shared_size {} {
+    if {[build_executable "failed to prepare" $::testfile $::srcfile2 {hip}]} {
+	return
+    }
+
+    clean_restart $::binfile
+
+    set bploc [gdb_get_line_number "Break here\." $::srcfile2]
+    with_rocm_gpu_lock {
+	if {![runto "$bploc" {message "runto end"}]} {
+	    return 0
+	}
+	set shared_size [get_valueof "" "props.sharedMemPerBlock" "0"]
+	return $shared_size
+    }
+}
+
+proc do_test {shared_size nonstop} {
+    if {[build_executable "failed to prepare" $::testfile $::srcfile \
+	[list debug hip additional_flags=-DSHARED_SIZE=$shared_size]]} {
+	return
+    }
+
+    save_vars { ::GDBFLAGS } {
+	if { $nonstop } {
+	    append ::GDBFLAGS " -ex \"set non-stop on\""
+	}
+	clean_restart $::binfile
+    }
+
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	set bploc [gdb_get_line_number "Break here\."]
+
+	# We want to stop one thread of the work-group with X coordinate 23
+	# (this is arbitrary, one value had to be picked).  We cannot know a
+	# priori how many waves make a work-group, but there must be at least
+	# 2, so we can look for the wave which has $_dispatch_pos equal to
+	# "(23,0,0)/1".
+	# Other work-groups can run freely (but still need to report the
+	# breakpoint).  Other threads in the work-group can also run freely.
+	gdb_breakpoint "$bploc if \$_streq(\$_dispatch_pos, \"(23,0,0)/1\")" \
+	    allow-pending
+
+	set thread_num 0
+	gdb_test_multiple "continue" "continue to breakpoint" {
+	    -re "Thread ($::decimal) .* hit Breakpoint" {
+		set thread_num $expect_out(1,string)
+		exp_continue
+	    }
+	    -re "$::gdb_prompt " {
+		gdb_assert { $thread_num != 0} $gdb_test_name
+	    }
+	}
+	if { $nonstop } {
+	    gdb_test "thread $thread_num" ".*Switching to thread.*" \
+		"select thread"
+	}
+
+	# Check values inside shared memory.  Those are set by the "generator"
+	# lambda in the device code.
+	gdb_test "p/x shared_buffer\[0\]" "= 0xdeadbeef"
+	gdb_test "p/x shared_buffer\[1\]" "= 0x17"
+	gdb_test "p/x shared_buffer\[2\]" "= 0x0"
+	gdb_test "p/x shared_buffer\[3\]" "= 0x0"
+	gdb_test "p/x shared_buffer\[4\]" "= 0xaaaaaaaa"
+	gdb_test "p/x shared_buffer\[shared_buffer_size / 2\]" "= 0xbadf00d"
+	gdb_test "p/x shared_buffer\[shared_buffer_size - 1\]" "= 0x123abcd"
+
+	# Keep the written values in sync with shared-memory.cpp.
+	gdb_test "p/x shared_buffer\[shared_buffer_size / 2\] = 0xffffffff" \
+	    "= 0xffffffff"
+	gdb_test "p/x shared_buffer\[shared_buffer_size - 1\] = 0xabcd0123" \
+	    "= 0xabcd0123"
+	gdb_test "p/x shared_buffer\[0\] = 0" "= 0x0"
+
+	# Once it is resumed, the test program asserts that the shared_buffer
+	# array has been updated with the specific values we've written above.
+	gdb_continue_to_end "continue to end" "continue" 1
+    }
+}
+
+set shared_size [get_shared_size]
+if {$shared_size == 0} {
+    return
+}
+
+foreach_with_prefix nonstop { on off } {
+    do_test $shared_size $nonstop
+}
