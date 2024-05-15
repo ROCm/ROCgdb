@@ -258,7 +258,7 @@ inspect_type (struct demangle_parse_info *info,
 	  if (i != NULL)
 	    {
 	      /* Merge the two trees.  */
-	      cp_merge_demangle_parse_infos (info, ret_comp, i.get ());
+	      cp_merge_demangle_parse_infos (info, ret_comp, std::move (i));
 
 	      /* Replace any newly introduced typedefs -- but not
 		 if the type is anonymous (that would lead to infinite
@@ -2186,15 +2186,8 @@ test_cp_remove_params ()
   CHECK_INCOMPL ("A::foo<(anonymous namespace)::B",
 		 "A::foo");
 
-  /* Shouldn't this parse?  Looks like a bug in
-     cp_demangled_name_to_comp.  See PR c++/22411.  */
-#if 0
   CHECK ("A::foo<void(int)>::func(int)",
 	 "A::foo<void(int)>::func");
-#else
-  CHECK_INCOMPL ("A::foo<void(int)>::func(int)",
-		 "A::foo");
-#endif
 
   CHECK_INCOMPL ("A::foo<void(int",
 		 "A::foo");
