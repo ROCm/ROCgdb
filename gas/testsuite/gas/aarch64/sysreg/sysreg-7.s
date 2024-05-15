@@ -1,22 +1,16 @@
-.arch armv8-a+lor
+	.include "sysreg-test-utils.inc"
 
-/* Read from system registers.  */
-mrs x0, lorc_el1
-mrs x0, lorea_el1
-mrs x0, lorn_el1
-mrs x0, lorsa_el1
-mrs x0, icc_ctlr_el3
-mrs x0, icc_sre_el1
-mrs x0, icc_sre_el2
-mrs x0, icc_sre_el3
-mrs x0, ich_vtr_el2
+	.text
 
-/* Write to system registers.  */
-msr lorc_el1, x0
-msr lorea_el1, x0
-msr lorn_el1, x0
-msr lorsa_el1, x0
-msr icc_ctlr_el3, x0
-msr icc_sre_el1, x0
-msr icc_sre_el2, x0
-msr icc_sre_el3, x0
+	.arch armv8-a+lor
+
+	rw_sys_reg sys_reg=lorc_el1
+	rw_sys_reg sys_reg=lorea_el1
+	rw_sys_reg sys_reg=lorn_el1
+	rw_sys_reg sys_reg=lorsa_el1
+	rw_sys_reg sys_reg=icc_ctlr_el3
+	rw_sys_reg sys_reg=icc_sre_el1
+	rw_sys_reg sys_reg=icc_sre_el2
+	rw_sys_reg sys_reg=icc_sre_el3
+
+	rw_sys_reg sys_reg=ich_vtr_el2 w=0
