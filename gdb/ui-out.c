@@ -564,18 +564,6 @@ ui_out::field_fmt (const char *fldname, const ui_file_style &style,
 }
 
 void
-ui_out::spaces (int numspaces)
-{
-  do_spaces (numspaces);
-}
-
-void
-ui_out::text (const char *string)
-{
-  do_text (string);
-}
-
-void
 ui_out::call_do_message (const ui_file_style &style, const char *format,
 			 ...)
 {
@@ -788,37 +776,6 @@ ui_out::message (const char *format, ...)
   va_end (args);
 }
 
-void
-ui_out::wrap_hint (int indent)
-{
-  do_wrap_hint (indent);
-}
-
-void
-ui_out::flush ()
-{
-  do_flush ();
-}
-
-void
-ui_out::redirect (ui_file *outstream)
-{
-  do_redirect (outstream);
-}
-
-/* Test the flags against the mask given.  */
-ui_out_flags
-ui_out::test_flags (ui_out_flags mask)
-{
-  return m_flags & mask;
-}
-
-bool
-ui_out::is_mi_like_p () const
-{
-  return do_is_mi_like_p ();
-}
-
 /* Verify that the field/tuple/list is correctly positioned.  Return
    the field number and corresponding alignment (if
    available/applicable).  */
@@ -951,14 +908,12 @@ buffered_streams::buffered_streams (buffer_group *group, ui_out *uiout)
     m_buffered_stderr (group, gdb_stderr),
     m_buffered_stdlog (group, gdb_stdlog),
     m_buffered_stdtarg (group, gdb_stdtarg),
-    m_buffered_stdtargerr (group, gdb_stdtargerr),
     m_uiout (uiout)
 {
   gdb_stdout = &m_buffered_stdout;
   gdb_stderr = &m_buffered_stderr;
   gdb_stdlog = &m_buffered_stdlog;
   gdb_stdtarg = &m_buffered_stdtarg;
-  gdb_stdtargerr = &m_buffered_stdtargerr;
 
   ui_file *stream = current_uiout->current_stream ();
   if (stream != nullptr)
@@ -991,7 +946,6 @@ buffered_streams::remove_buffers ()
   gdb_stderr = m_buffered_stderr.stream ();
   gdb_stdlog = m_buffered_stdlog.stream ();
   gdb_stdtarg = m_buffered_stdtarg.stream ();
-  gdb_stdtargerr = m_buffered_stdtargerr.stream ();
 
   if (m_buffered_current_uiout.has_value ())
     current_uiout->redirect (nullptr);

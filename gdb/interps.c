@@ -187,13 +187,16 @@ interp_lookup (struct ui *ui, const char *name)
 /* See interps.h.  */
 
 void
-set_top_level_interpreter (const char *name)
+set_top_level_interpreter (const char *name, bool for_new_ui)
 {
   /* Find it.  */
   struct interp *interp = interp_lookup (current_ui, name);
 
   if (interp == NULL)
     error (_("Interpreter `%s' unrecognized"), name);
+  if (for_new_ui && !interp->supports_new_ui ())
+    error (_("interpreter '%s' cannot be used with a new UI"), name);
+
   /* Install it.  */
   interp_set (interp, true);
 }
@@ -293,7 +296,6 @@ interpreter_exec_cmd (const char *args, int from_tty)
   scoped_restore save_stderr = make_scoped_restore (&gdb_stderr);
   scoped_restore save_stdlog = make_scoped_restore (&gdb_stdlog);
   scoped_restore save_stdtarg = make_scoped_restore (&gdb_stdtarg);
-  scoped_restore save_stdtargerr = make_scoped_restore (&gdb_stdtargerr);
 
   if (args == NULL)
     error_no_arg (_("interpreter-exec command"));

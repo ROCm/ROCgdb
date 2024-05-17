@@ -438,7 +438,7 @@ upgrade_types_v1 (ctf_dict_t *fp, ctf_header_t *cth)
   tbuf = (ctf_type_v1_t *) (fp->ctf_buf + cth->cth_typeoff);
   tend = (ctf_type_v1_t *) (fp->ctf_buf + cth->cth_stroff);
 
-  /* Much like init_types(), this is a two-pass process.
+  /* Much like init_static_types(), this is a two-pass process.
 
      First, figure out the new type-section size needed.  (It is possible,
      in theory, for it to be less than the old size, but this is very
@@ -636,7 +636,7 @@ upgrade_types_v1 (ctf_dict_t *fp, ctf_header_t *cth)
 
   /* Verify that the entire region was converted.  If not, we are either
      converting too much, or too little (leading to a buffer overrun either here
-     or at read time, in init_types().) */
+     or at read time, in init_static_types().) */
 
   assert ((size_t) t2p - (size_t) fp->ctf_buf == cth->cth_stroff);
 
@@ -1724,6 +1724,10 @@ ctf_bufopen (const ctf_sect_t *ctfsect, const ctf_sect_t *symsect,
 bad:
   ctf_set_open_errno (errp, err);
   ctf_err_warn_to_open (fp);
+  /* Without this, the refcnt is zero on entry and ctf_dict_close() won't
+     actually do anything on the grounds that this is a recursive call via
+     another dict being closed.  */
+  fp->ctf_refcnt = 1;
   ctf_dict_close (fp);
   return NULL;
 }
