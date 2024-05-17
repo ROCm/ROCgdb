@@ -218,6 +218,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_PMUv3_SS,
   /* Performance Monitors Instruction Counter Extension.  */
   AARCH64_FEATURE_PMUv3_ICNTR,
+  /* System Performance Monitors Extension */
+  AARCH64_FEATURE_SPMU,
   /* Performance Monitors Synchronous-Exception-Based Event Extension.  */
   AARCH64_FEATURE_SEBEP,
   /* SVE2.1 and SME2.1 non-widening BFloat16 instructions.  */
@@ -232,6 +234,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_CPA,
   /* FAMINMAX instructions.  */
   AARCH64_FEATURE_FAMINMAX,
+  /* FP8 instructions.  */
+  AARCH64_FEATURE_FP8,
   AARCH64_NUM_FEATURES
 };
 
@@ -309,6 +313,7 @@ enum aarch64_feature_bit {
 					 | AARCH64_FEATBIT (X, PMUv3p9)	\
 					 | AARCH64_FEATBIT (X, PMUv3_SS) \
 					 | AARCH64_FEATBIT (X, PMUv3_ICNTR) \
+					 | AARCH64_FEATBIT (X, SPMU) \
 					 | AARCH64_FEATBIT (X, SEBEP) \
 					 | AARCH64_FEATBIT (X, PREDRES2) \
 					)
