@@ -236,6 +236,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_FAMINMAX,
   /* FP8 instructions.  */
   AARCH64_FEATURE_FP8,
+  /* LUT instructions.  */
+  AARCH64_FEATURE_LUT,
   AARCH64_NUM_FEATURES
 };
 
@@ -523,10 +525,14 @@ enum aarch64_opnd
   AARCH64_OPND_Em,	/* AdvSIMD Vector Element Vm.  */
   AARCH64_OPND_Em16,	/* AdvSIMD Vector Element Vm restricted to V0 - V15 when
 			   qualifier is S_H.  */
+  AARCH64_OPND_Em_INDEX1_14,  /* AdvSIMD 1-bit encoded index in Vm at [14]  */
+  AARCH64_OPND_Em_INDEX2_13,  /* AdvSIMD 2-bit encoded index in Vm at [14:13]  */
+  AARCH64_OPND_Em_INDEX3_12,  /* AdvSIMD 3-bit encoded index in Vm at [14:12]  */
   AARCH64_OPND_LVn,	/* AdvSIMD Vector register list used in e.g. TBL.  */
   AARCH64_OPND_LVt,	/* AdvSIMD Vector register list used in ld/st.  */
   AARCH64_OPND_LVt_AL,	/* AdvSIMD Vector register list for loading single
 			   structure to all lanes.  */
+  AARCH64_OPND_LVn_LUT,	/* AdvSIMD Vector register list used in lut.  */
   AARCH64_OPND_LEt,	/* AdvSIMD Vector Element list.  */
 
   AARCH64_OPND_CRn,	/* Co-processor register in CRn field.  */
@@ -731,8 +737,11 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_Zd,		/* SVE vector register in Zd.  */
   AARCH64_OPND_SVE_Zm_5,	/* SVE vector register in Zm, bits [9,5].  */
   AARCH64_OPND_SVE_Zm_16,	/* SVE vector register in Zm, bits [20,16].  */
+  AARCH64_OPND_SVE_Zm1_23_INDEX, /* SVE bit index in Zm, bit 23.  */
+  AARCH64_OPND_SVE_Zm2_22_INDEX, /* SVE bit index in Zm, bits [23,22].  */
   AARCH64_OPND_SVE_Zm3_INDEX,	/* z0-z7[0-3] in Zm, bits [20,16].  */
   AARCH64_OPND_SVE_Zm3_11_INDEX, /* z0-z7[0-7] in Zm3_INDEX plus bit 11.  */
+  AARCH64_OPND_SVE_Zm3_12_INDEX, /* SVE bit index in Zm, bits 12 plus bit [23,22].  */
   AARCH64_OPND_SVE_Zm3_19_INDEX, /* z0-z7[0-3] in Zm3_INDEX plus bit 19.  */
   AARCH64_OPND_SVE_Zm3_22_INDEX, /* z0-z7[0-7] in Zm3_INDEX plus bit 22.  */
   AARCH64_OPND_SVE_Zm4_11_INDEX, /* z0-z15[0-3] in Zm plus bit 11.  */
@@ -1026,7 +1035,8 @@ enum aarch64_insn_class
   the,
   sve2_urqvs,
   sve_index1,
-  rcpc3
+  rcpc3,
+  lut
 };
 
 /* Opcode enumerators.  */
