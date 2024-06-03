@@ -22,6 +22,7 @@
 #include "mi-interp.h"
 
 #include "arch-utils.h"
+#include "exceptions.h"
 #include "interps.h"
 #include "event-top.h"
 #include "gdbsupport/event-loop.h"

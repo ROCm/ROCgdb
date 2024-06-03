@@ -21,6 +21,7 @@
 #include "arch-utils.h"
 #include <ctype.h>
 #include "event-top.h"
+#include "exceptions.h"
 #include "hashtab.h"
 #include "symtab.h"
 #include "frame.h"

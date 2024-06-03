@@ -30,6 +30,7 @@
 #include "target-float.h"
 #include "cli/cli-style.h"
 #include "gdbarch.h"
+#include "ui-out.h"
 
 static int print_field_values (struct value *, struct value *,
 			       struct ui_file *, int,
