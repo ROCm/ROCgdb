@@ -1,5 +1,10 @@
-# Destination must be of type register
-target:
+	# xcvmac - architecture set
+	.option push
+	.option arch, rv32i
+	.include "x-cv-mac.s"
+	.option pop
+
+	# xcvmac - destination must be of type register
 	cv.mac 8, t2, t0
 	cv.msu 23, t2, t0
 	cv.muls 43, t2, t0
@@ -23,7 +28,7 @@ target:
 	cv.macurn 35, t2, t0, 25
 	cv.machhurn 67, t2, t0, 5
 
-# Source one must be of type register
+	# xcvmac - source one must be of type register
 	cv.mac t4, 43, t0
 	cv.msu t4, 3, t0
 	cv.muls t4, 345, t0
@@ -47,7 +52,7 @@ target:
 	cv.macurn t4, 49, t0, 25
 	cv.machhurn t4, 6, t0, 5
 
-# Source two must be of type register
+	# xcvmac - source two must be of type register
 	cv.mac t4, t2, 344
 	cv.msu t4, t2, 23
 	cv.muls t4, t2, 2
@@ -71,7 +76,7 @@ target:
 	cv.macurn t4, t2, 900, 25
 	cv.machhurn t4, t2, 354, 5
 
-# Immediate value must be in range [0, 31]
+	# xcvmac - immediate value must be in range [0, 31]
 	cv.mulsn t4, t2, t0, -1
 	cv.mulhhsn t4, t2, t0, -1
 	cv.mulsrn t4, t2, t0, -1
@@ -136,7 +141,7 @@ target:
 	cv.machhun t4, t2, t0, 1245
 	cv.macurn t4, t2, t0, 45
 
-# Immediate value must be an absolute expression
+	# xcvmac - immediate value must be an absolute expression
 	cv.mulsn t4, t2, t0, t3
 	cv.mulhhsn t4, t2, t0, t1
 	cv.mulsrn t4, t2, t0, t6

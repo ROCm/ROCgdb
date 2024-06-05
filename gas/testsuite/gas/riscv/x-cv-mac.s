@@ -1,4 +1,3 @@
-target:
 	cv.mac t0, t1, t2
 	cv.mac t4, t2, t0
 	cv.mac t3, t5, t1
@@ -66,7 +65,7 @@ target:
 	cv.mulurn t4, t2, t0, 11
 	cv.mulurn t3, t5, t1, 31
 
-  # Pseudo-instructions
+	# Pseudo-instructions
 	cv.mulhhsn t0, t1, t2, 0
 	cv.mulhhsn t4, t2, t0, 0
 	cv.mulhhsn t3, t5, t1, 0
