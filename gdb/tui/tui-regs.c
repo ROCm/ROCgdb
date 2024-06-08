@@ -21,10 +21,7 @@
 
 #include "arch-utils.h"
 #include "tui/tui.h"
-#include "tui/tui-data.h"
 #include "symtab.h"
-#include "gdbtypes.h"
-#include "cli/cli-cmds.h"
 #include "frame.h"
 #include "regcache.h"
 #include "inferior.h"
@@ -32,11 +29,8 @@
 #include "tui/tui-layout.h"
 #include "tui/tui-win.h"
 #include "tui/tui-wingeneral.h"
-#include "tui/tui-file.h"
 #include "tui/tui-regs.h"
-#include "tui/tui-io.h"
 #include "reggroups.h"
-#include "valprint.h"
 #include "completer.h"
 
 #include "gdb_curses.h"
@@ -515,11 +509,11 @@ tui_reg_command (const char *args, int from_tty)
       /* Make sure the register window is visible.  If not, select an
 	 appropriate layout.  We need to do this before trying to run the
 	 'next' or 'prev' commands.  */
-      if (TUI_DATA_WIN == NULL || !TUI_DATA_WIN->is_visible ())
+      if (tui_data_win () == nullptr || !tui_data_win ()->is_visible ())
 	tui_regs_layout ();
 
       const reggroup *match = nullptr;
-      const reggroup *current_group = TUI_DATA_WIN->get_current_group ();
+      const reggroup *current_group = tui_data_win ()->get_current_group ();
       if (strncmp (args, "next", len) == 0)
 	match = tui_reg_next (current_group, gdbarch);
       else if (strncmp (args, "prev", len) == 0)
@@ -543,7 +537,7 @@ tui_reg_command (const char *args, int from_tty)
       if (match == NULL)
 	error (_("unknown register group '%s'"), args);
 
-      TUI_DATA_WIN->set_register_group (match);
+      tui_data_win ()->set_register_group (match);
     }
   else
     {

@@ -19,14 +19,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
+#include "observable.h"
 #include "symtab.h"
 #include "frame.h"
 #include "breakpoint.h"
 #include "value.h"
 #include "source.h"
 #include "objfiles.h"
-#include "filenames.h"
 #include "gdbsupport/gdb-safe-ctype.h"
 
 #include "tui/tui.h"
@@ -34,7 +33,6 @@
 #include "tui/tui-io.h"
 #include "tui/tui-status.h"
 #include "tui/tui-win.h"
-#include "tui/tui-wingeneral.h"
 #include "tui/tui-winsource.h"
 #include "tui/tui-source.h"
 #include "tui/tui-disasm.h"
@@ -459,7 +457,7 @@ tui_source_window_base::rerender ()
       struct gdbarch *gdbarch = get_frame_arch (frame);
 
       struct symtab *s = find_pc_line_symtab (get_frame_pc (frame));
-      if (this != TUI_SRC_WIN)
+      if (this != tui_src_win ())
 	find_line_pc (s, cursal.line, &cursal.pc);
 
       /* This centering code is copied from tui_source_window::maybe_update.
@@ -492,7 +490,7 @@ tui_source_window_base::refill ()
 {
   symtab_and_line sal {};
 
-  if (this == TUI_SRC_WIN)
+  if (this == tui_src_win ())
     {
       sal = get_current_source_symtab_and_line ();
       if (sal.symtab == NULL)

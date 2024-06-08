@@ -27,14 +27,9 @@
 
 #include "command.h"
 #include "symtab.h"
-#include "breakpoint.h"
 #include "frame.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
-#include "top.h"
-#include "source.h"
-#include "gdbsupport/event-loop.h"
-#include "async-event.h"
 #include "ui-out.h"
 #include "utils.h"
 
@@ -44,8 +39,6 @@
 #include "tui/tui-data.h"
 #include "tui/tui-layout.h"
 #include "tui/tui-wingeneral.h"
-#include "tui/tui-status.h"
-#include "tui/tui-regs.h"
 #include "tui/tui-disasm.h"
 #include "tui/tui-source.h"
 #include "tui/tui-winsource.h"
@@ -55,8 +48,6 @@
 #include <ctype.h>
 #include "readline/readline.h"
 #include <string_view>
-
-#include <signal.h>
 
 static void tui_set_tab_width_command (const char *, int);
 static void tui_refresh_all_command (const char *, int);
@@ -204,10 +195,10 @@ static void
 set_style_tui_current_position (const char *ignore, int from_tty,
 				cmd_list_element *c)
 {
-  if (TUI_SRC_WIN != nullptr)
-    TUI_SRC_WIN->refill ();
-  if (TUI_DISASM_WIN != nullptr)
-    TUI_DISASM_WIN->refill ();
+  if (tui_src_win () != nullptr)
+    tui_src_win ()->refill ();
+  if (tui_disasm_win () != nullptr)
+    tui_disasm_win ()->refill ();
 }
 
 /* Tui internal configuration variables.  These variables are updated
@@ -425,8 +416,8 @@ tui_update_gdb_sizes (void)
 
   if (tui_active)
     {
-      width = TUI_CMD_WIN->width;
-      height = TUI_CMD_WIN->height;
+      width = tui_cmd_win ()->width;
+      height = tui_cmd_win ()->height;
     }
   else
     {
@@ -514,7 +505,7 @@ tui_resize_all (void)
       resize_term (screenheight, screenwidth);
 #endif      
       /* Turn keypad off while we resize.  */
-      keypad (TUI_CMD_WIN->handle.get (), FALSE);
+      keypad (tui_cmd_win ()->handle.get (), FALSE);
       tui_update_gdb_sizes ();
       tui_set_term_height_to (screenheight);
       tui_set_term_width_to (screenwidth);
@@ -527,7 +518,7 @@ tui_resize_all (void)
 	 window to resize proportionately with containing terminal, rather
 	 than maintaining a fixed size.  */
       tui_apply_current_layout (false); /* Turn keypad back on.  */
-      keypad (TUI_CMD_WIN->handle.get (), TRUE);
+      keypad (tui_cmd_win ()->handle.get (), TRUE);
     }
 }
 
@@ -863,8 +854,8 @@ static void
 tui_set_compact_source (const char *ignore, int from_tty,
 			struct cmd_list_element *c)
 {
-  if (TUI_SRC_WIN != nullptr)
-    TUI_SRC_WIN->refill ();
+  if (tui_src_win () != nullptr)
+    tui_src_win ()->refill ();
 }
 
 /* Callback for "show tui compact-source".  */
@@ -1082,7 +1073,7 @@ parse_scrolling_args (const char *arg,
 		error (_("Unrecognized window `%s'"), wname);
 	      if (!(*win_to_scroll)->is_visible ())
 		error (_("Window is not visible"));
-	      else if (*win_to_scroll == TUI_CMD_WIN)
+	      else if (*win_to_scroll == tui_cmd_win ())
 		*win_to_scroll = *(tui_source_windows ().begin ());
 	    }
 	}
