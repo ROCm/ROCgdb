@@ -30082,6 +30082,13 @@ For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101} and
 @samp{gfx1102}, the @acronym{AMD ROCm} runtime cannot create a
 @acronym{AMD GPU} core dump (@pxref{AMD GPU core dumps}).
 
+@item
+For @acronym{AMD GPU} architectures @samp{gfx10*}, @samp{gfx11*} and
+@samp{gx12*}, a watchpoint (@pxref{Set Watchpoints, ,Setting
+Watchpoints}) might not be reported to the debugger if the memory is
+modified by the last instruction of the shader when precise memory
+is not enabled (@pxref{AMDGPU Memory Violation Reporting}).
+
 @end enumerate
 
 @node Controlling GDB

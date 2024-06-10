@@ -1,0 +1,87 @@
+# Copyright 2024 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test checks that a write watchpoint is reported to the debugger
+# when the memory is modified by the last statement of a shader.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# This test is known to fail for some architectures when precise memory is
+# not enabled.  This proc finds out if the current target is expected to have
+# a fail or not.
+proc target_has_xfail {} {
+    # Check for targets where this test will fail without precise memory
+    set targets [hcc_amdgpu_targets]
+    if { [llength $targets] == 0} {
+	return 1
+    }
+
+    # The test will run on GPU-0, so it should be the first of the list.
+    # Extract the target family by removing the last 2 chars from the target
+    # gfx number.
+    set target_family [string range [lindex $targets 0] 0 end-2]
+    return [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1
+}
+
+proc do_test {precise_memory has_xfail} {
+    clean_restart $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break here."] allow-pending]} {
+	    return
+	}
+
+	gdb_test "p *v" "= 64"
+	gdb_test "watch -l *v" "Hardware watchpoint $::decimal: -location \\*v"
+
+	if {$precise_memory} {
+	    # For architectures that does not support precise memory, a warning
+	    # will be displayed.
+	    gdb_test "set amdgpu precise-memory $precise_memory" \
+		"(warning: AMDGPU precise memory access reporting could not be enabled\\.)?"
+	}
+
+	if { $has_xfail } {
+	    setup_xfail "*-*-*"
+	}
+	gdb_test "continue" \
+	    [multi_line "Switching to thread $::decimal, lane 0.*" \
+		"" \
+		"Thread $::decimal \".*\" hit Hardware watchpoint $::decimal: -location \\*v" \
+		"" \
+		"Old value = 64" \
+		"New value = 8" \
+		".*"]
+    }
+}
+
+set supports_precise_memory [hip_devices_support_precise_memory]
+set has_xfail [target_has_xfail]
+
+foreach_with_prefix precise_memory {on off} {
+    if { $precise_memory && !$supports_precise_memory } {
+	unsupported "target does not support precise memory"
+	continue
+    }
+    do_test $precise_memory $has_xfail
+}
