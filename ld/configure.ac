@@ -18,7 +18,7 @@ dnl <http://www.gnu.org/licenses/>.
 dnl
 
 m4_include([../bfd/version.m4])
-AC_INIT([ld], BFD_VERSION)
+AC_INIT([ld], [BFD_VERSION])
 AC_CONFIG_SRCDIR(ldmain.c)
 
 AC_CANONICAL_TARGET
@@ -31,7 +31,6 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_GREP
-AC_GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG
@@ -197,7 +196,7 @@ esac])dnl
 # Decide if DT_TEXTREL check should be enabled in ELF linker.
 ac_default_ld_textrel_check=unset
 AC_ARG_ENABLE([textrel-check],
-	      AC_HELP_STRING([--enable-textrel-check=@<:@yes|no|warning|error@:>@],
+	      AS_HELP_STRING([--enable-textrel-check=@<:@yes|no|warning|error@:>@],
 			     [enable DT_TEXTREL check in ELF linker]),
 [case "${enableval}" in
   yes|no|warning|error) ac_default_ld_textrel_check=${enableval} ;;

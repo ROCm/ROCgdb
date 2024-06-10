@@ -24,10 +24,10 @@ AC_REVISION([for Readline 8.1, version 2.90])
 
 m4_include([../../config/override.m4])
 
-AC_INIT(readline, 8.1, bug-readline@gnu.org)
+AC_INIT([readline], [8.1], [bug-readline@gnu.org])
 
 dnl make sure we are using a recent autoconf version
-AC_PREREQ(2.50)
+AC_PREREQ([2.50])
 
 AC_CONFIG_SRCDIR(readline.h)
 dnl GDB LOCAL
@@ -45,7 +45,7 @@ dnl configure defaults
 opt_curses=no
 
 dnl arguments to configure
-AC_ARG_WITH(curses, AC_HELP_STRING([--with-curses], [use the curses library instead of the termcap library]), opt_curses=$withval)
+AC_ARG_WITH(curses, AS_HELP_STRING([--with-curses], [use the curses library instead of the termcap library]), opt_curses=$withval)
 
 if test "$opt_curses" = "yes"; then
 	prefer_curses=yes
@@ -58,12 +58,12 @@ opt_shared_libs=no
 opt_install_examples=no
 opt_bracketed_paste_default=yes
 
-AC_ARG_ENABLE(multibyte, AC_HELP_STRING([--enable-multibyte], [enable multibyte characters if OS supports them]), opt_multibyte=$enableval)
-dnl AC_ARG_ENABLE(shared, AC_HELP_STRING([--enable-shared], [build shared libraries [[default=YES]]]), opt_shared_libs=$enableval)
-AC_ARG_ENABLE(static, AC_HELP_STRING([--enable-static], [build static libraries [[default=YES]]]), opt_static_libs=$enableval)
-AC_ARG_ENABLE(install-examples, AC_HELP_STRING([--disable-install-examples], [don't install examples [[default=install]]]), opt_install_examples=$enableval)
+AC_ARG_ENABLE(multibyte, AS_HELP_STRING([--enable-multibyte], [enable multibyte characters if OS supports them]), opt_multibyte=$enableval)
+dnl AC_ARG_ENABLE(shared, AS_HELP_STRING([--enable-shared], [build shared libraries [[default=YES]]]), opt_shared_libs=$enableval)
+AC_ARG_ENABLE(static, AS_HELP_STRING([--enable-static], [build static libraries [[default=YES]]]), opt_static_libs=$enableval)
+AC_ARG_ENABLE(install-examples, AS_HELP_STRING([--disable-install-examples], [don't install examples [[default=install]]]), opt_install_examples=$enableval)
 
-AC_ARG_ENABLE(bracketed-paste-default, AC_HELP_STRING([--disable-bracketed-paste-default], [disable bracketed paste by default [[default=enable]]]), opt_bracketed_paste_default=$enableval)
+AC_ARG_ENABLE(bracketed-paste-default, AS_HELP_STRING([--disable-bracketed-paste-default], [disable bracketed paste by default [[default=enable]]]), opt_bracketed_paste_default=$enableval)
 
 if test $opt_multibyte = no; then
 AC_DEFINE(NO_MULTIBYTE_SUPPORT)
@@ -115,8 +115,7 @@ test -z "$CFLAGS" && want_auto_cflags=1
 
 AC_PROG_MAKE_SET
 AC_PROG_CC
-dnl AC_AIX
-AC_MINIX
+AC_USE_SYSTEM_EXTENSIONS
 
 # If we're using gcc and the user hasn't specified CFLAGS, add -O2 to CFLAGS
 if test -n "$want_auto_cflags" ; then
