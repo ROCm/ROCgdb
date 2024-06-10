@@ -25,6 +25,7 @@
 
    Author: Susan B. Macchia  */
 
+#include "async-event.h"
 #include "command.h"
 #include "symtab.h"
 #include "frame.h"
@@ -47,6 +48,7 @@
 #include "gdb_curses.h"
 #include <ctype.h>
 #include "readline/readline.h"
+#include <signal.h>
 #include <string_view>
 
 static void tui_set_tab_width_command (const char *, int);

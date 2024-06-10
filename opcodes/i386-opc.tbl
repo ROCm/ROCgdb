@@ -85,6 +85,7 @@
 #define RegKludge         OperandConstraint=REG_KLUDGE
 #define Ugh               OperandConstraint=UGH
 #define ImplicitStackOp   OperandConstraint=IMPLICIT_STACK_OP
+#define ZU                OperandConstraint=ZERO_UPPER
 
 #define ATTSyntax         Dialect=ATT_SYNTAX
 #define ATTMnemonic       Dialect=ATT_MNEMONIC
@@ -324,7 +325,7 @@ sti, 0xfb, 0, NoSuf, {}
 <alu2>, <alu2:opc> << 3, APX_F, D|W|CheckOperandSize|Modrm|No_sSuf|EVexMap4|<alu2:nf>, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
 <alu2>, 0x83/<alu2:opc>, APX_F, Modrm|CheckOperandSize|No_bSuf|No_sSuf|DstVVVV|EVexMap4|<alu2:nf>, { Imm8S, Reg16|Reg32|Reg64|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
 <alu2>, 0x83/<alu2:opc>, 0, Modrm|No_bSuf|No_sSuf|HLEPrefixLock|<alu2:opti>, { Imm8S, Reg16|Reg32|Reg64|Unspecified|BaseIndex }
-<alu2>, 0x83/<alu2:opc>, 0, Modrm|No_bSuf|No_sSuf|EVexMap4|<alu2:nf>, { Imm8S, Reg16|Reg32|Reg64|Unspecified|BaseIndex }
+<alu2>, 0x83/<alu2:opc>, APX_F, Modrm|No_bSuf|No_sSuf|EVexMap4|<alu2:nf>, { Imm8S, Reg16|Reg32|Reg64|Unspecified|BaseIndex }
 <alu2>, 0x04 | (<alu2:opc> << 3), 0, W|No_sSuf|<alu2:opti>, { Imm8|Imm16|Imm32|Imm32S, Acc|Byte|Word|Dword|Qword }
 <alu2>, 0x80/<alu2:opc>, APX_F, W|Modrm|CheckOperandSize|No_sSuf|DstVVVV|EVexMap4|<alu2:nf>, { Imm8|Imm16|Imm32|Imm32S, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex, Reg8|Reg16|Reg32|Reg64 }
 <alu2>, 0x80/<alu2:opc>, 0, W|Modrm|No_sSuf|HLEPrefixLock|<alu2:opti>, { Imm8|Imm16|Imm32|Imm32S, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
@@ -409,10 +410,12 @@ imulzu, 0x69, APX_F, Modrm|No_bSuf|No_sSuf|EVexMap4|NF|ZU, { Imm16, Reg16|Unspec
 // transformation.
 imul, 0x6b, i186, Modrm|No_bSuf|No_sSuf|RegKludge, { Imm8S, Reg16|Reg32|Reg64 }
 imul, 0x6b, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF, { Imm8S, Reg16|Reg32|Reg64 }
-imulzu, 0x6b, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF|ZU, { Imm8S, Reg16 }
 imul, 0x69, i186, Modrm|No_bSuf|No_sSuf|RegKludge, { Imm16|Imm32|Imm32S, Reg16|Reg32|Reg64 }
 imul, 0x69, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF, { Imm16|Imm32|Imm32S, Reg16|Reg32|Reg64 }
-imulzu, 0x69, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF|ZU, { Imm16, Reg16 }
+// ZU is omitted here, for colliding with RegKludge.  process_operands() will
+// replace the constraint value after processing RegKludge.
+imulzu, 0x6b, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF/*|ZU*/, { Imm8S, Reg16 }
+imulzu, 0x69, APX_F, Modrm|No_bSuf|No_sSuf|RegKludge|EVexMap4|NF/*|ZU*/, { Imm16, Reg16 }
 
 <mul>
 
@@ -533,8 +536,11 @@ loopne, 0xe0, x64, JumpByte|No_bSuf|No_wSuf|No_sSuf|NoRex64|IntelSuffix, { Disp8
 
 // Set byte on flag instructions.
 set<cc>, 0xf9<cc:opc>/0, i386, Modrm|No_wSuf|No_lSuf|No_sSuf|No_qSuf, { Reg8|Unspecified|BaseIndex }
-set<cc>, 0xf24<cc:opc>/0, APX_F, Modrm|No_wSuf|No_lSuf|No_sSuf|No_qSuf|VexWIG|EVexMap4, { Reg8 }
+set<cc>, 0xf24<cc:opc>/0, APX_F, Modrm|No_wSuf|No_lSuf|No_sSuf|No_qSuf|VexWIG|EVexMap4, { Reg8|Unspecified|BaseIndex }
 setzu<cc>, 0xf24<cc:opc>/0, APX_F, Modrm|No_wSuf|No_lSuf|No_sSuf|No_qSuf|VexWIG|EVexMap4|ZU, { Reg8 }
+// As an extension, allow SETcc without the ZU infix, instead taking the full
+// register as operand.
+set<cc>, 0xf24<cc:opc>/0, APX_F, Modrm|No_bSuf|No_sSuf|EVexMap4|ZU, { Reg32|Reg64 }
 
 // String manipulation.
 cmps, 0xa6, 0, W|No_sSuf|RepPrefixOk|IntelSuffix, {}
