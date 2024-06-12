@@ -12657,6 +12657,9 @@ remote_target::remote_hostio_send_command (int command_bytes, int which_packet,
       return -1;
     }
 
+  if (*remote_errno != FILEIO_SUCCESS)
+    return -1;
+
   /* Make sure we saw an attachment if and only if we expected one.  */
   if ((attachment_tmp == NULL && attachment != NULL)
       || (attachment_tmp != NULL && attachment == NULL))
@@ -12742,7 +12745,24 @@ remote_target::remote_hostio_open (inferior *inf, const char *filename,
   char *p = rs->buf.data ();
   int left = get_remote_packet_size () - 1;
 
-  if (warn_if_slow)
+  if (remote_hostio_set_filesystem (inf, remote_errno) != 0)
+    return -1;
+
+  remote_buffer_add_string (&p, &left, "vFile:open:");
+
+  remote_buffer_add_bytes (&p, &left, (const gdb_byte *) filename,
+			   strlen (filename));
+  remote_buffer_add_string (&p, &left, ",");
+
+  remote_buffer_add_int (&p, &left, flags);
+  remote_buffer_add_string (&p, &left, ",");
+
+  remote_buffer_add_int (&p, &left, mode);
+
+  int res = remote_hostio_send_command (p - rs->buf.data (), PACKET_vFile_open,
+					remote_errno, nullptr, nullptr);
+
+  if (warn_if_slow && res != -1)
     {
       static int warning_issued = 0;
 
@@ -12758,22 +12778,7 @@ remote_target::remote_hostio_open (inferior *inf, const char *filename,
 	}
     }
 
-  if (remote_hostio_set_filesystem (inf, remote_errno) != 0)
-    return -1;
-
-  remote_buffer_add_string (&p, &left, "vFile:open:");
-
-  remote_buffer_add_bytes (&p, &left, (const gdb_byte *) filename,
-			   strlen (filename));
-  remote_buffer_add_string (&p, &left, ",");
-
-  remote_buffer_add_int (&p, &left, flags);
-  remote_buffer_add_string (&p, &left, ",");
-
-  remote_buffer_add_int (&p, &left, mode);
-
-  return remote_hostio_send_command (p - rs->buf.data (), PACKET_vFile_open,
-				     remote_errno, NULL, NULL);
+  return res;
 }
 
 int
