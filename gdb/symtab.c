@@ -94,7 +94,7 @@ struct block_symbol lookup_local_symbol (const char *name,
 					 symbol_name_match_type match_type,
 					 const struct block *block,
 					 const domain_search_flags domain,
-					 enum language language);
+					 const struct language_defn *langdef);
 
 static struct block_symbol
   lookup_symbol_in_objfile (struct objfile *objfile,
@@ -369,6 +369,19 @@ from_scripting_domain (int val)
 	error (_("unrecognized domain constant"));
       return (domain_search_flag) val;
     }
+}
+
+/* See symtab.h.  */
+
+struct symbol *
+search_symbol_list (const char *name, int num, struct symbol **syms)
+{
+  for (int i = 0; i < num; ++i)
+    {
+      if (strcmp (name, syms[i]->natural_name ()) == 0)
+	return syms[i];
+    }
+  return nullptr;
 }
 
 /* See symtab.h.  */
@@ -2128,10 +2141,12 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
   if (is_a_field_of_this != NULL)
     memset (is_a_field_of_this, 0, sizeof (*is_a_field_of_this));
 
+  langdef = language_def (language);
+
   /* Search specified block and its superiors.  Don't search
      STATIC_BLOCK or GLOBAL_BLOCK.  */
 
-  result = lookup_local_symbol (name, match_type, block, domain, language);
+  result = lookup_local_symbol (name, match_type, block, domain, langdef);
   if (result.symbol != NULL)
     {
       symbol_lookup_debug_printf
@@ -2142,8 +2157,6 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
 
   /* If requested to do so by the caller and if appropriate for LANGUAGE,
      check to see if NAME is a field of `this'.  */
-
-  langdef = language_def (language);
 
   /* Don't do this check if we are searching for a struct.  It will
      not be found by check_field, but will be found by other
@@ -2205,36 +2218,37 @@ lookup_local_symbol (const char *name,
 		     symbol_name_match_type match_type,
 		     const struct block *block,
 		     const domain_search_flags domain,
-		     enum language language)
+		     const struct language_defn *langdef)
 {
   if (block == nullptr)
     return {};
 
-  struct symbol *sym;
-  const struct block *static_block = block->static_block ();
   const char *scope = block->scope ();
   
-  /* Check if it's a global block.  */
-  if (static_block == nullptr)
-    return {};
-
-  while (block != static_block)
+  while (!block->is_global_block () && !block->is_static_block ())
     {
-      sym = lookup_symbol_in_block (name, match_type, block, domain);
+      struct symbol *sym = lookup_symbol_in_block (name, match_type,
+						   block, domain);
       if (sym != NULL)
 	return (struct block_symbol) {sym, block};
 
-      if (language == language_cplus || language == language_fortran)
+      struct symbol *function = block->function ();
+      if (function != nullptr && function->is_template_function ())
 	{
-	  struct block_symbol blocksym
-	    = cp_lookup_symbol_imports_or_template (scope, name, block,
-						    domain);
-
-	  if (blocksym.symbol != NULL)
-	    return blocksym;
+	  struct template_symbol *templ = (struct template_symbol *) function;
+	  sym = search_symbol_list (name,
+				    templ->n_template_arguments,
+				    templ->template_arguments);
+	  if (sym != nullptr)
+	    return (struct block_symbol) {sym, block};
 	}
 
-      if (block->function () != NULL && block->inlined_p ())
+      struct block_symbol blocksym
+	= langdef->lookup_symbol_local (scope, name, block, domain);
+      if (blocksym.symbol != nullptr)
+	return blocksym;
+
+      if (block->inlined_p ())
 	break;
       block = block->superblock ();
     }
