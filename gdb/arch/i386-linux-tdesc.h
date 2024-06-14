@@ -1,6 +1,6 @@
-/* Native-dependent code for GNU/Linux i386.
+/* Target description related code for GNU/Linux i386.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,10 +17,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef I386_LINUX_NAT_H
-#define I386_LINUX_NAT_H 1
+#ifndef ARCH_I386_LINUX_TDESC_H
+#define ARCH_I386_LINUX_TDESC_H
 
-/* Does the current host support the GETFPXREGS request? */
-extern int have_ptrace_getfpxregs;
+struct target_desc;
 
-#endif
+/* Return the i386 target description corresponding to XCR0.  */
+
+extern const struct target_desc *i386_linux_read_description (uint64_t xcr0);
+
+#endif /* ARCH_I386_LINUX_TDESC_H */

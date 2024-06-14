@@ -749,6 +749,7 @@ ALL_64_TARGET_OBS = \
 	arch/aarch64-insn.o \
 	arch/aarch64-mte-linux.o \
 	arch/aarch64-scalable-linux.o \
+	arch/amd64-linux-tdesc.o \
 	arch/amd64.o \
 	arch/riscv.o \
 	bpf-tdep.o \
@@ -789,9 +790,11 @@ ALL_TARGET_OBS = \
 	arch/arm.o \
 	arch/arm-get-next-pcs.o \
 	arch/arm-linux.o \
+	arch/i386-linux-tdesc.o \
 	arch/i386.o \
 	arch/loongarch.o \
 	arch/ppc-linux-common.o \
+	arch/x86-linux-tdesc-features.o \
 	arm-bsd-tdep.o \
 	arm-fbsd-tdep.o \
 	arm-linux-tdep.o \
@@ -1400,7 +1403,6 @@ HFILES_NO_SRCDIR = \
 	hppa-tdep.h \
 	i386-bsd-nat.h \
 	i386-darwin-tdep.h \
-	i386-linux-nat.h \
 	i386-linux-tdep.h \
 	i386-tdep.h \
 	i387-tdep.h \
@@ -1555,13 +1557,17 @@ HFILES_NO_SRCDIR = \
 	arch/aarch64-insn.h \
 	arch/aarch64-mte-linux.h \
 	arch/aarch64-scalable-linux.h \
+	arch/amd64-linux-tdesc.h \
 	arch/arc.h \
 	arch/arm.h \
+	arch/i386-linux-tdesc.h \
 	arch/i386.h \
 	arch/loongarch.h \
 	arch/ppc-linux-common.h \
 	arch/ppc-linux-tdesc.h \
 	arch/riscv.h \
+	arch/x86-linux-tdesc-features.h \
+	arch/x86-linux-tdesc.h \
 	cli/cli-cmds.h \
 	cli/cli-decode.h \
 	cli/cli-script.h \
@@ -1598,6 +1604,7 @@ HFILES_NO_SRCDIR = \
 	nat/gdb_ptrace.h \
 	nat/gdb_thread_db.h \
 	nat/fork-inferior.h \
+	nat/i386-linux.h \
 	nat/linux-btrace.h \
 	nat/linux-namespaces.h \
 	nat/linux-nat.h \
@@ -1612,6 +1619,7 @@ HFILES_NO_SRCDIR = \
 	nat/x86-gcc-cpuid.h \
 	nat/x86-linux.h \
 	nat/x86-linux-dregs.h \
+	nat/x86-linux-tdesc.h \
 	python/py-event.h \
 	python/py-events.h \
 	python/py-stopevent.h \

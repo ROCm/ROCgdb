@@ -1,6 +1,6 @@
-/* GNU/Linux/x86-64 specific target description, for the remote server
-   for GDB.
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+/* Native-dependent code for GNU/Linux i386.
+
+   Copyright (C) 2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,19 +17,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "arch/x86-linux-tdesc.h"
-#include "tdesc.h"
-#include "x86-tdesc.h"
+#include "nat/i386-linux.h"
 
-/* See arch/x86-linux-tdesc.h.  */
-
-void
-x86_linux_post_init_tdesc (target_desc *tdesc, bool is_64bit)
-{
-#ifdef __x86_64__
-  if (is_64bit)
-    init_target_desc (tdesc, amd64_expedite_regs);
-  else
+/* See nat/i386-linux.h.  */
+tribool have_ptrace_getfpxregs =
+#ifdef HAVE_PTRACE_GETFPXREGS
+  TRIBOOL_UNKNOWN
+#else
+  TRIBOOL_FALSE
 #endif
-    init_target_desc (tdesc, i386_expedite_regs);
-}
+;

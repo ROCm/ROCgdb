@@ -40,6 +40,8 @@
 
 #include "i387-tdep.h"
 #include "gdbsupport/x86-xstate.h"
+#include "arch/i386-linux-tdesc.h"
+#include "arch/x86-linux-tdesc.h"
 
 /* The syscall's XML filename for i386.  */
 #define XML_SYSCALL_FILENAME_I386 "syscalls/i386-linux.xml"
@@ -679,29 +681,12 @@ i386_linux_core_read_x86_xsave_layout (struct gdbarch *gdbarch,
 					  layout) != 0;
 }
 
-/* See i386-linux-tdep.h.  */
+/* See arch/x86-linux-tdesc.h.  */
 
-const struct target_desc *
-i386_linux_read_description (uint64_t xcr0)
+void
+x86_linux_post_init_tdesc (target_desc *tdesc, bool is_64bit)
 {
-  if (xcr0 == 0)
-    return NULL;
-
-  static struct target_desc *i386_linux_tdescs \
-    [2/*X87*/][2/*SSE*/][2/*AVX*/][2/*MPX*/][2/*AVX512*/][2/*PKRU*/] = {};
-  struct target_desc **tdesc;
-
-  tdesc = &i386_linux_tdescs[(xcr0 & X86_XSTATE_X87) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_SSE) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_MPX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0];
-
-  if (*tdesc == NULL)
-    *tdesc = i386_create_target_description (xcr0, true, false);
-
-  return *tdesc;
+  /* Nothing.  */
 }
 
 /* Get Linux/x86 target description from core dump.  */
@@ -714,15 +699,16 @@ i386_linux_core_read_description (struct gdbarch *gdbarch,
   /* Linux/i386.  */
   x86_xsave_layout layout;
   uint64_t xcr0 = i386_linux_core_read_xsave_info (abfd, layout);
-  const struct target_desc *tdesc = i386_linux_read_description (xcr0);
 
-  if (tdesc != NULL)
-    return tdesc;
+  if (xcr0 == 0)
+    {
+      if (bfd_get_section_by_name (abfd, ".reg-xfp") != nullptr)
+	xcr0 = X86_XSTATE_SSE_MASK;
+      else
+	xcr0 = X86_XSTATE_X87_MASK;
+    }
 
-  if (bfd_get_section_by_name (abfd, ".reg-xfp") != NULL)
-    return i386_linux_read_description (X86_XSTATE_SSE_MASK);
-  else
-    return i386_linux_read_description (X86_XSTATE_X87_MASK);
+  return i386_linux_read_description (xcr0);
 }
 
 /* Similar to i386_supply_fpregset, but use XSAVE extended state.  */

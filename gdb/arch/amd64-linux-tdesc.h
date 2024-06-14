@@ -1,6 +1,6 @@
-/* GNU/Linux/x86-64 specific target description, for the remote server
-   for GDB.
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+/*  Target description related code for GNU/Linux x86-64.
+
+   Copyright (C) 2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,19 +17,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "arch/x86-linux-tdesc.h"
-#include "tdesc.h"
-#include "x86-tdesc.h"
+#ifndef ARCH_AMD64_LINUX_TDESC_H
+#define ARCH_AMD64_LINUX_TDESC_H
 
-/* See arch/x86-linux-tdesc.h.  */
+struct target_desc;
 
-void
-x86_linux_post_init_tdesc (target_desc *tdesc, bool is_64bit)
-{
-#ifdef __x86_64__
-  if (is_64bit)
-    init_target_desc (tdesc, amd64_expedite_regs);
-  else
-#endif
-    init_target_desc (tdesc, i386_expedite_regs);
-}
+/* Return the AMD64 target descriptions corresponding to XCR0 and IS_X32.  */
+
+extern const target_desc *amd64_linux_read_description (uint64_t xcr0,
+							bool is_x32);
+
+#endif /* ARCH_AMD64_LINUX_TDESC_H */
