@@ -1192,6 +1192,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"v", "zve64d",	check_implicit_always},
   {"v", "zvl128b",	check_implicit_always},
   {"zabha", "a",	check_implicit_always},
+  {"zacas", "a",	check_implicit_always},
   {"zvfbfmin", "zve32f",	check_implicit_always},
   {"zvfbfwma", "zve32f",	check_implicit_always},
   {"zvfbfwma", "zfbfmin",	check_implicit_always},
@@ -1273,7 +1274,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zcb", "zca",	check_implicit_always},
   {"zcmp", "zca",	check_implicit_always},
   {"smaia", "ssaia",		check_implicit_always},
-  {"smscrind", "sscsrind",	check_implicit_always},
+  {"smcsrind", "sscsrind",	check_implicit_always},
   {"smcntrpmf", "zicsr",	check_implicit_always},
   {"smstateen", "ssstateen",	check_implicit_always},
   {"smepmp", "zicsr",		check_implicit_always},
@@ -1363,6 +1364,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zmmul",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zaamo",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zabha",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zacas",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zalrsc",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zawrs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zfbfmin",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1483,7 +1485,8 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0},
+  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2545,6 +2548,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zaamo");
     case INSN_CLASS_ZABHA:
       return riscv_subset_supports (rps, "zabha");
+    case INSN_CLASS_ZACAS:
+      return riscv_subset_supports (rps, "zacas");
     case INSN_CLASS_ZALRSC:
       return riscv_subset_supports (rps, "zalrsc");
     case INSN_CLASS_ZAWRS:
@@ -2732,6 +2737,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xventanacondops");
     case INSN_CLASS_XSFVCP:
       return riscv_subset_supports (rps, "xsfvcp");
+    case INSN_CLASS_XSFCEASE:
+      return riscv_subset_supports (rps, "xsfcease");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2785,6 +2792,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zaamo";
     case INSN_CLASS_ZABHA:
       return "zabha";
+    case INSN_CLASS_ZACAS:
+      return "zacas";
     case INSN_CLASS_ZALRSC:
       return "zalrsc";
     case INSN_CLASS_ZAWRS:
@@ -2998,6 +3007,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadvector";
     case INSN_CLASS_XTHEADZVAMO:
       return "xtheadzvamo";
+    case INSN_CLASS_XSFCEASE:
+      return "xsfcease";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

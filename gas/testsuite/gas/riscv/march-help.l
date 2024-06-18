@@ -23,6 +23,7 @@ All available -march extensions for RISC-V:
 	zmmul                                   1.0
 	zaamo                                   1.0
 	zabha                                   1.0
+	zacas                                   1.0
 	zalrsc                                  1.0
 	zawrs                                   1.0
 	zfbfmin                                 1.0
@@ -129,3 +130,4 @@ All available -march extensions for RISC-V:
 	xtheadzvamo                             1.0
 	xventanacondops                         1.0
 	xsfvcp                                  1.0
+	xsfcease                                1.0

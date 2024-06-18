@@ -2360,6 +2360,13 @@
 #define MASK_C_NTL_S1 0xffff
 #define MATCH_C_NTL_ALL 0x9016
 #define MASK_C_NTL_ALL 0xffff
+/* Zacas instructions.  */
+#define MATCH_AMOCAS_W 0x2800202f
+#define MASK_AMOCAS_W 0xf800707f
+#define MATCH_AMOCAS_D 0x2800302f
+#define MASK_AMOCAS_D 0xf800707f
+#define MATCH_AMOCAS_Q 0x2800402f
+#define MASK_AMOCAS_Q 0xf800707f
 /* Zawrs instructions.  */
 #define MATCH_WRS_NTO 0x00d00073
 #define MASK_WRS_NTO 0xffffffff
@@ -3148,6 +3155,9 @@
 #define MASK_SF_VC_FVW 0xfa00707f
 #define MATCH_SF_VC_V_FVW 0xf800505b
 #define MASK_SF_VC_V_FVW 0xfa00707f
+/* Vendor-specific (SiFive) cease instruction.  */
+#define MATCH_SF_CEASE 0x30500073
+#define MASK_SF_CEASE 0xffffffff
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -3998,6 +4008,10 @@ DECLARE_INSN(c_ntl_p1, MATCH_C_NTL_P1, MASK_C_NTL_P1)
 DECLARE_INSN(c_ntl_pall, MATCH_C_NTL_PALL, MASK_C_NTL_PALL)
 DECLARE_INSN(c_ntl_s1, MATCH_C_NTL_S1, MASK_C_NTL_S1)
 DECLARE_INSN(c_ntl_all, MATCH_C_NTL_ALL, MASK_C_NTL_ALL)
+/* Zacas instructions.  */
+DECLARE_INSN(amocas_w, MATCH_AMOCAS_W, MASK_AMOCAS_W)
+DECLARE_INSN(amocas_d, MATCH_AMOCAS_D, MASK_AMOCAS_D)
+DECLARE_INSN(amocas_q, MATCH_AMOCAS_Q, MASK_AMOCAS_Q)
 /* Zawrs instructions.  */
 DECLARE_INSN(wrs_nto, MATCH_WRS_NTO, MASK_WRS_NTO)
 DECLARE_INSN(wrs_sto, MATCH_WRS_STO, MASK_WRS_STO)

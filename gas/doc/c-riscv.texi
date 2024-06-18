@@ -740,28 +740,28 @@ extensions supported and provides the location of their
 publicly-released documentation:
 
 @table @r
-@item Xcvmac
-The Xcvmac extension provides instructions for multiply-accumulate operations.
+@item XCvMac
+The XCvMac extension provides instructions for multiply-accumulate operations.
 
 It is documented in @url{https://docs.openhwgroup.org/projects/cv32e40p-user-manual/en/latest/instruction_set_extensions.html}
 
-@item Xcvalu
-The Xcvalu extension provides instructions for general ALU operations.
+@item XCvAlu
+The XCvAlu extension provides instructions for general ALU operations.
 
 It is documented in @url{https://docs.openhwgroup.org/projects/cv32e40p-user-manual/en/latest/instruction_set_extensions.html}
 
-@item Xcvelw
-The Xcvelw extension provides instructions for event load word operations.
+@item XCvElw
+The XCvElw extension provides instructions for event load word operations.
 
 It is documented in @url{https://docs.openhwgroup.org/projects/cv32e40p-user-manual/en/latest/instruction_set_extensions.html}
 
-@item Xcvbi
-The Xcvbi extension provides instructions for branch immediate operations.
+@item XCvBi
+The XCvBi extension provides instructions for branch immediate operations.
 
 It is documented in @url{https://docs.openhwgroup.org/projects/cv32e40p-user-manual/en/latest/instruction_set_extensions.html}
 
-@item Xcvmem
-The Xcvmem extension provides instructions for post inc load/store operations.
+@item XCvMem
+The XCvMem extension provides instructions for post inc load/store operations.
 
 It is documented in @url{https://docs.openhwgroup.org/projects/cv32e40p-user-manual/en/latest/instruction_set_extensions.html}
 
@@ -849,5 +849,10 @@ vector coprocessor.  To accelerate performance, system designers may use
 VCIX as a low-latency, high-throughput interface to a coprocessor.
 
 It is documented in @url{https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf}.
+
+@item XSfCease
+XSfCease provides an instruction to instigates power-down sequence.
+
+It is documented in @url{https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf}.
 
 @end table
