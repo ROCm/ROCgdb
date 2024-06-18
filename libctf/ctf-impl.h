@@ -294,7 +294,8 @@ typedef struct ctf_dedup
   ctf_dynhash_t *cd_decorated_names[4];
 
   /* Map type names to a hash from type hash value -> number of times each value
-     has appeared.  */
+     has appeared.  Enumeration constants are tracked via the enum they appear
+     in.  */
   ctf_dynhash_t *cd_name_counts;
 
   /* Map global type IDs to type hash values.  Used to determine if types are
@@ -386,7 +387,8 @@ struct ctf_dict
   ctf_dynhash_t *ctf_structs;	    /* Hash table of struct types.  */
   ctf_dynhash_t *ctf_unions;	    /* Hash table of union types.  */
   ctf_dynhash_t *ctf_enums;	    /* Hash table of enum types.  */
-  ctf_dynhash_t *ctf_names;	    /* Hash table of remaining type names.  */
+  ctf_dynhash_t *ctf_names;	    /* Hash table of remaining types, plus
+				       enumeration constants.  */
   ctf_lookup_t ctf_lookups[5];	    /* Pointers to nametabs for name lookup.  */
   ctf_strs_t ctf_str[2];	    /* Array of string table base and bounds.  */
   ctf_strs_writable_t *ctf_dynstrtab; /* Dynamically allocated string table, if any. */
@@ -406,6 +408,7 @@ struct ctf_dict
   uint32_t *ctf_pptrtab;	  /* Parent types pointed to by child dicts.  */
   size_t ctf_pptrtab_len;	  /* Num types storable in pptrtab currently.  */
   uint32_t ctf_pptrtab_typemax;	  /* Max child type when pptrtab last updated.  */
+  ctf_dynset_t *ctf_conflicting_enums;	/* Tracks enum constants that conflict.  */
   uint32_t *ctf_funcidx_names;	  /* Name of each function symbol in symtypetab
 				     (if indexed).  */
   uint32_t *ctf_objtidx_names;	  /* Likewise, for object symbols.  */
@@ -541,13 +544,15 @@ struct ctf_next
   uint32_t ctn_n;
 
   /* Some iterators contain other iterators, in addition to their other
-     state.  */
+     state.  We allow for inner and outer iterators, for two-layer nested loops
+     like those found in ctf_arc_lookup_enumerator_next.  */
   ctf_next_t *ctn_next;
+  ctf_next_t *ctn_next_inner;
 
-  /* We can save space on this side of things by noting that a dictionary is
-     either dynamic or not, as a whole, and a given iterator can only iterate
-     over one kind of thing at once: so we can overlap the DTD and non-DTD
-     members, and the structure, variable and enum members, etc.  */
+  /* We can save space on this side of things by noting that a type is either
+     dynamic or not, as a whole, and a given iterator can only iterate over one
+     kind of thing at once: so we can overlap the DTD and non-DTD members, and
+     the structure, variable and enum members, etc.  */
   union
   {
     unsigned char *ctn_vlen;
@@ -557,11 +562,13 @@ struct ctf_next
     void **ctn_hash_slot;
   } u;
 
-  /* This union is of various sorts of dict we can iterate over:
-     currently dictionaries and archives, dynhashes, and dynsets.  */
+  /* This union is of various sorts of dict we can iterate over: currently
+     archives, dictionaries, dynhashes, and dynsets.  ctn_fp is non-const
+     because we need to set errors on it.  */
+
   union
   {
-    const ctf_dict_t *ctn_fp;
+    ctf_dict_t *ctn_fp;
     const ctf_archive_t *ctn_arc;
     const ctf_dynhash_t *ctn_h;
     const ctf_dynset_t *ctn_s;
@@ -668,6 +675,7 @@ extern int ctf_dynhash_next_sorted (ctf_dynhash_t *, ctf_next_t **,
 extern ctf_dynset_t *ctf_dynset_create (htab_hash, htab_eq, ctf_hash_free_fun);
 extern int ctf_dynset_insert (ctf_dynset_t *, void *);
 extern void ctf_dynset_remove (ctf_dynset_t *, const void *);
+extern size_t ctf_dynset_elements (ctf_dynset_t *);
 extern void ctf_dynset_destroy (ctf_dynset_t *);
 extern void *ctf_dynset_lookup (ctf_dynset_t *, const void *);
 extern int ctf_dynset_exists (ctf_dynset_t *, const void *key,
