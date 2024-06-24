@@ -402,6 +402,12 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	  info->reglane.index = extract_fields (code, 0, 2, FLD_H, FLD_L);
 	  info->reglane.regno &= 0x1f;
 	  break;
+	case AARCH64_OPND_QLF_S_2B:
+	  /* h:l:m */
+	  info->reglane.index = extract_fields (code, 0, 3, FLD_H, FLD_L,
+						FLD_M);
+	  info->reglane.regno &= 0xf;
+	  break;
 	default:
 	  return false;
 	}
@@ -422,7 +428,15 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	return 0;
       switch (info->qualifier)
 	{
+	case AARCH64_OPND_QLF_S_B:
+	  /* H:imm3 */
+	  info->reglane.index = extract_fields (code, 0, 2, FLD_H,
+						FLD_imm3_19);
+	  info->reglane.regno &= 0x7;
+	  break;
+
 	case AARCH64_OPND_QLF_S_H:
+	case AARCH64_OPND_QLF_S_2B:
 	  if (info->type == AARCH64_OPND_Em16)
 	    {
 	      /* h:l:m */
@@ -437,6 +451,7 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	    }
 	  break;
 	case AARCH64_OPND_QLF_S_S:
+	case AARCH64_OPND_QLF_S_4B:
 	  /* h:l */
 	  info->reglane.index = extract_fields (code, 0, 2, FLD_H, FLD_L);
 	  break;
@@ -3413,6 +3428,12 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       if (variant != 1 && variant != 2)
 	return false;
       variant -= 1;
+      break;
+
+    case sme_size_12_b:
+      variant = extract_field (FLD_SME_size_12, inst->value, 0);
+      if (variant != 0)
+	return false;
       break;
 
     case sme_size_22:

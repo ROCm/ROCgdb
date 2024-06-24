@@ -240,6 +240,35 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_LUT,
   /* Branch Record Buffer Extension */
   AARCH64_FEATURE_BRBE,
+  /* SME LUTv2 instructions.  */
+  AARCH64_FEATURE_SME_LUTv2,
+  /* FP8FMA instructions.  */
+  AARCH64_FEATURE_FP8FMA,
+  /* FP8DOT4 instructions.  */
+  AARCH64_FEATURE_FP8DOT4,
+  /* FP8DOT2 instructions.  */
+  AARCH64_FEATURE_FP8DOT2,
+  /* SSVE FP8FMA instructions.  */
+  AARCH64_FEATURE_SSVE_FP8FMA,
+  /* SSVE FP8DOT4 instructions.  */
+  AARCH64_FEATURE_SSVE_FP8DOT4,
+  /* SSVE FP8DOT2 instructions.  */
+  AARCH64_FEATURE_SSVE_FP8DOT2,
+  /* SME F8F32 instructions.  */
+  AARCH64_FEATURE_SME_F8F32,
+  /* SME F8F16 instructions.  */
+  AARCH64_FEATURE_SME_F8F16,
+
+  /* Virtual features.  These are used to gate instructions that are enabled
+     by either of two (or more) sets of command line flags.  */
+  /* +fp8fma+sve or +ssve-fp8fma  */
+  AARCH64_FEATURE_FP8FMA_SVE,
+  /* +fp8dot4+sve or +ssve-fp8dot4  */
+  AARCH64_FEATURE_FP8DOT4_SVE,
+  /* +fp8dot2+sve or +ssve-fp8dot2  */
+  AARCH64_FEATURE_FP8DOT2_SVE,
+  /* +sme-f16f16 or +sme-f8f16  */
+  AARCH64_FEATURE_SME_F16F16_F8F16,
   AARCH64_NUM_FEATURES
 };
 
@@ -527,7 +556,9 @@ enum aarch64_opnd
   AARCH64_OPND_En,	/* AdvSIMD Vector Element Vn.  */
   AARCH64_OPND_Em,	/* AdvSIMD Vector Element Vm.  */
   AARCH64_OPND_Em16,	/* AdvSIMD Vector Element Vm restricted to V0 - V15 when
-			   qualifier is S_H.  */
+			   qualifier is S_H or S_2B.  */
+  AARCH64_OPND_Em8,	/* AdvSIMD Vector Element Vm restricted to V0 - V7,
+			   used only with qualifier S_B.  */
   AARCH64_OPND_Em_INDEX1_14,  /* AdvSIMD 1-bit encoded index in Vm at [14]  */
   AARCH64_OPND_Em_INDEX2_13,  /* AdvSIMD 2-bit encoded index in Vm at [14:13]  */
   AARCH64_OPND_Em_INDEX3_12,  /* AdvSIMD 3-bit encoded index in Vm at [14:12]  */
@@ -749,6 +780,7 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_Zm3_12_INDEX, /* SVE bit index in Zm, bits 12 plus bit [23,22].  */
   AARCH64_OPND_SVE_Zm3_19_INDEX, /* z0-z7[0-3] in Zm3_INDEX plus bit 19.  */
   AARCH64_OPND_SVE_Zm3_22_INDEX, /* z0-z7[0-7] in Zm3_INDEX plus bit 22.  */
+  AARCH64_OPND_SVE_Zm3_10_INDEX, /* z0-z7[0-15] in Zm3_INDEX plus bit 11:10.  */
   AARCH64_OPND_SVE_Zm4_11_INDEX, /* z0-z15[0-3] in Zm plus bit 11.  */
   AARCH64_OPND_SVE_Zm_imm4,     /* SVE vector register with 4bit index.  */
   AARCH64_OPND_SVE_Zm4_INDEX,	/* z0-z15[0-1] in Zm, bits [20,16].  */
@@ -760,13 +792,16 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ZtxN,	/* SVE vector register list in Zt.  */
   AARCH64_OPND_SME_Zdnx2,	/* SVE vector register list from [4:1]*2.  */
   AARCH64_OPND_SME_Zdnx4,	/* SVE vector register list from [4:2]*4.  */
+  AARCH64_OPND_SME_Zdnx4_STRIDED, /* SVE vector register list from [4:2]*4.  */
   AARCH64_OPND_SME_Zm,		/* SVE vector register list in 4-bit Zm.  */
   AARCH64_OPND_SME_Zmx2,	/* SVE vector register list from [20:17]*2.  */
   AARCH64_OPND_SME_Zmx4,	/* SVE vector register list from [20:18]*4.  */
   AARCH64_OPND_SME_Znx2,	/* SVE vector register list from [9:6]*2.  */
+  AARCH64_OPND_SME_Znx2_BIT_INDEX, /* SVE vector register list encoding a bit index from [9:6]*2.  */
   AARCH64_OPND_SME_Znx4,	/* SVE vector register list from [9:7]*4.  */
   AARCH64_OPND_SME_Ztx2_STRIDED, /* SVE vector register list in [4:0]&23.  */
   AARCH64_OPND_SME_Ztx4_STRIDED, /* SVE vector register list in [4:0]&19.  */
+  AARCH64_OPND_SME_ZAda_1b,	/* SME <ZAda>.H, 1-bits.  */
   AARCH64_OPND_SME_ZAda_2b,	/* SME <ZAda>.S, 2-bits.  */
   AARCH64_OPND_SME_ZAda_3b,	/* SME <ZAda>.D, 3-bits.  */
   AARCH64_OPND_SME_ZA_HV_idx_src,	/* SME source ZA tile vector.  */
@@ -797,10 +832,14 @@ enum aarch64_opnd
   AARCH64_OPND_SME_SHRIMM5,	    /* size + 5-bit right shift, bits [23:22,20:16].  */
   AARCH64_OPND_SME_Zm_INDEX1,	    /* Zn.T[index], bits [19:16,10].  */
   AARCH64_OPND_SME_Zm_INDEX2,	    /* Zn.T[index], bits [19:16,11:10].  */
+  AARCH64_OPND_SME_Zm_INDEX2_3,	    /* Zn.T[index], bits [19:16,10,3].  */
   AARCH64_OPND_SME_Zm_INDEX3_1,     /* Zn.T[index], bits [19:16,10,2:1].  */
   AARCH64_OPND_SME_Zm_INDEX3_2,     /* Zn.T[index], bits [19:16,11:10,2].  */
+  AARCH64_OPND_SME_Zm_INDEX3_3,     /* Zn.T[index], bits [19:16,11:10,3].  */
   AARCH64_OPND_SME_Zm_INDEX3_10,    /* Zn.T[index], bits [19:16,15,11:10].  */
   AARCH64_OPND_SME_Zm_INDEX4_1,     /* Zn.T[index], bits [19:16,11:10,2:1].  */
+  AARCH64_OPND_SME_Zm_INDEX4_2,     /* Zn.T[index], bits [19:16,11:10,3:2].  */
+  AARCH64_OPND_SME_Zm_INDEX4_3,     /* Zn.T[index], bits [19:16,15,11,10,3].  */
   AARCH64_OPND_SME_Zm_INDEX4_10,    /* Zn.T[index], bits [19:16,15,12:10].  */
   AARCH64_OPND_SME_Zn_INDEX1_16,    /* Zn[index], bits [9:5] and [16:16].  */
   AARCH64_OPND_SME_Zn_INDEX2_15,    /* Zn[index], bits [9:5] and [16:15].  */
@@ -812,6 +851,7 @@ enum aarch64_opnd
   AARCH64_OPND_SME_VLxN_13,	/* VLx2 or VLx4, in bit 13.  */
   AARCH64_OPND_SME_ZT0,		/* The fixed token zt0/ZT0 (not encoded).  */
   AARCH64_OPND_SME_ZT0_INDEX,	/* ZT0[<imm>], bits [14:12].  */
+  AARCH64_OPND_SME_ZT0_INDEX2_12, /* ZT0[<imm>], bits [13:12].  */
   AARCH64_OPND_SME_ZT0_LIST,	/* { zt0/ZT0 } (not encoded).  */
   AARCH64_OPND_TME_UIMM16,	/* TME unsigned 16-bit immediate.  */
   AARCH64_OPND_SM3_IMM2,	/* SM3 encodes lane in bits [13, 14].  */
@@ -863,11 +903,12 @@ enum aarch64_opnd_qualifier
   AARCH64_OPND_QLF_S_S,
   AARCH64_OPND_QLF_S_D,
   AARCH64_OPND_QLF_S_Q,
-  /* These type qualifiers have a special meaning in that they mean 4 x 1 byte
-     or 2 x 2 byte are selected by the instruction.  Other than that they have
-     no difference with AARCH64_OPND_QLF_S_B in encoding.  They are here purely
-     for syntactical reasons and is an exception from normal AArch64
-     disassembly scheme.  */
+  /* These type qualifiers have a special meaning in that they mean 2 x 1 byte,
+     4 x 1 byte or 2 x 2 byte are selected by the instruction.  Other than that
+     they have no difference with AARCH64_OPND_QLF_S_B in encoding.  They are
+     here purely for syntactical reasons and is an exception from normal
+     AArch64 disassembly scheme.  */
+  AARCH64_OPND_QLF_S_2B,
   AARCH64_OPND_QLF_S_4B,
   AARCH64_OPND_QLF_S_2H,
 
@@ -1003,6 +1044,7 @@ enum aarch64_insn_class
   sme_shift,
   sme_size_12_bhs,
   sme_size_12_hs,
+  sme_size_12_b,
   sme_size_22,
   sme_size_22_hsd,
   sme_sz_23,
