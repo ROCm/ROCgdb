@@ -1,6 +1,7 @@
 #! /usr/bin/perl -w
 
 #   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GCC.
 
@@ -202,7 +203,8 @@ while(<$inf>) {
 
     # Character entities.  First the ones that can be replaced by raw text
     # or discarded outright:
-    s/\@copyright\{\}/(c)/g;
+    s/\@copyright\{\}/©/g;
+    s/\@registeredsymbol\{\}/®/g;
     s/\@dots\{\}/.../g;
     s/\@enddots\{\}/..../g;
     s/\@([.!? ])/$1/g;
@@ -341,6 +343,8 @@ die "No filename or title\n" unless defined $fn && defined $tl;
 
 $sects{NAME} = "$fn \- $tl\n";
 $sects{FOOTNOTES} .= "=back\n" if exists $sects{FOOTNOTES};
+
+print "=encoding utf-8\n\n";
 
 for $sect (qw(NAME SYNOPSIS TARGET DESCRIPTION OPTIONS ENVIRONMENT FILES
 	      BUGS NOTES FOOTNOTES SEEALSO AUTHOR COPYRIGHT)) {
