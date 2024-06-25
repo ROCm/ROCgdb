@@ -175,9 +175,9 @@ TEXI2POD = perl $(srcdir)/../../etc/texi2pod.pl \
 		$(MAKEINFOFLAGS) $(MAKEINFO_EXTRA_FLAGS)
 
 POD2MAN1 = pod2man --center="GNU Development Tools" \
-		   --release="gdb-`sed q version.subst`" --section=1
+		   --release="gdb-`sed q version.subst`" --section=1 --utf8
 POD2MAN5 = pod2man --center="GNU Development Tools" \
-		   --release="gdb-`sed q version.subst`" --section=5
+		   --release="gdb-`sed q version.subst`" --section=5 --utf8
 
 # List of man pages generated from gdb.texi
 MAN1S = gdb.1 gdbserver.1 gcore.1 gdb-add-index.1
