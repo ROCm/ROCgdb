@@ -72,6 +72,7 @@ TEXI2ROFF=texi2roff
 TEXI2DVI=texi2dvi
 TEXI2DVI_TMPDIR=texi2dvi_tmpdir
 TEXI2DVI_CMD = rm -fr $(TEXI2DVI_TMPDIR)/$(subst .,_,$@) \
+		&& mkdir -p $(TEXI2DVI_TMPDIR)/$(subst .,_,$@) \
 		&& $(TEXI2DVI) --build=tidy \
 			       --build-dir=$(TEXI2DVI_TMPDIR)/$(subst .,_,$@)
 
@@ -247,7 +248,7 @@ Doxyfile-gdb-xref:	$(srcdir)/Doxyfile-gdb-xref.in
 Doxyfile-gdbserver:	$(srcdir)/Doxyfile-gdbserver.in
 	$(doxyedit) $(srcdir)/Doxyfile-gdbserver.in >Doxyfile-gdbserver
 
-all-doc: info dvi ps pdf
+all-doc: info man dvi ps pdf html
 diststuff: info man
 
 install-info: $(INFO_DEPS)
