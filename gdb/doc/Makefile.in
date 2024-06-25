@@ -185,7 +185,6 @@ MANCONF = -Dman
 TEXI2POD = perl $(srcdir)/../../etc/texi2pod.pl \
 		$(MAKEINFOFLAGS) $(MAKEINFO_EXTRA_FLAGS) -I $(srcdir)
 
-
 POD2MAN = pod2man --center="GNU Development Tools"
 
 # List of man pages generated from gdb.texi
@@ -651,7 +650,7 @@ $(MAN1S) $(MAN5S) : version.subst $(GDB_DOC_FILES)
 	$(ECHO_TEXI2POD) $(TEXI2POD) $(MANCONF) -D$(basename $@) \
 		< $(srcdir)/gdb.texinfo > $(basename $@).pod
 	$(ECHO_TEXI2MAN) ($(POD2MAN) --section=$(subst .,,$(suffix $@)) \
-			--release="gdb-`sed q $<`" $(basename $@).pod | \
+			--release="gdb-`sed q $<`" --utf8 $(basename $@).pod | \
 		sed -e '/^.if n .na/d' > $@.T$$$$ && \
 		mv -f $@.T$$$$ $@) || (rm -f $@.T$$$$ && exit 1)
 	$(SILENCE) rm -f $(basename $@).pod
