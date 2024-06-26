@@ -1600,15 +1600,18 @@ value::copy () const
       if (length == 0)
 	length = val->enclosing_type ()->length ();
 
-      gdb_assert (m_contents != nullptr);
-      const auto &arg_view
-	= gdb::make_array_view (m_contents.get (), length);
+      if (length != 0)
+	{
+	  gdb_assert (m_contents != nullptr);
+	  const auto &arg_view
+	    = gdb::make_array_view (m_contents.get (), length);
 
-      val->allocate_contents (false);
-      gdb::array_view<gdb_byte> val_contents
-	= val->contents_all_raw ().slice (0, length);
+	  val->allocate_contents (false);
+	  gdb::array_view<gdb_byte> val_contents
+	    = val->contents_all_raw ().slice (0, length);
 
-      gdb::copy (arg_view, val_contents);
+	  gdb::copy (arg_view, val_contents);
+	}
     }
 
   val->m_scope = m_scope;

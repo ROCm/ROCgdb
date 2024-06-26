@@ -451,8 +451,8 @@ proc dwarf_assemble {stmt_list_offset} {
 		    } SPECIAL_expr}
 		} {
 		    DW_TAG_formal_parameter {
-			{DW_AT_type :$unsigned_label}
-			{DW_AT_name gid}
+			{DW_AT_type :$int_label}
+			{DW_AT_name val}
 			{DW_AT_location {
 			    # V0 in 64-bit wavefront mode.
 			    DW_OP_regx 2560
@@ -462,18 +462,18 @@ proc dwarf_assemble {stmt_list_offset} {
 			    DW_OP_LLVM_offset
 			} SPECIAL_expr}
 		    }
-		    DW_TAG_formal_parameter {
-			{DW_AT_type :$pointer_label}
-			{DW_AT_name parray}
-			{DW_AT_location {
-			    # V1 in 64-bit wavefront mode.
-			    DW_OP_regx 2561
-			    DW_OP_LLVM_push_lane
-			    DW_OP_constu 0x4
-			    DW_OP_mul
-			    DW_OP_LLVM_offset
-			} SPECIAL_expr}
-		    }
+#		    DW_TAG_formal_parameter {
+#			{DW_AT_type :$pointer_label}
+#			{DW_AT_name parray}
+#			{DW_AT_location {
+#			    # V1 in 64-bit wavefront mode.
+#			    DW_OP_regx 2561
+#			    DW_OP_LLVM_push_lane
+#			    DW_OP_constu 0x4
+#			    DW_OP_mul
+#			    DW_OP_LLVM_offset
+#			} SPECIAL_expr}
+#		    }
 		}
 
 		DW_TAG_subprogram {
@@ -483,8 +483,8 @@ proc dwarf_assemble {stmt_list_offset} {
 		    } SPECIAL_expr}
 		} {
 		    DW_TAG_formal_parameter {
-			{DW_AT_type :$unsigned_label}
-			{DW_AT_name gid}
+			{DW_AT_type :$int_label}
+			{DW_AT_name val}
 			{DW_AT_location {
 			    # V0 in 64-bit wavefront mode.
 			    DW_OP_regx 2560
@@ -494,27 +494,27 @@ proc dwarf_assemble {stmt_list_offset} {
 			    DW_OP_LLVM_offset
 			} SPECIAL_expr}
 		    }
-		    DW_TAG_formal_parameter {
-			{DW_AT_type :$pointer_label}
-			{DW_AT_name parray}
-			{DW_AT_location {
-			    # V1 in 64-bit wavefront mode.
-			    DW_OP_regx 2561
-			    DW_OP_LLVM_push_lane
-			    DW_OP_constu 0x4
-			    DW_OP_mul
-			    DW_OP_LLVM_offset
-			} SPECIAL_expr}
-		    }
+#		    DW_TAG_formal_parameter {
+#			{DW_AT_type :$pointer_label}
+#			{DW_AT_name parray}
+#			{DW_AT_location {
+#			    # V1 in 64-bit wavefront mode.
+#			    DW_OP_regx 2561
+#			    DW_OP_LLVM_push_lane
+#			    DW_OP_constu 0x4
+#			    DW_OP_mul
+#			    DW_OP_LLVM_offset
+#			} SPECIAL_expr}
+#		    }
 		}
 
 		inactive_on_entry "get_global_id"
-		inactive_on_entry "__HIP_BlockDim::operator()(unsigned int) const"
-		inactive_on_entry "__HIP_BlockIdx::operator()(unsigned int) const"
-		inactive_on_entry "__HIP_Coordinates<__HIP_BlockDim>::__X::operator unsigned int() const"
-		inactive_on_entry "__HIP_Coordinates<__HIP_BlockIdx>::__X::operator unsigned int() const"
-		inactive_on_entry "__HIP_Coordinates<__HIP_ThreadIdx>::__X::operator unsigned int() const"
-		inactive_on_entry "__HIP_ThreadIdx::operator()(unsigned int) const"
+#		inactive_on_entry "__HIP_BlockDim::operator()(unsigned int) const"
+#		inactive_on_entry "__HIP_BlockIdx::operator()(unsigned int) const"
+#		inactive_on_entry "__HIP_Coordinates<__HIP_BlockDim>::__X::operator unsigned int() const"
+#		inactive_on_entry "__HIP_Coordinates<__HIP_BlockIdx>::__X::operator unsigned int() const"
+#		inactive_on_entry "__HIP_Coordinates<__HIP_ThreadIdx>::__X::operator unsigned int() const"
+#		inactive_on_entry "__HIP_ThreadIdx::operator()(unsigned int) const"
 	    }
 	}
 

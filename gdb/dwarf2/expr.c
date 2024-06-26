@@ -3044,8 +3044,18 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
   else
     entry = entry->to_location (this->m_per_objfile->objfile->arch ());
 
-  value *result = entry->to_gdb_value (this->m_frame, type,
-				       subobj_type, subobj_offset);
+  value *result;
+  auto regg = std::dynamic_pointer_cast<dwarf_register> (entry);
+  if (regg != nullptr)
+    {
+      result = regg->to_gdb_value (this->m_frame, type,
+				   subobj_type, subobj_offset);
+    }
+  else
+    {
+      result = entry->to_gdb_value (this->m_frame, type,
+				    subobj_type, subobj_offset);
+    }
 
   result->set_scope (this->m_scope | result->scope ());
   return result;
