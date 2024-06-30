@@ -19,7 +19,7 @@ dnl
 
 m4_include([../bfd/version.m4])
 m4_include([../config/debuginfod.m4])
-AC_INIT([binutils], BFD_VERSION)
+AC_INIT([binutils], [BFD_VERSION])
 AC_CONFIG_SRCDIR(ar.c)
 
 AC_CANONICAL_TARGET
@@ -28,7 +28,6 @@ AM_INIT_AUTOMAKE
 AM_SILENT_RULES([yes])
 
 AC_PROG_CC
-AC_GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_C_BIGENDIAN
@@ -292,7 +291,7 @@ BFD_BINARY_FOPEN
 
 # Support for the msgpack C library.
 AC_ARG_WITH([msgpack],
-	    AC_HELP_STRING([--with-msgpack], [Enable msgpack support (auto/yes/no)]),
+	    AS_HELP_STRING([--with-msgpack], [Enable msgpack support (auto/yes/no)]),
 	    [],
 	    [with_msgpack=auto])
 

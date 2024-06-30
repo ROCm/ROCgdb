@@ -17,7 +17,7 @@ dnl along with this program; see the file COPYING3.  If not see
 dnl <http://www.gnu.org/licenses/>.
 dnl
 m4_include([../bfd/version.m4])
-AC_INIT([gprof], BFD_VERSION)
+AC_INIT([gprof], [BFD_VERSION])
 AC_CONFIG_SRCDIR([gprof.c])
 
 AC_CANONICAL_TARGET([])
@@ -32,7 +32,6 @@ dnl config.h, to avoid any possible confusion with the bfd config.h.
 AC_CONFIG_HEADERS([gconfig.h:gconfig.in])
 
 AC_PROG_CC
-AC_GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_INSTALL
 

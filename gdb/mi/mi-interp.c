@@ -22,6 +22,7 @@
 #include "mi-interp.h"
 
 #include "arch-utils.h"
+#include "exceptions.h"
 #include "interps.h"
 #include "event-top.h"
 #include "gdbsupport/event-loop.h"
@@ -134,8 +135,6 @@ mi_interp::resume ()
   gdb_stdlog = mi->log;
   /* Route target output through the MI.  */
   gdb_stdtarg = mi->targ;
-  /* Route target error through the MI as well.  */
-  gdb_stdtargerr = mi->targ;
 
   deprecated_show_load_progress = mi_load_progress;
 }

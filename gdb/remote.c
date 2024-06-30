@@ -22,6 +22,7 @@
 
 #include <ctype.h>
 #include <fcntl.h>
+#include "exceptions.h"
 #include "inferior.h"
 #include "infrun.h"
 #include "bfd.h"
@@ -79,6 +80,7 @@
 #include <unordered_map>
 #include "async-event.h"
 #include "gdbsupport/selftest.h"
+#include "cli/cli-style.h"
 
 /* The remote target.  */
 
@@ -223,7 +225,7 @@ private:
 
   /* True if we have a textual error message, from an "E.MESSAGE"
      response.  */
-  bool m_textual_err_msg;
+  bool m_textual_err_msg = false;
 };
 
 /* Enumeration of packets for a remote target.  */
@@ -377,6 +379,18 @@ enum {
 
   /* Support for the qIsAddressTagged packet.  */
   PACKET_qIsAddressTagged,
+
+  /* Support for accepting error message in a E.errtext format.
+     This allows every remote packet to return E.errtext.
+
+     This feature only exists to fix a backwards compatibility issue
+     with the qRcmd and m packets.  Historically, these two packets didn't
+     support E.errtext style errors, but when this feature is on
+     these two packets can receive E.errtext style errors.
+
+     All new packets should be written to always accept E.errtext style
+     errors, and so they should not need to check for this feature.  */
+  PACKET_accept_error_message,
 
   PACKET_MAX
 };
@@ -966,7 +980,7 @@ public:
 
   int async_wait_fd () override;
 
-  void thread_events (int) override;
+  void thread_events (bool) override;
 
   bool supports_set_thread_options (gdb_thread_options) override;
 
@@ -2494,10 +2508,9 @@ add_packet_config_cmd (const unsigned int which_packet, const char *name,
    PACKET_ERROR case.
 
    An error packet can always take the form Exx (where xx is a hex
-   code).  When ACCEPT_MSG is true error messages can also take the
-   form E.msg (where msg is any arbitrary string).  */
+   code).  */
 static packet_result
-packet_check_result (const char *buf, bool accept_msg)
+packet_check_result (const char *buf)
 {
   if (buf[0] != '\0')
     {
@@ -2512,17 +2525,14 @@ packet_check_result (const char *buf, bool accept_msg)
       /* Not every request accepts an error in a E.msg form.
 	 Some packets accepts only Enn, in this case E. is not
 	 defined and E. is treated as PACKET_OK.  */
-      if (accept_msg)
+      /* Always treat "E." as an error.  This will be used for
+	 more verbose error messages, such as E.memtypes.  */
+      if (buf[0] == 'E' && buf[1] == '.')
 	{
-	  /* Always treat "E." as an error.  This will be used for
-	     more verbose error messages, such as E.memtypes.  */
-	  if (buf[0] == 'E' && buf[1] == '.')
-	    {
-	      if (buf[2] != '\0')
-		return packet_result::make_textual_error (buf + 2);
-	      else
-		return packet_result::make_textual_error ("no error provided");
-	    }
+	  if (buf[2] != '\0')
+	    return packet_result::make_textual_error (buf + 2);
+	  else
+	    return packet_result::make_textual_error ("no error provided");
 	}
 
       /* The packet may or may not be OK.  Just assume it is.  */
@@ -2536,9 +2546,9 @@ packet_check_result (const char *buf, bool accept_msg)
 }
 
 static packet_result
-packet_check_result (const gdb::char_vector &buf, bool accept_msg)
+packet_check_result (const gdb::char_vector &buf)
 {
-  return packet_check_result (buf.data (), accept_msg);
+  return packet_check_result (buf.data ());
 }
 
 packet_result
@@ -2551,7 +2561,7 @@ remote_features::packet_ok (const char *buf, const int which_packet)
       && config->support == PACKET_DISABLE)
     internal_error (_("packet_ok: attempt to use a disabled packet"));
 
-  packet_result result = packet_check_result (buf, true);
+  packet_result result = packet_check_result (buf);
   switch (result.status ())
     {
     case PACKET_OK:
@@ -2864,7 +2874,7 @@ remote_target::remote_add_inferior (bool fake_pid_p, int pid, int attached,
 
   /* If no main executable is currently open then attempt to
      open the file that was executed to create this inferior.  */
-  if (try_open_exec && get_exec_file (0) == NULL)
+  if (try_open_exec && current_program_space->exec_filename () == nullptr)
     exec_file_locate_attach (pid, 0, 1);
 
   /* Check for exec file mismatch, and let the user solve it.  */
@@ -5812,6 +5822,8 @@ static const struct protocol_feature remote_protocol_features[] = {
   { "no-resumed", PACKET_DISABLE, remote_supported_packet, PACKET_no_resumed },
   { "memory-tagging", PACKET_DISABLE, remote_supported_packet,
     PACKET_memory_tagging_feature },
+  { "error-message", PACKET_ENABLE, remote_supported_packet,
+    PACKET_accept_error_message },
 };
 
 static char *remote_support_xml;
@@ -5929,6 +5941,10 @@ remote_target::remote_query_supported ()
 	  && (m_features.packet_support (PACKET_qXfer_features)
 	      != PACKET_DISABLE))
 	remote_query_supported_append (&q, remote_support_xml);
+
+      if (m_features.packet_set_cmd_state (PACKET_accept_error_message)
+	  != AUTO_BOOLEAN_FALSE)
+      remote_query_supported_append (&q, "error-message+");
 
       q = "qSupported:" + q;
       putpkt (q.c_str ());
@@ -8884,7 +8900,7 @@ remote_target::send_g_packet ()
   xsnprintf (rs->buf.data (), get_remote_packet_size (), "g");
   putpkt (rs->buf);
   getpkt (&rs->buf);
-  packet_result result = packet_check_result (rs->buf, true);
+  packet_result result = packet_check_result (rs->buf);
   if (result.status () == PACKET_ERROR)
     error (_("Could not read registers; remote failure reply '%s'"),
 	   result.err_msg ());
@@ -9194,7 +9210,7 @@ remote_target::store_registers_using_G (const struct regcache *regcache)
   bin2hex (regs, p, rsa->sizeof_g_packet);
   putpkt (rs->buf);
   getpkt (&rs->buf);
-  packet_result pkt_status = packet_check_result (rs->buf, true);
+  packet_result pkt_status = packet_check_result (rs->buf);
   if (pkt_status.status () == PACKET_ERROR)
     error (_("Could not write registers; remote failure reply '%s'"),
 	   pkt_status.err_msg ());
@@ -9646,7 +9662,7 @@ remote_target::remote_read_bytes_1 (CORE_ADDR memaddr, gdb_byte *myaddr,
   *p = '\0';
   putpkt (rs->buf);
   getpkt (&rs->buf);
-  packet_result result = packet_check_result (rs->buf, false);
+  packet_result result = packet_check_result (rs->buf);
   if (result.status () == PACKET_ERROR)
     return TARGET_XFER_E_IO;
   /* Reply describes memory byte by byte, each byte encoded as two hex
@@ -9801,7 +9817,7 @@ remote_target::remote_send_printf (const char *format, ...)
   rs->buf[0] = '\0';
   getpkt (&rs->buf);
 
-  return packet_check_result (rs->buf, true).status ();
+  return packet_check_result (rs->buf).status ();
 }
 
 /* Flash writing can take quite some time.  We'll set
@@ -11994,7 +12010,7 @@ remote_target::rcmd (const char *command, struct ui_file *outbuf)
 	  remote_console_output (buf + 1, outbuf);
 	  continue;
 	}
-      packet_result result = packet_check_result (buf, false);
+      packet_result result = packet_check_result (buf);
       switch (result.status ())
 	{
 	case PACKET_UNKNOWN:
@@ -12655,6 +12671,9 @@ remote_target::remote_hostio_send_command (int command_bytes, int which_packet,
       return -1;
     }
 
+  if (*remote_errno != FILEIO_SUCCESS)
+    return -1;
+
   /* Make sure we saw an attachment if and only if we expected one.  */
   if ((attachment_tmp == NULL && attachment != NULL)
       || (attachment_tmp != NULL && attachment == NULL))
@@ -12740,22 +12759,6 @@ remote_target::remote_hostio_open (inferior *inf, const char *filename,
   char *p = rs->buf.data ();
   int left = get_remote_packet_size () - 1;
 
-  if (warn_if_slow)
-    {
-      static int warning_issued = 0;
-
-      gdb_printf (_("Reading %s from remote target...\n"),
-		  filename);
-
-      if (!warning_issued)
-	{
-	  warning (_("File transfers from remote targets can be slow."
-		     " Use \"set sysroot\" to access files locally"
-		     " instead."));
-	  warning_issued = 1;
-	}
-    }
-
   if (remote_hostio_set_filesystem (inf, remote_errno) != 0)
     return -1;
 
@@ -12770,8 +12773,26 @@ remote_target::remote_hostio_open (inferior *inf, const char *filename,
 
   remote_buffer_add_int (&p, &left, mode);
 
-  return remote_hostio_send_command (p - rs->buf.data (), PACKET_vFile_open,
-				     remote_errno, NULL, NULL);
+  int res = remote_hostio_send_command (p - rs->buf.data (), PACKET_vFile_open,
+					remote_errno, nullptr, nullptr);
+
+  if (warn_if_slow && res != -1)
+    {
+      static int warning_issued = 0;
+
+      gdb_printf (_("Reading %ps from remote target...\n"),
+		  styled_string (file_name_style.style (), filename));
+
+      if (!warning_issued)
+	{
+	  warning (_("File transfers from remote targets can be slow."
+		     " Use \"set sysroot\" to access files locally"
+		     " instead."));
+	  warning_issued = 1;
+	}
+    }
+
+  return res;
 }
 
 int
@@ -13284,7 +13305,8 @@ remote_target::remote_file_put (const char *local_file, const char *remote_file,
     remote_hostio_error (remote_errno);
 
   if (from_tty)
-    gdb_printf (_("Successfully sent file \"%s\".\n"), local_file);
+    gdb_printf (_("Successfully sent file \"%ps\".\n"),
+		styled_string (file_name_style.style (), local_file));
 }
 
 void
@@ -13344,7 +13366,8 @@ remote_target::remote_file_get (const char *remote_file, const char *local_file,
     remote_hostio_error (remote_errno);
 
   if (from_tty)
-    gdb_printf (_("Successfully fetched file \"%s\".\n"), remote_file);
+    gdb_printf (_("Successfully fetched file \"%ps\".\n"),
+		styled_string (file_name_style.style (), remote_file));
 }
 
 void
@@ -13369,7 +13392,8 @@ remote_target::remote_file_delete (const char *remote_file, int from_tty)
     remote_hostio_error (remote_errno);
 
   if (from_tty)
-    gdb_printf (_("Successfully deleted file \"%s\".\n"), remote_file);
+    gdb_printf (_("Successfully deleted file \"%ps\".\n"),
+		styled_string (file_name_style.style (), remote_file));
 }
 
 static void
@@ -15185,7 +15209,7 @@ remote_target::async (bool enable)
 /* Implementation of the to_thread_events method.  */
 
 void
-remote_target::thread_events (int enable)
+remote_target::thread_events (bool enable)
 {
   struct remote_state *rs = get_remote_state ();
   size_t size = get_remote_packet_size ();
@@ -15666,7 +15690,7 @@ remote_target::store_memtags (CORE_ADDR address, size_t len,
   getpkt (&rs->buf);
 
   /* Verify if the request was successful.  */
-  return packet_check_result (rs->buf, true).status () == PACKET_OK;
+  return packet_check_result (rs->buf).status () == PACKET_OK;
 }
 
 /* Implement the "is_address_tagged" target_ops method.  */
@@ -15867,29 +15891,26 @@ static void
 test_packet_check_result ()
 {
   std::string buf = "E.msg";
-  packet_result result = packet_check_result (buf.data (), true);
+  packet_result result = packet_check_result (buf.data ());
 
   SELF_CHECK (result.status () == PACKET_ERROR);
   SELF_CHECK (strcmp(result.err_msg (), "msg") == 0);
 
-  result = packet_check_result ("E01", true);
+  result = packet_check_result ("E01");
   SELF_CHECK (result.status () == PACKET_ERROR);
   SELF_CHECK (strcmp(result.err_msg (), "01") == 0);
 
-  SELF_CHECK (packet_check_result ("E1", true).status () == PACKET_OK);
+  SELF_CHECK (packet_check_result ("E1").status () == PACKET_OK);
 
-  SELF_CHECK (packet_check_result ("E000", true).status () == PACKET_OK);
+  SELF_CHECK (packet_check_result ("E000").status () == PACKET_OK);
 
-  result = packet_check_result ("E.", true);
+  result = packet_check_result ("E.");
   SELF_CHECK (result.status () == PACKET_ERROR);
   SELF_CHECK (strcmp(result.err_msg (), "no error provided") == 0);
 
-  SELF_CHECK (packet_check_result ("some response", true).status () == PACKET_OK);
+  SELF_CHECK (packet_check_result ("some response").status () == PACKET_OK);
 
-  SELF_CHECK (packet_check_result ("", true).status () == PACKET_UNKNOWN);
-
-  result = packet_check_result ("E.msg", false);
-  SELF_CHECK (result.status () == PACKET_OK);
+  SELF_CHECK (packet_check_result ("").status () == PACKET_UNKNOWN);
 }
 } // namespace selftests
 #endif /* GDB_SELF_TEST */
@@ -16257,6 +16278,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (PACKET_qIsAddressTagged,
 			 "qIsAddressTagged", "memory-tagging-address-check", 0);
+
+  add_packet_config_cmd (PACKET_accept_error_message,
+			 "error-message", "error-message", 0);
 
   /* Assert that we've registered "set remote foo-packet" commands
      for all packet configs.  */

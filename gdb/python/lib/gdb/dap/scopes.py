@@ -16,7 +16,9 @@
 import gdb
 
 from .frames import frame_for_id
+from .globalvars import get_global_scope
 from .server import request
+from .sources import make_source
 from .startup import in_gdb_thread
 from .varref import BaseReference
 
@@ -93,7 +95,9 @@ class _ScopeReference(BaseReference):
         result["namedVariables"] = self.child_count()
         if self.line is not None:
             result["line"] = self.line
-            # FIXME construct a Source object
+        filename = self.frame.filename()
+        if filename is not None:
+            result["source"] = make_source(filename)
         return result
 
     def has_children(self):
@@ -161,4 +165,7 @@ def scopes(*, frameId: int, **extra):
             scopes.append(_ScopeReference("Locals", "locals", frame, locs))
         scopes.append(_RegisterReference("Registers", frame))
         frame_to_scope[frameId] = scopes
+        global_scope = get_global_scope(frame)
+        if global_scope is not None:
+            scopes.append(global_scope)
     return {"scopes": [x.to_object() for x in scopes]}

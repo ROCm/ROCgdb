@@ -2358,7 +2358,6 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		    || h->plt.offset == (bfd_vma) -1)
 		  {
 		    Elf_Internal_Rela outrel;
-		    asection *sreloc;
 
 		    /* Need a dynamic relocation to get the real function
 		       address.  */
@@ -2399,13 +2398,24 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		       2. .rela.got section in dynamic executable.
 		       3. .rela.iplt section in static executable.  */
 		    if (bfd_link_pic (info))
-		      sreloc = htab->elf.irelifunc;
+		      riscv_elf_append_rela (output_bfd, htab->elf.irelifunc,
+					     &outrel);
 		    else if (htab->elf.splt != NULL)
-		      sreloc = htab->elf.srelgot;
+		      riscv_elf_append_rela (output_bfd, htab->elf.srelgot,
+					     &outrel);
 		    else
-		      sreloc = htab->elf.irelplt;
-
-		    riscv_elf_append_rela (output_bfd, sreloc, &outrel);
+		      {
+			/* Do not use riscv_elf_append_rela to add dynamic
+			   relocs into .rela.iplt, since it may cause the
+			   overwrite problems.  This is same as what we did
+			   in the riscv_elf_finish_dynamic_symbol.  */
+			const struct elf_backend_data *bed =
+				get_elf_backend_data (output_bfd);
+			bfd_vma iplt_idx = htab->last_iplt_index--;
+			bfd_byte *loc = htab->elf.irelplt->contents
+					+ iplt_idx * sizeof (ElfNN_External_Rela);
+			bed->s->swap_reloca_out (output_bfd, &outrel, loc);
+		      }
 
 		    /* If this reloc is against an external symbol, we
 		       do not want to fiddle with the addend.  Otherwise,
@@ -3569,7 +3579,7 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
 	}
     }
 
-  if (htab->elf.sgotplt)
+  if (htab->elf.sgotplt && htab->elf.sgotplt->size > 0)
     {
       asection *output_section = htab->elf.sgotplt->output_section;
 
@@ -3580,31 +3590,28 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
 	  return false;
 	}
 
-      if (htab->elf.sgotplt->size > 0)
-	{
-	  /* Write the first two entries in .got.plt, needed for the dynamic
-	     linker.  */
-	  bfd_put_NN (output_bfd, (bfd_vma) -1, htab->elf.sgotplt->contents);
-	  bfd_put_NN (output_bfd, (bfd_vma) 0,
-		      htab->elf.sgotplt->contents + GOT_ENTRY_SIZE);
-	}
+      /* Write the first two entries in .got.plt, needed for the dynamic
+	 linker.  */
+      bfd_put_NN (output_bfd, (bfd_vma) -1, htab->elf.sgotplt->contents);
+      bfd_put_NN (output_bfd, (bfd_vma) 0,
+		  htab->elf.sgotplt->contents + GOT_ENTRY_SIZE);
 
       elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
     }
 
-  if (htab->elf.sgot)
+  if (htab->elf.sgot && htab->elf.sgot->size > 0)
     {
       asection *output_section = htab->elf.sgot->output_section;
 
-      if (htab->elf.sgot->size > 0)
+      if (!bfd_is_abs_section (output_section))
 	{
 	  /* Set the first entry in the global offset table to the address of
 	     the dynamic section.  */
 	  bfd_vma val = sdyn ? sec_addr (sdyn) : 0;
 	  bfd_put_NN (output_bfd, val, htab->elf.sgot->contents);
-	}
 
-      elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
+	  elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
+	}
     }
 
   /* Fill PLT and GOT entries for local STT_GNU_IFUNC symbols.  */

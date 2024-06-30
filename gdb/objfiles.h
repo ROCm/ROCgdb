@@ -20,21 +20,15 @@
 #if !defined (OBJFILES_H)
 #define OBJFILES_H
 
-#include "hashtab.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "objfile-flags.h"
 #include "symfile.h"
 #include "progspace.h"
 #include "registry.h"
 #include "gdb_bfd.h"
-#include <atomic>
 #include <bitset>
-#include <vector>
-#include "gdbsupport/next-iterator.h"
-#include "gdbsupport/safe-iterator.h"
 #include "bcache.h"
 #include "gdbarch.h"
-#include "gdbsupport/refcounted-object.h"
 #include "jit.h"
 #include "quick-symbol.h"
 #include <forward_list>
@@ -234,14 +228,14 @@ struct objfile_per_bfd_storage
 
   const char *intern (const char *str)
   {
-    return (const char *) string_cache.insert (str, strlen (str) + 1);
+    return string_cache.insert (str, strlen (str) + 1);
   }
 
   /* Same as the above, but for an std::string.  */
 
   const char *intern (const std::string &str)
   {
-    return (const char *) string_cache.insert (str.c_str (), str.size () + 1);
+    return string_cache.insert (str.c_str (), str.size () + 1);
   }
 
   /* Get the BFD this object is associated to.  */

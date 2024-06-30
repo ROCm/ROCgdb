@@ -338,6 +338,13 @@
     { "vcmpp%XH", { MaskG, Vex, EXxh, EXxEVexS, CMP }, 0 },
     { "vcmps%XH", { MaskG, VexScalar, EXw, EXxEVexS, CMP }, 0 },
   },
+  /* PREFIX_EVEX_MAP4_4x */
+  {
+    { "%CFcmov%CCS",	{ VexGv, Gv, Ev }, 0 },
+    { Bad_Opcode },
+    { "%CFcmov%CCS",	{ VexGv, Gv, Ev }, 0 },
+    { "set%ZU%CC",	{ Eb }, 0 },
+  },
   /* PREFIX_EVEX_MAP4_F0 */
   {
     { "crc32A", { Gdq, Eb }, 0 },

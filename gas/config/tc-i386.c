@@ -172,7 +172,7 @@ static void optimize_imm (void);
 static bool optimize_disp (const insn_template *t);
 static const insn_template *match_template (char);
 static int check_string (void);
-static int process_suffix (void);
+static int process_suffix (const insn_template *);
 static int check_byte_reg (void);
 static int check_long_reg (void);
 static int check_qword_reg (void);
@@ -415,6 +415,16 @@ struct _i386_insn
 
     /* Compressed disp8*N attribute.  */
     unsigned int memshift;
+
+    /* SCC = EVEX.[SC3,SC2,SC1,SC0].  */
+    unsigned int scc;
+
+    /* Store 4 bits of EVEX.[OF,SF,ZF,CF].  */
+#define OSZC_CF 1
+#define OSZC_ZF 2
+#define OSZC_SF 4
+#define OSZC_OF 8
+    unsigned int oszc_flags;
 
     /* Prefer load or store in encoding.  */
     enum
@@ -1928,6 +1938,110 @@ static INLINE bool need_evex_encoding (const insn_template *t)
 
 #define CPU_FLAGS_PERFECT_MATCH \
   (CPU_FLAGS_ARCH_MATCH | CPU_FLAGS_64BIT_MATCH)
+
+static INLINE bool set_oszc_flags (unsigned int oszc_shift)
+{
+  if (i.oszc_flags & oszc_shift)
+    {
+      as_bad (_("same oszc flag used twice"));
+      return false;
+    }
+  i.oszc_flags |= oszc_shift;
+  return true;
+}
+
+/* Handle SCC OSZC flags.  */
+
+static int
+check_Scc_OszcOperations (const char *l)
+{
+  const char *suffix_string = l;
+
+  while (is_space_char (*suffix_string))
+    suffix_string++;
+
+  /* If {oszc flags} is absent, just return.  */
+  if (*suffix_string != '{')
+    return 0;
+
+  /* Skip '{'.  */
+  suffix_string++;
+
+  /* Parse 'dfv='.  */
+  while (is_space_char (*suffix_string))
+    suffix_string++;
+
+  if (strncasecmp (suffix_string, "dfv", 3) == 0)
+    suffix_string += 3;
+  else
+    {
+      as_bad (_("unrecognized pseudo-suffix"));
+      return -1;
+    }
+
+  while (is_space_char (*suffix_string))
+    suffix_string++;
+
+  if (*suffix_string == '=')
+    suffix_string++;
+  else
+    {
+      as_bad (_("unrecognized pseudo-suffix"));
+      return -1;
+    }
+
+  /* Parse 'of, sf, zf, cf}'.  */
+  while (*suffix_string)
+    {
+      while (is_space_char (*suffix_string))
+	suffix_string++;
+
+      /* Return for '{dfv=}'.  */
+      if (*suffix_string == '}')
+	return suffix_string + 1 - l;
+
+      if (strncasecmp (suffix_string, "of", 2) == 0)
+	{
+	  if (!set_oszc_flags (OSZC_OF))
+	    return -1;
+	}
+      else if (strncasecmp (suffix_string, "sf", 2) == 0)
+	{
+	  if (!set_oszc_flags (OSZC_SF))
+	    return -1;
+	}
+      else if (strncasecmp (suffix_string, "zf", 2) == 0)
+	{
+	  if (!set_oszc_flags (OSZC_ZF))
+	    return -1;
+	}
+      else if (strncasecmp (suffix_string, "cf", 2) == 0)
+	{
+	  if (!set_oszc_flags (OSZC_CF))
+	    return -1;
+	}
+      else
+	{
+	  as_bad (_("unrecognized oszc flags or illegal `,' in pseudo-suffix"));
+	  return -1;
+	}
+
+      suffix_string += 2;
+
+      while (is_space_char (*suffix_string))
+	suffix_string++;
+
+      if (*suffix_string == '}')
+	return ++suffix_string - l;
+
+      if (*suffix_string != ',')
+	break;
+      suffix_string ++;
+    }
+
+  as_bad (_("missing `}' or `,' in pseudo-suffix"));
+  return -1;
+}
 
 /* Return CPU flags match bits. */
 
@@ -3793,10 +3907,19 @@ install_template (const insn_template *t)
 	}
     }
 
+  /* For CCMP and CTEST the template has EVEX.SCC in base_opcode. Move it out of
+     there, to then adjust base_opcode to obtain its normal meaning.  */
+  if (i.tm.opcode_modifier.operandconstraint == SCC)
+    {
+      /* Get EVEX.SCC value from the lower 4 bits of base_opcode.  */
+      i.scc = i.tm.base_opcode & 0xf;
+      i.tm.base_opcode >>= 8;
+    }
+
   /* Note that for pseudo prefixes this produces a length of 1. But for them
      the length isn't interesting at all.  */
   for (l = 1; l < 4; ++l)
-    if (!(t->base_opcode >> (8 * l)))
+    if (!(i.tm.base_opcode >> (8 * l)))
       break;
 
   i.opcode_length = l;
@@ -4285,9 +4408,22 @@ build_apx_evex_prefix (void)
     i.vex.bytes[3] &= ~0x08;
 
   /* Encode the NDD bit of the instruction promoted from the legacy
-     space.  */
-  if (i.vex.register_specifier && i.tm.opcode_space == SPACE_EVEXMAP4)
+     space. ZU shares the same bit with NDD.  */
+  if ((i.vex.register_specifier && i.tm.opcode_space == SPACE_EVEXMAP4)
+      || i.tm.opcode_modifier.operandconstraint == ZERO_UPPER)
     i.vex.bytes[3] |= 0x10;
+
+  /* Encode SCC and oszc flags bits.  */
+  if (i.tm.opcode_modifier.operandconstraint == SCC)
+    {
+      /* The default value of vvvv is 1111 and needs to be cleared.  */
+      i.vex.bytes[2] &= ~0x78;
+      i.vex.bytes[2] |= (i.oszc_flags << 3);
+      /* ND and aaa bits shold be 0.  */
+      know (!(i.vex.bytes[3] & 0x17));
+      /* The default value of V' is 1 and needs to be cleared.  */
+      i.vex.bytes[3] = (i.vex.bytes[3] & ~0x08) | i.scc;
+    }
 
   /* Encode the NF bit.  */
   if (i.has_nf)
@@ -4303,22 +4439,20 @@ static void establish_rex (void)
   /* Respect a user-specified REX prefix.  */
   i.rex |= i.prefix[REX_PREFIX] & REX_OPCODE;
 
-  /* For 8 bit registers we need an empty rex prefix.  Also if the
-     instruction already has a prefix, we need to convert old
-     registers to new ones.  */
+  /* For 8 bit RegRex64 registers without a prefix, we need an empty rex prefix.  */
+  if (((i.types[first].bitfield.class == Reg && i.types[first].bitfield.byte
+	&& (i.op[first].regs->reg_flags & RegRex64) != 0)
+       || (i.types[last].bitfield.class == Reg && i.types[last].bitfield.byte
+	   && (i.op[last].regs->reg_flags & RegRex64) != 0))
+      && !is_apx_rex2_encoding () && !is_any_vex_encoding (&i.tm))
+    i.rex |= REX_OPCODE;
 
-  if ((i.types[first].bitfield.class == Reg && i.types[first].bitfield.byte
-       && ((i.op[first].regs->reg_flags & RegRex64) != 0 || i.rex != 0
-	   || i.rex2 != 0))
-      || (i.types[last].bitfield.class == Reg && i.types[last].bitfield.byte
-	  && ((i.op[last].regs->reg_flags & RegRex64) != 0 || i.rex != 0
-	      || i.rex2 != 0)))
+  /* For REX/REX2/EVEX prefix instructions, we need to convert old registers
+     (AL, CL, DL and BL) to new ones (AXL, CXL, DXL and BXL) and reject AH,
+     CH, DH and BH.  */
+  if (i.rex || i.rex2 || i.tm.opcode_modifier.evex)
     {
-      unsigned int x;
-
-      if (!is_apx_rex2_encoding () && !is_any_vex_encoding(&i.tm))
-	i.rex |= REX_OPCODE;
-      for (x = first; x <= last; x++)
+      for (unsigned int x = first; x <= last; x++)
 	{
 	  /* Look for 8 bit operand that uses old registers.  */
 	  if (i.types[x].bitfield.class == Reg && i.types[x].bitfield.byte
@@ -4328,8 +4462,9 @@ static void establish_rex (void)
 	      /* In case it is "hi" register, give up.  */
 	      if (i.op[x].regs->reg_num > 3)
 		as_bad (_("can't encode register '%s%s' in an "
-			  "instruction requiring REX/REX2 prefix"),
-			register_prefix, i.op[x].regs->reg_name);
+			  "instruction requiring %s prefix"),
+			register_prefix, i.op[x].regs->reg_name,
+			i.tm.opcode_modifier.evex ? "EVEX" : "REX/REX2");
 
 	      /* Otherwise it is equivalent to the extended register.
 		 Since the encoding doesn't change this is merely
@@ -4436,6 +4571,20 @@ check_hle (void)
 	}
       return 1;
     }
+}
+
+/* Helper for optimization (running ahead of process_suffix()), to make sure we
+   convert only well-formed insns.  @OP is the sized operand to cross check
+   against (typically a register).  Checking against a single operand typically
+   suffices, as match_template() has already honored CheckOperandSize.  */
+
+static bool is_plausible_suffix (unsigned int op)
+{
+  return !i.suffix
+	 || (i.suffix == BYTE_MNEM_SUFFIX && i.types[op].bitfield.byte)
+	 || (i.suffix == WORD_MNEM_SUFFIX && i.types[op].bitfield.word)
+	 || (i.suffix == LONG_MNEM_SUFFIX && i.types[op].bitfield.dword)
+	 || (i.suffix == QWORD_MNEM_SUFFIX && i.types[op].bitfield.qword);
 }
 
 /* Encode aligned vector move as unaligned vector move.  */
@@ -4623,6 +4772,7 @@ optimize_encoding (void)
       && i.reg_operands == 1
       && i.imm_operands == 1
       && !i.types[1].bitfield.byte
+      && is_plausible_suffix (1)
       && i.op[0].imms->X_op == O_constant
       && fits_in_imm7 (i.op[0].imms->X_add_number))
     {
@@ -4633,7 +4783,7 @@ optimize_encoding (void)
       if (flag_code == CODE_64BIT || base_regnum < 4)
 	{
 	  i.types[1].bitfield.byte = 1;
-	  /* Ignore the suffix.  */
+	  /* Squash the suffix.  */
 	  i.suffix = 0;
 	  /* Convert to byte registers. 8-bit registers are special,
 	     RegRex64 and non-RegRex64 each have 8 registers.  */
@@ -4774,6 +4924,43 @@ optimize_encoding (void)
 	   orl %rN, %rN   -> testl %rN, %rN
        */
       i.tm.base_opcode = 0x84 | (i.tm.base_opcode & 1);
+    }
+  else if (!optimize_for_space
+	   && i.tm.base_opcode == 0xd0
+	   && (i.tm.opcode_space == SPACE_BASE
+	       || i.tm.opcode_space == SPACE_EVEXMAP4)
+	   && !i.mem_operands)
+    {
+      /* Optimize: -O:
+	   shlb $1, %rN  -> addb %rN, %rN
+	   shlw $1, %rN  -> addw %rN, %rN
+	   shll $1, %rN  -> addl %rN, %rN
+	   shlq $1, %rN  -> addq %rN, %rN
+
+	   shlb $1, %rN, %rM  -> addb %rN, %rN, %rM
+	   shlw $1, %rN, %rM  -> addw %rN, %rN, %rM
+	   shll $1, %rN, %rM  -> addl %rN, %rN, %rM
+	   shlq $1, %rN, %rM  -> addq %rN, %rN, %rM
+       */
+      gas_assert (i.tm.extension_opcode == 4);
+      i.tm.base_opcode = 0x00;
+      i.tm.extension_opcode = None;
+      if (i.operands >= 2)
+	{
+	  i.tm.operand_types[0] = i.tm.operand_types[1];
+	  i.op[0].regs = i.op[1].regs;
+	  i.types[0] = i.types[1];
+	}
+      else
+	{
+	  /* Legacy form with omitted shift count operand.  */
+	  i.tm.operand_types[1] = i.tm.operand_types[0];
+	  i.op[1].regs = i.op[0].regs;
+	  i.types[1] = i.types[0];
+	  i.operands = 2;
+	}
+      i.reg_operands++;
+      i.imm_operands = 0;
     }
   else if (i.tm.base_opcode == 0xba
 	   && i.tm.opcode_space == SPACE_0F
@@ -5031,6 +5218,48 @@ optimize_encoding (void)
 	  i.op[1].regs = i.op[0].regs;
 	}
     }
+  else if (i.tm.extension_opcode == 6
+	   && i.tm.base_opcode >= 0x71
+	   && i.tm.base_opcode <= 0x73
+	   && i.tm.opcode_space == SPACE_0F
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number == 1
+	   && !i.mem_operands)
+    {
+      /* Optimize: -O:
+	   psllw $1, %mmxN          -> paddw %mmxN, %mmxN
+	   psllw $1, %xmmN          -> paddw %xmmN, %xmmN
+	   vpsllw $1, %xmmN, %xmmM  -> vpaddw %xmmN, %xmmN, %xmmM
+	   vpsllw $1, %ymmN, %ymmM  -> vpaddw %ymmN, %ymmN, %ymmM
+	   vpsllw $1, %zmmN, %zmmM  -> vpaddw %zmmN, %zmmN, %zmmM
+
+	   pslld $1, %mmxN          -> paddd %mmxN, %mmxN
+	   pslld $1, %xmmN          -> paddd %xmmN, %xmmN
+	   vpslld $1, %xmmN, %xmmM  -> vpaddd %xmmN, %xmmN, %xmmM
+	   vpslld $1, %ymmN, %ymmM  -> vpaddd %ymmN, %ymmN, %ymmM
+	   vpslld $1, %zmmN, %zmmM  -> vpaddd %zmmN, %zmmN, %zmmM
+
+	   psllq $1, %xmmN          -> paddq %xmmN, %xmmN
+	   vpsllq $1, %xmmN, %xmmM  -> vpaddq %xmmN, %xmmN, %xmmM
+	   vpsllq $1, %ymmN, %ymmM  -> vpaddq %ymmN, %ymmN, %ymmM
+	   vpsllq $1, %zmmN, %zmmM  -> vpaddq %zmmN, %zmmN, %zmmM
+	  */
+      if (i.tm.base_opcode != 0x73)
+	i.tm.base_opcode |= 0xfc; /* {,v}padd{w,d} */
+      else
+	{
+	  gas_assert (i.tm.operand_types[1].bitfield.class != RegMMX);
+	  i.tm.base_opcode = 0xd4; /* {,v}paddq */
+	}
+      i.tm.extension_opcode = None;
+      if (i.tm.opcode_modifier.vexvvvv)
+	i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
+      i.tm.operand_types[0] = i.tm.operand_types[1];
+      i.op[0].regs = i.op[1].regs;
+      i.types[0] = i.types[1];
+      i.reg_operands++;
+      i.imm_operands = 0;
+    }
   else if (optimize_for_space
 	   && i.tm.base_opcode == 0x59
 	   && i.tm.opcode_space == SPACE_0F38
@@ -5057,6 +5286,44 @@ optimize_encoding (void)
       i.tm.operand_types[2] = i.tm.operand_types[0];
 
       swap_2_operands (1, 2);
+    }
+  else if (i.tm.base_opcode == 0x16
+	   && i.tm.opcode_space == SPACE_0F3A
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number == 0)
+    {
+      /* Optimize: -O:
+         pextrd $0, %xmmN, ...   -> movd %xmmN, ...
+         pextrq $0, %xmmN, ...   -> movq %xmmN, ...
+         vpextrd $0, %xmmN, ...  -> vmovd %xmmN, ...
+         vpextrq $0, %xmmN, ...  -> vmovq %xmmN, ...
+       */
+      i.tm.opcode_space = SPACE_0F;
+      if (!i.mem_operands
+	  || i.tm.opcode_modifier.evex
+	  || (i.tm.opcode_modifier.vexw != VEXW1
+	      && i.tm.opcode_modifier.size != SIZE64))
+	i.tm.base_opcode = 0x7e;
+      else
+	{
+	  i.tm.base_opcode = 0xd6;
+	  i.tm.opcode_modifier.size = 0;
+	  i.tm.opcode_modifier.vexw
+	    = i.tm.opcode_modifier.sse2avx ? VEXW0 : VEXWIG;
+	}
+
+      i.op[0].regs = i.op[1].regs;
+      i.types[0] = i.types[1];
+      i.flags[0] = i.flags[1];
+      i.tm.operand_types[0] = i.tm.operand_types[1];
+
+      i.op[1].regs = i.op[2].regs;
+      i.types[1] = i.types[2];
+      i.flags[1] = i.flags[2];
+      i.tm.operand_types[1] = i.tm.operand_types[2];
+
+      i.operands = 2;
+      i.imm_operands = 0;
     }
 }
 
@@ -5392,7 +5659,7 @@ static void init_globals (void)
 }
 
 /* Helper for md_assemble() to decide whether to prepare for a possible 2nd
-   parsing pass. Instead of introducing a rarely use new insn attribute this
+   parsing pass. Instead of introducing a rarely used new insn attribute this
    utilizes a common pattern between affected templates. It is deemed
    acceptable that this will lead to unnecessary pass 2 preparations in a
    limited set of cases.  */
@@ -5404,7 +5671,10 @@ static INLINE bool may_need_pass2 (const insn_template *t)
 	 : (t->opcode_space == SPACE_0F
 	    && (t->base_opcode | 1) == 0xbf)
 	   || (t->opcode_space == SPACE_BASE
-	       && t->base_opcode == 0x63);
+	       && t->base_opcode == 0x63)
+	   || (intel_syntax /* shld / shrd may mean suffixed shl / shr.  */
+	       && t->opcode_space == SPACE_EVEXMAP4
+	       && (t->base_opcode | 8) == 0x2c);
 }
 
 #if defined (OBJ_MAYBE_ELF) || defined (OBJ_ELF)
@@ -6949,7 +7219,7 @@ md_assemble (char *line)
   if (use_unaligned_vector_move)
     encode_with_unaligned_vector_move ();
 
-  if (!process_suffix ())
+  if (!process_suffix (t))
     return;
 
   /* Check if IP-relative addressing requirements can be satisfied.  */
@@ -7423,6 +7693,15 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	    as_bad (_("no such instruction: `%s'"), token_start);
 	  return NULL;
 	}
+    }
+
+  /* Handle SCC OSZC flgs.  */
+  if (current_templates.start->opcode_modifier.operandconstraint == SCC)
+    {
+      int length = check_Scc_OszcOperations (l);
+      if (length < 0)
+	return NULL;
+      l += length;
     }
 
   if (current_templates.start->opcode_modifier.jump == JUMP
@@ -8361,12 +8640,16 @@ check_VecOperands (const insn_template *t)
 	if (operand_type_check (i.types[op], disp)
 	    && i.op[op].disps->X_op == O_constant)
 	  {
+	    /* Make sure to leave i.types[op].bitfield.disp8 alone upon
+	       secondary invocations of match_template().  */
 	    if (fits_in_disp8 (i.op[op].disps->X_add_number))
 	      {
-		i.types[op].bitfield.disp8 = 1;
+		if (!i.tm.mnem_off)
+		  i.types[op].bitfield.disp8 = 1;
 		return 0;
 	      }
-	    i.types[op].bitfield.disp8 = 0;
+	    if (!i.tm.mnem_off)
+	      i.types[op].bitfield.disp8 = 0;
 	  }
     }
 
@@ -8517,8 +8800,8 @@ check_Rex_required (void)
 	return true;
     }
 
-  if ((i.index_reg && (i.index_reg->reg_flags & (RegRex | RegRex64)))
-      || (i.base_reg && (i.base_reg->reg_flags & (RegRex | RegRex64))))
+  if ((i.index_reg && (i.index_reg->reg_flags & RegRex))
+      || (i.base_reg && (i.base_reg->reg_flags & RegRex)))
     return true;
 
   /* Check pseudo prefix {rex} are valid.  */
@@ -9184,6 +9467,11 @@ match_template (char mnem_suffix)
       return NULL;
     }
 
+  /* Don't emit diagnostics or install the template when one was already
+     installed, i.e. when called from process_suffix().  */
+  if (i.tm.mnem_off)
+    return t;
+
   if (!quiet_warnings)
     {
       if (!intel_syntax
@@ -9196,6 +9484,19 @@ match_template (char mnem_suffix)
 	  /* Warn them that a data or address size prefix doesn't
 	     affect assembly of the next line of code.  */
 	  as_warn (_("stand-alone `%s' prefix"), insn_name (t));
+	}
+
+      if (intel_syntax && mnem_suffix && !t->opcode_modifier.intelsuffix)
+	{
+	  static bool noticed;
+
+	  as_warn (_("mnemonic suffix used with `%s'"), insn_name (t));
+	  if (!noticed)
+	    {
+	      noticed = true;
+	      as_warn (_(
+"NOTE: Such forms are deprecated and will be rejected by a future version of the assembler"));
+	    }
 	}
     }
 
@@ -9255,6 +9556,9 @@ match_template (char mnem_suffix)
 	 flipping VEX.W.  */
       i.tm.opcode_modifier.vexw ^= VEXW0 ^ VEXW1;
 
+      /* In 3-operand insns XOP.W changes which operand goes into XOP.vvvv.  */
+      i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
+
     swap_first_2:
       j = i.tm.operand_types[0].bitfield.imm8;
       i.tm.operand_types[j] = operand_types[j + 1];
@@ -9290,7 +9594,7 @@ check_string (void)
 }
 
 static int
-process_suffix (void)
+process_suffix (const insn_template *t)
 {
   bool is_movx = false;
 
@@ -9464,6 +9768,39 @@ process_suffix (void)
 	suffixes |= 1 << 4;
       if (flag_code == CODE_64BIT && !i.tm.opcode_modifier.no_qsuf)
 	suffixes |= 1 << 5;
+
+      /* Operand size may be ambiguous only across multiple templates.  Avoid
+	 the extra effort though if we already know that multiple suffixes /
+	 operand sizes are allowed.  Also limit this to non-SIMD operand sizes
+	 (i.e. ones expressable via suffixes) for now.
+	 There's one special case though that needs excluding: Insns taking
+	 Disp<N> operands also match templates permitting BaseIndex.  JMP in
+	 particular would thus wrongly trigger the check further down.  Cover
+	 JUMP_DWORD insns here as well, just in case.  */
+      if (i.tm.opcode_modifier.jump != JUMP
+	  && i.tm.opcode_modifier.jump != JUMP_DWORD)
+	while (!(suffixes & (suffixes - 1)))
+	  {
+	    /* Sadly check_VecOperands(), running ahead of install_template(),
+	       may update i.memshift.  Save and restore the value here.  */
+	    unsigned int memshift = i.memshift;
+
+	    current_templates.start = t + 1;
+	    t = match_template (0);
+	    i.memshift = memshift;
+	    if (t == NULL)
+	      break;
+	    if (!t->opcode_modifier.no_bsuf)
+	      suffixes |= 1 << 0;
+	    if (!t->opcode_modifier.no_wsuf)
+	      suffixes |= 1 << 1;
+	    if (!t->opcode_modifier.no_lsuf)
+	      suffixes |= 1 << 2;
+	    if (!t->opcode_modifier.no_ssuf)
+	      suffixes |= 1 << 4;
+	    if (flag_code == CODE_64BIT && !t->opcode_modifier.no_qsuf)
+	      suffixes |= 1 << 5;
+	  }
 
       /* For [XYZ]MMWORD operands inspect operand sizes.  While generally
 	 also suitable for AT&T syntax mode, it was requested that this be
@@ -9789,11 +10126,13 @@ check_byte_reg (void)
       if (i.types[op].bitfield.class != Reg)
 	continue;
 
-      /* If this is an eight bit register, it's OK.  If it's the 16 or
-	 32 bit version of an eight bit register, we will just use the
-	 low portion, and that's OK too.  */
+      /* If this is an eight bit register, it's OK.  */
       if (i.types[op].bitfield.byte)
-	continue;
+	{
+	  if (i.tm.opcode_modifier.checkoperandsize)
+	    break;
+	  continue;
+	}
 
       /* I/O port address operands are OK too.  */
       if (i.tm.operand_types[op].bitfield.instance == RegD
@@ -9825,10 +10164,9 @@ check_long_reg (void)
     /* Reject eight bit registers, except where the template requires
        them. (eg. movzb)  */
     else if (i.types[op].bitfield.byte
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && (i.tm.operand_types[op].bitfield.word
-		 || i.tm.operand_types[op].bitfield.dword))
+		 || i.tm.operand_types[op].bitfield.dword
+		 || i.tm.operand_types[op].bitfield.qword))
       {
 	as_bad (_("`%s%s' not allowed with `%s%c'"),
 		register_prefix,
@@ -9841,8 +10179,6 @@ check_long_reg (void)
        prefix on a general reg is present.  */
     else if ((i.types[op].bitfield.word
 	      || i.types[op].bitfield.qword)
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && i.tm.operand_types[op].bitfield.dword)
       {
 	as_bad (_("incorrect register `%s%s' used with `%c' suffix"),
@@ -9850,6 +10186,9 @@ check_long_reg (void)
 		i.suffix);
 	return 0;
       }
+    else if (i.tm.opcode_modifier.checkoperandsize)
+      break;
+
   return 1;
 }
 
@@ -9865,8 +10204,6 @@ check_qword_reg (void)
     /* Reject eight bit registers, except where the template requires
        them. (eg. movzb)  */
     else if (i.types[op].bitfield.byte
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && (i.tm.operand_types[op].bitfield.word
 		 || i.tm.operand_types[op].bitfield.dword
 		 || i.tm.operand_types[op].bitfield.qword))
@@ -9881,16 +10218,15 @@ check_qword_reg (void)
     /* Error if the r prefix on a general reg is missing.  */
     else if ((i.types[op].bitfield.word
 	      || i.types[op].bitfield.dword)
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && i.tm.operand_types[op].bitfield.qword)
       {
-	/* Prohibit these changes in the 64bit mode, since the
-	   lowering is more complicated.  */
 	as_bad (_("incorrect register `%s%s' used with `%c' suffix"),
 		register_prefix, i.op[op].regs->reg_name, i.suffix);
 	return 0;
       }
+    else if (i.tm.opcode_modifier.checkoperandsize)
+      break;
+
   return 1;
 }
 
@@ -9905,10 +10241,9 @@ check_word_reg (void)
     /* Reject eight bit registers, except where the template requires
        them. (eg. movzb)  */
     else if (i.types[op].bitfield.byte
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && (i.tm.operand_types[op].bitfield.word
-		 || i.tm.operand_types[op].bitfield.dword))
+		 || i.tm.operand_types[op].bitfield.dword
+		 || i.tm.operand_types[op].bitfield.qword))
       {
 	as_bad (_("`%s%s' not allowed with `%s%c'"),
 		register_prefix,
@@ -9920,8 +10255,6 @@ check_word_reg (void)
     /* Error if the e or r prefix on a general reg is present.  */
     else if ((i.types[op].bitfield.dword
 		 || i.types[op].bitfield.qword)
-	     && (i.tm.operand_types[op].bitfield.class == Reg
-		 || i.tm.operand_types[op].bitfield.instance == Accum)
 	     && i.tm.operand_types[op].bitfield.word)
       {
 	as_bad (_("incorrect register `%s%s' used with `%c' suffix"),
@@ -9929,6 +10262,9 @@ check_word_reg (void)
 		i.suffix);
 	return 0;
       }
+    else if (i.tm.opcode_modifier.checkoperandsize)
+      break;
+
   return 1;
 }
 
@@ -10241,6 +10577,10 @@ process_operands (void)
       i.types[first_reg_op + 1] = i.types[first_reg_op];
       i.operands++;
       i.reg_operands++;
+
+      /* For IMULZU switch around the constraint.  */
+      if (i.tm.mnem_off == MN_imulzu)
+	i.tm.opcode_modifier.operandconstraint = ZERO_UPPER;
     }
 
   if (i.tm.opcode_modifier.modrm)
@@ -10441,15 +10781,8 @@ build_modrm_byte (void)
     {
     /* VEX.vvvv encodes the last source register operand.  */
     case VexVVVV_SRC2:
-      if (source != op)
-	{
-	  v = source++;
-	  break;
-	}
-      /* For vprot*, vpshl*, and vpsha*, XOP.W controls the swapping of src1
-	 and src2, and it requires fall through when the operands are swapped.
-       */
-      /* Fall through.  */
+      v = source++;
+      break;
     /* VEX.vvvv encodes the first source register operand.  */
     case VexVVVV_SRC1:
       v =  dest - 1;

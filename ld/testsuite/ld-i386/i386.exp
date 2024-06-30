@@ -191,7 +191,7 @@ set i386tests {
     {"Reloc section order"
      "-shared -melf_i386 -z nocombreloc -z notext" "" "--32"
      {reloc.s} {{objdump -hw reloc.d}} "reloc.so"}
-    {"Basic --emit-relocs support" "-shared -melf_i386 --emit-relocs" "" "--32"
+    {"Basic --emit-relocs support" "-shared -melf_i386 --emit-relocs --no-rosegment" "" "--32"
      {emit-relocs.s} {{readelf --relocs emit-relocs.rd}} "emit-relocs.so"}
     {"-z combreloc relocation sections" "-shared -melf_i386 -z combreloc" ""
      "--32" {combreloc.s} {{readelf -r combreloc.d}} "combreloc.so"}
@@ -541,6 +541,9 @@ run_dump_test "tlsdesc2"
 run_dump_test "report-reloc-1"
 run_dump_test "pr27998a"
 run_dump_test "pr27998b"
+run_dump_test "pr31868a"
+run_dump_test "pr31868b"
+run_dump_test "pr31868c"
 
 proc undefined_weak {cflags ldflags} {
     set testname "Undefined weak symbol"

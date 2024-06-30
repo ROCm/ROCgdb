@@ -17,7 +17,7 @@ dnl along with this program; see the file COPYING3.  If not see
 dnl <http://www.gnu.org/licenses/>.
 dnl
 
-AC_INIT(gold, 0.1)
+AC_INIT([gold], [0.1])
 AC_CONFIG_SRCDIR(gold.cc)
 
 AC_CANONICAL_TARGET
@@ -312,8 +312,6 @@ AC_PROG_YACC
 AC_PROG_RANLIB
 AC_PROG_INSTALL
 AC_PROG_LN_S
-
-AC_GNU_SOURCE
 
 ZW_GNU_GETTEXT_SISTER_DIR
 AM_PO_SUBDIRS

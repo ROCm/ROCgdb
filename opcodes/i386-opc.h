@@ -579,6 +579,10 @@ enum
 #define DISTINCT_DEST 8
   /* Instruction updates stack pointer implicitly.  */
 #define IMPLICIT_STACK_OP 9
+  /* Instruction zeroes upper part of register.  */
+#define ZERO_UPPER 10
+  /* Instruction support SCC.  */
+#define SCC 11
   OperandConstraint,
   /* instruction ignores operand size prefix and in Intel mode ignores
      mnemonic size suffix check.  */
@@ -733,6 +737,9 @@ enum
 #define ATT_MNEMONIC 3
   Dialect,
 
+  /* Mnemonic suffix permitted in Intel syntax.  */
+  IntelSuffix,
+
   /* ISA64: Don't change the order without other code adjustments.
 	0: Common to AMD64 and Intel64.
 	1: AMD64.
@@ -797,6 +804,7 @@ typedef struct i386_opcode_modifier
   unsigned int disp8memshift:3;
   unsigned int optimize:1;
   unsigned int dialect:2;
+  unsigned int intelsuffix:1;
   unsigned int isa64:2;
   unsigned int noegpr:1;
   unsigned int nf:1;

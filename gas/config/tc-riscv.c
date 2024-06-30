@@ -77,6 +77,8 @@ enum riscv_csr_class
   CSR_CLASS_H_32,	/* hypervisor, rv32 only */
   CSR_CLASS_SMAIA,		/* Smaia */
   CSR_CLASS_SMAIA_32,		/* Smaia, rv32 only */
+  CSR_CLASS_SMAIA_OR_SMCSRIND,		/* Smaia/Smcsrind */
+  CSR_CLASS_SMCSRIND,		/* Smcsrind */
   CSR_CLASS_SMCNTRPMF,		/* Smcntrpmf */
   CSR_CLASS_SMCNTRPMF_32,	/* Smcntrpmf, rv32 only */
   CSR_CLASS_SMSTATEEN,		/* Smstateen only */
@@ -85,6 +87,10 @@ enum riscv_csr_class
   CSR_CLASS_SSAIA_AND_H,	/* Ssaia with H */
   CSR_CLASS_SSAIA_32,		/* Ssaia, rv32 only */
   CSR_CLASS_SSAIA_AND_H_32,	/* Ssaia with H, rv32 only */
+  CSR_CLASS_SSAIA_OR_SSCSRIND,		/* Ssaia/Smcsrind */
+  CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H,	/* Ssaia/Smcsrind with H */
+  CSR_CLASS_SSCSRIND,		/* Sscsrind */
+  CSR_CLASS_SSCSRIND_AND_H,	/* Sscsrind with H */
   CSR_CLASS_SSSTATEEN,		/* S[ms]stateen only */
   CSR_CLASS_SSSTATEEN_AND_H,	/* S[ms]stateen only (with H) */
   CSR_CLASS_SSSTATEEN_AND_H_32,	/* S[ms]stateen RV32 only (with H) */
@@ -1059,6 +1065,12 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_SMAIA:
       extension = "smaia";
       break;
+    case CSR_CLASS_SMAIA_OR_SMCSRIND:
+      extension = "smaia or smcsrind";
+      break;
+    case CSR_CLASS_SMCSRIND:
+      extension = "smcsrind";
+      break;
     case CSR_CLASS_SMCNTRPMF_32:
       is_rv32_only = true;
       /* Fall through.  */
@@ -1081,6 +1093,16 @@ riscv_csr_address (const char *csr_name,
       is_h_required = (csr_class == CSR_CLASS_SSAIA_AND_H
 		       || csr_class == CSR_CLASS_SSAIA_AND_H_32);
       extension = "ssaia";
+      break;
+    case CSR_CLASS_SSAIA_OR_SSCSRIND:
+    case CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H:
+      is_h_required = (csr_class == CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H);
+      extension = "ssaia or sscsrind";
+      break;
+    case CSR_CLASS_SSCSRIND:
+    case CSR_CLASS_SSCSRIND_AND_H:
+      is_h_required = (csr_class == CSR_CLASS_SSCSRIND_AND_H);
+      extension = "sscsrind";
       break;
     case CSR_CLASS_SSSTATEEN_AND_H_32:
       is_rv32_only = true;
@@ -1660,7 +1682,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      switch (*++oparg)
 		{
 		  case '2':
-		    /* ls2[4:0] */
+		  case '4':
 		    used_bits |= ENCODE_CV_IS2_UIMM5 (-1U);
 		    break;
 		  case '3':
@@ -3956,6 +3978,16 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			ip->insn_opcode
 			    |= ENCODE_CV_IS3_UIMM5 (imm_expr->X_add_number);
 			continue;
+		      case '4':
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, FALSE);
+			asarg = expr_parse_end;
+			if (imm_expr->X_add_number < -16
+			    || imm_expr->X_add_number > 15)
+			  break;
+			ip->insn_opcode
+			    |= ENCODE_CV_IS2_UIMM5 (imm_expr->X_add_number);
+			continue;
 		      default:
 			goto unknown_riscv_ip_operand;
 		    }
@@ -5209,7 +5241,7 @@ RISC-V options:\n\
 void
 riscv_cfi_frame_initial_instructions (void)
 {
-  cfi_add_CFA_def_cfa_register (X_SP);
+  cfi_add_CFA_def_cfa (X_SP, 0);
 }
 
 int

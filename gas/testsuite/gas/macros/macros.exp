@@ -103,3 +103,6 @@ gas_test_error "exit.s" "" ".exitm outside of a macro"
 
 run_list_test altmacro
 run_list_test count
+run_list_test irp-count
+run_list_test irpc-quote
+run_list_test rept-count

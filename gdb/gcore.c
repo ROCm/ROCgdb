@@ -550,7 +550,7 @@ int
 objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 {
   /* Use objfile data to create memory sections.  */
-  bfd_vma temp_bottom, temp_top;
+  bfd_vma temp_bottom = 0, temp_top = 0;
 
   /* Call callback function for each objfile section.  */
   for (objfile *objfile : current_program_space->objfiles ())

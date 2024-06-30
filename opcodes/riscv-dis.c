@@ -32,6 +32,11 @@
 #include <stdint.h>
 #include <ctype.h>
 
+/* The RISC-V disassembler produces styled output using
+   disassemble_info::fprintf_styled_func.  This define prevents use of
+   disassemble_info::fprintf_func which is for unstyled output.  */
+#define fprintf_func please_use_fprintf_styled_func_instead
+
 /* Current XLEN for the disassembler.  */
 static unsigned xlen = 0;
 
@@ -223,26 +228,49 @@ print_reg_list (disassemble_info *info, insn_t l)
   bool numeric = riscv_gpr_names == riscv_gpr_names_numeric;
   unsigned reg_list = (int)EXTRACT_OPERAND (REG_LIST, l);
   unsigned r_start = numeric ? X_S2 : X_S0;
-  info->fprintf_func (info->stream, "%s", riscv_gpr_names[X_RA]);
+  info->fprintf_styled_func (info->stream, dis_style_register,
+			     "%s", riscv_gpr_names[X_RA]);
 
   if (reg_list == 5)
-    info->fprintf_func (info->stream, ",%s",
-			riscv_gpr_names[X_S0]);
+    {
+      info->fprintf_styled_func (info->stream, dis_style_text, ",");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[X_S0]);
+    }
   else if (reg_list == 6 || (numeric && reg_list > 6))
-    info->fprintf_func (info->stream, ",%s-%s",
-			riscv_gpr_names[X_S0],
-			riscv_gpr_names[X_S1]);
+    {
+      info->fprintf_styled_func (info->stream, dis_style_text, ",");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[X_S0]);
+      info->fprintf_styled_func (info->stream, dis_style_text, "-");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[X_S1]);
+    }
+
   if (reg_list == 15)
-    info->fprintf_func (info->stream, ",%s-%s",
-			riscv_gpr_names[r_start],
-			riscv_gpr_names[X_S11]);
+    {
+      info->fprintf_styled_func (info->stream, dis_style_text, ",");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[r_start]);
+      info->fprintf_styled_func (info->stream, dis_style_text, "-");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[X_S11]);
+    }
   else if (reg_list == 7 && numeric)
-    info->fprintf_func (info->stream, ",%s",
-			riscv_gpr_names[X_S2]);
+    {
+      info->fprintf_styled_func (info->stream, dis_style_text, ",");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[X_S2]);
+    }
   else if (reg_list > 6)
-    info->fprintf_func (info->stream, ",%s-%s",
-			riscv_gpr_names[r_start],
-			riscv_gpr_names[reg_list + 11]);
+    {
+      info->fprintf_styled_func (info->stream, dis_style_text, ",");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[r_start]);
+      info->fprintf_styled_func (info->stream, dis_style_text, "-");
+      info->fprintf_styled_func (info->stream, dis_style_register,
+				 "%s", riscv_gpr_names[reg_list + 11]);
+    }
 }
 
 /* Get Zcmp sp adjustment immediate.  */
@@ -770,6 +798,10 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  case '3':
 		    print (info->stream, dis_style_immediate, "%d",
 			((int) EXTRACT_CV_IS3_UIMM5 (l)));
+		    break;
+		  case '4':
+		    print (info->stream, dis_style_immediate, "%d",
+			   ((int) EXTRACT_CV_BI_IMM5 (l)));
 		    break;
 		  default:
 		    goto undefined_modifier;

@@ -2234,6 +2234,17 @@ elf_shlib_list_options (FILE *file)
   fprintf (file, _("\
   -z noseparate-code          Don't create separate code program header (default)\n"));
 #endif
+#if DEFAULT_LD_ROSEGMENT
+  fprintf (file, _("\
+  --rosegment                 With -z separate-code, create a single read-only segment (default)\n"));
+  fprintf (file, _("\
+  --no-rosegment              With -z separate-code, creste two read-only segments\n"));
+#else
+  fprintf (file, _("\
+  --rosegment                 With -z separate-code, create a single read-only segment\n"));
+  fprintf (file, _("\
+  --no-rosegment              With -z separate-code, creste two read-only segments (default)\n"));
+#endif
   fprintf (file, _("\
   -z common                   Generate common symbols with STT_COMMON type\n"));
   fprintf (file, _("\
@@ -2309,7 +2320,7 @@ elf_static_list_options (FILE *file)
   fprintf (file, _("\
   --error-execstack           Turn warnings about executable stacks into errors\n"));
   fprintf (file, _("\
-  --no-error-execstack         Do not turn warnings about executable stacks into errors\n"));
+  --no-error-execstack        Do not turn warnings about executable stacks into errors\n"));
   
 #if DEFAULT_LD_WARN_RWX_SEGMENTS
   fprintf (file, _("\

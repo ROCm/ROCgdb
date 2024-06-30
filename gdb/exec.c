@@ -214,7 +214,7 @@ validate_exec_file (int from_tty)
   if (exec_file_mismatch_mode == exec_file_mismatch_off)
     return;
 
-  const char *current_exec_file = get_exec_file (0);
+  const char *current_exec_file = current_program_space->exec_filename ();
   struct inferior *inf = current_inferior ();
   /* Try to determine a filename from the process itself.  */
   const char *pid_exec_file = target_pid_to_exec_file (inf->pid);
@@ -232,7 +232,7 @@ validate_exec_file (int from_tty)
      did not change).  If exec file changed, reopen_exec_file has
      allocated another file name, so get_exec_file again.  */
   reopen_exec_file ();
-  current_exec_file = get_exec_file (0);
+  current_exec_file = current_program_space->exec_filename ();
 
   const bfd_build_id *exec_file_build_id
     = build_id_bfd_get (current_program_space->exec_bfd ());
@@ -313,7 +313,7 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
   symfile_add_flags add_flags = 0;
 
   /* Do nothing if we already have an executable filename.  */
-  if (get_exec_file (0) != NULL)
+  if (current_program_space->exec_filename () != nullptr)
     return;
 
   /* Try to determine a filename from the process itself.  */
@@ -455,15 +455,15 @@ exec_file_attach (const char *filename, int from_tty)
 
       /* gdb_realpath_keepfile resolves symlinks on the local
 	 filesystem and so cannot be used for "target:" files.  */
-      gdb_assert (current_program_space->exec_filename == nullptr);
+      gdb_assert (current_program_space->exec_filename () == nullptr);
       if (load_via_target)
-	current_program_space->exec_filename
-	  = (make_unique_xstrdup
+	current_program_space->set_exec_filename
+	  (make_unique_xstrdup
 	     (bfd_get_filename (current_program_space->exec_bfd ())));
       else
-	current_program_space->exec_filename
-	  = make_unique_xstrdup (gdb_realpath_keepfile
-				   (scratch_pathname).c_str ());
+	current_program_space->set_exec_filename
+	  (make_unique_xstrdup (gdb_realpath_keepfile
+				  (scratch_pathname).c_str ()));
 
       if (!bfd_check_format_matches (current_program_space->exec_bfd (),
 				     bfd_object, &matching))
@@ -501,6 +501,15 @@ exec_file_attach (const char *filename, int from_tty)
 				   bfd_get_filename (curr_bfd)) == 0)));
 
   gdb::observers::executable_changed.notify (current_program_space, reload_p);
+}
+
+/* See exec.h.  */
+
+void
+no_executable_specified_error ()
+{
+  error (_("No executable file specified.\n\
+Use the \"file\" or \"exec-file\" command."));
 }
 
 /*  Process the first arg in ARGS as the new exec file.

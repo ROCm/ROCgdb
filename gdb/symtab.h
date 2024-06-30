@@ -1340,7 +1340,11 @@ struct symbol : public general_symbol_info, public allocate_on_obstack<symbol>
     m_is_inlined = is_inlined;
   }
 
-  bool is_cplus_template_function () const
+  /* Return true if this symbol is a template function.  Template
+     functions actually are of type 'template_symbol' and have extra
+     symbols (the template parameters) attached.  */
+
+  bool is_template_function () const
   {
     return this->subclass == SYMBOL_TEMPLATE;
   }
@@ -1587,7 +1591,7 @@ extern int register_symbol_register_impl (enum address_class,
 
 /* An instance of this type is used to represent a C++ template
    function.  A symbol is really of this type iff
-   symbol::is_cplus_template_function is true.  */
+   symbol::is_template_function is true.  */
 
 struct template_symbol : public symbol
 {
@@ -2606,12 +2610,14 @@ public:
      removed.  */
   std::vector<symbol_search> search () const;
 
-  /* The set of source files to search in for matching symbols.  This is
-     currently public so that it can be populated after this object has
-     been constructed.  */
-  std::vector<const char *> filenames;
+  /* Add a filename to the list of file names to search.  */
+  void add_filename (gdb::unique_xmalloc_ptr<char> filename)
+  { m_filenames.push_back (std::move (filename)); }
 
 private:
+  /* The set of source files to search in for matching symbols.  */
+  std::vector<gdb::unique_xmalloc_ptr<char>> m_filenames;
+
   /* The kind of symbols are we searching for.
      VARIABLES_DOMAIN - Search all symbols, excluding functions, type
 			names, and constants (enums).
@@ -2967,5 +2973,12 @@ extern void info_sources_worker (struct ui_out *uiout,
    linetable.  */
 
 std::optional<CORE_ADDR> find_epilogue_using_linetable (CORE_ADDR func_addr);
+
+/* Search an array of symbols for one named NAME.  Name comparison is
+   done using strcmp -- i.e., this is only useful for simple names.
+   Returns the symbol, if found, or nullptr if not.  */
+
+extern struct symbol *search_symbol_list (const char *name, int num,
+					  struct symbol **syms);
 
 #endif /* !defined(SYMTAB_H) */

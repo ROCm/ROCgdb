@@ -34,6 +34,7 @@
 
 #include "cpuid.c" /* ftns for identifying a chip */
 
+static hdrv_pcbe_api_t *pcbe_driver = NULL;
 static hdrv_pcbe_api_t hdrv_pcbe_core_api;
 static hdrv_pcbe_api_t hdrv_pcbe_opteron_api;
 static hdrv_pcbe_api_t *hdrv_pcbe_drivers[] = {
@@ -44,83 +45,11 @@ static hdrv_pcbe_api_t *hdrv_pcbe_drivers[] = {
 #include "opteron_pcbe.c" /* CPU-specific code */
 #include "core_pcbe.c" /* CPU-specific code  */
 
-extern hwcdrv_api_t hwcdrv_pcl_api;
-IS_GLOBAL hwcdrv_api_t *hwcdrv_drivers[] = {
-  &hwcdrv_pcl_api,
-  NULL
-};
-
 /*---------------------------------------------------------------------------*/
-
-/* utils for drivers */
-IS_GLOBAL int
-hwcdrv_assign_all_regnos (Hwcentry* entries[], unsigned numctrs)
-{
-  unsigned int pmc_assigned[MAX_PICS];
-  unsigned idx;
-  for (int ii = 0; ii < MAX_PICS; ii++)
-    pmc_assigned[ii] = 0;
-
-  /* assign the HWCs that we already know about */
-  for (idx = 0; idx < numctrs; idx++)
-    {
-      regno_t regno = entries[idx]->reg_num;
-      if (regno == REGNO_ANY)
-	{
-	  /* check to see if list of possible registers only contains one entry */
-	  regno = REG_LIST_SINGLE_VALID_ENTRY (entries[idx]->reg_list);
-	}
-      if (regno != REGNO_ANY)
-	{
-	  if (regno < 0 || regno >= MAX_PICS || !regno_is_valid (entries[idx], regno))
-	    {
-	      logerr (GTXT ("For counter #%d, register %d is out of range\n"), idx + 1, regno); /*!*/
-	      return HWCFUNCS_ERROR_HWCARGS;
-	    }
-	  TprintfT (DBG_LT2, "hwcfuncs_assign_regnos(): preselected: idx=%d, regno=%d\n", idx, regno);
-	  entries[idx]->reg_num = regno; /* assigning back to entries */
-	  pmc_assigned[regno] = 1;
-	}
-    }
-
-  /* assign HWCs that are currently REGNO_ANY */
-  for (idx = 0; idx < numctrs; idx++)
-    {
-      if (entries[idx]->reg_num == REGNO_ANY)
-	{
-	  int assigned = 0;
-	  regno_t *reg_list = entries[idx]->reg_list;
-	  for (; reg_list && *reg_list != REGNO_ANY; reg_list++)
-	    {
-	      regno_t regno = *reg_list;
-	      if (regno < 0 || regno >= MAX_PICS)
-		{
-		  logerr (GTXT ("For counter #%d, register %d is out of range\n"), idx + 1, regno); /*!*/
-		  return HWCFUNCS_ERROR_HWCARGS;
-		}
-	      if (pmc_assigned[regno] == 0)
-		{
-		  TprintfT (DBG_LT2, "hwcfuncs_assign_regnos(): assigned:   idx=%d, regno=%d\n", idx, regno);
-		  entries[idx]->reg_num = regno; /* assigning back to entries */
-		  pmc_assigned[regno] = 1;
-		  assigned = 1;
-		  break;
-		}
-	    }
-	  if (!assigned)
-	    {
-	      logerr (GTXT ("Counter '%s' could not be bound to a register\n"),
-		      entries[idx]->name ? entries[idx]->name : "<NULL>");
-	      return HWCFUNCS_ERROR_HWCARGS;
-	    }
-	}
-    }
-  return 0;
-}
-
-IS_GLOBAL int
+static int
 hwcdrv_lookup_cpuver (const char * cpcN_cciname)
 {
+  /* returns hwc_cpus.h ID for a given string. */
   libcpc2_cpu_lookup_t *plookup;
   static libcpc2_cpu_lookup_t cpu_table[] = {
     LIBCPC2_CPU_LOOKUP_LIST
@@ -166,8 +95,6 @@ hwcdrv_lookup_cpuver (const char * cpcN_cciname)
  *    For M8, a 4-bit mask of supported PICs is stored in bits [23:20].
  */
 
-IS_GLOBAL hwcdrv_get_eventnum_fn_t *hwcdrv_get_x86_eventnum = 0;
-
 static const attr_info_t perfctr_sparc_attrs[] = {
   {NTXT ("user"),   0, 0x01, 16}, //usr
   {NTXT ("system"), 0, 0x01, 17}, //os
@@ -204,8 +131,9 @@ myperfctr_get_x86_eventnum (const char *eventname, uint_t pmc,
 			    eventsel_t *eventsel, eventsel_t *valid_umask,
 			    uint_t *pmc_sel)
 {
-  if (hwcdrv_get_x86_eventnum &&
-      !hwcdrv_get_x86_eventnum (eventname, pmc, eventsel, valid_umask, pmc_sel))
+  if (pcbe_driver && pcbe_driver->hdrv_pcbe_get_eventnum &&
+      !pcbe_driver->hdrv_pcbe_get_eventnum (eventname, pmc, eventsel,
+					    valid_umask, pmc_sel))
     return 0;
 
   /* check for numerically-specified counters */
@@ -286,7 +214,7 @@ set_x86_attr_bits (eventsel_t *result_mask, eventsel_t evnt_valid_umask,
   return 0;
 }
 
-IS_GLOBAL int
+static int
 hwcfuncs_get_x86_eventsel (unsigned int regno, const char *int_name,
 			   eventsel_t *return_event, uint_t *return_pmc_sel)
 {
@@ -307,11 +235,6 @@ hwcfuncs_get_x86_eventsel (unsigned int regno, const char *int_name,
       return -1;
     }
   hwcfuncs_parse_ctr (int_name, NULL, &nameOnly, NULL, NULL, NULL);
-  if (regno == REGNO_ANY)
-    {
-      logerr (GTXT ("reg# could not be determined for `%s'\n"), nameOnly);
-      goto attr_wrapup;
-    }
 
   /* look up evntsel */
   if (myperfctr_get_x86_eventnum (nameOnly, regno,
@@ -364,6 +287,7 @@ perf_event_open (struct perf_event_attr *hw_event_uptr, pid_t pid,
       rc = syscall (__NR_perf_event_open, hw_event_uptr, pid, cpu, group_fd, flags);
       if (rc != -1)
 	return rc;
+      TprintfT (0, "perf_event_open %d: errno=%d %s\n", retry, errno, strerror(errno));
     }
   return rc;
 }
@@ -452,7 +376,6 @@ static struct
   int internal_open_called;
   hwcfuncs_tsd_get_fn_t find_vpc_ctx;
   unsigned hwcdef_cnt;      /* number of *active* hardware counters */
-  hwcdrv_get_events_fn_t *get_events;
 } hdrv_pcl_state;
 
 static hwcdrv_about_t hdrv_pcl_about = {.cpcN_cpuver = CPUVER_UNDEFINED};
@@ -890,14 +813,13 @@ hdrv_pcl_internal_open ()
       hdrv_pcbe_api_t *ppcbe = hdrv_pcbe_drivers[ii];
       if (!ppcbe->hdrv_pcbe_init ())
 	{
+	  pcbe_driver = ppcbe;
 	  hdrv_pcl_about.cpcN_cciname = ppcbe->hdrv_pcbe_impl_name ();
 	  hdrv_pcl_about.cpcN_cpuver = hwcdrv_lookup_cpuver (hdrv_pcl_about.cpcN_cciname);
 	  if (hdrv_pcl_about.cpcN_cpuver == CPUVER_UNDEFINED)
 	    goto internal_open_error;
 	  hdrv_pcl_about.cpcN_npics = ppcbe->hdrv_pcbe_ncounters ();
 	  hdrv_pcl_about.cpcN_docref = ppcbe->hdrv_pcbe_cpuref ();
-	  hdrv_pcl_state.get_events = ppcbe->hdrv_pcbe_get_events;
-	  hwcdrv_get_x86_eventnum = ppcbe->hdrv_pcbe_get_eventnum;
 	  break;
 	}
     }
@@ -971,11 +893,12 @@ hwcdrv_enable_mt (hwcfuncs_tsd_get_fn_t tsd_ftn)
 }
 
 HWCDRV_API int
-hwcdrv_get_descriptions (hwcf_hwc_cb_t *hwc_cb, hwcf_attr_cb_t *attr_cb)
+hwcdrv_get_descriptions (hwcf_hwc_cb_t *hwc_cb, hwcf_attr_cb_t *attr_cb,
+			 Hwcentry *raw_hwc_tbl)
 {
   int count = 0;
-  if (hwc_cb && hdrv_pcl_state.get_events)
-    count = hdrv_pcl_state.get_events (hwc_cb);
+  if (hwc_cb && pcbe_driver && pcbe_driver->hdrv_pcbe_get_events)
+    count = pcbe_driver->hdrv_pcbe_get_events (hwc_cb, raw_hwc_tbl);
   if (attr_cb)
     for (int ii = 0; perfctr_attrs_table && perfctr_attrs_table[ii].attrname; ii++)
       attr_cb (perfctr_attrs_table[ii].attrname);
@@ -987,7 +910,7 @@ hwcdrv_get_descriptions (hwcf_hwc_cb_t *hwc_cb, hwcf_attr_cb_t *attr_cb)
 HWCDRV_API int
 hwcdrv_assign_regnos (Hwcentry* entries[], unsigned numctrs)
 {
-  return hwcdrv_assign_all_regnos (entries, numctrs);
+  return 0;
 }
 
 static int

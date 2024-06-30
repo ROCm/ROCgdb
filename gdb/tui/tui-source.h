@@ -22,6 +22,7 @@
 #ifndef TUI_TUI_SOURCE_H
 #define TUI_TUI_SOURCE_H
 
+#include "gdbsupport/gdb-checked-static-cast.h"
 #include "tui/tui-data.h"
 #include "tui-winsource.h"
 
@@ -81,5 +82,13 @@ private:
   /* It is the resolved form as returned by symtab_to_fullname.  */
   gdb::unique_xmalloc_ptr<char> m_fullname;
 };
+
+/* Return the instance of the source window.  */
+
+inline tui_source_window *
+tui_src_win ()
+{
+  return gdb::checked_static_cast<tui_source_window *> (tui_win_list[SRC_WIN]);
+}
 
 #endif /* TUI_TUI_SOURCE_H */

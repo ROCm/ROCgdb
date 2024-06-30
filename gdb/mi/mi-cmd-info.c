@@ -20,6 +20,7 @@
 #include "mi-cmds.h"
 #include "ada-lang.h"
 #include "arch-utils.h"
+#include "ui-out.h"
 
 /* Implement the "-info-ada-exceptions" GDB/MI command.  */
 

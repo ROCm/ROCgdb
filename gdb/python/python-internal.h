@@ -102,20 +102,31 @@
 
 /* Python supplies HAVE_LONG_LONG and some `long long' support when it
    is available.  These defines let us handle the differences more
-   cleanly.  */
-#ifdef HAVE_LONG_LONG
+   cleanly.
+
+   Starting with python 3.6, support for platforms without long long support
+   has been removed [1].  HAVE_LONG_LONG and PY_LONG_LONG are still defined,
+   but only for compatibility, so we no longer rely on them.
+
+   [1] https://github.com/python/cpython/issues/72148.  */
+#if PY_VERSION_HEX >= 0x03060000 || defined (HAVE_LONG_LONG)
 
 #define GDB_PY_LL_ARG "L"
 #define GDB_PY_LLU_ARG "K"
+#if PY_VERSION_HEX >= 0x03060000
+typedef long long gdb_py_longest;
+typedef unsigned long long gdb_py_ulongest;
+#else
 typedef PY_LONG_LONG gdb_py_longest;
 typedef unsigned PY_LONG_LONG gdb_py_ulongest;
+#endif
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLongLong
 #define gdb_py_long_as_long_and_overflow PyLong_AsLongLongAndOverflow
 
 #else /* HAVE_LONG_LONG */
 
-#define GDB_PY_LL_ARG "L"
-#define GDB_PY_LLU_ARG "K"
+#define GDB_PY_LL_ARG "l"
+#define GDB_PY_LLU_ARG "k"
 typedef long gdb_py_longest;
 typedef unsigned long gdb_py_ulongest;
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLong
@@ -134,26 +145,97 @@ typedef long Py_hash_t;
 #define PyMem_RawMalloc PyMem_Malloc
 #endif
 
-/* PyObject_CallMethod's 'method' and 'format' parameters were missing
-   the 'const' qualifier before Python 3.4.  Hence, we wrap the
-   function in our own version to avoid errors with string literals.
-   Note, this is a variadic template because PyObject_CallMethod is a
-   varargs function and Python doesn't have a "PyObject_VaCallMethod"
-   variant taking a va_list that we could defer to instead.  */
+/* A template variable holding the format character (as for
+   Py_BuildValue) for a given type.  */
+template<typename T>
+struct gdbpy_method_format {};
+
+template<>
+struct gdbpy_method_format<gdb_py_longest>
+{
+  static constexpr char format = GDB_PY_LL_ARG[0];
+};
+
+template<>
+struct gdbpy_method_format<gdb_py_ulongest>
+{
+  static constexpr char format = GDB_PY_LLU_ARG[0];
+};
+
+template<>
+struct gdbpy_method_format<int>
+{
+  static constexpr char format = 'i';
+};
+
+template<>
+struct gdbpy_method_format<unsigned>
+{
+  static constexpr char format = 'I';
+};
+
+/* A helper function to compute the PyObject_CallMethod /
+   Py_BuildValue format given the argument types.  */
 
 template<typename... Args>
-static inline PyObject *
-gdb_PyObject_CallMethod (PyObject *o, const char *method, const char *format,
-			 Args... args) /* ARI: editCase function */
+constexpr std::array<char, sizeof... (Args) + 1>
+gdbpy_make_fmt ()
 {
-  return PyObject_CallMethod (o,
-			      const_cast<char *> (method),
-			      const_cast<char *> (format),
-			      args...);
+  return { gdbpy_method_format<Args>::format..., '\0' };
 }
 
+/* Typesafe wrapper around PyObject_CallMethod.
+
+   This variant accepts no arguments.  */
+
+static inline gdbpy_ref<>
+gdbpy_call_method (PyObject *o, const char *method)
+{
+  /* PyObject_CallMethod's 'method' and 'format' parameters were missing the
+     'const' qualifier before Python 3.4.  */
+  return gdbpy_ref<> (PyObject_CallMethod (o,
+					   const_cast<char *> (method),
+					   nullptr));
+}
+
+/* Typesafe wrapper around PyObject_CallMethod.
+
+   This variant accepts any number of arguments and automatically
+   computes the format string, ensuring that format/argument
+   mismatches are impossible.  */
+
+template<typename Arg, typename... Args>
+static inline gdbpy_ref<>
+gdbpy_call_method (PyObject *o, const char *method,
+		   Arg arg, Args... args)
+{
+  constexpr const auto fmt = gdbpy_make_fmt<Arg, Args...> ();
+
+  /* PyObject_CallMethod's 'method' and 'format' parameters were missing the
+     'const' qualifier before Python 3.4.  */
+  return gdbpy_ref<> (PyObject_CallMethod (o,
+					   const_cast<char *> (method),
+					   const_cast<char *> (fmt.data ()),
+					   arg, args...));
+}
+
+/* An overload that takes a gdbpy_ref<> rather than a raw 'PyObject *'.  */
+
+template<typename... Args>
+static inline gdbpy_ref<>
+gdbpy_call_method (const gdbpy_ref<> &o, const char *method, Args... args)
+{
+  return gdbpy_call_method (o.get (), method, args...);
+}
+
+/* Poison PyObject_CallMethod.  The typesafe wrapper gdbpy_call_method should be
+   used instead.  */
 #undef PyObject_CallMethod
-#define PyObject_CallMethod gdb_PyObject_CallMethod
+#ifdef __GNUC__
+# pragma GCC poison PyObject_CallMethod
+#else
+# define PyObject_CallMethod POISONED_PyObject_CallMethod
+#endif
 
 /* The 'name' parameter of PyErr_NewException was missing the 'const'
    qualifier in Python <= 3.4.  Hence, we wrap it in a function to

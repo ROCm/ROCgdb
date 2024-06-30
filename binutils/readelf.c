@@ -1536,10 +1536,10 @@ uses_msp430x_relocs (Filedata * filedata)
 
 
 static const char *
-get_symbol_at (Elf_Internal_Sym *  symtab,
+get_symbol_at (Filedata *          filedata,
+	       Elf_Internal_Sym *  symtab,
 	       uint64_t            nsyms,
 	       char *              strtab,
-	       uint64_t            strtablen,
 	       uint64_t            where,
 	       uint64_t *          offset_return)
 {
@@ -1547,10 +1547,6 @@ get_symbol_at (Elf_Internal_Sym *  symtab,
   Elf_Internal_Sym *  end = symtab + nsyms;
   Elf_Internal_Sym *  best = NULL;
   uint64_t            dist = 0x100000;
-
-  /* Paranoia.  */
-  if (symtab == NULL || nsyms == 0 || strtab == NULL || strtablen == 0)
-    return NULL;
 
   /* FIXME: Since this function is likely to be called repeatedly with
      slightly increasing addresses each time, we could speed things up by
@@ -1564,8 +1560,7 @@ get_symbol_at (Elf_Internal_Sym *  symtab,
 
       value = sym->st_value;
 
-      if (sym->st_name != 0
-	  && where >= value
+      if (where >= value
 	  && where - value < dist)
 	{
 	  best = sym;
@@ -1580,23 +1575,34 @@ get_symbol_at (Elf_Internal_Sym *  symtab,
 	beg = sym + 1;
     }
 
-  if (best == NULL)
-    return NULL;
+  const char *name;
 
-  if (best->st_name >= strtablen)
+  /* If there is a section start closer than the found symbol then
+     use that for symbolizing the address.  */
+  Elf_Internal_Shdr *sec = find_section_by_address (filedata, where);
+  if (sec != NULL
+      && where - sec->sh_addr < dist
+      && section_name_valid (filedata, sec))
+    {
+      name = section_name (filedata, sec);
+      dist = where - sec->sh_addr;
+    }
+  else if (best != NULL)
+    name = strtab + best->st_name;
+  else
     return NULL;
 
   if (offset_return != NULL)
     * offset_return = dist;
 
-  return strtab + best->st_name;
+  return name;
 }
 
 static void
-print_relr_addr_and_sym (Elf_Internal_Sym *  symtab,
+print_relr_addr_and_sym (Filedata *          filedata,
+			 Elf_Internal_Sym *  symtab,
 			 uint64_t            nsyms,
 			 char *              strtab,
-			 uint64_t            strtablen,
 			 uint64_t            where)
 {
   const char * symname = NULL;
@@ -1605,7 +1611,7 @@ print_relr_addr_and_sym (Elf_Internal_Sym *  symtab,
   print_vma (where, ZERO_HEX);
   printf ("  ");
 
-  symname = get_symbol_at (symtab, nsyms, strtab, strtablen, where, & offset);
+  symname = get_symbol_at (filedata, symtab, nsyms, strtab, where, & offset);
 
   if (symname == NULL)
     printf ("<no sym>");
@@ -1617,6 +1623,117 @@ print_relr_addr_and_sym (Elf_Internal_Sym *  symtab,
       printf (" + ");
       print_vma (offset, PREFIX_HEX);
     }
+}
+
+/* See bfd_is_aarch64_special_symbol_name.  */
+
+static bool
+is_aarch64_special_symbol_name (const char *name)
+{
+  if (!name || name[0] != '$')
+    return false;
+  if (name[1] == 'x' || name[1] == 'd')
+    /* Map.  */;
+  else if (name[1] == 'm' || name[1] == 'f' || name[1] == 'p')
+    /* Tag.  */;
+  else
+    return false;
+  return name[2] == 0 || name[2] == '.';
+}
+
+static bool
+is_special_symbol_name (Filedata * filedata, const char * s)
+{
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_AARCH64:
+      return is_aarch64_special_symbol_name (s);
+
+    default:
+      return false;
+    }
+}
+
+/* Allows selecting the best symbol from a set for displaying addresses.
+   BEST is the current best or NULL if there are no good symbols yet.
+   SYM is the next symbol to consider, if it is better than BEST then
+   return SYM else return BEST.  */
+
+static Elf_Internal_Sym *
+select_display_sym (Filedata *         filedata,
+		    char *             strtab,
+		    uint64_t           strtablen,
+		    Elf_Internal_Sym * best,
+		    Elf_Internal_Sym * sym)
+{
+  /* Ignore empty or invalid syms.  */
+  if (sym->st_name == 0)
+    return best;
+  if (sym->st_name >= strtablen)
+    return best;
+  /* Ignore undefined or TLS syms.  */
+  if (sym->st_shndx == SHN_UNDEF)
+    return best;
+  if (ELF_ST_TYPE (sym->st_info) == STT_TLS)
+    return best;
+
+  char *s = strtab + sym->st_name;
+
+  /* Don't display special symbols.  */
+  if (is_special_symbol_name (filedata, s))
+    return best;
+
+  /* Here SYM is good for display.  */
+
+  if (best == NULL)
+    return sym;
+
+  char *sbest = strtab + best->st_name;
+
+  /* Prefer non-local symbols.  */
+  if (ELF_ST_BIND (sym->st_info) == STB_LOCAL
+      && ELF_ST_BIND (best->st_info) != STB_LOCAL)
+    return best;
+  if (ELF_ST_BIND (sym->st_info) != STB_LOCAL
+      && ELF_ST_BIND (best->st_info) == STB_LOCAL)
+    return sym;
+
+  /* Select based on lexicographic order. */
+  return strcmp (s, sbest) < 0 ? sym : best;
+}
+
+/* Filter the sorted SYMTAB symbol array in-place to select at most one
+   symbol for an address and drop symbols that are not good to display.
+   Returns the new array length.  */
+
+static uint64_t
+filter_display_syms (Filedata *         filedata,
+		     Elf_Internal_Sym * symtab,
+		     uint64_t           nsyms,
+		     char *             strtab,
+		     uint64_t           strtablen)
+{
+  Elf_Internal_Sym *r = symtab;
+  Elf_Internal_Sym *w = symtab;
+  Elf_Internal_Sym *best = NULL;
+  Elf_Internal_Sym *end = symtab + nsyms;
+  while (r < end)
+    {
+      /* Select the best symbol for an address.  */
+      while (r < end
+	     && (best == NULL || best->st_value == r->st_value))
+	{
+	  best = select_display_sym (filedata, strtab, strtablen, best, r);
+	  r++;
+	}
+      if (best != NULL)
+	{
+	  *w = *best;
+	  w++;
+	  best = NULL;
+	}
+    }
+  return w - symtab;
 }
 
 static /* signed */ int
@@ -1730,13 +1847,20 @@ dump_relr_relocations (Filedata *          filedata,
   if (relrs == NULL)
     return false;
 
+  /* Paranoia.  */
+  if (strtab == NULL)
+    strtablen = 0;
+  if (symtab == NULL)
+    nsyms = 0;
+
   if (symtab != NULL)
     {
       /* Symbol tables are not sorted on address, but we want a quick lookup
 	 for the symbol associated with each address computed below, so sort
-	 the table now.  FIXME: This assumes that the symbol table will not
-	 be used later on for some other purpose.  */
+	 the table then filter out unwanted entries. FIXME: This assumes that
+	 the symbol table will not be used later on for some other purpose.  */
       qsort (symtab, nsyms, sizeof (Elf_Internal_Sym), symcmp);
+      nsyms = filter_display_syms (filedata, symtab, nsyms, strtab, strtablen);
     }
 
   if (relr_entsize == sizeof (Elf32_External_Relr))
@@ -1761,7 +1885,7 @@ dump_relr_relocations (Filedata *          filedata,
       if ((entry & 1) == 0)
 	{
 	  where = entry;
-	  print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, where);
+	  print_relr_addr_and_sym (filedata, symtab, nsyms, strtab, where);
 	  printf ("\n");
 	  where += relr_entsize;
 	}
@@ -1785,13 +1909,13 @@ dump_relr_relocations (Filedata *          filedata,
 		
 		if (first)
 		  {
-		    print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, addr);
+		    print_relr_addr_and_sym (filedata, symtab, nsyms, strtab, addr);
 		    first = false;
 		  }
 		else
 		  {
 		    printf (_("\n%*s "), relr_entsize == 4 ? 15 : 23, " ");
-		    print_relr_addr_and_sym (symtab, nsyms, strtab, strtablen, addr);
+		    print_relr_addr_and_sym (filedata, symtab, nsyms, strtab, addr);
 		  }
 	      }
 
@@ -4770,6 +4894,8 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805")
@@ -5101,6 +5227,7 @@ get_osabi_name (Filedata * filedata, unsigned int osabi)
     case ELFOSABI_FENIXOS:	return "FenixOS";
     case ELFOSABI_CLOUDABI:	return "Nuxi CloudABI";
     case ELFOSABI_OPENVOS:	return "Stratus Technologies OpenVOS";
+    case ELFOSABI_CUDA:         return "CUDA";
     default:
       if (osabi >= 64)
 	switch (filedata->file_header.e_machine)
@@ -5160,9 +5287,9 @@ get_aarch64_segment_type (unsigned long type)
 {
   switch (type)
     {
-    case PT_AARCH64_ARCHEXT:  return "AARCH64_ARCHEXT";
+    case PT_AARCH64_ARCHEXT:    return "AARCH64_ARCHEXT";
     case PT_AARCH64_MEMTAG_MTE:	return "AARCH64_MEMTAG_MTE";
-    default:                  return NULL;
+    default:                    return NULL;
     }
 }
 
@@ -5171,8 +5298,9 @@ get_arm_segment_type (unsigned long type)
 {
   switch (type)
     {
-    case PT_ARM_EXIDX: return "EXIDX";
-    default:           return NULL;
+    case PT_ARM_ARCHEXT: return "ARM_ARCHEXT";
+    case PT_ARM_EXIDX:   return "ARM_EXIDX";
+    default:             return NULL;
     }
 }
 
@@ -5264,17 +5392,19 @@ get_hpux_segment_type (unsigned long type, unsigned e_machine)
       case PT_HP_HSL_ANNOT:	return "HP_HSL_ANNOT";
       case PT_HP_STACK:		return "HP_STACK";
       case PT_HP_CORE_UTSNAME:	return "HP_CORE_UTSNAME";
-      default:			return NULL;
+      default:
+	break;
       }
 
   if (e_machine == EM_IA_64)
     switch (type)
       {
-      case PT_HP_TLS:		 return "HP_TLS";
+      case PT_HP_TLS:	 	 return "HP_TLS";
       case PT_IA_64_HP_OPT_ANOT: return "HP_OPT_ANNOT";
       case PT_IA_64_HP_HSL_ANOT: return "HP_HSL_ANNOT";
       case PT_IA_64_HP_STACK:	 return "HP_STACK";
-      default:			 return NULL;
+      default:
+	break;
       }
 
   return NULL;
@@ -5285,18 +5415,126 @@ get_solaris_segment_type (unsigned long type)
 {
   switch (type)
     {
-    case 0x6464e550: return "PT_SUNW_UNWIND";
-    case 0x6474e550: return "PT_SUNW_EH_FRAME";
-    case 0x6ffffff7: return "PT_LOSUNW";
-    case 0x6ffffffa: return "PT_SUNWBSS";
-    case 0x6ffffffb: return "PT_SUNWSTACK";
-    case 0x6ffffffc: return "PT_SUNWDTRACE";
-    case 0x6ffffffd: return "PT_SUNWCAP";
-    case 0x6fffffff: return "PT_HISUNW";
-    default:         return NULL;
+    case PT_SUNW_UNWIND:   return "SUNW_UNWIND";
+    case PT_SUNW_EH_FRAME: return "SUNW_EH_FRAME";
+    case PT_SUNWBSS:       return "SUNW_BSS";
+    case PT_SUNWSTACK:     return "SUNW_STACK";
+    case PT_SUNWDTRACE:    return "SUNW_DTRACE";
+    case PT_SUNWCAP:       return "SUNW_CAP";
+    default:               return NULL;
     }
 }
 
+static const char *
+get_os_specific_segment_type (Filedata * filedata, unsigned long p_type)
+{
+  static char buff[32];
+  const char * result = NULL;
+
+  switch (filedata->file_header.e_ident[EI_OSABI])
+    {
+    case ELFOSABI_GNU:
+    case ELFOSABI_FREEBSD:
+      if (p_type >= PT_GNU_MBIND_LO && p_type <= PT_GNU_MBIND_HI)
+	{
+	  sprintf (buff, "GNU_MBIND+%#lx", p_type - PT_GNU_MBIND_LO);
+	  result = buff;
+	}
+      break;
+
+    case ELFOSABI_HPUX:
+      result = get_hpux_segment_type (p_type,
+				      filedata->file_header.e_machine);
+      break;
+
+    case ELFOSABI_SOLARIS:
+      result = get_solaris_segment_type (p_type);
+      break;
+
+    default:
+      break;
+    }
+
+  if (result != NULL)
+    return result;
+  
+  switch (p_type)
+    {
+    case PT_GNU_EH_FRAME:      return "GNU_EH_FRAME";
+    case PT_GNU_STACK:         return "GNU_STACK";
+    case PT_GNU_RELRO:         return "GNU_RELRO";
+    case PT_GNU_PROPERTY:      return "GNU_PROPERTY";
+    case PT_GNU_SFRAME:        return "GNU_SFRAME";
+
+    case PT_OPENBSD_MUTABLE:   return "OPENBSD_MUTABLE";
+    case PT_OPENBSD_RANDOMIZE: return "OPENBSD_RANDOMIZE";
+    case PT_OPENBSD_WXNEEDED:  return "OPENBSD_WXNEEDED";
+    case PT_OPENBSD_NOBTCFI:   return "OPENBSD_NOBTCFI";
+    case PT_OPENBSD_SYSCALLS:  return "OPENBSD_SYSCALLS";
+    case PT_OPENBSD_BOOTDATA:  return "OPENBSD_BOOTDATA";
+
+    default:
+      break;
+    }
+
+  sprintf (buff, "LOOS+%#lx", p_type - PT_LOOS);
+  return buff;
+}
+
+static const char *
+get_processor_specific_segment_type (Filedata * filedata, unsigned long p_type)
+{
+  static char buff[32];
+  const char * result = NULL;
+
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_AARCH64:
+      result = get_aarch64_segment_type (p_type);
+      break;
+
+    case EM_ARM:
+      result = get_arm_segment_type (p_type);
+      break;
+
+    case EM_MIPS:
+    case EM_MIPS_RS3_LE:
+      result = get_mips_segment_type (p_type);
+      break;
+
+    case EM_PARISC:
+      result = get_parisc_segment_type (p_type);
+      break;
+
+    case EM_IA_64:
+      result = get_ia64_segment_type (p_type);
+      break;
+
+    case EM_TI_C6000:
+      result = get_tic6x_segment_type (p_type);
+      break;
+
+    case EM_S390:
+    case EM_S390_OLD:
+      result = get_s390_segment_type (p_type);
+      break;
+
+    case EM_RISCV:
+      result = get_riscv_segment_type (p_type);
+      break;
+
+    default:
+      result = NULL;
+      break;
+    }
+
+  if (result != NULL)
+    return result;
+
+  sprintf (buff, "LOPROC+%#lx", p_type - PT_LOPROC);
+  return buff;
+}
+  
 static const char *
 get_segment_type (Filedata * filedata, unsigned long p_type)
 {
@@ -5312,96 +5550,17 @@ get_segment_type (Filedata * filedata, unsigned long p_type)
     case PT_SHLIB:	return "SHLIB";
     case PT_PHDR:	return "PHDR";
     case PT_TLS:	return "TLS";
-    case PT_GNU_EH_FRAME: return "GNU_EH_FRAME";
-    case PT_GNU_STACK:	return "GNU_STACK";
-    case PT_GNU_RELRO:  return "GNU_RELRO";
-    case PT_GNU_PROPERTY: return "GNU_PROPERTY";
-    case PT_GNU_SFRAME: return "GNU_SFRAME";
-
-    case PT_OPENBSD_MUTABLE: return "OPENBSD_MUTABLE";
-    case PT_OPENBSD_RANDOMIZE: return "OPENBSD_RANDOMIZE";
-    case PT_OPENBSD_WXNEEDED: return "OPENBSD_WXNEEDED";
-    case PT_OPENBSD_NOBTCFI: return "OPENBSD_NOBTCFI";
-    case PT_OPENBSD_SYSCALLS: return "OPENBSD_SYSCALLS";
-    case PT_OPENBSD_BOOTDATA: return "OPENBSD_BOOTDATA";
-
-    default:
-      if ((p_type >= PT_LOPROC) && (p_type <= PT_HIPROC))
-	{
-	  const char * result;
-
-	  switch (filedata->file_header.e_machine)
-	    {
-	    case EM_AARCH64:
-	      result = get_aarch64_segment_type (p_type);
-	      break;
-	    case EM_ARM:
-	      result = get_arm_segment_type (p_type);
-	      break;
-	    case EM_MIPS:
-	    case EM_MIPS_RS3_LE:
-	      result = get_mips_segment_type (p_type);
-	      break;
-	    case EM_PARISC:
-	      result = get_parisc_segment_type (p_type);
-	      break;
-	    case EM_IA_64:
-	      result = get_ia64_segment_type (p_type);
-	      break;
-	    case EM_TI_C6000:
-	      result = get_tic6x_segment_type (p_type);
-	      break;
-	    case EM_S390:
-	    case EM_S390_OLD:
-	      result = get_s390_segment_type (p_type);
-	      break;
-	    case EM_RISCV:
-	      result = get_riscv_segment_type (p_type);
-	      break;
-	    default:
-	      result = NULL;
-	      break;
-	    }
-
-	  if (result != NULL)
-	    return result;
-
-	  sprintf (buff, "LOPROC+%#lx", p_type - PT_LOPROC);
-	}
-      else if ((p_type >= PT_LOOS) && (p_type <= PT_HIOS))
-	{
-	  const char * result = NULL;
-
-	  switch (filedata->file_header.e_ident[EI_OSABI])
-	    {
-	    case ELFOSABI_GNU:
-	    case ELFOSABI_FREEBSD:
-	      if (p_type >= PT_GNU_MBIND_LO && p_type <= PT_GNU_MBIND_HI)
-		{
-		  sprintf (buff, "GNU_MBIND+%#lx", p_type - PT_GNU_MBIND_LO);
-		  result = buff;
-		}
-	      break;
-	    case ELFOSABI_HPUX:
-	      result = get_hpux_segment_type (p_type,
-					      filedata->file_header.e_machine);
-	      break;
-	    case ELFOSABI_SOLARIS:
-	      result = get_solaris_segment_type (p_type);
-	      break;
-	    default:
-	      break;
-	    }
-	  if (result != NULL)
-	    return result;
-
-	  sprintf (buff, "LOOS+%#lx", p_type - PT_LOOS);
-	}
-      else
-	snprintf (buff, sizeof (buff), _("<unknown>: %lx"), p_type);
-
-      return buff;
+    case PT_NUM:	return "NUM";
     }
+
+  if ((p_type >= PT_LOOS) && (p_type <= PT_HIOS))
+    return get_os_specific_segment_type (filedata, p_type);
+
+  if ((p_type >= PT_LOPROC) && (p_type <= PT_HIPROC))
+    return get_processor_specific_segment_type (filedata, p_type);
+
+  snprintf (buff, sizeof (buff), _("<unknown>: %lx"), p_type);
+  return buff;
 }
 
 static const char *
@@ -5477,9 +5636,9 @@ get_parisc_section_type_name (unsigned int sh_type)
     case SHT_PARISC_UNWIND:	return "PARISC_UNWIND";
     case SHT_PARISC_DOC:	return "PARISC_DOC";
     case SHT_PARISC_ANNOT:	return "PARISC_ANNOT";
+    case SHT_PARISC_DLKM:	return "PARISC_DLKM";
     case SHT_PARISC_SYMEXTN:	return "PARISC_SYMEXTN";
     case SHT_PARISC_STUBS:	return "PARISC_STUBS";
-    case SHT_PARISC_DLKM:	return "PARISC_DLKM";
     default:             	return NULL;
     }
 }
@@ -5496,6 +5655,17 @@ get_ia64_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_IA_64_EXT:		       return "IA_64_EXT";
     case SHT_IA_64_UNWIND:	       return "IA_64_UNWIND";
     case SHT_IA_64_PRIORITY_INIT:      return "IA_64_PRIORITY_INIT";
+    default:
+      break;
+    }
+  return NULL;
+}
+
+static const char *
+get_vms_section_type_name (unsigned int sh_type)
+{
+  switch (sh_type)
+    {
     case SHT_IA_64_VMS_TRACE:          return "VMS_TRACE";
     case SHT_IA_64_VMS_TIE_SIGNATURES: return "VMS_TIE_SIGNATURES";
     case SHT_IA_64_VMS_DEBUG:          return "VMS_DEBUG";
@@ -5524,8 +5694,16 @@ get_aarch64_section_type_name (unsigned int sh_type)
 {
   switch (sh_type)
     {
-    case SHT_AARCH64_ATTRIBUTES: return "AARCH64_ATTRIBUTES";
-    default:			 return NULL;
+    case SHT_AARCH64_ATTRIBUTES:
+      return "AARCH64_ATTRIBUTES";
+    case SHT_AARCH64_AUTH_RELR:
+      return "AARCH64_AUTH_RELR";
+    case SHT_AARCH64_MEMTAG_GLOBALS_STATIC:
+      return "AARCH64_MEMTAG_GLOBALS_STATIC";
+    case SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC:
+      return "AARCH64_MEMTAG_GLOBALS_DYNAMIC";
+    default:
+      return NULL;
     }
 }
 
@@ -5619,11 +5797,222 @@ get_csky_section_type_name (unsigned int sh_type)
 }
 
 static const char *
-get_section_type_name (Filedata * filedata, unsigned int sh_type)
+get_powerpc_section_type_name (unsigned int sh_type)
+{
+  switch (sh_type)
+    {
+    case SHT_ORDERED: return "ORDERED";
+    default:          return NULL;
+    }
+}
+
+static const char *
+get_alpha_section_type_name (unsigned int sh_type)
+{
+  switch (sh_type)
+    {
+    case SHT_ALPHA_DEBUG:   return "DEBUG";
+    case SHT_ALPHA_REGINFO: return "REGINFO";
+    default:                return NULL;
+    }
+}
+
+static const char *
+get_processor_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
+{
+  static char buff[32];
+  const char * result = NULL;
+
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_AARCH64:
+      result = get_aarch64_section_type_name (sh_type);
+      break;
+
+    case EM_ALPHA:
+      result = get_alpha_section_type_name (sh_type);
+      break;
+
+    case EM_ARC:
+    case EM_ARC_COMPACT:
+    case EM_ARC_COMPACT2:
+    case EM_ARC_COMPACT3:
+    case EM_ARC_COMPACT3_64:
+      result = get_arc_section_type_name (sh_type);
+      break;
+
+    case EM_ARM:
+      result = get_arm_section_type_name (sh_type);
+      break;
+
+    case EM_CSKY:
+      result = get_csky_section_type_name (sh_type);
+      break;
+
+    case EM_IA_64:
+      result = get_ia64_section_type_name (filedata, sh_type);
+      break;
+
+    case EM_MIPS:
+    case EM_MIPS_RS3_LE:
+      result = get_mips_section_type_name (sh_type);
+      break;
+
+    case EM_MSP430:
+      result = get_msp430_section_type_name (sh_type);
+      break;
+
+    case EM_NFP:
+      result = get_nfp_section_type_name (sh_type);
+      break;
+
+    case EM_PARISC:
+      result = get_parisc_section_type_name (sh_type);
+      break;
+
+    case EM_PPC64:
+    case EM_PPC:
+      return get_powerpc_section_type_name (sh_type);
+      break;
+
+    case EM_RISCV:
+      result = get_riscv_section_type_name (sh_type);
+      break;
+
+    case EM_TI_C6000:
+      result = get_tic6x_section_type_name (sh_type);
+      break;
+
+    case EM_V800:
+    case EM_V850:
+    case EM_CYGNUS_V850:
+      result = get_v850_section_type_name (sh_type);
+      break;
+
+    case EM_X86_64:
+    case EM_L1OM:
+    case EM_K1OM:
+      result = get_x86_64_section_type_name (sh_type);
+      break;
+
+    default:
+      break;
+    }
+
+  if (result != NULL)
+    return result;
+
+  switch (sh_type)
+    {
+      /* FIXME: Are these correct ?  If so, why do they not have #define's ?  */
+    case 0x7ffffffd: return "AUXILIARY";
+    case 0x7fffffff: return "FILTER";
+    default:
+      break;
+    }
+
+  sprintf (buff, "LOPROC+%#x", sh_type - SHT_LOPROC);
+  return buff;
+}
+
+static const char *
+get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
+{
+  static char buff[32];
+  const char * result = NULL;
+
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_IA_64:
+      result = get_vms_section_type_name (sh_type);
+      break;
+    default:
+      break;
+    }
+
+  if (result != NULL)
+    return result;
+
+  if (filedata->file_header.e_ident[EI_OSABI] == ELFOSABI_SOLARIS)
+    result = get_solaris_section_type (sh_type);
+
+  if (result != NULL)
+    return result;
+
+  switch (sh_type)
+    {
+    case SHT_GNU_INCREMENTAL_INPUTS:  return "GNU_INCREMENTAL_INPUTS";
+    case SHT_GNU_ATTRIBUTES:          return "GNU_ATTRIBUTES";
+    case SHT_GNU_HASH:                return "GNU_HASH";
+    case SHT_GNU_LIBLIST:             return "GNU_LIBLIST";
+
+    case SHT_SUNW_move:               return "SUNW_MOVE";
+    case SHT_SUNW_COMDAT:             return "SUNW_COMDAT";
+    case SHT_SUNW_syminfo:            return "SUNW_SYMINFO";
+    case SHT_GNU_verdef:	      return "VERDEF";
+    case SHT_GNU_verneed:	      return "VERNEED";
+    case SHT_GNU_versym:	      return "VERSYM";
+      
+    case SHT_LLVM_ODRTAB:             return "LLVM_ODRTAB";
+    case SHT_LLVM_LINKER_OPTIONS:     return "LLVM_LINKER_OPTIONS";
+    case SHT_LLVM_ADDRSIG:            return "LLVM_ADDRSIG";
+    case SHT_LLVM_DEPENDENT_LIBRARIES: return "LLVM_DEPENDENT_LIBRARIES";
+    case SHT_LLVM_SYMPART:            return "LLVM_SYMPART";
+    case SHT_LLVM_PART_EHDR:          return "LLVM_PART_EHDR";
+    case SHT_LLVM_PART_PHDR:          return "LLVM_PART_PHDR";
+    case SHT_LLVM_BB_ADDR_MAP_V0:     return "LLVM_BB_ADDR_MAP_V0";
+    case SHT_LLVM_CALL_GRAPH_PROFILE: return "LLVM_CALL_GRAPH_PROFILE";
+    case SHT_LLVM_BB_ADDR_MAP:        return "LLVM_BB_ADDR_MAP";
+    case SHT_LLVM_OFFLOADING:         return "LLVM_OFFLOADING";
+    case SHT_LLVM_LTO:                return "LLVM_LTO";
+
+    case SHT_ANDROID_REL:             return "ANDROID_REL";
+    case SHT_ANDROID_RELA:            return "ANDROID_RELA";
+    case SHT_ANDROID_RELR:            return "ANDROID_RELR";
+
+    case SHT_CHECKSUM:                return "CHECKSUM";
+      
+      /* FIXME: Are these correct ?  If so, why do they not have #define's ?  */
+    case 0x6ffffff0:		     return "VERSYM";
+      
+    default:
+      break;
+    }
+
+  sprintf (buff, "LOOS+%#x", sh_type - SHT_LOOS);
+  return buff;
+}
+
+static const char *
+get_user_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
 {
   static char buff[32];
   const char * result;
 
+  switch (filedata->file_header.e_machine)
+    {
+    case EM_V800:
+    case EM_V850:
+    case EM_CYGNUS_V850:
+      result = get_v850_section_type_name (sh_type);
+      break;
+
+    default:
+      result = NULL;
+      break;
+    }
+
+  if (result != NULL)
+    return result;
+
+  sprintf (buff, "LOUSER+%#x", sh_type - SHT_LOUSER);
+  return buff;
+}
+
+static const char *
+get_section_type_name (Filedata *    filedata,
+		       unsigned int  sh_type)
+{
   switch (sh_type)
     {
     case SHT_NULL:		return "NULL";
@@ -5647,139 +6036,25 @@ get_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_RELR:		return "RELR";
       /* End of generic section types.  */
 
-      /* OS specific section types:  */
-    case SHT_GNU_verdef:	return "VERDEF";
-    case SHT_GNU_verneed:	return "VERNEED";
-    case SHT_GNU_versym:	return "VERSYM";
-    case SHT_GNU_INCREMENTAL_INPUTS: return "GNU_INCREMENTAL_INPUTS";
-    case 0x6ffffff0:		return "VERSYM";
-    case SHT_GNU_ATTRIBUTES:	return "GNU_ATTRIBUTES";
-    case SHT_GNU_HASH:		return "GNU_HASH";
-    case SHT_GNU_LIBLIST:	return "GNU_LIBLIST";
-    case 0x6ffffffc:		return "VERDEF";
-    case 0x7ffffffd:		return "AUXILIARY";
-    case 0x7fffffff:		return "FILTER";
-
     default:
-      if ((sh_type >= SHT_LOPROC) && (sh_type <= SHT_HIPROC))
-	{
-	  switch (filedata->file_header.e_machine)
-	    {
-	    case EM_ARC:
-	    case EM_ARC_COMPACT:
-	    case EM_ARC_COMPACT2:
-	    case EM_ARC_COMPACT3:
-	    case EM_ARC_COMPACT3_64:
-	      result = get_arc_section_type_name (sh_type);
-	      break;
-	    case EM_MIPS:
-	    case EM_MIPS_RS3_LE:
-	      result = get_mips_section_type_name (sh_type);
-	      break;
-	    case EM_PARISC:
-	      result = get_parisc_section_type_name (sh_type);
-	      break;
-	    case EM_IA_64:
-	      result = get_ia64_section_type_name (filedata, sh_type);
-	      break;
-	    case EM_X86_64:
-	    case EM_L1OM:
-	    case EM_K1OM:
-	      result = get_x86_64_section_type_name (sh_type);
-	      break;
-	    case EM_AARCH64:
-	      result = get_aarch64_section_type_name (sh_type);
-	      break;
-	    case EM_ARM:
-	      result = get_arm_section_type_name (sh_type);
-	      break;
-	    case EM_TI_C6000:
-	      result = get_tic6x_section_type_name (sh_type);
-	      break;
-	    case EM_MSP430:
-	      result = get_msp430_section_type_name (sh_type);
-	      break;
-	    case EM_NFP:
-	      result = get_nfp_section_type_name (sh_type);
-	      break;
-	    case EM_V800:
-	    case EM_V850:
-	    case EM_CYGNUS_V850:
-	      result = get_v850_section_type_name (sh_type);
-	      break;
-	    case EM_RISCV:
-	      result = get_riscv_section_type_name (sh_type);
-	      break;
-	    case EM_CSKY:
-	      result = get_csky_section_type_name (sh_type);
-	      break;
-	    default:
-	      result = NULL;
-	      break;
-	    }
-
-	  if (result != NULL)
-	    return result;
-
-	  sprintf (buff, "LOPROC+%#x", sh_type - SHT_LOPROC);
-	}
-      else if ((sh_type >= SHT_LOOS) && (sh_type <= SHT_HIOS))
-	{
-	  switch (filedata->file_header.e_machine)
-	    {
-	    case EM_IA_64:
-	      result = get_ia64_section_type_name (filedata, sh_type);
-	      break;
-	    default:
-	      if (filedata->file_header.e_ident[EI_OSABI] == ELFOSABI_SOLARIS)
-		result = get_solaris_section_type (sh_type);
-	      else
-		{
-		  switch (sh_type)
-		    {
-		    case SHT_GNU_INCREMENTAL_INPUTS: result = "GNU_INCREMENTAL_INPUTS"; break;
-		    case SHT_GNU_ATTRIBUTES: result = "GNU_ATTRIBUTES"; break;
-		    case SHT_GNU_HASH: result = "GNU_HASH"; break;
-		    case SHT_GNU_LIBLIST: result = "GNU_LIBLIST"; break;
-		    default:
-		      result = NULL;
-		      break;
-		    }
-		}
-	      break;
-	    }
-
-	  if (result != NULL)
-	    return result;
-
-	  sprintf (buff, "LOOS+%#x", sh_type - SHT_LOOS);
-	}
-      else if ((sh_type >= SHT_LOUSER) && (sh_type <= SHT_HIUSER))
-	{
-	  switch (filedata->file_header.e_machine)
-	    {
-	    case EM_V800:
-	    case EM_V850:
-	    case EM_CYGNUS_V850:
-	      result = get_v850_section_type_name (sh_type);
-	      break;
-	    default:
-	      result = NULL;
-	      break;
-	    }
-
-	  if (result != NULL)
-	    return result;
-
-	  sprintf (buff, "LOUSER+%#x", sh_type - SHT_LOUSER);
-	}
-      else
-	/* This message is probably going to be displayed in a 15
-	   character wide field, so put the hex value first.  */
-	snprintf (buff, sizeof (buff), _("%08x: <unknown>"), sh_type);
-
-      return buff;
+      break;
     }
+
+  if ((sh_type >= SHT_LOPROC) && (sh_type <= SHT_HIPROC))
+    return get_processor_specific_section_type_name (filedata, sh_type);
+
+  if ((sh_type >= SHT_LOOS) && (sh_type <= SHT_HIOS))
+    return get_os_specific_section_type_name (filedata, sh_type);
+
+  if ((sh_type >= SHT_LOUSER) && (sh_type <= SHT_HIUSER))
+    return get_user_specific_section_type_name (filedata, sh_type);
+
+  static char buff[32];
+
+  /* This message is probably going to be displayed in a 15
+     character wide field, so put the hex value first.  */
+  snprintf (buff, sizeof (buff), _("%08x: <unknown>"), sh_type);
+  return buff;
 }
 
 enum long_option_values
@@ -20516,6 +20791,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("GO BUILDID");
       case FDO_PACKAGING_METADATA:
 	return _("FDO_PACKAGING_METADATA");
+      case FDO_DLOPEN_METADATA:
+	return _("FDO_DLOPEN_METADATA");
       default:
 	break;
       }
@@ -21775,6 +22052,11 @@ print_fdo_note (Elf_Internal_Note * pnote)
   if (pnote->descsz > 0 && pnote->type == FDO_PACKAGING_METADATA)
     {
       printf (_("    Packaging Metadata: %.*s\n"), (int) pnote->descsz, pnote->descdata);
+      return true;
+    }
+  if (pnote->descsz > 0 && pnote->type == FDO_DLOPEN_METADATA)
+    {
+      printf (_("    Dlopen Metadata: %.*s\n"), (int) pnote->descsz, pnote->descdata);
       return true;
     }
   return false;

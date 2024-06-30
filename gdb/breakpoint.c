@@ -21,6 +21,7 @@
 #include "arch-utils.h"
 #include <ctype.h>
 #include "event-top.h"
+#include "exceptions.h"
 #include "hashtab.h"
 #include "symtab.h"
 #include "frame.h"
@@ -58,7 +59,6 @@
 #include "valprint.h"
 #include "jit.h"
 #include "parser-defs.h"
-#include "gdbsupport/gdb_regex.h"
 #include "probe.h"
 #include "cli/cli-utils.h"
 #include "stack.h"

@@ -1842,6 +1842,8 @@ enum bfd_architecture
 #define bfd_mach_amdgcn_gfx1100 0x041
 #define bfd_mach_amdgcn_gfx1101 0x046
 #define bfd_mach_amdgcn_gfx1102 0x047
+#define bfd_mach_amdgcn_gfx1200 0x048
+#define bfd_mach_amdgcn_gfx1201 0x04e
   bfd_arch_last
   };
 

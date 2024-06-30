@@ -21,6 +21,7 @@
 
 /* Originally by Steve Chamberlain, sac@cygnus.com */
 
+#include "exceptions.h"
 #include "frame.h"
 #include "inferior.h"
 #include "infrun.h"
@@ -41,6 +42,7 @@
 #include <cygwin/version.h>
 #endif
 #include <algorithm>
+#include <atomic>
 #include <vector>
 #include <queue>
 

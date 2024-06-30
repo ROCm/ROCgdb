@@ -1353,7 +1353,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	    {
 	      s->size += GOT_ENTRY_SIZE;
 	      if (need_reloc)
-		htab->elf.srelgot->size += 2 * sizeof (ElfNN_External_Rela);
+		htab->elf.srelgot->size += sizeof (ElfNN_External_Rela);
 	    }
 
 	  /* TLS_DESC needs one dynamic reloc and two GOT slot.  */
@@ -3949,6 +3949,12 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  info->callbacks->reloc_overflow
 	    (info, h ? &h->root : NULL, name, howto->name, rel->r_addend,
 	     input_bfd, input_section, rel->r_offset);
+	  if (r_type == R_LARCH_PCREL20_S2
+	      || r_type == R_LARCH_TLS_LD_PCREL20_S2
+	      || r_type == R_LARCH_TLS_GD_PCREL20_S2
+	      || r_type == R_LARCH_TLS_DESC_PCREL20_S2)
+	    _bfd_error_handler (_("recompile with 'gcc -mno-relax' or"
+				  " 'as -mno-relax' or 'ld --no-relax'"));
 	  break;
 
 	case bfd_reloc_outofrange:
@@ -4313,6 +4319,30 @@ loongarch_relax_tls_le (bfd *abfd, asection *sec,
   return true;
 }
 
+/* Whether two sections in the same segment.  */
+static bool
+loongarch_two_sections_in_same_segment (bfd *abfd, asection *a, asection *b)
+{
+  struct elf_segment_map *m;
+  for (m = elf_seg_map (abfd); m != NULL; m = m->next)
+    {
+      int i;
+      int j = 0;
+      for (i = m->count - 1; i >= 0; i--)
+	{
+	  if (m->sections[i] == a)
+	    j++;
+	  if (m->sections[i] == b)
+	    j++;
+	}
+      if (1 == j)
+	return false;
+      if (2 == j)
+	return true;
+    }
+  return false;
+}
+
 /* Relax pcalau12i,addi.d => pcaddi.  */
 static bool
 loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
@@ -4333,23 +4363,17 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
   sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec) + rel_hi->r_offset;
 
-  /* If pc and symbol not in the same segment, add/sub segment alignment.
-     FIXME: if there are multiple readonly segments? How to determine if
-     two sections are in the same segment.  */
-  if (!(sym_sec->flags & SEC_READONLY))
-    {
-      max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							  : max_alignment;
-      if (symval > pc)
-	pc -= max_alignment;
-      else if (symval < pc)
-	pc += max_alignment;
-    }
-  else
-    if (symval > pc)
-      pc -= max_alignment;
-    else if (symval < pc)
-      pc += max_alignment;
+  /* If pc and symbol not in the same segment, add/sub segment alignment.  */
+  if (!loongarch_two_sections_in_same_segment (info->output_bfd,
+					       sec->output_section,
+					       sym_sec->output_section))
+    max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
+							: max_alignment;
+
+  if (symval > pc)
+    pc -= (max_alignment > 4 ? max_alignment : 0);
+  else if (symval < pc)
+    pc += (max_alignment > 4 ? max_alignment : 0);
 
   const uint32_t addi_d = 0x02c00000;
   const uint32_t pcaddi = 0x18000000;
@@ -4388,7 +4412,7 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
 /* call36 f -> bl f
    tail36 $t0, f -> b f.  */
 static bool
-loongarch_relax_call36 (bfd *abfd, asection *sec,
+loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
 			    Elf_Internal_Rela *rel, bfd_vma symval,
 			    struct bfd_link_info *info, bool *again,
 			    bfd_vma max_alignment)
@@ -4404,9 +4428,13 @@ loongarch_relax_call36 (bfd *abfd, asection *sec,
   sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec) + rel->r_offset;
 
-  /* If pc and symbol not in the same segment, add/sub segment alignment.
-     FIXME: if there are multiple readonly segments? How to determine if
-     two sections are in the same segment.  */
+  /* If pc and symbol not in the same segment, add/sub segment alignment.  */
+  if (!loongarch_two_sections_in_same_segment (info->output_bfd,
+					       sec->output_section,
+					       sym_sec->output_section))
+    max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
+							: max_alignment;
+
   if (symval > pc)
     pc -= (max_alignment > 4 ? max_alignment : 0);
   else if (symval < pc)
@@ -4560,22 +4588,17 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
   sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec) + rel_hi->r_offset;
 
-  /* If pc and symbol not in the same segment, add/sub segment alignment.
-     FIXME: if there are multiple readonly segments?  */
-  if (!(sym_sec->flags & SEC_READONLY))
-    {
-      max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							  : max_alignment;
-      if (symval > pc)
-	pc -= max_alignment;
-      else if (symval < pc)
-	pc += max_alignment;
-    }
-  else
-    if (symval > pc)
-      pc -= max_alignment;
-    else if (symval < pc)
-      pc += max_alignment;
+  /* If pc and symbol not in the same segment, add/sub segment alignment.  */
+  if (!loongarch_two_sections_in_same_segment (info->output_bfd,
+					       sec->output_section,
+					       sym_sec->output_section))
+    max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
+							: max_alignment;
+
+  if (symval > pc)
+    pc -= (max_alignment > 4 ? max_alignment : 0);
+  else if (symval < pc)
+    pc += (max_alignment > 4 ? max_alignment : 0);
 
   const uint32_t addi_d = 0x02c00000;
   const uint32_t pcaddi = 0x18000000;
@@ -4859,8 +4882,8 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	  break;
 	case R_LARCH_CALL36:
 	  if (0 == info->relax_pass && (i + 2) <= sec->reloc_count)
-	    loongarch_relax_call36 (abfd, sec, rel, symval, info, again,
-				    max_alignment);
+	    loongarch_relax_call36 (abfd, sec, sym_sec, rel, symval,
+				    info, again, max_alignment);
 	  break;
 
 	case R_LARCH_TLS_LE_HI20_R:
@@ -5505,21 +5528,6 @@ elf_loongarch64_hash_symbol (struct elf_link_hash_entry *h)
   return _bfd_elf_hash_symbol (h);
 }
 
-/* If a relocation is rela_normal and the symbol associated with the
-   relocation is STT_SECTION type, the addend of the relocation would add
-   sec->output_offset when partial linking (ld -r).
-   See elf_backend_data.rela_normal and elf_link_input_bfd().
-   The addend of R_LARCH_ALIGN is used to represent the first and third
-   expression of .align, it should be a constant when linking.  */
-
-static bool
-loongarch_elf_is_rela_normal (Elf_Internal_Rela *rel)
-{
-  if (R_LARCH_ALIGN == ELFNN_R_TYPE (rel->r_info))
-    return false;
-  return true;
-}
-
 #define TARGET_LITTLE_SYM loongarch_elfNN_vec
 #define TARGET_LITTLE_NAME "elfNN-loongarch"
 #define ELF_ARCH bfd_arch_loongarch
@@ -5555,7 +5563,6 @@ loongarch_elf_is_rela_normal (Elf_Internal_Rela *rel)
 #define elf_backend_grok_psinfo loongarch_elf_grok_psinfo
 #define elf_backend_hash_symbol elf_loongarch64_hash_symbol
 #define bfd_elfNN_bfd_relax_section loongarch_elf_relax_section
-#define elf_backend_is_rela_normal loongarch_elf_is_rela_normal
 
 #define elf_backend_dtrel_excludes_plt 1
 

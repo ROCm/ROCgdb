@@ -198,6 +198,14 @@ match_rs1_eq_rs2 (const struct riscv_opcode *op, insn_t insn)
 }
 
 static int
+match_rs2_rd_even (const struct riscv_opcode *op, insn_t insn)
+{
+  int rs2 = (insn & MASK_RS2) >> OP_SH_RS2;
+  int rd = (insn & MASK_RD) >> OP_SH_RD;
+  return ((rs2 & 1) == 0) && ((rd & 1) == 0) && match_opcode (op, insn);
+}
+
+static int
 match_rd_nonzero (const struct riscv_opcode *op, insn_t insn)
 {
   return (op->pinfo == INSN_MACRO || match_opcode (op, insn))
@@ -748,6 +756,24 @@ const struct riscv_opcode riscv_opcodes[] =
 {"amomin.h.aqrl",   0, INSN_CLASS_ZABHA, "d,t,0(s)", MATCH_AMOMIN_H|MASK_AQRL, MASK_AMOMIN_H|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
 {"amominu.h.aqrl",  0, INSN_CLASS_ZABHA, "d,t,0(s)", MATCH_AMOMINU_H|MASK_AQRL, MASK_AMOMINU_H|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
 
+/* Zacas instruction subset.  */
+{"amocas.w",         0, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_W, MASK_AMOCAS_W|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"amocas.d",        32, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D, MASK_AMOCAS_D|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_8_BYTE },
+{"amocas.d",        64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"amocas.q",        64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
+{"amocas.w.aq",      0, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_W|MASK_AQ, MASK_AMOCAS_W|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"amocas.d.aq",     32, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQ, MASK_AMOCAS_D|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_8_BYTE },
+{"amocas.d.aq",     64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQ, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"amocas.q.aq",     64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q|MASK_AQ, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
+{"amocas.w.rl",      0, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_W|MASK_RL, MASK_AMOCAS_W|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"amocas.d.rl",     32, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_RL, MASK_AMOCAS_D|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_8_BYTE },
+{"amocas.d.rl",     64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_RL, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"amocas.q.rl",     64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q|MASK_RL, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
+{"amocas.w.aqrl",    0, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_W|MASK_AQRL, MASK_AMOCAS_W|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"amocas.d.aqrl",   32, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQRL, MASK_AMOCAS_D|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_8_BYTE },
+{"amocas.d.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQRL, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"amocas.q.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q|MASK_AQRL, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
+
 /* Multiply/Divide instruction subset.  */
 {"mul",        0, INSN_CLASS_ZCB_AND_ZMMUL, "Cs,Cw,Ct",  MATCH_C_MUL, MASK_C_MUL, match_opcode, INSN_ALIAS },
 {"mul",        0, INSN_CLASS_ZMMUL, "d,s,t",     MATCH_MUL, MASK_MUL, match_opcode, 0 },
@@ -828,6 +854,11 @@ const struct riscv_opcode riscv_opcodes[] =
 {"fcvt.h.l",  64, INSN_CLASS_ZFH_INX,   "D,s,m",     MATCH_FCVT_H_L, MASK_FCVT_H_L, match_opcode, 0 },
 {"fcvt.h.lu", 64, INSN_CLASS_ZFH_INX,   "D,s",       MATCH_FCVT_H_LU|MASK_RM, MASK_FCVT_H_LU|MASK_RM, match_opcode, 0 },
 {"fcvt.h.lu", 64, INSN_CLASS_ZFH_INX,   "D,s,m",     MATCH_FCVT_H_LU, MASK_FCVT_H_LU, match_opcode, 0 },
+
+/* Zfbfmin instructions.  */
+{"fcvt.bf16.s", 0, INSN_CLASS_ZFBFMIN, "D,S",   MATCH_FCVT_BF16_S|MASK_RM, MASK_FCVT_BF16_S|MASK_RM, match_opcode, 0 },
+{"fcvt.bf16.s", 0, INSN_CLASS_ZFBFMIN, "D,S,m", MATCH_FCVT_BF16_S, MASK_FCVT_BF16_S, match_opcode, 0 },
+{"fcvt.s.bf16", 0, INSN_CLASS_ZFBFMIN, "D,S",   MATCH_FCVT_S_BF16, MASK_FCVT_S_BF16|MASK_RM, match_opcode, 0 },
 
 /* Single-precision floating-point instruction subset.  */
 {"frcsr",      0, INSN_CLASS_F_INX,   "d",         MATCH_FRCSR, MASK_FRCSR, match_opcode, INSN_ALIAS },
@@ -2012,6 +2043,14 @@ const struct riscv_opcode riscv_opcodes[] =
 {"vmv4r.v",    0, INSN_CLASS_V, "Vd,Vt", MATCH_VMV4RV, MASK_VMV4RV, match_opcode, 0},
 {"vmv8r.v",    0, INSN_CLASS_V, "Vd,Vt", MATCH_VMV8RV, MASK_VMV8RV, match_opcode, 0},
 
+/* Zvfbfmin instructions.  */
+{"vfncvtbf16.f.f.w", 0, INSN_CLASS_ZVFBFMIN, "Vd,VtVm", MATCH_VFNCVTBF16_F_F_W, MASK_VFNCVTBF16_F_F_W, match_opcode, 0},
+{"vfwcvtbf16.f.f.v", 0, INSN_CLASS_ZVFBFMIN, "Vd,VtVm", MATCH_VFWCVTBF16_F_F_V, MASK_VFWCVTBF16_F_F_V, match_opcode, 0},
+
+/* Zvfbfwma instructions.  */
+{"vfwmaccbf16.vf",  0, INSN_CLASS_ZVFBFWMA, "Vd,S,VtVm",  MATCH_VFWMACCBF16_VF, MASK_VFWMACCBF16_VF, match_opcode, 0},
+{"vfwmaccbf16.vv",  0, INSN_CLASS_ZVFBFWMA, "Vd,Vs,VtVm", MATCH_VFWMACCBF16_VV, MASK_VFWMACCBF16_VV, match_opcode, 0},
+
 /* Zvbb/Zvkb instructions.  */
 {"vandn.vv",   0, INSN_CLASS_ZVKB, "Vd,Vt,VsVm", MATCH_VANDN_VV, MASK_VANDN_VV, match_opcode, 0},
 {"vandn.vx",   0, INSN_CLASS_ZVKB, "Vd,Vt,sVm", MATCH_VANDN_VX, MASK_VANDN_VX, match_opcode, 0},
@@ -2206,6 +2245,39 @@ const struct riscv_opcode riscv_opcodes[] =
 {"cv.subunr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBUNR,  MASK_CV_SUBUNR, match_opcode, 0},
 {"cv.subrnr",  0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBRNR,  MASK_CV_SUBRNR, match_opcode, 0},
 {"cv.suburnr", 0, INSN_CLASS_XCVALU, "d,s,t",     MATCH_CV_SUBURNR, MASK_CV_SUBURNR, match_opcode, 0},
+
+/* Vendor-specific (CORE-V) Xcvelw instructions.  */
+{"cv.elw", 0, INSN_CLASS_XCVELW, "d,o(s)",  MATCH_CV_ELW, MASK_CV_ELW, match_opcode, 0},
+
+/* Vendor-specific (CORE-V) Xcvbi instructions.  */
+{"cv.beqimm", 0, INSN_CLASS_XCVBI, "s,Xc4,p", MATCH_CV_BEQIMM, MASK_CV_BEQIMM, match_opcode, 0},
+{"cv.bneimm", 0, INSN_CLASS_XCVBI, "s,Xc4,p", MATCH_CV_BNEIMM, MASK_CV_BNEIMM, match_opcode, 0},
+
+/* Vendor-specific (CORE-V) Xcvmem instructions.  */
+{"cv.lb", 0, INSN_CLASS_XCVMEM, "d,(s),o", MATCH_CV_LBPOST,    MASK_CV_LBPOST,    match_opcode, 0},
+{"cv.lb", 0, INSN_CLASS_XCVMEM, "d,(s),t", MATCH_CV_LBRRPOST,  MASK_CV_LBRRPOST,  match_opcode, 0},
+{"cv.lb", 0, INSN_CLASS_XCVMEM, "d,t(s)",  MATCH_CV_LBRR,      MASK_CV_LBRR,      match_opcode, 0},
+{"cv.lbu",0, INSN_CLASS_XCVMEM, "d,(s),o", MATCH_CV_LBUPOST,   MASK_CV_LBUPOST,   match_opcode, 0},
+{"cv.lbu",0, INSN_CLASS_XCVMEM, "d,(s),t", MATCH_CV_LBURRPOST, MASK_CV_LBURRPOST, match_opcode, 0},
+{"cv.lbu",0, INSN_CLASS_XCVMEM, "d,t(s)",  MATCH_CV_LBURR,     MASK_CV_LBURR,     match_opcode, 0},
+{"cv.lh", 0, INSN_CLASS_XCVMEM, "d,(s),o", MATCH_CV_LHPOST,    MASK_CV_LHPOST,    match_opcode, 0},
+{"cv.lh", 0, INSN_CLASS_XCVMEM, "d,(s),t", MATCH_CV_LHRRPOST,  MASK_CV_LHRRPOST,  match_opcode, 0},
+{"cv.lh", 0, INSN_CLASS_XCVMEM, "d,t(s)",  MATCH_CV_LHRR,      MASK_CV_LHRR,      match_opcode, 0},
+{"cv.lhu",0, INSN_CLASS_XCVMEM, "d,(s),o", MATCH_CV_LHUPOST,   MASK_CV_LHUPOST,   match_opcode, 0},
+{"cv.lhu",0, INSN_CLASS_XCVMEM, "d,(s),t", MATCH_CV_LHURRPOST, MASK_CV_LHURRPOST, match_opcode, 0},
+{"cv.lhu",0, INSN_CLASS_XCVMEM, "d,t(s)",  MATCH_CV_LHURR,     MASK_CV_LHURR,     match_opcode, 0},
+{"cv.lw", 0, INSN_CLASS_XCVMEM, "d,(s),o", MATCH_CV_LWPOST,    MASK_CV_LWPOST,    match_opcode, 0},
+{"cv.lw", 0, INSN_CLASS_XCVMEM, "d,(s),t", MATCH_CV_LWRRPOST,  MASK_CV_LWRRPOST,  match_opcode, 0},
+{"cv.lw", 0, INSN_CLASS_XCVMEM, "d,t(s)",  MATCH_CV_LWRR,      MASK_CV_LWRR,      match_opcode, 0},
+{"cv.sb", 0, INSN_CLASS_XCVMEM, "t,(s),q", MATCH_CV_SBPOST,    MASK_CV_SBPOST,    match_opcode, 0},
+{"cv.sb", 0, INSN_CLASS_XCVMEM, "t,d(s)",  MATCH_CV_SBRR,      MASK_CV_SBRR,      match_opcode, 0},
+{"cv.sb", 0, INSN_CLASS_XCVMEM, "t,(s),d", MATCH_CV_SBRRPOST,  MASK_CV_SBRRPOST,  match_opcode, 0},
+{"cv.sh", 0, INSN_CLASS_XCVMEM, "t,(s),q", MATCH_CV_SHPOST,    MASK_CV_SHPOST,    match_opcode, 0},
+{"cv.sh", 0, INSN_CLASS_XCVMEM, "t,d(s)",  MATCH_CV_SHRR,      MASK_CV_SHRR,      match_opcode, 0},
+{"cv.sh", 0, INSN_CLASS_XCVMEM, "t,(s),d", MATCH_CV_SHRRPOST,  MASK_CV_SHRRPOST,  match_opcode, 0},
+{"cv.sw", 0, INSN_CLASS_XCVMEM, "t,(s),q", MATCH_CV_SWPOST,    MASK_CV_SWPOST,    match_opcode, 0},
+{"cv.sw", 0, INSN_CLASS_XCVMEM, "t,d(s)",  MATCH_CV_SWRR,      MASK_CV_SWRR,      match_opcode, 0},
+{"cv.sw", 0, INSN_CLASS_XCVMEM, "t,(s),d", MATCH_CV_SWRRPOST,  MASK_CV_SWRRPOST,  match_opcode, 0},
 
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 {"th.addsl",    0, INSN_CLASS_XTHEADBA,    "d,s,t,Xtu2@25",   MATCH_TH_ADDSL,    MASK_TH_ADDSL,    match_opcode, 0},
@@ -3040,6 +3112,9 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sf.vc.v.ivw", 0, INSN_CLASS_XSFVCP, "XsO2,Vd,Vt,Vi", MATCH_SF_VC_V_IVW, MASK_SF_VC_V_IVW, match_opcode, 0 },
 {"sf.vc.fvw",   0, INSN_CLASS_XSFVCP, "XsO1,Vd,Vt,S",  MATCH_SF_VC_FVW, MASK_SF_VC_FVW, match_opcode, 0 },
 {"sf.vc.v.fvw", 0, INSN_CLASS_XSFVCP, "XsO1,Vd,Vt,S",  MATCH_SF_VC_V_FVW, MASK_SF_VC_V_FVW, match_opcode, 0 },
+
+/* Vendor-specific (SiFive) cease instruction.  */
+{"sf.cease", 0, INSN_CLASS_XSFCEASE, "", MATCH_SF_CEASE, MASK_SF_CEASE, match_opcode, 0 },
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

@@ -849,6 +849,44 @@ proc gdb_continue_to_breakpoint {name {location_pattern .*}} {
     }]
 }
 
+# Check whether GDB is stopped at the given instruction.
+# INSTRUCTION should be just its mnemonic, without any arguments.
+
+proc is_at_instruction { instruction } {
+    global gdb_prompt hex
+
+    set test "pc points to $instruction"
+    gdb_test_multiple {x/i $pc} $test {
+	-re -wrap "=> $hex \[^\r\n\]+:\t$instruction\t\[^\r\n\]+" {
+	    return 1
+	}
+	-re "\r\n$gdb_prompt $" {
+	    return 0
+	}
+    }
+
+    return 0
+}
+
+# Single-steps GDB until it arrives at the given instruction.
+# INSTRUCTION should be just its mnemonic, without any arguments.
+
+proc arrive_at_instruction { instruction } {
+    set count 0
+
+    while { [is_at_instruction $instruction] != 1 } {
+	gdb_test -nopass "stepi" "\[^\r\n\]+" \
+	    "stepi #$count to reach $instruction"
+	incr count
+
+	if { $count > 50 } {
+	    fail "didn't reach $instruction"
+	    return 0
+	}
+    }
+
+    return 1
+}
 
 # gdb_internal_error_resync:
 #
@@ -1570,13 +1608,23 @@ proc python_version_at_least { major minor } {
 		<= [list $python_version_major $python_version_minor]]
 }
 
-# Return 1 if tcl version used is at least MAJOR.MINOR
-proc tcl_version_at_least { major minor } {
-    global tcl_version
-    regexp {^([0-9]+)\.([0-9]+)$} $tcl_version \
-	dummy tcl_version_major tcl_version_minor
-    return [version_compare [list $major $minor] \
-		<= [list $tcl_version_major $tcl_version_minor]]
+# Return 1 if tcl version used is at least MAJOR.MINOR.PATCHLEVEL.
+proc tcl_version_at_least { major minor {patchlevel 0} } {
+    global tcl_patchLevel
+    regexp {^([0-9]+)\.([0-9]+)\.([0-9]+)$} \
+	$tcl_patchLevel dummy \
+	tcl_version_major tcl_version_minor tcl_version_patchlevel
+    return \
+	[version_compare \
+	     [list \
+		  $major \
+		  $minor \
+		  $patchlevel] \
+	     <= \
+	     [list \
+		  $tcl_version_major \
+		  $tcl_version_minor \
+		  $tcl_version_patchlevel]]
 }
 
 if { [tcl_version_at_least 8 5] == 0 } {
@@ -1608,6 +1656,19 @@ if { [tcl_version_at_least 8 6] == 0 } {
 	}
 
 	return $res
+    }
+}
+
+if { [tcl_version_at_least 8 6 2] == 0 } {
+    # string cat was added in tcl 8.6.2.  Only add if missing.
+
+    rename string tcl_proc_string
+
+    proc string { what args } {
+	if { $what == "cat" } {
+	    return [join $args ""]
+	}
+	return [tcl_proc_string $what {*}$args]
     }
 }
 
@@ -3700,8 +3761,9 @@ proc support_displaced_stepping {} {
     return 0
 }
 
-# Return 1 if GDB can find the libc debug info, or 0 and a reason string if it
-# can't.  This procedure is meant to be called by the require procedure.
+# Return 0 and a reason string if GDB can determine that libc doesn't have
+# debug info, and 1 otherwise.  This procedure is meant to be called by the
+# require procedure.
 gdb_caching_proc libc_has_debug_info {} {
     global srcdir subdir gdb_prompt inferior_exited_re
 
@@ -3727,22 +3789,20 @@ gdb_caching_proc libc_has_debug_info {} {
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load "$obj"
     runto_main
-    set test "info sharedlibrary libc.so"
+    set libc_has_debug_info 1
+    set message "unable to get information on libc.so"
+    set test "info sharedlibrary"
     gdb_test_multiple $test $test {
 	-re ".*\(\\*\)\[^\r\n\]*/libc\.so.*$gdb_prompt $" {
 	    # Matched the "(*)" in the "Syms Read" columns which means:
 	    # "(*): Shared library is missing debugging information."
-	    verbose -log "$me: libc doesn't have debug info"
 	    set libc_has_debug_info 0
 	    set message "libc doesn't have debug info"
 	}
-	-re ".*Yes\[ \t\]+\[^\r\n\]*/libc\.so.*$gdb_prompt $" {
-	    verbose -log "$me: libc has debug info"
-	    set libc_has_debug_info 1
-	}
-	default {
-	    set libc_has_debug_info 0
-	    set message "libc not found in the inferior"
+	-re ".*$gdb_prompt $" {
+	    # The default pattern for the GDB prompt in gdb_test_multiple
+	    # causes a FAIL if it matches, but in our case we should just
+	    # assume that there is libc debug info.
 	}
     }
     gdb_exit
@@ -4498,6 +4558,67 @@ proc aarch64_supports_sme_svl { length } {
     return 1
 }
 
+# Run a test on the target to see if it supports AArch64 MOPS (Memory
+# Operations) extensions.  Return 1 if so, 0 if it does not.  Note this
+# causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_mops_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_mops_tests"
+
+    if { ![is_aarch64_target]} {
+	return 0
+    }
+
+    # ARMv9.3-A contains the MOPS extension.  The test program doesn't use it,
+    # but take the opportunity to check whether the toolchain knows about MOPS.
+    set compile_flags "{additional_flags=-march=armv9.3-a}"
+
+    # Compile a program that tests the MOPS feature.
+    set src {
+	#include <stdbool.h>
+	#include <sys/auxv.h>
+
+	#ifndef HWCAP2_MOPS
+	#define HWCAP2_MOPS (1UL << 43)
+	#endif
+
+	int main() {
+	    bool mops_supported = getauxval (AT_HWCAP2) & HWCAP2_MOPS;
+
+	    return !mops_supported;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    clean_restart $obj
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*$inferior_exited_re with code 01.*${gdb_prompt} $" {
+	    verbose -log "\n$me mops support not detected"
+	    set allow_mops_tests 0
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: mops support detected"
+	    set allow_mops_tests 1
+	}
+	default {
+	  warning "\n$me: default case taken"
+	    set allow_mops_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_mops_tests" 2
+    return $allow_mops_tests
+}
+
 # A helper that compiles a test case to see if __int128 is supported.
 proc gdb_int128_helper {lang} {
     return [gdb_can_simple_compile "i128-for-$lang" {
@@ -5061,16 +5182,8 @@ proc gdb_wrapper_init { args } {
 }
 
 # Determine options that we always want to pass to the compiler.
-gdb_caching_proc universal_compile_options {} {
-    set me "universal_compile_options"
+proc universal_compile_options {src obj} {
     set options {}
-
-    set src [standard_temp_file ccopts.c]
-    set obj [standard_temp_file ccopts.o]
-
-    gdb_produce_source $src {
-	int foo(void) { return 0; }
-    }
 
     # Try an option for disabling colored diagnostics.  Some compilers
     # yield colored diagnostics by default (when run from a tty) unless
@@ -5081,7 +5194,43 @@ gdb_caching_proc universal_compile_options {} {
 	# Seems to have worked; use the option.
 	lappend options $opt
     }
+
+    return $options
+}
+
+# Determine options that we always want to pass to the C compiler.
+gdb_caching_proc universal_compile_options_c {} {
+    set me "universal_compile_options_c"
+
+    set src [standard_temp_file ccopts.c]
+    set obj [standard_temp_file ccopts.o]
+
+    gdb_produce_source $src {
+	int foo(void) { return 0; }
+    }
+
+    set options [universal_compile_options $src $obj]
+
     file delete $src
+    file delete $obj
+
+    verbose "$me:  returning $options" 2
+    return $options
+}
+
+# Determine options that we always want to pass to the compiler for
+# assembly source files with the extension ".s".
+gdb_caching_proc universal_compile_options_assembly {} {
+    set me "universal_compile_options_assembly"
+
+    set src [standard_temp_file ccopts.s]
+    set obj [standard_temp_file csymbol.o]
+
+    gdb_produce_source $src {
+	main:
+    }
+
+    set options [universal_compile_options $src $obj]
     file delete $obj
 
     verbose "$me:  returning $options" 2
@@ -5226,6 +5375,7 @@ proc quote_for_host { args } {
 #     debug information
 #   - text_segment=addr: Tell the linker to place the text segment at ADDR.
 #   - build-id: Ensure the final binary includes a build-id.
+#   - no-build-id: Ensure the final binary does not include a build-id.
 #   - column-info/no-column-info: Enable/Disable generation of column table
 #     information.
 #
@@ -5269,7 +5419,13 @@ proc gdb_compile {source dest type options} {
     } elseif {[lsearch -exact $options hip] != -1} { 
 	# -fdiagnostics-color is not a hipcc option.
     } else {
-	set new_options [universal_compile_options]
+	# icx/clang compilers support the -fdiagnostics-color option for
+	# ".S" files and only it is not supported for ".s" files.
+	if {[string match *.s $source] != 0} {
+	    set new_options [universal_compile_options_assembly]
+	} else {
+	    set new_options [universal_compile_options_c]
+	}
     }
 
     # C/C++ specific settings.
@@ -5331,6 +5487,18 @@ proc gdb_compile {source dest type options} {
     if {[lsearch -exact $options build-id] > 0
 	&& [test_compiler_info "clang-*"]} {
 	lappend new_options "additional_flags=-Wl,--build-id"
+    }
+
+    # If the 'no-build-id' option is used then disable the build-id.
+    if {[lsearch -exact $options no-build-id] > 0} {
+	lappend new_options "additional_flags=-Wl,--build-id=none"
+    }
+
+    # Sanity check.  If both 'build-id' and 'no-build-id' are used
+    # then what is expected from us!
+    if {[lsearch -exact $options build-id] > 0
+	&& [lsearch -exact $options no-build-id] > 0} {
+	error "cannot use build-id and no-build-id options"
     }
 
     # Treating .c input files as C++ is deprecated in Clang, so
@@ -6175,6 +6343,13 @@ proc gdb_exit { } {
 # return 0 only if we cannot attach because it's unsupported.
 
 gdb_caching_proc can_spawn_for_attach_1 {} {
+    # For the benefit of gdb-caching-proc-consistency.exp, which
+    # calls can_spawn_for_attach_1 directly.  Keep in sync with
+    # can_spawn_for_attach.
+    if { [is_remote target] || [target_info exists use_gdb_stub] } {
+	return 0
+    }
+
     # Assume yes.
     set res 1
 
@@ -8035,10 +8210,11 @@ proc build_id_debug_filename_get { filename } {
 }
 
 # DEST should be a file compiled with debug information.  This proc
-# creates two new files DEST.debug which contains the debug
-# information extracted from DEST, and DEST.stripped, which is a copy
-# of DEST with the debug information removed.  A '.gnu_debuglink'
-# section will be added to DEST.stripped that points to DEST.debug.
+# creates DEST.debug which contains the debug information extracted
+# from DEST, and DEST is updated with the debug information removed.
+#
+# By default a '.gnu_debuglink' section will be added to DEST that
+# points to DEST.debug.
 #
 # If ARGS is passed, it is a list of optional flags.  The currently
 # supported flags are:
@@ -8046,7 +8222,7 @@ proc build_id_debug_filename_get { filename } {
 #   - no-main : remove the symbol entry for main from the separate
 #               debug file DEST.debug,
 #   - no-debuglink : don't add the '.gnu_debuglink' section to
-#                    DEST.stripped.
+#                    DEST.
 #
 # Function returns zero on success.  Function will return non-zero failure code
 # on some targets not supporting separate debug info (such as i386-msdos).
@@ -8105,20 +8281,26 @@ proc gdb_gnu_strip_debug { dest args } {
     # Unless the "no-debuglink" flag is passed, then link the two
     # previous output files together, adding the .gnu_debuglink
     # section to the stripped_file, containing a pointer to the
-    # debug_file, save the new file in dest.
+    # debug_file.
     if {[lsearch -exact $args "no-debuglink"] == -1} {
-	set result [catch "exec $objcopy_program --add-gnu-debuglink=${debug_file} ${stripped_file} ${dest}" output]
+	set result [catch "exec $objcopy_program --add-gnu-debuglink=${debug_file} ${stripped_file} ${stripped_file}-tmp" output]
 	verbose "result is $result"
 	verbose "output is $output"
 	if {$result == 1} {
 	    return 1
 	}
+	file delete "${stripped_file}"
+	file rename "${stripped_file}-tmp" "${stripped_file}"
     }
 
     # Workaround PR binutils/10802:
     # Preserve the 'x' bit also for PIEs (Position Independent Executables).
-    set perm [file attributes ${stripped_file} -permissions]
-    file attributes ${dest} -permissions $perm
+    set perm [file attributes ${dest} -permissions]
+    file attributes ${stripped_file} -permissions $perm
+
+    # Move the stripped_file back into dest.
+    file delete ${dest}
+    file rename ${stripped_file} ${dest}
 
     return 0
 }

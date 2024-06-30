@@ -20,10 +20,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "exceptions.h"
-#include "gdbsupport/array-view.h"
-#include "gdbsupport/function-view.h"
-#include "gdbsupport/scoped_restore.h"
 #include <chrono>
 
 struct completion_match_for_lcd;
@@ -195,7 +191,6 @@ extern void gdb_flush (struct ui_file *stream);
 
 /* Target output that should bypass the pager, if one is in use.  */
 extern struct ui_file *gdb_stdtarg;
-extern struct ui_file *gdb_stdtargerr;
 extern struct ui_file *gdb_stdtargin;
 
 /* Set the screen dimensions to WIDTH and HEIGHT.  */

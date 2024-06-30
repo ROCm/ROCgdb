@@ -419,6 +419,55 @@ loongarch_target_format ()
   return LARCH_opts.ase_lp64 ? "elf64-loongarch" : "elf32-loongarch";
 }
 
+typedef struct
+{
+  unsigned int sec_id;
+  symbolS *s;
+} align_sec_sym;
+
+static htab_t align_hash;
+
+static hashval_t
+align_sec_sym_hash (const void *entry)
+{
+  const align_sec_sym *e = entry;
+  return (hashval_t) (e->sec_id);
+}
+
+static int
+align_sec_sym_eq (const void *entry1, const void *entry2)
+{
+  const align_sec_sym *e1 = entry1, *e2 = entry2;
+  return e1->sec_id == e2->sec_id;
+}
+
+/* Make align symbol be in same section with alignment directive.
+   If the symbol is only created at the first time to handle alignment
+   directive.  This means that all other sections may use this symbol.
+   If the section of this symbol is discarded, there may be problems.  */
+
+static symbolS *get_align_symbol (segT sec)
+{
+  align_sec_sym search = { sec->id, NULL };
+  align_sec_sym *pentry = htab_find (align_hash, &search);
+  if (pentry)
+    return pentry->s;
+
+  /* If we not find the symbol in this section.  Create and insert it.  */
+  symbolS *s = (symbolS *)local_symbol_make (".Lla-relax-align", sec,
+					     &zero_address_frag, 0);
+  align_sec_sym entry = { sec->id, s };
+  align_sec_sym **slot = (align_sec_sym **) htab_find_slot (align_hash,
+							    &entry, INSERT);
+  if (slot == NULL)
+    return NULL;
+  *slot = (align_sec_sym *) xmalloc (sizeof (align_sec_sym));
+  if (*slot == NULL)
+    return NULL;
+  **slot = entry;
+  return entry.s;
+}
+
 void
 md_begin ()
 {
@@ -440,9 +489,19 @@ md_begin ()
 		    it->name, it->format, it->macro);
       }
 
+  align_hash = htab_create (10, align_sec_sym_hash, align_sec_sym_eq, free);
+
   /* FIXME: expressionS use 'offsetT' as constant,
    * we want this is 64-bit type.  */
   assert (8 <= sizeof (offsetT));
+}
+
+/* Called just before the assembler exits.  */
+
+void
+loongarch_md_end (void)
+{
+  htab_delete (align_hash);
 }
 
 unsigned long
@@ -482,6 +541,64 @@ s_dtprel (int bytes)
   demand_empty_rest_of_line ();
 }
 
+struct LARCH_option_stack
+{
+  struct LARCH_option_stack *next;
+  struct loongarch_ASEs_option options;
+};
+
+static struct LARCH_option_stack *LARCH_opts_stack = NULL;
+
+/* Handle the .option pseudo-op.
+   The alignment of .align is done by R_LARCH_ALIGN at link time.
+   If the .align directive is within the range controlled by
+   .option norelax, that is, relax is turned off, R_LARCH_ALIGN
+   cannot be generated, which may cause ld to be unable to handle
+   the alignment.  */
+static void
+s_loongarch_option (int x ATTRIBUTE_UNUSED)
+{
+  char *name = input_line_pointer, ch;
+  while (!is_end_of_line[(unsigned char) *input_line_pointer])
+    ++input_line_pointer;
+  ch = *input_line_pointer;
+  *input_line_pointer = '\0';
+
+  if (strcmp (name, "relax") == 0)
+    LARCH_opts.relax = 1;
+  else if (strcmp (name, "norelax") == 0)
+    LARCH_opts.relax = 0;
+  else if (strcmp (name, "push") == 0)
+    {
+      struct LARCH_option_stack *s;
+
+      s = XNEW (struct LARCH_option_stack);
+      s->next = LARCH_opts_stack;
+      s->options = LARCH_opts;
+      LARCH_opts_stack = s;
+    }
+  else if (strcmp (name, "pop") == 0)
+    {
+      struct LARCH_option_stack *s;
+
+      s = LARCH_opts_stack;
+      if (s == NULL)
+	as_bad (_(".option pop with no .option push"));
+      else
+	{
+	  LARCH_opts_stack = s->next;
+	  LARCH_opts = s->options;
+	  free (s);
+	}
+    }
+  else
+    {
+      as_warn (_("unrecognized .option directive: %s"), name);
+    }
+  *input_line_pointer = ch;
+  demand_empty_rest_of_line ();
+}
+
 static const pseudo_typeS loongarch_pseudo_table[] =
 {
   { "dword", cons, 8 },
@@ -489,6 +606,7 @@ static const pseudo_typeS loongarch_pseudo_table[] =
   { "half", cons, 2 },
   { "dtprelword", s_dtprel, 4 },
   { "dtpreldword", s_dtprel, 8 },
+  { "option", s_loongarch_option, 0},
   { NULL, NULL, 0 },
 };
 
@@ -1826,7 +1944,9 @@ loongarch_frag_align_code (int n, int max)
      if (fragP->fr_subtype != 0 && offset > fragP->fr_subtype).  */
   if (align_max)
     {
-      s = symbol_find (now_seg->name);
+      s = get_align_symbol (now_seg);
+      if (!s)
+	as_fatal (_("internal error: cannot get align symbol"));
       addend = ALIGN_MAX_ADDEND (n, max);
     }
 

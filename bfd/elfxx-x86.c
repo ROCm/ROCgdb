@@ -1861,7 +1861,7 @@ _bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
 	  plt_entry_size = htab->plt.plt_entry_size;
 	  num_pltn_fres = htab->sframe_plt->pltn_num_fres;
 	  num_pltn_entries
-	    = (htab->elf.splt->size - plt0_entry_size) / plt_entry_size;
+	    = (dpltsec->size - plt0_entry_size) / plt_entry_size;
 
 	  break;
 	}
@@ -1873,8 +1873,7 @@ _bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
 
 	  plt_entry_size = htab->sframe_plt->sec_pltn_entry_size;
 	  num_pltn_fres = htab->sframe_plt->sec_pltn_num_fres;
-	  num_pltn_entries
-		= htab->plt_second_eh_frame->size / plt_entry_size;
+	  num_pltn_entries = dpltsec->size / plt_entry_size;
 	  break;
 	}
     default:
@@ -2507,16 +2506,15 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  htab->plt_sframe->size = sizeof (sframe_header) + 1;
 	}
 
-      /* FIXME - generate for .got.plt ?  */
+      /* FIXME - generate for .plt.got ?  */
 
-      /* Unwind info for the second PLT.  */
       if (htab->plt_second_sframe != NULL
 	  && htab->plt_second != NULL
 	  && htab->plt_second->size != 0
 	  && !bfd_is_abs_section (htab->plt_second->output_section))
 	{
-	  _bfd_x86_elf_create_sframe_plt (output_bfd, info,
-					  SFRAME_PLT_SEC);
+	  /* SFrame stack trace info for the second PLT.  */
+	  _bfd_x86_elf_create_sframe_plt (output_bfd, info, SFRAME_PLT_SEC);
 	  /* FIXME - Dirty Hack.  Set the size to something non-zero for now,
 	     so that the section does not get stripped out below.  The precise
 	     size of this section is known only when the contents are
@@ -4019,6 +4017,50 @@ _bfd_x86_elf_merge_gnu_properties (struct bfd_link_info *info,
   return updated;
 }
 
+/* Report x86-64 ISA level.  */
+
+static void
+report_isa_level (struct bfd_link_info *info, bfd *abfd,
+		  unsigned int bitmask, bool needed)
+{
+  if (!bitmask)
+    return;
+
+  if (needed)
+    info->callbacks->einfo (_("%pB: x86 ISA needed: "), abfd);
+  else
+    info->callbacks->einfo (_("%pB: x86 ISA used: "), abfd);
+
+  while (bitmask)
+    {
+      unsigned int bit = bitmask & (- bitmask);
+
+      bitmask &= ~ bit;
+      switch (bit)
+	{
+	case GNU_PROPERTY_X86_ISA_1_BASELINE:
+	  info->callbacks->einfo ("x86-64-baseline");
+	  break;
+	case GNU_PROPERTY_X86_ISA_1_V2:
+	  info->callbacks->einfo ("x86-64-v2");
+	  break;
+	case GNU_PROPERTY_X86_ISA_1_V3:
+	  info->callbacks->einfo ("x86-64-v3");
+	  break;
+	case GNU_PROPERTY_X86_ISA_1_V4:
+	  info->callbacks->einfo ("x86-64-v4");
+	  break;
+	default:
+	  info->callbacks->einfo (_("<unknown: %x>"), bit);
+	  break;
+	}
+      if (bitmask)
+	info->callbacks->einfo (", ");
+    }
+
+  info->callbacks->einfo ("\n");
+}
+
 /* Set up x86 GNU properties.  Return the first relocatable ELF input
    with GNU properties if found.  Otherwise, return NULL.  */
 
@@ -4157,11 +4199,12 @@ _bfd_x86_elf_link_setup_gnu_properties
 	}
     }
 
-  if (htab->params->cet_report
-      || htab->params->lam_u48_report
-      || htab->params->lam_u57_report)
+  bool check_feature_1 = (htab->params->cet_report
+			  || htab->params->lam_u48_report
+			  || htab->params->lam_u57_report);
+  if (check_feature_1 || htab->params->isa_level_report)
     {
-      /* Report missing IBT, SHSTK and LAM properties.  */
+      /* Report missing IBT, SHSTK, ISA level and LAM properties.  */
       bfd *abfd;
       const char *warning_msg = _("%P: %pB: warning: missing %s\n");
       const char *error_msg = _("%X%P: %pB: error: missing %s\n");
@@ -4178,6 +4221,10 @@ _bfd_x86_elf_link_setup_gnu_properties
       bool check_shstk
 	= (htab->params->cet_report
 	   && (htab->params->cet_report & prop_report_shstk));
+      bool report_needed_level
+	= (htab->params->isa_level_report & isa_level_report_needed) != 0;
+      bool report_used_level
+	= (htab->params->isa_level_report & isa_level_report_used) != 0;
 
       if (htab->params->cet_report)
 	{
@@ -4205,23 +4252,62 @@ _bfd_x86_elf_link_setup_gnu_properties
 	if (!(abfd->flags & (DYNAMIC | BFD_PLUGIN | BFD_LINKER_CREATED))
 	    && bfd_get_flavour (abfd) == bfd_target_elf_flavour)
 	  {
+	    elf_property_list *p_feature_1 = NULL;
+	    elf_property_list *p_isa_1_needed = NULL;
+	    elf_property_list *p_isa_1_used = NULL;
+	    bool find_feature_1 = check_feature_1;
+	    bool find_needed_level = report_needed_level;
+	    bool find_used_level = report_used_level;
+
 	    for (p = elf_properties (abfd); p; p = p->next)
-	      if (p->property.pr_type == GNU_PROPERTY_X86_FEATURE_1_AND)
-		break;
+	      {
+		switch (p->property.pr_type)
+		  {
+		  case GNU_PROPERTY_X86_FEATURE_1_AND:
+		    if (find_feature_1)
+		      {
+			p_feature_1 = p;
+			find_feature_1 = false;
+		      }
+		    break;
+		  case GNU_PROPERTY_X86_ISA_1_NEEDED:
+		    if (find_needed_level)
+		      {
+			p_isa_1_needed = p;
+			find_needed_level = false;
+		      }
+		    break;
+		  case GNU_PROPERTY_X86_ISA_1_USED:
+		    if (find_used_level)
+		      {
+			p_isa_1_used = p;
+			find_used_level = false;
+		      }
+		    break;
+		  default:
+		    break;
+		  }
+
+		if (!find_feature_1
+		    && !find_needed_level
+		    && !find_used_level)
+		  break;
+	      }
+
 
 	    missing_ibt = check_ibt;
 	    missing_shstk = check_shstk;
 	    missing_lam_u48 = !!lam_u48_msg;
 	    missing_lam_u57 = !!lam_u57_msg;
-	    if (p)
+	    if (p_feature_1)
 	      {
-		missing_ibt &= !(p->property.u.number
+		missing_ibt &= !(p_feature_1->property.u.number
 				 & GNU_PROPERTY_X86_FEATURE_1_IBT);
-		missing_shstk &= !(p->property.u.number
+		missing_shstk &= !(p_feature_1->property.u.number
 				   & GNU_PROPERTY_X86_FEATURE_1_SHSTK);
-		missing_lam_u48 &= !(p->property.u.number
+		missing_lam_u48 &= !(p_feature_1->property.u.number
 				     & GNU_PROPERTY_X86_FEATURE_1_LAM_U48);
-		missing_lam_u57 &= !(p->property.u.number
+		missing_lam_u57 &= !(p_feature_1->property.u.number
 				     & GNU_PROPERTY_X86_FEATURE_1_LAM_U57);
 	      }
 	    if (missing_ibt || missing_shstk)
@@ -4244,6 +4330,15 @@ _bfd_x86_elf_link_setup_gnu_properties
 		missing = _("LAM_U57 property");
 		info->callbacks->einfo (lam_u57_msg, abfd, missing);
 	      }
+
+	    if (p_isa_1_needed)
+	      report_isa_level (info, abfd,
+				p_isa_1_needed->property.u.number,
+				true);
+	    if (p_isa_1_used)
+	      report_isa_level (info, abfd,
+				p_isa_1_used->property.u.number,
+				false);
 	  }
     }
 

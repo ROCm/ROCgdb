@@ -78,7 +78,7 @@ public:
   bool stopped_by_hw_breakpoint () override;
   bool supports_stopped_by_hw_breakpoint () override;
 
-  void thread_events (int) override;
+  void thread_events (bool) override;
 
   bool supports_set_thread_options (gdb_thread_options options) override;
 
@@ -162,6 +162,12 @@ public:
 
   /* The method to call, if any, when a new clone event is detected.  */
   virtual void low_new_clone (struct lwp_info *parent, pid_t child_lwp)
+  {}
+
+  /* The method to call, if any, when we have a new (from run/attach,
+     not fork) process to debug.  The process is ptrace-stopped when
+     this is called.  */
+  virtual void low_init_process (pid_t pid)
   {}
 
   /* The method to call, if any, when a process is no longer
@@ -298,9 +304,6 @@ lwp_info_range all_lwps ();
 /* Same as the above, but safe against deletion while iterating.  */
 
 lwp_info_safe_range all_lwps_safe ();
-
-/* Does the current host support PTRACE_GETREGSET?  */
-extern enum tribool have_ptrace_getregset;
 
 /* Called from the LWP layer to inform the thread_db layer that PARENT
    spawned CHILD.  Both LWPs are currently stopped.  This function

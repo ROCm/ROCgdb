@@ -94,7 +94,7 @@ struct block_symbol lookup_local_symbol (const char *name,
 					 symbol_name_match_type match_type,
 					 const struct block *block,
 					 const domain_search_flags domain,
-					 enum language language);
+					 const struct language_defn *langdef);
 
 static struct block_symbol
   lookup_symbol_in_objfile (struct objfile *objfile,
@@ -369,6 +369,19 @@ from_scripting_domain (int val)
 	error (_("unrecognized domain constant"));
       return (domain_search_flag) val;
     }
+}
+
+/* See symtab.h.  */
+
+struct symbol *
+search_symbol_list (const char *name, int num, struct symbol **syms)
+{
+  for (int i = 0; i < num; ++i)
+    {
+      if (strcmp (name, syms[i]->natural_name ()) == 0)
+	return syms[i];
+    }
+  return nullptr;
 }
 
 /* See symtab.h.  */
@@ -2128,10 +2141,12 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
   if (is_a_field_of_this != NULL)
     memset (is_a_field_of_this, 0, sizeof (*is_a_field_of_this));
 
+  langdef = language_def (language);
+
   /* Search specified block and its superiors.  Don't search
      STATIC_BLOCK or GLOBAL_BLOCK.  */
 
-  result = lookup_local_symbol (name, match_type, block, domain, language);
+  result = lookup_local_symbol (name, match_type, block, domain, langdef);
   if (result.symbol != NULL)
     {
       symbol_lookup_debug_printf
@@ -2142,8 +2157,6 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
 
   /* If requested to do so by the caller and if appropriate for LANGUAGE,
      check to see if NAME is a field of `this'.  */
-
-  langdef = language_def (language);
 
   /* Don't do this check if we are searching for a struct.  It will
      not be found by check_field, but will be found by other
@@ -2205,36 +2218,37 @@ lookup_local_symbol (const char *name,
 		     symbol_name_match_type match_type,
 		     const struct block *block,
 		     const domain_search_flags domain,
-		     enum language language)
+		     const struct language_defn *langdef)
 {
   if (block == nullptr)
     return {};
 
-  struct symbol *sym;
-  const struct block *static_block = block->static_block ();
   const char *scope = block->scope ();
   
-  /* Check if it's a global block.  */
-  if (static_block == nullptr)
-    return {};
-
-  while (block != static_block)
+  while (!block->is_global_block () && !block->is_static_block ())
     {
-      sym = lookup_symbol_in_block (name, match_type, block, domain);
+      struct symbol *sym = lookup_symbol_in_block (name, match_type,
+						   block, domain);
       if (sym != NULL)
 	return (struct block_symbol) {sym, block};
 
-      if (language == language_cplus || language == language_fortran)
+      struct symbol *function = block->function ();
+      if (function != nullptr && function->is_template_function ())
 	{
-	  struct block_symbol blocksym
-	    = cp_lookup_symbol_imports_or_template (scope, name, block,
-						    domain);
-
-	  if (blocksym.symbol != NULL)
-	    return blocksym;
+	  struct template_symbol *templ = (struct template_symbol *) function;
+	  sym = search_symbol_list (name,
+				    templ->n_template_arguments,
+				    templ->template_arguments);
+	  if (sym != nullptr)
+	    return (struct block_symbol) {sym, block};
 	}
 
-      if (block->function () != NULL && block->inlined_p ())
+      struct block_symbol blocksym
+	= langdef->lookup_symbol_local (scope, name, block, domain);
+      if (blocksym.symbol != nullptr)
+	return blocksym;
+
+      if (block->inlined_p ())
 	break;
       block = block->superblock ();
     }
@@ -4766,16 +4780,17 @@ info_sources_command (const char *args, int from_tty)
    true compare only lbasename of FILENAMES.  */
 
 static bool
-file_matches (const char *file, const std::vector<const char *> &filenames,
+file_matches (const char *file,
+	      const std::vector<gdb::unique_xmalloc_ptr<char>> &filenames,
 	      bool basenames)
 {
   if (filenames.empty ())
     return true;
 
-  for (const char *name : filenames)
+  for (const auto &name : filenames)
     {
-      name = (basenames ? lbasename (name) : name);
-      if (compare_filenames_for_search (file, name))
+      const char *lname = (basenames ? lbasename (name.get ()) : name.get ());
+      if (compare_filenames_for_search (file, lname))
 	return true;
     }
 
@@ -4868,10 +4883,10 @@ global_symbol_searcher::expand_symtabs
 
   auto do_file_match = [&] (const char *filename, bool basenames)
     {
-      return file_matches (filename, filenames, basenames);
+      return file_matches (filename, m_filenames, basenames);
     };
   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher = nullptr;
-  if (!filenames.empty ())
+  if (!m_filenames.empty ())
     file_matcher = do_file_match;
 
   objfile->expand_symtabs_matching
@@ -4900,7 +4915,7 @@ global_symbol_searcher::expand_symtabs
      We only search the objfile the msymbol came from, we no longer search
      all objfiles.  In large programs (1000s of shared libs) searching all
      objfiles is not worth the pain.  */
-  if (filenames.empty ()
+  if (m_filenames.empty ()
       && (kind & (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN)) != 0)
     {
       for (minimal_symbol *msymbol : objfile->msymbols ())
@@ -4966,12 +4981,12 @@ global_symbol_searcher::add_matching_symbols
 	      /* Check first sole REAL_SYMTAB->FILENAME.  It does
 		 not need to be a substring of symtab_to_fullname as
 		 it may contain "./" etc.  */
-	      if (!(file_matches (real_symtab->filename, filenames, false)
+	      if (!(file_matches (real_symtab->filename, m_filenames, false)
 		    || ((basenames_may_differ
 			 || file_matches (lbasename (real_symtab->filename),
-					  filenames, true))
+					  m_filenames, true))
 			&& file_matches (symtab_to_fullname (real_symtab),
-					 filenames, false))))
+					 m_filenames, false))))
 		continue;
 
 	      if (!sym->matches (kind))
@@ -5148,7 +5163,7 @@ global_symbol_searcher::search () const
      minimal symbol, as we assume that a minimal symbol does not have a
      type.  */
   if ((found_msymbol
-       || (filenames.empty () && (m_kind & SEARCH_VAR_DOMAIN) != 0))
+       || (m_filenames.empty () && (m_kind & SEARCH_VAR_DOMAIN) != 0))
       && !m_exclude_minsyms
       && !treg.has_value ())
     {
@@ -5557,7 +5572,7 @@ static void
 rbreak_command (const char *regexp, int from_tty)
 {
   std::string string;
-  const char *file_name = nullptr;
+  gdb::unique_xmalloc_ptr<char> file_name;
 
   if (regexp != nullptr)
     {
@@ -5570,23 +5585,18 @@ rbreak_command (const char *regexp, int from_tty)
 
       if (colon && *(colon + 1) != ':')
 	{
-	  int colon_index;
-	  char *local_name;
+	  int colon_index = colon - regexp;
+	  while (colon_index > 0 && isspace (regexp[colon_index - 1]))
+	    --colon_index;
 
-	  colon_index = colon - regexp;
-	  local_name = (char *) alloca (colon_index + 1);
-	  memcpy (local_name, regexp, colon_index);
-	  local_name[colon_index--] = 0;
-	  while (isspace (local_name[colon_index]))
-	    local_name[colon_index--] = 0;
-	  file_name = local_name;
+	  file_name = make_unique_xstrndup (regexp, colon_index);
 	  regexp = skip_spaces (colon + 1);
 	}
     }
 
   global_symbol_searcher spec (SEARCH_FUNCTION_DOMAIN, regexp);
   if (file_name != nullptr)
-    spec.filenames.push_back (file_name);
+    spec.add_filename (std::move (file_name));
   std::vector<symbol_search> symbols = spec.search ();
 
   scoped_rbreak_breakpoints finalize;
@@ -7248,7 +7258,7 @@ the use of prologue scanners."),
 	       &maintenanceflushlist);
   c = add_alias_cmd ("flush-symbol-cache", maintenance_flush_symbol_cache_cmd,
 		     class_maintenance, 0, &maintenancelist);
-  deprecate_cmd (c, "maintenancelist flush symbol-cache");
+  deprecate_cmd (c, "maintenance flush symbol-cache");
 
   gdb::observers::new_objfile.attach (symtab_new_objfile_observer, "symtab");
   gdb::observers::all_objfiles_removed.attach (symtab_all_objfiles_removed,

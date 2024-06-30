@@ -1513,6 +1513,54 @@ parse_vector_reg_list (char **ccp, aarch64_reg_type type,
   return error ? PARSE_FAIL : (ret_val << 2) | (nb_regs - 1);
 }
 
+/* Parse a SIMD vector register with a bit index. The SIMD vectors with
+   bit indices don't have type qualifiers.
+
+   Return null if the string pointed to by *CCP is not a valid AdvSIMD
+   vector register with a bit index.
+
+   Otherwise return the register and the bit index information
+   in *typeinfo.
+
+   The validity of the bit index itself is checked separately in encoding.
+ */
+
+static const reg_entry *
+parse_simd_vector_with_bit_index (char **ccp, struct vector_type_el *typeinfo)
+{
+  char *str = *ccp;
+  const reg_entry *reg = parse_reg (&str);
+  struct vector_type_el atype;
+
+  // Setting it here as this is the convention followed in the
+  // rest of the code with indices.
+  atype.defined = NTA_HASINDEX;
+  // This will be set to correct value in parse_index_expressions.
+  atype.index = 0;
+  // The rest of the fields are not applicable for this operand.
+  atype.type = NT_invtype;
+  atype.width = -1;
+  atype.element_size = 0;
+
+  if (reg == NULL)
+    return NULL;
+
+  if (reg->type != REG_TYPE_V)
+    return NULL;
+
+  // Parse the bit index.
+  if (!skip_past_char (&str, '['))
+    return NULL;
+  if (!parse_index_expression (&str, &atype.index))
+    return NULL;
+  if (!skip_past_char (&str, ']'))
+    return NULL;
+
+  *typeinfo = atype;
+  *ccp = str;
+  return reg;
+}
+
 /* Directives: register aliases.  */
 
 static reg_entry *
@@ -3827,7 +3875,7 @@ parse_shifter_operand_reloc (char **str, aarch64_opnd_info *operand,
       if (! aarch64_get_expression (&inst.reloc.exp, str, GE_NO_PREFIX,
 				    REJECT_ABSENT))
 	return false;
-      
+
       /* Record the relocation type (use the ADD variant here).  */
       inst.reloc.type = entry->add_type;
       inst.reloc.pc_rel = entry->pc_rel;
@@ -6187,6 +6235,7 @@ process_omitted_operand (enum aarch64_opnd type, const aarch64_opcode *opcode,
     case AARCH64_OPND_Rs:
     case AARCH64_OPND_Ra:
     case AARCH64_OPND_Rt_SYS:
+    case AARCH64_OPND_Rt_IN_SYS_ALIASES:
     case AARCH64_OPND_Rd_SP:
     case AARCH64_OPND_Rn_SP:
     case AARCH64_OPND_Rm_SP:
@@ -6571,6 +6620,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_Ra:
 	case AARCH64_OPND_Rt_LS64:
 	case AARCH64_OPND_Rt_SYS:
+	case AARCH64_OPND_Rt_IN_SYS_ALIASES:
 	case AARCH64_OPND_PAIRREG:
 	case AARCH64_OPND_PAIRREG_OR_XZR:
 	case AARCH64_OPND_SVE_Rm:
@@ -6736,7 +6786,10 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->qualifier = AARCH64_OPND_QLF_S_D;
 	  break;
 
+	case AARCH64_OPND_SVE_Zm1_23_INDEX:
+	case AARCH64_OPND_SVE_Zm2_22_INDEX:
 	case AARCH64_OPND_SVE_Zm3_INDEX:
+	case AARCH64_OPND_SVE_Zm3_12_INDEX:
 	case AARCH64_OPND_SVE_Zm3_22_INDEX:
 	case AARCH64_OPND_SVE_Zm3_19_INDEX:
 	case AARCH64_OPND_SVE_Zm3_11_INDEX:
@@ -6790,6 +6843,23 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->reglane.index = vectype.index;
 	  break;
 
+	case AARCH64_OPND_Em_INDEX1_14:
+	case AARCH64_OPND_Em_INDEX2_13:
+	case AARCH64_OPND_Em_INDEX3_12:
+	  // These are SIMD vector operands with bit indices. For example,
+	  // 'V27[3]'. These operands don't have type qualifiers before
+	  // indices.
+	  reg = parse_simd_vector_with_bit_index(&str, &vectype);
+
+	  if (!reg)
+	    goto failure;
+	  gas_assert (vectype.defined & NTA_HASINDEX);
+
+	  info->qualifier = AARCH64_OPND_QLF_NIL;
+	  info->reglane.regno = reg->number;
+	  info->reglane.index = vectype.index;
+	  break;
+
 	case AARCH64_OPND_SVE_ZnxN:
 	case AARCH64_OPND_SVE_ZtxN:
 	case AARCH64_OPND_SME_Zdnx2:
@@ -6812,6 +6882,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  goto vector_reg_list;
 
 	case AARCH64_OPND_LVn:
+	case AARCH64_OPND_LVn_LUT:
 	case AARCH64_OPND_LVt:
 	case AARCH64_OPND_LVt_AL:
 	case AARCH64_OPND_LEt:
@@ -8007,6 +8078,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->imm.value = val;
 	  break;
 
+	case AARCH64_OPND_BRBOP:
+	  po_strict_enum_or_fail (aarch64_brbop_array);
+	  info->imm.value = val;
+	  break;
+
 	case AARCH64_OPND_MOPS_ADDR_Rd:
 	case AARCH64_OPND_MOPS_ADDR_Rs:
 	  po_char_or_fail ('[');
@@ -8259,6 +8335,44 @@ warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
 	  && !(opnds[1].type == AARCH64_OPND_ADDR_SIMM13)
 	  && opnds[1].addr.writeback)
 	as_warn (_("unpredictable transfer with writeback -- `%s'"), str);
+      break;
+
+    case rcpc3:
+      {
+	const int nb_operands = aarch64_num_of_operands (opcode);
+	if (aarch64_get_operand_class (opnds[0].type)
+	    == AARCH64_OPND_CLASS_INT_REG)
+	  {
+	    /* Load Pair transfer with register overlap. */
+	    if (nb_operands == 3 && opnds[0].reg.regno == opnds[1].reg.regno)
+	      { // ldiapp, stilp
+		as_warn (_("unpredictable load pair transfer with register "
+			   "overlap -- `%s'"),
+			 str);
+	      }
+	    /* Loading/storing the base register is unpredictable if writeback. */
+	    else if ((nb_operands == 2
+		      && opnds[0].reg.regno == opnds[1].addr.base_regno
+		      && opnds[1].addr.base_regno != REG_SP
+		      && opnds[1].addr.writeback)
+		     || (nb_operands == 3
+			 && (opnds[0].reg.regno == opnds[2].addr.base_regno
+			     || opnds[1].reg.regno == opnds[2].addr.base_regno)
+			 && opnds[2].addr.base_regno != REG_SP
+			 && opnds[2].addr.writeback))
+	      {
+		if (strcmp (opcode->name, "ldapr") == 0
+		    || strcmp (opcode->name, "ldiapp") == 0)
+		  as_warn (
+		    _("unpredictable transfer with writeback (load) -- `%s'"),
+		    str);
+		else // stlr, stilp
+		  as_warn (
+		    _("unpredictable transfer with writeback (store) -- `%s'"),
+		    str);
+	      }
+	  }
+      }
       break;
 
     case ldstpair_off:
@@ -10398,6 +10512,10 @@ struct aarch64_option_cpu_value_table
   const aarch64_feature_set require; /* Feature dependencies.  */
 };
 
+/* There are currently many feature bits with no corresponding flag for features implied by FEAT_D128.  We should combine or remove most of these in the future, but for now just make +d128 enable these dependencies as well.  */
+#define D128_FEATURE_DEPS AARCH64_FEATURES (8, LSE128, SCTLR2, FGT2, ATS1A, \
+					    AIE, S1PIE, S2PIE, TCR2)
+
 static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"crc",		AARCH64_FEATURE (CRC), AARCH64_NO_FEATURES},
   {"crypto",		AARCH64_FEATURES (2, AES, SHA2),
@@ -10424,7 +10542,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"rcpc",		AARCH64_FEATURE (RCPC), AARCH64_NO_FEATURES},
   {"rcpc2",		AARCH64_FEATURE (RCPC2), AARCH64_FEATURE (RCPC)},
   {"dotprod",		AARCH64_FEATURE (DOTPROD), AARCH64_FEATURE (SIMD)},
-  {"sha2",		AARCH64_FEATURE (SHA2), AARCH64_FEATURE (FP)},
+  {"sha2",		AARCH64_FEATURE (SHA2), AARCH64_FEATURE (SIMD)},
   {"frintts",		AARCH64_FEATURE (FRINTTS), AARCH64_FEATURE (SIMD)},
   {"sb",		AARCH64_FEATURE (SB), AARCH64_NO_FEATURES},
   {"predres",		AARCH64_FEATURE (PREDRES), AARCH64_NO_FEATURES},
@@ -10469,14 +10587,16 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"the",		AARCH64_FEATURE (THE), AARCH64_NO_FEATURES},
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
-  {"d128",		AARCH64_FEATURE (D128),
-			AARCH64_FEATURE (LSE128)},
+  {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
   {"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
   {"sve2p1",		AARCH64_FEATURE (SVE2p1), AARCH64_FEATURE (SVE2)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
   {"cpa",		AARCH64_FEATURE (CPA), AARCH64_NO_FEATURES},
   {"faminmax",		AARCH64_FEATURE (FAMINMAX), AARCH64_FEATURE (SIMD)},
+  {"fp8",		AARCH64_FEATURE (FP8), AARCH64_FEATURE (SIMD)},
+  {"lut",		AARCH64_FEATURE (LUT), AARCH64_FEATURE (SIMD)},
+  {"brbe",		AARCH64_FEATURE (BRBE), AARCH64_NO_FEATURES},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

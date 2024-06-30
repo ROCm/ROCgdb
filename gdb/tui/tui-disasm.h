@@ -22,6 +22,7 @@
 #ifndef TUI_TUI_DISASM_H
 #define TUI_TUI_DISASM_H
 
+#include "gdbsupport/gdb-checked-static-cast.h"
 #include "tui/tui.h"
 #include "tui/tui-data.h"
 #include "tui-winsource.h"
@@ -63,6 +64,15 @@ private:
      in the current source window.  */
   bool addr_is_displayed (CORE_ADDR addr) const;
 };
+
+/* Return the instance of the disassembly windows.  */
+
+inline tui_disasm_window *
+tui_disasm_win ()
+{
+  return gdb::checked_static_cast<tui_disasm_window *>
+    (tui_win_list[DISASSEM_WIN]);
+}
 
 extern void tui_get_begin_asm_address (struct gdbarch **, CORE_ADDR *);
 

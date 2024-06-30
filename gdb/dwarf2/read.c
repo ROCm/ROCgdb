@@ -741,7 +741,7 @@ show_dwarf_max_cache_age (struct ui_file *file, int from_tty,
 }
 
 /* When true, wait for DWARF reading to be complete.  */
-static bool dwarf_synchronous = false;
+static bool dwarf_synchronous = true;
 
 /* "Show" callback for "maint set dwarf synchronous".  */
 static void
@@ -2999,17 +2999,6 @@ recursively_find_pc_sect_compunit_symtab (struct compunit_symtab *cust,
   return NULL;
 }
 
-dwarf2_per_cu_data *
-dwarf2_base_index_functions::find_per_cu (dwarf2_per_bfd *per_bfd,
-					  unrelocated_addr adjusted_pc)
-{
-  if (per_bfd->index_addrmap == nullptr)
-    return nullptr;
-
-  void *obj = per_bfd->index_addrmap->find ((CORE_ADDR) adjusted_pc);
-  return static_cast<dwarf2_per_cu_data *> (obj);
-}
-
 struct compunit_symtab *
 dwarf2_base_index_functions::find_pc_sect_compunit_symtab
      (struct objfile *objfile,
@@ -3021,10 +3010,14 @@ dwarf2_base_index_functions::find_pc_sect_compunit_symtab
   struct compunit_symtab *result;
 
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+  dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
+
+  if (per_bfd->index_table == nullptr)
+    return nullptr;
 
   CORE_ADDR baseaddr = objfile->text_section_offset ();
   struct dwarf2_per_cu_data *data
-    = find_per_cu (per_objfile->per_bfd, (unrelocated_addr) (pc - baseaddr));
+    = per_bfd->index_table->lookup ((unrelocated_addr) (pc - baseaddr));
   if (data == nullptr)
     return nullptr;
 
@@ -15124,7 +15117,15 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
 	  tt = builtin_type (gdbarch)->builtin_float;
 	  break;
 	case 64:
-	  tt = builtin_type (gdbarch)->builtin_double;
+	  if (builtin_type (gdbarch)->builtin_long_double->length () == 8
+	      && name_hint != nullptr
+	      && strstr (name_hint, "long") != nullptr)
+	    {
+	      /* Use "long double" for "complex long double".  */
+	      tt = builtin_type (gdbarch)->builtin_long_double;
+	    }
+	  else
+	    tt = builtin_type (gdbarch)->builtin_double;
 	  break;
 	case 96:	/* The x86-32 ABI specifies 96-bit long double.  */
 	case 128:
@@ -16577,16 +16578,6 @@ cooked_indexer::make_index (cutu_reader *reader)
   index_dies (reader, reader->info_ptr, nullptr, false);
 }
 
-dwarf2_per_cu_data *
-cooked_index_functions::find_per_cu (dwarf2_per_bfd *per_bfd,
-				     unrelocated_addr adjusted_pc)
-{
-  cooked_index *table
-    = (gdb::checked_static_cast<cooked_index *>
-       (per_bfd->index_table.get ()));
-  return table->lookup (adjusted_pc);
-}
-
 struct compunit_symtab *
 cooked_index_functions::find_compunit_symtab_by_address
      (struct objfile *objfile, CORE_ADDR address)
@@ -16655,13 +16646,23 @@ cooked_index_functions::expand_symtabs_matching
     language_ada
   };
 
+  symbol_name_match_type match_type
+    = lookup_name_without_params.match_type ();
+
   for (enum language lang : unique_styles)
     {
       std::vector<std::string_view> name_vec
 	= lookup_name_without_params.split_name (lang);
-      std::string last_name (name_vec.back ());
+      std::vector<std::string> name_str_vec (name_vec.begin (), name_vec.end ());
+      std::vector<lookup_name_info> segment_lookup_names;
+      segment_lookup_names.reserve (name_vec.size ());
+      for (auto &segment_name : name_str_vec)
+	{
+	  segment_lookup_names.emplace_back (segment_name,
+	    symbol_name_match_type::FULL, completing, true);
+	}
 
-      for (const cooked_index_entry *entry : table->find (last_name,
+      for (const cooked_index_entry *entry : table->find (name_str_vec.back (),
 							  completing))
 	{
 	  QUIT;
@@ -16690,12 +16691,23 @@ cooked_index_functions::expand_symtabs_matching
 	    {
 	      /* If we ran out of entries, or if this segment doesn't
 		 match, this did not match.  */
-	      if (parent == nullptr
-		  || strncmp (parent->name, name_vec[i - 1].data (),
-			      name_vec[i - 1].length ()) != 0)
+	      if (parent == nullptr)
 		{
 		  found = false;
 		  break;
+		}
+	      if (parent->lang != language_unknown)
+		{
+		  const language_defn *lang_def = language_def (parent->lang);
+		  symbol_name_matcher_ftype *name_matcher
+		    = lang_def->get_symbol_name_matcher
+		      (segment_lookup_names[i-1]);
+		  if (!name_matcher (parent->canonical,
+				     segment_lookup_names[i-1], nullptr))
+		    {
+		      found = false;
+		      break;
+		    }
 		}
 
 	      parent = parent->get_parent ();
@@ -16708,13 +16720,24 @@ cooked_index_functions::expand_symtabs_matching
 	     "x::a::b".  */
 	  if (symbol_matcher == nullptr)
 	    {
-	      symbol_name_match_type match_type
-		= lookup_name_without_params.match_type ();
 	      if ((match_type == symbol_name_match_type::FULL
 		   || (lang != language_ada
-		       && match_type == symbol_name_match_type::EXPRESSION))
-		  && parent != nullptr)
-		continue;
+		       && match_type == symbol_name_match_type::EXPRESSION)))
+		{
+		  if (parent != nullptr)
+		    continue;
+
+		  if (entry->lang != language_unknown)
+		    {
+		      const language_defn *lang_def = language_def (entry->lang);
+		      symbol_name_matcher_ftype *name_matcher
+			= lang_def->get_symbol_name_matcher
+			  (segment_lookup_names.back ());
+		      if (!name_matcher (entry->canonical,
+					 segment_lookup_names.back (), nullptr))
+			continue;
+		    }
+	      }
 	    }
 	  else
 	    {

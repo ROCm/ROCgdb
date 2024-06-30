@@ -18,7 +18,7 @@ dnl <http://www.gnu.org/licenses/>.
 dnl
 
 m4_include([../bfd/version.m4])
-AC_INIT([ld], BFD_VERSION)
+AC_INIT([ld], [BFD_VERSION])
 AC_CONFIG_SRCDIR(ldmain.c)
 
 AC_CANONICAL_TARGET
@@ -31,7 +31,6 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_GREP
-AC_GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG
@@ -197,7 +196,7 @@ esac])dnl
 # Decide if DT_TEXTREL check should be enabled in ELF linker.
 ac_default_ld_textrel_check=unset
 AC_ARG_ENABLE([textrel-check],
-	      AC_HELP_STRING([--enable-textrel-check=@<:@yes|no|warning|error@:>@],
+	      AS_HELP_STRING([--enable-textrel-check=@<:@yes|no|warning|error@:>@],
 			     [enable DT_TEXTREL check in ELF linker]),
 [case "${enableval}" in
   yes|no|warning|error) ac_default_ld_textrel_check=${enableval} ;;
@@ -211,6 +210,16 @@ AC_ARG_ENABLE(separate-code,
 [case "${enableval}" in
   yes) ac_default_ld_z_separate_code=1 ;;
   no) ac_default_ld_z_separate_code=0 ;;
+esac])
+
+# Decide if --rosegment should be enabled in the ELF linker by default.
+ac_default_ld_rosegment=unset
+AC_ARG_ENABLE(rosegment,
+	      AS_HELP_STRING([--enable-rosegment],
+	      [enable --rosegment in the ELF linker by default]),
+[case "${enableval}" in
+  yes) ac_default_ld_rosegment=1 ;;
+  no)  ac_default_ld_rosegment=0 ;;
 esac])
 
 # Decide if -z mark-plt should be enabled in ELF x86-64 linker by default.
@@ -571,6 +580,13 @@ fi
 AC_DEFINE_UNQUOTED(DEFAULT_LD_Z_SEPARATE_CODE,
   $ac_default_ld_z_separate_code,
   [Define to 1 if you want to enable -z separate-code in ELF linker by default.])
+
+if test "${ac_default_ld_rosegment}" = unset; then
+  ac_default_ld_rosegment=0
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_LD_ROSEGMENT,
+  $ac_default_ld_rosegment,
+  [Define to 1 if you want to enable --rosegment in the ELF linker by default.])
 
 if test "${ac_default_ld_z_mark_plt}" = unset; then
   ac_default_ld_z_mark_plt=0

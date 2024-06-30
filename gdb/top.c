@@ -17,6 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "exceptions.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-script.h"
 #include "cli/cli-setshow.h"
@@ -609,22 +610,18 @@ execute_fn_to_ui_file (struct ui_file *file, std::function<void(void)> fn)
 
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
-  {
-    ui_out_redirect_pop redirect_popper (current_uiout, file);
+  ui_out_redirect_pop redirect_popper (current_uiout, file);
 
-    scoped_restore save_stdout
-      = make_scoped_restore (&gdb_stdout, file);
-    scoped_restore save_stderr
-      = make_scoped_restore (&gdb_stderr, file);
-    scoped_restore save_stdlog
-      = make_scoped_restore (&gdb_stdlog, file);
-    scoped_restore save_stdtarg
-      = make_scoped_restore (&gdb_stdtarg, file);
-    scoped_restore save_stdtargerr
-      = make_scoped_restore (&gdb_stdtargerr, file);
+  scoped_restore save_stdout
+    = make_scoped_restore (&gdb_stdout, file);
+  scoped_restore save_stderr
+    = make_scoped_restore (&gdb_stderr, file);
+  scoped_restore save_stdlog
+    = make_scoped_restore (&gdb_stdlog, file);
+  scoped_restore save_stdtarg
+    = make_scoped_restore (&gdb_stdtarg, file);
 
-    fn ();
-  }
+  fn ();
 }
 
 /* See top.h.  */
