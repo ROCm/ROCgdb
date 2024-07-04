@@ -642,7 +642,6 @@ static int shared = 0;
 unsigned int x86_sframe_cfa_sp_reg;
 /* The other CFA base register for SFrame stack trace info.  */
 unsigned int x86_sframe_cfa_fp_reg;
-unsigned int x86_sframe_cfa_ra_reg;
 
 #endif
 
@@ -4436,7 +4435,7 @@ build_apx_evex_prefix (void)
     }
 
   /* Encode the NF bit.  */
-  if (i.has_nf)
+  if (i.has_nf || i.tm.opcode_modifier.operandconstraint == EVEX_NF)
     i.vex.bytes[3] |= 0x04;
 }
 
@@ -11988,6 +11987,7 @@ x86_cleanup (void)
     subseg_set (seg, subseg);
 }
 
+/* Whether SFrame stack trace info is supported.  */
 bool
 x86_support_sframe_p (void)
 {
@@ -11995,6 +11995,7 @@ x86_support_sframe_p (void)
   return (x86_elf_abi == X86_64_ABI);
 }
 
+/* Whether SFrame return address tracking is needed.  */
 bool
 x86_sframe_ra_tracking_p (void)
 {
@@ -12004,6 +12005,8 @@ x86_sframe_ra_tracking_p (void)
   return false;
 }
 
+/* The fixed offset from CFA for SFrame to recover the return address.
+   (useful only when SFrame RA tracking is not needed).  */
 offsetT
 x86_sframe_cfa_ra_offset (void)
 {
@@ -12011,6 +12014,7 @@ x86_sframe_cfa_ra_offset (void)
   return (offsetT) -8;
 }
 
+/* The abi/arch indentifier for SFrame.  */
 unsigned char
 x86_sframe_get_abi_arch (void)
 {
