@@ -456,6 +456,9 @@ struct _i386_insn
     /* Disable instruction size optimization.  */
     bool no_optimize;
 
+    /* Invert the condition encoded in a base opcode.  */
+    bool invert_cond;
+
     /* How to encode instructions.  */
     enum
       {
@@ -1929,6 +1932,7 @@ static INLINE bool need_evex_encoding (const insn_template *t)
 {
   return i.encoding == encoding_evex
 	|| i.encoding == encoding_evex512
+	|| i.has_nf
 	|| (t->opcode_modifier.vex && i.encoding == encoding_egpr)
 	|| i.mask.reg;
 }
@@ -3804,9 +3808,10 @@ want_disp32 (const insn_template *t)
 {
   return flag_code != CODE_64BIT
 	 || i.prefix[ADDR_PREFIX]
-	 || (t->mnem_off == MN_lea
+	 || ((t->mnem_off == MN_lea
+	      || (i.tm.base_opcode == 0x8d && i.tm.opcode_space == SPACE_BASE))
 	     && (!i.types[1].bitfield.qword
-		|| t->opcode_modifier.size == SIZE32));
+		 || t->opcode_modifier.size == SIZE32));
 }
 
 static int
@@ -3915,6 +3920,11 @@ install_template (const insn_template *t)
       i.scc = i.tm.base_opcode & 0xf;
       i.tm.base_opcode >>= 8;
     }
+
+  /* For CMOVcc having undergone NDD-to-legacy optimization with its source
+     operands being swapped, we need to invert the encoded condition.  */
+  if (i.invert_cond)
+    i.tm.base_opcode ^= 1;
 
   /* Note that for pseudo prefixes this produces a length of 1. But for them
      the length isn't interesting at all.  */
@@ -4768,7 +4778,9 @@ optimize_encoding (void)
     }
 
   if (optimize_for_space
-      && i.tm.mnem_off == MN_test
+      && (i.tm.mnem_off == MN_test
+          || (i.tm.base_opcode == 0xf6
+              && i.tm.opcode_space == SPACE_EVEXMAP4))
       && i.reg_operands == 1
       && i.imm_operands == 1
       && !i.types[1].bitfield.byte
@@ -4777,9 +4789,13 @@ optimize_encoding (void)
       && fits_in_imm7 (i.op[0].imms->X_add_number))
     {
       /* Optimize: -Os:
-	   test $imm7, %r64/%r32/%r16  -> test $imm7, %r8
+	   test      $imm7, %r64/%r32/%r16  -> test      $imm7, %r8
+	   ctest<cc> $imm7, %r64/%r32/%r16  -> ctest<cc> $imm7, %r8
        */
       unsigned int base_regnum = i.op[1].regs->reg_num;
+
+      gas_assert (!i.tm.opcode_modifier.modrm || i.tm.extension_opcode == 0);
+
       if (flag_code == CODE_64BIT || base_regnum < 4)
 	{
 	  i.types[1].bitfield.byte = 1;
@@ -4807,8 +4823,8 @@ optimize_encoding (void)
     }
   else if (flag_code == CODE_64BIT
 	   && i.tm.opcode_space == SPACE_BASE
-	   && ((i.types[1].bitfield.qword
-		&& i.reg_operands == 1
+	   && i.types[i.operands - 1].bitfield.qword
+	   && ((i.reg_operands == 1
 		&& i.imm_operands == 1
 		&& i.op[0].imms->X_op == O_constant
 		&& ((i.tm.base_opcode == 0xb8
@@ -4816,26 +4832,29 @@ optimize_encoding (void)
 		     && fits_in_unsigned_long (i.op[0].imms->X_add_number))
 		    || (fits_in_imm31 (i.op[0].imms->X_add_number)
 			&& (i.tm.base_opcode == 0x24
-			    || (i.tm.base_opcode == 0x80
-				&& i.tm.extension_opcode == 0x4)
-			    || i.tm.mnem_off == MN_test
+			    || (((i.tm.base_opcode == 0x80
+				  && i.tm.extension_opcode == 0x4)
+				 || i.tm.mnem_off == MN_test)
+				&& !(i.op[1].regs->reg_flags
+				     & (RegRex | RegRex2)))
 			    || ((i.tm.base_opcode | 1) == 0xc7
 				&& i.tm.extension_opcode == 0x0)))
 		    || (fits_in_imm7 (i.op[0].imms->X_add_number)
 			&& i.tm.base_opcode == 0x83
-			&& i.tm.extension_opcode == 0x4)))
-	       || (i.types[0].bitfield.qword
-		   && ((i.reg_operands == 2
-			&& i.op[0].regs == i.op[1].regs
-			&& (i.tm.mnem_off == MN_xor
-			    || i.tm.mnem_off == MN_sub))
-		       || i.tm.mnem_off == MN_clr))))
+			&& i.tm.extension_opcode == 0x4
+			&& !(i.op[1].regs->reg_flags & (RegRex | RegRex2)))))
+	       || ((i.reg_operands == 2
+		    && i.op[0].regs == i.op[1].regs
+		    && (i.tm.mnem_off == MN_xor
+			|| i.tm.mnem_off == MN_sub))
+		   || i.tm.mnem_off == MN_clr)))
     {
       /* Optimize: -O:
 	   andq $imm31, %r64   -> andl $imm31, %r32
 	   andq $imm7, %r64    -> andl $imm7, %r32
 	   testq $imm31, %r64  -> testl $imm31, %r32
 	   xorq %r64, %r64     -> xorl %r32, %r32
+	   clrq %r64           -> clrl %r32
 	   subq %r64, %r64     -> subl %r32, %r32
 	   movq $imm31, %r64   -> movl $imm31, %r32
 	   movq $imm32, %r64   -> movl $imm32, %r32
@@ -4927,6 +4946,7 @@ optimize_encoding (void)
     }
   else if (!optimize_for_space
 	   && i.tm.base_opcode == 0xd0
+	   && i.tm.extension_opcode == 4
 	   && (i.tm.opcode_space == SPACE_BASE
 	       || i.tm.opcode_space == SPACE_EVEXMAP4)
 	   && !i.mem_operands)
@@ -4942,7 +4962,6 @@ optimize_encoding (void)
 	   shll $1, %rN, %rM  -> addl %rN, %rN, %rM
 	   shlq $1, %rN, %rM  -> addq %rN, %rN, %rM
        */
-      gas_assert (i.tm.extension_opcode == 4);
       i.tm.base_opcode = 0x00;
       i.tm.extension_opcode = None;
       if (i.operands >= 2)
@@ -5324,6 +5343,395 @@ optimize_encoding (void)
 
       i.operands = 2;
       i.imm_operands = 0;
+    }
+}
+
+/* Check whether the promoted (to address size) register is usable as index
+   register in ModR/M SIB addressing.  */
+
+static bool is_index (const reg_entry *r)
+{
+  gas_assert (flag_code == CODE_64BIT);
+
+  if (r->reg_type.bitfield.byte)
+    {
+      if (!(r->reg_flags & RegRex64))
+	{
+	  if (r->reg_num >= 4)
+	    return false;
+	  r += 8;
+	}
+      r += 32;
+    }
+  if (r->reg_type.bitfield.word)
+    r += 32;
+  /* No need to further check .dword here.  */
+
+  return r->reg_type.bitfield.baseindex;
+}
+
+/* Try to shorten {nf} encodings, by shortening operand size or switching to
+   functionally identical encodings.  */
+
+static void
+optimize_nf_encoding (void)
+{
+  if (i.tm.base_opcode == 0x80
+      && (i.tm.extension_opcode == 0 || i.tm.extension_opcode == 5)
+      && i.suffix != BYTE_MNEM_SUFFIX
+      && !i.types[1].bitfield.byte
+      && !i.types[2].bitfield.byte
+      && i.op[0].imms->X_op == O_constant
+      && i.op[0].imms->X_add_number == 0x80)
+    {
+      /* Optimize: -O:
+	   {nf} addw $0x80, ...  -> {nf} subw $-0x80, ...
+	   {nf} addl $0x80, ...  -> {nf} subl $-0x80, ...
+	   {nf} addq $0x80, ...  -> {nf} subq $-0x80, ...
+
+	   {nf} subw $0x80, ...  -> {nf} addw $-0x80, ...
+	   {nf} subl $0x80, ...  -> {nf} addl $-0x80, ...
+	   {nf} subq $0x80, ...  -> {nf} addq $-0x80, ...
+       */
+      i.tm.base_opcode |= 3;
+      i.tm.extension_opcode ^= 5;
+      i.tm.opcode_modifier.w = 0;
+      i.op[0].imms->X_add_number = -i.op[0].imms->X_add_number;
+
+      i.tm.operand_types[0].bitfield.imm8 = 0;
+      i.tm.operand_types[0].bitfield.imm8s = 1;
+      i.tm.operand_types[0].bitfield.imm16 = 0;
+      i.tm.operand_types[0].bitfield.imm32 = 0;
+      i.tm.operand_types[0].bitfield.imm32s = 0;
+
+      i.types[0] = i.tm.operand_types[0];
+    }
+  else if ((i.tm.base_opcode | 3) == 0x83
+      && (i.tm.extension_opcode == 0 || i.tm.extension_opcode == 5)
+      && i.op[0].imms->X_op == O_constant
+      && (i.op[0].imms->X_add_number == 1
+	  || i.op[0].imms->X_add_number == -1
+	  /* While for wider than byte operations immediates were suitably
+	     adjusted earlier on, 0xff in the byte case needs covering
+	     explicitly.  */
+	  || (i.op[0].imms->X_add_number == 0xff
+	      && (i.suffix == BYTE_MNEM_SUFFIX
+		  || i.types[i.operands - 1].bitfield.byte))))
+    {
+      /* Optimize: -O:
+	   {nf} add $1, ...        -> {nf} inc ...
+	   {nf} add $-1, ...       -> {nf} dec ...
+	   {nf} add $0xf...f, ...  -> {nf} dec ...
+
+	   {nf} sub $1, ...        -> {nf} dec ...
+	   {nf} sub $-1, ...       -> {nf} inc ...
+	   {nf} sub $0xf...f, ...  -> {nf} inc ...
+       */
+      i.tm.base_opcode = 0xfe;
+      i.tm.extension_opcode
+	= (i.op[0].imms->X_add_number == 1) != (i.tm.extension_opcode == 0);
+      i.tm.opcode_modifier.w = 1;
+
+      i.types[0] = i.types[1];
+      i.types[1] = i.types[2];
+      i.tm.operand_types[0] = i.tm.operand_types[1];
+      i.tm.operand_types[1] = i.tm.operand_types[2];
+      i.op[0] = i.op[1];
+      i.op[1] = i.op[2];
+      i.flags[0] = i.flags[1];
+      i.flags[1] = i.flags[2];
+      i.reloc[0] = i.reloc[1];
+      i.reloc[1] = NO_RELOC;
+
+      i.imm_operands = 0;
+      --i.operands;
+    }
+  else if (i.tm.base_opcode == 0xc0
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number
+	      == (i.types[i.operands - 1].bitfield.byte
+		  || i.suffix == BYTE_MNEM_SUFFIX
+		  ? 7 : i.types[i.operands - 1].bitfield.word
+			|| i.suffix == WORD_MNEM_SUFFIX
+			? 15 : 63 >> (i.types[i.operands - 1].bitfield.dword
+				      || i.suffix == LONG_MNEM_SUFFIX)))
+    {
+      /* Optimize: -O:
+	   {nf} rol $osz-1, ...   -> {nf} ror $1, ...
+	   {nf} ror $osz-1, ...   -> {nf} rol $1, ...
+       */
+      gas_assert (i.tm.extension_opcode <= 1);
+      i.tm.extension_opcode ^= 1;
+      i.tm.base_opcode = 0xd0;
+      i.tm.operand_types[0].bitfield.imm1 = 1;
+      i.imm_operands = 0;
+    }
+  else if ((i.tm.base_opcode | 2) == 0x6b
+	   && i.op[0].imms->X_op == O_constant
+	   && (i.op[0].imms->X_add_number > 0
+	       ? !(i.op[0].imms->X_add_number & (i.op[0].imms->X_add_number - 1))
+	       /* optimize_imm() converts to sign-extended representation where
+		  possible (and input can also come with these specific numbers).  */
+	       : (i.types[i.operands - 1].bitfield.word
+		  && i.op[0].imms->X_add_number == -0x8000)
+		 || (i.types[i.operands - 1].bitfield.dword
+		     && i.op[0].imms->X_add_number + 1 == -0x7fffffff))
+	   /* 16-bit 3-operand non-ZU forms need leaviong alone, to prevent
+	      zero-extension of the result.  Unless, of course, both non-
+	      immediate operands match (which can be converted to the non-NDD
+	      form).  */
+	   && (i.operands < 3
+	       || !i.types[2].bitfield.word
+	       || i.tm.mnem_off == MN_imulzu
+	       || i.op[2].regs == i.op[1].regs)
+	   /* When merely optimizing for size, exclude cases where we'd convert
+	      from Imm8S to Imm8 encoding, thus not actually reducing size.  */
+	   && (!optimize_for_space
+	       || i.tm.base_opcode == 0x69
+	       || !(i.op[0].imms->X_add_number & 0x7d)))
+    {
+      /* Optimize: -O:
+	   {nf} imul   $1<<N, ...   -> {nf} shl $N, ...
+	   {nf} imulzu $1<<N, ...   -> {nf} shl $N, ...
+       */
+      if (i.op[0].imms->X_add_number != 2)
+	{
+	  i.tm.base_opcode = 0xc0;
+	  i.op[0].imms->X_add_number = ffs (i.op[0].imms->X_add_number) - 1;
+	  i.tm.operand_types[0].bitfield.imm8 = 1;
+	  i.tm.operand_types[0].bitfield.imm16 = 0;
+	  i.tm.operand_types[0].bitfield.imm32 = 0;
+	  i.tm.operand_types[0].bitfield.imm32s = 0;
+	}
+      else
+	{
+	  i.tm.base_opcode = 0xd0;
+	  i.tm.operand_types[0].bitfield.imm1 = 1;
+	}
+      i.types[0] = i.tm.operand_types[0];
+      i.tm.extension_opcode = 4;
+      i.tm.opcode_modifier.w = 1;
+      i.tm.opcode_modifier.operandconstraint = 0;
+      if (i.operands == 3)
+	{
+	  if (i.op[2].regs == i.op[1].regs && i.tm.mnem_off != MN_imulzu)
+	    {
+	      /* Convert to non-NDD form.  This is required for 16-bit insns
+	         (to prevent zero-extension) and benign for others.  */
+	      i.operands = 2;
+	      i.reg_operands = 1;
+	    }
+	  else
+	    i.tm.opcode_modifier.vexvvvv = VexVVVV_DST;
+	}
+      else if (i.tm.mnem_off == MN_imulzu)
+	{
+	  /* Convert to NDD form, to effect zero-extension of the result.  */
+	  i.tm.opcode_modifier.vexvvvv = VexVVVV_DST;
+	  i.operands = 3;
+	  i.reg_operands = 2;
+	  i.op[2].regs = i.op[1].regs;
+ 	  i.tm.operand_types[2] = i.tm.operand_types[1];
+ 	  i.types[2] = i.types[1];
+	}
+    }
+
+  if (optimize_for_space
+      && i.encoding != encoding_evex
+      && (i.tm.base_opcode == 0x00
+	  || (i.tm.base_opcode == 0xd0 && i.tm.extension_opcode == 4))
+      && !i.mem_operands
+      && !i.types[1].bitfield.byte
+      /* 16-bit operand size has extra restrictions: If REX2 was needed,
+	 no size reduction would be possible.  Plus 3-operand forms zero-
+	 extend the result, which can't be expressed with LEA.  */
+      && (!i.types[1].bitfield.word
+	  || (i.operands == 2 && i.encoding != encoding_egpr))
+      && is_plausible_suffix (1)
+      /* %rsp can't be the index.  */
+      && (is_index (i.op[1].regs)
+	  || (i.imm_operands == 0 && is_index (i.op[0].regs)))
+      /* While %rbp, %r13, %r21, and %r29 can be made the index in order to
+	 avoid the otherwise necessary Disp8, if the other operand is also
+	 from that set and REX2 would be required to encode the insn, the
+	 resulting encoding would be no smaller than the EVEX one.  */
+      && (i.op[1].regs->reg_num != 5
+	  || i.encoding != encoding_egpr
+	  || i.imm_operands > 0
+	  || i.op[0].regs->reg_num != 5))
+    {
+      /* Optimize: -Os:
+	   {nf} addw %N, %M    -> leaw (%rM,%rN), %M
+	   {nf} addl %eN, %eM  -> leal (%rM,%rN), %eM
+	   {nf} addq %rN, %rM  -> leaq (%rM,%rN), %rM
+
+	   {nf} shlw $1, %N   -> leaw (%rN,%rN), %N
+	   {nf} shll $1, %eN  -> leal (%rN,%rN), %eN
+	   {nf} shlq $1, %rN  -> leaq (%rN,%rN), %rN
+
+	   {nf} addl %eK, %eN, %eM  -> leal (%rN,%rK), %eM
+	   {nf} addq %rK, %rN, %rM  -> leaq (%rN,%rK), %rM
+
+	   {nf} shll $1, %eN, %eM  -> leal (%rN,%rN), %eM
+	   {nf} shlq $1, %rN, %rM  -> leaq (%rN,%rN), %rM
+       */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.base_opcode = 0x8d;
+      i.tm.extension_opcode = None;
+      i.tm.opcode_modifier.evex = 0;
+      i.tm.opcode_modifier.vexvvvv = 0;
+      if (i.imm_operands != 0)
+	i.index_reg = i.base_reg = i.op[1].regs;
+      else if (!is_index (i.op[0].regs)
+	       || (i.op[1].regs->reg_num == 5
+		   && i.op[0].regs->reg_num != 5))
+	{
+	  i.base_reg = i.op[0].regs;
+	  i.index_reg = i.op[1].regs;
+	}
+      else
+	{
+	  i.base_reg = i.op[1].regs;
+	  i.index_reg = i.op[0].regs;
+	}
+      if (i.types[1].bitfield.word)
+	{
+	  /* NB: No similar adjustment is needed when operand size is 32-bit.  */
+	  i.base_reg += 64;
+	  i.index_reg += 64;
+	}
+      i.op[1].regs = i.op[i.operands - 1].regs;
+
+      operand_type_set (&i.types[0], 0);
+      i.types[0].bitfield.baseindex = 1;
+      i.tm.operand_types[0] = i.types[0];
+      i.op[0].disps = NULL;
+      i.flags[0] = Operand_Mem;
+
+      i.operands = 2;
+      i.mem_operands = i.reg_operands = 1;
+      i.imm_operands = 0;
+      i.has_nf = false;
+    }
+  else if (optimize_for_space
+	   && i.encoding != encoding_evex
+	   && (i.tm.base_opcode == 0x80 || i.tm.base_opcode == 0x83)
+	   && (i.tm.extension_opcode == 0
+	       || (i.tm.extension_opcode == 5
+		   && i.op[0].imms->X_op == O_constant
+		   /* Subtraction of -0x80 will end up smaller only if neither
+		      operand size nor REX/REX2 prefixes are needed.  */
+		   && (i.op[0].imms->X_add_number != -0x80
+		       || (i.types[1].bitfield.dword
+		           && !(i.op[1].regs->reg_flags & RegRex)
+		           && !(i.op[i.operands - 1].regs->reg_flags & RegRex)
+		           && i.encoding != encoding_egpr))))
+	   && !i.mem_operands
+	   && !i.types[1].bitfield.byte
+	   /* 16-bit operand size has extra restrictions: If REX2 was needed,
+	      no size reduction would be possible.  Plus 3-operand forms zero-
+	      extend the result, which can't be expressed with LEA.  */
+	   && (!i.types[1].bitfield.word
+	       || (i.operands == 2 && i.encoding != encoding_egpr))
+	   && is_plausible_suffix (1))
+    {
+      /* Optimize: -Os:
+	   {nf} addw $N, %M   -> leaw N(%rM), %M
+	   {nf} addl $N, %eM  -> leal N(%rM), %eM
+	   {nf} addq $N, %rM  -> leaq N(%rM), %rM
+
+	   {nf} subw $N, %M   -> leaw -N(%rM), %M
+	   {nf} subl $N, %eM  -> leal -N(%rM), %eM
+	   {nf} subq $N, %rM  -> leaq -N(%rM), %rM
+
+	   {nf} addl $N, %eK, %eM  -> leal N(%rK), %eM
+	   {nf} addq $N, %rK, %rM  -> leaq N(%rK), %rM
+
+	   {nf} subl $N, %eK, %eM  -> leal -N(%rK), %eM
+	   {nf} subq $N, %rK, %rM  -> leaq -N(%rK), %rM
+       */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.base_opcode = 0x8d;
+      if (i.tm.extension_opcode == 5)
+	i.op[0].imms->X_add_number = -i.op[0].imms->X_add_number;
+      i.tm.extension_opcode = None;
+      i.tm.opcode_modifier.evex = 0;
+      i.tm.opcode_modifier.vexvvvv = 0;
+      i.base_reg = i.op[1].regs;
+      if (i.types[1].bitfield.word)
+	{
+	  /* NB: No similar adjustment is needed when operand size is 32-bit.  */
+	  i.base_reg += 64;
+	}
+      i.op[1].regs = i.op[i.operands - 1].regs;
+
+      operand_type_set (&i.types[0], 0);
+      i.types[0].bitfield.baseindex = 1;
+      i.types[0].bitfield.disp32 = 1;
+      i.op[0].disps = i.op[0].imms;
+      i.flags[0] = Operand_Mem;
+      optimize_disp (&i.tm);
+      i.tm.operand_types[0] = i.types[0];
+
+      i.operands = 2;
+      i.disp_operands = i.mem_operands = i.reg_operands = 1;
+      i.imm_operands = 0;
+      i.has_nf = false;
+    }
+  else if (i.tm.base_opcode == 0x6b
+	   && !i.mem_operands
+	   && i.encoding != encoding_evex
+	   && i.tm.mnem_off != MN_imulzu
+	   && is_plausible_suffix (1)
+	   /* %rsp can't be the index.  */
+	   && is_index (i.op[1].regs)
+	   /* There's no reduction in size for 16-bit forms requiring Disp8 and
+	      REX2.  */
+	   && (!optimize_for_space
+	       || !i.types[1].bitfield.word
+	       || i.op[1].regs->reg_num != 5
+	       || i.encoding != encoding_egpr)
+	   && i.op[0].imms->X_op == O_constant
+	   && (i.op[0].imms->X_add_number == 3
+	       || i.op[0].imms->X_add_number == 5
+	       || i.op[0].imms->X_add_number == 9))
+    {
+      /* Optimize: -O:
+        For n one of 3, 5, or 9
+	   {nf} imulw $n, %N, %M    -> leaw (%rN,%rN,n-1), %M
+	   {nf} imull $n, %eN, %eM  -> leal (%rN,%rN,n-1), %eM
+	   {nf} imulq $n, %rN, %rM  -> leaq (%rN,%rN,n-1), %rM
+
+	   {nf} imulw $n, %N   -> leaw (%rN,%rN,s), %N
+	   {nf} imull $n, %eN  -> leal (%rN,%rN,s), %eN
+	   {nf} imulq $n, %rN  -> leaq (%rN,%rN,s), %rN
+       */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.base_opcode = 0x8d;
+      i.tm.extension_opcode = None;
+      i.tm.opcode_modifier.evex = 0;
+      i.base_reg = i.op[1].regs;
+      /* NB: No similar adjustment is needed when operand size is 32 bits.  */
+      if (i.types[1].bitfield.word)
+	i.base_reg += 64;
+      i.index_reg = i.base_reg;
+      i.log2_scale_factor = i.op[0].imms->X_add_number == 9
+			    ? 3 : i.op[0].imms->X_add_number >> 1;
+
+      operand_type_set (&i.types[0], 0);
+      i.types[0].bitfield.baseindex = 1;
+      i.tm.operand_types[0] = i.types[0];
+      i.op[0].disps = NULL;
+      i.flags[0] = Operand_Mem;
+
+      i.tm.operand_types[1] = i.tm.operand_types[i.operands - 1];
+      i.op[1].regs = i.op[i.operands - 1].regs;
+      i.types[1] = i.types[i.operands - 1];
+
+      i.operands = 2;
+      i.mem_operands = i.reg_operands = 1;
+      i.imm_operands = 0;
+      i.has_nf = false;
     }
 }
 
@@ -7206,7 +7614,11 @@ md_assemble (char *line)
     }
 
   if (optimize && !i.no_optimize && i.tm.opcode_modifier.optimize)
-    optimize_encoding ();
+    {
+      if (i.has_nf)
+	optimize_nf_encoding ();
+      optimize_encoding ();
+    }
 
   /* Past optimization there's no need to distinguish encoding_evex,
      encoding_evex512, and encoding_egpr anymore.  */
@@ -7215,6 +7627,10 @@ md_assemble (char *line)
   else if (i.encoding == encoding_egpr)
     i.encoding = is_any_vex_encoding (&i.tm) ? encoding_evex
 					     : encoding_default;
+
+  /* Similarly {nf} can now be taken to imply {evex}.  */
+  if (i.has_nf && i.encoding == encoding_default)
+    i.encoding = encoding_evex;
 
   if (use_unaligned_vector_move)
     encode_with_unaligned_vector_move ();
@@ -7529,8 +7945,6 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 		case Prefix_NF:
 		  /* {nf} */
 		  i.has_nf = true;
-		  if (i.encoding == encoding_default)
-		    i.encoding = encoding_evex;
 		  break;
 		case Prefix_NoOptimize:
 		  /* {nooptimize} */
@@ -7539,7 +7953,9 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 		default:
 		  abort ();
 		}
-	      if (i.has_nf && i.encoding != encoding_evex)
+	      if (i.has_nf
+		  && i.encoding != encoding_default
+		  && i.encoding != encoding_evex)
 		{
 		  as_bad (_("{nf} cannot be combined with {vex}/{vex3}"));
 		  return NULL;
@@ -8682,9 +9098,6 @@ VEX_check_encoding (const insn_template *t)
 
   switch (i.encoding)
     {
-    case encoding_default:
-      break;
-
     case encoding_vex:
     case encoding_vex3:
       /* This instruction must be encoded with VEX prefix.  */
@@ -8695,6 +9108,10 @@ VEX_check_encoding (const insn_template *t)
 	}
       break;
 
+    case encoding_default:
+      if (!i.has_nf)
+	break;
+      /* Fall through.  */
     case encoding_evex:
     case encoding_evex512:
       /* This instruction must be encoded with EVEX prefix.  */
@@ -9436,7 +9853,14 @@ match_template (char mnem_suffix)
 			  && !i.op[i.operands - 1].regs->reg_type.bitfield.qword)))
 		{
 		  if (i.operands > 2 && match_dest_op == i.operands - 3)
-		    swap_2_operands (match_dest_op, i.operands - 2);
+		    {
+		      swap_2_operands (match_dest_op, i.operands - 2);
+
+		      /* CMOVcc is marked commutative, but then also needs its
+			 encoded condition inverted.  */
+		      if ((t->base_opcode | 0xf) == 0x4f)
+			i.invert_cond = true;
+		    }
 
 		  --i.operands;
 		  --i.reg_operands;

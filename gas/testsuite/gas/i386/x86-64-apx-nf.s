@@ -697,7 +697,8 @@ _start:
 	{nf}	xor	291(%r8, %rax, 4), %r9
 	{nf}	xor	291(%r8, %rax, 4), %r9, %r31
 
-.intel_syntax noprefix
+	.intel_syntax noprefix
+intel:
 	{nf}	add	bl, 123
 	{nf}	add	dl, bl, 123
 	{nf}	add	dx, 123
@@ -1377,3 +1378,134 @@ _start:
 	{nf}	xor	edx, ecx, DWORD PTR [r8+rax*4+291]
 	{nf}	xor	r9, QWORD PTR [r8+rax*4+291]
 	{nf}	xor	r31, r9, QWORD PTR [r8+rax*4+291]
+
+	.att_syntax prefix
+optimize:
+	.irp op, add, sub
+	{nf}	\op	$128, %bl
+	{nf}	\op	$128, %bl, %dl
+	{nf}	\op	$128, %dx
+	{nf}	\op	$128, %dx, %ax
+	{nf}	\op	$128, %ecx
+	{nf}	\op	$128, %ecx, %edx
+	{nf}	\op	$128, %r9
+	{nf}	\op	$128, %r9, %r31
+	{nf}	\op\()b	$128, (%rax)
+	{nf}	\op	$128, (%rax), %bl
+	{nf}	\op\()w	$128, (%rax)
+	{nf}	\op	$128, (%rax), %dx
+	{nf}	\op\()l	$128, (%rax)
+	{nf}	\op	$128, (%rax), %ecx
+	{nf}	\op\()q	$128, (%rax)
+	{nf}	\op	$128, (%rax), %r9
+
+	{nf}	\op	$1, %bl
+	{nf}	\op	$1, %bl, %dl
+	{nf}	\op	$1, %dx
+	{nf}	\op	$1, %dx, %ax
+	{nf}	\op	$1, %ecx
+	{nf}	\op	$1, %ecx, %edx
+	{nf}	\op	$1, %r9
+	{nf}	\op	$1, %r9, %r31
+	{nf}	\op\()b	$1, (%rax)
+	{nf}	\op	$1, (%rax), %bl
+	{nf}	\op\()w	$1, (%rax)
+	{nf}	\op	$1, (%rax), %dx
+	{nf}	\op\()l	$1, (%rax)
+	{nf}	\op	$1, (%rax), %ecx
+	{nf}	\op\()q	$1, (%rax)
+	{nf}	\op	$1, (%rax), %r9
+
+	{nf}	\op	$0xff, %bl
+	{nf}	\op	$-1, %bl, %dl
+	{nf}	\op	$0xffff, %dx
+	{nf}	\op	$-1, %dx, %ax
+	{nf}	\op	$0xffffffff, %ecx
+	{nf}	\op	$-1, %ecx, %edx
+	{nf}	\op	$-1, %r9
+	{nf}	\op	$-1, %r9, %r31
+	{nf}	\op\()b	$0xff, (%rax)
+	{nf}	\op	$-1, (%rax), %bl
+	{nf}	\op\()w	$0xffff, (%rax)
+	{nf}	\op	$-1, (%rax), %dx
+	{nf}	\op\()l	$0xffffffff, (%rax)
+	{nf}	\op	$-1, (%rax), %ecx
+	{nf}	\op\()q	$-1, (%rax)
+	{nf}	\op	$-1, (%rax), %r9
+	.endr
+
+	.irp dir, l, r
+	{nf}	ro\dir	$7, %dl
+	{nf}	ro\dir	$7, %dl, %al
+	{nf}	ro\dir	$15, %dx
+	{nf}	ro\dir	$15, %dx, %ax
+	{nf}	ro\dir	$31, %edx
+	{nf}	ro\dir	$31, %edx, %eax
+	{nf}	ro\dir	$63, %rdx
+	{nf}	ro\dir	$63, %rdx, %rax
+
+	{nf}	ro\dir\()b	$7, (%rdx)
+	{nf}	ro\dir		$7, (%rdx), %al
+	{nf}	ro\dir\()w	$15, (%rdx)
+	{nf}	ro\dir		$15, (%rdx), %ax
+	{nf}	ro\dir\()l	$31, (%rdx)
+	{nf}	ro\dir		$31, (%rdx), %eax
+	{nf}	ro\dir\()q	$63, (%rdx)
+	{nf}	ro\dir		$63, (%rdx), %rax
+	.endr
+
+	.irp r, "", e, r
+	{nf} imul $3, %\r\(cx), %\r\(dx)
+	{nf} imul $5, %\r\(bp), %\r\(dx)
+	{nf} imul $9, %\r\(cx), %\r\(bp)
+
+	# Note: %\r\(sp) source form needs leaving alone.
+	{nf} imul $3, %\r\(sp), %\r\(dx)
+	{nf} imul $5, %\r\(sp)
+
+	.ifeqs "\r",""
+	# Note: (16-bit) ZU form needs leaving alone.
+	{nf} imulzu $3, %cx, %dx
+	{nf} imulzu $5, %cx
+	# Note: 16-bit forms requiring REX2 and Disp8 want leaving alone with -Os.
+	{nf} imul $3, %bp, %r16w
+	{nf} imul $5, %r21w, %dx
+	{nf} imul $9, %r21w
+	.endif
+
+	# Note: 2-6 want leaving alone with -Os.
+	.irp n, 1, 2, 6, 7
+	# Note: 16-bit 3-operand src!=dst non-ZU form needs leaving alone.
+	{nf} imul $1<<\n, %\r\()dx, %\r\()cx
+	{nf} imul $1<<\n, (%rdx), %\r\()cx
+	{nf} imul $1<<\n, %\r\()cx, %\r\()cx
+	{nf} imul $1<<\n, %\r\()cx
+
+	.ifeqs "\r",""
+	{nf} imulzu $1<<\n, %dx, %cx
+	{nf} imulzu $1<<\n, (%rdx), %cx
+	{nf} imulzu $1<<\n, %cx, %cx
+	{nf} imulzu $1<<\n, %cx
+	.endif
+	.endr
+
+	.ifeqs "\r",""
+	# Note: 3-operand src!=dst non-ZU form needs leaving alone.
+	{nf} imul $1<<15, %dx, %cx
+	{nf} imul $-1<<15, (%rdx), %cx
+	{nf} imul $1<<15, %cx, %cx
+	{nf} imul $-1<<15, %cx
+	{nf} imulzu $1<<15, %cx
+	.endif
+
+	.ifeqs "\r","e"
+	{nf} imul $1<<31, %edx, %ecx
+	{nf} imul $-1<<31, (%rdx), %ecx
+	.endif
+
+	.ifeqs "\r","r"
+	{nf} imul $1<<30, %rdx, %rcx
+	# Needs leaving alone.
+	{nf} imul $-1<<31, %rdx, %rcx
+	.endif
+	.endr

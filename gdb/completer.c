@@ -236,7 +236,7 @@ filename_completer (struct cmd_list_element *ignore,
 	 trailing '/' ourselves now.  */
       if (!tracker.from_readline ())
 	{
-	  std::string expanded = gdb_tilde_expand (p_rl.get ());
+	  std::string expanded = gdb_tilde_expand (p_rl);
 	  struct stat finfo;
 	  const bool isdir = (stat (expanded.c_str (), &finfo) == 0
 			      && S_ISDIR (finfo.st_mode));
@@ -2058,7 +2058,7 @@ completion_tracker::recompute_lowest_common_denominator ()
 	return 1;
       };
 
-  htab_traverse (m_entries_hash.get (), visitor_func, this);
+  htab_traverse_noresize (m_entries_hash.get (), visitor_func, this);
   m_lowest_common_denominator_valid = true;
 }
 

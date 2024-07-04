@@ -402,6 +402,12 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	  info->reglane.index = extract_fields (code, 0, 2, FLD_H, FLD_L);
 	  info->reglane.regno &= 0x1f;
 	  break;
+	case AARCH64_OPND_QLF_S_2B:
+	  /* h:l:m */
+	  info->reglane.index = extract_fields (code, 0, 3, FLD_H, FLD_L,
+						FLD_M);
+	  info->reglane.regno &= 0xf;
+	  break;
 	default:
 	  return false;
 	}
@@ -422,7 +428,15 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	return 0;
       switch (info->qualifier)
 	{
+	case AARCH64_OPND_QLF_S_B:
+	  /* H:imm3 */
+	  info->reglane.index = extract_fields (code, 0, 2, FLD_H,
+						FLD_imm3_19);
+	  info->reglane.regno &= 0x7;
+	  break;
+
 	case AARCH64_OPND_QLF_S_H:
+	case AARCH64_OPND_QLF_S_2B:
 	  if (info->type == AARCH64_OPND_Em16)
 	    {
 	      /* h:l:m */
@@ -437,6 +451,7 @@ aarch64_ext_reglane (const aarch64_operand *self, aarch64_opnd_info *info,
 	    }
 	  break;
 	case AARCH64_OPND_QLF_S_S:
+	case AARCH64_OPND_QLF_S_4B:
 	  /* h:l */
 	  info->reglane.index = extract_fields (code, 0, 2, FLD_H, FLD_L);
 	  break;
@@ -2222,28 +2237,8 @@ aarch64_ext_sve_index (const aarch64_operand *self,
   int val;
 
   info->reglane.regno = extract_field (self->fields[0], code, 0);
-  val = extract_fields (code, 0, 2, FLD_SVE_tszh, FLD_imm5);
+  val = extract_all_fields_after (self, 1, code);
   if ((val & 31) == 0)
-    return 0;
-  while ((val & 1) == 0)
-    val /= 2;
-  info->reglane.index = val / 2;
-  return true;
-}
-
-/* Decode Zn.<T>[<imm>], where <imm> is an immediate with range of 0 to one less
-   than the number of elements in 128 bit, which can encode il:tsz.  */
-bool
-aarch64_ext_sve_index_imm (const aarch64_operand *self,
-			   aarch64_opnd_info *info, aarch64_insn code,
-			   const aarch64_inst *inst ATTRIBUTE_UNUSED,
-			   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
-{
-  int val;
-
-  info->reglane.regno = extract_field (self->fields[0], code, 0);
-  val = extract_fields (code, 0, 2, self->fields[2], self->fields[1]);
-  if ((val & 15) == 0)
     return 0;
   while ((val & 1) == 0)
     val /= 2;
@@ -3415,6 +3410,12 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       variant -= 1;
       break;
 
+    case sme_size_12_b:
+      variant = extract_field (FLD_SME_size_12, inst->value, 0);
+      if (variant != 0)
+	return false;
+      break;
+
     case sme_size_22:
       variant = extract_field (FLD_SME_size_22, inst->value, 0);
       break;
@@ -3435,19 +3436,9 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       break;
 
     case sve_index:
-      i = extract_fields (inst->value, 0, 2, FLD_SVE_tszh, FLD_imm5);
-      if ((i & 31) == 0)
-	return false;
-      while ((i & 1) == 0)
-	{
-	  i >>= 1;
-	  variant += 1;
-	}
-      break;
+      i = extract_field (FLD_imm5, inst->value, 0);
 
-    case sve_index1:
-      i = extract_fields (inst->value, 0, 2, FLD_SVE_tsz, FLD_SVE_i2h);
-      if ((i & 15) == 0)
+      if ((i & 31) == 0)
 	return false;
       while ((i & 1) == 0)
 	{

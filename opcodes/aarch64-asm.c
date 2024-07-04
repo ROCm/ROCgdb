@@ -153,9 +153,14 @@ aarch64_ins_reglane (const aarch64_operand *self, const aarch64_opnd_info *info,
 	{
 	case AARCH64_OPND_QLF_S_4B:
 	case AARCH64_OPND_QLF_S_2H:
-	  /* L:H */
+	  /* H:L */
 	  assert (reglane_index < 4);
 	  insert_fields (code, reglane_index, 0, 2, FLD_L, FLD_H);
+	  break;
+	case AARCH64_OPND_QLF_S_2B:
+	  /* H:L:M */
+	  assert (reglane_index < 8);
+	  insert_fields (code, reglane_index, 0, 3, FLD_M, FLD_L, FLD_H);
 	  break;
 	default:
 	  return false;
@@ -180,6 +185,11 @@ aarch64_ins_reglane (const aarch64_operand *self, const aarch64_opnd_info *info,
 
       switch (info->qualifier)
 	{
+	case AARCH64_OPND_QLF_S_B:
+	  /* H:imm3 */
+	  assert (reglane_index < 16);
+	  insert_fields (code, reglane_index, 0, 2, FLD_imm3_19, FLD_H);
+	  break;
 	case AARCH64_OPND_QLF_S_H:
 	  /* H:L:M */
 	  assert (reglane_index < 8);
@@ -1281,23 +1291,8 @@ aarch64_ins_sve_index (const aarch64_operand *self,
 {
   unsigned int esize = aarch64_get_qualifier_esize (info->qualifier);
   insert_field (self->fields[0], code, info->reglane.regno, 0);
-  insert_fields (code, (info->reglane.index * 2 + 1) * esize, 0,
-		 2, FLD_imm5, FLD_SVE_tszh);
-  return true;
-}
-
-/* Encode Zn.<T>[<imm>], where <imm> is an immediate with range of 0 to one less
-   than the number of elements in 128 bit, which can encode il:tsz.  */
-bool
-aarch64_ins_sve_index_imm (const aarch64_operand *self,
-			   const aarch64_opnd_info *info, aarch64_insn *code,
-			   const aarch64_inst *inst ATTRIBUTE_UNUSED,
-			   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
-{
-  insert_field (self->fields[0], code, info->reglane.regno, 0);
-  unsigned int esize = aarch64_get_qualifier_esize (info->qualifier);
-  insert_fields (code, (info->reglane.index * 2 + 1) * esize, 0,
-		 2, self->fields[1],self->fields[2]);
+  insert_all_fields_after (self, 1, code,
+			   (info->reglane.index * 2 + 1) * esize);
   return true;
 }
 
@@ -2145,6 +2140,7 @@ aarch64_encode_variant_using_iclass (struct aarch64_inst *inst)
       break;
 
     case sme_size_12_bhs:
+    case sme_size_12_b:
       insert_field (FLD_SME_size_12, &inst->value,
 		    aarch64_get_variant (inst), 0);
       break;
