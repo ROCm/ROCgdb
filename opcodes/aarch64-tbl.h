@@ -1567,6 +1567,10 @@
   QLF3(S_B,P_Z,S_B),                                    \
   QLF3(S_B,P_M,S_B),                                    \
 }
+#define OP_SVE_BU                                       \
+{                                                       \
+  QLF2(S_B,NIL),					\
+}
 #define OP_SVE_BUB                                      \
 {                                                       \
   QLF3(S_B,NIL,S_B),                                    \
@@ -1869,9 +1873,21 @@
 {                                                       \
   QLF3(S_S,P_Z,NIL),                                    \
 }
-#define OP_SVE_UB                                       \
-{                                                       \
-  QLF2(NIL,S_B),                                        \
+#define OP_SVE_UB				       \
+{						       \
+  QLF2(NIL,S_B),					\
+}
+#define OP_SVE_UD				       \
+{						       \
+  QLF2(NIL,S_D),					\
+}
+#define OP_SVE_UH				       \
+{						       \
+  QLF2(NIL,S_H),					\
+}
+#define OP_SVE_US				       \
+{						       \
+  QLF2(NIL,S_S),					\
 }
 #define OP_SVE_UUD                                      \
 {                                                       \
@@ -6640,7 +6656,24 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SVE2p1_INSN("fminqv",0x6417a000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_HSD_HSD, F_OPD_SIZE, 0),
 
   SVE2p1_INSN("dupq",0x05202400, 0xffe0fc00, sve_index, 0, OP2 (SVE_Zd, SVE_Zn_5_INDEX), OP_SVE_VV_BHSD, 0, 0),
+  SVE2p1_INSN("orqv",0x041c2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, 0),
+  SVE2p1_INSN("tblq",0x4400f800, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_ZnxN, SVE_Zm_16), OP_SVE_VVV_BHSD, F_OD(1), 0),
+  SVE2p1_INSN("tbxq",0x05203400, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
   SVE2p1_INSNC("extq",0x05602400, 0xfff0fc00, sve_misc, 0, OP4 (SVE_Zd, SVE_Zd, SVE_Zm_5, SVE_UIMM4), OP_SVE_BBBU, 0, C_SCAN_MOVPRFX, 1),
+  SVE2p1_INSN("uzpq1",0x4400e800, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
+  SVE2p1_INSN("uzpq2",0x4400ec00, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
+  SVE2p1_INSN("zipq1",0x4400e000, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
+  SVE2p1_INSN("zipq2",0x4400e400, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
+
+  SVE2p1_INSN("pmov",0x052a3800, 0xfffffc10, sve_misc, 0, OP2 (SVE_Pd, SVE_Zn0_INDEX), OP_SVE_BU, 0, 0),
+  SVE2p1_INSN("pmov",0x052c3800, 0xfffdfc10, sve_misc, 0, OP2 (SVE_Pd, SVE_Zn1_17_INDEX), OP_SVE_HU, 0, 0),
+  SVE2p1_INSN("pmov",0x05683800, 0xfff9fc10, sve_misc, 0, OP2 (SVE_Pd, SVE_Zn2_18_INDEX), OP_SVE_SU, 0, 0),
+  SVE2p1_INSN("pmov",0x05a83800, 0xffb9fc10, sve_misc, 0, OP2 (SVE_Pd, SVE_Zn3_22_INDEX), OP_SVE_DU, 0, 0),
+
+  SVE2p1_INSN("pmov",0x052b3800, 0xfffffe00, sve_misc, 0, OP2 (SVE_Zd0_INDEX, SVE_Pg4_5), OP_SVE_UB, 0, 0),
+  SVE2p1_INSN("pmov",0x052d3800, 0xfffdfe00, sve_misc, 0, OP2 (SVE_Zd1_17_INDEX, SVE_Pg4_5), OP_SVE_UH, 0, 0),
+  SVE2p1_INSN("pmov",0x05693800, 0xfff9fe00, sve_misc, 0, OP2 (SVE_Zd2_18_INDEX, SVE_Pg4_5), OP_SVE_US, 0, 0),
+  SVE2p1_INSN("pmov",0x05a93800, 0xffb9fe00, sve_misc, 0, OP2 (SVE_Zd3_22_INDEX, SVE_Pg4_5), OP_SVE_UD, 0, 0),
 
   SVE2p1_INSN("ld1q",0xc400a000, 0xffe0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_ZX), OP_SVE_QZD, F_OD (1), 0),
   SVE2p1_INSN("ld2q",0xa490e000, 0xfff0e000, sve_misc, 0, OP3 (SVE_ZtxN, SVE_Pg3, SVE_ADDR_RI_S4x2xVL), OP_SVE_QZU, F_OD (2), 0),
@@ -7471,6 +7504,28 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       F(FLD_SVE_Zn, FLD_imm3_15), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX4_14", 0,			\
       F(FLD_SVE_Zn, FLD_imm4_14), "an indexed SVE vector register")	\
+    Y(SVE_REG, regno, "SVE_Zn0_INDEX", 0, F(FLD_SVE_Zn),		\
+      "an SVE vector register with option zero index")			\
+    Y(SVE_REG, simple_index, "SVE_Zn1_17_INDEX", 0,			\
+      F(FLD_SVE_Zn, FLD_imm17_1),					\
+      "an SVE vector register with optional one bit index")		\
+    Y(SVE_REG, simple_index, "SVE_Zn2_18_INDEX", 0,			\
+      F(FLD_SVE_Zn, FLD_imm17_2),					\
+      "an SVE vector register with optional two bit index")		\
+    Y(SVE_REG, simple_index, "SVE_Zn3_22_INDEX", 0,			\
+      F(FLD_SVE_Zn, FLD_SVE_i3h, FLD_imm17_2),				\
+      "an SVE vector register with optional three bit index")		\
+    Y(SVE_REG, regno, "SVE_Zd0_INDEX", 0, F(FLD_SVE_Zd),		\
+      "an SVE vector register with option zero index")			\
+    Y(SVE_REG, simple_index, "SVE_Zd1_17_INDEX", 0,			\
+      F(FLD_SVE_Zd, FLD_imm17_1),					\
+      "an SVE vector register with optional one bit index")		\
+    Y(SVE_REG, simple_index, "SVE_Zd2_18_INDEX", 0,			\
+      F(FLD_SVE_Zd, FLD_imm17_2),					\
+      "an SVE vector register with optional two bit index")		\
+    Y(SVE_REG, simple_index, "SVE_Zd3_22_INDEX", 0,			\
+      F(FLD_SVE_Zd, FLD_SVE_i3h, FLD_imm17_2),				\
+      "an SVE vector register with optional three bit index")		\
     Y(IMMEDIATE, imm, "SME_VLxN_10", 0, F(FLD_SME_VL_10),		\
       "VLx2 or VLx4")							\
     Y(IMMEDIATE, imm, "SME_VLxN_13", 0, F(FLD_SME_VL_13),		\
