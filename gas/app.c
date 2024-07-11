@@ -406,7 +406,8 @@ scan_for_multibyte_characters (const unsigned char *  start,
    This is the way the old code used to work.  */
 
 size_t
-do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen)
+do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen,
+		bool check_multibyte)
 {
   char *to = tostart;
   char *toend = tostart + tolen;
@@ -431,10 +432,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen)
 	 11: After seeing a symbol character in state 0 (eg a label definition)
 	 -1: output string in out_string and go to the state in old_state
 	 -2: flush text until a '*' '/' is seen, then go to state old_state
-#ifdef TC_V850
-	 12: After seeing a dash, looking for a second dash as a start
-	     of comment.
-#endif
+	 12: no longer used
 #ifdef DOUBLEBAR_PARALLEL
 	 13: After seeing a vertical bar, looking for a second
 	     vertical bar as a parallel expression separator.
@@ -513,7 +511,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen)
       from = input_buffer;
       fromend = from + fromlen;
 
-      if (multibyte_handling == multibyte_warn)
+      if (check_multibyte)
 	(void) scan_for_multibyte_characters ((const unsigned char *) from,
 					      (const unsigned char* ) fromend,
 					      true /* Generate warnings.  */);
@@ -853,7 +851,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen)
 	  if (ch != '\0'
 	      && (*mri_state == ch
 		  || (*mri_state == ' '
-		      && lex[ch] == LEX_IS_WHITESPACE)
+		      && IS_WHITESPACE (ch))
 		  || (*mri_state == '0'
 		      && ch == '1')))
 	    {
@@ -861,8 +859,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen)
 	      ++mri_state;
 	    }
 	  else if (*mri_state != '\0'
-		   || (lex[ch] != LEX_IS_WHITESPACE
-		       && lex[ch] != LEX_IS_NEWLINE))
+		   || (!IS_WHITESPACE (ch) && !IS_NEWLINE (ch)))
 	    {
 	      /* We did not get the expected character, or we didn't
 		 get a valid terminating character after seeing the
