@@ -45,7 +45,7 @@ struct dispatch_size
 /* Compute the dispatch size necessary to occupy most but not all of the
    resources of device HIP_DEVICE_ID.
 
-   We aim at occupying all but two wave slots in every CU in the GPU.
+   We aim at occupying half of the GPU wave slots.
 
    If the exact topology of the GPU cannot be accessed, return a default
    dispatch size which might not be accurate.  */
@@ -108,7 +108,7 @@ hog_dispatch_size (int hip_device_id)
 	  && props.pciDeviceID == ((kfd_pci_location.value () >> 3) & 0x1f))
 	{
 	  return {{kfd_simd_count.value ()
-		   * (kfd_max_waves_per_simd.value () - 2)},
+		   * (kfd_max_waves_per_simd.value () / 2)},
 		{static_cast<uint32_t> (props.warpSize)}};
 	}
     }
