@@ -1606,6 +1606,10 @@
 {                                                       \
   QLF3(S_B,P_Z,NIL),                                    \
 }
+#define OP_SVE_D					\
+{                                                       \
+  QLF1(S_D),						\
+}
 #define OP_SVE_DD                                       \
 {                                                       \
   QLF2(S_D,S_D),                                        \
@@ -2084,6 +2088,11 @@
 {                                                       \
   QLF3(S_B,NIL,NIL),                                    \
 }
+#define OP_SVE_VUU_BH					\
+{                                                       \
+  QLF3(S_B,NIL,NIL),                                    \
+  QLF3(S_H,NIL,NIL),                                    \
+}
 #define OP_SVE_VUU_BHS                                  \
 {                                                       \
   QLF3(S_B,NIL,NIL),                                    \
@@ -2263,6 +2272,10 @@
   QLF3(S_B,S_H,S_H),                                    \
   QLF3(S_H,S_S,S_S),                                    \
   QLF3(S_S,S_D,S_D),                                    \
+}
+#define OP_SVE_VV_D					\
+{							\
+  QLF2(S_D, S_D)					\
 }
 #define OP_SVE_VV_BHS_HSD                               \
 {                                                       \
@@ -6641,6 +6654,38 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SME2p1_INSN ("movaz", 0xc0860200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrss_1), OP_SVE_SS, 0, 0),
   SME2p1_INSN ("movaz", 0xc0c60200, 0xffff1f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_vrsd_1), OP_SVE_DD, 0, 0),
 
+  SME2p1_INSN ("luti2", 0xc09c4000, 0xfffc4c08, sme_size_12_bh, 0, OP3 (SME_Ztx2_STRIDED, SME_ZT0, SME_Zn_INDEX3_15), OP_SVE_VUU_BH, 0, 0),
+  SME2p1_INSN ("luti2", 0xc09c8000, 0xfffccc0c, sme_size_12_bh, 0, OP3 (SME_Ztx4_STRIDED, SME_ZT0, SME_Zn_INDEX2_16), OP_SVE_VUU_BH, 0, 0),
+  SME2p1_INSN ("luti4", 0xc09a4000, 0xfffe4c08, sme_size_12_bh, 0, OP3 (SME_Ztx2_STRIDED, SME_ZT0, SME_Zn_INDEX2_15), OP_SVE_VUU_BH, 0, 0),
+  SME2p1_INSN ("luti4", 0xc09a9000, 0xfffefc0c, sme_misc, 0, OP3 (SME_Ztx4_STRIDED, SME_ZT0, SME_Zn_INDEX1_16), OP_SVE_HUU, 0, 0),
+
+  /* SME2.1 MOVAZ (array to vector, two registers).  */
+  SME2p1_INSN ("movaz", 0xc0060a00, 0xffff9f01, sme2_movaz, 0, OP2 (SME_Zdnx2, SME_ZA_array_off3_5), OP_SVE_VV_D, F_OD (2), 0),
+
+  /* SME2.1 MOVAZ (array to vector, four registers).  */
+  SME2p1_INSN ("movaz", 0xc0060e00, 0xffff9f03, sme2_movaz, 0, OP2 (SME_Zdnx4, SME_ZA_array_off3_5), OP_SVE_VV_D, F_OD (4), 0),
+
+  /* SME2.1 MOVAZ (tile to vector, single).  */
+  SME2p1_INSN ("movaz", 0xc0020200, 0xffff1e00, sme2_movaz, 0, OP2 (SVE_Zd, SME_ZA_ARRAY4), OP_SVE_BB, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0420200, 0xffff1e00, sme2_movaz, 0, OP2 (SVE_Zd, SME_ZA_ARRAY4), OP_SVE_HH, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0820200, 0xffff1e00, sme2_movaz, 0, OP2 (SVE_Zd, SME_ZA_ARRAY4), OP_SVE_SS, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0c20200, 0xffff1e00, sme2_movaz, 0, OP2 (SVE_Zd, SME_ZA_ARRAY4), OP_SVE_DD, 0, 0),
+  SME2p1_INSN ("movaz", 0xc0c30200, 0xffff1e00, sme2_movaz, 0, OP2 (SVE_Zd, SME_ZA_ARRAY4), OP_SVE_QQ, 0, 0),
+
+  /* ZERO (single-vector).  */
+  SME2p1_INSN ("zero", 0xc00c0000, 0xffff9ff8, sme2_movaz, 0, OP1 (SME_ZA_array_off3_0), OP_SVE_D, F_OD (2) | F_VG_REQ, 0),
+  SME2p1_INSN ("zero", 0xc00e0000, 0xffff9ff8, sme2_movaz, 0, OP1 (SME_ZA_array_off3_0), OP_SVE_D, F_OD (4) | F_VG_REQ, 0),
+
+  /* ZERO (double-vector).  */
+  SME2p1_INSN ("zero", 0xc00c8000, 0xffff9ff8, sme2_movaz, 0, OP1 (SME_ZA_array_off3x2), OP_SVE_D, 0, 0),
+  SME2p1_INSN ("zero", 0xc00d0000, 0xffff9ffc, sme2_movaz, 0, OP1 (SME_ZA_array_off2x2), OP_SVE_D, F_OD (2) | F_VG_REQ, 0),
+  SME2p1_INSN ("zero", 0xc00d8000, 0xffff9ffc, sme2_movaz, 0, OP1 (SME_ZA_array_off2x2), OP_SVE_D, F_OD (4) | F_VG_REQ, 0),
+
+  /* ZERO (quad-vector).  */
+  SME2p1_INSN ("zero", 0xc00e8000, 0xffff9ffc, sme2_movaz, 0, OP1 (SME_ZA_array_off2x4), OP_SVE_D, 0, 0),
+  SME2p1_INSN ("zero", 0xc00f0000, 0xffff9ffe, sme2_movaz, 0, OP1 (SME_ZA_array_off1x4), OP_SVE_D, F_OD (2) | F_VG_REQ, 0),
+  SME2p1_INSN ("zero", 0xc00f8000, 0xffff9ffe, sme2_movaz, 0, OP1 (SME_ZA_array_off1x4), OP_SVE_D, F_OD (4) | F_VG_REQ, 0),
+
 /* SVE2p1 Instructions.  */
   SVE2p1_INSN("addqv",0x04052000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, 0),
   SVE2p1_INSN("andqv",0x041e2000, 0xff3fe000, sve2_urqvs, 0, OP3 (Vd, SVE_Pg3, SVE_Zn), OP_SVE_vUS_BHSD_BHSD, F_OPD_SIZE, 0),
@@ -7315,6 +7360,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       F(FLD_SME_V,FLD_SME_Rv,FLD_off2), "2 bit ZA tile")		\
     Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsd_2", 0,			\
       F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_3), "3 bit ZA tile")		\
+    Y(ZA_ACCESS, sme_za_tile_to_vec, "SME_ZA_ARRAY4", 0,		\
+      F(FLD_SME_V,FLD_SME_Rv), "ZA tile to vector register")		\
     Y(SVE_REG, regno, "SVE_Za_5", 0, F(FLD_SVE_Za_5),			\
       "an SVE vector register")						\
     Y(SVE_REG, regno, "SVE_Za_16", 0, F(FLD_SVE_Za_16),			\

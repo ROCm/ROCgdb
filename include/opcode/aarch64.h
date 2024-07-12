@@ -789,6 +789,7 @@ enum aarch64_opnd
   AARCH64_OPND_SME_ZA_array_vrsh_2, /* Tile to vector, four registers (H).  */
   AARCH64_OPND_SME_ZA_array_vrss_2, /* Tile to vector, four registers (S). */
   AARCH64_OPND_SME_ZA_array_vrsd_2, /* Tile to vector, four registers (D).  */
+  AARCH64_OPND_SME_ZA_ARRAY4, /* Tile to vector, single (BHSDQ).  */
   AARCH64_OPND_SVE_Za_5,	/* SVE vector register in Za, bits [9,5].  */
   AARCH64_OPND_SVE_Za_16,	/* SVE vector register in Za, bits [20,16].  */
   AARCH64_OPND_SVE_Zd,		/* SVE vector register in Zd.  */
@@ -1067,6 +1068,7 @@ enum aarch64_insn_class
   sme_ldr,
   sme_psel,
   sme_shift,
+  sme_size_12_bh,
   sme_size_12_bhs,
   sme_size_12_hs,
   sme_size_12_b,
@@ -1385,7 +1387,10 @@ extern const aarch64_opcode aarch64_opcode_table[];
 #define F_OPD_SIZE (1ULL << 34)
 /* RCPC3 instruction has the field of 'size'.  */
 #define F_RCPC3_SIZE (1ULL << 35)
-/* Next bit is 36.  */
+/* This instruction need VGx2 or VGx4 mandatorily in the operand passed to
+   assembler.  */
+#define F_VG_REQ (1ULL << 36)
+/* Next bit is 37.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1446,6 +1451,12 @@ static inline unsigned int
 get_opcode_dependent_value (const aarch64_opcode *opcode)
 {
   return (opcode->flags >> 24) & 0x7;
+}
+
+static inline bool
+get_opcode_dependent_vg_status (const aarch64_opcode *opcode)
+{
+  return (opcode->flags >> 36) & 0x1;
 }
 
 static inline bool
