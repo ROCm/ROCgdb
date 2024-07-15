@@ -380,7 +380,7 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
 
   /* Clean up any leftovers from other runs.  Some other things from
      this function should probably be moved into target_pre_inferior.  */
-  target_pre_inferior (from_tty);
+  target_pre_inferior ();
 
   /* The comment here used to read, "The exec file is re-read every
      time we do a generic_mourn_inferior, so we just have to worry
@@ -516,7 +516,7 @@ start_command (const char *args, int from_tty)
   /* Some languages such as Ada need to search inside the program
      minimal symbols for the location where to put the temporary
      breakpoint before starting.  */
-  if (!have_minimal_symbols ())
+  if (!have_minimal_symbols (current_program_space))
     error (_("No symbol table loaded.  Use the \"file\" command."));
 
   /* Run the program until reaching the main procedure...  */
@@ -1075,7 +1075,8 @@ jump_command (const char *arg, int from_tty)
     {
       /* If multiple sal-objects were found, try dropping those that aren't
 	 from the current symtab.  */
-      struct symtab_and_line cursal = get_current_source_symtab_and_line ();
+      symtab_and_line cursal
+	= get_current_source_symtab_and_line (current_program_space);
       sals.erase (std::remove_if (sals.begin (), sals.end (),
 		  [&] (const symtab_and_line &sal)
 		    {
@@ -2625,7 +2626,7 @@ attach_command (const char *args, int from_tty)
 
   /* Clean up any leftovers from other runs.  Some other things from
      this function should probably be moved into target_pre_inferior.  */
-  target_pre_inferior (from_tty);
+  target_pre_inferior ();
 
   gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
   args = stripped.get ();
@@ -2824,7 +2825,7 @@ detach_command (const char *args, int from_tty)
   /* If the solist is global across inferiors, don't clear it when we
      detach from a single inferior.  */
   if (!gdbarch_has_global_solist (inf->arch ()))
-    no_shared_libraries (nullptr, from_tty);
+    no_shared_libraries (inf->pspace);
 
   if (deprecated_detach_hook)
     deprecated_detach_hook ();
@@ -2850,7 +2851,7 @@ disconnect_command (const char *args, int from_tty)
   query_if_trace_running (from_tty);
   disconnect_tracing ();
   target_disconnect (args, from_tty);
-  no_shared_libraries (nullptr, from_tty);
+  no_shared_libraries (current_program_space);
   init_thread_list ();
   update_previous_thread_and_lane ();
   if (deprecated_detach_hook)

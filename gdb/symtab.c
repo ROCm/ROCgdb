@@ -1756,7 +1756,7 @@ maintenance_print_symbol_cache_statistics (const char *args, int from_tty)
 static void
 symtab_new_objfile_observer (struct objfile *objfile)
 {
-  symbol_cache_flush (objfile->pspace);
+  symbol_cache_flush (objfile->pspace ());
 }
 
 /* This module's 'all_objfiles_removed' observer.  */
@@ -1775,7 +1775,7 @@ symtab_all_objfiles_removed (program_space *pspace)
 static void
 symtab_free_objfile_observer (struct objfile *objfile)
 {
-  symbol_cache_flush (objfile->pspace);
+  symbol_cache_flush (objfile->pspace ());
 }
 
 /* See symtab.h.  */
@@ -4765,8 +4765,9 @@ info_sources_worker (struct ui_out *uiout,
 static void
 info_sources_command (const char *args, int from_tty)
 {
-  if (!have_full_symbols () && !have_partial_symbols ())
-    error (_("No symbol table is loaded.  Use the \"file\" command."));
+  if (!have_full_symbols (current_program_space)
+      && !have_partial_symbols (current_program_space))
+    error (_ ("No symbol table is loaded.  Use the \"file\" command."));
 
   filename_partial_match_opts match_opts;
   auto group = make_info_sources_options_def_group (&match_opts);
@@ -6382,7 +6383,8 @@ make_source_files_completion_list (const char *text, const char *word)
   const char *base_name;
   struct add_partial_filename_data datum;
 
-  if (!have_full_symbols () && !have_partial_symbols ())
+  if (!have_full_symbols (current_program_space)
+      && !have_partial_symbols (current_program_space))
     return list;
 
   filename_seen_cache filenames_seen;

@@ -3831,7 +3831,7 @@ create_longjmp_master_breakpoint (void)
     {
       set_current_program_space (pspace);
 
-      for (objfile *obj : current_program_space->objfiles ())
+      for (objfile *obj : pspace->objfiles ())
 	{
 	  /* Skip separate debug object, it's handled in the loop below.  */
 	  if (obj->separate_debug_objfile_backlink != nullptr)
@@ -3864,7 +3864,7 @@ create_std_terminate_master_breakpoint (void)
     {
       set_current_program_space (pspace);
 
-      for (objfile *objfile : current_program_space->objfiles ())
+      for (objfile *objfile : pspace->objfiles ())
 	{
 	  struct breakpoint *b;
 	  struct breakpoint_objfile_data *bp_objfile_data;
@@ -8261,7 +8261,7 @@ disable_breakpoints_in_freed_objfile (struct objfile *objfile)
 	  if (loc.shlib_disabled != 0)
 	    continue;
 
-	  if (objfile->pspace != loc.pspace)
+	  if (objfile->pspace () != loc.pspace)
 	    continue;
 
 	  if (loc.loc_type != bp_loc_hardware_breakpoint
@@ -8994,8 +8994,6 @@ static void
 parse_breakpoint_sals (location_spec *locspec,
 		       struct linespec_result *canonical)
 {
-  struct symtab_and_line cursal;
-
   if (locspec->type () == LINESPEC_LOCATION_SPEC)
     {
       const char *spec
@@ -9044,7 +9042,8 @@ parse_breakpoint_sals (location_spec *locspec,
 
      ObjC: However, don't match an Objective-C method name which
      may have a '+' or '-' succeeded by a '['.  */
-  cursal = get_current_source_symtab_and_line ();
+  symtab_and_line cursal
+    = get_current_source_symtab_and_line (current_program_space);
   if (last_displayed_sal_is_valid ())
     {
       const char *spec = NULL;

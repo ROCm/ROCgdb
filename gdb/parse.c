@@ -148,7 +148,8 @@ parser_state::push_symbol (const char *name, block_symbol sym)
       struct bound_minimal_symbol msymbol = lookup_bound_minimal_symbol (name);
       if (msymbol.minsym != NULL)
 	push_new<expr::var_msym_value_operation> (msymbol);
-      else if (!have_full_symbols () && !have_partial_symbols ())
+      else if (!have_full_symbols (current_program_space)
+	       && !have_partial_symbols (current_program_space))
 	error (_("No symbol table is loaded.  Use the \"file\" command."));
       else
 	error (_("No symbol \"%s\" in current context."), name);
@@ -374,8 +375,8 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 
       if (!expression_context_block)
 	{
-	  struct symtab_and_line cursal
-	    = get_current_source_symtab_and_line ();
+	  symtab_and_line cursal
+	    = get_current_source_symtab_and_line (current_program_space);
 
 	  if (cursal.symtab)
 	    expression_context_block

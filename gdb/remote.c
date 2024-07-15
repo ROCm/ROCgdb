@@ -6265,7 +6265,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
     }
 
   /* First delete any symbols previously loaded from shared libraries.  */
-  no_shared_libraries (NULL, 0);
+  no_shared_libraries (current_program_space);
 
   /* Start the remote connection.  If error() or QUIT, discard this
      target (we'd otherwise be in an inconsistent state) and then
@@ -15438,7 +15438,7 @@ remote_objfile_changed_check_symbols (program_space *pspace)
 static void
 remote_new_objfile (struct objfile *objfile)
 {
-  remote_objfile_changed_check_symbols (objfile->pspace);
+  remote_objfile_changed_check_symbols (objfile->pspace ());
 }
 
 /* Pull all the tracepoints defined on the target and create local

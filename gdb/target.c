@@ -2429,7 +2429,7 @@ info_target_command (const char *args, int from_tty)
    resets (things which might change between targets).  */
 
 void
-target_pre_inferior (int from_tty)
+target_pre_inferior ()
 {
   /* Clear out solib state.  Otherwise the solib state of the previous
      inferior might have survived and is entirely wrong for the new
@@ -2453,7 +2453,7 @@ target_pre_inferior (int from_tty)
      memory regions and features.  */
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
-      no_shared_libraries (NULL, from_tty);
+      no_shared_libraries (current_program_space);
 
       invalidate_target_mem_regions ();
 
@@ -2507,7 +2507,7 @@ target_preopen (int from_tty)
      live process to a core of the same program.  */
   current_inferior ()->pop_all_targets_above (file_stratum);
 
-  target_pre_inferior (from_tty);
+  target_pre_inferior ();
 }
 
 /* See target.h.  */

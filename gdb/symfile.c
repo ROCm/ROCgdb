@@ -91,8 +91,6 @@ static void symbol_file_add_main_1 (const char *args, symfile_add_flags add_flag
 
 static const struct sym_fns *find_sym_fns (bfd *);
 
-static void overlay_invalidate_all (void);
-
 static void simple_free_overlay_table (void);
 
 static void read_target_long_array (CORE_ADDR, unsigned int *, int, int,
@@ -1026,7 +1024,6 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
 			    section_addr_info *addrs,
 			    objfile_flags flags, struct objfile *parent)
 {
-  struct objfile *objfile;
   const int from_tty = add_flags & SYMFILE_VERBOSE;
   const int mainline = add_flags & SYMFILE_MAINLINE;
   const int always_confirm = add_flags & SYMFILE_ALWAYS_CONFIRM;
@@ -1053,14 +1050,17 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
 
   if (from_tty
       && (always_confirm
-	  || ((have_full_symbols () || have_partial_symbols ())
+	  || ((have_full_symbols (current_program_space)
+	       || have_partial_symbols (current_program_space))
 	      && mainline))
-      && !query (_("Load new symbol table from \"%s\"? "), name))
+      && !query (_ ("Load new symbol table from \"%s\"? "), name))
     error (_("Not confirmed."));
 
   if (mainline)
     flags |= OBJF_MAINLINE;
-  objfile = objfile::make (abfd, name, flags, parent);
+
+  objfile *objfile
+    = objfile::make (abfd, current_program_space, name, flags, parent);
 
   /* We either created a new mapped symbol table, mapped an existing
      symbol table file which has not had initial symbol reading
@@ -1199,7 +1199,8 @@ symbol_file_add_main_1 (const char *args, symfile_add_flags add_flags,
 void
 symbol_file_clear (int from_tty)
 {
-  if ((have_full_symbols () || have_partial_symbols ())
+  if ((have_full_symbols (current_program_space)
+       || have_partial_symbols (current_program_space))
       && from_tty
       && (current_program_space->symfile_object_file
 	  ? !query (_("Discard symbol table from `%s'? "),
@@ -1209,7 +1210,7 @@ symbol_file_clear (int from_tty)
 
   /* solib descriptors may have handles to objfiles.  Wipe them before their
      objfiles get stale by free_all_objfiles.  */
-  no_shared_libraries (NULL, from_tty);
+  no_shared_libraries (current_program_space);
 
   current_program_space->free_all_objfiles ();
 
@@ -2387,7 +2388,7 @@ remove_symbol_file_command (const char *args, int from_tty)
 	{
 	  if ((objfile->flags & OBJF_USERLOADED) != 0
 	      && (objfile->flags & OBJF_SHARED) != 0
-	      && objfile->pspace == pspace
+	      && objfile->pspace () == pspace
 	      && is_addr_in_objfile (addr, objfile))
 	    {
 	      objf = objfile;
@@ -2408,7 +2409,7 @@ remove_symbol_file_command (const char *args, int from_tty)
 	{
 	  if ((objfile->flags & OBJF_USERLOADED) != 0
 	      && (objfile->flags & OBJF_SHARED) != 0
-	      && objfile->pspace == pspace
+	      && objfile->pspace () == pspace
 	      && filename_cmp (filename.get (), objfile_name (objfile)) == 0)
 	    {
 	      objf = objfile;
@@ -2611,7 +2612,7 @@ reread_symbols (int from_tty)
 	     making the dangling pointers point to correct data
 	     again.  */
 
-	  objfiles_changed ();
+	  objfiles_changed (current_program_space);
 
 	  /* Recompute section offsets and section indices.  */
 	  objfile->sf->sym_offsets (objfile, {});
@@ -2884,7 +2885,7 @@ clear_symtab_users (symfile_add_flags add_flags)
 
   /* Clear the "current" symtab first, because it is no longer valid.
      breakpoint_re_set may try to access the current symtab.  */
-  clear_current_source_symtab_and_line ();
+  clear_current_source_symtab_and_line (current_program_space);
 
   clear_displays ();
   clear_last_displayed_sal ();
@@ -2969,13 +2970,13 @@ section_is_overlay (struct obj_section *section)
   return 0;
 }
 
-/* Function: overlay_invalidate_all (void)
-   Invalidate the mapped state of all overlay sections (mark it as stale).  */
+/* Invalidate the mapped state of all overlay sections (mark it as stale) in
+   PSPACE.  */
 
 static void
-overlay_invalidate_all (void)
+overlay_invalidate_all (program_space *pspace)
 {
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile *objfile : pspace->objfiles ())
     for (obj_section *sect : objfile->sections ())
       if (section_is_overlay (sect))
 	sect->ovly_mapped = -1;
@@ -3011,7 +3012,7 @@ section_is_mapped (struct obj_section *osect)
 	{
 	  if (overlay_cache_invalid)
 	    {
-	      overlay_invalidate_all ();
+	      overlay_invalidate_all (current_program_space);
 	      overlay_cache_invalid = 0;
 	    }
 	  if (osect->ovly_mapped == -1)
@@ -3722,7 +3723,7 @@ static void
 symfile_free_objfile (struct objfile *objfile)
 {
   /* Remove the target sections owned by this objfile.  */
-  objfile->pspace->remove_target_sections (objfile);
+  objfile->pspace ()->remove_target_sections (objfile);
 }
 
 /* Wrapper around the quick_symbol_functions expand_symtabs_matching "method".

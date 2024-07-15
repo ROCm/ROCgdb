@@ -1334,7 +1334,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
   /* Also, loading a symbol file below may trigger symbol lookups, and
      we don't want those to be satisfied by the libraries of the
      previous incarnation of this process.  */
-  no_shared_libraries (nullptr, 0);
+  no_shared_libraries (current_program_space);
 
   inferior *execing_inferior = current_inferior ();
   inferior *following_inferior;
