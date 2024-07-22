@@ -1,6 +1,6 @@
+#as: -32
 #objdump: -dr --prefix-addresses
-#name: MIPS mul-ilocks
-#as: -march=r4000 -mtune=r4000
+#name: MIPS mul
 #source: mul.s
 
 # Test the mul macro.
@@ -59,23 +59,4 @@ Disassembly of section .text:
 0+00c0 <[^>]*> beqz	at,0+cc <foo\+(0x|)cc>
 0+00c4 <[^>]*> nop
 0+00c8 <[^>]*> break	(0x0,0x6|0x6)
-0+00cc <[^>]*> dmultu	a1,a2
-0+00d0 <[^>]*> mflo	a0
-0+00d4 <[^>]*> li	at,1
-0+00d8 <[^>]*> dmult	a1,at
-0+00dc <[^>]*> mflo	a0
-0+00e0 <[^>]*> dmult	a1,a2
-0+00e4 <[^>]*> mflo	a0
-0+00e8 <[^>]*> dsra32	a0,a0,0x1f
-0+00ec <[^>]*> mfhi	at
-0+00f0 <[^>]*> beq	a0,at,0+fc <foo\+(0x|)fc>
-0+00f4 <[^>]*> nop
-0+00f8 <[^>]*> break	(0x0,0x6|0x6)
-0+00fc <[^>]*> mflo	a0
-0+0100 <[^>]*> dmultu	a1,a2
-0+0104 <[^>]*> mfhi	at
-0+0108 <[^>]*> mflo	a0
-0+010c <[^>]*> beqz	at,0+118 <foo\+(0x|)118>
-0+0110 <[^>]*> nop
-0+0114 <[^>]*> break	(0x0,0x6|0x6)
 	...

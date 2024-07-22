@@ -138,6 +138,13 @@ typedef struct
 }
 arch_entry;
 
+/* Modes for parse_insn() to operate in.  */
+enum parse_mode {
+  parse_all,
+  parse_prefix,
+  parse_pseudo_prefix,
+};
+
 static void update_code_flag (int, int);
 static void s_insn (int);
 static void s_noopt (int);
@@ -163,7 +170,7 @@ static int i386_intel_operand (char *, int);
 static int i386_intel_simplify (expressionS *);
 static int i386_intel_parse_name (const char *, expressionS *);
 static const reg_entry *parse_register (const char *, char **);
-static const char *parse_insn (const char *, char *, bool);
+static const char *parse_insn (const char *, char *, enum parse_mode);
 static char *parse_operands (char *, const char *);
 static void swap_operands (void);
 static void swap_2_operands (unsigned int, unsigned int);
@@ -426,50 +433,8 @@ struct _i386_insn
 #define OSZC_OF 8
     unsigned int oszc_flags;
 
-    /* Prefer load or store in encoding.  */
-    enum
-      {
-	dir_encoding_default = 0,
-	dir_encoding_load,
-	dir_encoding_store,
-	dir_encoding_swap
-      } dir_encoding;
-
-    /* Prefer 8bit, 16bit, 32bit displacement in encoding.  */
-    enum
-      {
-	disp_encoding_default = 0,
-	disp_encoding_8bit,
-	disp_encoding_16bit,
-	disp_encoding_32bit
-      } disp_encoding;
-
-    /* Prefer the REX byte in encoding.  */
-    bool rex_encoding;
-
-    /* Prefer the REX2 prefix in encoding.  */
-    bool rex2_encoding;
-
-    /* No CSPAZO flags update.  */
-    bool has_nf;
-
-    /* Disable instruction size optimization.  */
-    bool no_optimize;
-
     /* Invert the condition encoded in a base opcode.  */
     bool invert_cond;
-
-    /* How to encode instructions.  */
-    enum
-      {
-	encoding_default = 0,
-	encoding_vex,
-	encoding_vex3,
-	encoding_egpr, /* REX2 or EVEX.  */
-	encoding_evex,
-	encoding_evex512,
-	encoding_error
-      } encoding;
 
     /* REP prefix.  */
     const char *rep_prefix;
@@ -488,6 +453,48 @@ struct _i386_insn
   };
 
 typedef struct _i386_insn i386_insn;
+
+/* Pseudo-prefix recording state, separate from i386_insn.  */
+static struct pseudo_prefixes {
+  /* How to encode instructions.  */
+  enum {
+    encoding_default = 0,
+    encoding_vex,
+    encoding_vex3,
+    encoding_egpr, /* REX2 or EVEX.  */
+    encoding_evex,
+    encoding_evex512,
+    encoding_error
+  } encoding;
+
+  /* Prefer load or store in encoding.  */
+  enum {
+    dir_encoding_default = 0,
+    dir_encoding_load,
+    dir_encoding_store,
+    dir_encoding_swap
+  } dir_encoding;
+
+  /* Prefer 8bit, 16bit, 32bit displacement in encoding.  */
+  enum {
+    disp_encoding_default = 0,
+    disp_encoding_8bit,
+    disp_encoding_16bit,
+    disp_encoding_32bit
+  } disp_encoding;
+
+  /* Prefer the REX byte in encoding.  */
+  bool rex_encoding;
+
+  /* Prefer the REX2 prefix in encoding.  */
+  bool rex2_encoding;
+
+  /* No CSPAZO flags update.  */
+  bool has_nf;
+
+  /* Disable instruction size optimization.  */
+  bool no_optimize;
+} pp;
 
 /* Link RC type with corresponding string, that'll be looked for in
    asm.  */
@@ -519,7 +526,7 @@ static const unsigned char i386_seg_prefixes[] = {
 
 /* List of chars besides those in app.c:symbol_chars that can start an
    operand.  Used to prevent the scrubber eating vital white-space.  */
-const char extra_symbol_chars[] = "*%-([{}"
+const char extra_symbol_chars[] = "*%-(["
 #ifdef LEX_AT
 	"@"
 #endif
@@ -580,7 +587,7 @@ static char operand_chars[256];
 
 /* All non-digit non-letter characters that may occur in an operand and
    which aren't already in extra_symbol_chars[].  */
-static const char operand_special_chars[] = "$+,)._~/<>|&^!=:@]";
+static const char operand_special_chars[] = "$+,)._~/<>|&^!=:@]{}";
 
 /* md_assemble() always leaves the strings it's passed unaltered.  To
    effect this we maintain a stack of saved characters that we've smashed
@@ -1929,10 +1936,10 @@ static const i386_cpu_flags avx512 = CPU_ANY_AVX512F_FLAGS;
 
 static INLINE bool need_evex_encoding (const insn_template *t)
 {
-  return i.encoding == encoding_evex
-	|| i.encoding == encoding_evex512
-	|| i.has_nf
-	|| (t->opcode_modifier.vex && i.encoding == encoding_egpr)
+  return pp.encoding == encoding_evex
+	|| pp.encoding == encoding_evex512
+	|| pp.has_nf
+	|| (t->opcode_modifier.vex && pp.encoding == encoding_egpr)
 	|| i.mask.reg;
 }
 
@@ -2628,8 +2635,8 @@ static INLINE int
 fits_in_imm4 (offsetT num)
 {
   /* Despite the name, check for imm3 if we're dealing with EVEX.  */
-  return (num & (i.encoding != encoding_evex
-		 && i.encoding != encoding_egpr ? 0xf : 7)) == num;
+  return (num & (pp.encoding != encoding_evex
+		 && pp.encoding != encoding_egpr ? 0xf : 7)) == num;
 }
 
 static i386_operand_type
@@ -3317,8 +3324,8 @@ op_lookup (const char *mnemonic)
 void
 md_begin (void)
 {
-  /* Support pseudo prefixes like {disp32}.  */
-  lex_type ['{'] = LEX_BEGIN_NAME;
+  /* Make sure possible padding space is clear.  */
+  memset (&pp, 0, sizeof (pp));
 
   /* Initialize op_hash hash table.  */
   op_hash = str_htab_create ();
@@ -3956,8 +3963,8 @@ build_vex_prefix (const insn_template *t)
   /* Use 2-byte VEX prefix by swapping destination and source operand
      if there are more than 1 register operand.  */
   if (i.reg_operands > 1
-      && i.encoding != encoding_vex3
-      && i.dir_encoding == dir_encoding_default
+      && pp.encoding != encoding_vex3
+      && pp.dir_encoding == dir_encoding_default
       && i.operands == i.reg_operands
       && operand_type_equal (&i.types[0], &i.types[i.operands - 1])
       && i.tm.opcode_space == SPACE_0F
@@ -3985,14 +3992,14 @@ build_vex_prefix (const insn_template *t)
   /* Use 2-byte VEX prefix by swapping commutative source operands if there
      are no memory operands and at least 3 register ones.  */
   if (i.reg_operands >= 3
-      && i.encoding != encoding_vex3
+      && pp.encoding != encoding_vex3
       && i.reg_operands == i.operands - i.imm_operands
       && i.tm.opcode_modifier.vex
       && i.tm.opcode_modifier.commutative
       /* .commutative aliases .staticrounding; disambiguate.  */
       && !i.tm.opcode_modifier.sae
       && (i.tm.opcode_modifier.sse2avx
-	  || (optimize > 1 && !i.no_optimize))
+	  || (optimize > 1 && !pp.no_optimize))
       && i.rex == REX_B
       && i.vex.register_specifier
       && !(i.vex.register_specifier->reg_flags & RegRex))
@@ -4048,7 +4055,7 @@ build_vex_prefix (const insn_template *t)
 
   /* Use 2-byte VEX prefix if possible.  */
   if (w == 0
-      && i.encoding != encoding_vex3
+      && pp.encoding != encoding_vex3
       && i.tm.opcode_space == SPACE_0F
       && (i.rex & (REX_W | REX_X | REX_B)) == 0)
     {
@@ -4110,7 +4117,7 @@ is_any_vex_encoding (const insn_template *t)
 static INLINE bool
 is_apx_evex_encoding (void)
 {
-  return i.rex2 || i.tm.opcode_space == SPACE_EVEXMAP4 || i.has_nf
+  return i.rex2 || i.tm.opcode_space == SPACE_EVEXMAP4 || pp.has_nf
     || (i.vex.register_specifier
 	&& (i.vex.register_specifier->reg_flags & RegRex2));
 }
@@ -4118,7 +4125,7 @@ is_apx_evex_encoding (void)
 static INLINE bool
 is_apx_rex2_encoding (void)
 {
-  return i.rex2 || i.rex2_encoding
+  return i.rex2 || pp.rex2_encoding
 	|| i.tm.opcode_modifier.rex2;
 }
 
@@ -4402,19 +4409,32 @@ build_rex2_prefix (void)
 static bool
 build_apx_evex_prefix (void)
 {
-  /* To mimic behavior for legacy insns, transform use of DATA16 into its
-     embedded-prefix representation.  */
-  if (i.prefix[DATA_PREFIX] && i.tm.opcode_space == SPACE_EVEXMAP4)
+  /* To mimic behavior for legacy insns, transform use of DATA16 and REX64 into
+     their embedded-prefix representations.  */
+  if (i.tm.opcode_space == SPACE_EVEXMAP4)
     {
-      if (i.tm.opcode_modifier.opcodeprefix)
+      if (i.prefix[DATA_PREFIX])
 	{
-	  as_bad (i.tm.opcode_modifier.opcodeprefix == PREFIX_0X66
-		  ? _("same type of prefix used twice")
-		  : _("conflicting use of `data16' prefix"));
-	  return false;
+	  if (i.tm.opcode_modifier.opcodeprefix)
+	    {
+	      as_bad (i.tm.opcode_modifier.opcodeprefix == PREFIX_0X66
+		      ? _("same type of prefix used twice")
+		      : _("conflicting use of `data16' prefix"));
+	      return false;
+	    }
+	  i.tm.opcode_modifier.opcodeprefix = PREFIX_0X66;
+	  i.prefix[DATA_PREFIX] = 0;
 	}
-      i.tm.opcode_modifier.opcodeprefix = PREFIX_0X66;
-      i.prefix[DATA_PREFIX] = 0;
+      if (i.prefix[REX_PREFIX] & REX_W)
+	{
+	  if (i.suffix == QWORD_MNEM_SUFFIX)
+	    {
+	      as_bad (_("same type of prefix used twice"));
+	      return false;
+	    }
+	  i.tm.opcode_modifier.vexw = VEXW1;
+	  i.prefix[REX_PREFIX] = 0;
+	}
     }
 
   build_evex_prefix ();
@@ -4450,7 +4470,7 @@ build_apx_evex_prefix (void)
     }
 
   /* Encode the NF bit.  */
-  if (i.has_nf || i.tm.opcode_modifier.operandconstraint == EVEX_NF)
+  if (pp.has_nf || i.tm.opcode_modifier.operandconstraint == EVEX_NF)
     i.vex.bytes[3] |= 0x04;
 
   return true;
@@ -4500,7 +4520,7 @@ static void establish_rex (void)
 	}
     }
 
-  if (i.rex == 0 && i.rex2 == 0 && (i.rex_encoding || i.rex2_encoding))
+  if (i.rex == 0 && i.rex2 == 0 && (pp.rex_encoding || pp.rex2_encoding))
     {
       /* Check if we can add a REX_OPCODE byte.  Look for 8 bit operand
 	 that uses legacy register.  If it is "hi" register, don't add
@@ -4514,12 +4534,12 @@ static void establish_rex (void)
 	    && i.op[x].regs->reg_num > 3)
 	  {
 	    gas_assert (!(i.op[x].regs->reg_flags & RegRex));
-	    i.rex_encoding = false;
-	    i.rex2_encoding = false;
+	    pp.rex_encoding = false;
+	    pp.rex2_encoding = false;
 	    break;
 	  }
 
-      if (i.rex_encoding)
+      if (pp.rex_encoding)
 	i.rex = REX_OPCODE;
     }
 
@@ -4912,7 +4932,7 @@ optimize_encoding (void)
     }
   else if (i.reg_operands == 3
 	   && i.op[0].regs == i.op[1].regs
-	   && i.encoding != encoding_evex
+	   && pp.encoding != encoding_evex
 	   && (i.tm.mnem_off == MN_xor
 	       || i.tm.mnem_off == MN_sub))
     {
@@ -5039,7 +5059,7 @@ optimize_encoding (void)
 	   && (i.tm.opcode_modifier.vex
 	       || ((!i.mask.reg || i.mask.zeroing)
 		   && i.tm.opcode_modifier.evex
-		   && (i.encoding != encoding_evex
+		   && (pp.encoding != encoding_evex
 		       || cpu_arch_isa_flags.bitfield.cpuavx512vl
 		       || is_cpu (&i.tm, CpuAVX512VL)
 		       || (i.tm.operand_types[2].bitfield.zmmword
@@ -5089,12 +5109,12 @@ optimize_encoding (void)
        */
       if (i.tm.opcode_modifier.evex)
 	{
-	  if (i.encoding != encoding_evex)
+	  if (pp.encoding != encoding_evex)
 	    {
 	      i.tm.opcode_modifier.vex = VEX128;
 	      i.tm.opcode_modifier.vexw = VEXW0;
 	      i.tm.opcode_modifier.evex = 0;
-	      i.encoding = encoding_vex;
+	      pp.encoding = encoding_vex;
 	      i.mask.reg = NULL;
 	    }
 	  else if (optimize > 1)
@@ -5117,8 +5137,8 @@ optimize_encoding (void)
 	    i.types[j].bitfield.ymmword = 0;
 	  }
     }
-  else if (i.encoding != encoding_evex
-	   && i.encoding != encoding_egpr
+  else if (pp.encoding != encoding_evex
+	   && pp.encoding != encoding_egpr
 	   && !i.types[0].bitfield.zmmword
 	   && !i.types[1].bitfield.zmmword
 	   && !i.mask.reg
@@ -5302,7 +5322,7 @@ optimize_encoding (void)
 	   && i.tm.opcode_modifier.vex
 	   && !(i.op[0].regs->reg_flags & RegRex)
 	   && i.op[0].regs->reg_type.bitfield.xmmword
-	   && i.encoding != encoding_vex3)
+	   && pp.encoding != encoding_vex3)
     {
       /* Optimize: -Os:
          vpbroadcastq %xmmN, %xmmM  -> vpunpcklqdq %xmmN, %xmmN, %xmmM (N < 8)
@@ -5553,7 +5573,7 @@ optimize_nf_encoding (void)
     }
 
   if (optimize_for_space
-      && i.encoding != encoding_evex
+      && pp.encoding != encoding_evex
       && (i.tm.base_opcode == 0x00
 	  || (i.tm.base_opcode == 0xd0 && i.tm.extension_opcode == 4))
       && !i.mem_operands
@@ -5562,7 +5582,7 @@ optimize_nf_encoding (void)
 	 no size reduction would be possible.  Plus 3-operand forms zero-
 	 extend the result, which can't be expressed with LEA.  */
       && (!i.types[1].bitfield.word
-	  || (i.operands == 2 && i.encoding != encoding_egpr))
+	  || (i.operands == 2 && pp.encoding != encoding_egpr))
       && is_plausible_suffix (1)
       /* %rsp can't be the index.  */
       && (is_index (i.op[1].regs)
@@ -5572,7 +5592,7 @@ optimize_nf_encoding (void)
 	 from that set and REX2 would be required to encode the insn, the
 	 resulting encoding would be no smaller than the EVEX one.  */
       && (i.op[1].regs->reg_num != 5
-	  || i.encoding != encoding_egpr
+	  || pp.encoding != encoding_egpr
 	  || i.imm_operands > 0
 	  || i.op[0].regs->reg_num != 5))
     {
@@ -5627,10 +5647,10 @@ optimize_nf_encoding (void)
       i.operands = 2;
       i.mem_operands = i.reg_operands = 1;
       i.imm_operands = 0;
-      i.has_nf = false;
+      pp.has_nf = false;
     }
   else if (optimize_for_space
-	   && i.encoding != encoding_evex
+	   && pp.encoding != encoding_evex
 	   && (i.tm.base_opcode == 0x80 || i.tm.base_opcode == 0x83)
 	   && (i.tm.extension_opcode == 0
 	       || (i.tm.extension_opcode == 5
@@ -5641,14 +5661,14 @@ optimize_nf_encoding (void)
 		       || (i.types[1].bitfield.dword
 		           && !(i.op[1].regs->reg_flags & RegRex)
 		           && !(i.op[i.operands - 1].regs->reg_flags & RegRex)
-		           && i.encoding != encoding_egpr))))
+		           && pp.encoding != encoding_egpr))))
 	   && !i.mem_operands
 	   && !i.types[1].bitfield.byte
 	   /* 16-bit operand size has extra restrictions: If REX2 was needed,
 	      no size reduction would be possible.  Plus 3-operand forms zero-
 	      extend the result, which can't be expressed with LEA.  */
 	   && (!i.types[1].bitfield.word
-	       || (i.operands == 2 && i.encoding != encoding_egpr))
+	       || (i.operands == 2 && pp.encoding != encoding_egpr))
 	   && is_plausible_suffix (1))
     {
       /* Optimize: -Os:
@@ -5692,11 +5712,11 @@ optimize_nf_encoding (void)
       i.operands = 2;
       i.disp_operands = i.mem_operands = i.reg_operands = 1;
       i.imm_operands = 0;
-      i.has_nf = false;
+      pp.has_nf = false;
     }
   else if (i.tm.base_opcode == 0x6b
 	   && !i.mem_operands
-	   && i.encoding != encoding_evex
+	   && pp.encoding != encoding_evex
 	   && i.tm.mnem_off != MN_imulzu
 	   && is_plausible_suffix (1)
 	   /* %rsp can't be the index.  */
@@ -5706,7 +5726,7 @@ optimize_nf_encoding (void)
 	   && (!optimize_for_space
 	       || !i.types[1].bitfield.word
 	       || i.op[1].regs->reg_num != 5
-	       || i.encoding != encoding_egpr)
+	       || pp.encoding != encoding_egpr)
 	   && i.op[0].imms->X_op == O_constant
 	   && (i.op[0].imms->X_add_number == 3
 	       || i.op[0].imms->X_add_number == 5
@@ -5747,7 +5767,7 @@ optimize_nf_encoding (void)
       i.operands = 2;
       i.mem_operands = i.reg_operands = 1;
       i.imm_operands = 0;
-      i.has_nf = false;
+      pp.has_nf = false;
     }
 }
 
@@ -7207,14 +7227,15 @@ x86_ginsn_new (const symbolS *insn_end_sym, enum ginsn_gen_mode gmode)
    machine dependent instruction.  This function is supposed to emit
    the frags/bytes it assembles to.  */
 
-void
-md_assemble (char *line)
+static void
+i386_assemble (char *line)
 {
   unsigned int j;
   char mnemonic[MAX_MNEM_SIZE], mnem_suffix = 0, *copy = NULL;
   char *xstrdup_copy = NULL;
   const char *end, *pass1_mnem = NULL;
   enum i386_error pass1_err = 0;
+  struct pseudo_prefixes orig_pp = pp;
   const insn_template *t;
   struct last_insn *last_insn
     = &seg_info(now_seg)->tc_segment_info_data.last_insn;
@@ -7227,13 +7248,13 @@ md_assemble (char *line)
   /* Suppress optimization when the last thing we saw may not have been
      a proper instruction (e.g. a stand-alone prefix or .byte).  */
   if (last_insn->kind != last_insn_other)
-    i.no_optimize = true;
+    pp.no_optimize = true;
 
   /* First parse an instruction mnemonic & call i386_operand for the operands.
      We assume that the scrubber has arranged it so that line[0] is the valid
      start of a (possibly prefixed) mnemonic.  */
 
-  end = parse_insn (line, mnemonic, false);
+  end = parse_insn (line, mnemonic, parse_all);
   if (end == NULL)
     {
       if (pass1_mnem != NULL)
@@ -7340,6 +7361,7 @@ md_assemble (char *line)
   no_match:
 	  pass1_err = i.error;
 	  pass1_mnem = insn_name (current_templates.start);
+	  pp = orig_pp;
 	  goto retry;
 	}
 
@@ -7535,7 +7557,7 @@ md_assemble (char *line)
 	}
 
       /* Zap the redundant prefix from XCHG when optimizing.  */
-      if (i.tm.base_opcode == 0x86 && optimize && !i.no_optimize)
+      if (i.tm.base_opcode == 0x86 && optimize && !pp.no_optimize)
 	i.prefix[LOCK_PREFIX] = 0;
     }
 
@@ -7619,24 +7641,24 @@ md_assemble (char *line)
       return;
     }
 
-  if (optimize && !i.no_optimize && i.tm.opcode_modifier.optimize)
+  if (optimize && !pp.no_optimize && i.tm.opcode_modifier.optimize)
     {
-      if (i.has_nf)
+      if (pp.has_nf)
 	optimize_nf_encoding ();
       optimize_encoding ();
     }
 
   /* Past optimization there's no need to distinguish encoding_evex,
      encoding_evex512, and encoding_egpr anymore.  */
-  if (i.encoding == encoding_evex512)
-    i.encoding = encoding_evex;
-  else if (i.encoding == encoding_egpr)
-    i.encoding = is_any_vex_encoding (&i.tm) ? encoding_evex
+  if (pp.encoding == encoding_evex512)
+    pp.encoding = encoding_evex;
+  else if (pp.encoding == encoding_egpr)
+    pp.encoding = is_any_vex_encoding (&i.tm) ? encoding_evex
 					     : encoding_default;
 
   /* Similarly {nf} can now be taken to imply {evex}.  */
-  if (i.has_nf && i.encoding == encoding_default)
-    i.encoding = encoding_evex;
+  if (pp.has_nf && pp.encoding == encoding_default)
+    pp.encoding = encoding_evex;
 
   if (use_unaligned_vector_move)
     encode_with_unaligned_vector_move ();
@@ -7709,14 +7731,19 @@ md_assemble (char *line)
 	}
 
       /* Check for explicit REX prefix.  */
-      if (i.prefix[REX_PREFIX] || i.rex_encoding)
+      if ((i.prefix[REX_PREFIX]
+	   && (i.tm.opcode_space != SPACE_EVEXMAP4
+	       /* To mimic behavior for legacy insns, permit use of REX64 for promoted
+		  legacy instructions.  */
+	       || i.prefix[REX_PREFIX] != (REX_OPCODE | REX_W)))
+	  || pp.rex_encoding)
 	{
 	  as_bad (_("REX prefix invalid with `%s'"), insn_name (&i.tm));
 	  return;
 	}
 
       /* Check for explicit REX2 prefix.  */
-      if (i.rex2_encoding)
+      if (pp.rex2_encoding)
 	{
 	  as_bad (_("{rex2} prefix invalid with `%s'"), insn_name (&i.tm));
 	  return;
@@ -7789,6 +7816,14 @@ md_assemble (char *line)
     last_insn->kind = last_insn_other;
 }
 
+void
+md_assemble (char *line)
+{
+  i386_assemble (line);
+  current_templates.start = NULL;
+  memset (&pp, 0, sizeof (pp));
+}
+
 /* The Q suffix is generally valid only in 64-bit mode, with very few
    exceptions: fild, fistp, fisttp, and cmpxchg8b.  Note that for fild
    and fisttp only one of their two templates is matched below: That's
@@ -7804,7 +7839,7 @@ static INLINE bool q_suffix_allowed(const insn_template *t)
 }
 
 static const char *
-parse_insn (const char *line, char *mnemonic, bool prefix_only)
+parse_insn (const char *line, char *mnemonic, enum parse_mode mode)
 {
   const char *l = line, *token_start = l;
   char *mnem_p;
@@ -7821,7 +7856,11 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	{
 	  ++mnem_p;
 	  ++l;
+	  if (is_space_char (*l))
+	    ++l;
 	}
+      else if (mode == parse_pseudo_prefix)
+	break;
       while ((*mnem_p = mnemonic_chars[(unsigned char) *l]) != 0)
 	{
 	  if (*mnem_p == '.')
@@ -7836,6 +7875,8 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	  l++;
 	}
       /* Pseudo-prefixes end with a closing figure brace.  */
+      if (*mnemonic == '{' && is_space_char (*l))
+	++l;
       if (*mnemonic == '{' && *l == '}')
 	{
 	  *mnem_p++ = *l++;
@@ -7853,7 +7894,7 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	       && (intel_syntax
 		   || (*l != PREFIX_SEPARATOR && *l != ',')))
 	{
-	  if (prefix_only)
+	  if (mode != parse_all)
 	    break;
 	  as_bad (_("invalid character %s in mnemonic"),
 		  output_invalid (*l));
@@ -7913,58 +7954,58 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 		{
 		case Prefix_Disp8:
 		  /* {disp8} */
-		  i.disp_encoding = disp_encoding_8bit;
+		  pp.disp_encoding = disp_encoding_8bit;
 		  break;
 		case Prefix_Disp16:
 		  /* {disp16} */
-		  i.disp_encoding = disp_encoding_16bit;
+		  pp.disp_encoding = disp_encoding_16bit;
 		  break;
 		case Prefix_Disp32:
 		  /* {disp32} */
-		  i.disp_encoding = disp_encoding_32bit;
+		  pp.disp_encoding = disp_encoding_32bit;
 		  break;
 		case Prefix_Load:
 		  /* {load} */
-		  i.dir_encoding = dir_encoding_load;
+		  pp.dir_encoding = dir_encoding_load;
 		  break;
 		case Prefix_Store:
 		  /* {store} */
-		  i.dir_encoding = dir_encoding_store;
+		  pp.dir_encoding = dir_encoding_store;
 		  break;
 		case Prefix_VEX:
 		  /* {vex} */
-		  i.encoding = encoding_vex;
+		  pp.encoding = encoding_vex;
 		  break;
 		case Prefix_VEX3:
 		  /* {vex3} */
-		  i.encoding = encoding_vex3;
+		  pp.encoding = encoding_vex3;
 		  break;
 		case Prefix_EVEX:
 		  /* {evex} */
-		  i.encoding = encoding_evex;
+		  pp.encoding = encoding_evex;
 		  break;
 		case Prefix_REX:
 		  /* {rex} */
-		  i.rex_encoding = true;
+		  pp.rex_encoding = true;
 		  break;
 		case Prefix_REX2:
 		  /* {rex2} */
-		  i.rex2_encoding = true;
+		  pp.rex2_encoding = true;
 		  break;
 		case Prefix_NF:
 		  /* {nf} */
-		  i.has_nf = true;
+		  pp.has_nf = true;
 		  break;
 		case Prefix_NoOptimize:
 		  /* {nooptimize} */
-		  i.no_optimize = true;
+		  pp.no_optimize = true;
 		  break;
 		default:
 		  abort ();
 		}
-	      if (i.has_nf
-		  && i.encoding != encoding_default
-		  && i.encoding != encoding_evex)
+	      if (pp.has_nf
+		  && pp.encoding != encoding_default
+		  && pp.encoding != encoding_evex)
 		{
 		  as_bad (_("{nf} cannot be combined with {vex}/{vex3}"));
 		  return NULL;
@@ -8000,7 +8041,7 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	break;
     }
 
-  if (prefix_only)
+  if (mode != parse_all)
     return token_start;
 
   if (!current_templates.start)
@@ -8010,19 +8051,19 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	 encoding.  */
       if (mnem_p - 2 == dot_p && dot_p[1] == 's')
 	{
-	  if (i.dir_encoding == dir_encoding_default)
-	    i.dir_encoding = dir_encoding_swap;
+	  if (pp.dir_encoding == dir_encoding_default)
+	    pp.dir_encoding = dir_encoding_swap;
 	  else
 	    as_warn (_("ignoring `.s' suffix due to earlier `{%s}'"),
-		     i.dir_encoding == dir_encoding_load ? "load" : "store");
+		     pp.dir_encoding == dir_encoding_load ? "load" : "store");
 	}
       else if (mnem_p - 3 == dot_p
 	       && dot_p[1] == 'd'
 	       && dot_p[2] == '8')
 	{
-	  if (i.disp_encoding == disp_encoding_default)
-	    i.disp_encoding = disp_encoding_8bit;
-	  else if (i.disp_encoding != disp_encoding_8bit)
+	  if (pp.disp_encoding == disp_encoding_default)
+	    pp.disp_encoding = disp_encoding_8bit;
+	  else if (pp.disp_encoding != disp_encoding_8bit)
 	    as_warn (_("ignoring `.d8' suffix due to earlier `{disp<N>}'"));
 	}
       else if (mnem_p - 4 == dot_p
@@ -8030,9 +8071,9 @@ parse_insn (const char *line, char *mnemonic, bool prefix_only)
 	       && dot_p[2] == '3'
 	       && dot_p[3] == '2')
 	{
-	  if (i.disp_encoding == disp_encoding_default)
-	    i.disp_encoding = disp_encoding_32bit;
-	  else if (i.disp_encoding != disp_encoding_32bit)
+	  if (pp.disp_encoding == disp_encoding_default)
+	    pp.disp_encoding = disp_encoding_32bit;
+	  else if (pp.disp_encoding != disp_encoding_32bit)
 	    as_warn (_("ignoring `.d32' suffix due to earlier `{disp<N>}'"));
 	}
       else
@@ -8579,7 +8620,7 @@ optimize_disp (const insn_template *t)
 
   /* Don't optimize displacement for movabs since it only takes 64bit
      displacement.  */
-  if (i.disp_encoding > disp_encoding_8bit
+  if (pp.disp_encoding > disp_encoding_8bit
       || (flag_code == CODE_64BIT && t->mnem_off == MN_movabs))
     return true;
 
@@ -8988,9 +9029,9 @@ check_VecOperands (const insn_template *t)
 	  && (is_cpu (t, CpuAPX_F)
 	   || (t->opcode_modifier.sse2avx && t->opcode_modifier.evex
 	       && (!t->opcode_modifier.vex
-		   || (i.encoding != encoding_default
-		       && i.encoding != encoding_vex
-		       && i.encoding != encoding_vex3))))))
+		   || (pp.encoding != encoding_default
+		       && pp.encoding != encoding_vex
+		       && pp.encoding != encoding_vex3))))))
     {
       if (i.op[0].imms->X_op != O_constant
 	  || !fits_in_imm4 (i.op[0].imms->X_add_number))
@@ -9008,7 +9049,7 @@ check_VecOperands (const insn_template *t)
   if (t->opcode_modifier.disp8memshift
       && (!t->opcode_modifier.vex
 	  || need_evex_encoding (t))
-      && i.disp_encoding <= disp_encoding_8bit)
+      && pp.disp_encoding <= disp_encoding_8bit)
     {
       if (i.broadcast.type || i.broadcast.bytes)
 	i.memshift = t->opcode_modifier.broadcast - 1;
@@ -9088,7 +9129,7 @@ check_VecOperands (const insn_template *t)
 static int
 VEX_check_encoding (const insn_template *t)
 {
-  if (i.encoding == encoding_error)
+  if (pp.encoding == encoding_error)
     {
       i.error = unsupported;
       return 1;
@@ -9105,7 +9146,7 @@ VEX_check_encoding (const insn_template *t)
       return 1;
     }
 
-  switch (i.encoding)
+  switch (pp.encoding)
     {
     case encoding_vex:
     case encoding_vex3:
@@ -9118,7 +9159,7 @@ VEX_check_encoding (const insn_template *t)
       break;
 
     case encoding_default:
-      if (!i.has_nf)
+      if (!pp.has_nf)
 	break;
       /* Fall through.  */
     case encoding_evex:
@@ -9175,7 +9216,7 @@ check_EgprOperands (const insn_template *t)
     }
 
   /* Check if pseudo prefix {rex2} is valid.  */
-  if (i.rex2_encoding && !t->opcode_modifier.sse2avx)
+  if (pp.rex2_encoding && !t->opcode_modifier.sse2avx)
     {
       i.error = invalid_pseudo_prefix;
       return true;
@@ -9231,7 +9272,7 @@ check_Rex_required (void)
     return true;
 
   /* Check pseudo prefix {rex} are valid.  */
-  return i.rex_encoding;
+  return pp.rex_encoding;
 }
 
 /* Optimize APX NDD insns to legacy insns.  */
@@ -9240,7 +9281,7 @@ can_convert_NDD_to_legacy (const insn_template *t)
 {
   unsigned int match_dest_op = ~0;
 
-  if (!i.has_nf && i.reg_operands >= 2)
+  if (!pp.has_nf && i.reg_operands >= 2)
     {
       unsigned int dest = i.operands - 1;
       unsigned int src1 = i.operands - 2;
@@ -9332,7 +9373,7 @@ match_template (char mnem_suffix)
 
       /* Check NF support.  */
       specific_error = progress (unsupported_nf);
-      if (i.has_nf && !t->opcode_modifier.nf)
+      if (pp.has_nf && !t->opcode_modifier.nf)
 	continue;
 
       /* Check Intel64/AMD64 ISA.   */
@@ -9421,7 +9462,7 @@ match_template (char mnem_suffix)
 	    }
 
 	  /* Check if pseudo prefix {rex2} is valid.  */
-	  if (t->opcode_modifier.noegpr && i.rex2_encoding)
+	  if (t->opcode_modifier.noegpr && pp.rex2_encoding)
 	    {
 	      specific_error = progress (invalid_pseudo_prefix);
 	      continue;
@@ -9495,9 +9536,9 @@ match_template (char mnem_suffix)
 	     {store} pseudo prefix on an applicable insn.  */
 	  if (!t->opcode_modifier.modrm
 	      && i.reg_operands == 1
-	      && ((i.dir_encoding == dir_encoding_load
+	      && ((pp.dir_encoding == dir_encoding_load
 		   && t->mnem_off != MN_pop)
-		  || (i.dir_encoding == dir_encoding_store
+		  || (pp.dir_encoding == dir_encoding_store
 		      && t->mnem_off != MN_push))
 	      /* Avoid BSWAP.  */
 	      && t->mnem_off != MN_bswap)
@@ -9520,8 +9561,8 @@ match_template (char mnem_suffix)
 
 	      /* Allow the ModR/M encoding to be requested by using the
 		 {load} or {store} pseudo prefix.  */
-	      if (i.dir_encoding == dir_encoding_load
-		  || i.dir_encoding == dir_encoding_store)
+	      if (pp.dir_encoding == dir_encoding_load
+		  || pp.dir_encoding == dir_encoding_store)
 		continue;
 	    }
 
@@ -9540,7 +9581,7 @@ match_template (char mnem_suffix)
 
 	      /* Allow the ModR/M encoding to be requested by using a suitable
 		 {load} or {store} pseudo prefix.  */
-	      if (i.dir_encoding == (i.types[0].bitfield.instance == Accum
+	      if (pp.dir_encoding == (i.types[0].bitfield.instance == Accum
 				     ? dir_encoding_store
 				     : dir_encoding_load)
 		  && !i.types[0].bitfield.disp64
@@ -9553,21 +9594,21 @@ match_template (char mnem_suffix)
 	  if (!t->opcode_modifier.modrm
 	      && i.reg_operands == 1
 	      && i.imm_operands == 1
-	      && (i.dir_encoding == dir_encoding_load
-		  || i.dir_encoding == dir_encoding_store)
+	      && (pp.dir_encoding == dir_encoding_load
+		  || pp.dir_encoding == dir_encoding_store)
 	      && t->opcode_space == SPACE_BASE)
 	    {
 	      if (t->base_opcode == 0xb0 /* mov $imm, %reg */
-		  && i.dir_encoding == dir_encoding_store)
+		  && pp.dir_encoding == dir_encoding_store)
 		continue;
 
 	      if ((t->base_opcode | 0x38) == 0x3c /* <alu> $imm, %acc */
 		  && (t->base_opcode != 0x3c /* cmp $imm, %acc */
-		      || i.dir_encoding == dir_encoding_load))
+		      || pp.dir_encoding == dir_encoding_load))
 		continue;
 
 	      if (t->base_opcode == 0xa8 /* test $imm, %acc */
-		  && i.dir_encoding == dir_encoding_load)
+		  && pp.dir_encoding == dir_encoding_load)
 		continue;
 	    }
 	  /* Fall through.  */
@@ -9587,7 +9628,7 @@ match_template (char mnem_suffix)
 
 	  if (t->opcode_modifier.d && i.reg_operands == i.operands
 	      && !operand_type_all_zero (&overlap1))
-	    switch (i.dir_encoding)
+	    switch (pp.dir_encoding)
 	      {
 	      case dir_encoding_load:
 		if (operand_type_check (operand_types[j], anymem)
@@ -9609,8 +9650,8 @@ match_template (char mnem_suffix)
 	      }
 
 	  /* If we want store form, we skip the current load.  */
-	  if ((i.dir_encoding == dir_encoding_store
-	       || i.dir_encoding == dir_encoding_swap)
+	  if ((pp.dir_encoding == dir_encoding_store
+	       || pp.dir_encoding == dir_encoding_swap)
 	      && i.mem_operands == 0
 	      && t->opcode_modifier.load)
 	    continue;
@@ -9828,8 +9869,8 @@ match_template (char mnem_suffix)
 	 add  %r8, %r16, %r8 -> add %r16, %r8, then rematch template.
 	 Note that the semantics have not been changed.  */
       if (optimize
-	  && !i.no_optimize
-	  && i.encoding != encoding_evex
+	  && !pp.no_optimize
+	  && pp.encoding != encoding_evex
 	  && ((t + 1 < current_templates.end
 	       && !t[1].opcode_modifier.evex
 	       && t[1].opcode_space <= SPACE_0F38
@@ -10863,8 +10904,8 @@ process_operands (void)
 	 need converting.  */
       i.rex |= i.prefix[REX_PREFIX] & (REX_W | REX_R | REX_X | REX_B);
       i.prefix[REX_PREFIX] = 0;
-      i.rex_encoding = 0;
-      i.rex2_encoding = 0;
+      pp.rex_encoding = 0;
+      pp.rex2_encoding = 0;
     }
   /* ImmExt should be processed after SSE2AVX.  */
   else if (i.tm.opcode_modifier.immext)
@@ -11093,7 +11134,7 @@ process_operands (void)
       if (dot_insn () && i.reg_operands == 2)
 	{
 	  gas_assert (is_any_vex_encoding (&i.tm)
-		      || i.encoding != encoding_default);
+		      || pp.encoding != encoding_default);
 	  i.vex.register_specifier = i.op[i.operands - 1].regs;
 	}
     }
@@ -11103,7 +11144,7 @@ process_operands (void)
 	      == InstanceNone)
     {
       gas_assert (is_any_vex_encoding (&i.tm)
-		  || i.encoding != encoding_default);
+		  || pp.encoding != encoding_default);
       i.vex.register_specifier = i.op[i.operands - 1].regs;
     }
 
@@ -11112,7 +11153,7 @@ process_operands (void)
     {
       if (!quiet_warnings)
 	as_warn (_("segment override on `%s' is ineffectual"), insn_name (&i.tm));
-      if (optimize && !i.no_optimize)
+      if (optimize && !pp.no_optimize)
 	{
 	  i.seg[0] = NULL;
 	  i.prefix[SEG_PREFIX] = 0;
@@ -11211,7 +11252,7 @@ build_modrm_byte (void)
 	}
       exp->X_add_number |= register_number (i.op[reg_slot].regs)
 			   << (3 + !(i.tm.opcode_modifier.evex
-				     || i.encoding == encoding_evex));
+				     || pp.encoding == encoding_evex));
     }
 
   switch (i.tm.opcode_modifier.vexvvvv)
@@ -11366,7 +11407,7 @@ build_modrm_byte (void)
 		      if (operand_type_check (i.types[op], disp) == 0)
 			{
 			  /* fake (%bp) into 0(%bp)  */
-			  if (i.disp_encoding == disp_encoding_16bit)
+			  if (pp.disp_encoding == disp_encoding_16bit)
 			    i.types[op].bitfield.disp16 = 1;
 			  else
 			    i.types[op].bitfield.disp8 = 1;
@@ -11381,10 +11422,10 @@ build_modrm_byte (void)
 		}
 	      if (!fake_zero_displacement
 		  && !i.disp_operands
-		  && i.disp_encoding)
+		  && pp.disp_encoding)
 		{
 		  fake_zero_displacement = 1;
-		  if (i.disp_encoding == disp_encoding_8bit)
+		  if (pp.disp_encoding == disp_encoding_8bit)
 		    i.types[op].bitfield.disp8 = 1;
 		  else
 		    i.types[op].bitfield.disp16 = 1;
@@ -11413,7 +11454,7 @@ build_modrm_byte (void)
 	      if (i.base_reg->reg_num == 5 && i.disp_operands == 0)
 		{
 		  fake_zero_displacement = 1;
-		  if (i.disp_encoding == disp_encoding_32bit)
+		  if (pp.disp_encoding == disp_encoding_32bit)
 		    i.types[op].bitfield.disp32 = 1;
 		  else
 		    i.types[op].bitfield.disp8 = 1;
@@ -11451,10 +11492,10 @@ build_modrm_byte (void)
 		{
 		  if (!fake_zero_displacement
 		      && !i.disp_operands
-		      && i.disp_encoding)
+		      && pp.disp_encoding)
 		    {
 		      fake_zero_displacement = 1;
-		      if (i.disp_encoding == disp_encoding_8bit)
+		      if (pp.disp_encoding == disp_encoding_8bit)
 			i.types[op].bitfield.disp8 = 1;
 		      else
 			i.types[op].bitfield.disp32 = 1;
@@ -11574,7 +11615,7 @@ output_branch (void)
     }
 
   code16 = flag_code == CODE_16BIT ? CODE16 : 0;
-  size = i.disp_encoding > disp_encoding_8bit ? BIG : SMALL;
+  size = pp.disp_encoding > disp_encoding_8bit ? BIG : SMALL;
 
   prefix = 0;
   if (i.prefix[DATA_PREFIX] != 0)
@@ -11873,6 +11914,65 @@ output_interseg_jump (void)
   else
     fix_new_exp (frag_now, p - frag_now->fr_literal, 2,
 		 i.op[0].imms, 0, reloc (2, 0, 0, i.reloc[0]));
+}
+
+/* Hook used to reject pseudo-prefixes misplaced at the start of a line.  */
+
+void i386_start_line (void)
+{
+  struct pseudo_prefixes last_pp;
+
+  memcpy (&last_pp, &pp, sizeof (pp));
+  memset (&pp, 0, sizeof (pp));
+  if (memcmp (&pp, &last_pp, sizeof (pp)))
+    as_bad_where (frag_now->fr_file, frag_now->fr_line,
+		  _("pseudo prefix without instruction"));
+}
+
+/* Hook used to warn about pseudo-prefixes ahead of a label.  */
+
+bool i386_check_label (void)
+{
+  struct pseudo_prefixes last_pp;
+
+  memcpy (&last_pp, &pp, sizeof (pp));
+  memset (&pp, 0, sizeof (pp));
+  if (memcmp (&pp, &last_pp, sizeof (pp)))
+    as_warn (_("pseudo prefix ahead of label; ignoring"));
+  return true;
+}
+
+/* Hook used to parse pseudo-prefixes off of the start of a line.  */
+
+int
+i386_unrecognized_line (int ch)
+{
+  char mnemonic[MAX_MNEM_SIZE];
+  const char *end;
+
+  if (ch != '{')
+    return 0;
+
+  --input_line_pointer;
+  know (*input_line_pointer == ch);
+
+  end = parse_insn (input_line_pointer, mnemonic, parse_pseudo_prefix);
+  if (end == NULL)
+    {
+      /* Diagnostic was already issued.  */
+      ignore_rest_of_line ();
+      memset (&pp, 0, sizeof (pp));
+      return 1;
+    }
+
+  if (end == input_line_pointer)
+    {
+      ++input_line_pointer;
+      return 0;
+    }
+
+  input_line_pointer += end - input_line_pointer;
+  return 1;
 }
 
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
@@ -13476,13 +13576,14 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
   saved_char = *saved_ilp;
   *saved_ilp = 0;
 
-  end = parse_insn (line, mnemonic, true);
+  end = parse_insn (line, mnemonic, parse_prefix);
   if (end == NULL)
     {
   bad:
       *saved_ilp = saved_char;
       ignore_rest_of_line ();
       i.tm.mnem_off = 0;
+      memset (&pp, 0, sizeof (pp));
       return;
     }
   line += end - line;
@@ -13521,20 +13622,20 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
     }
 
   if (vex || xop
-      ? i.encoding == encoding_evex
+      ? pp.encoding == encoding_evex
       : evex
-	? i.encoding == encoding_vex
-	  || i.encoding == encoding_vex3
-	: i.encoding != encoding_default)
+	? pp.encoding == encoding_vex
+	  || pp.encoding == encoding_vex3
+	: pp.encoding != encoding_default)
     {
       as_bad (_("pseudo-prefix conflicts with encoding specifier"));
       goto bad;
     }
 
-  if (line > end && i.encoding == encoding_default)
-    i.encoding = evex ? encoding_evex : encoding_vex;
+  if (line > end && pp.encoding == encoding_default)
+    pp.encoding = evex ? encoding_evex : encoding_vex;
 
-  if (i.encoding != encoding_default)
+  if (pp.encoding != encoding_default)
     {
       /* Only address size and segment override prefixes are permitted with
          VEX/XOP/EVEX encodings.  */
@@ -13829,8 +13930,8 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	}
 
       /* No need to distinguish encoding_evex and encoding_evex512.  */
-      if (i.encoding == encoding_evex512)
-	i.encoding = encoding_evex;
+      if (pp.encoding == encoding_evex512)
+	pp.encoding = encoding_evex;
     }
 
   /* Trim off encoding space.  */
@@ -13839,8 +13940,8 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       uint8_t byte = val >> ((--j - 1) * 8);
 
       i.insn_opcode_space = SPACE_0F;
-      switch (byte & -(j > 1 && !i.rex2_encoding
-		       && (i.encoding != encoding_egpr || evex)))
+      switch (byte & -(j > 1 && !pp.rex2_encoding
+		       && (pp.encoding != encoding_egpr || evex)))
 	{
 	case 0x38:
 	  i.insn_opcode_space = SPACE_0F38;
@@ -13874,7 +13975,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       expressionS *disp_exp = NULL;
       bool changed;
 
-      if (i.encoding == encoding_egpr)
+      if (pp.encoding == encoding_egpr)
 	{
 	  if (vex || xop)
 	    {
@@ -13882,21 +13983,21 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	      goto done;
 	    }
 	  if (evex)
-	    i.encoding = encoding_evex;
+	    pp.encoding = encoding_evex;
 	  else
-	    i.encoding = encoding_default;
+	    pp.encoding = encoding_default;
 	}
 
       /* Are we to emit ModR/M encoding?  */
       if (!i.short_form
 	  && (i.mem_operands
-	      || i.reg_operands > (i.encoding != encoding_default)
+	      || i.reg_operands > (pp.encoding != encoding_default)
 	      || i.tm.extension_opcode != None))
 	i.tm.opcode_modifier.modrm = 1;
 
       if (!i.tm.opcode_modifier.modrm
 	  && (i.reg_operands
-	      > i.short_form + 0U + (i.encoding != encoding_default)
+	      > i.short_form + 0U + (pp.encoding != encoding_default)
 	      || i.mem_operands))
 	{
 	  as_bad (_("too many register/memory operands"));
@@ -13935,7 +14036,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	    }
 	  /* Fall through.  */
 	case 3:
-	  if (i.encoding != encoding_default)
+	  if (pp.encoding != encoding_default)
 	    {
 	      i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
 	      break;
@@ -13991,13 +14092,13 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	      || i.index_reg->reg_type.bitfield.ymmword
 	      || i.index_reg->reg_type.bitfield.zmmword))
 	{
-	  if (i.encoding == encoding_default)
+	  if (pp.encoding == encoding_default)
 	    {
 	      as_bad (_("VSIB unavailable with legacy encoding"));
 	      goto done;
 	    }
 
-	  if (i.encoding == encoding_evex
+	  if (pp.encoding == encoding_evex
 	      && i.reg_operands > 1)
 	    {
 	      /* We could allow two register operands, encoding the 2nd one in
@@ -14017,7 +14118,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       for (j = i.imm_operands; j < i.operands; ++j)
 	{
 	  /* Look for 8-bit operands that use old registers.  */
-	  if (i.encoding != encoding_default
+	  if (pp.encoding != encoding_default
 	      && flag_code == CODE_64BIT
 	      && i.types[j].bitfield.class == Reg
 	      && i.types[j].bitfield.byte
@@ -14076,7 +14177,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	case  4: combined.bitfield.dword = 1; break;
 	}
 
-      if (i.encoding == encoding_default)
+      if (pp.encoding == encoding_default)
 	{
 	  if (flag_code == CODE_64BIT && combined.bitfield.qword)
 	    i.rex |= REX_W;
@@ -14141,11 +14242,11 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 		  ++i.memshift;
 	      else if (disp_exp != NULL && disp_exp->X_op == O_constant
 		       && disp_exp->X_add_number != 0
-		       && i.disp_encoding != disp_encoding_32bit)
+		       && pp.disp_encoding != disp_encoding_32bit)
 		{
 		  if (!quiet_warnings)
 		    as_warn ("cannot determine memory operand size");
-		  i.disp_encoding = disp_encoding_32bit;
+		  pp.disp_encoding = disp_encoding_32bit;
 		}
 	    }
 	}
@@ -14153,7 +14254,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       if (i.memshift >= 32)
 	i.memshift = 0;
       else if (!evex)
-	i.encoding = encoding_error;
+	pp.encoding = encoding_error;
 
       if (i.disp_operands && !optimize_disp (&i.tm))
 	goto done;
@@ -14219,8 +14320,8 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
      potential special casing there.  */
   i.tm.base_opcode |= val;
 
-  if (i.encoding == encoding_error
-      || (i.encoding != encoding_evex
+  if (pp.encoding == encoding_error
+      || (pp.encoding != encoding_evex
 	  ? i.broadcast.type || i.broadcast.bytes
 	    || i.rounding.type != rc_none
 	    || i.mask.reg
@@ -14272,6 +14373,9 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 
   /* Make sure dot_insn() won't yield "true" anymore.  */
   i.tm.mnem_off = 0;
+
+  current_templates.start = NULL;
+  memset (&pp, 0, sizeof (pp));
 }
 
 #ifdef TE_PE
@@ -14331,11 +14435,11 @@ RC_SAE_specifier (const char *pstr)
 	      return NULL;
 	    }
 
-	  switch (i.encoding)
+	  switch (pp.encoding)
 	    {
 	    case encoding_default:
 	    case encoding_egpr:
-	      i.encoding = encoding_evex512;
+	      pp.encoding = encoding_evex512;
 	      break;
 	    case encoding_evex:
 	    case encoding_evex512:
@@ -14368,6 +14472,8 @@ check_VecOperations (char *op_string)
       if (*op_string == '{')
 	{
 	  op_string++;
+	  if (is_space_char (*op_string))
+	    op_string++;
 
 	  /* Check broadcasts.  */
 	  if (startswith (op_string, "1to"))
@@ -14403,11 +14509,11 @@ check_VecOperations (char *op_string)
 		}
 	      op_string++;
 
-	      switch (i.encoding)
+	      switch (pp.encoding)
 		{
 		case encoding_default:
 		case encoding_egpr:
-		  i.encoding = encoding_evex;
+		  pp.encoding = encoding_evex;
 		  break;
 		case encoding_evex:
 		case encoding_evex512:
@@ -14538,6 +14644,8 @@ check_VecOperations (char *op_string)
 	  else
 	    goto unknown_vec_op;
 
+	  if (is_space_char (*op_string))
+	    op_string++;
 	  if (*op_string != '}')
 	    {
 	      as_bad (_("missing `}' in `%s'"), saved);
@@ -14545,8 +14653,6 @@ check_VecOperations (char *op_string)
 	    }
 	  op_string++;
 
-	  /* Strip whitespace since the addition of pseudo prefixes
-	     changed how the scrubber treats '{'.  */
 	  if (is_space_char (*op_string))
 	    ++op_string;
 
@@ -15133,7 +15239,7 @@ i386_index_check (const char *operand_string)
       if (addr_mode != CODE_16BIT)
 	{
 	  /* 32-bit/64-bit checks.  */
-	  if (i.disp_encoding == disp_encoding_16bit)
+	  if (pp.disp_encoding == disp_encoding_16bit)
 	    {
 	    bad_disp:
 	      as_bad (_("invalid `%s' prefix"),
@@ -15179,7 +15285,7 @@ i386_index_check (const char *operand_string)
       else
 	{
 	  /* 16-bit checks.  */
-	  if (i.disp_encoding == disp_encoding_32bit)
+	  if (pp.disp_encoding == disp_encoding_32bit)
 	    goto bad_disp;
 
 	  if ((i.base_reg
@@ -15208,9 +15314,16 @@ RC_SAE_immediate (const char *imm_start)
   if (*pstr != '{')
     return 0;
 
-  pstr = RC_SAE_specifier (pstr + 1);
+  pstr++;
+  if (is_space_char (*pstr))
+    pstr++;
+
+  pstr = RC_SAE_specifier (pstr);
   if (pstr == NULL)
     return 0;
+
+  if (is_space_char (*pstr))
+    pstr++;
 
   if (*pstr++ != '}')
     {
@@ -16682,17 +16795,18 @@ static bool check_register (const reg_entry *r)
       if (vector_size < VSZ512)
 	return false;
 
-      switch (i.encoding)
+      /* Don't update pp when not dealing with insn operands.  */
+      switch (current_templates.start ? pp.encoding : encoding_evex)
 	{
 	case encoding_default:
 	case encoding_egpr:
-	  i.encoding = encoding_evex512;
+	  pp.encoding = encoding_evex512;
 	  break;
 	case encoding_evex:
 	case encoding_evex512:
 	  break;
 	default:
-	  i.encoding = encoding_error;
+	  pp.encoding = encoding_error;
 	  break;
 	}
     }
@@ -16720,17 +16834,18 @@ static bool check_register (const reg_entry *r)
 	  || flag_code != CODE_64BIT)
 	return false;
 
-      switch (i.encoding)
+      /* Don't update pp when not dealing with insn operands.  */
+      switch (current_templates.start ? pp.encoding : encoding_evex)
 	{
 	  case encoding_default:
 	  case encoding_egpr:
 	  case encoding_evex512:
-	    i.encoding = encoding_evex;
+	    pp.encoding = encoding_evex;
 	    break;
 	  case encoding_evex:
 	    break;
 	  default:
-	    i.encoding = encoding_error;
+	    pp.encoding = encoding_error;
 	    break;
 	}
     }
@@ -16741,17 +16856,18 @@ static bool check_register (const reg_entry *r)
 	  || flag_code != CODE_64BIT)
 	return false;
 
-      switch (i.encoding)
+      /* Don't update pp when not dealing with insn operands.  */
+      switch (current_templates.start ? pp.encoding : encoding_egpr)
 	{
 	case encoding_default:
-	  i.encoding = encoding_egpr;
+	  pp.encoding = encoding_egpr;
 	  break;
 	case encoding_egpr:
 	case encoding_evex:
 	case encoding_evex512:
 	  break;
 	default:
-	  i.encoding = encoding_error;
+	  pp.encoding = encoding_error;
 	  break;
 	}
     }
