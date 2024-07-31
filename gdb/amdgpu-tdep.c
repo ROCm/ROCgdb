@@ -30,8 +30,6 @@
 #include "gdbtypes.h"
 #include "inferior.h"
 #include "language.h"
-#include "objfiles.h"
-#include "observable.h"
 #include "producer.h"
 #include "reggroups.h"
 #include "extract-store-integer.h"

@@ -44589,7 +44589,8 @@ This command is useful for debugging the agent version of dynamic
 printf (@pxref{Dynamic Printf}).
 
 @kindex maint info breakpoints
-@item @anchor{maint info breakpoints}maint info breakpoints
+@anchor{maint info breakpoints}
+@item maint info breakpoints
 Using the same format as @samp{info breakpoints}, display both the
 breakpoints you've set explicitly, and those @value{GDBN} is using for
 internal purposes.  Internal breakpoints are shown with negative
@@ -54184,7 +54185,7 @@ Richard M. Stallman and Roland H. Pesch, July 1991.
 
 @format
 @c man begin SYNOPSIS gcore
-gcore [-a] [-o @var{prefix}] @var{pid1} [@var{pid2}...@var{pidN}]
+gcore [-a] [-o @var{prefix}] [-d @var{directory}] @var{pid1} [@var{pid2}...@var{pidN}]
 @c man end
 @end format
 
@@ -54212,6 +54213,10 @@ when composing the file names of the core dumps.  The file name is
 composed as @file{@var{prefix}.@var{pid}}, where @var{pid} is the
 process ID of the running program being analyzed by @command{gcore}.
 If not specified, @var{prefix} defaults to @var{gcore}.
+
+@item -d @var{directory}
+Use @var{directory} as the data directory when invoking @value{GDBN} for running
+the gcore command. This argument is optional.
 @end table
 @c man end
 
