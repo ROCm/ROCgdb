@@ -681,6 +681,8 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
    the latest supported representation in the process, if needed, and if this
    recension of libctf supports upgrading.
 
+   Returns zero on success and a *positive* ECTF_* or errno value on error.
+
    This is a wrapper to simplify memory allocation on error in the _internal
    function that does all the actual work.  */
 
@@ -886,7 +888,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					       LCTF_INDEX_TO_TYPE (fp, id, child),
 					       tp->ctt_name);
 		if (err != 0)
-		  return err;
+		  return err * -1;
 	      }
 	    break;
 	  }
@@ -905,7 +907,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					 LCTF_INDEX_TO_TYPE (fp, id, child),
 					 tp->ctt_name);
 	  if (err != 0)
-	    return err;
+	    return err * -1;
 	  break;
 
 	case CTF_K_STRUCT:
@@ -920,7 +922,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					 tp->ctt_name);
 
 	  if (err != 0)
-	    return err;
+	    return err * -1;
 
 	  break;
 
@@ -936,7 +938,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					 tp->ctt_name);
 
 	  if (err != 0)
-	    return err;
+	    return err * -1;
 	  break;
 
 	case CTF_K_ENUM:
@@ -949,14 +951,14 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					   tp->ctt_name);
 
 	    if (err != 0)
-	      return err;
+	      return err * -1;
 
 	    /* Remember all enums for later rescanning.  */
 
 	    err = ctf_dynset_insert (all_enums, (void *) (ptrdiff_t)
 				     LCTF_INDEX_TO_TYPE (fp, id, child));
 	    if (err != 0)
-	      return err;
+	      return err * -1;
 	    break;
 	  }
 
@@ -968,7 +970,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					 LCTF_INDEX_TO_TYPE (fp, id, child),
 					 tp->ctt_name);
 	  if (err != 0)
-	    return err;
+	    return err * -1;
 	  break;
 
 	case CTF_K_FORWARD:
@@ -985,7 +987,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 		err = ctf_dynhash_insert_type (fp, h, LCTF_INDEX_TO_TYPE (fp, id, child),
 					       tp->ctt_name);
 		if (err != 0)
-		  return err;
+		  return err * -1;
 	      }
 	    break;
 	  }
@@ -1010,7 +1012,7 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 					 LCTF_INDEX_TO_TYPE (fp, id, child),
 					 tp->ctt_name);
 	  if (err != 0)
-	    return err;
+	    return err * -1;
 	  break;
 	default:
 	  ctf_err_warn (fp, 0, ECTF_CORRUPT,
@@ -1024,9 +1026,8 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 
   ctf_dprintf ("%lu total types processed\n", fp->ctf_typemax);
 
-  /* In the third pass, we traverse the enums we spotted earlier and add all
-     the enumeration constants therein either to the types table (if no
-     type exists with that name) or to ctf_conflciting_enums (otherwise).
+  /* In the third pass, we traverse the enums we spotted earlier and track all
+     the enumeration constants to aid in future detection of duplicates.
 
      Doing this in a third pass is necessary to avoid the case where an
      enum appears with a constant FOO, then later a type named FOO appears,
@@ -1040,35 +1041,12 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 
       while ((cte_name = ctf_enum_next (fp, enum_id, &i_constants, NULL)) != NULL)
 	{
-	  /* Add all the enumeration constants as identifiers.  They all appear
-	     as types that cite the original enum.
-
-	     Constants that appear in more than one enum, or which are already
-	     the names of types, appear in ctf_conflicting_enums as well.  */
-
-	  if (ctf_dynhash_lookup_type (fp->ctf_names, cte_name) == 0)
+	  if (ctf_track_enumerator (fp, enum_id, cte_name) < 0)
 	    {
-	      uint32_t name = ctf_str_add (fp, cte_name);
-
-	      if (name == 0)
-		goto enum_err;
-
-	      err = ctf_dynhash_insert_type (fp, fp->ctf_names, enum_id, name);
+	      ctf_next_destroy (i_constants);
+	      ctf_next_destroy (i);
+	      return ctf_errno (fp);
 	    }
-	  else
-	    {
-	      err = ctf_dynset_insert (fp->ctf_conflicting_enums, (void *)
-				       cte_name);
-
-	      if (err != 0)
-		goto enum_err;
-	    }
-	  continue;
-
-	enum_err:
-	  ctf_next_destroy (i_constants);
-	  ctf_next_destroy (i);
-	  return ctf_errno (fp);
 	}
       if (ctf_errno (fp) != ECTF_NEXT_END)
 	{
@@ -1474,18 +1452,12 @@ ctf_bufopen (const ctf_sect_t *ctfsect, const ctf_sect_t *symsect,
 
      First, we validate the preamble (common to all versions).  At that point,
      we know the endianness and specific header version, and can validate the
-     version-specific parts including section offsets and alignments.
-
-     We specifically do not support foreign-endian old versions.  */
+     version-specific parts including section offsets and alignments.  */
 
   if (_libctf_unlikely_ (pp->ctp_magic != CTF_MAGIC))
     {
       if (pp->ctp_magic == bswap_16 (CTF_MAGIC))
-	{
-	  if (pp->ctp_version != CTF_VERSION_3)
-	    return (ctf_set_open_errno (errp, ECTF_CTFVERS));
-	  foreign_endian = 1;
-	}
+	foreign_endian = 1;
       else
 	return (ctf_set_open_errno (errp, ECTF_NOCTFBUF));
     }

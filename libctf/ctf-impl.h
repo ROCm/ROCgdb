@@ -208,13 +208,13 @@ typedef struct ctf_err_warning
    the csa_refs in all entries are purged.  */
 
 #define CTF_STR_ATOM_FREEABLE	0x1
-#define CTF_STR_ATOM_MOVABLE	0x2
 
 typedef struct ctf_str_atom
 {
   char *csa_str;		/* Pointer to string (also used as hash key).  */
   ctf_list_t csa_refs;		/* This string's refs.  */
-  uint32_t csa_offset;		/* Strtab offset, if any.  */
+  ctf_list_t csa_movable_refs;	/* This string's movable refs.  */
+  uint32_t csa_offset;		/* Offset in this strtab, if any.  */
   uint32_t csa_external_offset;	/* External strtab offset, if any.  */
   unsigned long csa_snapshot_id; /* Snapshot ID at time of creation.  */
   int csa_flags;		 /* CTF_STR_ATOM_* flags. */
@@ -393,7 +393,7 @@ struct ctf_dict
   ctf_strs_t ctf_str[2];	    /* Array of string table base and bounds.  */
   ctf_strs_writable_t *ctf_dynstrtab; /* Dynamically allocated string table, if any. */
   ctf_dynhash_t *ctf_str_atoms;	  /* Hash table of ctf_str_atoms_t.  */
-  ctf_dynhash_t *ctf_str_movable_refs; /* Hash table of void * -> ctf_str_atom_ref_t.  */
+  ctf_dynhash_t *ctf_str_movable_refs; /* Hash table of void * -> ctf_str_atom_ref_movable_t.  */
   uint32_t ctf_str_prov_offset;	  /* Latest provisional offset assigned so far.  */
   unsigned char *ctf_base;	  /* CTF file pointer.  */
   unsigned char *ctf_dynbase;	  /* Freeable CTF file pointer. */
@@ -602,7 +602,8 @@ struct ctf_next
   ((fp)->ctf_dictops->ctfo_get_vbytes(fp, kind, size, vlen))
 
 #define LCTF_CHILD	0x0001	/* CTF dict is a child.  */
-#define LCTF_LINKING	0x0002  /* CTF link is underway: respect ctf_link_flags.  */
+#define LCTF_LINKING	0x0002	/* CTF link is underway: respect ctf_link_flags.  */
+#define LCTF_STRICT_NO_DUP_ENUMERATORS 0x0004 /* Duplicate enums prohibited.  */
 
 extern ctf_dynhash_t *ctf_name_table (ctf_dict_t *, int);
 extern const ctf_type_t *ctf_lookup_by_id (ctf_dict_t **, ctf_id_t);
@@ -713,13 +714,15 @@ extern int ctf_add_variable_forced (ctf_dict_t *, const char *, ctf_id_t);
 extern int ctf_add_funcobjt_sym_forced (ctf_dict_t *, int is_function,
 					const char *, ctf_id_t);
 
+extern int ctf_track_enumerator (ctf_dict_t *, ctf_id_t, const char *);
+
 extern int ctf_dedup_atoms_init (ctf_dict_t *);
 extern int ctf_dedup (ctf_dict_t *, ctf_dict_t **, uint32_t ninputs,
-		      uint32_t *parents, int cu_mapped);
-extern void ctf_dedup_fini (ctf_dict_t *, ctf_dict_t **, uint32_t);
+		      int cu_mapped);
 extern ctf_dict_t **ctf_dedup_emit (ctf_dict_t *, ctf_dict_t **,
 				    uint32_t ninputs, uint32_t *parents,
 				    uint32_t *noutputs, int cu_mapped);
+extern void ctf_dedup_fini (ctf_dict_t *, ctf_dict_t **, uint32_t);
 extern ctf_id_t ctf_dedup_type_mapping (ctf_dict_t *fp, ctf_dict_t *src_fp,
 					ctf_id_t src_type);
 
@@ -746,7 +749,6 @@ extern int ctf_str_move_refs (ctf_dict_t *fp, void *src, size_t len, void *dest)
 extern int ctf_str_add_external (ctf_dict_t *, const char *, uint32_t offset);
 extern void ctf_str_remove_ref (ctf_dict_t *, const char *, uint32_t *ref);
 extern void ctf_str_rollback (ctf_dict_t *, ctf_snapshot_id_t);
-extern void ctf_str_purge_refs (ctf_dict_t *);
 extern const ctf_strs_writable_t *ctf_str_write_strtab (ctf_dict_t *);
 
 extern struct ctf_archive_internal *
@@ -762,6 +764,8 @@ extern void ctf_flip_header (ctf_header_t *);
 extern int ctf_flip (ctf_dict_t *, ctf_header_t *, unsigned char *, int);
 
 extern int ctf_import_unref (ctf_dict_t *fp, ctf_dict_t *pfp);
+
+extern int ctf_write_thresholded (ctf_dict_t *fp, int fd, size_t threshold);
 
 _libctf_malloc_
 extern void *ctf_mmap (size_t length, size_t offset, int fd);
