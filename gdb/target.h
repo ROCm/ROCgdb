@@ -1040,6 +1040,14 @@ struct target_ops
        *TARGET_ERRNO).  */
     virtual int fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno);
 
+    /* Get information about the file FILENAME and put it in SB.  Look for
+       FILENAME in the filesystem as seen by INF.  If INF is NULL, use the
+       filesystem seen by the debugger (GDB or, for remote targets, the
+       remote stub).  Return 0 on success, or -1 if an error occurs (and
+       set *TARGET_ERRNO).  */
+    virtual int fileio_stat (struct inferior *inf, const char *filename,
+			     struct stat *sb, fileio_error *target_errno);
+
     /* Close FD on the target.  Return 0, or -1 if an error occurs
        (and set *TARGET_ERRNO).  */
     virtual int fileio_close (int fd, fileio_error *target_errno);
@@ -2276,6 +2284,14 @@ extern int target_fileio_pread (int fd, gdb_byte *read_buf, int len,
 extern int target_fileio_fstat (int fd, struct stat *sb,
 				fileio_error *target_errno);
 
+/* Get information about the file at FILENAME on the target and put it in
+   SB.  Look in the filesystem as seen by INF.  If INF is NULL, use the
+   filesystem seen by the debugger (GDB or, for remote targets, the remote
+   stub).  Return 0 on success, or -1 if an error occurs (and set
+   *TARGET_ERRNO).  */
+extern int target_fileio_stat (struct inferior *inf, const char *filename,
+			       struct stat *sb, fileio_error *target_errno);
+
 /* Close FD on the target.  Return 0, or -1 if an error occurs
    (and set *TARGET_ERRNO).  */
 extern int target_fileio_close (int fd, fileio_error *target_errno);
@@ -2483,7 +2499,7 @@ struct target_unpusher
 
 typedef std::unique_ptr<struct target_ops, target_unpusher> target_unpush_up;
 
-extern void target_pre_inferior (int);
+extern void target_pre_inferior ();
 
 extern void target_preopen (int);
 
@@ -2546,7 +2562,7 @@ extern int default_memory_insert_breakpoint (struct gdbarch *,
 
 extern void initialize_targets (void);
 
-extern void noprocess (void) ATTRIBUTE_NORETURN;
+[[noreturn]] extern void noprocess (void);
 
 extern void target_require_runnable (void);
 

@@ -11198,16 +11198,9 @@ ada_funcall_operation::evaluate (struct type *expect_type,
 	}
       return call_function_by_hand (callee, expect_type, argvec);
     case TYPE_CODE_INTERNAL_FUNCTION:
-      if (noside == EVAL_AVOID_SIDE_EFFECTS)
-	/* We don't know anything about what the internal
-	   function might return, but we have to return
-	   something.  */
-	return value::zero (builtin_type (exp->gdbarch)->builtin_int,
-			   not_lval);
-      else
 	return call_internal_function (exp->gdbarch, exp->language_defn,
 				       callee, nargs,
-				       argvec.data ());
+				       argvec.data (), noside);
 
     case TYPE_CODE_STRUCT:
       {
@@ -13887,7 +13880,7 @@ static struct cmd_list_element *show_ada_list;
 static void
 ada_new_objfile_observer (struct objfile *objfile)
 {
-  ada_clear_symbol_cache (objfile->pspace);
+  ada_clear_symbol_cache (objfile->pspace ());
 }
 
 /* This module's 'free_objfile' observer.  */
@@ -13895,7 +13888,7 @@ ada_new_objfile_observer (struct objfile *objfile)
 static void
 ada_free_objfile_observer (struct objfile *objfile)
 {
-  ada_clear_symbol_cache (objfile->pspace);
+  ada_clear_symbol_cache (objfile->pspace ());
 }
 
 /* Charsets known to GNAT.  */

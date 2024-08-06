@@ -107,6 +107,7 @@ static bool DistinctDest_Fixup (instr_info *, int, int);
 static bool PREFETCHI_Fixup (instr_info *, int, int);
 static bool PUSH2_POP2_Fixup (instr_info *, int, int);
 static bool JMPABS_Fixup (instr_info *, int, int);
+static bool CFCMOV_Fixup (instr_info *, int, int);
 
 static void ATTRIBUTE_PRINTF_3 i386_dis_printf (const disassemble_info *,
 						enum disassembler_style,
@@ -1808,6 +1809,8 @@ struct dis386 {
 	   in MAP4.
    "ZU" => print 'zu' if EVEX.ZU=1.
    "SC" => print suffix SCC for SCC insns
+   "SW" => print '.s' to indicate operands were swapped when suffix_always is
+	   true.
    "YK" keep unused, to avoid ambiguity with the combined use of Y and K.
    "YX" keep unused, to avoid ambiguity with the combined use of Y and X.
    "LQ" => print 'l' ('d' in Intel mode) or 'q' for memory operand, cond
@@ -4041,7 +4044,7 @@ static const struct dis386 prefix_table[][4] = {
     { "vbcstnebf162ps", { XM, Mw }, 0 },
     { "vbcstnesh2ps", { XM, Mw }, 0 },
   },
- 
+
   /* PREFIX_VEX_0F38D2_W_0 */
   {
     { "vpdpwuud",	{ XM, Vex, EXx }, 0 },
@@ -10560,7 +10563,14 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 		}
 	    }
 	  else if (l == 1 && last[0] == 'C')
-	    break;
+	    {
+	      if (ins->vex.nd && !ins->vex.nf)
+		break;
+	      *ins->obufp++ = 'c';
+	      *ins->obufp++ = 'f';
+	      /* Skip printing {evex} */
+	      evex_printed = true;
+	    }
 	  else if (l == 1 && last[0] == 'N')
 	    {
 	      if (ins->vex.nf)
@@ -10919,6 +10929,14 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 		*ins->obufp++ = ins->vex.w ? 'd': 's';
 	      else if (last[0] == 'B')
 		*ins->obufp++ = ins->vex.w ? 'w': 'b';
+	      else if (last[0] == 'S')
+		{
+		  if (ins->modrm.mod == 3 && (sizeflag & SUFFIX_ALWAYS))
+		    {
+		      *ins->obufp++ = '.';
+		      *ins->obufp++ = 's';
+		    }
+		}
 	      else
 		abort ();
 	    }
@@ -12397,9 +12415,9 @@ OP_I (instr_info *ins, int bytemode, int sizeflag)
       break;
     case const_1_mode:
       if (ins->intel_syntax)
-	oappend (ins, "1");
+	oappend_with_style (ins, "1", dis_style_immediate);
       else
-	oappend (ins, "$1");
+	oappend_with_style (ins, "$1", dis_style_immediate);
       return true;
     default:
       oappend (ins, INTERNAL_DISASSEMBLER_ERROR);
@@ -14039,4 +14057,27 @@ JMPABS_Fixup (instr_info *ins, int bytemode, int sizeflag)
   if (bytemode == eAX_reg)
     return OP_IMREG (ins, bytemode, sizeflag);
   return OP_OFF64 (ins, bytemode, sizeflag);
+}
+
+static bool
+CFCMOV_Fixup (instr_info *ins, int opnd, int sizeflag)
+{
+  /* EVEX.NF is used as a direction bit in the 2-operand case to reverse the
+     source and destination operands.  */
+  bool dstmem = !ins->vex.nd && ins->vex.nf;
+
+  if (opnd == 0)
+    {
+      if (dstmem)
+	return OP_E (ins, v_swap_mode, sizeflag);
+      return OP_G (ins, v_mode, sizeflag);
+    }
+
+  /* These bits have been consumed and should be cleared.  */
+  ins->vex.nf = false;
+  ins->vex.mask_register_specifier = 0;
+
+  if (dstmem)
+    return OP_G (ins, v_mode, sizeflag);
+  return OP_E (ins, v_mode, sizeflag);
 }

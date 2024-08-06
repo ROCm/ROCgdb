@@ -118,6 +118,21 @@ local_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 /* See local-fileio-target.h.  */
 
 int
+local_fileio_stat (inferior *inf, const char *filename, struct stat *sb,
+		   fileio_error *target_errno)
+{
+  int ret;
+
+  ret = lstat (filename, sb);
+  if (ret == -1)
+    *target_errno = host_to_fileio_error (errno);
+
+  return ret;
+}
+
+/* See local-fileio-target.h.  */
+
+int
 local_fileio_close (int fd, fileio_error *target_errno)
 {
   int ret;

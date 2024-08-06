@@ -774,9 +774,9 @@ proc undefined_weak {cflags ldflags} {
 
     if { [string match "*-fPIE*" $cflags]
 	 && ![string match "*nodynamic-undefined-weak*" $ldflags] } {
-	set weak_symbol "Weak defined"
+	set weak_symbol "Weak defined\n"
     } else {
-	set weak_symbol "Weak undefined"
+	set weak_symbol "Weak undefined\n"
     }
 
     run_cc_link_tests [list \
@@ -2274,6 +2274,13 @@ run_dump_test "ibt-plt-3a-x32"
 run_dump_test "ibt-plt-3b-x32"
 run_dump_test "ibt-plt-3c-x32"
 run_dump_test "ibt-plt-3d-x32"
+
+# Skip -z mark-plt tests on MUSL.
+if { [istarget "x86_64-*-musl*"]} {
+    set ASFLAGS "$saved_ASFLAGS"
+    return
+}
+
 run_dump_test "mark-plt-1a"
 run_dump_test "mark-plt-1b"
 run_dump_test "mark-plt-1c"

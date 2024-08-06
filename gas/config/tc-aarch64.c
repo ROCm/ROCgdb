@@ -33,6 +33,7 @@
 #include "dw2gencfi.h"
 #include "sframe.h"
 #include "gen-sframe.h"
+#include "scfi.h"
 #endif
 
 #include "dw2gencfi.h"
@@ -113,6 +114,7 @@ enum vector_el_type
 #define NTA_HASTYPE     1
 #define NTA_HASINDEX    2
 #define NTA_HASVARWIDTH 4
+#define NTA_NOINDEX    8
 
 struct vector_type_el
 {
@@ -1185,11 +1187,15 @@ parse_index_expression (char **str, int64_t *imm)
    register index.
 
    FLAGS includes PTR_GOOD_MATCH if we are sufficiently far into parsing
-   an operand that we can be confident that it is a good match.  */
+   an operand that we can be confident that it is a good match.
+
+   FLAGS includes PTR_OPTIONAL_INDEX to handle instructions with optional index
+   operands.  */
 
 #define PTR_IN_REGLIST (1U << 0)
 #define PTR_FULL_REG (1U << 1)
 #define PTR_GOOD_MATCH (1U << 2)
+#define PTR_OPTIONAL_INDEX (1U << 3)
 
 static const reg_entry *
 parse_typed_reg (char **ccp, aarch64_reg_type type,
@@ -1277,7 +1283,10 @@ parse_typed_reg (char **ccp, aarch64_reg_type type,
       atype.width = parsetype.width;
     }
 
-  if (!(flags & PTR_FULL_REG) && skip_past_char (&str, '['))
+  if ((flags & PTR_OPTIONAL_INDEX) && (*str == '\0' || *str == ','))
+    atype.defined |= NTA_NOINDEX;
+  else if ((!(flags & PTR_FULL_REG) || (flags & PTR_OPTIONAL_INDEX))
+	    && skip_past_char (&str, '['))
     {
       /* Reject Sn[index] syntax.  */
       if (reg->type != REG_TYPE_Z
@@ -3943,10 +3952,10 @@ parse_shifter_zt0_with_bit_index (char **str,
       return true;
     }
 
-  int64_t index;
-  if (!parse_index_expression (str, &index))
+  int64_t idx;
+  if (!parse_index_expression (str, &idx))
       return false;
-  operand->imm.value = index;
+  operand->imm.value = idx;
 
   if (!skip_past_comma (str))
       return true;
@@ -6886,6 +6895,20 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  reg_type = REG_TYPE_Z;
 	  goto vector_reg_index;
 
+	case AARCH64_OPND_SVE_Zn0_INDEX:
+	case AARCH64_OPND_SVE_Zn1_17_INDEX:
+	case AARCH64_OPND_SVE_Zn2_18_INDEX:
+	case AARCH64_OPND_SVE_Zn3_22_INDEX:
+	case AARCH64_OPND_SVE_Zd0_INDEX:
+	case AARCH64_OPND_SVE_Zd1_17_INDEX:
+	case AARCH64_OPND_SVE_Zd2_18_INDEX:
+	case AARCH64_OPND_SVE_Zd3_22_INDEX:
+	  reg_type = REG_TYPE_Z;
+	  reg = parse_typed_reg (&str, reg_type, &vectype, PTR_OPTIONAL_INDEX);
+	  if (!reg || !(vectype.defined & (NTA_HASINDEX | NTA_NOINDEX)))
+	    goto failure;
+	  goto vector_reg_optional_index;
+
 	case AARCH64_OPND_Ed:
 	case AARCH64_OPND_En:
 	case AARCH64_OPND_Em:
@@ -6899,7 +6922,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    goto failure;
 	  if (!(vectype.defined & NTA_HASINDEX))
 	    goto failure;
-
+	vector_reg_optional_index:
 	  if (reg->type == REG_TYPE_Z && vectype.type == NT_invtype)
 	    /* Unqualified Zn[index] is allowed in LUTI2 instructions.  */
 	    info->qualifier = AARCH64_OPND_QLF_NIL;
@@ -8159,6 +8182,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SME_ZA_array_vrsh_2:
 	case AARCH64_OPND_SME_ZA_array_vrss_2:
 	case AARCH64_OPND_SME_ZA_array_vrsd_2:
+	case AARCH64_OPND_SME_ZA_ARRAY4:
 	  if (!parse_dual_indexed_reg (&str, REG_TYPE_ZATHV,
 				       &info->indexed_za, &qualifier, 0))
 	    goto failure;
@@ -8591,6 +8615,10 @@ dump_opcode_operands (const aarch64_opcode *opcode)
 }
 #endif /* DEBUG_AARCH64 */
 
+#ifdef OBJ_ELF
+# include "tc-aarch64-ginsn.c"
+#endif
+
 /* This is the guts of the machine-dependent assembler.  STR points to a
    machine dependent instruction.  This function is supposed to emit
    the frags/bytes it assembles to.  */
@@ -8727,6 +8755,16 @@ md_assemble (char *str)
 	      memcpy (copy, &inst.base, sizeof (struct aarch64_inst));
 	      output_inst (copy);
 	    }
+
+#ifdef OBJ_ELF
+	  if (flag_synth_cfi)
+	    {
+	      ginsnS *ginsn;
+	      ginsn = aarch64_ginsn_new (symbol_temp_new_now (),
+					 frch_ginsn_gen_mode ());
+	      frch_ginsn_data_append (ginsn);
+	    }
+#endif
 
 	  /* Issue non-fatal messages if any.  */
 	  output_operand_error_report (str, true);
@@ -9078,7 +9116,7 @@ aarch64_support_sframe_p (void)
   return (aarch64_abi == AARCH64_ABI_LP64);
 }
 
-/* Specify if RA tracking is needed.  */
+/* Whether SFrame return address tracking is needed.  */
 
 bool
 aarch64_sframe_ra_tracking_p (void)
@@ -9086,8 +9124,8 @@ aarch64_sframe_ra_tracking_p (void)
   return true;
 }
 
-/* Specify the fixed offset to recover RA from CFA.
-   (useful only when RA tracking is not needed).  */
+/* The fixed offset from CFA for SFrame to recover the return address.
+   (useful only when SFrame RA tracking is not needed).  */
 
 offsetT
 aarch64_sframe_cfa_ra_offset (void)
@@ -10683,7 +10721,9 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
   {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
-  {"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
+  // Feature b16b16 is currently incomplete.
+  // TODO: finish implementation and enable relevant flags.
+  //{"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
   {"sve2p1",		AARCH64_FEATURE (SVE2p1), AARCH64_FEATURE (SVE2)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},

@@ -721,15 +721,16 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
   return false;
 }
 
-/* Return true if KNOWN->objfile is used by any other so_list object
-   in the list of shared libraries.  Return false otherwise.  */
+/* Return true if KNOWN->objfile is used by any other solib object
+   in PSPACE's list of shared libraries.  Return false otherwise.  */
 
 static bool
-solib_used (const solib &known)
+solib_used (program_space *pspace, const solib &known)
 {
-  for (const solib &pivot : current_program_space->solibs ())
+  for (const solib &pivot : pspace->solibs ())
     if (&pivot != &known && pivot.objfile == known.objfile)
       return true;
+
   return false;
 }
 
@@ -865,7 +866,7 @@ update_solib_list (int from_tty)
 	  /* Unless the user loaded it explicitly, free SO's objfile.  */
 	  if (gdb_iter->objfile != nullptr
 	      && !(gdb_iter->objfile->flags & OBJF_USERLOADED)
-	      && !solib_used (*gdb_iter))
+	      && !solib_used (current_program_space, *gdb_iter))
 	    gdb_iter->objfile->unlink ();
 
 	  /* Some targets' section tables might be referring to
@@ -1277,21 +1278,29 @@ sharedlibrary_command (const char *args, int from_tty)
   solib_add (args, from_tty, 1);
 }
 
-/* Implements the command "nosharedlibrary", which discards symbols
-   that have been auto-loaded from shared libraries.  Symbols from
-   shared libraries that were added by explicit request of the user
-   are not discarded.  Also called from remote.c.  */
+/* See solib.h.  */
 
 void
-no_shared_libraries (const char *ignored, int from_tty)
+no_shared_libraries (program_space *pspace)
 {
   /* The order of the two routines below is important: clear_solib notifies
      the solib_unloaded observers, and some of these observers might need
      access to their associated objfiles.  Therefore, we can not purge the
      solibs' objfiles before clear_solib has been called.  */
 
-  clear_solib (current_program_space);
-  objfile_purge_solibs ();
+  clear_solib (pspace);
+  objfile_purge_solibs (pspace);
+}
+
+/* Implements the command "nosharedlibrary", which discards symbols
+   that have been auto-loaded from shared libraries.  Symbols from
+   shared libraries that were added by explicit request of the user
+   are not discarded.  */
+
+static void
+no_shared_libraries_command (const char *ignored, int from_tty)
+{
+  no_shared_libraries (current_program_space);
 }
 
 /* See solib.h.  */
@@ -1368,7 +1377,7 @@ reload_shared_libraries_1 (int from_tty)
 	      && filename_cmp (found_pathname, so.so_name.c_str ()) != 0))
 	{
 	  if (so.objfile && !(so.objfile->flags & OBJF_USERLOADED)
-	      && !solib_used (so))
+	      && !solib_used (current_program_space, so))
 	    so.objfile->unlink ();
 	  current_program_space->remove_target_sections (&so);
 	  so.clear ();
@@ -1760,7 +1769,7 @@ remove_user_added_objfile (struct objfile *objfile)
 {
   if (objfile->flags & OBJF_USERLOADED)
     {
-      for (solib &so : objfile->pspace->solibs ())
+      for (solib &so : objfile->pspace ()->solibs ())
 	if (so.objfile == objfile)
 	  so.objfile = nullptr;
     }
@@ -1785,7 +1794,7 @@ _initialize_solib ()
     = add_info ("sharedlibrary", info_sharedlibrary_command,
 		_ ("Status of loaded shared object libraries."));
   add_info_alias ("dll", info_sharedlibrary_cmd, 1);
-  add_com ("nosharedlibrary", class_files, no_shared_libraries,
+  add_com ("nosharedlibrary", class_files, no_shared_libraries_command,
 	   _ ("Unload all shared object library symbols."));
 
   add_setshow_boolean_cmd ("auto-solib-add", class_support, &auto_solib_add,

@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.43:
+
 * Readelf now displays RELR relocations in full detail.
 
 * Readelf now has a -j/--display-section option which takes the name or index
@@ -19,6 +21,13 @@
 * Support for the FPA co-procossor on Arm has been removed.  In cases where a
   legacy CPU previously defaulted to using this instruction set extension, the
   assembler now defaults to no-FPU to avoid quietly misassembling legacy code.
+
+* gprofng:
+  Improved the support for hardware event counters:
+    - Re-designed and streamlined the implementation.
+    - Defined a common set of events for ARM processors.
+    - Added specific events for AMD ZEN3 / ZEN4, and Intel Ice Lake processors.
+  Added a minimal support for RISC-V.
 
 Changes in 2.42:
 

@@ -308,9 +308,10 @@ build_objfile_section_table (struct objfile *objfile)
    requests for specific operations.  Other bits like OBJF_SHARED are
    simply copied through to the new objfile flags member.  */
 
-objfile::objfile (gdb_bfd_ref_ptr bfd_, const char *name, objfile_flags flags_)
+objfile::objfile (gdb_bfd_ref_ptr bfd_, program_space *pspace,
+		  const char *name, objfile_flags flags_)
   : flags (flags_),
-    pspace (current_program_space),
+    m_pspace (pspace),
     obfd (std::move (bfd_))
 {
   const char *expanded_name;
@@ -347,13 +348,12 @@ objfile::objfile (gdb_bfd_ref_ptr bfd_, const char *name, objfile_flags flags_)
   set_objfile_per_bfd (this);
 }
 
-/* If there is a valid and known entry point, function fills *ENTRY_P with it
-   and returns non-zero; otherwise it returns zero.  */
+/* See objfiles.h.  */
 
 int
-entry_point_address_query (CORE_ADDR *entry_p)
+entry_point_address_query (program_space *pspace, CORE_ADDR *entry_p)
 {
-  objfile *objf = current_program_space->symfile_object_file;
+  objfile *objf = pspace->symfile_object_file;
   if (objf == NULL || !objf->per_bfd->ei.entry_point_p)
     return 0;
 
@@ -363,14 +363,14 @@ entry_point_address_query (CORE_ADDR *entry_p)
   return 1;
 }
 
-/* Get current entry point address.  Call error if it is not known.  */
+/* See objfiles.h.  */
 
 CORE_ADDR
-entry_point_address (void)
+entry_point_address (program_space *pspace)
 {
   CORE_ADDR retval;
 
-  if (!entry_point_address_query (&retval))
+  if (!entry_point_address_query (pspace, &retval))
     error (_("Entry point address is not known."));
 
   return retval;
@@ -444,10 +444,11 @@ add_separate_debug_objfile (struct objfile *objfile, struct objfile *parent)
 /* See objfiles.h.  */
 
 objfile *
-objfile::make (gdb_bfd_ref_ptr bfd_, const char *name_, objfile_flags flags_,
-	       objfile *parent)
+objfile::make (gdb_bfd_ref_ptr bfd_, program_space *pspace, const char *name_,
+	       objfile_flags flags_, objfile *parent)
 {
-  objfile *result = new objfile (std::move (bfd_), name_, flags_);
+  objfile *result
+    = new objfile (std::move (bfd_), current_program_space, name_, flags_);
   if (parent != nullptr)
     add_separate_debug_objfile (result, parent);
 
@@ -465,7 +466,7 @@ objfile::make (gdb_bfd_ref_ptr bfd_, const char *name_, objfile_flags flags_,
 void
 objfile::unlink ()
 {
-  current_program_space->remove_objfile (this);
+  this->pspace ()->remove_objfile (this);
 }
 
 /* Free all separate debug objfile of OBJFILE, but don't free OBJFILE
@@ -563,10 +564,11 @@ objfile::~objfile ()
      and if so, call clear_current_source_symtab_and_line.  */
 
   {
-    struct symtab_and_line cursal = get_current_source_symtab_and_line ();
+    symtab_and_line cursal
+      = get_current_source_symtab_and_line (this->pspace ());
 
     if (cursal.symtab && cursal.symtab->compunit ()->objfile () == this)
-      clear_current_source_symtab_and_line ();
+      clear_current_source_symtab_and_line (this->pspace ());
   }
 
   /* Likewise, but for the last displayed symtab.  */
@@ -575,7 +577,7 @@ objfile::~objfile ()
     clear_last_displayed_sal ();
 
   /* Rebuild section map next time we need it.  */
-  get_objfile_pspace_data (pspace)->section_map_dirty = 1;
+  get_objfile_pspace_data (m_pspace)->section_map_dirty = 1;
 }
 
 
@@ -653,7 +655,7 @@ objfile_relocate1 (struct objfile *objfile,
     objfile->section_offsets[i] = new_offsets[i];
 
   /* Rebuild section map next time we need it.  */
-  get_objfile_pspace_data (objfile->pspace)->section_map_dirty = 1;
+  get_objfile_pspace_data (objfile->pspace ())->section_map_dirty = 1;
 
   /* Update the table in exec_ops, used to read memory.  */
   for (obj_section *s : objfile->sections ())
@@ -738,67 +740,58 @@ objfile_rebase (struct objfile *objfile, CORE_ADDR slide)
   if (changed)
     breakpoint_re_set ();
 }
-
-/* Return non-zero if OBJFILE has full symbols.  */
 
-int
-objfile_has_full_symbols (struct objfile *objfile)
+/* See objfiles.h.  */
+
+bool
+objfile_has_full_symbols (objfile *objfile)
 {
-  return objfile->compunit_symtabs != NULL;
+  return objfile->compunit_symtabs != nullptr;
 }
 
-/* Return non-zero if OBJFILE has full or partial symbols, either directly
-   or through a separate debug file.  */
+/* See objfiles.h.  */
 
-int
-objfile_has_symbols (struct objfile *objfile)
+bool
+objfile_has_symbols (objfile *objfile)
 {
   for (::objfile *o : objfile->separate_debug_objfiles ())
     if (o->has_partial_symbols () || objfile_has_full_symbols (o))
-      return 1;
-  return 0;
+      return true;
+
+  return false;
 }
 
+/* See objfiles.h.  */
 
-/* Many places in gdb want to test just to see if we have any partial
-   symbols available.  This function returns zero if none are currently
-   available, nonzero otherwise.  */
-
-int
-have_partial_symbols (void)
+bool
+have_partial_symbols (program_space *pspace)
 {
-  for (objfile *ofp : current_program_space->objfiles ())
-    {
-      if (ofp->has_partial_symbols ())
-	return 1;
-    }
-  return 0;
+  for (objfile *ofp : pspace->objfiles ())
+    if (ofp->has_partial_symbols ())
+      return true;
+
+  return false;
 }
 
-/* Many places in gdb want to test just to see if we have any full
-   symbols available.  This function returns zero if none are currently
-   available, nonzero otherwise.  */
+/* See objfiles.h.  */
 
-int
-have_full_symbols (void)
+bool
+have_full_symbols (program_space *pspace)
 {
-  for (objfile *ofp : current_program_space->objfiles ())
-    {
-      if (objfile_has_full_symbols (ofp))
-	return 1;
-    }
-  return 0;
+  for (objfile *ofp : pspace->objfiles ())
+    if (objfile_has_full_symbols (ofp))
+      return true;
+
+  return false;
 }
 
 
-/* This operations deletes all objfile entries that represent solibs that
-   weren't explicitly loaded by the user, via e.g., the add-symbol-file
-   command.  */
+/* See objfiles.h.  */
 
 void
-objfile_purge_solibs (void)
+objfile_purge_solibs (program_space *pspace)
 {
-  for (objfile *objf : current_program_space->objfiles_safe ())
+  for (objfile *objf : pspace->objfiles_safe ())
     {
       /* We assume that the solib package has been purged already, or will
 	 be soon.  */
@@ -808,22 +801,16 @@ objfile_purge_solibs (void)
     }
 }
 
+/* See objfiles.h.  */
 
-/* Many places in gdb want to test just to see if we have any minimal
-   symbols available.  This function returns zero if none are currently
-   available, nonzero otherwise.  */
-
-int
-have_minimal_symbols (void)
+bool
+have_minimal_symbols (program_space *pspace)
 {
-  for (objfile *ofp : current_program_space->objfiles ())
-    {
-      if (ofp->per_bfd->minimal_symbol_count > 0)
-	{
-	  return 1;
-	}
-    }
-  return 0;
+  for (objfile *ofp : pspace->objfiles ())
+    if (ofp->per_bfd->minimal_symbol_count > 0)
+      return true;
+
+  return false;
 }
 
 /* Qsort comparison function.  */
@@ -1184,16 +1171,14 @@ pc_in_section (CORE_ADDR pc, const char *name)
 	  && s->the_bfd_section->name != nullptr
 	  && strcmp (s->the_bfd_section->name, name) == 0);
 }
-
 
-/* Set section_map_dirty so section map will be rebuilt next time it
-   is used.  Called by reread_symbols.  */
+/* See objfiles.h.  */
 
 void
-objfiles_changed (void)
+objfiles_changed (program_space *pspace)
 {
   /* Rebuild section map next time we need it.  */
-  get_objfile_pspace_data (current_program_space)->section_map_dirty = 1;
+  get_objfile_pspace_data (pspace)->section_map_dirty = 1;
 }
 
 /* See comments in objfiles.h.  */

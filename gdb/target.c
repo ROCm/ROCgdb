@@ -57,7 +57,7 @@
 #include "cli/cli-decode.h"
 #include "cli/cli-style.h"
 
-static void generic_tls_error (void) ATTRIBUTE_NORETURN;
+[[noreturn]] static void generic_tls_error (void);
 
 static void default_rcmd (struct target_ops *, const char *, struct ui_file *);
 
@@ -65,7 +65,7 @@ static int default_verify_memory (struct target_ops *self,
 				  const gdb_byte *data,
 				  CORE_ADDR memaddr, ULONGEST size);
 
-static void tcomplain (void) ATTRIBUTE_NORETURN;
+[[noreturn]] static void tcomplain (void);
 
 /* Mapping between target_info objects (which have address identity)
    and corresponding open/factory function/callback.  Each add_target
@@ -2429,7 +2429,7 @@ info_target_command (const char *args, int from_tty)
    resets (things which might change between targets).  */
 
 void
-target_pre_inferior (int from_tty)
+target_pre_inferior ()
 {
   /* Clear out solib state.  Otherwise the solib state of the previous
      inferior might have survived and is entirely wrong for the new
@@ -2453,7 +2453,7 @@ target_pre_inferior (int from_tty)
      memory regions and features.  */
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
-      no_shared_libraries (NULL, from_tty);
+      no_shared_libraries (current_program_space);
 
       invalidate_target_mem_regions ();
 
@@ -2507,7 +2507,7 @@ target_preopen (int from_tty)
      live process to a core of the same program.  */
   current_inferior ()->pop_all_targets_above (file_stratum);
 
-  target_pre_inferior (from_tty);
+  target_pre_inferior ();
 }
 
 /* See target.h.  */
@@ -3234,6 +3234,14 @@ target_ops::fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 }
 
 int
+target_ops::fileio_stat (struct inferior *inf, const char *filename,
+			 struct stat *sb, fileio_error *target_errno)
+{
+  *target_errno = FILEIO_ENOSYS;
+  return -1;
+}
+
+int
 target_ops::fileio_close (int fd, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
@@ -3348,6 +3356,29 @@ target_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
   target_debug_printf_nofunc ("target_fileio_fstat (%d) = %d (%d)", fd, ret,
 		       ret != -1 ? 0 : *target_errno);
   return ret;
+}
+
+/* See target.h.  */
+
+int
+target_fileio_stat (struct inferior *inf, const char *filename,
+		    struct stat *sb, fileio_error *target_errno)
+{
+  for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
+    {
+      int ret = t->fileio_stat (inf, filename, sb, target_errno);
+
+      if (ret == -1 && *target_errno == FILEIO_ENOSYS)
+	continue;
+
+      target_debug_printf_nofunc ("target_fileio_stat (%s) = %d (%d)",
+				  filename, ret,
+				  ret != -1 ? 0 : *target_errno);
+      return ret;
+    }
+
+  *target_errno = FILEIO_ENOSYS;
+  return -1;
 }
 
 /* See target.h.  */

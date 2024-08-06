@@ -91,6 +91,9 @@ read_cpuinfo ()
 
 #if defined(__aarch64__)
   asm volatile("mrs %0, cntfrq_el0" : "=r" (cpu_info.cpu_clk_freq));
+#elif defined(__riscv)
+  // Set 1000 MHz for minimal support RISC-V, will fix with a better method to get cpu clock frequency.
+  cpu_info.cpu_clk_freq = 1000;
 #endif
 
   // Read /proc/cpuinfo to get CPU info and clock rate
@@ -106,7 +109,7 @@ read_cpuinfo ()
 	    cpu_info.cpu_clk_freq = read_int (temp + 9);
 	  else if (strncmp (temp, "cpu family", 10) == 0)
 	    cpu_info.cpu_family = read_int (temp + 10);
-	  else if (strncmp (temp, "vendor_id", 9) == 0)
+	  else if ((strncmp (temp, "vendor_id", 9) || strncmp (temp, "mvendorid", 9)) == 0)
 	    {
 	      if (cpu_info.cpu_vendorstr == NULL)
 		read_str (temp + 9, &cpu_info.cpu_vendorstr);
@@ -1688,8 +1691,9 @@ Coll_Ctrl::build_data_desc ()
 	    min_time = h->min_time_default;
 	  if (ii > 0)
 	    sb.append (',');
-	  sb.appendf ("%d:%d:%lld:%s:%s:%lld:%d:m%lld:%d:%d:0x%x",
+	  sb.appendf ("%d:%d:%lld:%lld:%s:%s:%lld:%d:m%lld:%d:%d:0x%x",
 		  h->use_perf_event_type, h->type, (long long) h->config,
+		  (long long) h->config1,
 		  strcmp (h->name, h->int_name) ? h->name : "",
 		  h->int_name, (long long) h->reg_num, h->val,
 		  (long long) min_time, ii, /*tag*/ h->timecvt, h->memop);

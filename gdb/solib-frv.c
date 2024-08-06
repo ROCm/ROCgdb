@@ -382,6 +382,8 @@ frv_current_sos ()
 	  li->map = loadmap;
 	  li->got_value = got_addr;
 	  li->lm_addr = lm_addr;
+	  sop->lm_info = std::move (li);
+
 	  /* Fetch the name.  */
 	  addr = extract_unsigned_integer (lm_buf.l_name,
 					   sizeof (lm_buf.l_name),
@@ -687,7 +689,7 @@ enable_break (void)
       return 0;
     }
 
-  if (!entry_point_address_query (&entry_point))
+  if (!entry_point_address_query (current_program_space, &entry_point))
     {
       solib_debug_printf ("Symbol file has no entry point.");
       return 0;

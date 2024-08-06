@@ -249,6 +249,7 @@ enum {
   PACKET_vFile_unlink,
   PACKET_vFile_readlink,
   PACKET_vFile_fstat,
+  PACKET_vFile_stat,
   PACKET_qXfer_auxv,
   PACKET_qXfer_features,
   PACKET_qXfer_exec_file,
@@ -1011,6 +1012,9 @@ public:
 
   int fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno) override;
 
+  int fileio_stat (struct inferior *inf, const char *filename,
+		   struct stat *sb, fileio_error *target_errno) override;
+
   int fileio_close (int fd, fileio_error *target_errno) override;
 
   int fileio_unlink (struct inferior *inf,
@@ -1534,7 +1538,7 @@ static void remote_console_output (const char *msg, ui_file *stream);
 
 static void remote_btrace_reset (remote_state *rs);
 
-static void remote_unpush_and_throw (remote_target *target);
+[[noreturn]] static void remote_unpush_and_throw (remote_target *target);
 
 /* For "remote".  */
 
@@ -2522,9 +2526,6 @@ packet_check_result (const char *buf)
 	/* "Enn"  - definitely an error.  */
 	return packet_result::make_numeric_error (buf + 1);
 
-      /* Not every request accepts an error in a E.msg form.
-	 Some packets accepts only Enn, in this case E. is not
-	 defined and E. is treated as PACKET_OK.  */
       /* Always treat "E." as an error.  This will be used for
 	 more verbose error messages, such as E.memtypes.  */
       if (buf[0] == 'E' && buf[1] == '.')
@@ -3370,17 +3371,6 @@ struct gdb_ext_thread_info
     char more_display[256];	/* Long info, statistics, queue depth,
 				   whatever.  */
   };
-
-/* The volume of remote transfers can be limited by submitting
-   a mask containing bits specifying the desired information.
-   Use a union of these values as the 'selection' parameter to
-   get_thread_info.  FIXME: Make these TAG names more thread specific.  */
-
-#define TAG_THREADID 1
-#define TAG_EXISTS 2
-#define TAG_DISPLAY 4
-#define TAG_THREADNAME 8
-#define TAG_MOREDISPLAY 16
 
 #define BUF_THREAD_ID_SIZE (OPAQUETHREADBYTES * 2)
 
@@ -5944,7 +5934,7 @@ remote_target::remote_query_supported ()
 
       if (m_features.packet_set_cmd_state (PACKET_accept_error_message)
 	  != AUTO_BOOLEAN_FALSE)
-      remote_query_supported_append (&q, "error-message+");
+	remote_query_supported_append (&q, "error-message+");
 
       q = "qSupported:" + q;
       putpkt (q.c_str ());
@@ -6144,7 +6134,7 @@ remote_unpush_target (remote_target *target)
   fileio_handles_invalidate_target (target);
 }
 
-static void
+[[noreturn]] static void
 remote_unpush_and_throw (remote_target *target)
 {
   remote_unpush_target (target);
@@ -6265,7 +6255,7 @@ remote_target::open_1 (const char *name, int from_tty, int extended_p)
     }
 
   /* First delete any symbols previously loaded from shared libraries.  */
-  no_shared_libraries (NULL, 0);
+  no_shared_libraries (current_program_space);
 
   /* Start the remote connection.  If error() or QUIT, discard this
      target (we'd otherwise be in an inconsistent state) and then
@@ -13042,6 +13032,41 @@ remote_target::fileio_readlink (struct inferior *inf, const char *filename,
   return ret;
 }
 
+/* Helper function to handle ::fileio_fstat and ::fileio_stat result
+   processing.  When this function is called the remote syscall has been
+   performed and we know we didn't get an error back.
+
+   ATTACHMENT and ATTACHMENT_LEN are the attachment data extracted from the
+   remote syscall reply.  EXPECTED_LEN is the length returned from the
+   fstat or stat call, this the length of the returned data (in ATTACHMENT)
+   once it has been decoded.  The fstat/stat result (from the ATTACHMENT
+   data) is to be placed in ST.  */
+
+static int
+fileio_process_fstat_and_stat_reply (const char *attachment,
+				     int attachment_len,
+				     int expected_len,
+				     struct stat *st)
+{
+  struct fio_stat fst;
+
+  int read_len
+    = remote_unescape_input ((gdb_byte *) attachment, attachment_len,
+			     (gdb_byte *) &fst, sizeof (fst));
+
+  if (read_len != expected_len)
+    error (_("vFile:fstat returned %d, but %d bytes."),
+	   expected_len, read_len);
+
+  if (read_len != sizeof (fst))
+    error (_("vFile:fstat returned %d bytes, but expecting %d."),
+	   read_len, (int) sizeof (fst));
+
+  remote_fileio_to_host_stat (&fst, st);
+
+  return 0;
+}
+
 /* Implementation of to_fileio_fstat.  */
 
 int
@@ -13052,8 +13077,6 @@ remote_target::fileio_fstat (int fd, struct stat *st, fileio_error *remote_errno
   int left = get_remote_packet_size ();
   int attachment_len, ret;
   const char *attachment;
-  struct fio_stat fst;
-  int read_len;
 
   remote_buffer_add_string (&p, &left, "vFile:fstat:");
 
@@ -13085,19 +13108,41 @@ remote_target::fileio_fstat (int fd, struct stat *st, fileio_error *remote_errno
       return 0;
     }
 
-  read_len = remote_unescape_input ((gdb_byte *) attachment, attachment_len,
-				    (gdb_byte *) &fst, sizeof (fst));
+  return fileio_process_fstat_and_stat_reply (attachment, attachment_len,
+					      ret, st);
+}
 
-  if (read_len != ret)
-    error (_("vFile:fstat returned %d, but %d bytes."), ret, read_len);
+/* Implementation of to_fileio_stat.  */
 
-  if (read_len != sizeof (fst))
-    error (_("vFile:fstat returned %d bytes, but expecting %d."),
-	   read_len, (int) sizeof (fst));
+int
+remote_target::fileio_stat (struct inferior *inf, const char *filename,
+			    struct stat *st, fileio_error *remote_errno)
+{
+  struct remote_state *rs = get_remote_state ();
+  char *p = rs->buf.data ();
+  int left = get_remote_packet_size () - 1;
 
-  remote_fileio_to_host_stat (&fst, st);
+  if (remote_hostio_set_filesystem (inf, remote_errno) != 0)
+    return {};
 
-  return 0;
+  remote_buffer_add_string (&p, &left, "vFile:stat:");
+
+  remote_buffer_add_bytes (&p, &left, (const gdb_byte *) filename,
+			   strlen (filename));
+
+  int attachment_len;
+  const char *attachment;
+  int ret = remote_hostio_send_command (p - rs->buf.data (), PACKET_vFile_stat,
+					remote_errno, &attachment,
+					&attachment_len);
+
+  /* Unlike ::fileio_fstat, the stat fileio call was added later on, and
+     has none of the legacy bfd issues, so we can just return the error.  */
+  if (ret < 0)
+    return ret;
+
+  return fileio_process_fstat_and_stat_reply (attachment, attachment_len,
+					      ret, st);
 }
 
 /* Implementation of to_filesystem_is_local.  */
@@ -15438,7 +15483,7 @@ remote_objfile_changed_check_symbols (program_space *pspace)
 static void
 remote_new_objfile (struct objfile *objfile)
 {
-  remote_objfile_changed_check_symbols (objfile->pspace);
+  remote_objfile_changed_check_symbols (objfile->pspace ());
 }
 
 /* Pull all the tracepoints defined on the target and create local
@@ -16171,6 +16216,8 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 			 "hostio-readlink", 0);
 
   add_packet_config_cmd (PACKET_vFile_fstat, "vFile:fstat", "hostio-fstat", 0);
+
+  add_packet_config_cmd (PACKET_vFile_stat, "vFile:stat", "hostio-stat", 0);
 
   add_packet_config_cmd (PACKET_vAttach, "vAttach", "attach", 0);
 

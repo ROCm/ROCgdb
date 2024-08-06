@@ -45,5 +45,5 @@
 @c Name of GCC program
 @set GCC gcc
 @c Name of coremerge
-@set COREMERGEN @sc{coremerge}
-@set COREMERGEP coremerge
+@set COREMERGEN @sc{roccoremerge}
+@set COREMERGEP roccoremerge

@@ -2752,6 +2752,9 @@ core_pcbe_init (void)
       return 0;
     case X86_VENDOR_Intel:
       break;
+    case ANDES_VENDOR_ID:
+    case SIFIVE_VENDOR_ID:
+    case THEAD_VENDOR_ID:
     default:
       return -1;
     }
@@ -2913,7 +2916,7 @@ core_pcbe_impl_name (void)
 static const char *
 core_pcbe_cpuref (void)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__riscv)
   return "";
 #elif defined(__i386__) || defined(__x86_64)
   switch (cpuid_getmodel ())
@@ -3017,8 +3020,7 @@ core_pcbe_get_eventnum (const char *eventname, uint_t pmc, eventsel_t *eventnum,
 	  return 0;
 	}
     }
-  *eventnum = (eventsel_t) - 1;
-  return -1;
+  return 0;
 }
 
 static hdrv_pcbe_api_t hdrv_pcbe_core_api = {

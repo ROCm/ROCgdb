@@ -25968,6 +25968,10 @@ future connections is shown.  The available settings are:
 @tab @code{vFile:fstat}
 @tab Host I/O
 
+@item @code{hostio-stat-packet}
+@tab @code{vFile:stat}
+@tab Host I/O
+
 @item @code{hostio-setfs-packet}
 @tab @code{vFile:setfs}
 @tab Host I/O
@@ -31793,9 +31797,21 @@ files.
 @cindex arguments, to user-defined commands
 A @dfn{user-defined command} is a sequence of @value{GDBN} commands to
 which you assign a new name as a command.  This is done with the
-@code{define} command.  User commands may accept an unlimited number of arguments
-separated by whitespace.  Arguments are accessed within the user command
-via @code{$arg0@dots{}$argN}.  A trivial example:
+@code{define} command.
+
+User commands may accept an unlimited number of arguments separated by
+whitespace.  Arguments are accessed within the user command via
+@code{$arg0@dots{}$argN}.  The arguments are text substitutions, so
+they may reference variables, use complex expressions, or even perform
+inferior functions calls.  Note, however, that this textual
+substitution means that working with certain arguments is difficult.
+For example, there is no way for the user to pass an argument
+containing a space; and while stringifying an argument can be done
+using an expression like @code{"$arg1"}, this will fail if the
+argument contains a quote.  For more complicated and robust commands,
+we recommend writing them in Python; see @ref{CLI Commands In Python}.
+
+A trivial example:
 
 @smallexample
 define adder
@@ -31812,9 +31828,7 @@ adder 1 2 3
 
 @noindent
 This defines the command @code{adder}, which prints the sum of
-its three arguments.  Note the arguments are text substitutions, so they may
-reference variables, use complex expressions, or even perform inferior
-functions calls.
+its three arguments.
 
 @cindex argument count in user-defined commands
 @cindex how many arguments (user-defined commands)
@@ -49412,6 +49426,13 @@ error occurred.
 
 @item vFile:fstat: @var{fd}
 Get information about the open file corresponding to @var{fd}.
+On success the information is returned as a binary attachment
+and the return value is the size of this attachment in bytes.
+If an error occurs the return value is -1.  The format of the
+returned binary attachment is as described in @ref{struct stat}.
+
+@item vFile:stat: @var{filename}
+Get information about the file @var{filename} on the target.
 On success the information is returned as a binary attachment
 and the return value is the size of this attachment in bytes.
 If an error occurs the return value is -1.  The format of the

@@ -387,6 +387,8 @@ const aarch64_field fields[] =
     {  5, 14 },	/* imm14: in test bit and branch instructions.  */
     {  0, 16 },	/* imm16_0: in udf instruction. */
     {  5, 16 },	/* imm16_5: in exception instructions.  */
+    { 17,  1 }, /* imm17_1: in 1 bit element index.  */
+    { 17,  2 }, /* imm17_2: in 2 bits element index.  */
     {  5, 19 },	/* imm19: e.g. in CBZ.  */
     {  0, 26 },	/* imm26: in unconditional branch instructions.  */
     { 16,  3 },	/* immb: in advsimd shift by immediate instructions.  */
@@ -431,7 +433,11 @@ const aarch64_field fields[] =
     {  6,  1 }, /* ZAn: name of the bit encoded ZA tile.  */
     { 12,  4 },	/* opc2: in rcpc3 ld/st inst deciding the pre/post-index.  */
     { 30,  2 },	/* rcpc3_size: in rcpc3 ld/st, field controls Rt/Rt2 width.  */
-    { 5,  1 },	/* FLD_brbop: used in BRB to mean IALL or INJ.  */
+    {  5,  1 },	/* FLD_brbop: used in BRB to mean IALL or INJ.  */
+    {  8,  1 }, /* ZA8_1: name of the 1 bit encoded ZA tile ZA0-ZA1.  */
+    {  7,  2 }, /* ZA7_2: name of the 2 bits encoded ZA tile ZA0-ZA3.  */
+    {  6,  3 }, /* ZA6_3: name of the 3 bits encoded ZA tile ZA0-ZA7.  */
+    {  5,  4 }, /* ZA5_4: name of the 4 bits encoded ZA tile ZA0-ZA15.  */
 };
 
 enum aarch64_operand_class
@@ -1623,13 +1629,14 @@ check_reglist (const aarch64_opnd_info *opnd,
    - an initial immediate offset that is a multiple of RANGE_SIZE
      in the range [0, MAX_VALUE * RANGE_SIZE]
 
-   - a vector group size of GROUP_SIZE.  */
+   - a vector group size of GROUP_SIZE.
 
+   - STATUS_VG for cases where VGx2 or VGx4 is mandatory.  */
 static bool
 check_za_access (const aarch64_opnd_info *opnd,
 		 aarch64_operand_error *mismatch_detail, int idx,
 		 int min_wreg, int max_value, unsigned int range_size,
-		 int group_size)
+		 int group_size, bool status_vg)
 {
   if (!value_in_range_p (opnd->indexed_za.index.regno, min_wreg, min_wreg + 3))
     {
@@ -1681,8 +1688,8 @@ check_za_access (const aarch64_opnd_info *opnd,
     }
 
   /* The vector group specifier is optional in assembly code.  */
-  if (opnd->indexed_za.group_size != 0
-      && opnd->indexed_za.group_size != group_size)
+  if (opnd->indexed_za.group_size != group_size
+      && (status_vg || opnd->indexed_za.group_size != 0 ))
     {
       set_invalid_vg_size (mismatch_detail, idx, group_size);
       return false;
@@ -1874,6 +1881,14 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	case AARCH64_OPND_SME_Zn_INDEX3_14:
 	case AARCH64_OPND_SME_Zn_INDEX3_15:
 	case AARCH64_OPND_SME_Zn_INDEX4_14:
+	case AARCH64_OPND_SVE_Zn0_INDEX:
+	case AARCH64_OPND_SVE_Zn1_17_INDEX:
+	case AARCH64_OPND_SVE_Zn2_18_INDEX:
+	case AARCH64_OPND_SVE_Zn3_22_INDEX:
+	case AARCH64_OPND_SVE_Zd0_INDEX:
+	case AARCH64_OPND_SVE_Zd1_17_INDEX:
+	case AARCH64_OPND_SVE_Zd2_18_INDEX:
+	case AARCH64_OPND_SVE_Zd3_22_INDEX:
 	  size = get_operand_fields_width (get_operand_from_code (type)) - 5;
 	  if (!check_reglane (opnd, mismatch_detail, idx, "z", 0, 31,
 			      0, (1 << size) - 1))
@@ -1909,7 +1924,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  size = aarch64_get_qualifier_esize (opnd->qualifier);
 	  max_value = 16 / size - 1;
 	  if (!check_za_access (opnd, mismatch_detail, idx,
-				12, max_value, 1, 0))
+				12, max_value, 1, 0, get_opcode_dependent_value (opcode)))
 	    return 0;
 	  break;
 
@@ -1979,87 +1994,108 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  size = aarch64_get_qualifier_esize (opnd->qualifier);
 	  max_value = 16 / size - 1;
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, max_value, 1,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off4:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 15, 1,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off3_0:
 	case AARCH64_OPND_SME_ZA_array_off3_5:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 8, 7, 1,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off1x4:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 8, 1, 4,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off2x2:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 8, 3, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off2x4:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 8, 3, 4,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_off3x2:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 8, 7, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrsb_1:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 7, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrsh_1:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 3, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrss_1:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 1, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrsd_1:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 0, 2,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrsb_2:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 3, 4,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrsh_2:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 1, 4,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
+	    return 0;
+	  break;
+
+	case AARCH64_OPND_SME_ZA_ARRAY4:
+	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 15, 1,
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
 	case AARCH64_OPND_SME_ZA_array_vrss_2:
 	case AARCH64_OPND_SME_ZA_array_vrsd_2:
 	  if (!check_za_access (opnd, mismatch_detail, idx, 12, 0, 4,
-				get_opcode_dependent_value (opcode)))
+				get_opcode_dependent_value (opcode),
+				get_opcode_dependent_vg_status (opcode)))
 	    return 0;
 	  break;
 
@@ -2070,8 +2106,8 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  max_value = 16 / num / size;
 	  if (max_value > 0)
 	    max_value -= 1;
-	  if (!check_za_access (opnd, mismatch_detail, idx,
-				12, max_value, num, 0))
+	  if (!check_za_access (opnd, mismatch_detail, idx, 12, max_value, num,
+				0, get_opcode_dependent_value (opcode)))
 	    return 0;
 	  break;
 
@@ -4248,11 +4284,11 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Zt:
     case AARCH64_OPND_SME_Zm:
       if (opnd->qualifier == AARCH64_OPND_QLF_NIL)
-	snprintf (buf, size, "%s", style_reg (styler, "z%d", opnd->reg.regno));
+       snprintf (buf, size, "%s", style_reg (styler, "z%d", opnd->reg.regno));
       else
-	snprintf (buf, size, "%s",
-		  style_reg (styler, "z%d.%s", opnd->reg.regno,
-			     aarch64_get_qualifier_name (opnd->qualifier)));
+       snprintf (buf, size, "%s",
+		 style_reg (styler, "z%d.%s", opnd->reg.regno,
+			    aarch64_get_qualifier_name (opnd->qualifier)));
       break;
 
     case AARCH64_OPND_SVE_ZnxN:
@@ -4305,6 +4341,22 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 		 : style_reg (styler, "z%d.%s", opnd->reglane.regno,
 			      aarch64_get_qualifier_name (opnd->qualifier))),
 		style_imm (styler, "%" PRIi64, opnd->reglane.index));
+      break;
+
+    case AARCH64_OPND_SVE_Zn0_INDEX:
+    case AARCH64_OPND_SVE_Zn1_17_INDEX:
+    case AARCH64_OPND_SVE_Zn2_18_INDEX:
+    case AARCH64_OPND_SVE_Zn3_22_INDEX:
+    case AARCH64_OPND_SVE_Zd0_INDEX:
+    case AARCH64_OPND_SVE_Zd1_17_INDEX:
+    case AARCH64_OPND_SVE_Zd2_18_INDEX:
+    case AARCH64_OPND_SVE_Zd3_22_INDEX:
+      if (opnd->reglane.index == 0)
+	snprintf (buf, size, "%s", style_reg (styler, "z%d", opnd->reg.regno));
+      else
+	snprintf (buf, size, "%s[%s]",
+		  style_reg (styler, "z%d", opnd->reglane.regno),
+		  style_imm (styler, "%" PRIi64, opnd->reglane.index));
       break;
 
     case AARCH64_OPND_SME_ZAda_1b:
@@ -4382,6 +4434,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SME_ZA_array_vrsh_2:
     case AARCH64_OPND_SME_ZA_array_vrss_2:
     case AARCH64_OPND_SME_ZA_array_vrsd_2:
+    case AARCH64_OPND_SME_ZA_ARRAY4:
       snprintf (buf, size, "%s [%s, %s%s%s]",
 		style_reg (styler, "za%d%c%s%s",
 			   opnd->indexed_za.regno,

@@ -1828,7 +1828,7 @@ dwarf2_compile_property_to_c (string_file *stream,
 /* A helper function that throws an unimplemented error mentioning a
    given DWARF operator.  */
 
-static void ATTRIBUTE_NORETURN
+[[noreturn]] static void
 unimplemented (unsigned int op)
 {
   const char *name = get_DW_OP_name (op);

@@ -8,6 +8,7 @@ Contents of the SFrame section .sframe:
 
     Version: SFRAME_VERSION_2
     Flags: NONE
+    CFA fixed RA offset: \-8
     Num FDEs: 1
     Num FREs: 4
 
@@ -15,8 +16,8 @@ Contents of the SFrame section .sframe:
 
     func idx \[0\]: pc = 0x0, size = 25 bytes
     STARTPC +CFA +FP +RA +
-    0+0000 +sp\+8 +u +u +
-    0+0001 +sp\+16 +c\-16 +u +
-    0+0004 +fp\+16 +c\-16 +u +
-    0+0018 +sp\+8 +c\-16 +u +
+    0+0000 +sp\+8 +u +f +
+    0+0001 +sp\+16 +c\-16 +f +
+    0+0004 +fp\+16 +c\-16 +f +
+    0+0018 +sp\+8 +c\-16 +f +
 #pass

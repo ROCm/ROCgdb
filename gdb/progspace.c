@@ -115,7 +115,7 @@ program_space::~program_space ()
   set_current_program_space (this);
 
   breakpoint_program_space_exit (this);
-  no_shared_libraries (NULL, 0);
+  no_shared_libraries (this);
   free_all_objfiles ();
   /* Defer breakpoint re-set because we don't want to create new
      locations for this pspace which we're tearing down.  */
@@ -128,7 +128,7 @@ void
 program_space::free_all_objfiles ()
 {
   /* Any objfile reference would become stale.  */
-  for (const solib &so : current_program_space->solibs ())
+  for (const solib &so : this->solibs ())
     gdb_assert (so.objfile == NULL);
 
   while (!objfiles_list.empty ())
