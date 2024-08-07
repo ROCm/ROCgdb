@@ -30090,6 +30090,13 @@ Watchpoints}) might not be reported to the debugger if the memory is
 modified by the last instruction of the shader when precise memory
 is not enabled (@pxref{AMDGPU Memory Violation Reporting}).
 
+@item
+For architectures @samp{gfx10*}, @samp{gfx11*} and @samp{gfx12*}, a
+breakpoint should not be placed in a clause (see the @samp{s_clause}
+instruction in the relevant instruction set manual).  It is possible to
+step through a clause.  Waves can receive asynchronous exceptions
+while in a clause.
+
 @end enumerate
 
 @node Controlling GDB
