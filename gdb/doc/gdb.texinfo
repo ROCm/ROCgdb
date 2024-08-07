@@ -29700,9 +29700,6 @@ Error while mapping shared library sections:
 @end smallexample
 
 @item
-No support yet for @acronym{AMD GPU} core dumps.
-
-@item
 When in non-stop mode, wavefronts may not hit breakpoints inserted
 while not stopped, nor see memory updates made while not stopped,
 until the wavefront is next stopped.  Memory updated by non-stopped
