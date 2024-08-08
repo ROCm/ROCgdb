@@ -2353,6 +2353,14 @@ namespace eval ::varobj_tree {
     return $var_name
   }
 
+  # Check if VARIABLE is one of the CPLUS_FAKE_CHILD varobjs, i.e., it
+  # doesn't have a type.  Such a varobj is one of the artificial
+  # public/private/protected nodes.
+  proc is_cplus_fake_child {variable} {
+    upvar #0 $variable varobj
+    return [string equal $varobj(type) ""]
+  }
+
   # Should VARIABLE be used in path expressions?  The CPLUS_FAKE_CHILD
   # varobjs and anonymous structs/unions are not used for path expressions.
   proc is_path_expr_parent {variable} {
@@ -2361,7 +2369,7 @@ namespace eval ::varobj_tree {
     # If the varobj's type is "", it is a CPLUS_FAKE_CHILD.
     # If the tail of the varobj's object name is "%d_anonymous",
     # then it represents an anonymous struct or union.
-    if {[string length $varobj(type)] == 0 \
+    if {[is_cplus_fake_child $variable] \
 	    || [regexp {[0-9]+_anonymous$} $varobj(obj_name)]} {
       return false
     }
@@ -2374,6 +2382,7 @@ namespace eval ::varobj_tree {
   proc get_path_expr {parent_variable name type} {
     upvar #0 $parent_variable parent
     upvar #0 $parent_variable path_parent
+    set parent_var_name $parent_variable
 
     # If TYPE is "", this is one of the CPLUS_FAKE_CHILD varobjs,
     # which has no path expression.  Likewsise for anonymous structs
@@ -2401,6 +2410,13 @@ namespace eval ::varobj_tree {
       set is_compound 0
     }
 
+    # A base class has the same name as its type and its parent node is not
+    # a CPLUS_FAKE_CHILD varobj.  Class members are always children of a
+    # CPLUS_FAKE_CHILD.
+    if {$type eq $name && ![is_cplus_fake_child $parent_var_name]} {
+      # This is a base class.
+      return "((class $type) $path_parent(path_expr))"
+    }
     if {[string index $parent(type) end] == "\]"} {
       # Parent is an array.
       return "($path_parent(path_expr))\[$name\]"
