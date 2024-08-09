@@ -22,6 +22,7 @@
 #include "linux-ptrace.h"
 
 #include "arch/aarch64.h"
+#include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-mte-linux-ptrace.h"
@@ -118,10 +119,10 @@ aarch64_mte_fetch_memtags (int tid, CORE_ADDR address, size_t len,
   if (ntags == 0)
     return true;
 
-  gdb_byte tagbuf[ntags];
+  gdb::byte_vector tagbuf (ntags);
 
   struct iovec iovec;
-  iovec.iov_base = tagbuf;
+  iovec.iov_base = tagbuf.data ();
   iovec.iov_len = ntags;
 
   tags.clear ();
