@@ -484,10 +484,12 @@ inferior_call_waitpid (ptid_t pptid, int pid)
   scoped_switch_fork_info switch_fork_info (pptid);
 
   /* Get the waitpid_fn.  */
-  if (lookup_minimal_symbol ("waitpid", NULL, NULL).minsym != NULL)
+  if (lookup_minimal_symbol (current_program_space, "waitpid").minsym
+      != nullptr)
     waitpid_fn = find_function_in_inferior ("waitpid", &waitpid_objf);
   if (!waitpid_fn
-      && lookup_minimal_symbol ("_waitpid", NULL, NULL).minsym != NULL)
+      && (lookup_minimal_symbol (current_program_space, "_waitpid").minsym
+	  != nullptr))
     waitpid_fn = find_function_in_inferior ("_waitpid", &waitpid_objf);
   if (waitpid_fn != nullptr)
     {
@@ -638,9 +640,7 @@ info_checkpoints_command (const char *arg, int from_tty)
 	gdb_printf (_(", line %d"), sal.line);
       if (!sal.symtab && !sal.line)
 	{
-	  struct bound_minimal_symbol msym;
-
-	  msym = lookup_minimal_symbol_by_pc (pc);
+	  bound_minimal_symbol msym = lookup_minimal_symbol_by_pc (pc);
 	  if (msym.minsym)
 	    gdb_printf (", <%s>", msym.minsym->linkage_name ());
 	}
@@ -703,10 +703,11 @@ checkpoint_command (const char *args, int from_tty)
   
   /* Make the inferior fork, record its (and gdb's) state.  */
 
-  if (lookup_minimal_symbol ("fork", NULL, NULL).minsym != NULL)
+  if (lookup_minimal_symbol (current_program_space, "fork").minsym != nullptr)
     fork_fn = find_function_in_inferior ("fork", &fork_objf);
   if (!fork_fn)
-    if (lookup_minimal_symbol ("_fork", NULL, NULL).minsym != NULL)
+    if (lookup_minimal_symbol (current_program_space, "_fork").minsym
+	!= nullptr)
       fork_fn = find_function_in_inferior ("fork", &fork_objf);
   if (!fork_fn)
     error (_("checkpoint: can't find fork function in inferior."));

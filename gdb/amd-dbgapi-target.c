@@ -3010,16 +3010,18 @@ amd_dbgapi_xfer_global_memory_callback
   /* We need to set inferior_ptid / current_inferior as those are
      used by the target which will process the xfer_partial request.
 
-     Note that end up here when dbgapi tries to access device memory or
-     register content which are at this point mapped/saved in the host
-     process memory.  As a consequence, unwinding GPU frames will most
-     likely call into here.  If we used switch_to_thread to select a host
-     thread, this would implicitly call reinit_frame_cache.  We do not want
-     to clear the frame cache while trying to build it.  */
+     Note that we end up here when amd-dbgapi tries to access device memory or
+     register content which are at this point mapped/saved in the host process
+     memory.  As a consequence, unwinding GPU frames will most likely call into
+     here.  If we used switch_to_thread to select a host thread, this would
+     implicitly call reinit_frame_cache.  We do not want to clear the frame
+     cache while trying to build it.  */
   scoped_restore save_inferior_ptid = make_scoped_restore (&inferior_ptid);
   scoped_restore_current_inferior restore_current_inferior;
+  scoped_restore_current_program_space restore_program_space;
   inferior_ptid = ptid_t (inf->pid);
   set_current_inferior (inf);
+  set_current_program_space (inf->pspace);
 
   target_xfer_status status
     = target_xfer_partial (inf->top_target (), TARGET_OBJECT_RAW_MEMORY,

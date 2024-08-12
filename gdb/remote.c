@@ -5498,13 +5498,12 @@ remote_target::remote_check_symbols ()
 
   while (startswith (reply.data (), "qSymbol:"))
     {
-      struct bound_minimal_symbol sym;
-
       tmp = &reply[8];
       end = hex2bin (tmp, reinterpret_cast <gdb_byte *> (msg.data ()),
 		     strlen (tmp) / 2);
       msg[end] = '\0';
-      sym = lookup_minimal_symbol (msg.data (), NULL, NULL);
+      bound_minimal_symbol sym
+	= lookup_minimal_symbol (current_program_space, msg.data ());
       if (sym.minsym == NULL)
 	xsnprintf (msg.data (), get_remote_packet_size (), "qSymbol::%s",
 		   &reply[8]);

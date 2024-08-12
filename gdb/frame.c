@@ -2618,7 +2618,7 @@ inside_main_func (const frame_info_ptr &this_frame)
   CORE_ADDR sym_addr = 0;
   const char *name = main_name ();
   bound_minimal_symbol msymbol
-    = lookup_minimal_symbol (name, NULL,
+    = lookup_minimal_symbol (current_program_space, name,
 			     current_program_space->symfile_object_file);
 
   if (msymbol.minsym != nullptr)

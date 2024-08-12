@@ -2593,7 +2593,7 @@ struct symbol_search
 
   /* If msymbol is non-null, then a match was made on something for
      which only minimal_symbols exist.  */
-  struct bound_minimal_symbol msymbol;
+  bound_minimal_symbol msymbol;
 
 private:
 
