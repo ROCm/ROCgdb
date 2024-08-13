@@ -301,13 +301,13 @@ do_copy_load_segments (struct out_section *descr)
 			(descr->iphdr->p_filesz - to_copy), SEEK_SET) != 0
 	      || bfd_read (buf, to_read, descr->ibfd) != to_read)
 	    {
-	      non_fatal (_("Failed to read 0x%lx bytes from %s at "
+	      non_fatal (_("warning: Failed to read 0x%lx bytes from %s at "
 			   "offset 0x%lx: %s"),
 			 to_read, bfd_get_filename (descr->ibfd),
 			 (unsigned long) (descr->iphdr->p_offset
 					  + (descr->iphdr->p_filesz - to_copy)),
 			 bfd_errmsg (bfd_get_error ()));
-	      goto err;
+	      break;
 	    }
 
 	  if (!bfd_set_section_contents (descr->obfd, descr->osection,
@@ -318,7 +318,8 @@ do_copy_load_segments (struct out_section *descr)
 	      non_fatal (_("Failed to write 0x%zx bytes in %s at offset: %s"),
 			 to_read, bfd_get_filename (descr->ibfd),
 			 bfd_errmsg (bfd_get_error ()));
-	      goto err;
+	      free (buf);
+	      return -1;
 	    }
 
 	  to_copy -= to_read;
@@ -350,10 +351,6 @@ do_copy_load_segments (struct out_section *descr)
 
   free (buf);
   return 0;
-
-err:
-  free (buf);
-  return -1;
 }
 
 /* Analyze input file IBFD.
