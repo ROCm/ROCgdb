@@ -49,6 +49,15 @@
 
 #define is_power_of_two(x) ((x) && ((x) & ((x) - 1)) == 0)
 
+/* When generating sparse cores, we skip writing blocks comprised of all zeros
+   if the block is of size of SPARSE_BLOCK_SIZE and aligned on a
+   SPARSE_BLOCK_SIZE boundary in the underlying output file.  */
+#define SPARSE_BLOCK_SIZE 0x1000
+
+/* Largest amount of data (in bytes) we copy from an input to the produced
+   combined core file.  */
+#define COPY_SIZE (256 * SPARSE_BLOCK_SIZE)
+
 /* Set by command line flags.  */
 
 static int show_version = 0;
@@ -270,6 +279,86 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
   return 0;
 }
 
+/* Returns 1 if all SIZE first bytes from the buffer referenced by BUF are
+   all NUL bytes, 0 otherwise.
+
+   SIZE must be at most SPARSE_BLOCK_SIZE.  */
+
+static int
+is_all_zeros (const bfd_byte *buf, size_t size)
+{
+  assert (size <= SPARSE_BLOCK_SIZE);
+  static const bfd_byte zeros[SPARSE_BLOCK_SIZE] = {0};
+  return memcmp (buf, zeros, size) == 0;
+}
+
+/* Wrapper around bfd_set_section_contents that skips writing blocks of
+   SPARSE_BLOCK_SIZE size if such block only contains 0s.
+
+   The caller ensures that blocks should be written on a SPARSE_BLOCK_SIZE
+   boundary on the underlying file for this to effectively produce sparse
+   core dumps.  */
+
+static int
+sparse_bfd_set_section_contents (bfd *abfd, asection *section,
+				 const void *data, file_ptr offset,
+				 bfd_size_type count)
+{
+  for (size_t i = 0; i < count; i += SPARSE_BLOCK_SIZE)
+    {
+      size_t block_size = count - i;
+      if (block_size > SPARSE_BLOCK_SIZE)
+	block_size = SPARSE_BLOCK_SIZE;
+
+      /* Ignore writing blocks of all-0s.  */
+      if (!is_all_zeros (data + i, block_size))
+	{
+	  if (!bfd_set_section_contents (abfd, section, data + i, offset + i,
+					 block_size))
+	    return 0;
+	}
+    }
+
+  return 1;
+}
+
+/* Helper function which writes a single 0 at the last byte of the last
+   non-empty section in the file.
+
+   Since that section is at the very end of the output core dump, this ensures
+   that the overall file size is valid, even if we skip writing blocks of 0s
+   to obtain a sparse output.
+
+   This last byte is expected to be overridden later if it should be non-0.
+   If something wrong happens before the end of the copy, we do expect to have
+   0-initialized memory in the missing sections anyway, so this byte is
+   valid.  */
+
+static void
+ensure_last_section_size (struct out_section *descr)
+{
+  struct out_section *last_section = descr;
+  if (last_section == NULL)
+    return;
+
+  /* Output must have began so we are sure BFD has laid out all sections in
+     the output file.  */
+  assert (descr->obfd->output_has_begun);
+  for (descr = descr->next; descr != NULL; descr = descr->next)
+    {
+      if (descr->osection->size > 0
+	  && descr->osection->filepos > last_section->osection->filepos)
+	last_section = descr;
+    }
+
+  if (last_section->osection->size > 0)
+    {
+      const char byte = 0;
+      bfd_set_section_contents (last_section->obfd, last_section->osection,
+				&byte, last_section->osection->size - 1, 1);
+    }
+}
+
 /* Copy data from source file to destination file according to DESCR.
 
    Return 0 on success, non-0 otherwise.  */
@@ -277,12 +366,13 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 static int
 do_copy_load_segments (struct out_section *descr)
 {
-  char *buf = xmalloc (BUFSIZE);
+  char *buf = xmalloc (COPY_SIZE);
+
+  ensure_last_section_size (descr);
 
   for (; descr != NULL; descr = descr->next)
     {
       size_t to_copy = descr->iphdr->p_filesz;
-      size_t to_fill = descr->iphdr->p_memsz - descr->iphdr->p_filesz;
       verbose_printf (_(" Copying segment from %s offset=0x%lx,"
 			" size=0x%lx, vma=0x%lx\n"),
 		      bfd_get_filename (descr->ibfd),
@@ -292,10 +382,23 @@ do_copy_load_segments (struct out_section *descr)
       if (descr->iphdr->p_filesz == 0)
 	continue;
 
+      /* The first chunk should get us up to the next SPARSE_BLOCK_SIZE
+	 alignment on the underlying file.  */
+      int sparse_align = 1;
       /* Copy data from the input file.  */
       while (to_copy > 0)
 	{
-	  size_t to_read = to_copy < BUFSIZE ? to_copy : BUFSIZE;
+	  size_t to_read = to_copy < COPY_SIZE ? to_copy : COPY_SIZE;
+	  if (sparse_align)
+	    {
+	      size_t first_chunk_size
+		= (SPARSE_BLOCK_SIZE
+		   - (descr->osection->filepos % SPARSE_BLOCK_SIZE));
+	      if (first_chunk_size != SPARSE_BLOCK_SIZE)
+		to_read = first_chunk_size;
+
+	      sparse_align = 0;
+	    }
 
 	  if (bfd_seek (descr->ibfd, descr->iphdr->p_offset +
 			(descr->iphdr->p_filesz - to_copy), SEEK_SET) != 0
@@ -310,10 +413,11 @@ do_copy_load_segments (struct out_section *descr)
 	      break;
 	    }
 
-	  if (!bfd_set_section_contents (descr->obfd, descr->osection,
-					 buf,
-					 descr->iphdr->p_filesz - to_copy,
-					 to_read))
+	  if (!sparse_bfd_set_section_contents (descr->obfd, descr->osection,
+						buf,
+						descr->iphdr->p_filesz
+						- to_copy,
+						to_read))
 	    {
 	      non_fatal (_("Failed to write 0x%zx bytes in %s at offset: %s"),
 			 to_read, bfd_get_filename (descr->ibfd),
@@ -323,29 +427,6 @@ do_copy_load_segments (struct out_section *descr)
 	    }
 
 	  to_copy -= to_read;
-	}
-
-      if (to_fill > 0)
-	{
-	  memset (buf, 0, BUFSIZE);
-	  while (to_fill > 0)
-	    {
-	      size_t curr = to_fill < BUFSIZE ? to_fill : BUFSIZE;
-	      if (!bfd_set_section_contents (descr->obfd, descr->osection,
-					     buf,
-					     descr->iphdr->p_memsz - to_fill,
-					     curr))
-		{
-		  non_fatal (_("Failed 0-initialize 0x%zx bytes in %s at "
-			       "offset 0x%lx: %s"),
-			     curr, bfd_get_filename (descr->obfd),
-			     (unsigned long) (descr->iphdr->p_offset
-					      + descr->iphdr->p_memsz - to_fill),
-			     bfd_errmsg (bfd_get_error ()));
-		  break;
-		}
-	      to_fill -= curr;
-	    }
 	}
     }
 
@@ -529,9 +610,7 @@ do_merge_cores (bfd *obfd, bfd *hbfd, bfd *gbfd)
   if (prepare_obfd (obfd, descr, notes_buf_size, &note_sec))
     goto out;
 
-  if ((ret = do_copy_load_segments (descr)) != 0)
-    goto out;
-
+  /* Start the output by writing the note section out.  */
   if (!bfd_set_section_contents (obfd, note_sec, notes_buf, 0,
 				 notes_buf_size))
     {
@@ -540,6 +619,9 @@ do_merge_cores (bfd *obfd, bfd *hbfd, bfd *gbfd)
       ret = -1;
       goto out;
     }
+
+  if ((ret = do_copy_load_segments (descr)) != 0)
+    goto out;
 
   ret = 0;
 
