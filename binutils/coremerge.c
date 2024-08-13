@@ -146,8 +146,8 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
 
       if (in.namedata + in.namesz > (char *) note_end)
 	{
-	  fprintf (stderr, _("Error decoding notes from %s.\n"),
-		   bfd_get_filename (ibfd));
+	  non_fatal (_("Error decoding notes from %s."),
+		     bfd_get_filename (ibfd));
 	  free (note_data);
 	  return -1;
 	}
@@ -159,8 +159,8 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  && (in.descdata > (char *) note_end
 	      || in.descdata + in.descsz > (char *) note_end))
 	{
-	  fprintf (stderr, _("Error decoding notes from %s.\n"),
-		   bfd_get_filename (ibfd));
+	  non_fatal (_("Error decoding notes from %s."),
+		     bfd_get_filename (ibfd));
 	  free (note_data);
 	  return -1;
 	}
@@ -252,7 +252,7 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  || phdr_contains (phdr, head->iphdr->p_vaddr)
 	  || phdr_contains (phdr,
 			    head->iphdr->p_vaddr + head->iphdr->p_memsz - 1))
-	fprintf (stderr, "[warning] Found overapping segments\n");
+	non_fatal (_("[warning] Found overapping segments."));
     }
 
   /* Record the current section to be loaded.  */
@@ -296,20 +296,31 @@ do_copy_load_segments (struct out_section *descr)
       while (to_copy > 0)
 	{
 	  size_t to_read = to_copy < BUFSIZE ? to_copy : BUFSIZE;
+
 	  if (bfd_seek (descr->ibfd, descr->iphdr->p_offset +
 			(descr->iphdr->p_filesz - to_copy), SEEK_SET) != 0
-	      || bfd_read (buf, to_read, descr->ibfd) != to_read
-	      || !bfd_set_section_contents (descr->obfd, descr->osection,
-					    buf,
-					    descr->iphdr->p_filesz - to_copy,
-					    to_read))
+	      || bfd_read (buf, to_read, descr->ibfd) != to_read)
 	    {
-	      fprintf (stderr, _("Failed to copy data from %s to %s.\n"),
-		       bfd_get_filename (descr->ibfd),
-		       bfd_get_filename (descr->obfd));
-	      free (buf);
-	      return -1;
+	      non_fatal (_("Failed to read 0x%lx bytes from %s at "
+			   "offset 0x%lx: %s"),
+			 to_read, bfd_get_filename (descr->ibfd),
+			 (unsigned long) (descr->iphdr->p_offset
+					  + (descr->iphdr->p_filesz - to_copy)),
+			 bfd_errmsg (bfd_get_error ()));
+	      goto err;
 	    }
+
+	  if (!bfd_set_section_contents (descr->obfd, descr->osection,
+					 buf,
+					 descr->iphdr->p_filesz - to_copy,
+					 to_read))
+	    {
+	      non_fatal (_("Failed to write 0x%zx bytes in %s at offset: %s"),
+			 to_read, bfd_get_filename (descr->ibfd),
+			 bfd_errmsg (bfd_get_error ()));
+	      goto err;
+	    }
+
 	  to_copy -= to_read;
 	}
 
@@ -324,11 +335,13 @@ do_copy_load_segments (struct out_section *descr)
 					     descr->iphdr->p_memsz - to_fill,
 					     curr))
 		{
-		  fprintf (stderr, _("Failed to copy data from %s to %s.\n"),
-			   bfd_get_filename (descr->ibfd),
-			   bfd_get_filename (descr->obfd));
-		  free (buf);
-		  return -1;
+		  non_fatal (_("Failed 0-initialize 0x%zx bytes in %s at "
+			       "offset 0x%lx: %s"),
+			     curr, bfd_get_filename (descr->obfd),
+			     (unsigned long) (descr->iphdr->p_offset
+					      + descr->iphdr->p_memsz - to_fill),
+			     bfd_errmsg (bfd_get_error ()));
+		  break;
 		}
 	      to_fill -= curr;
 	    }
@@ -337,6 +350,10 @@ do_copy_load_segments (struct out_section *descr)
 
   free (buf);
   return 0;
+
+err:
+  free (buf);
+  return -1;
 }
 
 /* Analyze input file IBFD.
@@ -402,7 +419,8 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 						 | SEC_ALLOC);
   if (*note_sec == NULL)
     {
-      fprintf (stderr, _("Failed to create the output note section.\n"));
+      non_fatal (_("Failed to create the output note section: %s"),
+		 bfd_errmsg (bfd_get_error ()));
       return -1;
     }
 
@@ -413,8 +431,8 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
   if (!bfd_record_phdr (obfd, PT_NOTE, true, PF_R, false, 0, false, false, 1,
 			note_sec))
     {
-      fprintf (stderr, _("Failed to create program headers in %s.\n"),
-	       bfd_get_filename (obfd));
+      non_fatal (_("Failed to create program headers in %s."),
+		 bfd_get_filename (obfd));
       return -1;
     }
 
@@ -443,7 +461,8 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 	  || !bfd_set_section_vma (descr->osection, descr->iphdr->p_vaddr)
 	  || !bfd_set_section_lma (descr->osection, 0))
 	{
-	  fprintf (stderr, _("Failed to create output section.\n"));
+	  non_fatal (_("Failed to create output section: %s"),
+		     bfd_errmsg (bfd_get_error ()));
 	  return -1;
 	}
 
@@ -452,15 +471,15 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 	  /* Check that phdr->p_align is a power of 2.  */
 	  if (!is_power_of_two (descr->iphdr->p_align))
 	    {
-	      fprintf (stderr, _("Unsupported alignment %#lx.\n"),
-		       descr->iphdr->p_align);
+	      non_fatal (_("Unsupported alignment %#lx."),
+			 descr->iphdr->p_align);
 	      return -1;
 	    }
 
 	  int align = log2 (descr->iphdr->p_align);
 	  if (!bfd_set_section_alignment (descr->osection, align))
 	    {
-	      fprintf (stderr, _("Failed to create output section.\n"));
+	      non_fatal (_("Failed to create output section."));
 	      return -1;
 	    }
 	}
@@ -475,7 +494,7 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
       if (!bfd_record_phdr (descr->obfd, PT_LOAD, true, flags,
 			    false, 0, false, false, 1, &descr->osection))
 	{
-	  fprintf (stderr, _("Failed to create program header.\n"));
+	  non_fatal (_("Failed to create program header."));
 	  return -1;
 	}
     }
@@ -519,8 +538,8 @@ do_merge_cores (bfd *obfd, bfd *hbfd, bfd *gbfd)
   if (!bfd_set_section_contents (obfd, note_sec, notes_buf, 0,
 				 notes_buf_size))
     {
-      fprintf (stderr, _("Failed to write notes in %s.\n"),
-	       bfd_get_filename (obfd));
+      non_fatal (_("Failed to write notes in %s: %s"), bfd_get_filename (obfd),
+		 bfd_errmsg (bfd_get_error ()));
       ret = -1;
       goto out;
     }
@@ -551,13 +570,15 @@ open_core (const char *path)
   ret = bfd_openr (path, NULL);
   if (ret == NULL)
     {
-      fprintf (stderr, _("Failed to open %s.\n"), path);
+      non_fatal (_("Failed to open %s: %s"), path,
+		bfd_errmsg (bfd_get_error ()));
       return NULL;
     }
 
   if (!bfd_check_format (ret, bfd_core))
     {
-      fprintf (stderr, _("%s is not a core file.\n"), bfd_get_filename (ret));
+      non_fatal (_("%s is not a core file: %s"), bfd_get_filename (ret),
+		 bfd_errmsg (bfd_get_error ()));
       bfd_close (ret);
       return NULL;
     }
@@ -566,8 +587,8 @@ open_core (const char *path)
   if (bfd_get_flavour (ret) != bfd_target_elf_flavour
       || get_elf_backend_data (ret)->s->elfclass != ELFCLASS64)
     {
-      fprintf (stderr, _("%s is not an Elf64 based core file.\n"),
-	       bfd_get_filename (ret));
+      non_fatal (_("%s is not an Elf64 based core file."),
+		 bfd_get_filename (ret));
       bfd_close (ret);
       return NULL;
     }
@@ -587,7 +608,7 @@ merge_core (const char *out, const char *host_core, const char *gpu_core)
 
   if (access (out, F_OK) == 0 && !force)
     {
-      printf (_("File %s already exist.  Use '-f' to override.\n"), out);
+      non_fatal (_("File %s already exist.  Use '-f' to override."), out);
       return -1;
     }
 
@@ -608,7 +629,8 @@ merge_core (const char *out, const char *host_core, const char *gpu_core)
       || !bfd_set_format (obfd, bfd_core)
       || !bfd_set_arch_mach (obfd, bfd_get_arch (hbfd), bfd_get_mach (hbfd)) )
     {
-      fprintf (stderr, _("Failed to create %s\n"), out);
+      non_fatal (_("Failed to create %s: %s"), out,
+		 bfd_errmsg (bfd_get_error ()));
       bfd_close (hbfd);
       bfd_close (gbfd);
       return -1;
@@ -684,7 +706,7 @@ main (int argc, char **argv)
      - 2 files to merge.  */
   if (optind + 3 > argc)
     {
-      fprintf (stderr, _("Missing positional arguments.\n\n"));
+      non_fatal (_("Missing positional arguments.\n"));
       usage (stderr, 2);
     }
 
