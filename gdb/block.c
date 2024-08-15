@@ -446,7 +446,7 @@ get_block_compunit_symtab (const struct block *block)
 static void
 initialize_block_iterator (const struct block *block,
 			   struct block_iterator *iter,
-			   const lookup_name_info *name = nullptr)
+			   const lookup_name_info *name)
 {
   enum block_enum which;
   struct compunit_symtab *cu;

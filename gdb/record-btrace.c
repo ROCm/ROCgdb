@@ -828,6 +828,22 @@ btrace_insn_history (struct ui_out *uiout,
 	  btrace_ui_out_decode_error (uiout, btrace_insn_get_error (&it),
 				      conf->format);
 	}
+      else if (insn->iclass == BTRACE_INSN_AUX)
+	{
+	  if ((flags & DISASSEMBLY_OMIT_AUX_INSN) != 0)
+	    continue;
+
+	  uiout->field_fmt ("insn-number", "%u", btrace_insn_number (&it));
+	  uiout->text ("\t");
+	  /* Add 3 spaces to match the instructions and 2 to indent the aux
+	     string to make it more visible.  */
+	  uiout->spaces (5);
+	  uiout->text ("[");
+	  uiout->field_fmt ("aux-data", "%s",
+			    it.btinfo->aux_data.at
+			     (insn->aux_data_index).c_str ());
+	  uiout->text ("]\n");
+	}
       else
 	{
 	  struct disasm_insn dinsn;
@@ -1146,6 +1162,31 @@ btrace_get_bfun_name (const struct btrace_function *bfun)
     return "??";
 }
 
+static void
+btrace_print_aux_insn (struct ui_out *uiout,
+		       const struct btrace_function *bfun,
+		       const struct btrace_thread_info *btinfo,
+		       int level)
+{
+  for (const btrace_insn &insn : bfun->insn)
+    {
+      if (insn.iclass == BTRACE_INSN_AUX)
+	{
+	  /* Indent to the function level.  */
+	  uiout->text ("\t");
+	  /* Adjust for RECORD_PRINT_INDENT_CALLS and indent one
+	     additional level.  */
+	  for (int i = 0; i <= level; ++i)
+	    uiout->text ("  ");
+
+	  uiout->text ("[");
+	  uiout->field_fmt ("aux-data", "%s",
+			    btinfo->aux_data.at (insn.aux_data_index).c_str ());
+	  uiout->text ("]\n");
+	}
+    }
+}
+
 /* Disassemble a section of the recorded function trace.  */
 
 static void
@@ -1166,6 +1207,7 @@ btrace_call_history (struct ui_out *uiout,
       const struct btrace_function *bfun;
       struct minimal_symbol *msym;
       struct symbol *sym;
+      int level = 0;
 
       bfun = btrace_call_get (&it);
       sym = bfun->sym;
@@ -1192,9 +1234,9 @@ btrace_call_history (struct ui_out *uiout,
 
       if ((flags & RECORD_PRINT_INDENT_CALLS) != 0)
 	{
-	  int level = bfun->level + btinfo->level, i;
+	  level = bfun->level + btinfo->level;
 
-	  for (i = 0; i < level; ++i)
+	  for (int i = 0; i < level; ++i)
 	    uiout->text ("  ");
 	}
 
@@ -1221,6 +1263,10 @@ btrace_call_history (struct ui_out *uiout,
 	}
 
       uiout->text ("\n");
+
+      if (((flags & RECORD_DONT_PRINT_AUX) == 0)
+	  && ((bfun->flags & BFUN_CONTAINS_AUX) != 0))
+	btrace_print_aux_insn (uiout, bfun, btinfo, level);
     }
 }
 
@@ -2346,9 +2392,13 @@ record_btrace_single_step_forward (struct thread_info *tp)
     return btrace_step_stopped ();
 
   /* Skip gaps during replay.  If we end up at a gap (at the end of the trace),
-     jump back to the instruction at which we started.  */
+     jump back to the instruction at which we started.  If we're stepping a
+     BTRACE_INSN_AUX instruction, print the auxiliary data and skip the
+     instruction.  */
+
   start = *replay;
-  do
+
+  for (;;)
     {
       unsigned int steps;
 
@@ -2360,8 +2410,23 @@ record_btrace_single_step_forward (struct thread_info *tp)
 	  *replay = start;
 	  return btrace_step_no_history ();
 	}
+
+      const struct btrace_insn *insn = btrace_insn_get (replay);
+      if (insn == nullptr)
+	continue;
+
+      /* If we're stepping a BTRACE_INSN_AUX instruction, print the auxiliary
+	 data and skip the instruction.  */
+      if (insn->iclass == BTRACE_INSN_AUX)
+	{
+	  gdb_printf ("[%s]\n",
+		      btinfo->aux_data.at (insn->aux_data_index).c_str ());
+	  continue;
+	}
+
+      /* We have an instruction, we are done.  */
+      break;
     }
-  while (btrace_insn_get (replay) == NULL);
 
   /* Determine the end of the instruction trace.  */
   btrace_insn_end (&end, btinfo);
@@ -2392,9 +2457,12 @@ record_btrace_single_step_backward (struct thread_info *tp)
 
   /* If we can't step any further, we reached the end of the history.
      Skip gaps during replay.  If we end up at a gap (at the beginning of
-     the trace), jump back to the instruction at which we started.  */
+     the trace), jump back to the instruction at which we started.
+     If we're stepping a BTRACE_INSN_AUX instruction, print the auxiliary
+     data and skip the instruction.  */
   start = *replay;
-  do
+
+  for (;;)
     {
       unsigned int steps;
 
@@ -2404,8 +2472,22 @@ record_btrace_single_step_backward (struct thread_info *tp)
 	  *replay = start;
 	  return btrace_step_no_history ();
 	}
+
+      const struct btrace_insn *insn = btrace_insn_get (replay);
+      if (insn == nullptr)
+	continue;
+
+      /* Check if we're stepping a BTRACE_INSN_AUX instruction and skip it.  */
+      if (insn->iclass == BTRACE_INSN_AUX)
+	{
+	  gdb_printf ("[%s]\n",
+		      btinfo->aux_data.at (insn->aux_data_index).c_str ());
+	  continue;
+	}
+
+      /* We have an instruction, we are done.  */
+      break;
     }
-  while (btrace_insn_get (replay) == NULL);
 
   /* Check if we're stepping a breakpoint.
 
@@ -2827,26 +2909,33 @@ record_btrace_target::goto_record_end ()
 /* The goto_record method of target record-btrace.  */
 
 void
-record_btrace_target::goto_record (ULONGEST insn)
+record_btrace_target::goto_record (ULONGEST insn_number)
 {
   struct thread_info *tp;
   struct btrace_insn_iterator it;
   unsigned int number;
   int found;
 
-  number = insn;
+  number = insn_number;
 
   /* Check for wrap-arounds.  */
-  if (number != insn)
+  if (number != insn_number)
     error (_("Instruction number out of range."));
 
   tp = require_btrace_thread ();
 
   found = btrace_find_insn_by_number (&it, &tp->btrace, number);
 
-  /* Check if the instruction could not be found or is a gap.  */
-  if (found == 0 || btrace_insn_get (&it) == NULL)
+  /* Check if the instruction could not be found or is a gap or an
+     auxiliary instruction.  */
+  if (found == 0)
     error (_("No such instruction."));
+
+  const struct btrace_insn *insn = btrace_insn_get (&it);
+  if (insn == NULL)
+    error (_("No such instruction."));
+  if (insn->iclass == BTRACE_INSN_AUX)
+    error (_("Can't go to an auxiliary instruction."));
 
   record_btrace_set_replay (tp, &it);
 }
@@ -3218,4 +3307,9 @@ to see the actual buffer size."), NULL, show_record_pt_buffer_size_value,
 
   record_btrace_conf.bts.size = 64 * 1024;
   record_btrace_conf.pt.size = 16 * 1024;
+#if (LIBIPT_VERSION >= 0x200)
+  record_btrace_conf.pt.ptwrite = true;
+#else
+  record_btrace_conf.pt.ptwrite = false;
+#endif
 }

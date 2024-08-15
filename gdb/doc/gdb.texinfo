@@ -7861,6 +7861,9 @@ Moxie, PowerPC, PowerPC64, S/390, and x86 (i386/amd64) running
 GNU/Linux.  Process record and replay can be used both when native
 debugging, and when remote debugging via @code{gdbserver}.
 
+When recording an inferior, @value{GDBN} may print auxiliary information
+during stepping commands and commands displaying the execution history.
+
 For architecture environments that support process record and replay,
 @value{GDBN} provides the following commands:
 
@@ -8276,6 +8279,9 @@ To better align the printed instructions when the trace contains
 instructions from more than one function, the function name may be
 omitted by specifying the @code{/f} modifier.
 
+Printing auxiliary information is enabled by default and can be
+omitted with the @code{/a} modifier.
+
 Speculatively executed instructions are prefixed with @samp{?}.  This
 feature is not available for all recording formats.
 
@@ -8329,8 +8335,9 @@ that function, the source lines for this instruction sequence (if the
 @code{/l} modifier is specified), and the instructions numbers that form
 the sequence (if the @code{/i} modifier is specified).  The function names
 are indented to reflect the call stack depth if the @code{/c} modifier is
-specified.  The @code{/l}, @code{/i}, and @code{/c} modifiers can be given
-together.
+specified.  Printing auxiliary information is enabled by default and can be
+omitted with the @code{/a} modifier.  The @code{/l}, @code{/i}, @code{/a},
+and @code{/c} modifiers can be given together.
 
 @smallexample
 (@value{GDBP}) @b{list 1, 10}
@@ -47963,6 +47970,11 @@ These are the currently defined stub features and their properties:
 @tab @samp{-}
 @tab Yes
 
+@item @samp{Qbtrace-conf:pt:ptwrite}
+@tab Yes
+@tab @samp{-}
+@tab Yes
+
 @item @samp{QNonStop}
 @tab No
 @tab @samp{-}
@@ -48283,6 +48295,9 @@ The remote stub understands the @samp{Qbtrace-conf:bts:size} packet.
 
 @item Qbtrace-conf:pt:size
 The remote stub understands the @samp{Qbtrace-conf:pt:size} packet.
+
+@item Qbtrace-conf:pt:ptwrite
+The remote stub understands the @samp{Qbtrace-conf:pt:ptwrite} packet.
 
 @item swbreak
 The remote stub reports the @samp{swbreak} stop reason for memory
@@ -48771,6 +48786,18 @@ Reply:
 @table @samp
 @item OK
 The ring buffer size has been set.
+@end table
+
+@item Qbtrace-conf:pt:ptwrite=@var{(yes|no)}
+Indicate support for @code{PTWRITE} packets.  This allows for backwards
+compatibility.
+
+Reply:
+@table @samp
+@item OK
+The ptwrite config parameter has been set.
+@item E.errtext
+A badly formed request or an error was encountered.
 @end table
 
 @end table
@@ -51414,6 +51441,7 @@ The formal DTD for the branch trace configuration format is given below:
 
 <!ELEMENT pt	EMPTY>
 <!ATTLIST pt	size	CDATA	#IMPLIED>
+<!ATTLIST pt	ptwrite	(yes | no)	#IMPLIED>
 @end smallexample
 
 @include agentexpr.texi

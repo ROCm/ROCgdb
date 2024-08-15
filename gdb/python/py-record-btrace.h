@@ -31,6 +31,9 @@ extern PyObject *recpy_bt_format (PyObject *self, void *closure);
 /* Implementation of record.goto (instruction) -> None.  */
 extern PyObject *recpy_bt_goto (PyObject *self, PyObject *value);
 
+/* Implementation of BtraceRecord.clear (self) -> None.  */
+extern PyObject *recpy_bt_clear (PyObject *self, PyObject *args);
+
 /* Implementation of record.instruction_history [list].  */
 extern PyObject *recpy_bt_instruction_history (PyObject *self, void *closure);
 
@@ -87,5 +90,8 @@ extern PyObject *recpy_bt_func_prev (PyObject *self, void *closure);
 
 /* Implementation of RecordFunctionSegment.next [RecordFunctionSegment].  */
 extern PyObject *recpy_bt_func_next (PyObject *self, void *closure);
+
+/* Implementation of RecordAuxiliary.decoded [str].  */
+extern PyObject *recpy_bt_aux_data (PyObject *self, void *closure);
 
 #endif /* PYTHON_PY_RECORD_BTRACE_H */
