@@ -162,6 +162,7 @@ struct riscv_ip_error
 
 static const char default_arch[] = DEFAULT_ARCH;
 static const char *default_arch_with_ext = DEFAULT_RISCV_ARCH_WITH_EXT;
+static const char *file_arch_str = NULL;
 static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_NONE;
 static enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_NONE;
 
@@ -305,15 +306,17 @@ static riscv_parse_subset_t riscv_rps_as =
   true,			/* check_unknown_prefixed_ext.  */
 };
 
-/* Update the architecture string in the subset_list.  */
+/* Update file/function-level architecture string according to the
+   subset_list.  */
 
 static void
-riscv_reset_subsets_list_arch_str (void)
+riscv_set_arch_str (const char **arch_str_p)
 {
   riscv_subset_list_t *subsets = riscv_rps_as.subset_list;
-  if (subsets->arch_str != NULL)
-    free ((void *) subsets->arch_str);
-  subsets->arch_str = riscv_arch_str (xlen, subsets);
+  const char *arch_str = *arch_str_p;
+  if (arch_str != NULL)
+    free ((void *) arch_str);
+  *arch_str_p = riscv_arch_str (xlen, subsets);
 }
 
 /* This structure is used to hold a stack of .option values.  */
@@ -347,7 +350,8 @@ riscv_set_arch (const char *s)
     }
   riscv_release_subset_list (riscv_rps_as.subset_list);
   riscv_parse_subset (&riscv_rps_as, s);
-  riscv_reset_subsets_list_arch_str ();
+  riscv_set_arch_str (&file_arch_str);
+  riscv_set_arch_str (&riscv_rps_as.subset_list->arch_str);
 
   riscv_set_rvc (false);
   if (riscv_subset_supports (&riscv_rps_as, "c")
@@ -1687,6 +1691,12 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		    break;
 		  case '3':
 		    used_bits |= ENCODE_CV_IS3_UIMM5 (-1U);
+		    break;
+		  case '6':
+		    used_bits |= ENCODE_CV_BITMANIP_UIMM5(-1U);
+		    break;
+		  case '7':
+		    used_bits |= ENCODE_CV_BITMANIP_UIMM2(-1U);
 		    break;
 		  default:
 		    goto unknown_validate_operand;
@@ -3996,6 +4006,26 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			ip->insn_opcode
 			    |= ENCODE_CV_IS2_UIMM5 (imm_expr->X_add_number);
 			continue;
+		      case '6':
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, FALSE);
+			asarg = expr_parse_end;
+			if (imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 31)
+			  break;
+			ip->insn_opcode
+			    |= ENCODE_CV_BITMANIP_UIMM5 (imm_expr->X_add_number);
+			continue;
+		      case '7':
+			my_getExpression (imm_expr, asarg);
+			check_absolute_expr (ip, imm_expr, FALSE);
+			asarg = expr_parse_end;
+			if (imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 3)
+			  break;
+			ip->insn_opcode
+			    |= ENCODE_CV_BITMANIP_UIMM2 (imm_expr->X_add_number);
+			continue;
 		      default:
 			goto unknown_riscv_ip_operand;
 		    }
@@ -4811,13 +4841,13 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
   if (strcmp (name, "rvc") == 0)
     {
       riscv_update_subset (&riscv_rps_as, "+c");
-      riscv_reset_subsets_list_arch_str ();
+      riscv_set_arch_str (&riscv_rps_as.subset_list->arch_str);
       riscv_set_rvc (true);
     }
   else if (strcmp (name, "norvc") == 0)
     {
       riscv_update_subset (&riscv_rps_as, "-c");
-      riscv_reset_subsets_list_arch_str ();
+      riscv_set_arch_str (&riscv_rps_as.subset_list->arch_str);
       riscv_set_rvc (false);
     }
   else if (strcmp (name, "pic") == 0)
@@ -4838,7 +4868,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       if (ISSPACE (*name) && *name != '\0')
 	name++;
       riscv_update_subset (&riscv_rps_as, name);
-      riscv_reset_subsets_list_arch_str ();
+      riscv_set_arch_str (&riscv_rps_as.subset_list->arch_str);
 
       riscv_set_rvc (false);
       if (riscv_subset_supports (&riscv_rps_as, "c")
@@ -5363,7 +5393,7 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
 static void
 riscv_write_out_attrs (void)
 {
-  const char *arch_str, *priv_str, *p;
+  const char *priv_str, *p;
   /* versions[0]: major version.
      versions[1]: minor version.
      versions[2]: revision version.  */
@@ -5371,10 +5401,10 @@ riscv_write_out_attrs (void)
   unsigned int i;
 
   /* Re-write architecture elf attribute.  */
-  arch_str = riscv_rps_as.subset_list->arch_str;
-  if (!bfd_elf_add_proc_attr_string (stdoutput, Tag_RISCV_arch, arch_str))
+  if (!bfd_elf_add_proc_attr_string (stdoutput, Tag_RISCV_arch, file_arch_str))
     as_fatal (_("error adding attribute: %s"),
 	      bfd_errmsg (bfd_get_error ()));
+  free ((void *) file_arch_str);
 
   /* For the file without any instruction, we don't set the default_priv_spec
      according to the privileged elf attributes since the md_assemble isn't
