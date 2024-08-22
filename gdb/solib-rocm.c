@@ -783,7 +783,7 @@ rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc)
 static int
 rocm_solib_same (const solib &gdb, const solib &inferior)
 {
-  gdb_assert (gdb.provider != inferior.provider);
+  gdb_assert (gdb.provider == inferior.provider);
 
   /* The same code object can be loaded at different addresses (for different
      agents), those should be considered different.  */
