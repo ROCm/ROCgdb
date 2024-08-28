@@ -1,3 +1,2 @@
 .*: Assembler messages:
-.*:3: Error: .* `kmovd'
-.*:4: Error: .* `kmovd'
+.*:3: Error: GOTNTPOFF relocation cannot be used with `kmovd'
