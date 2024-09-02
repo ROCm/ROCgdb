@@ -1736,21 +1736,7 @@ value::record_latest ()
      the value was taken, and fast watchpoints should be able to assume that
      a value on the value history never changes.  */
   if (lazy ())
-    {
-      /* We know that this is a _huge_ array, any attempt to fetch this
-	 is going to cause GDB to throw an error.  However, to allow
-	 the array to still be displayed we fetch its contents up to
-	 `max_value_size' and mark anything beyond "unavailable" in
-	 the history.  */
-      if (m_type->code () == TYPE_CODE_ARRAY
-	  && m_type->length () > max_value_size
-	  && array_length_limiting_element_count.has_value ()
-	  && m_enclosing_type == m_type
-	  && calculate_limited_array_length (m_type) <= max_value_size)
-	m_limited_length = max_value_size;
-
-      fetch_lazy ();
-    }
+    fetch_lazy ();
 
   /* Mark the value as recorded in the history for the availability check.  */
   m_in_history = true;
@@ -3029,8 +3015,8 @@ value_static_field (struct type *type, int fieldno)
 	{
 	  /* With some compilers, e.g. HP aCC, static data members are
 	     reported as non-debuggable symbols.  */
-	  struct bound_minimal_symbol msym
-	    = lookup_minimal_symbol (phys_name, NULL, NULL);
+	  bound_minimal_symbol msym
+	    = lookup_minimal_symbol (current_program_space, phys_name);
 	  struct type *field_type = type->field (fieldno).type ();
 
 	  if (!msym.minsym)
@@ -3214,13 +3200,13 @@ value_fn_field (struct value **arg1p, struct fn_field *f,
   struct type *ftype = TYPE_FN_FIELD_TYPE (f, j);
   const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
   struct symbol *sym;
-  struct bound_minimal_symbol msym;
+  bound_minimal_symbol msym;
 
   sym = lookup_symbol (physname, nullptr, SEARCH_FUNCTION_DOMAIN,
 		       nullptr).symbol;
   if (sym == nullptr)
     {
-      msym = lookup_bound_minimal_symbol (physname);
+      msym = lookup_minimal_symbol (current_program_space, physname);
       if (msym.minsym == NULL)
 	return NULL;
     }

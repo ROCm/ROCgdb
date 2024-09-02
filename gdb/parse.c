@@ -145,7 +145,8 @@ parser_state::push_symbol (const char *name, block_symbol sym)
     }
   else
     {
-      struct bound_minimal_symbol msymbol = lookup_bound_minimal_symbol (name);
+      bound_minimal_symbol msymbol
+	= lookup_minimal_symbol (current_program_space, name);
       if (msymbol.minsym != NULL)
 	push_new<expr::var_msym_value_operation> (msymbol);
       else if (!have_full_symbols (current_program_space)
@@ -162,7 +163,6 @@ void
 parser_state::push_dollar (struct stoken str)
 {
   struct block_symbol sym;
-  struct bound_minimal_symbol msym;
   struct internalvar *isym = NULL;
   std::string copy;
 
@@ -232,7 +232,8 @@ parser_state::push_dollar (struct stoken str)
       push_new<expr::var_value_operation> (sym);
       return;
     }
-  msym = lookup_bound_minimal_symbol (copy.c_str ());
+  bound_minimal_symbol msym
+    = lookup_minimal_symbol (current_program_space, copy.c_str ());
   if (msym.minsym)
     {
       push_new<expr::var_msym_value_operation> (msym);
@@ -422,8 +423,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 		   expression_context_pc, flags, *stringptr,
 		   completer != nullptr, tracker);
 
-  scoped_restore_current_language lang_saver;
-  set_language (lang->la_language);
+  scoped_restore_current_language lang_saver (lang->la_language);
 
   try
     {
@@ -489,10 +489,7 @@ parse_expression_with_language (const char *string, enum language lang)
 {
   std::optional<scoped_restore_current_language> lang_saver;
   if (current_language->la_language != lang)
-    {
-      lang_saver.emplace ();
-      set_language (lang);
-    }
+    lang_saver.emplace (lang);
 
   return parse_expression (string);
 }

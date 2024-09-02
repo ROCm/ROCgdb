@@ -285,7 +285,8 @@ read_begin (void)
   /* Use more.  FIXME-SOMEDAY.  */
 
   if (flag_mri)
-    lex_type['?'] = 3;
+    lex_type['?'] = LEX_BEGIN_NAME | LEX_NAME;
+
   stabs_begin ();
 
 #ifndef WORKING_DOT_WORD
@@ -2849,6 +2850,7 @@ s_mri (int ignore ATTRIBUTE_UNUSED)
 #ifdef TC_M68K
       flag_m68k_mri = 1;
 #endif
+      lex_type['?'] = LEX_BEGIN_NAME | LEX_NAME;
     }
   else
     {
@@ -2856,6 +2858,7 @@ s_mri (int ignore ATTRIBUTE_UNUSED)
 #ifdef TC_M68K
       flag_m68k_mri = 0;
 #endif
+      lex_type['?'] = LEX_QM;
     }
 
   /* Operator precedence changes in m68k MRI mode, so we need to

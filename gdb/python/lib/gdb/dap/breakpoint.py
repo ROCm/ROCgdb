@@ -23,7 +23,14 @@ import gdb
 
 from .server import capability, request, send_event
 from .sources import make_source
-from .startup import DAPException, LogLevel, in_gdb_thread, log_stack, parse_and_eval
+from .startup import (
+    DAPException,
+    LogLevel,
+    exec_mi_and_log,
+    in_gdb_thread,
+    log_stack,
+    parse_and_eval,
+)
 from .typecheck import type_check
 
 # True when suppressing new breakpoint events.
@@ -97,11 +104,16 @@ breakpoint_map = {}
 @in_gdb_thread
 def _breakpoint_descriptor(bp):
     "Return the Breakpoint object descriptor given a gdb Breakpoint."
+    # If there are no objfiles (that is, before the launch request),
+    # we consider all breakpoints to be pending.  This is done to work
+    # around the gdb oddity that setting a breakpoint by address will
+    # always succeed.
+    pending = bp.pending or len(gdb.objfiles()) == 0
     result = {
         "id": bp.number,
-        "verified": not bp.pending,
+        "verified": not pending,
     }
-    if bp.pending:
+    if pending:
         result["reason"] = "pending"
     if bp.locations:
         # Just choose the first location, because DAP doesn't allow
@@ -368,10 +380,13 @@ def _catch_exception(filterId, **args):
         cmd = "-catch-" + filterId
     else:
         raise DAPException("Invalid exception filterID: " + str(filterId))
-    result = gdb.execute_mi(cmd)
+    result = exec_mi_and_log(cmd)
+    # While the Ada catchpoints emit a "bkptno" field here, the C++
+    # ones do not.  So, instead we look at the "number" field.
+    num = result["bkpt"]["number"]
     # A little lame that there's no more direct way.
     for bp in gdb.breakpoints():
-        if bp.number == result["bkptno"]:
+        if bp.number == num:
             return bp
     # Not a DAPException because this is definitely unexpected.
     raise Exception("Could not find catchpoint after creating")

@@ -506,8 +506,8 @@ arc_linux_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
 
      So we look for the symbol `_dl_linux_resolver', and if we are there,
      gdb sets a breakpoint at the return address, and continues.  */
-  struct bound_minimal_symbol resolver
-    = lookup_minimal_symbol ("_dl_linux_resolver", NULL, NULL);
+  bound_minimal_symbol resolver
+    = lookup_minimal_symbol (current_program_space, "_dl_linux_resolver");
 
   if (arc_debug)
     {

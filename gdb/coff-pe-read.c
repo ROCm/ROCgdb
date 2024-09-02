@@ -174,7 +174,6 @@ add_pe_forwarded_sym (minimal_symbol_reader &reader,
 		      const char *forward_func_name, int ordinal,
 		      const char *dll_name, struct objfile *objfile)
 {
-  struct bound_minimal_symbol msymbol;
   enum minimal_symbol_type msymtype;
   int forward_dll_name_len = strlen (forward_dll_name);
   short section;
@@ -183,15 +182,17 @@ add_pe_forwarded_sym (minimal_symbol_reader &reader,
 						      forward_dll_name,
 						      forward_func_name);
 
-  msymbol = lookup_bound_minimal_symbol (forward_qualified_name.c_str ());
-
+  bound_minimal_symbol msymbol
+    = lookup_minimal_symbol (current_program_space,
+			     forward_qualified_name.c_str ());
   if (!msymbol.minsym)
     {
       int i;
 
       for (i = 0; i < forward_dll_name_len; i++)
 	forward_qualified_name[i] = tolower (forward_qualified_name[i]);
-      msymbol = lookup_bound_minimal_symbol (forward_qualified_name.c_str ());
+      msymbol = lookup_minimal_symbol (current_program_space,
+				       forward_qualified_name.c_str ());
     }
 
   if (!msymbol.minsym)

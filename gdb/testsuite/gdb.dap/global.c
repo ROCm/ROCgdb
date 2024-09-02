@@ -1,10 +1,6 @@
-/* Native support for QNX Neutrino version 6.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
-
-   This code was donated by QNX Software Systems Ltd.
-
-   This file is part of GDB.
+   Copyright 2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,11 +15,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CONFIG_NM_NTO_H
-#define CONFIG_NM_NTO_H
+static struct {
+  int x;
+  struct {
+    int x2;
+  } y;
+} global;
 
-/* Setup the valid realtime signal range.  */
-#define REALTIME_LO 41
-#define REALTIME_HI 56
-
-#endif /* CONFIG_NM_NTO_H */
+int
+main ()
+{
+  global.x = 23;
+  global.y.x2 = 47;
+  return 0;			/* BREAK */
+}

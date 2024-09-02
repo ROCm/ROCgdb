@@ -35,6 +35,7 @@
 #endif
 
 #include <vector>
+#include <string>
 
 struct thread_info;
 struct btrace_function;
@@ -52,7 +53,10 @@ enum btrace_insn_class
   BTRACE_INSN_RETURN,
 
   /* The instruction is an unconditional jump.  */
-  BTRACE_INSN_JUMP
+  BTRACE_INSN_JUMP,
+
+  /* The instruction is a pseudo instruction containing auxiliary data.  */
+  BTRACE_INSN_AUX
 };
 
 /* Instruction flags.  */
@@ -68,8 +72,19 @@ DEF_ENUM_FLAGS_TYPE (enum btrace_insn_flag, btrace_insn_flags);
    This represents a single instruction in a branch trace.  */
 struct btrace_insn
 {
-  /* The address of this instruction.  */
-  CORE_ADDR pc;
+  union
+  {
+    /* The address of this instruction.  Applies to btrace_insn with
+       iclass == BTRACE_INSN_OTHER or
+       iclass == BTRACE_INSN_CALL or
+       iclass == BTRACE_INSN_RETURN or
+       iclass == BTRACE_INSN_JUMP.  */
+    CORE_ADDR pc;
+
+    /* Index into btrace_info::aux_data.  Applies to btrace_insn with
+       iclass == BTRACE_INSN_AUX.  */
+    uint64_t aux_data_index;
+  };
 
   /* The size of this instruction in bytes.  */
   gdb_byte size;
@@ -91,7 +106,11 @@ enum btrace_function_flag
 
   /* The 'up' link points to a tail call.  This obviously only makes sense
      if bfun_up_links_to_ret is clear.  */
-  BFUN_UP_LINKS_TO_TAILCALL = (1 << 1)
+  BFUN_UP_LINKS_TO_TAILCALL = (1 << 1),
+
+  /* Indicates that at least one auxiliary instruction is in the current
+     function segment.  */
+  BFUN_CONTAINS_AUX = (1 << 2)
 };
 DEF_ENUM_FLAGS_TYPE (enum btrace_function_flag, btrace_function_flags);
 
@@ -329,6 +348,20 @@ struct btrace_thread_info
      Note that the numbering for btrace function segments starts with 1, so
      function segment i will be at index (i - 1).  */
   std::vector<btrace_function> functions;
+
+  /* Optional auxiliary information that is printed in all commands
+     displaying or stepping through the execution history.  */
+  std::vector<std::string> aux_data;
+
+  /* Function pointer to the ptwrite callback.  Returns the string returned
+     by the ptwrite filter function.  */
+  std::optional<std::string> (*ptw_callback_fun) (const uint64_t payload,
+						  const uint64_t ip,
+						  const void *ptw_context)
+						    = nullptr;
+
+  /* Context for the ptw_callback_fun.  */
+  void *ptw_context = nullptr;
 
   /* The function level offset.  When added to each function's LEVEL,
      this normalizes the function levels such that the smallest level

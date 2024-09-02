@@ -3653,6 +3653,7 @@ elf_link_is_defined_archive_symbol (bfd * abfd, carsym * symdef)
      object file is an IR object, give linker LTO plugin a chance to
      get the correct symbol table.  */
   if (abfd->plugin_format == bfd_plugin_yes
+      || abfd->plugin_format == bfd_plugin_yes_unused
 #if BFD_SUPPORTS_PLUGINS
       || (abfd->plugin_format == bfd_plugin_unknown
 	  && bfd_link_plugin_object_p (abfd))
@@ -5718,9 +5719,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	  if ((s->flags & SEC_RELOC) == 0
 	      || s->reloc_count == 0
 	      || (s->flags & SEC_EXCLUDE) != 0
-	      || ((info->strip == strip_all
-		   || info->strip == strip_debugger)
-		  && (s->flags & SEC_DEBUGGING) != 0))
+	      || (s->flags & SEC_DEBUGGING) != 0)
 	    continue;
 
 	  internal_relocs = _bfd_elf_link_info_read_relocs

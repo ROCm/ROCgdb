@@ -149,7 +149,6 @@ static const solib_ops rocm_solib_ops =
   rocm_solib_open_symbol_file_object,
   rocm_solib_in_dynsym_resolve_code,
   rocm_solib_bfd_open,
-  nullptr /* find_and_open_solib */,
   rocm_solib_same,
   rocm_solib_keep_data_in_core,
   nullptr /* TODO update_breakpoints */,
