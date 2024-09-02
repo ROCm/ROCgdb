@@ -4037,7 +4037,7 @@ build_vex_prefix (const insn_template *t)
 {
   unsigned int register_specifier;
   unsigned int vector_length;
-  unsigned int w;
+  bool w;
 
   /* Check register specifier.  */
   if (i.vex.register_specifier)
@@ -4136,11 +4136,11 @@ build_vex_prefix (const insn_template *t)
 
   /* Check the REX.W bit and VEXW.  */
   if (i.tm.opcode_modifier.vexw == VEXWIG)
-    w = (vexwig == vexw1 || (i.rex & REX_W)) ? 1 : 0;
+    w = vexwig == vexw1 || (i.rex & REX_W);
   else if (i.tm.opcode_modifier.vexw && !(i.rex & REX_W))
-    w = i.tm.opcode_modifier.vexw == VEXW1 ? 1 : 0;
+    w = i.tm.opcode_modifier.vexw == VEXW1;
   else
-    w = (flag_code == CODE_64BIT ? i.rex & REX_W : vexwig == vexw1) ? 1 : 0;
+    w = flag_code == CODE_64BIT ? i.rex & REX_W : vexwig == vexw1;
 
   /* Use 2-byte VEX prefix if possible.  */
   if (w == 0
@@ -4149,13 +4149,13 @@ build_vex_prefix (const insn_template *t)
       && (i.rex & (REX_W | REX_X | REX_B)) == 0)
     {
       /* 2-byte VEX prefix.  */
-      unsigned int r;
+      bool r;
 
       i.vex.length = 2;
       i.vex.bytes[0] = 0xc5;
 
       /* Check the REX.R bit.  */
-      r = (i.rex & REX_R) ? 0 : 1;
+      r = !(i.rex & REX_R);
       i.vex.bytes[1] = (r << 7
 			| register_specifier << 3
 			| vector_length << 2
@@ -4293,7 +4293,8 @@ get_broadcast_bytes (const insn_template *t, bool diag)
 static void
 build_evex_prefix (void)
 {
-  unsigned int register_specifier, w;
+  unsigned int register_specifier;
+  bool w;
   rex_byte vrex_used = 0;
 
   /* Check register specifier.  */
@@ -4360,11 +4361,11 @@ build_evex_prefix (void)
 
   /* Check the REX.W bit and VEXW.  */
   if (i.tm.opcode_modifier.vexw == VEXWIG)
-    w = (evexwig == evexw1 || (i.rex & REX_W)) ? 1 : 0;
+    w = evexwig == evexw1 || (i.rex & REX_W);
   else if (i.tm.opcode_modifier.vexw && !(i.rex & REX_W))
-    w = i.tm.opcode_modifier.vexw == VEXW1 ? 1 : 0;
+    w = i.tm.opcode_modifier.vexw == VEXW1;
   else
-    w = (flag_code == CODE_64BIT ? i.rex & REX_W : evexwig == evexw1) ? 1 : 0;
+    w = flag_code == CODE_64BIT ? i.rex & REX_W : evexwig == evexw1;
 
   /* The third byte of the EVEX prefix.  */
   i.vex.bytes[2] = ((w << 7)
@@ -4575,9 +4576,9 @@ static void establish_rex (void)
   i.rex |= i.prefix[REX_PREFIX] & REX_OPCODE;
 
   /* For 8 bit RegRex64 registers without a prefix, we need an empty rex prefix.  */
-  if (((i.types[first].bitfield.class == Reg && i.types[first].bitfield.byte
+  if (((i.types[first].bitfield.class == Reg
 	&& (i.op[first].regs->reg_flags & RegRex64) != 0)
-       || (i.types[last].bitfield.class == Reg && i.types[last].bitfield.byte
+       || (i.types[last].bitfield.class == Reg
 	   && (i.op[last].regs->reg_flags & RegRex64) != 0))
       && !is_apx_rex2_encoding () && !is_any_vex_encoding (&i.tm))
     i.rex |= REX_OPCODE;
@@ -4591,9 +4592,8 @@ static void establish_rex (void)
 	{
 	  /* Look for 8 bit operand that uses old registers.  */
 	  if (i.types[x].bitfield.class == Reg && i.types[x].bitfield.byte
-	      && (i.op[x].regs->reg_flags & RegRex64) == 0)
+	      && !(i.op[x].regs->reg_flags & (RegRex | RegRex2 | RegRex64)))
 	    {
-	      gas_assert (!(i.op[x].regs->reg_flags & RegRex));
 	      /* In case it is "hi" register, give up.  */
 	      if (i.op[x].regs->reg_num > 3)
 		as_bad (_("can't encode register '%s%s' in an "
@@ -4619,10 +4619,9 @@ static void establish_rex (void)
       for (x = first; x <= last; x++)
 	if (i.types[x].bitfield.class == Reg
 	    && i.types[x].bitfield.byte
-	    && (i.op[x].regs->reg_flags & RegRex64) == 0
+	    && !(i.op[x].regs->reg_flags & (RegRex | RegRex2 | RegRex64))
 	    && i.op[x].regs->reg_num > 3)
 	  {
-	    gas_assert (!(i.op[x].regs->reg_flags & RegRex));
 	    pp.rex_encoding = false;
 	    pp.rex2_encoding = false;
 	    break;
@@ -4927,7 +4926,7 @@ optimize_encoding (void)
 	  /* Squash the suffix.  */
 	  i.suffix = 0;
 	  /* Convert to byte registers. 8-bit registers are special,
-	     RegRex64 and non-RegRex64 each have 8 registers.  */
+	     RegRex64 and non-RegRex* each have 8 registers.  */
 	  if (i.types[1].bitfield.word)
 	    /* 32 (or 40) 8-bit registers.  */
 	    j = 32;
@@ -5480,7 +5479,7 @@ static bool is_index (const reg_entry *r)
 
   if (r->reg_type.bitfield.byte)
     {
-      if (!(r->reg_flags & RegRex64))
+      if (!(r->reg_flags & (RegRex | RegRex2 | RegRex64)))
 	{
 	  if (r->reg_num >= 4)
 	    return false;
@@ -13147,7 +13146,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	      && flag_code == CODE_64BIT
 	      && i.types[j].bitfield.class == Reg
 	      && i.types[j].bitfield.byte
-	      && !(i.op[j].regs->reg_flags & RegRex64)
+	      && !(i.op[j].regs->reg_flags & (RegRex | RegRex2 | RegRex64))
 	      && i.op[j].regs->reg_num > 3)
 	    as_bad (_("can't encode register '%s%s' with VEX/XOP/EVEX"),
 		    register_prefix, i.op[j].regs->reg_name);

@@ -2068,7 +2068,7 @@ create_sals_line_offset (struct linespec_state *self,
       int i, j;
 
       /* True if the provided line gave an exact match.  False if we had to
-         search for the next following line with code.  */
+	 search for the next following line with code.  */
       bool was_exact = true;
 
       std::vector<symtab_and_line> intermediate_results
@@ -2122,15 +2122,16 @@ create_sals_line_offset (struct linespec_state *self,
 	    struct symbol *sym = (blocks[i]
 				  ? blocks[i]->containing_function ()
 				  : NULL);
-	    symtab_and_line *sal = &intermediate_results[i];
+	    symtab_and_line &sal = intermediate_results[i];
 
 	    /* Don't consider a match if:
 
-	        - the provided line did not give an exact match (so we started
-	          looking for lines below until we found one with code
-	          associated to it)
-	        - the found location is exactly the start of a function
-	        - the provided line is above the declaration line of the function
+	       - the provided line did not give an exact match (so we
+		 started looking for lines below until we found one with
+		 code associated to it)
+	       - the found location is exactly the start of a function
+	       - the provided line is above the declaration line of the
+		 function
 
 	       Consider the following source:
 
@@ -2145,21 +2146,21 @@ create_sals_line_offset (struct linespec_state *self,
 	       18 }
 
 	       The intent of this heuristic is that a breakpoint requested on
-	       line 11 and 12 will not result on a breakpoint on main, but a
+	       line 11 and 12 will not result in a breakpoint on main, but a
 	       breakpoint on line 13 will.  A breakpoint requested on the empty
 	       line 16 will also result in a breakpoint in main, at line 17.  */
 	    if (!was_exact
 		&& sym != nullptr
 		&& sym->aclass () == LOC_BLOCK
-		&& sal->pc == sym->value_block ()->entry_pc ()
+		&& sal.pc == sym->value_block ()->entry_pc ()
 		&& val.line < sym->line ())
 	      continue;
 
 	    if (self->funfirstline)
-	      skip_prologue_sal (sal);
+	      skip_prologue_sal (&sal);
 
-	    sal->symbol = sym;
-	    add_sal_to_sals (self, &values, sal,
+	    sal.symbol = sym;
+	    add_sal_to_sals (self, &values, &sal,
 			     sym ? sym->natural_name () : NULL, 0);
 	  }
     }

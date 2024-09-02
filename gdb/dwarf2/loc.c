@@ -42,7 +42,6 @@
 #include "dwarf2/frame.h"
 #include "dwarf2/leb.h"
 #include "compile/compile.h"
-#include "gdbsupport/selftest.h"
 #include <algorithm>
 #include <vector>
 #include <unordered_set>

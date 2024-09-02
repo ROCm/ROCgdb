@@ -22,13 +22,12 @@
 standard_testfile
 
 set shlib_path [standard_output_file ${testfile}-lib.so]
-
-if { [gdb_compile_shlib $srcdir/$subdir/$srcfile $shlib_path {debug}] != "" } {
+if {[build_executable "build shlib" $shlib_path $srcfile {debug shlib}]} {
     return
 }
 
 set opts [list debug shlib_load additional_flags=-DTHE_LIB_PATH="${shlib_path}"]
-if { [build_executable "failed to prepare"  ${testfile} ${srcfile} $opts] } {
+if {[build_executable "failed to prepare" ${testfile} ${srcfile} $opts]} {
     return
 }
 
@@ -40,7 +39,10 @@ proc do_test {} {
 
     set lineno [gdb_get_line_number "break here"]
     gdb_test "break $lineno" \
-	"No compiled code for line $lineno in the current file.\r\nBreakpoint 1 \\($lineno\\) pending."
+	[multi_line \
+	     "No compiled code for line $lineno in the current file\\." \
+	     "Breakpoint 1 \\($lineno\\) pending\\."] \
+	"breakpoint on a line outside any function"
 
     gdb_run_cmd
     gdb_test_multiple "" "stop on lib function breakpoint" {

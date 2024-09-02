@@ -975,15 +975,15 @@ elf_i386_check_tls_transition (asection *sec,
 
     case R_386_TLS_IE:
       /* Check transition from IE access model:
-		movl foo@indntpoff(%rip), %eax
-		movl foo@indntpoff(%rip), %reg
-		addl foo@indntpoff(%rip), %reg
+		movl foo@indntpoff, %eax
+		movl foo@indntpoff, %reg
+		addl foo@indntpoff, %reg
        */
 
       if (offset < 1 || (offset + 4) > sec->size)
 	return elf_x86_tls_error_yes;
 
-      /* Check "movl foo@tpoff(%rip), %eax" first.  */
+      /* Check "movl foo@indntpoff, %eax" first.  */
       val = bfd_get_8 (abfd, contents + offset - 1);
       if (val == 0xa1)
 	return elf_x86_tls_error_none;
@@ -991,7 +991,7 @@ elf_i386_check_tls_transition (asection *sec,
       if (offset < 2)
 	return elf_x86_tls_error_yes;
 
-      /* Check movl|addl foo@tpoff(%rip), %reg.   */
+      /* Check movl|addl foo@indntpoff, %reg.   */
       type = bfd_get_8 (abfd, contents + offset - 2);
       if (type != 0x8b && type != 0x03)
 	return elf_x86_tls_error_add_mov;
@@ -1039,19 +1039,8 @@ elf_i386_check_tls_transition (asection *sec,
 	      : elf_x86_tls_error_yes);
 
     case R_386_TLS_DESC_CALL:
-      /* Check transition from GDesc access model:
-		call *x@tlsdesc(%eax)
-       */
-      if (offset + 2 <= sec->size)
-	{
-	  /* Make sure that it's a call *x@tlsdesc(%eax).  */
-	  call = contents + offset;
-	  return (call[0] == 0xff && call[1] == 0x10
-		  ? elf_x86_tls_error_none
-		  : elf_x86_tls_error_indirect_call);
-	}
-
-      return elf_x86_tls_error_yes;
+      /* It has been checked in elf_i386_tls_transition.  */
+      return elf_x86_tls_error_none;
 
     default:
       abort ();
@@ -1077,6 +1066,8 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
   unsigned int to_type = from_type;
   bool check = true;
   unsigned int to_le_type, to_ie_type;
+  bfd_vma offset;
+  bfd_byte *call;
 
   /* Skip TLS transition for functions.  */
   if (h != NULL
@@ -1098,9 +1089,34 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
 
   switch (from_type)
     {
+    case R_386_TLS_DESC_CALL:
+      /* Check valid GDesc call:
+		call *x@tlscall(%eax)
+       */
+      offset = rel->r_offset;
+      call = NULL;
+      if (offset + 2 <= sec->size)
+	{
+	  /* Make sure that it's a call *x@tlscall(%eax).  */
+	  call = contents + offset;
+	  if (call[0] != 0xff || call[1] != 0x10)
+	    call = NULL;
+	}
+
+      if (call == NULL)
+	{
+	  _bfd_x86_elf_link_report_tls_transition_error
+	    (info, abfd, sec, symtab_hdr, h, sym, rel,
+	     "R_386_TLS_DESC_CALL", NULL,
+	     elf_x86_tls_error_indirect_call);
+
+	  return false;
+	}
+
+      /* Fall through.  */
+
     case R_386_TLS_GD:
     case R_386_TLS_GOTDESC:
-    case R_386_TLS_DESC_CALL:
     case R_386_TLS_IE_32:
     case R_386_TLS_IE:
     case R_386_TLS_GOTIE:
