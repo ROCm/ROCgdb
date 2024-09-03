@@ -36,8 +36,6 @@
 #include "reggroups.h"
 #include "extract-store-integer.h"
 
-#include <regex>
-
 /* Bit mask of the address space information in the core address.  */
 constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK = 0xff00000000000000;
 
