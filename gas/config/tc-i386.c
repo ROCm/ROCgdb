@@ -5143,6 +5143,41 @@ optimize_encoding (void)
 	  break;
 	}
     }
+  else if (optimize > 1
+	   && (i.tm.base_opcode | 0xf) == 0x4f
+	   && i.tm.opcode_space == SPACE_EVEXMAP4
+	   && i.reg_operands == 3
+	   && i.tm.opcode_modifier.operandconstraint == EVEX_NF
+	   && !i.types[0].bitfield.word)
+    {
+      /* Optimize: -O2:
+	   cfcmov<cc> %rM, %rN, %rN -> cmov<cc> %rM, %rN
+	   cfcmov<cc> %rM, %rN, %rM -> cmov<!cc> %rN, %rM
+	   cfcmov<cc> %rN, %rN, %rN -> nop %rN
+       */
+      if (i.op[0].regs == i.op[2].regs)
+	{
+	  i.tm.base_opcode ^= 1;
+	  i.op[0].regs = i.op[1].regs;
+	  i.op[1].regs = i.op[2].regs;
+	}
+      else if (i.op[1].regs != i.op[2].regs)
+	return;
+
+      i.tm.opcode_space = SPACE_0F;
+      i.tm.opcode_modifier.evex = 0;
+      i.tm.opcode_modifier.vexvvvv = 0;
+      i.tm.opcode_modifier.operandconstraint = 0;
+      i.reg_operands = 2;
+
+      /* While at it, convert to NOP if all three regs match.  */
+      if (i.op[0].regs == i.op[1].regs)
+	{
+	  i.tm.base_opcode = 0x1f;
+	  i.tm.extension_opcode = 0;
+	  i.reg_operands = 1;
+	}
+    }
   else if (i.reg_operands == 3
 	   && i.op[0].regs == i.op[1].regs
 	   && !i.types[2].bitfield.xmmword
@@ -8843,7 +8878,10 @@ match_template (char mnem_suffix)
 		  found_reverse_match = Opcode_D;
 		  goto check_operands_345;
 		}
-	      else if (t->opcode_modifier.commutative)
+	      else if (t->opcode_modifier.commutative
+		       /* CFCMOVcc also wants its major opcode unaltered.  */
+		       || (t->opcode_space == SPACE_EVEXMAP4
+			   && (t->base_opcode | 0xf) == 0x4f))
 		found_reverse_match = ~0;
 	      else if (t->opcode_space != SPACE_BASE
 		       && (t->opcode_space != SPACE_EVEXMAP4
@@ -9143,6 +9181,9 @@ match_template (char mnem_suffix)
 
       /* Fall through.  */
     case ~0:
+      if (i.tm.opcode_space == SPACE_EVEXMAP4
+	  && !t->opcode_modifier.commutative)
+	i.tm.opcode_modifier.operandconstraint = EVEX_NF;
       i.tm.operand_types[0] = operand_types[i.operands - 1];
       i.tm.operand_types[i.operands - 1] = operand_types[0];
       break;
