@@ -1564,6 +1564,7 @@ symbol_cache_mark_not_found (struct block_symbol_cache *bsc,
 static void
 symbol_cache_flush (struct program_space *pspace)
 {
+  ada_clear_symbol_cache (pspace);
   struct symbol_cache *cache = symbol_cache_key.get (pspace);
   int pass;
 
@@ -1927,6 +1928,28 @@ lookup_name_info::match_any ()
 					     true);
 
   return lookup_name;
+}
+
+/* See symtab.h.  */
+
+unsigned int
+lookup_name_info::search_name_hash (language lang) const
+{
+  /* This works around an obscure problem.  If currently in Ada mode,
+     and the name is wrapped in '<...>' (indicating verbatim mode),
+     force the use of the Ada language here so that the '<' and '>'
+     will be removed.  */
+  if (current_language->la_language == language_ada && ada ().verbatim_p ())
+    lang = language_ada;
+
+  /* Only compute each language's hash once.  */
+  if (!m_demangled_hashes_p[lang])
+    {
+      m_demangled_hashes[lang]
+	= ::search_name_hash (lang, language_lookup_name (lang));
+      m_demangled_hashes_p[lang] = true;
+    }
+  return m_demangled_hashes[lang];
 }
 
 /* Compute the demangled form of NAME as used by the various symbol
