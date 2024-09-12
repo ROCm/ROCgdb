@@ -16444,6 +16444,9 @@ the data was saved, as well as the current trace frame you are examining.
 Both @var{filename} and @var{dirname} must be on a filesystem accessible to
 the host.
 
+The @var{filename} and @var{dirname} arguments supports escaping and
+quoting, see @ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @smallexample
 (@value{GDBP}) target ctf ctf.ctf
 (@value{GDBP}) tfind
@@ -21555,6 +21558,9 @@ Like @code{compile code}, but take the source code from @var{filename}.
 @smallexample
 compile file /home/user/example.c
 @end smallexample
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 @end table
 
 @table @code
@@ -22103,6 +22109,7 @@ Remove symbol table from file "/home/user/gdb/mylib.so"? (y or n) y
 (@value{GDBP})
 @end smallexample
 
+The @var{address} can be any expression which evaluates to an address.
 
 @code{remove-symbol-file} does not repeat if you press @key{RET} after using it.
 
@@ -23000,6 +23007,9 @@ the @option{-dwarf-5} option, it produces 2 files:
 @file{@var{symbol-file}.debug_names} and
 @file{@var{symbol-file}.debug_str}.  The files are created in the
 given @var{directory}.
+
+The @var{directory} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 @end table
 
 Once you have created an index file you can merge it into your symbol
@@ -23370,10 +23380,16 @@ configuration):
 An executable file.  @samp{target exec @var{program}} is the same as
 @samp{exec-file @var{program}}.
 
+The @var{program} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @item target core @var{filename}
 @cindex core dump file target
 A core dump file.  @samp{target core @var{filename}} is the same as
 @samp{core-file @var{filename}}.
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @item target remote @var{medium}
 @cindex remote target
@@ -44946,6 +44962,9 @@ When the optional flag @samp{-single-feature} is provided then the
 target description being processed (either the default, or from
 @var{file}) must only contain a single feature.  The source file
 produced is different in this case.
+
+The @var{file} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @kindex maint print xml-tdesc
 @item maint print xml-tdesc  @r{[}@var{file}@r{]}

@@ -202,7 +202,8 @@ static symbol_name_matcher_ftype *ada_get_symbol_name_matcher
 static int symbols_are_identical_enums
   (const std::vector<struct block_symbol> &syms);
 
-static int ada_identical_enum_types_p (struct type *type1, struct type *type2);
+static bool ada_identical_enum_types_p (struct type *type1,
+					struct type *type2);
 
 
 /* The character set used for source files.  */
@@ -3816,8 +3817,6 @@ ada_resolve_enum (std::vector<struct block_symbol> &syms,
   for (int i = 0; i < syms.size (); ++i)
     {
       struct type *type2 = ada_check_typedef (syms[i].symbol->type ());
-      if (type1->num_fields () != type2->num_fields ())
-	continue;
       if (strcmp (type1->name (), type2->name ()) != 0)
 	continue;
       if (ada_identical_enum_types_p (type1, type2))
@@ -4968,31 +4967,31 @@ is_nondebugging_type (struct type *type)
   return (name != NULL && strcmp (name, "<variable, no debug info>") == 0);
 }
 
-/* Return nonzero if TYPE1 and TYPE2 are two enumeration types
+/* Return true if TYPE1 and TYPE2 are two enumeration types
    that are deemed "identical" for practical purposes.
 
    This function assumes that TYPE1 and TYPE2 are both TYPE_CODE_ENUM
-   types and that their number of enumerals is identical (in other
-   words, type1->num_fields () == type2->num_fields ()).  */
+   types.  */
 
-static int
+static bool
 ada_identical_enum_types_p (struct type *type1, struct type *type2)
 {
-  int i;
-
   /* The heuristic we use here is fairly conservative.  We consider
      that 2 enumerate types are identical if they have the same
      number of enumerals and that all enumerals have the same
      underlying value and name.  */
 
+  if (type1->num_fields () != type2->num_fields ())
+    return false;
+
   /* All enums in the type should have an identical underlying value.  */
-  for (i = 0; i < type1->num_fields (); i++)
+  for (int i = 0; i < type1->num_fields (); i++)
     if (type1->field (i).loc_enumval () != type2->field (i).loc_enumval ())
-      return 0;
+      return false;
 
   /* All enumerals should also have the same name (modulo any numerical
      suffix).  */
-  for (i = 0; i < type1->num_fields (); i++)
+  for (int i = 0; i < type1->num_fields (); i++)
     {
       const char *name_1 = type1->field (i).name ();
       const char *name_2 = type2->field (i).name ();
@@ -5002,10 +5001,10 @@ ada_identical_enum_types_p (struct type *type1, struct type *type2)
       ada_remove_trailing_digits (name_1, &len_1);
       ada_remove_trailing_digits (name_2, &len_2);
       if (len_1 != len_2 || strncmp (name_1, name_2, len_1) != 0)
-	return 0;
+	return false;
     }
 
-  return 1;
+  return true;
 }
 
 /* Return nonzero if all the symbols in SYMS are all enumeral symbols
@@ -5048,12 +5047,6 @@ symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
   /* Quick check: They should all have the same value.  */
   for (i = 1; i < syms.size (); i++)
     if (syms[i].symbol->value_longest () != syms[0].symbol->value_longest ())
-      return 0;
-
-  /* Quick check: They should all have the same number of enumerals.  */
-  for (i = 1; i < syms.size (); i++)
-    if (syms[i].symbol->type ()->num_fields ()
-	!= syms[0].symbol->type ()->num_fields ())
       return 0;
 
   /* All the sanity checks passed, so we might have a set of
@@ -12076,11 +12069,11 @@ struct ada_catchpoint : public code_breakpoint
     enable_state = enabled ? bp_enabled : bp_disabled;
     language = language_ada;
 
-    re_set ();
+    re_set (pspace);
   }
 
   struct bp_location *allocate_location () override;
-  void re_set () override;
+  void re_set (program_space *pspace) override;
   void check_status (struct bpstat *bs) override;
   enum print_stop_action print_it (const bpstat *bs) const override;
   bool print_one (const bp_location **) const override;
@@ -12125,7 +12118,7 @@ static struct symtab_and_line ada_exception_sal
    catchpoint kinds.  */
 
 void
-ada_catchpoint::re_set ()
+ada_catchpoint::re_set (program_space *pspace)
 {
   std::vector<symtab_and_line> sals;
   try

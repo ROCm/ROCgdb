@@ -117,13 +117,6 @@ public:
     return true;
   }
 
-  /* Disable output until the next call to doupdate.  */
-  void no_refresh ()
-  {
-    if (handle != nullptr)
-      wnoutrefresh (handle.get ());
-  }
-
   /* Called after the tab width has been changed.  */
   virtual void update_tab_width ()
   {
@@ -257,15 +250,6 @@ struct tui_nobox_window : public virtual tui_win_info
   bool can_box () const final override
   {
     return false;
-  }
-};
-
-/* A TUI window that is not refreshed.  */
-
-struct tui_norefresh_window : public virtual tui_win_info
-{
-  virtual void refresh_window () final override
-  {
   }
 };
 

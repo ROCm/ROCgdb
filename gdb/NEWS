@@ -10,19 +10,16 @@
   function in Python.  By default, the raw ptwrite payload is printed for
   each ptwrite that is encountered.
 
-* Python API
+* For breakpoints that are created in the 'pending' state, any
+  'thread' or 'task' keywords are parsed at the time the breakpoint is
+  created, rather than at the time the breakpoint becomes non-pending.
 
-  ** Added gdb.record.clear.  Clears the trace data of the current recording.
-     This forces re-decoding of the trace for successive commands.
-
-* Debugger Adapter Protocol changes
-
-  ** The "scopes" request will now return a scope holding global
-     variables from the stack frame's compilation unit.
-
-  ** The "scopes" request will return a "returnValue" scope holding
-     the return value from the latest "stepOut" command, when
-     appropriate.
+* Thread-specific breakpoints are only inserted into the program space
+  in which the thread of interest is running.  In most cases program
+  spaces are unique for each inferior, so this means that
+  thread-specific breakpoints will usually only be inserted for the
+  inferior containing the thread of interest.  The breakpoint will
+  be hit no less than before.
 
 * For ARM targets, the offset of the pc in the jmp_buf has been fixed to match
   glibc 2.20 and later.  This should only matter when not using libc probes.
@@ -40,6 +37,20 @@
   history has been reached.  It also specifies that the forward execution can
   continue, and the recording will also continue.
 
+* Python API
+
+  ** Added gdb.record.clear.  Clears the trace data of the current recording.
+     This forces re-decoding of the trace for successive commands.
+
+* Debugger Adapter Protocol changes
+
+  ** The "scopes" request will now return a scope holding global
+     variables from the stack frame's compilation unit.
+
+  ** The "scopes" request will return a "returnValue" scope holding
+     the return value from the latest "stepOut" command, when
+     appropriate.
+
 * New commands
 
 maintenance info inline-frames [ADDRESS]
@@ -52,6 +63,27 @@ maintenance info blocks [ADDRESS]
   ADDRESS, or at the current address if ADDRESS is not given.  Blocks
   are listed starting at the inner global block out to the most inner
   block.
+
+* Changed commands
+
+remove-symbol-file
+  This command now supports file-name completion.
+
+remove-symbol-file -a ADDRESS
+  The ADDRESS expression can now be a full expression consisting of
+  multiple terms, e.g. 'function + 0x1000' (without quotes),
+  previously only a single term could be given.
+
+target core
+target exec
+target tfile
+target ctf
+compile file
+maint print c-tdesc
+save gdb-index
+  These commands now require their filename argument to be quoted if
+  it contains white space or quote characters.  If the argument
+  contains no such special characters then quoting is not required.
 
 * New remote packets
 

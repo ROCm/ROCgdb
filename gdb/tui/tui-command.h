@@ -26,8 +26,7 @@
 
 /* The TUI command window.  */
 struct tui_cmd_window
-  : public tui_noscroll_window, tui_nobox_window, tui_norefresh_window,
-    tui_always_visible_window
+  : public tui_noscroll_window, tui_nobox_window, tui_always_visible_window
 {
   tui_cmd_window () = default;
 
@@ -62,8 +61,5 @@ tui_cmd_win ()
 {
   return dynamic_cast<tui_cmd_window *> (tui_win_list[CMD_WIN]);
 }
-
-/* Refresh the command window.  */
-extern void tui_refresh_cmd_win (void);
 
 #endif /* TUI_TUI_COMMAND_H */

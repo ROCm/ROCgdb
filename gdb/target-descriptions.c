@@ -1697,14 +1697,15 @@ static void
 maint_print_c_tdesc_cmd (const char *args, int from_tty)
 {
   const struct target_desc *tdesc;
-  const char *filename;
 
   maint_print_c_tdesc_options opts;
   auto grp = make_maint_print_c_tdesc_options_def_group (&opts);
   gdb::option::process_options
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp);
 
-  if (args == NULL)
+  std::string filename = extract_single_filename_arg (args);
+
+  if (filename.empty ())
     {
       /* Use the global target-supplied description, not the current
 	 architecture's.  This lets a GDB for one architecture generate C
@@ -1712,26 +1713,24 @@ maint_print_c_tdesc_cmd (const char *args, int from_tty)
 	 initialization code will reject the new description.  */
       target_desc_info *tdesc_info = &current_inferior ()->tdesc_info;
       tdesc = tdesc_info->tdesc;
-      filename = tdesc_info->filename.data ();
+      if (tdesc_info->filename.data () != nullptr)
+	filename = std::string (tdesc_info->filename.data ());
     }
   else
     {
       /* Use the target description from the XML file.  */
-      filename = args;
-      tdesc = file_read_description_xml (filename);
+      tdesc = file_read_description_xml (filename.c_str ());
     }
 
   if (tdesc == NULL)
     error (_("There is no target description to print."));
 
-  if (filename == NULL)
+  if (filename.empty ())
     filename = "fetched from target";
 
-  std::string filename_after_features (filename);
-  auto loc = filename_after_features.rfind ("/features/");
-
+  auto loc = filename.rfind ("/features/");
   if (loc != std::string::npos)
-    filename_after_features = filename_after_features.substr (loc + 10);
+    filename = filename.substr (loc + 10);
 
   /* Print c files for target features instead of target descriptions,
      because c files got from target features are more flexible than the
@@ -1742,13 +1741,13 @@ maint_print_c_tdesc_cmd (const char *args, int from_tty)
 	error (_("only target descriptions with 1 feature can be used "
 		 "with -single-feature option"));
 
-      print_c_feature v (filename_after_features);
+      print_c_feature v (filename);
 
       tdesc->accept (v);
     }
   else
     {
-      print_c_tdesc v (filename_after_features);
+      print_c_tdesc v (filename);
 
       tdesc->accept (v);
     }
@@ -1766,8 +1765,8 @@ maint_print_c_tdesc_cmd_completer (struct cmd_list_element *ignore,
       (tracker, &text, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, grp))
     return;
 
-  word = advance_to_filename_complete_word_point (tracker, text);
-  filename_completer (ignore, tracker, text, word);
+  word = advance_to_filename_maybe_quoted_complete_word_point (tracker, text);
+  filename_maybe_quoted_completer (ignore, tracker, text, word);
 }
 
 /* Implement the maintenance print xml-tdesc command.  */
@@ -1951,7 +1950,7 @@ that feature within an already existing target_desc object."), grp);
   cmd = add_cmd ("xml-tdesc", class_maintenance, maint_print_xml_tdesc_cmd, _("\
 Print the current target description as an XML file."),
 		 &maintenanceprintlist);
-  set_cmd_completer (cmd, filename_completer);
+  set_cmd_completer (cmd, deprecated_filename_completer);
 
   cmd = add_cmd ("xml-descriptions", class_maintenance,
 		 maintenance_check_xml_descriptions, _("\
@@ -1960,5 +1959,5 @@ Check the target descriptions created in GDB equal the descriptions\n\
 created from XML files in the directory.\n\
 The parameter is the directory name."),
 		 &maintenancechecklist);
-  set_cmd_completer (cmd, filename_completer);
+  set_cmd_completer (cmd, deprecated_filename_completer);
 }
