@@ -78,14 +78,27 @@ rocm_solib_fd_cache::open (const std::string &filename,
   auto it = m_cache.find (filename);
   if (it == m_cache.end ())
     {
-      /* The file is not yet opened on the target.  */
-      int fd
-	= target_fileio_open (m_inferior, filename.c_str (), FILEIO_O_RDONLY,
-			      false, 0, target_errno);
+      /* Try to locate the file using solib_find which is aware of sysroot
+	 and solib-search path first.  */
+      int fd = -1;
+      gdb::unique_xmalloc_ptr<char> expanded_fname
+	= solib_find (filename.c_str (), nullptr);
+
+      if (expanded_fname != nullptr)
+	fd = target_fileio_open (nullptr, expanded_fname.get (),
+				 FILEIO_O_RDONLY, false, 0, target_errno);
+
+      /* If the binary was not found on the sysroot, try to open it on the
+	 target.  */
+      if (fd == -1)
+	fd = target_fileio_open (m_inferior, filename.c_str (),
+				 FILEIO_O_RDONLY, false, 0, target_errno);
+
       if (fd != -1)
 	m_cache.emplace (std::piecewise_construct,
 			 std::forward_as_tuple (filename),
 			 std::forward_as_tuple (fd, 1));
+
       return fd;
     }
   else
