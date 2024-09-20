@@ -22347,6 +22347,7 @@ may try to load the host's libraries.  @value{GDBN} has two variables
 to specify the search directories for target libraries.
 
 @table @code
+@anchor{set sysroot}
 @cindex prefix for executable and shared library file names
 @cindex system root, alternate
 @kindex set solib-absolute-prefix
@@ -22448,6 +22449,7 @@ location.
 @item show sysroot
 Display the current executable and shared library prefix.
 
+@anchor{set solib-search-path}
 @kindex set solib-search-path
 @item set solib-search-path @var{path}
 If this variable is set, @var{path} is a colon-separated list of
@@ -29526,6 +29528,13 @@ Thread 3 (AMDGPU Wave 1:1:1:1 (0,0,0)/0) stopped because of SIGSEGV.
 [Current thread is 3, lane 0 (AMDGPU Lane 1:1:1:1/0 (0,0,0)[0,0,0])]
 (@value{GDBP})
 @end smallexample
+
+When opening a core dump, @value{GDBN} tries to load GPU code objects at
+the same path they were on the system where the core dump got produced.
+If the code objects are not at the same location, @value{GDBN} can look
+in the @code{sysroot} (@pxref{set sysroot,,set sysroot}), or use the
+@code{shared-library-path} (@pxref{set solib-search-path,,set
+solib-search-path}).
 
 @subsubsection @acronym{AMD GPU} Restrictions
 
