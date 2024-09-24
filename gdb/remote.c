@@ -365,6 +365,9 @@ enum {
   /* Support for the Qbtrace-conf:pt:ptwrite packet.  */
   PACKET_Qbtrace_conf_pt_ptwrite,
 
+  /* Support for the Qbtrace-conf:pt:event-tracing packet.  */
+  PACKET_Qbtrace_conf_pt_event_tracing,
+
   /* Support for exec events.  */
   PACKET_exec_event_feature,
 
@@ -693,6 +696,10 @@ public: /* data */
   /* The set of thread options the target reported it supports, via
      qSupported.  */
   gdb_thread_options supported_thread_options = 0;
+
+  /* Contains the regnums of the expedited registers in the last stop
+     reply packet.  */
+  std::set<int> last_seen_expedited_registers;
 
 private:
   /* Asynchronous signal handle registered as event loop source for
@@ -1489,6 +1496,20 @@ bool
 is_remote_target (process_stratum_target *target)
 {
   return as_remote_target (target) != nullptr;
+}
+
+/* See remote.h.  */
+
+bool
+remote_register_is_expedited (int regnum)
+{
+  remote_target *rt = as_remote_target (current_inferior ()->process_target ());
+
+  if (rt == nullptr)
+    return false;
+
+  remote_state *rs = rt->get_remote_state ();
+  return rs->last_seen_expedited_registers.count (regnum) > 0;
 }
 
 /* Per-program-space data key.  */
@@ -5809,6 +5830,8 @@ static const struct protocol_feature remote_protocol_features[] = {
     PACKET_Qbtrace_conf_pt_size },
   { "Qbtrace-conf:pt:ptwrite", PACKET_DISABLE, remote_supported_packet,
     PACKET_Qbtrace_conf_pt_ptwrite },
+  { "Qbtrace-conf:pt:event-tracing", PACKET_DISABLE, remote_supported_packet,
+    PACKET_Qbtrace_conf_pt_event_tracing },
   { "vContSupported", PACKET_DISABLE, remote_supported_packet, PACKET_vContSupported },
   { "QThreadEvents", PACKET_DISABLE, remote_supported_packet, PACKET_QThreadEvents },
   { "QThreadOptions", PACKET_DISABLE, remote_supported_thread_options,
@@ -8512,6 +8535,10 @@ remote_target::process_stop_reply (stop_reply_up stop_reply,
 {
   *status = stop_reply->ws;
   ptid_t ptid = stop_reply->ptid;
+  struct remote_state *rs = get_remote_state ();
+
+  /* Forget about last reply's expedited registers.  */
+  rs->last_seen_expedited_registers.clear ();
 
   /* If no thread/process was reported by the stub then select a suitable
      thread/process.  */
@@ -8538,7 +8565,10 @@ remote_target::process_stop_reply (stop_reply_up stop_reply,
 					stop_reply->arch);
 
 	  for (cached_reg_t &reg : stop_reply->regcache)
-	    regcache->raw_supply (reg.num, reg.data.get ());
+	    {
+	      regcache->raw_supply (reg.num, reg.data.get ());
+	      rs->last_seen_expedited_registers.insert (reg.num);
+	    }
 	}
 
       remote_thread_info *remote_thr = get_remote_thread_info (this, ptid);
@@ -13231,6 +13261,18 @@ public:
 	    fileio_error remote_errno;
 	    m_remote->remote_hostio_close (m_fd, &remote_errno);
 	  }
+	catch (const gdb_exception_quit &ex)
+	  {
+	    /* We can't throw from a destructor, so re-set the quit flag
+	      for later QUIT checking.  */
+	    set_quit_flag ();
+	  }
+	catch (const gdb_exception_forced_quit &ex)
+	  {
+	    /* Like above, but (eventually) cause GDB to terminate by
+	       setting sync_quit_force_run.  */
+	    set_force_quit_flag ();
+	  }
 	catch (...)
 	  {
 	    /* Swallow exception before it escapes the dtor.  If
@@ -14735,7 +14777,7 @@ parse_xml_btrace_conf_pt (struct gdb_xml_parser *parser,
 			  std::vector<gdb_xml_value> &attributes)
 {
   struct btrace_config *conf;
-  struct gdb_xml_value *size, *ptwrite;
+  struct gdb_xml_value *size, *ptwrite, *event_tracing;
 
   conf = (struct btrace_config *) user_data;
   conf->format = BTRACE_FORMAT_PT;
@@ -14748,11 +14790,17 @@ parse_xml_btrace_conf_pt (struct gdb_xml_parser *parser,
   ptwrite = xml_find_attribute (attributes, "ptwrite");
   if (ptwrite != nullptr)
     conf->pt.ptwrite = (bool) *(ULONGEST *) ptwrite->value.get ();
+
+  event_tracing = xml_find_attribute (attributes, "event-tracing");
+  if (event_tracing != nullptr)
+    conf->pt.event_tracing = (bool) *(ULONGEST *) event_tracing->value.get ();
 }
 
 static const struct gdb_xml_attribute btrace_conf_pt_attributes[] = {
   { "size", GDB_XML_AF_OPTIONAL, gdb_xml_parse_attr_ulongest, NULL },
   { "ptwrite", GDB_XML_AF_OPTIONAL, gdb_xml_parse_attr_enum,
+    gdb_xml_enums_boolean },
+  { "event-tracing", GDB_XML_AF_OPTIONAL, gdb_xml_parse_attr_enum,
     gdb_xml_enums_boolean },
   { NULL, GDB_XML_AF_NONE, NULL, NULL }
 };
@@ -14884,6 +14932,39 @@ remote_target::btrace_sync_conf (const btrace_config *conf)
 	}
 
       rs->btrace_config.pt.ptwrite = conf->pt.ptwrite;
+    }
+
+  /* Event tracing is a user setting, warn if it is set but the target
+     doesn't support it.  */
+  if ((m_features.packet_support (PACKET_Qbtrace_conf_pt_event_tracing)
+       != PACKET_ENABLE)
+	&& conf->pt.event_tracing)
+    warning (_("Target does not support event-tracing."));
+
+  if ((m_features.packet_support (PACKET_Qbtrace_conf_pt_event_tracing)
+       == PACKET_ENABLE)
+	&& conf->pt.event_tracing != rs->btrace_config.pt.event_tracing)
+    {
+      pos = buf;
+      const char *event_tracing = conf->pt.event_tracing ? "yes" : "no";
+      const char *name
+	= packets_descriptions[PACKET_Qbtrace_conf_pt_event_tracing].name;
+      pos += xsnprintf (pos, endbuf - pos, "%s=\"%s\"", name, event_tracing);
+
+      putpkt (buf);
+      getpkt (&rs->buf, 0);
+
+      packet_result result
+	= m_features.packet_ok (buf, PACKET_Qbtrace_conf_pt_event_tracing);
+      if (result.status () == PACKET_ERROR)
+	{
+	  if (buf[0] == 'E' && buf[1] == '.')
+	    error (_("Failed to sync event-tracing config: %s"), buf + 2);
+	  else
+	    error (_("Failed to sync event-tracing config."));
+	}
+
+      rs->btrace_config.pt.event_tracing = conf->pt.event_tracing;
     }
 }
 
@@ -16341,6 +16422,10 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 
   add_packet_config_cmd (PACKET_Qbtrace_conf_pt_ptwrite, "Qbtrace-conf:pt:ptwrite",
 			 "btrace-conf-pt-ptwrite", 0);
+
+  add_packet_config_cmd (PACKET_Qbtrace_conf_pt_event_tracing,
+			 "Qbtrace-conf:pt:event-tracing",
+			 "btrace-conf-pt-event-tracing", 0);
 
   add_packet_config_cmd (PACKET_vContSupported, "vContSupported",
 			 "verbose-resume-supported", 0);

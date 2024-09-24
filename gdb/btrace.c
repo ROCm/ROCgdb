@@ -547,30 +547,38 @@ ftrace_new_gap (struct btrace_thread_info *btinfo, int errcode,
    Return the chronologically latest function segment, never NULL.  */
 
 static struct btrace_function *
-ftrace_update_function (struct btrace_thread_info *btinfo, CORE_ADDR pc)
+ftrace_update_function (struct btrace_thread_info *btinfo,
+			std::optional<CORE_ADDR> pc)
 {
-  struct minimal_symbol *mfun;
-  struct symbol *fun;
-  struct btrace_function *bfun;
+  struct minimal_symbol *mfun = nullptr;
+  struct symbol *fun = nullptr;
 
   /* Try to determine the function we're in.  We use both types of symbols
      to avoid surprises when we sometimes get a full symbol and sometimes
      only a minimal symbol.  */
-  fun = find_pc_function (pc);
-  bound_minimal_symbol bmfun = lookup_minimal_symbol_by_pc (pc);
-  mfun = bmfun.minsym;
+  if (pc.has_value ())
+    {
+      fun = find_pc_function (*pc);
+      bound_minimal_symbol bmfun = lookup_minimal_symbol_by_pc (*pc);
+      mfun = bmfun.minsym;
 
-  if (fun == NULL && mfun == NULL)
-    DEBUG_FTRACE ("no symbol at %s", core_addr_to_string_nz (pc));
+      if (fun == nullptr && mfun == nullptr)
+	DEBUG_FTRACE ("no symbol at %s", core_addr_to_string_nz (*pc));
+    }
 
   /* If we didn't have a function, we create one.  */
   if (btinfo->functions.empty ())
     return ftrace_new_function (btinfo, mfun, fun);
 
   /* If we had a gap before, we create a function.  */
-  bfun = &btinfo->functions.back ();
+  btrace_function *bfun = &btinfo->functions.back ();
   if (bfun->errcode != 0)
     return ftrace_new_function (btinfo, mfun, fun);
+
+  /* If there is no valid PC, which can happen for events with a
+     suppressed IP, we can't do more than return the last bfun.  */
+  if (!pc.has_value ())
+    return bfun;
 
   /* Check the last instruction, if we have one.
      We do this check first, since it allows us to fill in the call stack
@@ -605,7 +613,7 @@ ftrace_update_function (struct btrace_thread_info *btinfo, CORE_ADDR pc)
 
 	case BTRACE_INSN_CALL:
 	  /* Ignore calls to the next instruction.  They are used for PIC.  */
-	  if (last->pc + last->size == pc)
+	  if (last->pc + last->size == *pc)
 	    break;
 
 	  return ftrace_new_call (btinfo, mfun, fun);
@@ -614,10 +622,10 @@ ftrace_update_function (struct btrace_thread_info *btinfo, CORE_ADDR pc)
 	  {
 	    CORE_ADDR start;
 
-	    start = get_pc_function_start (pc);
+	    start = get_pc_function_start (*pc);
 
 	    /* A jump to the start of a function is (typically) a tail call.  */
-	    if (start == pc)
+	    if (start == *pc)
 	      return ftrace_new_tailcall (btinfo, mfun, fun);
 
 	    /* Some versions of _Unwind_RaiseException use an indirect
@@ -642,6 +650,18 @@ ftrace_update_function (struct btrace_thread_info *btinfo, CORE_ADDR pc)
 
 	    break;
 	  }
+
+	case BTRACE_INSN_AUX:
+	  /* An aux insn couldn't have switched the function.  But the
+	     segment might not have had a symbol name resolved yet, as events
+	     might not have an IP.  Use the current IP in that case and update
+	     the name.  */
+	  if (bfun->sym == nullptr && bfun->msym == nullptr)
+	    {
+	      bfun->sym = fun;
+	      bfun->msym = mfun;
+	    }
+	  break;
 	}
     }
 
@@ -668,6 +688,8 @@ ftrace_update_insns (struct btrace_function *bfun, const btrace_insn &insn)
 
   if (insn.iclass == BTRACE_INSN_AUX)
     bfun->flags |= BFUN_CONTAINS_AUX;
+  else
+    bfun->flags |= BFUN_CONTAINS_NON_AUX;
 
   if (record_debug > 1)
     ftrace_debug (bfun, "update insn");
@@ -1101,7 +1123,8 @@ btrace_compute_ftrace_bts (struct thread_info *tp,
 	      break;
 	    }
 
-	  bfun = ftrace_update_function (btinfo, pc);
+	  bfun = ftrace_update_function (btinfo,
+					 std::make_optional<CORE_ADDR> (pc));
 
 	  /* Maintain the function level offset.
 	     For all but the last block, we do it here.  */
@@ -1211,10 +1234,10 @@ pt_btrace_insn (const struct pt_insn &insn)
 
 static void
 handle_pt_aux_insn (btrace_thread_info *btinfo, std::string &aux_str,
-		    CORE_ADDR ip)
+		    std::optional<CORE_ADDR> pc)
 {
   btinfo->aux_data.emplace_back (std::move (aux_str));
-  struct btrace_function *bfun = ftrace_update_function (btinfo, ip);
+  struct btrace_function *bfun = ftrace_update_function (btinfo, pc);
 
   btrace_insn insn {{btinfo->aux_data.size () - 1}, 0,
 		    BTRACE_INSN_AUX, 0};
@@ -1222,7 +1245,46 @@ handle_pt_aux_insn (btrace_thread_info *btinfo, std::string &aux_str,
   ftrace_update_insns (bfun, insn);
 }
 
+/* Check if the recording contains real instructions and not only auxiliary
+   instructions since the last gap (or since the beginning).  */
+
+static bool
+ftrace_contains_non_aux_since_last_gap (const btrace_thread_info *btinfo)
+{
+  const std::vector<btrace_function> &functions = btinfo->functions;
+
+  std::vector<btrace_function>::const_reverse_iterator rit;
+  for (rit = functions.crbegin (); rit != functions.crend (); ++rit)
+    {
+      if (rit->errcode != 0)
+	return false;
+
+      if ((rit->flags & BFUN_CONTAINS_NON_AUX) != 0)
+	return true;
+    }
+
+  return false;
+}
 #endif /* defined (HAVE_PT_INSN_EVENT) */
+
+#if (LIBIPT_VERSION >= 0x201)
+/* Translate an interrupt vector to a mnemonic string as defined for x86.
+   Returns nullptr if there is none.  */
+
+static const char *
+decode_interrupt_vector (const uint8_t vector)
+{
+  static const char *mnemonic[]
+    = { "#de", "#db", nullptr, "#bp", "#of", "#br", "#ud", "#nm",
+	"#df", "#mf", "#ts", "#np", "#ss", "#gp", "#pf", nullptr,
+	"#mf", "#ac", "#mc", "#xm", "#ve", "#cp" };
+
+  if (vector < (sizeof (mnemonic) / sizeof (mnemonic[0])))
+    return mnemonic[vector];
+
+  return nullptr;
+}
+#endif /* defined (LIBIPT_VERSION >= 0x201) */
 
 /* Handle instruction decode events (libipt-v2).  */
 
@@ -1236,6 +1298,7 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
     {
       struct pt_event event;
       uint64_t offset;
+      std::optional<CORE_ADDR> pc;
 
       status = pt_insn_event (decoder, &event, sizeof (event));
       if (status < 0)
@@ -1251,11 +1314,16 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 	    if (event.status_update != 0)
 	      break;
 
+	    /* Only create a new gap if there are non-aux instructions in
+	       the trace since the last gap.  We could be at the beginning
+	       of the recording and could already have handled one or more
+	       events, like ptev_iret, that created aux insns.  In that
+	       case we don't want to create a gap or print a warning.  */
 	    if (event.variant.enabled.resumed == 0
-		&& !btinfo->functions.empty ())
+		&& ftrace_contains_non_aux_since_last_gap (btinfo))
 	      {
 		struct btrace_function *bfun
-		  = ftrace_new_gap (btinfo, BDE_PT_DISABLED, gaps);
+		  = ftrace_new_gap (btinfo, BDE_PT_NON_CONTIGUOUS, gaps);
 
 		pt_insn_get_offset (decoder, &offset);
 
@@ -1282,7 +1350,6 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 #if defined (HAVE_STRUCT_PT_EVENT_VARIANT_PTWRITE)
 	case ptev_ptwrite:
 	  {
-	    uint64_t pc = 0;
 	    std::optional<std::string> ptw_string;
 
 	    /* Lookup the PC if available.  The event often doesn't provide
@@ -1314,8 +1381,9 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 		  }
 	      }
 
-	    if (pc == 0)
+	    if (!pc.has_value ())
 	      warning (_("Failed to determine the PC for ptwrite."));
+
 
 	    if (btinfo->ptw_callback_fun != nullptr)
 	      ptw_string
@@ -1333,6 +1401,203 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 	    break;
 	  }
 #endif /* defined (HAVE_STRUCT_PT_EVENT_VARIANT_PTWRITE) */
+
+#if (LIBIPT_VERSION >= 0x201)
+	case ptev_interrupt:
+	  {
+	    std::string aux_string = std::string (_("interrupt: vector = "))
+	      + hex_string (event.variant.interrupt.vector);
+
+	    const char *decoded
+	      = decode_interrupt_vector (event.variant.interrupt.vector);
+	    if (decoded != nullptr)
+	      aux_string += std::string (" (") + decoded + ")";
+
+	    if (event.variant.interrupt.has_cr2 != 0)
+	      {
+		aux_string += std::string (", cr2 = ")
+		  + hex_string (event.variant.interrupt.cr2);
+	      }
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.interrupt.ip;
+		aux_string += std::string (", ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_iret:
+	  {
+	    std::string aux_string = std::string (_("iret"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.iret.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_smi:
+	  {
+	    std::string aux_string = std::string (_("smi"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.smi.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_rsm:
+	  {
+	    std::string aux_string = std::string (_("rsm"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.rsm.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_sipi:
+	  {
+	    std::string aux_string = std::string (_("sipi: vector = "))
+	      + hex_string (event.variant.sipi.vector);
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_init:
+	  {
+	    std::string aux_string = std::string (_("init"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.init.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_vmentry:
+	  {
+	    std::string aux_string = std::string (_("vmentry"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.vmentry.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_vmexit:
+	  {
+	    std::string aux_string = std::string (_("vmexit"));
+
+	    if (event.variant.vmexit.has_vector != 0
+		|| event.variant.vmexit.has_vmxr != 0
+		|| event.variant.vmexit.has_vmxq != 0
+		|| event.ip_suppressed != 0)
+	      aux_string += std::string (":");
+
+	    if (event.variant.vmexit.has_vector != 0)
+	      {
+		aux_string += std::string (_(" vector = "))
+			      + hex_string (event.variant.vmexit.vector);
+
+		const char* decoded = decode_interrupt_vector
+					(event.variant.vmexit.vector);
+		if (decoded != nullptr)
+		  aux_string += std::string (" (") + decoded + ")";
+	      }
+
+	    if (event.variant.vmexit.has_vmxr != 0)
+	      {
+		std::string seperator = aux_string.back () == ':' ? "" : ",";
+		aux_string += seperator + std::string (" vmxr = ")
+			      + hex_string (event.variant.vmexit.vmxr);
+	      }
+
+	    if (event.variant.vmexit.has_vmxq != 0)
+	      {
+		std::string seperator = aux_string.back () == ':' ? "" : ",";
+		aux_string += seperator + std::string (" vmxq = ")
+			      + hex_string (event.variant.vmexit.vmxq);
+	      }
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.vmexit.ip;
+		std::string seperator = aux_string.back () == ':' ? "" : ",";
+		aux_string += seperator + std::string (" ip = ")
+			      + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_shutdown:
+	  {
+	    std::string aux_string = std::string (_("shutdown"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.shutdown.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_uintr:
+	  {
+	    std::string aux_string = std::string (_("uintr: vector = "))
+				     + hex_string (event.variant.uintr.vector);
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.uintr.ip;
+		aux_string += std::string (", ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+
+	case ptev_uiret:
+	  {
+	    std::string aux_string = std::string (_("uiret"));
+
+	    if (event.ip_suppressed == 0)
+	      {
+		pc = event.variant.uiret.ip;
+		aux_string += std::string (": ip = ") + hex_string (*pc);
+	      }
+
+	    handle_pt_aux_insn (btinfo, aux_string, pc);
+	    break;
+	  }
+#endif /* defined (LIBIPT_VERSION >= 0x201) */
 	}
     }
 #endif /* defined (HAVE_PT_INSN_EVENT) */
@@ -1359,7 +1624,7 @@ handle_pt_insn_event_flags (struct btrace_thread_info *btinfo,
       struct btrace_function *bfun;
       uint64_t offset;
 
-      bfun = ftrace_new_gap (btinfo, BDE_PT_DISABLED, gaps);
+      bfun = ftrace_new_gap (btinfo, BDE_PT_NON_CONTIGUOUS, gaps);
 
       pt_insn_get_offset (decoder, &offset);
 
@@ -1428,7 +1693,9 @@ ftrace_add_pt (struct btrace_thread_info *btinfo,
 	  /* Handle events indicated by flags in INSN.  */
 	  handle_pt_insn_event_flags (btinfo, decoder, insn, gaps);
 
-	  bfun = ftrace_update_function (btinfo, insn.ip);
+	  bfun
+	    = ftrace_update_function (btinfo,
+				      std::make_optional<CORE_ADDR> (insn.ip));
 
 	  /* Maintain the function level offset.  */
 	  *plevel = std::min (*plevel, bfun->level);
@@ -1966,8 +2233,8 @@ btrace_decode_error (enum btrace_format format, int errcode)
 	case BDE_PT_USER_QUIT:
 	  return _("trace decode cancelled");
 
-	case BDE_PT_DISABLED:
-	  return _("disabled");
+	case BDE_PT_NON_CONTIGUOUS:
+	  return _("non-contiguous");
 
 	case BDE_PT_OVERFLOW:
 	  return _("overflow");
@@ -2746,6 +3013,19 @@ pt_print_packet (const struct pt_packet *packet)
 		  packet->payload.ptw.ip ? (" ip") : (""));
       break;
 #endif /* defined (LIBIPT_VERSION >= 0x200)  */
+
+#if (LIBIPT_VERSION >= 0x201)
+    case ppt_cfe:
+      gdb_printf (("cfe %u: 0x%x%s"), packet->payload.cfe.type,
+		  packet->payload.cfe.vector,
+		  packet->payload.cfe.ip ? (" ip") : (""));
+      break;
+
+    case ppt_evd:
+      gdb_printf (("evd %u: 0x%" PRIx64 ""), packet->payload.evd.type,
+		  packet->payload.evd.payload);
+      break;
+#endif /* defined (LIBIPT_VERSION >= 0x201)  */
     }
 }
 

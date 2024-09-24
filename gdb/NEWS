@@ -3,6 +3,11 @@
 
 *** Changes since GDB 15
 
+* GDB now supports printing of asynchronous events from the Intel Processor
+  Trace during 'record instruction-history', 'record function-call-history'
+  and all stepping commands.  This can be controlled with the new
+  "set record btrace pt event-tracing" command.
+
 * GDB now supports printing of ptwrite payloads from the Intel Processor
   Trace during 'record instruction-history', 'record function-call-history'
   and all stepping commands.  The payload is also accessible in Python as a
@@ -84,6 +89,11 @@ save gdb-index
   These commands now require their filename argument to be quoted if
   it contains white space or quote characters.  If the argument
   contains no such special characters then quoting is not required.
+
+maintenance print remote-registers
+  Add an "Expedited" column to the output of the command.  It indicates
+  which registers were included in the last stop reply packet received by
+  GDB.
 
 * New remote packets
 

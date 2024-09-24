@@ -110,7 +110,11 @@ enum btrace_function_flag
 
   /* Indicates that at least one auxiliary instruction is in the current
      function segment.  */
-  BFUN_CONTAINS_AUX = (1 << 2)
+  BFUN_CONTAINS_AUX = (1 << 2),
+
+  /* Indicates that at least one instruction not of type BTRACE_INSN_AUX
+     is in the current function segment.  */
+  BFUN_CONTAINS_NON_AUX = (1 << 3)
 };
 DEF_ENUM_FLAGS_TYPE (enum btrace_function_flag, btrace_function_flags);
 
@@ -131,7 +135,7 @@ enum btrace_pt_error
   BDE_PT_USER_QUIT = 1,
 
   /* Tracing was temporarily disabled.  */
-  BDE_PT_DISABLED,
+  BDE_PT_NON_CONTIGUOUS,
 
   /* Trace recording overflowed.  */
   BDE_PT_OVERFLOW
@@ -356,7 +360,7 @@ struct btrace_thread_info
   /* Function pointer to the ptwrite callback.  Returns the string returned
      by the ptwrite filter function.  */
   std::optional<std::string> (*ptw_callback_fun) (const uint64_t payload,
-						  const uint64_t ip,
+						  std::optional<uint64_t> ip,
 						  const void *ptw_context)
 						    = nullptr;
 

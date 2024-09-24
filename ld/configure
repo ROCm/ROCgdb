@@ -872,6 +872,7 @@ with_libiconv_prefix
 with_libiconv_type
 with_libintl_prefix
 with_libintl_type
+with_xxhash
 with_system_zlib
 with_zstd
 '
@@ -1589,6 +1590,8 @@ Optional Packages:
   --with-libintl-prefix[=DIR]  search for libintl in DIR/include and DIR/lib
   --without-libintl-prefix     don't search for libintl in includedir and libdir
   --with-libintl-type=TYPE     type of library to search for (auto/static/shared)
+  --with-xxhash           use inlined libxxhash for hashing (faster)
+                          (auto/yes/no)
   --with-system-zlib      use installed libz
   --with-zstd             support zstd compressed debug sections
                           (default=auto)
@@ -11683,7 +11686,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11686 "configure"
+#line 11689 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11789,7 +11792,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11792 "configure"
+#line 11795 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -19085,6 +19088,45 @@ if test $ld_cv_decl_getopt_unistd_h = yes; then
 $as_echo "#define HAVE_DECL_GETOPT 1" >>confdefs.h
 
 fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use xxhash" >&5
+$as_echo_n "checking whether to use xxhash... " >&6; }
+
+# Check whether --with-xxhash was given.
+if test "${with_xxhash+set}" = set; then :
+  withval=$with_xxhash;
+else
+  with_xxhash=auto
+fi
+
+if test "x$with_xxhash" != "xno"; then
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#define XXH_INLINE_ALL
+#include <xxhash.h>
+XXH128_hash_t r;
+void foo (void) { r = XXH128("foo", 3, 0); }
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+  with_xxhash=yes
+
+$as_echo "#define WITH_XXHASH 1" >>confdefs.h
+
+
+else
+
+  if test "$with_xxhash" = yes; then
+    as_fn_error $? "xxhash is missing or unusable" "$LINENO" 5
+  fi
+  with_xxhash=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_xxhash" >&5
+$as_echo "$with_xxhash" >&6; }
 
 # Link in zlib/zstd if we can.  This allows us to read and write
 # compressed debug sections.
