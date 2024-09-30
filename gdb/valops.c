@@ -41,7 +41,6 @@
 #include "observable.h"
 #include "objfiles.h"
 #include "extension.h"
-#include "gdbtypes.h"
 #include "gdbsupport/byte-vector.h"
 #include "typeprint.h"
 
