@@ -11201,7 +11201,7 @@ clear_command (const char *arg, int from_tty)
 	}
     }
 
-  /* Now go thru the 'found' chain and delete them.  */
+  /* Now go through the 'found' chain and delete them.  */
   if (found.empty ())
     {
       if (arg)

@@ -559,7 +559,7 @@ mips_xfer_register (struct gdbarch *gdbarch, struct regcache *regcache,
 }
 
 /* Determine if a MIPS3 or later cpu is operating in MIPS{1,2} FPU
-   compatiblity mode.  A return value of 1 means that we have
+   compatibility mode.  A return value of 1 means that we have
    physical 64-bit registers, but should treat them as 32-bit registers.  */
 
 static int
@@ -575,7 +575,7 @@ mips2_fp_compat (const frame_info_ptr &frame)
   /* FIXME drow 2002-03-10: This is disabled until we can do it consistently,
      in all the places we deal with FP registers.  PR gdb/413.  */
   /* Otherwise check the FR bit in the status register - it controls
-     the FP compatiblity mode.  If it is clear we are in compatibility
+     the FP compatibility mode.  If it is clear we are in compatibility
      mode.  */
   if ((get_frame_register_unsigned (frame, MIPS_PS_REGNUM) & ST0_FR) == 0)
     return 1;
@@ -593,7 +593,7 @@ static CORE_ADDR heuristic_proc_start (struct gdbarch *, CORE_ADDR);
 static struct cmd_list_element *setmipscmdlist = NULL;
 static struct cmd_list_element *showmipscmdlist = NULL;
 
-/* Integer registers 0 thru 31 are handled explicitly by
+/* Integer registers 0 through 31 are handled explicitly by
    mips_register_name().  Processor specific registers 32 and above
    are listed in the following tables.  */
 
@@ -921,7 +921,7 @@ mips_convert_register_float_case_p (struct gdbarch *gdbarch, int regnum,
 }
 
 /* This predicate tests for the case of a value of less than 8
-   bytes in width that is being transfered to or from an 8 byte
+   bytes in width that is being transferred to or from an 8 byte
    general purpose register.  */
 static int
 mips_convert_register_gpreg_case_p (struct gdbarch *gdbarch, int regnum,
@@ -1077,7 +1077,7 @@ mips_register_type (struct gdbarch *gdbarch, int regnum)
 	return builtin_type (gdbarch)->builtin_int32;
       else if (tdep->mips64_transfers_32bit_regs_p)
 	/* The target, while possibly using a 64-bit register buffer,
-	   is only transfering 32-bits of each integer register.
+	   is only transferring 32-bits of each integer register.
 	   Reflect this in the cooked/pseudo (ABI) register value.  */
 	return builtin_type (gdbarch)->builtin_int32;
       else if (mips_abi_regsize (gdbarch) == 4)
@@ -2878,7 +2878,7 @@ mips_insn16_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     find_pc_partial_function (pc, NULL, &start_addr, NULL);
     if (start_addr == 0)
       start_addr = heuristic_proc_start (gdbarch, pc);
-    /* We can't analyze the prologue if we couldn't find the begining
+    /* We can't analyze the prologue if we couldn't find the beginning
        of the function.  */
     if (start_addr == 0)
       return cache;
@@ -3313,7 +3313,7 @@ mips_micro_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     find_pc_partial_function (pc, NULL, &start_addr, NULL);
     if (start_addr == 0)
       start_addr = heuristic_proc_start (get_frame_arch (this_frame), pc);
-    /* We can't analyze the prologue if we couldn't find the begining
+    /* We can't analyze the prologue if we couldn't find the beginning
        of the function.  */
     if (start_addr == 0)
       return cache;
@@ -3694,7 +3694,7 @@ mips_insn32_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     find_pc_partial_function (pc, NULL, &start_addr, NULL);
     if (start_addr == 0)
       start_addr = heuristic_proc_start (gdbarch, pc);
-    /* We can't analyze the prologue if we couldn't find the begining
+    /* We can't analyze the prologue if we couldn't find the beginning
        of the function.  */
     if (start_addr == 0)
       return cache;
@@ -4582,7 +4582,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     }
 
   /* Now load as many as possible of the first arguments into
-     registers, and push the rest onto the stack.  Loop thru args
+     registers, and push the rest onto the stack.  Loop through args
      from first to last.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
@@ -4755,7 +4755,7 @@ mips_eabi_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		}
 
 	      /* Note!!! This is NOT an else clause.  Odd sized
-		 structs may go thru BOTH paths.  Floating point
+		 structs may go through BOTH paths.  Floating point
 		 arguments will not.  */
 	      /* Write this portion of the argument to a general
 		 purpose register.  */
@@ -4976,7 +4976,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     }
 
   /* Now load as many as possible of the first arguments into
-     registers, and push the rest onto the stack.  Loop thru args
+     registers, and push the rest onto the stack.  Loop through args
      from first to last.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
@@ -5107,7 +5107,7 @@ mips_n32n64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		}
 
 	      /* Note!!! This is NOT an else clause.  Odd sized
-		 structs may go thru BOTH paths.  */
+		 structs may go through BOTH paths.  */
 	      /* Write this portion of the argument to a general
 		 purpose register.  */
 	      if (argreg <= mips_last_arg_regnum (gdbarch))
@@ -5456,7 +5456,7 @@ mips_o32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     }
 
   /* Now load as many as possible of the first arguments into
-     registers, and push the rest onto the stack.  Loop thru args
+     registers, and push the rest onto the stack.  Loop through args
      from first to last.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
@@ -5619,7 +5619,7 @@ mips_o32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		}
 
 	      /* Note!!! This is NOT an else clause.  Odd sized
-		 structs may go thru BOTH paths.  */
+		 structs may go through BOTH paths.  */
 	      /* Write this portion of the argument to a general
 		 purpose register.  */
 	      if (argreg <= mips_last_arg_regnum (gdbarch))
@@ -5977,7 +5977,7 @@ mips_o64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     }
 
   /* Now load as many as possible of the first arguments into
-     registers, and push the rest onto the stack.  Loop thru args
+     registers, and push the rest onto the stack.  Loop through args
      from first to last.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
@@ -6081,7 +6081,7 @@ mips_o64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		}
 
 	      /* Note!!! This is NOT an else clause.  Odd sized
-		 structs may go thru BOTH paths.  */
+		 structs may go through BOTH paths.  */
 	      /* Write this portion of the argument to a general
 		 purpose register.  */
 	      if (argreg <= mips_last_arg_regnum (gdbarch))
