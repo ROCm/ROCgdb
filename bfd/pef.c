@@ -210,7 +210,8 @@ bfd_pef_print_symbol (bfd *abfd,
 		      bfd_print_symbol_type how)
 {
   FILE *file = (FILE *) afile;
-  const char *symname = symbol->name ? symbol->name : "<null>";
+  const char *symname = (symbol->name != bfd_symbol_error_name
+			 ? symbol->name : _("<corrupt>"));
 
   switch (how)
     {

@@ -5610,8 +5610,6 @@ riscv_maybe_function_sym (const asymbol *sym,
 static bool
 riscv_elf_is_target_special_symbol (bfd *abfd, asymbol *sym)
 {
-  if (!sym->name)
-    return false;
   /* PR27584, local and empty symbols.  Since they are usually
      generated for pcrel relocations.  */
   return (!sym->name[0]

@@ -531,7 +531,7 @@ bfd_elf_get_elf_syms (bfd *ibfd,
 }
 
 /* Look up a symbol name.  */
-const char *
+static const char *
 bfd_elf_sym_name_raw (bfd *abfd,
 		      Elf_Internal_Shdr *symtab_hdr,
 		      Elf_Internal_Sym *isym)
@@ -558,7 +558,7 @@ bfd_elf_sym_name (bfd *abfd,
 {
   const char *name = bfd_elf_sym_name_raw (abfd, symtab_hdr, isym);
   if (name == NULL)
-    name = "<null>";
+    name = bfd_symbol_error_name;
   else if (sym_sec && *name == '\0')
     name = bfd_section_name (sym_sec);
 
@@ -2322,7 +2322,8 @@ bfd_elf_print_symbol (bfd *abfd,
 		      bfd_print_symbol_type how)
 {
   FILE *file = (FILE *) filep;
-  const char *symname = symbol->name ? symbol->name : "<null>";
+  const char *symname = (symbol->name != bfd_symbol_error_name
+			 ? symbol->name : _("<corrupt>"));
 
   switch (how)
     {
@@ -8735,9 +8736,8 @@ swap_out_syms (bfd *abfd,
       Elf_Internal_Sym sym;
 
       flagword flags = syms[idx]->flags;
-      if (syms[idx]->name == NULL
-	  || (!name_local_sections
-	      && (flags & (BSF_SECTION_SYM | BSF_GLOBAL)) == BSF_SECTION_SYM))
+      if (!name_local_sections
+	  && (flags & (BSF_SECTION_SYM | BSF_GLOBAL)) == BSF_SECTION_SYM)
 	{
 	  /* Local section symbols have no name.  */
 	  sym.st_name = 0;
@@ -9724,9 +9724,6 @@ bool
 _bfd_elf_is_local_label_name (bfd *abfd ATTRIBUTE_UNUSED,
 			      const char *name)
 {
-  if (!name)
-    return false;
-
   /* Normal local symbols start with ``.L''.  */
   if (name[0] == '.' && name[1] == 'L')
     return true;
@@ -13554,19 +13551,17 @@ _bfd_elf_get_synthetic_symtab (bfd *abfd,
   size = count * sizeof (asymbol);
   p = relplt->relocation;
   for (i = 0; i < count; i++, p += bed->s->int_rels_per_ext_rel)
-    if ((*p->sym_ptr_ptr)->name != NULL)
-      {
-	size += strlen ((*p->sym_ptr_ptr)->name) + sizeof ("@plt");
-	if (p->addend != 0)
-	  {
+    {
+      size += strlen ((*p->sym_ptr_ptr)->name) + sizeof ("@plt");
+      if (p->addend != 0)
+	{
 #ifdef BFD64
-	    size += (sizeof ("+0x") - 1 + 8
-		     + 8 * (bed->s->elfclass == ELFCLASS64));
+	  size += sizeof ("+0x") - 1 + 8 + 8 * (bed->s->elfclass == ELFCLASS64);
 #else
-	    size += sizeof ("+0x") - 1 + 8;
+	  size += sizeof ("+0x") - 1 + 8;
 #endif
-	  }
-      }
+	}
+    }
 
   s = *ret = (asymbol *) bfd_malloc (size);
   if (s == NULL)
@@ -13582,9 +13577,6 @@ _bfd_elf_get_synthetic_symtab (bfd *abfd,
 
       addr = bed->plt_sym_val (i, plt, p);
       if (addr == (bfd_vma) -1)
-	continue;
-
-      if ((*p->sym_ptr_ptr)->name == NULL)
 	continue;
 
       *s = **p->sym_ptr_ptr;

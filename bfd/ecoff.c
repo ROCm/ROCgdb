@@ -1452,7 +1452,8 @@ _bfd_ecoff_print_symbol (bfd *abfd,
   const struct ecoff_debug_swap * const debug_swap
     = &ecoff_backend (abfd)->debug_swap;
   FILE *file = (FILE *)filep;
-  const char *symname = symbol->name ? symbol->name : "<null>";
+  const char *symname = (symbol->name != bfd_symbol_error_name
+			 ? symbol->name : _("<corrupt>"));
 
   switch (how)
     {

@@ -1251,9 +1251,6 @@ is_specified_symbol_predicate (void **slot, void *data)
 static bool
 is_specified_symbol (const char *name, htab_t htab)
 {
-  if (name == NULL)
-    return false;
-
   if (wildcard)
     {
       struct is_specified_symbol_predicate_data data;
@@ -1578,9 +1575,6 @@ filter_symbols (bfd *abfd, bfd *obfd, asymbol **osyms,
       bool undefined;
       bool rem_leading_char;
       bool add_leading_char;
-
-      if (name == NULL)
-	continue;
 
       undefined = bfd_is_und_section (bfd_asymbol_section (sym));
 
