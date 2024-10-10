@@ -23653,7 +23653,7 @@ heterogeneous lanes become active.
 Just because a target architecture supports multiple lanes, does not
 mean that the source language is mapped to use them to implement
 source language threads of execution.  Therefore, a thread is only
-considered to have multiple heterogeneous lanes if it's current frame
+considered to have multiple heterogeneous lanes if its current frame
 corresponds to a source language that does do such a mapping.
 
 @anchor{Address Space}
