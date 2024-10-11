@@ -191,7 +191,7 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
   return 0;
 }
 
-/* Describe a load section which should be created in the output BFD and keep
+/* Describe load sections which should be created in the output BFD and keep
    track of where the actual data should be loaded from.  */
 
 struct out_section
@@ -202,7 +202,8 @@ struct out_section
   bfd *obfd;
   /* The Phdr describing where the data lives in IBFD.  */
   Elf_Internal_Phdr *iphdr;
-  /* The section in OBFD where the data will be copied.  */
+  /* The section in OBFD where the data will be copied.  Can be NULL if no
+     data needs to be copied to the OBFD (content-less section).  */
   asection *osection;
   /* Next section to be processed.  */
   struct out_section *next;
@@ -337,22 +338,26 @@ sparse_bfd_set_section_contents (bfd *abfd, asection *section,
 static void
 ensure_last_section_size (struct out_section *descr)
 {
-  struct out_section *last_section = descr;
-  if (last_section == NULL)
-    return;
+  struct out_section *last_section = NULL;
 
   /* Output must have began so we are sure BFD has laid out all sections in
      the output file.  */
   assert (descr->obfd->output_has_begun);
-  for (descr = descr->next; descr != NULL; descr = descr->next)
+  for (; descr != NULL; descr = descr->next)
     {
-      if (descr->osection->size > 0
-	  && descr->osection->filepos > last_section->osection->filepos)
-	last_section = descr;
+      if (descr->osection != NULL)
+	{
+	  assert (descr->osection->size > 0);
+	  if (last_section == NULL
+	      || descr->osection->filepos > last_section->osection->filepos)
+	    last_section = descr;
+	}
     }
 
-  if (last_section->osection->size > 0)
+  if (last_section != NULL)
     {
+      assert (last_section->osection != NULL
+	      && last_section->osection->size > 0);
       const char byte = 0;
       bfd_set_section_contents (last_section->obfd, last_section->osection,
 				&byte, last_section->osection->size - 1, 1);
@@ -372,15 +377,16 @@ do_copy_load_segments (struct out_section *descr)
 
   for (; descr != NULL; descr = descr->next)
     {
+      /* No data to copy for this section.  */
+      if (descr->osection == NULL)
+	continue;
+
       size_t to_copy = descr->iphdr->p_filesz;
       verbose_printf (_(" Copying segment from %s offset=0x%lx,"
 			" size=0x%lx, vma=0x%lx\n"),
 		      bfd_get_filename (descr->ibfd),
 		      descr->iphdr->p_offset, descr->iphdr->p_filesz,
 		      descr->iphdr->p_vaddr);
-
-      if (descr->iphdr->p_filesz == 0)
-	continue;
 
       /* The first chunk should get us up to the next SPARSE_BLOCK_SIZE
 	 alignment on the underlying file.  */
@@ -485,6 +491,65 @@ analyze_ibfd (bfd *obfd, bfd *ibfd,
   return 0;
 }
 
+/* Declare a load section of size SIZE to be loaded at address VMA in OBFD.
+   Attributes are set according to FLAGS.  The section alignment is specified
+   by ALIGN.  If OSECT is not NULL, it will be updated to point to the newly
+   created asection.
+
+   Return 0 on success, -1 on error.  */
+
+static int
+declare_load_sect (bfd *obfd, flagword flags, bfd_size_type size,
+		   bfd_vma vma, bfd_vma align, asection **osect)
+{
+  asection *osection;
+  if ((osection = bfd_make_section_anyway_with_flags (obfd, "load",
+						      flags)) == NULL
+      || !bfd_set_section_size (osection, size)
+      || !bfd_set_section_vma (osection, vma)
+      || !bfd_set_section_lma (osection, 0))
+    {
+      non_fatal (_("Failed to create output section: %s"),
+		 bfd_errmsg (bfd_get_error ()));
+      return -1;
+    }
+
+  if (align >= 1)
+    {
+      /* Check that phdr->p_align is a power of 2.  */
+      if (!is_power_of_two (align))
+	{
+	  non_fatal (_("Unsupported alignment %#lx."), align);
+	  return -1;
+	}
+
+      if (!bfd_set_section_alignment (osection, log2 (align)))
+	{
+	  non_fatal (_("Failed to create output section."));
+	  return -1;
+	}
+    }
+
+  /* Init the program header for the newly created section.  */
+  flags = PF_R;
+  if ((bfd_section_flags (osection) & SEC_READONLY) == 0)
+    flags |= PF_W;
+  if ((bfd_section_flags (osection) & SEC_CODE) != 0)
+    flags |= PF_X;
+
+  if (!bfd_record_phdr (obfd, PT_LOAD, true, flags, false, 0, false, false, 1,
+			&osection))
+    {
+      non_fatal (_("Failed to create program header."));
+      return -1;
+    }
+
+  if (osect != NULL)
+    *osect = osection;
+
+  return 0;
+}
+
 static int
 prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 	      asection **note_sec)
@@ -521,9 +586,6 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 
       flagword flags = SEC_ALLOC;
 
-      if (descr->iphdr->p_filesz != 0)
-	flags |=  SEC_LOAD | SEC_HAS_CONTENTS;
-
       if ((descr->iphdr->p_flags & PF_W) == 0)
 	flags |= SEC_READONLY;
 
@@ -532,48 +594,29 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
       else
 	flags |= SEC_DATA;
 
-      if ((descr->osection
-	   = bfd_make_section_anyway_with_flags (obfd, "load",
-						 flags)) == NULL
-	  || !bfd_set_section_size (descr->osection, descr->iphdr->p_memsz)
-	  || !bfd_set_section_vma (descr->osection, descr->iphdr->p_vaddr)
-	  || !bfd_set_section_lma (descr->osection, 0))
+      /* For the current segment, create a section with content
+	 (if p_filesz > 0), a section without content
+	 (if p_filesz < p_memsz), maybe both.
+	 Sections without content need no further processing, we only
+	 need to track sections for which we will need to copy data.  */
+      if (descr->iphdr->p_filesz > 0)
 	{
-	  non_fatal (_("Failed to create output section: %s"),
-		     bfd_errmsg (bfd_get_error ()));
-	  return -1;
+	  if (declare_load_sect (obfd, flags | SEC_LOAD | SEC_HAS_CONTENTS,
+				 descr->iphdr->p_filesz,
+				 descr->iphdr->p_vaddr, descr->iphdr->p_align,
+				 &descr->osection) == -1)
+	    return -1;
 	}
 
-      if (descr->iphdr->p_align >= 1)
+      if (descr->iphdr->p_filesz < descr->iphdr->p_memsz)
 	{
-	  /* Check that phdr->p_align is a power of 2.  */
-	  if (!is_power_of_two (descr->iphdr->p_align))
-	    {
-	      non_fatal (_("Unsupported alignment %#lx."),
-			 descr->iphdr->p_align);
-	      return -1;
-	    }
-
-	  int align = log2 (descr->iphdr->p_align);
-	  if (!bfd_set_section_alignment (descr->osection, align))
-	    {
-	      non_fatal (_("Failed to create output section."));
-	      return -1;
-	    }
-	}
-
-      /* Init the program header for the newly created section.  */
-      flags = PF_R;
-      if ((bfd_section_flags (descr->osection) & SEC_READONLY) == 0)
-	flags |= PF_W;
-      if ((bfd_section_flags (descr->osection) & SEC_CODE) != 0)
-	flags |= PF_X;
-
-      if (!bfd_record_phdr (descr->obfd, PT_LOAD, true, flags,
-			    false, 0, false, false, 1, &descr->osection))
-	{
-	  non_fatal (_("Failed to create program header."));
-	  return -1;
+	  if (declare_load_sect (obfd, flags,
+				 (descr->iphdr->p_memsz
+				  - descr->iphdr->p_filesz),
+				 (descr->iphdr->p_vaddr
+				  + descr->iphdr->p_filesz),
+				 descr->iphdr->p_align, NULL) == -1)
+	    return -1;
 	}
     }
 
