@@ -535,7 +535,7 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
       if ((descr->osection
 	   = bfd_make_section_anyway_with_flags (obfd, "load",
 						 flags)) == NULL
-	  || !bfd_set_section_size (descr->osection, descr->iphdr->p_memsz)
+	  || !bfd_set_section_size (descr->osection, descr->iphdr->p_filesz)
 	  || !bfd_set_section_vma (descr->osection, descr->iphdr->p_vaddr)
 	  || !bfd_set_section_lma (descr->osection, 0))
 	{
@@ -574,6 +574,68 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 	{
 	  non_fatal (_("Failed to create program header."));
 	  return -1;
+	}
+
+      if (descr->iphdr->p_filesz < descr->iphdr->p_memsz)
+	{
+	  /* Create a second section for the "no-content" part.  */
+	  flags = SEC_ALLOC;
+
+	  if ((descr->iphdr->p_flags & PF_W) == 0)
+	    flags |= SEC_READONLY;
+
+	  if ((descr->iphdr->p_flags & PF_X) != 0)
+	    flags |= SEC_CODE;
+	  else
+	    flags |= SEC_DATA;
+
+	  asection *osection;
+	  if ((osection
+	       = bfd_make_section_anyway_with_flags (obfd, "load",
+						     flags)) == NULL
+	      || !bfd_set_section_size (osection,
+					descr->iphdr->p_memsz
+					- descr->iphdr->p_filesz)
+	      || !bfd_set_section_vma (osection,
+				       descr->iphdr->p_vaddr
+				       + descr->iphdr->p_filesz)
+	      || !bfd_set_section_lma (osection, 0))
+	    {
+	      fprintf (stderr, _("Failed to create output section.\n"));
+	      return -1;
+	    }
+
+	  if (descr->iphdr->p_align >= 1)
+	    {
+	      /* Check that phdr->p_align is a power of 2.  */
+	      if (!is_power_of_two (descr->iphdr->p_align))
+		{
+		  fprintf (stderr, _("Unsupported alignment %#lx.\n"),
+			   descr->iphdr->p_align);
+		  return -1;
+		}
+
+	      int align = log2 (descr->iphdr->p_align);
+	      if (!bfd_set_section_alignment (osection, align))
+		{
+		  fprintf (stderr, _("Failed to create output section.\n"));
+		  return -1;
+		}
+	    }
+
+	  /* Init the program header for the newly created section.  */
+	  flags = PF_R;
+	  if ((bfd_section_flags (osection) & SEC_READONLY) == 0)
+	    flags |= PF_W;
+	  if ((bfd_section_flags (osection) & SEC_CODE) != 0)
+	    flags |= PF_X;
+
+	  if (!bfd_record_phdr (descr->obfd, PT_LOAD, true, flags,
+				false, 0, false, false, 1, &osection))
+	    {
+	      fprintf (stderr, _("Failed to create program header.\n"));
+	      return -1;
+	    }
 	}
     }
 
