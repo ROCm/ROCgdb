@@ -313,7 +313,7 @@ core_target::build_file_mappings ()
 
 	/* If this is a bfd of a shared library, record its soname
 	   and build id.  */
-	if (build_id != nullptr)
+	if (file_ofs == 0 && build_id != nullptr)
 	  {
 	    gdb::unique_xmalloc_ptr<char> soname
 	      = gdb_bfd_read_elf_soname (bfd->filename);
