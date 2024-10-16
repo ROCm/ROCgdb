@@ -432,6 +432,22 @@ core_target::build_file_mappings ()
       gdb::unique_xmalloc_ptr<char> expanded_fname
 	= exec_file_find (filename.c_str (), nullptr);
 
+      /* Only open regular files.  Opening non-regular files (like char or
+	 block device) might end-up having unexpected side effects.  For
+	 non-regular files, directly consider the mappings for this file
+	 as missing.  */
+      if (int err;
+	  expanded_fname != nullptr
+	  && !is_regular_file (expanded_fname.get (), &err))
+	{
+	  /* Record all regions for this file as unavailable.  */
+	  for (const mapped_file::region &region : file_data.regions)
+	    m_core_unavailable_mappings.emplace_back (region.start,
+						      region.end
+						      - region.start);
+	  continue;
+	}
+
       bool build_id_mismatch = false;
       if (expanded_fname != nullptr && file_data.build_id != nullptr)
 	{
