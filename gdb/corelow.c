@@ -275,6 +275,20 @@ core_target::build_file_mappings ()
 		return;
 	      }
 
+	    /* Only open regular files.  Opening non-regular files (like char or
+	       block device) might end-up having unexpected side effects.  For
+	       non-regular files, directly consider the mappings for this file
+	       as missing.  */
+	    if (int err;
+		expanded_fname != nullptr
+		&& !is_regular_file (expanded_fname.get (), &err))
+	      {
+		/* Record the region for this file as unavailable.  */
+		m_core_unavailable_mappings.emplace_back (start, end - start);
+		unavailable_paths.insert (filename);
+		return;
+	      }
+
 	    bfd = bfd_openr (expanded_fname.get (), "binary");
 
 	    if (bfd == nullptr || !bfd_check_format (bfd, bfd_object))
