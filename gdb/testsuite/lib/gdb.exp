@@ -6936,6 +6936,71 @@ proc gdb_core_cmd { core test } {
     return -1
 }
 
+# Figure out whether FILE is sparse.  Returns 1 if FILE is sparse, 0
+# if FILE is not sparse, and -1 if something went wrong.  If MESSAGE
+# is not empty, then issue PASS/FAIL/UNTESTED accordingly.
+proc check_sparse { file {message ""} } {
+    # There is no portable way to check for sparseness with TCL.
+    #
+    # The standard test is to use the stat syscall to get the number
+    # of blocks in the file, multiply by the block size, and compare
+    # the result with the file's logical size.  If smaller, then the
+    # file is sparse.
+    #
+    # We can get the file's logical size with TCL's "file size".  We
+    # can use TCL "file stat" to find the number of file blocks in the
+    # "blocks" element of the returned array (same as stat.st_blocks
+    # in C).  But we don't know what is the byte size of the blocks
+    # reported.  It is NOT what "file stat" returns in the "blksize"
+    # array element (as same stat.st_blksize in C).  As described at:
+    # https://pubs.opengroup.org/onlinepubs/007904875/basedefs/sys/stat.h.html
+    #
+    #  "The unit for the st_blocks member of the stat structure is not
+    #  defined within IEEE Std 1003.1-2001. In some implementations it
+    #  is 512 bytes. It may differ on a file system basis. There is no
+    #  correlation between values of the st_blocks and st_blksize, and
+    #  the f_bsize (from <sys/statvfs.h>) structure members.
+    #
+    #  Traditionally, some implementations defined the multiplier for
+    #  st_blocks in <sys/param.h> as the symbol DEV_BSIZE."
+    #
+    # We could try to address this by writing our own little C program
+    # that tries to use the correct block size for the system.
+    # Looking at the `GNU du`'s source code, though, we see that not
+    # all systems have DEV_BSIZE (or S_BLKSIZE, which is similar), and
+    # then there are some systems that don't have any such macro and
+    # use 1024 as block size.  So not even a 512 fallback works
+    # everywhere.
+    #
+    # It seems pointless to have to worry about portability like that
+    # when `du` exists and is installed (or easy to install) on
+    # practically every Unix-like system we might care about.
+    #
+    # Now, `du`'s behavior has a similar portability issue.  While
+    # most `du` implementations report blocks in 512 bytes units, that
+    # is not guaranteed.  Thankfully, "du -k" is in POSIX, which forces
+    # block size of 1024 bytes.  So that's what we use.
+    set du_result [remote_exec host "du" [list "-k" "$file"]]
+    set du_status [lindex $du_result 0]
+    set du_output [lindex $du_result 1]
+    if {$du_status != 0} {
+	verbose -log "du failed with error code $du_status"
+	verbose -log "du output is: $du_output"
+	if {$message != ""} {
+	    untested $message
+	}
+	return -1
+    }
+    # Get '123' from a string like "123   /path/to/file".
+    set blks [lindex [split $du_output] 0]
+    set size_on_disk [expr {1024 * $blks}]
+    set res [expr {$size_on_disk < [file size $file]}]
+    if {$message != ""} {
+	gdb_assert $res $message
+    }
+    return res
+}
+
 # Return the filename to download to the target and load on the target
 # for this shared library.  Normally just LIBNAME, unless shared libraries
 # for this target have separate link and load images.
