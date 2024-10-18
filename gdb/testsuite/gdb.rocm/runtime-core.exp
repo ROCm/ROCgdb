@@ -45,11 +45,7 @@ proc do_test { fault } {
 	return
     }
 
-    # Check that we obtained a sparse file.
-    file stat $coredump corestat
-    gdb_assert \
-	{$corestat(size) > $corestat(blksize) * $corestat(blocks)} \
-	"core is sparse"
+    check_sparse $coredump "core is sparse"
 
     remote_exec build "mv $coredump $coredump-$fault"
 
