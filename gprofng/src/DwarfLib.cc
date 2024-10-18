@@ -1006,6 +1006,10 @@ Dwr_Tag::dump ()
 	case DW_FORM_string:
 	case DW_FORM_line_strp:
 	case DW_FORM_strp_sup:
+	case DW_FORM_strx1:
+	case DW_FORM_strx2:
+	case DW_FORM_strx3:
+	case DW_FORM_strx4:
 	case DW_FORM_implicit_const:
 	  Dprintf (DUMP_DWARFLIB, "  \"%s\"", atrp->u.str ? atrp->u.str : "<NULL>");
 	  break;
@@ -1018,6 +1022,15 @@ Dwr_Tag::dump ()
 		   atrp->u.str);
 	  break;
 	case DW_FORM_addr:
+	case DW_FORM_addrx:
+	case DW_FORM_addrx1:
+	case DW_FORM_addrx2:
+	case DW_FORM_addrx3:
+	case DW_FORM_addrx4:
+	case DW_FORM_ref_sup4:
+	case DW_FORM_ref_sup8:
+	case DW_FORM_loclistx:
+	case DW_FORM_rnglistx:
 	case DW_FORM_data2:
 	case DW_FORM_data4:
 	case DW_FORM_data8:
@@ -1510,7 +1523,7 @@ DwrLineRegs::read_file_names_dwarf5 ()
 	   (long long) debug_lineSec->offset, efmt_cnt);
   if (efmt_cnt == 0)
     return NULL;
-  t_entry_fmt *efmt = (t_entry_fmt *) malloc (sizeof (t_entry_fmt) * efmt_cnt);
+  t_entry_fmt *efmt = (t_entry_fmt *) xmalloc (sizeof (t_entry_fmt) * efmt_cnt);
   for (int i = 0; i < efmt_cnt; i++)
     {
       efmt[i].type_code = debug_lineSec->GetULEB128 ();
@@ -2058,25 +2071,40 @@ DwrCU::set_die (Dwarf_Die die)
 	  (void) debug_infoSec->Get_64 ();
 	  break;
 	case DW_FORM_addrx:
-	case DW_FORM_strx:
 	case DW_FORM_loclistx:
 	case DW_FORM_rnglistx:
 	  atf->u.offset = debug_infoSec->GetULEB128 ();
 	  break;
-	case DW_FORM_addrx1:
+	case DW_FORM_strx:
+	  atf->u.offset = debug_infoSec->GetULEB128 ();
+	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
+	  break;
 	case DW_FORM_strx1:
+	  atf->u.offset = debug_infoSec->Get_8 ();
+	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
+	  break;
+	case DW_FORM_strx2:
+	  atf->u.offset = debug_infoSec->Get_16 ();
+	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
+	  break;
+	case DW_FORM_strx3:
+	  atf->u.offset = debug_infoSec->Get_24 ();
+	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
+	  break;
+	case DW_FORM_strx4:
+	  atf->u.offset = debug_infoSec->Get_32 ();
+	  atf->u.str = get_string (dwarf->debug_strSec, atf->u.offset);
+	  break;
+	case DW_FORM_addrx1:
 	  atf->u.offset = debug_infoSec->Get_8 ();
 	  break;
 	case DW_FORM_addrx2:
-	case DW_FORM_strx2:
 	  atf->u.offset = debug_infoSec->Get_16 ();
 	  break;
 	case DW_FORM_addrx3:
-	case DW_FORM_strx3:
 	  atf->u.offset = debug_infoSec->Get_24 ();
 	  break;
 	case DW_FORM_addrx4:
-	case DW_FORM_strx4:
 	case DW_FORM_ref_sup4:
 	  atf->u.offset = debug_infoSec->Get_32 ();
 	  break;
@@ -2322,8 +2350,8 @@ DwrCU::map_dwarf_lines (Module *mod)
   if (isGNU && (inlinedSubrCnt > 0))
     {
       Function *func = NULL;
-      mod->inlinedSubr = (InlinedSubr *) malloc (inlinedSubrCnt
-						 * sizeof (InlinedSubr));
+      mod->inlinedSubr = (InlinedSubr *) xmalloc (inlinedSubrCnt
+						  * sizeof (InlinedSubr));
       for (long i = 0; i < inlinedSubrCnt; i++)
 	{
 	  DwrInlinedSubr *inlinedSubr = dwrInlinedSubrs->get (i);

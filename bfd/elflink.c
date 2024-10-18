@@ -2877,7 +2877,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   if (keep_memory)
     esdo->relocs = internal_relocs;
 
-  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
+  _bfd_munmap_temporary (alloc1, alloc1_size);
 
   /* Don't free alloc2, since if it was allocated we are passing it
      back (under the name of internal_relocs).  */
@@ -2885,7 +2885,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   return internal_relocs;
 
  error_return:
-  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
+  _bfd_munmap_temporary (alloc1, alloc1_size);
   if (alloc2 != NULL)
     {
       if (keep_memory)
@@ -12926,7 +12926,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
     {
       file_ptr off = elf_next_file_pos (abfd);
 
-      _bfd_elf_assign_file_position_for_section (symtab_hdr, off, true);
+      _bfd_elf_assign_file_position_for_section (symtab_hdr, off, true, 0);
 
       /* Note that at this point elf_next_file_pos (abfd) is
 	 incorrect.  We do not yet know the size of the .symtab section.
@@ -13370,7 +13370,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	      symtab_shndx_hdr->sh_size = amt;
 
 	      off = _bfd_elf_assign_file_position_for_section (symtab_shndx_hdr,
-							       off, true);
+							       off, true, 0);
 
 	      if (bfd_seek (abfd, symtab_shndx_hdr->sh_offset, SEEK_SET) != 0
 		  || (bfd_write (flinfo.symshndxbuf, amt, abfd) != amt))
@@ -13394,7 +13394,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
       symstrtab_hdr->sh_addralign = 1;
 
       off = _bfd_elf_assign_file_position_for_section (symstrtab_hdr,
-						       off, true);
+						       off, true, 0);
       elf_next_file_pos (abfd) = off;
 
       if (bfd_seek (abfd, symstrtab_hdr->sh_offset, SEEK_SET) != 0
