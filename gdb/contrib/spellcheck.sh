@@ -20,12 +20,14 @@
 # $ ./gdb/contrib/spellcheck.sh gdb*
 
 scriptdir=$(cd "$(dirname "$0")" || exit; pwd -P)
+this_script=$scriptdir/$(basename "$0")
 
 url=https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings/For_machines
 cache_dir=$scriptdir/../../.git
 cache_file=wikipedia-common-misspellings.txt
 dictionary=$cache_dir/$cache_file
 local_dictionary=$scriptdir/common-misspellings.txt
+cache_file2=spell-check.pat1
 
 # Separators: space, slash, tab, colon, comma.
 declare -a grep_separators
@@ -71,12 +73,24 @@ join ()
 
 grep_or="|"
 sed_or="\|"
-grep_separator=$(join $grep_or "${grep_separators[@]}")
-sed_separator=$(join $sed_or "${sed_separators[@]}")
+
+grep_join ()
+{
+    local res
+    res=$(join $grep_or "$@")
+    echo "($res)"
+}
+
+sed_join ()
+{
+    local res
+    res=$(join $sed_or "$@")
+    echo "\($res\)"
+}
 
 usage ()
 {
-    echo "usage: $(basename "$0") <file|dir>+"
+    echo "usage: $(basename "$0") [--check] <file|dir>+"
 }
 
 make_absolute ()
@@ -100,6 +114,18 @@ parse_args ()
     local files
     files=$(mktemp)
     trap 'rm -f "$files"' EXIT
+
+    while true; do
+	case " $1 " in
+	    " --check ")
+		check=true
+		shift
+		;;
+	    *)
+		break
+		;;
+	esac
+    done
 
     if [ $# -eq -0 ]; then
 	usage
@@ -179,21 +205,36 @@ parse_dictionary ()
 
 find_files_matching_words ()
 {
+    local cache_id
+    cache_id=$(cat "$local_dictionary" "$dictionary" "$this_script" \
+		 | md5sum  \
+		 | awk '{print $1}')
+
+    local patfile
+    patfile="$cache_dir/$cache_file2".$cache_id
+
     local pat
-    pat=""
-    for word in "${words[@]}"; do
-	if [ "$pat" = "" ]; then
-	    pat="$word"
-	else
-	    pat="$pat|$word"
-	fi
-    done
-    pat="($pat)"
+    if [ -f "$patfile" ]; then
+	pat=$(cat "$patfile")
+    else
+	rm -f "$cache_dir/$cache_file2".*
 
-    local sep
-    sep=$grep_separator
+	pat=$(grep_join "${words[@]}")
 
-    pat="(^|$sep)$pat($sep|$)"
+	local before after
+	before=$(grep_join \
+		     "^" \
+		     "${grep_separators[@]}")
+	after=$(grep_join \
+		    "${grep_separators[@]}" \
+		    "\." \
+		    "$")
+
+	pat="$before$pat$after"
+
+	echo "$pat" \
+	     > "$patfile"
+    fi
 
     grep -E \
 	-l \
@@ -207,10 +248,16 @@ find_files_matching_word ()
     pat="$1"
     shift
 
-    local sep
-    sep=$grep_separator
+    local before after
+    before=$(grep_join \
+		 "^" \
+		 "${grep_separators[@]}")
+    after=$(grep_join \
+		"${grep_separators[@]}" \
+		"\." \
+		"$")
 
-    pat="(^|$sep)$pat($sep|$)"
+    pat="$before$pat$after"
 
     grep -E \
 	-l \
@@ -229,22 +276,20 @@ replace_word_in_file ()
     local file
     file="$3"
 
-    local sep
-    sep=$sed_separator
+    local before after
+    before=$(sed_join \
+		 "^" \
+		 "${sed_separators[@]}")
+    after=$(sed_join \
+		"${sed_separators[@]}" \
+		"\." \
+		"$")
 
-    # Save separator.
-    sep="\($sep\)"
-
-    local repl1 repl2 repl3
-
-    repl1="s%$sep$word$sep%\1$replacement\2%g"
-
-    repl2="s%^$word$sep%$replacement\1%"
-
-    repl3="s%$sep$word$%\1$replacement%"
+    local repl
+    repl="s%$before$word$after%\1$replacement\2%g"
 
     sed -i \
-	"$repl1;$repl2;$repl3" \
+	"$repl" \
 	"$file"
 }
 
@@ -311,6 +356,7 @@ replace_word_in_files ()
 main ()
 {
     declare -a unique_files
+    check=false
     parse_args "$@"
 
     get_dictionary
@@ -327,6 +373,10 @@ main ()
 
     if [ ${#files_matching_words[@]} -eq 0 ]; then
 	return
+    fi
+
+    if $check; then
+	exit 1
     fi
 
     declare -A words_done
