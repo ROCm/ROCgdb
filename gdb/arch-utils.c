@@ -38,6 +38,7 @@
 #include "auxv.h"
 #include "observable.h"
 #include "solib-target.h"
+#include "event-top.h"
 
 #include "gdbsupport/version.h"
 
@@ -1041,7 +1042,11 @@ default_print_insn (bfd_vma memaddr, disassemble_info *info)
 				 info->mach, current_program_space->exec_bfd ());
 
   gdb_assert (disassemble_fn != NULL);
-  return (*disassemble_fn) (memaddr, info);
+  int res = (*disassemble_fn) (memaddr, info);
+
+  QUIT;
+
+  return res;
 }
 
 /* See arch-utils.h.  */
