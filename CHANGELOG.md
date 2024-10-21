@@ -4,19 +4,15 @@ Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
 ## ROCgdb-16
+
 ### Added
-- When opening a core dump, GDB can use the "sysroot" or "solib-search-path"
-  settings to locate files containing GPU code objects.  This improves opening
+
+- When opening a core dump, GDB can use the `sysroot` or `solib-search-path`
+  settings to locate files containing GPU code objects. This allows opening
   GPU code objects on systems different from the one where the core dump was
   generated.
 
-## (Unreleased) ROCgdb-15
-### Added
-- 'info agents' now prints the agent location as "DDD:BB:DD.F", where
-  "DDDD" is the agent's PCI domain.
-- Add support for precise ALU exception reporting for architectures that
-  support it.  Precise ALU exceptions reporting is controlled with the
-  following commands:
+- Support for precise ALU exception reporting for supported architectures. Precise ALU exceptions reporting is controlled with the following commands:
   - set amdgpu precise-alu-exceptions
   - show amdgpu precise-alu-exceptions
 
