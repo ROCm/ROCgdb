@@ -1,7 +1,7 @@
 # Changelog for ROCgdb
 
 Full documentation for ROCgdb is available at
-[docs.amd.com](https://docs.amd.com/bundle/rocgdb)
+[rocm.docs.amd.com/rocgdb](https://docs.amd.com/bundle/rocgdb)
 
 ## ROCgdb-16
 
