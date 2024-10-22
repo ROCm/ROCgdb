@@ -67,17 +67,6 @@ public:
   /* Add an entry to the index.  The arguments describe the entry; see
      cooked-index.h.  The new entry is returned.  */
   cooked_index_entry *add (sect_offset die_offset, enum dwarf_tag tag,
-			   cooked_index_flag flags,
-			   const char *name,
-			   cooked_index_entry_ref parent_entry,
-			   dwarf2_per_cu *per_cu)
-  {
-    return m_shard->add (die_offset, tag, flags, per_cu->lang (),
-			 name, parent_entry, per_cu);
-  }
-
-  /* Overload that allows the language to be specified.  */
-  cooked_index_entry *add (sect_offset die_offset, enum dwarf_tag tag,
 			   cooked_index_flag flags, enum language lang,
 			   const char *name,
 			   cooked_index_entry_ref parent_entry,
@@ -154,6 +143,16 @@ public:
   void emit_complaints_and_exceptions
        (gdb::unordered_set<gdb_exception> &seen_exceptions);
 
+  /* Record that the FROM CU included the TO CU.  */
+  void record_inclusion (dwarf2_per_cu *from, dwarf2_per_cu *to)
+  {
+    m_inclusions[from].push_back (to);
+  }
+
+  /* Update CUs with all the inclusion information that we've
+     discovered.  */
+  void invert_cu_inclusions ();
+
 private:
   /* The abbrev table cache used by this indexer.  */
   abbrev_table_cache m_abbrev_table_cache;
@@ -198,6 +197,11 @@ private:
 
   /* Exceptions that we're storing to emit later.  */
   std::vector<gdb_exception> m_exceptions;
+
+  /* Map from a CU to a list of all the CUs that it directly
+     includes.  */
+  gdb::unordered_map<dwarf2_per_cu *,
+		     std::vector<dwarf2_per_cu *>> m_inclusions;
 };
 
 /* The possible states of the index.  See the explanatory comment

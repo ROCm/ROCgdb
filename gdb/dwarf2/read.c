@@ -1578,6 +1578,11 @@ static struct compunit_symtab *
 dw2_instantiate_symtab (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
 			bool skip_partial)
 {
+  /* Expand the corresponding canonical outermost CU.  This will
+     expand the desired CU as a side effect when following the
+     DW_TAG_imported_unit.  */
+  per_cu = per_cu->canonical_outermost_cu ();
+
   if (!per_objfile->compunit_symtab_set_p (per_cu))
     {
       free_cached_comp_units freer (per_objfile);
@@ -3327,7 +3332,7 @@ cooked_index_worker_debug_info::process_unit
       if (this_cu->scanned.compare_exchange_strong (nope, true))
 	{
 	  gdb_assert (storage != nullptr);
-	  cooked_indexer indexer (storage, this_cu, reader->cu ()->lang ());
+	  cooked_indexer indexer (storage, reader->cu ()->lang ());
 	  indexer.make_index (reader);
 	}
     }
@@ -3347,7 +3352,7 @@ cooked_index_worker_debug_info::process_type_unit
     return;
 
   gdb_assert (storage != nullptr);
-  cooked_indexer indexer (storage, per_cu, cu->lang ());
+  cooked_indexer indexer (storage, cu->lang ());
   indexer.make_index (reader);
 }
 
@@ -14144,15 +14149,15 @@ cooked_index_functions::search
 	     we see a symbol with an unknown language we find the CU's
 	     language.  Only the .gdb_index reader creates such
 	     symbols.  */
-	  enum language entry_lang = entry->lang;
-	  if (lang_matcher != nullptr || entry_lang == language_unknown)
+	  if (lang_matcher != nullptr || entry->lang == language_unknown)
 	    {
 	      entry->per_cu->ensure_lang (per_objfile);
 	      if (lang_matcher != nullptr
 		  && !entry->per_cu->maybe_multi_language ()
 		  && !lang_matcher (entry->per_cu->lang ()))
 		continue;
-	      entry_lang = entry->per_cu->lang ();
+	      else if (entry->lang == language_unknown)
+		entry->force_set_language ();
 	    }
 
 	  /* We've found the base name of the symbol; now walk its
@@ -14161,7 +14166,7 @@ cooked_index_functions::search
 	  bool found = true;
 
 	  const cooked_index_entry *parent = entry->get_parent ();
-	  const language_defn *lang_def = language_def (entry_lang);
+	  const language_defn *lang_def = language_def (entry->lang);
 	  for (int i = name_vec.size () - 1; i > 0; --i)
 	    {
 	      /* If we ran out of entries, or if this segment doesn't
@@ -14217,8 +14222,12 @@ cooked_index_functions::search
 	  else if (!symbol_matcher (full_name))
 	    continue;
 
-	  if (!search_one (entry->per_cu, per_objfile, cus_to_skip,
-			   file_matcher, listener, nullptr))
+	  bool check = entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
+	    {
+	      return search_one (per_cu, per_objfile, cus_to_skip,
+				 file_matcher, listener, nullptr);
+	    });
+	  if (!check)
 	    return false;
 	}
     }
@@ -17976,6 +17985,30 @@ dwarf2_per_cu::ensure_lang (dwarf2_per_objfile *per_objfile)
   abbrev_table_cache abbrev_table_cache;
   cutu_reader reader (*this, *per_objfile, per_objfile->get_cu (this),
 		      true, std::nullopt, abbrev_table_cache);
+}
+
+/* See read.h.  */
+
+bool
+dwarf2_per_cu::recursively_visit_cus (per_cu_callback callback)
+{
+  if (including_cus.empty ())
+    return callback (this);
+  for (dwarf2_per_cu *iter : including_cus)
+    if (!iter->recursively_visit_cus (callback))
+      return false;
+  return true;
+}
+
+/* See read.h.  */
+
+dwarf2_per_cu *
+dwarf2_per_cu::canonical_outermost_cu ()
+{
+  dwarf2_per_cu *iter = this;
+  while (!iter->including_cus.empty ())
+    iter = *iter->including_cus.begin ();
+  return iter;
 }
 
 /* Return the unit from ALL_UNITS that potentially contains TARGET.

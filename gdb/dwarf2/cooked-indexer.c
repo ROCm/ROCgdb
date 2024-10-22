@@ -27,9 +27,8 @@
 /* See cooked-indexer.h.  */
 
 cooked_indexer::cooked_indexer (cooked_index_worker_result *storage,
-				dwarf2_per_cu *per_cu, enum language language)
+				enum language language)
   : m_index_storage (storage),
-    m_per_cu (per_cu),
     m_language (language),
     m_die_range_map (storage->get_parent_map ())
 {
@@ -102,6 +101,17 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
      Doing this check here avoids self-imports as well.  */
   if (for_scanning)
     {
+      /* Record the inclusion precisely here.  Inclusions are done to
+	 ensure that imported units cause the correct expansions when
+	 searched; and in particular that all including units are
+	 expanded when finding an inline function.  So, this must be
+	 done for all units that are importing "for scanning".
+	 However, doing this any later than this spot would be too
+	 late -- because we want to do this for all importing units,
+	 not just the one that happens to win the race to do the
+	 scanning.  */
+      m_index_storage->record_inclusion (reader->cu ()->per_cu, per_cu);
+
       bool nope = false;
       if (!per_cu->scanned.compare_exchange_strong (nope, true))
 	return nullptr;
@@ -146,6 +156,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 				 const cooked_index_entry **parent_entry,
 				 parent_map::addr_type *maybe_defer,
 				 bool *is_enum_class,
+				 bool *is_inlined,
 				 bool for_specification)
 {
   bool is_declaration = false;
@@ -281,6 +292,16 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 				  scanning_per_cu, abbrev->tag);
 	    }
 	  break;
+
+	case DW_AT_inline:
+	  if (abbrev->tag == DW_TAG_subprogram)
+	    {
+	      std::optional<ULONGEST> val = attr.unsigned_constant ();
+	      if (val.has_value () && (*val == DW_INL_inlined
+				       || *val == DW_INL_declared_inlined))
+		*is_inlined = true;
+	    }
+	  break;
 	}
     }
 
@@ -359,7 +380,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 	scan_attributes (scanning_per_cu, new_reader, new_info_ptr,
 			 new_info_ptr, new_abbrev, name, linkage_name,
 			 flags, nullptr, parent_entry, maybe_defer,
-			 is_enum_class, true);
+			 is_enum_class, is_inlined, true);
     }
 
   if (!for_specification)
@@ -427,8 +448,7 @@ cooked_indexer::index_imported_unit (cutu_reader *reader,
   if (!target.has_value ())
     return info_ptr;
 
-  cutu_reader *new_reader
-    = ensure_cu_exists (reader, *target, true);
+  cutu_reader *new_reader = ensure_cu_exists (reader, *target, true);
   if (new_reader != nullptr)
     index_dies (new_reader, new_reader->info_ptr (), nullptr, false);
 
@@ -526,6 +546,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
       sect_offset sibling {};
       const cooked_index_entry *this_parent_entry = parent_entry;
       bool is_enum_class = false;
+      bool is_inlined = false;
 
       /* The scope of a DW_TAG_entry_point cooked_index_entry is the one of
 	 its surrounding subroutine.  */
@@ -534,7 +555,8 @@ cooked_indexer::index_dies (cutu_reader *reader,
       info_ptr
 	= scan_attributes (reader->cu ()->per_cu, reader, info_ptr, info_ptr,
 			   abbrev, &name, &linkage_name, &flags, &sibling,
-			   &this_parent_entry, &defer, &is_enum_class, false);
+			   &this_parent_entry, &defer, &is_enum_class,
+			   &is_inlined, false);
       /* A DW_TAG_entry_point inherits its static/extern property from
 	 the enclosing subroutine.  */
       if (abbrev->tag == DW_TAG_entry_point)
@@ -583,18 +605,25 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	    }
 	}
 
+      if (is_inlined)
+	flags |= IS_INLINED;
+
       cooked_index_entry *this_entry = nullptr;
+      /* Always use the reader's CU for the entry CU.  */
+      dwarf2_per_cu *cu_for_entry = reader->cu ()->per_cu;
       if (name != nullptr)
 	{
 	  if (defer != 0)
 	    this_entry
 	      = m_index_storage->add (this_die, abbrev->tag,
-				      flags | IS_PARENT_DEFERRED, name,
-				      defer, m_per_cu);
+				      flags | IS_PARENT_DEFERRED,
+				      m_language, name,
+				      defer, cu_for_entry);
 	  else
 	    this_entry
-	      = m_index_storage->add (this_die, abbrev->tag, flags, name,
-				      this_parent_entry, m_per_cu);
+	      = m_index_storage->add (this_die, abbrev->tag, flags,
+				      m_language, name,
+				      this_parent_entry, cu_for_entry);
 	}
 
       if (linkage_name != nullptr)
@@ -607,11 +636,10 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	     have linkage name present but name is absent.  */
 	  if (name != nullptr
 	      || (abbrev->tag != DW_TAG_subprogram
-		  && abbrev->tag != DW_TAG_inlined_subroutine
 		  && abbrev->tag != DW_TAG_entry_point))
 	    flags = flags | IS_LINKAGE;
-	  m_index_storage->add (this_die, abbrev->tag, flags,
-				linkage_name, nullptr, m_per_cu);
+	  m_index_storage->add (this_die, abbrev->tag, flags, m_language,
+				linkage_name, nullptr, cu_for_entry);
 	}
 
       if (abbrev->has_children)

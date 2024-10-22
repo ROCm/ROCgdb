@@ -682,6 +682,10 @@ public:
     /* The next available abbrev number.  */
     int next_abbrev = 1;
 
+    /* Storage for the CU list for inline entries.  This is outside
+       the loops to try to avoid repeated allocations.  */
+    std::vector<dwarf2_per_cu *> per_cus;
+
     for (auto &[name, these_entries] : m_name_to_value_set)
       {
 	/* Sort the items within each bucket.  This ensures that the
@@ -710,108 +714,137 @@ public:
 
 	for (const cooked_index_entry *entry : these_entries)
 	  {
-	    unit_kind kind = (entry->per_cu->is_debug_types ()
-			      ? unit_kind::tu
-			      : unit_kind::cu);
-	    /* Some Ada parentage is synthesized by the reader and so
-	       must be ignored here.  */
-	    const cooked_index_entry *parent = entry->get_parent ();
-	    if (parent != nullptr && (parent->flags & IS_SYNTHESIZED) != 0)
-	      parent = nullptr;
-
-	    int &abbrev = m_indexkey_to_abbrev[index_key (entry->tag,
-							  kind,
-							  entry->flags,
-							  entry->lang,
-							  parent != nullptr)];
-	    if (abbrev == 0)
+	    /* Accumulate all the relevant CUs.  This is needed for
+	       the DW_TAG_inlined_subroutine special case.  */
+	    per_cus.clear ();
+	    entry->visit_defining_cus ([&] (dwarf2_per_cu *one_cu)
 	      {
-		abbrev = next_abbrev++;
+		per_cus.push_back (one_cu);
+		return true;
+	      });
+	    /* Make sure the output is stable.  */
+	    std::sort (per_cus.begin (), per_cus.end (),
+		       [] (const dwarf2_per_cu *lhs, const dwarf2_per_cu *rhs)
+		       {
+			 return lhs->index < rhs->index;
+		       });
 
-		/* Abbrev number and tag.  */
-		m_abbrev_table.append_unsigned_leb128 (abbrev);
-		m_abbrev_table.append_unsigned_leb128 (entry->tag);
+	    for (dwarf2_per_cu *one_cu : per_cus)
+	      {
+		unit_kind kind = (entry->per_cu->is_debug_types ()
+				  ? unit_kind::tu
+				  : unit_kind::cu);
+		/* Some Ada parentage is synthesized by the reader and so
+		   must be ignored here.  */
+		const cooked_index_entry *parent = entry->get_parent ();
+		if (parent != nullptr && (parent->flags & IS_SYNTHESIZED) != 0)
+		  parent = nullptr;
+
+		int &abbrev = m_indexkey_to_abbrev[index_key (entry->tag,
+							      kind,
+							      entry->flags,
+							      entry->lang,
+							      parent != nullptr)];
+		if (abbrev == 0)
+		  {
+		    abbrev = next_abbrev++;
+
+		    /* Abbrev number and tag.  */
+		    m_abbrev_table.append_unsigned_leb128 (abbrev);
+		    m_abbrev_table.append_unsigned_leb128 (entry->tag);
+
+		    /* Unit index.  */
+		    m_abbrev_table.append_unsigned_leb128
+		      (kind == unit_kind::cu
+		       ? DW_IDX_compile_unit
+		       : DW_IDX_type_unit);
+		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+
+		    /* DIE offset.  */
+		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_die_offset);
+		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_ref_addr);
+
+		    /* Language.  */
+		    m_abbrev_table.append_unsigned_leb128
+		      (DW_IDX_GNU_language);
+		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+
+		    /* Internal linkage flag.  */
+		    if (!tag_is_type (entry->tag)
+			&& (entry->flags & IS_STATIC) != 0)
+		      {
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_IDX_GNU_internal);
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_FORM_flag_present);
+		      }
+
+		    /* Main subprogram flag.  */
+		    if ((entry->flags & IS_MAIN) != 0)
+		      {
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_IDX_GNU_main);
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_FORM_flag_present);
+		      }
+
+		    /* Linkage name flag.  */
+		    if ((entry->flags & IS_LINKAGE) != 0)
+		      {
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_IDX_GNU_linkage_name);
+			m_abbrev_table.append_unsigned_leb128
+			  (DW_FORM_flag_present);
+		      }
+
+		    /* Parent offset.  */
+		    if (parent != nullptr)
+		      {
+			m_abbrev_table.append_unsigned_leb128 (DW_IDX_parent);
+			m_abbrev_table.append_unsigned_leb128 (DW_FORM_data4);
+		      }
+
+		    /* Terminate attributes list.  */
+		    m_abbrev_table.append_unsigned_leb128 (0);
+		    m_abbrev_table.append_unsigned_leb128 (0);
+		  }
+
+		/* Record the offset in the pool at which this entry will
+		   reside.  */
+		const auto offset_inserted
+		  = (m_entry_pool_offsets.emplace (entry, m_entry_pool.size ())
+		     .second);
+		gdb_assert (offset_inserted
+			    || (entry->flags & IS_INLINED) != 0);
+
+		/* Write the entry to the pool, starting with the
+		   abbrev number.  */
+		m_entry_pool.append_unsigned_leb128 (abbrev);
 
 		/* Unit index.  */
-		m_abbrev_table.append_unsigned_leb128
-		  (kind == unit_kind::cu
-		   ? DW_IDX_compile_unit
-		   : DW_IDX_type_unit);
-		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+		const auto it = m_cu_index_htab.find (one_cu);
+		gdb_assert (it != m_cu_index_htab.cend ());
+		m_entry_pool.append_unsigned_leb128 (it->second);
 
 		/* DIE offset.  */
-		m_abbrev_table.append_unsigned_leb128 (DW_IDX_die_offset);
-		m_abbrev_table.append_unsigned_leb128 (DW_FORM_ref_addr);
+		m_entry_pool.append_uint (dwarf5_offset_size (),
+					  m_dwarf5_byte_order,
+					  to_underlying (entry->die_offset));
 
 		/* Language.  */
-		m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_language);
-		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
-
-		/* Internal linkage flag.  */
-		if (!tag_is_type (entry->tag)
-		    && (entry->flags & IS_STATIC) != 0)
-		  {
-		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_internal);
-		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
-		  }
-
-		/* Main subprogram flag.  */
-		if ((entry->flags & IS_MAIN) != 0)
-		  {
-		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_main);
-		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
-		  }
-
-		/* Linkage name flag.  */
-		if ((entry->flags & IS_LINKAGE) != 0)
-		  {
-		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_linkage_name);
-		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
-		  }
+		m_entry_pool.append_unsigned_leb128
+		  (entry->per_cu->dw_lang ());
 
 		/* Parent offset.  */
 		if (parent != nullptr)
 		  {
-		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_parent);
-		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_data4);
+		    m_offsets_to_patch.emplace_back
+		      (m_entry_pool.size (), parent);
+
+		    /* Write a dummy number, this gets patched later.  */
+		    m_entry_pool.append_uint (4, m_dwarf5_byte_order,
+					      0xfafafafa);
 		  }
-
-		/* Terminate attributes list.  */
-		m_abbrev_table.append_unsigned_leb128 (0);
-		m_abbrev_table.append_unsigned_leb128 (0);
-	      }
-
-	    /* Record the offset in the pool at which this entry will
-	       reside.  */
-	    const auto offset_inserted
-	      = (m_entry_pool_offsets.emplace (entry, m_entry_pool.size ())
-		 .second);
-	    gdb_assert (offset_inserted);
-
-	    /* Write the entry to the pool, starting with the abbrev number.  */
-	    m_entry_pool.append_unsigned_leb128 (abbrev);
-
-	    /* Unit index.  */
-	    const auto it = m_cu_index_htab.find (entry->per_cu);
-	    gdb_assert (it != m_cu_index_htab.cend ());
-	    m_entry_pool.append_unsigned_leb128 (it->second);
-
-	    /* DIE offset.  */
-	    m_entry_pool.append_uint (dwarf5_offset_size (),
-				      m_dwarf5_byte_order,
-				      to_underlying (entry->die_offset));
-
-	    /* Language.  */
-	    m_entry_pool.append_unsigned_leb128 (entry->per_cu->dw_lang ());
-
-	    /* Parent offset.  */
-	    if (parent != nullptr)
-	      {
-		m_offsets_to_patch.emplace_back (m_entry_pool.size (), parent);
-
-		/* Write a dummy number, this gets patched later.  */
-		m_entry_pool.append_uint (4, m_dwarf5_byte_order,
-					  0xfafafafa);
 	      }
 	  }
 
@@ -1238,9 +1271,6 @@ write_cooked_index (cooked_index *table,
 
   for (const cooked_index_entry *entry : table->all_entries ())
     {
-      const auto it = cu_index_htab.find (entry->per_cu);
-      gdb_assert (it != cu_index_htab.cend ());
-
       const char *name = entry->full_name (symtab->obstack ());
 
       if (entry->lang == language_ada)
@@ -1280,8 +1310,14 @@ write_cooked_index (cooked_index *table,
       else
 	kind = GDB_INDEX_SYMBOL_KIND_OTHER;
 
-      symtab->add_index_entry (name, (entry->flags & IS_STATIC) != 0,
-			       kind, it->second);
+      entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
+	{
+	  const auto it = cu_index_htab.find (per_cu);
+	  gdb_assert (it != cu_index_htab.cend ());
+	  symtab->add_index_entry (name, (entry->flags & IS_STATIC) != 0,
+				   kind, it->second);
+	  return true;
+	});
     }
 }
 

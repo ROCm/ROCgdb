@@ -44,6 +44,9 @@ enum cooked_index_flag_enum : unsigned char
   /* True if this entry was synthesized by gdb (as opposed to coming
      directly from the DWARF).  */
   IS_SYNTHESIZED = 32,
+  /* True if this is a function that has DW_AT_inline set in a way
+     that indicates it was inlined.  */
+  IS_INLINED = 64,
 };
 DEF_ENUM_FLAGS_TYPE (enum cooked_index_flag_enum, cooked_index_flag);
 
@@ -222,6 +225,31 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
     return m_parent_entry.deferred;
   }
 
+  /* Force the language to be set to the CU's language.  This may only
+     be called when the language is unknown, which can only happen
+     with .gdb_index.  This method is const because it is called from
+     a location that normally handles const entries.  */
+  void force_set_language () const;
+
+  /* Type of callback used when visiting defining CUs.  */
+  using per_cu_callback = gdb::function_view<bool (dwarf2_per_cu *)>;
+
+  /* Calls CALLBACK for each CU that "defines" this entry.
+
+     If any call to CALLBACK returns false, this immediately returns
+     false (skipping the remaining calls); otherwise returns true.
+
+     For most entries, there is a single defining CU, which is the
+     canonical outermost includer of the CU holding the entry.  In the
+     most typical case (i.e., where "dwz" has not been used), this is
+     just the entry's CU.
+
+     However, conceptually an inlined subroutine is defined in each
+     such outermost includer -- if a subroutine is inlined in many
+     places, and then "dwz" is run, the IS_INLINED subroutine may be
+     defined in some CU that is included by many other CUs.  */
+  bool visit_defining_cus (per_cu_callback callback) const;
+
   /* The name as it appears in DWARF.  This always points into one of
      the mapped DWARF sections.  Note that this may be the name or the
      linkage name -- two entries are created for DIEs which have both
@@ -233,11 +261,16 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
   enum dwarf_tag tag;
   /* Any flags attached to this entry.  */
   cooked_index_flag flags;
-  /* The language of this symbol.  */
-  ENUM_BITFIELD (language) lang : LANGUAGE_BITS;
+  /* The language of this symbol.  This is mutable because there is a
+     situation where the language is initially unknown, and then only
+     filled in later.  In particular this can happen when using
+     .gdb_index.  See also cooked_index_functions::search.  */
+  mutable ENUM_BITFIELD (language) lang : LANGUAGE_BITS;
   /* The offset of this DIE.  */
   sect_offset die_offset;
-  /* The CU from which this entry originates.  */
+  /* The CU from which this entry originates.  This may point to a
+     partial CU, which can't be expanded in isolation; see
+     visit_defining_cus.  */
   dwarf2_per_cu *per_cu;
 
 private:

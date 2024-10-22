@@ -224,6 +224,15 @@ private:
   /* Backlink to the owner of this.  */
   dwarf2_per_bfd *m_per_bfd;
 
+  /* Compare two CUs.  */
+  struct compare
+  {
+    bool operator() (const dwarf2_per_cu *lhs, const dwarf2_per_cu *rhs) const
+    {
+      return lhs->index < rhs->index;
+    }
+  };
+
 public:
   /* The file and directory for this CU.  This is cached so that we
      don't need to re-examine the DWO in some situations.  This may be
@@ -252,6 +261,13 @@ public:
      indices so we only pay a price for gold generated indices.
      http://sourceware.org/bugzilla/show_bug.cgi?id=15021.  */
   std::vector<dwarf2_per_cu *> imported_symtabs;
+
+  /* Pointer to all the CUs that include this CU via
+     DW_TAG_imported_unit.  This is used for the special handling of
+     inline functions appearing in partial units.  An ordered set is
+     used to ensure that the canonical CU is the same across
+     invocations of gdb.  */
+  std::set<dwarf2_per_cu *, compare> including_cus;
 
   bool is_debug_types () const
   { return m_is_debug_types; }
@@ -404,6 +420,27 @@ public:
 
   /* Free any cached file names.  */
   void free_cached_file_names ();
+
+  /* Indicate that INCLUDER includes this CU via
+     DW_TAG_imported_unit.  */
+  void add_includer (dwarf2_per_cu *includer)
+  {
+    including_cus.emplace (includer);
+  }
+
+  /* Type of callback used when visiting defining CUs.  */
+  using per_cu_callback = gdb::function_view<bool (dwarf2_per_cu *)>;
+
+  /* Calls CALLBACK for each CU that is the outermost includer of
+     ONE_CU.  If ONE_CU has no includers, it calls CALLBACK on ONE_CU.
+     If any call to CALLBACK returns false, this immediately returns
+     false (skipping the remaining calls); otherwise returns true.  */
+  bool recursively_visit_cus (per_cu_callback callback);
+
+  /* Return a canonical outermost CU corresponding to this CU.  If
+     this CU is standalone (not included by other CUs), then this
+     method will simply return 'this'.  */
+  dwarf2_per_cu *canonical_outermost_cu ();
 };
 
 /* Entry in the signatured_types hash table.  */
