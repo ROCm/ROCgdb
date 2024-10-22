@@ -56,6 +56,7 @@
 #include "extension.h"
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/gdb_tilde_expand.h"
+#include "gdbsupport/eintr.h"
 
 #ifdef TUI
 #include "tui/tui.h"
@@ -922,7 +923,11 @@ run_under_shell (const char *arg, int from_tty)
     }
 
   if (pid != -1)
-    waitpid (pid, &status, 0);
+    {
+      int ret = gdb::handle_eintr (-1, ::waitpid, pid, &status, 0);
+      if (ret == -1)
+	perror_with_name ("Cannot get status of shell command");
+    }
   else
     error (_("Fork failed"));
   return status;
