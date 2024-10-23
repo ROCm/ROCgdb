@@ -701,15 +701,10 @@ iterate_over_some_symtabs (const char *name,
   return false;
 }
 
-/* Check for a symtab of a specific name; first in symtabs, then in
-   psymtabs.  *If* there is no '/' in the name, a match after a '/'
-   in the symtab filename will also work.
-
-   Calls CALLBACK with each symtab that is found.  If CALLBACK returns
-   true, the search stops.  */
+/* See symtab.h.  */
 
 void
-iterate_over_symtabs (const char *name,
+iterate_over_symtabs (program_space *pspace, const char *name,
 		      gdb::function_view<bool (symtab *)> callback)
 {
   gdb::unique_xmalloc_ptr<char> real_path;
@@ -722,34 +717,28 @@ iterate_over_symtabs (const char *name,
       gdb_assert (IS_ABSOLUTE_PATH (real_path.get ()));
     }
 
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      if (iterate_over_some_symtabs (name, real_path.get (),
-				     objfile->compunit_symtabs, NULL,
-				     callback))
+  for (objfile *objfile : pspace->objfiles ())
+    if (iterate_over_some_symtabs (name, real_path.get (),
+				   objfile->compunit_symtabs, nullptr,
+				   callback))
 	return;
-    }
 
-  /* Same search rules as above apply here, but now we look thru the
+  /* Same search rules as above apply here, but now we look through the
      psymtabs.  */
-
-  for (objfile *objfile : current_program_space->objfiles ())
-    {
-      if (objfile->map_symtabs_matching_filename (name, real_path.get (),
-						  callback))
-	return;
-    }
+  for (objfile *objfile : pspace->objfiles ())
+    if (objfile->map_symtabs_matching_filename (name, real_path.get (),
+						callback))
+      return;
 }
 
-/* A wrapper for iterate_over_symtabs that returns the first matching
-   symtab, or NULL.  */
+/* See symtab.h.  */
 
-struct symtab *
-lookup_symtab (const char *name)
+symtab *
+lookup_symtab (program_space *pspace, const char *name)
 {
   struct symtab *result = NULL;
 
-  iterate_over_symtabs (name, [&] (symtab *symtab)
+  iterate_over_symtabs (pspace, name, [&] (symtab *symtab)
     {
       result = symtab;
       return true;
@@ -1564,6 +1553,7 @@ symbol_cache_mark_not_found (struct block_symbol_cache *bsc,
 static void
 symbol_cache_flush (struct program_space *pspace)
 {
+  ada_clear_symbol_cache (pspace);
   struct symbol_cache *cache = symbol_cache_key.get (pspace);
   int pass;
 
@@ -1927,6 +1917,28 @@ lookup_name_info::match_any ()
 					     true);
 
   return lookup_name;
+}
+
+/* See symtab.h.  */
+
+unsigned int
+lookup_name_info::search_name_hash (language lang) const
+{
+  /* This works around an obscure problem.  If currently in Ada mode,
+     and the name is wrapped in '<...>' (indicating verbatim mode),
+     force the use of the Ada language here so that the '<' and '>'
+     will be removed.  */
+  if (current_language->la_language == language_ada && ada ().verbatim_p ())
+    lang = language_ada;
+
+  /* Only compute each language's hash once.  */
+  if (!m_demangled_hashes_p[lang])
+    {
+      m_demangled_hashes[lang]
+	= ::search_name_hash (lang, language_lookup_name (lang));
+      m_demangled_hashes_p[lang] = true;
+    }
+  return m_demangled_hashes[lang];
 }
 
 /* Compute the demangled form of NAME as used by the various symbol
@@ -2981,7 +2993,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 					   section.  */
 	    }
 
-	  /* Cust is best found sofar, save it.  */
+	  /* Cust is best found so far, save it.  */
 	  best_cust = cust;
 	  best_cust_range = range;
 	}
@@ -6295,7 +6307,7 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
 
   /* Go through symtabs for SRCFILE and check the externs and statics
      for symbols which match.  */
-  iterate_over_symtabs (srcfile, [&] (symtab *s)
+  iterate_over_symtabs (current_program_space, srcfile, [&] (symtab *s)
     {
       add_symtab_completions (s->compunit (),
 			      tracker, mode, lookup_name,

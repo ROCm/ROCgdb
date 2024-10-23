@@ -82,6 +82,7 @@
 #include "pager.h"
 #include "run-on-main-thread.h"
 #include "arch-utils.h"
+#include "gdbsupport/gdb_tilde_expand.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -820,7 +821,9 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
     }
 
   /* Format the question outside of the loop, to avoid reusing args.  */
-  std::string question = string_vprintf (ctlstr, args);
+  string_file tem (gdb_stdout->can_emit_style_escape ());
+  gdb_vprintf (&tem, ctlstr, args);
+  std::string question = tem.release ();
   std::string prompt
     = string_printf (_("%s%s(%s or %s) %s"),
 		     annotation_level > 1 ? "\n\032\032pre-query\n" : "",
@@ -1283,6 +1286,14 @@ set_screen_width_and_height (int width, int height)
   set_width ();
 }
 
+/* Import termcap variable UP (instead of readline private variable
+   _rl_term_up, which we're trying to avoid, see PR build/10723).  The UP
+   variable doesn't seem be part of the regular termcap interface, but rather
+   curses-specific.  But if it's missing in the termcap library, then readline
+   provides a fallback version.  Let's assume the fallback is not part of the
+   private readline interface.  */
+extern "C" char *UP;
+
 /* Implement "maint info screen".  */
 
 static void
@@ -1341,6 +1352,46 @@ maintenance_info_screen (const char *args, int from_tty)
 	      _("Number of lines environment thinks "
 		"are in a page is %s (LINES).\n"),
 	      getenv ("LINES"));
+
+  bool have_up = UP != nullptr && *UP != '\0';
+
+  /* Fetch value of readline variable horizontal-scroll-mode.  */
+  const char *horizontal_scroll_mode_value
+    = rl_variable_value ("horizontal-scroll-mode");
+  bool force_horizontal_scroll_mode
+    = (horizontal_scroll_mode_value != nullptr
+       && strcmp (horizontal_scroll_mode_value, "on") == 0);
+
+  const char *mode = nullptr;
+  const char *reason = nullptr;
+  if (batch_flag)
+    {
+      mode = "unsupported";
+      reason = "gdb batch mode";
+    }
+  else if (!have_up)
+    {
+      mode = "unsupported";
+      reason = "terminal is not Cursor Up capable";
+    }
+  else if (force_horizontal_scroll_mode)
+    {
+      mode = "disabled";
+      reason = "horizontal-scroll-mode";
+    }
+  else if (readline_hidden_cols)
+    {
+      mode = "readline";
+      reason = "terminal is not auto wrap capable, last column reserved";
+    }
+  else
+    {
+      mode = "terminal";
+      reason = "terminal is auto wrap capable";
+    }
+
+  gdb_printf (gdb_stdout, _("Readline wrapping mode: %s (%s).\n"), mode,
+	      reason);
 }
 
 void
@@ -3704,6 +3755,23 @@ copy_bitwise (gdb_byte *dest, ULONGEST dest_offset,
       buf &= (1 << nbits) - 1;
       *dest = (*dest & (~0U << nbits)) | buf;
     }
+}
+
+/* See utils.h.  */
+
+std::string
+extract_single_filename_arg (const char *args)
+{
+  if (args == nullptr)
+    return {};
+
+  std::string filename = extract_string_maybe_quoted (&args);
+  args = skip_spaces (args);
+  if (*args != '\0')
+    error (_("Junk after filename \"%s\": %s"), filename.c_str (), args);
+  if (!filename.empty ())
+    filename = gdb_tilde_expand (filename.c_str ());
+  return filename;
 }
 
 #if GDB_SELF_TEST

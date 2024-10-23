@@ -49,6 +49,15 @@
 
 #define is_power_of_two(x) ((x) && ((x) & ((x) - 1)) == 0)
 
+/* When generating sparse cores, we skip writing blocks comprised of all zeros
+   if the block is of size of SPARSE_BLOCK_SIZE and aligned on a
+   SPARSE_BLOCK_SIZE boundary in the underlying output file.  */
+#define SPARSE_BLOCK_SIZE 0x1000
+
+/* Largest amount of data (in bytes) we copy from an input to the produced
+   combined core file.  */
+#define COPY_SIZE (256 * SPARSE_BLOCK_SIZE)
+
 /* Set by command line flags.  */
 
 static int show_version = 0;
@@ -146,8 +155,8 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
 
       if (in.namedata + in.namesz > (char *) note_end)
 	{
-	  fprintf (stderr, _("Error decoding notes from %s.\n"),
-		   bfd_get_filename (ibfd));
+	  non_fatal (_("Error decoding notes from %s."),
+		     bfd_get_filename (ibfd));
 	  free (note_data);
 	  return -1;
 	}
@@ -159,8 +168,8 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  && (in.descdata > (char *) note_end
 	      || in.descdata + in.descsz > (char *) note_end))
 	{
-	  fprintf (stderr, _("Error decoding notes from %s.\n"),
-		   bfd_get_filename (ibfd));
+	  non_fatal (_("Error decoding notes from %s."),
+		     bfd_get_filename (ibfd));
 	  free (note_data);
 	  return -1;
 	}
@@ -182,7 +191,7 @@ gather_notes (bfd *obfd, bfd *ibfd, Elf_Internal_Phdr *phdr,
   return 0;
 }
 
-/* Describe a load section which should be created in the output BFD and keep
+/* Describe load sections which should be created in the output BFD and keep
    track of where the actual data should be loaded from.  */
 
 struct out_section
@@ -193,7 +202,8 @@ struct out_section
   bfd *obfd;
   /* The Phdr describing where the data lives in IBFD.  */
   Elf_Internal_Phdr *iphdr;
-  /* The section in OBFD where the data will be copied.  */
+  /* The section in OBFD where the data will be copied.  Can be NULL if no
+     data needs to be copied to the OBFD (content-less section).  */
   asection *osection;
   /* Next section to be processed.  */
   struct out_section *next;
@@ -252,7 +262,7 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  || phdr_contains (phdr, head->iphdr->p_vaddr)
 	  || phdr_contains (phdr,
 			    head->iphdr->p_vaddr + head->iphdr->p_memsz - 1))
-	fprintf (stderr, "[warning] Found overapping segments\n");
+	non_fatal (_("[warning] Found overapping segments."));
     }
 
   /* Record the current section to be loaded.  */
@@ -270,6 +280,90 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
   return 0;
 }
 
+/* Returns 1 if all SIZE first bytes from the buffer referenced by BUF are
+   all NUL bytes, 0 otherwise.
+
+   SIZE must be at most SPARSE_BLOCK_SIZE.  */
+
+static int
+is_all_zeros (const bfd_byte *buf, size_t size)
+{
+  assert (size <= SPARSE_BLOCK_SIZE);
+  static const bfd_byte zeros[SPARSE_BLOCK_SIZE] = {0};
+  return memcmp (buf, zeros, size) == 0;
+}
+
+/* Wrapper around bfd_set_section_contents that skips writing blocks of
+   SPARSE_BLOCK_SIZE size if such block only contains 0s.
+
+   The caller ensures that blocks should be written on a SPARSE_BLOCK_SIZE
+   boundary on the underlying file for this to effectively produce sparse
+   core dumps.  */
+
+static int
+sparse_bfd_set_section_contents (bfd *abfd, asection *section,
+				 const void *data, file_ptr offset,
+				 bfd_size_type count)
+{
+  for (size_t i = 0; i < count; i += SPARSE_BLOCK_SIZE)
+    {
+      size_t block_size = count - i;
+      if (block_size > SPARSE_BLOCK_SIZE)
+	block_size = SPARSE_BLOCK_SIZE;
+
+      /* Ignore writing blocks of all-0s.  */
+      if (!is_all_zeros (data + i, block_size))
+	{
+	  if (!bfd_set_section_contents (abfd, section, data + i, offset + i,
+					 block_size))
+	    return 0;
+	}
+    }
+
+  return 1;
+}
+
+/* Helper function which writes a single 0 at the last byte of the last
+   non-empty section in the file.
+
+   Since that section is at the very end of the output core dump, this ensures
+   that the overall file size is valid, even if we skip writing blocks of 0s
+   to obtain a sparse output.
+
+   This last byte is expected to be overridden later if it should be non-0.
+   If something wrong happens before the end of the copy, we do expect to have
+   0-initialized memory in the missing sections anyway, so this byte is
+   valid.  */
+
+static void
+ensure_last_section_size (struct out_section *descr)
+{
+  struct out_section *last_section = NULL;
+
+  /* Output must have began so we are sure BFD has laid out all sections in
+     the output file.  */
+  assert (descr->obfd->output_has_begun);
+  for (; descr != NULL; descr = descr->next)
+    {
+      if (descr->osection != NULL)
+	{
+	  assert (descr->osection->size > 0);
+	  if (last_section == NULL
+	      || descr->osection->filepos > last_section->osection->filepos)
+	    last_section = descr;
+	}
+    }
+
+  if (last_section != NULL)
+    {
+      assert (last_section->osection != NULL
+	      && last_section->osection->size > 0);
+      const char byte = 0;
+      bfd_set_section_contents (last_section->obfd, last_section->osection,
+				&byte, last_section->osection->size - 1, 1);
+    }
+}
+
 /* Copy data from source file to destination file according to DESCR.
 
    Return 0 on success, non-0 otherwise.  */
@@ -277,61 +371,68 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 static int
 do_copy_load_segments (struct out_section *descr)
 {
-  char *buf = xmalloc (BUFSIZE);
+  char *buf = xmalloc (COPY_SIZE);
+
+  ensure_last_section_size (descr);
 
   for (; descr != NULL; descr = descr->next)
     {
+      /* No data to copy for this section.  */
+      if (descr->osection == NULL)
+	continue;
+
       size_t to_copy = descr->iphdr->p_filesz;
-      size_t to_fill = descr->iphdr->p_memsz - descr->iphdr->p_filesz;
       verbose_printf (_(" Copying segment from %s offset=0x%lx,"
 			" size=0x%lx, vma=0x%lx\n"),
 		      bfd_get_filename (descr->ibfd),
 		      descr->iphdr->p_offset, descr->iphdr->p_filesz,
 		      descr->iphdr->p_vaddr);
 
-      if (descr->iphdr->p_filesz == 0)
-	continue;
-
+      /* The first chunk should get us up to the next SPARSE_BLOCK_SIZE
+	 alignment on the underlying file.  */
+      int sparse_align = 1;
       /* Copy data from the input file.  */
       while (to_copy > 0)
 	{
-	  size_t to_read = to_copy < BUFSIZE ? to_copy : BUFSIZE;
+	  size_t to_read = to_copy < COPY_SIZE ? to_copy : COPY_SIZE;
+	  if (sparse_align)
+	    {
+	      size_t first_chunk_size
+		= (SPARSE_BLOCK_SIZE
+		   - (descr->osection->filepos % SPARSE_BLOCK_SIZE));
+	      if (first_chunk_size != SPARSE_BLOCK_SIZE)
+		to_read = first_chunk_size;
+
+	      sparse_align = 0;
+	    }
+
 	  if (bfd_seek (descr->ibfd, descr->iphdr->p_offset +
 			(descr->iphdr->p_filesz - to_copy), SEEK_SET) != 0
-	      || bfd_read (buf, to_read, descr->ibfd) != to_read
-	      || !bfd_set_section_contents (descr->obfd, descr->osection,
-					    buf,
-					    descr->iphdr->p_filesz - to_copy,
-					    to_read))
+	      || bfd_read (buf, to_read, descr->ibfd) != to_read)
 	    {
-	      fprintf (stderr, _("Failed to copy data from %s to %s.\n"),
-		       bfd_get_filename (descr->ibfd),
-		       bfd_get_filename (descr->obfd));
+	      non_fatal (_("warning: Failed to read 0x%lx bytes from %s at "
+			   "offset 0x%lx: %s"),
+			 to_read, bfd_get_filename (descr->ibfd),
+			 (unsigned long) (descr->iphdr->p_offset
+					  + (descr->iphdr->p_filesz - to_copy)),
+			 bfd_errmsg (bfd_get_error ()));
+	      break;
+	    }
+
+	  if (!sparse_bfd_set_section_contents (descr->obfd, descr->osection,
+						buf,
+						descr->iphdr->p_filesz
+						- to_copy,
+						to_read))
+	    {
+	      non_fatal (_("Failed to write 0x%zx bytes in %s at offset: %s"),
+			 to_read, bfd_get_filename (descr->ibfd),
+			 bfd_errmsg (bfd_get_error ()));
 	      free (buf);
 	      return -1;
 	    }
-	  to_copy -= to_read;
-	}
 
-      if (to_fill > 0)
-	{
-	  memset (buf, 0, BUFSIZE);
-	  while (to_fill > 0)
-	    {
-	      size_t curr = to_fill < BUFSIZE ? to_fill : BUFSIZE;
-	      if (!bfd_set_section_contents (descr->obfd, descr->osection,
-					     buf,
-					     descr->iphdr->p_memsz - to_fill,
-					     curr))
-		{
-		  fprintf (stderr, _("Failed to copy data from %s to %s.\n"),
-			   bfd_get_filename (descr->ibfd),
-			   bfd_get_filename (descr->obfd));
-		  free (buf);
-		  return -1;
-		}
-	      to_fill -= curr;
-	    }
+	  to_copy -= to_read;
 	}
     }
 
@@ -390,6 +491,65 @@ analyze_ibfd (bfd *obfd, bfd *ibfd,
   return 0;
 }
 
+/* Declare a load section of size SIZE to be loaded at address VMA in OBFD.
+   Attributes are set according to FLAGS.  The section alignment is specified
+   by ALIGN.  If OSECT is not NULL, it will be updated to point to the newly
+   created asection.
+
+   Return 0 on success, -1 on error.  */
+
+static int
+declare_load_sect (bfd *obfd, flagword flags, bfd_size_type size,
+		   bfd_vma vma, bfd_vma align, asection **osect)
+{
+  asection *osection;
+  if ((osection = bfd_make_section_anyway_with_flags (obfd, "load",
+						      flags)) == NULL
+      || !bfd_set_section_size (osection, size)
+      || !bfd_set_section_vma (osection, vma)
+      || !bfd_set_section_lma (osection, 0))
+    {
+      non_fatal (_("Failed to create output section: %s"),
+		 bfd_errmsg (bfd_get_error ()));
+      return -1;
+    }
+
+  if (align >= 1)
+    {
+      /* Check that phdr->p_align is a power of 2.  */
+      if (!is_power_of_two (align))
+	{
+	  non_fatal (_("Unsupported alignment %#lx."), align);
+	  return -1;
+	}
+
+      if (!bfd_set_section_alignment (osection, log2 (align)))
+	{
+	  non_fatal (_("Failed to create output section."));
+	  return -1;
+	}
+    }
+
+  /* Init the program header for the newly created section.  */
+  flags = PF_R;
+  if ((bfd_section_flags (osection) & SEC_READONLY) == 0)
+    flags |= PF_W;
+  if ((bfd_section_flags (osection) & SEC_CODE) != 0)
+    flags |= PF_X;
+
+  if (!bfd_record_phdr (obfd, PT_LOAD, true, flags, false, 0, false, false, 1,
+			&osection))
+    {
+      non_fatal (_("Failed to create program header."));
+      return -1;
+    }
+
+  if (osect != NULL)
+    *osect = osection;
+
+  return 0;
+}
+
 static int
 prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 	      asection **note_sec)
@@ -402,7 +562,8 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 						 | SEC_ALLOC);
   if (*note_sec == NULL)
     {
-      fprintf (stderr, _("Failed to create the output note section.\n"));
+      non_fatal (_("Failed to create the output note section: %s"),
+		 bfd_errmsg (bfd_get_error ()));
       return -1;
     }
 
@@ -413,8 +574,8 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
   if (!bfd_record_phdr (obfd, PT_NOTE, true, PF_R, false, 0, false, false, 1,
 			note_sec))
     {
-      fprintf (stderr, _("Failed to create program headers in %s.\n"),
-	       bfd_get_filename (obfd));
+      non_fatal (_("Failed to create program headers in %s."),
+		 bfd_get_filename (obfd));
       return -1;
     }
 
@@ -425,9 +586,6 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
 
       flagword flags = SEC_ALLOC;
 
-      if (descr->iphdr->p_filesz != 0)
-	flags |=  SEC_LOAD | SEC_HAS_CONTENTS;
-
       if ((descr->iphdr->p_flags & PF_W) == 0)
 	flags |= SEC_READONLY;
 
@@ -436,47 +594,29 @@ prepare_obfd (bfd *obfd, struct out_section *descr, int notes_data_size,
       else
 	flags |= SEC_DATA;
 
-      if ((descr->osection
-	   = bfd_make_section_anyway_with_flags (obfd, "load",
-						 flags)) == NULL
-	  || !bfd_set_section_size (descr->osection, descr->iphdr->p_memsz)
-	  || !bfd_set_section_vma (descr->osection, descr->iphdr->p_vaddr)
-	  || !bfd_set_section_lma (descr->osection, 0))
+      /* For the current segment, create a section with content
+	 (if p_filesz > 0), a section without content
+	 (if p_filesz < p_memsz), maybe both.
+	 Sections without content need no further processing, we only
+	 need to track sections for which we will need to copy data.  */
+      if (descr->iphdr->p_filesz > 0)
 	{
-	  fprintf (stderr, _("Failed to create output section.\n"));
-	  return -1;
+	  if (declare_load_sect (obfd, flags | SEC_LOAD | SEC_HAS_CONTENTS,
+				 descr->iphdr->p_filesz,
+				 descr->iphdr->p_vaddr, descr->iphdr->p_align,
+				 &descr->osection) == -1)
+	    return -1;
 	}
 
-      if (descr->iphdr->p_align >= 1)
+      if (descr->iphdr->p_filesz < descr->iphdr->p_memsz)
 	{
-	  /* Check that phdr->p_align is a power of 2.  */
-	  if (!is_power_of_two (descr->iphdr->p_align))
-	    {
-	      fprintf (stderr, _("Unsupported alignment %#lx.\n"),
-		       descr->iphdr->p_align);
-	      return -1;
-	    }
-
-	  int align = log2 (descr->iphdr->p_align);
-	  if (!bfd_set_section_alignment (descr->osection, align))
-	    {
-	      fprintf (stderr, _("Failed to create output section.\n"));
-	      return -1;
-	    }
-	}
-
-      /* Init the program header for the newly created section.  */
-      flags = PF_R;
-      if ((bfd_section_flags (descr->osection) & SEC_READONLY) == 0)
-	flags |= PF_W;
-      if ((bfd_section_flags (descr->osection) & SEC_CODE) != 0)
-	flags |= PF_X;
-
-      if (!bfd_record_phdr (descr->obfd, PT_LOAD, true, flags,
-			    false, 0, false, false, 1, &descr->osection))
-	{
-	  fprintf (stderr, _("Failed to create program header.\n"));
-	  return -1;
+	  if (declare_load_sect (obfd, flags,
+				 (descr->iphdr->p_memsz
+				  - descr->iphdr->p_filesz),
+				 (descr->iphdr->p_vaddr
+				  + descr->iphdr->p_filesz),
+				 descr->iphdr->p_align, NULL) == -1)
+	    return -1;
 	}
     }
 
@@ -513,17 +653,18 @@ do_merge_cores (bfd *obfd, bfd *hbfd, bfd *gbfd)
   if (prepare_obfd (obfd, descr, notes_buf_size, &note_sec))
     goto out;
 
-  if ((ret = do_copy_load_segments (descr)) != 0)
-    goto out;
-
+  /* Start the output by writing the note section out.  */
   if (!bfd_set_section_contents (obfd, note_sec, notes_buf, 0,
 				 notes_buf_size))
     {
-      fprintf (stderr, _("Failed to write notes in %s.\n"),
-	       bfd_get_filename (obfd));
+      non_fatal (_("Failed to write notes in %s: %s"), bfd_get_filename (obfd),
+		 bfd_errmsg (bfd_get_error ()));
       ret = -1;
       goto out;
     }
+
+  if ((ret = do_copy_load_segments (descr)) != 0)
+    goto out;
 
   ret = 0;
 
@@ -551,13 +692,15 @@ open_core (const char *path)
   ret = bfd_openr (path, NULL);
   if (ret == NULL)
     {
-      fprintf (stderr, _("Failed to open %s.\n"), path);
+      non_fatal (_("Failed to open %s: %s"), path,
+		bfd_errmsg (bfd_get_error ()));
       return NULL;
     }
 
   if (!bfd_check_format (ret, bfd_core))
     {
-      fprintf (stderr, _("%s is not a core file.\n"), bfd_get_filename (ret));
+      non_fatal (_("%s is not a core file: %s"), bfd_get_filename (ret),
+		 bfd_errmsg (bfd_get_error ()));
       bfd_close (ret);
       return NULL;
     }
@@ -566,8 +709,8 @@ open_core (const char *path)
   if (bfd_get_flavour (ret) != bfd_target_elf_flavour
       || get_elf_backend_data (ret)->s->elfclass != ELFCLASS64)
     {
-      fprintf (stderr, _("%s is not an Elf64 based core file.\n"),
-	       bfd_get_filename (ret));
+      non_fatal (_("%s is not an Elf64 based core file."),
+		 bfd_get_filename (ret));
       bfd_close (ret);
       return NULL;
     }
@@ -587,7 +730,7 @@ merge_core (const char *out, const char *host_core, const char *gpu_core)
 
   if (access (out, F_OK) == 0 && !force)
     {
-      printf (_("File %s already exist.  Use '-f' to override.\n"), out);
+      non_fatal (_("File %s already exist.  Use '-f' to override."), out);
       return -1;
     }
 
@@ -608,7 +751,8 @@ merge_core (const char *out, const char *host_core, const char *gpu_core)
       || !bfd_set_format (obfd, bfd_core)
       || !bfd_set_arch_mach (obfd, bfd_get_arch (hbfd), bfd_get_mach (hbfd)) )
     {
-      fprintf (stderr, _("Failed to create %s\n"), out);
+      non_fatal (_("Failed to create %s: %s"), out,
+		 bfd_errmsg (bfd_get_error ()));
       bfd_close (hbfd);
       bfd_close (gbfd);
       return -1;
@@ -684,7 +828,7 @@ main (int argc, char **argv)
      - 2 files to merge.  */
   if (optind + 3 > argc)
     {
-      fprintf (stderr, _("Missing positional arguments.\n\n"));
+      non_fatal (_("Missing positional arguments.\n"));
       usage (stderr, 2);
     }
 

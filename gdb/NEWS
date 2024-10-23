@@ -3,12 +3,51 @@
 
 *** Changes since GDB 15
 
+* Debugging support for Intel MPX has been removed.  This includes the
+  removal of
+  ** MPX register support
+  ** the commands "show/set mpx bound" (deprecated since GDB 15)
+  ** i386 and amd64 implementation of the hooks report_signal_info and
+     get_siginfo_type.
+
+* GDB now supports printing of asynchronous events from the Intel Processor
+  Trace during 'record instruction-history', 'record function-call-history'
+  and all stepping commands.  This can be controlled with the new
+  "set record btrace pt event-tracing" command.
+
 * GDB now supports printing of ptwrite payloads from the Intel Processor
   Trace during 'record instruction-history', 'record function-call-history'
   and all stepping commands.  The payload is also accessible in Python as a
   RecordAuxiliary object.  Printing is customizable via a ptwrite filter
   function in Python.  By default, the raw ptwrite payload is printed for
   each ptwrite that is encountered.
+
+* For breakpoints that are created in the 'pending' state, any
+  'thread' or 'task' keywords are parsed at the time the breakpoint is
+  created, rather than at the time the breakpoint becomes non-pending.
+
+* Thread-specific breakpoints are only inserted into the program space
+  in which the thread of interest is running.  In most cases program
+  spaces are unique for each inferior, so this means that
+  thread-specific breakpoints will usually only be inserted for the
+  inferior containing the thread of interest.  The breakpoint will
+  be hit no less than before.
+
+* For ARM targets, the offset of the pc in the jmp_buf has been fixed to match
+  glibc 2.20 and later.  This should only matter when not using libc probes.
+  This may cause breakage when using an incompatible libc, like uclibc or
+  newlib, or an older glibc.
+
+* MTE (Memory Tagging Extension) debugging is now supported on AArch64 baremetal
+  targets.
+
+* Remove support (native and remote) for QNX Neutrino (triplet
+  `i[3456]86-*-nto*`).
+
+* In a record session, when a forward emulation reaches the end of the reverse
+  history, the warning message has been changed to indicate that the end of the
+  history has been reached.  It also specifies that the forward execution can
+  continue, and the recording will also continue.
 
 * Python API
 
@@ -24,16 +63,56 @@
      the return value from the latest "stepOut" command, when
      appropriate.
 
-* For ARM targets, the offset of the pc in the jmp_buf has been fixed to match
-  glibc 2.20 and later.  This should only matter when not using libc probes.
-  This may cause breakage when using an incompatible libc, like uclibc or
-  newlib, or an older glibc.
+* New commands
 
-* MTE (Memory Tagging Extension) debugging is now supported on AArch64 baremetal
-  targets.
+set style line-number foreground COLOR
+set style line-number background COLOR
+set style line-number intensity VALUE
+  Control the styling of line numbers printed by GDB.
 
-* Remove support (native and remote) for QNX Neutrino (triplet
-  `i[3456]86-*-nto*`).
+maintenance info inline-frames [ADDRESS]
+  New command which displays GDB's inline-frame information for the
+  current address, or for ADDRESS if specified.  The output identifies
+  inlined frames which start at the specified address.
+
+maintenance info blocks [ADDRESS]
+  New command which displays information about all of the blocks at
+  ADDRESS, or at the current address if ADDRESS is not given.  Blocks
+  are listed starting at the inner global block out to the most inner
+  block.
+
+* Changed commands
+
+remove-symbol-file
+  This command now supports file-name completion.
+
+remove-symbol-file -a ADDRESS
+  The ADDRESS expression can now be a full expression consisting of
+  multiple terms, e.g. 'function + 0x1000' (without quotes),
+  previously only a single term could be given.
+
+target core
+target exec
+target tfile
+target ctf
+compile file
+maint print c-tdesc
+save gdb-index
+  These commands now require their filename argument to be quoted if
+  it contains white space or quote characters.  If the argument
+  contains no such special characters then quoting is not required.
+
+maintenance print remote-registers
+  Add an "Expedited" column to the output of the command.  It indicates
+  which registers were included in the last stop reply packet received by
+  GDB.
+
+* New remote packets
+
+vFile:stat
+  Return information about files on the remote system.  Like
+  vFile:fstat but takes a filename rather than an open file
+  descriptor.
 
 *** Changes in GDB 15
 
@@ -250,11 +329,6 @@ qIsAddressTagged
   file is about, this new packet provides a more generic way to perform such
   a check.
 
-vFile:stat
-  Return information about files on the remote system.  Like
-  vFile:fstat but takes a filename rather than an open file
-  descriptor.
-
 *** Changes in GDB 14
 
 * GDB now supports the AArch64 Scalable Matrix Extension 2 (SME2), which
@@ -339,7 +413,7 @@ vFile:stat
 
 * The printf command now accepts a '%V' output format which will
   format an expression just as the 'print' command would.  Print
-  options can be placed withing '[...]' after the '%V' to modify how
+  options can be placed within '[...]' after the '%V' to modify how
   the value is printed.  E.g:
     printf "%V", some_array
     printf "%V[-array-indexes on]", some_array
@@ -6616,7 +6690,7 @@ qSupported:
   target.
 
 qXfer:auxv:read:
-  Fetch an OS auxilliary vector from the remote stub.  This packet is a
+  Fetch an OS auxiliary vector from the remote stub.  This packet is a
   more efficient replacement for qPart:auxv:read.
 
 qXfer:memory-map:read:
@@ -7824,7 +7898,7 @@ with that.  The sub-program to run is specified using the syntax
 * MIPS 64 remote protocol
 
 A long standing bug in the mips64 remote protocol where by GDB
-expected certain 32 bit registers (ex SR) to be transfered as 32
+expected certain 32 bit registers (ex SR) to be transferred as 32
 instead of 64 bits has been fixed.
 
 The command ``set remote-mips64-transfers-32bit-regs on'' has been
@@ -8580,7 +8654,7 @@ MIPS remote debugging protocol.
 
 This version includes preliminary support for Chill, a Pascal like language
 used by telecommunications companies.  Chill support is also being integrated
-into the GNU compiler, but we don't know when it will be publically available.
+into the GNU compiler, but we don't know when it will be publicly available.
 
 
 *** Changes in GDB-4.8:

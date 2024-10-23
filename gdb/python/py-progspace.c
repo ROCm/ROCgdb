@@ -522,7 +522,7 @@ pspy_block_for_pc (PyObject *o, PyObject *args)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   if (cust == NULL || cust->objfile () == NULL)
@@ -564,7 +564,7 @@ pspy_find_pc_line (PyObject *o, PyObject *args)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   return result;
@@ -747,11 +747,10 @@ gdbpy_initialize_pspace (void)
   gdb::observers::free_program_space.attach (gdbpy_free_program_space_event,
 					     "py-progspace");
 
-  if (PyType_Ready (&pspace_object_type) < 0)
+  if (gdbpy_type_ready (&pspace_object_type) < 0)
     return -1;
 
-  return gdb_pymodule_addobject (gdb_module, "Progspace",
-				 (PyObject *) &pspace_object_type);
+  return 0;
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_pspace);

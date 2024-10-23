@@ -66,6 +66,8 @@ enum i386_cpu
   CpuSSE3,
   /* VIA PadLock required */
   CpuPadLock,
+  /* ZHAOXIN GMI required */
+  CpuGMI,
   /* AMD Secure Virtual Machine Ext-s required */
   CpuSVME,
   /* VMX Instructions required */
@@ -225,6 +227,8 @@ enum i386_cpu
   CpuLKGS,
   /* Intel USER_MSR Instruction support required.  */
   CpuUSER_MSR,
+  /* Intel AVX10.2 Instructions support required.  */
+  CpuAVX10_2,
   /* mwaitx instruction required */
   CpuMWAITX,
   /* Clzero instruction required */
@@ -398,6 +402,7 @@ typedef union i386_cpu_flags
       unsigned int cpusse2:1;
       unsigned int cpusse3:1;
       unsigned int cpupadlock:1;
+      unsigned int cpugmi:1;
       unsigned int cpusvme:1;
       unsigned int cpuvmx:1;
       unsigned int cpusmx:1;
@@ -477,6 +482,7 @@ typedef union i386_cpu_flags
       unsigned int cpufred:1;
       unsigned int cpulkgs:1;
       unsigned int cpuuser_msr:1;
+      unsigned int cpuavx10_2:1;
       unsigned int cpumwaitx:1;
       unsigned int cpuclzero:1;
       unsigned int cpuospke:1;

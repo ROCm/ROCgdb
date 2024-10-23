@@ -202,7 +202,8 @@ static symbol_name_matcher_ftype *ada_get_symbol_name_matcher
 static int symbols_are_identical_enums
   (const std::vector<struct block_symbol> &syms);
 
-static int ada_identical_enum_types_p (struct type *type1, struct type *type2);
+static bool ada_identical_enum_types_p (struct type *type1,
+					struct type *type2);
 
 
 /* The character set used for source files.  */
@@ -1489,7 +1490,7 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
       if (i < len0 + 3
 	  && encoded[i] == 'N' && encoded[i+1] == '_' && encoded[i+2] == '_')
 	{
-	  /* Backtrack a bit up until we reach either the begining of
+	  /* Backtrack a bit up until we reach either the beginning of
 	     the encoded name, or "__".  Make sure that we only find
 	     digits or lowercase characters.  */
 	  const char *ptr = encoded + i - 1;
@@ -3700,9 +3701,11 @@ See set/show multiple-symbol."));
 	      gdb_printf ("[%d] ", i + first_choice);
 	      ada_print_symbol_signature (gdb_stdout, syms[i].symbol,
 					  &type_print_raw_options);
-	      gdb_printf (_(" at %s:%d\n"),
-			  symtab_to_filename_for_display (symtab),
-			  syms[i].symbol->line ());
+	      gdb_printf (_(" at %ps:%ps\n"),
+			  styled_string (file_name_style.style (),
+					 symtab_to_filename_for_display (symtab)),
+			  styled_string (line_number_style.style (),
+					 pulongest (syms[i].symbol->line ())));
 	    }
 	  else if (is_enumeral
 		   && syms[i].symbol->type ()->name () != NULL)
@@ -3721,9 +3724,10 @@ See set/show multiple-symbol."));
 
 	      if (symtab != NULL)
 		gdb_printf (is_enumeral
-			    ? _(" in %s (enumeral)\n")
-			    : _(" at %s:?\n"),
-			    symtab_to_filename_for_display (symtab));
+			    ? _(" in %ps (enumeral)\n")
+			    : _(" at %ps:?\n"),
+			    styled_string (file_name_style.style (),
+					   symtab_to_filename_for_display (symtab)));
 	      else
 		gdb_printf (is_enumeral
 			    ? _(" (enumeral)\n")
@@ -3816,8 +3820,6 @@ ada_resolve_enum (std::vector<struct block_symbol> &syms,
   for (int i = 0; i < syms.size (); ++i)
     {
       struct type *type2 = ada_check_typedef (syms[i].symbol->type ());
-      if (type1->num_fields () != type2->num_fields ())
-	continue;
       if (strcmp (type1->name (), type2->name ()) != 0)
 	continue;
       if (ada_identical_enum_types_p (type1, type2))
@@ -4693,9 +4695,9 @@ make_array_descriptor (struct type *type, struct value *arr)
    even in this case, some expensive name-based symbol searches are still
    sometimes necessary - to find an XVZ variable, mostly.  */
 
-/* Clear all entries from the symbol cache.  */
+/* See ada-lang.h.  */
 
-static void
+void
 ada_clear_symbol_cache (program_space *pspace)
 {
   ada_pspace_data_handle.clear (pspace);
@@ -4968,47 +4970,44 @@ is_nondebugging_type (struct type *type)
   return (name != NULL && strcmp (name, "<variable, no debug info>") == 0);
 }
 
-/* Return nonzero if TYPE1 and TYPE2 are two enumeration types
+/* Return true if TYPE1 and TYPE2 are two enumeration types
    that are deemed "identical" for practical purposes.
 
    This function assumes that TYPE1 and TYPE2 are both TYPE_CODE_ENUM
-   types and that their number of enumerals is identical (in other
-   words, type1->num_fields () == type2->num_fields ()).  */
+   types.  */
 
-static int
+static bool
 ada_identical_enum_types_p (struct type *type1, struct type *type2)
 {
-  int i;
-
   /* The heuristic we use here is fairly conservative.  We consider
      that 2 enumerate types are identical if they have the same
      number of enumerals and that all enumerals have the same
      underlying value and name.  */
 
+  if (type1->num_fields () != type2->num_fields ())
+    return false;
+
   /* All enums in the type should have an identical underlying value.  */
-  for (i = 0; i < type1->num_fields (); i++)
+  for (int i = 0; i < type1->num_fields (); i++)
     if (type1->field (i).loc_enumval () != type2->field (i).loc_enumval ())
-      return 0;
+      return false;
 
   /* All enumerals should also have the same name (modulo any numerical
      suffix).  */
-  for (i = 0; i < type1->num_fields (); i++)
+  for (int i = 0; i < type1->num_fields (); i++)
     {
       const char *name_1 = type1->field (i).name ();
       const char *name_2 = type2->field (i).name ();
       int len_1 = strlen (name_1);
       int len_2 = strlen (name_2);
 
-      ada_remove_trailing_digits (type1->field (i).name (), &len_1);
-      ada_remove_trailing_digits (type2->field (i).name (), &len_2);
-      if (len_1 != len_2
-	  || strncmp (type1->field (i).name (),
-		      type2->field (i).name (),
-		      len_1) != 0)
-	return 0;
+      ada_remove_trailing_digits (name_1, &len_1);
+      ada_remove_trailing_digits (name_2, &len_2);
+      if (len_1 != len_2 || strncmp (name_1, name_2, len_1) != 0)
+	return false;
     }
 
-  return 1;
+  return true;
 }
 
 /* Return nonzero if all the symbols in SYMS are all enumeral symbols
@@ -5051,12 +5050,6 @@ symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
   /* Quick check: They should all have the same value.  */
   for (i = 1; i < syms.size (); i++)
     if (syms[i].symbol->value_longest () != syms[0].symbol->value_longest ())
-      return 0;
-
-  /* Quick check: They should all have the same number of enumerals.  */
-  for (i = 1; i < syms.size (); i++)
-    if (syms[i].symbol->type ()->num_fields ()
-	!= syms[0].symbol->type ()->num_fields ())
       return 0;
 
   /* All the sanity checks passed, so we might have a set of
@@ -5831,8 +5824,8 @@ is_name_suffix (const char *str)
   /* ??? We should not modify STR directly, as we are doing below.  This
      is fine in this case, but may become problematic later if we find
      that this alternative did not work, and want to try matching
-     another one from the begining of STR.  Since we modified it, we
-     won't be able to find the begining of the string anymore!  */
+     another one from the beginning of STR.  Since we modified it, we
+     won't be able to find the beginning of the string anymore!  */
   if (str[0] == 'X')
     {
       str += 1;
@@ -10785,7 +10778,7 @@ ada_unop_atr_operation::evaluate (struct type *expect_type,
   struct type *type_arg = nullptr;
   value *val = nullptr;
 
-  if (std::get<0> (m_storage)->opcode () == OP_TYPE)
+  if (std::get<0> (m_storage)->type_p ())
     {
       value *tem = std::get<0> (m_storage)->evaluate (nullptr, exp,
 						      EVAL_AVOID_SIDE_EFFECTS);
@@ -12079,11 +12072,11 @@ struct ada_catchpoint : public code_breakpoint
     enable_state = enabled ? bp_enabled : bp_disabled;
     language = language_ada;
 
-    re_set ();
+    re_set (pspace);
   }
 
   struct bp_location *allocate_location () override;
-  void re_set () override;
+  void re_set (program_space *pspace) override;
   void check_status (struct bpstat *bs) override;
   enum print_stop_action print_it (const bpstat *bs) const override;
   bool print_one (const bp_location **) const override;
@@ -12128,7 +12121,7 @@ static struct symtab_and_line ada_exception_sal
    catchpoint kinds.  */
 
 void
-ada_catchpoint::re_set ()
+ada_catchpoint::re_set (program_space *pspace)
 {
   std::vector<symtab_and_line> sals;
   try
@@ -12643,7 +12636,7 @@ ada_exception_catchpoint_cond_string (const char *excep_string,
      may then be set only on user-defined exceptions which have the
      same not-fully-qualified name (e.g. my_package.constraint_error).
 
-     To avoid this unexcepted behavior, these standard exceptions are
+     To avoid this unexpected behavior, these standard exceptions are
      systematically prefixed by "standard".  This means that "catch
      exception constraint_error" is rewritten into "catch exception
      standard.constraint_error".
@@ -12723,6 +12716,10 @@ create_ada_exception_catchpoint (struct gdbarch *gdbarch,
 				 int enabled,
 				 int from_tty)
 {
+  /* This works around an obscure issue when an Ada program is
+     compiled with LTO.  */
+  scoped_restore_current_language save_language (language_ada);
+
   std::unique_ptr<ada_catchpoint> c
     (new ada_catchpoint (gdbarch, ex_kind,
 			 cond_string.empty () ? nullptr : cond_string.c_str (),
@@ -13057,7 +13054,12 @@ ada_add_global_exceptions (compiled_regex *preg,
 			   },
 			   NULL,
 			   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			   SEARCH_VAR_DOMAIN);
+			   SEARCH_VAR_DOMAIN,
+			   [&] (enum language lang)
+			     {
+			       /* Try to skip non-Ada CUs.  */
+			       return lang == language_ada;
+			     });
 
   /* Iterate over all objfiles irrespective of scope or linker namespaces
      so we get all exceptions anywhere in the progspace.  */

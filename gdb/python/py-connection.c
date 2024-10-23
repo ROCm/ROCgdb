@@ -287,18 +287,10 @@ connpy_get_connection_details (PyObject *self, void *closure)
 static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_connection (void)
 {
-  if (PyType_Ready (&connection_object_type) < 0)
+  if (gdbpy_type_ready (&connection_object_type) < 0)
     return -1;
 
-  if (gdb_pymodule_addobject (gdb_module, "TargetConnection",
-			      (PyObject *) &connection_object_type) < 0)
-    return -1;
-
-  if (PyType_Ready (&remote_connection_object_type) < 0)
-    return -1;
-
-  if (gdb_pymodule_addobject (gdb_module, "RemoteTargetConnection",
-			      (PyObject *) &remote_connection_object_type) < 0)
+  if (gdbpy_type_ready (&remote_connection_object_type) < 0)
     return -1;
 
   return 0;
@@ -431,8 +423,7 @@ connpy_send_packet (PyObject *self, PyObject *args, PyObject *kw)
     }
   catch (const gdb_exception &except)
     {
-      gdbpy_convert_exception (except);
-      return nullptr;
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 }
 

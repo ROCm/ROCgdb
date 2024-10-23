@@ -893,7 +893,9 @@ psymbol_functions::expand_symtabs_matching
    gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
    gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
    block_search_flags search_flags,
-   domain_search_flags domain)
+   domain_search_flags domain,
+   gdb::function_view<expand_symtabs_lang_matcher_ftype>
+     lang_matcher ATTRIBUTE_UNUSED)
 {
   /* Clear the search flags.  */
   for (partial_symtab *ps : partial_symbols (objfile))
@@ -1082,7 +1084,7 @@ void
 partial_symtab::add_psymbol (std::string_view name, bool copy_name,
 			     domain_enum domain,
 			     enum address_class theclass,
-			     short section,
+			     int section,
 			     psymbol_placement where,
 			     unrelocated_addr coreaddr,
 			     enum language language,

@@ -64,7 +64,7 @@ proc string_list_to_regexp { args } {
 
 # STYLE can either be the payload part of an ANSI terminal sequence,
 # or a shorthand for one of the gdb standard styles: "file",
-# "function", "variable", or "address".
+# "function", "variable", "address", etc.
 
 proc style {str style} {
     switch -exact -- $style {
@@ -76,6 +76,7 @@ proc style {str style} {
 	address { set style 34 }
 	metadata { set style 2 }
 	version { set style "35;1" }
+	line-number { set style 2 }
 	none { return $str }
     }
     return "\033\\\[${style}m${str}\033\\\[m"
@@ -110,14 +111,31 @@ proc gdb_get_bp_addr { num } {
 }
 
 # Compare the version numbers in L1 to those in L2 using OP, and
-# return 1 if the comparison is true.  OP can be "<", "<=", or "==".
-# It is ok if the lengths of the lists differ.
+# return 1 if the comparison is true.  OP can be "<", "<=", ">", ">=",
+# or "==".  It is ok if the lengths of the lists differ.
 
 proc version_compare { l1 op l2 } {
     switch -exact $op {
 	"=="    -
 	"<="    -
 	"<"     {}
+
+	">=" {
+	    # a >= b => b <= a
+	    set x $l2
+	    set l2 $l1
+	    set l1 $x
+	    set op "<="
+	}
+
+	">" {
+	    # a > b => b < a
+	    set x $l2
+	    set l2 $l1
+	    set l1 $x
+	    set op "<"
+	}
+
 	default { error "unsupported op: $op" }
     }
 

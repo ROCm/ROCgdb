@@ -77,14 +77,27 @@ rocm_solib_fd_cache::open (const std::string &filename,
   auto it = m_cache.find (filename);
   if (it == m_cache.end ())
     {
-      /* The file is not yet opened on the target.  */
-      int fd
-	= target_fileio_open (m_inferior, filename.c_str (), FILEIO_O_RDONLY,
-			      false, 0, target_errno);
+      /* Try to locate the file using solib_find which is aware of sysroot
+	 and solib-search path first.  */
+      int fd = -1;
+      gdb::unique_xmalloc_ptr<char> expanded_fname
+	= solib_find (filename.c_str (), nullptr);
+
+      if (expanded_fname != nullptr)
+	fd = target_fileio_open (nullptr, expanded_fname.get (),
+				 FILEIO_O_RDONLY, false, 0, target_errno);
+
+      /* If the binary was not found on the sysroot, try to open it on the
+	 target.  */
+      if (fd == -1)
+	fd = target_fileio_open (m_inferior, filename.c_str (),
+				 FILEIO_O_RDONLY, false, 0, target_errno);
+
       if (fd != -1)
 	m_cache.emplace (std::piecewise_construct,
 			 std::forward_as_tuple (filename),
 			 std::forward_as_tuple (fd, 1));
+
       return fd;
     }
   else
@@ -131,13 +144,14 @@ static void rocm_solib_relocate_section_addresses (solib &so,
 static void rocm_solib_clear_so (const solib &so);
 static void rocm_solib_clear_solib (program_space *pspace);
 static void rocm_solib_create_inferior_hook (int from_tty);
-static intrusive_list<solib> rocm_solib_current_sos ();
+static owning_intrusive_list<solib> rocm_solib_current_sos ();
 static int rocm_solib_open_symbol_file_object (int from_tty);
 static int rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc);
 static gdb_bfd_ref_ptr rocm_solib_bfd_open (const char *pathname);
 static int rocm_solib_same (const solib &gdb, const solib &inferior);
 static int rocm_solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size);
 static void rocm_solib_handle_event ();
+static std::optional<CORE_ADDR> rocm_find_solib_addr (solib &so);
 
 static const solib_ops rocm_solib_ops =
 {
@@ -152,7 +166,8 @@ static const solib_ops rocm_solib_ops =
   rocm_solib_same,
   rocm_solib_keep_data_in_core,
   nullptr /* TODO update_breakpoints */,
-  rocm_solib_handle_event
+  rocm_solib_handle_event,
+  rocm_find_solib_addr
 };
 
 struct lm_info_rocm : public lm_info
@@ -241,20 +256,19 @@ rocm_solib_clear_solib (program_space *pspace)
 
 /* Create so_list objects from rocm_so objects in SOS.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
 {
-  intrusive_list<solib> dst;
+  owning_intrusive_list<solib> dst;
 
   for (const rocm_so &so : sos)
     {
-      struct solib *newobj = new struct solib;
-      newobj->lm_info = std::make_unique<lm_info_rocm> (*so.lm_info);
-      newobj->so_name = so.name;
-      newobj->so_original_name = so.unique_name;
-      newobj->provider = &rocm_solib_ops;
+      auto &newobj = dst.emplace_back ();
 
-      dst.push_back (*newobj);
+      newobj.lm_info = std::make_unique<lm_info_rocm> (*so.lm_info);
+      newobj.so_name = so.name;
+      newobj.so_original_name = so.unique_name;
+      newobj.provider = &rocm_solib_ops;
     }
 
   return dst;
@@ -263,7 +277,7 @@ so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
 /* Build a list of `struct solib' objects describing the shared
    objects currently loaded in the inferior.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 rocm_solib_current_sos ()
 {
   return
@@ -762,6 +776,13 @@ static void
 rocm_solib_handle_event ()
 {
   rocm_update_solib_list ();
+}
+
+static std::optional<CORE_ADDR>
+rocm_find_solib_addr (solib &so)
+{
+  auto *li = gdb::checked_static_cast<lm_info_rocm *> (so.lm_info.get ());
+  return li->l_addr;
 }
 
 static int

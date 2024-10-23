@@ -1755,7 +1755,7 @@ target_xfer_partial (struct target_ops *ops,
    If an error occurs, no guarantee is made about the contents of the data at
    MYADDR.  In particular, the caller should not depend upon partial reads
    filling the buffer with good data.  There is no way for the caller to know
-   how much good data might have been transfered anyway.  Callers that can
+   how much good data might have been transferred anyway.  Callers that can
    deal with partial reads should call target_read (which will retry until
    it makes no progress, and then return how much was transferred).  */
 
@@ -2578,18 +2578,12 @@ target_wait (ptid_t ptid, struct target_waitstatus *status,
   if (!target_can_async_p (target))
     gdb_assert ((options & TARGET_WNOHANG) == 0);
 
-  try
-    {
-      gdb::observers::target_pre_wait.notify (ptid);
-      ptid_t event_ptid = target->wait (ptid, status, options);
-      gdb::observers::target_post_wait.notify (event_ptid);
-      return event_ptid;
-    }
-  catch (...)
-    {
-      gdb::observers::target_post_wait.notify (null_ptid);
-      throw;
-    }
+  ptid_t event_ptid = null_ptid;
+  SCOPE_EXIT { gdb::observers::target_post_wait.notify (event_ptid); };
+  gdb::observers::target_pre_wait.notify (ptid);
+  event_ptid = target->wait (ptid, status, options);
+
+  return event_ptid;
 }
 
 /* See target.h.  */

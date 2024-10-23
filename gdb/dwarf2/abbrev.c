@@ -24,9 +24,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "dwarf2/read.h"
 #include "dwarf2/abbrev.h"
 #include "dwarf2/leb.h"
+#include "dwarf2/section.h"
 #include "bfd.h"
 
 /* Hash function for an abbrev.  */
@@ -276,7 +276,8 @@ abbrev_table::read (struct dwarf2_section_info *section,
 	}
       else if ((cur_abbrev->tag == DW_TAG_structure_type
 		|| cur_abbrev->tag == DW_TAG_class_type
-		|| cur_abbrev->tag == DW_TAG_union_type)
+		|| cur_abbrev->tag == DW_TAG_union_type
+		|| cur_abbrev->tag == DW_TAG_namespace)
 	       && cur_abbrev->has_children)
 	{
 	  /* We have to record this as interesting, regardless of how

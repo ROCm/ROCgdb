@@ -349,7 +349,7 @@ struct partial_symtab
   void add_psymbol (std::string_view name,
 		    bool copy_name, domain_enum domain,
 		    enum address_class theclass,
-		    short section,
+		    int section,
 		    psymbol_placement where,
 		    unrelocated_addr coreaddr,
 		    enum language language,
@@ -633,7 +633,9 @@ struct psymbol_functions : public quick_symbol_functions
      gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
      gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
      block_search_flags search_flags,
-     domain_search_flags kind) override;
+     domain_search_flags kind,
+     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
+       override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, bound_minimal_symbol msymbol, CORE_ADDR pc,

@@ -199,8 +199,7 @@ archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
 	}
       catch (const gdb_exception &except)
 	{
-	  gdbpy_convert_exception (except);
-	  return NULL;
+	  return gdbpy_handle_gdb_exception (nullptr, except);
 	}
 
       gdbpy_ref<> pc_obj = gdb_py_object_from_ulongest (pc);
@@ -362,11 +361,7 @@ static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_arch (void)
 {
   arch_object_type.tp_new = PyType_GenericNew;
-  if (PyType_Ready (&arch_object_type) < 0)
-    return -1;
-
-  return gdb_pymodule_addobject (gdb_module, "Architecture",
-				 (PyObject *) &arch_object_type);
+  return gdbpy_type_ready (&arch_object_type);
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_arch);

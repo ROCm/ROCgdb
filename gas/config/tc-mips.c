@@ -10831,13 +10831,10 @@ macro (struct mips_cl_insn *ip, char *str)
       if (mips_opts.micromips)
 	micromips_label_expr (&label_expr);
       else
-	label_expr.X_add_number = (mips_use_trap ()
-				   ? (dbl ? 12 : 8) : (dbl ? 20 : 16));
+	label_expr.X_add_number = mips_use_trap () ? 8 : 16;
       macro_build (&label_expr, "bne", "s,t,p", op[2], AT);
       if (dbl)
 	{
-	  expr1.X_add_number = 1;
-	  load_register (AT, &expr1, dbl);
 	  macro_build (NULL, "dsll32", SHFT_FMT, AT, AT, 31);
 	}
       else
@@ -16512,8 +16509,8 @@ s_mips_globl (int x ATTRIBUTE_UNUSED)
       symbolP = symbol_find_or_make (name);
       S_SET_EXTERNAL (symbolP);
 
-      *input_line_pointer = c;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (c);
+      SKIP_WHITESPACE ();
 
       if (!is_end_of_line[(unsigned char) *input_line_pointer]
 	  && (*input_line_pointer != ','))
@@ -17572,9 +17569,9 @@ s_mips_weakext (int ignore ATTRIBUTE_UNUSED)
   c = get_symbol_name (&name);
   symbolP = symbol_find_or_make (name);
   S_SET_WEAK (symbolP);
-  *input_line_pointer = c;
+  restore_line_pointer (c);
 
-  SKIP_WHITESPACE_AFTER_NAME ();
+  SKIP_WHITESPACE ();
 
   if (! is_end_of_line[(unsigned char) *input_line_pointer])
     {

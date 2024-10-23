@@ -44,6 +44,9 @@ proc do_test { fault } {
 	untested "Could not generate a core file"
 	return
     }
+
+    check_sparse $coredump "core is sparse"
+
     remote_exec build "mv $coredump $coredump-$fault"
 
     if {$fault == "pagefault"} {

@@ -632,19 +632,9 @@ execute_fn_to_string (std::string &res, std::function<void(void)> fn,
 {
   string_file str_file (term_out);
 
-  try
-    {
-      execute_fn_to_ui_file (&str_file, fn);
-    }
-  catch (...)
-    {
-      /* Finally.  */
-      res = str_file.release ();
-      throw;
-    }
+  SCOPE_EXIT { res = str_file.release (); };
 
-  /* And finally.  */
-  res = str_file.release ();
+  execute_fn_to_ui_file (&str_file, fn);
 }
 
 /* See top.h.  */
@@ -1388,6 +1378,11 @@ print_gdb_configuration (struct ui_file *stream)
 This GDB was configured as follows:\n\
    configure --host=%s --target=%s\n\
 "), host_name, target_name);
+
+#ifdef ENABLE_TARGETS
+  gdb_printf (stream, _("\
+	     --enable-targets=%s\n"), ENABLE_TARGETS);
+#endif
 
   gdb_printf (stream, _("\
 	     --with-auto-load-dir=%s\n\

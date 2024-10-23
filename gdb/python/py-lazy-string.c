@@ -148,7 +148,7 @@ stpy_convert_to_value (PyObject *self, PyObject *args)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   return result;
@@ -236,11 +236,7 @@ gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_lazy_string (void)
 {
-  if (PyType_Ready (&lazy_string_object_type) < 0)
-    return -1;
-
-  Py_INCREF (&lazy_string_object_type);
-  return 0;
+  return gdbpy_type_ready (&lazy_string_object_type);
 }
 
 /* Determine whether the printer object pointed to by OBJ is a
@@ -315,7 +311,7 @@ stpy_str (PyObject *self)
     }
   catch (const gdb_exception &exc)
     {
-      GDB_PY_HANDLE_EXCEPTION (exc);
+      return gdbpy_handle_gdb_exception (nullptr, exc);
     }
 
   return host_string_to_python_string (stream.c_str ()).release ();

@@ -412,7 +412,7 @@ infpy_threads (PyObject *self, PyObject *args)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   tuple = PyTuple_New (inf_obj->threads->size ());
@@ -578,7 +578,7 @@ infpy_read_memory (PyObject *self, PyObject *args, PyObject *kw)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
 
@@ -633,7 +633,7 @@ infpy_write_memory (PyObject *self, PyObject *args, PyObject *kw)
     }
   catch (const gdb_exception &ex)
     {
-      GDB_PY_HANDLE_EXCEPTION (ex);
+      return gdbpy_handle_gdb_exception (nullptr, ex);
     }
 
   Py_RETURN_NONE;
@@ -707,7 +707,7 @@ infpy_search_memory (PyObject *self, PyObject *args, PyObject *kw)
     }
   catch (const gdb_exception &ex)
     {
-      GDB_PY_HANDLE_EXCEPTION (ex);
+      return gdbpy_handle_gdb_exception (nullptr, ex);
     }
 
   if (found)
@@ -783,7 +783,7 @@ infpy_thread_from_thread_handle (PyObject *self, PyObject *args, PyObject *kw)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   Py_RETURN_NONE;
@@ -1009,11 +1009,7 @@ gdbpy_selected_inferior (PyObject *self, PyObject *args)
 static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_inferior (void)
 {
-  if (PyType_Ready (&inferior_object_type) < 0)
-    return -1;
-
-  if (gdb_pymodule_addobject (gdb_module, "Inferior",
-			      (PyObject *) &inferior_object_type) < 0)
+  if (gdbpy_type_ready (&inferior_object_type) < 0)
     return -1;
 
   gdb::observers::new_thread.attach (add_thread_object, "py-inferior");

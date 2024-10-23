@@ -865,6 +865,23 @@ weak_undef_file3.o: weak_undef_file3.cc
 weak_undef_file4.o: weak_undef_file4.cc
 	$(CXXCOMPILE) -c -o $@ $<
 
+check_PROGRAMS += weak_undef_test_3
+weak_undef_test_3_SOURCES = weak_undef_test_3.c
+weak_undef_test_3_DEPENDENCIES = gcctestdir/ld
+weak_undef_test_3_CFLAGS = -fPIE
+weak_undef_test_3_LDFLAGS = -pie
+
+check_PROGRAMS += weak_undef_test_4
+weak_undef_test_4_SOURCES = weak_undef_test_4.c
+weak_undef_test_4_DEPENDENCIES = gcctestdir/ld weak_undef_lib_4.so
+weak_undef_test_4_LDADD = weak_undef_lib_4.so
+weak_undef_test_4_LDFLAGS =  -Wl,-R,.
+MOSTLYCLEANFILES += weak_undef_lib_4.o weak_undef_lib_4.so
+weak_undef_lib_4.o:  weak_undef_lib_4.c
+	$(COMPILE) -fPIC -c -o $@ $<
+weak_undef_lib_4.so: gcctestdir/ld weak_undef_lib_4.o
+	$(LINK) -shared -o $@ weak_undef_lib_4.o
+
 if FN_PTRS_IN_SO_WITHOUT_PIC
 check_PROGRAMS += weak_undef_nonpic_test
 MOSTLYCLEANFILES += alt/weak_undef_lib_nonpic.so
@@ -2839,8 +2856,6 @@ ifuncmain1static_LDFLAGS = -static
 ifuncmain1static_LDADD = ifuncdep1.o
 
 check_PROGRAMS += ifuncmain1picstatic
-ifuncmain1picstatic: ifuncmain1pic.o ifuncmod1.o gcctestdir/ld
-	$(LINK) -static ifuncmain1pic.o ifuncmod1.o
 
 check_SCRIPTS += ifuncmod1.sh
 check_DATA += ifuncmod1.so.stderr
@@ -2848,6 +2863,9 @@ ifuncmod1.so.stderr: ifuncmod1.so
 	$(TEST_READELF) -s $< > /dev/null 2> $@
 endif
 endif
+
+ifuncmain1picstatic: ifuncmain1pic.o ifuncmod1.o gcctestdir/ld
+	$(LINK) -static ifuncmain1pic.o ifuncmod1.o
 
 check_PROGRAMS += ifuncmain1
 ifuncmain1_SOURCES = ifuncmain1.c
@@ -2904,10 +2922,11 @@ ifuncmain2static_LDFLAGS = -static
 ifuncmain2static_LDADD =
 
 check_PROGRAMS += ifuncmain2picstatic
+endif
+endif
+
 ifuncmain2picstatic: ifuncmain2pic.o ifuncdep2pic.o gcctestdir/ld
 	$(LINK) -static ifuncmain2pic.o ifuncdep2pic.o
-endif
-endif
 
 check_PROGRAMS += ifuncmain2
 ifuncmain2_SOURCES = ifuncmain2.c ifuncdep2.c
@@ -2941,10 +2960,11 @@ ifuncmain4static_LDFLAGS = -static
 ifuncmain4static_LDADD =
 
 check_PROGRAMS += ifuncmain4picstatic
+endif
+endif
+
 ifuncmain4picstatic: ifuncmain4pic.o gcctestdir/ld
 	$(LINK) -static ifuncmain4pic.o
-endif
-endif
 
 check_PROGRAMS += ifuncmain4
 ifuncmain4_SOURCES = ifuncmain4.c
@@ -2974,10 +2994,11 @@ ifuncmain5static_LDFLAGS = -static
 ifuncmain5static_LDADD = ifuncdep5.o
 
 check_PROGRAMS += ifuncmain5picstatic
+endif
+endif
+
 ifuncmain5picstatic: ifuncmain5pic.o ifuncmod5.o gcctestdir/ld
 	$(LINK) -static ifuncmain5pic.o ifuncmod5.o
-endif
-endif
 
 check_PROGRAMS += ifuncmain5
 ifuncmain5_SOURCES = ifuncmain5.c
@@ -3024,10 +3045,11 @@ ifuncmain7static_LDFLAGS = -static
 ifuncmain7static_LDADD =
 
 check_PROGRAMS += ifuncmain7picstatic
+endif
+endif
+
 ifuncmain7picstatic: ifuncmain7pic.o gcctestdir/ld
 	$(LINK) -static ifuncmain7pic.o
-endif
-endif
 
 check_PROGRAMS += ifuncmain7
 ifuncmain7_SOURCES = ifuncmain7.c

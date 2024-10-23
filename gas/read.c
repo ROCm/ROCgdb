@@ -1397,6 +1397,7 @@ read_a_source_file (const char *name)
 	  if (next_char && strchr (line_comment_chars, next_char))
 	    {
 	      /* Its a comment, ignore it.  Note: Not ignore_rest_of_line ()!  */
+	      s = input_line_pointer;
 	      while (s <= buffer_limit)
 		if (is_end_of_line (*s++))
 		  break;
@@ -3089,8 +3090,8 @@ s_purgem (int ignore ATTRIBUTE_UNUSED)
       SKIP_WHITESPACE ();
       c = get_symbol_name (& name);
       delete_macro (name);
-      *input_line_pointer = c;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (c);
+      SKIP_WHITESPACE ();
     }
   while (*input_line_pointer++ == ',');
 
@@ -3289,9 +3290,8 @@ assign_symbol (char *name, int mode)
 	  symbol_set_frag (symbolP, dummy_frag);
 	}
 #endif
-#if defined (OBJ_COFF) && !defined (TE_PE)
-      /* "set" symbols are local unless otherwise specified.  */
-      SF_SET_LOCAL (symbolP);
+#ifdef obj_assign_symbol
+      obj_assign_symbol (symbolP);
 #endif
     }
 
@@ -4401,7 +4401,7 @@ s_reloc (int ignore ATTRIBUTE_UNUSED)
     }
   else
     reloc->u.a.howto = bfd_reloc_name_lookup (stdoutput, r_name);
-  *input_line_pointer = c;
+  restore_line_pointer (c);
   if (reloc->u.a.howto == NULL)
     {
       as_bad (_("unrecognized reloc type"));
@@ -4409,7 +4409,7 @@ s_reloc (int ignore ATTRIBUTE_UNUSED)
     }
 
   exp.X_op = O_absent;
-  SKIP_WHITESPACE_AFTER_NAME ();
+  SKIP_WHITESPACE ();
   if (*input_line_pointer == ',')
     {
       ++input_line_pointer;
@@ -6528,8 +6528,8 @@ do_s_func (int end_p, const char *default_prefix)
 
       delim1 = get_symbol_name (& name);
       name = xstrdup (name);
-      *input_line_pointer = delim1;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (delim1);
+      SKIP_WHITESPACE ();
       if (*input_line_pointer != ',')
 	{
 	  if (default_prefix)

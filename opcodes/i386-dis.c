@@ -90,6 +90,7 @@ static bool PCLMUL_Fixup (instr_info *, int, int);
 static bool VPCMP_Fixup (instr_info *, int, int);
 static bool VPCOM_Fixup (instr_info *, int, int);
 static bool NOP_Fixup (instr_info *, int, int);
+static bool MONTMUL_Fixup (instr_info *, int, int);
 static bool OP_3DNowSuffix (instr_info *, int, int);
 static bool CMP_Fixup (instr_info *, int, int);
 static bool REP_Fixup (instr_info *, int, int);
@@ -229,6 +230,7 @@ struct instr_info
     bool b;
     bool no_broadcast;
     bool nf;
+    bool u;
   }
   vex;
 
@@ -1049,6 +1051,9 @@ enum
   PREFIX_0F7D,
   PREFIX_0F7E,
   PREFIX_0F7F,
+  PREFIX_0FA6_REG_0,
+  PREFIX_0FA6_REG_5,
+  PREFIX_0FA7_REG_6,
   PREFIX_0FAE_REG_0_MOD_3,
   PREFIX_0FAE_REG_1_MOD_3,
   PREFIX_0FAE_REG_2_MOD_3,
@@ -1189,6 +1194,7 @@ enum
   PREFIX_EVEX_0F3853,
   PREFIX_EVEX_0F3868,
   PREFIX_EVEX_0F3872,
+  PREFIX_EVEX_0F3874,
   PREFIX_EVEX_0F389A,
   PREFIX_EVEX_0F389B,
   PREFIX_EVEX_0F38AA,
@@ -1198,6 +1204,7 @@ enum
   PREFIX_EVEX_0F3A0A,
   PREFIX_EVEX_0F3A26,
   PREFIX_EVEX_0F3A27,
+  PREFIX_EVEX_0F3A42_W_0,
   PREFIX_EVEX_0F3A56,
   PREFIX_EVEX_0F3A57,
   PREFIX_EVEX_0F3A66,
@@ -1212,7 +1219,10 @@ enum
 
   PREFIX_EVEX_MAP5_10,
   PREFIX_EVEX_MAP5_11,
+  PREFIX_EVEX_MAP5_18,
+  PREFIX_EVEX_MAP5_1B,
   PREFIX_EVEX_MAP5_1D,
+  PREFIX_EVEX_MAP5_1E,
   PREFIX_EVEX_MAP5_2A,
   PREFIX_EVEX_MAP5_2C,
   PREFIX_EVEX_MAP5_2D,
@@ -1227,6 +1237,7 @@ enum
   PREFIX_EVEX_MAP5_5D,
   PREFIX_EVEX_MAP5_5E,
   PREFIX_EVEX_MAP5_5F,
+  PREFIX_EVEX_MAP5_74,
   PREFIX_EVEX_MAP5_78,
   PREFIX_EVEX_MAP5_79,
   PREFIX_EVEX_MAP5_7A,
@@ -1809,8 +1820,6 @@ struct dis386 {
 	   in MAP4.
    "ZU" => print 'zu' if EVEX.ZU=1.
    "SC" => print suffix SCC for SCC insns
-   "SW" => print '.s' to indicate operands were swapped when suffix_always is
-	   true.
    "YK" keep unused, to avoid ambiguity with the combined use of Y and K.
    "YX" keep unused, to avoid ambiguity with the combined use of Y and X.
    "LQ" => print 'l' ('d' in Intel mode) or 'q' for memory operand, cond
@@ -2850,9 +2859,12 @@ static const struct dis386 reg_table[][8] = {
   },
   /* REG_0FA6 */
   {
-    { "montmul",	{ { OP_0f07, 0 } }, 0 },
+    { PREFIX_TABLE (PREFIX_0FA6_REG_0) },
     { "xsha1",		{ { OP_0f07, 0 } }, 0 },
     { "xsha256",	{ { OP_0f07, 0 } }, 0 },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_0FA6_REG_5) },
   },
   /* REG_0FA7 */
   {
@@ -2862,6 +2874,7 @@ static const struct dis386 reg_table[][8] = {
     { "xcrypt-ctr",	{ { OP_0f07, 0 } }, 0 },
     { "xcrypt-cfb",	{ { OP_0f07, 0 } }, 0 },
     { "xcrypt-ofb",	{ { OP_0f07, 0 } }, 0 },
+    { PREFIX_TABLE (PREFIX_0FA7_REG_6) },
   },
   /* REG_0FAE */
   {
@@ -3438,6 +3451,26 @@ static const struct dis386 prefix_table[][4] = {
     { "movdqa",	{ EXxS, XM }, PREFIX_OPCODE },
   },
 
+  /* PREFIX_0FA6_REG_0 */
+  {
+    { Bad_Opcode },
+    { "montmul",	{ { MONTMUL_Fixup, 0 } }, 0},
+    { Bad_Opcode },
+    { "sm2",	{ Skip_MODRM }, 0 },
+  },
+
+  /* PREFIX_0FA6_REG_5 */
+  {
+    { Bad_Opcode },
+    { "sm3",	{ Skip_MODRM }, 0 },
+  },
+
+  /* PREFIX_0FA7_REG_6 */
+  {
+    { Bad_Opcode },
+    { "sm4",	{ Skip_MODRM }, 0 },
+  },
+
   /* PREFIX_0FAE_REG_0_MOD_3 */
   {
     { Bad_Opcode },
@@ -3988,18 +4021,18 @@ static const struct dis386 prefix_table[][4] = {
 
   /* PREFIX_VEX_0F3850_W_0 */
   {
-    { "vpdpbuud",	{ XM, Vex, EXx }, 0 },
-    { "vpdpbsud",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbuud",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbsud",	{ XM, Vex, EXx }, 0 },
     { "%XVvpdpbusd",	{ XM, Vex, EXx }, 0 },
-    { "vpdpbssd",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbssd",	{ XM, Vex, EXx }, 0 },
   },
 
   /* PREFIX_VEX_0F3851_W_0 */
   {
-    { "vpdpbuuds",	{ XM, Vex, EXx }, 0 },
-    { "vpdpbsuds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbuuds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbsuds",	{ XM, Vex, EXx }, 0 },
     { "%XVvpdpbusds",	{ XM, Vex, EXx }, 0 },
-    { "vpdpbssds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpbssds",	{ XM, Vex, EXx }, 0 },
   },
   /* PREFIX_VEX_0F385C_X86_64_L_0_W_0 */
   {
@@ -4047,16 +4080,16 @@ static const struct dis386 prefix_table[][4] = {
 
   /* PREFIX_VEX_0F38D2_W_0 */
   {
-    { "vpdpwuud",	{ XM, Vex, EXx }, 0 },
-    { "vpdpwsud",	{ XM, Vex, EXx }, 0 },
-    { "vpdpwusd",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwuud",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwsud",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwusd",	{ XM, Vex, EXx }, 0 },
   },
 
   /* PREFIX_VEX_0F38D3_W_0 */
   {
-    { "vpdpwuuds",	{ XM, Vex, EXx }, 0 },
-    { "vpdpwsuds",	{ XM, Vex, EXx }, 0 },
-    { "vpdpwusds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwuuds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwsuds",	{ XM, Vex, EXx }, 0 },
+    { "%XEvpdpwusds",	{ XM, Vex, EXx }, 0 },
   },
 
   /* PREFIX_VEX_0F38CB */
@@ -9031,6 +9064,8 @@ get_valid_dis386 (const struct dis386 *dp, instr_info *ins)
       if (!(*ins->codep & 0x4))
 	ins->rex2 |= REX_X;
 
+      ins->vex.u = *ins->codep & 0x4;
+
       switch ((*ins->codep & 0x3))
 	{
 	case 0:
@@ -9064,9 +9099,9 @@ get_valid_dis386 (const struct dis386 *dp, instr_info *ins)
       if (ins->address_mode != mode_64bit)
 	{
 	  /* Report bad for !evex_default and when two fixed values of evex
-	     change..  */
-	  if (ins->evex_type != evex_default
-	      || (ins->rex2 & (REX_B | REX_X)))
+	     change.  */
+	  if (ins->evex_type != evex_default || (ins->rex2 & REX_B)
+	      || ((ins->rex2 & REX_X) && (ins->modrm.mod != 3)))
 	    return &bad_opcode;
 	  /* In 16/32-bit mode silently ignore following bits.  */
 	  ins->rex &= ~REX_B;
@@ -9088,14 +9123,22 @@ get_valid_dis386 (const struct dis386 *dp, instr_info *ins)
       if (!fetch_modrm (ins))
 	return &err_opcode;
 
-      if (ins->modrm.mod == 3 && (ins->rex2 & REX_X))
+      /* When modrm.mod != 3, the U bit is used by APX for bit X4.
+	 When modrm.mod == 3, the U bit is used by AVX10.  The U bit and
+	 the b bit should not be zero at the same time.  */
+      if (ins->modrm.mod == 3 && !ins->vex.u && !ins->vex.b)
 	return &bad_opcode;
 
       /* Set vector length. For EVEX-promoted instructions, evex.ll == 0b00,
 	 which has the same encoding as vex.length == 128 and they can share
 	 the same processing with vex.length in OP_VEX.  */
       if (ins->modrm.mod == 3 && ins->vex.b && ins->evex_type != evex_from_legacy)
-	ins->vex.length = 512;
+	{
+	  if (ins->vex.u)
+	    ins->vex.length = 512;
+	  else
+	    ins->vex.length = 256;
+	}
       else
 	{
 	  switch (ins->vex.ll)
@@ -10251,9 +10294,21 @@ static const char *const scc_suffix[16] = {
 static void
 swap_operand (instr_info *ins)
 {
-  ins->mnemonicendp[0] = '.';
-  ins->mnemonicendp[1] = 's';
-  ins->mnemonicendp[2] = '\0';
+  char *p = ins->mnemonicendp;
+
+  if (p[-1] == '}')
+    {
+      while (*--p != '{')
+	{
+	  if (p <= ins->obuf + 2)
+	    abort ();
+	}
+      if (p[-1] == ' ')
+	--p;
+    }
+  memmove (p + 2, p, ins->mnemonicendp - p + 1);
+  p[0] = '.';
+  p[1] = 's';
   ins->mnemonicendp += 2;
 }
 
@@ -10929,14 +10984,6 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 		*ins->obufp++ = ins->vex.w ? 'd': 's';
 	      else if (last[0] == 'B')
 		*ins->obufp++ = ins->vex.w ? 'w': 'b';
-	      else if (last[0] == 'S')
-		{
-		  if (ins->modrm.mod == 3 && (sizeflag & SUFFIX_ALWAYS))
-		    {
-		      *ins->obufp++ = '.';
-		      *ins->obufp++ = 's';
-		    }
-		}
 	      else
 		abort ();
 	    }
@@ -12999,14 +13046,15 @@ OP_EX (instr_info *ins, int bytemode, int sizeflag)
   USED_REX (REX_B);
   if (ins->rex & REX_B)
     reg += 8;
-  if (ins->rex2 & REX_B)
-    reg += 16;
   if (ins->vex.evex)
     {
       USED_REX (REX_X);
       if ((ins->rex & REX_X))
 	reg += 16;
+      ins->rex2_used &= ~REX_B;
     }
+  else if (ins->rex2 & REX_B)
+    reg += 16;
 
   if ((sizeflag & SUFFIX_ALWAYS)
       && (bytemode == x_swap_mode
@@ -13069,6 +13117,24 @@ OP_0f07 (instr_info *ins, int bytemode, int sizeflag)
   if (ins->modrm.mod != 3 || ins->modrm.rm != 0)
     return BadOp (ins);
   return OP_E (ins, bytemode, sizeflag);
+}
+
+/* montmul instruction need display repz and skip modrm */
+
+static bool
+MONTMUL_Fixup (instr_info *ins, int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
+{
+  if (ins->modrm.mod != 3 || ins->modrm.rm != 0)
+    return BadOp (ins);
+
+  /* The 0xf3 prefix should be displayed as "repz" for montmul. */
+  if (ins->prefixes & PREFIX_REPZ)
+    ins->all_prefixes[ins->last_repz_prefix] = 0xf3;
+
+  /* Skip mod/rm byte.  */
+  MODRM_CHECK;
+  ins->codep++;
+  return true;
 }
 
 /* NOP is an alias of "xchg %ax,%ax" in 16bit mode, "xchg %eax,%eax" in

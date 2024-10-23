@@ -932,22 +932,6 @@ private:
   PyGILState_STATE m_state;
 };
 
-/* Use this in a 'catch' block to convert the exception to a Python
-   exception and return nullptr.  */
-#define GDB_PY_HANDLE_EXCEPTION(Exception)	\
-  do {						\
-    gdbpy_convert_exception (Exception);	\
-    return nullptr;				\
-  } while (0)
-
-/* Use this in a 'catch' block to convert the exception to a Python
-   exception and return -1.  */
-#define GDB_PY_SET_HANDLE_EXCEPTION(Exception)				\
-    do {								\
-      gdbpy_convert_exception (Exception);				\
-      return -1;							\
-    } while (0)
-
 int gdbpy_print_python_errors_p (void);
 void gdbpy_print_stack (void);
 void gdbpy_print_stack_or_quit ();
@@ -1012,6 +996,18 @@ extern PyObject *gdbpy_gdberror_exc;
 
 extern void gdbpy_convert_exception (const struct gdb_exception &)
     CPYCHECKER_SETS_EXCEPTION;
+
+ /* Use this in a 'catch' block to convert the exception E to a Python
+    exception and return value VAL to signal that an exception occurred.
+    Typically at the use site, that value will be returned immediately.  */
+
+template<typename T>
+[[nodiscard]] T
+gdbpy_handle_gdb_exception (T val, const gdb_exception &e)
+{
+  gdbpy_convert_exception (e);
+  return val;
+}
 
 int get_addr_from_python (PyObject *obj, CORE_ADDR *addr)
     CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
@@ -1118,5 +1114,35 @@ extern gdb::unique_xmalloc_ptr<char> gdbpy_fix_doc_string_indentation
 extern std::optional<int> gdbpy_print_insn (struct gdbarch *gdbarch,
 					    CORE_ADDR address,
 					    disassemble_info *info);
+
+/* A wrapper for PyType_Ready that also automatically registers the
+   type in the appropriate module.  Returns 0 on success, -1 on error.
+   If MOD is supplied, then the type is added to that module.  If MOD
+   is not supplied, the type name (tp_name field) must be of the form
+   "gdb.Mumble", and the type will be added to the gdb module.  */
+
+static inline int
+gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
+{
+  if (PyType_Ready (type) < 0)
+    return -1;
+  if (mod == nullptr)
+    {
+      gdb_assert (startswith (type->tp_name, "gdb."));
+      mod = gdb_module;
+    }
+  const char *dot = strrchr (type->tp_name, '.');
+  gdb_assert (dot != nullptr);
+  return gdb_pymodule_addobject (mod, dot + 1, (PyObject *) type);
+}
+
+/* Poison PyType_Ready.  Only gdbpy_type_ready should be used, to
+   avoid forgetting to register the type.  See PR python/32163.  */
+#undef PyType_Ready
+#ifdef __GNUC__
+# pragma GCC poison PyType_Ready
+#else
+# define PyType_Ready POISONED_PyType_Ready
+#endif
 
 #endif /* PYTHON_PYTHON_INTERNAL_H */

@@ -550,6 +550,19 @@ handle_btrace_conf_general_set (char *own_buf)
 	  return -1;
 	}
     }
+  else if (strncmp (op, "pt:event-tracing=", strlen ("pt:event-tracing=")) == 0)
+    {
+      op += strlen ("pt:event-tracing=");
+      if (strncmp (op, "\"yes\"", strlen ("\"yes\"")) == 0)
+	current_btrace_conf.pt.event_tracing = true;
+      else if (strncmp (op, "\"no\"", strlen ("\"no\"")) == 0)
+	current_btrace_conf.pt.event_tracing = false;
+      else
+	{
+	  strcpy (own_buf, "E.Bad event-tracing value.");
+	  return -1;
+	}
+    }
   else
     {
       strcpy (own_buf, "E.Bad Qbtrace configuration option.");
@@ -1773,7 +1786,7 @@ struct qxfer
      the starting point.  The ANNEX can be used to provide additional
      data-specific information to the target.
 
-     Return the number of bytes actually transfered, zero when no
+     Return the number of bytes actually transferred, zero when no
      further transfer is possible, -1 on error, -2 when the transfer
      is not supported, and -3 on a verbose error message that should
      be preserved.  Return of a positive value smaller than LEN does
@@ -2498,6 +2511,7 @@ supported_btrace_packets (char *buf)
   strcat (buf, ";Qbtrace:pt+");
   strcat (buf, ";Qbtrace-conf:pt:size+");
   strcat (buf, ";Qbtrace-conf:pt:ptwrite+");
+  strcat (buf, ";Qbtrace-conf:pt:event-tracing+");
   strcat (buf, ";Qbtrace:off+");
   strcat (buf, ";qXfer:btrace:read+");
   strcat (buf, ";qXfer:btrace-conf:read+");
@@ -4209,6 +4223,10 @@ captured_main (int argc, char *argv[])
 	  /* "-" specifies a stdio connection and is a form of port
 	     specification.  */
 	  port = STDIO_CONNECTION_NAME;
+
+	  /* Implying --once here prevents a hang after stdin has been closed.  */
+	  run_once = true;
+
 	  next_arg++;
 	  break;
 	}

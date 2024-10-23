@@ -130,6 +130,18 @@ if [istarget "loongarch64-*-*"] {
 		"a.binary" \
 	   ] \
       ]
+
+
+  run_ld_link_exec_tests [list \
+	[list \
+	    "get global abs symbol test" \
+	    "-Wl,-z norelro -Wl,--defsym sym=0xabba" \
+	    "" \
+	    { abs-global.s get_abs_global_sym.c} \
+	    "abs-global" \
+	    "abs-global.out" \
+	] \
+    ]
 }
 
 if [istarget "loongarch64-*-*"] {
@@ -154,6 +166,10 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "relr-got-shared"
     run_dump_test "relr-text-shared"
     run_dump_test "abssym_shared"
+    run_dump_test "bad_pcala_hi20_global"
+    run_dump_test "bad_pcala_hi20_weak"
+    run_dump_test "bad_pcrel20_s2_global"
+    run_dump_test "bad_pcrel20_s2_weak"
   }
 
   if [check_pie_support] {
@@ -184,5 +200,8 @@ if [istarget "loongarch64-*-*"] {
   run_dump_test "ie-le-relax"
   run_dump_test "tlsdesc_abs"
   run_dump_test "tlsdesc_extreme"
+  run_dump_test "provide_abs"
+  run_dump_test "provide_noabs"
+
 }
 

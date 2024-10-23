@@ -51,7 +51,6 @@
 #include "linespec.h"
 #include "cli/cli-utils.h"
 #include "objfiles.h"
-#include "annotate.h"
 
 #include "symfile.h"
 #include "extension.h"
@@ -1419,7 +1418,7 @@ print_frame (struct ui_out *uiout,
 	annotate_frame_source_file_end ();
 	uiout->text (":");
 	annotate_frame_source_line ();
-	uiout->field_signed ("line", sal.line);
+	uiout->field_signed ("line", sal.line, line_number_style.style ());
 	annotate_frame_source_end ();
       }
 

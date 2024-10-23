@@ -619,7 +619,7 @@ find_program_interpreter (void)
 
 
 /* Scan for DESIRED_DYNTAG in .dynamic section of the target's main executable,
-   found by consulting the OS auxillary vector.  If DESIRED_DYNTAG is found, 1
+   found by consulting the OS auxiliary vector.  If DESIRED_DYNTAG is found, 1
    is returned and the corresponding PTR is set.  */
 
 static int
@@ -991,20 +991,18 @@ svr4_clear_so (const solib &so)
 
 /* Create the so_list objects equivalent to the svr4_sos in SOS.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 so_list_from_svr4_sos (const std::vector<svr4_so> &sos)
 {
-  intrusive_list<solib> dst;
+  owning_intrusive_list<solib> dst;
 
   for (const svr4_so &so : sos)
     {
-      struct solib *newobj = new struct solib;
+      auto &newobj = dst.emplace_back ();
 
-      newobj->so_name = so.name;
-      newobj->so_original_name = so.name;
-      newobj->lm_info = std::make_unique<lm_info_svr4> (*so.lm_info);
-
-      dst.push_back (*newobj);
+      newobj.so_name = so.name;
+      newobj.so_original_name = so.name;
+      newobj.lm_info = std::make_unique<lm_info_svr4> (*so.lm_info);
     }
 
   return dst;
@@ -1184,25 +1182,24 @@ svr4_current_sos_via_xfer_libraries (struct svr4_library_list *list,
 /* If no shared library information is available from the dynamic
    linker, build a fallback list from other sources.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 svr4_default_sos (svr4_info *info)
 {
   if (!info->debug_loader_offset_p)
     return {};
 
-  solib *newobj = new solib;
   auto li = std::make_unique<lm_info_svr4> ();
 
   /* Nothing will ever check the other fields if we set l_addr_p.  */
   li->l_addr = li->l_addr_inferior = info->debug_loader_offset;
   li->l_addr_p = 1;
 
-  newobj->lm_info = std::move (li);
-  newobj->so_name = info->debug_loader_name;
-  newobj->so_original_name = newobj->so_name;
+  owning_intrusive_list<solib> sos;
+  auto &newobj = sos.emplace_back ();
 
-  intrusive_list<solib> sos;
-  sos.push_back (*newobj);
+  newobj.lm_info = std::move (li);
+  newobj.so_name = info->debug_loader_name;
+  newobj.so_original_name = newobj.so_name;
 
   return sos;
 }
@@ -1373,10 +1370,10 @@ svr4_current_sos_direct (struct svr4_info *info)
 
 /* Collect sos read and stored by the probes interface.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 svr4_collect_probes_sos (svr4_info *info)
 {
-  intrusive_list<solib> res;
+  owning_intrusive_list<solib> res;
 
   for (const auto &tuple : info->solib_lists)
     {
@@ -1390,10 +1387,10 @@ svr4_collect_probes_sos (svr4_info *info)
 /* Implement the main part of the "current_sos" solib_ops
    method.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 svr4_current_sos_1 (svr4_info *info)
 {
-  intrusive_list<solib> sos;
+  owning_intrusive_list<solib> sos;
 
   /* If we're using the probes interface, we can use the cache as it will
      be maintained by probe update/reload actions.  */
@@ -1417,11 +1414,11 @@ svr4_current_sos_1 (svr4_info *info)
 
 /* Implement the "current_sos" solib_ops method.  */
 
-static intrusive_list<solib>
+static owning_intrusive_list<solib>
 svr4_current_sos ()
 {
   svr4_info *info = get_svr4_info (current_program_space);
-  intrusive_list<solib> sos = svr4_current_sos_1 (info);
+  owning_intrusive_list<solib> sos = svr4_current_sos_1 (info);
   struct mem_range vsyscall_range;
 
   /* Filter out the vDSO module, if present.  Its symbol file would
@@ -1478,9 +1475,7 @@ svr4_current_sos ()
 
 	  if (vsyscall_range.contains (li->l_ld))
 	    {
-	      auto next = sos.erase (so);
-	      delete &*so;
-	      so = next;
+	      so = sos.erase (so);
 	      break;
 	    }
 
@@ -2360,7 +2355,7 @@ enable_break (struct svr4_info *info, int from_tty)
 	}
 
       /* If we were not able to find the base address of the loader
-	 from our so_list, then try using the AT_BASE auxilliary entry.  */
+	 from our so_list, then try using the AT_BASE auxiliary entry.  */
       if (!load_addr_found)
 	if (target_auxv_search (AT_BASE, &load_addr) > 0)
 	  {
@@ -2621,8 +2616,8 @@ svr4_exec_displacement (CORE_ADDR *displacementp)
 	return 0;
     }
 
-  /* Verify that the auxilliary vector describes the same file as exec_bfd, by
-     comparing their program headers.  If the program headers in the auxilliary
+  /* Verify that the auxiliary vector describes the same file as exec_bfd, by
+     comparing their program headers.  If the program headers in the auxiliary
      vector do not match the program headers in the executable, then we are
      looking at a different file than the one used by the kernel - for
      instance, "gdb program" connected to "gdbserver :PORT ld.so program".  */
@@ -3365,6 +3360,15 @@ svr4_iterate_over_objfiles_in_search_order
     }
 }
 
+/* See solib_ops::find_solib_addr in solist.h.  */
+
+static std::optional<CORE_ADDR>
+svr4_find_solib_addr (solib &so)
+{
+  auto *li = gdb::checked_static_cast<lm_info_svr4 *> (so.lm_info.get ());
+  return li->l_addr_inferior;
+}
+
 const struct solib_ops svr4_so_ops =
 {
   svr4_relocate_section_addresses,
@@ -3379,6 +3383,7 @@ const struct solib_ops svr4_so_ops =
   svr4_keep_data_in_core,
   svr4_update_solib_event_breakpoints,
   svr4_handle_solib_event,
+  svr4_find_solib_addr,
 };
 
 void _initialize_svr4_solib ();

@@ -75,14 +75,6 @@ private:
   bool v_opt;
   int multiple;
   char *str_compcom;
-  bool hex_visible;
-  int src_visible;
-  int vis_src;
-  int vis_dis;
-  int threshold_src;
-  int threshold_dis;
-  int threshold;
-  int vis_bits;
 };
 
 static int
@@ -97,6 +89,7 @@ real_main (int argc, char *argv[])
 int
 main (int argc, char *argv[])
 {
+  xmalloc_set_program_name (argv[0]);
   return catch_out_of_memory (real_main, argc, argv);
 }
 
@@ -224,7 +217,7 @@ er_src::set_outfile (char *cmd, FILE *&set_file)
       else if ((fname = strstr (cmd, "~")) != NULL && home != NULL)
 	cmdpath = dbe_sprintf ("/home/%s", fname + 1);
       else
-	cmdpath = strdup (cmd);
+	cmdpath = xstrdup (cmd);
       new_file = fopen (cmdpath, "w");
       if (new_file == NULL)
 	{
@@ -674,7 +667,7 @@ er_src::open (char *exe)
   Vector<Histable*> *module_lst;
 
   // Construct the Segment structure
-  char *path = strdup (exe);
+  char *path = xstrdup (exe);
   lo = dbeSession->createLoadObject (path);
   if (NULL == lo->dbeFile->find_file (lo->dbeFile->get_name ()))
     {

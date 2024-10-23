@@ -513,7 +513,7 @@ whatis_exp (const char *exp, int show)
       val = expr->evaluate_type ();
       type = val->type ();
 
-      if (show == -1 && expr->first_opcode () == OP_TYPE)
+      if (show == -1 && expr->type_p ())
 	{
 	  /* The user expression names a type directly.  */
 
@@ -562,10 +562,10 @@ whatis_exp (const char *exp, int show)
   std::unique_ptr<ext_lang_type_printers> printer_holder;
   if (!flags.raw)
     {
-      table_holder.reset (new typedef_hash_table);
+      table_holder = std::make_unique<typedef_hash_table> ();
       flags.global_typedefs = table_holder.get ();
 
-      printer_holder.reset (new ext_lang_type_printers);
+      printer_holder = std::make_unique<ext_lang_type_printers> ();
       flags.global_printers = printer_holder.get ();
     }
 

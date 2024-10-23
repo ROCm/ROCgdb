@@ -21,6 +21,8 @@
 #include <chrono>
 #include <iostream>
 #include <unistd.h>
+#include <list>
+#include <array>
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
@@ -111,6 +113,14 @@ main (int argc, char **argv)
       std::cerr << "Invalid test name \"" << teststr << "\"" << std::endl;
       return EXIT_FAILURE;
     }
+
+  /* Create a list of 0-initialized blocks of 50M of memory.  Most of those
+     blocks should not take actual storage space on the produced core dump if
+     the filesystem supports sparse files.  */
+
+  std::list<std::array<char, (1 << 20) * 50>> data;
+  for (int i = 0; i < 100; i++)
+    data.emplace_back ();
 
   hipStream_t st1;
   hipStream_t st2;

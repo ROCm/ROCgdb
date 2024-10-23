@@ -751,19 +751,24 @@ proc gdb_breakpoint { linespec args } {
 # single quoted C++ function specifier.
 #
 # If there are additional arguments, pass them to gdb_breakpoint.
-# We recognize no-message/message ourselves.
+# We recognize no-message/message ourselves as well as no-delete-brekpoints.
 #
 # no-message is messed up here, like gdb_breakpoint: to preserve
 # historical usage fails are always printed by default.
 # no-message: turns off printing of fails (and passes, but they're already off)
 # message: turns on printing of passes (and fails, but they're already on)
+#
+# The 'no-delete-brekpoints' option stops this proc from deleting all
+# breakpoints.
 
 proc runto { linespec args } {
     global gdb_prompt
     global bkptno_numopt_re
     global decimal
 
-    delete_breakpoints
+    if {[lsearch -exact $args no-delete-breakpoints] == -1} {
+	delete_breakpoints
+    }
 
     set print_pass 0
     set print_fail 1
@@ -787,7 +792,7 @@ proc runto { linespec args } {
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
     gdb_expect {
-	-re "(?:Break|Temporary break).* at .*:$decimal.*$gdb_prompt $" {
+	-re "(?:Break|Temporary break).* at .*:.*$decimal.*$gdb_prompt $" {
 	    if { $print_pass } {
 		pass $test_name
 	    }
@@ -839,11 +844,11 @@ proc runto { linespec args } {
 
 # Ask gdb to run until we hit a breakpoint at main.
 #
-# N.B. This function deletes all existing breakpoints.
-# If you don't want that, use gdb_start_cmd.
+# N.B. By default this function deletes all existing breakpoints.  If
+# you don't want that then pass the 'no-delete-breakpoints' argument.
 
-proc runto_main { } {
-    return [runto main qualified]
+proc runto_main { args } {
+    return [runto main qualified {*}$args]
 }
 
 ### Continue, and expect to hit a breakpoint.
@@ -1555,7 +1560,7 @@ proc gdb_test { args } {
     global gdb_prompt
     upvar timeout timeout
 
-    parse_args {
+    parse_some_args {
 	{prompt ""}
 	{no-prompt-anchor}
 	{lbl}
@@ -1563,7 +1568,8 @@ proc gdb_test { args } {
 	{nonl}
     }
 
-    lassign $args command pattern message question response
+    set args [lassign $args command pattern message question response]
+    check_no_args_left
 
     # Can't have a question without a response.
     if { $question != "" && $response == "" || [llength $args] > 5 } {
@@ -1698,6 +1704,16 @@ if { [tcl_version_at_least 8 6] == 0 } {
 
 	return $res
     }
+
+    # ::tcl_platform(pathSeparator) was added in 8.6.
+    switch $::tcl_platform(platform) {
+	windows {
+	    set ::tcl_platform(pathSeparator) ;
+	}
+	default {
+	    set ::tcl_platform(pathSeparator) :
+	}
+    }
 }
 
 if { [tcl_version_at_least 8 6 2] == 0 } {
@@ -1727,13 +1743,14 @@ if { [tcl_version_at_least 8 6 2] == 0 } {
 proc gdb_test_no_output { args } {
     global gdb_prompt
 
-    parse_args {
+    parse_some_args {
 	{prompt ""}
 	{no-prompt-anchor}
 	{nopass}
     }
 
-    lassign $args command message
+    set args [lassign $args command message]
+    check_no_args_left
 
     set prompt [fill_in_default_prompt $prompt [expr !${no-prompt-anchor}]]
 
@@ -1775,7 +1792,7 @@ proc gdb_test_no_output { args } {
 proc gdb_test_sequence { args } {
     global gdb_prompt
 
-    parse_args {{prompt ""}}
+    parse_some_args {{prompt ""}}
 
     if { $prompt == "" } {
 	set prompt "$gdb_prompt $"
@@ -1801,6 +1818,55 @@ proc gdb_test_sequence { args } {
 }
 
 
+# Issue COMMAND, and return corresponding output lines.  Helper function for
+# gdb_get_lines_no_pass and gdb_get_lines.
+
+proc gdb_get_lines_1 { command message } {
+    set no_pass [string equal $message ""]
+    set lines ""
+    set ok 0
+    gdb_test_multiple $command $message {
+	-re "\r\n(\[^\r\n\]*)(?=\r\n)" {
+	    set line $expect_out(1,string)
+	    if { $lines eq "" } {
+		append lines "$line"
+	    } else {
+		append lines "\r\n$line"
+	    }
+	    exp_continue
+	}
+	-re -wrap "" {
+	    append lines "\r\n"
+	    set ok 1
+	    if { ! $no_pass } {
+		pass $gdb_test_name
+	    }
+	}
+    }
+
+    if { ! $ok } {
+	return ""
+    }
+
+    return $lines
+}
+
+# Issue COMMAND, and return corresponding output lines.  Don't generate a pass.
+
+proc gdb_get_lines_no_pass { command } {
+    gdb_get_lines_1 $command ""
+}
+
+# Issue COMMAND, and return corresponding output lines.  Generate a pass.
+
+proc gdb_get_lines { command {message ""} } {
+    if { $message == "" } {
+	set message [command_to_message $command]
+    }
+
+    gdb_get_lines_1 $command $message
+}
+
 # Match output of COMMAND using RE.  Read output line-by-line.
 # Report pass/fail with MESSAGE.
 # For a command foo with output:
@@ -1840,22 +1906,7 @@ proc gdb_test_lines { command message re args } {
 	set message [command_to_message $command]
     }
 
-    set lines ""
-    gdb_test_multiple $command $message {
-	-re "\r\n(\[^\r\n\]*)(?=\r\n)" {
-	    set line $expect_out(1,string)
-	    if { $lines eq "" } {
-		append lines "$line"
-	    } else {
-		append lines "\r\n$line"
-	    }
-	    exp_continue
-	}
-	-re -wrap "" {
-	    append lines "\r\n"
-	}
-    }
-
+    set lines [gdb_get_lines_no_pass $command]
     gdb_assert { [regexp $re $lines] } $message
 
     foreach re $re_not {
@@ -3564,6 +3615,55 @@ gdb_caching_proc supports_memtag {} {
     return 0
 }
 
+# Return 1 if catch syscall is supported, otherwise return 0.
+
+gdb_caching_proc supports_catch_syscall {} {
+    set me "supports_catch_syscall"
+
+    # Compile a test program.
+    set src {
+	int main() {
+	    return 0;
+	}
+    }
+    if {![gdb_simple_compile $me $src executable]} {
+	verbose -log "$me: failed to compile"
+	return 0
+    }
+
+    # No error message, compilation succeeded so now run it via gdb.
+
+    gdb_exit
+    gdb_start
+    gdb_reinitialize_dir $::srcdir/$::subdir
+    gdb_load $obj
+    if { ![runto_main] } {
+	verbose -log "$me: failed to run to main"
+	return 0
+    }
+
+    # To make sure we test both setting and inserting the catchpoint.
+    gdb_test_no_output "set breakpoint always-inserted on"
+
+    set res 0
+    set re_yes \
+	[string_to_regexp \
+	     "Catchpoint 2 (any syscall)"]
+    gdb_test_multiple "catch syscall" "" {
+	-re -wrap ^$re_yes {
+	    set res 1
+	}
+	-re -wrap "" {
+	}
+    }
+
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me: returning $res" 2
+    return $res
+}
+
 # Return 1 if the target supports hardware single stepping.
 
 proc can_hardware_single_step {} {
@@ -4370,6 +4470,62 @@ gdb_caching_proc allow_btrace_ptw_tests {} {
 
     verbose "$me:  returning $allow_btrace_ptw_tests" 2
     return $allow_btrace_ptw_tests
+}
+
+
+# Run a test on the target to see if GDB supports event tracing on it.
+# Return 1 if so, 0 if it does not.
+
+gdb_caching_proc allow_btrace_pt_event_trace_tests {} {
+    global srcdir subdir
+    set me "allow_btrace_pt_event_trace_tests"
+    require allow_btrace_pt_tests
+
+    set src {
+	int
+	main ()
+	{
+	  return 0;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable]} {
+	return 0
+    }
+
+    gdb_exit
+    gdb_start
+    gdb_reinitialize_dir $srcdir/$subdir
+    gdb_load "$obj"
+    if ![runto_main] {
+	return 0
+    }
+
+    set allow_event_trace_tests 0
+    gdb_test_multiple "set record btrace pt event-tracing on" "$me:  first check" {
+	-re -wrap "Event-tracing is not supported by GDB." {
+	}
+	-re -wrap "" {
+	    set allow_event_trace_tests 1
+	}
+    }
+
+    if { $allow_event_trace_tests == 1 } {
+	gdb_test_multiple "record btrace pt" "$me:  check OS support" {
+	    -re -wrap "^" {
+	    }
+	    -re -wrap "" {
+		verbose -log "$me:  Target doesn't support event tracing."
+		set allow_event_trace_tests 0
+	    }
+	}
+    }
+
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_event_trace_tests" 2
+    return $allow_event_trace_tests
 }
 
 
@@ -5596,10 +5752,11 @@ proc gdb_compile {source dest type options} {
     }
 
     # If the 'build-id' option is used, then ensure that we generate a
-    # build-id.  GCC does this by default, but Clang does not, so
-    # enable it now.
-    if {[lsearch -exact $options build-id] > 0
-	&& [test_compiler_info "clang-*"]} {
+    # build-id.  It is possible that the compiler is configured to do
+    # so automatically, but at least for GCC the configure option
+    # --enable-linker-build-id is not enabled by default.
+    # So to be sure, enable it explicitly.
+    if {[lsearch -exact $options build-id] > 0} {
 	lappend new_options "ldflags=-Wl,--build-id"
     }
 
@@ -6777,6 +6934,71 @@ proc gdb_core_cmd { core test } {
     }
     fail "unsupported output from 'core' command"
     return -1
+}
+
+# Figure out whether FILE is sparse.  Returns 1 if FILE is sparse, 0
+# if FILE is not sparse, and -1 if something went wrong.  If MESSAGE
+# is not empty, then issue PASS/FAIL/UNTESTED accordingly.
+proc check_sparse { file {message ""} } {
+    # There is no portable way to check for sparseness with TCL.
+    #
+    # The standard test is to use the stat syscall to get the number
+    # of blocks in the file, multiply by the block size, and compare
+    # the result with the file's logical size.  If smaller, then the
+    # file is sparse.
+    #
+    # We can get the file's logical size with TCL's "file size".  We
+    # can use TCL "file stat" to find the number of file blocks in the
+    # "blocks" element of the returned array (same as stat.st_blocks
+    # in C).  But we don't know what is the byte size of the blocks
+    # reported.  It is NOT what "file stat" returns in the "blksize"
+    # array element (as same stat.st_blksize in C).  As described at:
+    # https://pubs.opengroup.org/onlinepubs/007904875/basedefs/sys/stat.h.html
+    #
+    #  "The unit for the st_blocks member of the stat structure is not
+    #  defined within IEEE Std 1003.1-2001. In some implementations it
+    #  is 512 bytes. It may differ on a file system basis. There is no
+    #  correlation between values of the st_blocks and st_blksize, and
+    #  the f_bsize (from <sys/statvfs.h>) structure members.
+    #
+    #  Traditionally, some implementations defined the multiplier for
+    #  st_blocks in <sys/param.h> as the symbol DEV_BSIZE."
+    #
+    # We could try to address this by writing our own little C program
+    # that tries to use the correct block size for the system.
+    # Looking at the `GNU du`'s source code, though, we see that not
+    # all systems have DEV_BSIZE (or S_BLKSIZE, which is similar), and
+    # then there are some systems that don't have any such macro and
+    # use 1024 as block size.  So not even a 512 fallback works
+    # everywhere.
+    #
+    # It seems pointless to have to worry about portability like that
+    # when `du` exists and is installed (or easy to install) on
+    # practically every Unix-like system we might care about.
+    #
+    # Now, `du`'s behavior has a similar portability issue.  While
+    # most `du` implementations report blocks in 512 bytes units, that
+    # is not guaranteed.  Thankfully, "du -k" is in POSIX, which forces
+    # block size of 1024 bytes.  So that's what we use.
+    set du_result [remote_exec host "du" [list "-k" "$file"]]
+    set du_status [lindex $du_result 0]
+    set du_output [lindex $du_result 1]
+    if {$du_status != 0} {
+	verbose -log "du failed with error code $du_status"
+	verbose -log "du output is: $du_output"
+	if {$message != ""} {
+	    untested $message
+	}
+	return -1
+    }
+    # Get '123' from a string like "123   /path/to/file".
+    set blks [lindex [split $du_output] 0]
+    set size_on_disk [expr {1024 * $blks}]
+    set res [expr {$size_on_disk < [file size $file]}]
+    if {$message != ""} {
+	gdb_assert $res $message
+    }
+    return res
 }
 
 # Return the filename to download to the target and load on the target
@@ -8269,14 +8491,17 @@ proc get_build_id { filename } {
 
 # Return the build-id hex string (usually 160 bits as 40 hex characters)
 # converted to the form: .build-id/ab/cdef1234...89.debug
+#
+# The '.debug' suffix can be changed by passing the SUFFIX argument.
+#
 # Return "" if no build-id found.
-proc build_id_debug_filename_get { filename } {
+proc build_id_debug_filename_get { filename {suffix ".debug"} } {
     set data [get_build_id $filename]
     if { $data == "" } {
 	return ""
     }
     regsub {^..} $data {\0/} data
-    return ".build-id/${data}.debug"
+    return ".build-id/${data}${suffix}"
 }
 
 # DEST should be a file compiled with debug information.  This proc
@@ -9263,7 +9488,7 @@ proc using_fission { } {
 #
 # Example:
 # proc myproc {foo args} {
-#   parse_list args 1 {{bar} {baz "abc"} {qux}} "-" false
+#   parse_list 1 args {{bar} {baz "abc"} {qux}} "-" false
 #    # ...
 # }
 # myproc ABC -bar -baz DEF peanut butter
@@ -9324,11 +9549,30 @@ proc parse_list { level listname argset prefix eval } {
 # Search the caller's args variable and set variables according to the list of
 # valid options described by ARGSET.
 
-proc parse_args { argset } {
+proc parse_some_args { argset } {
     parse_list 2 args $argset "-" false
 
     # The remaining args should be checked to see that they match the
     # number of items expected to be passed into the procedure...
+}
+
+# Check that the caller's args variable is empty.
+
+proc check_no_args_left {} {
+    # Require no remaining args.
+    upvar 1 args args
+    if { [llength $args] != 0 } {
+	error "Args left unparsed: $args"
+    }
+}
+
+# As parse_some_args, but check that no args remain after parsing.
+
+proc parse_args { argset } {
+    uplevel parse_some_args [list $argset]
+
+    # Require no remaining args.
+    uplevel check_no_args_left
 }
 
 # Process the caller's options variable and set variables according
@@ -9709,18 +9953,6 @@ gdb_caching_proc supports_statement_frontiers {} {
 	    return 0;
 	}
     } executable "additional_flags=-gstatement-frontiers"]
-}
-
-# Return 1 if compiler supports -mmpx -fcheck-pointer-bounds.  Otherwise,
-# return 0.
-
-gdb_caching_proc supports_mpx_check_pointer_bounds {} {
-    set flags "additional_flags=-mmpx additional_flags=-fcheck-pointer-bounds"
-    return [gdb_can_simple_compile supports_mpx_check_pointer_bounds {
-	int main () {
-	    return 0;
-	}
-    } executable $flags]
 }
 
 # Return 1 if compiler supports -fcf-protection=.  Otherwise,
@@ -10149,83 +10381,6 @@ gdb_caching_proc supports_gnuc {} {
 	#endif
     }
     return [gdb_simple_compile $me $src object ""]
-}
-
-# Return 1 if target supports mpx, otherwise return 0.
-gdb_caching_proc have_mpx {} {
-    global srcdir
-
-    set me "have_mpx"
-    if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-        verbose "$me: target does not support mpx, returning 0" 2
-        return 0
-    }
-
-    # Compile a test program.
-    set src {
-       #include "nat/x86-cpuid.h"
-
-        int main() {
-	  unsigned int eax, ebx, ecx, edx;
-
-	  if (!__get_cpuid (1, &eax, &ebx, &ecx, &edx))
-	    return 0;
-
-	  if ((ecx & bit_OSXSAVE) == bit_OSXSAVE)
-	    {
-	      if (__get_cpuid_max (0, (void *)0) < 7)
-		return 0;
-
-		__cpuid_count (7, 0, eax, ebx, ecx, edx);
-
-		if ((ebx & bit_MPX) == bit_MPX)
-		  return 1;
-
-	    }
-	  return 0;
-	}
-    }
-    set compile_flags "incdir=${srcdir}/.."
-    if {![gdb_simple_compile $me $src executable $compile_flags]} {
-        return 0
-    }
-
-    set target_obj [gdb_remote_download target $obj]
-    set result [remote_exec target $target_obj]
-    set status [lindex $result 0]
-    set output [lindex $result 1]
-    if { $output != "" } {
-	set status 0
-    }
-
-    remote_file build delete $obj
-
-    if { $status == 0 } {
-	verbose "$me:  returning $status" 2
-	return $status
-    }
-
-    # Compile program with -mmpx -fcheck-pointer-bounds, try to trigger
-    # 'No MPX support', in other words, see if kernel supports mpx.
-    set src { int main (void) { return 0; } }
-    set comp_flags {}
-    append comp_flags " additional_flags=-mmpx"
-    append comp_flags " additional_flags=-fcheck-pointer-bounds"
-    if {![gdb_simple_compile $me-2 $src executable $comp_flags]} {
-        return 0
-    }
-
-    set target_obj [gdb_remote_download target $obj]
-    set result [remote_exec target $target_obj]
-    set status [lindex $result 0]
-    set output [lindex $result 1]
-    set status [expr ($status == 0) \
-		    && ![regexp "^No MPX support\r?\n" $output]]
-
-    remote_file build delete $obj
-
-    verbose "$me:  returning $status" 2
-    return $status
 }
 
 # Return 1 if target supports avx, otherwise return 0.

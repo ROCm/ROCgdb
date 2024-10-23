@@ -4364,7 +4364,7 @@ includes changes in memory, registers, and even (within some limits)
 system state.  Effectively, it is like going back in time to the
 moment when the checkpoint was saved.
 
-Thus, if you're stepping thru a program and you think you're 
+Thus, if you're stepping through a program and you think you're
 getting close to the point where things go wrong, you can save
 a checkpoint.  Then, if you accidentally go too far and miss
 the critical statement, instead of having to restart your program
@@ -7152,33 +7152,6 @@ $1 = (void *) 0x7ffff7ff7000
 
 Depending on target support, @code{$_siginfo} may also be writable.
 
-@cindex Intel MPX boundary violations
-@cindex boundary violations, Intel MPX
-On some targets, a @code{SIGSEGV} can be caused by a boundary
-violation, i.e., accessing an address outside of the allowed range.
-In those cases @value{GDBN} may displays additional information,
-depending on how @value{GDBN} has been told to handle the signal.
-With @code{handle stop SIGSEGV}, @value{GDBN} displays the violation
-kind: "Upper" or "Lower", the memory address accessed and the
-bounds, while with @code{handle nostop SIGSEGV} no additional
-information is displayed.
-
-The usual output of a segfault is:
-@smallexample
-Program received signal SIGSEGV, Segmentation fault
-0x0000000000400d7c in upper () at i386-mpx-sigsegv.c:68
-68        value = *(p + len);
-@end smallexample
-
-While a bound violation is presented as:
-@smallexample
-Program received signal SIGSEGV, Segmentation fault
-Upper bound violation while accessing address 0x7fffffffc3b3
-Bounds: [lower = 0x7fffffffc390, upper = 0x7fffffffc3a3]
-0x0000000000400d7c in upper () at i386-mpx-sigsegv.c:68
-68        value = *(p + len);
-@end smallexample
-
 @node Thread Stops
 @section Stopping and Starting Multi-thread Programs
 
@@ -7763,7 +7736,7 @@ the called function, stopping at the beginning of the @emph{last}
 statement in the called function (typically a return statement).
 
 Also, as with the @code{step} command, if non-debuggable functions are
-called, @code{reverse-step} will run thru them backward without stopping.
+called, @code{reverse-step} will run through them backward without stopping.
 
 @kindex reverse-stepi
 @kindex rsi @r{(@code{reverse-stepi})}
@@ -8192,6 +8165,16 @@ also need longer to process the branch trace data before it can be used.
 @item show record btrace pt buffer-size @var{size}
 Show the current setting of the requested ring buffer size for branch
 tracing in Intel Processor Trace format.
+
+@item set record btrace pt event-tracing
+Enable or disable event tracing for branch tracing in Intel Processor
+Trace format.  When enabled, events are recorded during execution as
+auxiliary information and will be printed during stepping commands and
+commands displaying the execution history.  Changing this setting has no
+effect on an active recording.  The default is off.
+
+@item show record btrace pt event-tracing
+Show the current setting of Intel Processor Trace event tracing.
 
 @kindex info record
 @item info record
@@ -16444,6 +16427,9 @@ the data was saved, as well as the current trace frame you are examining.
 Both @var{filename} and @var{dirname} must be on a filesystem accessible to
 the host.
 
+The @var{filename} and @var{dirname} arguments supports escaping and
+quoting, see @ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @smallexample
 (@value{GDBP}) target ctf ctf.ctf
 (@value{GDBP}) tfind
@@ -18511,6 +18497,9 @@ All Modula-2 built-in procedures also return a result, described below.
 @table @code
 @item ABS(@var{n})
 Returns the absolute value of @var{n}.
+
+@item ADR(@var{n})
+Returns the memory address of @var{n}.
 
 @item CAP(@var{c})
 If @var{c} is a lower case letter, it returns its upper case
@@ -20629,6 +20618,7 @@ libraries.  When set to @code{off} no messages are printed.
 Show whether messages will be printed when a @value{GDBN} command
 entered from the keyboard causes symbol information to be loaded.
 
+@anchor{maint print symbols}
 @kindex maint print symbols
 @cindex symbol dump
 @kindex maint print psymbols
@@ -21554,6 +21544,9 @@ Like @code{compile code}, but take the source code from @var{filename}.
 @smallexample
 compile file /home/user/example.c
 @end smallexample
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 @end table
 
 @table @code
@@ -22102,6 +22095,7 @@ Remove symbol table from file "/home/user/gdb/mylib.so"? (y or n) y
 (@value{GDBP})
 @end smallexample
 
+The @var{address} can be any expression which evaluates to an address.
 
 @code{remove-symbol-file} does not repeat if you press @key{RET} after using it.
 
@@ -22353,6 +22347,7 @@ may try to load the host's libraries.  @value{GDBN} has two variables
 to specify the search directories for target libraries.
 
 @table @code
+@anchor{set sysroot}
 @cindex prefix for executable and shared library file names
 @cindex system root, alternate
 @kindex set solib-absolute-prefix
@@ -22454,6 +22449,7 @@ location.
 @item show sysroot
 Display the current executable and shared library prefix.
 
+@anchor{set solib-search-path}
 @kindex set solib-search-path
 @item set solib-search-path @var{path}
 If this variable is set, @var{path} is a colon-separated list of
@@ -22999,6 +22995,9 @@ the @option{-dwarf-5} option, it produces 2 files:
 @file{@var{symbol-file}.debug_names} and
 @file{@var{symbol-file}.debug_str}.  The files are created in the
 given @var{directory}.
+
+The @var{directory} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 @end table
 
 Once you have created an index file you can merge it into your symbol
@@ -23077,6 +23076,19 @@ to delete the content of that directory to free up disk space.
 Print the number of cache hits and misses since the launch of @value{GDBN}.
 
 @end table
+
+@subsection Building the index with GNU @command{gold}
+
+The GNU @command{gold} linker can write the index at link time into
+the resulting ELF file, by passing the @command{--gdb-index} flag to
+@command{gold}.
+
+This is especially helpful if you intend to build a program and immediately
+run it under @value{GDBN}.  You may find that it is faster overall for
+the linker to write the index while it has the relevant information in
+memory anyways, rather than re-reloading the data from disk with
+@command{gdb-add-index}, or debugging the program without an index at
+all, especially for large programs.
 
 @node Debug Names
 @section Extensions to @samp{.debug_names}
@@ -23369,10 +23381,16 @@ configuration):
 An executable file.  @samp{target exec @var{program}} is the same as
 @samp{exec-file @var{program}}.
 
+The @var{program} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @item target core @var{filename}
 @cindex core dump file target
 A core dump file.  @samp{target core @var{filename}} is the same as
 @samp{core-file @var{filename}}.
+
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @item target remote @var{medium}
 @cindex remote target
@@ -23648,7 +23666,7 @@ heterogeneous lanes become active.
 Just because a target architecture supports multiple lanes, does not
 mean that the source language is mapped to use them to implement
 source language threads of execution.  Therefore, a thread is only
-considered to have multiple heterogeneous lanes if it's current frame
+considered to have multiple heterogeneous lanes if its current frame
 corresponds to a source language that does do such a mapping.
 
 @anchor{Address Space}
@@ -28211,91 +28229,6 @@ Show the current setting of the convention to return @code{struct}s
 from functions.
 @end table
 
-
-@subsubsection Intel @dfn{Memory Protection Extensions} (MPX).
-@cindex Intel Memory Protection Extensions (MPX).
-
-Memory Protection Extension (MPX) adds the bound registers @samp{BND0}
-@footnote{The register named with capital letters represent the architecture
-registers.} through @samp{BND3}.  Bound registers store a pair of 64-bit values
-which are the lower bound and upper bound.  Bounds are effective addresses or
-memory locations.  The upper bounds are architecturally represented in 1's
-complement form.  A bound having lower bound = 0, and upper bound = 0
-(1's complement of all bits set) will allow access to the entire address space.
-
-@samp{BND0} through @samp{BND3} are represented in @value{GDBN} as @samp{bnd0raw}
-through @samp{bnd3raw}.  Pseudo registers @samp{bnd0} through @samp{bnd3}
-display the upper bound performing the complement of one operation on the
-upper bound value, i.e.@ when upper bound in @samp{bnd0raw} is 0 in the
-@value{GDBN} @samp{bnd0} it will be @code{0xfff@dots{}}.  In this sense it
-can also be noted that the upper bounds are inclusive.
-
-As an example, assume that the register BND0 holds bounds for a pointer having
-access allowed for the range between 0x32 and 0x71.  The values present on
-bnd0raw and bnd registers are presented as follows:
-
-@smallexample
-	bnd0raw = @{0x32, 0xffffffff8e@}
-	bnd0 = @{lbound = 0x32, ubound = 0x71@} : size 64
-@end smallexample
-
-This way the raw value can be accessed via bnd0raw@dots{}bnd3raw.  Any
-change on bnd0@dots{}bnd3 or bnd0raw@dots{}bnd3raw is reflect on its
-counterpart.  When the bnd0@dots{}bnd3 registers are displayed via
-Python, the display includes the memory size, in bits, accessible to
-the pointer.
-
-Bounds can also be stored in bounds tables, which are stored in
-application memory.  These tables store bounds for pointers by specifying
-the bounds pointer's value along with its bounds.  Evaluating and changing
-bounds located in bound tables is therefore interesting while investigating
-bugs on MPX context.  @value{GDBN} provides commands for this purpose:
-
-@table @code
-@item show mpx bound @var{pointer}
-@kindex show mpx bound
-Display bounds of the given @var{pointer}.
-
-@item set mpx bound @var{pointer}, @var{lbound}, @var{ubound}
-@kindex  set mpx bound
-Set the bounds of a pointer in the bound table.
-This command takes three parameters: @var{pointer} is the pointers
-whose bounds are to be changed, @var{lbound} and @var{ubound} are new values
-for lower and upper bounds respectively.
-@end table
-
-Both commands are deprecated and will be removed in future versions of
-@value{GDBN}.  MPX itself was listed as removed by Intel in 2019.
-
-When you call an inferior function on an Intel MPX enabled program,
-GDB sets the inferior's bound registers to the init (disabled) state
-before calling the function.  As a consequence, bounds checks for the
-pointer arguments passed to the function will always pass.
-
-This is necessary because when you call an inferior function, the
-program is usually in the middle of the execution of other function.
-Since at that point bound registers are in an arbitrary state, not
-clearing them would lead to random bound violations in the called
-function.
-
-You can still examine the influence of the bound registers on the
-execution of the called function by stopping the execution of the
-called function at its prologue, setting bound registers, and
-continuing the execution.  For example:
-
-@smallexample
-	$ break *upper
-	Breakpoint 2 at 0x4009de: file i386-mpx-call.c, line 47.
-	$ print upper (a, b, c, d, 1)
-	Breakpoint 2, upper (a=0x0, b=0x6e0000005b, c=0x0, d=0x0, len=48)....
-	$ print $bnd0
-	@{lbound = 0x0, ubound = ffffffff@} : size -1
-@end smallexample
-
-At this last step the value of bnd0 can be changed for investigation of bound
-violations caused along the execution of the call.  In order to know how to
-set the bound registers or bound table for the call consult the ABI.
-
 @subsubsection x87 registers
 
 @value{GDBN} provides access to the x87 state through the following registers:
@@ -29609,6 +29542,13 @@ Thread 3 (AMDGPU Wave 1:1:1:1 (0,0,0)/0) stopped because of SIGSEGV.
 (@value{GDBP})
 @end smallexample
 
+When opening a core dump, @value{GDBN} tries to load GPU code objects at
+the same path they were on the system where the core dump got produced.
+If the code objects are not at the same location, @value{GDBN} can look
+in the @code{sysroot} (@pxref{set sysroot,,set sysroot}), or use the
+@code{shared-library-path} (@pxref{set solib-search-path,,set
+solib-search-path}).
+
 @subsubsection @acronym{AMD GPU} Restrictions
 
 @value{GDBN} @acronym{AMD GPU} support is currently a prototype and
@@ -30577,6 +30517,10 @@ This style is also used for symbol names in styled disassembler output
 if @value{GDBN} is using its builtin disassembler library for styling
 (@pxref{style_disassembler_enabled,,@kbd{set style disassembler
 enabled}}).
+
+@item line-number
+Control the styling of line numbers.  By default, this style's
+intensity is dim.
 
 @item variable
 Control the styling of variable names.  These are managed with the
@@ -42989,6 +42933,11 @@ corresponds to the @code{file} command.  @xref{Files}.
 If provided, this must be a boolean.  When @samp{True}, @value{GDBN}
 will set a temporary breakpoint at the program's main procedure, using
 the same approach as the @code{start} command.  @xref{Starting}.
+
+@item stopOnEntry
+If provided, this must be a boolean.  When @samp{True}, @value{GDBN}
+will set a temporary breakpoint at the program's first instruction, using
+the same approach as the @code{starti} command.  @xref{Starting}.
 @end table
 
 @value{GDBN} defines some parameters that can be passed to the
@@ -44946,6 +44895,9 @@ target description being processed (either the default, or from
 @var{file}) must only contain a single feature.  The source file
 produced is different in this case.
 
+The @var{file} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
+
 @kindex maint print xml-tdesc
 @item maint print xml-tdesc  @r{[}@var{file}@r{]}
 Print the target description (@pxref{Target Descriptions}) as an XML
@@ -45014,6 +44966,176 @@ frame-id for frame #0: @{stack=0x7fffffffac70,code=0x0000000000401106,!special@}
 frame-id for frame #2: @{stack=0x7fffffffac90,code=0x000000000040111c,!special@}
 @end smallexample
 
+@item maint info inline-frames
+@itemx maint info inline-frames @var{address}
+@cindex frames of inlined functions
+@kindex maint info inline-frames
+Print information about inlined frames which start at the current
+address, or @var{address} if specified.
+
+In order to allow the user to correctly step into inlined functions,
+@value{GDBN} needs to identify which inlined functions start at a
+particular address, and @value{GDBN} also needs to track which of
+these functions was last displayed to the user as the current frame.
+
+Imagine a situation where function @code{main} calls @code{foo}, which
+then calls @code{bar}, something like this:
+
+@smallexample
+@group
+int
+main ()
+@{
+  /* Some interesting code here...  */
+
+  foo ();
+
+  /* More interesting code here... */
+@}
+
+void
+foo ()
+@{
+  bar ();
+@}
+
+void
+bar ()
+@{
+  /* Some interesting code here...  */
+@}
+@end group
+@end smallexample
+
+As both @code{foo} and @code{bar} are inlined within @code{main} then
+there could be one address within @code{main} which is also the start
+of @code{foo} and also the start of @code{bar}.  When the user stops
+at this address they will initially be told the inferior is in
+@code{main}, if the user does a @kbd{step} then @value{GDBN} doesn't
+actually step the inferior, instead the user is told the inferior
+entered @code{foo}.  After the next @kbd{step} the user is told the
+inferior entered @code{bar}.  The @kbd{maint info inline-frames}
+command can be used to view this internal @value{GDBN} state, like
+this:
+
+@smallexample
+@group
+(@value{GDBP}) step
+24	  foo ();
+(@value{GDBP}) maintenance info inline-frames
+Cached inline state information for thread 1.
+program counter = 0x401137
+skipped frames = 2
+  bar
+  foo
+> main
+@end group
+@end smallexample
+
+Here the user is stopped in @code{main} at the call to @code{foo}.  The
+inline-frames information shows that at this address @value{GDBN} has
+found the start of inlined functions @code{bar} and @code{foo}, but
+currently @value{GDBN} has skipped 2 frames and considers @code{main}
+to be the current frame, this is indicated with the @samp{>}.
+
+If the user performs a @kbd{step} to enter @code{foo} then the
+situation is updated:
+
+@smallexample
+@group
+(@value{GDBP}) step
+foo () at inline.c:14
+14	  bar ();
+(@value{GDBP}) maintenance info inline-frames
+Cached inline state information for thread 1.
+program counter = 0x401137
+skipped frames = 1
+  bar
+> foo
+  main
+@end group
+@end smallexample
+
+Notice that the program counter value @code{0x401137} hasn't change,
+but now @value{GDBN} considers @code{foo} to be the current frame, and
+it is marked as such with the @samp{>}.
+
+Finally, the user performs another @kbd{step} to enter @code{bar}:
+
+@smallexample
+@group
+(@value{GDBP}) step
+bar () at inline.c:6
+6	  ++global_counter;
+(@value{GDBP}) maintenance info inline-frames
+Cached inline state information for thread 1.
+program counter = 0x401137
+skipped frames = 0
+> bar
+  foo
+  main
+@end group
+@end smallexample
+
+@kindex maint info blocks
+@item maint info blocks
+@itemx maint info blocks @var{address}
+Print information about all blocks at @var{address}, or at the current
+@code{$pc} if @var{address} is not given.
+
+For information about what blocks are in @value{GDBN} see @ref{Blocks
+In Python}.
+
+Blocks are listed starting from the global block, then the static
+block, and then proceeding through progressively narrower scopes.
+
+Here is an example of the command's output:
+@smallexample
+@group
+(@value{GDBP}) maintenance info blocks
+Blocks at 0x401137:
+  from objfile: [(objfile *) 0x50507d0] /tmp/inline_func_demo
+
+[(block *) 0x504da90] 0x401106..0x40119a
+  entry pc: 0x401106
+  is global block
+  symbol count: 2
+  is contiguous
+@end group
+@group
+[(block *) 0x504d9f0] 0x401106..0x40119a
+  entry pc: 0x401106
+  is static block
+  symbol count: 1
+  is contiguous
+@end group
+@group
+[(block *) 0x504d9a0] 0x401106..0x40119a
+  entry pc: 0x401106
+  function: main
+  is contiguous
+@end group
+@group
+[(block *) 0x504d900] 0x401137..0x401166
+  entry pc: 0x401137
+  inline function: foo
+  symbol count: 1
+  is contiguous
+@end group
+@group
+[(block *) 0x504d860] 0x401137..0x401165
+  entry pc: 0x401137
+  inline function: bar
+  symbol count: 1
+  is contiguous
+@end group
+@end smallexample
+
+The command @kbd{maint info blocks} lists the symbol count for each
+block but doesn't print the symbols themselves.  The symbol names can
+be found using @kbd{maint print symbols} (@pxref{maint print
+symbols}).
+
 @kindex maint print registers
 @kindex maint print raw-registers
 @kindex maint print cooked-registers
@@ -45033,7 +45155,11 @@ including registers which aren't available on the target nor visible
 to user; the command @code{maint print register-groups} includes the
 groups that each register is a member of; and the command @code{maint
 print remote-registers} includes the remote target's register numbers
-and offsets in the `G' packets.
+and offsets in the `G' packets, as well as an indication of which
+registers were included in the last stop reply packet received by
+@value{GDBN} (@pxref{Stop Reply Packets}).  Please note that the list
+of registers included in a stop reply can change from one stop to the
+next.
 
 These commands take an optional parameter, a file name to which to
 write the information.
@@ -47975,6 +48101,11 @@ These are the currently defined stub features and their properties:
 @tab @samp{-}
 @tab Yes
 
+@item @samp{Qbtrace-conf:pt:event-tracing}
+@tab Yes
+@tab @samp{-}
+@tab Yes
+
 @item @samp{QNonStop}
 @tab No
 @tab @samp{-}
@@ -48298,6 +48429,9 @@ The remote stub understands the @samp{Qbtrace-conf:pt:size} packet.
 
 @item Qbtrace-conf:pt:ptwrite
 The remote stub understands the @samp{Qbtrace-conf:pt:ptwrite} packet.
+
+@item Qbtrace-conf:pt:event-tracing
+The remote stub understands the @samp{Qbtrace-conf:pt:event-tracing} packet.
 
 @item swbreak
 The remote stub reports the @samp{swbreak} stop reason for memory
@@ -48796,6 +48930,18 @@ Reply:
 @table @samp
 @item OK
 The ptwrite config parameter has been set.
+@item E.errtext
+A badly formed request or an error was encountered.
+@end table
+
+@item Qbtrace-conf:pt:event-tracing=@var{(yes|no)}
+Indicate support for event-tracing packets.  This allows for backwards
+compatibility.
+
+Reply:
+@table @samp
+@item OK
+The event-tracing config parameter has been set.
 @item E.errtext
 A badly formed request or an error was encountered.
 @end table
@@ -51433,15 +51579,16 @@ branch trace configuration discovery.  @xref{Expat}.
 The formal DTD for the branch trace configuration format is given below:
 
 @smallexample
-<!ELEMENT btrace-conf	(bts?, pt?)>
-<!ATTLIST btrace-conf	version	CDATA	#FIXED "1.0">
+<!ELEMENT btrace-conf		(bts?, pt?)>
+<!ATTLIST btrace-conf		version	CDATA	#FIXED "1.0">
 
 <!ELEMENT bts	EMPTY>
-<!ATTLIST bts	size	CDATA	#IMPLIED>
+<!ATTLIST bts	size		CDATA	#IMPLIED>
 
 <!ELEMENT pt	EMPTY>
-<!ATTLIST pt	size	CDATA	#IMPLIED>
-<!ATTLIST pt	ptwrite	(yes | no)	#IMPLIED>
+<!ATTLIST pt	size		CDATA	#IMPLIED>
+<!ATTLIST pt	ptwrite		(yes | no)	#IMPLIED>
+<!ATTLIST pt	event-tracing	(yes | no)	#IMPLIED>
 @end smallexample
 
 @include agentexpr.texi
@@ -52677,16 +52824,6 @@ describe the upper 128 bits of @sc{ymm} registers:
 @samp{ymm0h} through @samp{ymm7h} for i386
 @item
 @samp{ymm0h} through @samp{ymm15h} for amd64
-@end itemize
-
-The @samp{org.gnu.gdb.i386.mpx} is an optional feature representing Intel
-Memory Protection Extension (MPX).  It should describe the following registers:
-
-@itemize @minus
-@item
-@samp{bnd0raw} through @samp{bnd3raw} for i386 and amd64.
-@item
-@samp{bndcfgu} and @samp{bndstatus} for i386 and amd64.
 @end itemize
 
 The @samp{org.gnu.gdb.i386.linux} feature is optional.  It should

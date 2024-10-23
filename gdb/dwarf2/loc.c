@@ -42,7 +42,6 @@
 #include "dwarf2/frame.h"
 #include "dwarf2/leb.h"
 #include "compile/compile.h"
-#include "gdbsupport/selftest.h"
 #include <algorithm>
 #include <vector>
 #include <unordered_set>
@@ -781,7 +780,7 @@ func_addr_to_tail_call_list (struct gdbarch *gdbarch, CORE_ADDR addr)
    via its tail calls (incl. transitively).  Throw NO_ENTRY_VALUE_ERROR if it
    can call itself via tail calls.
 
-   If a funtion can tail call itself its entry value based parameters are
+   If a function can tail call itself its entry value based parameters are
    unreliable.  There is no verification whether the value of some/all
    parameters is unchanged through the self tail call, we expect if there is
    a self tail call all the parameters can be modified.  */
@@ -2840,10 +2839,13 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
   /* With -gsplit-dwarf a TLS variable can also look like this:
      DW_AT_location    : 3 byte block: fc 4 e0
 			(DW_OP_GNU_const_index: 4;
-			 DW_OP_GNU_push_tls_address)  */
+			 DW_OP_GNU_push_tls_address) |
+			 3 byte block a2 4 e0
+			(DW_OP_constx: 4;
+			 DW_OP_form_tls_address)  */
   else if (data + 3 <= end
 	   && data + 1 + (leb128_size = skip_leb128 (data + 1, end)) < end
-	   && data[0] == DW_OP_GNU_const_index
+	   && (data[0] == DW_OP_constx || data[0] == DW_OP_GNU_const_index)
 	   && leb128_size > 0
 	   && (data[1 + leb128_size] == DW_OP_GNU_push_tls_address
 	       || data[1 + leb128_size] == DW_OP_form_tls_address)
@@ -3477,6 +3479,7 @@ disassemble_dwarf_expression (struct ui_file *stream,
 	  gdb_printf (stream, " 0x%s", phex_nz (ul, addr_size));
 	  break;
 
+	case DW_OP_constx:
 	case DW_OP_GNU_const_index:
 	  data = safe_read_uleb128 (data, end, &ul);
 	  ul = (uint64_t) dwarf2_read_addr_index (per_cu, per_objfile, ul);

@@ -3,6 +3,13 @@
 Full documentation for ROCgdb is available at
 [docs.amd.com](https://docs.amd.com/bundle/rocgdb)
 
+## ROCgdb-16
+### Added
+- When opening a core dump, GDB can use the "sysroot" or "solib-search-path"
+  settings to locate files containing GPU code objects.  This improves opening
+  GPU code objects on systems different from the one where the core dump was
+  generated.
+
 ## (Unreleased) ROCgdb-15
 ### Added
 - 'info agents' now prints the agent location as "DDD:BB:DD.F", where

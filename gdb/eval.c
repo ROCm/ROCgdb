@@ -1872,16 +1872,19 @@ eval_op_postdec (struct type *expect_type, struct expression *exp,
     }
 }
 
-/* A helper function for OP_TYPE.  */
+namespace expr
+{
 
 struct value *
-eval_op_type (struct type *expect_type, struct expression *exp,
-	      enum noside noside, struct type *type)
+type_operation::evaluate (struct type *expect_type, struct expression *exp,
+			  enum noside noside)
 {
   if (noside == EVAL_AVOID_SIDE_EFFECTS)
-    return value::allocate (type);
+    return value::allocate (std::get<0> (m_storage));
   else
     error (_("Attempt to use a type name as an expression"));
+}
+
 }
 
 /* A helper function for BINOP_ASSIGN_MODIFY.  */
@@ -2102,7 +2105,7 @@ eval_op_objc_msgcall (struct type *expect_type, struct expression *exp,
 
   /* Found a function symbol.  Now we will substitute its
      value in place of the message dispatcher (obj_msgSend),
-     so that we call the method directly instead of thru
+     so that we call the method directly instead of through
      the dispatcher.  The main reason for doing this is that
      we can now evaluate the return value and parameter values
      according to their known data types, in case we need to

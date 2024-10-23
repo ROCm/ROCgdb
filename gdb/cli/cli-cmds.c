@@ -52,7 +52,6 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
 #include "cli/cli-utils.h"
-#include "cli/cli-style.h"
 
 #include "extension.h"
 #include "gdbsupport/pathstuff.h"
@@ -424,31 +423,7 @@ complete_command (const char *arg, int from_tty)
     {
       std::string arg_prefix (arg, word - arg);
 
-      if (result.number_matches == 1)
-	printf_unfiltered ("%s%s\n", arg_prefix.c_str (), result.match_list[0]);
-      else
-	{
-	  result.sort_match_list ();
-
-	  for (size_t i = 0; i < result.number_matches; i++)
-	    {
-	      printf_unfiltered ("%s%s",
-				 arg_prefix.c_str (),
-				 result.match_list[i + 1]);
-	      if (quote_char)
-		printf_unfiltered ("%c", quote_char);
-	      printf_unfiltered ("\n");
-	    }
-	}
-
-      if (result.number_matches == max_completions)
-	{
-	  /* ARG_PREFIX and WORD are included in the output so that emacs
-	     will include the message in the output.  */
-	  printf_unfiltered (_("%s%s %s\n"),
-			     arg_prefix.c_str (), word,
-			     get_max_completions_reached_message ());
-	}
+      result.print_matches (arg_prefix, word, quote_char);
     }
 }
 
@@ -1042,16 +1017,23 @@ edit_command (const char *arg, int from_tty)
 	  gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
 	  sym = find_pc_function (sal.pc);
 	  if (sym)
-	    gdb_printf ("%s is in %s (%s:%d).\n",
-			paddress (gdbarch, sal.pc),
-			sym->print_name (),
-			symtab_to_filename_for_display (sal.symtab),
-			sal.line);
+	    gdb_printf ("%ps is in %ps (%ps:%ps).\n",
+			styled_string (address_style.style (),
+				       paddress (gdbarch, sal.pc)),
+			styled_string (function_name_style.style (),
+				       sym->print_name ()),
+			styled_string (file_name_style.style (),
+				       symtab_to_filename_for_display (sal.symtab)),
+			styled_string (line_number_style.style (),
+				       pulongest (sal.line)));
 	  else
-	    gdb_printf ("%s is at %s:%d.\n",
-			paddress (gdbarch, sal.pc),
-			symtab_to_filename_for_display (sal.symtab),
-			sal.line);
+	    gdb_printf ("%ps is at %ps:%ps.\n",
+			styled_string (address_style.style (),
+				       paddress (gdbarch, sal.pc)),
+			styled_string (file_name_style.style (),
+				       symtab_to_filename_for_display (sal.symtab)),
+			styled_string (line_number_style.style (),
+				       pulongest (sal.line)));
 	}
 
       /* If what was given does not imply a symtab, it must be an
@@ -1143,19 +1125,14 @@ pipe_command (const char *arg, int from_tty)
   if (to_shell_command == nullptr)
     error (_("Error launching \"%s\""), shell_command);
 
-  try
-    {
-      stdio_file pipe_file (to_shell_command);
+  int exit_status;
+  {
+    SCOPE_EXIT { exit_status = pclose (to_shell_command); };
 
-      execute_command_to_ui_file (&pipe_file, gdb_cmd.c_str (), from_tty);
-    }
-  catch (...)
-    {
-      pclose (to_shell_command);
-      throw;
-    }
+    stdio_file pipe_file (to_shell_command);
 
-  int exit_status = pclose (to_shell_command);
+    execute_command_to_ui_file (&pipe_file, gdb_cmd.c_str (), from_tty);
+  }
 
   if (exit_status < 0)
     error (_("shell command \"%s\" failed: %s"), shell_command,
@@ -2156,9 +2133,11 @@ print_sal_location (const symtab_and_line &sal)
   const char *sym_name = NULL;
   if (sal.symbol != NULL)
     sym_name = sal.symbol->print_name ();
-  gdb_printf (_("file: \"%s\", line number: %d, symbol: \"%s\"\n"),
+  gdb_printf (_("file: \"%s\", line number: %ps, symbol: \"%s\"\n"),
 	      symtab_to_filename_for_display (sal.symtab),
-	      sal.line, sym_name != NULL ? sym_name : "???");
+	      styled_string (line_number_style.style (),
+			     pulongest (sal.line)),
+	      sym_name != NULL ? sym_name : "???");
 }
 
 /* Print a list of files and line numbers which a user may choose from
@@ -2653,7 +2632,7 @@ The debugger's current working directory specifies where scripts and other\n\
 files that can be loaded by GDB are located.\n\
 In order to change the inferior's current working directory, the recommended\n\
 way is to use the \"set cwd\" command."), &cmdlist);
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer (c, deprecated_filename_completer);
 
   add_com ("echo", class_support, echo_command, _("\
 Print a constant string.  Give string as argument.\n\
@@ -2819,7 +2798,7 @@ the previous command number shown."),
     = add_com ("shell", class_support, shell_command, _("\
 Execute the rest of the line as a shell command.\n\
 With no arguments, run an inferior shell."));
-  set_cmd_completer (shell_cmd, filename_completer);
+  set_cmd_completer (shell_cmd, deprecated_filename_completer);
 
   add_com_alias ("!", shell_cmd, class_support, 0);
 
@@ -2908,7 +2887,8 @@ you must type \"disassemble 'foo.c'::bar\" and not \"disassemble foo.c:bar\"."))
 
   c = add_com ("make", class_support, make_command, _("\
 Run the ``make'' program using the rest of the line as arguments."));
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer (c, deprecated_filename_completer);
+
   c = add_cmd ("user", no_class, show_user, _("\
 Show definitions of non-python/scheme user defined commands.\n\
 Argument is the name of the user defined command.\n\
@@ -2992,5 +2972,5 @@ Note that the file \"%s\" is read automatically in this way\n\
 when GDB is started."), GDBINIT).release ();
   c = add_cmd ("source", class_support, source_command,
 	       source_help_text, &cmdlist);
-  set_cmd_completer (c, filename_completer);
+  set_cmd_completer (c, deprecated_filename_completer);
 }

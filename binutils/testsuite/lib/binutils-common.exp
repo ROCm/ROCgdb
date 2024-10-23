@@ -275,27 +275,6 @@ proc is_generic { } {
     return 0
 }
 
-# Return true if target uses elf.em.
-proc uses_elf_em { } {
-    if { ![is_elf_format] || [is_generic] } {
-	return 0
-    }
-
-    # These targets don't use elf.em.
-    if { [istarget "fr30-*-*"]
-	 || [istarget "frv-*-elf"]
-	 || [istarget "ft32-*-*"]
-	 || [istarget "iq2000-*-*"]
-	 || [istarget "mn10200-*-*"]
-	 || [istarget "moxie-*-moxiebox*"]
-	 || [istarget "msp430-*-*"]
-	 || [istarget "mt-*-*"] } {
-	return 0
-    }
-
-    return 1
-}
-
 # True if the object format is ELF with unused section symbols.
 proc is_elf_unused_section_symbols {} {
     global AS ASFLAGS READELF
@@ -918,6 +897,9 @@ proc prune_dump_output { output } {
 #	Run this test and it is is expected to fail on a specified list
 #	of targets.
 #
+#   noxfail: GLOB|PROC ...
+#	Of targets that match the xfail list, this list won't fail.
+#
 #   error: REGEX
 #	An error with message matching REGEX must be emitted for the test
 #	to pass.  The DUMPPROG, addr2line, nm, objdump, readelf and size
@@ -1022,6 +1004,7 @@ proc run_dump_test { name {extra_options {}} } {
     set opts(warning) {}
     set opts(warning_output) {}
     set opts(xfail) {}
+    set opts(noxfail) {}
 
     set in_extra 0
     foreach i [concat $opt_array {{} {}} $extra_options] {
@@ -1052,6 +1035,7 @@ proc run_dump_test { name {extra_options {}} } {
 
 	switch -- $opt_name {
 	    xfail {}
+	    noxfail {}
 	    target {}
 	    alltargets {}
 	    notarget {}
@@ -1314,6 +1298,12 @@ proc run_dump_test { name {extra_options {}} } {
     foreach targ $opts(xfail) {
 	if [match_target $targ] {
 	    setup_xfail "*-*-*"
+	    break
+	}
+    }
+    foreach targ $opts(noxfail) {
+	if [match_target $targ] {
+	    clear_xfail "*-*-*"
 	    break
 	}
     }

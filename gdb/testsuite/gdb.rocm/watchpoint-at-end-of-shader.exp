@@ -40,7 +40,7 @@ proc target_has_xfail {} {
     # Extract the target family by removing the last 2 chars from the target
     # gfx number.
     set target_family [string range [lindex $targets 0] 0 end-2]
-    return [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1
+    return [expr [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1]
 }
 
 proc do_test {precise_memory has_xfail} {

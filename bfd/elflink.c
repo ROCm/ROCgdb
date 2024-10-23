@@ -2877,7 +2877,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   if (keep_memory)
     esdo->relocs = internal_relocs;
 
-  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
+  _bfd_munmap_temporary (alloc1, alloc1_size);
 
   /* Don't free alloc2, since if it was allocated we are passing it
      back (under the name of internal_relocs).  */
@@ -2885,7 +2885,7 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
   return internal_relocs;
 
  error_return:
-  _bfd_munmap_readonly_temporary (alloc1, alloc1_size);
+  _bfd_munmap_temporary (alloc1, alloc1_size);
   if (alloc2 != NULL)
     {
       if (keep_memory)
@@ -8109,8 +8109,8 @@ _bfd_elf_merge_sections (bfd *obfd, struct bfd_link_info *info)
   bfd *ibfd;
   asection *sec;
 
-  if (!is_elf_hash_table (info->hash))
-    return false;
+  if (ENABLE_CHECKING && !is_elf_hash_table (info->hash))
+    abort ();
 
   for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
     if ((ibfd->flags & DYNAMIC) == 0
@@ -8133,8 +8133,8 @@ _bfd_elf_merge_sections (bfd *obfd, struct bfd_link_info *info)
 	  }
 
   if (elf_hash_table (info)->merge_info != NULL)
-    _bfd_merge_sections (obfd, info, elf_hash_table (info)->merge_info,
-			 merge_sections_remove_hook);
+    return _bfd_merge_sections (obfd, info, elf_hash_table (info)->merge_info,
+				merge_sections_remove_hook);
   return true;
 }
 
@@ -8819,6 +8819,8 @@ bfd_elf_match_symbols_in_sections (asection *sec1, asection *sec2,
 	    symp->name = bfd_elf_string_from_elf_section (bfd1,
 							  hdr1->sh_link,
 							  ssym->st_name);
+	    if (symp->name == NULL)
+	      goto done;
 	    symp++;
 	  }
 
@@ -8832,6 +8834,8 @@ bfd_elf_match_symbols_in_sections (asection *sec1, asection *sec2,
 	    symp->name = bfd_elf_string_from_elf_section (bfd2,
 							  hdr2->sh_link,
 							  ssym->st_name);
+	    if (symp->name == NULL)
+	      goto done;
 	    symp++;
 	  }
 
@@ -8878,14 +8882,22 @@ bfd_elf_match_symbols_in_sections (asection *sec1, asection *sec2,
     goto done;
 
   for (i = 0; i < count1; i++)
-    symtable1[i].name
-      = bfd_elf_string_from_elf_section (bfd1, hdr1->sh_link,
-					 symtable1[i].u.isym->st_name);
+    {
+      symtable1[i].name
+	= bfd_elf_string_from_elf_section (bfd1, hdr1->sh_link,
+					   symtable1[i].u.isym->st_name);
+      if (symtable1[i].name == NULL)
+	goto done;
+    }
 
   for (i = 0; i < count2; i++)
-    symtable2[i].name
-      = bfd_elf_string_from_elf_section (bfd2, hdr2->sh_link,
-					 symtable2[i].u.isym->st_name);
+    {
+      symtable2[i].name
+	= bfd_elf_string_from_elf_section (bfd2, hdr2->sh_link,
+					   symtable2[i].u.isym->st_name);
+      if (symtable2[i].name == NULL)
+	goto done;
+    }
 
   /* Sort symbol by name.  */
   qsort (symtable1, count1, sizeof (struct elf_symbol),
@@ -12914,7 +12926,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
     {
       file_ptr off = elf_next_file_pos (abfd);
 
-      _bfd_elf_assign_file_position_for_section (symtab_hdr, off, true);
+      _bfd_elf_assign_file_position_for_section (symtab_hdr, off, true, 0);
 
       /* Note that at this point elf_next_file_pos (abfd) is
 	 incorrect.  We do not yet know the size of the .symtab section.
@@ -13358,7 +13370,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	      symtab_shndx_hdr->sh_size = amt;
 
 	      off = _bfd_elf_assign_file_position_for_section (symtab_shndx_hdr,
-							       off, true);
+							       off, true, 0);
 
 	      if (bfd_seek (abfd, symtab_shndx_hdr->sh_offset, SEEK_SET) != 0
 		  || (bfd_write (flinfo.symshndxbuf, amt, abfd) != amt))
@@ -13382,7 +13394,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
       symstrtab_hdr->sh_addralign = 1;
 
       off = _bfd_elf_assign_file_position_for_section (symstrtab_hdr,
-						       off, true);
+						       off, true, 0);
       elf_next_file_pos (abfd) = off;
 
       if (bfd_seek (abfd, symstrtab_hdr->sh_offset, SEEK_SET) != 0

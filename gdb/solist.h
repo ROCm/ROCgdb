@@ -20,9 +20,11 @@
 #define SOLIST_H
 
 #define SO_NAME_MAX_PATH_SIZE 512	/* FIXME: Should be dynamic */
+
 /* For domain_enum domain.  */
 #include "symtab.h"
 #include "gdb_bfd.h"
+#include "gdbsupport/owning_intrusive_list.h"
 #include "target-section.h"
 
 struct solib_ops;
@@ -125,7 +127,7 @@ struct solib_ops
      inferior --- we don't examine any of the shared library files
      themselves.  The declaration of `struct solib' says which fields
      we provide values for.  */
-  intrusive_list<solib> (*current_sos) ();
+  owning_intrusive_list<solib> (*current_sos) ();
 
   /* Find, open, and read the symbols for the main executable.  If
      FROM_TTY is non-zero, allow messages to be printed.  */
@@ -165,6 +167,23 @@ struct solib_ops
      NULL, in which case no specific preprocessing is necessary
      for this target.  */
   void (*handle_event) (void);
+
+  /* Return an address within the inferior's address space which is known
+     to be part of SO.  If there is no such address, or GDB doesn't know
+     how to figure out such an address then an empty optional is
+     returned.
+
+     The returned address can be used when loading the shared libraries
+     for a core file.  GDB knows the build-ids for (some) files mapped
+     into the inferior's address space, and knows the address ranges which
+     those mapped files cover.  If GDB can figure out a representative
+     address for the library then this can be used to match a library to a
+     mapped file, and thus to a build-id.  GDB can then use this
+     information to help locate the shared library objfile, if the objfile
+     is not in the expected place (as defined by the shared libraries file
+     name).  */
+
+  std::optional<CORE_ADDR> (*find_solib_addr) (solib &so);
 };
 
 /* A unique pointer to a so_list.  */
@@ -183,5 +202,10 @@ extern gdb_bfd_ref_ptr solib_bfd_fopen (const char *pathname, int fd);
 
 /* Find solib binary file and open it.  */
 extern gdb_bfd_ref_ptr solib_bfd_open (const char *in_pathname);
+
+/* A default implementation of the solib_ops::find_solib_addr callback.
+   This just returns an empty std::optional<CORE_ADDR> indicating GDB is
+   unable to find an address within the library SO.  */
+extern std::optional<CORE_ADDR> default_find_solib_addr (solib &so);
 
 #endif

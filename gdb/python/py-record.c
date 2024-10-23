@@ -653,11 +653,11 @@ gdbpy_initialize_record (void)
   recpy_aux_type.tp_richcompare = recpy_element_richcompare;
   recpy_aux_type.tp_hash = recpy_element_hash;
 
-  if (PyType_Ready (&recpy_record_type) < 0
-      || PyType_Ready (&recpy_insn_type) < 0
-      || PyType_Ready (&recpy_func_type) < 0
-      || PyType_Ready (&recpy_gap_type) < 0
-      || PyType_Ready (&recpy_aux_type) < 0)
+  if (gdbpy_type_ready (&recpy_record_type) < 0
+      || gdbpy_type_ready (&recpy_insn_type) < 0
+      || gdbpy_type_ready (&recpy_func_type) < 0
+      || gdbpy_type_ready (&recpy_gap_type) < 0
+      || gdbpy_type_ready (&recpy_aux_type) < 0)
     return -1;
   else
     return 0;
@@ -670,7 +670,6 @@ gdbpy_start_recording (PyObject *self, PyObject *args)
 {
   const char *method = NULL;
   const char *format = NULL;
-  PyObject *ret = NULL;
 
   if (!PyArg_ParseTuple (args, "|ss", &method, &format))
     return NULL;
@@ -678,14 +677,12 @@ gdbpy_start_recording (PyObject *self, PyObject *args)
   try
     {
       record_start (method, format, 0);
-      ret = gdbpy_current_recording (self, args);
+      return gdbpy_current_recording (self, args);
     }
   catch (const gdb_exception &except)
     {
-      gdbpy_convert_exception (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  return ret;
 }
 
 /* Implementation of gdb.current_recording (self) -> gdb.Record.  */
@@ -716,7 +713,7 @@ gdbpy_stop_recording (PyObject *self, PyObject *args)
     }
   catch (const gdb_exception &except)
     {
-      GDB_PY_HANDLE_EXCEPTION (except);
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   Py_RETURN_NONE;

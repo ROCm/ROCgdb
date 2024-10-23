@@ -1232,7 +1232,7 @@ primary	:	'*' primary		%prec '.'
 /* yylex defined in ada-lex.c: Reads one token, getting characters */
 /* through lexptr.  */
 
-/* Remap normal flex interface names (yylex) as well as gratuitiously */
+/* Remap normal flex interface names (yylex) as well as gratuitously */
 /* global symbol names, so we can have multiple flex-generated parsers */
 /* in gdb.  */
 
@@ -1477,7 +1477,7 @@ block_lookup (const struct block *context, const char *raw_name)
 
   if (context == NULL
       && (syms.empty () || syms[0].symbol->aclass () != LOC_BLOCK))
-    symtab = lookup_symtab (name);
+    symtab = lookup_symtab (current_program_space, name);
   else
     symtab = NULL;
 

@@ -377,7 +377,9 @@ static void
 maintenance_print_symbols (const char *args, int from_tty)
 {
   struct ui_file *outfile = gdb_stdout;
-  char *address_arg = NULL, *source_arg = NULL, *objfile_arg = NULL;
+  const char *address_arg = nullptr;
+  const char *source_arg = nullptr;
+  const char *objfile_arg = nullptr;
   int i, outfile_idx;
 
   dont_repeat ();
@@ -655,7 +657,7 @@ static void
 maintenance_print_msymbols (const char *args, int from_tty)
 {
   struct ui_file *outfile = gdb_stdout;
-  char *objfile_arg = NULL;
+  const char *objfile_arg = nullptr;
   int i, outfile_idx;
 
   dont_repeat ();
@@ -887,7 +889,7 @@ maintenance_check_symtabs (const char *ignore, int from_tty)
 static void
 maintenance_expand_symtabs (const char *args, int from_tty)
 {
-  char *regexp = NULL;
+  const char *regexp = nullptr;
 
   /* We use buildargv here so that we handle spaces in the regexp
      in a way that allows adding more arguments later.  */
@@ -903,18 +905,25 @@ maintenance_expand_symtabs (const char *args, int from_tty)
 	}
     }
 
-  if (regexp)
-    re_comp (regexp);
+  if (regexp == nullptr)
+    {
+      for (struct program_space *pspace : program_spaces)
+	for (objfile *objfile : pspace->objfiles ())
+	  objfile->expand_all_symtabs ();
+
+      return;
+    }
+
+  re_comp (regexp);
 
   for (struct program_space *pspace : program_spaces)
     for (objfile *objfile : pspace->objfiles ())
       objfile->expand_symtabs_matching
 	([&] (const char *filename, bool basenames)
-	 {
-	   /* KISS: Only apply the regexp to the complete file name.  */
-	   return (!basenames
-		   && (regexp == NULL || re_exec (filename)));
-	 },
+	   {
+	     /* KISS: Only apply the regexp to the complete file name.  */
+	     return !basenames && re_exec (filename);
+	   },
 	 NULL,
 	 NULL,
 	 NULL,
@@ -990,7 +999,8 @@ maintenance_print_one_line_table (struct symtab *symtab, void *data)
 	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
 	  uiout->field_signed ("index", i);
 	  if (item->line > 0)
-	    uiout->field_signed ("line", item->line);
+	    uiout->field_signed ("line", item->line,
+				 line_number_style.style ());
 	  else
 	    uiout->field_string ("line", _("END"));
 	  uiout->field_core_addr ("rel-address", objfile->arch (),

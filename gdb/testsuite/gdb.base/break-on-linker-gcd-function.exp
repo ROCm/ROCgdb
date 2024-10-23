@@ -43,7 +43,10 @@ proc set_breakpoint_on_gcd_function {} {
     set lineno [gdb_get_line_number "gdb break here"]
     gdb_test "set breakpoint pending on"
     gdb_test "b $lineno" \
-	"No compiled code for line $lineno in the current file.\r\nBreakpoint $::decimal \\($lineno\\) pending."
+	[multi_line \
+	     "^No compiled code for line $lineno in the current file\\." \
+	     "Breakpoint $::decimal \\($lineno\\) pending\\."] \
+	"break on line in garbage collected function"
 }
 
 set_breakpoint_on_gcd_function

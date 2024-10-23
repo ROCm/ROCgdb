@@ -73,9 +73,7 @@ responsibility among the other maintainers.
   BFIN		   Jie Zhang <jzhang918@gmail.com>
   BFIN		   Mike Frysinger <vapier@gentoo.org>
   BPF		   Jose E. Marchesi <jose.marchesi@oracle.com>
-  CR16		   M R Swami Reddy <MR.Swami.Reddy@nsc.com>
   CRIS		   Hans-Peter Nilsson <hp@axis.com>
-  CRX		   M R Swami Reddy <MR.Swami.Reddy@nsc.com>
   CTF		   Nick Alcock <nick.alcock@oracle.com>
   C-SKY		   Lifang Xia <lifang_xia@linux.alibaba.com>
   C-SKY		   Yunhai Shang <yunhai@linux.alibaba.com>
@@ -119,7 +117,6 @@ responsibility among the other maintainers.
   Moxie		   Anthony Green <green@moxielogic.com>
   NDS32		   Kuan-Lin Chen <kuanlinchentw@gmail.com>
   NDS32		   Wei-Cheng Wang <cole945@gmail.com>
-  NetBSD support   Matt Thomas <matt@netbsd.org>
   Nios II	   Sandra Loosemore <sloosemore@baylibre.com>
   Nios II	   Andrew Jenner <andrew@codesourcery.com>
   OR1K		   Christian Svensson <blue@cmd.nu>
@@ -140,7 +137,6 @@ responsibility among the other maintainers.
   SPU		   Alan Modra <amodra@gmail.com>
   TIC54X           Timothy Wall <twall@alum.mit.edu>
   TIC6X            Joseph Myers <josmyers@redhat.com>
-  VAX		   Matt Thomas <matt@netbsd.org>
   VAX		   Jan-Benedict Glaw <jbglaw@lug-owl.de>
   Visium	   Eric Botcazou <ebotcazou@libertysurf.fr>
   VMS		   Tristan Gingold <tgingold@free.fr>
@@ -171,7 +167,9 @@ goes with them.
   Mark Mitchell
   Bernd Schmidt
   Svein Seldal
+  M R Swami Reddy
   Martin Schwidefsky
+  Matt Thomas
 
       --------- CGEN Maintainers -------------
 

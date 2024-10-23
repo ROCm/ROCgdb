@@ -314,6 +314,7 @@ run_dump_test "tlsie2"
 run_dump_test "tlsie3"
 run_dump_test "tlsie4"
 run_dump_test "tlsie5"
+run_dump_test "tlsle1"
 run_dump_test "hidden1"
 run_dump_test "hidden2"
 run_dump_test "hidden3"
@@ -513,6 +514,7 @@ run_dump_test "pr28870"
 run_dump_test "pr28894"
 run_dump_test "pr30787"
 run_dump_test "pr31047"
+run_dump_test "pr32191"
 
 if { !([istarget "i?86-*-linux*"]
        || [istarget "i?86-*-gnu*"]
@@ -546,6 +548,7 @@ run_dump_test "pr31868b"
 run_dump_test "pr31868c"
 run_dump_test "tlsgdesc1"
 run_dump_test "tlsgdesc2"
+run_dump_test "tlsgdesc3"
 
 proc undefined_weak {cflags ldflags} {
     set testname "Undefined weak symbol"

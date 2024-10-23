@@ -222,7 +222,7 @@ static jiter_objfile_data *
 get_jiter_objfile_data (objfile *objf)
 {
   if (objf->jiter_data == nullptr)
-    objf->jiter_data.reset (new jiter_objfile_data ());
+    objf->jiter_data = std::make_unique<jiter_objfile_data> ();
 
   return objf->jiter_data.get ();
 }
@@ -236,8 +236,9 @@ add_objfile_entry (struct objfile *objfile, CORE_ADDR entry,
 {
   gdb_assert (objfile->jited_data == nullptr);
 
-  objfile->jited_data.reset (new jited_objfile_data (entry, symfile_addr,
-						     symfile_size));
+  objfile->jited_data = std::make_unique<jited_objfile_data> (entry,
+							      symfile_addr,
+							      symfile_size);
 }
 
 /* Helper function for reading the global JIT descriptor from remote
@@ -1329,7 +1330,7 @@ Usage: jit-reader-load FILE\n\
 Try to load file FILE as a debug info reader (and unwinder) for\n\
 JIT compiled code.  The file is loaded from " JIT_READER_DIR ",\n\
 relocated relative to the GDB executable if required."));
-      set_cmd_completer (c, filename_completer);
+      set_cmd_completer (c, deprecated_filename_completer);
 
       c = add_com ("jit-reader-unload", no_class,
 		   jit_reader_unload_command, _("\

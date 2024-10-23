@@ -266,17 +266,7 @@ class lookup_name_info final
   }
 
   /* Get the search name hash for searches in language LANG.  */
-  unsigned int search_name_hash (language lang) const
-  {
-    /* Only compute each language's hash once.  */
-    if (!m_demangled_hashes_p[lang])
-      {
-	m_demangled_hashes[lang]
-	  = ::search_name_hash (lang, language_lookup_name (lang));
-	m_demangled_hashes_p[lang] = true;
-      }
-    return m_demangled_hashes[lang];
-  }
+  unsigned int search_name_hash (language lang) const;
 
   /* Get the search name for searches in language LANG.  */
   const char *language_lookup_name (language lang) const
@@ -611,20 +601,20 @@ struct general_symbol_info
      section_offsets for this objfile.  Negative means that the symbol
      does not get relocated relative to a section.  */
 
-  short m_section;
+  int m_section;
 
   /* Set the index into the obj_section list (within the containing
      objfile) for the section that contains this symbol.  See M_SECTION
      for more details.  */
 
-  void set_section_index (short idx)
+  void set_section_index (int idx)
   { m_section = idx; }
 
   /* Return the index into the obj_section list (within the containing
      objfile) for the section that contains this symbol.  See M_SECTION
      for more details.  */
 
-  short section_index () const
+  auto section_index () const
   { return m_section; }
 
   /* Return the obj_section from OBJFILE for this symbol.  The symbol
@@ -818,7 +808,7 @@ struct minimal_symbol : public general_symbol_info
     m_target_flag_2 = target_flag_2;
   }
 
-  /* Size of this symbol.  dbx_end_psymtab in dbxread.c uses this
+  /* Size of this symbol.  stabs_end_psymtab in stabsread.c uses this
      information to calculate the end of the partial symtab based on the
      address of the last symbol plus the size of the last symbol.  */
 
@@ -2093,9 +2083,9 @@ extern const char multiple_symbols_cancel[];
 
 const char *multiple_symbols_select_mode (void);
 
-/* lookup a symbol table by source file name.  */
+/* Lookup a symbol table in PSPACE by source file name.  */
 
-extern struct symtab *lookup_symtab (const char *);
+extern symtab *lookup_symtab (program_space *pspace, const char *name);
 
 /* An object of this type is passed as the 'is_a_field_of_this'
    argument to lookup_symbol and lookup_symbol_in_language.  */
@@ -2812,9 +2802,15 @@ bool iterate_over_some_symtabs (const char *name,
 				struct compunit_symtab *after_last,
 				gdb::function_view<bool (symtab *)> callback);
 
-void iterate_over_symtabs (const char *name,
-			   gdb::function_view<bool (symtab *)> callback);
+/* Check in PSPACE for a symtab of a specific name; first in symtabs, then in
+   psymtabs.  *If* there is no '/' in the name, a match after a '/' in the
+   symtab filename will also work.
 
+   Call CALLBACK with each symtab that is found.  If CALLBACK returns
+   true, the search stops.  */
+
+void iterate_over_symtabs (program_space *pspace, const char *name,
+			   gdb::function_view<bool (symtab *)> callback);
 
 std::vector<CORE_ADDR> find_pcs_for_symtab_line
     (struct symtab *symtab, int line, const linetable_entry **best_entry);

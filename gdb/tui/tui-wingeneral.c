@@ -27,42 +27,27 @@
 
 #include "gdb_curses.h"
 
-/* This is true if we're currently suppressing output, via
-   wnoutrefresh.  This is needed in case we create a new window while
-   in this mode.  */
+/* This is true when there is a live instance of tui_batch_rendering.
+   The outermost tui_batch_rendering will cause a flush to the
+   screen.  */
 
 static bool suppress_output;
 
 /* See tui-data.h.  */
 
-tui_suppress_output::tui_suppress_output ()
+tui_batch_rendering::tui_batch_rendering ()
   : m_saved_suppress (suppress_output)
 {
   suppress_output = true;
-
-  for (const auto &win : all_tui_windows ())
-    win->no_refresh ();
 }
 
 /* See tui-data.h.  */
 
-tui_suppress_output::~tui_suppress_output ()
+tui_batch_rendering::~tui_batch_rendering ()
 {
   suppress_output = m_saved_suppress;
   if (!suppress_output)
     doupdate ();
-
-  for (const auto &win : all_tui_windows ())
-    win->refresh_window ();
-}
-
-/* See tui-data.h.  */
-
-void
-tui_wrefresh (WINDOW *win)
-{
-  if (!suppress_output)
-    wrefresh (win);
 }
 
 /* See tui-data.h.  */
@@ -71,7 +56,7 @@ void
 tui_win_info::refresh_window ()
 {
   if (handle != NULL)
-    tui_wrefresh (handle.get ());
+    wnoutrefresh (handle.get ());
 }
 
 /* Draw a border around the window.  */

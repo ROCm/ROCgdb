@@ -342,6 +342,8 @@ s390_parse_cpu (const char *arg,
     { STRING_COMMA_LEN ("z15"), STRING_COMMA_LEN ("arch13"),
       S390_INSTR_FLAG_HTM | S390_INSTR_FLAG_VX },
     { STRING_COMMA_LEN ("z16"), STRING_COMMA_LEN ("arch14"),
+      S390_INSTR_FLAG_HTM | S390_INSTR_FLAG_VX },
+    { STRING_COMMA_LEN (""), STRING_COMMA_LEN ("arch15"),
       S390_INSTR_FLAG_HTM | S390_INSTR_FLAG_VX }
   };
   static struct
@@ -794,13 +796,6 @@ s390_insert_operand (unsigned char *insn,
 	}
       uval &= 0xf;
     }
-
-  if (operand->flags & S390_OPERAND_OR1)
-    uval |= 1;
-  if (operand->flags & S390_OPERAND_OR2)
-    uval |= 2;
-  if (operand->flags & S390_OPERAND_OR8)
-    uval |= 8;
 
   /* Duplicate the GPR/VR operand at bit pos 12 to 16.  */
   if (operand->flags & S390_OPERAND_CP16)
