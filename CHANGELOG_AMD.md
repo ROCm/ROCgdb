@@ -7,14 +7,24 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
-- When opening a core dump, GDB can use the `sysroot` or `solib-search-path`
-  settings to locate files containing GPU code objects. This allows opening
-  GPU code objects on systems different from the one where the core dump was
-  generated.
+- Support for gfx1200 and gfx1201 architectures.
 - Support for precise ALU exception reporting for supported architectures.
   Precise ALU exceptions reporting is controlled with the following commands:
   - set amdgpu precise-alu-exceptions
   - show amdgpu precise-alu-exceptions
+
+### Changed
+
+- The `sysroot` or `solib-search-path` settings can now be used to locate files
+  containing GPU code objects when opening a core dump.  This allows opening
+  GPU code objects on systems different from the one where the core dump was
+  generated.
+
+### Resolved issues
+
+- Fixed possible hangs when opening some AMDGPU core dumps in ROCgdb.
+- Addressed cases where the `roccoremerge` utility improperly handled LOAD
+  segment copy from the host core dump to the combined core dump.
 
 ## ROCgdb-14.2 (for ROCm-6.2)
 
