@@ -625,6 +625,17 @@ cooked_indexer::index_dies (cutu_reader *reader,
 				      m_language, name,
 				      this_parent_entry, cu_for_entry);
 	}
+      else if (this_parent_entry != nullptr)
+	{
+	  /* Record this DIE's parent in the map so that deferred
+	     parent lookups through DW_AT_specification chains can
+	     find the parent even for DIEs that have no name and thus
+	     no cooked_index_entry.  */
+	  parent_map::addr_type addr
+	    = parent_map::form_addr (reader->buffer ()
+				     + to_underlying (this_die));
+	  m_die_range_map->add_entry (addr, addr, this_parent_entry);
+	}
 
       if (linkage_name != nullptr)
 	{
