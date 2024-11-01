@@ -13517,6 +13517,23 @@ an enumerated type:
 Visiting node of type NODE_INTEGER
 @end smallexample
 
+@findex $_mx_get_scaled_float@r{, convenience function}
+@item $_mx_get_scaled_float(@var{value}@r{[}, @var{scale}@r{]})
+Returns the scaled value(s) of an @acronym{AMD ROCm} microscaling object.
+
+If the optional argument @var{scale} is provided, it specifies the value
+by which the microscaling object should be scaled by.
+The default is 1.
+
+Returns a gdb.Value for a vector of floats representing scaled value(s)
+of the ROCm microscaling object.
+
+Note that a single microscaling floating type may hold more than one
+floating point element. The number of elements in the returned vector
+depends on the type of the microfloating value.  For example the
+__hipext_ocp_fp8_e4m3 type holds one element while
+__hipext_ocp_fp6x32_e3m2 holds thirty two elements.
+
 @findex $_cimag@r{, convenience function}
 @findex $_creal@r{, convenience function}
 @item $_cimag(@var{value})
