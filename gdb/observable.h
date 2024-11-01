@@ -256,6 +256,8 @@ extern observable <program_space */* pspace */> free_program_space;
 /* Called when GDB has opened a core dump.  */
 extern observable <inferior * /* inf */ > core_opened;
 
+extern observable<bool /* enabled */> tui_enabled;
+
 } /* namespace observers */
 
 } /* namespace gdb */
