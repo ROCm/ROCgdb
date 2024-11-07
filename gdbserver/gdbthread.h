@@ -20,14 +20,12 @@
 #define GDBSERVER_GDBTHREAD_H
 
 #include "gdbsupport/function-view.h"
-#include "inferiors.h"
-
-#include <list>
+#include "gdbsupport/intrusive_list.h"
 
 struct btrace_target_info;
 struct regcache;
 
-struct thread_info
+struct thread_info : public intrusive_list_node<thread_info>
 {
   thread_info (ptid_t id, void *target_data)
     : id (id), target_data (target_data)
@@ -85,8 +83,6 @@ struct thread_info
   gdb_thread_options thread_options = 0;
 };
 
-extern std::list<thread_info *> all_threads;
-
 void remove_thread (struct thread_info *thread);
 struct thread_info *add_thread (ptid_t ptid, void *target_data);
 
@@ -124,11 +120,21 @@ void for_each_thread (gdb::function_view<void (thread_info *)> func);
 
 void for_each_thread (int pid, gdb::function_view<void (thread_info *)> func);
 
-/* Find the a random thread for which FUNC (THREAD) returns true.  If
-   no entry is found then return NULL.  */
+/* Like the above, but only consider threads matching PTID.  */
+
+void for_each_thread
+  (ptid_t ptid, gdb::function_view<void (thread_info *)> func);
+
+/* Find a random thread that matches PTID and for which FUNC (THREAD)
+   returns true.  If no entry is found then return nullptr.  */
 
 thread_info *find_thread_in_random
   (gdb::function_view<bool (thread_info *)> func);
+
+/* Like the above, but only consider threads matching PTID.  */
+
+thread_info *find_thread_in_random
+  (ptid_t ptid, gdb::function_view<bool (thread_info *)> func);
 
 /* Get current thread ID (Linux task ID).  */
 #define current_ptid (current_thread->id)

@@ -20,11 +20,11 @@
 
 #include "gdbsupport/common-gdbthread.h"
 #include "gdbsupport/common-inferior.h"
+#include "gdbsupport/owning_intrusive_list.h"
 #include "gdbthread.h"
 #include "dll.h"
 
-std::list<process_info *> all_processes;
-std::list<thread_info *> all_threads;
+owning_intrusive_list<process_info> all_processes;
 
 /* The current process.  */
 static process_info *current_process_;
@@ -41,14 +41,21 @@ static std::string current_inferior_cwd;
 struct thread_info *
 add_thread (ptid_t thread_id, void *target_data)
 {
-  thread_info *new_thread = new thread_info (thread_id, target_data);
+  process_info *process = find_process_pid (thread_id.pid ());
+  gdb_assert (process != nullptr);
 
-  all_threads.push_back (new_thread);
+  auto &new_thread = process->thread_list ().emplace_back (thread_id,
+							   target_data);
+  bool inserted
+    = process->thread_map ().insert ({thread_id, &new_thread}).second;
+
+  /* A thread with this ptid should not exist in the map yet.  */
+  gdb_assert (inserted);
 
   if (current_thread == NULL)
-    switch_to_thread (new_thread);
+    switch_to_thread (&new_thread);
 
-  return new_thread;
+  return &new_thread;
 }
 
 /* See gdbthread.h.  */
@@ -56,18 +63,26 @@ add_thread (ptid_t thread_id, void *target_data)
 struct thread_info *
 get_first_thread (void)
 {
-  if (!all_threads.empty ())
-    return all_threads.front ();
-  else
-    return NULL;
+  return find_thread ([] (thread_info *thread)
+    {
+      return true;
+    });
 }
 
 struct thread_info *
 find_thread_ptid (ptid_t ptid)
 {
-  return find_thread ([&] (thread_info *thread) {
-    return thread->id == ptid;
-  });
+  process_info *process = find_process_pid (ptid.pid ());
+  if (process == nullptr)
+    return nullptr;
+
+  auto &thread_map = process->thread_map ();
+
+  if (auto it = thread_map.find (ptid);
+      it != thread_map.end ())
+    return it->second;
+
+  return nullptr;
 }
 
 /* Find a thread associated with the given PROCESS, or NULL if no
@@ -89,12 +104,6 @@ find_any_thread_of_pid (int pid)
   });
 }
 
-static void
-free_one_thread (thread_info *thread)
-{
-  delete thread;
-}
-
 void
 remove_thread (struct thread_info *thread)
 {
@@ -102,10 +111,17 @@ remove_thread (struct thread_info *thread)
     target_disable_btrace (thread->btrace);
 
   discard_queued_stop_replies (ptid_of (thread));
-  all_threads.remove (thread);
+  process_info *process = get_thread_process (thread);
+  gdb_assert (process != nullptr);
+
   if (current_thread == thread)
     switch_to_thread (nullptr);
-  free_one_thread (thread);
+
+  /* We should not try to remove a thread that was not added.  */
+  int num_erased = process->thread_map ().erase (thread->id);
+  gdb_assert (num_erased > 0);
+
+  process->thread_list ().erase (process->thread_list ().iterator_to (*thread));
 }
 
 void *
@@ -129,8 +145,11 @@ set_thread_regcache_data (struct thread_info *thread, struct regcache *data)
 void
 clear_inferiors (void)
 {
-  for_each_thread (free_one_thread);
-  all_threads.clear ();
+  for_each_process ([] (process_info *process)
+    {
+      process->thread_list ().clear ();
+      process->thread_map ().clear ();
+    });
 
   clear_dlls ();
 
@@ -141,11 +160,7 @@ clear_inferiors (void)
 struct process_info *
 add_process (int pid, int attached)
 {
-  process_info *process = new process_info (pid, attached);
-
-  all_processes.push_back (process);
-
-  return process;
+  return &all_processes.emplace_back (pid, attached);
 }
 
 /* Remove a process from the common process list and free the memory
@@ -158,10 +173,10 @@ remove_process (struct process_info *process)
   clear_symbol_cache (&process->symbol_cache);
   free_all_breakpoints (process);
   gdb_assert (find_thread_process (process) == NULL);
-  all_processes.remove (process);
   if (current_process () == process)
     switch_to_process (nullptr);
-  delete process;
+
+  all_processes.erase (all_processes.iterator_to (*process));
 }
 
 process_info *
@@ -178,7 +193,7 @@ process_info *
 get_first_process (void)
 {
   if (!all_processes.empty ())
-    return all_processes.front ();
+    return &all_processes.front ();
   else
     return NULL;
 }
@@ -221,13 +236,14 @@ current_process (void)
 void
 for_each_process (gdb::function_view<void (process_info *)> func)
 {
-  std::list<process_info *>::iterator next, cur = all_processes.begin ();
+  owning_intrusive_list<process_info>::iterator next, cur
+    = all_processes.begin ();
 
   while (cur != all_processes.end ())
     {
       next = cur;
       next++;
-      func (*cur);
+      func (&*cur);
       cur = next;
     }
 }
@@ -237,20 +253,23 @@ for_each_process (gdb::function_view<void (process_info *)> func)
 process_info *
 find_process (gdb::function_view<bool (process_info *)> func)
 {
-  std::list<process_info *>::iterator next, cur = all_processes.begin ();
-
-  while (cur != all_processes.end ())
-    {
-      next = cur;
-      next++;
-
-      if (func (*cur))
-	return *cur;
-
-      cur = next;
-    }
+  for (process_info &process : all_processes)
+    if (func (&process))
+      return &process;
 
   return NULL;
+}
+
+/* See inferiors.h.  */
+
+thread_info *
+process_info::find_thread (gdb::function_view<bool (thread_info *)> func)
+{
+  for (thread_info &thread : m_thread_list)
+    if (func (&thread))
+      return &thread;
+
+  return nullptr;
 }
 
 /* See gdbthread.h.  */
@@ -258,18 +277,10 @@ find_process (gdb::function_view<bool (process_info *)> func)
 thread_info *
 find_thread (gdb::function_view<bool (thread_info *)> func)
 {
-  std::list<thread_info *>::iterator next, cur = all_threads.begin ();
-
-  while (cur != all_threads.end ())
-    {
-      next = cur;
-      next++;
-
-      if (func (*cur))
-	return *cur;
-
-      cur = next;
-    }
+  for (process_info &process : all_processes)
+    if (thread_info *thread = process.find_thread (func);
+	thread != nullptr)
+      return thread;
 
   return NULL;
 }
@@ -279,10 +290,11 @@ find_thread (gdb::function_view<bool (thread_info *)> func)
 thread_info *
 find_thread (int pid, gdb::function_view<bool (thread_info *)> func)
 {
-  return find_thread ([&] (thread_info *thread)
-    {
-      return thread->id.pid () == pid && func (thread);
-    });
+  process_info *process = find_process_pid (pid);
+  if (process == nullptr)
+    return nullptr;
+
+  return process->find_thread (func);
 }
 
 /* See gdbthread.h.  */
@@ -290,9 +302,23 @@ find_thread (int pid, gdb::function_view<bool (thread_info *)> func)
 thread_info *
 find_thread (ptid_t filter, gdb::function_view<bool (thread_info *)> func)
 {
-  return find_thread ([&] (thread_info *thread) {
-    return thread->id.matches (filter) && func (thread);
-  });
+  if (filter == minus_one_ptid)
+    return find_thread (func);
+
+  process_info *process = find_process_pid (filter.pid ());
+  if (process == nullptr)
+    return nullptr;
+
+  if (filter.is_pid ())
+    return process->find_thread (func);
+
+  auto &thread_map = process->thread_map ();
+
+  if (auto it = thread_map.find (filter);
+      it != thread_map.end () && func (it->second))
+    return it->second;
+
+  return nullptr;
 }
 
 /* See gdbthread.h.  */
@@ -300,13 +326,26 @@ find_thread (ptid_t filter, gdb::function_view<bool (thread_info *)> func)
 void
 for_each_thread (gdb::function_view<void (thread_info *)> func)
 {
-  std::list<thread_info *>::iterator next, cur = all_threads.begin ();
-
-  while (cur != all_threads.end ())
+  for_each_process ([&] (process_info *proc)
     {
+      proc->for_each_thread (func);
+    });
+}
+
+/* See inferiors.h.  */
+
+void
+process_info::for_each_thread (gdb::function_view<void (thread_info *)> func)
+{
+  owning_intrusive_list<thread_info>::iterator next, cur
+    = m_thread_list.begin ();
+
+  while (cur != m_thread_list.end ())
+    {
+      /* FUNC may alter the current iterator.  */
       next = cur;
       next++;
-      func (*cur);
+      func (&*cur);
       cur = next;
     }
 }
@@ -316,11 +355,61 @@ for_each_thread (gdb::function_view<void (thread_info *)> func)
 void
 for_each_thread (int pid, gdb::function_view<void (thread_info *)> func)
 {
-  for_each_thread ([&] (thread_info *thread)
-    {
-      if (pid == thread->id.pid ())
+  process_info *process = find_process_pid (pid);
+  if (process == nullptr)
+    return;
+
+  process->for_each_thread (func);
+}
+
+/* See gdbthread.h.  */
+
+void
+for_each_thread (ptid_t ptid, gdb::function_view<void (thread_info *)> func)
+{
+  if (ptid == minus_one_ptid)
+    for_each_thread (func);
+  else if (ptid.is_pid ())
+    for_each_thread (ptid.pid (), func);
+  else
+    find_thread (ptid, [func] (thread_info *thread)
+      {
 	func (thread);
+	return false;
+      });
+}
+
+/* See gdbthread.h.  */
+
+thread_info *
+find_thread_in_random (ptid_t ptid,
+		       gdb::function_view<bool (thread_info *)> func)
+{
+  int count = 0;
+  int random_selector;
+
+  /* First count how many interesting entries we have.  */
+  for_each_thread (ptid, [&] (thread_info *thread)
+    {
+      if (func (thread))
+	count++;
     });
+
+  if (count == 0)
+    return nullptr;
+
+  /* Now randomly pick an entry out of those.  */
+  random_selector = (int)
+    ((count * (double) rand ()) / (RAND_MAX + 1.0));
+
+  thread_info *thread = find_thread (ptid, [&] (thread_info *thr_arg)
+    {
+      return func (thr_arg) && (random_selector-- == 0);
+    });
+
+  gdb_assert (thread != NULL);
+
+  return thread;
 }
 
 /* See gdbthread.h.  */
@@ -328,31 +417,8 @@ for_each_thread (int pid, gdb::function_view<void (thread_info *)> func)
 thread_info *
 find_thread_in_random (gdb::function_view<bool (thread_info *)> func)
 {
-  int count = 0;
-  int random_selector;
-
-  /* First count how many interesting entries we have.  */
-  for_each_thread ([&] (thread_info *thread) {
-    if (func (thread))
-      count++;
-  });
-
-  if (count == 0)
-    return NULL;
-
-  /* Now randomly pick an entry out of those.  */
-  random_selector = (int)
-    ((count * (double) rand ()) / (RAND_MAX + 1.0));
-
-  thread_info *thread = find_thread ([&] (thread_info *thr_arg) {
-    return func (thr_arg) && (random_selector-- == 0);
-  });
-
-  gdb_assert (thread != NULL);
-
-  return thread;
+  return find_thread_in_random (minus_one_ptid, func);
 }
-
 
 /* See gdbsupport/common-gdbthread.h.  */
 
