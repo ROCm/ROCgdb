@@ -27,14 +27,18 @@ struct regcache;
 
 struct thread_info : public intrusive_list_node<thread_info>
 {
-  thread_info (ptid_t id, void *target_data)
-    : id (id), target_data (target_data)
+  thread_info (ptid_t id, process_info *process, void *target_data)
+    : id (id), target_data (target_data), m_process (process)
   {}
 
   ~thread_info ()
   {
     free_register_cache (this->regcache_data);
   }
+
+  /* Return the process owning this thread.  */
+  process_info *process () const
+  { return m_process; }
 
   /* The id of this thread.  */
   ptid_t id;
@@ -81,10 +85,10 @@ struct thread_info : public intrusive_list_node<thread_info>
 
   /* Thread options GDB requested with QThreadOptions.  */
   gdb_thread_options thread_options = 0;
+  
+private:
+  process_info *m_process;
 };
-
-void remove_thread (struct thread_info *thread);
-struct thread_info *add_thread (ptid_t ptid, void *target_data);
 
 /* Return a pointer to the first thread, or NULL if there isn't one.  */
 
@@ -116,10 +120,6 @@ thread_info *find_thread (ptid_t filter,
 
 void for_each_thread (gdb::function_view<void (thread_info *)> func);
 
-/* Like the above, but only consider threads with pid PID.  */
-
-void for_each_thread (int pid, gdb::function_view<void (thread_info *)> func);
-
 /* Like the above, but only consider threads matching PTID.  */
 
 void for_each_thread
@@ -135,33 +135,6 @@ thread_info *find_thread_in_random
 
 thread_info *find_thread_in_random
   (ptid_t ptid, gdb::function_view<bool (thread_info *)> func);
-
-/* Get current thread ID (Linux task ID).  */
-#define current_ptid (current_thread->id)
-
-/* Get the ptid of THREAD.  */
-
-static inline ptid_t
-ptid_of (const thread_info *thread)
-{
-  return thread->id;
-}
-
-/* Get the pid of THREAD.  */
-
-static inline int
-pid_of (const thread_info *thread)
-{
-  return thread->id.pid ();
-}
-
-/* Get the lwp of THREAD.  */
-
-static inline long
-lwpid_of (const thread_info *thread)
-{
-  return thread->id.lwp ();
-}
 
 /* Switch the current thread.  */
 

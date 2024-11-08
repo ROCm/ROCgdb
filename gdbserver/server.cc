@@ -1007,7 +1007,7 @@ handle_general_set (char *own_buf)
 
 	  for_each_thread ([&] (thread_info *thread)
 	    {
-	      if (ptid_of (thread).matches (ptid))
+	      if (thread->id.matches (ptid))
 		set_options[thread] = options;
 	    });
 	}
@@ -1020,7 +1020,7 @@ handle_general_set (char *own_buf)
 	  if (thread->thread_options != options)
 	    {
 	      threads_debug_printf ("[options for %s are now %s]\n",
-				    target_pid_to_str (ptid_of (thread)).c_str (),
+				    target_pid_to_str (thread->id).c_str (),
 				    to_string (options).c_str ());
 
 	      thread->thread_options = options;
@@ -1296,11 +1296,7 @@ handle_detach (char *own_buf)
       process = find_process_pid (pid);
     }
   else
-    {
-      process = (current_thread != nullptr
-		 ? get_thread_process (current_thread)
-		 : nullptr);
-    }
+    process = current_process ();
 
   if (process == NULL)
     {
@@ -1363,9 +1359,7 @@ handle_detach (char *own_buf)
       if (child == nullptr || kind == TARGET_WAITKIND_THREAD_CLONED)
 	continue;
 
-      process_info *fork_child_process = get_thread_process (child);
-      gdb_assert (fork_child_process != nullptr);
-
+      process_info *fork_child_process = child->process ();
       int fork_child_pid = fork_child_process->pid;
 
       if (detach_inferior (fork_child_process) != 0)
@@ -1829,7 +1823,7 @@ handle_qxfer_exec_file (const char *annex,
       if (current_thread == NULL)
 	return -1;
 
-      pid = pid_of (current_thread);
+      pid = current_thread->id.pid ();
     }
   else
     {
@@ -2000,7 +1994,7 @@ handle_qxfer_statictrace (const char *annex,
 static void
 handle_qxfer_threads_worker (thread_info *thread, std::string *buffer)
 {
-  ptid_t ptid = ptid_of (thread);
+  ptid_t ptid = thread->id;
   char ptid_s[100];
   int core = target_core_of_thread (ptid);
   char core_s[21];
@@ -3654,7 +3648,7 @@ myresume (char *own_buf, int step, int sig)
 
   if (step || sig || valid_cont_thread)
     {
-      resume_info[0].thread = current_ptid;
+      resume_info[0].thread = current_thread->id;
       if (step)
 	resume_info[0].kind = resume_step;
       else

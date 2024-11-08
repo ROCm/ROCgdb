@@ -38,16 +38,11 @@ struct thread_info *current_thread;
    Empty if not specified.  */
 static std::string current_inferior_cwd;
 
-struct thread_info *
-add_thread (ptid_t thread_id, void *target_data)
+thread_info *
+process_info::add_thread (ptid_t id, void *target_data)
 {
-  process_info *process = find_process_pid (thread_id.pid ());
-  gdb_assert (process != nullptr);
-
-  auto &new_thread = process->thread_list ().emplace_back (thread_id,
-							   target_data);
-  bool inserted
-    = process->thread_map ().insert ({thread_id, &new_thread}).second;
+  auto &new_thread = m_thread_list.emplace_back (id, this, target_data);
+  bool inserted = m_ptid_thread_map.insert ({ id, &new_thread }).second;
 
   /* A thread with this ptid should not exist in the map yet.  */
   gdb_assert (inserted);
@@ -105,23 +100,22 @@ find_any_thread_of_pid (int pid)
 }
 
 void
-remove_thread (struct thread_info *thread)
+process_info::remove_thread (thread_info *thread)
 {
   if (thread->btrace != NULL)
     target_disable_btrace (thread->btrace);
 
-  discard_queued_stop_replies (ptid_of (thread));
-  process_info *process = get_thread_process (thread);
-  gdb_assert (process != nullptr);
+  discard_queued_stop_replies (thread->id);
 
   if (current_thread == thread)
     switch_to_thread (nullptr);
 
   /* We should not try to remove a thread that was not added.  */
-  int num_erased = process->thread_map ().erase (thread->id);
+  gdb_assert (thread->process () == this);
+  int num_erased = m_ptid_thread_map.erase (thread->id);
   gdb_assert (num_erased > 0);
 
-  process->thread_list ().erase (process->thread_list ().iterator_to (*thread));
+  m_thread_list.erase (m_thread_list.iterator_to (*thread));
 }
 
 void *
@@ -217,12 +211,6 @@ have_attached_inferiors_p (void)
   return find_process ([] (process_info *process) {
     return process->attached;
   }) != NULL;
-}
-
-struct process_info *
-get_thread_process (const struct thread_info *thread)
-{
-  return find_process_pid (thread->id.pid ());
 }
 
 struct process_info *
@@ -353,24 +341,17 @@ process_info::for_each_thread (gdb::function_view<void (thread_info *)> func)
 /* See gdbthread.h.  */
 
 void
-for_each_thread (int pid, gdb::function_view<void (thread_info *)> func)
-{
-  process_info *process = find_process_pid (pid);
-  if (process == nullptr)
-    return;
-
-  process->for_each_thread (func);
-}
-
-/* See gdbthread.h.  */
-
-void
 for_each_thread (ptid_t ptid, gdb::function_view<void (thread_info *)> func)
 {
   if (ptid == minus_one_ptid)
     for_each_thread (func);
   else if (ptid.is_pid ())
-    for_each_thread (ptid.pid (), func);
+    {
+      process_info *process = find_process_pid (ptid.pid ());
+
+      if (process != nullptr)
+	process->for_each_thread (func);
+    }
   else
     find_thread (ptid, [func] (thread_info *thread)
       {
@@ -435,7 +416,7 @@ void
 switch_to_thread (thread_info *thread)
 {
   if (thread != nullptr)
-    current_process_ = get_thread_process (thread);
+    current_process_ = thread->process ();
   else
     current_process_ = nullptr;
   current_thread = thread;

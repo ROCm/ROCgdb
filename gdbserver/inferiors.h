@@ -104,6 +104,14 @@ struct process_info : public intrusive_list_node<process_info>
   /* Invoke FUNC for each thread.  */
   void for_each_thread (gdb::function_view<void (thread_info *)> func);
 
+  /* Add a thread with id ID to this process.  */
+  thread_info *add_thread (ptid_t id, void *target_data);
+
+  /* Remove thread THREAD.
+
+     THREAD must be part of this process' thread list.  */
+  void remove_thread (thread_info *thread);
+
 private:
   /* This processes' thread list, sorted by creation order.  */
   owning_intrusive_list<thread_info> m_thread_list;
@@ -113,20 +121,11 @@ private:
   std::unordered_map<ptid_t, thread_info *> m_ptid_thread_map;
 };
 
-/* Get the pid of PROC.  */
-
-static inline int
-pid_of (const process_info *proc)
-{
-  return proc->pid;
-}
-
 /* Return a pointer to the current process.  Note that the current
    process may be non-null while the current thread (current_thread)
    is null.  */
 
 struct process_info *current_process (void);
-struct process_info *get_thread_process (const struct thread_info *);
 
 extern owning_intrusive_list<process_info> all_processes;
 
