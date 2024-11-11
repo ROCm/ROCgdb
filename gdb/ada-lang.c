@@ -5434,15 +5434,12 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
 			 const lookup_name_info &lookup_name,
 			 domain_search_flags domain)
 {
-  struct using_direct *renaming;
   int defns_mark = result.size ();
 
   symbol_name_matcher_ftype *name_match
     = ada_get_symbol_name_matcher (lookup_name);
 
-  for (renaming = block->get_using ();
-       renaming != NULL;
-       renaming = renaming->next)
+  for (using_direct *renaming : block->get_using ())
     {
       const char *r_name;
 
@@ -13960,11 +13957,11 @@ this option to \"off\" unless necessary."),
 
   add_setshow_boolean_cmd ("print-signatures", class_vars,
 			   &print_signatures, _("\
-Enable or disable the output of formal and return types for functions in the \
-overloads selection menu."), _("\
-Show whether the output of formal and return types for functions in the \
-overloads selection menu is activated."),
-			   NULL, NULL, NULL, &set_ada_list, &show_ada_list);
+Control the display of functions in overloads selection menu."), _("\
+Show how functions in overloads selection menu will be displayed."),
+			   _("\
+When enabled, formal and return types are shown."),
+			   NULL, NULL, &set_ada_list, &show_ada_list);
 
   ada_source_charset = gnat_source_charsets[0];
   add_setshow_enum_cmd ("source-charset", class_files,
