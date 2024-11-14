@@ -112,7 +112,7 @@ const char EXP_CHARS[] = "eE";
 /* or    0d1.2345e12.  */
 const char FLT_CHARS[] = "rRsSfFdDxXpP";
 
-const char *md_shortopts = "O::g::G:";
+const char md_shortopts[] = "O::g::G:";
 
 static const char default_arch[] = DEFAULT_ARCH;
 
@@ -154,7 +154,7 @@ enum options
   OPTION_END_OF_ENUM,
 };
 
-struct option md_longopts[] =
+const struct option md_longopts[] =
 {
   { "mabi", required_argument, NULL, OPTION_ABI },
 
@@ -172,7 +172,7 @@ struct option md_longopts[] =
   { NULL, no_argument, NULL, 0 }
 };
 
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 int
 md_parse_option (int c, const char *arg)
@@ -1080,7 +1080,7 @@ check_this_insn_before_appending (struct loongarch_cl_insn *ip)
     }
   /* check all atomic memory insns */
   else if (ip->insn->mask == LARCH_MK_ATOMIC_MEM
-	   && LARCH_INSN_ATOMIC_MEM(ip->insn_bin))
+	   && LARCH_INSN_ATOMIC_MEM (ip->insn_bin))
     {
       /* For AMO insn amswap.[wd], amadd.[wd], etc.  */
       if (ip->args[0] != 0
@@ -1090,22 +1090,22 @@ check_this_insn_before_appending (struct loongarch_cl_insn *ip)
     }
   else if ((ip->insn->mask == LARCH_MK_BSTRINS_W
 	    /* bstr(ins|pick).w  rd, rj, msbw, lsbw  */
-	    && (LARCH_INSN_BSTRINS_W(ip->insn_bin)
-		|| LARCH_INSN_BSTRPICK_W(ip->insn_bin)))
+	    && (LARCH_INSN_BSTRINS_W (ip->insn_bin)
+		|| LARCH_INSN_BSTRPICK_W (ip->insn_bin)))
 	   || (ip->insn->mask == LARCH_MK_BSTRINS_D
 	       /* bstr(ins|pick).d  rd, rj, msbd, lsbd  */
-	       && (LARCH_INSN_BSTRINS_D(ip->insn_bin)
-		   || LARCH_INSN_BSTRPICK_D(ip->insn_bin))))
+	       && (LARCH_INSN_BSTRINS_D (ip->insn_bin)
+		   || LARCH_INSN_BSTRPICK_D (ip->insn_bin))))
     {
       /* For bstr(ins|pick).[wd].  */
       if (ip->args[2] < ip->args[3])
 	as_bad (_("bstr(ins|pick).[wd] require msbd >= lsbd"));
     }
   else if (ip->insn->mask != 0
-	   && (LARCH_INSN_CSRXCHG(ip->insn_bin)
-	       || LARCH_INSN_GCSRXCHG(ip->insn_bin))
-	   && (LARCH_GET_RJ(ip->insn_bin) == 0
-	       || LARCH_GET_RJ(ip->insn_bin) == 1)
+	   && (LARCH_INSN_CSRXCHG (ip->insn_bin)
+	       || LARCH_INSN_GCSRXCHG (ip->insn_bin))
+	   && (LARCH_GET_RJ (ip->insn_bin) == 0
+	       || LARCH_GET_RJ (ip->insn_bin) == 1)
 	   /* csrxchg  rd, rj, csr_num  */
 	   && (strcmp ("csrxchg", ip->name) == 0
 	       || strcmp ("gcsrxchg", ip->name) == 0))
@@ -1454,6 +1454,30 @@ long
 md_pcrel_from (fixS *fixP ATTRIBUTE_UNUSED)
 {
   return 0;
+}
+
+/* Return 1 if the relocation must be forced, and 0 if the relocation
+   should never be forced.  */
+int
+loongarch_force_relocation (struct fix *fixp)
+{
+  /* Ensure we emit a relocation for every reference to the global
+     offset table.  */
+  switch (fixp->fx_r_type)
+    {
+      case BFD_RELOC_LARCH_GOT_PC_HI20:
+      case BFD_RELOC_LARCH_GOT_PC_LO12:
+      case BFD_RELOC_LARCH_GOT64_PC_LO20:
+      case BFD_RELOC_LARCH_GOT64_PC_HI12:
+      case BFD_RELOC_LARCH_GOT_HI20:
+      case BFD_RELOC_LARCH_GOT_LO12:
+      case BFD_RELOC_LARCH_GOT64_LO20:
+      case BFD_RELOC_LARCH_GOT64_HI12:
+	return 1;
+      default:
+	break;
+    }
+  return generic_force_reloc (fixp);
 }
 
 static void fix_reloc_insn (fixS *fixP, bfd_vma reloc_val, char *buf)
@@ -2207,7 +2231,7 @@ loongarch_convert_frag_branch (fragS *fragp)
     case RELAX_BRANCH_26:
       insn = bfd_getl32 (buf);
       /* Invert the branch condition.  */
-      if (LARCH_INSN_FLOAT_BRANCH(insn))
+      if (LARCH_INSN_FLOAT_BRANCH (insn))
 	insn ^= LARCH_FLOAT_BRANCH_INVERT_BIT;
       else
 	insn ^= LARCH_BRANCH_INVERT_BIT;

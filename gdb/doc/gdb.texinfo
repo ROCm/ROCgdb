@@ -19021,6 +19021,12 @@ operand of the membership (@code{in}) operator.
 
 @item
 @t{'Address}.
+
+@item
+@t{'Size} is available for objects (not types).
+
+@item
+@t{'Object_Size} is available, but not for indefinite types.
 @end itemize
 
 @item

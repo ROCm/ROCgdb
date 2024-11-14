@@ -57,6 +57,8 @@
 #include "gdbsupport/netstuff.h"
 #include "gdbsupport/rsp-low.h"
 
+#include "getopt.h"
+
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
@@ -66,6 +68,9 @@ typedef int socklen_t;
 
 static int remote_desc_in;
 static int remote_desc_out;
+/* When true all packets are printed to stderr as they are handled by
+   gdbreplay.  */
+bool debug_logging = false;
 
 static void
 sync_error (FILE *fp, const char *desc, int expect, int got)
@@ -259,13 +264,13 @@ remote_open (const char *name)
 }
 
 static int
-logchar (FILE *fp)
+logchar (FILE *fp, bool print)
 {
   int ch;
   int ch2;
 
   ch = fgetc (fp);
-  if (ch != '\r')
+  if (ch != '\r' && (print || debug_logging))
     {
       fputc (ch, stderr);
       fflush (stderr);
@@ -282,16 +287,22 @@ logchar (FILE *fp)
 	  ungetc (ch, fp);
 	  ch = '\r';
 	}
-      fputc (ch == EOL ? '\n' : '\r', stderr);
-      fflush (stderr);
+      if (print || debug_logging)
+	{
+	  fputc (ch == EOL ? '\n' : '\r', stderr);
+	  fflush (stderr);
+	}
       break;
     case '\n':
       ch = EOL;
       break;
     case '\\':
       ch = fgetc (fp);
-      fputc (ch, stderr);
-      fflush (stderr);
+      if (print || debug_logging)
+	{
+	  fputc (ch, stderr);
+	  fflush (stderr);
+	}
       switch (ch)
 	{
 	case '\\':
@@ -316,13 +327,27 @@ logchar (FILE *fp)
 	  break;
 	case 'x':
 	  ch2 = fgetc (fp);
-	  fputc (ch2, stderr);
-	  fflush (stderr);
+	  if (print || debug_logging)
+	    {
+	      fputc (ch2, stderr);
+	      fflush (stderr);
+	    }
 	  ch = fromhex (ch2) << 4;
 	  ch2 = fgetc (fp);
-	  fputc (ch2, stderr);
-	  fflush (stderr);
+	  if (print || debug_logging)
+	    {
+	      fputc (ch2, stderr);
+	      fflush (stderr);
+	    }
 	  ch |= fromhex (ch2);
+	  break;
+	case 'c':
+	  fputc (ch, stderr);
+	  fflush (stderr);
+	  break;
+	case 'E':
+	  fputc (ch, stderr);
+	  fflush (stderr);
 	  break;
 	default:
 	  /* Treat any other char as just itself */
@@ -354,14 +379,14 @@ expect (FILE *fp)
   int fromlog;
   int fromgdb;
 
-  if ((fromlog = logchar (fp)) != ' ')
+  if ((fromlog = logchar (fp, false)) != ' ')
     {
       sync_error (fp, "Sync error during gdb read of leading blank", ' ',
 		  fromlog);
     }
   do
     {
-      fromlog = logchar (fp);
+      fromlog = logchar (fp, false);
       if (fromlog == EOL)
 	break;
       fromgdb = gdbchar (remote_desc_in);
@@ -386,12 +411,12 @@ play (FILE *fp)
   int fromlog;
   char ch;
 
-  if ((fromlog = logchar (fp)) != ' ')
+  if ((fromlog = logchar (fp, false)) != ' ')
     {
       sync_error (fp, "Sync error skipping blank during write to gdb", ' ',
 		  fromlog);
     }
-  while ((fromlog = logchar (fp)) != EOL)
+  while ((fromlog = logchar (fp, false)) != EOL)
     {
       ch = fromlog;
       if (write (remote_desc_out, &ch, 1) != 1)
@@ -425,31 +450,44 @@ gdbreplay_usage (FILE *stream)
 captured_main (int argc, char *argv[])
 {
   FILE *fp;
-  int ch;
-
-  if (argc >= 2 && strcmp (argv[1], "--version") == 0)
+  int ch, optc;
+  enum opts { OPT_VERSION = 1, OPT_HELP, OPT_LOGGING };
+  static struct option longopts[] =
     {
-      gdbreplay_version ();
-      exit (0);
-    }
-  if (argc >= 2 && strcmp (argv[1], "--help") == 0)
+	{"version", no_argument, nullptr, OPT_VERSION},
+	{"help", no_argument, nullptr, OPT_HELP},
+	{"debug-logging", no_argument, nullptr, OPT_LOGGING},
+	{nullptr, no_argument, nullptr, 0}
+    };
+
+  while ((optc = getopt_long (argc, argv, "", longopts, nullptr)) != -1)
     {
-      gdbreplay_usage (stdout);
-      exit (0);
+      switch (optc)
+	{
+	case OPT_VERSION:
+	  gdbreplay_version ();
+	  exit (0);
+	case OPT_HELP:
+	  gdbreplay_usage (stdout);
+	  exit (0);
+	case OPT_LOGGING:
+	  debug_logging = true;
+	  break;
+	}
     }
 
-  if (argc < 3)
+  if (optind + 2 != argc)
     {
       gdbreplay_usage (stderr);
       exit (1);
     }
-  fp = fopen (argv[1], "r");
+  fp = fopen (argv[optind], "r");
   if (fp == NULL)
     {
-      perror_with_name (argv[1]);
+      perror_with_name (argv[optind]);
     }
-  remote_open (argv[2]);
-  while ((ch = logchar (fp)) != EOF)
+  remote_open (argv[optind + 1]);
+  while ((ch = logchar (fp, false)) != EOF)
     {
       switch (ch)
 	{
@@ -462,8 +500,18 @@ captured_main (int argc, char *argv[])
 	  play (fp);
 	  break;
 	case 'c':
-	  /* Command executed by gdb */
-	  while ((ch = logchar (fp)) != EOL);
+	  /* We want to always print the command executed by GDB.  */
+	  if (!debug_logging)
+	    {
+	      fprintf (stderr, "\n");
+	      fprintf (stderr, "Command expected from GDB:\n");
+	    }
+	  while ((ch = logchar (fp, true)) != EOL);
+	  break;
+	case 'E':
+	  if (!debug_logging)
+	    fprintf (stderr, "E");
+	  while ((ch = logchar (fp, true)) != EOL);
 	  break;
 	}
     }

@@ -4451,6 +4451,12 @@ struct i386_record_s
   int rip_offset;
   int popl_esp_hack;
   const int *regmap;
+
+  /* These are used by VEX and XOP prefixes.  */
+  uint8_t map_select;
+  uint8_t vvvv;
+  uint8_t pp;
+  uint8_t l;
 };
 
 /* Parse the "modrm" part of the memory address irp->addr points at.
@@ -4789,6 +4795,208 @@ static int i386_record_floats (struct gdbarch *gdbarch,
   return 0;
 }
 
+/* i386_process_record helper to deal with instructions that start
+   with VEX prefix.  */
+
+static int
+i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
+		 int opcode, struct gdbarch *gdbarch)
+{
+  /* We need this to find YMM (and once AVX-512 is supported, ZMM) registers.
+     We should always save the largest available register, since an
+     instruction that handles a smaller reg may zero out the higher bits,
+     so we must have them saved.  */
+  i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
+
+  /* Since we are reading pseudo registers, we need to tell GDB that it is
+     safe to do so, by saying we aren't _really_ running the inferior right
+     now.  */
+  SCOPE_EXIT { inferior_thread ()->set_executing (true); };
+  inferior_thread () -> set_executing (false);
+
+  switch (opcode)
+    {
+    case 0x6e:	/* VMOVD XMM, reg/mem  */
+      /* This is moving from a regular register or memory region into an
+	 XMM register. */
+      i386_record_modrm (ir);
+      /* ModR/M only has the 3 least significant bits of the destination
+	 register, the last one is indicated by VEX.R (stored inverted).  */
+      record_full_arch_list_add_reg (ir->regcache,
+				     tdep->ymm0_regnum
+				       + ir->reg + vex_r * 8);
+      break;
+    case 0x7e:	/* VMOV(D/Q)  */
+      i386_record_modrm (ir);
+      /* Both the intel and AMD manual are wrong about this.  According to
+	 it, the only difference between vmovq and vmovd should be the rex_w
+	 bit, but in empirical testing, it seems that they share this opcode,
+	 and the way to differentiate it here is looking at VEX.PP.  */
+      if (ir->pp == 2)
+	{
+	  /* This is vmovq moving from a regular register or memory
+	     into an XMM register.  As above, VEX.R is the final bit for
+	     destination register.  */
+	  record_full_arch_list_add_reg (ir->regcache,
+					 tdep->ymm0_regnum
+					 + ir->reg + vex_r * 8);
+	}
+      else if (ir->pp == 1)
+	{
+	  /* This is the vmovd version that stores into a regular register
+	     or memory region.  */
+	  /* If ModRM.mod is 11 we are saving into a register.  */
+	  if (ir->mod == 3)
+	    record_full_arch_list_add_reg (ir->regcache, ir->regmap[ir->rm]);
+	  else
+	    {
+	      /* Calculate the size of memory that will be modified
+		 and store it in the form of 1 << ir->ot, since that
+		 is how the function uses it.  In theory, VEX.W is supposed
+		 to indicate the size of the memory. In practice, I only
+		 ever seen it set to 0, and for 16 bytes, 0xD6 opcode
+		 is used.  */
+	      if (vex_w)
+		ir->ot = 4;
+	      else
+		ir->ot = 3;
+
+	      i386_record_lea_modrm (ir);
+	    }
+	}
+      else
+	{
+	  gdb_printf ("Unrecognized VEX.PP value %d at address %s.",
+		      ir->pp, paddress(gdbarch, ir->orig_addr));
+	  return -1;
+	}
+      break;
+    case 0xd6: /* VMOVQ reg/mem XMM  */
+      i386_record_modrm (ir);
+      /* This is the vmovq version that stores into a regular register
+	 or memory region.  */
+      /* If ModRM.mod is 11 we are saving into a register.  */
+      if (ir->mod == 3)
+	record_full_arch_list_add_reg (ir->regcache, ir->regmap[ir->rm]);
+      else
+	{
+	  /* We know that this operation is always 64 bits.  */
+	  ir->ot = 4;
+	  i386_record_lea_modrm (ir);
+	}
+      break;
+
+    case 0x6f: /* VMOVDQ (U|A)  */
+    case 0x7f: /* VMOVDQ (U|A)  */
+      /* vmovdq instructions have information about source/destination
+	 spread over many places, so this code ended up messier than
+	 I'd like.  */
+      /* The VEX.pp bits identify if the move is aligned or not, but this
+	 doesn't influence the recording so we can ignore it.  */
+      i386_record_modrm (ir);
+      /* The first bit of modrm identifies if both operands of the instruction
+	 are registers (bit = 1) or if one of the operands is memory.  */
+      if (ir->mod & 2)
+	{
+	  if (opcode == 0x6f)
+	    {
+	      /* vex_r will identify the high bit of the destination
+		 register.  Source is identified by ir->rex_b, but that
+		 doesn't matter for recording.  */
+	      record_full_arch_list_add_reg (ir->regcache,
+					     tdep->ymm0_regnum + 8*vex_r + ir->reg);
+	    }
+	  else
+	    {
+	      /* The origin operand is >7 and destination operand is <= 7.
+		 This is special cased because in this one vex_r is used to
+		 identify the high bit of the SOURCE operand, not destination
+		 which would mess the previous expression.  */
+	      record_full_arch_list_add_reg (ir->regcache,
+					     tdep->ymm0_regnum + ir->rm);
+	    }
+	}
+      else
+	{
+	  /* This is the easy branch.  We just need to check the opcode
+	     to see if the source or destination is memory.  */
+	  if (opcode == 0x6f)
+	    {
+	      record_full_arch_list_add_reg (ir->regcache,
+					     tdep->ymm0_regnum
+					      + ir->reg + vex_r * 8);
+	    }
+	  else
+	    {
+	      /* We're writing 256 bits, so 1<<8.  */
+	      ir->ot = 8;
+	      i386_record_lea_modrm (ir);
+	    }
+	}
+      break;
+
+    case 0x60:	/* VPUNPCKLBW  */
+    case 0x61:	/* VPUNPCKLWD  */
+    case 0x62:	/* VPUNPCKLDQ  */
+    case 0x6c:	/* VPUNPCKLQDQ */
+    case 0x68:	/* VPUNPCKHBW  */
+    case 0x69:	/* VPUNPCKHWD  */
+    case 0x6a:	/* VPUNPCKHDQ  */
+    case 0x6d:	/* VPUNPCKHQDQ */
+      {
+	i386_record_modrm (ir);
+	int reg_offset = ir->reg + vex_r * 8;
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + reg_offset);
+      }
+      break;
+
+    case 0x78:	/* VPBROADCASTB  */
+    case 0x79:	/* VPBROADCASTW  */
+    case 0x58:	/* VPBROADCASTD  */
+    case 0x59:	/* VPBROADCASTQ  */
+      {
+	i386_record_modrm (ir);
+	int reg_offset = ir->reg + vex_r * 8;
+	gdb_assert (tdep->num_ymm_regs > reg_offset);
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + reg_offset);
+      }
+      break;
+
+    case 0x77:/* VZEROUPPER  */
+      {
+	int num_regs = tdep->num_ymm_regs;
+	/* This instruction only works on ymm0..15, even if 16..31 are
+	   available.  */
+	if (num_regs > 16)
+	  num_regs = 16;
+	for (int i = 0; i < num_regs; i++)
+	  {
+	    /* We only need to record ymm_h, because the low bits
+	       are not touched.  */
+	    record_full_arch_list_add_reg (ir->regcache,
+					   tdep->ymm0h_regnum + i);
+	  }
+	break;
+      }
+
+    default:
+      gdb_printf (gdb_stderr,
+		  _("Process record does not support VEX instruction 0x%02x "
+		    "at address %s.\n"),
+		  (unsigned int) (opcode),
+		  paddress (gdbarch, ir->orig_addr));
+      return -1;
+    }
+
+  record_full_arch_list_add_reg (ir->regcache, ir->regmap[X86_RECORD_REIP_REGNUM]);
+  if (record_full_arch_list_add_end ())
+    return -1;
+
+  return 0;
+}
+
 /* Parse the current instruction, and record the values of the
    registers and memory that will be changed by the current
    instruction.  Returns -1 if something goes wrong, 0 otherwise.  */
@@ -4811,6 +5019,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
   uint8_t rex_w = -1;
   uint8_t rex_r = 0;
+  bool vex_prefix = false;
 
   memset (&ir, 0, sizeof (struct i386_record_s));
   ir.regcache = regcache;
@@ -4896,6 +5105,53 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	  else					/* 32 bit target */
 	    goto out_prefixes;
 	  break;
+	case 0xc4:	/* 3-byte VEX prefixes (for AVX/AVX2 instructions).  */
+	  {
+	    /* The first byte just identifies the VEX prefix.  Data is stored
+	       on the following 2 bytes.  */
+	    uint8_t byte;
+	    if (record_read_memory (gdbarch, ir.addr, &byte, 1))
+	      return -1;
+	    ir.addr++;
+
+	    rex_r = !((byte >> 7) & 0x1);
+	    ir.rex_x = !((byte >> 6) & 0x1);
+	    ir.rex_b = !((byte >> 5) & 0x1);
+	    ir.map_select = byte & 0x1f;
+	    /* Collect the last byte of the prefix.  */
+	    if (record_read_memory (gdbarch, ir.addr, &byte, 1))
+	      return -1;
+	    ir.addr++;
+	    rex_w = (byte >> 7) & 0x1;
+	    ir.vvvv = (~(byte >> 3) & 0xf);
+	    ir.l = (byte >> 2) & 0x1;
+	    ir.pp = byte & 0x3;
+	    vex_prefix = true;
+
+	    break;
+	  }
+	case 0xc5:	/* 2-byte VEX prefix for AVX/AVX2 instructions.  */
+	  {
+	    /* The first byte just identifies the VEX prefix.  Data is stored
+	       on the following 2 bytes.  */
+	    uint8_t byte;
+	    if (record_read_memory (gdbarch, ir.addr, &byte, 1))
+	      return -1;
+	    ir.addr++;
+
+	    /* On the 2-byte versions, these are pre-defined.  */
+	    ir.rex_x = 0;
+	    ir.rex_b = 0;
+	    rex_w = 0;
+	    ir.map_select = 1;
+
+	    rex_r = !((byte >> 7) & 0x1);
+	    ir.vvvv = (~(byte >> 3) & 0xf);
+	    ir.l = (byte >> 2) & 0x1;
+	    ir.pp = byte & 0x3;
+	    vex_prefix = true;
+	    break;
+	  }
 	default:
 	  goto out_prefixes;
 	  break;
@@ -4918,6 +5174,12 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
   /* Now check op code.  */
   opcode = (uint32_t) opcode8;
+  if (vex_prefix)
+    {
+      /* If we found the VEX prefix, i386 will either record or warn that
+	 the instruction isn't supported, so we can return the VEX result.  */
+      return i386_record_vex (&ir, rex_w, rex_r, opcode, gdbarch);
+    }
  reswitch:
   switch (opcode)
     {
@@ -7902,9 +8164,11 @@ static const int i386_record_regmap[] =
 {
   I386_EAX_REGNUM, I386_ECX_REGNUM, I386_EDX_REGNUM, I386_EBX_REGNUM,
   I386_ESP_REGNUM, I386_EBP_REGNUM, I386_ESI_REGNUM, I386_EDI_REGNUM,
-  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0,
+  0, 0, 0, 0,
   I386_EIP_REGNUM, I386_EFLAGS_REGNUM, I386_CS_REGNUM, I386_SS_REGNUM,
-  I386_DS_REGNUM, I386_ES_REGNUM, I386_FS_REGNUM, I386_GS_REGNUM
+  I386_DS_REGNUM, I386_ES_REGNUM, I386_FS_REGNUM, I386_GS_REGNUM,
+  /* xmm0_regnum */ 0
 };
 
 /* Check that the given address appears suitable for a fast

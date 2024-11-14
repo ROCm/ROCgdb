@@ -4909,7 +4909,7 @@ loongarch_relax_tls_le (bfd *abfd, asection *sec,
 		/* Change rj to $tp.  */
 		insn_rj = 0x2 << 5;
 		/* Get rd register.  */
-		insn_rd = LARCH_GET_RD(insn);
+		insn_rd = LARCH_GET_RD (insn);
 		/* Write symbol offset.  */
 		symval <<= 10;
 		/* Writes the modified instruction.  */
@@ -4928,7 +4928,7 @@ loongarch_relax_tls_le (bfd *abfd, asection *sec,
 	    break;
 
 	  case R_LARCH_TLS_LE_LO12:
-	    bfd_put (32, abfd, LARCH_OP_ORI | LARCH_GET_RD(insn),
+	    bfd_put (32, abfd, LARCH_OP_ORI | LARCH_GET_RD (insn),
 		    contents + rel->r_offset);
 	    break;
 
@@ -4974,7 +4974,7 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
   Elf_Internal_Rela *rel_lo = rel_hi + 2;
   uint32_t pca = bfd_get (32, abfd, contents + rel_hi->r_offset);
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
-  uint32_t rd = LARCH_GET_RD(pca);
+  uint32_t rd = LARCH_GET_RD (pca);
 
   /* This section's output_offset need to subtract the bytes of instructions
      relaxed by the previous sections, so it needs to be updated beforehand.
@@ -4999,10 +4999,10 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
 
   /* Is pcalau12i + addi.d insns?  */
   if ((ELFNN_R_TYPE (rel_lo->r_info) != R_LARCH_PCALA_LO12)
-      || !LARCH_INSN_ADDI_D(add)
+      || !LARCH_INSN_ADDI_D (add)
       /* Is pcalau12i $rd + addi.d $rd,$rd?  */
-      || (LARCH_GET_RD(add) != rd)
-      || (LARCH_GET_RJ(add) != rd)
+      || (LARCH_GET_RD (add) != rd)
+      || (LARCH_GET_RJ (add) != rd)
       /* Can be relaxed to pcaddi?  */
       || (symval & 0x3) /* 4 bytes align.  */
       || ((bfd_signed_vma)(symval - pc) < (bfd_signed_vma)(int32_t)0xffe00000)
@@ -5035,7 +5035,7 @@ loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
 {
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
   uint32_t jirl = bfd_get (32, abfd, contents + rel->r_offset + 4);
-  uint32_t rd = LARCH_GET_RD(jirl);
+  uint32_t rd = LARCH_GET_RD (jirl);
 
   /* This section's output_offset need to subtract the bytes of instructions
      relaxed by the previous sections, so it needs to be updated beforehand.
@@ -5094,13 +5094,13 @@ loongarch_relax_pcala_ld (bfd *abfd, asection *sec,
   Elf_Internal_Rela *rel_lo = rel_hi + 2;
   uint32_t pca = bfd_get (32, abfd, contents + rel_hi->r_offset);
   uint32_t ld = bfd_get (32, abfd, contents + rel_lo->r_offset);
-  uint32_t rd = LARCH_GET_RD(pca);
+  uint32_t rd = LARCH_GET_RD (pca);
   uint32_t addi_d = LARCH_OP_ADDI_D;
 
   if ((ELFNN_R_TYPE (rel_lo->r_info) != R_LARCH_GOT_PC_LO12)
-      || (LARCH_GET_RD(ld) != rd)
-      || (LARCH_GET_RJ(ld) != rd)
-      || !LARCH_INSN_LD_D(ld))
+      || (LARCH_GET_RD (ld) != rd)
+      || (LARCH_GET_RJ (ld) != rd)
+      || !LARCH_INSN_LD_D (ld))
     return false;
 
   addi_d = addi_d | (rd << 5) | rd;
@@ -5194,7 +5194,7 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
   Elf_Internal_Rela *rel_lo = rel_hi + 2;
   uint32_t pca = bfd_get (32, abfd, contents + rel_hi->r_offset);
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
-  uint32_t rd = LARCH_GET_RD(pca);
+  uint32_t rd = LARCH_GET_RD (pca);
 
   /* This section's output_offset need to subtract the bytes of instructions
      relaxed by the previous sections, so it needs to be updated beforehand.
@@ -5220,10 +5220,10 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
   /* Is pcalau12i + addi.d insns?  */
   if ((ELFNN_R_TYPE (rel_lo->r_info) != R_LARCH_GOT_PC_LO12
 	&& ELFNN_R_TYPE (rel_lo->r_info) != R_LARCH_TLS_DESC_PC_LO12)
-      || !LARCH_INSN_ADDI_D(add)
+      || !LARCH_INSN_ADDI_D (add)
       /* Is pcalau12i $rd + addi.d $rd,$rd?  */
-      || (LARCH_GET_RD(add) != rd)
-      || (LARCH_GET_RJ(add) != rd)
+      || (LARCH_GET_RD (add) != rd)
+      || (LARCH_GET_RJ (add) != rd)
       /* Can be relaxed to pcaddi?  */
       || (symval & 0x3) /* 4 bytes align.  */
       || ((bfd_signed_vma)(symval - pc) < (bfd_signed_vma)(int32_t)0xffe00000)
@@ -5350,7 +5350,6 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
       bfd_vma symval;
       asection *sym_sec;
       bool local_got = false;
-      bool is_abs_symbol = false;
       Elf_Internal_Rela *rel = relocs + i;
       struct elf_link_hash_entry *h = NULL;
       unsigned long r_type = ELFNN_R_TYPE (rel->r_info);
@@ -5456,8 +5455,9 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	  Elf_Internal_Sym *sym = (Elf_Internal_Sym *)symtab_hdr->contents
 				    + r_symndx;
 
-	  if (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
-	      && r_type != R_LARCH_CALL36)
+	  if ((ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC
+	       && r_type != R_LARCH_CALL36)
+	      || sym->st_shndx == SHN_ABS)
 	    continue;
 
 	  /* Only TLS instruction sequences that are accompanied by
@@ -5486,12 +5486,13 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	      symval = sym->st_value;
 	    }
 	  symtype = ELF_ST_TYPE (sym->st_info);
-	  is_abs_symbol = sym->st_shndx == SHN_ABS;
 	}
       else
 	{
-	  if (h != NULL && h->type == STT_GNU_IFUNC
-	      && r_type != R_LARCH_CALL36)
+	  if (h != NULL
+	      && ((h->type == STT_GNU_IFUNC
+		   && r_type != R_LARCH_CALL36)
+		  || bfd_is_abs_section (h->root.u.def.section)))
 	    continue;
 
 	  /* The GOT entry of tls symbols must in current execute file or
@@ -5533,7 +5534,6 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	  else
 	    continue;
 
-	  is_abs_symbol = bfd_is_abs_section (h->root.u.def.section);
 	  if (h && LARCH_REF_LOCAL (info, h))
 	    local_got = true;
 	  symtype = h->type;
@@ -5566,7 +5566,7 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 
       symval += sec_addr (sym_sec);
 
-      if (r_type == R_LARCH_GOT_PC_HI20 && (!local_got || is_abs_symbol))
+      if (r_type == R_LARCH_GOT_PC_HI20 && !local_got)
 	continue;
 
       if (relax_func (abfd, sec, sym_sec, rel, symval,

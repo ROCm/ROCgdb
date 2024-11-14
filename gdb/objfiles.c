@@ -562,14 +562,7 @@ objfile::~objfile ()
 
   /* Check to see if the current_source_symtab belongs to this objfile,
      and if so, call clear_current_source_symtab_and_line.  */
-
-  {
-    symtab_and_line cursal
-      = get_current_source_symtab_and_line (this->pspace ());
-
-    if (cursal.symtab && cursal.symtab->compunit ()->objfile () == this)
-      clear_current_source_symtab_and_line (this->pspace ());
-  }
+  clear_current_source_symtab_and_line (this);
 
   /* Likewise, but for the last displayed symtab.  */
   symtab *s = get_last_displayed_symtab ();
@@ -577,7 +570,9 @@ objfile::~objfile ()
     clear_last_displayed_sal ();
 
   /* Rebuild section map next time we need it.  */
-  get_objfile_pspace_data (m_pspace)->section_map_dirty = 1;
+  auto info = objfiles_pspace_data.get (pspace ());
+  if (info != nullptr)
+    info->section_map_dirty = 1;
 }
 
 

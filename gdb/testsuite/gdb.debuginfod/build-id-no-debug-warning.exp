@@ -16,7 +16,7 @@
 # This test triggers the "separate debug info file has no debug info" warning by replacing
 # the build-id based .debug file with the stripped binary and then loading it to gdb.
 # It then also sets up local debuginfod server with the correct debug file to download
-# to make sure no warnings are emmitted.
+# to make sure no warnings are emitted.
 
 
 standard_testfile
@@ -139,7 +139,7 @@ proc_with_prefix local_debuginfod { } {
     gdb_test "file ${build_id_debug_file}" \
 	[multi_line \
 	     "Reading symbols from ${build_id_debug_file}\\.\\.\\." \
-	     "Downloading separate debug info for ${build_id_debug_file}\\.\\.\\." \
+	     "Downloading\[^\r\n\]*separate debug info for ${build_id_debug_file}\\.\\.\\." \
 	     "Reading symbols from ${cache}/\[^\r\n\]+\\.\\.\\.(?:\r\nExpanding full symbols from \[^\r\n\]+)*"] \
 	"debuginfod running, info downloaded, no warnings"
 }

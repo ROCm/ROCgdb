@@ -233,7 +233,7 @@ struct label_fix
 /*   OPTIONS PROCESSING                              */
 /*****************************************************/
 
-const char *md_shortopts = "hV";	/* catted to std short options */
+const char md_shortopts[] = "hV";	/* catted to std short options */
 
 /* added to std long options */
 
@@ -254,7 +254,7 @@ const char *md_shortopts = "hV";	/* catted to std short options */
 #define OPTION_MORE                  (OPTION_MD_BASE + 19)
 #define OPTION_NO_MORE               (OPTION_MD_BASE + 20)
 
-struct option md_longopts[] = {
+const struct option md_longopts[] = {
   { "march",                 required_argument, NULL, OPTION_MARCH                 },
   { "check-resources",       no_argument,       NULL, OPTION_CHECK_RESOURCES       },
   { "no-check-resources",    no_argument,       NULL, OPTION_NO_CHECK_RESOURCES    },
@@ -273,7 +273,7 @@ struct option md_longopts[] = {
   { NULL,                    no_argument,       NULL, 0                            }
 };
 
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 int
 md_parse_option (int c, const char *arg ATTRIBUTE_UNUSED)
@@ -2107,21 +2107,13 @@ kvx_check_label (symbolS *sym)
 void
 kvx_emit_single_noop (void)
 {
-  char *nop;
-  char *end_of_bundle;
-
-  if (asprintf (&nop, "nop") < 0)
-    as_fatal ("%s", xstrerror (errno));
-
-  if (asprintf (&end_of_bundle, "be") < 0)
-    as_fatal ("%s", xstrerror (errno));
+  char nop[] = "nop";
+  char end_of_bundle[] = "be";
 
   char *saved_ilp = input_line_pointer;
   md_assemble (nop);
   md_assemble (end_of_bundle);
   input_line_pointer = saved_ilp;
-  free (nop);
-  free (end_of_bundle);
 }
 
 /*  edit out some syntactic sugar that confuses GAS       */

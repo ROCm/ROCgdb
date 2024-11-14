@@ -61,7 +61,7 @@ proc do_test {precise_memory has_xfail} {
 		"(warning: AMDGPU precise memory access reporting could not be enabled\\.)?"
 	}
 
-	if { $has_xfail } {
+	if { !$precise_memory && $has_xfail } {
 	    setup_xfail "*-*-*"
 	}
 	gdb_test "continue" \

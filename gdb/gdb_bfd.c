@@ -145,6 +145,19 @@ struct gdb_bfd_data
 
   /* The registry.  */
   registry<bfd> registry_fields;
+
+#if CXX_STD_THREAD
+  /* Most of the locking needed for multi-threaded operation is
+     handled by BFD itself.  However, the current BFD model is that
+     locking is only needed for global operations -- but it turned out
+     that the background DWARF reader could race with the auto-load
+     code reading the .debug_gdb_scripts section from the same BFD.
+
+     This lock is the fix: wrappers for important BFD functions will
+     acquire this lock before performing operations that might modify
+     the state of this BFD.  */
+  std::mutex per_bfd_mutex;
+#endif
 };
 
 registry<bfd> *
@@ -637,7 +650,8 @@ static int
 gdb_bfd_close_or_warn (struct bfd *abfd)
 {
   int ret;
-  const char *name = bfd_get_filename (abfd);
+  gdb::unique_xmalloc_ptr<char> name
+    = make_unique_xstrdup (bfd_get_filename (abfd));
 
   for (asection *sect : gdb_bfd_sections (abfd))
     free_one_bfd_section (sect);
@@ -645,7 +659,7 @@ gdb_bfd_close_or_warn (struct bfd *abfd)
   ret = bfd_close (abfd);
 
   if (!ret)
-    gdb_bfd_close_warning (name,
+    gdb_bfd_close_warning (name.get (),
 			   bfd_errmsg (bfd_get_error ()));
 
   return ret;
@@ -777,6 +791,11 @@ gdb_bfd_map_section (asection *sectp, bfd_size_type *size)
   gdb_assert (size != NULL);
 
   abfd = sectp->owner;
+
+#if CXX_STD_THREAD
+  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
+  std::lock_guard<std::mutex> guard (gdata->per_bfd_mutex);
+#endif
 
   descriptor = get_section_descriptor (sectp);
 
@@ -1109,6 +1128,11 @@ bool
 gdb_bfd_get_full_section_contents (bfd *abfd, asection *section,
 				   gdb::byte_vector *contents)
 {
+#if CXX_STD_THREAD
+  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
+  std::lock_guard<std::mutex> guard (gdata->per_bfd_mutex);
+#endif
+
   bfd_size_type section_size = bfd_section_size (section);
 
   contents->resize (section_size);

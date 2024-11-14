@@ -1394,8 +1394,11 @@ dwarf2_has_info (struct objfile *objfile,
       per_objfile = dwarf2_objfile_data_key.emplace (objfile, objfile, per_bfd);
     }
 
-  const bool has_info = (!per_objfile->per_bfd->info.is_virtual
-			 && per_objfile->per_bfd->info.s.section != nullptr
+  /* Virtual sections are created from DWP files.  It's not clear those
+     can occur here, so perhaps the is_virtual checks here are dead code.  */
+  const bool has_info = (!per_objfile->per_bfd->infos.empty ()
+			 && !per_objfile->per_bfd->infos[0].is_virtual
+			 && per_objfile->per_bfd->infos[0].s.section != nullptr
 			 && !per_objfile->per_bfd->abbrev.is_virtual
 			 && per_objfile->per_bfd->abbrev.s.section != nullptr);
 
@@ -1438,8 +1441,11 @@ dwarf2_per_bfd::locate_sections (bfd *abfd, asection *sectp,
     }
   else if (names.info.matches (sectp->name))
     {
-      this->info.s.section = sectp;
-      this->info.size = bfd_section_size (sectp);
+      struct dwarf2_section_info info_section;
+      memset (&info_section, 0, sizeof (info_section));
+      info_section.s.section = sectp;
+      info_section.size = bfd_section_size (sectp);
+      this->infos.push_back (info_section);
     }
   else if (names.abbrev.matches (sectp->name))
     {
@@ -1587,7 +1593,9 @@ dwarf2_get_section_info (struct objfile *objfile,
 void
 dwarf2_per_bfd::map_info_sections (struct objfile *objfile)
 {
-  info.read (objfile);
+  for (auto &section : infos)
+    section.read (objfile);
+
   abbrev.read (objfile);
   line.read (objfile);
   str.read (objfile);
@@ -5136,9 +5144,10 @@ create_all_units (dwarf2_per_objfile *per_objfile)
   htab_up types_htab;
   gdb_assert (per_objfile->per_bfd->all_units.empty ());
 
-  read_comp_units_from_section (per_objfile, &per_objfile->per_bfd->info,
-				&per_objfile->per_bfd->abbrev, 0,
-				types_htab, rcuh_kind::COMPILE);
+  for (dwarf2_section_info &section : per_objfile->per_bfd->infos)
+    read_comp_units_from_section (per_objfile, &section,
+				  &per_objfile->per_bfd->abbrev, 0,
+				  types_htab, rcuh_kind::COMPILE);
   for (dwarf2_section_info &section : per_objfile->per_bfd->types)
     read_comp_units_from_section (per_objfile, &section,
 				  &per_objfile->per_bfd->abbrev, 0,
@@ -17857,10 +17866,11 @@ dwarf_lang_to_enum_language (unsigned int lang)
   return language;
 }
 
-/* Return the named attribute or NULL if not there.  */
+/* Return the NAME attribute of DIE in *CU, or return NULL if not there.  Also
+   return in *CU the cu in which the attribute was actually found.  */
 
 static struct attribute *
-dwarf2_attr (struct die_info *die, unsigned int name, struct dwarf2_cu *cu)
+dwarf2_attr (struct die_info *die, unsigned int name, struct dwarf2_cu **cu)
 {
   for (;;)
     {
@@ -17880,13 +17890,21 @@ dwarf2_attr (struct die_info *die, unsigned int name, struct dwarf2_cu *cu)
 	break;
 
       struct die_info *prev_die = die;
-      die = follow_die_ref (die, spec, &cu);
+      die = follow_die_ref (die, spec, cu);
       if (die == prev_die)
 	/* Self-reference, we're done.  */
 	break;
     }
 
   return NULL;
+}
+
+/* Return the NAME attribute of DIE in CU, or return NULL if not there.  */
+
+static struct attribute *
+dwarf2_attr (struct die_info *die, unsigned int name, struct dwarf2_cu *cu)
+{
+  return dwarf2_attr (die, name, &cu);
 }
 
 /* Return the string associated with a string-typed attribute, or NULL if it
@@ -19055,17 +19073,24 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       if (attr != nullptr)
 	sym->set_line (attr->constant_value (0));
 
+      struct dwarf2_cu *file_cu = cu;
       attr = dwarf2_attr (die,
 			  inlined_func ? DW_AT_call_file : DW_AT_decl_file,
-			  cu);
+			  &file_cu);
       if (attr != nullptr && attr->is_nonnegative ())
 	{
 	  file_name_index file_index
 	    = (file_name_index) attr->as_nonnegative ();
 	  struct file_entry *fe;
 
-	  if (cu->line_header != NULL)
-	    fe = cu->line_header->file_name_at (file_index);
+	  if (file_cu->line_header == nullptr)
+	    {
+	      file_and_directory fnd (nullptr, nullptr);
+	      handle_DW_AT_stmt_list (file_cu->dies, file_cu, fnd, {}, false);
+	    }
+
+	  if (file_cu->line_header != nullptr)
+	    fe = file_cu->line_header->file_name_at (file_index);
 	  else
 	    fe = NULL;
 

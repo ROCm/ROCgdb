@@ -510,6 +510,8 @@ static const struct ld_option ld_options[] =
   { {"section-start", required_argument, NULL, OPTION_SECTION_START},
     '\0', N_("SECTION=ADDRESS"), N_("Set address of named section"),
     TWO_DASHES },
+  { {"image-base", required_argument, NULL, OPTION_IMAGE_BASE},
+    '\0', N_("ADDRESS"), N_("Set image base address"), TWO_DASHES },
   { {"Tbss", required_argument, NULL, OPTION_TBSS},
     '\0', N_("ADDRESS"), N_("Set address of .bss section"), ONE_DASH },
   { {"Tdata", required_argument, NULL, OPTION_TDATA},
@@ -1052,8 +1054,7 @@ parse_args (unsigned argc, char **argv)
 	  xexit (0);
 	  break;
 	case 'L':
-	  /* FIXME: Check the return value ?  */
-	  (void) ldfile_add_library_path (optarg, search_dir_cmd_line);
+	  ldfile_add_library_path (optarg, true);
 	  break;
 	case 'l':
 	  lang_add_input_file (optarg, lang_input_file_is_l_enum, NULL);
@@ -1478,6 +1479,9 @@ parse_args (unsigned argc, char **argv)
 	case OPTION_TTEXT:
 	  set_segment_start (".text", optarg);
 	  break;
+	case OPTION_IMAGE_BASE:
+	  /* Unless PE, --image-base and -Ttext-segment behavior is the same
+	     PE-specific functionality is implemented in emultempl/{pe, pep, beos}.em  */
 	case OPTION_TTEXT_SEGMENT:
 	  set_segment_start (".text-segment", optarg);
 	  break;
@@ -1868,7 +1872,6 @@ parse_args (unsigned argc, char **argv)
     {
       char * new_name = NULL;
       char * percent;
-      int    res = 0;
 
       if (config.map_filename[0] == 0)
 	{
@@ -1885,9 +1888,9 @@ parse_args (unsigned argc, char **argv)
 	     output filename.  If the % character was the last character in
 	     the original map filename then add a .map extension.  */
 	  percent[0] = 0;
-	  res = asprintf (&new_name, "%s%s%s", config.map_filename,
-			  output_filename,
-			  percent[1] ? percent + 1 : ".map");
+	  new_name = xasprintf ("%s%s%s", config.map_filename,
+				output_filename,
+				percent[1] ? percent + 1 : ".map");
 
 	  /* FIXME: Should we ensure that any directory components in new_name exist ?  */
 	}
@@ -1905,10 +1908,9 @@ parse_args (unsigned argc, char **argv)
 	  else if (S_ISDIR (s.st_mode))
 	    {
 	      char lastc = config.map_filename[strlen (config.map_filename) - 1];
-	      res = asprintf (&new_name, "%s%s%s.map",
-			      config.map_filename,
-			      IS_DIR_SEPARATOR (lastc) ? "" : "/",
-			      lbasename (output_filename));
+	      new_name = xasprintf ("%s%s%s.map", config.map_filename,
+				    IS_DIR_SEPARATOR (lastc) ? "" : "/",
+				    lbasename (output_filename));
 	    }
 	  else if (! S_ISREG (s.st_mode))
 	    {
@@ -1918,14 +1920,7 @@ parse_args (unsigned argc, char **argv)
 	  /* else FIXME: Check write permission ?  */
 	}
 
-      if (res < 0)
-	{
-	  /* If the asprintf failed then something is probably very
-	     wrong.  Better to halt now rather than continue on
-	     into more problems.  */
-	  einfo (_("%P%F: cannot create name for linker map file: %E\n"));
-	}
-      else if (new_name != NULL)
+      if (new_name != NULL)
 	{
 	  /* This is a trivial memory leak.  */
 	  config.map_filename = new_name;
@@ -2087,8 +2082,7 @@ set_default_dirlist (char *dirlist_ptr)
       if (p != NULL)
 	*p = '\0';
       if (*dirlist_ptr != '\0')
-	/* FIXME: Check the return value ?  */
-	(void) ldfile_add_library_path (dirlist_ptr, search_dir_cmd_line);
+	ldfile_add_library_path (dirlist_ptr, true);
       if (p == NULL)
 	break;
       dirlist_ptr = p + 1;

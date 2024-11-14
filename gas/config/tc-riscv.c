@@ -2107,17 +2107,12 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 static void
 md_assemblef (const char *format, ...)
 {
-  char *buf = NULL;
+  char *buf;
   va_list ap;
-  int r;
 
   va_start (ap, format);
 
-  r = vasprintf (&buf, format, ap);
-
-  if (r < 0)
-    as_fatal (_("internal: vasprintf failed"));
-
+  buf = xvasprintf (format, ap);
   md_assemble (buf);
   free(buf);
 
@@ -4310,7 +4305,7 @@ md_number_to_chars (char *buf, valueT val, int n)
     number_to_chars_littleendian (buf, val, n);
 }
 
-const char *md_shortopts = "O::g::G:";
+const char md_shortopts[] = "O::g::G:";
 
 enum options
 {
@@ -4331,7 +4326,7 @@ enum options
   OPTION_END_OF_ENUM
 };
 
-struct option md_longopts[] =
+const struct option md_longopts[] =
 {
   {"march", required_argument, NULL, OPTION_MARCH},
   {"fPIC", no_argument, NULL, OPTION_PIC},
@@ -4351,7 +4346,7 @@ struct option md_longopts[] =
 
   {NULL, no_argument, NULL, 0}
 };
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 int
 md_parse_option (int c, const char *arg)

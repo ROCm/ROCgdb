@@ -1448,7 +1448,7 @@ ada_task_list_changed (struct inferior *inf)
 static void
 ada_tasks_invalidate_pspace_data (struct program_space *pspace)
 {
-  get_ada_tasks_pspace_data (pspace)->initialized_p = 0;
+  ada_tasks_pspace_data_handle.clear (pspace);
 }
 
 /* Invalidate the per-inferior data.  */
@@ -1456,10 +1456,7 @@ ada_tasks_invalidate_pspace_data (struct program_space *pspace)
 static void
 ada_tasks_invalidate_inferior_data (struct inferior *inf)
 {
-  struct ada_tasks_inferior_data *data = get_ada_tasks_inferior_data (inf);
-
-  data->known_tasks_kind = ADA_TASKS_UNKNOWN;
-  data->task_list_valid_p = false;
+  ada_tasks_inferior_data_handle.clear (inf);
 }
 
 /* The 'normal_stop' observer notification callback.  */
