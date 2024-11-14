@@ -1697,7 +1697,7 @@ struct memory_write_request
     : begin (begin_), end (end_), data (data_), baton (baton_)
   {}
 
-  /* Begining address that must be written.  */
+  /* Beginning address that must be written.  */
   ULONGEST begin;
   /* Past-the-end address.  */
   ULONGEST end;

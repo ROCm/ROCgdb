@@ -37,6 +37,7 @@ grep_separators=(
     "	"
     ":"
     ","
+    "\""
 )
 declare -a sed_separators
 sed_separators=(
@@ -45,6 +46,33 @@ sed_separators=(
     "\t"
     ":"
     ","
+    "\""
+)
+
+# Pre: start of line, left parenthesis.
+declare -a grep_pre
+grep_pre=(
+    "^"
+    "\("
+)
+declare -a sed_pre
+sed_pre=(
+    "^"
+    "("
+)
+
+# Post: dot, right parenthesis, end of line.
+declare -a grep_post
+grep_post=(
+    "\."
+    "\)"
+    "$"
+)
+declare -a sed_post
+sed_post=(
+    "\."
+    ")"
+    "$"
 )
 
 join ()
@@ -190,8 +218,10 @@ output_local_dictionary ()
 
 output_dictionaries ()
 {
-    output_local_dictionary
-    cat "$dictionary"
+    (
+	output_local_dictionary
+	cat "$dictionary"
+    ) | grep -E -v "[A-Z]"
 }
 
 parse_dictionary ()
@@ -219,16 +249,22 @@ find_files_matching_words ()
     else
 	rm -f "$cache_dir/$cache_file2".*
 
-	pat=$(grep_join "${words[@]}")
+	declare -a re_words
+	mapfile -t re_words \
+		< <(for f in "${words[@]}"; do
+			echo "$f"
+		    done \
+			| sed "s/^\(.\)/[\u\1\1]/")
+
+	pat=$(grep_join "${re_words[@]}")
 
 	local before after
 	before=$(grep_join \
-		     "^" \
+		     "${grep_pre[@]}" \
 		     "${grep_separators[@]}")
 	after=$(grep_join \
 		    "${grep_separators[@]}" \
-		    "\." \
-		    "$")
+		    "${grep_post[@]}")
 
 	pat="$before$pat$after"
 
@@ -250,12 +286,13 @@ find_files_matching_word ()
 
     local before after
     before=$(grep_join \
-		 "^" \
+		 "${grep_pre[@]}" \
 		 "${grep_separators[@]}")
     after=$(grep_join \
 		"${grep_separators[@]}" \
-		"\." \
-		"$")
+		"${grep_post[@]}")
+
+    pat="(${pat@u}|$pat)"
 
     pat="$before$pat$after"
 
@@ -278,18 +315,19 @@ replace_word_in_file ()
 
     local before after
     before=$(sed_join \
-		 "^" \
+		 "${sed_pre[@]}" \
 		 "${sed_separators[@]}")
     after=$(sed_join \
 		"${sed_separators[@]}" \
-		"\." \
-		"$")
+		"${sed_post[@]}")
 
-    local repl
-    repl="s%$before$word$after%\1$replacement\2%g"
+    local repl1
+    local repl2
+    repl1="s%$before$word$after%\1$replacement\2%g"
+    repl2="s%$before${word@u}$after%\1${replacement@u}\2%g"
 
     sed -i \
-	"$repl" \
+	"$repl1;$repl2" \
 	"$file"
 }
 
