@@ -68,11 +68,11 @@ developing GNU and promoting software freedom.''
 
 AMD ROCm software is made available by Advanced Micro Devices, Inc. under the
 open source license identified in the top-level directory for the library in
-the repository on @url{Github.com} (Portions of AMD ROCm software are
-licensed under MITx11 and UIL/NCSA. For more information on the license, review
-the @file{license.txt} in the top-level directory for the library on
-@url{Github.com}).  The additional terms and conditions below apply to your use
-of AMD ROCm technical documentation.
+the repository on @url{https://github.com/ROCm/,Github.com} (Portions of AMD
+ROCm software are licensed under MITx11 and UIL/NCSA. For more information on
+the license, review the @file{license.txt} in the top-level directory for the
+library on @url{https://github.com/ROCm/,Github.com}).  The additional terms
+and conditions below apply to your use of AMD ROCm technical documentation.
 
 @copyright{}2019-2025 Advanced Micro Devices, Inc.  All rights reserved.
 
