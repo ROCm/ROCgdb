@@ -2445,7 +2445,8 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  loc->gdbarch = arch;
 		  loc->pspace = wp_pspace;
 		  loc->address
-		    = gdbarch_remove_non_address_bits (loc->gdbarch, addr);
+		    = gdbarch_remove_non_address_bits_watchpoint
+		      (loc->gdbarch, addr);
 		  loc->length = size;
 		  loc->watchpoint_type = type;
 		  b->add_location (*loc);
@@ -7707,7 +7708,7 @@ adjust_breakpoint_address (struct gdbarch *gdbarch,
 	}
 
       adjusted_bpaddr
-	= gdbarch_remove_non_address_bits (gdbarch, adjusted_bpaddr);
+	= gdbarch_remove_non_address_bits_breakpoint (gdbarch, adjusted_bpaddr);
 
       /* An adjusted breakpoint address can significantly alter
 	 a user's expectations.  Print a warning if an adjustment

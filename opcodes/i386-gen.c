@@ -30,7 +30,9 @@
 
 /* Build-time checks are preferrable over runtime ones.  Use this construct
    in preference where possible.  */
+#ifndef static_assert
 #define static_assert(e) ((void)sizeof (struct { int _:1 - 2 * !(e); }))
+#endif
 
 static const char *program_name = NULL;
 static int debug = 0;
@@ -279,6 +281,8 @@ static const dependency isa_dependencies[] =
     "64" },
   { "USER_MSR",
     "64" },
+  { "MSR_IMM",
+    "64" },
   { "APX_F",
     "XSAVE|64" },
 };
@@ -404,6 +408,7 @@ static bitfield cpu_flags[] =
   BITFIELD (FRED),
   BITFIELD (LKGS),
   BITFIELD (USER_MSR),
+  BITFIELD (MSR_IMM),
   BITFIELD (APX_F),
   BITFIELD (AVX10_2),
   BITFIELD (MWAITX),
@@ -1139,10 +1144,10 @@ process_i386_opcode_modifier (FILE *table, char *mod, unsigned int space,
     SPACE(0F),
     SPACE(0F38),
     SPACE(0F3A),
-    SPACE(EVEXMAP4),
-    SPACE(EVEXMAP5),
-    SPACE(EVEXMAP6),
-    SPACE(VEXMAP7),
+    SPACE(MAP4),
+    SPACE(MAP5),
+    SPACE(MAP6),
+    SPACE(MAP7),
     SPACE(XOP08),
     SPACE(XOP09),
     SPACE(XOP0A),

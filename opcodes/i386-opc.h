@@ -227,6 +227,8 @@ enum i386_cpu
   CpuLKGS,
   /* Intel USER_MSR Instruction support required.  */
   CpuUSER_MSR,
+  /* Intel MSR_IMM Instructions support required.  */
+  CpuMSR_IMM,
   /* Intel AVX10.2 Instructions support required.  */
   CpuAVX10_2,
   /* mwaitx instruction required */
@@ -482,6 +484,7 @@ typedef union i386_cpu_flags
       unsigned int cpufred:1;
       unsigned int cpulkgs:1;
       unsigned int cpuuser_msr:1;
+      unsigned int cpumsr_imm:1;
       unsigned int cpuavx10_2:1;
       unsigned int cpumwaitx:1;
       unsigned int cpuclzero:1;
@@ -572,10 +575,12 @@ enum
 #define UGH 3
   /* An implicit xmm0 as the first operand */
 #define IMPLICIT_1ST_XMM0 4
-  /* The second operand must be a vector register, {x,y,z}mmN, where N is a multiple of 4.
-     It implicitly denotes the register group of {x,y,z}mmN - {x,y,z}mm(N + 3).
+  /* One of the operands denotes a sequence of registers, with insn-dependent
+     constraint on the first register number.  It implicitly denotes e.g. the
+     register group of {x,y,z}mmN - {x,y,z}mm(N + 3), in which case N ought to
+     be a multiple of 4.
    */
-#define IMPLICIT_QUAD_GROUP 5
+#define IMPLICIT_GROUP 5
   /* Default mask isn't allowed.  */
 #define NO_DEFAULT_MASK 6
   /* Address prefix changes register operand */
@@ -987,15 +992,15 @@ typedef struct insn_template
   /* opcode space */
   unsigned int opcode_space:4;
   /* Opcode encoding space (values chosen to be usable directly in
-     VEX/XOP mmmmm and EVEX mm fields):
+     VEX/XOP mmmmm and EVEX mmm fields):
      0: Base opcode space.
      1: 0F opcode prefix / space.
      2: 0F38 opcode prefix / space.
      3: 0F3A opcode prefix / space.
-     4: EVEXMAP4 opcode prefix / space.
-     5: EVEXMAP5 opcode prefix / space.
-     6: EVEXMAP6 opcode prefix / space.
-     7: VEXMAP7 opcode prefix / space.
+     4: MAP4 opcode prefix / space.
+     5: MAP5 opcode prefix / space.
+     6: MAP6 opcode prefix / space.
+     7: MAP7 opcode prefix / space.
      8: XOP 08 opcode space.
      9: XOP 09 opcode space.
      A: XOP 0A opcode space.
@@ -1004,10 +1009,10 @@ typedef struct insn_template
 #define SPACE_0F	1
 #define SPACE_0F38	2
 #define SPACE_0F3A	3
-#define SPACE_EVEXMAP4	4
-#define SPACE_EVEXMAP5	5
-#define SPACE_EVEXMAP6	6
-#define SPACE_VEXMAP7	7
+#define SPACE_MAP4	4
+#define SPACE_MAP5	5
+#define SPACE_MAP6	6
+#define SPACE_MAP7	7
 #define SPACE_XOP08	8
 #define SPACE_XOP09	9
 #define SPACE_XOP0A	0xA
