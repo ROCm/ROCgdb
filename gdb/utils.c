@@ -83,6 +83,7 @@
 #include "run-on-main-thread.h"
 #include "arch-utils.h"
 #include "gdbsupport/gdb_tilde_expand.h"
+#include "gdbsupport/eintr.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -3522,7 +3523,7 @@ wait_to_die_with_timeout (pid_t pid, int *status, int timeout)
       alarm (timeout);
 #endif
 
-      waitpid_result = waitpid (pid, status, 0);
+      waitpid_result = gdb::waitpid (pid, status, 0);
 
 #ifdef SIGALRM
       alarm (0);
@@ -3534,7 +3535,7 @@ wait_to_die_with_timeout (pid_t pid, int *status, int timeout)
 #endif
     }
   else
-    waitpid_result = waitpid (pid, status, WNOHANG);
+    waitpid_result = gdb::waitpid (pid, status, WNOHANG);
 
   if (waitpid_result == pid)
     return pid;

@@ -2215,6 +2215,9 @@ static struct cmd_list_element *user_show_python_list;
 static void
 finalize_python (const struct extension_language_defn *ignore)
 {
+  if (!gdb_python_initialized)
+    return;
+
   struct active_ext_lang_state *previous_active;
 
   /* We don't use ensure_python_env here because if we ever ran the
@@ -2297,6 +2300,42 @@ gdbpy_gdb_exiting (int exit_code)
     gdbpy_print_stack ();
 }
 
+/* Signal handler to convert a SIGABRT into an exception.  */
+
+static void
+catch_python_fatal (int signum)
+{
+  signal (SIGABRT, catch_python_fatal);
+
+  throw_exception_sjlj (gdb_exception {RETURN_ERROR, GENERIC_ERROR});
+}
+
+/* Stand-in for Py_IsInitialized ().  To be used because after a python fatal
+   error, no calls into Python are allowed.  */
+
+static bool py_isinitialized = false;
+
+/* Call Py_Initialize (), and return true if successful.   */
+
+static bool ATTRIBUTE_UNUSED
+py_initialize ()
+{
+  auto prev_handler = signal (SIGABRT, catch_python_fatal);
+  SCOPE_EXIT { signal (SIGABRT, prev_handler); };
+
+  TRY_SJLJ
+    {
+      Py_Initialize ();
+      py_isinitialized = true;
+    }
+  CATCH_SJLJ (e, RETURN_MASK_ERROR)
+    {
+    }
+  END_CATCH_SJLJ;
+
+  return py_isinitialized;
+}
+
 static bool
 do_start_initialization ()
 {
@@ -2331,17 +2370,20 @@ do_start_initialization ()
      for Python versions that do not duplicate program_name.  */
   static wchar_t *progname_copy;
 
-  std::string oldloc = setlocale (LC_ALL, NULL);
-  setlocale (LC_ALL, "");
-  size_t progsize = strlen (progname.get ());
-  progname_copy = XNEWVEC (wchar_t, progsize + 1);
-  size_t count = mbstowcs (progname_copy, progname.get (), progsize + 1);
-  if (count == (size_t) -1)
-    {
-      fprintf (stderr, "Could not convert python path to string\n");
-      return false;
-    }
-  setlocale (LC_ALL, oldloc.c_str ());
+  {
+    std::string oldloc = setlocale (LC_ALL, NULL);
+    SCOPE_EXIT { setlocale (LC_ALL, oldloc.c_str ()); };
+
+    setlocale (LC_ALL, "");
+    size_t progsize = strlen (progname.get ());
+    progname_copy = XNEWVEC (wchar_t, progsize + 1);
+    size_t count = mbstowcs (progname_copy, progname.get (), progsize + 1);
+    if (count == (size_t) -1)
+      {
+	fprintf (stderr, "Could not convert python path to string\n");
+	return false;
+      }
+  }
 
   /* Py_SetProgramName was deprecated in Python 3.11.  Use PyConfig
      mechanisms for Python 3.10 and newer.  */
@@ -2350,7 +2392,8 @@ do_start_initialization ()
      remain alive for the duration of the program's execution, so
      it is not freed after this call.  */
   Py_SetProgramName (progname_copy);
-  Py_Initialize ();
+  if (!py_initialize ())
+    return false;
 #else
   PyConfig config;
 
@@ -2372,10 +2415,19 @@ do_start_initialization ()
 init_done:
   PyConfig_Clear (&config);
   if (PyStatus_Exception (status))
-    return false;
+    {
+      if (PyStatus_IsError (status))
+	gdb_printf (_("Python initialization failed: %s\n"), status.err_msg);
+      else
+	gdb_printf (_("Python initialization failed with exit status: %d\n"),
+		    status.exitcode);
+      return false;
+    }
+  py_isinitialized = true;
 #endif
 #else
-  Py_Initialize ();
+  if (!py_initialize ())
+    return false;
 #endif
 
 #if PY_VERSION_HEX < 0x03090000
@@ -2717,8 +2769,21 @@ do_initialize (const struct extension_language_defn *extlang)
 static void
 gdbpy_initialize (const struct extension_language_defn *extlang)
 {
-  if (!do_start_initialization () && PyErr_Occurred ())
-    gdbpy_print_stack ();
+  if (!do_start_initialization ())
+    {
+      if (py_isinitialized)
+	{
+	  if (PyErr_Occurred ())
+	    gdbpy_print_stack ();
+
+	  /* We got no use for the Python interpreter anymore.  Finalize it
+	     ASAP.  */
+	  Py_Finalize ();
+	}
+
+      /* Continue with python disabled.  */
+      return;
+    }
 
   gdbpy_enter enter_py;
 
