@@ -3,6 +3,18 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
+## ROCgdb-15.2 for ROCm-6.4
+
+### Added
+
+- Support for debugging shaders compiled for the following generic targets:
+  - gfx9-generic
+  - gfx9-4-generic
+  - gfx10-1-generic
+  - gfx10-3-generic
+  - gfx11-generic
+  - gfx12-generic
+
 ## ROCgdb-15.2 (for ROCm-6.3)
 
 ### Added

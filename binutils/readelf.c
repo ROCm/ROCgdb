@@ -4783,6 +4783,12 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
     default:
       out += sprintf (out, _(", <unknown AMDGPU GPU type: %#x>"), mach);
       break;
