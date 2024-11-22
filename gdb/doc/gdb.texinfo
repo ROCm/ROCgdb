@@ -28608,6 +28608,19 @@ Gfx1201 devices.
 
 @end table
 
+The following generic @acronym{AMD GPU} architectures are supported:
+
+@table @emph
+
+@item @code{gfx9-generic}
+@item @code{gfx9-4-generic}
+@item @code{gfx10-1-generic}
+@item @code{gfx10-3-generic}
+@item @code{gfx11-generic}
+@item @code{gfx12-generic}
+
+@end table
+
 You can consult the
 @url{https://llvm.org/docs/AMDGPUUsage.html#processors, LLVM
 documentation} for the correspondence between architecture names and
