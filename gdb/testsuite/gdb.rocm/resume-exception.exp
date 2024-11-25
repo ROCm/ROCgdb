@@ -1,0 +1,152 @@
+# Copyright 2024 Free Software Foundation, Inc.
+# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that after an exception, a wave remains halted when GDB resumes.
+# For testing purposes, the runtime thread is stopped, so it will not
+# terminate the process (call abort) as the result of an exception
+# (signal) being raised.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
+	{debug hip}]} {
+    return
+}
+
+# Imagine a sample code that looks like:
+#
+#   c = 1.0 / 0.0;             // exception (becomes GDB_SIGNAL_FPE)
+#   __builtin_debugtrap ();    // a trap in its true sense
+#
+# The idea is to run the inferior in non-stop mode.  When an exception
+# is raised, the GPU thread is stopped while the other threads, like the
+# runtime thread, are still running.  At this point, the test will
+# interrupt other threads as well and only let the GPU thread run in the
+# background.  If everything is in order and the wave is halted, this
+# should lead to no execution of the next instruction (s_trap 3).  On
+# the other hand, if the trap signal is received by GDB, that'd be a
+# failure of the test.  Stopping other threads, specially the runtime
+# thread, is necessary.  Else, the GPU kernel could be terminated before
+# the test could inspect the corresponding wave's status.  This abrupt
+# termination would be triggered by a SIGABRT signal raised by the
+# runtime as a response to EC_QUEUE_WAVE_MATH_ERROR notification of the
+# exception.
+#
+# Remarks:
+#
+# - Why non-stop mode?
+#   Because it allows us to control other threads, stop them at will, and
+#   makes it possible to _only_ run the selected one, while having other
+#   actors, specifically the runtime thread, stopped; lest it terminate
+#   the kernel with a SIGABRT.
+#
+# - Quirks of non-stop mode:
+#   When GDB reports a breakpoint, signal, etc., by default, it will
+#   have Thread 1 as the chosen one.  It's incumbent upon us to switch
+#   to the GPU thread (and know its number).  For that, we will discover
+#   it by setting a breakpoint on a GPU kernel and record the thread
+#   number when GDB reports hitting of that breakpoint.
+#
+# - Why an ALU exception and not something like SIGSEGV?
+#   As of now, SIGSEGV is not a good option because when the driver
+#   sends a notification about SIGSEGV to the runtime, it also evicts the
+#   process from the GPU, effectively preventing the wave from running
+#   irrespective of its HALT bit value.  Therefore, robbing us from the
+#   opportunity of detecting any abnormalities in the wave's status.
+
+# Confine non-stop mode only to this test.
+save_vars { ::GDBFLAGS } {
+    append ::GDBFLAGS " -ex \"set non-stop on\""
+    clean_restart $::binfile
+}
+
+# Based on the output of "info threads", return the number of running threads.
+# (Inspired by gdb.threads/linux-dp.exp)
+
+proc get_nr_of_running_threads { } {
+    set thread_count 0
+    gdb_test_multiple "info threads" "count running threads" -lbl {
+	-re "\r\n *$::decimal *Thread \[^\n\]* \\(running\\)" {
+	    incr thread_count
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+    return $thread_count
+}
+
+# Stop other running threads.
+# (Inspired by gdb.multi/multi-target-continue.exp)
+
+proc interrupt_running_threads { } {
+    set count [get_nr_of_running_threads]
+    set ok 0
+
+    gdb_test_multiple "interrupt -a" "stop all threads" {
+	-re "$::gdb_prompt " {
+	    for {set i 0} {$i < $count} {incr i} {
+		gdb_test_multiple "" $gdb_test_name {
+		    -re "Thread\[^\r\n\]*stopped\\." {
+			set ok 1
+		    }
+		}
+		if {!$ok} {
+		    break
+		}
+	    }
+	    gdb_assert $ok $gdb_test_name
+	}
+    }
+}
+
+with_rocm_gpu_lock {
+    # Run to GPU thread.
+    gdb_breakpoint "raise_fpe" "allow-pending"
+    gdb_test_multiple "run" "" {
+	-re -wrap ".*Thread ($::decimal) \[^\r\n]* hit Breakpoint .*" {
+	    set gpu_thread $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+    gdb_test "thread $gpu_thread" "raise_fpe.*" "select GPU thread"
+
+    enable_alu_exception "float_div0"
+
+    # "continue" the GPU kernel and expect a SIGFPE.
+    gdb_test "cont" "Thread $gpu_thread.*received signal SIGFPE.*" "SIGFPE"
+
+    interrupt_running_threads
+
+    # "continue" the GPU thread in the background.
+    gdb_test -no-prompt-anchor "continue&" ""
+    # After a period of "no news", then the test will pass.
+    gdb_test_multiple "" "check GPU wave is halted" {
+	-re ".*received signal SIGTRAP, " {
+	    fail $gdb_test_name
+	}
+	-timeout 2
+	timeout {
+	    pass $gdb_test_name
+	}
+    }
+}
