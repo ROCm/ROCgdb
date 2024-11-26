@@ -22,8 +22,8 @@
 
 #include "mi/mi-cmds.h"
 #include "gdbsupport/array-view.h"
-#include "hashtab.h"
 #include <optional>
+#include "gdbtypes.h"
 
 struct breakpoint;
 struct command_line;
@@ -177,7 +177,7 @@ enum ext_lang_rc
 
   /* There was an error (e.g., Python error while printing a value).
      When an error occurs no further extension languages are tried.
-     This is to preserve existing behaviour, and because it's convenient
+     This is to preserve existing behavior, and because it's convenient
      for Python developers.
      Note: This is different than encountering a memory error trying to read
      a value for pretty-printing.  Here we're referring to, e.g., programming
@@ -307,7 +307,8 @@ extern enum ext_lang_bt_status apply_ext_lang_frame_filter
 extern void apply_ext_lang_ptwrite_filter
   (struct btrace_thread_info *btinfo);
 
-extern void preserve_ext_lang_values (struct objfile *, htab_t copied_types);
+extern void preserve_ext_lang_values (struct objfile *,
+				      copied_types_hash_t &copied_types);
 
 extern const struct extension_language_defn *get_breakpoint_cond_ext_lang
   (struct breakpoint *b, enum extension_language skip_lang);

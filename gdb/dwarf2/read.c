@@ -91,13 +91,14 @@
 #include "gdbsupport/pathstuff.h"
 #include "count-one-bits.h"
 #include <unordered_set>
-#include "dwarf2/abbrev-cache.h"
+#include "dwarf2/abbrev-table-cache.h"
 #include "cooked-index.h"
 #include "gdbsupport/thread-pool.h"
 #include "run-on-main-thread.h"
 #include "dwarf2/parent-map.h"
 #include "dwarf2/error.h"
 #include <variant>
+#include "gdbsupport/unordered_set.h"
 
 /* When == 1, print basic high level tracing messages.
    When > 1, be more verbose.
@@ -575,7 +576,7 @@ struct die_reader_specs
   const gdb_byte *buffer_end;
 
   /* The abbreviation table to use when reading the DIEs.  */
-  struct abbrev_table *abbrev_table;
+  const struct abbrev_table *abbrev_table;
 };
 
 /* A subclass of die_reader_specs that holds storage and has complex
@@ -587,10 +588,10 @@ public:
 
   cutu_reader (dwarf2_per_cu_data *this_cu,
 	       dwarf2_per_objfile *per_objfile,
-	       struct abbrev_table *abbrev_table,
+	       const struct abbrev_table *abbrev_table,
 	       dwarf2_cu *existing_cu,
 	       bool skip_partial,
-	       abbrev_cache *cache = nullptr);
+	       const abbrev_table_cache *cache = nullptr);
 
   explicit cutu_reader (struct dwarf2_per_cu_data *this_cu,
 			dwarf2_per_objfile *per_objfile,
@@ -2903,12 +2904,8 @@ dw_expand_symtabs_matching_file_matcher
   if (file_matcher == NULL)
     return;
 
-  htab_up visited_found (htab_create_alloc (10, htab_hash_pointer,
-					    htab_eq_pointer,
-					    NULL, xcalloc, xfree));
-  htab_up visited_not_found (htab_create_alloc (10, htab_hash_pointer,
-						htab_eq_pointer,
-						NULL, xcalloc, xfree));
+  gdb::unordered_set<quick_file_names *> visited_found;
+  gdb::unordered_set<quick_file_names *> visited_not_found;
 
   /* The rule is CUs specify all the files, including those used by
      any TU, so there's no need to scan TUs here.  */
@@ -2951,9 +2948,9 @@ dw_expand_symtabs_matching_file_matcher
       if (file_data == NULL)
 	continue;
 
-      if (htab_find (visited_not_found.get (), file_data) != NULL)
+      if (visited_not_found.contains (file_data))
 	continue;
-      else if (htab_find (visited_found.get (), file_data) != NULL)
+      else if (visited_found.contains (file_data))
 	{
 	  per_cu->mark = 1;
 	  continue;
@@ -2984,11 +2981,10 @@ dw_expand_symtabs_matching_file_matcher
 	    }
 	}
 
-      void **slot = htab_find_slot (per_cu->mark
-				    ? visited_found.get ()
-				    : visited_not_found.get (),
-				    file_data, INSERT);
-      *slot = file_data;
+      if (per_cu->mark)
+	visited_found.insert (file_data);
+      else
+	visited_not_found.insert (file_data);
     }
 }
 
@@ -3712,7 +3708,7 @@ init_cu_die_reader (struct die_reader_specs *reader,
 		    struct dwarf2_cu *cu,
 		    struct dwarf2_section_info *section,
 		    struct dwo_file *dwo_file,
-		    struct abbrev_table *abbrev_table)
+		    const abbrev_table *abbrev_table)
 {
   gdb_assert (section->readin && section->buffer != NULL);
   reader->abfd = section->get_bfd_owner ();
@@ -4011,10 +4007,10 @@ cutu_reader::init_tu_and_read_dwo_dies (dwarf2_per_cu_data *this_cu,
 
 cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
 			  dwarf2_per_objfile *per_objfile,
-			  struct abbrev_table *abbrev_table,
+			  const struct abbrev_table *abbrev_table,
 			  dwarf2_cu *existing_cu,
 			  bool skip_partial,
-			  abbrev_cache *cache)
+			  const abbrev_table_cache *cache)
   : die_reader_specs {},
     m_this_cu (this_cu)
 {
@@ -4433,7 +4429,7 @@ cooked_index_storage::get_reader (dwarf2_per_cu_data *per_cu)
 cutu_reader *
 cooked_index_storage::preserve (std::unique_ptr<cutu_reader> reader)
 {
-  m_abbrev_cache.add (reader->release_abbrev_table ());
+  m_abbrev_table_cache.add (reader->release_abbrev_table ());
 
   int index = reader->cu->per_cu->index;
   void **slot = htab_find_slot_with_hash (m_reader_hash.get (), &index,
@@ -4611,7 +4607,7 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
   if (reader == nullptr)
     {
       cutu_reader new_reader (this_cu, per_objfile, nullptr, nullptr, false,
-			      storage->get_abbrev_cache ());
+			      &storage->get_abbrev_table_cache ());
 
       if (new_reader.comp_unit_die == nullptr || new_reader.dummy_p)
 	return;
@@ -5578,11 +5574,8 @@ load_full_comp_unit (dwarf2_per_cu_data *this_cu,
   struct dwarf2_cu *cu = reader.cu;
   const gdb_byte *info_ptr = reader.info_ptr;
 
-  gdb_assert (cu->die_hash == NULL);
-  cu->die_hash.reset (htab_create_alloc
-		      (cu->header.get_length_without_initial () / 12,
-		       die_info::hash, die_info::eq,
-		       nullptr, xcalloc, xfree));
+  gdb_assert (cu->die_hash.empty ());
+  cu->die_hash.reserve (cu->header.get_length_without_initial () / 12);
 
   if (reader.comp_unit_die->has_children)
     reader.comp_unit_die->child
@@ -6119,20 +6112,20 @@ void dwarf2_per_objfile::set_type_for_signatured_type
    included by PER_CU.  */
 
 static void
-recursively_compute_inclusions (std::vector<compunit_symtab *> *result,
-				htab_t all_children, htab_t all_type_symtabs,
-				dwarf2_per_cu_data *per_cu,
-				dwarf2_per_objfile *per_objfile,
-				struct compunit_symtab *immediate_parent)
+recursively_compute_inclusions
+     (std::vector<compunit_symtab *> *result,
+      gdb::unordered_set<dwarf2_per_cu_data *> &all_children,
+      gdb::unordered_set<compunit_symtab *> &all_type_symtabs,
+      dwarf2_per_cu_data *per_cu,
+      dwarf2_per_objfile *per_objfile,
+      struct compunit_symtab *immediate_parent)
 {
-  void **slot = htab_find_slot (all_children, per_cu, INSERT);
-  if (*slot != NULL)
+  if (bool inserted = all_children.emplace (per_cu).second;
+      !inserted)
     {
       /* This inclusion and its children have been processed.  */
       return;
     }
-
-  *slot = per_cu;
 
   /* Only add a CU if it has a symbol table.  */
   compunit_symtab *cust = per_objfile->get_symtab (per_cu);
@@ -6142,10 +6135,9 @@ recursively_compute_inclusions (std::vector<compunit_symtab *> *result,
 	 seen it yet (type unit per_cu's can share symtabs).  */
       if (per_cu->is_debug_types)
 	{
-	  slot = htab_find_slot (all_type_symtabs, cust, INSERT);
-	  if (*slot == NULL)
+	  if (bool inserted = all_type_symtabs.insert (cust).second;
+	      inserted)
 	    {
-	      *slot = cust;
 	      result->push_back (cust);
 	      if (cust->user == NULL)
 		cust->user = immediate_parent;
@@ -6184,16 +6176,12 @@ compute_compunit_symtab_includes (dwarf2_per_cu_data *per_cu,
       if (cust == NULL)
 	return;
 
-      htab_up all_children (htab_create_alloc (1, htab_hash_pointer,
-					       htab_eq_pointer,
-					       NULL, xcalloc, xfree));
-      htab_up all_type_symtabs (htab_create_alloc (1, htab_hash_pointer,
-						   htab_eq_pointer,
-						   NULL, xcalloc, xfree));
+      gdb::unordered_set<dwarf2_per_cu_data *> all_children;
+      gdb::unordered_set<compunit_symtab *> all_type_symtabs;
 
       for (dwarf2_per_cu_data *ptr : per_cu->imported_symtabs)
-	recursively_compute_inclusions (&result_symtabs, all_children.get (),
-					all_type_symtabs.get (), ptr,
+	recursively_compute_inclusions (&result_symtabs, all_children,
+					all_type_symtabs, ptr,
 					per_objfile, cust);
 
       /* Now we have a transitive closure of all the included symtabs.  */
@@ -10309,7 +10297,6 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
   struct objfile *objfile = per_objfile->objfile;
   struct gdbarch *gdbarch = objfile->arch ();
   struct attribute *attr;
-  void **slot;
   int nparams;
   struct die_info *child_die;
 
@@ -10328,21 +10315,6 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
       return;
     }
   unrelocated_addr pc = attr->as_address ();
-
-  if (cu->call_site_htab == nullptr)
-    cu->call_site_htab.reset (htab_create_alloc (16, call_site::hash,
-						 call_site::eq, nullptr,
-						 xcalloc, xfree));
-  struct call_site call_site_local (pc, nullptr, nullptr);
-  slot = htab_find_slot (cu->call_site_htab.get (), &call_site_local, INSERT);
-  if (*slot != NULL)
-    {
-      complaint (_("Duplicate PC %s for DW_TAG_call_site "
-		   "DIE %s [in module %s]"),
-		 paddress (gdbarch, (CORE_ADDR) pc), sect_offset_str (die->sect_off),
-		 objfile_name (objfile));
-      return;
-    }
 
   /* Count parameters at the caller.  */
 
@@ -10368,7 +10340,15 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 		      struct call_site,
 		      sizeof (*call_site) + sizeof (call_site->parameter[0]) * nparams))
     struct call_site (pc, cu->per_cu, per_objfile);
-  *slot = call_site;
+  
+  if (!cu->call_site_htab.emplace (call_site).second)
+    {
+      complaint (_("Duplicate PC %s for DW_TAG_call_site "
+		   "DIE %s [in module %s]"),
+		 paddress (gdbarch, (CORE_ADDR) pc), sect_offset_str (die->sect_off),
+		 objfile_name (objfile));
+      return;
+    }
 
   /* We never call the destructor of call_site, so we must ensure it is
      trivially destructible.  */
@@ -15984,10 +15964,8 @@ read_die_and_children (const struct die_reader_specs *reader,
       return NULL;
     }
 
-  void **slot = htab_find_slot_with_hash (reader->cu->die_hash.get (), die,
-					  to_underlying (die->sect_off),
-					  INSERT);
-  *slot = die;
+  bool inserted = reader->cu->die_hash.emplace (die).second;
+  gdb_assert (inserted);
 
   if (die->has_children)
     die->child = read_die_and_siblings_1 (reader, cur_ptr, new_info_ptr, die);
@@ -16251,7 +16229,7 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   if (result == nullptr)
     {
       cutu_reader new_reader (per_cu, per_objfile, nullptr, nullptr, false,
-			      m_index_storage->get_abbrev_cache ());
+			      &m_index_storage->get_abbrev_table_cache ());
 
       if (new_reader.dummy_p || new_reader.comp_unit_die == nullptr
 	  || !new_reader.comp_unit_die->has_children)
@@ -20618,7 +20596,6 @@ static struct die_info *
 follow_die_offset (sect_offset sect_off, int offset_in_dwz,
 		   struct dwarf2_cu **ref_cu)
 {
-  struct die_info temp_die;
   struct dwarf2_cu *target_cu, *cu = *ref_cu;
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
 
@@ -20679,11 +20656,9 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
     }
 
   *ref_cu = target_cu;
-  temp_die.sect_off = sect_off;
 
-  return (struct die_info *) htab_find_with_hash (target_cu->die_hash.get (),
-						  &temp_die,
-						  to_underlying (sect_off));
+  auto it = target_cu->die_hash.find (sect_off);
+  return it != target_cu->die_hash.end () ? *it : nullptr;
 }
 
 /* Follow reference attribute ATTR of SRC_DIE.
@@ -21042,9 +21017,7 @@ static struct die_info *
 follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 		  struct dwarf2_cu **ref_cu)
 {
-  struct die_info temp_die;
   struct dwarf2_cu *sig_cu;
-  struct die_info *die;
   dwarf2_per_objfile *per_objfile = (*ref_cu)->per_objfile;
 
 
@@ -21065,11 +21038,9 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
   sig_cu = per_objfile->get_cu (sig_type);
   gdb_assert (sig_cu != NULL);
   gdb_assert (to_underlying (sig_type->type_offset_in_section) != 0);
-  temp_die.sect_off = sig_type->type_offset_in_section;
-  die = (struct die_info *) htab_find_with_hash (sig_cu->die_hash.get (),
-						 &temp_die,
-						 to_underlying (temp_die.sect_off));
-  if (die)
+
+  if (auto die_it = sig_cu->die_hash.find (sig_type->type_offset_in_section);
+      die_it != sig_cu->die_hash.end ())
     {
       /* For .gdb_index version 7 keep track of included TUs.
 	 http://sourceware.org/bugzilla/show_bug.cgi?id=15021.  */
@@ -21078,7 +21049,7 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 	(*ref_cu)->per_cu->imported_symtabs.push_back (sig_cu->per_cu);
 
       *ref_cu = sig_cu;
-      return die;
+      return *die_it;
     }
 
   return NULL;
@@ -21260,11 +21231,8 @@ read_signatured_type (signatured_type *sig_type,
       struct dwarf2_cu *cu = reader.cu;
       const gdb_byte *info_ptr = reader.info_ptr;
 
-      gdb_assert (cu->die_hash == NULL);
-      cu->die_hash.reset (htab_create_alloc
-			  (cu->header.get_length_without_initial () / 12,
-			   die_info::hash, die_info::eq,
-			   nullptr, xcalloc, xfree));
+      gdb_assert (cu->die_hash.empty ());
+      cu->die_hash.reserve (cu->header.get_length_without_initial () / 12);
 
       if (reader.comp_unit_die->has_children)
 	reader.comp_unit_die->child
@@ -22073,52 +22041,6 @@ dwarf2_per_objfile::~dwarf2_per_objfile ()
   remove_all_cus ();
 }
 
-/* A set of CU "per_cu" pointer, DIE offset, and GDB type pointer.
-   We store these in a hash table separate from the DIEs, and preserve them
-   when the DIEs are flushed out of cache.
-
-   The CU "per_cu" pointer is needed because offset alone is not enough to
-   uniquely identify the type.  A file may have multiple .debug_types sections,
-   or the type may come from a DWO file.  Furthermore, while it's more logical
-   to use per_cu->section+offset, with Fission the section with the data is in
-   the DWO file but we don't know that section at the point we need it.
-   We have to use something in dwarf2_per_cu_data (or the pointer to it)
-   because we can enter the lookup routine, get_die_type_at_offset, from
-   outside this file, and thus won't necessarily have PER_CU->cu.
-   Fortunately, PER_CU is stable for the life of the objfile.  */
-
-struct dwarf2_per_cu_offset_and_type
-{
-  const struct dwarf2_per_cu_data *per_cu;
-  sect_offset sect_off;
-  struct type *type;
-};
-
-/* Hash function for a dwarf2_per_cu_offset_and_type.  */
-
-static hashval_t
-per_cu_offset_and_type_hash (const void *item)
-{
-  const struct dwarf2_per_cu_offset_and_type *ofs
-    = (const struct dwarf2_per_cu_offset_and_type *) item;
-
-  return (uintptr_t) ofs->per_cu + to_underlying (ofs->sect_off);
-}
-
-/* Equality function for a dwarf2_per_cu_offset_and_type.  */
-
-static int
-per_cu_offset_and_type_eq (const void *item_lhs, const void *item_rhs)
-{
-  const struct dwarf2_per_cu_offset_and_type *ofs_lhs
-    = (const struct dwarf2_per_cu_offset_and_type *) item_lhs;
-  const struct dwarf2_per_cu_offset_and_type *ofs_rhs
-    = (const struct dwarf2_per_cu_offset_and_type *) item_rhs;
-
-  return (ofs_lhs->per_cu == ofs_rhs->per_cu
-	  && ofs_lhs->sect_off == ofs_rhs->sect_off);
-}
-
 /* Set the type associated with DIE to TYPE.  Save it in CU's hash
    table if necessary.  For convenience, return TYPE.
 
@@ -22142,8 +22064,6 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      bool skip_data_location)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
-  struct dwarf2_per_cu_offset_and_type **slot, ofs;
-  struct objfile *objfile = per_objfile->objfile;
   struct attribute *attr;
   struct dynamic_prop prop;
 
@@ -22199,24 +22119,13 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	type->add_dyn_prop (DYN_PROP_DATA_LOCATION, prop);
     }
 
-  if (per_objfile->die_type_hash == NULL)
-    per_objfile->die_type_hash
-      = htab_up (htab_create_alloc (127,
-				    per_cu_offset_and_type_hash,
-				    per_cu_offset_and_type_eq,
-				    NULL, xcalloc, xfree));
-
-  ofs.per_cu = cu->per_cu;
-  ofs.sect_off = die->sect_off;
-  ofs.type = type;
-  slot = (struct dwarf2_per_cu_offset_and_type **)
-    htab_find_slot (per_objfile->die_type_hash.get (), &ofs, INSERT);
-  if (*slot)
+  bool inserted
+    = per_objfile->die_type_hash.emplace
+       (per_cu_and_offset {cu->per_cu, die->sect_off}, type).second;
+  if (!inserted)
     complaint (_("A problem internal to GDB: DIE %s has type already set"),
 	       sect_offset_str (die->sect_off));
-  *slot = XOBNEW (&objfile->objfile_obstack,
-		  struct dwarf2_per_cu_offset_and_type);
-  **slot = ofs;
+
   return type;
 }
 
@@ -22228,19 +22137,9 @@ get_die_type_at_offset (sect_offset sect_off,
 			dwarf2_per_cu_data *per_cu,
 			dwarf2_per_objfile *per_objfile)
 {
-  struct dwarf2_per_cu_offset_and_type *slot, ofs;
+  auto it = per_objfile->die_type_hash.find ({per_cu, sect_off});
 
-  if (per_objfile->die_type_hash == NULL)
-    return NULL;
-
-  ofs.per_cu = per_cu;
-  ofs.sect_off = sect_off;
-  slot = ((struct dwarf2_per_cu_offset_and_type *)
-	  htab_find (per_objfile->die_type_hash.get (), &ofs));
-  if (slot)
-    return slot->type;
-  else
-    return NULL;
+  return it != per_objfile->die_type_hash.end () ? it->second : nullptr;
 }
 
 /* Look up the type for DIE in CU in die_type_hash,

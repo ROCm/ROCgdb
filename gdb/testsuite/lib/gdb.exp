@@ -3672,7 +3672,7 @@ proc can_hardware_single_step {} {
 
     if { [istarget "arm*-*-*"] || [istarget "mips*-*-*"]
 	 || [istarget "tic6x-*-*"] || [istarget "sparc*-*-linux*"]
-	 || [istarget "nios2-*-*"] || [istarget "riscv*-*-linux*"] } {
+	 || [istarget "riscv*-*-linux*"] } {
 	return 0
     }
 
@@ -3701,6 +3701,7 @@ proc supports_process_record {} {
     if { [istarget "arm*-*-linux*"] || [istarget "x86_64-*-linux*"]
          || [istarget "i\[34567\]86-*-linux*"]
          || [istarget "aarch64*-*-linux*"]
+	 || [istarget "loongarch*-*-linux*"]
          || [istarget "powerpc*-*-linux*"]
          || [istarget "s390*-*-linux*"] } {
 	return 1
@@ -3720,6 +3721,7 @@ proc supports_reverse {} {
     if { [istarget "arm*-*-linux*"] || [istarget "x86_64-*-linux*"]
          || [istarget "i\[34567\]86-*-linux*"]
          || [istarget "aarch64*-*-linux*"]
+	 || [istarget "loongarch*-*-linux*"]
          || [istarget "powerpc*-*-linux*"]
          || [istarget "s390*-*-linux*"] } {
 	return 1
