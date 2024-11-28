@@ -33795,7 +33795,6 @@ usual, but you probably have no reason to use them from Emacs.
 We call this @dfn{text command mode}.  Emacs 22.1, and later, also uses
 a graphical mode, enabled by default, which provides further buffers
 that can control the execution and describe the state of your program.
-@xref{GDB Graphical Interface,,, Emacs, The @sc{gnu} Emacs Manual}.
 
 If you specify an absolute file name when prompted for the @kbd{M-x
 gdb} argument, then Emacs sets your current working directory to where
@@ -33847,9 +33846,8 @@ Continue execution of your program, like the @value{GDBN} @code{continue}
 command.
 
 @item C-c <
-Go up the number of frames indicated by the numeric argument
-(@pxref{Arguments, , Numeric Arguments, Emacs, The @sc{gnu} Emacs Manual}),
-like the @value{GDBN} @code{up} command.
+Go up the number of frames indicated by the numeric argument, like the
+@value{GDBN} @code{up} command.
 
 @item C-c >
 Go down the number of frames indicated by the numeric argument, like the
@@ -33881,8 +33879,7 @@ delete lines from the text, the line numbers that @value{GDBN} knows cease
 to correspond properly with the code.
 
 A more detailed description of Emacs' interaction with @value{GDBN} is
-given in the Emacs manual (@pxref{Debuggers,,, Emacs, The @sc{gnu}
-Emacs Manual}).
+given in the Emacs manual.
 
 @node GDB/MI
 @chapter The @sc{gdb/mi} Interface
