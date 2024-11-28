@@ -44,7 +44,11 @@ kern ()
 int
 main ()
 {
-  kern<<<512, 256>>> ();
+  /* Dispatch many workitems to ensure that when hog terminates there are
+     enough pending waves that are created by hw to occupy vacated slots.
+
+     TODO: Replace hard coded values based on output of "info agents". */
+  kern<<<4096, 256>>> ();
   return hipDeviceSynchronize () != hipSuccess;
 }
 
