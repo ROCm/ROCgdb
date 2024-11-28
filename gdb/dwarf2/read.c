@@ -4460,19 +4460,41 @@ cooked_index_storage::eq_cutu_reader (const void *a, const void *b)
 /* Dump MAP as parent_map.  */
 
 static void
-dump_parent_map (const struct addrmap *map)
+dump_parent_map (dwarf2_per_bfd *per_bfd, const struct addrmap *map)
 {
   auto_obstack temp_storage;
 
   auto annotate_cooked_index_entry
-    = [&] (struct ui_file *outfile, const void *value)
+    = [&] (struct ui_file *outfile, CORE_ADDR start_addr, const void *value)
 	{
 	  const cooked_index_entry *parent_entry
 	    = (const cooked_index_entry *)value;
-	  if (parent_entry == nullptr)
-	    return;
 
-	  gdb_printf (outfile, " (0x%" PRIx64 ": %s)",
+	  gdb_printf (outfile, "\n\t");
+
+	  bool found = false;
+	  for (auto sections : {per_bfd->infos, per_bfd->types})
+	    for (auto section : sections)
+	      if ((CORE_ADDR)section.buffer <= start_addr
+		&& start_addr < (CORE_ADDR) (section.buffer + section.size))
+	      {
+		gdb_printf (outfile, "(section: %s, offset: 0x%" PRIx64 ")",
+			    section.get_name (),
+			    start_addr - (CORE_ADDR)section.buffer);
+		found = true;
+		break;
+	      }
+
+	  if (!found)
+	    gdb_printf (outfile, "()");
+
+	  if (parent_entry == nullptr)
+	    {
+	      gdb_printf (outfile, " -> ()");
+	      return;
+	    }
+
+	  gdb_printf (outfile, " -> (0x%" PRIx64 ": %s)",
 		      to_underlying (parent_entry->die_offset),
 		      parent_entry->full_name (&temp_storage, false));
 	};
@@ -4484,20 +4506,20 @@ dump_parent_map (const struct addrmap *map)
 /* See parent-map.h.  */
 
 void
-parent_map::dump () const
+parent_map::dump (dwarf2_per_bfd *per_bfd) const
 {
-  dump_parent_map (&m_map);
+  dump_parent_map (per_bfd, &m_map);
 }
 
 /* See parent-map.h.  */
 
 void
-parent_map_map::dump () const
+parent_map_map::dump (dwarf2_per_bfd *per_bfd) const
 {
   for (const auto &iter : m_maps)
     {
       gdb_printf (gdb_stdlog, "map start:\n");
-      dump_parent_map (iter);
+      dump_parent_map (per_bfd, iter);
     }
 }
 
@@ -4898,7 +4920,7 @@ private:
     if (dwarf_read_debug > 1)
       {
 	dwarf_read_debug_printf_v ("Final m_all_parents_map:");
-	m_all_parents_map.dump ();
+	m_all_parents_map.dump (m_per_objfile->per_bfd);
       }
   }
 
@@ -16457,8 +16479,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
 	     with a NULL result when when we see a reference to a
 	     DIE in another CU that we may or may not have
 	     imported locally.  */
-	  parent_map::addr_type addr
-	    = parent_map::form_addr (origin_offset, origin_is_dwz);
+	  parent_map::addr_type addr = parent_map::form_addr (new_info_ptr);
 	  if (new_reader->cu != reader->cu || new_info_ptr > watermark_ptr)
 	    *maybe_defer = addr;
 	  else
@@ -16597,11 +16618,10 @@ cooked_indexer::recurse (cutu_reader *reader,
       /* Both start and end are inclusive, so use both "+ 1" and "- 1" to
 	 limit the range to the children of parent_entry.  */
       parent_map::addr_type start
-	= parent_map::form_addr (parent_entry->die_offset + 1,
-				 reader->cu->per_cu->is_dwz);
-      parent_map::addr_type end
-	= parent_map::form_addr (sect_offset (info_ptr - 1 - reader->buffer),
-				 reader->cu->per_cu->is_dwz);
+	= parent_map::form_addr (reader->buffer
+				 + to_underlying (parent_entry->die_offset)
+				 + 1);
+      parent_map::addr_type end = parent_map::form_addr (info_ptr - 1);
       m_die_range_map->add_entry (start, end, parent_entry);
     }
 
