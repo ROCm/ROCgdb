@@ -7757,6 +7757,33 @@ parse_insn (const char *line, char *mnemonic, enum parse_mode mode)
 	  else if (pp.disp_encoding != disp_encoding_32bit)
 	    as_warn (_("ignoring `.d32' suffix due to earlier `{disp<N>}'"));
 	}
+#ifdef TE_SOLARIS
+      /* Sun specifies an alternative form for CMOVcc: Size suffix (if any)
+	 first, then a dot, then the condition code mnemonic.  */
+      else if ((mnemonic + 4 == dot_p
+		&& !memcmp (mnemonic, "cmov", 4))
+	       /* While doc doesn't say so, gcc assumes it: Same for FCMOVcc,
+		  except that there's no size suffix to care about.  */
+	       || (mnemonic + 5 == dot_p
+		   && !memcmp (mnemonic, "fcmov", 5)))
+	{
+	  /* Simply strip the dot.  */
+	  memmove (dot_p, dot_p + 1, mnem_p - dot_p);
+	  dot_p = mnem_p - 1;
+	}
+      else if (!intel_syntax
+	       && mnemonic + 5 == dot_p
+	       && !memcmp (mnemonic, "cmov", 4)
+	       && strchr ("lqw", TOLOWER (dot_p[-1])))
+	{
+	  /* Strip the dot, while moving the suffix.  */
+	  char suffix = dot_p[-1];
+
+	  memmove (dot_p - 1, dot_p + 1, mnem_p - dot_p);
+	  mnem_p[-2] = suffix;
+	  dot_p = mnem_p - 1;
+	}
+#endif
       else
 	goto check_suffix;
       mnem_p = dot_p;
@@ -16711,11 +16738,14 @@ bool i386_record_operator (operatorT op,
 }
 #endif
 
+const char md_shortopts[] =
 #ifdef OBJ_ELF
-const char md_shortopts[] = "kVQ:sqnO::";
-#else
-const char md_shortopts[] = "qnO::";
+  "kVQ:"
+# ifdef TE_SOLARIS
+  "s"
+# endif
 #endif
+  "qnO::";
 
 #define OPTION_32 (OPTION_MD_BASE + 0)
 #define OPTION_64 (OPTION_MD_BASE + 1)
@@ -16839,10 +16869,12 @@ md_parse_option (int c, const char *arg)
     case 'k':
       break;
 
+# ifdef TE_SOLARIS
     case 's':
       /* -s: On i386 Solaris, this tells the native assembler to use
 	 .stab instead of .stab.excl.  We always use .stab anyhow.  */
       break;
+# endif
 
     case OPTION_MSHARED:
       shared = 1;
