@@ -1410,7 +1410,16 @@ gotrel[] =
 #else /* TE_PE */
     { STRING_COMMA_LEN ("SECREL32"), { BFD_RELOC_32_SECREL,
 				       BFD_RELOC_32_SECREL },
-    OPERAND_TYPE_IMM32_32S_64_DISP32_64, false },
+    OPERAND_TYPE_IMM32_32S_DISP32, false },
+    { STRING_COMMA_LEN ("SECIDX16"), { BFD_RELOC_16_SECIDX,
+				       BFD_RELOC_16_SECIDX },
+    { .bitfield = { .imm16 = 1, .disp16 = 1 } }, false },
+    { STRING_COMMA_LEN ("RVA"), { BFD_RELOC_RVA,
+				       BFD_RELOC_RVA },
+    OPERAND_TYPE_IMM32_32S_DISP32, false },
+    { STRING_COMMA_LEN ("IMGREL"), { BFD_RELOC_RVA,
+				       BFD_RELOC_RVA },
+    OPERAND_TYPE_IMM32_32S_DISP32, false },
 #endif
 
 #undef OPERAND_TYPE_IMM32_32S_DISP32
@@ -12186,7 +12195,8 @@ output_insn (const struct last_insn *last_insn)
       if (is_cpu (&i.tm, CpuXSAVEC))
 	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVEC;
 
-      if (x86_feature_2_used
+      if (object_64bit
+	  || x86_feature_2_used
 	  || is_cpu (&i.tm, CpuCMOV)
 	  || is_cpu (&i.tm, CpuSYSCALL)
 	  || i.tm.mnem_off == MN_cmpxchg8b)
@@ -13127,7 +13137,11 @@ x86_cons (expressionS *exp, int size)
   expr_mode = expr_operator_none;
 
 #if defined (OBJ_ELF) || defined (TE_PE)
-  if (size == 4 || (object_64bit && size == 8))
+  if (size == 4
+# ifdef TE_PE
+      || (size == 2)
+# endif
+      || (object_64bit && size == 8))
     {
       /* Handle @GOTOFF and the like in an expression.  */
       char *save;
