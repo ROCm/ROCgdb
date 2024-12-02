@@ -2526,33 +2526,6 @@ struct elf_aarch64_local_symbol
   bfd_vma tlsdesc_got_jump_table_offset;
 };
 
-struct elf_aarch64_obj_tdata
-{
-  struct elf_obj_tdata root;
-
-  /* local symbol descriptors */
-  struct elf_aarch64_local_symbol *locals;
-
-  /* Zero to warn when linking objects with incompatible enum sizes.  */
-  int no_enum_size_warning;
-
-  /* Zero to warn when linking objects with incompatible wchar_t sizes.  */
-  int no_wchar_size_warning;
-
-  /* All GNU_PROPERTY_AARCH64_FEATURE_1_AND properties.  */
-  uint32_t gnu_and_prop;
-
-  /* Zero to warn when linking objects with incompatible
-     GNU_PROPERTY_AARCH64_FEATURE_1_BTI.  */
-  int no_bti_warn;
-
-  /* PLT type based on security.  */
-  aarch64_plt_type plt_type;
-};
-
-#define elf_aarch64_tdata(bfd)				\
-  ((struct elf_aarch64_obj_tdata *) (bfd)->tdata.any)
-
 #define elf_aarch64_locals(bfd) (elf_aarch64_tdata (bfd)->locals)
 
 #define is_aarch64_elf(bfd)				\
@@ -3468,8 +3441,8 @@ aarch64_size_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
 static bool
 elf_aarch64_bti_p (bfd *output_bfd)
 {
-  uint32_t prop = elf_aarch64_tdata (output_bfd)->gnu_and_prop;
-  return prop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+  return elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
+       & GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 }
 
 /* External entry points for sizing and building linker stubs.  */
@@ -5024,7 +4997,7 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
 			       int fix_erratum_835769,
 			       erratum_84319_opts fix_erratum_843419,
 			       int no_apply_dynamic_relocs,
-			       aarch64_bti_pac_info bp_info)
+			       const aarch64_protection_opts *sw_protections)
 {
   struct elf_aarch64_link_hash_table *globals;
 
@@ -5041,19 +5014,32 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   elf_aarch64_tdata (output_bfd)->no_enum_size_warning = no_enum_warn;
   elf_aarch64_tdata (output_bfd)->no_wchar_size_warning = no_wchar_warn;
 
-  switch (bp_info.bti_type)
-    {
-    case BTI_WARN:
-      elf_aarch64_tdata (output_bfd)->no_bti_warn = 0;
-      elf_aarch64_tdata (output_bfd)->gnu_and_prop
-	|= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      break;
+  /* Note: gnu_property_aarch64_feature_1_and was initialized to 0 by
+     bfd_zalloc().  */
+  if (sw_protections->plt_type & PLT_BTI)
+    elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
+      |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
-    default:
+  switch (sw_protections->gcs_type)
+    {
+    case GCS_ALWAYS:
+      elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
+	|= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      break;
+    case GCS_NEVER:
+      elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
+	&= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      break;
+    case GCS_IMPLICIT:
+      /* GCS feature on the output bfd will be deduced from input objects.  */
       break;
     }
-  elf_aarch64_tdata (output_bfd)->plt_type = bp_info.plt_type;
-  setup_plt_values (link_info, bp_info.plt_type);
+
+  elf_aarch64_tdata (output_bfd)->sw_protections = *sw_protections;
+  elf_aarch64_tdata (output_bfd)->n_bti_issues = 0;
+  elf_aarch64_tdata (output_bfd)->n_gcs_issues = 0;
+
+  setup_plt_values (link_info, sw_protections->plt_type);
 }
 
 static bfd_vma
@@ -9857,16 +9843,18 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	      && !add_dynamic_entry (DT_AARCH64_VARIANT_PCS, 0))
 	    return false;
 
-	  if ((elf_aarch64_tdata (output_bfd)->plt_type == PLT_BTI_PAC)
+	  aarch64_plt_type plt_type
+	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
+	  if ((plt_type == PLT_BTI_PAC)
 	      && (!add_dynamic_entry (DT_AARCH64_BTI_PLT, 0)
 		  || !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0)))
 	    return false;
 
-	  else if ((elf_aarch64_tdata (output_bfd)->plt_type == PLT_BTI)
+	  else if ((plt_type == PLT_BTI)
 		   && !add_dynamic_entry (DT_AARCH64_BTI_PLT, 0))
 	    return false;
 
-	  else if ((elf_aarch64_tdata (output_bfd)->plt_type == PLT_PAC)
+	  else if ((plt_type == PLT_PAC)
 		   && !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0))
 	    return false;
 	}
@@ -9950,7 +9938,7 @@ elfNN_aarch64_create_small_pltn_entry (struct elf_link_hash_entry *h,
 
   /* First instruction in BTI enabled PLT stub is a BTI
      instruction so skip it.  */
-  if (elf_aarch64_tdata (output_bfd)->plt_type & PLT_BTI
+  if (elf_aarch64_tdata (output_bfd)->sw_protections.plt_type & PLT_BTI
       && elf_elfheader (output_bfd)->e_type == ET_EXEC)
     plt_entry = plt_entry + 4;
 
@@ -10278,7 +10266,7 @@ elfNN_aarch64_init_small_plt0_entry (bfd *output_bfd ATTRIBUTE_UNUSED,
   /* First instruction in BTI enabled PLT stub is a BTI
      instruction so skip it.  */
   bfd_byte *plt0_entry = htab->root.splt->contents;
-  if (elf_aarch64_tdata (output_bfd)->plt_type & PLT_BTI)
+  if (elf_aarch64_tdata (output_bfd)->sw_protections.plt_type & PLT_BTI)
     plt0_entry = plt0_entry + 4;
 
   /* Fill in the top 21 bits for this: ADRP x16, PLT_GOT + n * 8.
@@ -10377,7 +10365,8 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	  const bfd_byte *entry = elfNN_aarch64_tlsdesc_small_plt_entry;
 	  htab->tlsdesc_plt_entry_size = PLT_TLSDESC_ENTRY_SIZE;
 
-	  aarch64_plt_type type = elf_aarch64_tdata (output_bfd)->plt_type;
+	  aarch64_plt_type type
+	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
 	  if (type == PLT_BTI || type == PLT_BTI_PAC)
 	    {
 	      entry = elfNN_aarch64_tlsdesc_small_plt_bti_entry;
@@ -10543,7 +10532,7 @@ elfNN_aarch64_get_synthetic_symtab (bfd *abfd,
 				    asymbol **dynsyms,
 				    asymbol **ret)
 {
-  elf_aarch64_tdata (abfd)->plt_type = get_plt_type (abfd);
+  elf_aarch64_tdata (abfd)->sw_protections.plt_type = get_plt_type (abfd);
   return _bfd_elf_get_synthetic_symtab (abfd, symcount, syms,
 					dynsymcount, dynsyms, ret);
 }
@@ -10558,19 +10547,21 @@ elfNN_aarch64_plt_sym_val (bfd_vma i, const asection *plt,
   size_t plt0_size = PLT_ENTRY_SIZE;
   size_t pltn_size = PLT_SMALL_ENTRY_SIZE;
 
-  if (elf_aarch64_tdata (plt->owner)->plt_type == PLT_BTI_PAC)
+  aarch64_plt_type plt_type
+    = elf_aarch64_tdata (plt->owner)->sw_protections.plt_type;
+  if (plt_type == PLT_BTI_PAC)
     {
       if (elf_elfheader (plt->owner)->e_type == ET_EXEC)
 	pltn_size = PLT_BTI_PAC_SMALL_ENTRY_SIZE;
       else
 	pltn_size = PLT_PAC_SMALL_ENTRY_SIZE;
     }
-  else if (elf_aarch64_tdata (plt->owner)->plt_type == PLT_BTI)
+  else if (plt_type == PLT_BTI)
     {
       if (elf_elfheader (plt->owner)->e_type == ET_EXEC)
 	pltn_size = PLT_BTI_SMALL_ENTRY_SIZE;
     }
-  else if (elf_aarch64_tdata (plt->owner)->plt_type == PLT_PAC)
+  else if (plt_type == PLT_PAC)
     {
       pltn_size = PLT_PAC_SMALL_ENTRY_SIZE;
     }
@@ -10618,12 +10609,20 @@ elfNN_aarch64_backend_symbol_processing (bfd *abfd, asymbol *sym)
 static bfd *
 elfNN_aarch64_link_setup_gnu_properties (struct bfd_link_info *info)
 {
-  uint32_t prop = elf_aarch64_tdata (info->output_bfd)->gnu_and_prop;
-  bfd *pbfd = _bfd_aarch64_elf_link_setup_gnu_properties (info, &prop);
-  elf_aarch64_tdata (info->output_bfd)->gnu_and_prop = prop;
-  elf_aarch64_tdata (info->output_bfd)->plt_type
-    |= (prop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ? PLT_BTI : 0;
-  setup_plt_values (info, elf_aarch64_tdata (info->output_bfd)->plt_type);
+  bfd *pbfd = _bfd_aarch64_elf_link_setup_gnu_properties (info);
+
+  /* When BTI is forced on the command line, information flows from plt_type to
+     outprop, so plt_type has already been set and outprop don't have any effect
+     on plt_type.
+     Whereas if BTI is inferred from the input bfds, information flows from
+     outprop to plt_type.  If the property GNU_PROPERTY_AARCH64_FEATURE_1_BTI
+     has been set on all the input bfds, then BTI is set on the output bfd and
+     plt_type is updated accordingly.  */
+  struct elf_aarch64_obj_tdata * tdata = elf_aarch64_tdata (info->output_bfd);
+  uint32_t outprop = tdata->gnu_property_aarch64_feature_1_and;
+  if (outprop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+    tdata->sw_protections.plt_type |= PLT_BTI;
+  setup_plt_values (info, tdata->sw_protections.plt_type);
   return pbfd;
 }
 
@@ -10636,36 +10635,45 @@ elfNN_aarch64_merge_gnu_properties (struct bfd_link_info *info,
 				       elf_property *aprop,
 				       elf_property *bprop)
 {
-  uint32_t prop
-    = elf_aarch64_tdata (info->output_bfd)->gnu_and_prop;
+  uint32_t outprop
+    = elf_aarch64_tdata (info->output_bfd)->gnu_property_aarch64_feature_1_and;
 
-  /* If output has been marked with BTI using command line argument, give out
-     warning if necessary.  */
   /* Properties are merged per type, hence only check for warnings when merging
      GNU_PROPERTY_AARCH64_FEATURE_1_AND.  */
-  if (((aprop && aprop->pr_type == GNU_PROPERTY_AARCH64_FEATURE_1_AND)
-	|| (bprop && bprop->pr_type == GNU_PROPERTY_AARCH64_FEATURE_1_AND))
-      && (prop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-      && (!elf_aarch64_tdata (info->output_bfd)->no_bti_warn))
+  if ((aprop && aprop->pr_type == GNU_PROPERTY_AARCH64_FEATURE_1_AND)
+   || (bprop && bprop->pr_type == GNU_PROPERTY_AARCH64_FEATURE_1_AND))
     {
-      if ((aprop && !(aprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_BTI))
-	   || !aprop)
+      const aarch64_protection_opts *sw_protections
+	= &elf_aarch64_tdata (info->output_bfd)->sw_protections;
+      aarch64_feature_marking_report bti_report = sw_protections->bti_report;
+      aarch64_feature_marking_report gcs_report = sw_protections->gcs_report;
+
+      /* If output has been marked with BTI using command line argument, give
+	 out warning if necessary.  */
+      if ((outprop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+	  && (bti_report != MARKING_NONE))
 	{
-	  _bfd_error_handler (_("%pB: warning: BTI turned on by -z force-bti when "
-				"all inputs do not have BTI in NOTE section."),
-			      abfd);
+	  if (!aprop || !(aprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_BTI))
+	    _bfd_aarch64_elf_check_bti_report (info, abfd);
+	  if (!bprop || !(bprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_BTI))
+	    _bfd_aarch64_elf_check_bti_report (info, bbfd);
 	}
-      if ((bprop && !(bprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_BTI))
-	   || !bprop)
+
+      /* If the output has been marked with GCS using '-z gcs' and the input is
+	 missing GCS feature tag, throw a warning/error in accordance with
+	 -z gcs-report=warning/error.  */
+      if ((outprop & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+	  && gcs_report != MARKING_NONE)
 	{
-	  _bfd_error_handler (_("%pB: warning: BTI turned on by -z force-bti when "
-				"all inputs do not have BTI in NOTE section."),
-			      bbfd);
+	  if (!aprop || !(aprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_GCS))
+	    _bfd_aarch64_elf_check_gcs_report (info, abfd);
+	  if (!bprop || !(bprop->u.number & GNU_PROPERTY_AARCH64_FEATURE_1_GCS))
+	    _bfd_aarch64_elf_check_gcs_report (info, bbfd);
 	}
     }
 
   return  _bfd_aarch64_elf_merge_gnu_properties (info, abfd, aprop,
-						 bprop, prop);
+						 bprop, outprop);
 }
 
 /* We use this so we can override certain functions
