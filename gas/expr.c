@@ -193,17 +193,6 @@ expr_build_uconstant (offsetT value)
   e.X_extrabit = 0;
   return make_expr_symbol (&e);
 }
-
-/* Build an expression for the current location ('.').  */
-
-symbolS *
-expr_build_dot (void)
-{
-  expressionS e;
-
-  current_location (&e);
-  return symbol_clone_if_forward_ref (make_expr_symbol (&e));
-}
 
 /* Build any floating-point literal here.
    Also build any bignum literal here.  */
@@ -739,7 +728,7 @@ mri_char_constant (expressionS *expressionP)
    handles the magic symbol `.'.  */
 
 void
-current_location (expressionS *expressionp)
+current_location (expressionS *expressionp, enum expr_mode mode)
 {
   if (now_seg == absolute_section)
     {
@@ -749,9 +738,35 @@ current_location (expressionS *expressionp)
   else
     {
       expressionp->X_op = O_symbol;
-      expressionp->X_add_symbol = &dot_symbol;
+      if (mode != expr_defer)
+	{
+	  expressionp->X_add_symbol = symbol_temp_new_now ();
+#ifdef tc_new_dot_label
+	  tc_new_dot_label (expressionp->X_add_symbol);
+#endif
+	}
+      else
+	  expressionp->X_add_symbol = &dot_symbol;
       expressionp->X_add_number = 0;
     }
+}
+
+/* Make a symbol for the current location ('.').  */
+
+symbolS *
+expr_build_dot (void)
+{
+  if (now_seg != absolute_section)
+    {
+      symbolS *symbolP = symbol_temp_new_now ();
+
+#ifdef tc_new_dot_label
+      tc_new_dot_label (symbolP);
+#endif
+      return symbolP;
+    }
+
+  return expr_build_uconstant (abs_section_offset);
 }
 
 #ifndef md_register_arithmetic
@@ -1208,14 +1223,14 @@ operand (expressionS *expressionP, enum expr_mode mode)
       if (is_part_of_name (*input_line_pointer))
 	goto isname;
 
-      current_location (expressionP);
+      current_location (expressionP, mode);
       break;
 #endif
 
     case '.':
       if (!is_part_of_name (*input_line_pointer))
 	{
-	  current_location (expressionP);
+	  current_location (expressionP, mode);
 	  break;
 	}
       else if ((strncasecmp (input_line_pointer, "startof.", 8) == 0
@@ -1302,7 +1317,7 @@ operand (expressionS *expressionP, enum expr_mode mode)
       if (! flag_m68k_mri || is_part_of_name (*input_line_pointer))
 	goto de_fault;
 
-      current_location (expressionP);
+      current_location (expressionP, mode);
       break;
 #endif
 
