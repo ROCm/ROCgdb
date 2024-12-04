@@ -2091,6 +2091,17 @@ python_command (const char *arg, int from_tty)
 
 #endif /* HAVE_PYTHON */
 
+/* Stand-in for Py_IsInitialized ().  To be used because after a python fatal
+   error, no calls into Python are allowed.  */
+
+static bool py_isinitialized = false;
+
+/* Variables to hold the effective values of "python ignore-environment" and
+   "python dont-write-bytecode" at Python initialization.  */
+
+static bool python_ignore_environment_at_python_initialization;
+static bool python_dont_write_bytecode_at_python_initialization;
+
 /* When this is turned on before Python is initialised then Python will
    ignore any environment variables related to Python.  This is equivalent
    to passing `-E' to the python program.  */
@@ -2115,20 +2126,31 @@ static void
 set_python_ignore_environment (const char *args, int from_tty,
 			       struct cmd_list_element *c)
 {
-#ifdef HAVE_PYTHON
-  /* Py_IgnoreEnvironmentFlag is deprecated in Python 3.12.  Disable
-     its usage in Python 3.10 and above since the PyConfig mechanism
-     is now (also) used in 3.10 and higher.  See do_start_initialization()
-     in this file.  */
-#if PY_VERSION_HEX < 0x030a0000
-  Py_IgnoreEnvironmentFlag = python_ignore_environment ? 1 : 0;
-#endif
-#endif
+  if (py_isinitialized)
+    {
+      python_ignore_environment
+	= python_ignore_environment_at_python_initialization;
+
+      warning (_("Setting python ignore-environment after Python"
+		 " initialization has no effect, try setting this during"
+		 " early initialization"));
+    }
 }
 
 /* When this is turned on before Python is initialised then Python will
    not write `.pyc' files on import of a module.  */
 static enum auto_boolean python_dont_write_bytecode = AUTO_BOOLEAN_AUTO;
+
+
+/* Return true if environment variable PYTHONDONTWRITEBYTECODE is set to a
+   non-empty string.  */
+
+static bool
+env_python_dont_write_bytecode ()
+{
+  const char *envvar = getenv ("PYTHONDONTWRITEBYTECODE");
+  return envvar != nullptr && envvar[0] != '\0';
+}
 
 /* Implement 'show python dont-write-bytecode'.  */
 
@@ -2139,8 +2161,10 @@ show_python_dont_write_bytecode (struct ui_file *file, int from_tty,
   if (python_dont_write_bytecode == AUTO_BOOLEAN_AUTO)
     {
       const char *auto_string
-	= (python_ignore_environment
-	   || getenv ("PYTHONDONTWRITEBYTECODE") == nullptr) ? "off" : "on";
+	= ((python_ignore_environment
+	    || !env_python_dont_write_bytecode ())
+	   ? "off"
+	   : "on");
 
       gdb_printf (file,
 		  _("Python's dont-write-bytecode setting is %s (currently %s).\n"),
@@ -2166,10 +2190,7 @@ python_write_bytecode ()
       if (python_ignore_environment)
 	wbc = 1;
       else
-	{
-	  const char *pdwbc = getenv ("PYTHONDONTWRITEBYTECODE");
-	  wbc = (pdwbc == nullptr || pdwbc[0] == '\0') ? 1 : 0;
-	}
+	wbc = env_python_dont_write_bytecode () ? 0 : 1;
     }
   else
     wbc = python_dont_write_bytecode == AUTO_BOOLEAN_TRUE ? 0 : 1;
@@ -2187,15 +2208,18 @@ static void
 set_python_dont_write_bytecode (const char *args, int from_tty,
 				struct cmd_list_element *c)
 {
-#ifdef HAVE_PYTHON
-  /* Py_DontWriteBytecodeFlag is deprecated in Python 3.12.  Disable
-     its usage in Python 3.10 and above since the PyConfig mechanism
-     is now (also) used in 3.10 and higher.  See do_start_initialization()
-     in this file.  */
-#if PY_VERSION_HEX < 0x030a0000
-  Py_DontWriteBytecodeFlag = !python_write_bytecode ();
-#endif
-#endif /* HAVE_PYTHON */
+  if (py_isinitialized)
+    {
+      python_dont_write_bytecode
+	= (python_dont_write_bytecode_at_python_initialization
+	   ? AUTO_BOOLEAN_TRUE
+	   : AUTO_BOOLEAN_FALSE);
+
+      warning (_("Setting python dont-write-bytecode after Python"
+		 " initialization has no effect, try setting this during"
+		 " early initialization, or try setting"
+		 " sys.dont_write_bytecode"));
+    }
 }
 
 
@@ -2300,6 +2324,7 @@ gdbpy_gdb_exiting (int exit_code)
     gdbpy_print_stack ();
 }
 
+#if PY_VERSION_HEX < 0x030a0000
 /* Signal handler to convert a SIGABRT into an exception.  */
 
 static void
@@ -2310,15 +2335,10 @@ catch_python_fatal (int signum)
   throw_exception_sjlj (gdb_exception {RETURN_ERROR, GENERIC_ERROR});
 }
 
-/* Stand-in for Py_IsInitialized ().  To be used because after a python fatal
-   error, no calls into Python are allowed.  */
-
-static bool py_isinitialized = false;
-
 /* Call Py_Initialize (), and return true if successful.   */
 
-static bool ATTRIBUTE_UNUSED
-py_initialize ()
+static bool
+py_initialize_catch_abort ()
 {
   auto prev_handler = signal (SIGABRT, catch_python_fatal);
   SCOPE_EXIT { signal (SIGABRT, prev_handler); };
@@ -2335,21 +2355,40 @@ py_initialize ()
 
   return py_isinitialized;
 }
+#endif
+
+/* Initialize python, either by calling Py_Initialize or
+   Py_InitializeFromConfig, and return true if successful.  */
 
 static bool
-do_start_initialization ()
+py_initialize ()
 {
-  /* Define all internal modules.  These are all imported (and thus
-     created) during initialization.  */
-  struct _inittab mods[] =
-  {
-    { "_gdb", init__gdb_module },
-    { "_gdbevents", gdbpy_events_mod_func },
-    { nullptr, nullptr }
-  };
+  /* Sample values at Python initialization.  */
+  python_dont_write_bytecode_at_python_initialization
+    = !python_write_bytecode ();
+  python_ignore_environment_at_python_initialization
+    =  python_ignore_environment;
 
-  if (PyImport_ExtendInittab (mods) < 0)
-    return false;
+  /* Don't show "python dont-write-bytecode auto" after Python
+     initialization.  */
+  python_dont_write_bytecode
+    = (python_dont_write_bytecode_at_python_initialization
+       ? AUTO_BOOLEAN_TRUE
+       : AUTO_BOOLEAN_FALSE);
+
+#if PY_VERSION_HEX < 0x030a0000
+  /* Python documentation indicates that the memory given
+     to Py_SetProgramName cannot be freed.  However, it seems that
+     at least Python 3.7.4 Py_SetProgramName takes a copy of the
+     given program_name.  Making progname_copy static and not release
+     the memory avoids a leak report for Python versions that duplicate
+     program_name, and respect the requirement of Py_SetProgramName
+     for Python versions that do not duplicate program_name.  */
+  static wchar_t *progname_copy = nullptr;
+#else
+  wchar_t *progname_copy = nullptr;
+  SCOPE_EXIT { XDELETEVEC (progname_copy); };
+#endif
 
 #ifdef WITH_PYTHON_PATH
   /* Work around problem where python gets confused about where it is,
@@ -2361,14 +2400,6 @@ do_start_initialization ()
   gdb::unique_xmalloc_ptr<char> progname
     (concat (ldirname (python_libdir.c_str ()).c_str (), SLASH_STRING, "bin",
 	      SLASH_STRING, "python", (char *) NULL));
-  /* Python documentation indicates that the memory given
-     to Py_SetProgramName cannot be freed.  However, it seems that
-     at least Python 3.7.4 Py_SetProgramName takes a copy of the
-     given program_name.  Making progname_copy static and not release
-     the memory avoids a leak report for Python versions that duplicate
-     program_name, and respect the requirement of Py_SetProgramName
-     for Python versions that do not duplicate program_name.  */
-  static wchar_t *progname_copy;
 
   {
     std::string oldloc = setlocale (LC_ALL, NULL);
@@ -2384,6 +2415,7 @@ do_start_initialization ()
 	return false;
       }
   }
+#endif
 
   /* Py_SetProgramName was deprecated in Python 3.11.  Use PyConfig
      mechanisms for Python 3.10 and newer.  */
@@ -2391,20 +2423,28 @@ do_start_initialization ()
   /* Note that Py_SetProgramName expects the string it is passed to
      remain alive for the duration of the program's execution, so
      it is not freed after this call.  */
-  Py_SetProgramName (progname_copy);
-  if (!py_initialize ())
-    return false;
+  if (progname_copy != nullptr)
+    Py_SetProgramName (progname_copy);
+  Py_DontWriteBytecodeFlag
+    = python_dont_write_bytecode_at_python_initialization;
+  Py_IgnoreEnvironmentFlag
+    = python_ignore_environment_at_python_initialization ? 1 : 0;
+  return py_initialize_catch_abort ();
 #else
   PyConfig config;
 
   PyConfig_InitPythonConfig (&config);
-  PyStatus status = PyConfig_SetString (&config, &config.program_name,
-					progname_copy);
-  if (PyStatus_Exception (status))
-    goto init_done;
+  PyStatus status;
+  if (progname_copy != nullptr)
+    {
+      status = PyConfig_SetString (&config, &config.program_name,
+				   progname_copy);
+      if (PyStatus_Exception (status))
+	goto init_done;
+    }
 
-  config.write_bytecode = python_write_bytecode ();
-  config.use_environment = !python_ignore_environment;
+  config.write_bytecode = !python_dont_write_bytecode_at_python_initialization;
+  config.use_environment = !python_ignore_environment_at_python_initialization;
 
   status = PyConfig_Read (&config);
   if (PyStatus_Exception (status))
@@ -2423,12 +2463,29 @@ init_done:
 		    status.exitcode);
       return false;
     }
+
   py_isinitialized = true;
+  return true;
 #endif
-#else
+}
+
+static bool
+do_start_initialization ()
+{
+  /* Define all internal modules.  These are all imported (and thus
+     created) during initialization.  */
+  struct _inittab mods[] =
+  {
+    { "_gdb", init__gdb_module },
+    { "_gdbevents", gdbpy_events_mod_func },
+    { nullptr, nullptr }
+  };
+
+  if (PyImport_ExtendInittab (mods) < 0)
+    return false;
+
   if (!py_initialize ())
     return false;
-#endif
 
 #if PY_VERSION_HEX < 0x03090000
   /* PyEval_InitThreads became deprecated in Python 3.9 and will
@@ -2762,6 +2819,39 @@ do_initialize (const struct extension_language_defn *extlang)
   return gdb_pymodule_addobject (m, "gdb", gdb_python_module) >= 0;
 }
 
+/* Emit warnings in case python initialization has failed.  */
+
+static void
+python_initialization_failed_warnings ()
+{
+  const char *pythonhome = nullptr;
+  const char *pythonpath = nullptr;
+
+  if (!python_ignore_environment)
+    {
+      pythonhome = getenv ("PYTHONHOME");
+      pythonpath = getenv ("PYTHONPATH");
+    }
+
+  bool have_pythonhome
+    = pythonhome != nullptr && pythonhome[0] != '\0';
+  bool have_pythonpath
+    = pythonpath != nullptr && pythonpath[0] != '\0';
+
+  if (have_pythonhome)
+    warning (_("Python failed to initialize with PYTHONHOME set.  Maybe"
+	       " because it is set incorrectly? Maybe because it points to"
+	       " incompatible standard libraries? Consider changing or"
+	       " unsetting it, or ignoring it using \"set python"
+	       " ignore-environment on\" at early initialization."));
+
+  if (have_pythonpath)
+    warning (_("Python failed to initialize with PYTHONPATH set.  Maybe because"
+	       " it points to incompatible modules? Consider changing or"
+	       " unsetting it, or ignoring it using \"set python"
+	       " ignore-environment on\" at early initialization."));
+}
+
 /* Perform Python initialization.  This will be called after GDB has
    performed all of its own initialization.  This is the
    extension_language_ops.initialize "method".  */
@@ -2780,6 +2870,8 @@ gdbpy_initialize (const struct extension_language_defn *extlang)
 	     ASAP.  */
 	  Py_Finalize ();
 	}
+      else
+	python_initialization_failed_warnings ();
 
       /* Continue with python disabled.  */
       return;
