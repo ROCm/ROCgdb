@@ -927,14 +927,14 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   char *label = NULL;
   char *source = NULL;
   char *function = NULL;
-  PyObject * qualified = NULL;
+  PyObject *qualified = Py_False;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|siiOOsssOO", keywords,
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|siiOOsssOO!", keywords,
 					&spec, &type, &access_type,
 					&internal,
 					&temporary, &source,
 					&function, &label, &lineobj,
-					&qualified))
+					&PyBool_Type, &qualified))
     return -1;
 
 
@@ -982,10 +982,11 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	case bp_hardware_breakpoint:
 	  {
 	    location_spec_up locspec;
+	    gdb_assert (PyBool_Check (qualified));
 	    symbol_name_match_type func_name_match_type
-	      = (qualified != NULL && PyObject_IsTrue (qualified)
-		  ? symbol_name_match_type::FULL
-		  : symbol_name_match_type::WILD);
+	      = (qualified == Py_True
+		 ? symbol_name_match_type::FULL
+		 : symbol_name_match_type::WILD);
 
 	    if (spec != NULL)
 	      {
@@ -1689,7 +1690,7 @@ bplocpy_get_thread_groups (PyObject *py_self, void *closure)
 	  gdbpy_ref<> num = gdb_py_object_from_ulongest (inf->num);
 	  if (num == nullptr)
 	    return nullptr;
-	  if (PyList_Append (list.get (), num.release ()) != 0)
+	  if (PyList_Append (list.get (), num.get ()) != 0)
 	    return nullptr;
 	}
     }

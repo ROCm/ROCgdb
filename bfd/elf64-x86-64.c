@@ -629,7 +629,7 @@ static const bfd_byte elf_x86_64_lazy_bnd_plt_entry[LAZY_PLT_ENTRY_SIZE] =
    entries for a IBT-enabled lazy procedure linkage table look like
    this.  */
 
-static const bfd_byte elf_x86_64_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
+static const bfd_byte elf_x86_64_lazy_bnd_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
 {
   0xf3, 0x0f, 0x1e, 0xfa,	/* endbr64		      */
   0x68, 0, 0, 0, 0,		/* pushq immediate	      */
@@ -637,11 +637,11 @@ static const bfd_byte elf_x86_64_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
   0x90				/* nop			      */
 };
 
-/* The first entry in the x32 IBT-enabled lazy procedure linkage table
+/* The first entry in the IBT-enabled lazy procedure linkage table
    is the same as the normal lazy PLT.  Subsequent entries for an
-   x32 IBT-enabled lazy procedure linkage table look like this.  */
+   IBT-enabled lazy procedure linkage table look like this.  */
 
-static const bfd_byte elf_x32_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
+static const bfd_byte elf_x86_64_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
 {
   0xf3, 0x0f, 0x1e, 0xfa,	/* endbr64		      */
   0x68, 0, 0, 0, 0,		/* pushq immediate	      */
@@ -668,11 +668,11 @@ static const bfd_byte elf_x86_64_non_lazy_bnd_plt_entry[NON_LAZY_PLT_ENTRY_SIZE]
   0x90		     /* nop					      */
 };
 
-/* Entries for branches with IBT-enabled in the non-lazey procedure
-   linkage table look like this.  They have the same size as the lazy
-   PLT entry.  */
+/* Entries for IBT-enabled branches with BND prefix in the non-lazey
+   procedure linkage table look like this.  They have the same size as
+   the lazy PLT entry.  */
 
-static const bfd_byte elf_x86_64_non_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
+static const bfd_byte elf_x86_64_non_lazy_bnd_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
 {
   0xf3, 0x0f, 0x1e, 0xfa,	/* endbr64		       */
   0xf2, 0xff, 0x25,		/* bnd jmpq *name@GOTPC(%rip)  */
@@ -680,11 +680,11 @@ static const bfd_byte elf_x86_64_non_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
   0x0f, 0x1f, 0x44, 0x00, 0x00	/* nopl 0x0(%rax,%rax,1)       */
 };
 
-/* Entries for branches with IBT-enabled in the x32 non-lazey procedure
+/* Entries for branches with IBT-enabled in the non-lazey procedure
    linkage table look like this.  They have the same size as the lazy
    PLT entry.  */
 
-static const bfd_byte elf_x32_non_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
+static const bfd_byte elf_x86_64_non_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
 {
   0xf3, 0x0f, 0x1e, 0xfa,	     /* endbr64		       */
   0xff, 0x25,			     /* jmpq *name@GOTPC(%rip) */
@@ -770,9 +770,10 @@ static const bfd_byte elf_x86_64_eh_frame_lazy_bnd_plt[] =
   DW_CFA_nop, DW_CFA_nop, DW_CFA_nop, DW_CFA_nop
 };
 
-/* .eh_frame covering the lazy .plt section with IBT-enabled.  */
+/* .eh_frame covering the lazy .plt section with IBT-enabled and BND
+   prefix.  */
 
-static const bfd_byte elf_x86_64_eh_frame_lazy_ibt_plt[] =
+static const bfd_byte elf_x86_64_eh_frame_lazy_bnd_ibt_plt[] =
 {
   PLT_CIE_LENGTH, 0, 0, 0,	/* CIE length */
   0, 0, 0, 0,			/* CIE ID */
@@ -805,9 +806,9 @@ static const bfd_byte elf_x86_64_eh_frame_lazy_ibt_plt[] =
   DW_CFA_nop, DW_CFA_nop, DW_CFA_nop, DW_CFA_nop
 };
 
-/* .eh_frame covering the x32 lazy .plt section with IBT-enabled.  */
+/* .eh_frame covering the lazy .plt section with IBT-enabled.  */
 
-static const bfd_byte elf_x32_eh_frame_lazy_ibt_plt[] =
+static const bfd_byte elf_x86_64_eh_frame_lazy_ibt_plt[] =
 {
   PLT_CIE_LENGTH, 0, 0, 0,	/* CIE length */
   0, 0, 0, 0,			/* CIE ID */
@@ -906,6 +907,14 @@ static const sframe_frame_row_entry elf_x86_64_sframe_pltn_fre2 =
   SFRAME_V1_FRE_INFO (SFRAME_BASE_REG_SP, 1, SFRAME_FRE_OFFSET_1B) /* FRE info.  */
 };
 
+/* .sframe FRE covering the .plt section entry for IBT.  */
+static const sframe_frame_row_entry elf_x86_64_sframe_ibt_pltn_fre2 =
+{
+  9, /* SFrame FRE start address.  */
+  {16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* 12 bytes.  */
+  SFRAME_V1_FRE_INFO (SFRAME_BASE_REG_SP, 1, SFRAME_FRE_OFFSET_1B) /* FRE info.  */
+};
+
 /* .sframe FRE covering the second .plt section entry.  */
 static const sframe_frame_row_entry elf_x86_64_sframe_sec_pltn_fre1 =
 {
@@ -914,7 +923,7 @@ static const sframe_frame_row_entry elf_x86_64_sframe_sec_pltn_fre1 =
   SFRAME_V1_FRE_INFO (SFRAME_BASE_REG_SP, 1, SFRAME_FRE_OFFSET_1B) /* FRE info.  */
 };
 
-/* SFrame helper object for non-lazy PLT.  Also used for IBT enabled PLT.  */
+/* SFrame helper object for non-lazy PLT.  */
 static const struct elf_x86_sframe_plt elf_x86_64_sframe_non_lazy_plt =
 {
   LAZY_PLT_ENTRY_SIZE,
@@ -927,10 +936,34 @@ static const struct elf_x86_sframe_plt elf_x86_64_sframe_non_lazy_plt =
   { &elf_x86_64_sframe_sec_pltn_fre1, &elf_x86_64_sframe_null_fre },
   0,
   0, /* There is no second PLT necessary.  */
-  { &elf_x86_64_sframe_null_fre }
+  { &elf_x86_64_sframe_null_fre },
+  NON_LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLT GOT.  */
+  /* Array of SFrame FREs for PLT GOT.  */
+  { &elf_x86_64_sframe_null_fre },
 };
 
-/* SFrame helper object for lazy PLT.  Also used for IBT enabled PLT.  */
+/* SFrame helper object for non-lazy IBT enabled PLT.  */
+static const struct elf_x86_sframe_plt elf_x86_64_sframe_non_lazy_ibt_plt =
+{
+  LAZY_PLT_ENTRY_SIZE,
+  2, /* Number of FREs for PLT0.  */
+  /* Array of SFrame FREs for plt0.  */
+  { &elf_x86_64_sframe_plt0_fre1, &elf_x86_64_sframe_plt0_fre2 },
+  LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLTn.  */
+  /* Array of SFrame FREs for plt.  */
+  { &elf_x86_64_sframe_sec_pltn_fre1, &elf_x86_64_sframe_null_fre },
+  0,
+  0, /* There is no second PLT necessary.  */
+  { &elf_x86_64_sframe_null_fre },
+  LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLT GOT.  */
+  /* Array of SFrame FREs for PLT GOT.  */
+  { &elf_x86_64_sframe_null_fre },
+};
+
+/* SFrame helper object for lazy PLT. */
 static const struct elf_x86_sframe_plt elf_x86_64_sframe_plt =
 {
   LAZY_PLT_ENTRY_SIZE,
@@ -942,10 +975,34 @@ static const struct elf_x86_sframe_plt elf_x86_64_sframe_plt =
   /* Array of SFrame FREs for plt.  */
   { &elf_x86_64_sframe_pltn_fre1, &elf_x86_64_sframe_pltn_fre2 },
   NON_LAZY_PLT_ENTRY_SIZE,
-  1, /* Number of FREs for PLTn for second PLT.  */
-  /* FREs for second plt (stack trace info for .plt.got is
-     identical).  Used when IBT or non-lazy PLT is in effect.  */
-  { &elf_x86_64_sframe_sec_pltn_fre1 }
+  1, /* Number of FREs for second PLT.  */
+  /* Array of SFrame FREs for second PLT.  */
+  { &elf_x86_64_sframe_sec_pltn_fre1 },
+  NON_LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLT GOT.  */
+  /* Array of SFrame FREs for PLT GOT.  */
+  { &elf_x86_64_sframe_null_fre },
+};
+
+/* SFrame helper object for lazy PLT with IBT. */
+static const struct elf_x86_sframe_plt elf_x86_64_sframe_ibt_plt =
+{
+  LAZY_PLT_ENTRY_SIZE,
+  2, /* Number of FREs for PLT0.  */
+  /* Array of SFrame FREs for plt0.  */
+  { &elf_x86_64_sframe_plt0_fre1, &elf_x86_64_sframe_plt0_fre2 },
+  LAZY_PLT_ENTRY_SIZE,
+  2, /* Number of FREs for PLTn.  */
+  /* Array of SFrame FREs for plt.  */
+  { &elf_x86_64_sframe_pltn_fre1, &elf_x86_64_sframe_ibt_pltn_fre2 },
+  LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for second PLT.  */
+  /* Array of SFrame FREs for second plt.  */
+  { &elf_x86_64_sframe_sec_pltn_fre1 },
+  LAZY_PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLT GOT.  */
+  /* Array of SFrame FREs for PLT GOT.  */
+  { &elf_x86_64_sframe_null_fre },
 };
 
 /* These are the standard parameters.  */
@@ -1025,11 +1082,11 @@ static const struct elf_x86_non_lazy_plt_layout elf_x86_64_non_lazy_bnd_plt =
     sizeof (elf_x86_64_eh_frame_non_lazy_plt) /* eh_frame_plt_size */
   };
 
-static const struct elf_x86_lazy_plt_layout elf_x86_64_lazy_ibt_plt =
+static const struct elf_x86_lazy_plt_layout elf_x86_64_lazy_bnd_ibt_plt =
   {
     elf_x86_64_lazy_bnd_plt0_entry,	/* plt0_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt0_entry_size */
-    elf_x86_64_lazy_ibt_plt_entry,	/* plt_entry */
+    elf_x86_64_lazy_bnd_ibt_plt_entry,	/* plt_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_entry_size */
     elf_x86_64_tlsdesc_plt_entry,	/* plt_tlsdesc_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_tlsdesc_entry_size */
@@ -1047,16 +1104,16 @@ static const struct elf_x86_lazy_plt_layout elf_x86_64_lazy_ibt_plt =
     4+1+5+5,				/* plt_plt_insn_end */
     0,					/* plt_lazy_offset */
     elf_x86_64_lazy_bnd_plt0_entry,	/* pic_plt0_entry */
-    elf_x86_64_lazy_ibt_plt_entry,	/* pic_plt_entry */
-    elf_x86_64_eh_frame_lazy_ibt_plt,	/* eh_frame_plt */
-    sizeof (elf_x86_64_eh_frame_lazy_ibt_plt) /* eh_frame_plt_size */
+    elf_x86_64_lazy_bnd_ibt_plt_entry,	/* pic_plt_entry */
+    elf_x86_64_eh_frame_lazy_bnd_ibt_plt, /* eh_frame_plt */
+    sizeof (elf_x86_64_eh_frame_lazy_bnd_ibt_plt) /* eh_frame_plt_size */
   };
 
-static const struct elf_x86_lazy_plt_layout elf_x32_lazy_ibt_plt =
+static const struct elf_x86_lazy_plt_layout elf_x86_64_lazy_ibt_plt =
   {
     elf_x86_64_lazy_plt0_entry,		/* plt0_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt0_entry_size */
-    elf_x32_lazy_ibt_plt_entry,		/* plt_entry */
+    elf_x86_64_lazy_ibt_plt_entry,	/* plt_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_entry_size */
     elf_x86_64_tlsdesc_plt_entry,	/* plt_tlsdesc_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_tlsdesc_entry_size */
@@ -1074,15 +1131,15 @@ static const struct elf_x86_lazy_plt_layout elf_x32_lazy_ibt_plt =
     4+5+5,				/* plt_plt_insn_end */
     0,					/* plt_lazy_offset */
     elf_x86_64_lazy_plt0_entry,		/* pic_plt0_entry */
-    elf_x32_lazy_ibt_plt_entry,		/* pic_plt_entry */
-    elf_x32_eh_frame_lazy_ibt_plt,	/* eh_frame_plt */
-    sizeof (elf_x32_eh_frame_lazy_ibt_plt) /* eh_frame_plt_size */
+    elf_x86_64_lazy_ibt_plt_entry,	/* pic_plt_entry */
+    elf_x86_64_eh_frame_lazy_ibt_plt,	/* eh_frame_plt */
+    sizeof (elf_x86_64_eh_frame_lazy_ibt_plt) /* eh_frame_plt_size */
   };
 
-static const struct elf_x86_non_lazy_plt_layout elf_x86_64_non_lazy_ibt_plt =
+static const struct elf_x86_non_lazy_plt_layout elf_x86_64_non_lazy_bnd_ibt_plt =
   {
-    elf_x86_64_non_lazy_ibt_plt_entry,	/* plt_entry */
-    elf_x86_64_non_lazy_ibt_plt_entry,	/* pic_plt_entry */
+    elf_x86_64_non_lazy_bnd_ibt_plt_entry, /* plt_entry */
+    elf_x86_64_non_lazy_bnd_ibt_plt_entry, /* pic_plt_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_entry_size */
     4+1+2,				/* plt_got_offset */
     4+1+6,				/* plt_got_insn_size */
@@ -1090,10 +1147,10 @@ static const struct elf_x86_non_lazy_plt_layout elf_x86_64_non_lazy_ibt_plt =
     sizeof (elf_x86_64_eh_frame_non_lazy_plt) /* eh_frame_plt_size */
   };
 
-static const struct elf_x86_non_lazy_plt_layout elf_x32_non_lazy_ibt_plt =
+static const struct elf_x86_non_lazy_plt_layout elf_x86_64_non_lazy_ibt_plt =
   {
-    elf_x32_non_lazy_ibt_plt_entry,	/* plt_entry */
-    elf_x32_non_lazy_ibt_plt_entry,	/* pic_plt_entry */
+    elf_x86_64_non_lazy_ibt_plt_entry,	/* plt_entry */
+    elf_x86_64_non_lazy_ibt_plt_entry,	/* pic_plt_entry */
     LAZY_PLT_ENTRY_SIZE,		/* plt_entry_size */
     4+2,				/* plt_got_offset */
     4+6,				/* plt_got_insn_size */
@@ -5239,10 +5296,10 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
   const struct elf_x86_non_lazy_plt_layout *non_lazy_plt;
   const struct elf_x86_lazy_plt_layout *lazy_bnd_plt;
   const struct elf_x86_non_lazy_plt_layout *non_lazy_bnd_plt;
+  const struct elf_x86_lazy_plt_layout *lazy_bnd_ibt_plt;
+  const struct elf_x86_non_lazy_plt_layout *non_lazy_bnd_ibt_plt;
   const struct elf_x86_lazy_plt_layout *lazy_ibt_plt;
   const struct elf_x86_non_lazy_plt_layout *non_lazy_ibt_plt;
-  const struct elf_x86_lazy_plt_layout *x32_lazy_ibt_plt;
-  const struct elf_x86_non_lazy_plt_layout *x32_non_lazy_ibt_plt;
   asection *plt;
   enum elf_x86_plt_type plt_type;
   struct elf_x86_plt plts[] =
@@ -5268,21 +5325,21 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 
   lazy_plt = &elf_x86_64_lazy_plt;
   non_lazy_plt = &elf_x86_64_non_lazy_plt;
-  lazy_bnd_plt = &elf_x86_64_lazy_bnd_plt;
-  non_lazy_bnd_plt = &elf_x86_64_non_lazy_bnd_plt;
+  lazy_ibt_plt = &elf_x86_64_lazy_ibt_plt;
+  non_lazy_ibt_plt = &elf_x86_64_non_lazy_ibt_plt;
   if (ABI_64_P (abfd))
     {
-      lazy_ibt_plt = &elf_x86_64_lazy_ibt_plt;
-      non_lazy_ibt_plt = &elf_x86_64_non_lazy_ibt_plt;
-      x32_lazy_ibt_plt = &elf_x32_lazy_ibt_plt;
-      x32_non_lazy_ibt_plt = &elf_x32_non_lazy_ibt_plt;
+      lazy_bnd_ibt_plt = &elf_x86_64_lazy_bnd_ibt_plt;
+      non_lazy_bnd_ibt_plt = &elf_x86_64_non_lazy_bnd_ibt_plt;
+      lazy_bnd_plt = &elf_x86_64_lazy_bnd_plt;
+      non_lazy_bnd_plt = &elf_x86_64_non_lazy_bnd_plt;
     }
   else
     {
-      lazy_ibt_plt = &elf_x32_lazy_ibt_plt;
-      non_lazy_ibt_plt = &elf_x32_non_lazy_ibt_plt;
-      x32_lazy_ibt_plt = NULL;
-      x32_non_lazy_ibt_plt = NULL;
+      lazy_bnd_ibt_plt = NULL;
+      non_lazy_bnd_ibt_plt = NULL;
+      lazy_bnd_plt = NULL;
+      non_lazy_bnd_plt = NULL;
     }
 
   count = 0;
@@ -5311,16 +5368,14 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 	      && (memcmp (plt_contents + 6, lazy_plt->plt0_entry + 6,
 			  2) == 0))
 	    {
-	      if (x32_lazy_ibt_plt != NULL
-		  && (memcmp (plt_contents
-			      + x32_lazy_ibt_plt->plt_entry_size,
-			      x32_lazy_ibt_plt->plt_entry,
-			      x32_lazy_ibt_plt->plt_got_offset) == 0))
+	      if (memcmp (plt_contents + lazy_ibt_plt->plt_entry_size,
+			  lazy_ibt_plt->plt_entry,
+			  lazy_ibt_plt->plt_got_offset) == 0)
 		{
-		  /* The fist entry in the x32 lazy IBT PLT is the same
-		     as the lazy PLT.  */
+		  /* The fist entry in the lazy IBT PLT is the same as
+		     the lazy PLT.  */
 		  plt_type = plt_lazy | plt_second;
-		  lazy_plt = x32_lazy_ibt_plt;
+		  lazy_plt = lazy_ibt_plt;
 		}
 	      else
 		plt_type = plt_lazy;
@@ -5332,12 +5387,13 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 			       lazy_bnd_plt->plt0_entry + 6, 3) == 0))
 	    {
 	      plt_type = plt_lazy | plt_second;
-	      /* The fist entry in the lazy IBT PLT is the same as the
-		 lazy BND PLT.  */
-	      if ((memcmp (plt_contents + lazy_ibt_plt->plt_entry_size,
-			   lazy_ibt_plt->plt_entry,
-			   lazy_ibt_plt->plt_got_offset) == 0))
-		lazy_plt = lazy_ibt_plt;
+	      /* The fist entry in the lazy BND IBT PLT is the same as
+		 the lazy BND PLT.  */
+	      if (memcmp (plt_contents
+			  + lazy_bnd_ibt_plt->plt_entry_size,
+			  lazy_bnd_ibt_plt->plt_entry,
+			  lazy_bnd_ibt_plt->plt_got_offset) == 0)
+		lazy_plt = lazy_bnd_ibt_plt;
 	      else
 		lazy_plt = lazy_bnd_plt;
 	    }
@@ -5355,34 +5411,35 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 
       if (plt_type == plt_unknown || plt_type == plt_second)
 	{
-	  if (non_lazy_bnd_plt != NULL
-	      && plt->size >= non_lazy_bnd_plt->plt_entry_size
-	      && (memcmp (plt_contents, non_lazy_bnd_plt->plt_entry,
-			  non_lazy_bnd_plt->plt_got_offset) == 0))
-	    {
-	      /* Match BND PLT.  */
-	      plt_type = plt_second;
-	      non_lazy_plt = non_lazy_bnd_plt;
-	    }
-	  else if (non_lazy_ibt_plt != NULL
-		   && plt->size >= non_lazy_ibt_plt->plt_entry_size
-		   && (memcmp (plt_contents,
-			       non_lazy_ibt_plt->plt_entry,
-			       non_lazy_ibt_plt->plt_got_offset) == 0))
+	  if (plt->size >= non_lazy_ibt_plt->plt_entry_size
+	      && (memcmp (plt_contents,
+			  non_lazy_ibt_plt->plt_entry,
+			  non_lazy_ibt_plt->plt_got_offset) == 0))
 	    {
 	      /* Match IBT PLT.  */
 	      plt_type = plt_second;
 	      non_lazy_plt = non_lazy_ibt_plt;
 	    }
-	  else if (x32_non_lazy_ibt_plt != NULL
-		   && plt->size >= x32_non_lazy_ibt_plt->plt_entry_size
-		   && (memcmp (plt_contents,
-			       x32_non_lazy_ibt_plt->plt_entry,
-			       x32_non_lazy_ibt_plt->plt_got_offset) == 0))
+	  else if (non_lazy_bnd_plt != NULL)
 	    {
-	      /* Match x32 IBT PLT.  */
-	      plt_type = plt_second;
-	      non_lazy_plt = x32_non_lazy_ibt_plt;
+	      if (plt->size >= non_lazy_bnd_plt->plt_entry_size
+		  && (memcmp (plt_contents, non_lazy_bnd_plt->plt_entry,
+			      non_lazy_bnd_plt->plt_got_offset) == 0))
+		{
+		  /* Match BND PLT.  */
+		  plt_type = plt_second;
+		  non_lazy_plt = non_lazy_bnd_plt;
+		}
+	      else if (plt->size >= non_lazy_bnd_ibt_plt->plt_entry_size
+		       && (memcmp (plt_contents,
+				   non_lazy_bnd_ibt_plt->plt_entry,
+				   non_lazy_bnd_ibt_plt->plt_got_offset)
+			   == 0))
+		{
+		  /* Match BND IBT PLT.  */
+		  plt_type = plt_second;
+		  non_lazy_plt = non_lazy_bnd_ibt_plt;
+		}
 	    }
 	}
 
@@ -5671,15 +5728,15 @@ elf_x86_64_link_setup_gnu_properties (struct bfd_link_info *info)
   init_table.lazy_plt = &elf_x86_64_lazy_plt;
   init_table.non_lazy_plt = &elf_x86_64_non_lazy_plt;
 
-  init_table.lazy_ibt_plt = &elf_x32_lazy_ibt_plt;
-  init_table.non_lazy_ibt_plt = &elf_x32_non_lazy_ibt_plt;
+  init_table.lazy_ibt_plt = &elf_x86_64_lazy_ibt_plt;
+  init_table.non_lazy_ibt_plt = &elf_x86_64_non_lazy_ibt_plt;
 
   if (ABI_64_P (info->output_bfd))
     {
       init_table.sframe_lazy_plt = &elf_x86_64_sframe_plt;
       init_table.sframe_non_lazy_plt = &elf_x86_64_sframe_non_lazy_plt;
-      init_table.sframe_lazy_ibt_plt = &elf_x86_64_sframe_plt;
-      init_table.sframe_non_lazy_ibt_plt = &elf_x86_64_sframe_non_lazy_plt;
+      init_table.sframe_lazy_ibt_plt = &elf_x86_64_sframe_ibt_plt;
+      init_table.sframe_non_lazy_ibt_plt = &elf_x86_64_sframe_non_lazy_ibt_plt;
     }
   else
     {

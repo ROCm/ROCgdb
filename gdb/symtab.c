@@ -397,42 +397,35 @@ linetable_entry::pc (const struct objfile *objfile) const
 call_site *
 compunit_symtab::find_call_site (CORE_ADDR pc) const
 {
-  if (m_call_site_htab == nullptr)
-    return nullptr;
-
   CORE_ADDR delta = this->objfile ()->text_section_offset ();
-  unrelocated_addr unrelocated_pc = (unrelocated_addr) (pc - delta);
 
-  struct call_site call_site_local (unrelocated_pc, nullptr, nullptr);
-  void **slot
-    = htab_find_slot (m_call_site_htab, &call_site_local, NO_INSERT);
-  if (slot != nullptr)
-    return (call_site *) *slot;
+  if (auto it = m_call_site_htab->find (static_cast<unrelocated_addr> (pc - delta));
+      it != m_call_site_htab->end ())
+    return *it;
 
   /* See if the arch knows another PC we should try.  On some
      platforms, GCC emits a DWARF call site that is offset from the
      actual return location.  */
   struct gdbarch *arch = objfile ()->arch ();
   CORE_ADDR new_pc = gdbarch_update_call_site_pc (arch, pc);
+
   if (pc == new_pc)
     return nullptr;
 
-  unrelocated_pc = (unrelocated_addr) (new_pc - delta);
-  call_site new_call_site_local (unrelocated_pc, nullptr, nullptr);
-  slot = htab_find_slot (m_call_site_htab, &new_call_site_local, NO_INSERT);
-  if (slot == nullptr)
-    return nullptr;
+  if (auto it = m_call_site_htab->find (static_cast<unrelocated_addr> (new_pc - delta));
+      it != m_call_site_htab->end ())
+    return *it;
 
-  return (call_site *) *slot;
+  return nullptr;
 }
 
 /* See symtab.h.  */
 
 void
-compunit_symtab::set_call_site_htab (htab_up call_site_htab)
+compunit_symtab::set_call_site_htab (call_site_htab_t &&call_site_htab)
 {
   gdb_assert (m_call_site_htab == nullptr);
-  m_call_site_htab = call_site_htab.release ();
+  m_call_site_htab = new call_site_htab_t (std::move (call_site_htab));
 }
 
 /* See symtab.h.  */
@@ -501,8 +494,7 @@ void
 compunit_symtab::finalize ()
 {
   this->forget_cached_source_info ();
-  if (m_call_site_htab != nullptr)
-    htab_delete (m_call_site_htab);
+  delete m_call_site_htab;
 }
 
 /* The relocated address of the minimal symbol, using the section
@@ -3456,19 +3448,10 @@ find_pc_line_symtab (CORE_ADDR pc)
   return sal.symtab;
 }
 
-/* Find line number LINE in any symtab whose name is the same as
-   SYMTAB.
+/* See symtab.h.  */
 
-   If found, return the symtab that contains the linetable in which it was
-   found, set *INDEX to the index in the linetable of the best entry
-   found, and set *EXACT_MATCH to true if the value returned is an
-   exact match.
-
-   If not found, return NULL.  */
-
-struct symtab *
-find_line_symtab (struct symtab *sym_tab, int line,
-		  int *index, bool *exact_match)
+symtab *
+find_line_symtab (symtab *sym_tab, int line, int *index)
 {
   int exact = 0;  /* Initialized here to avoid a compiler warning.  */
 
@@ -3548,8 +3531,6 @@ done:
 
   if (index)
     *index = best_index;
-  if (exact_match)
-    *exact_match = (exact != 0);
 
   return best_symtab;
 }
@@ -3610,7 +3591,7 @@ find_line_pc (struct symtab *symtab, int line, CORE_ADDR *pc)
   if (symtab == 0)
     return false;
 
-  symtab = find_line_symtab (symtab, line, &ind, NULL);
+  symtab = find_line_symtab (symtab, line, &ind);
   if (symtab != NULL)
     {
       l = symtab->linetable ();
@@ -4270,7 +4251,7 @@ find_epilogue_using_linetable (CORE_ADDR func_addr)
       /* Move to the last linetable entry of the current function.  */
       if (it == &linetable->item[0])
 	{
-	  /* Doing it-- would introduce undefined behaviour, avoid it by
+	  /* Doing it-- would introduce undefined behavior, avoid it by
 	     explicitly handling this case.  */
 	  return {};
 	}
@@ -4304,7 +4285,7 @@ find_epilogue_using_linetable (CORE_ADDR func_addr)
 	  if (it == &linetable->item[0])
 	    {
 	      /* No more entries in the current function.
-		 Doing it-- would introduce undefined behaviour, avoid it by
+		 Doing it-- would introduce undefined behavior, avoid it by
 		 explicitly handling this case.  */
 	      break;
 	    }
@@ -7270,8 +7251,8 @@ If zero then the symbol cache is disabled."),
 			   _("Set if the PROLOGUE-END flag is ignored."),
 			   _("Show if the PROLOGUE-END flag is ignored."),
 			   _("\
-The PROLOGUE-END flag from the line-table entries is used to place \
-breakpoints past the prologue of functions.  Disabling its use forces \
+The PROLOGUE-END flag from the line-table entries is used to place\n\
+breakpoints past the prologue of functions.  Disabling its use forces\n\
 the use of prologue scanners."),
 			   nullptr, nullptr,
 			   &maintenance_set_cmdlist,

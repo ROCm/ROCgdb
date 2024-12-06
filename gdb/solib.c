@@ -526,7 +526,8 @@ solib_map_sections (solib &so)
 	    abfd = nullptr;
 
 	  if (abfd == nullptr)
-	    abfd = find_objfile_by_build_id (mapped_file_info->build_id (),
+	    abfd = find_objfile_by_build_id (current_program_space,
+					     mapped_file_info->build_id (),
 					     so.so_name.c_str ());
 
 	  if (abfd == nullptr && mismatch)
@@ -595,7 +596,7 @@ solib::clear ()
   this->abfd = nullptr;
 
   /* Our caller closed the objfile, possibly via objfile_purge_solibs.  */
-  this->symbols_loaded = 0;
+  this->symbols_loaded = false;
   this->objfile = nullptr;
 
   this->addr_low = this->addr_high = 0;
@@ -655,7 +656,7 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
 	      so.objfile->addr_low = so.addr_low;
 	    }
 
-	  so.symbols_loaded = 1;
+	  so.symbols_loaded = true;
 	}
       catch (const gdb_exception_error &e)
 	{
@@ -1305,7 +1306,7 @@ reload_shared_libraries_1 (int from_tty)
   for (solib &so : current_program_space->solibs ())
     {
       const char *found_pathname = NULL;
-      bool was_loaded = so.symbols_loaded != 0;
+      bool was_loaded = so.symbols_loaded;
       symfile_add_flags add_flags = SYMFILE_DEFER_BP_RESET;
 
       if (from_tty)

@@ -1,41 +1,66 @@
 # Changelog for ROCgdb
 
 Full documentation for ROCgdb is available at
-[docs.amd.com](https://docs.amd.com/bundle/rocgdb)
+[rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
-## ROCgdb-16
-### Added
-- When opening a core dump, GDB can use the "sysroot" or "solib-search-path"
-  settings to locate files containing GPU code objects.  This improves opening
-  GPU code objects on systems different from the one where the core dump was
-  generated.
+## ROCgdb-15.2 (for ROCm-6.3)
 
-## (Unreleased) ROCgdb-15
 ### Added
-- 'info agents' now prints the agent location as "DDD:BB:DD.F", where
-  "DDDD" is the agent's PCI domain.
-- Add support for precise ALU exception reporting for architectures that
-  support it.  Precise ALU exceptions reporting is controlled with the
-  following commands:
+
+- Support for gfx1200 and gfx1201 architectures.
+- Support for precise ALU exception reporting for supported architectures.
+  Precise ALU exceptions reporting is controlled with the following commands:
   - set amdgpu precise-alu-exceptions
   - show amdgpu precise-alu-exceptions
 
-## (Unreleased) ROCgdb-14
+### Changed
+
+- The `sysroot` or `solib-search-path` settings can now be used to locate files
+  containing GPU code objects when opening a core dump.  This allows opening
+  GPU code objects on systems different from the one where the core dump was
+  generated.
+
+### Resolved issues
+
+- Fixed possible hangs when opening some AMDGPU core dumps in ROCgdb.
+- Addressed cases where the `roccoremerge` utility improperly handled LOAD
+  segment copy from the host core dump to the combined core dump.
+
+## ROCgdb-14.2 (for ROCm-6.2)
+
 ### Added
+
+- 'info agents' now prints the agent location as "DDD:BB:DD.F", where "DDDD" is
+  the agent's PCI domain.
 - Introduce the `coremerge` utility to merge a host core dump and a GPU-only
   AMDGPU core dump into a unified AMDGPU corefile.
 - Support for generating and opening core files for heterogeneous processes.
 
-## (Unreleased) ROCgdb-13
+## ROCgdb-13.2 (for ROCm-6.0)
 
 ### Added
-- Support for watchpoints on scratch memory addresses.
+
 - Add support for gfx1100, gfx1101, and gfx1102.
 - Added support for gfx940, gfx941 and gfx942.
+
+### Known Issues
+
+- ROCgdb cannot debug a program on an AMDGPU device past a `s_sendmsg
+  sendmsg(MSG_DEALLOC_VGPRS)` instruction.  If an exception is reported
+  after this instruction has been executed (including asynchronous
+  exceptions), the wave is killed and the exceptions are only reported by
+  the ROCm runtime.
+
+## ROCgdb-13.2 (for ROCm-5.7)
+
+- Support for watchpoints on scratch memory addresses.
+
+## ROCgdb-13.1 (for ROCm-5.6)
 
 ### Optimized
 - Improved performances when handling the end of a process with a large
   number of threads.
+
 ### Known Issues
 - On certain configurations, ROCgdb can show the following warning message:
 
@@ -43,8 +68,3 @@ Full documentation for ROCgdb is available at
     Reverting to original interface.
 
   This does not affect ROCgdb's functionalities.
-- ROCgdb cannot debug a program on an AMDGPU device past a `s_sendmsg
-  sendmsg(MSG_DEALLOC_VGPRS)` instruction.  If an exception is reported
-  after this instruction has been executed (including asynchronous
-  exceptions), the wave is killed and the exceptions are only reported by
-  the ROCm runtime.

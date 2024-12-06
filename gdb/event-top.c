@@ -387,6 +387,23 @@ gdb_rl_callback_handler_install (const char *prompt)
      therefore loses input.  */
   gdb_assert (!callback_handler_installed);
 
+#ifdef RL_STATE_EOF
+  /* Some versions of readline contain a bug where the rl_eof_found flag
+     would not be reset back to 0 in rl_initialize, despite the
+     RL_STATE_EOF flag being cleared in this function.
+
+     The consequence of this mistake is that readline will appear to get
+     stuck in the EOF state, and will emit an extra '\n' character each
+     time an input line is completed.
+
+     Work around this by clearing the EOF state now ourselves.  */
+  if (RL_ISSTATE (RL_STATE_EOF))
+    {
+      RL_UNSETSTATE (RL_STATE_EOF);
+      rl_eof_found = 0;
+    }
+#endif /* RL_STATE_EOF */
+
   rl_callback_handler_install (prompt, gdb_rl_callback_handler);
   callback_handler_installed = true;
 }
@@ -1014,7 +1031,7 @@ handle_fatal_signal (int sig)
     }
 #endif
 
-  /* If possible arrange for SIG to have its default behaviour (which
+  /* If possible arrange for SIG to have its default behavior (which
      should be to terminate the current process), unblock SIG, and reraise
      the signal.  This ensures GDB terminates with the expected signal.  */
   if (signal (sig, SIG_DFL) != SIG_ERR
@@ -1251,6 +1268,60 @@ handle_sigint (int sig)
   mark_async_signal_handler (sigint_token);
 }
 
+/* Copy file descriptors smaller than N from SRC to DST and return DST.
+   Portable version of FD_COPY.  */
+
+static fd_set *
+fd_copy (fd_set *dst, const fd_set *src, int n)
+{
+  FD_ZERO (dst);
+  for (int i = 0; i < n; ++i)
+    if (FD_ISSET (i, src))
+      FD_SET (i, dst);
+
+  return dst;
+}
+
+/* Copy SRC to DST and return DST.  */
+
+static struct timeval *
+timeval_copy (struct timeval *dst, const struct timeval *src)
+{
+  *dst = *src;
+  return dst;
+}
+
+/* Version of select that can be used in a loop, since unlike select it keeps
+   requested and returned values separate.  */
+
+static int
+gdb_select (int n,
+	    const fd_set *req_readfds, fd_set *ret_readfds,
+	    const fd_set *req_writefds, fd_set *ret_writefds,
+	    const fd_set *req_exceptfds, fd_set *ret_exceptfds,
+	    const struct timeval *req_timeout, struct timeval *ret_timeout)
+{
+  ret_readfds
+    = (req_readfds == nullptr
+       ? nullptr
+       : fd_copy (ret_readfds, req_readfds, n));
+  ret_writefds
+    = (req_writefds == nullptr
+       ? nullptr
+       : fd_copy (ret_writefds, req_writefds, n));
+  ret_exceptfds
+    = (req_exceptfds == nullptr
+       ? nullptr
+       : fd_copy (ret_exceptfds, req_exceptfds, n));
+
+  ret_timeout
+    = (req_timeout == nullptr
+       ? nullptr
+       : timeval_copy (ret_timeout, req_timeout));
+
+  return gdb_select (n, ret_readfds, ret_writefds, ret_exceptfds, ret_timeout);
+}
+
 /* See gdb_select.h.  */
 
 int
@@ -1273,11 +1344,64 @@ interruptible_select (int n,
   if (n <= fd)
     n = fd + 1;
 
-  do
+  bool tsan_forced_timeout = false;
+#if defined (__SANITIZE_THREAD__)
+  struct timeval tv;
+  if (timeout == nullptr)
     {
-      res = gdb_select (n, readfds, writefds, exceptfds, timeout);
+      /* A nullptr timeout means select is blocking, and ThreadSanitizer has
+	 a bug that it considers select non-blocking, and consequently when
+	 intercepting select it will not call signal handlers for pending
+	 signals, and gdb will hang in select waiting for those signal
+	 handlers to be called.
+
+	 Filed here ( https://github.com/google/sanitizers/issues/1813 ).
+
+	 Work around this by:
+	 - forcing a small timeout, and
+	 - upon timeout calling a function that ThreadSanitizer does consider
+	   blocking: usleep, forcing signal handlers to be called for pending
+	   signals.  */
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000;
+      timeout = &tv;
+      tsan_forced_timeout = true;
     }
-  while (res == -1 && errno == EINTR);
+#endif
+
+  {
+    fd_set ret_readfds, ret_writefds, ret_exceptfds;
+    struct timeval ret_timeout;
+
+    while (true)
+      {
+	res = gdb_select (n,
+			  readfds, &ret_readfds,
+			  writefds, &ret_writefds,
+			  exceptfds, &ret_exceptfds,
+			  timeout, &ret_timeout);
+
+	if (res == -1 && errno == EINTR)
+	  continue;
+
+	if (tsan_forced_timeout && res == 0)
+	  {
+	    usleep (0);
+	    continue;
+	  }
+
+	break;
+      }
+
+    if (readfds != nullptr)
+      fd_copy (readfds, &ret_readfds, n);
+    if (writefds != nullptr)
+      fd_copy (writefds, &ret_writefds, n);
+    if (exceptfds != nullptr)
+      fd_copy (exceptfds, &ret_exceptfds, n);
+    if (timeout)
+      timeval_copy (timeout, &ret_timeout);
+  }
 
   if (res == 1 && FD_ISSET (fd, readfds))
     {

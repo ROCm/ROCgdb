@@ -29,6 +29,32 @@ dictionary=$cache_dir/$cache_file
 local_dictionary=$scriptdir/common-misspellings.txt
 cache_file2=spell-check.pat1
 
+bash_version_at_least ()
+{
+    local major
+    major="$1"
+    local minor
+    minor="$2"
+
+    if [ "$bash_major" = "" ]; then
+	bash_major=$(echo "$BASH_VERSION" | awk -F '.' '{print $1}')
+	bash_minor=$(echo "$BASH_VERSION" | awk -F '.' '{print $2}')
+    fi
+
+    if [ "$bash_major" -lt "$major" ]; then
+	# Major version less then required, return false.
+	return 1
+    fi
+
+    if [ "$bash_major" -gt "$major" ]; then
+	# Major version more then required, return true.
+	return 0
+    fi
+
+    # Check minor version.
+    [ "$bash_minor" -ge "$minor" ]
+}
+
 # Separators: space, slash, tab, colon, comma.
 declare -a grep_separators
 grep_separators=(
@@ -37,6 +63,7 @@ grep_separators=(
     "	"
     ":"
     ","
+    "\""
 )
 declare -a sed_separators
 sed_separators=(
@@ -45,6 +72,33 @@ sed_separators=(
     "\t"
     ":"
     ","
+    "\""
+)
+
+# Pre: start of line, left parenthesis.
+declare -a grep_pre
+grep_pre=(
+    "^"
+    "\("
+)
+declare -a sed_pre
+sed_pre=(
+    "^"
+    "("
+)
+
+# Post: dot, right parenthesis, end of line.
+declare -a grep_post
+grep_post=(
+    "\."
+    "\)"
+    "$"
+)
+declare -a sed_post
+sed_post=(
+    "\."
+    ")"
+    "$"
 )
 
 join ()
@@ -91,6 +145,7 @@ sed_join ()
 usage ()
 {
     echo "usage: $(basename "$0") [--check] <file|dir>+"
+    echo "       $(basename "$0") --print-dictionary"
 }
 
 make_absolute ()
@@ -114,6 +169,11 @@ parse_args ()
     local files
     files=$(mktemp)
     trap 'rm -f "$files"' EXIT
+
+    if [ $# -eq 1 ] && [ "$1" =  "--print-dictionary" ]; then
+	print_dictionary=true
+	return
+    fi
 
     while true; do
 	case " $1 " in
@@ -190,8 +250,10 @@ output_local_dictionary ()
 
 output_dictionaries ()
 {
-    output_local_dictionary
-    cat "$dictionary"
+    (
+	output_local_dictionary
+	cat "$dictionary"
+    ) | grep -E -v "[A-Z]"
 }
 
 parse_dictionary ()
@@ -201,6 +263,48 @@ parse_dictionary ()
 	    < <(awk -F '->' '{print $1}' <(output_dictionaries))
     mapfile -t replacements \
 	    < <(awk -F '->' '{print $2}' <(output_dictionaries))
+
+    local words_done
+    declare -A words_done
+    local i word replacement
+    i=0
+    for word in "${words[@]}"; do
+	replacement=${replacements[i]}
+
+	# Skip words that are already handled.  This ensures that the local
+	# dictionary overrides the wiki dictionary.
+	if [ "${words_done[$word]}" == 1 ]; then
+	    words[i]=""
+	    replacements[i]=""
+	    i=$((i + 1))
+	    continue
+	fi
+	words_done[$word]=1
+
+	# Skip identity rules.
+	if [ "$word" = "$replacement" ]; then
+	    words[i]=""
+	    replacements[i]=""
+	fi
+
+	i=$((i + 1))
+    done
+}
+
+print_dictionary ()
+{
+    local i word replacement
+    i=0
+    for word in "${words[@]}"; do
+	replacement=${replacements[i]}
+	i=$((i + 1))
+
+	if [ "$word" == "" ]; then
+	    continue
+	fi
+
+	echo "$word -> $replacement"
+    done
 }
 
 find_files_matching_words ()
@@ -219,16 +323,25 @@ find_files_matching_words ()
     else
 	rm -f "$cache_dir/$cache_file2".*
 
-	pat=$(grep_join "${words[@]}")
+	declare -a re_words
+	mapfile -t re_words \
+		< <(for f in "${words[@]}"; do
+			if [ "$f" = "" ]; then
+			    continue
+			fi
+			echo "$f"
+		    done \
+			| sed "s/^\(.\)/[\u\1\1]/")
+
+	pat=$(grep_join "${re_words[@]}")
 
 	local before after
 	before=$(grep_join \
-		     "^" \
+		     "${grep_pre[@]}" \
 		     "${grep_separators[@]}")
 	after=$(grep_join \
 		    "${grep_separators[@]}" \
-		    "\." \
-		    "$")
+		    "${grep_post[@]}")
 
 	pat="$before$pat$after"
 
@@ -250,12 +363,19 @@ find_files_matching_word ()
 
     local before after
     before=$(grep_join \
-		 "^" \
+		 "${grep_pre[@]}" \
 		 "${grep_separators[@]}")
     after=$(grep_join \
 		"${grep_separators[@]}" \
-		"\." \
-		"$")
+		"${grep_post[@]}")
+
+    if bash_version_at_least 5 1; then
+	patc=${pat@u}
+    else
+	# shellcheck disable=SC2001
+	patc=$(echo "$pat" | sed 's/^\(.\)/\u\1/')
+    fi
+    pat="($patc|$pat)"
 
     pat="$before$pat$after"
 
@@ -278,18 +398,29 @@ replace_word_in_file ()
 
     local before after
     before=$(sed_join \
-		 "^" \
+		 "${sed_pre[@]}" \
 		 "${sed_separators[@]}")
     after=$(sed_join \
 		"${sed_separators[@]}" \
-		"\." \
-		"$")
+		"${sed_post[@]}")
 
-    local repl
-    repl="s%$before$word$after%\1$replacement\2%g"
+    if bash_version_at_least 5 1; then
+	wordc=${word@u}
+	replacementc=${replacement@u}
+    else
+	# shellcheck disable=SC2001
+	wordc=$(echo "$word" | sed 's/^\(.\)/\u\1/')
+	# shellcheck disable=SC2001
+	replacementc=$(echo "$replacement" | sed 's/^\(.\)/\u\1/')
+    fi
+
+    local repl1
+    local repl2
+    repl1="s%$before$word$after%\1$replacement\2%g"
+    repl2="s%$before$wordc$after%\1$replacementc\2%g"
 
     sed -i \
-	"$repl" \
+	"$repl1;$repl2" \
 	"$file"
 }
 
@@ -357,6 +488,7 @@ main ()
 {
     declare -a unique_files
     check=false
+    print_dictionary=false
     parse_args "$@"
 
     get_dictionary
@@ -364,6 +496,11 @@ main ()
     declare -a words
     declare -a replacements
     parse_dictionary
+
+    if $print_dictionary; then
+	print_dictionary
+	exit 0
+    fi
 
     # Reduce set of files for sed to operate on.
     local files_matching_words
@@ -379,19 +516,15 @@ main ()
 	exit 1
     fi
 
-    declare -A words_done
     local i word replacement
     i=0
     for word in "${words[@]}"; do
-	replacement=${replacements[$i]}
+	replacement=${replacements[i]}
 	i=$((i + 1))
 
-	# Skip words that are already handled.  This ensures that the local
-	# dictionary overrides the wiki dictionary.
-	if [ "${words_done[$word]}" == 1 ]; then
+	if [ "$word" = "" ]; then
 	    continue
 	fi
-	words_done[$word]=1
 
 	replace_word_in_files \
 	    "$word" \

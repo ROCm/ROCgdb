@@ -362,6 +362,25 @@ match_sreg1_not_eq_sreg2 (const struct riscv_opcode *op, insn_t insn)
       && (EXTRACT_OPERAND (SREG1, insn) != EXTRACT_OPERAND (SREG2, insn));
 }
 
+/* This is used for cm.jt. This requires index operand to be less than 32.  */
+
+static int
+match_cm_jt (const struct riscv_opcode *op, insn_t insn)
+{
+  return match_opcode (op, insn)
+    && EXTRACT_ZCMT_INDEX (insn) < 32;
+}
+
+/* This is used for cm.jalt. This requires index operand to be in 32 to 255.  */
+
+static int
+match_cm_jalt (const struct riscv_opcode *op, insn_t insn)
+{
+  return match_opcode (op, insn)
+    && EXTRACT_ZCMT_INDEX (insn) >= 32
+    && EXTRACT_ZCMT_INDEX (insn) < 256;
+}
+
 /* The order of overloaded instructions matters.  Label arguments and
    register arguments look the same. Instructions that can have either
    for arguments must apear in the correct order in this table for the
@@ -2196,6 +2215,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"cm.mva01s",  0,  INSN_CLASS_ZCMP, "Wc1,Wc2",    MATCH_CM_MVA01S, MASK_CM_MVA01S, match_opcode, 0 },
 {"cm.mvsa01",  0,  INSN_CLASS_ZCMP, "Wc1,Wc2",    MATCH_CM_MVSA01, MASK_CM_MVSA01, match_sreg1_not_eq_sreg2, 0 },
 
+/* Zcmt instructions */
+{"cm.jt",      0,  INSN_CLASS_ZCMT, "WcI", MATCH_CM_JT, MASK_CM_JT, match_cm_jt, 0 },
+{"cm.jalt",    0,  INSN_CLASS_ZCMT, "Wci", MATCH_CM_JALT, MASK_CM_JALT, match_cm_jalt, 0 },
+
 /* Supervisor instructions.  */
 {"csrr",       0, INSN_CLASS_ZICSR, "d,E",   MATCH_CSRRS, MASK_CSRRS|MASK_RS1, match_opcode, INSN_ALIAS },
 {"csrwi",      0, INSN_CLASS_ZICSR, "E,Z",   MATCH_CSRRWI, MASK_CSRRWI|MASK_RD, match_opcode, INSN_ALIAS },
@@ -3425,6 +3448,20 @@ const struct riscv_opcode riscv_opcodes[] =
 
 /* Vendor-specific (SiFive) cease instruction.  */
 {"sf.cease", 0, INSN_CLASS_XSFCEASE, "", MATCH_SF_CEASE, MASK_SF_CEASE, match_opcode, 0 },
+
+/* SiFive custom int8 matrix-multiply instructions.  */
+{"sf.vqmaccu.4x8x4",  0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACCU4X8X4, MASK_SFVQMACCU4X8X4, match_opcode, 0},
+{"sf.vqmacc.4x8x4",   0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACC4X8X4, MASK_SFVQMACC4X8X4, match_opcode, 0},
+{"sf.vqmaccus.4x8x4", 0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACCUS4X8X4, MASK_SFVQMACCUS4X8X4, match_opcode, 0},
+{"sf.vqmaccsu.4x8x4", 0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACCSU4X8X4, MASK_SFVQMACCSU4X8X4, match_opcode, 0},
+{"sf.vqmaccu.2x8x2",  0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACCU2X8X2, MASK_SFVQMACCU2X8X2, match_opcode, 0},
+{"sf.vqmacc.2x8x2",   0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACC2X8X2, MASK_SFVQMACC2X8X2, match_opcode, 0},
+{"sf.vqmaccus.2x8x2", 0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACCUS2X8X2, MASK_SFVQMACCUS2X8X2, match_opcode, 0},
+{"sf.vqmaccsu.2x8x2", 0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACCSU2X8X2, MASK_SFVQMACCSU2X8X2, match_opcode, 0},
+
+/* SiFive FP32-to-int8 ranged clip instructions (Xsfvfnrclipxfqf).  */
+{"sf.vfnrclip.xu.f.qf", 0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXUFQF, MASK_SFVFNRCLIPXUFQF, match_opcode, 0},
+{"sf.vfnrclip.x.f.qf",  0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXFQF, MASK_SFVFNRCLIPXFQF, match_opcode, 0},
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

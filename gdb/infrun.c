@@ -5015,7 +5015,7 @@ adjust_pc_after_break (struct thread_info *thread,
      we would wrongly adjust the PC to 0x08000000, since there's a
      breakpoint at PC - 1.  We'd then report a hit on B1, although
      INSN1 hadn't been de-executed yet.  Doing nothing is the correct
-     behaviour.  */
+     behavior.  */
   if (execution_direction == EXEC_REVERSE)
     return;
 
@@ -8232,6 +8232,34 @@ process_event_stop_test (struct execution_control_state *ecs)
       infrun_debug_printf ("line number info");
       end_stepping_range (ecs);
       return;
+    }
+
+  /* Handle the case when subroutines have multiple ranges.  When we step
+     from one part to the next part of the same subroutine, all subroutine
+     levels are skipped again which begin here.  Compensate for this by
+     removing all skipped subroutines, which were already executing from
+     the user's perspective.  */
+
+  if (get_stack_frame_id (frame)
+      == ecs->event_thread->control.step_stack_frame_id
+      && inline_skipped_frames (ecs->event_thread) > 0
+      && ecs->event_thread->control.step_frame_id.artificial_depth > 0
+      && ecs->event_thread->control.step_frame_id.code_addr_p)
+    {
+      int depth = 0;
+      const struct block *prev
+	= block_for_pc (ecs->event_thread->control.step_frame_id.code_addr);
+      const struct block *curr = block_for_pc (ecs->event_thread->stop_pc ());
+      while (curr != nullptr && !curr->contains (prev))
+	{
+	  if (curr->inlined_p ())
+	    depth++;
+	  else if (curr->function () != nullptr)
+	    break;
+	  curr = curr->superblock ();
+       }
+      while (inline_skipped_frames (ecs->event_thread) > depth)
+	step_into_inline_frame (ecs->event_thread);
     }
 
   /* Look for "calls" to inlined functions, part one.  If the inline

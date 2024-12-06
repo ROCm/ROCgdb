@@ -32,6 +32,7 @@
 #include "jit.h"
 #include "quick-symbol.h"
 #include <forward_list>
+#include "gdbsupport/unordered_map.h"
 
 struct htab;
 struct objfile_data;
@@ -418,7 +419,7 @@ struct obj_section
    symbols, lookup_symbol is used to check if we only have a partial
    symbol and if so, read and expand the full compunit.  */
 
-struct objfile
+struct objfile : intrusive_list_node<objfile>
 {
 private:
 
@@ -857,7 +858,8 @@ public:
      Very few blocks have a static link, so it's more memory efficient to
      store these here rather than in struct block.  Static links must be
      allocated on the objfile's obstack.  */
-  htab_up static_links;
+  gdb::unordered_map<const block *, const dynamic_prop *>
+    static_links;
 
   /* JIT-related data for this objfile, if the objfile is a JITer;
      that is, it produces JITed objfiles.  */

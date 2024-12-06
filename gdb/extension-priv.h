@@ -201,7 +201,8 @@ struct extension_language_ops
      COPIED_TYPES is used to prevent cycles / duplicates and is passed to
      preserve_one_value.  */
   void (*preserve_values) (const struct extension_language_defn *,
-			   struct objfile *objfile, htab_t copied_types);
+			   struct objfile *objfile,
+			   copied_types_hash_t &copied_types);
 
   /* Return non-zero if there is a stop condition for the breakpoint.
      This is used to implement the restriction that a breakpoint may have
@@ -292,9 +293,22 @@ struct extension_language_ops
   /* Give extension languages a chance to deal with missing debug
      information.  OBJFILE is the file for which GDB was unable to find
      any debug information.  */
-  ext_lang_missing_debuginfo_result
+  ext_lang_missing_file_result
     (*handle_missing_debuginfo) (const struct extension_language_defn *,
 				 struct objfile *objfile);
+
+  /* Give extension languages a chance to deal with missing objfiles.
+     PSPACE is the program space in which GDB is searching for a missing
+     objfile, and will not be NULL.  BUILD_ID is the build-id of the
+     objfile we're looking for, and will not be NULL.  FILENAME is the name
+     of the file we're looking for, and will not be NULL.  See
+     ext_lang_find_objfile_from_buildid for some additional information
+     about the meaning of FILENAME.  */
+  ext_lang_missing_file_result
+    (*find_objfile_from_buildid) (const struct extension_language_defn *,
+				  program_space *pspace,
+				  const struct bfd_build_id *build_id,
+				  const char *filename);
 };
 
 /* State necessary to restore a signal handler to its previous value.  */

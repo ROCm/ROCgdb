@@ -70,6 +70,7 @@
 #include "gdbsupport/scoped_fd.h"
 #include "gdbsupport/scoped_restore.h"
 #include "nat/fork-inferior.h"
+#include "gdbsupport/eintr.h"
 
 /* Quick overview.
    Darwin kernel is Mach + BSD derived kernel.  Note that they share the
@@ -1604,7 +1605,7 @@ darwin_attach_pid (struct inferior *inf)
 	  if (!inf->attach_flag)
 	    {
 	      kill (inf->pid, 9);
-	      waitpid (inf->pid, &status, 0);
+	      gdb::waitpid (inf->pid, &status, 0);
 	    }
 
 	  error
@@ -2032,7 +2033,7 @@ darwin_nat_target::attach (const char *args, int from_tty)
 
   pid = parse_pid_to_attach (args);
 
-  if (pid == getpid ())		/* Trying to masturbate?  */
+  if (pid == getpid ())
     error (_("I refuse to debug myself!"));
 
   target_announce_attach (from_tty, pid);

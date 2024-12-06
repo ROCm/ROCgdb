@@ -2305,6 +2305,11 @@
 #define MASK_CM_MVA01S 0xfc63
 #define MATCH_CM_MVSA01 0xac22
 #define MASK_CM_MVSA01 0xfc63
+/* Zcmt instructions.  */
+#define MATCH_CM_JT 0xa002
+#define MASK_CM_JT 0xfc03
+#define MATCH_CM_JALT 0xa002
+#define MASK_CM_JALT 0xfc03
 /* Svinval instruction.  */
 #define MATCH_SINVAL_VMA 0x16000073
 #define MASK_SINVAL_VMA 0xfe007fff
@@ -3740,6 +3745,28 @@
 /* Vendor-specific (SiFive) cease instruction.  */
 #define MATCH_SF_CEASE 0x30500073
 #define MASK_SF_CEASE 0xffffffff
+/* SiFive custom int8 matrix-multiply instruction.  */
+#define MATCH_SFVQMACCU4X8X4 0xf200205b
+#define MASK_SFVQMACCU4X8X4 0xfe00707f
+#define MATCH_SFVQMACC4X8X4 0xf600205b
+#define MASK_SFVQMACC4X8X4 0xfe00707f
+#define MATCH_SFVQMACCUS4X8X4 0xfa00205b
+#define MASK_SFVQMACCUS4X8X4 0xfe00707f
+#define MATCH_SFVQMACCSU4X8X4 0xfe00205b
+#define MASK_SFVQMACCSU4X8X4 0xfe00707f
+#define MATCH_SFVQMACCU2X8X2 0xb200205b
+#define MASK_SFVQMACCU2X8X2 0xfe00707f
+#define MATCH_SFVQMACC2X8X2 0xb600205b
+#define MASK_SFVQMACC2X8X2 0xfe00707f
+#define MATCH_SFVQMACCUS2X8X2 0xba00205b
+#define MASK_SFVQMACCUS2X8X2 0xfe00707f
+#define MATCH_SFVQMACCSU2X8X2 0xbe00205b
+#define MASK_SFVQMACCSU2X8X2 0xfe00707f
+/* FP32-to-int8 Ranged Clip Instructions (Xsfvfnrclipxfqf).  */
+#define MATCH_SFVFNRCLIPXUFQF 0x8a00505b
+#define MASK_SFVFNRCLIPXUFQF 0xfe00707f
+#define MATCH_SFVFNRCLIPXFQF 0x8e00505b
+#define MASK_SFVFNRCLIPXFQF 0xfe00707f
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -4190,6 +4217,8 @@
 #define CSR_MSCONTEXT 0x7aa
 /* Unprivileged Scalar Crypto CSR addresses.  */
 #define CSR_SEED 0x015
+/* Unprivileged Zcmt CSR addresses.  */
+#define CSR_JVT 0x017
 /* Unprivileged Vector CSR addresses.  */
 #define CSR_VSTART 0x008
 #define CSR_VXSAT 0x009
@@ -4731,6 +4760,9 @@ DECLARE_INSN(cm_popret, MATCH_CM_POPRET, MASK_CM_POPRET)
 DECLARE_INSN(cm_popretz, MATCH_CM_POPRETZ, MASK_CM_POPRETZ)
 DECLARE_INSN(cm_mvsa01, MATCH_CM_MVSA01, MASK_CM_MVSA01)
 DECLARE_INSN(cm_mva01s, MATCH_CM_MVA01S, MASK_CM_MVA01S)
+/* Zcmt instructions.  */
+DECLARE_INSN(cm_jt, MATCH_CM_JT, MASK_CM_JT)
+DECLARE_INSN(cm_jalt, MATCH_CM_JALT, MASK_CM_JALT)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */
@@ -5304,6 +5336,8 @@ DECLARE_CSR(mcontext, CSR_MCONTEXT, CSR_CLASS_DEBUG, PRIV_SPEC_CLASS_NONE, PRIV_
 DECLARE_CSR(mscontext, CSR_MSCONTEXT, CSR_CLASS_DEBUG, PRIV_SPEC_CLASS_NONE, PRIV_SPEC_CLASS_NONE)
 /* Unprivileged Scalar Crypto CSRs.  */
 DECLARE_CSR(seed, CSR_SEED, CSR_CLASS_ZKR, PRIV_SPEC_CLASS_NONE, PRIV_SPEC_CLASS_NONE)
+/* Unprivileged Zcmt CSRs.  */
+DECLARE_CSR(jvt, CSR_JVT, CSR_CLASS_ZCMT, PRIV_SPEC_CLASS_NONE, PRIV_SPEC_CLASS_NONE)
 /* Unprivileged Vector CSRs.  */
 DECLARE_CSR(vstart, CSR_VSTART, CSR_CLASS_V, PRIV_SPEC_CLASS_NONE, PRIV_SPEC_CLASS_NONE)
 DECLARE_CSR(vxsat, CSR_VXSAT, CSR_CLASS_V, PRIV_SPEC_CLASS_NONE, PRIV_SPEC_CLASS_NONE)

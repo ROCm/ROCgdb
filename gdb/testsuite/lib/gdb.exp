@@ -2239,8 +2239,10 @@ proc gdb_reinitialize_dir { subdir } {
     }
     send_gdb "dir\n"
     gdb_expect 60 {
-	-re "Reinitialize source path to empty.*y or n. " {
-	    send_gdb "y\n" answer
+	-re "Reinitialize source path to empty.*y or n.(\\\s.answered Y; input not from terminal.)?" {
+	    if {![info exists expect_out(1,string)]} {
+		send_gdb "y\n" answer
+	    }
 	    gdb_expect 60 {
 		-re "Source directories searched.*$gdb_prompt $" {
 		    send_gdb "dir $subdir\n"
@@ -3670,7 +3672,7 @@ proc can_hardware_single_step {} {
 
     if { [istarget "arm*-*-*"] || [istarget "mips*-*-*"]
 	 || [istarget "tic6x-*-*"] || [istarget "sparc*-*-linux*"]
-	 || [istarget "nios2-*-*"] || [istarget "riscv*-*-linux*"] } {
+	 || [istarget "riscv*-*-linux*"] } {
 	return 0
     }
 
@@ -3699,6 +3701,7 @@ proc supports_process_record {} {
     if { [istarget "arm*-*-linux*"] || [istarget "x86_64-*-linux*"]
          || [istarget "i\[34567\]86-*-linux*"]
          || [istarget "aarch64*-*-linux*"]
+	 || [istarget "loongarch*-*-linux*"]
          || [istarget "powerpc*-*-linux*"]
          || [istarget "s390*-*-linux*"] } {
 	return 1
@@ -3718,6 +3721,7 @@ proc supports_reverse {} {
     if { [istarget "arm*-*-linux*"] || [istarget "x86_64-*-linux*"]
          || [istarget "i\[34567\]86-*-linux*"]
          || [istarget "aarch64*-*-linux*"]
+	 || [istarget "loongarch*-*-linux*"]
          || [istarget "powerpc*-*-linux*"]
          || [istarget "s390*-*-linux*"] } {
 	return 1
@@ -3737,6 +3741,34 @@ proc readline_is_used { } {
 	}
 	-re ".*$gdb_prompt $" {
 	    return 0
+	}
+    }
+}
+
+# Return true if readline has support for the EOF flag.
+
+proc readline_supports_eof_flag { } {
+    gdb_test_multiple "show configuration" "" {
+	-re -wrap "\r\nGNU Readline library version: ($::decimal)\\.($::decimal)\\s+\\((internal|system)\\)" {
+	    set major $expect_out(1,string)
+	    set minor $expect_out(2,string)
+	    set type $expect_out(3,string)
+
+	    # The internal readline was patched with EOF support ahead
+	    # of this landing in upstream readline.
+	    if { $type eq "internal" } {
+		return true
+	    }
+
+	    # The EOF flag support was added in readline 8.2.
+	    if { $major > 8 || $major == 8 && $minor >= 2 } {
+		return true
+	    }
+
+	    return false
+	}
+	-re ".*$::gdb_prompt $" {
+	    return false
 	}
     }
 }
@@ -4294,6 +4326,70 @@ gdb_caching_proc allow_avx512fp16_tests {} {
 
     verbose "$me:  returning $allow_avx512fp16_tests" 2
     return $allow_avx512fp16_tests
+}
+
+# Run a test on the target to see if it supports LAM 57.  Return 1 if so,
+# 0 if it does not.  Based on the arch_prctl() handle ARCH_ENABLE_TAGGED_ADDR
+# to enable LAM which fails if the hardware or the OS does not support LAM.
+
+gdb_caching_proc allow_lam_tests {} {
+    global gdb_prompt inferior_exited_re
+
+    set me "allow_lam_tests"
+    if { ![istarget "x86_64-*-*"] } {
+	verbose "$me:  target does not support LAM, returning 1" 2
+	return 0
+    }
+
+    # Compile a test program.
+    set src {
+      #define _GNU_SOURCE
+      #include <unistd.h>
+      #include <sys/syscall.h>
+      #include <assert.h>
+      #include <errno.h>
+      #include <asm/prctl.h>
+
+      int configure_lam ()
+      {
+	errno = 0;
+	syscall (SYS_arch_prctl, ARCH_ENABLE_TAGGED_ADDR, 6);
+	assert_perror (errno);
+	return errno;
+      }
+
+      int
+      main () { return configure_lam (); }
+    }
+
+    if {![gdb_simple_compile $me $src executable ""]} {
+	return 0
+    }
+    # No error message, compilation succeeded so now run it via gdb.
+
+    set allow_lam_tests 0
+    clean_restart $obj
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*$inferior_exited_re with code.*${gdb_prompt} $" {
+	    verbose -log "$me:  LAM support not detected."
+	}
+	-re ".*Program received signal SIGABRT, Aborted.*${gdb_prompt} $" {
+	    verbose -log "$me:  LAM support not detected."
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "$me:  LAM support detected."
+	    set allow_lam_tests 1
+	}
+	default {
+	    warning "\n$me:  default case taken."
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_lam_tests" 2
+    return $allow_lam_tests
 }
 
 # Run a test on the target to see if it supports btrace hardware.  Return 1 if so,

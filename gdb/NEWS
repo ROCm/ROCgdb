@@ -3,6 +3,14 @@
 
 *** Changes since GDB 15
 
+* Support for Nios II targets has been removed as this architecture
+  has been EOL'ed by Intel.
+
+* GDB now supports watchpoints for tagged data pointers (see
+  https://en.wikipedia.org/wiki/Tagged_pointer) on amd64, such as the
+  one used by the Linear Address Masking (LAM) feature provided by
+  Intel.
+
 * Debugging support for Intel MPX has been removed.  This includes the
   removal of
   ** MPX register support
@@ -51,10 +59,35 @@
 
 * The Ada 'Object_Size attribute is now supported.
 
+* Support for process record/replay and reverse debugging on loongarch*-linux*
+  targets has been added.
+
 * Python API
 
   ** Added gdb.record.clear.  Clears the trace data of the current recording.
      This forces re-decoding of the trace for successive commands.
+
+  ** Added the new event source gdb.tui_enabled.
+
+  ** New module gdb.missing_objfile that facilitates dealing with
+     missing objfiles when opening a core-file.
+
+  ** New function gdb.missing_objfile.register_handler that can
+     register an instance of a sub-class of
+     gdb.missing_debug.MissingObjfileHandler as a handler for missing
+     objfiles.
+
+  ** New class gdb.missing_objfile.MissingObjfileHandler which can be
+     sub-classed to create handlers for missing objfiles.
+
+  ** The 'signed' argument to gdb.Architecture.integer_type() will no
+     longer accept non-bool types.
+
+  ** The gdb.MICommand.installed property can only be set to True or
+     False.
+
+  ** The 'qualified' argument to gdb.Breakpoint constructor will no
+     longer accept non-bool types.
 
 * Debugger Adapter Protocol changes
 
@@ -67,10 +100,19 @@
 
 * New commands
 
+show jit-reader-directory
+  Show the name of the directory that "jit-reader-load" uses for
+  relative file names.
+
 set style line-number foreground COLOR
 set style line-number background COLOR
 set style line-number intensity VALUE
   Control the styling of line numbers printed by GDB.
+
+set warn-language-frame-mismatch [on|off]
+show warn-language-frame-mismatch
+  Control the warning that is emitted when specifying a language that
+  does not match the current frame's language.
 
 maintenance info inline-frames [ADDRESS]
   New command which displays GDB's inline-frame information for the
@@ -82,6 +124,19 @@ maintenance info blocks [ADDRESS]
   ADDRESS, or at the current address if ADDRESS is not given.  Blocks
   are listed starting at the inner global block out to the most inner
   block.
+
+info missing-objfile-handlers
+  List all the registered missing-objfile handlers.
+
+enable missing-objfile-handler LOCUS HANDLER
+disable missing-objfile-handler LOCUS HANDLER
+  Enable or disable a missing-objfile handler with a name matching the
+  regular expression HANDLER, in LOCUS.
+
+  LOCUS can be 'global' to operate on global missing-objfile handler,
+  'progspace' to operate on handlers within the current program space,
+  or can be a regular expression which is matched against the filename
+  of the primary executable in each program space.
 
 * Changed commands
 
@@ -108,6 +163,9 @@ maintenance print remote-registers
   Add an "Expedited" column to the output of the command.  It indicates
   which registers were included in the last stop reply packet received by
   GDB.
+
+show configuration
+  Now includes the version of GNU Readline library that GDB is using.
 
 * New remote packets
 
@@ -557,7 +615,7 @@ show tui mouse-events
      changed.
 
   ** New methods added to the gdb.PendingFrame class.  These methods
-     have the same behaviour as the corresponding methods on
+     have the same behavior as the corresponding methods on
      gdb.Frame.  The new methods are:
 
      - gdb.PendingFrame.name: Return the name for the frame's
@@ -1183,7 +1241,7 @@ winheight
 * MI changes
 
  ** The '-add-inferior' with no option flags now inherits the
-    connection of the current inferior, this restores the behaviour of
+    connection of the current inferior, this restores the behavior of
     GDB as it was prior to GDB 10.
 
  ** The '-add-inferior' command now accepts a '--no-connection'
@@ -1964,7 +2022,7 @@ set print frame-info [short-location|location|location-and-address
                         |source-and-location|source-line|auto]
 show print frame-info
   This controls what frame information is printed by the commands printing
-  a frame.  This setting will e.g. influence the behaviour of 'backtrace',
+  a frame.  This setting will e.g. influence the behavior of 'backtrace',
   'frame', 'stepi'.  The python frame filtering also respect this setting.
   The 'backtrace' '-frame-info' option can override this global setting.
 
@@ -8050,7 +8108,7 @@ full 64-bit address.  The command
 
 	set remoteaddresssize 32
 
-can be used to revert to the old behaviour.  For existing remote stubs
+can be used to revert to the old behavior.  For existing remote stubs
 the change should not be noticed, as the additional address information
 will be discarded.
 

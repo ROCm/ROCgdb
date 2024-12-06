@@ -388,7 +388,7 @@ check_frame_language_change (void)
   /* FIXME: This should be cacheing the frame and only running when
      the frame changes.  */
 
-  if (has_stack_frames ())
+  if (warn_frame_lang_mismatch && has_stack_frames ())
     {
       enum language flang;
 
@@ -1601,6 +1601,16 @@ This GDB was configured as follows:\n\
 (\"Relocatable\" means the directory can be moved with the GDB installation\n\
 tree, and GDB will still find it.)\n\
 "));
+
+  gdb_printf (stream, "\n");
+  gdb_printf (stream, _("GNU Readline library version: %s\t%s\n"),
+	      rl_library_version,
+#ifdef HAVE_READLINE_READLINE_H
+	      "(system)"
+#else
+	      "(internal)"
+#endif
+	      );
 }
 
 

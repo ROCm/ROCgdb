@@ -33,6 +33,7 @@
 #include "guile/guile.h"
 #include <array>
 #include "inferior.h"
+#include "gdbsupport/scoped_signal_handler.h"
 
 static script_sourcer_func source_gdb_script;
 static objfile_script_sourcer_func source_gdb_objfile_script;
@@ -84,7 +85,7 @@ const struct extension_language_defn extension_language_gdb =
 
 static const std::array<const extension_language_defn *, 2> extension_languages
 {
-  /* To preserve existing behaviour, python should always appear first.  */
+  /* To preserve existing behavior, python should always appear first.  */
   &extension_language_python,
   &extension_language_guile,
 };
@@ -297,28 +298,6 @@ ext_lang_auto_load_enabled (const struct extension_language_defn *extlang)
 }
 
 
-/* RAII class used to temporarily return SIG to its default handler.  */
-
-template<int SIG>
-struct scoped_default_signal
-{
-  scoped_default_signal ()
-  { m_old_sig_handler = signal (SIG, SIG_DFL); }
-
-  ~scoped_default_signal ()
-  { signal (SIG, m_old_sig_handler); }
-
-  DISABLE_COPY_AND_ASSIGN (scoped_default_signal);
-
-private:
-  /* The previous signal handler that needs to be restored.  */
-  sighandler_t m_old_sig_handler;
-};
-
-/* Class to temporarily return SIGINT to its default handler.  */
-
-using scoped_default_sigint = scoped_default_signal<SIGINT>;
-
 /* Functions that iterate over all extension languages.
    These only iterate over external extension languages, not including
    GDB's own extension/scripting language, unless otherwise indicated.  */
@@ -334,7 +313,7 @@ ext_lang_initialization (void)
       if (extlang->ops != nullptr
 	  && extlang->ops->initialize != NULL)
 	{
-	  scoped_default_sigint set_sigint_to_default_handler;
+	  scoped_signal_handler<SIGINT> set_sigint_to_default_handler (SIG_DFL);
 	  extlang->ops->initialize (extlang);
 	}
     }
@@ -584,7 +563,8 @@ apply_ext_lang_ptwrite_filter (btrace_thread_info *btinfo)
    preserve_one_value.  */
 
 void
-preserve_ext_lang_values (struct objfile *objfile, htab_t copied_types)
+preserve_ext_lang_values (struct objfile *objfile,
+			  copied_types_hash_t &copied_types)
 {
   for (const struct extension_language_defn *extlang : extension_languages)
     {
@@ -1053,7 +1033,7 @@ ext_lang_print_insn (struct gdbarch *gdbarch, CORE_ADDR address,
 
 /* See extension.h.  */
 
-ext_lang_missing_debuginfo_result
+ext_lang_missing_file_result
 ext_lang_handle_missing_debuginfo (struct objfile *objfile)
 {
   for (const struct extension_language_defn *extlang : extension_languages)
@@ -1061,8 +1041,30 @@ ext_lang_handle_missing_debuginfo (struct objfile *objfile)
       if (extlang->ops == nullptr
 	  || extlang->ops->handle_missing_debuginfo == nullptr)
 	continue;
-      ext_lang_missing_debuginfo_result result
+      ext_lang_missing_file_result result
 	= extlang->ops->handle_missing_debuginfo (extlang, objfile);
+      if (!result.filename ().empty () || result.try_again ())
+	return result;
+    }
+
+  return {};
+}
+
+/* See extension.h.  */
+
+ext_lang_missing_file_result
+ext_lang_find_objfile_from_buildid (program_space *pspace,
+				    const struct bfd_build_id *build_id,
+				    const char *filename)
+{
+  for (const struct extension_language_defn *extlang : extension_languages)
+    {
+      if (extlang->ops == nullptr
+	  || extlang->ops->find_objfile_from_buildid == nullptr)
+	continue;
+      ext_lang_missing_file_result result
+	= extlang->ops->find_objfile_from_buildid (extlang, pspace, build_id,
+						   filename);
       if (!result.filename ().empty () || result.try_again ())
 	return result;
     }

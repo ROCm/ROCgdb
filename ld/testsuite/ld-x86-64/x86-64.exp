@@ -321,6 +321,7 @@ run_dump_test "hidden2"
 run_dump_test "hidden3"
 run_dump_test "hidden4"
 run_dump_test "hidden5"
+run_dump_test "hidden6"
 run_dump_test "protected1"
 run_dump_test "protected2"
 run_dump_test "protected3"
@@ -547,6 +548,9 @@ run_dump_test "pr32191-x32"
 if { ![skip_sframe_tests] } {
     run_dump_test "sframe-simple-1"
     run_dump_test "sframe-plt-1"
+    run_dump_test "sframe-ibt-plt-1"
+    run_dump_test "sframe-pltgot-1"
+    run_dump_test "sframe-pltgot-2"
 }
 
 if ![istarget "x86_64-*-linux*"] {

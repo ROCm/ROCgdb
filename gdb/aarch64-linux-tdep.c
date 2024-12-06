@@ -1297,10 +1297,7 @@ aarch64_linux_supply_za_regset (const struct regset *regset,
       regcache->raw_supply (tdep->sme_za_regnum, buf);
     }
   else
-    {
-      gdb::byte_vector za_zeroed (za_bytes, 0);
-      regcache->raw_supply (tdep->sme_za_regnum, za_zeroed);
-    }
+    regcache->raw_supply_part_zeroed (tdep->sme_za_regnum, 0, za_bytes);
 }
 
 /* Collect register REGNUM from REGCACHE to BUF, using the register
@@ -2433,7 +2430,7 @@ static bool
 aarch64_linux_tagged_address_p (struct gdbarch *gdbarch, CORE_ADDR address)
 {
   /* Remove the top byte for the memory range check.  */
-  address = gdbarch_remove_non_address_bits (gdbarch, address);
+  address = aarch64_remove_non_address_bits (gdbarch, address);
 
   /* Check if the page that contains ADDRESS is mapped with PROT_MTE.  */
   if (!linux_address_in_memtag_page (address))
@@ -2491,8 +2488,9 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
       uiout->text ("\n");
 
       std::optional<CORE_ADDR> atag
-	= aarch64_mte_get_atag (gdbarch_remove_non_address_bits (gdbarch,
-								 fault_addr));
+	= aarch64_mte_get_atag (
+	    aarch64_remove_non_address_bits (gdbarch, fault_addr));
+
       gdb_byte ltag = aarch64_mte_get_ltag (fault_addr);
 
       if (!atag.has_value ())

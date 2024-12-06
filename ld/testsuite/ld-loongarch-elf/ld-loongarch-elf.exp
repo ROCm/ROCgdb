@@ -47,6 +47,7 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "tls-le-relax"
     run_dump_test "relax-medium-call"
     run_dump_test "relax-medium-call-1"
+    run_dump_test "check_got_relax"
 }
 
 if [istarget "loongarch32-*-*"] {
@@ -168,6 +169,8 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "abssym_shared"
     run_dump_test "bad_pcala_hi20_global"
     run_dump_test "bad_pcala_hi20_weak"
+    run_dump_test "bad_pcala_hi20_global_pie"
+    run_dump_test "bad_pcala_hi20_weak_pie"
     run_dump_test "bad_pcrel20_s2_global"
     run_dump_test "bad_pcrel20_s2_weak"
   }

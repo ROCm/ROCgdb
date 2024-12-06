@@ -383,9 +383,7 @@ the native maintainer when resolving ABI issues.
 
 	ms1		Deleted
 
-	nios2		--target=nios2-elf
-			--target=nios2-linux-gnu
-			Yao Qi			qiyao@sourceware.org
+	nios2		Deleted
 
 	ns32k		Deleted
 
@@ -552,6 +550,7 @@ David Blaikie					dblaikie@gmail.com
 Philip Blundell					philb@gnu.org
 Eric Botcazou					ebotcazou@libertysurf.fr
 Per Bothner					per@bothner.com
+Mohamed Bouhaouel				mohamed.bouhaouel@intel.com
 Don Breazeal					donb@codesourcery.com
 Joel Brobecker					brobecker@adacore.com
 Dave Brolley					brolley@redhat.com
@@ -775,7 +774,7 @@ Kai Tietz					ktietz@redhat.com
 Andreas Tobler					andreast@fgznet.ch
 Jon Turney					jon.turney@dronecode.org.uk
 David Ung					davidu@mips.com
-Shahab Vahedi					shahab@synopsys.com
+Shahab Vahedi					shahab.vahedi@amd.com
 D Venkatasubramanian				dvenkat@noida.hcltech.com
 Corinna Vinschen				vinschen@redhat.com
 Jan Vrany					jan.vrany@fit.cvut.cz

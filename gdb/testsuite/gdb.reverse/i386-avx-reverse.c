@@ -82,23 +82,23 @@ vmov_test ()
   asm volatile ("vmovq %0, %%xmm15": "=m" (buf1));
 
   /* Test vmovdq style instructions.  */
-  /* For local and dynamic buffers, we can't guarantee they will be aligned.
+  /* For local and global buffers, we can't guarantee they will be aligned.
      However, the aligned and unaligned versions seem to be encoded the same,
-     so testing one is enough to validate both.  */
+     so testing one is enough to validate both.  For safety, though, the
+     dynamic buffers are forced to be 32-bit aligned so vmovdqa can be
+     explicitly tested at least once.  */
 
   /* Operations based on local buffers.  */
   asm volatile ("vmovdqu %0, %%ymm0": : "m"(buf0));
   asm volatile ("vmovdqu %%ymm0, %0": "=m"(buf1));
 
   /* Operations based on global buffers.  */
-  /* Global buffers seem to always be aligned, lets sanity check vmovdqa.  */
-  asm volatile ("vmovdqa %0, %%ymm15": : "m"(global_buf0));
-  asm volatile ("vmovdqa %%ymm15, %0": "=m"(global_buf1));
   asm volatile ("vmovdqu %0, %%ymm0": : "m"(global_buf0));
   asm volatile ("vmovdqu %%ymm0, %0": "=m"(global_buf1));
 
   /* Operations based on dynamic buffers.  */
-  /* The dynamic buffers are not aligned, so we skip vmovdqa.  */
+  asm volatile ("vmovdqa %0, %%ymm15": : "m"(*dyn_buf0));
+  asm volatile ("vmovdqa %%ymm15, %0": "=m"(*dyn_buf1));
   asm volatile ("vmovdqu %0, %%ymm0": : "m"(*dyn_buf0));
   asm volatile ("vmovdqu %%ymm0, %0": "=m"(*dyn_buf1));
 
@@ -211,10 +211,88 @@ vzeroupper_test ()
 }
 
 int
+vpor_xor_test ()
+{
+  /* start vpor_xor_test.  */
+  /* Using GDB, load this value onto the register, for ease of testing.
+     ymm0.v2_int128  = {0x0, 0x12345}
+     ymm1.v2_int128  = {0x1f1e1d1c1b1a1918, 0x0}
+     ymm2.v2_int128  = {0x0, 0xbeef}
+     ymm15.v2_int128 = {0x0, 0xcafeface}
+     this way it's easy to confirm we're undoing things correctly.  */
+
+  asm volatile ("vpxor %ymm0, %ymm0, %ymm0");
+  asm volatile ("vpxor %xmm0, %xmm1, %xmm0");
+  asm volatile ("vpxor %ymm2, %ymm15, %ymm1");
+  asm volatile ("vpxor %xmm2, %xmm15, %xmm2");
+  asm volatile ("vpxor %ymm2, %ymm1, %ymm15");
+
+  asm volatile ("vpor %ymm0, %ymm0, %ymm0");
+  asm volatile ("vpor %xmm0, %xmm1, %xmm0");
+  asm volatile ("vpor %ymm2, %ymm15, %ymm1");
+  asm volatile ("vpor %xmm2, %xmm15, %xmm2");
+  asm volatile ("vpor %ymm2, %ymm1, %ymm15");
+  return 0; /* end vpor_xor_test  */
+}
+
+int
+vpcmpeq_test ()
+{
+  /* start vpcmpeq_test.  */
+  /* Using GDB, load these values onto registers for testing.
+     ymm0.v2_int128  = {0x0, 0x12345}
+     ymm1.v8_int32 = {0xcafe, 0xbeef, 0xff, 0x1234, 0x0, 0xff00, 0xff0000ff, 0xface0f0f}
+     ymm2.v8_int32 = {0xcafe0, 0xbeef, 0xff00, 0x12345678, 0x90abcdef, 0xffff00, 0xff, 0xf}
+     ymm15.v2_int128 = {0xcafeface, 0xcafeface}
+     this way it's easy to confirm we're undoing things correctly.  */
+
+  /* Test all the vpcmpeq variants on a low register (number 0).  */
+  asm volatile ("vpcmpeqb %xmm1, %xmm2, %xmm0");
+  asm volatile ("vpcmpeqw %xmm1, %xmm2, %xmm0");
+  asm volatile ("vpcmpeqd %xmm1, %xmm2, %xmm0");
+
+  asm volatile ("vpcmpeqb %ymm1, %ymm2, %ymm0");
+  asm volatile ("vpcmpeqw %ymm1, %ymm2, %ymm0");
+  asm volatile ("vpcmpeqd %ymm1, %ymm2, %ymm0");
+
+  /* Test all the vpcmpeq variants on a high register (number 15).  */
+  asm volatile ("vpcmpeqb %xmm1, %xmm2, %xmm15");
+  asm volatile ("vpcmpeqw %xmm1, %xmm2, %xmm15");
+  asm volatile ("vpcmpeqd %xmm1, %xmm2, %xmm15");
+
+  asm volatile ("vpcmpeqb %ymm1, %ymm2, %ymm15");
+  asm volatile ("vpcmpeqw %ymm1, %ymm2, %ymm15");
+  asm volatile ("vpcmpeqd %ymm1, %ymm2, %ymm15");
+  return 0; /* end vpcmpeq_test  */
+}
+
+int
+vpmovmskb_test ()
+{
+  /* start vpmovmskb_test.  */
+  /* Using GDB, load these values onto registers for testing.
+     rbx = 2
+     r8  = 3
+     r9  = 4
+     this way it's easy to confirm we're undoing things correctly.  */
+  asm volatile ("vpmovmskb %ymm0, %eax");
+  asm volatile ("vpmovmskb %ymm0, %ebx");
+
+  asm volatile ("vpmovmskb %ymm0, %r8");
+  asm volatile ("vpmovmskb %ymm0, %r9");
+  return 0; /* end vpmovmskb_test  */
+}
+
+/* This include is used to allocate the dynamic buffer and have
+   the pointers aligned to a 32-bit boundary, so we can test instructions
+   that require aligned memory.  */
+#include "precise-aligned-alloc.c"
+
+int
 main ()
 {
-  dyn_buf0 = (char *) malloc(sizeof(char) * 32);
-  dyn_buf1 = (char *) malloc(sizeof(char) * 32);
+  dyn_buf0 = (char *) precise_aligned_alloc(32, sizeof(char) * 32, NULL);
+  dyn_buf1 = (char *) precise_aligned_alloc(32, sizeof(char) * 32, NULL);
   for (int i =0; i < 32; i++)
     {
       dyn_buf0[i] = 0x20 + (i % 16);
@@ -230,5 +308,8 @@ main ()
   vpunpck_test ();
   vpbroadcast_test ();
   vzeroupper_test ();
+  vpor_xor_test ();
+  vpcmpeq_test ();
+  vpmovmskb_test ();
   return 0;	/* end of main */
 }

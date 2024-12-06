@@ -1221,6 +1221,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (apx_f, APX_F, APX_F, false),
   VECARCH (avx10.2, AVX10_2, ANY_AVX10_2, set),
   SUBARCH (gmi, GMI, GMI, false),
+  SUBARCH (msr_imm, MSR_IMM, MSR_IMM, false),
 };
 
 #undef SUBARCH
@@ -2233,7 +2234,8 @@ cpu_flags_match (const insn_template *t)
 	  && (any.bitfield.cpubmi || any.bitfield.cpubmi2
 	      || any.bitfield.cpuavx512f || any.bitfield.cpuavx512bw
 	      || any.bitfield.cpuavx512dq || any.bitfield.cpuamx_tile
-	      || any.bitfield.cpucmpccxadd || any.bitfield.cpuuser_msr))
+	      || any.bitfield.cpucmpccxadd || any.bitfield.cpuuser_msr
+	      || any.bitfield.cpumsr_imm))
 	{
 	  /* These checks (verifying that APX_F() was properly used in the
 	     opcode table entry) make sure there's no need for an "else" to
@@ -4037,7 +4039,8 @@ install_template (const insn_template *t)
       if ((maybe_cpu (t, CpuCMPCCXADD) || maybe_cpu (t, CpuAMX_TILE)
 	   || maybe_cpu (t, CpuAVX512F) || maybe_cpu (t, CpuAVX512DQ)
 	   || maybe_cpu (t, CpuAVX512BW) || maybe_cpu (t, CpuBMI)
-	   || maybe_cpu (t, CpuBMI2) || maybe_cpu (t, CpuUSER_MSR))
+	   || maybe_cpu (t, CpuBMI2) || maybe_cpu (t, CpuUSER_MSR)
+	   || maybe_cpu (t, CpuMSR_IMM))
 	  && maybe_cpu (t, CpuAPX_F))
 	{
 	  if (need_evex_encoding (t))
@@ -4211,7 +4214,7 @@ build_vex_prefix (const insn_template *t)
 	case SPACE_0F:
 	case SPACE_0F38:
 	case SPACE_0F3A:
-	case SPACE_VEXMAP7:
+	case SPACE_MAP7:
 	  i.vex.bytes[0] = 0xc4;
 	  break;
 	case SPACE_XOP08:
@@ -4246,7 +4249,7 @@ is_any_vex_encoding (const insn_template *t)
 static INLINE bool
 is_apx_evex_encoding (void)
 {
-  return i.rex2 || i.tm.opcode_space == SPACE_EVEXMAP4 || pp.has_nf
+  return i.rex2 || i.tm.opcode_space == SPACE_MAP4 || pp.has_nf
     || (i.vex.register_specifier
 	&& (i.vex.register_specifier->reg_flags & RegRex2));
 }
@@ -4370,7 +4373,7 @@ build_evex_prefix (void)
   /* The high 3 bits of the second EVEX byte are 1's compliment of RXB
      bits from REX.  */
   gas_assert (i.tm.opcode_space >= SPACE_0F);
-  gas_assert (i.tm.opcode_space <= SPACE_VEXMAP7);
+  gas_assert (i.tm.opcode_space <= SPACE_MAP7);
   i.vex.bytes[1] = ((~i.rex & 7) << 5)
 		   | (!dot_insn () ? i.tm.opcode_space
 				   : i.insn_opcode_space);
@@ -4543,7 +4546,7 @@ build_apx_evex_prefix (void)
 {
   /* To mimic behavior for legacy insns, transform use of DATA16 and REX64 into
      their embedded-prefix representations.  */
-  if (i.tm.opcode_space == SPACE_EVEXMAP4)
+  if (i.tm.opcode_space == SPACE_MAP4)
     {
       if (i.prefix[DATA_PREFIX])
 	{
@@ -4585,7 +4588,7 @@ build_apx_evex_prefix (void)
 
   /* Encode the NDD bit of the instruction promoted from the legacy
      space. ZU shares the same bit with NDD.  */
-  if ((i.vex.register_specifier && i.tm.opcode_space == SPACE_EVEXMAP4)
+  if ((i.vex.register_specifier && i.tm.opcode_space == SPACE_MAP4)
       || i.tm.opcode_modifier.operandconstraint == ZERO_UPPER)
     i.vex.bytes[3] |= 0x10;
 
@@ -4965,7 +4968,7 @@ optimize_encoding (void)
   if (optimize_for_space
       && (i.tm.mnem_off == MN_test
           || (i.tm.base_opcode == 0xf6
-              && i.tm.opcode_space == SPACE_EVEXMAP4))
+              && i.tm.opcode_space == SPACE_MAP4))
       && i.reg_operands == 1
       && i.imm_operands == 1
       && !i.types[1].bitfield.byte
@@ -5133,7 +5136,7 @@ optimize_encoding (void)
 	   && i.tm.base_opcode == 0xd0
 	   && i.tm.extension_opcode == 4
 	   && (i.tm.opcode_space == SPACE_BASE
-	       || i.tm.opcode_space == SPACE_EVEXMAP4)
+	       || i.tm.opcode_space == SPACE_MAP4)
 	   && !i.mem_operands)
     {
       /* Optimize: -O:
@@ -5198,7 +5201,7 @@ optimize_encoding (void)
     }
   else if (optimize > 1
 	   && (i.tm.base_opcode | 0xf) == 0x4f
-	   && i.tm.opcode_space == SPACE_EVEXMAP4
+	   && i.tm.opcode_space == SPACE_MAP4
 	   && i.reg_operands == 3
 	   && i.tm.opcode_modifier.operandconstraint == EVEX_NF
 	   && !i.types[0].bitfield.word)
@@ -6536,7 +6539,7 @@ static INLINE bool may_need_pass2 (const insn_template *t)
 	   || (t->opcode_space == SPACE_BASE
 	       && t->base_opcode == 0x63)
 	   || (intel_syntax /* shld / shrd may mean suffixed shl / shr.  */
-	       && t->opcode_space == SPACE_EVEXMAP4
+	       && t->opcode_space == SPACE_MAP4
 	       && (t->base_opcode | 8) == 0x2c);
 }
 
@@ -6990,18 +6993,20 @@ i386_assemble (char *line)
      because of the swapping above) in the incoming set of operands.  */
   if ((i.imm_operands == 2
        && (t->mnem_off == MN_extrq || t->mnem_off == MN_insertq))
-      || (t->mnem_off == MN_uwrmsr && i.imm_operands
-	  && i.operands > i.imm_operands))
+      || ((t->mnem_off == MN_uwrmsr || t->mnem_off == MN_wrmsrns)
+	  && i.imm_operands && i.operands > i.imm_operands))
       swap_2_operands (0, 1);
 
   if (i.imm_operands)
     {
-      /* For USER_MSR instructions, imm32 stands for the name of an model specific
-	 register (MSR). That's an unsigned quantity, whereas all other insns with
-	 32-bit immediate and 64-bit operand size use sign-extended
-	 immediates (imm32s). Therefore these insns are special-cased, bypassing
-	 the normal handling of immediates here.  */
-      if (is_cpu(current_templates.start, CpuUSER_MSR))
+      /* For USER_MSR and MSR_IMM instructions, imm32 stands for the name of a
+	 model specific register (MSR). That's an unsigned quantity, whereas all
+	 other insns with 32-bit immediate and 64-bit operand size use
+	 sign-extended immediates (imm32s). Therefore these insns are
+	 special-cased, bypassing the normal handling of immediates here.  */
+      if (is_cpu(current_templates.start, CpuUSER_MSR)
+	  || t->mnem_off == MN_rdmsr
+	  || t->mnem_off == MN_wrmsrns)
 	{
 	  for (j = 0; j < i.operands; j++)
 	    {
@@ -7248,7 +7253,7 @@ i386_assemble (char *line)
     }
 #endif
 
-  if ((is_any_vex_encoding (&i.tm) && i.tm.opcode_space != SPACE_EVEXMAP4)
+  if ((is_any_vex_encoding (&i.tm) && i.tm.opcode_space != SPACE_MAP4)
       || i.tm.operand_types[i.imm_operands].bitfield.class >= RegMMX
       || i.tm.operand_types[i.imm_operands + 1].bitfield.class >= RegMMX)
     {
@@ -7405,7 +7410,7 @@ i386_assemble (char *line)
 
       /* Check for explicit REX prefix.  */
       if ((i.prefix[REX_PREFIX]
-	   && (i.tm.opcode_space != SPACE_EVEXMAP4
+	   && (i.tm.opcode_space != SPACE_MAP4
 	       /* To mimic behavior for legacy insns, permit use of REX64 for promoted
 		  legacy instructions.  */
 	       || i.prefix[REX_PREFIX] != (REX_OPCODE | REX_W)))
@@ -7752,6 +7757,33 @@ parse_insn (const char *line, char *mnemonic, enum parse_mode mode)
 	  else if (pp.disp_encoding != disp_encoding_32bit)
 	    as_warn (_("ignoring `.d32' suffix due to earlier `{disp<N>}'"));
 	}
+#ifdef TE_SOLARIS
+      /* Sun specifies an alternative form for CMOVcc: Size suffix (if any)
+	 first, then a dot, then the condition code mnemonic.  */
+      else if ((mnemonic + 4 == dot_p
+		&& !memcmp (mnemonic, "cmov", 4))
+	       /* While doc doesn't say so, gcc assumes it: Same for FCMOVcc,
+		  except that there's no size suffix to care about.  */
+	       || (mnemonic + 5 == dot_p
+		   && !memcmp (mnemonic, "fcmov", 5)))
+	{
+	  /* Simply strip the dot.  */
+	  memmove (dot_p, dot_p + 1, mnem_p - dot_p);
+	  dot_p = mnem_p - 1;
+	}
+      else if (!intel_syntax
+	       && mnemonic + 5 == dot_p
+	       && !memcmp (mnemonic, "cmov", 4)
+	       && strchr ("lqw", TOLOWER (dot_p[-1])))
+	{
+	  /* Strip the dot, while moving the suffix.  */
+	  char suffix = dot_p[-1];
+
+	  memmove (dot_p - 1, dot_p + 1, mnem_p - dot_p);
+	  mnem_p[-2] = suffix;
+	  dot_p = mnem_p - 1;
+	}
+#endif
       else
 	goto check_suffix;
       mnem_p = dot_p;
@@ -9325,7 +9357,7 @@ match_template (char mnem_suffix)
 	     - the non-default (swapped) form is requested.  */
 	  overlap1 = operand_type_and (operand_types[0], operand_types[1]);
 
-	  j = i.operands - 1 - (t->opcode_space == SPACE_EVEXMAP4
+	  j = i.operands - 1 - (t->opcode_space == SPACE_MAP4
 				&& t->opcode_modifier.vexvvvv);
 
 	  if (t->opcode_modifier.d && i.reg_operands == i.operands
@@ -9421,7 +9453,7 @@ match_template (char mnem_suffix)
 		  found_reverse_match = Opcode_VexW;
 		  goto check_operands_345;
 		}
-	      else if (t->opcode_space == SPACE_EVEXMAP4
+	      else if (t->opcode_space == SPACE_MAP4
 		       && t->operands >= 3)
 		{
 		  found_reverse_match = Opcode_D;
@@ -9429,11 +9461,11 @@ match_template (char mnem_suffix)
 		}
 	      else if (t->opcode_modifier.commutative
 		       /* CFCMOVcc also wants its major opcode unaltered.  */
-		       || (t->opcode_space == SPACE_EVEXMAP4
+		       || (t->opcode_space == SPACE_MAP4
 			   && (t->base_opcode | 0xf) == 0x4f))
 		found_reverse_match = ~0;
 	      else if (t->opcode_space != SPACE_BASE
-		       && (t->opcode_space != SPACE_EVEXMAP4
+		       && (t->opcode_space != SPACE_MAP4
 			   /* MOVBE, originating from SPACE_0F38, also
 			      belongs here.  */
 			   || t->mnem_off == MN_movbe)
@@ -9692,7 +9724,7 @@ match_template (char mnem_suffix)
 
   /* APX insns acting on byte operands are WIG, yet that can't be expressed
      in the templates (they're also covering word/dword/qword operands).  */
-  if (t->opcode_space == SPACE_EVEXMAP4 && !t->opcode_modifier.vexw &&
+  if (t->opcode_space == SPACE_MAP4 && !t->opcode_modifier.vexw &&
       i.types[i.operands - 1].bitfield.byte)
     {
       gas_assert (t->opcode_modifier.w);
@@ -9717,7 +9749,7 @@ match_template (char mnem_suffix)
 
       i.tm.base_opcode ^= found_reverse_match;
 
-      if (i.tm.opcode_space == SPACE_EVEXMAP4)
+      if (i.tm.opcode_space == SPACE_MAP4)
 	goto swap_first_2;
 
       /* Certain SIMD insns have their load forms specified in the opcode
@@ -9730,7 +9762,7 @@ match_template (char mnem_suffix)
 
       /* Fall through.  */
     case ~0:
-      if (i.tm.opcode_space == SPACE_EVEXMAP4
+      if (i.tm.opcode_space == SPACE_MAP4
 	  && !t->opcode_modifier.commutative)
 	i.tm.opcode_modifier.operandconstraint = EVEX_NF;
       i.tm.operand_types[0] = operand_types[i.operands - 1];
@@ -10170,7 +10202,7 @@ process_suffix (const insn_template *t)
       if (i.tm.opcode_modifier.mnemonicsize != IGNORESIZE
 	  && !i.tm.opcode_modifier.floatmf
 	  && (!is_any_vex_encoding (&i.tm)
-	      || i.tm.opcode_space == SPACE_EVEXMAP4)
+	      || i.tm.opcode_space == SPACE_MAP4)
 	  && ((i.suffix == LONG_MNEM_SUFFIX) == (flag_code == CODE_16BIT)
 	      || (flag_code == CODE_64BIT
 		  && i.tm.opcode_modifier.jump == JUMP_BYTE)))
@@ -10182,7 +10214,7 @@ process_suffix (const insn_template *t)
 
 	  /* The DATA PREFIX of EVEX promoted from legacy APX instructions
 	     needs to be adjusted.  */
-	  if (i.tm.opcode_space == SPACE_EVEXMAP4)
+	  if (i.tm.opcode_space == SPACE_MAP4)
 	    {
 	      gas_assert (!i.tm.opcode_modifier.opcodeprefix);
 	      i.tm.opcode_modifier.opcodeprefix = PREFIX_0X66;
@@ -10703,21 +10735,40 @@ process_operands (void)
       i.operands--;
       i.tm.operands--;
     }
-  else if (i.tm.opcode_modifier.operandconstraint == IMPLICIT_QUAD_GROUP)
+  else if (i.tm.opcode_modifier.operandconstraint == IMPLICIT_GROUP)
     {
-      unsigned int regnum, first_reg_in_group, last_reg_in_group;
+      unsigned int op, extra;
+      const reg_entry *first;
 
-      /* The second operand must be {x,y,z}mmN, where N is a multiple of 4. */
-      gas_assert (i.operands >= 2 && i.types[1].bitfield.class == RegSIMD);
-      regnum = register_number (i.op[1].regs);
-      first_reg_in_group = regnum & ~3;
-      last_reg_in_group = first_reg_in_group + 3;
-      if (regnum != first_reg_in_group)
-	as_warn (_("source register `%s%s' implicitly denotes"
-		   " `%s%.3s%u' to `%s%.3s%u' source group in `%s'"),
-		 register_prefix, i.op[1].regs->reg_name,
-		 register_prefix, i.op[1].regs->reg_name, first_reg_in_group,
-		 register_prefix, i.op[1].regs->reg_name, last_reg_in_group,
+      /* The second operand must be {x,y,z}mmN. */
+      gas_assert (i.operands == 3 && i.types[1].bitfield.class == RegSIMD);
+
+      switch (i.types[2].bitfield.class)
+	{
+	case RegSIMD:
+	  /* AVX512-{4FMAPS,4VNNIW} operand 2: N must be a multiple of 4. */
+	  op = 1;
+	  extra = 3;
+	  break;
+
+	case RegMask:
+	  /* AVX512-VP2INTERSECT operand 3: N must be a multiple of 2. */
+	  op = 2;
+	  extra = 1;
+	  break;
+
+	default:
+	  abort ();
+	}
+
+      first = i.op[op].regs - (register_number (i.op[op].regs) & extra);
+      if (i.op[op].regs != first)
+	as_warn (_("operand %u `%s%s' implicitly denotes"
+		   " `%s%s' to `%s%s' group in `%s'"),
+		 intel_syntax ? i.operands - op : op + 1,
+		 register_prefix, i.op[op].regs->reg_name,
+		 register_prefix, first[0].reg_name,
+		 register_prefix, first[extra].reg_name,
 		 insn_name (&i.tm));
     }
   else if (i.tm.opcode_modifier.operandconstraint == REG_KLUDGE)
@@ -12752,7 +12803,7 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 		fixP->fx_signed = 1;
 
 	      if (reloc_type == BFD_RELOC_X86_64_GOTTPOFF
-		  && i.tm.opcode_space == SPACE_EVEXMAP4)
+		  && i.tm.opcode_space == SPACE_MAP4)
 		{
 		  /* Only "add %reg1, foo@gottpoff(%rip), %reg2" is
 		     allowed in md_assemble.  Set fx_tcbit2 for EVEX
@@ -16687,11 +16738,14 @@ bool i386_record_operator (operatorT op,
 }
 #endif
 
+const char md_shortopts[] =
 #ifdef OBJ_ELF
-const char md_shortopts[] = "kVQ:sqnO::";
-#else
-const char md_shortopts[] = "qnO::";
+  "kVQ:"
+# ifdef TE_SOLARIS
+  "s"
+# endif
 #endif
+  "qnO::";
 
 #define OPTION_32 (OPTION_MD_BASE + 0)
 #define OPTION_64 (OPTION_MD_BASE + 1)
@@ -16815,10 +16869,12 @@ md_parse_option (int c, const char *arg)
     case 'k':
       break;
 
+# ifdef TE_SOLARIS
     case 's':
       /* -s: On i386 Solaris, this tells the native assembler to use
 	 .stab instead of .stab.excl.  We always use .stab anyhow.  */
       break;
+# endif
 
     case OPTION_MSHARED:
       shared = 1;

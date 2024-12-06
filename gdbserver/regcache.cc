@@ -40,7 +40,7 @@ get_thread_regcache (struct thread_info *thread, int fetch)
      have.  */
   if (regcache == NULL)
     {
-      struct process_info *proc = get_thread_process (thread);
+      process_info *proc = thread->process ();
 
       gdb_assert (proc->tdesc != NULL);
 
@@ -97,8 +97,10 @@ regcache_invalidate_thread (struct thread_info *thread)
 void
 regcache_invalidate_pid (int pid)
 {
-  /* Only invalidate the regcaches of threads of this process.  */
-  for_each_thread (pid, regcache_invalidate_thread);
+  process_info *process = find_process_pid (pid);
+
+  if (process != nullptr)
+    process->for_each_thread (regcache_invalidate_thread);
 }
 
 /* See regcache.h.  */
@@ -365,6 +367,17 @@ supply_register_zeroed (struct regcache *regcache, int n)
 #ifndef IN_PROCESS_AGENT
   if (regcache->register_status != NULL)
     regcache->register_status[n] = REG_VALID;
+#endif
+}
+
+void
+regcache::raw_supply_part_zeroed (int regnum, int offset, size_t size)
+{
+  auto dst = register_data (this, regnum).slice (offset, size);
+  memset (dst.data (), 0, dst.size ());
+#ifndef IN_PROCESS_AGENT
+  if (register_status != NULL)
+    register_status[regnum] = REG_VALID;
 #endif
 }
 

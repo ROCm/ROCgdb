@@ -1227,7 +1227,7 @@ amd64_get_unused_input_int_reg (const struct amd64_insn *details)
 
   /* Avoid RAX.  */
   used_regs_mask |= 1 << EAX_REG_NUM;
-  /* Similarily avoid RDX, implicit operand in divides.  */
+  /* Similarly avoid RDX, implicit operand in divides.  */
   used_regs_mask |= 1 << EDX_REG_NUM;
   /* Avoid RSP.  */
   used_regs_mask |= 1 << ESP_REG_NUM;
@@ -1714,7 +1714,7 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 	  CORE_ADDR rip = pc - insn_offset;
 
 	  /* If we just stepped over a breakpoint insn, we don't backup
-	     the pc on purpose; this is to match behaviour without
+	     the pc on purpose; this is to match behavior without
 	     stepping.  */
 
 	  regcache_write_pc (regs, rip);

@@ -65,7 +65,7 @@ x86_dr_low_set_addr (int regnum, CORE_ADDR addr)
   gdb_assert (DR_FIRSTADDR <= regnum && regnum <= DR_LASTADDR);
 
   /* Only update the threads of this process.  */
-  for_each_thread (current_thread->id.pid (), update_debug_registers);
+  current_process ()->for_each_thread (update_debug_registers);
 }
 
 /* Update the inferior's DR7 debug control register from STATE.  */
@@ -74,7 +74,7 @@ static void
 x86_dr_low_set_control (unsigned long control)
 {
   /* Only update the threads of this process.  */
-  for_each_thread (current_thread->id.pid (), update_debug_registers);
+  current_process ()->for_each_thread (update_debug_registers);
 }
 
 /* Return the current value of a DR register of the current thread's
@@ -250,14 +250,17 @@ i386_get_thread_context (windows_thread_info *th)
   /* Requesting the CONTEXT_EXTENDED_REGISTERS register set fails if
      the system doesn't support extended registers.  */
   static DWORD extended_registers = CONTEXT_EXTENDED_REGISTERS;
+#ifdef __x86_64__
+  static DWORD wow64_extended_registers = WOW64_CONTEXT_EXTENDED_REGISTERS;
+#endif
 
  again:
 #ifdef __x86_64__
   if (windows_process.wow64_process)
-    th->wow64_context.ContextFlags = (CONTEXT_FULL
-				      | CONTEXT_FLOATING_POINT
-				      | CONTEXT_DEBUG_REGISTERS
-				      | extended_registers);
+    th->wow64_context.ContextFlags = (WOW64_CONTEXT_FULL
+				      | WOW64_CONTEXT_FLOATING_POINT
+				      | WOW64_CONTEXT_DEBUG_REGISTERS
+				      | wow64_extended_registers);
   else
 #endif
     th->context.ContextFlags = (CONTEXT_FULL
@@ -276,10 +279,23 @@ i386_get_thread_context (windows_thread_info *th)
     {
       DWORD e = GetLastError ();
 
-      if (extended_registers && e == ERROR_INVALID_PARAMETER)
+#ifdef __x86_64__
+      if (windows_process.wow64_process)
 	{
-	  extended_registers = 0;
-	  goto again;
+	  if (wow64_extended_registers && e == ERROR_INVALID_PARAMETER)
+	    {
+	      wow64_extended_registers = 0;
+	      goto again;
+	    }
+	}
+      else
+#endif
+	{
+	  if (extended_registers && e == ERROR_INVALID_PARAMETER)
+	    {
+	      extended_registers = 0;
+	      goto again;
+	    }
 	}
 
       error ("GetThreadContext failure %ld\n", (long) e);
@@ -596,12 +612,12 @@ i386_arch_setup (void)
 #ifdef __x86_64__
   tdesc = amd64_create_target_description (X86_XSTATE_SSE_MASK, false,
 					   false, false);
-  init_target_desc (tdesc, amd64_expedite_regs);
+  init_target_desc (tdesc, amd64_expedite_regs, WINDOWS_OSABI);
   win32_tdesc = tdesc;
 #endif
 
   tdesc = i386_create_target_description (X86_XSTATE_SSE_MASK, false, false);
-  init_target_desc (tdesc, i386_expedite_regs);
+  init_target_desc (tdesc, i386_expedite_regs, WINDOWS_OSABI);
 #ifdef __x86_64__
   wow64_win32_tdesc = tdesc;
 #else

@@ -1007,7 +1007,7 @@ handle_general_set (char *own_buf)
 
 	  for_each_thread ([&] (thread_info *thread)
 	    {
-	      if (ptid_of (thread).matches (ptid))
+	      if (thread->id.matches (ptid))
 		set_options[thread] = options;
 	    });
 	}
@@ -1020,7 +1020,7 @@ handle_general_set (char *own_buf)
 	  if (thread->thread_options != options)
 	    {
 	      threads_debug_printf ("[options for %s are now %s]\n",
-				    target_pid_to_str (ptid_of (thread)).c_str (),
+				    target_pid_to_str (thread->id).c_str (),
 				    to_string (options).c_str ());
 
 	      thread->thread_options = options;
@@ -1296,11 +1296,7 @@ handle_detach (char *own_buf)
       process = find_process_pid (pid);
     }
   else
-    {
-      process = (current_thread != nullptr
-		 ? get_thread_process (current_thread)
-		 : nullptr);
-    }
+    process = current_process ();
 
   if (process == NULL)
     {
@@ -1355,27 +1351,21 @@ handle_detach (char *own_buf)
      another process might delete the next thread in the iteration, which is
      the one saved by the safe iterator.  We will never delete the currently
      iterated on thread, so standard iteration should be safe.  */
-  for (thread_info *thread : all_threads)
+  for (thread_info &thread : process->thread_list ())
     {
-      /* Only threads that are of the process we are detaching.  */
-      if (thread->id.pid () != pid)
-	continue;
-
       /* Only threads that have a pending fork event.  */
       target_waitkind kind;
-      thread_info *child = target_thread_pending_child (thread, &kind);
+      thread_info *child = target_thread_pending_child (&thread, &kind);
       if (child == nullptr || kind == TARGET_WAITKIND_THREAD_CLONED)
 	continue;
 
-      process_info *fork_child_process = get_thread_process (child);
-      gdb_assert (fork_child_process != nullptr);
-
+      process_info *fork_child_process = child->process ();
       int fork_child_pid = fork_child_process->pid;
 
       if (detach_inferior (fork_child_process) != 0)
 	warning (_("Failed to detach fork child %s, child of %s"),
 		 target_pid_to_str (ptid_t (fork_child_pid)).c_str (),
-		 target_pid_to_str (thread->id).c_str ());
+		 target_pid_to_str (thread.id).c_str ());
     }
 
   if (detach_inferior (process) != 0)
@@ -1554,7 +1544,7 @@ parse_debug_options (const char *options)
   gdb_assert (options != nullptr);
 
   /* Empty options means the "default" set.  This exists mostly for
-     backwards compatibility with gdbserver's legacy behaviour.  */
+     backwards compatibility with gdbserver's legacy behavior.  */
   if (*options == '\0')
     options = "+threads";
 
@@ -1833,7 +1823,7 @@ handle_qxfer_exec_file (const char *annex,
       if (current_thread == NULL)
 	return -1;
 
-      pid = pid_of (current_thread);
+      pid = current_thread->id.pid ();
     }
   else
     {
@@ -2004,7 +1994,7 @@ handle_qxfer_statictrace (const char *annex,
 static void
 handle_qxfer_threads_worker (thread_info *thread, std::string *buffer)
 {
-  ptid_t ptid = ptid_of (thread);
+  ptid_t ptid = thread->id;
   char ptid_s[100];
   int core = target_core_of_thread (ptid);
   char core_s[21];
@@ -2523,7 +2513,47 @@ static void
 handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 {
   client_state &cs = get_client_state ();
-  static std::list<thread_info *>::const_iterator thread_iter;
+  static owning_intrusive_list<process_info>::iterator process_iter;
+  static owning_intrusive_list<thread_info>::iterator thread_iter;
+
+  auto init_thread_iter = [&] ()
+    {
+      process_iter = all_processes.begin ();
+      owning_intrusive_list<thread_info> *thread_list;
+
+      for (; process_iter != all_processes.end (); ++process_iter)
+	{
+	  thread_list = &process_iter->thread_list ();
+	  thread_iter = thread_list->begin ();
+	  if (thread_iter != thread_list->end ())
+	    break;
+	}
+      /* Make sure that there is at least one thread to iterate.  */
+      gdb_assert (process_iter != all_processes.end ());
+      gdb_assert (thread_iter != thread_list->end ());
+    };
+
+  auto advance_thread_iter = [&] ()
+    {
+      /* The loop below is written in the natural way as-if we'd always
+	 start at the beginning of the inferior list.  This fast forwards
+	 the algorithm to the actual current position.  */
+      owning_intrusive_list<thread_info> *thread_list
+	= &process_iter->thread_list ();
+      goto start;
+
+      for (; process_iter != all_processes.end (); ++process_iter)
+	{
+	  thread_list = &process_iter->thread_list ();
+	  thread_iter = thread_list->begin ();
+	  while (thread_iter != thread_list->end ())
+	    {
+	      return;
+	    start:
+	      ++thread_iter;
+	    }
+	}
+    };
 
   /* Reply the current thread id.  */
   if (strcmp ("qC", own_buf) == 0 && !disable_packet_qC)
@@ -2535,8 +2565,8 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	ptid = cs.general_thread;
       else
 	{
-	  thread_iter = all_threads.begin ();
-	  ptid = (*thread_iter)->id;
+	  init_thread_iter ();
+	  ptid = thread_iter->id;
 	}
 
       sprintf (own_buf, "QC");
@@ -2596,24 +2626,26 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       if (strcmp ("qfThreadInfo", own_buf) == 0)
 	{
 	  require_running_or_return (own_buf);
-	  thread_iter = all_threads.begin ();
+	  init_thread_iter ();
 
 	  *own_buf++ = 'm';
-	  ptid_t ptid = (*thread_iter)->id;
+	  ptid_t ptid = thread_iter->id;
 	  write_ptid (own_buf, ptid);
-	  thread_iter++;
+	  advance_thread_iter ();
 	  return;
 	}
 
       if (strcmp ("qsThreadInfo", own_buf) == 0)
 	{
 	  require_running_or_return (own_buf);
-	  if (thread_iter != all_threads.end ())
+	  /* We're done if the process iterator hits the end of the
+	     process list.  */
+	  if (process_iter != all_processes.end ())
 	    {
 	      *own_buf++ = 'm';
-	      ptid_t ptid = (*thread_iter)->id;
+	      ptid_t ptid = thread_iter->id;
 	      write_ptid (own_buf, ptid);
-	      thread_iter++;
+	      advance_thread_iter ();
 	      return;
 	    }
 	  else
@@ -3616,7 +3648,7 @@ myresume (char *own_buf, int step, int sig)
 
   if (step || sig || valid_cont_thread)
     {
-      resume_info[0].thread = current_ptid;
+      resume_info[0].thread = current_thread->id;
       if (step)
 	resume_info[0].kind = resume_step;
       else

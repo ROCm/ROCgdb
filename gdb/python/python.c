@@ -35,6 +35,7 @@
 #include "location.h"
 #include "run-on-main-thread.h"
 #include "observable.h"
+#include "build-id.h"
 
 #if GDB_SELF_TEST
 #include "gdbsupport/selftest.h"
@@ -128,8 +129,11 @@ static std::optional<std::string> gdbpy_colorize
   (const std::string &filename, const std::string &contents);
 static std::optional<std::string> gdbpy_colorize_disasm
 (const std::string &content, gdbarch *gdbarch);
-static ext_lang_missing_debuginfo_result gdbpy_handle_missing_debuginfo
+static ext_lang_missing_file_result gdbpy_handle_missing_debuginfo
   (const struct extension_language_defn *extlang, struct objfile *objfile);
+static ext_lang_missing_file_result gdbpy_find_objfile_from_buildid
+  (const struct extension_language_defn *extlang, program_space *pspace,
+   const struct bfd_build_id *build_id, const char *missing_filename);
 
 /* The interface between gdb proper and loading of python scripts.  */
 
@@ -179,7 +183,8 @@ static const struct extension_language_ops python_extension_ops =
 
   gdbpy_print_insn,
 
-  gdbpy_handle_missing_debuginfo
+  gdbpy_handle_missing_debuginfo,
+  gdbpy_find_objfile_from_buildid
 };
 
 #endif /* HAVE_PYTHON */
@@ -1755,10 +1760,10 @@ gdbpy_get_current_objfile (PyObject *unused1, PyObject *unused2)
 /* Implement the 'handle_missing_debuginfo' hook for Python.  GDB has
    failed to find any debug information for OBJFILE.  The extension has a
    chance to record this, or even install the required debug information.
-   See the description of ext_lang_missing_debuginfo_result in
-   extension-priv.h for details of the return value.  */
+   See the description of ext_lang_missing_file_result in extension-priv.h
+   for details of the return value.  */
 
-static ext_lang_missing_debuginfo_result
+static ext_lang_missing_file_result
 gdbpy_handle_missing_debuginfo (const struct extension_language_defn *extlang,
 				struct objfile *objfile)
 {
@@ -1805,8 +1810,10 @@ gdbpy_handle_missing_debuginfo (const struct extension_language_defn *extlang,
 
   if (PyBool_Check (pyo_execute_ret.get ()))
     {
-      bool try_again = PyObject_IsTrue (pyo_execute_ret.get ());
-      return ext_lang_missing_debuginfo_result (try_again);
+      /* We know the value is a bool, so it must be either Py_True or
+	 Py_False.  Anything else would not get past the above check.  */
+      bool try_again = pyo_execute_ret.get () == Py_True;
+      return ext_lang_missing_file_result (try_again);
     }
 
   if (!gdbpy_is_string (pyo_execute_ret.get ()))
@@ -1826,7 +1833,108 @@ gdbpy_handle_missing_debuginfo (const struct extension_language_defn *extlang,
       return {};
     }
 
-  return ext_lang_missing_debuginfo_result (std::string (filename.get ()));
+  return ext_lang_missing_file_result (std::string (filename.get ()));
+}
+
+/* Implement the find_objfile_from_buildid hook for Python.  PSPACE is the
+   program space in which GDB is trying to find an objfile, BUILD_ID is the
+   build-id for the missing objfile, and EXPECTED_FILENAME is a non-NULL
+   string which can be used (if needed) in messages to the user, and
+   represents the file GDB is looking for.  */
+
+static ext_lang_missing_file_result
+gdbpy_find_objfile_from_buildid (const struct extension_language_defn *extlang,
+				 program_space *pspace,
+				 const struct bfd_build_id *build_id,
+				 const char *missing_filename)
+{
+  gdb_assert (pspace != nullptr);
+  gdb_assert (build_id != nullptr);
+  gdb_assert (missing_filename != nullptr);
+
+  /* Early exit if Python is not initialised.  */
+  if (!gdb_python_initialized || gdb_python_module == nullptr)
+    return {};
+
+  gdbpy_enter enter_py;
+
+  /* Convert BUILD_ID into a Python object.  */
+  std::string hex_form = bin2hex (build_id->data, build_id->size);
+  gdbpy_ref<> pyo_buildid = host_string_to_python_string (hex_form.c_str ());
+  if (pyo_buildid == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  /* Convert MISSING_FILENAME to a Python object.  */
+  gdbpy_ref<> pyo_filename = host_string_to_python_string (missing_filename);
+  if (pyo_filename == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  /* Convert PSPACE to a Python object.  */
+  gdbpy_ref<> pyo_pspace = pspace_to_pspace_object (pspace);
+  if (pyo_pspace == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  /* Lookup the helper function within the GDB module.  */
+  gdbpy_ref<> pyo_handler
+    (PyObject_GetAttrString (gdb_python_module, "_handle_missing_objfile"));
+  if (pyo_handler == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  /* Call the function, passing in the Python objfile object.  */
+  gdbpy_ref<> pyo_execute_ret
+    (PyObject_CallFunctionObjArgs (pyo_handler.get (), pyo_pspace.get (),
+				   pyo_buildid.get (), pyo_filename.get (),
+				   nullptr));
+  if (pyo_execute_ret == nullptr)
+    {
+      /* If the handler is cancelled due to a Ctrl-C, then propagate
+	 the Ctrl-C as a GDB exception instead of swallowing it.  */
+      gdbpy_print_stack_or_quit ();
+      return {};
+    }
+
+  /* Parse the result, and convert it back to the C++ object.  */
+  if (pyo_execute_ret == Py_None)
+    return {};
+
+  if (PyBool_Check (pyo_execute_ret.get ()))
+    {
+      /* We know the value is a bool, so it must be either Py_True or
+	 Py_False.  Anything else would not get past the above check.  */
+      bool try_again = pyo_execute_ret.get () == Py_True;
+      return ext_lang_missing_file_result (try_again);
+    }
+
+  if (!gdbpy_is_string (pyo_execute_ret.get ()))
+    {
+      PyErr_SetString (PyExc_ValueError,
+		       "return value from _find_objfile_by_buildid should "
+		       "be None, a bool, or a str");
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  gdb::unique_xmalloc_ptr<char> filename
+    = python_string_to_host_string (pyo_execute_ret.get ());
+  if (filename == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
+  return ext_lang_missing_file_result (std::string (filename.get ()));
 }
 
 /* Compute the list of active python type printers and store them in
@@ -2107,6 +2215,9 @@ static struct cmd_list_element *user_show_python_list;
 static void
 finalize_python (const struct extension_language_defn *ignore)
 {
+  if (!gdb_python_initialized)
+    return;
+
   struct active_ext_lang_state *previous_active;
 
   /* We don't use ensure_python_env here because if we ever ran the
@@ -2189,6 +2300,42 @@ gdbpy_gdb_exiting (int exit_code)
     gdbpy_print_stack ();
 }
 
+/* Signal handler to convert a SIGABRT into an exception.  */
+
+static void
+catch_python_fatal (int signum)
+{
+  signal (SIGABRT, catch_python_fatal);
+
+  throw_exception_sjlj (gdb_exception {RETURN_ERROR, GENERIC_ERROR});
+}
+
+/* Stand-in for Py_IsInitialized ().  To be used because after a python fatal
+   error, no calls into Python are allowed.  */
+
+static bool py_isinitialized = false;
+
+/* Call Py_Initialize (), and return true if successful.   */
+
+static bool ATTRIBUTE_UNUSED
+py_initialize ()
+{
+  auto prev_handler = signal (SIGABRT, catch_python_fatal);
+  SCOPE_EXIT { signal (SIGABRT, prev_handler); };
+
+  TRY_SJLJ
+    {
+      Py_Initialize ();
+      py_isinitialized = true;
+    }
+  CATCH_SJLJ (e, RETURN_MASK_ERROR)
+    {
+    }
+  END_CATCH_SJLJ;
+
+  return py_isinitialized;
+}
+
 static bool
 do_start_initialization ()
 {
@@ -2223,17 +2370,20 @@ do_start_initialization ()
      for Python versions that do not duplicate program_name.  */
   static wchar_t *progname_copy;
 
-  std::string oldloc = setlocale (LC_ALL, NULL);
-  setlocale (LC_ALL, "");
-  size_t progsize = strlen (progname.get ());
-  progname_copy = XNEWVEC (wchar_t, progsize + 1);
-  size_t count = mbstowcs (progname_copy, progname.get (), progsize + 1);
-  if (count == (size_t) -1)
-    {
-      fprintf (stderr, "Could not convert python path to string\n");
-      return false;
-    }
-  setlocale (LC_ALL, oldloc.c_str ());
+  {
+    std::string oldloc = setlocale (LC_ALL, NULL);
+    SCOPE_EXIT { setlocale (LC_ALL, oldloc.c_str ()); };
+
+    setlocale (LC_ALL, "");
+    size_t progsize = strlen (progname.get ());
+    progname_copy = XNEWVEC (wchar_t, progsize + 1);
+    size_t count = mbstowcs (progname_copy, progname.get (), progsize + 1);
+    if (count == (size_t) -1)
+      {
+	fprintf (stderr, "Could not convert python path to string\n");
+	return false;
+      }
+  }
 
   /* Py_SetProgramName was deprecated in Python 3.11.  Use PyConfig
      mechanisms for Python 3.10 and newer.  */
@@ -2242,7 +2392,8 @@ do_start_initialization ()
      remain alive for the duration of the program's execution, so
      it is not freed after this call.  */
   Py_SetProgramName (progname_copy);
-  Py_Initialize ();
+  if (!py_initialize ())
+    return false;
 #else
   PyConfig config;
 
@@ -2264,10 +2415,19 @@ do_start_initialization ()
 init_done:
   PyConfig_Clear (&config);
   if (PyStatus_Exception (status))
-    return false;
+    {
+      if (PyStatus_IsError (status))
+	gdb_printf (_("Python initialization failed: %s\n"), status.err_msg);
+      else
+	gdb_printf (_("Python initialization failed with exit status: %d\n"),
+		    status.exitcode);
+      return false;
+    }
+  py_isinitialized = true;
 #endif
 #else
-  Py_Initialize ();
+  if (!py_initialize ())
+    return false;
 #endif
 
 #if PY_VERSION_HEX < 0x03090000
@@ -2609,8 +2769,21 @@ do_initialize (const struct extension_language_defn *extlang)
 static void
 gdbpy_initialize (const struct extension_language_defn *extlang)
 {
-  if (!do_start_initialization () && PyErr_Occurred ())
-    gdbpy_print_stack ();
+  if (!do_start_initialization ())
+    {
+      if (py_isinitialized)
+	{
+	  if (PyErr_Occurred ())
+	    gdbpy_print_stack ();
+
+	  /* We got no use for the Python interpreter anymore.  Finalize it
+	     ASAP.  */
+	  Py_Finalize ();
+	}
+
+      /* Continue with python disabled.  */
+      return;
+    }
 
   gdbpy_enter enter_py;
 
