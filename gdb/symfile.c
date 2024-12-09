@@ -22,6 +22,7 @@
 #include "arch-utils.h"
 #include "cli/cli-cmds.h"
 #include "extract-store-integer.h"
+#include "gdbsupport/gdb_vecs.h"
 #include "symtab.h"
 #include "gdbcore.h"
 #include "frame.h"
@@ -901,6 +902,10 @@ syms_from_objfile_1 (struct objfile *objfile,
       int num_sections = gdb_bfd_count_sections (objfile->obfd.get ());
 
       objfile->section_offsets.assign (num_sections, 0);
+
+      /* Release the objfile unique pointer, since nothing went wrong
+	 in reading it.  */
+      objfile_holder.release ();
       return;
     }
 
