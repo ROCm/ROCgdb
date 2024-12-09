@@ -34,8 +34,15 @@ static int pic_veneer = 0;
 static int fix_erratum_835769 = 0;
 static erratum_84319_opts fix_erratum_843419 = ERRAT_NONE;
 static int no_apply_dynamic_relocs = 0;
-static aarch64_plt_type plt_type = PLT_NORMAL;
-static aarch64_enable_bti_type bti_type = BTI_NONE;
+static aarch64_protection_opts sw_protections = {
+  .plt_type = PLT_NORMAL,
+  .bti_report = MARKING_WARN,
+  .gcs_type = GCS_IMPLICIT,
+  .gcs_report = MARKING_WARN,
+};
+
+#define COMPILE_TIME_STRLEN(s) \
+  (sizeof(s) - 1)
 
 static void
 gld${EMULATION_NAME}_before_parse (void)
@@ -321,17 +328,13 @@ aarch64_elf_create_output_section_statements (void)
       return;
     }
 
-  aarch64_bti_pac_info bp_info;
-  bp_info.plt_type = plt_type;
-  bp_info.bti_type = bti_type;
-
   bfd_elf${ELFSIZE}_aarch64_set_options (link_info.output_bfd, &link_info,
 				 no_enum_size_warning,
 				 no_wchar_size_warning,
 				 pic_veneer,
 				 fix_erratum_835769, fix_erratum_843419,
 				 no_apply_dynamic_relocs,
-				 bp_info);
+				 &sw_protections);
 
   stub_file = lang_add_input_file ("linker stubs",
 				   lang_input_file_is_fake_enum,
@@ -350,6 +353,77 @@ aarch64_elf_create_output_section_statements (void)
   ldlang_add_file (stub_file);
 }
 
+static bool
+aarch64_parse_feature_report_option (const char *_optarg,
+				     const char *report_opt,
+				     const size_t report_opt_len,
+				     aarch64_feature_marking_report *level)
+{
+  if (strncmp (_optarg, report_opt, report_opt_len) != 0)
+    return false;
+
+  if (strlen (_optarg) == report_opt_len
+      || strcmp (_optarg + report_opt_len, "=warning") == 0)
+    *level = MARKING_WARN;
+  else if (strcmp (_optarg + report_opt_len, "=none") == 0)
+    *level = MARKING_NONE;
+  else if (strcmp (_optarg + report_opt_len, "=error") == 0)
+    *level = MARKING_ERROR;
+  else
+    einfo (_("%X%P: error: unrecognized value '-z %s'\n"), _optarg);
+
+  return true;
+}
+
+static bool
+aarch64_parse_bti_report_option (const char *_optarg)
+{
+  #define BTI_REPORT      "bti-report"
+  #define BTI_REPORT_LEN  COMPILE_TIME_STRLEN (BTI_REPORT)
+
+  return aarch64_parse_feature_report_option (_optarg, BTI_REPORT,
+    BTI_REPORT_LEN, &sw_protections.bti_report);
+
+  #undef BTI_REPORT
+  #undef BTI_REPORT_LEN
+}
+
+static bool
+aarch64_parse_gcs_report_option (const char *_optarg)
+{
+  #define GCS_REPORT      "gcs-report"
+  #define GCS_REPORT_LEN  COMPILE_TIME_STRLEN (GCS_REPORT)
+
+  return aarch64_parse_feature_report_option (_optarg, GCS_REPORT,
+    GCS_REPORT_LEN, &sw_protections.gcs_report);
+
+  #undef GCS_REPORT
+  #undef GCS_REPORT_LEN
+}
+
+static bool
+aarch64_parse_gcs_option (const char *_optarg)
+{
+  #define GCS      "gcs"
+  #define GCS_LEN  COMPILE_TIME_STRLEN (GCS)
+
+  if (strncmp (_optarg, GCS, GCS_LEN) != 0)
+    return false;
+
+  if (strcmp (_optarg + GCS_LEN, "=always") == 0)
+    sw_protections.gcs_type = GCS_ALWAYS;
+  else if (strcmp (_optarg + GCS_LEN, "=never") == 0)
+    sw_protections.gcs_type = GCS_NEVER;
+  else if (strcmp (_optarg + GCS_LEN, "=implicit") == 0)
+    sw_protections.gcs_type = GCS_IMPLICIT;
+  else
+    einfo (_("%X%P: error: unrecognized value '-z %s'\n"), _optarg);
+
+  return true;
+
+  #undef GCS
+  #undef GCS_LEN
+}
 EOF
 
 # Define some shell vars to insert bits of code into the standard elf
@@ -396,18 +470,43 @@ PARSE_AND_LIST_OPTIONS='
                                                  instruction into an ADR.  As such the workaround will always use a\n\
                                                  veneer and this will give you both a performance and size overhead.\n"));
   fprintf (file, _("  --no-apply-dynamic-relocs    Do not apply link-time values for dynamic relocations\n"));
-  fprintf (file, _("  -z force-bti                  Turn on Branch Target Identification mechanism and generate PLTs with BTI. Generate warnings for missing BTI on inputs\n"));
-  fprintf (file, _("  -z pac-plt                    Protect PLTs with Pointer Authentication.\n"));
+  fprintf (file, _("\
+  -z force-bti                         Turn on Branch Target Identification mechanism and generate PLTs with BTI.\n\
+                                         Generate warnings for missing BTI markings on inputs\n"));
+  fprintf (file, _("\
+  -z bti-report[=none|warning|error]   Emit warning/error on mismatch of BTI marking between input objects and ouput.\n\
+                                         none: Does not emit any warning/error messages.\n\
+                                         warning (default): Emit warning when the input objects are missing BTI markings\n\
+                                           and output has BTI marking.\n\
+                                         error: Emit error when the input objects are missing BTI markings\n\
+                                           and output has BTI marking.\n"));
+  fprintf (file, _("\
+  -z pac-plt                           Protect PLTs with Pointer Authentication.\n"));
+  fprintf (file, _("\
+  -z gcs=[always|never|implicit]       Controls whether the output supports the Guarded Control Stack (GCS) mechanism.\n\
+                                         implicit (default if '\''-z gcs'\'' is omitted): deduce GCS from input objects.\n\
+                                         always: always marks the output with GCS.\n\
+                                         never: never marks the output with GCS.\n"));
+  fprintf (file, _("\
+  -z gcs-report[=none|warning|error]   Emit warning/error on mismatch of GCS marking between input objects and ouput.\n\
+                                         none: Does not emit any warning/error messages.\n\
+                                         warning (default): Emit warning when the input objects are missing GCS markings\n\
+                                           and output have GCS marking.\n\
+                                         error: Emit error when the input objects are missing GCS markings\n\
+                                           and output have GCS marking.\n"));
 '
 
 PARSE_AND_LIST_ARGS_CASE_Z_AARCH64='
-      else if (strcmp (optarg, "force-bti") == 0)
-	{
-	  plt_type |= PLT_BTI;
-	  bti_type = BTI_WARN;
-	}
-      else if (strcmp (optarg, "pac-plt") == 0)
-	plt_type |= PLT_PAC;
+     else if (strcmp (optarg, "force-bti") == 0)
+	sw_protections.plt_type |= PLT_BTI;
+     else if (aarch64_parse_bti_report_option (optarg))
+	{}
+     else if (strcmp (optarg, "pac-plt") == 0)
+	sw_protections.plt_type |= PLT_PAC;
+     else if (aarch64_parse_gcs_report_option (optarg))
+	{}
+     else if (aarch64_parse_gcs_option (optarg))
+	{}
 '
 PARSE_AND_LIST_ARGS_CASE_Z="$PARSE_AND_LIST_ARGS_CASE_Z $PARSE_AND_LIST_ARGS_CASE_Z_AARCH64"
 

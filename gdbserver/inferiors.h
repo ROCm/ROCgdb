@@ -19,7 +19,6 @@
 #ifndef GDBSERVER_INFERIORS_H
 #define GDBSERVER_INFERIORS_H
 
-#include "gdbsupport/gdb_vecs.h"
 #include "gdbsupport/owning_intrusive_list.h"
 
 #include "dll.h"
@@ -93,9 +92,13 @@ struct process_info : public intrusive_list_node<process_info>
   owning_intrusive_list<thread_info> &thread_list ()
   { return m_thread_list; }
 
-  /* Return a reference to the private thread map.  */
-  std::unordered_map<ptid_t, thread_info *> &thread_map ()
-  { return m_ptid_thread_map; }
+  /* Return the number of threads in this process.  */
+  unsigned int thread_count () const
+  { return m_ptid_thread_map.size (); }
+
+  /* Return the thread with ptid PTID, or nullptr if no such thread is
+     found.  */
+  thread_info *find_thread (ptid_t ptid);
 
   /* Find the first thread for which FUNC returns true.  Return nullptr if no
      such thread is found.  */
@@ -138,7 +141,7 @@ void for_each_process (gdb::function_view<void (process_info *)> func);
 
 process_info *find_process (gdb::function_view<bool (process_info *)> func);
 
-extern struct thread_info *current_thread;
+extern thread_info *current_thread;
 
 /* Return the first process in the processes list.  */
 struct process_info *get_first_process (void);
@@ -151,12 +154,6 @@ int have_attached_inferiors_p (void);
 
 /* Switch to a thread of PROC.  */
 void switch_to_process (process_info *proc);
-
-void clear_inferiors (void);
-
-void *thread_target_data (struct thread_info *);
-struct regcache *thread_regcache_data (struct thread_info *);
-void set_thread_regcache_data (struct thread_info *, struct regcache *);
 
 /* Set the inferior current working directory.  If CWD is empty, unset
    the directory.  */

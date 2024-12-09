@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include "event-top.h"
 #include "exceptions.h"
+#include "gdbsupport/gdb_vecs.h"
 #include "gdbsupport/unordered_set.h"
 #include "symtab.h"
 #include "frame.h"
@@ -164,7 +165,7 @@ static std::vector<symtab_and_line> bkpt_probe_decode_location_spec
       location_spec *locspec,
       struct program_space *search_pspace);
 
-static bool bl_address_is_meaningful (bp_location *loc);
+static bool bl_address_is_meaningful (const bp_location *loc);
 
 static int find_loc_num_by_location (const bp_location *loc);
 
@@ -7163,7 +7164,7 @@ print_breakpoint (breakpoint *b)
    internal or momentary.  */
 
 int
-user_breakpoint_p (struct breakpoint *b)
+user_breakpoint_p (const breakpoint *b)
 {
   return b->number > 0;
 }
@@ -7171,7 +7172,7 @@ user_breakpoint_p (struct breakpoint *b)
 /* See breakpoint.h.  */
 
 int
-pending_breakpoint_p (struct breakpoint *b)
+pending_breakpoint_p (const breakpoint *b)
 {
   return !b->has_locations ();
 }
@@ -7468,7 +7469,7 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
    zero.  */
 
 static bool
-bl_address_is_meaningful (bp_location *loc)
+bl_address_is_meaningful (const bp_location *loc)
 {
   return loc->loc_type != bp_loc_other;
 }

@@ -1239,6 +1239,12 @@ enum
   PREFIX_EVEX_MAP5_5D,
   PREFIX_EVEX_MAP5_5E,
   PREFIX_EVEX_MAP5_5F,
+  PREFIX_EVEX_MAP5_68,
+  PREFIX_EVEX_MAP5_69,
+  PREFIX_EVEX_MAP5_6A,
+  PREFIX_EVEX_MAP5_6B,
+  PREFIX_EVEX_MAP5_6C,
+  PREFIX_EVEX_MAP5_6D,
   PREFIX_EVEX_MAP5_74,
   PREFIX_EVEX_MAP5_78,
   PREFIX_EVEX_MAP5_79,
@@ -1248,8 +1254,24 @@ enum
   PREFIX_EVEX_MAP5_7D,
 
   PREFIX_EVEX_MAP6_13,
+  PREFIX_EVEX_MAP6_2C,
+  PREFIX_EVEX_MAP6_42,
+  PREFIX_EVEX_MAP6_4C,
+  PREFIX_EVEX_MAP6_4E,
   PREFIX_EVEX_MAP6_56,
   PREFIX_EVEX_MAP6_57,
+  PREFIX_EVEX_MAP6_98,
+  PREFIX_EVEX_MAP6_9A,
+  PREFIX_EVEX_MAP6_9C,
+  PREFIX_EVEX_MAP6_9E,
+  PREFIX_EVEX_MAP6_A8,
+  PREFIX_EVEX_MAP6_AA,
+  PREFIX_EVEX_MAP6_AC,
+  PREFIX_EVEX_MAP6_AE,
+  PREFIX_EVEX_MAP6_B8,
+  PREFIX_EVEX_MAP6_BA,
+  PREFIX_EVEX_MAP6_BC,
+  PREFIX_EVEX_MAP6_BE,
   PREFIX_EVEX_MAP6_D6,
   PREFIX_EVEX_MAP6_D7,
 };
@@ -1657,6 +1679,7 @@ enum
   EVEX_W_0F6F_P_3,
   EVEX_W_0F70_P_2,
   EVEX_W_0F72_R_2,
+  EVEX_W_0F72_R_4,
   EVEX_W_0F72_R_6,
   EVEX_W_0F73_R_2,
   EVEX_W_0F73_R_6,
@@ -1677,6 +1700,7 @@ enum
   EVEX_W_0FD3,
   EVEX_W_0FD4,
   EVEX_W_0FD6,
+  EVEX_W_0FE2,
   EVEX_W_0FE6_P_1,
   EVEX_W_0FE7,
   EVEX_W_0FF2,
@@ -1751,6 +1775,10 @@ enum
   EVEX_W_MAP4_FF_R_6,
 
   EVEX_W_MAP5_5B_P_0,
+  EVEX_W_MAP5_6C_P_0,
+  EVEX_W_MAP5_6C_P_2,
+  EVEX_W_MAP5_6D_P_0,
+  EVEX_W_MAP5_6D_P_2,
   EVEX_W_MAP5_7A_P_3,
 };
 
@@ -1815,10 +1843,14 @@ struct dis386 {
    "XW" => print 's', 'd' depending on the VEX.W bit (for FMA)
    "XD" => print 'd' if !EVEX or EVEX.W=1, EVEX.W=0 is not a valid encoding
    "XH" => print 'h' if EVEX.W=0, EVEX.W=1 is not a valid encoding (for FP16)
+   "XB" => print 'bf16' if EVEX.W=0, EVEX.W=1 is not a valid encoding
+	   (for BF16)
    "XS" => print 's' if !EVEX or EVEX.W=0, EVEX.W=1 is not a valid encoding
    "XV" => print "{vex} " pseudo prefix
    "XE" => print "{evex} " pseudo prefix if no EVEX-specific functionality is
 	   is used by an EVEX-encoded (AVX512VL) instruction.
+   "ME" => Similar to "XE", but only print "{evex} " when there is no
+	   memory operand.
    "NF" => print "{nf} " pseudo prefix when EVEX.NF = 1 and print "{evex} "
 	   pseudo prefix when instructions without NF, EGPR and VVVV,
    "NE" => don't print "{evex} " pseudo prefix for some special instructions
@@ -10510,6 +10542,13 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 
 	      goto case_B;
 	    }
+	  else if (l && last[0] == 'X')
+	    {
+	      if (!ins->vex.w)
+		oappend (ins, "bf16");
+	      else
+		oappend (ins, "{bad}");
+	    }
 	  else
 	    abort ();
 	  break;
@@ -10594,6 +10633,10 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 	    {
 	      switch (last[0])
 		{
+		case 'M':
+		  if (ins->modrm.mod != 3)
+		    break;
+		/* Fall through.  */
 		case 'X':
 		  if (!ins->vex.evex || ins->vex.b || ins->vex.ll >= 2
 		      || (ins->rex2 & 7)

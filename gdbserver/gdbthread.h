@@ -28,23 +28,29 @@ struct regcache;
 struct thread_info : public intrusive_list_node<thread_info>
 {
   thread_info (ptid_t id, process_info *process, void *target_data)
-    : id (id), target_data (target_data), m_process (process)
+    : id (id), m_process (process), m_target_data (target_data)
   {}
 
   ~thread_info ()
   {
-    free_register_cache (this->regcache_data);
+    free_register_cache (m_regcache);
   }
 
   /* Return the process owning this thread.  */
   process_info *process () const
   { return m_process; }
 
+  struct regcache *regcache ()
+  { return m_regcache; }
+
+  void set_regcache (struct regcache *regcache)
+  { m_regcache = regcache; }
+
+  void *target_data ()
+  { return m_target_data; }
+
   /* The id of this thread.  */
   ptid_t id;
-
-  void *target_data;
-  struct regcache *regcache_data = nullptr;
 
   /* The last resume GDB requested on this thread.  */
   enum resume_kind last_resume_kind = resume_continue;
@@ -88,17 +94,19 @@ struct thread_info : public intrusive_list_node<thread_info>
   
 private:
   process_info *m_process;
+  struct regcache *m_regcache = nullptr;
+  void *m_target_data;
 };
 
 /* Return a pointer to the first thread, or NULL if there isn't one.  */
 
-struct thread_info *get_first_thread (void);
+thread_info *get_first_thread (void);
 
-struct thread_info *find_thread_ptid (ptid_t ptid);
+thread_info *find_thread_ptid (ptid_t ptid);
 
 /* Find any thread of the PID process.  Returns NULL if none is
    found.  */
-struct thread_info *find_any_thread_of_pid (int pid);
+thread_info *find_any_thread_of_pid (int pid);
 
 /* Find the first thread for which FUNC returns true.  Return NULL if no thread
    satisfying FUNC is found.  */

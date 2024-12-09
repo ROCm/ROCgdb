@@ -181,9 +181,6 @@
 /* Define if <sys/procfs.h> has elf_fpregset_t. */
 #undef HAVE_ELF_FPREGSET_T
 
-/* Define to 1 if you have the <elf_hp.h> header file. */
-#undef HAVE_ELF_HP_H
-
 /* Define to 1 if your system has the etext variable. */
 #undef HAVE_ETEXT
 
@@ -588,9 +585,6 @@
 
 /* Define to 1 if you have the <vfork.h> header file. */
 #undef HAVE_VFORK_H
-
-/* Define to 1 if you have the `waitpid' function. */
-#undef HAVE_WAITPID
 
 /* Define to 1 if you have the <wait.h> header file. */
 #undef HAVE_WAIT_H

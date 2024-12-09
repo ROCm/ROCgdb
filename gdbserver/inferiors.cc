@@ -31,7 +31,7 @@ static process_info *current_process_;
 
 /* The current thread.  This is either a thread of CURRENT_PROCESS, or
    NULL.  */
-struct thread_info *current_thread;
+thread_info *current_thread;
 
 /* The current working directory used to start the inferior.
 
@@ -55,7 +55,7 @@ process_info::add_thread (ptid_t id, void *target_data)
 
 /* See gdbthread.h.  */
 
-struct thread_info *
+thread_info *
 get_first_thread (void)
 {
   return find_thread ([] (thread_info *thread)
@@ -64,26 +64,20 @@ get_first_thread (void)
     });
 }
 
-struct thread_info *
+thread_info *
 find_thread_ptid (ptid_t ptid)
 {
   process_info *process = find_process_pid (ptid.pid ());
   if (process == nullptr)
     return nullptr;
 
-  auto &thread_map = process->thread_map ();
-
-  if (auto it = thread_map.find (ptid);
-      it != thread_map.end ())
-    return it->second;
-
-  return nullptr;
+  return process->find_thread (ptid);
 }
 
 /* Find a thread associated with the given PROCESS, or NULL if no
    such thread exists.  */
 
-static struct thread_info *
+static thread_info *
 find_thread_process (const struct process_info *const process)
 {
   return find_any_thread_of_pid (process->pid);
@@ -91,7 +85,7 @@ find_thread_process (const struct process_info *const process)
 
 /* See gdbthread.h.  */
 
-struct thread_info *
+thread_info *
 find_any_thread_of_pid (int pid)
 {
   return find_thread (pid, [] (thread_info *thread) {
@@ -116,39 +110,6 @@ process_info::remove_thread (thread_info *thread)
   gdb_assert (num_erased > 0);
 
   m_thread_list.erase (m_thread_list.iterator_to (*thread));
-}
-
-void *
-thread_target_data (struct thread_info *thread)
-{
-  return thread->target_data;
-}
-
-struct regcache *
-thread_regcache_data (struct thread_info *thread)
-{
-  return thread->regcache_data;
-}
-
-void
-set_thread_regcache_data (struct thread_info *thread, struct regcache *data)
-{
-  thread->regcache_data = data;
-}
-
-void
-clear_inferiors (void)
-{
-  for_each_process ([] (process_info *process)
-    {
-      process->thread_list ().clear ();
-      process->thread_map ().clear ();
-    });
-
-  clear_dlls ();
-
-  switch_to_thread (nullptr);
-  current_process_ = nullptr;
 }
 
 struct process_info *
@@ -251,6 +212,18 @@ find_process (gdb::function_view<bool (process_info *)> func)
 /* See inferiors.h.  */
 
 thread_info *
+process_info::find_thread (ptid_t ptid)
+{
+  if (auto it = m_ptid_thread_map.find (ptid);
+      it != m_ptid_thread_map.end ())
+    return it->second;
+
+  return nullptr;
+}
+
+/* See inferiors.h.  */
+
+thread_info *
 process_info::find_thread (gdb::function_view<bool (thread_info *)> func)
 {
   for (thread_info &thread : m_thread_list)
@@ -300,11 +273,9 @@ find_thread (ptid_t filter, gdb::function_view<bool (thread_info *)> func)
   if (filter.is_pid ())
     return process->find_thread (func);
 
-  auto &thread_map = process->thread_map ();
-
-  if (auto it = thread_map.find (filter);
-      it != thread_map.end () && func (it->second))
-    return it->second;
+  if (thread_info *thread = process->find_thread (filter);
+      thread != nullptr && func (thread))
+    return thread;
 
   return nullptr;
 }
