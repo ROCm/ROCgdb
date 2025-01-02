@@ -1,5 +1,5 @@
 /* Mach-O support for BFD.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1489,9 +1489,9 @@ bfd_mach_o_canonicalize_non_scattered_reloc (bfd *abfd,
     {
       /* PR 17512: file: 8396-1185-0.004.  */
       if (num >= (unsigned) bfd_mach_o_count_symbols (abfd))
-	sym = bfd_und_section_ptr->symbol_ptr_ptr;
+	sym = &bfd_und_section_ptr->symbol;
       else if (syms == NULL)
-	sym = bfd_und_section_ptr->symbol_ptr_ptr;
+	sym = &bfd_und_section_ptr->symbol;
       else
 	/* An external symbol number.  */
 	sym = syms + num;
@@ -1503,7 +1503,7 @@ bfd_mach_o_canonicalize_non_scattered_reloc (bfd *abfd,
 	 This value is almost certainly not a valid section number, hence
 	 this specific case to avoid an assertion failure.
 	 Target specific swap_reloc_in routine should adjust that.  */
-      sym = bfd_abs_section_ptr->symbol_ptr_ptr;
+      sym = &bfd_abs_section_ptr->symbol;
     }
   else
     {
@@ -1516,7 +1516,7 @@ malformed mach-o reloc: section index is greater than the number of sections"));
 	}
 
       /* A section number.  */
-      sym = mdata->sections[num - 1]->bfdsection->symbol_ptr_ptr;
+      sym = &mdata->sections[num - 1]->bfdsection->symbol;
       /* For a symbol defined in section S, the addend (stored in the
 	 binary) contains the address of the section.  To comply with
 	 bfd convention, subtract the section address.
@@ -1554,7 +1554,7 @@ bfd_mach_o_pre_canonicalize_one_reloc (bfd *abfd,
   bfd_vma addr;
 
   addr = bfd_get_32 (abfd, raw->r_address);
-  res->sym_ptr_ptr = bfd_und_section_ptr->symbol_ptr_ptr;
+  res->sym_ptr_ptr = &bfd_und_section_ptr->symbol;
   res->addend = 0;
 
   if (addr & BFD_MACH_O_SR_SCATTERED)
@@ -1578,7 +1578,7 @@ bfd_mach_o_pre_canonicalize_one_reloc (bfd *abfd,
 	  bfd_mach_o_section *sect = mdata->sections[j];
 	  if (symnum >= sect->addr && symnum < sect->addr + sect->size)
 	    {
-	      res->sym_ptr_ptr = sect->bfdsection->symbol_ptr_ptr;
+	      res->sym_ptr_ptr = &sect->bfdsection->symbol;
 	      res->addend = symnum - sect->addr;
 	      break;
 	    }
@@ -3520,40 +3520,31 @@ bfd_mach_o_read_header (bfd *abfd, file_ptr hdr_off, bfd_mach_o_header *header)
 bool
 bfd_mach_o_new_section_hook (bfd *abfd, asection *sec)
 {
-  bfd_mach_o_section *s;
-  unsigned bfdalign = bfd_section_alignment (sec);
-
-  s = bfd_mach_o_get_mach_o_section (sec);
+  bfd_mach_o_section *s = bfd_zalloc (abfd, sizeof (*s));
   if (s == NULL)
+    return false;
+  sec->used_by_bfd = s;
+  s->bfdsection = sec;
+
+  /* Create the Darwin seg/sect name pair from the bfd name.
+     If this is a canonical name for which a specific paiting exists
+     there will also be defined flags, type, attribute and alignment
+     values.  */
+  const mach_o_section_name_xlat *xlat
+    = bfd_mach_o_convert_section_name_to_mach_o (abfd, sec, s);
+  if (xlat != NULL)
     {
-      flagword bfd_flags;
-      static const mach_o_section_name_xlat * xlat;
-
-      s = (bfd_mach_o_section *) bfd_zalloc (abfd, sizeof (*s));
-      if (s == NULL)
-	return false;
-      sec->used_by_bfd = s;
-      s->bfdsection = sec;
-
-      /* Create the Darwin seg/sect name pair from the bfd name.
-	 If this is a canonical name for which a specific paiting exists
-	 there will also be defined flags, type, attribute and alignment
-	 values.  */
-      xlat = bfd_mach_o_convert_section_name_to_mach_o (abfd, sec, s);
-      if (xlat != NULL)
-	{
-	  s->flags = xlat->macho_sectype | xlat->macho_secattr;
-	  s->align = xlat->sectalign > bfdalign ? xlat->sectalign
-						: bfdalign;
-	  bfd_set_section_alignment (sec, s->align);
-	  bfd_flags = bfd_section_flags (sec);
-	  if (bfd_flags == SEC_NO_FLAGS)
-	    bfd_set_section_flags (sec, xlat->bfd_flags);
-	}
-      else
-	/* Create default flags.  */
-	bfd_mach_o_set_section_flags_from_bfd (abfd, sec);
+      s->flags = xlat->macho_sectype | xlat->macho_secattr;
+      unsigned bfdalign = bfd_section_alignment (sec);
+      s->align = xlat->sectalign > bfdalign ? xlat->sectalign : bfdalign;
+      bfd_set_section_alignment (sec, s->align);
+      flagword bfd_flags = bfd_section_flags (sec);
+      if (bfd_flags == SEC_NO_FLAGS)
+	bfd_set_section_flags (sec, xlat->bfd_flags);
     }
+  else
+    /* Create default flags.  */
+    bfd_mach_o_set_section_flags_from_bfd (abfd, sec);
 
   return _bfd_generic_new_section_hook (abfd, sec);
 }
@@ -5085,7 +5076,7 @@ bfd_mach_o_flatten_sections (bfd *abfd)
 {
   bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
   bfd_mach_o_load_command *cmd;
-  long csect = 0;
+  unsigned long csect;
   size_t amt;
 
   /* Count total number of sections.  */
@@ -5129,6 +5120,7 @@ bfd_mach_o_flatten_sections (bfd *abfd)
 	    mdata->sections[csect++] = sec;
 	}
     }
+  BFD_ASSERT (mdata->nsects == csect);
   return true;
 }
 

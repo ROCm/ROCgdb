@@ -1,5 +1,5 @@
 /* Declarations for Intel 80386 opcode table
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU opcodes library.
 
@@ -229,8 +229,6 @@ enum i386_cpu
   CpuUSER_MSR,
   /* Intel MSR_IMM Instructions support required.  */
   CpuMSR_IMM,
-  /* Intel AVX10.2 Instructions support required.  */
-  CpuAVX10_2,
   /* mwaitx instruction required */
   CpuMWAITX,
   /* Clzero instruction required */
@@ -252,6 +250,8 @@ enum i386_cpu
   CpuAMX_FP16,
   /* AMX-COMPLEX instructions required.  */
   CpuAMX_COMPLEX,
+  /* AMX-TF32 Instructions support required.  */
+  CpuAMX_TF32,
   /* AMX-TILE instructions required */
   CpuAMX_TILE,
   /* GFNI instructions required */
@@ -327,6 +327,10 @@ enum i386_cpu
   CpuAVX512VL,
   /* Intel APX_F Instructions support required.  */
   CpuAPX_F,
+  /* Intel AVX10.2 Instructions support required.  */
+  CpuAVX10_2,
+  /* Intel AMX-TRANSPOSE Instructions support required.  */
+  CpuAMX_TRANSPOSE,
   /* Not supported in the 64bit mode  */
   CpuNo64,
 
@@ -363,6 +367,8 @@ enum i386_cpu
 		   cpuavx512f:1, \
 		   cpuavx512vl:1, \
 		   cpuapx_f:1, \
+		   cpuavx10_2:1, \
+		   cpuamx_transpose:1, \
       /* NOTE: This field needs to remain last. */ \
 		   cpuno64:1
 
@@ -485,7 +491,6 @@ typedef union i386_cpu_flags
       unsigned int cpulkgs:1;
       unsigned int cpuuser_msr:1;
       unsigned int cpumsr_imm:1;
-      unsigned int cpuavx10_2:1;
       unsigned int cpumwaitx:1;
       unsigned int cpuclzero:1;
       unsigned int cpuospke:1;
@@ -497,6 +502,7 @@ typedef union i386_cpu_flags
       unsigned int cpuamx_bf16:1;
       unsigned int cpuamx_fp16:1;
       unsigned int cpuamx_complex:1;
+      unsigned int cpuamx_tf32:1;
       unsigned int cpuamx_tile:1;
       unsigned int cpugfni:1;
       unsigned int cpuvaes:1;

@@ -1,5 +1,5 @@
 /* dwarf2dbg.c - DWARF2 debug support
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
    This file is part of GAS, the GNU Assembler.
@@ -883,6 +883,8 @@ allocate_filename_to_slot (const char *dirname,
 		}
 	      
 	      dirs[files[num].dir] = xmemdup0 (dirname, strlen (dirname));
+	      if (dirs_in_use <= files[num].dir)
+		dirs_in_use = files[num].dir + 1;
 	    }
 	    
 	  return true;
@@ -911,6 +913,8 @@ allocate_filename_to_slot (const char *dirname,
 		    }
 
 		  dirs[files[num].dir] = xmemdup0 (filename, file - filename);
+		  if (dirs_in_use <= files[num].dir)
+		    dirs_in_use = files[num].dir + 1;
 		}
 	      return true;
 	    }

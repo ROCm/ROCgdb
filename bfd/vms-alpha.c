@@ -1,5 +1,5 @@
 /* vms.c -- BFD back-end for EVAX (openVMS/Alpha) files.
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
 
    Initial version written by Klaus Kaempf (kkaempf@rmi.de)
    Major rewrite by Adacore.
@@ -5586,8 +5586,7 @@ alpha_vms_slurp_relocs (bfd *abfd)
 	      {
 		if (PRIV (sections) == NULL || cur_psidx >= (int) PRIV (section_count))
 		  goto fail;
-		reloc->sym_ptr_ptr =
-		  PRIV (sections)[cur_psidx]->symbol_ptr_ptr;
+		reloc->sym_ptr_ptr = &PRIV (sections)[cur_psidx]->symbol;
 	      }
 	    else
 	      reloc->sym_ptr_ptr = NULL;

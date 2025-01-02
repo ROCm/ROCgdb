@@ -1,5 +1,5 @@
 /* Alpha specific support for 64-bit ELF
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
    Contributed by Richard Henderson <rth@tamu.edu>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -289,8 +289,7 @@ elf64_alpha_bfd_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
 				      elf64_alpha_link_hash_newfunc,
-				      sizeof (struct alpha_elf_link_hash_entry),
-				      ALPHA_ELF_DATA))
+				      sizeof (struct alpha_elf_link_hash_entry)))
     {
       free (ret);
       return NULL;
@@ -354,8 +353,7 @@ struct alpha_elf_obj_tdata
 static bool
 elf64_alpha_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct alpha_elf_obj_tdata),
-				  ALPHA_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct alpha_elf_obj_tdata));
 }
 
 static bool

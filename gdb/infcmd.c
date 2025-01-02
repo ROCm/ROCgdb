@@ -28,6 +28,7 @@
 #include "gdbsupport/environ.h"
 #include "value.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "symfile.h"
 #include "gdbcore.h"
 #include "target.h"
@@ -1996,10 +1997,9 @@ info_program_command (const char *args, int from_tty)
     }
 
   if (from_tty)
-    {
-      gdb_printf (_("Type \"info stack\" or \"info "
-		    "registers\" for more information.\n"));
-    }
+    gdb_printf (_("Type \"%ps\" or \"%ps\" for more information.\n"),
+		styled_string (command_style.style (), "info stack"),
+		styled_string (command_style.style (), "info registers"));
 }
 
 static void

@@ -1,5 +1,5 @@
 /* Object file "section" support for the BFD library.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -545,7 +545,6 @@ CODE_FRAGMENT
 .
 .  {* A symbol which points at this section only.  *}
 .  struct bfd_symbol *symbol;
-.  struct bfd_symbol **symbol_ptr_ptr;
 .
 .  {* Early in the link process, map_head and map_tail are used to build
 .     a list of input sections attached to an output section.  Later,
@@ -738,8 +737,8 @@ EXTERNAL
 .  {* target_index, used_by_bfd, constructor_chain, owner,           *}	\
 .     0,            NULL,        NULL,              NULL,		\
 .									\
-.  {* symbol,                    symbol_ptr_ptr,                     *}	\
-.     (struct bfd_symbol *) SYM, &SEC.symbol,				\
+.  {* symbol,                                                        *}	\
+.     (struct bfd_symbol *) SYM,					\
 .									\
 .  {* map_head, map_tail, already_assigned, type                     *}	\
 .     { NULL }, { NULL }, NULL,             0				\
@@ -828,7 +827,6 @@ _bfd_generic_new_section_hook (bfd *abfd, asection *newsect)
   newsect->symbol->section = newsect;
   newsect->symbol->flags = BSF_SECTION_SYM;
 
-  newsect->symbol_ptr_ptr = &newsect->symbol;
   return true;
 }
 
@@ -1147,11 +1145,6 @@ bfd_make_section_old_way (bfd *abfd, const char *name)
       return bfd_section_init (abfd, newsect);
     }
 
-  /* Call new_section_hook when "creating" the standard abs, com, und
-     and ind sections to tack on format specific section data.
-     Also, create a proper section symbol.  */
-  if (! BFD_SEND (abfd, _new_section_hook, (abfd, newsect)))
-    return NULL;
   return newsect;
 }
 

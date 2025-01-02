@@ -1,5 +1,5 @@
 /* PowerPC-specific support for 32-bit ELF
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1052,8 +1052,7 @@ struct ppc_elf_obj_tdata
 static bool
 ppc_elf_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct ppc_elf_obj_tdata),
-				  PPC32_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct ppc_elf_obj_tdata));
 }
 
 /* When defaulting arch/mach, decode apuinfo to find a better match.  */
@@ -2279,8 +2278,7 @@ ppc_elf_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd,
 				      ppc_elf_link_hash_newfunc,
-				      sizeof (struct ppc_elf_link_hash_entry),
-				      PPC32_ELF_DATA))
+				      sizeof (struct ppc_elf_link_hash_entry)))
     {
       free (ret);
       return NULL;

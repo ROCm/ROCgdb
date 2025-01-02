@@ -1,5 +1,5 @@
 /* tc-m32r.c -- Assembler for the Renesas M32R.
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -725,7 +725,6 @@ md_begin (void)
   scom_section.flags          = SEC_IS_COMMON | SEC_SMALL_DATA;
   scom_section.output_section = & scom_section;
   scom_section.symbol         = & scom_symbol;
-  scom_section.symbol_ptr_ptr = & scom_section.symbol;
   scom_symbol                 = * bfd_com_section_ptr->symbol;
   scom_symbol.name            = ".scommon";
   scom_symbol.section         = & scom_section;
@@ -2194,9 +2193,8 @@ tc_gen_reloc (asection * section, fixS * fixP)
   arelent * reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixP->fx_addsy);
   reloc->address = fixP->fx_frag->fr_address + fixP->fx_where;
 
@@ -2269,7 +2267,7 @@ printf(" => %s",bfd_get_reloc_code_name(code));
 printf(" => %s\n",reloc->howto->name);
 #endif
 
- if (reloc->howto == (reloc_howto_type *) NULL)
+ if (reloc->howto == NULL)
     {
       as_bad_where (fixP->fx_file, fixP->fx_line,
             _("internal error: can't export reloc type %d (`%s')"),

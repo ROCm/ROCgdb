@@ -1,6 +1,6 @@
 /* dwarf.c -- display DWARF contents of a BFD binary file
-   Copyright (C) 2005-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2005-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GNU Binutils.
 
@@ -2417,6 +2417,31 @@ display_lang (uint64_t uvalue)
     case DW_LANG_Fortran03:		printf ("Fortran 03"); break;
     case DW_LANG_Fortran08:		printf ("Fortran 08"); break;
     case DW_LANG_RenderScript:		printf ("RenderScript"); break;
+    case DW_LANG_C17:                   printf ("C17"); break;
+    case DW_LANG_Fortran18:             printf ("Fortran 18"); break;
+    case DW_LANG_Ada2005:               printf ("Ada 2005"); break;
+    case DW_LANG_Ada2012:               printf ("Ada 2012"); break;
+    case DW_LANG_HIP:                   printf ("Hip"); break;
+    case DW_LANG_Assembly:              printf ("Assembler"); break;
+    case DW_LANG_C_sharp:               printf ("C Sharp"); break;
+    case DW_LANG_Mojo:                  printf ("Mojo"); break;
+    case DW_LANG_GLSL:                  printf ("GLSL"); break;
+    case DW_LANG_GLSL_ES:               printf ("GLSL_ES"); break;
+    case DW_LANG_HLSL:                  printf ("HLSL"); break;
+    case DW_LANG_OpenCL_CPP:            printf ("OpenCL C++"); break;
+    case DW_LANG_CPP_for_OpenCL:        printf ("C++ for OpenCL"); break;
+    case DW_LANG_SYCL:                  printf ("SYCL"); break;
+    case DW_LANG_C_plus_plus_17:        printf ("C++17"); break;
+    case DW_LANG_C_plus_plus_20:        printf ("C++20"); break;
+    case DW_LANG_C_plus_plus_23:	printf ("C++23"); break;
+    case DW_LANG_Odin:                  printf ("Odin"); break;
+    case DW_LANG_P4:                    printf ("P4"); break;
+    case DW_LANG_Metal:                 printf ("C23"); break;
+    case DW_LANG_C23:                   printf ("C23"); break;
+    case DW_LANG_Fortran23:             printf ("Fortran 23"); break;
+    case DW_LANG_Ruby:                  printf ("Ruby"); break;
+    case DW_LANG_Move:                  printf ("Move"); break;
+    case DW_LANG_Hylo:                  printf ("Hylo"); break;
 
       /* MIPS extension.  */
     case DW_LANG_Mips_Assembler:	printf ("MIPS assembler"); break;
@@ -11844,10 +11869,10 @@ check_gnu_debuglink (const char * pathname, void * crc_pointer)
     crc = calc_gnu_debuglink_crc32 (crc, buffer, count);
 
   fclose (f);
+  close_debug_file (sep_data);
 
   if (crc != * (unsigned long *) crc_pointer)
     {
-      close_debug_file (sep_data);
       warn (_("Separate debug info file %s found, but CRC does not match - ignoring\n"),
 	    pathname);
       return false;
@@ -11889,6 +11914,7 @@ check_gnu_debugaltlink (const char * filename, void * data ATTRIBUTE_UNUSED)
   /* FIXME: We should now extract the build-id in the separate file
      and check it...  */
 
+  close_debug_file (sep_data);
   return true;
 }
 

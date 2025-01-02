@@ -1,5 +1,5 @@
 /* BFD back-end for archive files (libraries).
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Written by Cygnus Support.  Mostly Gumby Henkel-Wallace's fault.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -708,20 +708,15 @@ _bfd_get_elt_at_filepos (bfd *archive, file_ptr filepos,
 	  /* This proxy entry refers to an element of a nested archive.
 	     Locate the member of that archive and return a bfd for it.  */
 	  bfd *ext_arch = find_nested_archive (filename, archive);
+	  file_ptr origin = new_areldata->origin;
 
+	  free (new_areldata);
 	  if (ext_arch == NULL
 	      || ! bfd_check_format (ext_arch, bfd_archive))
-	    {
-	      free (new_areldata);
-	      return NULL;
-	    }
-	  n_bfd = _bfd_get_elt_at_filepos (ext_arch,
-					   new_areldata->origin, info);
+	    return NULL;
+	  n_bfd = _bfd_get_elt_at_filepos (ext_arch, origin, info);
 	  if (n_bfd == NULL)
-	    {
-	      free (new_areldata);
-	      return NULL;
-	    }
+	    return NULL;
 	  n_bfd->proxy_origin = bfd_tell (archive);
 
 	  /* Copy BFD_COMPRESS, BFD_DECOMPRESS and BFD_COMPRESS_GABI
@@ -2887,6 +2882,15 @@ _bfd_unlink_from_archive_parent (bfd *abfd)
 bool
 _bfd_archive_close_and_cleanup (bfd *abfd)
 {
+  if (bfd_write_p (abfd) && abfd->format == bfd_archive)
+    {
+      bfd *current;
+      while ((current = abfd->archive_head) != NULL)
+	{
+	  abfd->archive_head = current->archive_next;
+	  bfd_close_all_done (current);
+	}
+    }
   if (bfd_read_p (abfd) && abfd->format == bfd_archive)
     {
       bfd *nbfd;

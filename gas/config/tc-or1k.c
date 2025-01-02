@@ -1,5 +1,5 @@
 /* tc-or1k.c -- Assembler for the OpenRISC family.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
    Contributed for OR32 by Johan Rydberg, jrydberg@opencores.org
 
    This file is part of GAS, the GNU Assembler.
@@ -298,9 +298,8 @@ tc_gen_reloc (asection * section, fixS * fixp)
   arelent *reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 

@@ -1,5 +1,5 @@
 /* Meta support for 32-bit ELF
-   Copyright (C) 2013-2024 Free Software Foundation, Inc.
+   Copyright (C) 2013-2025 Free Software Foundation, Inc.
    Contributed by Imagination Technologies Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1022,8 +1022,7 @@ elf_metag_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&htab->etab, abfd,
 				      metag_link_hash_newfunc,
-				      sizeof (struct elf_metag_link_hash_entry),
-				      METAG_ELF_DATA))
+				      sizeof (struct elf_metag_link_hash_entry)))
     {
       free (htab);
       return NULL;

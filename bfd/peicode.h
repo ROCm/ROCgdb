@@ -1,5 +1,5 @@
 /* Support for the generic parts of PE/PEI, for BFD.
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
    Written by Cygnus Solutions.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -500,7 +500,7 @@ pe_ILF_make_a_reloc (pe_ILF_vars *	       vars,
 		     bfd_reloc_code_real_type  reloc,
 		     asection_ptr	       sec)
 {
-  pe_ILF_make_a_symbol_reloc (vars, address, reloc, sec->symbol_ptr_ptr,
+  pe_ILF_make_a_symbol_reloc (vars, address, reloc, &sec->symbol,
 			      coff_section_data (vars->abfd, sec)->i);
 }
 

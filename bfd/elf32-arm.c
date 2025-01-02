@@ -1,5 +1,5 @@
 /* 32-bit ELF support for ARM
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -3207,8 +3207,7 @@ struct elf_arm_obj_tdata
 static bool
 elf32_arm_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_arm_obj_tdata),
-				  ARM_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct elf_arm_obj_tdata));
 }
 
 #define elf32_arm_hash_entry(ent) ((struct elf32_arm_link_hash_entry *)(ent))
@@ -4102,8 +4101,7 @@ elf32_arm_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (& ret->root, abfd,
 				      elf32_arm_link_hash_newfunc,
-				      sizeof (struct elf32_arm_link_hash_entry),
-				      ARM_ELF_DATA))
+				      sizeof (struct elf32_arm_link_hash_entry)))
     {
       free (ret);
       return NULL;
@@ -18535,16 +18533,10 @@ elf32_arm_filter_implib_symbols (bfd *abfd ATTRIBUTE_UNUSED,
 static bool
 elf32_arm_new_section_hook (bfd *abfd, asection *sec)
 {
-  if (!sec->used_by_bfd)
-    {
-      _arm_elf_section_data *sdata;
-      size_t amt = sizeof (*sdata);
-
-      sdata = (_arm_elf_section_data *) bfd_zalloc (abfd, amt);
-      if (sdata == NULL)
-	return false;
-      sec->used_by_bfd = sdata;
-    }
+  _arm_elf_section_data *sdata = bfd_zalloc (abfd, sizeof (*sdata));
+  if (sdata == NULL)
+    return false;
+  sec->used_by_bfd = sdata;
 
   return _bfd_elf_new_section_hook (abfd, sec);
 }

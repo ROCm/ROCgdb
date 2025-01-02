@@ -1,5 +1,5 @@
 /* write.c - emit .o file
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1294,7 +1294,7 @@ write_relocs (bfd *abfd ATTRIBUTE_UNUSED, asection *sec,
 	rp = &r->next;
     }
 
-  relocs = XCNEWVEC (arelent *, n);
+  relocs = notes_alloc (n * sizeof (arelent *));
 
   n = 0;
   r = my_reloc_list;
@@ -1975,7 +1975,7 @@ create_note_reloc (segT           sec,
 {
   struct reloc_list * reloc;
 
-  reloc = XNEW (struct reloc_list);
+  reloc = notes_alloc (sizeof (*reloc));
 
   /* We create a .b type reloc as resolve_reloc_expr_symbols() has already been called.  */
   reloc->u.b.sec           = sec;
@@ -2535,6 +2535,7 @@ write_object_file (void)
 #endif
 
   bfd_map_over_sections (stdoutput, write_relocs, (char *) 0);
+  reloc_list = NULL;
 
 #ifdef tc_frob_file_after_relocs
   tc_frob_file_after_relocs ();

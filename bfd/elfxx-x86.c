@@ -1,5 +1,5 @@
 /* x86 specific support for ELF
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -32,9 +32,7 @@
 bool
 _bfd_x86_elf_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd,
-				  sizeof (struct elf_x86_obj_tdata),
-				  get_elf_backend_data (abfd)->target_id);
+  return bfd_elf_allocate_object (abfd, sizeof (struct elf_x86_obj_tdata));
 }
 
 /* _TLS_MODULE_BASE_ needs to be treated especially when linking
@@ -720,23 +718,21 @@ struct bfd_link_hash_table *
 _bfd_x86_elf_link_hash_table_create (bfd *abfd)
 {
   struct elf_x86_link_hash_table *ret;
-  const struct elf_backend_data *bed;
   size_t amt = sizeof (struct elf_x86_link_hash_table);
 
   ret = (struct elf_x86_link_hash_table *) bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 
-  bed = get_elf_backend_data (abfd);
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd,
 				      _bfd_x86_elf_link_hash_newfunc,
-				      sizeof (struct elf_x86_link_hash_entry),
-				      bed->target_id))
+				      sizeof (struct elf_x86_link_hash_entry)))
     {
       free (ret);
       return NULL;
     }
 
+  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
   if (bed->target_id == X86_64_ELF_DATA)
     {
       ret->is_reloc_section = elf_x86_64_is_reloc_section;

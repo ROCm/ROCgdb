@@ -1,5 +1,5 @@
 /* Xtensa-specific support for 32-bit ELF.
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -665,8 +665,7 @@ struct elf_xtensa_obj_tdata
 static bool
 elf_xtensa_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_xtensa_obj_tdata),
-				  XTENSA_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct elf_xtensa_obj_tdata));
 }
 
 /* Xtensa ELF linker hash table.  */
@@ -741,8 +740,7 @@ elf_xtensa_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd,
 				      elf_xtensa_link_hash_newfunc,
-				      sizeof (struct elf_xtensa_link_hash_entry),
-				      XTENSA_ELF_DATA))
+				      sizeof (struct elf_xtensa_link_hash_entry)))
     {
       free (ret);
       return NULL;
@@ -6101,16 +6099,12 @@ struct elf_xtensa_section_data
 static bool
 elf_xtensa_new_section_hook (bfd *abfd, asection *sec)
 {
-  if (!sec->used_by_bfd)
-    {
-      struct elf_xtensa_section_data *sdata;
-      size_t amt = sizeof (*sdata);
+  struct elf_xtensa_section_data *sdata;
 
-      sdata = bfd_zalloc (abfd, amt);
-      if (sdata == NULL)
-	return false;
-      sec->used_by_bfd = sdata;
-    }
+  sdata = bfd_zalloc (abfd, sizeof (*sdata));
+  if (sdata == NULL)
+    return false;
+  sec->used_by_bfd = sdata;
 
   return _bfd_elf_new_section_hook (abfd, sec);
 }

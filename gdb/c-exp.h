@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef C_EXP_H
-#define C_EXP_H
+#ifndef GDB_C_EXP_H
+#define GDB_C_EXP_H
 
 #include "expop.h"
 #include "objc-lang.h"
@@ -237,4 +237,4 @@ protected:
 
 }/* namespace expr */
 
-#endif /* C_EXP_H */
+#endif /* GDB_C_EXP_H */

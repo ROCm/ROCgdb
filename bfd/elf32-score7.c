@@ -1,5 +1,5 @@
 /* 32-bit ELF support for S+core.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by
    Brain.lin (brain.lin@sunplusct.com)
    Mei Ligang (ligang@sunnorth.com.cn)
@@ -3863,9 +3863,8 @@ bool
 s7_elf32_score_new_section_hook (bfd *abfd, asection *sec)
 {
   struct _score_elf_section_data *sdata;
-  size_t amt = sizeof (*sdata);
 
-  sdata = bfd_zalloc (abfd, amt);
+  sdata = bfd_zalloc (abfd, sizeof (*sdata));
   if (sdata == NULL)
     return false;
   sec->used_by_bfd = sdata;

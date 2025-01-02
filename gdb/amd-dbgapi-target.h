@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef AMD_DBGAPI_TARGET_H
-#define AMD_DBGAPI_TARGET_H 1
+#ifndef GDB_AMD_DBGAPI_TARGET_H
+#define GDB_AMD_DBGAPI_TARGET_H
 
 #include "gdbsupport/observable.h"
 #include "gdbthread.h"
@@ -159,4 +159,4 @@ dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
 	   dispatch_id.handle, get_status_string (status));
 }
 
-#endif /* AMD_DBGAPI_TARGET_H */
+#endif /* GDB_AMD_DBGAPI_TARGET_H */

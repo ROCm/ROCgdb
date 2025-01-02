@@ -1,5 +1,5 @@
 # Expect script for various AARCH64 ELF tests.
-# Copyright (C) 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 2009-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -23,7 +23,7 @@ if { ![is_elf_format] || ![istarget "aarch64*-*-*"] } {
     return
 }
 
-load_lib $srcdir/$subdir/lib/aarch64-elf-lib.exp
+load_file $srcdir/$subdir/lib/aarch64-elf-lib.exp
 
 # List contains test-items with 3 items followed by 2 lists:
 # 0:name 1:ld early options 2:ld late options 3:assembler options

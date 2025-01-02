@@ -1,5 +1,5 @@
 /* BFD back-end for MIPS Extended-Coff files.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Original version by Per Bothner.
    Full support added by Ian Lance Taylor, ian@cygnus.com.
 
@@ -368,7 +368,7 @@ mips_adjust_reloc_in (bfd *abfd,
   /* If the type is MIPS_R_IGNORE, make sure this is a reference to
      the absolute section so that the reloc is ignored.  */
   if (intern->r_type == MIPS_R_IGNORE)
-    rptr->sym_ptr_ptr = bfd_abs_section_ptr->symbol_ptr_ptr;
+    rptr->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 
   rptr->howto = &mips_howto_table[intern->r_type];
 }

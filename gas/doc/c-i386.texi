@@ -1,4 +1,4 @@
-@c Copyright (C) 1991-2024 Free Software Foundation, Inc.
+@c Copyright (C) 1991-2025 Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
 @c man end
@@ -228,6 +228,8 @@ accept various extension mnemonics.  For example,
 @code{amx_bf16},
 @code{amx_fp16},
 @code{amx_complex},
+@code{amx_transpose},
+@code{amx_tf32},
 @code{amx_tile},
 @code{vmx},
 @code{vmfunc},
@@ -1700,7 +1702,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.shstk} @tab @samp{.gfni} @tab @samp{.vaes} @tab @samp{.vpclmulqdq}
 @item @samp{.movdiri} @tab @samp{.movdir64b} @tab @samp{.enqcmd} @tab @samp{.tsxldtrk}
 @item @samp{.amx_int8} @tab @samp{.amx_bf16} @tab @samp{.amx_fp16}
-@item @samp{.amx_complex} @tab @samp{.amx_tile}
+@item @samp{.amx_complex} @tab @samp{.amx_transpose} @tab @samp{.amx_tf32}
+@item @samp{.amx_tile}
 @item @samp{.kl} @tab @samp{.widekl} @tab @samp{.uintr} @tab @samp{.hreset}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme}

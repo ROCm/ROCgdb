@@ -1,6 +1,6 @@
 /* tc-wasm32.c -- Assembler code for the wasm32 target.
 
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -368,7 +368,7 @@ wasm32_leb128 (char **line, int bits, int sign)
       return str != str0;
     }
 
-  reloc = XNEW (struct reloc_list);
+  reloc = notes_alloc (sizeof (*reloc));
   reloc->u.a.offset_sym = expr_build_dot ();
   if (ex.X_op == O_symbol)
     {
@@ -411,7 +411,7 @@ wasm32_leb128 (char **line, int bits, int sign)
 
 	  signature = strndup (input_line_pointer + 1, siglength);
 
-	  reloc2 = XNEW (struct reloc_list);
+	  reloc2 = notes_alloc (sizeof (*reloc2));
 	  reloc2->u.a.offset_sym = expr_build_dot ();
 	  reloc2->u.a.sym = symbol_find_or_make (signature);
 	  reloc2->u.a.addend = 0;
@@ -797,8 +797,8 @@ tc_gen_reloc (asection * sec ATTRIBUTE_UNUSED, fixS * fixp)
 {
   arelent *reloc;
 
-  reloc = (arelent *) xmalloc (sizeof (*reloc));
-  reloc->sym_ptr_ptr = (asymbol **) xmalloc (sizeof (asymbol *));
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 

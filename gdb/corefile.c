@@ -37,6 +37,7 @@
 #include "gdbarch.h"
 #include "arch-utils.h"
 #include "interps.h"
+#include "arch-utils.h"
 
 void
 reopen_exec_file (void)
@@ -77,6 +78,15 @@ validate_files (void)
 	warning (_("exec file is newer than core file."));
     }
 }
+
+/* See arch-utils.h.  */
+
+core_file_exec_context
+default_core_parse_exec_context (struct gdbarch *gdbarch, bfd *cbfd)
+{
+  return {};
+}
+
 
 std::string
 memory_error_message (enum target_xfer_status err,

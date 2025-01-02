@@ -1,5 +1,5 @@
 /* CRIS-specific support for 32-bit ELF.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
    Contributed by Axis Communications AB.
    Written by Hans-Peter Nilsson, based on elf32-fr30.c
    PIC and shlib bits based primarily on elf32-m68k.c and elf32-i386.c.
@@ -898,8 +898,7 @@ elf_cris_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
 				      elf_cris_link_hash_newfunc,
-				      sizeof (struct elf_cris_link_hash_entry),
-				      CRIS_ELF_DATA))
+				      sizeof (struct elf_cris_link_hash_entry)))
     {
       free (ret);
       return NULL;

@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (BREAKPOINT_H)
-#define BREAKPOINT_H 1
+#ifndef GDB_BREAKPOINT_H
+#define GDB_BREAKPOINT_H
 
 #include "frame.h"
 #include "value.h"
@@ -1985,6 +1985,14 @@ public:
   scoped_rbreak_breakpoints ();
   ~scoped_rbreak_breakpoints ();
 
+  /* Return the number of first breakpoint made while this object is
+     in scope.  */
+  int first_breakpoint () const;
+
+  /* Return the number of the most recent breakpoint made while this
+     object is in scope, or -1 if no breakpoints were made.  */
+  int last_breakpoint () const;
+
   DISABLE_COPY_AND_ASSIGN (scoped_rbreak_breakpoints);
 };
 
@@ -2114,4 +2122,4 @@ extern void enable_disable_bp_location (bp_location *loc, bool enable);
 
 extern void notify_breakpoint_modified (breakpoint *b);
 
-#endif /* !defined (BREAKPOINT_H) */
+#endif /* GDB_BREAKPOINT_H */

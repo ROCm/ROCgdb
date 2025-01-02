@@ -1,5 +1,5 @@
 /* MIPS-specific support for 64-bit ELF
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
    Ian Lance Taylor, Cygnus Support
    Linker support added by Mark Mitchell, CodeSourcery, LLC.
    <mark@codesourcery.com>
@@ -4080,7 +4080,7 @@ mips_elf64_slurp_one_reloc_table (bfd *abfd, asection *asect,
 	    }
 
 	  /* Some types require symbols, whereas some do not.  */
-	  relent->sym_ptr_ptr = bfd_abs_section_ptr->symbol_ptr_ptr;
+	  relent->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 	  switch (type)
 	    {
 	    case R_MIPS_NONE:
@@ -4113,7 +4113,7 @@ mips_elf64_slurp_one_reloc_table (bfd *abfd, asection *asect,
 		      if ((s->flags & BSF_SECTION_SYM) == 0)
 			relent->sym_ptr_ptr = ps;
 		      else
-			relent->sym_ptr_ptr = s->section->symbol_ptr_ptr;
+			relent->sym_ptr_ptr = &s->section->symbol;
 		    }
 
 		  used_sym = true;

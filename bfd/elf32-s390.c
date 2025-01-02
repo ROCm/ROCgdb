@@ -1,5 +1,5 @@
 /* IBM S/390-specific support for 32-bit ELF
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
    Contributed by Carl B. Pedersen and Martin Schwidefsky.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -721,8 +721,7 @@ struct elf_s390_obj_tdata
 static bool
 elf_s390_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_s390_obj_tdata),
-				  S390_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct elf_s390_obj_tdata));
 }
 
 static bool
@@ -804,8 +803,7 @@ elf_s390_link_hash_table_create (bfd *abfd)
     return NULL;
 
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd, link_hash_newfunc,
-				      sizeof (struct elf_s390_link_hash_entry),
-				      S390_ELF_DATA))
+				      sizeof (struct elf_s390_link_hash_entry)))
     {
       free (ret);
       return NULL;

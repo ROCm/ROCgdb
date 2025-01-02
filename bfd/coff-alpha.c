@@ -1,5 +1,5 @@
 /* BFD back-end for ALPHA Extended-Coff files.
-   Copyright (C) 1993-2024 Free Software Foundation, Inc.
+   Copyright (C) 1993-2025 Free Software Foundation, Inc.
    Modified from coff-mips.c by Steve Chamberlain <sac@cygnus.com> and
    Ian Lance Taylor <ian@cygnus.com>.
 
@@ -664,7 +664,7 @@ alpha_adjust_reloc_in (bfd *abfd,
 	 some reason the address of this reloc type is not adjusted by
 	 the section vma.  We record the gp value for this object file
 	 here, for convenience when doing the GPDISP relocation.  */
-      rptr->sym_ptr_ptr = bfd_abs_section_ptr->symbol_ptr_ptr;
+      rptr->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
       rptr->address = intern->r_vaddr;
       rptr->addend = ecoff_data (abfd)->gp;
       break;

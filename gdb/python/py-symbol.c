@@ -610,8 +610,7 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
       /* Expand any symtabs that contain potentially matching symbols.  */
       lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
       expand_symtabs_matching (NULL, lookup_name, NULL, NULL,
-			       SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			       SEARCH_ALL_DOMAINS);
+			       SEARCH_STATIC_BLOCK, flags);
 
       for (objfile *objfile : current_program_space->objfiles ())
 	{
@@ -632,10 +631,11 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 
 		  if (symbol != nullptr)
 		    {
-		      PyObject *sym_obj
-			= symbol_to_symbol_object (symbol);
+		      PyObject *sym_obj = symbol_to_symbol_object (symbol);
+		      if (sym_obj == nullptr)
+			return nullptr;
 		      if (PyList_Append (return_list.get (), sym_obj) == -1)
-			return NULL;
+			return nullptr;
 		    }
 		}
 	    }

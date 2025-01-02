@@ -1,5 +1,5 @@
 /* BFD back-end for mmo objects (MMIX-specific object-format).
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
    Written by Hans-Peter Nilsson (hp@bitrange.com).
    Infrastructure and other bits originally copied from srec.c and
    binary.c.
@@ -2129,15 +2129,12 @@ mmo_scan (bfd *abfd)
 static bool
 mmo_new_section_hook (bfd *abfd, asection *newsect)
 {
+  /* We zero-fill all fields and assume NULL is represented by an all
+     zero-bit pattern.  */
+  newsect->used_by_bfd
+    = bfd_zalloc (abfd, sizeof (struct mmo_section_data_struct));
   if (!newsect->used_by_bfd)
-    {
-      /* We zero-fill all fields and assume NULL is represented by an all
-	 zero-bit pattern.  */
-      newsect->used_by_bfd
-	= bfd_zalloc (abfd, sizeof (struct mmo_section_data_struct));
-      if (!newsect->used_by_bfd)
-	return false;
-    }
+    return false;
 
   /* Always align to at least 32-bit words.  */
   newsect->alignment_power = 2;

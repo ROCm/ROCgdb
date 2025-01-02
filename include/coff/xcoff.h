@@ -1,6 +1,6 @@
 /* Internal format of XCOFF object file data structures for BFD.
 
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
    Written by Ian Lance Taylor <ian@cygnus.com>, Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -298,13 +298,13 @@ struct internal_ldrel
   bfd_vma l_vaddr;
 
   /* The symbol table index in the .loader section symbol table.  */
-  bfd_size_type l_symndx;
+  uint32_t l_symndx;
 
   /* The relocation type and size.  */
-  short l_rtype;
+  int16_t l_rtype;
 
   /* The section number this relocation applies to.  */
-  short l_rsecnm;
+  int16_t l_rsecnm;
 };
 
 /* An entry in the XCOFF linker hash table.  */

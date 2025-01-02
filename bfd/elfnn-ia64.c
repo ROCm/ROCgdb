@@ -1,5 +1,5 @@
 /* IA-64 support for 64-bit ELF
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1460,8 +1460,7 @@ elfNN_ia64_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
 				      elfNN_ia64_new_elf_hash_entry,
-				      sizeof (struct elfNN_ia64_link_hash_entry),
-				      IA64_ELF_DATA))
+				      sizeof (struct elfNN_ia64_link_hash_entry)))
     {
       free (ret);
       return NULL;

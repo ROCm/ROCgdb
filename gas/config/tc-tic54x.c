@@ -1,5 +1,5 @@
 /* tc-tic54x.c -- Assembly code for the Texas Instruments TMS320C54X
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
    Contributed by Timothy Wall (twall@cygnus.com)
 
    This file is part of GAS, the GNU Assembler.
@@ -2990,7 +2990,7 @@ md_begin (void)
   /* Look for A_DIR and add it to the include list.  */
   if (A_DIR != NULL)
     {
-      char *tmp = xstrdup (A_DIR);
+      char *tmp = notes_strdup (A_DIR);
 
       do
 	{
@@ -5095,8 +5095,8 @@ tc_gen_reloc (asection *section, fixS *fixP)
   bfd_reloc_code_real_type code = fixP->fx_r_type;
   asymbol *sym = symbol_get_bfdsym (fixP->fx_addsy);
 
-  rel = XNEW (arelent);
-  rel->sym_ptr_ptr = XNEW (asymbol *);
+  rel = notes_alloc (sizeof (arelent));
+  rel->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *rel->sym_ptr_ptr = sym;
   /* We assume that all rel->address are host byte offsets.  */
   rel->address = fixP->fx_frag->fr_address + fixP->fx_where;

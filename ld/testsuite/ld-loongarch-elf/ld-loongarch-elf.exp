@@ -1,5 +1,5 @@
 # Expect script for LoongArch ELF linker tests
-#   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -147,7 +147,7 @@ if [istarget "loongarch64-*-*"] {
   run_cc_link_tests [list \
       [list \
 	  "call undefweak symbol" \
-	  "" "" \
+	  "-no-pie" "" \
 	  {call_undefweak.s} \
 	  {{objdump {-d} call_undefweak.d}} \
 	  "call_undefweak" \
@@ -184,6 +184,7 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "bad_pcala_hi20_weak_pie"
     run_dump_test "bad_pcrel20_s2_global"
     run_dump_test "bad_pcrel20_s2_weak"
+    run_dump_test "weak-undef-hidden-shared"
   }
 
   if [check_pie_support] {
@@ -194,6 +195,8 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "relr-got-start"
     run_dump_test "relr-text-pie"
     run_dump_test "abssym_pie"
+    run_dump_test "weak-undef-hidden-pie"
+    run_dump_test "weak-undef-static-pie"
   }
 
   run_dump_test "max_imm_b16"
