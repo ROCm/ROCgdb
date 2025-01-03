@@ -1731,10 +1731,23 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
 
   std::vector<addr_range> aliases;
   amd_dbgapi_architecture_id_t architecture_id;
-  if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-				   &architecture_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_get_architecture failed"));
+  /* If we have a wave, use the wave's arch, otherwise, use the arch matching
+     gdbarch.  */
+  if (ptid != null_ptid)
+    {
+      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
+      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id), &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_wave_get_info failed"));
+    }
+  else
+    {
+      if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+				       &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_get_architecture failed"));
+    }
 
   /* Get a dbgapi address space id for the original address space.  */
   amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;

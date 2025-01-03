@@ -328,8 +328,11 @@ proc gdb_compile_ocl {source dest type options} {
 # Return true if all the devices on the host support precise memory.
 
 proc hip_devices_support_precise_memory {} {
-    set unsupported_targets \
-	{gfx900 gfx906 gfx908 gfx1010 gfx1011 gfx1012 gfx1030 gfx1031 gfx1032}
+    set unsupported_targets {
+	gfx9-generic gfx900 gfx906 gfx908
+	gfx10-1-generic gfx1010 gfx1011 gfx1012
+	gfx10-3-generic gfx1030 gfx1031 gfx1032
+    }
 
     set targets [hcc_amdgpu_targets]
     if { [llength $targets] == 0 } {
@@ -387,12 +390,31 @@ proc info_thread_get_wave_list { } {
   return $thr_list
 }
 
+# Get the GPU architecture for the current thread.
+
+proc get_current_gpu_arch {} {
+    set arch ""
+    gdb_test_multiple "info agents" "" -lbl {
+	-re "\r\n\\*\[^\r\n\]*gfx(\[a-f0-9\]+)\[^\r\n\]+" {
+	    set arch $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	    gdb_assert {"$arch" != ""} $gdb_test_name
+	}
+    }
+    return $arch
+}
+
 # Return true if all the devices support debugging multiple processes
 # using the GPU.
 
 proc hip_devices_support_debug_multi_process {} {
-    set unsupported_targets \
-	{gfx900 gfx906 gfx908 gfx1010 gfx1011 gfx1012 gfx1030 gfx1031 gfx1032}
+    set unsupported_targets {
+	gfx9-generic gfx900 gfx906 gfx908
+	gfx10-1-generic gfx1010 gfx1011 gfx1012
+	gfx10-3-generic gfx1030 gfx1031 gfx1032
+    }
 
     set targets [hcc_amdgpu_targets]
     if { [llength $targets] == 0 } {
@@ -495,4 +517,59 @@ proc rocm_generate_core_file { corefile_path } {
 	}
     }
     return 0
+}
+
+# Look for the FIELD in the definition (ptype) of register REG.
+# Return the starting bit offset of that FIELD.
+
+proc find_bit_offset_in_reg {reg field} {
+    set bit_offset ""
+    gdb_test_multiple "ptype \$$reg" "" -lbl {
+	-re " *bool \[^\r\n \]*[string_to_regexp $field] @(\[0-9\]+);" {
+	    set bit_offset $expect_out(1,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	    gdb_assert {"$bit_offset" != ""} $gdb_test_name
+	}
+    }
+    return $bit_offset
+}
+
+# Enable ALU exception EXCP_NAME for the currently selected wave.
+# This is architecture dependent:
+#
+#   gfx <  0x1200  -- the "mode" register must be modified.
+#                     the DX10_CLAMP bit must cleared.
+#
+#   gfx >= 0x1200  -- the "trap_ctrl" register must be modified.
+
+proc enable_alu_exception {excp_name} {
+    set arch 0x[get_current_gpu_arch]
+    if {$arch < 0x1200} {
+	# For generations prior to gfx12, ALU exceptions are not reported when
+	# the DX10_CLAMP bit is set.  Clear it.
+	with_test_prefix "clear DX10_CLAMP" {
+	    set clamp_bit_offset [find_bit_offset_in_reg "mode" "DX10_CLAMP"]
+	    gdb_test \
+		"p \$mode &= ~(1 << ${clamp_bit_offset})" \
+		"(?!.*DX10_CLAMP).*" \
+		"clear MODE.DX10_CLAMP"
+	}
+	set regname "mode"
+    } else {
+	set regname "trap_ctrl"
+    }
+
+    # The FLOAT_DIV0 flag is named EXCP_ENABLE.DIV0 (not to be confused with
+    # EXCP_EN.INT_DIV0).
+    set excp_name [string toupper $excp_name]
+    if {$arch < 0x1200 && $excp_name == "FLOAT_DIV0"} {
+	set excp_name "EXCP_EN.DIV0"
+    }
+
+    set bit_offset [find_bit_offset_in_reg $regname $excp_name]
+    gdb_test \
+	"p \$$regname |= (1 << $bit_offset)" \
+	"= .*$excp_name.*"
 }

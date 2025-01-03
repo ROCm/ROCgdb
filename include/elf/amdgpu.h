@@ -29,6 +29,7 @@
 #define ELFABIVERSION_AMDGPU_HSA_V3 1
 #define ELFABIVERSION_AMDGPU_HSA_V4 2
 #define ELFABIVERSION_AMDGPU_HSA_V5 3
+#define ELFABIVERSION_AMDGPU_HSA_V6 4
 
 /* Processor selection mask for EF_AMDGPU_MACH_* values.  */
 
@@ -76,13 +77,19 @@
 #define EF_AMDGPU_MACH_AMDGCN_GFX941  0x04b
 #define EF_AMDGPU_MACH_AMDGCN_GFX942  0x04c
 #define EF_AMDGPU_MACH_AMDGCN_GFX1201 0x04e
+#define EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC 0x051
+#define EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC 0x052
+#define EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC 0x053
+#define EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC 0x054
+#define EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC 0x059
+#define EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC 0x05f
 
 /* Code object v3 machine flags.  */
 
 #define EF_AMDGPU_FEATURE_XNACK_V3   0x100
 #define EF_AMDGPU_FEATURE_SRAMECC_V3 0x200
 
-/* Code object v4 (and later) machine flags.  */
+/* Code object v4 (and v5) machine flags.  */
 
 #define EF_AMDGPU_FEATURE_XNACK_V4             0x300
 #define EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 0x000
@@ -96,7 +103,12 @@
 #define EF_AMDGPU_FEATURE_SRAMECC_OFF_V4         0x800
 #define EF_AMDGPU_FEATURE_SRAMECC_ON_V4          0xc00
 
-/* Notes. */
+/* Code object v6 machine flags.  */
+
+#define EF_AMDGPU_GENERIC_VERSION_V              0xff000000
+#define EF_AMDGPU_GENERIC_VERSION_V_SHIFT        24
+
+/* Notes.  */
 
 #define NT_AMDGPU_METADATA                32
 #define NT_AMDGPU_CORE_STATE              33

@@ -4907,6 +4907,12 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
     default:
       out += sprintf (out, _(", <unknown AMDGPU GPU type: %#x>"), mach);
       break;
@@ -4986,6 +4992,19 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
 	}
 
       e_flags &= ~EF_AMDGPU_FEATURE_SRAMECC_V4;
+
+      /* Extensions for HSA v6+.  */
+      if (abiversion >= ELFABIVERSION_AMDGPU_HSA_V6)
+	{
+	  int generic_v;
+
+	  generic_v = ((e_flags & EF_AMDGPU_GENERIC_VERSION_V)
+		       >> EF_AMDGPU_GENERIC_VERSION_V_SHIFT);
+
+	  if (generic_v > 0)
+	    out += sprintf (out, _(", generic_v%d"), generic_v);
+	  e_flags &= ~EF_AMDGPU_GENERIC_VERSION_V;
+	}
     }
 
   if (e_flags != 0)
