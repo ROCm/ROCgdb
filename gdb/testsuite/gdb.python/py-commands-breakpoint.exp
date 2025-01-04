@@ -1,5 +1,5 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
-
+# Copyright (C) 2025 Free Software Foundation, Inc.
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -13,30 +13,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Check whether finish respects the print pretty user setting when printing the
-# function result.
+# This file is part of the GDB testsuite.
 
-standard_testfile
+load_lib gdb-python.exp
 
-set opts {}
-lappend opts debug
-if { [have_fvar_tracking] } {
-    lappend opts "additional_flags=-fvar-tracking"
-}
+require allow_python_tests
 
-if { [prepare_for_testing "failed to prepare" $testfile $srcfile $opts] } {
+standard_testfile .c .py
+
+if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
     return -1
 }
 
-proc finish_pretty { } {
-    if ![runto foo] {
-	return
-    }
-    gdb_test_no_output "set print pretty" \
-	"pretty printing switched on"
-    gdb_test "finish" \
-	{.*Value returned is \$1 = \{\r\n  a = 1,\r\n  b = 2\r\n\}} \
-	"finish foo prettyprinted function result"
+if { ![runto_main] } {
+    return 0
 }
 
-finish_pretty
+set host_python_file \
+    [gdb_remote_download host $srcdir/$subdir/$srcfile2]
+
+gdb_test_no_output "source $host_python_file" \
+    "source python file"
+
+gdb_test "python TestBreakpoint()" \
+    "Breakpoint $decimal .*"
+
+gdb_test "continue" \
+    [multi_line \
+	 "VAR: 1" \
+	 "VAR: 2" \
+	 "VAR: 3"]
