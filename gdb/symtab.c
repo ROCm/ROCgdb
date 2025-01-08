@@ -1,7 +1,7 @@
 /* Symbol table lookup for the GNU debugger, GDB.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
