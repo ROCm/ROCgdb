@@ -8218,16 +8218,15 @@ Packet: '%s'\n"),
 Packet: '%s'\n"),
 			   hex_string (pnum), p, buf);
 
+		  int reg_size = register_size (event->arch, reg->regnum);
 		  cached_reg.num = reg->regnum;
-		  cached_reg.data.reset ((gdb_byte *)
-					 xmalloc (register_size (event->arch,
-								 reg->regnum)));
+		  cached_reg.data.resize (reg_size);
 
 		  p = p1 + 1;
-		  fieldsize = hex2bin (p, cached_reg.data.get (),
-				       register_size (event->arch, reg->regnum));
+		  fieldsize = hex2bin (p, cached_reg.data.data (),
+				       cached_reg.data.size ());
 		  p += 2 * fieldsize;
-		  if (fieldsize < register_size (event->arch, reg->regnum))
+		  if (fieldsize < reg_size)
 		    warning (_("Remote reply is too short: %s"), buf);
 
 		  event->regcache.push_back (std::move (cached_reg));
@@ -8566,7 +8565,7 @@ remote_target::process_stop_reply (stop_reply_up stop_reply,
 
 	  for (cached_reg_t &reg : stop_reply->regcache)
 	    {
-	      regcache->raw_supply (reg.num, reg.data.get ());
+	      regcache->raw_supply (reg.num, reg.data);
 	      rs->last_seen_expedited_registers.insert (reg.num);
 	    }
 	}
@@ -10533,8 +10532,8 @@ remote_target::getpkt (gdb::char_vector *buf, bool forever, bool *is_notif)
 
 	      if (val > max_chars)
 		remote_debug_printf_nofunc
-		  ("Packet received: %s [%d bytes omitted]", str.c_str (),
-		   val - max_chars);
+		  ("Packet received: %s [%d of %d bytes omitted]", str.c_str (),
+		   val - max_chars, val);
 	      else
 		remote_debug_printf_nofunc ("Packet received: %s",
 					    str.c_str ());
