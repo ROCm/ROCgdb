@@ -6996,7 +6996,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_ZtxN:
 	case AARCH64_OPND_SME_Zdnx2:
 	case AARCH64_OPND_SME_Zdnx4:
-	case AARCH64_OPND_SME_Zdnx4_STRIDED:
 	case AARCH64_OPND_SME_Zmx2:
 	case AARCH64_OPND_SME_Zmx4:
 	case AARCH64_OPND_SME_Znx2:
@@ -8101,7 +8100,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->imm.value = vectype.index;
 	  break;
 
-	case AARCH64_OPND_SME_ZT0_INDEX2_12:
+	case AARCH64_OPND_SME_ZT0_INDEX_MUL_VL:
 	  po_misc_or_fail (parse_shifter_zt0_with_bit_index
 			   (&str, info, SHIFTED_MUL_VL));
 	  break;
@@ -10741,9 +10740,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
   {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
-  // Feature b16b16 is currently incomplete.
-  // TODO: finish implementation and enable relevant flags.
-  //{"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
+  {"sve-b16b16",	AARCH64_FEATURE (SVE_B16B16), AARCH64_NO_FEATURES},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
   {"sve2p1",		AARCH64_FEATURE (SVE2p1), AARCH64_FEATURE (SVE2)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
@@ -10766,6 +10763,9 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
 			AARCH64_FEATURES (2, FP8, SME2)},
   {"sme-f8f16",		AARCH64_FEATURE (SME_F8F16),
 			AARCH64_FEATURE (SME_F8F32)},
+  {"sme-f16f16",	AARCH64_FEATURE (SME_F16F16), AARCH64_FEATURE (SME2)},
+  {"sme-b16b16",	AARCH64_FEATURE (SME_B16B16),
+			AARCH64_FEATURES (2, SVE_B16B16, SME2)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
@@ -10784,7 +10784,7 @@ static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
   {AARCH64_FEATURE (SSVE_FP8DOT4), AARCH64_FEATURE (FP8DOT4_SVE)},
   {AARCH64_FEATURES (2, FP8DOT2, SVE2), AARCH64_FEATURE (FP8DOT2_SVE)},
   {AARCH64_FEATURE (SSVE_FP8DOT2), AARCH64_FEATURE (FP8DOT2_SVE)},
-  /* TODO: Add SME_F16F16->SME_F16F16_F8F16 when SME_F16F16 is added.  */
+  {AARCH64_FEATURE (SME_F16F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
   {AARCH64_FEATURE (SME_F8F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
 };
 
