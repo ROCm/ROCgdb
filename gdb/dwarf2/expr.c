@@ -150,7 +150,7 @@ read_from_register (const frame_info_ptr &frame, int regnum,
 
   frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
 			 optimized, unavailable, &lval, &address, &realnum,
-			 temp_buf.data ());
+			 temp_buf);
 
   if (!*optimized && !*unavailable)
      memcpy (buf.data (), (char *) temp_buf.data () + offset, length);
@@ -194,7 +194,7 @@ write_to_register (const frame_info_ptr &frame, int regnum,
 
   frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
 			 optimized, unavailable, &lval, &address, &realnum,
-			 temp_buf.data ());
+			 temp_buf);
 
   if (!*optimized && !*unavailable)
     {
