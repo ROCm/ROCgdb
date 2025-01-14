@@ -231,6 +231,8 @@ enum i386_cpu
   CpuUSER_MSR,
   /* Intel MSR_IMM Instructions support required.  */
   CpuMSR_IMM,
+  /* Intel MOVRS Instructions support required.  */
+  CpuMOVRS,
   /* mwaitx instruction required */
   CpuMWAITX,
   /* Clzero instruction required */
@@ -256,6 +258,10 @@ enum i386_cpu
   CpuAMX_TF32,
   /* AMX-FP8 instructions required */
   CpuAMX_FP8,
+  /* AMX-MOVRS Instructions support required.  */
+  CpuAMX_MOVRS,
+  /* AMX-AVX512 Instructions support required.  */
+  CpuAMX_AVX512,
   /* AMX-TILE instructions required */
   CpuAMX_TILE,
   /* GFNI instructions required */
@@ -496,6 +502,7 @@ typedef union i386_cpu_flags
       unsigned int cpulkgs:1;
       unsigned int cpuuser_msr:1;
       unsigned int cpumsr_imm:1;
+      unsigned int cpumovrs:1;
       unsigned int cpumwaitx:1;
       unsigned int cpuclzero:1;
       unsigned int cpuospke:1;
@@ -509,6 +516,8 @@ typedef union i386_cpu_flags
       unsigned int cpuamx_complex:1;
       unsigned int cpuamx_tf32:1;
       unsigned int cpuamx_fp8:1;
+      unsigned int cpuamx_movrs:1;
+      unsigned int cpuamx_avx512:1;
       unsigned int cpuamx_tile:1;
       unsigned int cpugfni:1;
       unsigned int cpuvaes:1;
