@@ -25621,21 +25621,13 @@ of a multi-process mode debug session.
 @subsection Tracepoints support in @code{gdbserver}
 @cindex tracepoints support in @code{gdbserver}
 
-On some targets, @code{gdbserver} supports tracepoints, fast
-tracepoints and static tracepoints.
+On some targets, @code{gdbserver} supports tracepoints and fast
+tracepoints.
 
-For fast or static tracepoints to work, a special library called the
+For fast tracepoints to work, a special library called the
 @dfn{in-process agent} (IPA), must be loaded in the inferior process.
 This library is built and distributed as an integral part of
-@code{gdbserver}.  In addition, support for static tracepoints
-requires building the in-process agent library with static tracepoints
-support.  At present, the UST (LTTng Userspace Tracer,
-@url{http://lttng.org/ust}) tracing engine is supported.  This support
-is automatically available if UST development headers are found in the
-standard include path when @code{gdbserver} is built, or if
-@code{gdbserver} was explicitly configured using @option{--with-ust}
-to point at such headers.  You can explicitly disable the support
-using @option{--with-ust=no}.
+@code{gdbserver}.
 
 There are several ways to load the in-process agent in your program:
 
@@ -49187,7 +49179,7 @@ tracepoints (@pxref{Tracepoints}).
 
 @table @samp
 
-@item QTDP:@var{n}:@var{addr}:@var{ena}:@var{step}:@var{pass}[:F@var{flen}][:X@var{len},@var{bytes}]@r{[}-@r{]}
+@item QTDP:@var{n}:@var{addr}:@var{ena}:@var{step}:@var{pass}[:F@var{flen}][:S][:X@var{len},@var{bytes}]@r{[}-@r{]}
 @cindex @samp{QTDP} packet
 Create a new tracepoint, number @var{n}, at @var{addr}.  If @var{ena}
 is @samp{E}, then the tracepoint is enabled; if it is @samp{D}, then
@@ -49195,7 +49187,8 @@ the tracepoint is disabled.  The @var{step} gives the tracepoint's step
 count, and @var{pass} gives its pass count.  If an @samp{F} is present,
 then the tracepoint is to be a fast tracepoint, and the @var{flen} is
 the number of bytes that the target should copy elsewhere to make room
-for the tracepoint.  If an @samp{X} is present, it introduces a
+for the tracepoint.  If an @samp{S} is present, the tracepoint is to be
+a static tracepoint.  If an @samp{X} is present, it introduces a
 tracepoint condition, which consists of a hexadecimal length, followed
 by a comma and hex-encoded bytes, in a manner similar to action
 encodings as described below.  If the trailing @samp{-} is present,
@@ -49254,6 +49247,9 @@ it directs.  The agent expression @var{expr} is as described in
 two-digit hex number in the packet; @var{len} is the number of bytes
 in the expression (and thus one-half the number of hex digits in the
 packet).
+
+@item L
+Collect static trace data.
 
 @end table
 
