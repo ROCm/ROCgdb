@@ -145,6 +145,63 @@ global decimal
 
 if {[record_full_function "vmov"] == true} {
     # Now execute backwards, checking all instructions.
+
+    test_one_memory "vmovaps" "dyn_buf1" \
+	"0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28" true
+    test_one_memory "vmovapd" "dyn_buf1" \
+	"0x54, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x28" true
+    test_one_register "vmovapd" "xmm15" ".*" "dynamic buffer: "
+    test_one_register "vmovaps" "xmm0" ".*" "dynamic buffer: "
+
+    test_one_memory "vmovups" "dyn_buf1" \
+	"0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28" true
+    test_one_memory "vmovupd" "dyn_buf1" \
+	"0x54, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x28" true
+    test_one_register "vmovupd" "xmm15" ".*" "dynamic buffer: "
+    test_one_register "vmovups" "xmm0" ".*" "dynamic buffer: "
+
+    test_one_memory "vmovups" "global_buf1" \
+	"0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18"
+    test_one_memory "vmovupd" "global_buf1" \
+	"0x54, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x18"
+    test_one_register "vmovupd" "xmm15" ".*" "global buffer: "
+    test_one_register "vmovups" "xmm0" ".*" "global buffer: "
+
+    test_one_memory "vmovups" "buf1" \
+	"0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38"
+    test_one_memory "vmovupd" "buf1" \
+	"0x54, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x38"
+    test_one_register "vmovupd" "xmm15" "0xbff8000000000000" "local buffer: "
+    test_one_register "vmovups" "xmm0" "0xc004000000000000" "local buffer: "
+
+    gdb_test "rs 3" "vmovq %%xmm3.*"
+
+    test_one_register "vmovsd" "xmm1" "0xbff8000000000000" "from register: "
+    test_one_register "vmovsd" "xmm15" "0xc004000000000000" "from register: "
+    test_one_register "vmovsd" "xmm8" "0x40866666" "from register: "
+    test_one_register "vmovsd" "xmm2" "0x40866666" "from register: "
+
+    test_one_memory "vmovsd" "d1" "0xbff8000000000000"
+    test_one_memory "vmovsd" "d2" "0xc004000000000000"
+    test_one_register "vmovsd" "xmm15" "0x3fc00000"
+    test_one_register "vmovsd" "xmm1" "0x40866666"
+
+    # Reverse step over the line initializing the floats.
+    gdb_test "rs" "double .*" "step over double initialization"
+
+    test_one_register "vmovss" "xmm1" "0x3fc00000" "from register: "
+    test_one_register "vmovss" "xmm15" "0x40866666" "from register: "
+    test_one_register "vmovss" "xmm8" "0" "from register: "
+    test_one_register "vmovss" "xmm2" "0" "from register: "
+
+    test_one_memory "vmovss" "f1" "0x3fc00000"
+    test_one_memory "vmovss" "f2" "0x40866666"
+    test_one_register "vmovss" "xmm15" "0x0"
+    test_one_register "vmovss" "xmm1" "0x0"
+
+    # Reverse step over the line initializing the floats.
+    gdb_test "rs" "float .*" "step over float initialization"
+
     test_one_register "vmovdqa" "ymm0" \
 	"0x2f2e2d2c2b2a29282726252423222120, 0x2f2e2d2c2b2a29282726252423222120" \
 	"from register: "
@@ -241,6 +298,25 @@ gdb_test_no_output \
 gdb_test_no_output "set \$ymm2.v2_int128 = {0x0, 0x0}"
 gdb_test_no_output "set \$ymm15.v2_int128 = {0xdead, 0xbeef}"
 if {[record_full_function "vpunpck"] == true} {
+    # Floating point unpack instructions.
+    test_one_register "vunpckhpd" "ymm15" \
+	"0x1f1e1d1c3f3e3d3c1b1a19183b3a3938, 0x0"
+    test_one_register "vunpckhpd" "ymm2" \
+	"0x1f1e1d1c3f3e3d3c1b1a19183b3a3938, 0x2f2e2d2c4f4e4d4c2b2a29284b4a4948"
+    test_one_register "vunpckhps" "ymm2" \
+	"0x17161514131211103736353433323130, 0x0"
+    test_one_register "vunpckhps" "ymm15" \
+	"0x17161514131211103736353433323130, 0x27262524232221204746454443424140"
+    test_one_register "vunpcklpd" "ymm15" \
+	"0x17161514373635341312111033323130, 0x0"
+    test_one_register "vunpcklpd" "ymm2" \
+	"0x17161514373635341312111033323130, 0x27262524474645442322212043424140"
+    test_one_register "vunpcklps" "ymm2" \
+	"0x1f1e1d1c1b1a19183f3e3d3c3b3a3938, 0x0"
+    test_one_register "vunpcklps" "ymm15" \
+	"0x1f1e1d1c1b1a19183f3e3d3c3b3a3938, 0x2f2e2d2c2b2a29284f4e4d4c4b4a4948"
+
+
     test_one_register "vpunpckhqdq" "ymm15" \
 	"0x1f1e1d1c3f3e3d3c1b1a19183b3a3938, 0x2f2e2d2c4f4e4d4c2b2a29284b4a4948" \
 	"ymm: "
@@ -268,14 +344,15 @@ if {[record_full_function "vpunpck"] == true} {
     test_one_register "vpunpcklwd" "ymm15" \
 	"0x17371636153514341333123211311030, 0x0"
     test_one_register "vpunpcklbw" "ymm15" "0xdead, 0xbeef"
+
+    # Move to the end of vmov_test to set up next.
+    # Stop recording in case of recording errors.
+    gdb_test "record stop" "Process record is stopped.*" \
+	"delete history for vpunpck_test"
 } else {
     untested "couldn't test vpunpck tests"
 }
 
-# Move to the end of vmov_test to set up next.
-# Stop recording in case of recording errors.
-gdb_test "record stop" "Process record is stopped.*" \
-    "delete history for vpunpck_test"
 gdb_test "finish" "Run till exit from.*vpunpck_test.*" "leaving vpunpck_test"
 
 # Start vpbroadcast tests
@@ -440,3 +517,108 @@ if {[record_full_function "vpmovmskb"] == true} {
 }
 gdb_test "finish" "Run till exit from.*vpmovmskb_test.*" \
     "leaving vpmovmskb"
+
+# Preparation and testing arithmetic instructions.
+gdb_test_no_output \
+    "set \$ymm0.v8_float = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5}"
+gdb_test_no_output \
+    "set \$ymm1.v8_float = {0, 1, 2, 3, 4, 5, 6, 7}"
+gdb_test_no_output "set \$ymm15.v2_int128 = {0,0}"
+
+if {[record_full_function "arith"] == true} {
+    test_one_register "vmaxsd" "ymm15" \
+	"0x40400000400000003f8000003f000000, 0x0" "ymm operation: "
+    test_one_register "vmaxss" "ymm15" \
+	"0x40600000402000003fc000003f000000, 0x40f0000040d0000040b0000040900000" \
+	"xmm operation: "
+    test_one_register "vmaxpd" "ymm15" \
+	"0x40600000402000003fc000003f000000, 0x0" "ymm operation: "
+    test_one_register "vmaxpd" "ymm15" \
+	"0x40600000402000003fc000003f000000, 0x40f0000040d0000040b0000040900000" \
+	"xmm operation: "
+    test_one_register "vmaxps" "ymm15" \
+	"0x40600000402000003fc000003f000000, 0x0" "ymm operation: "
+    test_one_register "vmaxps" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "xmm operation: "
+
+    test_one_register "vminsd" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "ymm operation: "
+    test_one_register "vminss" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x40e0000040c0000040a0000040800000" \
+	"xmm operation: "
+    test_one_register "vminpd" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "ymm operation: "
+    test_one_register "vminpd" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x40e0000040c0000040a0000040800000" \
+	"xmm operation: "
+    test_one_register "vminps" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "ymm operation: "
+    test_one_register "vminps" "ymm15" \
+	"0x40400000400000003fafffff820001f0, 0x0" "xmm operation: "
+
+    test_one_register "vdivsd" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "ymm operation: "
+    test_one_register "vdivss" "ymm15" \
+	"0x3fcfffffffc000013fafffff820001f0, 0x3fdfffffffe000013fdfffffffe00001" \
+	"xmm operation: "
+    test_one_register "vdivpd" "ymm15" \
+	"0x3fcfffffffc000013fafffff820001f0, 0x0" "ymm operation: "
+    test_one_register "vdivpd" "ymm15" \
+	"0x3f5b6db73f4ccccd3f2aaaab00000000, 0x3f6eeeef3f6c4ec53f68ba2f3f638e39" \
+	"xmm operation: "
+    test_one_register "vdivps" "ymm15" \
+	"0x3f5b6db73f4ccccd3f2aaaab00000000, 0x0" "ymm operation: "
+    test_one_register "vdivps" "ymm15" \
+	"0x4040000040000000bfbe00007e000000, 0x0" "xmm operation: "
+
+    test_one_register "vsubsd" "ymm15" \
+	"0x40400000400000003f800000bf000000, 0x0" "ymm operation: "
+    test_one_register "vsubss" "ymm15" \
+	"0xc058000060400000bfbe00007e000000, 0xc0e0000040e00000c0a0000040a00000" \
+	"xmm operation: "
+    test_one_register "vsubpd" "ymm15" \
+	"0xc058000060400000bfbe00007e000000, 0x0" "ymm operation: "
+    test_one_register "vsubpd" "ymm15" \
+	"0xbf000000bf000000bf000000bf000000, 0xbf000000bf000000bf000000bf000000" \
+	"xmm operation: "
+    test_one_register "vsubps" "ymm15" \
+	"0xbf000000bf000000bf000000bf000000, 0x0" "ymm operation: "
+    test_one_register "vsubps" "ymm15" \
+	"0x40400000400000003f5000003f000000, 0x0" "xmm operation: "
+
+    test_one_register "vmulsd" "ymm15" \
+	"0x40400000400000003f80000000000000, 0x0" "ymm operation: "
+    test_one_register "vmulss" "ymm15" \
+	"0x40b00000802001003f5000003f000000, 0x41e00000819001064160000081100104" \
+	"xmm operation: "
+    test_one_register "vmulpd" "ymm15" \
+	"0x40b00000802001003f5000003f000000, 0x0" "ymm operation: "
+    test_one_register "vmulpd" "ymm15" \
+	"0x4128000040a000003fc0000000000000, 0x42520000421c000041dc000041900000" \
+	"xmm operation: "
+    test_one_register "vmulps" "ymm15" \
+	"0x4128000040a000003fc0000000000000, 0x0" "ymm operation: "
+    test_one_register "vmulps" "ymm15" \
+	"0x40400000400000003fc100003f000000, 0x0" "xmm operation: "
+
+    test_one_register "vaddsd" "ymm15" \
+	"0x40400000400000003f8000003f000000, 0x0" "ymm operation: "
+    test_one_register "vaddss" "ymm15" \
+	"0x40640000502000003fc100003f000000, 0x40f800006130000040b8000060d00000" \
+	"xmm operation: "
+    test_one_register "vaddpd" "ymm15" \
+	"0x40640000502000003fc100003f000000, 0x0" "ymm operation: "
+    test_one_register "vaddpd" "ymm15" \
+	"0x40d0000040900000402000003f000000, 0x41680000414800004128000041080000" \
+	"xmm operation: "
+    test_one_register "vaddps" "ymm15" \
+	"0x40d0000040900000402000003f000000, 0x0" "ymm operation: "
+    test_one_register "vaddps" "ymm15" "0x0, 0x0" "xmm operation: "
+
+    gdb_test "record stop" "Process record is stopped.*" \
+	"delete history for arith_test"
+} else {
+    untested "couldn't run arith tests"
+}
+gdb_test "finish" "Run till exit from.*arith_test.*" \
+    "leaving arith"

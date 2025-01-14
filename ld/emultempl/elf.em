@@ -99,6 +99,7 @@ fragment <<EOF
   link_info.default_execstack = DEFAULT_LD_EXECSTACK;
   link_info.error_execstack = DEFAULT_LD_ERROR_EXECSTACK;
   link_info.warn_is_error_for_rwx_segments = DEFAULT_LD_ERROR_RWX_SEGMENTS;
+  link_info.memory_seal = DEFAULT_LD_Z_MEMORY_SEAL;
 }
 
 EOF
@@ -1083,6 +1084,10 @@ fragment <<EOF
 	link_info.combreloc = false;
       else if (strcmp (optarg, "nocopyreloc") == 0)
 	link_info.nocopyreloc = true;
+      else if (strcmp (optarg, "memory-seal") == 0)
+       link_info.memory_seal = true;
+      else if (strcmp (optarg, "nomemory-seal") == 0)
+       link_info.memory_seal = false;
 EOF
 if test -n "$COMMONPAGESIZE"; then
 fragment <<EOF
