@@ -32,6 +32,30 @@
 
 #include <asm/ptrace.h>
 
+/* Hash table storing per-process data.  We don't bind this to a
+   per-inferior registry because of targets like x86 GNU/Linux that
+   need to keep track of processes that aren't bound to any inferior
+   (e.g., fork children, checkpoints).  */
+
+static std::unordered_map<pid_t, loongarch_debug_reg_state>
+loongarch_debug_process_state;
+
+/* See nat/loongarch-linux-hw-point.h.  */
+
+struct loongarch_debug_reg_state *
+loongarch_get_debug_reg_state (pid_t pid)
+{
+  return &loongarch_debug_process_state[pid];
+}
+
+/* Remove any existing per-process debug state for process PID.  */
+
+static void
+loongarch_remove_debug_reg_state (pid_t pid)
+{
+  loongarch_debug_process_state.erase (pid);
+}
+
 /* LoongArch Linux native additions to the default Linux support.  */
 
 class loongarch_linux_nat_target final : public linux_nat_trad_target
@@ -445,33 +469,6 @@ fill_fpregset (const struct regcache *regcache, gdb_fpregset_t *fpregset,
   loongarch_fpregset.collect_regset (nullptr, regcache, regnum, fpregset,
 				     sizeof (gdb_fpregset_t));
 }
-
-/* Helper for the "stopped_data_address" target method.  Returns TRUE
-   if a hardware watchpoint trap at ADDR_TRAP matches a set watchpoint.
-   The address of the matched watchpoint is returned in *ADDR_P.  */
-
-static bool
-loongarch_stopped_data_address (const struct loongarch_debug_reg_state *state,
-			      CORE_ADDR addr_trap, CORE_ADDR *addr_p)
-{
-
-  int i;
-
-  for (i = loongarch_num_wp_regs - 1; i >= 0; --i)
-    {
-      const CORE_ADDR addr_watch = state->dr_addr_wp[i];
-
-      if (state->dr_ref_count_wp[i]
-	  && DR_CONTROL_ENABLED (state->dr_ctrl_wp[i])
-	  && addr_trap == addr_watch)
-	{
-	  *addr_p = addr_watch;
-	  return true;
-	}
-    }
-  return false;
-}
-
 
 /* Returns the number of hardware watchpoints of type TYPE that we can
    set.  Value is positive if we can set CNT watchpoints, zero if
