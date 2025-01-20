@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -202,7 +202,6 @@ private:
   HashMap<char*, Module*> *seg_modules_map; // to find a comparable module
 
   static int func_compare (const void *p1, const void *p2);
-  int read_archive ();
   void init_datatypes ();
   void update_datatypes (Module*, Vaddr, uint32_t datatype_id);
 };

@@ -1,5 +1,5 @@
 /* aarch64-opc.h -- Header file for aarch64-opc.c and aarch64-opc-2.c.
-   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+   Copyright (C) 2012-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -63,9 +63,7 @@ enum aarch64_field_kind
   FLD_SME_ZAda_1b,
   FLD_SME_ZAda_2b,
   FLD_SME_ZAda_3b,
-  FLD_SME_ZdnT,
   FLD_SME_Zdn2,
-  FLD_SME_Zdn2_0,
   FLD_SME_Zdn4,
   FLD_SME_Zm,
   FLD_SME_Zm2,

@@ -1,6 +1,6 @@
 /* I/O, string, cleanup, and other random utilities for GDB.
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef GDB_UTILS_H
+#define GDB_UTILS_H
 
 #include <chrono>
 
@@ -511,4 +511,4 @@ private:
   std::vector<string_file> m_warnings;
 };
 
-#endif /* UTILS_H */
+#endif /* GDB_UTILS_H */

@@ -1,5 +1,5 @@
 /* symbols.c -symbol table-
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1721,9 +1721,29 @@ resolve_symbol_value (symbolS *symp)
 
 	  switch (symp->x->value.X_op)
 	    {
-	    case O_multiply:		left *= right; break;
-	    case O_divide:		left /= right; break;
-	    case O_modulus:		left %= right; break;
+	    /* See expr() for reasons of the use of valueT casts here.  */
+	    case O_multiply:		left *= (valueT) right; break;
+
+	    /* See expr() for reasons of the special casing.  */
+	    case O_divide:
+	      if (right == 1)
+		break;
+	      if (right == -1)
+		{
+		  left = -left;
+		  break;
+		}
+	      left /= right;
+	      break;
+
+	    /* Again, see expr() for reasons of the special casing.  */
+	    case O_modulus:
+	      if (right == 1 || right == -1)
+		left = 0;
+	      else
+		left %= right;
+	      break;
+
 	    case O_left_shift:
 	      left = (valueT) left << (valueT) right; break;
 	    case O_right_shift:
@@ -2791,6 +2811,23 @@ symbol_get_frag (const symbolS *s)
 {
   if (s->flags.local_symbol)
     return ((struct local_symbol *) s)->frag;
+  return s->frag;
+}
+
+/* Return the frag of a symbol and the symbol's offset into that frag.  */
+
+fragS *symbol_get_frag_and_value (const symbolS *s, addressT *value)
+{
+  if (s->flags.local_symbol)
+    {
+      const struct local_symbol *locsym = (const struct local_symbol *) s;
+
+      *value = locsym->value;
+      return locsym->frag;
+    }
+
+  gas_assert (s->x->value.X_op == O_constant);
+  *value = s->x->value.X_add_number;
   return s->frag;
 }
 

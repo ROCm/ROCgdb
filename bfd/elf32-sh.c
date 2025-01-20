@@ -1,5 +1,5 @@
 /* Renesas / SuperH SH specific support for 32-bit ELF
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
    Contributed by Ian Lance Taylor, Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -2149,8 +2149,7 @@ struct sh_elf_obj_tdata
 static bool
 sh_elf_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct sh_elf_obj_tdata),
-				  SH_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct sh_elf_obj_tdata));
 }
 
 /* sh ELF linker hash table.  */
@@ -2244,8 +2243,7 @@ sh_elf_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
 				      sh_elf_link_hash_newfunc,
-				      sizeof (struct elf_sh_link_hash_entry),
-				      SH_ELF_DATA))
+				      sizeof (struct elf_sh_link_hash_entry)))
     {
       free (ret);
       return NULL;

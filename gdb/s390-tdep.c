@@ -40,6 +40,7 @@
 #include "trad-frame.h"
 #include "value.h"
 #include "inferior.h"
+#include "dwarf2/loc.h"
 
 #include "features/s390-linux32.c"
 #include "features/s390x-linux64.c"
@@ -853,6 +854,11 @@ s390_analyze_prologue (struct gdbarch *gdbarch,
       else if (is_rr (insn32, op_lr, &r1, &r2)
 	       || is_rre (insn64, op_lgr, &r1, &r2))
 	data->gpr[r1] = data->gpr[r2];
+
+      /* LDGR r1, r2 --- load from register to floating-point register
+	 (64-bit version).  */
+      else if (is_rre (insn64, op_ldgr, &r1, &r2))
+	data->fpr[r1] = data->gpr[r2];
 
       /* L r1, d2(x2, b2) --- load.  */
       /* LY r1, d2(x2, b2) --- load (long-displacement version).  */
@@ -2120,6 +2126,62 @@ s390_return_value (struct gdbarch *gdbarch, struct value *function,
   return rvc;
 }
 
+/* Try to get the value of DWARF_REG in FRAME at function entry.  If successful,
+   return it as value of type VAL_TYPE.  */
+
+static struct value *
+dwarf_reg_on_entry (int dwarf_reg, struct type *val_type,
+		    const frame_info_ptr &frame)
+{
+  enum call_site_parameter_kind kind = CALL_SITE_PARAMETER_DWARF_REG;
+  union call_site_parameter_u kind_u = { .dwarf_reg = dwarf_reg };
+
+  try
+    {
+      return value_of_dwarf_reg_entry (val_type, frame, kind, kind_u);
+    }
+  catch (const gdb_exception_error &e)
+    {
+      if (e.error == NO_ENTRY_VALUE_ERROR)
+	return nullptr;
+
+      throw;
+    }
+}
+
+/* Both the 32-bit and 64-bit ABIs specify that values of some types are
+   returned in a storage buffer provided by the caller.  Return the address of
+   that storage buffer, if possible.  Implements the
+   gdbarch_get_return_buf_addr hook.  */
+
+static CORE_ADDR
+s390_get_return_buf_addr (struct type *val_type,
+			  const frame_info_ptr &cur_frame)
+{
+  /* The address of the storage buffer is provided as a hidden argument in
+     register r2.  */
+  int dwarf_reg = 2;
+
+  /* The ABI does not guarantee that the register will not be changed while
+     executing the function.  Hence, it cannot be assumed that it will still
+     contain the address of the storage buffer when execution reaches the end
+     of the function.
+
+     Attempt to determine the value on entry using the DW_OP_entry_value DWARF
+     entries.  This requires compiling the user program with -fvar-tracking.  */
+  struct value *val_on_entry
+    = dwarf_reg_on_entry (dwarf_reg, lookup_pointer_type (val_type), cur_frame);
+
+  if (val_on_entry == nullptr)
+    {
+      warning ("Cannot determine the function return value.\n"
+	       "Try compiling with -fvar-tracking.");
+      return 0;
+    }
+
+  return value_as_address (val_on_entry);
+}
+
 /* Frame unwinding.  */
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
@@ -2476,15 +2538,49 @@ s390_prologue_frame_unwind_cache (const frame_info_ptr &this_frame,
      ABI; for call-clobbered registers the parser may have recognized
      spurious stores.  */
 
-  for (i = 0; i < 16; i++)
+  for (i = 0; i < S390_NUM_GPRS; i++)
     if (s390_register_call_saved (gdbarch, S390_R0_REGNUM + i)
 	&& data.gpr_slot[i] != 0)
       info->saved_regs[S390_R0_REGNUM + i].set_addr (cfa - data.gpr_slot[i]);
 
-  for (i = 0; i < 16; i++)
+  for (i = 0; i < S390_NUM_FPRS; i++)
     if (s390_register_call_saved (gdbarch, S390_F0_REGNUM + i)
 	&& data.fpr_slot[i] != 0)
       info->saved_regs[S390_F0_REGNUM + i].set_addr (cfa - data.fpr_slot[i]);
+
+  /* Handle this type of prologue:
+       ldgr    %f2,%r11
+       ldgr    %f0,%r15
+     where call-clobbered floating point registers are used as register save
+     slots.  */
+  for (i = 0; i < S390_NUM_FPRS; i++)
+    {
+      int fpr = S390_F0_REGNUM + i;
+
+      /* Check that fpr is a call-clobbered register.  */
+      if (s390_register_call_saved (gdbarch, fpr))
+	continue;
+
+      /* Check that fpr contains the value of a register at function
+	 entry.  */
+      if (data.fpr[i].kind != pvk_register)
+	continue;
+
+      int entry_val_reg = data.fpr[i].reg;
+
+      /* Check that entry_val_reg is a call-saved register.  */
+      if (!s390_register_call_saved (gdbarch, entry_val_reg))
+	continue;
+
+      /* In the prologue, we've copied:
+	 - the value of a call-saved register (entry_val_reg) at function
+	   entry, to
+	 - a call-clobbered floating point register (fpr).
+
+	 Heuristic: assume that makes the floating point register a register
+	 save slot, leaving the value constant throughout the function.  */
+      info->saved_regs[entry_val_reg].set_realreg (fpr);
+    }
 
   /* Function return will set PC to %r14.  */
   info->saved_regs[S390_PSWA_REGNUM] = info->saved_regs[S390_RETADDR_REGNUM];
@@ -7198,6 +7294,7 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, s390_dummy_id);
   set_gdbarch_frame_align (gdbarch, s390_frame_align);
   set_gdbarch_return_value (gdbarch, s390_return_value);
+  set_gdbarch_get_return_buf_addr (gdbarch, s390_get_return_buf_addr);
 
   /* Frame handling.  */
   /* Stack grows downward.  */

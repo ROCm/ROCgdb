@@ -1,7 +1,7 @@
 /* DWARF 2 Expression Evaluator.
 
    Copyright (C) 2001-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Berlin <dan@dberlin.org>.
 
@@ -20,8 +20,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (DWARF2EXPR_H)
-#define DWARF2EXPR_H
+#ifndef GDB_DWARF2_EXPR_H
+#define GDB_DWARF2_EXPR_H
 
 #include "leb128.h"
 #include "dwarf2/call-site.h"
@@ -136,4 +136,4 @@ extern const gdb_byte *safe_skip_leb128 (const gdb_byte *buf,
 
 extern void ensure_have_frame (const frame_info_ptr &frame, const char *context);
 
-#endif /* DWARF2EXPR_H */
+#endif /* GDB_DWARF2_EXPR_H */

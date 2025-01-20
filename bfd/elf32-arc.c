@@ -1,5 +1,5 @@
 /* ARC-specific support for 32-bit ELF
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
    Contributed by Cupertino Miranda (cmiranda@synopsys.com).
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -363,8 +363,7 @@ arc_elf_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd,
 				      elf_arc_link_hash_newfunc,
-				      sizeof (struct elf_arc_link_hash_entry),
-				      ARC_ELF_DATA))
+				      sizeof (struct elf_arc_link_hash_entry)))
     {
       free (ret);
       return NULL;

@@ -2,7 +2,7 @@
 
 %{
 
-/* Copyright (C) 1991-2024 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2025 Free Software Foundation, Inc.
    Written by Steve Chamberlain of Cygnus Support.
 
    This file is part of the GNU Binutils.
@@ -139,7 +139,7 @@ V_IDENTIFIER [*?.$_a-zA-Z\[\]\-\!\^\\]([*?.$_a-zA-Z0-9\[\]\-\!\^\\]|::)*
 				return INT;
 			}
 
-<MRI,EXPRESSION>([0-9A-Fa-f])+(H|h|X|x|B|b|O|o|D|d) {
+<MRI,EXPRESSION>((([0-9A-Fa-f])+(H|h|X|x))|(([0-1])+(B|b))|(([0-7])+(O|o))|(([0-9])+(D|d))) {
 				   int ibase ;
 				   switch (yytext[yyleng - 1]) {
 				    case 'X':

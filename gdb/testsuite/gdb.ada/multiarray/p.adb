@@ -42,5 +42,7 @@ begin
    Nop; --  START
 
    Discard (Simple, Nested);
+   Do_Nothing (Simple'Address);
+   Do_Nothing (Nested'Address);
 
 end P;

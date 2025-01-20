@@ -1,5 +1,5 @@
 /* Routines to help build PEI-format DLLs (Win32 etc)
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
    Written by DJ Delorie <dj@cygnus.com>
 
    This file is part of the GNU Binutils.
@@ -3058,13 +3058,6 @@ pe_dll_generate_implib (def_file *def, const char *impfilename, struct bfd_link_
 
   if (! bfd_close (outarch))
     einfo ("%X%P: bfd_close %s: %E\n", impfilename);
-
-  while (head != NULL)
-    {
-      bfd *n = head->archive_next;
-      bfd_close (head);
-      head = n;
-    }
 }
 
 static int undef_count = 0;

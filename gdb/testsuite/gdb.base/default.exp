@@ -1,5 +1,5 @@
 #   Copyright 1988-2024 Free Software Foundation, Inc.
-#   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+#   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -526,7 +526,7 @@ if $use_gdb_stub {
 }
 
 #test rbreak
-gdb_test "rbreak" "rbreak"
+gdb_test "rbreak" "No breakpoints made."
 
 # test restore
 gdb_test "restore" "You can't do that without a process to debug\."
@@ -697,7 +697,7 @@ set show_conv_list \
 	{$_gdb_maint_setting = <internal function _gdb_maint_setting>} \
 	{$_gdb_setting_str = <internal function _gdb_setting_str>} \
 	{$_gdb_setting = <internal function _gdb_setting>} \
-	{$_gdb_major = 16} \
+	{$_gdb_major = 17} \
 	{$_gdb_minor = 1} \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \

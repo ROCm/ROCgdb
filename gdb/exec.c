@@ -1,7 +1,7 @@
 /* Work with executable files, for GDB. 
 
    Copyright (C) 1988-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -326,7 +326,8 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
       warning (_("No executable has been specified and target does not "
 		 "support\n"
 		 "determining executable automatically.  "
-		 "Try using the \"file\" command."));
+		 "Try using the \"%ps\" command."),
+	       styled_string (command_style.style (), "file"));
       return;
     }
 

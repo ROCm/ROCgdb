@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -41,6 +41,7 @@ template <typename Key_t, typename Value_t> class Map;
 #define GELF_R_TYPE(info)   ((((uint64_t)(info))<<56)>>56)
 
 #define	SHF_SUNW_ABSENT		0x00200000	/* section data not present */
+#define	SEC_DECOMPRESSED	0x00400000	/* bfd allocated this memory */
 
 // Ancillary values.
 #define ANC_SUNW_NULL       0

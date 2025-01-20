@@ -1,5 +1,5 @@
 // i386 opcode table.
-// Copyright (C) 2007-2024 Free Software Foundation, Inc.
+// Copyright (C) 2007-2025 Free Software Foundation, Inc.
 //
 // This file is part of the GNU opcodes library.
 //
@@ -2134,10 +2134,13 @@ xcryptofb, 0xf30fa7e8, PadLock, NoSuf|RepPrefixOk, {}
 // Alias for xstore-rng.
 xstore, 0xfa7c0, PadLock, NoSuf|RepPrefixOk, {}
 
-// ZHAOXIN GMI instructions
+// Zhaoxin GMI instructions
 sm2, 0xf20fa6c0, GMI, NoSuf, {}
 sm3, 0xf30fa6e8, GMI, NoSuf, {}
 sm4, 0xf30fa7f0, GMI, NoSuf, {}
+
+// Zhaoxin PadLock RNG2 instruction
+xrng2, 0xf30fa7f8, PadLockRNG2, NoSuf|RepPrefixOk, {}
 
 // Multy-precision Add Carry, rdseed instructions.
 <adx:pfx, c:66, o:f3>
@@ -2193,8 +2196,12 @@ vsm3msg2, 0x66da, SM3, Modrm|Space0F38|Vex128|Src1VVVV|VexW0|NoSuf, { RegXMM|Uns
 
 // SM4 instructions.
 
-vsm4key4, 0xf3da, SM4, Modrm|Space0F38|Vex|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|Unspecified|BaseIndex, RegXMM|RegYMM, RegXMM|RegYMM }
-vsm4rnds4, 0xf2da, SM4, Modrm|Space0F38|Vex|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|Unspecified|BaseIndex, RegXMM|RegYMM, RegXMM|RegYMM }
+<sm4:isa:attr:reg, $y:SM4:Vex:, $z:SM4&AVX10_2:Disp8ShiftVL:RegZMM>
+
+vsm4key4<sm4>, 0xf3da, <sm4:isa>, Modrm|Space0F38|<sm4:attr>|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|<sm4:reg>|Unspecified|BaseIndex, RegXMM|RegYMM|<sm4:reg>, RegXMM|RegYMM|<sm4:reg> }
+vsm4rnds4<sm4>, 0xf2da, <sm4:isa>, Modrm|Space0F38|<sm4:attr>|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|<sm4:reg>|Unspecified|BaseIndex, RegXMM|RegYMM|<sm4:reg>, RegXMM|RegYMM|<sm4:reg> }
+
+<sm4>
 
 // SM4 instructions end.
 
@@ -3122,9 +3129,9 @@ vcvtneps2bf16<Vxy>, 0xf372, AVX_NE_CONVERT, Modrm|<Vxy:vex>|Space0F38|VexW0|NoSu
 // ENQCMD instructions.
 
 enqcmd, 0xf20f38f8, ENQCMD, Modrm|AddrPrefixOpReg|NoSuf, { Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
-enqcmd, 0xf2f8, APX_F(ENQCMD), Modrm|AddrPrefixOpReg|NoSuf|EVexMap4, { Unspecified|BaseIndex, Reg32|Reg64 }
+enqcmd, 0xf2f8, ENQCMD&APX_F, Modrm|AddrPrefixOpReg|NoSuf|EVexMap4, { Unspecified|BaseIndex, Reg32|Reg64 }
 enqcmds, 0xf30f38f8, ENQCMD, Modrm|AddrPrefixOpReg|NoSuf, { Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
-enqcmds, 0xf3f8, APX_F(ENQCMD), Modrm|AddrPrefixOpReg|NoSuf|EVexMap4, { Unspecified|BaseIndex, Reg32|Reg64 }
+enqcmds, 0xf3f8, ENQCMD&APX_F, Modrm|AddrPrefixOpReg|NoSuf|EVexMap4, { Unspecified|BaseIndex, Reg32|Reg64 }
 
 // ENQCMD instructions end.
 
@@ -3205,6 +3212,34 @@ tilestored, 0xf34b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf
 tilerelease, 0x49c0, AMX_TILE, Vex128|Space0F38|VexW0|NoSuf, {}
 
 tilezero, 0xf249, AMX_TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
+
+<z:pfx, z0:, z1:66>
+
+<loc:opc, $t:0x0, t1:0x1>
+
+t2rpntlvw<z><loc>, 0x<z:pfx>6e | <loc:opc>, APX_F(AMX_TRANSPOSE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf|ImplicitGroup, { Unspecified|BaseIndex, RegTMM }
+
+<z>
+<loc>
+
+tconjtcmmimfp16ps, 0x6b, AMX_COMPLEX&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+tconjtfp16, 0x666b, AMX_COMPLEX&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM, RegTMM }
+
+ttcmmimfp16ps, 0xf26b, AMX_COMPLEX&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+ttcmmrlfp16ps, 0xf36b, AMX_COMPLEX&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+ttdpbf16ps, 0xf36c, AMX_BF16&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+ttdpfp16ps, 0xf26c, AMX_FP16&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+ttransposed, 0xf35f, AMX_TRANSPOSE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM, RegTMM }
+
+tmmultf32ps, 0x6648, AMX_TF32, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+ttmmultf32ps, 0x48, AMX_TF32&AMX_TRANSPOSE, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+tdpbf8ps, 0xfd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+tdpbhf8ps, 0xf2fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+tdphbf8ps, 0xf3fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+tdphf8ps, 0x66fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
 // AMX instructions end.
 
@@ -3509,5 +3544,16 @@ vcvttsd2<sign>sis, 0xf2<sign:opc>, AVX10_2, Modrm|Map5|EVexLIG|Disp8MemShift=3|N
 vcvttss2<sign>sis, 0xf3<sign:opc>, AVX10_2, Modrm|Map5|EVexLIG|Disp8MemShift=2|NoSuf|SAE, { RegXMM|Dword|Unspecified|BaseIndex, Reg32|Reg64 }
 
 <sign>
+
+vminmaxpbf16, 0xf252, AVX10_2, Modrm|Masking|Space0F3A|Src1VVVV|VexW0|Disp8ShiftVL|Broadcast|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Word|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vminmaxp<sdh>, 0x<sdh:pfx>52, AVX10_2, Modrm|Masking|Space0F3A|<sdh:vexw>|Broadcast|Src1VVVV|Disp8ShiftVL|CheckOperandSize|NoSuf|SAE, { Imm8, RegXMM|RegYMM|RegZMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vminmaxs<sdh>, 0x<sdh:pfx>53, AVX10_2, Modrm|EVexLIG|Masking|Space0F3A|Src1VVVV|<sdh:vexw>|Disp8MemShift|CheckOperandSize|NoSuf|SAE, { Imm8, RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM, RegXMM }
+
+vmovd, 0xf37e, AVX10_2, Load|Modrm|EVex128|VexW0|Space0F|Disp8MemShift=2|NoSuf, { Dword|Unspecified|BaseIndex|RegXMM, RegXMM }
+vmovd, 0x66d6, AVX10_2, Modrm|EVex128|VexW0|Space0F|Disp8MemShift=2|NoSuf, { RegXMM, Dword|Unspecified|BaseIndex|RegXMM }
+vmovw, 0xf36e, AVX10_2, D|Modrm|EVex128|VexW0|Map5|Disp8MemShift=1|NoSuf, { Word|Unspecified|BaseIndex|RegXMM, RegXMM }
+
+vcomxs<sdh>, 0x<sdh:spfx>2f, AVX10_2, Modrm|EVexLIG|<sdh:spc1>|<sdh:vexw>|Disp8MemShift|NoSuf|SAE, { RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM }
+vucomxs<sdh>, 0x<sdh:spfx>2e, AVX10_2, Modrm|EVexLIG|<sdh:spc1>|<sdh:vexw>|Disp8MemShift|NoSuf|SAE, { RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM }
 
 // AVX10.2 instructions end.

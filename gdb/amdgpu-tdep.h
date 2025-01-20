@@ -1,7 +1,7 @@
 /* Target-dependent code for the AMDGPU architectures.
 
    Copyright (C) 2019-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef AMDGPU_TDEP_H
-#define AMDGPU_TDEP_H
+#ifndef GDB_AMDGPU_TDEP_H
+#define GDB_AMDGPU_TDEP_H
 
 #include "gdbarch.h"
 
@@ -113,4 +113,4 @@ arch_addr_space_id amdgpu_address_space_id_from_core_address (CORE_ADDR addr);
 
 CORE_ADDR amdgpu_segment_address_from_core_address (CORE_ADDR addr);
 
-#endif /* AMDGPU_TDEP_H */
+#endif /* GDB_AMDGPU_TDEP_H */

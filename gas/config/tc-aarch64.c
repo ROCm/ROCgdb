@@ -1,6 +1,6 @@
 /* tc-aarch64.c -- Assemble for the AArch64 ISA
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -662,18 +662,25 @@ static bool in_aarch64_get_expression = false;
 #define ALLOW_ABSENT  false
 #define REJECT_ABSENT true
 
+/* Fifth argument to aarch64_get_expression.  */
+#define NORMAL_RESOLUTION false
+
 /* Return TRUE if the string pointed by *STR is successfully parsed
    as an valid expression; *EP will be filled with the information of
    such an expression.  Otherwise return FALSE.
 
    If ALLOW_IMMEDIATE_PREFIX is true then skip a '#' at the start.
-   If REJECT_ABSENT is true then trat missing expressions as an error.  */
+   If REJECT_ABSENT is true then trat missing expressions as an error.
+   If DEFER_RESOLUTION is true, then do not resolve expressions against
+   constant symbols.  Necessary if the expression is part of a fixup
+   that uses a reloc that must be emitted.  */
 
 static bool
 aarch64_get_expression (expressionS *  ep,
 			char **        str,
 			bool           allow_immediate_prefix,
-			bool           reject_absent)
+			bool           reject_absent,
+			bool           defer_resolution)
 {
   char *save_in;
   segT seg;
@@ -693,7 +700,10 @@ aarch64_get_expression (expressionS *  ep,
   save_in = input_line_pointer;
   input_line_pointer = *str;
   in_aarch64_get_expression = true;
-  seg = expression (ep);
+  if (defer_resolution)
+    seg = deferred_expression (ep);
+  else
+    seg = expression (ep);
   in_aarch64_get_expression = false;
 
   if (ep->X_op == O_illegal || (reject_absent && ep->X_op == O_absent))
@@ -1159,7 +1169,8 @@ parse_index_expression (char **str, int64_t *imm)
 {
   expressionS exp;
 
-  aarch64_get_expression (&exp, str, GE_NO_PREFIX, REJECT_ABSENT);
+  aarch64_get_expression (&exp, str, GE_NO_PREFIX, REJECT_ABSENT,
+			  NORMAL_RESOLUTION);
   if (exp.X_op != O_constant)
     {
       first_error (_("constant expression required"));
@@ -2542,7 +2553,8 @@ parse_immediate_expression (char **str, expressionS *exp,
       return false;
     }
 
-  aarch64_get_expression (exp, str, GE_OPT_PREFIX, REJECT_ABSENT);
+  aarch64_get_expression (exp, str, GE_OPT_PREFIX, REJECT_ABSENT,
+			  NORMAL_RESOLUTION);
 
   if (exp->X_op == O_absent)
     {
@@ -2776,7 +2788,8 @@ parse_big_immediate (char **str, int64_t *imm, aarch64_reg_type reg_type)
       return false;
     }
 
-  aarch64_get_expression (&inst.reloc.exp, &ptr, GE_OPT_PREFIX, REJECT_ABSENT);
+  aarch64_get_expression (&inst.reloc.exp, &ptr, GE_OPT_PREFIX, REJECT_ABSENT,
+			  NORMAL_RESOLUTION);
 
   if (inst.reloc.exp.X_op == O_constant)
     *imm = inst.reloc.exp.X_add_number;
@@ -3673,7 +3686,8 @@ parse_shift (char **str, aarch64_opnd_info *operand, enum parse_shift_mode mode)
 	  p++;
 	  exp_has_prefix = 1;
 	}
-      aarch64_get_expression (&exp, &p, GE_NO_PREFIX, ALLOW_ABSENT);
+      aarch64_get_expression (&exp, &p, GE_NO_PREFIX, ALLOW_ABSENT,
+			      NORMAL_RESOLUTION);
     }
   if (kind == AARCH64_MOD_MUL_VL)
     /* For consistency, give MUL VL the same shift amount as an implicit
@@ -3737,7 +3751,7 @@ parse_shifter_operand_imm (char **str, aarch64_opnd_info *operand,
 
   /* Accept an immediate expression.  */
   if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_OPT_PREFIX,
-				REJECT_ABSENT))
+				REJECT_ABSENT, NORMAL_RESOLUTION))
     return false;
 
   /* Accept optional LSL for arithmetic immediate values.  */
@@ -3896,7 +3910,8 @@ parse_shifter_operand_reloc (char **str, aarch64_opnd_info *operand,
 
       /* Next, we parse the expression.  */
       if (! aarch64_get_expression (&inst.reloc.exp, str, GE_NO_PREFIX,
-				    REJECT_ABSENT))
+				    REJECT_ABSENT,
+				    aarch64_force_reloc (entry->add_type) == 1))
 	return false;
 
       /* Record the relocation type (use the ADD variant here).  */
@@ -4091,7 +4106,8 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	    }
 
 	  /* #:<reloc_op>:  */
-	  if (! aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
+	  if (! aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT,
+					aarch64_force_reloc (ty) == 1))
 	    {
 	      set_syntax_error (_("invalid relocation expression"));
 	      return false;
@@ -4107,7 +4123,8 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	    /* =immediate; need to generate the literal in the literal pool. */
 	    inst.gen_lit_pool = 1;
 
-	  if (!aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
+	  if (!aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT,
+				       NORMAL_RESOLUTION))
 	    {
 	      set_syntax_error (_("invalid address"));
 	      return false;
@@ -4221,7 +4238,8 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	      /* We now have the group relocation table entry corresponding to
 	         the name in the assembler source.  Next, we parse the
 	         expression.  */
-	      if (! aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
+	      if (! aarch64_get_expression (exp, &p, GE_NO_PREFIX, REJECT_ABSENT,
+					    aarch64_force_reloc (entry->ldst_type) == 1))
 		{
 		  set_syntax_error (_("invalid relocation expression"));
 		  return false;
@@ -4234,7 +4252,8 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	    }
 	  else
 	    {
-	      if (! aarch64_get_expression (exp, &p, GE_OPT_PREFIX, REJECT_ABSENT))
+	      if (! aarch64_get_expression (exp, &p, GE_OPT_PREFIX, REJECT_ABSENT,
+					    NORMAL_RESOLUTION))
 		{
 		  set_syntax_error (_("invalid expression in the address"));
 		  return false;
@@ -4290,7 +4309,8 @@ parse_address_main (char **str, aarch64_opnd_info *operand,
 	  operand->addr.offset.regno = reg->number;
 	  operand->addr.offset.is_reg = 1;
 	}
-      else if (! aarch64_get_expression (exp, &p, GE_OPT_PREFIX, REJECT_ABSENT))
+      else if (! aarch64_get_expression (exp, &p, GE_OPT_PREFIX, REJECT_ABSENT,
+					 NORMAL_RESOLUTION))
 	{
 	  /* [Xn],#expr */
 	  set_syntax_error (_("invalid expression in the address"));
@@ -4418,7 +4438,8 @@ parse_half (char **str, int *internal_fixup_p)
   else
     *internal_fixup_p = 1;
 
-  if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
+  if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT,
+				aarch64_force_reloc (inst.reloc.type) == 1))
     return false;
 
   *str = p;
@@ -4460,7 +4481,8 @@ parse_adrp (char **str)
     inst.reloc.type = BFD_RELOC_AARCH64_ADR_HI21_PCREL;
 
   inst.reloc.pc_rel = 1;
-  if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
+  if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT,
+				aarch64_force_reloc (inst.reloc.type) == 1))
     return false;
   *str = p;
   return true;
@@ -5667,6 +5689,9 @@ print_operands (char *buf, const aarch64_opcode *opcode,
 static void
 output_info (const char *format, ...)
 {
+  if (flag_no_information)
+    return;
+
   const char *file;
   unsigned int line;
   va_list args;
@@ -6971,7 +6996,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_ZtxN:
 	case AARCH64_OPND_SME_Zdnx2:
 	case AARCH64_OPND_SME_Zdnx4:
-	case AARCH64_OPND_SME_Zdnx4_STRIDED:
 	case AARCH64_OPND_SME_Zmx2:
 	case AARCH64_OPND_SME_Zmx4:
 	case AARCH64_OPND_SME_Znx2:
@@ -7219,7 +7243,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      goto failure;
 	    str = saved;
 	    po_misc_or_fail (aarch64_get_expression (&inst.reloc.exp, &str,
-						     GE_OPT_PREFIX, REJECT_ABSENT));
+						     GE_OPT_PREFIX, REJECT_ABSENT,
+						     NORMAL_RESOLUTION));
 	    /* The MOV immediate alias will be fixed up by fix_mov_imm_insn
 	       later.  fix_mov_imm_insn will try to determine a machine
 	       instruction (MOVZ, MOVN or ORR) for it and will issue an error
@@ -8075,7 +8100,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->imm.value = vectype.index;
 	  break;
 
-	case AARCH64_OPND_SME_ZT0_INDEX2_12:
+	case AARCH64_OPND_SME_ZT0_INDEX_MUL_VL:
 	  po_misc_or_fail (parse_shifter_zt0_with_bit_index
 			   (&str, info, SHIFTED_MUL_VL));
 	  break;
@@ -9601,8 +9626,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 
   /* Note whether this will delete the relocation.  */
 
-  if (fixP->fx_addsy == 0 && !fixP->fx_pcrel
-      && aarch64_force_reloc (fixP->fx_r_type) <= 0)
+  if (fixP->fx_addsy == 0 && !fixP->fx_pcrel)
     fixP->fx_done = 1;
 
   /* Process the relocations.  */
@@ -9981,9 +10005,8 @@ tc_gen_reloc (asection * section, fixS * fixp)
   arelent *reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
@@ -10717,9 +10740,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
   {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
-  // Feature b16b16 is currently incomplete.
-  // TODO: finish implementation and enable relevant flags.
-  //{"b16b16",		AARCH64_FEATURE (B16B16), AARCH64_FEATURE (SVE2)},
+  {"sve-b16b16",	AARCH64_FEATURE (SVE_B16B16), AARCH64_NO_FEATURES},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
   {"sve2p1",		AARCH64_FEATURE (SVE2p1), AARCH64_FEATURE (SVE2)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
@@ -10742,6 +10763,9 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
 			AARCH64_FEATURES (2, FP8, SME2)},
   {"sme-f8f16",		AARCH64_FEATURE (SME_F8F16),
 			AARCH64_FEATURE (SME_F8F32)},
+  {"sme-f16f16",	AARCH64_FEATURE (SME_F16F16), AARCH64_FEATURE (SME2)},
+  {"sme-b16b16",	AARCH64_FEATURE (SME_B16B16),
+			AARCH64_FEATURES (2, SVE_B16B16, SME2)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
@@ -10760,7 +10784,7 @@ static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
   {AARCH64_FEATURE (SSVE_FP8DOT4), AARCH64_FEATURE (FP8DOT4_SVE)},
   {AARCH64_FEATURES (2, FP8DOT2, SVE2), AARCH64_FEATURE (FP8DOT2_SVE)},
   {AARCH64_FEATURE (SSVE_FP8DOT2), AARCH64_FEATURE (FP8DOT2_SVE)},
-  /* TODO: Add SME_F16F16->SME_F16F16_F8F16 when SME_F16F16 is added.  */
+  {AARCH64_FEATURE (SME_F16F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
   {AARCH64_FEATURE (SME_F8F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
 };
 

@@ -1,7 +1,7 @@
 # Dynamic architecture support for GDB, the GNU debugger.
 
 # Copyright (C) 1998-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -2962,5 +2962,25 @@ The corefile's bfd is passed through COREFILE_BFD.
     name="use_target_description_from_corefile_notes",
     params=[("struct bfd *", "corefile_bfd")],
     predefault="default_use_target_description_from_corefile_notes",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Examine the core file bfd object CBFD and try to extract the name of
+the current executable and the argument list, which are return in a
+core_file_exec_context object.
+
+If for any reason the details can't be extracted from CBFD then an
+empty context is returned.
+
+It is required that the current inferior be the one associated with
+CBFD, strings are read from the current inferior using target methods
+which all assume current_inferior() is the one to read from.
+""",
+    type="core_file_exec_context",
+    name="core_parse_exec_context",
+    params=[("bfd *", "cbfd")],
+    predefault="default_core_parse_exec_context",
     invalid=False,
 )

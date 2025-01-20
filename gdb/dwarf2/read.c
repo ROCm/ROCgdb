@@ -1,7 +1,7 @@
 /* DWARF 2 debugging format support for GDB.
 
    Copyright (C) 1994-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -16827,6 +16827,12 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	      break;
 
 	    case DW_TAG_enumeration_type:
+	      /* Some versions of gdc could emit an "enum class"
+		 without a name, which is nonsensical.  These are
+		 skipped.  */
+	      if (is_enum_class && this_entry == nullptr)
+		continue;
+
 	      /* We need to recurse even for an anonymous enumeration.
 		 Which scope we record as the parent scope depends on
 		 whether we're reading an "enum class".  If so, we use
@@ -19483,7 +19489,11 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		     be seen here, because it will have a location and
 		     so will be handled above.  */
 		  sym->set_linkage_name (name);
-		  list_to_add = cu->list_in_scope;
+		  list_to_add
+		    = ((cu->list_in_scope
+			== cu->get_builder ()->get_file_symbols ())
+		       ? cu->get_builder ()->get_global_symbols ()
+		       : cu->list_in_scope);
 		  SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
 		  sym->set_aclass_index (ada_imported_index);
 		}

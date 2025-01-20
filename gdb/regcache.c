@@ -1,7 +1,7 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -180,10 +180,9 @@ register_size (struct gdbarch *gdbarch, int regnum)
 /* See gdbsupport/common-regcache.h.  */
 
 int
-regcache_register_size (const reg_buffer_common *regcache, int n)
+reg_buffer::register_size (int regnum) const
 {
-  return register_size
-    (gdb::checked_static_cast<const struct regcache *> (regcache)->arch (), n);
+  return ::register_size (this->arch (), regnum);
 }
 
 reg_buffer::reg_buffer (gdbarch *gdbarch, bool has_pseudo)
@@ -940,7 +939,7 @@ register_status
 readable_regcache::read_part (int regnum, int offset,
 			      gdb::array_view<gdb_byte> dst, bool is_raw)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + dst.size () <= reg_size);
@@ -984,7 +983,7 @@ void
 reg_buffer::raw_collect_part (int regnum, int offset,
 			      gdb::array_view<gdb_byte> dst) const
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + dst.size () <= reg_size);
@@ -1014,7 +1013,7 @@ register_status
 regcache::write_part (int regnum, int offset,
 		      gdb::array_view<const gdb_byte> src, bool is_raw)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + src.size () <= reg_size);
@@ -1066,7 +1065,7 @@ void
 reg_buffer::raw_supply_part (int regnum, int offset,
 			     gdb::array_view<const gdb_byte> src)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + src.size () <= reg_size);
@@ -1237,8 +1236,7 @@ regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
 				    const gdb_byte *in_buf, gdb_byte *out_buf,
 				    int slot_size, int offs) const
 {
-  struct gdbarch *gdbarch = arch ();
-  int reg_size = std::min (register_size (gdbarch, regnum), slot_size);
+  int reg_size = std::min (register_size (regnum), slot_size);
 
   /* Use part versions and reg_size to prevent possible buffer overflows when
      accessing the regcache.  */
@@ -1255,7 +1253,7 @@ regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
   else if (in_buf != nullptr)
     {
       /* Zero-extend the register value if the slot is smaller than the register.  */
-      if (slot_size < register_size (gdbarch, regnum))
+      if (slot_size < register_size (regnum))
 	out_regcache->raw_supply_zeroed (regnum);
       out_regcache->raw_supply_part (regnum, 0,
 				     gdb::make_array_view (in_buf + offs,

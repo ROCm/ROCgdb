@@ -1,6 +1,6 @@
 /* Disassemble support for GDB.
    Copyright (C) 2002-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef DISASM_H
-#define DISASM_H
+#ifndef GDB_DISASM_H
+#define GDB_DISASM_H
 
 #include "dis-asm.h"
 #include "disasm-flags.h"
@@ -393,4 +393,4 @@ extern const char *get_disassembler_options (struct gdbarch *gdbarch);
 
 extern void set_disassembler_options (const char *options);
 
-#endif
+#endif /* GDB_DISASM_H */

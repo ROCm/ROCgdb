@@ -1,5 +1,5 @@
 /* read.c - read a source file -
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -330,6 +330,7 @@ read_end (void)
   _obstack_free (&cond_obstack, NULL);
   free (current_name);
   free (current_label);
+  free (include_dirs);
 }
 
 #ifndef TC_ADDRESS_BYTES
@@ -3143,9 +3144,9 @@ do_repeat (size_t count, const char *start, const char *end,
   sb one;
   sb many;
 
-  if (((ssize_t) count) < 0)
+  if (count > 0x7fffffff)
     {
-      as_bad (_("negative count for %s - ignored"), start);
+      as_bad (_("excessive count %zu for %s - ignored"), count, start);
       count = 0;
     }
 
@@ -4068,7 +4069,7 @@ pseudo_set (symbolS *symbolP)
   if (!S_IS_FORWARD_REF (symbolP))
     (void) expression (&exp);
   else
-    (void) deferred_expression (&exp);
+    (void) expr (0, &exp, expr_defer_incl_dot);
 
   if (exp.X_op == O_illegal)
     as_bad (_("illegal expression"));
@@ -4350,7 +4351,7 @@ s_reloc (int ignore ATTRIBUTE_UNUSED)
     { "64", BFD_RELOC_64 }
   };
 
-  reloc = XNEW (struct reloc_list);
+  reloc = notes_alloc (sizeof (*reloc));
 
   if (flag_mri)
     stop = mri_comment_field (&stopc);
@@ -4429,7 +4430,6 @@ s_reloc (int ignore ATTRIBUTE_UNUSED)
       as_bad (_("bad reloc expression"));
     err_out:
       ignore_rest_of_line ();
-      free (reloc);
       if (flag_mri)
 	mri_comment_end (stop, stopc);
       return;
@@ -4483,8 +4483,7 @@ emit_expr_with_reloc (expressionS *exp,
     return;
 
   frag_grow (nbytes);
-  dot_value = frag_now_fix ();
-  dot_frag = frag_now;
+  symbol_set_value_now (&dot_symbol);
 
 #ifndef NO_LISTING
 #ifdef OBJ_ELF

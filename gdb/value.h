@@ -1,7 +1,7 @@
 /* Definitions for values of C expressions, for GDB.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (VALUE_H)
-#define VALUE_H 1
+#ifndef GDB_VALUE_H
+#define GDB_VALUE_H
 
 #include "frame.h"
 #include "extension.h"
@@ -1762,4 +1762,4 @@ void pseudo_to_concat_raw (const frame_info_ptr &next_frame,
 			   int raw_reg_1_num, int raw_reg_2_num,
 			   int raw_reg_3_num);
 
-#endif /* !defined (VALUE_H) */
+#endif /* GDB_VALUE_H */

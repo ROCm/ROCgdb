@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2024 Free Software Foundation, Inc.
+# Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -447,6 +447,22 @@ if { ![istarget "pdp11-*-*"] } {
 # poor little PDP-11 can't handle 16-byte values
 if { ![istarget "pdp11-*-*"] } {
     run_dump_test octa
+}
+
+# Some x86 flavors use '/' as a comment char, yet that can be suppressed.
+# Some other target use '/' or '%' as a comment char, without a way to
+# suppress it.
+if { [istarget "i?86-*-*"] || [istarget "x86_64-*-*"] } {
+    run_dump_test quad-div {{as --divide}}
+    run_dump_test quad-div2 {{as --divide}}
+    run_dump_test octa-div {{as --divide}}
+} elseif { ![istarget "mcore-*-*"]
+	   && ![istarget "mmix-*-*"]
+	   && ![istarget "pdp11-*-*"]
+	   && ![istarget "pj*-*-*"] } {
+    run_dump_test quad-div
+    run_dump_test quad-div2
+    run_dump_test octa-div
 }
 
 # .set works differently on some targets.

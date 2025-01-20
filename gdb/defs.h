@@ -1,6 +1,6 @@
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef DEFS_H
-#define DEFS_H
+#ifndef GDB_DEFS_H
+#define GDB_DEFS_H
 
 #ifdef GDBSERVER
 #  error gdbserver should not include gdb/defs.h
@@ -443,4 +443,4 @@ struct arch_addr_space
 
 #include "utils.h"
 
-#endif /* #ifndef DEFS_H */
+#endif /* GDB_DEFS_H */

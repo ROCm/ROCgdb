@@ -1,7 +1,7 @@
 /* Target used to communicate with the AMD Debugger API.
 
    Copyright (C) 2019-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef AMD_DBGAPI_TARGET_H
-#define AMD_DBGAPI_TARGET_H 1
+#ifndef GDB_AMD_DBGAPI_TARGET_H
+#define GDB_AMD_DBGAPI_TARGET_H
 
 #include "gdbsupport/observable.h"
 #include "gdbthread.h"
@@ -159,4 +159,4 @@ dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
 	   dispatch_id.handle, get_status_string (status));
 }
 
-#endif /* AMD_DBGAPI_TARGET_H */
+#endif /* GDB_AMD_DBGAPI_TARGET_H */

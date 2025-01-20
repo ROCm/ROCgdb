@@ -1,5 +1,5 @@
 /* Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef INFRUN_H
-#define INFRUN_H 1
+#ifndef GDB_INFRUN_H
+#define GDB_INFRUN_H
 
 #include "gdbthread.h"
 #include "symtab.h"
@@ -434,4 +434,4 @@ private:
    with "maint set lane-divergence".  */
 extern bool maint_lane_divergence_support;
 
-#endif /* INFRUN_H */
+#endif /* GDB_INFRUN_H */

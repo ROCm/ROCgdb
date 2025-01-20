@@ -1,7 +1,7 @@
 /* Definitions for C expressions
 
    Copyright (C) 2020-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef C_EXP_H
-#define C_EXP_H
+#ifndef GDB_C_EXP_H
+#define GDB_C_EXP_H
 
 #include "expop.h"
 #include "objc-lang.h"
@@ -237,4 +237,4 @@ protected:
 
 }/* namespace expr */
 
-#endif /* C_EXP_H */
+#endif /* GDB_C_EXP_H */

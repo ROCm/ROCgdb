@@ -1276,7 +1276,7 @@ fd_copy (fd_set *dst, const fd_set *src, int n)
 {
   FD_ZERO (dst);
   for (int i = 0; i < n; ++i)
-    if (FD_ISSET (i, src))
+    if (FD_ISSET (i, const_cast<fd_set *>(src)))
       FD_SET (i, dst);
 
   return dst;
@@ -1480,6 +1480,7 @@ async_do_nothing (gdb_client_data arg)
 static void
 handle_sighup (int sig)
 {
+  scoped_restore restore_errno = make_scoped_restore (&errno);
   mark_async_signal_handler (sighup_token);
   signal (sig, handle_sighup);
 }

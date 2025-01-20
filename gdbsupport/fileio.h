@@ -1,7 +1,7 @@
 /* File-I/O functions for GDB, the GNU debugger.
 
    Copyright (C) 2003-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef COMMON_FILEIO_H
-#define COMMON_FILEIO_H
+#ifndef GDBSUPPORT_FILEIO_H
+#define GDBSUPPORT_FILEIO_H
 
 #include <sys/stat.h>
 
@@ -191,4 +191,4 @@ host_to_fileio_time (time_t num, fio_time_t fnum)
 
 extern void host_to_fileio_stat (struct stat *st, struct fio_stat *fst);
 
-#endif /* COMMON_FILEIO_H */
+#endif /* GDBSUPPORT_FILEIO_H */

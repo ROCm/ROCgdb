@@ -1,5 +1,5 @@
 /* BFD back-end for PDP-11 a.out binaries.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1842,7 +1842,7 @@ pdp11_aout_swap_reloc_out (bfd *abfd, arelent *g, bfd_byte *natptr)
       if (symbols != NULL && r_index < bfd_get_symcount (abfd))		\
 	cache_ptr->sym_ptr_ptr = symbols + r_index;			\
       else								\
-	cache_ptr->sym_ptr_ptr = bfd_abs_section_ptr->symbol_ptr_ptr;	\
+	cache_ptr->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;		\
       cache_ptr->addend = ad;						\
     }									\
   else									\
@@ -1853,23 +1853,23 @@ pdp11_aout_swap_reloc_out (bfd *abfd, arelent *g, bfd_byte *natptr)
 	{								\
 	case N_TEXT:							\
 	case N_TEXT | N_EXT:						\
-	  cache_ptr->sym_ptr_ptr  = obj_textsec (abfd)->symbol_ptr_ptr;	\
+	  cache_ptr->sym_ptr_ptr  = &obj_textsec (abfd)->symbol;	\
 	  cache_ptr->addend = ad  - su->textsec->vma;			\
 	  break;							\
 	case N_DATA:							\
 	case N_DATA | N_EXT:						\
-	  cache_ptr->sym_ptr_ptr  = obj_datasec (abfd)->symbol_ptr_ptr;	\
+	  cache_ptr->sym_ptr_ptr  = &obj_datasec (abfd)->symbol;	\
 	  cache_ptr->addend = ad - su->datasec->vma;			\
 	  break;							\
 	case N_BSS:							\
 	case N_BSS | N_EXT:						\
-	  cache_ptr->sym_ptr_ptr  = obj_bsssec (abfd)->symbol_ptr_ptr;	\
+	  cache_ptr->sym_ptr_ptr  = &obj_bsssec (abfd)->symbol;		\
 	  cache_ptr->addend = ad - su->bsssec->vma;			\
 	  break;							\
 	default:							\
 	case N_ABS:							\
 	case N_ABS | N_EXT:						\
-	  cache_ptr->sym_ptr_ptr = bfd_abs_section_ptr->symbol_ptr_ptr;	\
+	  cache_ptr->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;	\
 	  cache_ptr->addend = ad;					\
 	  break;							\
 	}								\
@@ -3655,19 +3655,12 @@ aout_link_input_section (struct aout_final_link_info *flaginfo,
 				  (file_ptr) 0, input_size))
     return false;
 
-  /* Read in the relocs if we haven't already done it.  */
-  if (aout_section_data (input_section) != NULL
-      && aout_section_data (input_section)->relocs != NULL)
-    relocs = aout_section_data (input_section)->relocs;
-  else
+  relocs = flaginfo->relocs;
+  if (rel_size > 0)
     {
-      relocs = flaginfo->relocs;
-      if (rel_size > 0)
-	{
-	  if (bfd_seek (input_bfd, input_section->rel_filepos, SEEK_SET) != 0
-	      || bfd_read (relocs, rel_size, input_bfd) != rel_size)
-	    return false;
-	}
+      if (bfd_seek (input_bfd, input_section->rel_filepos, SEEK_SET) != 0
+	  || bfd_read (relocs, rel_size, input_bfd) != rel_size)
+	return false;
     }
 
   /* Relocate the section contents.  */

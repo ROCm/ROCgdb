@@ -1,5 +1,5 @@
 /* opncls.c -- open and close a BFD.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
 
    Written by Cygnus Support.
 
@@ -943,7 +943,6 @@ bfd_close_all_done (bfd *abfd)
     _maybe_make_executable (abfd);
 
   _bfd_delete_bfd (abfd);
-  _bfd_clear_error_data ();
 
   return ret;
 }
@@ -1768,7 +1767,7 @@ bfd_fill_in_gnu_debuglink_section (bfd *abfd,
   debuglink_size &= ~3;
   debuglink_size += 4;
 
-  contents = (char *) bfd_malloc (debuglink_size);
+  contents = bfd_malloc (debuglink_size);
   if (contents == NULL)
     {
       /* XXX Should we delete the section from the bfd ?  */
@@ -1781,14 +1780,9 @@ bfd_fill_in_gnu_debuglink_section (bfd *abfd,
 
   bfd_put_32 (abfd, crc32, contents + crc_offset);
 
-  if (! bfd_set_section_contents (abfd, sect, contents, 0, debuglink_size))
-    {
-      /* XXX Should we delete the section from the bfd ?  */
-      free (contents);
-      return false;
-    }
-
-  return true;
+  bool ret = bfd_set_section_contents (abfd, sect, contents, 0, debuglink_size);
+  free (contents);
+  return ret;
 }
 
 /* Finds the build-id associated with @var{abfd}.  If the build-id is

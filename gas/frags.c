@@ -1,5 +1,5 @@
 /* frags.c - manage frags -
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -25,9 +25,9 @@
 extern fragS zero_address_frag;
 extern fragS predefined_address_frag;
 
-static int totalfrags;
+static unsigned int totalfrags;
 
-int
+unsigned int
 get_frag_count (void)
 {
   return totalfrags;

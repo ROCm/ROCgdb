@@ -1,5 +1,5 @@
 /* riscv.h.  RISC-V opcode list for GDB, the GNU debugger.
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
+   Copyright (C) 2011-2025 Free Software Foundation, Inc.
    Contributed by Andrew Waterman
 
    This file is part of GDB, GAS, and the GNU binutils.
@@ -643,7 +643,6 @@ enum
   M_FLx,
   M_Sx_FSx,
   M_CALL,
-  M_J,
   M_LI,
   M_EXTH,
   M_ZEXTW,

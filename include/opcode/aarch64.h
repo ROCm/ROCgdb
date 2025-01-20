@@ -1,6 +1,6 @@
 /* AArch64 assembler/disassembler support.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GNU Binutils.
@@ -226,8 +226,6 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SPMU2,
   /* Performance Monitors Synchronous-Exception-Based Event Extension.  */
   AARCH64_FEATURE_SEBEP,
-  /* SVE2.1 and SME2.1 non-widening BFloat16 instructions.  */
-  AARCH64_FEATURE_B16B16,
   /* SME2.1 instructions.  */
   AARCH64_FEATURE_SME2p1,
   /* SVE2.1 instructions.  */
@@ -264,6 +262,12 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SME_F8F32,
   /* SME F8F16 instructions.  */
   AARCH64_FEATURE_SME_F8F16,
+  /* Non-widening half-precision FP16 to FP16 arithmetic for SME2.  */
+  AARCH64_FEATURE_SME_F16F16,
+  /* SVE Z-targeting non-widening BFloat16 instructions.  */
+  AARCH64_FEATURE_SVE_B16B16,
+  /* SME non-widening BFloat16 instructions.  */
+  AARCH64_FEATURE_SME_B16B16,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -813,7 +817,6 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ZtxN,	/* SVE vector register list in Zt.  */
   AARCH64_OPND_SME_Zdnx2,	/* SVE vector register list from [4:1]*2.  */
   AARCH64_OPND_SME_Zdnx4,	/* SVE vector register list from [4:2]*4.  */
-  AARCH64_OPND_SME_Zdnx4_STRIDED, /* SVE vector register list from [4:2]*4.  */
   AARCH64_OPND_SME_Zm,		/* SVE vector register list in 4-bit Zm.  */
   AARCH64_OPND_SME_Zmx2,	/* SVE vector register list from [20:17]*2.  */
   AARCH64_OPND_SME_Zmx4,	/* SVE vector register list from [20:18]*4.  */
@@ -880,7 +883,7 @@ enum aarch64_opnd
   AARCH64_OPND_SME_VLxN_13,	/* VLx2 or VLx4, in bit 13.  */
   AARCH64_OPND_SME_ZT0,		/* The fixed token zt0/ZT0 (not encoded).  */
   AARCH64_OPND_SME_ZT0_INDEX,	/* ZT0[<imm>], bits [14:12].  */
-  AARCH64_OPND_SME_ZT0_INDEX2_12, /* ZT0[<imm>], bits [13:12].  */
+  AARCH64_OPND_SME_ZT0_INDEX_MUL_VL,/* ZT0[<imm>], bits [13:12].  */
   AARCH64_OPND_SME_ZT0_LIST,	/* { zt0/ZT0 } (not encoded).  */
   AARCH64_OPND_TME_UIMM16,	/* TME unsigned 16-bit immediate.  */
   AARCH64_OPND_SM3_IMM2,	/* SM3 encodes lane in bits [13, 14].  */

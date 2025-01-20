@@ -1,7 +1,7 @@
 /* Print and select stack frames for GDB, the GNU debugger.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -2225,6 +2225,7 @@ iterate_over_block_locals (const struct block *b,
       switch (sym->aclass ())
 	{
 	case LOC_CONST:
+	case LOC_CONST_BYTES:
 	case LOC_LOCAL:
 	case LOC_REGISTER:
 	case LOC_STATIC:
@@ -2780,7 +2781,14 @@ return_command (const char *retval_exp, int from_tty)
     {
       int confirmed;
 
-      if (thisfun == NULL)
+      if (get_frame_type (thisframe) == SIGTRAMP_FRAME)
+	{
+	  warning (_("Returning from signal trampoline does not fully restore"
+		     " pre-signal state, such as process signal mask."));
+	  confirmed = query (_("%sMake signal trampoline return now? "),
+			     query_prefix.c_str ());
+	}
+      else if (thisfun == NULL)
 	confirmed = query (_("%sMake selected stack frame return now? "),
 			   query_prefix.c_str ());
       else

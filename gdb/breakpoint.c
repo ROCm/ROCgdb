@@ -1,7 +1,7 @@
 /* Everything about breakpoints, for GDB.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -865,6 +865,24 @@ scoped_rbreak_breakpoints::scoped_rbreak_breakpoints ()
 scoped_rbreak_breakpoints::~scoped_rbreak_breakpoints ()
 {
   prev_breakpoint_count = rbreak_start_breakpoint_count;
+}
+
+/* See breakpoint.h.  */
+
+int
+scoped_rbreak_breakpoints::first_breakpoint () const
+{
+  return rbreak_start_breakpoint_count + 1;
+}
+
+/* See breakpoint.h.  */
+
+int
+scoped_rbreak_breakpoints::last_breakpoint () const
+{
+  return (rbreak_start_breakpoint_count == breakpoint_count
+	  ? -1
+	  : breakpoint_count);
 }
 
 /* Used in run_command to zero the hit count when a new run starts.  */
@@ -9546,7 +9564,8 @@ create_breakpoint (struct gdbarch *gdbarch,
   if (canonical.lsals.size () > 1)
     {
       warning (_("Multiple breakpoints were set.\nUse the "
-		 "\"delete\" command to delete unwanted breakpoints."));
+		 "\"%ps\" command to delete unwanted breakpoints."),
+	       styled_string (command_style.style (), "delete"));
       prev_breakpoint_count = prev_bkpt_count;
     }
 

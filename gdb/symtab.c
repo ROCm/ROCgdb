@@ -1,7 +1,7 @@
 /* Symbol table lookup for the GNU debugger, GDB.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "dwarf2/call-site.h"
+#include "exceptions.h"
 #include "symtab.h"
 #include "event-top.h"
 #include "gdbtypes.h"
@@ -47,6 +48,7 @@
 #include "fnmatch.h"
 #include "hashtab.h"
 #include "typeprint.h"
+#include "exceptions.h"
 
 #include "gdbsupport/gdb_obstack.h"
 #include "block.h"
@@ -74,6 +76,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/common-utils.h"
 #include <optional>
+#include <unordered_set>
 
 /* Forward declarations for local functions.  */
 
@@ -584,40 +587,6 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 	      && IS_DIR_SEPARATOR (filename[len - search_len - 1]))
 	  || (HAS_DRIVE_SPEC (filename)
 	      && STRIP_DRIVE_SPEC (filename) == &filename[len - search_len]));
-}
-
-/* Same as compare_filenames_for_search, but for glob-style patterns.
-   Heads up on the order of the arguments.  They match the order of
-   compare_filenames_for_search, but it's the opposite of the order of
-   arguments to gdb_filename_fnmatch.  */
-
-bool
-compare_glob_filenames_for_search (const char *filename,
-				   const char *search_name)
-{
-  /* We rely on the property of glob-style patterns with FNM_FILE_NAME that
-     all /s have to be explicitly specified.  */
-  int file_path_elements = count_path_elements (filename);
-  int search_path_elements = count_path_elements (search_name);
-
-  if (search_path_elements > file_path_elements)
-    return false;
-
-  if (IS_ABSOLUTE_PATH (search_name))
-    {
-      return (search_path_elements == file_path_elements
-	      && gdb_filename_fnmatch (search_name, filename,
-				       FNM_FILE_NAME | FNM_NOESCAPE) == 0);
-    }
-
-  {
-    const char *file_to_compare
-      = strip_leading_path_elements (filename,
-				     file_path_elements - search_path_elements);
-
-    return gdb_filename_fnmatch (search_name, file_to_compare,
-				 FNM_FILE_NAME | FNM_NOESCAPE) == 0;
-  }
 }
 
 /* Check for a symtab of a specific name by searching some symtabs.
@@ -5587,7 +5556,6 @@ info_main_command (const char *args, int from_tty)
 static void
 rbreak_command (const char *regexp, int from_tty)
 {
-  std::string string;
   gdb::unique_xmalloc_ptr<char> file_name;
 
   if (regexp != nullptr)
@@ -5615,29 +5583,62 @@ rbreak_command (const char *regexp, int from_tty)
     spec.add_filename (std::move (file_name));
   std::vector<symbol_search> symbols = spec.search ();
 
+  std::unordered_set<std::string> seen_names;
   scoped_rbreak_breakpoints finalize;
+  int err_count = 0;
+
   for (const symbol_search &p : symbols)
     {
-      if (p.msymbol.minsym == NULL)
+      std::string name;
+      if (p.msymbol.minsym == nullptr)
 	{
-	  struct symtab *symtab = p.symbol->symtab ();
-	  const char *fullname = symtab_to_fullname (symtab);
-
-	  string = string_printf ("%s:'%s'", fullname,
-				  p.symbol->linkage_name ());
-	  break_command (&string[0], from_tty);
-	  print_symbol_info (p.symbol, p.block, nullptr);
+	  if (file_name != nullptr)
+	    {
+	      struct symtab *symtab = p.symbol->symtab ();
+	      const char *fullname = symtab_to_fullname (symtab);
+	      name = string_printf ("%s:'%s'", fullname,
+				    p.symbol->linkage_name ());
+	    }
+	  else
+	    name = p.symbol->linkage_name ();
 	}
       else
-	{
-	  string = string_printf ("'%s'",
-				  p.msymbol.minsym->linkage_name ());
+	name = p.msymbol.minsym->linkage_name ();
 
-	  break_command (&string[0], from_tty);
-	  gdb_printf ("<function, no debug info> %s;\n",
-		      p.msymbol.minsym->print_name ());
+      if (!seen_names.insert (name).second)
+	continue;
+
+      try
+	{
+	  break_command (name.c_str (), from_tty);
 	}
+      catch (const gdb_exception_error &ex)
+	{
+	  exception_print (gdb_stderr, ex);
+	  ++err_count;
+	  continue;
+	}
+
+      if (p.msymbol.minsym == nullptr)
+	print_symbol_info (p.symbol, p.block, nullptr);
+      else
+	gdb_printf ("<function, no debug info> %s;\n", name.c_str ());
     }
+
+  int first_bp = finalize.first_breakpoint ();
+  int last_bp = finalize.last_breakpoint ();
+
+  if (last_bp == -1)
+    gdb_printf (_("No breakpoints made.\n"));
+  else if (first_bp == last_bp)
+    gdb_printf (_("Successfully created breakpoint %d.\n"), first_bp);
+  else
+    gdb_printf (_("Successfully created breakpoints %d-%d.\n"),
+		first_bp, last_bp);
+
+  if (err_count > 0)
+    gdb_printf (_("%d breakpoints failed due to errors, see above.\n"),
+		err_count);
 }
 
 

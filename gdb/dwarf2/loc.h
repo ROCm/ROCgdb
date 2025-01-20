@@ -1,7 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (DWARF2LOC_H)
-#define DWARF2LOC_H
+#ifndef GDB_DWARF2_LOC_H
+#define GDB_DWARF2_LOC_H
 
 #include "dwarf2/expr.h"
 
@@ -309,4 +309,4 @@ extern struct value *value_of_dwarf_reg_entry (struct type *type,
 					       const frame_info_ptr &frame,
 					       enum call_site_parameter_kind kind,
 					       union call_site_parameter_u kind_u);
-#endif /* DWARF2LOC_H */
+#endif /* GDB_DWARF2_LOC_H */

@@ -1,7 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
    Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -19,8 +19,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-#ifndef GDBARCH_H
-#define GDBARCH_H
+#ifndef GDB_GDBARCH_H
+#define GDB_GDBARCH_H
 
 #include <vector>
 #include "frame.h"
@@ -62,6 +62,7 @@ struct ui_out;
 struct inferior;
 struct x86_xsave_layout;
 struct solib_ops;
+struct core_file_exec_context;
 
 #include "regcache.h"
 
@@ -383,4 +384,4 @@ gdbarch_stack_grows_down (gdbarch *arch)
   return gdbarch_inner_than (arch, 1, 2);
 }
 
-#endif
+#endif /* GDB_GDBARCH_H */

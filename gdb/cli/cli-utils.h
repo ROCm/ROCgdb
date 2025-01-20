@@ -1,7 +1,7 @@
 /* CLI utilities.
 
    Copyright (C) 2011-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CLI_CLI_UTILS_H
-#define CLI_CLI_UTILS_H
+#ifndef GDB_CLI_CLI_UTILS_H
+#define GDB_CLI_CLI_UTILS_H
 
 #include "completer.h"
 
@@ -243,4 +243,4 @@ extern std::string
   make_ranges_from_sorted_vector (const std::vector<int> &numbers,
 				  bool want_brakets);
 
-#endif /* CLI_CLI_UTILS_H */
+#endif /* GDB_CLI_CLI_UTILS_H */

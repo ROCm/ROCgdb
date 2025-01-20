@@ -1,6 +1,6 @@
 /* Multi-process/thread control defs for GDB, the GNU debugger.
    Copyright (C) 1987-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
    Contributed by Lynx Real-Time Systems, Inc.  Los Gatos, CA.
    
 
@@ -19,8 +19,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDBTHREAD_H
-#define GDBTHREAD_H
+#ifndef GDB_GDBTHREAD_H
+#define GDB_GDBTHREAD_H
 
 struct symtab;
 
@@ -535,7 +535,7 @@ public:
   struct target_waitstatus pending_follow;
 
   /* True if this thread has been explicitly requested to stop.  */
-  int stop_requested = 0;
+  bool stop_requested = false;
 
   /* The initiating frame of a nexting operation, used for deciding
      which exceptions to intercept.  If it is null_frame_id no
@@ -1164,4 +1164,4 @@ extern void thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
 
 extern const char *thread_state_string (enum thread_state state);
 
-#endif /* GDBTHREAD_H */
+#endif /* GDB_GDBTHREAD_H */

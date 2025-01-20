@@ -1,5 +1,5 @@
 /* expr.c -operands, expressions-
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -738,7 +738,7 @@ current_location (expressionS *expressionp, enum expr_mode mode)
   else
     {
       expressionp->X_op = O_symbol;
-      if (mode != expr_defer)
+      if (mode != expr_defer_incl_dot)
 	{
 	  expressionp->X_add_symbol = symbol_temp_new_now ();
 #ifdef tc_new_dot_label
@@ -1387,14 +1387,14 @@ operand (expressionS *expressionP, enum expr_mode mode)
 	  /* If we have an absolute symbol or a reg, then we know its
 	     value now.  */
 	  segment = S_GET_SEGMENT (symbolP);
-	  if (mode != expr_defer
+	  if (!expr_defer_p (mode)
 	      && segment == absolute_section
 	      && !S_FORCE_RELOC (symbolP, 0))
 	    {
 	      expressionP->X_op = O_constant;
 	      expressionP->X_add_number = S_GET_VALUE (symbolP);
 	    }
-	  else if (mode != expr_defer && segment == reg_section)
+	  else if (!expr_defer_p (mode) && segment == reg_section)
 	    {
 	      expressionP->X_op = O_register;
 	      expressionP->X_add_number = S_GET_VALUE (symbolP);
@@ -1438,7 +1438,7 @@ operand (expressionS *expressionP, enum expr_mode mode)
   if (expressionP->X_add_symbol)
     symbol_mark_used (expressionP->X_add_symbol);
 
-  if (mode != expr_defer)
+  if (!expr_defer_p (mode))
     {
       expressionP->X_add_symbol
 	= symbol_clone_if_forward_ref (expressionP->X_add_symbol);
@@ -1849,10 +1849,7 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 
   /* Save the value of dot for the fixup code.  */
   if (rank == 0)
-    {
-      dot_value = frag_now_fix ();
-      dot_frag = frag_now;
-    }
+    symbol_set_value_now (&dot_symbol);
 
   retval = operand (resultP, mode);
 
@@ -1933,7 +1930,7 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 
       is_unsigned = resultP->X_unsigned && right.X_unsigned;
 
-      if (mode == expr_defer
+      if (expr_defer_p (mode)
 	  && ((resultP->X_add_symbol != NULL
 	       && S_IS_FORWARD_REF (resultP->X_add_symbol))
 	      || (right.X_add_symbol != NULL
@@ -2015,8 +2012,32 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 		 bits of the result.  */
 	      resultP->X_add_number *= (valueT) v;
 	      break;
-	    case O_divide:		resultP->X_add_number /= v; break;
-	    case O_modulus:		resultP->X_add_number %= v; break;
+
+	    case O_divide:
+	      if (v == 1)
+		break;
+	      if (v == -1)
+		{
+		  /* Dividing the largest negative value representable in offsetT
+		     by -1 has a non-representable result in common binary
+		     notation.  Treat it as negation instead, carried out as an
+		     unsigned operation to avoid UB.  */
+		  resultP->X_add_number = - (valueT) resultP->X_add_number;
+		}
+	      else
+		resultP->X_add_number /= v;
+	      break;
+
+	    case O_modulus:
+	      /* See above for why in particular -1 needs special casing.
+	         While the operation is UB in C, mathematically it has a well-
+	         defined result.  */
+	      if (v == 1 || v == -1)
+		resultP->X_add_number = 0;
+	      else
+		resultP->X_add_number %= v;
+	      break;
+
 	    case O_left_shift:
 	    case O_right_shift:
 	      /* We always use unsigned shifts.  According to the ISO
@@ -2372,12 +2393,22 @@ resolve_expression (expressionS *expressionP)
 	case O_divide:
 	  if (right == 0)
 	    return 0;
-	  left = (offsetT) left / (offsetT) right;
+	  /* See expr() for reasons of the special casing.  */
+	  if (right == 1)
+	    break;
+	  if ((offsetT) right == -1)
+	    left = -left;
+	  else
+	    left = (offsetT) left / (offsetT) right;
 	  break;
 	case O_modulus:
 	  if (right == 0)
 	    return 0;
-	  left = (offsetT) left % (offsetT) right;
+	  /* Again, see expr() for reasons of the special casing.  */
+	  if (right == 1 || (offsetT) right == -1)
+	    left = 0;
+	  else
+	    left = (offsetT) left % (offsetT) right;
 	  break;
 	case O_left_shift:
 	  if (right >= sizeof (left) * CHAR_BIT)

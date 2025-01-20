@@ -1,5 +1,5 @@
 /* tc-csky.c -- Assembler for C-SKY
-   Copyright (C) 1989-2024 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
    Created by Lifang Xia (lifang_xia@c-sky.com)
    Contributed by C-SKY Microsystems and Mentor Graphics.
 
@@ -5655,10 +5655,10 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
 
   if (fixP->fx_pcrel
       && fixP->fx_r_type == BFD_RELOC_CKCORE_ADDR32)
-      fixP->fx_r_type = BFD_RELOC_CKCORE_PCREL32;
+    fixP->fx_r_type = BFD_RELOC_CKCORE_PCREL32;
 
-  rel = xmalloc (sizeof (arelent));
-  rel->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  rel = notes_alloc (sizeof (arelent));
+  rel->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *rel->sym_ptr_ptr = symbol_get_bfdsym (fixP->fx_addsy);
   rel->howto = bfd_reloc_type_lookup (stdoutput, fixP->fx_r_type);
   rel->addend = fixP->fx_offset;

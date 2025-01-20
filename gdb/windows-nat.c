@@ -53,6 +53,7 @@
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbthread.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include <unistd.h>
 #include "exec.h"
 #include "solist.h"
@@ -3113,9 +3114,9 @@ _initialize_windows_nat ()
 
   add_com ("signal-event", class_run, signal_event_command, _("\
 Signal a crashed process with event ID, to allow its debugging.\n\
-This command is needed in support of setting up GDB as JIT debugger on \
-MS-Windows.  The command should be invoked from the GDB command line using \
-the '-ex' command-line option.  The ID of the event that blocks the \
+This command is needed in support of setting up GDB as JIT debugger on\n\
+MS-Windows.  The command should be invoked from the GDB command line using\n\
+the '-ex' command-line option.  The ID of the event that blocks the\n\
 crashed process will be supplied by the Windows JIT debugging mechanism."));
 
 #ifdef __CYGWIN__
@@ -3190,7 +3191,9 @@ Show whether to display kernel exceptions in child process."), NULL,
 	 that we're missing some functionality.  */
       warning(_("\
 cannot automatically find executable file or library to read symbols.\n\
-Use \"file\" or \"dll\" command to load executable/libraries directly."));
+Use \"%ps\" or \"%ps\" command to load executable/libraries directly."),
+	      styled_string (command_style.style (), "file"),
+	      styled_string (command_style.style (), "dll"));
     }
 }
 

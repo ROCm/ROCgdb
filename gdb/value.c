@@ -1,7 +1,7 @@
 /* Low level packing and unpacking of values for GDB, the GNU Debugger.
 
    Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -2623,8 +2623,9 @@ show_convenience (const char *ignore, int from_tty)
       gdb_printf (_("No debugger convenience variables now defined.\n"
 		    "Convenience variables have "
 		    "names starting with \"$\";\n"
-		    "use \"set\" as in \"set "
-		    "$foo = 5\" to define them.\n"));
+		    "use \"%ps\" as in \"%ps\" to define them.\n"),
+		  styled_string (command_style.style (), "set"),
+		  styled_string (command_style.style (), "set $foo = 5"));
     }
 }
 

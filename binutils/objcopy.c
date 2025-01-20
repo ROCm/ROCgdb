@@ -1,5 +1,5 @@
 /* objcopy.c -- copy object file from input to output, optionally massaging it.
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -1666,7 +1666,7 @@ filter_symbols (bfd *abfd, bfd *obfd, asymbol **osyms,
 	keep = false;
       else if ((flags & BSF_KEEP) != 0		/* Used in relocation.  */
 	       || ((flags & BSF_SECTION_SYM) != 0
-		   && ((*bfd_asymbol_section (sym)->symbol_ptr_ptr)->flags
+		   && (bfd_asymbol_section (sym)->symbol->flags
 		       & BSF_KEEP) != 0))
 	{
 	  keep = true;
@@ -3845,10 +3845,7 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 	  if (l->obfd == NULL)
 	    rmdir (l->name);
 	  else
-	    {
-	      bfd_close (l->obfd);
-	      unlink (l->name);
-	    }
+	    unlink (l->name);
 	  free (l->name);
 	}
       next = l->next;

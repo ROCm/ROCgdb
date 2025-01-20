@@ -1,7 +1,7 @@
 /* TUI window generic functions.
 
    Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Hewlett-Packard Company.
 
@@ -528,6 +528,7 @@ static struct async_signal_handler *tui_sigwinch_token;
 static void
 tui_sigwinch_handler (int signal)
 {
+  scoped_restore restore_errno = make_scoped_restore (&errno);
   mark_async_signal_handler (tui_sigwinch_token);
   tui_set_win_resized_to (true);
 }

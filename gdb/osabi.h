@@ -1,6 +1,6 @@
 /* OS ABI variant handling for GDB.
    Copyright (C) 2001-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
    
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef OSABI_H
-#define OSABI_H
+#ifndef GDB_OSABI_H
+#define GDB_OSABI_H
 
 #include "gdbsupport/osabi.h"
 
@@ -57,4 +57,4 @@ void generic_elf_osabi_sniff_abi_tag_sections (bfd *, asection *,
    which calls set_tdesc_osabi and an 'enum gdb_osabi' value is needed.  */
 const char *gdbarch_osabi_enum_name (enum gdb_osabi osabi);
 
-#endif /* OSABI_H */
+#endif /* GDB_OSABI_H */
