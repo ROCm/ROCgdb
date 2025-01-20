@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CLI_CLI_UTILS_H
-#define CLI_CLI_UTILS_H
+#ifndef GDB_CLI_CLI_UTILS_H
+#define GDB_CLI_CLI_UTILS_H
 
 #include "completer.h"
 
@@ -243,4 +243,4 @@ extern std::string
   make_ranges_from_sorted_vector (const std::vector<int> &numbers,
 				  bool want_brakets);
 
-#endif /* CLI_CLI_UTILS_H */
+#endif /* GDB_CLI_CLI_UTILS_H */

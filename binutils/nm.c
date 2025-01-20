@@ -676,7 +676,7 @@ print_symname (const char *form, struct extended_symbol_info *info,
 	       const char *name, bfd *abfd)
 {
   char *alloc = NULL;
-  char *atver = NULL;
+  char *atname = NULL;
 
   if (name == NULL)
     name = info->sinfo->name;
@@ -684,9 +684,19 @@ print_symname (const char *form, struct extended_symbol_info *info,
   if (!with_symbol_versions
       && bfd_get_flavour (abfd) == bfd_target_elf_flavour)
     {
-      atver = strchr (name, '@');
+      char *atver = strchr (name, '@');
+
       if (atver)
-	*atver = 0;
+	{
+	  /* PR 32467 - Corrupt binaries might include an @ character in a
+	     symbol name.  Since non-versioned symbol names can be in
+	     read-only memory (via memory mapping of a file's contents) we
+	     cannot just replace the @ character with a NUL.  Instead we
+	     create a truncated copy of the name.  */
+	  atname = xstrdup (name);
+	  atname [atver - name] = 0;
+	  name = atname;
+	}
     }
 
   if (do_demangle && *name)
@@ -697,9 +707,7 @@ print_symname (const char *form, struct extended_symbol_info *info,
     }
 
   if (unicode_display != unicode_default)
-    {
-      name = convert_utf8 (name);
-    }
+    name = convert_utf8 (name);
 
   if (info != NULL && info->elfinfo && with_symbol_versions)
     {
@@ -720,8 +728,8 @@ print_symname (const char *form, struct extended_symbol_info *info,
 	}
     }
   printf (form, name);
-  if (atver)
-    *atver = '@';
+
+  free (atname);
   free (alloc);
 }
 
@@ -1498,8 +1506,8 @@ display_rel_file (bfd *abfd, bfd *archive_bfd)
   else
     print_size_symbols (abfd, dynamic, symsizes, symcount, archive_bfd);
 
-  if (synthsyms)
-    free (synthsyms);
+  free_lineno_cache (abfd);
+  free (synthsyms);
   free (minisyms);
   free (symsizes);
 }
@@ -1566,26 +1574,29 @@ set_print_format (bfd *file)
 static void
 display_archive (bfd *file)
 {
-  bfd *arfile = NULL;
-  bfd *last_arfile = NULL;
-  char **matching;
-
   format->print_archive_filename (bfd_get_filename (file));
 
   if (print_armap)
     print_symdef_entry (file);
 
+  bfd *last_arfile = NULL;
   for (;;)
     {
-      arfile = bfd_openr_next_archived_file (file, arfile);
-
-      if (arfile == NULL)
+      bfd *arfile = bfd_openr_next_archived_file (file, last_arfile);
+      if (arfile == NULL
+	  || arfile == last_arfile)
 	{
+	  if (arfile != NULL)
+	    bfd_set_error (bfd_error_malformed_archive);
 	  if (bfd_get_error () != bfd_error_no_more_archived_files)
 	    bfd_nonfatal (bfd_get_filename (file));
 	  break;
 	}
 
+      if (last_arfile != NULL)
+	bfd_close (last_arfile);
+
+      char **matching;
       if (bfd_check_format_matches (arfile, bfd_object, &matching))
 	{
 	  set_print_format (arfile);
@@ -1600,21 +1611,11 @@ display_archive (bfd *file)
 	    list_matching_formats (matching);
 	}
 
-      if (last_arfile != NULL)
-	{
-	  free_lineno_cache (last_arfile);
-	  bfd_close (last_arfile);
-	  if (arfile == last_arfile)
-	    return;
-	}
       last_arfile = arfile;
     }
 
   if (last_arfile != NULL)
-    {
-      free_lineno_cache (last_arfile);
-      bfd_close (last_arfile);
-    }
+    bfd_close (last_arfile);
 }
 
 static bool
@@ -1656,7 +1657,6 @@ display_file (char *filename)
       retval = false;
     }
 
-  free_lineno_cache (file);
   if (!bfd_close (file))
     retval = false;
 

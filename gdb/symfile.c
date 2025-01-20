@@ -22,6 +22,7 @@
 #include "arch-utils.h"
 #include "cli/cli-cmds.h"
 #include "extract-store-integer.h"
+#include "gdbsupport/gdb_vecs.h"
 #include "symtab.h"
 #include "gdbcore.h"
 #include "frame.h"
@@ -901,6 +902,10 @@ syms_from_objfile_1 (struct objfile *objfile,
       int num_sections = gdb_bfd_count_sections (objfile->obfd.get ());
 
       objfile->section_offsets.assign (num_sections, 0);
+
+      /* Release the objfile unique pointer, since nothing went wrong
+	 in reading it.  */
+      objfile_holder.release ();
       return;
     }
 
@@ -1270,9 +1275,9 @@ separate_debug_file_exists (const std::string &name, unsigned long crc,
      numbers will never set st_ino to zero, this is merely an
      optimization, so we do not need to worry about false negatives.  */
 
-  if (bfd_stat (abfd.get (), &abfd_stat) == 0
+  if (gdb_bfd_stat (abfd.get (), &abfd_stat) == 0
       && abfd_stat.st_ino != 0
-      && bfd_stat (parent_objfile->obfd.get (), &parent_stat) == 0)
+      && gdb_bfd_stat (parent_objfile->obfd.get (), &parent_stat) == 0)
     {
       if (abfd_stat.st_dev == parent_stat.st_dev
 	  && abfd_stat.st_ino == parent_stat.st_ino)
@@ -2491,7 +2496,7 @@ reread_symbols (int from_tty)
 	continue;
 
       struct stat new_statbuf;
-      int res = bfd_stat (objfile->obfd.get (), &new_statbuf);
+      int res = gdb_bfd_stat (objfile->obfd.get (), &new_statbuf);
       if (res != 0)
 	{
 	  /* If this object is from an archive (what you usually create

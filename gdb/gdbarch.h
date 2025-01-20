@@ -19,8 +19,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-#ifndef GDBARCH_H
-#define GDBARCH_H
+#ifndef GDB_GDBARCH_H
+#define GDB_GDBARCH_H
 
 #include <vector>
 #include "frame.h"
@@ -62,6 +62,7 @@ struct ui_out;
 struct inferior;
 struct x86_xsave_layout;
 struct solib_ops;
+struct core_file_exec_context;
 
 #include "regcache.h"
 
@@ -383,4 +384,4 @@ gdbarch_stack_grows_down (gdbarch *arch)
   return gdbarch_inner_than (arch, 1, 2);
 }
 
-#endif
+#endif /* GDB_GDBARCH_H */

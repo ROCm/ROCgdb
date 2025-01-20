@@ -223,18 +223,17 @@ bfd_elf_gnu_hash (const char *namearg)
 }
 
 /* Create a tdata field OBJECT_SIZE bytes in length, zeroed out and with
-   the object_id field of an elf_obj_tdata field set to OBJECT_ID.  */
+   the object_id field of an elf_obj_tdata field set.  */
 bool
 bfd_elf_allocate_object (bfd *abfd,
-			 size_t object_size,
-			 enum elf_target_id object_id)
+			 size_t object_size)
 {
   BFD_ASSERT (object_size >= sizeof (struct elf_obj_tdata));
   abfd->tdata.any = bfd_zalloc (abfd, object_size);
   if (abfd->tdata.any == NULL)
     return false;
 
-  elf_object_id (abfd) = object_id;
+  elf_object_id (abfd) = get_elf_backend_data (abfd)->target_id;
   if (abfd->direction != read_direction)
     {
       struct output_elf_obj_tdata *o = bfd_zalloc (abfd, sizeof *o);
@@ -250,9 +249,7 @@ bfd_elf_allocate_object (bfd *abfd,
 bool
 bfd_elf_make_object (bfd *abfd)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_obj_tdata),
-				  bed->target_id);
+  return bfd_elf_allocate_object (abfd, sizeof (struct elf_obj_tdata));
 }
 
 bool
@@ -5982,11 +5979,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	p->p_align = 1 << bed->s->log_file_align;
 
       if (m == phdr_load_seg)
-	{
-	  if (!m->includes_filehdr)
-	    p->p_offset = off;
-	  off += actual * bed->s->sizeof_phdr;
-	}
+	off += actual * bed->s->sizeof_phdr;
 
       no_contents = false;
       off_adjust = 0;
@@ -6135,6 +6128,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	    {
 	      if (p->p_type == PT_LOAD)
 		{
+		  p->p_offset = off - actual * bed->s->sizeof_phdr;
 		  elf_elfheader (abfd)->e_phoff = p->p_offset;
 		  if (m->count > 0)
 		    {
@@ -6145,6 +6139,9 @@ assign_file_positions_for_load_sections (bfd *abfd,
 		}
 	      else if (phdr_load_seg != NULL)
 		{
+		  /* Also set PT_PHDR to match phdr_load_seg.  We've
+		     sorted segments so that phdr_load_seg will
+		     already be set by the code immediately above.  */
 		  Elf_Internal_Phdr *phdr = phdrs + phdr_load_seg->idx;
 		  bfd_vma phdr_off = 0;  /* Octets.  */
 		  if (phdr_load_seg->includes_filehdr)
@@ -6402,8 +6399,8 @@ assign_file_positions_for_load_sections (bfd *abfd,
 		{
 		  _bfd_error_handler
 		    /* xgettext:c-format */
-		    (_("%pB: section `%pA' can't be allocated in segment %d"),
-		     abfd, sec, j);
+		    (_("%pB: section `%pA' can't be allocated in segment %u"),
+		     abfd, sec, m->idx);
 		  print_segment_map (m);
 		}
 	    }
@@ -13869,8 +13866,7 @@ _bfd_elf_slurp_secondary_reloc_section (bfd *       abfd,
 		{
 		  /* FIXME: This and the error case below mean that we
 		     have a symbol on relocs that is not elf_symbol_type.  */
-		  internal_reloc->sym_ptr_ptr =
-		    bfd_abs_section_ptr->symbol_ptr_ptr;
+		  internal_reloc->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 		}
 	      else if (r_sym (rela.r_info) > symcount)
 		{
@@ -13879,8 +13875,7 @@ _bfd_elf_slurp_secondary_reloc_section (bfd *       abfd,
 		    (_("%pB(%pA): relocation %zu has invalid symbol index %lu"),
 		     abfd, sec, i, (long) r_sym (rela.r_info));
 		  bfd_set_error (bfd_error_bad_value);
-		  internal_reloc->sym_ptr_ptr =
-		    bfd_abs_section_ptr->symbol_ptr_ptr;
+		  internal_reloc->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 		  result = false;
 		}
 	      else

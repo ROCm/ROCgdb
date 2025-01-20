@@ -19,8 +19,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDBTHREAD_H
-#define GDBTHREAD_H
+#ifndef GDB_GDBTHREAD_H
+#define GDB_GDBTHREAD_H
 
 struct symtab;
 
@@ -1164,4 +1164,4 @@ extern void thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
 
 extern const char *thread_state_string (enum thread_state state);
 
-#endif /* GDBTHREAD_H */
+#endif /* GDB_GDBTHREAD_H */

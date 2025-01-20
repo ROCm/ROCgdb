@@ -16,10 +16,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (COMMAND_H)
-#define COMMAND_H 1
+#ifndef GDB_COMMAND_H
+#define GDB_COMMAND_H
 
-#include "gdbsupport/gdb_vecs.h"
 #include "gdbsupport/scoped_restore.h"
 
 struct completion_tracker;
@@ -958,4 +957,4 @@ extern void not_just_help_class_command (const char *, int);
 extern void cmd_func (struct cmd_list_element *cmd,
 		      const char *args, int from_tty);
 
-#endif /* !defined (COMMAND_H) */
+#endif /* GDB_COMMAND_H */

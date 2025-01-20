@@ -1843,8 +1843,7 @@ struct ppc64_elf_obj_tdata
 static bool
 ppc64_elf_mkobject (bfd *abfd)
 {
-  return bfd_elf_allocate_object (abfd, sizeof (struct ppc64_elf_obj_tdata),
-				  PPC64_ELF_DATA);
+  return bfd_elf_allocate_object (abfd, sizeof (struct ppc64_elf_obj_tdata));
 }
 
 /* Fix bad default arch selected for a 64 bit input bfd when the
@@ -2050,16 +2049,12 @@ struct _ppc64_elf_section_data
 static bool
 ppc64_elf_new_section_hook (bfd *abfd, asection *sec)
 {
-  if (!sec->used_by_bfd)
-    {
-      struct _ppc64_elf_section_data *sdata;
-      size_t amt = sizeof (*sdata);
+  struct _ppc64_elf_section_data *sdata;
 
-      sdata = bfd_zalloc (abfd, amt);
-      if (sdata == NULL)
-	return false;
-      sec->used_by_bfd = sdata;
-    }
+  sdata = bfd_zalloc (abfd, sizeof (*sdata));
+  if (sdata == NULL)
+    return false;
+  sec->used_by_bfd = sdata;
 
   return _bfd_elf_new_section_hook (abfd, sec);
 }
@@ -3551,8 +3546,7 @@ ppc64_elf_link_hash_table_create (bfd *abfd)
     return NULL;
 
   if (!_bfd_elf_link_hash_table_init (&htab->elf, abfd, link_hash_newfunc,
-				      sizeof (struct ppc_link_hash_entry),
-				      PPC64_ELF_DATA))
+				      sizeof (struct ppc_link_hash_entry)))
     {
       free (htab);
       return NULL;
@@ -12683,6 +12677,10 @@ ppc64_elf_setup_section_lists (struct bfd_link_info *info)
 
   if (htab == NULL)
     return -1;
+
+  /* The access to _bfd_section_id here is unlocked, so for the time
+     being this function cannot be called in multi-threaded mode.  */
+  BFD_ASSERT (!_bfd_threading_enabled ());
 
   htab->sec_info_arr_size = _bfd_section_id;
   amt = sizeof (*htab->sec_info) * (htab->sec_info_arr_size);

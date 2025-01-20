@@ -2193,8 +2193,12 @@ vsm3msg2, 0x66da, SM3, Modrm|Space0F38|Vex128|Src1VVVV|VexW0|NoSuf, { RegXMM|Uns
 
 // SM4 instructions.
 
-vsm4key4, 0xf3da, SM4, Modrm|Space0F38|Vex|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|Unspecified|BaseIndex, RegXMM|RegYMM, RegXMM|RegYMM }
-vsm4rnds4, 0xf2da, SM4, Modrm|Space0F38|Vex|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|Unspecified|BaseIndex, RegXMM|RegYMM, RegXMM|RegYMM }
+<sm4:isa:attr:reg, $y:SM4:Vex:, $z:SM4&AVX10_2:Disp8ShiftVL:RegZMM>
+
+vsm4key4<sm4>, 0xf3da, <sm4:isa>, Modrm|Space0F38|<sm4:attr>|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|<sm4:reg>|Unspecified|BaseIndex, RegXMM|RegYMM|<sm4:reg>, RegXMM|RegYMM|<sm4:reg> }
+vsm4rnds4<sm4>, 0xf2da, <sm4:isa>, Modrm|Space0F38|<sm4:attr>|Src1VVVV|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|<sm4:reg>|Unspecified|BaseIndex, RegXMM|RegYMM|<sm4:reg>, RegXMM|RegYMM|<sm4:reg> }
+
+<sm4>
 
 // SM4 instructions end.
 
@@ -3509,5 +3513,16 @@ vcvttsd2<sign>sis, 0xf2<sign:opc>, AVX10_2, Modrm|Map5|EVexLIG|Disp8MemShift=3|N
 vcvttss2<sign>sis, 0xf3<sign:opc>, AVX10_2, Modrm|Map5|EVexLIG|Disp8MemShift=2|NoSuf|SAE, { RegXMM|Dword|Unspecified|BaseIndex, Reg32|Reg64 }
 
 <sign>
+
+vminmaxpbf16, 0xf252, AVX10_2, Modrm|Masking|Space0F3A|Src1VVVV|VexW0|Disp8ShiftVL|Broadcast|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Word|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vminmaxp<sdh>, 0x<sdh:pfx>52, AVX10_2, Modrm|Masking|Space0F3A|<sdh:vexw>|Broadcast|Src1VVVV|Disp8ShiftVL|CheckOperandSize|NoSuf|SAE, { Imm8, RegXMM|RegYMM|RegZMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vminmaxs<sdh>, 0x<sdh:pfx>53, AVX10_2, Modrm|EVexLIG|Masking|Space0F3A|Src1VVVV|<sdh:vexw>|Disp8MemShift|CheckOperandSize|NoSuf|SAE, { Imm8, RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM, RegXMM }
+
+vmovd, 0xf37e, AVX10_2, Load|Modrm|EVex128|VexW0|Space0F|Disp8MemShift=2|NoSuf, { Dword|Unspecified|BaseIndex|RegXMM, RegXMM }
+vmovd, 0x66d6, AVX10_2, Modrm|EVex128|VexW0|Space0F|Disp8MemShift=2|NoSuf, { RegXMM, Dword|Unspecified|BaseIndex|RegXMM }
+vmovw, 0xf36e, AVX10_2, D|Modrm|EVex128|VexW0|Map5|Disp8MemShift=1|NoSuf, { Word|Unspecified|BaseIndex|RegXMM, RegXMM }
+
+vcomxs<sdh>, 0x<sdh:spfx>2f, AVX10_2, Modrm|EVexLIG|<sdh:spc1>|<sdh:vexw>|Disp8MemShift|NoSuf|SAE, { RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM }
+vucomxs<sdh>, 0x<sdh:spfx>2e, AVX10_2, Modrm|EVexLIG|<sdh:spc1>|<sdh:vexw>|Disp8MemShift|NoSuf|SAE, { RegXMM|<sdh:elem>|Unspecified|BaseIndex, RegXMM }
 
 // AVX10.2 instructions end.

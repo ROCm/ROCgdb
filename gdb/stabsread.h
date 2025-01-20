@@ -1,5 +1,5 @@
-  /* Include file for stabs debugging format support functions.
-     Copyright (C) 1986-2024 Free Software Foundation, Inc.
+/* Include file for stabs debugging format support functions.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef STABSREAD_H
-#define STABSREAD_H
+#ifndef GDB_STABSREAD_H
+#define GDB_STABSREAD_H
 
 struct objfile;
 struct legacy_psymtab;
@@ -305,4 +305,4 @@ struct symloc
     int file_string_offset;
     enum language pst_language;
   };
-#endif /* STABSREAD_H */
+#endif /* GDB_STABSREAD_H */

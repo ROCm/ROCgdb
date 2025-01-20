@@ -19,8 +19,8 @@
 
 /* Interface routines for core, executable, etc.  */
 
-#if !defined (GDBCORE_H)
-#define GDBCORE_H 1
+#ifndef GDB_GDBCORE_H
+#define GDB_GDBCORE_H
 
 struct type;
 struct regcache;
@@ -123,10 +123,6 @@ extern void (*deprecated_file_changed_hook) (const char *filename);
 /* Whether to open exec and core files read-only or read-write.  */
 
 extern bool write_files;
-
-/* Open and set up the core file bfd.  */
-
-extern void core_target_open (const char *arg, int from_tty);
 
 extern void core_file_command (const char *filename, int from_tty);
 
@@ -262,4 +258,4 @@ std::optional<core_target_mapped_file_info>
 core_target_find_mapped_file (const char *filename,
 			      std::optional<CORE_ADDR> addr);
 
-#endif /* !defined (GDBCORE_H) */
+#endif /* GDB_GDBCORE_H */

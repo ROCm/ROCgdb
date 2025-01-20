@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef TARGET_DEBUG_H
-#define TARGET_DEBUG_H
+#ifndef GDB_TARGET_DEBUG_H
+#define GDB_TARGET_DEBUG_H
 
 /* Printers for the debug target.  Each prints an object of a given
    type to a string that needn't be freed.  Most printers are macros,
@@ -397,4 +397,4 @@ static std::string
 target_debug_print_displaced_step_prepare_status (displaced_step_prepare_status s)
 { return displaced_step_prepare_status_str (s); }
 
-#endif /* TARGET_DEBUG_H */
+#endif /* GDB_TARGET_DEBUG_H */

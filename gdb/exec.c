@@ -326,7 +326,8 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
       warning (_("No executable has been specified and target does not "
 		 "support\n"
 		 "determining executable automatically.  "
-		 "Try using the \"file\" command."));
+		 "Try using the \"%ps\" command."),
+	       styled_string (command_style.style (), "file"));
       return;
     }
 
@@ -482,7 +483,7 @@ exec_file_attach (const char *filename, int from_tty)
 	= build_section_table (current_program_space->exec_bfd ());
 
       current_program_space->ebfd_mtime
-	= bfd_get_mtime (current_program_space->exec_bfd ());
+	= gdb_bfd_get_mtime (current_program_space->exec_bfd ());
 
       validate_files ();
 

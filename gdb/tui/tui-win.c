@@ -528,6 +528,7 @@ static struct async_signal_handler *tui_sigwinch_token;
 static void
 tui_sigwinch_handler (int signal)
 {
+  scoped_restore restore_errno = make_scoped_restore (&errno);
   mark_async_signal_handler (tui_sigwinch_token);
   tui_set_win_resized_to (true);
 }

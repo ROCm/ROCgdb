@@ -2417,6 +2417,31 @@ display_lang (uint64_t uvalue)
     case DW_LANG_Fortran03:		printf ("Fortran 03"); break;
     case DW_LANG_Fortran08:		printf ("Fortran 08"); break;
     case DW_LANG_RenderScript:		printf ("RenderScript"); break;
+    case DW_LANG_C17:                   printf ("C17"); break;
+    case DW_LANG_Fortran18:             printf ("Fortran 18"); break;
+    case DW_LANG_Ada2005:               printf ("Ada 2005"); break;
+    case DW_LANG_Ada2012:               printf ("Ada 2012"); break;
+    case DW_LANG_HIP:                   printf ("Hip"); break;
+    case DW_LANG_Assembly:              printf ("Assembler"); break;
+    case DW_LANG_C_sharp:               printf ("C Sharp"); break;
+    case DW_LANG_Mojo:                  printf ("Mojo"); break;
+    case DW_LANG_GLSL:                  printf ("GLSL"); break;
+    case DW_LANG_GLSL_ES:               printf ("GLSL_ES"); break;
+    case DW_LANG_HLSL:                  printf ("HLSL"); break;
+    case DW_LANG_OpenCL_CPP:            printf ("OpenCL C++"); break;
+    case DW_LANG_CPP_for_OpenCL:        printf ("C++ for OpenCL"); break;
+    case DW_LANG_SYCL:                  printf ("SYCL"); break;
+    case DW_LANG_C_plus_plus_17:        printf ("C++17"); break;
+    case DW_LANG_C_plus_plus_20:        printf ("C++20"); break;
+    case DW_LANG_C_plus_plus_23:	printf ("C++23"); break;
+    case DW_LANG_Odin:                  printf ("Odin"); break;
+    case DW_LANG_P4:                    printf ("P4"); break;
+    case DW_LANG_Metal:                 printf ("C23"); break;
+    case DW_LANG_C23:                   printf ("C23"); break;
+    case DW_LANG_Fortran23:             printf ("Fortran 23"); break;
+    case DW_LANG_Ruby:                  printf ("Ruby"); break;
+    case DW_LANG_Move:                  printf ("Move"); break;
+    case DW_LANG_Hylo:                  printf ("Hylo"); break;
 
       /* MIPS extension.  */
     case DW_LANG_Mips_Assembler:	printf ("MIPS assembler"); break;
@@ -8825,6 +8850,27 @@ init_dwarf_regnames_riscv (void)
   dwarf_regnames_lookup_func = regname_internal_riscv;
 }
 
+static const char *const dwarf_regnames_loongarch[] =
+{
+  "$zero", "$ra", "$tp", "$sp", "$a0", "$a1", "$a2", "$a3",  /* 0-7   */
+  "$a4",   "$a5", "$a6", "$a7", "$t0", "$t1", "$t2", "$t3",  /* 8-15  */
+  "$t4",   "$t5", "$t6", "$t7", "$t8", "$r21","$fp", "$s0",  /* 16-23 */
+  "$s1",   "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$s8",  /* 24-31 */
+  "$fa0", "$fa1", "$fa2", "$fa3", "$fa4",  "$fa5",  "$fa6",  /* 32-38 */
+  "$fa7", "$ft0", "$ft1", "$ft2", "$ft3",  "$ft4",  "$ft5",  /* 39-45 */
+  "$ft6", "$ft7", "$ft8", "$ft9", "$ft10", "$ft11", "$ft12", /* 46-52 */
+  "$ft13", "$ft14", "$ft15", "$fs0", "$fs1", "$fs2", "$fs3", /* 53-59 */
+  "$fs4",  "$fs5",  "$fs6",  "$fs7",			     /* 60-63 */
+};
+
+static void
+init_dwarf_regnames_loongarch (void)
+{
+  dwarf_regnames = dwarf_regnames_loongarch;
+  dwarf_regnames_count = ARRAY_SIZE (dwarf_regnames_loongarch);
+  dwarf_regnames_lookup_func = regname_internal_by_table_only;
+}
+
 void
 init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
 {
@@ -8857,6 +8903,10 @@ init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
 
     case EM_RISCV:
       init_dwarf_regnames_riscv ();
+      break;
+
+    case EM_LOONGARCH:
+      init_dwarf_regnames_loongarch ();
       break;
 
     default:
@@ -8906,6 +8956,10 @@ init_dwarf_regnames_by_bfd_arch_and_mach (enum bfd_architecture arch,
 
     case bfd_arch_riscv:
       init_dwarf_regnames_riscv ();
+      break;
+
+    case bfd_arch_loongarch:
+      init_dwarf_regnames_loongarch ();
       break;
 
     default:

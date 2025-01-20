@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if !defined (BREAKPOINT_H)
-#define BREAKPOINT_H 1
+#ifndef GDB_BREAKPOINT_H
+#define GDB_BREAKPOINT_H
 
 #include "frame.h"
 #include "value.h"
@@ -1985,6 +1985,14 @@ public:
   scoped_rbreak_breakpoints ();
   ~scoped_rbreak_breakpoints ();
 
+  /* Return the number of first breakpoint made while this object is
+     in scope.  */
+  int first_breakpoint () const;
+
+  /* Return the number of the most recent breakpoint made while this
+     object is in scope, or -1 if no breakpoints were made.  */
+  int last_breakpoint () const;
+
   DISABLE_COPY_AND_ASSIGN (scoped_rbreak_breakpoints);
 };
 
@@ -2044,10 +2052,10 @@ extern int pc_at_non_inline_function (const address_space *aspace,
 				      CORE_ADDR pc,
 				      const target_waitstatus &ws);
 
-extern int user_breakpoint_p (struct breakpoint *);
+extern int user_breakpoint_p (const breakpoint *);
 
 /* Return true if this breakpoint is pending, false if not.  */
-extern int pending_breakpoint_p (struct breakpoint *);
+extern int pending_breakpoint_p (const breakpoint *);
 
 /* Attempt to determine architecture of location identified by SAL.  */
 extern struct gdbarch *get_sal_arch (struct symtab_and_line sal);
@@ -2114,4 +2122,4 @@ extern void enable_disable_bp_location (bp_location *loc, bool enable);
 
 extern void notify_breakpoint_modified (breakpoint *b);
 
-#endif /* !defined (BREAKPOINT_H) */
+#endif /* GDB_BREAKPOINT_H */
