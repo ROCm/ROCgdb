@@ -107,7 +107,7 @@ if {![dwarf2_support]} {
 
 standard_testfile .cpp
 
-set gpu_target [hcc_amdgpu_target]
+set gpu_target [lindex [find_amdgpu_devices] 0]
 
 # This test can only be run on vega20 GPUs.
 if {$gpu_target != "gfx906"} {
