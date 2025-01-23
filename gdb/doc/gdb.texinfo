@@ -29195,6 +29195,9 @@ Gfx1200 devices.
 @item @code{gfx1201}
 Gfx1201 devices.
 
+@item @code{gfx1250}
+Gfx1250 devices.
+
 @end table
 
 The following generic @acronym{AMD GPU} architectures are supported:
