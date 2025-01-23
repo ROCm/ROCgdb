@@ -64,11 +64,12 @@ static const bfd_arch_info_type arch_info_struct[] =
   N (bfd_mach_amdgcn_gfx1153, "amdgcn:gfx1153", false, NN (19)),
   N (bfd_mach_amdgcn_gfx1200, "amdgcn:gfx1200", false, NN (20)),
   N (bfd_mach_amdgcn_gfx1201, "amdgcn:gfx1201", false, NN (21)),
-  N (bfd_mach_amdgcn_gfx9_generic, "amdgcn:gfx9-generic", false, NN (22)),
-  N (bfd_mach_amdgcn_gfx9_4_generic, "amdgcn:gfx9-4-generic", false, NN (23)),
-  N (bfd_mach_amdgcn_gfx10_1_generic, "amdgcn:gfx10-1-generic", false, NN (24)),
-  N (bfd_mach_amdgcn_gfx10_3_generic, "amdgcn:gfx10-3-generic", false, NN (25)),
-  N (bfd_mach_amdgcn_gfx11_generic, "amdgcn:gfx11-generic", false, NN (26)),
+  N (bfd_mach_amdgcn_gfx1250, "amdgcn:gfx1250", false, NN (22)),
+  N (bfd_mach_amdgcn_gfx9_generic, "amdgcn:gfx9-generic", false, NN (23)),
+  N (bfd_mach_amdgcn_gfx9_4_generic, "amdgcn:gfx9-4-generic", false, NN (24)),
+  N (bfd_mach_amdgcn_gfx10_1_generic, "amdgcn:gfx10-1-generic", false, NN (25)),
+  N (bfd_mach_amdgcn_gfx10_3_generic, "amdgcn:gfx10-3-generic", false, NN (26)),
+  N (bfd_mach_amdgcn_gfx11_generic, "amdgcn:gfx11-generic", false, NN (27)),
   N (bfd_mach_amdgcn_gfx12_generic, "amdgcn:gfx12-generic", false, NULL),
 };
 
