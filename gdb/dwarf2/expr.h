@@ -25,6 +25,7 @@
 
 #include "leb128.h"
 #include "dwarf2/call-site.h"
+#include "dwarf2.h"
 
 struct dwarf2_per_objfile;
 

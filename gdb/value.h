@@ -1152,6 +1152,8 @@ extern value *default_value_from_register (gdbarch *gdbarch, type *type,
 					   ULONGEST offset,
 					   ULONGEST bit_offset);
 
+extern ULONGEST default_dwarf2_reg_piece_offset (gdbarch *gdbarch, int regnum, ULONGEST size);
+
 /* VALUE must be an lval_register value.  If regnum is the value's
    associated register number, and len the length of the value's type,
    read one or more registers in VALUE's frame, starting with register REGNUM,
