@@ -222,16 +222,16 @@ sparc64nbsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind sparc64nbsd_sigcontext_frame_unwind =
-{
+static const struct frame_unwind_legacy sparc64nbsd_sigcontext_frame_unwind (
   "sparc64 netbsd sigcontext",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   sparc64nbsd_sigcontext_frame_this_id,
   sparc64nbsd_sigcontext_frame_prev_register,
   NULL,
   sparc64nbsd_sigtramp_frame_sniffer
-};
+);
 
 
 static const struct regset sparc64nbsd_gregset =

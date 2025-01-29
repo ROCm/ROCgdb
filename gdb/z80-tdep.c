@@ -1063,11 +1063,10 @@ z80_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
   return 0;
 }
 
-static const struct frame_unwind
-z80_frame_unwind =
-{
+static const struct frame_unwind_legacy z80_frame_unwind (
   "z80",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   z80_frame_this_id,
   z80_frame_prev_register,
@@ -1075,7 +1074,7 @@ z80_frame_unwind =
   default_frame_sniffer
   /*dealloc_cache*/
   /*prev_arch*/
-};
+);
 
 /* Initialize the gdbarch struct for the Z80 arch */
 static struct gdbarch *

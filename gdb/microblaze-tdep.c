@@ -478,16 +478,16 @@ microblaze_frame_prev_register (const frame_info_ptr &this_frame,
 
 }
 
-static const struct frame_unwind microblaze_frame_unwind =
-{
+static const struct frame_unwind_legacy microblaze_frame_unwind (
   "microblaze prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   microblaze_frame_this_id,
   microblaze_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 microblaze_frame_base_address (const frame_info_ptr &next_frame,

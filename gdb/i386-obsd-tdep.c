@@ -390,18 +390,19 @@ i386obsd_trapframe_sniffer (const struct frame_unwind *self,
 		   || startswith (name, "Xsoft")));
 }
 
-static const struct frame_unwind i386obsd_trapframe_unwind = {
+static const struct frame_unwind_legacy i386obsd_trapframe_unwind (
   "i386 openbsd trap",
   /* FIXME: kettenis/20051219: This really is more like an interrupt
      frame, but SIGTRAMP_FRAME would print <signal handler called>,
      which really is not what we want here.  */
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   i386obsd_trapframe_this_id,
   i386obsd_trapframe_prev_register,
   NULL,
   i386obsd_trapframe_sniffer
-};
+);
 
 
 static void 

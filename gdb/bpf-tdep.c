@@ -181,16 +181,16 @@ bpf_frame_prev_register (const frame_info_ptr &this_frame,
 
 /* Frame unwinder machinery for BPF.  */
 
-static const struct frame_unwind bpf_frame_unwind =
-{
+static const struct frame_unwind_legacy bpf_frame_unwind (
   "bpf prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   bpf_frame_unwind_stop_reason,
   bpf_frame_this_id,
   bpf_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 
 /* Breakpoints.  */

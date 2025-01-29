@@ -1126,13 +1126,13 @@ relocations.  Different output formats can have further restrictions; for
 example some @code{a.out}-based formats do not support partial linking
 with input files in other formats at all.
 
-On ELF platforms, when the relocatable output contains both contents
-which require link-time optimization (LTO) and contents which don't
-require LTO, a .gnu_object_only section will be created to contain a
-relocatable object file, as if @samp{-r} is applied to all relocatable
-inputs which don't require LTO.  When processing a relocatable input
-with a .gnu_object_only section, the linker will extract the
-.gnu_object_only section as a separate input.
+When the relocatable output contains both contents which require
+link-time optimization (LTO) and contents which don't require LTO,
+a .gnu_object_only section will be created to contain a relocatable
+object file, as if @samp{-r} is applied to all relocatable inputs
+which don't require LTO.  When processing a relocatable input with
+a .gnu_object_only section, the linker will extract the .gnu_object_only
+section as a separate input.
 
 Note that since @samp{-r} groups some sections from different input files
 together, there may be negative impacts on code size and locality in
@@ -8055,9 +8055,9 @@ in certain ARM1176 processors.  The workaround is enabled by default if you
 are targeting ARM v6 (excluding ARM v6T2) or earlier.  It can be disabled
 unconditionally by specifying @samp{--no-fix-arm1176}.
 
-Further information is available in the ``ARM1176JZ-S and ARM1176JZF-S
-Programmer Advice Notice'' available on the ARM documentation website at:
-http://infocenter.arm.com/.
+Further information is available in ``ARM1176JZ-S and ARM1176JZF-S
+Programmer Advice Notice'' (UAN0002) available on the Arm documentation
+website at @uref{https://developer.arm.com/}.
 
 @cindex STM32L4xx erratum workaround
 @kindex --fix-stm32l4xx-629360
@@ -8255,15 +8255,33 @@ mark the output with GCS.
 
 @kindex -z gcs-report[=none|warning|error]
 @cindex Control warnings for missing GCS markings.
-The @samp{-z gcs-report[=none|warning|error]} specifies how to report the missing
-GCS markings on inputs, i.e. the GNU_PROPERTY_AARCH64_FEATURE_1_GCS property.
-By default, if the option is omitted and @samp{-z gcs} is provided, warnings are
-emitted.
+The @samp{-z gcs-report[=none|warning|error]} option specifies how to report the
+missing GCS markings on inputs, i.e. the GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+property. By default, if the option is omitted and @samp{-z gcs} is provided,
+warnings are emitted.
 @itemize
 @item @samp{none} disables any warning messages.
 @item @samp{warning} (the default value) emits warning messages when input objects
-composing the link unit are missing GCS markings, or dynamic objects containing
-external symbols used in the link unit.
+composing the link unit are missing GCS markings.
+@item @samp{error} turns the warning messages into errors.
+@end itemize
+If issues are found, a maximum of 20 messages will be emitted, and then a summary
+with the total number of issues will be displayed at the end.
+
+@kindex -z gcs-report-dynamic=none|warning|error
+@cindex Control warnings for missing GCS markings on dynamic input objects.
+The @samp{-z gcs-report-dynamic=none|warning|error} option specifies how to
+report the missing GCS markings on dynamic input objects, i.e. the
+GNU_PROPERTY_AARCH64_FEATURE_1_GCS property. By default, if the option is
+omitted, it inherits the value of @samp{-z gcs-report}. However, the inherited
+value is capped to @samp{warning} as some user might want to only report errors
+in the currently built module, and not the shared dependencies. It is therefore
+necessary to use an explicit @samp{-z gcs-report-dynamic=error} option if you
+want the linker to error on GCS issues in the shared libraries.
+@itemize
+@item @samp{none} disables any warning messages.
+@item @samp{warning} emits warning messages when dynamic objects are missing
+GCS markings.
 @item @samp{error} turns the warning messages into errors.
 @end itemize
 If issues are found, a maximum of 20 messages will be emitted, and then a summary

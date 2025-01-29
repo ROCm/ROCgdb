@@ -231,15 +231,16 @@ ppcobsd_sigtramp_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_register (cache, this_frame, regnum);
 }
 
-static const struct frame_unwind ppcobsd_sigtramp_frame_unwind = {
+static const struct frame_unwind_legacy ppcobsd_sigtramp_frame_unwind (
   "ppc openbsd sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   ppcobsd_sigtramp_frame_this_id,
   ppcobsd_sigtramp_frame_prev_register,
   NULL,
   ppcobsd_sigtramp_frame_sniffer
-};
+);
 
 
 static void

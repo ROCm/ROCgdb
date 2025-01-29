@@ -72,6 +72,7 @@ enum riscv_csr_class
   CSR_CLASS_F,		/* f-ext only */
   CSR_CLASS_ZKR,	/* zkr only */
   CSR_CLASS_ZCMT,	/* zcmt only */
+  CSR_CLASS_ZICFISS,	/* Zicfiss */
   CSR_CLASS_V,		/* rvv only */
   CSR_CLASS_DEBUG,	/* debug CSR */
   CSR_CLASS_H,		/* hypervisor */
@@ -82,6 +83,7 @@ enum riscv_csr_class
   CSR_CLASS_SMCSRIND,		/* Smcsrind */
   CSR_CLASS_SMCNTRPMF,		/* Smcntrpmf */
   CSR_CLASS_SMCNTRPMF_32,	/* Smcntrpmf, rv32 only */
+  CSR_CLASS_SMCTR,		/* Smctr */
   CSR_CLASS_SMRNMI,		/* Smrnmi */
   CSR_CLASS_SMSTATEEN,		/* Smstateen only */
   CSR_CLASS_SMSTATEEN_32,	/* Smstateen RV32 only */
@@ -102,6 +104,7 @@ enum riscv_csr_class
   CSR_CLASS_SSTC_AND_H,		/* Sstc only (with H) */
   CSR_CLASS_SSTC_32,		/* Sstc RV32 only */
   CSR_CLASS_SSTC_AND_H_32,	/* Sstc RV32 only (with H) */
+  CSR_CLASS_SSCTR,		/* Ssctr */
   CSR_CLASS_XTHEADVECTOR,	/* xtheadvector only */
 };
 
@@ -1074,6 +1077,9 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_ZCMT:
       extension = "zcmt";
       break;
+    case CSR_CLASS_ZICFISS:
+      extension = "zicfiss";
+      break;
     case CSR_CLASS_V:
       extension = "zve32x";
       break;
@@ -1105,6 +1111,7 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_SMSTATEEN:
       extension = "smstateen";
       break;
+    case CSR_CLASS_SMCTR: extension = "smctr"; break;
     case CSR_CLASS_SSAIA:
     case CSR_CLASS_SSAIA_AND_H:
     case CSR_CLASS_SSAIA_32:
@@ -1150,6 +1157,7 @@ riscv_csr_address (const char *csr_name,
 		      || csr_class == CSR_CLASS_SSTC_AND_H_32);
       extension = "sstc";
       break;
+    case CSR_CLASS_SSCTR: extension = "ssctr"; break;
     case CSR_CLASS_DEBUG:
       break;
     case CSR_CLASS_XTHEADVECTOR:
@@ -2800,10 +2808,7 @@ riscv_is_priv_insn (insn_t insn)
   return (((insn ^ MATCH_SRET) & MASK_SRET) == 0
 	  || ((insn ^ MATCH_MRET) & MASK_MRET) == 0
 	  || ((insn ^ MATCH_SFENCE_VMA) & MASK_SFENCE_VMA) == 0
-	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0
-  /* The sfence.vm is dropped in the v1.10 priv specs, but we still need to
-     check it here to keep the compatible.  */
-	  || ((insn ^ MATCH_SFENCE_VM) & MASK_SFENCE_VM) == 0);
+	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0);
 }
 
 static symbolS *deferred_sym_rootP;

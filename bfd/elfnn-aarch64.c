@@ -2631,6 +2631,11 @@ struct elf_aarch64_link_hash_table
   /* The bytes of the subsequent PLT entry.  */
   const bfd_byte *plt_entry;
 
+  /* PLT entries have a common shape, but may have some pre-amble
+     instructions (such as BTI).  This delta is used to factor this
+     out of the common code.  */
+  int plt_entry_delta;
+
   /* For convenience in allocate_dynrelocs.  */
   bfd *obfd;
 
@@ -2924,6 +2929,7 @@ elfNN_aarch64_link_hash_table_create (bfd *abfd)
   ret->plt_header_size = PLT_ENTRY_SIZE;
   ret->plt0_entry = elfNN_aarch64_small_plt0_entry;
   ret->plt_entry_size = PLT_SMALL_ENTRY_SIZE;
+  ret->plt_entry_delta = 0;
   ret->plt_entry = elfNN_aarch64_small_plt_entry;
   ret->tlsdesc_plt_entry_size = PLT_TLSDESC_ENTRY_SIZE;
   ret->obfd = abfd;
@@ -4850,6 +4856,7 @@ elfNN_aarch64_build_stubs (struct bfd_link_info *info)
       stub_sec->contents = bfd_zalloc (htab->stub_bfd, size);
       if (stub_sec->contents == NULL && size != 0)
 	return false;
+      stub_sec->alloced = 1;
       stub_sec->size = 0;
 
       /* Add a branch around the stub section, and a nop, to keep it 8 byte
@@ -4958,15 +4965,17 @@ setup_plt_values (struct bfd_link_info *link_info,
       globals->plt0_entry = elfNN_aarch64_small_plt0_bti_entry;
 
       /* Only in ET_EXEC we need PLTn with BTI.  */
-      if (bfd_link_pde (link_info))
+      if (bfd_link_executable (link_info))
 	{
 	  globals->plt_entry_size = PLT_BTI_PAC_SMALL_ENTRY_SIZE;
 	  globals->plt_entry = elfNN_aarch64_small_plt_bti_pac_entry;
+	  globals->plt_entry_delta = 4;
 	}
       else
 	{
 	  globals->plt_entry_size = PLT_PAC_SMALL_ENTRY_SIZE;
 	  globals->plt_entry = elfNN_aarch64_small_plt_pac_entry;
+	  globals->plt_entry_delta = 0;
 	}
     }
   else if (plt_type == PLT_BTI)
@@ -4974,10 +4983,11 @@ setup_plt_values (struct bfd_link_info *link_info,
       globals->plt0_entry = elfNN_aarch64_small_plt0_bti_entry;
 
       /* Only in ET_EXEC we need PLTn with BTI.  */
-      if (bfd_link_pde (link_info))
+      if (bfd_link_executable (link_info))
 	{
 	  globals->plt_entry_size = PLT_BTI_SMALL_ENTRY_SIZE;
 	  globals->plt_entry = elfNN_aarch64_small_plt_bti_entry;
+	  globals->plt_entry_delta = 4;
 	}
     }
   else if (plt_type == PLT_PAC)
@@ -5035,8 +5045,22 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
     }
 
   elf_aarch64_tdata (output_bfd)->sw_protections = *sw_protections;
+  /* Inherit the value from '-z gcs-report' if the option '-z gcs-report-dynamic'
+     was not set on the command line.  However, the inheritance mechanism is
+     capped to avoid inheriting the error level from -g gcs-report as the user
+     might want to continue to build a module without rebuilding all the shared
+     libraries.  If a user also wants to error GCS issues in the shared
+     libraries, '-z gcs-report-dynamic=error' will have to be specified
+     explicitly.  */
+  if (sw_protections->gcs_report_dynamic == MARKING_UNSET)
+    elf_aarch64_tdata (output_bfd)->sw_protections.gcs_report_dynamic
+      = (sw_protections->gcs_report == MARKING_ERROR)
+      ? MARKING_WARN
+      : sw_protections->gcs_report;
+
   elf_aarch64_tdata (output_bfd)->n_bti_issues = 0;
   elf_aarch64_tdata (output_bfd)->n_gcs_issues = 0;
+  elf_aarch64_tdata (output_bfd)->n_gcs_dynamic_issues = 0;
 
   setup_plt_values (link_info, sw_protections->plt_type);
 }
@@ -9392,6 +9416,7 @@ elfNN_aarch64_finish_relative_relocs (struct bfd_link_info *info)
   srelrdyn->contents = bfd_alloc (dynobj, srelrdyn->size);
   if (srelrdyn->contents == NULL)
     return false;
+  srelrdyn->alloced = 1;
   bfd_vma *addr = htab->relr_sorted;
   bfd_byte *loc = srelrdyn->contents;
   for (bfd_size_type i = 0; i < htab->relr_count; )
@@ -9458,6 +9483,7 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
+	  s->alloced = 1;
 	}
     }
 
@@ -9709,6 +9735,7 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
+      s->alloced = 1;
     }
 
   if (htab->root.dynamic_sections_created)
@@ -9823,11 +9850,9 @@ elfNN_aarch64_create_small_pltn_entry (struct elf_link_hash_entry *h,
   /* Copy in the boiler-plate for the PLTn entry.  */
   memcpy (plt_entry, htab->plt_entry, htab->plt_entry_size);
 
-  /* First instruction in BTI enabled PLT stub is a BTI
-     instruction so skip it.  */
-  if (elf_aarch64_tdata (output_bfd)->sw_protections.plt_type & PLT_BTI
-      && elf_elfheader (output_bfd)->e_type == ET_EXEC)
-    plt_entry = plt_entry + 4;
+  /* Allow for any delta (such as a BTI instruction) before the common
+     sequence.  */
+  plt_entry += htab->plt_entry_delta;
 
   /* Fill in the top 21 bits for this: ADRP x16, PLT_GOT + n * 8.
      ADRP:   ((PG(S+A)-PG(P)) >> 12) & 0x1fffff */

@@ -542,15 +542,16 @@ msp430_prev_register (const frame_info_ptr &this_frame,
     return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind msp430_unwind = {
+static const struct frame_unwind_legacy msp430_unwind (
   "msp430 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   msp430_this_id,
   msp430_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Implement the "dwarf2_reg_to_regnum" gdbarch method.  */
 

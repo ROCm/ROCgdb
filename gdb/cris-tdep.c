@@ -435,16 +435,16 @@ cris_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind cris_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy cris_sigtramp_frame_unwind (
   "cris sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   cris_sigtramp_frame_this_id,
   cris_sigtramp_frame_prev_register,
   NULL,
   cris_sigtramp_frame_sniffer
-};
+);
 
 static int
 crisv32_single_step_through_delay (struct gdbarch *gdbarch,
@@ -900,16 +900,16 @@ cris_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   return sp;
 }
 
-static const struct frame_unwind cris_frame_unwind = 
-{
+static const struct frame_unwind_legacy cris_frame_unwind (
   "cris prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   cris_frame_this_id,
   cris_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 cris_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)

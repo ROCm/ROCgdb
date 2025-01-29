@@ -32,6 +32,7 @@
 #include "regcache.h"
 #include "value.h"
 #include "record.h"
+#include "extract-store-integer.h"
 
 #include "complaints.h"
 #include "dwarf2/frame.h"
@@ -183,9 +184,6 @@ static ULONGEST read_encoded_value (struct comp_unit *unit, gdb_byte encoding,
 				    unsigned int *bytes_read_ptr,
 				    unrelocated_addr func_base);
 
-
-/* See dwarf2/frame.h.  */
-bool dwarf2_frame_unwinders_enabled_p = true;
 
 /* Store the length the expression for the CFA in the `cfa_reg' field,
    which is unused in that case.  */
@@ -1372,9 +1370,6 @@ static int
 dwarf2_frame_sniffer (const struct frame_unwind *self,
 		      const frame_info_ptr &this_frame, void **this_cache)
 {
-  if (!dwarf2_frame_unwinders_enabled_p)
-    return 0;
-
   /* Grab an address that is guaranteed to reside somewhere within the
      function.  get_frame_pc(), with a no-return next function, can
      end up returning something past the end of this function's body.
@@ -1395,30 +1390,30 @@ dwarf2_frame_sniffer (const struct frame_unwind *self,
   if (fde->cie->signal_frame
       || dwarf2_frame_signal_frame_p (get_frame_arch (this_frame),
 				      this_frame))
-    return self->type == SIGTRAMP_FRAME;
+    return self->type () == SIGTRAMP_FRAME;
 
-  if (self->type != NORMAL_FRAME)
+  if (self->type () != NORMAL_FRAME)
     return 0;
 
   return 1;
 }
 
-static const struct frame_unwind dwarf2_frame_unwind =
-{
+static const struct frame_unwind_legacy dwarf2_frame_unwind (
   "dwarf2",
   NORMAL_FRAME,
+  FRAME_UNWIND_DEBUGINFO,
   dwarf2_frame_unwind_stop_reason,
   dwarf2_frame_this_id,
   dwarf2_frame_prev_register,
   NULL,
   dwarf2_frame_sniffer,
   dwarf2_frame_dealloc_cache
-};
+);
 
-static const struct frame_unwind dwarf2_signal_frame_unwind =
-{
+static const struct frame_unwind_legacy dwarf2_signal_frame_unwind (
   "dwarf2 signal",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_DEBUGINFO,
   dwarf2_frame_unwind_stop_reason,
   dwarf2_frame_this_id,
   dwarf2_frame_prev_register,
@@ -1427,7 +1422,7 @@ static const struct frame_unwind dwarf2_signal_frame_unwind =
 
   /* TAILCALL_CACHE can never be in such frame to need dealloc_cache.  */
   NULL
-};
+);
 
 /* Append the DWARF-2 frame unwinders to GDBARCH's list.  */
 
@@ -2319,34 +2314,10 @@ dwarf2_build_frame_info (struct objfile *objfile)
   set_comp_unit (objfile, unit.release ());
 }
 
-/* Handle 'maintenance show dwarf unwinders'.  */
-
-static void
-show_dwarf_unwinders_enabled_p (struct ui_file *file, int from_tty,
-				struct cmd_list_element *c,
-				const char *value)
-{
-  gdb_printf (file,
-	      _("The DWARF stack unwinders are currently %s.\n"),
-	      value);
-}
-
 void _initialize_dwarf2_frame ();
 void
 _initialize_dwarf2_frame ()
 {
-  add_setshow_boolean_cmd ("unwinders", class_obscure,
-			   &dwarf2_frame_unwinders_enabled_p , _("\
-Set whether the DWARF stack frame unwinders are used."), _("\
-Show whether the DWARF stack frame unwinders are used."), _("\
-When enabled the DWARF stack frame unwinders can be used for architectures\n\
-that support the DWARF unwinders.  Enabling the DWARF unwinders for an\n\
-architecture that doesn't support them will have no effect."),
-			   NULL,
-			   show_dwarf_unwinders_enabled_p,
-			   &set_dwarf_cmdlist,
-			   &show_dwarf_cmdlist);
-
 #if GDB_SELF_TEST
   selftests::register_test_foreach_arch ("execute_cfa_program",
 					 selftests::execute_cfa_program_test);

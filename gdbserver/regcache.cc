@@ -42,8 +42,8 @@ get_thread_regcache (thread_info *thread, bool fetch)
 
       gdb_assert (proc->tdesc != NULL);
 
-      regcache = new_register_cache (proc->tdesc);
-      thread->set_regcache (regcache);
+      thread->set_regcache (std::make_unique<struct regcache> (proc->tdesc));
+      regcache = thread->regcache ();
     }
 
   if (fetch && !regcache->registers_fetched)
@@ -52,8 +52,7 @@ get_thread_regcache (thread_info *thread, bool fetch)
 
       switch_to_thread (thread);
       /* Invalidate all registers, to prevent stale left-overs.  */
-      memset (regcache->register_status, REG_UNAVAILABLE,
-	      regcache->tdesc->reg_defs.size ());
+      regcache->reset (REG_UNKNOWN);
       fetch_inferior_registers (regcache, -1);
       regcache->registers_fetched = true;
     }
@@ -112,70 +111,50 @@ regcache_invalidate (void)
 
 #endif
 
-struct regcache *
-init_register_cache (struct regcache *regcache,
-		     const struct target_desc *tdesc,
-		     unsigned char *regbuf)
+regcache::regcache (const target_desc *tdesc, unsigned char *regbuf)
+  : tdesc (tdesc), registers (regbuf)
 {
-  if (regbuf == NULL)
-    {
-#ifndef IN_PROCESS_AGENT
-      /* Make sure to zero-initialize the register cache when it is
-	 created, in case there are registers the target never
-	 fetches.  This way they'll read as zero instead of
-	 garbage.  */
-      regcache->tdesc = tdesc;
-      regcache->registers
-	= (unsigned char *) xcalloc (1, tdesc->registers_size);
-      regcache->registers_owned = true;
-      regcache->register_status
-	= (unsigned char *) xmalloc (tdesc->reg_defs.size ());
-      memset ((void *) regcache->register_status, REG_UNAVAILABLE,
-	      tdesc->reg_defs.size ());
-#else
-      gdb_assert_not_reached ("can't allocate memory from the heap");
-#endif
-    }
-  else
-    {
-      regcache->tdesc = tdesc;
-      regcache->registers = regbuf;
-      regcache->registers_owned = false;
-#ifndef IN_PROCESS_AGENT
-      regcache->register_status = NULL;
-#endif
-    }
-
-  regcache->registers_fetched = false;
-
-  return regcache;
+  gdb_assert (regbuf != nullptr);
 }
 
 #ifndef IN_PROCESS_AGENT
 
-struct regcache *
-new_register_cache (const struct target_desc *tdesc)
+regcache::regcache (const target_desc *tdesc)
+  : tdesc (tdesc), registers_owned (true)
 {
-  struct regcache *regcache = new struct regcache;
-
   gdb_assert (tdesc->registers_size != 0);
 
-  return init_register_cache (regcache, tdesc, NULL);
+  /* Make sure to zero-initialize the register cache when it is
+     created, in case there are registers the target never
+     fetches.  This way they'll read as zero instead of
+     garbage.  */
+  this->registers
+    = (unsigned char *) xmalloc (tdesc->registers_size);
+  size_t num_regs = tdesc->reg_defs.size ();
+  m_register_status.reset (new enum register_status[num_regs]);
+  reset (REG_UNKNOWN);
 }
 
-void
-free_register_cache (struct regcache *regcache)
+regcache::~regcache ()
 {
-  if (regcache)
-    {
-      if (regcache->registers_owned)
-	free (regcache->registers);
-      free (regcache->register_status);
-      delete regcache;
-    }
+  if (registers_owned)
+    free (registers);
 }
 
 #endif
+
+void
+regcache::reset (enum register_status status)
+{
+  /* Zero-initialize the register cache, in case there are registers
+     the target never fetches.  This way they'll read as zero instead
+     of garbage.  */
+  memset (this->registers, 0, this->tdesc->registers_size);
+#ifndef IN_PROCESS_AGENT
+  for (int i = 0; i < this->tdesc->reg_defs.size (); i++)
+    set_register_status (i, status);
+#endif
+}
 
 void
 regcache::copy_from (regcache *src)
@@ -186,8 +165,8 @@ regcache::copy_from (regcache *src)
 
   memcpy (this->registers, src->registers, src->tdesc->registers_size);
 #ifndef IN_PROCESS_AGENT
-  if (this->register_status != nullptr && src->register_status != nullptr)
-    memcpy (this->register_status, src->register_status,
+  if (m_register_status != nullptr && src->m_register_status != nullptr)
+    memcpy (m_register_status.get (), src->m_register_status.get (),
 	    src->tdesc->reg_defs.size ());
 #endif
   this->registers_fetched = src->registers_fetched;
@@ -267,7 +246,6 @@ free_register_cache_thread (thread_info *thread)
   if (regcache != NULL)
     {
       regcache_invalidate_thread (thread);
-      free_register_cache (regcache);
       thread->set_regcache (nullptr);
     }
 }
@@ -381,26 +359,14 @@ supply_register_by_name_zeroed (struct regcache *regcache,
 void
 supply_regblock (struct regcache *regcache, const void *buf)
 {
-  if (buf)
-    {
-      const struct target_desc *tdesc = regcache->tdesc;
+  gdb_assert (buf != nullptr);
+  const struct target_desc *tdesc = regcache->tdesc;
 
-      memcpy (regcache->registers, buf, tdesc->registers_size);
+  memcpy (regcache->registers, buf, tdesc->registers_size);
 #ifndef IN_PROCESS_AGENT
-      for (int i = 0; i < tdesc->reg_defs.size (); i++)
-	regcache->set_register_status (i, REG_VALID);
+  for (int i = 0; i < tdesc->reg_defs.size (); i++)
+    regcache->set_register_status (i, REG_VALID);
 #endif
-    }
-  else
-    {
-      const struct target_desc *tdesc = regcache->tdesc;
-
-      memset (regcache->registers, 0, tdesc->registers_size);
-#ifndef IN_PROCESS_AGENT
-      for (int i = 0; i < tdesc->reg_defs.size (); i++)
-	regcache->set_register_status (i, REG_UNAVAILABLE);
-#endif
-    }
 }
 
 #ifndef IN_PROCESS_AGENT
@@ -510,8 +476,8 @@ regcache::get_register_status (int regnum) const
 {
 #ifndef IN_PROCESS_AGENT
   gdb_assert (regnum >= 0 && regnum < tdesc->reg_defs.size ());
-  if (register_status != nullptr)
-    return (enum register_status) (register_status[regnum]);
+  if (m_register_status != nullptr)
+    return m_register_status[regnum];
   else
     return REG_VALID;
 #else
@@ -524,8 +490,8 @@ regcache::set_register_status (int regnum, enum register_status status)
 {
 #ifndef IN_PROCESS_AGENT
   gdb_assert (regnum >= 0 && regnum < tdesc->reg_defs.size ());
-  if (register_status != nullptr)
-    register_status[regnum] = status;
+  if (m_register_status != nullptr)
+    m_register_status[regnum] = status;
 #endif
 }
 

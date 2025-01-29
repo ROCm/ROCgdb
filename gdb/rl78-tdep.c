@@ -1183,16 +1183,16 @@ rl78_prev_register (const frame_info_ptr &this_frame,
     return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind rl78_unwind =
-{
+static const struct frame_unwind_legacy rl78_unwind (
   "rl78 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   rl78_this_id,
   rl78_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Implement the "dwarf_reg_to_regnum" gdbarch method.  */
 

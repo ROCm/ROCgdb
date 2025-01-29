@@ -315,12 +315,11 @@ plugin_opt_plugin_arg (const char *arg)
 static bfd *
 plugin_get_ir_dummy_bfd (const char *name, bfd *srctemplate)
 {
-  bfd *abfd;
-  bool bfd_plugin_target;
-
-  bfd_plugin_target = bfd_plugin_target_p (srctemplate->xvec);
-  abfd = bfd_create (concat (name, IRONLY_SUFFIX, (const char *) NULL),
-		     bfd_plugin_target ? link_info.output_bfd : srctemplate);
+  bool bfd_plugin_target = bfd_plugin_target_p (srctemplate->xvec);
+  char *filename = concat (name, IRONLY_SUFFIX, (const char *) NULL);
+  bfd *abfd = bfd_create (filename, (bfd_plugin_target
+				     ? link_info.output_bfd : srctemplate));
+  free (filename);
   if (abfd != NULL)
     {
       abfd->flags |= BFD_LINKER_CREATED | BFD_PLUGIN;
@@ -367,7 +366,8 @@ asymbol_from_plugin_symbol (bfd *abfd, asymbol *asym,
 
   asym->the_bfd = abfd;
   asym->name = (ldsym->version
-		? concat (ldsym->name, "@", ldsym->version, (const char *) NULL)
+		? stat_concat (ldsym->name, "@", ldsym->version,
+			       (const char *) NULL)
 		: ldsym->name);
   asym->value = 0;
   switch (ldsym->def)
@@ -379,11 +379,11 @@ asymbol_from_plugin_symbol (bfd *abfd, asymbol *asym,
       flags |= BSF_GLOBAL;
       if (ldsym->comdat_key)
 	{
-	  char *name = concat (".gnu.linkonce.t.", ldsym->comdat_key,
-			       (const char *) NULL);
+	  char *name = stat_concat (".gnu.linkonce.t.", ldsym->comdat_key,
+				    (const char *) NULL);
 	  section = bfd_get_section_by_name (abfd, name);
 	  if (section != NULL)
-	    free (name);
+	    stat_free (name);
 	  else
 	    {
 	      flagword sflags;
@@ -1121,7 +1121,7 @@ plugin_load_plugins (void)
     }
 
   /* Allocate tv array and initialise constant part.  */
-  my_tv = xmalloc ((max_args + 1 + tv_header_size) * sizeof *my_tv);
+  my_tv = stat_alloc ((max_args + 1 + tv_header_size) * sizeof (*my_tv));
   set_tv_header (my_tv);
 
   /* Pass over plugins again, activating them.  */

@@ -416,6 +416,9 @@
 	csr vsieh
 	csr vsiph
 
+	# Zicfiss
+	csr ssp
+
 	# Sscsrind
 	csr siselect
 	csr sireg
@@ -469,6 +472,13 @@
 	csr stimecmph
 	csr vstimecmp
 	csr vstimecmph
+
+	# Smctr/Ssctr
+	csr sctrctl
+	csr sctrstatus
+	csr sctrdepth
+	csr vsctrctl
+	csr mctrctl
 
 	# Supported in previous priv spec, but dropped now
 

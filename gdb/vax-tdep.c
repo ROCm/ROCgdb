@@ -386,16 +386,16 @@ vax_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_prev_register (this_frame, cache->saved_regs, regnum);
 }
 
-static const struct frame_unwind vax_frame_unwind =
-{
+static const struct frame_unwind_legacy vax_frame_unwind (
   "vax prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   vax_frame_this_id,
   vax_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 
 static CORE_ADDR
