@@ -36,7 +36,6 @@
 #include "dwarf2/comp-unit-head.h"
 #include "dwarf2/cu.h"
 #include "dwarf2/index-cache.h"
-#include "dwarf2/index-common.h"
 #include "dwarf2/leb.h"
 #include "dwarf2/line-header.h"
 #include "dwarf2/dwz.h"
@@ -743,7 +742,7 @@ show_dwarf_max_cache_age (struct ui_file *file, int from_tty,
 }
 
 /* When true, wait for DWARF reading to be complete.  */
-static bool dwarf_synchronous = true;
+static bool dwarf_synchronous = false;
 
 /* "Show" callback for "maint set dwarf synchronous".  */
 static void
