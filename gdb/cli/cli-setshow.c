@@ -28,6 +28,7 @@
 #include "cli/cli-decode.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-setshow.h"
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 
 /* Return true if the change of command parameter should be notified.  */
@@ -138,10 +139,14 @@ deprecated_show_value_hack (struct ui_file *file,
     {
     case var_string:
     case var_string_noescape:
-    case var_optional_filename:
-    case var_filename:
     case var_enum:
       gdb_printf (file, (" is \"%s\".\n"), value);
+      break;
+
+    case var_optional_filename:
+    case var_filename:
+      gdb_printf ((" is \"%ps\".\n"),
+		  styled_string (file_name_style.style (), value));
       break;
 
     default:
@@ -444,6 +449,13 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	option_changed = c->var->set<const char *> (match);
       }
       break;
+    case var_color:
+      {
+	ui_file_style::color color = parse_var_color (arg);
+	ui_file_style::color approx_color = color.approximate (colorsupport ());
+	option_changed = c->var->set<ui_file_style::color> (approx_color);
+      }
+      break;
     default:
       error (_("gdb internal error: bad var_type in do_setshow_command"));
     }
@@ -521,6 +533,14 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	  interps_notify_param_changed
 	    (name, c->var->get<const char *> ());
 	  break;
+	case var_color:
+	  {
+	    const ui_file_style::color &color
+	      = c->var->get<ui_file_style::color> ();
+	    interps_notify_param_changed
+	      (name, color.to_string ().c_str ());
+	  }
+	  break;
 	case var_boolean:
 	  {
 	    const char *opt = c->var->get<bool> () ? "on" : "off";
@@ -584,6 +604,12 @@ get_setshow_command_value_string (const setting &var)
 	const char *value = var.get<const char *> ();
 	if (value != nullptr)
 	  stb.puts (value);
+      }
+      break;
+    case var_color:
+      {
+	const ui_file_style::color &value = var.get<ui_file_style::color> ();
+	stb.puts (value.to_string ().c_str ());
       }
       break;
     case var_boolean:

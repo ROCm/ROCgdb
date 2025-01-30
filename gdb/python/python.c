@@ -77,6 +77,7 @@ static const char *gdbpy_should_print_stack = python_excp_message;
 #include "interps.h"
 #include "event-top.h"
 #include "py-event.h"
+#include "py-color.h"
 
 /* True if Python has been successfully initialized, false
    otherwise.  */
@@ -509,6 +510,12 @@ gdbpy_parameter_value (const setting &var)
 	  str = var.get<std::string> ().c_str ();
 
 	return host_string_to_python_string (str).release ();
+      }
+
+    case var_color:
+      {
+	const ui_file_style::color &color = var.get<ui_file_style::color> ();
+	return create_color_object (color).release ();
       }
 
     case var_boolean:

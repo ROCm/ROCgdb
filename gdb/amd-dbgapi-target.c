@@ -233,7 +233,7 @@ struct amd_dbgapi_inferior_info
      enablement.  */
   struct dbgapi_feature_request precise_alu_exceptions;
 
-  std::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
+  gdb::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
     breakpoint_map;
 
@@ -243,7 +243,7 @@ struct amd_dbgapi_inferior_info
   /* List of pending events the amd-dbgapi target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
 
-  std::unordered_map<thread_info *,
+  gdb::unordered_map<thread_info *,
 		     decltype (amd_dbgapi_displaced_stepping_id_t::handle)>
     stepping_id_map;
 
@@ -254,7 +254,7 @@ struct amd_dbgapi_inferior_info
 
      wave_info objects are added when we first see the wave, and
      removed from a thread_deleted observer.  */
-  std::unordered_map<decltype (amd_dbgapi_wave_id_t::handle), wave_info>
+  gdb::unordered_map<decltype (amd_dbgapi_wave_id_t::handle), wave_info>
     wave_info_map;
 };
 

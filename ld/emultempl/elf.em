@@ -99,6 +99,7 @@ fragment <<EOF
   link_info.default_execstack = DEFAULT_LD_EXECSTACK;
   link_info.error_execstack = DEFAULT_LD_ERROR_EXECSTACK;
   link_info.warn_is_error_for_rwx_segments = DEFAULT_LD_ERROR_RWX_SEGMENTS;
+  link_info.memory_seal = DEFAULT_LD_Z_MEMORY_SEAL;
 }
 
 EOF
@@ -1083,6 +1084,10 @@ fragment <<EOF
 	link_info.combreloc = false;
       else if (strcmp (optarg, "nocopyreloc") == 0)
 	link_info.nocopyreloc = true;
+      else if (strcmp (optarg, "memory-seal") == 0)
+       link_info.memory_seal = true;
+      else if (strcmp (optarg, "nomemory-seal") == 0)
+       link_info.memory_seal = false;
 EOF
 if test -n "$COMMONPAGESIZE"; then
 fragment <<EOF
@@ -1173,6 +1178,7 @@ LDEMUL_BEFORE_PLACE_ORPHANS=${LDEMUL_BEFORE_PLACE_ORPHANS-ldelf_before_place_orp
 LDEMUL_AFTER_ALLOCATION=${LDEMUL_AFTER_ALLOCATION-gld${EMULATION_NAME}_after_allocation}
 LDEMUL_SET_OUTPUT_ARCH=${LDEMUL_SET_OUTPUT_ARCH-ldelf_set_output_arch}
 LDEMUL_BEFORE_ALLOCATION=${LDEMUL_BEFORE_ALLOCATION-gld${EMULATION_NAME}_before_allocation}
+LDEMUL_FINISH=${LDEMUL_FINISH-ldelf_finish}
 LDEMUL_OPEN_DYNAMIC_ARCHIVE=${LDEMUL_OPEN_DYNAMIC_ARCHIVE-ldelf_open_dynamic_archive}
 LDEMUL_PLACE_ORPHAN=${LDEMUL_PLACE_ORPHAN-ldelf_place_orphan}
 LDEMUL_ADD_OPTIONS=gld${EMULATION_NAME}_add_options

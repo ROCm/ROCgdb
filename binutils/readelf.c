@@ -5964,6 +5964,7 @@ get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_GNU_ATTRIBUTES:          return "GNU_ATTRIBUTES";
     case SHT_GNU_HASH:                return "GNU_HASH";
     case SHT_GNU_LIBLIST:             return "GNU_LIBLIST";
+    case SHT_GNU_OBJECT_ONLY:	      return "GNU_OBJECT_ONLY";
 
     case SHT_SUNW_move:               return "SUNW_MOVE";
     case SHT_SUNW_COMDAT:             return "SUNW_COMDAT";
@@ -21497,6 +21498,12 @@ print_gnu_property_note (Filedata * filedata, Elf_Internal_Note * pnote)
 
 	    case GNU_PROPERTY_NO_COPY_ON_PROTECTED:
 	      printf ("no copy on protected ");
+	      if (datasz)
+		printf (_("<corrupt length: %#x> "), datasz);
+	      goto next;
+
+	    case GNU_PROPERTY_MEMORY_SEAL:
+	      printf ("memory seal ");
 	      if (datasz)
 		printf (_("<corrupt length: %#x> "), datasz);
 	      goto next;

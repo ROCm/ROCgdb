@@ -36,6 +36,7 @@
 #include <algorithm>
 #include "completer.h"
 #include "readline/tilde.h"
+#include "cli/cli-style.h"
 
 /* Types.  */
 
@@ -1237,8 +1238,8 @@ show_tdesc_filename_cmd (struct ui_file *file, int from_tty,
 
   if (value != NULL && *value != '\0')
     gdb_printf (file,
-		_("The target description will be read from \"%s\".\n"),
-		value);
+		_("The target description will be read from \"%ps\".\n"),
+		styled_string (file_name_style.style (), value));
   else
     gdb_printf (file, _("The target description will be "
 			"read from the target.\n"));

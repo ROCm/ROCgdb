@@ -121,7 +121,11 @@ private:
   /* The program name, adjusted if needed.  */
   std::string m_path;
 } program_path;
-static std::vector<char *> program_args;
+
+/* All program arguments are merged into a single string.  */
+
+static std::string program_args;
+
 static std::string wrapper_argv;
 
 /* The PID of the originally created or attached inferior.  Used to
@@ -1965,29 +1969,6 @@ handle_qxfer_siginfo (const char *annex,
   return the_target->qxfer_siginfo (annex, readbuf, writebuf, offset, len);
 }
 
-/* Handle qXfer:statictrace:read.  */
-
-static int
-handle_qxfer_statictrace (const char *annex,
-			  gdb_byte *readbuf, const gdb_byte *writebuf,
-			  ULONGEST offset, LONGEST len)
-{
-  client_state &cs = get_client_state ();
-  ULONGEST nbytes;
-
-  if (writebuf != NULL)
-    return -2;
-
-  if (annex[0] != '\0' || current_thread == NULL 
-      || cs.current_traceframe == -1)
-    return -1;
-
-  if (traceframe_read_sdata (cs.current_traceframe, offset,
-			     readbuf, len, &nbytes))
-    return -1;
-  return nbytes;
-}
-
 /* Helper for handle_qxfer_threads_proper.
    Emit the XML to describe the thread of INF.  */
 
@@ -2324,7 +2305,6 @@ static const struct qxfer qxfer_packets[] =
     { "libraries-svr4", handle_qxfer_libraries_svr4 },
     { "osdata", handle_qxfer_osdata },
     { "siginfo", handle_qxfer_siginfo },
-    { "statictrace", handle_qxfer_statictrace },
     { "threads", handle_qxfer_threads },
     { "traceframe-info", handle_qxfer_traceframe_info },
   };
@@ -2842,9 +2822,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	  strcat (own_buf, ";DisconnectedTracing+");
 	  if (gdb_supports_qRelocInsn && target_supports_fast_tracepoints ())
 	    strcat (own_buf, ";FastTracepoints+");
-	  strcat (own_buf, ";StaticTracepoints+");
 	  strcat (own_buf, ";InstallInTrace+");
-	  strcat (own_buf, ";qXfer:statictrace:read+");
 	  strcat (own_buf, ";qXfer:traceframe-info:read+");
 	  strcat (own_buf, ";EnableDisableTracepoints+");
 	  strcat (own_buf, ";QTBuffer:size+");
@@ -3484,9 +3462,8 @@ handle_v_run (char *own_buf)
   else
     program_path.set (new_program_name.get ());
 
-  /* Free the old argv and install the new one.  */
-  free_vector_argv (program_args);
-  program_args = new_argv;
+  program_args = construct_inferior_arguments (new_argv);
+  free_vector_argv (new_argv);
 
   try
     {
@@ -4372,12 +4349,11 @@ captured_main (int argc, char *argv[])
 
   if (pid == 0 && *next_arg != NULL)
     {
-      int i, n;
-
-      n = argc - (next_arg - argv);
       program_path.set (next_arg[0]);
-      for (i = 1; i < n; i++)
-	program_args.push_back (xstrdup (next_arg[i]));
+
+      int n = argc - (next_arg - argv);
+      program_args
+	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]});
 
       /* Wait till we are at first instruction in program.  */
       target_create_inferior (program_path.get (), program_args);

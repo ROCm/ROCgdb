@@ -3015,6 +3015,7 @@ static const struct bfd_elf_special_section special_sections_g[] =
   { STRING_COMMA_LEN (".gnu.linkonce.p"), -2, SHT_PROGBITS,    SHF_ALLOC + SHF_WRITE },
   { STRING_COMMA_LEN (".gnu.lto_"),	  -1, SHT_PROGBITS,    SHF_EXCLUDE },
   { STRING_COMMA_LEN (".got"),		   0, SHT_PROGBITS,    SHF_ALLOC + SHF_WRITE },
+  { STRING_COMMA_LEN (".gnu_object_only"), 0, SHT_GNU_OBJECT_ONLY, SHF_EXCLUDE },
   { STRING_COMMA_LEN (".gnu.version"),	   0, SHT_GNU_versym,  0 },
   { STRING_COMMA_LEN (".gnu.version_d"),   0, SHT_GNU_verdef,  0 },
   { STRING_COMMA_LEN (".gnu.version_r"),   0, SHT_GNU_verneed, 0 },
@@ -6806,8 +6807,12 @@ assign_file_positions_except_relocs (bfd *abfd,
 	      hdr->sh_offset = -1;
 	    }
 	  else
+	    /* There shouldn't be a need to effect "capped" file alignment here,
+	       yet at least the Linux kernel's modpost utility was found to be
+	       unhappy without.  While the issue was addressed there, let's be
+	       kind for at least the foreseeable future ...  */
 	    off = _bfd_elf_assign_file_position_for_section (hdr, off, false,
-							     0);
+							     bed->s->log_file_align);
 	}
 
       elf_next_file_pos (abfd) = off;
@@ -8680,7 +8685,7 @@ swap_out_syms (bfd *abfd,
     }
 
   if (_bfd_mul_overflow (symcount + 1, bed->s->sizeof_sym, &amt)
-      || (outbound_syms = (bfd_byte *) bfd_alloc (abfd, amt)) == NULL)
+      || (outbound_syms = bfd_malloc (amt)) == NULL)
     {
     error_no_mem:
       bfd_set_error (bfd_error_no_memory);
@@ -10121,6 +10126,8 @@ _bfd_elf_free_cached_info (bfd *abfd)
       _bfd_dwarf2_cleanup_debug_info (abfd, &tdata->dwarf2_find_line_info);
       _bfd_dwarf1_cleanup_debug_info (abfd, &tdata->dwarf1_find_line_info);
       _bfd_stab_cleanup (abfd, &tdata->line_info);
+      free (tdata->symtab_hdr.contents);
+      tdata->symtab_hdr.contents = NULL;
     }
 
   return _bfd_generic_bfd_free_cached_info (abfd);

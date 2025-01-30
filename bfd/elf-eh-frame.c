@@ -359,6 +359,7 @@ skip_cfa_op (bfd_byte **iter, bfd_byte *end, unsigned int encoded_ptr_width)
     case DW_CFA_remember_state:
     case DW_CFA_restore_state:
     case DW_CFA_GNU_window_save:
+    case DW_CFA_AARCH64_negate_ra_state_with_pc:
       /* No arguments.  */
       return true;
 
@@ -1012,8 +1013,8 @@ _bfd_elf_parse_eh_frame (bfd *abfd, struct bfd_link_info *info,
 	  unsigned int cnt;
 	  bfd_byte *p;
 
-	  this_inf->set_loc = (unsigned int *)
-	      bfd_malloc ((set_loc_count + 1) * sizeof (unsigned int));
+	  this_inf->set_loc
+	    = bfd_alloc (abfd, (set_loc_count + 1) * sizeof (unsigned int));
 	  REQUIRE (this_inf->set_loc);
 	  this_inf->set_loc[0] = set_loc_count;
 	  p = insns;
@@ -1306,7 +1307,7 @@ find_merged_cie (bfd *abfd, struct bfd_link_info *info, asection *sec,
   if (new_cie == NULL)
     {
       /* Keep CIE_INF and record it in the hash table.  */
-      new_cie = (struct cie *) malloc (sizeof (struct cie));
+      new_cie = bfd_malloc (sizeof (*new_cie));
       if (new_cie == NULL)
 	return cie_inf;
 
@@ -1626,6 +1627,10 @@ _bfd_elf_discard_section_eh_frame_hdr (struct bfd_link_info *info)
       htab_delete (hdr_info->u.dwarf.cies);
       hdr_info->u.dwarf.cies = NULL;
     }
+
+  if (info->eh_frame_hdr_type == 0
+      || bfd_link_relocatable (info))
+    return false;
 
   sec = hdr_info->hdr_sec;
   if (sec == NULL)

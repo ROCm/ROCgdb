@@ -76,16 +76,6 @@ enum class linespec_complete_what
   KEYWORD,
 };
 
-/* An address entry is used to ensure that any given location is only
-   added to the result a single time.  It holds an address and the
-   program space from which the address came.  */
-
-struct address_entry
-{
-  struct program_space *pspace;
-  CORE_ADDR addr;
-};
-
 /* A linespec.  Elements of this structure are filled in by a parser
    (either parse_linespec or some other function).  The structure is
    then converted into SALs by convert_linespec_to_sals.  */
@@ -126,7 +116,7 @@ struct linespec
 struct linespec_canonical_name
 {
   /* Remaining text part of the linespec string.  */
-  char *suffix;
+  std::string suffix;
 
   /* If NULL then SUFFIX is the whole linespec string.  */
   struct symtab *symtab;
@@ -138,6 +128,37 @@ struct linespec_canonical_name
 
 struct linespec_state
 {
+  linespec_state (int flags, const language_defn *language,
+		  program_space *pspace,
+		  program_space *search_pspace,
+		  symtab *default_symtab,
+		  int default_line,
+		  linespec_result *canonical)
+    : language (language),
+      program_space (pspace),
+      search_pspace (search_pspace),
+      default_symtab (default_symtab),
+      default_line (default_line),
+      funfirstline ((flags & DECODE_LINE_FUNFIRSTLINE) != 0),
+      list_mode ((flags & DECODE_LINE_LIST_MODE) != 0),
+      canonical (canonical)
+  {
+  }
+
+  linespec_state (const language_defn *language, program_space *program_space)
+    : linespec_state (0, language, program_space, nullptr, nullptr, 0, nullptr)
+  {
+  }
+
+  DISABLE_COPY_AND_ASSIGN (linespec_state);
+
+  /* Add ADDR to the address set.  Return true if this is a new
+     entry.  */
+  bool maybe_add_address (program_space *pspace, CORE_ADDR addr)
+  {
+    return addr_set.emplace (pspace, addr).second;
+  }
+
   /* The language in use during linespec processing.  */
   const struct language_defn *language;
 
@@ -156,23 +177,30 @@ struct linespec_state
 
   /* The 'funfirstline' value that was passed in to decode_line_1 or
      decode_line_full.  */
-  int funfirstline;
+  bool funfirstline;
 
-  /* Nonzero if we are running in 'list' mode; see decode_line_list.  */
-  int list_mode;
+  /* True if we are running in 'list' mode; see decode_line_list.  */
+  bool list_mode;
 
   /* The 'canonical' value passed to decode_line_full, or NULL.  */
   struct linespec_result *canonical;
 
   /* Canonical strings that mirror the std::vector<symtab_and_line> result.  */
-  struct linespec_canonical_name *canonical_names;
+  std::vector<linespec_canonical_name> canonical_names;
+
+  /* Are we building a linespec?  */
+  bool is_linespec = false;
+
+private:
+
+  /* An address entry is used to ensure that any given location is
+     only added to the result a single time.  It holds an address and
+     the program space from which the address came.  */
+  using address_entry = std::pair<::program_space *, CORE_ADDR>;
 
   /* This is a set of address_entry objects which is used to prevent
      duplicate symbols from being entered into the result.  */
-  htab_t addr_set;
-
-  /* Are we building a linespec?  */
-  int is_linespec;
+  gdb::unordered_set<address_entry> addr_set;
 };
 
 /* This is a helper object that is used when collecting symbols into a
@@ -284,8 +312,6 @@ struct linespec_parser
 		   int default_line,
 		   struct linespec_result *canonical);
 
-  ~linespec_parser ();
-
   DISABLE_COPY_AND_ASSIGN (linespec_parser);
 
   /* Lexer internal data  */
@@ -302,10 +328,10 @@ struct linespec_parser
   } lexer {};
 
   /* Is the entire linespec quote-enclosed?  */
-  int is_quote_enclosed = 0;
+  bool is_quote_enclosed = false;
 
   /* The state of the parse.  */
-  struct linespec_state state {};
+  linespec_state state;
 
   /* The result of the parse.  */
   linespec result;
@@ -370,8 +396,8 @@ static struct line_offset
      linespec_parse_variable (struct linespec_state *self,
 			      const char *variable);
 
-static int symbol_to_sal (struct symtab_and_line *result,
-			  int funfirstline, struct symbol *sym);
+static bool symbol_to_sal (struct symtab_and_line *result,
+			   bool funfirstline, struct symbol *sym);
 
 static void add_matching_symbols_to_info (const char *name,
 					  symbol_name_match_type name_match_type,
@@ -1039,25 +1065,22 @@ linespec_lexer_peek_token (linespec_parser *parser)
    the new sal, if needed.  If not NULL, SYMNAME is the name of the
    symbol to use when constructing the new canonical name.
 
-   If LITERAL_CANONICAL is non-zero, SYMNAME will be used as the
+   If LITERAL_CANONICAL is true, SYMNAME will be used as the
    canonical name for the SAL.  */
 
 static void
 add_sal_to_sals (struct linespec_state *self,
 		 std::vector<symtab_and_line> *sals,
 		 struct symtab_and_line *sal,
-		 const char *symname, int literal_canonical)
+		 const char *symname, bool literal_canonical)
 {
   sals->push_back (*sal);
 
   if (self->canonical)
     {
-      struct linespec_canonical_name *canonical;
+      linespec_canonical_name &canonical
+	= self->canonical_names.emplace_back ();
 
-      self->canonical_names = XRESIZEVEC (struct linespec_canonical_name,
-					  self->canonical_names,
-					  sals->size ());
-      canonical = &self->canonical_names[sals->size () - 1];
       if (!literal_canonical && sal->symtab)
 	{
 	  symtab_to_fullname (sal->symtab);
@@ -1067,69 +1090,23 @@ add_sal_to_sals (struct linespec_state *self,
 	     the time being.  */
 	  if (symname != NULL && sal->line != 0
 	      && self->language->la_language == language_ada)
-	    canonical->suffix = xstrprintf ("%s:%d", symname,
-					    sal->line).release ();
+	    canonical.suffix = string_printf ("%s:%d", symname,
+					      sal->line);
 	  else if (symname != NULL)
-	    canonical->suffix = xstrdup (symname);
+	    canonical.suffix = symname;
 	  else
-	    canonical->suffix = xstrprintf ("%d", sal->line).release ();
-	  canonical->symtab = sal->symtab;
+	    canonical.suffix = string_printf ("%d", sal->line);
+	  canonical.symtab = sal->symtab;
 	}
       else
 	{
 	  if (symname != NULL)
-	    canonical->suffix = xstrdup (symname);
+	    canonical.suffix = symname;
 	  else
-	    canonical->suffix = xstrdup ("<unknown>");
-	  canonical->symtab = NULL;
+	    canonical.suffix = "<unknown>";
+	  canonical.symtab = NULL;
 	}
     }
-}
-
-/* A hash function for address_entry.  */
-
-static hashval_t
-hash_address_entry (const void *p)
-{
-  const struct address_entry *aep = (const struct address_entry *) p;
-  hashval_t hash;
-
-  hash = iterative_hash_object (aep->pspace, 0);
-  return iterative_hash_object (aep->addr, hash);
-}
-
-/* An equality function for address_entry.  */
-
-static int
-eq_address_entry (const void *a, const void *b)
-{
-  const struct address_entry *aea = (const struct address_entry *) a;
-  const struct address_entry *aeb = (const struct address_entry *) b;
-
-  return aea->pspace == aeb->pspace && aea->addr == aeb->addr;
-}
-
-/* Check whether the address, represented by PSPACE and ADDR, is
-   already in the set.  If so, return 0.  Otherwise, add it and return
-   1.  */
-
-static int
-maybe_add_address (htab_t set, struct program_space *pspace, CORE_ADDR addr)
-{
-  struct address_entry e, *p;
-  void **slot;
-
-  e.pspace = pspace;
-  e.addr = addr;
-  slot = htab_find_slot (set, &e, INSERT);
-  if (*slot)
-    return 0;
-
-  p = XNEW (struct address_entry);
-  memcpy (p, &e, sizeof (struct address_entry));
-  *slot = p;
-
-  return 1;
 }
 
 /* A helper that walks over all matching symtabs in all objfiles and
@@ -1322,7 +1299,7 @@ canonical_to_fullform (const struct linespec_canonical_name *canonical)
     return canonical->suffix;
   else
     return string_printf ("%s:%s", symtab_to_fullname (canonical->symtab),
-			  canonical->suffix);
+			  canonical->suffix.c_str ());
 }
 
 /* Given FILTERS, a list of canonical names, filter the sals in RESULT
@@ -1401,9 +1378,8 @@ struct decode_line_2_item
   /* The form using symtab_to_filename_for_display.  */
   std::string displayform;
 
-  /* Field is initialized to zero and it is set to one if the user
-     requested breakpoint for this entry.  */
-  unsigned int selected : 1;
+  /* True if the user requested breakpoint for this entry.  */
+  bool selected;
 };
 
 /* Handle multiple results in RESULT depending on SELECT_MODE.  This
@@ -1433,7 +1409,6 @@ decode_line_2 (struct linespec_state *self,
       std::string displayform;
 
       canonical = &self->canonical_names[i];
-      gdb_assert (canonical->suffix != NULL);
 
       std::string fullform = canonical_to_fullform (canonical);
 
@@ -1445,7 +1420,7 @@ decode_line_2 (struct linespec_state *self,
 
 	  fn_for_display = symtab_to_filename_for_display (canonical->symtab);
 	  displayform = string_printf ("%s:%s", fn_for_display,
-				       canonical->suffix);
+				       canonical->suffix.c_str ());
 	}
 
       items.emplace_back (std::move (fullform), std::move (displayform),
@@ -1519,7 +1494,7 @@ decode_line_2 (struct linespec_state *self,
 	  if (!item->selected)
 	    {
 	      filters.push_back (item->fullform.c_str ());
-	      item->selected = 1;
+	      item->selected = true;
 	    }
 	  else
 	    {
@@ -2010,7 +1985,7 @@ static std::vector<symtab_and_line>
 create_sals_line_offset (struct linespec_state *self,
 			 linespec *ls)
 {
-  int use_default = 0;
+  bool use_default = false;
 
   /* This is where we need to make sure we have good defaults.
      We must guarantee that this section of code is never executed
@@ -2029,7 +2004,7 @@ create_sals_line_offset (struct linespec_state *self,
       ls->file_symtabs
 	= collect_symtabs_from_filename (self->default_symtab->filename,
 					 self->search_pspace);
-      use_default = 1;
+      use_default = true;
     }
 
   symtab_and_line val;
@@ -2158,7 +2133,7 @@ create_sals_line_offset (struct linespec_state *self,
 
 	    sal.symbol = sym;
 	    add_sal_to_sals (self, &values, &sal,
-			     sym ? sym->natural_name () : NULL, 0);
+			     sym ? sym->natural_name () : nullptr, false);
 	  }
     }
 
@@ -2190,7 +2165,7 @@ convert_address_location_to_sals (struct linespec_state *self,
   sal.symbol = find_pc_sect_containing_function (sal.pc, sal.section);
 
   std::vector<symtab_and_line> sals;
-  add_sal_to_sals (self, &sals, &sal, core_addr_to_string (address), 1);
+  add_sal_to_sals (self, &sals, &sal, core_addr_to_string (address), true);
 
   return sals;
 }
@@ -2213,9 +2188,9 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 	    = sym.symbol->symtab ()->compunit ()->objfile ()->pspace ();
 
 	  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-	      && maybe_add_address (state->addr_set, pspace, sal.pc))
+	      && state->maybe_add_address (pspace, sal.pc))
 	    add_sal_to_sals (state, &sals, &sal,
-			     sym.symbol->natural_name (), 0);
+			     sym.symbol->natural_name (), false);
 	}
     }
   else if (!ls->function_symbols.empty () || !ls->minimal_symbols.empty ())
@@ -2278,9 +2253,9 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 		{
 		  symtab_and_line sal;
 		  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-		      && maybe_add_address (state->addr_set, pspace, sal.pc))
+		      && state->maybe_add_address (pspace, sal.pc))
 		    add_sal_to_sals (state, &sals, &sal,
-				     sym.symbol->natural_name (), 0);
+				     sym.symbol->natural_name (), false);
 		}
 	    }
 	}
@@ -2485,7 +2460,7 @@ parse_linespec (linespec_parser *parser, const char *arg,
   /* A special case to start.  It has become quite popular for
      IDEs to work around bugs in the previous parser by quoting
      the entire linespec, so we attempt to deal with this nicely.  */
-  parser->is_quote_enclosed = 0;
+  parser->is_quote_enclosed = false;
   if (parser->completion_tracker == NULL
       && !is_ada_operator (arg)
       && *arg != '\0'
@@ -2497,7 +2472,7 @@ parse_linespec (linespec_parser *parser, const char *arg,
 	  /* Here's the special case.  Skip ARG past the initial
 	     quote.  */
 	  ++arg;
-	  parser->is_quote_enclosed = 1;
+	  parser->is_quote_enclosed = true;
 	}
     }
 
@@ -2667,30 +2642,6 @@ parse_linespec (linespec_parser *parser, const char *arg,
 }
 
 
-/* A constructor for linespec_state.  */
-
-static void
-linespec_state_constructor (struct linespec_state *self,
-			    int flags, const struct language_defn *language,
-			    struct program_space *search_pspace,
-			    struct symtab *default_symtab,
-			    int default_line,
-			    struct linespec_result *canonical)
-{
-  memset (self, 0, sizeof (*self));
-  self->language = language;
-  self->funfirstline = (flags & DECODE_LINE_FUNFIRSTLINE) ? 1 : 0;
-  self->list_mode = (flags & DECODE_LINE_LIST_MODE) ? 1 : 0;
-  self->search_pspace = search_pspace;
-  self->default_symtab = default_symtab;
-  self->default_line = default_line;
-  self->canonical = canonical;
-  self->program_space = current_program_space;
-  self->addr_set = htab_create_alloc (10, hash_address_entry, eq_address_entry,
-				      xfree, xcalloc, xfree);
-  self->is_linespec = 0;
-}
-
 /* Initialize a new linespec parser.  */
 
 linespec_parser::linespec_parser (int flags,
@@ -2699,30 +2650,13 @@ linespec_parser::linespec_parser (int flags,
 				  struct symtab *default_symtab,
 				  int default_line,
 				  struct linespec_result *canonical)
+  : state (flags, language, current_program_space, search_pspace,
+	     default_symtab, default_line, canonical)
 {
   lexer.current.type = LSTOKEN_CONSUMED;
   result.explicit_loc.func_name_match_type
     = symbol_name_match_type::WILD;
   result.explicit_loc.line_offset.sign = LINE_OFFSET_UNKNOWN;
-  linespec_state_constructor (&state, flags, language,
-			      search_pspace,
-			      default_symtab, default_line, canonical);
-}
-
-/* A destructor for linespec_state.  */
-
-static void
-linespec_state_destructor (struct linespec_state *self)
-{
-  htab_delete (self->addr_set);
-  xfree (self->canonical_names);
-}
-
-/* Delete a linespec parser.  */
-
-linespec_parser::~linespec_parser ()
-{
-  linespec_state_destructor (&state);
 }
 
 /* See description in linespec.h.  */
@@ -2908,7 +2842,7 @@ linespec_complete (completion_tracker &tracker, const char *text,
   parser.lexer.stream = text;
 
   parser.completion_tracker = &tracker;
-  parser.state.is_linespec = 1;
+  parser.state.is_linespec = true;
 
   /* Parse as much as possible.  parser.completion_word will hold
      furthest completion point we managed to parse to.  */
@@ -3099,7 +3033,7 @@ location_spec_to_sals (linespec_parser *parser,
     case LINESPEC_LOCATION_SPEC:
       {
 	const linespec_location_spec *ls = as_linespec_location_spec (locspec);
-	parser->state.is_linespec = 1;
+	parser->state.is_linespec = true;
 	result = parse_linespec (parser, ls->spec_string.get (),
 				 ls->match_type);
       }
@@ -3185,14 +3119,6 @@ decode_line_full (struct location_spec *locspec, int flags,
 
   gdb_assert (result.size () == 1 || canonical->pre_expanded);
   canonical->pre_expanded = 1;
-
-  /* Arrange for allocated canonical names to be freed.  */
-  std::vector<gdb::unique_xmalloc_ptr<char>> hold_names;
-  for (int i = 0; i < result.size (); ++i)
-    {
-      gdb_assert (state->canonical_names[i].suffix != NULL);
-      hold_names.emplace_back (state->canonical_names[i].suffix);
-    }
 
   if (select_mode == NULL)
     {
@@ -3753,10 +3679,8 @@ symbol_searcher::find_all_symbols (const std::string &name,
 				   struct program_space *search_pspace)
 {
   symbol_searcher_collect_info info;
-  struct linespec_state state;
+  linespec_state state (language, current_program_space);
 
-  memset (&state, 0, sizeof (state));
-  state.language = language;
   info.state = &state;
 
   info.result.symbols = &m_symbols;
@@ -4020,7 +3944,7 @@ decode_digits_list_mode (struct linespec_state *self,
       val.pc = 0;
       val.explicit_line = true;
 
-      add_sal_to_sals (self, &values, &val, NULL, 0);
+      add_sal_to_sals (self, &values, &val, NULL, false);
     }
 
   return values;
@@ -4170,8 +4094,8 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
 
   sal.section = msymbol->obj_section (objfile);
 
-  if (maybe_add_address (self->addr_set, objfile->pspace (), sal.pc))
-    add_sal_to_sals (self, result, &sal, msymbol->natural_name (), 0);
+  if (self->maybe_add_address (objfile->pspace (), sal.pc))
+    add_sal_to_sals (self, result, &sal, msymbol->natural_name (), false);
 }
 
 /* Helper for search_minsyms_for_name that adds the symbol to the
@@ -4179,7 +4103,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
 
 static void
 add_minsym (struct minimal_symbol *minsym, struct objfile *objfile,
-	    struct symtab *symtab, int list_mode,
+	    struct symtab *symtab, bool list_mode,
 	    std::vector<bound_minimal_symbol> *msyms)
 {
   if (symtab != NULL)
@@ -4197,11 +4121,8 @@ add_minsym (struct minimal_symbol *minsym, struct objfile *objfile,
     }
 
   /* Exclude data symbols when looking for breakpoint locations.  */
-  if (!list_mode && !msymbol_is_function (objfile, minsym))
-    return;
-
-  msyms->emplace_back (minsym, objfile);
-  return;
+  if (list_mode || msymbol_is_function (objfile, minsym))
+    msyms->emplace_back (minsym, objfile);
 }
 
 /* Search for minimal symbols called NAME.  If SEARCH_PSPACE
@@ -4328,6 +4249,11 @@ add_matching_symbols_to_info (const char *name,
 {
   lookup_name_info lookup_name (name, name_match_type);
 
+  auto add_symbol = [&] (block_symbol *bsym)
+    {
+      return info->add_symbol (bsym);
+    };
+
   for (const auto &elt : *info->file_symtabs)
     {
       if (elt == nullptr)
@@ -4335,8 +4261,7 @@ add_matching_symbols_to_info (const char *name,
 	  iterate_over_all_matching_symtabs (info->state, lookup_name,
 					     domain_search_flags,
 					     pspace, true,
-					     [&] (block_symbol *bsym)
-	    { return info->add_symbol (bsym); });
+					     add_symbol);
 	  search_minsyms_for_name (info, lookup_name, pspace, NULL);
 	}
       else if (pspace == NULL || pspace == elt->compunit ()->objfile ()->pspace ())
@@ -4348,9 +4273,7 @@ add_matching_symbols_to_info (const char *name,
 	  program_space *elt_pspace = elt->compunit ()->objfile ()->pspace ();
 	  gdb_assert (!elt_pspace->executing_startup);
 	  set_current_program_space (elt_pspace);
-	  iterate_over_file_blocks (elt, lookup_name, SEARCH_VFT,
-				    [&] (block_symbol *bsym)
-	    { return info->add_symbol (bsym); });
+	  iterate_over_file_blocks (elt, lookup_name, SEARCH_VFT, add_symbol);
 
 	  /* If no new symbols were found in this iteration and this symtab
 	     is in assembler, we might actually be looking for a label for
@@ -4368,14 +4291,14 @@ add_matching_symbols_to_info (const char *name,
 /* Now come some functions that are called from multiple places within
    decode_line_1.  */
 
-static int
+static bool
 symbol_to_sal (struct symtab_and_line *result,
-	       int funfirstline, struct symbol *sym)
+	       bool funfirstline, struct symbol *sym)
 {
   if (sym->aclass () == LOC_BLOCK)
     {
       *result = find_function_start_sal (sym, funfirstline);
-      return 1;
+      return true;
     }
   else
     {
@@ -4388,7 +4311,7 @@ symbol_to_sal (struct symtab_and_line *result,
 	  result->pc = sym->value_address ();
 	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
 	  result->explicit_pc = 1;
-	  return 1;
+	  return true;
 	}
       else if (funfirstline)
 	{
@@ -4403,11 +4326,11 @@ symbol_to_sal (struct symtab_and_line *result,
 	  result->line = sym->line ();
 	  result->pc = sym->value_address ();
 	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
-	  return 1;
+	  return true;
 	}
     }
 
-  return 0;
+  return false;
 }
 
 linespec_result::~linespec_result ()

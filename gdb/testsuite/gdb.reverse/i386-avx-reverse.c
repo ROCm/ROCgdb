@@ -107,6 +107,67 @@ vmov_test ()
   asm volatile ("vmovdqu %ymm2, %ymm15");
   asm volatile ("vmovdqa %ymm15, %ymm0");
 
+  /* Testing vmov [ss|sd] instructions.  */
+  /* Note, vmovss only works with XMM registers, not YMM registers,
+     according to the intel manual.  Also, initializing the variables
+     uses xmm0 in my machine, so we can't test with it, so use xmm1
+     instead.  */
+
+  /* Move single precision floats to and from memory.  */
+  float f1 = 1.5, f2 = 4.2;
+  asm volatile ("vmovss %0, %%xmm1" : : "m"(f1));
+  asm volatile ("vmovss %0, %%xmm15": : "m"(f2));
+  asm volatile ("vmovss %%xmm1, %0" :  "=m"(f2));
+  asm volatile ("vmovss %%xmm15, %0":  "=m"(f1));
+
+  asm volatile ("vmovss %xmm15, %xmm1, %xmm2");
+  asm volatile ("vmovss %xmm15, %xmm1, %xmm8");
+  asm volatile ("vmovss %xmm1, %xmm2, %xmm15");
+  asm volatile ("vmovss %xmm2, %xmm15, %xmm1");
+
+  /* Testing double precision floats.  */
+  double d1 = -1.5, d2 = -2.5;
+  asm volatile ("vmovsd %0, %%xmm1" : : "m"(d1));
+  asm volatile ("vmovsd %0, %%xmm15": : "m"(d2));
+  asm volatile ("vmovsd %%xmm1, %0" :  "=m"(d2));
+  asm volatile ("vmovsd %%xmm15, %0":  "=m"(d1));
+
+  asm volatile ("vmovsd %xmm15, %xmm1, %xmm2");
+  asm volatile ("vmovsd %xmm15, %xmm1, %xmm8");
+  asm volatile ("vmovsd %xmm1, %xmm2, %xmm15");
+  asm volatile ("vmovsd %xmm2, %xmm15, %xmm1");
+
+  /* "reset" all the buffers.  This doesn't zero them all, but
+     it zeroes the start which lets us ensure the tests see
+     some changes.  */
+  asm volatile ("vmovq %%xmm3, %0": "=m" (buf1));
+  asm volatile ("vmovq %%xmm3, %0": "=m" (global_buf1));
+  asm volatile ("vmovq %%xmm3, %0": "=m" (*dyn_buf1));
+
+  /* Testing vmovu[ps|pd] instructions.  Even though there are aligned
+     versions of these instructions like vmovdq[u|a], they have different
+     opcodes, meaning they'll need to be tested separately.  */
+
+  asm volatile ("vmovups %0, %%xmm0"  : : "m"(buf0));
+  asm volatile ("vmovupd %0, %%xmm15" : : "m"(buf1));
+  asm volatile ("vmovupd %%xmm0, %0"  : : "m"(buf1));
+  asm volatile ("vmovups %%xmm15, %0" : : "m"(buf1));
+
+  asm volatile ("vmovups %0, %%xmm0"  : : "m"(global_buf0));
+  asm volatile ("vmovupd %0, %%xmm15" : : "m"(global_buf1));
+  asm volatile ("vmovupd %%xmm0, %0"  : : "m"(global_buf1));
+  asm volatile ("vmovups %%xmm15, %0" : : "m"(global_buf1));
+
+  asm volatile ("vmovups %0, %%xmm0"  : : "m"(*dyn_buf0));
+  asm volatile ("vmovupd %0, %%xmm15" : : "m"(*dyn_buf1));
+  asm volatile ("vmovupd %%xmm0, %0"  : : "m"(*dyn_buf1));
+  asm volatile ("vmovups %%xmm15, %0" : : "m"(*dyn_buf1));
+
+  asm volatile ("vmovaps %0, %%xmm0"  : : "m"(*dyn_buf0));
+  asm volatile ("vmovapd %0, %%xmm15" : : "m"(*dyn_buf1));
+  asm volatile ("vmovapd %%xmm0, %0"  : : "m"(*dyn_buf1));
+  asm volatile ("vmovaps %%xmm15, %0" : : "m"(*dyn_buf1));
+
   /* We have a return statement to deal with
      epilogue in different compilers.  */
   return 0; /* end vmov_test */
@@ -121,6 +182,7 @@ vpunpck_test  ()
   /* Using GDB, load these values onto registers, for ease of testing.
      ymm0.v2_int128  = {0x1f1e1d1c1b1a19181716151413121110, 0x2f2e2d2c2b2a29282726252423222120}
      ymm1.v2_int128  = {0x4f4e4d4c4b4a49484746454443424140, 0x3f3e3d3c3b3a39383736353433323130}
+     ymm2.v2_int128 = {0x0, 0x0}
      ymm15.v2_int128 = {0xdead, 0xbeef}
      so that's easy to confirm that the unpacking went as expected.  */
 
@@ -159,6 +221,25 @@ vpunpck_test  ()
   asm volatile ("vpunpckhdq  %ymm0, %ymm1,  %ymm15");
   /* 17 16 15 14 13 12 11 10 ...*/
   asm volatile ("vpunpckhqdq %ymm0, %ymm1, %ymm15");
+
+  /* Test some of the floating point unpack instructions.  */
+  /* 17 27 16 26 15 25 14 24 ...*/
+  asm volatile ("vunpcklps  %xmm0, %xmm1, %xmm15");
+  /* 17 16 27 26 15 14 25 24 ...*/
+  asm volatile ("vunpcklps  %ymm0, %ymm1, %ymm2");
+  /* 17 16 15 14 27 26 25 24 ...*/
+  asm volatile ("vunpcklpd  %xmm0, %xmm1,  %xmm2");
+  /* 17 16 15 14 13 12 11 10 ...*/
+  asm volatile ("vunpcklpd %ymm0, %ymm1, %ymm15");
+  /* 17 27 16 26 15 25 14 24 ...*/
+  asm volatile ("vunpckhps  %xmm0, %xmm1, %xmm15");
+  /* 17 16 27 26 15 14 25 24 ...*/
+  asm volatile ("vunpckhps  %ymm0, %ymm1, %ymm2");
+  /* 17 16 15 14 27 26 25 24 ...*/
+  asm volatile ("vunpckhpd  %xmm0, %xmm1,  %xmm2");
+  /* 17 16 15 14 13 12 11 10 ...*/
+  asm volatile ("vunpckhpd %ymm0, %ymm1, %ymm15");
+
   /* We have a return statement to deal with
      epilogue in different compilers.  */
   return 0; /* end vpunpck_test */
@@ -283,6 +364,61 @@ vpmovmskb_test ()
   return 0; /* end vpmovmskb_test  */
 }
 
+/* Test record arithmetic instructions.  */
+int
+arith_test ()
+{
+  /* start arith_test.  */
+  /* Using GDB, load these values onto registers for testing.
+     ymm0.v8_float = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5}
+     ymm1.v8_float = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5}
+     ymm15.v2_int128 = {0x0, 0x0}
+     this way it's easy to confirm we're undoing things correctly.  */
+  asm volatile ("vaddps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vaddps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vaddpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vaddpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vaddss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vaddsd %xmm0, %xmm1, %xmm15");
+
+  asm volatile ("vmulps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmulps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vmulpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmulpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vmulss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmulsd %xmm0, %xmm1, %xmm15");
+
+  asm volatile ("vsubps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vsubps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vsubpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vsubpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vsubss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vsubsd %xmm0, %xmm1, %xmm15");
+
+  asm volatile ("vdivps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vdivps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vdivpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vdivpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vdivss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vdivsd %xmm0, %xmm1, %xmm15");
+
+  asm volatile ("vminps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vminps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vminpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vminpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vminss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vminsd %xmm0, %xmm1, %xmm15");
+
+  asm volatile ("vmaxps %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmaxps %ymm0, %ymm1, %ymm15");
+  asm volatile ("vmaxpd %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmaxpd %ymm0, %ymm1, %ymm15");
+  asm volatile ("vmaxss %xmm0, %xmm1, %xmm15");
+  asm volatile ("vmaxsd %xmm0, %xmm1, %xmm15");
+
+  return 0; /* end arith_test  */
+}
+
 /* This include is used to allocate the dynamic buffer and have
    the pointers aligned to a 32-bit boundary, so we can test instructions
    that require aligned memory.  */
@@ -311,5 +447,6 @@ main ()
   vpor_xor_test ();
   vpcmpeq_test ();
   vpmovmskb_test ();
+  arith_test ();
   return 0;	/* end of main */
 }

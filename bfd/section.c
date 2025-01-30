@@ -661,6 +661,9 @@ EXTERNAL
 .#define BFD_COM_SECTION_NAME "*COM*"
 .#define BFD_IND_SECTION_NAME "*IND*"
 .
+.{* GNU object-only section name.  *}
+.#define GNU_OBJECT_ONLY_SECTION_NAME ".gnu_object_only"
+.
 .{* Pointer to the common section.  *}
 .#define bfd_com_section_ptr (&_bfd_std_section[0])
 .{* Pointer to the undefined section.  *}
@@ -1060,7 +1063,7 @@ bfd_get_unique_section_name (bfd *abfd, const char *templat, int *count)
   char *sname;
 
   len = strlen (templat);
-  sname = (char *) bfd_malloc (len + 8);
+  sname = bfd_alloc (abfd, len + 8);
   if (sname == NULL)
     return NULL;
   memcpy (sname, templat, len);
