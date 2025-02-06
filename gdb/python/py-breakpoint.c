@@ -1080,6 +1080,8 @@ bppy_repr (PyObject *self)
 
   std::string str = " ";
   const bp_specificity &s = bp->bp->specificity;
+  if (s.inferior != -1)
+    str += string_printf ("inferior=%d ", s.inferior);
   if (s.thread != -1)
     str += string_printf ("thread=%d ", s.thread);
   if (s.task > 0)
