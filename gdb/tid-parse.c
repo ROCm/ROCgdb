@@ -37,7 +37,8 @@ invalid_thread_id_error (const char *string)
    do get back a negative number.  */
 
 static int
-get_positive_number_trailer (const char **pp, int trailer, const char *string)
+get_non_negative_number_trailer (const char **pp, int trailer,
+				 const char *string)
 {
   int num;
 
@@ -76,7 +77,7 @@ parse_thread_id_1 (const char *tidstr, const char **end)
     {
       /* Parse number to the left of the dot.  */
       p1 = number;
-      inf_num = get_positive_number_trailer (&p1, '.', number);
+      inf_num = get_non_negative_number_trailer (&p1, '.', number);
       if (inf_num == 0)
 	invalid_thread_id_error (number);
       p1 = dot + 1;
@@ -87,7 +88,7 @@ parse_thread_id_1 (const char *tidstr, const char **end)
       p1 = number;
     }
 
-  thr_num = get_positive_number_trailer (&p1, 0, number);
+  thr_num = get_non_negative_number_trailer (&p1, 0, number);
   if (thr_num == 0)
     invalid_thread_id_error (number);
 
@@ -254,7 +255,7 @@ tid_range_parser::get_tid_or_range (int *inf_num,
 
 	  /* Parse number to the left of the dot.  */
 	  p = m_cur_tok;
-	  m_inf_num = get_positive_number_trailer (&p, '.', m_cur_tok);
+	  m_inf_num = get_non_negative_number_trailer (&p, '.', m_cur_tok);
 	  if (m_inf_num == 0)
 	    return 0;
 
