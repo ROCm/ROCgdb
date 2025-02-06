@@ -13649,16 +13649,17 @@ extract_bp_num (extract_bp_kind kind, const char *start,
 		int trailer, const char **end_out = NULL)
 {
   const char *end = start;
-  int num = get_number_trailer (&end, trailer);
+  std::optional<int> res = get_number_trailer (&end, trailer);
+  if (!res.has_value () || *res == 0)
+    error (kind == extract_bp_kind::bp
+	   ? _("Bad breakpoint number '%.*s'")
+	   : _("Bad breakpoint location number '%.*s'"),
+	   int (end - start), start);
+  int num = *res;
   if (num < 0)
     error (kind == extract_bp_kind::bp
 	   ? _("Negative breakpoint number '%.*s'")
 	   : _("Negative breakpoint location number '%.*s'"),
-	   int (end - start), start);
-  if (num == 0)
-    error (kind == extract_bp_kind::bp
-	   ? _("Bad breakpoint number '%.*s'")
-	   : _("Bad breakpoint location number '%.*s'"),
 	   int (end - start), start);
 
   if (end_out != NULL)

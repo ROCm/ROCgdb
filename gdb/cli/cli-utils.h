@@ -36,7 +36,7 @@ struct cmd_list_element;
    TRAILER is a character which can be found after the number; most
    commonly this is `-'.  If you don't want a trailer, use \0.  */
 
-extern int get_number_trailer (const char **pp, int trailer);
+extern std::optional<int> get_number_trailer (const char **pp, int trailer);
 
 /* Convenience.  Like get_number_trailer, but with no TRAILER.  */
 

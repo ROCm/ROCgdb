@@ -78,10 +78,10 @@ get_ulongest (const char **pp, int trailer)
 
 /* See documentation in cli-utils.h.  */
 
-int
+std::optional<int>
 get_number_trailer (const char **pp, int trailer)
 {
-  int retval = 0;	/* default */
+  std::optional<int> retval;
   const char *p = *pp;
   bool negative = false;
 
@@ -98,12 +98,9 @@ get_number_trailer (const char **pp, int trailer)
       if (val)	/* Value history reference */
 	{
 	  if (val->type ()->code () == TYPE_CODE_INT)
-	    retval = value_as_long (val);
+	    retval.emplace (value_as_long (val));
 	  else
-	    {
-	      gdb_printf (_("History value must have integer type.\n"));
-	      retval = 0;
-	    }
+	    gdb_printf (_("History value must have integer type.\n"));
 	}
       else	/* Convenience variable */
 	{
@@ -120,12 +117,11 @@ get_number_trailer (const char **pp, int trailer)
 	  varname[p - start] = '\0';
 	  if (get_internalvar_integer (lookup_internalvar (varname),
 				       &longest_val))
-	    retval = (int) longest_val;
+	    retval.emplace ((int) longest_val);
 	  else
 	    {
 	      gdb_printf (_("Convenience variable must "
 			    "have integer value.\n"));
-	      retval = 0;
 	    }
 	}
     }
@@ -140,22 +136,25 @@ get_number_trailer (const char **pp, int trailer)
 	  /* Skip non-numeric token.  */
 	  while (*p && !isspace((int) *p))
 	    ++p;
-	  /* Return zero, which caller must interpret as error.  */
-	  retval = 0;
 	}
       else
-	retval = atoi (p1);
+	retval.emplace (atoi (p1));
     }
   if (!(isspace (*p) || *p == '\0' || *p == trailer))
     {
-      /* Trailing junk: return 0 and let caller print error msg.  */
+      /* Trailing junk: return empty and let caller print error
+	 msg.  */
       while (!(isspace (*p) || *p == '\0' || *p == trailer))
 	++p;
-      retval = 0;
+      retval.reset ();
     }
   p = skip_spaces (p);
   *pp = p;
-  return negative ? -retval : retval;
+
+  if (negative && retval.has_value ())
+    *retval = -*retval;
+
+  return retval;
 }
 
 /* See documentation in cli-utils.h.  */
@@ -163,7 +162,8 @@ get_number_trailer (const char **pp, int trailer)
 int
 get_number (const char **pp)
 {
-  return get_number_trailer (pp, '\0');
+  std::optional<int> res = get_number_trailer (pp, '\0');
+  return res.value_or (0);
 }
 
 /* See documentation in cli-utils.h.  */
@@ -171,12 +171,10 @@ get_number (const char **pp)
 int
 get_number (char **pp)
 {
-  int result;
   const char *p = *pp;
-
-  result = get_number_trailer (&p, '\0');
+  std::optional<int> res = get_number_trailer (&p, '\0');
   *pp = (char *) p;
-  return result;
+  return res.value_or (0);
 }
 
 /* See documentation in cli-utils.h.  */
@@ -255,7 +253,8 @@ number_or_range_parser::get_number ()
     {
       /* Default case: state->m_cur_tok is pointing either to a solo
 	 number, or to the first number of a range.  */
-      m_last_retval = get_number_trailer (&m_cur_tok, '-');
+      std::optional<int> res = get_number_trailer (&m_cur_tok, '-');
+      m_last_retval = res.value_or (0);
       /* If get_number_trailer has found a '-' preceded by a space, it
 	 might be the start of a command option.  So, do not parse a
 	 range if the '-' is followed by an alpha or another '-'.  We

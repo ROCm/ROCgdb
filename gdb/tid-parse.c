@@ -36,16 +36,14 @@ invalid_thread_id_error (const char *string)
    STRING is the parser string to be used in the error message if we
    do get back a negative number.  */
 
-static int
+static std::optional<int>
 get_non_negative_number_trailer (const char **pp, int trailer,
 				 const char *string)
 {
-  int num;
-
-  num = get_number_trailer (pp, trailer);
-  if (num < 0)
+  std::optional<int> res = get_number_trailer (pp, trailer);
+  if (res.has_value () && *res < 0)
     error (_("negative value: %s"), string);
-  return num;
+  return res;
 }
 
 /* Parse TIDSTR as a per-inferior thread ID, in either INF_NUM.THR_NUM
@@ -69,7 +67,7 @@ parse_thread_id_1 (const char *tidstr, const char **end)
 {
   const char *number = tidstr;
   const char *dot, *p1;
-  int thr_num, inf_num;
+  int inf_num;
 
   dot = strchr (number, '.');
 
@@ -77,9 +75,11 @@ parse_thread_id_1 (const char *tidstr, const char **end)
     {
       /* Parse number to the left of the dot.  */
       p1 = number;
-      inf_num = get_non_negative_number_trailer (&p1, '.', number);
-      if (inf_num == 0)
+      std::optional<int> res
+	= get_non_negative_number_trailer (&p1, '.', number);
+      if (!res.has_value () || *res == 0)
 	invalid_thread_id_error (number);
+      inf_num = *res;
       p1 = dot + 1;
     }
   else
@@ -88,9 +88,11 @@ parse_thread_id_1 (const char *tidstr, const char **end)
       p1 = number;
     }
 
-  thr_num = get_non_negative_number_trailer (&p1, 0, number);
-  if (thr_num == 0)
+  std::optional<int> res
+    = get_non_negative_number_trailer (&p1, 0, number);
+  if (!res.has_value () || *res == 0)
     invalid_thread_id_error (number);
+  int thr_num = *res;
 
   if (end != nullptr)
     *end = p1;
@@ -255,9 +257,11 @@ tid_range_parser::get_tid_or_range (int *inf_num,
 
 	  /* Parse number to the left of the dot.  */
 	  p = m_cur_tok;
-	  m_inf_num = get_non_negative_number_trailer (&p, '.', m_cur_tok);
-	  if (m_inf_num == 0)
+	  std::optional<int> res
+	    = get_non_negative_number_trailer (&p, '.', m_cur_tok);
+	  if (!res.has_value () || *res == 0)
 	    return 0;
+	  m_inf_num = *res;
 
 	  m_qualified = true;
 	  p = dot + 1;

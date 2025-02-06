@@ -3099,7 +3099,7 @@ frame_apply_cmd_completer (struct cmd_list_element *ignore,
 {
   const char *cmd = text;
 
-  int count = get_number_trailer (&cmd, 0);
+  int count = get_number (&cmd);
   if (count == 0)
     return;
 
@@ -3187,7 +3187,7 @@ frame_apply_command (const char* cmd, int from_tty)
 
   if (cmd == NULL)
     error (_("Missing COUNT argument."));
-  count = get_number_trailer (&cmd, 0);
+  count = get_number (&cmd);
   if (count == 0)
     error (_("Invalid COUNT argument."));
 
