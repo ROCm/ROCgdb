@@ -447,17 +447,24 @@ dump_condition_tokens (const std::vector<token> &vec)
 /* See break-cond-parse.h.  */
 
 void
+error_if_already_specific (const bp_specificity &spec)
+{
+  if (spec.is_specific ())
+    error ("You can specify only one of thread, inferior, or task.");
+}
+
+/* See break-cond-parse.h.  */
+
+void
 create_breakpoint_parse_arg_string
   (const char *str, gdb::unique_xmalloc_ptr<char> *cond_string_ptr,
-   int *thread_ptr, int *inferior_ptr, int *task_ptr,
+   bp_specificity *specificity_ptr,
    gdb::unique_xmalloc_ptr<char> *rest_ptr, bool *force_ptr)
 {
   /* Set up the defaults.  */
   cond_string_ptr->reset ();
   rest_ptr->reset ();
-  *thread_ptr = -1;
-  *inferior_ptr = -1;
-  *task_ptr = -1;
+  *specificity_ptr = {};
   *force_ptr = false;
 
   if (str == nullptr)
@@ -472,7 +479,7 @@ create_breakpoint_parse_arg_string
      as we parse TOKENS.  If all of TOKENS is parsed successfully then the
      state from these variables is copied into the output arguments before
      the function returns.  */
-  int thread = -1, inferior = -1, task = -1;
+  bp_specificity spec;
   bool force = false;
   gdb::unique_xmalloc_ptr<char> cond_string, rest;
 
@@ -486,49 +493,46 @@ create_breakpoint_parse_arg_string
 	  break;
 	case token::type::THREAD:
 	  {
-	    if (thread != -1)
+	    if (spec.thread != -1)
 	      error ("You can specify only one thread.");
-	    if (task != -1 || inferior != -1)
-	      error ("You can specify only one of thread, inferior, or task.");
+	    error_if_already_specific (spec);
 	    const char *tmptok;
 	    thread_info *thr = parse_thread_id (tok_value.c_str (), &tmptok);
 	    gdb_assert (*tmptok == '\0');
-	    thread = thr->global_num;
+	    spec.thread = thr->global_num;
 	  }
 	  break;
 	case token::type::INFERIOR:
 	  {
-	    if (inferior != -1)
+	    if (spec.inferior != -1)
 	      error ("You can specify only one inferior.");
-	    if (task != -1 || thread != -1)
-	      error ("You can specify only one of thread, inferior, or task.");
+	    error_if_already_specific (spec);
 	    char *tmptok;
 	    long inferior_id = strtol (tok_value.c_str (), &tmptok, 0);
 	    if (*tmptok != '\0')
 	      error (_("Junk '%s' after inferior keyword."), tmptok);
 	    if (inferior_id > INT_MAX)
 	      error (_("No inferior number '%ld'"), inferior_id);
-	    inferior = static_cast<int> (inferior_id);
-	    struct inferior *inf = find_inferior_id (inferior);
+	    spec.inferior = static_cast<int> (inferior_id);
+	    inferior *inf = find_inferior_id (spec.inferior);
 	    if (inf == nullptr)
-	      error (_("No inferior number '%d'"), inferior);
+	      error (_("No inferior number '%d'"), spec.inferior);
 	  }
 	  break;
 	case token::type::TASK:
 	  {
-	    if (task != -1)
+	    if (spec.task != -1)
 	      error ("You can specify only one task.");
-	    if (inferior != -1 || thread != -1)
-	      error ("You can specify only one of thread, inferior, or task.");
+	    error_if_already_specific (spec);
 	    char *tmptok;
 	    long task_id = strtol (tok_value.c_str (), &tmptok, 0);
 	    if (*tmptok != '\0')
 	      error (_("Junk '%s' after task keyword."), tmptok);
 	    if (task_id > INT_MAX)
 	      error (_("Unknown task %ld"), task_id);
-	    task = static_cast<int> (task_id);
-	    if (!valid_task_id (task))
-	      error (_("Unknown task %d."), task);
+	    spec.task = static_cast<int> (task_id);
+	    if (!valid_task_id (spec.task))
+	      error (_("Unknown task %d."), spec.task);
 	  }
 	  break;
 	case token::type::CONDITION:
@@ -544,9 +548,7 @@ create_breakpoint_parse_arg_string
 
   /* Move results into the output locations.  */
   *force_ptr = force;
-  *thread_ptr = thread;
-  *inferior_ptr = inferior;
-  *task_ptr = task;
+  *specificity_ptr = spec;
   rest_ptr->reset (rest.release ());
   cond_string_ptr->reset (cond_string.release ());
 }
@@ -561,13 +563,13 @@ namespace selftests {
    create_breakpoint_parse_arg_string.  */
 
 static void
-test (const char *input, const char *condition, int thread = -1,
-      int inferior = -1, int task = -1, bool force = false,
+test (const char *input, const char *condition,
+      const bp_specificity &specificity = {}, bool force = false,
       const char *rest = nullptr, const char *error_msg = nullptr)
 {
   gdb::unique_xmalloc_ptr<char> extracted_condition;
   gdb::unique_xmalloc_ptr<char> extracted_rest;
-  int extracted_thread, extracted_inferior, extracted_task;
+  bp_specificity extracted_specificity;
   bool extracted_force_condition;
   std::string exception_msg, error_str;
 
@@ -577,9 +579,8 @@ test (const char *input, const char *condition, int thread = -1,
   try
     {
       create_breakpoint_parse_arg_string (input, &extracted_condition,
-					  &extracted_thread,
-					  &extracted_inferior,
-					  &extracted_task, &extracted_rest,
+					  &extracted_specificity,
+					  &extracted_rest,
 					  &extracted_force_condition);
     }
   catch (const gdb_exception_error &ex)
@@ -595,9 +596,7 @@ test (const char *input, const char *condition, int thread = -1,
 	  && strcmp (condition, extracted_condition.get ()) != 0)
       || (rest == nullptr) != (extracted_rest.get () == nullptr)
       || (rest != nullptr && strcmp (rest, extracted_rest.get ()) != 0)
-      || thread != extracted_thread
-      || inferior != extracted_inferior
-      || task != extracted_task
+      || specificity != extracted_specificity
       || force != extracted_force_condition
       || exception_msg != error_str)
     {
@@ -606,9 +605,9 @@ test (const char *input, const char *condition, int thread = -1,
 	  debug_printf ("input: '%s'\n", input);
 	  debug_printf ("condition: '%s'\n", extracted_condition.get ());
 	  debug_printf ("rest: '%s'\n", extracted_rest.get ());
-	  debug_printf ("thread: %d\n", extracted_thread);
-	  debug_printf ("inferior: %d\n", extracted_inferior);
-	  debug_printf ("task: %d\n", extracted_task);
+	  debug_printf ("thread: %d\n", extracted_specificity.thread);
+	  debug_printf ("inferior: %d\n", extracted_specificity.inferior);
+	  debug_printf ("task: %d\n", extracted_specificity.task);
 	  debug_printf ("forced: %s\n",
 			extracted_force_condition ? "true" : "false");
 	  debug_printf ("exception: '%s'\n", exception_msg.c_str ());
@@ -626,7 +625,7 @@ test (const char *input, const char *condition, int thread = -1,
 static void
 test_error (const char *input, const char *error_msg)
 {
-  test (input, nullptr, -1, -1, -1, false, nullptr, error_msg);
+  test (input, nullptr, {}, false, nullptr, error_msg);
 }
 
 /* Test the create_breakpoint_parse_arg_string function.  Just wraps
@@ -639,30 +638,29 @@ create_breakpoint_parse_arg_string_tests ()
   scoped_restore_current_pspace_and_thread restore;
   scoped_mock_context<test_target_ops> mock_target (arch);
 
-  int global_thread_num = mock_target.mock_thread.global_num;
+  bp_specificity thread_specific;
+  thread_specific.thread = mock_target.mock_thread.global_num;
+  bp_specificity inferior_specific;
+  inferior_specific.inferior = 1;
 
   /* Test parsing valid breakpoint condition strings.  */
   test ("  if blah  ", "blah");
-  test (" if blah thread 1", "blah", global_thread_num);
-  test (" if blah inferior 1", "blah", -1, 1);
-  test (" if blah thread 1  ", "blah", global_thread_num);
-  test ("thread 1 woof", nullptr, global_thread_num, -1, -1, false, "woof");
-  test ("thread 1 X", nullptr, global_thread_num, -1, -1, false, "X");
-  test (" if blah thread 1 -force-condition", "blah", global_thread_num,
-	-1, -1, true);
-  test (" -force-condition if blah thread 1", "blah", global_thread_num,
-	-1, -1, true);
-  test (" -force-condition if blah thread 1  ", "blah", global_thread_num,
-	-1, -1, true);
-  test ("thread 1 -force-condition if blah", "blah", global_thread_num,
-	-1, -1, true);
+  test (" if blah thread 1", "blah", thread_specific);
+  test (" if blah inferior 1", "blah", inferior_specific);
+  test (" if blah thread 1  ", "blah", thread_specific);
+  test ("thread 1 woof", nullptr, thread_specific, false, "woof");
+  test ("thread 1 X", nullptr, thread_specific, false, "X");
+  test (" if blah thread 1 -force-condition", "blah", thread_specific, true);
+  test (" -force-condition if blah thread 1", "blah", thread_specific, true);
+  test (" -force-condition if blah thread 1  ", "blah", thread_specific, true);
+  test ("thread 1 -force-condition if blah", "blah", thread_specific, true);
   test ("if (A::outer::func ())", "(A::outer::func ())");
   test ("if ( foo == thread )", "( foo == thread )");
-  test ("if ( foo == thread ) inferior 1", "( foo == thread )", -1, 1);
-  test ("if ( foo == thread ) thread 1", "( foo == thread )",
-	global_thread_num);
+  test ("if ( foo == thread ) inferior 1", "( foo == thread )",
+	inferior_specific);
+  test ("if ( foo == thread ) thread 1", "( foo == thread )", thread_specific);
   test ("if foo == thread", "foo == thread");
-  test ("if foo == thread 1", "foo ==", global_thread_num);
+  test ("if foo == thread 1", "foo ==", thread_specific);
 
   /* Test parsing some invalid breakpoint condition strings.  */
   test_error ("thread 1 if foo == 123 thread 1",

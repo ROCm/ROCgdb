@@ -104,7 +104,8 @@ static void create_breakpoints_sal (struct gdbarch *,
 				    gdb::unique_xmalloc_ptr<char>,
 				    gdb::unique_xmalloc_ptr<char>,
 				    enum bptype,
-				    enum bpdisp, int, int, int,
+				    enum bpdisp,
+				    const bp_specificity &,
 				    int,
 				    int, int, int, unsigned);
 
@@ -385,10 +386,10 @@ struct momentary_breakpoint : public code_breakpoint
     enable_state = bp_enabled;
     disposition = disp_donttouch;
     frame_id = frame_id_;
-    thread = thread_;
+    specificity.thread = thread_;
 
     /* The inferior should have been set by the parent constructor.  */
-    gdb_assert (inferior == -1);
+    gdb_assert (specificity.inferior == -1);
   }
 
   void re_set (program_space *pspace) override;
@@ -1574,10 +1575,11 @@ breakpoint_set_thread (struct breakpoint *b, int thread)
 
   /* It is not valid to set a thread restriction for a breakpoint that
      already has task or inferior restriction.  */
-  gdb_assert (thread == -1 || (b->task == -1 && b->inferior == -1));
+  gdb_assert (thread == -1
+	      || (b->specificity.task == -1 && b->specificity.inferior == -1));
 
-  int old_thread = b->thread;
-  b->thread = thread;
+  int old_thread = b->specificity.thread;
+  b->specificity.thread = thread;
   if (old_thread != thread)
     {
       /* If THREAD is in a different program_space than OLD_THREAD, or the
@@ -1632,10 +1634,12 @@ breakpoint_set_inferior (struct breakpoint *b, int inferior)
 
   /* It is not valid to set an inferior restriction for a breakpoint that
      already has a task or thread restriction.  */
-  gdb_assert (inferior == -1 || (b->task == -1 && b->thread == -1));
+  gdb_assert (inferior == -1
+	      || (b->specificity.task == -1
+		  && b->specificity.thread == -1));
 
-  int old_inferior = b->inferior;
-  b->inferior = inferior;
+  int old_inferior = b->specificity.inferior;
+  b->specificity.inferior = inferior;
   if (old_inferior != inferior)
     {
       /* If INFERIOR is in a different program_space than OLD_INFERIOR, or
@@ -1689,10 +1693,11 @@ breakpoint_set_task (struct breakpoint *b, int task)
 
   /* It is not valid to set a task restriction for a breakpoint that
      already has a thread or inferior restriction.  */
-  gdb_assert (task == -1 || (b->thread == -1 && b->inferior == -1));
+  gdb_assert (task == -1 || (b->specificity.thread == -1
+			     && b->specificity.inferior == -1));
 
-  int old_task = b->task;
-  b->task = task;
+  int old_task = b->specificity.task;
+  b->specificity.task = task;
   if (old_task != task)
     notify_breakpoint_modified (b);
 }
@@ -2642,7 +2647,8 @@ should_be_inserted (struct bp_location *bl)
 	 We can't fix it unless GDB is able to emulate the instruction
 	 or switch to displaced stepping.  */
       && !(bl->owner->type == bp_single_step
-	   && thread_is_stepping_over_breakpoint (bl->owner->thread)))
+	   && (thread_is_stepping_over_breakpoint
+	       (bl->owner->specificity.thread))))
     {
       infrun_debug_printf ("skipping breakpoint: stepping past insn at: %s",
 			   paddress (bl->gdbarch, bl->address));
@@ -3003,7 +3009,7 @@ breakpoint_kind (const struct bp_location *bl, CORE_ADDR *addr)
 {
   if (bl->owner->type == bp_single_step)
     {
-      struct thread_info *thr = find_thread_global_id (bl->owner->thread);
+      thread_info *thr = find_thread_global_id (bl->owner->specificity.thread);
       struct regcache *regcache;
 
       regcache = get_thread_regcache (thr);
@@ -3490,14 +3496,14 @@ insert_breakpoint_locations (void)
       /* There is no point inserting thread-specific breakpoints if
 	 the thread no longer exists.  ALL_BP_LOCATIONS bp_location
 	 has BL->OWNER always non-NULL.  */
-      if (bl->owner->thread != -1
-	  && !valid_global_thread_id (bl->owner->thread))
+      if (bl->owner->specificity.thread != -1
+	  && !valid_global_thread_id (bl->owner->specificity.thread))
 	continue;
 
       /* Or inferior specific breakpoints if the inferior no longer
 	 exists.  */
-      if (bl->owner->inferior != -1
-	  && !valid_global_inferior_id (bl->owner->inferior))
+      if (bl->owner->specificity.inferior != -1
+	  && !valid_global_inferior_id (bl->owner->specificity.inferior))
 	continue;
 
       switch_to_program_space_and_thread (bl->pspace);
@@ -3592,7 +3598,7 @@ remove_threaded_breakpoints (thread_info *tp,
 {
   for (breakpoint &b : all_breakpoints_safe ())
     {
-      if (b.thread == tp->global_num && user_breakpoint_p (&b))
+      if (b.specificity.thread == tp->global_num && user_breakpoint_p (&b))
 	{
 	  gdb_printf (_("\
 Thread-specific breakpoint %d deleted - thread %s no longer in the thread list.\n"),
@@ -3610,7 +3616,7 @@ remove_inferior_breakpoints (struct inferior *inf)
 {
   for (breakpoint &b : all_breakpoints_safe ())
     {
-      if (b.inferior == inf->num && user_breakpoint_p (&b))
+      if (b.specificity.inferior == inf->num && user_breakpoint_p (&b))
 	{
 	  /* Tell the user the breakpoint has been deleted.  But only for
 	     breakpoints that would not normally have been deleted at the
@@ -5783,6 +5789,21 @@ bpstat_check_watchpoint (bpstat *bs)
     }
 }
 
+bool
+bp_specificity::matches (thread_info *thr) const
+{
+  if (thread != -1 && thread != thr->global_num)
+    return false;
+
+  if (inferior != -1 && inferior != thr->inf->num)
+    return false;
+
+  if (task != -1 && task != ada_get_task_number (thr))
+    return false;
+
+  return true;
+}
+
 /* For breakpoints that are currently marked as telling gdb to stop,
    check conditions (condition proper, frame, thread and ignore count)
    of breakpoint referred to by BS.  If we should not stop for this
@@ -5841,9 +5862,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
   /* If this is a thread/task-specific breakpoint, don't waste cpu
      evaluating the condition if this isn't the specified
      thread/task.  */
-  if ((b->thread != -1 && b->thread != thread->global_num)
-      || (b->inferior != -1 && b->inferior != thread->inf->num)
-      || (b->task != -1 && b->task != ada_get_task_number (thread)))
+  if (!b->specificity.matches (thread))
     {
       infrun_debug_printf ("incorrect thread or task, not stopping");
       bs->stop = false;
@@ -6899,12 +6918,12 @@ print_one_breakpoint_location (struct breakpoint *b,
      output below.  */
   if (part_of_multiple && uiout->is_mi_like_p ())
     {
-      if (b->thread != -1)
-	uiout->field_signed ("thread", b->thread);
-      else if (b->task != -1)
-	uiout->field_signed ("task", b->task);
-      else if (b->inferior != -1)
-	uiout->field_signed ("inferior", b->inferior);
+      if (b->specificity.thread != -1)
+	uiout->field_signed ("thread", b->specificity.thread);
+      else if (b->specificity.task != -1)
+	uiout->field_signed ("task", b->specificity.task);
+      else if (b->specificity.inferior != -1)
+	uiout->field_signed ("inferior", b->specificity.inferior);
     }
 
   uiout->text ("\n");
@@ -6945,32 +6964,34 @@ print_one_breakpoint_location (struct breakpoint *b,
       uiout->text ("\n");
     }
 
-  if (!part_of_multiple && b->thread != -1)
+  if (!part_of_multiple && b->specificity.thread != -1)
     {
+      const bp_specificity &s = b->specificity;
+
       /* FIXME should make an annotation for this.  */
       uiout->text ("\tstop only in thread ");
       if (uiout->is_mi_like_p ())
-	uiout->field_signed ("thread", b->thread);
+	uiout->field_signed ("thread", s.thread);
       else
 	{
-	  struct thread_info *thr = find_thread_global_id (b->thread);
+	  thread_info *thr = find_thread_global_id (s.thread);
 
 	  uiout->field_string ("thread", print_thread_id (thr));
 	}
       uiout->text ("\n");
     }
 
-  if (!part_of_multiple && b->task != -1)
+  if (!part_of_multiple && b->specificity.task != -1)
     {
       uiout->text ("\tstop only in task ");
-      uiout->field_signed ("task", b->task);
+      uiout->field_signed ("task", b->specificity.task);
       uiout->text ("\n");
     }
 
-  if (!part_of_multiple && b->inferior != -1)
+  if (!part_of_multiple && b->specificity.inferior != -1)
     {
       uiout->text ("\tstop only in inferior ");
-      uiout->field_signed ("inferior", b->inferior);
+      uiout->field_signed ("inferior", b->specificity.inferior);
       uiout->text ("\n");
     }
 
@@ -7475,15 +7496,17 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	  {
 	    others--;
 	    gdb_printf ("%d", b.number);
-	    if (b.thread == -1 && thread != -1)
+	    /* o => other breakpoint */
+	    const bp_specificity &o = b.specificity;
+	    if (o.thread == -1 && thread != -1)
 	      gdb_printf (" (all threads)");
-	    else if (b.thread != -1)
+	    else if (o.thread != -1)
 	      {
-		struct thread_info *thr = find_thread_global_id (b.thread);
+		struct thread_info *thr = find_thread_global_id (o.thread);
 		gdb_printf (" (thread %s)", print_thread_id (thr));
 	      }
-	    else if (b.task != -1)
-	      gdb_printf (" (task %d)", b.task);
+	    else if (o.task != -1)
+	      gdb_printf (" (task %d)", o.task);
 	    gdb_printf ("%s%s ",
 			((b.enable_state == bp_disabled
 			  || b.enable_state == bp_call_disabled)
@@ -7963,9 +7986,10 @@ delete_longjmp_breakpoint (int thread)
   for (breakpoint &b : all_breakpoints_safe ())
     if (b.type == bp_longjmp || b.type == bp_exception)
       {
-	if (b.thread == thread)
+	const bp_specificity &s = b.specificity;
+	if (s.thread == thread)
 	  {
-	    gdb_assert (b.inferior == -1);
+	    gdb_assert (s.inferior == -1);
 	    delete_breakpoint (&b);
 	  }
       }
@@ -7977,9 +8001,10 @@ delete_longjmp_breakpoint_at_next_stop (int thread)
   for (breakpoint &b : all_breakpoints_safe ())
     if (b.type == bp_longjmp || b.type == bp_exception)
       {
-	if (b.thread == thread)
+	const bp_specificity &s = b.specificity;
+	if (s.thread == thread)
 	  {
-	    gdb_assert (b.inferior == -1);
+	    gdb_assert (s.inferior == -1);
 	    b.disposition = disp_del_at_next_stop;
 	  }
       }
@@ -8036,9 +8061,10 @@ check_longjmp_breakpoint_for_call_dummy (struct thread_info *tp)
 
   for (struct breakpoint &b : all_breakpoints ())
     {
-      if (b.type == bp_longjmp_call_dummy && b.thread == tp->global_num)
+      const bp_specificity &s = b.specificity;
+      if (b.type == bp_longjmp_call_dummy && s.thread == tp->global_num)
 	{
-	  gdb_assert (b.inferior == -1);
+	  gdb_assert (s.inferior == -1);
 	  struct breakpoint *dummy_b = b.related_breakpoint;
 
 	  /* Find the bp_call_dummy breakpoint in the list of breakpoints
@@ -8685,7 +8711,7 @@ clone_momentary_breakpoint (struct breakpoint *orig)
     return NULL;
 
   return momentary_breakpoint_from_master (orig, orig->type, 0,
-					   orig->thread);
+					   orig->specificity.thread);
 }
 
 breakpoint_up
@@ -8935,7 +8961,7 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 				  gdb::unique_xmalloc_ptr<char> cond_string_,
 				  gdb::unique_xmalloc_ptr<char> extra_string_,
 				  enum bpdisp disposition_,
-				  int thread_, int task_, int inferior_,
+				  const bp_specificity &specificity_,
 				  int ignore_count_,
 				  int from_tty,
 				  int enabled_, unsigned flags,
@@ -8959,15 +8985,9 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
     }
 
   gdb_assert (!sals.empty ());
+  specificity_.assert_valid ();
 
-  /* At most one of thread, task, or inferior can be set on any breakpoint.  */
-  gdb_assert (((thread == -1 ? 0 : 1)
-	       + (task == -1 ? 0 : 1)
-	       + (inferior == -1 ? 0 : 1)) <= 1);
-
-  thread = thread_;
-  task = task_;
-  inferior = inferior_;
+  specificity = specificity_;
 
   cond_string = std::move (cond_string_);
   extra_string = std::move (extra_string_);
@@ -9017,7 +9037,8 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 	    loc_gdbarch = gdbarch;
 
 	  describe_other_breakpoints (loc_gdbarch,
-				      sal.pspace, sal.pc, sal.section, thread);
+				      sal.pspace, sal.pc, sal.section,
+				      specificity.thread);
 	}
 
       bp_location *new_loc = add_location (sal);
@@ -9064,7 +9085,8 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 		       gdb::unique_xmalloc_ptr<char> cond_string,
 		       gdb::unique_xmalloc_ptr<char> extra_string,
 		       enum bptype type, enum bpdisp disposition,
-		       int thread, int task, int inferior, int ignore_count,
+		       const bp_specificity &specificity,
+		       int ignore_count,
 		       int from_tty,
 		       int enabled, int internal, unsigned flags,
 		       int display_canonical)
@@ -9078,7 +9100,8 @@ create_breakpoint_sal (struct gdbarch *gdbarch,
 				std::move (cond_string),
 				std::move (extra_string),
 				disposition,
-				thread, task, inferior, ignore_count,
+				specificity,
+				ignore_count,
 				from_tty,
 				enabled, flags,
 				display_canonical);
@@ -9107,7 +9130,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 			gdb::unique_xmalloc_ptr<char> cond_string,
 			gdb::unique_xmalloc_ptr<char> extra_string,
 			enum bptype type, enum bpdisp disposition,
-			int thread, int task, int inferior,
+			const bp_specificity &specificity,
 			int ignore_count,
 			int from_tty,
 			int enabled, int internal, unsigned flags)
@@ -9132,7 +9155,7 @@ create_breakpoints_sal (struct gdbarch *gdbarch,
 			     std::move (cond_string),
 			     std::move (extra_string),
 			     type, disposition,
-			     thread, task, inferior, ignore_count,
+			     specificity, ignore_count,
 			     from_tty, enabled, internal, flags,
 			     canonical->special_display);
     }
@@ -9371,7 +9394,7 @@ int
 create_breakpoint (struct gdbarch *gdbarch,
 		   location_spec *locspec,
 		   const char *cond_string,
-		   int thread, int inferior,
+		   bp_specificity specificity,
 		   const char *extra_string,
 		   bool force_condition, int parse_extra,
 		   int tempflag, enum bptype type_wanted,
@@ -9383,18 +9406,14 @@ create_breakpoint (struct gdbarch *gdbarch,
 {
   struct linespec_result canonical;
   bool pending = false;
-  int task = -1;
   int prev_bkpt_count = breakpoint_count;
 
-  gdb_assert (thread == -1 || thread > 0);
-  gdb_assert (inferior == -1 || inferior > 0);
-  gdb_assert (thread == -1 || inferior == -1);
+  specificity.assert_valid ();
 
-  /* If PARSE_EXTRA is true then the thread and inferior details will be
-     parsed from the EXTRA_STRING, the THREAD and INFERIOR arguments
-     should be -1.  */
-  gdb_assert (!parse_extra || thread == -1);
-  gdb_assert (!parse_extra || inferior == -1);
+  /* If PARSE_EXTRA is true then the specificity details will be
+     parsed from the EXTRA_STRING, and the SPECIFICY argument should
+     be clear.  */
+  gdb_assert (!parse_extra || !specificity.is_specific ());
 
   gdb_assert (ops != NULL);
 
@@ -9422,7 +9441,7 @@ create_breakpoint (struct gdbarch *gdbarch,
     {
       /* Parse EXTRA_STRING splitting the parts out.  */
       create_breakpoint_parse_arg_string (extra_string, &cond_string_copy,
-					  &thread, &inferior, &task,
+					  &specificity,
 					  &extra_string_copy,
 					  &force_condition);
 
@@ -9436,9 +9455,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 	 We still do the EXTRA_STRING_COPY is empty check, just later in
 	 this function.  */
 
-      gdb_assert (thread == -1 || thread > 0);
-      gdb_assert (task == -1 || task > 0);
-      gdb_assert (inferior == -1 || inferior > 0);
+      specificity.assert_valid ();
     }
   else
     {
@@ -9455,7 +9472,8 @@ create_breakpoint (struct gdbarch *gdbarch,
   try
     {
       struct program_space *search_pspace
-	= find_program_space_for_breakpoint (thread, inferior);
+	= find_program_space_for_breakpoint (specificity.thread,
+					     specificity.inferior);
       ops->create_sals_from_location_spec (locspec, &canonical,
 					   search_pspace);
     }
@@ -9552,7 +9570,7 @@ create_breakpoint (struct gdbarch *gdbarch,
 				   std::move (extra_string_copy),
 				   type_wanted,
 				   tempflag ? disp_del : disp_donttouch,
-				   thread, task, inferior, ignore_count,
+				   specificity, ignore_count,
 				   from_tty, enabled, internal, flags);
     }
   else
@@ -9564,9 +9582,7 @@ create_breakpoint (struct gdbarch *gdbarch,
       /* Create a private copy of the condition string.  */
       b->cond_string = std::move (cond_string_copy);
 
-      b->thread = thread;
-      b->task = task;
-      b->inferior = inferior;
+      b->specificity = specificity;
 
       /* Create a private copy of any extra string.  */
       b->extra_string = std::move (extra_string_copy);
@@ -9617,8 +9633,8 @@ break_command_1 (const char *arg, int flag, int from_tty)
 
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
-		     NULL,
-		     -1 /* thread */, -1 /* inferior */,
+		     nullptr, /* cond_string */
+		     {} /* specificity */,
 		     arg, false, 1 /* parse arg */,
 		     tempflag, type_wanted,
 		     0 /* Ignore count */,
@@ -9728,7 +9744,8 @@ dprintf_command (const char *arg, int from_tty)
 
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
-		     NULL, -1, -1,
+		     nullptr, /* cond_string */
+		     {} /* specificity */,
 		     arg, false, 0 /* parse arg */,
 		     0, bp_dprintf,
 		     0 /* Ignore count */,
@@ -10488,8 +10505,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
   const char *cond_start = NULL;
   const char *cond_end = NULL;
   enum bptype bp_type;
-  int thread = -1;
-  int inferior = -1;
+  bp_specificity specificity;
   /* Flag to indicate whether we are going to use masks for
      the hardware watchpoint.  */
   bool use_mask = false;
@@ -10538,34 +10554,26 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 		 only in a specific thread.  */
 	      const char *endp;
 
-	      if (thread != -1)
+	      if (specificity.thread != -1)
 		error(_("You can specify only one thread."));
 
-	      if (task != -1)
-		error (_("You can specify only one of thread or task."));
-
-	      if (inferior != -1)
-		error (_("You can specify only one of inferior or thread."));
+	      error_if_already_specific (specificity);
 
 	      /* Extract the thread ID from the next token.  */
 	      thr = parse_thread_id (value_start, &endp);
 	      if (value_start == endp)
 		error (_("Junk after thread keyword."));
 
-	      thread = thr->global_num;
+	      specificity.thread = thr->global_num;
 	    }
 	  else if (toklen == 4 && startswith (tok, "task"))
 	    {
 	      char *tmp;
 
-	      if (task != -1)
+	      if (specificity.task != -1)
 		error(_("You can specify only one task."));
 
-	      if (thread != -1)
-		error (_("You can specify only one of thread or task."));
-
-	      if (inferior != -1)
-		error (_("You can specify only one of inferior or task."));
+	      error_if_already_specific (specificity);
 
 	      task = strtol (value_start, &tmp, 0);
 	      if (tmp == value_start)
@@ -10758,10 +10766,8 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     w = std::make_unique<watchpoint> (nullptr, bp_type);
 
   /* At most one of thread or task can be set on a watchpoint.  */
-  gdb_assert (thread == -1 || task == -1);
-  w->thread = thread;
-  w->inferior = inferior;
-  w->task = task;
+  specificity.assert_valid ();
+  w->specificity = specificity;
   w->disposition = disp_donttouch;
   w->pspace = current_program_space;
   w->exp = std::move (exp);
@@ -12462,7 +12468,7 @@ momentary_breakpoint::print_mention () const
 
 longjmp_breakpoint::~longjmp_breakpoint ()
 {
-  thread_info *tp = find_thread_global_id (this->thread);
+  thread_info *tp = find_thread_global_id (this->specificity.thread);
 
   if (tp != NULL)
     tp->initiating_frame = null_frame_id;
@@ -12649,8 +12655,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 				      gdb::unique_xmalloc_ptr<char> extra_string,
 				      enum bptype type_wanted,
 				      enum bpdisp disposition,
-				      int thread,
-				      int task, int inferior,
+				      const bp_specificity &specificity,
 				      int ignore_count,
 				      int from_tty, int enabled,
 				      int internal, unsigned flags)
@@ -12677,7 +12682,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
 			 std::move (cond_string),
 			 std::move (extra_string),
 			 disposition,
-			 thread, task, inferior, ignore_count,
+			 specificity, ignore_count,
 			 from_tty, enabled, flags,
 			 canonical->special_display));
 
@@ -13323,7 +13328,8 @@ code_breakpoint::re_set_default (struct program_space *filter_pspace)
      breakpoints that are not thread- or inferior-specific, BP_PSPACE will
      be nullptr.  */
   program_space *bp_pspace
-    = find_program_space_for_breakpoint (this->thread, this->inferior);
+    = find_program_space_for_breakpoint (this->specificity.thread,
+					 this->specificity.inferior);
 
   /* If this is not a thread or inferior specific breakpoint, or it is a
      thread or inferior specific breakpoint but we are looking for new
@@ -13464,9 +13470,9 @@ breakpoint_re_set_one (breakpoint *b, program_space *filter_pspace)
 void
 breakpoint_re_set_thread (struct breakpoint *b)
 {
-  if (b->thread != -1)
+  if (b->specificity.thread != -1)
     {
-      b->thread = inferior_thread ()->global_num;
+      b->specificity.thread = inferior_thread ()->global_num;
 
       /* We're being called after following a fork.  The new fork is
 	 selected as current, and unless this was a vfork will have a
@@ -14202,7 +14208,9 @@ trace_command (const char *arg, int from_tty)
 
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
-		     NULL, -1, -1, arg, false, 1 /* parse arg */,
+		     nullptr, /* cond_string */
+		     {} /* specificity */,
+		     arg, false, 1 /* parse arg */,
 		     0 /* tempflag */,
 		     bp_tracepoint /* type_wanted */,
 		     0 /* Ignore count */,
@@ -14220,7 +14228,9 @@ ftrace_command (const char *arg, int from_tty)
 						      current_language);
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
-		     NULL, -1, -1, arg, false, 1 /* parse arg */,
+		     nullptr, /* cond_string */
+		     {} /* specificity */,
+		     arg, false, 1 /* parse arg */,
 		     0 /* tempflag */,
 		     bp_fast_tracepoint /* type_wanted */,
 		     0 /* Ignore count */,
@@ -14258,7 +14268,9 @@ strace_command (const char *arg, int from_tty)
 
   create_breakpoint (get_current_arch (),
 		     locspec.get (),
-		     NULL, -1, -1, arg, false, 1 /* parse arg */,
+		     nullptr, /* cond_string */
+		     {} /* specificity */,
+		     arg, false, 1 /* parse arg */,
 		     0 /* tempflag */,
 		     type /* type_wanted */,
 		     0 /* Ignore count */,
@@ -14333,7 +14345,9 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
 
   if (!create_breakpoint (get_current_arch (),
 			  locspec.get (),
-			  utp->cond_string.get (), -1, -1, addr_str,
+			  utp->cond_string.get () /* cond_string */,
+			  {} /* specificity */,
+			  addr_str,
 			  false /* force_condition */,
 			  0 /* parse cond/thread */,
 			  0 /* tempflag */,
@@ -14594,14 +14608,17 @@ get_tracepoint_by_number (const char **arg,
 void
 breakpoint::print_recreate_thread (struct ui_file *fp) const
 {
-  if (thread != -1)
+  if (specificity.thread != -1)
     {
-      struct thread_info *thr = find_thread_global_id (thread);
+      thread_info *thr = find_thread_global_id (specificity.thread);
       gdb_printf (fp, " thread %s", print_full_thread_id (thr));
     }
 
-  if (task != -1)
-    gdb_printf (fp, " task %d", task);
+  if (specificity.task != -1)
+    gdb_printf (fp, " task %d", specificity.task);
+
+  if (specificity.inferior != -1)
+    gdb_printf (fp, " inferior %d", specificity.inferior);
 
   gdb_printf (fp, "\n");
 }

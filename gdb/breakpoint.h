@@ -259,6 +259,57 @@ enum condition_status
     condition_updated
   };
 
+struct bp_specificity
+{
+  /* Inferior number for inferior-specific breakpoint, or -1 if this
+     breakpoint is for all inferiors.  */
+  int inferior = -1;
+
+  /* Global thread number for thread-specific breakpoint, or -1 if
+     don't care.  */
+  int thread = -1;
+
+  /* Ada task number for task-specific breakpoint, or -1 if don't
+     care.  */
+  int task = -1;
+
+  bool operator== (const bp_specificity &rhs) const
+  {
+    return (thread == rhs.thread
+	    && inferior == rhs.inferior
+	    && task == rhs.task);
+  }
+
+  bool operator!= (const bp_specificity &rhs) const
+  {
+    return !(*this == rhs);
+  }
+
+  /* Do various validity assertion checks.  Note this isn't a function
+     that returns true/false depending on validity, leaving the
+     gdb_assert to the caller, so that an eventual assertion failure
+     points more directly to the check that failed.  */
+  void assert_valid () const
+  {
+    gdb_assert (thread == -1 || thread > 0);
+    gdb_assert (inferior == -1 || inferior > 0);
+    gdb_assert (task == -1 || task > 0);
+
+    /* At most one of thread, task or inferior can be set on any
+       breakpoint.  */
+    gdb_assert (((thread == -1 ? 0 : 1)
+		 + (task == -1 ? 0 : 1)
+		 + (inferior == -1 ? 0 : 1)) <= 1);
+  }
+
+  bool is_specific () const
+  {
+    return (*this != bp_specificity {});
+  }
+
+  bool matches (thread_info *thr) const;
+};
+
 /* Information used by targets to insert and remove breakpoints.  */
 
 struct bp_target_info
@@ -588,7 +639,8 @@ struct breakpoint_ops
 				  struct linespec_result *,
 				  gdb::unique_xmalloc_ptr<char>,
 				  gdb::unique_xmalloc_ptr<char>,
-				  enum bptype, enum bpdisp, int, int, int,
+				  enum bptype, enum bpdisp,
+				  const bp_specificity &,
 				  int, int, int, int, unsigned);
 };
 
@@ -884,17 +936,7 @@ struct breakpoint : public intrusive_list_node<breakpoint>
      watchpoint_scope breakpoint or something like that.  FIXME).  */
   breakpoint *related_breakpoint;
 
-  /* Thread number for thread-specific breakpoint, or -1 if don't
-     care.  */
-  int thread = -1;
-
-  /* Inferior number for inferior-specific breakpoint, or -1 if this
-     breakpoint is for all inferiors.  */
-  int inferior = -1;
-
-  /* Ada task number for task-specific breakpoint, or -1 if don't
-     care.  */
-  int task = -1;
+  bp_specificity specificity;
 
   /* Count of the number of times this breakpoint was taken, dumped
      with the info, but not used for anything else.  Useful for seeing
@@ -950,7 +992,8 @@ struct code_breakpoint : public breakpoint
 		   gdb::unique_xmalloc_ptr<char> cond_string,
 		   gdb::unique_xmalloc_ptr<char> extra_string,
 		   enum bpdisp disposition,
-		   int thread, int task, int inferior, int ignore_count,
+		   const bp_specificity &specificity,
+		   int ignore_count,
 		   int from_tty,
 		   int enabled, unsigned flags,
 		   int display_canonical);
@@ -1685,8 +1728,8 @@ enum breakpoint_create_flags
 
 extern int create_breakpoint (struct gdbarch *gdbarch,
 			      struct location_spec *locspec,
-			      const char *cond_string, int thread,
-			      int inferior,
+			      const char *cond_string,
+			      bp_specificity specificity,
 			      const char *extra_string,
 			      bool force_condition,
 			      int parse_extra,
