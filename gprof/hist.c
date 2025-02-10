@@ -109,12 +109,12 @@ read_histogram_header (histogram *record,
       done (1);
     }
 
-  n_hist_scale = (double)((record->highpc - record->lowpc) / sizeof (UNIT))
+  n_hist_scale = (double)(record->highpc - record->lowpc) / sizeof (UNIT)
     / record->num_bins;
 
   if (first)
     {
-      /* We don't try to veryfy profrate is the same for all histogram
+      /* We don't try to verify profrate is the same for all histogram
 	 records.  If we have two histogram records for the same
 	 address range and profiling samples is done as often
 	 as possible as opposed on timer, then the actual profrate will
@@ -155,8 +155,8 @@ read_histogram_header (histogram *record,
       if (fabs (hist_scale - n_hist_scale) > 0.000001)
 	{
 	  fprintf (stderr,
-		   _("%s: different scales in histogram records"),
-		   whoami);
+		   _("%s: different scales in histogram records: %f != %f\n"),
+		   whoami, hist_scale, n_hist_scale);
 	  done (1);
 	}
     }
@@ -443,7 +443,7 @@ hist_assign_samples_1 (histogram *r)
 			    total_time));
 }
 
-/* Calls 'hist_assign_sampes_1' for all histogram records read so far. */
+/* Calls 'hist_assign_samples_1' for all histogram records read so far. */
 void
 hist_assign_samples (void)
 {
@@ -724,7 +724,7 @@ hist_clip_symbol_address (bfd_vma *p_lowpc, bfd_vma *p_highpc)
     *p_highpc = *p_lowpc;
 }
 
-/* Find and return exising histogram record having the same lowpc and
+/* Find and return existing histogram record having the same lowpc and
    highpc as passed via the parameters.  Return NULL if nothing is found.
    The return value is valid until any new histogram is read.  */
 static histogram *
