@@ -23,6 +23,24 @@ if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path "/opt/rocm"
 }
 
+# Act as a drop-in replacement for "remote_exec host"
+# that logs the failures.
+
+proc log_host_exec { cmd } {
+    set result [remote_exec host "$cmd"]
+    set exit_status [lindex $result 0]
+    if {$exit_status != 0} {
+	# -1 indicates that $cmd could not be executed at all.
+	if {$exit_status == -1} {
+	    verbose -log "Cannot execute $cmd."
+	} else {
+	    verbose -log "$cmd returned an error."
+	}
+    }
+
+    return $result
+}
+
 # Detect available GPU devices.
 #
 # Return a list of GPU devices that do exist on the system.
