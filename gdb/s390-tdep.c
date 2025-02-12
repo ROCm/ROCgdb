@@ -2343,8 +2343,8 @@ s390_unwind_pseudo_register (const frame_info_ptr &this_frame, int regnum)
       struct value *val2
 	= frame_unwind_register_value (this_frame, S390_V0_LOWER_REGNUM + reg);
 
-      val1->contents_copy (val, 0, 0, 8);
-      val2->contents_copy (val, 8, 0, 8);
+      val1->contents_copy (val, 0, 0, 0, 8);
+      val2->contents_copy (val, 8, 0, 0, 8);
 
       return value_cast (type, val);
     }
