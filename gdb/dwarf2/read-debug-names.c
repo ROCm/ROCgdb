@@ -28,6 +28,7 @@
 #include "read.h"
 #include "stringify.h"
 #include "extract-store-integer.h"
+#include "gdbsupport/thread-pool.h"
 
 /* This is just like cooked_index_functions, but overrides a single
    method so the test suite can distinguish the .debug_names case from
@@ -74,7 +75,15 @@ struct mapped_debug_names_reader
   bfd *abfd = nullptr;
   bfd_endian dwarf5_byte_order {};
   bool dwarf5_is_dwarf64 = false;
+
+  /* True if the augmentation string indicates the index was produced by
+     GDB.  */
   bool augmentation_is_gdb = false;
+
+  /* If AUGMENTATION_IS_GDB is true, this indicates the version.  Otherwise,
+     this value is meaningless.  */
+  unsigned int gdb_augmentation_version = 0;
+
   uint8_t offset_size = 0;
   uint32_t cu_count = 0;
   uint32_t tu_count = 0, bucket_count = 0, name_count = 0;
@@ -105,8 +114,33 @@ struct mapped_debug_names_reader
 
   std::unordered_map<ULONGEST, index_val> abbrev_map;
 
-  std::unique_ptr<cooked_index_shard> shard;
+  /* Even though the scanning of .debug_names and creation of the cooked index
+     entries is done serially, we create multiple shards so that the
+     finalization step can be parallelized.  The shards are filled in a round
+     robin fashion.  */
+  std::vector<cooked_index_shard_up> shards;
+
+  /* Next shard to insert an entry in.  */
+  int next_shard = 0;
+
+  /* Maps entry pool offsets to cooked index entries.  */
+  gdb::unordered_map<ULONGEST, cooked_index_entry *>
+    entry_pool_offsets_to_entries;
+
+  /* Cooked index entries for which the parent needs to be resolved.
+
+     The second value of the pair is the DW_IDX_parent value.  Its meaning
+     depends on the augmentation string:
+
+       - GDB2: an index in the name table
+       - GDB3: an offset offset into the entry pool  */
   std::vector<std::pair<cooked_index_entry *, ULONGEST>> needs_parent;
+
+  /* All the cooked index entries created, in the same order and groups as
+     listed in the name table.
+
+     The size of the outer vector is equal to the number of entries in the name
+     table (NAME_COUNT).  */
   std::vector<std::vector<cooked_index_entry *>> all_entries;
 };
 
@@ -121,6 +155,7 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 					   std::optional<ULONGEST> &parent)
 {
   unsigned int bytes_read;
+  const auto offset_in_entry_pool = entry - entry_pool;
   const ULONGEST abbrev = read_unsigned_leb128 (abfd, entry, &bytes_read);
   entry += bytes_read;
   if (abbrev == 0)
@@ -239,8 +274,18 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 
   /* Skip if we couldn't find a valid CU/TU index.  */
   if (per_cu != nullptr)
-    *result = shard->add (die_offset, (dwarf_tag) indexval.dwarf_tag, flags,
-			  lang, name, nullptr, per_cu);
+    {
+      *result
+	= shards[next_shard]->add (die_offset, (dwarf_tag) indexval.dwarf_tag,
+				   flags, lang, name, nullptr, per_cu);
+
+      ++next_shard;
+      if (next_shard == shards.size ())
+	next_shard = 0;
+
+      entry_pool_offsets_to_entries.emplace (offset_in_entry_pool, *result);
+    }
+
   return entry;
 }
 
@@ -296,19 +341,43 @@ mapped_debug_names_reader::scan_all_names ()
       scan_entries (i, name, entry);
     }
 
-  /* Now update the parent pointers for all entries.  This has to be
-     done in a funny way because DWARF specifies the parent entry to
-     point to a name -- but we don't know which specific one.  */
-  for (auto [entry, parent_idx] : needs_parent)
+  /* Resolve the parent pointers for all entries that have a parent.
+
+     If the augmentation string is "GDB2", the DW_IDX_parent value is an index
+     into the name table.  Since there may be multiple index entries associated
+     to that name, we have a little heuristic to figure out which is the right
+     one.
+
+     Otherwise, the DW_IDX_parent value is an offset into the entry pool, which
+     is not ambiguous.  */
+  for (auto &[entry, parent_val] : needs_parent)
     {
-      /* Name entries are indexed from 1 in DWARF.  */
-      std::vector<cooked_index_entry *> &entries = all_entries[parent_idx - 1];
-      for (const auto &parent : entries)
-	if (parent->lang == entry->lang)
-	  {
-	    entry->set_parent (parent);
-	    break;
-	  }
+      if (augmentation_is_gdb && gdb_augmentation_version == 2)
+	{
+	  /* Name entries are indexed from 1 in DWARF.  */
+	  std::vector<cooked_index_entry *> &entries
+	    = all_entries[parent_val - 1];
+
+	  for (const auto &parent : entries)
+	    if (parent->lang == entry->lang)
+	      {
+		entry->set_parent (parent);
+		break;
+	      }
+	}
+      else
+	{
+	  const auto parent_it
+	    = entry_pool_offsets_to_entries.find (parent_val);
+
+	  if (parent_it == entry_pool_offsets_to_entries.cend ())
+	    {
+	      complaint (_ ("Parent entry not found for .debug_names entry"));
+	      continue;
+	    }
+
+	  entry->set_parent (parent_it->second);
+	}
     }
 }
 
@@ -348,14 +417,13 @@ cooked_index_debug_names::do_reading ()
 			  complaint_handler.release (),
 			  std::move (exceptions),
 			  parent_map ());
-  std::vector<std::unique_ptr<cooked_index_shard>> indexes;
-  indexes.push_back (std::move (m_map.shard));
   cooked_index *table
     = (gdb::checked_static_cast<cooked_index *>
        (per_bfd->index_table.get ()));
+
   /* Note that this code never uses IS_PARENT_DEFERRED, so it is safe
      to pass nullptr here.  */
-  table->set_contents (std::move (indexes), &m_warnings, nullptr);
+  table->set_contents (std::move (m_map.shards), &m_warnings, nullptr);
 
   bfd_thread_cleanup ();
 }
@@ -403,16 +471,6 @@ check_signatured_type_table_from_debug_names
 }
 
 /* DWARF-5 debug_names reader.  */
-
-/* The old, no-longer-supported GDB augmentation.  */
-static const gdb_byte old_gdb_augmentation[]
-     = { 'G', 'D', 'B', 0 };
-static_assert (sizeof (old_gdb_augmentation) % 4 == 0);
-
-/* DWARF-5 augmentation string for GDB's DW_IDX_GNU_* extension.  This
-   must have a size that is a multiple of 4.  */
-const gdb_byte dwarf5_augmentation[8] = { 'G', 'D', 'B', '2', 0, 0, 0, 0 };
-static_assert (sizeof (dwarf5_augmentation) % 4 == 0);
 
 /* A helper function that reads the .debug_names section in SECTION
    and fills in MAP.  FILENAME is the name of the file containing the
@@ -525,18 +583,24 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   addr += 4;
   augmentation_string_size += (-augmentation_string_size) & 3;
 
-  if (augmentation_string_size == sizeof (old_gdb_augmentation)
-      && memcmp (addr, old_gdb_augmentation,
-		 sizeof (old_gdb_augmentation)) == 0)
+  const auto augmentation_string
+    = gdb::make_array_view (addr, augmentation_string_size);
+
+  if (augmentation_string == gdb::make_array_view (dwarf5_augmentation_1))
     {
       warning (_(".debug_names created by an old version of gdb; ignoring"));
       return false;
     }
-
-  map.augmentation_is_gdb = ((augmentation_string_size
-			      == sizeof (dwarf5_augmentation))
-			     && memcmp (addr, dwarf5_augmentation,
-					sizeof (dwarf5_augmentation)) == 0);
+  else if (augmentation_string == gdb::make_array_view (dwarf5_augmentation_2))
+    {
+      map.augmentation_is_gdb = true;
+      map.gdb_augmentation_version = 2;
+    }
+  else if (augmentation_string == gdb::make_array_view (dwarf5_augmentation_3))
+    {
+      map.augmentation_is_gdb = true;
+      map.gdb_augmentation_version = 3;
+    }
 
   if (!map.augmentation_is_gdb)
     {
@@ -544,6 +608,7 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
       return false;
     }
 
+  /* Skip past augmentation string.  */
   addr += augmentation_string_size;
 
   /* List of CUs */
@@ -766,8 +831,18 @@ do_dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
 			     &addrmap, &warnings);
   warnings.emit ();
 
-  map.shard = std::make_unique<cooked_index_shard> ();
-  map.shard->install_addrmap (&addrmap);
+  const auto n_workers
+    = std::max<std::size_t> (gdb::thread_pool::g_thread_pool->thread_count (),
+			     1);
+
+  /* Create as many index shard as there are worker threads.  */
+  for (int i = 0; i < n_workers; ++i)
+    map.shards.emplace_back (std::make_unique<cooked_index_shard> ());
+
+  /* There is a single address map for the whole index (coming from
+     .debug_aranges).  We only need to install it into a single shard for it to
+     get searched by cooked_index.  */
+  map.shards[0]->install_addrmap (&addrmap);
 
   auto cidn = (std::make_unique<cooked_index_debug_names>
 	       (per_objfile, std::move (map)));
