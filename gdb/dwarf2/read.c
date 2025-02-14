@@ -17725,7 +17725,6 @@ lnp_state_machine::handle_set_file (file_name_index file)
     dwarf2_debug_line_missing_file_complaint ();
   else
     {
-      m_last_subfile = m_cu->get_builder ()->get_current_subfile ();
       m_line_has_non_zero_discriminator = m_discriminator != 0;
       dwarf2_start_subfile (m_cu, *fe, *m_line_header);
     }
@@ -17914,9 +17913,10 @@ lnp_state_machine::record_line (bool end_sequence)
 				   builder->get_current_subfile (),
 				   m_line, m_address, lte_flags,
 				   m_currently_recording_lines ? m_cu : nullptr);
+
+	      m_last_subfile = m_cu->get_builder ()->get_current_subfile ();
+	      m_last_line = m_line;
 	    }
-	  m_last_subfile = m_cu->get_builder ()->get_current_subfile ();
-	  m_last_line = m_line;
 	}
     }
 
