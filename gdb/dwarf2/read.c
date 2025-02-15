@@ -287,6 +287,8 @@ struct type_unit_group
   struct stmt_list_hash hash {};
 };
 
+using type_unit_group_up = std::unique_ptr<type_unit_group>;
+
 /* These sections are what may appear in a (real or virtual) DWO file.  */
 
 struct dwo_sections
@@ -381,6 +383,8 @@ struct dwo_file
      Each element is a struct dwo_unit.  */
   htab_up tus;
 };
+
+using dwo_file_up = std::unique_ptr<dwo_file>;
 
 /* These sections are what may appear in a DWP file.  */
 
@@ -623,7 +627,7 @@ private:
 				  dwarf2_cu *existing_cu);
 
   struct dwarf2_per_cu_data *m_this_cu;
-  std::unique_ptr<dwarf2_cu> m_new_cu;
+  dwarf2_cu_up m_new_cu;
 
   /* The ordinary abbreviation table.  */
   abbrev_table_up m_abbrev_table_holder;
@@ -1165,10 +1169,6 @@ static struct dwo_unit *lookup_dwo_type_unit
 
 static void queue_and_load_all_dwo_tus (dwarf2_cu *cu);
 
-/* A unique pointer to a dwo_file.  */
-
-typedef std::unique_ptr<struct dwo_file> dwo_file_up;
-
 static void process_cu_includes (dwarf2_per_objfile *per_objfile);
 
 static void check_producer (struct dwarf2_cu *cu);
@@ -1613,7 +1613,7 @@ dwarf2_per_bfd::map_info_sections (struct objfile *objfile)
 /* See dwarf2/read.h.  */
 
 void
-dwarf2_per_bfd::start_reading (std::unique_ptr<dwarf_scanner_base> new_table)
+dwarf2_per_bfd::start_reading (dwarf_scanner_base_up new_table)
 {
   gdb_assert (index_table == nullptr);
   index_table = std::move (new_table);
@@ -3571,7 +3571,7 @@ allocate_type_unit_groups_table ()
 /* Helper routine for get_type_unit_group.
    Create the type_unit_group object used to hold one or more TUs.  */
 
-static std::unique_ptr<type_unit_group>
+static type_unit_group_up
 create_type_unit_group (struct dwarf2_cu *cu, sect_offset line_offset_struct)
 {
   auto tu_group = std::make_unique<type_unit_group> ();
@@ -3625,8 +3625,7 @@ get_type_unit_group (struct dwarf2_cu *cu, const struct attribute *stmt_list)
   if (*slot == nullptr)
     {
       sect_offset line_offset_struct = (sect_offset) line_offset;
-      std::unique_ptr<type_unit_group> grp
-	= create_type_unit_group (cu, line_offset_struct);
+      auto grp = create_type_unit_group (cu, line_offset_struct);
       *slot = grp.release ();
       ++tu_stats->nr_symtabs;
     }
@@ -3642,7 +3641,7 @@ cooked_index_storage::cooked_index_storage ()
 				      eq_cutu_reader,
 				      htab_delete_entry<cutu_reader>,
 				      xcalloc, xfree)),
-    m_index (new cooked_index_shard)
+    m_shard (new cooked_index_shard)
 {
 }
 
@@ -3655,7 +3654,7 @@ cooked_index_storage::get_reader (dwarf2_per_cu_data *per_cu)
 }
 
 cutu_reader *
-cooked_index_storage::preserve (std::unique_ptr<cutu_reader> reader)
+cooked_index_storage::preserve (cutu_reader_up reader)
 {
   m_abbrev_table_cache.add (reader->release_abbrev_table ());
 
@@ -3862,8 +3861,7 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
       if (new_reader.comp_unit_die == nullptr || new_reader.dummy_p)
 	return;
 
-      std::unique_ptr<cutu_reader> copy
-	(new cutu_reader (std::move (new_reader)));
+      auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
       reader = storage->preserve (std::move (copy));
     }
 
@@ -4120,10 +4118,10 @@ process_skeletonless_type_units (dwarf2_per_objfile *per_objfile,
 /* A subclass of cooked_index_worker that handles scanning
    .debug_info.  */
 
-class cooked_index_debug_info : public cooked_index_worker
+class cooked_index_worker_debug_info : public cooked_index_worker
 {
 public:
-  cooked_index_debug_info (dwarf2_per_objfile *per_objfile)
+  cooked_index_worker_debug_info (dwarf2_per_objfile *per_objfile)
     : cooked_index_worker (per_objfile)
   {
     gdb_assert (is_main_thread ());
@@ -4172,7 +4170,7 @@ private:
 };
 
 void
-cooked_index_debug_info::process_cus (size_t task_number, unit_iterator first,
+cooked_index_worker_debug_info::process_cus (size_t task_number, unit_iterator first,
 				      unit_iterator end)
 {
   SCOPE_EXIT { bfd_thread_cleanup (); };
@@ -4202,22 +4200,23 @@ cooked_index_debug_info::process_cus (size_t task_number, unit_iterator first,
 }
 
 void
-cooked_index_debug_info::done_reading ()
+cooked_index_worker_debug_info::done_reading ()
 {
   /* Only handle the scanning results here.  Complaints and exceptions
      can only be dealt with on the main thread.  */
-  std::vector<std::unique_ptr<cooked_index_shard>> indexes;
+  std::vector<cooked_index_shard_up> shards;
+
   for (auto &one_result : m_results)
     {
-      indexes.push_back (std::move (std::get<0> (one_result)));
+      shards.push_back (std::move (std::get<0> (one_result)));
       m_all_parents_map.add_map (std::get<3> (one_result));
     }
 
   /* This has to wait until we read the CUs, we need the list of DWOs.  */
   process_skeletonless_type_units (m_per_objfile, &m_index_storage);
 
-  indexes.push_back (m_index_storage.release ());
-  indexes.shrink_to_fit ();
+  shards.push_back (m_index_storage.release ());
+  shards.shrink_to_fit ();
 
   m_all_parents_map.add_map (m_index_storage.release_parent_map ());
 
@@ -4225,12 +4224,12 @@ cooked_index_debug_info::done_reading ()
   cooked_index *table
     = (gdb::checked_static_cast<cooked_index *>
        (per_bfd->index_table.get ()));
-  table->set_contents (std::move (indexes), &m_warnings,
+  table->set_contents (std::move (shards), &m_warnings,
 		       &m_all_parents_map);
 }
 
 void
-cooked_index_debug_info::do_reading ()
+cooked_index_worker_debug_info::do_reading ()
 {
   dwarf2_per_bfd *per_bfd = m_per_objfile->per_bfd;
 
@@ -8686,7 +8685,7 @@ open_dwp_file (dwarf2_per_objfile *per_objfile, const char *file_name)
    By convention the name of the DWP file is ${objfile}.dwp.
    The result is NULL if it can't be found.  */
 
-static std::unique_ptr<struct dwp_file>
+static dwp_file_up
 open_and_init_dwp_file (dwarf2_per_objfile *per_objfile)
 {
   struct objfile *objfile = per_objfile->objfile;
@@ -8723,12 +8722,11 @@ open_and_init_dwp_file (dwarf2_per_objfile *per_objfile)
     {
       dwarf_read_debug_printf ("DWP file not found: %s", dwp_name.c_str ());
 
-      return std::unique_ptr<dwp_file> ();
+      return dwp_file_up ();
     }
 
   const char *name = bfd_get_filename (dbfd.get ());
-  std::unique_ptr<struct dwp_file> dwp_file
-    (new struct dwp_file (name, std::move (dbfd)));
+  auto dwp_file = std::make_unique<struct dwp_file> (name, std::move (dbfd));
 
   dwp_file->num_sections = elf_numsections (dwp_file->dbfd);
   dwp_file->elf_sections =
@@ -15554,8 +15552,7 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
 
       prepare_one_comp_unit (new_reader.cu, new_reader.comp_unit_die,
 			     language_minimal);
-      std::unique_ptr<cutu_reader> copy
-	(new cutu_reader (std::move (new_reader)));
+      auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
       result = m_index_storage->preserve (std::move (copy));
     }
 
@@ -16367,8 +16364,7 @@ start_debug_info_reader (dwarf2_per_objfile *per_objfile)
   /* Set the index table early so that sharing works even while
      scanning; and then start the scanning.  */
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
-  std::unique_ptr<cooked_index_worker> worker
-    = std::make_unique<cooked_index_debug_info> (per_objfile);
+  auto worker = std::make_unique<cooked_index_worker_debug_info> (per_objfile);
   per_bfd->start_reading (std::make_unique<cooked_index> (per_objfile,
 							  std::move (worker)));
 }
@@ -21313,7 +21309,7 @@ dwarf2_per_objfile::get_cu (dwarf2_per_cu_data *per_cu)
 
 void
 dwarf2_per_objfile::set_cu (dwarf2_per_cu_data *per_cu,
-			    std::unique_ptr<dwarf2_cu> cu)
+			    dwarf2_cu_up cu)
 {
   gdb_assert (this->get_cu (per_cu) == nullptr);
 

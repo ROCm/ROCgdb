@@ -194,6 +194,17 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 	  ull = read_offset (abfd, entry, offset_size);
 	  entry += offset_size;
 	  break;
+	case DW_FORM_data1:
+	  ull = *entry++;
+	  break;
+	case DW_FORM_data2:
+	  ull = read_2_bytes (abfd, entry);
+	  entry += 2;
+	  break;
+	case DW_FORM_data4:
+	  ull = read_4_bytes (abfd, entry);
+	  entry += 4;
+	  break;
 	case DW_FORM_ref4:
 	  ull = read_4_bytes (abfd, entry);
 	  entry += 4;
@@ -207,9 +218,12 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 	  entry += 8;
 	  break;
 	default:
-	  complaint (_("Unsupported .debug_names form %s [in module %s]"),
-		     dwarf_form_name (attr.form),
-		     bfd_get_filename (abfd));
+	  /* A warning instead of a complaint, because this one is
+	     more like a bug in gdb.  */
+	  warning (_("Unsupported .debug_names form %s [in module %s].\n"
+		     "This normally should not happen, please file a bug report."),
+		   dwarf_form_name (attr.form),
+		   bfd_get_filename (abfd));
 	  return nullptr;
 	}
       switch (attr.dw_idx)
@@ -383,9 +397,9 @@ mapped_debug_names_reader::scan_all_names ()
 
 /* A reader for .debug_names.  */
 
-struct cooked_index_debug_names : public cooked_index_worker
+struct cooked_index_worker_debug_names : public cooked_index_worker
 {
-  cooked_index_debug_names (dwarf2_per_objfile *per_objfile,
+  cooked_index_worker_debug_names (dwarf2_per_objfile *per_objfile,
 			    mapped_debug_names_reader &&map)
     : cooked_index_worker (per_objfile),
       m_map (std::move (map))
@@ -397,7 +411,7 @@ struct cooked_index_debug_names : public cooked_index_worker
 };
 
 void
-cooked_index_debug_names::do_reading ()
+cooked_index_worker_debug_names::do_reading ()
 {
   complaint_interceptor complaint_handler;
   std::vector<gdb_exception> exceptions;
@@ -844,7 +858,7 @@ do_dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
      get searched by cooked_index.  */
   map.shards[0]->install_addrmap (&addrmap);
 
-  auto cidn = (std::make_unique<cooked_index_debug_names>
+  auto cidn = (std::make_unique<cooked_index_worker_debug_names>
 	       (per_objfile, std::move (map)));
   auto idx = std::make_unique<debug_names_index> (per_objfile,
 						  std::move (cidn));
