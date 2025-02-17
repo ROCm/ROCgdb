@@ -137,8 +137,8 @@ main (int argc, char **argv)
     {
     case testcase_t::memfault:
       {
-	int out = 3;
-	pagefault_kernel<<<1, 1, 0, st2>>> (&out);
+	int *out = nullptr;
+	pagefault_kernel<<<1, 1, 0, st2>>> (out);
 	break;
       }
     case testcase_t::abort:
