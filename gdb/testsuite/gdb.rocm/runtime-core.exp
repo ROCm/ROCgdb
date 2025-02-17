@@ -97,7 +97,7 @@ proc do_test { fault } {
 	gdb_test "frame function ${fault}_kernel" ".* ${fault}_kernel \\(.*"
 	gdb_test "p local" "= 42"
 	if {$fault == "pagefault"} {
-	    gdb_test "p out == 0" " = false"
+	    gdb_test "p out == 0" " = true"
 	}
 	gdb_test "p some_global" " = 16"
     }
