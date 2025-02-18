@@ -1007,16 +1007,16 @@ m68k_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind m68k_frame_unwind =
-{
+static const struct frame_unwind_legacy m68k_frame_unwind (
   "m68k prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   m68k_frame_this_id,
   m68k_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 m68k_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)

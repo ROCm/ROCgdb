@@ -220,16 +220,16 @@ sparc64obsd_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind sparc64obsd_frame_unwind =
-{
+static const struct frame_unwind_legacy sparc64obsd_frame_unwind (
   "sparc64 openbsd sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   sparc64obsd_frame_this_id,
   sparc64obsd_frame_prev_register,
   NULL,
   sparc64obsd_sigtramp_frame_sniffer
-};
+);
 
 /* Kernel debugging support.  */
 
@@ -304,16 +304,16 @@ sparc64obsd_trapframe_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind sparc64obsd_trapframe_unwind =
-{
+static const struct frame_unwind_legacy sparc64obsd_trapframe_unwind (
   "sparc64 openbsd trap",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   sparc64obsd_trapframe_this_id,
   sparc64obsd_trapframe_prev_register,
   NULL,
   sparc64obsd_trapframe_sniffer
-};
+);
 
 
 /* Threads support.  */

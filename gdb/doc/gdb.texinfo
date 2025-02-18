@@ -27902,6 +27902,7 @@ all uses of @value{GDBN} with the architecture, both native and cross.
 * Sparc64::
 * S12Z::
 * AMD GPU::            @acronym{AMD GPU} architectures
+* RISC-V::
 @end menu
 
 @node AArch64
@@ -30090,6 +30091,29 @@ step through a clause.  Waves can receive asynchronous exceptions
 while in a clause.
 
 @end enumerate
+
+
+@node RISC-V
+@subsection RISC-V
+@cindex RISC-V support
+
+When @value{GDBN} is debugging a RISC-V architecture, it provides the
+following special commands:
+
+@table @code
+@item set riscv numeric-register-names @r{[}on@r{|}off@r{]}
+@kindex set riscv numeric-register-names
+This command controls whether @value{GDBN} displays RISC-V register names using
+their numeric or abi names.  When @samp{on}, @value{GDBN} displays registers
+by their numeric names (e.g. @samp{x1}).  When @samp{off}, @value{GDBN}
+displays registers by their abi names (e.g. @samp{ra}).  The default is
+@samp{off}.
+
+@item show riscv numeric-register-names
+Show whether @value{GDBN} will refer to registers by their numeric names.
+
+@end table
+
 
 @node Controlling GDB
 @chapter Controlling @value{GDBN}
@@ -45450,34 +45474,46 @@ On hosts without threading, or where worker threads have been disabled
 at runtime, this setting has no effect, as DWARF reading is always
 done on the main thread, and is therefore always synchronous.
 
-@kindex maint set dwarf unwinders
-@kindex maint show dwarf unwinders
-@item maint set dwarf unwinders
-@itemx maint show dwarf unwinders
-Control use of the DWARF frame unwinders.
-
-@cindex DWARF frame unwinders
-Many targets that support DWARF debugging use @value{GDBN}'s DWARF
-frame unwinders to build the backtrace.  Many of these targets will
-also have a second mechanism for building the backtrace for use in
-cases where DWARF information is not available, this second mechanism
-is often an analysis of a function's prologue.
-
-In order to extend testing coverage of the second level stack
-unwinding mechanisms it is helpful to be able to disable the DWARF
-stack unwinders, this can be done with this switch.
-
-In normal use of @value{GDBN} disabling the DWARF unwinders is not
-advisable, there are cases that are better handled through DWARF than
-prologue analysis, and the debug experience is likely to be better
-with the DWARF frame unwinders enabled.
-
-If DWARF frame unwinders are not supported for a particular target
-architecture, then enabling this flag does not cause them to be used.
-
 @kindex maint info frame-unwinders
 @item maint info frame-unwinders
-List the frame unwinders currently in effect, starting with the highest priority.
+List the frame unwinders currently in effect, starting with the highest
+priority.  This also lists the unwinder class, which is mostly defined by
+which area of @value{GDBN} uses it.  The currently available classes are:
+
+@table @samp
+@item GDB
+Internal unwinders, added by @value{GDBN} core.
+@item EXTENSION
+Unwinders added by extension languages.
+@item DEBUGINFO
+Unwinders installed by debug information readers.
+@item ARCH
+Unwinders installed by the architecture specific code.
+@end table
+
+@kindex maint frame-unwinder disable
+@kindex maint frame-unwinder enable
+@item maint frame-unwinder disable [@code{-all} | @code{-name} @var{name} | [@code{-class}] @var{class}]
+@item maint frame-unwinder enable [@code{-all} | @code{-name} @var{name} | [@code{-class}] @var{class}]
+Disable or enable frame unwinders.  This is meant only as a testing tool, and
+@value{GDBN} is not guaranteed to work properly if it is unable to find
+valid frame unwinders.
+
+The meaning of each of the invocations are as follows:
+
+@table @samp
+@item @code{-all}
+Disable or enable all unwinders.
+@item @code{-name} @var{name}
+@var{name} is the exact name of the unwinder to be disabled or enabled.
+@item [@code{-class}] @var{class}
+@var{class} is the class of frame unwinders to be disabled or enabled.
+The class may include the prefix @code{FRAME_UNWINDER_}, but it is not
+required.
+@end table
+
+@var{name} and @var{class} are always case insensitive.  If no option
+starting wth @code{-} is given, @value{GDBN} assumes @code{-class}.
 
 @kindex maint set worker-threads
 @kindex maint show worker-threads
@@ -45966,7 +46002,7 @@ seven repeats (@samp{$}) can be expanded using a repeat count of only
 five (@samp{"}).  For example, @samp{00000000} can be encoded as
 @samp{0*"00}.
 
-@xref{Standard Replies} for standard error responses, and how to
+@xref{Standard Replies}, for standard error responses, and how to
 respond indicating a command is not supported.
 
 In describing packets (commands and responses), each description has a
@@ -46703,6 +46739,10 @@ data from memory for the response; even if @var{addr} is word-aligned
 and @var{length} is a multiple of the word size, the stub is free to
 use byte accesses, or not.  For this reason, this packet may not be
 suitable for accessing memory-mapped I/O devices.
+
+@value{GDBN} will only use this packet if the stub reports the
+@samp{binary-upload} feature is supported in its @samp{qSupported}
+reply (@pxref{qSupported}).
 
 Reply:
 @table @samp
@@ -47542,7 +47582,7 @@ tags found in the requested memory range.
 @cindex check if a given address is in a memory tagged region
 @cindex @samp{qIsAddressTagged} packet
 @item qIsAddressTagged:@var{address}
-@anchor {qIsAddressTagged}
+@anchor{qIsAddressTagged}
 Check if address @var{address} is in a memory tagged region; if it is, it's
 said to be @dfn{tagged}.  The target is responsible for checking it, as this
 is architecture-specific.
@@ -48351,6 +48391,11 @@ These are the currently defined stub features and their properties:
 @tab @samp{+}
 @tab No
 
+@item @samp{binary-upload}
+@tab No
+@tab @samp{-}
+@tab No
+
 @end multitable
 
 These are the currently defined stub features, in more detail:
@@ -48597,6 +48642,9 @@ The remote stub supports replying with an error in a
 send this feature back to @value{GDBN} in the @samp{qSupported} reply,
 @value{GDBN} will always support @samp{E.@var{errtext}} format replies
 if it sent the @samp{error-message} feature.
+
+@item binary-upload
+The remote stub supports the @samp{x} packet (@pxref{x packet}).
 @end table
 
 @item qSymbol::
@@ -52524,7 +52572,7 @@ bytes.  @xref{svl}.
 @item
 @code{SVCR} is a 64-bit status pseudo-register with two valid bits.  Bit 0
 (@sc{sm}) shows whether the streaming @acronym{SVE} mode is enabled or disabled.
-Bit 1 (@sc{ZA}) shows whether the @code{ZA} register state is active (in use) or
+Bit 1 (@sc{za}) shows whether the @code{ZA} register state is active (in use) or
 not.
 @xref{aarch64 sme svcr}.
 

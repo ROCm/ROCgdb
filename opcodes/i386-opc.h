@@ -66,10 +66,14 @@ enum i386_cpu
   CpuSSE3,
   /* VIA PadLock required */
   CpuPadLock,
-  /* Zhaoxin GMI required */
-  CpuGMI,
+  /* Zhaoxin GMI SM2 required */
+  CpuGMISM2,
+  /* Zhaoxin GMI CCS required */
+  CpuGMICCS,
   /* Zhaoxin PadLock RNG2 required */
   CpuPadLockRNG2,
+  /* Zhaoxin PadLock PHE2 required */
+  CpuPadLockPHE2,
   /* AMD Secure Virtual Machine Ext-s required */
   CpuSVME,
   /* VMX Instructions required */
@@ -312,6 +316,8 @@ enum i386_cpu
   CpuSNP,
   /* RMPQUERY instruction required */
   CpuRMPQUERY,
+  /* RMPREAD instruction required */
+  CpuRMPREAD,
 
   /* NOTE: These items, which can be combined with other ISA flags above, need
      to remain second to last and in sync with CPU_FLAGS_COMMON. */
@@ -420,8 +426,10 @@ typedef union i386_cpu_flags
       unsigned int cpusse2:1;
       unsigned int cpusse3:1;
       unsigned int cpupadlock:1;
-      unsigned int cpugmi:1;
+      unsigned int cpugmism2:1;
+      unsigned int cpugmiccs:1;
       unsigned int cpupadlockrng2:1;
+      unsigned int cpupadlockphe2:1;
       unsigned int cpusvme:1;
       unsigned int cpuvmx:1;
       unsigned int cpusmx:1;
@@ -543,6 +551,7 @@ typedef union i386_cpu_flags
       unsigned int cputlbsync:1;
       unsigned int cpusnp:1;
       unsigned int cpurmpquery:1;
+      unsigned int cpurmpread:1;
       CPU_FLAGS_COMMON;
 #ifdef CpuUnused
       unsigned int unused:(CpuNumOfBits - CpuUnused);

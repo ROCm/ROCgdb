@@ -1023,6 +1023,10 @@ proc command_to_message { command } {
 #   if one of them matches.  If MESSAGE is empty COMMAND will be used.
 # -prompt PROMPT_REGEXP specifies a regexp matching the expected prompt
 #   after the command output.  If empty, defaults to "$gdb_prompt $".
+# -no-prompt-anchor specifies that if the default prompt regexp is used, it
+#   should not be anchored at the end of the buffer.  This means that the
+#   pattern can match even if there is stuff output after the prompt.  Does not
+#   have any effect if -prompt is specified.
 # -lbl specifies that line-by-line matching will be used.
 # EXPECT_ARGUMENTS will be fed to expect in addition to the standard
 #   patterns.  Pattern elements will be evaluated in the caller's
@@ -1122,6 +1126,7 @@ proc gdb_test_multiple { command message args } {
 
     set line_by_line 0
     set prompt_regexp ""
+    set prompt_anchor 1
     for {set i 0} {$i < [llength $args]} {incr i} {
 	set arg [lindex $args $i]
 	if { $arg  == "-prompt" } {
@@ -1129,6 +1134,8 @@ proc gdb_test_multiple { command message args } {
 	    set prompt_regexp [lindex $args $i]
 	} elseif { $arg == "-lbl" } {
 	    set line_by_line 1
+	} elseif { $arg == "-no-prompt-anchor" } {
+	    set prompt_anchor 0
 	} else {
 	    set user_code $arg
 	    break
@@ -1140,7 +1147,7 @@ proc gdb_test_multiple { command message args } {
 	error "Too few arguments to gdb_test_multiple"
     }
 
-    set prompt_regexp [fill_in_default_prompt $prompt_regexp true]
+    set prompt_regexp [fill_in_default_prompt $prompt_regexp $prompt_anchor]
 
     if { $message == "" } {
 	set message [command_to_message $command]
@@ -8784,8 +8791,8 @@ proc test_prefix_command_help { command_list expected_initial_lines args } {
     # Use 'list' and not just {} because we want variables to
     # be expanded in this list.
     set l_stock_body [list\
-         "List of $full_command subcommands\:.*\[\r\n\]+"\
-         "Type \"help $full_command\" followed by $full_command subcommand name for full documentation\.\[\r\n\]+"]
+         "List of \"$full_command\" subcommands\:.*\[\r\n\]+"\
+         "Type \"help $full_command\" followed by subcommand name for full documentation\.\[\r\n\]+"]
     set l_entire_body [concat $expected_initial_lines $l_stock_body $help_list_trailer]
     if {[llength $args]>0} {
         help_test_raw "help ${command}" $l_entire_body [lindex $args 0]

@@ -988,16 +988,16 @@ nds32_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind nds32_frame_unwind =
-{
+static const struct frame_unwind_legacy nds32_frame_unwind (
   "nds32 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   nds32_frame_this_id,
   nds32_frame_prev_register,
   NULL,
-  default_frame_sniffer,
-};
+  default_frame_sniffer
+);
 
 /* Return the frame base address of *THIS_FRAME.  */
 
@@ -1372,16 +1372,16 @@ nds32_epilogue_frame_prev_register (const frame_info_ptr &this_frame,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind nds32_epilogue_frame_unwind =
-{
+static const struct frame_unwind_legacy nds32_epilogue_frame_unwind (
   "nds32 epilogue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   nds32_epilogue_frame_this_id,
   nds32_epilogue_frame_prev_register,
   NULL,
   nds32_epilogue_frame_sniffer
-};
+);
 
 
 /* Floating type and struct type that has only one floating type member

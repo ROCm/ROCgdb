@@ -1261,6 +1261,28 @@ s390_value_from_register (gdbarch *gdbarch, type *type, int regnum,
   return value;
 }
 
+/* Implementation of the gdbarch_dwarf2_reg_piece_offset hook.  */
+
+static ULONGEST
+s390_dwarf2_reg_piece_offset (gdbarch *gdbarch, int gdb_regnum, ULONGEST size)
+{
+  s390_gdbarch_tdep *tdep = gdbarch_tdep<s390_gdbarch_tdep> (gdbarch);
+
+  /* Floating point register.  */
+  if (gdb_regnum >= S390_F0_REGNUM && gdb_regnum <= S390_F15_REGNUM)
+    return 0;
+
+  /* Vector register, v0 - v15.  */
+  if (regnum_is_vxr_full (tdep, gdb_regnum))
+    return 0;
+
+  /* Vector register, v16 - v31.  */
+  if (gdb_regnum >= S390_V16_REGNUM && gdb_regnum <= S390_V31_REGNUM)
+    return 0;
+
+  return default_dwarf2_reg_piece_offset (gdbarch, gdb_regnum, size);
+}
+
 /* Implement pseudo_register_name tdesc method.  */
 
 static const char *
@@ -2311,6 +2333,22 @@ s390_unwind_pseudo_register (const frame_info_ptr &this_frame, int regnum)
 	return value_cast (type, val);
     }
 
+  if (regnum_is_vxr_full (tdep, regnum))
+    {
+      struct value *val = value::allocate_register (this_frame, regnum);
+
+      int reg = regnum - tdep->v0_full_regnum;
+      struct value *val1
+	= frame_unwind_register_value (this_frame, S390_F0_REGNUM + reg);
+      struct value *val2
+	= frame_unwind_register_value (this_frame, S390_V0_LOWER_REGNUM + reg);
+
+      val1->contents_copy (val, 0, 0, 8);
+      val2->contents_copy (val, 8, 0, 8);
+
+      return value_cast (type, val);
+    }
+
   return value::allocate_optimized_out (type);
 }
 
@@ -2743,15 +2781,16 @@ s390_frame_prev_register (const frame_info_ptr &this_frame,
 
 /* Default S390 frame unwinder.  */
 
-static const struct frame_unwind s390_frame_unwind = {
+static const struct frame_unwind_legacy s390_frame_unwind (
   "s390 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   s390_frame_this_id,
   s390_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Code stubs and their stack frames.  For things like PLTs and NULL
    function calls (where there is no true frame and the return address
@@ -2837,15 +2876,16 @@ s390_stub_frame_sniffer (const struct frame_unwind *self,
 
 /* S390 stub frame unwinder.  */
 
-static const struct frame_unwind s390_stub_frame_unwind = {
+static const struct frame_unwind_legacy s390_stub_frame_unwind (
   "s390 stub",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   s390_stub_frame_this_id,
   s390_stub_frame_prev_register,
   NULL,
   s390_stub_frame_sniffer
-};
+);
 
 /* Frame base handling.  */
 
@@ -7274,6 +7314,7 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_stab_reg_to_regnum (gdbarch, s390_dwarf_reg_to_regnum);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, s390_dwarf_reg_to_regnum);
   set_gdbarch_value_from_register (gdbarch, s390_value_from_register);
+  set_gdbarch_dwarf2_reg_piece_offset (gdbarch, s390_dwarf2_reg_piece_offset);
 
   /* Pseudo registers.  */
   set_gdbarch_pseudo_register_read (gdbarch, s390_pseudo_register_read);

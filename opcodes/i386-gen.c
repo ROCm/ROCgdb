@@ -251,6 +251,8 @@ static const dependency isa_dependencies[] =
     "SEV_ES" },
   { "RMPQUERY",
     "SNP|64" },
+  { "RMPREAD",
+    "SNP|64" },
   { "TSX",
     "RTM|HLE" },
   { "TSXLDTRK",
@@ -296,6 +298,8 @@ static const dependency isa_dependencies[] =
   { "APX_F",
     "XSAVE|64" },
   { "PadLockRNG2",
+    "PadLock" },
+  { "PadLockPHE2",
     "PadLock" },
 };
 
@@ -350,8 +354,10 @@ static bitfield cpu_flags[] =
   BITFIELD (3dnow),
   BITFIELD (3dnowA),
   BITFIELD (PadLock),
-  BITFIELD (GMI),
+  BITFIELD (GMISM2),
+  BITFIELD (GMICCS),
   BITFIELD (PadLockRNG2),
+  BITFIELD (PadLockPHE2),
   BITFIELD (SVME),
   BITFIELD (VMX),
   BITFIELD (SMX),
@@ -466,6 +472,7 @@ static bitfield cpu_flags[] =
   BITFIELD (TLBSYNC),
   BITFIELD (SNP),
   BITFIELD (RMPQUERY),
+  BITFIELD (RMPREAD),
   BITFIELD (64),
   BITFIELD (No64),
 #ifdef CpuUnused
@@ -1036,6 +1043,20 @@ process_i386_cpu_flag (FILE *table, char *flag,
 	  all[Cpu64].value = 1;
 
       output_cpu_flags(table, all, ARRAY_SIZE (all), -1, comma, indent, lineno);
+
+      /* For APX_F extension of multiple cpuid enabled insns, we cannot use
+	 APX_F(cpuid_A&cpuid_B) in the opcode table, as the result would fail
+	 to be parsed.  Furthermore, the result also wouldn't be quite valid.
+	 However, the assembler's cpu_flags_match() will simply propagate "any"
+	 to "all", zapping "any" afterwards altogether.  IOW in this situation
+	 both masks have "&&" meaning.  Set the missing flag here.  */
+      if (all[CpuAMX_TRANSPOSE].value && all[CpuAMX_MOVRS].value)
+	{
+	  if (!any[CpuAPX_F].value || !any[CpuAMX_MOVRS].value)
+	    fail ("%s: %d: internal error: APX_F=%d AMX_MOVRS=%d\n",
+		  filename, lineno, any[CpuAPX_F].value, any[CpuAMX_MOVRS].value);
+	  any[CpuAMX_TRANSPOSE].value = 1;
+	}
     }
 
   output_cpu_flags (table, any, ARRAY_SIZE (any), name != NULL,

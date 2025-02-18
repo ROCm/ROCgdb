@@ -683,7 +683,8 @@ loongarch_elf_record_tls_and_got_reference (bfd *abfd,
 					    struct bfd_link_info *info,
 					    struct elf_link_hash_entry *h,
 					    unsigned long symndx,
-					    char tls_type)
+					    char tls_type,
+					    bool with_relax_reloc)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
   Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
@@ -729,9 +730,12 @@ loongarch_elf_record_tls_and_got_reference (bfd *abfd,
   char *new_tls_type = &_bfd_loongarch_elf_tls_type (abfd, h, symndx);
   *new_tls_type |= tls_type;
 
-  /* If a symbol is accessed by both IE and DESC, relax DESC to IE.  */
-  if ((*new_tls_type & GOT_TLS_IE) && (*new_tls_type & GOT_TLS_GDESC))
+  /* If DESC relocs can do transitions and accessed by both IE and DESC,
+     transition DESC to IE.  */
+  if (with_relax_reloc
+      && (*new_tls_type & GOT_TLS_IE) && (*new_tls_type & GOT_TLS_GDESC))
     *new_tls_type &= ~ (GOT_TLS_GDESC);
+
   if ((*new_tls_type & GOT_NORMAL) && (*new_tls_type & ~GOT_NORMAL))
     {
       _bfd_error_handler (_("%pB: `%s' accessed both as normal and "
@@ -1014,9 +1018,13 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       /* Type transitions are only possible with relocations accompanied
 	 by R_LARCH_RELAX.  */
+      bool with_relax_reloc = false;
       if (rel + 1 != relocs + sec->reloc_count
 	  && ELFNN_R_TYPE (rel[1].r_info) == R_LARCH_RELAX)
-	r_type = loongarch_tls_transition (abfd, info, h, r_symndx, r_type);
+	{
+	  r_type = loongarch_tls_transition (abfd, info, h, r_symndx, r_type);
+	  with_relax_reloc = true;
+	}
 
       /* I don't want to spend time supporting DT_RELR with old object
 	 files doing stack-based relocs.  */
@@ -1041,7 +1049,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    h->pointer_equality_needed = 1;
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
-							   GOT_NORMAL))
+							   GOT_NORMAL,
+							   with_relax_reloc))
 	    return false;
 	  break;
 
@@ -1052,7 +1061,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_SOP_PUSH_TLS_GD:
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
-							   GOT_TLS_GD))
+							   GOT_TLS_GD,
+							   with_relax_reloc))
 	    return false;
 	  break;
 
@@ -1065,7 +1075,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
-							   GOT_TLS_IE))
+							   GOT_TLS_IE,
+							   with_relax_reloc))
 	    return false;
 	  break;
 
@@ -1077,7 +1088,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
-							   GOT_TLS_LE))
+							   GOT_TLS_LE,
+							   with_relax_reloc))
 	    return false;
 	  break;
 
@@ -1085,7 +1097,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_TLS_DESC_HI20:
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
-							   GOT_TLS_GDESC))
+							   GOT_TLS_GDESC,
+							   with_relax_reloc))
 	    return false;
 	  break;
 
@@ -2298,6 +2311,7 @@ loongarch_elf_finish_relative_relocs (struct bfd_link_info *info)
   srelrdyn->contents = bfd_alloc (dynobj, srelrdyn->size);
   if (!srelrdyn->contents)
     return false;
+  srelrdyn->alloced = 1;
 
   bfd_vma *addr = htab->relr_sorted;
   bfd_byte *loc = srelrdyn->contents;
@@ -2372,6 +2386,7 @@ loongarch_elf_late_size_sections (bfd *output_bfd,
 	    interpreter = "/lib/ld.so.1";
 
 	  s->contents = (unsigned char *) interpreter;
+	  s->alloced = 1;
 	  s->size = strlen (interpreter) + 1;
 	}
     }
@@ -2600,6 +2615,7 @@ loongarch_elf_late_size_sections (bfd *output_bfd,
       s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
+      s->alloced = 1;
     }
 
   if (elf_hash_table (info)->dynamic_sections_created)
@@ -5251,8 +5267,9 @@ void
 bfd_elfNN_loongarch_set_data_segment_info (struct bfd_link_info *info,
 				     int *data_segment_phase)
 {
-  struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  htab->data_segment_phase = data_segment_phase;
+  if (is_elf_hash_table (info->hash)
+      && elf_hash_table_id (elf_hash_table (info)) == LARCH_ELF_DATA)
+    loongarch_elf_hash_table (info)->data_segment_phase = data_segment_phase;
 }
 
 /* Implement R_LARCH_ALIGN by deleting excess alignment NOPs.
@@ -5620,10 +5637,13 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	}
       else
 	{
+	  /* Do not relax __[start|stop]_SECNAME, since the symbol value
+	     is not set yet.  */
 	  if (h != NULL
 	      && ((h->type == STT_GNU_IFUNC
 		   && r_type != R_LARCH_CALL36)
-		  || bfd_is_abs_section (h->root.u.def.section)))
+		  || bfd_is_abs_section (h->root.u.def.section)
+		  || h->start_stop))
 	    continue;
 
 	  /* The GOT entry of tls symbols must in current execute file or

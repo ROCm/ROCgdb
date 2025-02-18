@@ -2282,16 +2282,16 @@ hppa_frame_unwind_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_frame_unwind =
-{
+static const struct frame_unwind_legacy hppa_frame_unwind (
   "hppa unwind table",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_frame_this_id,
   hppa_frame_prev_register,
   NULL,
   hppa_frame_unwind_sniffer
-};
+);
 
 /* This is a generic fallback frame unwinder that kicks in if we fail all
    the other ones.  Normally we would expect the stub and regular unwinder
@@ -2395,16 +2395,16 @@ hppa_fallback_frame_prev_register (const frame_info_ptr &this_frame,
 					  info->saved_regs, regnum);
 }
 
-static const struct frame_unwind hppa_fallback_frame_unwind =
-{
+static const struct frame_unwind_legacy hppa_fallback_frame_unwind (
   "hppa prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_fallback_frame_this_id,
   hppa_fallback_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Stub frames, used for all kinds of call stubs.  */
 struct hppa_stub_unwind_cache
@@ -2477,15 +2477,16 @@ hppa_stub_unwind_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_stub_frame_unwind = {
+static const struct frame_unwind_legacy hppa_stub_frame_unwind (
   "hppa stub",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_stub_frame_this_id,
   hppa_stub_frame_prev_register,
   NULL,
   hppa_stub_unwind_sniffer
-};
+);
 
 CORE_ADDR
 hppa_unwind_pc (struct gdbarch *gdbarch, const frame_info_ptr &next_frame)

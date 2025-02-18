@@ -39,7 +39,7 @@
 
 repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
+    rev: 25.1.0
     hooks:
       - id: black
         types_or: [file]
@@ -49,12 +49,17 @@ repos:
     hooks:
     - id: flake8
       types_or: [file]
-      # Note this one is only run on gdb/python, not (for now) the
-      # test suite.
-      files: 'gdb/python/.*\.py(\.in)?$'
+      # Run this for (in glob notation):
+      #
+      #  - gdb/gdb-gdb.py.in
+      #  - gdb/*.py
+      #  - gdb/python/**/*.py
+      #  - gdb/testsuite/*.py
+      #
+      files: '^gdb/(gdb-gdb\.py\.in|[^/]+\.py|python/.+\.py|testsuite/[^/]+\.py)$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.0
     hooks:
     - id: isort
       types_or: [file]

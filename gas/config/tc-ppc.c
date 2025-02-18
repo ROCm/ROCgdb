@@ -3325,7 +3325,7 @@ md_assemble (char *str)
   unsigned int insn_length;
 
   /* Get the opcode.  */
-  for (s = str; *s != '\0' && ! ISSPACE (*s); s++)
+  for (s = str; ! is_end_of_stmt (*s) && ! is_whitespace (*s); s++)
     ;
   if (*s != '\0')
     *s++ = '\0';
@@ -3351,7 +3351,7 @@ md_assemble (char *str)
     }
 
   str = s;
-  while (ISSPACE (*str))
+  while (is_whitespace (*str))
     ++str;
 
 #ifdef OBJ_XCOFF
@@ -3967,7 +3967,7 @@ md_assemble (char *str)
 	    {
 	      do
 		++str;
-	      while (ISSPACE (*str));
+	      while (is_whitespace (*str));
 	      endc = ',';
 	    }
 	}
@@ -3996,7 +3996,7 @@ md_assemble (char *str)
 	}
     }
 
-  while (ISSPACE (*str))
+  while (is_whitespace (*str))
     ++str;
 
   if (*str != '\0')
@@ -5831,7 +5831,7 @@ ppc_tc (int ignore ATTRIBUTE_UNUSED)
 
   /* Skip the TOC symbol name.  */
   while (is_part_of_name (*input_line_pointer)
-	 || *input_line_pointer == ' '
+	 || is_whitespace (*input_line_pointer)
 	 || *input_line_pointer == '['
 	 || *input_line_pointer == ']'
 	 || *input_line_pointer == '{'
@@ -5939,6 +5939,7 @@ ppc_machine (int ignore ATTRIBUTE_UNUSED)
       if (ppc_cpu != old_cpu)
 	ppc_setup_opcodes ();
     }
+  free (cpu_string);
 
   demand_empty_rest_of_line ();
 }
@@ -6889,7 +6890,7 @@ ppc_nop_select (void)
 }
 
 void
-ppc_handle_align (struct frag *fragP)
+ppc_handle_align (segT sec, struct frag *fragP)
 {
   valueT count = (fragP->fr_next->fr_address
 		  - (fragP->fr_address + fragP->fr_fix));
@@ -6928,7 +6929,9 @@ ppc_handle_align (struct frag *fragP)
 	  if (count == 0)
 	    return;
 
-	  rest = xmalloc (SIZEOF_STRUCT_FRAG + 4);
+	  segment_info_type *seginfo = seg_info (sec);
+	  struct obstack *ob = &seginfo->frchainP->frch_obstack;
+	  rest = frag_alloc (ob, 4);
 	  memcpy (rest, fragP, SIZEOF_STRUCT_FRAG);
 	  fragP->fr_next = rest;
 	  fragP = rest;
@@ -6952,7 +6955,9 @@ ppc_handle_align (struct frag *fragP)
 	     reduce the number of nops in the current frag by one.  */
 	  if (count > 4)
 	    {
-	      struct frag *group_nop = xmalloc (SIZEOF_STRUCT_FRAG + 4);
+	      segment_info_type *seginfo = seg_info (sec);
+	      struct obstack *ob = &seginfo->frchainP->frch_obstack;
+	      struct frag *group_nop = frag_alloc (ob, 4);
 
 	      memcpy (group_nop, fragP, SIZEOF_STRUCT_FRAG);
 	      group_nop->fr_address = group_nop->fr_next->fr_address - 4;

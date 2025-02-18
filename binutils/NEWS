@@ -1,10 +1,16 @@
 -*- text -*-
 
+Changes in 2.44:
+
 * Support for Nios II targets has been removed except in the readelf utility,
   as this architecture has been EOL'ed by Intel.
 
 * RISC-V disassembly now supports -M,max option like QEMU to dump instruction
   without checking architecture support as usual.
+
+* gprofng:
+  Support for hardware event counters for Neoverse-N1, Ampere-1, and
+  Appliedmicro processors.
 
 Changes in 2.43:
 

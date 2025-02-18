@@ -1,4 +1,4 @@
-@c Copyright (C) 2008--2024 Free Software Foundation, Inc.
+@c Copyright (C) 2008--2025 Free Software Foundation, Inc.
 @c Copyright (C) 2020--2025 Advanced Micro Devices, Inc. All rights reserved.
 @c Permission is granted to copy, distribute and/or modify this document
 @c under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -3015,7 +3015,7 @@ unwinders can derive, though it is not required that unwinders derive
 from this class, so long as any user created unwinder has the required
 @code{name} and @code{enabled} attributes.
 
-@defun gdb.unwinder.Unwinder.__init__(name)
+@defun gdb.unwinder.Unwinder.__init__ (name)
 The @var{name} is a string used to reference this unwinder within some
 @value{GDBN} commands (@pxref{Managing Registered Unwinders}).
 @end defun
@@ -3041,7 +3041,7 @@ most cases this class will be sufficient.
 
 @code{gdb.unwinder.FrameId} has the following method:
 
-@defun gdb.unwinder.FrameId.__init__(sp, pc, special = @code{None})
+@defun gdb.unwinder.FrameId.__init__ (sp, pc, special = @code{None})
 The @var{sp} and @var{pc} arguments are required and should be either
 a @code{gdb.Value} object, or an integer.
 
@@ -4953,7 +4953,7 @@ command, a string.  The arguments, @var{arg}, are passed to the
 command.  Each argument must also be a string.
 
 This function returns a Python dictionary whose contents reflect the
-corresponding @sc{GDB/MI} command's output.  Refer to the
+corresponding @sc{gdb/mi} command's output.  Refer to the
 documentation for these commands for details.  Lists are represented
 as Python lists, and tuples are represented as Python dictionaries.
 
@@ -6047,6 +6047,11 @@ The block containing this block.  If this parent block does not exist,
 this attribute holds @code{None}.  This attribute is not writable.
 @end defvar
 
+@defvar Block.subblocks
+A list of blocks nested in this block.  If there are no blocks nested,
+this attribute holds an empty list.  This attribute is not writable.
+@end defvar
+
 @defvar Block.global_block
 The global block associated with this block.  This attribute is not
 writable.
@@ -6202,6 +6207,11 @@ asked @value{GDBN} to display demangled or mangled names.
 @defvar Symbol.addr_class
 The address class of the symbol.  This classifies how to find the value
 of a symbol.  Each address class is a constant defined in the
+@code{gdb} module and described later in this chapter.
+@end defvar
+
+@defvar Symbol.domain
+The domain of the symbol.  Each domain is a constant defined in the
 @code{gdb} module and described later in this chapter.
 @end defvar
 
@@ -7182,6 +7192,10 @@ If @var{signed} is not specified, it defaults to @code{True}.  If
 
 If the indicated type cannot be found, this function will throw a
 @code{ValueError} exception.
+@end defun
+
+@defun Architecture.void_type ()
+This function returns a void type.
 @end defun
 
 @anchor{gdbpy_architecture_registers}

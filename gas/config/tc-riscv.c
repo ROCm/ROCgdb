@@ -72,6 +72,7 @@ enum riscv_csr_class
   CSR_CLASS_F,		/* f-ext only */
   CSR_CLASS_ZKR,	/* zkr only */
   CSR_CLASS_ZCMT,	/* zcmt only */
+  CSR_CLASS_ZICFISS,	/* Zicfiss */
   CSR_CLASS_V,		/* rvv only */
   CSR_CLASS_DEBUG,	/* debug CSR */
   CSR_CLASS_H,		/* hypervisor */
@@ -82,6 +83,7 @@ enum riscv_csr_class
   CSR_CLASS_SMCSRIND,		/* Smcsrind */
   CSR_CLASS_SMCNTRPMF,		/* Smcntrpmf */
   CSR_CLASS_SMCNTRPMF_32,	/* Smcntrpmf, rv32 only */
+  CSR_CLASS_SMCTR,		/* Smctr */
   CSR_CLASS_SMRNMI,		/* Smrnmi */
   CSR_CLASS_SMSTATEEN,		/* Smstateen only */
   CSR_CLASS_SMSTATEEN_32,	/* Smstateen RV32 only */
@@ -102,6 +104,7 @@ enum riscv_csr_class
   CSR_CLASS_SSTC_AND_H,		/* Sstc only (with H) */
   CSR_CLASS_SSTC_32,		/* Sstc RV32 only */
   CSR_CLASS_SSTC_AND_H_32,	/* Sstc RV32 only (with H) */
+  CSR_CLASS_SSCTR,		/* Ssctr */
   CSR_CLASS_XTHEADVECTOR,	/* xtheadvector only */
 };
 
@@ -1074,6 +1077,9 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_ZCMT:
       extension = "zcmt";
       break;
+    case CSR_CLASS_ZICFISS:
+      extension = "zicfiss";
+      break;
     case CSR_CLASS_V:
       extension = "zve32x";
       break;
@@ -1105,6 +1111,7 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_SMSTATEEN:
       extension = "smstateen";
       break;
+    case CSR_CLASS_SMCTR: extension = "smctr"; break;
     case CSR_CLASS_SSAIA:
     case CSR_CLASS_SSAIA_AND_H:
     case CSR_CLASS_SSAIA_32:
@@ -1150,6 +1157,7 @@ riscv_csr_address (const char *csr_name,
 		      || csr_class == CSR_CLASS_SSTC_AND_H_32);
       extension = "sstc";
       break;
+    case CSR_CLASS_SSCTR: extension = "ssctr"; break;
     case CSR_CLASS_DEBUG:
       break;
     case CSR_CLASS_XTHEADVECTOR:
@@ -2476,7 +2484,7 @@ parse_relocation (char **str, bfd_reloc_code_real_type *reloc,
       {
 	size_t len = 1 + strlen (percent_op->str);
 
-	while (ISSPACE ((*str)[len]))
+	while (is_whitespace ((*str)[len]))
 	  ++len;
 	if ((*str)[len] != '(')
 	  continue;
@@ -2540,7 +2548,7 @@ my_getSmallExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
 
       /* Skip over whitespace and brackets, keeping count of the number
 	 of brackets.  */
-      while (*str == ' ' || *str == '\t' || *str == '(')
+      while (is_whitespace (*str) || *str == '(')
 	if (*str++ == '(')
 	  str_depth++;
     }
@@ -2569,7 +2577,7 @@ my_getSmallExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
   probing_insn_operands = orig_probing;
 
   /* Match every open bracket.  */
-  while (crux_depth > 0 && (*str == ')' || *str == ' ' || *str == '\t'))
+  while (crux_depth > 0 && (*str == ')' || is_whitespace (*str)))
     if (*str++ == ')')
       crux_depth--;
 
@@ -2800,10 +2808,7 @@ riscv_is_priv_insn (insn_t insn)
   return (((insn ^ MATCH_SRET) & MASK_SRET) == 0
 	  || ((insn ^ MATCH_MRET) & MASK_MRET) == 0
 	  || ((insn ^ MATCH_SFENCE_VMA) & MASK_SFENCE_VMA) == 0
-	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0
-  /* The sfence.vm is dropped in the v1.10 priv specs, but we still need to
-     check it here to keep the compatible.  */
-	  || ((insn ^ MATCH_SFENCE_VM) & MASK_SFENCE_VM) == 0);
+	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0);
 }
 
 static symbolS *deferred_sym_rootP;
@@ -2839,7 +2844,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   /* Parse the name of the instruction.  Terminate the string if whitespace
      is found so that str_hash_find only sees the name part of the string.  */
   for (asarg = str; *asarg!= '\0'; ++asarg)
-    if (ISSPACE (*asarg))
+    if (is_whitespace (*asarg))
       {
 	save_c = *asarg;
 	*asarg++ = '\0';
@@ -2886,7 +2891,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       for (oparg = insn->args;; ++oparg)
 	{
 	  opargStart = oparg;
-	  asarg += strspn (asarg, " \t");
+	  while (is_whitespace (*asarg))
+	    ++asarg;
 	  switch (*oparg)
 	    {
 	    case '\0': /* End of args.  */
@@ -3515,7 +3521,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      if (reg_lookup (&asarg, RCLASS_GPR, &regno))
 		{
 		  char c = *oparg;
-		  if (*asarg == ' ')
+		  if (is_whitespace (*asarg))
 		    ++asarg;
 
 		  /* Now that we have assembled one operand, we use the args
@@ -3549,7 +3555,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      ? RCLASS_GPR : RCLASS_FPR), &regno))
 		{
 		  char c = *oparg;
-		  if (*asarg == ' ')
+		  if (is_whitespace (*asarg))
 		    ++asarg;
 		  switch (c)
 		    {
@@ -4958,7 +4964,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
   else if (strncmp (name, "arch,", 5) == 0)
     {
       name += 5;
-      if (ISSPACE (*name) && *name != '\0')
+      if (is_whitespace (*name) && *name != '\0')
 	name++;
       riscv_update_subset (&riscv_rps_as, name);
       riscv_set_arch_str (&riscv_rps_as.subset_list->arch_str);
@@ -5436,19 +5442,22 @@ riscv_elf_final_processing (void)
 static void
 s_riscv_leb128 (int sign)
 {
-  expressionS exp;
-  char *save_in = input_line_pointer;
+  do
+    {
+      expressionS exp;
 
-  expression (&exp);
-  if (sign && exp.X_op != O_constant)
-    as_bad (_("non-constant .sleb128 is not supported"));
-  else if (!sign && exp.X_op != O_constant && exp.X_op != O_subtract)
-    as_bad (_(".uleb128 only supports constant or subtract expressions"));
+      expression (&exp);
+      if (sign && exp.X_op != O_constant)
+	as_bad (_("non-constant .sleb128 is not supported"));
+      else if (!sign && exp.X_op != O_constant && exp.X_op != O_subtract)
+	as_bad (_(".uleb128 only supports constant or subtract expressions"));
+      else
+	emit_leb128_expr (&exp, sign);
+    }
+  while (*input_line_pointer++ == ',');
 
+  input_line_pointer--;
   demand_empty_rest_of_line ();
-
-  input_line_pointer = save_in;
-  return s_leb128 (sign);
 }
 
 /* Parse the .insn directive.  There are three formats,

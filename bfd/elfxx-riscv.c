@@ -1218,7 +1218,10 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zcf", "+f,+zca", check_implicit_always},
   {"zcmp", "+zca", check_implicit_always},
   {"zcmop", "+zca", check_implicit_always},
-  {"zcmt", "+zca,+zicsr",	check_implicit_always},
+  {"zcmt", "+zca,+zicsr", check_implicit_always},
+
+  {"zicfilp", "+zicsr", check_implicit_always},
+  {"zicfiss", "+zimop,+zicsr", check_implicit_always},
 
   {"shcounterenw", "+h", check_implicit_always},
   {"shgatpa", "+h", check_implicit_always},
@@ -1259,6 +1262,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"smaia", "+ssaia", check_implicit_always},
   {"smcsrind", "+sscsrind", check_implicit_always},
   {"smcntrpmf", "+zicsr", check_implicit_always},
+  {"smctr", "+zicsr", check_implicit_always},
   {"smstateen", "+ssstateen", check_implicit_always},
   {"smepmp", "+zicsr", check_implicit_always},
   {"smdbltrp", "+zicsr", check_implicit_always},
@@ -1267,6 +1271,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"sscsrind", "+zicsr", check_implicit_always},
   {"sscofpmf", "+zicsr", check_implicit_always},
   {"sscounterenw", "+zicsr", check_implicit_always},
+  {"ssctr", "+zicsr", check_implicit_always},
   {"ssstateen", "+zicsr", check_implicit_always},
   {"sstc", "+zicsr", check_implicit_always},
   {"sstvala", "+zicsr", check_implicit_always},
@@ -1353,6 +1358,8 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zihintpause",	ISA_SPEC_CLASS_DRAFT,		2, 0,  0 },
   {"zihpm",		ISA_SPEC_CLASS_DRAFT,		2, 0,  0 },
   {"zimop",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zicfiss",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zicfilp",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zmmul",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"za64rs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"za128rs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1446,6 +1453,7 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"smaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smcsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smcntrpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"smctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smepmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smrnmi",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1455,6 +1463,7 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"sscsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sscofpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sscounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"ssctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sstc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sstvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -2577,6 +2586,13 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zihintpause");
     case INSN_CLASS_ZIMOP:
       return riscv_subset_supports (rps, "zimop");
+    case INSN_CLASS_ZICFISS:
+      return riscv_subset_supports (rps, "zicfiss");
+    case INSN_CLASS_ZICFISS_AND_ZCMOP:
+      return riscv_subset_supports (rps, "zicfiss")
+	     && riscv_subset_supports (rps, "zcmop");
+    case INSN_CLASS_ZICFILP:
+      return riscv_subset_supports (rps, "zicfilp");
     case INSN_CLASS_M:
       return riscv_subset_supports (rps, "m");
     case INSN_CLASS_ZMMUL:
@@ -2735,6 +2751,9 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zcmp");
     case INSN_CLASS_ZCMT:
       return riscv_subset_supports (rps, "zcmt");
+    case INSN_CLASS_SMCTR_OR_SSCTR:
+      return (riscv_subset_supports (rps, "smctr")
+	      || riscv_subset_supports (rps, "ssctr"));
     case INSN_CLASS_SVINVAL:
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
@@ -2823,6 +2842,19 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zicsr";
     case INSN_CLASS_ZIFENCEI:
       return "zifencei";
+    case INSN_CLASS_ZICFISS:
+      return "zicfiss";
+    case INSN_CLASS_ZICFISS_AND_ZCMOP:
+      if (!riscv_subset_supports (rps, "zicfiss"))
+	{
+	  if (!riscv_subset_supports (rps, "zcmop"))
+	    return _("zicfiss' and `zcmop");
+	  else
+	    return "zicfiss";
+	}
+      return "zcmop";
+    case INSN_CLASS_ZICFILP:
+      return "zicfilp";
     case INSN_CLASS_ZIHINTNTL:
       return "zihintntl";
     case INSN_CLASS_ZIHINTNTL_AND_C:
@@ -3025,6 +3057,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zcmp";
     case INSN_CLASS_ZCMT:
       return "zcmt";
+    case INSN_CLASS_SMCTR_OR_SSCTR:
+      return _("smctr' or `ssctr");
     case INSN_CLASS_SVINVAL:
       return "svinval";
     case INSN_CLASS_H:

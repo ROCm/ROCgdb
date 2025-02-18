@@ -728,15 +728,16 @@ xstormy16_frame_base_address (const frame_info_ptr &this_frame, void **this_cach
   return cache->base;
 }
 
-static const struct frame_unwind xstormy16_frame_unwind = {
+static const struct frame_unwind_legacy xstormy16_frame_unwind (
   "xstormy16 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   xstormy16_frame_this_id,
   xstormy16_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static const struct frame_base xstormy16_frame_base = {
   &xstormy16_frame_unwind,

@@ -524,6 +524,7 @@ fetch_error (const instr_info *ins)
 #define Xz { OP_DSreg, eSI_reg }
 #define Yb { OP_ESreg, eDI_reg }
 #define Yv { OP_ESreg, eDI_reg }
+#define DSCX { OP_DSreg, eCX_reg }
 #define DSBX { OP_DSreg, eBX_reg }
 
 #define es { OP_REG, es_reg }
@@ -1346,6 +1347,7 @@ enum
   X86_64_0F01_REG_5_MOD_3_RM_6_PREFIX_1,
   X86_64_0F01_REG_5_MOD_3_RM_7_PREFIX_1,
   X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_1,
+  X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_3,
   X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_1,
   X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_3,
   X86_64_0F01_REG_7_MOD_3_RM_7_PREFIX_1,
@@ -2305,7 +2307,7 @@ static const struct dis386 dis386_twobyte[] = {
   { "sysenter",		{ SEP }, PREFIX_REX2_ILLEGAL },
   { "sysexit%LQ",	{ SEP }, PREFIX_REX2_ILLEGAL },
   { Bad_Opcode },
-  { "getsec",		{ XX }, 0 },
+  { "getsec",		{ XX }, PREFIX_REX2_ILLEGAL },
   /* 38 */
   { THREE_BYTE_TABLE (THREE_BYTE_0F38) },
   { Bad_Opcode },
@@ -2972,8 +2974,8 @@ static const struct dis386 reg_table[][8] = {
     { PREFIX_TABLE (PREFIX_0FA6_REG_0) },
     { "xsha1",		{ { OP_0f07, 0 } }, 0 },
     { "xsha256",	{ { OP_0f07, 0 } }, 0 },
-    { Bad_Opcode },
-    { Bad_Opcode },
+    { "xsha384",	{ { OP_0f07, 0 } }, 0 },
+    { "xsha512",	{ { OP_0f07, 0 } }, 0 },
     { PREFIX_TABLE (PREFIX_0FA6_REG_5) },
   },
   /* REG_0FA7 */
@@ -3252,6 +3254,8 @@ static const struct dis386 prefix_table[][4] = {
   {
     { "rdpru", { Skip_MODRM }, 0 },
     { X86_64_TABLE (X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_1) },
+    { Bad_Opcode },
+    { X86_64_TABLE (X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_3) },
   },
 
   /* PREFIX_0F01_REG_7_MOD_3_RM_6 */
@@ -4631,6 +4635,12 @@ static const struct dis386 x86_64_table[][2] = {
     { "rmpquery", { Skip_MODRM }, 0 },
   },
 
+  /* X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_3 */
+  {
+    { Bad_Opcode },
+    { "rmpread",	{ DSCX, RMrAX, Skip_MODRM }, 0 },
+  },
+
   /* X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_1 */
   {
     { Bad_Opcode },
@@ -4640,7 +4650,7 @@ static const struct dis386 x86_64_table[][2] = {
   /* X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_3 */
   {
     { Bad_Opcode },
-    { "rmpupdate",	{ Skip_MODRM }, 0 },
+    { "rmpupdate",	{ RMrAX, DSCX, Skip_MODRM }, 0 },
   },
 
   /* X86_64_0F01_REG_7_MOD_3_RM_7_PREFIX_1 */
@@ -13126,8 +13136,11 @@ OP_ESreg (instr_info *ins, int code, int sizeflag)
 	  intel_operand_size (ins, b_mode, sizeflag);
 	}
     }
-  oappend_register (ins, att_names_seg[0]);
-  oappend_char (ins, ':');
+  if (ins->address_mode != mode_64bit)
+    {
+      oappend_register (ins, att_names_seg[0]);
+      oappend_char (ins, ':');
+    }
   ptr_reg (ins, code, sizeflag);
   return true;
 }
@@ -13139,6 +13152,8 @@ OP_DSreg (instr_info *ins, int code, int sizeflag)
     {
       switch (ins->codep[-1])
 	{
+	case 0x01:	/* rmpupdate/rmpread */
+	  break;
 	case 0x6f:	/* outsw/outsl */
 	  intel_operand_size (ins, z_mode, sizeflag);
 	  break;
@@ -13151,9 +13166,9 @@ OP_DSreg (instr_info *ins, int code, int sizeflag)
 	  intel_operand_size (ins, b_mode, sizeflag);
 	}
     }
-  /* Set ins->active_seg_prefix to PREFIX_DS if it is unset so that the
-     default segment register DS is printed.  */
-  if (!ins->active_seg_prefix)
+  /* Outside of 64-bit mode set ins->active_seg_prefix to PREFIX_DS if it
+     is unset, so that the default segment register DS is printed.  */
+  if (ins->address_mode != mode_64bit && !ins->active_seg_prefix)
     ins->active_seg_prefix = PREFIX_DS;
   append_seg (ins);
   ptr_reg (ins, code, sizeflag);
@@ -14412,6 +14427,7 @@ OP_Rounding (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
   if (ins->modrm.mod != 3 || !ins->vex.b)
     return true;
 
+  ins->evex_used |= EVEX_b_used;
   switch (bytemode)
     {
     case evex_rounding_64_mode:
@@ -14419,11 +14435,9 @@ OP_Rounding (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
         return true;
       /* Fall through.  */
     case evex_rounding_mode:
-      ins->evex_used |= EVEX_b_used;
       oappend (ins, names_rounding[ins->vex.ll]);
       break;
     case evex_sae_mode:
-      ins->evex_used |= EVEX_b_used;
       oappend (ins, "{");
       break;
     default:

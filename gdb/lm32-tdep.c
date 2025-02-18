@@ -447,15 +447,16 @@ lm32_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
-static const struct frame_unwind lm32_frame_unwind = {
+static const struct frame_unwind_legacy lm32_frame_unwind (
   "lm32 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   lm32_frame_this_id,
   lm32_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 lm32_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)

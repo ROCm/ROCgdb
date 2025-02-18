@@ -170,7 +170,9 @@ extern int tc_i386_fix_adjustable (struct fix *);
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCREL		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCRELX		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_REX_GOTPCRELX	\
-   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_4_GOTPCRELX)
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_4_GOTPCRELX	\
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_5_GOTPCRELX	\
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_6_GOTPCRELX)
 
 #define TC_FORCE_RELOCATION_ABS(FIX)				\
   (TC_FORCE_RELOCATION (FIX)					\
@@ -179,7 +181,9 @@ extern int tc_i386_fix_adjustable (struct fix *);
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCREL		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCRELX		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_REX_GOTPCRELX	\
-   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_4_GOTPCRELX)
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_4_GOTPCRELX	\
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_5_GOTPCRELX	\
+   || (FIX)->fx_r_type == BFD_RELOC_X86_64_CODE_6_GOTPCRELX)
 
 extern void i386_start_line (void);
 #define md_start_line_hook i386_start_line
@@ -374,7 +378,7 @@ extern void i386_generate_nops (fragS *, char *, offsetT, int);
 #define md_generate_nops(frag, where, amount, control) \
   i386_generate_nops ((frag), (where), (amount), (control))
 
-#define HANDLE_ALIGN(fragP)						\
+#define HANDLE_ALIGN(sec, fragP)						\
 if (fragP->fr_type == rs_align_code) 					\
   {									\
     offsetT __count = (fragP->fr_next->fr_address			\

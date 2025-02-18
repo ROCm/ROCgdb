@@ -59,10 +59,22 @@ set s390tests {
      "-m31" {gotreloc-1.s}
      {{objdump -dzrj.text gotreloc_31-no-pie-1.dd}}
      "gotreloc_31-1"}
+    {"Helper shared library (PLT test)"
+     "-shared -m elf_s390" "" "-m31" {pltlib.s}
+     {}
+     "libpltlib_31.so"}
+    {"PLT: PLT generation (non-PIC/PIE)"
+     "-m elf_s390 tmpdir/libpltlib_31.so" "" "-m31" {plt_31-1.s}
+     {{objdump "-M insnlength -dzrj.plt" plt_31_non-pic-1.pd} {readelf "-wf" plt_31-1.wf}}
+     "plt_31_non-pic-1"}
+    {"PLT: PLT generation (PIC/PIE)"
+     "-m elf_s390 tmpdir/libpltlib_31.so -pic" "" "-m31" {plt_31-1.s}
+     {{objdump "-M insnlength -dzrj.plt" plt_31_pic-1.pd} {readelf "-wf" plt_31-1.wf}}
+     "plt_31_pic-1"}
 }
 
 set s390xtests {
-    {"TLS -fpic -shared transitions" "-shared -melf64_s390 --hash-style=sysv" ""
+    {"TLS -fpic -shared transitions" "-shared -melf64_s390 --hash-style=sysv --no-ld-generated-unwind-info" ""
      "-m64 -Aesame" {tlspic1_64.s tlspic2_64.s}
      {{readelf -WSsrl tlspic_64.rd} {objdump -dzrj.text tlspic_64.dd}
       {objdump -sj.got tlspic_64.sd} {objdump -sj.tdata tlspic_64.td}}
@@ -70,7 +82,7 @@ set s390xtests {
     {"Helper shared library" "-shared -melf64_s390" ""
      "-m64 -Aesame" {tlslib_64.s} {} "libtlslib_64.so"}
     {"TLS -fpic and -fno-pic exec transitions"
-     "-melf64_s390 tmpdir/libtlslib_64.so --hash-style=sysv" ""
+     "-melf64_s390 tmpdir/libtlslib_64.so --hash-style=sysv --no-ld-generated-unwind-info" ""
      "-m64 -Aesame" {tlsbinpic_64.s tlsbin_64.s}
      {{readelf -WSsrl tlsbin_64.rd} {objdump -dzrj.text tlsbin_64.dd}
       {objdump -sj.got tlsbin_64.sd} {objdump -sj.tdata tlsbin_64.td}}
@@ -101,6 +113,18 @@ set s390xtests {
     {"WEAKUNDEF2: overflow test (PLT32DBL)"
      "-m elf64_s390 -dT 8GB.ld --no-error-rwx-segments -no-pie" "" "-m64" {weakundef-2.s}
      {{objdump "-dzrj.text" weakundef-2.dd}} "weakundef-2"}
+    {"Helper shared library (PLT test)"
+     "-shared -m elf64_s390" "" "-m64" {pltlib.s}
+     {}
+     "libpltlib_64.so"}
+    {"PLT: PLT generation without .eh_frame unwind info"
+     "-m elf64_s390 tmpdir/libpltlib_64.so --no-ld-generated-unwind-info" "" "-m64" {plt_64-1.s}
+     {{objdump "-dzrj.plt" plt_64-1.pd} {readelf "-wf" plt_64-1.wf}}
+     "plt_64-1"}
+    {"PLT: PLT generation with .eh_frame unwind info"
+     "-m elf64_s390 tmpdir/libpltlib_64.so" "" "-m64" {plt_64-1.s}
+     {{objdump "-dzrj.plt" plt_64-1.pd} {readelf "-wf" plt_64-1_eh.wf}}
+     "plt_64-1_eh"}
 }
 
 if [istarget "s390-*-*"] {

@@ -1496,7 +1496,7 @@ mmix_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		  /* Shift this reloc to the end of the relocs to maintain
 		     the r_offset sorted reloc order.  */
 		  relcpy = *rel;
-		  memmove (rel, rel + 1, (char *) relend - (char *) rel);
+		  memmove (rel, rel + 1, (char *) relend - (char *) (rel + 1));
 		  relend[-1] = relcpy;
 
 		  /* Back up one reloc, or else we'd skip the next reloc
@@ -2385,6 +2385,7 @@ _bfd_mmix_after_linker_allocation (bfd *abfd ATTRIBUTE_UNUSED,
     = contents = bfd_alloc (bpo_greg_owner, bpo_gregs_section->size);
   if (contents == NULL)
     return false;
+  bpo_gregs_section->alloced = 1;
 
   /* Sanity check: If these numbers mismatch, some relocation has not been
      accounted for and the rest of gregdata is probably inconsistent.

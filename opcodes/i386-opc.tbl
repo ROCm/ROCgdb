@@ -596,7 +596,7 @@ ssto, 0xaa, 0, W|No_sSuf|RepPrefixOk, {}
 ssto, 0xaa, 0, W|No_sSuf|IsStringEsOp0|RepPrefixOk, { Byte|Word|Dword|Qword|Unspecified|BaseIndex }
 ssto, 0xaa, 0, W|No_sSuf|IsStringEsOp1|RepPrefixOk, { Acc|Byte|Word|Dword|Qword, Byte|Word|Dword|Qword|Unspecified|BaseIndex }
 xlat, 0xd7, 0, No_wSuf|No_lSuf|No_sSuf|No_qSuf|IntelSuffix, {}
-xlat, 0xd7, 0, No_wSuf|No_lSuf|No_sSuf|No_qSuf|IsString|IntelSuffix, { Byte|Unspecified|BaseIndex }
+xlat, 0xd7, 0, No_wSuf|No_lSuf|No_sSuf|No_qSuf|IsString|IntelSuffix, { RegB|Byte|Unspecified|BaseIndex }
 
 // Bit manipulation.
 bsf, 0xfbc, i386, Modrm|CheckOperandSize|No_bSuf|No_sSuf|RepPrefixOk, { Reg16|Reg32|Reg64|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
@@ -2134,13 +2134,19 @@ xcryptofb, 0xf30fa7e8, PadLock, NoSuf|RepPrefixOk, {}
 // Alias for xstore-rng.
 xstore, 0xfa7c0, PadLock, NoSuf|RepPrefixOk, {}
 
-// Zhaoxin GMI instructions
-sm2, 0xf20fa6c0, GMI, NoSuf, {}
-sm3, 0xf30fa6e8, GMI, NoSuf, {}
-sm4, 0xf30fa7f0, GMI, NoSuf, {}
+// Zhaoxin GMI SM2 instruction
+sm2, 0xf20fa6c0, GMISM2, NoSuf, {}
+
+// Zhaoxin GMI CCS instructions
+sm3, 0xf30fa6e8, GMICCS, NoSuf, {}
+sm4, 0xf30fa7f0, GMICCS, NoSuf, {}
 
 // Zhaoxin PadLock RNG2 instruction
 xrng2, 0xf30fa7f8, PadLockRNG2, NoSuf|RepPrefixOk, {}
+
+// Zhaoxin PadLock PHE2 instructions
+xsha384, 0xf30fa6d8, PadLockPHE2, NoSuf|RepPrefixOk, {}
+xsha512, 0xf30fa6e0, PadLockPHE2, NoSuf|RepPrefixOk, {}
 
 // Multy-precision Add Carry, rdseed instructions.
 <adx:pfx, c:66, o:f3>
@@ -3153,6 +3159,7 @@ psmash, 0xf30f01ff, SNP&x64, NoSuf, {}
 psmash, 0xf30f01ff, SNP&x64, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword }
 pvalidate, 0xf20f01ff, SNP, NoSuf, {}
 pvalidate, 0xf20f01ff, SNP, AddrPrefixOpReg|NoSuf, { Acc|Word|Dword|Qword, RegC|Dword, RegD|Dword }
+// These two forms exist only for compatibility with older gas.
 rmpupdate, 0xf20f01fe, SNP&x64, NoSuf, {}
 rmpupdate, 0xf20f01fe, SNP&x64, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword, RegC|Qword }
 rmpadjust, 0xf30f01fe, SNP&x64, NoSuf, {}
@@ -3162,6 +3169,9 @@ pvalidate, 0xf20f01ff, SNP, AddrPrefixOpReg|NoSuf, { Acc|Word|Dword|Qword }
 rmpupdate, 0xf20f01fe, SNP&x64, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword }
 rmpadjust, 0xf30f01fe, SNP&x64, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword }
 
+// This must come last, for its IsString attribute to take effect.
+rmpupdate, 0xf20f01fe, SNP&x64, IsString|NoSuf|NoRex64, { RegC|Unspecified|BaseIndex, Acc|Qword }
+
 // SNP instructions end
 
 // RMPQUERY instruction
@@ -3170,6 +3180,12 @@ rmpquery, 0xf30f01fd, RMPQUERY, NoSuf, {}
 rmpquery, 0xf30f01fd, RMPQUERY, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword, RegC|Qword, RegD|Qword }
 
 // RMPQUERY instruction end
+
+// RMPREAD instruction
+
+rmpread, 0xf20f01fd, RMPREAD&x64, IsString|NoSuf|NoRex64, { Acc|Qword, RegC|Unspecified|BaseIndex }
+
+// RMPREAD instruction end
 
 // RDPRU instruction
 

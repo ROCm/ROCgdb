@@ -452,16 +452,16 @@ tic6x_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
   return info->base;
 }
 
-static const struct frame_unwind tic6x_frame_unwind =
-{
+static const struct frame_unwind_legacy tic6x_frame_unwind (
   "tic6x prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   tic6x_frame_this_id,
   tic6x_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static const struct frame_base tic6x_frame_base =
 {
@@ -515,16 +515,16 @@ tic6x_stub_unwind_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind tic6x_stub_unwind =
-{
+static const struct frame_unwind_legacy tic6x_stub_unwind (
   "tic6x stub",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   tic6x_stub_this_id,
   tic6x_frame_prev_register,
   NULL,
   tic6x_stub_unwind_sniffer
-};
+);
 
 /* Return the instruction on address PC.  */
 

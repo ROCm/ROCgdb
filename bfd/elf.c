@@ -1747,7 +1747,7 @@ get_hash_table_data (bfd *abfd, bfd_size_type number,
   i_data = (bfd_vma *) bfd_malloc (number * sizeof (*i_data));
   if (i_data == NULL)
     {
-      free (e_data);
+      _bfd_munmap_temporary (e_data_addr, e_data_size);
       return NULL;
     }
 
@@ -1942,7 +1942,7 @@ _bfd_elf_get_dynamic_symbols (bfd *abfd, Elf_Internal_Phdr *phdr,
 	  break;
 	}
 
-      filepos = offset_from_vma (phdrs, phnum, dt_hash, sizeof (nb),
+      filepos = offset_from_vma (phdrs, phnum, dt_hash, 2 * hash_ent_size,
 				 NULL);
       if (filepos == (file_ptr) -1
 	  || bfd_seek (abfd, filepos, SEEK_SET) != 0
@@ -2013,8 +2013,7 @@ _bfd_elf_get_dynamic_symbols (bfd *abfd, Elf_Internal_Phdr *phdr,
 
       maxchain -= gnusymidx;
       filepos = offset_from_vma (phdrs, phnum,
-				 (buckets_vma +
-				  4 * (ngnubuckets + maxchain)),
+				 buckets_vma + 4 * (ngnubuckets + maxchain),
 				 4, NULL);
       if (filepos == (file_ptr) -1
 	  || bfd_seek (abfd, filepos, SEEK_SET) != 0)
@@ -2031,7 +2030,7 @@ _bfd_elf_get_dynamic_symbols (bfd *abfd, Elf_Internal_Phdr *phdr,
       while ((bfd_get_32 (abfd, nb) & 1) == 0);
 
       filepos = offset_from_vma (phdrs, phnum,
-				 (buckets_vma + 4 * ngnubuckets),
+				 buckets_vma + 4 * ngnubuckets,
 				 4, NULL);
       if (filepos == (file_ptr) -1
 	  || bfd_seek (abfd, filepos, SEEK_SET) != 0)
@@ -2045,8 +2044,7 @@ _bfd_elf_get_dynamic_symbols (bfd *abfd, Elf_Internal_Phdr *phdr,
       if (dt_mips_xhash)
 	{
 	  filepos = offset_from_vma (phdrs, phnum,
-				     (buckets_vma
-				      + 4 * (ngnubuckets + maxchain)),
+				     buckets_vma + 4 * (ngnubuckets + maxchain),
 				     4, NULL);
 	  if (filepos == (file_ptr) -1
 	      || bfd_seek (abfd, filepos, SEEK_SET) != 0)
@@ -3886,6 +3884,7 @@ bfd_elf_set_group_contents (bfd *abfd, asection *sec, void *failedptrarg)
 	  *failedptr = true;
 	  return;
 	}
+      sec->alloced = 1;
     }
 
   loc = sec->contents + sec->size;
@@ -6421,9 +6420,9 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	 program headers, so provide a symbol __ehdr_start pointing there.
 	 A program can use this to examine itself robustly.  */
 
-      struct elf_link_hash_entry *hash
-	= elf_link_hash_lookup (elf_hash_table (link_info), "__ehdr_start",
-				false, false, true);
+      struct elf_link_hash_table *htab = elf_hash_table (link_info);
+      struct elf_link_hash_entry *hash = htab->hehdr_start;
+
       /* If the symbol was referenced and not defined, define it.  */
       if (hash != NULL
 	  && (hash->root.type == bfd_link_hash_new
@@ -10126,6 +10125,23 @@ _bfd_elf_free_cached_info (bfd *abfd)
       _bfd_dwarf2_cleanup_debug_info (abfd, &tdata->dwarf2_find_line_info);
       _bfd_dwarf1_cleanup_debug_info (abfd, &tdata->dwarf1_find_line_info);
       _bfd_stab_cleanup (abfd, &tdata->line_info);
+      for (asection *sec = abfd->sections; sec != NULL; sec = sec->next)
+	{
+	  _bfd_elf_munmap_section_contents (sec, sec->contents);
+	  if (!sec->alloced)
+	    {
+	      free (elf_section_data (sec)->this_hdr.contents);
+	      elf_section_data (sec)->this_hdr.contents = NULL;
+	    }
+	  free (elf_section_data (sec)->relocs);
+	  elf_section_data (sec)->relocs = NULL;
+	  if (sec->sec_info_type == SEC_INFO_TYPE_EH_FRAME)
+	    {
+	      struct eh_frame_sec_info *sec_info
+		= elf_section_data (sec)->sec_info;
+	      free (sec_info->cies);
+	    }
+	}
       free (tdata->symtab_hdr.contents);
       tdata->symtab_hdr.contents = NULL;
     }
@@ -14106,6 +14122,7 @@ _bfd_elf_write_secondary_reloc_section (bfd *abfd, asection *sec)
 	  hdr->contents = bfd_alloc (abfd, hdr->sh_size);
 	  if (hdr->contents == NULL)
 	    continue;
+	  relsec->alloced = 1;
 
 #if DEBUG_SECONDARY_RELOCS
 	  fprintf (stderr, "write %u secondary relocs for %s from %s\n",
@@ -14218,12 +14235,10 @@ _bfd_elf_write_secondary_reloc_section (bfd *abfd, asection *sec)
   return result;
 }
 
-/* Mmap in section contents.  If FINAL_LINK is false, set *BUF to NULL
-   before calling bfd_get_full_section_contents.  */
+/* Mmap in section contents.  */
 
 static bool
-elf_mmap_section_contents (bfd *abfd, sec_ptr sec, bfd_byte **buf,
-			   bool final_link)
+elf_mmap_section_contents (bfd *abfd, sec_ptr sec, bfd_byte **buf)
 {
 #ifdef USE_MMAP
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
@@ -14248,17 +14263,12 @@ elf_mmap_section_contents (bfd *abfd, sec_ptr sec, bfd_byte **buf,
 	    abort ();
 	  sec->mmapped_p = 1;
 
-	  /* Never use the preallocated buffer if mmapp is used.  */
+	  /* We can't use the final link preallocated buffer for mmap.  */
 	  *buf = NULL;
 	}
     }
 #endif
-  /* NB: When this is called from elf_link_input_bfd, FINAL_LINK is
-     true.  If FINAL_LINK is false, *BUF is set to the preallocated
-     buffer if USE_MMAP is undefined and *BUF is set to NULL if
-     USE_MMAP is defined.  */
-  if (!final_link)
-    *buf = NULL;
+  /* FIXME: We should not get here if sec->alloced is set.  */
   bool ret = bfd_get_full_section_contents (abfd, sec, buf);
   if (ret && sec->mmapped_p)
     *buf = sec->contents;
@@ -14270,7 +14280,8 @@ elf_mmap_section_contents (bfd *abfd, sec_ptr sec, bfd_byte **buf,
 bool
 _bfd_elf_mmap_section_contents (bfd *abfd, sec_ptr sec, bfd_byte **buf)
 {
-  return elf_mmap_section_contents (abfd, sec, buf, false);
+  *buf = NULL;
+  return elf_mmap_section_contents (abfd, sec, buf);
 }
 
 /* Mmap in the full section contents for the final link.  */
@@ -14279,29 +14290,38 @@ bool
 _bfd_elf_link_mmap_section_contents (bfd *abfd, sec_ptr sec,
 				     bfd_byte **buf)
 {
-  return elf_mmap_section_contents (abfd, sec, buf, true);
+  return elf_mmap_section_contents (abfd, sec, buf);
 }
 
 /* Munmap section contents.  */
 
 void
-_bfd_elf_munmap_section_contents (asection *sec ATTRIBUTE_UNUSED,
-				  void *contents)
+_bfd_elf_munmap_section_contents (asection *sec, void *contents)
 {
   /* NB: Since _bfd_elf_munmap_section_contents is called like free,
      CONTENTS may be NULL.  */
   if (contents == NULL)
     return;
 
+  if (sec->alloced
+      /* What a tangled web we weave with section contents.
+	 FIXME: We shouldn't need to test anything but sec->alloced
+	 here, but there are cases where a buffer is allocated for a
+	 section but then another buffer is malloc'd anyway.  eg.
+	 trace through ld-elf/eh4 testcase on x86_64.  */
+      && (sec->contents == contents
+	  || elf_section_data (sec)->this_hdr.contents == contents))
+    return;
+
+  /* Don't leave pointers to data we are about to munmap or free.  */
+  if (sec->contents == contents)
+    sec->contents = NULL;
+  if (elf_section_data (sec)->this_hdr.contents == contents)
+    elf_section_data (sec)->this_hdr.contents = NULL;
+
 #ifdef USE_MMAP
   if (sec->mmapped_p)
     {
-      /* _bfd_elf_mmap_section_contents may return the previously
-	 mapped section contents.  Munmap the section contents only
-	 if they haven't been cached.  */
-      if (elf_section_data (sec)->this_hdr.contents == contents)
-	return;
-
       /* When _bfd_elf_mmap_section_contents returns CONTENTS as
 	 malloced, CONTENTS_ADDR is set to NULL.  */
       if (elf_section_data (sec)->contents_addr != NULL)
@@ -14311,7 +14331,6 @@ _bfd_elf_munmap_section_contents (asection *sec ATTRIBUTE_UNUSED,
 		      elf_section_data (sec)->contents_size) != 0)
 	    abort ();
 	  sec->mmapped_p = 0;
-	  sec->contents = NULL;
 	  elf_section_data (sec)->contents_addr = NULL;
 	  elf_section_data (sec)->contents_size = 0;
 	  return;
@@ -14338,6 +14357,7 @@ _bfd_elf_link_munmap_section_contents (asection *sec ATTRIBUTE_UNUSED)
 	abort ();
       sec->mmapped_p = 0;
       sec->contents = NULL;
+      elf_section_data (sec)->this_hdr.contents = NULL;
       elf_section_data (sec)->contents_addr = NULL;
       elf_section_data (sec)->contents_size = 0;
     }

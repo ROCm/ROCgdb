@@ -332,16 +332,16 @@ frv_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind frv_linux_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy frv_linux_sigtramp_frame_unwind (
   "frv linux sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   frv_linux_sigtramp_frame_this_id,
   frv_linux_sigtramp_frame_prev_register,
   NULL,
   frv_linux_sigtramp_frame_sniffer
-};
+);
 
 /* The FRV kernel defines ELF_NGREG as 46.  We add 2 in order to include
    the loadmap addresses in the register set.  (See below for more info.)  */

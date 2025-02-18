@@ -1,11 +1,13 @@
 -*- text -*-
 
+Changes in 2.44:
+
 * Add support for the x86 Intel Diamond Rapids AMX instructions, including
   AMX-AVX512, AMX-FP8, AMX-MOVRS, AMX-TF32 and AMX-TRANSPOSE.
 
 * Add support for the x86 Intel MOVRS instructions.
 
-* Add support for the x86 Zhaoxin PadLock RNG2 instruction.
+* Add support for the x86 Zhaoxin PadLock PHE2 and RNG2 instructions.
 
 * Add support for AArch64 SME and SVE non-widening BFloat16 (SVE_B16B16 and
   SME_B16B16) instructions.
@@ -23,9 +25,18 @@
 
 * On x86 emulation support (for secondary targets) was dropped.
 
-* Add support for RISC-V Zcmp (cm.mva01s, cm.mvsa01), Smrnmi, S[sm]dbltrp,
-  CORE-V (xcvbitmanip, xcvsimd) extensions with version 1.0 and more SiFive
-  extensions (xsfvqmaccdod, xsfvqmaccqoq and xsfvfnrclipxfqf).
+* Add support for RISC-V standard extensions,
+  Zicfiss v1.0, Zicfilp v1.0, Zcmp v1.0 (cm.mva01s and cm.mvsa01 instructions),
+  Zcmt v1.0, Smrnmi v1.0, S[sm]dbltrp v1.0 and S[sm]ctr v1.0 (replaced the
+  dropped sfence.vm encoding since privileged spec v1.10).
+
+* Add support for RISC-V vendor extensions,
+  CORE-V, xcvbitmanip v1.0 and xcvsimd v1.0.
+  SiFive, xsfvqmaccdod v1.0, xsfvqmaccqoqv1.0 and xsfvfnrclipxfqf v1.0.
+
+* Add support for 4 formats of .cfi directives register aliases for LoongArch,
+  for example, .cfi_offset r1,8, .cfi_offset ra,8, .cfi_offset $r1,8,
+  .cfi_offset $ra,8.
 
 Changes in 2.43:
 

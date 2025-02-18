@@ -2162,16 +2162,16 @@ ia64_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
     }
 }
  
-static const struct frame_unwind ia64_frame_unwind =
-{
+static const struct frame_unwind_legacy ia64_frame_unwind (
   "ia64 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   &ia64_frame_this_id,
   &ia64_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Signal trampolines.  */
 
@@ -2351,16 +2351,16 @@ ia64_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind ia64_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy ia64_sigtramp_frame_unwind (
   "ia64 sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   ia64_sigtramp_frame_this_id,
   ia64_sigtramp_frame_prev_register,
   NULL,
   ia64_sigtramp_frame_sniffer
-};
+);
 
 
 
@@ -3011,17 +3011,17 @@ ia64_libunwind_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind ia64_libunwind_frame_unwind =
-{
+static const struct frame_unwind_legacy ia64_libunwind_frame_unwind (
   "ia64 libunwind",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   ia64_libunwind_frame_this_id,
   ia64_libunwind_frame_prev_register,
   NULL,
   ia64_libunwind_frame_sniffer,
   libunwind_frame_dealloc_cache
-};
+);
 
 static void
 ia64_libunwind_sigtramp_frame_this_id (const frame_info_ptr &this_frame,
@@ -3100,16 +3100,16 @@ ia64_libunwind_sigtramp_frame_sniffer (const struct frame_unwind *self,
     return ia64_sigtramp_frame_sniffer (self, this_frame, this_cache);
 }
 
-static const struct frame_unwind ia64_libunwind_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy ia64_libunwind_sigtramp_frame_unwind (
   "ia64 libunwind sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   ia64_libunwind_sigtramp_frame_this_id,
   ia64_libunwind_sigtramp_frame_prev_register,
   NULL,
   ia64_libunwind_sigtramp_frame_sniffer
-};
+);
 
 /* Set of libunwind callback acccessor functions.  */
 unw_accessors_t ia64_unw_accessors =

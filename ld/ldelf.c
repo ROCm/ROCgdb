@@ -615,7 +615,10 @@ ldelf_search_needed (const char *path, struct dt_needed *n, int force,
       needed.name = filename;
 
       if (ldelf_try_needed (&needed, force, is_linux))
-	return true;
+	{
+	  free (filename);
+	  return true;
+	}
 
       free (filename);
 
@@ -1455,14 +1458,12 @@ write_build_id (bfd *abfd)
     }
   i_shdr = &elf_section_data (asec->output_section)->this_hdr;
 
-  if (i_shdr->contents == NULL)
-    {
-      if (asec->contents == NULL)
-	asec->contents = (unsigned char *) xmalloc (asec->size);
-      contents = asec->contents;
-    }
-  else
+  if (i_shdr->contents != NULL)
     contents = i_shdr->contents + asec->output_offset;
+  else if (asec->contents != NULL)
+    contents = asec->contents;
+  else
+    contents = xmalloc (asec->size);
 
   e_note = (Elf_External_Note *) contents;
   size = offsetof (Elf_External_Note, name[sizeof "GNU"]);
@@ -1482,8 +1483,11 @@ write_build_id (bfd *abfd)
 
   position = i_shdr->sh_offset + asec->output_offset;
   size = asec->size;
-  return (bfd_seek (abfd, position, SEEK_SET) == 0
-	  && bfd_write (contents, size, abfd) == size);
+  bool ret = (bfd_seek (abfd, position, SEEK_SET) == 0
+	      && bfd_write (contents, size, abfd) == size);
+  if (i_shdr->contents == NULL && asec->contents == NULL)
+    free (contents);
+  return ret;
 }
 
 /* Make .note.gnu.build-id section, and set up elf_tdata->build_id.  */
@@ -1544,14 +1548,12 @@ write_package_metadata (bfd *abfd)
     }
   i_shdr = &elf_section_data (asec->output_section)->this_hdr;
 
-  if (i_shdr->contents == NULL)
-    {
-      if (asec->contents == NULL)
-	asec->contents = (unsigned char *) xmalloc (asec->size);
-      contents = asec->contents;
-    }
-  else
+  if (i_shdr->contents != NULL)
     contents = i_shdr->contents + asec->output_offset;
+  else if (asec->contents != NULL)
+    contents = asec->contents;
+  else
+    contents = xmalloc (asec->size);
 
   e_note = (Elf_External_Note *) contents;
   size = offsetof (Elf_External_Note, name[sizeof "FDO"]);
@@ -1570,8 +1572,11 @@ write_package_metadata (bfd *abfd)
 
   position = i_shdr->sh_offset + asec->output_offset;
   size = asec->size;
-  return (bfd_seek (abfd, position, SEEK_SET) == 0
-	  && bfd_write (contents, size, abfd) == size);
+  bool ret = (bfd_seek (abfd, position, SEEK_SET) == 0
+	      && bfd_write (contents, size, abfd) == size);
+  if (i_shdr->contents == NULL && asec->contents == NULL)
+    free (contents);
+  return ret;
 }
 
 /* Make .note.package section.
@@ -1747,7 +1752,7 @@ ldelf_append_to_separated_string (char **to, char *op_arg)
    sections, but before any sizes or addresses have been set.  */
 
 void
-ldelf_before_allocation (char *audit, char *depaudit,
+ldelf_before_allocation (char **audit, char **depaudit,
 			 const char *default_interpreter_name)
 {
   const char *rpath;
@@ -1767,8 +1772,7 @@ ldelf_before_allocation (char *audit, char *depaudit,
       if (!bfd_link_relocatable (&link_info))
 	{
 	  struct elf_link_hash_table *htab = elf_hash_table (&link_info);
-	  struct elf_link_hash_entry *h
-	    = elf_link_hash_lookup (htab, "__ehdr_start", false, false, true);
+	  struct elf_link_hash_entry *h = htab->hehdr_start;
 
 	  /* Only adjust the export class if the symbol was referenced
 	     and not defined, otherwise leave it alone.  */
@@ -1816,30 +1820,28 @@ ldelf_before_allocation (char *audit, char *depaudit,
 	   a dep audit entry.  */
 	if (audit_libs && *audit_libs != '\0')
 	  {
-	    char *cp = xstrdup (audit_libs);
+	    char *copy_audit_libs = xstrdup (audit_libs);
+	    char *cp = copy_audit_libs;
 	    do
 	      {
-		int more = 0;
 		char *cp2 = strchr (cp, config.rpath_separator);
 
 		if (cp2)
-		  {
-		    *cp2 = '\0';
-		    more = 1;
-		  }
+		  *cp2++ = '\0';
 
-		if (cp != NULL && *cp != '\0')
-		  ldelf_append_to_separated_string (&depaudit, cp);
+		if (*cp != '\0')
+		  ldelf_append_to_separated_string (depaudit, cp);
 
-		cp = more ? ++cp2 : NULL;
+		cp = cp2;
 	      }
 	    while (cp != NULL);
+	    free (copy_audit_libs);
 	  }
       }
 
   if (! (bfd_elf_size_dynamic_sections
 	 (link_info.output_bfd, command_line.soname, rpath,
-	  command_line.filter_shlib, audit, depaudit,
+	  command_line.filter_shlib, *audit, *depaudit,
 	  (const char * const *) command_line.auxiliary_filters,
 	  &link_info, &sinterp)))
     einfo (_("%F%P: failed to set dynamic section sizes: %E\n"));
@@ -1852,6 +1854,7 @@ ldelf_before_allocation (char *audit, char *depaudit,
       if (default_interpreter_name != NULL)
 	{
 	  sinterp->contents = (bfd_byte *) default_interpreter_name;
+	  sinterp->alloced = 1;
 	  sinterp->size = strlen ((char *) sinterp->contents) + 1;
 	}
     }

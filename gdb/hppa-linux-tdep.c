@@ -308,15 +308,16 @@ hppa_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_linux_sigtramp_frame_unwind = {
+static const struct frame_unwind_legacy hppa_linux_sigtramp_frame_unwind (
   "hppa linux sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_linux_sigtramp_frame_this_id,
   hppa_linux_sigtramp_frame_prev_register,
   NULL,
   hppa_linux_sigtramp_frame_sniffer
-};
+);
 
 /* Attempt to find (and return) the global pointer for the given
    function.

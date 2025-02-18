@@ -314,16 +314,16 @@ m68k_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return m68k_linux_pc_in_sigtramp (this_frame);
 }
 
-static const struct frame_unwind m68k_linux_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy m68k_linux_sigtramp_frame_unwind (
   "m68k linux sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   m68k_linux_sigtramp_frame_this_id,
   m68k_linux_sigtramp_frame_prev_register,
   NULL,
   m68k_linux_sigtramp_frame_sniffer
-};
+);
 
 /* Register maps for supply/collect regset functions.  */
 

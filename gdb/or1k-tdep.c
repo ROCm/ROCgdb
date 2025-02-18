@@ -1125,16 +1125,17 @@ or1k_frame_prev_register (const frame_info_ptr &this_frame,
 
 /* Data structures for the normal prologue-analysis-based unwinder.  */
 
-static const struct frame_unwind or1k_frame_unwind = {
+static const struct frame_unwind_legacy or1k_frame_unwind (
   "or1k prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   or1k_frame_this_id,
   or1k_frame_prev_register,
   NULL,
   default_frame_sniffer,
-  NULL,
-};
+  NULL
+);
 
 /* Architecture initialization for OpenRISC 1000.  */
 

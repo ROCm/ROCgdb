@@ -693,6 +693,9 @@ elf_x86_link_hash_table_free (bfd *obfd)
   struct elf_x86_link_hash_table *htab
     = (struct elf_x86_link_hash_table *) obfd->link.hash;
 
+  free (htab->dt_relr_bitmap.u.elf64);
+  free (htab->unaligned_relative_reloc.data);
+  free (htab->relative_reloc.data);
   if (htab->loc_hash_table)
     htab_delete (htab->loc_hash_table);
   if (htab->loc_hash_memory)
@@ -1089,12 +1092,15 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
   bool return_status = false;
   bool keep_symbuf = false;
 
-  if (bfd_link_relocatable (info))
-    return true;
-
   /* Assume we're not going to change any sizes, and we'll only need
      one pass.  */
   *again = false;
+
+  if (bfd_link_relocatable (info))
+    return true;
+
+  if (!info->enable_dt_relr)
+    return true;
 
   bed = get_elf_backend_data (abfd);
   htab = elf_x86_hash_table (info, bed->target_id);
@@ -1783,6 +1789,7 @@ elf_x86_write_dl_relr_bitmap (struct bfd_link_info *info,
 
   /* Cache the section contents for elf_link_input_bfd.  */
   sec->contents = contents;
+  sec->alloced = 1;
 
   if (ABI_64_P (info->output_bfd))
     for (i = 0; i < htab->dt_relr_bitmap.count; i++, contents += 8)
@@ -2012,6 +2019,7 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
 
   sec->size = (bfd_size_type) sec_size;
   sec->contents = (unsigned char *) bfd_zalloc (dynobj, sec->size);
+  sec->alloced = 1;
   memcpy (sec->contents, contents, sec_size);
 
   sframe_encoder_free (&ectx);
@@ -2669,6 +2677,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
       s->contents = (unsigned char *) bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
+      s->alloced = 1;
     }
 
   if (htab->plt_eh_frame != NULL
@@ -3304,19 +3313,19 @@ _bfd_x86_elf_link_report_tls_transition_error
 	 asect);
       break;
 
-    case elf_x86_tls_error_add:
-      info->callbacks->einfo
-	/* xgettext:c-format */
-	(_("%pB(%pA+0x%v): relocation %s against `%s' must be used "
-	   "in ADD only\n"),
-	 abfd, asect, rel->r_offset, from_reloc_name, name);
-      break;
-
     case elf_x86_tls_error_add_mov:
       info->callbacks->einfo
 	/* xgettext:c-format */
 	(_("%pB(%pA+0x%v): relocation %s against `%s' must be used "
 	   "in ADD or MOV only\n"),
+	 abfd, asect, rel->r_offset, from_reloc_name, name);
+      break;
+
+    case elf_x86_tls_error_add_movrs:
+      info->callbacks->einfo
+	/* xgettext:c-format */
+	(_("%pB(%pA+0x%v): relocation %s against `%s' must be used "
+	   "in ADD or MOVRS only\n"),
 	 abfd, asect, rel->r_offset, from_reloc_name, name);
       break;
 
@@ -4700,6 +4709,7 @@ _bfd_x86_elf_link_setup_gnu_properties
 	    abort ();
 	  s->size = htab->dynamic_interpreter_size;
 	  s->contents = (unsigned char *) htab->dynamic_interpreter;
+	  s->alloced = 1;
 	  htab->interp = s;
 	}
 

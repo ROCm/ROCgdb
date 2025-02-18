@@ -1089,7 +1089,7 @@ obj_elf_section_name (void)
     {
       char *end = input_line_pointer;
 
-      while (0 == strchr ("\n\t,; ", *end))
+      while (!is_whitespace (*end) && !is_end_of_stmt (*end) && *end != ',')
 	end++;
       if (end == input_line_pointer)
 	{
@@ -1324,13 +1324,27 @@ obj_elf_section (int push)
 		  && (bfd_section_flags (now_seg)
 		      & (SEC_MERGE | SEC_STRINGS)) != 0)
 		goto fetch_entsize;
-	      entsize = get_absolute_expression ();
-	      SKIP_WHITESPACE ();
-	      if (entsize <= 0)
+	      if (is_end_of_line[(unsigned char) *input_line_pointer])
 		{
-		  as_warn (_("invalid merge / string entity size"));
-		  attr &= ~(SHF_MERGE | SHF_STRINGS);
-		  entsize = 0;
+		  /* ??? This is here for older versions of gcc that
+		     test for gas string merge support with
+		     '.section .rodata.str, "aMS", @progbits, 1'
+		     Unfortunately '@' begins a comment on arm.
+		     This isn't as_warn because gcc tests with
+		     --fatal-warnings. */
+		  as_tsktsk (_("missing merge / string entity size, 1 assumed"));
+		  entsize = 1;
+		}
+	      else
+		{
+		  entsize = get_absolute_expression ();
+		  SKIP_WHITESPACE ();
+		  if (entsize <= 0)
+		    {
+		      as_warn (_("invalid merge / string entity size"));
+		      attr &= ~(SHF_MERGE | SHF_STRINGS);
+		      entsize = 0;
+		    }
 		}
 	    }
 	  else if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0 && inherit
@@ -1340,10 +1354,20 @@ obj_elf_section (int push)
 	    fetch_entsize:
 	      entsize = now_seg->entsize;
 	    }
-	  else if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0)
+	  else if ((attr & SHF_MERGE) != 0)
 	    {
-	      as_warn (_("entity size for SHF_MERGE / SHF_STRINGS not specified"));
+	      /* ??? Perhaps we should error here.  The manual says that
+		 entsize must be specified if SHF_MERGE is set.  */
+	      as_warn (_("entity size for SHF_MERGE not specified"));
 	      attr &= ~(SHF_MERGE | SHF_STRINGS);
+	    }
+	  else if ((attr & SHF_STRINGS) != 0)
+	    {
+	      /* Ideally we would warn about this, but older versions
+		 of gas did not permit an entity size to be specified,
+		 so we have to default this silently for
+		 compatibility.  */
+	      entsize = 1;
 	    }
 
 	  if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0 && type == SHT_NOBITS)
@@ -1957,8 +1981,8 @@ obj_elf_get_vtable_inherit (void)
     ++input_line_pointer;
 
   if (input_line_pointer[0] == '0'
-      && (input_line_pointer[1] == '\0'
-	  || ISSPACE (input_line_pointer[1])))
+      && (is_end_of_stmt (input_line_pointer[1])
+	  || is_whitespace (input_line_pointer[1])))
     {
       psym = section_symbol (absolute_section);
       ++input_line_pointer;
@@ -2032,7 +2056,7 @@ obj_elf_vtable_entry (int ignore ATTRIBUTE_UNUSED)
   (void) obj_elf_get_vtable_entry ();
 }
 
-#define skip_whitespace(str)  do { if (*(str) == ' ') ++(str); } while (0)
+#define skip_whitespace(str)  do { if (is_whitespace (*(str))) ++(str); } while (0)
 
 static inline int
 skip_past_char (char ** str, char c)
@@ -3076,6 +3100,7 @@ elf_frob_file_after_relocs (void)
       subseg_set (group, 0);
       bfd_set_section_size (group, size);
       group->contents = (unsigned char *) frag_more (size);
+      group->alloced = 1;
       frag_now->fr_fix = frag_now_fix_octets ();
       frag_wane (frag_now);
     }

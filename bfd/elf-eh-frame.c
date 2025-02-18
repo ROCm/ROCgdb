@@ -606,7 +606,9 @@ _bfd_elf_parse_eh_frame (bfd *abfd, struct bfd_link_info *info,
       || (sec->flags & SEC_HAS_CONTENTS) == 0
       || sec->sec_info_type != SEC_INFO_TYPE_NONE)
     {
-      /* This file does not contain .eh_frame information.  */
+      /* This file does not contain .eh_frame information or
+	 .eh_frame has already been parsed, as can happen with
+	 --gc-sections.  */
       return;
     }
 
@@ -2409,7 +2411,7 @@ write_dwarf_eh_frame_hdr (bfd *abfd, struct bfd_link_info *info)
   struct elf_link_hash_table *htab;
   struct eh_frame_hdr_info *hdr_info;
   asection *sec;
-  bool retval = true;
+  bool retval = false;
 
   htab = elf_hash_table (info);
   hdr_info = &htab->eh_info;
@@ -2425,14 +2427,11 @@ write_dwarf_eh_frame_hdr (bfd *abfd, struct bfd_link_info *info)
     size += 4 + hdr_info->u.dwarf.fde_count * 8;
   contents = (bfd_byte *) bfd_malloc (size);
   if (contents == NULL)
-    return false;
+    goto out;
 
   eh_frame_sec = bfd_get_section_by_name (abfd, ".eh_frame");
   if (eh_frame_sec == NULL)
-    {
-      free (contents);
-      return false;
-    }
+    goto out;
 
   memset (contents, 0, EH_FRAME_HDR_SIZE);
   /* Version.  */
@@ -2456,6 +2455,7 @@ write_dwarf_eh_frame_hdr (bfd *abfd, struct bfd_link_info *info)
     }
   bfd_put_32 (abfd, encoded_eh_frame, contents + 4);
 
+  retval = true;
   if (contents[2] != DW_EH_PE_omit)
     {
       unsigned int i;
@@ -2508,9 +2508,10 @@ write_dwarf_eh_frame_hdr (bfd *abfd, struct bfd_link_info *info)
 				 (file_ptr) sec->output_offset,
 				 sec->size))
     retval = false;
+ out:
   free (contents);
-
   free (hdr_info->u.dwarf.array);
+  hdr_info->u.dwarf.array = NULL;
   return retval;
 }
 
