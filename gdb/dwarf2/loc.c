@@ -44,7 +44,6 @@
 #include "compile/compile.h"
 #include <algorithm>
 #include <vector>
-#include <unordered_set>
 #include "gdbsupport/underlying.h"
 #include "gdbsupport/byte-vector.h"
 #include "extract-store-integer.h"
@@ -796,7 +795,7 @@ func_verify_no_selftailcall (struct gdbarch *gdbarch, CORE_ADDR verify_addr)
   std::vector<CORE_ADDR> todo;
 
   /* Track here CORE_ADDRs which were already visited.  */
-  std::unordered_set<CORE_ADDR> addr_hash;
+  gdb::unordered_set<CORE_ADDR> addr_hash;
 
   todo.push_back (verify_addr);
   while (!todo.empty ())
@@ -965,7 +964,7 @@ call_site_find_chain_2
      (struct gdbarch *gdbarch,
       gdb::unique_xmalloc_ptr<struct call_site_chain> *resultp,
       std::vector<struct call_site *> &chain,
-      std::unordered_set<CORE_ADDR> &addr_hash,
+      gdb::unordered_set<CORE_ADDR> &addr_hash,
       struct call_site *call_site,
       CORE_ADDR callee_pc)
 {
@@ -1048,7 +1047,7 @@ call_site_find_chain_1 (struct gdbarch *gdbarch, CORE_ADDR caller_pc,
 		 paddress (gdbarch, save_callee_pc));
 
   /* Mark CALL_SITEs so we do not visit the same ones twice.  */
-  std::unordered_set<CORE_ADDR> addr_hash;
+  gdb::unordered_set<CORE_ADDR> addr_hash;
 
   /* Do not push CALL_SITE to CHAIN.  Push there only the first tail call site
      at the target's function.  All the possible tail call sites in the
