@@ -3123,7 +3123,7 @@ notify_about_to_proceed ()
 }
 
 void
-clear_proceed_status (int step)
+clear_proceed_status (int step, bool about_to_proceed)
 {
   /* With scheduler-locking replay, stop replaying other threads in the
      same process if we're not replaying the selected thread.
@@ -3162,7 +3162,8 @@ clear_proceed_status (int step)
       inferior->control.stop_soon = NO_STOP_QUIETLY;
     }
 
-  notify_about_to_proceed ();
+  if (about_to_proceed)
+    notify_about_to_proceed ();
 }
 
 /* Returns true if TP is still stopped at a breakpoint that needs
@@ -3851,7 +3852,7 @@ init_wait_for_inferior (void)
 
   breakpoint_init_inferior (current_inferior (), inf_starting);
 
-  clear_proceed_status (0);
+  clear_proceed_status (0, false);
 
   nullify_last_target_wait_ptid ();
 

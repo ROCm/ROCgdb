@@ -129,8 +129,9 @@ extern void start_remote (int from_tty);
 /* Clear out all variables saying what to do when inferior is
    continued or stepped.  First do this, then set the ones you want,
    then call `proceed'.  STEP indicates whether we're preparing for a
-   step/stepi command.  */
-extern void clear_proceed_status (int step);
+   step/stepi command.  Set ABOUT_TO_PROCEED to false if we're not
+   calling `proceeed` yet.  */
+extern void clear_proceed_status (int step, bool about_to_proceed = true);
 
 extern void proceed (CORE_ADDR, enum gdb_signal);
 

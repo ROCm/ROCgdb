@@ -2862,6 +2862,10 @@ attach_command (const char *args, int from_tty)
      this function should probably be moved into target_pre_inferior.  */
   target_pre_inferior ();
 
+  /* Set up execution context to know that we should return from
+     wait_for_inferior as soon as the target reports a stop.  */
+  init_wait_for_inferior ();
+
   gdb::unique_xmalloc_ptr<char> stripped = strip_bg_char (args, &async_exec);
   args = stripped.get ();
 
@@ -2903,10 +2907,6 @@ attach_command (const char *args, int from_tty)
        before the attach continuation runs and the command is really
        finished.  */
   target_terminal::inferior ();
-
-  /* Set up execution context to know that we should return from
-     wait_for_inferior as soon as the target reports a stop.  */
-  init_wait_for_inferior ();
 
   inferior->needs_setup = true;
 
