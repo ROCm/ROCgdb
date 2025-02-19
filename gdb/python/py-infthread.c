@@ -259,7 +259,7 @@ thpy_is_stopped (PyObject *self, PyObject *args)
 
   THPY_REQUIRE_VALID (thread_obj);
 
-  if (thread_obj->thread->state == THREAD_STOPPED)
+  if (thread_obj->thread->state () == THREAD_STOPPED)
     Py_RETURN_TRUE;
 
   Py_RETURN_FALSE;
@@ -275,7 +275,7 @@ thpy_is_running (PyObject *self, PyObject *args)
 
   THPY_REQUIRE_VALID (thread_obj);
 
-  if (thread_obj->thread->state == THREAD_RUNNING)
+  if (thread_obj->thread->state () == THREAD_RUNNING)
     Py_RETURN_TRUE;
 
   Py_RETURN_FALSE;
@@ -291,7 +291,7 @@ thpy_is_exited (PyObject *self, PyObject *args)
 
   THPY_REQUIRE_VALID (thread_obj);
 
-  if (thread_obj->thread->state == THREAD_EXITED)
+  if (thread_obj->thread->state () == THREAD_EXITED)
     Py_RETURN_TRUE;
 
   Py_RETURN_FALSE;

@@ -148,7 +148,7 @@ struct non_exited_thread_filter
 {
   bool operator() (struct thread_info &thr) const
   {
-    return thr.state != THREAD_EXITED;
+    return thr.state () != THREAD_EXITED;
   }
 };
 

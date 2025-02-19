@@ -692,12 +692,12 @@ proceed_thread_callback (struct thread_info *thread)
      into a single target `resume_all' request, because some threads
      may be stopped in internal breakpoints/events, or stopped waiting
      for its turn in the displaced stepping queue (that is, they are
-     running && !executing).  The target side has no idea about why
-     the thread is stopped, so a `resume_all' command would resume too
-     much.  If/when GDB gains a way to tell the target `hold this
-     thread stopped until I say otherwise', then we can optimize
-     this.  */
-  if (thread->state != THREAD_STOPPED)
+     running from the user's perspective but internally stopped).  The
+     target side has no idea about why the thread is stopped, so a
+     `resume_all' command would resume too much.  If/when GDB gains a
+     way to tell the target `hold this thread stopped until I say
+     otherwise', then we can optimize this.  */
+  if (thread->state () != THREAD_STOPPED)
     return false;
 
   if (!thread->inf->has_execution ())
@@ -713,7 +713,7 @@ static void
 ensure_valid_thread (void)
 {
   if (inferior_ptid == null_ptid
-      || inferior_thread ()->state == THREAD_EXITED)
+      || inferior_thread ()->state () == THREAD_EXITED)
     error (_("Cannot execute this command without a live selected thread."));
 }
 
@@ -742,7 +742,7 @@ error_is_running (void)
 static void
 ensure_not_running (void)
 {
-  if (inferior_thread ()->state == THREAD_RUNNING)
+  if (inferior_thread ()->state () == THREAD_RUNNING)
     error_is_running ();
 }
 
@@ -1100,7 +1100,8 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 
 	      /* Pretend that we've ran.  */
 	      resume_ptid = user_visible_resume_ptid (1);
-	      set_running (tp->inf->process_target (), resume_ptid, true);
+	      set_state (tp->inf->process_target (), resume_ptid,
+			 THREAD_RUNNING);
 
 	      step_into_inline_frame (tp);
 
@@ -2078,12 +2079,12 @@ info_program_command (const char *args, int from_tty)
 		  print_thread_id (tp),
 		  target_pid_to_str (tp->ptid).c_str ());
 
-      if (tp->state == THREAD_EXITED)
+      if (tp->state () == THREAD_EXITED)
 	{
 	  gdb_printf (_("Selected thread has exited.\n"));
 	  return;
 	}
-      else if (tp->state == THREAD_RUNNING)
+      else if (tp->state () == THREAD_RUNNING)
 	{
 	  gdb_printf (_("Selected thread is running.\n"));
 	  return;
@@ -2105,13 +2106,13 @@ info_program_command (const char *args, int from_tty)
 		  print_thread_id (tp),
 		  target_pid_to_str (tp->ptid).c_str ());
 
-      if (tp->state == THREAD_EXITED)
+      if (tp->state () == THREAD_EXITED)
 	{
 	  gdb_printf (_("Thread has since exited.\n"));
 	  return;
 	}
 
-      if (tp->state == THREAD_RUNNING)
+      if (tp->state () == THREAD_RUNNING)
 	{
 	  gdb_printf (_("Thread is now running.\n"));
 	  return;
@@ -2707,7 +2708,7 @@ proceed_after_attach (inferior *inf)
   scoped_restore_current_thread restore_thread;
 
   for (thread_info &thread : inf->non_exited_threads ())
-    if (!thread.executing ()
+    if (thread.internal_state () != THREAD_INT_RUNNING
 	&& !thread.stop_requested
 	&& thread.stop_signal () == GDB_SIGNAL_0)
       {
@@ -2990,7 +2991,7 @@ notice_new_inferior (thread_info *thr, bool leave_running, int from_tty)
   /* When we "notice" a new inferior we need to do all the things we
      would normally do if we had just attached to it.  */
 
-  if (thr->executing ())
+  if (thr->internal_state () == THREAD_INT_RUNNING)
     {
       struct inferior *inferior = current_inferior ();
 
