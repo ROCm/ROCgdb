@@ -155,9 +155,6 @@ static int dwarf2_locexpr_block_index;
 static int dwarf2_loclist_block_index;
 static int ada_block_index;
 
-static bool producer_is_gas_lt_2_38 (struct dwarf2_cu *cu);
-static bool producer_is_gas_ge_2_39 (struct dwarf2_cu *cu);
-
 /* Size of .debug_loclists section header for 32-bit DWARF format.  */
 #define LOCLIST_HEADER_SIZE32 12
 
@@ -599,12 +596,14 @@ public:
 	       const struct abbrev_table *abbrev_table,
 	       dwarf2_cu *existing_cu,
 	       bool skip_partial,
+	       enum language pretend_language,
 	       const abbrev_table_cache *cache = nullptr);
 
-  explicit cutu_reader (struct dwarf2_per_cu_data *this_cu,
-			dwarf2_per_objfile *per_objfile,
-			struct dwarf2_cu *parent_cu = nullptr,
-			struct dwo_file *dwo_file = nullptr);
+  cutu_reader (dwarf2_per_cu_data *this_cu,
+	       dwarf2_per_objfile *per_objfile,
+	       enum language pretend_language,
+	       struct dwarf2_cu *parent_cu = nullptr,
+	       struct dwo_file *dwo_file = nullptr);
 
   DISABLE_COPY_AND_ASSIGN (cutu_reader);
 
@@ -628,7 +627,11 @@ public:
 private:
   void init_tu_and_read_dwo_dies (dwarf2_per_cu_data *this_cu,
 				  dwarf2_per_objfile *per_objfile,
-				  dwarf2_cu *existing_cu);
+				  dwarf2_cu *existing_cu,
+				  enum language pretend_language);
+
+  void prepare_one_comp_unit (struct dwarf2_cu *cu,
+			      enum language pretend_language);
 
   struct dwarf2_per_cu_data *m_this_cu;
   dwarf2_cu_up m_new_cu;
@@ -1060,10 +1063,6 @@ static struct dwarf2_per_cu_data *dwarf2_find_containing_comp_unit
   (sect_offset sect_off, unsigned int offset_in_dwz,
    dwarf2_per_bfd *per_bfd);
 
-static void prepare_one_comp_unit (struct dwarf2_cu *cu,
-				   struct die_info *comp_unit_die,
-				   enum language pretend_language);
-
 static struct type *set_die_type (struct die_info *, struct type *,
 				  struct dwarf2_cu *, bool = false);
 
@@ -1175,7 +1174,6 @@ static void queue_and_load_all_dwo_tus (dwarf2_cu *cu);
 
 static void process_cu_includes (dwarf2_per_objfile *per_objfile);
 
-static void check_producer (struct dwarf2_cu *cu);
 
 /* Various complaints about symbol reading that don't abort the process.  */
 
@@ -1972,7 +1970,7 @@ dw2_get_file_names (dwarf2_per_cu_data *this_cu,
   if (this_cu->files_read)
     return this_cu->file_names;
 
-  cutu_reader reader (this_cu, per_objfile);
+  cutu_reader reader (this_cu, per_objfile, language_minimal);
   if (!reader.dummy_p)
     dw2_get_file_names_reader (&reader, reader.comp_unit_die);
 
@@ -3178,7 +3176,8 @@ lookup_dwo_unit (dwarf2_cu *cu, die_info *comp_unit_die, const char *dwo_name)
 void
 cutu_reader::init_tu_and_read_dwo_dies (dwarf2_per_cu_data *this_cu,
 					dwarf2_per_objfile *per_objfile,
-					dwarf2_cu *existing_cu)
+					dwarf2_cu *existing_cu,
+					enum language pretend_language)
 {
   struct signatured_type *sig_type;
 
@@ -3220,6 +3219,8 @@ cutu_reader::init_tu_and_read_dwo_dies (dwarf2_per_cu_data *this_cu,
       /* Dummy die.  */
       dummy_p = true;
     }
+
+  prepare_one_comp_unit (cu, pretend_language);
 }
 
 /* Initialize a CU (or TU) and read its DIEs.
@@ -3237,6 +3238,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
 			  const struct abbrev_table *abbrev_table,
 			  dwarf2_cu *existing_cu,
 			  bool skip_partial,
+			  enum language pretend_language,
 			  const abbrev_table_cache *cache)
   : die_reader_specs {},
     m_this_cu (this_cu)
@@ -3264,7 +3266,8 @@ cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
       /* Narrow down the scope of possibilities to have to understand.  */
       gdb_assert (this_cu->is_debug_types);
       gdb_assert (abbrev_table == NULL);
-      init_tu_and_read_dwo_dies (this_cu, per_objfile, existing_cu);
+      init_tu_and_read_dwo_dies (this_cu, per_objfile, existing_cu,
+				 pretend_language);
       return;
     }
 
@@ -3351,85 +3354,90 @@ cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
   /* Skip dummy compilation units.  */
   if (info_ptr >= begin_info_ptr + this_cu->length ()
       || peek_abbrev_code (abfd, info_ptr) == 0)
-    {
-      dummy_p = true;
-      return;
-    }
-
-  /* If we don't have them yet, read the abbrevs for this compilation unit.
-     And if we need to read them now, make sure they're freed when we're
-     done.  */
-  if (abbrev_table != NULL)
-    gdb_assert (cu->header.abbrev_sect_off == abbrev_table->sect_off);
+    dummy_p = true;
   else
     {
-      if (cache != nullptr)
-	abbrev_table = cache->find (abbrev_section,
-				    cu->header.abbrev_sect_off);
-      if (abbrev_table == nullptr)
-	{
-	  abbrev_section->read (objfile);
-	  m_abbrev_table_holder
-	    = abbrev_table::read (abbrev_section, cu->header.abbrev_sect_off);
-	  abbrev_table = m_abbrev_table_holder.get ();
-	}
-    }
-
-  /* Read the top level CU/TU die.  */
-  init_cu_die_reader (this, cu, section, NULL, abbrev_table);
-  info_ptr = read_toplevel_die (this, &comp_unit_die, info_ptr);
-
-  if (skip_partial && comp_unit_die->tag == DW_TAG_partial_unit)
-    {
-      dummy_p = true;
-      return;
-    }
-
-  /* If we are in a DWO stub, process it and then read in the "real" CU/TU
-     from the DWO file.  read_cutu_die_from_dwo will allocate the abbreviation
-     table from the DWO file and pass the ownership over to us.  It will be
-     referenced from READER, so we must make sure to free it after we're done
-     with READER.
-
-     Note that if USE_EXISTING_OK != 0, and THIS_CU->cu already contains a
-     DWO CU, that this test will fail (the attribute will not be present).  */
-  const char *dwo_name = dwarf2_dwo_name (comp_unit_die, cu);
-  if (dwo_name != nullptr)
-    {
-      struct dwo_unit *dwo_unit;
-      struct die_info *dwo_comp_unit_die;
-
-      if (comp_unit_die->has_children)
-	{
-	  complaint (_("compilation unit with DW_AT_GNU_dwo_name"
-		       " has children (offset %s) [in module %s]"),
-		     sect_offset_str (this_cu->sect_off),
-		     bfd_get_filename (abfd));
-	}
-      dwo_unit = lookup_dwo_unit (cu, comp_unit_die, dwo_name);
-      if (dwo_unit != NULL)
-	{
-	  if (read_cutu_die_from_dwo (cu, dwo_unit,
-				      comp_unit_die, NULL,
-				      this, &info_ptr,
-				      &dwo_comp_unit_die,
-				      &m_dwo_abbrev_table) == 0)
-	    {
-	      /* Dummy die.  */
-	      dummy_p = true;
-	      return;
-	    }
-	  comp_unit_die = dwo_comp_unit_die;
-	}
+      /* If we don't have them yet, read the abbrevs for this
+	 compilation unit.  And if we need to read them now, make sure
+	 they're freed when we're done.  */
+      if (abbrev_table != NULL)
+	gdb_assert (cu->header.abbrev_sect_off == abbrev_table->sect_off);
       else
 	{
-	  /* Yikes, we couldn't find the rest of the DIE, we only have
-	     the stub.  A complaint has already been logged.  There's
-	     not much more we can do except pass on the stub DIE to
-	     die_reader_func.  We don't want to throw an error on bad
-	     debug info.  */
+	  if (cache != nullptr)
+	    abbrev_table = cache->find (abbrev_section,
+					cu->header.abbrev_sect_off);
+	  if (abbrev_table == nullptr)
+	    {
+	      abbrev_section->read (objfile);
+	      m_abbrev_table_holder
+		= abbrev_table::read (abbrev_section,
+				      cu->header.abbrev_sect_off);
+	      abbrev_table = m_abbrev_table_holder.get ();
+	    }
+	}
+
+      /* Read the top level CU/TU die.  */
+      init_cu_die_reader (this, cu, section, NULL, abbrev_table);
+      info_ptr = read_toplevel_die (this, &comp_unit_die, info_ptr);
+
+      if (skip_partial && comp_unit_die->tag == DW_TAG_partial_unit)
+	dummy_p = true;
+      else
+	{
+	  /* If we are in a DWO stub, process it and then read in the
+	     "real" CU/TU from the DWO file.  read_cutu_die_from_dwo
+	     will allocate the abbreviation table from the DWO file
+	     and pass the ownership over to us.  It will be referenced
+	     from READER, so we must make sure to free it after we're
+	     done with READER.
+
+	     Note that if USE_EXISTING_OK != 0, and THIS_CU->cu
+	     already contains a DWO CU, that this test will fail (the
+	     attribute will not be present).  */
+	  const char *dwo_name = dwarf2_dwo_name (comp_unit_die, cu);
+	  if (dwo_name != nullptr)
+	    {
+	      struct dwo_unit *dwo_unit;
+	      struct die_info *dwo_comp_unit_die;
+
+	      if (comp_unit_die->has_children)
+		{
+		  complaint (_("compilation unit with DW_AT_GNU_dwo_name"
+			       " has children (offset %s) [in module %s]"),
+			     sect_offset_str (this_cu->sect_off),
+			     bfd_get_filename (abfd));
+		}
+	      dwo_unit = lookup_dwo_unit (cu, comp_unit_die, dwo_name);
+	      if (dwo_unit != NULL)
+		{
+		  if (read_cutu_die_from_dwo (cu, dwo_unit,
+					      comp_unit_die, NULL,
+					      this, &info_ptr,
+					      &dwo_comp_unit_die,
+					      &m_dwo_abbrev_table) == 0)
+		    {
+		      /* Dummy die.  */
+		      dummy_p = true;
+		    }
+		  else
+		    comp_unit_die = dwo_comp_unit_die;
+		}
+	      else
+		{
+		  /* Yikes, we couldn't find the rest of the DIE, we only have
+		     the stub.  A complaint has already been logged.  There's
+		     not much more we can do except pass on the stub DIE to
+		     die_reader_func.  We don't want to throw an error on bad
+		     debug info.  */
+		}
+	    }
 	}
     }
+
+  /* Only a dummy unit can be missing the compunit DIE.  */
+  gdb_assert (dummy_p || comp_unit_die != nullptr);
+  prepare_one_comp_unit (cu, pretend_language);
 }
 
 void
@@ -3464,6 +3472,7 @@ cutu_reader::keep ()
 
 cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
 			  dwarf2_per_objfile *per_objfile,
+			  enum language pretend_language,
 			  struct dwarf2_cu *parent_cu,
 			  struct dwo_file *dwo_file)
   : die_reader_specs {},
@@ -3508,18 +3517,20 @@ cutu_reader::cutu_reader (dwarf2_per_cu_data *this_cu,
   /* Skip dummy compilation units.  */
   if (info_ptr >= begin_info_ptr + this_cu->length ()
       || peek_abbrev_code (abfd, info_ptr) == 0)
+    dummy_p = true;
+  else
     {
-      dummy_p = true;
-      return;
+      abbrev_section->read (objfile);
+      m_abbrev_table_holder
+	= abbrev_table::read (abbrev_section,
+			      m_new_cu->header.abbrev_sect_off);
+
+      init_cu_die_reader (this, m_new_cu.get (), section, dwo_file,
+			  m_abbrev_table_holder.get ());
+      info_ptr = read_toplevel_die (this, &comp_unit_die, info_ptr);
     }
 
-  abbrev_section->read (objfile);
-  m_abbrev_table_holder
-    = abbrev_table::read (abbrev_section, m_new_cu->header.abbrev_sect_off);
-
-  init_cu_die_reader (this, m_new_cu.get (), section, dwo_file,
-		      m_abbrev_table_holder.get ());
-  info_ptr = read_toplevel_die (this, &comp_unit_die, info_ptr);
+  prepare_one_comp_unit (m_new_cu.get (), pretend_language);
 }
 
 
@@ -3855,6 +3866,7 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
   if (reader == nullptr)
     {
       cutu_reader new_reader (this_cu, per_objfile, nullptr, nullptr, false,
+			      language_minimal,
 			      &storage->get_abbrev_table_cache ());
 
       if (new_reader.comp_unit_die == nullptr || new_reader.dummy_p)
@@ -3874,8 +3886,6 @@ process_psymtab_comp_unit (dwarf2_per_cu_data *this_cu,
       bool nope = false;
       if (this_cu->scanned.compare_exchange_strong (nope, true))
 	{
-	  prepare_one_comp_unit (reader->cu, reader->comp_unit_die,
-				 language_minimal);
 	  gdb_assert (storage != nullptr);
 	  cooked_indexer indexer (storage, this_cu, reader->cu->lang ());
 	  indexer.make_index (reader);
@@ -3897,8 +3907,6 @@ build_type_psymtabs_reader (cutu_reader *reader,
 
   if (! type_unit_die->has_children)
     return;
-
-  prepare_one_comp_unit (cu, type_unit_die, language_minimal);
 
   gdb_assert (storage != nullptr);
   cooked_indexer indexer (storage, per_cu, cu->lang ());
@@ -4009,7 +4017,8 @@ build_type_psymtabs (dwarf2_per_objfile *per_objfile,
 	}
 
       cutu_reader reader (tu.sig_type, per_objfile,
-			  abbrev_table.get (), nullptr, false);
+			  abbrev_table.get (), nullptr, false,
+			  language_minimal);
       if (!reader.dummy_p)
 	build_type_psymtabs_reader (&reader, storage);
     }
@@ -4076,7 +4085,8 @@ process_skeletonless_type_unit (void **slot, void *info)
   *slot = entry;
 
   /* This does the job that build_type_psymtabs would have done.  */
-  cutu_reader reader (entry, per_objfile, nullptr, nullptr, false);
+  cutu_reader reader (entry, per_objfile, nullptr, nullptr, false,
+		      language_minimal);
   if (!reader.dummy_p)
     build_type_psymtabs_reader (&reader, data->storage);
 
@@ -4841,7 +4851,8 @@ load_full_comp_unit (dwarf2_per_cu_data *this_cu,
 {
   gdb_assert (! this_cu->is_debug_types);
 
-  cutu_reader reader (this_cu, per_objfile, NULL, existing_cu, skip_partial);
+  cutu_reader reader (this_cu, per_objfile, NULL, existing_cu, skip_partial,
+		      pretend_language);
   if (reader.dummy_p)
     return;
 
@@ -4857,14 +4868,6 @@ load_full_comp_unit (dwarf2_per_cu_data *this_cu,
 			       &info_ptr, reader.comp_unit_die);
   cu->dies = reader.comp_unit_die;
   /* comp_unit_die is not stored in die_hash, no need.  */
-
-  /* We try not to read any attributes in this function, because not
-     all CUs needed for references have been loaded yet, and symbol
-     table processing isn't initialized.  But we have to set the CU language,
-     or we won't be able to build types correctly.
-     Similarly, if we do not read the producer, we can not apply
-     producer-specific interpretation.  */
-  prepare_one_comp_unit (cu, cu->dies, pretend_language);
 
   reader.keep ();
 }
@@ -5553,8 +5556,6 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
 
   if (cust != NULL)
     {
-      int gcc_4_minor = producer_is_gcc_ge_4 (cu->producer);
-
       /* Set symtab language to language from DW_AT_language.  If the
 	 compilation is from a C file generated by language preprocessors, do
 	 not set the language if it was already deduced by start_subfile.  */
@@ -5574,13 +5575,13 @@ process_full_comp_unit (dwarf2_cu *cu, enum language pretend_language)
 	 Still one can confuse GDB by using non-standard GCC compilation
 	 options - this waits on GCC PR other/32998 (-frecord-gcc-switches).
 	 */
-      if (cu->has_loclist && gcc_4_minor >= 5)
+      /* Note that this code traditionally did not accept non-GCC
+	 compilers; that is preserved but seems potentially wrong.  */
+      if (cu->has_loclist && cu->producer_is_gcc ()
+	  && !cu->producer_is_gcc_lt_4_5 ())
 	cust->set_locations_valid (true);
 
-      int major, minor;
-      if (cu->producer != nullptr
-	  && producer_is_gcc (cu->producer, &major, &minor)
-	  && (major < 4 || (major == 4 && minor < 5)))
+      if (cu->producer_is_gcc_lt_4_5 ())
 	/* Don't trust gcc < 4.5.x.  */
 	cust->set_epilogue_unwind_valid (false);
       else
@@ -6575,55 +6576,6 @@ read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
 		       &objfile->objfile_obstack);
 }
 
-/* ICC<14 does not output the required DW_AT_declaration on incomplete
-   types, but gives them a size of zero.  Starting with version 14,
-   ICC is compatible with GCC.  */
-
-static bool
-producer_is_icc_lt_14 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_icc_lt_14;
-}
-
-/* ICC generates a DW_AT_type for C void functions.  This was observed on
-   ICC 14.0.5.212, and appears to be against the DWARF spec (V5 3.3.2)
-   which says that void functions should not have a DW_AT_type.  */
-
-static bool
-producer_is_icc (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_icc;
-}
-
-/* Check for possibly missing DW_AT_comp_dir with relative .debug_line
-   directory paths.  GCC SVN r127613 (new option -fdebug-prefix-map) fixed
-   this, it was first present in GCC release 4.3.0.  */
-
-static bool
-producer_is_gcc_lt_4_3 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_gcc_lt_4_3;
-}
-
-/* See dwarf2/read.h.  */
-bool
-producer_is_clang (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_clang;
-}
-
 static file_and_directory &
 find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
 {
@@ -6636,7 +6588,7 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
 			  dwarf2_string_attr (die, DW_AT_comp_dir, cu));
 
   if (res.get_comp_dir () == nullptr
-      && producer_is_gcc_lt_4_3 (cu)
+      && cu->producer_is_gcc_lt_4_3 ()
       && res.get_name () != nullptr
       && IS_ABSOLUTE_PATH (res.get_name ()))
     {
@@ -6761,8 +6713,6 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   struct attribute *attr;
   struct die_info *child_die;
 
-  prepare_one_comp_unit (cu, die, cu->lang ());
-
   unrelocated_addr unrel_low, unrel_high;
   get_scope_pc_bounds (die, &unrel_low, &unrel_high, cu);
 
@@ -6779,7 +6729,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
      implicitly prefixing it with the compilation dir.  Work around this by
      prefixing it with the source dir instead.  */
   if (cu->header.version == 5 && !IS_ABSOLUTE_PATH (fnd.get_name ())
-      && producer_is_gas_lt_2_38 (cu))
+      && cu->producer_is_gas_lt_2_38 ())
     {
       attr = dwarf2_attr (die, DW_AT_stmt_list, cu);
       if (attr != nullptr && attr->form_is_unsigned ())
@@ -6975,8 +6925,6 @@ static void
 read_type_unit_scope (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct die_info *child_die;
-
-  prepare_one_comp_unit (cu, die, language_minimal);
 
   /* Initialize (or reinitialize) the machinery for building symtabs.
      We do this before processing child DIEs, so that the line header table
@@ -7187,7 +7135,8 @@ create_cus_hash_table (dwarf2_per_objfile *per_objfile,
 
       dwarf2_per_cu_data per_cu (per_bfd, &section, sect_off);
 
-      cutu_reader reader (&per_cu, per_objfile, cu, &dwo_file);
+      cutu_reader reader (&per_cu, per_objfile, language_minimal,
+			  cu, &dwo_file);
       if (!reader.dummy_p)
 	create_dwo_cu_reader (&reader, reader.info_ptr, reader.comp_unit_die,
 			      &dwo_file, &read_unit);
@@ -9256,7 +9205,7 @@ fixup_low_high_pc (struct dwarf2_cu *cu, struct die_info *die, CORE_ADDR *low_pc
   struct gdbarch *gdbarch = objfile->arch ();
 
   if (gdbarch_bfd_arch_info (gdbarch)->arch == bfd_arch_arm
-      && producer_is_gas_ge_2_39 (cu))
+      && cu->producer_is_gas_ge_2_39 ())
     {
       /* Gas version 2.39 produces DWARF for a Thumb subprogram with a low_pc
 	 attribute with the thumb bit set (PR gas/31115).  Work around this.  */
@@ -10796,110 +10745,6 @@ dwarf2_record_block_ranges (struct die_info *die, struct block *block,
   dwarf2_record_block_entry_pc (die, block, cu);
 }
 
-/* Check whether the producer field indicates either of GCC < 4.6, or the
-   Intel C/C++ compiler, and cache the result in CU.  */
-
-static void
-check_producer (struct dwarf2_cu *cu)
-{
-  int major, minor;
-
-  if (cu->producer == NULL)
-    {
-      /* For unknown compilers expect their behavior is DWARF version
-	 compliant.
-
-	 GCC started to support .debug_types sections by -gdwarf-4 since
-	 gcc-4.5.x.  As the .debug_types sections are missing DW_AT_producer
-	 for their space efficiency GDB cannot workaround gcc-4.5.x -gdwarf-4
-	 combination.  gcc-4.5.x -gdwarf-4 binaries have DW_AT_accessibility
-	 interpreted incorrectly by GDB now - GCC PR debug/48229.  */
-    }
-  else if (producer_is_gcc (cu->producer, &major, &minor))
-    {
-      cu->producer_is_gxx_lt_4_6 = major < 4 || (major == 4 && minor < 6);
-      cu->producer_is_gcc_lt_4_3 = major < 4 || (major == 4 && minor < 3);
-      cu->producer_is_gcc_11 = major == 11;
-    }
-  else if (producer_is_icc (cu->producer, &major, &minor))
-    {
-      cu->producer_is_icc = true;
-      cu->producer_is_icc_lt_14 = major < 14;
-    }
-  else if (startswith (cu->producer, "CodeWarrior S12/L-ISA"))
-    cu->producer_is_codewarrior = true;
-  else if (producer_is_clang (cu->producer, &major, &minor))
-    cu->producer_is_clang = true;
-  else if (producer_is_gas (cu->producer, &major, &minor))
-    {
-      cu->producer_is_gas_lt_2_38 = major < 2 || (major == 2 && minor < 38);
-      cu->producer_is_gas_2_39 = major == 2 && minor == 39;
-      cu->producer_is_gas_ge_2_40 = major > 2 || (major == 2 && minor >= 40);
-    }
-  else
-    {
-      /* For other non-GCC compilers, expect their behavior is DWARF version
-	 compliant.  */
-    }
-
-  cu->checked_producer = true;
-}
-
-/* Check for GCC PR debug/45124 fix which is not present in any G++ version up
-   to 4.5.any while it is present already in G++ 4.6.0 - the PR has been fixed
-   during 4.6.0 experimental.  */
-
-static bool
-producer_is_gxx_lt_4_6 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_gxx_lt_4_6;
-}
-
-
-/* Codewarrior (at least as of version 5.0.40) generates dwarf line information
-   with incorrect is_stmt attributes.  */
-
-static bool
-producer_is_codewarrior (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_codewarrior;
-}
-
-static bool
-producer_is_gas_lt_2_38 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_gas_lt_2_38;
-}
-
-static bool
-producer_is_gas_2_39 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_gas_2_39;
-}
-
-/* Return true if CU is produced by GAS 2.39 or later.  */
-
-static bool
-producer_is_gas_ge_2_39 (struct dwarf2_cu *cu)
-{
-  if (!cu->checked_producer)
-    check_producer (cu);
-
-  return cu->producer_is_gas_2_39 || cu->producer_is_gas_ge_2_40;
-}
-
 /* Return the accessibility of DIE, as given by DW_AT_accessibility.
    If that attribute is not available, return the appropriate
    default.  */
@@ -10919,7 +10764,7 @@ dwarf2_access_attribute (struct die_info *die, struct dwarf2_cu *cu)
 		 plongest (value));
     }
 
-  if (cu->header.version < 3 || producer_is_gxx_lt_4_6 (cu))
+  if (cu->header.version < 3 || cu->producer_is_gxx_lt_4_6 ())
     {
       /* The default DWARF 2 accessibility for members is public, the default
 	 accessibility for inheritance is private.  */
@@ -11012,7 +10857,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	       Negative DW_AT_data_member_location
 	       https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101378
 	     */
-	  if (offset == -1 && cu->producer_is_gcc_11)
+	  if (offset == -1 && cu->producer_is_gcc_11 ())
 	    {
 	      complaint (_("DW_AT_data_member_location value of -1, assuming 0"));
 	      offset = 0;
@@ -12145,7 +11990,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
 
   maybe_set_alignment (cu, die, type);
 
-  if (producer_is_icc_lt_14 (cu) && (type->length () == 0))
+  if (cu->producer_is_icc_lt_14 () && type->length () == 0)
     {
       /* ICC<14 does not output the required DW_AT_declaration on
 	 incomplete types, but gives them a size of zero.  */
@@ -12157,7 +12002,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   if (die_is_declaration (die, cu))
     type->set_is_stub (true);
   else if (attr == NULL && die->child == NULL
-	   && producer_is_realview (cu->producer))
+	   && cu->producer_is_realview ())
     /* RealView does not output the required DW_AT_declaration
        on incomplete types.  */
     type->set_is_stub (true);
@@ -12438,8 +12283,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		  set_type_vptr_fieldno (type, TYPE_VPTR_FIELDNO (t));
 		}
 	    }
-	  else if (cu->producer
-		   && startswith (cu->producer, "IBM(R) XL C/C++ Advanced Edition"))
+	  else if (cu->producer_is_xlc ())
 	    {
 	      /* The IBM XLC compiler does not provide direct indication
 		 of the containing type, but the vtable pointer is
@@ -13268,8 +13112,7 @@ read_array_order (struct die_info *die, struct dwarf2_cu *cu)
      FIXME: dsl/2004-8-20: If G77 is ever fixed, this will also need
      version checking.  */
 
-  if (cu->lang () == language_fortran
-      && cu->producer && strstr (cu->producer, "GNU F77"))
+  if (cu->lang () == language_fortran && cu->producer_is_gf77 ())
     {
       return DW_ORD_row_major;
     }
@@ -14022,7 +13865,7 @@ prototyped_function_p (struct die_info *die, struct dwarf2_cu *cu)
      prototyped and unprototyped functions; default to prototyped,
      since that is more common in modern code (and RealView warns
      about unprototyped functions).  */
-  if (producer_is_realview (cu->producer))
+  if (cu->producer_is_realview ())
     return 1;
 
   return 0;
@@ -14054,7 +13897,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
       && !type->is_stub ()
       && die->child == nullptr
       && (cu->per_cu->version () == 2
-	  || producer_is_gas_2_39 (cu)))
+	  || cu->producer_is_gas_2_39 ()))
     {
       /* Work around PR gas/29517, pretend we have an DW_TAG_unspecified_type
 	 return type.  */
@@ -14081,7 +13924,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
       && is_valid_DW_AT_calling_convention_for_subroutine (attr->constant_value (0)))
     TYPE_CALLING_CONVENTION (ftype)
       = (enum dwarf_calling_convention) attr->constant_value (0);
-  else if (cu->producer && strstr (cu->producer, "IBM XL C for OpenCL"))
+  else if (cu->producer_is_xlc_opencl ())
     TYPE_CALLING_CONVENTION (ftype) = DW_CC_GDB_IBM_OpenCL;
   else
     TYPE_CALLING_CONVENTION (ftype) = DW_CC_normal;
@@ -14201,7 +14044,8 @@ read_typedef (struct die_info *die, struct dwarf2_cu *cu)
   struct gdbarch *gdbarch = objfile->arch ();
   struct type *target_type = die_type (die, cu);
 
-  if (gdbarch_dwarf2_omit_typedef_p (gdbarch, target_type, cu->producer, name))
+  if (gdbarch_dwarf2_omit_typedef_p (gdbarch, target_type,
+				     cu->get_producer (), name))
     {
       /* The long double is defined as a base type in C.  GCC creates a long
 	 double typedef with target-type _Float128 for the long double to
@@ -14550,7 +14394,7 @@ dwarf2_init_integer_type (struct dwarf2_cu *cu, int bits, int unsigned_p,
   /* Versions of Intel's C Compiler generate an integer type called "void"
      instead of using DW_TAG_unspecified_type.  This has been seen on
      at least versions 14, 17, and 18.  */
-  if (bits == 0 && producer_is_icc (cu) && name != nullptr
+  if (bits == 0 && cu->producer_is_icc () && name != nullptr
       && strcmp (name, "void") == 0)
     type = builtin_type (objfile)->builtin_void;
   else
@@ -15563,14 +15407,13 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   if (result == nullptr)
     {
       cutu_reader new_reader (per_cu, per_objfile, nullptr, nullptr, false,
+			      language_minimal,
 			      &m_index_storage->get_abbrev_table_cache ());
 
       if (new_reader.dummy_p || new_reader.comp_unit_die == nullptr
 	  || !new_reader.comp_unit_die->has_children)
 	return nullptr;
 
-      prepare_one_comp_unit (new_reader.cu, new_reader.comp_unit_die,
-			     language_minimal);
       auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
       result = m_index_storage->preserve (std::move (copy));
     }
@@ -16305,6 +16148,7 @@ cooked_index_functions::expand_symtabs_matching
 	  bool found = true;
 
 	  const cooked_index_entry *parent = entry->get_parent ();
+	  const language_defn *lang_def = language_def (entry->lang);
 	  for (int i = name_vec.size () - 1; i > 0; --i)
 	    {
 	      /* If we ran out of entries, or if this segment doesn't
@@ -16316,7 +16160,6 @@ cooked_index_functions::expand_symtabs_matching
 		}
 	      if (parent->lang != language_unknown)
 		{
-		  const language_defn *lang_def = language_def (parent->lang);
 		  symbol_name_matcher_ftype *name_matcher
 		    = lang_def->get_symbol_name_matcher
 		      (segment_lookup_names[i-1]);
@@ -16347,7 +16190,6 @@ cooked_index_functions::expand_symtabs_matching
 
 		  if (entry->lang != language_unknown)
 		    {
-		      const language_defn *lang_def = language_def (entry->lang);
 		      symbol_name_matcher_ftype *name_matcher
 			= lang_def->get_symbol_name_matcher
 			  (segment_lookup_names.back ());
@@ -17056,7 +16898,8 @@ dwarf2_read_addr_index (dwarf2_per_cu_data *per_cu,
     }
   else
     {
-      cutu_reader reader (per_cu, per_objfile, nullptr, nullptr, false);
+      cutu_reader reader (per_cu, per_objfile, nullptr, nullptr, false,
+			  language_minimal);
       addr_base = reader.cu->addr_base;
       addr_size = reader.cu->header.addr_size;
     }
@@ -17916,7 +17759,7 @@ lnp_state_machine::record_line (bool end_sequence)
       if (!end_sequence && !ignore_this_line)
 	{
 	  linetable_entry_flags lte_flags = m_flags;
-	  if (producer_is_codewarrior (m_cu))
+	  if (m_cu->producer_is_codewarrior ())
 	    lte_flags |= LEF_IS_STMT;
 
 	  if (dwarf_record_line_p (m_cu, m_line, m_last_line,
@@ -18798,17 +18641,11 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_union_type:
 	case DW_TAG_set_type:
 	case DW_TAG_enumeration_type:
-	case DW_TAG_namelist:
-	  if (die->tag == DW_TAG_namelist)
-	    {
-	      sym->set_aclass_index (LOC_STATIC);
-	      sym->set_domain (VAR_DOMAIN);
-	    }
-	  else if (cu->lang () == language_c
-		   || cu->lang () == language_cplus
-		   || cu->lang () == language_objc
-		   || cu->lang () == language_opencl
-		   || cu->lang () == language_minimal)
+	  if (cu->lang () == language_c
+	      || cu->lang () == language_cplus
+	      || cu->lang () == language_objc
+	      || cu->lang () == language_opencl
+	      || cu->lang () == language_minimal)
 	    {
 	      /* These languages have a tag namespace.  Note that
 		 there's a special hack for C++ in the matching code,
@@ -18900,6 +18737,11 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	case DW_TAG_common_block:
 	  sym->set_aclass_index (LOC_COMMON_BLOCK);
 	  sym->set_domain (COMMON_BLOCK_DOMAIN);
+	  list_to_add = cu->list_in_scope;
+	  break;
+	case DW_TAG_namelist:
+	  sym->set_aclass_index (LOC_STATIC);
+	  sym->set_domain (VAR_DOMAIN);
 	  list_to_add = cu->list_in_scope;
 	  break;
 	default:
@@ -20570,7 +20412,8 @@ read_signatured_type (signatured_type *sig_type,
   gdb_assert (sig_type->is_debug_types);
   gdb_assert (per_objfile->get_cu (sig_type) == nullptr);
 
-  cutu_reader reader (sig_type, per_objfile, nullptr, nullptr, false);
+  cutu_reader reader (sig_type, per_objfile, nullptr, nullptr, false,
+		      language_minimal);
 
   if (!reader.dummy_p)
     {
@@ -20586,14 +20429,6 @@ read_signatured_type (signatured_type *sig_type,
 				   reader.comp_unit_die);
       cu->dies = reader.comp_unit_die;
       /* comp_unit_die is not stored in die_hash, no need.  */
-
-      /* We try not to read any attributes in this function, because
-	 not all CUs needed for references have been loaded yet, and
-	 symbol table processing isn't initialized.  But we have to
-	 set the CU language, or we won't be able to build types
-	 correctly.  Similarly, if we do not read the producer, we can
-	 not apply producer-specific interpretation.  */
-      prepare_one_comp_unit (cu, cu->dies, language_minimal);
 
       reader.keep ();
     }
@@ -21094,7 +20929,9 @@ dwarf2_per_cu_data::set_lang (enum language lang,
   packed<language, LANGUAGE_BYTES> new_value = lang;
   packed<language, LANGUAGE_BYTES> old_value = m_lang.exchange (new_value);
   /* If already set, verify that it's the same value.  */
-  gdb_assert (old_value == language_unknown || old_value == lang);
+  gdb_assert (old_value == language_unknown
+	      || old_value == language_minimal
+	      || old_value == lang);
 
   packed<dwarf_source_language, 2> new_dw = dw_lang;
   packed<dwarf_source_language, 2> old_dw = m_dw_lang.exchange (new_dw);
@@ -21109,14 +20946,9 @@ dwarf2_per_cu_data::ensure_lang (dwarf2_per_objfile *per_objfile)
   if (lang (false) != language_unknown)
     return;
 
-  cutu_reader reader (this, per_objfile);
-  if (reader.dummy_p)
-    {
-      set_lang (language_minimal, (dwarf_source_language)0);
-      return;
-    }
-
-  prepare_one_comp_unit (reader.cu, reader.comp_unit_die, language_minimal);
+  /* Constructing this object will set the language as a side
+     effect.  */
+  cutu_reader reader (this, per_objfile, language_minimal);
 }
 
 /* A helper function for dwarf2_find_containing_comp_unit that returns
@@ -21247,22 +21079,33 @@ run_test ()
 
 #endif /* GDB_SELF_TEST */
 
-/* Initialize basic fields of dwarf_cu CU according to DIE COMP_UNIT_DIE.  */
+/* Initialize basic fields of dwarf_cu CU according to DIE
+   COMP_UNIT_DIE.  If COMP_UNIT_DIE is NULL, the CU is assumed to be a
+   CU one with no contents; in this case default values are used for
+   the fields.  */
 
-static void
-prepare_one_comp_unit (struct dwarf2_cu *cu, struct die_info *comp_unit_die,
-		       enum language pretend_language)
+void
+cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
+				    enum language pretend_language)
 {
   struct attribute *attr;
 
-  cu->producer = dwarf2_string_attr (comp_unit_die, DW_AT_producer, cu);
+  if (comp_unit_die == nullptr)
+    {
+      cu->set_producer (nullptr);
+      cu->language_defn = language_def (pretend_language);
+      cu->per_cu->set_unit_type (DW_UT_compile);
+      cu->per_cu->set_lang (pretend_language, (dwarf_source_language) 0);
+      return;
+    }
+
+  cu->set_producer (dwarf2_string_attr (comp_unit_die, DW_AT_producer, cu));
 
   /* Set the language we're debugging.  */
   attr = dwarf2_attr (comp_unit_die, DW_AT_language, cu);
   enum language lang;
   dwarf_source_language dw_lang = (dwarf_source_language) 0;
-  if (cu->producer != nullptr
-      && strstr (cu->producer, "IBM XL C for OpenCL") != NULL)
+  if (cu->producer_is_xlc_opencl ())
     {
       /* The XLCL doesn't generate DW_LANG_OpenCL because this
 	 attribute is not standardised yet.  As a workaround for the
@@ -21271,8 +21114,7 @@ prepare_one_comp_unit (struct dwarf2_cu *cu, struct die_info *comp_unit_die,
       lang = language_opencl;
       dw_lang = DW_LANG_OpenCL;
     }
-  else if (cu->producer != nullptr
-	   && strstr (cu->producer, "GNU Go ") != NULL)
+  else if (cu->producer_is_ggo ())
     {
       /* Similar hack for Go.  */
       lang = language_go;
@@ -21291,10 +21133,9 @@ prepare_one_comp_unit (struct dwarf2_cu *cu, struct die_info *comp_unit_die,
   /* Initialize the lto_artificial field.  */
   attr = dwarf2_attr (comp_unit_die, DW_AT_name, cu);
   if (attr != nullptr
-      && cu->producer != nullptr
+      && cu->producer_is_gcc ()
       && attr->as_string () != nullptr
-      && strcmp (attr->as_string (), "<artificial>") == 0
-      && producer_is_gcc (cu->producer, nullptr, nullptr))
+      && strcmp (attr->as_string (), "<artificial>") == 0)
     cu->per_cu->lto_artificial = true;
 
   switch (comp_unit_die->tag)
