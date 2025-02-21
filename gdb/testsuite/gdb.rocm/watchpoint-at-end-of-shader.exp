@@ -31,25 +31,18 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 # a fail or not.
 proc target_has_xfail {} {
     # Check for targets where this test will fail without precise memory
-    set targets [hcc_amdgpu_targets]
+    set targets [find_amdgpu_devices]
     if { [llength $targets] == 0} {
 	return 1
     }
 
     # The test will run on GPU-0, so it should be the first of the list.
     set target [lindex $targets 0]
-    # First check for "generic".
-    if { [string match "gfx*-generic" $target] } {
-      set known_has_fail \
-	{gfx10-1-generic gfx10-3-generic gfx11-generic gfx12-generic}
-      return [expr [lsearch -exact $known_has_fail $target] != -1]
-    } else {
-      # Extract the target family by removing the last 2 chars from the target
-      # gfx number.
-      set target_family [string range $target 0 end-2]
-      verbose -log "Target family: $target_family"
-      return [expr [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1]
-    }
+    # Extract the target family by removing the last 2 chars from the target
+    # gfx number.
+    set target_family [string range $target 0 end-2]
+    verbose -log "Target family: $target_family"
+    return [expr [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1]
 }
 
 proc do_test {precise_memory has_xfail} {

@@ -826,8 +826,12 @@ elf_x86_linker_defined (struct bfd_link_info *info, const char *name)
 {
   struct elf_link_hash_entry *h;
 
-  h = elf_link_hash_lookup (elf_hash_table (info), name,
-			    false, false, false);
+  /* NULL indicates __ehdr_start.  */
+  if (name == NULL)
+    h = elf_hash_table (info)->hehdr_start;
+  else
+    h = elf_link_hash_lookup (elf_hash_table (info), name,
+			      false, false, false);
   if (h == NULL)
     return;
 
@@ -894,9 +898,10 @@ _bfd_x86_elf_link_check_relocs (bfd *abfd, struct bfd_link_info *info)
 		}
 	    }
 
-	  /* "__ehdr_start" will be defined by linker as a hidden symbol
-	     later if it is referenced and not defined.  */
-	  elf_x86_linker_defined (info, "__ehdr_start");
+	  /* Pass NULL for __ehdr_start which will be defined by
+	     linker as a hidden symbol later if it is referenced and
+	     not defined.  */
+	  elf_x86_linker_defined (info, NULL);
 
 	  if (bfd_link_executable (info))
 	    {
@@ -973,15 +978,7 @@ _bfd_x86_elf_check_relocs (bfd *abfd,
 	  goto error_return;
 	}
 
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
+      h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx, symtab_hdr);
 
       if (X86_NEED_DYNAMIC_RELOC_TYPE_P (is_x86_64, r_type)
 	  && NEED_DYNAMIC_RELOCATION_P (is_x86_64, info, true, h, sec,
@@ -1209,10 +1206,12 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
       else
 	{
 	  /* Get H and SEC for GENERATE_DYNAMIC_RELOCATION_P below.  */
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+	  h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx, symtab_hdr);
+	  if (h == NULL)
+	    {
+	      /* FIXMEL: Issue an error message ?  */
+	      continue;
+	    }
 
 	  if (h->root.type == bfd_link_hash_defined
 	      || h->root.type == bfd_link_hash_defweak)

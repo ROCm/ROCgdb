@@ -4397,10 +4397,26 @@ listed:
 
 @table @code
 @item Checkpoint ID
+@item Active state indicator
 @item Process ID
 @item Code Address
 @item Source line, or label
 @end table
+
+Checkpoint IDs will be displayed as either a non-negative integer or
+in the form @var{i}.@var{n}, where @var{i} is the inferior number, a
+positive integer, as shown by the command @code{info inferiors}, and
+@var{n}, a non-negative integer, is the checkpoint number for that
+inferior.  The single non-negative integer form is used when
+there is only one inferior.  The @var{i}.@var{n} form is used when
+there are multiple inferiors.
+
+The active state indicator is a single letter, either @samp{y} or
+@samp{n}, indicating yes or no.  Only one checkpoint per inferior may
+be active at once.  The active checkpoint in the current inferior is
+also shown by a @samp{*} at the start of the line.  Checkpoints whose
+active state is @samp{n} can be switched to using the @code{restart}
+command or deleted using the @code{delete checkpoint} command.
 
 @kindex restart @var{checkpoint-id}
 @item restart @var{checkpoint-id}
@@ -4408,7 +4424,9 @@ Restore the program state that was saved as checkpoint number
 @var{checkpoint-id}.  All program variables, registers, stack frames
 etc.@:  will be returned to the values that they had when the checkpoint
 was saved.  In essence, gdb will ``wind back the clock'' to the point
-in time when the checkpoint was saved.
+in time when the checkpoint was saved.  The checkpoint number
+@var{checkpoint-id} is specified in the same form as that output by the
+@code{info checkpoints} command.
 
 Note that breakpoints, @value{GDBN} variables, command history etc.
 are not affected by restoring a checkpoint.  In general, a checkpoint
@@ -23170,16 +23188,48 @@ The DWARF specification documents an optional index section called
 section.  However, in order to work with @value{GDBN}, some extensions
 were necessary.
 
-@value{GDBN} uses the augmentation string @samp{GDB2}.  Earlier
-versions used the string @samp{GDB}, but these versions of the index
-are no longer supported.
+@value{GDBN} uses an augmentation string to specify which extensions
+are in use and to allow support of backwards-incompatible changes in
+this functionality.  The augmentation string has the form
+@samp{GDB@var{n}}, where @var{n} is an integral version number of the
+extensions, which is incremented when the extensions are added or
+modified.  The smallest @var{n} is 2; earlier versions of
+@value{GDBN} used just @samp{GDB} with no version number, but these
+versions of the index are no longer supported.
+
+Here is a list of augmentation string versions along with the changes
+introduced with each version, compared to the previous version.
+
+@table @samp
+
+@item GDB2
+Specifies the use of attributes @code{DW_IDX_GNU_internal},
+@code{DW_IDX_GNU_main}, @code{DW_IDX_GNU_language} and
+@code{DW_IDX_GNU_linkage_name}, described below.
+
+@item GDB3
+Changes the semantic of the @code{DW_IDX_parent} attribute.
+With @samp{GDB2}, @code{DW_IDX_parent} provided an offset into the name
+table.  With @samp{GDB3}, it now provides an offset to the index entry
+of the parent, relative to the start of the entry pool region.
+
+@end table
+
+@value{GDBN} produces indexes with the augmentation string @samp{GDB3}.
+
+@value{GDBN} can read indexes with augmentation strings @samp{GDB2} or
+@samp{GDB3}.  @value{GDBN} does not support reading indexes with any
+other augmentation strings.
 
 @value{GDBN} does not use the specified hash table.  Therefore,
 because this hash table is optional, @value{GDBN} also does not write
 it.
 
-@value{GDBN} also generates and uses some extra index attributes:
+@value{GDBN} generates and uses the following non-standard index
+attributes:
+
 @table @code
+
 @item DW_IDX_GNU_internal
 This has the value @samp{0x2000}.  It is a flag that, when set,
 indicates that the associated entry has @code{static} linkage.
@@ -23196,6 +23246,7 @@ indicating the language of the associated entry.
 This has the value @samp{0x2004}.  It is a flag that, when set,
 indicates that the associated entry is a linkage name, and not a
 source name.
+
 @end table
 
 @node Symbol Errors
@@ -34912,12 +34963,22 @@ to this library.
 
 @item =library-unloaded,...
 Reports that a library was unloaded by the program.  This notification
-has 3 fields---@var{id}, @var{target-name} and @var{host-name} with
-the same meaning as for the @code{=library-loaded} notification.
+has the following fields---@var{id}, @var{target-name},
+@var{host-name} and @var{ranges} with the same meaning as for the
+@code{=library-loaded} notification.
+
+It is possible that a library can appear multiple times in an
+inferior's library list, but the library is only mapped once into the
+inferior's address space.  When this happens, and one copy of the
+library is unloaded, but there are remaining copies, the
+@var{still-in-use} field will be @samp{true}.  In all other
+situations, the @var{still-in-use} field will have the value
+@samp{false}.
+
 The @var{thread-group} field, if present, specifies the id of the
-thread group in whose context the library was unloaded.  If the field is
-absent, it means the library was unloaded in the context of all present
-thread groups.
+thread group in whose context the library was unloaded.  If the field
+is absent, it means the library was unloaded in the context of all
+present thread groups.
 
 @item =traceframe-changed,num=@var{tfnum},tracepoint=@var{tpnum}
 @itemx =traceframe-changed,end

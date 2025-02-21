@@ -1230,6 +1230,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (msr_imm, MSR_IMM, MSR_IMM, false),
   SUBARCH (padlockrng2, PADLOCKRNG2, PADLOCKRNG2, false),
   SUBARCH (padlockphe2, PADLOCKPHE2, PADLOCKPHE2, false),
+  SUBARCH (padlockxmodx, PADLOCKXMODX, PADLOCKXMODX, false),
   SUBARCH (movrs, MOVRS, MOVRS, false),
 };
 
@@ -2124,6 +2125,59 @@ check_Scc_OszcOperations (const char *l)
   /* Skip '{'.  */
   suffix_string++;
 
+  /* For .insn require 'scc=' as the first element.  */
+  if (dot_insn ())
+    {
+      char *copy;
+      valueT val;
+
+      while (is_whitespace (*suffix_string))
+	suffix_string++;
+
+      if (strncasecmp (suffix_string, "scc", 3) == 0)
+	suffix_string += 3;
+      else
+	{
+	  as_bad (_("unrecognized pseudo-suffix"));
+	  return -1;
+	}
+
+      while (is_whitespace (*suffix_string))
+	suffix_string++;
+
+      if (*suffix_string == '=')
+	suffix_string++;
+      else
+	{
+	  as_bad (_("unrecognized pseudo-suffix"));
+	  return -1;
+	}
+
+      copy = xstrdup (suffix_string);
+      /* No need to save/restore input_line_pointer; that's done in the
+	 caller already.  */
+      input_line_pointer = copy;
+      val = get_absolute_expression ();
+      suffix_string += input_line_pointer - copy;
+      free (copy);
+
+      if (val > 0xf)
+	{
+	  as_bad (_("scc= value must be between 0 and 15 (decimal)"));
+	  return -1;
+	}
+
+      i.scc = val;
+
+      /* Permit dfv= to be absent (implying all flag values being zero).  */
+      if (*suffix_string == '}')
+	return suffix_string + 1 - l;
+
+      if (*suffix_string != ',')
+	goto bad;
+      suffix_string++;
+    }
+
   /* Parse 'dfv='.  */
   while (is_whitespace (*suffix_string))
     suffix_string++;
@@ -2196,6 +2250,7 @@ check_Scc_OszcOperations (const char *l)
       suffix_string ++;
     }
 
+ bad:
   as_bad (_("missing `}' or `,' in pseudo-suffix"));
   return -1;
 }
@@ -3611,6 +3666,7 @@ i386_md_end (void)
 {
   htab_delete (op_hash);
   htab_delete (reg_hash);
+  GOT_symbol = NULL;
 }
 
 #ifdef DEBUG386
@@ -4571,7 +4627,7 @@ build_rex2_prefix (void)
    | z| L'L | b | `v | aaa |
 */
 static bool
-build_apx_evex_prefix (void)
+build_apx_evex_prefix (bool force_nd)
 {
   /* To mimic behavior for legacy insns, transform use of DATA16 and REX64 into
      their embedded-prefix representations.  */
@@ -4618,7 +4674,8 @@ build_apx_evex_prefix (void)
   /* Encode the NDD bit of the instruction promoted from the legacy
      space. ZU shares the same bit with NDD.  */
   if ((i.vex.register_specifier && i.tm.opcode_space == SPACE_MAP4)
-      || i.tm.opcode_modifier.operandconstraint == ZERO_UPPER)
+      || i.tm.opcode_modifier.operandconstraint == ZERO_UPPER
+      || force_nd)
     i.vex.bytes[3] |= 0x10;
 
   /* Encode SCC and oszc flags bits.  */
@@ -7460,7 +7517,7 @@ i386_assemble (char *line)
 
       if (is_apx_evex_encoding ())
 	{
-	  if (!build_apx_evex_prefix ())
+	  if (!build_apx_evex_prefix (false))
 	    return;
 	}
       else if (i.tm.opcode_modifier.vex)
@@ -10970,7 +11027,8 @@ build_modrm_byte (void)
     if (i.tm.operand_types[op].bitfield.baseindex)
       break;
 
-  if (i.reg_operands + i.mem_operands + (i.tm.extension_opcode != None) == 4)
+  if (i.reg_operands + i.mem_operands + (i.tm.extension_opcode != None)
+      + (i.tm.opcode_modifier.operandconstraint == SCC) == 4)
     {
       expressionS *exp;
 
@@ -10982,10 +11040,12 @@ build_modrm_byte (void)
 	 2. 4 operands: 4 register operands or 3 register operands
 	 plus 1 memory operand, with VexXDS.
 	 3. Other equivalent combinations when coming from s_insn().  */
-      gas_assert (i.tm.opcode_modifier.vexvvvv
-		  && i.tm.opcode_modifier.vexw);
-      gas_assert (dot_insn ()
-		  || i.tm.operand_types[dest].bitfield.class == RegSIMD);
+      if (!dot_insn ())
+	{
+	  gas_assert (i.tm.opcode_modifier.vexvvvv
+		      && i.tm.opcode_modifier.vexw);
+	  gas_assert (i.tm.operand_types[dest].bitfield.class == RegSIMD);
+	}
 
       /* Of the first two non-immediate operands the one with the template
 	 not allowing for a memory one is encoded in the immediate operand.  */
@@ -12048,6 +12108,7 @@ add_branch_prefix_frag_p (const struct last_insn *last_insn)
       || is_cpu (&i.tm, CpuPadLock)
       || is_cpu (&i.tm, CpuPadLockRNG2)
       || is_cpu (&i.tm, CpuPadLockPHE2)
+      || is_cpu (&i.tm, CpuPadLockXMODX)
       || !cpu_arch_flags.bitfield.cpui386)
     return 0;
 
@@ -12173,21 +12234,23 @@ output_insn (const struct last_insn *last_insn)
 #ifdef OBJ_ELF
   if (x86_used_note && now_seg != absolute_section)
     {
+      unsigned int feature_2_used = 0;
+
       if ((i.xstate & xstate_tmm) == xstate_tmm
 	  || is_cpu (&i.tm, CpuAMX_TILE))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_TMM;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_TMM;
 
       if (is_cpu (&i.tm, Cpu8087)
 	  || is_cpu (&i.tm, Cpu287)
 	  || is_cpu (&i.tm, Cpu387)
 	  || is_cpu (&i.tm, Cpu687)
 	  || is_cpu (&i.tm, CpuFISTTP))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_X87;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_X87;
 
       if ((i.xstate & xstate_mmx)
 	  || i.tm.mnem_off == MN_emms
 	  || i.tm.mnem_off == MN_femms)
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MMX;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MMX;
 
       if (i.index_reg)
 	{
@@ -12210,25 +12273,29 @@ output_insn (const struct last_insn *last_insn)
 		  || is_cpu (&i.tm, CpuAVX)))
 	  || is_cpu (&i.tm, CpuWideKL)
 	  || is_cpu (&i.tm, CpuKL))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XMM;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XMM;
 
       if ((i.xstate & xstate_ymm) == xstate_ymm)
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_YMM;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_YMM;
       if ((i.xstate & xstate_zmm) == xstate_zmm)
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_ZMM;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_ZMM;
       if (i.mask.reg || (i.xstate & xstate_mask) == xstate_mask)
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MASK;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_MASK;
       if (is_cpu (&i.tm, CpuFXSR))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_FXSR;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_FXSR;
       if (is_cpu (&i.tm, CpuXsave))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVE;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVE;
       if (is_cpu (&i.tm, CpuXsaveopt))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT;
       if (is_cpu (&i.tm, CpuXSAVEC))
-	x86_feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVEC;
+	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_XSAVEC;
+
+      x86_feature_2_used |= feature_2_used;
 
       if (object_64bit
-	  || x86_feature_2_used
+	  || (feature_2_used
+	      & (GNU_PROPERTY_X86_FEATURE_2_XMM
+		 | GNU_PROPERTY_X86_FEATURE_2_FXSR)) != 0
 	  || is_cpu (&i.tm, CpuCMOV)
 	  || is_cpu (&i.tm, CpuSYSCALL)
 	  || i.tm.mnem_off == MN_cmpxchg8b)
@@ -12256,13 +12323,11 @@ output_insn (const struct last_insn *last_insn)
 	      && !is_cpu (&i.tm, CpuFMA4)
 	      && !is_cpu (&i.tm, CpuLWP)
 	      && !is_cpu (&i.tm, CpuTBM)
-	      && !(x86_feature_2_used & GNU_PROPERTY_X86_FEATURE_2_TMM))
-	  || is_cpu (&i.tm, CpuF16C)
-	  || is_cpu (&i.tm, CpuFMA)
+	      && !(feature_2_used & GNU_PROPERTY_X86_FEATURE_2_TMM))
 	  || is_cpu (&i.tm, CpuLZCNT)
 	  || is_cpu (&i.tm, CpuMovbe)
 	  || is_cpu (&i.tm, CpuXSAVES)
-	  || (x86_feature_2_used
+	  || (feature_2_used
 	      & (GNU_PROPERTY_X86_FEATURE_2_XSAVE
 		 | GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT
 		 | GNU_PROPERTY_X86_FEATURE_2_XSAVEC)) != 0)
@@ -12424,7 +12489,8 @@ output_insn (const struct last_insn *last_insn)
 	    case PREFIX_0XF3:
 	      if ((!is_cpu (&i.tm, CpuPadLock)
 		   && !is_cpu (&i.tm, CpuPadLockRNG2)
-		   && !is_cpu (&i.tm, CpuPadLockPHE2))
+		   && !is_cpu (&i.tm, CpuPadLockPHE2)
+		   && !is_cpu (&i.tm, CpuPadLockXMODX))
 		  || (i.prefix[REP_PREFIX] != 0xf3))
 		add_prefix (0xf3);
 	      break;
@@ -12877,17 +12943,14 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 		  && (i.rm.mode == 2
 		      || (i.rm.mode == 0 && i.rm.regmem == 5))
 		  && ((space == SPACE_BASE
-		       && i.operands == 1
 		       && i.tm.base_opcode == 0xff
 		       && (i.rm.reg == 2 || i.rm.reg == 4))
 		      || ((space == SPACE_BASE
 			   || space == SPACE_0F38
 			   || space == SPACE_MAP4)
-			  && i.operands == 2
 			  && i.tm.base_opcode == 0x8b)
 		      || ((space == SPACE_BASE
 			   || space == SPACE_MAP4)
-			  && i.operands >= 2
 			  && (i.tm.base_opcode == 0x85
 			      || (i.tm.base_opcode
 				  | (i.operands > 2 ? 0x3a : 0x38)) == 0x3b))))
@@ -13271,7 +13334,8 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
   const char *end;
   unsigned int j;
   valueT val;
-  bool vex = false, xop = false, evex = false;
+  bool vex = false, xop = false;
+  enum { evex_none, evex_basic, evex_nd } evex = evex_none;
   struct last_insn *last_insn;
 
   init_globals ();
@@ -13320,7 +13384,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
   else if (startswith (line, "EVEX")
 	   && (line[4] == '.' || is_whitespace (line[4])))
     {
-      evex = true;
+      evex = evex_basic;
       line += 4;
     }
 
@@ -13539,6 +13603,20 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	line += 3;
     }
 
+  if (line > end && evex && *line == '.')
+    {
+      if (line[1] == 'N' && line[2] == 'D')
+	{
+	  evex = evex_nd;
+	  line += 3;
+	}
+      else if (line[1] == 'Z' && line[2] == 'U')
+	{
+	  i.tm.opcode_modifier.operandconstraint = ZERO_UPPER;
+	  line += 3;
+	}
+    }
+
   if (line > end && *line && !is_whitespace (*line))
     {
       /* Improve diagnostic a little.  */
@@ -13605,6 +13683,25 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	    goto bad;
 	  val &= ((uint64_t)1 << (--j * 8)) - 1;
 	  break;
+	}
+    }
+
+  if (evex == evex_basic && *line == '{')
+    {
+      int length = check_Scc_OszcOperations (line);
+
+      if (length > 0)
+	{
+	  line += length;
+	  if (is_whitespace (*line))
+	    ++line;
+
+	  if (i.tm.opcode_modifier.operandconstraint)
+	    {
+	      as_bad (_("SCC/OSZC specifier cannot be used here"));
+	      goto bad;
+	    }
+	  i.tm.opcode_modifier.operandconstraint = SCC;
 	}
     }
 
@@ -13709,7 +13806,8 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 
       /* Enforce certain constraints on operands.  */
       switch (i.reg_operands + i.mem_operands
-	      + (i.tm.extension_opcode != None))
+	      + (i.tm.extension_opcode != None)
+	      + (i.tm.opcode_modifier.operandconstraint == SCC))
 	{
 	case 0:
 	  if (i.short_form)
@@ -13724,9 +13822,13 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	      as_bad (_("too few register/memory operands"));
 	      goto done;
 	    }
-	  break;
-
+	  /* Fall through.  */
 	case 2:
+	  if (evex == evex_nd)
+	    {
+	      as_bad (_("too few register/memory operands"));
+	      goto done;
+	    }
 	  break;
 
 	case 4:
@@ -13739,9 +13841,12 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	    }
 	  /* Fall through.  */
 	case 3:
+	  if (i.tm.opcode_modifier.operandconstraint == SCC)
+	    break;
 	  if (pp.encoding != encoding_default)
 	    {
-	      i.tm.opcode_modifier.vexvvvv = i.tm.extension_opcode == None
+	      i.tm.opcode_modifier.vexvvvv = (i.tm.extension_opcode == None
+					      && evex != evex_nd)
 					     ? VexVVVV_SRC1 : VexVVVV_DST;
 	      break;
 	    }
@@ -14039,6 +14144,13 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 
   if (vex || xop)
     {
+      if (is_apx_evex_encoding ())
+	{
+	  as_bad (_("APX functionality cannot be used with %s encodings"),
+		  vex ? "VEX" : "XOP");
+	  goto done;
+	}
+
       if (!i.tm.opcode_modifier.vex)
 	i.tm.opcode_modifier.vex = VEXScalar; /* LIG */
 
@@ -14050,7 +14162,36 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
       if (!i.tm.opcode_modifier.evex)
 	i.tm.opcode_modifier.evex = EVEXLIG;
 
-      build_evex_prefix ();
+      /* To keep earlier .insn uses working as far as possible, take the
+	 legacy path when opcode space is 4 bits wide (impossible to encode in
+	 extended EVEX), and when no "extended" syntax elements are used.  */
+      if ((!is_apx_evex_encoding () || i.insn_opcode_space > 7)
+	  && evex == evex_basic
+	  && !i.tm.opcode_modifier.operandconstraint)
+	build_evex_prefix ();
+      else if (i.insn_opcode_space > 7)
+	{
+	  as_bad (_("opcode space cannot be larger than 7"));
+	  goto done;
+	}
+      else if (evex == evex_nd && (i.broadcast.type || i.broadcast.bytes))
+	{
+	  as_bad (_("ND and broadcast cannot be used at the same time"));
+	  goto done;
+	}
+      else if (pp.has_nf && i.mask.reg)
+	{
+	  as_bad (_("{nf} and masking cannot be used at the same time"));
+	  goto done;
+	}
+      else if (i.tm.opcode_modifier.operandconstraint == SCC
+	       && (pp.has_nf || i.mask.reg))
+	{
+	  as_bad (_("SCC cannot be used at the same time {nf} / masking"));
+	  goto done;
+	}
+      else if (!build_apx_evex_prefix (evex == evex_nd))
+	goto done;
       i.rex &= REX_OPCODE;
     }
   else

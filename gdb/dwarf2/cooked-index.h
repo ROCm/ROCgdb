@@ -319,6 +319,9 @@ private:
      found.  */
   dwarf2_per_cu_data *lookup (unrelocated_addr addr)
   {
+    if (m_addrmap == nullptr)
+      return nullptr;
+
     return (static_cast<dwarf2_per_cu_data *>
 	    (m_addrmap->find ((CORE_ADDR) addr)));
   }
@@ -364,7 +367,11 @@ private:
   std::vector<gdb::unique_xmalloc_ptr<char>> m_names;
 };
 
+using cooked_index_shard_up = std::unique_ptr<cooked_index_shard>;
+
 class cutu_reader;
+
+using cutu_reader_up = std::unique_ptr<cutu_reader>;
 
 /* An instance of this is created when scanning DWARF to create a
    cooked index.  */
@@ -385,7 +392,7 @@ public:
   cutu_reader *get_reader (dwarf2_per_cu_data *per_cu);
 
   /* Preserve READER by storing it in the local hash table.  */
-  cutu_reader *preserve (std::unique_ptr<cutu_reader> reader);
+  cutu_reader *preserve (cutu_reader_up reader);
 
   /* Add an entry to the index.  The arguments describe the entry; see
      cooked-index.h.  The new entry is returned.  */
@@ -395,16 +402,16 @@ public:
 			   cooked_index_entry_ref parent_entry,
 			   dwarf2_per_cu_data *per_cu)
   {
-    return m_index->add (die_offset, tag, flags, per_cu->lang (),
+    return m_shard->add (die_offset, tag, flags, per_cu->lang (),
 			 name, parent_entry, per_cu);
   }
 
   /* Install the current addrmap into the shard being constructed,
      then transfer ownership of the index to the caller.  */
-  std::unique_ptr<cooked_index_shard> release ()
+  cooked_index_shard_up release ()
   {
-    m_index->install_addrmap (&m_addrmap);
-    return std::move (m_index);
+    m_shard->install_addrmap (&m_addrmap);
+    return std::move (m_shard);
   }
 
   /* Return the mutable addrmap that is currently being created.  */
@@ -440,7 +447,7 @@ private:
   /* A hash table of cutu_reader objects.  */
   htab_up m_reader_hash;
   /* The index shard that is being constructed.  */
-  std::unique_ptr<cooked_index_shard> m_index;
+  cooked_index_shard_up m_shard;
 
   /* Parent map for each CU that is read.  */
   parent_map m_parent_map;
@@ -526,7 +533,7 @@ protected:
      thread-safe.  run_on_main_thread could be used, but that would
      mean the messages are printed after the prompt, which looks
      weird.  */
-  using result_type = std::tuple<std::unique_ptr<cooked_index_shard>,
+  using result_type = std::tuple<cooked_index_shard_up,
 				 complaint_collection,
 				 std::vector<gdb_exception>,
 				 parent_map>;
@@ -564,6 +571,8 @@ protected:
   /* An object used to write to the index cache.  */
   index_cache_store_context m_cache_store;
 };
+
+using cooked_index_worker_up = std::unique_ptr<cooked_index_worker>;
 
 /* The main index of DIEs.
 
@@ -621,19 +630,14 @@ protected:
 class cooked_index : public dwarf_scanner_base
 {
 public:
-
-  /* A convenience typedef for the vector that is contained in this
-     object.  */
-  using vec_type = std::vector<std::unique_ptr<cooked_index_shard>>;
-
   cooked_index (dwarf2_per_objfile *per_objfile,
-		std::unique_ptr<cooked_index_worker> &&worker);
+		cooked_index_worker_up &&worker);
   ~cooked_index () override;
 
   DISABLE_COPY_AND_ASSIGN (cooked_index);
 
   /* Start reading the DWARF.  */
-  void start_reading ();
+  void start_reading () override;
 
   /* Called by cooked_index_worker to set the contents of this index
      and transition to the MAIN_AVAILABLE state.  WARN is used to
@@ -641,7 +645,8 @@ public:
      PARENT_MAPS is used when resolving pending parent links.
      PARENT_MAPS may be NULL if there are no IS_PARENT_DEFERRED
      entries in VEC.  */
-  void set_contents (vec_type &&vec, deferred_warnings *warn,
+  void set_contents (std::vector<cooked_index_shard_up> &&vec,
+		     deferred_warnings *warn,
 		     const parent_map_map *parent_maps);
 
   /* A range over a vector of subranges.  */
@@ -657,9 +662,9 @@ public:
   {
     wait (cooked_state::FINALIZED, true);
     std::vector<cooked_index_shard::range> result_range;
-    result_range.reserve (m_vector.size ());
-    for (auto &entry : m_vector)
-      result_range.push_back (entry->all_entries ());
+    result_range.reserve (m_shards.size ());
+    for (auto &shard : m_shards)
+      result_range.push_back (shard->all_entries ());
     return range (std::move (result_range));
   }
 
@@ -669,7 +674,9 @@ public:
   dwarf2_per_cu_data *lookup (unrelocated_addr addr) override;
 
   /* Return a new vector of all the addrmaps used by all the indexes
-     held by this object.  */
+     held by this object.
+
+     Elements of the vector may be nullptr.  */
   std::vector<const addrmap *> get_addrmaps ();
 
   /* Return the entry that is believed to represent the program's
@@ -707,12 +714,12 @@ private:
 
   /* The vector of cooked_index objects.  This is stored because the
      entries are stored on the obstacks in those objects.  */
-  vec_type m_vector;
+  std::vector<cooked_index_shard_up> m_shards;
 
   /* This tracks the current state.  When this is nullptr, it means
      that the state is CACHE_DONE -- it's important to note that only
      the main thread may change the value of this pointer.  */
-  std::unique_ptr<cooked_index_worker> m_state;
+  cooked_index_worker_up m_state;
 
   dwarf2_per_bfd *m_per_bfd;
 };

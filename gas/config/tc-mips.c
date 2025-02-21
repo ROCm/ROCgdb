@@ -14394,17 +14394,8 @@ mips16_ip (char *str, struct mips_cl_insn *insn)
   c = *end;
 
   l = 0;
-  switch (c)
+  if (c == '.')
     {
-    case '\0':
-      break;
-
-    default:
-      if (is_whitespace (*s))
-	s++;
-      break;
-
-    case '.':
       s++;
       if (*s == 't')
 	{
@@ -14416,13 +14407,14 @@ mips16_ip (char *str, struct mips_cl_insn *insn)
 	  l = 4;
 	  s++;
 	}
-      if (*s == '\0')
-	break;
-      else if (is_whitespace (*s++))
-	break;
-      set_insn_error (0, _("unrecognized opcode"));
-      return;
+      if (l == 0 || (*s != '\0' && !is_whitespace (*s++)))
+	{
+	  set_insn_error (0, _("unrecognized opcode"));
+	  return;
+	}
     }
+  else if (is_whitespace (c))
+    s++;
   forced_insn_length = l;
 
   *end = 0;

@@ -1,7 +1,6 @@
-/* Native-dependent definitions for Intel 386 running the GNU Hurd
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,15 +15,33 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CONFIG_I386_NM_I386GNU_H
-#define CONFIG_I386_NM_I386GNU_H
+/* These numbered comments are to ensure the TUI source window will be
+   filled with content, and give us something to match against.  */
 
-/* Thread flavors used in re-setting the T bit.  */
-#define THREAD_STATE_FLAVOR		i386_REGS_SEGS_STATE
-#define THREAD_STATE_SIZE		i386_THREAD_STATE_COUNT
-#define THREAD_STATE_SET_TRACED(state) \
-  	((struct i386_thread_state *) (state))->efl |= 0x100
-#define THREAD_STATE_CLEAR_TRACED(state) \
-  	((((struct i386_thread_state *) (state))->efl &= ~0x100), 1)
+/* 01 */
+/* 02 */
+/* 03 */
+/* 04 */
+/* 05 */
+/* 06 */
+/* 07 */
+/* 08 */
+/* 09 */
+/* 10 */
 
-#endif /* CONFIG_I386_NM_I386GNU_H */
+int
+main (void)
+{
+  return 0;
+}
+
+/* 11 */
+/* 12 */
+/* 13 */
+/* 14 */
+/* 15 */
+/* 16 */
+/* 17 */
+/* 18 */
+/* 19 */
+/* 20 */

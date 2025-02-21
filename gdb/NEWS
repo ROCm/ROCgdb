@@ -24,6 +24,8 @@
 
 * UST (static tracepoint) support from gdbserver has been removed.
 
+* Linux checkpoint code has been updated to work with multiple inferiors.
+
 * New commands
 
 maintenance check psymtabs
@@ -59,6 +61,21 @@ binary-upload in qSupported reply
   then GDB will, where possible, make use of the 'x' packet.  If the
   stub doesn't report this feature supported, then GDB will not use
   the 'x' packet.
+
+* MI changes
+
+** The =library-unloaded event now includes the 'ranges' field, which
+   has the same meaning as for the =library-loaded event.
+
+** The =library-unloaded event now includes the 'still-in-use' field.
+   This field is 'true' when a library is unloaded (removed from the
+   inferior's list of loaded libraries), but the mapping within the
+   inferior's address space is retained, as the library was mapped
+   multiple times, and the same mapping was being reused.  In all
+   other cases, this field will have the value 'false'.
+
+* Support for stabs debugging format and the a.out/dbx object format is
+  deprecated, and will be removed in GDB 18.
 
 *** Changes in GDB 16
 

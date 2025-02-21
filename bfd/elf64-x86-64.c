@@ -1649,8 +1649,8 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
     {
       reloc_howto_type *from, *to;
 
-      from = elf_x86_64_rtype_to_howto (abfd, from_type);
-      to = elf_x86_64_rtype_to_howto (abfd, to_type);
+      from = &x86_64_elf_howto_table[from_type];
+      to = &x86_64_elf_howto_table[to_type];
 
       if (from == NULL || to == NULL)
 	return false;
@@ -1770,6 +1770,7 @@ static unsigned int evex_move_r_to_b (unsigned int byte1)
 
 static bool
 elf_x86_64_convert_load_reloc (bfd *abfd,
+			       asection *input_section,
 			       bfd_byte *contents,
 			       unsigned int *r_type_p,
 			       Elf_Internal_Rela *irel,
@@ -1784,7 +1785,7 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   bool to_reloc_pc32;
   bool abs_symbol;
   bool local_ref;
-  asection *tsec;
+  asection *tsec = NULL;
   bfd_signed_vma raddend;
   unsigned int opcode;
   unsigned int modrm;
@@ -1793,6 +1794,10 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   unsigned int r_symndx;
   bfd_vma roff = irel->r_offset;
   bfd_vma abs_relocation;
+  reloc_howto_type *howto;
+  bfd_reloc_status_type r;
+  Elf_Internal_Sym *isym;
+  bfd_vma relocation;
 
   switch (r_type)
     {
@@ -1901,8 +1906,8 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
   /* Get the symbol referred to by the reloc.  */
   if (h == NULL)
     {
-      Elf_Internal_Sym *isym
-	= bfd_sym_from_r_symndx (&htab->elf.sym_cache, abfd, r_symndx);
+      isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache, abfd,
+				    r_symndx);
 
       /* Skip relocation against undefined symbols.  */
       if (isym->st_shndx == SHN_UNDEF)
@@ -1931,6 +1936,9 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	 It is OK convert mov with R_X86_64_GOTPCREL to
 	 R_X86_64_PC32.  */
       struct elf_x86_link_hash_entry *eh = elf_x86_hash_entry (h);
+
+      isym = NULL;
+      tsec = NULL;
 
       abs_symbol = ABS_SYMBOL_P (h);
       abs_relocation = h->root.u.def.value;
@@ -1991,6 +1999,22 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	      /* Skip since R_X86_64_32/R_X86_64_32S may overflow.  */
 	      if (no_overflow)
 		return true;
+	      if (h->start_stop)
+		tsec = h->root.u.def.section;
+	      else if (h == htab->elf.hehdr_start)
+		{
+		  /* Use the lowest-addressed section to estimate the
+		     __ehdr_start symbol value.  */
+		  asection *sec;
+		  tsec = NULL;
+		  for (sec = link_info->output_bfd->sections;
+		       sec != NULL;
+		       sec = sec->next)
+		    if ((sec->flags & SEC_LOAD) != 0
+			&& (tsec == NULL || tsec->vma > sec->vma))
+		      tsec = sec;
+
+		}
 	      goto convert;
 	    }
 	  tsec = h->root.u.def.section;
@@ -1998,6 +2022,9 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
       else
 	return true;
     }
+
+  if (tsec == NULL)
+    return false;
 
   /* Don't convert GOTPCREL relocation against large section.  */
   if (elf_section_data (tsec) !=  NULL
@@ -2009,12 +2036,41 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
     return true;
 
  convert:
+  /* Compute relocation value so that it can be used later to check for
+     overflow against the converted relocation.  */
+  if (h == NULL)
+    {
+      /* Make a copy of IREL so that _bfd_elf_rela_local_sym won't
+	 change IREL.  */
+      Elf_Internal_Rela rel = *irel;
+      relocation = _bfd_elf_rela_local_sym (link_info->output_bfd, isym,
+					    &tsec, &rel);
+      /* Use the updated r_addend.  */
+      raddend = rel.r_addend;
+    }
+  else if (tsec != NULL)
+    relocation = (h->root.u.def.value
+		  + tsec->output_section->vma
+		  + tsec->output_offset);
+  else
+    relocation = 0;
+
   if (opcode == 0xff)
     {
       /* We have "call/jmp *foo@GOTPCREL(%rip)".  */
       unsigned int nop;
       unsigned int disp;
       bfd_vma nop_offset;
+
+      r_type = R_X86_64_PC32;
+
+      /* Skip if the converted relocation will overflow.  */
+      howto = &x86_64_elf_howto_table[r_type];
+      r = _bfd_final_link_relocate (howto, abfd, input_section,
+				    contents, irel->r_offset,
+				    relocation, raddend);
+      if (r == bfd_reloc_overflow)
+	return true;
 
       /* Convert R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX to
 	 R_X86_64_PC32.  */
@@ -2060,7 +2116,6 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	}
       bfd_put_8 (abfd, nop, contents + nop_offset);
       bfd_put_8 (abfd, modrm, contents + irel->r_offset - 1);
-      r_type = R_X86_64_PC32;
     }
   else if (r_type == R_X86_64_CODE_6_GOTPCRELX && opcode != 0x8b)
     {
@@ -2100,6 +2155,14 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
       /* Use R_X86_64_32 with 32-bit operand to avoid relocation
 	 overflow when sign-extending imm32 to 64 bits.  */
       r_type = evex[1] & 0x80 ? R_X86_64_32S : R_X86_64_32;
+
+      /* Skip if the converted relocation will overflow.  */
+      howto = elf_x86_64_rtype_to_howto (abfd, r_type);
+      r = _bfd_final_link_relocate (howto, abfd, input_section,
+				    contents, irel->r_offset,
+				    relocation, 0);
+      if (r == bfd_reloc_overflow)
+	return true;
 
       if (abs_relocation) /* Bogus; should be abs_symbol.  */
 	{
@@ -2186,6 +2249,15 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	      opcode = 0x8d;
 	      r_type = R_X86_64_PC32;
 
+	      /* Skip if the converted relocation will overflow.  */
+	      howto = &x86_64_elf_howto_table[r_type];
+	      r = _bfd_final_link_relocate (howto, abfd, input_section,
+					    contents, irel->r_offset,
+					    relocation,
+					    raddend);
+	      if (r == bfd_reloc_overflow)
+		return true;
+
 	      /* For MOVRS move a possible REX prefix as necessary.  */
 	      if (movrs == 5)
 		bfd_put_8 (abfd, rex, contents + roff - 3);
@@ -2245,6 +2317,14 @@ elf_x86_64_convert_load_reloc (bfd *abfd,
 	  r_type = rex_w ? R_X86_64_32S : R_X86_64_32;
 
 	rewrite_modrm_rex:
+	  /* Skip if the converted relocation will overflow.  */
+	  howto = elf_x86_64_rtype_to_howto (abfd, r_type);
+	  r = _bfd_final_link_relocate (howto, abfd, input_section,
+					contents, irel->r_offset,
+					relocation, 0);
+	  if (r == bfd_reloc_overflow)
+	    return true;
+
 	  if (abs_relocation)
 	    {
 	      /* Check if R_X86_64_32S/R_X86_64_32 fits.  */
@@ -2361,6 +2441,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       bool size_reloc;
       bool converted_reloc;
       bool no_dynreloc;
+      reloc_howto_type *howto;
 
       r_symndx = htab->r_sym (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
@@ -2374,6 +2455,17 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* xgettext:c-format */
 	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
 			      abfd, r_symndx);
+	  goto error_return;
+	}
+
+      howto = elf_x86_64_rtype_to_howto (abfd, r_type);
+      if (rel->r_offset + bfd_get_reloc_size (howto) > sec->size)
+	{
+	  /* xgettext:c-format */
+	  _bfd_error_handler
+	    (_("%pB: bad reloc offset (%#" PRIx64 " > %#" PRIx64 ") for"
+	       " section `%pA'"), abfd, (uint64_t) rel->r_offset,
+	     (uint64_t) sec->size, sec);
 	  goto error_return;
 	}
 
@@ -2408,10 +2500,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       else
 	{
 	  isym = NULL;
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+	  h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx, symtab_hdr);
 	}
 
       /* Check invalid x32 relocations.  */
@@ -2465,9 +2554,9 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	  && (h == NULL || h->type != STT_GNU_IFUNC))
 	{
 	  Elf_Internal_Rela *irel = (Elf_Internal_Rela *) rel;
-	  if (!elf_x86_64_convert_load_reloc (abfd, contents, &r_type,
-					      irel, h, &converted_reloc,
-					      info))
+	  if (!elf_x86_64_convert_load_reloc (abfd, sec, contents,
+					      &r_type, irel, h,
+					      &converted_reloc, info))
 	    goto error_return;
 
 	  if (converted_reloc)
@@ -5303,6 +5392,15 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 
       if (generate_dynamic_reloc)
 	{
+	  /* If the relgot section has not been created, then
+	     generate an error instead of a reloc.  cf PR 32638.  */
+	  if (relgot == NULL || relgot->size == 0)
+	    {
+	      info->callbacks->einfo (_("%F%pB: Unable to generate dynamic relocs because a suitable section does not exist\n"),
+					output_bfd);
+	      return false;
+	    }
+	  
 	  if (relative_reloc_name != NULL
 	      && htab->params->report_relative_reloc)
 	    _bfd_x86_elf_link_report_relative_reloc

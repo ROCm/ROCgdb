@@ -470,7 +470,7 @@ const char EXP_CHARS[] = "eE";
 
 /* Chars that mean this number is a floating point constant.
    As in 0f12.456 or 0d1.2345e12.  */
-const char FLT_CHARS[] = "rRsSfFdDxXpPhH";
+const char FLT_CHARS[] = "rRsSfFdDxXpPhHbB";
 
 /* Indicate ELF attributes are explicitly set.  */
 static bool explicit_attr = false;
@@ -898,7 +898,7 @@ static const struct opcode_name_t opcode_name_list[] =
   /*reserved    0x5b.  */
   {"JAL",       0x6f},
   {"SYSTEM",    0x73},
-  /*reserved    0x77.  */
+  {"OP_VE",     0x77},
   {"CUSTOM_3",  0x7b},
   /* >80b       0x7f.  */
 
@@ -5802,6 +5802,7 @@ static const pseudo_typeS riscv_pseudo_table[] =
   {"attribute", s_riscv_attribute, 0},
   {"variant_cc", s_variant_cc, 0},
   {"float16", float_cons, 'h'},
+  {"bfloat16", float_cons, 'b'},
 
   { NULL, NULL, 0 },
 };
