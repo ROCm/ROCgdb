@@ -23,30 +23,51 @@ if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path "/opt/rocm"
 }
 
-# Detect available GPU devices.
+# Act as a drop-in replacement for "remote_exec host"
+# that logs the failures.
+
+proc log_host_exec { cmd } {
+    set result [remote_exec host "$cmd"]
+    set exit_status [lindex $result 0]
+    if {$exit_status != 0} {
+	# -1 indicates that $cmd could not be executed at all.
+	if {$exit_status == -1} {
+	    verbose -log "Cannot execute $cmd."
+	} else {
+	    verbose -log "$cmd returned an error."
+	}
+    }
+
+    return $result
+}
+
+# Detect available AMDGPU devices.
 #
 # Return a list of GPU devices that do exist on the system.
 # The list will be empty when there's no GPU or the execution
-# of rocm_agent_enumerator does not succeed.
+# of rocm_agent_enumerator does not succeed.  It is up to the
+# caller of this procedure that what should happen when an empty
+# list is returned.
 
 gdb_caching_proc find_amdgpu_devices {} {
     global rocm_path
     set hip_gpu_devices [list]
-    set enumerator "${rocm_path}/bin/rocm_agent_enumerator"
+    set enumerator "rocm_agent_enumerator"
+    set targets ""
 
-    set result [remote_exec host "$enumerator"]
-    set exit_status [lindex $result 0]
-    if {$exit_status != 0} {
-	# In case of a failure, it is up to the caller what should
-	# happen next when this procedure returns an empty list.
-	if {$exit_status == -1} {
-	    verbose -log "Cannot execute $enumerator."
-	} else {
-	    verbose -log "$enumerator returned an error."
-	}
-    } else {
+    # Try the PATH first
+    set result [log_host_exec "$enumerator"]
+    if {[lindex $result 0] == 0} {
 	set targets [lindex $result 1]
+    } else {
+	# Now try the ROCM_PATH
+	set result [log_host_exec "$rocm_path/bin/$enumerator"]
+	if {[lindex $result 0] == 0} {
+	    set targets [lindex $result 1]
+	}
+    }
 
+    if {$targets != ""} {
 	foreach dev $targets {
 	    # Ignore the 'gfx000' device which identifies the host.
 	    if {$dev != "gfx000"} {
