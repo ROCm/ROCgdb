@@ -28573,6 +28573,9 @@ Aqua Vanjaram devices.
 @item @code{gfx942}
 @samp{gfx942} devices.
 
+@item @code{gfx950}
+@samp{gfx950} devices.
+
 @item @code{gfx1010}
 Navi 10 devices.
 
