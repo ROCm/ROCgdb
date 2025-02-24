@@ -51,6 +51,46 @@ static const char * const cli_intensities[] = {
   nullptr
 };
 
+/* Return true if GDB's output terminal should support styling, otherwise,
+   return false.  This function really checks for things that indicate
+   styling might not be supported, so a return value of false indicates
+   we've seen something to indicate we should not perform styling.  A
+   return value of true is the default.  */
+
+static bool
+terminal_supports_styling ()
+{
+  const char *term = getenv ("TERM");
+
+  /* Windows doesn't by default define $TERM, but can support styles
+     regardless.  */
+#ifndef _WIN32
+  if (term == nullptr || strcmp (term, "dumb") == 0)
+    return false;
+#else
+  /* But if they do define $TERM, let us behave the same as on Posix
+     platforms, for the benefit of programs which invoke GDB as their
+     back-end.  */
+  if (term != nullptr && strcmp (term, "dumb") == 0)
+    return false;
+#endif
+
+  return true;
+}
+
+/* See cli/cli-style.h.  */
+
+void
+disable_styling_from_environment ()
+{
+  const char *no_color = getenv ("NO_COLOR");
+  if (no_color != nullptr && *no_color != '\0')
+    cli_styling = false;
+
+  if (!terminal_supports_styling ())
+    cli_styling = false;
+}
+
 /* See cli-style.h.  */
 
 cli_style_option file_name_style ("filename", ui_file_style::GREEN);
@@ -286,6 +326,17 @@ static cmd_list_element *style_disasm_show_list;
 static void
 set_style_enabled  (const char *args, int from_tty, struct cmd_list_element *c)
 {
+  /* This finds the 'set style enabled' command.  */
+  struct cmd_list_element *set_style_enabled_cmd
+    = lookup_cmd_exact ("enabled", style_set_list);
+
+  /* If the user does 'set style enabled on', but the terminal doesn't
+     appear to support styling, then warn the user.  */
+  if (c == set_style_enabled_cmd && cli_styling
+      && !terminal_supports_styling ())
+    warning ("The current terminal doesn't support styling.  Styled output "
+	     "might not appear as expected.");
+
   g_source_cache.clear ();
   gdb::observers::styling_changed.notify ();
 }
@@ -371,9 +422,17 @@ Configure various disassembler style-related variables."),
   add_setshow_boolean_cmd ("enabled", no_class, &disassembler_styling, _("\
 Set whether disassembler output styling is enabled."), _("\
 Show whether disassembler output styling is enabled."), _("\
-If enabled, disassembler output is styled.  Disassembler highlighting\n\
-requires the Python Pygments library, if this library is not available\n\
-then disassembler highlighting will not be possible."
+If enabled, disassembler output is styled.\n\
+\n\
+Disassembler styling requires a library that is able to style the current\n\
+instruction architecture.  By default, GDB will use its builtin library\n\
+for disassembler styling, but this cannot style every architecture.\n\
+\n\
+For architectures that cannot be styled by the builtin disassembler library\n\
+GDB will use the Python Pygments library, if this library is available.\n\
+\n\
+If neither option is able to style the current architecture, then\n\
+disassembler output will be unstyled, even when this option is enabled."
 			   ), set_style_enabled, show_style_disassembler,
 			   &style_disasm_set_list, &style_disasm_show_list);
 

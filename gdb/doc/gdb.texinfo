@@ -6975,7 +6975,7 @@ fatal so it can carry out the purpose of the interrupt: to kill the program.
 
 @value{GDBN} has the ability to detect any occurrence of a signal in your
 program.  You can tell @value{GDBN} in advance what to do for each kind of
-signal.
+signal, apart from SIGKILL, which has its usual effect regardless.
 
 When specifying a signal by number, @value{GDBN} translates the number
 to the target platform according to the corresponding signal name.
@@ -35139,6 +35139,11 @@ by a symbol name.
 @item pending
 If this breakpoint is pending, this field is present and holds the
 text used to set the breakpoint, as entered by the user.
+
+@value{GDBN}'s internal breakpoints (@pxref{maint info breakpoints})
+can sometimes become pending too, for these breakpoints the
+@var{pending} field will be empty as @value{GDBN} automatically
+creates these breakpoints as shared libraries are loaded.
 
 @item evaluated-by
 Where this breakpoint's condition is evaluated, either @samp{host} or

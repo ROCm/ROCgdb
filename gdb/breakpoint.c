@@ -6593,7 +6593,28 @@ print_breakpoint_location (const breakpoint *b, const bp_location *loc)
       uiout->field_stream ("at", stb);
     }
   else
-    uiout->field_string ("pending", b->locspec->to_string ());
+    {
+      /* Internal breakpoints don't have a locspec string, but can become
+	 pending if the shared library the breakpoint is in is unloaded.
+	 For most internal breakpoint types though, after unloading the
+	 shared library, the breakpoint will be deleted and never recreated
+	 (see internal_breakpoint::re_set).  But for two internal
+	 breakpoint types bp_shlib_event and bp_thread_event this is not
+	 true.  Usually we don't expect the libraries that contain these
+	 breakpoints to ever be unloaded, but a buggy inferior might do
+	 such a thing, in which case GDB should be prepared to handle this
+	 case.
+
+	 If these two breakpoint types become pending then there will be no
+	 locspec string.  */
+      gdb_assert (b->locspec != nullptr
+		  || (!user_breakpoint_p (b)
+		      && (b->type == bp_shlib_event
+			  || b->type == bp_thread_event)));
+      const char *locspec_str
+	= (b->locspec != nullptr ? b->locspec->to_string () : "");
+      uiout->field_string ("pending", locspec_str);
+    }
 
   if (loc && is_breakpoint (b)
       && breakpoint_condition_evaluation_mode () == condition_evaluation_target
@@ -8243,10 +8264,9 @@ disable_breakpoints_in_shlibs (program_space *pspace)
 	 becomes enabled, or the duplicate is removed, gdb will try to
 	 insert all breakpoints.  If we don't set shlib_disabled here,
 	 we'll try to insert those breakpoints and fail.  */
-      if (((b->type == bp_breakpoint)
-	   || (b->type == bp_jit_event)
-	   || (b->type == bp_hardware_breakpoint)
-	   || (is_tracepoint (b)))
+      if (((b->type == bp_jit_event)
+	   || is_breakpoint (b)
+	   || is_tracepoint (b))
 	  && loc->pspace == pspace
 	  && !loc->shlib_disabled
 	  && solib_name_from_address (loc->pspace, loc->address)
@@ -8273,39 +8293,55 @@ disable_breakpoints_in_unloaded_shlib (program_space *pspace, const solib &solib
 
   bool disabled_shlib_breaks = false;
 
-  for (bp_location *loc : all_bp_locations ())
+  for (breakpoint &b : all_breakpoints ())
     {
-      /* ALL_BP_LOCATIONS bp_location has LOC->OWNER always non-NULL.  */
-      struct breakpoint *b = loc->owner;
+      bool bp_modified = false;
 
-      if (pspace == loc->pspace
-	  && !loc->shlib_disabled
-	  && (((b->type == bp_breakpoint
-		|| b->type == bp_jit_event
-		|| b->type == bp_hardware_breakpoint)
-	       && (loc->loc_type == bp_loc_hardware_breakpoint
-		   || loc->loc_type == bp_loc_software_breakpoint))
-	      || is_tracepoint (b))
-	  && solib_contains_address_p (solib, loc->address))
+      for (bp_location &loc : b.locations ())
 	{
-	  loc->shlib_disabled = 1;
-	  /* At this point, we cannot rely on remove_breakpoint
-	     succeeding so we must mark the breakpoint as not inserted
-	     to prevent future errors occurring in remove_breakpoints.  */
-	  loc->inserted = 0;
+	  if (pspace != loc.pspace || loc.shlib_disabled)
+	    continue;
 
-	  /* This may cause duplicate notifications for the same breakpoint.  */
-	  notify_breakpoint_modified (b);
+	  if (loc.loc_type != bp_loc_hardware_breakpoint
+	      && loc.loc_type != bp_loc_software_breakpoint
+	      && !is_tracepoint (&b))
+	    continue;
 
-	  if (!disabled_shlib_breaks)
+	  if (!solib_contains_address_p (solib, loc.address))
+	    continue;
+
+	  loc.shlib_disabled = 1;
+
+	  /* At this point, we don't know whether the shared library
+	     was unmapped from the inferior or not, so leave the
+	     inserted flag alone.  We'll handle failure to uninsert
+	     quietly, in case the library was indeed unmapped.
+
+	     The test gdb.base/nostdlib.exp when run on AArch64
+	     GNU/Linux using glibc will cause the dynamic linker to be
+	     unloaded from the inferior, but the linker will never be
+	     unmapped.  Additionally, at the time the dynamic linker
+	     is unloaded the inferior will be stopped within the
+	     dynamic linker.
+
+	     If we clear the inserted flag here then GDB will fail to
+	     remove the internal breakpoints from the dynamic linker
+	     leading to unexpected SIGTRAPs.  */
+
+	  bp_modified = true;
+
+	  if (!disabled_shlib_breaks && user_breakpoint_p (&b))
 	    {
 	      target_terminal::ours_for_output ();
 	      warning (_("Temporarily disabling breakpoints "
 			 "for unloaded shared library \"%s\""),
 		       solib.so_name.c_str ());
+	      disabled_shlib_breaks = true;
 	    }
-	  disabled_shlib_breaks = true;
 	}
+
+      if (bp_modified)
+	notify_breakpoint_modified (&b);
     }
 }
 
@@ -13191,8 +13227,7 @@ update_breakpoint_locations (code_breakpoint *b,
 
   for (const bp_location &e : existing_locations)
     {
-      if (e.function_name == nullptr
-	  || (e.enabled && !e.disabled_by_cond))
+      if (e.function_name == nullptr || e.enabled)
 	continue;
 
       if (have_ambiguous_names)
@@ -13209,7 +13244,6 @@ update_breakpoint_locations (code_breakpoint *b,
 	      if (breakpoint_locations_match (&e, &l, true))
 		{
 		  l.enabled = e.enabled;
-		  l.disabled_by_cond = e.disabled_by_cond;
 		  break;
 		}
 	    }
@@ -13222,7 +13256,6 @@ update_breakpoint_locations (code_breakpoint *b,
 			   l.function_name.get ()) == 0)
 	      {
 		l.enabled = e.enabled;
-		l.disabled_by_cond = e.disabled_by_cond;
 		break;
 	      }
 	}
