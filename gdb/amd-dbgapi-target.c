@@ -244,6 +244,8 @@ struct amd_dbgapi_inferior_info
   /* List of pending events the amd-dbgapi target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
 
+  /* Map of threads with ongoing displaced steps to corresponding amd-dbgapi
+     displaced stepping handles.  */
   gdb::unordered_map<thread_info *,
 		     decltype (amd_dbgapi_displaced_stepping_id_t::handle)>
     stepping_id_map;
@@ -335,17 +337,17 @@ struct amd_dbgapi_target final : public target_ops
   bool stopped_by_sw_breakpoint () override;
   bool stopped_by_hw_breakpoint () override;
 
-  bool
-  supports_displaced_step (thread_info *thread) override
+  bool supports_displaced_step (thread_info *thread) override
   {
+    /* Handle displaced stepping for GPU threads only.  */
     if (!ptid_is_gpu (thread->ptid))
       return beneath ()->supports_displaced_step (thread);
+
     return true;
   }
 
-  displaced_step_prepare_status
-  displaced_step_prepare (thread_info *thread,
-			  CORE_ADDR &displaced_pc) override;
+  displaced_step_prepare_status displaced_step_prepare
+    (thread_info *thread, CORE_ADDR &displaced_pc) override;
 
   displaced_step_finish_status displaced_step_finish
     (thread_info *thread, const target_waitstatus &status) override;
@@ -2659,56 +2661,60 @@ amd_dbgapi_target::update_thread_list ()
 
 displaced_step_prepare_status
 amd_dbgapi_target::displaced_step_prepare (thread_info *thread,
-					 CORE_ADDR &displaced_pc)
+					   CORE_ADDR &displaced_pc)
 {
   if (!ptid_is_gpu (thread->ptid))
     return beneath ()->displaced_step_prepare (thread, displaced_pc);
 
   gdb_assert (!thread->displaced_step_state.in_progress ());
 
-  /* Read the bytes that were overwritten by the breakpoint instruction.  */
+  /* Read the bytes that were overwritten by the breakpoint instruction being
+     stepped over.  */
   CORE_ADDR original_pc = regcache_read_pc (get_thread_regcache (thread));
-
   gdbarch *arch = get_thread_regcache (thread)->arch ();
   size_t size = get_amdgpu_gdbarch_tdep (arch)->breakpoint_instruction_size;
-  gdb::unique_xmalloc_ptr<gdb_byte> overwritten_bytes (
-    static_cast<gdb_byte *> (xmalloc (size)));
+  gdb::byte_vector overwritten_bytes (size);
 
-  /* Read the instruction bytes overwritten by the breakpoint.   */
-  int err = target_read_memory (original_pc, overwritten_bytes.get (), size);
-  if (err != 0)
-    throw_error (MEMORY_ERROR, _("Error accessing memory address %s (%s)."),
-		 paddress (arch, original_pc), safe_strerror (err));
+  read_memory (original_pc, overwritten_bytes.data (), size);
 
+  /* Ask dbgapi to start the displaced step.  */
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
   amd_dbgapi_displaced_stepping_id_t stepping_id;
-
   amd_dbgapi_status_t status
-    = amd_dbgapi_displaced_stepping_start (wave_id, overwritten_bytes.get (),
+    = amd_dbgapi_displaced_stepping_start (wave_id, overwritten_bytes.data (),
 					   &stepping_id);
 
-  if (status
-      == AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_NOT_AVAILABLE)
-    return DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE;
-  else if (status == AMD_DBGAPI_STATUS_ERROR_ILLEGAL_INSTRUCTION)
-    return DISPLACED_STEP_PREPARE_STATUS_CANT;
-  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_displaced_stepping_start failed (%s)"),
-	   get_status_string (status));
+  switch (status)
+   {
+    case AMD_DBGAPI_STATUS_SUCCESS:
+      break;
 
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
-  if (!info->stepping_id_map.emplace (thread, stepping_id.handle).second)
-    {
-      amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
-      error (_("Could not insert the displaced stepping id in the map"));
+    case AMD_DBGAPI_STATUS_ERROR_DISPLACED_STEPPING_BUFFER_NOT_AVAILABLE:
+      return DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE;
+
+    case AMD_DBGAPI_STATUS_ERROR_ILLEGAL_INSTRUCTION:
+      return DISPLACED_STEP_PREPARE_STATUS_CANT;
+
+    default:
+      error (_("amd_dbgapi_displaced_stepping_start failed (%s)"),
+	   get_status_string (status));
     }
 
+  /* Save the displaced stepping id in the per-inferior info.  */
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
+
+  bool inserted
+    = info->stepping_id_map.emplace (thread, stepping_id.handle).second;
+  gdb_assert (inserted);
+
+  /* Get the new (displaced) PC.  */
   status = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_PC,
 				     sizeof (displaced_pc), &displaced_pc);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     {
       amd_dbgapi_displaced_stepping_complete (wave_id, stepping_id);
-      error (_("amd_dbgapi_wave_get_info failed (%s)"),
+      error (_("amd_dbgapi_wave_get_info failed (%s), could not get the "
+	       "thread's displaced PC."),
 	     get_status_string (status));
     }
 
@@ -2729,13 +2735,12 @@ amd_dbgapi_target::displaced_step_finish (thread_info *thread,
 
   gdb_assert (thread->displaced_step_state.in_progress ());
 
-  /* Find the stepping_id for this thread.  */
-  struct amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
-  auto it = info->stepping_id_map.find (thread);
-  gdb_assert (it != info->stepping_id_map.end ());
+  /* Find the displaced stepping id for this thread.  */
+  amd_dbgapi_inferior_info *info = get_amd_dbgapi_inferior_info (thread->inf);
+  auto entry = info->stepping_id_map.extract (thread);
 
-  amd_dbgapi_displaced_stepping_id_t stepping_id{ it->second };
-  info->stepping_id_map.erase (it);
+  gdb_assert (entry.has_value ());
+  amd_dbgapi_displaced_stepping_id_t stepping_id {entry->second};
 
   /* If the thread exited while stepping, we are done.  The code above
      cleared our associated resources.  We don't want to call dbgapi
@@ -2747,7 +2752,6 @@ amd_dbgapi_target::displaced_step_finish (thread_info *thread,
     return DISPLACED_STEP_FINISH_STATUS_OK;
 
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
-
   amd_dbgapi_wave_stop_reasons_t stop_reason;
   amd_dbgapi_status_t status
     = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STOP_REASON,
