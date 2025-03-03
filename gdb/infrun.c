@@ -1716,15 +1716,12 @@ show_can_use_displaced_stepping (struct ui_file *file, int from_tty,
 		  "to step over breakpoints is %s.\n"), value);
 }
 
-/* Return true if the target behing THREAD supports displaced stepping.  */
+/* Return true if the target behind THREAD supports displaced stepping.  */
 
 static bool
 target_supports_displaced_stepping (thread_info *thread)
 {
-  inferior *inf = thread->inf;
-  target_ops *target = inf->top_target ();
-
-  return target->supports_displaced_step (thread);
+  return thread->inf->top_target ()->supports_displaced_step (thread);
 }
 
 /* Return non-zero if displaced stepping can/should be used to step
@@ -1861,7 +1858,7 @@ displaced_step_prepare_throw (thread_info *tp)
 				paddress (gdbarch, original_pc), dislen);
     }
 
-  displaced_step_prepare_status status
+  auto status
     = tp->inf->top_target ()->displaced_step_prepare (tp, displaced_pc);
 
   if (status == DISPLACED_STEP_PREPARE_STATUS_CANT)
@@ -2042,6 +2039,7 @@ displaced_step_finish (thread_info *event_thread,
 {
   /* Check whether the parent is displaced stepping.  */
   inferior *parent_inf = event_thread->inf;
+  target_ops *top_target = parent_inf->top_target ();
 
   /* If this was a fork/vfork/clone, this event indicates that the
      displaced stepping of the syscall instruction has been done, so
@@ -2060,13 +2058,8 @@ displaced_step_finish (thread_info *event_thread,
      displaced stepping but not forks.  */
   if (event_status.kind () == TARGET_WAITKIND_FORKED
       && target_supports_displaced_stepping (event_thread))
-    {
-      struct regcache *parent_regcache = get_thread_regcache (event_thread);
-      struct gdbarch *gdbarch = parent_regcache->arch ();
-
-      gdbarch_displaced_step_restore_all_in_ptid
-	(gdbarch, parent_inf, event_status.child_ptid ());
-    }
+    top_target->displaced_step_restore_all_in_ptid
+      (parent_inf, event_status.child_ptid ());
 
   displaced_step_thread_state *displaced = &event_thread->displaced_step_state;
 
@@ -2089,9 +2082,7 @@ displaced_step_finish (thread_info *event_thread,
 
   /* Do the fixup, and release the resources acquired to do the displaced
      step. */
-  displaced_step_finish_status status
-    = event_thread->inf->top_target ()->displaced_step_finish (event_thread,
-							       event_status);
+  auto status = top_target->displaced_step_finish (event_thread, event_status);
 
   if (event_status.kind () == TARGET_WAITKIND_FORKED
       || event_status.kind () == TARGET_WAITKIND_VFORKED

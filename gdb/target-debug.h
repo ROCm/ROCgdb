@@ -311,6 +311,10 @@ static std::string
 target_debug_print_target_waitstatus_p (struct target_waitstatus *status)
 { return status->to_string (); }
 
+static std::string
+target_debug_print_const_target_waitstatus_r (const target_waitstatus &status)
+{ return status.to_string (); }
+
 /* Functions that are used via TARGET_DEBUG_PRINTER.  */
 
 static std::string
@@ -364,10 +368,6 @@ target_debug_print_gdb_byte_vector_r (gdb::byte_vector &vector)
 { return target_debug_print_const_gdb_byte_vector_r (vector); }
 
 static std::string
-target_debug_print_const_target_waitstatus_r (const target_waitstatus &status)
-{ return status.to_string (); }
-
-static std::string
 target_debug_print_x86_xsave_layout (const x86_xsave_layout &layout)
 {
   std::string s = string_printf ("{ sizeof_xsave=%d", layout.sizeof_xsave);
@@ -394,7 +394,8 @@ target_debug_print_displaced_step_finish_status (displaced_step_finish_status s)
 { return displaced_step_finish_status_str (s); }
 
 static std::string
-target_debug_print_displaced_step_prepare_status (displaced_step_prepare_status s)
+target_debug_print_displaced_step_prepare_status
+  (displaced_step_prepare_status s)
 { return displaced_step_prepare_status_str (s); }
 
 #endif /* GDB_TARGET_DEBUG_H */
