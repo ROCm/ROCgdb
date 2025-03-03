@@ -32,6 +32,7 @@
 #include "gdbsupport/event-loop.h"
 #include "gdbsupport/filestuff.h"
 #include "gdbsupport/gdb_unique_ptr.h"
+#include "gdbsupport/unordered_map.h"
 #include "gdbthread.h"
 #include "inf-loop.h"
 #include "inferior.h"
