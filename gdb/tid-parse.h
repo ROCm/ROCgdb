@@ -36,6 +36,8 @@ struct thread_info;
    thrown.  */
 struct thread_info *parse_thread_id (const char *tidstr, const char **end);
 
+std::pair<thread_info *, int> parse_lane_id (const char *input);
+
 /* Return true if TIDSTR is pointing to a string that looks like a
    thread-id.  This doesn't mean that TIDSTR identifies a valid thread, but
    the string does at least look like a valid thread-id.  If END is not

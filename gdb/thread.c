@@ -2606,20 +2606,30 @@ warn_if_current_lane_is_inactive ()
     warning (_("Current lane is inactive."));
 }
 
+static void
+switch_to_lane (thread_info *tp, int lane)
+{
+  scoped_restore_current_thread restore_thread;
+
+  switch_to_thread (tp);
+  gdbarch *arch = target_thread_architecture (tp->ptid);
+  int lane_count = gdbarch_supported_lanes_count (arch, tp);
+  if (lane < 0 || lane >= lane_count)
+    error (_("Lane %d does not exist on thread %s."), lane,
+	   print_thread_id (tp));
+
+  tp->set_current_simd_lane (lane);
+
+  restore_thread.dont_restore ();
+  select_frame (get_current_frame ());
+}
+
 /* See gdbthread.h.  */
 
 void
 switch_to_lane (int lane)
 {
-  thread_info *tp = inferior_thread ();
-  gdbarch *arch = target_thread_architecture (tp->ptid);
-  int lane_count = gdbarch_supported_lanes_count (arch, tp);
-  if (lane < 0 || lane >= lane_count)
-    error (_("Lane %d does not exist on this thread."), lane);
-
-  tp->set_current_simd_lane (lane);
-
-  select_frame (get_current_frame ());
+  switch_to_lane (inferior_thread (), lane);
 }
 
 /* Switch to the specified lane, or print the current lane.  */
@@ -2627,15 +2637,11 @@ switch_to_lane (int lane)
 static void
 lane_command (const char *tidstr, int from_tty)
 {
-  if (inferior_ptid == null_ptid)
-    error (_("No thread selected"));
-
-  struct thread_info *tp = inferior_thread ();
-
   if (tidstr == NULL)
     {
-      if (target_has_stack ())
+      if (inferior_ptid != null_ptid)
 	{
+	  thread_info *tp = inferior_thread ();
 	  int lane = tp->current_simd_lane ();
 
 	  if (tp->state == THREAD_EXITED)
@@ -2650,13 +2656,13 @@ lane_command (const char *tidstr, int from_tty)
 			target_lane_to_str (tp, lane).c_str ());
 	}
       else
-	error (_("No stack."));
+	error (_("No current lane."));
     }
   else
     {
-      int lane = parse_and_eval_long (tidstr);
+      auto [thr, lane] = parse_lane_id (tidstr);
 
-      switch_to_lane (lane);
+      switch_to_lane (thr, lane);
 
       notify_user_selected_context_changed
 	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);

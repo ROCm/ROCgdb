@@ -139,6 +139,31 @@ parse_thread_id (const char *tidstr, const char **end)
   return tp;
 }
 
+std::pair<thread_info *, int>
+parse_lane_id (const char *input)
+{
+  thread_info *thr = nullptr;
+  const char *lanestr = nullptr;
+
+  const char *last_dot = strrchr (input, '.');
+  if (last_dot != nullptr)
+    {
+      /* Parse [INF.]THR to the left of the dot.  */
+      std::string tidstr (input, last_dot);
+      thr = parse_thread_id (tidstr.c_str (), nullptr);
+      lanestr = last_dot + 1;
+    }
+  else
+    {
+      thr = inferior_thread ();
+      lanestr = input;
+    }
+
+  int lane_num = parse_and_eval_long (lanestr);
+
+  return { thr, lane_num };
+}
+
 /* See tid-parse.h.  */
 
 bool
