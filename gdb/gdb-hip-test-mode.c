@@ -59,7 +59,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, std::string_view name)
   else if (objfile->obfd->arch_info->arch != bfd_arch_amdgcn
 	   && name == "_ZN3lld3elf12LinkerDriver4mainEN4llvm8ArrayRefIPKcEE")
     {
-      /* /opt/rocm/lib/libamd_comgr.so.1 calls
+      /* /opt/rocm/lib/libamd_comgr.so calls
 	   lld::elf::LinkerDriver::main(llvm::ArrayRef<char const*>)
 	 before we reach the device's main.  */
       if (gdb_hip_test_mode > 1)

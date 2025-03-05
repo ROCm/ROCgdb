@@ -119,12 +119,12 @@ The installed ROCgdb will be placed in:
 
 - ``<prefix>/bin/rocgdb``
 
-To execute ROCgdb, the ROCdbgapi library and its dependent ROCcomgr library must
+To execute ROCgdb, the ROCdbgapi library and its dependent Comgr library must
 be installed.  These can be installed as part of the AMD ROCm release by the
 ``rocm-dbgapi`` package:
 
 - ``librocm-dbgapi.so.0``
-- ``libamd_comgr.so.1``
+- ``libamd_comgr.so``
 
 The PDF *User Manual* can be generated with:
 
