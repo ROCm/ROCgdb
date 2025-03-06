@@ -2135,7 +2135,12 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
   try
     {
       /* Switch to the lane on which the command is executed.  */
-      thr->set_current_simd_lane (lane);
+      std::optional<scoped_restore_current_simd_lane> restore_lane;
+      if (lane_mode)
+	{
+	  restore_lane.emplace (thr);
+	  thr->set_current_simd_lane (lane);
+	}
 
       std::string cmd_result;
       execute_command_to_string
@@ -2608,10 +2613,7 @@ lane_apply_command (const char *id_list, int from_tty)
   if (id_list == cmd || isdigit (cmd[0]))
     invalid_lane_id_error (cmd);
 
-  scoped_restore_current_thread restore_current_thread;
-  std::optional<scoped_restore_current_simd_lane> restore_current_thread_lane;
-  if (inferior_ptid != null_ptid)
-    restore_current_thread_lane.emplace (inferior_thread ());
+  scoped_restore_current_thread restore_thread;
   scoped_restore_selected_frame restore_frame;
 
   lane_id current_lane_id = get_current_lane_id ();
