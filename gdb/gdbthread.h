@@ -735,6 +735,12 @@ extern int show_inferior_qualified_tids (void);
    circular static buffer, NUMCELLS deep.  */
 const char *print_thread_id (struct thread_info *thr);
 
+/* Return a string version of [THR/LANE]'s lane ID.  If there are
+   multiple inferiors, then this prints the inferior-qualifier form of
+   the thread part.  The result is stored in a circular static buffer,
+   NUMCELLS deep.  */
+const char *print_lane_id (struct thread_info *thr, int lane);
+
 /* Like print_thread_id, but always prints the inferior-qualified form,
    even when there is only a single inferior.  */
 const char *print_full_thread_id (struct thread_info *thr);

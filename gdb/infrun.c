@@ -9708,8 +9708,8 @@ normal_stop ()
 		{
 		  int lane = thr->current_simd_lane ();
 
-		  gdb_printf (_("[Switching to thread %s, lane %d (%s)]\n"),
-			      print_thread_id (thr), lane,
+		  gdb_printf (_("[Switching to lane %s (%s)]\n"),
+			      print_lane_id (thr, lane),
 			      target_lane_to_str (thr, lane).c_str ());
 		}
 	      else

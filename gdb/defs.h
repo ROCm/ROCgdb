@@ -402,7 +402,10 @@ enum user_selected_what_flag
     USER_SELECTED_THREAD = 1 << 2,
 
     /* Frame selected.  */
-    USER_SELECTED_FRAME = 1 << 3
+    USER_SELECTED_FRAME = 1 << 3,
+
+    /* Lane selected.  */
+    USER_SELECTED_LANE = 1 << 4,
   };
 DEF_ENUM_FLAGS_TYPE (enum user_selected_what_flag, user_selected_what);
 

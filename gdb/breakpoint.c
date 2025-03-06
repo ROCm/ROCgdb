@@ -6987,8 +6987,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	  if (s.lane >= 0)
 	    {
 	      uiout->text ("\tstop only in lane ");
-	      uiout->field_fmt ("lane", "%s.%d",
-				print_thread_id (thr), s.lane);
+	      uiout->field_fmt ("lane", "%s", print_lane_id (thr, s.lane));
 	    }
 	  else
 	    {
@@ -7525,8 +7524,7 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	      {
 		thread_info *thr = find_thread_global_id (o.thread);
 		if (o.lane >= 0)
-		  gdb_printf (" (lane %s.%d)", print_thread_id (thr),
-			      o.lane);
+		  gdb_printf (" (lane %s)", print_lane_id (thr, o.lane));
 		else
 		  gdb_printf (" (thread %s)", print_thread_id (thr));
 	      }

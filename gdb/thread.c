@@ -1062,6 +1062,12 @@ finish_thread_state (process_stratum_target *targ, ptid_t ptid)
     notify_target_resumed (ptid);
 }
 
+static void
+error_no_thread_selected ()
+{
+  error (_("No thread selected."));
+}
+
 /* See gdbthread.h.  */
 
 void
@@ -1069,7 +1075,7 @@ validate_registers_access (void)
 {
   /* No selected thread, no registers.  */
   if (inferior_ptid == null_ptid)
-    error (_("No thread selected."));
+    error_no_thread_selected ();
 
   thread_info *tp = inferior_thread ();
 
@@ -1565,9 +1571,7 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	uiout->field_skip ("current");
     }
 
-  std::string lane_id_str
-    = string_printf ("%s.%d", print_thread_id (tp), lane);
-  uiout->field_string ("id", lane_id_str.c_str ());
+  uiout->field_string ("id", print_lane_id (tp, lane));
 
   gdbarch *arch = target_thread_architecture (tp->ptid);
   int used_lanes_count = gdbarch_used_lanes_count (arch, tp);
@@ -2058,6 +2062,18 @@ print_thread_id (struct thread_info *thr)
 /* See gdbthread.h.  */
 
 const char *
+print_lane_id (struct thread_info *thr, int lane)
+{
+  char *s = get_print_cell ();
+
+  gdb_assert (thr != nullptr);
+  xsnprintf (s, PRINT_CELL_SIZE, "%s.%d", print_thread_id (thr), lane);
+  return s;
+}
+
+/* See gdbthread.h.  */
+
+const char *
 print_full_thread_id (struct thread_info *thr)
 {
   char *s = get_print_cell ();
@@ -2121,8 +2137,8 @@ thr_lane_try_catch_cmd (bool lane_mode, thread_info *thr, int lane,
   if (lane_mode)
     {
       header
-	= string_printf (_("\nLane %s.%d (%s):\n"),
-			 print_thread_id (thr), lane,
+	= string_printf (_("\nLane %s (%s):\n"),
+			 print_lane_id (thr, lane),
 			 target_lane_to_str (thr, lane).c_str ());
     }
   else if (ada_task.has_value ())
@@ -2720,10 +2736,7 @@ thread_command (const char *tidstr, int from_tty)
 {
   if (tidstr == NULL)
     {
-      if (inferior_ptid == null_ptid)
-	error (_("No thread selected"));
-
-      if (target_has_stack ())
+      if (inferior_ptid != null_ptid)
 	{
 	  struct thread_info *tp = inferior_thread ();
 
@@ -2732,43 +2745,30 @@ thread_command (const char *tidstr, int from_tty)
 			print_thread_id (tp),
 			target_pid_to_str (inferior_ptid).c_str ());
 	  else
-	    {
-	      if (tp->has_simd_lanes ())
-		{
-		  int lane = tp->current_simd_lane ();
-
-		  gdb_printf (_("[Current thread is %s, lane %d (%s)]\n"),
-			      print_thread_id (tp), lane,
-			      target_lane_to_str (tp, lane).c_str ());
-		}
-	      else
-		{
-		  gdb_printf (_("[Current thread is %s (%s)]\n"),
-			      print_thread_id (tp),
-			      target_pid_to_str (inferior_ptid).c_str ());
-		}
-	    }
+	    gdb_printf (_("[Current thread is %s (%s)]\n"),
+			print_thread_id (tp),
+			target_pid_to_str (inferior_ptid).c_str ());
 	}
       else
-	error (_("No stack."));
+	error_no_thread_selected ();
     }
   else
     {
+      /* XXX: this is not multi-target safe... */
       ptid_t previous_ptid = inferior_ptid;
 
       thread_select (tidstr, parse_thread_id (tidstr, NULL));
 
+      user_selected_what what = (USER_SELECTED_THREAD
+				 | USER_SELECTED_LANE
+				 | USER_SELECTED_FRAME);
+
       /* Print if the thread has not changed, otherwise an event will
 	 be sent.  */
       if (inferior_ptid == previous_ptid)
-	{
-	  print_selected_thread_frame (current_uiout,
-				       USER_SELECTED_THREAD
-				       | USER_SELECTED_FRAME);
-	}
+	print_selected_thread_frame (current_uiout, what);
       else
-	notify_user_selected_context_changed
-	  (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+	notify_user_selected_context_changed (what);
     }
 }
 
@@ -2801,7 +2801,9 @@ switch_to_lane (thread_info *tp, int lane)
   tp->set_current_simd_lane (lane);
 
   restore_thread.dont_restore ();
-  select_frame (get_current_frame ());
+
+  if (tp->state == THREAD_STOPPED)
+    select_frame (get_current_frame ());
 }
 
 /* See gdbthread.h.  */
@@ -2822,30 +2824,50 @@ lane_command (const char *tidstr, int from_tty)
       if (inferior_ptid != null_ptid)
 	{
 	  thread_info *tp = inferior_thread ();
+
+	  if (!tp->has_simd_lanes ())
+	    error (_("The current thread has no lanes."));
+
 	  int lane = tp->current_simd_lane ();
 
 	  if (tp->state == THREAD_EXITED)
-	    gdb_printf (_("[Current lane is %d, thread %s (%s) (exited)]\n"),
-			lane,
-			print_thread_id (tp),
+	    gdb_printf (_("[Current lane is %s (%s) (exited)]\n"),
+			print_lane_id (tp, lane),
 			target_lane_to_str (tp, lane).c_str ());
 	  else
-	    gdb_printf (_("[Current lane is %d, thread %s (%s)]\n"),
-			lane,
-			print_thread_id (tp),
+	    gdb_printf (_("[Current lane is %s (%s)]\n"),
+			print_lane_id (tp, tp->current_simd_lane ()),
 			target_lane_to_str (tp, lane).c_str ());
 	}
       else
-	error (_("No current lane."));
+	error_no_thread_selected ();
     }
   else
     {
+      auto current_thread_lane = [] () -> std::pair<thread_info *, int>
+	{
+	  if (inferior_ptid != null_ptid)
+	    {
+	      thread_info *thr = inferior_thread ();
+	      return { thr, thr->current_simd_lane () };
+	    }
+	  else
+	    return { nullptr, -1 };
+	};
+
+      auto [previous_thread, previous_lane] = current_thread_lane ();
+
       auto [thr, lane] = parse_lane_id (tidstr);
 
       switch_to_lane (thr, lane);
 
-      notify_user_selected_context_changed
-	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+      /* Print if the lane has not changed, otherwise an event will be
+	 sent.  */
+      user_selected_what what = USER_SELECTED_LANE | USER_SELECTED_FRAME;
+      if (previous_thread == thr && previous_lane == lane)
+	print_selected_thread_frame (current_uiout, what);
+      else
+	notify_user_selected_context_changed (what);
     }
 }
 
@@ -2857,7 +2879,7 @@ thread_name_command (const char *arg, int from_tty)
   struct thread_info *info;
 
   if (inferior_ptid == null_ptid)
-    error (_("No thread selected"));
+    error_no_thread_selected ();
 
   arg = skip_spaces (arg);
 
@@ -2994,33 +3016,39 @@ print_selected_thread_frame (struct ui_out *uiout,
 	{
 	  uiout->text ("[Switching to thread ");
 	  uiout->text (print_thread_id (tp));
-	  if (tp->has_simd_lanes ())
-	    uiout->text (string_printf (", lane %d", tp->current_simd_lane ()));
 	  uiout->text (" (");
-	  if (tp->has_simd_lanes ())
-	    uiout->text (target_lane_to_str (tp, tp->current_simd_lane ()));
-	  else
-	    uiout->text (target_pid_to_str (inferior_ptid));
+	  uiout->text (target_pid_to_str (inferior_ptid));
 	  uiout->text (")");
 	  uiout->text ("]");
-	}
-    }
-
-  if (tp->state == THREAD_RUNNING)
-    {
-      if (selection & USER_SELECTED_THREAD)
-	uiout->text ("(running)\n");
-    }
-  else if (selection & USER_SELECTED_FRAME)
-    {
-      if (selection & USER_SELECTED_THREAD)
-	{
+	  if (tp->state == THREAD_RUNNING)
+	    uiout->text ("(running)");
 	  uiout->text ("\n");
-
-	  warn_if_current_lane_is_inactive ();
 	}
+    }
 
-      if (has_stack_frames ())
+  if (selection & USER_SELECTED_LANE && tp->has_simd_lanes ())
+    {
+      const int lane = tp->current_simd_lane ();
+      if (uiout->is_mi_like_p ())
+	uiout->field_signed ("new-lane-id", lane);
+      else
+	{
+	  uiout->text ("[Switching to lane ");
+	  uiout->text (print_lane_id (tp, lane));
+	  uiout->text (" (");
+	  uiout->text (target_lane_to_str (tp, lane));
+	  uiout->text (")");
+	  uiout->text ("]");
+	  if (tp->state == THREAD_RUNNING)
+	    uiout->text ("(running)");
+	  uiout->text ("\n");
+	}
+      warn_if_current_lane_is_inactive ();
+    }
+
+  if (selection & USER_SELECTED_FRAME)
+    {
+      if (tp->state == THREAD_STOPPED && has_stack_frames ())
 	print_stack_frame_to_uiout (uiout, get_selected_frame (NULL),
 				    1, SRC_AND_LOC, 1);
     }
