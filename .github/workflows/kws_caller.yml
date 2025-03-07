@@ -1,3 +1,4 @@
+---
 name: Rocm Validation Suite KWS
 on:
   push:
