@@ -29,7 +29,7 @@ namespace selftests {
    of the returned buffer.
 
    If there's no known instruction to disassemble for GDBARCH (because we
-   haven't figured on out, not because no instructions exist) then nullptr
+   haven't figured one out, not because no instructions exist) then nullptr
    is returned, and *LEN is set to 0.  */
 
 static const gdb_byte *
@@ -329,7 +329,7 @@ memory_error_test (struct gdbarch *gdbarch)
   SELF_CHECK (saw_memory_error);
 }
 
-} // namespace selftests
+} /* namespace selftests */
 
 void _initialize_disasm_selftests ();
 void

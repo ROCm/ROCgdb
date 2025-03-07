@@ -204,6 +204,8 @@ static int symbols_are_identical_enums
 
 static bool ada_identical_enum_types_p (struct type *type1,
 					struct type *type2);
+
+static const char *ada_unqualify_enum_name (const char *name);
 
 
 /* The character set used for source files.  */
@@ -3799,7 +3801,10 @@ ada_resolve_enum (std::vector<struct block_symbol> &syms,
   for (int i = 0; i < syms.size (); ++i)
     {
       struct type *type2 = ada_check_typedef (syms[i].symbol->type ());
-      if (strcmp (type1->name (), type2->name ()) != 0)
+      /* We let an anonymous enum type match a non-anonymous one.  */
+      if (type1->name () != nullptr
+	  && type2->name () != nullptr
+	  && strcmp (type1->name (), type2->name ()) != 0)
 	continue;
       if (ada_identical_enum_types_p (type1, type2))
 	return i;
@@ -4976,8 +4981,8 @@ ada_identical_enum_types_p (struct type *type1, struct type *type2)
      suffix).  */
   for (int i = 0; i < type1->num_fields (); i++)
     {
-      const char *name_1 = type1->field (i).name ();
-      const char *name_2 = type2->field (i).name ();
+      const char *name_1 = ada_unqualify_enum_name (type1->field (i).name ());
+      const char *name_2 = ada_unqualify_enum_name (type2->field (i).name ());
       int len_1 = strlen (name_1);
       int len_2 = strlen (name_2);
 
@@ -5424,17 +5429,9 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
       const char *r_name;
 
       /* Avoid infinite recursions: skip this renaming if we are actually
-	 already traversing it.
-
-	 Currently, symbol lookup in Ada don't use the namespace machinery from
-	 C++/Fortran support: skip namespace imports that use them.  */
-      if (renaming->searched
-	  || (renaming->import_src != NULL
-	      && renaming->import_src[0] != '\0')
-	  || (renaming->import_dest != NULL
-	      && renaming->import_dest[0] != '\0'))
+	 already traversing it.  */
+      if (renaming->searched)
 	continue;
-      renaming->searched = 1;
 
       /* TODO: here, we perform another name-based symbol lookup, which can
 	 pull its own multiple overloads.  In theory, we should be able to do
@@ -5446,14 +5443,33 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
       r_name = (renaming->alias != NULL
 		? renaming->alias
 		: renaming->declaration);
+      if (r_name == nullptr)
+	continue;
+
+      scoped_restore reset_searched
+	= make_scoped_restore (&renaming->searched, 1);
+      std::string storage;
+      if (renaming->import_src != nullptr && renaming->import_src[0] != '\0')
+	{
+	  storage = std::string (renaming->import_src) + "__" + r_name;
+	  r_name = storage.c_str ();
+	}
+
       if (name_match (r_name, lookup_name, NULL))
 	{
-	  lookup_name_info decl_lookup_name (renaming->declaration,
+	  r_name = renaming->declaration;
+	  if (renaming->import_dest != nullptr
+	      && renaming->import_dest[0] != '\0')
+	    {
+	      storage = std::string (renaming->import_dest) + "__" + r_name;
+	      r_name = storage.c_str ();
+	    }
+
+	  lookup_name_info decl_lookup_name (r_name,
 					     lookup_name.match_type ());
 	  ada_add_all_symbols (result, block, decl_lookup_name, domain,
 			       1, NULL);
 	}
-      renaming->searched = 0;
     }
   return result.size () != defns_mark;
 }
@@ -6685,8 +6701,10 @@ ada_variant_discrim_name (struct type *type0)
   if (name == NULL || name[0] == '\000')
     return "";
 
-  for (discrim_end = name + strlen (name) - 6; discrim_end != name;
-       discrim_end -= 1)
+  size_t len = strlen (name);
+  if (len < 6)
+    return "";
+  for (discrim_end = name + len - 6; discrim_end != name; discrim_end -= 1)
     {
       if (startswith (discrim_end, "___XVN"))
 	break;
@@ -8756,7 +8774,14 @@ ada_atr_enum_rep (struct expression *exp, enum noside noside, struct type *type,
     type = type->target_type ();
   if (type->code () != TYPE_CODE_ENUM)
     error (_("'Enum_Rep only defined on enum types"));
-  if (!types_equal (type, arg->type ()))
+  /* In some scenarios, GNAT will emit two distinct-but-equivalent
+     enum types.  For example, this can happen with an artificial
+     range type like the index type in:
+
+     type AR is array (Enum_With_Gaps range <>) of MyWord;
+
+     This is why types_equal is not used here.  */
+  if (!ada_identical_enum_types_p (type, arg->type ()))
     error (_("'Enum_Rep requires argument to have same type as enum"));
 
   return value_cast (inttype, arg);
@@ -8942,15 +8967,12 @@ ada_aligned_value_addr (struct type *type, const gdb_byte *valaddr)
 }
 
 
+/* Remove qualifications from the enumeration constant named NAME,
+   returning a pointer to the constant's base name.  */
 
-/* The printed representation of an enumeration literal with encoded
-   name NAME.  The value is good to the next call of ada_enum_name.  */
-const char *
-ada_enum_name (const char *name)
+static const char *
+ada_unqualify_enum_name (const char *name)
 {
-  static std::string storage;
-  const char *tmp;
-
   /* First, unqualify the enumeration name:
      1. Search for the last '.' character.  If we find one, then skip
      all the preceding characters, the unqualified name starts
@@ -8960,7 +8982,7 @@ ada_enum_name (const char *name)
      but stop searching when we hit an overloading suffix, which is
      of the form "__" followed by digits.  */
 
-  tmp = strrchr (name, '.');
+  const char *tmp = strrchr (name, '.');
   if (tmp != NULL)
     name = tmp + 1;
   else
@@ -8974,6 +8996,17 @@ ada_enum_name (const char *name)
 	}
     }
 
+  return name;
+}
+
+/* The printed representation of an enumeration literal with encoded
+   name NAME.  The value is good to the next call of ada_enum_name.  */
+const char *
+ada_enum_name (const char *name)
+{
+  static std::string storage;
+
+  name = ada_unqualify_enum_name (name);
   if (name[0] == 'Q')
     {
       int v;
@@ -9012,7 +9045,7 @@ ada_enum_name (const char *name)
     }
   else
     {
-      tmp = strstr (name, "__");
+      const char *tmp = strstr (name, "__");
       if (tmp == NULL)
 	tmp = strstr (name, "$");
       if (tmp != NULL)
@@ -13002,15 +13035,6 @@ ada_add_exceptions_from_frame (compiled_regex *preg,
     }
 }
 
-/* Return true if NAME matches PREG or if PREG is NULL.  */
-
-static bool
-name_matches_regex (const char *name, compiled_regex *preg)
-{
-  return (preg == NULL
-	  || preg->exec (ada_decode (name).c_str (), 0, NULL, 0) == 0);
-}
-
 /* Add all exceptions defined globally whose name name match
    a regular expression, excluding standard exceptions.
 
@@ -13034,6 +13058,13 @@ static void
 ada_add_global_exceptions (compiled_regex *preg,
 			   std::vector<ada_exc_info> *exceptions)
 {
+  /* Return true if NAME matches PREG or if PREG is NULL.  */
+  auto name_matches_regex = [&] (const char *name)
+    {
+      return preg == nullptr || preg->exec (name, 0, NULL, 0) == 0;
+    };
+
+
   /* In Ada, the symbol "search name" is a linkage name, whereas the
      regular expression used to do the matching refers to the natural
      name.  So match against the decoded name.  */
@@ -13042,7 +13073,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 			   [&] (const char *search_name)
 			   {
 			     std::string decoded = ada_decode (search_name);
-			     return name_matches_regex (decoded.c_str (), preg);
+			     return name_matches_regex (decoded.c_str ());
 			   },
 			   NULL,
 			   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
@@ -13068,7 +13099,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 
 	      for (struct symbol *sym : block_iterator_range (b))
 		if (ada_is_non_standard_exception_sym (sym)
-		    && name_matches_regex (sym->natural_name (), preg))
+		    && name_matches_regex (sym->natural_name ()))
 		  {
 		    struct ada_exc_info info
 		      = {sym->print_name (), sym->value_address ()};

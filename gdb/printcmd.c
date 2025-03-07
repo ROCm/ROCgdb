@@ -44,7 +44,6 @@
 #include "disasm.h"
 #include "target-float.h"
 #include "observable.h"
-#include "solist.h"
 #include "parser-defs.h"
 #include "charset.h"
 #include "arch-utils.h"
@@ -57,7 +56,6 @@
 #include "gdbsupport/byte-vector.h"
 #include <optional>
 #include "gdbsupport/gdb-safe-ctype.h"
-#include "gdbsupport/rsp-low.h"
 #include "inferior.h"
 
 /* Chain containing all defined memory-tag subcommands.  */

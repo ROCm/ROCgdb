@@ -562,8 +562,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
     }
 }
 
-using cu_index_map
-  = gdb::unordered_map<const dwarf2_per_cu_data *, unsigned int>;
+using cu_index_map = gdb::unordered_map<const dwarf2_per_cu *, unsigned int>;
 
 /* Helper struct for building the address table.  */
 struct addrmap_index_data
@@ -604,8 +603,7 @@ add_address_entry (data_buf &addr_vec,
 int
 addrmap_index_data::operator() (CORE_ADDR start_addr, const void *obj)
 {
-  const dwarf2_per_cu_data *per_cu
-    = static_cast<const dwarf2_per_cu_data *> (obj);
+  const dwarf2_per_cu *per_cu = static_cast<const dwarf2_per_cu *> (obj);
 
   if (previous_valid)
     add_address_entry (addr_vec,
@@ -678,9 +676,8 @@ public:
   /* Insert one symbol.  */
   void insert (const cooked_index_entry *entry)
   {
-    /* These entries are synthesized by the reader, and so should not
-       be written.  */
-    if (entry->lang == language_ada && entry->tag == DW_TAG_namespace)
+    /* Synthesized entries should not be written.  */
+    if ((entry->flags & IS_SYNTHESIZED) != 0)
       return;
 
     m_name_to_value_set[entry->name].emplace_back (entry);
@@ -731,11 +728,11 @@ public:
 	    unit_kind kind = (entry->per_cu->is_debug_types
 			      ? unit_kind::tu
 			      : unit_kind::cu);
-	    /* Currently Ada parentage is synthesized by the
-	       reader and so must be ignored here.  */
-	    const cooked_index_entry *parent = (entry->lang == language_ada
-						? nullptr
-						: entry->get_parent ());
+	    /* Some Ada parentage is synthesized by the reader and so
+	       must be ignored here.  */
+	    const cooked_index_entry *parent = entry->get_parent ();
+	    if (parent != nullptr && (parent->flags & IS_SYNTHESIZED) != 0)
+	      parent = nullptr;
 
 	    int &idx = m_indexkey_to_idx[index_key (entry->tag,
 						    kind,
@@ -756,7 +753,8 @@ public:
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_ref_addr);
 		m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_language);
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
-		if ((entry->flags & IS_STATIC) != 0)
+		if (!tag_is_type (entry->tag)
+		    && (entry->flags & IS_STATIC) != 0)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_internal);
 		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
@@ -874,7 +872,7 @@ public:
     m_debugstrlookup.file_write (file_str);
   }
 
-  void add_cu (dwarf2_per_cu_data *per_cu, offset_type index)
+  void add_cu (dwarf2_per_cu *per_cu, offset_type index)
   {
     m_cu_index_htab.emplace (per_cu, index);
   }
@@ -1306,10 +1304,9 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   data_buf objfile_cu_list;
   data_buf dwz_cu_list;
 
-  /* While we're scanning CU's create a table that maps a dwarf2_per_cu_data
-     (which is what addrmap records) to its index (which is what is recorded
-     in the index file).  This will later be needed to write the address
-     table.  */
+  /* While we're scanning CU's create a table that maps a dwarf2_per_cu (which
+     is what addrmap records) to its index (which is what is recorded in the
+     index file).  This will later be needed to write the address table.  */
   cu_index_map cu_index_htab;
   cu_index_htab.reserve (per_bfd->all_units.size ());
 
@@ -1322,7 +1319,7 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   int counter = 0;
   for (int i = 0; i < per_bfd->all_units.size (); ++i)
     {
-      dwarf2_per_cu_data *per_cu = per_bfd->all_units[i].get ();
+      dwarf2_per_cu *per_cu = per_bfd->all_units[i].get ();
 
       const auto insertpair = cu_index_htab.emplace (per_cu, counter);
       gdb_assert (insertpair.second);
@@ -1405,7 +1402,7 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   int types_counter = 0;
   for (int i = 0; i < per_bfd->all_units.size (); ++i)
     {
-      dwarf2_per_cu_data *per_cu = per_bfd->all_units[i].get ();
+      dwarf2_per_cu *per_cu = per_bfd->all_units[i].get ();
 
       int &this_counter = per_cu->is_debug_types ? types_counter : counter;
       data_buf &this_list = per_cu->is_debug_types ? types_cu_list : cu_list;
@@ -1683,7 +1680,7 @@ save_gdb_index_command (const char *args, int from_tty)
 	  try
 	    {
 	      const char *basename = lbasename (objfile_name (objfile));
-	      const dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd);
+	      const dwz_file *dwz = per_objfile->per_bfd->get_dwz_file ();
 	      const char *dwz_basename = NULL;
 
 	      if (dwz != NULL)

@@ -25,7 +25,7 @@
 
 struct symbol_computed_ops;
 struct dwarf2_per_objfile;
-struct dwarf2_per_cu_data;
+struct dwarf2_per_cu;
 struct dwarf2_loclist_baton;
 struct agent_expr;
 struct axs_value;
@@ -68,7 +68,7 @@ value *compute_var_value (const char *name);
 
 struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
   (const frame_info_ptr &frame, call_site_parameter_kind kind,
-   call_site_parameter_u kind_u, dwarf2_per_cu_data **per_cu_return,
+   call_site_parameter_u kind_u, dwarf2_per_cu **per_cu_return,
    dwarf2_per_objfile **per_objfile_return);
 
 
@@ -79,7 +79,7 @@ struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
 
 value *dwarf2_evaluate_loc_desc (type *type, const frame_info_ptr &frame,
 				 const gdb_byte *data, size_t size,
-				 dwarf2_per_cu_data *per_cu,
+				 dwarf2_per_cu *per_cu,
 				 dwarf2_per_objfile *per_objfile,
 				 bool as_lval = true);
 
@@ -173,7 +173,7 @@ struct dwarf2_locexpr_baton
 
   /* The compilation unit containing the symbol whose location
      we're computing.  */
-  struct dwarf2_per_cu_data *per_cu;
+  dwarf2_per_cu *per_cu;
 };
 
 struct dwarf2_loclist_baton
@@ -193,7 +193,7 @@ struct dwarf2_loclist_baton
 
   /* The compilation unit containing the symbol whose location
      we're computing.  */
-  struct dwarf2_per_cu_data *per_cu;
+  dwarf2_per_cu *per_cu;
 
   /* Non-zero if the location list lives in .debug_loc.dwo.
      The format of entries in this section are different.  */
@@ -294,7 +294,7 @@ extern void invalid_synthetic_pointer ();
 /* Fetch the value pointed to by a synthetic pointer.  */
 
 extern value *indirect_synthetic_pointer
-  (sect_offset die, LONGEST byte_offset, dwarf2_per_cu_data *per_cu,
+  (sect_offset die, LONGEST byte_offset, dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile, const frame_info_ptr &frame,
    struct type *type, bool resolve_abstract_p = false);
 

@@ -39,11 +39,11 @@ dwz_file::read_string (struct objfile *objfile, LONGEST str_offset)
   if (str.buffer == NULL)
     error (_("DW_FORM_GNU_strp_alt used without .debug_str "
 	     "section [in module %s]"),
-	   bfd_get_filename (dwz_bfd.get ()));
+	   this->filename ());
   if (str_offset >= str.size)
     error (_("DW_FORM_GNU_strp_alt pointing outside of "
 	     ".debug_str section [in module %s]"),
-	   bfd_get_filename (dwz_bfd.get ()));
+	   this->filename ());
   gdb_assert (HOST_CHAR_BIT == 8);
   if (str.buffer[str_offset] == '\0')
     return NULL;
@@ -213,8 +213,7 @@ dwarf2_read_dwz_file (dwarf2_per_objfile *per_objfile)
 
   if (!IS_ABSOLUTE_PATH (filename.c_str ()))
     {
-      gdb::unique_xmalloc_ptr<char> abs
-	= gdb_realpath (bfd_get_filename (per_bfd->obfd));
+      gdb::unique_xmalloc_ptr<char> abs = gdb_realpath (per_bfd->filename ());
 
       filename = ldirname (abs.get ()) + SLASH_STRING + filename;
     }
@@ -241,12 +240,9 @@ dwarf2_read_dwz_file (dwarf2_per_objfile *per_objfile)
   if (dwz_bfd == nullptr)
     {
       gdb::unique_xmalloc_ptr<char> alt_filename;
-      const char *origname = bfd_get_filename (per_bfd->obfd);
-
-      scoped_fd fd (debuginfod_debuginfo_query (buildid,
-						buildid_len,
-						origname,
-						&alt_filename));
+      scoped_fd fd
+	= debuginfod_debuginfo_query (buildid, buildid_len,
+				      per_bfd->filename (), &alt_filename);
 
       if (fd.get () >= 0)
 	{
@@ -263,7 +259,7 @@ dwarf2_read_dwz_file (dwarf2_per_objfile *per_objfile)
 
   if (dwz_bfd == NULL)
     error (_("could not find '.gnu_debugaltlink' file for %s"),
-	   bfd_get_filename (per_bfd->obfd));
+	   per_bfd->filename ());
 
   auto result = std::make_unique<dwz_file> (std::move (dwz_bfd));
 
@@ -275,21 +271,4 @@ dwarf2_read_dwz_file (dwarf2_per_objfile *per_objfile)
   bfd_cache_close (result->dwz_bfd.get ());
 
   per_bfd->dwz_file = std::move (result);
-}
-
-/* See dwz.h.  */
-
-struct dwz_file *
-dwarf2_get_dwz_file (dwarf2_per_bfd *per_bfd, bool require)
-{
-  gdb_assert (!require || per_bfd->dwz_file.has_value ());
-
-  dwz_file *result = nullptr;
-  if (per_bfd->dwz_file.has_value ())
-    {
-      result = per_bfd->dwz_file->get ();
-      if (require && result == nullptr)
-	error (_("could not read '.gnu_debugaltlink' section"));
-    }
-  return result;
 }

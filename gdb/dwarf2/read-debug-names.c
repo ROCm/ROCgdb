@@ -41,7 +41,7 @@ struct dwarf2_debug_names_index : public cooked_index_functions
   void dump (struct objfile *objfile) override
   {
     gdb_printf (".debug_names: exists\n");
-    /* This could call the superclass method if that's useful.  */
+    cooked_index_functions::dump (objfile);
   }
 };
 
@@ -174,7 +174,7 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
   cooked_index_flag flags = 0;
   sect_offset die_offset {};
   enum language lang = language_unknown;
-  dwarf2_per_cu_data *per_cu = nullptr;
+  dwarf2_per_cu *per_cu = nullptr;
   for (const auto &attr : indexval.attr_vec)
     {
       ULONGEST ull;
@@ -777,7 +777,7 @@ check_cus_from_debug_names (dwarf2_per_bfd *per_bfd,
   if (dwz_map.cu_count == 0)
     return true;
 
-  dwz_file *dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   return check_cus_from_debug_names_list (per_bfd, dwz_map, dwz->info,
 					  true /* is_dwz */);
 }
@@ -803,7 +803,7 @@ do_dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
 
   /* If there is a .dwz file, read it so we can get its CU list as
      well.  */
-  dwz_file *dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   if (dwz != NULL)
     {
       if (!read_debug_names_from_section (per_objfile,
