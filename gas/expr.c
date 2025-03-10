@@ -298,7 +298,7 @@ integer_constant (int radix, expressionS *expressionP)
 #define valuesize 32
 #endif
 
-  if (is_end_of_line[(unsigned char) *input_line_pointer])
+  if (is_end_of_stmt (*input_line_pointer))
     {
       expressionP->X_op = O_absent;
       return;
@@ -769,6 +769,16 @@ expr_build_dot (void)
   return expr_build_uconstant (abs_section_offset);
 }
 
+/* Copy an expression, preserving X_md.  */
+
+static void expr_copy (expressionS *dst, const expressionS *src)
+{
+  unsigned short md = dst->X_md;
+
+  *dst = *src;
+  dst->X_md = md;
+}
+
 #ifndef md_register_arithmetic
 # define md_register_arithmetic 1
 #endif
@@ -803,7 +813,7 @@ operand (expressionS *expressionP, enum expr_mode mode)
   SKIP_WHITESPACE ();		/* Leading whitespace is part of operand.  */
   c = *input_line_pointer++;	/* input_line_pointer -> past char in c.  */
 
-  if (is_end_of_line[(unsigned char) c])
+  if (is_end_of_stmt (c))
     goto eol;
 
   switch (c)
@@ -946,7 +956,7 @@ operand (expressionS *expressionP, enum expr_mode mode)
 	      /* If it says "0f" and it could possibly be a floating point
 		 number, make it one.  Otherwise, make it a local label,
 		 and try to deal with parsing the rest later.  */
-	      if (!is_end_of_line[(unsigned char) input_line_pointer[1]]
+	      if (!is_end_of_stmt (input_line_pointer[1])
 		  && strchr (FLT_CHARS, 'f') != NULL)
 		{
 		  char *cp = input_line_pointer + 1;
@@ -1396,8 +1406,17 @@ operand (expressionS *expressionP, enum expr_mode mode)
 	    }
 	  else if (!expr_defer_p (mode) && segment == reg_section)
 	    {
-	      expressionP->X_op = O_register;
-	      expressionP->X_add_number = S_GET_VALUE (symbolP);
+	      if (md_register_arithmetic)
+		{
+		  expressionP->X_op = O_register;
+		  expressionP->X_add_number = S_GET_VALUE (symbolP);
+		}
+	      else
+		{
+		  expr_copy (expressionP,
+			     symbol_get_value_expression (symbolP));
+		  resolve_register (expressionP);
+		}
 	    }
 	  else
 	    {
@@ -1668,7 +1687,7 @@ operatorf (int *num_chars)
   c = *input_line_pointer & 0xff;
   *num_chars = 1;
 
-  if (is_end_of_line[c])
+  if (is_end_of_stmt (c))
     return O_illegal;
 
 #ifdef md_operator
@@ -2489,6 +2508,8 @@ void resolve_register (expressionS *expP)
 
   do
     {
+      if (!md_register_arithmetic && e->X_add_number)
+	break;
       sym = e->X_add_symbol;
       acc += e->X_add_number;
       e = symbol_get_value_expression (sym);
@@ -2497,7 +2518,7 @@ void resolve_register (expressionS *expP)
 
   if (e->X_op == O_register)
     {
-      *expP = *e;
+      expr_copy (expP, e);
       expP->X_add_number += acc;
     }
 }

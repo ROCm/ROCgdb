@@ -34,6 +34,8 @@
 #include "dwarf2/aranges.h"
 #include "dwarf2/attribute.h"
 #include "dwarf2/comp-unit-head.h"
+#include "dwarf2/cooked-index-storage.h"
+#include "dwarf2/cooked-indexer.h"
 #include "dwarf2/cu.h"
 #include "dwarf2/index-cache.h"
 #include "dwarf2/leb.h"
@@ -94,7 +96,6 @@
 #include "run-on-main-thread.h"
 #include "dwarf2/parent-map.h"
 #include "dwarf2/error.h"
-#include <variant>
 #include "gdbsupport/unordered_set.h"
 #include "extract-store-integer.h"
 
@@ -629,152 +630,6 @@ struct dwp_file
   asection **elf_sections = nullptr;
 };
 
-class cutu_reader
-{
-public:
-
-  cutu_reader (dwarf2_per_cu *this_cu,
-	       dwarf2_per_objfile *per_objfile,
-	       const struct abbrev_table *abbrev_table,
-	       dwarf2_cu *existing_cu,
-	       bool skip_partial,
-	       enum language pretend_language,
-	       const abbrev_table_cache *cache = nullptr);
-
-  cutu_reader (dwarf2_per_cu *this_cu,
-	       dwarf2_per_objfile *per_objfile,
-	       enum language pretend_language,
-	       struct dwarf2_cu *parent_cu = nullptr,
-	       struct dwo_file *dwo_file = nullptr);
-
-  DISABLE_COPY_AND_ASSIGN (cutu_reader);
-
-  cutu_reader (cutu_reader &&) = default;
-
-  bool is_dummy () const { return m_dummy_p; }
-
-  dwarf2_cu *cu () const { return m_cu; }
-
-  die_info *comp_unit_die () const { return m_comp_unit_die; }
-
-  const gdb_byte *info_ptr () const { return m_info_ptr; }
-
-  bfd *abfd () const { return m_abfd; }
-
-  const gdb_byte *buffer () const { return m_buffer; }
-
-  const gdb_byte *buffer_end () const { return m_buffer_end; }
-
-  const dwarf2_section_info *section () const { return m_die_section; }
-
-  /* Release the new CU, putting it on the chain.  This cannot be done
-     for dummy CUs.  */
-  void keep ();
-
-  /* Release the abbrev table, transferring ownership to the
-     caller.  */
-  abbrev_table_up release_abbrev_table ()
-  {
-    return std::move (m_abbrev_table_holder);
-  }
-
-  die_info *read_die_and_siblings (const gdb_byte *info_ptr,
-				   const gdb_byte **new_info_ptr,
-				   die_info *parent);
-
-  const gdb_byte *read_attribute (attribute *attr, const attr_abbrev *abbrev,
-				  const gdb_byte *info_ptr,
-				  bool allow_reprocess = true);
-
-  const abbrev_info *peek_die_abbrev (const gdb_byte *info_ptr,
-				      unsigned int *bytes_read);
-
-  const gdb_byte *skip_one_die (const gdb_byte *info_ptr,
-				const abbrev_info *abbrev,
-				bool do_skip_children = true);
-
-  const gdb_byte *skip_children (const gdb_byte *info_ptr);
-
-private:
-  void init_cu_die_reader (dwarf2_cu *cu, dwarf2_section_info *section,
-			   struct dwo_file *dwo_file,
-			   const struct abbrev_table *abbrev_table);
-
-  void init_tu_and_read_dwo_dies (dwarf2_per_cu *this_cu,
-				  dwarf2_per_objfile *per_objfile,
-				  dwarf2_cu *existing_cu,
-				  enum language pretend_language);
-
-  int read_cutu_die_from_dwo (dwarf2_cu *cu, dwo_unit *dwo_unit,
-			      die_info *stub_comp_unit_die,
-			      const char *stub_comp_dir,
-			      const gdb_byte **result_info_ptr,
-			      die_info **result_comp_unit_die,
-			      abbrev_table_up *result_dwo_abbrev_table);
-
-  void prepare_one_comp_unit (struct dwarf2_cu *cu,
-			      enum language pretend_language);
-
-  const gdb_byte *read_toplevel_die (die_info **diep, const gdb_byte *info_ptr,
-				     gdb::array_view<attribute *> extra_attrs
-				     = {});
-
-  die_info *read_die_and_siblings_1 (const gdb_byte *, const gdb_byte **,
-				     die_info *);
-
-  die_info *read_die_and_children (const gdb_byte *info_ptr,
-				   const gdb_byte **new_info_ptr,
-				   die_info *parent);
-
-  const gdb_byte *read_full_die_1 (die_info **diep, const gdb_byte *info_ptr,
-				   int num_extra_attrs, bool allow_reprocess);
-
-  const gdb_byte *read_attribute_value (attribute *attr, unsigned form,
-					LONGEST implicit_const,
-					const gdb_byte *info_ptr,
-					bool allow_reprocess);
-
-  void read_attribute_reprocess (attribute *attr,
-				 dwarf_tag tag = DW_TAG_padding);
-
-  const char *read_dwo_str_index (ULONGEST str_index);
-
-  /* The bfd of die_section.  */
-  bfd *m_abfd;
-
-  /* The CU of the DIE we are parsing.  */
-  struct dwarf2_cu *m_cu;
-
-  /* Non-NULL if reading a DWO file (including one packaged into a DWP).  */
-  struct dwo_file *m_dwo_file;
-
-  /* The section the die comes from.
-    This is either .debug_info or .debug_types, or the .dwo variants.  */
-  struct dwarf2_section_info *m_die_section;
-
-  /* die_section->buffer.  */
-  const gdb_byte *m_buffer;
-
-  /* The end of the buffer.  */
-  const gdb_byte *m_buffer_end;
-
-  /* The abbreviation table to use when reading the DIEs.  */
-  const struct abbrev_table *m_abbrev_table;
-
-  const gdb_byte *m_info_ptr = nullptr;
-  struct die_info *m_comp_unit_die = nullptr;
-  bool m_dummy_p = false;
-
-  dwarf2_per_cu *m_this_cu;
-  dwarf2_cu_up m_new_cu;
-
-  /* The ordinary abbreviation table.  */
-  abbrev_table_up m_abbrev_table_holder;
-
-  /* The DWO abbreviation table.  */
-  abbrev_table_up m_dwo_abbrev_table;
-};
-
 /* FIXME: We might want to set this from BFD via bfd_arch_bits_per_byte,
    but this would require a corresponding change in unpack_field_as_long
    and friends.  */
@@ -898,9 +753,6 @@ show_dwarf_synchronous (struct ui_file *file, int from_tty,
 
 /* local function prototypes */
 
-static void dwarf2_find_base_address (struct die_info *die,
-				      struct dwarf2_cu *cu);
-
 static void build_type_psymtabs_reader (cutu_reader *reader,
 					cooked_index_storage *storage);
 
@@ -1017,31 +869,6 @@ static struct dwarf2_section_info *cu_debug_loc_section (struct dwarf2_cu *cu);
 static struct dwarf2_section_info *cu_debug_rnglists_section
   (struct dwarf2_cu *cu, dwarf_tag tag);
 
-/* How dwarf2_get_pc_bounds constructed its *LOWPC and *HIGHPC return
-   values.  Keep the items ordered with increasing constraints compliance.  */
-enum pc_bounds_kind
-{
-  /* No attribute DW_AT_low_pc, DW_AT_high_pc or DW_AT_ranges was found.  */
-  PC_BOUNDS_NOT_PRESENT,
-
-  /* Some of the attributes DW_AT_low_pc, DW_AT_high_pc or DW_AT_ranges
-     were present but they do not form a valid range of PC addresses.  */
-  PC_BOUNDS_INVALID,
-
-  /* Discontiguous range was found - that is DW_AT_ranges was found.  */
-  PC_BOUNDS_RANGES,
-
-  /* Contiguous range was found - DW_AT_low_pc and DW_AT_high_pc were found.  */
-  PC_BOUNDS_HIGH_LOW,
-};
-
-static enum pc_bounds_kind dwarf2_get_pc_bounds (struct die_info *,
-						 unrelocated_addr *,
-						 unrelocated_addr *,
-						 struct dwarf2_cu *,
-						 addrmap_mutable *,
-						 void *);
-
 static void get_scope_pc_bounds (struct die_info *,
 				 unrelocated_addr *, unrelocated_addr *,
 				 struct dwarf2_cu *);
@@ -1084,9 +911,6 @@ static const char *namespace_name (struct die_info *die,
 				   int *is_anonymous, struct dwarf2_cu *);
 
 static void process_enumeration_scope (struct die_info *, struct dwarf2_cu *);
-
-static bool decode_locdesc (struct dwarf_block *, struct dwarf2_cu *,
-			    CORE_ADDR *addr);
 
 static enum dwarf_array_dim_ordering read_array_order (struct die_info *,
 						       struct dwarf2_cu *);
@@ -1151,10 +975,6 @@ static void dwarf2_symbol_mark_computed (const struct attribute *attr,
 					 struct symbol *sym,
 					 struct dwarf2_cu *cu,
 					 int is_block);
-
-static dwarf2_per_cu *dwarf2_find_containing_comp_unit
-  (sect_offset sect_off, unsigned int offset_in_dwz,
-   dwarf2_per_bfd *per_bfd);
 
 static struct type *set_die_type (struct die_info *, struct type *,
 				  struct dwarf2_cu *, bool = false);
@@ -1238,9 +1058,6 @@ dwarf2_per_cu_deleter::operator() (dwarf2_per_cu *data)
   else
     delete data;
 }
-
-static file_and_directory &find_file_and_directory
-     (struct die_info *die, struct dwarf2_cu *cu);
 
 static const char *compute_include_file_name
      (const struct line_header *lh,
@@ -2044,7 +1861,9 @@ dw2_get_file_names (dwarf2_per_cu *this_cu, dwarf2_per_objfile *per_objfile)
   if (this_cu->files_read)
     return this_cu->file_names;
 
-  cutu_reader reader (this_cu, per_objfile, language_minimal);
+  cutu_reader reader (this_cu, per_objfile, nullptr,
+		      per_objfile->get_cu (this_cu), true, language_minimal,
+		      nullptr);
   if (!reader.is_dummy ())
     dw2_get_file_names_reader (reader.cu (), reader.comp_unit_die ());
 
@@ -2574,15 +2393,9 @@ dwarf2_initialize_objfile (struct objfile *objfile,
   return true;
 }
 
-
+/* See read.h.  */
 
-/* Find the base address of the compilation unit for range lists and
-   location lists.  It will normally be specified by DW_AT_low_pc.
-   In DWARF-3 draft 4, the base address could be overridden by
-   DW_AT_entry_pc.  It's been removed, but GCC still uses this for
-   compilation units with discontinuous ranges.  */
-
-static void
+void
 dwarf2_find_base_address (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct attribute *attr;
@@ -3487,8 +3300,10 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
   struct objfile *objfile = per_objfile->objfile;
   struct dwarf2_section_info *section = this_cu->section;
   bfd *abfd = section->get_bfd_owner ();
-  struct dwarf2_section_info *abbrev_section;
   const gdb_byte *begin_info_ptr, *info_ptr;
+
+  gdb_assert (parent_cu != nullptr);
+  gdb_assert (dwo_file != nullptr);
 
   if (dwarf_die_debug)
     gdb_printf (gdb_stdlog, "Reading %s unit at offset %s\n",
@@ -3497,9 +3312,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 
   gdb_assert (per_objfile->get_cu (this_cu) == nullptr);
 
-  abbrev_section = (dwo_file != NULL
-		    ? &dwo_file->sections.abbrev
-		    : get_abbrev_section_for_cu (this_cu));
+  dwarf2_section_info *abbrev_section = &dwo_file->sections.abbrev;
 
   /* This is cheap if the section is already read in.  */
   section->read (objfile);
@@ -3513,11 +3326,9 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 					     ? rcuh_kind::TYPE
 					     : rcuh_kind::COMPILE));
 
-  if (parent_cu != nullptr)
-    {
-      m_new_cu->str_offsets_base = parent_cu->str_offsets_base;
-      m_new_cu->addr_base = parent_cu->addr_base;
-    }
+  m_new_cu->str_offsets_base = parent_cu->str_offsets_base;
+  m_new_cu->addr_base = parent_cu->addr_base;
+
   this_cu->set_length (m_new_cu->header.get_length_with_initial ());
 
   /* Skip dummy compilation units.  */
@@ -3650,147 +3461,6 @@ get_type_unit_group (struct dwarf2_cu *cu, const struct attribute *stmt_list)
   gdb_assert (tu_group != nullptr);
   return tu_group;
 }
-
-
-cooked_index_storage::cooked_index_storage ()
-  : m_reader_hash (htab_create_alloc (10, hash_cutu_reader,
-				      eq_cutu_reader,
-				      htab_delete_entry<cutu_reader>,
-				      xcalloc, xfree)),
-    m_shard (new cooked_index_shard)
-{
-}
-
-cutu_reader *
-cooked_index_storage::get_reader (dwarf2_per_cu *per_cu)
-{
-  int index = per_cu->index;
-  return (cutu_reader *) htab_find_with_hash (m_reader_hash.get (),
-					      &index, index);
-}
-
-cutu_reader *
-cooked_index_storage::preserve (cutu_reader_up reader)
-{
-  m_abbrev_table_cache.add (reader->release_abbrev_table ());
-
-  int index = reader->cu ()->per_cu->index;
-  void **slot = htab_find_slot_with_hash (m_reader_hash.get (), &index,
-					  index, INSERT);
-  gdb_assert (*slot == nullptr);
-  cutu_reader *result = reader.get ();
-  *slot = reader.release ();
-  return result;
-}
-
-/* Hash function for a cutu_reader.  */
-hashval_t
-cooked_index_storage::hash_cutu_reader (const void *a)
-{
-  const cutu_reader *reader = (const cutu_reader *) a;
-  return reader->cu ()->per_cu->index;
-}
-
-/* Equality function for cutu_reader.  */
-int
-cooked_index_storage::eq_cutu_reader (const void *a, const void *b)
-{
-  const cutu_reader *ra = (const cutu_reader *) a;
-  const int *rb = (const int *) b;
-  return ra->cu ()->per_cu->index == *rb;
-}
-
-/* An instance of this is created to index a CU.  */
-
-class cooked_indexer
-{
-public:
-  cooked_indexer (cooked_index_storage *storage, dwarf2_per_cu *per_cu,
-		  enum language language)
-    : m_index_storage (storage),
-      m_per_cu (per_cu),
-      m_language (language),
-      m_die_range_map (storage->get_parent_map ())
-  {
-  }
-
-  DISABLE_COPY_AND_ASSIGN (cooked_indexer);
-
-  /* Index the given CU.  */
-  void make_index (cutu_reader *reader);
-
-private:
-
-  /* A helper function to scan the PC bounds of READER and record them
-     in the storage's addrmap.  */
-  void check_bounds (cutu_reader *reader);
-
-  /* Ensure that the indicated CU exists.  The cutu_reader for it is
-     returned.  FOR_SCANNING is true if the caller intends to scan all
-     the DIEs in the CU; when false, this use is assumed to be to look
-     up just a single DIE.  */
-  cutu_reader *ensure_cu_exists (cutu_reader *reader,
-				 dwarf2_per_objfile *per_objfile,
-				 sect_offset sect_off,
-				 bool is_dwz,
-				 bool for_scanning);
-
-  /* Index DIEs in the READER starting at INFO_PTR.  PARENT is
-     the entry for the enclosing scope (nullptr at top level).  FULLY
-     is true when a full scan must be done -- in some languages,
-     function scopes must be fully explored in order to find nested
-     functions.  This returns a pointer to just after the spot where
-     reading stopped.  */
-  const gdb_byte *index_dies (cutu_reader *reader,
-			      const gdb_byte *info_ptr,
-			      std::variant<const cooked_index_entry *,
-					   parent_map::addr_type> parent,
-			      bool fully);
-
-  /* Scan the attributes for a given DIE and update the out
-     parameters.  Returns a pointer to the byte after the DIE.  */
-  const gdb_byte *scan_attributes (dwarf2_per_cu *scanning_per_cu,
-				   cutu_reader *reader,
-				   const gdb_byte *watermark_ptr,
-				   const gdb_byte *info_ptr,
-				   const abbrev_info *abbrev,
-				   const char **name,
-				   const char **linkage_name,
-				   cooked_index_flag *flags,
-				   sect_offset *sibling_offset,
-				   const cooked_index_entry **parent_entry,
-				   parent_map::addr_type *maybe_defer,
-				   bool *is_enum_class,
-				   bool for_specification);
-
-  /* Handle DW_TAG_imported_unit, by scanning the DIE to find
-     DW_AT_import, and then scanning the referenced CU.  Returns a
-     pointer to the byte after the DIE.  */
-  const gdb_byte *index_imported_unit (cutu_reader *reader,
-				       const gdb_byte *info_ptr,
-				       const abbrev_info *abbrev);
-
-  /* Recursively read DIEs, recording the section offsets in
-     m_die_range_map and then calling index_dies.  */
-  const gdb_byte *recurse (cutu_reader *reader,
-			   const gdb_byte *info_ptr,
-			   std::variant<const cooked_index_entry *,
-					parent_map::addr_type> parent_entry,
-			   bool fully);
-
-  /* The storage object, where the results are kept.  */
-  cooked_index_storage *m_index_storage;
-  /* The CU that we are reading on behalf of.  This object might be
-     asked to index one CU but to treat the results as if they come
-     from some including CU; in this case the including CU would be
-     recorded here.  */
-  dwarf2_per_cu *m_per_cu;
-  /* The language that we're assuming when reading.  */
-  enum language m_language;
-
-  /* Map from DIE ranges to newly-created entries.  */
-  parent_map *m_die_range_map;
-};
 
 /* Subroutine of dwarf2_build_psymtabs_hard to simplify it.
    Process compilation unit THIS_CU for a psymtab.  */
@@ -6504,7 +6174,7 @@ read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
 		       &objfile->objfile_obstack);
 }
 
-static file_and_directory &
+file_and_directory &
 find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
 {
   if (cu->per_cu->fnd != nullptr)
@@ -9970,12 +9640,9 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
   return 1;
 }
 
-/* Get low and high pc attributes from DW_AT_ranges attribute value OFFSET.
-   Return 1 if the attributes are present and valid, otherwise, return 0.
-   TAG is passed to dwarf2_ranges_process.  If MAP is not NULL, then
-   ranges in MAP are set, using DATUM as the value.  */
+/* See read.h.  */
 
-static int
+int
 dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 		    unrelocated_addr *high_return, struct dwarf2_cu *cu,
 		    addrmap_mutable *map, void *datum, dwarf_tag tag)
@@ -10146,11 +9813,9 @@ dwarf_get_pc_bounds_ranges_or_highlow_pc (die_info *die, unrelocated_addr *low,
     return ret;
 }
 
-/* Get low and high pc attributes from a die.  See enum pc_bounds_kind
-   definition for the return value.  *LOWPC and *HIGHPC are set iff
-   neither PC_BOUNDS_NOT_PRESENT nor PC_BOUNDS_INVALID are returned.  */
+/* See read.h.  */
 
-static enum pc_bounds_kind
+pc_bounds_kind
 dwarf2_get_pc_bounds (struct die_info *die, unrelocated_addr *lowpc,
 		      unrelocated_addr *highpc, struct dwarf2_cu *cu,
 		      addrmap_mutable *map, void *datum)
@@ -15086,663 +14751,6 @@ cutu_reader::read_toplevel_die (die_info **diep, const gdb_byte *info_ptr,
 
   return result;
 }
-
-
-void
-cooked_indexer::check_bounds (cutu_reader *reader)
-{
-  dwarf2_cu *cu = reader->cu ();
-
-  if (cu->per_cu->addresses_seen)
-    return;
-
-  unrelocated_addr best_lowpc = {}, best_highpc = {};
-  /* Possibly set the default values of LOWPC and HIGHPC from
-     `DW_AT_ranges'.  */
-  dwarf2_find_base_address (reader->comp_unit_die (), cu);
-  enum pc_bounds_kind cu_bounds_kind
-    = dwarf2_get_pc_bounds (reader->comp_unit_die (), &best_lowpc, &best_highpc,
-			    cu, m_index_storage->get_addrmap (), cu->per_cu);
-  if (cu_bounds_kind == PC_BOUNDS_HIGH_LOW && best_lowpc < best_highpc)
-    {
-      /* Store the contiguous range if it is not empty; it can be
-	 empty for CUs with no code.  addrmap requires CORE_ADDR, so
-	 we cast here.  */
-      m_index_storage->get_addrmap ()->set_empty ((CORE_ADDR) best_lowpc,
-						  (CORE_ADDR) best_highpc - 1,
-						  cu->per_cu);
-
-      cu->per_cu->addresses_seen = true;
-    }
-}
-
-/* Helper function that returns true if TAG can have a linkage
-   name.  */
-
-static bool
-tag_can_have_linkage_name (enum dwarf_tag tag)
-{
-  switch (tag)
-    {
-    case DW_TAG_variable:
-    case DW_TAG_subprogram:
-      return true;
-
-    default:
-      return false;
-    }
-}
-
-cutu_reader *
-cooked_indexer::ensure_cu_exists (cutu_reader *reader,
-				  dwarf2_per_objfile *per_objfile,
-				  sect_offset sect_off, bool is_dwz,
-				  bool for_scanning)
-{
-  /* Lookups for type unit references are always in the CU, and
-     cross-CU references will crash.  */
-  if (reader->cu ()->per_cu->is_dwz == is_dwz
-      && reader->cu ()->header.offset_in_cu_p (sect_off))
-    return reader;
-
-  dwarf2_per_cu *per_cu
-    = dwarf2_find_containing_comp_unit (sect_off, is_dwz,
-					per_objfile->per_bfd);
-
-  /* When scanning, we only want to visit a given CU a single time.
-     Doing this check here avoids self-imports as well.  */
-  if (for_scanning)
-    {
-      bool nope = false;
-      if (!per_cu->scanned.compare_exchange_strong (nope, true))
-	return nullptr;
-    }
-
-  cutu_reader *result = m_index_storage->get_reader (per_cu);
-  if (result == nullptr)
-    {
-      cutu_reader new_reader (per_cu, per_objfile, nullptr, nullptr, false,
-			      language_minimal,
-			      &m_index_storage->get_abbrev_table_cache ());
-
-      if (new_reader.is_dummy () || new_reader.comp_unit_die () == nullptr
-	  || !new_reader.comp_unit_die ()->has_children)
-	return nullptr;
-
-      auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
-      result = m_index_storage->preserve (std::move (copy));
-    }
-
-  if (result->is_dummy () || result->comp_unit_die () == nullptr
-      || !result->comp_unit_die ()->has_children)
-    return nullptr;
-
-  if (for_scanning)
-    check_bounds (result);
-
-  return result;
-}
-
-const gdb_byte *
-cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
-				 cutu_reader *reader,
-				 const gdb_byte *watermark_ptr,
-				 const gdb_byte *info_ptr,
-				 const abbrev_info *abbrev,
-				 const char **name,
-				 const char **linkage_name,
-				 cooked_index_flag *flags,
-				 sect_offset *sibling_offset,
-				 const cooked_index_entry **parent_entry,
-				 parent_map::addr_type *maybe_defer,
-				 bool *is_enum_class,
-				 bool for_specification)
-{
-  bool origin_is_dwz = false;
-  bool is_declaration = false;
-  sect_offset origin_offset {};
-
-  std::optional<unrelocated_addr> low_pc;
-  std::optional<unrelocated_addr> high_pc;
-  bool high_pc_relative = false;
-
-  for (int i = 0; i < abbrev->num_attrs; ++i)
-    {
-      attribute attr;
-      info_ptr = reader->read_attribute (&attr, &abbrev->attrs[i], info_ptr);
-
-      /* Store the data if it is of an attribute we want to keep in a
-	 partial symbol table.  */
-      switch (attr.name)
-	{
-	case DW_AT_name:
-	  switch (abbrev->tag)
-	    {
-	    case DW_TAG_compile_unit:
-	    case DW_TAG_partial_unit:
-	    case DW_TAG_type_unit:
-	      /* Compilation units have a DW_AT_name that is a filename, not
-		 a source language identifier.  */
-	      break;
-
-	    default:
-	      if (*name == nullptr)
-		*name = attr.as_string ();
-	      break;
-	    }
-	  break;
-
-	case DW_AT_linkage_name:
-	case DW_AT_MIPS_linkage_name:
-	  /* Note that both forms of linkage name might appear.  We
-	     assume they will be the same, and we only store the last
-	     one we see.  */
-	  if (*linkage_name == nullptr)
-	    {
-	      *linkage_name = attr.as_string ();
-
-	      if (*linkage_name != nullptr)
-		{
-		  *linkage_name
-		    = (gdb_hip_test_mode_frob_names
-		       (reader->cu ()->per_objfile->objfile,
-			*linkage_name));
-		}
-	    }
-	  break;
-
-	/* DWARF 4 has defined a dedicated DW_AT_main_subprogram
-	   attribute to indicate the starting function of the program...  */
-	case DW_AT_main_subprogram:
-	  if (attr.as_boolean ())
-	    *flags |= IS_MAIN;
-	  break;
-
-	/* ... however with older versions the DW_CC_program value of
-	   the DW_AT_calling_convention attribute was used instead as
-	   the only means available.  We handle both variants then.  */
-	case DW_AT_calling_convention:
-	  if (attr.constant_value (DW_CC_normal) == DW_CC_program)
-	    *flags |= IS_MAIN;
-	  break;
-
-	case DW_AT_declaration:
-	  is_declaration = attr.as_boolean ();
-	  break;
-
-	case DW_AT_sibling:
-	  if (sibling_offset != nullptr)
-	    *sibling_offset = attr.get_ref_die_offset ();
-	  break;
-
-	case DW_AT_specification:
-	case DW_AT_abstract_origin:
-	case DW_AT_extension:
-	  origin_offset = attr.get_ref_die_offset ();
-	  origin_is_dwz = attr.form == DW_FORM_GNU_ref_alt;
-	  break;
-
-	case DW_AT_external:
-	  if (attr.as_boolean ())
-	    *flags &= ~IS_STATIC;
-	  break;
-
-	case DW_AT_enum_class:
-	  if (attr.as_boolean ())
-	    *is_enum_class = true;
-	  break;
-
-	case DW_AT_low_pc:
-	  low_pc = attr.as_address ();
-	  break;
-
-	case DW_AT_high_pc:
-	  high_pc = attr.as_address ();
-	  if (reader->cu ()->header.version >= 4 && attr.form_is_constant ())
-	    high_pc_relative = true;
-	  break;
-
-	case DW_AT_location:
-	  if (!scanning_per_cu->addresses_seen && attr.form_is_block ())
-	    {
-	      struct dwarf_block *locdesc = attr.as_block ();
-	      CORE_ADDR addr;
-	      dwarf2_cu *cu = reader->cu ();
-
-	      if (decode_locdesc (locdesc, cu, &addr)
-		  && (addr != 0
-		      || cu->per_objfile->per_bfd->has_section_at_zero))
-		{
-		  low_pc = (unrelocated_addr) addr;
-		  /* For variables, we don't want to try decoding the
-		     type just to find the size -- for gdb's purposes
-		     we only need the address of a variable.  */
-		  high_pc = (unrelocated_addr) (addr + 1);
-		  high_pc_relative = false;
-		}
-	    }
-	  break;
-
-	case DW_AT_ranges:
-	  if (!scanning_per_cu->addresses_seen)
-	    {
-	      /* Offset in the .debug_ranges or .debug_rnglist section
-		 (depending on DWARF version).  */
-	      ULONGEST ranges_offset = attr.as_unsigned ();
-
-	      /* See dwarf2_cu::gnu_ranges_base's doc for why we might
-		 want to add this value.  */
-	      ranges_offset += reader->cu ()->gnu_ranges_base;
-
-	      unrelocated_addr lowpc, highpc;
-	      dwarf2_ranges_read (ranges_offset, &lowpc, &highpc, reader->cu (),
-				  m_index_storage->get_addrmap (),
-				  scanning_per_cu, abbrev->tag);
-	    }
-	  break;
-	}
-    }
-
-  /* We don't want to examine declarations, but if we found a
-     declaration when handling DW_AT_specification or the like, then
-     that is ok.  Similarly, we allow an external variable without a
-     location; those are resolved via minimal symbols.  */
-  if (is_declaration && !for_specification
-      && !(abbrev->tag == DW_TAG_variable && (*flags & IS_STATIC) == 0))
-    {
-      /* We always want to recurse into some types, but we may not
-	 want to treat them as definitions.  */
-      if ((abbrev->tag == DW_TAG_class_type
-	   || abbrev->tag == DW_TAG_structure_type
-	   || abbrev->tag == DW_TAG_union_type
-	   || abbrev->tag == DW_TAG_namespace)
-	  && abbrev->has_children)
-	*flags |= IS_TYPE_DECLARATION;
-      else
-	{
-	  *linkage_name = nullptr;
-	  *name = nullptr;
-	}
-    }
-  else if ((*name == nullptr
-	    || (*linkage_name == nullptr
-		&& tag_can_have_linkage_name (abbrev->tag))
-	    || (*parent_entry == nullptr && m_language != language_c))
-	   && origin_offset != sect_offset (0))
-    {
-      cutu_reader *new_reader
-	= ensure_cu_exists (reader, reader->cu ()->per_objfile, origin_offset,
-			    origin_is_dwz, false);
-      if (new_reader == nullptr)
-	error (_(DWARF_ERROR_PREFIX
-		 "cannot follow reference to DIE at %s"
-		 " [in module %s]"),
-	       sect_offset_str (origin_offset),
-	       bfd_get_filename (reader->abfd ()));
-
-      const gdb_byte *new_info_ptr
-	= (new_reader->buffer () + to_underlying (origin_offset));
-
-      if (*parent_entry == nullptr)
-	{
-	  /* We only perform immediate lookups of parents for DIEs
-	     from earlier in this CU.  This avoids any problem
-	     with a NULL result when when we see a reference to a
-	     DIE in another CU that we may or may not have
-	     imported locally.  */
-	  parent_map::addr_type addr = parent_map::form_addr (new_info_ptr);
-	  if (new_reader->cu () != reader->cu ()
-	      || new_info_ptr > watermark_ptr)
-	    *maybe_defer = addr;
-	  else
-	    *parent_entry = m_die_range_map->find (addr);
-	}
-
-      unsigned int bytes_read;
-      const abbrev_info *new_abbrev
-	= new_reader->peek_die_abbrev (new_info_ptr, &bytes_read);
-
-      if (new_abbrev == nullptr)
-	error (_(DWARF_ERROR_PREFIX
-		 "Unexpected null DIE at offset %s [in module %s]"),
-	       sect_offset_str (origin_offset),
-	       bfd_get_filename (new_reader->abfd ()));
-
-      new_info_ptr += bytes_read;
-
-      if (new_reader->cu () == reader->cu () && new_info_ptr == watermark_ptr)
-	{
-	  /* Self-reference, we're done.  */
-	}
-      else
-	scan_attributes (scanning_per_cu, new_reader, new_info_ptr,
-			 new_info_ptr, new_abbrev, name, linkage_name,
-			 flags, nullptr, parent_entry, maybe_defer,
-			 is_enum_class, true);
-    }
-
-  if (!for_specification)
-    {
-      /* Older versions of GNAT emit full-qualified encoded names.  In
-	 this case, also use this name as the linkage name.  */
-      if (m_language == language_ada
-	  && *linkage_name == nullptr
-	  && *name != nullptr
-	  && strstr (*name, "__") != nullptr)
-	*linkage_name = *name;
-
-      if (!scanning_per_cu->addresses_seen && low_pc.has_value ()
-	  && (reader->cu ()->per_objfile->per_bfd->has_section_at_zero
-	      || *low_pc != (unrelocated_addr) 0)
-	  && high_pc.has_value ())
-	{
-	  if (high_pc_relative)
-	    high_pc = (unrelocated_addr) ((ULONGEST) *high_pc
-					  + (ULONGEST) *low_pc);
-
-	  if (*high_pc > *low_pc)
-	    {
-	      /* Need CORE_ADDR casts for addrmap.  */
-	      m_index_storage->get_addrmap ()->set_empty
-		((CORE_ADDR) *low_pc, (CORE_ADDR) *high_pc - 1,
-		 scanning_per_cu);
-	    }
-	}
-
-      if (abbrev->tag == DW_TAG_namespace && *name == nullptr)
-	*name = "(anonymous namespace)";
-
-      /* Keep in sync with new_symbol.  */
-      if (abbrev->tag == DW_TAG_subprogram
-	  && (m_language == language_ada
-	      || m_language == language_fortran))
-	*flags &= ~IS_STATIC;
-    }
-
-  return info_ptr;
-}
-
-const gdb_byte *
-cooked_indexer::index_imported_unit (cutu_reader *reader,
-				     const gdb_byte *info_ptr,
-				     const abbrev_info *abbrev)
-{
-  sect_offset sect_off {};
-  bool is_dwz = false;
-
-  for (int i = 0; i < abbrev->num_attrs; ++i)
-    {
-      /* Note that we never need to reprocess attributes here.  */
-      attribute attr;
-      info_ptr = reader->read_attribute (&attr, &abbrev->attrs[i], info_ptr);
-
-      if (attr.name == DW_AT_import)
-	{
-	  sect_off = attr.get_ref_die_offset ();
-	  is_dwz = (attr.form == DW_FORM_GNU_ref_alt
-		    || reader->cu ()->per_cu->is_dwz);
-	}
-    }
-
-  /* Did not find DW_AT_import.  */
-  if (sect_off == sect_offset (0))
-    return info_ptr;
-
-  dwarf2_per_objfile *per_objfile = reader->cu ()->per_objfile;
-  cutu_reader *new_reader
-    = ensure_cu_exists (reader, per_objfile, sect_off, is_dwz, true);
-  if (new_reader != nullptr)
-    {
-      index_dies (new_reader, new_reader->info_ptr (), nullptr, false);
-
-      reader->cu ()->add_dependence (new_reader->cu ()->per_cu);
-    }
-
-  return info_ptr;
-}
-
-const gdb_byte *
-cooked_indexer::recurse (cutu_reader *reader,
-			 const gdb_byte *info_ptr,
-			 std::variant<const cooked_index_entry *,
-				      parent_map::addr_type> parent,
-			 bool fully)
-{
-  info_ptr = index_dies (reader, info_ptr, parent, fully);
-
-  if (!std::holds_alternative<const cooked_index_entry *> (parent))
-    return info_ptr;
-  const cooked_index_entry *parent_entry
-    = std::get<const cooked_index_entry *> (parent);
-
-  if (parent_entry != nullptr)
-    {
-      /* Both start and end are inclusive, so use both "+ 1" and "- 1" to
-	 limit the range to the children of parent_entry.  */
-      parent_map::addr_type start
-	= parent_map::form_addr (reader->buffer ()
-				 + to_underlying (parent_entry->die_offset)
-				 + 1);
-      parent_map::addr_type end = parent_map::form_addr (info_ptr - 1);
-      m_die_range_map->add_entry (start, end, parent_entry);
-    }
-
-  return info_ptr;
-}
-
-const gdb_byte *
-cooked_indexer::index_dies (cutu_reader *reader,
-			    const gdb_byte *info_ptr,
-			    std::variant<const cooked_index_entry *,
-					 parent_map::addr_type> parent,
-			    bool fully)
-{
-  const gdb_byte *end_ptr
-    = (reader->buffer () + to_underlying (reader->cu ()->header.sect_off)
-       + reader->cu ()->header.get_length_with_initial ());
-
-  while (info_ptr < end_ptr)
-    {
-      sect_offset this_die = (sect_offset) (info_ptr - reader->buffer ());
-      unsigned int bytes_read;
-      const abbrev_info *abbrev
-	= reader->peek_die_abbrev (info_ptr, &bytes_read);
-      info_ptr += bytes_read;
-      if (abbrev == nullptr)
-	break;
-
-      if (abbrev->tag == DW_TAG_imported_unit)
-	{
-	  info_ptr = index_imported_unit (reader, info_ptr, abbrev);
-	  continue;
-	}
-
-      parent_map::addr_type defer {};
-      if (std::holds_alternative<parent_map::addr_type> (parent))
-	defer = std::get<parent_map::addr_type> (parent);
-      const cooked_index_entry *parent_entry = nullptr;
-      if (std::holds_alternative<const cooked_index_entry *> (parent))
-	parent_entry = std::get<const cooked_index_entry *> (parent);
-
-      /* If a DIE parent is a DW_TAG_subprogram, then the DIE is only
-	 interesting if it's a DW_TAG_subprogram or a DW_TAG_entry_point.  */
-      bool die_interesting
-	= (abbrev->interesting
-	   && (parent_entry == nullptr
-	       || parent_entry->tag != DW_TAG_subprogram
-	       || abbrev->tag == DW_TAG_subprogram
-	       || abbrev->tag == DW_TAG_entry_point));
-
-      if (!die_interesting)
-	{
-	  info_ptr = reader->skip_one_die (info_ptr, abbrev, !fully);
-	  if (fully && abbrev->has_children)
-	    info_ptr = index_dies (reader, info_ptr, parent, fully);
-	  continue;
-	}
-
-      const char *name = nullptr;
-      const char *linkage_name = nullptr;
-      cooked_index_flag flags = IS_STATIC;
-      sect_offset sibling {};
-      const cooked_index_entry *this_parent_entry = parent_entry;
-      bool is_enum_class = false;
-
-      /* The scope of a DW_TAG_entry_point cooked_index_entry is the one of
-	 its surrounding subroutine.  */
-      if (abbrev->tag == DW_TAG_entry_point)
-	this_parent_entry = parent_entry->get_parent ();
-      info_ptr
-	= scan_attributes (reader->cu ()->per_cu, reader, info_ptr, info_ptr,
-			   abbrev, &name, &linkage_name, &flags, &sibling,
-			   &this_parent_entry, &defer, &is_enum_class, false);
-      /* A DW_TAG_entry_point inherits its static/extern property from
-	 the enclosing subroutine.  */
-      if (abbrev->tag == DW_TAG_entry_point)
-	{
-	  flags &= ~IS_STATIC;
-	  flags |= parent_entry->flags & IS_STATIC;
-	}
-
-      if (abbrev->tag == DW_TAG_namespace
-	  && m_language == language_cplus
-	  && strcmp (name, "::") == 0)
-	{
-	  /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they
-	     generated bogus DW_TAG_namespace DIEs with a name of "::"
-	     for the global namespace.  Work around this problem
-	     here.  */
-	  name = nullptr;
-	}
-
-      cooked_index_entry *this_entry = nullptr;
-      if (name != nullptr)
-	{
-	  if (defer != 0)
-	    this_entry
-	      = m_index_storage->add (this_die, abbrev->tag,
-				      flags | IS_PARENT_DEFERRED, name,
-				      defer, m_per_cu);
-	  else
-	    this_entry
-	      = m_index_storage->add (this_die, abbrev->tag, flags, name,
-				      this_parent_entry, m_per_cu);
-	}
-
-      if (linkage_name != nullptr)
-	{
-	  /* We only want this to be "main" if it has a linkage name
-	     but not an ordinary name.  */
-	  if (name != nullptr)
-	    flags = flags & ~IS_MAIN;
-	  /* Set the IS_LINKAGE on for everything except when functions
-	     have linkage name present but name is absent.  */
-	  if (name != nullptr
-	      || (abbrev->tag != DW_TAG_subprogram
-		  && abbrev->tag != DW_TAG_inlined_subroutine
-		  && abbrev->tag != DW_TAG_entry_point))
-	    flags = flags | IS_LINKAGE;
-	  m_index_storage->add (this_die, abbrev->tag, flags,
-				linkage_name, nullptr, m_per_cu);
-	}
-
-      if (abbrev->has_children)
-	{
-	  switch (abbrev->tag)
-	    {
-	    case DW_TAG_class_type:
-	    case DW_TAG_interface_type:
-	    case DW_TAG_structure_type:
-	    case DW_TAG_union_type:
-	      if (m_language != language_c && this_entry != nullptr)
-		{
-		  info_ptr = recurse (reader, info_ptr, this_entry, fully);
-		  continue;
-		}
-	      break;
-
-	    case DW_TAG_enumeration_type:
-	      /* Some versions of gdc could emit an "enum class"
-		 without a name, which is nonsensical.  These are
-		 skipped.  */
-	      if (is_enum_class && this_entry == nullptr)
-		continue;
-
-	      /* We need to recurse even for an anonymous enumeration.
-		 Which scope we record as the parent scope depends on
-		 whether we're reading an "enum class".  If so, we use
-		 the enum itself as the parent, yielding names like
-		 "enum_class::enumerator"; otherwise we inject the
-		 names into our own parent scope.  */
-	      {
-		std::variant<const cooked_index_entry *,
-			     parent_map::addr_type> recurse_parent;
-		if (is_enum_class)
-		  {
-		    gdb_assert (this_entry != nullptr);
-		    recurse_parent = this_entry;
-		  }
-		else if (defer != 0)
-		  recurse_parent = defer;
-		else
-		  recurse_parent = this_parent_entry;
-
-		info_ptr = recurse (reader, info_ptr, recurse_parent, fully);
-	      }
-	      continue;
-
-	    case DW_TAG_module:
-	      if (this_entry == nullptr)
-		break;
-	      [[fallthrough]];
-	    case DW_TAG_namespace:
-	      /* We don't check THIS_ENTRY for a namespace, to handle
-		 the ancient G++ workaround pointed out above.  */
-	      info_ptr = recurse (reader, info_ptr, this_entry, fully);
-	      continue;
-
-	    case DW_TAG_subprogram:
-	      if ((m_language == language_fortran
-		   || m_language == language_ada)
-		  && this_entry != nullptr)
-		{
-		  info_ptr = recurse (reader, info_ptr, this_entry, true);
-		  continue;
-		}
-	      break;
-	    }
-
-	  if (sibling != sect_offset (0))
-	    {
-	      const gdb_byte *sibling_ptr
-		= reader->buffer () + to_underlying (sibling);
-
-	      if (sibling_ptr < info_ptr)
-		complaint (_("DW_AT_sibling points backwards"));
-	      else if (sibling_ptr > reader->buffer_end ())
-		reader->section ()->overflow_complaint ();
-	      else
-		info_ptr = sibling_ptr;
-	    }
-	  else
-	    info_ptr = reader->skip_children (info_ptr);
-	}
-    }
-
-  return info_ptr;
-}
-
-void
-cooked_indexer::make_index (cutu_reader *reader)
-{
-  check_bounds (reader);
-  find_file_and_directory (reader->comp_unit_die (), reader->cu ());
-
-  if (!reader->comp_unit_die ()->has_children)
-    return;
-
-  index_dies (reader, reader->info_ptr (), nullptr, false);
-}
 
 struct compunit_symtab *
 cooked_index_functions::find_compunit_symtab_by_address
@@ -15926,31 +14934,33 @@ cooked_index_functions::expand_symtabs_matching
 
 	  /* Might have been looking for "a::b" and found
 	     "x::a::b".  */
-	  if (symbol_matcher == nullptr)
-	    {
-	      if ((match_type == symbol_name_match_type::FULL
-		   || (lang != language_ada
-		       && match_type == symbol_name_match_type::EXPRESSION)))
-		{
-		  if (parent != nullptr)
-		    continue;
+	  if (((match_type == symbol_name_match_type::FULL
+		|| (lang != language_ada
+		    && match_type == symbol_name_match_type::EXPRESSION)))
+	      && parent != nullptr)
+	    continue;
 
-		  if (entry->lang != language_unknown)
-		    {
-		      symbol_name_matcher_ftype *name_matcher
-			= lang_def->get_symbol_name_matcher
-			  (segment_lookup_names.back ());
-		      if (!name_matcher (entry->canonical,
-					 segment_lookup_names.back (), nullptr))
-			continue;
-		    }
-	      }
-	    }
-	  else
+	  /* Check that the full name matches -- either by matching
+	     the lookup name ourselves, or by passing the full name to
+	     the symbol matcher.  The former is a bit of a hack: it
+	     seems like the loop above could just examine every
+	     element of the name, avoiding the need to check here; but
+	     this is hard.  See PR symtab/32733.  */
+	  if (symbol_matcher != nullptr || entry->lang != language_unknown)
 	    {
 	      auto_obstack temp_storage;
-	      const char *full_name = entry->full_name (&temp_storage);
-	      if (!symbol_matcher (full_name))
+	      const char *full_name = entry->full_name (&temp_storage,
+							false, true);
+	      if (symbol_matcher == nullptr)
+		{
+		  symbol_name_matcher_ftype *name_matcher
+		    = (lang_def->get_symbol_name_matcher
+		       (lookup_name_without_params));
+		  if (!name_matcher (full_name, lookup_name_without_params,
+				     nullptr))
+		    continue;
+		}
+	      else if (!symbol_matcher (full_name))
 		continue;
 	    }
 
@@ -20175,33 +19185,9 @@ read_signatured_type (signatured_type *sig_type,
   sig_type->tu_read = 1;
 }
 
-/* Decode simple location descriptions.
+/* See read.h.  */
 
-   Given a pointer to a DWARF block that defines a location, compute
-   the location.  Returns true if the expression was computable by
-   this function, false otherwise.  On a true return, *RESULT is set.
-
-   Note that this function does not implement a full DWARF expression
-   evaluator.  Instead, it is used for a few limited purposes:
-
-   - Getting the address of a symbol that has a constant address.  For
-   example, if a symbol has a location like "DW_OP_addr", the address
-   can be extracted.
-
-   - Getting the offset of a virtual function in its vtable.  There
-   are two forms of this, one of which involves DW_OP_deref -- so this
-   function handles derefs in a peculiar way to make this 'work'.
-   (Probably this area should be rewritten.)
-
-   - Getting the offset of a field, when it is constant.
-
-   Opcodes that cannot be part of a constant expression, for example
-   those involving registers, simply result in a return of
-   'false'.
-
-   This function may emit a complaint.  */
-
-static bool
+bool
 decode_locdesc (struct dwarf_block *blk, struct dwarf2_cu *cu,
 		CORE_ADDR *result)
 {
@@ -20686,7 +19672,8 @@ dwarf2_per_cu::ensure_lang (dwarf2_per_objfile *per_objfile)
 
   /* Constructing this object will set the language as a side
      effect.  */
-  cutu_reader reader (this, per_objfile, language_minimal);
+  cutu_reader reader (this, per_objfile, nullptr, per_objfile->get_cu (this),
+		      true, language_minimal, nullptr);
 }
 
 /* A helper function for dwarf2_find_containing_comp_unit that returns
@@ -20721,10 +19708,9 @@ dwarf2_find_containing_comp_unit
   return low;
 }
 
-/* Locate the .debug_info compilation unit from CU's objfile which contains
-   the DIE at OFFSET.  Raises an error on failure.  */
+/* See read.h.  */
 
-static dwarf2_per_cu *
+dwarf2_per_cu *
 dwarf2_find_containing_comp_unit (sect_offset sect_off,
 				  unsigned int offset_in_dwz,
 				  dwarf2_per_bfd *per_bfd)

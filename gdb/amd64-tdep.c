@@ -50,6 +50,7 @@
 #include "osabi.h"
 #include "x86-tdep.h"
 #include "amd64-ravenscar-thread.h"
+#include "gdbsupport/selftest.h"
 
 /* Note that the AMD64 architecture was previously known as x86-64.
    The latter is (forever) engraved into the canonical system name as
@@ -1157,6 +1158,14 @@ rex_prefix_p (gdb_byte pfx)
   return REX_PREFIX_P (pfx);
 }
 
+/* True if PFX is the start of the 2-byte REX2 prefix.  */
+
+static bool
+rex2_prefix_p (gdb_byte pfx)
+{
+  return pfx == REX2_OPCODE;
+}
+
 /* True if PFX is the start of the 2-byte VEX prefix.  */
 
 static bool
@@ -1171,6 +1180,14 @@ static bool
 vex3_prefix_p (gdb_byte pfx)
 {
   return pfx == 0xc4;
+}
+
+/* Return true if PFX is the start of the 4-byte EVEX prefix.  */
+
+static bool
+evex_prefix_p (gdb_byte pfx)
+{
+  return pfx == 0x62;
 }
 
 /* Skip the legacy instruction prefixes in INSN.
@@ -1206,31 +1223,38 @@ amd64_skip_prefixes (gdb_byte *insn)
   return insn;
 }
 
-/* Return an integer register (other than RSP) that is unused as an input
-   operand in INSN.
-   In order to not require adding a rex prefix if the insn doesn't already
-   have one, the result is restricted to RAX ... RDI, sans RSP.
-   The register numbering of the result follows architecture ordering,
-   e.g. RDI = 7.  */
+/* Return true if the MODRM byte of an insn indicates that the insn is
+   rip-relative.  */
 
-static int
-amd64_get_unused_input_int_reg (const struct amd64_insn *details)
+static bool
+rip_relative_p (gdb_byte modrm)
+{
+  gdb_byte mod = MODRM_MOD_FIELD (modrm);
+  gdb_byte rm = MODRM_RM_FIELD (modrm);
+
+  return mod == 0 && rm == 0x05;
+}
+
+/* Return a register mask for the integer registers that are used as an input
+   operand in INSN.  If !ASSUMPTIONS, only return the registers we actually
+   found, for the benefit of self tests.  */
+
+static uint32_t
+amd64_get_used_input_int_regs (const struct amd64_insn *details,
+			       bool assumptions = true)
 {
   /* 1 bit for each reg */
-  int used_regs_mask = 0;
+  uint32_t used_regs_mask = 0;
 
-  /* There can be at most 3 int regs used as inputs in an insn, and we have
-     7 to choose from (RAX ... RDI, sans RSP).
-     This allows us to take a conservative approach and keep things simple.
-     E.g. By avoiding RAX, we don't have to specifically watch for opcodes
-     that implicitly specify RAX.  */
-
-  /* Avoid RAX.  */
-  used_regs_mask |= 1 << EAX_REG_NUM;
-  /* Similarly avoid RDX, implicit operand in divides.  */
-  used_regs_mask |= 1 << EDX_REG_NUM;
-  /* Avoid RSP.  */
-  used_regs_mask |= 1 << ESP_REG_NUM;
+  if (assumptions)
+    {
+      /* Assume RAX is used.  If not, we'd have to detect opcodes that implicitly
+	 use RAX.  */
+      used_regs_mask |= 1 << EAX_REG_NUM;
+      /* Assume RDX is used.  If not, we'd have to detect opcodes that implicitly
+	 use RDX, like divides.  */
+      used_regs_mask |= 1 << EDX_REG_NUM;
+    }
 
   /* If the opcode is one byte long and there's no ModRM byte,
      assume the opcode specifies a register.  */
@@ -1256,28 +1280,42 @@ amd64_get_unused_input_int_reg (const struct amd64_insn *details)
 	  used_regs_mask |= 1 << base;
 	  used_regs_mask |= 1 << idx;
 	}
-      else
+      else if (!rip_relative_p (modrm))
 	{
 	  used_regs_mask |= 1 << rm;
 	}
     }
 
   gdb_assert (used_regs_mask < 256);
-  gdb_assert (used_regs_mask != 255);
+  return used_regs_mask;
+}
+
+/* Return an integer register in ALLOWED_REGS_MASK that is unused as an input
+   operand in INSN.  The register numbering of the result follows architecture
+   ordering, e.g. RDI = 7.  Return -1 if no register can be found.  */
+
+static int
+amd64_get_unused_input_int_reg (const struct amd64_insn *details,
+				uint32_t allowed_regs_mask)
+{
+  /* 1 bit for each reg */
+  uint32_t used_regs_mask = amd64_get_used_input_int_regs (details);
 
   /* Finally, find a free reg.  */
   {
     int i;
 
-    for (i = 0; i < 8; ++i)
+    for (i = 0; i < 32; ++i)
       {
+	if (! (allowed_regs_mask & (1 << i)))
+	  continue;
+
 	if (! (used_regs_mask & (1 << i)))
 	  return i;
       }
-
-    /* We shouldn't get here.  */
-    internal_error (_("unable to find free reg"));
   }
+
+  return -1;
 }
 
 /* Extract the details of INSN that we need.  */
@@ -1304,10 +1342,14 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
       details->enc_prefix_offset = insn - start;
       ++insn;
     }
+  else if (rex2_prefix_p (*insn))
+    {
+      details->enc_prefix_offset = insn - start;
+      insn += 2;
+    }
   else if (vex2_prefix_p (*insn))
     {
-      /* Don't record the offset in this case because this prefix has
-	 no REX.B equivalent.  */
+      details->enc_prefix_offset = insn - start;
       insn += 2;
     }
   else if (vex3_prefix_p (*insn))
@@ -1315,10 +1357,89 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
       details->enc_prefix_offset = insn - start;
       insn += 3;
     }
+  else if (evex_prefix_p (*insn))
+    {
+      details->enc_prefix_offset = insn - start;
+      insn += 4;
+    }
+  gdb_byte *prefix = (details->enc_prefix_offset == -1
+		      ? nullptr
+		      : &start[details->enc_prefix_offset]);
 
   details->opcode_offset = insn - start;
 
-  if (*insn == TWO_BYTE_OPCODE_ESCAPE)
+  if (prefix != nullptr && rex2_prefix_p (*prefix))
+    {
+      bool m = (prefix[1] & (REX2_M << 4)) != 0;
+      if (!m)
+	{
+	  need_modrm = onebyte_has_modrm[*insn];
+	  details->opcode_len = 1;
+	}
+      else
+	{
+	  need_modrm = twobyte_has_modrm[*insn];
+	  details->opcode_len = 2;
+	}
+    }
+  else if (prefix != nullptr && vex2_prefix_p (*prefix))
+    {
+      need_modrm = twobyte_has_modrm[*insn];
+      details->opcode_len = 2;
+    }
+  else if (prefix != nullptr && vex3_prefix_p (*prefix))
+    {
+      need_modrm = twobyte_has_modrm[*insn];
+
+      gdb_byte m = prefix[1] & 0x1f;
+      if (m == 0)
+	{
+	  /* Todo: Xeon Phi-specific JKZD/JKNZD.  */
+	  return;
+	}
+      else if (m == 1)
+	{
+	  /* Escape 0x0f.  */
+	  details->opcode_len = 2;
+	}
+      else if (m == 2 || m == 3)
+	{
+	  /* Escape 0x0f 0x38 or 0x0f 0x3a.  */
+	  details->opcode_len = 3;
+	}
+      else if (m == 7)
+	{
+	  /* Todo: URDMSR/UWRMSR instructions.  */
+	  return;
+	}
+      else
+	{
+	  /* Unknown opcode map.  */
+	  return;
+	}
+    }
+  else if (prefix != nullptr && evex_prefix_p (*prefix))
+    {
+      need_modrm = twobyte_has_modrm[*insn];
+
+      gdb_byte m = prefix[1] & 0x7;
+      if (m == 1)
+	{
+	  /* Escape 0x0f.  */
+	  details->opcode_len = 2;
+	}
+      else if (m == 2 || m == 3)
+	{
+	  /* Escape 0x0f 0x38 or 0x0f 0x3a.  */
+	  details->opcode_len = 3;
+	}
+      else
+	{
+	  /* Unknown opcode map.  */
+	  return;
+	}
+    }
+  else if (*insn == TWO_BYTE_OPCODE_ESCAPE)
     {
       /* Two or three-byte opcode.  */
       ++insn;
@@ -1355,21 +1476,71 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
     }
 }
 
+/* Convert a %rip-relative INSN to use BASEREG+disp addressing, leaving
+   displacement unchanged.  */
+
+static void
+fixup_riprel (const struct amd64_insn &details, gdb_byte *insn,
+	      int basereg)
+{
+  /* Position of the not-B bit in the 3-byte VEX prefix (in byte 1).  */
+  static constexpr gdb_byte VEX3_NOT_B = 0x20;
+
+  /* Position of the B3 and B4 bits in the REX2 prefix (in byte 1).  */
+  static constexpr gdb_byte REX2_B = 0x11;
+
+  /* Position of the not-B3 bit in the EVEX prefix (in byte 1).  */
+  static constexpr gdb_byte EVEX_NOT_B = VEX3_NOT_B;
+
+  /* Position of the B4 bit in the EVEX prefix (in byte 1).  */
+  static constexpr gdb_byte EVEX_B = 0x08;
+
+  /* REX.B should be unset (VEX.!B set) as we were using rip-relative
+     addressing, but ensure it's unset (set for VEX) anyway, tmp_regno
+     is not r8-r15.  */
+  if (details.enc_prefix_offset != -1)
+    {
+      gdb_byte *pfx = &insn[details.enc_prefix_offset];
+      if (rex_prefix_p (pfx[0]))
+	pfx[0] &= ~REX_B;
+      else if (rex2_prefix_p (pfx[0]))
+	pfx[1] &= ~REX2_B;
+      else if (vex2_prefix_p (pfx[0]))
+	{
+	  /* VEX.!B is set implicitly.  */
+	}
+      else if (vex3_prefix_p (pfx[0]))
+	pfx[1] |= VEX3_NOT_B;
+      else if (evex_prefix_p (pfx[0]))
+	{
+	  pfx[1] |= EVEX_NOT_B;
+	  pfx[1] &= ~EVEX_B;
+	}
+      else
+	gdb_assert_not_reached ("unhandled prefix");
+    }
+
+  int modrm_offset = details.modrm_offset;
+  /* Convert the ModRM field to be base+disp.  */
+  insn[modrm_offset] &= ~0xc7;
+  insn[modrm_offset] |= 0x80 + basereg;
+}
+
 /* Update %rip-relative addressing in INSN.
 
    %rip-relative addressing only uses a 32-bit displacement.
    32 bits is not enough to be guaranteed to cover the distance between where
    the real instruction is and where its copy is.
    Convert the insn to use base+disp addressing.
-   We set base = pc + insn_length so we can leave disp unchanged.  */
+   We set base = pc + insn_length so we can leave disp unchanged.
+   Return true if successful, false otherwise.  */
 
-static void
+static bool
 fixup_riprel (struct gdbarch *gdbarch,
 	      amd64_displaced_step_copy_insn_closure *dsc,
 	      CORE_ADDR from, CORE_ADDR to, struct regcache *regs)
 {
   const struct amd64_insn *insn_details = &dsc->insn_details;
-  int modrm_offset = insn_details->modrm_offset;
   CORE_ADDR rip_base;
   int insn_length;
   int arch_tmp_regno, tmp_regno;
@@ -1380,37 +1551,27 @@ fixup_riprel (struct gdbarch *gdbarch,
 					  dsc->insn_buf.size (), from);
   rip_base = from + insn_length;
 
-  /* We need a register to hold the address.
-     Pick one not used in the insn.
-     NOTE: arch_tmp_regno uses architecture ordering, e.g. RDI = 7.  */
-  arch_tmp_regno = amd64_get_unused_input_int_reg (insn_details);
+  /* We need a register to hold the address.  Pick one not used in the insn.
+     In order to not require adding a rex prefix if the insn doesn't already
+     have one, the range is restricted to RAX ... RDI, without RSP.
+     We avoid RSP, because when patched into in the modrm byte, it doesn't
+     indicate the use of the register, but instead the use of a SIB byte.  */
+  uint32_t allowed_regs_mask = 0xff & ~(1 << ESP_REG_NUM);
+  arch_tmp_regno
+    = amd64_get_unused_input_int_reg (insn_details, allowed_regs_mask);
+  if (arch_tmp_regno == -1)
+    return false;
+
+  fixup_riprel (dsc->insn_details, dsc->insn_buf.data (), arch_tmp_regno);
+
+  /* Convert arch_tmp_regno, which uses architecture ordering (e.g. RDI = 7),
+     to GDB regnum.  */
   tmp_regno = amd64_arch_reg_to_regnum (arch_tmp_regno);
-
-  /* Position of the not-B bit in the 3-byte VEX prefix (in byte 1).  */
-  static constexpr gdb_byte VEX3_NOT_B = 0x20;
-
-  /* REX.B should be unset (VEX.!B set) as we were using rip-relative
-     addressing, but ensure it's unset (set for VEX) anyway, tmp_regno
-     is not r8-r15.  */
-  if (insn_details->enc_prefix_offset != -1)
-    {
-      gdb_byte *pfx = &dsc->insn_buf[insn_details->enc_prefix_offset];
-      if (rex_prefix_p (pfx[0]))
-	pfx[0] &= ~REX_B;
-      else if (vex3_prefix_p (pfx[0]))
-	pfx[1] |= VEX3_NOT_B;
-      else
-	gdb_assert_not_reached ("unhandled prefix");
-    }
 
   regcache_cooked_read_unsigned (regs, tmp_regno, &orig_value);
   dsc->tmp_regno = tmp_regno;
   dsc->tmp_save = orig_value;
   dsc->tmp_used = 1;
-
-  /* Convert the ModRM field to be base+disp.  */
-  dsc->insn_buf[modrm_offset] &= ~0xc7;
-  dsc->insn_buf[modrm_offset] |= 0x80 + arch_tmp_regno;
 
   regcache_cooked_write_unsigned (regs, tmp_regno, rip_base);
 
@@ -1418,9 +1579,13 @@ fixup_riprel (struct gdbarch *gdbarch,
   displaced_debug_printf ("using temp reg %d, old value %s, new value %s",
 			  dsc->tmp_regno, paddress (gdbarch, dsc->tmp_save),
 			  paddress (gdbarch, rip_base));
+  return true;
 }
 
-static void
+/* Fixup the insn in DSC->insn_buf, which was copied from address FROM to TO.
+   Return true if successful, false otherwise.  */
+
+static bool
 fixup_displaced_copy (struct gdbarch *gdbarch,
 		      amd64_displaced_step_copy_insn_closure *dsc,
 		      CORE_ADDR from, CORE_ADDR to, struct regcache *regs)
@@ -1431,13 +1596,15 @@ fixup_displaced_copy (struct gdbarch *gdbarch,
     {
       gdb_byte modrm = details->raw_insn[details->modrm_offset];
 
-      if ((modrm & 0xc7) == 0x05)
+      if (rip_relative_p (modrm))
 	{
 	  /* The insn uses rip-relative addressing.
 	     Deal with it.  */
-	  fixup_riprel (gdbarch, dsc, from, to, regs);
+	  return fixup_riprel (gdbarch, dsc, from, to, regs);
 	}
     }
+
+  return true;
 }
 
 displaced_step_copy_insn_closure_up
@@ -1462,6 +1629,8 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
   memset (buf + len, 0, fixup_sentinel_space);
 
   amd64_get_insn_details (buf, details);
+  if (details->opcode_len == -1)
+    return nullptr;
 
   /* GDB may get control back after the insn after the syscall.
      Presumably this is a kernel bug.
@@ -1475,7 +1644,8 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
 
   /* Modify the insn to cope with the address where it will be executed from.
      In particular, handle any rip-relative addressing.	 */
-  fixup_displaced_copy (gdbarch, dsc.get (), from, to, regs);
+  if (!fixup_displaced_copy (gdbarch, dsc.get (), from, to, regs))
+    return nullptr;
 
   write_memory (to, buf, len);
 
@@ -1762,7 +1932,7 @@ rip_relative_offset (struct amd64_insn *insn)
     {
       gdb_byte modrm = insn->raw_insn[insn->modrm_offset];
 
-      if ((modrm & 0xc7) == 0x05)
+      if (rip_relative_p (modrm))
 	{
 	  /* The displacement is found right after the ModRM byte.  */
 	  return insn->modrm_offset + 1;
@@ -3374,6 +3544,202 @@ amd64_target_description (uint64_t xcr0, bool segments)
   return *tdesc;
 }
 
+#if GDB_SELF_TEST
+
+namespace selftests {
+
+/* Recode a vex2 instruction into a vex3 instruction.  */
+
+static void
+vex2_to_vex3 (gdb::byte_vector &vex2, gdb::byte_vector &vex3)
+{
+  gdb_assert (vex2.size () >= 2);
+  gdb_assert (vex2[0] == 0xc5);
+
+  unsigned char r = vex2[1] >> 7;
+  unsigned char b = 0x1;
+  unsigned char x = 0x1;
+  unsigned char m = 0x1;
+  unsigned char w = 0x0;
+
+  vex3.resize (3);
+  vex3[0] = 0xc4;
+  vex3[1] = (r << 7) | (x << 6) | (b << 5) | m;
+  vex3[2] = (vex2[1] & ~0x80) | (w << 7);
+
+  std::copy (vex2.begin () + 2, vex2.end (),
+	     std::back_inserter (vex3));
+}
+
+/* Test vex2 to vex3.  */
+
+static void
+test_vex2_to_vex3 (void)
+{
+  /* INSN: vzeroall, vex2 prefix.  */
+  gdb::byte_vector vex2 = { 0xc5, 0xfc, 0x77 };
+
+  gdb::byte_vector vex3;
+  vex2_to_vex3 (vex2, vex3);
+
+  /* INSN: vzeroall, vex3 prefix.  */
+  gdb::byte_vector vex3_ref = { 0xc4, 0xe1, 0x7c, 0x77 };
+  SELF_CHECK (vex3 == vex3_ref);
+}
+
+/* Test amd64_get_insn_details.  */
+
+static void
+test_amd64_get_insn_details (void)
+{
+  struct amd64_insn details;
+  gdb::byte_vector insn, tmp;
+
+  /* INSN: add %eax,(%rcx).  */
+  insn = { 0x01, 0x01 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 1);
+  SELF_CHECK (details.enc_prefix_offset == -1);
+  SELF_CHECK (details.opcode_offset == 0);
+  SELF_CHECK (details.modrm_offset == 1);
+  SELF_CHECK (amd64_get_used_input_int_regs (&details, false)
+	      == ((1 << EAX_REG_NUM) | (1 << ECX_REG_NUM)));
+  SELF_CHECK (rip_relative_offset (&details) == 0);
+
+  /* INSN: push %rax.  This exercises the "opcode specifies register" case in
+     amd64_get_used_input_int_regs.  */
+  insn = { 0x50 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 1);
+  SELF_CHECK (details.enc_prefix_offset == -1);
+  SELF_CHECK (details.opcode_offset == 0);
+  SELF_CHECK (details.modrm_offset == -1);
+  SELF_CHECK (amd64_get_used_input_int_regs (&details, false)
+	      == ((1 << EAX_REG_NUM)));
+  SELF_CHECK (rip_relative_offset (&details) == 0);
+
+  /* INSN: lea 0x1e(%rip),%rdi, rex prefix.  */
+  insn = { 0x48, 0x8d, 0x3d, 0x1e, 0x00, 0x00, 0x00 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 1);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 1);
+  SELF_CHECK (details.modrm_offset == 2);
+  SELF_CHECK (amd64_get_used_input_int_regs (&details, false)
+	      == (1 << EDI_REG_NUM));
+  SELF_CHECK (rip_relative_offset (&details) == 3);
+
+  /* INSN: lea 0x1e(%ecx),%rdi, rex prefix.  */
+  gdb::byte_vector updated_insn = { 0x48, 0x8d, 0xb9, 0x1e, 0x00, 0x00, 0x00 };
+  fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  SELF_CHECK (insn == updated_insn);
+
+  gdb::byte_vector vex2, vex3;
+
+  /* INSN: vzeroall, vex2 prefix.  */
+  vex2 = { 0xc5, 0xfc, 0x77 };
+  amd64_get_insn_details (vex2.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 2);
+  SELF_CHECK (details.modrm_offset == -1);
+
+  /* INSN: vzeroall, vex3 prefix.  */
+  vex2_to_vex3 (vex2, vex3);
+  amd64_get_insn_details (vex3.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == -1);
+
+  /* INSN: vzeroupper, vex2 prefix.  */
+  vex2 = { 0xc5, 0xf8, 0x77 };
+  amd64_get_insn_details (vex2.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 2);
+  SELF_CHECK (details.modrm_offset == -1);
+
+  /* INSN: vzeroupper, vex3 prefix.  */
+  vex2_to_vex3 (vex2, vex3);
+  amd64_get_insn_details (vex3.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == -1);
+
+  /* INSN: vmovdqu 0x9(%rip),%ymm3, vex2 prefix.  */
+  vex2 = { 0xc5, 0xfe, 0x6f, 0x1d, 0x09, 0x00, 0x00, 0x00 };
+  amd64_get_insn_details (vex2.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 2);
+  SELF_CHECK (details.modrm_offset == 3);
+
+  /* INSN: vmovdqu 0x9(%rcx),%ymm3, vex2 prefix.  */
+  gdb::byte_vector updated_vex2
+    = { 0xc5, 0xfe, 0x6f, 0x99, 0x09, 0x00, 0x00, 0x00 };
+  tmp = vex2;
+  fixup_riprel (details, tmp.data (), ECX_REG_NUM);
+  SELF_CHECK (tmp == updated_vex2);
+
+  /* INSN: vmovdqu 0x9(%rip),%ymm3, vex3 prefix.  */
+  vex2_to_vex3 (vex2, vex3);
+  amd64_get_insn_details (vex3.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == 4);
+
+  /* INSN: vmovdqu 0x9(%rcx),%ymm3, vex3 prefix.  */
+  gdb::byte_vector updated_vex3;
+  vex2_to_vex3 (updated_vex2, updated_vex3);
+  tmp = vex3;
+  fixup_riprel (details, tmp.data (), ECX_REG_NUM);
+  SELF_CHECK (tmp == updated_vex3);
+
+  /* INSN: lea 0x0(%eip),%r31d, rex2 prefix.  */
+  insn = { 0x67, 0xd5, 0x44, 0x8d, 0x3d, 0x00, 0x00, 0x00, 0x00 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 1);
+  SELF_CHECK (details.enc_prefix_offset == 1);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == 4);
+  /* This is incorrect, r31 is used instead of rdi, but currently that doesn't
+     matter.  */
+  SELF_CHECK (amd64_get_used_input_int_regs (&details, false)
+	      == (1 << EDI_REG_NUM));
+
+  /* INSN: lea 0x0(%ecx),%r31d, rex2 prefix.  */
+  updated_insn = { 0x67, 0xd5, 0x44, 0x8d, 0xb9, 0x00, 0x00, 0x00, 0x00 };
+  fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  SELF_CHECK (insn == updated_insn);
+
+  /* INSN: vmovaps -0x400(%rip),%zmm0, evex prefix.  */
+  insn = { 0x62, 0xf1, 0x7c, 0x48, 0x28, 0x05, 0x00, 0xfc, 0xff, 0xff };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 2);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 4);
+  SELF_CHECK (details.modrm_offset == 5);
+
+  /* INSN: vmovaps -0x400(%rcx),%zmm0, evex prefix.  */
+  updated_insn
+    = { 0x62, 0xf1, 0x7c, 0x48, 0x28, 0x81, 0x00, 0xfc, 0xff, 0xff };
+  fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  SELF_CHECK (insn == updated_insn);
+}
+
+static void
+amd64_insn_decode (void)
+{
+  test_vex2_to_vex3 ();
+  test_amd64_get_insn_details ();
+}
+
+} // namespace selftests
+#endif /* GDB_SELF_TEST */
+
 void _initialize_amd64_tdep ();
 void
 _initialize_amd64_tdep ()
@@ -3382,6 +3748,10 @@ _initialize_amd64_tdep ()
 			  amd64_none_init_abi);
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x64_32, GDB_OSABI_NONE,
 			  amd64_x32_none_init_abi);
+#if GDB_SELF_TEST
+  selftests::register_test ("amd64-insn-decode",
+			    selftests::amd64_insn_decode);
+#endif
 }
 
 
