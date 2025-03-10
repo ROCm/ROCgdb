@@ -150,6 +150,11 @@ read_table (const struct aarch64_opcode* table)
     {
       bool match = false;
 
+      unsigned int operand_count = 0;
+      while (operand_count < ARRAY_SIZE (ent->operands)
+	     && ent->operands[operand_count] != AARCH64_OPND_NIL)
+	operand_count++;
+
       /* F_PSEUDO needs to be used together with F_ALIAS to indicate an alias
 	 opcode is a programmer friendly pseudo instruction available only in
 	 the assembly code (thus will not show up in the disassembly).  */
@@ -187,6 +192,47 @@ read_table (const struct aarch64_opcode* table)
 	  fprintf (stderr, "%s: no operands match, but tied=%u\n",
 		   ent->name, ent->tied_operand);
 	  ++errors;
+	}
+
+      /* Check that the qualifier sequence lengths match the number of
+	 operands.  */
+      bool qlf_end = false;
+      for (unsigned int i = 0; i < ARRAY_SIZE (ent->qualifiers_list); i++)
+	{
+	  for (unsigned int j = 0; j < ARRAY_SIZE (ent->qualifiers_list[0]); j++)
+	    {
+	      if (j >= operand_count || qlf_end)
+		{
+		  if (ent->qualifiers_list[i][j] != AARCH64_OPND_QLF_UNUSED)
+		    {
+		      fprintf (stderr,
+			       "%s (%08x,%08x): Qualifier %u for sequence %u should be UNUSED.\n",
+			       ent->name, ent->opcode, ent->mask, j, i);
+		      ++errors;
+		    }
+		}
+	      else if (ent->qualifiers_list[i][j] == AARCH64_OPND_QLF_UNUSED)
+		{
+		  if (j == 0)
+		    {
+		      qlf_end = true;
+		      if (i == 0 && operand_count > 0)
+			{
+			  fprintf (stderr,
+				   "%s (%08x,%08x): No qualifiers specified.\n",
+				   ent->name, ent->opcode, ent->mask);
+			  ++errors;
+			}
+		    }
+		  else
+		    {
+		      fprintf (stderr,
+			       "%s (%08x,%08x): Qualifier %u for sequence %u is missing.\n",
+			       ent->name, ent->opcode, ent->mask, j, i);
+		      ++errors;
+		    }
+		}
+	    }
 	}
 
       if (ent->flags & F_SUBCLASS)
