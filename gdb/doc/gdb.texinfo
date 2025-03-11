@@ -28662,12 +28662,6 @@ AMD Instinct@registeredsymbol{} MI100 accelerator devices.
 @item @code{gfx90a}
 AMD Instinct@registeredsymbol{} MI200 Series accelerator devices.
 
-@item @code{gfx940}
-Aqua Vanjaram devices.
-
-@item @code{gfx941}
-@samp{gfx941} devices.
-
 @item @code{gfx942}
 @samp{gfx942} devices.
 

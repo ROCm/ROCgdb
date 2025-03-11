@@ -9,6 +9,10 @@ Full documentation for ROCgdb is available at
 
 - Support for the gfx950 architecture.
 
+### Removed
+
+- Support for the gfx940 and gfx941 architectures.
+
 ## ROCgdb-15.2 for ROCm-6.4
 
 ### Added
