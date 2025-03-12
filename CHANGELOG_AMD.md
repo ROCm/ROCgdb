@@ -3,6 +3,12 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
+## ROCgdb-16-2 for ROCm-6.5
+
+### Added
+
+- Support for the gfx950 architecture.
+
 ## ROCgdb-15.2 for ROCm-6.4
 
 ### Added
