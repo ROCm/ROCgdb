@@ -1865,7 +1865,7 @@ dw2_get_file_names (dwarf2_per_cu *this_cu, dwarf2_per_objfile *per_objfile)
 		      per_objfile->get_cu (this_cu), true, language_minimal,
 		      nullptr);
   if (!reader.is_dummy ())
-    dw2_get_file_names_reader (reader.cu (), reader.comp_unit_die ());
+    dw2_get_file_names_reader (reader.cu (), reader.top_level_die ());
 
   return this_cu->file_names;
 }
@@ -2776,7 +2776,7 @@ cutu_reader::init_cu_die_reader (dwarf2_cu *cu, dwarf2_section_info *section,
    attribute of the referencing CU.  At most one of STUB_COMP_UNIT_DIE and
    STUB_COMP_DIR may be non-NULL.
 
-   *RESULT_READER,*RESULT_INFO_PTR,*RESULT_COMP_UNIT_DIE
+   *RESULT_READER,*RESULT_INFO_PTR,*RESULT_TOP_LEVEL_DIE
    are filled in with the info of the DIE from the DWO file.
 
    *RESULT_DWO_ABBREV_TABLE will be filled in with the abbrev table allocated
@@ -2790,7 +2790,7 @@ cutu_reader::read_cutu_die_from_dwo (dwarf2_cu *cu, dwo_unit *dwo_unit,
 				     die_info *stub_comp_unit_die,
 				     const char *stub_comp_dir,
 				     const gdb_byte **result_info_ptr,
-				     die_info **result_comp_unit_die,
+				     die_info **result_top_level_die,
 				     abbrev_table_up *result_dwo_abbrev_table)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -2918,7 +2918,7 @@ cutu_reader::read_cutu_die_from_dwo (dwarf2_cu *cu, dwo_unit *dwo_unit,
      has the benefit of simplifying the rest of the code - all the
      work to maintain the illusion of a single
      DW_TAG_{compile,type}_unit DIE is done here.  */
-  info_ptr = this->read_toplevel_die (result_comp_unit_die, info_ptr,
+  info_ptr = this->read_toplevel_die (result_top_level_die, info_ptr,
 				      gdb::make_array_view (attributes,
 							    next_attr_idx));
 
@@ -3031,7 +3031,7 @@ cutu_reader::init_tu_and_read_dwo_dies (dwarf2_per_cu *this_cu,
   if (read_cutu_die_from_dwo (cu, sig_type->dwo_unit,
 			      NULL /* stub_comp_unit_die */,
 			      sig_type->dwo_unit->dwo_file->comp_dir,
-			      &m_info_ptr, &m_comp_unit_die,
+			      &m_info_ptr, &m_top_level_die,
 			      &m_dwo_abbrev_table)
       == 0)
     {
@@ -3155,8 +3155,6 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 	  /* Establish the type offset that can be used to lookup the type.  */
 	  sig_type->type_offset_in_section =
 	    this_cu->sect_off + to_underlying (sig_type->type_offset_in_tu);
-
-	  this_cu->set_version (cu->header.version);
 	}
       else
 	{
@@ -3167,7 +3165,6 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 
 	  gdb_assert (this_cu->sect_off == cu->header.sect_off);
 	  this_cu->set_length (cu->header.get_length_with_initial ());
-	  this_cu->set_version (cu->header.version);
 	}
     }
 
@@ -3199,9 +3196,9 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 
       /* Read the top level CU/TU die.  */
       this->init_cu_die_reader (cu, section, NULL, abbrev_table);
-      m_info_ptr = this->read_toplevel_die (&m_comp_unit_die, m_info_ptr);
+      m_info_ptr = this->read_toplevel_die (&m_top_level_die, m_info_ptr);
 
-      if (skip_partial && m_comp_unit_die->tag == DW_TAG_partial_unit)
+      if (skip_partial && m_top_level_die->tag == DW_TAG_partial_unit)
 	m_dummy_p = true;
       else
 	{
@@ -3215,23 +3212,23 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 	     Note that if USE_EXISTING_OK != 0, and THIS_CU->cu
 	     already contains a DWO CU, that this test will fail (the
 	     attribute will not be present).  */
-	  const char *dwo_name = dwarf2_dwo_name (m_comp_unit_die, cu);
+	  const char *dwo_name = dwarf2_dwo_name (m_top_level_die, cu);
 	  if (dwo_name != nullptr)
 	    {
 	      struct dwo_unit *dwo_unit;
 	      struct die_info *dwo_comp_unit_die;
 
-	      if (m_comp_unit_die->has_children)
+	      if (m_top_level_die->has_children)
 		{
 		  complaint (_("compilation unit with DW_AT_GNU_dwo_name"
 			       " has children (offset %s) [in module %s]"),
 			     sect_offset_str (this_cu->sect_off),
 			     bfd_get_filename (abfd));
 		}
-	      dwo_unit = lookup_dwo_unit (cu, m_comp_unit_die, dwo_name);
+	      dwo_unit = lookup_dwo_unit (cu, m_top_level_die, dwo_name);
 	      if (dwo_unit != NULL)
 		{
-		  if (read_cutu_die_from_dwo (cu, dwo_unit, m_comp_unit_die,
+		  if (read_cutu_die_from_dwo (cu, dwo_unit, m_top_level_die,
 					      nullptr, &m_info_ptr,
 					      &dwo_comp_unit_die,
 					      &m_dwo_abbrev_table)
@@ -3241,7 +3238,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 		      m_dummy_p = true;
 		    }
 		  else
-		    m_comp_unit_die = dwo_comp_unit_die;
+		    m_top_level_die = dwo_comp_unit_die;
 		}
 	      else
 		{
@@ -3256,7 +3253,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
     }
 
   /* Only a dummy unit can be missing the compunit DIE.  */
-  gdb_assert (m_dummy_p || m_comp_unit_die != nullptr);
+  gdb_assert (m_dummy_p || m_top_level_die != nullptr);
   prepare_one_comp_unit (cu, pretend_language);
 }
 
@@ -3344,7 +3341,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu *this_cu,
 
       this->init_cu_die_reader (m_new_cu.get (), section, dwo_file,
 				m_abbrev_table_holder.get ());
-      info_ptr = this->read_toplevel_die (&m_comp_unit_die, info_ptr);
+      info_ptr = this->read_toplevel_die (&m_top_level_die, info_ptr);
     }
 
   prepare_one_comp_unit (m_new_cu.get (), pretend_language);
@@ -3484,12 +3481,12 @@ process_psymtab_comp_unit (dwarf2_per_cu *this_cu,
       reader = storage->preserve (std::move (copy));
     }
 
-  if (reader->comp_unit_die () == nullptr || reader->is_dummy ())
+  if (reader->top_level_die () == nullptr || reader->is_dummy ())
     return;
 
   if (this_cu->is_debug_types)
     build_type_psymtabs_reader (reader, storage);
-  else if (reader->comp_unit_die ()->tag != DW_TAG_partial_unit)
+  else if (reader->top_level_die ()->tag != DW_TAG_partial_unit)
     {
       bool nope = false;
       if (this_cu->scanned.compare_exchange_strong (nope, true))
@@ -3509,7 +3506,7 @@ build_type_psymtabs_reader (cutu_reader *reader,
 {
   struct dwarf2_cu *cu = reader->cu ();
   dwarf2_per_cu *per_cu = cu->per_cu;
-  die_info *type_unit_die = reader->comp_unit_die ();
+  die_info *type_unit_die = reader->top_level_die ();
 
   gdb_assert (per_cu->is_debug_types);
 
@@ -3938,11 +3935,6 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 		       sect_offset_str (sig_ptr->sect_off),
 		       hex_string (sig_ptr->signature));
 	}
-
-      /* Init this asap, to avoid a data race in the set_version in
-	 cutu_reader::cutu_reader (which may be run in parallel for the cooked
-	 index case).  */
-      this_cu->set_version (cu_header.version);
 
       info_ptr = info_ptr + this_cu->length ();
       per_objfile->per_bfd->all_units.push_back (std::move (this_cu));
@@ -4423,11 +4415,11 @@ load_full_comp_unit (dwarf2_per_cu *this_cu,
   gdb_assert (cu->die_hash.empty ());
   cu->die_hash.reserve (cu->header.get_length_without_initial () / 12);
 
-  if (reader.comp_unit_die ()->has_children)
-    reader.comp_unit_die ()->child
+  if (reader.top_level_die ()->has_children)
+    reader.top_level_die ()->child
       = reader.read_die_and_siblings (reader.info_ptr (), &info_ptr,
-				      reader.comp_unit_die ());
-  cu->dies = reader.comp_unit_die ();
+				      reader.top_level_die ());
+  cu->dies = reader.top_level_die ();
   /* comp_unit_die is not stored in die_hash, no need.  */
 
   reader.keep ();
@@ -6627,7 +6619,7 @@ create_cus_hash_table (dwarf2_cu *cu, dwo_file &dwo_file)
 
       if (!reader.is_dummy ())
 	create_dwo_cu_reader (reader.cu (), reader.info_ptr (),
-			      reader.comp_unit_die (), &dwo_file, &read_unit);
+			      reader.top_level_die (), &dwo_file, &read_unit);
       info_ptr += per_cu.length ();
 
       /* If the unit could not be parsed, skip it.  */
@@ -7903,7 +7895,7 @@ open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
 
   create_cus_hash_table (cu, *dwo_file);
 
-  if (cu->per_cu->version () < 5)
+  if (cu->header.version < 5)
     create_debug_types_hash_table (per_objfile, dwo_file.get (),
 				   dwo_file->sections.types);
   else
@@ -13330,8 +13322,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
   if (type->code () == TYPE_CODE_VOID
       && !type->is_stub ()
       && die->child == nullptr
-      && (cu->per_cu->version () == 2
-	  || cu->producer_is_gas_2_39 ()))
+      && (cu->header.version == 2 || cu->producer_is_gas_2_39 ()))
     {
       /* Work around PR gas/29517, pretend we have an DW_TAG_unspecified_type
 	 return type.  */
@@ -14950,7 +14941,7 @@ cooked_index_functions::expand_symtabs_matching
 	    {
 	      auto_obstack temp_storage;
 	      const char *full_name = entry->full_name (&temp_storage,
-							false, true);
+							FOR_ADA_LINKAGE_NAME);
 	      if (symbol_matcher == nullptr)
 		{
 		  symbol_name_matcher_ftype *name_matcher
@@ -19172,11 +19163,11 @@ read_signatured_type (signatured_type *sig_type,
       gdb_assert (cu->die_hash.empty ());
       cu->die_hash.reserve (cu->header.get_length_without_initial () / 12);
 
-      if (reader.comp_unit_die ()->has_children)
-	reader.comp_unit_die ()->child
+      if (reader.top_level_die ()->has_children)
+	reader.top_level_die ()->child
 	  = reader.read_die_and_siblings (info_ptr, &info_ptr,
-					  reader.comp_unit_die ());
-      cu->dies = reader.comp_unit_die ();
+					  reader.top_level_die ());
+      cu->dies = reader.top_level_die ();
       /* comp_unit_die is not stored in die_hash, no need.  */
 
       reader.keep ();
@@ -19528,6 +19519,7 @@ fill_in_loclist_baton (struct dwarf2_cu *cu,
   else
     baton->base_address = {};
   baton->from_dwo = cu->dwo_unit != NULL;
+  baton->dwarf_version = cu->header.version;
 }
 
 static void
@@ -19816,7 +19808,7 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
 {
   struct attribute *attr;
 
-  if (m_comp_unit_die == nullptr)
+  if (m_top_level_die == nullptr)
     {
       cu->set_producer (nullptr);
       cu->language_defn = language_def (pretend_language);
@@ -19825,10 +19817,10 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
       return;
     }
 
-  cu->set_producer (dwarf2_string_attr (m_comp_unit_die, DW_AT_producer, cu));
+  cu->set_producer (dwarf2_string_attr (m_top_level_die, DW_AT_producer, cu));
 
   /* Set the language we're debugging.  */
-  attr = dwarf2_attr (m_comp_unit_die, DW_AT_language, cu);
+  attr = dwarf2_attr (m_top_level_die, DW_AT_language, cu);
   enum language lang;
   dwarf_source_language dw_lang = (dwarf_source_language) 0;
   if (cu->producer_is_xlc_opencl ())
@@ -19857,14 +19849,14 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
   cu->language_defn = language_def (lang);
 
   /* Initialize the lto_artificial field.  */
-  attr = dwarf2_attr (m_comp_unit_die, DW_AT_name, cu);
+  attr = dwarf2_attr (m_top_level_die, DW_AT_name, cu);
   if (attr != nullptr
       && cu->producer_is_gcc ()
       && attr->as_string () != nullptr
       && strcmp (attr->as_string (), "<artificial>") == 0)
     cu->per_cu->lto_artificial = true;
 
-  switch (m_comp_unit_die->tag)
+  switch (m_top_level_die->tag)
     {
     case DW_TAG_compile_unit:
       cu->per_cu->set_unit_type (DW_UT_compile);
@@ -19877,7 +19869,7 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
       break;
     default:
       error (_(DWARF_ERROR_PREFIX "unexpected tag '%s' at offset %s"),
-	     dwarf_tag_name (m_comp_unit_die->tag),
+	     dwarf_tag_name (m_top_level_die->tag),
 	     sect_offset_str (cu->per_cu->sect_off));
     }
 
