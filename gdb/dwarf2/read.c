@@ -1968,12 +1968,9 @@ void
 dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-  int total_units = per_objfile->per_bfd->all_units.size ();
 
-  for (int i = 0; i < total_units; ++i)
+  for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
     {
-      dwarf2_per_cu *per_cu = per_objfile->per_bfd->get_cu (i);
-
       /* We don't want to directly expand a partial CU, because if we
 	 read it with the wrong language, then assertion failures can
 	 be triggered later on.  See PR symtab/23010.  So, tell
@@ -3594,15 +3591,14 @@ build_type_psymtabs (dwarf2_per_objfile *per_objfile,
   sorted_by_abbrev.reserve (per_objfile->per_bfd->all_type_units.size ());
 
   for (const auto &cu : per_objfile->per_bfd->all_units)
-    {
-      if (cu->is_debug_types)
-	{
-	  auto sig_type = static_cast<signatured_type *> (cu.get ());
-	  sorted_by_abbrev.emplace_back
-	    (sig_type, read_abbrev_offset (per_objfile, sig_type->section,
-					   sig_type->sect_off));
-	}
-    }
+    if (cu->is_debug_types)
+      {
+	auto sig_type = static_cast<signatured_type *> (cu.get ());
+	sorted_by_abbrev.emplace_back (sig_type,
+				       read_abbrev_offset (per_objfile,
+							   sig_type->section,
+							   sig_type->sect_off));
+      }
 
   std::sort (sorted_by_abbrev.begin (), sorted_by_abbrev.end ());
 
@@ -6555,9 +6551,8 @@ lookup_dwo_file (dwarf2_per_bfd *per_bfd, const char *dwo_name,
 /* die_reader_func for create_dwo_cu.  */
 
 static void
-create_dwo_cu_reader (dwarf2_cu *cu, const gdb_byte *info_ptr,
-		      die_info *comp_unit_die, dwo_file *dwo_file,
-		      dwo_unit *dwo_unit)
+create_dwo_cu_reader (dwarf2_cu *cu, die_info *comp_unit_die,
+		      dwo_file *dwo_file, dwo_unit *dwo_unit)
 {
   sect_offset sect_off = cu->per_cu->sect_off;
   struct dwarf2_section_info *section = cu->per_cu->section;
@@ -6618,8 +6613,8 @@ create_cus_hash_table (dwarf2_cu *cu, dwo_file &dwo_file)
 			  cu, &dwo_file);
 
       if (!reader.is_dummy ())
-	create_dwo_cu_reader (reader.cu (), reader.info_ptr (),
-			      reader.top_level_die (), &dwo_file, &read_unit);
+	create_dwo_cu_reader (reader.cu (), reader.top_level_die (), &dwo_file,
+			      &read_unit);
       info_ptr += per_cu.length ();
 
       /* If the unit could not be parsed, skip it.  */
