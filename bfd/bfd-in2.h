@@ -1841,6 +1841,7 @@ enum bfd_architecture
 #define bfd_mach_amdgcn_gfx940          0x040
 #define bfd_mach_amdgcn_gfx941          0x04b
 #define bfd_mach_amdgcn_gfx942          0x04c
+#define bfd_mach_amdgcn_gfx950          0x04f
 #define bfd_mach_amdgcn_gfx10_1_generic 0x052
 #define bfd_mach_amdgcn_gfx1010         0x033
 #define bfd_mach_amdgcn_gfx1011         0x034
@@ -2974,6 +2975,8 @@ const char *bfd_format_string (bfd_format format);
     || (H)->type == bfd_link_hash_defweak) \
    && bfd_is_abs_section ((H)->u.def.section) \
    && !(H)->rel_from_abs)
+
+bool bfd_link_align_section (asection *, unsigned int);
 
 bool bfd_link_split_section (bfd *abfd, asection *sec);
 

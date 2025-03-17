@@ -199,15 +199,17 @@ proc target_defaults_to_execstack {} {
 
     # If the linker has been configured with --enable-default-execstack=no then
     # this proc should always return 0.
-    if { [file exists $base_dir/config.status] } {
-	set status [remote_exec host grep "enable-default-execstack=no" $base_dir/config.status]
+    set f $base_dir/config.h
+    set s {DEFAULT_LD_EXECSTACK\ 0}
+    if { [file exists $f] } {
+	set status [remote_exec host grep $s $f]
 	if { [lindex $status 0] == 0 } {
 	    return 0
 	} else {
-	    verbose -log "$base_dir/config.status does not contain enable-default-execstack=no"
+	    verbose -log "$f does not contain $s"
 	}
     } else {
-	verbose -log "there is no file $base_dir/config.status"
+	verbose -log "there is no file $f"
     }
     
     if {   [istarget "aarch64*-*-*"]
@@ -497,6 +499,17 @@ if { [istarget *-*-linux*]
 	]
     }
 
+    run_cc_link_tests [list \
+	[list \
+	    "Build pr32690.so" \
+	    "-shared" \
+	    "-O2 -fPIC" \
+	    { pr32690b.c } \
+	    {} \
+	    "pr32690.so" \
+	] \
+    ]
+
     run_ld_link_exec_tests [list \
 	[list \
 	    "Run mbind2a" \
@@ -515,6 +528,18 @@ if { [istarget *-*-linux*]
 	    "mbind2b" \
 	    "pass.out" \
 	    "-O2 -I../bfd" \
+	] \
+	[list \
+	    "Run pr32690" \
+	    "-pie -Wl,-z,now" \
+	    "" \
+	    { pr32690a.c } \
+	    "pr32690" \
+	    "pass.out" \
+	    "-O2 -fPIE" \
+	    "C" \
+	    {} \
+	    "-Wl,-R,tmpdir tmpdir/pr32690.so" \
 	] \
     ]
 }

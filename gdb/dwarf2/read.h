@@ -21,7 +21,6 @@
 #define GDB_DWARF2_READ_H
 
 #include <queue>
-#include <unordered_map>
 #include "dwarf2/comp-unit-head.h"
 #include "dwarf2/file-and-dir.h"
 #include "dwarf2/index-cache.h"
@@ -97,8 +96,10 @@ using dwarf2_per_cu_data_up
 
 struct dwarf2_per_cu_data
 {
-  dwarf2_per_cu_data ()
-    : is_debug_types (false),
+  dwarf2_per_cu_data (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
+		      sect_offset sect_off)
+    : sect_off (sect_off),
+      is_debug_types (false),
       is_dwz (false),
       reading_dwo_directly (false),
       tu_read (false),
@@ -107,7 +108,9 @@ struct dwarf2_per_cu_data
       m_header_read_in (false),
       mark (false),
       files_read (false),
-      scanned (false)
+      scanned (false),
+      section (section),
+      per_bfd (per_bfd)
   {
   }
 
@@ -116,7 +119,7 @@ struct dwarf2_per_cu_data
      initial_length_size.
      If the DIE refers to a DWO file, this is always of the original die,
      not the DWO file.  */
-  sect_offset sect_off {};
+  sect_offset sect_off;
 
 private:
   unsigned int m_length = 0;
@@ -210,7 +213,7 @@ public:
   struct dwarf2_section_info *section = nullptr;
 
   /* Backlink to the owner of this.  */
-  dwarf2_per_bfd *per_bfd = nullptr;
+  dwarf2_per_bfd *per_bfd;
 
   /* DWARF header of this CU.  Note that dwarf2_cu reads its own version of the
      header, which may differ from this one, since it may pass rcuh_kind::TYPE
@@ -368,9 +371,13 @@ public:
 
 struct signatured_type : public dwarf2_per_cu_data
 {
-  signatured_type (ULONGEST signature)
-    : signature (signature)
-  {}
+  signatured_type (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
+		   sect_offset sect_off, ULONGEST signature)
+    : dwarf2_per_cu_data (per_bfd, section, sect_off),
+      signature (signature)
+  {
+    this->is_debug_types = true;
+  }
 
   /* The type's signature.  */
   ULONGEST signature;
@@ -445,12 +452,15 @@ struct dwarf2_per_bfd
   /* A convenience function to allocate a dwarf2_per_cu_data.  The
      returned object has its "index" field set properly.  The object
      is allocated on the dwarf2_per_bfd obstack.  */
-  dwarf2_per_cu_data_up allocate_per_cu ();
+  dwarf2_per_cu_data_up allocate_per_cu (dwarf2_section_info *section,
+					 sect_offset sect_off);
 
   /* A convenience function to allocate a signatured_type.  The
      returned object has its "index" field set properly.  The object
      is allocated on the dwarf2_per_bfd obstack.  */
-  signatured_type_up allocate_signatured_type (ULONGEST signature);
+  signatured_type_up allocate_signatured_type (dwarf2_section_info *section,
+					       sect_offset sect_off,
+					       ULONGEST signature);
 
   /* Map all the DWARF section data needed when scanning
      .debug_info.  */
@@ -563,7 +573,7 @@ public:
 
   /* Mapping from abstract origin DIE to concrete DIEs that reference it as
      DW_AT_abstract_origin.  */
-  std::unordered_map<sect_offset, std::vector<sect_offset>>
+  gdb::unordered_map<sect_offset, std::vector<sect_offset>>
     abstract_to_concrete;
 
   /* Current directory, captured at the moment that object this was
@@ -793,17 +803,17 @@ private:
      that the CU/TU has not been expanded yet.  */
   std::vector<compunit_symtab *> m_symtabs;
 
- /* Map from a type unit group to the corresponding unshared
-    structure.  */
-  std::unordered_map<type_unit_group *, type_unit_group_unshareable_up>
+  /* Map from a type unit group to the corresponding unshared
+     structure.  */
+  gdb::unordered_map<type_unit_group *, type_unit_group_unshareable_up>
     m_type_units;
 
   /* Map from signatured types to the corresponding struct type.  */
-  std::unordered_map<signatured_type *, struct type *> m_type_map;
+  gdb::unordered_map<signatured_type *, struct type *> m_type_map;
 
   /* Map from the objfile-independent dwarf2_per_cu_data instances to the
      corresponding objfile-dependent dwarf2_cu instances.  */
-  std::unordered_map<dwarf2_per_cu_data *, dwarf2_cu_up> m_dwarf2_cus;
+  gdb::unordered_map<dwarf2_per_cu_data *, dwarf2_cu_up> m_dwarf2_cus;
 };
 
 /* Converts DWARF language names to GDB language names.  */
@@ -882,9 +892,6 @@ extern void dwarf2_get_section_info (struct objfile *,
 				     enum dwarf2_section_enum,
 				     asection **, const gdb_byte **,
 				     bfd_size_type *);
-
-/* Return true if the producer of the inferior is clang.  */
-extern bool producer_is_clang (struct dwarf2_cu *cu);
 
 /* Interface for DWARF indexing methods.  */
 

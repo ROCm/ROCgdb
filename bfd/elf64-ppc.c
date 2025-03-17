@@ -10207,8 +10207,8 @@ size_global_entry_stubs (struct elf_link_hash_entry *h, void *inf)
 	   non-empty.  Otherwise the .text output section will be
 	   aligned at least to plt_stub_align even when no global
 	   entry stubs are needed.  */
-	if (s->alignment_power < align_power)
-	  s->alignment_power = align_power;
+	if (!bfd_link_align_section (s, align_power))
+	  return false;
 	stub_align = (bfd_vma) 1 << align_power;
 	if (htab->params->plt_stub_align >= 0
 	    || ((((stub_off + stub_size - 1) & -stub_align)
@@ -12294,7 +12294,7 @@ ppc_size_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
   if (stub_entry->target_section != NULL
       && stub_entry->target_section->output_section == NULL
       && info->non_contiguous_regions)
-    info->callbacks->einfo (_("%F%P: Could not assign `%pA' to an output section. "
+    info->callbacks->fatal (_("%P: Could not assign `%pA' to an output section. "
 			      "Retry without --enable-non-contiguous-regions.\n"),
 			    stub_entry->target_section);
 
@@ -12302,7 +12302,7 @@ ppc_size_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
   if (stub_entry->group->stub_sec != NULL
       && stub_entry->group->stub_sec->output_section == NULL
       && info->non_contiguous_regions)
-    info->callbacks->einfo (_("%F%P: Could not assign `%pA' to an output section. "
+    info->callbacks->fatal (_("%P: Could not assign `%pA' to an output section. "
 			      "Retry without --enable-non-contiguous-regions.\n"),
 			    stub_entry->group->stub_sec);
 

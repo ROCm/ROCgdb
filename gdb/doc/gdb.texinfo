@@ -6975,7 +6975,7 @@ fatal so it can carry out the purpose of the interrupt: to kill the program.
 
 @value{GDBN} has the ability to detect any occurrence of a signal in your
 program.  You can tell @value{GDBN} in advance what to do for each kind of
-signal.
+signal, apart from SIGKILL, which has its usual effect regardless.
 
 When specifying a signal by number, @value{GDBN} translates the number
 to the target platform according to the corresponding signal name.
@@ -23077,10 +23077,9 @@ To create an index file, use the @code{save gdb-index} command:
 @kindex save gdb-index
 Create index files for all symbol files currently known by
 @value{GDBN}.  For each known @var{symbol-file}, this command by
-default creates it produces a single file
-@file{@var{symbol-file}.gdb-index}.  If you invoke this command with
-the @option{-dwarf-5} option, it produces 2 files:
-@file{@var{symbol-file}.debug_names} and
+default produces a single file @file{@var{symbol-file}.gdb-index}.
+If you invoke this command with the @option{-dwarf-5} option, it
+produces 2 files: @file{@var{symbol-file}.debug_names} and
 @file{@var{symbol-file}.debug_str}.  The files are created in the
 given @var{directory}.
 
@@ -28660,6 +28659,9 @@ Aqua Vanjaram devices.
 
 @item @code{gfx942}
 @samp{gfx942} devices.
+
+@item @code{gfx950}
+@samp{gfx950} devices.
 
 @item @code{gfx1010}
 Navi 10 devices.
@@ -35140,6 +35142,11 @@ by a symbol name.
 @item pending
 If this breakpoint is pending, this field is present and holds the
 text used to set the breakpoint, as entered by the user.
+
+@value{GDBN}'s internal breakpoints (@pxref{maint info breakpoints})
+can sometimes become pending too, for these breakpoints the
+@var{pending} field will be empty as @value{GDBN} automatically
+creates these breakpoints as shared libraries are loaded.
 
 @item evaluated-by
 Where this breakpoint's condition is evaluated, either @samp{host} or
@@ -51629,7 +51636,7 @@ the following structure:
 @smallexample
 <?xml version="1.0"?>
 <threads>
-    <thread id="id" core="0" name="name" handle="1a2b3c">
+    <thread id="id" core="0" name="name" id_str="Thread 12.34" handle="1a2b3c">
     ... description ...
     </thread>
 </threads>
@@ -51641,7 +51648,10 @@ identifies the thread (@pxref{thread-id syntax}).  The
 the thread was last executing on.  The @samp{name} attribute, if
 present, specifies the human-readable name of the thread.  The content
 of the of @samp{thread} element is interpreted as human-readable
-auxiliary information.  The @samp{handle} attribute, if present,
+auxiliary information.  The @samp{id_str} attribute, if present,
+specifies what @value{GDBN} should print as the target ID of the
+thread (e.g.@: in the @samp{info threads} command or when switching
+to the thread).  The @samp{handle} attribute, if present,
 is a hex encoded representation of the thread handle.
 
 
@@ -54851,7 +54861,7 @@ the @value{GDBN} manual in node @code{Index Files}
 @c man begin OPTIONS gdb-add-index
 @table @env
 @item -dwarf-5
-Add DWARF 5 sections instead of previous @code{.debug_index} section.
+Add DWARF 5 sections instead of previous @code{.gdb_index} section.
 
 @end table
 @c man end

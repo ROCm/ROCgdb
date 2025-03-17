@@ -12932,9 +12932,10 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 	      else if (object_64bit)
 		continue;
 
-	      /* Check for "call/jmp *mem", "mov mem, %reg", "movrs mem, %reg",
-		 "test %reg, mem" and "binop mem, %reg" where binop
-		 is one of adc, add, and, cmp, or, sbb, sub, xor
+#ifdef OBJ_ELF
+	      /* Check for "call/jmp *mem", "push mem", "mov mem, %reg",
+		 "movrs mem, %reg", "test %reg, mem" and "binop mem, %reg" where
+		 binop is one of adc, add, and, cmp, or, sbb, sub, xor, or imul
 		 instructions without data prefix.  Always generate
 		 R_386_GOT32X for "sym*GOT" operand in 32-bit mode.  */
 	      unsigned int space = dot_insn () ? i.insn_opcode_space
@@ -12944,7 +12945,7 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 		      || (i.rm.mode == 0 && i.rm.regmem == 5))
 		  && ((space == SPACE_BASE
 		       && i.tm.base_opcode == 0xff
-		       && (i.rm.reg == 2 || i.rm.reg == 4))
+		       && (i.rm.reg == 2 || i.rm.reg == 4 || i.rm.reg == 6))
 		      || ((space == SPACE_BASE
 			   || space == SPACE_0F38
 			   || space == SPACE_MAP4)
@@ -12953,7 +12954,13 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 			   || space == SPACE_MAP4)
 			  && (i.tm.base_opcode == 0x85
 			      || (i.tm.base_opcode
-				  | (i.operands > 2 ? 0x3a : 0x38)) == 0x3b))))
+				  | (i.operands > 2 ? 0x3a : 0x38)) == 0x3b))
+		      || (((space == SPACE_0F
+			    /* Because of the 0F prefix, no suitable relocation
+			       exists for this unless it's REX2-encoded.  */
+			    && is_apx_rex2_encoding ())
+			   || space == SPACE_MAP4)
+			  && i.tm.base_opcode == 0xaf)))
 		{
 		  if (object_64bit)
 		    {
@@ -12988,9 +12995,11 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 			}
 		    }
 		  else if (generate_relax_relocations
-			   || (i.rm.mode == 0 && i.rm.regmem == 5))
+			   ? (!shared || i.rm.mode != 0 || i.rm.regmem != 5)
+			   : (!shared && i.rm.mode == 0 && i.rm.regmem == 5))
 		    fixP->fx_tcbit2 = 1;
 		}
+#endif
 	    }
 	}
     }
@@ -16838,10 +16847,9 @@ parse_register (const char *reg_string, char **end_op)
 	{
 	  const expressionS *e = symbol_get_value_expression (symbolP);
 
-	  if (e->X_op == O_register)
+	  if (e->X_op == O_register
+	      && (valueT) e->X_add_number < i386_regtab_size)
 	    {
-	      know (e->X_add_number >= 0
-		    && (valueT) e->X_add_number < i386_regtab_size);
 	      r = i386_regtab + e->X_add_number;
 	      *end_op = (char *) reg_string + (input_line_pointer - buf);
 	    }
@@ -18025,6 +18033,7 @@ i386_target_format (void)
 
 #endif /* ELF / PE / MACH_O  */
 
+#ifdef OBJ_ELF
 symbolS *
 md_undefined_symbol (char *name)
 {
@@ -18042,8 +18051,9 @@ md_undefined_symbol (char *name)
 	};
       return GOT_symbol;
     }
-  return 0;
+  return NULL;
 }
+#endif
 
 #ifdef OBJ_AOUT
 /* Round up a section size to the appropriate boundary.  */
