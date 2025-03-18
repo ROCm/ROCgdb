@@ -26,9 +26,10 @@
 
 * Linux checkpoint code has been updated to work with multiple inferiors.
 
-* The gcore script now has a -v or --version option, which prints the
-  version number, and then exits.  As well as a -h or --help option,
-  which prints each options and a brief description.
+* The gcore and gdb-add-index scripts now have a -v or --version
+  option, which prints the version number, and then exits.  As well as
+  a -h or --help option, which prints each options and a brief
+  description.
 
 * New commands
 
@@ -53,9 +54,9 @@ show riscv numeric-register-names
 
   ** The memory_source argument (the second argument) has been removed
      from gdb.disassembler.builtin_disassemble.  This argument was
-     never used by GDB, and was added my mistake.  The only place this
-     argument was ever documented was in the NEWS file, the official
-     documentation never mentioned this argument.
+     never used by GDB, and was added by mistake.  The unused argument
+     was never documented in the GDB manual, so users should not have
+     been using it.
 
 * Guile API
 
