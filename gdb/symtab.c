@@ -76,7 +76,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/common-utils.h"
 #include <optional>
-#include <unordered_set>
+#include "gdbsupport/unordered_set.h"
 
 /* Forward declarations for local functions.  */
 
@@ -5624,7 +5624,7 @@ rbreak_command (const char *regexp, int from_tty)
     spec.add_filename (std::move (file_name));
   std::vector<symbol_search> symbols = spec.search ();
 
-  std::unordered_set<std::string> seen_names;
+  gdb::unordered_set<std::string> seen_names;
   scoped_rbreak_breakpoints finalize;
   int err_count = 0;
 

@@ -1477,6 +1477,11 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"svnapot",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"svpbmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssqosid",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"ssnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"smnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"smmpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"sspm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"supm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1507,6 +1512,7 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadmempair",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadsync",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadvdot",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -2124,6 +2130,36 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
 	(_("`xtheadvector' is conflict with the `v' extension"));
       no_conflict = false;
     }
+  if (riscv_lookup_subset (rps->subset_list, "ssnpm", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `ssnpm' extension"),
+			  xlen);
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "smnpm", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `smnpm' extension"),
+			  xlen);
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "smmpm", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `smmpm' extension"),
+			  xlen);
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "sspm", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `sspm' extension"),
+			  xlen);
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "supm", &subset) && xlen != 64)
+    {
+      rps->error_handler (_ ("rv%d does not support the `supm' extension"),
+			  xlen);
+      no_conflict = false;
+    }
 
   bool support_zve = false;
   bool support_zvl = false;
@@ -2328,7 +2364,7 @@ riscv_arch_str1 (riscv_subset_t *subset,
 /* Convert subset information into string with explicit versions.  */
 
 char *
-riscv_arch_str (unsigned xlen, const riscv_subset_list_t *subset)
+riscv_arch_str (unsigned xlen, riscv_subset_list_t *subset, bool update)
 {
   size_t arch_str_len = riscv_estimate_arch_strlen (subset);
   char *attr_str = xmalloc (arch_str_len);
@@ -2338,6 +2374,13 @@ riscv_arch_str (unsigned xlen, const riscv_subset_list_t *subset)
 
   riscv_arch_str1 (subset->head, attr_str, buf, arch_str_len);
   free (buf);
+
+  if (update)
+    {
+      if (subset->arch_str != NULL)
+	free ((void *) subset->arch_str);
+      subset->arch_str = attr_str;
+    }
 
   return attr_str;
 }
@@ -2524,13 +2567,13 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
     }
   while (*p++ == ',');
 
-  bool conflict = false;
+  bool no_conflict = true;
   if (explicit_subset == NULL)
     {
       riscv_parse_add_implicit_subsets (rps);
-      conflict = riscv_parse_check_conflicts (rps);
+      no_conflict = riscv_parse_check_conflicts (rps);
     }
-  return conflict;
+  return no_conflict;
 }
 
 /* Add/Remove an extension to/from the subset list.  This is used for
@@ -2799,6 +2842,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xtheadsync");
     case INSN_CLASS_XTHEADVECTOR:
       return riscv_subset_supports (rps, "xtheadvector");
+    case INSN_CLASS_XTHEADVDOT:
+      return riscv_subset_supports (rps, "xtheadvdot");
     case INSN_CLASS_XTHEADZVAMO:
       return riscv_subset_supports (rps, "xtheadzvamo");
     case INSN_CLASS_XVENTANACONDOPS:
@@ -3104,6 +3149,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadsync";
     case INSN_CLASS_XTHEADVECTOR:
       return "xtheadvector";
+    case INSN_CLASS_XTHEADVDOT:
+      return "xtheadvdot";
     case INSN_CLASS_XTHEADZVAMO:
       return "xtheadzvamo";
     case INSN_CLASS_XSFCEASE:
