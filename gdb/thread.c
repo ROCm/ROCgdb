@@ -1232,14 +1232,6 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
   /* Switch to the thread (and inferior / target).  */
   switch_to_thread (tp);
 
-  if (show_current_lane)
-    {
-      if (tp->has_simd_lanes ())
-	uiout->field_signed ("lane", tp->current_simd_lane ());
-      else
-	uiout->field_skip ("lane");
-    }
-
   /* For the CLI, we stuff everything into the target-id field.
      This is a gross hack to make the output come out looking
      correct.  The underlying problem here is that ui-out has no
@@ -1262,6 +1254,14 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
   else
     {
       uiout->field_string ("target-id", thread_target_id_str (tp));
+    }
+
+  if (show_current_lane)
+    {
+      if (tp->has_simd_lanes ())
+	uiout->field_signed ("lane", tp->current_simd_lane ());
+      else
+	uiout->field_skip ("lane");
     }
 
   if (tp->state == THREAD_RUNNING)
@@ -1392,10 +1392,10 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	uiout->table_header (4, ui_left, "id-in-tg", "Id");
 	if (show_global_ids)
 	  uiout->table_header (4, ui_left, "id", "GId");
-	if (show_current_lane)
-	  uiout->table_header (5, ui_left, "lane", "Lane");
 	uiout->table_header (target_id_col_width, ui_left,
 			     "target-id", "Target Id");
+	if (show_current_lane)
+	  uiout->table_header (5, ui_left, "lane", "Lane");
 	uiout->table_header (1, ui_left, "frame", "Frame");
 	uiout->table_body ();
       }
