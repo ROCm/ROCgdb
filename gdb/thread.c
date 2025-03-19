@@ -1132,7 +1132,7 @@ pc_in_thread_step_range (CORE_ADDR pc, struct thread_info *thread)
 /* Helper for print_thread_info.  Returns true if THR should be
    printed.  If REQUESTED_THREADS, a list of GDB ids/ranges, is not
    NULL, only print THR if its ID is included in the list.  GLOBAL_IDS
-   is true if REQUESTED_THREADS is list of global IDs, false if a list
+   is true if REQUESTED_THREADS is a list of global IDs, false if a list
    of per-inferior thread ids.  If PID is not -1, only print THR if it
    is a thread from the process PID.  Otherwise, threads from all
    attached PIDs are printed.  If both REQUESTED_THREADS is not NULL
@@ -1141,7 +1141,7 @@ pc_in_thread_step_range (CORE_ADDR pc, struct thread_info *thread)
 
 static bool
 should_print_thread (const char *requested_threads, int default_inf_num,
-		     int global_ids, int pid, struct thread_info *thr)
+		     bool global_ids, int pid, struct thread_info *thr)
 {
   if (requested_threads != NULL && *requested_threads != '\0')
     {
@@ -1199,7 +1199,8 @@ thread_target_id_str (thread_info *tp, int lane = -1)
 
 static void
 do_print_thread (ui_out *uiout, const char *requested_threads,
-		 int global_ids, int pid, int show_global_ids,
+		 bool global_ids, int pid, bool show_global_ids,
+		 bool show_current_lane,
 		 int default_inf_num, thread_info *tp,
 		 thread_info *current_thread)
 {
@@ -1230,6 +1231,14 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
 
   /* Switch to the thread (and inferior / target).  */
   switch_to_thread (tp);
+
+  if (show_current_lane)
+    {
+      if (tp->has_simd_lanes ())
+	uiout->field_signed ("lane", tp->current_simd_lane ());
+      else
+	uiout->field_skip ("lane");
+    }
 
   /* For the CLI, we stuff everything into the target-id field.
      This is a gross hack to make the output come out looking
@@ -1286,12 +1295,13 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
 
 static void
 print_thread (ui_out *uiout, const char *requested_threads,
-	      int global_ids, int pid, int show_global_ids,
+	      bool global_ids, int pid, bool show_global_ids,
+	      bool show_current_lane,
 	      int default_inf_num, thread_info *tp, thread_info *current_thread)
 
 {
   do_with_buffered_output (do_print_thread, uiout, requested_threads,
-			   global_ids, pid, show_global_ids,
+			   global_ids, pid, show_global_ids, show_current_lane,
 			   default_inf_num, tp, current_thread);
 }
 
@@ -1326,6 +1336,8 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
     /* We'll be switching threads temporarily below.  */
     scoped_restore_current_thread restore_thread;
 
+    bool show_current_lane = false;
+
     if (uiout->is_mi_like_p ())
       list_emitter.emplace (uiout, "threads");
     else
@@ -1354,6 +1366,9 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 			  thread_target_id_str (tp).size ());
 
 	    ++n_threads;
+
+	    if (!show_current_lane && tp->has_simd_lanes ())
+	      show_current_lane = true;
 	  }
 
 	if (n_threads == 0)
@@ -1366,13 +1381,19 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	    return;
 	  }
 
-	table_emitter.emplace (uiout, show_global_ids ? 5 : 4,
-			       n_threads, "threads");
+	int n_cols = 4;
+	if (show_global_ids)
+	  n_cols++;
+	if (show_current_lane)
+	  n_cols++;
+	table_emitter.emplace (uiout, n_cols, n_threads, "threads");
 
 	uiout->table_header (1, ui_left, "current", "");
 	uiout->table_header (4, ui_left, "id-in-tg", "Id");
 	if (show_global_ids)
 	  uiout->table_header (4, ui_left, "id", "GId");
+	if (show_current_lane)
+	  uiout->table_header (5, ui_left, "lane", "Lane");
 	uiout->table_header (target_id_col_width, ui_left,
 			     "target-id", "Target Id");
 	uiout->table_header (1, ui_left, "frame", "Frame");
@@ -1388,7 +1409,8 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 	    current_exited = true;
 
 	  print_thread (uiout, requested_threads, global_ids, pid,
-			show_global_ids, default_inf_num, tp, current_thread);
+			show_global_ids, show_current_lane,
+			default_inf_num, tp, current_thread);
 	}
 
     /* This end scope restores the current thread and the frame
