@@ -1500,6 +1500,9 @@ struct info_lanes_opts
 
   /* For "-inactive".  */
   bool only_inactive = false;
+
+  /* For "-unused".  */
+  bool only_unused = false;
 };
 
 static const gdb::option::option_def info_lanes_option_defs[] = {
@@ -1520,6 +1523,12 @@ static const gdb::option::option_def info_lanes_option_defs[] = {
     "inactive",
     [] (info_lanes_opts *opts) { return &opts->only_inactive; },
     N_("Only inactive lanes."),
+  },
+
+  gdb::option::flag_option_def<info_lanes_opts> {
+    "unused",
+    [] (info_lanes_opts *opts) { return &opts->only_unused; },
+    N_("Only unused lanes."),
   },
 };
 
@@ -1542,15 +1551,21 @@ should_print_lane (thread_info *thr, const info_lanes_opts &opts,
   int lane = thr->current_simd_lane ();
 
   if (opts.show_all)
-    ;
-  else if (opts.only_active && !thr->is_simd_lane_active (lane))
-    return false;
-  else if (opts.only_inactive && thr->is_simd_lane_active (lane))
-    return false;
-  else if (lane >= lane_used_count)
-    return false;
-
-  return true;
+    return true;
+  else if (!opts.only_active
+	   && !opts.only_inactive
+	   && !opts.only_unused
+	   && lane < lane_used_count)
+    return true;
+  else if (opts.only_active && thr->is_simd_lane_active (lane))
+    return true;
+  else if (opts.only_inactive
+	   && !thr->is_simd_lane_active (lane)
+	   && lane < lane_used_count)
+    return true;
+  else if (opts.only_unused && lane >= lane_used_count)
+    return true;
+  return false;
 }
 
 /* Print one row in the "info lanes" table.  TP is the thread related
