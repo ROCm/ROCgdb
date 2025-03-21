@@ -831,7 +831,13 @@ mi_interp::on_memory_changed (CORE_ADDR memaddr, ssize_t len,
 
   ui_out_redirect_pop redir (mi_uiout, this->event_channel);
 
-  if (scope_matches (scope, LOCATION_SCOPE_THREAD))
+  if (scope_matches (scope, LOCATION_SCOPE_LANE))
+    {
+      mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
+      mi_uiout->field_signed ("lane-id",
+			      inferior_thread ()->current_simd_lane ());
+    }
+  else if (scope_matches (scope, LOCATION_SCOPE_THREAD))
     mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
   else
     mi_uiout->field_fmt ("thread-group", "i%d", current_inferior ()->num);
