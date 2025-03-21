@@ -433,12 +433,8 @@ amdgcn_return_value_load_store (gdbarch *gdbarch, regcache *regcache,
   const int base_regno
     = first_regnum_for_arg_or_return_value (gdbarch, regcache->ptid ());
   const int lanenumber
-#if 0
     = current_inferior ()->find_thread
 	(regcache->ptid ())->current_simd_lane ();
-#else
-    = 0;
-#endif
 
   for (const auto &piece : alloc.allocation ())
     {
