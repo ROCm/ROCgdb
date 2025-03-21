@@ -1966,7 +1966,10 @@ struct user_selected_context
 {
   /* Constructor.  */
   user_selected_context ()
-    : m_previous_ptid (inferior_ptid)
+    : m_previous_ptid (inferior_ptid),
+      m_previous_lane (inferior_ptid != null_ptid
+		       ? inferior_thread ()->current_simd_lane ()
+		       : -1)
   {
     save_selected_frame (&m_previous_frame_id, &m_previous_frame_level);
   }
@@ -1975,9 +1978,10 @@ struct user_selected_context
      was created.  */
   bool has_changed () const
   {
-    /* Did the selected thread change?  */
+    /* Did the selected thread or lane change?  */
     if (m_previous_ptid != null_ptid && inferior_ptid != null_ptid
-	&& m_previous_ptid != inferior_ptid)
+	&& (m_previous_ptid != inferior_ptid
+	    || inferior_thread ()->current_simd_lane () != m_previous_lane))
       return true;
 
     /* Grab details of the currently selected frame, for comparison.  */
@@ -2005,6 +2009,10 @@ private:
   /* The previously selected thread.  This might be null_ptid if there was
      no previously selected thread.  */
   ptid_t m_previous_ptid;
+
+  /* The previously selected lane.  This will be -1 if there was no
+     previously selected lane.  */
+  int m_previous_lane;
 
   /* The previously selected frame.  If the innermost frame is selected, or
      no frame is selected, then the frame_id will be null_frame_id, and the
