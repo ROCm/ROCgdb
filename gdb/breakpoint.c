@@ -2030,38 +2030,22 @@ is_watchpoint (const struct breakpoint *bpt)
 	  || bpt->type == bp_watchpoint);
 }
 
-/* Returns true if the current thread, its SIMD lane and its running
-   state are safe to evaluate or update watchpoint B.
-
-   Watchpoints on local expressions need to be evaluated in the context
-   that they were bound to on their creation.  This means that the
-   original thread needs to be stopped and in focus (together with the
-   original SIMD lane) for the needed evaluation context to be present.
-   Additional need to stop the thread is to be able to select the
-   correct frame context.
-
+/* Returns true if the current thread and its running state are safe
+   to evaluate or update watchpoint B.  Watchpoints on local
+   expressions need to be evaluated in the context of the thread that
+   was current when the watchpoint was created, and, that thread needs
+   to be stopped to be able to select the correct frame context.
    Watchpoints on global expressions can be evaluated on any thread,
-   and in any state.
-
-   It is presently left to the target allowing memory accesses when
-   threads are running.  */
+   and in any state.  It is presently left to the target allowing
+   memory accesses when threads are running.  */
 
 static bool
-watchpoint_in_thread_and_simd_lane_scope (struct watchpoint *b)
+watchpoint_in_thread_scope (struct watchpoint *b)
 {
-  if (b->pspace != current_program_space)
-    return false;
-  else if (b->watchpoint_thread == null_ptid)
-    return true;
-  else if (inferior_ptid != b->watchpoint_thread
-	   || inferior_thread ()->executing ())
-    return false;
-  else if (b->watchpoint_simd_lane == -1)
-    return true;
-  else if (b->watchpoint_simd_lane != inferior_thread ()->current_simd_lane ())
-    return false;
-
-  return true;
+  return (b->pspace == current_program_space
+	  && (b->watchpoint_thread == null_ptid
+	      || (inferior_ptid == b->watchpoint_thread
+		  && !inferior_thread ()->executing ())));
 }
 
 /* Set watchpoint B to disp_del_at_next_stop, even including its possible
@@ -2179,7 +2163,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_and_simd_lane_scope (b))
+  if (!watchpoint_in_thread_scope (b))
     return;
 
   if (b->disposition == disp_del_at_next_stop)
@@ -2415,7 +2399,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  std::vector<addr_range> aliases
 		    = gdbarch_get_watchable_aliases (arch,
 						     b->watchpoint_thread,
-						     b->watchpoint_simd_lane,
+						     0, /* lane */
 						     {addr, range.size});
 		  if (aliases.empty ())
 		    {
@@ -4768,8 +4752,7 @@ bpstat::bpstat (const bpstat &other)
     commands (other.commands),
     print (other.print),
     stop (other.stop),
-    print_it (other.print_it),
-    simd_lane_mask (other.simd_lane_mask)
+    print_it (other.print_it)
 {
   if (other.old_val != NULL)
     old_val = release_value (other.old_val->copy ());
@@ -5008,11 +4991,6 @@ bpstat_do_actions_1 (bpstat **bsp)
   int printed_hit_locno = -1;
 
   breakpoint_proceeded = 0;
-
-  /* After all actions are done, restore the original SIMD lane.  */
-  thread_info *thread = inferior_thread ();
-  scoped_restore_current_simd_lane restore_lane (thread);
-
   for (; bs != NULL; bs = bs->next)
     {
       struct command_line *cmd = NULL;
@@ -5051,13 +5029,6 @@ bpstat_do_actions_1 (bpstat **bsp)
 	{
 	  /* The action has been already done by bpstat_stop_status.  */
 	  cmd = cmd->next;
-	}
-
-      if (cmd != nullptr && thread->has_simd_lanes ())
-	{
-	  /* Apply actions to the first hit lane.  */
-	  int lane = find_first_active_simd_lane (bs->simd_lane_mask);
-	  thread->set_current_simd_lane (lane);
 	}
 
       while (cmd != NULL)
@@ -5347,8 +5318,7 @@ bpstat::bpstat (struct bp_location *bl, bpstat ***bs_link_pointer)
     commands (NULL),
     print (0),
     stop (0),
-    print_it (print_it_normal),
-    simd_lane_mask (0)
+    print_it (print_it_normal)
 {
   **bs_link_pointer = this;
   *bs_link_pointer = &next;
@@ -5360,8 +5330,7 @@ bpstat::bpstat ()
     commands (NULL),
     print (0),
     stop (0),
-    print_it (print_it_normal),
-    simd_lane_mask (0)
+    print_it (print_it_normal)
 {
 }
 
@@ -5476,7 +5445,7 @@ watchpoint_check (bpstat *bs)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_and_simd_lane_scope (b))
+  if (!watchpoint_in_thread_scope (b))
     return WP_IGNORE;
 
   if (b->exp_valid_block == NULL)
@@ -5825,19 +5794,6 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
       return;
     }
 
-  /* Remember the SIMD mask.  */
-  bs->simd_lane_mask = thread->active_simd_lanes_mask ();
-
-  /* If we hit the breakpoint with all lanes inactive, don't stop.
-     This can happen in conditional/divergent code -- the compiler may
-     decide it's cheaper to execute a block of instructions unmasked
-     than to emit a jump over the instruction block.  */
-  if (maint_lane_divergence_support && bs->simd_lane_mask == 0)
-    {
-      bs->stop = 0;
-      return;
-    }
-
   /* If this is a thread/task-specific breakpoint, don't waste cpu
      evaluating the condition if this isn't the specified
      thread/task.  */
@@ -5915,27 +5871,7 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
 	    {
 	      scoped_restore reset_in_cond_eval
 		= make_scoped_restore (&thread->control.in_cond_eval, true);
-	      scoped_restore_current_simd_lane restore_lane {thread};
-	      simd_lanes_mask_t condition_mask = 0;
-
-	      /* Evaluate the condition for all SIMD lanes which might have
-		 caused the stop.  */
-	      for_active_lanes (bs->simd_lane_mask, [&] (int lane)
-		{
-		  thread->set_current_simd_lane (lane);
-		  if (breakpoint_cond_eval (cond))
-		    {
-		      /* Unmask the lane if the condition is true.  */
-		      condition_mask |= (simd_lanes_mask_t) 1 << lane;
-		    }
-
-		  return true;
-		});
-
-	      /* If at least one lane is unmasked, then the condition
-		 was held.  Update the SIMD lanes mask.  */
-	      condition_result = condition_mask != 0;
-	      bs->simd_lane_mask = condition_mask;
+	      condition_result = breakpoint_cond_eval (cond);
 	    }
 	  catch (const gdb_exception_error &ex)
 	    {
@@ -10691,7 +10627,6 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   ptid_t watchpoint_thread_ptid = null_ptid;
-  int watchpoint_simd_lane = -1;
   frame_info_ptr wp_frame = nullptr;
   if (scope_matches (scope, LOCATION_SCOPE_THREAD))
     {
@@ -10699,16 +10634,6 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	error (_("Location requires a selected thread"));
 
       watchpoint_thread_ptid = inferior_ptid;
-
-      if (scope_matches (scope, LOCATION_SCOPE_LANE))
-	{
-	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
-
-	  if (current_simd_lane == -1)
-	    error (_("Location requires a selected SIMD lane"));
-
-	  watchpoint_simd_lane = current_simd_lane;
-	}
 
       if (scope_matches (scope, LOCATION_SCOPE_FRAME))
 	wp_frame = get_selected_frame ("Location requires a selected frame");
@@ -10800,7 +10725,6 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
   w->watchpoint_frame = watchpoint_frame_id;
   w->watchpoint_thread = watchpoint_thread_ptid;
-  w->watchpoint_simd_lane = watchpoint_simd_lane;
 
   if (!just_location)
     value_free_to_mark (mark);
@@ -12227,30 +12151,6 @@ ordinary_breakpoint::print_it (const bpstat *bs) const
     uiout->text ("Breakpoint ");
   print_num_locno (bs, uiout);
   uiout->text (", ");
-
-  if (bs->simd_lane_mask != 0)
-    {
-      if (inferior_thread ()->has_simd_lanes ())
-	{
-	  std::vector<int> hit_lanes;
-	  for_active_lanes (bs->simd_lane_mask, [&] (int lane)
-	    {
-	      hit_lanes.push_back (lane);
-	      return true;
-	    });
-
-	  if (hit_lanes.size () > 1)
-	    uiout->text ("with lanes ");
-	  else
-	    uiout->text ("with lane ");
-
-	  std::string lanes
-	    = make_ranges_from_sorted_vector (hit_lanes,
-					      !current_uiout->is_mi_like_p ());
-	  uiout->field_string ("hit-lanes", lanes.c_str ());
-	  uiout->text (", ");
-	}
-    }
 
   return PRINT_SRC_AND_LOC;
 }

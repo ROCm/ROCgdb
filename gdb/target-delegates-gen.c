@@ -90,10 +90,6 @@ struct dummy_target : public target_ops
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
-  std::string lane_to_str (thread_info *arg0, int arg1) override;
-  std::string dispatch_pos_str (thread_info *arg0) override;
-  std::string thread_workgroup_pos_str (thread_info *arg0) override;
-  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -277,10 +273,6 @@ struct debug_target : public target_ops
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
-  std::string lane_to_str (thread_info *arg0, int arg1) override;
-  std::string dispatch_pos_str (thread_info *arg0) override;
-  std::string thread_workgroup_pos_str (thread_info *arg0) override;
-  std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -1829,108 +1821,6 @@ debug_target::thread_name (thread_info *arg0)
 	      this->beneath ()->shortname (),
 	      target_debug_print_thread_info_p (arg0).c_str (),
 	      target_debug_print_const_char_p (result).c_str ());
-  return result;
-}
-
-std::string
-target_ops::lane_to_str (thread_info *arg0, int arg1)
-{
-  return this->beneath ()->lane_to_str (arg0, arg1);
-}
-
-std::string
-dummy_target::lane_to_str (thread_info *arg0, int arg1)
-{
-  return default_lane_to_str (this, arg0, arg1);
-}
-
-std::string
-debug_target::lane_to_str (thread_info *arg0, int arg1)
-{
-  target_debug_printf_nofunc ("-> %s->lane_to_str (...)", this->beneath ()->shortname ());
-  std::string result
-    = this->beneath ()->lane_to_str (arg0, arg1);
-  target_debug_printf_nofunc ("<- %s->lane_to_str (%s, %s) = %s",
-	      this->beneath ()->shortname (),
-	      target_debug_print_thread_info_p (arg0).c_str (),
-	      target_debug_print_int (arg1).c_str (),
-	      target_debug_print_std_string (result).c_str ());
-  return result;
-}
-
-std::string
-target_ops::dispatch_pos_str (thread_info *arg0)
-{
-  return this->beneath ()->dispatch_pos_str (arg0);
-}
-
-std::string
-dummy_target::dispatch_pos_str (thread_info *arg0)
-{
-  return default_dispatch_pos_str (this, arg0);
-}
-
-std::string
-debug_target::dispatch_pos_str (thread_info *arg0)
-{
-  target_debug_printf_nofunc ("-> %s->dispatch_pos_str (...)", this->beneath ()->shortname ());
-  std::string result
-    = this->beneath ()->dispatch_pos_str (arg0);
-  target_debug_printf_nofunc ("<- %s->dispatch_pos_str (%s) = %s",
-	      this->beneath ()->shortname (),
-	      target_debug_print_thread_info_p (arg0).c_str (),
-	      target_debug_print_std_string (result).c_str ());
-  return result;
-}
-
-std::string
-target_ops::thread_workgroup_pos_str (thread_info *arg0)
-{
-  return this->beneath ()->thread_workgroup_pos_str (arg0);
-}
-
-std::string
-dummy_target::thread_workgroup_pos_str (thread_info *arg0)
-{
-  return default_thread_workgroup_pos_str (this, arg0);
-}
-
-std::string
-debug_target::thread_workgroup_pos_str (thread_info *arg0)
-{
-  target_debug_printf_nofunc ("-> %s->thread_workgroup_pos_str (...)", this->beneath ()->shortname ());
-  std::string result
-    = this->beneath ()->thread_workgroup_pos_str (arg0);
-  target_debug_printf_nofunc ("<- %s->thread_workgroup_pos_str (%s) = %s",
-	      this->beneath ()->shortname (),
-	      target_debug_print_thread_info_p (arg0).c_str (),
-	      target_debug_print_std_string (result).c_str ());
-  return result;
-}
-
-std::string
-target_ops::lane_workgroup_pos_str (thread_info *arg0, int arg1)
-{
-  return this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
-}
-
-std::string
-dummy_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
-{
-  return default_lane_workgroup_pos_str (this, arg0, arg1);
-}
-
-std::string
-debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
-{
-  target_debug_printf_nofunc ("-> %s->lane_workgroup_pos_str (...)", this->beneath ()->shortname ());
-  std::string result
-    = this->beneath ()->lane_workgroup_pos_str (arg0, arg1);
-  target_debug_printf_nofunc ("<- %s->lane_workgroup_pos_str (%s, %s) = %s",
-	      this->beneath ()->shortname (),
-	      target_debug_print_thread_info_p (arg0).c_str (),
-	      target_debug_print_int (arg1).c_str (),
-	      target_debug_print_std_string (result).c_str ());
   return result;
 }
 

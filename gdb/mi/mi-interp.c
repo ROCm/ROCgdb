@@ -427,8 +427,6 @@ mi_interp::on_normal_stop (struct bpstat *bs, int print_frame)
 	print_stop_event (this->cli_uiout);
 
       mi_uiout->field_signed ("thread-id", tp->global_num);
-      if (tp->has_simd_lanes ())
-	mi_uiout->field_signed ("lane-id", tp->current_simd_lane ());
       if (non_stop)
 	{
 	  ui_out_emit_list list_emitter (mi_uiout, "stopped-threads");
@@ -831,13 +829,7 @@ mi_interp::on_memory_changed (CORE_ADDR memaddr, ssize_t len,
 
   ui_out_redirect_pop redir (mi_uiout, this->event_channel);
 
-  if (scope_matches (scope, LOCATION_SCOPE_LANE))
-    {
-      mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
-      mi_uiout->field_signed ("lane-id",
-			      inferior_thread ()->current_simd_lane ());
-    }
-  else if (scope_matches (scope, LOCATION_SCOPE_THREAD))
+  if (scope_matches (scope, LOCATION_SCOPE_THREAD))
     mi_uiout->field_signed ("thread-id", inferior_thread ()->global_num);
   else
     mi_uiout->field_fmt ("thread-group", "i%d", current_inferior ()->num);
@@ -883,10 +875,6 @@ mi_interp::on_user_selected_context_changed (user_selected_what selection)
 
       gdb_printf (this->event_channel, "thread-selected,id=\"%d\"",
 		  tp->global_num);
-
-      if (tp->has_simd_lanes ())
-	gdb_printf (this->event_channel,
-		    ",lane-id=\"%d\"", tp->current_simd_lane ());
 
       if (tp->state != THREAD_RUNNING)
 	{

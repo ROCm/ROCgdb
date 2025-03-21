@@ -2469,7 +2469,7 @@ target_pre_inferior ()
 
   current_inferior ()->highest_thread_num = 0;
 
-  update_previous_thread_and_lane ();
+  update_previous_thread ();
 
   agent_capability_invalidate ();
 }
@@ -2500,7 +2500,7 @@ target_preopen (int from_tty)
     }
 
   /* Release reference to old previous thread.  */
-  update_previous_thread_and_lane ();
+  update_previous_thread ();
 
   /* Calling target_kill may remove the target from the stack.  But if
      it doesn't (which seems like a win for UDI), remove it now.  */
@@ -2602,30 +2602,6 @@ std::string
 target_pid_to_str (ptid_t ptid)
 {
   return current_inferior ()->top_target ()->pid_to_str (ptid);
-}
-
-std::string
-target_lane_to_str (thread_info *thr, int lane)
-{
-  return current_inferior ()->top_target ()->lane_to_str (thr, lane);
-}
-
-std::string
-target_dispatch_pos_str (thread_info *thr)
-{
-  return current_inferior ()->top_target ()->dispatch_pos_str (thr);
-}
-
-std::string
-target_thread_workgroup_pos_str (thread_info *thr)
-{
-  return current_inferior ()->top_target ()->thread_workgroup_pos_str (thr);
-}
-
-std::string
-target_lane_workgroup_pos_str (thread_info *thr, int lane)
-{
-  return current_inferior ()->top_target ()->lane_workgroup_pos_str (thr, lane);
 }
 
 const char *
@@ -3708,30 +3684,6 @@ static std::string
 default_pid_to_str (struct target_ops *ops, ptid_t ptid)
 {
   return normal_pid_to_str (ptid);
-}
-
-static std::string
-default_lane_to_str (struct target_ops *ops, thread_info *thr, int lane)
-{
-  return target_pid_to_str (thr->ptid);
-}
-
-static std::string
-default_dispatch_pos_str (struct target_ops *ops, thread_info *thr)
-{
-  return {};
-}
-
-static std::string
-default_thread_workgroup_pos_str (struct target_ops *ops, thread_info *thr)
-{
-  return {};
-}
-
-static std::string
-default_lane_workgroup_pos_str (struct target_ops *ops, thread_info *thr, int lane)
-{
-  return {};
 }
 
 /* Error-catcher for target_find_memory_regions.  */

@@ -339,27 +339,6 @@ typedef struct frame_id (gdbarch_dummy_id_ftype) (struct gdbarch *gdbarch, const
 extern struct frame_id gdbarch_dummy_id (struct gdbarch *gdbarch, const frame_info_ptr &this_frame);
 extern void set_gdbarch_dummy_id (struct gdbarch *gdbarch, gdbarch_dummy_id_ftype *dummy_id);
 
-/* Return the active SIMD lanes mask for a thread TP. */
-
-extern bool gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch);
-
-typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdbarch, thread_info *tp);
-extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
-extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
-
-/* Return the number of lanes supported by the thread. */
-
-typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
-extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
-extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
-
-/* Return the number of lanes used by the thread, accounting for
-   partial work-groups.  Defaults to the number of supported lanes. */
-
-typedef int (gdbarch_used_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
-extern int gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
-extern void set_gdbarch_used_lanes_count (struct gdbarch *gdbarch, gdbarch_used_lanes_count_ftype *used_lanes_count);
-
 /* Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
    deprecated_fp_regnum. */
 

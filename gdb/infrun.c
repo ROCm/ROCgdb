@@ -155,28 +155,21 @@ show_step_stop_if_no_debug (struct ui_file *file, int from_tty,
   gdb_printf (file, _("Mode of the step operation is %s.\n"), value);
 }
 
-/* proceed and normal_stop use these to notify the user when the
-   inferior stopped in a different thread/lane than it had been
-   running in.  The thread can also be used to find for which thread
-   normal_stop last reported a stop.  */
+/* proceed and normal_stop use this to notify the user when the
+   inferior stopped in a different thread than it had been running in.
+   It can also be used to find for which thread normal_stop last
+   reported a stop.  */
 static thread_info_ref previous_thread;
-static int previous_lane = -1;
 
 /* See infrun.h.  */
 
 void
-update_previous_thread_and_lane ()
+update_previous_thread ()
 {
   if (inferior_ptid == null_ptid)
-    {
-      previous_thread = nullptr;
-      previous_lane = -1;
-    }
+    previous_thread = nullptr;
   else
-    {
-      previous_thread = thread_info_ref::new_reference (inferior_thread ());
-      previous_lane = inferior_thread ()->current_simd_lane ();
-    }
+    previous_thread = thread_info_ref::new_reference (inferior_thread ());
 }
 
 /* See infrun.h.  */
@@ -200,18 +193,6 @@ show_debug_infrun (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
 {
   gdb_printf (file, _("Inferior debugging is %s.\n"), value);
-}
-
-/* See infrun.h.  */
-bool maint_lane_divergence_support = true;
-
-/* Implementation of "maint show lane-divergence-support".  */
-
-static void
-maint_show_lane_divergence_support (ui_file *file, int from_tty,
-				    cmd_list_element *c, const char *value)
-{
-  gdb_printf (file, _("Lane divergence debugging support is %s.\n"), value);
 }
 
 /* Support for disabling address space randomization.  */
@@ -3651,8 +3632,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
       return;
     }
 
-  /* We'll update these if & when we switch to a new thread/lane.  */
-  update_previous_thread_and_lane ();
+  /* We'll update this if & when we switch to a new thread.  */
+  update_previous_thread ();
 
   thread_info *cur_thr = inferior_thread ();
   infrun_debug_printf ("cur_thr = %s", cur_thr->ptid.to_string ().c_str ());
@@ -3897,7 +3878,7 @@ init_wait_for_inferior (void)
 
   nullify_last_target_wait_ptid ();
 
-  update_previous_thread_and_lane ();
+  update_previous_thread ();
 }
 
 
@@ -7398,38 +7379,6 @@ handle_signal_stop (struct execution_control_state *ecs)
   process_event_stop_test (ecs);
 }
 
-/* Switch to an active lane that caused the stop.  If we stopped for a
-   breakpoint, use the breakpoint's lane mask to determine candidate
-   active lanes, as it may have been further restricted from the
-   thread's execution mask.  Otherwise, use the thread's execution
-   mask.  If the previous current lane is still active, do not change
-   lanes.  Otherwise, select the first active lane.  If all lanes are
-   masked out, leave the previous current lane selected.  */
-
-static void
-switch_to_active_lane (thread_info *thr)
-{
-  simd_lanes_mask_t mask;
-  if (thr->control.stop_bpstat != nullptr)
-    mask = thr->control.stop_bpstat->simd_lane_mask;
-  else
-    mask = thr->active_simd_lanes_mask ();
-
-  if (mask != 0)
-    {
-      int current_simd_lane = thr->current_simd_lane ();
-      /* If previous SIMD lane matches the SIMD lane mask, do not
-	 change it.  Otherwise, find a new one.  */
-      if (!is_simd_lane_active (mask, current_simd_lane))
-	{
-	  /* If a specific SIMD lane caused the stop, then switch the
-	     thread to this lane.  */
-	  int first_lane = find_first_active_simd_lane (mask);
-	  thr->set_current_simd_lane (first_lane);
-	}
-    }
-}
-
 /* Return the address for the beginning of the line.  */
 
 CORE_ADDR
@@ -7754,21 +7703,6 @@ process_event_stop_test (struct execution_control_state *ecs)
     {
       infrun_debug_printf ("no stepping, continue");
       /* Likewise if we aren't even stepping.  */
-      keep_going (ecs);
-      return;
-    }
-
-  /* If this lane is divergent, keep stepping until it becomes
-     active.  */
-  if (maint_lane_divergence_support
-      && (!ecs->event_thread->is_simd_lane_active
-	  (ecs->event_thread->current_simd_lane ())))
-    {
-      infrun_debug_printf
-	("stepping divergent lane %s",
-	 target_lane_to_str (ecs->event_thread,
-			     ecs->event_thread->current_simd_lane ()).c_str ());
-
       keep_going (ecs);
       return;
     }
@@ -9663,12 +9597,6 @@ normal_stop ()
      instead of after.  */
   update_thread_list ();
 
-  if (target_has_execution ()
-      && last.kind () != TARGET_WAITKIND_SIGNALLED
-      && last.kind () != TARGET_WAITKIND_EXITED
-      && last.kind () != TARGET_WAITKIND_NO_RESUMED)
-    switch_to_active_lane (inferior_thread ());
-
   if (last.kind () == TARGET_WAITKIND_STOPPED && stopped_by_random_signal)
     notify_signal_received (inferior_thread ()->stop_signal ());
 
@@ -9690,42 +9618,23 @@ normal_stop ()
      informing of a stop.  */
   if (!non_stop)
     {
-
       if ((last.kind () != TARGET_WAITKIND_SIGNALLED
 	   && last.kind () != TARGET_WAITKIND_EXITED
 	   && last.kind () != TARGET_WAITKIND_NO_RESUMED
 	   && last.kind () != TARGET_WAITKIND_THREAD_EXITED)
 	  && target_has_execution ()
-	  && (previous_thread != inferior_thread ()
-	      || previous_lane != inferior_thread ()->current_simd_lane ()))
+	  && previous_thread != inferior_thread ())
 	{
 	  SWITCH_THRU_ALL_UIS ()
 	    {
 	      target_terminal::ours_for_output ();
-
-	      thread_info *thr = inferior_thread ();
-
-	      if (thr->has_simd_lanes ())
-		{
-		  int lane = thr->current_simd_lane ();
-
-		  gdb_printf (_("[Switching to thread %s, lane %d (%s)]\n"),
-			      print_thread_id (thr), lane,
-			      target_lane_to_str (thr, lane).c_str ());
-		}
-	      else
-		{
-		  gdb_printf (_("[Switching to thread %s (%s)]\n"),
-			      print_thread_id (thr),
-			      target_pid_to_str (thr->ptid).c_str ());
-		}
-
-	      warn_if_current_lane_is_inactive ();
+	      gdb_printf (_("[Switching to %s]\n"),
+			  target_pid_to_str (inferior_ptid).c_str ());
 	      annotate_thread_changed ();
 	    }
 	}
 
-      update_previous_thread_and_lane ();
+      update_previous_thread ();
     }
 
   if (last.kind () == TARGET_WAITKIND_NO_RESUMED
@@ -10959,16 +10868,6 @@ or signalled."),
 			   show_observer_mode,
 			   &setlist,
 			   &showlist);
-
-  add_setshow_boolean_cmd ("lane-divergence-support", class_maintenance,
-			   &maint_lane_divergence_support,  _("\
-Set lane divergence debugging support."), _("\
-Show lane divergence debugging support."), _("\
-When non-zero, lane divergence debugging is enabled."),
-			   nullptr,
-			   maint_show_lane_divergence_support,
-			   &maintenance_set_cmdlist,
-			   &maintenance_show_cmdlist);
 
 #if GDB_SELF_TEST
   selftests::register_test ("infrun_thread_ptid_changed",

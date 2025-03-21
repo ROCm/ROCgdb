@@ -530,52 +530,15 @@ mi_cmd_target_flash_erase (const char *command, const char *const *argv,
 void
 mi_cmd_thread_select (const char *command, const char *const *argv, int argc)
 {
-  int lane = -1;
-
-  /* Parse the command options.  */
-  enum opt
-    {
-      LANE_OPT,
-    };
-  static const struct mi_opt opts[] =
-    {
-      /* Note: this can't be "--lane", because we have a global --lane
-	 option parsed by mi_parse.  "-thread-select --lane 3 4" would
-	 select lane 3 of the current thread instead of the lane of
-	 the passed-in thread, only to be then be "overwritten" when
-	 thread 4 is selected.  */
-      {"l", LANE_OPT, 1},
-      {NULL, 0, 0},
-    };
-
-  int oind = 0;
-  const char *oarg;
-
-  while (1)
-    {
-      int opt = mi_getopt ("-thread-select", argc, argv, opts, &oind, &oarg);
-
-      if (opt < 0)
-	break;
-      switch ((enum opt) opt)
-	{
-	case LANE_OPT:
-	  lane = atoi (oarg);
-	  break;
-	}
-    }
-  argv += oind;
-  argc -= oind;
-
   if (argc != 1)
-    error (_("-thread-select: USAGE: [-l lanenum] threadnum."));
+    error (_("-thread-select: USAGE: threadnum."));
 
   int num = value_as_long (parse_and_eval (argv[0]));
   thread_info *thr = find_thread_global_id (num);
   if (thr == NULL)
     error (_("Thread ID %d not known."), num);
 
-  thread_select (argv[0], thr, lane);
+  thread_select (argv[0], thr);
 
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
@@ -608,15 +571,6 @@ mi_cmd_thread_list_ids (const char *command, const char *const *argv, int argc)
   if (current_thread != -1)
     current_uiout->field_signed ("current-thread-id", current_thread);
   current_uiout->field_signed ("number-of-threads", num);
-}
-
-void
-mi_cmd_lane_info (const char *command, const char *const *argv, int argc)
-{
-  if (argc != 0 && argc != 1)
-    error (_("Invalid MI command"));
-
-  print_lane_info (current_uiout, argv[0]);
 }
 
 void
@@ -2012,10 +1966,7 @@ struct user_selected_context
 {
   /* Constructor.  */
   user_selected_context ()
-    : m_previous_ptid (inferior_ptid),
-      m_previous_lane (inferior_ptid != null_ptid
-		       ? inferior_thread ()->current_simd_lane ()
-		       : -1)
+    : m_previous_ptid (inferior_ptid)
   {
     save_selected_frame (&m_previous_frame_id, &m_previous_frame_level);
   }
@@ -2024,10 +1975,9 @@ struct user_selected_context
      was created.  */
   bool has_changed () const
   {
-    /* Did the selected thread or lane change?  */
+    /* Did the selected thread change?  */
     if (m_previous_ptid != null_ptid && inferior_ptid != null_ptid
-	&& (m_previous_ptid != inferior_ptid
-	    || inferior_thread ()->current_simd_lane () != m_previous_lane))
+	&& m_previous_ptid != inferior_ptid)
       return true;
 
     /* Grab details of the currently selected frame, for comparison.  */
@@ -2056,10 +2006,6 @@ private:
      no previously selected thread.  */
   ptid_t m_previous_ptid;
 
-  /* The previously selected lane.  This will be -1 if there was no
-     previously selected lane.  */
-  int m_previous_lane;
-
   /* The previously selected frame.  If the innermost frame is selected, or
      no frame is selected, then the frame_id will be null_frame_id, and the
      level will be -1.  */
@@ -2077,9 +2023,6 @@ mi_cmd_execute (struct mi_parse *parse)
 
   if (parse->all && parse->thread != -1)
     error (_("Cannot specify --thread together with --all"));
-
-  if (parse->all && parse->lane != -1)
-    error (_("Cannot specify --lane together with --all"));
 
   if (parse->thread_group != -1 && parse->thread != -1)
     error (_("Cannot specify --thread together with --thread-group"));
@@ -2128,9 +2071,6 @@ mi_cmd_execute (struct mi_parse *parse)
 
       switch_to_thread (tp);
     }
-
-  if (parse->lane != -1)
-    switch_to_lane (parse->lane);
 
   std::optional<scoped_restore_selected_frame> frame_saver;
   if (parse->frame != -1)

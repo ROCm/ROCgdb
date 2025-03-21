@@ -1068,11 +1068,6 @@ struct watchpoint : public breakpoint
      watchpoint should be evaluated in all threads.  */
   ptid_t watchpoint_thread;
 
-  /* Holds the SIMD lane that was in focus at the point when the
-     watchpoint was inserted, or `-1' if no SIMD lane was in focus
-     at that point or the WATCHPOINT_THREAD doesn't contain lanes.  */
-  int watchpoint_simd_lane;
-
   /* For hardware watchpoints, the triggered status according to the
      hardware.  */
   enum watchpoint_triggered watchpoint_triggered;
@@ -1445,12 +1440,6 @@ struct bpstat
     /* Tell bpstat_print and print_bp_stop_message how to print stuff
        associated with this element of the bpstat chain.  */
     enum bp_print_how print_it;
-
-    /* Which SIMD lanes where active when the breakpoint was hit.  If
-       the breakpoint is conditional, then this is further restricted
-       to which lanes the breakpoint conditional evaluated true
-       for.  */
-    simd_lanes_mask_t simd_lane_mask;
   };
 
 enum inf_context

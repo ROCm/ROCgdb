@@ -634,40 +634,6 @@ frame.
     invalid=False,
 )
 
-Method(
-    comment="""
-Return the active SIMD lanes mask for a thread TP.
-""",
-    type="simd_lanes_mask_t",
-    name="active_lanes_mask",
-    params=[("thread_info *", "tp")],
-    predicate=True,
-    invalid=True,
-)
-
-Method(
-    comment="""
-Return the number of lanes supported by the thread.
-""",
-    type="int",
-    name="supported_lanes_count",
-    params=[("thread_info *", "tp")],
-    predefault="default_supported_lanes_count",
-    invalid=False,
-)
-
-Method(
-    comment="""
-Return the number of lanes used by the thread, accounting for
-partial work-groups.  Defaults to the number of supported lanes.
-""",
-    type="int",
-    name="used_lanes_count",
-    params=[("thread_info *", "tp")],
-    predefault="gdbarch_supported_lanes_count",
-    invalid=False,
-)
-
 Value(
     comment="""
 Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete

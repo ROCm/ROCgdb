@@ -718,14 +718,6 @@ struct target_ops
       TARGET_DEFAULT_RETURN (NULL);
     virtual const char *thread_name (thread_info *)
       TARGET_DEFAULT_RETURN (NULL);
-    virtual std::string lane_to_str (thread_info *, int)
-      TARGET_DEFAULT_FUNC (default_lane_to_str);
-    virtual std::string dispatch_pos_str (thread_info *)
-      TARGET_DEFAULT_FUNC (default_dispatch_pos_str);
-    virtual std::string thread_workgroup_pos_str (thread_info *)
-      TARGET_DEFAULT_FUNC (default_thread_workgroup_pos_str);
-    virtual std::string lane_workgroup_pos_str (thread_info *, int)
-      TARGET_DEFAULT_FUNC (default_lane_workgroup_pos_str);
     virtual thread_info *thread_handle_to_thread_info (const gdb_byte *,
 						       int,
 						       inferior *inf)
@@ -2013,16 +2005,6 @@ extern exec_direction_kind target_execution_direction ();
 extern std::string target_pid_to_str (ptid_t ptid);
 
 extern std::string normal_pid_to_str (ptid_t ptid);
-
-/* Convert lane LANE of THR to a string.  */
-extern std::string target_lane_to_str (thread_info *thr, int lane);
-
-/* Get the thread's dispatch position as a string.  */
-extern std::string target_dispatch_pos_str (thread_info *thr);
-/* Get the thread's workgroup position as a string.  */
-extern std::string target_thread_workgroup_pos_str (thread_info *thr);
-/* Get the lane's workgroup position as a string.  */
-extern std::string target_lane_workgroup_pos_str (thread_info *thr, int lane);
 
 /* Return a short string describing extra information about PID,
    e.g. "sleeping", "runnable", "running on LWP 3".  Null return value

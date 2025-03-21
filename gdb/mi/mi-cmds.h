@@ -90,7 +90,6 @@ extern mi_cmd_argv_ftype mi_cmd_info_ada_exceptions;
 extern mi_cmd_argv_ftype mi_cmd_info_gdb_mi_command;
 extern mi_cmd_argv_ftype mi_cmd_info_os;
 extern mi_cmd_argv_ftype mi_cmd_interpreter_exec;
-extern mi_cmd_argv_ftype mi_cmd_lane_info;
 extern mi_cmd_argv_ftype mi_cmd_list_features;
 extern mi_cmd_argv_ftype mi_cmd_list_target_features;
 extern mi_cmd_argv_ftype mi_cmd_list_thread_groups;

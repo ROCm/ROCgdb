@@ -72,13 +72,7 @@ print_varobj (struct varobj *var, enum print_values print_values,
 
   thread_id = varobj_get_thread_id (var);
   if (thread_id > 0)
-    {
-      uiout->field_signed ("thread-id", thread_id);
-
-      int lane = varobj_get_lane (var);
-      if (lane >= 0)
-	uiout->field_signed ("lane-id", lane);
-    }
+    uiout->field_signed ("thread-id", thread_id);
 
   if (varobj_get_frozen (var))
     uiout->field_signed ("frozen", 1);

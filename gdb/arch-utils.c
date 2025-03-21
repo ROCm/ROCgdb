@@ -1177,15 +1177,6 @@ default_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
 }
 
 /* See arch-utils.h.  */
-
-int
-default_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
-{
-  return 0;
-}
-
-/* See arch-utils.h.  */
-
 bool
 default_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
 						    struct bfd *corefile_bfd)

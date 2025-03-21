@@ -92,9 +92,6 @@ struct gdbarch
   gdbarch_register_name_ftype *register_name = nullptr;
   gdbarch_register_type_ftype *register_type = nullptr;
   gdbarch_dummy_id_ftype *dummy_id = default_dummy_id;
-  gdbarch_active_lanes_mask_ftype *active_lanes_mask = nullptr;
-  gdbarch_supported_lanes_count_ftype *supported_lanes_count = default_supported_lanes_count;
-  gdbarch_used_lanes_count_ftype *used_lanes_count = gdbarch_supported_lanes_count;
   int deprecated_fp_regnum = -1;
   gdbarch_push_dummy_call_ftype *push_dummy_call = nullptr;
   enum call_dummy_location_type call_dummy_location = AT_ENTRY_POINT;
@@ -367,9 +364,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if (gdbarch->register_type == 0)
     log.puts ("\n\tregister_type");
   /* Skip verify of dummy_id, invalid_p == 0.  */
-  /* Skip verify of active_lanes_mask, has predicate.  */
-  /* Skip verify of supported_lanes_count, invalid_p == 0.  */
-  /* Skip verify of used_lanes_count, invalid_p == 0.  */
   /* Skip verify of deprecated_fp_regnum, invalid_p == 0.  */
   /* Skip verify of push_dummy_call, has predicate.  */
   /* Skip verify of call_dummy_location, invalid_p == 0.  */
@@ -760,18 +754,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: dummy_id = <%s>\n",
 	      host_address_to_string (gdbarch->dummy_id));
-  gdb_printf (file,
-	      "gdbarch_dump: gdbarch_active_lanes_mask_p() = %d\n",
-	      gdbarch_active_lanes_mask_p (gdbarch));
-  gdb_printf (file,
-	      "gdbarch_dump: active_lanes_mask = <%s>\n",
-	      host_address_to_string (gdbarch->active_lanes_mask));
-  gdb_printf (file,
-	      "gdbarch_dump: supported_lanes_count = <%s>\n",
-	      host_address_to_string (gdbarch->supported_lanes_count));
-  gdb_printf (file,
-	      "gdbarch_dump: used_lanes_count = <%s>\n",
-	      host_address_to_string (gdbarch->used_lanes_count));
   gdb_printf (file,
 	      "gdbarch_dump: deprecated_fp_regnum = %s\n",
 	      plongest (gdbarch->deprecated_fp_regnum));
@@ -2348,64 +2330,6 @@ set_gdbarch_dummy_id (struct gdbarch *gdbarch,
 		      gdbarch_dummy_id_ftype dummy_id)
 {
   gdbarch->dummy_id = dummy_id;
-}
-
-bool
-gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch)
-{
-  gdb_assert (gdbarch != NULL);
-  return gdbarch->active_lanes_mask != NULL;
-}
-
-simd_lanes_mask_t
-gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->active_lanes_mask != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_active_lanes_mask called\n");
-  return gdbarch->active_lanes_mask (gdbarch, tp);
-}
-
-void
-set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch,
-			       gdbarch_active_lanes_mask_ftype active_lanes_mask)
-{
-  gdbarch->active_lanes_mask = active_lanes_mask;
-}
-
-int
-gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->supported_lanes_count != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_supported_lanes_count called\n");
-  return gdbarch->supported_lanes_count (gdbarch, tp);
-}
-
-void
-set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch,
-				   gdbarch_supported_lanes_count_ftype supported_lanes_count)
-{
-  gdbarch->supported_lanes_count = supported_lanes_count;
-}
-
-int
-gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->used_lanes_count != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_used_lanes_count called\n");
-  return gdbarch->used_lanes_count (gdbarch, tp);
-}
-
-void
-set_gdbarch_used_lanes_count (struct gdbarch *gdbarch,
-			      gdbarch_used_lanes_count_ftype used_lanes_count)
-{
-  gdbarch->used_lanes_count = used_lanes_count;
 }
 
 int
