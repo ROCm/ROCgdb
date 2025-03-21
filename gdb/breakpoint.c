@@ -2030,22 +2030,38 @@ is_watchpoint (const struct breakpoint *bpt)
 	  || bpt->type == bp_watchpoint);
 }
 
-/* Returns true if the current thread and its running state are safe
-   to evaluate or update watchpoint B.  Watchpoints on local
-   expressions need to be evaluated in the context of the thread that
-   was current when the watchpoint was created, and, that thread needs
-   to be stopped to be able to select the correct frame context.
+/* Returns true if the current thread, its SIMD lane and its running
+   state are safe to evaluate or update watchpoint B.
+
+   Watchpoints on local expressions need to be evaluated in the context
+   that they were bound to on their creation.  This means that the
+   original thread needs to be stopped and in focus (together with the
+   original SIMD lane) for the needed evaluation context to be present.
+   Additional need to stop the thread is to be able to select the
+   correct frame context.
+
    Watchpoints on global expressions can be evaluated on any thread,
-   and in any state.  It is presently left to the target allowing
-   memory accesses when threads are running.  */
+   and in any state.
+
+   It is presently left to the target allowing memory accesses when
+   threads are running.  */
 
 static bool
-watchpoint_in_thread_scope (struct watchpoint *b)
+watchpoint_in_thread_and_simd_lane_scope (struct watchpoint *b)
 {
-  return (b->pspace == current_program_space
-	  && (b->watchpoint_thread == null_ptid
-	      || (inferior_ptid == b->watchpoint_thread
-		  && !inferior_thread ()->executing ())));
+  if (b->pspace != current_program_space)
+    return false;
+  else if (b->watchpoint_thread == null_ptid)
+    return true;
+  else if (inferior_ptid != b->watchpoint_thread
+	   || inferior_thread ()->executing ())
+    return false;
+  else if (b->watchpoint_simd_lane == -1)
+    return true;
+  else if (b->watchpoint_simd_lane != inferior_thread ()->current_simd_lane ())
+    return false;
+
+  return true;
 }
 
 /* Set watchpoint B to disp_del_at_next_stop, even including its possible
@@ -2163,7 +2179,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_scope (b))
+  if (!watchpoint_in_thread_and_simd_lane_scope (b))
     return;
 
   if (b->disposition == disp_del_at_next_stop)
@@ -2399,7 +2415,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
 		  std::vector<addr_range> aliases
 		    = gdbarch_get_watchable_aliases (arch,
 						     b->watchpoint_thread,
-						     0, /* lane */
+						     b->watchpoint_simd_lane,
 						     {addr, range.size});
 		  if (aliases.empty ())
 		    {
@@ -5460,7 +5476,7 @@ watchpoint_check (bpstat *bs)
   /* If this is a local watchpoint, we only want to check if the
      watchpoint frame is in scope if the current thread is the thread
      that was used to create the watchpoint.  */
-  if (!watchpoint_in_thread_scope (b))
+  if (!watchpoint_in_thread_and_simd_lane_scope (b))
     return WP_IGNORE;
 
   if (b->exp_valid_block == NULL)
@@ -10675,6 +10691,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
     }
 
   ptid_t watchpoint_thread_ptid = null_ptid;
+  int watchpoint_simd_lane = -1;
   frame_info_ptr wp_frame = nullptr;
   if (scope_matches (scope, LOCATION_SCOPE_THREAD))
     {
@@ -10682,6 +10699,16 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	error (_("Location requires a selected thread"));
 
       watchpoint_thread_ptid = inferior_ptid;
+
+      if (scope_matches (scope, LOCATION_SCOPE_LANE))
+	{
+	  int current_simd_lane = inferior_thread ()->current_simd_lane ();
+
+	  if (current_simd_lane == -1)
+	    error (_("Location requires a selected SIMD lane"));
+
+	  watchpoint_simd_lane = current_simd_lane;
+	}
 
       if (scope_matches (scope, LOCATION_SCOPE_FRAME))
 	wp_frame = get_selected_frame ("Location requires a selected frame");
@@ -10773,6 +10800,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 
   w->watchpoint_frame = watchpoint_frame_id;
   w->watchpoint_thread = watchpoint_thread_ptid;
+  w->watchpoint_simd_lane = watchpoint_simd_lane;
 
   if (!just_location)
     value_free_to_mark (mark);
