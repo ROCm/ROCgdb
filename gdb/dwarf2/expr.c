@@ -90,12 +90,11 @@ static void
 ensure_have_simd_lane (const char *op_name)
 {
   ensure_have_thread (op_name);
-#if 0
+
   int current_simd_lane
     = inferior_thread ()->current_simd_lane ();
 
   if (current_simd_lane == -1)
-#endif
     error (_("%s evaluation requires a SIMD lane to be in focus."), op_name);
 }
 
