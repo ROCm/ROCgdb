@@ -1676,7 +1676,7 @@ struct elf_backend_data
      Returns the value to be installed in the ST_SHNDX field of the
      emitted symbol.  If not defined, the value is left unchanged.  */
   unsigned int (*symbol_section_index) (bfd *, elf_symbol_type *);
-  
+
   /* Called when a section has extra reloc sections.  */
   bool (*init_secondary_reloc_section) (bfd *, Elf_Internal_Shdr *,
 					const char *, unsigned int);
@@ -2030,6 +2030,9 @@ struct output_elf_obj_tdata
      created.  */
   asection *sframe;
 
+  /* Holds the build attributes section if it exists.  */
+  asection *obj_build_attributes;
+
   /* Used to determine if the e_flags field has been initialized */
   bool flags_init;
 };
@@ -2214,6 +2217,8 @@ struct elf_obj_tdata
 #define elf_next_file_pos(bfd)	(elf_tdata(bfd) -> o->next_file_pos)
 #define elf_stack_flags(bfd)	(elf_tdata(bfd) -> o->stack_flags)
 #define elf_sframe(bfd)		(elf_tdata(bfd) -> o->sframe)
+#define elf_obj_build_attributes(bfd) \
+				(elf_tdata(bfd) -> o->obj_build_attributes)
 #define elf_shstrtab(bfd)	(elf_tdata(bfd) -> o->strtab_ptr)
 #define elf_onesymtab(bfd)	(elf_tdata(bfd) -> symtab_section)
 #define elf_symtab_shndx_list(bfd)	(elf_tdata(bfd) -> symtab_shndx_list)
@@ -3065,6 +3070,8 @@ extern obj_attribute *bfd_elf_add_obj_attr_int_string
   bfd_elf_add_obj_attr_int_string ((BFD), OBJ_ATTR_PROC, (TAG), \
 				   (INTVAL), (STRVAL))
 
+extern bool _bfd_elf_write_section_build_attributes
+  (bfd *, struct bfd_link_info *);
 extern char *_bfd_elf_attr_strdup (bfd *, const char *);
 extern void _bfd_elf_copy_obj_attributes (bfd *, bfd *);
 extern int _bfd_elf_obj_attrs_arg_type (bfd *, int, unsigned int);
@@ -3078,6 +3085,8 @@ extern bool elf_read_notes (bfd *, file_ptr, bfd_size_type, size_t);
 
 extern bool _bfd_elf_parse_gnu_properties
   (bfd *, Elf_Internal_Note *);
+extern elf_property_list * _bfd_elf_find_property
+  (elf_property_list *, unsigned int, elf_property_list **);
 extern elf_property * _bfd_elf_get_property
   (bfd *, unsigned int, unsigned int);
 extern bfd *_bfd_elf_link_setup_gnu_properties

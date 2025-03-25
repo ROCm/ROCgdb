@@ -77,7 +77,7 @@ ensure_have_frame (const frame_info_ptr &frame, const char *context)
 /* Ensure that a PER_CU is defined and throw an exception otherwise.  */
 
 static void
-ensure_have_per_cu (dwarf2_per_cu_data *per_cu, const char* op_name)
+ensure_have_per_cu (dwarf2_per_cu *per_cu, const char *op_name)
 {
   if (per_cu == nullptr)
     throw_error (GENERIC_ERROR,
@@ -1577,7 +1577,7 @@ class dwarf_implicit_pointer : public dwarf_location
 public:
   dwarf_implicit_pointer (gdbarch *arch,
 			  dwarf2_per_objfile *per_objfile,
-			  dwarf2_per_cu_data *per_cu,
+			  dwarf2_per_cu *per_cu,
 			  int addr_size, sect_offset die_offset,
 			  LONGEST offset, LONGEST bit_suboffset = 0)
     : dwarf_location (arch, offset, bit_suboffset),
@@ -1646,7 +1646,7 @@ private:
   dwarf2_per_objfile *m_per_objfile;
 
   /* Compilation unit context of the implicit pointer.  */
-  dwarf2_per_cu_data *m_per_cu;
+  dwarf2_per_cu *m_per_cu;
 
   /* Address size for the evaluation.  */
   int m_addr_size;
@@ -1730,7 +1730,7 @@ dwarf_implicit_pointer::to_gdb_value (const frame_info_ptr &frame,
 class dwarf_composite : public dwarf_location
 {
 public:
-  dwarf_composite (gdbarch *arch, dwarf2_per_cu_data *per_cu,
+  dwarf_composite (gdbarch *arch, dwarf2_per_cu *per_cu,
 		   LONGEST offset = 0, LONGEST bit_suboffset = 0)
     : dwarf_location (arch, offset, bit_suboffset), m_per_cu (per_cu)
   {}
@@ -1824,7 +1824,7 @@ private:
   };
 
   /* Compilation unit context of the pointer.  */
-  dwarf2_per_cu_data *m_per_cu;
+  dwarf2_per_cu *m_per_cu;
 
   /* Vector of composite pieces.  */
   std::vector<piece> m_pieces;
@@ -2658,8 +2658,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
    found at SECT_OFF.  */
 
 static value *
-sect_variable_value (sect_offset sect_off,
-		     dwarf2_per_cu_data *per_cu,
+sect_variable_value (sect_offset sect_off, dwarf2_per_cu *per_cu,
 		     dwarf2_per_objfile *per_objfile)
 {
   const char *var_name = nullptr;
@@ -2714,7 +2713,7 @@ struct dwarf_expr_context
      can be specified to override the range of memory addresses with
      the passed in buffer.  */
   struct value *evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			  dwarf2_per_cu_data *per_cu,
+			  dwarf2_per_cu *per_cu,
 			  const frame_info_ptr &frame,
 			  std::vector<value *> *init_values,
 			  const property_addr_info *addr_info,
@@ -2740,7 +2739,7 @@ private:
   frame_info_ptr m_frame = nullptr;
 
   /* Compilation unit used for the evaluation.  */
-  dwarf2_per_cu_data *m_per_cu = nullptr;
+  dwarf2_per_cu *m_per_cu = nullptr;
 
   /* Property address info used for the evaluation.  */
   const property_addr_info *m_addr_info = nullptr;
@@ -2986,7 +2985,7 @@ dwarf_expr_context::push_dwarf_reg_entry_value
   ensure_have_per_cu (this->m_per_cu, "DW_OP_entry_value");
   ensure_have_frame (this->m_frame, "DW_OP_entry_value");
 
-  dwarf2_per_cu_data *caller_per_cu;
+  dwarf2_per_cu *caller_per_cu;
   dwarf2_per_objfile *caller_per_objfile;
   frame_info_ptr caller_frame = get_prev_frame (this->m_frame);
   struct call_site_parameter *parameter
@@ -3054,7 +3053,7 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 
 value *
 dwarf_expr_context::evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			      dwarf2_per_cu_data *per_cu,
+			      dwarf2_per_cu *per_cu,
 			      const frame_info_ptr &frame,
 			      std::vector<value *> *init_values,
 			      const property_addr_info *addr_info,
@@ -4690,7 +4689,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 value *
 dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu_data *per_cu,
+		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu *per_cu,
 		 const frame_info_ptr &frame, int addr_size,
 		 std::vector<value *> *init_values,
 		 const property_addr_info *addr_info,

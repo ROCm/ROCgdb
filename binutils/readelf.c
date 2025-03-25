@@ -438,7 +438,7 @@ section_index_real (const Filedata *filedata, unsigned int ndx)
 	  && ndx < filedata->file_header.e_shnum
 	  && ndx > 0);
 }
- 
+
 #define DT_VERSIONTAGIDX(tag)	(DT_VERNEEDNUM - (tag))	/* Reverse order!  */
 
 static inline bool
@@ -585,7 +585,7 @@ print_vma (uint64_t vma, print_mode mode)
       if (is_32bit_elf)
 	return printf ("%08" PRIx64, vma);
       return printf ("%016" PRIx64, vma);
-      
+
     case DEC_5:
       if (vma <= 99999)
 	return printf ("%5" PRId64, vma);
@@ -800,7 +800,7 @@ print_symbol_name (signed int width, const char * symbol)
 
 	      if (width_remaining < (nbytes * 2) + 2)
 		break;
-	  
+
 	      putchar (is_utf8 ? '<' : '{');
 	      printf ("0x");
 	      for (i = 0; i < nbytes; i++)
@@ -811,14 +811,14 @@ print_symbol_name (signed int width, const char * symbol)
 	    {
 	      if (unicode_display == unicode_highlight && isatty (1))
 		printf ("\x1B[31;47m"); /* Red.  */
-	      
+
 	      switch (nbytes)
 		{
 		case 2:
 		  if (width_remaining < 6)
 		    break;
 		  printf ("\\u%02x%02x",
-			  (bytes[0] & 0x1c) >> 2, 
+			  (bytes[0] & 0x1c) >> 2,
 			  ((bytes[0] & 0x03) << 6) | (bytes[1] & 0x3f));
 		  break;
 		case 3:
@@ -835,7 +835,7 @@ print_symbol_name (signed int width, const char * symbol)
 			  ((bytes[0] & 0x07) << 6) | ((bytes[1] & 0x3c) >> 2),
 			  ((bytes[1] & 0x03) << 6) | ((bytes[2] & 0x3c) >> 2),
 			  ((bytes[2] & 0x03) << 6) | (bytes[3] & 0x3f));
-		  
+
 		  break;
 		default:
 		  /* URG.  */
@@ -845,7 +845,7 @@ print_symbol_name (signed int width, const char * symbol)
 	      if (unicode_display == unicode_highlight && isatty (1))
 		printf ("\033[0m"); /* Default colour.  */
 	    }
-	  
+
 	  if (bytes[nbytes - 1] == 0)
 	    break;
 	}
@@ -904,7 +904,7 @@ printable_string (const char * string, unsigned int max_len)
 {
 #define NUM_STRING_BUFS   5
 #define MAX_STRING_LEN  256
-  
+
   static int   string_buf_index = 0;
   static char  string_buf [NUM_STRING_BUFS][MAX_STRING_LEN + 1];
 
@@ -918,7 +918,7 @@ printable_string (const char * string, unsigned int max_len)
 
   char         c;
   unsigned int remaining = MAX_STRING_LEN;
-  
+
   while ((c = * string ++) != 0)
     {
       if (ISCNTRL (c))
@@ -960,7 +960,7 @@ printable_string (const char * string, unsigned int max_len)
     }
 
   * buf = 0;
-  return buf_start;  
+  return buf_start;
 }
 
 /* Returns a pointer to a static buffer containing a
@@ -1793,7 +1793,7 @@ count_relr_relocations (Filedata *          filedata,
   nentries = section->sh_size / entsize;
   if (nentries == 0)
     return 0;
-  
+
   /* FIXME: This call to get_data duplicates one that follows in
      dump_relr_relocations().  They could be combined into just
      one call.  */
@@ -1928,7 +1928,7 @@ dump_relr_relocations (Filedata *          filedata,
 	    if ((entry & 1) == 1)
 	      {
 		uint64_t addr = where + (j * relr_entsize);
-		
+
 		if (first)
 		  {
 		    print_relr_addr_and_sym (filedata, symtab, nsyms, strtab, addr);
@@ -1949,7 +1949,7 @@ dump_relr_relocations (Filedata *          filedata,
   free (relrs);
   return true;
 }
-		       
+
 /* Display the contents of the relocation data found at the specified
    offset.  */
 
@@ -3534,7 +3534,7 @@ static char *
 decode_ARM_machine_flags (char *out, unsigned e_flags)
 {
   unsigned eabi;
-  bool unknown = false;
+  bool unknown_abi = false;
 
   eabi = EF_ARM_EABI_VERSION (e_flags);
   e_flags &= ~ EF_ARM_EABIMASK;
@@ -3558,7 +3558,7 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
     default:
       out = stpcpy (out, ", <unrecognized EABI>");
       if (e_flags)
-	unknown = true;
+	unknown_abi = true;
       break;
 
     case EF_ARM_EABI_VER1:
@@ -3578,7 +3578,7 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
 	      break;
 
 	    default:
-	      unknown = true;
+	      unknown_abi = true;
 	      break;
 	    }
 	}
@@ -3609,7 +3609,7 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
 	      break;
 
 	    default:
-	      unknown = true;
+	      unknown_abi = true;
 	      break;
 	    }
 	}
@@ -3640,7 +3640,7 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
 	      break;
 
 	    default:
-	      unknown = true;
+	      unknown_abi = true;
 	      break;
 	    }
 	}
@@ -3675,7 +3675,7 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
 	      break;
 
 	    default:
-	      unknown = true;
+	      unknown_abi = true;
 	      break;
 	    }
 	}
@@ -3730,13 +3730,13 @@ decode_ARM_machine_flags (char *out, unsigned e_flags)
 	      break;
 
 	    default:
-	      unknown = true;
+	      unknown_abi = true;
 	      break;
 	    }
 	}
     }
 
-  if (unknown)
+  if (unknown_abi)
     out = stpcpy (out,_(", <unknown>"));
   return out;
 }
@@ -5499,7 +5499,7 @@ get_os_specific_segment_type (Filedata * filedata, unsigned long p_type)
 
   if (result != NULL)
     return result;
-  
+
   switch (p_type)
     {
     case PT_GNU_EH_FRAME:      return "GNU_EH_FRAME";
@@ -5576,7 +5576,7 @@ get_processor_specific_segment_type (Filedata * filedata, unsigned long p_type)
   sprintf (buff, "LOPROC+%#lx", p_type - PT_LOPROC);
   return buff;
 }
-  
+
 static const char *
 get_segment_type (Filedata * filedata, unsigned long p_type)
 {
@@ -5995,7 +5995,7 @@ get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_GNU_verdef:	      return "VERDEF";
     case SHT_GNU_verneed:	      return "VERNEED";
     case SHT_GNU_versym:	      return "VERSYM";
-      
+
     case SHT_LLVM_ODRTAB:             return "LLVM_ODRTAB";
     case SHT_LLVM_LINKER_OPTIONS:     return "LLVM_LINKER_OPTIONS";
     case SHT_LLVM_ADDRSIG:            return "LLVM_ADDRSIG";
@@ -6014,10 +6014,10 @@ get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_ANDROID_RELR:            return "ANDROID_RELR";
 
     case SHT_CHECKSUM:                return "CHECKSUM";
-      
+
       /* FIXME: Are these correct ?  If so, why do they not have #define's ?  */
     case 0x6ffffff0:		     return "VERSYM";
-      
+
     default:
       break;
     }
@@ -6240,7 +6240,7 @@ usage (FILE * stream)
   fprintf (stream, _("\
      -X --extra-sym-info Display extra information when showing symbols\n"));
   fprintf (stream, _("\
-     --no-extra-sym-info Do not display extra information when showing symbols (default)\n"));		     
+     --no-extra-sym-info Do not display extra information when showing symbols (default)\n"));
   fprintf (stream, _("\
   -n --notes             Display the contents of note sections (if present)\n"));
   fprintf (stream, _("\
@@ -6630,7 +6630,7 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	case OPTION_NO_EXTRA_SYM_INFO:
 	  extra_sym_info = false;
 	  break;
-	  
+
 #ifdef SUPPORT_DISASSEMBLY
 	case 'i':
 	  request_dump (dumpdata, DISASS_DUMP);
@@ -6790,7 +6790,7 @@ check_magic_number (Filedata * filedata, Elf_Internal_Ehdr * header)
      FIXME: It is not clear if all four bytes are used as constant magic
      valus by all compilers.  It may be necessary to recode this function if
      different tools use different length sequences.  */
-     
+
   static struct
   {
     unsigned char  magic[4];
@@ -6799,7 +6799,7 @@ check_magic_number (Filedata * filedata, Elf_Internal_Ehdr * header)
   }
   known_magic[] =
   {
-    { { 'B', 'C', 0xc0, 0xde }, 
+    { { 'B', 'C', 0xc0, 0xde },
       N_("This is a LLVM bitcode file - try using llvm-bcanalyzer\n"),
       N_("This is a LLVM bitcode file - try extracting and then using llvm-bcanalyzer\n")
     },
@@ -14320,7 +14320,7 @@ print_symbol (Filedata *           filedata,
 	    printf ("%*s", 10 - printed, "");
 	}
     }
-  
+
   /* Get the symbol's name.  For section symbols without a
      specific name use the (already computed) section name.  */
   if (ELF_ST_TYPE (psym->st_info) == STT_SECTION
@@ -16515,7 +16515,7 @@ uncompress_section_contents (bool              is_zstd,
     }
 
   uncompressed_buffer = xmalloc (uncompressed_size);
-  
+
   if (is_zstd)
     {
 #ifdef HAVE_ZSTD
@@ -16575,7 +16575,7 @@ maybe_expand_or_relocate_section (Elf_Internal_Shdr *  section,
 {
   uint64_t         section_size = section->sh_size;
   unsigned char *  start = * start_ptr;
-  
+
   if (decompress_dumps)
     {
       uint64_t new_size = section_size;
@@ -17104,7 +17104,10 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
 	    printable_section_name (filedata, section));
 
  while ((fp = ctf_archive_next (ctfa, &i, &name, 0, &err)) != NULL)
-    dump_ctf_archive_member (fp, name, parent, member++);
+   {
+     dump_ctf_archive_member (fp, name, parent, member++);
+     ctf_dict_close (fp);
+   }
  if (err != ECTF_NEXT_END)
    {
      dump_ctf_errs (NULL);
@@ -19292,198 +19295,187 @@ process_attributes (Filedata * filedata,
 		    unsigned char * (* display_pub_attribute) (unsigned char *, const unsigned char * const),
 		    unsigned char * (* display_proc_gnu_attribute) (unsigned char *, unsigned int, const unsigned char * const))
 {
-  Elf_Internal_Shdr * sect;
-  unsigned i;
-  bool res = true;
-
   /* Find the section header so that we get the size.  */
-  for (i = 0, sect = filedata->section_headers;
-       i < filedata->file_header.e_shnum;
-       i++, sect++)
+  Elf_Internal_Shdr * sect = find_section_by_type (filedata, proc_type);
+  if (sect == NULL)
+    sect = find_section_by_type (filedata, SHT_GNU_ATTRIBUTES);
+
+  if (sect == NULL)
+    /* No section, exit without error.  */
+    return true;
+
+  unsigned char * contents = (unsigned char *)
+    get_data (NULL, filedata, sect->sh_offset, 1, sect->sh_size, _("attributes"));
+  if (contents == NULL)
+    return false;
+
+  bool res = true;
+  unsigned char * p = contents;
+  /* The first character is the version of the attributes.
+     Currently only version 1, (aka 'A') is recognised here.  */
+  if (*p != 'A')
     {
-      unsigned char * contents;
-      unsigned char * p;
-
-      if (sect->sh_type != proc_type && sect->sh_type != SHT_GNU_ATTRIBUTES)
-	continue;
-
-      contents = (unsigned char *) get_data (NULL, filedata, sect->sh_offset, 1,
-                                             sect->sh_size, _("attributes"));
-      if (contents == NULL)
-	{
-	  res = false;
-	  continue;
-	}
-
-      p = contents;
-      /* The first character is the version of the attributes.
-	 Currently only version 1, (aka 'A') is recognised here.  */
-      if (*p != 'A')
-	{
-	  printf (_("Unknown attributes version '%c'(%d) - expecting 'A'\n"), *p, *p);
-	  res = false;
-	}
-      else
-	{
-	  uint64_t section_len;
-
-	  section_len = sect->sh_size - 1;
-	  p++;
-
-	  while (section_len > 0)
-	    {
-	      uint64_t attr_len;
-	      unsigned int namelen;
-	      bool public_section;
-	      bool gnu_section;
-
-	      if (section_len <= 4)
-		{
-		  error (_("Tag section ends prematurely\n"));
-		  res = false;
-		  break;
-		}
-	      attr_len = byte_get (p, 4);
-	      p += 4;
-
-	      if (attr_len > section_len)
-		{
-		  error (_("Bad attribute length (%u > %u)\n"),
-			  (unsigned) attr_len, (unsigned) section_len);
-		  attr_len = section_len;
-		  res = false;
-		}
-	      /* PR 17531: file: 001-101425-0.004  */
-	      else if (attr_len < 5)
-		{
-		  error (_("Attribute length of %u is too small\n"), (unsigned) attr_len);
-		  res = false;
-		  break;
-		}
-
-	      section_len -= attr_len;
-	      attr_len -= 4;
-
-	      namelen = strnlen ((char *) p, attr_len) + 1;
-	      if (namelen == 0 || namelen >= attr_len)
-		{
-		  error (_("Corrupt attribute section name\n"));
-		  res = false;
-		  break;
-		}
-
-	      printf (_("Attribute Section: "));
-	      print_symbol_name (INT_MAX, (const char *) p);
-	      putchar ('\n');
-
-	      if (public_name && streq ((char *) p, public_name))
-		public_section = true;
-	      else
-		public_section = false;
-
-	      if (streq ((char *) p, "gnu"))
-		gnu_section = true;
-	      else
-		gnu_section = false;
-
-	      p += namelen;
-	      attr_len -= namelen;
-
-	      while (attr_len > 0 && p < contents + sect->sh_size)
-		{
-		  int tag;
-		  unsigned int val;
-		  uint64_t size;
-		  unsigned char * end;
-
-		  /* PR binutils/17531: Safe handling of corrupt files.  */
-		  if (attr_len < 6)
-		    {
-		      error (_("Unused bytes at end of section\n"));
-		      res = false;
-		      section_len = 0;
-		      break;
-		    }
-
-		  tag = *(p++);
-		  size = byte_get (p, 4);
-		  if (size > attr_len)
-		    {
-		      error (_("Bad subsection length (%u > %u)\n"),
-			      (unsigned) size, (unsigned) attr_len);
-		      res = false;
-		      size = attr_len;
-		    }
-		  /* PR binutils/17531: Safe handling of corrupt files.  */
-		  if (size < 6)
-		    {
-		      error (_("Bad subsection length (%u < 6)\n"),
-			      (unsigned) size);
-		      res = false;
-		      section_len = 0;
-		      break;
-		    }
-
-		  attr_len -= size;
-		  end = p + size - 1;
-		  assert (end <= contents + sect->sh_size);
-		  p += 4;
-
-		  switch (tag)
-		    {
-		    case 1:
-		      printf (_("File Attributes\n"));
-		      break;
-		    case 2:
-		      printf (_("Section Attributes:"));
-		      goto do_numlist;
-		    case 3:
-		      printf (_("Symbol Attributes:"));
-		      /* Fall through.  */
-		    do_numlist:
-		      for (;;)
-			{
-			  READ_ULEB (val, p, end);
-			  if (val == 0)
-			    break;
-			  printf (" %d", val);
-			}
-		      printf ("\n");
-		      break;
-		    default:
-		      printf (_("Unknown tag: %d\n"), tag);
-		      public_section = false;
-		      break;
-		    }
-
-		  if (public_section && display_pub_attribute != NULL)
-		    {
-		      while (p < end)
-			p = display_pub_attribute (p, end);
-		      assert (p == end);
-		    }
-		  else if (gnu_section && display_proc_gnu_attribute != NULL)
-		    {
-		      while (p < end)
-			p = display_gnu_attribute (p,
-						   display_proc_gnu_attribute,
-						   end);
-		      assert (p == end);
-		    }
-		  else if (p < end)
-		    {
-		      printf (_("  Unknown attribute:\n"));
-		      display_raw_attribute (p, end);
-		      p = end;
-		    }
-		  else
-		    attr_len = 0;
-		}
-	    }
-	}
-
-      free (contents);
+      printf (_("Unknown attributes version '%c'(%d) - expecting 'A'\n"), *p, *p);
+      res = false;
+      goto free_data;
     }
+
+  uint64_t section_len = sect->sh_size - 1;
+  p++;
+
+  while (section_len > 0)
+    {
+      uint64_t attr_len;
+      unsigned int namelen;
+      bool public_section;
+      bool gnu_section;
+
+      if (section_len <= 4)
+	{
+	  error (_("Tag section ends prematurely\n"));
+	  res = false;
+	  break;
+	}
+      attr_len = byte_get (p, 4);
+      p += 4;
+
+      if (attr_len > section_len)
+	{
+	  error (_("Bad attribute length (%u > %u)\n"),
+		  (unsigned) attr_len, (unsigned) section_len);
+	  attr_len = section_len;
+	  res = false;
+	}
+      /* PR 17531: file: 001-101425-0.004  */
+      else if (attr_len < 5)
+	{
+	  error (_("Attribute length of %u is too small\n"), (unsigned) attr_len);
+	  res = false;
+	  break;
+	}
+
+      section_len -= attr_len;
+      attr_len -= 4;
+
+      namelen = strnlen ((char *) p, attr_len) + 1;
+      if (namelen == 0 || namelen >= attr_len)
+	{
+	  error (_("Corrupt attribute section name\n"));
+	  res = false;
+	  break;
+	}
+
+      printf (_("Attribute Section: "));
+      print_symbol_name (INT_MAX, (const char *) p);
+      putchar ('\n');
+
+      if (public_name && streq ((char *) p, public_name))
+	public_section = true;
+      else
+	public_section = false;
+
+      if (streq ((char *) p, "gnu"))
+	gnu_section = true;
+      else
+	gnu_section = false;
+
+      p += namelen;
+      attr_len -= namelen;
+
+      while (attr_len > 0 && p < contents + sect->sh_size)
+	{
+	  int tag;
+	  unsigned int val;
+	  uint64_t size;
+	  unsigned char * end;
+
+	  /* PR binutils/17531: Safe handling of corrupt files.  */
+	  if (attr_len < 6)
+	    {
+	      error (_("Unused bytes at end of section\n"));
+	      res = false;
+	      section_len = 0;
+	      break;
+	    }
+
+	  tag = *(p++);
+	  size = byte_get (p, 4);
+	  if (size > attr_len)
+	    {
+	      error (_("Bad subsection length (%u > %u)\n"),
+		      (unsigned) size, (unsigned) attr_len);
+	      res = false;
+	      size = attr_len;
+	    }
+	  /* PR binutils/17531: Safe handling of corrupt files.  */
+	  if (size < 6)
+	    {
+	      error (_("Bad subsection length (%u < 6)\n"),
+		      (unsigned) size);
+	      res = false;
+	      section_len = 0;
+	      break;
+	    }
+
+	  attr_len -= size;
+	  end = p + size - 1;
+	  assert (end <= contents + sect->sh_size);
+	  p += 4;
+
+	  switch (tag)
+	    {
+	    case 1:
+	      printf (_("File Attributes\n"));
+	      break;
+	    case 2:
+	      printf (_("Section Attributes:"));
+	      goto do_numlist;
+	    case 3:
+	      printf (_("Symbol Attributes:"));
+	      /* Fall through.  */
+	    do_numlist:
+	      for (;;)
+		{
+		  READ_ULEB (val, p, end);
+		  if (val == 0)
+		    break;
+		  printf (" %d", val);
+		}
+	      printf ("\n");
+	      break;
+	    default:
+	      printf (_("Unknown tag: %d\n"), tag);
+	      public_section = false;
+	      break;
+	    }
+
+	  if (public_section && display_pub_attribute != NULL)
+	    {
+	      while (p < end)
+		p = display_pub_attribute (p, end);
+	      assert (p == end);
+	    }
+	  else if (gnu_section && display_proc_gnu_attribute != NULL)
+	    {
+	      while (p < end)
+		p = display_gnu_attribute (p,
+					   display_proc_gnu_attribute,
+					   end);
+	      assert (p == end);
+	    }
+	  else if (p < end)
+	    {
+	      printf (_("  Unknown attribute:\n"));
+	      display_raw_attribute (p, end);
+	      p = end;
+	    }
+	  else
+	    attr_len = 0;
+	}
+    }
+
+free_data:
+  free (contents);
 
   return res;
 }
@@ -23845,8 +23837,8 @@ might_need_separate_debug_info (Filedata * filedata)
      deliberate user action.  */
   if (DEFAULT_FOR_FOLLOW_LINKS == 0 && do_follow_links)
     return true;
-  
-  if (process_links || do_syms || do_unwind 
+
+  if (process_links || do_syms || do_unwind
       || dump_any_debugging || do_dump || do_debugging)
     return true;
 

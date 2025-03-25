@@ -26,7 +26,6 @@
 #include "inferior.h"
 #include "regcache.h"
 #include "user-regs.h"
-#include "gdbsupport/gdb_obstack.h"
 #include "dummy-frame.h"
 #include "sentinel-frame.h"
 #include "gdbcore.h"

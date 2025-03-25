@@ -669,12 +669,6 @@ collect_cores (struct thread_info *ti, void *xdata)
   return 0;
 }
 
-struct print_one_inferior_data
-{
-  int recurse;
-  const std::set<int> *inferiors;
-};
-
 static void
 print_one_inferior (struct inferior *inferior, bool recurse,
 		    const std::set<int> &ids)

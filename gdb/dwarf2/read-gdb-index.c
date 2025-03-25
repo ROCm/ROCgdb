@@ -129,7 +129,7 @@ struct mapped_gdb_index : public dwarf_scanner_base
   /* The shortcut table data.  */
   gdb::array_view<const gdb_byte> shortcut_table;
 
-  /* An address map that maps from PC to dwarf2_per_cu_data.  */
+  /* An address map that maps from PC to dwarf2_per_cu.  */
   addrmap_fixed *index_addrmap = nullptr;
 
   /* Return the index into the constant pool of the name of the IDXth
@@ -186,13 +186,13 @@ struct mapped_gdb_index : public dwarf_scanner_base
     return version >= 8;
   }
 
-  dwarf2_per_cu_data *lookup (unrelocated_addr addr) override
+  dwarf2_per_cu *lookup (unrelocated_addr addr) override
   {
     if (index_addrmap == nullptr)
       return nullptr;
 
     void *obj = index_addrmap->find (static_cast<CORE_ADDR> (addr));
-    return static_cast<dwarf2_per_cu_data *> (obj);
+    return static_cast<dwarf2_per_cu *> (obj);
   }
 
   cooked_index *index_for_writing () override
@@ -434,10 +434,10 @@ static bool
 dw2_expand_symtabs_matching_symbol
   (mapped_gdb_index &index,
    const lookup_name_info &lookup_name_in,
-   gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
+   expand_symtabs_symbol_matcher symbol_matcher,
    gdb::function_view<bool (offset_type)> match_callback,
    dwarf2_per_objfile *per_objfile,
-   gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
+   expand_symtabs_lang_matcher lang_matcher)
 {
   lookup_name_info lookup_name_without_params
     = lookup_name_in.make_ignore_params ();
@@ -985,7 +985,7 @@ run_test ()
   test_dw2_expand_symtabs_matching_symbol ();
 }
 
-}} // namespace selftests::dw2_expand_symtabs_matching
+}} /* namespace selftests::dw2_expand_symtabs_matching */
 
 #endif /* GDB_SELF_TEST */
 
@@ -999,14 +999,13 @@ struct dwarf2_gdb_index : public dwarf2_base_index_functions
 
   bool expand_symtabs_matching
     (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     expand_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     expand_symtabs_symbol_matcher symbol_matcher,
+     expand_symtabs_expansion_listener expansion_notify,
      block_search_flags search_flags,
      domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-       override;
+     expand_symtabs_lang_matcher lang_matcher) override;
 };
 
 /* This dumps minimal information about the index.
@@ -1030,13 +1029,12 @@ dwarf2_gdb_index::dump (struct objfile *objfile)
    index of the symbol name that matched.  */
 
 static bool
-dw2_expand_marked_cus
-  (dwarf2_per_objfile *per_objfile, offset_type idx,
-   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-   gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-   block_search_flags search_flags,
-   domain_search_flags kind,
-   gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
+dw2_expand_marked_cus (dwarf2_per_objfile *per_objfile, offset_type idx,
+		       expand_symtabs_file_matcher file_matcher,
+		       expand_symtabs_expansion_listener expansion_notify,
+		       block_search_flags search_flags,
+		       domain_search_flags kind,
+		       expand_symtabs_lang_matcher lang_matcher)
 {
   offset_type vec_len, vec_idx;
   bool global_seen = false;
@@ -1115,7 +1113,8 @@ dw2_expand_marked_cus
 	  continue;
 	}
 
-      dwarf2_per_cu_data *per_cu = per_objfile->per_bfd->get_cu (cu_index);
+      dwarf2_per_cu *per_cu = per_objfile->per_bfd->get_cu (cu_index);
+
       if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
 					    expansion_notify, lang_matcher))
 	return false;
@@ -1126,14 +1125,14 @@ dw2_expand_marked_cus
 
 bool
 dwarf2_gdb_index::expand_symtabs_matching
-    (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-     const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
+  (objfile *objfile,
+   expand_symtabs_file_matcher file_matcher,
+   const lookup_name_info *lookup_name,
+   expand_symtabs_symbol_matcher symbol_matcher,
+   expand_symtabs_expansion_listener expansion_notify,
+   block_search_flags search_flags,
+   domain_search_flags domain,
+   expand_symtabs_lang_matcher lang_matcher)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
@@ -1143,8 +1142,7 @@ dwarf2_gdb_index::expand_symtabs_matching
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
   if (lookup_name == nullptr)
     {
-      for (dwarf2_per_cu_data *per_cu
-	     : all_units_range (per_objfile->per_bfd))
+      for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
 	{
 	  QUIT;
 
@@ -1326,10 +1324,10 @@ create_cus_from_gdb_index_list (dwarf2_per_bfd *per_bfd,
       ULONGEST length = extract_unsigned_integer (cu_list + 8, 8, BFD_ENDIAN_LITTLE);
       cu_list += 2 * 8;
 
-      dwarf2_per_cu_data_up per_cu
-	= create_cu_from_index_list (per_bfd, section, is_dwz, sect_off,
-				     length);
-      per_bfd->all_units.push_back (std::move (per_cu));
+      per_bfd->all_units.emplace_back (per_bfd->allocate_per_cu (section,
+								 sect_off,
+								 length,
+								 is_dwz));
     }
 }
 
@@ -1350,7 +1348,7 @@ create_cus_from_gdb_index (dwarf2_per_bfd *per_bfd,
   if (dwz_elements == 0)
     return;
 
-  dwz_file *dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   create_cus_from_gdb_index_list (per_bfd, dwz_list, dwz_elements,
 				  &dwz->info, 1);
 }
@@ -1362,31 +1360,28 @@ create_signatured_type_table_from_gdb_index
   (dwarf2_per_bfd *per_bfd, struct dwarf2_section_info *section,
    const gdb_byte *bytes, offset_type elements)
 {
-  htab_up sig_types_hash = allocate_signatured_type_table ();
+  signatured_type_set sig_types_hash;
 
   for (offset_type i = 0; i < elements; i += 3)
     {
-      signatured_type_up sig_type;
-      ULONGEST signature;
-      void **slot;
-      cu_offset type_offset_in_tu;
-
       static_assert (sizeof (ULONGEST) >= 8);
       sect_offset sect_off
 	= (sect_offset) extract_unsigned_integer (bytes, 8, BFD_ENDIAN_LITTLE);
-      type_offset_in_tu
+	cu_offset type_offset_in_tu
 	= (cu_offset) extract_unsigned_integer (bytes + 8, 8,
 						BFD_ENDIAN_LITTLE);
-      signature = extract_unsigned_integer (bytes + 16, 8, BFD_ENDIAN_LITTLE);
+      ULONGEST signature
+	= extract_unsigned_integer (bytes + 16, 8, BFD_ENDIAN_LITTLE);
       bytes += 3 * 8;
 
-      sig_type
-	= per_bfd->allocate_signatured_type (section, sect_off, signature);
+      /* The length of the type unit is unknown at this time.  It gets
+	 (presumably) set by a cutu_reader when it gets expanded later.  */
+      signatured_type_up sig_type
+	= per_bfd->allocate_signatured_type (section, sect_off, 0 /* length */,
+					     false /* is_dwz */, signature);
       sig_type->type_offset_in_tu = type_offset_in_tu;
 
-      slot = htab_find_slot (sig_types_hash.get (), sig_type.get (), INSERT);
-      *slot = sig_type.get ();
-
+      sig_types_hash.emplace (sig_type.get ());
       per_bfd->all_units.emplace_back (sig_type.release ());
     }
 
@@ -1485,7 +1480,6 @@ dwarf2_read_gdb_index
 {
   const gdb_byte *cu_list, *types_list, *dwz_list = NULL;
   offset_type cu_list_elements, types_list_elements, dwz_list_elements = 0;
-  struct dwz_file *dwz;
   struct objfile *objfile = per_objfile->objfile;
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
 
@@ -1509,7 +1503,7 @@ dwarf2_read_gdb_index
 
   /* If there is a .dwz file, read it so we can get its CU list as
      well.  */
-  dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   if (dwz != NULL)
     {
       mapped_gdb_index dwz_map;
@@ -1522,14 +1516,14 @@ dwarf2_read_gdb_index
       if (dwz_index_content.empty ())
 	return false;
 
-      if (!read_gdb_index_from_buffer (bfd_get_filename (dwz->dwz_bfd.get ()),
+      if (!read_gdb_index_from_buffer (dwz->filename (),
 				       1, dwz_index_content, &dwz_map,
 				       &dwz_list, &dwz_list_elements,
 				       &dwz_types_ignore,
 				       &dwz_types_elements_ignore))
 	{
 	  warning (_("could not read '.gdb_index' section from %s; skipping"),
-		   bfd_get_filename (dwz->dwz_bfd.get ()));
+		   dwz->filename ());
 	  return false;
 	}
     }

@@ -28,37 +28,93 @@
 #include "libbfd.h"
 #include "elf-bfd.h"
 
+/* Find a property.  */
+elf_property_list *
+_bfd_elf_find_property (elf_property_list *l,
+			unsigned int type,
+			elf_property_list **prev)
+{
+  if (prev != NULL)
+    *prev = NULL;
+
+  /* The properties are supposed to be sorted in the list.  */
+  for (elf_property_list *n = l; n != NULL; n = n->next)
+    {
+      if (type == n->property.pr_type)
+	return n;
+      else if (type < n->property.pr_type)
+	break;
+      else if (prev != NULL)
+	*prev = n;
+    }
+  return NULL;
+}
+
+/* Insert a property into the list after prev.  */
+static elf_property_list *
+_bfd_elf_insert_property (elf_property_list *l,
+			  elf_property_list *what,
+			  elf_property_list *prev)
+{
+  if (l == NULL) // First node.
+    return what;
+
+  if (prev == NULL) // Prepend.
+    {
+      what->next = l;
+      return what;
+    }
+
+  what->next = prev->next;
+  prev->next = what;
+  return l;
+}
+
+/* Remove a property from the list after prev.  */
+static elf_property_list *
+_bfd_elf_remove_property (elf_property_list *l,
+			  elf_property_list *what,
+			  elf_property_list *prev)
+{
+  if (l == NULL)
+    return l;
+
+  if (prev == NULL) // Pop front
+    {
+      BFD_ASSERT (what == l);
+      l = what->next;
+    }
+  else
+    prev->next = what->next;
+
+  what->next = NULL;
+  return l;
+}
+
 /* Get a property, allocate a new one if needed.  */
 
 elf_property *
 _bfd_elf_get_property (bfd *abfd, unsigned int type, unsigned int datasz)
 {
-  elf_property_list *p, **lastp;
-
   if (bfd_get_flavour (abfd) != bfd_target_elf_flavour)
     {
       /* Never should happen.  */
       abort ();
     }
 
-  /* Keep the property list in order of type.  */
-  lastp = &elf_properties (abfd);
-  for (p = *lastp; p; p = p->next)
+  elf_property_list *prev;
+  elf_property_list *p =
+    _bfd_elf_find_property (elf_properties (abfd), type, &prev);
+  if (p != NULL)  /* Reuse the existing entry.  */
     {
-      /* Reuse the existing entry.  */
-      if (type == p->property.pr_type)
+      if (datasz > p->property.pr_datasz)
 	{
-	  if (datasz > p->property.pr_datasz)
-	    {
-	      /* This can happen when mixing 32-bit and 64-bit objects.  */
-	      p->property.pr_datasz = datasz;
-	    }
-	  return &p->property;
+	  /* This can happen when mixing 32-bit and 64-bit objects.  */
+	  p->property.pr_datasz = datasz;
 	}
-      else if (type < p->property.pr_type)
-	break;
-      lastp = &p->next;
+      return &p->property;
     }
+
   p = (elf_property_list *) bfd_alloc (abfd, sizeof (*p));
   if (p == NULL)
     {
@@ -66,11 +122,14 @@ _bfd_elf_get_property (bfd *abfd, unsigned int type, unsigned int datasz)
 			  abfd);
       _exit (EXIT_FAILURE);
     }
+
   memset (p, 0, sizeof (*p));
   p->property.pr_type = type;
   p->property.pr_datasz = datasz;
-  p->next = *lastp;
-  *lastp = p;
+
+  elf_properties (abfd) =
+    _bfd_elf_insert_property (elf_properties (abfd), p, prev);
+
   return &p->property;
 }
 
@@ -357,23 +416,16 @@ static elf_property *
 elf_find_and_remove_property (elf_property_list **listp,
 			      unsigned int type, bool rm)
 {
-  elf_property_list *list;
+  elf_property_list *prev;
+  elf_property_list *p = _bfd_elf_find_property (*listp, type, &prev);
+  if (p == NULL)
+    return NULL;
 
-  for (list = *listp; list; list = list->next)
-    {
-      if (type == list->property.pr_type)
-	{
-	  /* Remove this property.  */
-	  if (rm)
-	    *listp = list->next;
-	  return &list->property;
-	}
-      else if (type < list->property.pr_type)
-	break;
-      listp = &list->next;
-    }
+  if (rm)
+    *listp = _bfd_elf_remove_property (*listp, p, prev);
 
-  return NULL;
+  /* FIXME: we leak memory with this approach.  */
+  return &p->property;
 }
 
 /* Merge GNU property list *LISTP in ABFD with FIRST_PBFD.  */

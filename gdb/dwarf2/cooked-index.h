@@ -40,7 +40,7 @@
 #include <condition_variable>
 #endif /* CXX_STD_THREAD */
 
-struct dwarf2_per_cu_data;
+struct dwarf2_per_cu;
 struct dwarf2_per_bfd;
 struct index_cache_store_context;
 struct cooked_index_entry;
@@ -60,6 +60,9 @@ enum cooked_index_flag_enum : unsigned char
   /* True is parent_entry.deferred has a value rather than parent_entry
      .resolved.  */
   IS_PARENT_DEFERRED = 16,
+  /* True if this entry was synthesized by gdb (as opposed to coming
+     directly from the DWARF).  */
+  IS_SYNTHESIZED = 32,
 };
 DEF_ENUM_FLAGS_TYPE (enum cooked_index_flag_enum, cooked_index_flag);
 
@@ -105,7 +108,7 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
 		      cooked_index_flag flags_,
 		      enum language lang_, const char *name_,
 		      cooked_index_entry_ref parent_entry_,
-		      dwarf2_per_cu_data *per_cu_)
+		      dwarf2_per_cu *per_cu_)
     : name (name_),
       tag (tag_),
       flags (flags_),
@@ -140,10 +143,15 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
      STORAGE.  FOR_MAIN is true if we are computing the name of the
      "main" entry -- one marked DW_AT_main_subprogram.  This matters
      for avoiding name canonicalization and also a related race (if
-     "main" computation is done during finalization).  If the language
+     "main" computation is done during finalization).  If
+     FOR_ADA_LINKAGE is true, then Ada-language symbols will have
+     their "linkage-style" name computed.  The default is
+     source-style.  If the language
      doesn't prescribe a separator, one can be specified using
      DEFAULT_SEP.  */
-  const char *full_name (struct obstack *storage, bool for_main = false,
+  const char *full_name (struct obstack *storage,
+			 bool for_main = false,
+			 bool for_ada_linkage = false,
 			 const char *default_sep = nullptr) const;
 
   /* Comparison modes for the 'compare' function.  See the function
@@ -241,16 +249,17 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
   /* The offset of this DIE.  */
   sect_offset die_offset;
   /* The CU from which this entry originates.  */
-  dwarf2_per_cu_data *per_cu;
+  dwarf2_per_cu *per_cu;
 
 private:
 
   /* A helper method for full_name.  Emits the full scope of this
      object, followed by the separator, to STORAGE.  If this entry has
-     a parent, its write_scope method is called first.  FOR_MAIN is
-     true when computing the name of 'main'; see full_name.  */
+     a parent, its write_scope method is called first.  See full_name
+     for a description of the FOR_MAIN and FOR_ADA_LINKAGE
+     parameters.  */
   void write_scope (struct obstack *storage, const char *sep,
-		    bool for_main) const;
+		    bool for_main, bool for_ada_linkage) const;
 
   /* The parent entry.  This is NULL for top-level entries.
      Otherwise, it points to the parent entry, such as a namespace or
@@ -279,7 +288,7 @@ public:
 			   cooked_index_flag flags, enum language lang,
 			   const char *name,
 			   cooked_index_entry_ref parent_entry,
-			   dwarf2_per_cu_data *per_cu);
+			   dwarf2_per_cu *per_cu);
 
   /* Install a new fixed addrmap from the given mutable addrmap.  */
   void install_addrmap (addrmap_mutable *map)
@@ -317,13 +326,12 @@ private:
   /* Look up ADDR in the address map, and return either the
      corresponding CU, or nullptr if the address could not be
      found.  */
-  dwarf2_per_cu_data *lookup (unrelocated_addr addr)
+  dwarf2_per_cu *lookup (unrelocated_addr addr)
   {
     if (m_addrmap == nullptr)
       return nullptr;
 
-    return (static_cast<dwarf2_per_cu_data *>
-	    (m_addrmap->find ((CORE_ADDR) addr)));
+    return (static_cast<dwarf2_per_cu *> (m_addrmap->find ((CORE_ADDR) addr)));
   }
 
   /* Create a new cooked_index_entry and register it with this object.
@@ -334,19 +342,16 @@ private:
 			      enum language lang,
 			      const char *name,
 			      cooked_index_entry_ref parent_entry,
-			      dwarf2_per_cu_data *per_cu)
-  {
-    return new (&m_storage) cooked_index_entry (die_offset, tag, flags,
-						lang, name, parent_entry,
-						per_cu);
-  }
+			      dwarf2_per_cu *per_cu);
 
-  /* GNAT only emits mangled ("encoded") names in the DWARF, and does
-     not emit the module structure.  However, we need this structure
-     to do lookups.  This function recreates that structure for an
-     existing entry, modifying ENTRY as appropriate.  */
+  /* When GNAT emits mangled ("encoded") names in the DWARF, and does
+     not emit the module structure, we still need this structuring to
+     do lookups.  This function recreates that information for an
+     existing entry, modifying ENTRY as appropriate.  Any new entries
+     are added to NEW_ENTRIES.  */
   void handle_gnat_encoded_entry
-       (cooked_index_entry *entry, htab_t gnat_entries);
+       (cooked_index_entry *entry, htab_t gnat_entries,
+	std::vector<cooked_index_entry *> &new_entries);
 
   /* Finalize the index.  This should be called a single time, when
      the index has been fully populated.  It enters all the entries
@@ -360,8 +365,7 @@ private:
   std::vector<cooked_index_entry *> m_entries;
   /* If we found an entry with 'is_main' set, store it here.  */
   cooked_index_entry *m_main = nullptr;
-  /* The addrmap.  This maps address ranges to dwarf2_per_cu_data
-     objects.  */
+  /* The addrmap.  This maps address ranges to dwarf2_per_cu objects.  */
   addrmap_fixed *m_addrmap = nullptr;
   /* Storage for canonical names.  */
   std::vector<gdb::unique_xmalloc_ptr<char>> m_names;
@@ -389,7 +393,7 @@ public:
 
   /* Return the DIE reader corresponding to PER_CU.  If no such reader
      has been registered, return NULL.  */
-  cutu_reader *get_reader (dwarf2_per_cu_data *per_cu);
+  cutu_reader *get_reader (dwarf2_per_cu *per_cu);
 
   /* Preserve READER by storing it in the local hash table.  */
   cutu_reader *preserve (cutu_reader_up reader);
@@ -400,7 +404,7 @@ public:
 			   cooked_index_flag flags,
 			   const char *name,
 			   cooked_index_entry_ref parent_entry,
-			   dwarf2_per_cu_data *per_cu)
+			   dwarf2_per_cu *per_cu)
   {
     return m_shard->add (die_offset, tag, flags, per_cu->lang (),
 			 name, parent_entry, per_cu);
@@ -527,7 +531,7 @@ protected:
 
   /* Each thread returns a tuple holding a cooked index, any collected
      complaints, a vector of errors that should be printed, and a
-     vector of parent maps.
+     parent map.
 
      The errors are retained because GDB's I/O system is not
      thread-safe.  run_on_main_thread could be used, but that would
@@ -671,7 +675,7 @@ public:
   /* Look up ADDR in the address map, and return either the
      corresponding CU, or nullptr if the address could not be
      found.  */
-  dwarf2_per_cu_data *lookup (unrelocated_addr addr) override;
+  dwarf2_per_cu *lookup (unrelocated_addr addr) override;
 
   /* Return a new vector of all the addrmaps used by all the indexes
      held by this object.
@@ -782,14 +786,13 @@ struct cooked_index_functions : public dwarf2_base_index_functions
 
   bool expand_symtabs_matching
     (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     expand_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     expand_symtabs_symbol_matcher symbol_matcher,
+     expand_symtabs_expansion_listener expansion_notify,
      block_search_flags search_flags,
      domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-       override;
+     expand_symtabs_lang_matcher lang_matcher) override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, bound_minimal_symbol msymbol,
@@ -800,10 +803,8 @@ struct cooked_index_functions : public dwarf2_base_index_functions
 	    (objfile, msymbol, pc, section, warn_if_readin));
   }
 
-  void map_symbol_filenames
-       (struct objfile *objfile,
-	gdb::function_view<symbol_filename_ftype> fun,
-	bool need_fullname) override
+  void map_symbol_filenames (objfile *objfile, symbol_filename_listener fun,
+			     bool need_fullname) override
   {
     wait (objfile, true);
     return (dwarf2_base_index_functions::map_symbol_filenames
