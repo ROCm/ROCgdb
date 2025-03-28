@@ -430,11 +430,7 @@ cooked_indexer::index_imported_unit (cutu_reader *reader,
   cutu_reader *new_reader
     = ensure_cu_exists (reader, *target, true);
   if (new_reader != nullptr)
-    {
-      index_dies (new_reader, new_reader->info_ptr (), nullptr, false);
-
-      reader->cu ()->add_dependence (new_reader->cu ()->per_cu);
-    }
+    index_dies (new_reader, new_reader->info_ptr (), nullptr, false);
 
   return info_ptr;
 }

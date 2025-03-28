@@ -300,9 +300,9 @@ private:
      symbols are being read.  */
   buildsym_compunit_up m_builder;
 
-  /* A set of pointers to dwarf2_per_cu objects for compilation units referenced
-     by this one.  Only used during full symbol processing; partial symbol
-     tables do not have dependencies.  */
+  /* A set of pointers to dwarf2_per_cu objects for compilation units
+     referenced by this one.  Only used during full symbol
+     processing.  */
   gdb::unordered_set<dwarf2_per_cu *> m_dependencies;
 
 public:
