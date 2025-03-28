@@ -38,6 +38,7 @@
 #include "gdbarch.h"
 #include "c-exp.h"
 #include "arch-utils.h"
+#include "inferior.h"
 
 /* Given a C string type, STR_TYPE, return the corresponding target
    character set name.  */
@@ -711,7 +712,8 @@ value *aspace_operation::evaluate (struct type *expect_type,
     lookup_pointer_type (builtin_type (exp->gdbarch)->builtin_void);
 
   val = value_from_pointer (generic_ptr_type, adddress);
-  val->set_scope (gdbarch_address_scope (exp->gdbarch, adddress));
+  val->set_scope (gdbarch_address_scope (exp->gdbarch, inferior_ptid,
+					 adddress));
   return val;
 }
 

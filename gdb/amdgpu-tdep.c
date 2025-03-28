@@ -1660,7 +1660,7 @@ amdgpu_address_spaces (struct gdbarch *gdbarch)
 }
 
 static location_scope
-amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
 {
   amd_dbgapi_segment_address_dependency_t segment_address_dependency;
 
@@ -1683,10 +1683,28 @@ amdgpu_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
       != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
 
-  if (amd_dbgapi_address_dependency (address_space_id,
-				     segment_address,
-				     &segment_address_dependency)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  amd_dbgapi_status_t ret;
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 79
+  /* Access to GPU globals can be made from host threads.  When we place a
+     watchpoint on such global GPU variable, a matching watchpoint is also
+     added on the CPU side for the same address, so it is possible to call here
+     with a ptid that belongs to a non-GPU thread.  */
+  const amd_dbgapi_wave_id_t wave_id = (ptid_is_gpu (ptid)
+					? get_amd_dbgapi_wave_id (ptid)
+					: AMD_DBGAPI_WAVE_NONE);
+
+  amd_dbgapi_process_id_t process_id
+    = get_amd_dbgapi_process_id (current_inferior ());
+
+  ret = amd_dbgapi_address_dependency (process_id, wave_id,
+				       address_space_id, segment_address,
+				       &segment_address_dependency);
+#else
+  ret = amd_dbgapi_address_dependency (address_space_id,
+				       segment_address,
+				       &segment_address_dependency);
+#endif
+  if (ret != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_address_dependency failed"));
 
   switch (segment_address_dependency)
