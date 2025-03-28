@@ -3538,7 +3538,8 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  address
 	    = gdbarch_segment_address_to_core_address (arch, address_space,
 						       address);
-	  location_scope scope = gdbarch_address_scope (arch, address);
+	  location_scope scope
+	    = gdbarch_address_scope (arch, inferior_ptid, address);
 
 	  if (scope_matches (scope, LOCATION_SCOPE_LANE))
 	    {
@@ -3692,7 +3693,8 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 	  CORE_ADDR address
 	    = gdbarch_segment_address_to_core_address
 		(arch, address_space, address_value->to_long ());
-	  location_scope scope = gdbarch_address_scope (arch, address);
+	  location_scope scope
+	    = gdbarch_address_scope (arch, inferior_ptid, address);
 
 	  /* Only need to check if there is a SIMD lane in focus,
 	     previous check ensured that there is a frame so there

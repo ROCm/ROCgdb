@@ -975,7 +975,7 @@ Return the address's scope.
 """,
     type="location_scope",
     name="address_scope",
-    params=[("CORE_ADDR", "address")],
+    params=[("ptid_t", "ptid"), ("CORE_ADDR", "address")],
     postdefault="default_address_scope",
     invalid=False,
 )

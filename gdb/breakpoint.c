@@ -10668,7 +10668,8 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       value_free_to_mark (mark);
 
       CORE_ADDR addr = value_as_address (val.get ());
-      scope = gdbarch_address_scope (val->type ()->arch (), addr);
+      scope = gdbarch_address_scope (val->type ()->arch (), inferior_ptid,
+				     addr);
 
       if (use_mask)
 	{
@@ -10692,7 +10693,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
 	     and so it needs to be reconfirmed now.  */
 	  if (iter->lval () == lval_memory)
 	    scope |= gdbarch_address_scope (iter->type ()->arch (),
-					    iter->address ());
+					    inferior_ptid, iter->address ());
 	  scope |= iter->scope ();
 	}
 
