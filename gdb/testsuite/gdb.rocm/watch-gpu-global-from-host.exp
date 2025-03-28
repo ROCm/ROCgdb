@@ -1,0 +1,53 @@
+# Copyright 2025-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Example where we place a watchpoint on a GPU global (from a GPU context),
+# and later reach CPU code that triggers it by modifying that global value.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {} {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	gdb_test "with breakpoint pending on -- break kern" \
+	    "Breakpoint $::decimal \\(kern\\) pending."
+
+	gdb_test "continue" \
+	    "Thread $::decimal \"kern\" hit Breakpoint $::decimal, with lane 0, kern .*"
+
+	gdb_test "watch global" "Hardware watchpoint $::decimal: global"
+
+	gdb_test "continue" \
+	    "Hardware watchpoint $::decimal: global.*Old value = 0\r\nNew value = 8\r\nmain.*" \
+	    "hit watchpoint in main"
+    }
+}
+
+do_test
+
