@@ -1171,7 +1171,7 @@ default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
 
 /* See arch-utils.h.  */
 location_scope
-default_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+default_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
 {
   return LOCATION_SCOPE_INFERIOR;
 }

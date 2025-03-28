@@ -813,7 +813,7 @@ mi_interp::on_memory_changed (CORE_ADDR memaddr, ssize_t len,
     return;
 
   location_scope scope
-    = gdbarch_address_scope (get_current_arch (), memaddr);
+    = gdbarch_address_scope (get_current_arch (), inferior_ptid, memaddr);
 
   ui_out *mi_uiout = this->interp_ui_out ();
 
