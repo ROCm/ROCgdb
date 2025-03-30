@@ -3307,7 +3307,7 @@ cooked_index_worker_debug_info::process_unit
     {
       auto new_reader
 	= std::make_unique<cutu_reader> (*this_cu, *per_objfile, nullptr,
-					 false, std::nullopt,
+					 true, std::nullopt,
 					 storage->get_abbrev_table_cache ());
 
       if (new_reader->is_dummy ())
@@ -3321,7 +3321,7 @@ cooked_index_worker_debug_info::process_unit
 
   if (this_cu->is_debug_types ())
     process_type_unit (reader, storage);
-  else if (reader->top_level_die ()->tag != DW_TAG_partial_unit)
+  else
     {
       bool nope = false;
       if (this_cu->scanned.compare_exchange_strong (nope, true))
