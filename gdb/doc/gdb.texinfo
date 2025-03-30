@@ -23328,6 +23328,43 @@ source name.
 
 @end table
 
+@value{GDBN} also has some special handling for cases not considered
+in the DWARF specification.
+
+@itemize @bullet
+@item
+The @code{DW_IDX_parent} for a C-style enumerator does not point at
+the entry for @code{enum} itself, but rather the parent of the type.
+The reason for this is that C-style enumerators are injected into the
+containing scope, and so their name is not qualified by the
+@code{enum}; and furthermore there is no way to distinguish between
+C-style enumerators and @code{enum class}-style enumerators in
+@samp{.debug_names}.
+
+@item
+Similarly, @code{DW_IDX_parent} is omitted for any linkage name
+entries that are written.
+
+@item
+Definitions in partial units are handled differently.  These most
+typically are seen in the output of @code{dwz}.
+
+In general, a DWARF partial unit cannot be read in isolation, but only
+by reading it in the context of some other unit that references it via
+@code{DW_TAG_imported_unit}.
+
+Therefore, an ordinary definition in a partial unit is attributed to
+one of the outermost containing units.  This is done by referencing
+this containing CU in the @code{DW_IDX_compile_unit} attribute.
+
+A further special case applies to @code{DW_TAG_inlined_subroutine}
+entries.  An inlined subroutine appearing in a partial unit may be
+inlined in all of the outermost compilation units that directly or
+indirectly include the partial unit.  Therefore, in this case,
+@value{GDBN} will emit a separate index entry for the entry, once for
+each such containing unit.
+@end itemize
+
 @node Symbol Errors
 @section Errors Reading Symbol Files
 
