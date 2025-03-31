@@ -91,11 +91,14 @@ ensure_have_simd_lane (const char *op_name)
 {
   ensure_have_thread (op_name);
 
-  int current_simd_lane
-    = inferior_thread ()->current_simd_lane ();
+  thread_info *thr = inferior_thread ();
+  ULONGEST lane = thr->current_simd_lane ();
 
-  if (current_simd_lane == -1)
+  if (lane == -1)
     error (_("%s evaluation requires a SIMD lane to be in focus."), op_name);
+
+  if (!thr->is_simd_lane_active (lane))
+    throw_error (LANE_INACTIVE_ERROR, _("lane inactive"));
 }
 
 /* Return the number of bytes overlapping a contiguous chunk of N_BITS

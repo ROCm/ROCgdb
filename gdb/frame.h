@@ -945,9 +945,9 @@ struct frame_arg
      ERROR are NULL this parameter's value should not be printed.  */
   struct value *val = nullptr;
 
-  /* String containing the error message, it is more usually NULL indicating no
-     error occurred reading this parameter.  */
-  gdb::unique_xmalloc_ptr<char> error;
+  /* If an error occured reading this parameter, this is the error.
+     Otherwise, this is GDB_NO_ERROR.  */
+  gdb_exception error;
 
   /* One of the print_entry_values_* entries as appropriate specifically for
      this frame_arg.  It will be different from print_entry_values.  With

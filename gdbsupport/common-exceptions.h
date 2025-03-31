@@ -120,6 +120,10 @@ enum errors {
      a thread context to be present, but it is missing.  */
   DWARF2_THREAD_CONTEXT_MISSING,
 
+  /* Operation requires an active lane, but current lane is
+     inactive.  */
+  LANE_INACTIVE_ERROR,
+
   /* Add more errors here.  */
   NR_ERRORS
 };

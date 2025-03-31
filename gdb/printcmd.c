@@ -2384,9 +2384,17 @@ print_variable_and_value (const char *name, struct symbol *var,
     }
   catch (const gdb_exception_error &except)
     {
-      fprintf_styled (stream, metadata_style.style (),
-		      "<error reading variable %s (%s)>", name,
-		      except.what ());
+      if (except.error == LANE_INACTIVE_ERROR)
+	{
+	  fprintf_styled (stream, metadata_style.style (), "<%s>",
+			  except.what ());
+	}
+      else
+	{
+	  fprintf_styled (stream, metadata_style.style (),
+			  "<error reading variable %s (%s)>", name,
+			  except.what ());
+	}
     }
 
   gdb_printf (stream, "\n");

@@ -496,15 +496,15 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 {
   struct ui_out *uiout = current_uiout;
 
-  gdb_assert (!arg->val || !arg->error);
+  gdb_assert (!arg->val || arg->error.error == GDB_NO_ERROR);
   gdb_assert ((values == PRINT_NO_VALUES && arg->val == NULL
-	       && arg->error == NULL)
+	       && arg->error.error == GDB_NO_ERROR)
 	      || values == PRINT_SIMPLE_VALUES
 	      || (values == PRINT_ALL_VALUES
-		  && (arg->val != NULL || arg->error != NULL)));
+		  && (arg->val != NULL || arg->error.error != GDB_NO_ERROR)));
   gdb_assert (arg->entry_kind == print_entry_values_no
 	      || (arg->entry_kind == print_entry_values_only
-		  && (arg->val || arg->error)));
+		  && (arg->val || arg->error.error != GDB_NO_ERROR)));
 
   if (skip_unavailable && arg->val != NULL
       && (arg->val->entirely_unavailable ()
@@ -537,10 +537,13 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
       uiout->field_stream ("type", stb);
     }
 
-  if (arg->val || arg->error)
+  if (arg->val || arg->error.error != GDB_NO_ERROR)
     {
-      if (arg->error)
-	stb.printf (_("<error reading variable: %s>"), arg->error.get ());
+      if (arg->error.error == LANE_INACTIVE_ERROR)
+	stb.printf (_("<%s>"), arg->error.message->c_str ());
+      else if (arg->error.error != GDB_NO_ERROR)
+	stb.printf (_("<error reading variable: %s>"),
+		    arg->error.message->c_str ());
       else
 	{
 	  try
