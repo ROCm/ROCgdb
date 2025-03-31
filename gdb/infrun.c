@@ -9719,7 +9719,6 @@ normal_stop ()
 			      target_pid_to_str (thr->ptid).c_str ());
 		}
 
-	      warn_if_current_lane_is_inactive ();
 	      annotate_thread_changed ();
 	    }
 	}

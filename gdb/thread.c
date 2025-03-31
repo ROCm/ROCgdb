@@ -2809,20 +2809,6 @@ thread_command (const char *tidstr, int from_tty)
     }
 }
 
-/* See gdbthread.h.  Note we issue a warning instead of erroring out
-   because it's safer -- we can have times the execution mask is
-   0.  */
-
-void
-warn_if_current_lane_is_inactive ()
-{
-  struct thread_info *tp = inferior_thread ();
-
-  if (!tp->executing ()
-      && !tp->is_simd_lane_active (tp->current_simd_lane ()))
-    warning (_("Current lane is inactive."));
-}
-
 static void
 switch_to_lane (thread_info *tp, int lane)
 {
@@ -3080,7 +3066,6 @@ print_selected_thread_frame (struct ui_out *uiout,
 	    uiout->text ("(running)");
 	  uiout->text ("\n");
 	}
-      warn_if_current_lane_is_inactive ();
     }
 
   if (selection & USER_SELECTED_FRAME)
