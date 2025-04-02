@@ -1652,20 +1652,12 @@ print_lane_row (ui_out *uiout, thread_info *tp, int lane, bool is_current)
 	}
       else
 	{
-	  if (tp->is_simd_lane_active (lane))
-	    {
-	      frame_info_ptr curr_frame = get_current_frame ();
+	  frame_info_ptr curr_frame = get_current_frame ();
 
-	      print_stack_frame (curr_frame,
-				 /* For MI output, print frame level.  */
-				 uiout->is_mi_like_p (),
-				 LOCATION, 0);
-	    }
-	  else
-	    {
-	      /* Lanes in this row are inactive.  */
-	      uiout->text ("(inactive)\n");
-	    }
+	  print_stack_frame (curr_frame,
+			     /* For MI output, print frame level.  */
+			     uiout->is_mi_like_p (),
+			     LOCATION, 0);
 	}
     }
 }
