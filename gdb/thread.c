@@ -2735,6 +2735,56 @@ lane_apply_command (const char *id_list, int from_tty)
     }
 }
 
+/* Find lane IDs with a target ID matching ARG.  */
+
+static void
+lane_find_command (const char *arg, int from_tty)
+{
+  if (arg == nullptr || *arg == '\0')
+    error (_("Command requires an argument."));
+
+  const char *tmp = re_comp (arg);
+  if (tmp != 0)
+    error (_("Invalid regexp (%s): %s"), tmp, arg);
+
+  /* We're going to be switching threads.  */
+  scoped_restore_current_thread restore_thread;
+
+  update_thread_list ();
+
+  bool match = false;
+
+  for (inferior *inf : all_inferiors ())
+    {
+      switch_to_inferior_no_thread (inf);
+
+      for (thread_info *tp : inf->non_exited_threads ())
+	{
+	  if (!tp->has_simd_lanes ())
+	    continue;
+
+	  gdbarch *arch = target_thread_architecture (tp->ptid);
+	  int lane_count = gdbarch_used_lanes_count (arch, tp);
+
+	  scoped_restore_current_simd_lane restore_lane (tp);
+
+	  for (int lane = 0; lane < lane_count; ++lane)
+	    {
+	      std::string name = target_lane_to_str (tp, lane);
+	      if (!name.empty () && re_exec (name.c_str ()))
+		{
+		  gdb_printf (_("Lane %s has target id '%s'\n"),
+			      print_lane_id (tp, lane), name.c_str ());
+		  match = true;
+		}
+	    }
+	}
+    }
+
+  if (!match)
+    gdb_printf (_("No lanes match '%s'\n"), arg);
+}
+
 /* Implementation of the "taas" command.  */
 
 static void
@@ -3533,6 +3583,12 @@ Find threads that match a regular expression.\n\
 Usage: thread find REGEXP\n\
 Will display thread ids whose name, target ID, or extra info matches REGEXP."),
 	   &thread_cmd_list);
+
+  add_cmd ("find", class_run, lane_find_command, _("\
+Find lanes that match a regular expression.\n\
+Usage: lane find REGEXP\n\
+Displays lane IDs whose target ID matches REGEXP."),
+	   &lane_cmd_list);
 
   add_setshow_boolean_cmd ("thread-events", no_class,
 			   &print_thread_events, _("\
