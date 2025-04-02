@@ -34,7 +34,7 @@
 #include "dwarf2/aranges.h"
 #include "dwarf2/attribute.h"
 #include "dwarf2/comp-unit-head.h"
-#include "dwarf2/cooked-index-storage.h"
+#include "dwarf2/cooked-index-worker.h"
 #include "dwarf2/cooked-indexer.h"
 #include "dwarf2/cu.h"
 #include "dwarf2/index-cache.h"
@@ -730,7 +730,7 @@ show_dwarf_synchronous (struct ui_file *file, int from_tty,
 /* local function prototypes */
 
 static void build_type_psymtabs_reader (cutu_reader *reader,
-					cooked_index_storage *storage);
+					cooked_index_worker_result *storage);
 
 static void var_decode_location (struct attribute *attr,
 				 struct symbol *sym,
@@ -3291,7 +3291,7 @@ get_type_unit_group_key (struct dwarf2_cu *cu, const struct attribute *stmt_list
 static void
 process_psymtab_comp_unit (dwarf2_per_cu *this_cu,
 			   dwarf2_per_objfile *per_objfile,
-			   cooked_index_storage *storage)
+			   cooked_index_worker_result *storage)
 {
   cutu_reader *reader = storage->get_reader (this_cu);
   if (reader == nullptr)
@@ -3328,7 +3328,7 @@ process_psymtab_comp_unit (dwarf2_per_cu *this_cu,
 
 static void
 build_type_psymtabs_reader (cutu_reader *reader,
-			    cooked_index_storage *storage)
+			    cooked_index_worker_result *storage)
 {
   struct dwarf2_cu *cu = reader->cu ();
   dwarf2_per_cu *per_cu = cu->per_cu;
@@ -3381,7 +3381,7 @@ struct tu_abbrev_offset
 
 static void
 build_type_psymtabs (dwarf2_per_objfile *per_objfile,
-		     cooked_index_storage *storage)
+		     cooked_index_worker_result *storage)
 {
   struct tu_stats *tu_stats = &per_objfile->per_bfd->tu_stats;
   abbrev_table_up abbrev_table;
@@ -3478,7 +3478,7 @@ print_tu_stats (dwarf2_per_objfile *per_objfile)
 static void
 process_skeletonless_type_unit (dwo_unit *dwo_unit,
 				dwarf2_per_objfile *per_objfile,
-				cooked_index_storage *storage)
+				cooked_index_worker_result *storage)
 {
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
 
@@ -3509,7 +3509,7 @@ process_skeletonless_type_unit (dwo_unit *dwo_unit,
 
 static void
 process_skeletonless_type_units (dwarf2_per_objfile *per_objfile,
-				 cooked_index_storage *storage)
+				 cooked_index_worker_result *storage)
 {
   /* Skeletonless TUs in DWP files without .gdb_index is not supported yet.  */
   if (get_dwp_file (per_objfile) == nullptr)
@@ -3555,7 +3555,7 @@ private:
 
   /* After the last DWARF-reading task has finished, this function
      does the remaining work to finish the scan.  */
-  void done_reading ();
+  void done_reading () override;
 
   /* An iterator for the comp units.  */
   using unit_iterator = std::vector<dwarf2_per_cu_up>::iterator;
@@ -3569,12 +3569,13 @@ private:
   /* A storage object for "leftovers" -- see the 'start' method, but
      essentially things not parsed during the normal CU parsing
      passes.  */
-  cooked_index_storage m_index_storage;
+  cooked_index_worker_result m_index_storage;
 };
 
 void
-cooked_index_worker_debug_info::process_cus (size_t task_number, unit_iterator first,
-				      unit_iterator end)
+cooked_index_worker_debug_info::process_cus (size_t task_number,
+					     unit_iterator first,
+					     unit_iterator end)
 {
   SCOPE_EXIT { bfd_thread_cleanup (); };
 
@@ -3582,7 +3583,7 @@ cooked_index_worker_debug_info::process_cus (size_t task_number, unit_iterator f
   complaint_interceptor complaint_handler;
 
   std::vector<gdb_exception> errors;
-  cooked_index_storage thread_storage;
+  cooked_index_worker_result thread_storage;
   for (auto inner = first; inner != end; ++inner)
     {
       dwarf2_per_cu *per_cu = inner->get ();
@@ -3593,43 +3594,24 @@ cooked_index_worker_debug_info::process_cus (size_t task_number, unit_iterator f
 	}
       catch (gdb_exception &except)
 	{
-	  errors.push_back (std::move (except));
+	  thread_storage.note_error (std::move (except));
 	}
     }
 
-  m_results[task_number] = result_type (thread_storage.release (),
-					complaint_handler.release (),
-					std::move (errors),
-					thread_storage.release_parent_map ());
+  thread_storage.done_reading (complaint_handler.release ());
+  m_results[task_number] = std::move (thread_storage);
 }
 
 void
 cooked_index_worker_debug_info::done_reading ()
 {
-  /* Only handle the scanning results here.  Complaints and exceptions
-     can only be dealt with on the main thread.  */
-  std::vector<cooked_index_shard_up> shards;
-
-  for (auto &one_result : m_results)
-    {
-      shards.push_back (std::move (std::get<0> (one_result)));
-      m_all_parents_map.add_map (std::get<3> (one_result));
-    }
-
   /* This has to wait until we read the CUs, we need the list of DWOs.  */
   process_skeletonless_type_units (m_per_objfile, &m_index_storage);
 
-  shards.push_back (m_index_storage.release ());
-  shards.shrink_to_fit ();
+  m_results.push_back (std::move (m_index_storage));
 
-  m_all_parents_map.add_map (m_index_storage.release_parent_map ());
-
-  dwarf2_per_bfd *per_bfd = m_per_objfile->per_bfd;
-  cooked_index *table
-    = (gdb::checked_static_cast<cooked_index *>
-       (per_bfd->index_table.get ()));
-  table->set_contents (std::move (shards), &m_warnings,
-		       &m_all_parents_map);
+  /* Call into the base class.  */
+  cooked_index_worker::done_reading ();
 }
 
 void

@@ -18,13 +18,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "dwarf2/cooked-indexer.h"
-#include "dwarf2/cooked-index-storage.h"
+#include "dwarf2/cooked-index-worker.h"
 #include "dwarf2/error.h"
 #include "gdb-hip-test-mode.h"
 
 /* See cooked-indexer.h.  */
 
-cooked_indexer::cooked_indexer (cooked_index_storage *storage,
+cooked_indexer::cooked_indexer (cooked_index_worker_result *storage,
 				dwarf2_per_cu *per_cu, enum language language)
   : m_index_storage (storage),
     m_per_cu (per_cu),
