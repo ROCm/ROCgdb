@@ -20,19 +20,14 @@
 #ifndef GDB_DWARF2_COOKED_INDEX_H
 #define GDB_DWARF2_COOKED_INDEX_H
 
-#include "dwarf2.h"
 #include "dwarf2/cooked-index-entry.h"
-#include "dwarf2/types.h"
 #include "symtab.h"
-#include "hashtab.h"
 #include "quick-symbol.h"
-#include "gdbsupport/gdb_obstack.h"
 #include "addrmap.h"
 #include "dwarf2/mapped-index.h"
 #include "dwarf2/read.h"
 #include "dwarf2/parent-map.h"
 #include "gdbsupport/range-chain.h"
-#include "complaints.h"
 #include "dwarf2/cooked-index-shard.h"
 #include "dwarf2/cooked-index-worker.h"
 
@@ -110,14 +105,8 @@ public:
   void start_reading () override;
 
   /* Called by cooked_index_worker to set the contents of this index
-     and transition to the MAIN_AVAILABLE state.  WARN is used to
-     collect any warnings that may arise when writing to the cache.
-     PARENT_MAPS is used when resolving pending parent links.
-     PARENT_MAPS may be NULL if there are no IS_PARENT_DEFERRED
-     entries in VEC.  */
-  void set_contents (std::vector<cooked_index_shard_up> &&vec,
-		     deferred_warnings *warn,
-		     const parent_map_map *parent_maps);
+     and transition to the MAIN_AVAILABLE state.  */
+  void set_contents ();
 
   /* A range over a vector of subranges.  */
   using range = range_chain<cooked_index_shard::range>;

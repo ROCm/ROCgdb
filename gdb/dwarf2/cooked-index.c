@@ -20,14 +20,10 @@
 #include "dwarf2/cooked-index.h"
 #include "dwarf2/read.h"
 #include "dwarf2/stringify.h"
-#include "dwarf2/index-cache.h"
 #include "event-top.h"
-#include "split-name.h"
 #include "observable.h"
 #include "run-on-main-thread.h"
-#include <algorithm>
 #include "gdbsupport/task-group.h"
-#include <chrono>
 #include "cli/cli-cmds.h"
 
 /* We don't want gdb to exit while it is in the process of writing to
@@ -82,12 +78,10 @@ cooked_index::wait (cooked_state desired_state, bool allow_quit)
 }
 
 void
-cooked_index::set_contents (std::vector<cooked_index_shard_up> &&shards,
-			    deferred_warnings *warn,
-			    const parent_map_map *parent_maps)
+cooked_index::set_contents ()
 {
   gdb_assert (m_shards.empty ());
-  m_shards = std::move (shards);
+  m_shards = m_state->release_shards ();
 
   m_state->set (cooked_state::MAIN_AVAILABLE);
 
@@ -96,16 +90,17 @@ cooked_index::set_contents (std::vector<cooked_index_shard_up> &&shards,
      finalization.  However, that would take a slot in the global
      thread pool, and if enough such tasks were submitted at once, it
      would cause a livelock.  */
-  gdb::task_group finalizers ([this, warn] ()
+  gdb::task_group finalizers ([this] ()
   {
     m_state->set (cooked_state::FINALIZED);
-    m_state->write_to_cache (index_for_writing (), warn);
+    m_state->write_to_cache (index_for_writing ());
     m_state->set (cooked_state::CACHE_DONE);
   });
 
   for (auto &shard : m_shards)
     {
       auto this_shard = shard.get ();
+      const parent_map_map *parent_maps = m_state->get_parent_map_map ();
       finalizers.add_task ([=] () { this_shard->finalize (parent_maps); });
     }
 
