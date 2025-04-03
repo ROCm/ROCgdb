@@ -1525,6 +1525,9 @@ struct info_lanes_opts
 
   /* For "-unused".  */
   bool only_unused = false;
+
+  /* For "-if EXPR".  */
+  std::string if_expr;
 };
 
 static const gdb::option::option_def info_lanes_option_defs[] = {
@@ -1552,6 +1555,13 @@ static const gdb::option::option_def info_lanes_option_defs[] = {
     [] (info_lanes_opts *opts) { return &opts->only_unused; },
     N_("Only unused lanes."),
   },
+
+  gdb::option::expression_option_def<info_lanes_opts> {
+    "if",
+    [] (info_lanes_opts *opts) { return &opts->if_expr; },
+    nullptr,
+    N_("Only lanes for which EXPRESSION is true."),
+  },
 };
 
 /* Create an option_def_group for the "info lanes" options, with OPTS
@@ -1567,8 +1577,9 @@ make_info_lanes_options_def_group (info_lanes_opts *opts)
    printed.  */
 
 static bool
-should_print_lane (thread_info *thr, const info_lanes_opts &opts,
-		   int lane_used_count)
+should_print_lane_state_flags (thread_info *thr,
+			       const info_lanes_opts &opts,
+			       int lane_used_count)
 {
   int lane = thr->current_simd_lane ();
 
@@ -1588,6 +1599,29 @@ should_print_lane (thread_info *thr, const info_lanes_opts &opts,
   else if (opts.only_unused && lane >= lane_used_count)
     return true;
   return false;
+}
+
+static bool
+should_print_lane (thread_info *thr, const info_lanes_opts &opts,
+		   int lane_used_count)
+{
+  if (!should_print_lane_state_flags (thr, opts, lane_used_count))
+    return false;
+
+  if (!opts.if_expr.empty ())
+    {
+      try
+	{
+	  if (parse_and_eval_long (opts.if_expr.c_str ()) == 0)
+	    return false;
+	}
+      catch (const gdb_exception_error &except)
+	{
+	  return false;
+	}
+    }
+
+  return true;
 }
 
 /* Print one row in the "info lanes" table.  TP is the thread related
