@@ -40,6 +40,7 @@ enum py_param_types
   param_string_noescape,
   param_optional_filename,
   param_filename,
+  param_expression,
   param_zinteger,
   param_zuinteger,
   param_zuinteger_unlimited,
@@ -68,6 +69,7 @@ param_to_var[] =
   { var_string_noescape },
   { var_optional_filename },
   { var_filename },
+  { var_expression },
   { var_integer },
   { var_uinteger },
   { var_pinteger, pinteger_unlimited_literals },
@@ -89,6 +91,7 @@ static struct {
   { "PARAM_STRING_NOESCAPE", param_string_noescape },
   { "PARAM_OPTIONAL_FILENAME", param_optional_filename },
   { "PARAM_FILENAME", param_filename },
+  { "PARAM_EXPRESSION", param_expression },
   { "PARAM_ZINTEGER", param_zinteger },
   { "PARAM_ZUINTEGER", param_zuinteger },
   { "PARAM_ZUINTEGER_UNLIMITED", param_zuinteger_unlimited },
@@ -717,6 +720,13 @@ add_setshow_generic (enum var_types type, const literal_def *extra_literals,
 					   self->value.stringval, set_doc,
 					   show_doc, help_doc, get_set_value,
 					   get_show_value, set_list, show_list);
+      break;
+
+    case var_expression:
+      commands = add_setshow_expression_cmd (cmd_name.get (), cmdclass,
+					     self->value.stringval, set_doc,
+					     show_doc, help_doc, get_set_value,
+					     get_show_value, set_list, show_list);
       break;
 
     case var_enum:

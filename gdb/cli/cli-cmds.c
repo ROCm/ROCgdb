@@ -2390,6 +2390,7 @@ value_from_setting (const setting &var, struct gdbarch *gdbarch)
     case var_string_noescape:
     case var_optional_filename:
     case var_filename:
+    case var_expression:
     case var_enum:
       {
 	const char *value;
@@ -2472,6 +2473,7 @@ str_value_from_setting (const setting &var, struct gdbarch *gdbarch)
     case var_string_noescape:
     case var_optional_filename:
     case var_filename:
+    case var_expression:
     case var_enum:
       /* For these cases, we do not use get_setshow_command_value_string,
 	 as this function handle some characters specially, e.g. by

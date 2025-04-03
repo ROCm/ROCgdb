@@ -132,6 +132,7 @@ enum scm_param_types
   param_string_noescape,
   param_optional_filename,
   param_filename,
+  param_expression,
   param_enum,
   param_color,
 };
@@ -159,6 +160,7 @@ param_to_var[] =
   { var_string_noescape },
   { var_optional_filename },
   { var_filename },
+  { var_expression },
   { var_enum },
   { var_color }
 };
@@ -508,6 +510,13 @@ add_setshow_generic (enum var_types param_type,
 					   show_func, set_list, show_list);
       break;
 
+    case var_expression:
+      commands = add_setshow_expression_cmd (cmd_name, cmd_class,
+					     self->value.stringval, set_doc,
+					     show_doc, help_doc, set_func,
+					     show_func, set_list, show_list);
+      break;
+
     case var_enum:
       /* Initialize the value, just in case.  */
       make_setting (self).set<const char *> (self->enumeration[0]);
@@ -651,6 +660,7 @@ pascm_param_value (const setting &var, int arg_pos, const char *func_name)
     case var_string_noescape:
     case var_optional_filename:
     case var_filename:
+    case var_expression:
       {
 	const std::string &str = var.get<std::string> ();
 	return gdbscm_scm_from_host_string (str.c_str (), str.length ());
@@ -739,6 +749,7 @@ pascm_set_param_value_x (param_smob *p_smob,
     case var_string_noescape:
     case var_optional_filename:
     case var_filename:
+    case var_expression:
       SCM_ASSERT_TYPE (scm_is_string (value)
 		       || (var.type () != var_filename
 			   && gdbscm_is_false (value)),

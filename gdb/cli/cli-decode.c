@@ -996,6 +996,55 @@ add_setshow_filename_cmd (const char *name, command_class theclass,
    list for set/show or some sublist thereof).  */
 
 set_show_commands
+add_setshow_expression_cmd (const char *name, enum command_class theclass,
+			    std::string *var,
+			    const char *set_doc, const char *show_doc,
+			    const char *help_doc,
+			    cmd_func_ftype *set_func,
+			    show_value_ftype *show_func,
+			    struct cmd_list_element **set_list,
+			    struct cmd_list_element **show_list)
+{
+  set_show_commands commands
+    = add_setshow_cmd_full<std::string> (name, theclass, var_expression, var,
+					 set_doc, show_doc, help_doc,
+					 nullptr, nullptr, set_func,
+					 show_func, set_list, show_list);
+
+  set_cmd_completer (commands.set, expression_completer);
+
+  return commands;
+}
+
+/* Same as above but using a getter and a setter function instead of a pointer
+   to a global storage buffer.  */
+
+set_show_commands
+add_setshow_expression_cmd (const char *name, command_class theclass,
+			    const char *set_doc, const char *show_doc,
+			    const char *help_doc,
+			    setting_func_types<std::string>::set set_func,
+			    setting_func_types<std::string>::get get_func,
+			    show_value_ftype *show_func,
+			    cmd_list_element **set_list,
+			    cmd_list_element **show_list)
+{
+  auto cmds = add_setshow_cmd_full<std::string> (name, theclass, var_expression,
+						 nullptr, set_doc, show_doc,
+						 help_doc, set_func, get_func,
+						 nullptr, show_func, set_list,
+						 show_list);
+
+  set_cmd_completer (cmds.set, expression_completer);
+
+  return cmds;
+}
+
+
+/* Add element named NAME to both the set and show command LISTs (the
+   list for set/show or some sublist thereof).  */
+
+set_show_commands
 add_setshow_string_cmd (const char *name, enum command_class theclass,
 			std::string *var,
 			const char *set_doc, const char *show_doc,

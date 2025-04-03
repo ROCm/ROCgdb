@@ -57,13 +57,14 @@
    readline, for proper testing of TAB completion.
 
    These maintenance commands support options of all the different
-   available kinds of commands (boolean, enum, flag, string, filename,
-   uinteger):
+   available kinds of commands (boolean, color, enum, flag, string,
+   filename, expression, uinteger):
 
     (gdb) maint test-options require-delimiter -[TAB]
-    -bool                -flag                      -uinteger-unlimited
-    -enum                -pinteger-unlimited        -xx1
-    -filename            -string                    -xx2
+    -bool                -filename                  -uinteger-unlimited
+    -color               -flag                      -xx1
+    -enum                -pinteger-unlimited        -xx2
+    -expression          -string
 
     (gdb) maint test-options require-delimiter -bool o[TAB]
     off  on
@@ -137,6 +138,7 @@ struct test_options_opts
   int pint_unl_opt = 0;
   std::string string_opt;
   std::string filename_opt;
+  std::string expression_opt;
   ui_file_style::color color_opt { ui_file_style::MAGENTA };
 
   test_options_opts () = default;
@@ -150,7 +152,7 @@ struct test_options_opts
     gdb_printf (file,
 		_("-flag %d -xx1 %d -xx2 %d -bool %d "
 		  "-enum %s -uint-unl %s -pint-unl %s -string '%s' "
-		  "-filename '%s' -color %s -- %s\n"),
+		  "-filename '%s' -expression (%s) -color %s -- %s\n"),
 		flag_opt,
 		xx1_opt,
 		xx2_opt,
@@ -164,6 +166,7 @@ struct test_options_opts
 		 : plongest (pint_unl_opt)),
 		string_opt.c_str (),
 		filename_opt.c_str (),
+		expression_opt.c_str (),
 		color_opt.to_string ().c_str (),
 		args);
   }
@@ -246,6 +249,14 @@ static const gdb::option::option_def test_options_option_defs[] = {
     [] (test_options_opts *opts) { return &opts->filename_opt; },
     nullptr, /* show_cmd_cb */
     N_("A filename option."),
+  },
+
+  /* An expression option.  */
+  gdb::option::expression_option_def<test_options_opts> {
+    "expression",
+    [] (test_options_opts *opts) { return &opts->expression_opt; },
+    nullptr, /* show_cmd_cb */
+    N_("An expression option."),
   },
 
   /* A color option.  */
