@@ -19,8 +19,8 @@
 #define GDB_BREAK_COND_PARSE_H
 
 /* Given TOK, a string possibly containing a condition, thread, inferior,
-   task and force-condition flag, as accepted by the 'break' command,
-   extract the condition string, thread, inferior, task number, and the
+   task, lane and force-condition flag, as accepted by the 'break' command,
+   extract the condition string, thread, inferior, lane, task number, and the
    force_condition flag, then set *COND_STRING, *SPECIFICITY, and *FORCE.
 
    As TOK is parsed, if an unknown keyword is encountered before the 'if'

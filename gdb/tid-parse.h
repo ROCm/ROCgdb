@@ -22,6 +22,9 @@
 
 #include "cli/cli-utils.h"
 
+/* Fully-qualified lane ID.  */
+using lane_id = std::array<int, 3>;
+
 struct thread_info;
 
 /* Issue an invalid thread ID error, pointing at STRING, the invalid
@@ -36,7 +39,8 @@ struct thread_info;
    thrown.  */
 struct thread_info *parse_thread_id (const char *tidstr, const char **end);
 
-std::pair<thread_info *, int> parse_lane_id (const char *input);
+std::pair<thread_info *, int> parse_lane_id (const char *input,
+					     const char **end = nullptr);
 
 /* Return true if TIDSTR is pointing to a string that looks like a
    thread-id.  This doesn't mean that TIDSTR identifies a valid thread, but
@@ -45,6 +49,14 @@ std::pair<thread_info *, int> parse_lane_id (const char *input);
    the thread-id into *END.  */
 
 bool is_thread_id (const char *tidstr, const char **end);
+
+/* Return true if LIDSTR is pointing to a string that looks like a
+   lane-id.  This doesn't mean that LIDSTR identifies a valid lane,
+   but the string does at least look like a valid lane-id.  If END is
+   not NULL, parse_lane_id stores the address of the first character
+   after the lane-id into *END.  */
+
+bool is_lane_id (const char *lidstr, const char **end);
 
 /* Parse a thread ID or a thread range list.
 

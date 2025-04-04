@@ -5849,6 +5849,13 @@ bpstat_check_breakpoint_conditions (bpstat *bs, thread_info *thread)
   /* Remember the SIMD mask.  */
   bs->simd_lane_mask = thread->active_simd_lanes_mask ();
 
+  /* If the breakpoint is set for a specific lane, mask all other
+     lanes.  */
+  if (b->specificity.thread != -1
+      && b->specificity.thread == thread->global_num
+      && b->specificity.lane >= 0)
+    bs->simd_lane_mask &= (simd_lanes_mask_t) 1 << b->specificity.lane;
+
   /* If we hit the breakpoint with all lanes inactive, don't stop.
      This can happen in conditional/divergent code -- the compiler may
      decide it's cheaper to execute a block of instructions unmasked
@@ -6924,6 +6931,8 @@ print_one_breakpoint_location (struct breakpoint *b,
 	uiout->field_signed ("task", b->specificity.task);
       else if (b->specificity.inferior != -1)
 	uiout->field_signed ("inferior", b->specificity.inferior);
+      else if (b->specificity.lane != -1)
+	uiout->field_signed ("lane", b->specificity.inferior);
     }
 
   uiout->text ("\n");
@@ -6969,14 +6978,23 @@ print_one_breakpoint_location (struct breakpoint *b,
       const bp_specificity &s = b->specificity;
 
       /* FIXME should make an annotation for this.  */
-      uiout->text ("\tstop only in thread ");
       if (uiout->is_mi_like_p ())
 	uiout->field_signed ("thread", s.thread);
       else
 	{
 	  thread_info *thr = find_thread_global_id (s.thread);
 
-	  uiout->field_string ("thread", print_thread_id (thr));
+	  if (s.lane >= 0)
+	    {
+	      uiout->text ("\tstop only in lane ");
+	      uiout->field_fmt ("lane", "%s.%d",
+				print_thread_id (thr), s.lane);
+	    }
+	  else
+	    {
+	      uiout->text ("\tstop only in thread ");
+	      uiout->field_string ("thread", print_thread_id (thr));
+	    }
 	}
       uiout->text ("\n");
     }
@@ -7505,8 +7523,12 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	      gdb_printf (" (not specific)");
 	    else if (o.thread != -1)
 	      {
-		struct thread_info *thr = find_thread_global_id (o.thread);
-		gdb_printf (" (thread %s)", print_thread_id (thr));
+		thread_info *thr = find_thread_global_id (o.thread);
+		if (o.lane >= 0)
+		  gdb_printf (" (lane %s.%d)", print_thread_id (thr),
+			      o.lane);
+		else
+		  gdb_printf (" (thread %s)", print_thread_id (thr));
 	      }
 	    else if (o.task != -1)
 	      gdb_printf (" (task %d)", o.task);
@@ -14618,7 +14640,10 @@ breakpoint::print_recreate_thread (struct ui_file *fp) const
   if (specificity.thread != -1)
     {
       thread_info *thr = find_thread_global_id (specificity.thread);
-      gdb_printf (fp, " thread %s", print_full_thread_id (thr));
+      if (specificity.lane != -1)
+	gdb_printf (fp, " lane %s", print_full_lane_id (thr, specificity.lane));
+      else
+	gdb_printf (fp, " thread %s", print_full_thread_id (thr));
     }
 
   if (specificity.task != -1)

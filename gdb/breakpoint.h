@@ -269,6 +269,10 @@ struct bp_specificity
      don't care.  */
   int thread = -1;
 
+  /* Lane number for lane-specific breakpoint, or -1 if don't care.
+     It is taken into consideration iff THREAD is specified.  */
+  int lane = -1;
+
   /* Ada task number for task-specific breakpoint, or -1 if don't
      care.  */
   int task = -1;
@@ -277,7 +281,8 @@ struct bp_specificity
   {
     return (thread == rhs.thread
 	    && inferior == rhs.inferior
-	    && task == rhs.task);
+	    && task == rhs.task
+	    && lane == rhs.lane);
   }
 
   bool operator!= (const bp_specificity &rhs) const
@@ -294,9 +299,11 @@ struct bp_specificity
     gdb_assert (thread == -1 || thread > 0);
     gdb_assert (inferior == -1 || inferior > 0);
     gdb_assert (task == -1 || task > 0);
+    gdb_assert (lane == -1 || (lane >= 0 && thread > 0));
 
     /* At most one of thread, task or inferior can be set on any
-       breakpoint.  */
+       breakpoint.  If lane is set, then thread must be set too, so we
+       don't count lane here.  */
     gdb_assert (((thread == -1 ? 0 : 1)
 		 + (task == -1 ? 0 : 1)
 		 + (inferior == -1 ? 0 : 1)) <= 1);

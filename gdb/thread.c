@@ -1961,6 +1961,17 @@ print_full_thread_id (struct thread_info *thr)
   return s;
 }
 
+const char *
+print_full_lane_id (struct thread_info *thr, int lane)
+{
+  char *s = get_print_cell ();
+
+  gdb_assert (thr != nullptr);
+  xsnprintf (s, PRINT_CELL_SIZE, "%d.%d.%d",
+	     thr->inf->num, thr->per_inf_num, lane);
+  return s;
+}
+
 /* Sort an array of struct thread_info pointers by thread ID (first by
    inferior number, and then by per-inferior thread number).  Sorts in
    ascending order.  */

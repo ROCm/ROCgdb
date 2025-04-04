@@ -739,6 +739,10 @@ const char *print_thread_id (struct thread_info *thr);
    even when there is only a single inferior.  */
 const char *print_full_thread_id (struct thread_info *thr);
 
+/* Return a string version of a fully-qualified lane ID for
+   printing.  */
+const char *print_full_lane_id (struct thread_info *thr, int lane);
+
 /* Boolean test for an already-known ptid.  */
 extern bool in_thread_list (process_stratum_target *targ, ptid_t ptid);
 

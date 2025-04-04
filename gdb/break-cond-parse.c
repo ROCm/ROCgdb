@@ -96,6 +96,7 @@ struct token
     THREAD,
     INFERIOR,
     TASK,
+    LANE,
 
     /* This is the token used when we find unknown content, the m_content
        for this token is the rest of the input string.  */
@@ -129,6 +130,9 @@ struct token
 			      std::string (m_content).c_str ());
       case type::TASK:
 	return string_printf ("{ TASK: \"%s\" }",
+			      std::string (m_content).c_str ());
+      case type::LANE:
+	return string_printf ("{ LANE: \"%s\" }",
 			      std::string (m_content).c_str ());
       case type::REST:
 	return string_printf ("{ REST: \"%s\" }",
@@ -282,6 +286,8 @@ parse_all_tokens (const char *str)
 	curr_results->emplace_back (token::type::INFERIOR, v);
       else if (startswith ("task", t))
 	curr_results->emplace_back (token::type::TASK, v);
+      else if (startswith ("lane", t))
+	curr_results->emplace_back (token::type::LANE, v);
       else
 	{
 	  /* An unknown token.  If we are scanning forward then reset TOK
@@ -378,11 +384,16 @@ parse_all_tokens (const char *str)
 
       if (t.get_type () == token::type::FORCE)
 	forward_results.back ().extend (std::move (t));
-      else if (t.get_type () == token::type::THREAD)
+      else if (t.get_type () == token::type::THREAD
+	       || t.get_type () == token::type::LANE)
 	{
 	  const char *end;
 	  std::string v (t.get_value ());
-	  if (is_thread_id (v.c_str (), &end) && *end == '\0')
+
+	  auto is_my_id = (t.get_type () == token::type::THREAD
+			   ? is_thread_id
+			   : is_lane_id);
+	  if (is_my_id (v.c_str (), &end) && *end == '\0')
 	    break;
 	  forward_results.back ().extend (std::move (t));
 	}
@@ -450,7 +461,7 @@ void
 error_if_already_specific (const bp_specificity &spec)
 {
   if (spec.is_specific ())
-    error ("You can specify only one of thread, inferior, or task.");
+    error ("You can specify only one of thread, inferior, lane, or task.");
 }
 
 /* See break-cond-parse.h.  */
@@ -500,6 +511,18 @@ create_breakpoint_parse_arg_string
 	    thread_info *thr = parse_thread_id (tok_value.c_str (), &tmptok);
 	    gdb_assert (*tmptok == '\0');
 	    spec.thread = thr->global_num;
+	  }
+	  break;
+	case token::type::LANE:
+	  {
+	    if (spec.lane != -1)
+	      error ("You can specify only one lane.");
+	    error_if_already_specific (spec);
+	    const char *tmptok;
+	    auto [thr, lane_num] = parse_lane_id (tok_value.c_str (), &tmptok);
+	    gdb_assert (*tmptok == '\0');
+	    spec.thread = thr->global_num;
+	    spec.lane = lane_num;
 	  }
 	  break;
 	case token::type::INFERIOR:
@@ -608,6 +631,7 @@ test (const char *input, const char *condition,
 	  debug_printf ("thread: %d\n", extracted_specificity.thread);
 	  debug_printf ("inferior: %d\n", extracted_specificity.inferior);
 	  debug_printf ("task: %d\n", extracted_specificity.task);
+	  debug_printf ("lane: %d\n", extracted_specificity.lane);
 	  debug_printf ("forced: %s\n",
 			extracted_force_condition ? "true" : "false");
 	  debug_printf ("exception: '%s'\n", exception_msg.c_str ());
@@ -680,6 +704,8 @@ create_breakpoint_parse_arg_string_tests ()
   test_error ("thread 1xxx", "Invalid thread ID: 1xxx");
   test_error ("inferior 1xxx", "Junk 'xxx' after inferior keyword.");
   test_error ("task 1xxx", "Junk 'xxx' after task keyword.");
+
+  /* XXX add lane tests */
 }
 
 } /* namespace selftests */

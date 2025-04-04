@@ -30,6 +30,12 @@ invalid_thread_id_error (const char *string)
   error (_("Invalid thread ID: %s"), string);
 }
 
+[[noreturn]] static void
+invalid_lane_id_error (const char *string)
+{
+  error (_("Invalid lane ID: %s"), string);
+}
+
 /* Wrapper for get_number_trailer that throws an error if we get back
    a negative number.  We'll see a negative value if the number is
    stored in a negative convenience variable (e.g., $minus_one = -1).
@@ -63,50 +69,45 @@ get_non_negative_number_trailer (const char **pp, int trailer,
    exception.  */
 
 static std::pair<int, int>
-parse_thread_id_1 (const char *tidstr, const char **end)
+parse_thread_id_1 (const char *tidstr, const char **end,
+		   gdb::function_view<void (const char *)> invalid_id,
+		   const char *tidstr_error)
 {
-  const char *number = tidstr;
-  const char *dot, *p1;
+  const char *p;
   int inf_num;
-
-  dot = strchr (number, '.');
-
-  if (dot != NULL)
+  const char *dot = strchr (tidstr, '.');
+  if (dot != nullptr)
     {
       /* Parse number to the left of the dot.  */
-      p1 = number;
+      p = tidstr;
       std::optional<int> res
-	= get_non_negative_number_trailer (&p1, '.', number);
+	= get_non_negative_number_trailer (&p, '.', tidstr_error);
       if (!res.has_value () || *res == 0)
-	invalid_thread_id_error (number);
+	invalid_id (tidstr_error);
       inf_num = *res;
-      p1 = dot + 1;
+      p = dot + 1;
     }
   else
     {
       inf_num = 0;
-      p1 = number;
+      p = tidstr;
     }
 
   std::optional<int> res
-    = get_non_negative_number_trailer (&p1, 0, number);
+    = get_non_negative_number_trailer (&p, '.', tidstr_error);
   if (!res.has_value () || *res == 0)
-    invalid_thread_id_error (number);
+    invalid_id (tidstr_error);
   int thr_num = *res;
 
   if (end != nullptr)
-    *end = p1;
+    *end = p;
 
   return { inf_num, thr_num };
 }
 
-/* See tid-parse.h.  */
-
-struct thread_info *
-parse_thread_id (const char *tidstr, const char **end)
+static thread_info *
+resolve_thread_id (int inf_num, int thr_num)
 {
-  const auto [inf_num, thr_num] = parse_thread_id_1 (tidstr, end);
-
   inferior *inf;
   bool explicit_inf_id = false;
 
@@ -139,27 +140,75 @@ parse_thread_id (const char *tidstr, const char **end)
   return tp;
 }
 
-std::pair<thread_info *, int>
-parse_lane_id (const char *input)
-{
-  thread_info *thr = nullptr;
-  const char *lanestr = nullptr;
+/* See tid-parse.h.  */
 
-  const char *last_dot = strrchr (input, '.');
+struct thread_info *
+parse_thread_id (const char *tidstr, const char **end)
+{
+  const auto [inf_num, thr_num]
+    = parse_thread_id_1 (tidstr, end, invalid_thread_id_error, tidstr);
+  return resolve_thread_id (inf_num, thr_num);
+}
+
+static lane_id
+parse_lane_id_1 (const char *lidstr, const char **end)
+{
+  const char *lanenum_str;
+  lane_id res;
+
+  const char *last_dot = strrchr (lidstr, '.');
   if (last_dot != nullptr)
     {
       /* Parse [INF.]THR to the left of the dot.  */
-      std::string tidstr (input, last_dot);
-      thr = parse_thread_id (tidstr.c_str (), nullptr);
-      lanestr = last_dot + 1;
+      std::string tidstr (lidstr, last_dot);
+      const char *tid_end;
+      auto pair = parse_thread_id_1 (tidstr.c_str (), &tid_end,
+				     invalid_lane_id_error, lidstr);
+      if (*tid_end != '\0')
+	error (_("whoops"));
+      res[0] = std::get<0> (pair);
+      res[1] = std::get<1> (pair);
+      lanenum_str = last_dot + 1;
     }
   else
     {
-      thr = inferior_thread ();
-      lanestr = input;
+      res[0] = 0;
+      res[1] = 0;
+      lanenum_str = lidstr;
     }
 
-  int lane_num = parse_and_eval_long (lanestr);
+  const char *p = lanenum_str;
+  std::optional<int> lanenum = get_non_negative_number_trailer (&p, 0, lidstr);
+  /* Note that 0 is valid.  */
+  if (!lanenum.has_value ())
+    invalid_lane_id_error (lidstr);
+  res[2] = *lanenum;
+
+  if (end != nullptr)
+    *end = p;
+
+  return res;
+}
+
+std::pair<thread_info *, int>
+parse_lane_id (const char *lidstr, const char **end)
+{
+  auto [inf_num, thr_num, lane_num] = parse_lane_id_1 (lidstr, end);
+
+  thread_info *thr;
+  if (thr_num == 0)
+    {
+      /* If the thread number is 0, it means the user didn't specify a
+	 thread.  Fill it from current context.  */
+      gdb_assert (inf_num == 0);
+      thr = inferior_thread ();
+    }
+  else
+    {
+      /* resolve_thread_id handles the case of the user not specifying
+	 an inferior number either.  */
+      thr = resolve_thread_id (inf_num, thr_num);
+    }
 
   return { thr, lane_num };
 }
@@ -171,7 +220,23 @@ is_thread_id (const char *tidstr, const char **end)
 {
   try
     {
-      (void) parse_thread_id_1 (tidstr, end);
+      (void) parse_thread_id_1 (tidstr, end, invalid_thread_id_error, tidstr);
+      return true;
+    }
+  catch (const gdb_exception_error &)
+    {
+      return false;
+    }
+}
+
+/* See tid-parse.h.  */
+
+bool
+is_lane_id (const char *lidstr, const char **end)
+{
+  try
+    {
+      (void) parse_lane_id_1 (lidstr, end);
       return true;
     }
   catch (const gdb_exception_error &)
