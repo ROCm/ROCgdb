@@ -7478,7 +7478,8 @@ breakpoint_has_pc (struct breakpoint *b,
 static void
 describe_other_breakpoints (struct gdbarch *gdbarch,
 			    struct program_space *pspace, CORE_ADDR pc,
-			    struct obj_section *section, int thread)
+			    struct obj_section *section,
+			    const bp_specificity &specificity)
 {
   int others = 0;
 
@@ -7500,8 +7501,8 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	    gdb_printf ("%d", b.number);
 	    /* o => other breakpoint */
 	    const bp_specificity &o = b.specificity;
-	    if (o.thread == -1 && thread != -1)
-	      gdb_printf (" (all threads)");
+	    if (!o.is_specific () && specificity.is_specific ())
+	      gdb_printf (" (not specific)");
 	    else if (o.thread != -1)
 	      {
 		struct thread_info *thr = find_thread_global_id (o.thread);
@@ -7509,6 +7510,9 @@ describe_other_breakpoints (struct gdbarch *gdbarch,
 	      }
 	    else if (o.task != -1)
 	      gdb_printf (" (task %d)", o.task);
+	    else if (o.inferior != -1)
+	      gdb_printf (" (inferior %d)", o.inferior);
+
 	    gdb_printf ("%s%s ",
 			((b.enable_state == bp_disabled
 			  || b.enable_state == bp_call_disabled)
@@ -9040,7 +9044,7 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 
 	  describe_other_breakpoints (loc_gdbarch,
 				      sal.pspace, sal.pc, sal.section,
-				      specificity.thread);
+				      specificity);
 	}
 
       bp_location *new_loc = add_location (sal);
