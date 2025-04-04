@@ -90,13 +90,15 @@ static void
 ensure_have_simd_lane (const char *op_name)
 {
   ensure_have_thread (op_name);
-#if 0
-  int current_simd_lane
-    = inferior_thread ()->current_simd_lane ();
 
-  if (current_simd_lane == -1)
-#endif
+  thread_info *thr = inferior_thread ();
+  ULONGEST lane = thr->current_simd_lane ();
+
+  if (lane == -1)
     error (_("%s evaluation requires a SIMD lane to be in focus."), op_name);
+
+  if (!thr->is_simd_lane_active (lane))
+    throw_error (LANE_INACTIVE_ERROR, _("lane inactive"));
 }
 
 /* Return the number of bytes overlapping a contiguous chunk of N_BITS
@@ -3711,11 +3713,9 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
       case DW_OP_LLVM_USER_push_lane:
 	{
 	  ensure_have_simd_lane ("DW_OP_LLVM_push_lane");
-#if 0
 	  ULONGEST lane = inferior_thread ()->current_simd_lane ();
 	  result_entry = std::make_shared<dwarf_value> (lane, address_type);
 	  m_scope |= LOCATION_SCOPE_LANE;
-#endif
 	}
 	break;
 

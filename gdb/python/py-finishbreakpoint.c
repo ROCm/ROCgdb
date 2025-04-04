@@ -305,8 +305,10 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       /* Set a breakpoint on the return address.  */
       location_spec_up locspec
 	= new_address_location_spec (get_frame_pc (prev_frame), NULL, 0);
+      bp_specificity specificity;
+      specificity.thread = thread;
       create_breakpoint (gdbpy_enter::get_gdbarch (),
-			 locspec.get (), NULL, thread, -1, NULL, false,
+			 locspec.get (), NULL, specificity, NULL, false,
 			 0,
 			 1 /*temp_flag*/,
 			 bp_breakpoint,

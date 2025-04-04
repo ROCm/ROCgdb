@@ -1610,6 +1610,14 @@ core_file_exec_context::environment () const
   return e;
 }
 
+/* See arch-utils.h.  */
+
+int
+default_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  return 0;
+}
+
 void _initialize_gdbarch_utils ();
 void
 _initialize_gdbarch_utils ()

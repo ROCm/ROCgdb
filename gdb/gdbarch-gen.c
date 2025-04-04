@@ -96,6 +96,9 @@ struct gdbarch
   gdbarch_push_dummy_call_ftype *push_dummy_call = nullptr;
   enum call_dummy_location_type call_dummy_location = AT_ENTRY_POINT;
   gdbarch_push_dummy_code_ftype *push_dummy_code = nullptr;
+  gdbarch_active_lanes_mask_ftype *active_lanes_mask = nullptr;
+  gdbarch_supported_lanes_count_ftype *supported_lanes_count = default_supported_lanes_count;
+  gdbarch_used_lanes_count_ftype *used_lanes_count = gdbarch_supported_lanes_count;
   gdbarch_code_of_frame_writable_ftype *code_of_frame_writable = default_code_of_frame_writable;
   gdbarch_print_registers_info_ftype *print_registers_info = default_print_registers_info;
   gdbarch_print_float_info_ftype *print_float_info = default_print_float_info;
@@ -368,6 +371,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of push_dummy_call, has predicate.  */
   /* Skip verify of call_dummy_location, invalid_p == 0.  */
   /* Skip verify of push_dummy_code, has predicate.  */
+  /* Skip verify of active_lanes_mask, has predicate.  */
+  /* Skip verify of supported_lanes_count, invalid_p == 0.  */
+  /* Skip verify of used_lanes_count, invalid_p == 0.  */
   /* Skip verify of code_of_frame_writable, invalid_p == 0.  */
   /* Skip verify of print_registers_info, invalid_p == 0.  */
   /* Skip verify of print_float_info, invalid_p == 0.  */
@@ -772,6 +778,18 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: push_dummy_code = <%s>\n",
 	      host_address_to_string (gdbarch->push_dummy_code));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_active_lanes_mask_p() = %d\n",
+	      gdbarch_active_lanes_mask_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: active_lanes_mask = <%s>\n",
+	      host_address_to_string (gdbarch->active_lanes_mask));
+  gdb_printf (file,
+	      "gdbarch_dump: supported_lanes_count = <%s>\n",
+	      host_address_to_string (gdbarch->supported_lanes_count));
+  gdb_printf (file,
+	      "gdbarch_dump: used_lanes_count = <%s>\n",
+	      host_address_to_string (gdbarch->used_lanes_count));
   gdb_printf (file,
 	      "gdbarch_dump: code_of_frame_writable = <%s>\n",
 	      host_address_to_string (gdbarch->code_of_frame_writable));
@@ -2412,6 +2430,64 @@ set_gdbarch_push_dummy_code (struct gdbarch *gdbarch,
 			     gdbarch_push_dummy_code_ftype push_dummy_code)
 {
   gdbarch->push_dummy_code = push_dummy_code;
+}
+
+bool
+gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->active_lanes_mask != NULL;
+}
+
+simd_lanes_mask_t
+gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->active_lanes_mask != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_active_lanes_mask called\n");
+  return gdbarch->active_lanes_mask (gdbarch, tp);
+}
+
+void
+set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch,
+			       gdbarch_active_lanes_mask_ftype active_lanes_mask)
+{
+  gdbarch->active_lanes_mask = active_lanes_mask;
+}
+
+int
+gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->supported_lanes_count != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_supported_lanes_count called\n");
+  return gdbarch->supported_lanes_count (gdbarch, tp);
+}
+
+void
+set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch,
+				   gdbarch_supported_lanes_count_ftype supported_lanes_count)
+{
+  gdbarch->supported_lanes_count = supported_lanes_count;
+}
+
+int
+gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->used_lanes_count != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_used_lanes_count called\n");
+  return gdbarch->used_lanes_count (gdbarch, tp);
+}
+
+void
+set_gdbarch_used_lanes_count (struct gdbarch *gdbarch,
+			      gdbarch_used_lanes_count_ftype used_lanes_count)
+{
+  gdbarch->used_lanes_count = used_lanes_count;
 }
 
 int

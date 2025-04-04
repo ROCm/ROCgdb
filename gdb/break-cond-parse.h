@@ -19,10 +19,9 @@
 #define GDB_BREAK_COND_PARSE_H
 
 /* Given TOK, a string possibly containing a condition, thread, inferior,
-   task and force-condition flag, as accepted by the 'break' command,
-   extract the condition string, thread, inferior, task number, and the
-   force_condition flag, then set *COND_STRING, *THREAD, *INFERIOR, *TASK,
-   and *FORCE.
+   task, lane and force-condition flag, as accepted by the 'break' command,
+   extract the condition string, thread, inferior, lane, task number, and the
+   force_condition flag, then set *COND_STRING, *SPECIFICITY, and *FORCE.
 
    As TOK is parsed, if an unknown keyword is encountered before the 'if'
    keyword then everything starting from the unknown keyword is placed into
@@ -32,9 +31,10 @@
    found then *COND will be returned as nullptr.  If no unknown content is
    found then *REST is returned as nullptr.
 
-   If no thread is found, *THREAD is set to -1.  If no inferior is found,
-   *INFERIOR is set to -1.  If no task is found, *TASK is set to -1.  If
-   the -force-condition flag is not found then *FORCE is set to false.
+   *SPECIFICITY is cleared on entry, and then its fields are filled in
+   when the corresponding specificity keyword ('thread', 'inferior',
+   etc.)  is found.  If the -force-condition flag is not found then
+   *FORCE is set to false.
 
    Due to the free-form nature that the string TOK might take (a 'thread'
    keyword can appear before or after an 'if' condition) then we end up
@@ -46,7 +46,11 @@
 
 extern void create_breakpoint_parse_arg_string
   (const char *tok, gdb::unique_xmalloc_ptr<char> *cond_string,
-   int *thread, int *inferior, int *task,
+   bp_specificity *specificity_ptr,
    gdb::unique_xmalloc_ptr<char> *rest, bool *force);
+
+/* Throw an error if SPEC is already specific.  */
+
+extern void error_if_already_specific (const bp_specificity &spec);
 
 #endif /* GDB_BREAK_COND_PARSE_H */

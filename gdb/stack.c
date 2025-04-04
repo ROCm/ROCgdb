@@ -416,7 +416,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 
   string_file stb;
 
-  gdb_assert (!arg->val || !arg->error);
+  gdb_assert (!arg->val || arg->error.error == GDB_NO_ERROR);
   gdb_assert (arg->entry_kind == print_entry_values_no
 	      || arg->entry_kind == print_entry_values_only
 	      || (!uiout->is_mi_like_p ()
@@ -441,13 +441,19 @@ print_frame_arg (const frame_print_options &fp_opts,
   uiout->text ("=");
 
   ui_file_style style;
-  if (!arg->val && !arg->error)
+  if (!arg->val && arg->error.error == GDB_NO_ERROR)
     uiout->text ("...");
   else
     {
-      if (arg->error)
+      if (arg->error.error == LANE_INACTIVE_ERROR)
 	{
-	  stb.printf (_("<error reading variable: %s>"), arg->error.get ());
+	  stb.printf (_("<%s>"), arg->error.message->c_str ());
+	  style = metadata_style.style ();
+	}
+      else if (arg->error.error != GDB_NO_ERROR)
+	{
+	  stb.printf (_("<error reading variable: %s>"),
+		      arg->error.message->c_str());
 	  style = metadata_style.style ();
 	}
       else
@@ -504,7 +510,7 @@ read_frame_local (struct symbol *sym, const frame_info_ptr &frame,
 {
   argp->sym = sym;
   argp->val = NULL;
-  argp->error = NULL;
+  argp->error = {};
 
   try
     {
@@ -512,7 +518,7 @@ read_frame_local (struct symbol *sym, const frame_info_ptr &frame,
     }
   catch (const gdb_exception_error &except)
     {
-      argp->error.reset (xstrdup (except.what ()));
+      argp->error = except;
     }
 }
 
@@ -525,7 +531,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 		struct frame_arg *argp, struct frame_arg *entryargp)
 {
   struct value *val = NULL, *entryval = NULL;
-  char *val_error = NULL, *entryval_error = NULL;
+  gdb_exception val_error, entryval_error;
   int val_equal = 0;
 
   if (fp_opts.print_entry_values != print_entry_values_only
@@ -537,8 +543,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 	}
       catch (const gdb_exception_error &except)
 	{
-	  val_error = (char *) alloca (except.message->size () + 1);
-	  strcpy (val_error, except.what ());
+	  val_error = except;
 	}
     }
 
@@ -556,10 +561,7 @@ read_frame_arg (const frame_print_options &fp_opts,
       catch (const gdb_exception_error &except)
 	{
 	  if (except.error != NO_ENTRY_VALUE_ERROR)
-	    {
-	      entryval_error = (char *) alloca (except.message->size () + 1);
-	      strcpy (entryval_error, except.what ());
-	    }
+	    entryval_error = except;
 	}
 
       if (entryval != NULL && entryval->optimized_out ())
@@ -616,11 +618,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 		      if (except.error == NO_ENTRY_VALUE_ERROR)
 			val_equal = 1;
 		      else if (except.message != NULL)
-			{
-			  entryval_error
-			    = (char *) alloca (except.message->size () + 1);
-			  strcpy (entryval_error, except.what ());
-			}
+			entryval_error = except;
 		    }
 
 		  /* Value was not a reference; and its content matches.  */
@@ -635,10 +633,11 @@ read_frame_arg (const frame_print_options &fp_opts,
 	  /* Try to remove possibly duplicate error message for ENTRYARGP even
 	     in MI mode.  */
 
-	  if (val_error && entryval_error
-	      && strcmp (val_error, entryval_error) == 0)
+	  if (val_error.error != GDB_NO_ERROR
+	      && entryval_error.error != GDB_NO_ERROR
+	      && *val_error.message == *entryval_error.message)
 	    {
-	      entryval_error = NULL;
+	      entryval_error = {};
 
 	      /* Do not se VAL_EQUAL as the same error message may be shown for
 		 the entry value even if no entry values are present in the
@@ -659,8 +658,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 	    }
 	  catch (const gdb_exception_error &except)
 	    {
-	      val_error = (char *) alloca (except.message->size () + 1);
-	      strcpy (val_error, except.what ());
+	      val_error = except;
 	    }
 	}
       if (fp_opts.print_entry_values == print_entry_values_only
@@ -669,7 +667,7 @@ read_frame_arg (const frame_print_options &fp_opts,
 	      && (!val || val->optimized_out ())))
 	{
 	  entryval = value::allocate_optimized_out (sym->type ());
-	  entryval_error = NULL;
+	  entryval_error = {};
 	}
     }
   if ((fp_opts.print_entry_values == print_entry_values_compact
@@ -678,13 +676,13 @@ read_frame_arg (const frame_print_options &fp_opts,
       && (!val || val->optimized_out ()) && entryval != NULL)
     {
       val = NULL;
-      val_error = NULL;
+      val_error = {};
     }
 
   argp->sym = sym;
   argp->val = val;
-  argp->error.reset (val_error ? xstrdup (val_error) : NULL);
-  if (!val && !val_error)
+  argp->error = val_error;
+  if (!val && val_error.error == GDB_NO_ERROR)
     argp->entry_kind = print_entry_values_only;
   else if ((fp_opts.print_entry_values == print_entry_values_compact
 	   || fp_opts.print_entry_values == print_entry_values_default)
@@ -698,8 +696,8 @@ read_frame_arg (const frame_print_options &fp_opts,
 
   entryargp->sym = sym;
   entryargp->val = entryval;
-  entryargp->error.reset (entryval_error ? xstrdup (entryval_error) : NULL);
-  if (!entryval && !entryval_error)
+  entryargp->error = entryval_error;
+  if (!entryval && entryval_error.error == GDB_NO_ERROR)
     entryargp->entry_kind = print_entry_values_no;
   else
     entryargp->entry_kind = print_entry_values_only;
@@ -3099,7 +3097,7 @@ frame_apply_cmd_completer (struct cmd_list_element *ignore,
 {
   const char *cmd = text;
 
-  int count = get_number_trailer (&cmd, 0);
+  int count = get_number (&cmd);
   if (count == 0)
     return;
 
@@ -3187,7 +3185,7 @@ frame_apply_command (const char* cmd, int from_tty)
 
   if (cmd == NULL)
     error (_("Missing COUNT argument."));
-  count = get_number_trailer (&cmd, 0);
+  count = get_number (&cmd);
   if (count == 0)
     error (_("Invalid COUNT argument."));
 

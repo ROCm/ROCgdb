@@ -309,6 +309,12 @@ struct amd_dbgapi_target final : public target_ops
 
   std::string pid_to_str (ptid_t ptid) override;
 
+  std::string lane_to_str (thread_info *thr, int lane) override;
+
+  std::string dispatch_pos_str (thread_info *thr) override;
+  std::string thread_workgroup_pos_str (thread_info *thr) override;
+  std::string lane_workgroup_pos_str (thread_info *thr, int lane) override;
+
   const char *thread_name (thread_info *tp) override;
 
   const char *extra_thread_info (thread_info *tp) override;
@@ -507,6 +513,25 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 			os_id);
 }
 
+/* Return the dispatch position string for a given thread.  */
+
+static std::string
+dispatch_pos_string (thread_info *tp)
+{
+  uint32_t group_ids[3];
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD, group_ids)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return "(?,?,?)/?";
+
+  uint32_t wave_in_group;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
+		       wave_in_group);
+
+  return string_printf ("(%d,%d,%d)/%d",
+			group_ids[0], group_ids[1], group_ids[2],
+			wave_in_group);
+}
+
 /* Return the target id string for a given queue.  */
 static std::string
 queue_target_id_string (amd_dbgapi_queue_id_t queue_id)
@@ -546,6 +571,187 @@ agent_target_id_string (amd_dbgapi_agent_id_t agent_id)
 	   agent_id.handle, get_status_string (status));
 
   return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
+}
+
+/* Return the thread/wave's workgroup position as a string.  */
+
+static std::string
+thread_workgroup_pos_string (thread_info *tp)
+{
+  uint32_t wave_in_group;
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
+		     wave_in_group) != AMD_DBGAPI_STATUS_SUCCESS)
+    return "?";
+
+  return string_printf ("%u", wave_in_group);
+}
+
+/* Convert flat ID FLATID to coordinates and store them in COORD_ID.
+   SIZES is the sizes of each axis.  */
+
+static void
+flatid_to_id (uint32_t coord_id[3], size_t flatid, const size_t sizes[3])
+{
+  coord_id[2] = flatid / (sizes[0] * sizes[1]);
+
+  flatid -= (size_t) coord_id[2] * sizes[0] * sizes[1];
+
+  coord_id[1] = flatid / sizes[0];
+
+  flatid -= (size_t) coord_id[1] * sizes[0];
+
+  coord_id[0] = flatid;
+}
+
+/* Object used to collect information about a work-item.  Used to
+   compute work-item coordinates taking into account partial
+   work-groups.  */
+
+struct work_item_info
+{
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  amd_dbgapi_queue_id_t queue_id;
+  amd_dbgapi_agent_id_t agent_id;
+
+  /* Grid sizes in work-items.  */
+  uint32_t grid_sizes[3];
+
+  /* Grid's work-group sizes in work-items.  */
+  uint16_t work_group_sizes[3];
+
+  /* Grid work-group coordinates.  */
+  uint32_t work_group_ids[3];
+
+  /* Wave in work-group.  */
+  uint32_t wave_in_group;
+
+  /* Lane count per wave.  */
+  size_t lane_count;
+
+  /* Return the flat work-item id of the lane at index LANE_INDEX.  */
+  size_t flatid (int lane_index) const
+  {
+    return wave_in_group * lane_count + lane_index;
+  }
+
+  /* Store in PARTIAL_WORKGROUP_SIZES the work-group item sizes for
+     each axis, taking into account the work-items that actually fit
+     in the grid.  */
+  void partial_work_group_sizes (size_t partial_work_group_sizes[3]) const
+  {
+    for (int i = 0; i < 3; i++)
+      {
+	size_t work_item_start = work_group_ids[i] * work_group_sizes[i];
+	size_t work_item_end = work_item_start + work_group_sizes[i];
+	if (work_item_end > grid_sizes[i])
+	  work_item_end = grid_sizes[i];
+	partial_work_group_sizes[i] = work_item_end - work_item_start;
+      }
+  }
+};
+
+/* Populate WI, a work_item_info object describing lane LANE of wave
+   TP.  Returns true on success, false if info is not available.  */
+
+static bool
+make_work_item_info (thread_info *tp, int lane, work_item_info *wi)
+{
+  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, wi->dispatch_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      /* The dispatch associated with a wave is not available.  A wave
+	 may not have an associated dispatch if attaching to a process
+	 with already existing waves.  */
+      return false;
+    }
+
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_QUEUE, wi->queue_id);
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_AGENT, wi->agent_id);
+  dispatch_get_info_throw (wi->dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+			   wi->grid_sizes);
+
+  dispatch_get_info_throw (wi->dispatch_id,
+			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
+			   wi->work_group_sizes);
+
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
+		       wi->work_group_ids);
+
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
+		       wi->wave_in_group);
+
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi->lane_count);
+
+  return true;
+}
+
+/* Return the lane's work-group position as a string.  */
+
+static std::string
+lane_workgroup_pos_string (thread_info *tp, int lane)
+{
+  work_item_info wi;
+
+  if (make_work_item_info (tp, lane, &wi))
+    {
+      size_t partial_work_group_sizes[3];
+
+      wi.partial_work_group_sizes (partial_work_group_sizes);
+
+      size_t work_item_flatid = wi.flatid (lane);
+
+      uint32_t work_item_ids[3];
+      flatid_to_id (work_item_ids, work_item_flatid, partial_work_group_sizes);
+
+      return string_printf ("[%d,%d,%d]",
+			    work_item_ids[0], work_item_ids[1], work_item_ids[2]);
+    }
+  else
+    return "[?,?,?]";
+}
+
+/* Return the target id string for a given lane.  */
+
+static std::string
+lane_target_id_string (thread_info *tp, int lane)
+{
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  amd_dbgapi_queue_id_t queue_id;
+  amd_dbgapi_agent_id_t agent_id;
+  uint32_t group_ids[3];
+
+  std::string str = "AMDGPU Lane ";
+
+  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_AGENT, agent_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf ("%ld", agent_id.handle)
+	   : " ?";
+
+  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_QUEUE, queue_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf (":%ld", queue_id.handle)
+	   : ":?";
+
+  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH,
+			 dispatch_id)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	   ? string_printf (":%ld", dispatch_id.handle)
+	   : ":?";
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
+
+  str += string_printf (":%ld/%d", wave_id.handle, lane);
+
+  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
+			 group_ids)
+	  == AMD_DBGAPI_STATUS_SUCCESS
+	  ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
+			   group_ids[2])
+	  : " (?,?,?)");
+
+  str += lane_workgroup_pos_string (tp, lane);
+
+  return str;
 }
 
 /* Clear our async event handler.  */
@@ -788,6 +994,46 @@ amd_dbgapi_target::pid_to_str (ptid_t ptid)
   return wave_coordinates (wave_id).to_string ();
 }
 
+std::string
+amd_dbgapi_target::lane_to_str (thread_info *thr, int lane)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->lane_to_str (thr, lane);
+
+  return lane_target_id_string (thr, lane);
+}
+
+/* Implementation of target_workgroup_pos_str.  */
+
+std::string
+amd_dbgapi_target::dispatch_pos_str (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->dispatch_pos_str (thr);
+
+  return dispatch_pos_string (thr);
+}
+
+std::string
+amd_dbgapi_target::thread_workgroup_pos_str (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->thread_workgroup_pos_str (thr);
+
+  return thread_workgroup_pos_string (thr);
+}
+
+/* Implementation of target_lane_workgroup_pos_str.  */
+
+std::string
+amd_dbgapi_target::lane_workgroup_pos_str (thread_info *thr, int lane)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->lane_workgroup_pos_str (thr, lane);
+
+  return lane_workgroup_pos_string (thr, lane);
+}
+
 const char *
 amd_dbgapi_target::extra_thread_info (thread_info *tp)
 {
@@ -840,13 +1086,14 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 
   size_t len = requested_len;
   amd_dbgapi_status_t status;
+  int current_lane = inferior_thread ()->current_simd_lane ();
 
   if (readbuf != nullptr)
-    status = amd_dbgapi_read_memory (process_id, wave_id, 0,
+    status = amd_dbgapi_read_memory (process_id, wave_id, current_lane,
 				     address_space_id, segment_address, &len,
 				     readbuf);
   else
-    status = amd_dbgapi_write_memory (process_id, wave_id, 0,
+    status = amd_dbgapi_write_memory (process_id, wave_id, current_lane,
 				      address_space_id, segment_address, &len,
 				      writebuf);
 

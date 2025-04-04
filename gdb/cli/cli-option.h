@@ -349,6 +349,39 @@ struct color_option_def : option_def
   }
 };
 
+/* A var_expression command line option.  */
+
+template<typename Context = std::string>
+struct expression_option_def : option_def
+{
+  expression_option_def (const char *long_option_,
+		     std::string *(*get_var_address_cb_) (Context *),
+		     show_value_ftype *show_cmd_cb_,
+		     const char *set_doc_,
+		     const char *show_doc_ = nullptr,
+		     const char *help_doc_ = nullptr)
+    : option_def (long_option_, var_expression, nullptr,
+		  (erased_get_var_address_ftype *) get_var_address_cb_,
+		  show_cmd_cb_,
+		  set_doc_, show_doc_, help_doc_)
+  {
+    var_address.string = detail::get_var_address<std::string, Context>;
+  }
+
+  expression_option_def (const char *long_option_,
+			 const char *set_doc_,
+			 const char *show_doc_ = nullptr,
+			 const char *help_doc_ = nullptr)
+    : option_def (long_option_, var_expression, nullptr,
+		  ((erased_get_var_address_ftype *)
+		   gdb::option::detail::return_self<Context>),
+		  nullptr,
+		  set_doc_, show_doc_, help_doc_)
+  {
+    var_address.string = detail::get_var_address<std::string, Context>;
+  }
+};
+
 /* A group of options that all share the same context pointer to pass
    to the options' get-current-value callbacks.  */
 struct option_def_group

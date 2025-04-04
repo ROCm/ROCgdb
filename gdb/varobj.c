@@ -93,6 +93,10 @@ struct varobj_root
      was created.  */
   int thread_id = 0;
 
+  /* If not -1, indicates the currently selected lane.  Valid iff
+     THREAD_ID is not -1.  */
+  int lane = -1;
+
   /* If true, the -var-update always recomputes the value in the
      current thread and frame.  Otherwise, variable object is
      always updated in the specific scope/thread/frame.  */
@@ -354,7 +358,13 @@ varobj_create (const char *objname,
 	    error (_("Failed to find the specified frame"));
 
 	  var->root->frame = get_frame_id (fi);
-	  var->root->thread_id = inferior_thread ()->global_num;
+
+	  thread_info *thr = inferior_thread ();
+	  var->root->thread_id = thr->global_num;
+
+	  if (thr->has_simd_lanes ())
+	    var->root->lane = thr->current_simd_lane ();
+
 	  old_id = get_frame_id (get_selected_frame (NULL));
 	  select_frame (fi);	 
 	}
@@ -540,6 +550,21 @@ varobj_get_thread_id (const struct varobj *var)
 {
   if (var->root->valid_block && var->root->thread_id > 0)
     return var->root->thread_id;
+  else
+    return -1;
+}
+
+/* If the variable object is bound to a specific thread lane, return
+   the id of the lane -- which is always non-negative.  Otherwise,
+   returns -1.  */
+
+int
+varobj_get_lane (const struct varobj *var)
+{
+  if (var->root->valid_block
+      && var->root->thread_id > 0
+      && var->root->lane >= 0)
+    return var->root->lane;
   else
     return -1;
 }
@@ -1234,7 +1259,35 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
 
 	  try
 	    {
-	      value->fetch_lazy ();
+	      /* If the value's address is of an address space that is
+		 thread or lane specific, we need to fetch the value
+		 in the context of the right thread/lane.  */
+	      std::optional<scoped_restore_current_thread> restore_thread;
+	      std::optional<scoped_restore_current_simd_lane> restore_lane;
+
+	      if (var->root->thread_id > 0)
+		{
+		  thread_info *thread = find_thread_global_id (var->root->thread_id);
+		  if (thread != nullptr)
+		    {
+		      restore_thread.emplace ();
+		      switch_to_thread (thread);
+
+		      if (var->root->lane != -1)
+			{
+			  restore_lane.emplace (thread);
+			  thread->set_current_simd_lane (var->root->lane);
+			}
+		    }
+		  else
+		    {
+		      /* See comment in the catch block.  */
+		      value = nullptr;
+		    }
+		}
+
+	      if (value != nullptr)
+		value->fetch_lazy ();
 	    }
 
 	  catch (const gdb_exception_error &except)
@@ -1942,6 +1995,7 @@ value_of_root_1 (struct varobj **var_handle)
     return NULL;
 
   scoped_restore_current_thread restore_thread;
+  std::optional<scoped_restore_current_simd_lane> restore_lane;
 
   /* Determine whether the variable is still around.  */
   if (var->root->valid_block == NULL || var->root->floating)
@@ -1961,6 +2015,12 @@ value_of_root_1 (struct varobj **var_handle)
       if (thread != NULL)
 	{
 	  switch_to_thread (thread);
+	  if (var->root->lane != -1)
+	    {
+	      restore_lane.emplace (thread);
+	      thread->set_current_simd_lane (var->root->lane);
+	    }
+
 	  within_scope = check_scope (var);
 	}
     }

@@ -272,7 +272,7 @@ bppy_set_thread (PyObject *self, PyObject *newvalue, void *closure)
 	  return -1;
 	}
 
-      if (self_bp->bp->task != -1)
+      if (self_bp->bp->specificity.task != -1)
 	{
 	  PyErr_SetString (PyExc_RuntimeError,
 			   _("Cannot set both task and thread attributes."));
@@ -288,7 +288,7 @@ bppy_set_thread (PyObject *self, PyObject *newvalue, void *closure)
       return -1;
     }
 
-  if (self_bp->bp->inferior != -1 && id != -1)
+  if (self_bp->bp->specificity.inferior != -1 && id != -1)
     {
       PyErr_SetString (PyExc_RuntimeError,
 		       _("Cannot have both 'thread' and 'inferior' "
@@ -347,7 +347,7 @@ bppy_set_inferior (PyObject *self, PyObject *newvalue, void *closure)
       return -1;
     }
 
-  if (self_bp->bp->thread != -1 && id != -1)
+  if (self_bp->bp->specificity.thread != -1 && id != -1)
     {
       PyErr_SetString (PyExc_RuntimeError,
 		       _("Cannot have both 'thread' and 'inferior' conditions "
@@ -355,7 +355,7 @@ bppy_set_inferior (PyObject *self, PyObject *newvalue, void *closure)
       return -1;
     }
 
-  if (self_bp->bp->task != -1 && id != -1)
+  if (self_bp->bp->specificity.task != -1 && id != -1)
     {
       PyErr_SetString (PyExc_RuntimeError,
 		       _("Cannot have both 'task' and 'inferior' conditions "
@@ -405,7 +405,7 @@ bppy_set_task (PyObject *self, PyObject *newvalue, void *closure)
 	  return -1;
 	}
 
-      if (self_bp->bp->thread != -1)
+      if (self_bp->bp->specificity.thread != -1)
 	{
 	  PyErr_SetString (PyExc_RuntimeError,
 			   _("Cannot set both task and thread attributes."));
@@ -765,10 +765,12 @@ bppy_get_thread (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (self_bp);
 
-  if (self_bp->bp->thread == -1)
+  int thread = self_bp->bp->specificity.thread;
+
+  if (thread == -1)
     Py_RETURN_NONE;
 
-  return gdb_py_object_from_longest (self_bp->bp->thread).release ();
+  return gdb_py_object_from_longest (thread).release ();
 }
 
 /* Python function to get the breakpoint's inferior ID.  */
@@ -779,10 +781,12 @@ bppy_get_inferior (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (self_bp);
 
-  if (self_bp->bp->inferior == -1)
+  int inferior = self_bp->bp->specificity.inferior;
+
+  if (inferior == -1)
     Py_RETURN_NONE;
 
-  return gdb_py_object_from_longest (self_bp->bp->inferior).release ();
+  return gdb_py_object_from_longest (inferior).release ();
 }
 
 /* Python function to get the breakpoint's task ID (in Ada).  */
@@ -793,10 +797,12 @@ bppy_get_task (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (self_bp);
 
-  if (self_bp->bp->task == -1)
+  int task = self_bp->bp->specificity.task;
+
+  if (task == -1)
     Py_RETURN_NONE;
 
-  return gdb_py_object_from_longest (self_bp->bp->task).release ();
+  return gdb_py_object_from_longest (task).release ();
 }
 
 /* Python function to get the breakpoint's hit count.  */
@@ -1024,7 +1030,7 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	      = breakpoint_ops_for_location_spec (locspec.get (), false);
 
 	    create_breakpoint (gdbpy_enter::get_gdbarch (),
-			       locspec.get (), NULL, -1, -1, NULL, false,
+			       locspec.get (), NULL, {}, NULL, false,
 			       0,
 			       temporary_bp, type,
 			       0,
@@ -1073,10 +1079,13 @@ bppy_repr (PyObject *self)
     return PyUnicode_FromFormat ("<%s (invalid)>", Py_TYPE (self)->tp_name);
 
   std::string str = " ";
-  if (bp->bp->thread != -1)
-    str += string_printf ("thread=%d ", bp->bp->thread);
-  if (bp->bp->task > 0)
-    str += string_printf ("task=%d ", bp->bp->task);
+  const bp_specificity &s = bp->bp->specificity;
+  if (s.inferior != -1)
+    str += string_printf ("inferior=%d ", s.inferior);
+  if (s.thread != -1)
+    str += string_printf ("thread=%d ", s.thread);
+  if (s.task > 0)
+    str += string_printf ("task=%d ", s.task);
   if (bp->bp->enable_count > 0)
     str += string_printf ("enable_count=%d ", bp->bp->enable_count);
   str.pop_back ();

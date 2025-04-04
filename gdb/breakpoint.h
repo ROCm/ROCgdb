@@ -259,6 +259,64 @@ enum condition_status
     condition_updated
   };
 
+struct bp_specificity
+{
+  /* Inferior number for inferior-specific breakpoint, or -1 if this
+     breakpoint is for all inferiors.  */
+  int inferior = -1;
+
+  /* Global thread number for thread-specific breakpoint, or -1 if
+     don't care.  */
+  int thread = -1;
+
+  /* Lane number for lane-specific breakpoint, or -1 if don't care.
+     It is taken into consideration iff THREAD is specified.  */
+  int lane = -1;
+
+  /* Ada task number for task-specific breakpoint, or -1 if don't
+     care.  */
+  int task = -1;
+
+  bool operator== (const bp_specificity &rhs) const
+  {
+    return (thread == rhs.thread
+	    && inferior == rhs.inferior
+	    && task == rhs.task
+	    && lane == rhs.lane);
+  }
+
+  bool operator!= (const bp_specificity &rhs) const
+  {
+    return !(*this == rhs);
+  }
+
+  /* Do various validity assertion checks.  Note this isn't a function
+     that returns true/false depending on validity, leaving the
+     gdb_assert to the caller, so that an eventual assertion failure
+     points more directly to the check that failed.  */
+  void assert_valid () const
+  {
+    gdb_assert (thread == -1 || thread > 0);
+    gdb_assert (inferior == -1 || inferior > 0);
+    gdb_assert (task == -1 || task > 0);
+    gdb_assert (lane == -1 || (lane >= 0 && thread > 0));
+
+    /* At most one of thread, task or inferior can be set on any
+       breakpoint.  If lane is set, then thread must be set too, so we
+       don't count lane here.  */
+    gdb_assert (((thread == -1 ? 0 : 1)
+		 + (task == -1 ? 0 : 1)
+		 + (inferior == -1 ? 0 : 1)) <= 1);
+  }
+
+  bool is_specific () const
+  {
+    return (*this != bp_specificity {});
+  }
+
+  bool matches (thread_info *thr) const;
+};
+
 /* Information used by targets to insert and remove breakpoints.  */
 
 struct bp_target_info
@@ -588,7 +646,8 @@ struct breakpoint_ops
 				  struct linespec_result *,
 				  gdb::unique_xmalloc_ptr<char>,
 				  gdb::unique_xmalloc_ptr<char>,
-				  enum bptype, enum bpdisp, int, int, int,
+				  enum bptype, enum bpdisp,
+				  const bp_specificity &,
 				  int, int, int, int, unsigned);
 };
 
@@ -884,17 +943,7 @@ struct breakpoint : public intrusive_list_node<breakpoint>
      watchpoint_scope breakpoint or something like that.  FIXME).  */
   breakpoint *related_breakpoint;
 
-  /* Thread number for thread-specific breakpoint, or -1 if don't
-     care.  */
-  int thread = -1;
-
-  /* Inferior number for inferior-specific breakpoint, or -1 if this
-     breakpoint is for all inferiors.  */
-  int inferior = -1;
-
-  /* Ada task number for task-specific breakpoint, or -1 if don't
-     care.  */
-  int task = -1;
+  bp_specificity specificity;
 
   /* Count of the number of times this breakpoint was taken, dumped
      with the info, but not used for anything else.  Useful for seeing
@@ -950,7 +999,8 @@ struct code_breakpoint : public breakpoint
 		   gdb::unique_xmalloc_ptr<char> cond_string,
 		   gdb::unique_xmalloc_ptr<char> extra_string,
 		   enum bpdisp disposition,
-		   int thread, int task, int inferior, int ignore_count,
+		   const bp_specificity &specificity,
+		   int ignore_count,
 		   int from_tty,
 		   int enabled, unsigned flags,
 		   int display_canonical);
@@ -1067,6 +1117,11 @@ struct watchpoint : public breakpoint
      should be considered in scope for, or `null_ptid' if the
      watchpoint should be evaluated in all threads.  */
   ptid_t watchpoint_thread;
+
+  /* Holds the SIMD lane that was in focus at the point when the
+     watchpoint was inserted, or `-1' if no SIMD lane was in focus
+     at that point or the WATCHPOINT_THREAD doesn't contain lanes.  */
+  int watchpoint_simd_lane;
 
   /* For hardware watchpoints, the triggered status according to the
      hardware.  */
@@ -1440,6 +1495,12 @@ struct bpstat
     /* Tell bpstat_print and print_bp_stop_message how to print stuff
        associated with this element of the bpstat chain.  */
     enum bp_print_how print_it;
+
+    /* Which SIMD lanes where active when the breakpoint was hit.  If
+       the breakpoint is conditional, then this is further restricted
+       to which lanes the breakpoint conditional evaluated true
+       for.  */
+    simd_lanes_mask_t simd_lane_mask;
   };
 
 enum inf_context
@@ -1674,8 +1735,8 @@ enum breakpoint_create_flags
 
 extern int create_breakpoint (struct gdbarch *gdbarch,
 			      struct location_spec *locspec,
-			      const char *cond_string, int thread,
-			      int inferior,
+			      const char *cond_string,
+			      bp_specificity specificity,
 			      const char *extra_string,
 			      bool force_condition,
 			      int parse_extra,
@@ -2092,14 +2153,6 @@ bool is_hardware_watchpoint (const struct breakpoint *bpt);
    catchpoint, false otherwise.  */
 
 extern void print_solib_event (bool is_catchpoint);
-
-/* Print a message describing any user-breakpoints set at PC.  This
-   concerns with logical breakpoints, so we match program spaces, not
-   address spaces.  */
-
-extern void describe_other_breakpoints (struct gdbarch *,
-					struct program_space *, CORE_ADDR,
-					struct obj_section *, int);
 
 /* Enable or disable a breakpoint location LOC.  ENABLE
    specifies whether to enable or disable.  */

@@ -464,7 +464,7 @@ gdbscm_register_breakpoint_x (SCM self)
 	    const breakpoint_ops *ops =
 	      breakpoint_ops_for_location_spec (locspec.get (), false);
 	    create_breakpoint (get_current_arch (),
-			       locspec.get (), NULL, -1, -1, NULL, false,
+			       locspec.get (), NULL, {}, NULL, false,
 			       0,
 			       temporary, bp_breakpoint,
 			       0,
@@ -749,10 +749,10 @@ gdbscm_breakpoint_thread (SCM self)
   breakpoint_smob *bp_smob
     = bpscm_get_valid_breakpoint_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
 
-  if (bp_smob->bp->thread == -1)
+  if (bp_smob->bp->specificity.thread == -1)
     return SCM_BOOL_F;
 
-  return scm_from_long (bp_smob->bp->thread);
+  return scm_from_long (bp_smob->bp->specificity.thread);
 }
 
 /* (set-breakpoint-thread! <gdb:breakpoint> integer) -> unspecified */
@@ -773,7 +773,7 @@ gdbscm_set_breakpoint_thread_x (SCM self, SCM newvalue)
 				     _("invalid thread id"));
 	}
 
-      if (bp_smob->bp->task != -1)
+      if (bp_smob->bp->specificity.task != -1)
 	scm_misc_error (FUNC_NAME,
 			_("cannot set both task and thread attributes"),
 			SCM_EOL);
@@ -783,7 +783,7 @@ gdbscm_set_breakpoint_thread_x (SCM self, SCM newvalue)
   else
     SCM_ASSERT_TYPE (0, newvalue, SCM_ARG2, FUNC_NAME, _("integer or #f"));
 
-  if (bp_smob->bp->inferior != -1 && id != -1)
+  if (bp_smob->bp->specificity.inferior != -1 && id != -1)
     scm_misc_error (FUNC_NAME,
 		    _("Cannot have both 'thread' and 'inferior' "
 		      "conditions on a breakpoint"), SCM_EOL);
@@ -801,10 +801,10 @@ gdbscm_breakpoint_task (SCM self)
   breakpoint_smob *bp_smob
     = bpscm_get_valid_breakpoint_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
 
-  if (bp_smob->bp->task == -1)
+  if (bp_smob->bp->specificity.task == -1)
     return SCM_BOOL_F;
 
-  return scm_from_long (bp_smob->bp->task);
+  return scm_from_long (bp_smob->bp->specificity.task);
 }
 
 /* (set-breakpoint-task! <gdb:breakpoint> integer) -> unspecified */
@@ -838,7 +838,7 @@ gdbscm_set_breakpoint_task_x (SCM self, SCM newvalue)
 				     _("invalid task id"));
 	}
 
-      if (bp_smob->bp->thread != -1)
+      if (bp_smob->bp->specificity.thread != -1)
 	scm_misc_error (FUNC_NAME,
 			_("cannot set both task and thread attributes"),
 			SCM_EOL);

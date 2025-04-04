@@ -43,7 +43,8 @@ union option_value
   /* For var_enum options.  */
   const char *enumeration;
 
-  /* For var_string and var_filename options.  This is allocated with new.  */
+  /* For var_string, var_filename and var_expression options.  This is
+     allocated with new.  */
   std::string *string;
 
   /* For var_color options.  */
@@ -88,7 +89,9 @@ struct option_def_and_value
   {
     if (value.has_value ())
       {
-	if (option.type == var_string || option.type == var_filename)
+	if (option.type == var_string
+	    || option.type == var_filename
+	    || option.type == var_expression)
 	  delete value->string;
       }
   }
@@ -105,7 +108,9 @@ private:
   {
     if (value.has_value ())
       {
-	if (option.type == var_string || option.type == var_filename)
+	if (option.type == var_string
+	    || option.type == var_filename
+	    || option.type == var_expression)
 	  value->string = nullptr;
       }
   }
@@ -174,6 +179,24 @@ complete_on_all_options (completion_tracker &tracker,
 {
   static const char opt[] = "-";
   complete_on_options (options_group, tracker, opt + 1, opt);
+}
+
+/* Wrapper around complete_expression, helper for parse_option.  It
+   doesn't let exceptions escape (e.g.,
+   MAX_COMPLETIONS_REACHED_ERROR), as we need parse_option's caller to
+   advance the word point past the "-expression " part.  */
+
+static void
+safe_complete_expression (completion_tracker &tracker,
+			  const char *text, const char *word)
+{
+  try
+    {
+      complete_expression (tracker, text, word);
+    }
+  catch (const gdb_exception_error &except)
+    {
+    }
 }
 
 /* Parse ARGS, guided by OPTIONS_GROUP.  HAVE_DELIMITER is true if the
@@ -483,6 +506,133 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	val.string = new std::string (std::move (str));
 	return option_def_and_value {*match, match_ctx, val};
       }
+    case var_expression:
+      {
+	if (check_for_argument (args, "--"))
+	  {
+	    /* Treat e.g., "maint test-options -expression --" as if there
+	       was no argument after "-expression".  */
+	    error (_("-%s requires an argument"), match->name);
+	  }
+
+	const char *arg_start = *args;
+
+	std::string str;
+
+	if (**args == '\0' && completion == nullptr)
+	  error (_("-%s requires an argument"), match->name);
+	else if (**args == '\'' || **args == '"')
+	  {
+	    str = extract_string_maybe_quoted (args);
+	    if (*args == arg_start)
+	      error (_("-%s requires an argument"), match->name);
+	  }
+	else if (**args == '(')
+	  {
+	    const char *p = *args + 1;
+	    int depth = 1;
+	    while (*p != '\0')
+	      {
+		if (*p == '(')
+		  ++depth;
+		else if (*p == ')')
+		  {
+		    if (--depth == 0)
+		      {
+			++p;
+			break;
+		      }
+		  }
+		++p;
+	      }
+
+	    if (completion == nullptr)
+	      {
+		if (depth != 0)
+		  error (_("-%s EXPR requires balanced parentheses"),
+			 match->name);
+		if (depth == 0 && !(*p == 0 || isspace (*p)))
+		  error (_("garbage after -%s EXPR"), match->name);
+	      }
+
+	    /* Don't complete if there's garbage after (EXPR), like:
+		 -expr (foo) bar[TAB]
+	    */
+	    if (completion != nullptr && *p == '\0')
+	      {
+		if (depth == 0)
+		  {
+		    /* If completing an expression with the cursor
+		       right at the terminating parens, complete the
+		       completion word without interpretation, so that
+		       readline advances the cursor one whitespace
+		       past the parens, like so:
+
+		       before: "-expr (foo + bar)"
+		       after:  "-expr (foo + bar) "
+
+		       Include the opening parens in the completion
+		       too, because when the user presses TAB in the
+		       middle of a line, like:
+
+			 "-expr (foo + bar) -other"
+					   ^ cursor here
+
+		       readline prints the lcd, like so:
+
+			 (gdb) cmd -expr (foo + bar) -other
+			 (foo + bar)
+			 (gdb) cmd -expr (foo + bar) -other
+		    */
+		    gdb::unique_xmalloc_ptr<char> text_copy
+		      = make_unique_xstrdup (arg_start);
+		    completion->tracker.add_completion (std::move (text_copy));
+		    return {};
+		  }
+		else
+		  {
+		    completion->tracker.advance_custom_word_point_by (1);
+
+		    const char *word
+		      = (advance_to_expression_complete_word_point
+			 (completion->tracker, arg_start + 1));
+
+		    safe_complete_expression (completion->tracker,
+					      arg_start + 1, word);
+
+		    if (completion->tracker.have_completions ())
+		      return {};
+		  }
+	      }
+
+	    str = std::string (*args + 1, (depth == 0) ? p - 1 : p);
+	    *args = p;
+	  }
+	else
+	  {
+	    const char *end = skip_to_space (*args);
+
+	    if (completion != nullptr && *end == '\0')
+	      {
+		const char *word
+		  = (advance_to_expression_complete_word_point
+		     (completion->tracker, arg_start));
+
+		safe_complete_expression (completion->tracker,
+					  arg_start, word);
+
+		if (completion->tracker.have_completions ())
+		  return {};
+	      }
+
+	    str = std::string (*args, end);
+	    *args = end;
+	  }
+
+	option_value val;
+	val.string = new std::string (std::move (str));
+	return option_def_and_value {*match, match_ctx, val};
+      }
 
     case var_filename:
       {
@@ -512,7 +662,7 @@ parse_option (gdb::array_view<const option_def_group> options_group,
 	       completions.
 
 	       However, *ARGS will also have been updated, and the general
-	       option completion code (which we will return too) also
+	       option completion code (which we will return to) also
 	       updates the custom word point based on the adjustment made
 	       to *ARGS.
 
@@ -721,6 +871,7 @@ save_option_value_in_ctx (std::optional<option_def_and_value> &ov)
       break;
     case var_string:
     case var_filename:
+    case var_expression:
       *ov->option.var_address.string (ov->option, ov->ctx)
 	= std::move (*ov->value->string);
       break;
@@ -836,6 +987,9 @@ append_val_type_str (std::string &help, const option_def &opt,
       break;
     case var_filename:
       help += " FILENAME";
+      break;
+    case var_expression:
+      help += " EXPRESSION";
       break;
     default:
       break;
@@ -996,6 +1150,15 @@ add_setshow_cmds_for_options (command_class cmd_class,
 				    option.help_doc,
 				    nullptr, option.show_cmd_cb,
 				    set_list, show_list);
+	}
+      else if (option.type == var_expression)
+	{
+	  add_setshow_expression_cmd (option.name, cmd_class,
+				      option.var_address.string (option, data),
+				      option.set_doc, option.show_doc,
+				      option.help_doc,
+				      nullptr, option.show_cmd_cb,
+				      set_list, show_list);
 	}
       else
 	gdb_assert_not_reached ("option type not handled");

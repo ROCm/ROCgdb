@@ -360,6 +360,27 @@ typedef CORE_ADDR (gdbarch_push_dummy_code_ftype) (struct gdbarch *gdbarch, CORE
 extern CORE_ADDR gdbarch_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp, CORE_ADDR funaddr, struct value **args, int nargs, struct type *value_type, CORE_ADDR *real_pc, CORE_ADDR *bp_addr, struct regcache *regcache);
 extern void set_gdbarch_push_dummy_code (struct gdbarch *gdbarch, gdbarch_push_dummy_code_ftype *push_dummy_code);
 
+/* Return the active SIMD lanes mask for a thread TP. */
+
+extern bool gdbarch_active_lanes_mask_p (struct gdbarch *gdbarch);
+
+typedef simd_lanes_mask_t (gdbarch_active_lanes_mask_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern simd_lanes_mask_t gdbarch_active_lanes_mask (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_active_lanes_mask (struct gdbarch *gdbarch, gdbarch_active_lanes_mask_ftype *active_lanes_mask);
+
+/* Return the number of lanes supported by the thread. */
+
+typedef int (gdbarch_supported_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_supported_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_supported_lanes_count (struct gdbarch *gdbarch, gdbarch_supported_lanes_count_ftype *supported_lanes_count);
+
+/* Return the number of lanes used by the thread, accounting for
+   partial work-groups.  Defaults to the number of supported lanes. */
+
+typedef int (gdbarch_used_lanes_count_ftype) (struct gdbarch *gdbarch, thread_info *tp);
+extern int gdbarch_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp);
+extern void set_gdbarch_used_lanes_count (struct gdbarch *gdbarch, gdbarch_used_lanes_count_ftype *used_lanes_count);
+
 /* Return true if the code of FRAME is writable. */
 
 typedef int (gdbarch_code_of_frame_writable_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);

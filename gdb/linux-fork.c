@@ -297,12 +297,13 @@ parse_checkpoint_id (const char *ckptstr)
   if (dot != nullptr)
     {
       /* Parse number to the left of the dot.  */
-      int inf_num;
 
       p1 = number;
-      inf_num = get_number_trailer (&p1, '.');
-      if (inf_num <= 0)
+      std::optional<int> res = get_number_trailer (&p1, '.');
+      if (!res.has_value () || *res <= 0)
 	error (_("Inferior number must be a positive integer"));
+
+      int inf_num = *res;
 
       inf = find_inferior_id (inf_num);
       if (inf == NULL)
@@ -316,7 +317,7 @@ parse_checkpoint_id (const char *ckptstr)
       p1 = number;
     }
 
-  int fork_num = get_number_trailer (&p1, 0);
+  int fork_num = get_number (&p1);
   if (fork_num < 0)
     error (_("Checkpoint number must be a non-negative integer"));
 

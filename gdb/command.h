@@ -108,6 +108,8 @@ enum var_types
     var_optional_filename,
     /* String which stores a filename.  (*VAR) is a std::string.  */
     var_filename,
+    /* String which stores an expression.  (*VAR) is a std::string.  */
+    var_expression,
     /* Enumerated type.  Can only have one of the specified values.
        *VAR is a char pointer to the name of the element that we
        find.  */
@@ -175,8 +177,11 @@ inline bool var_type_uses<int> (var_types t)
 template<>
 inline bool var_type_uses<std::string> (var_types t)
 {
-  return (t == var_string || t == var_string_noescape
-	  || t == var_optional_filename || t == var_filename);
+  return (t == var_string
+	  || t == var_string_noescape
+	  || t == var_optional_filename
+	  || t == var_filename
+	  || t == var_expression);
 }
 
 /* Return true if a setting of type T is backed by a const char * variable.
@@ -762,6 +767,19 @@ extern set_show_commands add_setshow_filename_cmd
    cmd_list_element **show_list);
 
 extern set_show_commands add_setshow_filename_cmd
+  (const char *name, command_class theclass, const char *set_doc,
+   const char *show_doc, const char *help_doc,
+   setting_func_types<std::string>::set set_func,
+   setting_func_types<std::string>::get get_func, show_value_ftype *show_func,
+   cmd_list_element **set_list, cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_expression_cmd
+  (const char *name, command_class theclass, std::string *var, const char *set_doc,
+   const char *show_doc, const char *help_doc, cmd_func_ftype *set_func,
+   show_value_ftype *show_func, cmd_list_element **set_list,
+   cmd_list_element **show_list);
+
+extern set_show_commands add_setshow_expression_cmd
   (const char *name, command_class theclass, const char *set_doc,
    const char *show_doc, const char *help_doc,
    setting_func_types<std::string>::set set_func,

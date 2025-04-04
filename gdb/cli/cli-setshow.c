@@ -139,6 +139,7 @@ deprecated_show_value_hack (struct ui_file *file,
     {
     case var_string:
     case var_string_noescape:
+    case var_expression:
     case var_enum:
       gdb_printf (file, (" is \"%s\".\n"), value);
       break;
@@ -379,6 +380,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
       }
       break;
     case var_string_noescape:
+    case var_expression:
       option_changed = c->var->set<std::string> (std::string (arg));
       break;
     case var_filename:
@@ -524,6 +526,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	{
 	case var_string:
 	case var_string_noescape:
+	case var_expression:
 	case var_filename:
 	case var_optional_filename:
 	  interps_notify_param_changed
@@ -597,6 +600,7 @@ get_setshow_command_value_string (const setting &var)
     case var_string_noescape:
     case var_optional_filename:
     case var_filename:
+    case var_expression:
       stb.puts (var.get<std::string> ().c_str ());
       break;
     case var_enum:

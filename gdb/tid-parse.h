@@ -22,11 +22,18 @@
 
 #include "cli/cli-utils.h"
 
+/* Fully-qualified lane ID.  */
+using lane_id = std::array<int, 3>;
+
 struct thread_info;
 
 /* Issue an invalid thread ID error, pointing at STRING, the invalid
    ID.  */
 [[noreturn]] extern void invalid_thread_id_error (const char *string);
+
+/* Issue an invalid lane ID error, pointing at STRING, the invalid
+   ID.  */
+[[noreturn]] extern void invalid_lane_id_error (const char *string);
 
 /* Parse TIDSTR as a per-inferior thread ID, in either INF_NUM.THR_NUM
    or THR_NUM form.  In the latter case, the missing INF_NUM is filled
@@ -36,6 +43,40 @@ struct thread_info;
    thrown.  */
 struct thread_info *parse_thread_id (const char *tidstr, const char **end);
 
+std::pair<thread_info *, int> parse_lane_id (const char *input,
+					     const char **end = nullptr);
+
+std::pair<std::string, std::string> split_lane_id (const char *lidstr);
+
+class lane_id_list_parser
+{
+public:
+  /* Start and end (inclusive) of id-part range.  See inline variables
+     representing special cases below.  */
+  using range = std::pair<int, int>;
+
+  /* The three parts of [[INF.]THR.]LANE.  Note that each part is a
+     range.  */
+  using lane_id_range = std::array<lane_id_list_parser::range, 3>;
+
+  /* Part was missing => current inferior/thread/lane.  */
+  inline static constexpr range missing_part = {-2, 0};
+
+  /* Part was '*' => all inferiors/threads/lanes.  */
+  inline static constexpr range star_part = {-1, 0};
+
+  void init (const char *input);
+
+  lane_id_range get_id_range ();
+
+  bool finished ();
+
+  const char *cur_tok () { return m_cursor; }
+
+private:
+  const char *m_cursor;
+};
+
 /* Return true if TIDSTR is pointing to a string that looks like a
    thread-id.  This doesn't mean that TIDSTR identifies a valid thread, but
    the string does at least look like a valid thread-id.  If END is not
@@ -43,6 +84,14 @@ struct thread_info *parse_thread_id (const char *tidstr, const char **end);
    the thread-id into *END.  */
 
 bool is_thread_id (const char *tidstr, const char **end);
+
+/* Return true if LIDSTR is pointing to a string that looks like a
+   lane-id.  This doesn't mean that LIDSTR identifies a valid lane,
+   but the string does at least look like a valid lane-id.  If END is
+   not NULL, parse_lane_id stores the address of the first character
+   after the lane-id into *END.  */
+
+bool is_lane_id (const char *lidstr, const char **end);
 
 /* Parse a thread ID or a thread range list.
 

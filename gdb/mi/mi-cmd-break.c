@@ -364,8 +364,12 @@ mi_cmd_break_insert_1 (int dprintf, const char *command,
 	error (_("Garbage '%s' at end of location"), address);
     }
 
+  bp_specificity specificity;
+  specificity.thread = thread;
+  specificity.inferior = thread_group;
+
   create_breakpoint (get_current_arch (), locspec.get (), condition,
-		     thread, thread_group,
+		     specificity,
 		     extra_string.c_str (),
 		     force_condition,
 		     0 /* condition and thread are valid.  */,

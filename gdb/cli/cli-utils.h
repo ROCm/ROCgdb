@@ -23,6 +23,8 @@
 
 #include "completer.h"
 
+#include <vector>
+
 struct cmd_list_element;
 
 /* *PP is a string denoting a number.  Get the number.  Advance *PP
@@ -34,7 +36,7 @@ struct cmd_list_element;
    TRAILER is a character which can be found after the number; most
    commonly this is `-'.  If you don't want a trailer, use \0.  */
 
-extern int get_number_trailer (const char **pp, int trailer);
+extern std::optional<int> get_number_trailer (const char **pp, int trailer);
 
 /* Convenience.  Like get_number_trailer, but with no TRAILER.  */
 
@@ -225,5 +227,20 @@ struct qcs_flags
    FLAGS->SILENT are true.  WHICH_COMMAND is included in the error
    message.  */
 extern void validate_flags_qcs (const char *which_command, qcs_flags *flags);
+
+/* Create a string of ranges out of a sorted vector of integers
+   NUMBERS.  Duplicated values are ignored.  If the result contains
+   more than one number, it is enclosed in square brackets, unless
+   WANT_BRACKETS is false.
+
+   Examples:
+    For the vector {} the result is "".
+    For the vector {1} the result is "1".
+    For the vector {1,1,1,1} the result is "1".
+    For the vector {0,1,1,2,4,6,7,8} the result is "[0-2 4 6-8]".
+*/
+extern std::string
+  make_ranges_from_sorted_vector (const std::vector<int> &numbers,
+				  bool want_brakets);
 
 #endif /* GDB_CLI_CLI_UTILS_H */

@@ -128,7 +128,7 @@ remove_dummy_frame (struct dummy_frame **dummy_ptr)
 static bool
 pop_dummy_frame_bpt (struct breakpoint *b, struct dummy_frame *dummy)
 {
-  if (b->thread == dummy->id.thread->global_num
+  if (b->specificity.thread == dummy->id.thread->global_num
       && b->disposition == disp_del && b->frame_id == dummy->id.id)
     {
       while (b->related_breakpoint != b)

@@ -452,4 +452,7 @@ extern location_scope default_address_scope (struct gdbarch *gdbarch,
 extern std::vector<addr_range> default_get_watchable_aliases
   (struct gdbarch *gdbarch, ptid_t ptid, int simd_lane, addr_range range);
 
+extern int default_supported_lanes_count (struct gdbarch *gdbarch,
+					  thread_info *tp);
+
 #endif /* GDB_ARCH_UTILS_H */

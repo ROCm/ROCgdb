@@ -30,21 +30,26 @@ invalid_thread_id_error (const char *string)
   error (_("Invalid thread ID: %s"), string);
 }
 
+[[noreturn]] void
+invalid_lane_id_error (const char *string)
+{
+  error (_("Invalid lane ID: %s"), string);
+}
+
 /* Wrapper for get_number_trailer that throws an error if we get back
    a negative number.  We'll see a negative value if the number is
    stored in a negative convenience variable (e.g., $minus_one = -1).
    STRING is the parser string to be used in the error message if we
    do get back a negative number.  */
 
-static int
-get_positive_number_trailer (const char **pp, int trailer, const char *string)
+static std::optional<int>
+get_non_negative_number_trailer (const char **pp, int trailer,
+				 const char *string)
 {
-  int num;
-
-  num = get_number_trailer (pp, trailer);
-  if (num < 0)
+  std::optional<int> res = get_number_trailer (pp, trailer);
+  if (res.has_value () && *res < 0)
     error (_("negative value: %s"), string);
-  return num;
+  return res;
 }
 
 /* Parse TIDSTR as a per-inferior thread ID, in either INF_NUM.THR_NUM
@@ -64,46 +69,45 @@ get_positive_number_trailer (const char **pp, int trailer, const char *string)
    exception.  */
 
 static std::pair<int, int>
-parse_thread_id_1 (const char *tidstr, const char **end)
+parse_thread_id_1 (const char *tidstr, const char **end,
+		   gdb::function_view<void (const char *)> invalid_id,
+		   const char *tidstr_error)
 {
-  const char *number = tidstr;
-  const char *dot, *p1;
-  int thr_num, inf_num;
-
-  dot = strchr (number, '.');
-
-  if (dot != NULL)
+  const char *p;
+  int inf_num;
+  const char *dot = strchr (tidstr, '.');
+  if (dot != nullptr)
     {
       /* Parse number to the left of the dot.  */
-      p1 = number;
-      inf_num = get_positive_number_trailer (&p1, '.', number);
-      if (inf_num == 0)
-	invalid_thread_id_error (number);
-      p1 = dot + 1;
+      p = tidstr;
+      std::optional<int> res
+	= get_non_negative_number_trailer (&p, '.', tidstr_error);
+      if (!res.has_value () || *res == 0)
+	invalid_id (tidstr_error);
+      inf_num = *res;
+      p = dot + 1;
     }
   else
     {
       inf_num = 0;
-      p1 = number;
+      p = tidstr;
     }
 
-  thr_num = get_positive_number_trailer (&p1, 0, number);
-  if (thr_num == 0)
-    invalid_thread_id_error (number);
+  std::optional<int> res
+    = get_non_negative_number_trailer (&p, '.', tidstr_error);
+  if (!res.has_value () || *res == 0)
+    invalid_id (tidstr_error);
+  int thr_num = *res;
 
   if (end != nullptr)
-    *end = p1;
+    *end = p;
 
   return { inf_num, thr_num };
 }
 
-/* See tid-parse.h.  */
-
-struct thread_info *
-parse_thread_id (const char *tidstr, const char **end)
+static thread_info *
+resolve_thread_id (int inf_num, int thr_num)
 {
-  const auto [inf_num, thr_num] = parse_thread_id_1 (tidstr, end);
-
   inferior *inf;
   bool explicit_inf_id = false;
 
@@ -138,12 +142,208 @@ parse_thread_id (const char *tidstr, const char **end)
 
 /* See tid-parse.h.  */
 
+struct thread_info *
+parse_thread_id (const char *tidstr, const char **end)
+{
+  const auto [inf_num, thr_num]
+    = parse_thread_id_1 (tidstr, end, invalid_thread_id_error, tidstr);
+  return resolve_thread_id (inf_num, thr_num);
+}
+
+std::pair<std::string, std::string>
+split_lane_id (const char *lidstr)
+{
+  const char *last_dot = strrchr (lidstr, '.');
+  if (last_dot != nullptr)
+    {
+      std::string tidstr (lidstr, last_dot);
+      std::string lanestr (last_dot + 1);
+      return {tidstr, lanestr};
+    }
+  else
+    return {"", lidstr};
+}
+
+static std::array<std::string_view, 3>
+split_lane_id_parts (const char *input, const char **endp)
+{
+  std::string_view sv (input);
+
+  /* Check if there's a space in the input and adjust the
+     string_view accordingly.  */
+  size_t space_pos = sv.find (' ');
+  if (space_pos != std::string_view::npos)
+    {
+      sv = sv.substr (0, space_pos);
+      *endp = input + space_pos;
+    }
+  else
+    *endp = input + sv.size ();
+
+  /* Hold the three parts (filled from right to left).  */
+  std::array<std::string_view, 3> parts;
+
+  if (sv.empty ())
+    return parts;
+
+  size_t count = 0;
+  size_t end = sv.size ();
+
+  /* Find dots from right to left.  */
+  for (;;)
+    {
+      size_t dot_pos = sv.rfind ('.', end - 1);
+      if (dot_pos == std::string_view::npos)
+	break;
+
+      if (count == 2 || dot_pos == 0 || dot_pos == end - 1)
+	invalid_lane_id_error (input);
+
+      parts[2 - count++] = sv.substr (dot_pos + 1, end - dot_pos - 1);
+      end = dot_pos;
+    }
+  /* Capture the last remaining part.  */
+  parts[2 - count++] = sv.substr (0, end);
+
+  return parts;
+}
+
+void
+lane_id_list_parser::init (const char *input)
+{
+  m_cursor = skip_spaces (input);
+}
+
+lane_id_list_parser::lane_id_range
+lane_id_list_parser::get_id_range ()
+{
+  lane_id_range res;
+  const char *end;
+  auto str_res = split_lane_id_parts (m_cursor, &end);
+
+  for (size_t i = 0; i < 3; i++)
+    {
+      auto &part = str_res[i];
+      if (part.empty ())
+	res[i] = missing_part;
+      else if (part == "*")
+	res[i] = star_part;
+      else
+	{
+	  std::string str (str_res[i]);
+	  number_or_range_parser parser (str.c_str ());
+	  int range_start = parser.get_number ();
+	  int range_end = (parser.in_range ()
+			   ? parser.end_value ()
+			   : range_start);
+	  res[i] = {range_start, range_end};
+	}
+    }
+
+  m_cursor = skip_spaces (end);
+
+  return res;
+}
+
+bool
+lane_id_list_parser::finished ()
+{
+  /* Parsing is finished when at end of string or null string, or we
+     are not in a range and not in front of an integer, negative
+     integer, convenience var or negative convenience var.  */
+  return (*m_cursor == '\0'
+	  || !(isdigit (*m_cursor)
+	       || *m_cursor == '$'
+	       || *m_cursor == '*'));
+}
+
+static lane_id
+parse_lane_id_1 (const char *lidstr, const char **end)
+{
+  const char *lanenum_str;
+  lane_id res;
+
+  const char *last_dot = strrchr (lidstr, '.');
+  if (last_dot != nullptr)
+    {
+      /* Parse [INF.]THR to the left of the dot.  */
+      std::string tidstr (lidstr, last_dot);
+      const char *tid_end;
+      auto pair = parse_thread_id_1 (tidstr.c_str (), &tid_end,
+				     invalid_lane_id_error, lidstr);
+      if (*tid_end != '\0')
+	error (_("whoops"));
+      res[0] = std::get<0> (pair);
+      res[1] = std::get<1> (pair);
+      lanenum_str = last_dot + 1;
+    }
+  else
+    {
+      res[0] = 0;
+      res[1] = 0;
+      lanenum_str = lidstr;
+    }
+
+  const char *p = lanenum_str;
+  std::optional<int> lanenum = get_non_negative_number_trailer (&p, 0, lidstr);
+  /* Note that 0 is valid.  */
+  if (!lanenum.has_value ())
+    invalid_lane_id_error (lidstr);
+  res[2] = *lanenum;
+
+  if (end != nullptr)
+    *end = p;
+
+  return res;
+}
+
+std::pair<thread_info *, int>
+parse_lane_id (const char *lidstr, const char **end)
+{
+  auto [inf_num, thr_num, lane_num] = parse_lane_id_1 (lidstr, end);
+
+  thread_info *thr;
+  if (thr_num == 0)
+    {
+      /* If the thread number is 0, it means the user didn't specify a
+	 thread.  Fill it from current context.  */
+      gdb_assert (inf_num == 0);
+      thr = inferior_thread ();
+    }
+  else
+    {
+      /* resolve_thread_id handles the case of the user not specifying
+	 an inferior number either.  */
+      thr = resolve_thread_id (inf_num, thr_num);
+    }
+
+  return { thr, lane_num };
+}
+
+/* See tid-parse.h.  */
+
 bool
 is_thread_id (const char *tidstr, const char **end)
 {
   try
     {
-      (void) parse_thread_id_1 (tidstr, end);
+      (void) parse_thread_id_1 (tidstr, end, invalid_thread_id_error, tidstr);
+      return true;
+    }
+  catch (const gdb_exception_error &)
+    {
+      return false;
+    }
+}
+
+/* See tid-parse.h.  */
+
+bool
+is_lane_id (const char *lidstr, const char **end)
+{
+  try
+    {
+      (void) parse_lane_id_1 (lidstr, end);
       return true;
     }
   catch (const gdb_exception_error &)
@@ -254,9 +454,11 @@ tid_range_parser::get_tid_or_range (int *inf_num,
 
 	  /* Parse number to the left of the dot.  */
 	  p = m_cur_tok;
-	  m_inf_num = get_positive_number_trailer (&p, '.', m_cur_tok);
-	  if (m_inf_num == 0)
+	  std::optional<int> res
+	    = get_non_negative_number_trailer (&p, '.', m_cur_tok);
+	  if (!res.has_value () || *res == 0)
 	    return 0;
+	  m_inf_num = *res;
 
 	  m_qualified = true;
 	  p = dot + 1;

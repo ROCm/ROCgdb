@@ -783,6 +783,7 @@ inferior_command (const char *args, int from_tty)
 	  notify_user_selected_context_changed
 	    (USER_SELECTED_INFERIOR
 	     | USER_SELECTED_THREAD
+	     | USER_SELECTED_LANE
 	     | USER_SELECTED_FRAME);
 	}
       else

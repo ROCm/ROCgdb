@@ -971,7 +971,7 @@ elf_gnu_ifunc_resolver_stop (code_breakpoint *b)
       gdb_assert (b_return->has_single_location ());
       gdb_assert (frame_id_p (b_return->frame_id));
 
-      if (b_return->thread == thread_id
+      if (b_return->specificity.thread == thread_id
 	  && b_return->first_loc ().requested_address == prev_pc
 	  && b_return->frame_id == prev_frame_id)
 	break;
