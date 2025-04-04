@@ -253,8 +253,11 @@ number_or_range_parser::get_number ()
     {
       /* Default case: state->m_cur_tok is pointing either to a solo
 	 number, or to the first number of a range.  */
+      const char *number = m_cur_tok;
       std::optional<int> res = get_number_trailer (&m_cur_tok, '-');
-      m_last_retval = res.value_or (0);
+      if (!res.has_value ())
+	error (_("invalid number: %s"), number);
+      m_last_retval = *res;
       /* If get_number_trailer has found a '-' preceded by a space, it
 	 might be the start of a command option.  So, do not parse a
 	 range if the '-' is followed by an alpha or another '-'.  We

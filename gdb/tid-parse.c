@@ -30,7 +30,7 @@ invalid_thread_id_error (const char *string)
   error (_("Invalid thread ID: %s"), string);
 }
 
-[[noreturn]] static void
+[[noreturn]] void
 invalid_lane_id_error (const char *string)
 {
   error (_("Invalid lane ID: %s"), string);
@@ -148,6 +148,113 @@ parse_thread_id (const char *tidstr, const char **end)
   const auto [inf_num, thr_num]
     = parse_thread_id_1 (tidstr, end, invalid_thread_id_error, tidstr);
   return resolve_thread_id (inf_num, thr_num);
+}
+
+std::pair<std::string, std::string>
+split_lane_id (const char *lidstr)
+{
+  const char *last_dot = strrchr (lidstr, '.');
+  if (last_dot != nullptr)
+    {
+      std::string tidstr (lidstr, last_dot);
+      std::string lanestr (last_dot + 1);
+      return {tidstr, lanestr};
+    }
+  else
+    return {"", lidstr};
+}
+
+static std::array<std::string_view, 3>
+split_lane_id_parts (const char *input, const char **endp)
+{
+  std::string_view sv (input);
+
+  /* Check if there's a space in the input and adjust the
+     string_view accordingly.  */
+  size_t space_pos = sv.find (' ');
+  if (space_pos != std::string_view::npos)
+    {
+      sv = sv.substr (0, space_pos);
+      *endp = input + space_pos;
+    }
+  else
+    *endp = input + sv.size ();
+
+  /* Hold the three parts (filled from right to left).  */
+  std::array<std::string_view, 3> parts;
+
+  if (sv.empty ())
+    return parts;
+
+  size_t count = 0;
+  size_t end = sv.size ();
+
+  /* Find dots from right to left.  */
+  for (;;)
+    {
+      size_t dot_pos = sv.rfind ('.', end - 1);
+      if (dot_pos == std::string_view::npos)
+	break;
+
+      if (count == 2 || dot_pos == 0 || dot_pos == end - 1)
+	invalid_lane_id_error (input);
+
+      parts[2 - count++] = sv.substr (dot_pos + 1, end - dot_pos - 1);
+      end = dot_pos;
+    }
+  /* Capture the last remaining part.  */
+  parts[2 - count++] = sv.substr (0, end);
+
+  return parts;
+}
+
+void
+lane_id_list_parser::init (const char *input)
+{
+  m_cursor = skip_spaces (input);
+}
+
+lane_id_list_parser::lane_id_range
+lane_id_list_parser::get_id_range ()
+{
+  lane_id_range res;
+  const char *end;
+  auto str_res = split_lane_id_parts (m_cursor, &end);
+
+  for (size_t i = 0; i < 3; i++)
+    {
+      auto &part = str_res[i];
+      if (part.empty ())
+	res[i] = missing_part;
+      else if (part == "*")
+	res[i] = star_part;
+      else
+	{
+	  std::string str (str_res[i]);
+	  number_or_range_parser parser (str.c_str ());
+	  int range_start = parser.get_number ();
+	  int range_end = (parser.in_range ()
+			   ? parser.end_value ()
+			   : range_start);
+	  res[i] = {range_start, range_end};
+	}
+    }
+
+  m_cursor = skip_spaces (end);
+
+  return res;
+}
+
+bool
+lane_id_list_parser::finished ()
+{
+  /* Parsing is finished when at end of string or null string, or we
+     are not in a range and not in front of an integer, negative
+     integer, convenience var or negative convenience var.  */
+  return (*m_cursor == '\0'
+	  || !(isdigit (*m_cursor)
+	       || *m_cursor == '$'
+	       || *m_cursor == '*'));
 }
 
 static lane_id
