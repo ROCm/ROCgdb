@@ -7471,9 +7471,11 @@ breakpoint_has_pc (struct breakpoint *b,
   return false;
 }
 
-/* See breakpoint.h.  */
+/* Print a message describing any user-breakpoints set at PC.  This
+   concerns with logical breakpoints, so we match program spaces, not
+   address spaces.  */
 
-void
+static void
 describe_other_breakpoints (struct gdbarch *gdbarch,
 			    struct program_space *pspace, CORE_ADDR pc,
 			    struct obj_section *section, int thread)

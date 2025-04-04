@@ -2147,14 +2147,6 @@ bool is_hardware_watchpoint (const struct breakpoint *bpt);
 
 extern void print_solib_event (bool is_catchpoint);
 
-/* Print a message describing any user-breakpoints set at PC.  This
-   concerns with logical breakpoints, so we match program spaces, not
-   address spaces.  */
-
-extern void describe_other_breakpoints (struct gdbarch *,
-					struct program_space *, CORE_ADDR,
-					struct obj_section *, int);
-
 /* Enable or disable a breakpoint location LOC.  ENABLE
    specifies whether to enable or disable.  */
 
