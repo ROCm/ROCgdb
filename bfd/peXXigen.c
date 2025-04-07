@@ -593,7 +593,7 @@ _bfd_XXi_swap_aouthdr_out (bfd * abfd, void * in, void * out)
   struct internal_extra_pe_aouthdr *extra = &pe->pe_opthdr;
   PEAOUTHDR *aouthdr_out = (PEAOUTHDR *) out;
   bfd_vma sa, fa, ib;
-  IMAGE_DATA_DIRECTORY idata2, idata5, tls;
+  IMAGE_DATA_DIRECTORY idata2, idata5, tls, loadcfg;
 
   sa = extra->SectionAlignment;
   fa = extra->FileAlignment;
@@ -602,6 +602,7 @@ _bfd_XXi_swap_aouthdr_out (bfd * abfd, void * in, void * out)
   idata2 = pe->pe_opthdr.DataDirectory[PE_IMPORT_TABLE];
   idata5 = pe->pe_opthdr.DataDirectory[PE_IMPORT_ADDRESS_TABLE];
   tls = pe->pe_opthdr.DataDirectory[PE_TLS_TABLE];
+  loadcfg = pe->pe_opthdr.DataDirectory[PE_LOAD_CONFIG_TABLE];
 
   if (aouthdr_in->tsize)
     {
@@ -651,6 +652,7 @@ _bfd_XXi_swap_aouthdr_out (bfd * abfd, void * in, void * out)
   extra->DataDirectory[PE_IMPORT_TABLE]  = idata2;
   extra->DataDirectory[PE_IMPORT_ADDRESS_TABLE] = idata5;
   extra->DataDirectory[PE_TLS_TABLE] = tls;
+  extra->DataDirectory[PE_LOAD_CONFIG_TABLE] = loadcfg;
 
   if (extra->DataDirectory[PE_IMPORT_TABLE].VirtualAddress == 0)
     /* Until other .idata fixes are made (pending patch), the entry for
@@ -4403,6 +4405,7 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
   struct coff_link_hash_entry *h1;
   struct bfd_link_info *info = pfinfo->info;
   bool result = true;
+  char name[20];
 
   /* There are a few fields that need to be filled in now while we
      have symbol table access.
@@ -4430,8 +4433,8 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
       else
 	{
 	  _bfd_error_handler
-	    (_("%pB: unable to fill in DataDictionary[1] because .idata$2 is missing"),
-	     abfd);
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s is missing"),
+	     abfd, PE_IMPORT_TABLE, ".idata$2");
 	  result = false;
 	}
 
@@ -4450,8 +4453,8 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
       else
 	{
 	  _bfd_error_handler
-	    (_("%pB: unable to fill in DataDictionary[1] because .idata$4 is missing"),
-	     abfd);
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s is missing"),
+	     abfd, PE_IMPORT_TABLE, ".idata$4");
 	  result = false;
 	}
 
@@ -4471,8 +4474,8 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
       else
 	{
 	  _bfd_error_handler
-	    (_("%pB: unable to fill in DataDictionary[12] because .idata$5 is missing"),
-	     abfd);
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s is missing"),
+	     abfd, PE_IMPORT_ADDRESS_TABLE, ".idata$5");
 	  result = false;
 	}
 
@@ -4491,8 +4494,8 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
       else
 	{
 	  _bfd_error_handler
-	    (_("%pB: unable to fill in DataDictionary[PE_IMPORT_ADDRESS_TABLE (12)] because .idata$6 is missing"),
-	     abfd);
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s is missing"),
+	     abfd, PE_IMPORT_ADDRESS_TABLE, ".idata$6");
 	  result = false;
 	}
     }
@@ -4533,17 +4536,16 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
 	  else
 	    {
 	      _bfd_error_handler
-		(_("%pB: unable to fill in DataDictionary[PE_IMPORT_ADDRESS_TABLE(12)]"
-		   " because .idata$6 is missing"), abfd);
+		(_("%pB: unable to fill in DataDirectory[%d]: %s not defined correctly"),
+		 abfd, PE_IMPORT_ADDRESS_TABLE, "__IAT_end__");
 	      result = false;
 	    }
 	}
     }
 
-  h1 = coff_link_hash_lookup (coff_hash_table (info),
-			      (bfd_get_symbol_leading_char (abfd) != 0
-			       ? "__tls_used" : "_tls_used"),
-			      false, false, true);
+  name[0] = bfd_get_symbol_leading_char (abfd);
+  strcpy (name + !!name[0], "_tls_used");
+  h1 = coff_link_hash_lookup (coff_hash_table (info), name, false, false, true);
   if (h1 != NULL)
     {
       if ((h1->root.type == bfd_link_hash_defined
@@ -4558,8 +4560,8 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
       else
 	{
 	  _bfd_error_handler
-	    (_("%pB: unable to fill in DataDictionary[9] because __tls_used is missing"),
-	     abfd);
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s not defined correctly"),
+	     abfd, PE_TLS_TABLE, name);
 	  result = false;
 	}
      /* According to PECOFF sepcifications by Microsoft version 8.2
@@ -4571,6 +4573,81 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
 #else
       pe_data (abfd)->pe_opthdr.DataDirectory[PE_TLS_TABLE].Size = 0x28;
 #endif
+    }
+
+  name[0] = bfd_get_symbol_leading_char (abfd);
+  strcpy (name + !!name[0], "_load_config_used");
+  h1 = coff_link_hash_lookup (coff_hash_table (info), name, false, false, true);
+  if (h1 != NULL)
+    {
+      char data[4];
+      if ((h1->root.type == bfd_link_hash_defined
+	   || h1->root.type == bfd_link_hash_defweak)
+	  && h1->root.u.def.section != NULL
+	  && h1->root.u.def.section->output_section != NULL)
+	{
+	  pe_data (abfd)->pe_opthdr.DataDirectory[PE_LOAD_CONFIG_TABLE].VirtualAddress =
+	    (h1->root.u.def.value
+	     + h1->root.u.def.section->output_section->vma
+	     + h1->root.u.def.section->output_offset
+	     - pe_data (abfd)->pe_opthdr.ImageBase);
+
+	  if (pe_data (abfd)->pe_opthdr.DataDirectory[PE_LOAD_CONFIG_TABLE].VirtualAddress
+	      & (bfd_arch_bits_per_address (abfd) / bfd_arch_bits_per_byte (abfd)
+		- 1))
+	    {
+	      _bfd_error_handler
+		(_("%pB: unable to fill in DataDirectory[%d]: %s not properly aligned"),
+		 abfd, PE_LOAD_CONFIG_TABLE, name);
+	      result = false;
+	    }
+
+	  /* The size is stored as the first 4 bytes at _load_config_used.  */
+	  if (bfd_get_section_contents (abfd,
+		h1->root.u.def.section->output_section, data,
+		h1->root.u.def.section->output_offset + h1->root.u.def.value,
+		4))
+	    {
+	      uint32_t size = bfd_get_32 (abfd, data);
+	      /* The Microsoft PE format documentation says for compatibility
+		 with Windows XP and earlier, the size must be 64 for x86
+		 images.  */
+	      pe_data (abfd)->pe_opthdr.DataDirectory[PE_LOAD_CONFIG_TABLE].Size
+		= (bfd_get_arch (abfd) == bfd_arch_i386
+		   && ((bfd_get_mach (abfd) & ~bfd_mach_i386_intel_syntax)
+		       == bfd_mach_i386_i386)
+		   && ((pe_data (abfd)->pe_opthdr.Subsystem
+			== IMAGE_SUBSYSTEM_WINDOWS_GUI)
+		       || (pe_data (abfd)->pe_opthdr.Subsystem
+			   == IMAGE_SUBSYSTEM_WINDOWS_CUI))
+		   && (pe_data (abfd)->pe_opthdr.MajorSubsystemVersion * 256
+		       + pe_data (abfd)->pe_opthdr.MinorSubsystemVersion
+		       <= 0x0501))
+		? 64 : size;
+
+	      if (size > h1->root.u.def.section->size - h1->root.u.def.value)
+		{
+		  _bfd_error_handler
+		    (_("%pB: unable to fill in DataDirectory[%d]: size too large for the containing section"),
+		     abfd, PE_LOAD_CONFIG_TABLE);
+		  result = false;
+		}
+	    }
+	  else
+	    {
+	      _bfd_error_handler
+		(_("%pB: unable to fill in DataDirectory[%d]: size can't be read from %s"),
+		 abfd, PE_LOAD_CONFIG_TABLE, name);
+	      result = false;
+	    }
+	}
+      else
+	{
+	  _bfd_error_handler
+	    (_("%pB: unable to fill in DataDirectory[%d]: %s not defined correctly"),
+	     abfd, PE_LOAD_CONFIG_TABLE, name);
+	  result = false;
+	}
     }
 
 /* If there is a .pdata section and we have linked pdata finally, we
