@@ -1,7 +1,6 @@
 /* Definitions for BFD wrappers used by GDB.
 
    Copyright (C) 2011-2025 Free Software Foundation, Inc.
-   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
