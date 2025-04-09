@@ -1,6 +1,6 @@
 /* Support for GDB maintenance commands.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -28,8 +28,6 @@
 #include "symtab.h"
 #include "block.h"
 #include "gdbtypes.h"
-#include "demangle.h"
-#include "gdbcore.h"
 #include "expression.h"
 #include "language.h"
 #include "symfile.h"
