@@ -69,7 +69,7 @@ struct attribute
      form.  */
   LONGEST as_signed () const
   {
-    gdb_assert (form_is_signed ());
+    gdb_assert (form_is_strictly_signed ());
     return u.snd;
   }
 
@@ -91,28 +91,6 @@ struct attribute
     return u.unsnd;
   }
 
-  /* Return true if the value is nonnegative.  Requires that that
-     reprocessing not be needed.  */
-  bool is_nonnegative () const
-  {
-    if (form_is_unsigned ())
-      return true;
-    if (form_is_signed ())
-      return as_signed () >= 0;
-    return false;
-  }
-
-  /* Return the nonnegative value.  Requires that that reprocessing not be
-     needed.  */
-  ULONGEST as_nonnegative () const
-  {
-    if (form_is_unsigned ())
-      return as_unsigned ();
-    if (form_is_signed ())
-      return (ULONGEST)as_signed ();
-    gdb_assert (false);
-  }
-
   /* Return non-zero if ATTR's value is a section offset --- classes
      lineptr, loclistptr, macptr or rangelistptr --- or zero, otherwise.
      You may use the as_unsigned method to retrieve such offsets.
@@ -123,6 +101,18 @@ struct attribute
      of them.  */
 
   bool form_is_section_offset () const;
+
+  /* Return an unsigned constant value.  This only handles constant
+     forms (i.e., form_is_constant -- and not the extended list of
+     "unsigned" forms) and assumes an unsigned value is desired.  This
+     can be used with DWARF-defined enumerations like DW_CC_* or
+     DW_INL_*, but also in situations where a nonnegative constant
+     integer is specified by DWARF.
+
+     If a signed form and negative value is used, or if a non-constant
+     form is used, then complaint is issued and an empty value is
+     returned.  */
+  std::optional<ULONGEST> unsigned_constant () const;
 
   /* Return non-zero if ATTR's value falls in the 'constant' class, or
      zero otherwise.  When this function returns true, you can apply
@@ -168,8 +158,11 @@ struct attribute
   /* Check if the attribute's form is an unsigned integer form.  */
   bool form_is_unsigned () const;
 
-  /* Check if the attribute's form is a signed integer form.  */
-  bool form_is_signed () const;
+  /* Check if the attribute's form is a signed integer form.  This
+     only returns true for forms that are strictly signed -- that is,
+     for a context-dependent form like DW_FORM_data1, this returns
+     false.  */
+  bool form_is_strictly_signed () const;
 
   /* Check if the attribute's form is a form that requires
      "reprocessing".  */

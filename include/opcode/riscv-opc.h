@@ -2311,6 +2311,9 @@
 /* Smctr/Ssctr instruction.  */
 #define MATCH_SCTRCLR 0x10400073
 #define MASK_SCTRCLR 0xffffffff
+/* Smrnmi instruction.  */
+#define MATCH_MNRET 0x70200073
+#define MASK_MNRET 0xffffffff
 /* Svinval instruction.  */
 #define MATCH_SINVAL_VMA 0x16000073
 #define MASK_SINVAL_VMA 0xfe007fff
@@ -3699,6 +3702,21 @@
 #define MASK_TH_VFMVFS 0xfe0ff07f
 #define MATCH_TH_VFMVSF 0x36005057
 #define MASK_TH_VFMVSF 0xfff0707f
+/* Vendor-specific (T-Head) XTheadVdot instructions.  */
+#define MATCH_TH_VMAQA_VV 0x8000600b
+#define MASK_TH_VMAQA_VV 0xfc00707f
+#define MATCH_TH_VMAQA_VX 0x8400600b
+#define MASK_TH_VMAQA_VX 0xfc00707f
+#define MATCH_TH_VMAQAU_VV 0x8800600b
+#define MASK_TH_VMAQAU_VV 0xfc00707f
+#define MATCH_TH_VMAQAU_VX 0x8c00600b
+#define MASK_TH_VMAQAU_VX 0xfc00707f
+#define MATCH_TH_VMAQASU_VV 0x9000600b
+#define MASK_TH_VMAQASU_VV 0xfc00707f
+#define MATCH_TH_VMAQASU_VX 0x9400600b
+#define MASK_TH_VMAQASU_VX 0xfc00707f
+#define MATCH_TH_VMAQAUS_VX 0x9c00600b
+#define MASK_TH_VMAQAUS_VX 0xfc00707f
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 #define MATCH_VT_MASKC 0x607b
 #define MASK_VT_MASKC 0xfe00707f
@@ -4793,6 +4811,8 @@ DECLARE_INSN(cm_jt, MATCH_CM_JT, MASK_CM_JT)
 DECLARE_INSN(cm_jalt, MATCH_CM_JALT, MASK_CM_JALT)
 /* Smctr/Ssctr instruction.  */
 DECLARE_INSN(sctrclr, MATCH_SCTRCLR, MASK_SCTRCLR)
+/* Smrnmi instruction */
+DECLARE_INSN(mnret, MATCH_MNRET, MASK_MNRET)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */

@@ -22376,6 +22376,12 @@ Print the names of the shared libraries which are currently loaded
 that match @var{regex}.  If @var{regex} is omitted then print
 all shared libraries that are loaded.
 
+For each library, @value{GDBN} also lists the address range allocated
+to that library if it can be determined.  If the address range cannot
+be determined then the address range for the @code{.text} section from
+the library will be listed.  If the @code{.text} section cannot be
+found then no addresses will be listed.
+
 @kindex info dll
 @item info dll @var{regex}
 This is an alias of @code{info sharedlibrary}.
@@ -24156,11 +24162,11 @@ heterogeneous agent IDs using the qualified
 @var{agent-num} is shown.
 
 If @value{GDBN} cannot find a suitable name for an agent, one will be formed
-following the @samp{Device @var{VVVV}:@var{DDDD}} pattern where @var{VVVV} is
-the hexadecimal formatted PCI vendor ID of the agent, and @var{VVVV} is the
-hexadecimal formatted PCI device ID of the agent.  If such name appears, it is
-recommended to run the @command{update-pciids} command to update the database
-@value{GDBN} uses to retrieve device names.
+following either the @samp{Device @var{VVVV}:@var{DDDD}} or the @samp{Device
+@var{VVVV}:@var{DDDD}.@var{RR}} patterns where @var{VVVV} is the hexadecimal
+formatted PCI vendor ID of the agent, @var{DDDD} is the hexadecimal formatted
+PCI device ID of the agent, and @var{RR} is the hexadecimal formatted
+PCI device revision ID.
 
 @item info queues @r{[}@var{queue-id-list}@r{]}
 @kindex info queues
@@ -28655,12 +28661,6 @@ AMD Instinct@registeredsymbol{} MI100 accelerator devices.
 
 @item @code{gfx90a}
 AMD Instinct@registeredsymbol{} MI200 Series accelerator devices.
-
-@item @code{gfx940}
-Aqua Vanjaram devices.
-
-@item @code{gfx941}
-@samp{gfx941} devices.
 
 @item @code{gfx942}
 @samp{gfx942} devices.
@@ -54579,7 +54579,8 @@ Richard M. Stallman and Roland H. Pesch, July 1991.
 
 @format
 @c man begin SYNOPSIS gcore
-gcore [-a] [-o @var{prefix}] [-d @var{directory}] @var{pid1} [@var{pid2}...@var{pidN}]
+gcore [-v | --version] [-h | --help] [-a] [-o @var{prefix}] [-d @var{directory}]
+      @var{pid1} [@var{pid2}...@var{pidN}]
 @c man end
 @end format
 
@@ -54606,11 +54607,19 @@ The optional argument @var{prefix} specifies the prefix to be used
 when composing the file names of the core dumps.  The file name is
 composed as @file{@var{prefix}.@var{pid}}, where @var{pid} is the
 process ID of the running program being analyzed by @command{gcore}.
-If not specified, @var{prefix} defaults to @var{gcore}.
+If not specified, @var{prefix} defaults to @var{core}.
 
 @item -d @var{directory}
 Use @var{directory} as the data directory when invoking @value{GDBN} for running
 the gcore command. This argument is optional.
+
+@item --help
+@itemx -h
+List all options, with brief explanations.
+
+@item --version
+@itemx -v
+Print version information and then exit.
 @end table
 @c man end
 
@@ -54822,7 +54831,7 @@ Richard M. Stallman and Roland H. Pesch, July 1991.
 @c man title gdb-add-index Add index files to speed up GDB
 
 @c man begin SYNOPSIS gdb-add-index
-gdb-add-index [-dwarf-5] @var{filename}
+gdb-add-index [-h | --help] [-v | --version] [--dwarf-5] @var{filename}
 @c man end
 
 @c man begin DESCRIPTION gdb-add-index
@@ -54840,8 +54849,8 @@ which use ELF binaries and DWARF debug information (i.e., sections
 named @code{.debug_*}).
 
 By default @command{gdb-add-index} will add a pre-DWARF 5
-@code{.gdb_index} section to @var{filename}.  With @option{-dwarf-5}
-DWARF 5 sections are added instead.
+@code{.gdb_index} section to @var{filename}.  With @option{--dwarf-5}
+the DWARF 5 section @code{.debug_names} is added instead.
 
 @var{filename} must be writable.
 
@@ -54865,9 +54874,16 @@ the @value{GDBN} manual in node @code{Index Files}
 
 @c man begin OPTIONS gdb-add-index
 @table @env
-@item -dwarf-5
+@item --dwarf-5
 Add DWARF 5 sections instead of previous @code{.gdb_index} section.
 
+@item --help
+@itemx -h
+List all options, with brief explanations.
+
+@item --version
+@itemx -v
+Print version information and then exit.
 @end table
 @c man end
 

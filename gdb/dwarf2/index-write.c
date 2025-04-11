@@ -887,8 +887,7 @@ private:
 
     /* Object constructor to be called for current DWARF2_PER_BFD.  */
     debug_str_lookup (dwarf2_per_bfd *per_bfd)
-      : m_abfd (per_bfd->obfd),
-	m_per_bfd (per_bfd)
+      : m_per_bfd (per_bfd)
     {
     }
 
@@ -922,7 +921,6 @@ private:
 
   private:
     gdb::unordered_map<c_str_view, size_t, c_str_view_hasher> m_str_table;
-    bfd *const m_abfd;
     dwarf2_per_bfd *m_per_bfd;
 
     /* Data to add at the end of .debug_str for new needed symbol names.  */
@@ -1280,7 +1278,7 @@ write_shortcuts_table (cooked_index *table, data_buf &shortcuts,
       if (dw_lang != 0)
 	{
 	  auto_obstack obstack;
-	  const auto main_name = main_info->full_name (&obstack, true);
+	  const auto main_name = main_info->full_name (&obstack, FOR_MAIN);
 
 	  main_name_offset = cpool.size ();
 	  cpool.append_cstr0 (main_name);
@@ -1317,11 +1315,9 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
      work here.  */
 
   int counter = 0;
-  for (int i = 0; i < per_bfd->all_units.size (); ++i)
+  for (const dwarf2_per_cu_up &per_cu : per_bfd->all_units)
     {
-      dwarf2_per_cu *per_cu = per_bfd->all_units[i].get ();
-
-      const auto insertpair = cu_index_htab.emplace (per_cu, counter);
+      const auto insertpair = cu_index_htab.emplace (per_cu.get (), counter);
       gdb_assert (insertpair.second);
 
       /* See enhancement PR symtab/30838.  */
@@ -1337,7 +1333,7 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
 			   to_underlying (per_cu->sect_off));
       if (per_cu->is_debug_types)
 	{
-	  signatured_type *sig_type = (signatured_type *) per_cu;
+	  signatured_type *sig_type = (signatured_type *) per_cu.get ();
 	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
 			       to_underlying (sig_type->type_offset_in_tu));
 	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
@@ -1400,14 +1396,12 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   debug_names nametable (per_bfd, dwarf5_is_dwarf64, dwarf5_byte_order);
   int counter = 0;
   int types_counter = 0;
-  for (int i = 0; i < per_bfd->all_units.size (); ++i)
+  for (const dwarf2_per_cu_up &per_cu : per_bfd->all_units)
     {
-      dwarf2_per_cu *per_cu = per_bfd->all_units[i].get ();
-
       int &this_counter = per_cu->is_debug_types ? types_counter : counter;
       data_buf &this_list = per_cu->is_debug_types ? types_cu_list : cu_list;
 
-      nametable.add_cu (per_cu, this_counter);
+      nametable.add_cu (per_cu.get (), this_counter);
       this_list.append_uint (nametable.dwarf5_offset_size (),
 			     dwarf5_byte_order,
 			     to_underlying (per_cu->sect_off));

@@ -25,8 +25,7 @@
 #include "gdbsupport/def-vector.h"
 #include "gdbarch.h"
 #include "scoped-mock-context.h"
-
-#include <map>
+#include "gdbsupport/unordered_map.h"
 
 namespace selftests {
 
@@ -128,10 +127,13 @@ register_to_value_test (struct gdbarch *gdbarch)
 static void
 register_name_test (struct gdbarch *gdbarch)
 {
+  if (selftest_skip_warning_arch (gdbarch))
+    return;
+
   scoped_mock_context<test_target_ops> mockctx (gdbarch);
 
   /* Track the number of times each register name appears.  */
-  std::map<const std::string, int> name_counts;
+  gdb::unordered_map<std::string, int> name_counts;
 
   const int num_regs = gdbarch_num_cooked_regs (gdbarch);
   for (auto regnum = 0; regnum < num_regs; regnum++)

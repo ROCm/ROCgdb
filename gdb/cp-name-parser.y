@@ -75,19 +75,35 @@
 
 struct cpname_state
 {
+  cpname_state (const char *input, demangle_parse_info *info)
+    : lexptr (input),
+      prev_lexptr (input),
+      demangle_info (info)
+  { }
+
+  /* Un-push a character into the lexer.  This can only un-push the
+     previous character in the input string.  */
+  void unpush (char c)
+  {
+    gdb_assert (lexptr[-1] == c);
+    --lexptr;
+  }
+
   /* LEXPTR is the current pointer into our lex buffer.  PREV_LEXPTR
      is the start of the last token lexed, only used for diagnostics.
      ERROR_LEXPTR is the first place an error occurred.  GLOBAL_ERRMSG
      is the first error message encountered.  */
 
-  const char *lexptr, *prev_lexptr, *error_lexptr, *global_errmsg;
+  const char *lexptr, *prev_lexptr;
+  const char *error_lexptr = nullptr;
+  const char *global_errmsg = nullptr;
 
   demangle_parse_info *demangle_info;
 
   /* The parse tree created by the parser is stored here after a
      successful parse.  */
 
-  struct demangle_component *global_result;
+  struct demangle_component *global_result = nullptr;
 
   struct demangle_component *d_grab ();
 
@@ -507,6 +523,11 @@ conversion_op_name
 unqualified_name:	oper
 		|	oper '<' template_params '>'
 			{ $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
+		|	oper '<' template_params RSH
+			{
+			  $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp);
+			  state->unpush ('>');
+			}
 		|	'~' NAME
 			{ $$ = state->make_dtor (gnu_v3_complete_object_dtor, $2); }
 		;
@@ -572,6 +593,11 @@ nested_name	:	NAME COLONCOLON
 /* DEMANGLE_COMPONENT_TEMPLATE_ARGLIST */
 templ	:	NAME '<' template_params '>'
 			{ $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
+		| NAME '<' template_params RSH
+			{
+			  $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp);
+			  state->unpush ('>');
+			}
 		;
 
 template_params	:	template_arg
@@ -2018,14 +2044,8 @@ struct std::unique_ptr<demangle_parse_info>
 cp_demangled_name_to_comp (const char *demangled_name,
 			   std::string *errmsg)
 {
-  cpname_state state;
-
-  state.prev_lexptr = state.lexptr = demangled_name;
-  state.error_lexptr = NULL;
-  state.global_errmsg = NULL;
-
   auto result = std::make_unique<demangle_parse_info> ();
-  state.demangle_info = result.get ();
+  cpname_state state (demangled_name, result.get ());
 
   if (yyparse (&state))
     {
@@ -2083,6 +2103,9 @@ canonicalize_tests ()
   should_be_the_same ("something<void ()>", "something<void (void)>");
 
   should_parse ("void whatever::operator<=><int, int>");
+
+  should_be_the_same ("Foozle<int>::fogey<Empty<int> > (Empty<int>)",
+		      "Foozle<int>::fogey<Empty<int>> (Empty<int>)");
 }
 
 #endif

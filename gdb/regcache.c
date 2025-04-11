@@ -29,6 +29,7 @@
 #include "reggroups.h"
 #include "observable.h"
 #include "regset.h"
+#include "gdbsupport/unordered_map.h"
 #include <unordered_map>
 #include "cli/cli-cmds.h"
 
@@ -350,12 +351,12 @@ using ptid_regcache_map
 
 /* Type holding regcaches for a given pid.  */
 
-using pid_ptid_regcache_map = std::unordered_map<int, ptid_regcache_map>;
+using pid_ptid_regcache_map = gdb::unordered_map<int, ptid_regcache_map>;
 
 /* Type holding regcaches for a given target.  */
 
 using target_pid_ptid_regcache_map
-  = std::unordered_map<process_stratum_target *, pid_ptid_regcache_map>;
+  = gdb::unordered_map<process_stratum_target *, pid_ptid_regcache_map>;
 
 /* Global structure containing the existing regcaches.  */
 
@@ -1911,32 +1912,13 @@ public:
   {}
 };
 
-/* Return true if regcache::cooked_{read,write}_test should be skipped for
-   GDBARCH.  */
-
-static bool
-selftest_skiparch (struct gdbarch *gdbarch)
-{
-  const char *name = gdbarch_bfd_arch_info (gdbarch)->printable_name;
-
-  /* Avoid warning:
-       Running selftest regcache::cooked_{read,write}_test::m68hc11.
-       warning: No frame soft register found in the symbol table.
-       Stack backtrace will not work.
-     We could instead capture the output and then filter out the warning, but
-     that seems more trouble than it's worth.  */
-  return (strcmp (name, "m68hc11") == 0
-	  || strcmp (name, "m68hc12") == 0
-	  || strcmp (name, "m68hc12:HCS12") == 0);
-}
-
 /* Test regcache::cooked_read gets registers from raw registers and
    memory instead of target to_{fetch,store}_registers.  */
 
 static void
 cooked_read_test (struct gdbarch *gdbarch)
 {
-  if (selftest_skiparch (gdbarch))
+  if (selftest_skip_warning_arch (gdbarch))
     return;
 
   scoped_mock_context<target_ops_no_register> mockctx (gdbarch);
@@ -2074,7 +2056,7 @@ cooked_read_test (struct gdbarch *gdbarch)
 static void
 cooked_write_test (struct gdbarch *gdbarch)
 {
-  if (selftest_skiparch (gdbarch))
+  if (selftest_skip_warning_arch (gdbarch))
     return;
 
   /* Create a mock environment.  A process_stratum target pushed.  */

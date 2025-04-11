@@ -122,11 +122,8 @@ cooked_index_entry::compare (const char *stra, const char *strb,
 
   /* When completing, if STRB ends earlier than STRA, consider them as
      equal.  */
-  if (mode == COMPLETE || (mode == MATCH && a == munge ('<')))
-    {
-      if (b == '\0')
-	return 0;
-    }
+  if (mode == COMPLETE && b == '\0')
+    return 0;
 
   return a < b ? -1 : 1;
 }
@@ -221,11 +218,11 @@ cooked_index_entry::matches (domain_search_flags kind) const
 /* See cooked-index.h.  */
 
 const char *
-cooked_index_entry::full_name (struct obstack *storage, bool for_main,
-			       bool for_ada_linkage,
+cooked_index_entry::full_name (struct obstack *storage,
+			       cooked_index_full_name_flag name_flags,
 			       const char *default_sep) const
 {
-  const char *local_name = for_main ? name : canonical;
+  const char *local_name = ((name_flags & FOR_MAIN) != 0) ? name : canonical;
 
   if ((flags & IS_LINKAGE) != 0 || get_parent () == nullptr)
     return local_name;
@@ -240,7 +237,7 @@ cooked_index_entry::full_name (struct obstack *storage, bool for_main,
       break;
 
     case language_ada:
-      if (for_ada_linkage)
+      if ((name_flags & FOR_ADA_LINKAGE_NAME) != 0)
 	{
 	  sep = "__";
 	  break;
@@ -257,7 +254,12 @@ cooked_index_entry::full_name (struct obstack *storage, bool for_main,
       break;
     }
 
-  get_parent ()->write_scope (storage, sep, for_main, for_ada_linkage);
+  /* The FOR_ADA_LINKAGE_NAME flag should only affect Ada entries, so
+     disable it here if we don't need it.  */
+  if (lang != language_ada)
+    name_flags &= ~FOR_ADA_LINKAGE_NAME;
+
+  get_parent ()->write_scope (storage, sep, name_flags);
   obstack_grow0 (storage, local_name, strlen (local_name));
   return (const char *) obstack_finish (storage);
 }
@@ -267,14 +269,15 @@ cooked_index_entry::full_name (struct obstack *storage, bool for_main,
 void
 cooked_index_entry::write_scope (struct obstack *storage,
 				 const char *sep,
-				 bool for_main,
-				 bool for_ada_linkage) const
+				 cooked_index_full_name_flag flags) const
 {
   if (get_parent () != nullptr)
-    get_parent ()->write_scope (storage, sep, for_main, for_ada_linkage);
+    get_parent ()->write_scope (storage, sep, flags);
   /* When computing the Ada linkage name, the entry might not have
      been canonicalized yet, so use the 'name'.  */
-  const char *local_name = (for_main || for_ada_linkage) ? name : canonical;
+  const char *local_name = ((flags & (FOR_MAIN | FOR_ADA_LINKAGE_NAME)) != 0
+			    ? name
+			    : canonical);
   obstack_grow (storage, local_name, strlen (local_name));
   obstack_grow (storage, sep, strlen (sep));
 }
@@ -368,13 +371,11 @@ cooked_index_shard::handle_gnat_encoded_entry
       cooked_index_entry *last = (cooked_index_entry *) *slot;
       if (last == nullptr || last->per_cu != entry->per_cu)
 	{
-	  gdb::unique_xmalloc_ptr<char> new_name
-	    = make_unique_xstrndup (name.data (), name.length ());
+	  const char *new_name = m_names.insert (name);
 	  last = create (entry->die_offset, DW_TAG_module,
-			 IS_SYNTHESIZED, language_ada, new_name.get (), parent,
+			 IS_SYNTHESIZED, language_ada, new_name, parent,
 			 entry->per_cu);
 	  last->canonical = last->name;
-	  m_names.push_back (std::move (new_name));
 	  new_entries.push_back (last);
 	  *slot = last;
 	}
@@ -383,35 +384,44 @@ cooked_index_shard::handle_gnat_encoded_entry
     }
 
   entry->set_parent (parent);
-  auto new_canon = make_unique_xstrndup (tail.data (), tail.length ());
-  entry->canonical = new_canon.get ();
-  m_names.push_back (std::move (new_canon));
+  entry->canonical = m_names.insert (tail);
 }
+
+/* Hash a cooked index entry by name pointer value.
+
+   We can use pointer equality here because names come from .debug_str, which
+   will normally be unique-ified by the linker.  Also, duplicates are relatively
+   harmless -- they just mean a bit of extra memory is used.  */
+
+struct cooked_index_entry_name_ptr_hash
+{
+  using is_avalanching = void;
+
+  std::uint64_t operator () (const cooked_index_entry *entry) const noexcept
+  {
+    return ankerl::unordered_dense::hash<const char *> () (entry->name);
+  }
+};
+
+/* Compare cooked index entries by name pointer value.  */
+
+struct cooked_index_entry_name_ptr_eq
+{
+  bool operator () (const cooked_index_entry *a,
+		    const cooked_index_entry *b) const noexcept
+  {
+    return a->name == b->name;
+  }
+};
 
 /* See cooked-index.h.  */
 
 void
 cooked_index_shard::finalize (const parent_map_map *parent_maps)
 {
-  auto hash_name_ptr = [] (const void *p)
-    {
-      const cooked_index_entry *entry = (const cooked_index_entry *) p;
-      return htab_hash_pointer (entry->name);
-    };
-
-  auto eq_name_ptr = [] (const void *a, const void *b) -> int
-    {
-      const cooked_index_entry *ea = (const cooked_index_entry *) a;
-      const cooked_index_entry *eb = (const cooked_index_entry *) b;
-      return ea->name == eb->name;
-    };
-
-  /* We can use pointer equality here because names come from
-     .debug_str, which will normally be unique-ified by the linker.
-     Also, duplicates are relatively harmless -- they just mean a bit
-     of extra memory is used.  */
-  htab_up seen_names (htab_create_alloc (10, hash_name_ptr, eq_name_ptr,
-					 nullptr, xcalloc, xfree));
+  gdb::unordered_set<const cooked_index_entry *,
+		     cooked_index_entry_name_ptr_hash,
+		     cooked_index_entry_name_ptr_eq> seen_names;
 
   auto hash_entry = [] (const void *e)
     {
@@ -471,8 +481,8 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 		 code in cooked_index_entry::full_name).  */
 	      if (entry->get_parent () != nullptr)
 		{
-		  const char *fullname = entry->full_name (&m_storage, false,
-							   true);
+		  const char *fullname
+		    = entry->full_name (&m_storage, FOR_ADA_LINKAGE_NAME);
 		  cooked_index_entry *linkage = create (entry->die_offset,
 							entry->tag,
 							(entry->flags
@@ -492,10 +502,12 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 	}
       else if (entry->lang == language_cplus || entry->lang == language_c)
 	{
-	  void **slot = htab_find_slot (seen_names.get (), entry,
-					INSERT);
-	  if (*slot == nullptr)
+	  auto [it, inserted] = seen_names.insert (entry);
+
+	  if (inserted)
 	    {
+	      /* No entry with that name was present, compute the canonical
+		 name.  */
 	      gdb::unique_xmalloc_ptr<char> canon_name
 		= (entry->lang == language_cplus
 		   ? cp_canonicalize_string (entry->name)
@@ -503,17 +515,13 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 	      if (canon_name == nullptr)
 		entry->canonical = entry->name;
 	      else
-		{
-		  entry->canonical = canon_name.get ();
-		  m_names.push_back (std::move (canon_name));
-		}
-	      *slot = entry;
+		entry->canonical = m_names.insert (std::move (canon_name));
 	    }
 	  else
 	    {
-	      const cooked_index_entry *other
-		= (const cooked_index_entry *) *slot;
-	      entry->canonical = other->canonical;
+	      /* An entry with that name was present, re-use its canonical
+		 name.  */
+	      entry->canonical = (*it)->canonical;
 	    }
 	}
       else
@@ -526,7 +534,6 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
   m_entries.insert (m_entries.end (), new_gnat_entries.begin (),
 		    new_gnat_entries.end ());
 
-  m_names.shrink_to_fit ();
   m_entries.shrink_to_fit ();
   std::sort (m_entries.begin (), m_entries.end (),
 	     [] (const cooked_index_entry *a, const cooked_index_entry *b)
@@ -540,25 +547,28 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 cooked_index_shard::range
 cooked_index_shard::find (const std::string &name, bool completing) const
 {
-  cooked_index_entry::comparison_mode mode = (completing
-					      ? cooked_index_entry::COMPLETE
-					      : cooked_index_entry::MATCH);
-
-  auto lower = std::lower_bound (m_entries.cbegin (), m_entries.cend (), name,
-				 [=] (const cooked_index_entry *entry,
-				      const std::string &n)
+  struct comparator
   {
-    return cooked_index_entry::compare (entry->canonical, n.c_str (), mode) < 0;
-  });
+    cooked_index_entry::comparison_mode mode;
 
-  auto upper = std::upper_bound (m_entries.cbegin (), m_entries.cend (), name,
-				 [=] (const std::string &n,
-				      const cooked_index_entry *entry)
-  {
-    return cooked_index_entry::compare (entry->canonical, n.c_str (), mode) > 0;
-  });
+    bool operator() (const cooked_index_entry *entry,
+		     const char *name) const noexcept
+    {
+      return cooked_index_entry::compare (entry->canonical, name, mode) < 0;
+    }
 
-  return range (lower, upper);
+    bool operator() (const char *name,
+		     const cooked_index_entry *entry) const noexcept
+    {
+      return cooked_index_entry::compare (entry->canonical, name, mode) > 0;
+    }
+  };
+
+  return std::make_from_tuple<range>
+    (std::equal_range (m_entries.cbegin (), m_entries.cend (), name.c_str (),
+		       comparator { (completing
+				     ? cooked_index_entry::COMPLETE
+				     : cooked_index_entry::MATCH) }));
 }
 
 /* See cooked-index.h.  */
@@ -702,10 +712,8 @@ cooked_index_worker::write_to_cache (const cooked_index *idx,
     }
 }
 
-cooked_index::cooked_index (dwarf2_per_objfile *per_objfile,
-			    cooked_index_worker_up &&worker)
-  : m_state (std::move (worker)),
-    m_per_bfd (per_objfile->per_bfd)
+cooked_index::cooked_index (cooked_index_worker_up &&worker)
+  : m_state (std::move (worker))
 {
   /* ACTIVE_VECTORS is not locked, and this assert ensures that this
      will be caught if ever moved to the background.  */
@@ -834,7 +842,7 @@ cooked_index::get_main_name (struct obstack *obstack, enum language *lang)
     return nullptr;
 
   *lang = entry->lang;
-  return entry->full_name (obstack, true);
+  return entry->full_name (obstack, FOR_MAIN);
 }
 
 /* See cooked_index.h.  */
@@ -902,7 +910,7 @@ cooked_index::dump (gdbarch *arch)
       gdb_printf ("    name:       %s\n", entry->name);
       gdb_printf ("    canonical:  %s\n", entry->canonical);
       gdb_printf ("    qualified:  %s\n",
-		  entry->full_name (&temp_storage, false, "::"));
+		  entry->full_name (&temp_storage, 0, "::"));
       gdb_printf ("    DWARF tag:  %s\n", dwarf_tag_name (entry->tag));
       gdb_printf ("    flags:      %s\n", to_string (entry->flags).c_str ());
       gdb_printf ("    DIE offset: %s\n", sect_offset_str (entry->die_offset));

@@ -513,6 +513,9 @@ static struct pseudo_prefixes {
     disp_encoding_32bit
   } disp_encoding;
 
+  /* Exclude sign-extended 8bit immediate in encoding.  */
+  bool no_imm8s;
+
   /* Prefer the REX byte in encoding.  */
   bool rex_encoding;
 
@@ -2589,6 +2592,19 @@ operand_size_match (const insn_template *t)
   /* Check memory and accumulator operand size.  */
   for (j = 0; j < i.operands; j++)
     {
+      /* Instruction templates with only sign-extended 8-bit immediate
+	 operand also have a second template with full-operand-size
+	 immediate operand under a different opcode.  Don't match the
+	 first template if sign-extended 8-bit immediate operand should
+	 be excluded.  */
+      if (pp.no_imm8s
+	  && !t->operand_types[j].bitfield.imm8
+	  && t->operand_types[j].bitfield.imm8s)
+	{
+	  match = 0;
+	  break;
+	}
+
       if (i.types[j].bitfield.class != Reg
 	  && i.types[j].bitfield.class != RegSIMD
 	  && t->opcode_modifier.operandconstraint == ANY_SIZE)
@@ -3077,7 +3093,7 @@ set_intel_syntax (int syntax_flag)
   int ask_naked_reg = 0;
 
   SKIP_WHITESPACE ();
-  if (!is_end_of_line[(unsigned char) *input_line_pointer])
+  if (!is_end_of_stmt (*input_line_pointer))
     {
       char *string;
       int e = get_symbol_name (&string);
@@ -3132,7 +3148,7 @@ set_check (int what)
 
   SKIP_WHITESPACE ();
 
-  if (!is_end_of_line[(unsigned char) *input_line_pointer])
+  if (!is_end_of_stmt (*input_line_pointer))
     {
       char *string;
       int e = get_symbol_name (&string);
@@ -3241,7 +3257,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 
   SKIP_WHITESPACE ();
 
-  if (is_end_of_line[(unsigned char) *input_line_pointer])
+  if (is_end_of_stmt (*input_line_pointer))
     {
       as_bad (_("missing cpu architecture"));
       input_line_pointer++;
@@ -3452,7 +3468,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 
   no_cond_jump_promotion = 0;
   if (restore_line_pointer (e) == ','
-      && !is_end_of_line[(unsigned char) input_line_pointer[1]])
+      && !is_end_of_stmt (input_line_pointer[1]))
     {
       ++input_line_pointer;
       e = get_symbol_name (&s);
@@ -4422,7 +4438,7 @@ static void
 build_evex_prefix (void)
 {
   unsigned int register_specifier;
-  bool w, u;
+  bool w;
   rex_byte vrex_used = 0;
 
   /* Check register specifier.  */
@@ -4545,12 +4561,10 @@ build_evex_prefix (void)
 	abort ();
     }
 
-  u = i.rounding.type == rc_none || i.tm.opcode_modifier.evex != EVEX256;
-
   /* The third byte of the EVEX prefix.  */
   i.vex.bytes[2] = ((w << 7)
 		    | (register_specifier << 3)
-		    | (u << 2)
+		    | 4 /* Encode the U bit.  */
 		    | i.tm.opcode_modifier.opcodeprefix);
 
   /* The fourth byte of the EVEX prefix.  */
@@ -7766,6 +7780,10 @@ parse_insn (const char *line, char *mnemonic, enum parse_mode mode)
 		  /* {nooptimize} */
 		  pp.no_optimize = true;
 		  break;
+		case Prefix_NoImm8s:
+		  /* {noimm8s} */
+		  pp.no_imm8s = true;
+		  break;
 		default:
 		  abort ();
 		}
@@ -8824,19 +8842,14 @@ check_VecOperands (const insn_template *t)
 	  return 1;
 	}
 
-      /* Non-EVEX.{LIG,512,256} forms need to have a ZMM or YMM register as at
-	 least one operand.  For YMM register or EVEX256, we will need AVX10.2
-	 enabled.  There's no need to check all operands, though: Either of the
-	 last two operands will be of the right size in all relevant templates.  */
+      /* Non-EVEX.{LIG,512} forms need to have a ZMM or YMM register as at
+	 least one operand.  There's no need to check all operands, though:
+	 Either of the last two operands will be of the right size in all
+	 relevant templates.  */
       if (t->opcode_modifier.evex != EVEXLIG
 	  && t->opcode_modifier.evex != EVEX512
-	  && (t->opcode_modifier.evex != EVEX256
-	      || !cpu_arch_flags.bitfield.cpuavx10_2)
 	  && !i.types[t->operands - 1].bitfield.zmmword
-	  && !i.types[t->operands - 2].bitfield.zmmword
-	  && ((!i.types[t->operands - 1].bitfield.ymmword
-	       && !i.types[t->operands - 2].bitfield.ymmword)
-	      || !cpu_arch_flags.bitfield.cpuavx10_2))
+	  && !i.types[t->operands - 2].bitfield.zmmword)
 	{
 	  i.error = operand_size_mismatch;
 	  return 1;
@@ -13177,7 +13190,7 @@ lex_got (enum bfd_reloc_code_real *rel,
   unsigned int j;
 
   for (cp = input_line_pointer; *cp != '@'; cp++)
-    if (is_end_of_line[(unsigned char) *cp] || *cp == ',')
+    if (is_end_of_stmt (*cp) || *cp == ',')
       return NULL;
 
   for (j = 0; j < ARRAY_SIZE (gotrel); j++)
@@ -13214,7 +13227,7 @@ lex_got (enum bfd_reloc_code_real *rel,
 		 (and including) an end_of_line char or comma.  */
 	      past_reloc = cp + 1 + len;
 	      cp = past_reloc;
-	      while (!is_end_of_line[(unsigned char) *cp] && *cp != ',')
+	      while (!is_end_of_stmt (*cp) && *cp != ',')
 		++cp;
 	      second = cp + 1 - past_reloc;
 
@@ -14032,7 +14045,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
 	{
 	  if (!i.tm.opcode_modifier.evex)
 	    {
-	      /* Do _not_ consider AVX512VL / AVX10.2 here.  */
+	      /* Do _not_ consider AVX512VL here.  */
 	      if (combined.bitfield.zmmword)
 	        i.tm.opcode_modifier.evex = EVEX512;
 	      else if (combined.bitfield.ymmword)
@@ -16847,9 +16860,9 @@ parse_register (const char *reg_string, char **end_op)
 	{
 	  const expressionS *e = symbol_get_value_expression (symbolP);
 
-	  if (e->X_op == O_register
-	      && (valueT) e->X_add_number < i386_regtab_size)
+	  if (e->X_op == O_register)
 	    {
+	      know ((valueT) e->X_add_number < i386_regtab_size);
 	      r = i386_regtab + e->X_add_number;
 	      *end_op = (char *) reg_string + (input_line_pointer - buf);
 	    }

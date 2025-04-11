@@ -18,13 +18,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "exceptions.h"
-#include "breakpoint.h"
 #include "target.h"
 #include "inferior.h"
 #include "annotate.h"
 #include "ui-out.h"
 #include "serial.h"
-#include "gdbthread.h"
 #include "ui.h"
 #include <optional>
 
@@ -82,7 +80,7 @@ print_exception (struct ui_file *file, const struct gdb_exception &e)
 	  end++;
 	  file->write (start, end - start);
 	}
-    }					    
+    }
   gdb_printf (file, "\n");
 
   /* Now append the annotation.  */

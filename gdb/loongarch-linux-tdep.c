@@ -581,11 +581,17 @@ static linux_record_tdep loongarch_linux_record_tdep;
 static enum gdb_syscall
 loongarch_canonicalize_syscall (enum loongarch_syscall syscall_number)
 {
-#define SYSCALL_MAP(SYSCALL) case loongarch_sys_##SYSCALL:              \
-  return gdb_sys_##SYSCALL
+#define SYSCALL_MAP(SYSCALL)			\
+  case loongarch_sys_ ## SYSCALL:		\
+    return gdb_sys_ ## SYSCALL
 
-#define UNSUPPORTED_SYSCALL_MAP(SYSCALL) case loongarch_sys_##SYSCALL:  \
-  return gdb_sys_no_syscall
+#define SYSCALL_MAP_RENAME(SYSCALL, GDB_SYSCALL)	\
+  case loongarch_sys_ ## SYSCALL:			\
+    return GDB_SYSCALL;
+
+#define UNSUPPORTED_SYSCALL_MAP(SYSCALL)	\
+  case loongarch_sys_ ## SYSCALL:		\
+    return gdb_sys_no_syscall
 
   switch(syscall_number)
     {
@@ -806,8 +812,7 @@ loongarch_canonicalize_syscall (enum loongarch_syscall syscall_number)
       SYSCALL_MAP (clone);
       SYSCALL_MAP (execve);
 
-    case loongarch_sys_mmap:
-      return gdb_sys_mmap2;
+      SYSCALL_MAP_RENAME (mmap, gdb_old_mmap);
 
       SYSCALL_MAP (fadvise64);
       SYSCALL_MAP (swapon);
@@ -828,7 +833,7 @@ loongarch_canonicalize_syscall (enum loongarch_syscall syscall_number)
       SYSCALL_MAP (move_pages);
       UNSUPPORTED_SYSCALL_MAP (rt_tgsigqueueinfo);
       UNSUPPORTED_SYSCALL_MAP (perf_event_open);
-      UNSUPPORTED_SYSCALL_MAP (accept4);
+      SYSCALL_MAP (accept4);
       UNSUPPORTED_SYSCALL_MAP (recvmmsg);
       SYSCALL_MAP (wait4);
       UNSUPPORTED_SYSCALL_MAP (prlimit64);
@@ -907,7 +912,9 @@ loongarch_canonicalize_syscall (enum loongarch_syscall syscall_number)
     default:
       return gdb_sys_no_syscall;
     }
+
 #undef SYSCALL_MAP
+#undef SYSCALL_MAP_RENAME
 #undef UNSUPPORTED_SYSCALL_MAP
 }
 

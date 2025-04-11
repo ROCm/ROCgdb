@@ -697,14 +697,17 @@ notify_solib_loaded (solib &so)
 /* Notify interpreters and observers that solib SO has been unloaded.
    When STILL_IN_USE is true, the objfile backing SO is still in use,
    this indicates that SO was loaded multiple times, but only mapped
-   in once (the mapping was reused).  */
+   in once (the mapping was reused).
+
+   When SILENT is true, don't announce to the user if any breakpoints are
+   disabled as a result of unloading SO.  */
 
 static void
 notify_solib_unloaded (program_space *pspace, const solib &so,
-		       bool still_in_use)
+		       bool still_in_use, bool silent)
 {
   interps_notify_solib_unloaded (so, still_in_use);
-  gdb::observers::solib_unloaded.notify (pspace, so, still_in_use);
+  gdb::observers::solib_unloaded.notify (pspace, so, still_in_use, silent);
 }
 
 /* See solib.h.  */
@@ -815,7 +818,7 @@ update_solib_list (int from_tty)
 	  /* Notify any observer that the shared object has been
 	     unloaded before we remove it from GDB's tables.  */
 	  notify_solib_unloaded (current_program_space, *gdb_iter,
-				 still_in_use);
+				 still_in_use, false);
 
 	  /* Unless the user loaded it explicitly, free SO's objfile.  */
 	  if (gdb_iter->objfile != nullptr
@@ -1183,14 +1186,12 @@ clear_solib (program_space *pspace)
 {
   const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
 
-  disable_breakpoints_in_shlibs (pspace);
-
   for (solib &so : pspace->so_list)
     {
       bool still_in_use
 	= (so.objfile != nullptr && solib_used (pspace, so));
 
-      notify_solib_unloaded (pspace, so, still_in_use);
+      notify_solib_unloaded (pspace, so, still_in_use, true);
       pspace->remove_target_sections (&so);
     };
 
@@ -1483,49 +1484,38 @@ CORE_ADDR
 gdb_bfd_lookup_symbol_from_symtab (
   bfd *abfd, gdb::function_view<bool (const asymbol *)> match_sym)
 {
-  long storage_needed = bfd_get_symtab_upper_bound (abfd);
   CORE_ADDR symaddr = 0;
+  gdb::array_view<asymbol *> symbol_table
+    = gdb_bfd_canonicalize_symtab (abfd, false);
 
-  if (storage_needed > 0)
+  for (asymbol *sym : symbol_table)
     {
-      unsigned int i;
-
-      gdb::def_vector<asymbol *> storage (storage_needed / sizeof (asymbol *));
-      asymbol **symbol_table = storage.data ();
-      unsigned int number_of_symbols
-	= bfd_canonicalize_symtab (abfd, symbol_table);
-
-      for (i = 0; i < number_of_symbols; i++)
+      if (match_sym (sym))
 	{
-	  asymbol *sym = *symbol_table++;
+	  gdbarch *gdbarch = current_inferior ()->arch ();
+	  symaddr = sym->value;
 
-	  if (match_sym (sym))
+	  /* Some ELF targets fiddle with addresses of symbols they
+	     consider special.  They use minimal symbols to do that
+	     and this is needed for correct breakpoint placement,
+	     but we do not have full data here to build a complete
+	     minimal symbol, so just set the address and let the
+	     targets cope with that.  */
+	  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour
+	      && gdbarch_elf_make_msymbol_special_p (gdbarch))
 	    {
-	      gdbarch *gdbarch = current_inferior ()->arch ();
-	      symaddr = sym->value;
-
-	      /* Some ELF targets fiddle with addresses of symbols they
-		 consider special.  They use minimal symbols to do that
-		 and this is needed for correct breakpoint placement,
-		 but we do not have full data here to build a complete
-		 minimal symbol, so just set the address and let the
-		 targets cope with that.  */
-	      if (bfd_get_flavour (abfd) == bfd_target_elf_flavour
-		  && gdbarch_elf_make_msymbol_special_p (gdbarch))
+	      struct minimal_symbol msym
 		{
-		  struct minimal_symbol msym
-		  {
-		  };
+		};
 
-		  msym.set_value_address (symaddr);
-		  gdbarch_elf_make_msymbol_special (gdbarch, sym, &msym);
-		  symaddr = CORE_ADDR (msym.unrelocated_address ());
-		}
-
-	      /* BFD symbols are section relative.  */
-	      symaddr += sym->section->vma;
-	      break;
+	      msym.set_value_address (symaddr);
+	      gdbarch_elf_make_msymbol_special (gdbarch, sym, &msym);
+	      symaddr = CORE_ADDR (msym.unrelocated_address ());
 	    }
+
+	  /* BFD symbols are section relative.  */
+	  symaddr += sym->section->vma;
+	  break;
 	}
     }
 

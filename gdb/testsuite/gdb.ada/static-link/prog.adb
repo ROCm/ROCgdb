@@ -32,4 +32,6 @@ procedure Prog is
 
 begin
    Intermediate;
+   Do_Nothing (Upper'Address);
+   Do_Nothing (Value'Address);
 end Prog;

@@ -30,9 +30,9 @@
 #include "gdbsupport/iterator-range.h"
 #include "dwarf2/mapped-index.h"
 #include "dwarf2/read.h"
-#include "dwarf2/abbrev-table-cache.h"
 #include "dwarf2/parent-map.h"
 #include "gdbsupport/range-chain.h"
+#include "gdbsupport/string-set.h"
 #include "complaints.h"
 
 #if CXX_STD_THREAD
@@ -65,6 +65,17 @@ enum cooked_index_flag_enum : unsigned char
   IS_SYNTHESIZED = 32,
 };
 DEF_ENUM_FLAGS_TYPE (enum cooked_index_flag_enum, cooked_index_flag);
+
+/* Flags used when requesting the full name of an entry.  */
+enum cooked_index_full_name_enum : unsigned char
+{
+  /* Set when requesting the name of "main".  See the method for the
+     full description.  */
+  FOR_MAIN = 1,
+  /* Set when requesting the linkage name for an Ada entry.  */
+  FOR_ADA_LINKAGE_NAME = 2,
+};
+DEF_ENUM_FLAGS_TYPE (enum cooked_index_full_name_enum, cooked_index_full_name_flag);
 
 /* Type representing either a resolved or deferred cooked_index_entry.  */
 
@@ -140,18 +151,22 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
 
   /* Construct the fully-qualified name of this entry and return a
      pointer to it.  If allocation is needed, it will be done on
-     STORAGE.  FOR_MAIN is true if we are computing the name of the
-     "main" entry -- one marked DW_AT_main_subprogram.  This matters
-     for avoiding name canonicalization and also a related race (if
-     "main" computation is done during finalization).  If
-     FOR_ADA_LINKAGE is true, then Ada-language symbols will have
-     their "linkage-style" name computed.  The default is
-     source-style.  If the language
-     doesn't prescribe a separator, one can be specified using
-     DEFAULT_SEP.  */
+     STORAGE.
+
+     FLAGS affects the result.  If the FOR_MAIN flag is set, we are
+     computing the name of the "main" entry -- one marked
+     DW_AT_main_subprogram.  This matters for avoiding name
+     canonicalization and also a related race (if "main" computation
+     is done during finalization).
+
+     If the FOR_ADA_LINKAGE_NAME flag is set, then Ada-language
+     symbols will have their "linkage-style" name computed.  The
+     default is source-style.
+
+     If the language doesn't prescribe a separator, one can be
+     specified using DEFAULT_SEP.  */
   const char *full_name (struct obstack *storage,
-			 bool for_main = false,
-			 bool for_ada_linkage = false,
+			 cooked_index_full_name_flag name_flags = 0,
 			 const char *default_sep = nullptr) const;
 
   /* Comparison modes for the 'compare' function.  See the function
@@ -256,10 +271,9 @@ private:
   /* A helper method for full_name.  Emits the full scope of this
      object, followed by the separator, to STORAGE.  If this entry has
      a parent, its write_scope method is called first.  See full_name
-     for a description of the FOR_MAIN and FOR_ADA_LINKAGE
-     parameters.  */
+     for a description of the FLAGS parameter.  */
   void write_scope (struct obstack *storage, const char *sep,
-		    bool for_main, bool for_ada_linkage) const;
+		    cooked_index_full_name_flag flags) const;
 
   /* The parent entry.  This is NULL for top-level entries.
      Otherwise, it points to the parent entry, such as a namespace or
@@ -368,97 +382,10 @@ private:
   /* The addrmap.  This maps address ranges to dwarf2_per_cu objects.  */
   addrmap_fixed *m_addrmap = nullptr;
   /* Storage for canonical names.  */
-  std::vector<gdb::unique_xmalloc_ptr<char>> m_names;
+  gdb::string_set m_names;
 };
 
 using cooked_index_shard_up = std::unique_ptr<cooked_index_shard>;
-
-class cutu_reader;
-
-using cutu_reader_up = std::unique_ptr<cutu_reader>;
-
-/* An instance of this is created when scanning DWARF to create a
-   cooked index.  */
-
-class cooked_index_storage
-{
-public:
-
-  cooked_index_storage ();
-  DISABLE_COPY_AND_ASSIGN (cooked_index_storage);
-
-  /* Return the current abbrev table_cache.  */
-  const abbrev_table_cache &get_abbrev_table_cache () const
-  { return m_abbrev_table_cache; }
-
-  /* Return the DIE reader corresponding to PER_CU.  If no such reader
-     has been registered, return NULL.  */
-  cutu_reader *get_reader (dwarf2_per_cu *per_cu);
-
-  /* Preserve READER by storing it in the local hash table.  */
-  cutu_reader *preserve (cutu_reader_up reader);
-
-  /* Add an entry to the index.  The arguments describe the entry; see
-     cooked-index.h.  The new entry is returned.  */
-  cooked_index_entry *add (sect_offset die_offset, enum dwarf_tag tag,
-			   cooked_index_flag flags,
-			   const char *name,
-			   cooked_index_entry_ref parent_entry,
-			   dwarf2_per_cu *per_cu)
-  {
-    return m_shard->add (die_offset, tag, flags, per_cu->lang (),
-			 name, parent_entry, per_cu);
-  }
-
-  /* Install the current addrmap into the shard being constructed,
-     then transfer ownership of the index to the caller.  */
-  cooked_index_shard_up release ()
-  {
-    m_shard->install_addrmap (&m_addrmap);
-    return std::move (m_shard);
-  }
-
-  /* Return the mutable addrmap that is currently being created.  */
-  addrmap_mutable *get_addrmap ()
-  {
-    return &m_addrmap;
-  }
-
-  /* Return the parent_map that is currently being created.  */
-  parent_map *get_parent_map ()
-  {
-    return &m_parent_map;
-  }
-
-  /* Return the parent_map that is currently being created.  Ownership
-     is passed to the caller.  */
-  parent_map release_parent_map ()
-  {
-    return std::move (m_parent_map);
-  }
-
-private:
-
-  /* Hash function for a cutu_reader.  */
-  static hashval_t hash_cutu_reader (const void *a);
-
-  /* Equality function for cutu_reader.  */
-  static int eq_cutu_reader (const void *a, const void *b);
-
-  /* The abbrev table cache used by this indexer.  */
-  abbrev_table_cache m_abbrev_table_cache;
-
-  /* A hash table of cutu_reader objects.  */
-  htab_up m_reader_hash;
-  /* The index shard that is being constructed.  */
-  cooked_index_shard_up m_shard;
-
-  /* Parent map for each CU that is read.  */
-  parent_map m_parent_map;
-
-  /* A writeable addrmap being constructed by this scanner.  */
-  addrmap_mutable m_addrmap;
-};
 
 /* The possible states of the index.  See the explanatory comment
    before cooked_index for more details.  */
@@ -634,8 +561,7 @@ using cooked_index_worker_up = std::unique_ptr<cooked_index_worker>;
 class cooked_index : public dwarf_scanner_base
 {
 public:
-  cooked_index (dwarf2_per_objfile *per_objfile,
-		cooked_index_worker_up &&worker);
+  cooked_index (cooked_index_worker_up &&worker);
   ~cooked_index () override;
 
   DISABLE_COPY_AND_ASSIGN (cooked_index);
@@ -724,8 +650,6 @@ private:
      that the state is CACHE_DONE -- it's important to note that only
      the main thread may change the value of this pointer.  */
   cooked_index_worker_up m_state;
-
-  dwarf2_per_bfd *m_per_bfd;
 };
 
 /* An implementation of quick_symbol_functions for the cooked DWARF

@@ -2442,11 +2442,11 @@ with ctags tool.
 Display the assembler mnemonics for the machine instructions from the
 input file.  This option only disassembles those sections which are 
 expected to contain instructions.  If the optional @var{symbol}
-argument is given, then display the assembler mnemonics starting at
-@var{symbol}.  If @var{symbol} is a function name then disassembly
-will stop at the end of the function, otherwise it will stop when the
-next symbol is encountered.  If there are no matches for @var{symbol}
-then nothing will be displayed.
+argument is given (perhaps multiple times), then display the assembler
+mnemonics starting at (all the) @var{symbol}.  If @var{symbol} is a
+function name then disassembly will stop at the end of the function,
+otherwise it will stop when the next symbol is encountered.  If there
+are no matches for any @var{symbol} then nothing will be displayed.
 
 Note if the @option{--dwarf=follow-links} option is enabled
 then any symbol tables in linked debug info files will be read in and
@@ -2710,6 +2710,23 @@ different arguments, you may not see the disassembly you expect.
 If you disassemble without giving a CPU selection, a default will be
 chosen from information gleaned by BFD from the object files headers,
 but the result again may not be as you expect.
+
+For RISC-V, the following options are supported:
+
+@table @code
+@item numeric
+Print numeric register names, rather than ABI names (e.g., print @code{x2}
+instead of @code{sp}).
+
+@item no-aliases
+Disassemble only into canonical instructions. For example, compressed
+instructions will be represented as such (@code{addi sp,sp,-128} will be
+@code{c.addi16sp sp,-128}).
+
+@item priv-spec=@var{SPEC}
+Print the CSR according to the chosen privilege spec version (e.g.,
+@code{1.10}, @code{1.11}, @code{1.12}).
+@end table
 
 For MIPS, this option controls the printing of instruction mnemonic
 names and register names in disassembled instructions.  Multiple

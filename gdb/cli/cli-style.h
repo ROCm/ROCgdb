@@ -157,13 +157,37 @@ extern bool source_styling;
 /* True if disassembler styling is enabled.  */
 extern bool disassembler_styling;
 
-/* True if styling is enabled.  */
-extern bool cli_styling;
-
 /* Check for environment variables that indicate styling should start as
    disabled.  If any are found then disable styling.  Styling is never
    enabled by this call.  If styling was already disabled then it remains
    disabled after this call.  */
 extern void disable_styling_from_environment ();
+
+/* Equivalent to 'set style enabled off'.  Can be used during GDB's start
+   up if a command line option, or environment variable, indicates that
+   styling should be turned off.  */
+extern void disable_cli_styling ();
+
+/* Return true styled output is currently enabled.  */
+extern bool term_cli_styling ();
+
+/* Allow styling to be temporarily suppressed without changing the value of
+   'set style enabled' user setting.  This is useful in, for example, the
+   Python gdb.execute() call which can produce unstyled output.  */
+struct scoped_disable_styling
+{
+  /* Temporarily suppress styling without changing the value of 'set
+     style enabled' user setting.  */
+  scoped_disable_styling ();
+
+  /* If the constructor started suppressing styling, then styling is
+     resumed after this destructor call.  */
+  ~scoped_disable_styling ();
+
+private:
+
+  /* The value to restore in the destructor.  */
+  bool m_old_value;
+};
 
 #endif /* GDB_CLI_CLI_STYLE_H */

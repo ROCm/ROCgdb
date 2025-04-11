@@ -1787,8 +1787,6 @@ enum bfd_architecture
 #define bfd_mach_amdgcn_gfx908          0x030
 #define bfd_mach_amdgcn_gfx90a          0x03f
 #define bfd_mach_amdgcn_gfx9_4_generic  0x05f
-#define bfd_mach_amdgcn_gfx940          0x040
-#define bfd_mach_amdgcn_gfx941          0x04b
 #define bfd_mach_amdgcn_gfx942          0x04c
 #define bfd_mach_amdgcn_gfx950          0x04f
 #define bfd_mach_amdgcn_gfx10_1_generic 0x052

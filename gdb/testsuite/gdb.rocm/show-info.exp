@@ -41,23 +41,23 @@ gdb_continue_to_breakpoint "bit_extract_kernel"
 #Test0
 # Check that dbgapi is properly configured to display "info agents".
 #
-# In case dbgapi is not properly configured to find the pci.ids file (usually
-# in /usr/share/{hwdata,misc}/pci.ids), it will issue a warning and generate
-# a fallback name in the form "Device vvvv:dddd".
+# In case dbgapi is not properly configured to find the device name database it
+# will issue a warning and generate a fallback name in the form
+# "Device vvvv:dddd" or "Device vvvv:dddd.rr".
 #
-# It is however possible to have a name matching "Device vvvv:dddd" if dbgapi
-# is properly configured, but the device is not registered in the pci.ids file.
-# In such situation, a hard fail would be erroneous.  As a misconfiguration
-# of dbgapi is not really a GDB error, issue an XFAIL if either a warning is
-# issued or a device has a fallback name as both indicate an environment
-# problem.
+# It is however possible to have a name matching "Device vvvv:dddd[.rr]" if
+# dbgapi is properly configured, but the device is not registered in the
+# database.  In such situation, a hard fail would be erroneous.  As a
+# misconfiguration of dbgapi is not really a GDB error, issue an XFAIL if
+# either a warning is issued or a device has a fallback name as both indicate
+# an environment problem.
 set seen_error 0
 gdb_test_multiple "info agents" "dbgapi properly configured" {
   -re "amd-dbgapi: warning:" {
     set seen_error 1
     exp_continue
   }
-  -re "Device \[0-9a-zA-Z\]\{4\}:\[0-9a-zA-Z\]\{4\}" {
+  -re "Device \[0-9a-zA-Z\]\{4\}:\[0-9a-zA-Z\]\{4\}(\\.\[0-9a-zA-Z\]\{2\})?\\s" {
     set seen_error 1
     exp_continue
   }

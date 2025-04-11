@@ -73,7 +73,20 @@ AC_SUBST(docdir)
 AC_SUBST(htmldir)
 AC_SUBST(pdfdir)
 
-AC_CONFIG_FILES([Makefile po/Makefile.in:po/Make-in])
-AC_OUTPUT
+AC_CACHE_CHECK([whether gprof tests can run],
+  [gprof_cv_sys_native], [dnl
+  gprof_cv_sys_native=no
+  if test x"${host}" = x"${target}" \
+     && ${CC-cc} -O2 -fno-omit-frame-pointer -pg -o tst-gmon $srcdir/testsuite/tst-gmon.c; then
+    rm -f gmon.out
+    ./tst-gmon
+    if test -s gmon.out; then
+      gprof_cv_sys_native=yes
+    fi
+    rm -f tst-gmon gmon.out
+  fi])
+AM_CONDITIONAL(NATIVE, test "$gprof_cv_sys_native" = "yes")
+
+AC_OUTPUT(Makefile testsuite/Makefile po/Makefile.in:po/Make-in)
 
 GNU_MAKE_JOBSERVER

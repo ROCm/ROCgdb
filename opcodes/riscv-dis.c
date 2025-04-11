@@ -37,6 +37,9 @@
    disassemble_info::fprintf_func which is for unstyled output.  */
 #define fprintf_func please_use_fprintf_styled_func_instead
 
+/* The earliest privilege spec supported by disassembler. */
+#define PRIV_SPEC_EARLIEST PRIV_SPEC_CLASS_1P10
+
 struct riscv_private_data
 {
   bfd_vma gp;
@@ -139,7 +142,7 @@ parse_riscv_dis_option (const char *option, struct disassemble_info *info)
       const char *name = NULL;
 
       RISCV_GET_PRIV_SPEC_CLASS (value, priv_spec);
-      if (priv_spec == PRIV_SPEC_CLASS_NONE)
+      if (priv_spec < PRIV_SPEC_EARLIEST)
 	opcodes_error_handler (_("unknown privileged spec set by %s=%s"),
 			       option, value);
       else if (pd->default_priv_spec == PRIV_SPEC_CLASS_NONE)
@@ -1051,6 +1054,23 @@ riscv_disassemble_insn (bfd_vma memaddr,
   return insnlen;
 }
 
+/* Decide if we need to parse the architecture string again, also record the
+   string into the current subset list.  */
+
+static void
+riscv_dis_parse_subset (struct disassemble_info *info, const char *arch_new)
+{
+  struct riscv_private_data *pd = info->private_data;
+  const char *arch_subset_list = pd->riscv_rps_dis.subset_list->arch_str;
+  if (arch_subset_list == NULL || strcmp (arch_subset_list, arch_new) != 0)
+    {
+      riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
+      riscv_parse_subset (&pd->riscv_rps_dis, arch_new);
+      riscv_arch_str (pd->xlen, pd->riscv_rps_dis.subset_list,
+		      true/* update */);
+    }
+}
+
 /* If we find the suitable mapping symbol update the STATE.
    Otherwise, do nothing.  */
 
@@ -1073,13 +1093,11 @@ riscv_update_map_state (int n,
   else if (strcmp (name, "$x") == 0)
     {
       *state = MAP_INSN;
-      riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
-      riscv_parse_subset (&pd->riscv_rps_dis, pd->default_arch);
+      riscv_dis_parse_subset (info, pd->default_arch);
     }
   else if (strncmp (name, "$xrv", 4) == 0)
     {
       *state = MAP_INSN;
-      riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
 
       /* ISA mapping string may be numbered, suffixed with '.n'. Do not
 	 consider this as part of the ISA string.  */
@@ -1090,11 +1108,11 @@ riscv_update_map_state (int n,
 	  char *name_substr = xmalloc (suffix_index + 1);
 	  strncpy (name_substr, name, suffix_index);
 	  name_substr[suffix_index] = '\0';
-	  riscv_parse_subset (&pd->riscv_rps_dis, name_substr + 2);
+	  riscv_dis_parse_subset (info, name_substr + 2);
 	  free (name_substr);
 	}
       else
-	riscv_parse_subset (&pd->riscv_rps_dis, name + 2);
+	riscv_dis_parse_subset (info, name + 2);
     }
 }
 
@@ -1409,8 +1427,6 @@ riscv_init_disasm_info (struct disassemble_info *info)
 	    }
 	}
     }
-  riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
-  riscv_parse_subset (&pd->riscv_rps_dis, pd->default_arch);
 
   pd->last_map_symbol = -1;
   pd->last_stop_offset = 0;
@@ -1423,6 +1439,7 @@ riscv_init_disasm_info (struct disassemble_info *info)
   pd->all_ext = false;
 
   info->private_data = pd;
+  riscv_dis_parse_subset (info, pd->default_arch);
   return true;
 }
 
@@ -1594,12 +1611,12 @@ disassembler_options_riscv (void)
       args = XNEWVEC (disasm_option_arg_t, num_args + 1);
 
       args[RISCV_OPTION_ARG_PRIV_SPEC].name = "SPEC";
-      priv_spec_count = PRIV_SPEC_CLASS_DRAFT - PRIV_SPEC_CLASS_NONE - 1;
+      priv_spec_count = PRIV_SPEC_CLASS_DRAFT - PRIV_SPEC_EARLIEST;
       args[RISCV_OPTION_ARG_PRIV_SPEC].values
         = XNEWVEC (const char *, priv_spec_count + 1);
       for (i = 0; i < priv_spec_count; i++)
 	args[RISCV_OPTION_ARG_PRIV_SPEC].values[i]
-          = riscv_priv_specs[i].name;
+	  = riscv_priv_specs[PRIV_SPEC_EARLIEST - PRIV_SPEC_CLASS_NONE - 1 + i].name;
       /* The array we return must be NULL terminated.  */
       args[RISCV_OPTION_ARG_PRIV_SPEC].values[i] = NULL;
 

@@ -3,6 +3,10 @@
 
 *** Changes since GDB 16
 
+* Debugger Adapter Protocol changes
+
+  ** GDB now supports the "completions" request.
+
 * "set style" commands now supports numeric format for basic colors
   from 0 to 255 and #RRGGBB format for TrueColor.
 
@@ -26,6 +30,11 @@
 
 * Linux checkpoint code has been updated to work with multiple inferiors.
 
+* The gcore and gdb-add-index scripts now have a -v or --version
+  option, which prints the version number, and then exits.  As well as
+  a -h or --help option, which prints each options and a brief
+  description.
+
 * New commands
 
 maintenance check psymtabs
@@ -40,12 +49,30 @@ show riscv numeric-register-names
   (e.g 'x1') or their abi names (e.g. 'ra').
   Defaults to 'off', matching the old behaviour (abi names).
 
+* Changed commands
+
+info sharedlibrary
+  On Linux and FreeBSD, the addresses shown in the output of this
+  command are now for the full memory range allocated to the shared
+  library.
+
 * Python API
 
   ** New class gdb.Color for dealing with colors.
 
   ** New constant gdb.PARAM_COLOR represents color type of a
      gdb.Parameter.value.  Parameter's value is gdb.Color instance.
+
+  ** The memory_source argument (the second argument) has been removed
+     from gdb.disassembler.builtin_disassemble.  This argument was
+     never used by GDB, and was added by mistake.  The unused argument
+     was never documented in the GDB manual, so users should not have
+     been using it.
+
+  ** gdb.execute has an additional 'styling' argument.  When True, then
+     output will be styled.  The default for this argument is True
+     when output is going to standard output, and False when output is
+     going to a string.
 
 * Guile API
 
@@ -84,6 +111,10 @@ qXfer:threads:read
 
 * Support for stabs debugging format and the a.out/dbx object format is
   deprecated, and will be removed in GDB 18.
+
+* A new configure option was added, allowing support for the compile
+  subsystem to be disabled at configure time, in the form of
+  --disable-gdb-compile.
 
 *** Changes in GDB 16
 

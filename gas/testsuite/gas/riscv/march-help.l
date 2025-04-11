@@ -140,6 +140,11 @@ All available -march extensions for RISC-V:
 	svnapot                                 1.0
 	svpbmt                                  1.0
 	ssqosid                                 1.0
+	ssnpm                                   1.0
+	smnpm                                   1.0
+	smmpm                                   1.0
+	sspm                                    1.0
+	supm                                    1.0
 	xcvalu                                  1.0
 	xcvbi                                   1.0
 	xcvbitmanip                             1.0
@@ -160,6 +165,7 @@ All available -march extensions for RISC-V:
 	xtheadmempair                           1.0
 	xtheadsync                              1.0
 	xtheadvector                            1.0
+	xtheadvdot                              1.0
 	xtheadzvamo                             1.0
 	xventanacondops                         1.0
 	xsfvcp                                  1.0

@@ -27,9 +27,9 @@
 /* True if styling is enabled.  */
 
 #if defined (__MSDOS__)
-bool cli_styling = false;
+static bool cli_styling = false;
 #else
-bool cli_styling = true;
+static bool cli_styling = true;
 #endif
 
 /* True if source styling is enabled.  Note that this is only
@@ -50,6 +50,25 @@ static const char * const cli_intensities[] = {
   "dim",
   nullptr
 };
+
+/* When true styling is being temporarily suppressed.  */
+
+static bool scoped_disable_styling_p = false;
+
+/* See cli/cli-style.h.  */
+
+scoped_disable_styling::scoped_disable_styling ()
+{
+  m_old_value = scoped_disable_styling_p;
+  scoped_disable_styling_p = true;
+}
+
+/* See cli/cli-style.h.  */
+
+scoped_disable_styling::~scoped_disable_styling ()
+{
+  scoped_disable_styling_p = m_old_value;
+}
 
 /* Return true if GDB's output terminal should support styling, otherwise,
    return false.  This function really checks for things that indicate
@@ -76,6 +95,22 @@ terminal_supports_styling ()
 #endif
 
   return true;
+}
+
+/* See cli/cli-style.h.  */
+
+void
+disable_cli_styling ()
+{
+  cli_styling = false;
+}
+
+/* See cli/cli-style.h.  */
+
+bool
+term_cli_styling ()
+{
+  return cli_styling && !scoped_disable_styling_p;
 }
 
 /* See cli/cli-style.h.  */
@@ -337,7 +372,9 @@ set_style_enabled  (const char *args, int from_tty, struct cmd_list_element *c)
     warning ("The current terminal doesn't support styling.  Styled output "
 	     "might not appear as expected.");
 
-  g_source_cache.clear ();
+  /* It is not necessary to flush the source cache here.  The source cache
+     tracks whether entries are styled or not.  */
+
   gdb::observers::styling_changed.notify ();
 }
 

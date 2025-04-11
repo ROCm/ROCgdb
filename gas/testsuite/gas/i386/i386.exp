@@ -515,9 +515,6 @@ if [gas_32_check] then {
     run_list_test "user_msr-inval"
     run_list_test "msr_imm-inval"
     run_list_test "apx-push2pop2-inval"
-    run_dump_test "avx10_2-rounding"
-    run_dump_test "avx10_2-rounding-intel"
-    run_list_test "avx10_2-rounding-inval"
     run_dump_test "avx10_2-evex-promote"
     run_dump_test "avx10_2-512-media"
     run_dump_test "avx10_2-512-media-intel"
@@ -848,6 +845,9 @@ run_list_test "unspec" ""
 run_dump_test "fp"
 run_dump_test "cond"
 run_dump_test pr30248
+if {![is_aout_format]} then {
+    run_list_test pr32721 ""
+}
 if {[is_elf_format] || [istarget "*-*-vxworks*"]} then {
     run_list_test_stdin "list-1" "-al"
     run_list_test_stdin "list-2" "-al"

@@ -78,7 +78,6 @@
 #include "gdbsupport/search.h"
 #include <algorithm>
 #include <iterator>
-#include <unordered_map>
 #include "async-event.h"
 #include "gdbsupport/selftest.h"
 #include "cli/cli-style.h"
@@ -701,7 +700,7 @@ public: /* data */
 
   /* Contains the regnums of the expedited registers in the last stop
      reply packet.  */
-  std::set<int> last_seen_expedited_registers;
+  gdb::unordered_set<int> last_seen_expedited_registers;
 
 private:
   /* Asynchronous signal handle registered as event loop source for
@@ -711,7 +710,7 @@ private:
   /* Mapping of remote protocol data for each gdbarch.  Usually there
      is only one entry here, though we may see more with stubs that
      support multi-process.  */
-  std::unordered_map<struct gdbarch *, remote_arch_state>
+  gdb::unordered_map<struct gdbarch *, remote_arch_state>
     m_arch_states;
 };
 

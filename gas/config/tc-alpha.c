@@ -888,7 +888,7 @@ tokenize_arguments (char *str,
 
 #ifdef RELOC_OP_P
   /* ??? Wrest control of ! away from the regular expression parser.  */
-  is_end_of_line[(unsigned char) '!'] = 1;
+  lex_type[(unsigned char) '!'] |= LEX_EOS;
 #endif
 
   while (tok < end_tok && *input_line_pointer)
@@ -1029,21 +1029,21 @@ tokenize_arguments (char *str,
   debug_exp (orig_tok, ntok - (end_tok - tok));
 #endif
 #ifdef RELOC_OP_P
-  is_end_of_line[(unsigned char) '!'] = 0;
+  lex_type[(unsigned char) '!'] &= ~LEX_EOS;
 #endif
 
   return ntok - (end_tok - tok);
 
  err:
 #ifdef RELOC_OP_P
-  is_end_of_line[(unsigned char) '!'] = 0;
+  lex_type[(unsigned char) '!'] &= ~LEX_EOS;
 #endif
   input_line_pointer = old_input_line_pointer;
   return TOKENIZE_ERROR;
 
 #ifdef RELOC_OP_P
  err_report:
-  is_end_of_line[(unsigned char) '!'] = 0;
+  lex_type[(unsigned char) '!'] &= ~LEX_EOS;
 #endif
   input_line_pointer = old_input_line_pointer;
   return TOKENIZE_ERROR_REPORT;
@@ -4059,7 +4059,8 @@ alpha_elf_md_finish (void)
 	   function symbol.  This prevents problems with globals.  */
 	cfi_new_fde (symbol_temp_new (S_GET_SEGMENT (p->func_sym),
 				      symbol_get_frag (p->func_sym),
-				      S_GET_VALUE (p->func_sym)));
+				      S_GET_VALUE (p->func_sym)),
+		     false);
 
 	cfi_set_sections ();
 	cfi_set_return_column (p->ra_regno);
@@ -4138,7 +4139,7 @@ s_alpha_usepv (int unused ATTRIBUTE_UNUSED)
 
   sym = symbol_find_or_make (name);
   name_end = restore_line_pointer (name_end);
-  if (! is_end_of_line[(unsigned char) name_end])
+  if (! is_end_of_stmt (name_end))
     input_line_pointer++;
 
   if (name_end != ',')

@@ -2305,6 +2305,9 @@ const struct riscv_opcode riscv_opcodes[] =
 {"hinval.vvma",     0, INSN_CLASS_SVINVAL, "s,t", MATCH_HINVAL_VVMA, MASK_HINVAL_VVMA, match_opcode, 0 },
 {"hinval.gvma",     0, INSN_CLASS_SVINVAL, "s,t", MATCH_HINVAL_GVMA, MASK_HINVAL_GVMA, match_opcode, 0 },
 
+/* Smrnmi instruction */
+{"mnret", 0, INSN_CLASS_SMRNMI, "", MATCH_MNRET, MASK_MNRET, match_opcode, 0 },
+
 /* Hypervisor instructions.  */
 {"hfence.vvma", 0, INSN_CLASS_H, "",       MATCH_HFENCE_VVMA, MASK_HFENCE_VVMA|MASK_RS1|MASK_RS2, match_opcode, INSN_ALIAS },
 {"hfence.vvma", 0, INSN_CLASS_H, "s",      MATCH_HFENCE_VVMA, MASK_HFENCE_VVMA|MASK_RS2, match_opcode, INSN_ALIAS },
@@ -3458,6 +3461,15 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vrgather.vx",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,sVm", MATCH_VRGATHERVX, MASK_VRGATHERVX, match_opcode, 0},
 {"th.vrgather.vi",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VjVm", MATCH_VRGATHERVI, MASK_VRGATHERVI, match_opcode, 0},
 {"th.vcompress.vm",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,Vs", MATCH_VCOMPRESSVM, MASK_VCOMPRESSVM, match_opcode, 0},
+
+/* Vendor-specific (T-Head) XTheadVdot instructions.  */
+{"th.vmaqa.vv",        0, INSN_CLASS_XTHEADVDOT,  "Vd,Vs,VtVm",  MATCH_TH_VMAQA_VV, MASK_TH_VMAQA_VV, match_opcode, 0},
+{"th.vmaqau.vv",       0, INSN_CLASS_XTHEADVDOT,  "Vd,Vs,VtVm",  MATCH_TH_VMAQAU_VV, MASK_TH_VMAQAU_VV, match_opcode, 0},
+{"th.vmaqasu.vv",      0, INSN_CLASS_XTHEADVDOT,  "Vd,Vs,VtVm",  MATCH_TH_VMAQASU_VV, MASK_TH_VMAQASU_VV, match_opcode, 0},
+{"th.vmaqa.vx",        0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQA_VX, MASK_TH_VMAQA_VX, match_opcode, 0},
+{"th.vmaqau.vx",       0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAU_VX, MASK_TH_VMAQAU_VX, match_opcode, 0},
+{"th.vmaqasu.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQASU_VX, MASK_TH_VMAQASU_VX, match_opcode, 0},
+{"th.vmaqaus.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAUS_VX, MASK_TH_VMAQAUS_VX, match_opcode, 0},
 
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },

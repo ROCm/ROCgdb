@@ -56,10 +56,17 @@
 /* Definition of a user function.  */
 struct internal_function
 {
+  internal_function (std::string name, internal_function_fn_noside handler,
+		     void *cookie)
+    : name (std::move (name)),
+      handler (handler),
+      cookie (cookie)
+  {}
+
   /* The name of the function.  It is a bit odd to have this in the
      function itself -- the user might use a differently-named
      convenience variable to hold the function.  */
-  char *name;
+  std::string name;
 
   /* The handler.  */
   internal_function_fn_noside handler;
@@ -67,6 +74,8 @@ struct internal_function
   /* User data for the handler.  */
   void *cookie;
 };
+
+using internal_function_up = std::unique_ptr<internal_function>;
 
 /* Returns true if the ranges defined by [offset1, offset1+len1) and
    [offset2, offset2+len2) overlap.  */
@@ -1901,6 +1910,19 @@ struct internalvar
     : name (std::move (name))
   {}
 
+  internalvar (internalvar &&other)
+    : name (std::move(other.name)),
+      kind (other.kind),
+      u (other.u)
+  {
+    other.kind = INTERNALVAR_VOID;
+  }
+
+  ~internalvar ()
+  {
+    clear_internalvar (this);
+  }
+
   std::string name;
 
   /* We support various different kinds of content of an internal variable.
@@ -2313,13 +2335,13 @@ set_internalvar_string (struct internalvar *var, const char *string)
 }
 
 static void
-set_internalvar_function (struct internalvar *var, struct internal_function *f)
+set_internalvar_function (internalvar *var, internal_function_up f)
 {
   /* Clean up old contents.  */
   clear_internalvar (var);
 
   var->kind = INTERNALVAR_FUNCTION;
-  var->u.fn.function = f;
+  var->u.fn.function = f.release ();
   var->u.fn.canonical = 1;
   /* Variables installed here are always the canonical version.  */
 }
@@ -2338,6 +2360,10 @@ clear_internalvar (struct internalvar *var)
       xfree (var->u.string);
       break;
 
+    case INTERNALVAR_FUNCTION:
+      delete var->u.fn.function;
+      break;
+
     default:
       break;
     }
@@ -2352,18 +2378,6 @@ internalvar_name (const struct internalvar *var)
   return var->name.c_str ();
 }
 
-static struct internal_function *
-create_internal_function (const char *name,
-			  internal_function_fn_noside handler, void *cookie)
-{
-  struct internal_function *ifn = new (struct internal_function);
-
-  ifn->name = xstrdup (name);
-  ifn->handler = handler;
-  ifn->cookie = cookie;
-  return ifn;
-}
-
 const char *
 value_internal_function_name (struct value *val)
 {
@@ -2374,7 +2388,7 @@ value_internal_function_name (struct value *val)
   result = get_internalvar_function (VALUE_INTERNALVAR (val), &ifn);
   gdb_assert (result);
 
-  return ifn->name;
+  return ifn->name.c_str ();
 }
 
 struct value *
@@ -2409,11 +2423,9 @@ static struct cmd_list_element *
 do_add_internal_function (const char *name, const char *doc,
 			  internal_function_fn_noside handler, void *cookie)
 {
-  struct internal_function *ifn;
-  struct internalvar *var = lookup_internalvar (name);
-
-  ifn = create_internal_function (name, handler, cookie);
-  set_internalvar_function (var, ifn);
+  set_internalvar_function (lookup_internalvar (name),
+			    std::make_unique<internal_function> (name, handler,
+								 cookie));
 
   return add_cmd (name, no_class, function_command, doc, &functionlist);
 }

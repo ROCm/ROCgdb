@@ -220,17 +220,6 @@ static FILE *list_file;
 
 static char *data_buffer;
 
-/* Prototypes.  */
-static void listing_message (const char *, const char *);
-static file_info_type *file_info (const char *);
-static void new_frag (void);
-static void listing_page (list_info_type *);
-static unsigned int calc_hex (list_info_type *);
-static void print_lines (list_info_type *, unsigned int, const char *,
-			 unsigned int);
-static void list_symbol_table (void);
-static void listing_listing (char *);
-
 static void
 listing_message (const char *name, const char *message)
 {
@@ -362,8 +351,7 @@ listing_newline (char *ps)
 	  int seen_slash = 0;
 
 	  for (copy = input_line_pointer;
-	       *copy && (seen_quote
-			 || is_end_of_line [(unsigned char) *copy] != 1);
+	       seen_quote ? *copy : !is_end_of_line (*copy);
 	       copy++)
 	    {
 	      if (seen_slash)
@@ -441,6 +429,51 @@ listing_newline (char *ps)
 	new_i->debugging = true;
     }
 #endif
+}
+
+/* Set listing context back to where it was when input was parsed, to allow
+   associating late code/data emission to segments with their origin.  */
+
+struct list_info_struct *listing_override_tail (struct list_info_struct *info)
+{
+  struct list_info_struct *prev = listing_tail;
+  const fragS *frag;
+
+  if (!info)
+    return NULL;
+
+  listing_tail = info;
+
+  /* The first frag created by listing_newline() is still associated with the
+     earlier line.  For the adjustment done below this property doesn't hold,
+     though.  */
+  frag = info->frag;
+  if (frag->line != info)
+    frag = frag->fr_next;
+
+  /* Check whether there's any other output data already for this line.  Replace
+     info->frag only if there's none.  This is to cover for contributions to
+     multiple sections from a single line not being properly represented in the
+     listing, at the time of writing.  Prefer the listing to show any "ordinary"
+     code/data contributions over any .eh_frame ones.  (This way multiple .cfi_*
+     on a single line will also have all their contributions listed, rather
+     than just those from the last such directive.)  */
+  for (; frag; frag = frag->fr_next)
+    if (frag->line != info
+	|| (frag->fr_type != rs_dummy
+	    && (frag->fr_type != rs_fill
+		|| frag->fr_fix
+		|| (frag->fr_var && frag->fr_offset))))
+      break;
+
+  if (!frag || frag->line != info)
+    {
+      new_frag ();
+      info->frag = frag_now;
+      new_frag ();
+    }
+
+  return prev;
 }
 
 /* Attach all current frags to the previous line instead of the
@@ -1580,7 +1613,7 @@ listing_title (int depth)
     {
       if (quoted
 	  ? *input_line_pointer == '\"'
-	  : is_end_of_line[(unsigned char) *input_line_pointer])
+	  : is_end_of_stmt (*input_line_pointer))
 	{
 	  if (listing)
 	    {
@@ -1623,60 +1656,6 @@ listing_source_file (const char *file)
 {
   if (listing)
     listing_tail->hll_file = file_info (file);
-}
-
-#else
-
-/* Dummy functions for when compiled without listing enabled.  */
-
-void
-listing_list (int on)
-{
-  s_ignore (0);
-}
-
-void
-listing_eject (int ignore)
-{
-  s_ignore (0);
-}
-
-void
-listing_psize (int ignore)
-{
-  s_ignore (0);
-}
-
-void
-listing_nopage (int ignore)
-{
-  s_ignore (0);
-}
-
-void
-listing_title (int depth)
-{
-  s_ignore (0);
-}
-
-void
-listing_file (const char *name)
-{
-}
-
-void
-listing_newline (char *name)
-{
-}
-
-void
-listing_source_line (unsigned int n)
-{
-}
-
-void
-listing_source_file (const char *n)
-{
 }
 
 #endif

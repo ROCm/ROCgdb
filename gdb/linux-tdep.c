@@ -44,9 +44,9 @@
 #include "solib-svr4.h"
 #include "memtag.h"
 #include "cli/cli-style.h"
+#include "gdbsupport/unordered_map.h"
 
 #include <ctype.h>
-#include <unordered_map>
 
 /* This enum represents the values that the user can choose when
    informing the Linux kernel about which memory mappings will be
@@ -854,7 +854,7 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
     {
       xsnprintf (filename, sizeof filename, "/proc/%ld/cmdline", pid);
       gdb_byte *buffer;
-      ssize_t len = target_fileio_read_alloc (NULL, filename, &buffer);
+      LONGEST len = target_fileio_read_alloc (nullptr, filename, &buffer);
 
       if (len > 0)
 	{
@@ -1189,7 +1189,7 @@ linux_read_core_file_mappings
     warning (_("malformed note - filename area is too big"));
 
   const bfd_build_id *orig_build_id = cbfd->build_id;
-  std::unordered_map<ULONGEST, const bfd_build_id *> vma_map;
+  gdb::unordered_map<ULONGEST, const bfd_build_id *> vma_map;
 
   /* Search for solib build-ids in the core file.  Each time one is found,
      map the start vma of the corresponding elf header to the build-id.  */
@@ -2212,17 +2212,17 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
   /* The number of fields read by `sscanf'.  */
   int n_fields = 0;
 
-  gdb_assert (p != NULL);
+  gdb_assert (p != nullptr);
 
   /* Obtaining PID and filename.  */
   pid = inferior_ptid.pid ();
   xsnprintf (filename, sizeof (filename), "/proc/%d/cmdline", (int) pid);
   /* The full name of the program which generated the corefile.  */
-  gdb_byte *buf = NULL;
-  size_t buf_len = target_fileio_read_alloc (NULL, filename, &buf);
+  gdb_byte *buf = nullptr;
+  LONGEST buf_len = target_fileio_read_alloc (nullptr, filename, &buf);
   gdb::unique_xmalloc_ptr<char> fname ((char *)buf);
 
-  if (buf_len < 1 || fname.get ()[0] == '\0')
+  if (buf_len < 1 || fname.get () == nullptr || fname.get ()[0] == '\0')
     {
       /* No program name was read, so we won't be able to retrieve more
 	 information about the process.  */
