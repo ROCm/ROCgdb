@@ -6290,8 +6290,8 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 		    continue;
 
 		  /* In the pre-LTO-plugin pass we must not mistakenly
-		     include this archive member if an earlier BFD
-		     defined this symbol.  */
+		     include this archive member if an earlier shared
+		     library defined this symbol.  */
 		  struct elf_link_hash_table *htab = elf_hash_table (info);
 		  if (htab->first_hash)
 		    {
@@ -6299,7 +6299,9 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 			  = ((struct elf_link_first_hash_entry *)
 			     bfd_hash_lookup (htab->first_hash, symdef->name,
 					      false, false));
-		      if (e && e->abfd != abfd)
+		      if (e
+			  && (e->abfd->flags & DYNAMIC) != 0
+			  && e->abfd != abfd)
 			continue;
 		    }
 		}
@@ -14408,7 +14410,8 @@ elf_gc_sweep (bfd *abfd, struct bfd_link_info *info)
 	  if (o->flags & SEC_GROUP)
 	    {
 	      asection *first = elf_next_in_group (o);
-	      o->gc_mark = first->gc_mark;
+	      if (first != NULL)
+		o->gc_mark = first->gc_mark;
 	    }
 
 	  if (o->gc_mark)

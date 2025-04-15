@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -89,6 +89,10 @@ if { [build_executable "${testfile}.exp" $binfile \
 set dwo_file [standard_output_file ${testfile}.dwo]
 if { [gdb_compile_shlib $dwo_asm_file $dwo_file nodebug] != "" } {
     return
+}
+
+if { [is_remote host] } {
+    gdb_remote_download host $dwo_file
 }
 
 clean_restart ${testfile}
