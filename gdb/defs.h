@@ -117,6 +117,7 @@ enum language
     language_objc,		/* Objective-C */
     language_rust,		/* Rust */
     language_cplus,		/* C++ */
+    language_hip,		/* HIP (Heterogeneous Interface for Portability) */
     language_d,			/* D */
     language_go,		/* Go */
     language_fortran,		/* Fortran */
@@ -142,7 +143,7 @@ static_assert (nr_languages <= (1 << LANGUAGE_BITS));
 static inline bool
 is_cplus_dialect (enum language lang)
 {
-  return lang == language_cplus;
+  return lang == language_cplus || lang == language_hip;
 }
 
 /* If LANG is one of C++ dialects, return "language_cplus".

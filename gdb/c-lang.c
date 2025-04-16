@@ -1052,6 +1052,10 @@ public:
 
 protected:
 
+  cplus_language (enum language dialect)
+    : language_defn (dialect)
+  { gdb_assert (is_cplus_dialect (dialect)); }
+
   /* See language.h.  */
 
   symbol_name_matcher_ftype *get_symbol_name_matcher_inner
@@ -1190,3 +1194,28 @@ public:
 
 /* The single instance of the minimal language class.  */
 static minimal_language minimal_language_defn;
+
+/* A class for the HIP (Heterogeneous Interface for Portability) language.
+   HIP is an extension of C++ and is intended for parallel programming
+   on different platforms.  */
+
+class hip_language : public cplus_language
+{
+public:
+  hip_language ()
+    : cplus_language (language_hip)
+  { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "hip"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "HIP"; }
+};
+
+/* The single instance of the HIP language class.  */
+static hip_language hip_language_defn;

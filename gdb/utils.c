@@ -2826,6 +2826,7 @@ strncmp_iw_with_mode_tests ()
     };
 
   user_def_ops_test (language_cplus);
+  user_def_ops_test (language_hip);
 
   /* Skip "[abi:cxx11]" tags in the symbol name if the lookup name
      doesn't include them.  These are not language-specific in
