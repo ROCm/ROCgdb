@@ -79,6 +79,7 @@ proc c_like { lang } {
 	- asm
 	- objective-c
 	- opencl
+	- hip
 	- minimal {set res 1}
     }
     return $res

@@ -18076,6 +18076,9 @@ dwarf_lang_to_enum_language (unsigned int lang)
     case DW_LANG_OpenCL:
       language = language_opencl;
       break;
+    case DW_LANG_HIP:
+      language = language_hip;
+      break;
     case DW_LANG_Cobol74:
     case DW_LANG_Cobol85:
     default:

@@ -100,6 +100,7 @@ run_tests ()
     };
 
   check_cpp_dialect (language_cplus);
+  check_cpp_dialect (language_hip);
 
 #undef CHECK
 #undef CHECK_INCOMPL

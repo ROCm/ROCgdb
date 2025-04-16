@@ -19858,8 +19858,8 @@ Show if descriptive types are ignored by @value{GDBN}.
 @cindex HIP
 
 @value{GDBN} supports the
-@url{https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_kernel_language.md,
-HIP Programming Language}.
+HIP@footnote{@url{https://rocm.docs.amd.com/projects/HIP/en/docs-develop/what_is_hip.html,
+Heterogeneous Interface for Portability}} programming language.
 
 @c TODO: Add any language specific differences.
 
