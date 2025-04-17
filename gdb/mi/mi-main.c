@@ -2324,7 +2324,7 @@ timestamp (struct mi_timestamp *tv)
   using namespace std::chrono;
 
   tv->wallclock = steady_clock::now ();
-  run_time_clock::now (tv->utime, tv->stime);
+  get_run_time (tv->utime, tv->stime);
 }
 
 static void
