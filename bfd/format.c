@@ -331,6 +331,25 @@ print_and_clear_messages (struct per_xvec_messages *list,
 	free (iter);
       iter = next;
     }
+
+  /* Don't retain a pointer to free'd memory.  */
+  list->next = NULL;
+}
+
+/* Discard all messages associated with TARG in LIST.  Unlike
+   print_and_clear_messages, PER_XVEC_NO_TARGET is not valid for TARG.  */
+
+static void
+clear_messages (struct per_xvec_messages *list,
+		const bfd_target *targ)
+{
+  struct per_xvec_messages *iter;
+
+  for (iter = list; iter != NULL; iter = iter->next)
+    {
+      if (iter->targ == targ)
+	clear_warnmsg (&iter->messages);
+    }
 }
 
 /* This a copy of lto_section defined in GCC (lto-streamer.h).  */
@@ -451,7 +470,18 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
   /* Avoid clashes with bfd_cache_close_all running in another
      thread.  */
   if (!bfd_cache_set_uncloseable (abfd, true, &old_in_format_matches))
-    return false;
+    {
+      free (matching_vector);
+      return false;
+    }
+
+  /* Locking is required here in order to manage _bfd_section_id.  */
+  if (!bfd_lock ())
+    {
+      bfd_cache_set_uncloseable (abfd, old_in_format_matches, NULL);
+      free (matching_vector);
+      return false;
+    }
 
   /* Presume the answer is yes.  */
   abfd->format = format;
@@ -460,10 +490,6 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
   /* Don't report errors on recursive calls checking the first element
      of an archive.  */
   orig_messages = _bfd_set_error_handler_caching (&messages);
-
-  /* Locking is required here in order to manage _bfd_section_id.  */
-  if (!bfd_lock ())
-    return false;
 
   preserve_match.marker = NULL;
   if (!bfd_preserve_save (abfd, &preserve, NULL))
@@ -544,6 +570,12 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 
       /* Change BFD's target temporarily.  */
       abfd->xvec = *target;
+
+      /* It is possible that targets appear multiple times in
+	 bfd_target_vector.  If this is the case, then we want to avoid
+	 accumulating duplicate messages for a target in MESSAGES, so
+	 discard any previous messages associated with this target.  */
+      clear_messages (&messages, abfd->xvec);
 
       if (bfd_seek (abfd, 0, SEEK_SET) != 0)
 	goto err_ret;
@@ -754,7 +786,8 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
  out:
   if (preserve_match.marker != NULL)
     bfd_preserve_finish (abfd, &preserve_match);
-  bfd_preserve_restore (abfd, &preserve);
+  if (preserve.marker != NULL)
+    bfd_preserve_restore (abfd, &preserve);
   _bfd_restore_error_handler_caching (orig_messages);
   print_and_clear_messages (&messages, PER_XVEC_NO_TARGET);
   bfd_cache_set_uncloseable (abfd, old_in_format_matches, NULL);

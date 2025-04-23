@@ -30,13 +30,16 @@
 #
 # This removes the bulk of the changes which are most likely to be correct.
 
+# pyright: strict
+
 import argparse
 import locale
 import os
 import os.path
+import pathlib
 import subprocess
 import sys
-from typing import List, Optional
+from typing import Iterable
 
 
 def get_update_list():
@@ -66,24 +69,20 @@ def get_update_list():
         .split("\0")
     )
 
-    def include_file(filename):
-        (dirname, basename) = os.path.split(filename)
-        dirbasename = os.path.basename(dirname)
-        return not (
-            basename in EXCLUDE_ALL_LIST
-            or dirbasename in EXCLUDE_ALL_LIST
-            or dirname in EXCLUDE_LIST
-            or dirname in NOT_FSF_LIST
-            or dirname in BY_HAND
-            or filename in EXCLUDE_LIST
-            or filename in NOT_FSF_LIST
-            or filename in BY_HAND
-        )
+    full_exclude_list = EXCLUDE_LIST + BY_HAND
+
+    def include_file(filename: str):
+        path = pathlib.Path(filename)
+        for pattern in full_exclude_list:
+            if path.full_match(pattern):
+                return False
+
+        return True
 
     return filter(include_file, result)
 
 
-def update_files(update_list):
+def update_files(update_list: Iterable[str]):
     """Update the copyright header of the files in the given list.
 
     We use gnulib's update-copyright script for that.
@@ -128,7 +127,7 @@ def update_files(update_list):
             print("*** " + line)
 
 
-def may_have_copyright_notice(filename):
+def may_have_copyright_notice(filename: str):
     """Check that the given file does not seem to have a copyright notice.
 
     The filename is relative to the root directory.
@@ -166,7 +165,7 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: List[str]) -> Optional[int]:
+def main(argv: list[str]) -> int | None:
     """The main subprogram."""
     parser = get_parser()
     _ = parser.parse_args(argv)
@@ -210,8 +209,14 @@ def main(argv: List[str]) -> Optional[int]:
 # generated, non-FSF, or otherwise special (e.g. license text,
 # or test cases which must be sensitive to line numbering).
 #
-# Filenames are relative to the root directory.
+# Entries are treated as glob patterns.
 EXCLUDE_LIST = (
+    "**/aclocal.m4",
+    "**/configure",
+    "**/COPYING.LIB",
+    "**/COPYING",
+    "**/fdl.texi",
+    "**/gpl.texi",
     "gdb/copying.c",
     "gdb/nat/glibc_thread_db.h",
     "gdb/CONTRIBUTE",
@@ -219,45 +224,11 @@ EXCLUDE_LIST = (
     "gdbsupport/unordered_dense.h",
     "gnulib/doc/gendocs_template",
     "gnulib/doc/gendocs_template_min",
-    "gnulib/import",
+    "gnulib/import/**",
     "gnulib/config.in",
     "gnulib/Makefile.in",
-)
-
-# Files which should not be modified, either because they are
-# generated, non-FSF, or otherwise special (e.g. license text,
-# or test cases which must be sensitive to line numbering).
-#
-# Matches any file or directory name anywhere.  Use with caution.
-# This is mostly for files that can be found in multiple directories.
-# Eg: We want all files named COPYING to be left untouched.
-
-EXCLUDE_ALL_LIST = (
-    "COPYING",
-    "COPYING.LIB",
-    "configure",
-    "fdl.texi",
-    "gpl.texi",
-    "aclocal.m4",
-)
-
-# The list of files to update by hand.
-BY_HAND = (
-    # Nothing at the moment :-).
-)
-
-# Files containing multiple copyright headers.  This script is only
-# fixing the first one it finds, so we need to finish the update
-# by hand.
-MULTIPLE_COPYRIGHT_HEADERS = (
-    "gdb/doc/gdb.texinfo",
-    "gdb/doc/refcard.tex",
-    "gdb/syscalls/update-netbsd.sh",
-)
-
-# The list of file which have a copyright, but not held by the FSF.
-# Filenames are relative to the root directory.
-NOT_FSF_LIST = (
+    "sim/Makefile.in",
+    # The files below have a copyright, but not held by the FSF.
     "gdb/exc_request.defs",
     "gdb/gdbtk",
     "gdb/testsuite/gdb.gdbtk/",
@@ -294,8 +265,26 @@ NOT_FSF_LIST = (
     "sim/mips/sim-main.c",
     "sim/moxie/moxie-gdb.dts",
     # Not a single file in sim/ppc/ appears to be copyright FSF :-(.
-    "sim/ppc",
+    "sim/ppc/**",
     "sim/testsuite/mips/mips32-dsp2.s",
+)
+
+# The list of files to update by hand.
+#
+# Entries are treated as glob patterns.
+BY_HAND: tuple[str, ...] = (
+    # Nothing at the moment :-).
+)
+
+# Files containing multiple copyright headers.  This script is only
+# fixing the first one it finds, so we need to finish the update
+# by hand.
+#
+# Entries are treated as glob patterns.
+MULTIPLE_COPYRIGHT_HEADERS = (
+    "gdb/doc/gdb.texinfo",
+    "gdb/doc/refcard.tex",
+    "gdb/syscalls/update-netbsd.sh",
 )
 
 if __name__ == "__main__":

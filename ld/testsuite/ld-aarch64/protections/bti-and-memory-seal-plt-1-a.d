@@ -1,8 +1,9 @@
-#name: No '-z force-bti' with feature properties (BTI) forces the generation of BTI PLT (shared)
+#name: No '-z force-bti' with '-z memory-seal' with feature properties (BTI) forces the generation of BTI PLT (shared)
 #source: bti-plt-1.s
+#source: bti-plt-2.s
 #target: [check_shared_lib_support]
 #as: -mabi=lp64 -defsym __property_bti__=1
-#ld: -shared -T bti-plt.ld -L./tmpdir -lbti-plt-so
+#ld: -shared -z memory-seal -T bti-plt.ld -L./tmpdir -lbti-plt-so
 #objdump: -dr -j .plt
 
 [^:]*: *file format elf64-.*aarch64
@@ -29,4 +30,16 @@ Disassembly of section \.plt:
 .*:	90000090 	adrp	x16, 28000 <_GLOBAL_OFFSET_TABLE_>
 .*:	f9401611 	ldr	x17, \[x16, #40\]
 .*:	9100a210 	add	x16, x16, #0x28
+.*:	d61f0220 	br	x17
+
+[0-9]+ <.*>:
+.*:	90000090 	adrp	x16, 28000 <_GLOBAL_OFFSET_TABLE_>
+.*:	f9401a11 	ldr	x17, \[x16, #48\]
+.*:	9100c210 	add	x16, x16, #0x30
+.*:	d61f0220 	br	x17
+
+[0-9]+ <.*>:
+.*:	90000090 	adrp	x16, 28000 <_GLOBAL_OFFSET_TABLE_>
+.*:	f9401e11 	ldr	x17, \[x16, #56\]
+.*:	9100e210 	add	x16, x16, #0x38
 .*:	d61f0220 	br	x17
