@@ -301,7 +301,7 @@ struct dwo_sections
   struct dwarf2_section_info str;
   struct dwarf2_section_info str_offsets;
   /* In the case of a virtual DWO file, these two are unused.  */
-  struct dwarf2_section_info info;
+  std::vector<dwarf2_section_info> infos;
   std::vector<dwarf2_section_info> types;
 };
 
@@ -9174,7 +9174,7 @@ dwarf2_locate_dwo_sections (struct objfile *objfile, bfd *abfd,
   if (names->abbrev_dwo.matches (sectp->name))
     dw_sect = &dwo_sections->abbrev;
   else if (names->info_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->info;
+    dw_sect = &dwo_sections->infos.emplace_back (dwarf2_section_info {});
   else if (names->line_dwo.matches (sectp->name))
     dw_sect = &dwo_sections->line;
   else if (names->loc_dwo.matches (sectp->name))
@@ -9192,16 +9192,14 @@ dwarf2_locate_dwo_sections (struct objfile *objfile, bfd *abfd,
   else if (names->str_offsets_dwo.matches (sectp->name))
     dw_sect = &dwo_sections->str_offsets;
   else if (names->types_dwo.matches (sectp->name))
-    {
-      struct dwarf2_section_info type_section;
-
-      memset (&type_section, 0, sizeof (type_section));
-      dwo_sections->types.push_back (type_section);
-      dw_sect = &dwo_sections->types.back ();
-    }
+    dw_sect = &dwo_sections->types.emplace_back (dwarf2_section_info {});
 
   if (dw_sect != nullptr)
     {
+      /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+      gdb_assert (!dw_sect->readin);
+
       dw_sect->s.section = sectp;
       dw_sect->size = bfd_section_size (sectp);
       dw_sect->read (objfile);
@@ -9235,8 +9233,9 @@ open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
     dwarf2_locate_dwo_sections (per_objfile->objfile, dwo_file->dbfd.get (),
 				sec, &dwo_file->sections);
 
-  create_cus_hash_table (per_objfile, cu, *dwo_file, dwo_file->sections.info,
-			 dwo_file->cus);
+  for (dwarf2_section_info &section : dwo_file->sections.infos)
+    create_cus_hash_table (per_objfile, cu, *dwo_file, section,
+			   dwo_file->cus);
 
   if (cu->header.version < 5)
     {
@@ -9244,11 +9243,9 @@ open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
 				     dwo_file->sections.types, dwo_file->tus);
     }
   else
-    {
-      create_debug_type_hash_table (per_objfile, dwo_file.get (),
-				    &dwo_file->sections.info, dwo_file->tus,
-				    rcuh_kind::COMPILE);
-    }
+    for (dwarf2_section_info &section : dwo_file->sections.infos)
+      create_debug_type_hash_table (per_objfile, dwo_file.get (), &section,
+				    dwo_file->tus, rcuh_kind::COMPILE);
 
   dwarf_read_debug_printf ("DWO file found: %s", dwo_name);
 
@@ -9284,6 +9281,10 @@ dwarf2_locate_common_dwp_sections (struct objfile *objfile, bfd *abfd,
 
   if (dw_sect != nullptr)
     {
+      /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+      gdb_assert (!dw_sect->readin);
+
       dw_sect->s.section = sectp;
       dw_sect->size = bfd_section_size (sectp);
       dw_sect->read (objfile);
@@ -9329,6 +9330,10 @@ dwarf2_locate_v2_dwp_sections (struct objfile *objfile, bfd *abfd,
 
   if (dw_sect != nullptr)
     {
+      /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+      gdb_assert (!dw_sect->readin);
+
       dw_sect->s.section = sectp;
       dw_sect->size = bfd_section_size (sectp);
       dw_sect->read (objfile);
@@ -9372,6 +9377,10 @@ dwarf2_locate_v5_dwp_sections (struct objfile *objfile, bfd *abfd,
 
   if (dw_sect != nullptr)
     {
+      /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+      gdb_assert (!dw_sect->readin);
+
       dw_sect->s.section = sectp;
       dw_sect->size = bfd_section_size (sectp);
       dw_sect->read (objfile);
