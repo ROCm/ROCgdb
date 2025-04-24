@@ -1284,7 +1284,7 @@ dwarf2_has_info (struct objfile *objfile,
 	 BFD, to avoid races.  */
       try
 	{
-	  dwarf2_read_dwz_file (per_objfile);
+	  dwz_file::read_dwz_file (per_objfile);
 	}
       catch (const gdb_exception_error &err)
 	{
@@ -3898,11 +3898,13 @@ cutu_reader::skip_one_attribute (dwarf_form form, const gdb_byte *info_ptr)
     case DW_FORM_data4:
     case DW_FORM_ref4:
     case DW_FORM_strx4:
+    case DW_FORM_ref_sup4:
       return info_ptr + 4;
 
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sig8:
+    case DW_FORM_ref_sup8:
       return info_ptr + 8;
 
     case DW_FORM_data16:
@@ -3915,6 +3917,7 @@ cutu_reader::skip_one_attribute (dwarf_form form, const gdb_byte *info_ptr)
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_GNU_strp_alt:
+    case DW_FORM_strp_sup:
       return info_ptr + m_cu->header.offset_size;
 
     case DW_FORM_exprloc:
@@ -5025,7 +5028,7 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
   if (attr != NULL)
     {
       sect_offset sect_off = attr->get_ref_die_offset ();
-      bool is_dwz = (attr->form == DW_FORM_GNU_ref_alt || cu->per_cu->is_dwz);
+      bool is_dwz = attr->form_is_alt () || cu->per_cu->is_dwz;
       dwarf2_per_objfile *per_objfile = cu->per_objfile;
       dwarf2_per_cu *per_cu
 	= dwarf2_find_containing_comp_unit (sect_off, is_dwz,
@@ -14922,10 +14925,12 @@ cutu_reader::read_attribute_value (attribute *attr, unsigned form,
       info_ptr += 2;
       break;
     case DW_FORM_data4:
+    case DW_FORM_ref_sup4:
       attr->set_unsigned (read_4_bytes (m_abfd, info_ptr));
       info_ptr += 4;
       break;
     case DW_FORM_data8:
+    case DW_FORM_ref_sup8:
       attr->set_unsigned (read_8_bytes (m_abfd, info_ptr));
       info_ptr += 8;
       break;
@@ -14977,6 +14982,7 @@ cutu_reader::read_attribute_value (attribute *attr, unsigned form,
 	}
       [[fallthrough]];
     case DW_FORM_GNU_strp_alt:
+    case DW_FORM_strp_sup:
       {
 	dwz_file *dwz = per_objfile->per_bfd->get_dwz_file (true);
 	LONGEST str_offset
@@ -17259,6 +17265,7 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
     case DW_FORM_strx:
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_strp_alt:
+    case DW_FORM_strp_sup:
       /* The string is already allocated on the objfile obstack, point
 	 directly to it.  */
       *bytes = (const gdb_byte *) attr->as_string ();
@@ -17465,7 +17472,7 @@ lookup_die_type (struct die_info *die, const struct attribute *attr,
 
   /* First see if we have it cached.  */
 
-  if (attr->form == DW_FORM_GNU_ref_alt)
+  if (attr->form_is_alt ())
     {
       sect_offset sect_off = attr->get_ref_die_offset ();
       dwarf2_per_cu *per_cu
@@ -18253,15 +18260,14 @@ follow_die_ref (struct die_info *src_die, const struct attribute *attr,
   struct dwarf2_cu *cu = *ref_cu;
   struct die_info *die;
 
-  if (attr->form != DW_FORM_GNU_ref_alt && src_die->sect_off == sect_off)
+  if (!attr->form_is_alt () && src_die->sect_off == sect_off)
     {
       /* Self-reference, we're done.  */
       return src_die;
     }
 
   die = follow_die_offset (sect_off,
-			   (attr->form == DW_FORM_GNU_ref_alt
-			    || cu->per_cu->is_dwz),
+			   attr->form_is_alt () || cu->per_cu->is_dwz,
 			   ref_cu);
   if (!die)
     error (_(DWARF_ERROR_PREFIX
@@ -18472,6 +18478,7 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
     case DW_FORM_strx:
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_strp_alt:
+    case DW_FORM_strp_sup:
       /* The string is already allocated on the objfile obstack, point
 	 directly to it.  */
       {

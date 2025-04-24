@@ -40,6 +40,14 @@
   namespace into which the library was loaded, if more than one namespace
   is active.
 
+* New built-in convenience variables $_active_linker_namespaces and
+  $_current_linker_namespace.  These show the number of active linkage
+  namespaces, and the namespace to which the current location belongs to.
+  In systems that don't support linkage namespaces, these always return 1
+  and [[0]] respectively.
+
+ * Add record full support for rv64gc architectures
+
 * New commands
 
 maintenance check psymtabs
@@ -53,6 +61,11 @@ show riscv numeric-register-names
   Controls whether GDB refers to risc-v registers by their numeric names
   (e.g 'x1') or their abi names (e.g. 'ra').
   Defaults to 'off', matching the old behaviour (abi names).
+
+info linker-namespaces
+info linker-namespaces [[N]]
+  Print information about the given linker namespace (identified as N),
+  or about all the namespaces if no argument is given.
 
 * Changed commands
 
