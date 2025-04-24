@@ -176,8 +176,8 @@ proc_with_prefix scalefunc_checks {} {
     gdb_test "p \$_mx_get_scaled_float(&e2m1n)" "Error.*Python.*mx_scalar must be of ROCm microscaling scalar type"
     gdb_test "p \$_mx_get_scaled_float(e2m1n, 0)" "Error.*Python.*usage.*_mx_get_scaled_float\\\(mx_scalar, mx_scale >= 1\\\)"
     gdb_test "p \$_mx_get_scaled_float(e2m1n, -15)" "Error.*Python.*usage.*_mx_get_scaled_float\\\(mx_scalar, mx_scale >= 1\\\)"
-    gdb_test "p \$_mx_get_scaled_float(e2m1n, e8m0, 5)" "Error.*Python.*_MxGetScaledFloat.*takes.*2 to 3.*arguments.*4.*given"
-    gdb_test "p \$_mx_get_scaled_float()" "Error.*Python.*_MxGetScaledFloat.*missing 1 required positional argument.*'mxvar'"
+    gdb_test "p \$_mx_get_scaled_float(e2m1n, e8m0, 5)" "Error.*Python.*(_MxGetScaledFloat\.)?invoke\\\(\\\).*takes.*2 to 3.*arguments.*4.*given"
+    gdb_test "p \$_mx_get_scaled_float()" "Error.*Python.*(_MxGetScaledFloat\.)?invoke\\\(\\\).*missing 1 required positional argument.*'mxvar'"
 }
 
 proc do_test {} {
