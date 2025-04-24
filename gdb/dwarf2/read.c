@@ -7929,32 +7929,65 @@ create_cus_hash_table (dwarf2_cu *cu, dwo_file &dwo_file,
   end_ptr = info_ptr + section.size;
   while (info_ptr < end_ptr)
     {
-      struct dwarf2_per_cu_data per_cu;
       struct dwo_unit read_unit {};
       struct dwo_unit *dwo_unit;
       void **slot;
       sect_offset sect_off = (sect_offset) (info_ptr - section.buffer);
 
-      per_cu.per_bfd = per_bfd;
-      per_cu.is_debug_types = 0;
-      per_cu.sect_off = sect_offset (info_ptr - section.buffer);
-      per_cu.section = &section;
+      if (cu->header.version < 5)
+	{
+	  struct dwarf2_per_cu_data per_cu;
+	  per_cu.per_bfd = per_bfd;
+	  per_cu.is_debug_types = 0;
+	  per_cu.sect_off = sect_offset (info_ptr - section.buffer);
+	  per_cu.section = &section;
 
-      cutu_reader reader (&per_cu, per_objfile, cu, &dwo_file);
-      if (!reader.dummy_p)
-	create_dwo_cu_reader (&reader, reader.info_ptr, reader.comp_unit_die,
-			      &dwo_file, &read_unit);
-      info_ptr += per_cu.length ();
+	  cutu_reader reader (&per_cu, per_objfile, cu, &dwo_file);
+	  if (!reader.dummy_p)
+	    create_dwo_cu_reader (&reader, reader.info_ptr,
+				  reader.comp_unit_die, &dwo_file, &read_unit);
+	  info_ptr += per_cu.length ();
 
-      /* If the unit could not be parsed, skip it.  */
-      if (read_unit.dwo_file == NULL)
-	continue;
+	  /* If the unit could not be parsed, skip it.  */
+	  if (read_unit.dwo_file == NULL)
+	    continue;
 
-      /* DWARF 5 .debug_info.dwo sections may contain some type units.  Skip
-	 everything that is not a compile unit.  */
-      if (const auto ut = reader.cu->header.unit_type;
-	  ut != DW_UT_compile && ut != DW_UT_split_compile)
-	continue;
+	  /* DWARF 5 .debug_info.dwo sections may contain some type units.  Skip
+	     everything that is not a compile unit.  */
+	  if (const auto ut = reader.cu->header.unit_type;
+	      ut != DW_UT_compile && ut != DW_UT_split_compile)
+	    continue;
+	}
+      else
+	{
+	  comp_unit_head header;
+	  dwarf2_section_info *abbrev_section = &dwo_file.sections.abbrev;
+	  const gdb_byte *info_ptr_post_header
+	    = read_and_check_comp_unit_head (cu->per_objfile, &header,
+					     &section, abbrev_section,
+					     info_ptr, rcuh_kind::COMPILE);
+
+	  unsigned int length = header.get_length_with_initial ();
+	  info_ptr += length;
+
+	  /* Skip dummy units.  */
+	  if (info_ptr_post_header >= info_ptr
+	      || peek_abbrev_code (section.get_bfd_owner (),
+				   info_ptr_post_header)
+		   == 0)
+	    continue;
+
+	  /* DWARF 5 .debug_info.dwo sections may contain some type units.  Skip
+	     everything that is not a compile unit.  */
+	  if (header.unit_type != DW_UT_split_compile)
+	    continue;
+
+	  read_unit.dwo_file = &dwo_file;
+	  read_unit.signature = header.signature;
+	  read_unit.section = &section;
+	  read_unit.sect_off = sect_off;
+	  read_unit.length = cu->per_cu->length ();
+	}
 
       if (dwo_file.cus == nullptr)
 	dwo_file.cus = allocate_dwo_unit_table ();
