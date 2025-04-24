@@ -1047,6 +1047,17 @@ value::allocate_optimized_out (struct type *type)
   return retval;
 }
 
+/* See value.h.  */
+
+struct value *
+value::allocate_unavailable (struct type *type)
+{
+  struct value *retval = value::allocate (type);
+
+  retval->mark_bytes_unavailable (0, type->length ());
+  return retval;
+}
+
 /* Accessor methods.  */
 
 gdb::array_view<gdb_byte>
