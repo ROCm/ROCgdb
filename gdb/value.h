@@ -183,6 +183,9 @@ public:
   /* Allocate NOT_LVAL value for type TYPE being OPTIMIZED_OUT.  */
   static struct value *allocate_optimized_out (struct type *type);
 
+  /* Allocate NOT_LVAL value for type TYPE being UNAVAILABLE.  */
+  static struct value *allocate_unavailable (struct type *type);
+
   /* Create a value of type TYPE that is zero, and return it.  */
   static struct value *zero (struct type *type, enum lval_type lv);
 
