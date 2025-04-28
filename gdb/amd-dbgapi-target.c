@@ -618,9 +618,9 @@ flatid_to_id (uint32_t coord_id[3], size_t flatid, const size_t sizes[3])
   coord_id[0] = flatid;
 }
 
-/* Object used to collect information about a work-item.  Used to
-   compute work-item coordinates taking into account partial
-   work-groups.  */
+/* Object used to collect information about all the work-items
+   handled by a wave.  Used to compute work-item coordinates
+   taking into account partial work-groups.  */
 
 struct work_item_info
 {
@@ -666,11 +666,11 @@ struct work_item_info
   }
 };
 
-/* Populate WI, a work_item_info object describing lane LANE of wave
-   TP.  Returns true on success, false if info is not available.  */
+/* Populate WI, a work_item_info object.
+   Returns true on success, false if info is not available.  */
 
 static bool
-make_work_item_info (thread_info *tp, int lane, work_item_info *wi)
+make_work_item_info (thread_info *tp, work_item_info *wi)
 {
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, wi->dispatch_id)
       != AMD_DBGAPI_STATUS_SUCCESS)
@@ -708,7 +708,7 @@ lane_workgroup_pos_string (thread_info *tp, int lane)
 {
   work_item_info wi;
 
-  if (make_work_item_info (tp, lane, &wi))
+  if (make_work_item_info (tp, &wi))
     {
       size_t partial_work_group_sizes[3];
 
