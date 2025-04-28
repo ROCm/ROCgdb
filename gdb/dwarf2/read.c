@@ -624,15 +624,21 @@ struct variant_field
   /* A variant can contain other variant parts.  */
   std::vector<variant_part_builder> variant_parts;
 
-  /* If we see a DW_TAG_variant, then this will be set if this is the
-     default branch.  */
-  bool default_branch = false;
   /* If we see a DW_AT_discr_value, then this will be the discriminant
-     value.  */
-  ULONGEST discriminant_value = 0;
+     value.  Just the attribute is stored here, because we have to
+     defer deciding whether the value is signed or unsigned until the
+     end.  */
+  const attribute *discriminant_attr = nullptr;
   /* If we see a DW_AT_discr_list, then this is a pointer to the list
      data.  */
   struct dwarf_block *discr_list_data = nullptr;
+
+  /* If both DW_AT_discr_value and DW_AT_discr_list are absent, then
+     this is the default branch.  */
+  bool is_default () const
+  {
+    return discriminant_attr == nullptr && discr_list_data == nullptr;
+  }
 };
 
 /* This represents a DW_TAG_variant_part.  */
@@ -9931,7 +9937,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	 so if we see it, we can assume that a constant form is really
 	 a constant and not a section offset.  */
       if (attr->form_is_constant ())
-	*offset = attr->constant_value (0);
+	*offset = attr->unsigned_constant ().value_or (0);
       else if (attr->form_is_section_offset ())
 	dwarf2_complex_location_expr_complaint ();
       else if (attr->form_is_block ()
@@ -9949,7 +9955,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
       attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
       if (attr != nullptr)
 	{
-	  *offset = attr->constant_value (0);
+	  *offset = attr->unsigned_constant ().value_or (0);
 	  return 1;
 	}
     }
@@ -9971,7 +9977,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
     {
       if (attr->form_is_constant ())
 	{
-	  LONGEST offset = attr->constant_value (0);
+	  LONGEST offset = attr->unsigned_constant ().value_or (0);
 
 	  /* Work around this GCC 11 bug, where it would erroneously use -1
 	     data member locations, instead of 0:
@@ -10020,7 +10026,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
     {
       attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
       if (attr != nullptr)
-	field->set_loc_bitpos (attr->constant_value (0));
+	field->set_loc_bitpos (attr->unsigned_constant ().value_or (0));
     }
 }
 
@@ -10089,7 +10095,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       /* Get bit size of field (zero if none).  */
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
       if (attr != nullptr)
-	fp->set_bitsize (attr->constant_value (0));
+	fp->set_bitsize (attr->unsigned_constant ().value_or (0));
       else
 	fp->set_bitsize (0);
 
@@ -10098,6 +10104,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
       attr = dwarf2_attr (die, DW_AT_bit_offset, cu);
       if (attr != nullptr && attr->form_is_constant ())
 	{
+	  ULONGEST bit_offset = attr->unsigned_constant ().value_or (0);
 	  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
 	    {
 	      /* For big endian bits, the DW_AT_bit_offset gives the
@@ -10105,7 +10112,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		 anonymous object to the MSB of the field.  We don't
 		 have to do anything special since we don't need to
 		 know the size of the anonymous object.  */
-	      fp->set_loc_bitpos (fp->loc_bitpos () + attr->constant_value (0));
+	      fp->set_loc_bitpos (fp->loc_bitpos () + bit_offset);
 	    }
 	  else
 	    {
@@ -10116,7 +10123,6 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		 the field itself.  The result is the bit offset of
 		 the LSB of the field.  */
 	      int anonymous_size;
-	      int bit_offset = attr->constant_value (0);
 
 	      attr = dwarf2_attr (die, DW_AT_byte_size, cu);
 	      if (attr != nullptr && attr->form_is_constant ())
@@ -10124,7 +10130,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		  /* The size of the anonymous object containing
 		     the bit field is explicit, so use the
 		     indicated size (in bytes).  */
-		  anonymous_size = attr->constant_value (0);
+		  anonymous_size = attr->unsigned_constant ().value_or (0);
 		}
 	      else
 		{
@@ -10277,13 +10283,19 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
 {
   std::vector<discriminant_range> ranges;
 
-  if (variant.default_branch)
+  if (variant.is_default ())
     return {};
 
   if (variant.discr_list_data == nullptr)
     {
-      discriminant_range r
-	= {variant.discriminant_value, variant.discriminant_value};
+      ULONGEST value;
+
+      if (is_unsigned)
+	value = variant.discriminant_attr->unsigned_constant ().value_or (0);
+      else
+	value = variant.discriminant_attr->signed_constant ().value_or (0);
+
+      discriminant_range r = { value, value };
       ranges.push_back (r);
     }
   else
@@ -11097,7 +11109,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   if (attr != nullptr)
     {
       if (attr->form_is_constant ())
-	type->set_length (attr->constant_value (0));
+	type->set_length (attr->unsigned_constant ().value_or (0));
       else
 	{
 	  struct dynamic_prop prop;
@@ -11242,12 +11254,14 @@ handle_variant (struct die_info *die, struct type *type,
     {
       discr = dwarf2_attr (die, DW_AT_discr_list, cu);
       if (discr == nullptr || discr->as_block ()->size == 0)
-	variant.default_branch = true;
+	{
+	  /* Nothing to do here -- default branch.  */
+	}
       else
 	variant.discr_list_data = discr->as_block ();
     }
   else
-    variant.discriminant_value = discr->constant_value (0);
+    variant.discriminant_attr = discr;
 
   for (die_info *variant_child : die->children ())
     handle_struct_member_die (variant_child, type, fi, template_args, cu);
@@ -11573,25 +11587,30 @@ die_byte_order (die_info *die, dwarf2_cu *cu, enum bfd_endian *byte_order)
 
 /* Assuming DIE is an enumeration type, and TYPE is its associated
    type, update TYPE using some information only available in DIE's
-   children.  In particular, the fields are computed.  */
+   children.  In particular, the fields are computed.  If IS_UNSIGNED
+   is set, the enumeration type's sign is already known (a true value
+   means unsigned), and so examining the constants to determine the
+   sign isn't needed; when this is unset, the enumerator constants are
+   read as signed values.  */
 
 static void
 update_enumeration_type_from_children (struct die_info *die,
 				       struct type *type,
-				       struct dwarf2_cu *cu)
+				       struct dwarf2_cu *cu,
+				       std::optional<bool> is_unsigned)
 {
-  int unsigned_enum = 1;
-  int flag_enum = 1;
+  /* This is used to check whether the enum is signed or unsigned; for
+     simplicity, it is always correct regardless of whether
+     IS_UNSIGNED is set.  */
+  bool unsigned_enum = is_unsigned.value_or (true);
+  bool flag_enum = true;
 
-  auto_obstack obstack;
   std::vector<struct field> fields;
 
   for (die_info *child_die : die->children ())
     {
       struct attribute *attr;
       LONGEST value;
-      const gdb_byte *bytes;
-      struct dwarf2_locexpr_baton *baton;
       const char *name;
 
       if (child_die->tag != DW_TAG_enumerator)
@@ -11605,18 +11624,25 @@ update_enumeration_type_from_children (struct die_info *die,
       if (name == NULL)
 	name = "<anonymous enumerator>";
 
-      dwarf2_const_value_attr (attr, type, name, &obstack, cu,
-			       &value, &bytes, &baton);
-      if (value < 0)
-	{
-	  unsigned_enum = 0;
-	  flag_enum = 0;
-	}
+      /* Can't check UNSIGNED_ENUM here because that is
+	 optimistic.  */
+      if (is_unsigned.has_value () && *is_unsigned)
+	value = attr->unsigned_constant ().value_or (0);
       else
 	{
-	  if (count_one_bits_ll (value) >= 2)
-	    flag_enum = 0;
+	  /* Read as signed, either because we don't know the sign or
+	     because we know it is definitely signed.  */
+	  value = attr->signed_constant ().value_or (0);
+
+	  if (value < 0)
+	    {
+	      unsigned_enum = false;
+	      flag_enum = false;
+	    }
 	}
+
+      if (flag_enum && count_one_bits_ll (value) >= 2)
+	flag_enum = false;
 
       struct field &field = fields.emplace_back ();
       field.set_name (dwarf2_physname (name, child_die, cu));
@@ -11626,13 +11652,10 @@ update_enumeration_type_from_children (struct die_info *die,
   if (!fields.empty ())
     type->copy_fields (fields);
   else
-    flag_enum = 0;
+    flag_enum = false;
 
-  if (unsigned_enum)
-    type->set_is_unsigned (true);
-
-  if (flag_enum)
-    type->set_is_flag_enum (true);
+  type->set_is_unsigned (unsigned_enum);
+  type->set_is_flag_enum (flag_enum);
 }
 
 /* Given a DW_AT_enumeration_type die, set its type.  We do not
@@ -11676,7 +11699,7 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    type->set_length (attr->constant_value (0));
+    type->set_length (attr->unsigned_constant ().value_or (0));
   else
     type->set_length (0);
 
@@ -11690,6 +11713,11 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
   if (die_is_declaration (die, cu))
     type->set_is_stub (true);
 
+  /* If the underlying type is known, and is unsigned, then we'll
+     assume the enumerator constants are unsigned.  Otherwise we have
+     to assume they are signed.  */
+  std::optional<bool> is_unsigned;
+
   /* If this type has an underlying type that is not a stub, then we
      may use its attributes.  We always use the "unsigned" attribute
      in this situation, because ordinarily we guess whether the type
@@ -11702,7 +11730,8 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
       struct type *underlying_type = type->target_type ();
       underlying_type = check_typedef (underlying_type);
 
-      type->set_is_unsigned (underlying_type->is_unsigned ());
+      is_unsigned = underlying_type->is_unsigned ();
+      type->set_is_unsigned (*is_unsigned);
 
       if (type->length () == 0)
 	type->set_length (underlying_type->length ());
@@ -11722,7 +11751,7 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
      Note that, as usual, this must come after set_die_type to avoid
      infinite recursion when trying to compute the names of the
      enumerators.  */
-  update_enumeration_type_from_children (die, type, cu);
+  update_enumeration_type_from_children (die, type, cu, is_unsigned);
 
   return type;
 }
@@ -12072,7 +12101,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_bit_stride, cu);
   if (attr != NULL)
-    bit_stride = attr->constant_value (0);
+    bit_stride = attr->unsigned_constant ().value_or (0);
 
   /* Irix 6.2 native cc creates array types without children for
      arrays with unspecified length.  */
@@ -12296,7 +12325,7 @@ mark_common_block_symbol_computed (struct symbol *sym,
 
   if (member_loc->form_is_constant ())
     {
-      offset = member_loc->constant_value (0);
+      offset = member_loc->unsigned_constant ().value_or (0);
       baton->size += 1 /* DW_OP_addr */ + cu->header.addr_size;
     }
   else
@@ -12611,7 +12640,8 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr_byte_size = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr_byte_size)
-    byte_size = attr_byte_size->constant_value (cu_header->addr_size);
+    byte_size = (attr_byte_size->unsigned_constant ()
+		 .value_or (cu_header->addr_size));
   else
     byte_size = cu_header->addr_size;
 
@@ -12723,7 +12753,8 @@ read_tag_reference_type (struct die_info *die, struct dwarf2_cu *cu,
   type = lookup_reference_type (target_type, refcode);
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    type->set_length (attr->constant_value (cu_header->addr_size));
+    type->set_length (attr->unsigned_constant ()
+		      .value_or (cu_header->addr_size));
   else
     type->set_length (cu_header->addr_size);
 
@@ -12887,9 +12918,7 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
 	len = dwarf2_attr (die, DW_AT_byte_size, cu);
       if (len != nullptr && len->form_is_constant ())
 	{
-	  /* Pass 0 as the default as we know this attribute is constant
-	     and the default value will not be returned.  */
-	  LONGEST sz = len->constant_value (0);
+	  LONGEST sz = len->unsigned_constant ().value_or (0);
 	  prop_type = objfile_int_type (objfile, sz, true);
 	}
       else
@@ -12908,15 +12937,14 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
   else if (attr != nullptr)
     {
       /* This DW_AT_string_length just contains the length with no
-	 indirection.  There's no need to create a dynamic property in this
-	 case.  Pass 0 for the default value as we know it will not be
-	 returned in this case.  */
-      length = attr->constant_value (0);
+	 indirection.  There's no need to create a dynamic property in
+	 this case.  */
+      length = attr->unsigned_constant ().value_or (0);
     }
   else if ((attr = dwarf2_attr (die, DW_AT_byte_size, cu)) != nullptr)
     {
       /* We don't currently support non-constant byte sizes for strings.  */
-      length = attr->constant_value (1);
+      length = attr->unsigned_constant ().value_or (1);
     }
   else
     {
@@ -13225,10 +13253,10 @@ get_mpz (struct dwarf2_cu *cu, gdb_mpz *value, struct attribute *attr)
 		   ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE,
 		   true);
     }
-  else if (attr->form_is_unsigned ())
+  else if (attr->form_is_strictly_unsigned ())
     *value = gdb_mpz (attr->as_unsigned ());
   else
-    *value = gdb_mpz (attr->constant_value (1));
+    *value = gdb_mpz (attr->signed_constant ().value_or (1));
 }
 
 /* Assuming DIE is a rational DW_TAG_constant, read the DIE's
@@ -13407,14 +13435,14 @@ finish_fixed_point_type (struct type *type, const char *suffix,
     }
   else if (attr->name == DW_AT_binary_scale)
     {
-      LONGEST scale_exp = attr->constant_value (0);
+      LONGEST scale_exp = attr->signed_constant ().value_or (0);
       gdb_mpz &num_or_denom = scale_exp > 0 ? scale_num : scale_denom;
 
       num_or_denom <<= std::abs (scale_exp);
     }
   else if (attr->name == DW_AT_decimal_scale)
     {
-      LONGEST scale_exp = attr->constant_value (0);
+      LONGEST scale_exp = attr->signed_constant ().value_or (0);
       gdb_mpz &num_or_denom = scale_exp > 0 ? scale_num : scale_denom;
 
       num_or_denom = gdb_mpz::pow (10, std::abs (scale_exp));
@@ -13626,7 +13654,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
     }
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    bits = attr->constant_value (0) * TARGET_CHAR_BIT;
+    bits = attr->unsigned_constant ().value_or (0) * TARGET_CHAR_BIT;
   name = dwarf2_full_name (nullptr, die, cu);
   if (!name)
     complaint (_("DW_AT_name missing from DW_TAG_base_type"));
@@ -13777,22 +13805,28 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
       if (attr != nullptr && attr->form_is_constant ())
 	{
-	  unsigned real_bit_size = attr->constant_value (0);
+	  unsigned real_bit_size = attr->unsigned_constant ().value_or (0);
 	  if (real_bit_size >= 0 && real_bit_size <= 8 * type->length ())
 	    {
 	      attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
 	      /* Only use the attributes if they make sense together.  */
-	      if (attr == nullptr
-		  || (attr->form_is_constant ()
-		      && attr->constant_value (0) >= 0
-		      && (attr->constant_value (0) + real_bit_size
-			  <= 8 * type->length ())))
+	      std::optional<ULONGEST> bit_offset;
+	      if (attr == nullptr)
+		bit_offset = 0;
+	      else if (attr->form_is_constant ())
+		{
+		  bit_offset = attr->unsigned_constant ();
+		  if (bit_offset.has_value ()
+		      && *bit_offset + real_bit_size > 8 * type->length ())
+		    bit_offset.reset ();
+		}
+	      if (bit_offset.has_value ())
 		{
 		  TYPE_MAIN_TYPE (type)->type_specific.int_stuff.bit_size
 		    = real_bit_size;
 		  if (attr != nullptr)
 		    TYPE_MAIN_TYPE (type)->type_specific.int_stuff.bit_offset
-		      = attr->constant_value (0);
+		      = *bit_offset;
 		}
 	    }
 	}
@@ -14105,8 +14139,13 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   LONGEST bias = 0;
   struct attribute *bias_attr = dwarf2_attr (die, DW_AT_GNU_bias, cu);
-  if (bias_attr != nullptr && bias_attr->form_is_constant ())
-    bias = bias_attr->constant_value (0);
+  if (bias_attr != nullptr)
+    {
+      if (base_type->is_unsigned ())
+	bias = (LONGEST) bias_attr->unsigned_constant ().value_or (0);
+      else
+	bias = bias_attr->signed_constant ().value_or (0);
+    }
 
   /* Normally, the DWARF producers are expected to use a signed
      constant form (Eg. DW_FORM_sdata) to express negative bounds.
@@ -14193,7 +14232,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
-    range_type->set_length (attr->constant_value (0));
+    range_type->set_length (attr->unsigned_constant ().value_or (0));
 
   maybe_set_alignment (cu, die, range_type);
 
@@ -17180,13 +17219,10 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
    list was that this is unspecified.  We choose to always zero-extend
    because that is the interpretation long in use by GCC.  */
 
-static gdb_byte *
-dwarf2_const_value_data (const struct attribute *attr, struct obstack *obstack,
-			 struct dwarf2_cu *cu, LONGEST *value, int bits)
+static void
+dwarf2_const_value_data (const struct attribute *attr, LONGEST *value,
+			 int bits)
 {
-  struct objfile *objfile = cu->per_objfile->objfile;
-  enum bfd_endian byte_order = bfd_big_endian (objfile->obfd.get ()) ?
-				BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE;
   LONGEST l = attr->constant_value (0);
 
   if (bits < sizeof (*value) * 8)
@@ -17194,16 +17230,8 @@ dwarf2_const_value_data (const struct attribute *attr, struct obstack *obstack,
       l &= ((LONGEST) 1 << bits) - 1;
       *value = l;
     }
-  else if (bits == sizeof (*value) * 8)
-    *value = l;
   else
-    {
-      gdb_byte *bytes = (gdb_byte *) obstack_alloc (obstack, bits / 8);
-      store_unsigned_integer (bytes, bits / 8, byte_order, l);
-      return bytes;
-    }
-
-  return NULL;
+    *value = l;
 }
 
 /* Read a constant value from an attribute.  Either set *VALUE, or if
@@ -17289,16 +17317,16 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
 	 converted to host endianness, so we just need to sign- or
 	 zero-extend it as appropriate.  */
     case DW_FORM_data1:
-      *bytes = dwarf2_const_value_data (attr, obstack, cu, value, 8);
+      dwarf2_const_value_data (attr, value, 8);
       break;
     case DW_FORM_data2:
-      *bytes = dwarf2_const_value_data (attr, obstack, cu, value, 16);
+      dwarf2_const_value_data (attr, value, 16);
       break;
     case DW_FORM_data4:
-      *bytes = dwarf2_const_value_data (attr, obstack, cu, value, 32);
+      dwarf2_const_value_data (attr, value, 32);
       break;
     case DW_FORM_data8:
-      *bytes = dwarf2_const_value_data (attr, obstack, cu, value, 64);
+      dwarf2_const_value_data (attr, value, 64);
       break;
 
     case DW_FORM_sdata:
@@ -18244,8 +18272,7 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
 
   *ref_cu = target_cu;
 
-  auto it = target_cu->die_hash.find (sect_off);
-  return it != target_cu->die_hash.end () ? *it : nullptr;
+  return target_cu->find_die (sect_off);
 }
 
 /* Follow reference attribute ATTR of SRC_DIE.
@@ -18507,31 +18534,23 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
 	 zero-extend it as appropriate.  */
     case DW_FORM_data1:
       type = die_type (die, cu);
-      result = dwarf2_const_value_data (attr, obstack, cu, &value, 8);
-      if (result == NULL)
-	result = write_constant_as_bytes (obstack, byte_order,
-					  type, value, len);
+      dwarf2_const_value_data (attr, &value, 8);
+      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
       break;
     case DW_FORM_data2:
       type = die_type (die, cu);
-      result = dwarf2_const_value_data (attr, obstack, cu, &value, 16);
-      if (result == NULL)
-	result = write_constant_as_bytes (obstack, byte_order,
-					  type, value, len);
+      dwarf2_const_value_data (attr, &value, 16);
+      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
       break;
     case DW_FORM_data4:
       type = die_type (die, cu);
-      result = dwarf2_const_value_data (attr, obstack, cu, &value, 32);
-      if (result == NULL)
-	result = write_constant_as_bytes (obstack, byte_order,
-					  type, value, len);
+      dwarf2_const_value_data (attr, &value, 32);
+      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
       break;
     case DW_FORM_data8:
       type = die_type (die, cu);
-      result = dwarf2_const_value_data (attr, obstack, cu, &value, 64);
-      if (result == NULL)
-	result = write_constant_as_bytes (obstack, byte_order,
-					  type, value, len);
+      dwarf2_const_value_data (attr, &value, 64);
+      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
       break;
 
     case DW_FORM_sdata:
@@ -18621,8 +18640,8 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
   gdb_assert (sig_cu != NULL);
   gdb_assert (to_underlying (sig_type->type_offset_in_section) != 0);
 
-  if (auto die_it = sig_cu->die_hash.find (sig_type->type_offset_in_section);
-      die_it != sig_cu->die_hash.end ())
+  if (die_info *die = sig_cu->find_die (sig_type->type_offset_in_section);
+      die != nullptr)
     {
       /* For .gdb_index version 7 keep track of included TUs.
 	 http://sourceware.org/bugzilla/show_bug.cgi?id=15021.  */
@@ -18631,7 +18650,7 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
 	(*ref_cu)->per_cu->imported_symtabs.push_back (sig_cu->per_cu);
 
       *ref_cu = sig_cu;
-      return *die_it;
+      return die;
     }
 
   return NULL;
