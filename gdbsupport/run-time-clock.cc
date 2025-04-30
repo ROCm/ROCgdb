@@ -38,13 +38,29 @@ timeval_to_microseconds (struct timeval *tv)
 #endif
 
 void
-run_time_clock::now (user_cpu_time_clock::time_point &user,
-		     system_cpu_time_clock::time_point &system) noexcept
+get_run_time (user_cpu_time_clock::time_point &user,
+	      system_cpu_time_clock::time_point &system,
+	      run_time_scope scope) noexcept
 {
 #ifdef HAVE_GETRUSAGE
   struct rusage rusage;
+  int who;
 
-  getrusage (RUSAGE_SELF, &rusage);
+  switch (scope)
+    {
+    case run_time_scope::thread:
+      who = RUSAGE_THREAD;
+      break;
+
+    case run_time_scope::process:
+      who = RUSAGE_SELF;
+      break;
+
+    default:
+      gdb_assert_not_reached ("invalid run_time_scope value");
+    }
+
+  getrusage (who, &rusage);
 
   microseconds utime = timeval_to_microseconds (&rusage.ru_utime);
   microseconds stime = timeval_to_microseconds (&rusage.ru_stime);

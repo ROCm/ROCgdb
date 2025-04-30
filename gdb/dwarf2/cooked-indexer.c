@@ -90,7 +90,7 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   /* Lookups for type unit references are always in the CU, and
      cross-CU references will crash.  */
   if (reader->cu ()->per_cu->is_dwz == is_dwz
-      && reader->cu ()->header.offset_in_cu_p (sect_off))
+      && reader->cu ()->header.offset_in_unit_p (sect_off))
     return reader;
 
   dwarf2_per_objfile *per_objfile = reader->cu ()->per_objfile;
@@ -110,20 +110,20 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   cutu_reader *result = m_index_storage->get_reader (per_cu);
   if (result == nullptr)
     {
-      cutu_reader new_reader (*per_cu, *per_objfile, nullptr, nullptr, false,
-			      language_minimal,
-			      &m_index_storage->get_abbrev_table_cache ());
+      const abbrev_table_cache &abbrev_table_cache
+	= m_index_storage->get_abbrev_table_cache ();
+      auto new_reader
+	= std::make_unique<cutu_reader> (*per_cu, *per_objfile, nullptr,
+					 nullptr, false, language_minimal,
+					 &abbrev_table_cache);
 
-      if (new_reader.is_dummy () || new_reader.top_level_die () == nullptr
-	  || !new_reader.top_level_die ()->has_children)
+      if (new_reader->is_dummy ())
 	return nullptr;
 
-      auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
-      result = m_index_storage->preserve (std::move (copy));
+      result = m_index_storage->preserve (std::move (new_reader));
     }
 
-  if (result->is_dummy () || result->top_level_die () == nullptr
-      || !result->top_level_die ()->has_children)
+  if (result->is_dummy ())
     return nullptr;
 
   if (for_scanning)
