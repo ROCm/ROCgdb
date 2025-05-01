@@ -8118,7 +8118,7 @@ range_entry_compar (const void *ap, const void *bp)
   return (a > b) - (b > a);
 }
 
-static void
+static unsigned char *
 display_debug_ranges_list (unsigned char *  start,
 			   unsigned char *  finish,
 			   unsigned int     pointer_size,
@@ -8165,6 +8165,8 @@ display_debug_ranges_list (unsigned char *  start,
 
       putchar ('\n');
     }
+
+  return start;
 }
 
 static unsigned char *
@@ -8386,6 +8388,7 @@ display_debug_ranges (struct dwarf_section *section,
 {
   unsigned char *start = section->start;
   unsigned char *last_start = start;
+  unsigned char *last_end;
   uint64_t bytes = section->size;
   unsigned char *section_begin = start;
   unsigned char *finish = start + bytes;
@@ -8449,14 +8452,11 @@ display_debug_ranges (struct dwarf_section *section,
   qsort (range_entries, num_range_list, sizeof (*range_entries),
 	 range_entry_compar);
 
-  if (dwarf_check != 0 && range_entries[0].ranges_offset != 0)
-    warn (_("Range lists in %s section start at %#" PRIx64 "\n"),
-	  section->name, range_entries[0].ranges_offset);
-
   putchar ('\n');
   if (!is_rnglists)
     printf (_("    Offset   Begin    End\n"));
 
+  last_end = NULL;
   for (i = 0; i < num_range_list; i++)
     {
       struct range_entry *range_entry = &range_entries[i];
@@ -8495,6 +8495,12 @@ display_debug_ranges (struct dwarf_section *section,
 
       next = section_begin + offset; /* Offset is from the section start, the base has already been added.  */
 
+      if (i == 0)
+	{
+	  last_end = section_begin;
+	  if (is_rnglists)
+	    last_end += 2 * offset_size - 4 + 2 + 1 + 1 + 4;
+	}
       /* If multiple DWARF entities reference the same range then we will
 	 have multiple entries in the `range_entries' list for the same
 	 offset.  Thanks to the sort above these will all be consecutive in
@@ -8504,11 +8510,15 @@ display_debug_ranges (struct dwarf_section *section,
 	continue;
       last_offset = offset;
 
-      if (dwarf_check != 0 && i > 0)
+      if (dwarf_check != 0)
 	{
 	  if (start < next)
-	    warn (_("There is a hole [%#tx - %#tx] in %s section.\n"),
-		  start - section_begin, next - section_begin, section->name);
+	    {
+	      if (last_end != next)
+		warn (_("There is a hole [%#tx - %#tx] in %s section.\n"),
+		      last_end - section_begin, next - section_begin,
+		      section->name);
+	    }
 	  else if (start > next)
 	    {
 	      if (next == last_start)
@@ -8522,11 +8532,14 @@ display_debug_ranges (struct dwarf_section *section,
       last_start = next;
 
       if (is_rnglists)
-        display_debug_rnglists_list
-	  (start, finish, pointer_size, offset, base_address, debug_info_p->addr_base);
+	last_end
+	  = display_debug_rnglists_list
+	      (start, finish, pointer_size, offset, base_address,
+	       debug_info_p->addr_base);
       else
-        display_debug_ranges_list
-	  (start, finish, pointer_size, offset, base_address);
+	last_end
+	  = display_debug_ranges_list
+	      (start, finish, pointer_size, offset, base_address);
     }
 
   /* Display trailing empty (or unreferenced) compile units, if any.  */
