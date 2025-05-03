@@ -11644,7 +11644,7 @@ remote_target::remote_write_qxfer (const char *object_name,
   i = snprintf (rs->buf.data (), max_size,
 		"qXfer:%s:write:%s:%s:",
 		object_name, annex ? annex : "",
-		phex_nz (offset, sizeof offset));
+		phex_nz (offset));
   max_size -= (i + 1);
 
   /* Escape as much data as fits into rs->buf.  */
@@ -11709,8 +11709,8 @@ remote_target::remote_read_qxfer (const char *object_name,
   snprintf (rs->buf.data (), get_remote_packet_size () - 4,
 	    "qXfer:%s:read:%s:%s,%s",
 	    object_name, annex ? annex : "",
-	    phex_nz (offset, sizeof offset),
-	    phex_nz (n, sizeof n));
+	    phex_nz (offset),
+	    phex_nz (n));
   i = putpkt (rs->buf);
   if (i < 0)
     return TARGET_XFER_E_IO;
@@ -12008,7 +12008,7 @@ remote_target::search_memory (CORE_ADDR start_addr, ULONGEST search_space_len,
   i = snprintf (rs->buf.data (), max_size,
 		"qSearch:memory:%s;%s;",
 		phex_nz (start_addr, addr_size),
-		phex_nz (search_space_len, sizeof (search_space_len)));
+		phex_nz (search_space_len));
   max_size -= (i + 1);
 
   /* Escape as much data as fits into rs->buf.  */
@@ -13757,7 +13757,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
   encode_actions_rsp (loc, &tdp_actions, &stepping_actions);
 
   tpaddr = loc->address;
-  strcpy (addrbuf, phex (tpaddr, sizeof (CORE_ADDR)));
+  strcpy (addrbuf, phex (tpaddr));
   ret = snprintf (buf.data (), buf.size (), "QTDP:%x:%s:%c:%lx:%x",
 		  b->number, addrbuf, /* address */
 		  (b->enable_state == bp_enabled ? 'E' : 'D'),
@@ -14021,7 +14021,7 @@ remote_target::enable_tracepoint (struct bp_location *location)
 
   xsnprintf (rs->buf.data (), get_remote_packet_size (), "QTEnable:%x:%s",
 	     location->owner->number,
-	     phex (location->address, sizeof (CORE_ADDR)));
+	     phex (location->address));
   putpkt (rs->buf);
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
@@ -14037,7 +14037,7 @@ remote_target::disable_tracepoint (struct bp_location *location)
 
   xsnprintf (rs->buf.data (), get_remote_packet_size (), "QTDisable:%x:%s",
 	     location->owner->number,
-	     phex (location->address, sizeof (CORE_ADDR)));
+	     phex (location->address));
   putpkt (rs->buf);
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
@@ -15563,7 +15563,7 @@ remote_target::commit_requested_thread_options ()
 
       *obuf_p++ = ';';
       obuf_p += xsnprintf (obuf_p, obuf_endp - obuf_p, "%s",
-			   phex_nz (options, sizeof (options)));
+			   phex_nz (options));
       if (tp->ptid != magic_null_ptid)
 	{
 	  *obuf_p++ = ':';
@@ -15802,8 +15802,8 @@ create_fetch_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
 
   std::string request = string_printf ("qMemTags:%s,%s:%s",
 				       phex_nz (address, addr_size),
-				       phex_nz (len, sizeof (len)),
-				       phex_nz (type, sizeof (type)));
+				       phex_nz (len),
+				       phex_nz (type));
 
   strcpy (packet.data (), request.c_str ());
 }
@@ -15837,8 +15837,8 @@ create_store_memtags_request (gdb::char_vector &packet, CORE_ADDR address,
   /* Put together the main packet, address and length.  */
   std::string request = string_printf ("QMemTags:%s,%s:%s:",
 				       phex_nz (address, addr_size),
-				       phex_nz (len, sizeof (len)),
-				       phex_nz (type, sizeof (type)));
+				       phex_nz (len),
+				       phex_nz (type));
   request += bin2hex (tags.data (), tags.size ());
 
   /* Check if we have exceeded the maximum packet size.  */
