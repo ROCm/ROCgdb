@@ -1,6 +1,6 @@
----
-name: ROCm CI Caller
-on:
+  base_ref: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref }}
+      trigger_event_type: ${{ github.event_name }}
+      # yamllint enable
   pull_request:
     branches: [amd-staging, amd-staging-rocgdb-*, amd-mainline-rocgdb-*, release/rocm-rel-*]
     types: [opened, reopened, synchronize]
@@ -25,3 +25,5 @@ jobs:
       base_ref: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref }}
       trigger_event_type: ${{ github.event_name }}
       # yamllint enable
+name: ROCm CI Caller
+on:
