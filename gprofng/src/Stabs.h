@@ -40,7 +40,6 @@ class ComC;
 class Elf;
 class Dwarf;
 class Symbol;
-class Reloc;
 struct cpf_stabs_t;
 class SourceFile;
 template <typename Key_t, typename Value_t> class Map;
@@ -86,12 +85,12 @@ class Stabs {
     Platform_t	get_platform()	{ return platform; }
     WSize_t	get_class()	{ return wsize;}
     Stab_status	get_status()    { return status;}
+    Vector<Symbol *> *get_symbols() { return SymLst; }
 
     Stab_status	read_stabs(ino64_t srcInode, Module *module, Vector<ComC*> *comComs, bool readDwarf = false);
     Stab_status	read_archive(LoadObject *lo);
     bool	read_symbols(Vector<Function*> *functions);
     uint64_t	mapOffsetToAddress(uint64_t img_offset);
-    char	*sym_name(uint64_t target, uint64_t instr, int flag);
   Elf *openElf (bool dbg_info = false);
     void        read_hwcprof_info(Module *module);
     void        dump();
@@ -135,8 +134,6 @@ class Stabs {
     Symbol              *pltSym;
     Vector<Symbol*>	*SymLst;		// list of func symbols
     Vector<Symbol*>	*SymLstByName;		// list of func symbols sorted by Name
-    Vector<Reloc*>	*RelLst;		// list of text relocations
-    Vector<Reloc*>	*RelPLTLst;		// list of PLT relocations
     Vector<Symbol*>	*LocalLst;		// list of local func symbols
     Vector<char*>	*LocalFile;		// list of local files
     Vector<int>		*LocalFileIdx;		// start index in LocalLst
