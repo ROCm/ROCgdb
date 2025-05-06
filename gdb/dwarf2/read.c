@@ -9168,6 +9168,7 @@ dwarf2_locate_dwo_sections (objfile *objfile, dwo_file &dwo_file)
 {
   const struct dwop_section_names *names = &dwop_section_names;
   dwo_sections &dwo_sections = dwo_file.sections;
+  bool complained_about_macro_already = false;
 
   for (asection *sec : gdb_bfd_sections (dwo_file.dbfd))
     {
@@ -9186,7 +9187,24 @@ dwarf2_locate_dwo_sections (objfile *objfile, dwo_file &dwo_file)
       else if (names->macinfo_dwo.matches (sec->name))
 	dw_sect = &dwo_sections.macinfo;
       else if (names->macro_dwo.matches (sec->name))
-	dw_sect = &dwo_sections.macro;
+	{
+	  /* gcc versions <= 13 generate multiple .debug_macro.dwo sections with
+	     some unresolved links between them.  It's not usable, so do as if
+	     there were not there.  */
+	  if (!complained_about_macro_already)
+	    {
+	      if (dwo_sections.macro.s.section == nullptr)
+		dw_sect = &dwo_sections.macro;
+	      else
+		{
+		  warning (_("Multiple .debug_macro.dwo sections found in "
+			     "%s, ignoring them."), dwo_file.dbfd->filename);
+
+		  dwo_sections.macro = dwarf2_section_info {};
+		  complained_about_macro_already = true;
+		}
+	    }
+	}
       else if (names->rnglists_dwo.matches (sec->name))
 	dw_sect = &dwo_sections.rnglists;
       else if (names->str_dwo.matches (sec->name))
