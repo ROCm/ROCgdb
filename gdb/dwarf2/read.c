@@ -700,6 +700,12 @@ struct field_info
      we're reading.  */
   std::vector<variant_part_builder> variant_parts;
 
+  /* All the field batons that must be updated.  This is only used
+     when a type's property depends on a field of this structure; for
+     example in Ada when an array's length may come from a field of an
+     enclosing record.  */
+  gdb::unordered_map<dwarf2_property_baton *, sect_offset> field_batons;
+
   /* Return the total number of fields (including baseclasses).  */
   int nfields () const
   {
@@ -8746,7 +8752,8 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
       struct dwarf2_locexpr_baton *dlbaton;
       struct dwarf_block *block = attr->as_block ();
 
-      dlbaton = XOBNEW (&objfile->objfile_obstack, struct dwarf2_locexpr_baton);
+      dlbaton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+				struct dwarf2_locexpr_baton);
       dlbaton->data = block->data;
       dlbaton->size = block->size;
       dlbaton->per_objfile = per_objfile;
@@ -9869,54 +9876,6 @@ dwarf2_access_attribute (struct die_info *die, struct dwarf2_cu *cu)
     }
 }
 
-/* Look for DW_AT_data_member_location or DW_AT_data_bit_offset.  Set
-   *OFFSET to the byte offset.  If the attribute was not found return
-   0, otherwise return 1.  If it was found but could not properly be
-   handled, set *OFFSET to 0.  */
-
-static int
-handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
-			LONGEST *offset)
-{
-  struct attribute *attr;
-
-  attr = dwarf2_attr (die, DW_AT_data_member_location, cu);
-  if (attr != NULL)
-    {
-      *offset = 0;
-      CORE_ADDR temp;
-
-      /* Note that we do not check for a section offset first here.
-	 This is because DW_AT_data_member_location is new in DWARF 4,
-	 so if we see it, we can assume that a constant form is really
-	 a constant and not a section offset.  */
-      if (attr->form_is_constant ())
-	*offset = attr->unsigned_constant ().value_or (0);
-      else if (attr->form_is_section_offset ())
-	dwarf2_complex_location_expr_complaint ();
-      else if (attr->form_is_block ()
-	       && decode_locdesc (attr->as_block (), cu, &temp))
-	{
-	  *offset = temp;
-	}
-      else
-	dwarf2_complex_location_expr_complaint ();
-
-      return 1;
-    }
-  else
-    {
-      attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
-      if (attr != nullptr)
-	{
-	  *offset = attr->unsigned_constant ().value_or (0);
-	  return 1;
-	}
-    }
-
-  return 0;
-}
-
 /* Look for DW_AT_data_member_location or DW_AT_data_bit_offset and
    store the results in FIELD.  */
 
@@ -9929,6 +9888,25 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
   attr = dwarf2_attr (die, DW_AT_data_member_location, cu);
   if (attr != NULL)
     {
+      bool has_bit_offset = false;
+      LONGEST bit_offset = 0;
+      LONGEST anonymous_size = 0;
+
+      attribute *attr2 = dwarf2_attr (die, DW_AT_bit_offset, cu);
+      if (attr2 != nullptr && attr2->form_is_constant ())
+	{
+	  has_bit_offset = true;
+	  bit_offset = attr2->unsigned_constant ().value_or (0);
+	  attr2 = dwarf2_attr (die, DW_AT_byte_size, cu);
+	  if (attr2 != nullptr && attr2->form_is_constant ())
+	    {
+	      /* The size of the anonymous object containing
+		 the bit field is explicit, so use the
+		 indicated size (in bytes).  */
+	      anonymous_size = attr2->unsigned_constant ().value_or (0);
+	    }
+	}
+
       if (attr->form_is_constant ())
 	{
 	  LONGEST offset = attr->unsigned_constant ().value_or (0);
@@ -9946,9 +9924,9 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	    }
 
 	  field->set_loc_bitpos (offset * bits_per_byte);
+	  if (has_bit_offset)
+	    apply_bit_offset_to_field (*field, bit_offset, anonymous_size);
 	}
-      else if (attr->form_is_section_offset ())
-	dwarf2_complex_location_expr_complaint ();
       else if (attr->form_is_block ())
 	{
 	  CORE_ADDR offset;
@@ -9958,9 +9936,20 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	    {
 	      dwarf2_per_objfile *per_objfile = cu->per_objfile;
 	      struct objfile *objfile = per_objfile->objfile;
-	      struct dwarf2_locexpr_baton *dlbaton
-		= XOBNEW (&objfile->objfile_obstack,
-			  struct dwarf2_locexpr_baton);
+	      struct dwarf2_locexpr_baton *dlbaton;
+	      if (has_bit_offset)
+		{
+		  dwarf2_field_location_baton *flbaton
+		    = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+				      dwarf2_field_location_baton);
+		  flbaton->is_field_location = true;
+		  flbaton->bit_offset = bit_offset;
+		  flbaton->explicit_byte_size = anonymous_size;
+		  dlbaton = flbaton;
+		}
+	      else
+		dlbaton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+					  struct dwarf2_locexpr_baton);
 	      dlbaton->data = attr->as_block ()->data;
 	      dlbaton->size = attr->as_block ()->size;
 	      /* When using this baton, we want to compute the address
@@ -9974,7 +9963,8 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	    }
 	}
       else
-	dwarf2_complex_location_expr_complaint ();
+	complaint (_("Unsupported form %s for DW_AT_data_member_location"),
+		   dwarf_form_name (attr->form));
     }
   else
     {
@@ -9990,8 +9980,6 @@ static void
 dwarf2_add_field (struct field_info *fip, struct die_info *die,
 		  struct dwarf2_cu *cu)
 {
-  struct objfile *objfile = cu->per_objfile->objfile;
-  struct gdbarch *gdbarch = objfile->arch ();
   struct nextfield *new_field;
   struct attribute *attr;
   struct field *fp;
@@ -10055,50 +10043,6 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 
       /* Get bit offset of field.  */
       handle_member_location (die, cu, fp);
-      attr = dwarf2_attr (die, DW_AT_bit_offset, cu);
-      if (attr != nullptr && attr->form_is_constant ())
-	{
-	  ULONGEST bit_offset = attr->unsigned_constant ().value_or (0);
-	  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
-	    {
-	      /* For big endian bits, the DW_AT_bit_offset gives the
-		 additional bit offset from the MSB of the containing
-		 anonymous object to the MSB of the field.  We don't
-		 have to do anything special since we don't need to
-		 know the size of the anonymous object.  */
-	      fp->set_loc_bitpos (fp->loc_bitpos () + bit_offset);
-	    }
-	  else
-	    {
-	      /* For little endian bits, compute the bit offset to the
-		 MSB of the anonymous object, subtract off the number of
-		 bits from the MSB of the field to the MSB of the
-		 object, and then subtract off the number of bits of
-		 the field itself.  The result is the bit offset of
-		 the LSB of the field.  */
-	      int anonymous_size;
-
-	      attr = dwarf2_attr (die, DW_AT_byte_size, cu);
-	      if (attr != nullptr && attr->form_is_constant ())
-		{
-		  /* The size of the anonymous object containing
-		     the bit field is explicit, so use the
-		     indicated size (in bytes).  */
-		  anonymous_size = attr->unsigned_constant ().value_or (0);
-		}
-	      else
-		{
-		  /* The size of the anonymous object containing
-		     the bit field must be inferred from the type
-		     attribute of the data member containing the
-		     bit field.  */
-		  anonymous_size = fp->type ()->length ();
-		}
-	      fp->set_loc_bitpos (fp->loc_bitpos ()
-				  + anonymous_size * bits_per_byte
-				  - bit_offset - fp->bitsize ());
-	    }
-	}
 
       /* Get name of field.  */
       fieldname = dwarf2_name (die, cu);
@@ -11277,6 +11221,56 @@ handle_struct_member_die (struct die_info *child_die, struct type *type,
     handle_variant (child_die, type, fi, template_args, cu);
 }
 
+/* Create a property baton for a field of the struct type currently
+   being processed.  OFFSET is the DIE offset of the field in the
+   structure.  If OFFSET is found among the fields that have already
+   been seen, then a new property baton is allocated on the objfile
+   obstack and returned.  The baton isn't fully filled in -- it will
+   be post-processed once the fields are finally created; see
+   update_field_batons.  If OFFSET is not found, NULL is returned.  */
+
+static dwarf2_property_baton *
+find_field_create_baton (dwarf2_cu *cu, sect_offset offset)
+{
+  field_info *fi = cu->field_info;
+  /* Defensive programming in case we see unusual DWARF.  */
+  if (fi == nullptr)
+    return nullptr;
+  for (const auto &fld : fi->fields)
+    if (fld.offset == offset)
+      {
+	dwarf2_property_baton *result
+	  = XOBNEW (&cu->per_objfile->objfile->objfile_obstack,
+		    struct dwarf2_property_baton);
+	fi->field_batons[result] = offset;
+	return result;
+      }
+  return nullptr;
+}
+
+/* Update all the stored field property batons.  FI is the field info
+   for the structure being created.  TYPE is the corresponding struct
+   type with its fields already filled in.  This fills in the correct
+   field for each baton that was stored while processing this
+   type.  */
+
+static void
+update_field_batons (field_info *fi, struct type *type)
+{
+  int n_bases = fi->baseclasses.size ();
+  for (auto &[baton, offset] : fi->field_batons)
+    {
+      for (int i = 0; i < fi->fields.size (); ++i)
+	{
+	  if (fi->fields[i].offset == offset)
+	    {
+	      baton->field = &type->field (n_bases + i);
+	      break;
+	    }
+	}
+    }
+}
+
 /* Finish creating a structure or union type, including filling in its
    members and creating a symbol for it. This function also handles Fortran
    namelist variables, their items or members and creating a symbol for
@@ -11297,6 +11291,9 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct field_info fi;
       std::vector<struct symbol *> template_args;
+
+      scoped_restore save_field_info
+	= make_scoped_restore (&cu->field_info, &fi);
 
       for (die_info *child_die : die->children ())
 	handle_struct_member_die (child_die, type, &fi, &template_args, cu);
@@ -11319,7 +11316,11 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 
       /* Attach fields and member functions to the type.  */
       if (fi.nfields () > 0)
-	dwarf2_attach_fields_to_type (&fi, type, cu);
+	{
+	  dwarf2_attach_fields_to_type (&fi, type, cu);
+	  update_field_batons (&fi, type);
+	}
+
       if (!fi.fnfieldlists.empty ())
 	{
 	  dwarf2_attach_fn_fields_to_type (&fi, type, cu);
@@ -12270,7 +12271,8 @@ mark_common_block_symbol_computed (struct symbol *sym,
   gdb_assert (member_loc->form_is_block ()
 	      || member_loc->form_is_constant ());
 
-  baton = XOBNEW (&objfile->objfile_obstack, struct dwarf2_locexpr_baton);
+  baton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+			  struct dwarf2_locexpr_baton);
   baton->per_objfile = per_objfile;
   baton->per_cu = cu->per_cu;
   gdb_assert (baton->per_cu);
@@ -13933,17 +13935,14 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	  case DW_AT_data_member_location:
 	  case DW_AT_data_bit_offset:
 	    {
-	      LONGEST offset;
-
-	      if (!handle_member_location (target_die, target_cu, &offset))
+	      baton = find_field_create_baton (cu, target_die->sect_off);
+	      if (baton == nullptr)
 		return 0;
 
-	      baton = XOBNEW (obstack, struct dwarf2_property_baton);
 	      baton->property_type = read_type_die (target_die->parent,
-						      target_cu);
-	      baton->offset_info.offset = offset;
-	      baton->offset_info.type = die_type (target_die, target_cu);
-	      prop->set_addr_offset (baton);
+						    target_cu);
+	      baton->field = nullptr;
+	      prop->set_field (baton);
 	      break;
 	    }
 	}
@@ -17243,7 +17242,7 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
 	/* Symbols of this form are reasonably rare, so we just
 	   piggyback on the existing location code rather than writing
 	   a new implementation of symbol_computed_ops.  */
-	*baton = XOBNEW (obstack, struct dwarf2_locexpr_baton);
+	*baton = OBSTACK_ZALLOC (obstack, struct dwarf2_locexpr_baton);
 	(*baton)->per_objfile = per_objfile;
 	(*baton)->per_cu = cu->per_cu;
 	gdb_assert ((*baton)->per_cu);
@@ -19198,7 +19197,8 @@ dwarf2_symbol_mark_computed (const struct attribute *attr, struct symbol *sym,
     {
       struct dwarf2_locexpr_baton *baton;
 
-      baton = XOBNEW (&objfile->objfile_obstack, struct dwarf2_locexpr_baton);
+      baton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
+			      struct dwarf2_locexpr_baton);
       baton->per_objfile = per_objfile;
       baton->per_cu = cu->per_cu;
       gdb_assert (baton->per_cu);

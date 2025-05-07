@@ -902,7 +902,7 @@ operator== (const dynamic_prop &l, const dynamic_prop &r)
       return true;
     case PROP_CONST:
       return l.const_val () == r.const_val ();
-    case PROP_ADDR_OFFSET:
+    case PROP_FIELD:
     case PROP_LOCEXPR:
     case PROP_LOCLIST:
       return l.baton () == r.baton ();
@@ -2146,7 +2146,7 @@ is_dynamic_type (struct type *type)
 }
 
 static struct type *resolve_dynamic_type_internal
-  (struct type *type, struct property_addr_info *addr_stack,
+  (struct type *type, const property_addr_info *addr_stack,
    const frame_info_ptr &frame, bool top_level);
 
 /* Given a dynamic range type (dyn_range_type) and a stack of
@@ -2167,7 +2167,7 @@ static struct type *resolve_dynamic_type_internal
 
 static struct type *
 resolve_dynamic_range (struct type *dyn_range_type,
-		       struct property_addr_info *addr_stack,
+		       const property_addr_info *addr_stack,
 		       const frame_info_ptr &frame,
 		       int rank, bool resolve_p = true)
 {
@@ -2269,7 +2269,7 @@ resolve_dynamic_range (struct type *dyn_range_type,
 
 static struct type *
 resolve_dynamic_array_or_string_1 (struct type *type,
-				   struct property_addr_info *addr_stack,
+				   const property_addr_info *addr_stack,
 				   const frame_info_ptr &frame,
 				   int rank, bool resolve_p)
 {
@@ -2397,7 +2397,7 @@ resolve_dynamic_array_or_string_1 (struct type *type,
 
 static struct type *
 resolve_dynamic_array_or_string (struct type *type,
-				 struct property_addr_info *addr_stack,
+				 const property_addr_info *addr_stack,
 				 const frame_info_ptr &frame)
 {
   CORE_ADDR value;
@@ -2490,7 +2490,7 @@ resolve_dynamic_array_or_string (struct type *type,
 
 static struct type *
 resolve_dynamic_union (struct type *type,
-		       struct property_addr_info *addr_stack,
+		       const property_addr_info *addr_stack,
 		       const frame_info_ptr &frame)
 {
   struct type *resolved_type;
@@ -2534,7 +2534,7 @@ variant::matches (ULONGEST value, bool is_unsigned) const
 
 static void
 compute_variant_fields_inner (struct type *type,
-			      struct property_addr_info *addr_stack,
+			      const property_addr_info *addr_stack,
 			      const variant_part &part,
 			      std::vector<bool> &flags);
 
@@ -2549,7 +2549,7 @@ compute_variant_fields_inner (struct type *type,
 
 static void
 compute_variant_fields_recurse (struct type *type,
-				struct property_addr_info *addr_stack,
+				const property_addr_info *addr_stack,
 				const variant &variant,
 				std::vector<bool> &flags,
 				bool enabled)
@@ -2581,7 +2581,7 @@ compute_variant_fields_recurse (struct type *type,
 
 static void
 compute_variant_fields_inner (struct type *type,
-			      struct property_addr_info *addr_stack,
+			      const property_addr_info *addr_stack,
 			      const variant_part &part,
 			      std::vector<bool> &flags)
 {
@@ -2650,7 +2650,7 @@ compute_variant_fields_inner (struct type *type,
 static void
 compute_variant_fields (struct type *type,
 			struct type *resolved_type,
-			struct property_addr_info *addr_stack,
+			const property_addr_info *addr_stack,
 			const gdb::array_view<variant_part> &parts)
 {
   /* Assume all fields are included by default.  */
@@ -2676,13 +2676,113 @@ compute_variant_fields (struct type *type,
     }
 }
 
+/* See gdbtypes.h.  */
+
+void
+apply_bit_offset_to_field (struct field &field, LONGEST bit_offset,
+			   LONGEST explicit_byte_size)
+{
+  struct type *field_type = field.type ();
+  struct gdbarch *gdbarch = field_type->arch ();
+  LONGEST current_bitpos = field.loc_bitpos ();
+
+  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
+    {
+      /* For big endian bits, the DW_AT_bit_offset gives the
+	 additional bit offset from the MSB of the containing
+	 anonymous object to the MSB of the field.  We don't
+	 have to do anything special since we don't need to
+	 know the size of the anonymous object.  */
+      field.set_loc_bitpos (current_bitpos + bit_offset);
+    }
+  else
+    {
+      /* For little endian bits, compute the bit offset to the
+	 MSB of the anonymous object, subtract off the number of
+	 bits from the MSB of the field to the MSB of the
+	 object, and then subtract off the number of bits of
+	 the field itself.  The result is the bit offset of
+	 the LSB of the field.  */
+      LONGEST object_size = explicit_byte_size;
+      if (object_size == 0)
+	object_size = field_type->length ();
+
+      field.set_loc_bitpos (current_bitpos
+			    + 8 * object_size
+			    - bit_offset
+			    - field.bitsize ());
+    }
+}
+
+/* See gdbtypes.h.  */
+
+void
+resolve_dynamic_field (struct field &field,
+		       const property_addr_info *addr_stack,
+		       const frame_info_ptr &frame)
+{
+  gdb_assert (!field.is_static ());
+
+  if (field.loc_kind () == FIELD_LOC_KIND_DWARF_BLOCK)
+    {
+      dwarf2_locexpr_baton *field_loc
+	= field.loc_dwarf_block ();
+
+      struct dwarf2_property_baton baton;
+      baton.property_type = lookup_pointer_type (field.type ());
+      baton.locexpr = *field_loc;
+
+      struct dynamic_prop prop;
+      prop.set_locexpr (&baton);
+
+      CORE_ADDR vals[1] = {addr_stack->addr};
+      CORE_ADDR addr;
+      if (dwarf2_evaluate_property (&prop, frame, addr_stack, &addr, vals))
+	{
+	  field.set_loc_bitpos (TARGET_CHAR_BIT * (addr - addr_stack->addr));
+
+	  if (field_loc->is_field_location)
+	    {
+	      dwarf2_field_location_baton *fl_baton
+		= static_cast<dwarf2_field_location_baton *> (field_loc);
+	      apply_bit_offset_to_field (field, fl_baton->bit_offset,
+					 fl_baton->explicit_byte_size);
+	    }
+	}
+    }
+
+  /* As we know this field is not a static field, the field's
+     field_loc_kind should be FIELD_LOC_KIND_BITPOS.  Verify
+     this is the case, but only trigger a simple error rather
+     than an internal error if that fails.  While failing
+     that verification indicates a bug in our code, the error
+     is not severe enough to suggest to the user he stops
+     his debugging session because of it.  */
+  if (field.loc_kind () != FIELD_LOC_KIND_BITPOS)
+    error (_("Cannot determine struct field location"
+	     " (invalid location kind)"));
+
+  struct property_addr_info pinfo;
+  pinfo.type = check_typedef (field.type ());
+  size_t offset = field.loc_bitpos () / TARGET_CHAR_BIT;
+  pinfo.valaddr = addr_stack->valaddr;
+  if (!pinfo.valaddr.empty ())
+    pinfo.valaddr = pinfo.valaddr.slice (offset);
+  pinfo.addr = addr_stack->addr + offset;
+  pinfo.next = addr_stack;
+
+  field.set_type (resolve_dynamic_type_internal (field.type (),
+						 &pinfo, frame, false));
+  gdb_assert (field.loc_kind () == FIELD_LOC_KIND_BITPOS);
+}
+
 /* Resolve dynamic bounds of members of the struct TYPE to static
    bounds.  ADDR_STACK is a stack of struct property_addr_info to
    be used if needed during the dynamic resolution.  */
 
 static struct type *
 resolve_dynamic_struct (struct type *type,
-			struct property_addr_info *addr_stack,
+			const property_addr_info *addr_stack,
 			const frame_info_ptr &frame)
 {
   struct type *resolved_type;
@@ -2710,52 +2810,11 @@ resolve_dynamic_struct (struct type *type,
   for (i = 0; i < resolved_type->num_fields (); ++i)
     {
       unsigned new_bit_length;
-      struct property_addr_info pinfo;
 
       if (resolved_type->field (i).is_static ())
 	continue;
 
-      if (resolved_type->field (i).loc_kind () == FIELD_LOC_KIND_DWARF_BLOCK)
-	{
-	  struct dwarf2_property_baton baton;
-	  baton.property_type
-	    = lookup_pointer_type (resolved_type->field (i).type ());
-	  baton.locexpr = *resolved_type->field (i).loc_dwarf_block ();
-
-	  struct dynamic_prop prop;
-	  prop.set_locexpr (&baton);
-
-	  CORE_ADDR addr;
-	  if (dwarf2_evaluate_property (&prop, frame, addr_stack, &addr,
-					{addr_stack->addr}))
-	    resolved_type->field (i).set_loc_bitpos
-	      (TARGET_CHAR_BIT * (addr - addr_stack->addr));
-	}
-
-      /* As we know this field is not a static field, the field's
-	 field_loc_kind should be FIELD_LOC_KIND_BITPOS.  Verify
-	 this is the case, but only trigger a simple error rather
-	 than an internal error if that fails.  While failing
-	 that verification indicates a bug in our code, the error
-	 is not severe enough to suggest to the user he stops
-	 his debugging session because of it.  */
-      if (resolved_type->field (i).loc_kind () != FIELD_LOC_KIND_BITPOS)
-	error (_("Cannot determine struct field location"
-		 " (invalid location kind)"));
-
-      pinfo.type = check_typedef (resolved_type->field (i).type ());
-      size_t offset = resolved_type->field (i).loc_bitpos () / TARGET_CHAR_BIT;
-      pinfo.valaddr = addr_stack->valaddr;
-      if (!pinfo.valaddr.empty ())
-	pinfo.valaddr = pinfo.valaddr.slice (offset);
-      pinfo.addr = addr_stack->addr + offset;
-      pinfo.next = addr_stack;
-
-      resolved_type->field (i).set_type
-	(resolve_dynamic_type_internal (resolved_type->field (i).type (),
-					&pinfo, frame, false));
-      gdb_assert (resolved_type->field (i).loc_kind ()
-		  == FIELD_LOC_KIND_BITPOS);
+      resolve_dynamic_field (resolved_type->field (i), addr_stack, frame);
 
       new_bit_length = resolved_type->field (i).loc_bitpos ();
       if (resolved_type->field (i).bitsize () != 0)
@@ -2797,7 +2856,7 @@ resolve_dynamic_struct (struct type *type,
 
 static struct type *
 resolve_dynamic_type_internal (struct type *type,
-			       struct property_addr_info *addr_stack,
+			       const property_addr_info *addr_stack,
 			       const frame_info_ptr &frame,
 			       bool top_level)
 {
