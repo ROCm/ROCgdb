@@ -1728,6 +1728,10 @@ glibc_link_map_to_tls_module_id (CORE_ADDR lm_addr)
 static void
 tls_maybe_fill_slot (solib &so)
 {
+  /* This is not a SVR4 solib, ignore it here.  */
+  if (so.provider != nullptr)
+    return;
+
   struct svr4_info *info = get_svr4_info (current_program_space);
   if (!info->glibc_tls_slots_inited)
     {
@@ -1769,6 +1773,10 @@ tls_maybe_erase_slot (program_space *pspace, const solib &so,
 		      bool still_in_use, bool silent)
 {
   if (still_in_use)
+    return;
+
+  /* This is not a svr4 solib, ignore it.  */
+  if (so.provider != nullptr)
     return;
 
   struct svr4_info *info = get_svr4_info (pspace);
