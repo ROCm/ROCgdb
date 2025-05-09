@@ -1,6 +1,6 @@
 /* Python interface to instruction disassembly.
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1311,12 +1311,13 @@ gdbpy_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
       return {};
     }
 
-  /* Check the result is a DisassemblerResult (or a sub-class).  */
-  if (!PyObject_IsInstance (result.get (),
-			    (PyObject *) &disasm_result_object_type))
+  /* Check the result is a DisassemblerResult.  */
+  if (!PyObject_TypeCheck (result.get (), &disasm_result_object_type))
     {
-      PyErr_SetString (PyExc_TypeError,
-		       _("Result is not a DisassemblerResult."));
+      PyErr_Format
+	(PyExc_TypeError,
+	 _("Result from Disassembler must be gdb.DisassemblerResult, not %s."),
+	 Py_TYPE (result.get ())->tp_name);
       gdbpy_print_stack ();
       return std::optional<int> (-1);
     }

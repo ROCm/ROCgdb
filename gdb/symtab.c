@@ -1,6 +1,6 @@
 /* Symbol table lookup for the GNU debugger, GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -6551,7 +6551,7 @@ find_main_name (void)
      language.  It is easy to guaranty this with Ada, since we use a
      special symbol generated only when the main in Ada to find the name
      of the main procedure.  It is difficult however to see how this can
-     be guarantied for languages such as C, for instance.  This suggests
+     be guaranteed for languages such as C, for instance.  This suggests
      that order of call for these methods becomes important, which means
      a more complicated approach.  */
   new_main_name = ada_main_name ();

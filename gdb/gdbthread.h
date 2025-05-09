@@ -1,5 +1,5 @@
 /* Multi-process/thread control defs for GDB, the GNU debugger.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
    Contributed by Lynx Real-Time Systems, Inc.  Los Gatos, CA.
    
@@ -72,10 +72,10 @@ extern bool debug_threads;
    you want.  */
 enum thread_state
 {
-  /* In the frontend's perpective, the thread is stopped.  */
+  /* In the frontend's perspective, the thread is stopped.  */
   THREAD_STOPPED,
 
-  /* In the frontend's perpective, the thread is running.  */
+  /* In the frontend's perspective, the thread is running.  */
   THREAD_RUNNING,
 
   /* The thread is listed, but known to have exited.  We keep it

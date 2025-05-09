@@ -1,5 +1,5 @@
 /* GDB routines for manipulating the minimal symbol tables.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
    This file is part of GDB.
@@ -37,6 +37,7 @@
 
 
 #include <ctype.h>
+#include "maint.h"
 #include "symtab.h"
 #include "bfd.h"
 #include "filenames.h"
@@ -1481,6 +1482,8 @@ minimal_symbol_reader::install ()
       gdb::parallel_for_each (10, &msymbols[0], &msymbols[mcount],
 	 [&] (minimal_symbol *start, minimal_symbol *end)
 	 {
+	   scoped_time_it time_it ("minsyms install worker");
+
 	   for (minimal_symbol *msym = start; msym < end; ++msym)
 	     {
 	       size_t idx = msym - msymbols;
@@ -1688,7 +1691,8 @@ find_minsym_type_and_address (minimal_symbol *msymbol,
     {
       /* Skip translation if caller does not need the address.  */
       if (address_p != NULL)
-	*address_p = target_translate_tls_address (objfile, addr);
+	*address_p = target_translate_tls_address
+		       (objfile, addr, bound_msym.minsym->print_name ());
       return builtin_type (objfile)->nodebug_tls_symbol;
     }
 

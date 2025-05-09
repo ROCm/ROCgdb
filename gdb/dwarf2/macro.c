@@ -1,6 +1,6 @@
 /* Read DWARF macro information
 
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -259,6 +259,7 @@ skip_form_bytes (bfd *abfd, const gdb_byte *bytes, const gdb_byte *buffer_end,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_GNU_strp_alt:
+    case DW_FORM_strp_sup:
       bytes += offset_size;
       break;
 

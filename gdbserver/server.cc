@@ -1,5 +1,5 @@
 /* Main code for remote server for GDB.
-   Copyright (C) 1989-2024 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -51,6 +51,7 @@
 #include "gdbsupport/scoped_restore.h"
 #include "gdbsupport/search.h"
 #include "gdbsupport/gdb_argv_vec.h"
+#include "gdbsupport/remote-args.h"
 
 /* PBUFSIZ must also be at least as big as IPA_CMD_BUF_SIZE, because
    the client state data is passed directly to some agent
@@ -2863,7 +2864,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	{
 	  char *end_buf = own_buf + strlen (own_buf);
 	  sprintf (end_buf, ";QThreadOptions=%s",
-		   phex_nz (supported_options, sizeof (supported_options)));
+		   phex_nz (supported_options));
 	}
 
       strcat (own_buf, ";QThreadEvents+");
@@ -3465,7 +3466,7 @@ handle_v_run (char *own_buf)
   else
     program_path.set (new_program_name.get ());
 
-  program_args = construct_inferior_arguments (new_argv.get (), true);
+  program_args = gdb::remote_args::join (new_argv.get ());
 
   try
     {
@@ -4071,6 +4072,33 @@ test_memory_tagging_functions (void)
 	      && tags.size () == 5);
 }
 
+/* Exercise the behavior of doing a 0-length comparison for a register in a
+   register buffer, which should return true.  */
+
+static void test_registers_raw_compare_zero_length ()
+{
+  /* Start off with a dummy target description.  */
+  target_desc dummy_tdesc;
+
+  /* Make it 8 bytes long.  */
+  dummy_tdesc.registers_size = 8;
+
+  /* Add a couple dummy 32-bit registers.  */
+  dummy_tdesc.reg_defs.emplace_back ("r0", 0, 32);
+  dummy_tdesc.reg_defs.emplace_back ("r1", 32, 32);
+
+  /* Create our dummy register cache so we can invoke the raw_compare method
+     we want to validate.  */
+  regcache dummy_regcache (&dummy_tdesc);
+
+  /* Create a dummy byte buffer we can pass to the raw_compare method.  */
+  gdb_byte dummy_buffer[8];
+
+  /* Validate the 0-length comparison (due to the comparison offset being
+     equal to the length of the register) returns true.  */
+  SELF_CHECK (dummy_regcache.raw_compare (0, dummy_buffer, 4));
+}
+
 } /* namespace selftests */
 #endif /* GDB_SELF_TEST */
 
@@ -4094,6 +4122,8 @@ captured_main (int argc, char *argv[])
 
   selftests::register_test ("remote_memory_tagging",
 			    selftests::test_memory_tagging_functions);
+  selftests::register_test ("test_registers_raw_compare_zero_length",
+			    selftests::test_registers_raw_compare_zero_length);
 #endif
 
   current_directory = getcwd (NULL, 0);

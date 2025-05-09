@@ -1,6 +1,6 @@
 /* Support for GDB maintenance commands.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -28,8 +28,6 @@
 #include "symtab.h"
 #include "block.h"
 #include "gdbtypes.h"
-#include "demangle.h"
-#include "gdbcore.h"
 #include "expression.h"
 #include "language.h"
 #include "symfile.h"
@@ -41,6 +39,7 @@
 #include "inferior.h"
 #include "gdbsupport/thread-pool.h"
 #include "event-top.h"
+#include "cp-support.h"
 
 #include "cli/cli-decode.h"
 #include "cli/cli-utils.h"
@@ -108,6 +107,18 @@ maintenance_demangle (const char *args, int from_tty)
 {
   gdb_printf (_("This command has been moved to \"%ps\".\n"),
 	      styled_string (command_style.style (), "demangle"));
+}
+
+/* Print the canonical form of a name.  */
+
+static void
+maintenance_canonicalize (const char *args, int from_tty)
+{
+  gdb::unique_xmalloc_ptr<char> canon = cp_canonicalize_string (args);
+  if (canon == nullptr)
+    gdb_printf ("No change.\n");
+  else
+    gdb_printf ("canonical = %s\n", canon.get ());
 }
 
 static void
@@ -1140,6 +1151,50 @@ set_per_command_cmd (const char *args, int from_tty)
       }
 }
 
+/* See maint.h.  */
+
+scoped_time_it::scoped_time_it (const char *what)
+  : m_enabled (per_command_time),
+    m_what (what),
+    m_start_wall (m_enabled
+		  ? std::chrono::steady_clock::now ()
+		  : std::chrono::steady_clock::time_point ())
+{
+  if (m_enabled)
+    get_run_time (m_start_user, m_start_sys, run_time_scope::thread);
+}
+
+/* See maint.h.  */
+
+scoped_time_it::~scoped_time_it ()
+{
+  if (!m_enabled)
+    return;
+
+  namespace chr = std::chrono;
+  auto end_wall = chr::steady_clock::now ();
+
+  user_cpu_time_clock::time_point end_user;
+  system_cpu_time_clock::time_point end_sys;
+  get_run_time (end_user, end_sys, run_time_scope::thread);
+
+  auto user = end_user - m_start_user;
+  auto sys = end_sys - m_start_sys;
+  auto wall = end_wall - m_start_wall;
+  auto user_ms = chr::duration_cast<chr::milliseconds> (user).count ();
+  auto sys_ms = chr::duration_cast<chr::milliseconds> (sys).count ();
+  auto wall_ms = chr::duration_cast<chr::milliseconds> (wall).count ();
+  auto user_plus_sys_ms = user_ms + sys_ms;
+
+  auto str
+    = string_printf ("Time for \"%s\": wall %.03f, user %.03f, sys %.03f, "
+		     "user+sys %.03f, %.01f %% CPU\n",
+		     m_what, wall_ms / 1000.0, user_ms / 1000.0,
+		     sys_ms / 1000.0, user_plus_sys_ms / 1000.0,
+		     user_plus_sys_ms * 100.0 / wall_ms);
+  gdb_stdlog->write_async_safe (str.data (), str.size ());
+}
+
 /* Options affecting the "maintenance selftest" command.  */
 
 struct maintenance_selftest_options
@@ -1344,6 +1399,12 @@ Cause GDB to behave as if a demangler warning was reported."),
 This command has been moved to \"demangle\"."),
 		 &maintenancelist);
   deprecate_cmd (cmd, "demangle");
+
+  cmd = add_cmd ("canonicalize", class_maintenance, maintenance_canonicalize,
+		 _("\
+Show the canonical form of a C++ name.\n\
+Usage: maintenance canonicalize NAME"),
+		 &maintenancelist);
 
   add_prefix_cmd ("per-command", class_maintenance, set_per_command_cmd, _("\
 Per-command statistics settings."),

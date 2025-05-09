@@ -122,6 +122,9 @@
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
 
+/* Define to 1 if you have the `getrusage' function. */
+#undef HAVE_GETRUSAGE
+
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
@@ -230,9 +233,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* The size of `void *', as computed by sizeof. */
-#undef SIZEOF_VOID_P
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

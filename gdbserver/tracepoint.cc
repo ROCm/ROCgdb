@@ -1,5 +1,5 @@
 /* Tracepoint code for remote server for GDB.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -3461,8 +3461,8 @@ cmd_qtstatus (char *packet)
 	   free_space (), phex_nz (trace_buffer_hi - trace_buffer_lo, 0),
 	   circular_trace_buffer,
 	   disconnected_tracing,
-	   phex_nz (tracing_start_time, sizeof (tracing_start_time)),
-	   phex_nz (tracing_stop_time, sizeof (tracing_stop_time)),
+	   phex_nz (tracing_start_time),
+	   phex_nz (tracing_stop_time),
 	   buf1, buf2);
 }
 
@@ -4990,7 +4990,7 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 	dataptr += sizeof (mlen);
 	string_xml_appendf (*buffer,
 			    "<memory start=\"0x%s\" length=\"0x%s\"/>\n",
-			    paddress (maddr), phex_nz (mlen, sizeof (mlen)));
+			    paddress (maddr), phex_nz (mlen));
 	break;
       }
     case 'V':

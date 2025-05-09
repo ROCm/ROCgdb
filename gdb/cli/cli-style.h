@@ -1,6 +1,6 @@
 /* CLI stylizing
 
-   Copyright (C) 2018-2024 Free Software Foundation, Inc.
+   Copyright (C) 2018-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -189,5 +189,19 @@ private:
   /* The value to restore in the destructor.  */
   bool m_old_value;
 };
+
+/* Return true if emoji styling is allowed.  */
+extern bool emojis_ok ();
+
+/* Disable emoji styling.  This is here so that Windows can disable
+   emoji when the console is in use.  It shouldn't be called
+   elsewhere.  */
+extern void no_emojis ();
+
+/* Print the warning prefix, if desired.  */
+extern void print_warning_prefix (ui_file *file);
+
+/* Print the error prefix, if desired.  */
+extern void print_error_prefix (ui_file *file);
 
 #endif /* GDB_CLI_CLI_STYLE_H */

@@ -1,6 +1,6 @@
 /* Everything about breakpoints, for GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -10458,7 +10458,7 @@ masked_watchpoint::print_recreate (struct ui_file *fp) const
     }
 
   gdb_printf (fp, " %s mask 0x%s", exp_string.get (),
-	      phex (hw_wp_mask, sizeof (CORE_ADDR)));
+	      phex (hw_wp_mask));
   print_recreate_thread (fp);
 }
 

@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -216,7 +216,7 @@ gdbarch_tdep (struct gdbarch *gdbarch)
    information obtained from INFO.ABFD or the global defaults.
 
    The ARCHES parameter is a linked list (sorted most recently used)
-   of all the previously created architures for this architecture
+   of all the previously created architectures for this architecture
    family.  The (possibly NULL) ARCHES->gdbarch can used to access
    values from the previously selected architecture for this
    architecture family.

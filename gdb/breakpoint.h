@@ -1,5 +1,5 @@
 /* Data structures associated with breakpoints in GDB.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -1755,7 +1755,7 @@ extern void disable_overlay_breakpoints (void);
 extern void set_std_terminate_breakpoint (void);
 extern void delete_std_terminate_breakpoint (void);
 
-/* These functions respectively disable or reenable all currently
+/* These functions respectively disable or re-enable all currently
    enabled watchpoints.  When disabled, the watchpoints are marked
    call_disabled.  When re-enabled, they are marked enabled.
 

@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2024 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -241,7 +241,7 @@ do
     done
 
     # Check whether this target needs 64-bit CORE_ADDR
-    if test x${enable_64_bit_bfd} = xno; then
+    if test x${have_64_bit_bfd} = xno; then
       . ${srcdir}/../bfd/config.bfd
     fi
 
@@ -254,19 +254,10 @@ do
 done
 
 if test x${all_targets} = xtrue; then
-  if test x${enable_64_bit_bfd} = xyes; then
+  if test x${have_64_bit_bfd} = xyes; then
     TARGET_OBS='$(ALL_TARGET_OBS) $(ALL_64_TARGET_OBS)'
   else
-    case ${host} in
-    mips*)
-      # If all targets were requested, but 64 bit bfd is not enabled,
-      # the build will fail. See PR 28684.
-      AC_MSG_ERROR([--enable-targets=all requires --enable-64-bit-bfd])
-      ;;
-    *)
-      TARGET_OBS='$(ALL_TARGET_OBS)'
-      ;;
-    esac
+    TARGET_OBS='$(ALL_TARGET_OBS)'
   fi
 fi
 
@@ -1244,7 +1235,7 @@ AC_ARG_ENABLE([gdb-compile],
 	      [GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-compile])],
 	      [enable_gdb_compile=yes])
 
-if test "${enable_gdb_compile}" == yes; then
+if test "${enable_gdb_compile}" = yes; then
     AC_DEFINE(HAVE_COMPILE, 1, [Define if compiling support to gdb compile.])
     CONFIG_OBS="$CONFIG_OBS \$(SUBDIR_GCC_COMPILE_OBS)"
 else

@@ -1,6 +1,6 @@
 /* Handle SVR4 shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -405,10 +405,67 @@ struct svr4_info
      The special entry zero is reserved for a linear list to support
      gdbstubs that do not support namespaces.  */
   std::map<CORE_ADDR, std::vector<svr4_so>> solib_lists;
+
+  /* Mapping between r_debug[_ext] addresses and a user-friendly
+     identifier for the namespace.  A vector is used to make it
+     easy to assign new internal IDs to namespaces.
+
+     For gdbservers that don't support namespaces, the first (and only)
+     entry of the vector will be 0.
+
+     A note on consistency. We can't make the IDs be consistent before
+     and after the initial relocation of the inferior (when the global
+     _r_debug is relocated, as mentioned in the previous comment).  It is
+     likely that this is a non-issue, since the inferior can't have called
+     dlmopen yet, but I think it is worth noting.
+
+     The only issue I am aware at this point is that, if when parsing an
+     XML file, we read an LMID that given by an XML file (and read in
+     library_list_start_library) is the identifier obtained with dlinfo
+     instead of the address of r_debug[_ext], and after attaching the
+     inferior adds another SO to that namespace, we might double-count it
+     since we won't have access to the LMID later on.  However, this is
+     already a problem with the existing solib_lists code.  */
+  std::vector<CORE_ADDR> namespace_id;
+
+  /* This identifies which namespaces are active.  A namespace is considered
+     active when there is at least one shared object loaded into it.  */
+  std::set<size_t> active_namespaces;
+
+  /* This flag indicates whether initializations related to the
+     GLIBC TLS module id tracking code have been performed.  */
+  bool glibc_tls_slots_inited = false;
+
+  /* A vector of link map addresses for GLIBC TLS slots.  See comment
+     for tls_maybe_fill_slot for more information.  */
+  std::vector<CORE_ADDR> glibc_tls_slots;
 };
 
 /* Per-program-space data key.  */
 static const registry<program_space>::key<svr4_info> solib_svr4_pspace_data;
+
+/* Check if the lmid address is already assigned an ID in the svr4_info,
+   and if not, assign it one and add it to the list of known namespaces.  */
+static void
+svr4_maybe_add_namespace (svr4_info *info, CORE_ADDR lmid)
+{
+  int i;
+  for (i = 0; i < info->namespace_id.size (); i++)
+    {
+      if (info->namespace_id[i] == lmid)
+	break;
+    }
+  if (i == info->namespace_id.size ())
+    info->namespace_id.push_back (lmid);
+
+  info->active_namespaces.insert (i);
+
+  /* Create or update the convenience variable "active_namespaces".
+     It only needs to be updated here, as this only changes when a
+     dlmopen or dlclose call happens.  */
+  set_internalvar_integer (lookup_internalvar ("_active_linker_namespaces"),
+			   info->active_namespaces.size ());
+}
 
 /* Return whether DEBUG_BASE is the default namespace of INFO.  */
 
@@ -586,10 +643,10 @@ read_program_header (int type, int *p_arch_size, CORE_ADDR *base_addr)
   return buf;
 }
 
+/* See solib-svr4.h.  */
 
-/* Return program interpreter string.  */
-static std::optional<gdb::byte_vector>
-find_program_interpreter (void)
+std::optional<gdb::byte_vector>
+svr4_find_program_interpreter ()
 {
   /* If we have a current exec_bfd, use its section table.  */
   if (current_program_space->exec_bfd ()
@@ -1041,14 +1098,18 @@ library_list_start_library (struct gdb_xml_parser *parser,
   /* Older versions did not supply lmid.  Put the element into the flat
      list of the special namespace zero in that case.  */
   gdb_xml_value *at_lmid = xml_find_attribute (attributes, "lmid");
+  svr4_info *info = get_svr4_info (current_program_space);
   if (at_lmid == nullptr)
-    solist = list->cur_list;
+    {
+      solist = list->cur_list;
+      svr4_maybe_add_namespace (info, 0);
+    }
   else
     {
       ULONGEST lmid = *(ULONGEST *) at_lmid->value.get ();
       solist = &list->solib_lists[lmid];
+      svr4_maybe_add_namespace (info, lmid);
     }
-
   solist->emplace_back (name, std::move (li));
 }
 
@@ -1286,6 +1347,8 @@ svr4_current_sos_direct (struct svr4_info *info)
   /* Remove any old libraries.  We're going to read them back in again.  */
   info->solib_lists.clear ();
 
+  info->active_namespaces.clear ();
+
   /* Fall back to manual examination of the target if the packet is not
      supported or gdbserver failed to find DT_DEBUG.  gdb.server/solib-list.exp
      tests a case where gdbserver cannot find the shared libraries list while
@@ -1333,7 +1396,10 @@ svr4_current_sos_direct (struct svr4_info *info)
     ignore_first = true;
 
   auto cleanup = make_scope_exit ([info] ()
-    { info->solib_lists.clear (); });
+    {
+      info->solib_lists.clear ();
+      info->active_namespaces.clear ();
+    });
 
   /* Collect the sos in each namespace.  */
   CORE_ADDR debug_base = info->debug_base;
@@ -1343,8 +1409,11 @@ svr4_current_sos_direct (struct svr4_info *info)
       /* Walk the inferior's link map list, and build our so_list list.  */
       lm = solib_svr4_r_map (debug_base);
       if (lm != 0)
-	svr4_read_so_list (info, lm, 0, info->solib_lists[debug_base],
-			   ignore_first);
+	{
+	  svr4_maybe_add_namespace (info, debug_base);
+	  svr4_read_so_list (info, lm, 0, info->solib_lists[debug_base],
+			     ignore_first);
+	}
     }
 
   /* On Solaris, the dynamic linker is not in the normal list of
@@ -1361,8 +1430,11 @@ svr4_current_sos_direct (struct svr4_info *info)
     {
       /* Add the dynamic linker's namespace unless we already did.  */
       if (info->solib_lists.find (debug_base) == info->solib_lists.end ())
-	svr4_read_so_list (info, debug_base, 0, info->solib_lists[debug_base],
-			   0);
+	{
+	  svr4_maybe_add_namespace (info, debug_base);
+	  svr4_read_so_list (info, debug_base, 0, info->solib_lists[debug_base],
+			     0);
+	}
     }
 
   cleanup.release ();
@@ -1514,6 +1586,198 @@ svr4_fetch_objfile_link_map (struct objfile *objfile)
 
   /* Not found!  */
   return 0;
+}
+
+/* Return true if bfd section BFD_SECT is a thread local section
+   (i.e. either named ".tdata" or ".tbss"), and false otherwise.  */
+
+static bool
+is_thread_local_section (struct bfd_section *bfd_sect)
+{
+  return ((strcmp (bfd_sect->name, ".tdata") == 0
+	   || strcmp (bfd_sect->name, ".tbss") == 0)
+	  && bfd_sect->size != 0);
+}
+
+/* Return true if objfile OBJF contains a thread local section, and
+   false otherwise.  */
+
+static bool
+has_thread_local_section (const objfile *objf)
+{
+  for (obj_section *objsec : objf->sections ())
+    if (is_thread_local_section (objsec->the_bfd_section))
+      return true;
+  return false;
+}
+
+/* Return true if solib SO contains a thread local section, and false
+   otherwise.  */
+
+static bool
+has_thread_local_section (const solib &so)
+{
+  for (const target_section &p : so.sections)
+    if (is_thread_local_section (p.the_bfd_section))
+      return true;
+  return false;
+}
+
+/* For the MUSL C library, given link map address LM_ADDR, return the
+   corresponding TLS module id, or 0 if not found.
+
+   Background: Unlike the mechanism used by glibc (see below), the
+   scheme used by the MUSL C library is pretty simple.  If the
+   executable contains TLS variables it gets module id 1.  Otherwise,
+   the first shared object loaded which contains TLS variables is
+   assigned to module id 1.  TLS-containing shared objects are then
+   assigned consecutive module ids, based on the order that they are
+   loaded.  When unloaded via dlclose, module ids are reassigned as if
+   that module had never been loaded.  */
+
+int
+musl_link_map_to_tls_module_id (CORE_ADDR lm_addr)
+{
+  /* When lm_addr is zero, the program is statically linked.  Any TLS
+     variables will be in module id 1.  */
+  if (lm_addr == 0)
+    return 1;
+
+  int mod_id = 0;
+  if (has_thread_local_section (current_program_space->symfile_object_file))
+    mod_id++;
+
+  struct svr4_info *info = get_svr4_info (current_program_space);
+
+  /* Cause svr4_current_sos() to be run if it hasn't been already.  */
+  if (info->main_lm_addr == 0)
+    solib_add (NULL, 0, auto_solib_add);
+
+  /* Handle case where lm_addr corresponds to the main program.
+     Return value is either 0, when there are no TLS variables, or 1,
+     when there are.  */
+  if (lm_addr == info->main_lm_addr)
+    return mod_id;
+
+  /* Iterate through the shared objects, possibly incrementing the
+     module id, and returning mod_id should a match be found.  */
+  for (const solib &so : current_program_space->solibs ())
+    {
+      if (has_thread_local_section (so))
+	mod_id++;
+
+      auto *li = gdb::checked_static_cast<lm_info_svr4 *> (so.lm_info.get ());
+      if (li->lm_addr == lm_addr)
+	return mod_id;
+    }
+  return 0;
+}
+
+/* For GLIBC, given link map address LM_ADDR, return the corresponding TLS
+   module id, or 0 if not found.  */
+
+int
+glibc_link_map_to_tls_module_id (CORE_ADDR lm_addr)
+{
+  /* When lm_addr is zero, the program is statically linked.  Any TLS
+     variables will be in module id 1.  */
+  if (lm_addr == 0)
+    return 1;
+
+  /* Look up lm_addr in the TLS slot data structure.  */
+  struct svr4_info *info = get_svr4_info (current_program_space);
+  auto it = std::find (info->glibc_tls_slots.begin (),
+		       info->glibc_tls_slots.end (),
+		       lm_addr);
+  if (it == info->glibc_tls_slots.end ())
+    return 0;
+  else
+    return 1 + it - info->glibc_tls_slots.begin ();
+}
+
+/* Conditionally, based on whether the shared object, SO, contains TLS
+   variables, assign a link map address to a TLS module id slot.  This
+   code is GLIBC-specific and may only work for specific GLIBC
+   versions.  That said, it is known to work for (at least) GLIBC
+   versions 2.27 thru 2.40.
+
+   Background: In order to implement internal TLS address lookup
+   code, it is necessary to find the module id that has been
+   associated with a specific link map address.  In GLIBC, the TLS
+   module id is stored in struct link_map, in the member
+   'l_tls_modid'.  While the first several members of struct link_map
+   are part of the SVR4 ABI, the offset to l_tls_modid definitely is
+   not.  Therefore, since we don't know the offset to l_tls_modid, we
+   cannot simply look it up - which is a shame, because things would
+   be so much more easy and obviously accurate, if we could access
+   l_tls_modid.
+
+   GLIBC has a concept of TLS module id slots.  These slots are
+   allocated consecutively as shared objects containing TLS variables
+   are loaded.  When unloaded (e.g. via dlclose()), the corresponding
+   slot is marked as unused, but may be used again when later loading
+   a shared object.
+
+   The functions tls_maybe_fill_slot and tls_maybe_erase_slot are
+   associated with the observers 'solib_loaded' and 'solib_unloaded'.
+   They (attempt to) track use of TLS module id slots in the same way
+   that GLIBC does, which will hopefully provide an accurate module id
+   when asked to provide it via glibc_link_map_to_tls_module_id(),
+   above.  */
+
+static void
+tls_maybe_fill_slot (solib &so)
+{
+  struct svr4_info *info = get_svr4_info (current_program_space);
+  if (!info->glibc_tls_slots_inited)
+    {
+      /* Cause svr4_current_sos() to be run if it hasn't been already.  */
+      if (info->main_lm_addr == 0)
+	svr4_current_sos_direct (info);
+
+      /* Quit early when main_lm_addr is still 0.  */
+      if (info->main_lm_addr == 0)
+	return;
+
+      /* Also quit early when symfile_object_file is not yet known.  */
+      if (current_program_space->symfile_object_file == nullptr)
+	return;
+
+      if (has_thread_local_section (current_program_space->symfile_object_file))
+	info->glibc_tls_slots.push_back (info->main_lm_addr);
+      info->glibc_tls_slots_inited = true;
+    }
+
+  if (has_thread_local_section (so))
+    {
+      auto it = std::find (info->glibc_tls_slots.begin (),
+			   info->glibc_tls_slots.end (),
+			   0);
+      auto *li = gdb::checked_static_cast<lm_info_svr4 *> (so.lm_info.get ());
+      if (it == info->glibc_tls_slots.end ())
+	info->glibc_tls_slots.push_back (li->lm_addr);
+      else
+	*it = li->lm_addr;
+    }
+}
+
+/* Remove a link map address from the TLS module slot data structure.
+   As noted above, this code is GLIBC-specific.  */
+
+static void
+tls_maybe_erase_slot (program_space *pspace, const solib &so,
+		      bool still_in_use, bool silent)
+{
+  if (still_in_use)
+    return;
+
+  struct svr4_info *info = get_svr4_info (pspace);
+  auto *li = gdb::checked_static_cast<lm_info_svr4 *> (so.lm_info.get ());
+  auto it = std::find (info->glibc_tls_slots.begin (),
+		       info->glibc_tls_slots.end (),
+		       li->lm_addr);
+  if (it != info->glibc_tls_slots.end ())
+    *it = 0;
 }
 
 /* On some systems, the only way to recognize the link map entry for
@@ -1778,6 +2042,10 @@ solist_update_incremental (svr4_info *info, CORE_ADDR debug_base,
 	return 0;
 
       prev_lm = 0;
+
+      /* If the list is empty, we are seeing a new namespace for the
+	 first time, so assign it an internal ID.  */
+      svr4_maybe_add_namespace (info, debug_base);
     }
   else
     prev_lm = solist.back ().lm_info->lm_addr;
@@ -1790,9 +2058,9 @@ solist_update_incremental (svr4_info *info, CORE_ADDR debug_base,
 
       /* Unknown key=value pairs are ignored by the gdbstub.  */
       xsnprintf (annex, sizeof (annex), "lmid=%s;start=%s;prev=%s",
-		 phex_nz (debug_base, sizeof (debug_base)),
-		 phex_nz (lm, sizeof (lm)),
-		 phex_nz (prev_lm, sizeof (prev_lm)));
+		 phex_nz (debug_base),
+		 phex_nz (lm),
+		 phex_nz (prev_lm));
       if (!svr4_current_sos_via_xfer_libraries (&library_list, annex))
 	return 0;
 
@@ -1845,6 +2113,8 @@ disable_probes_interface (svr4_info *info)
 
   free_probes_table (info);
   info->solib_lists.clear ();
+  info->namespace_id.clear ();
+  info->active_namespaces.clear ();
 }
 
 /* Update the solib list as appropriate when using the
@@ -2307,7 +2577,7 @@ enable_break (struct svr4_info *info, int from_tty)
   /* Find the program interpreter; if not found, warn the user and drop
      into the old breakpoint at symbol code.  */
   std::optional<gdb::byte_vector> interp_name_holder
-    = find_program_interpreter ();
+    = svr4_find_program_interpreter ();
   if (interp_name_holder)
     {
       const char *interp_name = (const char *) interp_name_holder->data ();
@@ -3042,6 +3312,8 @@ svr4_solib_create_inferior_hook (int from_tty)
   /* Clear the probes-based interface's state.  */
   free_probes_table (info);
   info->solib_lists.clear ();
+  info->namespace_id.clear ();
+  info->active_namespaces.clear ();
 
   /* Relocate the main executable if necessary.  */
   svr4_relocate_main_executable ();
@@ -3470,6 +3742,80 @@ svr4_find_solib_addr (solib &so)
   return li->l_addr_inferior;
 }
 
+/* See solib_ops::find_solib_ns in solist.h.  */
+
+static int
+svr4_find_solib_ns (const solib &so)
+{
+  CORE_ADDR debug_base = find_debug_base_for_solib (&so);
+  svr4_info *info = get_svr4_info (current_program_space);
+  for (int i = 0; i < info->namespace_id.size (); i++)
+    {
+      if (info->namespace_id[i] == debug_base)
+	{
+	  gdb_assert (info->active_namespaces.count (i) == 1);
+	  return i;
+	}
+    }
+  error (_("No namespace found"));
+}
+
+/* see solib_ops::num_active_namespaces in solist.h.  */
+static int
+svr4_num_active_namespaces ()
+{
+  svr4_info *info = get_svr4_info (current_program_space);
+  return info->active_namespaces.size ();
+}
+
+/* See solib_ops::get_solibs_in_ns in solist.h.  */
+static std::vector<const solib *>
+svr4_get_solibs_in_ns (int nsid)
+{
+  std::vector<const solib*> ns_solibs;
+  svr4_info *info = get_svr4_info (current_program_space);
+
+  /* If the namespace ID is inactive, there will be no active
+     libraries, so we can have an early exit, as a treat.  */
+  if (info->active_namespaces.count (nsid) != 1)
+    return ns_solibs;
+
+  /* Since we only have the names of solibs in a given namespace,
+     we'll need to walk through the solib list of the inferior and
+     find which solib objects correspond to which svr4_so.  We create
+     an unordered map with the names and lm_info to check things
+     faster, and to be able to remove SOs from the map, to avoid
+     returning the dynamic linker multiple times.  */
+  CORE_ADDR debug_base = info->namespace_id[nsid];
+  std::unordered_map<std::string, const lm_info_svr4 *> namespace_solibs;
+  for (svr4_so &so : info->solib_lists[debug_base])
+    {
+      namespace_solibs[so.name]
+	= gdb::checked_static_cast<const lm_info_svr4 *>
+	    (so.lm_info.get ());
+    }
+  for (const solib &so: current_program_space->solibs ())
+    {
+      auto *lm_inferior
+	= gdb::checked_static_cast<const lm_info_svr4 *> (so.lm_info.get ());
+
+      /* This is inspired by the svr4_same, by finding the svr4_so object
+	 in the map, and then double checking if the lm_info is considered
+	 the same.  */
+      if (namespace_solibs.count (so.so_original_name) > 0
+	  && namespace_solibs[so.so_original_name]->l_addr_inferior
+	      == lm_inferior->l_addr_inferior)
+	{
+	  ns_solibs.push_back (&so);
+	  /* Remove the SO from the map, so that we don't end up
+	     printing the dynamic linker multiple times.  */
+	  namespace_solibs.erase (so.so_original_name);
+	}
+    }
+
+  return ns_solibs;
+}
+
 const struct solib_ops svr4_so_ops =
 {
   svr4_relocate_section_addresses,
@@ -3485,6 +3831,9 @@ const struct solib_ops svr4_so_ops =
   svr4_update_solib_event_breakpoints,
   svr4_handle_solib_event,
   svr4_find_solib_addr,
+  svr4_find_solib_ns,
+  svr4_num_active_namespaces,
+  svr4_get_solibs_in_ns,
 };
 
 void _initialize_svr4_solib ();
@@ -3493,4 +3842,8 @@ _initialize_svr4_solib ()
 {
   gdb::observers::free_objfile.attach (svr4_free_objfile_observer,
 				       "solib-svr4");
+
+  /* Set up observers for tracking GLIBC TLS module id slots.  */
+  gdb::observers::solib_loaded.attach (tls_maybe_fill_slot, "solib-svr4");
+  gdb::observers::solib_unloaded.attach (tls_maybe_erase_slot, "solib-svr4");
 }

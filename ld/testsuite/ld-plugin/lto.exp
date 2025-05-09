@@ -477,6 +477,12 @@ set lto_link_elf_tests [list \
   [list {liblto-19.so} \
    {-shared tmpdir/lto-19b.o tmpdir/liblto-19.a} {-O2 -fPIC} \
    {dummy.c} {} {liblto-19.so}] \
+  [list {liblto-20_static.a} \
+   {} {-fPIC} \
+   {lto-20b.c} {} {liblto-20_static.a}] \
+  [list {liblto-20.so} \
+   {-shared -Wl,--version-script=lto-20.ver} {-DSHARED -fPIC} \
+   {lto-20b.c} {} {liblto-20.so}] \
   [list {pr26806.so} \
    {-shared} {-fpic -O2 -flto} \
    {pr26806.c} {{nm {-D} pr26806.d}} {pr26806.so}] \
@@ -880,6 +886,10 @@ set lto_run_elf_shared_tests [list \
    {-Wl,--as-needed,-R,tmpdir} {} \
    {lto-19c.c} {lto-19.exe} {pass.out} {-flto -O2} {c} {} \
    {tmpdir/liblto-19.so tmpdir/liblto-19.a}] \
+  [list {lto-20} \
+   {-Wl,--as-needed,-R,tmpdir} {} \
+   {lto-20a.c} {lto-20.exe} {pass.out} {-flto} {c} {} \
+   {tmpdir/liblto-20.so tmpdir/liblto-20_static.a -Wl,--no-as-needed}] \
   [list {pr31482a} \
    {-Wl,--no-as-needed,-R,tmpdir} {} \
    {pr31482a.c} {pr31482a.exe} {pass.out} {-flto} {c} {} \
@@ -1202,6 +1212,38 @@ if { [is_elf_format] } {
 
 if { [is_elf_format] && [check_lto_shared_available] } {
     run_ld_link_exec_tests $lto_run_elf_shared_tests
+    if { [check_lto_fat_available] } {
+	run_cc_link_tests [list \
+	    [list \
+		"Build libpr32846a.a" \
+		"$plug_opt" "-fPIC -O2 -flto $lto_no_fat" \
+		{pr32846a.c pr32846b.c} {} "libpr32846a.a" \
+	    ] \
+	    [list \
+		"Build libpr32846b.a" \
+		"$plug_opt" "-fPIC -O2 -flto $lto_no_fat" \
+		{pr32846a.c pr32846b.c pr32846c.c} {} "libpr32846b.a" \
+	    ] \
+	    [list \
+		"Build pr32846d.o" \
+		"$plug_opt" "-fPIC -O2 -flto $lto_no_fat" \
+		{pr32846d.c} {} \
+	    ] \
+	    [list \
+		"Build pr32846e.o" \
+		"$plug_opt" "-fPIC -O2 -flto $lto_no_fat" \
+		{pr32846e.c} {} \
+	    ] \
+	    [list \
+		"Build pr32846" \
+		"-shared -fPIC -O2 -flto $lto_no_fat -Wl,--no-undefined \
+		 tmpdir/pr32846d.o tmpdir/libpr32846a.a \
+		 tmpdir/libpr32846b.a tmpdir/pr32846e.o" \
+		"-O2 -fPIC -flto $lto_no_fat" \
+		{dummy.c} {} "pr32846" \
+	    ] \
+	] \
+    }
 }
 
 proc pr20103 {cflags libs} {

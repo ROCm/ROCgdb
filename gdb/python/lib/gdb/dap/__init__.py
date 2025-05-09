@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -96,5 +96,4 @@ def pre_command_loop():
         # These are handy for bug reports.
         startup.exec_and_log("show version")
         startup.exec_and_log("show configuration")
-        global server
         startup.start_dap(server.main_loop)

@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -672,6 +672,8 @@ captured_main_1 (struct captured_main_args *context)
   /* Ensure stderr is unbuffered.  A Cygwin pty or pipe is implemented
      as a Windows pipe, and Windows buffers on pipes.  */
   setvbuf (stderr, NULL, _IONBF, BUFSIZ);
+
+  windows_initialize_console ();
 #endif
 
   /* Note: `error' cannot be called before this point, because the
@@ -1124,7 +1126,7 @@ captured_main_1 (struct captured_main_args *context)
 
   /* Do these (and anything which might call wrap_here or *_filtered)
      after initialize_all_files() but before the interpreter has been
-     installed.  Otherwize the help/version messages will be eaten by
+     installed.  Otherwise the help/version messages will be eaten by
      the interpreter's output handler.  */
 
   if (print_version)

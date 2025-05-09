@@ -1,6 +1,6 @@
 /* Program and address space management, for GDB, the GNU debugger.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -202,12 +202,14 @@ program_space::exec_close ()
   if (ebfd != nullptr)
     {
       /* Removing target sections may close the exec_ops target.
-	 Clear ebfd before doing so to prevent recursion.  */
-      bfd *saved_ebfd = ebfd.get ();
+	 Clear ebfd before doing so to prevent recursion.  We
+	 move it to another ref_ptr instead of saving it to a raw
+	 pointer to avoid it looking like possible use-after-free.  */
+      gdb_bfd_ref_ptr saved_ebfd = std::move (ebfd);
       ebfd.reset (nullptr);
       ebfd_mtime = 0;
 
-      remove_target_sections (saved_ebfd);
+      remove_target_sections (saved_ebfd.get ());
 
       m_exec_filename.reset ();
     }

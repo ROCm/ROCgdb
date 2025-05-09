@@ -1,0 +1,202 @@
+# Copyright 2025 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test OCP microscaling types (i.e. fp8/6/4) are printed correctly,
+# and $_mx_get_scaled_float works correctly.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test $_mx_get_scaled_float with and without pretty-printing enabled, and
+# check the expected vector type is returned.  MX_ARGS is the arguments to pass
+# to $_mx_get_scaled_float.  RESULT_RE is the expected result float vector
+# elements.  VECTOR_SIZE_RE is the expected result vector size.
+proc test_mx_function {mx_args result_re vector_size_re} {
+    gdb_test "p \$_mx_get_scaled_float($mx_args)" " = \\\{$result_re\\\}"
+    gdb_test "p /r \$_mx_get_scaled_float($mx_args)" " = \\\{$result_re\\\}"
+    # Unfortunately, "ptype $anyfunction()" doesn't work correctly.
+    # Indirect via "ptype $" instead as workaround.
+    gdb_test "ptype \$" "^type = float __attribute__ \\(\\(vector_size\\($vector_size_re\\)\\)\\)" "ptype \$_mx_get_scaled_float($mx_args)"
+}
+
+proc_with_prefix ocp_mx_fp8e4m3 {} {
+    gdb_breakpoint [gdb_get_line_number "break here 1"] allow-pending
+    gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp8e4m3_values.*|Breakpoint .*, fp8e4m3_values.* at .*"
+    with_test_prefix "encoding" {
+	gdb_test "p fp8e4m3zero.e" "\\\{0.0, 0.0\\\}"
+	gdb_test "p fp8e4m3nan.e" "\\\{nan, nan\\\}"
+	gdb_test "p fp8e4m3nmax.e" "\\\{448.0, -448.0\\\}"
+	gdb_test "p fp8e4m3nmin.e" "\\\{0.015625, -0.015625\\\}"
+	gdb_test "p fp8e4m3nrndm.e" "\\\{11.0, -4.5\\\}"
+	gdb_test "p fp8e4m3smax.e" "\\\{0.013671875, -0.013671875\\\}"
+	gdb_test "p fp8e4m3smin.e" "\\\{0.001953125, -0.001953125\\\}"
+	gdb_test "p fp8e4m3srndm.e" "\\\{0.017578125, -0.009765625\\\}"
+    }
+    with_test_prefix "builtin" {
+	gdb_test "p e8m0" "1"
+	gdb_test "p e4m3" "\\\{112.0\\\}"
+	gdb_test "p e4m3n" "\\\{224.0, -128.0\\\}"
+	gdb_test "p e4m3s" "\\\{0.02734375, -0.00390625\\\}"
+    }
+    with_test_prefix "scalefunc" {
+	test_mx_function "e4m3"        "112" "1"
+	test_mx_function "e4m3, 2"     "224" "1"
+	test_mx_function "e4m3, e8m0"  "112" "1"
+	test_mx_function "e4m3n"       "224, -128" "2"
+	test_mx_function "e4m3n, 2"    "448, -256" "2"
+	test_mx_function "e4m3n, e8m0" "224, -128" "2"
+    }
+}
+
+proc_with_prefix ocp_mx_fp8e5m2 {} {
+    gdb_breakpoint [gdb_get_line_number "break here 2"] allow-pending
+    gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp8e5m2_values.*|Breakpoint .*, fp8e5m2_values.* at .*"
+    with_test_prefix "encoding" {
+	gdb_test "p fp8e5m2zero.e" "\\\{0.0, 0.0\\\}"
+	gdb_test "p fp8e5m2inf.e"  "\\\{inf, -inf\\\}"
+	gdb_test "p fp8e5m2nan0.e" "\\\{nan, nan\\\}"
+	gdb_test "p fp8e5m2nan1.e" "\\\{nan, nan\\\}"
+	gdb_test "p fp8e5m2nan2.e" "\\\{nan, nan\\\}"
+	gdb_test "p fp8e5m2nmax.e" "\\\{57344.0, -57344.0\\\}"
+	gdb_test "p fp8e5m2nmin.e" "\\\{6.103515625e-05, -6.103515625e-05\\\}"
+	gdb_test "p fp8e5m2nrndm.e" "\\\{2.5, -0.03125\\\}"
+	gdb_test "p fp8e5m2smax.e" "\\\{4.57763671875e-05, -4.57763671875e-05\\\}"
+	gdb_test "p fp8e5m2smin.e" "\\\{1.52587890625e-05, -1.52587890625e-05\\\}"
+	gdb_test "p fp8e5m2srndm.e" "\\\{3.0517578125e-05, -3.0517578125e-05\\\}"
+    }
+    with_test_prefix "builtin" {
+	gdb_test "p e8m0" "2"
+	gdb_test "p e5m2" "\\\{-224.0\\\}"
+	gdb_test "p e5m2n" "\\\{28672.0, -3072.0\\\}"
+	gdb_test "p e5m2s" "\\\{9.1552734375e-05, -3.0517578125e-05\\\}"
+    }
+    with_test_prefix "scalefunc" {
+	test_mx_function "e5m2"        "-224" "1"
+	test_mx_function "e5m2, 3"     "-672" "1"
+	test_mx_function "e5m2, e8m0"  "-448" "1"
+	test_mx_function "e5m2n"       "28672, -3072" "2"
+	test_mx_function "e5m2n, 3"    "86016, -9216" "2"
+	test_mx_function "e5m2n, e8m0" "57344, -6144" "2"
+    }
+}
+
+proc_with_prefix ocp_mx_fp6e2m3 {} {
+    gdb_breakpoint [gdb_get_line_number "break here 3"] allow-pending
+    gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp6e2m3_values.*|Breakpoint .*, fp6e2m3_values.* at .*"
+    with_test_prefix "encoding" {
+	gdb_test "p fp6e2m3zero.e" "\\\{0.0, 0.0, .*\\\}"
+	gdb_test "p fp6e2m3nmax.e" "\\\{7.5, -7.5, .*\\\}"
+	gdb_test "p fp6e2m3nmin.e" "\\\{1.0, -1.0, .*\\\}"
+	gdb_test "p fp6e2m3nrndm.e" "\\\{5.0, -1.5, .*\\\}"
+	gdb_test "p fp6e2m3smax.e" "\\\{0.875, -0.875, .*\\\}"
+	gdb_test "p fp6e2m3smin.e" "\\\{0.125, -0.125, .*\\\}"
+	gdb_test "p fp6e2m3srndm.e" "\\\{0.625, -0.375, .*\\\}"
+    }
+    with_test_prefix "builtin" {
+	gdb_test "p e8m0" "4"
+	gdb_test "p e2m3n" "\\\{7.5, -1.25, .*\\\}"
+	gdb_test "p e2m3s" "\\\{0.375, -0.125, .*\\\}"
+    }
+    with_test_prefix "scalefunc" {
+	test_mx_function "e2m3n"       "7.5, -1.25, .*"  "32"
+	test_mx_function "e2m3n, 5"    "37.5, -6.25, .*" "32"
+	test_mx_function "e2m3n, e8m0" "30, -5, .*"      "32"
+    }
+}
+
+proc_with_prefix ocp_mx_fp6e3m2 {} {
+    gdb_breakpoint [gdb_get_line_number "break here 4"] allow-pending
+    gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp6e3m2_values.*|Breakpoint .*, fp6e3m2_values.* at .*"
+    with_test_prefix "encoding" {
+	gdb_test "p fp6e3m2zero.e" "\\\{0.0, 0.0, .*\\\}"
+	gdb_test "p fp6e3m2nmax.e" "\\\{28.0, -28.0, .*\\\}"
+	gdb_test "p fp6e3m2nmin.e" "\\\{0.25, -0.25, .*\\\}"
+	gdb_test "p fp6e3m2nrndm.e" "\\\{0.875, -2.5, .*\\\}"
+	gdb_test "p fp6e3m2smax.e" "\\\{0.1875, -0.1875, .*\\\}"
+	gdb_test "p fp6e3m2smin.e" "\\\{0.0625, -0.0625, .*\\\}"
+	gdb_test "p fp6e3m2srndm.e" "\\\{0.125, -0.125, .*\\\}"
+    }
+    with_test_prefix "builtin" {
+	gdb_test "p e8m0" "8"
+	gdb_test "p e3m2n" "\\\{14.0, -1.25, .*\\\}"
+	gdb_test "p e3m2s" "\\\{0.125, -0.75, .*\\\}"
+    }
+    with_test_prefix "scalefunc" {
+	test_mx_function "e3m2n"       "14, -1.25, .*"   "32"
+	test_mx_function "e3m2n, 9"    "126, -11.25, .*" "32"
+	test_mx_function "e3m2n, e8m0" "112, -10, .*"    "32"
+    }
+}
+
+proc_with_prefix ocp_mx_fp4e2m1 {} {
+    gdb_breakpoint [gdb_get_line_number "break here 5"] allow-pending
+    gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp4e2m1_values.*|Breakpoint .*, fp4e2m1_values.* at .*"
+    with_test_prefix "encoding" {
+	gdb_test "p fp4e2m1zero.e" "\\\{0.0, 0.0\\\}"
+	gdb_test "p fp4e2m1nmax.e" "\\\{6.0, -6.0\\\}"
+	gdb_test "p fp4e2m1nmin.e" "\\\{1.0, -1.0\\\}"
+	gdb_test "p fp4e2m1nrndm.e" "\\\{3.0, -2.0\\\}"
+	gdb_test "p fp4e2m1smax.e" "\\\{0.5, -0.5\\\}"
+	gdb_test "p fp4e2m1smin.e" "\\\{0.5, -0.5\\\}"
+	gdb_test "p fp4e2m1srndm.e" "\\\{0.5, -0.5\\\}"
+    }
+    with_test_prefix "builtin" {
+	gdb_test "p e8m0" "16"
+	gdb_test "p e2m1n" "\\\{3.0, -1.5\\\}"
+	gdb_test "p e2m1s" "\\\{0.5, -0.5\\\}"
+    }
+    with_test_prefix "scalefunc" {
+	test_mx_function "e2m1n"       "3, -1.5"   "2"
+	test_mx_function "e2m1n, 17"   "51, -25.5" "2"
+	test_mx_function "e2m1n, e8m0" "48, -24"   "2"
+    }
+}
+
+proc_with_prefix scalefunc_checks {} {
+    gdb_test "p \$_mx_get_scaled_float(e8m0)" "Error.*Python.*mx_scalar must be of ROCm microscaling scalar type"
+    gdb_test "p \$_mx_get_scaled_float(&e2m1n)" "Error.*Python.*mx_scalar must be of ROCm microscaling scalar type"
+    gdb_test "p \$_mx_get_scaled_float(e2m1n, 0)" "Error.*Python.*usage.*_mx_get_scaled_float\\\(mx_scalar, mx_scale >= 1\\\)"
+    gdb_test "p \$_mx_get_scaled_float(e2m1n, -15)" "Error.*Python.*usage.*_mx_get_scaled_float\\\(mx_scalar, mx_scale >= 1\\\)"
+    gdb_test "p \$_mx_get_scaled_float(e2m1n, e8m0, 5)" "Error.*Python.*(_MxGetScaledFloat\.)?invoke\\\(\\\).*takes.*2 to 3.*arguments.*4.*given"
+    gdb_test "p \$_mx_get_scaled_float()" "Error.*Python.*(_MxGetScaledFloat\.)?invoke\\\(\\\).*missing 1 required positional argument.*'mxvar'"
+}
+
+proc do_test {} {
+    clean_restart $::binfile
+    if ![runto_main] {
+	fail "can't run to main"
+	return -1
+    }
+
+    foreach_with_prefix loc { on_dev on_host } {
+	ocp_mx_fp8e4m3
+	ocp_mx_fp8e5m2
+	ocp_mx_fp6e2m3
+	ocp_mx_fp6e3m2
+	ocp_mx_fp4e2m1
+    }
+    scalefunc_checks
+}
+
+with_rocm_gpu_lock {
+    do_test
+}

@@ -1,6 +1,6 @@
 /* General utility routines for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -179,6 +179,7 @@ vwarning (const char *string, va_list args)
 	  target_terminal::ours_for_output ();
 	}
       gdb_puts (warning_pre_print, gdb_stderr);
+      print_warning_prefix (gdb_stderr);
       gdb_puts (_("warning: "), gdb_stderr);
       gdb_vprintf (gdb_stderr, string, args);
       gdb_printf (gdb_stderr, "\n");
@@ -384,7 +385,7 @@ internal_vproblem (struct internal_problem *problem,
 #endif
 
   /* Create a string containing the full error/warning message.  Need
-     to call query with this full string, as otherwize the reason
+     to call query with this full string, as otherwise the reason
      (error/warning) and question become separated.  Format using a
      style similar to a compiler error message.  Include extra detail
      so that the user knows that they are living on the edge.  */
@@ -1406,18 +1407,6 @@ pager_file::emit_style_escape (const ui_file_style &style)
 	m_stream->emit_style_escape (style);
       else
 	m_wrap_buffer.append (style.to_ansi ());
-    }
-}
-
-/* See pager.h.  */
-
-void
-pager_file::reset_style ()
-{
-  if (can_emit_style_escape ())
-    {
-      m_applied_style = ui_file_style ();
-      m_wrap_buffer.append (m_applied_style.to_ansi ());
     }
 }
 

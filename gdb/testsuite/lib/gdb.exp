@@ -1,4 +1,4 @@
-# Copyright 1992-2024 Free Software Foundation, Inc.
+# Copyright 1992-2025 Free Software Foundation, Inc.
 # Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
@@ -3759,7 +3759,8 @@ proc supports_reverse {} {
          || [istarget "aarch64*-*-linux*"]
 	 || [istarget "loongarch*-*-linux*"]
          || [istarget "powerpc*-*-linux*"]
-         || [istarget "s390*-*-linux*"] } {
+	 || [istarget "s390*-*-linux*"]
+	 || [istarget "riscv*-*-*"] } {
 	return 1
     }
 
@@ -3938,13 +3939,16 @@ gdb_caching_proc is_aarch32_target {} {
 	return 0
     }
 
-    set list {}
-    foreach reg \
-	{r0 r1 r2 r3} {
-	    lappend list "\tmov $reg, $reg"
-	}
+    return [gdb_can_simple_compile aarch32 {
+	int main (void) {
+	    asm ("\tmov r0, r0");
+	    asm ("\tmov r1, r1");
+	    asm ("\tmov r2, r2");
+	    asm ("\tmov r3, r3");
 
-    return [gdb_can_simple_compile aarch32 [join $list \n]]
+	    return 0;
+	}
+    }]
 }
 
 # Return 1 if this target is an aarch64, either lp64 or ilp32.

@@ -1,6 +1,6 @@
 /* DWARF CU data structure
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,7 @@
 #define GDB_DWARF2_CU_H
 
 #include "buildsym.h"
-#include "dwarf2/comp-unit-head.h"
+#include "dwarf2/unit-head.h"
 #include <optional>
 #include "language.h"
 #include "gdbsupport/unordered_set.h"
@@ -99,8 +99,17 @@ struct dwarf2_cu
   void add_dependence (dwarf2_per_cu *ref_per_cu)
   { m_dependencies.emplace (ref_per_cu); }
 
+  /* Find the DIE at section offset SECT_OFF.
+
+     Return nullptr if not found.  */
+  die_info *find_die (sect_offset sect_off) const
+  {
+    auto it = die_hash.find (sect_off);
+    return it != die_hash.end () ? *it : nullptr;
+  }
+
   /* The header of the compilation unit.  */
-  struct comp_unit_head header;
+  struct unit_head header;
 
   /* Base address of this compilation unit.  */
   std::optional<unrelocated_addr> base_address;

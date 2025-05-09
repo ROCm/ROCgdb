@@ -1,6 +1,6 @@
 /* Python interface to ui_file_style::color objects.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -64,7 +64,8 @@ create_color_object (const ui_file_style::color &color)
 bool
 gdbpy_is_color (PyObject *obj)
 {
-  return PyObject_IsInstance (obj, (PyObject *) &colorpy_object_type);
+  gdb_assert (obj != nullptr);
+  return PyObject_TypeCheck (obj, &colorpy_object_type) != 0;
 }
 
 /* See py-color.h.  */
@@ -80,33 +81,33 @@ gdbpy_get_color (PyObject *obj)
 static PyObject *
 get_attr (PyObject *obj, PyObject *attr_name)
 {
-  if (! PyUnicode_Check (attr_name))
+  if (!PyUnicode_Check (attr_name))
     return PyObject_GenericGetAttr (obj, attr_name);
 
   colorpy_object *self = (colorpy_object *) obj;
   const ui_file_style::color &color = self->color;
 
-  if (! PyUnicode_CompareWithASCIIString (attr_name, "colorspace"))
+  if (!PyUnicode_CompareWithASCIIString (attr_name, "colorspace"))
     {
       int value = static_cast<int> (color.colorspace ());
       return gdb_py_object_from_longest (value).release ();
     }
 
-  if (! PyUnicode_CompareWithASCIIString (attr_name, "is_none"))
+  if (!PyUnicode_CompareWithASCIIString (attr_name, "is_none"))
     return PyBool_FromLong (color.is_none ());
 
-  if (! PyUnicode_CompareWithASCIIString (attr_name, "is_indexed"))
+  if (!PyUnicode_CompareWithASCIIString (attr_name, "is_indexed"))
     return PyBool_FromLong (color.is_indexed ());
 
-  if (! PyUnicode_CompareWithASCIIString (attr_name, "is_direct"))
+  if (!PyUnicode_CompareWithASCIIString (attr_name, "is_direct"))
     return PyBool_FromLong (color.is_direct ());
 
   if (color.is_indexed ()
-      && ! PyUnicode_CompareWithASCIIString (attr_name, "index"))
+      && !PyUnicode_CompareWithASCIIString (attr_name, "index"))
     return gdb_py_object_from_longest (color.get_value ()).release ();
 
   if (color.is_direct ()
-      && ! PyUnicode_CompareWithASCIIString (attr_name, "components"))
+      && !PyUnicode_CompareWithASCIIString (attr_name, "components"))
     {
       uint8_t rgb[3];
       color.get_rgb (rgb);
@@ -135,21 +136,21 @@ get_attr (PyObject *obj, PyObject *attr_name)
 /* Implementation of Color.escape_sequence (self, is_fg) -> str.  */
 
 static PyObject *
-colorpy_escape_sequence (PyObject *self, PyObject *is_fg_obj)
+colorpy_escape_sequence (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-  if (!gdbpy_is_color (self))
-    {
-      PyErr_SetString (PyExc_RuntimeError,
-		       _("Object is not gdb.Color."));
-      return nullptr;
-    }
+  static const char *keywords[] = { "is_foreground", nullptr };
+  PyObject *is_fg_obj;
 
-  if (! PyBool_Check (is_fg_obj))
-    {
-      PyErr_SetString (PyExc_RuntimeError,
-		       _("A boolean argument is required."));
-      return nullptr;
-    }
+  /* Parse method arguments.  */
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "O!", keywords,
+					&PyBool_Type, &is_fg_obj))
+    return nullptr;
+
+  /* Python ensures the type of SELF.  */
+  gdb_assert (gdbpy_is_color (self));
+
+  /* The argument parsing ensures we have a bool.  */
+  gdb_assert (PyBool_Check (is_fg_obj));
 
   bool is_fg = is_fg_obj == Py_True;
   std::string s = gdbpy_get_color (self).to_ansi (is_fg);
@@ -175,17 +176,20 @@ colorpy_init (PyObject *self, PyObject *args, PyObject *kwds)
   PyObject *colorspace_obj = nullptr;
   color_space colorspace = color_space::MONOCHROME;
 
-  if (! PyArg_ParseTuple (args, "|OO", &value_obj, &colorspace_obj))
+  static const char *keywords[] = { "value", "color_space", nullptr };
+
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwds, "|OO", keywords,
+					&value_obj, &colorspace_obj))
     return -1;
 
   try
     {
-      if (colorspace_obj)
+      if (colorspace_obj != nullptr)
 	{
 	  if (PyLong_Check (colorspace_obj))
 	    {
 	      long colorspace_id = -1;
-	      if (! gdb_py_int_as_long (colorspace_obj, &colorspace_id))
+	      if (!gdb_py_int_as_long (colorspace_obj, &colorspace_id))
 		return -1;
 	      if (!color_space_safe_cast (&colorspace, colorspace_id))
 		error (_("colorspace %ld is out of range."), colorspace_id);
@@ -201,11 +205,11 @@ colorpy_init (PyObject *self, PyObject *args, PyObject *kwds)
       else if (PyLong_Check (value_obj))
 	{
 	  long value = -1;
-	  if (! gdb_py_int_as_long (value_obj, &value))
+	  if (!gdb_py_int_as_long (value_obj, &value))
 	    return -1;
 	  if (value < 0 || value > INT_MAX)
 	    error (_("value %ld is out of range."), value);
-	  if (colorspace_obj)
+	  if (colorspace_obj != nullptr)
 	    obj->color = ui_file_style::color (colorspace, value);
 	  else
 	    obj->color = ui_file_style::color (value);
@@ -256,7 +260,6 @@ colorpy_init (PyObject *self, PyObject *args, PyObject *kwds)
       return gdbpy_handle_gdb_exception (-1, except);
     }
 
-  Py_INCREF (self);
   return 0;
 }
 
@@ -272,10 +275,10 @@ colorpy_str (PyObject *self)
 static int
 gdbpy_initialize_color (void)
 {
-  for (auto & pair : colorspace_constants)
-      if (PyModule_AddIntConstant (gdb_module, pair.name,
-				   static_cast<long> (pair.value)) < 0)
-	return -1;
+  for (auto &pair : colorspace_constants)
+    if (PyModule_AddIntConstant (gdb_module, pair.name,
+				 static_cast<long> (pair.value)) < 0)
+      return -1;
 
   colorpy_object_type.tp_new = PyType_GenericNew;
   return gdbpy_type_ready (&colorpy_object_type, gdb_module);
@@ -285,7 +288,8 @@ gdbpy_initialize_color (void)
 
 static PyMethodDef color_methods[] =
 {
-  { "escape_sequence", colorpy_escape_sequence, METH_O,
+  { "escape_sequence", (PyCFunction) colorpy_escape_sequence,
+    METH_VARARGS | METH_KEYWORDS,
     "escape_sequence (is_foreground) -> str.\n\
 Return the ANSI escape sequence for this color.\n\
 IS_FOREGROUND indicates whether this is a foreground or background color."},
@@ -313,7 +317,7 @@ PyTypeObject colorpy_object_type =
   get_attr,			  /*tp_getattro*/
   0,				  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
-  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB color object",	  	  /* tp_doc */
   0,				  /* tp_traverse */
   0,				  /* tp_clear */

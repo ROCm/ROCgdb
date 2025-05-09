@@ -129,8 +129,7 @@ class Stabs {
 
     // Interface with Elf Symbol Table
     void                check_Symtab();
-    void                readSymSec(unsigned int sec, Elf *elf);
-    void                check_Relocs();
+    void		readSymSec (Elf *elf, bool is_dynamic);
     void                get_save_addr(bool need_swap_endian);
     Symbol              *map_PC_to_sym(uint64_t pc);
     Symbol              *pltSym;
@@ -146,9 +145,10 @@ class Stabs {
     Map<const char*, Symbol*> *get_elf_symbols();
     Dwarf       *dwarf;
 
-    bool        st_check_symtab, st_check_relocs;
+    bool	st_check_symtab;
     Function	*createFunction(LoadObject *lo, Module *module, Symbol *sym);
     void        fixSymtabAlias();
+    void	removeDupSyms ();
 
     // Interface with dwarf
     Dwarf       *openDwarf();

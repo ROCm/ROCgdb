@@ -1,5 +1,5 @@
 /* Native debugging support for Intel x86 running DJGPP.
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
    Written by Robert Hoehne.
 
    This file is part of GDB.
@@ -697,7 +697,7 @@ go32_nat_target::create_inferior (const char *exec_file,
 		      "not enough memory.\n"));
 
   /* Parse the command line and create redirections.  */
-  if (strpbrk (args, "<>"))
+  if (strpbrk (args, "<>") != nullptr)
     {
       if (redir_cmdline_parse (args, &child_cmd) == 0)
 	args = child_cmd.command;

@@ -1,6 +1,6 @@
 /* DWARF 2 Expression Evaluator.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Berlin (dan@dberlin.org)
@@ -3726,6 +3726,27 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
   return op_ptr;
 }
 
+/* Return true if, for an expr evaluated in the context of FRAME, we can
+   assume that DW_OP_entry_value (expr) == expr.
+
+   We can assume this right after executing a call, when stopped at the
+   start of the called function, in other words, when:
+   - FRAME is the innermost frame, and
+   - FRAME->pc is the first insn in a function.  */
+
+static bool
+trivial_entry_value (frame_info_ptr frame)
+{
+  bool innermost_frame = frame_relative_level (frame) == 0;
+
+  /* Get pc corresponding to frame.  Use get_frame_address_in_block to make
+     sure we get a pc in the correct function in the case of tail calls.  */
+  CORE_ADDR pc = get_frame_address_in_block (frame);
+  bool at_first_insn = find_function_type (pc) != nullptr;
+
+  return innermost_frame && at_first_insn;
+}
+
 void
 dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 				      const gdb_byte *op_end)
@@ -4516,6 +4537,8 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    CORE_ADDR deref_size;
 	    union call_site_parameter_u kind_u;
 
+	    ensure_have_frame (this->m_frame, "DW_OP_entry_value");
+
 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &len);
 	    if (op_ptr + len > op_end)
 	      error (_("DW_OP_entry_value: too few bytes available."));
@@ -4524,6 +4547,16 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    if (kind_u.dwarf_reg != -1)
 	      {
 		op_ptr += len;
+
+		if (trivial_entry_value (this->m_frame))
+		  {
+		    /* We can assume that DW_OP_entry_value (expr) == expr.
+		       Handle as DW_OP_regx.  */
+		    result_entry = std::make_shared<dwarf_register>
+		      (arch, kind_u.dwarf_reg);
+		    break;
+		  }
+
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u,
 						  -1 /* deref_size */);
@@ -4538,6 +4571,26 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 		if (deref_size == -1)
 		  deref_size = this->m_addr_size;
 		op_ptr += len;
+
+		if (trivial_entry_value (this->m_frame))
+		  {
+		    /* We can assume that DW_OP_entry_value (expr) == expr.
+		       Handle as DW_OP_bregx;DW_OP_deref_size.  */
+
+		    auto location
+		      = std::make_shared<dwarf_register> (arch,
+							  kind_u.dwarf_reg);
+		    std::shared_ptr<dwarf_value> regval
+		      = location->deref (this->m_frame, this->m_addr_info,
+					 address_type);
+		    result_entry
+		      = regval->to_location (arch)->deref (this->m_frame,
+							   this->m_addr_info,
+							   address_type,
+							   deref_size);
+		    break;
+		  }
+
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u, deref_size);
 		goto no_push;

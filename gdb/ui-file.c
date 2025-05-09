@@ -1,6 +1,6 @@
 /* UI_FILE - a generic STDIO like output stream.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -82,18 +82,6 @@ ui_file::emit_style_escape (const ui_file_style &style)
     {
       m_applied_style = style;
       this->puts (style.to_ansi ().c_str ());
-    }
-}
-
-/* See ui-file.h.  */
-
-void
-ui_file::reset_style ()
-{
-  if (can_emit_style_escape ())
-    {
-      m_applied_style = ui_file_style ();
-      this->puts (m_applied_style.to_ansi ().c_str ());
     }
 }
 

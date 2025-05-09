@@ -1,6 +1,6 @@
 /* Implementation of the GDB variable objects API.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
    Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
@@ -1363,7 +1363,7 @@ install_new_value (struct varobj *var, struct value *value, bool initial)
     {
       /* For values that are not changeable, we don't compare the values.
 	 However, we want to notice if a value was not NULL and now is NULL,
-	 or vise versa, so that we report when top-level varobjs come in scope
+	 or vice versa, so that we report when top-level varobjs come in scope
 	 and leave the scope.  */
       changed = (var->value != NULL) != (value != NULL);
     }

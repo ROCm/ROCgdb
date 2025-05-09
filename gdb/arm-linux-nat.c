@@ -1,5 +1,5 @@
 /* GNU/Linux on ARM native support.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -714,7 +714,7 @@ struct arm_linux_hw_breakpoint
 
    The Linux ptrace interface to hardware break-/watch-points presents the 
    values in a vector centred around 0 (which is used fo generic information).
-   Positive indicies refer to breakpoint addresses/control registers, negative
+   Positive indices refer to breakpoint addresses/control registers, negative
    indices to watchpoint addresses/control registers.
 
    The Linux vector is indexed as follows:

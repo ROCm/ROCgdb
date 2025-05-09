@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux AArch64.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -24,6 +24,7 @@
 #include "gdbarch.h"
 #include "glibc-tdep.h"
 #include "linux-tdep.h"
+#include "svr4-tls-tdep.h"
 #include "aarch64-tdep.h"
 #include "aarch64-linux-tdep.h"
 #include "osabi.h"
@@ -35,6 +36,7 @@
 #include "target/target.h"
 #include "expop.h"
 #include "auxv.h"
+#include "inferior.h"
 
 #include "regcache.h"
 #include "regset.h"
@@ -2275,7 +2277,7 @@ aarch64_canonicalize_syscall (enum aarch64_syscall syscall_number)
       SYSCALL_MAP (clone);
       SYSCALL_MAP (execve);
 
-      SYSCALL_MAP_RENAME (mmap, gdb_old_mmap);
+      SYSCALL_MAP_RENAME (mmap, gdb_sys_old_mmap);
 
       SYSCALL_MAP (fadvise64);
       SYSCALL_MAP (swapon);
@@ -2597,8 +2599,8 @@ aarch64_linux_fill_memtag_section (struct gdbarch *gdbarch, asection *osec)
 				 static_cast<int> (memtag_type::allocation)))
 	{
 	  warning (_("Failed to read MTE tags from memory range [%s,%s)."),
-		     phex_nz (start_address, sizeof (start_address)),
-		     phex_nz (end_address, sizeof (end_address)));
+		     phex_nz (start_address),
+		     phex_nz (end_address));
 	  return false;
 	}
 
@@ -2701,6 +2703,57 @@ aarch64_use_target_description_from_corefile_notes (gdbarch *gdbarch,
   return true;
 }
 
+/* Fetch and return the TLS DTV (dynamic thread vector) address for PTID.
+   Throw a suitable TLS error if something goes wrong.  */
+
+static CORE_ADDR
+aarch64_linux_get_tls_dtv_addr (struct gdbarch *gdbarch, ptid_t ptid,
+				svr4_tls_libc libc)
+{
+  /* On aarch64, the thread pointer is found in the TPIDR register.
+     Note that this is the first register in the TLS feature - see
+     features/aarch64-tls.c - and it will always be present.  */
+  regcache *regcache
+    = get_thread_arch_regcache (current_inferior (), ptid, gdbarch);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  target_fetch_registers (regcache, tdep->tls_regnum_base);
+  ULONGEST thr_ptr;
+  if (regcache->cooked_read (tdep->tls_regnum_base, &thr_ptr) != REG_VALID)
+    throw_error (TLS_GENERIC_ERROR, _("Unable to fetch thread pointer"));
+
+  CORE_ADDR dtv_ptr_addr;
+  switch (libc)
+    {
+    case svr4_tls_libc_musl:
+      /* MUSL: The DTV pointer is found at the very end of the pthread
+	 struct which is located *before* the thread pointer.  I.e.
+	 the thread pointer will be just beyond the end of the struct,
+	 so the address of the DTV pointer is found one pointer-size
+	 before the thread pointer.  */
+      dtv_ptr_addr = thr_ptr - (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
+      break;
+    case svr4_tls_libc_glibc:
+      /* GLIBC: The thread pointer (tpidr) points at the TCB (thread control
+	 block).  On aarch64, this struct (tcbhead_t) is defined to
+	 contain two pointers.  The first is a pointer to the DTV and
+	 the second is a pointer to private data.  So the DTV pointer
+	 address is the same as the thread pointer.  */
+      dtv_ptr_addr = thr_ptr;
+      break;
+    default:
+      throw_error (TLS_GENERIC_ERROR, _("Unknown aarch64 C library"));
+      break;
+    }
+  gdb::byte_vector buf (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
+  if (target_read_memory (dtv_ptr_addr, buf.data (), buf.size ()) != 0)
+    throw_error (TLS_GENERIC_ERROR, _("Unable to fetch DTV address"));
+
+  const struct builtin_type *builtin = builtin_type (gdbarch);
+  CORE_ADDR dtv_addr = gdbarch_pointer_to_address
+			 (gdbarch, builtin->builtin_data_ptr, buf.data ());
+  return dtv_addr;
+}
+
 static void
 aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -2722,6 +2775,9 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,
 					     svr4_fetch_objfile_link_map);
+  set_gdbarch_get_thread_local_address (gdbarch,
+					svr4_tls_get_thread_local_address);
+  svr4_tls_register_tls_methods (info, gdbarch, aarch64_linux_get_tls_dtv_addr);
 
   /* Shared library handling.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);

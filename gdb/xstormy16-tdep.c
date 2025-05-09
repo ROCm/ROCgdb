@@ -1,6 +1,6 @@
 /* Target-dependent code for the Sanyo Xstormy16a (LC590000) processor.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -435,7 +435,7 @@ xstormy16_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      return sal.end;
 	    }
 	}
-      /* No useable line symbol.  Use result of prologue parsing method.  */
+      /* No usable line symbol.  Use result of prologue parsing method.  */
       return plg_end;
     }
 

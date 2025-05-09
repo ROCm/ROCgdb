@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux running on PA-RISC, for GDB.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -322,7 +322,7 @@ static const struct frame_unwind_legacy hppa_linux_sigtramp_frame_unwind (
 /* Attempt to find (and return) the global pointer for the given
    function.
 
-   This is a rather nasty bit of code searchs for the .dynamic section
+   This rather nasty bit of code searches for the .dynamic section
    in the objfile corresponding to the pc of the function we're trying
    to call.  Once it finds the addresses at which the .dynamic section
    lives in the child process, it scans the Elf32_Dyn entries for a

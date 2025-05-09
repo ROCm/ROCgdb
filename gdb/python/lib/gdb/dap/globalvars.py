@@ -1,4 +1,4 @@
-# Copyright 2024 Free Software Foundation, Inc.
+# Copyright 2024-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -78,7 +78,6 @@ def get_global_scope(frame):
     except RuntimeError:
         return None
 
-    global _id_to_scope
     block = block.static_block
     if block in _id_to_scope:
         return _id_to_scope[block]

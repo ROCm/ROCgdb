@@ -1,6 +1,6 @@
 /* DWARF attributes
 
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -114,6 +114,15 @@ struct attribute
      returned.  */
   std::optional<ULONGEST> unsigned_constant () const;
 
+  /* Return a signed constant value.  This only handles constant forms
+     (i.e., form_is_constant -- and not the extended list of
+     "unsigned" forms) and assumes a signed value is desired.  This
+     function will sign-extend DW_FORM_data* values.
+
+     If non-constant form is used, then complaint is issued and an
+     empty value is returned.  */
+  std::optional<LONGEST> signed_constant () const;
+
   /* Return non-zero if ATTR's value falls in the 'constant' class, or
      zero otherwise.  When this function returns true, you can apply
      the constant_value method to it.
@@ -144,7 +153,9 @@ struct attribute
 	    || form == DW_FORM_ref4
 	    || form == DW_FORM_ref8
 	    || form == DW_FORM_ref_udata
-	    || form == DW_FORM_GNU_ref_alt);
+	    || form == DW_FORM_GNU_ref_alt
+	    || form == DW_FORM_ref_sup4
+	    || form == DW_FORM_ref_sup8);
   }
 
   /* Check if the attribute's form is a DW_FORM_block*
@@ -164,9 +175,28 @@ struct attribute
      false.  */
   bool form_is_strictly_signed () const;
 
+  /* Check if the attribute's form is an unsigned constant form.  This
+     only returns true for forms that are strictly unsigned -- that
+     is, for a context-dependent form like DW_FORM_data1, this returns
+     false.  */
+  bool form_is_strictly_unsigned () const
+  {
+    return form == DW_FORM_udata;
+  }
+
   /* Check if the attribute's form is a form that requires
      "reprocessing".  */
   bool form_requires_reprocessing () const;
+
+  /* Check if attribute's form refers to the separate "dwz" file.
+     This is only useful for references to the .debug_info section,
+     not to the supplementary .debug_str section.  */
+  bool form_is_alt () const
+  {
+    return (form == DW_FORM_GNU_ref_alt
+	    || form == DW_FORM_ref_sup4
+	    || form == DW_FORM_ref_sup8);
+  }
 
   /* Return DIE offset of this attribute.  Return 0 with complaint if
      the attribute is not of the required kind.  */

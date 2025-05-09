@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/sparc64.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -318,7 +318,7 @@ static const struct frame_unwind_legacy sparc64obsd_trapframe_unwind (
 
 /* Threads support.  */
 
-/* Offset wthin the thread structure where we can find %fp and %i7.  */
+/* Offset within the thread structure where we can find %fp and %i7.  */
 #define SPARC64OBSD_UTHREAD_FP_OFFSET	232
 #define SPARC64OBSD_UTHREAD_PC_OFFSET	240
 

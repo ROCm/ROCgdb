@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2024 Free Software Foundation, Inc.
+# Copyright (C) 2010-2025 Free Software Foundation, Inc.
 
 # Makefile for building a staged copy of the data-directory.
 # This file is part of GDB.
@@ -123,7 +123,9 @@ PYTHON_FILE_LIST = \
 	gdb/function/as_string.py \
 	gdb/function/caller_is.py \
 	gdb/function/strfns.py \
-	gdb/printer/__init__.py
+	gdb/function/rocm_get_scaled_float.py \
+	gdb/printer/__init__.py \
+	gdb/printer/rocm_ocp_mx.py
 
 @HAVE_PYTHON_TRUE@PYTHON_FILES = $(PYTHON_FILE_LIST)
 @HAVE_PYTHON_FALSE@PYTHON_FILES =

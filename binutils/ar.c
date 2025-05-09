@@ -67,7 +67,9 @@ static int mri_mode;
 /* This flag distinguishes between ar and ranlib:
    1 means this is 'ranlib'; 0 means this is 'ar'.
    -1 means if we should use argv[0] to decide.  */
+#ifndef is_ranlib
 extern int is_ranlib;
+#endif
 
 /* Nonzero means don't warn about creating the archive file if necessary.  */
 int silent_create = 0;
@@ -735,16 +737,23 @@ main (int argc, char **argv)
 
   expandargv (&argc, &argv);
 
+#ifndef is_ranlib
   if (is_ranlib < 0)
     {
-      const char *temp = lbasename (program_name);
+      size_t l = strlen (program_name);
 
-      if (strlen (temp) >= 6
-	  && FILENAME_CMP (temp + strlen (temp) - 6, "ranlib") == 0)
-	is_ranlib = 1;
-      else
-	is_ranlib = 0;
+#ifdef HAVE_DOS_BASED_FILE_SYSTEM
+      /* Drop the .exe suffix, if any.  */
+      if (l > 4 && FILENAME_CMP (program_name + l - 4, ".exe") == 0)
+	{
+	  l -= 4;
+	  program_name[l] = '\0';
+	}
+#endif
+      is_ranlib = (l >= 6 &&
+		   FILENAME_CMP (program_name + l - 6, "ranlib") == 0);
     }
+#endif
 
   if (bfd_init () != BFD_INIT_MAGIC)
     fatal (_("fatal error: libbfd ABI mismatch"));

@@ -1,6 +1,6 @@
 /* Target-dependent code for s390.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,6 +41,8 @@
 #include "value.h"
 #include "inferior.h"
 #include "dwarf2/loc.h"
+#include "gdbsupport/selftest.h"
+#include "gdb/disasm-selftests.h"
 
 #include "features/s390-linux32.c"
 #include "features/s390x-linux64.c"
@@ -2343,8 +2345,8 @@ s390_unwind_pseudo_register (const frame_info_ptr &this_frame, int regnum)
       struct value *val2
 	= frame_unwind_register_value (this_frame, S390_V0_LOWER_REGNUM + reg);
 
-      val1->contents_copy (val, 0, 0, 8);
-      val2->contents_copy (val, 8, 0, 8);
+      val1->contents_copy (val, 0, 0, 0, 8);
+      val2->contents_copy (val, 8, 0, 0, 8);
 
       return value_cast (type, val);
     }
@@ -2489,7 +2491,7 @@ s390_prologue_frame_unwind_cache (const frame_info_ptr &this_frame,
 	 size zero.  This is only possible if the next frame is a sentinel
 	 frame, a dummy frame, or a signal trampoline frame.  */
       /* FIXME: cagney/2004-05-01: This sanity check shouldn't be
-	 needed, instead the code should simpliy rely on its
+	 needed, instead the code should simply rely on its
 	 analysis.  */
       next_frame = get_next_frame (this_frame);
       while (next_frame && get_frame_type (next_frame) == INLINE_FRAME)
@@ -2538,7 +2540,7 @@ s390_prologue_frame_unwind_cache (const frame_info_ptr &this_frame,
      code at a point where the frame pointer has already been restored.
      This can only happen in an innermost frame.  */
   /* FIXME: cagney/2004-05-01: This sanity check shouldn't be needed,
-     instead the code should simpliy rely on its analysis.  */
+     instead the code should simply rely on its analysis.  */
   next_frame = get_next_frame (this_frame);
   while (next_frame && get_frame_type (next_frame) == INLINE_FRAME)
     next_frame = get_next_frame (next_frame);
@@ -7469,6 +7471,51 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
+#if GDB_SELF_TEST
+namespace selftests {
+
+/* Return bfd_arch_info representing s390x.  */
+
+static const bfd_arch_info *
+bfd_arch_info_s390x ()
+{
+  return bfd_lookup_arch (bfd_arch_s390, bfd_mach_s390_64);
+}
+
+/* Return gdbarch representing s390x.  */
+
+static gdbarch *
+gdbarch_s390x ()
+{
+  struct gdbarch_info info;
+  info.bfd_arch_info = bfd_arch_info_s390x ();
+  if (info.bfd_arch_info == nullptr)
+    return nullptr;
+
+  info.osabi = GDB_OSABI_NONE;
+  return gdbarch_find_by_info (info);
+}
+
+/* Check disassembly of s390x instructions.  */
+
+static void
+disassemble_s390x ()
+{
+  gdbarch *gdbarch = gdbarch_s390x ();
+  if (gdbarch == nullptr)
+    return;
+
+  scoped_restore disassembler_options_restore
+    = make_scoped_restore (&s390_disassembler_options, "zarch");
+
+  gdb::byte_vector insn = { 0xb9, 0x68, 0x00, 0x03 };
+  disassemble_insn (gdbarch, insn, "clzg\t%r0,%r3");
+}
+
+} /* namespace selftests */
+
+#endif /* GDB_SELF_TEST */
+
 void _initialize_s390_tdep ();
 void
 _initialize_s390_tdep ()
@@ -7478,4 +7525,9 @@ _initialize_s390_tdep ()
 
   initialize_tdesc_s390_linux32 ();
   initialize_tdesc_s390x_linux64 ();
+
+#if GDB_SELF_TEST
+  selftests::register_test ("disassemble-s390x",
+			    selftests::disassemble_s390x);
+#endif /* GDB_SELF_TEST */
 }

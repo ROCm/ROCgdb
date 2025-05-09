@@ -1,6 +1,6 @@
 /* YACC parser for C++ names, for GDB.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    Parts of the lexer are based on c-exp.y from GDB.
 
@@ -2046,6 +2046,9 @@ cp_demangled_name_to_comp (const char *demangled_name,
 {
   auto result = std::make_unique<demangle_parse_info> ();
   cpname_state state (demangled_name, result.get ());
+
+  scoped_restore restore_yydebug = make_scoped_restore (&yydebug,
+							parser_debug);
 
   if (yyparse (&state))
     {

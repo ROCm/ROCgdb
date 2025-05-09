@@ -1,5 +1,5 @@
 /* Read coff symbol tables and convert to internal format, for GDB.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
    Contributed by David D. Johnson, Brown University (ddj@cs.brown.edu).
 
    This file is part of GDB.
@@ -903,7 +903,7 @@ coff_symtab_read (minimal_symbol_reader &reader,
   symnum = 0;
   while (symnum < nsyms)
     {
-      QUIT;			/* Make this command interruptable.  */
+      QUIT;			/* Make this command interruptible.  */
 
       read_one_sym (cs, &main_sym, &main_aux);
 

@@ -1,6 +1,6 @@
 /* Python interface to values.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1096,8 +1096,7 @@ valpy_getitem (PyObject *self, PyObject *key)
 	res_val = value_struct_elt (&tmp, {}, field.get (), NULL,
 				    "struct/class/union");
       else if (bitpos >= 0)
-	res_val = value_struct_elt_bitpos (&tmp, bitpos, field_type,
-					   "struct/class/union");
+	res_val = value_struct_elt_bitpos (tmp, bitpos, field_type);
       else if (base_class_type != NULL)
 	{
 	  struct type *val_type;

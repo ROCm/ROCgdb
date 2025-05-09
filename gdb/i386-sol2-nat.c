@@ -1,6 +1,6 @@
 /* Native-dependent code for Solaris x86.
 
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,7 +25,7 @@
 #include "target.h"
 #include "procfs.h"
 
-/* This file provids the (temporary) glue between the Solaris x86
+/* This file provides the (temporary) glue between the Solaris x86
    target dependent code and the machine independent SVR4 /proc
    support.  */
 

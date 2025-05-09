@@ -1,4 +1,4 @@
-# Copyright (C) 1989-2024 Free Software Foundation, Inc.
+# Copyright (C) 1989-2025 Free Software Foundation, Inc.
 # Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
@@ -480,6 +480,7 @@ SELFTESTS_SRCS = \
 	unittests/ptid-selftests.c \
 	unittests/main-thread-selftests.c \
 	unittests/mkdir-recursive-selftests.c \
+	unittests/remote-arg-selftests.c \
 	unittests/rsp-low-selftests.c \
 	unittests/scoped_fd-selftests.c \
 	unittests/scoped_ignore_signal-selftests.c \
@@ -770,6 +771,7 @@ ALL_64_TARGET_OBS = \
 	mips-sde-tdep.o \
 	mips-tdep.o \
 	mips64-obsd-tdep.o \
+	riscv-canonicalize-syscall-gen.o \
 	riscv-fbsd-tdep.o \
 	riscv-linux-tdep.o \
 	riscv-none-tdep.o \
@@ -897,6 +899,7 @@ ALL_TARGET_OBS = \
 	sparc-ravenscar-thread.o \
 	sparc-sol2-tdep.o \
 	sparc-tdep.o \
+	svr4-tls-tdep.o \
 	symfile-mem.o \
 	tic6x-linux-tdep.o \
 	tic6x-tdep.o \
@@ -1096,9 +1099,10 @@ COMMON_SFILES = \
 	dwarf2/ada-imported.c \
 	dwarf2/aranges.c \
 	dwarf2/attribute.c \
-	dwarf2/comp-unit-head.c \
 	dwarf2/cooked-index.c \
-	dwarf2/cooked-index-storage.c \
+	dwarf2/cooked-index-entry.c \
+	dwarf2/cooked-index-shard.c \
+	dwarf2/cooked-index-worker.c \
 	dwarf2/cooked-indexer.c \
 	dwarf2/cu.c \
 	dwarf2/die.c \
@@ -1119,6 +1123,7 @@ COMMON_SFILES = \
 	dwarf2/read-gdb-index.c \
 	dwarf2/section.c \
 	dwarf2/stringify.c \
+	dwarf2/unit-head.c \
 	extract-store-integer.c \
 	eval.c \
 	event-top.c \
@@ -1360,7 +1365,9 @@ HFILES_NO_SRCDIR = \
 	dummy-frame.h \
 	dwarf2/aranges.h \
 	dwarf2/cooked-index.h \
-	dwarf2/cooked-index-storage.h \
+	dwarf2/cooked-index-entry.h \
+	dwarf2/cooked-index-shard.h \
+	dwarf2/cooked-index-worker.h \
 	dwarf2/cooked-indexer.h \
 	dwarf2/cu.h \
 	dwarf2/frame-tailcall.h \
@@ -1521,6 +1528,7 @@ HFILES_NO_SRCDIR = \
 	stabsread.h \
 	stack.h \
 	stap-probe.h \
+	svr4-tls-tdep.h \
 	symfile.h \
 	symtab.h \
 	target.h \
@@ -1886,6 +1894,7 @@ ALLDEPFILES = \
 	sparc64-obsd-tdep.c \
 	sparc64-sol2-tdep.c \
 	sparc64-tdep.c \
+	svr4-tls-tdep.c \
 	tilegx-linux-nat.c \
 	tilegx-linux-tdep.c \
 	tilegx-tdep.c \

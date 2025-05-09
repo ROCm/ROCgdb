@@ -1,5 +1,5 @@
 \input texinfo      @c -*-texinfo-*-
-@c Copyright (C) 1988--2024 Free Software Foundation, Inc.
+@c Copyright (C) 1988--2025 Free Software Foundation, Inc.
 @c Copyright (C) 2020--2025 Advanced Micro Devices, Inc. All rights reserved.
 @c
 @c %**start of header
@@ -51,7 +51,7 @@
 
 @copying
 @c man begin COPYRIGHT
-Copyright @copyright{} 1988-2024 Free Software Foundation, Inc.
+Copyright @copyright{} 1988-2025 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -68,11 +68,11 @@ developing GNU and promoting software freedom.''
 
 AMD ROCm software is made available by Advanced Micro Devices, Inc. under the
 open source license identified in the top-level directory for the library in
-the repository on @url{Github.com} (Portions of AMD ROCm software are
-licensed under MITx11 and UIL/NCSA. For more information on the license, review
-the @file{license.txt} in the top-level directory for the library on
-@url{Github.com}).  The additional terms and conditions below apply to your use
-of AMD ROCm technical documentation.
+the repository on @url{https://github.com/ROCm/,Github.com} (Portions of AMD
+ROCm software are licensed under MITx11 and UIL/NCSA. For more information on
+the license, review the @file{license.txt} in the top-level directory for the
+library on @url{https://github.com/ROCm/,Github.com}).  The additional terms
+and conditions below apply to your use of AMD ROCm technical documentation.
 
 @copyright{}2019-2025 Advanced Micro Devices, Inc.  All rights reserved.
 
@@ -164,7 +164,7 @@ This is the @value{EDITION} Edition, for @value{GDBN}
 @end ifset
 Version @value{GDBVN}.
 
-Copyright (C) 1988-2024 Free Software Foundation, Inc.
+Copyright (C) 1988-2025 Free Software Foundation, Inc.
 
 This edition of the GDB manual is dedicated to the memory of Fred
 Fish.  Fred was a long-standing contributor to GDB and to Free
@@ -4165,6 +4165,56 @@ threads are created and deleted.
 See @ref{Heterogeneous Debugging} for additional information related
 to threads in heterogeneous systems.
 
+@cindex thread local storage
+@cindex @acronym{TLS}
+For some debugging targets, @value{GDBN} has support for accessing
+variables that reside in Thread Local Storage (@acronym{TLS}).
+@acronym{TLS} variables are similar to global variables, except that
+each thread has its own copy of the variable.  While often used in
+multi-threaded programs, @acronym{TLS} variables can also be used in
+programs without threads.  The C library variable @var{errno} is,
+perhaps, the most prominent example of a @acronym{TLS} variable that
+is frequently used in non-threaded programs.  For targets where
+@value{GDBN} does not have good @acronym{TLS} support, printing or
+changing the value of @var{errno} might not be directly possible.
+
+@sc{gnu}/Linux and FreeBSD targets have support for accessing
+@acronym{TLS} variables.  On @sc{gnu}/Linux, the helper library,
+@code{libthread_db}, is used to help resolve the addresses of
+@acronym{TLS} variables.  Some FreeBSD and some @sc{gnu}/Linux targets
+also have @value{GDBN}-internal @acronym{TLS} resolution code.
+@sc{gnu}/Linux targets will attempt to use the @acronym{TLS} address
+lookup functionality provided by @code{libthread_db}, but will fall
+back to using its internal @acronym{TLS} support when
+@code{libthread_db} is not available.  This can happen in
+cross-debugging scenarios or when debugging programs that are linked
+in such a way that @code{libthread_db} support is unavailable -- this
+includes statically linked programs, linking against @acronym{GLIBC}
+versions earlier than 2.34, but not with @code{libpthread}, and use of
+other (non-@acronym{GLIBC}) C libraries.
+
+@table @code
+@kindex maint set force-internal-tls-address-lookup
+@kindex maint show force-internal-tls-address-lookup
+@cindex internal @acronym{TLS} address lookup
+@item maint set force-internal-tls-address-lookup
+@itemx maint show force-internal-tls-address-lookup
+Turns on or off forced use of @value{GDBN}-internal @acronym{TLS}
+address lookup code.  Use @code{on} to enable and @code{off} to
+disable.  The default for this setting is @code{off}.
+
+When disabled, @value{GDBN} will attempt to use a helper
+@code{libthread_db} library if possible, but will fall back to use of
+its own internal @acronym{TLS} address lookup mechanisms if necessary.
+
+When enabled, @value{GDBN} will only use @value{GDBN}'s internal
+@acronym{TLS} address lookup mechanisms, if they exist.
+
+This command is only available for @sc{gnu}/Linux targets.  Its
+primary use is for testing -- certain tests in the @value{GDBN} test
+suite use this command to force use of internal TLS address lookup.
+@end table
+
 @node Forks
 @section Debugging Forks
 
@@ -7884,9 +7934,9 @@ previous instruction; otherwise, it will work in record mode, if the
 platform supports reverse execution, or stop if not.
 
 Currently, process record and replay is supported on ARM, Aarch64,
-LoongArch, Moxie, PowerPC, PowerPC64, S/390, and x86 (i386/amd64) running
-GNU/Linux.  Process record and replay can be used both when native
-debugging, and when remote debugging via @code{gdbserver}.
+LoongArch, Moxie, PowerPC, PowerPC64, S/390, RISC-V and x86 (i386/amd64)
+running GNU/Linux.  Process record and replay can be used both when
+native debugging, and when remote debugging via @code{gdbserver}.
 
 When recording an inferior, @value{GDBN} may print auxiliary information
 during stepping commands and commands displaying the execution history.
@@ -13131,6 +13181,18 @@ variable which may be @samp{truecolor} or @samp{24bit}. Other color spaces are
 determined by the "Co" termcap which in turn depends on the @env{TERM}
 environment variable.
 
+@vindex $_active_linker_namespaces@r{, convenience variable}
+@item $_active_linker_namespaces
+Number of active linkage namespaces in the inferior.  In systems with no
+support for linkage namespaces, this variable will always be set to @samp{1}.
+
+@vindex $_current_linker_namespace@r{, convenience variable}
+@item $_current_linker_namespace
+The namespace which contains the current location in the inferior.  This
+returns GDB's internal identifier for namespaces, which is @samp{[[@var{n}]]}
+where @var{n} is a zero-based namespace number.  In systems with no support
+for linkage namespaces, this variable will always be set to @samp{[[0]]}.
+
 @item $_agent
 The per-inferior heterogeneous agent number of the current thread, or 0
 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
@@ -13516,6 +13578,23 @@ an enumerated type:
 (@value{GDBP}) printf "Visiting node of type %s\n", $_as_string(node)
 Visiting node of type NODE_INTEGER
 @end smallexample
+
+@findex $_mx_get_scaled_float@r{, convenience function}
+@item $_mx_get_scaled_float(@var{value}@r{[}, @var{scale}@r{]})
+Returns the scaled value(s) of an @acronym{AMD ROCm} microscaling object.
+
+If the optional argument @var{scale} is provided, it specifies the value
+by which the microscaling object should be scaled by.
+The default is 1.
+
+Returns a gdb.Value for a vector of floats representing scaled value(s)
+of the ROCm microscaling object.
+
+Note that a single microscaling floating type may hold more than one
+floating point element. The number of elements in the returned vector
+depends on the type of the microfloating value.  For example the
+__hipext_ocp_fp8_e4m3 type holds one element while
+__hipext_ocp_fp6x32_e3m2 holds thirty two elements.
 
 @findex $_cimag@r{, convenience function}
 @findex $_creal@r{, convenience function}
@@ -22382,6 +22461,11 @@ be determined then the address range for the @code{.text} section from
 the library will be listed.  If the @code{.text} section cannot be
 found then no addresses will be listed.
 
+On systems that support linkage namespaces, the output includes an
+additional column @code{NS} if the inferior has more than one active
+namespace when the command is used.  This column the linkage namespace
+that the shared library was loaded into.
+
 @kindex info dll
 @item info dll @var{regex}
 This is an alias of @code{info sharedlibrary}.
@@ -22415,6 +22499,22 @@ Catchpoints}).
 command for this.  This command exists for historical reasons.  It is
 less useful than setting a catchpoint, because it does not allow for
 conditions or commands as a catchpoint does.
+
+@table @code
+@kindex info linker-namespaces
+@item info linker-namespaces
+@item info linker-namespaces @code{[[@var{n}]]}
+
+With no argument, print the number of linker namespaces which are
+currently active --- that is, namespaces that have libraries loaded
+into them.  Then, it prints the number of libraries loaded into each
+namespace, and all the libraries loaded into them, in the same way
+as @code{info sharedlibrary}.
+
+If an argument @code{[[@var{n}]]} is provided, only prints the
+library count and the libraried for the provided namespace @var{n}.
+The surrounding square brackets are optional.
+@end table
 
 @table @code
 @item set stop-on-solib-events
@@ -30551,6 +30651,19 @@ value, then @value{GDBN} will change this to @samp{off} at startup.
 @item show style enabled
 Show the current state of styling.
 
+@item set style emoji @samp{auto|on|off}
+Enable or disable the use of emoji.  On most hosts, the default is
+@samp{auto}, meaning that emoji will only be used if the host
+character set is @samp{UTF-8}; however, on Windows the default is
+@samp{off} when using the console.  Note that disabling styling as a
+whole will also prevent emoji display.
+
+Currently, emoji are printed whenever @value{GDBN} reports an error or
+a warning.
+
+@item show style emoji
+Show the current state of emoji output.
+
 @item set style sources @samp{on|off}
 Enable or disable source code styling.  This affects whether source
 code, such as the output of the @code{list} command, is styled.  The
@@ -30563,6 +30676,17 @@ There are two ways that highlighting can be done.  First, if
 is used.  Otherwise, if @value{GDBN} was configured with Python
 scripting support, and if the Python Pygments package is available,
 then it will be used.
+
+@item set style warning-prefix
+@itemx show style warning-prefix
+@itemx set style error-prefix
+@itemx show style error-prefix
+
+These commands control the prefix that is printed before warnings and
+errors, respectively.  This functionality is intended for use with
+emoji display, and so the prefixes are only displayed if emoji styling
+is enabled.  The defaults are the warning sign emoji for warnings, and
+and the cross mark emoji for errors.
 
 @item show style sources
 Show the current state of source code styling.
@@ -33915,7 +34039,6 @@ usual, but you probably have no reason to use them from Emacs.
 We call this @dfn{text command mode}.  Emacs 22.1, and later, also uses
 a graphical mode, enabled by default, which provides further buffers
 that can control the execution and describe the state of your program.
-@xref{GDB Graphical Interface,,, Emacs, The @sc{gnu} Emacs Manual}.
 
 If you specify an absolute file name when prompted for the @kbd{M-x
 gdb} argument, then Emacs sets your current working directory to where
@@ -33967,9 +34090,8 @@ Continue execution of your program, like the @value{GDBN} @code{continue}
 command.
 
 @item C-c <
-Go up the number of frames indicated by the numeric argument
-(@pxref{Arguments, , Numeric Arguments, Emacs, The @sc{gnu} Emacs Manual}),
-like the @value{GDBN} @code{up} command.
+Go up the number of frames indicated by the numeric argument, like the
+@value{GDBN} @code{up} command.
 
 @item C-c >
 Go down the number of frames indicated by the numeric argument, like the
@@ -34001,8 +34123,7 @@ delete lines from the text, the line numbers that @value{GDBN} knows cease
 to correspond properly with the code.
 
 A more detailed description of Emacs' interaction with @value{GDBN} is
-given in the Emacs manual (@pxref{Debuggers,,, Emacs, The @sc{gnu}
-Emacs Manual}).
+given in the Emacs manual.
 
 @node GDB/MI
 @chapter The @sc{gdb/mi} Interface
@@ -44723,6 +44844,13 @@ Translate the given format string and list of argument expressions
 into remote agent bytecodes and display them as a disassembled list.
 This command is useful for debugging the agent version of dynamic
 printf (@pxref{Dynamic Printf}).
+
+@kindex maint canonicalize
+@item maint canonicalize @var{name}
+Print the canonical form of @var{name}, a C@t{++} name.  Because a
+C@t{++} name may have multiple possible spellings, @value{GDBN}
+computes a canonical form of a name for internal use.  For example,
+@code{short int} and @code{short} are two ways to name the same type.
 
 @kindex maint info breakpoints
 @anchor{maint info breakpoints}

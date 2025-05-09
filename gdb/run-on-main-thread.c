@@ -1,5 +1,5 @@
 /* Run a function on the main thread
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -83,7 +83,7 @@ run_events (int error, gdb_client_data client_data)
 	}
       catch (const gdb_exception_quit &e)
 	{
-	  /* Should cancelation of a runnable event cancel the execution of
+	  /* Should cancellation of a runnable event cancel the execution of
 	     the following one?  The answer is not clear, so keep doing what
 	     we've done so far: ignore this exception.  */
 	}

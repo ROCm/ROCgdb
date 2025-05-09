@@ -1,6 +1,6 @@
 /* Definitions for values of C expressions, for GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -981,7 +981,7 @@ struct lval_funcs
      This may simply return the same closure, if VALUE's is
      reference-counted or statically allocated.
 
-     This may be NULL, in which case VALUE's closure is re-used in the
+     This may be NULL, in which case VALUE's closure is reused in the
      new value.  */
   void *(*copy_closure) (const struct value *v);
 
@@ -1336,10 +1336,9 @@ extern struct value *value_struct_elt (struct value **argp,
 				       const char *name, int *static_memfuncp,
 				       const char *err);
 
-extern struct value *value_struct_elt_bitpos (struct value **argp,
+extern struct value *value_struct_elt_bitpos (struct value *val,
 					      int bitpos,
-					      struct type *field_type,
-					      const char *err);
+					      struct type *field_type);
 
 extern struct value *value_aggregate_elt (struct type *curtype,
 					  const char *name,

@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    Written by Elena Zannoni <ezannoni@cygnus.com> of Cygnus Solutions.
 
@@ -980,11 +980,6 @@ handle_fatal_signal (int sig)
 #endif
 
 #ifdef GDB_PRINT_INTERNAL_BACKTRACE
-  const auto sig_write = [] (const char *msg) -> void
-  {
-    gdb_stderr->write_async_safe (msg, strlen (msg));
-  };
-
   if (bt_on_fatal_signal)
     {
       sig_write ("\n\n");
@@ -1027,7 +1022,13 @@ handle_fatal_signal (int sig)
 	}
       sig_write ("\n\n");
 
-      gdb_stderr->flush ();
+      if (gdb_stderr == nullptr || gdb_stderr->fd () == -1)
+	{
+	  /* Writing to file descriptor instead of stream, no flush
+	     required.  */
+	}
+      else
+	gdb_stderr->flush ();
     }
 #endif
 

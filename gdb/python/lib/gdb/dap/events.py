@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -238,7 +238,6 @@ def _on_stop(event):
     ):
         obj["reason"] = "pause"
     else:
-        global stop_reason_map
         obj["reason"] = stop_reason_map[event.details["reason"]]
     _expected_pause = False
     send_event_maybe_later("stopped", obj)

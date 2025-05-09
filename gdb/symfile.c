@@ -1,6 +1,6 @@
 /* Generic symbol file reading for the GNU debugger, GDB.
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -3035,7 +3035,7 @@ section_is_mapped (struct obj_section *osect)
     case ovly_off:
       return 0;			/* overlay debugging off */
     case ovly_auto:		/* overlay debugging automatic */
-      /* Unles there is a gdbarch_overlay_update function,
+      /* Unless there is a gdbarch_overlay_update function,
 	 there's really nothing useful to do here (can't really go auto).  */
       gdbarch = osect->objfile->arch ();
       if (gdbarch_overlay_update_p (gdbarch))

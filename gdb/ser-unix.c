@@ -1,6 +1,6 @@
 /* Serial interface for local (hardwired) serial ports on Un*x like systems
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -404,7 +404,7 @@ rate_to_code (int rate)
 
   for (i = 0; baudtab[i].rate != -1; i++)
     {
-      /* test for perfect macth.  */
+      /* test for perfect match.  */
       if (rate == baudtab[i].rate)
 	return baudtab[i].code;
       else

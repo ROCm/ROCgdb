@@ -1,6 +1,6 @@
 /* Python interface to breakpoints
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -948,7 +948,7 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       else
 	{
 	  PyErr_SetString (PyExc_RuntimeError,
-			   _("Line keyword should be an integer or a string. "));
+			   _("Line keyword should be an integer or a string."));
 	  return -1;
 	}
     }

@@ -18,13 +18,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "dwarf2/cooked-indexer.h"
-#include "dwarf2/cooked-index-storage.h"
+#include "dwarf2/cooked-index-worker.h"
 #include "dwarf2/error.h"
 #include "gdb-hip-test-mode.h"
 
 /* See cooked-indexer.h.  */
 
-cooked_indexer::cooked_indexer (cooked_index_storage *storage,
+cooked_indexer::cooked_indexer (cooked_index_worker_result *storage,
 				dwarf2_per_cu *per_cu, enum language language)
   : m_index_storage (storage),
     m_per_cu (per_cu),
@@ -90,7 +90,7 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   /* Lookups for type unit references are always in the CU, and
      cross-CU references will crash.  */
   if (reader->cu ()->per_cu->is_dwz == is_dwz
-      && reader->cu ()->header.offset_in_cu_p (sect_off))
+      && reader->cu ()->header.offset_in_unit_p (sect_off))
     return reader;
 
   dwarf2_per_objfile *per_objfile = reader->cu ()->per_objfile;
@@ -110,20 +110,20 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   cutu_reader *result = m_index_storage->get_reader (per_cu);
   if (result == nullptr)
     {
-      cutu_reader new_reader (*per_cu, *per_objfile, nullptr, nullptr, false,
-			      language_minimal,
-			      &m_index_storage->get_abbrev_table_cache ());
+      const abbrev_table_cache &abbrev_table_cache
+	= m_index_storage->get_abbrev_table_cache ();
+      auto new_reader
+	= std::make_unique<cutu_reader> (*per_cu, *per_objfile, nullptr,
+					 nullptr, false, language_minimal,
+					 &abbrev_table_cache);
 
-      if (new_reader.is_dummy () || new_reader.top_level_die () == nullptr
-	  || !new_reader.top_level_die ()->has_children)
+      if (new_reader->is_dummy ())
 	return nullptr;
 
-      auto copy = std::make_unique<cutu_reader> (std::move (new_reader));
-      result = m_index_storage->preserve (std::move (copy));
+      result = m_index_storage->preserve (std::move (new_reader));
     }
 
-  if (result->is_dummy () || result->top_level_die () == nullptr
-      || !result->top_level_die ()->has_children)
+  if (result->is_dummy ())
     return nullptr;
 
   if (for_scanning)
@@ -233,7 +233,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 	case DW_AT_abstract_origin:
 	case DW_AT_extension:
 	  origin_offset = attr.get_ref_die_offset ();
-	  origin_is_dwz = attr.form == DW_FORM_GNU_ref_alt;
+	  origin_is_dwz = attr.form_is_alt ();
 	  break;
 
 	case DW_AT_external:
@@ -434,7 +434,7 @@ cooked_indexer::index_imported_unit (cutu_reader *reader,
       if (attr.name == DW_AT_import)
 	{
 	  sect_off = attr.get_ref_die_offset ();
-	  is_dwz = (attr.form == DW_FORM_GNU_ref_alt
+	  is_dwz = (attr.form_is_alt ()
 		    || reader->cu ()->per_cu->is_dwz);
 	}
     }

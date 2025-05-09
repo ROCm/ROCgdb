@@ -1,6 +1,6 @@
 /* Common target dependent code for GDB on AArch64 systems.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -2696,7 +2696,7 @@ aarch64_store_return_value (struct type *type, struct regcache *regs,
 	{
 	  /* Integral values greater than one word are stored in
 	     consecutive registers starting with r0.  This will always
-	     be a multiple of the regiser size.  */
+	     be a multiple of the register size.  */
 	  int len = type->length ();
 	  int regno = AARCH64_X0_REGNUM;
 
@@ -4236,7 +4236,7 @@ aarch64_memtag_to_string (struct gdbarch *gdbarch, struct value *tag_value)
 
   CORE_ADDR tag = value_as_address (tag_value);
 
-  return string_printf ("0x%s", phex_nz (tag, sizeof (tag)));
+  return string_printf ("0x%s", phex_nz (tag));
 }
 
 /* See aarch64-tdep.h.  */
@@ -4344,7 +4344,7 @@ aarch64_initialize_sme_pseudo_names (struct gdbarch *gdbarch,
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
-   re-use an architecture from ARCHES, which is a list of
+   reuse an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
 
    Called e.g. at program startup, when reading a core file, and when

@@ -569,7 +569,7 @@ obj_coff_ident (int ignore ATTRIBUTE_UNUSED)
 #define SKIP_WHITESPACES()	while (is_whitespace (*input_line_pointer)) \
                                   input_line_pointer++;
 
-static void
+void
 obj_coff_def (int what ATTRIBUTE_UNUSED)
 {
   if (def_symbol_in_progress != NULL)
@@ -1187,7 +1187,6 @@ coff_assign_symbol (symbolS *symp ATTRIBUTE_UNUSED)
 #endif
 }
 
-symbolS *coff_last_function;
 #ifndef OBJ_XCOFF
 static symbolS *coff_last_bf;
 #endif
@@ -1195,6 +1194,7 @@ static symbolS *coff_last_bf;
 void
 coff_frob_symbol (symbolS *symp, int *punt)
 {
+  static symbolS *last_functionP;
   static symbolS *last_tagP;
   static stack *block_stack;
   static symbolS *set_end;
@@ -1338,30 +1338,26 @@ coff_frob_symbol (symbolS *symp, int *punt)
 		}
 	    }
 
-	  if (coff_last_function == 0 && SF_GET_FUNCTION (symp)
-	      && S_IS_DEFINED (symp))
+	  if (SF_GET_FUNCTION (symp) && S_IS_DEFINED (symp))
 	    {
 	      union internal_auxent *auxp;
 
-	      coff_last_function = symp;
 	      if (S_GET_NUMBER_AUXILIARY (symp) < 1)
 		S_SET_NUMBER_AUXILIARY (symp, 1);
 	      auxp = SYM_AUXENT (symp);
-	      memset (auxp->x_sym.x_fcnary.x_ary.x_dimen, 0,
-		      sizeof (auxp->x_sym.x_fcnary.x_ary.x_dimen));
+	      memset (&auxp->x_sym.x_fcnary.x_fcn, 0,
+		      sizeof (auxp->x_sym.x_fcnary.x_fcn));
 	    }
 
 	  if (S_GET_STORAGE_CLASS (symp) == C_EFCN
 	      && S_IS_DEFINED (symp))
 	    {
-	      if (coff_last_function == 0)
+	      if (!last_functionP)
 		as_fatal (_("C_EFCN symbol for %s out of scope"),
 			  S_GET_NAME (symp));
-	      SA_SET_SYM_FSIZE (coff_last_function,
+	      SA_SET_SYM_FSIZE (last_functionP,
 				(long) (S_GET_VALUE (symp)
-					- S_GET_VALUE (coff_last_function)));
-	      next_set_end = coff_last_function;
-	      coff_last_function = 0;
+					- S_GET_VALUE (last_functionP)));
 	    }
 	}
 
@@ -1413,6 +1409,13 @@ coff_frob_symbol (symbolS *symp, int *punt)
 	as_warn (_("Warning: internal error: forgetting to set endndx of %s"),
 		 S_GET_NAME (set_end));
       set_end = next_set_end;
+    }
+
+  if (SF_GET_FUNCTION (symp) && S_IS_DEFINED (symp) && !*punt)
+    {
+      if (last_functionP)
+	SA_SET_SYM_ENDNDX (last_functionP, symp);
+      last_functionP = symp;
     }
 
 #ifndef OBJ_XCOFF
@@ -1887,8 +1890,8 @@ static const pseudo_typeS coff_pseudo_table[] =
   {"loc", obj_coff_loc, 0},
   {"optim", s_ignore, 0},	/* For sun386i cc (?) */
   {"weak", obj_coff_weak, 0},
-#if defined TC_TIC4X
-  /* The tic4x uses sdef instead of def.  */
+#if defined (TC_TIC4X) || defined (TC_TIC54X)
+  /* The tic4x and tic54x use sdef instead of def.  */
   {"sdef", obj_coff_def, 0},
 #endif
 #if defined(SEH_CMDS)

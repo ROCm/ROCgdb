@@ -1,6 +1,6 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -6937,7 +6937,7 @@ ppc_process_record_prefix_store_vsx_ds_form (struct gdbarch *gdbarch,
 }
 
 /* Record the prefixed VSX, form D, instructions.  The arguments are the
-   instruction address for PC-relative addresss (addr), the first 32-bits of
+   instruction address for PC-relative address (addr), the first 32-bits of
    the instruction (insn_prefix) and the following 32-bits of the instruction
    (insn_suffix).  Return 0 on success.  */
 
@@ -7569,7 +7569,7 @@ ppc64_update_call_site_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
   return pc + 4;
 }
 
-/* Initialize the current architecture based on INFO.  If possible, re-use an
+/* Initialize the current architecture based on INFO.  If possible, reuse an
    architecture from ARCHES, which is a list of architectures already created
    during this debugging session.
 

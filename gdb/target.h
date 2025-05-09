@@ -1,6 +1,6 @@
 /* Interface between GDB and target environments, including files and processes
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.  Written by John Gilmore.
@@ -2517,8 +2517,14 @@ extern void target_pre_inferior ();
 
 extern void target_preopen (int);
 
+/* Using the objfile specified in OBJFILE, find the address for the
+   current thread's thread-local storage with offset OFFSET.  If it's
+   provided, NAME might be used to indicate the relevant variable
+   in an error message.  */
+
 extern CORE_ADDR target_translate_tls_address (struct objfile *objfile,
-					       CORE_ADDR offset);
+					       CORE_ADDR offset,
+					       const char *name = nullptr);
 
 /* Return the "section" containing the specified address.  */
 const struct target_section *target_section_by_addr (struct target_ops *target,

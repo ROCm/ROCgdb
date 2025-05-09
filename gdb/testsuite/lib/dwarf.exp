@@ -1,4 +1,4 @@
-# Copyright 2010-2024 Free Software Foundation, Inc.
+# Copyright 2010-2025 Free Software Foundation, Inc.
 # Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
@@ -746,6 +746,11 @@ namespace eval Dwarf {
 	    }
 	}
 	close $fd
+
+	variable _constants
+
+	# Add DW_FORM_strx_id as alias of DW_FORM_strx.
+	_process_one_constant DW_FORM_strx_id $_constants(DW_FORM_strx)
     }
 
     proc _quote {string} {
@@ -890,6 +895,12 @@ namespace eval Dwarf {
 	    DW_FORM_ref2 -
 	    DW_FORM_indirect -
 	    DW_FORM_exprloc -
+
+	    # Generate a DW_FORM_str index, but assume generation of .debug_str and
+	    # .debug_str_offsets is taken care of elsewhere.
+	    DW_FORM_strx_id {
+		_op .uleb128 $value
+	    }
 
 	    DW_FORM_strx -
 	    DW_FORM_strx1 -
@@ -1358,7 +1369,6 @@ namespace eval Dwarf {
     # used, as indicated in the header of the section where the location
     # description is found.
     #
-    # (FIXME should use 'info complete' here.)
     # Each list's first element is the opcode, either short or long
     # forms are accepted.
     # FIXME argument handling
@@ -1366,9 +1376,18 @@ namespace eval Dwarf {
     proc _location { body dwarf_version addr_size offset_size } {
 	variable _constants
 
+	set collected_lines ""
 	foreach line [split $body \n] {
 	    # Ignore blank lines, and allow embedded comments.
-	    if {[lindex $line 0] == "" || [regexp -- {^[ \t]*#} $line]} {
+	    if {  [regexp -- {^[ \t]*$} $line] || [regexp -- {^[ \t]*#} $line] } {
+		continue
+	    }
+	    if { $collected_lines != "" } {
+		set line "$collected_lines\n$line"
+		set collected_lines ""
+	    }
+	    if { ! [info complete $line] } {
+		set collected_lines $line
 		continue
 	    }
 	    set opcode [_map_name [lindex $line 0] _OP]
@@ -1462,6 +1481,17 @@ namespace eval Dwarf {
 
 		   set cu_offset "$argvec(label) - $_cu_label"
 		   _op .4byte $cu_offset
+		}
+
+		DW_OP_entry_value {
+		    _get_args $line $opcode body
+		    set l1 [new_label "expr_start"]
+		    set l2 [new_label "expr_end"]
+		    _op .uleb128 "$l2 - $l1" "expression"
+		    define_label $l1
+		    _location $argvec(body) $dwarf_version $addr_size \
+			$offset_size
+		    define_label $l2
 		}
 
 		DW_OP_implicit_value {
@@ -1596,6 +1626,17 @@ namespace eval Dwarf {
     #                default = default
     # fission 0|1  - boolean indicating if generating Fission debug info
     #                default = 0
+    # dwo_id       - The value to use as the dwo_id field of skeleton and
+    #                split_compile unit headers.  May only be used with DWARF
+    #                version 5.
+    #
+    #                If a dwo_id value is specified (is non-zero), this unit is
+    #                assumed to be part of a skeleton/split_unit pair.  The unit
+    #                type will be chosen according to the `fission` value.
+    #
+    #                When using DWARF version 5 and fission is non-zero, it is
+    #                mandatory to provide a non-zero dwo_id value.
+    #                default = 0
     # label <label>
     #              - string indicating label to be defined at the start
     #                of the CU header.
@@ -1618,6 +1659,7 @@ namespace eval Dwarf {
 	set _cu_version 4
 	set _cu_addr_size default
 	set _cu_is_fission 0
+	set dwo_id 0
 	set section ".debug_info"
 	set _abbrev_section ".debug_abbrev"
 	set label ""
@@ -1629,6 +1671,7 @@ namespace eval Dwarf {
 		version { set _cu_version $value }
 		addr_size { set _cu_addr_size $value }
 		fission { set _cu_is_fission $value }
+		dwo_id { set dwo_id $value }
 		label { set label $value }
 		default { error "unknown option $name" }
 	    }
@@ -1679,12 +1722,42 @@ namespace eval Dwarf {
 
 	# The CU header for DWARF 4 and 5 are slightly different.
 	if { $_cu_version == 5 } {
-	    _op .byte 0x1 "DW_UT_compile"
+	    # The presence of a DWO_ID indicates that we generate a skeleton
+	    # or split_compile unit.
+	    if { $dwo_id != 0 } {
+		if { $_cu_is_fission } {
+		    set unit_type_name "DW_UT_split_compile"
+		} else {
+		    set unit_type_name "DW_UT_skeleton"
+		}
+	    } else {
+		set unit_type_name "DW_UT_compile"
+	    }
+
+	    _op .byte $_constants($unit_type_name) $unit_type_name
 	    _op .byte $_cu_addr_size "Pointer size"
 	    _op_offset $_cu_offset_size $my_abbrevs Abbrevs
+
+	    # Output DWO ID, if specified.
+	    if { $dwo_id != 0 } {
+		_op .8byte $dwo_id "DWO_ID"
+	    } else {
+		# To help catch user errors: if the caller asked to put this
+		# unit in the DWO file but didn't provide a DWO ID, it is likely
+		# an error.
+		if { $_cu_is_fission } {
+		    error "DWO ID not specified for DWARF 5 split compile"
+		}
+	    }
 	} else {
 	    _op_offset $_cu_offset_size $my_abbrevs Abbrevs
 	    _op .byte $_cu_addr_size "Pointer size"
+
+	    # For DWARF versions < 5, the DWO ID is not in the unit header,
+	    # so it makes not sense to specify one.
+	    if { $dwo_id != 0 } {
+		error "DWO ID specified for DWARF < 5 unit"
+	    }
 	}
 
 	_defer_output $_abbrev_section {
@@ -1761,7 +1834,7 @@ namespace eval Dwarf {
 	}
 	if { $_cu_is_fission } {
 	    set section "$section.dwo"
-	    set _abbrev_section "$section.dwo"
+	    set _abbrev_section "$_abbrev_section.dwo"
 	}
 
 	_section $section
@@ -3161,6 +3234,24 @@ namespace eval Dwarf {
 	}
     }
 
+    # Emit a .debug_sup section with the given file name and build-id.
+    # The buildid should be represented as a hexadecimal string, like
+    # "ffeeddcc".
+    proc debug_sup {is_sup filename buildid} {
+	_defer_output .debug_sup {
+	    # The version.
+	    _op .2byte 0x5
+	    # Supplementary marker.
+	    _op .byte $is_sup
+	    _op .ascii [_quote $filename]
+	    set len [expr {[string length $buildid] / 2}]
+	    _op .uleb128 $len
+	    foreach {a b} [split $buildid {}] {
+		_op .byte 0x$a$b
+	    }
+	}
+    }
+
     proc _note {type name hexdata} {
 	set namelen [expr [string length $name] + 1]
 	set datalen [expr [string length $hexdata] / 2]
@@ -3458,6 +3549,37 @@ namespace eval Dwarf {
 
 	# Section end.
 	debug_names_end:
+    }
+
+    # Add the strings in ARGS to the .debug_str section, and create a
+    # .debug_str_offsets section pointing to those strings.
+    # BASE_OFFSET is the label for DW_AT_str_offsets_base.
+    proc debug_str_offsets { base_offset args } {
+	_section .debug_str
+	set num 0
+	foreach arg $args {
+	    set str_label [_compute_label "str_${num}"]
+	    define_label $str_label
+	    _op .asciz \"$arg\" ".debug_str_offsets string $num"
+	    incr num
+	}
+
+	declare_labels debug_str_offsets_start debug_str_offsets_end
+	set initial_length "$debug_str_offsets_end - $debug_str_offsets_start"
+
+	_section .debug_str_offsets
+	_op .4byte $initial_length "Initial_length"
+	debug_str_offsets_start:
+	_op .2byte 0x5 "version"
+	_op .2byte 0x0 "padding"
+	$base_offset:
+	set num 0
+	foreach arg $args {
+	    set str_label [_compute_label "str_${num}"]
+	    _op .4byte $str_label "string $num"
+	    incr num
+	}
+	debug_str_offsets_end:
     }
 
     # The top-level interface to the DWARF assembler.

@@ -1,6 +1,6 @@
 /* addrmap.c --- implementation of address map data structure.
 
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -178,12 +178,39 @@ addrmap_mutable::force_transition (CORE_ADDR addr)
 }
 
 
+/* Compare keys as CORE_ADDR * values.  */
+static int
+splay_compare_CORE_ADDR_ptr (splay_tree_key ak, splay_tree_key bk)
+{
+  CORE_ADDR a = * (CORE_ADDR *) ak;
+  CORE_ADDR b = * (CORE_ADDR *) bk;
+
+  /* We can't just return a-b here, because of over/underflow.  */
+  if (a < b)
+    return -1;
+  else if (a == b)
+    return 0;
+  else
+    return 1;
+}
+
+
+static void
+xfree_wrapper (splay_tree_key key)
+{
+  xfree ((void *) key);
+}
+
 void
 addrmap_mutable::set_empty (CORE_ADDR start, CORE_ADDR end_inclusive,
 			    void *obj)
 {
   splay_tree_node n, next;
   void *prior_value;
+
+  if (tree == nullptr)
+    tree = splay_tree_new (splay_compare_CORE_ADDR_ptr, xfree_wrapper,
+			   nullptr /* no delete value */);
 
   /* If we're being asked to set all empty portions of the given
      address range to empty, then probably the caller is confused.
@@ -233,6 +260,9 @@ addrmap_mutable::set_empty (CORE_ADDR start, CORE_ADDR end_inclusive,
 void *
 addrmap_mutable::do_find (CORE_ADDR addr) const
 {
+  if (tree == nullptr)
+    return nullptr;
+
   splay_tree_node n = splay_tree_lookup (addr);
   if (n != nullptr)
     {
@@ -287,16 +317,6 @@ addrmap_fixed::addrmap_fixed (struct obstack *obstack,
   gdb_assert (num_transitions == transition_count);
 }
 
-
-void
-addrmap_mutable::relocate (CORE_ADDR offset)
-{
-  /* Not needed yet.  */
-  internal_error (_("addrmap_relocate is not implemented yet "
-		    "for mutable addrmaps"));
-}
-
-
 /* This is a splay_tree_foreach_fn.  */
 
 static int
@@ -311,43 +331,20 @@ addrmap_mutable_foreach_worker (splay_tree_node node, void *data)
 int
 addrmap_mutable::do_foreach (addrmap_foreach_fn fn) const
 {
+  if (tree == nullptr)
+    return 0;
   return splay_tree_foreach (tree, addrmap_mutable_foreach_worker, &fn);
 }
 
 
-/* Compare keys as CORE_ADDR * values.  */
-static int
-splay_compare_CORE_ADDR_ptr (splay_tree_key ak, splay_tree_key bk)
-{
-  CORE_ADDR a = * (CORE_ADDR *) ak;
-  CORE_ADDR b = * (CORE_ADDR *) bk;
-
-  /* We can't just return a-b here, because of over/underflow.  */
-  if (a < b)
-    return -1;
-  else if (a == b)
-    return 0;
-  else
-    return 1;
-}
-
-
-static void
-xfree_wrapper (splay_tree_key key)
-{
-  xfree ((void *) key);
-}
-
-addrmap_mutable::addrmap_mutable ()
-  : tree (splay_tree_new (splay_compare_CORE_ADDR_ptr, xfree_wrapper,
-			  nullptr /* no delete value */))
-{
-}
-
-addrmap_mutable::~addrmap_mutable ()
+void
+addrmap_mutable::clear ()
 {
   if (tree != nullptr)
-    splay_tree_delete (tree);
+    {
+      splay_tree_delete (tree);
+      tree = nullptr;
+    }
 }
 
 
@@ -443,7 +440,7 @@ test_addrmap ()
   CHECK_ADDRMAP_FIND (map, array, 13, 19, nullptr);
 
   /* Create corresponding fixed addrmap.  */
-  struct addrmap *map2
+  addrmap_fixed *map2
     = new (&temp_obstack) addrmap_fixed (&temp_obstack, map.get ());
   SELF_CHECK (map2 != nullptr);
   CHECK_ADDRMAP_FIND (map2, array, 0, 9, nullptr);

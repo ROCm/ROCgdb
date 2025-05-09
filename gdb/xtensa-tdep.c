@@ -1,6 +1,6 @@
 /* Target-dependent code for the Xtensa port of GDB, the GNU debugger.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1767,7 +1767,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
 	      arg_type = builtin_type (gdbarch)->builtin_long;
 	      arg = value_cast (arg_type, arg);
 	    }
-	  /* Aligment is equal to the type length for the basic types.  */
+	  /* Alignment is equal to the type length for the basic types.  */
 	  info->align = arg_type->length ();
 	  break;
 

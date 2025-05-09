@@ -1,6 +1,6 @@
 /* Target-dependent code for Analog Devices Blackfin processor, for GDB.
 
-   Copyright (C) 2005-2024 Free Software Foundation, Inc.
+   Copyright (C) 2005-2025 Free Software Foundation, Inc.
 
    Contributed by Analog Devices, Inc.
 
@@ -769,7 +769,7 @@ bfin_abi (struct gdbarch *gdbarch)
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
-   re-use an architecture from ARCHES, which is a list of
+   reuse an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
 
    Called e.g. at program startup, when reading a core file, and when

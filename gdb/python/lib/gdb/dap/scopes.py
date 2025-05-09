@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ from .sources import make_source
 from .startup import in_gdb_thread
 from .varref import BaseReference
 
-# Map DAP frame IDs to scopes.  This ensures that scopes are re-used.
+# Map DAP frame IDs to scopes.  This ensures that scopes are reused.
 frame_to_scope = {}
 
 
@@ -120,7 +120,6 @@ class _FinishScopeReference(_ScopeReference):
 
     def fetch_one_child(self, idx):
         assert idx == 0
-        global _last_return_value
         return ("(return)", _last_return_value)
 
 
@@ -145,8 +144,6 @@ class _RegisterReference(_ScopeReference):
 
 @request("scopes")
 def scopes(*, frameId: int, **extra):
-    global _last_return_value
-    global frame_to_scope
     if frameId in frame_to_scope:
         scopes = frame_to_scope[frameId]
     else:

@@ -1,6 +1,6 @@
 /* Print and select stack frames for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -828,7 +828,7 @@ print_frame_args (const frame_print_options &fp_opts,
 		     (1) Because find_saved_registers may be slow for
 			 remote debugging.
 
-		     (2) Because registers are often re-used and stack
+		     (2) Because registers are often reused and stack
 			 slots rarely (never?) are.  Therefore using
 			 the stack slot is much less likely to print
 			 garbage.

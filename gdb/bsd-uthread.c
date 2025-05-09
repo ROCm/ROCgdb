@@ -1,6 +1,6 @@
 /* BSD user-level threads support.
 
-   Copyright (C) 2005-2024 Free Software Foundation, Inc.
+   Copyright (C) 2005-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -536,7 +536,7 @@ bsd_uthread_target::pid_to_str (ptid_t ptid)
   if (ptid.tid () != 0)
     return string_printf ("process %d, thread 0x%s",
 			  ptid.pid (),
-			  phex_nz (ptid.tid (), sizeof (ULONGEST)));
+			  phex_nz (ptid.tid ()));
 
   return normal_pid_to_str (ptid);
 }

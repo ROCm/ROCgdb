@@ -1,4 +1,4 @@
-# Copyright (C) 1989-2024 Free Software Foundation, Inc.
+# Copyright (C) 1989-2025 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -194,6 +194,7 @@ SFILES = \
 	$(srcdir)/linux-loongarch-low.cc \
 	$(srcdir)/linux-low.cc \
 	$(srcdir)/linux-m68k-low.cc \
+        $(srcdir)/linux-microblaze-low.cc \
 	$(srcdir)/linux-mips-low.cc \
 	$(srcdir)/linux-or1k-low.cc \
 	$(srcdir)/linux-ppc-low.cc \

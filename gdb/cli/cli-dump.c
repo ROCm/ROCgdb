@@ -1,6 +1,6 @@
 /* Dump-to-file commands, for GDB, the GNU debugger.
 
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    Contributed by Red Hat.
 
@@ -397,7 +397,7 @@ restore_one_section (bfd *ibfd, asection *isec,
   if (sec_end <= load_start
       || (load_end > 0 && sec_start >= load_end))
     {
-      /* No, no useable data in this section.  */
+      /* No, no usable data in this section.  */
       gdb_printf (_("skipping section %s...\n"), 
 		  bfd_section_name (isec));
       return;

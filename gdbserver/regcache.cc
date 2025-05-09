@@ -1,5 +1,5 @@
 /* Register support routines for the remote server for GDB.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -353,8 +353,7 @@ supply_register_by_name_zeroed (struct regcache *regcache,
 #endif
 
 /* Supply the whole register set whose contents are stored in BUF, to
-   REGCACHE.  If BUF is NULL, all the registers' values are recorded
-   as unavailable.  */
+   REGCACHE.  */
 
 void
 supply_regblock (struct regcache *regcache, const void *buf)
@@ -503,7 +502,7 @@ regcache::raw_compare (int regnum, const void *buf, int offset) const
   gdb_assert (buf != NULL);
 
   gdb::array_view<const gdb_byte> regbuf = register_data (this, regnum);
-  gdb_assert (offset < regbuf.size ());
+  gdb_assert (offset <= regbuf.size ());
   regbuf = regbuf.slice (offset);
 
   return memcmp (buf, regbuf.data (), regbuf.size ()) == 0;

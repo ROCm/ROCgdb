@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux on LoongArch processors.
 
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of GDB.
@@ -812,7 +812,7 @@ loongarch_canonicalize_syscall (enum loongarch_syscall syscall_number)
       SYSCALL_MAP (clone);
       SYSCALL_MAP (execve);
 
-      SYSCALL_MAP_RENAME (mmap, gdb_old_mmap);
+      SYSCALL_MAP_RENAME (mmap, gdb_sys_old_mmap);
 
       SYSCALL_MAP (fadvise64);
       SYSCALL_MAP (swapon);
@@ -938,7 +938,7 @@ loongarch_record_all_but_pc_registers (struct regcache *regcache)
   return 0;
 }
 
-/* Handler for LoongArch architechture system call instruction recording.  */
+/* Handler for LoongArch architecture system call instruction recording.  */
 
 static int
 loongarch_linux_syscall_record (struct regcache *regcache,

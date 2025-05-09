@@ -1,6 +1,6 @@
 /* Support for printing C++ values for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -100,7 +100,7 @@ cp_is_vtbl_member (struct type *type)
 	  /* The type name of the thunk pointer is NULL when using
 	     dwarf2.  We could test for a pointer to a function, but
 	     there is no type info for the virtual table either, so it
-	     wont help.  */
+	     won't help.  */
 	  return cp_is_vtbl_ptr_type (type);
 	}
     }

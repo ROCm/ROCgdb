@@ -1,6 +1,6 @@
 /* Handle shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,7 +68,7 @@ show_solib_search_path (struct ui_file *file, int from_tty,
 	      value);
 }
 
-/* Same as HAVE_DOS_BASED_FILE_SYSTEM, but useable as an rvalue.  */
+/* Same as HAVE_DOS_BASED_FILE_SYSTEM, but usable as an rvalue.  */
 #if (HAVE_DOS_BASED_FILE_SYSTEM)
 #define DOS_BASED_FILE_SYSTEM 1
 #else
@@ -1022,6 +1022,100 @@ solib_add (const char *pattern, int from_tty, int readsyms)
   }
 }
 
+/* Helper function for "info sharedlibrary" and "info namespace".
+   This receives a list of solibs to be printed, and prints a table
+   with all the relevant data.  If PRINT_NAMESPACE is true, figure out
+   the solib_ops of the current gdbarch, to calculate the namespace
+   that contains an solib.
+   Returns true if one or more solibs are missing debug information,
+   false otherwise.  */
+
+static void
+print_solib_list_table (std::vector<const solib *> solib_list,
+			bool print_namespace)
+{
+  gdbarch *gdbarch = current_inferior ()->arch ();
+  /* "0x", a little whitespace, and two hex digits per byte of pointers.  */
+  int addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
+  const solib_ops *ops = gdbarch_so_ops (gdbarch);
+  struct ui_out *uiout = current_uiout;
+  bool so_missing_debug_info = false;
+
+  /* There are 3 conditions for this command to print solib namespaces,
+     first PRINT_NAMESPACE has to be true, second the solib_ops has to
+     support multiple namespaces, and third there must be more than one
+     active namespace.  Fold all these into the PRINT_NAMESPACE condition.  */
+  print_namespace = print_namespace && ops->num_active_namespaces != nullptr
+		    && ops->num_active_namespaces () > 1;
+
+  int num_cols = 4;
+  if (print_namespace)
+    num_cols++;
+
+  {
+    ui_out_emit_table table_emitter (uiout, num_cols, solib_list.size (),
+				     "SharedLibraryTable");
+
+    /* The "- 1" is because ui_out adds one space between columns.  */
+    uiout->table_header (addr_width - 1, ui_left, "from", "From");
+    uiout->table_header (addr_width - 1, ui_left, "to", "To");
+    if (print_namespace)
+      uiout->table_header (5, ui_left, "namespace", "NS");
+    uiout->table_header (12 - 1, ui_left, "syms-read", "Syms Read");
+    uiout->table_header (0, ui_noalign, "name", "Shared Object Library");
+
+    uiout->table_body ();
+
+    for (const solib *so : solib_list)
+      {
+	if (so->so_name.empty ())
+	  continue;
+
+	ui_out_emit_tuple tuple_emitter (uiout, "lib");
+
+	if (so->addr_high != 0)
+	  {
+	    uiout->field_core_addr ("from", gdbarch, so->addr_low);
+	    uiout->field_core_addr ("to", gdbarch, so->addr_high);
+	  }
+	else
+	  {
+	    uiout->field_skip ("from");
+	    uiout->field_skip ("to");
+	  }
+
+	if (print_namespace)
+	  {
+	    try
+	      {
+		uiout->field_fmt ("namespace", "[[%d]]", ops->find_solib_ns (*so));
+	      }
+	    catch (const gdb_exception_error &er)
+	      {
+		uiout->field_skip ("namespace");
+	      }
+	  }
+
+	if (!top_level_interpreter ()->interp_ui_out ()->is_mi_like_p ()
+	    && so->symbols_loaded && !objfile_has_symbols (so->objfile))
+	  {
+	    so_missing_debug_info = true;
+	    uiout->field_string ("syms-read", "Yes (*)");
+	  }
+	else
+	  uiout->field_string ("syms-read", so->symbols_loaded ? "Yes" : "No");
+
+	uiout->field_string ("name", so->so_name, file_name_style.style ());
+
+	uiout->text ("\n");
+      }
+  }
+
+  if (so_missing_debug_info)
+    uiout->message (_ ("(*): Shared library is missing "
+		       "debugging information.\n"));
+}
+
 /* Implement the "info sharedlibrary" command.  Walk through the
    shared library list and print information about each attached
    library matching PATTERN.  If PATTERN is elided, print them
@@ -1030,10 +1124,6 @@ solib_add (const char *pattern, int from_tty, int readsyms)
 static void
 info_sharedlibrary_command (const char *pattern, int from_tty)
 {
-  bool so_missing_debug_info = false;
-  int addr_width;
-  int nr_libs;
-  gdbarch *gdbarch = current_inferior ()->arch ();
   struct ui_out *uiout = current_uiout;
 
   if (pattern)
@@ -1044,84 +1134,120 @@ info_sharedlibrary_command (const char *pattern, int from_tty)
 	error (_ ("Invalid regexp: %s"), re_err);
     }
 
-  /* "0x", a little whitespace, and two hex digits per byte of pointers.  */
-  addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
-
   update_solib_list (from_tty);
 
   /* ui_out_emit_table table_emitter needs to know the number of rows,
      so we need to make two passes over the libs.  */
 
-  nr_libs = 0;
+  std::vector<const solib *> print_libs;
   for (const solib &so : current_program_space->solibs ())
     {
       if (!so.so_name.empty ())
 	{
 	  if (pattern && !re_exec (so.so_name.c_str ()))
 	    continue;
-	  ++nr_libs;
+	  print_libs.push_back (&so);
 	}
     }
 
-  {
-    ui_out_emit_table table_emitter (uiout, 4, nr_libs, "SharedLibraryTable");
+  print_solib_list_table (print_libs, true);
 
-    /* The "- 1" is because ui_out adds one space between columns.  */
-    uiout->table_header (addr_width - 1, ui_left, "from", "From");
-    uiout->table_header (addr_width - 1, ui_left, "to", "To");
-    uiout->table_header (12 - 1, ui_left, "syms-read", "Syms Read");
-    uiout->table_header (0, ui_noalign, "name", "Shared Object Library");
-
-    uiout->table_body ();
-
-    for (const solib &so : current_program_space->solibs ())
-      {
-	if (so.so_name.empty ())
-	  continue;
-
-	if (pattern && !re_exec (so.so_name.c_str ()))
-	  continue;
-
-	ui_out_emit_tuple tuple_emitter (uiout, "lib");
-
-	if (so.addr_high != 0)
-	  {
-	    uiout->field_core_addr ("from", gdbarch, so.addr_low);
-	    uiout->field_core_addr ("to", gdbarch, so.addr_high);
-	  }
-	else
-	  {
-	    uiout->field_skip ("from");
-	    uiout->field_skip ("to");
-	  }
-
-	if (!top_level_interpreter ()->interp_ui_out ()->is_mi_like_p ()
-	    && so.symbols_loaded && !objfile_has_symbols (so.objfile))
-	  {
-	    so_missing_debug_info = true;
-	    uiout->field_string ("syms-read", "Yes (*)");
-	  }
-	else
-	  uiout->field_string ("syms-read", so.symbols_loaded ? "Yes" : "No");
-
-	uiout->field_string ("name", so.so_name, file_name_style.style ());
-
-	uiout->text ("\n");
-      }
-  }
-
-  if (nr_libs == 0)
+  if (print_libs.size () == 0)
     {
       if (pattern)
 	uiout->message (_ ("No shared libraries matched.\n"));
       else
 	uiout->message (_ ("No shared libraries loaded at this time.\n"));
     }
+}
+
+/* Implement the "info linker-namespaces" command.  If the current
+   gdbarch's solib_ops object does not support multiple namespaces,
+   this command would just look like "info sharedlibrary", so point
+   the user to that command instead.
+   If solib_ops does support multiple namespaces, this command
+   will group the libraries by linker namespace, or only print the
+   libraries in the supplied namespace.  */
+static void
+info_linker_namespace_command (const char *pattern, int from_tty)
+{
+  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  /* This command only really makes sense for inferiors that support
+     linker namespaces, so we can leave early.  */
+  if (ops->num_active_namespaces == nullptr)
+    error (_("Current inferior does not support linker namespaces." \
+	     "Use \"info sharedlibrary\" instead"));
+
+  struct ui_out *uiout = current_uiout;
+  std::vector<std::pair<int, std::vector<const solib *>>> all_solibs_to_print;
+
+  if (pattern != nullptr)
+    while (*pattern == ' ')
+      pattern++;
+
+  if (pattern == nullptr || pattern[0] == '\0')
+    {
+      uiout->message (_ ("There are %d linker namespaces loaded\n"),
+		      ops->num_active_namespaces ());
+
+      int printed = 0;
+      for (int i = 0; printed < ops->num_active_namespaces (); i++)
+	{
+	  std::vector<const solib *> solibs_to_print
+	    = ops->get_solibs_in_ns (i);
+	  if (solibs_to_print.size () > 0)
+	    {
+	      all_solibs_to_print.push_back (std::make_pair
+					      (i, solibs_to_print));
+	      printed++;
+	    }
+	}
+    }
   else
     {
-      if (so_missing_debug_info)
-	uiout->message (_ ("(*): Shared library is missing "
-			   "debugging information.\n"));
+      int ns;
+      /* Check if the pattern includes the optional [[ and ]] decorators.
+	 To match multiple occurrences, '+' needs to be escaped, and every
+	 escape sequence must be doubled to survive the compiler pass.  */
+      re_comp ("^\\[\\[[0-9]\\+\\]\\]$");
+      if (re_exec (pattern))
+	ns = strtol (pattern+2, nullptr, 10);
+      else
+	{
+	  char * end = nullptr;
+	  ns = strtol (pattern, &end, 10);
+	  if (end[0] != '\0')
+	    error (_ ("Invalid linker namespace identifier: %s"), pattern);
+	}
+
+      all_solibs_to_print.push_back
+	(std::make_pair (ns, ops->get_solibs_in_ns (ns)));
+    }
+
+  bool ns_separator = false;
+
+  for (auto &solibs_pair : all_solibs_to_print)
+    {
+      if (ns_separator)
+	uiout->message ("\n\n");
+      else
+	ns_separator = true;
+      int ns = solibs_pair.first;
+      std::vector<const solib *> solibs_to_print = solibs_pair.second;
+      if (solibs_to_print.size () == 0)
+	{
+	  uiout->message (_("Linker namespace [[%d]] is not active.\n"), ns);
+	  /* If we got here, a specific namespace was requested, so there
+	     will only be one vector.  We can leave early.  */
+	  break;
+	}
+      uiout->message
+	(_ ("There are %zu libraries loaded in linker namespace [[%d]]\n"),
+	 solibs_to_print.size (), ns);
+      uiout->message
+	(_ ("Displaying libraries for linker namespace [[%d]]:\n"), ns);
+
+      print_solib_list_table (solibs_to_print, false);
     }
 }
 
@@ -1742,6 +1868,44 @@ default_find_solib_addr (solib &so)
   return {};
 }
 
+/* Implementation of the current_linker_namespace convenience variable.
+   This returns the GDB internal identifier of the linker namespace,
+   for the current frame, in the form '[[<number>]]'.  If the inferior
+   doesn't support linker namespaces, this always returns [[0]].  */
+
+static value *
+current_linker_namespace_make_value (gdbarch *gdbarch, internalvar *var,
+				     void *ignore)
+{
+  const solib_ops *ops = gdbarch_so_ops (gdbarch);
+  const language_defn *lang = language_def (get_frame_language
+					      (get_current_frame ()));
+  std::string nsid = "[[0]]";
+  if (ops->find_solib_ns != nullptr)
+    {
+      CORE_ADDR curr_pc = get_frame_pc (get_current_frame ());
+      for (const solib &so : current_program_space->solibs ())
+	if (solib_contains_address_p (so, curr_pc))
+	  {
+	    nsid = string_printf ("[[%d]]", ops->find_solib_ns (so));
+	    break;
+	  }
+    }
+
+
+  /* If the PC is not in an SO, or the solib_ops doesn't support
+     linker namespaces, the inferior is in the default namespace.  */
+  return lang->value_string (gdbarch, nsid.c_str (), nsid.length ());
+}
+
+/* Implementation of `$_current_linker_namespace' variable.  */
+
+static const struct internalvar_funcs current_linker_namespace_funcs =
+{
+  current_linker_namespace_make_value,
+  nullptr,
+};
+
 void _initialize_solib ();
 
 void
@@ -1754,6 +1918,13 @@ _initialize_solib ()
   },
     "solib");
 
+  /* Convenience variables for debugging linker namespaces.  These are
+     set here, even if the solib_ops doesn't support them,
+     for consistency.  */
+  create_internalvar_type_lazy ("_current_linker_namespace",
+				&current_linker_namespace_funcs, nullptr);
+  set_internalvar_integer (lookup_internalvar ("_active_linker_namespaces"), 1);
+
   add_com (
     "sharedlibrary", class_files, sharedlibrary_command,
     _ ("Load shared object library symbols for files matching REGEXP."));
@@ -1763,6 +1934,9 @@ _initialize_solib ()
   add_info_alias ("dll", info_sharedlibrary_cmd, 1);
   add_com ("nosharedlibrary", class_files, no_shared_libraries_command,
 	   _ ("Unload all shared object library symbols."));
+
+  add_info ("linker-namespaces", info_linker_namespace_command,
+      _ ("Get information about linker namespaces in the inferior."));
 
   add_setshow_boolean_cmd ("auto-solib-add", class_support, &auto_solib_add,
 			   _ ("\

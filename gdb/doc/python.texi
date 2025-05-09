@@ -1,5 +1,4 @@
 @c Copyright (C) 2008--2025 Free Software Foundation, Inc.
-@c Copyright (C) 2020--2025 Advanced Micro Devices, Inc. All rights reserved.
 @c Permission is granted to copy, distribute and/or modify this document
 @c under the terms of the GNU Free Documentation License, Version 1.3 or
 @c any later version published by the Free Software Foundation; with the
@@ -258,7 +257,7 @@ Python code must not override these, or even change the options using
 signals, @value{GDBN} will most likely stop working correctly.  Note
 that it is unfortunately common for GUI toolkits to install a
 @code{SIGCHLD} handler.  When creating a new Python thread, you can
-use @code{gdb.block_signals} or @code{gdb.Thread} to handle this
+use @code{gdb.blocked_signals} or @code{gdb.Thread} to handle this
 correctly; see @ref{Threading in GDB}.
 
 @item
@@ -655,22 +654,22 @@ threads, you must be careful to only call @value{GDBN}-specific
 functions in the @value{GDBN} thread.  @value{GDBN} provides some
 functions to help with this.
 
-@defun gdb.block_signals ()
+@defun gdb.blocked_signals ()
 As mentioned earlier (@pxref{Basic Python}), certain signals must be
-delivered to the @value{GDBN} main thread.  The @code{block_signals}
+delivered to the @value{GDBN} main thread.  The @code{blocked_signals}
 function returns a context manager that will block these signals on
 entry.  This can be used when starting a new thread to ensure that the
 signals are blocked there, like:
 
 @smallexample
-with gdb.block_signals():
+with gdb.blocked_signals():
    start_new_thread()
 @end smallexample
 @end defun
 
 @deftp {class} gdb.Thread
 This is a subclass of Python's @code{threading.Thread} class.  It
-overrides the @code{start} method to call @code{block_signals}, making
+overrides the @code{start} method to call @code{blocked_signals}, making
 this an easy-to-use drop-in replacement for creating threads that will
 work well in @value{GDBN}.
 @end deftp
@@ -4555,8 +4554,8 @@ registered.
 
 The help text for the new command is taken from the Python
 documentation string for the command's class, if there is one.  If no
-documentation string is provided, the default value ``This command is
-not documented.'' is used.
+documentation string is provided, the default value @samp{This command
+is not documented.} is used.
 @end defun
 
 @cindex don't repeat Python command
@@ -7050,13 +7049,13 @@ writable.
 
 @cindex colors in python
 @tindex gdb.Color
-You can assign instance of @code{Color} to the @code{value} of
+You can assign instance of @code{gdb.Color} to the @code{value} of
 a @code{Parameter} instance created with @code{PARAM_COLOR}.
 
-@code{Color} may refer to an index from color palette or contain components
-of a color from some colorspace.
+@code{gdb.Color} may refer to an index from a color palette or contain
+components of a color from some color space.
 
-@defun Color.__init__ (@r{[}@var{value} @r{[}, @var{color-space}@r{]}@r{]})
+@defun Color.__init__ (@r{[}value @r{[}, color_space@r{]}@r{]})
 
 @var{value} is @code{None} (meaning the terminal's default color),
 an integer index of a color in palette, tuple with color components
@@ -7066,8 +7065,9 @@ or one of the following color names:
 @samp{green}, @samp{yellow}, @samp{blue}, @samp{magenta}, @samp{cyan},
 or @samp{white}.
 
-@var{color-space} should be one of the @samp{COLORSPACE_} constants.  This
-argument tells @value{GDBN} which color space @var{value} belongs.
+@var{color_space} should be one of the @samp{COLORSPACE_} constants
+listed below.  This argument tells @value{GDBN} which color space
+@var{value} belongs.
 @end defun
 
 @defvar Color.is_none
@@ -7095,7 +7095,7 @@ This attribute exist if @code{is_direct} is @code{True}.  Its value is tuple
 with integer components of a color.
 @end defvar
 
-@defun Color.escape_sequence (@var{self}, @var{is_foreground})
+@defun Color.escape_sequence (is_foreground)
 Returns string to change terminal's color to this.
 
 If @var{is_foreground} is @code{True}, then the returned sequence will change
@@ -7136,6 +7136,8 @@ Palette with 256 colors.  First 16 are from COLORSPACE_AIXTERM_16COLOR.  Next
 Direct 24-bit RGB colors.
 
 @end table
+
+It is not possible to sub-class the @code{Color} class.
 
 @node Architectures In Python
 @subsubsection Python representation of architectures

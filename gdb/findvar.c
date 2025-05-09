@@ -1,6 +1,6 @@
 /* Find a variable's value in memory, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -506,7 +506,8 @@ language_defn::read_var_value (struct symbol *var,
 	/* Determine address of TLS variable. */
 	if (obj_section
 	    && (obj_section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
-	  addr = target_translate_tls_address (obj_section->objfile, addr);
+	  addr = target_translate_tls_address (obj_section->objfile, addr,
+					       var->print_name ());
       }
       break;
 

@@ -1,6 +1,6 @@
 /* Target-dependent code for the NDS32 architecture, for GDB.
 
-   Copyright (C) 2013-2024 Free Software Foundation, Inc.
+   Copyright (C) 2013-2025 Free Software Foundation, Inc.
    Contributed by Andes Technology Corporation.
 
    This file is part of GDB.
@@ -1935,7 +1935,7 @@ nds32_validate_tdesc_p (const struct target_desc *tdesc,
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
-   re-use an architecture from ARCHES, which is a list of
+   reuse an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
 
    Called e.g. at program startup, when reading a core file, and when

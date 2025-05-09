@@ -1,6 +1,6 @@
 /* Tracing functionality for remote targets in custom GDB protocol
 
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -2818,7 +2818,7 @@ encode_source_string (int tpnum, ULONGEST addr,
   if (80 + strlen (srctype) > buf_size)
     error (_("Buffer too small for source encoding"));
   sprintf (buf, "%x:%s:%s:%x:%x:",
-	   tpnum, phex_nz (addr, sizeof (addr)),
+	   tpnum, phex_nz (addr),
 	   srctype, 0, (int) strlen (src));
   if (strlen (buf) + strlen (src) * 2 >= buf_size)
     error (_("Source string too long for buffer"));

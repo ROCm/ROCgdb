@@ -1,5 +1,5 @@
 /* Target operations for the remote server for GDB.
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -258,7 +258,7 @@ target_pid_to_str (ptid_t ptid)
   else if (ptid.tid () != 0)
     return string_printf("Thread %d.0x%s",
 			 ptid.pid (),
-			 phex_nz (ptid.tid (), sizeof (ULONGEST)));
+			 phex_nz (ptid.tid ()));
   else if (ptid.lwp () != 0)
     return string_printf("LWP %d.%ld",
 			 ptid.pid (), ptid.lwp ());

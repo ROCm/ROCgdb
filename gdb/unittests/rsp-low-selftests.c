@@ -1,6 +1,6 @@
 /* Unit tests for the rsp-low.c file.
 
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -51,7 +51,7 @@ static void test_hex2str ()
 {
   SELF_CHECK (hex2str ("666f6f") == "foo");
   SELF_CHECK (hex2str ("666f6fa") == "foo");
-  SELF_CHECK (hex2str ("666f6f", 2) == "fo");
+  SELF_CHECK (hex2str ("666f6f", 2) == "fo"); /* codespell:ignore */
   SELF_CHECK (hex2str ("666", 2) == "f");
   SELF_CHECK (hex2str ("666", 6) == "f");
   SELF_CHECK (hex2str ("") == "");

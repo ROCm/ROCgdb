@@ -1,6 +1,6 @@
 /* Print values for GNU debugger GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -1340,7 +1340,9 @@ process_print_command_args (const char *args, value_print_options *print_opts,
 	 value, so invert it for parse_expression.  */
       parser_flags flags = 0;
       if (!voidprint)
-	flags = PARSER_VOID_CONTEXT;
+	flags |= PARSER_VOID_CONTEXT;
+      if (parser_debug)
+	flags |= PARSER_DEBUG;
       expression_up expr = parse_expression (exp, nullptr, flags);
       return expr->evaluate ();
     }
@@ -2911,7 +2913,7 @@ static void
 printf_command (const char *arg, int from_tty)
 {
   ui_printf (arg, gdb_stdout);
-  gdb_stdout->reset_style ();
+  gdb_stdout->emit_style_escape (ui_file_style ());
   gdb_stdout->wrap_here (0);
   gdb_stdout->flush ();
 }

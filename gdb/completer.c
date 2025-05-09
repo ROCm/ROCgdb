@@ -1,5 +1,5 @@
 /* Line completion stuff for GDB, the GNU debugger.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -356,7 +356,7 @@ gdb_completer_file_name_quote_1 (const char *text, char quote_char)
   if (quote_char == '\'')
     {
       /* There is no backslash escaping permitted within a single quoted
-	 string, so in this case we can just return the input sting.  */
+	 string, so in this case we can just return the input string.  */
       str = text;
     }
   else if (quote_char == '"')
