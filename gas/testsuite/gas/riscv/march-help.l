@@ -102,11 +102,13 @@ All available -march extensions for RISC-V:
 	ztso                                    1.0
 	zca                                     1.0
 	zcb                                     1.0
+	zce                                     1.0
 	zcf                                     1.0
 	zcd                                     1.0
 	zcmop                                   1.0
 	zcmp                                    1.0
 	zcmt                                    1.0
+	sha                                     1.0
 	shcounterenw                            1.0
 	shgatpa                                 1.0
 	shtvala                                 1.0
@@ -173,3 +175,7 @@ All available -march extensions for RISC-V:
 	xsfvqmaccqoq                            1.0
 	xsfvqmaccdod                            1.0
 	xsfvfnrclipxfqf                         1.0
+	xmipscbop                               1.0
+	xmipscmov                               1.0
+	xmipsexectl                             1.0
+	xmipslsp                                1.0
