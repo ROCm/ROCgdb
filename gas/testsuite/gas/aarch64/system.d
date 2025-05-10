@@ -8,12 +8,15 @@ Disassembly of section \.text:
 
 0+ <.*>:
 .*:	d6bf03e0 	drps
+.*:	d69f03e0 	eret
 .*:	d503201f 	nop
 .*:	d503203f 	yield
 .*:	d503205f 	wfe
 .*:	d503207f 	wfi
 .*:	d503209f 	sev
 .*:	d50320bf 	sevl
+.*:	d50320df 	dgh
+.*:	d503229f 	csdb
 .*:	d50322df 	clrbhb
 .*:	d503201f 	nop
 .*:	d503203f 	yield
@@ -21,7 +24,7 @@ Disassembly of section \.text:
 .*:	d503207f 	wfi
 .*:	d503209f 	sev
 .*:	d50320bf 	sevl
-.*:	d50320df 	hint	#0x6
+.*:	d50320df 	dgh
 .*:	d50320ff 	(hint	#0x7|xpaclri)
 .*:	d503211f 	(hint	#0x8|pacia1716)
 .*:	d503213f 	hint	#0x9
