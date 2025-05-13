@@ -7520,45 +7520,66 @@ cutu_reader::open_dwo_file (dwarf2_per_bfd *per_bfd, const char *file_name,
    size of each of the DWO debugging sections we are interested in.  */
 
 void
-cutu_reader::locate_dwo_sections (struct objfile *objfile, bfd *abfd,
-				  asection *sectp, dwo_sections *dwo_sections)
+cutu_reader::locate_dwo_sections (objfile *objfile, dwo_file &dwo_file)
 {
   const struct dwop_section_names *names = &dwop_section_names;
+  dwo_sections &dwo_sections = dwo_file.sections;
+  bool complained_about_macro_already = false;
 
-  struct dwarf2_section_info *dw_sect = nullptr;
-
-  if (names->abbrev_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->abbrev;
-  else if (names->info_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->infos.emplace_back (dwarf2_section_info {});
-  else if (names->line_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->line;
-  else if (names->loc_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->loc;
-  else if (names->loclists_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->loclists;
-  else if (names->macinfo_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->macinfo;
-  else if (names->macro_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->macro;
-  else if (names->rnglists_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->rnglists;
-  else if (names->str_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->str;
-  else if (names->str_offsets_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->str_offsets;
-  else if (names->types_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->types.emplace_back (dwarf2_section_info {});
-
-  if (dw_sect != nullptr)
+  for (asection *sec : gdb_bfd_sections (dwo_file.dbfd))
     {
-      /* Make sure we don't overwrite a section info that has been filled in
-	 already.  */
-      gdb_assert (!dw_sect->readin);
+      struct dwarf2_section_info *dw_sect = nullptr;
 
-      dw_sect->s.section = sectp;
-      dw_sect->size = bfd_section_size (sectp);
-      dw_sect->read (objfile);
+      if (names->abbrev_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.abbrev;
+      else if (names->info_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.infos.emplace_back (dwarf2_section_info {});
+      else if (names->line_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.line;
+      else if (names->loc_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.loc;
+      else if (names->loclists_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.loclists;
+      else if (names->macinfo_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.macinfo;
+      else if (names->macro_dwo.matches (sec->name))
+	{
+	  /* gcc versions <= 13 generate multiple .debug_macro.dwo sections with
+	     some unresolved links between them.  It's not usable, so do as if
+	     there were not there.  */
+	  if (!complained_about_macro_already)
+	    {
+	      if (dwo_sections.macro.s.section == nullptr)
+		dw_sect = &dwo_sections.macro;
+	      else
+		{
+		  warning (_("Multiple .debug_macro.dwo sections found in "
+			     "%s, ignoring them."), dwo_file.dbfd->filename);
+
+		  dwo_sections.macro = dwarf2_section_info {};
+		  complained_about_macro_already = true;
+		}
+	    }
+	}
+      else if (names->rnglists_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.rnglists;
+      else if (names->str_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.str;
+      else if (names->str_offsets_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.str_offsets;
+      else if (names->types_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.types.emplace_back (dwarf2_section_info {});
+
+      if (dw_sect != nullptr)
+	{
+	  /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+	  gdb_assert (!dw_sect->readin);
+
+	  dw_sect->s.section = sec;
+	  dw_sect->size = bfd_section_size (sec);
+	  dw_sect->read (objfile);
+	}
     }
 }
 
@@ -7586,9 +7607,7 @@ cutu_reader::open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
   dwo_file->comp_dir = comp_dir;
   dwo_file->dbfd = std::move (dbfd);
 
-  for (asection *sec : gdb_bfd_sections (dwo_file->dbfd))
-    this->locate_dwo_sections (per_objfile->objfile, dwo_file->dbfd.get (), sec,
-			       &dwo_file->sections);
+  this->locate_dwo_sections (per_objfile->objfile, *dwo_file);
 
   /* There is normally just one .debug_info.dwo section in a DWO file.  But when
      building with -fdebug-types-section, gcc produces multiple .debug_info.dwo
