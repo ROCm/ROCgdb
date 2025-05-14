@@ -1673,14 +1673,10 @@ linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
   data.obfd = obfd;
 
   auto accept_dri_render_nodes
-    = [] (filter_flags filterflags, const struct smaps_vmflags *v,
-	  int maybe_private_p, int mapping_anon_p, int mapping_file_p,
-	  const char *filename, ULONGEST addr, ULONGEST offset) -> int
+    = [] (filter_flags filterflags, const smaps_data &map) -> bool
       {
-	const char *render_node_name_prefix = "/dev/dri/renderD";
-	return (strncmp (filename,
-			render_node_name_prefix,
-			strlen (render_node_name_prefix)) == 0);
+	static const char *render_node_name_prefix = "/dev/dri/renderD";
+	return startswith (map.filename, render_node_name_prefix);
       };
 
   return linux_find_memory_regions_full (gdbarch,
