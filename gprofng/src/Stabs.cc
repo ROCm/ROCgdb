@@ -35,10 +35,7 @@
 #include "StringBuilder.h"
 #include "DbeFile.h"
 #include "StringMap.h"
-
-#define DISASM_REL_NONE     0     /* symtab search only */
-#define DISASM_REL_ONLY     1     /* relocation search only */
-#define DISASM_REL_TARG     2     /* relocatoin then symtab */
+#include "Symbol.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // class StabReader
@@ -61,105 +58,6 @@ private:
   int StrTabSize;
   int StabEntSize;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-// class Symbol
-
-class Symbol
-{
-public:
-  Symbol (Vector<Symbol*> *vec = NULL);
-
-  ~Symbol ()
-  {
-    free (name);
-  }
-
-  inline Symbol *
-  cardinal ()
-  {
-    return alias ? alias : this;
-  }
-
-  static void dump (Vector<Symbol*> *vec, char*msg);
-
-  Function *func;
-  Sp_lang_code lang_code;
-  uint64_t value; // st_value used in sym_name()
-  uint64_t save;
-  int64_t size;
-  uint64_t img_offset; // image offset in the ELF file
-  char *name;
-  Symbol *alias;
-  int local_ind;
-  int flags;
-  bool defined;
-};
-
-Symbol::Symbol (Vector<Symbol*> *vec)
-{
-  func = NULL;
-  lang_code = Sp_lang_unknown;
-  value = 0;
-  save = 0;
-  size = 0;
-  img_offset = 0;
-  name = NULL;
-  alias = NULL;
-  local_ind = -1;
-  flags = 0;
-  defined = false;
-  if (vec)
-    vec->append (this);
-}
-
-void
-Symbol::dump (Vector<Symbol*> *vec, char*msg)
-{
-  if (!DUMP_ELF_SYM || vec == NULL || vec->size () == 0)
-    return;
-  printf (NTXT ("======= Symbol::dump: %s =========\n"
-		"         value |    img_offset     | flags|local_ind|\n"), msg);
-  for (int i = 0; i < vec->size (); i++)
-    {
-      Symbol *sp = vec->fetch (i);
-      printf (NTXT ("  %3d %8lld |0x%016llx |%5d |%8d |%s\n"),
-	      i, (long long) sp->value, (long long) sp->img_offset, sp->flags,
-	      sp->local_ind, sp->name ? sp->name : NTXT ("NULL"));
-    }
-  printf (NTXT ("\n===== END of Symbol::dump: %s =========\n\n"), msg);
-}
-
-// end of class Symbol
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-// class Reloc
-class Reloc
-{
-public:
-  Reloc ();
-  ~Reloc ();
-  uint64_t type;
-  uint64_t value;
-  uint64_t addend;
-  char *name;
-};
-
-Reloc::Reloc ()
-{
-  type = 0;
-  value = 0;
-  addend = 0;
-  name = NULL;
-}
-
-Reloc::~Reloc ()
-{
-  free (name);
-}
-// end of class Reloc
-///////////////////////////////////////////////////////////////////////////////
 
 enum
 {
@@ -232,15 +130,6 @@ SymImgOffsetCmp (const void *a, const void *b)
 	  (item1->img_offset == item2->img_offset) ? SymNameCmp (a, b) : -1;
 }
 
-static int
-RelValueCmp (const void *a, const void *b)
-{
-  Reloc *item1 = *((Reloc **) a);
-  Reloc *item2 = *((Reloc **) b);
-  return (item1->value > item2->value) ? 1 :
-	  (item1->value == item2->value) ? 0 : -1;
-}
-
 /* Remove all duplicate symbols which can be in SymLst.  The
    duplication is due to processing of both static and dynamic
    symbols.  This function is called before computing symbol
@@ -252,7 +141,6 @@ Stabs::removeDupSyms ()
   long ind, i, last;
   Symbol *symA, *symB;
   SymLst->sort (SymImgOffsetCmp);
-  dump ();
 
   last = 0;
   ind = SymLst->size ();
@@ -294,8 +182,6 @@ Stabs::Stabs (char *_path, char *_lo_name)
   SymLstByName = NULL;
   pltSym = NULL;
   SymLst = new Vector<Symbol*>;
-  RelLst = new Vector<Reloc*>;
-  RelPLTLst = new Vector<Reloc*>;
   LocalLst = new Vector<Symbol*>;
   LocalFile = new Vector<char*>;
   LocalFileIdx = new Vector<int>;
@@ -341,8 +227,6 @@ Stabs::~Stabs ()
 {
   delete SymLstByName;
   Destroy (SymLst);
-  Destroy (RelLst);
-  Destroy (RelPLTLst);
   Destroy (LocalFile);
   delete elfDis;
   delete dwarf;
@@ -456,42 +340,6 @@ Stabs::read_symbols (Vector<Function*> *functions)
       }
     }
   return true;
-}
-
-char *
-Stabs::sym_name (uint64_t target, uint64_t instr, int flag)
-{
-  long index;
-  if (flag == DISASM_REL_ONLY || flag == DISASM_REL_TARG)
-    {
-      Reloc *relptr = new Reloc;
-      relptr->value = instr;
-      index = RelLst->bisearch (0, -1, &relptr, RelValueCmp);
-      if (index >= 0)
-	{
-	  delete relptr;
-	  return RelLst->fetch (index)->name;
-	}
-      if (!is_relocatable ())
-	{
-	  relptr->value = target;
-	  index = RelPLTLst->bisearch (0, -1, &relptr, RelValueCmp);
-	  if (index >= 0)
-	    {
-	      delete relptr;
-	      return RelPLTLst->fetch (index)->name;
-	    }
-	}
-      delete relptr;
-    }
-  if (flag == DISASM_REL_NONE || flag == DISASM_REL_TARG || !is_relocatable ())
-    {
-      Symbol *sptr;
-      sptr = map_PC_to_sym (target);
-      if (sptr && sptr->value == target)
-	return sptr->name;
-    }
-  return NULL;
 }
 
 Symbol *
@@ -1761,10 +1609,12 @@ Stabs::readSymSec (Elf *elf, bool is_dynamic)
       if (asym == NULL)
 	break;
       const char *st_name = bfd_asymbol_name (asym);
+      if (st_name == NULL)
+	continue;
       switch (GELF_ST_TYPE (Sym.st_info))
 	{
 	case STT_FUNC:
-	  if (Sym.st_size == 0)
+	  if (Sym.st_size == 0 || ELF_ST_BIND (Sym.st_info) == STB_WEAK)
 	    break;
 	  if (Sym.st_shndx == 0)
 	    {
@@ -1839,8 +1689,7 @@ Stabs::readSymSec (Elf *elf, bool is_dynamic)
   fixSymtabAlias ();
   SymLst->sort (SymValueCmp);
   get_save_addr (elf->need_swap_endian);
-  dump ();
-}//check_Symtab
+}
 
 void
 Stabs::get_save_addr (bool need_swap_endian)
@@ -2339,6 +2188,7 @@ Stabs::openDwarf ()
     {
       dwarf = new Dwarf (this);
       check_Symtab ();
+      dump();
     }
   return dwarf;
 }
@@ -2363,8 +2213,8 @@ Stabs::dump ()
 	printf ("  %3d: %5d '%s'\n", i, LocalFileIdx->fetch (i),
 		LocalFile->fetch (i));
     }
-  Symbol::dump (SymLst, NTXT ("SymLst"));
-  Symbol::dump (LocalLst, NTXT ("LocalLst"));
+  SymLst->dump ("SymLst");
+  LocalLst->dump ("LocalLst");
   printf (NTXT ("\n===== END of Stabs::dump: %s =========\n\n"),
   path ? path : NTXT ("NULL"));
 }

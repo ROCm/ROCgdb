@@ -1148,7 +1148,8 @@ riscv_elf_ignore_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 /* Always add implicit extensions for the SUBSET.  */
 
 static bool
-check_implicit_always (riscv_subset_t *subset ATTRIBUTE_UNUSED)
+check_implicit_always (riscv_parse_subset_t *rps ATTRIBUTE_UNUSED,
+		       const riscv_subset_t *subset ATTRIBUTE_UNUSED)
 {
   return true;
 }
@@ -1156,11 +1157,24 @@ check_implicit_always (riscv_subset_t *subset ATTRIBUTE_UNUSED)
 /* Add implicit extensions only when the version of SUBSET less than 2.1.  */
 
 static bool
-check_implicit_for_i (riscv_subset_t *subset)
+check_implicit_for_i (riscv_parse_subset_t *rps ATTRIBUTE_UNUSED,
+		      const riscv_subset_t *subset ATTRIBUTE_UNUSED)
 {
   return (subset->major_version < 2
 	  || (subset->major_version == 2
 	      && subset->minor_version < 1));
+}
+
+/* Add the IMPLICIT only when the 'f' extension is also available
+   and XLEN is 32.  */
+
+static bool
+check_implicit_for_zcf (riscv_parse_subset_t *rps,
+			const riscv_subset_t *subset ATTRIBUTE_UNUSED)
+{
+  riscv_subset_t *tmp = NULL;
+  return *rps->xlen == 32
+	 && riscv_lookup_subset (rps->subset_list, "f", &tmp);
 }
 
 /* Record all implicit information for the subsets.  */
@@ -1169,7 +1183,8 @@ struct riscv_implicit_subset
   const char *ext;
   const char *implicit_exts;
   /* A function to determine if we need to add the implicit subsets.  */
-  bool (*check_func) (riscv_subset_t *);
+  bool (*check_func) (riscv_parse_subset_t *,
+		      const riscv_subset_t *);
 };
 /* Please added in order since this table is only run once time.  */
 static struct riscv_implicit_subset riscv_implicit_subsets[] =
@@ -1213,6 +1228,8 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvl128b", "+zvl64b", check_implicit_always},
   {"zvl64b", "+zvl32b", check_implicit_always},
 
+  {"zce", "+zca,+zcb,+zcmp,+zcmt", check_implicit_always},
+  {"zce", "+zcf", check_implicit_for_zcf},
   {"zcb", "+zca", check_implicit_always},
   {"zcd", "+d,+zca", check_implicit_always},
   {"zcf", "+f,+zca", check_implicit_always},
@@ -1222,6 +1239,8 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
 
   {"zicfilp", "+zicsr", check_implicit_always},
   {"zicfiss", "+zimop,+zicsr", check_implicit_always},
+
+  {"sha", "+h,+ssstateen,+shcounterenw,+shvstvala,+shtvala,+shvstvecd,+shvsatpa,+shgatpa", check_implicit_always},
 
   {"shcounterenw", "+h", check_implicit_always},
   {"shgatpa", "+h", check_implicit_always},
@@ -1437,6 +1456,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"ztso",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zca",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcb",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zce",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcf",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcd",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcmop",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1447,6 +1467,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
 
 static struct riscv_supported_ext riscv_supported_std_s_ext[] =
 {
+  {"sha",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shcounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shgatpa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shtvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1523,6 +1544,10 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0},
   {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0},
   {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0},
+  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2076,7 +2101,7 @@ riscv_parse_add_implicit_subsets (riscv_parse_subset_t *rps)
     {
       riscv_subset_t *subset = NULL;
       if (riscv_lookup_subset (rps->subset_list, t->ext, &subset)
-	&& t->check_func (subset))
+	&& t->check_func (rps, subset))
       riscv_update_subset1 (rps, subset, t->implicit_exts);
     }
 }
@@ -2863,6 +2888,14 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xsfvqmaccdod");
     case INSN_CLASS_XSFVFNRCLIPXFQF:
       return riscv_subset_supports (rps, "xsfvfnrclipxfqf");
+    case INSN_CLASS_XMIPSCBOP:
+      return riscv_subset_supports (rps, "xmipscbop");
+    case INSN_CLASS_XMIPSCMOV:
+      return riscv_subset_supports (rps, "xmipscmov");
+    case INSN_CLASS_XMIPSEXECTL:
+      return riscv_subset_supports (rps, "xmipsexectl");
+    case INSN_CLASS_XMIPSLSP:
+      return riscv_subset_supports (rps, "xmipslsp");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

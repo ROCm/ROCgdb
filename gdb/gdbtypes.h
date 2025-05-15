@@ -259,7 +259,7 @@ enum dynamic_prop_kind
 {
   PROP_UNDEFINED, /* Not defined.  */
   PROP_CONST,     /* Constant.  */
-  PROP_ADDR_OFFSET, /* Address offset.  */
+  PROP_FIELD,	  /* Field of a type.  */
   PROP_LOCEXPR,   /* Location expression.  */
   PROP_LOCLIST,    /* Location list.  */
   PROP_VARIANT_PARTS, /* Variant parts.  */
@@ -347,7 +347,7 @@ struct dynamic_prop
   {
     gdb_assert (m_kind == PROP_LOCEXPR
 		|| m_kind == PROP_LOCLIST
-		|| m_kind == PROP_ADDR_OFFSET);
+		|| m_kind == PROP_FIELD);
 
     return m_data.baton;
   }
@@ -364,9 +364,9 @@ struct dynamic_prop
     m_data.baton = baton;
   }
 
-  void set_addr_offset (const dwarf2_property_baton *baton)
+  void set_field (const dwarf2_property_baton *baton)
   {
-    m_kind = PROP_ADDR_OFFSET;
+    m_kind = PROP_FIELD;
     m_data.baton = baton;
   }
 
@@ -2628,6 +2628,41 @@ extern struct type *resolve_dynamic_type
    where an apparently-resolved type may still be considered
    "dynamic".  */
 extern bool is_dynamic_type (struct type *type);
+
+/* Resolve any dynamic components of FIELD.  FIELD is updated.
+   ADDR_STACK and FRAME are used where necessary to supply information
+   for the resolution process; see resolve_dynamic_type.
+   Specifically, after calling this, the field's bit position will be
+   a constant, and the field's type will not have dynamic properties.
+
+   This function assumes that FIELD is not a static field.  */
+
+extern void resolve_dynamic_field (struct field &field,
+				   const struct property_addr_info *addr_stack,
+				   const frame_info_ptr &frame);
+
+/* A helper function that handles the DWARF semantics for
+   DW_AT_bit_offset.
+
+   DWARF 3 specified DW_AT_bit_offset in a funny way, making it simple
+   to use on big-endian targets but somewhat difficult for
+   little-endian.  This function handles the logic here.
+
+   While DW_AT_bit_offset was deprecated in DWARF 4 (and removed
+   entirely from DWARF 5), it is still useful because it is the only
+   way to describe a field that appears at a non-constant bit
+   offset.
+
+   FIELD is updated in-place.  It is assumed that FIELD already has a
+   constant bit position.  BIT_OFFSET is the value of the
+   DW_AT_bit_offset attribute, and EXPLICIT_BYTE_SIZE is either the
+   value of a DW_AT_byte_size from the field's DIE -- indicating an
+   explicit size of the enclosing anonymous object -- or it may be 0,
+   indicating that the field's type size should be used.  */
+
+extern void apply_bit_offset_to_field (struct field &field,
+				       LONGEST bit_offset,
+				       LONGEST explicit_byte_size);
 
 extern struct type *check_typedef (struct type *);
 
