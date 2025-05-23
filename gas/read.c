@@ -1514,12 +1514,7 @@ s_abort (int ignore ATTRIBUTE_UNUSED)
 }
 
 #ifndef TC_ALIGN_LIMIT
-/* Limit alignment in code to 1G, to limit the amount of memory used
-   by rs_code_align frags.  */
-#define TC_ALIGN_LIMIT \
-  ((subseg_text_p (now_seg)				\
-    && stdoutput->arch_info->bits_per_address >= 32)	\
-   ? 30 : stdoutput->arch_info->bits_per_address - 1)
+#define TC_ALIGN_LIMIT (stdoutput->arch_info->bits_per_address - 1)
 #endif
 
 /* Handle the .align pseudo-op.  A positive ARG is a default alignment
@@ -3622,6 +3617,13 @@ s_nop (int ignore ATTRIBUTE_UNUSED)
 	     && frag_off + frag_now_fix () < start_off + exp.X_add_number);
 }
 
+/* Use this to specify the amount of memory allocated for representing
+   the nops.  Needs to be large enough to hold any fixed size prologue
+   plus the replicating portion.  */
+#ifndef MAX_MEM_FOR_RS_SPACE_NOP
+# define MAX_MEM_FOR_RS_SPACE_NOP 1
+#endif
+
 void
 s_nops (int ignore ATTRIBUTE_UNUSED)
 {
@@ -3670,8 +3672,7 @@ s_nops (int ignore ATTRIBUTE_UNUSED)
   /* Store the no-op instruction control byte in the first byte of frag.  */
   char *p;
   symbolS *sym = make_expr_symbol (&exp);
-  p = frag_var (rs_space_nop, 1, 1, (relax_substateT) 0,
-		sym, (offsetT) 0, (char *) 0);
+  p = frag_var (rs_space_nop, MAX_MEM_FOR_RS_SPACE_NOP, 1, 0, sym, 0, NULL);
   *p = val.X_add_number;
 }
 
