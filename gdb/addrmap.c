@@ -398,20 +398,20 @@ namespace selftests {
 /* Convert P to CORE_ADDR.  */
 
 static CORE_ADDR
-core_addr (void *p)
+core_addr (const void *p)
 {
-  return (CORE_ADDR)(uintptr_t)p;
+  return (CORE_ADDR) (uintptr_t) p;
 }
 
 /* Check that &ARRAY[LOW]..&ARRAY[HIGH] has VAL in MAP.  */
 
-#define CHECK_ADDRMAP_FIND(MAP, ARRAY, LOW, HIGH, VAL)			\
-  do									\
-    {									\
-      for (unsigned i = LOW; i <= HIGH; ++i)				\
-	SELF_CHECK (MAP->find (core_addr (&ARRAY[i])) == VAL);		\
-    }									\
-  while (0)
+static void
+check_addrmap_find (const addrmap &map, const char *array, unsigned int low,
+		    unsigned int high, const void *val)
+{
+  for (unsigned int i = low; i <= high; ++i)
+    SELF_CHECK (map.find (core_addr (&array[i])) == val);
+}
 
 /* Entry point for addrmap unit tests.  */
 
@@ -427,25 +427,24 @@ test_addrmap ()
 
   /* Create mutable addrmap.  */
   auto_obstack temp_obstack;
-  auto map = std::make_unique<struct addrmap_mutable> ();
-  SELF_CHECK (map != nullptr);
+  addrmap_mutable map;
 
   /* Check initial state.  */
-  CHECK_ADDRMAP_FIND (map, array, 0, 19, nullptr);
+  check_addrmap_find (map, array, 0, 19, nullptr);
 
   /* Insert address range into mutable addrmap.  */
-  map->set_empty (core_addr (&array[10]), core_addr (&array[12]), val1);
-  CHECK_ADDRMAP_FIND (map, array, 0, 9, nullptr);
-  CHECK_ADDRMAP_FIND (map, array, 10, 12, val1);
-  CHECK_ADDRMAP_FIND (map, array, 13, 19, nullptr);
+  map.set_empty (core_addr (&array[10]), core_addr (&array[12]), val1);
+  check_addrmap_find (map, array, 0, 9, nullptr);
+  check_addrmap_find (map, array, 10, 12, val1);
+  check_addrmap_find (map, array, 13, 19, nullptr);
 
   /* Create corresponding fixed addrmap.  */
   addrmap_fixed *map2
-    = new (&temp_obstack) addrmap_fixed (&temp_obstack, map.get ());
+    = new (&temp_obstack) addrmap_fixed (&temp_obstack, &map);
   SELF_CHECK (map2 != nullptr);
-  CHECK_ADDRMAP_FIND (map2, array, 0, 9, nullptr);
-  CHECK_ADDRMAP_FIND (map2, array, 10, 12, val1);
-  CHECK_ADDRMAP_FIND (map2, array, 13, 19, nullptr);
+  check_addrmap_find (*map2, array, 0, 9, nullptr);
+  check_addrmap_find (*map2, array, 10, 12, val1);
+  check_addrmap_find (*map2, array, 13, 19, nullptr);
 
   /* Iterate over both addrmaps.  */
   auto callback = [&] (CORE_ADDR start_addr, void *obj)
@@ -460,21 +459,21 @@ test_addrmap ()
 	SELF_CHECK (false);
       return 0;
     };
-  SELF_CHECK (map->foreach (callback) == 0);
+  SELF_CHECK (map.foreach (callback) == 0);
   SELF_CHECK (map2->foreach (callback) == 0);
 
   /* Relocate fixed addrmap.  */
   map2->relocate (1);
-  CHECK_ADDRMAP_FIND (map2, array, 0, 10, nullptr);
-  CHECK_ADDRMAP_FIND (map2, array, 11, 13, val1);
-  CHECK_ADDRMAP_FIND (map2, array, 14, 19, nullptr);
+  check_addrmap_find (*map2, array, 0, 10, nullptr);
+  check_addrmap_find (*map2, array, 11, 13, val1);
+  check_addrmap_find (*map2, array, 14, 19, nullptr);
 
   /* Insert partially overlapping address range into mutable addrmap.  */
-  map->set_empty (core_addr (&array[11]), core_addr (&array[13]), val2);
-  CHECK_ADDRMAP_FIND (map, array, 0, 9, nullptr);
-  CHECK_ADDRMAP_FIND (map, array, 10, 12, val1);
-  CHECK_ADDRMAP_FIND (map, array, 13, 13, val2);
-  CHECK_ADDRMAP_FIND (map, array, 14, 19, nullptr);
+  map.set_empty (core_addr (&array[11]), core_addr (&array[13]), val2);
+  check_addrmap_find (map, array, 0, 9, nullptr);
+  check_addrmap_find (map, array, 10, 12, val1);
+  check_addrmap_find (map, array, 13, 13, val2);
+  check_addrmap_find (map, array, 14, 19, nullptr);
 }
 
 } /* namespace selftests */
