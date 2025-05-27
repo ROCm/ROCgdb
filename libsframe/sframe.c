@@ -369,43 +369,34 @@ sframe_decoder_get_funcdesc_at_index (sframe_decoder_ctx *ctx,
 
 static bool
 sframe_fre_check_range_p (sframe_func_desc_entry *fdep,
-			  int32_t start_ip_offset, int32_t end_ip_offset,
+			  uint32_t start_ip_offset, uint32_t end_ip_offset,
 			  int32_t pc)
 {
-  int32_t start_ip, end_ip;
   int32_t func_start_addr;
   uint8_t rep_block_size;
   uint32_t fde_type;
-  int32_t masked_pc;
+  uint32_t pc_offset;
   bool mask_p;
-  bool ret;
-
-  ret = false;
 
   if (!fdep)
-    return ret;
+    return false;
 
   func_start_addr = fdep->sfde_func_start_address;
   fde_type = sframe_get_fde_type (fdep);
   mask_p = (fde_type == SFRAME_FDE_TYPE_PCMASK);
   rep_block_size = fdep->sfde_func_rep_size;
 
-  if (!mask_p)
-    {
-      start_ip = start_ip_offset + func_start_addr;
-      end_ip = end_ip_offset + func_start_addr;
-      ret = ((start_ip <= pc) && (end_ip >= pc));
-    }
-  else
-    {
-      /* For FDEs for repetitive pattern of insns, we need to return the FRE
-	 where pc % rep_block_size is between start_ip_offset and
-	 end_ip_offset.  */
-      masked_pc = pc % rep_block_size;
-      ret = ((start_ip_offset <= masked_pc) && (end_ip_offset >= masked_pc));
-    }
+  if (func_start_addr > pc)
+    return false;
 
-  return ret;
+  /* Given func_start_addr <= pc, pc - func_start_addr must be positive.  */
+  pc_offset = pc - func_start_addr;
+  /* For SFrame FDEs encoding information for repetitive pattern of insns,
+     masking with the rep_block_size is necessary to find the matching FRE.  */
+  if (mask_p)
+    pc_offset = pc_offset % rep_block_size;
+
+  return (start_ip_offset <= pc_offset) && (end_ip_offset >= pc_offset);
 }
 
 static int
@@ -1036,7 +1027,7 @@ sframe_get_funcdesc_with_addr_internal (sframe_decoder_ctx *ctx, int32_t addr,
 {
   sframe_header *dhp;
   sframe_func_desc_entry *fdp;
-  int low, high, cnt;
+  int low, high;
 
   if (ctx == NULL)
     return sframe_ret_set_errno (errp, SFRAME_ERR_INVAL);
@@ -1054,22 +1045,19 @@ sframe_get_funcdesc_with_addr_internal (sframe_decoder_ctx *ctx, int32_t addr,
   fdp = (sframe_func_desc_entry *) ctx->sfd_funcdesc;
   low = 0;
   high = dhp->sfh_num_fdes;
-  cnt = high;
   while (low <= high)
     {
       int mid = low + (high - low) / 2;
 
-      if (fdp[mid].sfde_func_start_address == addr)
+      /* Given sfde_func_start_address <= addr,
+	 addr - sfde_func_start_address must be positive.  */
+      if (fdp[mid].sfde_func_start_address <= addr
+	  && ((uint32_t)(addr - fdp[mid].sfde_func_start_address)
+	      < fdp[mid].sfde_func_size))
 	return fdp + mid;
 
       if (fdp[mid].sfde_func_start_address < addr)
-	{
-	  if (mid == (cnt - 1)) 	/* Check if it's the last one.  */
-	    return fdp + (cnt - 1);
-	  else if (fdp[mid+1].sfde_func_start_address > addr)
-	    return fdp + mid;
-	  low = mid + 1;
-	}
+	low = mid + 1;
       else
 	high = mid - 1;
     }
@@ -1112,14 +1100,12 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
 {
   sframe_frame_row_entry cur_fre;
   sframe_func_desc_entry *fdep;
-  uint32_t fre_type, fde_type, i;
-  int32_t start_ip_offset;
+  uint32_t fre_type, i;
   int32_t func_start_addr;
-  int32_t end_ip_offset;
+  uint32_t start_ip_offset, end_ip_offset;
   const char *fres;
   size_t size = 0;
   int err = 0;
-  bool mask_p;
 
   if ((ctx == NULL) || (frep == NULL))
     return sframe_set_errno (&err, SFRAME_ERR_INVAL);
@@ -1130,8 +1116,6 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
     return sframe_set_errno (&err, SFRAME_ERR_DCTX_INVAL);
 
   fre_type = sframe_get_fre_type (fdep);
-  fde_type = sframe_get_fde_type (fdep);
-  mask_p = (fde_type == SFRAME_FDE_TYPE_PCMASK);
 
   fres = ctx->sfd_fres + fdep->sfde_func_start_fre_off;
   func_start_addr = fdep->sfde_func_start_address;
@@ -1145,8 +1129,9 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
      start_ip_offset = cur_fre.fre_start_addr;
      end_ip_offset = sframe_fre_get_end_ip_offset (fdep, i, fres + size);
 
-     /* First FRE's start_ip must be more than pc for regular SFrame FDEs.  */
-     if (i == 0 && !mask_p && (start_ip_offset + func_start_addr) > pc)
+     /* Stop search if FRE's start_ip is greater than pc.  Given
+	func_start_addr <= pc, pc - func_start_addr must be positive.  */
+     if (start_ip_offset > (uint32_t)(pc - func_start_addr))
        return sframe_set_errno (&err, SFRAME_ERR_FRE_INVAL);
 
      if (sframe_fre_check_range_p (fdep, start_ip_offset, end_ip_offset, pc))
