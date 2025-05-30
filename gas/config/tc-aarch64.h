@@ -133,9 +133,17 @@ void aarch64_copy_symbol_attributes (symbolS *, symbolS *);
 #endif
 
 #ifdef OBJ_ELF
-void aarch64_elf_copy_symbol_attributes (symbolS *, symbolS *);
+/* Don't copy st_other.
+   This is needed so AArch64 specific st_other values can be independently
+   specified for an IFUNC resolver (that is called by the dynamic linker)
+   and the symbol it resolves (aliased to the resolver).  In particular,
+   if a function symbol has special st_other value set via directives,
+   then attaching an IFUNC resolver to that symbol should not override
+   the st_other setting.  Requiring the directive on the IFUNC resolver
+   symbol would be unexpected and problematic in C code, where the two
+   symbols appear as two independent function declarations.  */
 #define OBJ_COPY_SYMBOL_ATTRIBUTES(DEST, SRC) \
-  aarch64_elf_copy_symbol_attributes (DEST, SRC)
+  elf_copy_symbol_size (DEST, SRC)
 #endif
 
 #define TC_START_LABEL(STR, NUL_CHAR, NEXT_CHAR)			\
@@ -181,7 +189,7 @@ struct aarch64_frag_type
 #define HANDLE_ALIGN(sec, fragp) aarch64_handle_align (fragp)
 /* Max space for a rs_align_code fragment is 3 unaligned bytes
    (fr_fix) plus 4 bytes to contain the repeating NOP (fr_var).  */
-#define MAX_MEM_FOR_RS_ALIGN_CODE (3 + 4)
+#define MAX_MEM_FOR_RS_ALIGN_CODE(p2align, max) (3 + 4)
 
 #define md_do_align(N, FILL, LEN, MAX, LABEL)					\
   if (FILL == NULL && (N) != 0 && ! need_pass_2 && subseg_text_p (now_seg))	\
