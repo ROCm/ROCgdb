@@ -35,7 +35,6 @@
 #include "regcache.h"
 #include "observable.h"
 
-#include "solist.h"
 #include "solib.h"
 #include "solib-svr4.h"
 
@@ -194,8 +193,8 @@ svr4_same (const solib &gdb, const solib &inferior)
   auto *lmi
     = gdb::checked_static_cast<const lm_info_svr4 *> (inferior.lm_info.get ());
 
-  return svr4_same (gdb.so_original_name.c_str (),
-		    inferior.so_original_name.c_str (), *lmg, *lmi);
+  return svr4_same (gdb.original_name.c_str (),
+		    inferior.original_name.c_str (), *lmg, *lmi);
 }
 
 static lm_info_svr4_up
@@ -317,7 +316,7 @@ lm_addr_check (const solib &so, bfd *abfd)
 		gdb_printf (_("Using PIC (Position Independent Code) "
 			      "prelink displacement %s for \"%s\".\n"),
 			    paddress (current_inferior ()->arch (), l_addr),
-			    so.so_name.c_str ());
+			    so.name.c_str ());
 	    }
 	  else
 	    {
@@ -333,7 +332,7 @@ lm_addr_check (const solib &so, bfd *abfd)
 	      warning (_(".dynamic section for \"%s\" "
 			 "is not at the expected address "
 			 "(wrong library or version mismatch?)"),
-			 so.so_name.c_str ());
+			 so.name.c_str ());
 	    }
 	}
 
@@ -951,7 +950,7 @@ svr4_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
   return (name_lm >= vaddr && name_lm < vaddr + size);
 }
 
-/* See solist.h.  */
+/* See solib.h.  */
 
 static int
 open_symbol_file_object (int from_tty)
@@ -1046,10 +1045,10 @@ svr4_clear_so (const solib &so)
     li->l_addr_p = 0;
 }
 
-/* Create the so_list objects equivalent to the svr4_sos in SOS.  */
+/* Create the solib objects equivalent to the svr4_sos in SOS.  */
 
 static owning_intrusive_list<solib>
-so_list_from_svr4_sos (const std::vector<svr4_so> &sos)
+solib_from_svr4_sos (const std::vector<svr4_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -1057,8 +1056,8 @@ so_list_from_svr4_sos (const std::vector<svr4_so> &sos)
     {
       auto &newobj = dst.emplace_back ();
 
-      newobj.so_name = so.name;
-      newobj.so_original_name = so.name;
+      newobj.name = so.name;
+      newobj.original_name = so.name;
       newobj.lm_info = std::make_unique<lm_info_svr4> (*so.lm_info);
     }
 
@@ -1176,11 +1175,10 @@ static const struct gdb_xml_element svr4_library_list_elements[] =
   { NULL, NULL, NULL, GDB_XML_EF_NONE, NULL, NULL }
 };
 
-/* Parse qXfer:libraries:read packet into *SO_LIST_RETURN.  Return 1 if
+/* Parse qXfer:libraries:read packet into *LIST.
 
-   Return 0 if packet not supported, *SO_LIST_RETURN is not modified in such
-   case.  Return 1 if *SO_LIST_RETURN contains the library list, it may be
-   empty, caller is responsible for freeing all its entries.  */
+   Return 0 if packet not supported, *LIST is not modified in such case.
+   Return 1 if *LIST contains the library list.  */
 
 static int
 svr4_parse_libraries (const char *document, struct svr4_library_list *list)
@@ -1202,11 +1200,11 @@ svr4_parse_libraries (const char *document, struct svr4_library_list *list)
   return 0;
 }
 
-/* Attempt to get so_list from target via qXfer:libraries-svr4:read packet.
+/* Attempt to get the shared object list from target via
+   qXfer:libraries-svr4:read packet.
 
-   Return 0 if packet not supported, *SO_LIST_RETURN is not modified in such
-   case.  Return 1 if *SO_LIST_RETURN contains the library list, it may be
-   empty, caller is responsible for freeing all its entries.
+   Return 0 if packet not supported, *LIST is not modified in such case.
+   Return 1 if *LIST contains the library list.
 
    Note that ANNEX must be NULL if the remote does not explicitly allow
    qXfer:libraries-svr4:read packets with non-empty annexes.  Support for
@@ -1259,8 +1257,8 @@ svr4_default_sos (svr4_info *info)
   auto &newobj = sos.emplace_back ();
 
   newobj.lm_info = std::move (li);
-  newobj.so_name = info->debug_loader_name;
-  newobj.so_original_name = newobj.so_name;
+  newobj.name = info->debug_loader_name;
+  newobj.original_name = newobj.name;
 
   return sos;
 }
@@ -1450,7 +1448,7 @@ svr4_collect_probes_sos (svr4_info *info)
   for (const auto &tuple : info->solib_lists)
     {
       const std::vector<svr4_so> &sos = tuple.second;
-      res.splice (so_list_from_svr4_sos (sos));
+      res.splice (solib_from_svr4_sos (sos));
     }
 
   return res;
@@ -1804,10 +1802,10 @@ match_main (const char *soname)
   return (0);
 }
 
-/* Return 1 if PC lies in the dynamic symbol resolution code of the
+/* Return true if PC lies in the dynamic symbol resolution code of the
    SVR4 run time loader.  */
 
-int
+bool
 svr4_in_dynsym_resolve_code (CORE_ADDR pc)
 {
   struct svr4_info *info = get_svr4_info (current_program_space);
@@ -2623,7 +2621,7 @@ enable_break (struct svr4_info *info, int from_tty)
 	 address from the shared library table.  */
       for (const solib &so : current_program_space->solibs ())
 	{
-	  if (svr4_same_1 (interp_name, so.so_original_name.c_str ()))
+	  if (svr4_same_1 (interp_name, so.original_name.c_str ()))
 	    {
 	      load_addr_found = 1;
 	      loader_found_in_list = 1;
@@ -3656,7 +3654,7 @@ find_debug_base_for_solib (const solib *solib)
       const std::vector<svr4_so> &sos = tuple.second;
 
       for (const svr4_so &so : sos)
-	if (svr4_same (solib->so_original_name.c_str (), so.name.c_str (),
+	if (svr4_same (solib->original_name.c_str (), so.name.c_str (),
 		       *lm_info, *so.lm_info))
 	  return debug_base;
     }
@@ -3798,14 +3796,14 @@ svr4_get_solibs_in_ns (int nsid)
       /* This is inspired by the svr4_same, by finding the svr4_so object
 	 in the map, and then double checking if the lm_info is considered
 	 the same.  */
-      if (namespace_solibs.count (so.so_original_name) > 0
-	  && namespace_solibs[so.so_original_name]->l_addr_inferior
+      if (namespace_solibs.count (so.original_name) > 0
+	  && namespace_solibs[so.original_name]->l_addr_inferior
 	      == lm_inferior->l_addr_inferior)
 	{
 	  ns_solibs.push_back (&so);
 	  /* Remove the SO from the map, so that we don't end up
 	     printing the dynamic linker multiple times.  */
-	  namespace_solibs.erase (so.so_original_name);
+	  namespace_solibs.erase (so.original_name);
 	}
     }
 

@@ -27,7 +27,7 @@
 #include "regcache.h"
 #include "gdb_bfd.h"
 
-#include "solist.h"
+#include "solib.h"
 #include "solib-darwin.h"
 
 #include "mach-o.h"
@@ -133,7 +133,7 @@ darwin_load_image_infos (struct darwin_info *info)
     (buf + 8 + ptr_type->length (), ptr_type);
 }
 
-/* Link map info to include in an allocated so_list entry.  */
+/* Link map info to include in an allocated solib entry.  */
 
 struct lm_info_darwin final : public lm_info
 {
@@ -186,16 +186,6 @@ find_program_interpreter (void)
   /* If we didn't find it, read from memory.
      FIXME: todo.  */
   return buf;
-}
-
-/*  Not used.  I don't see how the main symbol file can be found: the
-    interpreter name is needed and it is known from the executable file.
-    Note that darwin-nat.c implements pid_to_exec_file.  */
-
-static int
-open_symbol_file_object (int from_tty)
-{
-  return 0;
 }
 
 /* Build a list of currently loaded shared objects.  See solib-svr4.c.  */
@@ -264,8 +254,8 @@ darwin_current_sos ()
 
       auto li = std::make_unique<lm_info_darwin> ();
 
-      newobj.so_name = file_path.get ();
-      newobj.so_original_name = newobj.so_name;
+      newobj.name = file_path.get ();
+      newobj.original_name = newobj.name;
       li->lm_addr = load_addr;
 
       newobj.lm_info = std::move (li);
@@ -361,15 +351,6 @@ darwin_read_exec_load_addr_at_init (struct darwin_info *info)
   load_addr = extract_unsigned_integer (buf, addr_size, byte_order);
 
   return darwin_validate_exec_header (load_addr);
-}
-
-/* Return 1 if PC lies in the dynamic symbol resolution code of the
-   run time loader.  */
-
-static int
-darwin_in_dynsym_resolve_code (CORE_ADDR pc)
-{
-  return 0;
 }
 
 /* A wrapper for bfd_mach_o_fat_extract that handles reference
@@ -649,8 +630,8 @@ const solib_ops darwin_so_ops =
   darwin_clear_solib,
   darwin_solib_create_inferior_hook,
   darwin_current_sos,
-  open_symbol_file_object,
-  darwin_in_dynsym_resolve_code,
+  nullptr,
+  nullptr,
   darwin_bfd_open,
   nullptr,
   nullptr,

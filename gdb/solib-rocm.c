@@ -29,7 +29,6 @@
 #include "observable.h"
 #include "solib.h"
 #include "solib-svr4.h"
-#include "solist.h"
 #include "symfile.h"
 
 #include <unordered_map>
@@ -215,10 +214,10 @@ rocm_solib_handle_event ()
   rocm_update_solib_list ();
 }
 
-/* Create so_list objects from rocm_so objects in SOS.  */
+/* Create solib objects from rocm_so objects in SOS.  */
 
 static owning_intrusive_list<solib>
-so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
+solibs_from_rocm_sos (const std::vector<rocm_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -227,8 +226,8 @@ so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
       auto &newobj = dst.emplace_back ();
 
       newobj.lm_info = std::make_unique<lm_info_svr4> (*so.lm_info);
-      newobj.so_name = so.name;
-      newobj.so_original_name = so.unique_name;
+      newobj.name = so.name;
+      newobj.original_name = so.unique_name;
     }
 
   return dst;
@@ -249,13 +248,13 @@ rocm_solib_current_sos ()
   if (dev_sos.empty ())
     return sos;
 
-  owning_intrusive_list<solib> dev_so_list = so_list_from_rocm_sos (dev_sos);
+  owning_intrusive_list<solib> dev_solibs = solibs_from_rocm_sos (dev_sos);
 
   if (sos.empty ())
-    return dev_so_list;
+    return dev_solibs;
 
   /* Append our libraries to the end of the list.  */
-  sos.splice (std::move (dev_so_list));
+  sos.splice (std::move (dev_solibs));
 
   return sos;
 }

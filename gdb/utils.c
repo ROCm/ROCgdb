@@ -55,7 +55,6 @@
 #include "top.h"
 #include "ui.h"
 #include "main.h"
-#include "solist.h"
 
 #include "inferior.h"
 

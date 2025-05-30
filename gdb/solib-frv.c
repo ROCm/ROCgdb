@@ -20,7 +20,6 @@
 #include "extract-store-integer.h"
 #include "gdbcore.h"
 #include "solib.h"
-#include "solist.h"
 #include "frv-tdep.h"
 #include "objfiles.h"
 #include "symtab.h"
@@ -194,7 +193,7 @@ struct ext_link_map
   ext_ptr l_next, l_prev;	/* struct link_map *l_next, *l_prev; */
 };
 
-/* Link map info to include in an allocated so_list entry.  */
+/* Link map info to include in an allocated solib entry.  */
 
 struct lm_info_frv final : public lm_info
 {
@@ -236,15 +235,6 @@ static lm_info_frv *main_executable_lm_info;
 static void frv_relocate_main_executable (void);
 static CORE_ADDR main_got (void);
 static int enable_break2 (void);
-
-/* Implement the "open_symbol_file_object" solib_ops method.  */
-
-static int
-open_symbol_file_object (int from_tty)
-{
-  /* Unimplemented.  */
-  return 0;
-}
 
 /* Cached value for lm_base(), below.  */
 static CORE_ADDR lm_base_cache = 0;
@@ -397,8 +387,8 @@ frv_current_sos ()
 	    warning (_("Can't read pathname for link map entry."));
 	  else
 	    {
-	      sop.so_name = name_buf.get ();
-	      sop.so_original_name = sop.so_name;
+	      sop.name = name_buf.get ();
+	      sop.original_name = sop.name;
 	    }
 	}
       else
@@ -424,7 +414,7 @@ static CORE_ADDR interp_text_sect_high;
 static CORE_ADDR interp_plt_sect_low;
 static CORE_ADDR interp_plt_sect_high;
 
-static int
+static bool
 frv_in_dynsym_resolve_code (CORE_ADDR pc)
 {
   return ((pc >= interp_text_sect_low && pc < interp_text_sect_high)
@@ -1081,7 +1071,7 @@ const solib_ops frv_so_ops =
   frv_clear_solib,
   frv_solib_create_inferior_hook,
   frv_current_sos,
-  open_symbol_file_object,
+  nullptr,
   frv_in_dynsym_resolve_code,
   solib_bfd_open,
   nullptr,
