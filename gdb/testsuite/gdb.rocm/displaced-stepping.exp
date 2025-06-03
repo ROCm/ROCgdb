@@ -70,7 +70,7 @@ with_rocm_gpu_lock {
     gdb_breakpoint "SWAPPC"
     gdb_breakpoint "CALL"
     gdb_breakpoint "SETPC"
-    gdb_breakpoint "END_OF_TESTS"
+    gdb_breakpoint "END_OF_COMMON_TESTS"
 
     gdb_continue_to_breakpoint "getpc"
 
@@ -122,5 +122,70 @@ with_rocm_gpu_lock {
 	gdb_test "x/i \$pc" \
 		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_nop\[ \t\]+1" \
 		"reach end of common tests"
+    }
+
+    set arch 0x[get_current_gpu_arch]
+    if {$arch >= 0x1250} {
+	gdb_breakpoint "ADD_PC_PLUS_POS_IMM"
+	gdb_breakpoint "ADD_PC_PLUS_NEG_IMM"
+	gdb_breakpoint "ADD_PC_PLUS_POS_REGVAL"
+	gdb_breakpoint "ADD_PC_PLUS_NEG_REGVAL"
+
+	gdb_continue_to_breakpoint "add_pc_i64 +<imm>"
+
+	with_test_prefix "add_pc_i64 +<imm>" {
+	    gdb_test "p \$s8" \
+		" = 1" "test number in s8"
+
+	    gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_add_pc_i64\[ \t\]+\[^s\].*" \
+		"s_add_pc_i64 with an immediate value"
+
+	    # sample output: 0x00007ffff6091568  66 asm(".if  (.amdgcn.gfx_...
+	    gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
+
+	    gdb_continue_to_breakpoint "add_pc_i64 -<imm>"
+	}
+
+	with_test_prefix "add_pc_i64 -<imm>" {
+	    gdb_test "p \$s8" \
+		" = 2" "test number in s8"
+
+	    gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_add_pc_i64\[ \t\]+\[^s\].*" \
+		"s_add_pc_i64 with another immediate value"
+
+	    gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
+
+	    gdb_continue_to_breakpoint "add_pc_i64 -<reg>"
+	}
+
+	with_test_prefix "add_pc_i64 -<reg>" {
+	    gdb_test "p \$s8" \
+		" = 3" "test number in s8"
+
+	    gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_add_pc_i64\[ \t\]+s\\\[4:5\\\]" \
+		"s_add_pc_i64 with a register pair"
+
+	    gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
+
+	    gdb_continue_to_breakpoint "add_pc_i64 +<reg>"
+	}
+
+	with_test_prefix "add_pc_i64 +<reg>" {
+	    gdb_test "p \$s8" \
+		" = 4" "test number in s8"
+
+	    gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_add_pc_i64\[ \t\]+s\\\[6:7\\\]" \
+		"s_add_pc_i64 with another register pair"
+
+	    gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
+
+	    gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_nop\[ \t\]+2" \
+		"reach end of s_add_pc_i64 test"
+	}
     }
 }
