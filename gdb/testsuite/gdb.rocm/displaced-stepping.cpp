@@ -62,8 +62,55 @@ kernel ()
       "	  s_setpc_b64	[s6, s7]				  \n\t"
       "	  s_trap	2					  \n\t"
 
-      "END_OF_TESTS:						  \n\t"
+      "END_OF_COMMON_TESTS:					  \n\t"
       "	  s_nop		1" ::: "s4", "s5", "s6", "s7");
+
+  asm(".if !(.amdgcn.gfx_generation_number < 12 ||    \
+	     (.amdgcn.gfx_generation_number == 12 &&  \
+	      .amdgcn.gfx_generation_minor < 5))		  \n\t"
+
+      "	  .globl ADD_PC_PLUS_POS_IMM				  \n\t"
+      "	  .globl ADD_PC_PLUS_NEG_IMM				  \n\t"
+      "	  .globl ADD_PC_PLUS_POS_REGVAL				  \n\t"
+      "	  .globl ADD_PC_PLUS_NEG_REGVAL				  \n\t"
+
+      "ADD_PC_TST1:						  \n\t"
+      "# test s8=1: pc+imm					  \n\t"
+      "	  s_mov_b32	s8, 1					  \n\t"
+      "ADD_PC_PLUS_POS_IMM:					  \n\t"
+      "	  s_add_pc_i64	ADD_PC_TST2 - ADD_PC_TST1_END		  \n\t"
+      "ADD_PC_TST1_END:						  \n\t"
+      "	  s_trap	2					  \n\t"
+
+      "ADD_PC_TST4:						  \n\t"
+      "# test s8=4: pc+reg					  \n\t"
+      "	  s_add_i32	s8, s8, 1				  \n\t"
+      "	  s_mov_b64	s[6:7], ADD_PC_TST_END - ADD_PC_TST4_END  \n\t"
+      "ADD_PC_PLUS_POS_REGVAL:					  \n\t"
+      "	  s_add_pc_i64	s[6:7]					  \n\t"
+      "ADD_PC_TST4_END:						  \n\t"
+      "	  s_trap	2					  \n\t"
+
+      "ADD_PC_TST3:						  \n\t"
+      "# test s8=3: pc-reg					  \n\t"
+      "	  s_add_i32	s8, s8, 1				  \n\t"
+      "	  s_mov_b64	s[4:5], ADD_PC_TST4 - ADD_PC_TST3_END	  \n\t"
+      "ADD_PC_PLUS_NEG_REGVAL:					  \n\t"
+      "	  s_add_pc_i64	s[4:5]					  \n\t"
+      "ADD_PC_TST3_END:						  \n\t"
+      "	  s_trap	2					  \n\t"
+
+      "ADD_PC_TST2:						  \n\t"
+      "# test s8=2: pc-imm					  \n\t"
+      "	  s_add_i32	s8, s8, 1				  \n\t"
+      "ADD_PC_PLUS_NEG_IMM:					  \n\t"
+      "	  s_add_pc_i64	ADD_PC_TST3 - ADD_PC_TST2_END		  \n\t"
+      "ADD_PC_TST2_END:						  \n\t"
+      "	  s_trap	2					  \n\t"
+
+      "ADD_PC_TST_END:						  \n\t"
+      "	  s_nop  2						  \n\t"
+      ".endif" ::: "s4", "s5", "s6", "s7", "s8");
 }
 
 int
