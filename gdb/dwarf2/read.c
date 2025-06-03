@@ -4873,10 +4873,11 @@ process_dwo_file_for_skeletonless_type_units (void **slot, void *info)
 
 static void
 process_skeletonless_type_units (dwarf2_per_objfile *per_objfile,
-				 cooked_index_storage *storage)
+				 cooked_index_storage *storage,
+				 bool m_per_command_time)
 {
   skeleton_data data { per_objfile, storage };
-  scoped_time_it time_it ("DWARF skeletonless type units");
+  scoped_time_it time_it ("DWARF skeletonless type units", m_per_command_time);
 
   /* Skeletonless TUs in DWP files without .gdb_index is not supported yet.  */
   if (get_dwp_file (per_objfile) == NULL
@@ -4990,7 +4991,8 @@ cooked_index_debug_info::done_reading ()
   }
 
   /* This has to wait until we read the CUs, we need the list of DWOs.  */
-  process_skeletonless_type_units (m_per_objfile, &m_index_storage);
+  process_skeletonless_type_units (m_per_objfile, &m_index_storage,
+				   m_per_command_time);
 
   indexes.push_back (m_index_storage.release ());
   indexes.shrink_to_fit ();
@@ -5066,7 +5068,7 @@ cooked_index_debug_info::do_reading ()
       gdb_assert (iter != last);
       workers.add_task ([this, task_count, iter, last] ()
 	{
-	  scoped_time_it time_it ("DWARF indexing worker");
+	  scoped_time_it time_it ("DWARF indexing worker", m_per_command_time);
 	  process_cus (task_count, iter, last);
 	});
 

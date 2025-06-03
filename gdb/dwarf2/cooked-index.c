@@ -666,7 +666,7 @@ cooked_index::set_contents (vec_type &&vec, deferred_warnings *warn,
       auto this_index = idx.get ();
       finalizers.add_task ([=] ()
 	{
-	  scoped_time_it time_it ("DWARF finalize worker");
+	  scoped_time_it time_it ("DWARF finalize worker", m_state->m_per_command_time);
 	  this_index->finalize (parent_maps);
 	});
     }
