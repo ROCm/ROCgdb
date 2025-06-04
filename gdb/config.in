@@ -39,6 +39,9 @@
 /* Define to BFD's default target vector. */
 #undef DEFAULT_BFD_VEC
 
+/* defined if dwarf format was requested. */
+#undef DWARF_FORMAT_AVAILABLE
+
 /* Handle .ctf type-info sections */
 #undef ENABLE_LIBCTF
 
@@ -638,6 +641,9 @@
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
+
+/* defined if mdebug format was requested. */
+#undef MDEBUG_FORMAT_AVAILABLE
 
 /* Name of this package. */
 #undef PACKAGE

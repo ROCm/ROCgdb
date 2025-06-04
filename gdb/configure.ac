@@ -192,6 +192,34 @@ AS_HELP_STRING([--enable-targets=TARGETS], [alternative target configurations]),
 esac])
 
 
+# Check whether to support mdebug/ecoff debug information.
+AC_ARG_ENABLE(gdb-mdebug-support,
+AS_HELP_STRING([--enable-gdb-mdebug-support],
+	       [Enable support for the mdebug debuginfo format (default 'yes')]),
+[GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-mdebug-support])],
+[enable_gdb_mdebug_support=yes])
+
+if test "x${enable_gdb_mdebug_support}" != "xno"; then
+    CONFIG_SRCS="$CONFIG_SRCS mdebugread.c"
+    CONFIG_OBS="$CONFIG_OBS mdebugread.o"
+    AC_DEFINE(MDEBUG_FORMAT_AVAILABLE, 1,
+	      [defined if mdebug format was requested.])
+fi
+
+# Check whether to support dwarf debug information
+AC_ARG_ENABLE(gdb-dwarf-support,
+AS_HELP_STRING([--enable-gdb-dwarf-support],
+	       [Enable support for the dwarf debuginfo format (default 'yes')]),
+[GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-dwarf-support])],
+[enable_gdb_dwarf_support=yes])
+
+if test "x${enable_gdb_dwarf_support}" != "xno"; then
+    AC_DEFINE(DWARF_FORMAT_AVAILABLE, 1,
+	      [defined if dwarf format was requested.])
+    CONFIG_SRCS="$CONFIG_SRCS \$(DWARF2_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(DWARF2_OBS)"
+fi
+
 BFD_64_BIT
 
 # Provide defaults for some variables set by the per-host and per-target
@@ -1220,17 +1248,31 @@ AC_ARG_ENABLE([gdb-compile],
     AS_HELP_STRING([--enable-gdb-compile],
 	      [enable support for the compile subsystem, default 'yes']),
 	      [GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-compile])],
-	      [enable_gdb_compile=yes])
+	      [enable_gdb_compile=default])
 
-if test "${enable_gdb_compile}" = yes; then
-    AC_DEFINE(HAVE_COMPILE, 1, [Define if compiling support to gdb compile.])
-    CONFIG_OBS="$CONFIG_OBS \$(SUBDIR_GCC_COMPILE_OBS)"
-else
+case ${enable_gdb_compile}-${enable_gdb_dwarf_support} in
+    yes-no)
+      AC_MSG_ERROR([enabling gdb compile requires dwarf support])
+      ;;
+    default-no)
+      AC_MSG_WARN([Defaulting compile support to 'no'])
+      # Fallthrough.
+      ;&
+    no-*)
     # Even if compile support is not enabled, we need this file to define
     # the "compile" command.
     CONFIG_OBS="$CONFIG_OBS compile/compile.o"
     CONFIG_SRCS="$CONFIG_SRCS compile/compile.c"
-fi
+      ;;
+    default-yes)
+      AC_MSG_WARN([Defaulting compile support to 'yes'])
+      # Fallthrough.
+      ;&
+    yes-*)
+      AC_DEFINE(HAVE_COMPILE, 1, [Define if compiling support to gdb compile.])
+      CONFIG_OBS="$CONFIG_OBS \$(SUBDIR_GCC_COMPILE_OBS)"
+      ;;
+esac
 
 # ---------------------------- #
 # Check for source highlight.  #
