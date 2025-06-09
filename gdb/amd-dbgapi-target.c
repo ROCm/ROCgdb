@@ -894,6 +894,8 @@ amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
   if (action == AMD_DBGAPI_BREAKPOINT_ACTION_RESUME)
     return;
 
+  require_forward_progress (*info, false);
+
   /* If the action is AMD_DBGAPI_BREAKPOINT_ACTION_HALT, we need to wait until
      a breakpoint resume event for this breakpoint_id is seen.  */
   amd_dbgapi_event_id_t resume_event_id
@@ -1964,6 +1966,10 @@ static amd_dbgapi_event_id_t
 process_event_queue (amd_dbgapi_inferior_info &info,
 		     amd_dbgapi_event_kind_t until_event_kind)
 {
+  /* Pulling events with forward progress required may result in bad
+     performance, make sure it is not required.  */
+  gdb_assert (!info.forward_progress_required);
+
   while (true)
     {
       amd_dbgapi_event_id_t event_id;
@@ -2222,6 +2228,10 @@ amd_dbgapi_finalize_core_attach (inferior *inf)
     return;
 
   auto *info = get_amd_dbgapi_inferior_info (inf);
+
+  /* Disable forward progress requirement when processing core files.  */
+  require_forward_progress (*info, false);
+
   process_event_queue (*info);
   thread_info *focus_thread = nullptr;
 
