@@ -753,8 +753,8 @@ AC_DEFUN([AC_TRY_LIBPYTHON],
   found_usable_python=no
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include "Python.h"]],
                                  [[
-				    #if PY_MAJOR_VERSION != 3
-				    # error "We only support Python 3"
+				    #if PY_VERSION_HEX < 0x03040000
+				    # error "Minimum supported Python version is 3.4"
 				    #endif
 				    Py_Initialize ();
 				 ]])],
@@ -1935,7 +1935,7 @@ if test "$gdb_cv_var_elf" = yes; then
 		gcore-elf.o elf-none-tdep.o"
   AC_DEFINE(HAVE_ELF, 1,
 	    [Define if ELF support should be included.])
-  # -ldl is provided by bfd/Makfile.am (LIBDL) <PLUGINS>.
+  # -ldl is provided by bfd/Makefile.am (LIBDL) <PLUGINS>.
   if test "$plugins" = "yes"; then
     AC_SEARCH_LIBS(dlopen, dl)
   fi

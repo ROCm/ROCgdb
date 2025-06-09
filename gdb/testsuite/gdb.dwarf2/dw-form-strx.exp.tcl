@@ -24,15 +24,15 @@ set asm_file [standard_output_file $srcfile2]
 
 # Debug info in the main file.
 Dwarf::assemble $asm_file {
-    declare_labels base_offset
+    declare_labels base_offset_cu1
 
-    debug_str_offsets base_offset int
+    debug_str_offsets { base_offset base_offset_cu1 } int
 
     cu {
 	version 5
     } {
 	DW_TAG_compile_unit {
-	    {DW_AT_str_offsets_base $base_offset sec_offset}
+	    {DW_AT_str_offsets_base $base_offset_cu1 sec_offset}
 	} {
 	    declare_labels int4_type
 
@@ -56,5 +56,9 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
+
+# Let includers know prepare_for_testing was done, without having to check
+# source return status.
+set prepare_for_testing_done 1

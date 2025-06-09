@@ -46,7 +46,7 @@
   In systems that don't support linkage namespaces, these always return 1
   and [[0]] respectively.
 
- * Add record full support for rv64gc architectures
+* Add record full support for rv64gc architectures
 
 * New commands
 
@@ -90,6 +90,18 @@ info sharedlibrary
   command are now for the full memory range allocated to the shared
   library.
 
+info threads [-gid] [-stopped] [-running] [ID]...
+  If no threads match the given ID(s) or filter options, GDB now prints
+
+    No threads matched.
+
+  without printing the provided arguments.  The newly added '-stopped'
+  option makes GDB list the stopped threads only.  Similarly,
+  '-running' makes GDB list the running threads only.  If both options
+  are given together, both stopped and running threads are listed.
+  These new flags can be useful to get a reduced list when there is a
+  large number of threads.
+
 * GDB-internal Thread Local Storage (TLS) support
 
   ** Linux targets for the x86_64, aarch64, ppc64, s390x, and riscv
@@ -112,6 +124,8 @@ info sharedlibrary
 
 * Python API
 
+  ** GDB no longer supports Python versions less than 3.4.
+
   ** New class gdb.Color for dealing with colors.
 
   ** New constant gdb.PARAM_COLOR represents color type of a
@@ -128,12 +142,25 @@ info sharedlibrary
      when output is going to standard output, and False when output is
      going to a string.
 
+  ** Setting the documentation string (__doc__) of a gdb.Parameter
+     sub-class to the empty string, means GDB will only display the
+     set_doc or show_doc strings in the set/show help output.
+
+  ** New gdb.ParameterPrefix class.  This can be used to create 'set'
+     and 'show' gdb.Command prefixes, suitable for use with new
+     gdb.Parameters.
+
 * Guile API
 
   ** New type <gdb:color> for dealing with colors.
 
   ** New constant PARAM_COLOR represents color type of a value
      of a <gdb:parameter> object.  Parameter's value is <gdb::color> instance.
+
+  ** Eliding the #:doc string from make-parameter now means that GDB
+     will use a default documentation string.  Setting #:doc to the
+     empty string for make-parameter means GDB will only display the
+     #:set_doc or #:show_doc strings in the set/show help output.
 
 * New remote packets
 
@@ -7549,7 +7576,7 @@ for DW_OP_piece is still missing).
 
 A number of long standing bugs that caused GDB to die while starting a
 Java application have been fixed.  GDB's Java support is now
-considered "useable".
+considered "usable".
 
 * GNU/Linux support for fork, vfork, and exec.
 

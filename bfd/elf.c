@@ -3470,7 +3470,7 @@ _bfd_elf_init_reloc_shdr (bfd *abfd,
 			  struct bfd_elf_section_reloc_data *reldata,
 			  const char *sec_name,
 			  bool use_rela_p,
-			  bool delay_st_name_p)
+			  bool delay_sh_name_p)
 {
   Elf_Internal_Shdr *rel_hdr;
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
@@ -3481,7 +3481,7 @@ _bfd_elf_init_reloc_shdr (bfd *abfd,
     return false;
   reldata->hdr = rel_hdr;
 
-  if (delay_st_name_p)
+  if (delay_sh_name_p)
     rel_hdr->sh_name = (unsigned int) -1;
   else if (!_bfd_elf_set_reloc_sh_name (abfd, rel_hdr, sec_name,
 					use_rela_p))
@@ -3527,7 +3527,7 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
   Elf_Internal_Shdr *this_hdr;
   unsigned int sh_type;
   const char *name = asect->name;
-  bool delay_st_name_p = false;
+  bool delay_sh_name_p = false;
   bfd_vma mask;
 
   if (arg->failed)
@@ -3544,16 +3544,17 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
       && (abfd->flags & BFD_COMPRESS) != 0
       && (asect->flags & SEC_DEBUGGING) != 0
       && (asect->flags & SEC_ALLOC) == 0
+      && (asect->flags & SEC_HAS_CONTENTS) != 0
       && name[1] == 'd'
       && name[6] == '_')
     {
       /* If this section will be compressed, delay adding section
 	 name to section name section after it is compressed in
 	 _bfd_elf_assign_file_positions_for_non_load.  */
-      delay_st_name_p = true;
+      delay_sh_name_p = true;
     }
 
-  if (delay_st_name_p)
+  if (delay_sh_name_p)
     this_hdr->sh_name = (unsigned int) -1;
   else
     {
@@ -3752,14 +3753,14 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 	{
 	  if (esd->rel.count && esd->rel.hdr == NULL
 	      && !_bfd_elf_init_reloc_shdr (abfd, &esd->rel, name,
-					    false, delay_st_name_p))
+					    false, delay_sh_name_p))
 	    {
 	      arg->failed = true;
 	      return;
 	    }
 	  if (esd->rela.count && esd->rela.hdr == NULL
 	      && !_bfd_elf_init_reloc_shdr (abfd, &esd->rela, name,
-					    true, delay_st_name_p))
+					    true, delay_sh_name_p))
 	    {
 	      arg->failed = true;
 	      return;
@@ -3770,7 +3771,7 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 					   ? &esd->rela : &esd->rel),
 					  name,
 					  asect->use_rela_p,
-					  delay_st_name_p))
+					  delay_sh_name_p))
 	{
 	  arg->failed = true;
 	  return;
@@ -10393,6 +10394,12 @@ elfcore_grok_xstatereg (bfd *abfd, Elf_Internal_Note *note)
 }
 
 static bool
+elfcore_grok_sspreg (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-ssp", note);
+}
+
+static bool
 elfcore_grok_ppc_vmx (bfd *abfd, Elf_Internal_Note *note)
 {
   return elfcore_make_note_pseudosection (abfd, ".reg-ppc-vmx", note);
@@ -11098,6 +11105,13 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
 	  && strcmp (note->namedata, "LINUX") == 0)
 	return elfcore_grok_xstatereg (abfd, note);
+      else
+	return true;
+
+    case NT_X86_SHSTK:		/* Linux CET extension.  */
+      if (note->namesz == 6
+	  && strcmp (note->namedata, "LINUX") == 0)
+	return elfcore_grok_sspreg (abfd, note);
       else
 	return true;
 
@@ -12551,6 +12565,15 @@ elfcore_write_xstatereg (bfd *abfd, char *buf, int *bufsiz,
 			     note_name, NT_X86_XSTATE, xfpregs, size);
 }
 
+static char *
+elfcore_write_sspreg (bfd *abfd, char *buf, int *bufsiz,
+		      const void *ssp, int size)
+{
+  const char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_X86_SHSTK, ssp, size);
+}
+
 char *
 elfcore_write_x86_segbases (bfd *abfd, char *buf, int *bufsiz,
 			    const void *regs, int size)
@@ -13146,6 +13169,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_xstatereg (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-x86-segbases") == 0)
     return elfcore_write_x86_segbases (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-ssp") == 0)
+    return elfcore_write_sspreg (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-ppc-vmx") == 0)
     return elfcore_write_ppc_vmx (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-ppc-vsx") == 0)

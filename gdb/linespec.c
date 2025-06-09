@@ -1016,7 +1016,7 @@ linespec_lexer_consume_token (linespec_parser *parser)
       if (*parser->lexer.stream != '\0')
 	{
 	  parser->completion_quote_char = '\0';
-	  parser->completion_quote_end = NULL;;
+	  parser->completion_quote_end = NULL;
 	}
     }
 
@@ -3407,30 +3407,52 @@ lookup_prefix_sym (struct linespec_state *state,
   return collector.release_symbols ();
 }
 
-/* A std::sort comparison function for symbols.  The resulting order does
-   not actually matter; we just need to be able to sort them so that
-   symbols with the same program space end up next to each other.  */
+/* Compare pspace A and B based on program space ID.  Return 0 if equal,
+   1 if A->num > B->num, -1 otherwise (modeled on strcmp).  */
+
+static int
+compare_pspace (const struct program_space *a, const struct program_space *b)
+{
+  if (a->num > b->num)
+    return 1;
+
+  if (a->num < b->num)
+    return -1;
+
+  return 0;
+}
+
+/* An std::sort comparison function for pointers.  Don't use this if stable
+   sorting results are required.  */
+
+static bool
+compare_pointers (void *a, void *b)
+{
+  return (uintptr_t)a < (uintptr_t)b;
+}
+
+/* An std::sort comparison function for symbols.  The requirement is that
+   symbols with the same program space end up next to each other.  This is for
+   the purpose of iterating over the symbols and doing something once for each
+   program space.  */
 
 static bool
 compare_symbols (const block_symbol &a, const block_symbol &b)
 {
-  uintptr_t uia, uib;
-
-  uia = (uintptr_t) a.symbol->symtab ()->compunit ()->objfile ()->pspace ();
-  uib = (uintptr_t) b.symbol->symtab ()->compunit ()->objfile ()->pspace ();
-
-  if (uia < uib)
+  /* To check for same program space, we could just use a pointer comparison,
+     which gives unstable sorting results.  While the assumption is that this
+     doesn't matter, play it safe and compare program space IDs instead.  */
+  int cmp
+    = compare_pspace (a.symbol->symtab ()->compunit ()->objfile ()->pspace (),
+		      b.symbol->symtab ()->compunit ()->objfile ()->pspace ());
+  if (cmp == -1)
     return true;
-  if (uia > uib)
+  if (cmp == 1)
     return false;
 
-  uia = (uintptr_t) a.symbol;
-  uib = (uintptr_t) b.symbol;
-
-  if (uia < uib)
-    return true;
-
-  return false;
+  /* This gives unstable sorting results.  We assume that this doesn't
+     matter.  */
+  return compare_pointers (a.symbol, b.symbol);
 }
 
 /* Like compare_symbols but for minimal symbols.  */
@@ -3438,23 +3460,16 @@ compare_symbols (const block_symbol &a, const block_symbol &b)
 static bool
 compare_msymbols (const bound_minimal_symbol &a, const bound_minimal_symbol &b)
 {
-  uintptr_t uia, uib;
-
-  uia = (uintptr_t) a.objfile->pspace ();
-  uib = (uintptr_t) a.objfile->pspace ();
-
-  if (uia < uib)
+  /* See comment in compare_symbols for use of compare_pspace.  */
+  int cmp = compare_pspace (a.objfile->pspace (), a.objfile->pspace ());
+  if (cmp == -1)
     return true;
-  if (uia > uib)
+  if (cmp == 1)
     return false;
 
-  uia = (uintptr_t) a.minsym;
-  uib = (uintptr_t) b.minsym;
-
-  if (uia < uib)
-    return true;
-
-  return false;
+  /* This gives unstable sorting results.  We assume that this doesn't
+     matter.  */
+  return compare_pointers (a.minsym, b.minsym);
 }
 
 /* Look for all the matching instances of each symbol in NAMES.  Only

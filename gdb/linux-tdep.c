@@ -630,9 +630,9 @@ mapping_is_anonymous_p (const char *filename)
   return 0;
 }
 
-/* Return 0 if the memory mapping (which is related to FILTERFLAGS, V,
-   MAYBE_PRIVATE_P, MAPPING_ANONYMOUS_P, ADDR and OFFSET) should not
-   be dumped, or greater than 0 if it should.
+/* Return false if the memory mapping represented by MAP should not be
+   dumped, or true if it should.  FILTERFLAGS guides which mappings
+   should be dumped.
 
    In a nutshell, this is the logic that we follow in order to decide
    if a mapping should be dumped or not.
@@ -677,11 +677,14 @@ mapping_is_anonymous_p (const char *filename)
      header (of a DSO or an executable, for example).  If it is, and
      if the user is interested in dump it, then we should dump it.  */
 
-static int
-dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
-		int maybe_private_p, int mapping_anon_p, int mapping_file_p,
-		const char *filename, ULONGEST addr, ULONGEST offset)
+static bool
+dump_mapping_p (filter_flags filterflags, const smaps_data &map)
 {
+  /* Older Linux kernels did not support the "Anonymous:" counter.
+     If it is missing, we can't be sure what to dump, so dump everything.  */
+  if (!map.has_anonymous)
+    return true;
+
   /* Initially, we trust in what we received from our caller.  This
      value may not be very precise (i.e., it was probably gathered
      from the permission line in the /proc/PID/smaps list, which
@@ -689,41 +692,42 @@ dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
      what we have until we take a look at the "VmFlags:" field
      (assuming that the version of the Linux kernel being used
      supports it, of course).  */
-  int private_p = maybe_private_p;
-  int dump_p;
+  int private_p = map.priv;
 
   /* We always dump vDSO and vsyscall mappings, because it's likely that
      there'll be no file to read the contents from at core load time.
      The kernel does the same.  */
-  if (strcmp ("[vdso]", filename) == 0
-      || strcmp ("[vsyscall]", filename) == 0)
-    return 1;
+  if (map.filename == "[vdso]" || map.filename == "[vsyscall]")
+    return true;
 
-  if (v->initialized_p)
+  if (map.vmflags.initialized_p)
     {
       /* We never dump I/O mappings.  */
-      if (v->io_page)
-	return 0;
+      if (map.vmflags.io_page)
+	return false;
 
       /* Check if we should exclude this mapping.  */
-      if (!dump_excluded_mappings && v->exclude_coredump)
-	return 0;
+      if (!dump_excluded_mappings && map.vmflags.exclude_coredump)
+	return false;
 
       /* Update our notion of whether this mapping is shared or
 	 private based on a trustworthy value.  */
-      private_p = !v->shared_mapping;
+      private_p = !map.vmflags.shared_mapping;
 
       /* HugeTLB checking.  */
-      if (v->uses_huge_tlb)
+      if (map.vmflags.uses_huge_tlb)
 	{
 	  if ((private_p && (filterflags & COREFILTER_HUGETLB_PRIVATE))
 	      || (!private_p && (filterflags & COREFILTER_HUGETLB_SHARED)))
-	    return 1;
+	    return true;
 
-	  return 0;
+	  return false;
 	}
     }
 
+  int mapping_anon_p = map.mapping_anon_p;
+  int mapping_file_p = map.mapping_file_p;
+  bool dump_p;
   if (private_p)
     {
       if (mapping_anon_p && mapping_file_p)
@@ -763,7 +767,7 @@ dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
 
      A mapping contains an ELF header if it is a private mapping, its
      offset is zero, and its first word is ELFMAG.  */
-  if (!dump_p && private_p && offset == 0
+  if (!dump_p && private_p && map.offset == 0
       && (filterflags & COREFILTER_ELF_HEADERS) != 0)
     {
       /* Useful define specifying the size of the ELF magical
@@ -774,7 +778,7 @@ dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
 
       /* Let's check if we have an ELF header.  */
       gdb_byte h[SELFMAG];
-      if (target_read_memory (addr, h, SELFMAG) == 0)
+      if (target_read_memory (map.start_address, h, SELFMAG) == 0)
 	{
 	  /* The EI_MAG* and ELFMAG* constants come from
 	     <elf/common.h>.  */
@@ -783,7 +787,7 @@ dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
 	    {
 	      /* This mapping contains an ELF header, so we
 		 should dump it.  */
-	      dump_p = 1;
+	      dump_p = true;
 	    }
 	}
     }
@@ -794,20 +798,25 @@ dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
 /* As above, but return true only when we should dump the NT_FILE
    entry.  */
 
-static int
-dump_note_entry_p (filter_flags filterflags, const struct smaps_vmflags *v,
-		int maybe_private_p, int mapping_anon_p, int mapping_file_p,
-		const char *filename, ULONGEST addr, ULONGEST offset)
+static bool
+dump_note_entry_p (filter_flags filterflags, const smaps_data &map)
 {
+  /* No NT_FILE entry for mappings with no filename.  */
+  if (map.filename.length () == 0)
+    return false;
+
+  /* Don't add NT_FILE entries for mappings with a zero inode.  */
+  if (map.inode == 0)
+    return false;
+
   /* vDSO and vsyscall mappings will end up in the core file.  Don't
      put them in the NT_FILE note.  */
-  if (strcmp ("[vdso]", filename) == 0
-      || strcmp ("[vsyscall]", filename) == 0)
-    return 0;
+  if (map.filename == "[vdso]" || map.filename == "[vsyscall]")
+    return false;
 
   /* Otherwise, any other file-based mapping should be placed in the
      note.  */
-  return 1;
+  return true;
 }
 
 /* Implement the "info proc" command.  */
@@ -1314,21 +1323,15 @@ linux_core_xfer_siginfo (struct gdbarch *gdbarch, gdb_byte *readbuf,
 }
 
 typedef int linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
-					    ULONGEST offset, ULONGEST inode,
+					    ULONGEST offset,
 					    int read, int write,
 					    int exec, int modified,
 					    bool memory_tagged,
-					    const char *filename,
+					    const std::string &filename,
 					    void *data);
 
-typedef int linux_dump_mapping_p_ftype (filter_flags filterflags,
-					const struct smaps_vmflags *v,
-					int maybe_private_p,
-					int mapping_anon_p,
-					int mapping_file_p,
-					const char *filename,
-					ULONGEST addr,
-					ULONGEST offset);
+typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
+					 const smaps_data &map);
 
 /* Helper function to parse the contents of /proc/<pid>/smaps into a data
    structure, for easy access.
@@ -1590,35 +1593,15 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
   for (const struct smaps_data &map : smaps)
     {
-      int should_dump_p = 0;
-
-      if (map.has_anonymous)
-	{
-	  should_dump_p
-	    = should_dump_mapping_p (filterflags, &map.vmflags,
-				     map.priv,
-				     map.mapping_anon_p,
-				     map.mapping_file_p,
-				     map.filename.c_str (),
-				     map.start_address,
-				     map.offset);
-	}
-      else
-	{
-	  /* Older Linux kernels did not support the "Anonymous:" counter.
-	     If it is missing, we can't be sure - dump all the pages.  */
-	  should_dump_p = 1;
-	}
-
       /* Invoke the callback function to create the corefile segment.  */
-      if (should_dump_p)
+      if (should_dump_mapping_p (filterflags, map))
 	{
 	  func (map.start_address, map.end_address - map.start_address,
-		map.offset, map.inode, map.read, map.write, map.exec,
+		map.offset, map.read, map.write, map.exec,
 		1, /* MODIFIED is true because we want to dump
 		      the mapping.  */
 		map.vmflags.memory_tagging != 0,
-		map.filename.c_str (), obfd);
+		map.filename, obfd);
 	}
     }
 
@@ -1644,10 +1627,10 @@ struct linux_find_memory_regions_data
 
 static int
 linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
-				 ULONGEST offset, ULONGEST inode,
+				 ULONGEST offset,
 				 int read, int write, int exec, int modified,
 				 bool memory_tagged,
-				 const char *filename, void *arg)
+				 const std::string &filename, void *arg)
 {
   struct linux_find_memory_regions_data *data
     = (struct linux_find_memory_regions_data *) arg;
@@ -1690,14 +1673,10 @@ linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
   data.obfd = obfd;
 
   auto accept_dri_render_nodes
-    = [] (filter_flags filterflags, const struct smaps_vmflags *v,
-	  int maybe_private_p, int mapping_anon_p, int mapping_file_p,
-	  const char *filename, ULONGEST addr, ULONGEST offset) -> int
+    = [] (filter_flags filterflags, const smaps_data &map) -> bool
       {
-	const char *render_node_name_prefix = "/dev/dri/renderD";
-	return (strncmp (filename,
-			render_node_name_prefix,
-			strlen (render_node_name_prefix)) == 0);
+	static const char *render_node_name_prefix = "/dev/dri/renderD";
+	return startswith (map.filename, render_node_name_prefix);
       };
 
   return linux_find_memory_regions_full (gdbarch,
@@ -1725,8 +1704,6 @@ struct linux_make_mappings_data
   struct type *long_type;
 };
 
-static linux_find_memory_region_ftype linux_make_mappings_callback;
-
 /* A callback for linux_find_memory_regions_full that updates the
    mappings data for linux_make_mappings_corefile_notes.
 
@@ -1735,17 +1712,16 @@ static linux_find_memory_region_ftype linux_make_mappings_callback;
 
 static int
 linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
-			      ULONGEST offset, ULONGEST inode,
+			      ULONGEST offset,
 			      int read, int write, int exec, int modified,
 			      bool memory_tagged,
-			      const char *filename, void *data)
+			      const std::string &filename, void *data)
 {
   struct linux_make_mappings_data *map_data
     = (struct linux_make_mappings_data *) data;
   gdb_byte buf[sizeof (ULONGEST)];
 
-  if (*filename == '\0' || inode == 0)
-    return 0;
+  gdb_assert (filename.length () > 0);
 
   ++map_data->file_count;
 
@@ -1756,7 +1732,7 @@ linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
   pack_long (buf, map_data->long_type, offset);
   obstack_grow (map_data->data_obstack, buf, map_data->long_type->length ());
 
-  obstack_grow_str0 (map_data->filename_obstack, filename);
+  obstack_grow_str0 (map_data->filename_obstack, filename.c_str ());
 
   return 0;
 }

@@ -67,9 +67,19 @@ with_test_prefix "test-param" {
     gdb_test_no_output "set print test-param off"
     gdb_test "show print test-param" "The state of the Test Parameter is off." "show parameter off"
     gdb_test "guile (print (parameter-value test-param))" "= #f" "parameter value, false"
-    gdb_test "help show print test-param" "Show the state of the boolean test-param.*" "show help"
-    gdb_test "help set print test-param" "Set the state of the boolean test-param.*" "set help"
-    gdb_test "help set print" "set print test-param -- Set the state of the boolean test-param.*" "general help"
+    gdb_test "help show print test-param" \
+	[multi_line \
+	     "^Show the state of the boolean test-param\\." \
+	     "When enabled, test param does something useful\\. When disabled, does nothing\\."] \
+	"show help"
+    gdb_test "help set print test-param" \
+	[multi_line \
+	     "^Set the state of the boolean test-param\\." \
+	     "When enabled, test param does something useful\\. When disabled, does nothing\\."] \
+	 "set help"
+    gdb_test "help set print" \
+	"set print test-param -- Set the state of the boolean test-param.*" \
+	"general help"
 
     gdb_test "guile (print (parameter? test-param))" "= #t"
     gdb_test "guile (print (parameter? 42))" "= #f"
@@ -314,9 +324,17 @@ with_test_prefix "test-undocumented-param" {
     gdb_test "show print test-undoc-param" "The state of the Test Parameter is on." "show parameter on"
     gdb_test_no_output "set print test-undoc-param off"
     gdb_test "show print test-undoc-param" "The state of the Test Parameter is off." "show parameter off"
-    gdb_test "help show print test-undoc-param" "This command is not documented." "show help"
-    gdb_test "help set print test-undoc-param" "This command is not documented." "set help"
-    gdb_test "help set print" "set print test-undoc-param -- This command is not documented.*" "general help"
+    gdb_test "help show print test-undoc-param" \
+	[multi_line \
+	     "^Show the current value of 'print test-undoc-param'\\." \
+	     "This command is not documented\\."] \
+	"show help"
+    gdb_test "help set print test-undoc-param" \
+	[multi_line \
+	     "Set the current value of 'print test-undoc-param'\\." \
+	     "This command is not documented\\."] \
+	 "set help"
+    gdb_test "help set print" "set print test-undoc-param -- Set the current value of 'print test-undoc-param'\\..*" "general help"
 }
 
 # Test a parameter with a restricted range, where we need to notify the user
@@ -379,13 +397,85 @@ gdb_test_no_output "guile (register-parameter! prev-ambig)"
 
 with_test_prefix "previously-ambiguous" {
     gdb_test "guile (print (parameter-value prev-ambig))" "= #f" "parameter value, false"
-    gdb_test "show print s" "Command is not documented is off." "show parameter off"
+    gdb_test "show print s" \
+	"The current value of 'print s' is off\\." "show parameter off"
     gdb_test_no_output "set print s on"
-    gdb_test "show print s" "Command is not documented is on." "show parameter on"
+    gdb_test "show print s" \
+	"The current value of 'print s' is on\\." "show parameter on"
     gdb_test "guile (print (parameter-value prev-ambig))" "= #t" "parameter value, true"
-    gdb_test "help show print s" "This command is not documented." "show help"
-    gdb_test "help set print s" "This command is not documented." "set help"
-    gdb_test "help set print" "set print s -- This command is not documented.*" "general help"
+    gdb_test "help show print s" \
+	[multi_line \
+	     "^Show the current value of 'print s'\\." \
+	     "This command is not documented\\."] \
+	"show help"
+    gdb_test "help set print s" \
+	[multi_line \
+	     "Set the current value of 'print s'\\." \
+	     "This command is not documented\\."] \
+	"set help"
+    gdb_test "help set print" \
+	"set print s -- Set the current value of 'print s'\\..*" \
+	"general help"
+}
+
+gdb_test_multiline "create set/show foo1 prefix commands" \
+    "guile" "" \
+    "(register-command! (make-command \"set foo1\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:prefix? #t))" "" \
+    "(register-command! (make-command \"show foo1\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:prefix? #t))" "" \
+    "end"
+
+gdb_test_multiline "create 'foo bar' parameter" \
+    "guile" "" \
+    "(register-parameter! (make-parameter \"foo bar\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:parameter-type PARAM_BOOLEAN" "" \
+    "   #:show-func (lambda (self value)" "" \
+    "      (format #f \"The state of 'foo bar' is ~a.\" value))" "" \
+    "   #:initial-value #t))" "" \
+    "end"
+
+gdb_test "show foo1 bar" "^The state of 'foo bar' is on\\." "show parameter 'foo bar'"
+
+gdb_test_multiline "create set/show foo2 prefix commands" \
+    "guile" "" \
+    "(register-command! (make-command \"set foo2\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:prefix? #t))" "" \
+    "(register-command! (make-command \"show foo2\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:prefix? #t))" "" \
+    "end" ""
+
+gdb_test_multiline "create ambiguous 'foo baz' parameter" \
+    "guile" "" \
+    "(register-parameter! (make-parameter \"foo baz\"" "" \
+    "   #:command-class COMMAND_OBSCURE" "" \
+    "   #:parameter-type PARAM_BOOLEAN" "" \
+    "   #:show-func (lambda (self value)" "" \
+    "      (format #f \"The state of 'foo baz' is ~a.\" value))" "" \
+    "   #:initial-value #t))" "" \
+    "end" \
+    [multi_line \
+	 "Out of range: could not find command prefix 'foo' in position 1: \"foo baz\"" \
+	 "Error while executing Scheme code."]
+
+with_test_prefix "empty doc string" {
+    gdb_test_multiline "empty doc string parameter" \
+	"guile" "" \
+	"(register-parameter! (make-parameter \"empty-doc-string\"" "" \
+	"   #:command-class COMMAND_NONE" "" \
+	"   #:parameter-type PARAM_ZINTEGER" "" \
+	"   #:doc \"\"" "" \
+	"   #:set-doc \"Set doc string.\"" "" \
+	"   #:show-doc \"Show doc string.\"))" "" \
+	"end"
+
+    gdb_test "help set empty-doc-string" "^Set doc string\\."
+    gdb_test "help show empty-doc-string" "^Show doc string\\."
 }
 
 rename scm_param_test_maybe_no_output ""

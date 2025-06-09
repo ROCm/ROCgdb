@@ -93,6 +93,7 @@ enum riscv_csr_class
   CSR_CLASS_SSAIA_AND_H_32,	/* Ssaia with H, rv32 only */
   CSR_CLASS_SSAIA_OR_SSCSRIND,		/* Ssaia/Smcsrind */
   CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H,	/* Ssaia/Smcsrind with H */
+  CSR_CLASS_SSCCFG,		/* Ssccfg */
   CSR_CLASS_SSCSRIND,		/* Sscsrind */
   CSR_CLASS_SSCSRIND_AND_H,	/* Sscsrind with H */
   CSR_CLASS_SSSTATEEN,		/* S[ms]stateen only */
@@ -1117,6 +1118,9 @@ riscv_csr_address (const char *csr_name,
     case CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H:
       is_h_required = (csr_class == CSR_CLASS_SSAIA_OR_SSCSRIND_AND_H);
       extension = "ssaia or sscsrind";
+      break;
+    case CSR_CLASS_SSCCFG:
+      extension = "ssccfg";
       break;
     case CSR_CLASS_SSCSRIND:
     case CSR_CLASS_SSCSRIND_AND_H:
@@ -4848,7 +4852,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  bfd_vma delta = target - md_pcrel_from (fixP);
 	  bfd_putl32 (bfd_getl32 (buf) | ENCODE_JTYPE_IMM (delta), buf);
 	  if (!riscv_opts.relax && S_IS_LOCAL (fixP->fx_addsy))
-	    fixP->fx_done = 1;
+	    {
+	      if (!VALID_JTYPE_IMM (delta))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("invalid J-type offset (%+lld)"),
+			      (long long) delta);
+	      fixP->fx_done = 1;
+	    }
 	}
       break;
 
@@ -4860,7 +4870,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  bfd_vma delta = target - md_pcrel_from (fixP);
 	  bfd_putl32 (bfd_getl32 (buf) | ENCODE_BTYPE_IMM (delta), buf);
 	  if (!riscv_opts.relax && S_IS_LOCAL (fixP->fx_addsy))
-	    fixP->fx_done = 1;
+	    {
+	      if (!VALID_BTYPE_IMM (delta))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("invalid B-type offset (%+lld)"),
+			      (long long) delta);
+	      fixP->fx_done = 1;
+	    }
 	}
       break;
 
@@ -4872,7 +4888,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  bfd_vma delta = target - md_pcrel_from (fixP);
 	  bfd_putl16 (bfd_getl16 (buf) | ENCODE_CBTYPE_IMM (delta), buf);
 	  if (!riscv_opts.relax && S_IS_LOCAL (fixP->fx_addsy))
-	    fixP->fx_done = 1;
+	    {
+	      if (!VALID_CBTYPE_IMM (delta))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("invalid CB-type offset (%+lld)"),
+			      (long long) delta);
+	      fixP->fx_done = 1;
+	    }
 	}
       break;
 
@@ -4884,7 +4906,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  bfd_vma delta = target - md_pcrel_from (fixP);
 	  bfd_putl16 (bfd_getl16 (buf) | ENCODE_CJTYPE_IMM (delta), buf);
 	  if (!riscv_opts.relax && S_IS_LOCAL (fixP->fx_addsy))
-	    fixP->fx_done = 1;
+	    {
+	      if (!VALID_CJTYPE_IMM (delta))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("invalid CJ-type offset (%+lld)"),
+			      (long long) delta);
+	      fixP->fx_done = 1;
+	    }
 	}
       break;
 
@@ -4919,7 +4947,14 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 		      | ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)),
 		      buf);
 	  if (!riscv_opts.relax)
-	    fixP->fx_done = 1;
+	    {
+	      if (xlen > 32
+		  && !VALID_UTYPE_IMM (RISCV_CONST_HIGH_PART (value)))
+		as_bad_where (fixP->fx_file, fixP->fx_line,
+			      _("invalid pcrel_hi offset (%+lld)"),
+			      (long long) value);
+	      fixP->fx_done = 1;
+	    }
 	}
       relaxable = true;
       break;
@@ -4945,7 +4980,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	      bfd_putl32 (bfd_getl32 (buf) | ENCODE_STYPE_IMM (value), buf);
 	    else
 	      bfd_putl32 (bfd_getl32 (buf) | ENCODE_ITYPE_IMM (value), buf);
-	    /* Relaxations should never be enabled by `.option relax'.  */
+	    /* Relaxations should never be enabled by `.option relax'.
+	       The offset is checked by corresponding %pcrel_hi entry.  */
 	    if (!riscv_opts.relax)
 	      fixP->fx_done = 1;
 	  }
@@ -5851,35 +5887,6 @@ s_variant_cc (int ignored ATTRIBUTE_UNUSED)
   elfsym = elf_symbol_from (bfdsym);
   gas_assert (elfsym);
   elfsym->internal_elf_sym.st_other |= STO_RISCV_VARIANT_CC;
-}
-
-/* Same as elf_copy_symbol_attributes, but without copying st_other.
-   This is needed so RISC-V specific st_other values can be independently
-   specified for an IFUNC resolver (that is called by the dynamic linker)
-   and the symbol it resolves (aliased to the resolver).  In particular,
-   if a function symbol has special st_other value set via directives,
-   then attaching an IFUNC resolver to that symbol should not override
-   the st_other setting.  Requiring the directive on the IFUNC resolver
-   symbol would be unexpected and problematic in C code, where the two
-   symbols appear as two independent function declarations.  */
-
-void
-riscv_elf_copy_symbol_attributes (symbolS *dest, symbolS *src)
-{
-  struct elf_obj_sy *srcelf = symbol_get_obj (src);
-  struct elf_obj_sy *destelf = symbol_get_obj (dest);
-  /* If size is unset, copy size from src.  Because we don't track whether
-     .size has been used, we can't differentiate .size dest, 0 from the case
-     where dest's size is unset.  */
-  if (!destelf->size && S_GET_SIZE (dest) == 0)
-    {
-      if (srcelf->size)
-	{
-	  destelf->size = XNEW (expressionS);
-	  *destelf->size = *srcelf->size;
-	}
-      S_SET_SIZE (dest, S_GET_SIZE (src));
-    }
 }
 
 /* RISC-V pseudo-ops table.  */

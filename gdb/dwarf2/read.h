@@ -20,6 +20,9 @@
 #ifndef GDB_DWARF2_READ_H
 #define GDB_DWARF2_READ_H
 
+#if CXX_STD_THREAD
+#include <mutex>
+#endif
 #include <queue>
 #include "dwarf2/abbrev.h"
 #include "dwarf2/unit-head.h"
@@ -634,6 +637,11 @@ public:
   /* Set of dwo_file objects.  */
   dwo_file_up_set dwo_files;
 
+#if CXX_STD_THREAD
+  /* Mutex to synchronize access to DWO_FILES.  */
+  std::mutex dwo_files_lock;
+#endif
+
   /* The DWP file if there is one, or NULL.  */
   dwp_file_up dwp_file;
 
@@ -1029,8 +1037,7 @@ private:
   dwo_file_up open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
 				      const char *comp_dir);
 
-  void locate_dwo_sections (struct objfile *objfile, bfd *abfd, asection *sectp,
-			    struct dwo_sections *dwo_sections);
+  void locate_dwo_sections (objfile *objfile, dwo_file &dwo_file);
 
   void create_dwo_unit_hash_tables (dwo_file &dwo_file, dwarf2_cu &skeleton_cu,
 				    dwarf2_section_info &section,

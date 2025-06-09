@@ -55,7 +55,6 @@
 #include "top.h"
 #include "ui.h"
 #include "main.h"
-#include "solist.h"
 
 #include "inferior.h"
 
@@ -3372,7 +3371,7 @@ gdb_argv_as_array_view_test ()
    argument.  */
 
 std::string
-ldirname (const char *filename)
+gdb_ldirname (const char *filename)
 {
   std::string dirname;
   const char *base = lbasename (filename);

@@ -291,23 +291,28 @@ struct dwo_sections
 struct dwo_unit
 {
   /* Backlink to the containing struct dwo_file.  */
-  struct dwo_file *dwo_file;
+  struct dwo_file *dwo_file = nullptr;
 
   /* The "id" that distinguishes this CU/TU.
      .debug_info calls this "dwo_id", .debug_types calls this "signature".
      Since signatures came first, we stick with it for consistency.  */
-  ULONGEST signature;
+  ULONGEST signature = 0;
 
   /* The section this CU/TU lives in, in the DWO file.  */
-  struct dwarf2_section_info *section;
+  dwarf2_section_info *section = nullptr;
+
+  /* This is set if SECTION is owned by this dwo_unit.  */
+  dwarf2_section_info_up section_holder;
 
   /* Same as dwarf2_per_cu::{sect_off,length} but in the DWO section.  */
-  sect_offset sect_off;
-  unsigned int length;
+  sect_offset sect_off {};
+  unsigned int length = 0;
 
   /* For types, offset in the type's DIE of the type defined by this TU.  */
   cu_offset type_offset_in_tu;
 };
+
+using dwo_unit_up = std::unique_ptr<dwo_unit>;
 
 /* Hash function for dwo_unit objects, based on the signature.  */
 
@@ -318,7 +323,7 @@ struct dwo_unit_hash
   std::size_t operator() (ULONGEST signature) const noexcept
   { return signature; }
 
-  std::size_t operator() (const dwo_unit *unit) const noexcept
+  std::size_t operator() (const dwo_unit_up &unit) const noexcept
   { return (*this) (unit->signature); }
 };
 
@@ -332,16 +337,16 @@ struct dwo_unit_eq
 {
   using is_transparent = void;
 
-  bool operator() (ULONGEST sig, const dwo_unit *unit) const noexcept
+  bool operator() (ULONGEST sig, const dwo_unit_up  &unit) const noexcept
   { return sig == unit->signature; }
 
-  bool operator() (const dwo_unit *a, const dwo_unit *b) const noexcept
+  bool operator() (const dwo_unit_up &a, const dwo_unit_up &b) const noexcept
   { return (*this) (a->signature, b); }
 };
 
 /* Set of dwo_unit object, using their signature as identity.  */
 
-using dwo_unit_set = gdb::unordered_set<dwo_unit *, dwo_unit_hash, dwo_unit_eq>;
+using dwo_unit_set = gdb::unordered_set<dwo_unit_up, dwo_unit_hash, dwo_unit_eq>;
 
 /* include/dwarf2.h defines the DWP section codes.
    It defines a max value but it doesn't define a min value, which we
@@ -601,6 +606,11 @@ struct dwp_file
   dwo_unit_set loaded_cus;
   dwo_unit_set loaded_tus;
 
+#if CXX_STD_THREAD
+  /* Mutex to synchronize access to LOADED_CUS and LOADED_TUS.  */
+  std::mutex loaded_cutus_lock;
+#endif
+
   /* Table to map ELF section numbers to their sections.
      This is only needed for the DWP V1 file format.  */
   unsigned int num_sections = 0;
@@ -699,12 +709,6 @@ struct field_info
   /* This holds all the top-level variant parts attached to the type
      we're reading.  */
   std::vector<variant_part_builder> variant_parts;
-
-  /* All the field batons that must be updated.  This is only used
-     when a type's property depends on a field of this structure; for
-     example in Ada when an array's length may come from a field of an
-     enclosing record.  */
-  gdb::unordered_map<dwarf2_property_baton *, sect_offset> field_batons;
 
   /* Return the total number of fields (including baseclasses).  */
   int nfields () const
@@ -2495,7 +2499,7 @@ lookup_dwo_signatured_type (struct dwarf2_cu *cu, ULONGEST sig)
   if (it == dwo_file->tus.end ())
     return nullptr;
 
-  dwo_unit *dwo_entry = *it;
+  dwo_unit *dwo_entry = it->get ();
 
   /* If the global table doesn't have an entry for this TU, add one.  */
   if (sig_type_it == per_bfd->signatured_types.end ())
@@ -2785,13 +2789,6 @@ dwo_unit *
 cutu_reader::lookup_dwo_unit (dwarf2_cu *cu, die_info *comp_unit_die,
 			      const char *dwo_name)
 {
-#if CXX_STD_THREAD
-  /* We need a lock here to handle the DWO hash table.  */
-  static std::mutex dwo_lock;
-
-  std::lock_guard<std::mutex> guard (dwo_lock);
-#endif
-
   dwarf2_per_cu *per_cu = cu->per_cu;
   struct dwo_unit *dwo_unit;
   const char *comp_dir;
@@ -3430,7 +3427,10 @@ cooked_index_worker_debug_info::process_type_units
 			  abbrev_table.get (), nullptr, false,
 			  language_minimal);
       if (!reader.is_dummy ())
-	process_type_unit (&reader, storage);
+	storage->catch_error ([&] ()
+	  {
+	    process_type_unit (&reader, storage);
+	  });
     }
 }
 
@@ -3471,8 +3471,11 @@ cooked_index_worker_debug_info::process_skeletonless_type_units
   /* Skeletonless TUs in DWP files without .gdb_index is not supported yet.  */
   if (per_objfile->per_bfd->dwp_file == nullptr)
     for (const dwo_file_up &file : per_objfile->per_bfd->dwo_files)
-      for (dwo_unit *unit : file->tus)
-	process_skeletonless_type_unit (unit, per_objfile, storage);
+      for (const dwo_unit_up &unit : file->tus)
+	storage->catch_error ([&] ()
+	  {
+	    process_skeletonless_type_unit (unit.get (), per_objfile, storage);
+	  });
 }
 
 void
@@ -3491,14 +3494,10 @@ cooked_index_worker_debug_info::process_units (size_t task_number,
     {
       dwarf2_per_cu *per_cu = inner->get ();
 
-      try
+      thread_storage.catch_error ([&] ()
 	{
 	  process_unit (per_cu, m_per_objfile, &thread_storage);
-	}
-      catch (gdb_exception &except)
-	{
-	  thread_storage.note_error (std::move (except));
-	}
+	});
     }
 
   thread_storage.done_reading (complaint_handler.release ());
@@ -5867,7 +5866,7 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
       && res.get_name () != nullptr
       && IS_ABSOLUTE_PATH (res.get_name ()))
     {
-      res.set_comp_dir (ldirname (res.get_name ()));
+      res.set_comp_dir (gdb_ldirname (res.get_name ()));
       res.set_name (make_unique_xstrdup (lbasename (res.get_name ())));
     }
 
@@ -6214,9 +6213,31 @@ static dwo_file *
 lookup_dwo_file (dwarf2_per_bfd *per_bfd, const char *dwo_name,
 		 const char *comp_dir)
 {
+#if CXX_STD_THREAD
+  std::lock_guard<std::mutex> guard (per_bfd->dwo_files_lock);
+#endif
+
   auto it = per_bfd->dwo_files.find (dwo_file_search {dwo_name, comp_dir});
 
   return it != per_bfd->dwo_files.end () ? it->get() : nullptr;
+}
+
+/* Add DWO_FILE to the per-BFD DWO file hash table.
+
+   Return the dwo_file actually kept in the hash table.
+
+   If another thread raced with this one, opening the exact same DWO file and
+   inserting it first in the hash table, then keep that other thread's copy
+   and DWO_FILE gets freed.  */
+
+static dwo_file *
+add_dwo_file (dwarf2_per_bfd *per_bfd, dwo_file_up dwo_file)
+{
+#if CXX_STD_THREAD
+  std::lock_guard<std::mutex> lock (per_bfd->dwo_files_lock);
+#endif
+
+  return per_bfd->dwo_files.emplace (std::move (dwo_file)).first->get ();
 }
 
 void
@@ -6297,7 +6318,7 @@ cutu_reader::create_dwo_unit_hash_tables (dwo_file &dwo_file,
       else
 	signature = header.signature;
 
-      dwo_unit *dwo_unit = OBSTACK_ZALLOC (&per_bfd.obstack, struct dwo_unit);
+      auto dwo_unit = std::make_unique<struct dwo_unit> ();
 
       /* Set the fields common to compile and type units.  */
       dwo_unit->dwo_file = &dwo_file;
@@ -6315,7 +6336,7 @@ cutu_reader::create_dwo_unit_hash_tables (dwo_file &dwo_file,
 				   sect_offset_str (sect_off),
 				   hex_string (dwo_unit->signature));
 
-	  auto [it, inserted] = dwo_file.cus.emplace (dwo_unit);
+	  auto [it, inserted] = dwo_file.cus.emplace (std::move (dwo_unit));
 	  if (!inserted)
 	    complaint (_("debug cu entry at offset %s is duplicate to"
 			 " the entry at offset %s, signature %s"),
@@ -6334,7 +6355,7 @@ cutu_reader::create_dwo_unit_hash_tables (dwo_file &dwo_file,
 				   sect_offset_str (sect_off),
 				   hex_string (dwo_unit->signature));
 
-	  auto [it, inserted] = dwo_file.tus.emplace (dwo_unit);
+	  auto [it, inserted] = dwo_file.tus.emplace (std::move (dwo_unit));
 	  if (!inserted)
 	    complaint (_("debug type entry at offset %s is duplicate to"
 			 " the entry at offset %s, signature %s"),
@@ -6815,7 +6836,7 @@ locate_v1_virtual_dwo_sections (asection *sectp,
    COMP_DIR is the DW_AT_comp_dir attribute of the referencing CU.
    This is for DWP version 1 files.  */
 
-static struct dwo_unit *
+static dwo_unit_up
 create_dwo_unit_in_dwp_v1 (dwarf2_per_bfd *per_bfd,
 			   struct dwp_file *dwp_file,
 			   uint32_t unit_index,
@@ -6938,19 +6959,17 @@ create_dwo_unit_in_dwp_v1 (dwarf2_per_bfd *per_bfd,
 	 types we'll grow the vector and eventually have to reallocate space
 	 for it, invalidating all copies of pointers into the previous
 	 contents.  */
-      auto [it, inserted]
-	= per_bfd->dwo_files.emplace (std::move (new_dwo_file));
-      gdb_assert (inserted);
-      dwo_file = it->get ();
+      dwo_file = add_dwo_file (per_bfd, std::move (new_dwo_file));
     }
   else
     dwarf_read_debug_printf ("Using existing virtual DWO: %s",
 			     virtual_dwo_name.c_str ());
 
-  dwo_unit *dwo_unit = OBSTACK_ZALLOC (&per_bfd->obstack, struct dwo_unit);
+  auto dwo_unit = std::make_unique<struct dwo_unit> ();
   dwo_unit->dwo_file = dwo_file;
   dwo_unit->signature = signature;
-  dwo_unit->section = XOBNEW (&per_bfd->obstack, struct dwarf2_section_info);
+  dwo_unit->section_holder = std::make_unique<dwarf2_section_info> ();
+  dwo_unit->section = dwo_unit->section_holder.get ();
   *dwo_unit->section = sections.info_or_types;
   /* dwo_unit->{offset,length,type_offset_in_tu} are set later.  */
 
@@ -7008,7 +7027,7 @@ create_dwp_v2_or_v5_section (dwarf2_per_bfd *per_bfd,
    COMP_DIR is the DW_AT_comp_dir attribute of the referencing CU.
    This is for DWP version 2 files.  */
 
-static struct dwo_unit *
+static dwo_unit_up
 create_dwo_unit_in_dwp_v2 (dwarf2_per_bfd *per_bfd,
 			   struct dwp_file *dwp_file,
 			   uint32_t unit_index,
@@ -7143,19 +7162,17 @@ create_dwo_unit_in_dwp_v2 (dwarf2_per_bfd *per_bfd,
 	 types we'll grow the vector and eventually have to reallocate space
 	 for it, invalidating all copies of pointers into the previous
 	 contents.  */
-      auto [it, inserted]
-	= per_bfd->dwo_files.emplace (std::move (new_dwo_file));
-      gdb_assert (inserted);
-      dwo_file = it->get ();
+      dwo_file = add_dwo_file (per_bfd, std::move (new_dwo_file));
     }
   else
     dwarf_read_debug_printf ("Using existing virtual DWO: %s",
 			     virtual_dwo_name.c_str ());
 
-  dwo_unit *dwo_unit = OBSTACK_ZALLOC (&per_bfd->obstack, struct dwo_unit);
+  auto dwo_unit = std::make_unique<struct dwo_unit> ();
   dwo_unit->dwo_file = dwo_file;
   dwo_unit->signature = signature;
-  dwo_unit->section = XOBNEW (&per_bfd->obstack, struct dwarf2_section_info);
+  dwo_unit->section_holder = std::make_unique<dwarf2_section_info> ();
+  dwo_unit->section = dwo_unit->section_holder.get ();
   *dwo_unit->section = create_dwp_v2_or_v5_section
 			 (per_bfd,
 			  is_debug_types
@@ -7173,7 +7190,7 @@ create_dwo_unit_in_dwp_v2 (dwarf2_per_bfd *per_bfd,
    COMP_DIR is the DW_AT_comp_dir attribute of the referencing CU.
    This is for DWP version 5 files.  */
 
-static struct dwo_unit *
+static dwo_unit_up
 create_dwo_unit_in_dwp_v5 (dwarf2_per_bfd *per_bfd,
 			   struct dwp_file *dwp_file,
 			   uint32_t unit_index,
@@ -7313,16 +7330,13 @@ create_dwo_unit_in_dwp_v5 (dwarf2_per_bfd *per_bfd,
 	 types we'll grow the vector and eventually have to reallocate space
 	 for it, invalidating all copies of pointers into the previous
 	 contents.  */
-      auto [it, inserted]
-	= per_bfd->dwo_files.emplace (std::move (new_dwo_file));
-      gdb_assert (inserted);
-      dwo_file = it->get ();
+      dwo_file = add_dwo_file (per_bfd, std::move (new_dwo_file));
     }
   else
     dwarf_read_debug_printf ("Using existing virtual DWO: %s",
 			     virtual_dwo_name.c_str ());
 
-  dwo_unit *dwo_unit = OBSTACK_ZALLOC (&per_bfd->obstack, struct dwo_unit);
+  auto dwo_unit = std::make_unique<struct dwo_unit> ();
   dwo_unit->dwo_file = dwo_file;
   dwo_unit->signature = signature;
   dwo_unit->section
@@ -7353,9 +7367,15 @@ lookup_dwo_unit_in_dwp (dwarf2_per_bfd *per_bfd,
   auto &dwo_unit_set
     = is_debug_types ? dwp_file->loaded_tus : dwp_file->loaded_cus;
 
-  if (auto it = dwo_unit_set.find (signature);
-      it != dwo_unit_set.end ())
-    return *it;
+  {
+#if CXX_STD_THREAD
+    std::lock_guard<std::mutex> guard (dwp_file->loaded_cutus_lock);
+#endif
+
+    if (auto it = dwo_unit_set.find (signature);
+	it != dwo_unit_set.end ())
+      return it->get ();
+  }
 
   /* Use a for loop so that we don't loop forever on bad debug info.  */
   for (unsigned int i = 0; i < dwp_htab->nr_slots; ++i)
@@ -7369,7 +7389,7 @@ lookup_dwo_unit_in_dwp (dwarf2_per_bfd *per_bfd,
 	  uint32_t unit_index =
 	    read_4_bytes (dbfd,
 			  dwp_htab->unit_table + hash * sizeof (uint32_t));
-	  dwo_unit *dwo_unit;
+	  dwo_unit_up dwo_unit;
 
 	  if (dwp_file->version == 1)
 	    dwo_unit
@@ -7384,9 +7404,14 @@ lookup_dwo_unit_in_dwp (dwarf2_per_bfd *per_bfd,
 	      = create_dwo_unit_in_dwp_v5 (per_bfd, dwp_file, unit_index,
 					   comp_dir, signature, is_debug_types);
 
-	  auto [it, inserted] = dwo_unit_set.emplace (dwo_unit);
-	  gdb_assert (inserted);
-	  return *it;
+	  /* If another thread raced with this one, opening the exact same
+	     DWO unit, then we'll keep that other thread's copy.  */
+#if CXX_STD_THREAD
+	  std::lock_guard<std::mutex> guard (dwp_file->loaded_cutus_lock);
+#endif
+
+	  auto it = dwo_unit_set.emplace (std::move (dwo_unit)).first;
+	  return it->get ();
 	}
 
       if (signature_in_table == 0)
@@ -7442,7 +7467,7 @@ try_open_dwop_file (dwarf2_per_bfd *per_bfd, const char *file_name, int is_dwp,
     search_path = per_bfd->captured_debug_dir.c_str ();
 
   /* Add the path for the executable binary to the list of search paths.  */
-  std::string objfile_dir = ldirname (per_bfd->filename ());
+  std::string objfile_dir = gdb_ldirname (per_bfd->filename ());
   search_path_holder.reset (concat (objfile_dir.c_str (),
 				    dirname_separator_string,
 				    search_path, nullptr));
@@ -7463,14 +7488,23 @@ try_open_dwop_file (dwarf2_per_bfd *per_bfd, const char *file_name, int is_dwp,
   if (sym_bfd == NULL)
     return NULL;
 
-  if (!bfd_check_format (sym_bfd.get (), bfd_object))
-    return NULL;
+  {
+#if CXX_STD_THREAD
+    /* The operations below are not thread-safe, use a lock to synchronize
+       concurrent accesses.  */
+    static std::mutex mutex;
+    std::lock_guard<std::mutex> lock (mutex);
+#endif
 
-  /* Success.  Record the bfd as having been included by the objfile's bfd.
+    if (!bfd_check_format (sym_bfd.get (), bfd_object))
+      return NULL;
+
+    /* Success.  Record the bfd as having been included by the objfile's bfd.
      This is important because things like demangled_names_hash lives in the
      objfile's per_bfd space and may have references to things like symbol
      names that live in the DWO/DWP file's per_bfd space.  PR 16426.  */
-  gdb_bfd_record_inclusion (per_bfd->obfd, sym_bfd.get ());
+    gdb_bfd_record_inclusion (per_bfd->obfd, sym_bfd.get ());
+  }
 
   return sym_bfd;
 }
@@ -7520,45 +7554,66 @@ cutu_reader::open_dwo_file (dwarf2_per_bfd *per_bfd, const char *file_name,
    size of each of the DWO debugging sections we are interested in.  */
 
 void
-cutu_reader::locate_dwo_sections (struct objfile *objfile, bfd *abfd,
-				  asection *sectp, dwo_sections *dwo_sections)
+cutu_reader::locate_dwo_sections (objfile *objfile, dwo_file &dwo_file)
 {
   const struct dwop_section_names *names = &dwop_section_names;
+  dwo_sections &dwo_sections = dwo_file.sections;
+  bool complained_about_macro_already = false;
 
-  struct dwarf2_section_info *dw_sect = nullptr;
-
-  if (names->abbrev_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->abbrev;
-  else if (names->info_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->infos.emplace_back (dwarf2_section_info {});
-  else if (names->line_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->line;
-  else if (names->loc_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->loc;
-  else if (names->loclists_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->loclists;
-  else if (names->macinfo_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->macinfo;
-  else if (names->macro_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->macro;
-  else if (names->rnglists_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->rnglists;
-  else if (names->str_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->str;
-  else if (names->str_offsets_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->str_offsets;
-  else if (names->types_dwo.matches (sectp->name))
-    dw_sect = &dwo_sections->types.emplace_back (dwarf2_section_info {});
-
-  if (dw_sect != nullptr)
+  for (asection *sec : gdb_bfd_sections (dwo_file.dbfd))
     {
-      /* Make sure we don't overwrite a section info that has been filled in
-	 already.  */
-      gdb_assert (!dw_sect->readin);
+      struct dwarf2_section_info *dw_sect = nullptr;
 
-      dw_sect->s.section = sectp;
-      dw_sect->size = bfd_section_size (sectp);
-      dw_sect->read (objfile);
+      if (names->abbrev_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.abbrev;
+      else if (names->info_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.infos.emplace_back (dwarf2_section_info {});
+      else if (names->line_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.line;
+      else if (names->loc_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.loc;
+      else if (names->loclists_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.loclists;
+      else if (names->macinfo_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.macinfo;
+      else if (names->macro_dwo.matches (sec->name))
+	{
+	  /* gcc versions <= 13 generate multiple .debug_macro.dwo sections with
+	     some unresolved links between them.  It's not usable, so do as if
+	     there were not there.  */
+	  if (!complained_about_macro_already)
+	    {
+	      if (dwo_sections.macro.s.section == nullptr)
+		dw_sect = &dwo_sections.macro;
+	      else
+		{
+		  warning (_("Multiple .debug_macro.dwo sections found in "
+			     "%s, ignoring them."), dwo_file.dbfd->filename);
+
+		  dwo_sections.macro = dwarf2_section_info {};
+		  complained_about_macro_already = true;
+		}
+	    }
+	}
+      else if (names->rnglists_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.rnglists;
+      else if (names->str_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.str;
+      else if (names->str_offsets_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.str_offsets;
+      else if (names->types_dwo.matches (sec->name))
+	dw_sect = &dwo_sections.types.emplace_back (dwarf2_section_info {});
+
+      if (dw_sect != nullptr)
+	{
+	  /* Make sure we don't overwrite a section info that has been filled in
+	 already.  */
+	  gdb_assert (!dw_sect->readin);
+
+	  dw_sect->s.section = sec;
+	  dw_sect->size = bfd_section_size (sec);
+	  dw_sect->read (objfile);
+	}
     }
 }
 
@@ -7586,9 +7641,7 @@ cutu_reader::open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
   dwo_file->comp_dir = comp_dir;
   dwo_file->dbfd = std::move (dbfd);
 
-  for (asection *sec : gdb_bfd_sections (dwo_file->dbfd))
-    this->locate_dwo_sections (per_objfile->objfile, dwo_file->dbfd.get (), sec,
-			       &dwo_file->sections);
+  this->locate_dwo_sections (per_objfile->objfile, *dwo_file);
 
   /* There is normally just one .debug_info.dwo section in a DWO file.  But when
      building with -fdebug-types-section, gcc produces multiple .debug_info.dwo
@@ -7796,7 +7849,7 @@ open_and_init_dwp_file (dwarf2_per_objfile *per_objfile)
       struct objfile *backlink = objfile->separate_debug_objfile_backlink;
       const char *backlink_basename = lbasename (backlink->original_name);
 
-      dwp_name = ldirname (objfile->original_name) + SLASH_STRING + backlink_basename;
+      dwp_name = gdb_ldirname (objfile->original_name) + SLASH_STRING + backlink_basename;
     }
   else
     dwp_name = objfile->original_name;
@@ -7946,12 +7999,7 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 	    = open_and_init_dwo_file (cu, dwo_name, comp_dir);
 
 	  if (new_dwo_file != nullptr)
-	    {
-	      auto [it, inserted]
-		= per_bfd->dwo_files.emplace (std::move (new_dwo_file));
-	      gdb_assert (inserted);
-	      dwo_file = (*it).get ();
-	    }
+	    dwo_file = add_dwo_file (per_bfd, std::move (new_dwo_file));
 	}
 
       if (dwo_file != NULL)
@@ -7962,13 +8010,13 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 	    {
 	      if (auto it = dwo_file->tus.find (signature);
 		  it != dwo_file->tus.end ())
-		dwo_cutu = *it;
+		dwo_cutu = it->get ();
 	    }
 	  else if (!is_debug_types && !dwo_file->cus.empty ())
 	    {
 	      if (auto it = dwo_file->cus.find (signature);
 		  it != dwo_file->cus.end ())
-		dwo_cutu = *it;
+		dwo_cutu = it->get ();
 	    }
 
 	  if (dwo_cutu != NULL)
@@ -8075,8 +8123,8 @@ queue_and_load_all_dwo_tus (dwarf2_cu *cu)
 
   dwo_file = dwo_unit->dwo_file;
 
-  for (struct dwo_unit *unit : dwo_file->tus)
-    queue_and_load_dwo_tu (unit, cu);
+  for (const dwo_unit_up &unit : dwo_file->tus)
+    queue_and_load_dwo_tu (unit.get (), cu);
 }
 
 /* Read in various DIEs.  */
@@ -9974,6 +10022,29 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
     }
 }
 
+/* A helper that computes the location of a field.  The CU and the
+   DW_TAG_member DIE are passed in.  The results are stored in
+   *FP.  */
+
+static void
+compute_field_location (dwarf2_cu *cu, die_info *die, field *fp)
+{
+  /* Get type of field.  */
+  fp->set_type (die_type (die, cu));
+
+  fp->set_loc_bitpos (0);
+
+  /* Get bit size of field (zero if none).  */
+  attribute *attr = dwarf2_attr (die, DW_AT_bit_size, cu);
+  if (attr != nullptr)
+    fp->set_bitsize (attr->unsigned_constant ().value_or (0));
+  else
+    fp->set_bitsize (0);
+
+  /* Get bit offset of field.  */
+  handle_member_location (die, cu, fp);
+}
+
 /* Add an aggregate field to the field list.  */
 
 static void
@@ -10029,20 +10100,7 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 	}
       /* Data member other than a C++ static data member.  */
 
-      /* Get type of field.  */
-      fp->set_type (die_type (die, cu));
-
-      fp->set_loc_bitpos (0);
-
-      /* Get bit size of field (zero if none).  */
-      attr = dwarf2_attr (die, DW_AT_bit_size, cu);
-      if (attr != nullptr)
-	fp->set_bitsize (attr->unsigned_constant ().value_or (0));
-      else
-	fp->set_bitsize (0);
-
-      /* Get bit offset of field.  */
-      handle_member_location (die, cu, fp);
+      compute_field_location (cu, die, fp);
 
       /* Get name of field.  */
       fieldname = dwarf2_name (die, cu);
@@ -11221,54 +11279,19 @@ handle_struct_member_die (struct die_info *child_die, struct type *type,
     handle_variant (child_die, type, fi, template_args, cu);
 }
 
-/* Create a property baton for a field of the struct type currently
-   being processed.  OFFSET is the DIE offset of the field in the
-   structure.  If OFFSET is found among the fields that have already
-   been seen, then a new property baton is allocated on the objfile
-   obstack and returned.  The baton isn't fully filled in -- it will
-   be post-processed once the fields are finally created; see
-   update_field_batons.  If OFFSET is not found, NULL is returned.  */
+/* Create a property baton for a field.  DIE is the field's DIE.  The
+   baton's "field" member is filled in, but the other members of the
+   baton are not.  The new property baton is returned.  */
 
 static dwarf2_property_baton *
-find_field_create_baton (dwarf2_cu *cu, sect_offset offset)
+find_field_create_baton (dwarf2_cu *cu, die_info *die)
 {
-  field_info *fi = cu->field_info;
-  /* Defensive programming in case we see unusual DWARF.  */
-  if (fi == nullptr)
-    return nullptr;
-  for (const auto &fld : fi->fields)
-    if (fld.offset == offset)
-      {
-	dwarf2_property_baton *result
-	  = XOBNEW (&cu->per_objfile->objfile->objfile_obstack,
-		    struct dwarf2_property_baton);
-	fi->field_batons[result] = offset;
-	return result;
-      }
-  return nullptr;
-}
-
-/* Update all the stored field property batons.  FI is the field info
-   for the structure being created.  TYPE is the corresponding struct
-   type with its fields already filled in.  This fills in the correct
-   field for each baton that was stored while processing this
-   type.  */
-
-static void
-update_field_batons (field_info *fi, struct type *type)
-{
-  int n_bases = fi->baseclasses.size ();
-  for (auto &[baton, offset] : fi->field_batons)
-    {
-      for (int i = 0; i < fi->fields.size (); ++i)
-	{
-	  if (fi->fields[i].offset == offset)
-	    {
-	      baton->field = &type->field (n_bases + i);
-	      break;
-	    }
-	}
-    }
+  dwarf2_property_baton *result
+    = XOBNEW (&cu->per_objfile->objfile->objfile_obstack,
+	      struct dwarf2_property_baton);
+  memset (&result->field, 0, sizeof (result->field));
+  compute_field_location (cu, die, &result->field);
+  return result;
 }
 
 /* Finish creating a structure or union type, including filling in its
@@ -11292,9 +11315,6 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
       struct field_info fi;
       std::vector<struct symbol *> template_args;
 
-      scoped_restore save_field_info
-	= make_scoped_restore (&cu->field_info, &fi);
-
       for (die_info *child_die : die->children ())
 	handle_struct_member_die (child_die, type, &fi, &template_args, cu);
 
@@ -11316,11 +11336,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 
       /* Attach fields and member functions to the type.  */
       if (fi.nfields () > 0)
-	{
-	  dwarf2_attach_fields_to_type (&fi, type, cu);
-	  update_field_batons (&fi, type);
-	}
-
+	dwarf2_attach_fields_to_type (&fi, type, cu);
       if (!fi.fnfieldlists.empty ())
 	{
 	  dwarf2_attach_fn_fields_to_type (&fi, type, cu);
@@ -13935,13 +13951,12 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	  case DW_AT_data_member_location:
 	  case DW_AT_data_bit_offset:
 	    {
-	      baton = find_field_create_baton (cu, target_die->sect_off);
+	      baton = find_field_create_baton (cu, target_die);
 	      if (baton == nullptr)
 		return 0;
 
 	      baton->property_type = read_type_die (target_die->parent,
 						    target_cu);
-	      baton->field = nullptr;
 	      prop->set_field (baton);
 	      break;
 	    }

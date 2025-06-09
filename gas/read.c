@@ -234,7 +234,6 @@ static unsigned int bundle_lock_depth;
 #endif
 
 static void do_s_func (int end_p, const char *default_prefix);
-static void s_align (int, int);
 static void s_altmacro (int);
 static void s_bad_end (int);
 static void s_reloc (int);
@@ -668,12 +667,15 @@ start_bundle (void)
 {
   fragS *frag = frag_now;
 
-  frag_align_code (0, 0);
+  frag_align_code (bundle_align_p2, 0);
 
   while (frag->fr_type != rs_align_code)
     frag = frag->fr_next;
 
   gas_assert (frag != frag_now);
+
+  /* Set initial alignment to zero.  */
+  frag->fr_offset = 0;
 
   return frag;
 }
@@ -721,9 +723,9 @@ finish_bundle (fragS *frag, unsigned int size)
 
   if (size > 1)
     {
-      /* If there is more than a single byte, then we need to set up the
-	 alignment frag.  Otherwise we leave it at its initial state from
-	 calling frag_align_code (0, 0), so that it does nothing.  */
+      /* If there is more than a single byte, then we need to set up
+	 the alignment frag.  Otherwise we leave it at its initial
+	 state with zero alignment so that it does nothing.  */
       frag->fr_offset = bundle_align_p2;
       frag->fr_subtype = size - 1;
     }
@@ -1514,13 +1516,14 @@ s_abort (int ignore ATTRIBUTE_UNUSED)
   as_fatal (_(".abort detected.  Abandoning ship."));
 }
 
+#ifndef TC_ALIGN_LIMIT
+#define TC_ALIGN_LIMIT (stdoutput->arch_info->bits_per_address - 1)
+#endif
+
 /* Handle the .align pseudo-op.  A positive ARG is a default alignment
    (in bytes).  A negative ARG is the negative of the length of the
    fill pattern.  BYTES_P is non-zero if the alignment value should be
    interpreted as the byte boundary, rather than the power of 2.  */
-#ifndef TC_ALIGN_LIMIT
-#define TC_ALIGN_LIMIT (stdoutput->arch_info->bits_per_address - 1)
-#endif
 
 static void
 s_align (signed int arg, int bytes_p)
@@ -1573,7 +1576,8 @@ s_align (signed int arg, int bytes_p)
   if (align > align_limit)
     {
       align = align_limit;
-      as_warn (_("alignment too large: %u assumed"), align_limit);
+      as_warn (_("alignment too large: %u assumed"),
+	       bytes_p ? 1u << align_limit : align_limit);
     }
 
   if (*input_line_pointer != ',')
@@ -1598,7 +1602,13 @@ s_align (signed int arg, int bytes_p)
       else
 	{
 	  ++input_line_pointer;
-	  max = get_absolute_expression ();
+	  offsetT val = get_absolute_expression ();
+	  max = val;
+	  if (val < 0 || max != (valueT) val)
+	    {
+	      as_warn (_("ignoring out of range alignment maximum"));
+	      max = 0;
+	    }
 	}
     }
 
@@ -2251,8 +2261,8 @@ void
 s_fill (int ignore ATTRIBUTE_UNUSED)
 {
   expressionS rep_exp;
-  long size = 1;
-  long fill = 0;
+  offsetT size = 1;
+  valueT fill = 0;
   char *p;
 
 #ifdef md_flush_pending_output
@@ -2318,7 +2328,7 @@ s_fill (int ignore ATTRIBUTE_UNUSED)
   if (size && !need_pass_2)
     {
       if (now_seg == absolute_section)
-	abs_section_offset += rep_exp.X_add_number * size;
+	abs_section_offset += (valueT) rep_exp.X_add_number * size;
 
       if (rep_exp.X_op == O_constant)
 	{
@@ -2361,7 +2371,7 @@ s_fill (int ignore ATTRIBUTE_UNUSED)
 	 bytes from a 4-byte expression and they forgot to sign
 	 extend.  */
 #define BSD_FILL_SIZE_CROCK_4 (4)
-      md_number_to_chars (p, (valueT) fill,
+      md_number_to_chars (p, fill,
 			  (size > BSD_FILL_SIZE_CROCK_4
 			   ? BSD_FILL_SIZE_CROCK_4
 			   : (int) size));
@@ -3296,6 +3306,7 @@ assign_symbol (char *name, int mode)
 	 retain the value of the symbol at the point of use.  */
       else if (S_IS_VOLATILE (symbolP))
 	symbolP = symbol_clone (symbolP, 1);
+      S_CLEAR_WEAKREFR (symbolP);
     }
 
   if (mode == 0)
@@ -3610,6 +3621,13 @@ s_nop (int ignore ATTRIBUTE_UNUSED)
 	     && frag_off + frag_now_fix () < start_off + exp.X_add_number);
 }
 
+/* Use this to specify the amount of memory allocated for representing
+   the nops.  Needs to be large enough to hold any fixed size prologue
+   plus the replicating portion.  */
+#ifndef MAX_MEM_FOR_RS_SPACE_NOP
+# define MAX_MEM_FOR_RS_SPACE_NOP 1
+#endif
+
 void
 s_nops (int ignore ATTRIBUTE_UNUSED)
 {
@@ -3658,8 +3676,7 @@ s_nops (int ignore ATTRIBUTE_UNUSED)
   /* Store the no-op instruction control byte in the first byte of frag.  */
   char *p;
   symbolS *sym = make_expr_symbol (&exp);
-  p = frag_var (rs_space_nop, 1, 1, (relax_substateT) 0,
-		sym, (offsetT) 0, (char *) 0);
+  p = frag_var (rs_space_nop, MAX_MEM_FOR_RS_SPACE_NOP, 1, 0, sym, 0, NULL);
   *p = val.X_add_number;
 }
 

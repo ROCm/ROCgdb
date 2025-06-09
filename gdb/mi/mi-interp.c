@@ -36,7 +36,7 @@
 #include "mi-common.h"
 #include "observable.h"
 #include "gdbthread.h"
-#include "solist.h"
+#include "solib.h"
 #include "objfiles.h"
 #include "tracepoint.h"
 #include "cli-out.h"
@@ -730,9 +730,9 @@ mi_output_solib_attribs_1 (ui_out *uiout, const solib &solib,
 {
   gdbarch *gdbarch = current_inferior ()->arch ();
 
-  uiout->field_string ("id", solib.so_original_name);
-  uiout->field_string ("target-name", solib.so_original_name);
-  uiout->field_string ("host-name", solib.so_name);
+  uiout->field_string ("id", solib.original_name);
+  uiout->field_string ("target-name", solib.original_name);
+  uiout->field_string ("host-name", solib.name);
   if (include_symbols_loaded_p)
     uiout->field_signed ("symbols-loaded", solib.symbols_loaded);
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))

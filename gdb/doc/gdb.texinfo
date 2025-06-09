@@ -3874,7 +3874,7 @@ Thread 1 "main" received signal SIGINT, Interrupt.
 @table @code
 @anchor{info_threads}
 @kindex info threads
-@item info threads @r{[}-gid@r{]} @r{[}@var{thread-id-list}@r{]}
+@item info threads @r{[}-gid@r{]} @r{[}-stopped@r{]} @r{[}-running@r{]} @r{[}@var{thread-id-list}@r{]}
 
 Display information about one or more threads.  With no arguments
 displays information about all threads.  You can specify the list of
@@ -3923,8 +3923,16 @@ If you're debugging multiple inferiors, @value{GDBN} displays thread
 IDs using the qualified @var{inferior-num}.@var{thread-num} format.
 Otherwise, only @var{thread-num} is shown.
 
-If you specify the @w{@option{-gid}} option, @value{GDBN} displays a
-column indicating each thread's global thread ID:
+If you specify the @samp{-stopped} option, @value{GDBN} filters the
+output of the command to print the stopped threads only.  Similarly,
+if you specify the @samp{-running} option, @value{GDBN} filters the
+output to print the running threads only.  These options can be
+helpful to reduce the output list if there is a large number of
+threads.  If you specify both options, @value{GDBN} prints both
+stopped and running threads.
+
+If you specify the @samp{-gid} option, @value{GDBN} displays a column
+indicating each thread's global thread ID:
 
 @smallexample
 (@value{GDBP}) info threads -gid
@@ -44647,7 +44655,7 @@ libpython is present and found at configure time.)  Python makes
 @value{GDBN} scripting much more powerful than the restricted CLI
 scripting language.  If your host does not have Python installed, you
 can find it on @url{http://www.python.org/download/}.  The oldest version
-of Python supported by GDB is 3.0.1.  The optional argument @var{python}
+of Python supported by GDB is 3.4.  The optional argument @var{python}
 is used to find the Python headers and libraries.  It can be either
 the name of a Python executable, or the name of the directory in which
 Python is installed.

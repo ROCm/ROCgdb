@@ -28,7 +28,6 @@
 #include "inferior.h"
 #include "observable.h"
 #include "solib.h"
-#include "solist.h"
 #include "symfile.h"
 
 #include <unordered_map>
@@ -146,7 +145,7 @@ static void rocm_solib_clear_solib (program_space *pspace);
 static void rocm_solib_create_inferior_hook (int from_tty);
 static owning_intrusive_list<solib> rocm_solib_current_sos ();
 static int rocm_solib_open_symbol_file_object (int from_tty);
-static int rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc);
+static bool rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc);
 static gdb_bfd_ref_ptr rocm_solib_bfd_open (const char *pathname);
 static int rocm_solib_same (const solib &gdb, const solib &inferior);
 static int rocm_solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size);
@@ -254,10 +253,10 @@ rocm_solib_clear_solib (program_space *pspace)
     }
 }
 
-/* Create so_list objects from rocm_so objects in SOS.  */
+/* Create solib objects from rocm_so objects in SOS.  */
 
 static owning_intrusive_list<solib>
-so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
+solibs_from_rocm_sos (const std::vector<rocm_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -266,8 +265,8 @@ so_list_from_rocm_sos (const std::vector<rocm_so> &sos)
       auto &newobj = dst.emplace_back ();
 
       newobj.lm_info = std::make_unique<lm_info_rocm> (*so.lm_info);
-      newobj.so_name = so.name;
-      newobj.so_original_name = so.unique_name;
+      newobj.name = so.name;
+      newobj.original_name = so.unique_name;
       newobj.provider = &rocm_solib_ops;
     }
 
@@ -281,7 +280,7 @@ static owning_intrusive_list<solib>
 rocm_solib_current_sos ()
 {
   return
-    so_list_from_rocm_sos (get_solib_info (current_inferior ())->solib_list);
+    solibs_from_rocm_sos (get_solib_info (current_inferior ())->solib_list);
 }
 
 namespace {
@@ -794,7 +793,7 @@ rocm_solib_open_symbol_file_object (int from_tty)
   return false;
 }
 
-static int
+static bool
 rocm_solib_in_dynsym_resolve_code (CORE_ADDR pc)
 {
   return false;
@@ -810,7 +809,7 @@ rocm_solib_same (const solib &gdb, const solib &inferior)
   lm_info_rocm *gdb_li = static_cast<lm_info_rocm *> (gdb.lm_info.get ());
   lm_info_rocm *inf_li = static_cast<lm_info_rocm *> (inferior.lm_info.get ());
 
-  return (gdb.so_original_name == inferior.so_original_name
+  return (gdb.original_name == inferior.original_name
 	  && gdb_li->l_addr == inf_li->l_addr);
 }
 

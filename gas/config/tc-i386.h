@@ -230,9 +230,6 @@ if ((n)									\
     goto around;							\
   }
 
-#define MAX_MEM_FOR_RS_ALIGN_CODE \
-  (alignment ? ((size_t) 1 << alignment) - 1 : (size_t) 1)
-
 extern void i386_cons_align (int);
 #define md_cons_align(nbytes) i386_cons_align (nbytes)
 
@@ -379,17 +376,43 @@ extern void i386_generate_nops (fragS *, char *, offsetT, int);
 #define md_generate_nops(frag, where, amount, control) \
   i386_generate_nops ((frag), (where), (amount), (control))
 
-#define HANDLE_ALIGN(sec, fragP)						\
+#define HANDLE_ALIGN(sec, fragP) \
 if (fragP->fr_type == rs_align_code) 					\
   {									\
     offsetT __count = (fragP->fr_next->fr_address			\
 		       - fragP->fr_address				\
 		       - fragP->fr_fix);				\
-    if (__count > 0							\
-	&& (unsigned int) __count <= fragP->tc_frag_data.max_bytes)	\
-      md_generate_nops (fragP, fragP->fr_literal + fragP->fr_fix,	\
-			__count, 0);					\
+    if (__count > 0)							\
+      {									\
+	know (fragP->tc_frag_data.max_bytes >= (valueT) __count		\
+	      || (fragP->tc_frag_data.max_bytes				\
+		  >= MAX_MEM_FOR_RS_ALIGN_CODE (fragP->fr_offset,	\
+						fragP->fr_subtype)));	\
+	md_generate_nops (fragP, fragP->fr_literal + fragP->fr_fix,	\
+			  __count, 0);					\
+      }									\
   }
+/* Possible plain nop, branch, twice largest nop less 1.
+   Yes, the branch might be one byte longer in CODE_16BIT but then the
+   largest nop is smaller.  */
+#define MAX_MEM_FOR_RS_SPACE_NOP (1 + 5 + 2 * 15 - 1)
+
+static inline unsigned int
+max_mem_for_rs_align_code (unsigned int p2align, unsigned int max)
+{
+  unsigned int bytes = 1;
+  if (p2align != 0)
+    {
+      bytes = MAX_MEM_FOR_RS_SPACE_NOP;
+      if (bytes > (1ull << p2align) - 1)
+	bytes = (1ull << p2align) - 1;
+      if (max != 0 && bytes > max)
+	bytes = max;
+    }
+  return bytes;
+}
+#define MAX_MEM_FOR_RS_ALIGN_CODE(p2align, max) \
+  max_mem_for_rs_align_code (p2align, max)
 
 /* We want .cfi_* pseudo-ops for generating unwind info.  */
 #define TARGET_USE_CFIPOP 1
@@ -413,6 +436,9 @@ extern void tc_x86_frame_initial_instructions (void);
 #define REG_FP 6
 /* DWARF register number of the stack-pointer register in 64-bit mode.  */
 #define REG_SP 7
+/* DWARF register number of the (pseudo) return address register in 64-bit
+   mode.  This is the same as reg RIP in i386-reg.tbl.  */
+#define REG_RA 16
 
 #define md_elf_section_type(str,len) i386_elf_section_type (str, len)
 extern int i386_elf_section_type (const char *, size_t);
@@ -455,12 +481,18 @@ extern bool x86_support_sframe_p (void);
 #define support_sframe_p x86_support_sframe_p
 
 /* The stack pointer DWARF register number for SFrame CFA tracking.  */
-extern unsigned int x86_sframe_cfa_sp_reg;
+extern const unsigned int x86_sframe_cfa_sp_reg;
 #define SFRAME_CFA_SP_REG x86_sframe_cfa_sp_reg
 
 /* The frame pointer DWARF register number for SFrame CFA and FP tracking.  */
-extern unsigned int x86_sframe_cfa_fp_reg;
+extern const unsigned int x86_sframe_cfa_fp_reg;
 #define SFRAME_CFA_FP_REG x86_sframe_cfa_fp_reg
+
+/* The return address DWARF register number for SFrame purposes.  Although for
+   AMD64, RA tracking is disabled, specific constructs, like for indicating
+   the _start function, may use it.  */
+extern const unsigned int x86_sframe_cfa_ra_reg;
+#define SFRAME_CFA_RA_REG x86_sframe_cfa_ra_reg
 
 /* Whether SFrame return address tracking is needed.  */
 extern bool x86_sframe_ra_tracking_p (void);

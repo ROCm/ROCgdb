@@ -1022,6 +1022,12 @@ static const struct elf_reloc_map riscv_reloc_map[] =
   { BFD_RELOC_RISCV_SUB_ULEB128, R_RISCV_SUB_ULEB128 },
 };
 
+struct riscv_profiles
+{
+  const char *profile_name;
+  const char *profile_string;
+};
+
 /* Given a BFD reloc type, return a howto structure.  */
 
 reloc_howto_type *
@@ -1206,6 +1212,9 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xsfvqmaccdod", "+zve32x,+zvl128b", check_implicit_always},
   {"xsfvfnrclipxfqf", "+zve32f", check_implicit_always},
 
+  {"xtheadvector", "+zicsr", check_implicit_always},
+  {"xtheadzvamo", "+zaamo", check_implicit_always},
+
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvfh", "+zvfhmin,+zfhmin", check_implicit_always},
   {"zvfhmin", "+zve32f", check_implicit_always},
@@ -1239,6 +1248,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
 
   {"zicfilp", "+zicsr", check_implicit_always},
   {"zicfiss", "+zimop,+zicsr", check_implicit_always},
+  {"zclsd", "+zca,+zilsd", check_implicit_always},
 
   {"sha", "+h,+ssstateen,+shcounterenw,+shvstvala,+shtvala,+shvstvecd,+shvsatpa,+shgatpa", check_implicit_always},
 
@@ -1279,6 +1289,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvks", "+zvksed,+zvksh,+zvkb,+zvkt", check_implicit_always},
 
   {"smaia", "+ssaia", check_implicit_always},
+  {"smcdeleg", "+ssccfg", check_implicit_always},
   {"smcsrind", "+sscsrind", check_implicit_always},
   {"smcntrpmf", "+zicsr", check_implicit_always},
   {"smctr", "+zicsr", check_implicit_always},
@@ -1289,6 +1300,7 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"smmpm", "+zicsr", check_implicit_always},
 
   {"ssaia", "+zicsr", check_implicit_always},
+  {"ssccfg", "+sscsrind", check_implicit_always},
   {"sscsrind", "+zicsr", check_implicit_always},
   {"sscofpmf", "+zicsr", check_implicit_always},
   {"sscounterenw", "+zicsr", check_implicit_always},
@@ -1305,6 +1317,47 @@ static struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"svadu", "+zicsr", check_implicit_always},
   {"svbare", "+zicsr", check_implicit_always},
   {NULL, NULL, NULL}
+};
+
+/* This table records the mapping form RISC-V Profiles into march string.  */
+static struct riscv_profiles riscv_profiles_table[] =
+{
+  /* RVI20U only contains the base extension 'i' as mandatory extension.  */
+  {"rvi20u64", "rv64i"},
+  {"rvi20u32", "rv32i"},
+
+  /* RVA20U contains the 'i,m,a,f,d,c,zicsr,zicntr,ziccif,ziccrse,ziccamoa,
+     zicclsm,za128rs' as mandatory extensions.  */
+  {"rva20u64", "rv64imafdc_zicsr_zicntr_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_za128rs"},
+
+  /* RVA22U contains the 'i,m,a,f,d,c,zicsr,zihintpause,zba,zbb,zbs,zicntr,
+     zihpm,ziccif,ziccrse,ziccamoa, zicclsm,zic64b,za64rs,zicbom,zicbop,zicboz,
+     zfhmin,zkt' as mandatory extensions.  */
+  {"rva22u64", "rv64imafdc_zicsr_zicntr_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
+   "_zicboz_zfhmin_zkt"},
+
+  /* RVA23 contains all mandatory base ISA for RVA22U64 and the new extension
+     'v,zihintntl,zvfhmin,zvbb,zvkt,zicond,zimop,zcmop,zfa,zawrs' as mandatory
+     extensions.  */
+  {"rva23u64", "rv64imafdcv_zicsr_zicntr_zihpm_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
+   "_zicboz_zfhmin_zkt_zvfhmin_zvbb_zvkt_zihintntl_zicond_zimop_zcmop_zcb"
+   "_zfa_zawrs"},
+
+  /* RVB23 contains all mandatory base ISA for RVA22U64 and the new extension
+     'zihintntl,zicond,zimop,zcmop,zfa,zawrs' as mandatory
+     extensions.  */
+  {"rvb23u64", "rv64imafdc_zicsr_zicntr_zihpm_ziccif_ziccrse_ziccamoa"
+   "_zicclsm_zic64b_za64rs_zihintpause_zba_zbb_zbs_zicbom_zicbop"
+   "_zicboz_zfhmin_zkt_zihintntl_zicond_zimop_zcmop_zcb"
+   "_zfa_zawrs"},
+
+  /* Currently we do not define S/M mode Profiles.  */
+
+  /* Terminate the list.  */
+  {NULL, NULL}
 };
 
 /* For default_enable field, decide if the extension should
@@ -1382,6 +1435,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zimop",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zicfiss",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zicfilp",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zilsd",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zmmul",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"za64rs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"za128rs",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
@@ -1462,6 +1516,7 @@ static struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zcmop",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcmp",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {"zcmt",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
+  {"zclsd",		ISA_SPEC_CLASS_DRAFT,		1, 0,  0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1475,6 +1530,7 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"shvstvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shvstvecd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"smcdeleg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smcsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smcntrpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1483,6 +1539,7 @@ static struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"smstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smdbltrp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"ssccfg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssccptr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sscsrind",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sscofpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1965,10 +2022,11 @@ riscv_parsing_subset_version (const char *p,
 static const char *
 riscv_parse_extensions (riscv_parse_subset_t *rps,
 			const char *arch,
-			const char *p)
+			const char *p,
+			bool profile)
 {
-  /* First letter must start with i, e or g.  */
-  if (*p != 'e' && *p != 'i' && *p != 'g')
+  /* First letter must start with i, e, g or a profile.  */
+  if (*p != 'e' && *p != 'i' && *p != 'g' && !profile)
     {
       rps->error_handler
 	(_("%s: first ISA extension must be `e', `i' or `g'"),
@@ -2152,10 +2210,19 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "xtheadvector", &subset)
-      && riscv_lookup_subset (rps->subset_list, "v", &subset))
+      && riscv_lookup_subset (rps->subset_list, "zve32x", &subset))
     {
       rps->error_handler
-	(_("`xtheadvector' is conflict with the `v' extension"));
+	(_("`xtheadvector' is conflict with the `v/zve32x' extension"));
+      no_conflict = false;
+    }
+  if (riscv_lookup_subset (rps->subset_list, "zclsd", &subset)
+      && ((riscv_lookup_subset (rps->subset_list, "c", &subset)
+	   && riscv_lookup_subset (rps->subset_list, "f", &subset))
+	  || riscv_lookup_subset (rps->subset_list, "zcf", &subset)))
+    {
+      rps->error_handler
+	(_("`zclsd' is conflict with the `c+f'/ `zcf' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "ssnpm", &subset) && xlen != 64)
@@ -2237,6 +2304,42 @@ riscv_set_default_arch (riscv_parse_subset_t *rps)
     }
 }
 
+static bool
+riscv_find_profiles (riscv_parse_subset_t *rps, const char **pp)
+{
+  const char *p = *pp;
+
+  /* Checking if input string contains a Profiles.
+     There are two cases use Profiles in -march option:
+
+      1. Only use Profiles in '-march' as input
+      2. Mixed Profiles with other extensions
+
+      Use '_' to split Profiles and other extensions.  */
+
+  for (int i = 0; riscv_profiles_table[i].profile_name != NULL; ++i)
+    {
+      /* Find profile at the begin.  */
+      if (startswith (p, riscv_profiles_table[i].profile_name))
+	{
+	  /* Handle the profile string.  */
+	  riscv_parse_subset (rps, riscv_profiles_table[i].profile_string);
+	  p += strlen (riscv_profiles_table[i].profile_name);
+	  /* Handle string after profiles if exists.  If missing underline
+	     bewteen profile and other extensions, warn the user but not deal
+	     as an error.  */
+	  if (*p != '\0' && *p != '_')
+	    _bfd_error_handler
+	      (_("Warning: should use \"_\" to contact Profiles with other "
+		 "extensions"));
+	  *pp = p;
+	  return true;
+	}
+    }
+  /* Not found profile, return directly.  */
+  return false;
+}
+
 /* Function for parsing ISA string.
 
    Return Value:
@@ -2274,8 +2377,14 @@ riscv_parse_subset (riscv_parse_subset_t *rps,
 	}
     }
 
+  bool profile = false;
   p = arch;
-  if (startswith (p, "rv32"))
+  if (riscv_find_profiles (rps, &p))
+    {
+      /* Check if using Profiles.  */
+      profile = true;
+    }
+  else if (startswith (p, "rv32"))
     {
       *rps->xlen = 32;
       p += 4;
@@ -2296,13 +2405,13 @@ riscv_parse_subset (riscv_parse_subset_t *rps,
 	 string is empty.  */
       if (strlen (arch))
 	rps->error_handler (
-	  _("%s: ISA string must begin with rv32 or rv64"),
+	  _("%s: ISA string must begin with rv32, rv64 or Profiles"),
 	  arch);
       return false;
     }
 
   /* Parse single standard and prefixed extensions.  */
-  if (riscv_parse_extensions (rps, arch, p) == NULL)
+  if (riscv_parse_extensions (rps, arch, p, profile) == NULL)
     return false;
 
   /* Finally add implicit extensions according to the current
@@ -2826,6 +2935,10 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_SMCTR_OR_SSCTR:
       return (riscv_subset_supports (rps, "smctr")
 	      || riscv_subset_supports (rps, "ssctr"));
+    case INSN_CLASS_ZILSD:
+      return riscv_subset_supports (rps, "zilsd");
+    case INSN_CLASS_ZCLSD:
+      return riscv_subset_supports (rps, "zclsd");
     case INSN_CLASS_SMRNMI:
       return riscv_subset_supports (rps, "smrnmi");
     case INSN_CLASS_SVINVAL:
@@ -3143,6 +3256,10 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zcmt";
     case INSN_CLASS_SMCTR_OR_SSCTR:
       return _("smctr' or `ssctr");
+    case INSN_CLASS_ZILSD:
+     return "zilsd";
+    case INSN_CLASS_ZCLSD:
+      return "zclsd";
     case INSN_CLASS_SMRNMI:
       return "smrnmi";
     case INSN_CLASS_SVINVAL:

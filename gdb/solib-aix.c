@@ -17,7 +17,6 @@
 
 #include "solib-aix.h"
 #include "solib.h"
-#include "solist.h"
 #include "inferior.h"
 #include "gdb_bfd.h"
 #include "objfiles.h"
@@ -482,28 +481,12 @@ solib_aix_current_sos ()
 
       /* Add it to the list.  */
       auto &new_solib = sos.emplace_back ();
-      new_solib.so_original_name = so_name;
-      new_solib.so_name = so_name;
+      new_solib.original_name = so_name;
+      new_solib.name = so_name;
       new_solib.lm_info = std::make_unique<lm_info_aix> (info);
     }
 
   return sos;
-}
-
-/* Implement the "open_symbol_file_object" solib_ops method.  */
-
-static int
-solib_aix_open_symbol_file_object (int from_tty)
-{
-  return 0;
-}
-
-/* Implement the "in_dynsym_resolve_code" solib_ops method.  */
-
-static int
-solib_aix_in_dynsym_resolve_code (CORE_ADDR pc)
-{
-  return 0;
 }
 
 /* Implement the "bfd_open" solib_ops method.  */
@@ -684,8 +667,8 @@ const solib_ops solib_aix_so_ops =
   nullptr,
   solib_aix_solib_create_inferior_hook,
   solib_aix_current_sos,
-  solib_aix_open_symbol_file_object,
-  solib_aix_in_dynsym_resolve_code,
+  nullptr,
+  nullptr,
   solib_aix_bfd_open,
   nullptr,
   nullptr,
