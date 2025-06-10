@@ -3378,13 +3378,12 @@ allocate_signatured_type_table ()
 }
 
 /* A helper for create_debug_types_hash_table.  Read types from SECTION
-   and fill them into TYPES_HTAB.  It will process only type units,
-   therefore DW_UT_type.  */
+   and fill them into DWO_FILE's type unit hash table.  It will process only
+   type units, therefore DW_UT_type.  */
 
 static void
 create_debug_type_hash_table (dwarf2_per_objfile *per_objfile,
-			      struct dwo_file *dwo_file,
-			      dwarf2_section_info *section, htab_up &types_htab,
+			      dwo_file *dwo_file, dwarf2_section_info *section,
 			      rcuh_kind section_kind)
 {
   struct objfile *objfile = per_objfile->objfile;
@@ -3445,8 +3444,8 @@ create_debug_type_hash_table (dwarf2_per_objfile *per_objfile,
 	  continue;
 	}
 
-      if (types_htab == NULL)
-	types_htab = allocate_dwo_unit_table ();
+      if (dwo_file->tus == nullptr)
+	dwo_file->tus = allocate_dwo_unit_table ();
 
       dwo_tu = OBSTACK_ZALLOC (&per_objfile->per_bfd->obstack, dwo_unit);
       dwo_tu->dwo_file = dwo_file;
@@ -3456,7 +3455,7 @@ create_debug_type_hash_table (dwarf2_per_objfile *per_objfile,
       dwo_tu->sect_off = sect_off;
       dwo_tu->length = length;
 
-      slot = htab_find_slot (types_htab.get (), dwo_tu, INSERT);
+      slot = htab_find_slot (dwo_file->tus.get (), dwo_tu, INSERT);
       gdb_assert (slot != NULL);
       if (*slot != NULL)
 	complaint (_("debug type entry at offset %s is duplicate to"
@@ -3478,18 +3477,15 @@ create_debug_type_hash_table (dwarf2_per_objfile *per_objfile,
    (or .debug_types.dwo) section(s).
    DWO_FILE is a pointer to the DWO file object.
 
-   The result is a pointer to the hash table or NULL if there are no types.
-
    Note: This function processes DWO files only, not DWP files.  */
 
 static void
-create_debug_types_hash_table (dwarf2_per_objfile *per_objfile,
-			       struct dwo_file *dwo_file,
-			       gdb::array_view<dwarf2_section_info> type_sections,
-			       htab_up &types_htab)
+create_debug_types_hash_table
+  (dwarf2_per_objfile *per_objfile, dwo_file *dwo_file,
+   gdb::array_view<dwarf2_section_info> type_sections)
 {
   for (dwarf2_section_info &section : type_sections)
-    create_debug_type_hash_table (per_objfile, dwo_file, &section, types_htab,
+    create_debug_type_hash_table (per_objfile, dwo_file, &section,
 				  rcuh_kind::TYPE);
 }
 
@@ -7912,8 +7908,8 @@ create_dwo_cu_reader (const struct die_reader_specs *reader,
    Note: This function processes DWO files only, not DWP files.  */
 
 static void
-create_cus_hash_table (dwarf2_cu *cu, struct dwo_file &dwo_file,
-		       dwarf2_section_info &section, htab_up &cus_htab)
+create_cus_hash_table (dwarf2_cu *cu, dwo_file &dwo_file,
+		       dwarf2_section_info &section)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
@@ -7950,17 +7946,17 @@ create_cus_hash_table (dwarf2_cu *cu, struct dwo_file &dwo_file,
 			      &dwo_file, &read_unit);
       info_ptr += per_cu.length ();
 
-      // If the unit could not be parsed, skip it.
+      /* If the unit could not be parsed, skip it.  */
       if (read_unit.dwo_file == NULL)
 	continue;
 
-      if (cus_htab == NULL)
-	cus_htab = allocate_dwo_unit_table ();
+      if (dwo_file.cus == nullptr)
+	dwo_file.cus = allocate_dwo_unit_table ();
 
       dwo_unit = OBSTACK_ZALLOC (&per_bfd->obstack,
 				 struct dwo_unit);
       *dwo_unit = read_unit;
-      slot = htab_find_slot (cus_htab.get (), dwo_unit, INSERT);
+      slot = htab_find_slot (dwo_file.cus.get (), dwo_unit, INSERT);
       gdb_assert (slot != NULL);
       if (*slot != NULL)
 	{
@@ -9263,17 +9259,16 @@ open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
   dwarf2_locate_dwo_sections (per_objfile->objfile, *dwo_file);
 
   for (dwarf2_section_info &section : dwo_file->sections.infos)
-    create_cus_hash_table (cu, *dwo_file, section, dwo_file->cus);
+    create_cus_hash_table (cu, *dwo_file, section);
 
   if (cu->header.version < 5)
-    {
-      create_debug_types_hash_table (per_objfile, dwo_file.get (),
-				     dwo_file->sections.types, dwo_file->tus);
-    }
+    create_debug_types_hash_table (per_objfile, dwo_file.get (),
+				   dwo_file->sections.types);
   else
     for (dwarf2_section_info &section : dwo_file->sections.infos)
-      create_debug_type_hash_table (per_objfile, dwo_file.get (), &section,
-				    dwo_file->tus, rcuh_kind::COMPILE);
+      create_debug_type_hash_table (per_objfile, dwo_file.get (),
+				    &section,
+				    rcuh_kind::COMPILE);
 
   dwarf_read_debug_printf ("DWO file found: %s", dwo_name);
 
