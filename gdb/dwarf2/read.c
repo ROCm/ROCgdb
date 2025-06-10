@@ -7950,6 +7950,12 @@ create_cus_hash_table (dwarf2_cu *cu, dwo_file &dwo_file,
       if (read_unit.dwo_file == NULL)
 	continue;
 
+      /* DWARF 5 .debug_info.dwo sections may contain some type units.  Skip
+	 everything that is not a compile unit.  */
+      if (const auto ut = reader.cu->header.unit_type;
+	  ut != DW_UT_compile && ut != DW_UT_split_compile)
+	continue;
+
       if (dwo_file.cus == nullptr)
 	dwo_file.cus = allocate_dwo_unit_table ();
 
