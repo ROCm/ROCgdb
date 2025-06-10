@@ -35,19 +35,19 @@ kernel ()
 {
   asm("s_nop	0");
 
-  asm("s_getpc_b64	[s0, s1]\n\t" /* getpc breakpoint here */
-      "s_add_u32	s2, s0, 16\n\t"
-      "s_addc_u32	s3, s1, 0");
+  asm("s_getpc_b64	[s4, s5]\n\t" /* getpc breakpoint here */
+      "s_add_u32	s6, s4, 16\n\t"
+      "s_addc_u32	s7, s5, 0" ::: "s4", "s5", "s6", "s7");
 
-  asm("s_swappc_b64	[s0, s1], [s2, s3]\n\t" /* swappc breakpoint here */
-      "s_trap	2");
+  asm("s_swappc_b64	[s4, s5], [s6, s7]\n\t" /* swappc breakpoint here */
+      "s_trap	2" ::: "s4", "s5");
 
-  asm("s_call_b64	[s0,s1], 1\n\t" /* call breakpoint here */
+  asm("s_call_b64	[s4, s5], 1\n\t" /* call breakpoint here */
       "s_trap	2\n\t"
-      "s_add_u32	s2, s0, 20\n\t"
-      "s_addc_u32	s3, s1, 0");
+      "s_add_u32	s6, s4, 20\n\t"
+      "s_addc_u32	s7, s5, 0" ::: "s4", "s5", "s6", "s7");
 
-  asm("s_setpc_b64	[s2, s3]\n\t" /* setpc breakpoint here */
+  asm("s_setpc_b64	[s6, s7]\n\t" /* setpc breakpoint here */
       "s_trap	2");
 
   asm("s_nop	0"); /* last breakpoint here */

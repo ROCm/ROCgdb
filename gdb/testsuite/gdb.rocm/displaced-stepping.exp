@@ -75,14 +75,14 @@ with_rocm_gpu_lock {
     gdb_continue_to_breakpoint "getpc"
 
     with_test_prefix "getpc" {
-	set_regs { "s0" "s1" } 0 "clear s0,s1"
+	set_regs { "s4" "s5" } 0 "clear s4,s5"
 
 	gdb_test "continue" \
 	    "Continuing.*Breakpoint.*, kernel ().*s_swappc_b64.*" \
 	    "displaced-step s_getpc_b64"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 8)" \
-	    " = true" "check s0,s1"
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == (\$pc - 8)" \
+	    " = true" "check s4,s5"
     }
 
     with_test_prefix "swappc" {
@@ -90,8 +90,8 @@ with_rocm_gpu_lock {
 	    ".*Breakpoint.*, kernel ().*s_call_b64.*" \
 	    "displaced-step s_swappc_b64"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 4)" \
-	    " = true" "check s0,s1"
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == (\$pc - 4)" \
+	    " = true" "check s4,s5"
     }
 
     with_test_prefix "call" {
@@ -99,8 +99,8 @@ with_rocm_gpu_lock {
 	    "Continuing.*Breakpoint.*, kernel ().*s_setpc_b64.*" \
 	    "displaced-step s_call_b64"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 12)" \
-	    " = true" "check s0,s1"
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == (\$pc - 12)" \
+	    " = true" "check s4,s5"
     }
 
     with_test_prefix "setpc" {
