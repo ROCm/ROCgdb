@@ -159,16 +159,9 @@ proc_with_prefix do_attach_failure_tests {} {
 
     # Verify that we can't double attach to the process.
 
-    set test "first attach"
-    gdb_test_multiple "attach $testpid" "$test" {
-	-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*main.*at .*$srcfile:.*$gdb_prompt $" {
-	    pass "$test"
-	}
-	-re "Attaching to program.*`?$escapedbinfile\.exe'?, process $testpid.*\[Switching to thread $testpid\..*\].*$gdb_prompt $" {
-	    # Response expected on Cygwin.
-	    pass "$test"
-	}
-    }
+    gdb_test "attach $testpid" \
+	"Attaching to program.*`?${escapedbinfile}(\.exe)?'?, process $testpid.*main.*at .*$srcfile:.*" \
+	"first attach"
 
     gdb_test "add-inferior" "Added inferior 2.*" "add empty inferior 2"
     gdb_test "inferior 2" "Switching to inferior 2.*" "switch to inferior 2"
@@ -252,16 +245,9 @@ proc_with_prefix do_attach_tests {} {
 	}
     }
 
-    set test "attach1, after setting file"
-    gdb_test_multiple "attach $testpid" "$test" {
-	-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*main.*at .*$srcfile:.*$gdb_prompt $" {
-	    pass "$test"
-	}
-	-re "Attaching to program.*`?$escapedbinfile\.exe'?, process $testpid.*\[Switching to thread $testpid\..*\].*$gdb_prompt $" {
-	    # Response expected on Cygwin
-	    pass "$test"
-	}
-    }
+    gdb_test "attach $testpid" \
+	"Attaching to program.*`?${escapedbinfile}(\.exe)?'?, process $testpid.*main.*at .*$srcfile:.*" \
+	"attach1, after setting file"
 
     # Verify that we can "see" the variable "should_exit" in the
     # program, and that it is zero.

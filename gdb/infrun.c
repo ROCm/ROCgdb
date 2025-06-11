@@ -407,6 +407,19 @@ static process_stratum_target *target_last_proc_target;
 static ptid_t target_last_wait_ptid;
 static struct target_waitstatus target_last_waitstatus;
 
+/* See infrun.h.  */
+
+void
+set_normal_stop_state_just_attached ()
+{
+  stop_print_frame = true;
+  stopped_by_random_signal = 0;
+
+  target_waitstatus status;
+  status.set_ignore ();
+  set_last_target_status (nullptr, minus_one_ptid, status);
+}
+
 void init_thread_stepping_state (struct thread_info *tss);
 
 static const char follow_fork_mode_child[] = "child";

@@ -428,4 +428,8 @@ private:
    input.  */
 extern void reinstall_readline_callback_handler_cleanup ();
 
+/* Set up state for normal_stop after we just attached, on
+   target_attach_no_wait targets.  */
+extern void set_normal_stop_state_just_attached ();
+
 #endif /* GDB_INFRUN_H */

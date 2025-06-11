@@ -2956,7 +2956,10 @@ attach_command (const char *args, int from_tty)
       return;
     }
   else
-    attach_post_wait (from_tty, mode);
+    {
+      set_normal_stop_state_just_attached ();
+      attach_post_wait (from_tty, mode);
+    }
 
   disable_commit_resumed.reset_and_commit ();
 }
