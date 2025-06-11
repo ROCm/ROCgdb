@@ -33,6 +33,7 @@ if ![runto_main] {
     return -1
 }
 
+gdb_test "info queues" "No queues are currently active\\." "info queues, no queues"
 
 # Set breakpoint in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
@@ -159,6 +160,47 @@ gdb_test_sequence "info break" "info break" {
 gdb_test_sequence "info inferiors" "info inferiors" {
     {Num\s+Description\s+Connection\s+Executable}
     {\*\s\d+\s+process\s+\d+}
+}
+
+# Check that "info queues" gives us a non-empty output.
+set seen_header 0
+set queue_ids [list]
+# Contains the per-queue information line (including the leading `*` for the
+# queue the current wave belongs to).
+set queue_info_lines [list]
+
+set table_header_regex "\\s+Target\\s+Id\\s+Type\\s+Read\\s+Write\\s+Size\\s+Address\\s*"
+gdb_test_multiple "info queues" "info queues with queues" {
+    -re $table_header_regex {
+	set seen_header 1
+	exp_continue
+    }
+    -re "\r\n(\\*?\\s*(\\d+)\\s+AMDGPU Queue\\s+\\d+:\\d+ \\(QID \\d+\\)\\s+(HSA|PM4|DMA|XGMI|Unknown)\\s+(\\d+\\s+)?(\\d+\\s+)?\\d+\\s+$::hex)" {
+	lappend queue_ids $expect_out(2,string)
+	lappend queue_info_lines $expect_out(1,string)
+
+	exp_continue
+    }
+    -re -wrap "" {
+	gdb_assert {[llength $queue_ids] > 0 && $seen_header} $gdb_test_name
+    }
+}
+
+# Check that we can get infos for queues individually.
+for { set i 0 } { $i < [llength $queue_ids] } { incr i } {
+    gdb_test "info queue [lindex $queue_ids $i]" \
+	"$table_header_regex\r\n[string_to_regexp [lindex $queue_info_lines $i]].*" \
+	"info queue, queue $i"
+
+}
+
+# Check the path where we provide an invalid queue id.
+# Pick the highest queue_id seen + 1.
+if {[llength $queue_ids] > 0} {
+    set invalid_id [expr [tcl::mathfunc::max {*}$queue_ids] + 1]
+    gdb_test "info queues $invalid_id" \
+	"No active queues match '$invalid_id'\\." \
+	"info queues, no match"
 }
 
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
