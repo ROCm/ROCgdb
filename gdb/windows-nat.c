@@ -321,6 +321,31 @@ static const struct xlate_exception xlate[] =
 #endif /* 0 */
 
 void
+all_windows_threads_iterator::advance ()
+{
+  /* Skip threads owned by targets on the target stack other than
+     windows-nat.  E.g., GPU threads.  */
+  do
+    {
+      ++m_base_iter;
+    }
+  while (m_base_iter != all_non_exited_threads_iterator {}
+	 && as_windows_thread_info (&*m_base_iter) == nullptr);
+}
+
+all_windows_threads_iterator
+all_windows_threads_range::begin () const
+{
+  /* Find the first thread owned by the windows-nat target, if
+     any.  */
+  auto begin = m_base_range.begin ();
+  while (begin != m_base_range.end ()
+	 && as_windows_thread_info (&*begin) == nullptr)
+    ++begin;
+  return all_windows_threads_iterator (begin);
+}
+
+void
 check (BOOL ok, const char *file, int line)
 {
   if (!ok)
@@ -1332,10 +1357,11 @@ windows_nat_target::stop_interrupt (ptid_t ptid, bool stop_on_first_match)
 {
   for (thread_info &thr : all_non_exited_threads (this))
     {
-      if (!thr.ptid.matches (ptid))
+      auto *w_th = as_windows_thread_info (&thr);
+      if (w_th == nullptr || !thr.ptid.matches (ptid))
 	continue;
 
-      if (stop_one_thread (as_windows_thread_info (&thr), SK_EXTERNAL))
+      if (stop_one_thread (w_th, SK_EXTERNAL))
 	{
 	  if (stop_on_first_match)
 	    return;
@@ -1425,7 +1451,8 @@ windows_nat_target::get_windows_debug_event
 	continue;
 
       auto *th = as_windows_thread_info (&thread);
-      if (thread.internal_state () == THREAD_INT_RUNNING
+      if (th != nullptr
+	  && thread.internal_state () == THREAD_INT_RUNNING
 	  && th->suspended
 	  && th->pending_status.kind () != TARGET_WAITKIND_IGNORE)
 	{
@@ -2312,9 +2339,12 @@ windows_nat_target::detach (inferior *inf, int from_tty)
      flag.  */
   for (thread_info &thr : inf->non_exited_threads ())
     {
+      auto *w_th = as_windows_thread_info (&thr);
+      if (w_th == nullptr)
+	continue;
+
       if (thr.internal_state () != THREAD_INT_RUNNING)
 	{
-	  windows_thread_info *w_th = windows_process->find_thread (thr.ptid);
 	  gdb_signal signo = get_detach_signal (this, thr.ptid);
 
 	  if (signo != w_th->last_sig
