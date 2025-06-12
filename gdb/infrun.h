@@ -67,12 +67,11 @@ infrun_debug_show_threads (const char *title, ThreadRange threads)
 
       infrun_debug_printf ("%s:", title);
       for (thread_info *thread : threads)
-	infrun_debug_printf ("  thread %s, executing = %d, resumed = %d, "
+	infrun_debug_printf ("  thread %s, internal_state = %s, "
 			     "state = %s",
 			     thread->ptid.to_string ().c_str (),
-			     thread->executing (),
-			     thread->resumed (),
-			     thread_state_string (thread->state));
+			     thread_int_state_string (thread->internal_state ()),
+			     thread_state_string (thread->state ()));
     }
 }
 
@@ -332,6 +331,12 @@ extern void all_uis_on_sync_execution_starting (void);
 /* In all-stop, restart the target if it had to be stopped to
    detach.  */
 extern void restart_after_all_stop_detach (process_stratum_target *proc_target);
+
+/* While detaching, return the signal PTID was supposed to be resumed
+   with, if it were resumed, so we can pass it down to PTID while
+   detaching.  */
+extern gdb_signal get_detach_signal (process_stratum_target *proc_target,
+				     ptid_t ptid);
 
 /* RAII object to temporarily disable the requirement for target
    stacks to commit their resumed threads.
