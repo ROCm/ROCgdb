@@ -665,15 +665,19 @@ private:
   bool m_report_thread_events = false;
 };
 
-/* Get the windows_thread_info object associated with THR.  */
+/* If THR belongs to the windows-nat target, returns the
+   windows_thread_info object associated with it.  Otherwise returns
+   NULL.  */
 
 static windows_thread_info *
 as_windows_thread_info (thread_info *thr)
 {
   /* Cast to windows_private_thread_info, which inherits from
      private_thread_info, and is implicitly convertible to
-     windows_thread_info, the return type.  */
-  return static_cast<windows_private_thread_info *> (thr->priv.get ());
+     windows_thread_info, the return type.  We use dynamic_cast,
+     because the inferior's thread list may have threads from other
+     targets on the target stack.  */
+  return dynamic_cast<windows_private_thread_info *> (thr->priv.get ());
 }
 
 /* Creates an iterator that works like all_matching_threads_iterator,
@@ -698,7 +702,7 @@ public:
 
   all_windows_threads_iterator &operator++ ()
   {
-    ++m_base_iter;
+    advance ();
     return *this;
   }
 
@@ -709,8 +713,24 @@ public:
   { return !(*this == other); }
 
 private:
+  /* Advance to the next windows-nat thread.  */
+  void advance ();
+
   all_non_exited_threads_iterator m_base_iter;
 };
+
+void
+all_windows_threads_iterator::advance ()
+{
+  /* Skip threads owned by targets on the target stack other than
+     windows-nat.  E.g., GPU threads.  */
+  do
+    {
+      ++m_base_iter;
+    }
+  while (*m_base_iter != nullptr
+	 && as_windows_thread_info (*m_base_iter) == nullptr);
+}
 
 /* The range for all_windows_threads, below.  */
 
@@ -721,14 +741,24 @@ public:
     : m_base_range (base_range)
   {}
 
-  all_windows_threads_iterator begin () const
-  { return all_windows_threads_iterator (m_base_range.begin ()); }
+  all_windows_threads_iterator begin () const;
   all_windows_threads_iterator end () const
   { return all_windows_threads_iterator (m_base_range.end ()); }
 
 private:
   all_non_exited_threads_range m_base_range;
 };
+
+all_windows_threads_iterator
+all_windows_threads_range::begin () const
+{
+  /* Find the first thread owned by the windows-nat target, if
+     any.  */
+  auto begin = m_base_range.begin ();
+  while (*begin != nullptr && as_windows_thread_info (*begin) == nullptr)
+    ++begin;
+  return all_windows_threads_iterator (begin);
+}
 
 /* Return a range that can be used to walk over all non-exited Windows
    threads of all inferiors, with range-for.  */
@@ -2097,7 +2127,8 @@ windows_nat_target::get_windows_debug_event
 	continue;
 
       auto *th = as_windows_thread_info (thread);
-      if (thread->internal_state () == THREAD_INT_RUNNING
+      if (th != nullptr
+	  && thread->internal_state () == THREAD_INT_RUNNING
 	  && th->suspended
 	  && th->pending_status.kind () != TARGET_WAITKIND_IGNORE)
 	{
