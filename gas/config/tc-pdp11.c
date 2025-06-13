@@ -239,12 +239,12 @@ md_number_to_chars (char con[], valueT value, int nbytes)
 
 void
 md_apply_fix (fixS *fixP,
-	       valueT * valP,
-	       segT seg ATTRIBUTE_UNUSED)
+	      valueT *valP,
+	      segT seg ATTRIBUTE_UNUSED)
 {
   valueT code;
   valueT mask;
-  valueT val = * valP;
+  valueT val = *valP;
   char *buf;
   int shift;
   int size;
@@ -710,7 +710,7 @@ md_assemble (char *instruction_string)
 
   c = *p;
   *p = '\0';
-  op = (struct pdp11_opcode *)str_hash_find (insn_hash, str);
+  op = str_hash_find (insn_hash, str);
   *p = c;
   if (op == 0)
     {

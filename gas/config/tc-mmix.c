@@ -835,7 +835,7 @@ md_assemble (char *str)
       *operands++ = '\0';
     }
 
-  instruction = (struct mmix_opcode *) str_hash_find (mmix_opcode_hash, str);
+  instruction = str_hash_find (mmix_opcode_hash, str);
   if (instruction == NULL)
     {
       as_bad (_("unknown opcode: `%s'"), str);
@@ -2426,12 +2426,11 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
 void
 md_apply_fix (fixS *fixP, valueT *valP, segT segment)
 {
-  char *buf  = fixP->fx_where + fixP->fx_frag->fr_literal;
+  char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
   /* Note: use offsetT because it is signed, valueT is unsigned.  */
-  offsetT val  = (offsetT) * valP;
-  segT symsec
-    = (fixP->fx_addsy == NULL
-       ? absolute_section : S_GET_SEGMENT (fixP->fx_addsy));
+  offsetT val = *valP;
+  segT symsec = (fixP->fx_addsy == NULL
+		 ? absolute_section : S_GET_SEGMENT (fixP->fx_addsy));
 
   /* If the fix is relative to a symbol which is not defined, or, (if
      pcrel), not in the same segment as the fix, we cannot resolve it

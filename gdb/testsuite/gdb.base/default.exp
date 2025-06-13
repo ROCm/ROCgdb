@@ -778,7 +778,7 @@ set show_conv_list \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \
 	{$_active_linker_namespaces = 1} \
-	{$_current_linker_namespace = <error: No registers.>}\
+	{$_linker_namespace = <error: No registers.>}\
 	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
     }
 if [allow_python_tests] {

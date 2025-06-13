@@ -1236,7 +1236,7 @@ md_assemble (char *str)
 
   *op_end = 0;  /* Zero-terminate op code string for str_hash_find() call.  */
 
-  opcode = (opcode_entry_type *) str_hash_find (opcode_hash_control, op_start);
+  opcode = str_hash_find (opcode_hash_control, op_start);
 
   if (opcode == NULL)
     {
@@ -1407,7 +1407,7 @@ md_section_align (segT seg, valueT size)
 void
 md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
 {
-  long val = * (long *) valP;
+  offsetT val = *valP;
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
 
   switch (fixP->fx_r_type)

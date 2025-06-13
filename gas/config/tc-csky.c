@@ -632,102 +632,120 @@ struct csky_cpu_info
 
 
 #define CSKY_FEATURES_DEF_NULL()            \
-   {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+   {{0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_e(isa_e)          \
    {FEATURE_DSP_EXT(isa_e),                 \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_t(isa_t)          \
    {FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_f(isa_f)          \
    {FEATURE_FLOAT(isa_f),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_v(isa_v)          \
    {FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_ef(isa_e, isa_f)  \
    {FEATURE_DSP_EXT(isa_e),                 \
     FEATURE_FLOAT(isa_f),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_jt(isa_j, isa_t)  \
    {FEATURE_JAVA(isa_j),                    \
     FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_efht(isa_e, isa_f, isa_h, isa_t) \
    {FEATURE_DSP_EXT(isa_e),                 \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_SHIELD(isa_h),                  \
     FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0},                                \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_efv(isa_e, isa_f, isa_v) \
    {FEATURE_DSP_EXT(isa_e),                 \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0},                       \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_eft(isa_e, isa_f, isa_t) \
    {FEATURE_DSP_EXT(isa_e),                 \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0},                       \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_d(isa_d) \
-   {FEATURE_DSP(isa_d),             \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+   {FEATURE_DSP(isa_d),                     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0},     \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_df(isa_d, isa_f)  \
-   {FEATURE_DSP(isa_d),             \
-    FEATURE_FLOAT(isa_f),               \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+   {FEATURE_DSP(isa_d),                     \
+    FEATURE_FLOAT(isa_f),                   \
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_ft(isa_f, isa_t)  \
    {FEATURE_FLOAT(isa_f),                   \
     FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_tv(isa_t, isa_v)  \
    {FEATURE_TRUST(isa_t),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_fv(isa_f, isa_v)  \
    {FEATURE_FLOAT(isa_f),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
-
+    {0,0,0}, {0,0,0}, {0,0,0},              \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_dft(isa_d, isa_f, isa_t) \
    {FEATURE_DSP(isa_d),                     \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_TRUST(isa_t),                   \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0},                       \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_dfv(isa_d, isa_f, isa_v) \
    {FEATURE_DSP(isa_d),                     \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0},                       \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_ftv(isa_f, isa_t, isa_v) \
    {FEATURE_FLOAT(isa_f),                   \
     FEATURE_TRUST(isa_t),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0}, {0,0,0},                       \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_FEATURES_DEF_eftv(isa_e, isa_f, isa_t, isa_v) \
    {FEATURE_DSP_EXT(isa_e),                 \
     FEATURE_FLOAT(isa_f),                   \
     FEATURE_TRUST(isa_t),                   \
     FEATURE_VDSP(isa_v),                    \
-    {0}, {0}, {0}, {0}, {0}, {0}}
+    {0,0,0},                                \
+    {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 
 #define CSKY_CPU_REVERISON_r0p0(isa)        \
@@ -740,13 +758,15 @@ struct csky_cpu_info
     {3, 0, isa}
 
 #define CSKY_CPU_REVERISON_RESERVED()  \
-{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+  {{0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, \
+   {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 #define CSKY_CPU_REVERISON_R3(isa1, isa2, isa3) \
   {CSKY_CPU_REVERISON_r1p0(isa1),           \
    CSKY_CPU_REVERISON_r2p0(isa2),           \
    CSKY_CPU_REVERISON_r3p0(isa3),           \
-   {0}, {0}, {0}, {0}, {0}, {0}, {0}}
+   {0,0,0}, {0,0,0},                        \
+   {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}}
 
 /* CSKY cpus table.  */
 const struct csky_cpu_info csky_cpus[] =
@@ -936,7 +956,11 @@ const struct csky_cpu_info csky_cpus[] =
 /* Start of private CPUs.  */
 /* End of private CPUs.  */
 
-  {NULL},
+  {NULL,
+   0,
+   0,
+   CSKY_FEATURES_DEF_NULL(),
+   CSKY_CPU_REVERISON_RESERVED()}
 };
 
 int md_short_jump_size = 2;
@@ -3386,10 +3410,8 @@ parse_opcode (char *str)
   csky_insn.number = csky_count_operands (opcode_end);
 
   /* Find hash by name in csky_macros_hash and csky_opcodes_hash.  */
-  csky_insn.macro = (struct csky_macro_info *) str_hash_find (csky_macros_hash,
-							      macro_name);
-  csky_insn.opcode = (struct csky_opcode *) str_hash_find (csky_opcodes_hash,
-							   name);
+  csky_insn.macro = str_hash_find (csky_macros_hash, macro_name);
+  csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
 
   if (csky_insn.macro == NULL && csky_insn.opcode == NULL)
     return false;
@@ -3614,8 +3636,7 @@ get_operand_value (struct csky_opcode_info *op,
 	  if (val <= 6)
 	    {
 	      const char *name = "movi";
-	      csky_insn.opcode = (struct csky_opcode *)
-		str_hash_find (csky_opcodes_hash, name);
+	      csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
 	      csky_insn.val[csky_insn.idx - 1] = 1 << val;
 	    }
 	  return true;
@@ -3648,8 +3669,7 @@ get_operand_value (struct csky_opcode_info *op,
 	    if (log <= 6)
 	      {
 		const char *name = "movi";
-		csky_insn.opcode = (struct csky_opcode *)
-		  str_hash_find (csky_opcodes_hash, name);
+		csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
 		as_warn (_("translating mgeni to movi"));
 	      }
 	    else
@@ -3686,8 +3706,7 @@ get_operand_value (struct csky_opcode_info *op,
 	  if (mask_val > 0 && mask_val < 8)
 	    {
 	      const char *op_movi = "movi";
-	      csky_insn.opcode = (struct csky_opcode *)
-		str_hash_find (csky_opcodes_hash, op_movi);
+	      csky_insn.opcode = str_hash_find (csky_opcodes_hash, op_movi);
 	      if (csky_insn.opcode == NULL)
 		return false;
 	      csky_insn.val[csky_insn.idx - 1] = (1 << mask_val) - 1;
@@ -3747,8 +3766,7 @@ get_operand_value (struct csky_opcode_info *op,
 	  if (mask_val > 0 && mask_val < 16)
 	    {
 	      const char *op_movi = "movi";
-	      csky_insn.opcode = (struct csky_opcode *)
-		str_hash_find (csky_opcodes_hash, op_movi);
+	      csky_insn.opcode = str_hash_find (csky_opcodes_hash, op_movi);
 	      if (csky_insn.opcode == NULL)
 		return false;
 	      csky_insn.val[csky_insn.idx - 1] = (1 << (mask_val + 1)) - 1;
@@ -6475,8 +6493,7 @@ v1_work_jbsr (void)
     {
       /* Using jsri instruction.  */
       const char *name = "jsri";
-      csky_insn.opcode = (struct csky_opcode *)
-	str_hash_find (csky_opcodes_hash, name);
+      csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
       csky_insn.opcode_idx = 0;
       csky_insn.isize = 2;
 
@@ -6823,8 +6840,7 @@ bool
 v2_work_rotlc (void)
 {
   const char *name = "addc";
-  csky_insn.opcode
-    = (struct csky_opcode *) str_hash_find (csky_opcodes_hash, name);
+  csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
   csky_insn.opcode_idx = 0;
   if (csky_insn.isize == 2)
     {
@@ -6861,8 +6877,7 @@ v2_work_bgeni (void)
       name = "movih";
       val >>= 16;
     }
-  csky_insn.opcode
-    = (struct csky_opcode *) str_hash_find (csky_opcodes_hash, name);
+  csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
   csky_insn.opcode_idx = 0;
   csky_insn.val[1] = val;
 
@@ -6879,8 +6894,7 @@ bool
 v2_work_not (void)
 {
   const char *name = "nor";
-  csky_insn.opcode
-    = (struct csky_opcode *) str_hash_find (csky_opcodes_hash, name);
+  csky_insn.opcode = str_hash_find (csky_opcodes_hash, name);
   csky_insn.opcode_idx = 0;
   if (csky_insn.number == 1)
     {

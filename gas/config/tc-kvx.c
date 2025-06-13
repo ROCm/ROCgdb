@@ -509,7 +509,7 @@ insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
       {
 	char *ilp_save = input_line_pointer;
 	input_line_pointer = tok->tok;
-	expressionS exp = { 0 };
+	expressionS exp;
 	expression (&exp);
 	input_line_pointer = ilp_save;
 
@@ -2524,8 +2524,7 @@ kvx_handle_align (fragS *fragP)
   static unsigned int nop_single = 0;
   if (!nop_single)
     {
-      const struct kvxopc *opcode =
-	(struct kvxopc *) str_hash_find (env.opcode_hash, "nop");
+      const struct kvxopc *opcode = str_hash_find (env.opcode_hash, "nop");
 
       if (opcode == NULL)
 	as_fatal
