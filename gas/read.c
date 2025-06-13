@@ -1437,14 +1437,15 @@ read_a_source_file (const char *name)
 #endif
 }
 
-/* Convert O_constant expression EXP into the equivalent O_big representation.
-   Take the sign of the number from SIGN rather than X_add_number.  */
+/* Convert O_constant expression EXP into the equivalent O_big
+   representation.  */
 
-static void
-convert_to_bignum (expressionS *exp, int sign)
+static bool
+convert_to_bignum (expressionS *exp)
 {
   valueT value;
   unsigned int i;
+  bool sign = !exp->X_unsigned && exp->X_extrabit;
 
   value = exp->X_add_number;
   for (i = 0; i < sizeof (exp->X_add_number) / CHARS_PER_LITTLENUM; i++)
@@ -1458,6 +1459,9 @@ convert_to_bignum (expressionS *exp, int sign)
     generic_bignum[i++] = sign ? LITTLENUM_MASK : 0;
   exp->X_op = O_big;
   exp->X_add_number = i;
+  exp->X_unsigned = !sign;
+
+  return sign;
 }
 
 /* For most MRI pseudo-ops, the line actually ends at the first
@@ -4651,8 +4655,7 @@ emit_expr_with_reloc (expressionS *exp,
      pass to md_number_to_chars, handle it as a bignum.  */
   if (op == O_constant && nbytes > sizeof (valueT))
     {
-      extra_digit = exp->X_unsigned ? 0 : -1;
-      convert_to_bignum (exp, !exp->X_unsigned);
+      extra_digit = -convert_to_bignum (exp);
       op = O_big;
     }
 
@@ -5371,12 +5374,14 @@ emit_leb128_expr (expressionS *exp, int sign)
     }
   else if (op == O_constant
 	   && sign
-	   && (exp->X_add_number < 0) == !exp->X_extrabit)
+	   && (exp->X_unsigned
+	       ? exp->X_add_number < 0
+	       : (exp->X_add_number < 0) != exp->X_extrabit))
     {
       /* We're outputting a signed leb128 and the sign of X_add_number
 	 doesn't reflect the sign of the original value.  Convert EXP
 	 to a correctly-extended bignum instead.  */
-      convert_to_bignum (exp, exp->X_extrabit);
+      convert_to_bignum (exp);
       op = O_big;
     }
 
