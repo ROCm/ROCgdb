@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <list>
 #include <array>
+#include <cassert>
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
