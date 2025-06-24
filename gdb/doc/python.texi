@@ -479,7 +479,7 @@ call this function and will automatically direct the output to the
 relevant stream.
 @end defun
 
-@defun gdb.flush (@r{[}, stream@r{]})
+@defun gdb.flush (@r{[}stream@r{]})
 Flush the buffer of a @value{GDBN} paginated stream so that the
 contents are displayed immediately.  @value{GDBN} will flush the
 contents of a stream automatically when it encounters a newline in the
@@ -507,6 +507,17 @@ stream values are:
 
 Flushing @code{sys.stdout} or @code{sys.stderr} will automatically
 call this function for the relevant stream.
+@end defun
+
+@defun gdb.warning (text)
+Print a warning message to @value{GDBN}'s standard output stream.  The
+warning message is the warning prefix (@pxref{warning-prefix}), the
+string @w{@samp{warning: }}, and then @var{text}, which must be a
+non-empty string.
+
+Due to the warning prefix, @var{text} should not begin with a capital
+letter (except for proper nouns), and @var{text} should end with a
+period.
 @end defun
 
 @defun gdb.target_charset ()
