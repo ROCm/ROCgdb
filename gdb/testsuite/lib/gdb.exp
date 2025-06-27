@@ -1128,6 +1128,7 @@ proc gdb_test_multiple { command message args } {
     global any_spawn_id
 
     set line_by_line 0
+    set lbl_anchor_re ""
     set prompt_regexp ""
     set prompt_anchor 1
     for {set i 0} {$i < [llength $args]} {incr i} {
@@ -1137,6 +1138,7 @@ proc gdb_test_multiple { command message args } {
 	    set prompt_regexp [lindex $args $i]
 	} elseif { $arg == "-lbl" } {
 	    set line_by_line 1
+	    set lbl_anchor_re "^"
 	} elseif { $arg == "-no-prompt-anchor" } {
 	    set prompt_anchor 0
 	} else {
@@ -1395,7 +1397,7 @@ proc gdb_test_multiple { command message args } {
 	    fail "$errmsg"
 	    set result -1
 	}
-	-re "\r\n$prompt_regexp" {
+	-re "${lbl_anchor_re}\r\n$prompt_regexp" {
 	    if {![string match "" $message]} {
 		fail "$message"
 	    }
@@ -2319,7 +2321,9 @@ proc default_gdb_exit {} {
     }
 
     if ![is_remote host] {
-	remote_close host
+	if {[catch { remote_close host } message]} {
+	    warning "closing gdb failed with: $message"
+	}
     }
     unset gdb_spawn_id
     unset ::gdb_tty_name
@@ -5100,6 +5104,40 @@ proc allow_watchpoint_tests {} {
 	# Until the compiler emits proper DWARF for variables.
 	# Otherwise, we'd run into very long timeout sequences,
 	# particularly on tests that use software watchpoints.
+	return 0
+    }
+
+    return 1
+}
+
+# Return whether we allow running fork-related testcases.  Targets
+# that don't even have any concept of fork will just fail to compile
+# the testcases and skip the tests that way if this returns true for
+# them.  Unix targets that do have a fork system call, but don't
+# support intercepting forks will want to return false here, otherwise
+# the testcases that exercise fork may hit a number of long cascading
+# time out sequences.
+
+proc allow_fork_tests {} {
+    if {[istarget "*-*-cygwin*"] || [istarget "*-*-mingw*"]} {
+	return 0
+    }
+
+    return 1
+}
+
+# Return whether we allow running testcases that want to debug
+# multiple inferiors with the same target.  Not all targets support
+# this.  Note that some tests add a second inferior but never start
+# it.  Those tests should not be skipped due to this proc returning
+# false.
+
+proc allow_multi_inferior_tests {} {
+    if {[istarget "*-*-cygwin*"] || [istarget "*-*-mingw*"]} {
+	return 0
+    }
+
+    if {[use_gdb_stub]} {
 	return 0
     }
 
@@ -9411,7 +9449,12 @@ proc core_find_1 {coredir binfile {arg ""}} {
     set found 0
     catch "system \"(cd ${coredir}; ulimit -c unlimited; ${binfile} ${arg}; true) >/dev/null 2>&1\""
     #      remote_exec host "${binfile}"
-    foreach i "${coredir}/core ${coredir}/core.coremaker.c ${binfile}.core" {
+    set binfile_basename [file tail $binfile]
+    foreach i [list \
+		   ${coredir}/core \
+		   ${coredir}/core.coremaker.c \
+		   ${coredir}/${binfile_basename}.core \
+		   ${coredir}/${binfile_basename}.exe.core] {
 	if [remote_file build exists $i] {
 	    remote_exec build "mv $i $destcore"
 	    set found 1

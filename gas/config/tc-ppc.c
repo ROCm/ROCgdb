@@ -3331,8 +3331,8 @@ md_assemble (char *str)
     *s++ = '\0';
 
   /* Look up the opcode in the hash table.  */
-  opcode = (const struct powerpc_opcode *) str_hash_find (ppc_hash, str);
-  if (opcode == (const struct powerpc_opcode *) NULL)
+  opcode = str_hash_find (ppc_hash, str);
+  if (opcode == NULL)
     {
       as_bad (_("unrecognized opcode: `%s'"), str);
       ppc_clear_labels ();
@@ -6964,7 +6964,7 @@ ppc_handle_align (segT sec, struct frag *fragP)
 void
 md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 {
-  valueT value = * valP;
+  valueT value = *valP;
   offsetT fieldval;
   const struct powerpc_operand *operand;
 

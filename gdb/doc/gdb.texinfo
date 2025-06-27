@@ -13194,12 +13194,12 @@ environment variable.
 Number of active linkage namespaces in the inferior.  In systems with no
 support for linkage namespaces, this variable will always be set to @samp{1}.
 
-@vindex $_current_linker_namespace@r{, convenience variable}
-@item $_current_linker_namespace
+@vindex $_linker_namespace@r{, convenience variable}
+@item $_linker_namespace
 The namespace which contains the current location in the inferior.  This
-returns GDB's internal identifier for namespaces, which is @samp{[[@var{n}]]}
-where @var{n} is a zero-based namespace number.  In systems with no support
-for linkage namespaces, this variable will always be set to @samp{[[0]]}.
+returns @value{GDBN}'s internal numbering for the namespace.  In systems with no
+support for linker namespaces, this variable will always be set to
+@samp{0}.
 
 @item $_agent
 The per-inferior heterogeneous agent number of the current thread, or 0
@@ -28092,8 +28092,9 @@ Show whether AArch64 debugging messages are displayed.
 
 @end table
 
-@subsubsection AArch64 SVE.
-@cindex AArch64 SVE.
+@subsubsection AArch64 Scalable Vector Extension
+@cindex Scalable Vector Extension, AArch64
+@cindex SVE, AArch64
 
 When @value{GDBN} is debugging the AArch64 architecture, if the Scalable Vector
 Extension (SVE) is present, then @value{GDBN} will provide the vector registers
@@ -28132,11 +28133,10 @@ internally by @value{GDBN} and the Linux Kernel.
 
 @end itemize
 
-@subsubsection AArch64 SME.
+@subsubsection AArch64 Scalable Matrix Extension
 @anchor{AArch64 SME}
-@cindex SME
-@cindex AArch64 SME
-@cindex Scalable Matrix Extension
+@cindex Scalable Matrix Extension, AArch64
+@cindex SME, AArch64
 
 The Scalable Matrix Extension (@url{https://community.arm.com/arm-community-blogs/b/architectures-and-processors-blog/posts/scalable-matrix-extension-armv9-a-architecture, @acronym{SME}})
 is an AArch64 architecture extension that expands on the concept of the
@@ -28328,11 +28328,10 @@ incorrect values for SVE registers (when in streaming mode).
 This is the same limitation we have for the @acronym{SVE} registers, and there
 are plans to address this limitation going forward.
 
-@subsubsection AArch64 SME2.
+@subsubsection AArch64 Scalable Matrix Extension 2
 @anchor{AArch64 SME2}
-@cindex SME2
-@cindex AArch64 SME2
-@cindex Scalable Matrix Extension 2
+@cindex Scalable Matrix Extension 2, AArch64
+@cindex SME2, AArch64
 
 The Scalable Matrix Extension 2 is an AArch64 architecture extension that
 further expands the @acronym{SME} extension with the following:
@@ -28372,8 +28371,9 @@ For more information about @acronym{SME2}, please refer to the
 official @url{https://developer.arm.com/documentation/ddi0487/latest,
 architecture documentation}.
 
-@subsubsection AArch64 Pointer Authentication.
-@cindex AArch64 Pointer Authentication.
+@subsubsection AArch64 Pointer Authentication
+@cindex Pointer Authentication, AArch64
+@cindex PAC, AArch64
 @anchor{AArch64 PAC}
 
 When @value{GDBN} is debugging the AArch64 architecture, and the program is
@@ -28383,8 +28383,9 @@ When GDB prints a backtrace, any addresses that required unmasking will be
 postfixed with the marker [PAC].  When using the MI, this is printed as part
 of the @code{addr_flags} field.
 
-@subsubsection AArch64 Memory Tagging Extension.
-@cindex AArch64 Memory Tagging Extension.
+@subsubsection AArch64 Memory Tagging Extension
+@cindex Memory Tagging Extension, AArch64
+@cindex MTE, AArch64
 
 When @value{GDBN} is debugging the AArch64 architecture, the program is
 using the v8.5-A feature Memory Tagging Extension (MTE) and there is support
@@ -34001,136 +34002,13 @@ appropriate @code{set style} commands.  @xref{Output Styling}.
 
 @cindex Emacs
 @cindex @sc{gnu} Emacs
-A special interface allows you to use @sc{gnu} Emacs to view (and
-edit) the source files for the program you are debugging with
-@value{GDBN}.
 
-To use this interface, use the command @kbd{M-x gdb} in Emacs.  Give the
-executable file you want to debug as an argument.  This command starts
-@value{GDBN} as a subprocess of Emacs, with input and output through a newly
-created Emacs buffer.
-@c (Do not use the @code{-tui} option to run @value{GDBN} from Emacs.)
+In @sc{gnu} Emacs there is a special interface to @value{GDBN}, which
+facilitates viewing the source code for the program you are debugging.
+There is also an IDE-like interface to GDB, with specialized buffers for
+breakpoints, stack frames and other aspects of the debugger state.
 
-Running @value{GDBN} under Emacs can be just like running @value{GDBN} normally except for two
-things:
-
-@itemize @bullet
-@item
-All ``terminal'' input and output goes through an Emacs buffer, called
-the GUD buffer.
-
-This applies both to @value{GDBN} commands and their output, and to the input
-and output done by the program you are debugging.
-
-This is useful because it means that you can copy the text of previous
-commands and input them again; you can even use parts of the output
-in this way.
-
-All the facilities of Emacs' Shell mode are available for interacting
-with your program.  In particular, you can send signals the usual
-way---for example, @kbd{C-c C-c} for an interrupt, @kbd{C-c C-z} for a
-stop.
-
-@item
-@value{GDBN} displays source code through Emacs.
-
-Each time @value{GDBN} displays a stack frame, Emacs automatically finds the
-source file for that frame and puts an arrow (@samp{=>}) at the
-left margin of the current line.  Emacs uses a separate buffer for
-source display, and splits the screen to show both your @value{GDBN} session
-and the source.
-
-Explicit @value{GDBN} @code{list} or search commands still produce output as
-usual, but you probably have no reason to use them from Emacs.
-@end itemize
-
-We call this @dfn{text command mode}.  Emacs 22.1, and later, also uses
-a graphical mode, enabled by default, which provides further buffers
-that can control the execution and describe the state of your program.
-
-If you specify an absolute file name when prompted for the @kbd{M-x
-gdb} argument, then Emacs sets your current working directory to where
-your program resides.  If you only specify the file name, then Emacs
-sets your current working directory to the directory associated
-with the previous buffer.  In this case, @value{GDBN} may find your
-program by searching your environment's @env{PATH} variable, but on
-some operating systems it might not find the source.  So, although the
-@value{GDBN} input and output session proceeds normally, the auxiliary
-buffer does not display the current source and line of execution.
-
-The initial working directory of @value{GDBN} is printed on the top
-line of the GUD buffer and this serves as a default for the commands
-that specify files for @value{GDBN} to operate on.  @xref{Files,
-,Commands to Specify Files}.
-
-By default, @kbd{M-x gdb} calls the program called @file{gdb}.  If you
-need to call @value{GDBN} by a different name (for example, if you
-keep several configurations around, with different names) you can
-customize the Emacs variable @code{gud-gdb-command-name} to run the
-one you want.
-
-In the GUD buffer, you can use these special Emacs commands in
-addition to the standard Shell mode commands:
-
-@table @kbd
-@item C-h m
-Describe the features of Emacs' GUD Mode.
-
-@item C-c C-s
-Execute to another source line, like the @value{GDBN} @code{step} command; also
-update the display window to show the current file and location.
-
-@item C-c C-n
-Execute to next source line in this function, skipping all function
-calls, like the @value{GDBN} @code{next} command.  Then update the display window
-to show the current file and location.
-
-@item C-c C-i
-Execute one instruction, like the @value{GDBN} @code{stepi} command; update
-display window accordingly.
-
-@item C-c C-f
-Execute until exit from the selected stack frame, like the @value{GDBN}
-@code{finish} command.
-
-@item C-c C-r
-Continue execution of your program, like the @value{GDBN} @code{continue}
-command.
-
-@item C-c <
-Go up the number of frames indicated by the numeric argument, like the
-@value{GDBN} @code{up} command.
-
-@item C-c >
-Go down the number of frames indicated by the numeric argument, like the
-@value{GDBN} @code{down} command.
-@end table
-
-In any source file, the Emacs command @kbd{C-x @key{SPC}} (@code{gud-break})
-tells @value{GDBN} to set a breakpoint on the source line point is on.
-
-In text command mode, if you type @kbd{M-x speedbar}, Emacs displays a
-separate frame which shows a backtrace when the GUD buffer is current.
-Move point to any frame in the stack and type @key{RET} to make it
-become the current frame and display the associated source in the
-source buffer.  Alternatively, click @kbd{Mouse-2} to make the
-selected frame become the current one.  In graphical mode, the
-speedbar displays watch expressions.
-
-If you accidentally delete the source-display buffer, an easy way to get
-it back is to type the command @code{f} in the @value{GDBN} buffer, to
-request a frame display; when you run under Emacs, this recreates
-the source buffer if necessary to show you the context of the current
-frame.
-
-The source files displayed in Emacs are in ordinary Emacs buffers
-which are visiting the source files in the usual way.  You can edit
-the files with these buffers if you wish; but keep in mind that @value{GDBN}
-communicates with Emacs in terms of line numbers.  If you add or
-delete lines from the text, the line numbers that @value{GDBN} knows cease
-to correspond properly with the code.
-
-A more detailed description of Emacs' interaction with @value{GDBN} is
+A detailed description of Emacs' interaction with @value{GDBN} is
 given in the Emacs manual.
 
 @node GDB/MI

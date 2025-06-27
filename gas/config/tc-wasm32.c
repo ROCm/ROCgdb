@@ -204,7 +204,7 @@ void
 md_apply_fix (fixS * fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
 {
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
-  long val = (long) *valP;
+  valueT val = *valP;
 
   if (fixP->fx_pcrel)
     {
@@ -746,7 +746,7 @@ md_assemble (char *str)
   if (!op[0])
     as_bad (_("can't find opcode "));
 
-  opcode = (struct wasm32_opcode_s *) str_hash_find (wasm32_hash, op);
+  opcode = str_hash_find (wasm32_hash, op);
 
   if (opcode == NULL)
     {

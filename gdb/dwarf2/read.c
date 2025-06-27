@@ -3466,7 +3466,7 @@ void
 cooked_index_worker_debug_info::process_skeletonless_type_units
   (dwarf2_per_objfile *per_objfile, cooked_index_worker_result *storage)
 {
-  scoped_time_it time_it ("DWARF skeletonless type units");
+  scoped_time_it time_it ("DWARF skeletonless type units", m_per_command_time);
 
   /* Skeletonless TUs in DWP files without .gdb_index is not supported yet.  */
   if (per_objfile->per_bfd->dwp_file == nullptr)
@@ -3575,7 +3575,7 @@ cooked_index_worker_debug_info::do_reading ()
       gdb_assert (iter != last);
       workers.add_task ([this, task_count, iter, last] ()
 	{
-	  scoped_time_it time_it ("DWARF indexing worker");
+	  scoped_time_it time_it ("DWARF indexing worker", m_per_command_time);
 	  process_units (task_count, iter, last);
 	});
 
@@ -7643,11 +7643,6 @@ cutu_reader::open_and_init_dwo_file (dwarf2_cu *cu, const char *dwo_name,
 
   this->locate_dwo_sections (per_objfile->objfile, *dwo_file);
 
-  /* There is normally just one .debug_info.dwo section in a DWO file.  But when
-     building with -fdebug-types-section, gcc produces multiple .debug_info.dwo
-     sections.  One for each produced type unit and one for the compile unit.
-     This is not expected, but we can easily enough deal with what gcc
-     produces.  This behavior has been observed with gcc 14.2.1.  */
   for (dwarf2_section_info &section : dwo_file->sections.infos)
     create_dwo_unit_hash_tables (*dwo_file, *cu, section, ruh_kind::COMPILE);
 
@@ -9944,7 +9939,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
       if (attr2 != nullptr && attr2->form_is_constant ())
 	{
 	  has_bit_offset = true;
-	  bit_offset = attr2->unsigned_constant ().value_or (0);
+	  bit_offset = attr2->confused_constant ().value_or (0);
 	  attr2 = dwarf2_attr (die, DW_AT_byte_size, cu);
 	  if (attr2 != nullptr && attr2->form_is_constant ())
 	    {
@@ -9957,7 +9952,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 
       if (attr->form_is_constant ())
 	{
-	  LONGEST offset = attr->unsigned_constant ().value_or (0);
+	  LONGEST offset = attr->confused_constant ().value_or (0);
 
 	  /* Work around this GCC 11 bug, where it would erroneously use -1
 	     data member locations, instead of 0:
@@ -10007,7 +10002,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      dlbaton->per_objfile = per_objfile;
 	      dlbaton->per_cu = cu->per_cu;
 
-	      field->set_loc_dwarf_block (dlbaton);
+	      field->set_loc_dwarf_block_addr (dlbaton);
 	    }
 	}
       else
@@ -10018,7 +10013,28 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
     {
       attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
       if (attr != nullptr)
-	field->set_loc_bitpos (attr->unsigned_constant ().value_or (0));
+	{
+	  if (attr->form_is_constant ())
+	    field->set_loc_bitpos (attr->unsigned_constant ().value_or (0));
+	  else if (attr->form_is_block ())
+	    {
+	      /* This is a DWARF extension.  See
+		 https://dwarfstd.org/issues/250501.1.html.  */
+	      dwarf2_per_objfile *per_objfile = cu->per_objfile;
+	      dwarf2_locexpr_baton *dlbaton
+		= OBSTACK_ZALLOC (&per_objfile->objfile->objfile_obstack,
+				  dwarf2_locexpr_baton);
+	      dlbaton->data = attr->as_block ()->data;
+	      dlbaton->size = attr->as_block ()->size;
+	      dlbaton->per_objfile = per_objfile;
+	      dlbaton->per_cu = cu->per_cu;
+
+	      field->set_loc_dwarf_block_bitpos (dlbaton);
+	    }
+	  else
+	    complaint (_("Unsupported form %s for DW_AT_data_bit_offset"),
+		       dwarf_form_name (attr->form));
+	}
     }
 }
 
@@ -17195,29 +17211,6 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
   return (sym);
 }
 
-/* Given an attr with a DW_FORM_dataN value in host byte order,
-   zero-extend it as appropriate for the symbol's type.  The DWARF
-   standard (v4) is not entirely clear about the meaning of using
-   DW_FORM_dataN for a constant with a signed type, where the type is
-   wider than the data.  The conclusion of a discussion on the DWARF
-   list was that this is unspecified.  We choose to always zero-extend
-   because that is the interpretation long in use by GCC.  */
-
-static void
-dwarf2_const_value_data (const struct attribute *attr, LONGEST *value,
-			 int bits)
-{
-  LONGEST l = attr->constant_value (0);
-
-  if (bits < sizeof (*value) * 8)
-    {
-      l &= ((LONGEST) 1 << bits) - 1;
-      *value = l;
-    }
-  else
-    *value = l;
-}
-
 /* Read a constant value from an attribute.  Either set *VALUE, or if
    the value does not fit in *VALUE, set *BYTES - either already
    allocated on the objfile obstack, or newly allocated on OBSTACK,
@@ -17301,25 +17294,13 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
 	 converted to host endianness, so we just need to sign- or
 	 zero-extend it as appropriate.  */
     case DW_FORM_data1:
-      dwarf2_const_value_data (attr, value, 8);
-      break;
     case DW_FORM_data2:
-      dwarf2_const_value_data (attr, value, 16);
-      break;
     case DW_FORM_data4:
-      dwarf2_const_value_data (attr, value, 32);
-      break;
     case DW_FORM_data8:
-      dwarf2_const_value_data (attr, value, 64);
-      break;
-
     case DW_FORM_sdata:
     case DW_FORM_implicit_const:
-      *value = attr->as_signed ();
-      break;
-
     case DW_FORM_udata:
-      *value = attr->as_unsigned ();
+      *value = attr->confused_constant ().value_or (0);
       break;
 
     default:
@@ -18515,39 +18496,19 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
 	 symbol's value "represented as it would be on the target
 	 architecture."  By the time we get here, it's already been
 	 converted to host endianness, so we just need to sign- or
-	 zero-extend it as appropriate.  */
-    case DW_FORM_data1:
-      type = die_type (die, cu);
-      dwarf2_const_value_data (attr, &value, 8);
-      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
-      break;
-    case DW_FORM_data2:
-      type = die_type (die, cu);
-      dwarf2_const_value_data (attr, &value, 16);
-      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
-      break;
-    case DW_FORM_data4:
-      type = die_type (die, cu);
-      dwarf2_const_value_data (attr, &value, 32);
-      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
-      break;
-    case DW_FORM_data8:
-      type = die_type (die, cu);
-      dwarf2_const_value_data (attr, &value, 64);
-      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
-      break;
+	 zero-extend it as appropriate.
 
+	 Both GCC and LLVM agree that these are always signed, though.  */
+    case DW_FORM_data1:
+    case DW_FORM_data2:
+    case DW_FORM_data4:
+    case DW_FORM_data8:
     case DW_FORM_sdata:
     case DW_FORM_implicit_const:
-      type = die_type (die, cu);
-      result = write_constant_as_bytes (obstack, byte_order,
-					type, attr->as_signed (), len);
-      break;
-
     case DW_FORM_udata:
       type = die_type (die, cu);
-      result = write_constant_as_bytes (obstack, byte_order,
-					type, attr->as_unsigned (), len);
+      value = attr->confused_constant ().value_or (0);
+      result = write_constant_as_bytes (obstack, byte_order, type, value, len);
       break;
 
     default:

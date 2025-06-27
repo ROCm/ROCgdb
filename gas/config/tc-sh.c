@@ -544,6 +544,7 @@ sh_optimize_expr (expressionS *l, operatorT op, expressionS *r)
       add_to_result (l, symval_diff, symval_diff < 0);
       l->X_op = O_constant;
       l->X_add_symbol = 0;
+      l->X_unsigned = 0;
       return 1;
     }
   return 0;
@@ -2180,7 +2181,7 @@ find_cooked_opcode (char **str_p)
   if (nlen == 0)
     as_bad (_("can't find opcode "));
 
-  return (sh_opcode_info *) str_hash_find (opcode_hash_control, name);
+  return str_hash_find (opcode_hash_control, name);
 }
 
 /* Assemble a parallel processing insn.  */
@@ -3396,7 +3397,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
   int lowbyte = target_big_endian ? 1 : 0;
   int highbyte = target_big_endian ? 0 : 1;
-  long val = (long) *valP;
+  long val = *valP;
   long max, min;
   int shift;
 

@@ -48,7 +48,6 @@
 #include <map>
 
 static struct link_map_offsets *svr4_fetch_link_map_offsets (void);
-static int svr4_have_link_map_offsets (void);
 static void svr4_relocate_main_executable (void);
 static void probes_table_remove_objfile_probes (struct objfile *objfile);
 static void svr4_iterate_over_objfiles_in_search_order
@@ -368,7 +367,7 @@ struct svr4_info
   CORE_ADDR debug_loader_offset = 0;
 
   /* Name of the dynamic linker, valid if debug_loader_offset_p.  */
-  char *debug_loader_name = nullptr;
+  std::string debug_loader_name;
 
   /* Load map address for the main executable in default namespace.  */
   CORE_ADDR main_lm_addr = 0;
@@ -752,9 +751,6 @@ static CORE_ADDR
 elf_locate_base (void)
 {
   CORE_ADDR dyn_ptr, dyn_ptr_addr;
-
-  if (!svr4_have_link_map_offsets ())
-    return 0;
 
   /* Look for DT_MIPS_RLD_MAP first.  MIPS executables use this
      instead of DT_DEBUG, although they sometimes contain an unused
@@ -2689,7 +2685,7 @@ enable_break (struct svr4_info *info, int from_tty)
 
       if (!loader_found_in_list)
 	{
-	  info->debug_loader_name = xstrdup (interp_name);
+	  info->debug_loader_name = interp_name;
 	  info->debug_loader_offset_p = 1;
 	  info->debug_loader_offset = load_addr;
 	  solib_add (NULL, from_tty, auto_solib_add);
@@ -3335,9 +3331,6 @@ svr4_solib_create_inferior_hook (int from_tty)
   if (!target_has_execution ())
     return;
 
-  if (!svr4_have_link_map_offsets ())
-    return;
-
   if (!enable_break (info, from_tty))
     return;
 }
@@ -3349,8 +3342,7 @@ svr4_clear_solib (program_space *pspace)
   info->debug_base = 0;
   info->debug_loader_offset_p = 0;
   info->debug_loader_offset = 0;
-  xfree (info->debug_loader_name);
-  info->debug_loader_name = NULL;
+  info->debug_loader_name.clear ();
 }
 
 /* Clear any bits of ADDR that wouldn't fit in a target-format
@@ -3536,17 +3528,6 @@ svr4_fetch_link_map_offsets (void)
   gdb_assert (ops->fetch_link_map_offsets);
   return ops->fetch_link_map_offsets ();
 }
-
-/* Return 1 if a link map offset fetcher has been defined, 0 otherwise.  */
-
-static int
-svr4_have_link_map_offsets (void)
-{
-  struct solib_svr4_ops *ops = get_ops (current_inferior ()->arch ());
-
-  return (ops->fetch_link_map_offsets != NULL);
-}
-
 
 /* Most OS'es that have SVR4-style ELF dynamic libraries define a
    `struct r_debug' and a `struct link_map' that are binary compatible

@@ -933,7 +933,7 @@ opcode_name_lookup (char **s)
   save_c = *e;
   *e = '\0';
 
-  o = (struct opcode_name_t *) str_hash_find (opcode_names_hash, *s);
+  o = str_hash_find (opcode_names_hash, *s);
 
   /* Advance to next token if one was recognized.  */
   if (o)
@@ -961,15 +961,15 @@ static htab_t reg_names_hash = NULL;
 static htab_t csr_extra_hash = NULL;
 
 #define ENCODE_REG_HASH(cls, n) \
-  ((void *)(uintptr_t)((n) * RCLASS_MAX + (cls) + 1))
-#define DECODE_REG_CLASS(hash) (((uintptr_t)(hash) - 1) % RCLASS_MAX)
-#define DECODE_REG_NUM(hash) (((uintptr_t)(hash) - 1) / RCLASS_MAX)
+  ((n) * RCLASS_MAX + (cls) + 1)
+#define DECODE_REG_CLASS(hash) (((hash) - 1) % RCLASS_MAX)
+#define DECODE_REG_NUM(hash) (((hash) - 1) / RCLASS_MAX)
 
 static void
 hash_reg_name (enum reg_class class, const char *name, unsigned n)
 {
-  void *hash = ENCODE_REG_HASH (class, n);
-  if (str_hash_insert (reg_names_hash, name, hash, 0) != NULL)
+  uintptr_t hash = ENCODE_REG_HASH (class, n);
+  if (str_hash_insert_int (reg_names_hash, name, hash, 0) != NULL)
     as_fatal (_("internal: duplicate %s"), name);
 }
 
@@ -995,7 +995,7 @@ riscv_init_csr_hash (const char *name,
   bool need_enrty = true;
 
   pre_entry = NULL;
-  entry = (struct riscv_csr_extra *) str_hash_find (csr_extra_hash, name);
+  entry = str_hash_find (csr_extra_hash, name);
   while (need_enrty && entry != NULL)
     {
       if (entry->csr_class == class
@@ -1210,8 +1210,7 @@ riscv_csr_address (const char *csr_name,
 static unsigned int
 reg_csr_lookup_internal (const char *s)
 {
-  struct riscv_csr_extra *r =
-    (struct riscv_csr_extra *) str_hash_find (csr_extra_hash, s);
+  struct riscv_csr_extra *r = str_hash_find (csr_extra_hash, s);
 
   if (r == NULL)
     return -1U;
@@ -1222,13 +1221,13 @@ reg_csr_lookup_internal (const char *s)
 static unsigned int
 reg_lookup_internal (const char *s, enum reg_class class)
 {
-  void *r;
+  uintptr_t r;
 
   if (class == RCLASS_CSR)
     return reg_csr_lookup_internal (s);
 
-  r = str_hash_find (reg_names_hash, s);
-  if (r == NULL || DECODE_REG_CLASS (r) != class)
+  r = str_hash_find_int (reg_names_hash, s);
+  if (r == (uintptr_t) -1 || DECODE_REG_CLASS (r) != class)
     return -1;
 
   if (riscv_subset_supports (&riscv_rps_as, "e")
@@ -2048,7 +2047,7 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
   va_start (args, fmt);
 
   r = BFD_RELOC_UNUSED;
-  mo = (struct riscv_opcode *) str_hash_find (op_hash, name);
+  mo = str_hash_find (op_hash, name);
   gas_assert (mo);
 
   /* Find a non-RVC variant of the instruction.  append_insn will compress
@@ -2864,7 +2863,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	break;
       }
 
-  insn = (struct riscv_opcode *) str_hash_find (hash, str);
+  insn = str_hash_find (hash, str);
 
   probing_insn_operands = true;
 

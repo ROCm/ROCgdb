@@ -189,7 +189,6 @@ struct m9s12xg_opcode_def
 /* Local functions.  */
 static register_id reg_name_search (char *);
 static register_id register_name (void);
-static int cmp_opcode (struct m68hc11_opcode *, struct m68hc11_opcode *);
 static char *print_opcode_format (struct m68hc11_opcode *, int);
 static char *skip_whites (char *);
 static int check_range (long, int);
@@ -588,8 +587,10 @@ md_section_align (asection *seg, valueT addr)
 }
 
 static int
-cmp_opcode (struct m68hc11_opcode *op1, struct m68hc11_opcode *op2)
+cmp_opcode (const void *p1, const void *p2)
 {
+  const struct m68hc11_opcode *op1 = p1;
+  const struct m68hc11_opcode *op2 = p2;
   return strcmp (op1->name, op2->name);
 }
 
@@ -639,8 +640,7 @@ md_begin (void)
 	      }
 	}
     }
-  qsort (opcodes, num_opcodes, sizeof (struct m68hc11_opcode),
-         (int (*) (const void*, const void*)) cmp_opcode);
+  qsort (opcodes, num_opcodes, sizeof (struct m68hc11_opcode), cmp_opcode);
 
   opc = XNEWVEC (struct m68hc11_opcode_def, num_opcodes);
   m68hc11_opcode_defs = opc;
@@ -1008,7 +1008,7 @@ print_insn_format (char *name)
   struct m68hc11_opcode *opcode;
   char buf[128];
 
-  opc = (struct m68hc11_opcode_def *) str_hash_find (m68hc11_hash, name);
+  opc = str_hash_find (m68hc11_hash, name);
   if (opc == NULL)
     {
       as_bad (_("Instruction `%s' is not recognized."), name);
@@ -2848,7 +2848,7 @@ md_assemble (char *str)
   if (current_architecture == cpuxgate)
     {
       /* Find the opcode definition given its name.  */
-      opc = (struct m68hc11_opcode_def *) str_hash_find (m68hc11_hash, name);
+      opc = str_hash_find (m68hc11_hash, name);
       if (opc == NULL)
         {
           as_bad (_("Opcode `%s' is not recognized."), name);
@@ -3469,7 +3469,7 @@ md_assemble (char *str)
     }
 
   /* Find the opcode definition given its name.  */
-  opc = (struct m68hc11_opcode_def *) str_hash_find (m68hc11_hash, name);
+  opc = str_hash_find (m68hc11_hash, name);
 
   /* If it's not recognized, look for 'jbsr' and 'jbxx'.  These are
      pseudo insns for relative branch.  For these branches, we always
@@ -3477,8 +3477,7 @@ md_assemble (char *str)
      is given.  */
   if (opc == NULL && name[0] == 'j' && name[1] == 'b')
     {
-      opc = (struct m68hc11_opcode_def *) str_hash_find (m68hc11_hash,
-							 &name[1]);
+      opc = str_hash_find (m68hc11_hash, &name[1]);
       if (opc
 	  && (!(opc->format & M6811_OP_JUMP_REL)
 	      || (opc->format & M6811_OP_BITMASK)))
@@ -3509,8 +3508,7 @@ md_assemble (char *str)
 	    {
 	      name[nlen++] = TOLOWER (*op_end++);
 	      name[nlen] = 0;
-	      opc = (struct m68hc11_opcode_def *) str_hash_find (m68hc11_hash,
-								 name);
+	      opc = str_hash_find (m68hc11_hash, name);
 	    }
 	}
     }
