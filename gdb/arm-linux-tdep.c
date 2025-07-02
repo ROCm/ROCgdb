@@ -41,6 +41,7 @@
 #include "arm-tdep.h"
 #include "arm-linux-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "glibc-tdep.h"
 #include "arch-utils.h"
 #include "inferior.h"
@@ -1801,8 +1802,7 @@ arm_linux_init_abi (struct gdbarch_info info,
     }
   tdep->jb_elt_size = ARM_LINUX_JB_ELEMENT_SIZE;
 
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   /* Single stepping.  */
   set_gdbarch_software_single_step (gdbarch, arm_linux_software_single_step);
@@ -2026,9 +2026,7 @@ arm_linux_init_abi (struct gdbarch_info info,
   set_gdbarch_gcc_target_options (gdbarch, arm_linux_gcc_target_options);
 }
 
-void _initialize_arm_linux_tdep ();
-void
-_initialize_arm_linux_tdep ()
+INIT_GDB_FILE (arm_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_LINUX,
 			  arm_linux_init_abi);

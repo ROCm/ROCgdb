@@ -29,6 +29,7 @@
 #include "gdbcore.h"
 #include "linux-record.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "svr4-tls-tdep.h"
 #include "objfiles.h"
 #include "osabi.h"
@@ -1214,8 +1215,7 @@ s390_linux_init_abi_31 (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   s390_linux_init_abi_any (info, gdbarch);
 
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
   set_xml_syscall_file_name (gdbarch, XML_SYSCALL_FILENAME_S390);
 }
 
@@ -1230,14 +1230,11 @@ s390_linux_init_abi_64 (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   s390_linux_init_abi_any (info, gdbarch);
 
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 linux_lp64_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_lp64_svr4_solib_ops);
   set_xml_syscall_file_name (gdbarch, XML_SYSCALL_FILENAME_S390X);
 }
 
-void _initialize_s390_linux_tdep ();
-void
-_initialize_s390_linux_tdep ()
+INIT_GDB_FILE (s390_linux_tdep)
 {
   /* Hook us into the OSABI mechanism.  */
   gdbarch_register_osabi (bfd_arch_s390, bfd_mach_s390_31, GDB_OSABI_LINUX,

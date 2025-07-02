@@ -33,6 +33,7 @@
 #include "registry.h"
 #include "gdbtypes.h"
 #include "expression.h"
+#include "solib.h"
 
 struct floatformat;
 struct ui_file;

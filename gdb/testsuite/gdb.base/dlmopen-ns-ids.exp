@@ -169,6 +169,12 @@ proc_with_prefix test_conv_vars {} {
 proc test_info_linker_namespaces {} {
     clean_restart $::binfile
 
+    # Check that "info linker-namespaces" while the inferior is not running
+    # doesn't crash.
+    gdb_test "info linker-namespaces" \
+	"Current inferior does not support linker namespaces\\.  Use \"info sharedlibrary\" instead\\." \
+	"info linker-namespaces before running"
+
     if { ![runto_main] } {
 	return
     }

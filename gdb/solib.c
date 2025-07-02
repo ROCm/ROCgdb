@@ -467,6 +467,12 @@ solib_bfd_open (const char *pathname)
   return abfd;
 }
 
+gdb_bfd_ref_ptr
+solib_ops::bfd_open (const char *pathname) const
+{
+  return solib_bfd_open (pathname);
+}
+
 /* Given a pointer to one of the shared objects in our list of mapped
    objects, use the recorded name to open a bfd descriptor for the
    object, build a section table, relocate all the section addresses
@@ -482,10 +488,8 @@ solib_bfd_open (const char *pathname)
 static int
 solib_map_sections (solib &so)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
   gdb::unique_xmalloc_ptr<char> filename (tilde_expand (so.name.c_str ()));
-  gdb_bfd_ref_ptr abfd (ops->bfd_open (filename.get ()));
+  gdb_bfd_ref_ptr abfd (so.ops ().bfd_open (filename.get ()));
 
   /* If we have a core target then the core target might have some helpful
      information (i.e. build-ids) about the shared libraries we are trying
@@ -495,7 +499,7 @@ solib_map_sections (solib &so)
      If we don't have a core target then this will return an empty struct
      with no hint information, we then lookup the shared library based on
      its filename.  */
-  std::optional<CORE_ADDR> solib_addr = ops->find_solib_addr (so);
+  std::optional<CORE_ADDR> solib_addr = so.ops ().find_solib_addr (so);
   std::optional <const core_target_mapped_file_info> mapped_file_info
     = core_target_find_mapped_file (so.name.c_str (), solib_addr);
 
@@ -519,7 +523,7 @@ solib_map_sections (solib &so)
 	     However, if it was good enough during the mapped file
 	     processing, we assume it's good enough now.  */
 	  if (!mapped_file_info->filename ().empty ())
-	    abfd = ops->bfd_open (mapped_file_info->filename ().c_str ());
+	    abfd = so.ops ().bfd_open (mapped_file_info->filename ().c_str ());
 	  else
 	    abfd = nullptr;
 
@@ -559,7 +563,7 @@ solib_map_sections (solib &so)
       /* Relocate the section binding addresses as recorded in the shared
 	 object's file by the base address to which the object was actually
 	 mapped.  */
-      ops->relocate_section_addresses (so, &p);
+      so.ops ().relocate_section_addresses (so, &p);
 
       /* If the target didn't provide information about the address
 	 range of the shared object, assume we want the location of
@@ -586,8 +590,6 @@ solib_map_sections (solib &so)
 void
 solib::clear ()
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
   this->sections.clear ();
   this->abfd = nullptr;
 
@@ -602,8 +604,7 @@ solib::clear ()
   this->name = this->original_name;
 
   /* Do the same for target-specific data.  */
-  if (ops->clear_so != NULL)
-    ops->clear_so (*this);
+  this->ops ().clear_so (*this);
 }
 
 lm_info::~lm_info () = default;
@@ -711,7 +712,10 @@ notify_solib_unloaded (program_space *pspace, const solib &so,
 void
 update_solib_list (int from_tty)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = current_program_space->solib_ops ();
+
+  if (ops == nullptr)
+    return;
 
   /* We can reach here due to changing solib-search-path or the
      sysroot, before having any inferior.  */
@@ -723,8 +727,7 @@ update_solib_list (int from_tty)
 	 have not opened a symbol file, we may be able to get its
 	 symbols now!  */
       if (inf->attach_flag
-	  && current_program_space->symfile_object_file == nullptr
-	  && ops->open_symbol_file_object != nullptr)
+	  && current_program_space->symfile_object_file == nullptr)
 	{
 	  try
 	    {
@@ -773,19 +776,8 @@ update_solib_list (int from_tty)
       /* Check to see whether the shared object *gdb also appears in
 	 the inferior's current list.  */
       for (; inferior_iter != inferior.end (); ++inferior_iter)
-	{
-	  if (ops->same)
-	    {
-	      if (ops->same (*gdb_iter, *inferior_iter))
-		break;
-	    }
-	  else
-	    {
-	      if (!filename_cmp (gdb_iter->original_name.c_str (),
-				 inferior_iter->original_name.c_str ()))
-		break;
-	    }
-	}
+	if (ops->same (*gdb_iter, *inferior_iter))
+	  break;
 
       /* If the shared object appears on the inferior's list too, then
 	 it's still loaded, so we don't need to do anything.  Delete
@@ -1025,16 +1017,21 @@ print_solib_list_table (std::vector<const solib *> solib_list,
   gdbarch *gdbarch = current_inferior ()->arch ();
   /* "0x", a little whitespace, and two hex digits per byte of pointers.  */
   int addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
-  const solib_ops *ops = gdbarch_so_ops (gdbarch);
+  const solib_ops *ops = current_program_space->solib_ops ();
   struct ui_out *uiout = current_uiout;
   bool so_missing_debug_info = false;
+
+  if (ops == nullptr)
+    return;
 
   /* There are 3 conditions for this command to print solib namespaces,
      first PRINT_NAMESPACE has to be true, second the solib_ops has to
      support multiple namespaces, and third there must be more than one
      active namespace.  Fold all these into the PRINT_NAMESPACE condition.  */
-  print_namespace = print_namespace && ops->num_active_namespaces != nullptr
-		    && ops->num_active_namespaces () > 1;
+  print_namespace = (print_namespace
+		     && ops != nullptr
+		     && ops->supports_namespaces ()
+		     && ops->num_active_namespaces () > 1);
 
   int num_cols = 4;
   if (print_namespace)
@@ -1159,12 +1156,13 @@ info_sharedlibrary_command (const char *pattern, int from_tty)
 static void
 info_linker_namespace_command (const char *pattern, int from_tty)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = current_program_space->solib_ops ();
+
   /* This command only really makes sense for inferiors that support
      linker namespaces, so we can leave early.  */
-  if (ops->num_active_namespaces == nullptr)
-    error (_("Current inferior does not support linker namespaces." \
-	     "Use \"info sharedlibrary\" instead"));
+  if (ops == nullptr || !ops->supports_namespaces ())
+    error (_("Current inferior does not support linker namespaces.  "
+	     "Use \"info sharedlibrary\" instead."));
 
   struct ui_out *uiout = current_uiout;
   std::vector<std::pair<int, std::vector<const solib *>>> all_solibs_to_print;
@@ -1272,17 +1270,21 @@ solib_name_from_address (struct program_space *pspace, CORE_ADDR address)
   return nullptr;
 }
 
+bool
+solib_ops::same (const solib &a, const solib &b) const
+{
+  return (filename_cmp (a.original_name.c_str (), b.original_name.c_str ())
+	  == 0);
+}
+
 /* See solib.h.  */
 
 bool
 solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = current_program_space->solib_ops ();
 
-  if (ops->keep_data_in_core)
-    return ops->keep_data_in_core (vaddr, size) != 0;
-  else
-    return false;
+  return ops != nullptr && ops->keep_data_in_core (vaddr, size);
 }
 
 /* See solib.h.  */
@@ -1290,8 +1292,6 @@ solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
 void
 clear_solib (program_space *pspace)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
   for (solib &so : pspace->solibs ())
     {
       bool still_in_use
@@ -1303,7 +1303,8 @@ clear_solib (program_space *pspace)
 
   pspace->solibs ().clear ();
 
-  if (ops->clear_solib != nullptr)
+  if (const solib_ops *ops = pspace->solib_ops ();
+      ops != nullptr)
     ops->clear_solib (pspace);
 }
 
@@ -1315,10 +1316,9 @@ clear_solib (program_space *pspace)
 void
 solib_create_inferior_hook (int from_tty)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
-  if (ops->solib_create_inferior_hook != nullptr)
-    ops->solib_create_inferior_hook (from_tty);
+  if (const solib_ops *ops = current_program_space->solib_ops ();
+      ops != nullptr)
+    ops->create_inferior_hook (from_tty);
 }
 
 /* See solib.h.  */
@@ -1326,10 +1326,9 @@ solib_create_inferior_hook (int from_tty)
 bool
 in_solib_dynsym_resolve_code (CORE_ADDR pc)
 {
-  const auto in_dynsym_resolve_code
-    = gdbarch_so_ops (current_inferior ()->arch ())->in_dynsym_resolve_code;
+  const solib_ops *ops = current_program_space->solib_ops ();
 
-  return in_dynsym_resolve_code && in_dynsym_resolve_code (pc);
+  return ops != nullptr && ops->in_dynsym_resolve_code (pc);
 }
 
 /* Implements the "sharedlibrary" command.  */
@@ -1371,9 +1370,9 @@ no_shared_libraries_command (const char *ignored, int from_tty)
 void
 update_solib_breakpoints (void)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
+  const solib_ops *ops = current_program_space->solib_ops ();
 
-  if (ops->update_breakpoints != NULL)
+  if (ops != nullptr)
     ops->update_breakpoints ();
 }
 
@@ -1382,9 +1381,8 @@ update_solib_breakpoints (void)
 void
 handle_solib_event (void)
 {
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
-  if (ops->handle_event != NULL)
+  if (const solib_ops *ops = current_program_space->solib_ops ();
+      ops != nullptr)
     ops->handle_event ();
 
   current_inferior ()->pspace->clear_solib_cache ();
@@ -1417,7 +1415,8 @@ reload_shared_libraries_1 (int from_tty)
 
       gdb::unique_xmalloc_ptr<char> filename (
 	tilde_expand (so.original_name.c_str ()));
-      gdb_bfd_ref_ptr abfd (solib_bfd_open (filename.get ()));
+
+      gdb_bfd_ref_ptr abfd = so.ops ().bfd_open (filename.get ());
       if (abfd != NULL)
 	found_pathname = bfd_get_filename (abfd.get ());
 
@@ -1468,8 +1467,6 @@ reload_shared_libraries (const char *ignored, int from_tty,
 {
   reload_shared_libraries_1 (from_tty);
 
-  const solib_ops *ops = gdbarch_so_ops (current_inferior ()->arch ());
-
   /* Creating inferior hooks here has two purposes.  First, if we reload 
      shared libraries then the address of solib breakpoint we've computed
      previously might be no longer valid.  For example, if we forgot to set
@@ -1483,7 +1480,8 @@ reload_shared_libraries (const char *ignored, int from_tty,
     {
       /* Reset or free private data structures not associated with
 	 solib entries.  */
-      if (ops->clear_solib != nullptr)
+      if (const solib_ops *ops = current_program_space->solib_ops ();
+	  ops != nullptr)
 	ops->clear_solib (current_program_space);
 
       /* Remove any previous solib event breakpoint.  This is usually
@@ -1810,15 +1808,8 @@ remove_user_added_objfile (struct objfile *objfile)
     }
 }
 
-/* See solist.h.  */
-
-std::optional<CORE_ADDR>
-default_find_solib_addr (solib &so)
-{
-  return {};
-}
-
 /* Implementation of the linker_namespace convenience variable.
+
    This returns the GDB internal identifier of the linker namespace,
    for the selected frame, as an integer.  If the inferior doesn't support
    linker namespaces, this always returns 0.  */
@@ -1827,19 +1818,17 @@ static value *
 linker_namespace_make_value (gdbarch *gdbarch, internalvar *var,
 				     void *ignore)
 {
-  const solib_ops *ops = gdbarch_so_ops (gdbarch);
   int nsid = 0;
-  if (ops->find_solib_ns != nullptr)
-    {
-      CORE_ADDR curr_pc = get_frame_pc (get_selected_frame ());
-      for (const solib &so : current_program_space->solibs ())
-	if (solib_contains_address_p (so, curr_pc))
-	  {
-	    nsid = ops->find_solib_ns (so);
-	    break;
-	  }
-    }
+  CORE_ADDR curr_pc = get_frame_pc (get_selected_frame ());
 
+  for (const solib &so : current_program_space->solibs ())
+    if (solib_contains_address_p (so, curr_pc))
+      {
+	if (so.ops ().supports_namespaces ())
+	  nsid = so.ops ().find_solib_ns (so);
+
+	break;
+      }
 
   /* If the PC is not in an SO, or the solib_ops doesn't support
      linker namespaces, the inferior is in the default namespace.  */
@@ -1854,10 +1843,7 @@ static const struct internalvar_funcs linker_namespace_funcs =
   nullptr,
 };
 
-void _initialize_solib ();
-
-void
-_initialize_solib ()
+INIT_GDB_FILE (solib)
 {
   gdb::observers::free_objfile.attach (remove_user_added_objfile, "solib");
   gdb::observers::inferior_execd.attach (

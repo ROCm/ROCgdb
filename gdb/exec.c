@@ -1064,9 +1064,7 @@ exec_target::has_memory ()
   return !current_program_space->target_sections ().empty ();
 }
 
-void _initialize_exec ();
-void
-_initialize_exec ()
+INIT_GDB_FILE (exec)
 {
   struct cmd_list_element *c;
 

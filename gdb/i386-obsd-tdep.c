@@ -441,13 +441,10 @@ i386obsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_prepend_unwinder (gdbarch, &i386obsd_trapframe_unwind);
 
   /* OpenBSD ELF uses SVR4-style shared libraries.  */
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_svr4_ilp32_solib_ops);
 }
 
-void _initialize_i386obsd_tdep ();
-void
-_initialize_i386obsd_tdep ()
+INIT_GDB_FILE (i386obsd_tdep)
 {
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_OPENBSD,
 			  i386obsd_init_abi);

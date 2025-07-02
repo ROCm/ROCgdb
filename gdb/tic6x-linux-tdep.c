@@ -169,7 +169,7 @@ tic6x_uclinux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   linux_init_abi (info, gdbarch, 0);
 
   /* Shared library handling.  */
-  set_gdbarch_so_ops (gdbarch, &dsbt_so_ops);
+  set_gdbarch_make_solib_ops (gdbarch, make_dsbt_solib_ops);
 
   tdep->syscall_next_pc = tic6x_linux_syscall_next_pc;
 
@@ -203,9 +203,7 @@ tic6x_uclinux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 				&tic6x_linux_rt_sigreturn_tramp_frame);
 }
 
-void _initialize_tic6x_linux_tdep ();
-void
-_initialize_tic6x_linux_tdep ()
+INIT_GDB_FILE (tic6x_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_tic6x, 0, GDB_OSABI_LINUX,
 			  tic6x_uclinux_init_abi);

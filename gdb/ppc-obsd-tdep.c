@@ -254,8 +254,7 @@ ppcobsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_return_value (gdbarch, ppc_sysv_abi_broken_return_value);
 
   /* OpenBSD uses SVR4-style shared libraries.  */
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_svr4_ilp32_solib_ops);
 
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, ppcobsd_iterate_over_regset_sections);
@@ -263,9 +262,7 @@ ppcobsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_append_unwinder (gdbarch, &ppcobsd_sigtramp_frame_unwind);
 }
 
-void _initialize_ppcobsd_tdep ();
-void
-_initialize_ppcobsd_tdep ()
+INIT_GDB_FILE (ppcobsd_tdep)
 {
   gdbarch_register_osabi (bfd_arch_rs6000, 0, GDB_OSABI_OPENBSD,
 			  ppcobsd_init_abi);

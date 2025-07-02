@@ -218,13 +218,10 @@ amd64_gnu_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->sc_num_regs = ARRAY_SIZE (amd64_gnu_sc_reg_offset);
 
   /* Hurd uses SVR4-style shared libraries.  */
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_lp64_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_svr4_lp64_solib_ops);
 }
 
-void _initialize_amd64_gnu_tdep ();
-void
-_initialize_amd64_gnu_tdep ()
+INIT_GDB_FILE (amd64_gnu_tdep)
 {
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64,
 			  GDB_OSABI_HURD, amd64_gnu_init_abi);
