@@ -4916,6 +4916,8 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602")
@@ -17801,13 +17803,17 @@ display_tag_value (signed int tag,
   else if (tag & 1)
     {
       /* PR 17531 file: 027-19978-0.004.  */
-      size_t maxlen = (end - p) - 1;
+      size_t maxlen = end - p;
 
       putchar ('"');
       if (maxlen > 0)
 	{
+	  maxlen -= 1; /* Remove \0 from the character count.  */
 	  print_symbol_name ((int) maxlen, (const char *) p);
-	  p += strnlen ((char *) p, maxlen) + 1;
+	  size_t len = strnlen ((char *) p, maxlen);
+	  if (len == maxlen && p[maxlen] != '\0')
+	    printf (_("<corrupt string tag>"));
+	  p += len + 1;
 	}
       else
 	{
@@ -21312,6 +21318,33 @@ decode_aarch64_feature_1_and (unsigned int bitmask)
 }
 
 static void
+decode_riscv_feature_1_and (unsigned int bitmask)
+{
+  while (bitmask)
+    {
+      unsigned int bit = bitmask & (- bitmask);
+
+      bitmask &= ~ bit;
+      switch (bit)
+	{
+	case GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED:
+	  printf ("CFI_LP_UNLABELED");
+	  break;
+
+	case GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS:
+	  printf ("CFI_SS");
+	  break;
+
+	default:
+	  printf (_("<unknown: %x>"), bit);
+	  break;
+	}
+      if (bitmask)
+	printf (", ");
+    }
+}
+
+static void
 decode_1_needed (unsigned int bitmask)
 {
   while (bitmask)
@@ -21498,6 +21531,18 @@ print_gnu_property_note (Filedata * filedata, Elf_Internal_Note * pnote)
 		    printf (_("<corrupt length: %#x> "), datasz);
 		  else
 		    decode_aarch64_feature_1_and (byte_get (ptr, 4));
+		  goto next;
+		}
+	    }
+	  else if (filedata->file_header.e_machine == EM_RISCV)
+	    {
+	      if (type == GNU_PROPERTY_RISCV_FEATURE_1_AND)
+		{
+		  printf ("RISC-V AND feature: ");
+		  if (datasz != 4)
+		    printf (_("<corrupt length: %#x> "), datasz);
+		  else
+		    decode_riscv_feature_1_and (byte_get (ptr, 4));
 		  goto next;
 		}
 	    }

@@ -2129,7 +2129,7 @@ linux_handle_extended_wait (struct lwp_info *lp, int status)
       open_proc_mem_file (lp->ptid);
 
       ourstatus->set_execd
-	(make_unique_xstrdup (linux_proc_pid_to_exec_file (pid)));
+	(make_unique_xstrdup (linux_target->pid_to_exec_file (pid)));
 
       /* The thread that execed must have been resumed, but, when a
 	 thread execs, it changes its tid to the tgid, and the old
@@ -4000,7 +4000,14 @@ linux_nat_target::thread_name (struct thread_info *thr)
 const char *
 linux_nat_target::pid_to_exec_file (int pid)
 {
-  return linux_proc_pid_to_exec_file (pid);
+  /* If there's no sysroot.  Or the sysroot is just 'target:' and the
+     inferior is in the same mount namespce, then we can consider the
+     filesystem local.  */
+  bool local_fs = (gdb_sysroot.empty ()
+		   || (gdb_sysroot == TARGET_SYSROOT_PREFIX
+		       && linux_ns_same (pid, LINUX_NS_MNT)));
+
+  return linux_proc_pid_to_exec_file (pid, local_fs);
 }
 
 /* Object representing an /proc/PID/mem open file.  We keep one such
@@ -4583,6 +4590,20 @@ linux_nat_target::fileio_open (struct inferior *inf, const char *filename,
     *target_errno = host_to_fileio_error (errno);
 
   return fd;
+}
+
+/* Implementation of to_fileio_lstat.  */
+
+int
+linux_nat_target::fileio_lstat (struct inferior *inf, const char *filename,
+				struct stat *sb, fileio_error *target_errno)
+{
+  int r = linux_mntns_lstat (linux_nat_fileio_pid_of (inf), filename, sb);
+
+  if (r == -1)
+    *target_errno = host_to_fileio_error (errno);
+
+  return r;
 }
 
 /* Implementation of to_fileio_readlink.  */

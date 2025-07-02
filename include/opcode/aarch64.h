@@ -79,6 +79,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_CRC,
   /* LSE instructions.  */
   AARCH64_FEATURE_LSE,
+  /* LSFE instructions.  */
+  AARCH64_FEATURE_LSFE,
   /* PAN instructions.  */
   AARCH64_FEATURE_PAN,
   /* LOR instructions.  */
@@ -135,8 +137,12 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_ID_PFR2,
   /* SSBS mechanism enabled.  */
   AARCH64_FEATURE_SSBS,
+  /* Compare and branch instructions.  */
+  AARCH64_FEATURE_CMPBR,
   /* Memory Tagging Extension.  */
   AARCH64_FEATURE_MEMTAG,
+  /* Outer Cacheable Cache Maintenance Operation.  */
+  AARCH64_FEATURE_OCCMO,
   /* Transactional Memory Extension.  */
   AARCH64_FEATURE_TME,
   /* XS memory attribute.  */
@@ -230,6 +236,12 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SME2p1,
   /* SVE2.1 instructions.  */
   AARCH64_FEATURE_SVE2p1,
+  /* SVE_F16F32MM instructions.  */
+  AARCH64_FEATURE_SVE_F16F32MM,
+  /* F8F32MM instructions.  */
+  AARCH64_FEATURE_F8F32MM,
+  /* F8F16MM instructions.  */
+  AARCH64_FEATURE_F8F16MM,
   /* RCPC3 instructions.  */
   AARCH64_FEATURE_RCPC3,
   /* Enhanced Software Step Extension. */
@@ -264,6 +276,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SME_F8F16,
   /* Non-widening half-precision FP16 to FP16 arithmetic for SME2.  */
   AARCH64_FEATURE_SME_F16F16,
+  /* FEAT_SVE_BFSCALE.  */
+  AARCH64_FEATURE_SVE_BFSCALE,
   /* SVE Z-targeting non-widening BFloat16 instructions.  */
   AARCH64_FEATURE_SVE_B16B16,
   /* SME non-widening BFloat16 instructions.  */
@@ -280,6 +294,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_V9_5A,
   /* FPRCVT instructions.  */
   AARCH64_FEATURE_FPRCVT,
+  /* Point of Physical Storage.  */
+  AARCH64_FEATURE_PoPS,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -291,6 +307,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_FP8DOT2_SVE,
   /* +sme-f16f16 or +sme-f8f16  */
   AARCH64_FEATURE_SME_F16F16_F8F16,
+  /* +sve2 or +sme2 */
+  AARCH64_FEATURE_SVE2_SME2,
   /* +sve2p1 or +sme */
   AARCH64_FEATURE_SVE2p1_SME,
   /* +sve2p1 or +sme2 */
@@ -684,6 +702,8 @@ enum aarch64_opnd
   AARCH64_OPND_WIDTH,	/* Immediate #<width> in e.g. BFI.  */
   AARCH64_OPND_IMM,	/* Immediate.  */
   AARCH64_OPND_IMM_2,	/* Immediate.  */
+  AARCH64_OPND_IMMP1_2,	/* Immediate plus 1.  */
+  AARCH64_OPND_IMMS1_2,	/* Immediate minus 1.  */
   AARCH64_OPND_UIMM3_OP1,/* Unsigned 3-bit immediate in the op1 field.  */
   AARCH64_OPND_UIMM3_OP2,/* Unsigned 3-bit immediate in the op2 field.  */
   AARCH64_OPND_UIMM4,	/* Unsigned 4-bit immediate in the CRm field.  */
@@ -711,6 +731,7 @@ enum aarch64_opnd
   AARCH64_OPND_COND1,	/* Same as the above, but excluding AL and NV.  */
 
   AARCH64_OPND_ADDR_ADRP,	/* Memory address for ADRP */
+  AARCH64_OPND_ADDR_PCREL9,	/* 9-bit PC-relative address for e.g. CB<cc>.  */
   AARCH64_OPND_ADDR_PCREL14,	/* 14-bit PC-relative address for e.g. TBZ.  */
   AARCH64_OPND_ADDR_PCREL19,	/* 19-bit PC-relative address for e.g. LDR.  */
   AARCH64_OPND_ADDR_PCREL21,	/* 21-bit PC-relative address for e.g. ADR.  */
@@ -894,6 +915,7 @@ enum aarch64_opnd
   AARCH64_OPND_SME_Zdnx2,	/* SVE vector register list from [4:1]*2.  */
   AARCH64_OPND_SME_Zdnx4,	/* SVE vector register list from [4:2]*4.  */
   AARCH64_OPND_SME_Zm,		/* SVE vector register list in 4-bit Zm.  */
+  AARCH64_OPND_SME_Zm_17,	/* SVE vector register list in [20:17].  */
   AARCH64_OPND_SME_Zmx2,	/* SVE vector register list from [20:17]*2.  */
   AARCH64_OPND_SME_Zmx4,	/* SVE vector register list from [20:18]*4.  */
   AARCH64_OPND_SME_Znx2,	/* SVE vector register list from [9:6]*2.  */
@@ -1493,7 +1515,10 @@ extern const aarch64_opcode aarch64_opcode_table[];
 #define F_DP_TAG_ONLY (1ULL << 37)
 
 #define F_SUBCLASS_OTHER (F_SUBCLASS)
-/* Next bit is 41.  */
+
+/* For LSFE instructions with size[30:31] field.  */
+#define F_LSFE_SZ (1ULL << 41)
+/* Next bit is 42.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1577,7 +1602,7 @@ opcode_has_special_coder (const aarch64_opcode *opcode)
 {
   return (opcode->flags & (F_SF | F_LSE_SZ | F_SIZEQ | F_FPTYPE | F_SSIZE | F_T
 	  | F_GPRSIZE_IN_Q | F_LDS_SIZE | F_MISC | F_N | F_COND
-	  | F_OPD_SIZE | F_RCPC3_SIZE)) != 0;
+	  | F_OPD_SIZE | F_RCPC3_SIZE | F_LSFE_SZ )) != 0;
 }
 
 struct aarch64_name_value_pair

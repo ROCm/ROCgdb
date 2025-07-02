@@ -1801,6 +1801,8 @@ enum bfd_architecture
 #define bfd_mach_amdgcn_gfx1100         0x041
 #define bfd_mach_amdgcn_gfx1101         0x046
 #define bfd_mach_amdgcn_gfx1102         0x047
+#define bfd_mach_amdgcn_gfx1150         0x043
+#define bfd_mach_amdgcn_gfx1151         0x04a
 #define bfd_mach_amdgcn_gfx12_generic   0x059
 #define bfd_mach_amdgcn_gfx1200         0x048
 #define bfd_mach_amdgcn_gfx1201         0x04e
@@ -7034,6 +7036,11 @@ enum bfd_reloc_code_real
   /* AArch64 pseudo relocation code to be used internally by the AArch64
      assembler and not (currently) written to any object files.  */
   BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC,
+
+  /* AArch64 9 bit pc-relative conditional branch and compare & branch.
+     The lowest two bits must be zero and are not stored in the
+     instruction, giving an 11 bit signed byte offset.  */
+  BFD_RELOC_AARCH64_BRANCH9,
 
   /* Tilera TILEPro Relocations.  */
   BFD_RELOC_TILEPRO_COPY,

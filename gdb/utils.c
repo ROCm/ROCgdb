@@ -1403,7 +1403,26 @@ pager_file::emit_style_escape (const ui_file_style &style)
     {
       m_applied_style = style;
       if (m_paging)
-	m_stream->emit_style_escape (style);
+	{
+	  /* Previous style changes will have been sent to m_stream via
+	     escape sequences encoded in the m_wrap_buffer.  As a result,
+	     the m_stream->m_applied_style will not have been updated.
+
+	     If we now use m_stream->emit_style_escape, then the required
+	     style might not actually be emitted as the requested style
+	     might happen to match the out of date value in
+	     m_stream->m_applied_style.
+
+	     Instead, send the style change directly using m_stream->puts.
+
+	     However, we track what style is currently applied to the
+	     underlying stream in m_stream_style, this is updated whenever
+	     m_wrap_buffer is flushed to the underlying stream.  And so, if
+	     the style we are applying matches what we know is currently
+	     applied to the underlying stream, then we can skip sending
+	     this style to the stream.  */
+	  this->set_stream_style (m_applied_style);
+	}
       else
 	m_wrap_buffer.append (style.to_ansi ());
     }
@@ -1426,8 +1445,8 @@ pager_file::prompt_for_continue ()
 
   scoped_restore save_paging = make_scoped_restore (&m_paging, true);
 
-  /* Clear the current styling.  */
-  m_stream->emit_style_escape (ui_file_style ());
+  /* Clear the current styling on ourselves and the managed stream.  */
+  this->emit_style_escape (ui_file_style ());
 
   if (annotation_level > 1)
     m_stream->puts (("\n\032\032pre-prompt-for-continue\n"));
@@ -1510,6 +1529,7 @@ pager_file::flush_wrap_buffer ()
   if (!m_paging && !m_wrap_buffer.empty ())
     {
       m_stream->puts (m_wrap_buffer.c_str ());
+      m_stream_style = m_applied_style;
       m_wrap_buffer.clear ();
     }
 }
@@ -1726,7 +1746,8 @@ pager_file::puts (const char *linebuffer)
 		     current applied style to how it was at the WRAP_COLUMN
 		     location.  */
 		  m_applied_style = m_wrap_style;
-		  m_stream->emit_style_escape (ui_file_style ());
+		  this->set_stream_style (ui_file_style ());
+
 		  /* If we aren't actually wrapping, don't output
 		     newline -- if chars_per_line is right, we
 		     probably just overflowed anyway; if it's wrong,
@@ -1754,7 +1775,7 @@ pager_file::puts (const char *linebuffer)
 
 		  /* Having finished inserting the wrapping we should
 		     restore the style as it was at the WRAP_COLUMN.  */
-		  m_stream->emit_style_escape (m_wrap_style);
+		  this->set_stream_style (m_wrap_style);
 
 		  /* The WRAP_BUFFER will still contain content, and that
 		     content might set some alternative style.  Restore
@@ -1769,7 +1790,7 @@ pager_file::puts (const char *linebuffer)
 		  m_wrap_column = 0;	/* And disable fancy wrap */
 		}
 	      else if (did_paginate)
-		m_stream->emit_style_escape (save_style);
+		this->emit_style_escape (save_style);
 	    }
 	}
 

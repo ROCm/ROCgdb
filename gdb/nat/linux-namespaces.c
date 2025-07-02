@@ -233,6 +233,12 @@ enum mnsh_msg_type
        MNSH_RET_INT.  */
     MNSH_REQ_SETNS,
 
+    /* A request that the helper call lstat.  The single
+       argument (the filename) should be passed in BUF, and
+       should include a terminating NUL character.  The helper
+       should respond with a MNSH_RET_INTSTR.  */
+    MNSH_REQ_LSTAT,
+
     /* A request that the helper call open.  Arguments should
        be passed in BUF, INT1 and INT2.  The filename (in BUF)
        should include a terminating NUL character.  The helper
@@ -282,6 +288,10 @@ mnsh_debug_print_message (enum mnsh_msg_type type,
     {
     case MNSH_MSG_ERROR:
       res += "ERROR";
+      break;
+
+    case MNSH_REQ_LSTAT:
+      res += "LSTAT";
       break;
 
     case MNSH_REQ_SETNS:
@@ -511,6 +521,20 @@ mnsh_handle_setns (int sock, int fd, int nstype)
   return mnsh_return_int (sock, result, errno);
 }
 
+
+/* Handle a MNSH_REQ_LSTAT message.  Must be async-signal-safe.  */
+
+static ssize_t
+mnsh_handle_lstat (int sock, const char *filename)
+{
+  struct stat sb;
+  int stat_ok = lstat (filename, &sb);
+
+  return mnsh_return_intstr (sock, stat_ok, &sb,
+			     stat_ok == -1 ? 0 : sizeof (sb),
+			     errno);
+}
+
 /* Handle a MNSH_REQ_OPEN message.  Must be async-signal-safe.  */
 
 static ssize_t
@@ -569,6 +593,11 @@ mnsh_main (int sock)
 	    case MNSH_REQ_SETNS:
 	      if (fd > 0)
 		response = mnsh_handle_setns (sock, fd, int1);
+	      break;
+
+	    case MNSH_REQ_LSTAT:
+	      if (size > 0 && buf[size - 1] == '\0')
+		response = mnsh_handle_lstat (sock, buf);
 	      break;
 
 	    case MNSH_REQ_OPEN:
@@ -761,6 +790,10 @@ mnsh_maybe_mourn_peer (void)
   mnsh_send_message (helper->sock, MNSH_REQ_OPEN, -1, flags, mode, \
 		     filename, strlen (filename) + 1)
 
+#define mnsh_send_lstat(helper, filename) \
+  mnsh_send_message (helper->sock, MNSH_REQ_LSTAT, -1, 0, 0, \
+		     filename, strlen (filename) + 1)
+
 #define mnsh_send_unlink(helper, filename) \
   mnsh_send_message (helper->sock, MNSH_REQ_UNLINK, -1, 0, 0, \
 		     filename, strlen (filename) + 1)
@@ -880,7 +913,7 @@ linux_mntns_access_fs (pid_t pid)
   struct stat sb;
   struct linux_mnsh *helper;
   ssize_t size;
-  int fd;
+  int fd, fd_user = -1;
 
   if (pid == getpid ())
     return MNSH_FS_DIRECT;
@@ -897,6 +930,8 @@ linux_mntns_access_fs (pid_t pid)
     {
       int save_errno = errno;
       close (fd);
+      if (fd_user >= 0)
+	close (fd_user);
       errno = save_errno;
     };
 
@@ -906,6 +941,13 @@ linux_mntns_access_fs (pid_t pid)
   if (sb.st_ino == ns->id)
     return MNSH_FS_DIRECT;
 
+  struct linux_ns *ns_user = linux_ns_get_namespace (LINUX_NS_USER);
+  if (ns_user != nullptr)
+    {
+      const char *ns_filename = linux_ns_filename (ns_user, pid);
+      fd_user = gdb_open_cloexec (ns_filename, O_RDONLY, 0).release ();
+    }
+
   helper = linux_mntns_get_helper ();
   if (helper == NULL)
     return MNSH_FS_ERROR;
@@ -913,6 +955,19 @@ linux_mntns_access_fs (pid_t pid)
   if (sb.st_ino != helper->nsid)
     {
       int result, error;
+
+      /* Try to enter the user namespace first.  The current user might
+	 have elevated privileges within the user namespace, which would
+	 then allow the attempt to enter the mount namespace to succeed.  */
+      if (fd_user >= 0)
+	{
+	  size = mnsh_send_setns (helper, fd_user, 0);
+	  if (size < 0)
+	    return MNSH_FS_ERROR;
+
+	  if (mnsh_recv_int (helper, &result, &error) != 0)
+	    return MNSH_FS_ERROR;
+	}
 
       size = mnsh_send_setns (helper, fd, 0);
       if (size < 0)
@@ -939,6 +994,42 @@ linux_mntns_access_fs (pid_t pid)
     }
 
   return MNSH_FS_HELPER;
+}
+
+/* See nat/linux-namespaces.h.  */
+
+int
+linux_mntns_lstat (pid_t pid, const char *filename,
+		   struct stat *sb)
+{
+  enum mnsh_fs_code access = linux_mntns_access_fs (pid);
+
+  if (access == MNSH_FS_ERROR)
+    return -1;
+
+  if (access == MNSH_FS_DIRECT)
+    return lstat (filename, sb);
+
+  gdb_assert (access == MNSH_FS_HELPER);
+
+  struct linux_mnsh *helper = linux_mntns_get_helper ();
+
+  ssize_t size = mnsh_send_lstat (helper, filename);
+  if (size < 0)
+    return -1;
+
+  int stat_ok, error;
+  size = mnsh_recv_intstr (helper, &stat_ok, &error, sb, sizeof (*sb));
+
+  if (size < 0)
+    {
+      stat_ok = -1;
+      errno = error;
+    }
+  else
+    gdb_assert (stat_ok == -1 || size == sizeof (*sb));
+
+  return stat_ok;
 }
 
 /* See nat/linux-namespaces.h.  */
