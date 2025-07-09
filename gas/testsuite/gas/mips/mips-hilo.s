@@ -1,6 +1,4 @@
-# Source file used to test li/addi on MIPS16e2
-
-	.set	mips16
+# Source file used to test lui/addiu.
 
 	.data
 data_label:
@@ -126,11 +124,11 @@ stuff:
 	lui	$4,%hi(small_local_common+0x1a5a5)
 	addiu	$4,%lo(small_local_common+0x1a5a5)
 	lui	$5,%hi(0)
-	lw	$4,%hi(0)($5)
+	lw	$4,%lo(0)($5)
 	lui	$5,%hi(data_label)
-	lw	$4,%hi(data_label)($5)
+	lw	$4,%lo(data_label)($5)
 	lui	$5,%hi(data_label2)
-	lw	$4,%hi(data_label2)($5)
+	lw	$4,%lo(data_label2)($5)
 	lui	$5,%hi(big_external_data_label)
 	lw	$4,%lo(big_external_data_label)($5)
 	lui	$5,%hi(small_external_data_label)

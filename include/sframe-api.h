@@ -36,6 +36,11 @@ typedef struct sframe_encoder_ctx sframe_encoder_ctx;
 #define MAX_OFFSET_BYTES  \
   ((SFRAME_FRE_OFFSET_4B * 2 * MAX_NUM_STACK_OFFSETS))
 
+/* Set of flags that are required to be harmonious between all decoder and
+   encoder objects participating in a link.  */
+#define SFRAME_F_LD_MUSTHAVE_FLAGS \
+  (SFRAME_F_FDE_FUNC_START_PCREL)
+
 /* User interfacing SFrame Row Entry.
    An abstraction provided by libsframe so the consumer is decoupled from
    the binary format representation of the same.
@@ -123,6 +128,22 @@ sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx);
 /* Get the format version from the SFrame decoder context DCTX.  */
 extern uint8_t
 sframe_decoder_get_version (sframe_decoder_ctx *dctx);
+
+/* Get the section flags from the SFrame decoder context DCTX.  */
+extern uint8_t
+sframe_decoder_get_flags (sframe_decoder_ctx *dctx);
+
+/* Get the offset of the sfde_func_start_address field (from the start of the
+   on-disk layout of the SFrame section) of the FDE at FUNC_IDX in the decoder
+   context DCTX.
+
+   If FUNC_IDX is more than the number of SFrame FDEs in the section, sets
+   error code in ERRP, but returns the (hypothetical) offset.  This is useful
+   for the linker when arranging input FDEs into the output section to be
+   emitted.  */
+uint32_t
+sframe_decoder_get_offsetof_fde_start_addr (sframe_decoder_ctx *dctx,
+					    uint32_t func_idx, int *errp);
 
 /* Return the number of function descriptor entries in the SFrame decoder
    DCTX.  */
@@ -237,6 +258,22 @@ sframe_encoder_get_abi_arch (sframe_encoder_ctx *encoder);
 /* Get the format version from the SFrame encoder context ENCODER.  */
 extern uint8_t
 sframe_encoder_get_version (sframe_encoder_ctx *encoder);
+
+/* Get the section flags from the SFrame encoder context ENCODER.  */
+extern uint8_t
+sframe_encoder_get_flags (sframe_encoder_ctx *encoder);
+
+/* Get the offset of the sfde_func_start_address field (from the start of the
+   on-disk layout of the SFrame section) of the FDE at FUNC_IDX in the encoder
+   context ENCODER.
+
+   If FUNC_IDX is more than the number of SFrame FDEs in the section, sets
+   error code in ERRP, but returns the (hypothetical) offset.  This is useful
+   for the linker when arranging input FDEs into the output section to be
+   emitted.  */
+uint32_t
+sframe_encoder_get_offsetof_fde_start_addr (sframe_encoder_ctx *encoder,
+					    uint32_t func_idx, int *errp);
 
 /* Return the number of function descriptor entries in the SFrame encoder
    ENCODER.  */

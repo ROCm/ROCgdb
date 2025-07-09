@@ -1312,7 +1312,7 @@ get_directive (directiveE *directive, bool *negated)
       if (strncmp (directive_string, directive_info[i].name, len) == 0)
 	{
 	  input_line_pointer += len;
-	  *directive = (directiveE) i;
+	  *directive = i;
 	  if (*negated && !directive_info[i].can_be_negated)
 	    as_bad (_("directive %s cannot be negated"),
 		    directive_info[i].name);
@@ -1321,7 +1321,7 @@ get_directive (directiveE *directive, bool *negated)
     }
 
   as_bad (_("unknown directive"));
-  *directive = (directiveE) XTENSA_UNDEFINED;
+  *directive = XTENSA_UNDEFINED;
 }
 
 
@@ -1705,7 +1705,7 @@ xtensa_elf_cons (int nbytes)
 	    as_bad (_("invalid use of %s relocation"), reloc_howto->name);
 	  else
 	    {
-	      char *p = frag_more ((int) nbytes);
+	      char *p = frag_more (nbytes);
 	      xtensa_set_frag_assembly_state (frag_now);
 	      fix_new_exp (frag_now, p - frag_now->fr_literal,
 			   nbytes, &exp, reloc_howto->pc_relative, reloc);
@@ -1714,7 +1714,7 @@ xtensa_elf_cons (int nbytes)
       else
 	{
 	  xtensa_set_frag_assembly_state (frag_now);
-	  emit_expr (&exp, (unsigned int) nbytes);
+	  emit_expr (&exp, nbytes);
 	}
     }
   while (*input_line_pointer++ == ',');
@@ -1869,7 +1869,7 @@ expression_end (const char *name)
 }
 
 
-#define ERROR_REG_NUM ((unsigned) -1)
+#define ERROR_REG_NUM (-1u)
 
 static unsigned
 tc_get_register (const char *prefix)
@@ -1903,7 +1903,7 @@ tc_get_register (const char *prefix)
       return ERROR_REG_NUM;
     }
 
-  if (!ISDIGIT ((unsigned char) *input_line_pointer))
+  if (!ISDIGIT (*input_line_pointer))
     {
       as_bad (_("bad register number: %s"), input_line_pointer);
       return ERROR_REG_NUM;
@@ -1911,7 +1911,7 @@ tc_get_register (const char *prefix)
 
   reg = 0;
 
-  while (ISDIGIT ((int) *input_line_pointer))
+  while (ISDIGIT (*input_line_pointer))
     reg = reg * 10 + *input_line_pointer++ - '0';
 
   if (!(next_expr = expression_end (input_line_pointer)))
@@ -1961,7 +1961,7 @@ expression_maybe_register (xtensa_opcode opc, int opnd, expressionS *tok)
 	    case BFD_RELOC_HI16:
 	      if (tok->X_op == O_constant)
 		{
-		  tok->X_add_number = ((unsigned) tok->X_add_number) >> 16;
+		  tok->X_add_number = ((uint32_t) tok->X_add_number) >> 16;
 		  return;
 		}
 	      break;
@@ -2522,7 +2522,7 @@ xg_translate_idioms (char **popname, int *pnum_args, char **arg_strings)
     {
       if (*pnum_args == 0)
 	{
-	  arg_strings[0] = (char *) xmalloc (2);
+	  arg_strings[0] = xmalloc (2);
 	  strcpy (arg_strings[0], "0");
 	  *pnum_args = 1;
 	}
@@ -5378,7 +5378,7 @@ xtensa_frob_label (symbolS *sym)
   /* Since the label was already attached to a frag associated with the
      previous basic block, it now needs to be reset to the current frag.  */
   symbol_set_frag (sym, frag_now);
-  S_SET_VALUE (sym, (valueT) frag_now_fix ());
+  S_SET_VALUE (sym, frag_now_fix ());
 
   if (generating_literals)
     xtensa_add_literal_sym (sym);
@@ -9001,15 +9001,15 @@ xtensa_add_config_info (void)
   /* Follow the standard note section layout:
      First write the length of the name string.  */
   p = frag_more (4);
-  md_number_to_chars (p, (valueT) XTINFO_NAMESZ, 4);
+  md_number_to_chars (p, XTINFO_NAMESZ, 4);
 
   /* Next comes the length of the "descriptor", i.e., the actual data.  */
   p = frag_more (4);
-  md_number_to_chars (p, (valueT) sz, 4);
+  md_number_to_chars (p, sz, 4);
 
   /* Write the note type.  */
   p = frag_more (4);
-  md_number_to_chars (p, (valueT) XTINFO_TYPE, 4);
+  md_number_to_chars (p, XTINFO_TYPE, 4);
 
   /* Write the name field.  */
   p = frag_more (XTINFO_NAMESZ);
@@ -10321,7 +10321,7 @@ relax_frag_immed (segT segP,
 				 min_steps, stretch);
   gas_assert (num_steps >= min_steps && num_steps <= RELAX_IMMED_MAXSTEPS);
 
-  fragP->tc_frag_data.slot_subtypes[slot] = (int) RELAX_IMMED + num_steps;
+  fragP->tc_frag_data.slot_subtypes[slot] = RELAX_IMMED + num_steps;
 
   /* Figure out the number of bytes needed.  */
   num_literal_bytes = get_num_stack_literal_bytes (&istack);
@@ -10350,8 +10350,7 @@ relax_frag_immed (segT segP,
 					 min_steps, stretch + old_size);
 	  gas_assert (num_steps >= min_steps && num_steps <= RELAX_IMMED_MAXSTEPS);
 
-	  fragP->tc_frag_data.slot_subtypes[slot]
-	    = (int) RELAX_IMMED + num_steps;
+	  fragP->tc_frag_data.slot_subtypes[slot] = RELAX_IMMED + num_steps;
 
 	  num_literal_bytes = get_num_stack_literal_bytes (&istack);
 	  literal_diff

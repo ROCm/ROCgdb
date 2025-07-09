@@ -248,9 +248,7 @@ gas_cgen_record_fixup (fragS *frag, int where, const CGEN_INSN *insn,
      but it is the operand that has a pc relative relocation.  */
   fixP = fix_new (frag, where, length / 8, symbol, offset,
 		  CGEN_OPERAND_ATTR_VALUE (operand, CGEN_OPERAND_PCREL_ADDR),
-		  (bfd_reloc_code_real_type)
-		    ((int) BFD_RELOC_UNUSED
-		     + (int) operand->type));
+		  BFD_RELOC_UNUSED + operand->type);
   fixP->fx_cgen.insn = insn;
   fixP->fx_cgen.opinfo = opinfo;
   fixP->fx_cgen.field = NULL;
@@ -283,9 +281,7 @@ gas_cgen_record_fixup_exp (fragS *frag, int where, const CGEN_INSN *insn,
      but it is the operand that has a pc relative relocation.  */
   fixP = fix_new_exp (frag, where, length / 8, exp,
 		      CGEN_OPERAND_ATTR_VALUE (operand, CGEN_OPERAND_PCREL_ADDR),
-		      (bfd_reloc_code_real_type)
-		        ((int) BFD_RELOC_UNUSED
-			 + (int) operand->type));
+		      BFD_RELOC_UNUSED + operand->type);
   fixP->fx_cgen.insn = insn;
   fixP->fx_cgen.opinfo = opinfo;
   fixP->fx_cgen.field = NULL;
@@ -479,13 +475,13 @@ gas_cgen_parse_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 	  /* Re-init rightshift quantity, just in case.  */
 	  rightshift = operand->length;
 	  queue_fixup_recursively (opindex, opinfo_1, & exp,
-				   (reloc_type == BFD_RELOC_RELC) ?
-				   & (operand->index_fields) : 0,
+				   (reloc_type == BFD_RELOC_RELC
+				    ? &operand->index_fields : 0),
 				   signed_p, -1);
 	}
-      * resultP = errmsg
-	? CGEN_PARSE_OPERAND_RESULT_ERROR
-	: CGEN_PARSE_OPERAND_RESULT_QUEUED;
+      *resultP = (errmsg
+		  ? CGEN_PARSE_OPERAND_RESULT_ERROR
+		  : CGEN_PARSE_OPERAND_RESULT_QUEUED);
       *valueP = 0;
 #else
       queue_fixup (opindex, opinfo_1, &exp);
@@ -852,16 +848,16 @@ gas_cgen_md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   /* Canonical name, since used a lot.  */
   CGEN_CPU_DESC cd = gas_cgen_cpu_desc;
 
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
   /* We don't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_where (fixP->fx_file, fixP->fx_line, _("expression too complex"));
 
-  if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
+  if (fixP->fx_r_type >= BFD_RELOC_UNUSED)
     {
-      int opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
+      int opindex = fixP->fx_r_type - BFD_RELOC_UNUSED;
       const CGEN_OPERAND *operand = cgen_operand_lookup_by_num (cd, opindex);
       const char *errmsg;
       bfd_reloc_code_real_type reloc_type;
@@ -914,7 +910,7 @@ gas_cgen_md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 
 	    /* ??? 0 is passed for `pc'.  */
 	    errmsg = CGEN_CPU_INSERT_OPERAND (cd) (cd, opindex, fields,
-						   &insn_value, (bfd_vma) 0);
+						   &insn_value, 0);
 	    cgen_put_insn_value (cd, (unsigned char *) where,
 				 CGEN_INSN_BITSIZE (insn), insn_value,
                                  cd->insn_endian);
@@ -922,8 +918,7 @@ gas_cgen_md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 #else
 	  /* ??? 0 is passed for `pc'.  */
 	  errmsg = CGEN_CPU_INSERT_OPERAND (cd) (cd, opindex, fields,
-						 (unsigned char *) where,
-						 (bfd_vma) 0);
+						 (unsigned char *) where, 0);
 #endif
 	  if (errmsg)
 	    as_bad_where (fixP->fx_file, fixP->fx_line, "%s", errmsg);

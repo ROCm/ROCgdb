@@ -170,33 +170,13 @@ struct alpha_macro
 #define note_fpreg(R)		(alpha_fprmask |= (1 << (R)))
 
 /* Predicates for 16- and 32-bit ranges */
-/* XXX: The non-shift version appears to trigger a compiler bug when
-   cross-assembling from x86 w/ gcc 2.7.2.  */
-
-#if 1
-#define range_signed_16(x) \
-	(((offsetT) (x) >> 15) == 0 || ((offsetT) (x) >> 15) == -1)
-#define range_signed_32(x) \
-	(((offsetT) (x) >> 31) == 0 || ((offsetT) (x) >> 31) == -1)
-#else
-#define range_signed_16(x)	((offsetT) (x) >= -(offsetT) 0x8000 &&	\
-				 (offsetT) (x) <=  (offsetT) 0x7FFF)
-#define range_signed_32(x)	((offsetT) (x) >= -(offsetT) 0x80000000 && \
-				 (offsetT) (x) <=  (offsetT) 0x7FFFFFFF)
-#endif
+#define range_signed_16(x)	((valueT) (x) + 0x8000 <= 0xFFFF)
+#define range_signed_32(x)	((valueT) (x) + 0x80000000 <= 0xFFFFFFFF)
 
 /* Macros for sign extending from 16- and 32-bits.  */
-/* XXX: The cast macros will work on all the systems that I care about,
-   but really a predicate should be found to use the non-cast forms.  */
-
-#if 1
-#define sign_extend_16(x)	((short) (x))
-#define sign_extend_32(x)	((int) (x))
-#else
-#define sign_extend_16(x)	((offsetT) (((x) & 0xFFFF) ^ 0x8000) - 0x8000)
-#define sign_extend_32(x)	((offsetT) (((x) & 0xFFFFFFFF) \
-					   ^ 0x80000000) - 0x80000000)
-#endif
+#define sign_extend_16(x)	((((valueT) (x) & 0xFFFF) ^ 0x8000) - 0x8000)
+#define sign_extend_32(x)	((((valueT) (x) & 0xFFFFFFFF) ^ 0x80000000) \
+				 - 0x80000000)
 
 /* Macros to build tokens.  */
 
@@ -442,7 +422,7 @@ static int alpha_flag_show_after_trunc = 0;		/* -H */
 #define ALPHA_RELOC_TABLE(op)						\
 (&alpha_reloc_op[ ((!USER_RELOC_P (op))					\
 		  ? (abort (), 0)					\
-		  : (int) (op) - (int) O_literal) ])
+		  : (op) - O_literal) ])
 
 #define DEF(NAME, RELOC, REQ, ALLOW) \
  { #NAME, sizeof(#NAME)-1, O_##NAME, RELOC, REQ, ALLOW}
@@ -638,7 +618,7 @@ alpha_adjust_relocs (bfd *abfd ATTRIBUTE_UNUSED,
   for (fixp = seginfo->fix_root; fixp; fixp = next)
     {
       next = fixp->fx_next;
-      fixp->fx_next = (fixS *) 0;
+      fixp->fx_next = NULL;
 
       switch (fixp->fx_r_type)
 	{
@@ -736,7 +716,7 @@ alpha_adjust_relocs (bfd *abfd ATTRIBUTE_UNUSED,
 	      && ! fixp->tc_fix_data.info->multi_section_p)
 	    {
 	      for (slave = fixp->tc_fix_data.info->slaves;
-		   slave != (fixS *) 0;
+		   slave != NULL;
 		   slave = slave->tc_fix_data.next_reloc)
 		{
 		  slave->fx_next = fixp->fx_next;
@@ -1719,7 +1699,7 @@ alpha_align (int n,
   if (label != NULL && S_GET_SEGMENT (label) == now_seg)
     {
       symbol_set_frag (label, frag_now);
-      S_SET_VALUE (label, (valueT) frag_now_fix ());
+      S_SET_VALUE (label, frag_now_fix ());
     }
 
   record_alignment (now_seg, n);
@@ -1738,7 +1718,7 @@ emit_insn (struct alpha_insn *insn)
 
   /* Take care of alignment duties.  */
   if (alpha_auto_align_on && alpha_current_align < 2)
-    alpha_align (2, (char *) NULL, alpha_insn_label, 0);
+    alpha_align (2, NULL, alpha_insn_label, 0);
   if (alpha_current_align > 2)
     alpha_current_align = 2;
   alpha_insn_label = NULL;
@@ -1754,7 +1734,7 @@ emit_insn (struct alpha_insn *insn)
   /* Apply the fixups in order.  */
   for (i = 0; i < insn->nfixups; ++i)
     {
-      const struct alpha_operand *operand = (const struct alpha_operand *) 0;
+      const struct alpha_operand *operand = NULL;
       struct alpha_fixup *fixup = &insn->fixups[i];
       struct alpha_reloc_tag *info = NULL;
       int size, pcrel;
@@ -1777,8 +1757,7 @@ emit_insn (struct alpha_insn *insn)
       else
 	{
 	  reloc_howto_type *reloc_howto =
-              bfd_reloc_type_lookup (stdoutput,
-                                     (bfd_reloc_code_real_type) fixup->reloc);
+	    bfd_reloc_type_lookup (stdoutput, fixup->reloc);
 	  gas_assert (reloc_howto);
 
 	  size = bfd_get_reloc_size (reloc_howto);
@@ -1800,7 +1779,7 @@ emit_insn (struct alpha_insn *insn)
 	}
 
       fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, size,
-			  &fixup->exp, pcrel, (bfd_reloc_code_real_type) fixup->reloc);
+			  &fixup->exp, pcrel, fixup->reloc);
 
       /* Turn off complaints that the addend is too large for some fixups,
          and copy in the sequence number for the explicit relocations.  */
@@ -2029,7 +2008,7 @@ assemble_insn (const struct alpha_opcode *opcode,
   for (argidx = opcode->operands; *argidx; ++argidx)
     {
       const struct alpha_operand *operand = &alpha_operands[*argidx];
-      const expressionS *t = (const expressionS *) 0;
+      const expressionS *t = NULL;
 
       if (operand->flags & AXP_OPERAND_FAKE)
 	{
@@ -2138,8 +2117,7 @@ assemble_insn (const struct alpha_opcode *opcode,
       else if (reloc < BFD_RELOC_UNUSED && reloc > 0)
 	{
 	  reloc_howto_type *reloc_howto
-              = bfd_reloc_type_lookup (stdoutput,
-                                       (bfd_reloc_code_real_type) reloc);
+	    = bfd_reloc_type_lookup (stdoutput, reloc);
 	  if (reloc_operand == NULL
 	      || reloc_howto->bitsize != reloc_operand->bits)
 	    {
@@ -2182,7 +2160,7 @@ emit_ir_load (const expressionS *tok,
     basereg = tok[2].X_add_number;
 
   lituse = load_expression (tok[0].X_add_number, &tok[1],
-			    &basereg, &newtok[1], (const char *) opname);
+			    &basereg, &newtok[1], opname);
 
   if (basereg == alpha_gp_register &&
       (symlen > 4 && strcmp (&symname [symlen - 4], "..lk") == 0))
@@ -2191,7 +2169,7 @@ emit_ir_load (const expressionS *tok,
   newtok[0] = tok[0];
   set_tok_preg (newtok[2], basereg);
 
-  assemble_tokens_to_insn ((const char *) opname, newtok, 3, &insn);
+  assemble_tokens_to_insn (opname, newtok, 3, &insn);
 
   if (lituse)
     {
@@ -2229,7 +2207,7 @@ emit_loadstore (const expressionS *tok,
 	as_bad (_("macro requires $at register while noat in effect"));
 
       lituse = load_expression (AXP_REG_AT, &tok[1],
-				&basereg, &newtok[1], (const char *) opname);
+				&basereg, &newtok[1], opname);
     }
   else
     {
@@ -2240,7 +2218,7 @@ emit_loadstore (const expressionS *tok,
   newtok[0] = tok[0];
   set_tok_preg (newtok[2], basereg);
 
-  assemble_tokens_to_insn ((const char *) opname, newtok, 3, &insn);
+  assemble_tokens_to_insn (opname, newtok, 3, &insn);
 
   if (lituse)
     {
@@ -2262,7 +2240,7 @@ emit_ldXu (const expressionS *tok,
 	   const void * vlgsize)
 {
   if (alpha_target & AXP_OPCODE_BWX)
-    emit_ir_load (tok, ntok, ldXu_op[(long) vlgsize]);
+    emit_ir_load (tok, ntok, ldXu_op[(intptr_t) vlgsize]);
   else
     {
       expressionS newtok[3];
@@ -2302,7 +2280,7 @@ emit_ldXu (const expressionS *tok,
       /* Emit "extXl targ, $at, targ".  */
       set_tok_reg (newtok[1], basereg);
       newtok[2] = newtok[0];
-      assemble_tokens_to_insn (extXl_op[(long) vlgsize], newtok, 3, &insn);
+      assemble_tokens_to_insn (extXl_op[(intptr_t) vlgsize], newtok, 3, &insn);
 
       if (lituse)
 	{
@@ -2325,7 +2303,7 @@ emit_ldX (const expressionS *tok,
 	  const void * vlgsize)
 {
   emit_ldXu (tok, ntok, vlgsize);
-  assemble_tokens (sextX_op[(long) vlgsize], tok, 1, 1);
+  assemble_tokens (sextX_op[(intptr_t) vlgsize], tok, 1, 1);
 }
 
 /* Load an integral value from an unaligned address as an unsigned
@@ -2336,7 +2314,7 @@ emit_uldXu (const expressionS *tok,
 	    int ntok,
 	    const void * vlgsize)
 {
-  long lgsize = (long) vlgsize;
+  int lgsize = (intptr_t) vlgsize;
   expressionS newtok[3];
 
   if (alpha_noat_on)
@@ -2386,7 +2364,7 @@ emit_uldX (const expressionS *tok,
 	   const void * vlgsize)
 {
   emit_uldXu (tok, ntok, vlgsize);
-  assemble_tokens (sextX_op[(long) vlgsize], tok, 1, 1);
+  assemble_tokens (sextX_op[(intptr_t) vlgsize], tok, 1, 1);
 }
 
 /* Implement the ldil macro.  */
@@ -2411,7 +2389,7 @@ emit_stX (const expressionS *tok,
 	  int ntok,
 	  const void * vlgsize)
 {
-  int lgsize = (int) (long) vlgsize;
+  int lgsize = (intptr_t) vlgsize;
 
   if (alpha_target & AXP_OPCODE_BWX)
     emit_loadstore (tok, ntok, stX_op[lgsize]);
@@ -2513,7 +2491,7 @@ emit_ustX (const expressionS *tok,
 	   int ntok,
 	   const void * vlgsize)
 {
-  int lgsize = (int) (long) vlgsize;
+  int lgsize = (intptr_t) vlgsize;
   expressionS newtok[3];
 
   /* Emit "lda $at, exp".  */
@@ -2584,7 +2562,7 @@ emit_sextX (const expressionS *tok,
 	    int ntok,
 	    const void * vlgsize)
 {
-  long lgsize = (long) vlgsize;
+  int lgsize = (intptr_t) vlgsize;
 
   if (alpha_target & AXP_OPCODE_BWX)
     assemble_tokens (sextX_op[lgsize], tok, ntok, 0);
@@ -2686,7 +2664,7 @@ emit_division (const expressionS *tok,
 	}
     }
 
-  sym = symbol_find_or_make ((const char *) symname);
+  sym = symbol_find_or_make (symname);
 
   set_tok_reg (newtok[0], AXP_REG_AT);
   set_tok_sym (newtok[1], sym, 0);
@@ -2739,7 +2717,7 @@ emit_division (const expressionS *tok,
   else
     rr = regno (tok[2].X_add_number);
 
-  sym = symbol_find_or_make ((const char *) symname);
+  sym = symbol_find_or_make (symname);
 
   /* Move the operands into the right place.  */
   if (yr == AXP_REG_T10 && xr == AXP_REG_T11)
@@ -2820,7 +2798,7 @@ emit_jsrjmp (const expressionS *tok,
 	     int ntok,
 	     const void * vopname)
 {
-  const char *opname = (const char *) vopname;
+  const char *opname = vopname;
   struct alpha_insn insn;
   expressionS newtok[3];
   int r, tokidx = 0;
@@ -2916,7 +2894,7 @@ emit_retjcr (const expressionS *tok,
 	     int ntok,
 	     const void * vopname)
 {
-  const char *opname = (const char *) vopname;
+  const char *opname = vopname;
   expressionS newtok[3];
   int r, tokidx = 0;
 
@@ -3389,11 +3367,11 @@ add_to_link_pool (symbolS *sym, offsetT addend)
 
   if (seginfo->frchainP)
     for (fixp = seginfo->frchainP->fix_root;
-	 fixp != (fixS *) NULL;
+	 fixp != NULL;
 	 fixp = fixp->fx_next)
       {
 	if (fixp->fx_addsy == sym
-	    && fixp->fx_offset == (valueT)addend
+	    && fixp->fx_offset == (valueT) addend
 	    && fixp->tc_fix_data.info
 	    && fixp->tc_fix_data.info->sym
 	    && symbol_symbolS (fixp->tc_fix_data.info->sym)
@@ -3416,8 +3394,8 @@ add_to_link_pool (symbolS *sym, offsetT addend)
   expsym = make_expr_symbol (&e);
 
   /* Create a fixup for the entry.  */
-  fixp = fix_new
-    (frag_now, p - frag_now->fr_literal, 8, sym, addend, 0, BFD_RELOC_64);
+  fixp = fix_new (frag_now, p - frag_now->fr_literal, 8,
+		  sym, addend, 0, BFD_RELOC_64);
   fixp->tc_fix_data.info = get_alpha_reloc_tag (next_sequence_num--);
   fixp->tc_fix_data.info->sym = expsym;
 
@@ -3552,7 +3530,7 @@ s_alpha_comm (int ignore ATTRIBUTE_UNUSED)
       symbolS *sec_symbol;
       segT current_seg = now_seg;
       subsegT current_subseg = now_subseg;
-      int cur_size;
+      offsetT cur_size;
 
       input_line_pointer++;
       SKIP_WHITESPACE ();
@@ -3567,13 +3545,12 @@ s_alpha_comm (int ignore ATTRIBUTE_UNUSED)
 
       /* Reuse stab_string_size to store the size of the section.  */
       cur_size = seg_info (sec)->stabu.stab_string_size;
-      if ((int) size > cur_size)
+      if (size > cur_size)
 	{
-	  char *pfrag
-	    = frag_var (rs_fill, 1, 1, (relax_substateT)0, NULL,
-			(valueT)size - (valueT)cur_size, NULL);
+	  char *pfrag = frag_var (rs_fill, 1, 1, 0, NULL,
+				  size - cur_size, NULL);
 	  *pfrag = 0;
-	  seg_info (sec)->stabu.stab_string_size = (int)size;
+	  seg_info (sec)->stabu.stab_string_size = size;
 	}
 
       S_SET_SEGMENT (symbolP, sec);
@@ -3598,8 +3575,7 @@ s_alpha_comm (int ignore ATTRIBUTE_UNUSED)
       record_alignment (bss_section, log_align);
 
       symbol_set_frag (symbolP, frag_now);
-      pfrag = frag_var (rs_org, 1, 1, (relax_substateT)0, symbolP,
-                        size, NULL);
+      pfrag = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
       *pfrag = 0;
 
       S_SET_SEGMENT (symbolP, bss_section);
@@ -4590,7 +4566,7 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
       *(p + 3) = alpha_evax_proc->ra_save;
       break;
     case PDSC_S_K_KIND_FP_STACK:
-      md_number_to_chars (p + 2, (valueT) alpha_evax_proc->rsa_offset, 2);
+      md_number_to_chars (p + 2, alpha_evax_proc->rsa_offset, 2);
       break;
     default:		/* impossible */
       break;
@@ -4600,7 +4576,7 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
   *(p + 5) = alpha_evax_proc->type & 0x0f;
 
   /* Signature offset.  */
-  md_number_to_chars (p + 6, (valueT) 0, 2);
+  md_number_to_chars (p + 6, 0, 2);
 
   fix_new_exp (frag_now, p - frag_now->fr_literal + 8,
                8, &exp, 0, BFD_RELOC_64);
@@ -4610,8 +4586,8 @@ s_alpha_pdesc (int ignore ATTRIBUTE_UNUSED)
 
   /* pdesc+16: Size.  */
   p = frag_more (6);
-  md_number_to_chars (p, (valueT) alpha_evax_proc->framesize, 4);
-  md_number_to_chars (p + 4, (valueT) 0, 2);
+  md_number_to_chars (p, alpha_evax_proc->framesize, 4);
+  md_number_to_chars (p + 4, 0, 2);
 
   /* Entry length.  */
   exp.X_op = O_subtract;
@@ -4868,7 +4844,7 @@ s_alpha_gprel32 (int ignore ATTRIBUTE_UNUSED)
 #endif
 
   if (alpha_auto_align_on && alpha_current_align < 2)
-    alpha_align (2, (char *) NULL, alpha_insn_label, 0);
+    alpha_align (2, NULL, alpha_insn_label, 0);
   if (alpha_current_align > 2)
     alpha_current_align = 2;
   alpha_insn_label = NULL;
@@ -4911,7 +4887,7 @@ s_alpha_float_cons (int type)
     }
 
   if (alpha_auto_align_on && alpha_current_align < log_size)
-    alpha_align (log_size, (char *) NULL, alpha_insn_label, 0);
+    alpha_align (log_size, NULL, alpha_insn_label, 0);
   if (alpha_current_align > log_size)
     alpha_current_align = log_size;
   alpha_insn_label = NULL;
@@ -5096,7 +5072,7 @@ alpha_cons_align (int size)
     ++log_size;
 
   if (alpha_auto_align_on && alpha_current_align < log_size)
-    alpha_align (log_size, (char *) NULL, alpha_insn_label, 0);
+    alpha_align (log_size, NULL, alpha_insn_label, 0);
   if (alpha_current_align > log_size)
     alpha_current_align = log_size;
   alpha_insn_label = NULL;
@@ -5509,7 +5485,7 @@ md_begin (void)
 #ifdef OBJ_ELF
   if (ECOFF_DEBUGGING)
     {
-      segT sec = subseg_new (".mdebug", (subsegT) 0);
+      segT sec = subseg_new (".mdebug", 0);
       bfd_set_section_flags (sec, SEC_HAS_CONTENTS | SEC_READONLY);
       bfd_set_section_alignment (sec, 3);
     }

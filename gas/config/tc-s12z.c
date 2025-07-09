@@ -186,7 +186,7 @@ valueT
 md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_section_alignment (seg);
-  return ((addr + (1 << align) - 1) & -(1 << align));
+  return (addr + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 void
@@ -579,9 +579,7 @@ lex_opr (uint8_t *buffer, int *n_bytes, expressionS *exp,
 	    }
 	  else if (lex_reg_name (REG_BIT_Dn, &reg2))
 	    {
-	      if (c >= -1 * (long) (0x1u << 17)
-		  &&
-		  c < (long) (0x1u << 17) - 1)
+	      if (c >= -1 * (1L << 17) && c < (1L << 17) - 1)
 		{
 		  *n_bytes = 3;
 		  *xb = 0x80;
@@ -3891,7 +3889,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("Relocation %d is not supported by object file format."),
@@ -3930,11 +3928,11 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 {
   long value = *valP;
 
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
   /* We don't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   /*
@@ -3946,23 +3944,23 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   switch (fixP->fx_r_type)
     {
     case BFD_RELOC_8:
-      ((bfd_byte *) where)[0] = (bfd_byte) value;
+      where[0] = value;
       break;
     case BFD_RELOC_16:
-      bfd_putb16 ((bfd_vma) value, (unsigned char *) where);
+      bfd_putb16 (value, where);
       break;
     case BFD_RELOC_24:
-      bfd_putb24 ((bfd_vma) value, (unsigned char *) where);
+      bfd_putb24 (value, where);
       break;
     case BFD_RELOC_S12Z_OPR:
       {
         switch (fixP->fx_size)
           {
           case 3:
-            bfd_putb24 ((bfd_vma) value, (unsigned char *) where);
+            bfd_putb24 (value, where);
             break;
           case 2:
-            bfd_putb16 ((bfd_vma) value, (unsigned char *) where);
+            bfd_putb16 (value, where);
             break;
           default:
             abort ();
@@ -3970,14 +3968,14 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       }
       break;
     case BFD_RELOC_32:
-      bfd_putb32 ((bfd_vma) value, (unsigned char *) where);
+      bfd_putb32 (value, where);
       break;
     case BFD_RELOC_16_PCREL:
       if (value < -0x4000 || value > 0x3FFF)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
 		      _("Value out of 16-bit range."));
 
-      bfd_putb16 ((bfd_vma) value | 0x8000, (unsigned char *) where);
+      bfd_putb16 (value | 0x8000, where);
       break;
 
     default:

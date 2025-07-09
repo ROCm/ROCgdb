@@ -334,7 +334,7 @@ check_eh_frame (expressionS *exp, unsigned int *pnbytes)
 	/* Stop scanning if we don't see the expected FDE fields.  */
 	d->state = state_error;
       else
-	d->state = (enum frame_state) (d->state + 1);
+	d->state++;
       break;
 
     case state_saw_pc_begin:
@@ -537,7 +537,7 @@ eh_frame_convert_frag (fragS *frag)
   int loc4_fix, ca;
 
   loc4_frag = (fragS *) frag->fr_opcode;
-  loc4_fix = (int) frag->fr_offset;
+  loc4_fix = frag->fr_offset;
 
   diff = resolve_symbol_value (frag->fr_symbol);
 

@@ -267,7 +267,7 @@ parse_gp_reg (const char *name)
 
   entry.name = name;
 
-  reg = (const metag_reg *) htab_find (reg_htab, &entry);
+  reg = htab_find (reg_htab, &entry);
 
   return reg;
 }
@@ -4112,7 +4112,7 @@ __parse_dsp_reg (const char *line, const metag_reg **reg, htab_t dsp_regtab)
   name[len] = '\0';
   entry.name = name;
 
-  _reg = (const metag_reg *) htab_find (dsp_regtab, &entry);
+  _reg = htab_find (dsp_regtab, &entry);
   if (!_reg)
     return NULL;
 
@@ -6003,7 +6003,7 @@ parse_split_condition (const char *line, metag_insn *insn)
 
   entry.name = buf;
 
-  scond = (const split_condition *) htab_find (scond_htab, &entry);
+  scond = htab_find (scond_htab, &entry);
 
   if (!scond)
     return NULL;
@@ -6263,10 +6263,9 @@ find_insn_templates (const char *mnemonic)
   insn_templates *slot;
 
   entry.template = &template;
+  template.name = mnemonic;
 
-  memcpy ((void *)&entry.template->name, &mnemonic, sizeof (char *));
-
-  slot = (insn_templates *) htab_find (mnemonic_htab, &entry);
+  slot = htab_find (mnemonic_htab, &entry);
 
   if (slot)
     return slot;
@@ -6307,8 +6306,8 @@ hash_templates (const void *p)
 static int
 eq_templates (const void *a, const void *b)
 {
-  insn_templates *ta = (insn_templates *)a;
-  insn_templates *tb = (insn_templates *)b;
+  const insn_templates *ta = a;
+  const insn_templates *tb = b;
   return strcasecmp (ta->template->name, tb->template->name) == 0;
 }
 
@@ -6324,7 +6323,7 @@ create_mnemonic_htab (void)
   for (i = 0; i < num_templates; i++)
     {
       const insn_template *template = &metag_optab[i];
-      insn_templates **slot = NULL;
+      void **slot;
       insn_templates *new_entry;
 
       new_entry = XNEW (insn_templates);
@@ -6332,8 +6331,7 @@ create_mnemonic_htab (void)
       new_entry->template = template;
       new_entry->next = NULL;
 
-      slot = (insn_templates **) htab_find_slot (mnemonic_htab, new_entry,
-						 INSERT);
+      slot = htab_find_slot (mnemonic_htab, new_entry, INSERT);
 
       if (*slot)
 	{
@@ -6355,7 +6353,7 @@ create_mnemonic_htab (void)
 static hashval_t
 hash_regs (const void *p)
 {
-  metag_reg *rp = (metag_reg *)p;
+  const metag_reg *rp = p;
   char buf[MAX_REG_LEN];
 
   strupper (buf, rp->name);
@@ -6367,8 +6365,8 @@ hash_regs (const void *p)
 static int
 eq_regs (const void *a, const void *b)
 {
-  metag_reg *ra = (metag_reg *)a;
-  metag_reg *rb = (metag_reg *)b;
+  const metag_reg *ra = a;
+  const metag_reg *rb = b;
   return strcasecmp (ra->name, rb->name) == 0;
 }
 
@@ -6457,8 +6455,8 @@ hash_scond (const void *p)
 static int
 eq_scond (const void *a, const void *b)
 {
-  split_condition *ra = (split_condition *)a;
-  split_condition *rb = (split_condition *)b;
+  const split_condition *ra = a;
+  const split_condition *rb = b;
 
   return strcasecmp (ra->name, rb->name) == 0;
 }
@@ -6738,8 +6736,7 @@ md_atof (int type, char * litP, int * sizeP)
 
   for (i = 0; i < prec; i++)
     {
-      md_number_to_chars (litP, (valueT) words[i],
-			  sizeof (LITTLENUM_TYPE));
+      md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
       litP += sizeof (LITTLENUM_TYPE);
     }
 

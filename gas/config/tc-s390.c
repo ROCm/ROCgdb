@@ -727,9 +727,9 @@ s390_insert_operand (unsigned char *insn,
 	{
 	  if (operand->flags & S390_OPERAND_PCREL)
 	    {
-	      val = (offsetT) ((addressT) val << 1);
-	      min = (offsetT) ((addressT) min << 1);
-	      max = (offsetT) ((addressT) max << 1);
+	      val = (addressT) val << 1;
+	      min = (addressT) min << 1;
+	      max = (addressT) max << 1;
 	    }
 
 	  s390_bad_operand_out_of_range (operand_number, val, min, max,
@@ -738,7 +738,7 @@ s390_insert_operand (unsigned char *insn,
 	  return;
 	}
       /* val is ok, now restrict it to operand->bits bits.  */
-      uval = (addressT) val & ((((addressT) 1 << (operand->bits-1)) << 1) - 1);
+      uval = val & ((((addressT) 1 << (operand->bits-1)) << 1) - 1);
       /* val is restrict, now check for special case.  */
       if (operand->bits == 20 && operand->shift == 20)
         uval = (uval >> 12) | ((uval & 0xfff) << 8);
@@ -748,8 +748,8 @@ s390_insert_operand (unsigned char *insn,
       addressT min, max;
 
       max = (((addressT) 1 << (operand->bits - 1)) << 1) - 1;
-      min = (offsetT) 0;
-      uval = (addressT) val;
+      min = 0;
+      uval = val;
 
       /* Vector register operands have an additional bit in the RXB
 	 field.  */
@@ -1316,7 +1316,7 @@ s390_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long */)
 	    as_bad (_("relocation not applicable"));
 	}
       else
-	emit_expr (&exp, (unsigned int) nbytes);
+	emit_expr (&exp, nbytes);
     }
   while (*input_line_pointer++ == ',');
 
@@ -1906,8 +1906,7 @@ md_gather_operands (char *str,
 	fixP = fix_new_exp (frag_now, f - frag_now->fr_literal, 4,
 			    &fixups[i].exp,
 			    (operand->flags & S390_OPERAND_PCREL) != 0,
-			    ((bfd_reloc_code_real_type)
-			     (fixups[i].opindex + (int) BFD_RELOC_UNUSED)));
+			    fixups[i].opindex + BFD_RELOC_UNUSED);
       /* s390_insert_operand () does the range checking.  */
       if (operand->flags & S390_OPERAND_PCREL)
 	fixP->fx_no_overflow = 1;
@@ -2084,7 +2083,7 @@ s390_literals (int ignore ATTRIBUTE_UNUSED)
 
   /* Emit symbol for start of literal pool.  */
   S_SET_SEGMENT (lp_sym, now_seg);
-  S_SET_VALUE (lp_sym, (valueT) frag_now_fix ());
+  S_SET_VALUE (lp_sym, frag_now_fix ());
   symbol_set_frag (lp_sym, frag_now);
 
   while (lpe_list)
@@ -2092,7 +2091,7 @@ s390_literals (int ignore ATTRIBUTE_UNUSED)
       lpe = lpe_list;
       lpe_list = lpe_list->next;
       S_SET_SEGMENT (lpe->sym, now_seg);
-      S_SET_VALUE (lpe->sym, (valueT) frag_now_fix ());
+      S_SET_VALUE (lpe->sym, frag_now_fix ());
       symbol_set_frag (lpe->sym, frag_now);
 
       /* Emit literal pool entry.  */
@@ -2490,19 +2489,19 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   else
     fixP->fx_done = 1;
 
-  if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
+  if (fixP->fx_r_type >= BFD_RELOC_UNUSED)
     {
       const struct s390_operand *operand;
       int opindex;
 
-      opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
+      opindex = fixP->fx_r_type - BFD_RELOC_UNUSED;
       operand = &s390_operands[opindex];
 
       if (fixP->fx_done)
 	{
 	  /* Insert the fully resolved operand value.  */
 	  s390_insert_operand ((unsigned char *) where, operand,
-			       (offsetT) value, fixP->fx_file, fixP->fx_line, 0);
+			       value, fixP->fx_file, fixP->fx_line, 0);
 	  return;
 	}
 
@@ -2631,9 +2630,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	      if (fixP->fx_pcrel)
 		value >>= 1;
 
-	      mop = bfd_getb16 ((unsigned char *) where);
-	      mop |= (unsigned short) (value & 0xfff);
-	      bfd_putb16 ((bfd_vma) mop, (unsigned char *) where);
+	      mop = bfd_getb16 (where);
+	      mop |= value & 0xfff;
+	      bfd_putb16 (mop, where);
 	    }
 	  break;
 
@@ -2643,10 +2642,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  if (fixP->fx_done)
 	    {
 	      unsigned int mop;
-	      mop = bfd_getb32 ((unsigned char *) where);
-	      mop |= (unsigned int) ((value & 0xfff) << 8 |
-				     (value & 0xff000) >> 12);
-	      bfd_putb32 ((bfd_vma) mop, (unsigned char *) where);
+	      mop = bfd_getb32 (where);
+	      mop |= ((value & 0xfff) << 8
+		      | (value & 0xff000) >> 12);
+	      bfd_putb32 (mop, where);
 	    }
 	  break;
 
@@ -2686,9 +2685,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	      unsigned int mop;
 	      value >>= 1;
 
-	      mop = bfd_getb32 ((unsigned char *) where - 1);
-	      mop |= (unsigned int) (value & 0xffffff);
-	      bfd_putb32 ((bfd_vma) mop, (unsigned char *) where - 1);
+	      mop = bfd_getb32 (where - 1);
+	      mop |= value & 0xffffff;
+	      bfd_putb32 (mop, where - 1);
 	    }
 	  break;
 

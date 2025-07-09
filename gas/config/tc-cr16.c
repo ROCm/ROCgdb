@@ -235,7 +235,7 @@ l_cons (int nbytes)
 
       if ((*(input_line_pointer) == '@') && (*(input_line_pointer +1) == 'c'))
 	code_label = 1;
-      emit_expr (&exp, (unsigned int) nbytes);
+      emit_expr (&exp, nbytes);
       ++c;
       if ((*(input_line_pointer) == '@') && (*(input_line_pointer +1) == 'c'))
 	{
@@ -760,7 +760,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
       switch (fixP->fx_r_type)
 	{
 	case BFD_RELOC_CR16_NUM8:
-	  bfd_put_8 (stdoutput, (unsigned char) val, buf);
+	  bfd_put_8 (stdoutput, val, buf);
 	  break;
 	case BFD_RELOC_CR16_NUM16:
 	  bfd_put_16 (stdoutput, val, buf);
@@ -2456,7 +2456,7 @@ print_insn (ins *insn)
   /* Write the instruction encoding to frag.  */
   for (i = 0; i < insn_size; i++)
     {
-      md_number_to_chars (this_frag, (valueT) words[i], 2);
+      md_number_to_chars (this_frag, words[i], 2);
       this_frag += 2;
     }
 }
@@ -2514,7 +2514,7 @@ md_assemble (char *op)
       strcpy (param1, get_b_cc (op));
       strcat (param1,",");
       strcat (param1, param);
-      param = (char *) &param1;
+      param = param1;
       cr16_assemble ("b", param);
       return;
     }

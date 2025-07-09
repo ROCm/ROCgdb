@@ -1950,11 +1950,11 @@ mapping_state (map_state state)
    {
      struct frag * const frag_first = seg_info (now_seg)->frchainP->frch_root;
      if (frag_now != frag_first || frag_now_fix () > 0)
-       make_mapping_symbol (MAP_DATA, (valueT) 0, frag_first);
+       make_mapping_symbol (MAP_DATA, 0, frag_first);
    }
 
   seg_info (now_seg)->tc_segment_info_data.current_state = state;
-  make_mapping_symbol (state, (valueT) frag_now_fix (), frag_now);
+  make_mapping_symbol (state, frag_now_fix (), frag_now);
 }
 
 /* Dump the literal pool.  */
@@ -5269,7 +5269,7 @@ md_pcrel_from_section (fixS * fixP, segT seg)
 {
   /* If the symbol is undefined or defined in another section
      we leave the add number alone for the linker to fix it later.  */
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != seg))
     return fixP->fx_size;
@@ -5320,7 +5320,7 @@ csky_cons_fix_new (fragS *frag,
 	reloc = BFD_RELOC_32;
 	break;
       }
-  fixP = fix_new_exp (frag, off, (int) len, exp, 0, reloc);
+  fixP = fix_new_exp (frag, off, len, exp, 0, reloc);
   if (BFD_RELOC_CKCORE_TLS_IE32 == insn_reloc
       || BFD_RELOC_CKCORE_TLS_GD32 == insn_reloc
       || BFD_RELOC_CKCORE_TLS_LDM32 == insn_reloc)
@@ -5596,25 +5596,25 @@ md_apply_fix (fixS   *fixP,
 	  case BFD_RELOC_CKCORE_PCREL_IMM8BY4:
 	  case BFD_RELOC_CKCORE_PCREL_IMM10BY4:
 	  case BFD_RELOC_CKCORE_PCREL_IMM16BY4:
-	    max = (offsetT) howto->dst_mask;
+	    max = howto->dst_mask;
 	    min = 0;
 	    break;
 	    /* lrw16.  */
 	  case BFD_RELOC_CKCORE_PCREL_IMM7BY4:
 	    if (do_extend_lrw)
-	      max = (offsetT)((1 << (howto->bitsize + 1)) - 2);
+	      max = ((valueT) 1 << (howto->bitsize + 1)) - 2;
 	    else
-	      max = (offsetT)((1 << howto->bitsize) - 1);
+	      max = ((valueT) 1 << howto->bitsize) - 1;
 	    min = 0;
 	    break;
 	    /* flrws, flrwd: the offset bits are divided in two parts.  */
 	  case BFD_RELOC_CKCORE_PCREL_FLRW_IMM8BY4:
-	    max = (offsetT)((1 << howto->bitsize) - 1);
+	    max = ((valueT) 1 << howto->bitsize) - 1;
 	    min = 0;
 	    break;
 	    /* Offset is signed.  */
 	  default:
-	    max = (offsetT)(howto->dst_mask >> 1);
+	    max = howto->dst_mask >> 1;
 	    min = - max - 1;
 	    issigned = 1;
 	  }
@@ -5630,7 +5630,7 @@ md_apply_fix (fixS   *fixP,
 	if (do_extend_lrw && (opcode & 0xfc00) == CSKYV2_INST_LRW16)
 	  val &= 0xff;
 	else
-	  val &= issigned ? (offsetT)(howto->dst_mask) : max;
+	  val &= issigned ? (offsetT) howto->dst_mask : max;
 
 	if (fixP->fx_r_type == BFD_RELOC_CKCORE_PCREL_BLOOP_IMM4BY4)
 	  val = (val & 0xf) << 12;
@@ -7689,7 +7689,7 @@ csky_cons (int nbytes)
 			howto->name, nbytes);
 	      else
 		{
-		  register char *p = frag_more ((int) nbytes);
+		  register char *p = frag_more (nbytes);
 		  int offset = nbytes - size;
 
 		  fix_new_exp (frag_now,
@@ -7698,7 +7698,7 @@ csky_cons (int nbytes)
 		}
 	    }
 	  else
-	    emit_expr (&exp, (unsigned int) nbytes);
+	    emit_expr (&exp, nbytes);
 	  if (now_seg == text_section)
 	    poolspan += nbytes;
 	}
@@ -7861,8 +7861,7 @@ static void
 csky_stack_size (int arg ATTRIBUTE_UNUSED)
 {
   expressionS exp;
-  stack_size_entry *sse
-    = (stack_size_entry *) xcalloc (1, sizeof (stack_size_entry));
+  stack_size_entry *sse = xcalloc (1, sizeof (stack_size_entry));
 
   expression (&exp);
   if (exp.X_op == O_symbol)

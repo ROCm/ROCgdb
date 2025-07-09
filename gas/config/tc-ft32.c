@@ -530,12 +530,11 @@ static valueT
 md_chars_to_number (char * buf, int n)
 {
   valueT result = 0;
-  unsigned char * where = (unsigned char *) buf;
 
   while (n--)
     {
       result <<= 8;
-      result |= (where[n] & 255);
+      result |= (buf[n] & 255);
     }
 
   return result;
@@ -581,7 +580,7 @@ md_apply_fix (fixS *fixP ATTRIBUTE_UNUSED,
   }
 
   /* We don't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   switch (fixP->fx_r_type)
