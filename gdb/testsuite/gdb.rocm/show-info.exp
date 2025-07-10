@@ -171,14 +171,22 @@ set queue_ids [list]
 # queue the current wave belongs to).
 set queue_info_lines [list]
 
+# A list of agent id's for each queue entry.
+set agent_ids [list]
+
+# A list of OS queue id's for each queue entry.
+set os_ids [list]
+
 set table_header_regex "${ws}+Target${ws}+Id${ws}+Type${ws}+Read${ws}+Write${ws}+Size${ws}+Address${ws}*"
 gdb_test_multiple "info queues" "info queues with queues" {
     -re $table_header_regex {
 	set seen_header 1
 	exp_continue
     }
-    -re "\r\n(\\*?${ws}*(\\d+)${ws}+AMDGPU Queue${ws}+\\d+:\\d+ \\(QID \\d+\\)${ws}+(HSA|PM4|DMA|XGMI|Unknown)${ws}+(\\d+${ws}+)?(\\d+${ws}+)?\\d+${ws}+${::hex}${ws}*(?=\r\n))" {
+    -re "\r\n(\\*?${ws}*(\\d+)${ws}+AMDGPU Queue${ws}+(\\d+):\\d+ \\(QID (\\d+)\\)${ws}+(HSA|PM4|DMA|XGMI|Unknown)${ws}+(\\d+${ws}+)?(\\d+${ws}+)?\\d+${ws}+${::hex}${ws}*(?=\r\n))" {
 	lappend queue_ids $expect_out(2,string)
+	lappend agent_ids $expect_out(3,string)
+	lappend os_ids $expect_out(4,string)
 	lappend queue_info_lines $expect_out(1,string)
 
 	exp_continue
@@ -216,6 +224,33 @@ if {[llength $queue_ids] > 0} {
     gdb_test "info queues $invalid_id" \
 	"No active queues match '$invalid_id'\\." \
 	"info queues, no match"
+
+    # Test the "queue find [regexp]" command.
+
+    # Invalid ID.
+    gdb_test "queue find 1:$invalid_id" \
+	     "No queues match '1:$invalid_id'" \
+	     "queue find, no match"
+
+    # Valid ID.
+
+    # Fetch the index of the last entry.
+    set index [expr [llength $queue_ids] - 1]
+
+    # Fetch the queue, agent and OS ids.
+    set valid_id [lindex $queue_ids $index]
+    set agent_id [lindex $agent_ids $index]
+    set os_id [lindex $os_ids $index]
+    gdb_test "queue find $agent_id\[:\]$valid_id" \
+	     "Queue $valid_id has Target Id 'AMDGPU Queue $agent_id:$valid_id \\(QID $os_id\\)'" \
+	     "queue find, match"
+
+    # Everything
+    set sequence [list]
+    for {set i [expr [llength $queue_ids] - 1]} {$i >= 0} {incr i -1} {
+	lappend sequence "Queue [lindex $queue_ids $i] has Target Id 'AMDGPU Queue [lindex $agent_ids $i]:[lindex $queue_ids $i] \\(QID [lindex $os_ids $i]\\)'"
+    }
+    gdb_test_sequence "queue find ." "" $sequence
 }
 
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
