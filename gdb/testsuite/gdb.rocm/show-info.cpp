@@ -39,6 +39,22 @@ __global__ void bit_extract_kernel(uint32_t* C_d, const uint32_t* A_d, size_t N)
     }
 }
 
+// Two single-wave kernels to test `info dispatches` with multiple dispatches
+__global__ void single_wave_kernel1() {
+    int x = 0;
+
+    while(x < 10) {
+        x++;
+    }
+}
+
+__global__ void single_wave_kernel2() {
+    int x = 0;
+
+    while(x < 10) {
+        x++;
+    }
+}
 
 int main(int argc, char* argv[]) {
     uint32_t *A_d, *C_d;
@@ -87,5 +103,22 @@ int main(int argc, char* argv[]) {
             CHECK(hipErrorUnknown);
         }
     }
+
+    // Kernels for dispatch tests
+    const unsigned numBlocks = 1;
+    const unsigned numThreadsPerBlock = 1;
+    const unsigned sharedMemBytes = 0;
+    hipStream_t stream1, stream2; // Multiple streams for multiple dispatches
+
+    CHECK(hipStreamCreate(&stream1));
+    CHECK(hipStreamCreate(&stream2));
+    
+    printf("info: launch 'single_wave_kernel1' and 'single_wave_kernel2' \n");
+    hipLaunchKernelGGL(single_wave_kernel1, dim3(numBlocks), dim3(numThreadsPerBlock), sharedMemBytes, stream1);
+    hipLaunchKernelGGL(single_wave_kernel2, dim3(numBlocks), dim3(numThreadsPerBlock), sharedMemBytes, stream2);
+
+    CHECK(hipStreamDestroy(stream1));
+    CHECK(hipStreamDestroy(stream2));
+
     printf("PASSED!\n");
 }

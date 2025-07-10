@@ -34,6 +34,7 @@ if ![runto_main] {
 }
 
 gdb_test "info queues" "No queues are currently active\\." "info queues, no queues"
+gdb_test "info dispatches" "No dispatches are currently active\\." "info dispatches, no dispatches"
 
 # Set breakpoint in device code.
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
@@ -203,7 +204,44 @@ if {[llength $queue_ids] > 0} {
 	"info queues, no match"
 }
 
+# Start `info dispatches` tests
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"
+gdb_breakpoint "single_wave_kernel1" "allow-pending"
+gdb_breakpoint "single_wave_kernel2" "allow-pending"
+gdb_test "continue"
+
+# Check that `info dispatches` gives us a non-empty output.
+# So long as the GPU has at least two threads and the scheduler uses the second thread
+# if it's unused, this will test `info dispatches` with multiple concurrent dispatches.
+
+set seen_header 0
+set dispatch_ids [list]
+# Contains the per-dispatch information line (including the leading `*` for the
+# dispatch the current wave belongs to).
+set dispatch_info_lines [list]
+
+# (B|As|Rs) in the body regex checks synchronization: each dispatch
+# either has a barrier, an acquired fence, or a fence it will release.
+
+set table_header_regex "\\s+Target\\s+Id\\s+Grid\\s+Workgroup\\s+Fence\\s+Kernel\\s+Function"
+gdb_test_multiple "info dispatches" "info dispatches with one dispatch" {
+    -re $table_header_regex {
+	set seen_header 1
+	exp_continue
+    }
+    -re "\r\n(\\*?\\s*(\\d+)\\s+AMDGPU Dispatch\\s+\\d+:\\d+:\\d+\\s+\\(PKID\\s+\\d+\\)\\s+\\\[\\d+\\,\\d+\\,\\d+\\\]\\s+\\\[\\d+\\,\\d+\\,\\d+\\\]\\s+(B|As|Rs))" {
+	lappend dispatch_ids $expect_out(2,string)
+	lappend dispatch_info_lines $expect_out(1,string)
+
+	exp_continue
+    }
+    -re -wrap "" {
+	gdb_assert {[llength $dispatch_ids] > 0 && $seen_header} $gdb_test_name
+    }
+}
+
+gdb_test "clear single_wave_kernel1" "Deleted breakpoint.*"
+gdb_test "clear single_wave_kernel2" "Deleted breakpoint.*"
 gdb_test "continue" {.+Inferior\s\d+.+\sexited\snormally.+}
 
 }
