@@ -4607,7 +4607,9 @@ parse_hint_opt (const char *name, char **str,
 	  && o->value != HINT_OPD_CSYNC)
       || ((strcmp ("bti", name) == 0)
 	  && (o->value != HINT_OPD_C && o->value != HINT_OPD_J
-	      && o->value != HINT_OPD_JC)))
+	      && o->value != HINT_OPD_JC))
+      || ((strcmp ("stshh", name) == 0)
+	  && (o->value != HINT_OPD_KEEP && o->value != HINT_OPD_STRM)))
       return false;
 
   *str = q;
@@ -6917,6 +6919,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SME_Zn_INDEX1_16:
 	case AARCH64_OPND_SME_Zn_INDEX2_15:
 	case AARCH64_OPND_SME_Zn_INDEX2_16:
+	case AARCH64_OPND_SME_Zn_INDEX2_19:
 	case AARCH64_OPND_SME_Zn_INDEX3_14:
 	case AARCH64_OPND_SME_Zn_INDEX3_15:
 	case AARCH64_OPND_SME_Zn_INDEX4_14:
@@ -8106,9 +8109,18 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_PRFOP:
 	  val = parse_pldop (&str);
+
+	  if (opcode->iclass != ldst_pos && val == 0x18)
+	    {
+	      set_syntax_error (_("invalid prefetch operation (IR is not valid for"
+	                          " this instruction variant)"));
+	      goto failure;
+	    }
+
 	  /* This is an extension to accept a 0..31 immediate.  */
 	  if (val == PARSE_FAIL)
 	    po_imm_or_fail (0, 31);
+
 	  inst.base.operands[i].prfop = aarch64_prfops + val;
 	  break;
 
@@ -8184,6 +8196,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_BTI_TARGET:
+	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
+	    goto failure;
+	  break;
+
+	case AARCH64_OPND_STSHH_POLICY:
 	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
 	    goto failure;
 	  break;
@@ -9346,6 +9363,10 @@ try_to_encode_as_unscaled_ldst (aarch64_inst *instr)
 
   if (new_op == OP_NIL)
     return false;
+
+  if ((instr->opcode->op == OP_PRFM_POS)
+	       && (instr->operands[0].prfop->value == 0x18))
+	return false;
 
   new_opcode = aarch64_get_opcode (new_op);
   gas_assert (new_opcode != NULL);
@@ -10698,6 +10719,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"lse",		AARCH64_FEATURE (LSE), AARCH64_NO_FEATURES},
   {"lsfe",		AARCH64_FEATURE (LSFE), AARCH64_FEATURE (FP)},
   {"lse128",		AARCH64_FEATURE (LSE128), AARCH64_FEATURE (LSE)},
+  {"lsui",		AARCH64_FEATURE (LSUI), AARCH64_NO_FEATURES},
   {"simd",		AARCH64_FEATURE (SIMD), AARCH64_FEATURE (FP)},
   {"pan",		AARCH64_FEATURE (PAN), AARCH64_NO_FEATURES},
   {"lor",		AARCH64_FEATURE (LOR), AARCH64_NO_FEATURES},
@@ -10735,7 +10757,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve2-sm4",		AARCH64_FEATURE (SVE2_SM4),
 			AARCH64_FEATURES (2, SVE2, SM4)},
   {"sve2-aes",		AARCH64_FEATURE (SVE2_AES),
-			AARCH64_FEATURES (2, SVE2, AES)},
+			AARCH64_FEATURES (2, SVE2, SVE_AES)},
   {"sve2-sha3",		AARCH64_FEATURE (SVE2_SHA3),
 			AARCH64_FEATURES (2, SVE2, SHA3)},
   {"sve2-bitperm",	AARCH64_FEATURE (SVE2_BITPERM),
@@ -10773,6 +10795,9 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve-f16f32mm",	AARCH64_FEATURE (SVE_F16F32MM), AARCH64_FEATURE (SVE)},
   {"f8f32mm",		AARCH64_FEATURE (F8F32MM), AARCH64_FEATURES (2, SIMD, FP8)},
   {"f8f16mm",		AARCH64_FEATURE (F8F16MM), AARCH64_FEATURES (2, SIMD, FP8)},
+  {"sve-aes",		AARCH64_FEATURE (SVE_AES), AARCH64_FEATURE (AES)},
+  {"sve-aes2",		AARCH64_FEATURE (SVE_AES2), AARCH64_NO_FEATURES},
+  {"ssve-aes",	AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURES (2, SME2, SVE_AES)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
   {"cpa",		AARCH64_FEATURE (CPA), AARCH64_NO_FEATURES},
   {"faminmax",		AARCH64_FEATURE (FAMINMAX), AARCH64_FEATURE (SIMD)},
@@ -10811,6 +10836,8 @@ struct aarch64_virtual_dependency_table
 };
 
 static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
+  {AARCH64_FEATURE (SVE2), AARCH64_FEATURE (SVE2_SSVE_AES)},
+  {AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURE (SVE2_SSVE_AES)},
   {AARCH64_FEATURES (2, FP8FMA, SVE2), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURE (SSVE_FP8FMA), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURES (2, FP8DOT4, SVE2), AARCH64_FEATURE (FP8DOT4_SVE)},

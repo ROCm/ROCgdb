@@ -1356,11 +1356,23 @@
   QLF3(X, X, S_D),		\
 }
 
+/* e.g. LDTP <Xt1>, <Xt2>, [<Xn|SP>, #<imm>]!.  */
+#define QL_LDST_PAIR_X		\
+{				\
+  QLF3(X, X, S_D),		\
+}
+
 /* e.g. STNP <Qt1>, <Qt2>, [<Xn|SP>{, #<imm>}].  */
 #define QL_LDST_PAIR_FP		\
 {				\
   QLF3(S_S, S_S, S_S),		\
   QLF3(S_D, S_D, S_D),		\
+  QLF3(S_Q, S_Q, S_Q),		\
+}
+
+/* e.g. LDTP <Qt1>, <Qt2>, [<Xn|SP>{, #<imm>}].  */
+#define QL_LDST_PAIR_S_Q		\
+{				\
   QLF3(S_Q, S_Q, S_Q),		\
 }
 
@@ -2300,6 +2312,10 @@
   QLF3(S_S,S_S,S_S),                                    \
   QLF3(S_D,S_D,S_D),                                    \
 }
+#define OP_SVE_BBQ                                  \
+{                                                       \
+  QLF3(S_B, S_B, S_Q)                                   \
+}
 #define OP_SVE_VVV_D                                    \
 {                                                       \
   QLF3(S_D,S_D,S_D),                                    \
@@ -2794,6 +2810,10 @@ static const aarch64_feature_set aarch64_feature_lsfe =
   AARCH64_FEATURE (LSFE);
 static const aarch64_feature_set aarch64_feature_lse128 =
   AARCH64_FEATURES (2, LSE, LSE128);
+static const aarch64_feature_set aarch64_feature_lsui =
+    AARCH64_FEATURE (LSUI);
+static const aarch64_feature_set aarch64_feature_lsui_fp =
+    AARCH64_FEATURES (2, LSUI, FP);
 static const aarch64_feature_set aarch64_feature_lor =
   AARCH64_FEATURE (LOR);
 static const aarch64_feature_set aarch64_feature_rdma =
@@ -2851,7 +2871,7 @@ static const aarch64_feature_set aarch64_feature_tme =
 static const aarch64_feature_set aarch64_feature_sve2 =
   AARCH64_FEATURE (SVE2);
 static const aarch64_feature_set aarch64_feature_sve2aes =
-  AARCH64_FEATURES (2, SVE2, SVE2_AES);
+  AARCH64_FEATURES (2, SVE_AES, SVE2_SSVE_AES);
 static const aarch64_feature_set aarch64_feature_sve2sha3 =
   AARCH64_FEATURES (2, SVE2, SVE2_SHA3);
 static const aarch64_feature_set aarch64_feature_sve2sm4 =
@@ -2928,6 +2948,8 @@ static const aarch64_feature_set aarch64_feature_f8f16mm =
   AARCH64_FEATURE (F8F16MM);
 static const aarch64_feature_set aarch64_feature_f8f16mm_sve2 =
   AARCH64_FEATURES (2, SVE2, F8F16MM);
+static const aarch64_feature_set aarch64_feature_sve_aes2 =
+  AARCH64_FEATURES (2, SVE_AES2, SVE2_SSVE_AES);
 static const aarch64_feature_set aarch64_feature_rcpc3 =
   AARCH64_FEATURE (RCPC3);
 static const aarch64_feature_set aarch64_feature_cpa =
@@ -3000,6 +3022,8 @@ static const aarch64_feature_set aarch64_feature_sve2p2_sme2p2 =
 #define LSE		&aarch64_feature_lse
 #define LSFE		&aarch64_feature_lsfe
 #define LSE128		&aarch64_feature_lse128
+#define LSUI		&aarch64_feature_lsui
+#define LSUI_FP		&aarch64_feature_lsui_fp
 #define LOR		&aarch64_feature_lor
 #define RDMA		&aarch64_feature_rdma
 #define FP_F16		&aarch64_feature_fp_f16
@@ -3067,6 +3091,7 @@ static const aarch64_feature_set aarch64_feature_sve2p2_sme2p2 =
 #define F8F32MM_SVE2  &aarch64_feature_f8f32mm_sve2
 #define F8F16MM  &aarch64_feature_f8f16mm
 #define F8F16MM_SVE2  &aarch64_feature_f8f16mm_sve2
+#define SVE_AES2  &aarch64_feature_sve_aes2
 #define RCPC3	  &aarch64_feature_rcpc3
 #define CPA	  &aarch64_feature_cpa
 #define CPA_SVE   &aarch64_feature_cpa_sve
@@ -3116,6 +3141,10 @@ static const aarch64_feature_set aarch64_feature_sve2p2_sme2p2 =
   { NAME, OPCODE, MASK, CLASS, 0, LSFE, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LSE128_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LSE128, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define _LSUI_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, LSUI, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define _LSUI_FP_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, LSUI_FP, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LOR_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LOR, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define RDMA_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
@@ -3210,6 +3239,9 @@ static const aarch64_feature_set aarch64_feature_sve2p2_sme2p2 =
     FLAGS | F_STRICT, CONSTRAINTS, TIED, NULL }
 #define SVE2AES_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2_AES, OPS, QUALS, \
+    FLAGS | F_STRICT, 0, TIED, NULL }
+#define SVE_AES2_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
+  { NAME, OPCODE, MASK, CLASS, OP, SVE_AES2, OPS, QUALS, \
     FLAGS | F_STRICT, 0, TIED, NULL }
 #define SVE2SHA3_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2_SHA3, OPS, QUALS, \
@@ -4766,6 +4798,55 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   _LSE128_INSN ("swppa", 0x19a08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
   _LSE128_INSN ("swppal", 0x19e08000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
   _LSE128_INSN ("swppl", 0x19608000, 0xffe0fc00, lse128_atomic, OP3 (LSE128_Rt, LSE128_Rt2, ADDR_SIMPLE), QL_X2NIL, 0),
+
+  /* LSUI extension */
+  _LSUI_INSN ("ldtxr", 0x895f7c00, 0xbffffc00, ldstexcl, OP2 (Rt, ADDR_SIMPLE), QL_R1NIL, F_GPRSIZE_IN_Q),
+  _LSUI_INSN ("ldatxr", 0x895ffc00, 0xbffffc00, ldstexcl, OP2 (Rt, ADDR_SIMPLE), QL_R1NIL, F_GPRSIZE_IN_Q),
+  _LSUI_INSN ("sttxr", 0x89007c00, 0xbfe0fc00, ldstexcl, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2_LDST_EXC, F_GPRSIZE_IN_Q),
+  _LSUI_INSN ("stltxr", 0x8900fc00, 0xbfe0fc00, ldstexcl, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2_LDST_EXC, F_GPRSIZE_IN_Q),
+  _LSUI_INSN ("cast", 0xc9807c00, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSUI_INSN ("casat", 0xc9c07c00, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSUI_INSN ("casalt", 0xc9c0fc00, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSUI_INSN ("caslt", 0xc980fc00, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSUI_INSN ("caspt", 0x49807c00, 0xffe0fc00, lse_atomic, OP5 (Rs, PAIRREG, Rt, PAIRREG, ADDR_SIMPLE), QL_X4NIL, 0),
+  _LSUI_INSN ("caspat", 0x49c07c00, 0xffe0fc00, lse_atomic, OP5 (Rs, PAIRREG, Rt, PAIRREG, ADDR_SIMPLE), QL_X4NIL, 0),
+  _LSUI_INSN ("caspalt", 0x49c0fc00, 0xffe0fc00, lse_atomic, OP5 (Rs, PAIRREG, Rt, PAIRREG, ADDR_SIMPLE), QL_X4NIL, 0),
+  _LSUI_INSN ("casplt", 0x4980fc00, 0xffe0fc00, lse_atomic, OP5 (Rs, PAIRREG, Rt, PAIRREG, ADDR_SIMPLE), QL_X4NIL, 0),
+  _LSUI_INSN ("swpt", 0x19208400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("swpta", 0x19a08400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("swptal", 0x19e08400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("swptl", 0x19608400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtadd", 0x19200400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttadd", 0x1920041f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtadda", 0x19a00400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtaddal", 0x19e00400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtaddl", 0x19600400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttaddl", 0x1960041f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtclr", 0x19201400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttclr", 0x1920141f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtclra", 0x19a01400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtclral", 0x19e01400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtclrl", 0x19601400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttclrl", 0x1960141f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtset", 0x19203400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttset", 0x1920341f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtseta", 0x19a03400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtsetal", 0x19e03400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ),
+  _LSUI_INSN ("ldtsetl", 0x19603400, 0xbfe0fc00, lse_atomic, OP3 (Rs, Rt, ADDR_SIMPLE), QL_R2NIL, F_LSE_SZ | F_HAS_ALIAS),
+  _LSUI_INSN ("sttsetl", 0x1960341f, 0xbfe0fc1f, lse_atomic, OP2 (Rs, ADDR_SIMPLE), QL_R1NIL, F_LSE_SZ | F_ALIAS),
+  _LSUI_INSN ("ldtnp", 0xe8400000, 0xffc00000, ldstnapair_offs, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_LOAD),
+  _LSUI_FP_INSN ("ldtnp", 0xec400000, 0xffc00000, ldstnapair_offs, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_LOAD),
+  _LSUI_INSN ("sttnp", 0xe8000000, 0xffc00000, ldstnapair_offs, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_STORE),
+  _LSUI_FP_INSN ("sttnp", 0xec000000, 0xffc00000, ldstnapair_offs, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_STORE),
+  _LSUI_INSN ("ldtp", 0xe9400000, 0xffc00000, ldstpair_off, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_LOAD),
+  _LSUI_FP_INSN ("ldtp", 0xed400000, 0xffc00000, ldstpair_off, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_LOAD),
+  _LSUI_INSN ("sttp", 0xe9000000, 0xffc00000, ldstpair_off, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_STORE),
+  _LSUI_FP_INSN ("sttp", 0xed000000, 0xffc00000, ldstpair_off, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_STORE),
+  _LSUI_INSN ("ldtp", 0xe8c00000, 0xfec00000, ldstpair_indexed, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_LOAD),
+  _LSUI_FP_INSN ("ldtp", 0xecc00000, 0xfec00000, ldstpair_indexed, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_LOAD),
+  _LSUI_INSN ("sttp", 0xe8800000, 0xfec00000, ldstpair_indexed, OP3 (Rt, Rt2, ADDR_SIMM7), QL_LDST_PAIR_X, F_LDST_STORE),
+  _LSUI_FP_INSN ("sttp", 0xec800000, 0xfec00000, ldstpair_indexed, OP3 (Fd, Fa, ADDR_SIMM7), QL_LDST_PAIR_S_Q, F_LDST_STORE),
+
   /* RCPC3 extension.  */
   RCPC3_INSN ("ldiapp", 0x19400800, 0x3fe0ec00, rcpc3, OP3 (Rt, Rs, RCPC3_ADDR_OPT_POSTIND), QL_R2NIL, F_RCPC3_SIZE),
   RCPC3_INSN ("stilp",  0x19000800, 0x3fe0ec00, rcpc3, OP3 (Rt, Rs, RCPC3_ADDR_OPT_PREIND_WB), QL_R2NIL, F_RCPC3_SIZE),
@@ -4809,6 +4890,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SME_INSN ("smstop",  0xd503407f, 0xfffff1ff, sme_stop,  0, OP1 (SME_SM_ZA), {}, F_SYS_WRITE, 0),
   /* System.  */
   CHK_INSN ("chkfeat", 0xd503251f, 0xffffffff, OP1 (X16), QL_I1X, 0),
+  CORE_INSN ("stshh", 0xd503261f, 0xffffffdf, ic_system, 0, OP1 (STSHH_POLICY), {}, F_ALIAS),
   CORE_INSN ("msr", 0xd500401f, 0xfff8f01f, ic_system, 0, OP2 (PSTATEFIELD, UIMM4), {}, F_SYS_WRITE),
   CORE_INSN ("hint",0xd503201f, 0xfffff01f, ic_system, 0, OP1 (UIMM7), {}, F_HAS_ALIAS),
   CORE_INSN ("nop", 0xd503201f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
@@ -5990,6 +6072,17 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SVE2BITPERM_INSN ("bdep", 0x4500b400, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
   SVE2BITPERM_INSN ("bext", 0x4500b000, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
   SVE2BITPERM_INSN ("bgrp", 0x4500b800, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, 0),
+  /* SVE_AES2 instructions */
+  SVE_AES2_INSN ("aesdimc", 0x4523ec00, 0xffe7fc01, sve_misc, 0, OP3 (SME_Zdnx2, SME_Zdnx2, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aesdimc", 0x4527ec00, 0xffe7fc03, sve_misc, 0, OP3 (SME_Zdnx4, SME_Zdnx4, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aesd", 0x4522ec00, 0xffe7fc01, sve_misc, 0, OP3 (SME_Zdnx2, SME_Zdnx2, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aesd", 0x4526ec00, 0xffe7fc03, sve_misc, 0, OP3 (SME_Zdnx4, SME_Zdnx4, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aesemc", 0x4523e800, 0xffe7fc01, sve_misc, 0, OP3 (SME_Zdnx2, SME_Zdnx2, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aesemc", 0x4527e800, 0xffe7fc03, sve_misc, 0, OP3 (SME_Zdnx4, SME_Zdnx4, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aese", 0x4522e800, 0xffe7fc01, sve_misc, 0, OP3 (SME_Zdnx2, SME_Zdnx2, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("aese", 0x4526e800, 0xffe7fc03, sve_misc, 0, OP3 (SME_Zdnx4, SME_Zdnx4, SME_Zn_INDEX2_19), OP_SVE_BBQ, 0, 1),
+  SVE_AES2_INSN ("pmlal", 0x4520fc00, 0xffe0fc01, sve_misc, 0, OP3 (SME_Zdnx2, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_Q_D, 0, 0),
+  SVE_AES2_INSN ("pmull", 0x4520f800, 0xffe0fc01, sve_misc, 0, OP3 (SME_Zdnx2, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_Q_D, 0, 0),
   /* SME instructions.  */
   SME_INSN ("addha", 0xc0900000, 0xffff001c, sme_misc, 0, OP4 (SME_ZAda_2b, SVE_Pg3, SME_Pm, SVE_Zn), OP_SVE_SMMS, 0, 0),
   SME_I16I64_INSN ("addha", 0xc0d00000, 0xffff0018, sme_misc, 0, OP4 (SME_ZAda_3b, SVE_Pg3, SME_Pm, SVE_Zn), OP_SVE_DMMD, 0, 0),
@@ -7629,6 +7722,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "the GCSB option name DSYNC")					\
     Y(SYSTEM, hint, "BTI_TARGET", 0, F (),				\
       "BTI targets j/c/jc")						\
+    Y(SYSTEM, hint, "STSHH_POLICY", 0, F(),				\
+      "an STSHH policy (keep/strm)")					\
     Y(SYSTEM, imm, "BRBOP", 0, F(FLD_brbop),				\
       "Branch Record Buffer operation operand")				\
     Y(INT_REG, regno, "Rt_IN_SYS_ALIASES", 0, F(FLD_Rt),		\
@@ -8061,6 +8156,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       F(FLD_SVE_Zn, FLD_imm2_15), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX2_16", 0,			\
       F(FLD_SVE_Zn, FLD_imm2_16), "an indexed SVE vector register")	\
+    Y(SVE_REG, simple_index, "SME_Zn_INDEX2_19", 0,			\
+      F(FLD_SVE_Zn, FLD_imm2_19), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX3_14", 0,			\
       F(FLD_SVE_Zn, FLD_imm3_14), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX3_15", 0,			\

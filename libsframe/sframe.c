@@ -166,6 +166,7 @@ need_swapping (int endian)
       case SFRAME_ABI_AMD64_ENDIAN_LITTLE:
 	return !is_little;
       case SFRAME_ABI_AARCH64_ENDIAN_BIG:
+      case SFRAME_ABI_S390X_ENDIAN_BIG:
 	return is_little;
       default:
 	break;
@@ -520,7 +521,7 @@ flip_sframe (char *frame_buf, size_t buf_size, uint32_t to_foreign)
 	  fre_offset = fdep->sfde_func_start_fre_off;
 	}
 
-      fp = frame_buf + sframe_get_hdr_size (ihp) + ihp->sfh_freoff;
+      fp = frame_buf + hdrsz + ihp->sfh_freoff;
       fp += fre_offset;
       for (; j < prev_frep_index + num_fres; j++)
 	{
@@ -535,8 +536,12 @@ flip_sframe (char *frame_buf, size_t buf_size, uint32_t to_foreign)
       prev_frep_index = j;
     }
   /* All FDEs and FREs must have been endian flipped by now.  */
-  if ((j != ihp->sfh_num_fres) || (bytes_flipped != (buf_size - hdrsz)))
+  if ((j != ihp->sfh_num_fres) || (bytes_flipped > (buf_size - hdrsz)))
     goto bad;
+  /* Optional trailing section padding.  */
+  for (fp = frame_buf + hdrsz + bytes_flipped; fp < frame_buf + buf_size; fp++)
+    if (*fp != '\0')
+      goto bad;
 
   /* Success.  */
   return 0;
@@ -690,13 +695,22 @@ sframe_fre_get_base_reg_id (sframe_frame_row_entry *fre, int *errp)
 /* Get the CFA offset from the FRE.  If the offset is invalid, sets errp.  */
 
 int32_t
-sframe_fre_get_cfa_offset (sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
+sframe_fre_get_cfa_offset (sframe_decoder_ctx *dctx,
 			   sframe_frame_row_entry *fre, int *errp)
 {
-  return sframe_get_fre_offset (fre, SFRAME_FRE_CFA_OFFSET_IDX, errp);
+  int32_t offset = sframe_get_fre_offset (fre, SFRAME_FRE_CFA_OFFSET_IDX, errp);
+
+  /* For s390x undo adjustment of CFA offset (to enable 8-bit offsets).  */
+  if (sframe_decoder_get_abi_arch (dctx) == SFRAME_ABI_S390X_ENDIAN_BIG)
+    offset = SFRAME_V2_S390X_CFA_OFFSET_DECODE (offset);
+
+  return offset;
 }
 
-/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.  */
+/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.
+
+   For s390x the offset may be an encoded register number, indicated by
+   LSB set to one, which is only valid in the topmost frame.  */
 
 int32_t
 sframe_fre_get_fp_offset (sframe_decoder_ctx *dctx,
@@ -723,7 +737,12 @@ sframe_fre_get_fp_offset (sframe_decoder_ctx *dctx,
   return sframe_get_fre_offset (fre, fp_offset_idx, errp);
 }
 
-/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.  */
+/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.
+
+   For s390x an RA offset value of SFRAME_FRE_RA_OFFSET_INVALID indicates
+   that the RA is not saved, which is only valid in the topmost frame.
+   For s390x the offset may be an encoded register number, indicated by
+   LSB set to one, which is only valid in the topmost frame.  */
 
 int32_t
 sframe_fre_get_ra_offset (sframe_decoder_ctx *dctx,
