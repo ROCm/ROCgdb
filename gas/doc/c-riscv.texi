@@ -216,6 +216,19 @@ Enables or disables relaxation.  The RISC-V assembler and linker
 opportunistically relax some code sequences, but sometimes this behavior is not
 desirable.
 
+@item exact
+@itemx noexact
+Enables or disables exact mode.  Not only the exact mode disables linker
+relaxations, it also disables automatic instruction compression and the branch
+relaxation (both optionally change instruction encodings and/or instruction
+count).  This mode is useful in some cases where the instruction sequences, as
+exactly written, are expected to be emitted.
+
+Note that, in the current implementation, @samp{.option exact} implies
+@samp{.option norelax} and @samp{.option noexact} implies @samp{.option relax}.
+Due to their flaky interactions, it is strongly discouraged to use both
+@samp{.option relax/norelax} and @samp{.option exact/noexact} in the same scope.
+
 @item csr-check
 @itemx no-csr-check
 Enables or disables the CSR checking.

@@ -271,6 +271,7 @@ struct riscv_set_options
   int pic; /* Generate position-independent code.  */
   int rvc; /* Generate RVC code.  */
   int relax; /* Emit relocs the linker is allowed to relax.  */
+  int exact; /* Emit instructions without compression or relaxation.  */
   int arch_attr; /* Emit architecture and privileged elf attributes.  */
   int csr_check; /* Enable the CSR checking.  */
 };
@@ -280,6 +281,7 @@ static struct riscv_set_options riscv_opts =
   0, /* pic */
   0, /* rvc */
   1, /* relax */
+  0, /* exact */
   DEFAULT_RISCV_ATTR, /* arch_attr */
   0, /* csr_check */
 };
@@ -493,16 +495,18 @@ static bool explicit_priv_attr = false;
 static char *expr_parse_end;
 
 /* Macros for encoding relaxation state for RVC branches and far jumps.  */
-#define RELAX_BRANCH_ENCODE(uncond, rvc, length)	\
+#define RELAX_BRANCH_ENCODE(uncond, rvc, length, exact)	\
   ((relax_substateT) 					\
    (0xc0000000						\
     | ((uncond) ? 1 : 0)				\
     | ((rvc) ? 2 : 0)					\
-    | ((length) << 2)))
+    | ((exact) ? 4 : 0)					\
+    | ((length) << 3)))
 #define RELAX_BRANCH_P(i) (((i) & 0xf0000000) == 0xc0000000)
-#define RELAX_BRANCH_LENGTH(i) (((i) >> 2) & 0xF)
+#define RELAX_BRANCH_LENGTH(i) (((i) >> 3) & 0xF)
 #define RELAX_BRANCH_RVC(i) (((i) & 2) != 0)
 #define RELAX_BRANCH_UNCOND(i) (((i) & 1) != 0)
+#define RELAX_BRANCH_EXACT(i) (((i) & 4) != 0)
 
 /* Is the given value a sign-extended 32-bit value?  */
 #define IS_SEXT_32BIT_NUM(x)						\
@@ -832,22 +836,25 @@ add_relaxed_insn (struct riscv_cl_insn *insn, int max_chars, int var,
 static unsigned
 relaxed_branch_length (fragS *fragp, asection *sec, int update)
 {
-  int jump, rvc, length = 8;
+  int jump, rvc, exact, length = 8;
 
   if (!fragp)
     return length;
 
   jump = RELAX_BRANCH_UNCOND (fragp->fr_subtype);
   rvc = RELAX_BRANCH_RVC (fragp->fr_subtype);
+  exact = RELAX_BRANCH_EXACT (fragp->fr_subtype);
   length = RELAX_BRANCH_LENGTH (fragp->fr_subtype);
 
   /* Assume jumps are in range; the linker will catch any that aren't.  */
   length = jump ? 4 : 8;
 
-  if (fragp->fr_symbol != NULL
-      && S_IS_DEFINED (fragp->fr_symbol)
-      && !S_IS_WEAK (fragp->fr_symbol)
-      && sec == S_GET_SEGMENT (fragp->fr_symbol))
+  if (exact)
+    length = rvc ? 2 : 4;
+  else if (fragp->fr_symbol != NULL
+	   && S_IS_DEFINED (fragp->fr_symbol)
+	   && !S_IS_WEAK (fragp->fr_symbol)
+	   && sec == S_GET_SEGMENT (fragp->fr_symbol))
     {
       offsetT val = S_GET_VALUE (fragp->fr_symbol) + fragp->fr_offset;
       bfd_vma rvc_range = jump ? RVC_JUMP_REACH : RVC_BRANCH_REACH;
@@ -862,7 +869,7 @@ relaxed_branch_length (fragS *fragp, asection *sec, int update)
     }
 
   if (update)
-    fragp->fr_subtype = RELAX_BRANCH_ENCODE (jump, rvc, length);
+    fragp->fr_subtype = RELAX_BRANCH_ENCODE (jump, rvc, length, exact);
 
   return length;
 }
@@ -2069,7 +2076,8 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	    }
 
 	  add_relaxed_insn (ip, worst_case, best_case,
-			    RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case),
+			    RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case,
+						 riscv_opts.exact),
 			    address_expr->X_add_symbol,
 			    address_expr->X_add_number);
 	  return;
@@ -2985,6 +2993,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
     {
       if ((insn->xlen_requirement != 0) && (xlen != insn->xlen_requirement))
+	continue;
+
+      if (insn->pinfo != INSN_MACRO && riscv_opts.exact
+	  && (insn->pinfo & INSN_NON_EXACT))
 	continue;
 
       if (!riscv_multi_subset_supports (&riscv_rps_as, insn->insn_class))
@@ -5369,6 +5381,16 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
     riscv_opts.relax = true;
   else if (strcmp (name, "norelax") == 0)
     riscv_opts.relax = false;
+  else if (strcmp (name, "exact") == 0)
+    {
+      riscv_opts.exact = true;
+      riscv_opts.relax = false;
+    }
+  else if (strcmp (name, "noexact") == 0)
+    {
+      riscv_opts.exact = false;
+      riscv_opts.relax = true;
+    }
   else if (strcmp (name, "csr-check") == 0)
     riscv_opts.csr_check = true;
   else if (strcmp (name, "no-csr-check") == 0)
