@@ -2584,9 +2584,12 @@ get_aarch64_dynamic_type (unsigned long type)
 {
   switch (type)
     {
-    case DT_AARCH64_BTI_PLT:  return "AARCH64_BTI_PLT";
-    case DT_AARCH64_PAC_PLT:  return "AARCH64_PAC_PLT";
+    case DT_AARCH64_BTI_PLT:      return "AARCH64_BTI_PLT";
+    case DT_AARCH64_PAC_PLT:      return "AARCH64_PAC_PLT";
     case DT_AARCH64_VARIANT_PCS:  return "AARCH64_VARIANT_PCS";
+    case DT_AARCH64_MEMTAG_MODE:  return "AARCH64_MEMTAG_MODE";
+    case DT_AARCH64_MEMTAG_STACK: return "AARCH64_MEMTAG_STACK";
+
     default:
       return NULL;
     }
@@ -5988,6 +5991,7 @@ get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_GNU_HASH:                return "GNU_HASH";
     case SHT_GNU_LIBLIST:             return "GNU_LIBLIST";
     case SHT_GNU_OBJECT_ONLY:	      return "GNU_OBJECT_ONLY";
+    case SHT_GNU_SFRAME:              return "GNU_SFRAME";
 
     case SHT_SUNW_move:               return "SUNW_MOVE";
     case SHT_SUNW_COMDAT:             return "SUNW_COMDAT";
@@ -6851,7 +6855,7 @@ process_file_header (Filedata * filedata)
     return false;
 
   if (! filedata->is_separate)
-    init_dwarf_regnames_by_elf_machine_code (header->e_machine);
+    init_dwarf_by_elf_machine_code (header->e_machine);
 
   if (do_header)
     {
@@ -8391,6 +8395,7 @@ process_section_headers (Filedata * filedata)
 
 	case SHT_NOTE:
 	case SHT_PROGBITS:
+	case SHT_GNU_SFRAME:
 	  /* Having a zero sized section is not illegal according to the
 	     ELF standard, but it might be an indication that something
 	     is wrong.  So issue a warning if we are running in lint mode.  */

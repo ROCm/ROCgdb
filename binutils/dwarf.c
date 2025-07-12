@@ -8611,6 +8611,8 @@ typedef struct Frame_Chunk
 }
 Frame_Chunk;
 
+typedef bool (*is_mach_augmentation_ftype) (char c);
+static is_mach_augmentation_ftype is_mach_augmentation;
 typedef const char *(*dwarf_regname_lookup_ftype) (unsigned int);
 static dwarf_regname_lookup_ftype dwarf_regnames_lookup_func;
 static const char *const *dwarf_regnames;
@@ -8923,9 +8925,22 @@ init_dwarf_regnames_loongarch (void)
   dwarf_regnames_lookup_func = regname_internal_by_table_only;
 }
 
-void
-init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
+static bool
+is_nomach_augmentation (char c ATTRIBUTE_UNUSED)
 {
+  return false;
+}
+
+static bool
+is_aarch64_augmentation (char c)
+{
+  return (c == 'B' || c == 'G');
+}
+
+void
+init_dwarf_by_elf_machine_code (unsigned int e_machine)
+{
+  is_mach_augmentation = is_nomach_augmentation;
   dwarf_regnames_lookup_func = NULL;
   is_aarch64 = false;
 
@@ -8947,6 +8962,7 @@ init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
 
     case EM_AARCH64:
       init_dwarf_regnames_aarch64 ();
+      is_mach_augmentation = is_aarch64_augmentation;
       break;
 
     case EM_S390:
@@ -8970,9 +8986,10 @@ init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
    architecture and specific machine type of a BFD.  */
 
 void
-init_dwarf_regnames_by_bfd_arch_and_mach (enum bfd_architecture arch,
-					  unsigned long mach)
+init_dwarf_by_bfd_arch_and_mach (enum bfd_architecture arch,
+				 unsigned long mach)
 {
+  is_mach_augmentation = is_nomach_augmentation;
   dwarf_regnames_lookup_func = NULL;
   is_aarch64 = false;
 
@@ -9000,6 +9017,7 @@ init_dwarf_regnames_by_bfd_arch_and_mach (enum bfd_architecture arch,
 
     case bfd_arch_aarch64:
       init_dwarf_regnames_aarch64();
+      is_mach_augmentation = is_aarch64_augmentation;
       break;
 
     case bfd_arch_s390:
@@ -9248,7 +9266,7 @@ read_cie (unsigned char *start, unsigned char *end,
 	    fc->fde_encoding = *q++;
 	  else if (*p == 'S')
 	    ;
-	  else if (*p == 'B')
+	  else if (is_mach_augmentation (*p))
 	    ;
 	  else
 	    break;

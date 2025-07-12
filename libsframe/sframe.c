@@ -876,7 +876,7 @@ sframe_decode_fre (const char *fre_buf, sframe_frame_row_entry *fre,
   return 0;
 }
 
-/* Decode the specified SFrame buffer CF_BUF of size CF_SIZE and return the
+/* Decode the specified SFrame buffer SF_BUF of size SF_SIZE and return the
    new SFrame decoder context.
 
    Sets ERRP for the caller if any error.  Frees up the allocated memory in
@@ -1077,18 +1077,6 @@ sframe_decoder_get_offsetof_fde_start_addr (sframe_decoder_ctx *dctx,
   return (sframe_decoder_get_hdr_size (dctx)
 	  + func_idx * sizeof (sframe_func_desc_entry)
 	  + offsetof (sframe_func_desc_entry, sfde_func_start_address));
-}
-
-/* Find the function descriptor entry which contains the specified address
-   ADDR.
-   This function is deprecated and will be removed from libsframe.so.2.  */
-
-void *
-sframe_get_funcdesc_with_addr (sframe_decoder_ctx *ctx __attribute__ ((unused)),
-			       int32_t addr __attribute__ ((unused)),
-			       int *errp)
-{
-  return sframe_ret_set_errno (errp, SFRAME_ERR_INVAL);
 }
 
 /* Find the function descriptor entry starting which contains the specified
@@ -1639,7 +1627,7 @@ sframe_encoder_add_funcdesc (sframe_encoder_ctx *encoder,
 			     int32_t start_addr,
 			     uint32_t func_size,
 			     unsigned char func_info,
-			     uint32_t num_fres __attribute__ ((unused)))
+			     uint32_t num_fres ATTRIBUTE_UNUSED)
 {
   sframe_header *ehp;
   sf_fde_tbl *fd_info;
@@ -1721,7 +1709,7 @@ sframe_encoder_add_funcdesc_v2 (sframe_encoder_ctx *encoder,
 				uint32_t func_size,
 				unsigned char func_info,
 				uint8_t rep_block_size,
-				uint32_t num_fres __attribute__ ((unused)))
+				uint32_t num_fres ATTRIBUTE_UNUSED)
 {
   sf_fde_tbl *fd_info;
   int err;

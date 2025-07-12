@@ -8,6 +8,8 @@
   with the applicable encoding.  Setting the flag ensures compliance with the
   updated SFrame V2 specification.
 
+  ELF SFrame sections now have section type set to SHT_GNU_SFRAME.
+
 * Add .errif and .warnif directives, permitting user-controlled diagnostics
   with conditionals that are evaluated only at the end of assembly.
 
@@ -38,6 +40,15 @@
   MIPS: xmipscbop v1.0, xmipscmov v1.0, xmipsexectl v1.0, xmipslsp v1.0.
 
 * Add support for the x86 Zhaoxin PadLock XMODX instructions.
+
+* Add support for several instruction aliases defined for the LoongArch 32-bit
+  reduced subset (LA32R): rdcntvl.w, rdcntvh.w, rdcntid.w.
+
+* For LoongArch, warn about out-of-range 3rd arguments (maximum number of
+  bytes to skip) of .align directives.
+
+* For LoongArch, warn about negative right-shift amounts and
+  division/modulus-by-zero when evaluating expressions.
 
 Changes in 2.44:
 

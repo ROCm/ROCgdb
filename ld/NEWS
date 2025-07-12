@@ -9,6 +9,8 @@
   sfde_func_start_address field in the SFrame section.  Relocatable SFrame
   links are now fixed.
 
+  ELF SFrame sections now have section type set to SHT_GNU_SFRAME.
+
 * On RISC-V, add new PLT formats, and GNU property merge rules for zicfiss and
   zicfilp extensions.
 
@@ -34,6 +36,12 @@
   --no-ld-generated-unwind-info.
 
 * On s390, add support for linker option --[no-]ld-generated-unwind-info.
+
+* On LoongArch, linker relaxation time complexity is no longer quadratic with
+  respect to relocation counts.  Linking time of large software should be
+  improved.
+
+* On LoongArch, R_LARCH_32_PCREL records are now checked for overflow.
 
 Changes in 2.44:
 

@@ -91,11 +91,6 @@
 #define tc_cfi_reloc_for_encoding(e) BFD_RELOC_NONE
 #endif
 
-/* Targets which support SFrame format will define this and return true.  */
-#ifndef support_sframe_p
-# define support_sframe_p() false
-#endif
-
 /* Private segment collection list.  */
 struct dwcfi_seg_list
 {
@@ -414,7 +409,7 @@ alloc_fde_entry (void)
   fde->lsda_encoding = DW_EH_PE_omit;
   fde->eh_header_type = EH_COMPACT_UNKNOWN;
 #ifdef tc_fde_entry_init_extra
-  tc_fde_entry_init_extra (fde)
+  tc_fde_entry_init_extra (fde);
 #endif
 
   return fde;
@@ -2277,7 +2272,7 @@ select_cie_for_fde (struct fde_entry *fde, bool eh_frame,
   cie->personality = fde->personality;
   cie->first = fde->data;
 #ifdef tc_cie_entry_init_extra
-  tc_cie_entry_init_extra (cie, fde)
+  tc_cie_entry_init_extra (cie, fde);
 #endif
 
   for (i = cie->first; i ; i = i->next)
@@ -2606,6 +2601,7 @@ cfi_finish (void)
 	- .sframe in the .cfi_sections directive.  */
   if (flag_gen_sframe || (all_cfi_sections & CFI_EMIT_sframe) != 0)
     {
+#ifdef support_sframe_p
       if (support_sframe_p () && !SUPPORT_FRAME_LINKONCE)
 	{
 	  segT sframe_seg;
@@ -2615,9 +2611,11 @@ cfi_finish (void)
 				    (SEC_ALLOC | SEC_LOAD | SEC_DATA
 				     | DWARF2_EH_FRAME_READ_ONLY),
 				    alignment);
+	  elf_section_type (sframe_seg) = SHT_GNU_SFRAME;
 	  output_sframe (sframe_seg);
 	}
       else
+#endif
 	as_bad (_(".sframe not supported for target"));
     }
 
