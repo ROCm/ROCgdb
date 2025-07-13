@@ -55,8 +55,8 @@ Approx time to complete from here: 2 hours ...
 
   4. Create the release branch using:
 
-	git branch binutils-2_45-branch
-        git push origin binutils-2_45-branch
+	git branch binutils-2_46-branch
+        git push origin binutils-2_46-branch
 
      If you get a message like:
      
@@ -66,7 +66,7 @@ Approx time to complete from here: 2 hours ...
 
   5. Make sure that the branch is there.  IE check out the branch sources:
   
-        git clone ssh://sourceware.org/git/binutils-gdb.git -b binutils-2_45-branch 2.45
+        git clone ssh://sourceware.org/git/binutils-gdb.git -b binutils-2_46-branch 2.46
 
      If you get a message about being in a "detached head" state, something
      has gone wrong...
@@ -88,8 +88,8 @@ Approx time to complete from here: 2 hours ...
      ask Joel Brobecker <brobecker AT adacore DOT com>.
 
   7. Rename the current HEAD version entry in Bugzilla, and create a
-     new one.  E.g. rename "2.45 (HEAD)" to 2.45, and create
-     "2.46 (HEAD)":
+     new one.  E.g. rename "2.46 (HEAD)" to 2.46, and create
+     "2.47 (HEAD)":
      
         https://sourceware.org/bugzilla/editversions.cgi?product=binutils
 
@@ -97,18 +97,18 @@ Approx time to complete from here: 2 hours ...
      of the next release and the BRANCH to indicate that it is almost
      ready for the release.
 
-     So if the release is going to be 2.45 then the version number on
-     the BRANCH should be set to 2.44.90 - ie almost, but not quite 2.45,
-     and the version number on the MAINLINE should be set to 2.45.50 -
-     ie half way to 2.46 release.
+     So if the release is going to be 2.46 then the version number on
+     the BRANCH should be set to 2.45.90 - ie almost, but not quite 2.46,
+     and the version number on the MAINLINE should be set to 2.46.50 -
+     ie half way to 2.47 release.
 
      So the BRANCH bfd/version.m4 has:
      
-       m4_define([BFD_VERSION], [2.44.90])
+       m4_define([BFD_VERSION], [2.45.90])
        
      and the MAINLINE has:
 
-       m4_define([BFD_VERSION], [2.45.50])
+       m4_define([BFD_VERSION], [2.46.50])
 
      Regenerate various files on both branch and HEAD by configuring
      with "--enable-maintainer-mode --enable-gold --enable-shared" and then building
@@ -140,10 +140,10 @@ Approx time to complete from here: 2 hours ...
 	
 	Add a .dirstamp file to the gas/doc subdirectory:
 
-          touch -d `date +%Y-%m-%d` binutils-2.44.90/gas/doc/.dirstamp
-          tar rvf binutils-2.44.90.tar binutils-2.44.90/gas/doc/.dirstamp
-          rm binutils-2.44.90.tar.xz
-          xz -9 -k binutils-2.44.90.tar
+          touch -d `date +%Y-%m-%d` binutils-2.45.90/gas/doc/.dirstamp
+          tar rvf binutils-2.45.90.tar binutils-2.45.90/gas/doc/.dirstamp
+          rm binutils-2.45.90.tar.xz
+          xz -9 -k binutils-2.45.90.tar
 
 	 ...END OF FIXME
 
@@ -154,7 +154,12 @@ Approx time to complete from here: 2 hours ...
 	   tar xvf binutils-*.tar.xz
 	   mkdir build
 	   cd build
+	   
+     For EVEN numbered releases:
 	   ../binutils-*/configure --quiet --enable-gold
+     For ODD numbered releases:
+	   ../binutils-*/configure --quiet
+	   
 	   make
 	   popd
 
@@ -162,8 +167,8 @@ Approx time to complete from here: 2 hours ...
 
      d. Upload the pre-release snapshot to the sourceware FTP site:
 
-          scp binutils-2.44.90.tar.xz sourceware.org:/var/ftp/pub/binutils/snapshots
-          ssh sourceware.org sha256sum ~ftp/pub/binutils/snapshots/binutils-2.44.90.tar.xz
+          scp binutils-2.45.90.tar.xz sourceware.org:/var/ftp/pub/binutils/snapshots
+          ssh sourceware.org sha256sum ~ftp/pub/binutils/snapshots/binutils-2.45.90.tar.xz
 
         Paranoia: Compare the checksum with the local version.
 
@@ -182,7 +187,7 @@ Dear Translation Project
 
   A snapshot of the branch sources can be found here:
 
-    https://sourceware.org/pub/binutils/snapshots/binutils-2.44.90.tar.xz
+    https://sourceware.org/pub/binutils/snapshots/binutils-2.45.90.tar.xz
 
   We hope to make the official release of the sources on the <DATE>
   although that could change if there are important bugs that need to
