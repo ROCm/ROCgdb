@@ -3446,13 +3446,12 @@ elf32_csky_size_stubs (bfd *output_bfd,
   while (1)
     {
       bfd *input_bfd;
-      unsigned int bfd_indx;
       asection *stub_sec;
       bool stub_changed = false;
 
-      for (input_bfd = info->input_bfds, bfd_indx = 0;
+      for (input_bfd = info->input_bfds;
 	   input_bfd != NULL;
-	   input_bfd = input_bfd->link.next, bfd_indx++)
+	   input_bfd = input_bfd->link.next)
 	{
 	  Elf_Internal_Shdr *symtab_hdr;
 	  asection *section;
@@ -4381,8 +4380,8 @@ csky_elf_relocate_section (bfd *                  output_bfd,
 	  else
 #endif
 	    RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					     rel, 1, relend, howto, 0,
-					     contents);
+					     rel, 1, relend, R_CKCORE_NONE,
+					     howto, 0, contents);
 	}
 
       if (bfd_link_relocatable (info))

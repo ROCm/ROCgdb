@@ -6527,16 +6527,15 @@ elf32_arm_size_stubs (bfd *output_bfd,
   while (1)
     {
       bfd *input_bfd;
-      unsigned int bfd_indx;
       asection *stub_sec;
       enum elf32_arm_stub_type stub_type;
       bool stub_changed = false;
       unsigned prev_num_a8_fixes = num_a8_fixes;
 
       num_a8_fixes = 0;
-      for (input_bfd = info->input_bfds, bfd_indx = 0;
+      for (input_bfd = info->input_bfds;
 	   input_bfd != NULL;
-	   input_bfd = input_bfd->link.next, bfd_indx++)
+	   input_bfd = input_bfd->link.next)
 	{
 	  Elf_Internal_Shdr *symtab_hdr;
 	  asection *section;
@@ -13379,7 +13378,8 @@ elf32_arm_relocate_section (bfd *		   output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_ARM_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	{

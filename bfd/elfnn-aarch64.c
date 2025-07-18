@@ -7059,7 +7059,8 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_AARCH64_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -8464,10 +8465,9 @@ elfNN_aarch64_modify_headers (bfd *abfd,
 			      struct bfd_link_info *info)
 {
   struct elf_segment_map *m;
-  unsigned int segment_count = 0;
   Elf_Internal_Phdr *p;
 
-  for (m = elf_seg_map (abfd); m != NULL; m = m->next, segment_count++)
+  for (m = elf_seg_map (abfd); m != NULL; m = m->next)
     {
       /* We are only interested in the memory tag segment that will be dumped
 	 to a core file.  If we have no memory tags or this isn't a core file we
