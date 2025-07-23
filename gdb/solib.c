@@ -1167,9 +1167,7 @@ info_linker_namespace_command (const char *pattern, int from_tty)
   struct ui_out *uiout = current_uiout;
   std::vector<std::pair<int, std::vector<const solib *>>> all_solibs_to_print;
 
-  if (pattern != nullptr)
-    while (*pattern == ' ')
-      pattern++;
+  pattern = skip_spaces (pattern);
 
   if (pattern == nullptr || pattern[0] == '\0')
     {
@@ -1197,10 +1195,10 @@ info_linker_namespace_command (const char *pattern, int from_tty)
 	 escape sequence must be doubled to survive the compiler pass.  */
       re_comp ("^\\[\\[[0-9]\\+\\]\\]$");
       if (re_exec (pattern))
-	ns = strtol (pattern+2, nullptr, 10);
+	ns = strtol (pattern + 2, nullptr, 10);
       else
 	{
-	  char * end = nullptr;
+	  char *end = nullptr;
 	  ns = strtol (pattern, &end, 10);
 	  if (end[0] != '\0')
 	    error (_("Invalid linker namespace identifier: %s"), pattern);
