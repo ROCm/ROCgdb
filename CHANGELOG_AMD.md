@@ -7,7 +7,8 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
-- Support for the gfx950 architecture.
+- Support for the following architectures:
+  - `gfx950`
 
 ### Removed
 
@@ -18,12 +19,12 @@ Full documentation for ROCgdb is available at
 ### Added
 
 - Support for debugging shaders compiled for the following generic targets:
-  - gfx9-generic
-  - gfx9-4-generic
-  - gfx10-1-generic
-  - gfx10-3-generic
-  - gfx11-generic
-  - gfx12-generic
+  - `gfx9-generic`
+  - `gfx9-4-generic`
+  - `gfx10-1-generic`
+  - `gfx10-3-generic`
+  - `gfx11-generic`
+  - `gfx12-generic`
 
 ## ROCgdb-15.2 (for ROCm-6.3)
 
