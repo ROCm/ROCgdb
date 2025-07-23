@@ -28614,6 +28614,12 @@ Wheat Nas devices.
 @item @code{gfx1102}
 Hotpink Bonefish devices.
 
+@item @code{gfx1150}
+Gfx1150 devices.
+
+@item @code{gfx1151}
+Gfx1151 devices.
+
 @item @code{gfx1200}
 Gfx1200 devices.
 
