@@ -83,14 +83,40 @@ namespace eval Term {
     proc _ctl_0x07 {} {
     }
 
-    # Backspace.
-    proc _ctl_0x08 {} {
-	_log_cur "Backspace" {
-	    variable _cur_col
+    # Return 1 if tuiterm has the bw/auto_left_margin enabled.
+    proc _have_bw {} {
+	return 0
+    }
 
-	    if {$_cur_col > 0} {
+    # Backspace.
+    proc _ctl_0x08 { {bw -1} } {
+	if { $bw == -1 } {
+	    set bw [_have_bw]
+	}
+	_log_cur "Backspace, bw == $bw" {
+	    variable _cur_col
+	    variable _cur_row
+	    variable _cols
+
+	    if { $_cur_col > 0 } {
+		# No wrapping needed.
 		incr _cur_col -1
+		return
 	    }
+
+	    if { ! $bw } {
+		# Wrapping not enabled.
+		return
+	    }
+
+	    if { $_cur_row == 0 } {
+		# Can't wrap.
+		return
+	    }
+
+	    # Wrap to previous line.
+	    set _cur_col [expr $_cols - 1]
+	    incr _cur_row -1
 	}
     }
 
@@ -153,6 +179,14 @@ namespace eval Term {
 	    # Write N blank spaces starting from the cursor.
 	    _clear_in_line $_cur_col [expr $_cur_col + $n] $_cur_row
 	}
+    }
+
+    # Horizontal Position Absolute.
+    #
+    # https://vt100.net/docs/vt510-rm/HPA.html
+    proc _csi_` {args} {
+	# Same as Cursor Horizontal Absolute.
+	return [Term::_csi_G {*}$args]
     }
 
     # Cursor Up.
@@ -251,7 +285,7 @@ namespace eval Term {
 	    variable _cur_col
 	    variable _cols
 
-	    set _cur_col [expr {min ($arg - 1, $_cols)}]
+	    set _cur_col [expr {min ($arg, $_cols)} - 1]
 	}
     }
 
@@ -597,6 +631,11 @@ namespace eval Term {
     #
     # https://vt100.net/docs/vt510-rm/SGR.html
     proc _csi_m {args} {
+	if { [llength $args] == 0 } {
+	    # Apply default.
+	    set args [list 0]
+	}
+
 	_log_cur "Select Graphic Rendition ([join $args {, }])" {
 	    variable _attrs
 
@@ -740,7 +779,7 @@ namespace eval Term {
 		_log "wait_for: unsupported escape"
 		error "unsupported escape"
 	    }
-	    -re "^\x1b\\\[(\[0-9;\]*)(\[a-zA-Z@\])" {
+	    -re "^\x1b\\\[(\[0-9;\]*)(\[a-zA-Z@`\])" {
 		set cmd $expect_out(2,string)
 		set params [split $expect_out(1,string) ";"]
 		_log "wait_for: _csi_$cmd <<<$expect_out(1,string)>>>"
