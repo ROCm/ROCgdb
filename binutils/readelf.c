@@ -22954,7 +22954,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
   printf (_("    KFD version: %u.%u\n"), kfd_major, kfd_minor);
   printf (_("    Runtime snapshot: "));
   for (i = 0; i < runtime_snapshot_size; ++i)
-    printf ("%02x%c", *++head & 0xff,
+    printf ("%02x%c", *head++ & 0xff,
 	    i == runtime_snapshot_size - 1 ? '\n' : ' ');
 
   /* Agents snapshots.  */
@@ -22963,7 +22963,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
     {
       printf ("      ");
       for (j = 0; j < agent_snapshot_size; ++j)
-	printf ("%02x ", *++head & 0xff);
+	printf ("%02x ", *head++ & 0xff);
       printf ("\n");
     }
 
@@ -22973,7 +22973,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
     {
       printf ("      ");
       for (j = 0; j < queues_snapshot_size; ++j)
-	printf ("%02x ", *++head & 0xff);
+	printf ("%02x ", *head++ & 0xff);
       printf ("\n");
     }
 
