@@ -6063,6 +6063,26 @@ proc gdb_compile {source dest type options} {
 	lappend new_options "early_flags=-O0\
 			     -mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
+
+	if {[istarget "*-*-mingw*"]} {
+	    # This tells Clang to emit DWARF, but only if -g, or -gN
+	    # (with N>=1) is also specified later in the command line.
+	    lappend new_options "early_flags=-gdwarf -g0"
+
+	    # Passing "-debug:dwarf" to lld-link suppresses:
+	    #  lld-link: warning: section name .debug_info is longer \
+	    #    than 8 characters and will use a non-standard string table
+	    #
+	    # Passing -debug:none is necessary to disable PDB
+	    # emission.  This is because Clang passes "-debug" to
+	    # lld-link if you specify _any_ -g option, including
+	    # -gdwarf and -g0, and lld-link emits a PDB file with
+	    # "-debug".  IOW, even plain -gdwarf still emits a (mostly
+	    # empty and useless) PDB file.  "-debug:dwarf" does not
+	    # disable PDB emission (by design), but "-debug:none" does
+	    # disable it.
+	    lappend new_options "ldflags=-Wl,-debug:none -Wl,-debug:dwarf"
+	}
     }
 
     # Because we link with libraries using their basename, we may need
