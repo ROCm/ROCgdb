@@ -47,7 +47,6 @@ struct tu_stats
   int nr_symtab_sharers = 0;
   int nr_stmt_less_type_units = 0;
   int nr_all_type_units_reallocs = 0;
-  int nr_tus = 0;
 };
 
 struct abbrev_table_cache;
@@ -296,6 +295,10 @@ public:
     return m_length;
   }
 
+  /* Return true if the length of this CU has been set.  */
+  bool length_is_set () const
+  { return m_length != 0; }
+
   void set_length (unsigned int length, bool strict_p = true)
   {
     if (m_length == 0)
@@ -521,20 +524,6 @@ struct dwarf2_per_bfd
     return this->all_units[index].get ();
   }
 
-  /* Return the CU given its index in the CU table in the index.  */
-  dwarf2_per_cu *get_index_cu (int index) const
-  {
-    if (this->all_comp_units_index_cus.empty ())
-      return get_unit (index);
-
-    return this->all_comp_units_index_cus[index];
-  }
-
-  dwarf2_per_cu *get_index_tu (int index) const
-  {
-    return this->all_comp_units_index_tus[index];
-  }
-
   /* Return the separate '.dwz' debug file.  If there is no
      .gnu_debugaltlink or .debug_sup section in the file, then the
      result depends on REQUIRE: if REQUIRE is true, error out; if
@@ -619,13 +608,9 @@ public:
      the target compilation unit of a particular reference.  */
   std::vector<dwarf2_per_cu_up> all_units;
 
-  /* The all_units vector contains both CUs and TUs.  Provide views on the
-     vector that are limited to either the CU part or the TU part.  */
-  gdb::array_view<dwarf2_per_cu_up> all_comp_units;
-  gdb::array_view<dwarf2_per_cu_up> all_type_units;
-
-  std::vector<dwarf2_per_cu *> all_comp_units_index_cus;
-  std::vector<dwarf2_per_cu *> all_comp_units_index_tus;
+  /* Number of compilation and type units in the ALL_UNITS vector.  */
+  unsigned int num_comp_units = 0;
+  unsigned int num_type_units = 0;
 
   /* Set of signatured_types, used to look up by signature.  */
   signatured_type_set signatured_types;
@@ -1232,7 +1217,7 @@ extern void dw_expand_symtabs_matching_file_matcher
 extern const char *read_indirect_string_at_offset
   (dwarf2_per_objfile *per_objfile, LONGEST str_offset);
 
-/* Initialize the views on all_units.  */
+/* Finalize the all_units vector.  */
 
 extern void finalize_all_units (dwarf2_per_bfd *per_bfd);
 
@@ -1277,14 +1262,17 @@ extern pc_bounds_kind dwarf2_get_pc_bounds (die_info *die,
 					    dwarf2_cu *cu, addrmap_mutable *map,
 					    void *datum);
 
-/* Locate the .debug_info compilation unit from CU's objfile which contains
-   the DIE at OFFSET.  Raises an error on failure.  */
+/* Locate the unit in PER_OBJFILE which contains the DIE at TARGET.  Raises an
+   error on failure.  */
 
-extern dwarf2_per_cu *dwarf2_find_containing_comp_unit (sect_offset sect_off,
-							unsigned int
-							  offset_in_dwz,
-							dwarf2_per_bfd
-							  *per_bfd);
+extern dwarf2_per_cu *dwarf2_find_containing_unit
+  (const section_and_offset &target, dwarf2_per_objfile *per_objfile);
+
+/* Locate the unit starting at START in PER_BFD.  Return nullptr if not
+   found.  */
+
+extern dwarf2_per_cu *dwarf2_find_unit (const section_and_offset &start,
+					dwarf2_per_bfd *per_bfd);
 
 /* Decode simple location descriptions.
 
@@ -1326,5 +1314,11 @@ extern int dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 
 extern file_and_directory &find_file_and_directory (die_info *die,
 						    dwarf2_cu *cu);
+
+
+/* Return the section that ATTR, an attribute with ref form, references.  */
+
+extern const dwarf2_section_info &get_section_for_ref
+  (const attribute &attr, dwarf2_cu *cu);
 
 #endif /* GDB_DWARF2_READ_H */
