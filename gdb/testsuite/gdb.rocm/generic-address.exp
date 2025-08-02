@@ -1,0 +1,158 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test accessing memory through a generic address pointer.
+# The idea is to get the generic address of a local variable
+# and then alter its content and check if the value of that
+# variable has indeed changed.  Eventually, we apply the same
+# logic to a local array that is bound to be straddled over
+# two DWORDs (interleave size).
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile \
+	{debug hip}]} {
+    return -1
+}
+
+proc do_test {} {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	# Set breakpoints in device code.  One hit is enough.
+	for {set i 1} {$i <= 4} {incr i} {
+	    set bp_line [gdb_get_line_number "Break here $i"]
+	    gdb_breakpoint $bp_line "allow-pending" "temporary"
+	}
+
+	gdb_test "continue" "NOP \\(1\\);" "look into \"local\" variable"
+
+	# Switch to arbitrary lane 11.
+	set lane 11
+	gdb_test "lane $lane" "Switching to .* lane $lane .*" \
+	    "switch to lane $lane"
+
+	with_test_prefix "local" {
+	    # Verify that the address of "local" is in "private_lane" address space.
+	    gdb_test_multiple "p &local" "address of \"local\" is private" {
+		-re -wrap ".*private_lane#0x.*" {
+		    pass $gdb_test_name
+		}
+		-re -wrap ".*" {
+		    unsupported "local variable isn't in private lane address space"
+		    return
+		}
+	    }
+
+	    # N.B.:
+	    # At the time of writing this test, the compiler does not attach
+	    # the DWARF information (DW_AT_LLVM_address_space) to pointer or
+	    # reference DIEs.  Even if it would, rocgdb does not know how to
+	    # use it.  This imposes limitations as it cannot be determined
+	    # where the value of "gen_local_addr" points to or how to handle
+	    # a reference to "local" variable.
+
+	    # For future/backward compatibility, we try to accommodate both
+	    # cases where "gen_local_addr" is a basic global pointer or a
+	    # generic one.
+	    set addr ""
+	    gdb_test_multiple "p gen_local_addr" "extract address type" {
+		-re " = \\(volatile int \\*\\) (generic\\#$::hex)\r\n" {
+		    set addr $expect_out(1,string)
+		    exp_continue
+		}
+		-re " = \\(volatile int \\*\\) ($::hex)\r\n" {
+		    set addr "generic#$expect_out(1,string)"
+		    exp_continue
+		}
+		-re "$::gdb_prompt $" {
+		    gdb_assert { $addr != "" } $gdb_test_name
+		}
+	    }
+
+	    # Record the value of "local" (threadIdx.x) and verify
+	    # that the "$addr" is really pointing to it.
+	    set local [get_valueof "/d" "local" INVALID]
+	    gdb_test "x/wd $addr" "$addr:\[ \t\]+$local" "read from generic address"
+
+	    # The ultimate test:
+	    #   - Change the content of memory that "$addr" points to.
+	    #   - Expect the result to be reflected in the "local" variable.
+	    gdb_test_no_output "set {int} $addr = 1337" "change"
+	    gdb_test "print local" " = 1337" "read what was written"
+	    gdb_test "continue" "NOP \\(2\\);" \
+		"modification is reflected in the program"
+	}
+
+	gdb_test "continue" "NOP \\(3\\);" "look into \"arr\" array"
+	gdb_test "info lane" "\\*\[ \t\]+$lane\[ \t\]+A\[ \t\]+.*" \
+	    "must be in the right lane ($lane)"
+
+	# Time to deal with a not-so-alignment-friendly part of an array.
+	with_test_prefix "array" {
+	    gdb_test "print /x arr" \
+		" = \\{0x11, 0x22, 0x33, 0x44, 0x55\\}" \
+		"print \"arr\" as is"
+
+	    # Use the address of "arr[1]" to print its contents.
+	    gdb_test "print /x {uint32_t}(arr + 1)" \
+		" = 0x55443322" \
+		"use the address of \"arr\[1\]\" to print its contents"
+
+	    set addr ""
+	    gdb_test_multiple "p gen_arr1_addr" "extract address type" {
+		-re " = \\(volatile uint32_t \\*\\) (generic\\#$::hex)\r\n" {
+		    set addr $expect_out(1,string)
+		    exp_continue
+		}
+		-re " = \\(volatile uint32_t \\*\\) ($::hex)\r\n" {
+		    set addr "generic#$expect_out(1,string)"
+		    exp_continue
+		}
+		-re "$::gdb_prompt $" {
+		    gdb_assert { $addr != "" } $gdb_test_name
+		}
+	    }
+
+	    # Record the 32-bit value at "arr[1..4]" and verify
+	    # that the "$addr" is really pointing to it.
+	    set dw [get_valueof "/d" "{uint32_t}(arr + 1)" INVALID]
+	    gdb_test "x/wd $addr" "$addr:\[ \t\]+$dw" "read at generic address"
+
+	    # The ultimate test:
+	    #   - Change the content of memory that "$addr" points to.
+	    #   - Expect the result to be reflected in "arr[1..4]".
+	    gdb_test_no_output "set {uint32_t} $addr = 0x87654321" "change"
+	    gdb_test "print /x {uint32_t}(arr + 1)" \
+	      " = 0x87654321" "read what was written"
+	    gdb_test "continue" "NOP \\(4\\);" \
+		"modification is reflected in the program"
+	}
+    }
+}
+
+do_test
