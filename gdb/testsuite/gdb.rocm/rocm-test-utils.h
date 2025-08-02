@@ -37,4 +37,9 @@
     }									\
   while (0)
 
+/* Insert a "s_nop <n>" marker into the code.  It is better than
+   an empty function that might get optimised away.  */
+
+#define NOP(N) asm volatile ("s_nop " #N)
+
 #endif /* ROCM_TEST_UTILS_H */
