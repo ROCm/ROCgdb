@@ -36,7 +36,6 @@ kernel ()
 #else
 
 #include <hip/hip_runtime.h>
-#include <unistd.h>
 
 constexpr unsigned int NUM_ITEMS_PER_BLOCK = 256;
 constexpr unsigned int NUM_BLOCKS = 128;
