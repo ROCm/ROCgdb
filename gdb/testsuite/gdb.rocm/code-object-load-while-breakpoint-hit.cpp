@@ -36,7 +36,6 @@ kernel ()
 #else
 
 #include <hip/hip_runtime.h>
-#include <unistd.h>
 
 #include "rocm-test-utils.h"
 
