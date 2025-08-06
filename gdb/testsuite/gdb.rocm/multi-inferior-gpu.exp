@@ -22,6 +22,7 @@ standard_testfile .cpp
 
 require allow_hipcc_tests
 require hip_devices_support_debug_multi_process
+require allow_fork_tests
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
     return
