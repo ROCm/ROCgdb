@@ -584,21 +584,23 @@ thread_workgroup_pos_string (thread_info *tp)
   return string_printf ("%u", wave_in_group);
 }
 
-/* Convert flat ID FLATID to coordinates and store them in COORD_ID.
+/* Return the coordinates for flat ID FLATID.
    SIZES is the sizes of each axis.  */
 
-static void
-flatid_to_id (vec3_u32_t &coord_id, size_t flatid, const vec3_t<size_t> &sizes)
+static vec3_u32_t
+flatid_to_id (size_t flatid, const vec3_t<size_t> &sizes)
 {
-  coord_id[2] = flatid / (sizes[0] * sizes[1]);
+  vec3_u32_t coord_id;
 
+  coord_id[2] = flatid / (sizes[0] * sizes[1]);
   flatid -= (size_t) coord_id[2] * sizes[0] * sizes[1];
 
   coord_id[1] = flatid / sizes[0];
-
   flatid -= (size_t) coord_id[1] * sizes[0];
 
   coord_id[0] = flatid;
+
+  return coord_id;
 }
 
 /* Object used to collect information about all the work-items
@@ -684,27 +686,30 @@ make_work_item_info (thread_info *tp, work_item_info *wi)
   return true;
 }
 
+/* Return the work-group position of the work-item assigned to lane LANE.  */
+
+static opt_vec3_u32_t
+lane_workgroup_pos (thread_info *tp, int lane)
+{
+  work_item_info wi;
+  if (make_work_item_info (tp, &wi))
+    {
+      vec3_t<size_t> partial_wg_sizes;
+      wi.partial_work_group_sizes (partial_wg_sizes);
+      return flatid_to_id (wi.flatid (lane), partial_wg_sizes);
+    }
+  return std::nullopt;
+}
+
 /* Return the lane's work-group position as a string.  */
 
 static std::string
 lane_workgroup_pos_string (thread_info *tp, int lane)
 {
-  work_item_info wi;
-
-  if (make_work_item_info (tp, &wi))
-    {
-      vec3_t<size_t> partial_wg_sizes;
-
-      wi.partial_work_group_sizes (partial_wg_sizes);
-
-      size_t work_item_flatid = wi.flatid (lane);
-
-      vec3_u32_t work_item_ids;
-      flatid_to_id (work_item_ids, work_item_flatid, partial_wg_sizes);
-
-      return string_printf ("[%d,%d,%d]",
-			    work_item_ids[0], work_item_ids[1], work_item_ids[2]);
-    }
+  if (auto wi_ids = lane_workgroup_pos (tp, lane);
+      wi_ids.has_value ())
+    return string_printf ("[%d,%d,%d]",
+			  (*wi_ids)[0], (*wi_ids)[1], (*wi_ids)[2]);
   else
     return "[?,?,?]";
 }
