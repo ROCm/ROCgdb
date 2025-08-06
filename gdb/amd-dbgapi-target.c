@@ -329,6 +329,11 @@ struct amd_dbgapi_target final : public target_ops
   std::string dispatch_pos_str (thread_info *thr) override;
   std::string thread_workgroup_pos_str (thread_info *thr) override;
   std::string lane_workgroup_pos_str (thread_info *thr, int lane) override;
+  opt_vec3_u32_t lane_workgroup_pos (thread_info *thr, int lane) override;
+  opt_vec3_u32_t workgroup_grid_pos (thread_info *thr) override;
+  opt_vec3_u32_t workgroup_sizes (thread_info *thr) override;
+  opt_vec3_u32_t grid_sizes (thread_info *thr) override;
+  opt_size_t wave_size (thread_info *thr) override;
 
   const char *thread_name (thread_info *tp) override;
 
@@ -1147,6 +1152,130 @@ amd_dbgapi_target::lane_workgroup_pos_str (thread_info *thr, int lane)
     return beneath ()->lane_workgroup_pos_str (thr, lane);
 
   return lane_workgroup_pos_string (thr, lane);
+}
+
+/* Implementation of target_ops::lane_workgroup_pos.  */
+
+opt_vec3_u32_t
+amd_dbgapi_target::lane_workgroup_pos (thread_info *thr, int lane)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->lane_workgroup_pos (thr, lane);
+
+  return ::lane_workgroup_pos (thr, lane);
+}
+
+/* Implementation of target_ops::workgroup_grid_pos.  */
+
+opt_vec3_u32_t
+amd_dbgapi_target::workgroup_grid_pos (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->workgroup_grid_pos (thr);
+
+  vec3_u32_t group_ids;
+  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
+				AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
+				sizeof (group_ids),
+				group_ids.data ())
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  return group_ids;
+}
+
+/* Implementation of target_ops::workgroup_sizes.  */
+
+opt_vec3_u32_t
+amd_dbgapi_target::workgroup_sizes (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->workgroup_sizes (thr);
+
+  /* Get the current dispatch ID.  */
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
+				AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				sizeof (dispatch_id),
+				&dispatch_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  /* Now that we have a dispatch ID, get the group sizes.  */
+  std::array<uint16_t, 3> group_sizes_16b;
+  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+				    AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
+				    sizeof (group_sizes_16b),
+				    group_sizes_16b.data ())
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  vec3_u32_t group_sizes_32b;
+  std::copy (group_sizes_16b.begin (),
+	     group_sizes_16b.end (),
+	     group_sizes_32b.data ());
+
+  return group_sizes_32b;
+}
+
+/* Implementation of target_ops::grid_sizes.  */
+
+opt_vec3_u32_t
+amd_dbgapi_target::grid_sizes (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->grid_sizes (thr);
+
+  /* Get the current dispatch ID.  */
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
+				AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				sizeof (dispatch_id),
+				&dispatch_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  /* Now that we have a dispatch ID, get the group sizes.  */
+  std::array<uint16_t, 3> group_sizes;
+  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+				    AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
+				    sizeof (group_sizes),
+				    group_sizes.data ())
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  vec3_u32_t grid_sizes;
+  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+				    AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+				    sizeof (grid_sizes),
+				    grid_sizes.data ())
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  /* Convert GRID_SIZES from "work-item" unit to "work-group" unit.  */
+  for (size_t i = 0; i < 3; ++i)
+    grid_sizes[i] /= group_sizes[i];
+
+  return grid_sizes;
+}
+
+/* Implementation of target_ops::wave_size.  */
+
+opt_size_t
+amd_dbgapi_target::wave_size (thread_info *thr)
+{
+  if (!ptid_is_gpu (thr->ptid))
+    return beneath ()->wave_size (thr);
+
+  size_t lane_count;
+  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
+				AMD_DBGAPI_WAVE_INFO_LANE_COUNT,
+				sizeof (lane_count),
+				&lane_count)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  return lane_count;
 }
 
 const char *

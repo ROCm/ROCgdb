@@ -9,6 +9,12 @@ Full documentation for ROCgdb is available at
 
 - GDB now determines the name of AMD GPU threads based on the name of
   their kernel function.
+- Support for the HIP language and its built-in variables:
+  - `threadIdx`
+  - `blockIdx`
+  - `blockDim`
+  - `gridDim`
+  - `warpSize`
 
 ## ROCgdb-16-2 for ROCm-7.0
 
