@@ -1,0 +1,264 @@
+# Copyright (C) 2025 Free Software Foundation, Inc.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check the GDB support for HIP built-in variables.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" \
+	$testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# A mapping from built-in variable names to reference variable names
+# in the test program that hold the correct values.
+set reference_for(threadIdx) thread_idx
+set reference_for(blockIdx)  group_idx
+set reference_for(blockDim)  group_size
+set reference_for(gridDim)   grid_size
+
+# These globals will have the reference values from the test
+# program captured.  See "record_reference_values" procedure.
+set thread_idx_x ""
+set thread_idx_y ""
+set thread_idx_z ""
+set group_idx_x ""
+set group_idx_y ""
+set group_idx_z ""
+set group_size_x ""
+set group_size_y ""
+set group_size_z ""
+set grid_size_x ""
+set grid_size_y ""
+set grid_size_z ""
+set wave_size ""
+
+# Record the reference variables values into the corresponding
+# global variables.
+proc record_reference_values {} {
+    global reference_for
+    foreach var3d {threadIdx blockIdx blockDim gridDim} {
+	set ref $reference_for($var3d)
+	global ${ref}_x
+	global ${ref}_y
+	global ${ref}_z
+	set ${ref}_x [get_integer_valueof ${ref}_x INVALID]
+	set ${ref}_y [get_integer_valueof ${ref}_y INVALID]
+	set ${ref}_z [get_integer_valueof ${ref}_z INVALID]
+    }
+    global wave_size
+    set wave_size [get_integer_valueof wave_size INVALID]
+}
+
+# Compare the value of built-in variables against the recorded
+# reference values from the program.
+proc check_builtin_variables_values {} {
+    global reference_for
+    foreach var3d {threadIdx blockIdx blockDim gridDim} {
+	set ref $reference_for($var3d)
+	global ${ref}_x
+	global ${ref}_y
+	global ${ref}_z
+
+	# Evaluate values held in ${ref}_* names.
+	set num_x [set ${ref}_x]
+	set num_y [set ${ref}_y]
+	set num_z [set ${ref}_z]
+
+	gdb_test "p $var3d" "= {x = $num_x, y = $num_y, z = $num_z}" \
+	    "$var3d == $ref"
+	gdb_test "p ${var3d}.x" "$num_x" "${var3d}.x == $num_x"
+	gdb_test "p ${var3d}.y" "$num_y" "${var3d}.y == $num_y"
+	gdb_test "p ${var3d}.z" "$num_z" "${var3d}.z == $num_z"
+    }
+    global wave_size
+    gdb_test "p warpSize" "= $wave_size" "warpSize == $wave_size"
+}
+
+# Check the definitions, sizes, and alignments of the built-in variables.
+proc check_builtin_variables_definitions {} {
+    # type = struct __gdb_hip_builtin_vec {
+    #     uint32_t x;
+    #     uint32_t y;
+    #     uint32_t z;
+    # }
+    set header "struct __gdb_hip_builtin_vec \\{\r\n"
+    set x_def  "\[ \t\]+uint32_t x;\r\n"
+    set y_def  "\[ \t\]+uint32_t y;\r\n"
+    set z_def  "\[ \t\]+uint32_t z;\r\n"
+    set trailer "\\}"
+    foreach var3d {threadIdx blockIdx blockDim gridDim} {
+	gdb_test "ptype $var3d" \
+	    "${header}${x_def}${y_def}${z_def}${trailer}" \
+	    "type of $var3d"
+    }
+    gdb_test "ptype warpSize" "unsigned int" "type of warpSize"
+
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	gdb_test "p sizeof($var)" " = 12" "size of $var"
+    }
+
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	gdb_test "p alignof(decltype($var))" " = 4" "alignment of $var"
+    }
+}
+
+# Check if the built-in variables are unavailable.
+proc check_builtin_variables_unavailable {} {
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	gdb_test "p $var" " = <unavailable>" "$var not available yet"
+    }
+}
+
+# Check if the built-in variables cannot be found.
+proc check_builtin_variables_notfound {} {
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	gdb_test "p $var" "No symbol \"$var\" in current context\." \
+	    "$var not found"
+    }
+}
+
+# Tests cases:
+#
+# - No built-in must be found when host side lang is c++.
+# - No built-in must be available when host side lang is hip.
+#
+# - Setting conditional breakpoint in device code based on built-ins,
+#   while still debugging on the host side, must work when lang=hip.
+#
+# Rest of the cases are happening when debugging the device code.
+#
+# - The definitions and values of the built-ins must be available when:
+#   - with debug info, lang=hip, at kern() level that references the built-ins.
+#   - with debug info, lang=hip, at inner_func1() level without any references
+#     to the built-ins.
+#
+# - The value of a shadowed built-in, at innfer_func2() level, must reflect
+#   the local value (with debug info, lang=hip)
+# - without debug info, lang=hip, the shadowed variable shall go away and once
+#   again all the built-in definitions and values must be available.
+#
+# - The definitions and values of the built-ins must be available when:
+#   - without debug info, lang=hip, at kern() level that references the
+#     built-ins.
+#   - without debug info, lang=hip, at inner_func1() level without any
+#     references to the built-ins.
+#
+# - The built-ins mustn't be found when lang=c++, even if debugging the
+#   device code.
+
+with_rocm_gpu_lock {
+    if ![runto_main] {
+	return -1
+    }
+
+    with_test_prefix "before running program" {
+	gdb_test "show language" \
+	    "The current source language is \"auto; currently c\\+\\+\"\." \
+	    "C++ as the auto language on the host side"
+	check_builtin_variables_notfound
+
+	# Set the language to HIP and check if the built-in variables are
+	# unavailable.  It also has the desired effect that when setting
+	# the (pending) breakpoint in device code, the conditional
+	# expression will be parsed and evaluated in HIP context.
+	gdb_test "set language hip" \
+	    "Warning: the current language does not match this frame\." \
+	    "change the language to HIP"
+	check_builtin_variables_unavailable
+    }
+
+    # Set a breakpoint in device code, and set a condition to select a wave
+    # with coordinates != (0, 0, 0).
+    set bp_line [gdb_get_line_number "Break here."]
+    gdb_breakpoint \
+	[concat "$bp_line if " \
+	    "threadIdx.x == 7 && threadIdx.y == 3 && threadIdx.z == 1 " \
+	    "&& blockIdx.x == 2 && blockIdx.y == 1 && blockIdx.z == 3" ] \
+	"allow-pending"
+    gdb_continue_to_breakpoint "kern"
+
+    # After hitting the breakpoint, record the reference values.
+    record_reference_values
+
+    with_test_prefix "with debug info" {
+	with_test_prefix "kernel()" {
+	    check_builtin_variables_definitions
+	    check_builtin_variables_values
+	}
+
+	# Check again after stepping into inner_func1(), with debug info.
+	gdb_test "step" "inner_func1 \\(\\) at.*" \
+	    "step into inner_func1() for the first time"
+	with_test_prefix "inner_func1()" {
+	    check_builtin_variables_definitions
+	    check_builtin_variables_values
+	}
+	# Get out of the inner_func1(), right onto the verge of another call.
+	gdb_test "next" "kern \\(\\) at\[^\r\n\]*\r\n.*inner_func2 \\(\\).*" \
+	    "step out of inner_func1()"
+
+	# Get into inner_func2() with its own local blockIdx variable.
+	gdb_test "step" "inner_func2 \\(\\) at.*" \
+	    "step into inner_func2() with its own blockIdx"
+	gdb_test "next" "$::decimal\[ \t\]+return;" \
+	    "let the initialization happen"
+	gdb_test "p/x blockIdx" "0x42424242" \
+	    "local blockIdx shadowing the built-in"
+    }
+
+    # Now remove the debug info and check everything.
+    gdb_test_no_output "nosharedlibrary" "no debug info in inner_func2()"
+    with_test_prefix "without debug info" {
+	with_test_prefix "inner_func2()" {
+	    check_builtin_variables_definitions
+	    check_builtin_variables_values
+	}
+
+	# Put the debug info back, so we can "next" out of this function.
+	gdb_test "sharedlibrary" ".*" "put debug info back in inner_func2()"
+	# Get out of the inner_func2(), right onto the verge of another call.
+	gdb_test "next" "kern \\(\\) at\[^\r\n\]*\r\n.*inner_func1 \\(\\).*" \
+	    "step out of inner_func2()"
+
+	# Remove the debug info again and repeat the checks for "kern()".
+	gdb_test_no_output "nosharedlibrary" "no debug info at kern() level"
+	with_test_prefix "kernel()" {
+	    check_builtin_variables_definitions
+	    check_builtin_variables_values
+	}
+
+	# Check again after stepping into inner_func1(), without debug info.
+	gdb_test "step" "Cannot find bounds of current function" \
+	    "step into inner_func1() for the second time"
+	with_test_prefix "inner_func1()" {
+	    check_builtin_variables_definitions
+	    check_builtin_variables_values
+	}
+
+	gdb_test_no_output "set language c++" \
+	    "change the language to other than HIP"
+	with_test_prefix "another language (c++)" {
+	    check_builtin_variables_notfound
+	}
+    }
+}

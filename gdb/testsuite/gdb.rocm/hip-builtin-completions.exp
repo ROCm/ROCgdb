@@ -1,0 +1,140 @@
+# Copyright (C) 2025 Free Software Foundation, Inc.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check the completion for HIP built-in variables.
+
+# It's not this test's concern to verify the functionality of GDB's
+# completion, but only to verify that HIP built-ins show up where
+# they are expected to.  Therefore, only the simple "complete"
+# command is used to get a list of completions instead of dealing
+# with <TAB> or M-? key-presses.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile hip-builtin-variables.cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" \
+	$testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Check that no completion related to HIP built-ins show up.
+proc no_hip_completions {} {
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	gdb_test_no_output "complete print $var"
+	gdb_test_no_output "complete break main if $var"
+    }
+}
+
+# Check that all HIP built-ins' completions are offered.
+proc all_hip_completions {} {
+    foreach var {threadIdx blockIdx blockDim gridDim warpSize} {
+	# threadI blockI blockD gridD warpSi
+	set substr [string range $var 0 [expr {[string length $var] - 3}]]
+	gdb_test "complete print $substr" "print $var"
+	gdb_test "complete break main if $substr" "break main if $var"
+    }
+
+    # ".x", ".y" and ".z" completions for three-dimensional built-ins.
+    foreach var {threadIdx blockIdx blockDim gridDim} {
+	gdb_test "complete print $var\." \
+	    "print $var\.x\r\nprint $var\.y\r\nprint $var\.z"
+	gdb_test "complete b main if $var\." \
+	    "b main if $var\.x\r\nb main if $var\.y\r\nb main if $var\.z"
+    }
+}
+
+# Tests cases:
+#
+# - No completion must be available when the host code language is c++.
+# - All completions must be available when the host side language is hip.
+#
+# - All completions must be available when in device code and:
+#   - with debug info, lang=hip, at kern() level with references to the
+#     built-ins.
+#   - with debug info, lang=hip, at inner_func1() level without any references
+#     to the built-ins.
+#   - without debug info, lang=hip, at inner_func1() level without any
+#     references to the built-ins.
+#
+# - No completion must be available when in device code and lang=c++.
+#   This one is only tested under no DWARF info.  Otherwise, there will be a
+#   "warpSize" in DWARF data coming from HIP runtime itself.
+
+with_rocm_gpu_lock {
+    if ![runto_main] {
+	return -1
+    }
+
+    with_test_prefix "before running program" {
+	gdb_test "show language" \
+	    "The current source language is \"auto; currently c\\+\\+\"\." \
+	    "C++ as the auto language on the host side"
+	no_hip_completions
+
+	# Set the language to HIP and check if the built-in variables are
+	# unavailable.  It also has the desired effect that when setting
+	# the (pending) breakpoint in device code, the conditional
+	# expression will be parsed and evaluated in HIP context.
+	gdb_test "set language hip" \
+	    "Warning: the current language does not match this frame\." \
+	    "change the language to HIP"
+	all_hip_completions
+    }
+
+    # Set a breakpoint in device code.
+    set bp_line [gdb_get_line_number "Break here."]
+    gdb_breakpoint "$bp_line" "allow-pending" "temporary"
+    gdb_continue_to_breakpoint "kern"
+
+    with_test_prefix "hip language" {
+	with_test_prefix "with debug info" {
+	    all_hip_completions
+
+	    # Check again after stepping into inner_func1(), with debug info.
+	    gdb_test "step" "inner_func1 \\(\\) at.*" \
+		"step into inner_func1()"
+	    with_test_prefix "inner_func1()" {
+		all_hip_completions
+	    }
+	}
+
+	# Now remove the debug info and check everything.
+	gdb_test_no_output "nosharedlibrary" "no debug info"
+	with_test_prefix "without debug info" {
+	    all_hip_completions
+	}
+
+	# Put the debug info back, so we can "next" out of this function.
+	gdb_test "sharedlibrary" ".*" "put debug info back in inner_func2()"
+	# Get out of the inner_func1().
+	gdb_test "next" "kern \\(\\) at\[^\r\n\]*\r\n.*inner_func2 \\(\\).*" \
+	    "step out of inner_func1()"
+    }
+
+    gdb_test_no_output "set language c++" \
+	"change the language to other than HIP"
+    with_test_prefix "another language (c++)" {
+	# Remove the debug info again; else, "warpSize" DWARF symbol from the
+	# HIP runtime will linger on.
+	gdb_test_no_output "nosharedlibrary" "no debug info"
+	no_hip_completions
+    }
+}
