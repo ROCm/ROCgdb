@@ -2143,6 +2143,9 @@ struct bfd
   /* Set if this is the linker input BFD.  */
   unsigned int is_linker_input : 1;
 
+  /* Set if this is the strip input BFD.  */
+  unsigned int is_strip_input : 1;
+
   /* If this is an input for a compiler plug-in library.  */
   ENUM_BITFIELD (bfd_plugin_format) plugin_format : 2;
 
@@ -2915,14 +2918,7 @@ bool generic_core_file_matches_executable_p
    (bfd *core_bfd, bfd *exec_bfd);
 
 /* Extracted from format.c.  */
-bool bfd_check_format_lto (bfd *abfd, bfd_format format,
-    bool lto_sections_removed);
-
 bool bfd_check_format (bfd *abfd, bfd_format format);
-
-bool bfd_check_format_matches_lto
-   (bfd *abfd, bfd_format format, char ***matching,
-    bool lto_sections_removed);
 
 bool bfd_check_format_matches
    (bfd *abfd, bfd_format format, char ***matching);

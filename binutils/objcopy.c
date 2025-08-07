@@ -30,8 +30,9 @@
 #include "coff/internal.h"
 #include "libcoff.h"
 #include "safe-ctype.h"
-#include "plugin-api.h"
+#if BFD_SUPPORTS_PLUGINS
 #include "plugin.h"
+#endif
 
 /* FIXME: See bfd/peXXigen.c for why we include an architecture specific
    header in generic PE code.  */
@@ -170,6 +171,8 @@ static bool sections_removed;
 #if BFD_SUPPORTS_PLUGINS
 /* TRUE if all GCC LTO sections are to be removed.  */
 static bool lto_sections_removed;
+#else
+#define lto_sections_removed false
 #endif
 
 /* TRUE if only some sections are to be copied.  */
@@ -3687,6 +3690,8 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
       bool ok_object;
       const char *element_name;
 
+      this_element->is_strip_input = 1;
+
       element_name = bfd_get_filename (this_element);
       /* PR binutils/17533: Do not allow directory traversal
 	 outside of the current directory tree by archive members.  */
@@ -3745,11 +3750,10 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 
 #if BFD_SUPPORTS_PLUGINS
       /* Ignore plugin target if all LTO sections should be removed.  */
-      ok_object = bfd_check_format_lto (this_element, bfd_object,
-					lto_sections_removed);
-#else
-      ok_object = bfd_check_format (this_element, bfd_object);
+      if (lto_sections_removed)
+	this_element->plugin_format = bfd_plugin_no;
 #endif
+      ok_object = bfd_check_format (this_element, bfd_object);
 
       /* PR binutils/3110: Cope with archives
 	 containing multiple target types.  */
@@ -3768,7 +3772,9 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 
 #if BFD_SUPPORTS_PLUGINS
       /* Copy LTO IR file as unknown object.  */
-      if (bfd_plugin_target_p (this_element->xvec))
+      if ((!lto_sections_removed
+	   && this_element->lto_type == lto_slim_ir_object)
+	  || bfd_plugin_target_p (this_element->xvec))
 	ok_object = false;
       else
 #endif
@@ -3863,6 +3869,25 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
   return ok;
 }
 
+static bool
+check_format_object (bfd *ibfd, char ***obj_matching,
+		     bool no_plugins ATTRIBUTE_UNUSED)
+{
+#if BFD_SUPPORTS_PLUGINS
+  /* Ignore plugin target first if all LTO sections should be
+     removed.  Try with plugin target next if ignoring plugin
+     target fails to match the format.  */
+  if (no_plugins && ibfd->plugin_format == bfd_plugin_unknown)
+    {
+      ibfd->plugin_format = bfd_plugin_no;
+      if (bfd_check_format_matches (ibfd, bfd_object, obj_matching))
+	return true;
+      ibfd->plugin_format = bfd_plugin_unknown;
+    }
+#endif
+  return bfd_check_format_matches (ibfd, bfd_object, obj_matching);
+}
+
 /* The top-level control.  */
 
 static void
@@ -3946,6 +3971,8 @@ copy_file (const char *input_filename, const char *output_filename, int ofd,
       break;
     }
 
+  ibfd->is_strip_input = 1;
+
   if (bfd_check_format (ibfd, bfd_archive))
     {
       bool force_output_target;
@@ -3988,21 +4015,7 @@ copy_file (const char *input_filename, const char *output_filename, int ofd,
 			 input_arch, target_defaulted))
 	status = 1;
     }
-  else if (
-#if BFD_SUPPORTS_PLUGINS
-	   /* Ignore plugin target first if all LTO sections should be
-	      removed.  Try with plugin target next if ignoring plugin
-	      target fails to match the format.  */
-	   bfd_check_format_matches_lto (ibfd, bfd_object, &obj_matching,
-					 lto_sections_removed)
-	   || (lto_sections_removed
-	       && bfd_check_format_matches_lto (ibfd, bfd_object,
-						&obj_matching, false))
-#else
-	   bfd_check_format_matches_lto (ibfd, bfd_object, &obj_matching,
-					 false)
-#endif
-	   )
+  else if (check_format_object (ibfd, &obj_matching, lto_sections_removed))
     {
       bfd *obfd;
     do_copy:
@@ -5066,6 +5079,11 @@ strip_main (int argc, char *argv[])
 					       SECTION_CONTEXT_REMOVE)
 			  || !!find_section_list (".llvm.lto", false,
 					       SECTION_CONTEXT_REMOVE));
+  /* NB: Must keep .gnu.debuglto_* sections unless all GCC LTO sections
+     will be removed to avoid undefined references to symbols in GCC LTO
+     debug sections.  */
+  if (!lto_sections_removed)
+    find_section_list (".gnu.debuglto_*", true, SECTION_CONTEXT_KEEP);
 #endif
 
   i = optind;
