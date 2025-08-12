@@ -5684,9 +5684,11 @@ proc gdb_can_simple_compile_nodebug {name code {type object} {compile_flags ""}
 		$default_compile_flags]
 }
 
-# Some targets need to always link a special object in.  Save its path here.
+# Some targets need to always link a special object in.  This is an
+# array which saves the path to the special object, indexed by
+# language.  If an element doesn't exist, it means we haven't tried
+# compiling the special object for that language yet.
 global gdb_saved_set_unbuffered_mode_obj
-set gdb_saved_set_unbuffered_mode_obj ""
 
 # Escape STR sufficiently for use on host commandline.
 
@@ -6206,22 +6208,42 @@ proc gdb_compile {source dest type options} {
 	    # need to make sure that the final objfile is written to
 	    # atomically.
 
-	    if { $gdb_saved_set_unbuffered_mode_obj == "" } {
-		verbose "compiling gdb_saved_set_unbuffered_obj"
+	    # For most C-based languages, we compile the special
+	    # object with the C compiler.  For HIP, compile it with
+	    # HIPCC.
+	    if {[lsearch -exact $options hip] != -1} {
+		set unbuf_obj_lang hip
+	    } {
+		set unbuf_obj_lang c
+	    }
+
+	    if {![info exists gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]} {
+		verbose "compiling gdb_saved_set_unbuffered_obj for $unbuf_obj_lang"
 		set unbuf_src ${srcdir}/lib/set_unbuffered_mode.c
 		# This gives us a per-expect-instance unique filename,
 		# which is important for GDB_PARALLEL.  See comments
 		# above.
-		set unbuf_obj [standard_temp_file set_unbuffered_mode.o]
+		set unbuf_obj_basename set_unbuffered_mode-$unbuf_obj_lang.o
+		set unbuf_obj [standard_temp_file $unbuf_obj_basename]
 
-		set result [gdb_compile "${unbuf_src}" "${unbuf_obj}" object {nowarnings}]
+		set unbuf_obj_options {nowarnings}
+		if {[lsearch -exact $options hip] != -1} {
+		    lappend unbuf_obj_options hip
+		    # While HIPCC makes Clang treat .cc/.cpp files as
+		    # HIP files (via '-x hip'), it treats .c files as
+		    # C files (via '-x c').  Since we have a .c file,
+		    # force compilation in HIP mode ourselves.
+		    lappend unbuf_obj_options "additional_flags=-x hip"
+		}
+
+		set result [gdb_compile "${unbuf_src}" "${unbuf_obj}" object $unbuf_obj_options]
 		if { $result != "" } {
 		    return $result
 		}
 		if {[is_remote host]} {
-		    set gdb_saved_set_unbuffered_mode_obj set_unbuffered_mode_saved.o
+		    set gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang) $unbuf_obj_basename
 		} else {
-		    set gdb_saved_set_unbuffered_mode_obj ${objdir}/set_unbuffered_mode_saved.o
+		    set gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang) ${objdir}/$unbuf_obj_basename
 		}
 		# Link a copy of the output object, because the
 		# original may be automatically deleted.
@@ -6229,21 +6251,50 @@ proc gdb_compile {source dest type options} {
 		    # Make sure to write the .o file atomically.
 		    # (Note GDB_PARALLEL mode does not support remote
 		    # host testing.)
-		    file rename -force -- $unbuf_obj $gdb_saved_set_unbuffered_mode_obj
+		    file rename -force -- \
+			$unbuf_obj \
+			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
 		} else {
-		    remote_download host $unbuf_obj $gdb_saved_set_unbuffered_mode_obj
+		    remote_download host \
+			$unbuf_obj \
+			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
 		}
 	    } else {
-		verbose "gdb_saved_set_unbuffered_obj already compiled"
+		verbose "gdb_saved_set_unbuffered_obj already compiled for $unbuf_obj_lang"
 	    }
 
 	    # This object can only be added if standard libraries are
 	    # used.  Thus, we need to disable it if -nostdlib option
 	    # is used.
 	    if {[lsearch -regexp $options "-nostdlib"] < 0 } {
-		# Use ldflags to avoid copying the object file to the
-		# host multiple times.
-		lappend options "ldflags=$gdb_saved_set_unbuffered_mode_obj"
+		if {[lsearch -exact $options hip] == -1} {
+		    # Use ldflags to avoid copying the object file to
+		    # the host multiple times.
+		    lappend options \
+			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
+		} else {
+		    # With ldflags, the .o file would be placed last
+		    # in the HIPCC invocation, like:
+		    #
+		    #  $ hipcc source.cc set_unbuffered_mode_obj.o
+		    #
+		    # Unfortunately, if a foo.o file appears after a
+		    # bar.cc file, HIPCC treats the foo.o file as a
+		    # source file, and invokes Clang with "clang -x
+		    # hip foo.o", which fails.
+		    #
+		    # HIPCC works correctly if we put the .o file
+		    # first, though, like:
+		    #
+		    #  $ hipcc set_unbuffered_mode_obj.o source.cc
+		    #
+		    # So for HIP, we prepend the
+		    # set_unbuffered_mode_obj.o file to the sources
+		    # list.
+		    set source \
+			[linsert $source 0 \
+			     $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]
+		}
 	    }
 	}
     }
