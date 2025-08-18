@@ -3,7 +3,7 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
-## ROCgdb-16-2 for ROCm-7.0
+## ROCgdb-16-3 for ROCm-7.0
 
 ### Added
 
