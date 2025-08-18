@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <cstddef>
 #include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 
 /* The device's malloc buffer, and the pointer to the current position
    where we'll return memory from.  We allocate this buffer from host
