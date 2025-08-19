@@ -45,9 +45,16 @@ namespace eval Term {
 	set orig_cur_row $_cur_row
 	set orig_cur_col $_cur_col
 
-	uplevel $body
+	set code [catch {uplevel $body} result]
 
 	_log "$what, cursor: ($orig_cur_row, $orig_cur_col) -> ($_cur_row, $_cur_col)"
+
+	if { $code == 1 } {
+	    global errorInfo errorCode
+	    return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+	} else {
+	    return -code $code $result
+	}
     }
 
     # If ARG is empty, return DEF: otherwise ARG.  This is useful for
@@ -83,14 +90,42 @@ namespace eval Term {
     proc _ctl_0x07 {} {
     }
 
-    # Backspace.
-    proc _ctl_0x08 {} {
-	_log_cur "Backspace" {
-	    variable _cur_col
+    # Return 1 if tuiterm has the bw/auto_left_margin enabled.
+    proc _have_bw {} {
+	return [expr \
+		    [string equal $Term::_TERM "ansiw"] \
+		    || [string equal $Term::_TERM "ansis"]]
+    }
 
-	    if {$_cur_col > 0} {
+    # Backspace.
+    proc _ctl_0x08 { {bw -1} } {
+	if { $bw == -1 } {
+	    set bw [_have_bw]
+	}
+	_log_cur "Backspace, bw == $bw" {
+	    variable _cur_col
+	    variable _cur_row
+	    variable _cols
+
+	    if { $_cur_col > 0 } {
+		# No wrapping needed.
 		incr _cur_col -1
+		return
 	    }
+
+	    if { ! $bw } {
+		# Wrapping not enabled.
+		return
+	    }
+
+	    if { $_cur_row == 0 } {
+		# Can't wrap.
+		return
+	    }
+
+	    # Wrap to previous line.
+	    set _cur_col [expr $_cols - 1]
+	    incr _cur_row -1
 	}
     }
 
@@ -153,6 +188,14 @@ namespace eval Term {
 	    # Write N blank spaces starting from the cursor.
 	    _clear_in_line $_cur_col [expr $_cur_col + $n] $_cur_row
 	}
+    }
+
+    # Horizontal Position Absolute.
+    #
+    # https://vt100.net/docs/vt510-rm/HPA.html
+    proc _csi_` {args} {
+	# Same as Cursor Horizontal Absolute.
+	return [Term::_csi_G {*}$args]
     }
 
     # Cursor Up.
@@ -251,7 +294,7 @@ namespace eval Term {
 	    variable _cur_col
 	    variable _cols
 
-	    set _cur_col [expr {min ($arg - 1, $_cols)}]
+	    set _cur_col [expr {min ($arg, $_cols)} - 1]
 	}
     }
 
@@ -597,6 +640,11 @@ namespace eval Term {
     #
     # https://vt100.net/docs/vt510-rm/SGR.html
     proc _csi_m {args} {
+	if { [llength $args] == 0 } {
+	    # Apply default.
+	    set args [list 0]
+	}
+
 	_log_cur "Select Graphic Rendition ([join $args {, }])" {
 	    variable _attrs
 
@@ -653,6 +701,14 @@ namespace eval Term {
 		}
 	    }
 	}
+    }
+
+    # Request Terminal Parameters (DECREQTPARM)
+    #
+    # https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+    # https://vt100.net/docs/vt100-ug/chapter3.html
+    proc _csi_x {} {
+	# Ignore.
     }
 
     # Insert string at the cursor location.
@@ -740,7 +796,7 @@ namespace eval Term {
 		_log "wait_for: unsupported escape"
 		error "unsupported escape"
 	    }
-	    -re "^\x1b\\\[(\[0-9;\]*)(\[a-zA-Z@\])" {
+	    -re "^\x1b\\\[(\[0-9;\]*)(\[a-zA-Z@`\])" {
 		set cmd $expect_out(2,string)
 		set params [split $expect_out(1,string) ";"]
 		_log "wait_for: _csi_$cmd <<<$expect_out(1,string)>>>"
@@ -840,12 +896,45 @@ namespace eval Term {
 	return 1
     }
 
+    # Accept some output from gdb and update the screen.  Wait for the current
+    # screen line to match REGEXP and cursor position POS, unless POS is empty.
+    # Return 0 on timeout, 1 on success.
+    proc wait_for_line { regexp {pos ""} } {
+	variable _cur_row
+	variable _cur_col
+	variable _cols
+
+	while 1 {
+	    if { [accept_gdb_output] == 0 } {
+		return 0
+	    }
+
+	    if { ![check_region_contents_p 0 $_cur_row $_cols 1 $regexp] } {
+		continue
+	    }
+
+	    if { $pos == "" || $_cur_col == $pos } {
+		break
+	    }
+	}
+
+	return 1
+    }
+
     # Setup the terminal with dimensions ROWSxCOLS, TERM=ansi, and execute
     # BODY.
     proc with_tuiterm {rows cols body} {
 	global env stty_init
+	variable _TERM
 	save_vars {env(TERM) env(NO_COLOR) stty_init} {
-	    setenv TERM ansi
+	    if { [ishost *-*-*bsd*] } {
+		setenv TERM ansiw
+	    } else {
+		setenv TERM ansi
+	    }
+	    # Save active TERM variable.
+	    set Term::_TERM $env(TERM)
+
 	    setenv NO_COLOR ""
 	    _setup $rows $cols
 
@@ -955,10 +1044,10 @@ namespace eval Term {
 	return $res
     }
 
-    # Return the text of screen line N.  Lines are 0-based.  If C is given,
-    # stop before column C.  Columns are also zero-based.  If ATTRS, annotate
-    # with attributes.
-    proc get_line_1 {n c attrs} {
+    # Return the text of screen line N.  Lines are 0-based.  Start at column
+    # X.  If C is non-empty, stop before column C.  Columns are also
+    # zero-based.  If ATTRS, annotate with attributes.
+    proc get_string {n x c {attrs 0}} {
 	variable _rows
 	# This can happen during resizing, if the cursor seems to
 	# temporarily be off-screen.
@@ -970,7 +1059,6 @@ namespace eval Term {
 	variable _cols
 	variable _chars
 	set c [_default $c $_cols]
-	set x 0
 	if { $attrs } {
 	    _reset_attrs line_attrs
 	}
@@ -988,6 +1076,20 @@ namespace eval Term {
 	    append result [apply_attrs line_attrs $char_attrs]
 	}
 	return $result
+    }
+
+    # Return the text of screen line N.  Lines are 0-based.  Start at column
+    # X.  If C is non-empty, stop before column C.  Columns are also
+    # zero-based. Annotate with attributes.
+    proc get_string_with_attrs { n x c } {
+	return [get_string $n $x $c 1]
+    }
+
+    # Return the text of screen line N.  Lines are 0-based.  If C is
+    # non-empty, stop before column C.  Columns are also zero-based. If
+    # ATTRS, annotate with attributes.
+    proc get_line_1 {n c attrs} {
+	return [get_string $n 0 $c $attrs]
     }
 
     # Return the text of screen line N, without attributes.  Lines are
@@ -1224,7 +1326,7 @@ namespace eval Term {
 
 	for {set y 0} {$y < $_rows} {incr y} {
 	    set fmt [format %5d $y]
-	    verbose -log "$fmt [get_line_1 $y "" $attrs]"
+	    verbose -log "$fmt [get_line_1 $y {} $attrs]"
 	}
     }
 

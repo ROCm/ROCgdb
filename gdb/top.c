@@ -34,6 +34,7 @@
 #include "value.h"
 #include "language.h"
 #include "terminal.h"
+#include "gdbsupport/cleanups.h"
 #include "gdbsupport/job-control.h"
 #include "annotate.h"
 #include "completer.h"
@@ -2347,9 +2348,7 @@ gdb_init ()
   init_colorsupport_var ();
 }
 
-void _initialize_top ();
-void
-_initialize_top ()
+INIT_GDB_FILE (top)
 {
   /* Determine a default value for the history filename.  */
   const char *tmpenv = getenv ("GDBHISTFILE");

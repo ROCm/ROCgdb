@@ -44,7 +44,6 @@ AC_CHECK_FUNCS(setitimer)
 
 ALL_LINGUAS="bg da de eo es fi fr ga hu id it ja ms nl pt_BR ro ru rw sr sv tr uk vi"
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)
@@ -87,6 +86,7 @@ AC_CACHE_CHECK([whether gprof tests can run],
   fi])
 AM_CONDITIONAL(NATIVE, test "$gprof_cv_sys_native" = "yes")
 
-AC_OUTPUT(Makefile testsuite/Makefile po/Makefile.in:po/Make-in)
+AC_CONFIG_FILES([Makefile testsuite/Makefile po/Makefile.in:po/Make-in])
+AC_OUTPUT
 
 GNU_MAKE_JOBSERVER

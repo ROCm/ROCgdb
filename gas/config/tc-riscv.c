@@ -332,6 +332,7 @@ struct riscv_option_stack
   struct riscv_option_stack *next;
   struct riscv_set_options options;
   riscv_subset_list_t *subset_list;
+  unsigned xlen;
 };
 
 static struct riscv_option_stack *riscv_opts_stack = NULL;
@@ -537,7 +538,7 @@ make_mapping_symbol (enum riscv_seg_mstate state,
     {
       /* Store current $x+arch into tc_segment_info.  */
       seg_info (now_seg)->tc_segment_info_data.arch_map_symbol = symbol;
-      xfree ((void *) buff);
+      xfree (buff);
     }
 
   /* If .fill or other data filling directive generates zero sized data,
@@ -1885,15 +1886,13 @@ riscv_record_pcrel_fixup (htab_t p, const asection *sec, bfd_vma address,
 			  symbolS *symbol, bfd_vma target)
 {
   riscv_pcrel_hi_fixup entry = {sec, address, symbol, target};
-  riscv_pcrel_hi_fixup **slot =
-	(riscv_pcrel_hi_fixup **) htab_find_slot (p, &entry, INSERT);
+  void **slot = htab_find_slot (p, &entry, INSERT);
   if (slot == NULL)
     return false;
 
-  *slot = (riscv_pcrel_hi_fixup *) xmalloc (sizeof (riscv_pcrel_hi_fixup));
-  if (*slot == NULL)
-    return false;
-  **slot = entry;
+  riscv_pcrel_hi_fixup *pent = xmalloc (sizeof (*pent));
+  *slot = pent;
+  *pent = entry;
   return true;
 }
 
@@ -4323,12 +4322,12 @@ riscv_ip_hardcode (char *str,
       switch (imm_expr->X_op)
 	{
 	case O_constant:
-	  values[num++] = (insn_t) imm_expr->X_add_number;
+	  values[num++] = imm_expr->X_add_number;
 	  break;
 	case O_big:
 	  /* Extract lower 32-bits of a big number.
 	     Assume that generic_bignum_to_int32 work on such number.  */
-	  values[num++] = (insn_t) generic_bignum_to_int32 ();
+	  values[num++] = generic_bignum_to_int32 ();
 	  break;
 	default:
 	  /* The first value isn't constant, so it should be
@@ -4617,7 +4616,7 @@ bool riscv_parse_name (const char *name, struct expressionS *ep,
   gas_assert (mode == expr_normal);
 
   regno = reg_lookup_internal (name, RCLASS_GPR);
-  if (regno == (unsigned int)-1)
+  if (regno == -1u)
     return false;
 
   if (symbol_find (name) != NULL)
@@ -4936,7 +4935,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 
 	  /* Record PCREL_HI20.  */
 	  if (!riscv_record_pcrel_fixup (riscv_pcrel_hi_fixup_hash,
-					 (const asection *) seg,
+					 seg,
 					 md_pcrel_from (fixP),
 					 fixP->fx_addsy,
 					 target))
@@ -4965,8 +4964,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	 and set fx_done for -mno-relax.  */
       {
 	bfd_vma location_pcrel_hi = S_GET_VALUE (fixP->fx_addsy) + *valP;
-	riscv_pcrel_hi_fixup search =
-		{(const asection *) seg, location_pcrel_hi, 0, 0};
+	riscv_pcrel_hi_fixup search = {seg, location_pcrel_hi, 0, 0};
 	riscv_pcrel_hi_fixup *entry = htab_find (riscv_pcrel_hi_fixup_hash,
 						 &search);
 	if (entry && entry->symbol
@@ -5075,7 +5073,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
     }
   else if (strcmp (name, "norvc") == 0)
     {
-      riscv_update_subset (&riscv_rps_as, "-c");
+      riscv_update_subset_norvc (&riscv_rps_as);
       riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
       riscv_set_rvc (false);
     }
@@ -5113,6 +5111,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       s->next = riscv_opts_stack;
       s->options = riscv_opts;
       s->subset_list = riscv_rps_as.subset_list;
+      s->xlen = xlen;
       riscv_opts_stack = s;
       riscv_rps_as.subset_list = riscv_copy_subset_list (s->subset_list);
     }
@@ -5129,6 +5128,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 	  riscv_opts_stack = s->next;
 	  riscv_opts = s->options;
 	  riscv_rps_as.subset_list = s->subset_list;
+	  xlen = s->xlen;
 	  riscv_release_subset_list (release_subsets);
 	  free (s);
 	}
@@ -5752,7 +5752,7 @@ riscv_insert_uleb128_fixes (bfd *abfd ATTRIBUTE_UNUSED,
       exp_dup->X_add_number = 0; /* Set addend of SUB_ULEB128 to zero.  */
       fix_new_exp (fragP, fragP->fr_fix, 0,
 		   exp_dup, 0, BFD_RELOC_RISCV_SUB_ULEB128);
-      free ((void *) exp_dup);
+      free (exp_dup);
     }
 }
 
@@ -5779,7 +5779,7 @@ riscv_md_end (void)
 void
 riscv_adjust_symtab (void)
 {
-  bfd_map_over_sections (stdoutput, riscv_check_mapping_symbols, (char *) 0);
+  bfd_map_over_sections (stdoutput, riscv_check_mapping_symbols, NULL);
   elf_adjust_symtab ();
 }
 

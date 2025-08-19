@@ -503,12 +503,21 @@ struct sframe_func_bfdinfo
   unsigned int func_reloc_index;
 };
 
+/* Link state information of the SFrame section.  */
+enum sframe_sec_state
+{
+  SFRAME_SEC_DECODED = 1,
+  SFRAME_SEC_MERGED,
+};
+
 /* SFrame decoder info.
    Contains all information for a decoded .sframe section.  */
 struct sframe_dec_info
 {
   /* Decoder context.  */
   struct sframe_decoder_ctx *sfd_ctx;
+  /* SFrame section state as it progresses through the link process.  */
+  enum sframe_sec_state sfd_state;
   /* Number of function descriptor entries in this .sframe.  */
   unsigned int sfd_fde_count;
   /* Additional information for linking.  */
@@ -596,8 +605,7 @@ enum elf_target_os
 {
   is_normal,
   is_solaris,	/* Solaris.  */
-  is_vxworks,	/* VxWorks.  */
-  is_nacl	/* Native Client.  */
+  is_vxworks	/* VxWorks.  */
 };
 
 /* Used by bfd_sym_from_r_symndx to cache a small number of local
@@ -2384,10 +2392,8 @@ extern bool _bfd_elf_copy_private_header_data
   (bfd *, bfd *);
 extern bool _bfd_elf_copy_private_symbol_data
   (bfd *, asymbol *, bfd *, asymbol *);
-extern bool _bfd_elf_init_private_section_data
-  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *);
 extern bool _bfd_elf_copy_private_section_data
-  (bfd *, asection *, bfd *, asection *);
+  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *);
 extern bool _bfd_elf_write_object_contents
   (bfd *);
 extern bool _bfd_elf_write_corefile_contents
@@ -2540,6 +2546,8 @@ extern bool _bfd_elf_discard_section_sframe
   (asection *, bool (*) (bfd_vma, void *), struct elf_reloc_cookie *);
 extern bool _bfd_elf_merge_section_sframe
   (bfd *, struct bfd_link_info *, asection *, bfd_byte *);
+extern bfd_vma _bfd_elf_sframe_section_offset
+  (bfd *, struct bfd_link_info *, asection *, bfd_vma);
 extern bool _bfd_elf_write_section_sframe
   (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_set_section_sframe (bfd *, struct bfd_link_info *);
@@ -2624,7 +2632,7 @@ extern bool _bfd_elf_link_output_relocs
    struct elf_link_hash_entry **);
 
 extern void _bfd_elf_link_add_glibc_version_dependency
-  (struct elf_find_verdep_info *, const char *[]);
+  (struct elf_find_verdep_info *, const char *const []);
 
 extern void _bfd_elf_link_add_dt_relr_dependency
   (struct elf_find_verdep_info *);
@@ -3264,42 +3272,39 @@ extern asection _bfd_elf_large_com_section;
    link, we remove such relocations.  Otherwise, we just want the
    section contents zeroed and avoid any special processing.  */
 #define RELOC_AGAINST_DISCARDED_SECTION(info, input_bfd, input_section,	\
-					rel, count, relend,		\
+					rel, count, relend, rnone,	\
 					howto, index, contents)		\
   {									\
-    int i_;								\
     _bfd_clear_contents (howto, input_bfd, input_section,		\
 			 contents, rel[index].r_offset);		\
 									\
+    /* For ld -r, remove relocations in debug and sframe sections	\
+       against symbols defined in discarded sections.  Not done for	\
+       others.  In particular the .eh_frame editing code expects	\
+       such relocs to be present.  */					\
     if (bfd_link_relocatable (info)					\
-	&& (input_section->flags & SEC_DEBUGGING))			\
+	&& ((input_section->flags & SEC_DEBUGGING) != 0			\
+	    || elf_section_type (input_section) == SHT_GNU_SFRAME))	\
       {									\
-	/* Only remove relocations in debug sections since other	\
-	   sections may require relocations.  */			\
-	Elf_Internal_Shdr *rel_hdr;					\
+	Elf_Internal_Shdr *rel_hdr					\
+	  = _bfd_elf_single_rel_hdr (input_section->output_section);	\
 									\
-	rel_hdr = _bfd_elf_single_rel_hdr (input_section->output_section); \
+	rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+	rel_hdr = _bfd_elf_single_rel_hdr (input_section);		\
+	rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
 									\
-	/* Avoid empty output section.  */				\
-	if (rel_hdr->sh_size > rel_hdr->sh_entsize)			\
-	  {								\
-	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
-	    rel_hdr = _bfd_elf_single_rel_hdr (input_section);		\
-	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+	memmove (rel, rel + count,					\
+		 (relend - rel - count) * sizeof (*rel));		\
 									\
-	    memmove (rel, rel + count,					\
-		     (relend - rel - count) * sizeof (*rel));		\
-									\
-	    input_section->reloc_count -= count;			\
-	    relend -= count;						\
-	    rel--;							\
-	    continue;							\
-	  }								\
+	input_section->reloc_count -= count;				\
+	relend -= count;						\
+	rel--;								\
+	continue;							\
       }									\
 									\
-    for (i_ = 0; i_ < count; i_++)					\
+    for (int i_ = 0; i_ < count; i_++)					\
       {									\
-	rel[i_].r_info = 0;						\
+	rel[i_].r_info = rnone;						\
 	rel[i_].r_addend = 0;						\
       }									\
     rel += count - 1;							\

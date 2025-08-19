@@ -1,3 +1,28 @@
+2025-07-29  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* testsuite/ld-elfweak/elfweak.exp: Enable on *-*-solaris2* rather
+	than sparc*-*-solaris2* only.
+
+2025-07-28  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* testsuite/ld-plugin/lto.exp (PR ld/28138 test): Raise fd limit
+	to 25.
+
+2025-07-28  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* testsuite/ld-elf/indirect.exp (Run with libpr19553c.so):
+	Skip on *-*-solaris2*.
+
+2025-07-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR ld/32580
+	* configure.ac <*-*-solaris2*>: Enforce SHELL=/bin/bash.
+	* configure: Regenerate.
+
+2025-07-13  Nick Clifton  <nickc@redhat.com>
+
+	* 2.45 Branch point.
+
 2025-02-08  Alexandre Oliva <oliva@adacore.com>
 
 	* testsuite/ld-sparc/got-def.s: New test.

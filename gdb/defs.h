@@ -191,8 +191,6 @@ extern std::string relocate_gdb_directory (const char *initial, bool relocatable
 
 /* From top.c */
 
-typedef void initialize_file_ftype (void);
-
 extern char *gdb_readline_wrapper (const char *);
 
 extern const char *command_line_input (std::string &cmd_line_buffer,
@@ -442,5 +440,11 @@ struct arch_addr_space
 };
 
 #include "utils.h"
+
+/* File initialization macro.  This is found by make-init-c and used
+   to construct the gdb initialization function.  */
+#define INIT_GDB_FILE(NAME) \
+  extern void _initialize_ ## NAME (); \
+  void _initialize_ ## NAME ()
 
 #endif /* GDB_DEFS_H */

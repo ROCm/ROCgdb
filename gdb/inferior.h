@@ -213,7 +213,14 @@ extern ptid_t gdb_startup_inferior (pid_t pid, int num_traps);
 
 extern void setup_inferior (int from_tty);
 
-extern void post_create_inferior (int from_tty);
+/* Common actions to take after creating any sort of inferior, by any
+   means (running, attaching, connecting, et cetera).  The target
+   should be stopped.
+
+   If SET_PSPACE_SOLIB_OPS is true, initialize the program space's solib
+   provider using the current inferior's architecture.  */
+
+extern void post_create_inferior (int from_tty, bool set_pspace_solib_ops);
 
 extern void attach_command (const char *, int);
 
@@ -675,30 +682,6 @@ public:
   /* Per inferior data-pointers required by other GDB modules.  */
   registry<inferior> registry_fields;
 
-  /* Add SO_OPS to the list of secondary solib provider, if not already
-     present.  */
-  void push_solib_ops (const solib_ops *so_ops)
-  {
-    if (std::find (m_solib_ops.begin (), m_solib_ops.end (),
-		   so_ops) == m_solib_ops.end ())
-      m_solib_ops.push_back (so_ops);
-  }
-
-  const std::vector<const solib_ops *> &
-  so_ops () { return m_solib_ops; }
-
-  /* Remove SO_OPS from the list of secondary solib providers.  */
-  void pop_solib_ops (const solib_ops *so_ops)
-  {
-    auto iter = std::find (m_solib_ops.begin (),
-			   m_solib_ops.end (),
-			   so_ops);
-
-    /* TODO some cleanup here.  */
-    if (iter != m_solib_ops.end ())
-      m_solib_ops.erase (iter);
-  }
-
 private:
 
   /* Unpush TARGET and assert that it worked.  */
@@ -706,10 +689,6 @@ private:
 
   /* The inferior's target stack.  */
   target_stack m_target_stack;
-
-  /* The gdbarch's solib_ops is the main solist provider, but we can
-     register additional providers here.  */
-  std::vector<const solib_ops *> m_solib_ops;
 
   /* The name of terminal device to use for I/O.  */
   std::string m_terminal;

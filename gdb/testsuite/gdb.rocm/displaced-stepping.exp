@@ -66,46 +66,61 @@ with_rocm_gpu_lock {
     gdb_breakpoint "kernel" temporary allow-pending qualified
     gdb_continue_to_breakpoint "kernel"
 
-    gdb_breakpoint [gdb_get_line_number "getpc breakpoint here"]
-    gdb_breakpoint [gdb_get_line_number "swappc breakpoint here"]
-    gdb_breakpoint [gdb_get_line_number "call breakpoint here"]
-    gdb_breakpoint [gdb_get_line_number "setpc breakpoint here"]
-    gdb_breakpoint [gdb_get_line_number "last breakpoint here"]
+    gdb_breakpoint "GETPC"
+    gdb_breakpoint "SWAPPC"
+    gdb_breakpoint "CALL"
+    gdb_breakpoint "SETPC"
+    gdb_breakpoint "END_OF_TESTS"
 
     gdb_continue_to_breakpoint "getpc"
 
     with_test_prefix "getpc" {
-	set_regs { "s0" "s1" } 0 "clear s0,s1"
+	gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_getpc_b64\[ \t\]+s\\\[4:5\\\]"
 
-	gdb_test "continue" \
-	    "Continuing.*Breakpoint.*, kernel ().*s_swappc_b64.*" \
-	    "displaced-step s_getpc_b64"
+	set_regs { "s4" "s5" } 0 "clear s4,s5"
+	# sample output: 0x00007ffff609140c  36  asm(" .globl GETPC    \n\t"
+	gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 8)" \
-	    " = true" "check s0,s1"
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == \$pc" \
+	    " = true" "check s4,s5"
+
+	gdb_continue_to_breakpoint "swappc"
     }
 
     with_test_prefix "swappc" {
-	gdb_test "stepi" \
-	    ".*Breakpoint.*, kernel ().*s_call_b64.*" \
-	    "displaced-step s_swappc_b64"
+	gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_swappc_b64\[ \t\]+s\\\[4:5\\\], s\\\[6:7\\\]"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 4)" \
-	    " = true" "check s0,s1"
+	# sample output: Thread 7 ... hit Breakpoint 5, ... in kernel
+	gdb_test "stepi" "Thread $::decimal.*hit Breakpoint $::decimal.*in kernel.*" \
+	    "simulate"
+
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == (\$pc - 4)" \
+	    " = true" "check s4,s5"
     }
 
     with_test_prefix "call" {
-	gdb_test "continue" \
-	    "Continuing.*Breakpoint.*, kernel ().*s_setpc_b64.*" \
-	    "displaced-step s_call_b64"
+	gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_call_b64\[ \t\]+s\\\[4:5\\\], 1"
 
-	gdb_test "p ((uint64_t)\$s1<<32 | (uint32_t)\$s0) == (\$pc - 12)" \
-	    " = true" "check s0,s1"
+	gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
+
+	gdb_test "p ((uint64_t)\$s5<<32 | (uint32_t)\$s4) == (\$pc - 4)" \
+	    " = true" "check s4,s5"
+
+	gdb_continue_to_breakpoint "setpc"
     }
 
     with_test_prefix "setpc" {
-	gdb_test "stepi" \
-	    ".*Breakpoint.*, kernel ().*s_nop.*" \
-	    "displaced-step s_setpc_b64"
+	gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_setpc_b64\[ \t\]+s\\\[6:7\\\]"
+
+	gdb_test "stepi" "Thread $::decimal.*hit Breakpoint $::decimal.*in kernel.*" \
+	    "simulate"
+
+	gdb_test "x/i \$pc" \
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_nop\[ \t\]+1" \
+		"reach end of common tests"
     }
 }

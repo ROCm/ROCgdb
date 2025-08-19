@@ -18,9 +18,12 @@
 #ifndef GDB_SOLIB_AIX_H
 #define GDB_SOLIB_AIX_H
 
-struct solib_ops;
-extern const solib_ops solib_aix_so_ops;
+#include "solib.h"
 
 extern CORE_ADDR solib_aix_get_toc_value (CORE_ADDR pc);
+
+/* Return a new solib_ops for AIX systems.  */
+
+solib_ops_up make_aix_solib_ops ();
 
 #endif /* GDB_SOLIB_AIX_H */

@@ -453,11 +453,8 @@ core_target::build_file_mappings ()
   const bfd_build_id *core_build_id
     = build_id_bfd_get (current_program_space->core_bfd ());
 
-  for (const auto &iter : mapped_files)
+  for (const auto &[filename, file_data] : mapped_files)
     {
-      const std::string &filename = iter.first;
-      const mapped_file &file_data = iter.second;
-
       /* If this mapped file has the same build-id as was discovered for
 	 the core-file itself, then we assume this is the main
 	 executable.  Record the filename as we can use this later.  */
@@ -1198,7 +1195,7 @@ core_target_open (const char *arg, int from_tty)
   if (current_program_space->exec_bfd () == nullptr)
     set_gdbarch_from_file (current_program_space->core_bfd ());
 
-  post_create_inferior (from_tty);
+  post_create_inferior (from_tty, true);
 
   /* Now go through the target stack looking for threads since there
      may be a thread_stratum target loaded on top of target core by
@@ -2184,9 +2181,7 @@ core_target_find_mapped_file (const char *filename,
   return targ->lookup_mapped_file_info (filename, addr);
 }
 
-void _initialize_corelow ();
-void
-_initialize_corelow ()
+INIT_GDB_FILE (corelow)
 {
   add_target (core_target_info, core_target_open,
 	      filename_maybe_quoted_completer);

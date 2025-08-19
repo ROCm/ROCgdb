@@ -154,7 +154,7 @@ md_section_align (segT segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
 
-  return ((size + (1 << align) - 1) & -(1 << align));
+  return (size + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 
@@ -248,10 +248,10 @@ epiphany_PIC_related_p (symbolS *sym)
 void
 epiphany_apply_fix (fixS *fixP, valueT *valP, segT seg)
 {
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
-  if (((int) fixP->fx_r_type < (int) BFD_RELOC_UNUSED)
+  if ((fixP->fx_r_type < BFD_RELOC_UNUSED)
       && fixP->fx_done)
     {
       /* Install EPIPHANY-dependent relocations HERE because nobody else
@@ -942,7 +942,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
       fixP->fx_r_type = fixP->fx_cgen.opinfo;
     }
 
-  md_number_to_chars (displacement, (valueT) addend, extension + 1);
+  md_number_to_chars (displacement, addend, extension + 1);
 
   fragP->fr_fix += (extension & -2); /* 0,2 or 4 bytes added.  */
 }
@@ -956,7 +956,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
 long
 md_pcrel_from_section (fixS *fixP, segT sec)
 {
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (!S_IS_DEFINED (fixP->fx_addsy)
 	  || (S_GET_SEGMENT (fixP->fx_addsy) != sec)
 	  || S_IS_EXTERNAL (fixP->fx_addsy)
@@ -1025,10 +1025,10 @@ epiphany_fix_adjustable (fixS *fixP)
 {
  bfd_reloc_code_real_type reloc_type;
 
-  if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
+  if (fixP->fx_r_type >= BFD_RELOC_UNUSED)
     {
       const CGEN_INSN *insn = fixP->fx_cgen.insn;
-      int opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
+      int opindex = fixP->fx_r_type - BFD_RELOC_UNUSED;
       const CGEN_OPERAND *operand =
 	cgen_operand_lookup_by_num (gas_cgen_cpu_desc, opindex);
 

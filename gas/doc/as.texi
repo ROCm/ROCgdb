@@ -240,7 +240,7 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
  [@b{--gdwarf-<N>}] [@b{--gdwarf-sections}]
  [@b{--gdwarf-cie-version}=@var{VERSION}]
  [@b{--generate-missing-build-notes=[no|yes]}]
- [@b{--gsframe}]
+ [@b{--gsframe}] [@b{--gsframe=[no|yes]}]
  [@b{--hash-size}=@var{N}]
  [@b{--help}] [@b{--target-help}]
  [@b{--info}] [@b{--no-info}]
@@ -779,6 +779,10 @@ symbols with the @code{STT_COMMON} type.  The default can be controlled
 by a configure option @option{--enable-elf-stt-common}.
 @end ifset
 
+@item --emit-local-absolute
+Emit even pre-defined (local) absolute symbols to the outgoing symbol table.
+Note that this isn't the exact opposite of @samp{--strip-local-absolute}.
+
 @item --emulation=@var{name}
 If the assembler is configured to support multiple different target
 configurations then this option can be used to select the desired form.
@@ -856,7 +860,11 @@ configure option.
 
 @item --gsframe
 @itemx --gsframe
-Create @var{.sframe} section from CFI directives.
+@itemx --gsframe=no
+@itemx --gsframe=yes
+Create @var{.sframe} section from CFI directives.  The explicit
+@option{--gsframe=yes} option behaves the same as @option{--gsframe}.
+Generation can be suppressed with @option{--gsframe=no}.
 
 @end ifset
 
@@ -3909,6 +3917,7 @@ the same order they were declared.  This may break some debuggers.
 * Symbol Names::                Symbol Names
 * Dot::                         The Special Dot Symbol
 * Symbol Attributes::           Symbol Attributes
+* Predefined Symbols::          Predefined Symbols
 @end menu
 
 @node Labels
@@ -4250,6 +4259,30 @@ Language Reference Manual} (HP 92432-90001) under the @code{IMPORT} and
 @code{EXPORT} assembler directive documentation.
 @end ifset
 
+@node Predefined Symbols
+@section Predefined Symbols
+
+Certain pre-defined symbols will be made available for use, and possibly also
+inserted in the symbol table.  Because of the use of parentheses, access to
+these symbols will require quotation.
+
+Independent of the specific target, the following symbols will (perhaps
+conditionally; see each individual item) be made available:
+@itemize @bullet
+
+@item @code{GAS(version)}
+The version of the assembler, expressed as @samp{major} @code{*} 100000000
+@code{+} @samp{minor} @code{*} 1000000 @code{+} @samp{rev} @code{*} 10000.
+
+@item @code{GAS(date)}
+The date of the assembler sources (which may not be the date the assembler was
+built).  This is added only for non-release versions of gas.  The specific
+value probably better isn't checked for, just its defined-ness.
+
+@end itemize
+
+All symbols of the form @code{GAS(...)} are reserved for use by GNU @value{AS}.
+
 @node Expressions
 @chapter Expressions
 
@@ -4553,6 +4586,7 @@ Some machine configurations provide additional directives.
 * Equiv::                       @code{.equiv @var{symbol}, @var{expression}}
 * Eqv::                         @code{.eqv @var{symbol}, @var{expression}}
 * Err::				@code{.err}
+* Errif::			@code{.errif @var{expression}}
 * Error::			@code{.error @var{string}}
 * Exitm::			@code{.exitm}
 * Extern::                      @code{.extern}
@@ -4685,6 +4719,7 @@ Some machine configurations provide additional directives.
 * VTableInherit::               @code{.vtable_inherit @var{child}, @var{parent}}
 @end ifset
 
+* Warnif::			@code{.warnif @var{expression}}
 * Warning::			@code{.warning @var{string}}
 * Weak::                        @code{.weak @var{names}}
 * Weakref::                     @code{.weakref @var{alias}, @var{symbol}}
@@ -5527,6 +5562,13 @@ value is taken.
 If @command{@value{AS}} assembles a @code{.err} directive, it will print an error
 message and, unless the @option{-Z} option was used, it will not generate an
 object file.  This can be used to signal an error in conditionally compiled code.
+
+@node Errif
+@section @code{.errif "@var{expression}"}
+@cindex errif directive
+
+Record @var{expression} for evaluation at the end of assembly.  Raise an error
+if the expression evaluates to non-zero.
 
 @node Error
 @section @code{.error "@var{string}"}
@@ -7720,6 +7762,13 @@ This directive finds the symbol @code{child} and finds or creates the symbol
 parent whose addend is the value of the child symbol.  As a special case the
 parent name of @code{0} is treated as referring to the @code{*ABS*} section.
 @end ifset
+
+@node Warnif
+@section @code{.warnif "@var{expression}"}
+@cindex errif directive
+
+Record @var{expression} for evaluation at the end of assembly.  Raise a
+warning if the expression evaluates to non-zero.
 
 @node Warning
 @section @code{.warning "@var{string}"}

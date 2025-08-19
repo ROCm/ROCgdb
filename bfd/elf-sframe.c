@@ -23,6 +23,7 @@
 #include "libbfd.h"
 #include "elf-bfd.h"
 #include "sframe-api.h"
+#include "sframe-internal.h"
 
 /* Return TRUE if the function has been marked for deletion during the linking
    process.  */
@@ -119,7 +120,6 @@ sframe_decoder_init_func_bfdinfo (bfd *abfd,
   if ((sec->flags & SEC_LINKER_CREATED) && cookie->rels == NULL)
     return true;
 
-  BFD_ASSERT (cookie->rels + fde_count == cookie->relend);
   rel = cookie->rels;
   for (i = 0; i < fde_count; i++)
     {
@@ -130,6 +130,14 @@ sframe_decoder_init_func_bfdinfo (bfd *abfd,
 
       rel++;
     }
+
+  /* If there are more relocation entries, they must be R_*_NONE which
+     may be generated from relocations against discarded sections by
+     ld -r.  */
+  for (; rel < cookie->relend; rel++)
+   if (rel->r_info != 0)
+     break;
+  BFD_ASSERT (rel == cookie->relend);
 
   return true;
 }
@@ -190,6 +198,18 @@ _bfd_elf_parse_sframe (bfd *abfd,
   bfd_size_type sf_size;
   int decerr = 0;
 
+  /* Prior versions of assembler and ld were generating SFrame sections with
+     section type SHT_PROGBITS.  Issue an error for lack of support for such
+     objects now.  Even if section size is zero, a valid section type is
+     expected.  */
+  if (elf_section_type (sec) != SHT_GNU_SFRAME)
+    {
+      _bfd_error_handler
+	(_("error in %pB(%pA); unexpected SFrame section type"),
+	 abfd, sec);
+      return false;
+    }
+
   if (sec->size == 0
       || (sec->flags & SEC_HAS_CONTENTS) == 0
       || sec->sec_info_type != SEC_INFO_TYPE_NONE)
@@ -212,10 +232,11 @@ _bfd_elf_parse_sframe (bfd *abfd,
   /* Decode the buffer and keep decoded contents for later use.
      Relocations are performed later, but are such that the section's
      size is unaffected.  */
-  sfd_info = bfd_alloc (abfd, sizeof (*sfd_info));
+  sfd_info = bfd_zalloc (abfd, sizeof (*sfd_info));
   sf_size = sec->size;
 
   sfd_info->sfd_ctx = sframe_decode ((const char*)sfbuf, sf_size, &decerr);
+  sfd_info->sfd_state = SFRAME_SEC_DECODED;
   sfd_ctx = sfd_info->sfd_ctx;
   if (!sfd_ctx)
     /* Free'ing up any memory held by decoder context is done by
@@ -296,8 +317,7 @@ _bfd_elf_discard_section_sframe
    BFD ABFD.  Returns true if no error.  */
 
 bool
-_bfd_elf_set_section_sframe (bfd *abfd,
-				struct bfd_link_info *info)
+_bfd_elf_set_section_sframe (bfd *abfd, struct bfd_link_info *info)
 {
   asection *cfsec;
 
@@ -305,6 +325,7 @@ _bfd_elf_set_section_sframe (bfd *abfd,
   if (!cfsec)
     return false;
 
+  elf_section_type (cfsec) = SHT_GNU_SFRAME;
   elf_sframe (abfd) = cfsec;
 
   return true;
@@ -328,6 +349,8 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
   int8_t sfd_ctx_fixed_ra_offset;
   uint8_t dctx_version;
   uint8_t ectx_version;
+  uint8_t dctx_flags;
+  uint8_t ectx_flags;
   int encerr = 0;
 
   struct elf_link_hash_table *htab;
@@ -351,6 +374,8 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
   if (sfd_ctx == NULL || sfe_info == NULL)
     return false;
 
+  dctx_flags = sframe_decoder_get_flags (sfd_ctx);
+
   if (htab->sfe_info.sfe_ctx == NULL)
     {
       sfd_ctx_abi_arch = sframe_decoder_get_abi_arch (sfd_ctx);
@@ -361,8 +386,18 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
       if (!sfd_ctx_abi_arch)
 	return false;
 
+      /* In-memory FDEs in the encoder object are unsorted during linking and
+	 will be sorted before emission.  Reset SFRAME_F_FDE_SORTED to aptly
+	 reflect that (doing so has no other functional value at this time
+	 though).  */
+      uint8_t tflags = dctx_flags & ~SFRAME_F_FDE_SORTED;
+      /* ld always generates an output section with
+	 SFRAME_F_FDE_FUNC_START_PCREL flag set.  Later using
+	 SFRAME_V2_GNU_AS_LD_ENCODING_FLAGS, it is enforced that the provided
+	 input sections also have this flag set.  */
+      tflags |= SFRAME_F_FDE_FUNC_START_PCREL;
       htab->sfe_info.sfe_ctx = sframe_encode (SFRAME_VERSION_2,
-					      0, /* SFrame flags.  */
+					      tflags, /* SFrame flags.  */
 					      sfd_ctx_abi_arch,
 					      sfd_ctx_fixed_fp_offset,
 					      sfd_ctx_fixed_ra_offset,
@@ -411,6 +446,18 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
       return false;
     }
 
+  /* Check that all SFrame sections being linked have the 'data encoding'
+     related flags set.  The implementation does not support updating these
+     data encodings on the fly; confirm by checking the ectx_flags.  */
+  ectx_flags = sframe_encoder_get_flags (sfe_ctx);
+  if ((dctx_flags & ectx_flags & SFRAME_V2_GNU_AS_LD_ENCODING_FLAGS)
+      != SFRAME_V2_GNU_AS_LD_ENCODING_FLAGS)
+    {
+      _bfd_error_handler
+	(_("SFrame sections with unexpected data encoding prevent"
+	  " .sframe generation"));
+      return false;
+    }
 
   /* Iterate over the function descriptor entries and the FREs of the
      function from the decoder context.  Add each of them to the encoder
@@ -481,6 +528,15 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
 		address += sframe_read_value (abfd, contents,
 					      pltn_r_offset, 4);
 	      address += (sec->output_offset + r_offset);
+	      /* SFrame FDE function start address is an offset from the
+		 sfde_func_start_address field to the start PC.  The
+		 calculation below is the distance of sfde_func_start_address
+		 field from the start of the output SFrame section.  */
+	      uint32_t offsetof_fde_in_sec
+		= sframe_encoder_get_offsetof_fde_start_addr (sfe_ctx,
+							      cur_fidx + num_enc_fidx,
+							      NULL);
+	      address -= offsetof_fde_in_sec;
 
 	      /* FIXME For testing only. Cleanup later.  */
 	      // address += (sec->output_section->vma);
@@ -508,10 +564,96 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
 	    }
 	}
     }
+  sfd_info->sfd_state = SFRAME_SEC_MERGED;
   /* Free the SFrame decoder context.  */
   sframe_decoder_free (&sfd_ctx);
 
   return true;
+}
+
+/* Adjust an address in the .sframe section.  Given OFFSET within
+   SEC, this returns the new offset in the merged .sframe section,
+   or -1 if the address refers to an FDE which has been removed.
+
+   PS: This function assumes that _bfd_elf_merge_section_sframe has
+   not been called on the input section SEC yet.  Note how it uses
+   sframe_encoder_get_num_fidx () to figure out the offset of FDE
+   in the output section.  */
+
+bfd_vma
+_bfd_elf_sframe_section_offset (bfd *output_bfd ATTRIBUTE_UNUSED,
+				struct bfd_link_info *info,
+				asection *sec,
+				bfd_vma offset)
+{
+  struct sframe_dec_info *sfd_info;
+  struct sframe_enc_info *sfe_info;
+  sframe_decoder_ctx *sfd_ctx;
+  sframe_encoder_ctx *sfe_ctx;
+  struct elf_link_hash_table *htab;
+
+  unsigned int sec_fde_idx, out_num_fdes;
+  unsigned int sfd_num_fdes, sfe_num_fdes;
+  uint32_t sfd_fde_offset;
+  bfd_vma new_offset;
+
+  if (sec->sec_info_type != SEC_INFO_TYPE_SFRAME)
+    return offset;
+
+  sfd_info = elf_section_data (sec)->sec_info;
+  sfd_ctx = sfd_info->sfd_ctx;
+  sfd_num_fdes = sframe_decoder_get_num_fidx (sfd_ctx);
+
+  BFD_ASSERT (sfd_info->sfd_state == SFRAME_SEC_DECODED);
+
+  htab = elf_hash_table (info);
+  sfe_info = &(htab->sfe_info);
+  sfe_ctx = sfe_info->sfe_ctx;
+  sfe_num_fdes = sframe_encoder_get_num_fidx (sfe_ctx);
+
+  /* The index of this FDE in the output section depends on number of deleted
+     functions (between index 0 and sec_fde_idx), if any.  */
+  out_num_fdes = 0;
+  sec_fde_idx = 0;
+  for (unsigned int i = 0; i < sfd_num_fdes; i++)
+    {
+      sfd_fde_offset = sframe_decoder_get_offsetof_fde_start_addr (sfd_ctx,
+								   i, NULL);
+      if (!sframe_decoder_func_deleted_p (sfd_info, i))
+	out_num_fdes++;
+
+      if (sfd_fde_offset == offset)
+	{
+	  /* Found the index of the FDE (at OFFSET) in the input section.  */
+	  sec_fde_idx = i;
+	  break;
+	}
+    }
+
+  if (sframe_decoder_func_deleted_p (sfd_info, sec_fde_idx))
+    return (bfd_vma) -1;
+
+  /* The number of FDEs in the output SFrame section.  Note that the output
+     index of the FDE of interest will be (out_num_fdes - 1).  */
+  out_num_fdes += sfe_num_fdes;
+
+  new_offset = sframe_decoder_get_offsetof_fde_start_addr (sfd_ctx,
+							   out_num_fdes - 1,
+							   NULL);
+  /* Recall that SFrame section merging has distinct requirements: All SFrame
+     FDEs from input sections are clubbed together in the beginning of the
+     output section.  So, at this point in the current function, the new_offset
+     is the correct offset in the merged output SFrame section.  Note, however,
+     that the default mechanism in the _elf_link_input_bfd will do the
+     following adjustment:
+       irela->r_offset += o->output_offset;
+     for all section types.  However, such an adjustment in the RELA offset is
+     _not_ needed for SFrame sections.  Perform the reverse adjustment here so
+     that the default mechanism does not need additional SFrame specific
+     checks.  */
+  new_offset -= sec->output_offset;
+
+  return new_offset;
 }
 
 /* Write out the .sframe section.  This must be called after
@@ -546,13 +688,11 @@ _bfd_elf_write_section_sframe (bfd *abfd, struct bfd_link_info *info)
 				 (file_ptr) sec->output_offset,
 				 sec->size))
     retval = false;
-  else if (!bfd_link_relocatable (info))
+  else
     {
       Elf_Internal_Shdr *hdr = &elf_section_data (sec)->this_hdr;
       hdr->sh_size = sec->size;
     }
-  /* For relocatable links, do not update the section size as the section
-     contents have not been relocated.  */
 
   sframe_encoder_free (&sfe_ctx);
 

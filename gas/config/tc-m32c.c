@@ -380,7 +380,7 @@ valueT
 md_section_align (segT segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
-  return ((size + (1 << align) - 1) & -(1 << align));
+  return (size + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 symbolS *
@@ -845,7 +845,7 @@ md_convert_frag (bfd *   abfd ATTRIBUTE_UNUSED,
 long
 md_pcrel_from_section (fixS * fixP, segT sec)
 {
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
     /* The symbol is undefined (or is defined but not in this section).
@@ -1136,9 +1136,9 @@ m32c_fix_adjustable (fixS * fixP)
 
   /* We need the symbol name for the VTABLE entries.  */
   reloc = fixP->fx_r_type;
-  if (reloc > (int)BFD_RELOC_UNUSED)
+  if (reloc > BFD_RELOC_UNUSED)
     {
-      reloc -= (int)BFD_RELOC_UNUSED;
+      reloc -= BFD_RELOC_UNUSED;
       switch (reloc)
 	{
 	case M32C_OPERAND_DSP_32_S16:

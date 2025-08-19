@@ -805,8 +805,8 @@ struct priv_reg_entry v9a_asr_table[] =
 static int
 cmp_reg_entry (const void *parg, const void *qarg)
 {
-  const struct priv_reg_entry *p = (const struct priv_reg_entry *) parg;
-  const struct priv_reg_entry *q = (const struct priv_reg_entry *) qarg;
+  const struct priv_reg_entry *p = parg;
+  const struct priv_reg_entry *q = qarg;
 
   if (p->name == q->name)
     return 0;
@@ -921,8 +921,8 @@ struct perc_entry perc_table[NUM_PERC_ENTRIES];
 static int
 cmp_perc_entry (const void *parg, const void *qarg)
 {
-  const struct perc_entry *p = (const struct perc_entry *) parg;
-  const struct perc_entry *q = (const struct perc_entry *) qarg;
+  const struct perc_entry *p = parg;
+  const struct perc_entry *q = qarg;
 
   if (p->name == q->name)
     return 0;
@@ -1254,7 +1254,7 @@ synthetize_setuw (const struct sparc_opcode *insn)
 	      && (the_insn.exp.X_add_number < -(offsetT) U0x80000000
 		  || the_insn.exp.X_add_number > (offsetT) U0xffffffff))
 	    as_warn (_("set: number not in -2147483648..4294967295 range"));
-	  the_insn.exp.X_add_number = (int) the_insn.exp.X_add_number;
+	  the_insn.exp.X_add_number = (int32_t) the_insn.exp.X_add_number;
 	}
     }
 
@@ -3402,9 +3402,9 @@ output_insn (const struct sparc_opcode *insn, struct sparc_it *theinsn)
 
   /* Put out the opcode.  */
   if (INSN_BIG_ENDIAN)
-    number_to_chars_bigendian (toP, (valueT) theinsn->opcode, 4);
+    number_to_chars_bigendian (toP, theinsn->opcode, 4);
   else
-    number_to_chars_littleendian (toP, (valueT) theinsn->opcode, 4);
+    number_to_chars_littleendian (toP, theinsn->opcode, 4);
 
   /* Put out the symbol-dependent stuff.  */
   if (theinsn->reloc != BFD_RELOC_NONE)
@@ -3544,9 +3544,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
       /* It's a relocation against an instruction.  */
 
       if (INSN_BIG_ENDIAN)
-	insn = bfd_getb32 ((unsigned char *) buf);
+	insn = bfd_getb32 (buf);
       else
-	insn = bfd_getl32 ((unsigned char *) buf);
+	insn = bfd_getl32 (buf);
 
       switch (fixP->fx_r_type)
 	{
@@ -3588,9 +3588,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
 		 then we can optimize if the call destination is near
 		 by changing the call into a branch always.  */
 	      if (INSN_BIG_ENDIAN)
-		delay = bfd_getb32 ((unsigned char *) buf + 4);
+		delay = bfd_getb32 (buf + 4);
 	      else
-		delay = bfd_getl32 ((unsigned char *) buf + 4);
+		delay = bfd_getl32 (buf + 4);
 	      if ((insn & OP (~0)) != OP (1) || (delay & OP (~0)) != OP (2))
 		break;
 	      if ((delay & OP3 (~0)) != OP3 (0x3d) /* Restore.  */
@@ -3624,9 +3624,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
 		  int reg;
 
 		  if (INSN_BIG_ENDIAN)
-		    setter = bfd_getb32 ((unsigned char *) buf - 4);
+		    setter = bfd_getb32 (buf - 4);
 		  else
-		    setter = bfd_getl32 ((unsigned char *) buf - 4);
+		    setter = bfd_getl32 (buf - 4);
 		  if ((setter & (0xffffffff ^ RD (~0)))
 		      != (INSN_OR | RS1 (O7) | RS2 (G0)))
 		    break;
@@ -3643,9 +3643,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
 		    break;
 
 		  if (INSN_BIG_ENDIAN)
-		    bfd_putb32 (INSN_NOP, (unsigned char *) buf + 4);
+		    bfd_putb32 (INSN_NOP, buf + 4);
 		  else
-		    bfd_putl32 (INSN_NOP, (unsigned char *) buf + 4);
+		    bfd_putl32 (INSN_NOP, buf + 4);
 		}
 	    }
 	  break;
@@ -3820,9 +3820,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment ATTRIBUTE_UNUSED)
 	}
 
       if (INSN_BIG_ENDIAN)
-	bfd_putb32 (insn, (unsigned char *) buf);
+	bfd_putb32 (insn, buf);
       else
-	bfd_putl32 (insn, (unsigned char *) buf);
+	bfd_putl32 (insn, buf);
     }
 
   /* Are we finished with this relocation now?  */
@@ -4219,8 +4219,7 @@ s_reserve (int ignore ATTRIBUTE_UNUSED)
 	    symbol_get_frag (symbolP)->fr_symbol = NULL;
 
 	  symbol_set_frag (symbolP, frag_now);
-	  pfrag = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP,
-			    (offsetT) size, (char *) 0);
+	  pfrag = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
 	  *pfrag = 0;
 
 	  S_SET_SEGMENT (symbolP, bss_section);
@@ -4336,8 +4335,7 @@ s_common (int ignore ATTRIBUTE_UNUSED)
 	  if (S_GET_SEGMENT (symbolP) == bss_section)
 	    symbol_get_frag (symbolP)->fr_symbol = 0;
 	  symbol_set_frag (symbolP, frag_now);
-	  p = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP,
-			(offsetT) size, (char *) 0);
+	  p = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
 	  *p = 0;
 	  S_SET_SEGMENT (symbolP, bss_section);
 	  S_CLEAR_EXTERNAL (symbolP);
@@ -4347,7 +4345,7 @@ s_common (int ignore ATTRIBUTE_UNUSED)
       else
 	{
 	allocate_common:
-	  S_SET_VALUE (symbolP, (valueT) size);
+	  S_SET_VALUE (symbolP, size);
 	  S_SET_ALIGN (symbolP, temp);
 	  S_SET_SIZE (symbolP, size);
 	  S_SET_EXTERNAL (symbolP);
@@ -4553,7 +4551,7 @@ s_register (int ignore ATTRIBUTE_UNUSED)
 	      if (! (flags & (BSF_GLOBAL|BSF_LOCAL|BSF_WEAK)))
 		flags |= BSF_GLOBAL;
 	      symbol_get_bfdsym (globals[reg])->flags = flags;
-	      S_SET_VALUE (globals[reg], (valueT) reg);
+	      S_SET_VALUE (globals[reg], reg);
 	      S_SET_ALIGN (globals[reg], reg);
 	      S_SET_SIZE (globals[reg], 0);
 	      /* Although we actually want undefined_section here,
@@ -4635,8 +4633,7 @@ sparc_cons_align (int nbytes)
       return;
     }
 
-  frag_var (rs_align_test, 1, 1, (relax_substateT) 0,
-	    (symbolS *) NULL, (offsetT) nalign, (char *) NULL);
+  frag_var (rs_align_test, 1, 1, 0, NULL, nalign, NULL);
 
   record_alignment (now_seg, nalign);
 }
@@ -4937,7 +4934,7 @@ cons_fix_new_sparc (fragS *frag,
 	}
    }
 
-  fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
+  fix_new_exp (frag, where, nbytes, exp, 0, r);
 }
 
 void

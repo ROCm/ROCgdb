@@ -173,6 +173,10 @@ loongarch_elf_new_section_hook (bfd *abfd, asection *sec)
 #define loongarch_elf_hash_table(p)					\
     ((struct loongarch_elf_link_hash_table *) ((p)->hash))		\
 
+/* During linker relaxation, indicates whether the section has already
+   undergone alignment processing and no more byte deletion is permitted.  */
+#define loongarch_sec_closed_for_deletion(sec) ((sec)->sec_flg0)
+
 #define MINUS_ONE ((bfd_vma) 0 - 1)
 
 #define sec_addr(sec) ((sec)->output_section->vma + (sec)->output_offset)
@@ -3399,8 +3403,9 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       name = loongarch_sym_name (input_bfd, h, sym);
 
       if (sec != NULL && discarded_section (sec))
-	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section, rel,
-					 1, relend, howto, 0, contents);
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, 1, relend, R_LARCH_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -4789,7 +4794,10 @@ loongarch_calc_relaxed_addr (struct bfd_link_info *info, bfd_vma offset)
   struct pending_delete_op *op;
   splay_tree_node node;
 
-  BFD_ASSERT (pdops != NULL);
+  if (!pdops)
+    /* Currently this means we are past the stages where byte deletion could
+       possibly happen.  */
+    return offset;
 
   /* Find the op that starts just before the given address.  */
   node = splay_tree_predecessor (pdops, (splay_tree_key)offset);
@@ -4814,9 +4822,9 @@ loongarch_calc_relaxed_addr (struct bfd_link_info *info, bfd_vma offset)
 
 static void
 loongarch_relax_delete_bytes (bfd *abfd,
-			  bfd_vma addr,
-			  size_t count,
-			  struct bfd_link_info *link_info)
+			      bfd_vma addr,
+			      size_t count,
+			      struct bfd_link_info *link_info)
 {
   struct loongarch_elf_link_hash_table *htab
       = loongarch_elf_hash_table (link_info);
@@ -4864,6 +4872,88 @@ loongarch_relax_delete_bytes (bfd *abfd,
     {
       op = (struct pending_delete_op *)node->value;
       op->cumulative_offset += count;
+    }
+}
+
+static void
+loongarch_relax_delete_or_nop (bfd *abfd,
+			       asection *sec,
+			       bfd_vma addr,
+			       size_t count,
+			       struct bfd_link_info *link_info)
+{
+  struct bfd_elf_section_data *data = elf_section_data (sec);
+  bfd_byte *contents = data->this_hdr.contents;
+
+  BFD_ASSERT (count % 4 == 0);
+
+  if (!loongarch_sec_closed_for_deletion (sec))
+    {
+      /* Deletions are still possible within the section.  */
+      loongarch_relax_delete_bytes (abfd, addr, count, link_info);
+      return;
+    }
+
+  /* We can no longer delete bytes in the section after enforcing alignment.
+     But as the resulting shrinkage may open up a few more relaxation chances,
+     allowing unnecessary instructions to be replaced with NOPs instead of
+     being removed altogether may still benefit performance to a lesser
+     extent.  */
+  for (; count; addr += 4, count -= 4)
+    bfd_put (32, abfd, LARCH_NOP, contents + addr);
+}
+
+/* If some bytes in a symbol is deleted, we need to adjust its size.  */
+static void
+loongarch_relax_resize_symbol (bfd_size_type *size, bfd_vma orig_value,
+			       splay_tree pdops)
+{
+  splay_tree_key key = (splay_tree_key)orig_value;
+  bfd_vma orig_end = orig_value + *size;
+  splay_tree_node node = splay_tree_predecessor (pdops, key);
+
+  if (node)
+    {
+      bfd_vma addr = (bfd_vma)node->key;
+      struct pending_delete_op *op = (struct pending_delete_op *)node->value;
+
+      /* This shouldn't happen unless people write something really insane like
+	     .reloc ., R_LARCH_ALIGN, 60
+	     .rept 15
+	     1: nop
+	     .endr
+	     .set x, 1b
+	     .size x, . - 1b
+	 But let's just try to make it "work" anyway.  */
+      if (orig_value < addr + op->size)
+	{
+	  bfd_size_type n_deleted = op->size - (orig_value - addr);
+	  if (n_deleted >= *size)
+	    {
+	      *size = 0;
+	      return;
+	    }
+
+	  *size -= n_deleted;
+	}
+    }
+
+  node = splay_tree_lookup (pdops, key);
+  if (!node)
+    node = splay_tree_successor (pdops, key);
+
+  for (; node; node = splay_tree_successor (pdops, node->key))
+    {
+      bfd_vma addr = (bfd_vma)node->key;
+      struct pending_delete_op *op = (struct pending_delete_op *)node->value;
+
+      if (addr >= orig_end)
+	return;
+
+      if (orig_end < addr + op->size)
+	*size -= orig_end - addr;
+      else
+	*size -= op->size;
     }
 }
 
@@ -4965,30 +5055,8 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 	    sym->st_value
 		= loongarch_calc_relaxed_addr (link_info, orig_value);
 
-	  /* If the symbol *spans* some deleted bytes, that is its *end* is in
-	     the moved bytes but its *start* isn't, then we must adjust its
-	     size.
-
-	     This test needs to use the original value of st_value, otherwise
-	     we might accidentally decrease size when deleting bytes right
-	     before the symbol.  */
-	  bfd_vma sym_end = orig_value + sym->st_size;
-	  if (sym_end <= toaddr)
-	    {
-	      splay_tree_node node = splay_tree_predecessor (
-		  pdops, (splay_tree_key)orig_value);
-	      for (; node; node = splay_tree_successor (pdops, node->key))
-		{
-		  bfd_vma addr = (bfd_vma)node->key;
-		  struct pending_delete_op *op
-		      = (struct pending_delete_op *)node->value;
-
-		  if (addr >= sym_end)
-		    break;
-		  if (orig_value <= addr && sym_end > addr)
-		    sym->st_size -= op->size;
-		}
-	    }
+	  if (orig_value + sym->st_size <= toaddr)
+	    loongarch_relax_resize_symbol (&sym->st_size, orig_value, pdops);
 	}
     }
 
@@ -5035,29 +5103,13 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
 	{
 	  bfd_vma orig_value = sym_hash->root.u.def.value;
 
-	  /* As above, adjust the value.  */
+	  /* As above, adjust the value and size.  */
 	  if (orig_value <= toaddr)
 	    sym_hash->root.u.def.value
 		= loongarch_calc_relaxed_addr (link_info, orig_value);
 
-	  /* As above, adjust the size if needed.  */
-	  bfd_vma sym_end = orig_value + sym_hash->size;
-	  if (sym_end <= toaddr)
-	    {
-	      splay_tree_node node = splay_tree_predecessor (
-		  pdops, (splay_tree_key)orig_value);
-	      for (; node; node = splay_tree_successor (pdops, node->key))
-		{
-		  bfd_vma addr = (bfd_vma)node->key;
-		  struct pending_delete_op *op
-		      = (struct pending_delete_op *)node->value;
-
-		  if (addr >= sym_end)
-		    break;
-		  if (orig_value <= addr && sym_end > addr)
-		    sym_hash->size -= op->size;
-		}
-	    }
+	  if (orig_value + sym_hash->size <= toaddr)
+	    loongarch_relax_resize_symbol (&sym_hash->size, orig_value, pdops);
 	}
     }
 }
@@ -5135,7 +5187,7 @@ loongarch_tls_perform_trans (bfd *abfd, asection *sec,
 	bfd_put (32, abfd, LARCH_NOP, contents + rel->r_offset);
 	/* link with -relax option will delete NOP.  */
 	if (!info->disable_target_specific_optimizations)
-	  loongarch_relax_delete_bytes (abfd, rel->r_offset, 4, info);
+	  loongarch_relax_delete_or_nop (abfd, sec, rel->r_offset, 4, info);
 	return true;
 
       case R_LARCH_TLS_IE_PC_HI20:
@@ -5250,7 +5302,7 @@ loongarch_relax_tls_le (bfd *abfd, asection *sec, asection *sym_sec,
 	    if (symval < 0x800)
 	      {
 		rel->r_info = ELFNN_R_INFO (0, R_LARCH_NONE);
-		loongarch_relax_delete_bytes (abfd, rel->r_offset,
+		loongarch_relax_delete_or_nop (abfd, sec, rel->r_offset,
 		    4, link_info);
 	      }
 	    break;
@@ -5275,8 +5327,8 @@ loongarch_relax_tls_le (bfd *abfd, asection *sec, asection *sym_sec,
 	  case R_LARCH_TLS_LE64_LO20:
 	  case R_LARCH_TLS_LE64_HI12:
 	    rel->r_info = ELFNN_R_INFO (0, R_LARCH_NONE);
-	    loongarch_relax_delete_bytes (abfd, rel->r_offset,
-					  4, link_info);
+	    loongarch_relax_delete_or_nop (abfd, sec, rel->r_offset,
+					   4, link_info);
 	    break;
 
 	  case R_LARCH_TLS_LE_LO12:
@@ -5344,7 +5396,7 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
 					       sec->output_section,
 					       sym_sec->output_section))
     max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							: max_alignment;
+						      : max_alignment;
 
   if (symval > pc)
     pc -= (max_alignment > 4 ? max_alignment : 0);
@@ -5376,7 +5428,7 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
 				 R_LARCH_PCREL20_S2);
   rel_lo->r_info = ELFNN_R_INFO (0, R_LARCH_NONE);
 
-  loongarch_relax_delete_bytes (abfd, rel_lo->r_offset, 4, info);
+  loongarch_relax_delete_or_nop (abfd, sec, rel_lo->r_offset, 4, info);
 
   return true;
 }
@@ -5409,7 +5461,7 @@ loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
 					       sec->output_section,
 					       sym_sec->output_section))
     max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							: max_alignment;
+						      : max_alignment;
 
   if (symval > pc)
     pc -= (max_alignment > 4 ? max_alignment : 0);
@@ -5436,7 +5488,7 @@ loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
   /* Adjust relocations.  */
   rel->r_info = ELFNN_R_INFO (ELFNN_R_SYM (rel->r_info), R_LARCH_B26);
   /* Delete jirl instruction.  */
-  loongarch_relax_delete_bytes (abfd, rel->r_offset + 4, 4, info);
+  loongarch_relax_delete_or_nop (abfd, sec, rel->r_offset + 4, 4, info);
   return true;
 }
 
@@ -5473,7 +5525,7 @@ loongarch_relax_pcala_ld (bfd *abfd, asection *sec,
 					       sec->output_section,
 					       sym_sec->output_section))
     max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							: max_alignment;
+						      : max_alignment;
 
   if (symval > pc)
     pc -= (max_alignment > 4 ? max_alignment : 0);
@@ -5511,8 +5563,9 @@ bfd_elfNN_loongarch_set_data_segment_info (struct bfd_link_info *info,
     loongarch_elf_hash_table (info)->data_segment_phase = data_segment_phase;
 }
 
-/* Implement R_LARCH_ALIGN by deleting excess alignment NOPs.
-   Once we've handled an R_LARCH_ALIGN, we can't relax anything else.  */
+/* Honor R_LARCH_ALIGN requests by deleting excess alignment NOPs.
+   Once we've handled an R_LARCH_ALIGN, we can't relax anything else by deleting
+   bytes, or alignment will be disrupted.  */
 static bool
 loongarch_relax_align (bfd *abfd, asection *sec, asection *sym_sec,
 			Elf_Internal_Rela *rel,
@@ -5553,9 +5606,9 @@ loongarch_relax_align (bfd *abfd, asection *sec, asection *sym_sec,
       return false;
     }
 
-  /* Once we've handled an R_LARCH_ALIGN in a section,
-     we can't relax anything else in this section.  */
-  sec->sec_flg0 = true;
+  /* Once we've handled an R_LARCH_ALIGN in a section, we can't relax anything
+     else by deleting bytes, or alignment will be disrupted.  */
+  loongarch_sec_closed_for_deletion (sec) = true;
   rel->r_info = ELFNN_R_INFO (0, R_LARCH_NONE);
 
   /* If skipping more bytes than the specified maximum,
@@ -5605,7 +5658,7 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
 					       sec->output_section,
 					       sym_sec->output_section))
     max_alignment = info->maxpagesize > max_alignment ? info->maxpagesize
-							: max_alignment;
+						      : max_alignment;
 
   if (symval > pc)
     pc -= (max_alignment > 4 ? max_alignment : 0);
@@ -5653,7 +5706,7 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
     }
   rel_lo->r_info = ELFNN_R_INFO (0, R_LARCH_NONE);
 
-  loongarch_relax_delete_bytes (abfd, rel_lo->r_offset, 4, info);
+  loongarch_relax_delete_or_nop (abfd, sec, rel_lo->r_offset, 4, info);
 
   return true;
 }
@@ -5697,15 +5750,25 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
   if (htab->layout_mutating_for_relr)
     return true;
 
+  /* Definition of LoongArch linker relaxation passes:
+
+     - Pass 0: relaxes everything except R_LARCH_ALIGN, byte deletions are
+	       performed; skipped if disable_target_specific_optimizations.
+     - Pass 1: handles alignment, byte deletions are performed.  Sections with
+	       R_LARCH_ALIGN relocations are marked closed for further byte
+	       deletion in order to not disturb alignment.  This pass is NOT
+	       skipped even if disable_target_specific_optimizations is true.
+     - Pass 2: identical to Pass 0, but replacing relaxed insns with NOP in case
+	       the containing section is closed for deletion; skip condition
+	       also same as Pass 0.  */
+  bool is_alignment_pass = info->relax_pass == 1;
   if (bfd_link_relocatable (info)
-      || sec->sec_flg0
       || sec->reloc_count == 0
       || (sec->flags & SEC_RELOC) == 0
       || (sec->flags & SEC_HAS_CONTENTS) == 0
       /* The exp_seg_relro_adjust is enum phase_enum (0x4).  */
       || *(htab->data_segment_phase) == 4
-      || (info->disable_target_specific_optimizations
-	  && info->relax_pass == 0))
+      || (info->disable_target_specific_optimizations && !is_alignment_pass))
     return true;
 
   struct bfd_elf_section_data *data = elf_section_data (sec);
@@ -5741,7 +5804,10 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
       htab->max_alignment = max_alignment;
     }
 
-  splay_tree pdops = pending_delete_ops_new (abfd);
+  splay_tree pdops = NULL;
+  if (!loongarch_sec_closed_for_deletion (sec))
+    pdops = pending_delete_ops_new (abfd);
+
   htab->pending_delete_ops = pdops;
 
   for (unsigned int i = 0; i < sec->reloc_count; i++)
@@ -5783,7 +5849,13 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	}
 
       relax_func_t relax_func = NULL;
-      if (info->relax_pass == 0)
+      if (is_alignment_pass)
+	{
+	  if (r_type != R_LARCH_ALIGN)
+	    continue;
+	  relax_func = loongarch_relax_align;
+	}
+      else
 	{
 	  switch (r_type)
 	    {
@@ -5837,10 +5909,6 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 		continue;
 	    }
 	}
-      else if (info->relax_pass == 1 && r_type == R_LARCH_ALIGN)
-	relax_func = loongarch_relax_align;
-      else
-	continue;
 
       /* Four kind of relocations:
 	 Normal: symval is the symbol address.
@@ -5979,9 +6047,12 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 				    info, again, max_alignment);
     }
 
-  loongarch_relax_perform_deletes (abfd, sec, info);
-  htab->pending_delete_ops = NULL;
-  splay_tree_delete (pdops);
+  if (pdops)
+    {
+      loongarch_relax_perform_deletes (abfd, sec, info);
+      htab->pending_delete_ops = NULL;
+      splay_tree_delete (pdops);
+    }
 
   return true;
 }

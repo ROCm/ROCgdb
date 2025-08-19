@@ -23,7 +23,6 @@
 #include "break-cond-parse.h"
 #include "tid-parse.h"
 #include "ada-lang.h"
-#include "exceptions.h"
 
 /* When parsing tokens from a string, which direction are we parsing?
 
@@ -684,9 +683,7 @@ create_breakpoint_parse_arg_string_tests ()
 } /* namespace selftests */
 #endif /* GDB_SELF_TEST */
 
-void _initialize_break_cond_parse ();
-void
-_initialize_break_cond_parse ()
+INIT_GDB_FILE (break_cond_parse)
 {
 #if GDB_SELF_TEST
   selftests::register_test

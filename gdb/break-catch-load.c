@@ -22,7 +22,6 @@
 #include "arch-utils.h"
 #include "breakpoint.h"
 #include "cli/cli-decode.h"
-#include "mi/mi-common.h"
 #include "progspace.h"
 #include "solib.h"
 #include "target.h"
@@ -264,9 +263,7 @@ catch_unload_command_1 (const char *arg, int from_tty,
   catch_load_or_unload (arg, from_tty, 0, command);
 }
 
-void _initialize_break_catch_load ();
-void
-_initialize_break_catch_load ()
+INIT_GDB_FILE (break_catch_load)
 {
   add_catch_command ("load", _("Catch loads of shared libraries.\n\
 Usage: catch load [REGEX]\n\

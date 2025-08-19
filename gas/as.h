@@ -339,7 +339,8 @@ COMMON enum synth_cfi_type flag_synth_cfi;
 /* This is true if the assembler should output time and space usage.  */
 COMMON unsigned char flag_print_statistics;
 
-/* True if local absolute symbols are to be stripped.  */
+/* True (positive) if local absolute symbols are to be stripped.  Negative if
+   even pre-defined symbols should be emitted.  */
 COMMON int flag_strip_local_absolute;
 
 /* True if we should generate a traditional format object file.  */
@@ -354,8 +355,30 @@ COMMON int flag_execstack;
 /* TRUE if .note.GNU-stack section with SEC_CODE should be created */
 COMMON int flag_noexecstack;
 
-/* TRUE if .sframe section should be created.  */
-COMMON int flag_gen_sframe;
+/* PR gas/33175.
+   Add enumerators to disambiguate between configure-time
+   enablement (or not) vs user-specficied enablement/disablement (the latter
+   via command line).  The expected usage of these states is:
+     - user-specified command line takes precedence over configure-time
+       setting and .cfi_sections directive usage.
+     - .cfi_sections usage takes precedence over configure-time setting.  */
+enum gen_sframe_option
+{
+  /* Default. SFrame generation not enabled at configure time.  GNU as will
+     not generate SFrame sections by default, unless enabled by user via
+     command line.  */
+  GEN_SFRAME_DEFAULT_NONE,
+  /* SFrame generation enabled at configure time.  GNU as will generate SFrame
+     sections for all objects, unless disabled by user via command line.  */
+  GEN_SFRAME_CONFIG_ENABLED,
+  /* User specified disablement via --gsframe=no.  */
+  GEN_SFRAME_DISABLED,
+  /* User specified enablement via --gsframe or --gsframe=yes.  */
+  GEN_SFRAME_ENABLED,
+};
+
+/* State of the setting for SFrame section creation.  */
+COMMON enum gen_sframe_option flag_gen_sframe;
 
 /* name of emitted object file */
 COMMON const char *out_file_name;
@@ -514,6 +537,7 @@ void   as_report_context (void);
 const char * as_where (unsigned int *);
 const char * as_where_top (unsigned int *);
 const char * as_where_physical (unsigned int *);
+void   predefine_symbol (const char *, valueT);
 void   bump_line_counters (void);
 void   do_scrub_begin (int);
 void   input_scrub_begin (void);

@@ -164,7 +164,7 @@ md_begin (void)
       opcode_entry_type *fake_opcode;
       fake_opcode = XNEW (opcode_entry_type);
       fake_opcode->name = md_pseudo_table[idx].poc_name;
-      fake_opcode->func = (void *) (md_pseudo_table + idx);
+      fake_opcode->p = md_pseudo_table + idx;
       fake_opcode->opcode = 250;
       str_hash_insert (opcode_hash_control, fake_opcode->name, fake_opcode, 0);
     }
@@ -1032,7 +1032,6 @@ build_bytes (opcode_entry_type *this_try, struct z8k_op *operand ATTRIBUTE_UNUSE
 {
   unsigned char *output_ptr = buffer;
   int c;
-  int nibble;
   unsigned int *class_ptr;
 
   frag_wane (frag_now);
@@ -1044,7 +1043,7 @@ build_bytes (opcode_entry_type *this_try, struct z8k_op *operand ATTRIBUTE_UNUSE
   memset (buffer, 0, sizeof (buffer));
   class_ptr = this_try->byte_info;
 
-  for (nibble = 0; (c = *class_ptr++); nibble++)
+  while ((c = *class_ptr++) != 0)
     {
 
       switch (c & CLASS_MASK)
@@ -1248,7 +1247,7 @@ md_assemble (char *str)
 
   if (opcode->opcode == 250)
     {
-      pseudo_typeS *p;
+      const pseudo_typeS *p;
       char oc;
       char *old = input_line_pointer;
 
@@ -1260,7 +1259,7 @@ md_assemble (char *str)
       *old = '\n';
       while (is_whitespace (*input_line_pointer))
 	input_line_pointer++;
-      p = (pseudo_typeS *) (opcode->func);
+      p = opcode->p;
 
       (p->poc_handler) (p->poc_val);
       input_line_pointer = old;

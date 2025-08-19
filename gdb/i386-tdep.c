@@ -60,9 +60,7 @@
 
 #include "stap-probe.h"
 #include "user-regs.h"
-#include "cli/cli-utils.h"
 #include "expression.h"
-#include "parser-defs.h"
 #include <ctype.h>
 #include <algorithm>
 #include <unordered_set>
@@ -4800,7 +4798,7 @@ static int i386_record_floats (struct gdbarch *gdbarch,
 
 static int
 i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
-		 int opcode, struct gdbarch *gdbarch)
+		 struct gdbarch *gdbarch)
 {
   /* We need this to find YMM (and once AVX-512 is supported, ZMM) registers.
      We should always save the largest available register, since an
@@ -4813,6 +4811,11 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
      now.  */
   SCOPE_EXIT { inferior_thread ()->set_executing (true); };
   inferior_thread () -> set_executing (false);
+
+  uint8_t opcode;
+  if (record_read_memory (gdbarch, ir->addr, &opcode, 1))
+    return -1;
+  ir->addr++;
 
   switch (opcode)
     {
@@ -4853,12 +4856,6 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	    ir->ot = 4 + ir->l;
 	  i386_record_lea_modrm (ir);
 	}
-      break;
-    case 0x14: /* VUNPCKL[PS|PD].  */
-    case 0x15: /* VUNPCKH [PS|PD].  */
-      i386_record_modrm (ir);
-      record_full_arch_list_add_reg (ir->regcache,
-				     tdep->ymm0_regnum + ir->reg + vex_r * 8);
       break;
     case 0x6e:	/* VMOVD XMM, reg/mem  */
       /* This is moving from a regular register or memory region into an
@@ -4915,6 +4912,16 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	  return -1;
 	}
       break;
+    case 0xd0:    /* VADDSUBPD XMM1, XMM2, reg/mem */
+		  /* VADDSUBPS XMM1, XMM2, reg/mem */
+      i386_record_modrm (ir);
+      /* The most significant bit of the register offset
+	 is vex_r. */
+      record_full_arch_list_add_reg (ir->regcache,
+				     tdep->ymm0_regnum
+				     + ir->reg + vex_r * 8);
+      break;
+
     case 0xd6: /* VMOVQ reg/mem XMM  */
       i386_record_modrm (ir);
       /* This is the vmovq version that stores into a regular register
@@ -4979,6 +4986,27 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	}
       break;
 
+    case 0x19:	/* VBROADCASTSD and VEXTRACTF128.  */
+    case 0x39:	/* VEXTRACTI128.  */
+      i386_record_modrm (ir);
+      /* vextract instructions use ModRM.R/M and VEX.B to address the
+	 output register, while vbroadcast use ModRM.Reg and VEX.R.
+	 They are differentiated through map_select.  */
+      if (ir->map_select == 2)
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->reg
+				       + 8 * vex_r);
+      else
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->rm
+				       + 8 * ir->rex_b);
+      break;
+
+    case 0x18:	/* VBROADCASTSS and VINSERTI128.  */
+    case 0x20:	/* VPINSRB.  */
+    case 0x21:	/* VINSERTPS.  */
+    case 0x22:	/* VINSR[D|Q].  */
+    case 0x38:	/* VINSERTF128.  */
     case 0x60:	/* VPUNPCKLBW  */
     case 0x61:	/* VPUNPCKLWD  */
     case 0x62:	/* VPUNPCKLDQ  */
@@ -4987,12 +5015,68 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
     case 0x69:	/* VPUNPCKHWD  */
     case 0x6a:	/* VPUNPCKHDQ  */
     case 0x6d:	/* VPUNPCKHQDQ */
+    case 0xc4:	/* VPINSRW.  */
       {
 	i386_record_modrm (ir);
 	int reg_offset = ir->reg + vex_r * 8;
 	record_full_arch_list_add_reg (ir->regcache,
 				       tdep->ymm0_regnum + reg_offset);
       }
+      break;
+
+    case 0x14:	/* VPEXTRB and VUNPCKL[PS|PD].  */
+    case 0x15:	/* VPEXTRW (to memory) and VUNPCKH [PS|PD].  */
+    case 0x16:	/* VPEXTR[D|Q], VPERMPS, VMOVLHPS and VMOVHP[S|D] to reg.  */
+      {
+	i386_record_modrm (ir);
+	/* All vpextr instructions in this case use map_select == 3,
+	   while vpermps has map_select == 2 and the other instructions
+	   have map_select == 1.  The opcode 0xc5 is for vpextr, but also
+	   uses map_select == 1, but due to other inconsistencies with
+	   the other vpextr instructions, it is in a separate case to
+	   avoid making this even more of a mess.  */
+	if (ir->map_select == 3)
+	  {
+	    if (ir->mod == 3)
+	      {
+		/* ModRM.Mod being equal to 3 means this ModRM encodes
+		   a register.  */
+		record_full_arch_list_add_reg (ir->regcache,
+					  ir->regmap[X86_RECORD_REAX_REGNUM
+						     + ir->rm]);
+	      }
+	    else
+	      {
+		/* Even though the test only generated ModRM.Mod == 0,
+		   in theory all values != 3 are viable to encode a memory
+		   address, so all of them are passed along.  */
+		/* Size is mostly based on the opcode, except for
+		   double/quadword difference.  */
+		ir->ot = opcode - 0x14;
+		if (opcode == 0x16 && vex_w == 1)
+		  ir->ot ++;
+		/* I'm not sure if this is the original use, but in here
+		   rip_offset is used to indicate that the RIP pointer will
+		   be 1 byte away from where the instruction expects it to
+		   be, because the immediate will not have been read by the
+		   time the address changed is calculated.  */
+		ir->rip_offset = 1;
+		i386_record_lea_modrm (ir);
+	      }
+	  }
+	else
+	  {
+	    record_full_arch_list_add_reg (ir->regcache,
+					   tdep->ymm0_regnum + ir->reg
+					   + vex_r * 8);
+	  }
+	break;
+      }
+    case 0xc5:	/* VPEXTRW to register.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				ir->regmap[X86_RECORD_REAX_REGNUM
+					   + ir->reg]);
       break;
 
     case 0x74:	/* VPCMPEQB  */
@@ -5006,17 +5090,96 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
       }
       break;
 
-    case 0x78:	/* VPBROADCASTB  */
-    case 0x79:	/* VPBROADCASTW  */
+    case 0x71:	/* VPS[LL|RA|RL]W with constant shift.  */
+    case 0x72:	/* VPS[LL|RA|RL]D with constant shift.  */
+    case 0x73:	/* VPS[LL|RL][Q|DQ] with constant shift.  */
+      {
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->vvvv);
+	break;
+      }
+
+    case 0x2c:	/* VCVTTSD2SI and VCVTTSS2SI.  */
+    case 0x2d:	/* VCVTSD2SI and VCVTSS2SI.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				     ir->regmap[X86_RECORD_REAX_REGNUM
+						+ ir->reg]);
+      break;
+
+    case 0x17:	/* VEXTRACTPS and VMOVHP[S|D] to memory.  */
+    case 0x13:	/* VMOVLPD to memory.  */
+      i386_record_modrm (ir);
+      if (ir->map_select == 1) /* This is the VMOV family.  */
+	{
+	  ir->ot = 3;
+	  i386_record_lea_modrm (ir);
+	}
+      else
+	record_full_arch_list_add_reg (ir->regcache,
+				       ir->regmap[X86_RECORD_REAX_REGNUM
+						  + ir->rm]);
+      break;
+
+    case 0x00:	/* VSHUFB and VPERMQ.  */
+    case 0x01:	/* VPERMPD.  */
+    case 0x02:	/* VPBLENDD.  */
+    case 0x04:	/* VPERMILPS with immediate.  */
+    case 0x05:	/* VPERMILPD with immediate.  */
+    case 0x06:	/* VMPERM2F128.  */
+    case 0x0c:	/* VPERMILPS with register and VBLENDPS.  */
+    case 0x0d:	/* VPERMILPD with register and VBLENDPD.  */
+    case 0x0e:	/* VPBLENDW.  */
+    case 0x12:	/* VMOVDDUP, VMOVHLPS and VMOVLPD to register.  */
+    case 0x1a:	/* VBROADCASTF128.  */
+    case 0x2a:	/* VCVTSI2SS.  */
+    case 0x2b:	/* VPACKUSDW.  */
+    case 0x36:	/* VPERMD.  */
+    case 0x40:	/* VPMULLD  */
+    case 0x46:	/* VPERM2I128.  */
+    case 0x4a:	/* VBLENDVPS.  */
+    case 0x4b:	/* VBLENDVPD.  */
+    case 0x4c:	/* VPBLENDVB.  */
+    case 0x57:	/* VXORP[S|D]  */
     case 0x58:	/* VPBROADCASTD and VADD[P|S][S|D]  */
     case 0x59:	/* VPBROADCASTQ and VMUL[P|S][S|D]  */
+    case 0x5a:	/* VCVTPS2PD, VCVTSD2SS, VCVTSS2SD and VCVTPD2PS.  */
+    case 0x5b:	/* VCVTDQ2PS, VCVTTPS2PD and VCVTPS2DQ.  */
     case 0x5c:	/* VSUB[P|S][S|D]  */
     case 0x5d:	/* VMIN[P|S][S|D]  */
     case 0x5e:	/* VDIV[P|S][S|D]  */
     case 0x5f:	/* VMAX[P|S][S|D]  */
+    case 0x63:	/* VPACKSSWB.  */
+    case 0X67:	/* VPACKUSWB.  */
+    case 0x6b:	/* VPACKSSDW.  */
+    case 0x70:	/* VPSHUF[B|D|HW|LW].  */
+    case 0x78:	/* VPBROADCASTB  */
+    case 0x79:	/* VPBROADCASTW  */
+    case 0xc6:	/* VSHUFP[S|D].  */
+    case 0xd1:	/* VPSRLW, dynamic shift.  */
+    case 0xd2:	/* VPSRLD, dynamic shift.  */
+    case 0xd3:	/* VPSRLQ, dynamic shift.  */
+    case 0xd4:	/* VPADDQ  */
+    case 0xd5:	/* VPMULLW  */
+    case 0xdb:	/* VPAND  */
+    case 0xdf:	/* VPANDN  */
+    case 0xe1:	/* VPSRAW, dynamic shift.  */
+    case 0xe2:	/* VPSRAD, dynamic shift.  */
+    case 0xe4:	/* VPMULHUW  */
+    case 0xe5:	/* VPMULHW  */
+    case 0xe6:	/* VCVTDQ2PD, VCVTTPD2DQ and VCVTPD2DQ.  */
+    case 0xf1:	/* VPSLLW, dynamic shift.  */
+    case 0xf2:	/* VPSLLD, dynamic shift.  */
+    case 0xf3:	/* VPSLLQ, dynamic shift.  */
+    case 0xf4:	/* VPMULUDQ  */
+    case 0xf6:	/* VPSADBW.  */
+    case 0xfc:	/* VPADDB  */
+    case 0xfd:	/* VPADDW  */
+    case 0xfe:	/* VPADDD  */
       {
-	/* vpbroadcast and arithmetic operations are differentiated
-	   by map_select, but it doesn't change the recording mechanics.  */
+	/* This set of instructions all share the same exact way to encode
+	   the destination register, so there's no reason to try and
+	   differentiate them.  */
 	i386_record_modrm (ir);
 	int reg_offset = ir->reg + vex_r * 8;
 	gdb_assert (tdep->num_ymm_regs > reg_offset);
@@ -5024,6 +5187,17 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 				       tdep->ymm0_regnum + reg_offset);
       }
       break;
+
+    case 0x2e: /* VUCOMIS[S|D].  */
+    case 0x2f: /* VCOMIS[S|D].  */
+      {
+	/* Despite what the manual implies, saying that the first register
+	   will be written to, actual testing shows that the only register
+	   changed is EFLAGS.  */
+	record_full_arch_list_add_reg (ir->regcache,
+				       ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
+	break;
+      }
 
     case 0x77:/* VZEROUPPER  */
       {
@@ -5117,8 +5291,11 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 		"addr = %s\n",
 		paddress (gdbarch, ir.addr));
 
-  /* prefixes */
-  while (1)
+  /* Process the prefixes.  This used to be an infinite loop, but since
+     a VEX prefix is always the last one before the opcode, according to
+     Intel's manual anyway, and some AVX opcodes may conflict with
+     prefixes, it's safe to leave the loop as soon as we see VEX.  */
+  while (!vex_prefix)
     {
       if (record_read_memory (gdbarch, ir.addr, &opcode8, 1))
 	return -1;
@@ -5258,7 +5435,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     {
       /* If we found the VEX prefix, i386 will either record or warn that
 	 the instruction isn't supported, so we can return the VEX result.  */
-      return i386_record_vex (&ir, rex_w, rex_r, opcode, gdbarch);
+      return i386_record_vex (&ir, rex_w, rex_r, gdbarch);
     }
  reswitch:
   switch (opcode)
@@ -8800,40 +8977,11 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->num_core_regs = I386_NUM_GREGS + I387_NUM_REGS;
   tdep->register_names = i386_register_names;
 
-  /* No upper YMM registers.  */
-  tdep->ymmh_register_names = NULL;
-  tdep->ymm0h_regnum = -1;
-
-  /* No upper ZMM registers.  */
-  tdep->zmmh_register_names = NULL;
-  tdep->zmm0h_regnum = -1;
-
-  /* No high XMM registers.  */
-  tdep->xmm_avx512_register_names = NULL;
-  tdep->xmm16_regnum = -1;
-
-  /* No upper YMM16-31 registers.  */
-  tdep->ymm16h_register_names = NULL;
-  tdep->ymm16h_regnum = -1;
-
   tdep->num_byte_regs = 8;
   tdep->num_word_regs = 8;
   tdep->num_dword_regs = 0;
   tdep->num_mmx_regs = 8;
   tdep->num_ymm_regs = 0;
-
-  /* No AVX512 registers.  */
-  tdep->k0_regnum = -1;
-  tdep->num_zmm_regs = 0;
-  tdep->num_ymm_avx512_regs = 0;
-  tdep->num_xmm_avx512_regs = 0;
-
-  /* No PKEYS registers  */
-  tdep->pkru_regnum = -1;
-  tdep->num_pkeys_regs = 0;
-
-  /* No segment base registers.  */
-  tdep->fsbase_regnum = -1;
 
   tdesc_arch_data_up tdesc_data = tdesc_data_alloc ();
 
@@ -8970,9 +9118,7 @@ i386_target_description (uint64_t xcr0, bool segments)
   return *tdesc;
 }
 
-void _initialize_i386_tdep ();
-void
-_initialize_i386_tdep ()
+INIT_GDB_FILE (i386_tdep)
 {
   gdbarch_register (bfd_arch_i386, i386_gdbarch_init);
 

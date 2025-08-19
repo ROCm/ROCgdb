@@ -567,7 +567,7 @@ tfile_target_open (const char *arg, int from_tty)
 
   merge_uploaded_tracepoints (&uploaded_tps);
 
-  post_create_inferior (from_tty);
+  post_create_inferior (from_tty, true);
 }
 
 /* Interpret the given line from the definitions part of the trace
@@ -1116,9 +1116,7 @@ tfile_append_tdesc_line (const char *line)
   trace_tdesc += "\n";
 }
 
-void _initialize_tracefile_tfile ();
-void
-_initialize_tracefile_tfile ()
+INIT_GDB_FILE (tracefile_tfile)
 {
   add_target (tfile_target_info, tfile_target_open,
 	      filename_maybe_quoted_completer);

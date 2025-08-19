@@ -44,7 +44,6 @@ proc is_elf_format {} {
    && ![istarget kvx-*-*]
 	 && ![istarget *-*-*linux*]
 	 && ![istarget *-*-lynxos*]
-	 && ![istarget *-*-nacl*]
 	 && ![istarget *-*-netbsd*]
 	 && ![istarget *-*-nto*]
 	 && ![istarget *-*-openbsd*]
@@ -238,7 +237,6 @@ proc match_target { target } {
 proc supports_gnu_osabi {} {
     if { [istarget *-*-gnu*]
 	 || [istarget *-*-linux*]
-	 || [istarget *-*-nacl*]
 	 || ( [istarget *-*-*bsd*] && ![istarget arm*-*-netbsd*] )
 	 || [istarget *-*-lynxos]
 	 || ( [istarget *-*-nto*] && ![istarget arm*-*-*] )
@@ -478,6 +476,36 @@ proc supports_dt_relr {} {
 	return 1
     }
     return 0
+}
+
+# Whether a target assembler supports --gsframe.
+proc gas_sframe_check {} {
+    global check_as_sframe_result
+    global AS
+    global ASFLAGS
+    if [info exists check_as_sframe_result] {
+	return $check_as_sframe_result
+    }
+
+    set as_file "tmpdir/check_as_sframe.s"
+    set as_fh [open $as_file w 0666]
+    puts $as_fh "# Generated file. DO NOT EDIT"
+    puts $as_fh "\t.cfi_startproc"
+    puts $as_fh "\t.cfi_endproc"
+    close $as_fh
+    remote_download host $as_file
+    verbose -log "Checking SFrame support in AS:"
+
+    set status [remote_exec host "$AS $ASFLAGS --gsframe $as_file"]
+
+    if { [lindex $status 0] != 0 } then {
+	verbose -log "SFrame not supported in AS"
+	set check_as_sframe_result 0
+    } else {
+	verbose -log "SFrame supported in AS"
+	set check_as_sframe_result 1
+    }
+    return $check_as_sframe_result
 }
 
 # get_relative_path FROM TO
@@ -1782,4 +1810,31 @@ proc get_standard_section_names {} {
 	return { {\$CODE\$} {\$DATA\$} {\$BSS\$} }
     }
     return
+}
+
+set llvm_plug_opt ""
+if { [isnative] } then {
+    if ![info exists CLANG_FOR_TARGET] then {
+	catch "exec clang -v" got
+	if [regexp "clang version" $got] then {
+	    set CLANG_FOR_TARGET clang
+	}
+    }
+    if [info exists CLANG_FOR_TARGET] then {
+	set llvm_plug_so [string trim [exec $CLANG_FOR_TARGET -print-file-name=LLVMgold.so]]
+	if { $llvm_plug_so ne "LLVMgold.so" } then {
+	    set llvm_plug_opt "--plugin $llvm_plug_so"
+	}
+
+	if { $llvm_plug_opt eq "" } then {
+	    # If it is still blank, try llvm-config --libdir.  Clang
+	    # searches CLANG_INSTALL_LIBDIR_BASENAME which corresponds
+	    # to this.
+	    catch "exec llvm-config --libdir" got
+	    if {[file isdirectory $got] \
+		&& [file isfile $got/LLVMgold.so]} then {
+		set llvm_plug_opt "--plugin $got/LLVMgold.so"
+	    }
+	}
+    }
 }

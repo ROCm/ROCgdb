@@ -18,9 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "arch-utils.h"
-#include <ctype.h>
 #include "breakpoint.h"
-#include "cli/cli-cmds.h"
 #include "inferior.h"
 #include "infrun.h"
 #include "annotate.h"
@@ -409,9 +407,7 @@ catch_signal_command (const char *arg, int from_tty,
   create_signal_catchpoint (tempflag, std::move (filter), catch_all);
 }
 
-void _initialize_break_catch_sig ();
-void
-_initialize_break_catch_sig ()
+INIT_GDB_FILE (break_catch_sig)
 {
   add_catch_command ("signal", _("\
 Catch signals by their names and/or numbers.\n\

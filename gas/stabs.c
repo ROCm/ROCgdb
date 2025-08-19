@@ -163,7 +163,7 @@ aout_process_stab (int what, const char *string, int type, int other, int desc)
       /* .stabd sets the name to NULL.  Why?  */
       S_SET_NAME (symbol, NULL);
       symbol_set_frag (symbol, frag_now);
-      S_SET_VALUE (symbol, (valueT) frag_now_fix ());
+      S_SET_VALUE (symbol, frag_now_fix ());
     }
 
   symbol_append (symbol, symbol_lastP, &symbol_rootP, &symbol_lastP);
@@ -323,7 +323,7 @@ s_stab_generic (int what,
       switch (type)
 	{
 	case N_SLINE:
-	  listing_source_line ((unsigned int) desc);
+	  listing_source_line (desc);
 	  break;
 	case N_SO:
 	case N_SOL:
@@ -358,10 +358,10 @@ s_stab_generic (int what,
       /* At least for now, stabs in a special stab section are always
 	 output as 12 byte blocks of information.  */
       p = frag_more (8);
-      md_number_to_chars (p, (valueT) stroff, 4);
-      md_number_to_chars (p + 4, (valueT) type, 1);
-      md_number_to_chars (p + 5, (valueT) other, 1);
-      md_number_to_chars (p + 6, (valueT) desc, 2);
+      md_number_to_chars (p, stroff, 4);
+      md_number_to_chars (p + 4, type, 1);
+      md_number_to_chars (p + 5, other, 1);
+      md_number_to_chars (p + 6, desc, 2);
 
       if (what == 's' || what == 'n')
 	{

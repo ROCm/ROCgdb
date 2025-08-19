@@ -28,7 +28,6 @@
 #include "libiberty.h"
 #include "objalloc.h"
 #if BFD_SUPPORTS_PLUGINS
-#include "plugin-api.h"
 #include "plugin.h"
 #endif
 
@@ -2381,7 +2380,7 @@ elf_link_add_glibc_verneed (struct elf_find_verdep_info *rinfo,
 void
 _bfd_elf_link_add_glibc_version_dependency
   (struct elf_find_verdep_info *rinfo,
-   const char *version_dep[])
+   const char *const version_dep[])
 {
   Elf_Internal_Verneed *t = NULL;
   int glibc_minor_base = INT_MAX;
@@ -2406,7 +2405,7 @@ _bfd_elf_link_add_dt_relr_dependency (struct elf_find_verdep_info *rinfo)
 {
   if (rinfo->info->enable_dt_relr)
     {
-      const char *version[] =
+      static const char *const version[] =
 	{
 	  "GLIBC_ABI_DT_RELR",
 	  NULL
@@ -11293,7 +11292,7 @@ _bfd_elf_default_action_discarded (asection *sec)
       && strncmp (sec->name, ".eh_frame.", 10) == 0)
     return 0;
 
-  if (strcmp (".sframe", sec->name) == 0)
+  if (elf_section_type (sec) == SHT_GNU_SFRAME)
     return 0;
 
   if (strcmp (".gcc_except_table", sec->name) == 0)

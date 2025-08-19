@@ -244,8 +244,7 @@ microblaze_s_lcomm (int xxx ATTRIBUTE_UNUSED)
   if (S_GET_SEGMENT (symbolP) == current_seg)
     symbol_get_frag (symbolP)->fr_symbol = 0;
   symbol_set_frag (symbolP, frag_now);
-  pfrag = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP, size,
-		    (char *) 0);
+  pfrag = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
   *pfrag = 0;
   S_SET_SIZE (symbolP, size);
   S_SET_SEGMENT (symbolP, current_seg);
@@ -485,7 +484,7 @@ parse_reg (char * s, unsigned * reg)
         }
       else
         as_bad (_("register expected, but saw '%.6s'"), s);
-      if ((int) tmpreg >= MIN_PVR_REGNUM && tmpreg <= MAX_PVR_REGNUM)
+      if (tmpreg - MIN_PVR_REGNUM <= MAX_PVR_REGNUM - MIN_PVR_REGNUM)
         *reg = REG_PVR + tmpreg;
       else
         {
@@ -514,7 +513,7 @@ parse_reg (char * s, unsigned * reg)
       else
 	as_bad (_("register expected, but saw '%.6s'"), s);
 
-      if ((int) tmpreg >= MIN_REGNUM && tmpreg <= MAX_REGNUM)
+      if (tmpreg - MIN_REGNUM <= MAX_REGNUM - MIN_REGNUM)
         *reg = tmpreg;
       else
 	{
@@ -551,7 +550,7 @@ parse_reg (char * s, unsigned * reg)
           else
             as_bad (_("register expected, but saw '%.6s'"), s);
 
-          if ((int)tmpreg >= MIN_REGNUM && tmpreg <= MAX_REGNUM)
+          if (tmpreg - MIN_REGNUM <= MAX_REGNUM - MIN_REGNUM)
             *reg = tmpreg;
           else
 	    {
@@ -1873,17 +1872,15 @@ md_atof (int type, char * litP, int * sizeP)
     {
       for (i = prec - 1; i >= 0; i--)
         {
-          md_number_to_chars (litP, (valueT) words[i],
-                              sizeof (LITTLENUM_TYPE));
-          litP += sizeof (LITTLENUM_TYPE);
+	  md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
+	  litP += sizeof (LITTLENUM_TYPE);
         }
     }
   else
     for (i = 0; i < prec; i++)
       {
-        md_number_to_chars (litP, (valueT) words[i],
-                            sizeof (LITTLENUM_TYPE));
-        litP += sizeof (LITTLENUM_TYPE);
+	md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
+	litP += sizeof (LITTLENUM_TYPE);
       }
 
   return NULL;
@@ -2445,7 +2442,7 @@ md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
      we leave the add number alone for the linker to fix it later.
      Only account for the PC pre-bump (No PC-pre-bump on the Microblaze). */
 
-  if (fixp->fx_addsy != (symbolS *) NULL
+  if (fixp->fx_addsy != NULL
       && (!S_IS_DEFINED (fixp->fx_addsy)
           || (S_GET_SEGMENT (fixp->fx_addsy) != sec)))
     return 0;

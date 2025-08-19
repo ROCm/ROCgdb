@@ -132,7 +132,7 @@ static unsigned int nr_seen[2];
 static symbolS *
 symbol_lookup_or_make (const char *name, bool start)
 {
-  char *buf = concat (start ? ".startof." : ".sizeof.", name, NULL);
+  char *buf = concat (start ? ".startof." : ".sizeof.", name, (char *) NULL);
   symbolS *symbolP;
   unsigned int i;
 
@@ -1880,7 +1880,7 @@ expr (int rankarg,		/* Larger # is higher rank.  */
   know (!is_whitespace (*input_line_pointer));
 
   op_left = operatorf (&op_chars);
-  while (op_left != O_illegal && op_rank[(int) op_left] > rank)
+  while (op_left != O_illegal && op_rank[op_left] > rank)
     {
       segT rightseg;
       bool is_unsigned;
@@ -1889,7 +1889,7 @@ expr (int rankarg,		/* Larger # is higher rank.  */
       input_line_pointer += op_chars;	/* -> after operator.  */
 
       right.X_md = 0;
-      rightseg = expr (op_rank[(int) op_left], &right, mode);
+      rightseg = expr (op_rank[op_left], &right, mode);
       if (right.X_op == O_absent)
 	{
 	  as_warn (_("missing operand; zero assumed"));
@@ -1915,12 +1915,12 @@ expr (int rankarg,		/* Larger # is higher rank.  */
       op_right = operatorf (&op_chars);
 
       know (op_right == O_illegal || op_left == O_index
-	    || op_rank[(int) op_right] <= op_rank[(int) op_left]);
-      know ((int) op_left >= (int) O_multiply);
+	    || op_rank[op_right] <= op_rank[op_left]);
+      know (op_left >= O_multiply);
 #ifndef md_operator
-      know ((int) op_left <= (int) O_index);
+      know (op_left <= O_index);
 #else
-      know ((int) op_left < (int) O_max);
+      know (op_left < O_max);
 #endif
 
       /* input_line_pointer->after right-hand quantity.  */
@@ -1991,8 +1991,8 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 				       symbol_get_frag (right.X_add_symbol),
 				       &frag_off))
 	{
-	  offsetT symval_diff = S_GET_VALUE (resultP->X_add_symbol)
-				- S_GET_VALUE (right.X_add_symbol);
+	  offsetT symval_diff = (S_GET_VALUE (resultP->X_add_symbol)
+				 - S_GET_VALUE (right.X_add_symbol));
 	  subtract_from_result (resultP, right.X_add_number, right.X_extrabit);
 	  subtract_from_result (resultP, frag_off / OCTETS_PER_BYTE, 0);
 	  add_to_result (resultP, symval_diff, symval_diff < 0);

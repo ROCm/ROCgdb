@@ -99,7 +99,7 @@
   ((H) != NULL \
    && (H)->dynindx != -1 \
    && (!bfd_link_pic (INFO) \
-       || !SYMBOLIC_BIND ((INFO), (H)) \
+       || !(bfd_link_pie ((INFO)) || SYMBOLIC_BIND ((INFO), (H))) \
        || !(H)->def_regular))
 
 /* True if this is actually a static link, or it is a -Bsymbolic link
@@ -1441,11 +1441,10 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
       /* Make sure this symbol is output as a dynamic symbol.
 	 Undefined weak syms won't yet be marked as dynamic.  */
       if (h->dynindx == -1
-	  && !h->forced_local)
-	{
-	  if (! bfd_elf_link_record_dynamic_symbol (info, h))
-	    return false;
-	}
+	  && !h->forced_local
+	  && h->root.type == bfd_link_hash_undefweak
+	  && !bfd_elf_link_record_dynamic_symbol (info, h))
+	return false;
 
       if (WILL_CALL_FINISH_DYNAMIC_SYMBOL (1, bfd_link_pic (info), h))
 	{
@@ -1497,21 +1496,20 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
   if (h->got.refcount > 0)
     {
       asection *s;
-      bool dyn;
+      bool dyn = htab->elf.dynamic_sections_created;
       int tls_type = riscv_elf_hash_entry (h)->tls_type;
 
       /* Make sure this symbol is output as a dynamic symbol.
 	 Undefined weak syms won't yet be marked as dynamic.  */
-      if (h->dynindx == -1
-	  && !h->forced_local)
-	{
-	  if (! bfd_elf_link_record_dynamic_symbol (info, h))
-	    return false;
-	}
+      if (dyn
+	  && h->dynindx == -1
+	  && !h->forced_local
+	  && h->root.type == bfd_link_hash_undefweak
+	  && !bfd_elf_link_record_dynamic_symbol (info, h))
+	return false;
 
       s = htab->elf.sgot;
       h->got.offset = s->size;
-      dyn = htab->elf.dynamic_sections_created;
       if (tls_type & (GOT_TLS_GD | GOT_TLS_IE | GOT_TLSDESC))
 	{
 	  int indx = 0;
@@ -1545,7 +1543,10 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
       else
 	{
 	  s->size += GOT_ENTRY_SIZE;
-	  if (WILL_CALL_FINISH_DYNAMIC_SYMBOL (dyn, bfd_link_pic (info), h)
+	  if ((ELF_ST_VISIBILITY (h->other) == STV_DEFAULT
+	       || h->root.type != bfd_link_hash_undefweak)
+	      && (bfd_link_pic (info)
+		  || WILL_CALL_FINISH_DYNAMIC_SYMBOL (dyn, 0, h))
 	      && ! UNDEFWEAK_NO_DYNAMIC_RELOC (info, h))
 	    htab->elf.srelgot->size += sizeof (ElfNN_External_Rela);
 	}
@@ -1591,11 +1592,9 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	  /* Make sure undefined weak symbols are output as a dynamic
 	     symbol in PIEs.  */
 	  else if (h->dynindx == -1
-		   && !h->forced_local)
-	    {
-	      if (! bfd_elf_link_record_dynamic_symbol (info, h))
-		return false;
-	    }
+		   && !h->forced_local
+		   && !bfd_elf_link_record_dynamic_symbol (info, h))
+	    return false;
 	}
     }
   else
@@ -1614,11 +1613,10 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	  /* Make sure this symbol is output as a dynamic symbol.
 	     Undefined weak syms won't yet be marked as dynamic.  */
 	  if (h->dynindx == -1
-	      && !h->forced_local)
-	    {
-	      if (! bfd_elf_link_record_dynamic_symbol (info, h))
-		return false;
-	    }
+	      && !h->forced_local
+	      && h->root.type == bfd_link_hash_undefweak
+	      && !bfd_elf_link_record_dynamic_symbol (info, h))
+	    return false;
 
 	  /* If that succeeded, we know we'll be keeping all the
 	     relocs.  */
@@ -1634,6 +1632,8 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
   /* Finally, allocate space.  */
   for (p = h->dyn_relocs; p != NULL; p = p->next)
     {
+      if (discarded_section (p->sec))
+	continue;
       asection *sreloc = elf_section_data (p->sec)->sreloc;
       sreloc->size += p->count * sizeof (ElfNN_External_Rela);
     }
@@ -2459,6 +2459,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
       const char *msg = NULL;
       bool resolved_to_zero;
       bool via_plt = false;
+      bool relative_got = false;
 
       if (howto == NULL)
 	continue;
@@ -2510,7 +2511,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_RISCV_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -2872,6 +2874,15 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		    off &= ~1;
 		  else
 		    {
+		      /* If a symbol is not dynamic and is not undefined weak,
+			 bind it locally and generate a RELATIVE relocation
+			 under PIC mode.  */
+		      if (h->dynindx == -1
+			  && !h->forced_local
+			  && h->root.type != bfd_link_hash_undefweak
+			  && bfd_link_pic (info))
+			relative_got = true;
+
 		      bfd_put_NN (output_bfd, relocation,
 				  htab->elf.sgot->contents + off);
 		      h->got.offset |= 1;
@@ -2895,27 +2906,27 @@ riscv_elf_relocate_section (bfd *output_bfd,
 	      else
 		{
 		  if (bfd_link_pic (info))
-		    {
-		      asection *s;
-		      Elf_Internal_Rela outrel;
-
-		      /* We need to generate a R_RISCV_RELATIVE reloc
-			 for the dynamic linker.  */
-		      s = htab->elf.srelgot;
-		      BFD_ASSERT (s != NULL);
-
-		      outrel.r_offset = sec_addr (htab->elf.sgot) + off;
-		      outrel.r_info =
-			ELFNN_R_INFO (0, R_RISCV_RELATIVE);
-		      outrel.r_addend = relocation;
-		      relocation = 0;
-		      riscv_elf_append_rela (output_bfd, s, &outrel);
-		    }
+		    relative_got = true;
 
 		  bfd_put_NN (output_bfd, relocation,
 			      htab->elf.sgot->contents + off);
 		  local_got_offsets[r_symndx] |= 1;
 		}
+	    }
+
+	  /* We need to generate a R_RISCV_RELATIVE relocation later in the
+	     riscv_elf_finish_dynamic_symbol if h->dynindx != -1;  Otherwise,
+	     generate a R_RISCV_RELATIVE relocation here now.  */
+	  if (relative_got)
+	    {
+	      asection *s = htab->elf.srelgot;
+	      BFD_ASSERT (s != NULL);
+
+	      Elf_Internal_Rela outrel;
+	      outrel.r_offset = sec_addr (htab->elf.sgot) + off;
+	      outrel.r_info = ELFNN_R_INFO (0, R_RISCV_RELATIVE);
+	      outrel.r_addend = relocation;
+	      riscv_elf_append_rela (output_bfd, s, &outrel);
 	    }
 
 	  if (rel->r_addend != 0)
@@ -5986,43 +5997,49 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
 #define TARGET_BIG_SYM				riscv_elfNN_be_vec
 #define TARGET_BIG_NAME				"elfNN-bigriscv"
 
-#define elf_backend_reloc_type_class		riscv_reloc_type_class
+#define elf_info_to_howto_rel			NULL
+#define elf_info_to_howto			riscv_info_to_howto_rela
 
 #define bfd_elfNN_bfd_reloc_name_lookup		riscv_reloc_name_lookup
-#define bfd_elfNN_bfd_link_hash_table_create	riscv_elf_link_hash_table_create
+#define bfd_elfNN_bfd_link_hash_table_create	\
+  riscv_elf_link_hash_table_create
 #define bfd_elfNN_bfd_reloc_type_lookup		riscv_reloc_type_lookup
-#define bfd_elfNN_bfd_merge_private_bfd_data \
+#define bfd_elfNN_bfd_merge_private_bfd_data	\
   _bfd_riscv_elf_merge_private_bfd_data
-#define bfd_elfNN_bfd_is_target_special_symbol	riscv_elf_is_target_special_symbol
+#define bfd_elfNN_bfd_is_target_special_symbol	\
+  riscv_elf_is_target_special_symbol
+#define bfd_elfNN_bfd_relax_section		_bfd_riscv_relax_section
+#define bfd_elfNN_mkobject			elfNN_riscv_mkobject
+#define bfd_elfNN_get_synthetic_symtab		\
+  elfNN_riscv_get_synthetic_symtab
 
+#define elf_backend_reloc_type_class		riscv_reloc_type_class
 #define elf_backend_copy_indirect_symbol	riscv_elf_copy_indirect_symbol
-#define elf_backend_create_dynamic_sections	riscv_elf_create_dynamic_sections
+#define elf_backend_create_dynamic_sections	\
+  riscv_elf_create_dynamic_sections
 #define elf_backend_check_relocs		riscv_elf_check_relocs
 #define elf_backend_adjust_dynamic_symbol	riscv_elf_adjust_dynamic_symbol
 #define elf_backend_late_size_sections		riscv_elf_late_size_sections
 #define elf_backend_relocate_section		riscv_elf_relocate_section
 #define elf_backend_finish_dynamic_symbol	riscv_elf_finish_dynamic_symbol
-#define elf_backend_finish_dynamic_sections	riscv_elf_finish_dynamic_sections
+#define elf_backend_finish_dynamic_sections	\
+  riscv_elf_finish_dynamic_sections
 #define elf_backend_plt_sym_val			riscv_elf_plt_sym_val
 #define elf_backend_grok_prstatus		riscv_elf_grok_prstatus
 #define elf_backend_grok_psinfo			riscv_elf_grok_psinfo
 #define elf_backend_object_p			riscv_elf_object_p
 #define elf_backend_write_core_note		riscv_write_core_note
 #define elf_backend_maybe_function_sym		riscv_maybe_function_sym
-#define elf_info_to_howto_rel			NULL
-#define elf_info_to_howto			riscv_info_to_howto_rela
-#define bfd_elfNN_bfd_relax_section		_bfd_riscv_relax_section
-#define bfd_elfNN_mkobject			elfNN_riscv_mkobject
-#define bfd_elfNN_get_synthetic_symtab		elfNN_riscv_get_synthetic_symtab
 #define elf_backend_additional_program_headers \
   riscv_elf_additional_program_headers
 #define elf_backend_modify_segment_map		riscv_elf_modify_segment_map
-#define elf_backend_merge_symbol_attribute	riscv_elf_merge_symbol_attribute
-
+#define elf_backend_merge_symbol_attribute	\
+  riscv_elf_merge_symbol_attribute
 #define elf_backend_init_index_section		_bfd_elf_init_1_index_section
-
-#define elf_backend_setup_gnu_properties	elfNN_riscv_link_setup_gnu_properties
-#define elf_backend_merge_gnu_properties	elfNN_riscv_merge_gnu_properties
+#define elf_backend_setup_gnu_properties	\
+  elfNN_riscv_link_setup_gnu_properties
+#define elf_backend_merge_gnu_properties	\
+  elfNN_riscv_merge_gnu_properties
 
 #define elf_backend_can_gc_sections		1
 #define elf_backend_can_refcount		1
@@ -6043,6 +6060,7 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
 #define elf_backend_obj_attrs_section_type	SHT_RISCV_ATTRIBUTES
 #undef  elf_backend_obj_attrs_section
 #define elf_backend_obj_attrs_section		RISCV_ATTRIBUTES_SECTION_NAME
-#define elf_backend_obj_attrs_handle_unknown	riscv_elf_obj_attrs_handle_unknown
+#define elf_backend_obj_attrs_handle_unknown	\
+  riscv_elf_obj_attrs_handle_unknown
 
 #include "elfNN-target.h"

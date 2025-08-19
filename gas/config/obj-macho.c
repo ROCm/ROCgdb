@@ -531,8 +531,8 @@ obj_mach_o_zerofill (int ignore ATTRIBUTE_UNUSED)
       SKIP_WHITESPACE ();
       if (*input_line_pointer == ',')
 	{
-	  align = (unsigned int) parse_align (0);
-	  if (align == (unsigned int) -1)
+	  align = parse_align (0);
+	  if (align == -1u)
 	    {
 	      as_warn (_("align value not recognized, using size"));
 	      align = size;
@@ -552,7 +552,7 @@ obj_mach_o_zerofill (int ignore ATTRIBUTE_UNUSED)
   new_seg = obj_mach_o_make_or_get_sect (segname, sectname, specified_mask,
 					 BFD_MACH_O_S_ZEROFILL,
 					 BFD_MACH_O_S_ATTR_NONE,
-					 align, (offsetT) 0 /*stub size*/);
+					 align, 0 /*stub size*/);
   if (new_seg == NULL)
     return;
 
@@ -960,7 +960,7 @@ obj_mach_o_fileprop (int prop)
   if (prop < 0 || prop >= OBJ_MACH_O_FILE_PROP_MAX)
     as_fatal (_("internal error: bad file property ID %d"), prop);
 
-  switch ((obj_mach_o_file_properties) prop)
+  switch (prop)
     {
       case OBJ_MACH_O_FILE_PROP_SUBSECTS_VIA_SYMS:
         obj_mach_o_subsections_by_symbols = 1;
@@ -1023,7 +1023,7 @@ obj_mach_o_set_symbol_qualifier (symbolS *sym, int type)
   if (sec != NULL)
     sectype = sec->flags & BFD_MACH_O_SECTION_TYPE_MASK;
 
-  switch ((obj_mach_o_symbol_type) type)
+  switch (type)
     {
       case OBJ_MACH_O_SYM_LOCAL:
 	/* This is an extension over the system tools.  */
@@ -1613,7 +1613,7 @@ obj_mach_o_check_before_writing (bfd *abfd ATTRIBUTE_UNUSED,
 void
 obj_mach_o_pre_output_hook (void)
 {
-  bfd_map_over_sections (stdoutput, obj_mach_o_check_before_writing, (char *) 0);
+  bfd_map_over_sections (stdoutput, obj_mach_o_check_before_writing, NULL);
 }
 
 /* Here we count up frags in each subsection (where a sub-section is defined
@@ -1662,7 +1662,7 @@ obj_mach_o_set_subsections (bfd *abfd ATTRIBUTE_UNUSED,
 void
 obj_mach_o_pre_relax_hook (void)
 {
-  bfd_map_over_sections (stdoutput, obj_mach_o_set_subsections, (char *) 0);
+  bfd_map_over_sections (stdoutput, obj_mach_o_set_subsections, NULL);
 }
 
 /* Zerofill and GB Zerofill sections must be sorted to follow all other
@@ -1698,7 +1698,7 @@ obj_mach_o_set_section_vma (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *v_p
 {
   bfd_mach_o_section *ms = bfd_mach_o_get_mach_o_section (sec);
   unsigned bfd_align = bfd_section_alignment (sec);
-  obj_mach_o_set_vma_data *p = (struct obj_mach_o_set_vma_data *)v_p;
+  obj_mach_o_set_vma_data *p = v_p;
   unsigned sectype = (ms->flags & BFD_MACH_O_SECTION_TYPE_MASK);
   unsigned zf;
 
@@ -1741,11 +1741,11 @@ void obj_mach_o_post_relax_hook (void)
 
   memset (&d, 0, sizeof (d));
 
-  bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, (char *) &d);
+  bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, &d);
   if ((d.vma_pass = d.zerofill_seen) != 0)
-    bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, (char *) &d);
+    bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, &d);
   if ((d.vma_pass = d.gb_zerofill_seen) != 0)
-    bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, (char *) &d);
+    bfd_map_over_sections (stdoutput, obj_mach_o_set_section_vma, &d);
 }
 
 static void
@@ -1777,8 +1777,7 @@ obj_mach_o_set_indirect_symbols (bfd *abfd, asection *sec,
 	  obj_mach_o_indirect_sym *isym;
 	  obj_mach_o_indirect_sym *list = NULL;
 	  obj_mach_o_indirect_sym *list_tail = NULL;
-	  unsigned long eltsiz =
-			bfd_mach_o_section_get_entry_size (abfd, ms);
+	  unsigned long eltsiz = bfd_mach_o_section_get_entry_size (abfd, ms);
 
 	  for (isym = indirect_syms; isym != NULL; isym = isym->next)
 	    {
@@ -1801,7 +1800,7 @@ obj_mach_o_set_indirect_symbols (bfd *abfd, asection *sec,
 	     entry size, we're dead ... */
 	  gas_assert (eltsiz != 0);
 
-	  ncalc = (unsigned int) (sect_size / eltsiz);
+	  ncalc = sect_size / eltsiz;
 	  if (nactual != ncalc)
 	    as_bad (_("the number of .indirect_symbols defined in section %s"
 		      " does not match the number expected (%d defined, %d"
@@ -1875,7 +1874,7 @@ obj_mach_o_set_indirect_symbols (bfd *abfd, asection *sec,
 void
 obj_mach_o_frob_file_after_relocs (void)
 {
-  bfd_map_over_sections (stdoutput, obj_mach_o_set_indirect_symbols, (char *) 0);
+  bfd_map_over_sections (stdoutput, obj_mach_o_set_indirect_symbols, NULL);
 }
 
 /* Reverse relocations order to make ld happy.  */

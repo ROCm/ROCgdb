@@ -23,6 +23,7 @@
 #include "extract-store-integer.h"
 #include "gdbarch.h"
 #include "glibc-tdep.h"
+#include "solib-svr4-linux.h"
 #include "linux-tdep.h"
 #include "svr4-tls-tdep.h"
 #include "aarch64-tdep.h"
@@ -2768,9 +2769,7 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->lowest_pc = 0x8000;
 
   linux_init_abi (info, gdbarch, 1);
-
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 linux_lp64_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_lp64_svr4_solib_ops);
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,
@@ -3041,9 +3040,7 @@ aarch64_linux_ltag_tests (void)
 } /* namespace selftests */
 #endif /* GDB_SELF_TEST */
 
-void _initialize_aarch64_linux_tdep ();
-void
-_initialize_aarch64_linux_tdep ()
+INIT_GDB_FILE (aarch64_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_LINUX,
 			  aarch64_linux_init_abi);

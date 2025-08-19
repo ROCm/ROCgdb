@@ -31,9 +31,9 @@
   }
 
 __global__ void
-use_shared (size_t shared_size_bytes)
+use_shared ()
 {
-  constexpr size_t shared_buffer_size = SHARED_SIZE / 4;
+  constexpr size_t shared_buffer_size = SHARED_SIZE / sizeof (uint32_t);
   __shared__ uint32_t shared_buffer[shared_buffer_size];
 
   /* Helper function generating the value to store in share memory.  IDX is
@@ -117,7 +117,7 @@ main (int argc, char **argv)
 
   assert (props.sharedMemPerBlock == SHARED_SIZE);
 
-  use_shared<<<128, props.maxThreadsPerBlock>>> (props.sharedMemPerBlock);
+  use_shared<<<128, props.maxThreadsPerBlock>>> ();
 
   CHECK (hipDeviceSynchronize ());
 }

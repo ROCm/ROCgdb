@@ -2584,9 +2584,12 @@ get_aarch64_dynamic_type (unsigned long type)
 {
   switch (type)
     {
-    case DT_AARCH64_BTI_PLT:  return "AARCH64_BTI_PLT";
-    case DT_AARCH64_PAC_PLT:  return "AARCH64_PAC_PLT";
+    case DT_AARCH64_BTI_PLT:      return "AARCH64_BTI_PLT";
+    case DT_AARCH64_PAC_PLT:      return "AARCH64_PAC_PLT";
     case DT_AARCH64_VARIANT_PCS:  return "AARCH64_VARIANT_PCS";
+    case DT_AARCH64_MEMTAG_MODE:  return "AARCH64_MEMTAG_MODE";
+    case DT_AARCH64_MEMTAG_STACK: return "AARCH64_MEMTAG_STACK";
+
     default:
       return NULL;
     }
@@ -5988,6 +5991,7 @@ get_os_specific_section_type_name (Filedata * filedata, unsigned int sh_type)
     case SHT_GNU_HASH:                return "GNU_HASH";
     case SHT_GNU_LIBLIST:             return "GNU_LIBLIST";
     case SHT_GNU_OBJECT_ONLY:	      return "GNU_OBJECT_ONLY";
+    case SHT_GNU_SFRAME:              return "GNU_SFRAME";
 
     case SHT_SUNW_move:               return "SUNW_MOVE";
     case SHT_SUNW_COMDAT:             return "SUNW_COMDAT";
@@ -6562,6 +6566,8 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	      dump_any_debugging = true;
 	      dwarf_select_sections_all ();
 	    }
+	  else if (strcmp (optarg, "sframe-internal-only") == 0)
+	    warn (_("Unrecognized debug option 'sframe-internal-only'\n"));
 	  else
 	    {
 	      do_debugging = false;
@@ -6607,9 +6613,15 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  break;
 	case OPTION_SFRAME_DUMP:
 	  do_sframe = true;
+	  /* Fix PR/32589 but keep the error messaging same ?  */
+	  if (optarg != NULL && strcmp (optarg, "") == 0)
+	    {
+	      do_dump = true;
+	      error (_("Section name must be provided\n"));
+	    }
 	  /* Providing section name is optional.  request_dump (), however,
 	     thrives on non NULL optarg.  Handle it explicitly here.  */
-	  if (optarg != NULL)
+	  else if (optarg != NULL)
 	    request_dump (dumpdata, SFRAME_DUMP);
 	  else
 	    {
@@ -6843,7 +6855,7 @@ process_file_header (Filedata * filedata)
     return false;
 
   if (! filedata->is_separate)
-    init_dwarf_regnames_by_elf_machine_code (header->e_machine);
+    init_dwarf_by_elf_machine_code (header->e_machine);
 
   if (do_header)
     {
@@ -8383,6 +8395,7 @@ process_section_headers (Filedata * filedata)
 
 	case SHT_NOTE:
 	case SHT_PROGBITS:
+	case SHT_GNU_SFRAME:
 	  /* Having a zero sized section is not illegal according to the
 	     ELF standard, but it might be an indication that something
 	     is wrong.  So issue a warning if we are running in lint mode.  */
@@ -17126,44 +17139,6 @@ dump_section_as_ctf (Elf_Internal_Shdr * section, Filedata * filedata)
 #endif
 
 static bool
-dump_section_as_sframe (Elf_Internal_Shdr * section, Filedata * filedata)
-{
-  void *		  data = NULL;
-  sframe_decoder_ctx	  *sfd_ctx = NULL;
-  const char *print_name = printable_section_name (filedata, section);
-
-  bool ret = true;
-  size_t sf_size;
-  int err = 0;
-
-  if (strcmp (print_name, "") == 0)
-    {
-      error (_("Section name must be provided \n"));
-      ret = false;
-      return ret;
-    }
-
-  data = get_section_contents (section, filedata);
-  sf_size = section->sh_size;
-  /* Decode the contents of the section.  */
-  sfd_ctx = sframe_decode ((const char*)data, sf_size, &err);
-  if (!sfd_ctx)
-    {
-      ret = false;
-      error (_("SFrame decode failure: %s\n"), sframe_errmsg (err));
-      goto fail;
-    }
-
-  printf (_("Contents of the SFrame section %s:"), print_name);
-  /* Dump the contents as text.  */
-  dump_sframe (sfd_ctx, section->sh_addr);
-
- fail:
-  free (data);
-  return ret;
-}
-
-static bool
 load_specific_debug_section (enum dwarf_section_display_enum  debug,
 			     const Elf_Internal_Shdr *        sec,
 			     void *                           data)
@@ -17542,6 +17517,7 @@ display_debug_section (int shndx, Elf_Internal_Shdr * section, Filedata * fileda
 
       if (streq (sec->uncompressed_name, name)
 	  || (id == line && startswith (name, ".debug_line."))
+	  || (id == sframe && section->sh_type == SHT_GNU_SFRAME)
 	  || streq (sec->compressed_name, name))
 	{
 	  bool secondary = (section != find_section (filedata, name));
@@ -17550,6 +17526,8 @@ display_debug_section (int shndx, Elf_Internal_Shdr * section, Filedata * fileda
 	    free_debug_section (id);
 
 	  if (i == line && startswith (name, ".debug_line."))
+	    sec->name = name;
+	  else if (id == sframe && section->sh_type == SHT_GNU_SFRAME)
 	    sec->name = name;
 	  else if (streq (sec->uncompressed_name, name))
 	    sec->name = sec->uncompressed_name;
@@ -17730,7 +17708,7 @@ process_section_contents (Filedata * filedata)
 #endif
       if (dump & SFRAME_DUMP)
 	{
-	  if (! dump_section_as_sframe (section, filedata))
+	  if (! display_debug_section (i, section, filedata))
 	    res = false;
 	}
     }
@@ -21778,8 +21756,13 @@ print_v850_note (Elf_Internal_Note * pnote)
 {
   unsigned int val;
 
+  printf ("  %s: ", get_v850_elf_note_type (pnote->type));
+
   if (pnote->descsz != 4)
-    return false;
+    {
+      printf ("<corrupt descsz: %#lx>\n", pnote->descsz);
+      return false;
+    }
 
   val = byte_get ((unsigned char *) pnote->descdata, pnote->descsz);
 
@@ -23038,7 +23021,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
   printf (_("    KFD version: %u.%u\n"), kfd_major, kfd_minor);
   printf (_("    Runtime snapshot: "));
   for (i = 0; i < runtime_snapshot_size; ++i)
-    printf ("%02x%c", *++head & 0xff,
+    printf ("%02x%c", *head++ & 0xff,
 	    i == runtime_snapshot_size - 1 ? '\n' : ' ');
 
   /* Agents snapshots.  */
@@ -23047,7 +23030,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
     {
       printf ("      ");
       for (j = 0; j < agent_snapshot_size; ++j)
-	printf ("%02x ", *++head & 0xff);
+	printf ("%02x ", *head++ & 0xff);
       printf ("\n");
     }
 
@@ -23057,7 +23040,7 @@ print_amdgpu_core_state (Elf_Internal_Note *pnote)
     {
       printf ("      ");
       for (j = 0; j < queues_snapshot_size; ++j)
-	printf ("%02x ", *++head & 0xff);
+	printf ("%02x ", *head++ & 0xff);
       printf ("\n");
     }
 
@@ -23448,10 +23431,15 @@ process_v850_notes (Filedata * filedata, uint64_t offset, uint64_t length)
 	    " %#" PRIx64 " with length %#" PRIx64 ":\n"),
 	  offset, length);
 
-  while ((char *) external + sizeof (Elf_External_Note) < end)
+  while ((char *) external < end)
     {
-      Elf_External_Note * next;
+      char *next;
       Elf_Internal_Note inote;
+      size_t data_remaining = end - (char *) external;
+
+      if (data_remaining < offsetof (Elf_External_Note, name))
+	break;
+      data_remaining -= offsetof (Elf_External_Note, name);
 
       inote.type     = BYTE_GET (external->type);
       inote.namesz   = BYTE_GET (external->namesz);
@@ -23459,47 +23447,25 @@ process_v850_notes (Filedata * filedata, uint64_t offset, uint64_t length)
       inote.descsz   = BYTE_GET (external->descsz);
       inote.descdata = inote.namedata + align_power (inote.namesz, 2);
       inote.descpos  = offset + (inote.descdata - (char *) pnotes);
+      next = inote.descdata + align_power (inote.descsz, 2);
 
-      if (inote.descdata < (char *) pnotes || inote.descdata >= end)
+      if ((size_t) (inote.descdata - inote.namedata) < inote.namesz
+	  || (size_t) (inote.descdata - inote.namedata) > data_remaining
+	  || (size_t) (next - inote.descdata) < inote.descsz
+	  || ((size_t) (next - inote.descdata)
+	      > data_remaining - (size_t) (inote.descdata - inote.namedata)))
 	{
-	  warn (_("Corrupt note: name size is too big: %lx\n"), inote.namesz);
-	  inote.descdata = inote.namedata;
-	  inote.namesz   = 0;
-	}
-
-      next = (Elf_External_Note *) (inote.descdata + align_power (inote.descsz, 2));
-
-      if (   ((char *) next > end)
-	  || ((char *) next <  (char *) pnotes))
-	{
-	  warn (_("corrupt descsz found in note at offset %#tx\n"),
+	  warn (_("note with invalid namesz and/or descsz found at offset %#tx\n"),
 		(char *) external - (char *) pnotes);
-	  warn (_(" type: %#lx, namesize: %#lx, descsize: %#lx\n"),
-		inote.type, inote.namesz, inote.descsz);
+	  warn (_(" type: %#lx, namesize: %#lx, descsize: %#lx, alignment: %u\n"),
+		inote.type, inote.namesz, inote.descsz, 2);
 	  break;
 	}
 
-      external = next;
-
-      /* Prevent out-of-bounds indexing.  */
-      if (   inote.namedata + inote.namesz > end
-	  || inote.namedata + inote.namesz < inote.namedata)
-        {
-          warn (_("corrupt namesz found in note at offset %#zx\n"),
-                (char *) external - (char *) pnotes);
-          warn (_(" type: %#lx, namesize: %#lx, descsize: %#lx\n"),
-                inote.type, inote.namesz, inote.descsz);
-          break;
-        }
-
-      printf ("  %s: ", get_v850_elf_note_type (inote.type));
+      external = (Elf_External_Note *) next;
 
       if (! print_v850_note (& inote))
-	{
-	  res = false;
-	  printf ("<corrupt sizes: namesz: %#lx, descsz: %#lx>\n",
-		  inote.namesz, inote.descsz);
-	}
+	res = false;
     }
 
   free (pnotes);

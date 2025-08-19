@@ -36,9 +36,10 @@
 #include "libcoff.h"
 #include "bucomm.h"
 #include "demanguse.h"
-#include "plugin-api.h"
-#include "plugin.h"
 #include "safe-ctype.h"
+#if BFD_SUPPORTS_PLUGINS
+#include "plugin.h"
+#endif
 
 #ifndef streq
 #define streq(a,b) (strcmp ((a),(b)) == 0)
@@ -802,6 +803,9 @@ filter_symbols (bfd *abfd, bool is_dynamic, void *minisyms,
 	continue;
 
       if (bfd_lto_slim_symbol_p (abfd, sym->name)
+#if BFD_SUPPORTS_PLUGINS
+	  && !bfd_plugin_target_p (abfd->xvec)
+#endif
 	  && report_plugin_err)
 	{
 	  report_plugin_err = false;
@@ -1484,7 +1488,11 @@ display_rel_file (bfd *abfd, bfd *archive_bfd)
 
   /* lto_type is set to lto_non_ir_object when a bfd is loaded with a
      compiler LTO plugin.  */
-  if (bfd_get_lto_type (abfd) == lto_slim_ir_object)
+  if (bfd_get_lto_type (abfd) == lto_slim_ir_object
+#if BFD_SUPPORTS_PLUGINS
+      && !bfd_plugin_target_p (abfd->xvec)
+#endif
+     )
     {
       report_plugin_err = false;
       non_fatal (_("%s: plugin needed to handle lto object"),

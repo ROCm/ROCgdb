@@ -633,6 +633,33 @@ z80_start_line_hook (void)
 	  break;
 	}
     }
+  /* Remove leading zeros from dollar local labels if SDCC compat enabled.  */
+  if (sdcc_compat && *input_line_pointer == '0')
+    {
+      char *dollar;
+
+      /* SDCC emits at most one label definition per line, so it is
+	 enough to look at only the first label.  Hand-written asm
+	 might use more, but then it is unlikely to use leading zeros
+	 on dollar local labels.  */
+
+      /* Place p at the first character after [0-9]+.  */
+      for (p = input_line_pointer; *p >= '0' && *p <= '9'; ++p)
+	;
+
+      /* Is this a dollar sign label?
+	 GAS allows spaces between $ and :, but SDCC does not.  */
+      if (p[0] == '$' && p[1] == ':')
+	{
+	  dollar = p;
+	  /* Replace zeros with spaces until the first non-zero,
+	     but leave the last character before $ intact (for e.g. 0$:).  */
+	  for (p = input_line_pointer; *p == '0' && p < dollar - 1; ++p)
+	    {
+	      *p = ' ';
+	    }
+	}
+    }
   /* Check for <label>[:] =|([.](EQU|DEFL)) <value>.  */
   if (is_name_beginner (*input_line_pointer))
     {
@@ -2966,10 +2993,10 @@ emit_lea (char prefix, char opcode, const char * args)
   switch (rnum)
     {
     case REG_IX:
-      opcode = (opcode == (char)0x33) ? 0x55 : (opcode|0x00);
+      opcode = opcode == 0x33 ? 0x55 : opcode | 0x00;
       break;
     case REG_IY:
-      opcode = (opcode == (char)0x32) ? 0x54 : (opcode|0x01);
+      opcode = opcode == 0x32 ? 0x54 : opcode | 0x01;
     }
 
   q = frag_more (2);
@@ -3420,7 +3447,7 @@ assemble_suffix (const char **suffix)
         i = 0x40;
         break;
     }
-  *frag_more (1) = (char)i;
+  *frag_more (1) = i;
   switch (i)
     {
     case 0x40: inst_mode = INST_MODE_FORCED | INST_MODE_S | INST_MODE_IS; break;
@@ -3720,7 +3747,7 @@ is_overflow (long value, unsigned bitsize)
 {
   if (value < 0)
     return signed_overflow (value, bitsize);
-  return unsigned_overflow ((unsigned long)value, bitsize);
+  return unsigned_overflow (value, bitsize);
 }
 
 void
@@ -4064,8 +4091,8 @@ str_to_zeda32(char *litP, int *sizeP)
   else if (!sign)
     mantissa &= (1ull << 23) - 1;
   for (i = 0; i < 24; i += 8)
-    *litP++ = (char)(mantissa >> i);
-  *litP = (char)(0x80 + exponent);
+    *litP++ = mantissa >> i;
+  *litP = 0x80 + exponent;
   return NULL;
 }
 
@@ -4111,9 +4138,9 @@ str_to_float48(char *litP, int *sizeP)
     return _("overflow");
   if (!sign)
     mantissa &= (1ull << 39) - 1;
-  *litP++ = (char)(0x80 + exponent);
+  *litP++ = 0x80 + exponent;
   for (i = 0; i < 40; i += 8)
-    *litP++ = (char)(mantissa >> i);
+    *litP++ = mantissa >> i;
   return NULL;
 }
 

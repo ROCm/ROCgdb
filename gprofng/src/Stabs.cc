@@ -163,21 +163,11 @@ Stabs::removeDupSyms ()
   SymLst->truncate (last);
 }
 
-Stabs *
-Stabs::NewStabs (char *_path, char *lo_name)
+Stabs::Stabs (Elf *elf, char *_lo_name)
 {
-  Stabs *stabs = new Stabs (_path, lo_name);
-  if (stabs->status != Stabs::DBGD_ERR_NONE)
-    {
-      delete stabs;
-      return NULL;
-    }
-  return stabs;
-}
-
-Stabs::Stabs (char *_path, char *_lo_name)
-{
-  path = dbe_strdup (_path);
+  elfDis = elf;
+  elfDbg = elf->gnu_debug_file ? elf->gnu_debug_file : elf;
+  path = dbe_strdup (elf->get_location ());
   lo_name = dbe_strdup (_lo_name);
   SymLstByName = NULL;
   pltSym = NULL;
@@ -187,16 +177,12 @@ Stabs::Stabs (char *_path, char *_lo_name)
   LocalFileIdx = new Vector<int>;
   last_PC_to_sym = NULL;
   dwarf = NULL;
-  elfDbg = NULL;
-  elfDis = NULL;
   stabsModules = NULL;
   textsz = 0;
   wsize = Wnone;
   st_check_symtab = false;
   status = DBGD_ERR_NONE;
 
-  if (openElf (false) == NULL)
-    return;
   switch (elfDis->elf_getclass ())
     {
     case ELFCLASS32:
@@ -206,75 +192,7 @@ Stabs::Stabs (char *_path, char *_lo_name)
       wsize = W64;
       break;
     }
-  isRelocatable = elfDis->elf_getehdr ()->e_type == ET_REL;
-  for (unsigned int pnum = 0; pnum < elfDis->elf_getehdr ()->e_phnum; pnum++)
-    {
-      Elf_Internal_Phdr *phdr = elfDis->get_phdr (pnum);
-      if (phdr->p_type == PT_LOAD && phdr->p_flags == (PF_R | PF_X))
-	{
-	  if (textsz == 0)
-	    textsz = phdr->p_memsz;
-	  else
-	    {
-	      textsz = 0;
-	      break;
-	    }
-	}
-    }
-}
-
-Stabs::~Stabs ()
-{
-  delete SymLstByName;
-  Destroy (SymLst);
-  Destroy (LocalFile);
-  delete elfDis;
-  delete dwarf;
-  delete LocalLst;
-  delete LocalFileIdx;
-  delete stabsModules;
-  free (path);
-  free (lo_name);
-}
-
-Elf *
-Stabs::openElf (char *fname, Stab_status &st)
-{
-  Elf::Elf_status elf_status;
-  Elf *elf = Elf::elf_begin (fname, &elf_status);
-  if (elf == NULL)
-    {
-      switch (elf_status)
-	{
-	case Elf::ELF_ERR_CANT_OPEN_FILE:
-	case Elf::ELF_ERR_CANT_MMAP:
-	case Elf::ELF_ERR_BIG_FILE:
-	  st = DBGD_ERR_CANT_OPEN_FILE;
-	  break;
-	case Elf::ELF_ERR_BAD_ELF_FORMAT:
-	default:
-	  st = DBGD_ERR_BAD_ELF_FORMAT;
-	  break;
-	}
-      return NULL;
-    }
-  if (elf->elf_version (EV_CURRENT) == EV_NONE)
-    {
-      // ELF library out of date
-      delete elf;
-      st = DBGD_ERR_BAD_ELF_LIB;
-      return NULL;
-    }
-
-  Elf_Internal_Ehdr *ehdrp = elf->elf_getehdr ();
-  if (ehdrp == NULL)
-    {
-      // check machine
-      delete elf;
-      st = DBGD_ERR_BAD_ELF_FORMAT;
-      return NULL;
-    }
-  switch (ehdrp->e_machine)
+  switch (elfDis->elf_getehdr ()->e_machine)
     {
     case EM_SPARC:
       platform = Sparc;
@@ -299,29 +217,42 @@ Stabs::openElf (char *fname, Stab_status &st)
       platform = Unknown;
       break;
     }
-  return elf;
+  isRelocatable = elfDis->elf_getehdr ()->e_type == ET_REL;
+  for (unsigned int pnum = 0; pnum < elfDis->elf_getehdr ()->e_phnum; pnum++)
+    {
+      Elf_Internal_Phdr *phdr = elfDis->get_phdr (pnum);
+      if (phdr->p_type == PT_LOAD && phdr->p_flags == (PF_R | PF_X))
+	{
+	  if (textsz == 0)
+	    textsz = phdr->p_memsz;
+	  else
+	    {
+	      textsz = 0;
+	      break;
+	    }
+	}
+    }
+}
+
+Stabs::~Stabs ()
+{
+  delete SymLstByName;
+  Destroy (SymLst);
+  Destroy (LocalFile);
+  delete dwarf;
+  delete LocalLst;
+  delete LocalFileIdx;
+  delete stabsModules;
+  free (path);
+  free (lo_name);
 }
 
 Elf *
 Stabs::openElf (bool dbg_info)
 {
-  if (status != DBGD_ERR_NONE)
-    return NULL;
-  if (elfDis == NULL)
-    {
-      elfDis = openElf (path, status);
-      if (elfDis == NULL)
-	return NULL;
-    }
-  if (!dbg_info)
-    return elfDis;
-  if (elfDbg == NULL)
-    {
-      elfDbg = elfDis->find_ancillary_files (lo_name);
-      if (elfDbg == NULL)
-	elfDbg = elfDis;
-    }
-  return elfDbg;
+  if (dbg_info)
+    return elfDbg;
+  return elfDis;
 }
 
 bool
@@ -1615,7 +1546,7 @@ Stabs::readSymSec (Elf *elf, bool is_dynamic)
       switch (GELF_ST_TYPE (Sym.st_info))
 	{
 	case STT_FUNC:
-	  if (Sym.st_size == 0 || ELF_ST_BIND (Sym.st_info) == STB_WEAK)
+	  if (Sym.st_size == 0)
 	    break;
 	  if (Sym.st_shndx == 0)
 	    {
@@ -2130,57 +2061,6 @@ Stabs::append_Function (Module *module, char *fname)
   module->loadobject->functions->append (func);
   return func;
 }
-
-Function *
-Stabs::append_Function (Module *module, char *linkerName, uint64_t pc)
-{
-  Dprintf (DEBUG_STABS, NTXT ("Stabs::append_Function: module=%s linkerName=%s pc=0x%llx\n"),
-	   STR (module->get_name ()), STR (linkerName), (unsigned long long) pc);
-  long i;
-  Symbol *sitem = NULL, *sp;
-  Function *func;
-  sp = new Symbol;
-  if (pc)
-    {
-      sp->value = pc;
-      i = SymLst->bisearch (0, -1, &sp, SymFindCmp);
-      if (i != -1)
-	sitem = SymLst->fetch (i);
-    }
-
-  if (!sitem && linkerName)
-    {
-      if (SymLstByName == NULL)
-	{
-	  SymLstByName = SymLst->copy ();
-	  SymLstByName->sort (SymNameCmp);
-	}
-      sp->name = linkerName;
-      i = SymLstByName->bisearch (0, -1, &sp, SymNameCmp);
-      sp->name = NULL;
-      if (i != -1)
-	sitem = SymLstByName->fetch (i);
-    }
-  delete sp;
-
-  if (!sitem)
-    return NULL;
-  if (sitem->alias)
-    sitem = sitem->alias;
-  if (sitem->func)
-    return sitem->func;
-
-  sitem->func = func = dbeSession->createFunction ();
-  func->img_fname = path;
-  func->img_offset = sitem->img_offset;
-  func->save_addr = sitem->save;
-  func->size = sitem->size;
-  func->module = module;
-  func->set_name (sitem->name); //XXXX ?? Now call it to set obj->name
-  module->functions->append (func);
-  module->loadobject->functions->append (func);
-  return func;
-}// Stabs::append_Function
 
 Dwarf *
 Stabs::openDwarf ()

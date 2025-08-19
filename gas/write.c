@@ -142,7 +142,7 @@ fix_new_internal (fragS *frag,		/* Which frag?  */
 
   n_fixups++;
 
-  fixP = (fixS *) obstack_alloc (&notes, sizeof (fixS));
+  fixP = obstack_alloc (&notes, sizeof (fixS));
 
   fixP->fx_frag = frag;
   fixP->fx_where = where;
@@ -222,7 +222,7 @@ fix_new (fragS *frag,			/* Which frag?  */
 	 RELOC_ENUM r_type		/* Relocation type.  */)
 {
   return fix_new_internal (frag, where, size, add_symbol,
-			   (symbolS *) NULL, offset, pcrel, r_type, false);
+			   NULL, offset, pcrel, r_type, false);
 }
 
 /* Create a fixup for an expression.  Currently we only support fixups
@@ -290,7 +290,7 @@ fix_at_start (fragS *frag, unsigned long size, symbolS *add_symbol,
 	      offsetT offset, int pcrel, RELOC_ENUM r_type)
 {
   return fix_new_internal (frag, 0, size, add_symbol,
-			   (symbolS *) NULL, offset, pcrel, r_type, true);
+			   NULL, offset, pcrel, r_type, true);
 }
 
 /* Generic function to determine whether a fixup requires a relocation.  */
@@ -352,7 +352,7 @@ get_recorded_alignment (segT seg)
 static void
 renumber_sections (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *countparg)
 {
-  int *countp = (int *) countparg;
+  int *countp = countparg;
 
   sec->index = *countp;
   ++*countp;
@@ -369,9 +369,9 @@ chain_frchains_together_1 (segT section, struct frchain *frchp)
       prev_frag->fr_next = frchp->frch_root;
       prev_frag = frchp->frch_last;
       gas_assert (prev_frag->fr_type != 0);
-      if (frchp->fix_root != (fixS *) NULL)
+      if (frchp->fix_root != NULL)
 	{
-	  if (seg_info (section)->fix_root == (fixS *) NULL)
+	  if (seg_info (section)->fix_root == NULL)
 	    seg_info (section)->fix_root = frchp->fix_root;
 	  prev_fix->fx_next = frchp->fix_root;
 	  seg_info (section)->fix_tail = frchp->fix_tail;
@@ -395,7 +395,7 @@ chain_frchains_together (bfd *abfd ATTRIBUTE_UNUSED,
   /* BFD may have introduced its own sections without using
      subseg_new, so it is possible that seg_info is NULL.  */
   info = seg_info (section);
-  if (info != (segment_info_type *) NULL)
+  if (info != NULL)
     info->frchainP->frch_last
       = chain_frchains_together_1 (section, info->frchainP);
 
@@ -553,7 +553,7 @@ static void
 relax_seg (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *xxx)
 {
   segment_info_type *seginfo = seg_info (sec);
-  struct relax_seg_info *info = (struct relax_seg_info *) xxx;
+  struct relax_seg_info *info = xxx;
 
   if (seginfo && seginfo->frchainP
       && relax_segment (seginfo->frchainP->frch_root, sec, info->pass))
@@ -587,8 +587,8 @@ size_seg (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *xxx ATTRIBUTE_UNUSED)
     size = 0;
 
   flags = bfd_section_flags (sec);
-  if (size == 0 && bfd_section_size (sec) != 0 &&
-    (flags & SEC_HAS_CONTENTS) != 0)
+  if (size == 0 && bfd_section_size (sec) != 0
+      && (flags & SEC_HAS_CONTENTS) != 0)
     return;
 
   if (size > 0 && ! seginfo->bss)
@@ -632,6 +632,10 @@ size_seg (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *xxx ATTRIBUTE_UNUSED)
 #ifdef obj_frob_section
   obj_frob_section (sec);
 #endif
+
+  if (sec->entsize && (sec->size % sec->entsize))
+    as_warn (_("section `%s' size (%#" PRIx64 ") is not a multiple of its entry size %#x"),
+	     sec->name, (uint64_t) sec->size, sec->entsize);
 }
 
 #ifdef DEBUG2
@@ -1293,7 +1297,7 @@ write_relocs (bfd *abfd ATTRIBUTE_UNUSED, asection *sec,
   n = 0;
   r = my_reloc_list;
   last_frag = NULL;
-  for (fixp = seginfo->fix_root; fixp != (fixS *) NULL; fixp = fixp->fx_next)
+  for (fixp = seginfo->fix_root; fixp != NULL; fixp = fixp->fx_next)
     {
       int fx_size, slack;
       valueT loc;
@@ -1668,9 +1672,8 @@ write_contents (bfd *abfd ATTRIBUTE_UNUSED,
 
       if (f->fr_fix)
 	{
-	  x = bfd_set_section_contents (stdoutput, sec,
-					f->fr_literal, (file_ptr) offset,
-					(bfd_size_type) f->fr_fix);
+	  x = bfd_set_section_contents (stdoutput, sec, f->fr_literal,
+					offset, f->fr_fix);
 	  if (!x)
 	    as_fatal (ngettext ("can't write %ld byte "
 				"to section %s of %s: '%s'",
@@ -1694,10 +1697,8 @@ write_contents (bfd *abfd ATTRIBUTE_UNUSED,
 	      /* Do it the old way. Can this ever happen?  */
 	      while (count--)
 		{
-		  x = bfd_set_section_contents (stdoutput, sec,
-						fill_literal,
-						(file_ptr) offset,
-						(bfd_size_type) fill_size);
+		  x = bfd_set_section_contents (stdoutput, sec, fill_literal,
+						offset, fill_size);
 		  if (!x)
 		    as_fatal (ngettext ("can't fill %ld byte "
 					"in section %s of %s: '%s'",
@@ -1732,9 +1733,8 @@ write_contents (bfd *abfd ATTRIBUTE_UNUSED,
 	      for (; count > 0; count -= n_per_buf)
 		{
 		  n_per_buf = n_per_buf > count ? count : n_per_buf;
-		  x = bfd_set_section_contents
-		    (stdoutput, sec, buf, (file_ptr) offset,
-		     (bfd_size_type) n_per_buf * fill_size);
+		  x = bfd_set_section_contents (stdoutput, sec, buf, offset,
+						n_per_buf * fill_size);
 		  if (!x)
 		    as_fatal (ngettext ("can't fill %ld byte "
 					"in section %s of %s: '%s'",
@@ -2145,7 +2145,7 @@ write_object_file (void)
     bfd_map_over_sections (stdoutput, renumber_sections, &i);
   }
 
-  bfd_map_over_sections (stdoutput, chain_frchains_together, (char *) 0);
+  bfd_map_over_sections (stdoutput, chain_frchains_together, NULL);
 
   /* We have two segments. If user gave -R flag, then we must put the
      data frags into the text segment. Do this before relaxing so
@@ -2167,12 +2167,12 @@ write_object_file (void)
       struct broken_word *brokp;
 
       for (brokp = broken_words;
-	   brokp != (struct broken_word *) NULL;
+	   brokp != NULL;
 	   brokp = brokp->next_broken_word)
 	{
 	  brokp->added = 0;
 
-	  if (brokp->dispfrag != (fragS *) NULL
+	  if (brokp->dispfrag != NULL
 	      && brokp->dispfrag->fr_type == rs_broken_word)
 	    brokp->dispfrag->fr_subtype = 0;
 	}
@@ -2194,7 +2194,7 @@ write_object_file (void)
      TC_FINALIZE_SYMS_BEFORE_SIZE_SEG to 0.  */
   finalize_syms = TC_FINALIZE_SYMS_BEFORE_SIZE_SEG;
 
-  bfd_map_over_sections (stdoutput, size_seg, (char *) 0);
+  bfd_map_over_sections (stdoutput, size_seg, NULL);
 
   /* Relaxation has completed.  Freeze all syms.  */
   finalize_syms = 1;
@@ -2246,7 +2246,7 @@ write_object_file (void)
 	char *table_ptr;
 	addressT table_addr;
 	addressT from_addr, to_addr;
-	int n, m;
+	int n;
 
 	subseg_change (lie->seg, lie->subseg);
 	fragP = lie->dispfrag;
@@ -2271,9 +2271,9 @@ write_object_file (void)
 	table_ptr += md_short_jump_size;
 	table_addr += md_short_jump_size;
 
-	for (m = 0;
+	for (;
 	     lie && lie->dispfrag == fragP;
-	     m++, lie = lie->next_broken_word)
+	     lie = lie->next_broken_word)
 	  {
 	    if (lie->added == 2)
 	      continue;
@@ -2321,6 +2321,8 @@ write_object_file (void)
   resolve_local_symbol_values ();
   resolve_reloc_expr_symbols ();
 
+  evaluate_deferred_diags ();
+
 #ifdef OBJ_ELF
   if (IS_ELF)
     maybe_generate_build_notes ();
@@ -2333,7 +2335,7 @@ write_object_file (void)
   obj_frob_file_before_adjust ();
 #endif
 
-  bfd_map_over_sections (stdoutput, adjust_reloc_syms, (char *) 0);
+  bfd_map_over_sections (stdoutput, adjust_reloc_syms, NULL);
 
 #ifdef tc_frob_file_before_fix
   tc_frob_file_before_fix ();
@@ -2342,7 +2344,7 @@ write_object_file (void)
   obj_frob_file_before_fix ();
 #endif
 
-  bfd_map_over_sections (stdoutput, fix_segment, (char *) 0);
+  bfd_map_over_sections (stdoutput, fix_segment, NULL);
 
   /* Set up symbol table, and write it out.  */
   if (symbol_rootP)
@@ -2377,7 +2379,7 @@ write_object_file (void)
 	  if (name)
 	    {
 	      const char *name2 =
-		decode_local_label_name ((char *) S_GET_NAME (symp));
+		decode_local_label_name (S_GET_NAME (symp));
 	      /* They only differ if `name' is a fb or dollar local
 		 label name.  */
 	      if (name2 != name && ! S_IS_DEFINED (symp))
@@ -2499,7 +2501,7 @@ write_object_file (void)
   obj_coff_generate_pdata ();
 #endif
 
-  bfd_map_over_sections (stdoutput, write_relocs, (char *) 0);
+  bfd_map_over_sections (stdoutput, write_relocs, NULL);
   reloc_list = NULL;
 
 #ifdef tc_frob_file_after_relocs
@@ -2527,10 +2529,10 @@ write_object_file (void)
 	flags = BFD_COMPRESS | BFD_COMPRESS_GABI | BFD_COMPRESS_ZSTD;
       stdoutput->flags |= flags & bfd_applicable_file_flags (stdoutput);
       if ((stdoutput->flags & BFD_COMPRESS) != 0)
-	bfd_map_over_sections (stdoutput, compress_debug, (char *) 0);
+	bfd_map_over_sections (stdoutput, compress_debug, NULL);
     }
 
-  bfd_map_over_sections (stdoutput, write_contents, (char *) 0);
+  bfd_map_over_sections (stdoutput, write_contents, NULL);
 }
 
 #ifdef TC_GENERIC_RELAX_TABLE
@@ -2894,8 +2896,7 @@ relax_segment (struct frag *segment_frag_root, segT segment, int pass)
 			    {
 			      char buf[50];
 
-			      bfd_sprintf_vma (stdoutput, buf,
-					       (addressT) lie->addnum);
+			      bfd_sprintf_vma (stdoutput, buf, lie->addnum);
 			      as_warn_where (fragP->fr_file, fragP->fr_line,
 					     _(".word %s-%s+%s didn't fit"),
 					     S_GET_NAME (lie->add),

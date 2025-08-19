@@ -45,6 +45,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/scoped_ignore_signal.h"
 #include "gdbsupport/buildargv.h"
+#include "gdbsupport/cleanups.h"
 
 /* Hold "compile" commands.  */
 
@@ -868,9 +869,7 @@ compile_command (const char *args, int from_tty)
 /* See compile.h.  */
 cmd_list_element *compile_cmd_element = nullptr;
 
-void _initialize_compile ();
-void
-_initialize_compile ()
+INIT_GDB_FILE (compile)
 {
   compile_cmd_element = add_prefix_cmd ("compile", class_obscure,
 					compile_command,

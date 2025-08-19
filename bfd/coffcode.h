@@ -909,7 +909,9 @@ fill_comdat_hash (bfd *abfd)
   if (! _bfd_coff_get_external_symbols (abfd))
     return true;
 
-  esymstart = esym = (bfd_byte *) obj_coff_external_syms (abfd);
+  esymstart = esym = obj_coff_external_syms (abfd);
+  if (esym == NULL)
+    return true;
   esymend = esym + obj_raw_syment_count (abfd) * bfd_coff_symesz (abfd);
 
   for (struct internal_syment isym;
@@ -5954,8 +5956,6 @@ static const bfd_coff_backend_data bigobj_swap_table =
 #ifndef coff_bfd_copy_private_header_data
 #define coff_bfd_copy_private_header_data   _bfd_generic_bfd_copy_private_header_data
 #endif
-
-#define coff_init_private_section_data	    _bfd_generic_init_private_section_data
 
 #ifndef coff_bfd_copy_private_section_data
 #define coff_bfd_copy_private_section_data  _bfd_generic_bfd_copy_private_section_data

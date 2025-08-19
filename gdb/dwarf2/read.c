@@ -1692,6 +1692,7 @@ dwarf2_per_bfd::allocate_per_cu (dwarf2_section_info *section,
   dwarf2_per_cu_up result (new dwarf2_per_cu (this, section, sect_off,
 					      length, is_dwz));
   result->index = all_units.size ();
+  this->num_comp_units++;
   return result;
 }
 
@@ -1708,7 +1709,7 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
     = std::make_unique<signatured_type> (this, section, sect_off, length,
 					 is_dwz, signature);
   result->index = all_units.size ();
-  tu_stats.nr_tus++;
+  this->num_type_units++;
   return result;
 }
 
@@ -2372,6 +2373,24 @@ get_abbrev_section_for_cu (dwarf2_per_cu *this_cu)
   return abbrev;
 }
 
+/* "less than" function used to both sort and bisect units in the
+   `dwarf2_per_bfd::all_units` vector.  Return true if the LHS CU comes before
+   (is "less" than) the section and offset in RHS.
+
+   For simplicity, sort sections by their pointer.  This is not ideal, because
+   it can cause the behavior to change across runs, making some bugs harder to
+   investigate.  An improvement would be for sections to be sorted by their
+   properties.  */
+
+static bool
+all_units_less_than (const dwarf2_per_cu &lhs, const section_and_offset &rhs)
+{
+  if (lhs.section != rhs.section)
+    return lhs.section < rhs.section;
+
+  return lhs.sect_off < rhs.offset;
+}
+
 /* Fetch the abbreviation table offset from a comp or type unit header.  */
 
 static sect_offset
@@ -2415,7 +2434,17 @@ add_type_unit (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
 					 false /* is_dwz */, sig);
   signatured_type *sig_type = sig_type_holder.get ();
 
-  per_bfd->all_units.emplace_back (sig_type_holder.release ());
+  /* Preserve the ordering of per_bfd->all_units.  */
+  auto insert_it
+    = std::lower_bound (per_bfd->all_units.begin (), per_bfd->all_units.end (),
+			sig_type,
+			[] (const dwarf2_per_cu_up &lhs,
+			    const signatured_type *rhs) {
+			  return all_units_less_than (*lhs, { rhs->section,
+							      rhs->sect_off });
+			});
+
+  per_bfd->all_units.emplace (insert_it, sig_type_holder.release ());
   auto emplace_ret = per_bfd->signatured_types.emplace (sig_type);
 
   /* Assert that an insertion took place - that there wasn't a type unit with
@@ -3214,10 +3243,11 @@ private:
 
   void print_tu_stats (dwarf2_per_objfile *per_objfile)
   {
-    struct tu_stats *tu_stats = &per_objfile->per_bfd->tu_stats;
+    dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
+    tu_stats *tu_stats = &per_bfd->tu_stats;
 
     dwarf_read_debug_printf ("Type unit statistics:");
-    dwarf_read_debug_printf ("  %d TUs", tu_stats->nr_tus);
+    dwarf_read_debug_printf ("  %d TUs", per_bfd->num_type_units);
     dwarf_read_debug_printf ("  %d uniq abbrev tables",
 			     tu_stats->nr_uniq_abbrev_tables);
     dwarf_read_debug_printf ("  %d symtabs from stmt_list entries",
@@ -3367,7 +3397,7 @@ cooked_index_worker_debug_info::process_type_units
   abbrev_table_up abbrev_table;
   sect_offset abbrev_offset;
 
-  if (per_objfile->per_bfd->all_type_units.size () == 0)
+  if (per_objfile->per_bfd->num_type_units == 0)
     return;
 
   /* TUs typically share abbrev tables, and there can be way more TUs than
@@ -3394,7 +3424,7 @@ cooked_index_worker_debug_info::process_type_units
   /* Sort in a separate table to maintain the order of all_units
      for .gdb_index: TU indices directly index all_type_units.  */
   std::vector<tu_abbrev_offset> sorted_by_abbrev;
-  sorted_by_abbrev.reserve (per_objfile->per_bfd->all_type_units.size ());
+  sorted_by_abbrev.reserve (per_objfile->per_bfd->num_type_units);
 
   for (const auto &cu : per_objfile->per_bfd->all_units)
     if (cu->is_debug_types)
@@ -3646,16 +3676,18 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
     }
 }
 
-/* Initialize the views on all_units.  */
+/* See read.h.  */
 
 void
 finalize_all_units (dwarf2_per_bfd *per_bfd)
 {
-  size_t nr_tus = per_bfd->tu_stats.nr_tus;
-  size_t nr_cus = per_bfd->all_units.size () - nr_tus;
-  gdb::array_view<dwarf2_per_cu_up> tmp = per_bfd->all_units;
-  per_bfd->all_comp_units = tmp.slice (0, nr_cus);
-  per_bfd->all_type_units = tmp.slice (nr_cus, nr_tus);
+  /* Ensure that the all_units vector is in the expected order for
+     dwarf2_find_containing_unit to be able to perform a binary search.  */
+  std::sort (per_bfd->all_units.begin (), per_bfd->all_units.end (),
+	     [] (const dwarf2_per_cu_up &a, const dwarf2_per_cu_up &b)
+	       {
+		 return all_units_less_than (*a, { b->section, b->sect_off });
+	       });
 }
 
 /* See read.h.  */
@@ -4911,6 +4943,21 @@ process_full_type_unit (dwarf2_cu *cu)
   cu->reset_builder ();
 }
 
+/* See read.h.  */
+
+const dwarf2_section_info &
+get_section_for_ref (const attribute &attr, dwarf2_cu *cu)
+{
+  gdb_assert (attr.form_is_ref ());
+
+  if (attr.form_is_alt ())
+    return cu->per_cu->per_bfd->get_dwz_file (true)->info;
+
+  /* If the source is already in the supplementary (dwz) file, then CU->SECTION
+     already represents the section in the supplementary file.  */
+  return cu->section ();
+}
+
 /* Process an imported unit DIE.  */
 
 static void
@@ -4930,12 +4977,11 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_import, cu);
   if (attr != NULL)
     {
+      const dwarf2_section_info &section = get_section_for_ref (*attr, cu);
       sect_offset sect_off = attr->get_ref_die_offset ();
-      bool is_dwz = attr->form_is_alt () || cu->per_cu->is_dwz;
       dwarf2_per_objfile *per_objfile = cu->per_objfile;
       dwarf2_per_cu *per_cu
-	= dwarf2_find_containing_comp_unit (sect_off, is_dwz,
-					    per_objfile->per_bfd);
+	= dwarf2_find_containing_unit ({ &section, sect_off }, per_objfile);
 
       /* We're importing a C++ compilation unit with tag DW_TAG_compile_unit
 	 into another compilation unit, at root level.  Regard this as a hint,
@@ -6060,6 +6106,20 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
 	  dwarf_decode_macros (cu, macro_offset, 0);
 	}
     }
+}
+
+/* See cu.h.
+
+   This function is defined in this file (instead of cu.c) because it needs
+   to see the definition of struct dwo_unit.  */
+
+const dwarf2_section_info &
+dwarf2_cu::section () const
+{
+  if (this->dwo_unit != nullptr)
+    return *this->dwo_unit->section;
+  else
+    return *this->per_cu->section;
 }
 
 void
@@ -9926,33 +9986,37 @@ static void
 handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 			struct field *field)
 {
-  struct attribute *attr;
+  const auto data_member_location_attr
+    = dwarf2_attr (die, DW_AT_data_member_location, cu);
 
-  attr = dwarf2_attr (die, DW_AT_data_member_location, cu);
-  if (attr != NULL)
+  if (data_member_location_attr != nullptr)
     {
       bool has_bit_offset = false;
       LONGEST bit_offset = 0;
       LONGEST anonymous_size = 0;
+      const auto bit_offset_attr = dwarf2_attr (die, DW_AT_bit_offset, cu);
 
-      attribute *attr2 = dwarf2_attr (die, DW_AT_bit_offset, cu);
-      if (attr2 != nullptr && attr2->form_is_constant ())
+      if (bit_offset_attr != nullptr && bit_offset_attr->form_is_constant ())
 	{
 	  has_bit_offset = true;
-	  bit_offset = attr2->confused_constant ().value_or (0);
-	  attr2 = dwarf2_attr (die, DW_AT_byte_size, cu);
-	  if (attr2 != nullptr && attr2->form_is_constant ())
+	  bit_offset = bit_offset_attr->confused_constant ().value_or (0);
+
+	  const auto byte_size_attr = dwarf2_attr (die, DW_AT_byte_size, cu);
+
+	  if (byte_size_attr != nullptr && byte_size_attr->form_is_constant ())
 	    {
 	      /* The size of the anonymous object containing
 		 the bit field is explicit, so use the
 		 indicated size (in bytes).  */
-	      anonymous_size = attr2->unsigned_constant ().value_or (0);
+	      anonymous_size
+		= byte_size_attr->unsigned_constant ().value_or (0);
 	    }
 	}
 
-      if (attr->form_is_constant ())
+      if (data_member_location_attr->form_is_constant ())
 	{
-	  LONGEST offset = attr->confused_constant ().value_or (0);
+	  LONGEST offset
+	    = data_member_location_attr->confused_constant ().value_or (0);
 
 	  /* Work around this GCC 11 bug, where it would erroneously use -1
 	     data member locations, instead of 0:
@@ -9970,11 +10034,17 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	  if (has_bit_offset)
 	    apply_bit_offset_to_field (*field, bit_offset, anonymous_size);
 	}
-      else if (attr->form_is_block ())
+      else if (data_member_location_attr->form_is_block ())
 	{
 	  CORE_ADDR offset;
-	  if (decode_locdesc (attr->as_block (), cu, &offset))
-	    field->set_loc_bitpos (offset * bits_per_byte);
+	  if (decode_locdesc (data_member_location_attr->as_block (), cu,
+			      &offset))
+	    {
+	      field->set_loc_bitpos (offset * bits_per_byte);
+
+	      if (has_bit_offset)
+		apply_bit_offset_to_field (*field, bit_offset, anonymous_size);
+	    }
 	  else
 	    {
 	      dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -9993,8 +10063,8 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      else
 		dlbaton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
 					  struct dwarf2_locexpr_baton);
-	      dlbaton->data = attr->as_block ()->data;
-	      dlbaton->size = attr->as_block ()->size;
+	      dlbaton->data = data_member_location_attr->as_block ()->data;
+	      dlbaton->size = data_member_location_attr->as_block ()->size;
 	      /* When using this baton, we want to compute the address
 		 of the field, not the value.  This is why
 		 is_reference is set to false here.  */
@@ -10007,16 +10077,19 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	}
       else
 	complaint (_("Unsupported form %s for DW_AT_data_member_location"),
-		   dwarf_form_name (attr->form));
+		   dwarf_form_name (data_member_location_attr->form));
     }
   else
     {
-      attr = dwarf2_attr (die, DW_AT_data_bit_offset, cu);
-      if (attr != nullptr)
+      const auto data_bit_offset_attr
+	= dwarf2_attr (die, DW_AT_data_bit_offset, cu);
+
+      if (data_bit_offset_attr != nullptr)
 	{
-	  if (attr->form_is_constant ())
-	    field->set_loc_bitpos (attr->unsigned_constant ().value_or (0));
-	  else if (attr->form_is_block ())
+	  if (data_bit_offset_attr->form_is_constant ())
+	    field->set_loc_bitpos (data_bit_offset_attr->unsigned_constant ()
+				   .value_or (0));
+	  else if (data_bit_offset_attr->form_is_block ())
 	    {
 	      /* This is a DWARF extension.  See
 		 https://dwarfstd.org/issues/250501.1.html.  */
@@ -10024,8 +10097,8 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      dwarf2_locexpr_baton *dlbaton
 		= OBSTACK_ZALLOC (&per_objfile->objfile->objfile_obstack,
 				  dwarf2_locexpr_baton);
-	      dlbaton->data = attr->as_block ()->data;
-	      dlbaton->size = attr->as_block ()->size;
+	      dlbaton->data = data_bit_offset_attr->as_block ()->data;
+	      dlbaton->size = data_bit_offset_attr->as_block ()->size;
 	      dlbaton->per_objfile = per_objfile;
 	      dlbaton->per_cu = cu->per_cu;
 
@@ -10033,7 +10106,7 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	    }
 	  else
 	    complaint (_("Unsupported form %s for DW_AT_data_bit_offset"),
-		       dwarf_form_name (attr->form));
+		       dwarf_form_name (data_bit_offset_attr->form));
 	}
     }
 }
@@ -17467,9 +17540,10 @@ lookup_die_type (struct die_info *die, const struct attribute *attr,
 
   if (attr->form_is_alt ())
     {
+      const auto &section = get_section_for_ref (*attr, cu);
       sect_offset sect_off = attr->get_ref_die_offset ();
       dwarf2_per_cu *per_cu
-	= dwarf2_find_containing_comp_unit (sect_off, 1, per_objfile->per_bfd);
+	= dwarf2_find_containing_unit ({ &section, sect_off }, per_objfile);
 
       this_type = get_die_type_at_offset (sect_off, per_cu, per_objfile);
     }
@@ -18174,14 +18248,13 @@ follow_die_ref_or_sig (struct die_info *src_die, const struct attribute *attr,
   return die;
 }
 
-/* Follow reference OFFSET.
-   On entry *REF_CU is the CU of the source die referencing OFFSET.
+/* Follow reference TARGET.
+   On entry *REF_CU is the CU of the source die referencing TARGET.
    On exit *REF_CU is the CU of the result.
-   Returns NULL if OFFSET is invalid.  */
+   Returns nullptr if TARGET is invalid.  */
 
-static struct die_info *
-follow_die_offset (sect_offset sect_off, int offset_in_dwz,
-		   struct dwarf2_cu **ref_cu)
+static die_info *
+follow_die_offset (const section_and_offset &target, dwarf2_cu **ref_cu)
 {
   dwarf2_cu *source_cu = *ref_cu;
   dwarf2_cu *target_cu = source_cu;
@@ -18193,23 +18266,23 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
   dwarf_read_debug_printf_v ("source CU offset: %s, target offset: %s, "
 			     "source CU contains target offset: %d",
 			     sect_offset_str (source_cu->per_cu->sect_off),
-			     sect_offset_str (sect_off),
-			     source_cu->header.offset_in_unit_p (sect_off));
+			     sect_offset_str (target.offset),
+			     (target.section == &source_cu->section ()
+			      && source_cu->header.offset_in_unit_p (target.offset)));
 
   if (source_cu->per_cu->is_debug_types)
     {
       /* .debug_types CUs cannot reference anything outside their CU.
 	 If they need to, they have to reference a signatured type via
 	 DW_FORM_ref_sig8.  */
-      if (!source_cu->header.offset_in_unit_p (sect_off))
+      if (!source_cu->header.offset_in_unit_p (target.offset))
 	return NULL;
     }
-  else if (offset_in_dwz != source_cu->per_cu->is_dwz
-	   || !source_cu->header.offset_in_unit_p (sect_off))
+  else if (target.section != &source_cu->section ()
+	   || !source_cu->header.offset_in_unit_p (target.offset))
     {
       dwarf2_per_cu *target_per_cu
-	= dwarf2_find_containing_comp_unit (sect_off, offset_in_dwz,
-					    per_objfile->per_bfd);
+	= dwarf2_find_containing_unit (target, per_objfile);
 
       dwarf_read_debug_printf_v ("target CU offset: %s, "
 				 "target CU DIEs loaded: %d",
@@ -18231,13 +18304,13 @@ follow_die_offset (sect_offset sect_off, int offset_in_dwz,
 	error (_(DWARF_ERROR_PREFIX
 		 "cannot follow reference to DIE at %s"
 		 " [in module %s]"),
-	       sect_offset_str (sect_off),
+	       sect_offset_str (target.offset),
 	       objfile_name (per_objfile->objfile));
     }
 
   *ref_cu = target_cu;
 
-  return target_cu->find_die (sect_off);
+  return target_cu->find_die (target.offset);
 }
 
 /* Follow reference attribute ATTR of SRC_DIE.
@@ -18249,8 +18322,7 @@ follow_die_ref (struct die_info *src_die, const struct attribute *attr,
 		struct dwarf2_cu **ref_cu)
 {
   sect_offset sect_off = attr->get_ref_die_offset ();
-  struct dwarf2_cu *cu = *ref_cu;
-  struct die_info *die;
+  struct dwarf2_cu *src_cu = *ref_cu;
 
   if (!attr->form_is_alt () && src_die->sect_off == sect_off)
     {
@@ -18258,14 +18330,13 @@ follow_die_ref (struct die_info *src_die, const struct attribute *attr,
       return src_die;
     }
 
-  die = follow_die_offset (sect_off,
-			   attr->form_is_alt () || cu->per_cu->is_dwz,
-			   ref_cu);
-  if (!die)
+  const dwarf2_section_info &section = get_section_for_ref (*attr, src_cu);
+  die_info *die = follow_die_offset ({ &section, sect_off }, ref_cu);
+  if (die == nullptr)
     error (_(DWARF_ERROR_PREFIX
 	     "Cannot find DIE at %s referenced from DIE at %s [in module %s]"),
 	   sect_offset_str (sect_off), sect_offset_str (src_die->sect_off),
-	   objfile_name (cu->per_objfile->objfile));
+	   objfile_name (src_cu->per_objfile->objfile));
 
   return die;
 }
@@ -18278,7 +18349,6 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 			       gdb::function_view<CORE_ADDR ()> get_frame_pc,
 			       bool resolve_abstract_p)
 {
-  struct die_info *die;
   struct attribute *attr;
   struct dwarf2_locexpr_baton retval;
   struct objfile *objfile = per_objfile->objfile;
@@ -18296,8 +18366,8 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 	     sect_offset_str (sect_off), objfile_name (objfile));
     }
 
-  die = follow_die_offset (sect_off, per_cu->is_dwz, &cu);
-  if (!die)
+  die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
+  if (die == nullptr)
     error (_(DWARF_ERROR_PREFIX
 	     "Cannot find DIE at %s referenced [in module %s]"),
 	   sect_offset_str (sect_off), objfile_name (objfile));
@@ -18313,8 +18383,8 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 	     : per_objfile->per_bfd->abstract_to_concrete[die->sect_off])
 	{
 	  struct dwarf2_cu *cand_cu = cu;
-	  struct die_info *cand
-	    = follow_die_offset (cand_off, per_cu->is_dwz, &cand_cu);
+	  die_info *cand
+	    = follow_die_offset ({ &cu->section (), cand_off }, &cand_cu);
 	  if (!cand
 	      || !cand->parent
 	      || cand->parent->tag != DW_TAG_subprogram)
@@ -18416,7 +18486,6 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
 			     obstack *obstack,
 			     LONGEST *len)
 {
-  struct die_info *die;
   struct attribute *attr;
   const gdb_byte *result = NULL;
   struct type *type;
@@ -18437,7 +18506,7 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
 	     sect_offset_str (sect_off), objfile_name (objfile));
     }
 
-  die = follow_die_offset (sect_off, per_cu->is_dwz, &cu);
+  die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
   if (!die)
     error (_(DWARF_ERROR_PREFIX
 	     "Cannot find DIE at %s referenced [in module %s]"),
@@ -18527,8 +18596,6 @@ dwarf2_fetch_die_type_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 				dwarf2_per_objfile *per_objfile,
 				const char **var_name)
 {
-  struct die_info *die;
-
   dwarf2_cu *cu = per_objfile->get_cu (per_cu);
   if (cu == nullptr)
     cu = load_cu (per_cu, per_objfile, false);
@@ -18536,7 +18603,7 @@ dwarf2_fetch_die_type_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
   if (cu == nullptr)
     return nullptr;
 
-  die = follow_die_offset (sect_off, per_cu->is_dwz, &cu);
+  die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
   if (!die)
     return NULL;
 
@@ -19286,69 +19353,115 @@ dwarf2_per_cu::ensure_lang (dwarf2_per_objfile *per_objfile)
 		      true, language_minimal, nullptr);
 }
 
-/* A helper function for dwarf2_find_containing_comp_unit that returns
-   the index of the result, and that searches a vector.  It will
-   return a result even if the offset in question does not actually
-   occur in any CU.  This is separate so that it can be unit
-   tested.  */
+/* Return the unit from ALL_UNITS that potentially contains TARGET.
 
-static int
-dwarf2_find_containing_comp_unit
-  (sect_offset sect_off,
-   unsigned int offset_in_dwz,
-   const std::vector<dwarf2_per_cu_up> &all_units)
+   Since the unit lengths may not be known yet, this function doesn't check that
+   TARGET.OFFSET actually falls within the range of the returned unit.  The
+   caller is responsible for this.
+
+   If no units possibly match TARGET, return nullptr.  */
+
+static dwarf2_per_cu *
+dwarf2_find_containing_unit (const section_and_offset &target,
+			     const std::vector<dwarf2_per_cu_up> &all_units)
 {
-  int low, high;
+  auto it = std::lower_bound (all_units.begin (), all_units.end (), target,
+			      [] (const dwarf2_per_cu_up &per_cu,
+				  const section_and_offset &key)
+				{
+				  return all_units_less_than (*per_cu, key);
+				});
 
-  low = 0;
-  high = all_units.size () - 1;
-  while (high > low)
+  if (it == all_units.begin ())
     {
-      int mid = low + (high - low) / 2;
-      dwarf2_per_cu *mid_cu = all_units[mid].get ();
-
-      if (mid_cu->is_dwz > offset_in_dwz
-	  || (mid_cu->is_dwz == offset_in_dwz
-	      && mid_cu->sect_off + mid_cu->length () > sect_off))
-	high = mid;
+      /* TARGET falls before the first unit of the first section, or is an
+	 exact match with the first.  */
+      if ((*it)->section == target.section && (*it)->sect_off == target.offset)
+	return it->get ();
       else
-	low = mid + 1;
+	return nullptr;
     }
-  gdb_assert (low == high);
-  return low;
+
+  if (it != all_units.end ()
+      && (*it)->section == target.section
+      && (*it)->sect_off == target.offset)
+    {
+      /* TARGET is an exact match with the start of *IT, so *IT is what we're
+	 looking for.  */
+      return it->get ();
+    }
+
+  /* Otherwise, the match is the one just before, as long as it matches the
+     section we're looking for.  */
+  --it;
+
+  if ((*it)->section == target.section)
+    return it->get ();
+
+  return nullptr;
 }
 
 /* See read.h.  */
 
 dwarf2_per_cu *
-dwarf2_find_containing_comp_unit (sect_offset sect_off,
-				  unsigned int offset_in_dwz,
-				  dwarf2_per_bfd *per_bfd)
+dwarf2_find_containing_unit (const section_and_offset &target,
+			     dwarf2_per_objfile *per_objfile)
 {
-  int low = dwarf2_find_containing_comp_unit
-    (sect_off, offset_in_dwz, per_bfd->all_units);
-  dwarf2_per_cu *this_cu = per_bfd->all_units[low].get ();
-
-  if (this_cu->is_dwz != offset_in_dwz || this_cu->sect_off > sect_off)
+  dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
+  dwarf2_per_cu *per_cu
+    = dwarf2_find_containing_unit (target, per_bfd->all_units);
+  auto error_out = [&target, per_bfd] ()
     {
-      if (low == 0 || this_cu->is_dwz != offset_in_dwz)
-	error (_(DWARF_ERROR_PREFIX
-		 "could not find CU containing offset %s [in module %s]"),
-	       sect_offset_str (sect_off),
-	       per_bfd->filename ());
+      error (_(DWARF_ERROR_PREFIX
+	       "could not find unit containing offset %s [in module %s]"),
+	     sect_offset_str (target.offset), per_bfd->filename ());
+    };
 
-      gdb_assert (per_bfd->all_units[low-1]->sect_off
-		  <= sect_off);
-      return per_bfd->all_units[low - 1].get ();
-    }
-  else
-    {
-      if (low == per_bfd->all_units.size () - 1
-	  && sect_off >= this_cu->sect_off + this_cu->length ())
-	error (_("invalid dwarf2 offset %s"), sect_offset_str (sect_off));
-      gdb_assert (sect_off < this_cu->sect_off + this_cu->length ());
-      return this_cu;
-    }
+  if (per_cu == nullptr)
+    error_out ();
+
+  gdb_assert (per_cu->section == target.section);
+
+  /* Some producers of dwarf2_per_cu objects (thinking of the .gdb_index reader)
+     do not set the length ahead of time.  The length is needed to check if
+     the target is truly within PER_CU's range, so compute it now.  Constructing
+     the cutu_reader object has the side-effect of setting PER_CU's length.
+     Even though it should happen too often, it could be replaced with
+     something more lightweight that has the same effect.  */
+  if (!per_cu->length_is_set ())
+    cutu_reader (*per_cu, *per_objfile, nullptr, nullptr, false,
+		 language_minimal);
+
+  /* Now we can check if the target section offset is within PER_CU's range.  */
+  if (target.offset < per_cu->sect_off
+      || target.offset >= per_cu->sect_off + per_cu->length ())
+    error_out ();
+
+  return per_cu;
+}
+
+/* See read.h.  */
+
+dwarf2_per_cu *
+dwarf2_find_unit (const section_and_offset &start, dwarf2_per_bfd *per_bfd)
+{
+  auto it = std::lower_bound (per_bfd->all_units.begin (),
+			      per_bfd->all_units.end (), start,
+			      [] (const dwarf2_per_cu_up &per_cu,
+				  const section_and_offset &key)
+				{
+				  return all_units_less_than (*per_cu, key);
+				});
+
+  if (it == per_bfd->all_units.end ())
+    return nullptr;
+
+  dwarf2_per_cu *per_cu = it->get ();
+
+  if (per_cu->section != start.section || per_cu->sect_off != start.offset)
+    return nullptr;
+
+  return per_cu;
 }
 
 #if GDB_SELF_TEST
@@ -19359,59 +19472,55 @@ namespace find_containing_comp_unit {
 static void
 run_test ()
 {
-  char dummy_per_bfd;
-  char dummy_section;
+  auto dummy_per_bfd = reinterpret_cast<dwarf2_per_bfd *> (0x3000);
+  auto &main_section = *reinterpret_cast<dwarf2_section_info *> (0x4000);
+  auto &dwz_section = *reinterpret_cast<dwarf2_section_info *> (0x5000);
+  std::vector<dwarf2_per_cu_up> units;
 
-  const auto create_dummy_per_cu = [&] (sect_offset sect_off,
-					unsigned int length,
-					bool is_dwz)
+  /* Create one dummy unit, append it to UNITS, return a non-owning
+     reference.  */
+  auto create_dummy_per_unit = [&] (dwarf2_section_info &section,
+				    unsigned int sect_off, bool is_dwz)
+			       -> dwarf2_per_cu &
     {
-      auto per_bfd = reinterpret_cast<dwarf2_per_bfd *> (&dummy_per_bfd);
-      auto section = reinterpret_cast<dwarf2_section_info *> (&dummy_section);
-
-      return dwarf2_per_cu_up (new dwarf2_per_cu (per_bfd, section, sect_off,
-						  length, is_dwz));
+      /* Omit the length, because dwarf2_find_containing_unit does not consider
+	 it.  */
+      return *units.emplace_back (new dwarf2_per_cu (dummy_per_bfd, &section,
+						     sect_offset (sect_off),
+						     0, is_dwz));
     };
 
-  /* Units in the main file.  */
-  dwarf2_per_cu_up one = create_dummy_per_cu (sect_offset (0), 5, false);
-  dwarf2_per_cu *one_ptr = one.get ();
-  dwarf2_per_cu_up two
-    = create_dummy_per_cu (sect_offset (one->length ()), 7, false);
-  dwarf2_per_cu *two_ptr = two.get ();
+  /* Create 2 units in the main file and 2 units in the supplementary (dwz)
+     file.  */
+  auto &main1 = create_dummy_per_unit (main_section, 10, false);
+  auto &main2 = create_dummy_per_unit (main_section, 20, false);
+  auto &dwz1 = create_dummy_per_unit (dwz_section, 10, false);
+  auto &dwz2 = create_dummy_per_unit (dwz_section, 20, false);
 
-  /* Units in the supplementary (dwz) file.  */
-  dwarf2_per_cu_up three = create_dummy_per_cu (sect_offset (0), 5, true);
-  dwarf2_per_cu *three_ptr = three.get ();
-  dwarf2_per_cu_up four
-    = create_dummy_per_cu (sect_offset (three->length ()), 7, true);
-  dwarf2_per_cu *four_ptr = four.get ();
+  /* Check that looking up a unit at all offsets in the range [START,END[ in
+     section SECTION finds EXPECTED.  */
+  auto check_range = [&units] (dwarf2_section_info &section, unsigned int start,
+			       unsigned int end, dwarf2_per_cu *expected)
+   {
+      for (unsigned int sect_off = start; sect_off < end; ++sect_off)
+	{
+	  section_and_offset target { &section, sect_offset (sect_off) };
+	  dwarf2_per_cu *result = dwarf2_find_containing_unit (target, units);
 
-  std::vector<dwarf2_per_cu_up> units;
-  units.push_back (std::move (one));
-  units.push_back (std::move (two));
-  units.push_back (std::move (three));
-  units.push_back (std::move (four));
+	  SELF_CHECK (result == expected);
+	}
+   };
 
-  int result;
+  check_range (main_section, 0, 10, nullptr);
+  check_range (main_section, 10, 20, &main1);
+  check_range (main_section, 20, 30, &main2);
 
-  result = dwarf2_find_containing_comp_unit (sect_offset (0), 0, units);
-  SELF_CHECK (units[result].get () == one_ptr);
-  result = dwarf2_find_containing_comp_unit (sect_offset (3), 0, units);
-  SELF_CHECK (units[result].get () == one_ptr);
-  result = dwarf2_find_containing_comp_unit (sect_offset (5), 0, units);
-  SELF_CHECK (units[result].get () == two_ptr);
-
-  result = dwarf2_find_containing_comp_unit (sect_offset (0), 1, units);
-  SELF_CHECK (units[result].get () == three_ptr);
-  result = dwarf2_find_containing_comp_unit (sect_offset (3), 1, units);
-  SELF_CHECK (units[result].get () == three_ptr);
-  result = dwarf2_find_containing_comp_unit (sect_offset (5), 1, units);
-  SELF_CHECK (units[result].get () == four_ptr);
+  check_range (dwz_section, 0, 10, nullptr);
+  check_range (dwz_section, 10, 20, &dwz1);
+  check_range (dwz_section, 20, 30, &dwz2);
 }
-
-}
-}
+} /* namespace find_containing_comp_unit */
+} /* namespace selftests */
 
 #endif /* GDB_SELF_TEST */
 
@@ -19706,9 +19815,7 @@ show_check_physname (struct ui_file *file, int from_tty,
 	      value);
 }
 
-void _initialize_dwarf2_read ();
-void
-_initialize_dwarf2_read ()
+INIT_GDB_FILE (dwarf2_read)
 {
   add_setshow_prefix_cmd ("dwarf", class_maintenance,
 			  _("\

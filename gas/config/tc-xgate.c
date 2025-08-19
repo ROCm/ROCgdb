@@ -104,7 +104,7 @@ static void get_default_target (void);
 static char *extract_word (char *, char *, int);
 static struct xgate_opcode *xgate_find_match (struct xgate_opcode_handle *,
 					      int, s_operand [], unsigned int);
-static int cmp_opcode (struct xgate_opcode *, struct xgate_opcode *);
+static int cmp_opcode (const void *, const void *);
 static void xgate_print_table (void);
 static unsigned int xgate_get_operands (char *, s_operand []);
 static register_id reg_name_search (char *);
@@ -308,7 +308,7 @@ md_begin (void)
     xgate_op_table[i] = xgate_opcode_ptr[i];
 
   qsort (xgate_op_table, xgate_num_opcodes, sizeof (struct xgate_opcode),
-	 (int (*)(const void *, const void *)) cmp_opcode);
+	 cmp_opcode);
 
   /* Calculate number of handles since this will be
      smaller than the raw number of opcodes in the table.  */
@@ -466,7 +466,7 @@ valueT
 md_section_align (asection * seg, valueT addr)
 {
   int align = bfd_section_alignment (seg);
-  return ((addr + (1 << align) - 1) & -(1 << align));
+  return (addr + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 void
@@ -621,7 +621,7 @@ tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
   else
     reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
 
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line, _
 		    ("Relocation %d is not supported by object file format."),
@@ -652,11 +652,11 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
 
   /* If the fixup is done mark it done so no further symbol resolution
      will take place.  */
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
   /* We don't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   where = fixP->fx_frag->fr_literal + fixP->fx_where;
@@ -705,7 +705,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
 		      _("Value out of 16-bit range."));
       value >>= 8;
       value &= 0x00ff;
-      bfd_putb16 ((bfd_vma) value | opcode, (void *) where);
+      bfd_putb16 (value | opcode, where);
       break;
     case BFD_RELOC_XGATE_24:
     case BFD_RELOC_XGATE_IMM8_LO:
@@ -713,7 +713,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
 	as_bad_where (fixP->fx_file, fixP->fx_line,
 		      _("Value out of 16-bit range."));
       value &= 0x00ff;
-      bfd_putb16 ((bfd_vma) value | opcode, (void *) where);
+      bfd_putb16 (value | opcode, where);
       break;
     case BFD_RELOC_XGATE_IMM3:
       if (value < 0 || value > 7)
@@ -737,13 +737,13 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg ATTRIBUTE_UNUSED)
       number_to_chars_bigendian (where, (opcode | value), 2);
       break;
     case BFD_RELOC_8:
-      ((bfd_byte *) where)[0] = (bfd_byte) value;
+      *where = value & 0xff;
       break;
     case BFD_RELOC_32:
-      bfd_putb32 ((bfd_vma) value, (unsigned char *) where);
+      bfd_putb32 (value, where);
       break;
     case BFD_RELOC_16:
-      bfd_putb16 ((bfd_vma) value, (unsigned char *) where);
+      bfd_putb16 (value, where);
       break;
     default:
       as_fatal (_("Line %d: unknown relocation type: 0x%x."), fixP->fx_line,
@@ -896,8 +896,10 @@ xgate_parse_exp (char *s, expressionS * op)
 }
 
 static int
-cmp_opcode (struct xgate_opcode *op1, struct xgate_opcode *op2)
+cmp_opcode (const void *p1, const void *p2)
 {
+  const struct xgate_opcode *op1 = p1;
+  const struct xgate_opcode *op2 = p2;
   return strcmp (op1->name, op2->name);
 }
 
@@ -1121,7 +1123,6 @@ xgate_scan_operands (struct xgate_opcode *opcode, s_operand oprs[])
   unsigned short oper_mask = 0;
   int operand_bit_length = 0;
   unsigned int operand = 0;
-  char n_operand_bits = 0;
   char first_operand_equals_second = 0;
   int i = 0;
   char c = 0;
@@ -1137,7 +1138,6 @@ xgate_scan_operands (struct xgate_opcode *opcode, s_operand oprs[])
 	{
 	  oper_mask <<= 1;
 	  oper_mask += 1;
-	  n_operand_bits++;
 	}
     }
 

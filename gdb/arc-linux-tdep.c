@@ -19,6 +19,7 @@
 
 /* GDB header files.  */
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "objfiles.h"
 #include "opcode/arc.h"
 #include "osabi.h"
@@ -736,15 +737,10 @@ arc_linux_init_osabi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* GNU/Linux uses SVR4-style shared libraries, with 32-bit ints, longs
      and pointers (ILP32).  */
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 }
 
-/* Suppress warning from -Wmissing-prototypes.  */
-extern initialize_file_ftype _initialize_arc_linux_tdep;
-
-void
-_initialize_arc_linux_tdep ()
+INIT_GDB_FILE (arc_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_arc, 0, GDB_OSABI_LINUX,
 			  arc_linux_init_osabi);

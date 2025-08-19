@@ -32,6 +32,7 @@
 #include "regcache.h"
 #include "hppa-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "elf/common.h"
 
 /* Map DWARF DBX register numbers to GDB register numbers.  */
@@ -499,8 +500,7 @@ hppa_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_append_unwinder (gdbarch, &hppa_linux_sigtramp_frame_unwind);
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   tdep->in_solib_call_trampoline = hppa_in_solib_call_trampoline;
   set_gdbarch_skip_trampoline_code (gdbarch, hppa_skip_trampoline_code);
@@ -524,9 +524,7 @@ hppa_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					     svr4_fetch_objfile_link_map);
 }
 
-void _initialize_hppa_linux_tdep ();
-void
-_initialize_hppa_linux_tdep ()
+INIT_GDB_FILE (hppa_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_LINUX,
 			  hppa_linux_init_abi);

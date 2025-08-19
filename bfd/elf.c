@@ -2477,6 +2477,7 @@ bfd_section_from_shdr (bfd *abfd, unsigned int shindex)
     case SHT_PREINIT_ARRAY:	/* .preinit_array section.  */
     case SHT_GNU_LIBLIST:	/* .gnu.liblist section.  */
     case SHT_GNU_HASH:		/* .gnu.hash section.  */
+    case SHT_GNU_SFRAME:	/* .sframe section.  */
       ret = _bfd_elf_make_section_from_shdr (abfd, hdr, name, shindex);
       goto success;
 
@@ -2882,8 +2883,10 @@ bfd_section_from_shdr (bfd *abfd, unsigned int shindex)
 
     default:
       /* Possibly an attributes section.  */
-      if (hdr->sh_type == SHT_GNU_ATTRIBUTES
-	  || hdr->sh_type == bed->obj_attrs_section_type)
+      if (get_elf_backend_data (abfd)->target_os != is_solaris
+	  /* PR 33153: Solaris defines SHT_SUNW_cap which collides with SHT_GNU_ATTRIBUTES.  */
+	  && (hdr->sh_type == SHT_GNU_ATTRIBUTES
+	      || hdr->sh_type == bed->obj_attrs_section_type))
 	{
 	  if (! _bfd_elf_make_section_from_shdr (abfd, hdr, name, shindex))
 	    goto fail;
@@ -8376,25 +8379,34 @@ copy_private_bfd_data (bfd *ibfd, bfd *obfd)
   return rewrite_elf_program_header (ibfd, obfd, maxpagesize);
 }
 
-/* Initialize private output section information from input section.  */
+/* Copy private section information from input to output.  This function
+   is called both by objcopy where LINK_INFO is NULL, and ld where
+   LINK_INFO is non-NULL in the usual case but NULL for a special case
+   when dealing with LTO IR or cloning output sections.  */
 
 bool
-_bfd_elf_init_private_section_data (bfd *ibfd,
+_bfd_elf_copy_private_section_data (bfd *ibfd,
 				    asection *isec,
 				    bfd *obfd,
 				    asection *osec,
 				    struct bfd_link_info *link_info)
-
 {
-  Elf_Internal_Shdr *ihdr, *ohdr;
-  bool final_link = (link_info != NULL
-		     && !bfd_link_relocatable (link_info));
-
   if (ibfd->xvec->flavour != bfd_target_elf_flavour
       || obfd->xvec->flavour != bfd_target_elf_flavour)
     return true;
 
-  BFD_ASSERT (elf_section_data (osec) != NULL);
+  Elf_Internal_Shdr *ihdr = &elf_section_data (isec)->this_hdr;
+  Elf_Internal_Shdr *ohdr = &elf_section_data (osec)->this_hdr;
+  if (link_info == NULL)
+    {
+      ohdr->sh_entsize = ihdr->sh_entsize;
+
+      if (ihdr->sh_type == SHT_SYMTAB
+	  || ihdr->sh_type == SHT_DYNSYM
+	  || ihdr->sh_type == SHT_GNU_verneed
+	  || ihdr->sh_type == SHT_GNU_verdef)
+	ohdr->sh_info = ihdr->sh_info;
+    }
 
   /* If this is a known ABI section, ELF section type and flags may
      have been set up when OSEC was created.  For normal sections we
@@ -8404,11 +8416,14 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
       || elf_section_type (osec) == SHT_NOTE
       || elf_section_type (osec) == SHT_NOBITS)
     elf_section_type (osec) = SHT_NULL;
+
   /* For objcopy and relocatable link, copy the ELF section type from
      the input file if the BFD section flags are the same.  (If they
      are different the user may be doing something like
      "objcopy --set-section-flags .text=alloc,data".)  For a final
      link allow some flags that the linker clears to differ.  */
+  bool final_link = (link_info != NULL
+		     && !bfd_link_relocatable (link_info));
   if (elf_section_type (osec) == SHT_NULL
       && (osec->flags == isec->flags
 	  || (final_link
@@ -8446,14 +8461,11 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
     elf_section_flags (osec) |= (elf_section_flags (isec)
 				 & SHF_COMPRESSED);
 
-  ihdr = &elf_section_data (isec)->this_hdr;
-
   /* We need to handle elf_linked_to_section for SHF_LINK_ORDER. We
      don't use the output section of the linked-to section since it
      may be NULL at this point.  */
   if ((ihdr->sh_flags & SHF_LINK_ORDER) != 0)
     {
-      ohdr = &elf_section_data (osec)->this_hdr;
       ohdr->sh_flags |= SHF_LINK_ORDER;
       elf_linked_to_section (osec) = elf_linked_to_section (isec);
     }
@@ -8461,36 +8473,6 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
   osec->use_rela_p = isec->use_rela_p;
 
   return true;
-}
-
-/* Copy private section information.  This copies over the entsize
-   field, and sometimes the info field.  */
-
-bool
-_bfd_elf_copy_private_section_data (bfd *ibfd,
-				    asection *isec,
-				    bfd *obfd,
-				    asection *osec)
-{
-  Elf_Internal_Shdr *ihdr, *ohdr;
-
-  if (ibfd->xvec->flavour != bfd_target_elf_flavour
-      || obfd->xvec->flavour != bfd_target_elf_flavour)
-    return true;
-
-  ihdr = &elf_section_data (isec)->this_hdr;
-  ohdr = &elf_section_data (osec)->this_hdr;
-
-  ohdr->sh_entsize = ihdr->sh_entsize;
-
-  if (ihdr->sh_type == SHT_SYMTAB
-      || ihdr->sh_type == SHT_DYNSYM
-      || ihdr->sh_type == SHT_GNU_verneed
-      || ihdr->sh_type == SHT_GNU_verdef)
-    ohdr->sh_info = ihdr->sh_info;
-
-  return _bfd_elf_init_private_section_data (ibfd, isec, obfd, osec,
-					     NULL);
 }
 
 /* Look at all the SHT_GROUP sections in IBFD, making any adjustments
@@ -10659,6 +10641,15 @@ elfcore_grok_aarch_zt (bfd *abfd, Elf_Internal_Note *note)
   return elfcore_make_note_pseudosection (abfd, ".reg-aarch-zt", note);
 }
 
+/* Convert NOTE into a bfd_section called ".reg-aarch-gcs".  Return TRUE if
+   successful, otherwise return FALSE.  */
+
+static bool
+elfcore_grok_aarch_gcs (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-aarch-gcs", note);
+}
+
 static bool
 elfcore_grok_arc_v2 (bfd *abfd, Elf_Internal_Note *note)
 {
@@ -10958,7 +10949,7 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 
   type = bfd_get_32 (abfd, note->descdata);
 
-  struct
+  static const struct
   {
     const char *type_name;
     unsigned long min_size;
@@ -11413,6 +11404,12 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
 	  && strcmp (note->namedata, "LINUX") == 0)
 	return elfcore_grok_aarch_zt (abfd, note);
+      else
+	return true;
+
+    case NT_ARM_GCS:
+      if (note->namesz == 6 && strcmp (note->namedata, "LINUX") == 0)
+	return elfcore_grok_aarch_gcs (abfd, note);
       else
 	return true;
 
@@ -13086,6 +13083,20 @@ elfcore_write_aarch_zt (bfd *abfd,
 			     size);
 }
 
+/* Write the buffer of GCS register values in AARCH_GCS (length SIZE) into
+   the note buffer BUF and update *BUFSIZ.  ABFD is the bfd the note is being
+   written into.  Return a pointer to the new start of the note buffer, to
+   replace BUF which may no longer be valid.  */
+
+static char *
+elfcore_write_aarch_gcs (bfd *abfd, char *buf, int *bufsiz,
+			 const void *aarch_gcs, int size)
+{
+  const char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz, note_name, NT_ARM_GCS,
+			     aarch_gcs, size);
+}
+
 char *
 elfcore_write_arc_v2 (bfd *abfd,
 		      char *buf,
@@ -13275,6 +13286,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_aarch_za (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-aarch-zt") == 0)
     return elfcore_write_aarch_zt (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-aarch-gcs") == 0)
+    return elfcore_write_aarch_gcs (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-arc-v2") == 0)
     return elfcore_write_arc_v2 (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".gdb-tdesc") == 0)
@@ -13347,7 +13360,7 @@ elf_parse_notes (bfd *abfd, char *buf, size_t size, file_ptr offset,
 	case bfd_core:
 	  {
 #define GROKER_ELEMENT(S,F) {S, sizeof (S) - 1, F}
-	    struct
+	    static const struct
 	    {
 	      const char * string;
 	      size_t len;
@@ -13561,6 +13574,9 @@ _bfd_elf_section_offset (bfd *abfd,
 				       offset);
     case SEC_INFO_TYPE_EH_FRAME:
       return _bfd_elf_eh_frame_section_offset (abfd, info, sec, offset);
+
+    case SEC_INFO_TYPE_SFRAME:
+      return _bfd_elf_sframe_section_offset (abfd, info, sec, offset);
 
     default:
       if ((sec->flags & SEC_ELF_REVERSE_COPY) != 0)

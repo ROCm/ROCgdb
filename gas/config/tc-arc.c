@@ -522,7 +522,7 @@ static unsigned cl_features = 0;
 #define ARC_RELOC_TABLE(op)				\
   (&arc_reloc_op[ ((!USER_RELOC_P (op))			\
 		   ? (abort (), 0)			\
-		   : (int) (op) - (int) O_gotoff) ])
+		   : (op) - O_gotoff) ])
 
 #define DEF(NAME, RELOC, REQ)				\
   { #NAME, sizeof (#NAME)-1, O_##NAME, RELOC, REQ}
@@ -778,7 +778,7 @@ arc_insert_opcode (const struct arc_opcode *opcode)
 static void
 arc_opcode_free (void *elt)
 {
-  string_tuple_t *tuple = (string_tuple_t *) elt;
+  string_tuple_t *tuple = elt;
   struct arc_opcode_hash_entry *entry = (void *) tuple->value;
   free (entry->opcode);
   free (entry);
@@ -1444,7 +1444,7 @@ apply_fixups (struct arc_insn *insn, fragS *fragP, int fix)
 	offset = insn->len;
 
       /* Some fixups are only used internally, thus no howto.  */
-      if ((int) fixup->reloc == 0)
+      if (fixup->reloc == 0)
 	as_fatal (_("Unhandled reloc type"));
 
       if ((int) fixup->reloc < 0)
@@ -1457,8 +1457,7 @@ apply_fixups (struct arc_insn *insn, fragS *fragP, int fix)
       else
 	{
 	  reloc_howto_type *reloc_howto =
-	    bfd_reloc_type_lookup (stdoutput,
-				   (bfd_reloc_code_real_type) fixup->reloc);
+	    bfd_reloc_type_lookup (stdoutput, fixup->reloc);
 	  gas_assert (reloc_howto);
 
 	  /* FIXME! the reloc size is wrong in the BFD file.
@@ -2768,7 +2767,7 @@ md_pcrel_from_section (fixS *fixP,
 
   pr_debug ("pcrel_from_section, fx_offset = %d\n", (int) fixP->fx_offset);
 
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (!S_IS_DEFINED (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
     {
@@ -3660,7 +3659,7 @@ find_reloc (const char *name,
 	  if (!nflg)
 	    continue;
 	  found_flag = false;
-	  unsigned * psflg = (unsigned *)r->flags;
+	  const unsigned *psflg = r->flags;
 	  do
 	    {
 	      tmp = false;
@@ -3918,7 +3917,7 @@ assemble_insn (const struct arc_opcode *opcode,
   for (argidx = opcode->operands; *argidx; ++argidx)
     {
       const struct arc_operand *operand = &arc_operands[*argidx];
-      const expressionS *t = (const expressionS *) 0;
+      const expressionS *t = NULL;
 
       if (ARC_OPERAND_IS_FAKE (operand))
 	continue;
@@ -4058,8 +4057,7 @@ assemble_insn (const struct arc_opcode *opcode,
 	    {
 	      /* sanity checks.  */
 	      reloc_howto_type *reloc_howto
-		= bfd_reloc_type_lookup (stdoutput,
-					 (bfd_reloc_code_real_type) reloc);
+		= bfd_reloc_type_lookup (stdoutput, reloc);
 	      unsigned reloc_bitsize = reloc_howto->bitsize;
 	      if (reloc_howto->rightshift)
 		reloc_bitsize -= reloc_howto->rightshift;
@@ -4083,8 +4081,7 @@ assemble_insn (const struct arc_opcode *opcode,
 	  else
 	    {
 	      reloc_howto_type *reloc_howto =
-		bfd_reloc_type_lookup (stdoutput,
-				       (bfd_reloc_code_real_type) fixup->reloc);
+		bfd_reloc_type_lookup (stdoutput, fixup->reloc);
 	      pcrel = reloc_howto->pc_relative;
 	    }
 	  fixup->pcrel = pcrel;
@@ -4676,7 +4673,7 @@ arc_extinsn (int ignore ATTRIBUTE_UNUSED)
     as_warn ("%s", errmsg);
 
   /* Insert the extension instruction.  */
-  arc_insert_opcode ((const struct arc_opcode *) arc_ext_opcodes);
+  arc_insert_opcode (arc_ext_opcodes);
 
   create_extinst_section (&einsn);
 }
@@ -4974,7 +4971,7 @@ arc_stralloc (char * s1, const char * s2)
   gas_assert (s2);
   len += strlen (s2) + 1;
 
-  p = (char *) xmalloc (len);
+  p = xmalloc (len);
 
   if (s1)
     {

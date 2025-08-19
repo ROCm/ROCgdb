@@ -659,8 +659,7 @@ s_tic6x_scomm (int ignore ATTRIBUTE_UNUSED)
 
       symbol_set_frag (symbolP, frag_now);
 
-      pfrag = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP, size,
-			(char *) 0);
+      pfrag = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
       *pfrag = 0;
       S_SET_SIZE (symbolP, size);
       S_SET_SEGMENT (symbolP, sbss_section);
@@ -669,7 +668,7 @@ s_tic6x_scomm (int ignore ATTRIBUTE_UNUSED)
     }
   else
     {
-      S_SET_VALUE (symbolP, (valueT) size);
+      S_SET_VALUE (symbolP, size);
       S_SET_ALIGN (symbolP, 1 << align2);
       S_SET_EXTERNAL (symbolP);
       S_SET_SEGMENT (symbolP, &scom_section);
@@ -3084,14 +3083,13 @@ static valueT
 md_chars_to_number (char *buf, int n)
 {
   valueT result = 0;
-  unsigned char *p = (unsigned char *) buf;
 
   if (target_big_endian)
     {
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (*p++ & 0xff);
+	  result |= (*buf++ & 0xff);
 	}
     }
   else
@@ -3099,7 +3097,7 @@ md_chars_to_number (char *buf, int n)
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (p[n] & 0xff);
+	  result |= (buf[n] & 0xff);
 	}
     }
 
@@ -3527,7 +3525,7 @@ md_assemble (char *str)
       bool found_match = false;
 
       for (i = 0; i < TIC6X_NUM_PREFER; i++)
-	opc_rank[i] = (unsigned int) -1;
+	opc_rank[i] = -1u;
 
       min_rank = TIC6X_NUM_PREFER - 1;
       max_rank = 0;
@@ -3576,7 +3574,7 @@ md_assemble (char *str)
 	      if (rank > max_rank)
 		max_rank = rank;
 
-	      if (opc_rank[rank] == (unsigned int) -1)
+	      if (opc_rank[rank] == -1u)
 		opc_rank[rank] = i;
 	      else
 		/* The opcode table should provide a total ordering
@@ -3607,7 +3605,7 @@ md_assemble (char *str)
     {
       fix_needed = false;
 
-      if (opc_rank[try_rank] == (unsigned int) -1)
+      if (opc_rank[try_rank] == -1u)
 	continue;
 
       opcode_value = tic6x_try_encode (opcm[opc_rank[try_rank]], operands,
@@ -4468,7 +4466,7 @@ tic6x_pcrel_from_section (fixS *fixp, segT sec)
       && (!S_IS_DEFINED (fixp->fx_addsy)
 	  || S_GET_SEGMENT (fixp->fx_addsy) != sec))
     return 0;
-  return (fixp->fx_where + fixp->fx_frag->fr_address) & ~(long) 0x1f;
+  return (fixp->fx_where + fixp->fx_frag->fr_address) & ~0x1fULL;
 }
 
 /* Round up a section size to the appropriate boundary.  */

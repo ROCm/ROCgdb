@@ -4410,7 +4410,7 @@ md_assemble (char *str)
 	  fixP->fx_pcrel_adjust = the_ins.reloc[m].pcrel_fix;
 	}
       (void) frag_var (rs_machine_dependent, FRAG_VAR_SIZE, 0,
-		       (relax_substateT) (the_ins.fragb[n].fragty),
+		       the_ins.fragb[n].fragty,
 		       the_ins.fragb[n].fadd, the_ins.fragb[n].foff, to_beg_P);
     }
   gas_assert (the_ins.nfrag >= 1);
@@ -6417,7 +6417,7 @@ parse_mri_control_expression (char *stop, int qual, const char *truelab,
 	flab = mri_control_label ();
 
       build_mri_control_operand (qual, cc, leftstart, leftstop, rightstart,
-				 rightstop, (const char *) NULL, flab, extent);
+				 rightstop, NULL, flab, extent);
 
       input_line_pointer += 3;
       if (*input_line_pointer != '.'
@@ -6452,7 +6452,7 @@ parse_mri_control_expression (char *stop, int qual, const char *truelab,
 	tlab = mri_control_label ();
 
       build_mri_control_operand (qual, cc, leftstart, leftstop, rightstart,
-				 rightstop, tlab, (const char *) NULL, extent);
+				 rightstop, tlab, NULL, extent);
 
       input_line_pointer += 2;
       if (*input_line_pointer != '.'
@@ -6554,7 +6554,7 @@ s_mri_if (int qual)
 
   n = push_mri_control (mri_if);
 
-  parse_mri_control_expression (s - 3, qual, (const char *) NULL,
+  parse_mri_control_expression (s - 3, qual, NULL,
 				n->next, s[1] == '.' ? s[2] : '\0');
 
   if (s[1] == '.')
@@ -7043,7 +7043,7 @@ s_mri_until (int qual)
   for (s = input_line_pointer; ! is_end_of_stmt (*s); s++)
     ;
 
-  parse_mri_control_expression (s, qual, (const char *) NULL,
+  parse_mri_control_expression (s, qual, NULL,
 				mri_control_stack->top, '\0');
 
   colon (mri_control_stack->bottom);
@@ -7100,7 +7100,7 @@ s_mri_while (int qual)
 
   colon (n->next);
 
-  parse_mri_control_expression (s - 1, qual, (const char *) NULL, n->bottom,
+  parse_mri_control_expression (s - 1, qual, NULL, n->bottom,
 				s[1] == '.' ? s[2] : '\0');
 
   input_line_pointer = s + 1;
@@ -7333,7 +7333,7 @@ m68k_set_extension (char const *name, int allow_m, int silent)
 
   if (negated)
     not_current_architecture |= (ext->control_regs
-				 ? *(unsigned *)ext->control_regs: ext->arch);
+				 ? *ext->control_regs: ext->arch);
   else
     current_architecture |= ext->arch;
   return 1;
@@ -7904,7 +7904,7 @@ m68k_elf_cons (int nbytes /* 4=.long */)
 	    }
 	}
       else
-	emit_expr (&exp, (unsigned int) nbytes);
+	emit_expr (&exp, nbytes);
     }
   while (*input_line_pointer++ == ',');
 

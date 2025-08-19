@@ -2465,6 +2465,7 @@ target_pre_inferior ()
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
       no_shared_libraries (current_program_space);
+      current_program_space->unset_solib_ops ();
 
       invalidate_target_mem_regions ();
 
@@ -4577,10 +4578,7 @@ set_write_memory_registers_permission (const char *args, int from_tty,
   update_observer_mode ();
 }
 
-void _initialize_target ();
-
-void
-_initialize_target ()
+INIT_GDB_FILE (target)
 {
   the_debug_target = new debug_target ();
 

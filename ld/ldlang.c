@@ -43,13 +43,10 @@
 #include "hashtab.h"
 #include "elf-bfd.h"
 #include "bfdver.h"
-
+#include <errno.h>
 #if BFD_SUPPORTS_PLUGINS
 #include "plugin.h"
 #endif
-
-/* FIXME: Put it here to avoid NAME conflict from ldgram.h.  */
-#include "elf-bfd.h"
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) & (((TYPE*) 0)->MEMBER))
@@ -2874,7 +2871,7 @@ lang_add_section (lang_statement_list_type *ptr,
       /* This must happen after flags have been updated.  The output
 	 section may have been created before we saw its first input
 	 section, eg. for a data statement.  */
-      bfd_init_private_section_data (section->owner, section,
+      bfd_copy_private_section_data (section->owner, section,
 				     link_info.output_bfd,
 				     output->bfd_section,
 				     &link_info);
@@ -10494,7 +10491,7 @@ setup_section (bfd *ibfd, sec_ptr isection, void *p)
 
   /* Allow the BFD backend to copy any private data it understands
      from the input section to the output section.  */
-  if (!bfd_copy_private_section_data (ibfd, isection, obfd, osection))
+  if (!bfd_copy_private_section_data (ibfd, isection, obfd, osection, NULL))
     {
       err = _("failed to copy private data");
       goto loser;
@@ -10840,9 +10837,18 @@ cmdline_add_object_only_section (bfd_byte *contents, size_t size)
       fatal (_("%P: failed to finish output with object-only section\n"));
     }
 
+  /* ibfd needs to be closed *after* obfd, otherwise ld may crash with a
+     segmentation fault.  */
+  if (!bfd_close (ibfd))
+    einfo (_("%P%F: failed to close input\n"));
+
   /* Must be freed after bfd_close ().  */
   free (isympp);
   free (osympp);
+
+  /* Must unlink to ensure rename works on Windows.  */
+  if (unlink (output_filename) && errno != ENOENT)
+    einfo (_("%P%F: failed to unlink %s\n"), output_filename);
 
   if (rename (ofilename, output_filename))
     {
@@ -10854,10 +10860,14 @@ cmdline_add_object_only_section (bfd_byte *contents, size_t size)
   return;
 
 loser:
-  free (isympp);
-  free (osympp);
   if (obfd)
     bfd_close (obfd);
+  /* ibfd needs to be closed *after* obfd, otherwise ld may crash with a
+     segmentation fault.  */
+  if (ibfd)
+    bfd_close (ibfd);
+  free (isympp);
+  free (osympp);
   if (ofilename)
     {
       unlink (ofilename);
@@ -10886,6 +10896,9 @@ cmdline_emit_object_only_section (void)
 
   lang_init (true);
   ldexp_init (true);
+
+  /* Allow lang_add_section to add new sections.  */
+  map_head_is_link_order = false;
 
   /* Set up the object-only output. */
   lang_final ();

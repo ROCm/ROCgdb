@@ -223,7 +223,7 @@ static char *data_buffer;
 static void
 listing_message (const char *name, const char *message)
 {
-  if (listing_tail != (list_info_type *) NULL)
+  if (listing_tail != NULL)
     {
       char *n = concat (name, message, (char *) NULL);
       struct list_message *lm = XNEW (struct list_message);
@@ -256,7 +256,7 @@ file_info (const char *file_name)
   /* Find an entry with this file name.  */
   file_info_type *p = file_info_head;
 
-  while (p != (file_info_type *) NULL)
+  while (p != NULL)
     {
       if (filename_cmp (p->filename, file_name) == 0)
 	return p;
@@ -406,11 +406,11 @@ listing_newline (char *ps)
   new_i->frag = frag_now;
   new_i->line = line;
   new_i->file = file_info (file);
-  new_i->next = (list_info_type *) NULL;
+  new_i->next = NULL;
   new_i->messages = NULL;
   new_i->last_message = NULL;
   new_i->edict = EDICT_NONE;
-  new_i->hll_file = (file_info_type *) NULL;
+  new_i->hll_file = NULL;
   new_i->hll_line = 0;
 
   new_frag ();
@@ -488,7 +488,7 @@ listing_prev_line (void)
   list_info_type *l;
   fragS *f;
 
-  if (head == (list_info_type *) NULL
+  if (head == NULL
       || head == listing_tail)
     return;
 
@@ -497,7 +497,7 @@ listing_prev_line (void)
   for (l = head; l->next != listing_tail; l = l->next)
     ;
 
-  for (f = frchain_now->frch_root; f != (fragS *) NULL; f = f->fr_next)
+  for (f = frchain_now->frch_root; f != NULL; f = f->fr_next)
     if (f->line == listing_tail)
       f->line = l;
 
@@ -795,7 +795,7 @@ calc_hex (list_info_type *list)
 {
   size_t data_buffer_size;
   list_info_type *first = list;
-  unsigned int address = ~(unsigned int) 0;
+  unsigned int address = ~0u;
   fragS *frag;
   fragS *frag_ptr;
   unsigned int octet_in_frag;
@@ -810,14 +810,14 @@ calc_hex (list_info_type *list)
   data_buffer_size = 0;
 
   /* Dump all the frags which belong to this line.  */
-  while (frag_ptr != (fragS *) NULL && frag_ptr->line == first)
+  while (frag_ptr != NULL && frag_ptr->line == first)
     {
       /* Print as many bytes from the fixed part as is sensible.  */
       octet_in_frag = 0;
       while (octet_in_frag < frag_ptr->fr_fix
 	     && data_buffer_size < MAX_BYTES - 3)
 	{
-	  if (address == ~(unsigned int) 0)
+	  if (address == ~0u)
 	    address = frag_ptr->fr_address / OCTETS_PER_BYTE;
 
 	  sprintf (data_buffer + data_buffer_size,
@@ -836,7 +836,7 @@ calc_hex (list_info_type *list)
 		  < frag_ptr->fr_fix + frag_ptr->fr_var * frag_ptr->fr_offset)
 		 && data_buffer_size < MAX_BYTES - 3)
 	    {
-	      if (address == ~(unsigned int) 0)
+	      if (address == ~0u)
 		address = frag_ptr->fr_address / OCTETS_PER_BYTE;
 
 	      sprintf (data_buffer + data_buffer_size,
@@ -875,7 +875,7 @@ print_lines (list_info_type *list, unsigned int lineno,
   nchars = (LISTING_WORD_SIZE * 2 + 1) * listing_lhs_width;
 
   /* Print the hex for the first line.  */
-  if (address == ~(unsigned int) 0)
+  if (address == ~0u)
     {
       fprintf (list_file, "% 4d     ", lineno);
       for (idx = 0; idx < nchars; idx++)
@@ -1013,7 +1013,7 @@ list_symbol_table (void)
 
   got_some = 0;
 
-  for (ptr = symbol_rootP; ptr != (symbolS *) NULL; ptr = symbol_next (ptr))
+  for (ptr = symbol_rootP; ptr != NULL; ptr = symbol_next (ptr))
     {
       if (S_GET_NAME (ptr) && strlen (S_GET_NAME (ptr)) != 0)
 	{
@@ -1302,7 +1302,7 @@ listing_listing (char *name ATTRIBUTE_UNUSED)
 		  p = buffer_line (list->file, buffer, width);
 
 		  if (list->file->linenum < list_line)
-		    address = ~(unsigned int) 0;
+		    address = ~0u;
 		  else
 		    address = calc_hex (list);
 
@@ -1354,11 +1354,11 @@ print_timestamp (void)
 }
 
 static void
-print_single_option (char * opt, int *pos)
+print_single_option (char *opt, size_t *pos)
 {
   size_t opt_len = strlen (opt);
 
-   if ((*pos + opt_len) < paper_width)
+   if (*pos + opt_len < paper_width)
      {
         fprintf (list_file, _("%s "), opt);
         *pos = *pos + opt_len;
@@ -1376,7 +1376,7 @@ static void
 print_options (char ** argv)
 {
   const char *field_name = _("\n options passed\t: ");
-  int pos = strlen (field_name);
+  size_t pos = strlen (field_name);
   char **p;
 
   fputs (field_name, list_file);

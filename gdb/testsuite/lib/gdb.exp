@@ -273,6 +273,10 @@ if ![info exists INTERNAL_GDBFLAGS] {
 
     # Handle the case that "interactive-mode auto" reports off.
     append INTERNAL_GDBFLAGS { -iex "set interactive-mode on"}
+
+    if { [ishost "*-*-mingw*"] } {
+	append INTERNAL_GDBFLAGS { -iex "maint set console-translation-mode binary"}
+    }
 }
 
 # The variable gdb_prompt is a regexp which matches the gdb prompt.
@@ -284,9 +288,12 @@ if {![info exists gdb_prompt]} {
     set gdb_prompt "\\(gdb\\)"
 }
 
-# A regexp that matches the pagination prompt.
-set pagination_prompt \
+# The pagination prompt.
+set pagination_prompt_str \
     "--Type <RET> for more, q to quit, c to continue without paging--"
+
+# A regexp that matches the pagination prompt.
+set pagination_prompt [string_to_regexp $pagination_prompt_str]
 
 # The variable fullname_syntax_POSIX is a regexp which matches a POSIX 
 # absolute path ie. /foo/ 
@@ -5737,6 +5744,10 @@ proc gdb_simple_compile {name code {type object} {compile_flags {}} {object obj}
 	    set ext "d"
 	    break
 	}
+	if { "$flag" eq "rust" } {
+	    set ext "rs"
+	    break
+	}
     }
     set src [standard_temp_file $name.$ext]
     set obj [standard_temp_file $name.$postfix]
@@ -10092,6 +10103,10 @@ proc gdb_stdin_log_init { } {
 
     set logfile [standard_output_file_with_gdb_instance gdb.in]
     set in_file [open $logfile w]
+
+    verbose -log ""
+    verbose -log "Starting logfile: $logfile"
+    verbose -log ""
 }
 
 # Write to the file for logging gdb input.
@@ -10525,7 +10540,11 @@ proc with_override { name override body } {
 proc with_ansi_styling_terminal { body } {
     save_vars { ::env(TERM) ::env(NO_COLOR) ::env(COLORTERM) } {
 	# Set environment variables to allow styling.
-	setenv TERM ansi
+	if { [ishost *-*-*bsd*] } {
+	    setenv TERM ansiw
+	} else {
+	    setenv TERM ansi
+	}
 	unset -nocomplain ::env(NO_COLOR)
 	unset -nocomplain ::env(COLORTERM)
 

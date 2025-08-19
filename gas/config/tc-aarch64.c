@@ -2351,6 +2351,14 @@ s_aarch64_cfi_b_key_frame (int ignored ATTRIBUTE_UNUSED)
   fde->pauth_key = AARCH64_PAUTH_KEY_B;
 }
 
+static void
+s_aarch64_mte_tagged_frame (int ignored ATTRIBUTE_UNUSED)
+{
+  demand_empty_rest_of_line ();
+  struct fde_entry *fde = frchain_now->frch_cfi_data->cur_fde_data;
+  fde->memtag_frame_p = true;
+}
+
 #ifdef OBJ_ELF
 /* Emit BFD_RELOC_AARCH64_TLSDESC_ADD on the next ADD instruction.  */
 
@@ -2476,6 +2484,7 @@ const pseudo_typeS md_pseudo_table[] = {
   {"arch_extension", s_aarch64_arch_extension, 0},
   {"inst", s_aarch64_inst, 0},
   {"cfi_b_key_frame", s_aarch64_cfi_b_key_frame, 0},
+  {"cfi_mte_tagged_frame", s_aarch64_mte_tagged_frame, 0},
 #ifdef OBJ_ELF
   {"tlsdescadd", s_tlsdescadd, 0},
   {"tlsdesccall", s_tlsdesccall, 0},
@@ -4607,7 +4616,9 @@ parse_hint_opt (const char *name, char **str,
 	  && o->value != HINT_OPD_CSYNC)
       || ((strcmp ("bti", name) == 0)
 	  && (o->value != HINT_OPD_C && o->value != HINT_OPD_J
-	      && o->value != HINT_OPD_JC)))
+	      && o->value != HINT_OPD_JC))
+      || ((strcmp ("stshh", name) == 0)
+	  && (o->value != HINT_OPD_KEEP && o->value != HINT_OPD_STRM)))
       return false;
 
   *str = q;
@@ -4954,6 +4965,10 @@ parse_sme_sm_za (char **str)
   return TOLOWER (p[0]);
 }
 
+/* By default, system register accesses are unguarded (apart from the
+   requirement of +d128 for mrrs/msrr).  */
+static int sysreg_checking_p = 0;
+
 /* Parse a system register or a PSTATE field name for an MSR/MRS instruction.
    Returns the encoding for the option, or PARSE_FAIL.
 
@@ -5008,10 +5023,11 @@ parse_sys_reg (char **str, htab_t sys_regs,
     }
   else
     {
-      if (pstatefield_p && !aarch64_pstatefield_supported_p (cpu_variant, o))
+      if (pstatefield_p && sysreg_checking_p
+	  && !aarch64_pstatefield_supported_p (cpu_variant, o))
 	as_bad (_("selected processor does not support PSTATE field "
 		  "name '%s'"), buf);
-      if (!pstatefield_p
+      if (!pstatefield_p && sysreg_checking_p
 	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->name,
 					       o->flags, &o->features))
 	as_bad (_("selected processor does not support system register "
@@ -5092,12 +5108,14 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   } while (0)
 
 #define po_imm_nc_or_fail() do {				\
-    if (! parse_constant_immediate (&str, &val, imm_reg_type))	\
+    aarch64_reg_type invalid_types = imm_invalid_reg_types (opcode->flags); \
+    if (! parse_constant_immediate (&str, &val, invalid_types))	\
       goto failure;						\
   } while (0)
 
 #define po_imm_or_fail(min, max) do {				\
-    if (! parse_constant_immediate (&str, &val, imm_reg_type))	\
+    aarch64_reg_type invalid_types = imm_invalid_reg_types (opcode->flags); \
+    if (! parse_constant_immediate (&str, &val, invalid_types))	\
       goto failure;						\
     if (val < min || val > max)					\
       {								\
@@ -5108,8 +5126,9 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   } while (0)
 
 #define po_enum_or_fail(array) do {				\
+    aarch64_reg_type invalid_types = imm_invalid_reg_types (opcode->flags); \
     if (!parse_enum_string (&str, &val, array,			\
-			    ARRAY_SIZE (array), imm_reg_type))	\
+			    ARRAY_SIZE (array), invalid_types))	\
       goto failure;						\
   } while (0)
 
@@ -5622,7 +5641,7 @@ static const char *aarch64_apply_style
 {
   int res;
   char *ptr;
-  struct obstack *stack = (struct obstack *) styler->state;
+  struct obstack *stack = styler->state;
   va_list ap;
 
   /* Calculate the required space.  */
@@ -5632,7 +5651,7 @@ static const char *aarch64_apply_style
   gas_assert (res >= 0);
 
   /* Allocate space on the obstack and format the result.  */
-  ptr = (char *) obstack_alloc (stack, res + 1);
+  ptr = obstack_alloc (stack, res + 1);
   res = vsnprintf (ptr, (res + 1), fmt, args);
   gas_assert (res >= 0);
 
@@ -5651,7 +5670,7 @@ print_operands (char *buf, const aarch64_opcode *opcode,
   obstack_init (&content);
 
   styler.apply_style = aarch64_apply_style;
-  styler.state = (void *) &content;
+  styler.state = &content;
 
   for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
     {
@@ -6655,6 +6674,28 @@ reg_list_valid_p (uint32_t reginfo, struct aarch64_reglist *list,
   return true;
 }
 
+static aarch64_reg_type
+imm_invalid_reg_types (uint64_t flags)
+{
+  switch (flags & F_INVALID_IMM_SYMS)
+    {
+    case F_INVALID_IMM_SYMS_1:
+      return REG_TYPE_R_ZR_BHSDQ_V;
+
+    case F_INVALID_IMM_SYMS_2:
+      return REG_TYPE_R_ZR_SP_BHSDQ_VZP;
+
+    case F_INVALID_IMM_SYMS_3:
+      return REG_TYPE_R_ZR_SP_BHSDQ_VZP_PN;
+
+    default:
+      /* All instructions with immediate operands require an explicit flag -
+	 this ensures that the flags will not be forgotten when adding new
+	 instructions.  */
+      gas_assert (0);
+    }
+}
+
 /* Generic instruction operand parser.	This does no encoding and no
    semantic validation; it merely squirrels values away in the inst
    structure.  Returns TRUE or FALSE depending on whether the
@@ -6667,18 +6708,9 @@ parse_operands (char *str, const aarch64_opcode *opcode)
   char *backtrack_pos = 0;
   const enum aarch64_opnd *operands = opcode->operands;
   const uint64_t flags = opcode->flags;
-  aarch64_reg_type imm_reg_type;
 
   clear_error ();
   skip_whitespace (str);
-
-  if (AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SME2))
-    imm_reg_type = REG_TYPE_R_ZR_SP_BHSDQ_VZP_PN;
-  else if (AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SVE)
-	   || AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SVE2))
-    imm_reg_type = REG_TYPE_R_ZR_SP_BHSDQ_VZP;
-  else
-    imm_reg_type = REG_TYPE_R_ZR_BHSDQ_V;
 
   for (i = 0; operands[i] != AARCH64_OPND_NIL; i++)
     {
@@ -6917,6 +6949,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SME_Zn_INDEX1_16:
 	case AARCH64_OPND_SME_Zn_INDEX2_15:
 	case AARCH64_OPND_SME_Zn_INDEX2_16:
+	case AARCH64_OPND_SME_Zn_INDEX2_19:
 	case AARCH64_OPND_SME_Zn_INDEX3_14:
 	case AARCH64_OPND_SME_Zn_INDEX3_15:
 	case AARCH64_OPND_SME_Zn_INDEX4_14:
@@ -7234,13 +7267,15 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  {
 	    int qfloat;
 	    bool res1 = false, res2 = false;
+	    aarch64_reg_type invalid_types
+	      = imm_invalid_reg_types (opcode->flags);
 	    /* N.B. -0.0 will be rejected; although -0.0 shouldn't be rejected,
 	       it is probably not worth the effort to support it.  */
 	    if (!(res1 = parse_aarch64_imm_float (&str, &qfloat, false,
-						  imm_reg_type))
+						  invalid_types))
 		&& (error_p ()
 		    || !(res2 = parse_constant_immediate (&str, &val,
-							  imm_reg_type))))
+							  invalid_types))))
 	      goto failure;
 	    if ((res1 && qfloat == 0) || (res2 && val == 0))
 	      {
@@ -7274,7 +7309,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_SIMD_IMM:
 	case AARCH64_OPND_SIMD_IMM_SFT:
-	  if (! parse_big_immediate (&str, &val, imm_reg_type))
+	  if (! parse_big_immediate (&str, &val,
+				     imm_invalid_reg_types (opcode->flags)))
 	    goto failure;
 	  assign_imm_if_const_or_fixup_later (&inst.reloc, info,
 					      /* addr_off_p */ 0,
@@ -7302,11 +7338,13 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SIMD_FPIMM:
 	case AARCH64_OPND_SVE_FPIMM8:
 	  {
+	    aarch64_reg_type invalid_types
+	      = imm_invalid_reg_types (opcode->flags);
 	    int qfloat;
 	    bool dp_p;
 
 	    dp_p = double_precision_operand_p (&inst.base.operands[0]);
-	    if (!parse_aarch64_imm_float (&str, &qfloat, dp_p, imm_reg_type)
+	    if (!parse_aarch64_imm_float (&str, &qfloat, dp_p, invalid_types)
 		|| !aarch64_imm_float_p (qfloat))
 	      {
 		if (!error_p ())
@@ -7323,11 +7361,13 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_I1_HALF_TWO:
 	case AARCH64_OPND_SVE_I1_ZERO_ONE:
 	  {
+	    aarch64_reg_type invalid_types
+	      = imm_invalid_reg_types (opcode->flags);
 	    int qfloat;
 	    bool dp_p;
 
 	    dp_p = double_precision_operand_p (&inst.base.operands[0]);
-	    if (!parse_aarch64_imm_float (&str, &qfloat, dp_p, imm_reg_type))
+	    if (!parse_aarch64_imm_float (&str, &qfloat, dp_p, invalid_types))
 	      {
 		if (!error_p ())
 		  set_fatal_syntax_error (_("invalid floating-point"
@@ -7416,13 +7456,17 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_EXCEPTION:
 	case AARCH64_OPND_UNDEFINED:
-	  po_misc_or_fail (parse_immediate_expression (&str, &inst.reloc.exp,
-						       imm_reg_type));
-	  assign_imm_if_const_or_fixup_later (&inst.reloc, info,
-					      /* addr_off_p */ 0,
-					      /* need_libopcodes_p */ 0,
-					      /* skip_p */ 1);
-	  break;
+	  {
+	    aarch64_reg_type invalid_types
+	      = imm_invalid_reg_types (opcode->flags);
+	    po_misc_or_fail (parse_immediate_expression (&str, &inst.reloc.exp,
+							 invalid_types));
+	    assign_imm_if_const_or_fixup_later (&inst.reloc, info,
+						/* addr_off_p */ 0,
+						/* need_libopcodes_p */ 0,
+						/* skip_p */ 1);
+	    break;
+	  }
 
 	case AARCH64_OPND_NZCV:
 	  {
@@ -8091,7 +8135,9 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    {
 	      /* DSB nXS barrier variant accept 5-bit unsigned immediate, with
 	         possible values 16, 20, 24 or 28 , encoded as val<3:2>.  */
-	      if (! parse_constant_immediate (&str, &val, imm_reg_type))
+	      aarch64_reg_type invalid_types
+		= imm_invalid_reg_types (opcode->flags);
+	      if (! parse_constant_immediate (&str, &val, invalid_types))
 	        goto failure;
 	      if (!(val == 16 || val == 20 || val == 24 || val == 28))
 	        {
@@ -8106,9 +8152,18 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_PRFOP:
 	  val = parse_pldop (&str);
+
+	  if (opcode->iclass != ldst_pos && val == 0x18)
+	    {
+	      set_syntax_error (_("invalid prefetch operation (IR is not valid for"
+	                          " this instruction variant)"));
+	      goto failure;
+	    }
+
 	  /* This is an extension to accept a 0..31 immediate.  */
 	  if (val == PARSE_FAIL)
 	    po_imm_or_fail (0, 31);
+
 	  inst.base.operands[i].prfop = aarch64_prfops + val;
 	  break;
 
@@ -8184,6 +8239,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_BTI_TARGET:
+	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
+	    goto failure;
+	  break;
+
+	case AARCH64_OPND_STSHH_POLICY:
 	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
 	    goto failure;
 	  break;
@@ -8662,7 +8722,7 @@ md_assemble (char *str)
   if (last_label_seen != NULL)
     {
       symbol_set_frag (last_label_seen, frag_now);
-      S_SET_VALUE (last_label_seen, (valueT) frag_now_fix ());
+      S_SET_VALUE (last_label_seen, frag_now_fix ());
       S_SET_SEGMENT (last_label_seen, now_seg);
     }
 
@@ -9346,6 +9406,10 @@ try_to_encode_as_unscaled_ldst (aarch64_inst *instr)
 
   if (new_op == OP_NIL)
     return false;
+
+  if ((instr->opcode->op == OP_PRFM_POS)
+	       && (instr->operands[0].prfop->value == 0x18))
+	return false;
 
   new_opcode = aarch64_get_opcode (new_op);
   gas_assert (new_opcode != NULL);
@@ -10123,7 +10187,7 @@ cons_fix_new_aarch64 (fragS * frag, int where, int size, expressionS * exp)
     }
 #endif
 
-  fix_new_exp (frag, where, (int) size, exp, pcrel, type);
+  fix_new_exp (frag, where, size, exp, pcrel, type);
 }
 
 /* Implement md_after_parse_args.  This is the earliest time we need to decide
@@ -10269,7 +10333,7 @@ aarch64_adjust_symtab (void)
 {
 #ifdef OBJ_ELF
   /* Remove any overlapping mapping symbols generated by alignment frags.  */
-  bfd_map_over_sections (stdoutput, check_mapping_symbols, (char *) 0);
+  bfd_map_over_sections (stdoutput, check_mapping_symbols, NULL);
   /* Now do generic ELF adjustments.  */
   elf_adjust_symtab ();
 #endif
@@ -10553,6 +10617,9 @@ static struct aarch64_option_table aarch64_opts[] = {
    NULL},
   {"mno-verbose-error", N_("do not output verbose error messages"),
    &verbose_error_p, 0, NULL},
+  {"menable-sysreg-checking",
+   N_("enable feature flag gating for system registers"),
+   &sysreg_checking_p, 1, NULL},
   {NULL, NULL, NULL, 0, NULL}
 };
 
@@ -10675,6 +10742,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv9.3-a",	AARCH64_ARCH_FEATURES (V9_3A)},
   {"armv9.4-a",	AARCH64_ARCH_FEATURES (V9_4A)},
   {"armv9.5-a", AARCH64_ARCH_FEATURES (V9_5A)},
+  {"armv9.6-a", AARCH64_ARCH_FEATURES (V9_6A)},
   {NULL, AARCH64_NO_FEATURES}
 };
 
@@ -10698,6 +10766,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"lse",		AARCH64_FEATURE (LSE), AARCH64_NO_FEATURES},
   {"lsfe",		AARCH64_FEATURE (LSFE), AARCH64_FEATURE (FP)},
   {"lse128",		AARCH64_FEATURE (LSE128), AARCH64_FEATURE (LSE)},
+  {"lsui",		AARCH64_FEATURE (LSUI), AARCH64_NO_FEATURES},
   {"simd",		AARCH64_FEATURE (SIMD), AARCH64_FEATURE (FP)},
   {"pan",		AARCH64_FEATURE (PAN), AARCH64_NO_FEATURES},
   {"lor",		AARCH64_FEATURE (LOR), AARCH64_NO_FEATURES},
@@ -10735,7 +10804,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve2-sm4",		AARCH64_FEATURE (SVE2_SM4),
 			AARCH64_FEATURES (2, SVE2, SM4)},
   {"sve2-aes",		AARCH64_FEATURE (SVE2_AES),
-			AARCH64_FEATURES (2, SVE2, AES)},
+			AARCH64_FEATURES (2, SVE2, SVE_AES)},
   {"sve2-sha3",		AARCH64_FEATURE (SVE2_SHA3),
 			AARCH64_FEATURES (2, SVE2, SHA3)},
   {"sve2-bitperm",	AARCH64_FEATURE (SVE2_BITPERM),
@@ -10773,6 +10842,9 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve-f16f32mm",	AARCH64_FEATURE (SVE_F16F32MM), AARCH64_FEATURE (SVE)},
   {"f8f32mm",		AARCH64_FEATURE (F8F32MM), AARCH64_FEATURES (2, SIMD, FP8)},
   {"f8f16mm",		AARCH64_FEATURE (F8F16MM), AARCH64_FEATURES (2, SIMD, FP8)},
+  {"sve-aes",		AARCH64_FEATURE (SVE_AES), AARCH64_FEATURE (AES)},
+  {"sve-aes2",		AARCH64_FEATURE (SVE_AES2), AARCH64_NO_FEATURES},
+  {"ssve-aes",	AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURES (2, SME2, SVE_AES)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
   {"cpa",		AARCH64_FEATURE (CPA), AARCH64_NO_FEATURES},
   {"faminmax",		AARCH64_FEATURE (FAMINMAX), AARCH64_FEATURE (SIMD)},
@@ -10797,6 +10869,8 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sme-b16b16",	AARCH64_FEATURE (SME_B16B16),
 			AARCH64_FEATURES (2, SVE_B16B16, SME2)},
   {"pops",		AARCH64_FEATURE (PoPS), AARCH64_NO_FEATURES},
+  {"sve2p2",		AARCH64_FEATURE (SVE2p2), AARCH64_FEATURE (SVE2p1)},
+  {"sme2p2",		AARCH64_FEATURE (SME2p2), AARCH64_FEATURE (SME2p1)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
@@ -10809,6 +10883,8 @@ struct aarch64_virtual_dependency_table
 };
 
 static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
+  {AARCH64_FEATURE (SVE2), AARCH64_FEATURE (SVE2_SSVE_AES)},
+  {AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURE (SVE2_SSVE_AES)},
   {AARCH64_FEATURES (2, FP8FMA, SVE2), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURE (SSVE_FP8FMA), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURES (2, FP8DOT4, SVE2), AARCH64_FEATURE (FP8DOT4_SVE)},
@@ -10817,13 +10893,15 @@ static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
   {AARCH64_FEATURE (SSVE_FP8DOT2), AARCH64_FEATURE (FP8DOT2_SVE)},
   {AARCH64_FEATURE (SME_F16F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
   {AARCH64_FEATURE (SME_F8F16), AARCH64_FEATURE (SME_F16F16_F8F16)},
+  {AARCH64_FEATURE (SVE), AARCH64_FEATURE (SVE_SME2p2)},
+  {AARCH64_FEATURE (SME), AARCH64_FEATURE (SVE2p1_SME)},
+  {AARCH64_FEATURE (SVE2), AARCH64_FEATURE (SVE2_SME2)},
+  {AARCH64_FEATURE (SME2), AARCH64_FEATURES (2, SVE2_SME2, SVE2p1_SME2)},
   {AARCH64_FEATURE (SVE2p1), AARCH64_FEATURES (3, SVE2p1_SME, SVE2p1_SME2,
 					       SVE2p1_SME2p1)},
-  {AARCH64_FEATURE (SME), AARCH64_FEATURE (SVE2p1_SME)},
-  {AARCH64_FEATURE (SME2), AARCH64_FEATURE (SVE2p1_SME2)},
-  {AARCH64_FEATURE (SVE2), AARCH64_FEATURE (SVE2_SME2)},
-  {AARCH64_FEATURE (SME2), AARCH64_FEATURE (SVE2_SME2)},
   {AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SVE2p1_SME2p1)},
+  {AARCH64_FEATURE (SVE2p2), AARCH64_FEATURE (SVE2p2_SME2p2)},
+  {AARCH64_FEATURE (SME2p2), AARCH64_FEATURES (2, SVE_SME2p2, SVE2p2_SME2p2)},
 };
 
 static aarch64_feature_set

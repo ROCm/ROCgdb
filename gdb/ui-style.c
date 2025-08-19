@@ -21,12 +21,14 @@
 #include "gdbsupport/gdb_regex.h"
 
 /* A regular expression that is used for matching ANSI terminal escape
-   sequences.  */
+   sequences.  Note that this will actually match any prefix of such a
+   sequence.  This property is used so that other code can buffer
+   incomplete sequences as needed.  */
 
 static const char ansi_regex_text[] =
-  /* Introduction.  */
-  "^\033\\["
-#define DATA_SUBEXP 1
+  /* Introduction.  Only the escape character is truly required.  */
+  "^\033(\\["
+#define DATA_SUBEXP 2
   /* Capture parameter and intermediate bytes.  */
   "("
   /* Parameter bytes.  */
@@ -36,12 +38,12 @@ static const char ansi_regex_text[] =
   /* End the first capture.  */
   ")"
   /* The final byte.  */
-#define FINAL_SUBEXP 2
-  "([\x40-\x7e])";
+#define FINAL_SUBEXP 3
+  "([\x40-\x7e]))?";
 
 /* The number of subexpressions to allocate space for, including the
    "0th" whole match subexpression.  */
-#define NUM_SUBEXPRESSIONS 3
+#define NUM_SUBEXPRESSIONS 4
 
 /* The compiled form of ansi_regex_text.  */
 
@@ -288,6 +290,16 @@ ui_file_style::to_ansi () const
       else
 	result.append (std::to_string (m_intensity));
       result.push_back (';');
+      if (m_italic)
+	result.append ("3");
+      else
+	result.append ("23");
+      result.push_back (';');
+      if (m_underline)
+	result.append ("4");
+      else
+	result.append ("24");
+      result.push_back (';');
       if (m_reverse)
 	result.push_back ('7');
       else
@@ -371,6 +383,15 @@ ui_file_style::parse (const char *buf, size_t *n_read)
       *n_read = 0;
       return false;
     }
+
+  /* If the final subexpression did not match, then that means there
+     was an incomplete sequence.  These are ignored here.  */
+  if (subexps[FINAL_SUBEXP].rm_so == -1)
+    {
+      *n_read = 0;
+      return false;
+    }
+
   /* Other failures mean the regexp is broken.  */
   gdb_assert (match == 0);
   /* The regexp is anchored.  */
@@ -424,6 +445,14 @@ ui_file_style::parse (const char *buf, size_t *n_read)
 	      /* Dim.  */
 	      m_intensity = DIM;
 	      break;
+	    case 3:
+	      /* Italic.  */
+	      m_italic = true;
+	      break;
+	    case 4:
+	      /* Underline.  */
+	      m_underline = true;
+	      break;
 	    case 7:
 	      /* Reverse.  */
 	      m_reverse = true;
@@ -434,6 +463,14 @@ ui_file_style::parse (const char *buf, size_t *n_read)
 	    case 22:
 	      /* Normal.  */
 	      m_intensity = NORMAL;
+	      break;
+	    case 23:
+	      /* Non-italic.  */
+	      m_italic = false;
+	      break;
+	    case 24:
+	      /* Non-underline.  */
+	      m_underline = false;
 	      break;
 	    case 27:
 	      /* Inverse off.  */
@@ -527,17 +564,25 @@ ui_file_style::parse (const char *buf, size_t *n_read)
 
 /* See ui-style.h.  */
 
-bool
-skip_ansi_escape (const char *buf, int *n_read)
+ansi_escape_result
+examine_ansi_escape (const char *buf, int *n_read)
 {
+  gdb_assert (*buf == '\033');
+
   regmatch_t subexps[NUM_SUBEXPRESSIONS];
 
   int match = ansi_regex.exec (buf, ARRAY_SIZE (subexps), subexps, 0);
-  if (match == REG_NOMATCH || buf[subexps[FINAL_SUBEXP].rm_so] != 'm')
-    return false;
+  if (match == REG_NOMATCH)
+    return ansi_escape_result::NO_MATCH;
+
+  if (subexps[FINAL_SUBEXP].rm_so == -1)
+    return ansi_escape_result::INCOMPLETE;
+
+  if (buf[subexps[FINAL_SUBEXP].rm_so] != 'm')
+    return ansi_escape_result::NO_MATCH;
 
   *n_read = subexps[FINAL_SUBEXP].rm_eo;
-  return true;
+  return ansi_escape_result::MATCHED;
 }
 
 /* See ui-style.h.  */

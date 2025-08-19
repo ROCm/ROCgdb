@@ -226,8 +226,8 @@ solib_target_parse_libraries (const char *library)
 }
 #endif
 
-static owning_intrusive_list<solib>
-solib_target_current_sos (void)
+owning_intrusive_list<solib>
+target_solib_ops::current_sos () const
 {
   owning_intrusive_list<solib> sos;
 
@@ -245,7 +245,7 @@ solib_target_current_sos (void)
   /* Build a struct solib for each entry on the list.  */
   for (lm_info_target_up &info : library_list)
     {
-      auto &new_solib = sos.emplace_back ();
+      auto &new_solib = sos.emplace_back (*this);
 
       /* We don't need a copy of the name in INFO anymore.  */
       new_solib.name = std::move (info->name);
@@ -256,8 +256,9 @@ solib_target_current_sos (void)
   return sos;
 }
 
-static void
-solib_target_relocate_section_addresses (solib &so, target_section *sec)
+void
+target_solib_ops::relocate_section_addresses (solib &so,
+					      target_section *sec) const
 {
   CORE_ADDR offset;
   auto *li = gdb::checked_static_cast<lm_info_target *> (so.lm_info.get ());
@@ -376,8 +377,8 @@ Could not relocate shared library \"%s\": bad offsets"), so.name.c_str ());
   sec->endaddr += offset;
 }
 
-static bool
-solib_target_in_dynsym_resolve_code (CORE_ADDR pc)
+bool
+target_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
 {
   /* We don't have a range of addresses for the dynamic linker; there
      may not be one in the program's address space.  So only report
@@ -385,19 +386,10 @@ solib_target_in_dynsym_resolve_code (CORE_ADDR pc)
   return in_plt_section (pc);
 }
 
-const solib_ops solib_target_so_ops =
+/* See solib-target.h.  */
+
+solib_ops_up
+make_target_solib_ops ()
 {
-  solib_target_relocate_section_addresses,
-  nullptr,
-  nullptr,
-  nullptr,
-  solib_target_current_sos,
-  nullptr,
-  solib_target_in_dynsym_resolve_code,
-  solib_bfd_open,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  default_find_solib_addr,
-};
+  return std::make_unique<target_solib_ops> ();
+}

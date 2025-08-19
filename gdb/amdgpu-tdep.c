@@ -2341,10 +2341,7 @@ amdgpu_aspace_encoding_test ()
 
 #endif
 
-void _initialize_amdgpu_tdep ();
-
-void
-_initialize_amdgpu_tdep ()
+INIT_GDB_FILE (amdgpu_tdep)
 {
   gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL,
 		    amdgpu_supports_arch_info);
