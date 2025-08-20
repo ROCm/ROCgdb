@@ -19,8 +19,11 @@
 
 #include <stdio.h>
 
-static void __gdb_set_unbuffered_output (void) __attribute__ ((constructor));
-static void
+/* Use an explicit priority so that this runs before constructors of
+   namespace-scope C++ objects (which may output to stdout/stderr).
+   Lower priorities run first.  Constructor priorities from 0 to 100
+   are reserved for the implementation.  */
+static void __attribute__ ((constructor (101)))
 __gdb_set_unbuffered_output (void)
 {
   setvbuf (stdout, NULL, _IONBF, BUFSIZ);
