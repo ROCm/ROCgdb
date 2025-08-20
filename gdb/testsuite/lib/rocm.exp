@@ -45,35 +45,43 @@ proc log_host_exec { cmd } {
 #
 # Return a list of GPU devices that do exist on the system.
 # The list will be empty when there's no GPU or the execution
-# of rocm_agent_enumerator does not succeed.
+# of the enumerator program does not succeed.  It is up to the
+# caller of this procedure what should happen when an empty
+# list is returned.
 
 gdb_caching_proc find_amdgpu_devices {} {
-    global rocm_path
-    set hip_gpu_devices [list]
-    set enumerator "${rocm_path}/bin/rocm_agent_enumerator"
+    # Compile and run a simple custom HIP program that lists all GPU
+    # devices, one device per line.  We don't rely on
+    # rocm_agent_enumerator because that does not exist on all
+    # supported platforms.
+    if {![gdb_simple_compile device_enumerator {
+	    #include <hip/hip_runtime.h>
+	    #include <stdio.h>
 
-    set result [remote_exec host "$enumerator"]
-    set exit_status [lindex $result 0]
-    if {$exit_status != 0} {
-	# In case of a failure, it is up to the caller what should
-	# happen next when this procedure returns an empty list.
-	if {$exit_status == -1} {
-	    verbose -log "Cannot execute $enumerator."
-	} else {
-	    verbose -log "$enumerator returned an error."
-	}
-    } else {
-	set targets [lindex $result 1]
-
-	foreach dev $targets {
-	    # Ignore the 'gfx000' device which identifies the host.
-	    if {$dev != "gfx000"} {
-		lappend hip_gpu_devices $dev
+	    int
+	    main ()
+	    {
+	      int device_count;
+	      if (hipGetDeviceCount (&device_count) == hipSuccess)
+		for (int i = 0; i < device_count; i++)
+		  {
+		    hipDeviceProp_t props;
+		    if (hipGetDeviceProperties (&props, i) == hipSuccess)
+		      printf ("%s\n", props.gcnArchName);
+		  }
 	    }
-	}
+	} executable {hip}]} {
+	return {}
     }
 
-    return $hip_gpu_devices
+    set result [log_host_exec "$obj"]
+    if {[lindex $result 0] == 0} {
+	set targets [lindex $result 1]
+	# Convert newline-separated string to a list.
+	return {*}$targets
+    }
+
+    return {}
 }
 
 # Get the list of GPU targets to compile for.
@@ -110,31 +118,12 @@ gdb_caching_proc allow_hipcc_tests {} {
 	return {0 "amd-dbgapi not supported"}
     }
 
-    # Check if there's any GPU device to run the tests on.
+    # Check if there's any GPU device to run the tests on.  If this
+    # works, then we also know we have a working hipcc compiler
+    # available.
     set devices [find_amdgpu_devices]
     if {[llength $devices] == 0} {
 	return {0 "no suitable amdgpu targets found"}
-    }
-
-    # Check if we have a working hipcc compiler available.
-    # TARGETS won't be empty, because there's at least one GPU device.
-    set targets [hcc_amdgpu_targets]
-    set flags [list hip additional_flags=--offload-arch=[join $targets ","]]
-    if {![gdb_simple_compile hipprobe {
-	    #include <hip/hip_runtime.h>
-	    __global__ void
-	    kern () {}
-
-	    int
-	    main ()
-	    {
-		kern<<<1, 1>>> ();
-		if (hipDeviceSynchronize () != hipSuccess)
-		  return -1;
-		return 0;
-	    }
-	} executable $flags]} {
-	return {0 "failed to compile hip program"}
     }
 
     return 1
