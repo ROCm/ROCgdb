@@ -3053,7 +3053,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 			par_state->language ()->name_of_this ()
 			? &is_a_field_of_this : NULL);
 
-  if (bsym.symbol && bsym.symbol->aclass () == LOC_BLOCK)
+  if (bsym.symbol && bsym.symbol->loc_class () == LOC_BLOCK)
     {
       yylval.ssym.sym = bsym;
       yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
@@ -3101,7 +3101,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	}
     }
 
-  if (bsym.symbol && bsym.symbol->aclass () == LOC_TYPEDEF)
+  if (bsym.symbol && bsym.symbol->loc_class () == LOC_TYPEDEF)
     {
       yylval.tsym.type = bsym.symbol->type ();
       return TYPENAME;
@@ -3196,7 +3196,7 @@ classify_inner_name (struct parser_state *par_state,
       return ERROR;
     }
 
-  switch (yylval.ssym.sym.symbol->aclass ())
+  switch (yylval.ssym.sym.symbol->loc_class ())
     {
     case LOC_BLOCK:
     case LOC_LABEL:

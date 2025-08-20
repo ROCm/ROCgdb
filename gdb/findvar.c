@@ -143,7 +143,7 @@ symbol_read_needs (struct symbol *sym)
 	}
     }
 
-  switch (sym->aclass ())
+  switch (sym->loc_class ())
     {
       /* All cases listed explicitly so that gcc -Wall will detect it if
 	 we failed to consider one.  */
@@ -323,7 +323,7 @@ language_defn::read_var_value (struct symbol *var,
   else if (sym_need == SYMBOL_NEEDS_REGISTERS && !target_has_registers ())
     error (_("Cannot read `%s' without registers"), var->print_name ());
 
-  switch (var->aclass ())
+  switch (var->loc_class ())
     {
     case LOC_CONST:
       if (is_dynamic_type (type))
@@ -446,7 +446,7 @@ language_defn::read_var_value (struct symbol *var,
 	const symbol_register_ops *reg_ops = var->register_ops ();
 	int regno = reg_ops->register_number (var, get_frame_arch (frame));
 
-	if (var->aclass () == LOC_REGPARM_ADDR)
+	if (var->loc_class () == LOC_REGPARM_ADDR)
 	  addr = value_as_address
 	    (value_from_register (lookup_pointer_type (type), regno, frame));
 	else

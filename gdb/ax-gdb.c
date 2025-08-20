@@ -525,7 +525,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
     return computed_ops->tracepoint_var_ref (var, ax, value);
 
   /* I'm imitating the code in read_var_value.  */
-  switch (var->aclass ())
+  switch (var->loc_class ())
     {
     case LOC_CONST:		/* A constant, like an enum value.  */
       ax_const_l (ax, (LONGEST) var->value_longest ());
@@ -538,8 +538,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
       break;
 
     case LOC_CONST_BYTES:
-      internal_error (_("gen_var_ref: LOC_CONST_BYTES "
-			"symbols are not supported"));
+      error (_("gen_var_ref: LOC_CONST_BYTES symbols are not supported"));
 
       /* Variable at a fixed location in memory.  Easy.  */
     case LOC_STATIC:

@@ -792,7 +792,7 @@ change_section (const char *name,
 	= match_p->linked_to_symbol_name;
 
       bfd_set_section_flags (sec, flags);
-      if (flags & (SEC_MERGE | SEC_STRINGS))
+      if (entsize != 0)
 	sec->entsize = entsize;
       elf_group_name (sec) = match_p->group_name;
 
@@ -847,7 +847,7 @@ change_section (const char *name,
 	       processor or application specific attribute as suspicious?  */
 	    elf_section_flags (sec) = attr;
 
-	  if ((flags & (SEC_MERGE | SEC_STRINGS))
+	  if (entsize != 0
 	      && old_sec->entsize != (unsigned) entsize)
 	    as_bad (_("changed section entity size for %s"), name);
 	}
@@ -870,8 +870,9 @@ obj_elf_change_section (const char *name,
 }
 
 static bfd_vma
-obj_elf_parse_section_letters (char *str, size_t len,
-			       bool *is_clone, int *inherit, bfd_vma *gnu_attr)
+obj_elf_parse_section_letters (char *str, size_t len, bool push,
+			       bool *is_clone, int *inherit, bfd_vma *gnu_attr,
+			       bool *has_entsize)
 {
   bfd_vma attr = 0;
 
@@ -896,6 +897,11 @@ obj_elf_parse_section_letters (char *str, size_t len,
 		}
 	    }
 	  break;
+	case 'd':
+	  if (gnu_attr == NULL)
+	    goto unrecognized;
+	  *gnu_attr |= SHF_GNU_MBIND;
+	  break;
 	case 'e':
 	  attr |= SHF_EXCLUDE;
 	  break;
@@ -908,33 +914,36 @@ obj_elf_parse_section_letters (char *str, size_t len,
 	case 'x':
 	  attr |= SHF_EXECINSTR;
 	  break;
-	case 'M':
-	  attr |= SHF_MERGE;
-	  break;
-	case 'S':
-	  attr |= SHF_STRINGS;
+	case 'E':
+	  *has_entsize = true;
 	  break;
 	case 'G':
 	  attr |= SHF_GROUP;
 	  break;
-	case 'T':
-	  attr |= SHF_TLS;
-	  break;
-	case 'd':
-	  *gnu_attr |= SHF_GNU_MBIND;
+	case 'M':
+	  attr |= SHF_MERGE;
 	  break;
 	case 'R':
+	  if (gnu_attr == NULL)
+	    goto unrecognized;
 	  *gnu_attr |= SHF_GNU_RETAIN;
+	  break;
+	case 'S':
+	  attr |= SHF_STRINGS;
+	  break;
+	case 'T':
+	  attr |= SHF_TLS;
 	  break;
 	case '?':
 	  *is_clone = true;
 	  break;
 	default:
+	unrecognized:
 	  {
-	    const char *bad_msg = _("unrecognized .section attribute:"
-				    " want a,e,o,w,x,M,S,G,T or number");
+	    const char *md_extra = "";
+
 #ifdef md_elf_section_letter
-	    bfd_vma md_attr = md_elf_section_letter (*str, &bad_msg);
+	    bfd_vma md_attr = md_elf_section_letter (*str, &md_extra);
 	    if (md_attr != (bfd_vma) -1)
 	      attr |= md_attr;
 	    else
@@ -942,22 +951,14 @@ obj_elf_parse_section_letters (char *str, size_t len,
 	      if (ISDIGIT (*str))
 		{
 		  char * end;
-		  const struct elf_backend_data *bed;
 		  bfd_vma numeric_flags = strtoul (str, &end, 0);
 
 		  attr |= numeric_flags;
 
-		  bed = get_elf_backend_data (stdoutput);
-
-		  if (bed->elf_osabi == ELFOSABI_NONE
-		      || bed->elf_osabi == ELFOSABI_STANDALONE
-		      || bed->elf_osabi == ELFOSABI_GNU
-		      || bed->elf_osabi == ELFOSABI_FREEBSD)
+		  if (gnu_attr != NULL)
 		    {
 		      /* Add flags in the SHF_MASKOS range to gnu_attr for
 			 OSABIs that support those flags.
-			 Also adding the flags for ELFOSABI_{NONE,STANDALONE}
-			 allows them to be validated later in obj_elf_section.
 			 We can't just always set these bits in gnu_attr for
 			 all OSABIs, since Binutils does not recognize all
 			 SHF_MASKOS bits for non-GNU OSABIs.  It's therefore
@@ -973,10 +974,19 @@ obj_elf_parse_section_letters (char *str, size_t len,
 		  len -= (end - str);
 		  str = end;
 		}
-	      else if (!attr && !*gnu_attr && (*str == '+' || *str == '-'))
+	      else if (!*inherit && !attr
+		       && (gnu_attr == NULL || !*gnu_attr)
+		       && (*str == '+' || *str == '-'))
 		*inherit = *str == '+' ? 1 : -1;
 	      else
-		as_fatal ("%s", bad_msg);
+		{
+		  as_bad (_("unrecognized .%ssection attribute: want %s%s%s,? or number"),
+		    push ? "push" : "",
+		    gnu_attr != NULL ? "a,d,e,o,w,x,E,G,M,R,S,T"
+				     : "a,e,o,w,x,E,G,M,S,T",
+		    md_extra != NULL ? "," : "", md_extra);
+		  return attr;
+		}
 	  }
 	  break;
 	}
@@ -1181,7 +1191,7 @@ obj_elf_section (int push)
   bfd_vma attr;
   bfd_vma gnu_attr;
   int entsize;
-  bool linkonce;
+  bool linkonce, has_entsize;
   subsegT new_subsection = 0;
   struct elf_section_match match;
   unsigned long linked_to_section_index = -1UL;
@@ -1226,6 +1236,7 @@ obj_elf_section (int push)
   attr = 0;
   gnu_attr = 0;
   entsize = 0;
+  has_entsize = false;
   linkonce = 0;
 
   if (*input_line_pointer == ',')
@@ -1261,8 +1272,17 @@ obj_elf_section (int push)
 	      ignore_rest_of_line ();
 	      return;
 	    }
-	  attr = obj_elf_parse_section_letters (beg, strlen (beg), &is_clone,
-						&inherit, &gnu_attr);
+
+	  const struct elf_backend_data *bed = get_elf_backend_data (stdoutput);
+	  attr = obj_elf_parse_section_letters (beg, strlen (beg), push,
+						&is_clone, &inherit,
+						bed->elf_osabi == ELFOSABI_NONE
+						|| (bed->elf_osabi
+						    == ELFOSABI_GNU)
+						|| (bed->elf_osabi
+						    == ELFOSABI_FREEBSD)
+						? &gnu_attr : NULL,
+						&has_entsize);
 
 	  if (inherit > 0)
 	    attr |= elf_section_flags (now_seg);
@@ -1270,6 +1290,9 @@ obj_elf_section (int push)
 	    attr = elf_section_flags (now_seg) & ~attr;
 	  if (inherit)
 	    type = elf_section_type (now_seg);
+
+	  if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0)
+	    has_entsize = true;
 
 	  SKIP_WHITESPACE ();
 	  if (*input_line_pointer == ',')
@@ -1310,16 +1333,18 @@ obj_elf_section (int push)
 	    }
 
 	  SKIP_WHITESPACE ();
-	  if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0
-	      && *input_line_pointer == ',')
+	  if (has_entsize && *input_line_pointer == ',')
 	    {
 	      ++input_line_pointer;
 	      SKIP_WHITESPACE ();
 	      if (inherit && *input_line_pointer == ','
+		  && ((bfd_section_flags (now_seg)
+		       & (SEC_MERGE | SEC_STRINGS)) != 0
+		      || now_seg->entsize))
+		goto fetch_entsize;
+	      if (is_end_of_stmt (*input_line_pointer)
 		  && (bfd_section_flags (now_seg)
 		      & (SEC_MERGE | SEC_STRINGS)) != 0)
-		goto fetch_entsize;
-	      if (is_end_of_stmt (*input_line_pointer))
 		{
 		  /* ??? This is here for older versions of gcc that
 		     test for gas string merge support with
@@ -1327,7 +1352,7 @@ obj_elf_section (int push)
 		     Unfortunately '@' begins a comment on arm.
 		     This isn't as_warn because gcc tests with
 		     --fatal-warnings. */
-		  as_tsktsk (_("missing merge / string entity size, 1 assumed"));
+		  as_tsktsk (_("missing section entity size, 1 assumed"));
 		  entsize = 1;
 		}
 	      else
@@ -1336,15 +1361,17 @@ obj_elf_section (int push)
 		  SKIP_WHITESPACE ();
 		  if (entsize <= 0)
 		    {
-		      as_warn (_("invalid merge / string entity size"));
+		      as_warn (_("invalid section entity size"));
 		      attr &= ~(SHF_MERGE | SHF_STRINGS);
+		      has_entsize = false;
 		      entsize = 0;
 		    }
 		}
 	    }
-	  else if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0 && inherit
-		    && (bfd_section_flags (now_seg)
-			& (SEC_MERGE | SEC_STRINGS)) != 0)
+	  else if (has_entsize && inherit
+		    && ((bfd_section_flags (now_seg)
+			 & (SEC_MERGE | SEC_STRINGS)) != 0
+			|| now_seg->entsize))
 	    {
 	    fetch_entsize:
 	      entsize = now_seg->entsize;
@@ -1355,6 +1382,7 @@ obj_elf_section (int push)
 		 entsize must be specified if SHF_MERGE is set.  */
 	      as_warn (_("entity size for SHF_MERGE not specified"));
 	      attr &= ~(SHF_MERGE | SHF_STRINGS);
+	      has_entsize = false;
 	    }
 	  else if ((attr & SHF_STRINGS) != 0)
 	    {
@@ -1363,6 +1391,11 @@ obj_elf_section (int push)
 		 so we have to default this silently for
 		 compatibility.  */
 	      entsize = 1;
+	    }
+	  else if (has_entsize)
+	    {
+	      as_warn (_("entity size not specified"));
+	      has_entsize = false;
 	    }
 
 	  if ((attr & (SHF_MERGE | SHF_STRINGS)) != 0 && type == SHT_NOBITS)
@@ -1572,28 +1605,17 @@ obj_elf_section (int push)
 
   if ((gnu_attr & (SHF_GNU_MBIND | SHF_GNU_RETAIN)) != 0)
     {
-      const struct elf_backend_data *bed;
       bool mbind_p = (gnu_attr & SHF_GNU_MBIND) != 0;
 
       if (mbind_p && (attr & SHF_ALLOC) == 0)
 	as_bad (_("SHF_ALLOC isn't set for GNU_MBIND section: %s"), name);
 
-      bed = get_elf_backend_data (stdoutput);
+      if (mbind_p)
+	elf_tdata (stdoutput)->has_gnu_osabi |= elf_gnu_osabi_mbind;
+      if ((gnu_attr & SHF_GNU_RETAIN) != 0)
+	elf_tdata (stdoutput)->has_gnu_osabi |= elf_gnu_osabi_retain;
 
-      if (bed->elf_osabi != ELFOSABI_GNU
-	  && bed->elf_osabi != ELFOSABI_FREEBSD
-	  && bed->elf_osabi != ELFOSABI_NONE)
-	as_bad (_("%s section is supported only by GNU and FreeBSD targets"),
-		mbind_p ? "GNU_MBIND" : "GNU_RETAIN");
-      else
-	{
-	  if (mbind_p)
-	    elf_tdata (stdoutput)->has_gnu_osabi |= elf_gnu_osabi_mbind;
-	  if ((gnu_attr & SHF_GNU_RETAIN) != 0)
-	    elf_tdata (stdoutput)->has_gnu_osabi |= elf_gnu_osabi_retain;
-
-	  attr |= gnu_attr;
-	}
+      attr |= gnu_attr;
     }
 
   change_section (name, type, attr, entsize, &match, linkonce, push,

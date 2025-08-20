@@ -19,6 +19,7 @@
 
 #include "annotate.h"
 #include "exceptions.h"
+#include "gdbsupport/common-inferior.h"
 #include "top.h"
 #include "ui.h"
 #include "target.h"
@@ -1330,10 +1331,8 @@ captured_main_1 (struct captured_main_args *context)
 }
 
 static void
-captured_main (void *data)
+captured_main (captured_main_args *context)
 {
-  struct captured_main_args *context = (struct captured_main_args *) data;
-
   captured_main_1 (context);
 
   /* NOTE: cagney/1999-11-07: There is probably no reason for not

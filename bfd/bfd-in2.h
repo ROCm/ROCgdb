@@ -166,6 +166,14 @@ startswith (const char *str, const char *prefix)
   return strncmp (str, prefix, strlen (prefix)) == 0;
 }
 
+/* Return true if plugin is enabled.  */
+
+static inline bool
+bfd_plugin_enabled (void)
+{
+  return BFD_SUPPORTS_PLUGINS != 0;
+}
+
 /* Extracted from libbfd.c.  */
 void *bfd_alloc (bfd *abfd, bfd_size_type wanted);
 
@@ -2142,9 +2150,6 @@ struct bfd
 
   /* Set if this is the linker input BFD.  */
   unsigned int is_linker_input : 1;
-
-  /* Set if this is the strip input BFD.  */
-  unsigned int is_strip_input : 1;
 
   /* If this is an input for a compiler plug-in library.  */
   ENUM_BITFIELD (bfd_plugin_format) plugin_format : 2;

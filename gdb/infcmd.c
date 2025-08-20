@@ -26,6 +26,7 @@
 #include "inferior.h"
 #include "infrun.h"
 #include "gdbsupport/environ.h"
+#include "gdbsupport/common-inferior.h"
 #include "value.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
@@ -986,7 +987,7 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 	  if (inline_skipped_frames (tp) > 0)
 	    {
 	      const symbol *sym = inline_skipped_symbol (tp);
-	      if (sym->aclass () == LOC_BLOCK)
+	      if (sym->loc_class () == LOC_BLOCK)
 		{
 		  const block *block = sym->value_block ();
 		  if (block->end () < tp->control.step_range_end)
