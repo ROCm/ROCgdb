@@ -25,7 +25,7 @@ require allow_hipcc_tests allow_python_tests
 standard_testfile .cpp -size.cpp
 
 proc get_shared_size {} {
-    if {[build_executable "failed to prepare" $::testfile $::srcfile2 {hip}]} {
+    if {[build_executable "failed to prepare" $::testfile $::srcfile2 {debug hip}]} {
 	return
     }
 
