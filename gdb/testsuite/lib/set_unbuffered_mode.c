@@ -19,8 +19,8 @@
 
 #include <stdio.h>
 
-static int __gdb_set_unbuffered_output (void) __attribute__ ((constructor));
-static int
+static void __gdb_set_unbuffered_output (void) __attribute__ ((constructor));
+static void
 __gdb_set_unbuffered_output (void)
 {
   setvbuf (stdout, NULL, _IONBF, BUFSIZ);
