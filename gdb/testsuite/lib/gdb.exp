@@ -5877,6 +5877,26 @@ proc gdb_compile {source dest type options} {
     global objdir
     global gdb_saved_set_unbuffered_mode_obj
 
+    if {[lsearch -exact $options hip] != -1
+	&& [istarget "*-*-mingw*"]} {
+	# target_compile by default links with -lm, if the target
+	# board does not have 'mathlib' set to point to an alternative
+	# math library.  Windows HIPCC targets the MSVC ABI and uses
+	# the MSVC headers and libraries, and there is no separate
+	# math lib in that case, the math functions are found in the C
+	# runtime library instead.  If mathlib is not set already in
+	# the target board, set it to empty and recurse, to override
+	# target_compile's default.
+	global board
+	set board [target_info name]
+	if {![board_info $board exists mathlib]} {
+	    set_board_info mathlib ""
+	    set result [gdb_compile $source $dest $type $options]
+	    unset_board_info mathlib
+	    return $result
+	}
+    }
+
     set outdir [file dirname $dest]
 
     # If this is set, calling test_compiler_info will cause recursion.
