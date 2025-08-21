@@ -469,6 +469,12 @@ enum option_values
   OPTION_NO_LITERAL_MOVEMENT,
   OPTION_ABI_WINDOWED,
   OPTION_ABI_CALL0,
+  /* Used by emultempl/elf-x86-glibc.em.  */
+  OPTION_GNU2_TLS_VERSION_TAG,
+  OPTION_NO_GNU2_TLS_VERSION_TAG,
+  /* Used by emultempl/elf-i386-glibc.em.  */
+  OPTION_GNU_TLS_VERSION_TAG,
+  OPTION_NO_GNU_TLS_VERSION_TAG,
 };
 
 /* The initial parser states.  */

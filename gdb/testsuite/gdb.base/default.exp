@@ -774,7 +774,7 @@ set show_conv_list \
 	{$_gdb_setting = <internal function _gdb_setting>} \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \
-	{$_active_linker_namespaces = 1} \
+	{$_linker_namespace_count = 0} \
 	{$_linker_namespace = <error: No registers.>}\
 	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
     }

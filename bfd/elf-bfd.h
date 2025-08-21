@@ -2631,8 +2631,8 @@ extern bool _bfd_elf_link_output_relocs
   (bfd *, asection *, Elf_Internal_Shdr *, Elf_Internal_Rela *,
    struct elf_link_hash_entry **);
 
-extern void _bfd_elf_link_add_glibc_version_dependency
-  (struct elf_find_verdep_info *, const char *const []);
+extern bool _bfd_elf_link_add_glibc_version_dependency
+  (struct elf_find_verdep_info *, const char *const [], bool *);
 
 extern void _bfd_elf_link_add_dt_relr_dependency
   (struct elf_find_verdep_info *);
