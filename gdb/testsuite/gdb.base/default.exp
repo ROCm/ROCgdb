@@ -777,6 +777,7 @@ set show_conv_list \
 	{$_linker_namespace_count = 0} \
 	{$_linker_namespace = <error: No registers.>}\
 	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
+	{$_wave_id = void} \
     }
 if [allow_python_tests] {
     append show_conv_list \
