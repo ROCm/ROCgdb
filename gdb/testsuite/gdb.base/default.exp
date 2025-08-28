@@ -702,6 +702,7 @@ set show_conv_list \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \
 	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
+	{$_wave_id = void} \
     }
 if [allow_python_tests] {
     append show_conv_list \
