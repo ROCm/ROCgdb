@@ -2785,66 +2785,47 @@ strncmp_iw_with_mode_tests ()
   check_scope_operator (language_fortran);
   check_scope_operator (language_rust);
 
-  /* Test C++ user-defined operators.  */
-  CHECK_MATCH_LANG ("operator foo(int&)", "operator foo(int &)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo(int &)", "operator foo(int &)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo(int\t&)", "operator foo(int\t&)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo (int)", "operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo\t(int)", "operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo \t(int)", "operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo (int)", "operator foo \t(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo\t(int)", "operator foo \t(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("operator foo \t(int)", "operator foo \t(int)", NORMAL,
-		    language_cplus);
+  /* Test user-defined operators in C++ and its other dialects.  */
+  auto user_def_ops_test = [] (enum language lang)
+    {
+#define MATCH(s1, s2) CHECK_MATCH_LANG (s1, s2, NORMAL, lang)
+#define NOMATCH(s1, s2) CHECK_NO_MATCH_LANG (s1, s2, NORMAL, lang)
+      MATCH ("operator foo(int&)", "operator foo(int &)");
+      MATCH ("operator foo(int &)", "operator foo(int &)");
+      MATCH ("operator foo(int\t&)", "operator foo(int\t&)");
+      MATCH ("operator foo (int)", "operator foo(int)");
+      MATCH ("operator foo\t(int)", "operator foo(int)");
+      MATCH ("operator foo \t(int)", "operator foo(int)");
+      MATCH ("operator foo (int)", "operator foo \t(int)");
+      MATCH ("operator foo\t(int)", "operator foo \t(int)");
+      MATCH ("operator foo \t(int)", "operator foo \t(int)");
 
-  CHECK_MATCH_LANG ("a::operator foo(int&)", "a::operator foo(int &)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a :: operator foo(int &)", "a::operator foo(int &)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a \t:: \toperator foo(int\t&)", "a::operator foo(int\t&)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo (int)", "a::operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo\t(int)", "a::operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo \t(int)", "a::operator foo(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo (int)", "a::operator foo \t(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo\t(int)", "a::operator foo \t(int)", NORMAL,
-		    language_cplus);
-  CHECK_MATCH_LANG ("a::operator foo \t(int)", "a::operator foo \t(int)", NORMAL,
-		    language_cplus);
+      MATCH ("a::operator foo(int&)", "a::operator foo(int &)");
+      MATCH ("a :: operator foo(int &)", "a::operator foo(int &)");
+      MATCH ("a \t:: \toperator foo(int\t&)", "a::operator foo(int\t&)");
+      MATCH ("a::operator foo (int)", "a::operator foo(int)");
+      MATCH ("a::operator foo\t(int)", "a::operator foo(int)");
+      MATCH ("a::operator foo \t(int)", "a::operator foo(int)");
+      MATCH ("a::operator foo (int)", "a::operator foo \t(int)");
+      MATCH ("a::operator foo\t(int)", "a::operator foo \t(int)");
+      MATCH ("a::operator foo \t(int)", "a::operator foo \t(int)");
 
-  CHECK_NO_MATCH_LANG ("operator foo(int)", "operator foo(char)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("operator foo(int)", "operator foo(int *)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("operator foo(int)", "operator foo(int &)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("operator foo(int)", "operator foo(int, char *)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("operator foo(int)", "operator bar(int)", NORMAL,
-		       language_cplus);
+      NOMATCH ("operator foo(int)", "operator foo(char)");
+      NOMATCH ("operator foo(int)", "operator foo(int *)");
+      NOMATCH ("operator foo(int)", "operator foo(int &)");
+      NOMATCH ("operator foo(int)", "operator foo(int, char *)");
+      NOMATCH ("operator foo(int)", "operator bar(int)");
 
-  CHECK_NO_MATCH_LANG ("a::operator b::foo(int)", "a::operator a::foo(char)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("a::operator foo(int)", "a::operator foo(int *)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("a::operator foo(int)", "a::operator foo(int &)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("a::operator foo(int)", "a::operator foo(int, char *)", NORMAL,
-		       language_cplus);
-  CHECK_NO_MATCH_LANG ("a::operator foo(int)", "a::operator bar(int)", NORMAL,
-		       language_cplus);
+      NOMATCH ("a::operator b::foo(int)", "a::operator a::foo(char)");
+      NOMATCH ("a::operator foo(int)", "a::operator foo(int *)");
+      NOMATCH ("a::operator foo(int)", "a::operator foo(int &)");
+      NOMATCH ("a::operator foo(int)", "a::operator foo(int, char *)");
+      NOMATCH ("a::operator foo(int)", "a::operator bar(int)");
+#undef NOMATCH
+#undef MATCH
+    };
+
+  user_def_ops_test (language_cplus);
 
   /* Skip "[abi:cxx11]" tags in the symbol name if the lookup name
      doesn't include them.  These are not language-specific in
