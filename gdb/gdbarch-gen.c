@@ -251,7 +251,6 @@ struct gdbarch
   gdbarch_gen_return_address_ftype *gen_return_address = default_gen_return_address;
   gdbarch_info_proc_ftype *info_proc = nullptr;
   gdbarch_core_info_proc_ftype *core_info_proc = nullptr;
-  gdbarch_iterate_over_objfiles_in_search_order_ftype *iterate_over_objfiles_in_search_order = default_iterate_over_objfiles_in_search_order;
   struct ravenscar_arch_ops * ravenscar_ops = NULL;
   gdbarch_insn_is_call_ftype *insn_is_call = default_insn_is_call;
   gdbarch_insn_is_ret_ftype *insn_is_ret = default_insn_is_ret;
@@ -545,7 +544,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of gen_return_address, invalid_p == 0.  */
   /* Skip verify of info_proc, has predicate.  */
   /* Skip verify of core_info_proc, has predicate.  */
-  /* Skip verify of iterate_over_objfiles_in_search_order, invalid_p == 0.  */
   /* Skip verify of ravenscar_ops, invalid_p == 0.  */
   /* Skip verify of insn_is_call, invalid_p == 0.  */
   /* Skip verify of insn_is_ret, invalid_p == 0.  */
@@ -1411,9 +1409,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: core_info_proc = <%s>\n",
 	      host_address_to_string (gdbarch->core_info_proc));
-  gdb_printf (file,
-	      "gdbarch_dump: iterate_over_objfiles_in_search_order = <%s>\n",
-	      host_address_to_string (gdbarch->iterate_over_objfiles_in_search_order));
   gdb_printf (file,
 	      "gdbarch_dump: ravenscar_ops = %s\n",
 	      host_address_to_string (gdbarch->ravenscar_ops));
@@ -3728,13 +3723,13 @@ set_gdbarch_skip_trampoline_code (struct gdbarch *gdbarch,
 }
 
 solib_ops_up
-gdbarch_make_solib_ops (struct gdbarch *gdbarch)
+gdbarch_make_solib_ops (struct gdbarch *gdbarch, program_space *pspace)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->make_solib_ops != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_make_solib_ops called\n");
-  return gdbarch->make_solib_ops ();
+  return gdbarch->make_solib_ops (pspace);
 }
 
 void
@@ -5437,13 +5432,13 @@ gdbarch_core_info_proc_p (struct gdbarch *gdbarch)
 }
 
 void
-gdbarch_core_info_proc (struct gdbarch *gdbarch, const char *args, enum info_proc_what what)
+gdbarch_core_info_proc (struct gdbarch *gdbarch, struct bfd *cbfd, const char *args, enum info_proc_what what)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_info_proc != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_info_proc called\n");
-  gdbarch->core_info_proc (gdbarch, args, what);
+  gdbarch->core_info_proc (gdbarch, cbfd, args, what);
 }
 
 void
@@ -5451,23 +5446,6 @@ set_gdbarch_core_info_proc (struct gdbarch *gdbarch,
 			    gdbarch_core_info_proc_ftype core_info_proc)
 {
   gdbarch->core_info_proc = core_info_proc;
-}
-
-void
-gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype cb, struct objfile *current_objfile)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->iterate_over_objfiles_in_search_order != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_iterate_over_objfiles_in_search_order called\n");
-  gdbarch->iterate_over_objfiles_in_search_order (gdbarch, cb, current_objfile);
-}
-
-void
-set_gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch,
-						   gdbarch_iterate_over_objfiles_in_search_order_ftype iterate_over_objfiles_in_search_order)
-{
-  gdbarch->iterate_over_objfiles_in_search_order = iterate_over_objfiles_in_search_order;
 }
 
 struct ravenscar_arch_ops *

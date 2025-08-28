@@ -1574,7 +1574,7 @@ Function(
     comment="Return a newly-allocated solib_ops object capable of providing the solibs for this architecture.",
     type="solib_ops_up",
     name="make_solib_ops",
-    params=[],
+    params=[("program_space *", "pspace")],
     predefault="make_target_solib_ops",
     invalid=False,
 )
@@ -2703,33 +2703,16 @@ Method(
     comment="""
 Implement the "info proc" command for core files.  Note that there
 are two "info_proc"-like methods on gdbarch -- one for core files,
-one for live targets.
+one for live targets.  CBFD is the core file being read from.
 """,
     type="void",
     name="core_info_proc",
-    params=[("const char *", "args"), ("enum info_proc_what", "what")],
-    predicate=True,
-)
-
-Method(
-    comment="""
-Iterate over all objfiles in the order that makes the most sense
-for the architecture to make global symbol searches.
-
-CB is a callback function passed an objfile to be searched.  The iteration stops
-if this function returns nonzero.
-
-If not NULL, CURRENT_OBJFILE corresponds to the objfile being
-inspected when the symbol search was requested.
-""",
-    type="void",
-    name="iterate_over_objfiles_in_search_order",
     params=[
-        ("iterate_over_objfiles_in_search_order_cb_ftype", "cb"),
-        ("struct objfile *", "current_objfile"),
+        ("struct bfd *", "cbfd"),
+        ("const char *", "args"),
+        ("enum info_proc_what", "what"),
     ],
-    predefault="default_iterate_over_objfiles_in_search_order",
-    invalid=False,
+    predicate=True,
 )
 
 Value(

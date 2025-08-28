@@ -473,6 +473,18 @@ solib_ops::bfd_open (const char *pathname) const
   return solib_bfd_open (pathname);
 }
 
+/* See solib.h.  */
+
+void
+solib_ops::iterate_over_objfiles_in_search_order
+  (iterate_over_objfiles_in_search_order_cb_ftype cb,
+   objfile *current_objfile) const
+{
+  for (objfile *objfile : m_pspace->objfiles ())
+    if (cb (objfile))
+      return;
+}
+
 /* Given a pointer to one of the shared objects in our list of mapped
    objects, use the recorded name to open a bfd descriptor for the
    object, build a section table, relocate all the section addresses
@@ -633,15 +645,12 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
 	  /* Have we already loaded this shared object?  */
 	  so.objfile = nullptr;
 	  for (objfile *objfile : current_program_space->objfiles ())
-	    {
-	      if (filename_cmp (objfile_name (objfile), so.name.c_str ())
-		    == 0
-		  && objfile->addr_low == so.addr_low)
-		{
-		  so.objfile = objfile;
-		  break;
-		}
-	    }
+	    if (objfile->addr_low == so.addr_low)
+	      {
+		so.objfile = objfile;
+		break;
+	      }
+
 	  if (so.objfile == NULL)
 	    {
 	      section_addr_info sap
@@ -1045,7 +1054,7 @@ print_solib_list_table (std::vector<const solib *> solib_list,
     uiout->table_header (addr_width - 1, ui_left, "from", "From");
     uiout->table_header (addr_width - 1, ui_left, "to", "To");
     if (print_namespace)
-      uiout->table_header (5, ui_left, "namespace", "NS");
+      uiout->table_header (9, ui_left, "namespace", "Linker NS");
     uiout->table_header (12 - 1, ui_left, "syms-read", "Syms Read");
     uiout->table_header (0, ui_noalign, "name", "Shared Object Library");
 
@@ -1073,7 +1082,7 @@ print_solib_list_table (std::vector<const solib *> solib_list,
 	  {
 	    try
 	      {
-		uiout->field_fmt ("namespace", "[[%d]]", ops->find_solib_ns (*so));
+		uiout->field_fmt ("namespace", "%d", ops->find_solib_ns (*so));
 	      }
 	    catch (const gdb_exception_error &er)
 	      {
@@ -1171,7 +1180,7 @@ info_linker_namespace_command (const char *pattern, int from_tty)
 
   if (pattern == nullptr || pattern[0] == '\0')
     {
-      uiout->message (_("There are %d linker namespaces loaded\n"),
+      uiout->message (_("There are %d linker namespaces loaded.\n"),
 		      ops->num_active_namespaces ());
 
       int printed = 0;
@@ -1208,27 +1217,26 @@ info_linker_namespace_command (const char *pattern, int from_tty)
 	(std::make_pair (ns, ops->get_solibs_in_ns (ns)));
     }
 
-  bool ns_separator = false;
-
   for (const auto &[ns, solibs_to_print] : all_solibs_to_print)
     {
-      if (ns_separator)
-	uiout->message ("\n\n");
-      else
-	ns_separator = true;
+      uiout->message ("\n");
 
       if (solibs_to_print.size () == 0)
 	{
-	  uiout->message (_("Linker namespace [[%d]] is not active.\n"), ns);
+	  uiout->message (_("Linker namespace %d is not active.\n"), ns);
 	  /* If we got here, a specific namespace was requested, so there
 	     will only be one vector.  We can leave early.  */
 	  break;
 	}
-      uiout->message
-	(_("There are %zu libraries loaded in linker namespace [[%d]]\n"),
-	 solibs_to_print.size (), ns);
-      uiout->message
-	(_("Displaying libraries for linker namespace [[%d]]:\n"), ns);
+
+      if (solibs_to_print.size () == 1)
+	uiout->message
+	  (_("1 library loaded in linker namespace %d:\n"), ns);
+      else
+	uiout->message
+	  (_("%zu libraries loaded in linker namespace %d:\n"),
+	   solibs_to_print.size (), ns);
+
 
       print_solib_list_table (solibs_to_print, false);
     }

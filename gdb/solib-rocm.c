@@ -173,8 +173,8 @@ struct rocm_solib_ops : public solib_ops
 {
   /* HOST_OPS is the host solib_ops that rocm_solib_ops hijacks / wraps,
      in order to provide support for ROCm code objects.  */
-  explicit rocm_solib_ops (solib_ops_up host_ops)
-    : m_host_ops (std::move (host_ops))
+  explicit rocm_solib_ops (program_space *pspace, solib_ops_up host_ops)
+    : solib_ops (pspace), m_host_ops (std::move (host_ops))
   {
   }
 
@@ -223,6 +223,14 @@ struct rocm_solib_ops : public solib_ops
 
   std::vector<const solib *> get_solibs_in_ns (int nsid) const override
   { return m_host_ops->get_solibs_in_ns (nsid); }
+
+  void iterate_over_objfiles_in_search_order
+    (iterate_over_objfiles_in_search_order_cb_ftype cb,
+     objfile *current_objfile) const override
+  {
+    return m_host_ops->iterate_over_objfiles_in_search_order
+      (cb, current_objfile);
+  }
 
 private:
   owning_intrusive_list<solib>
@@ -801,7 +809,8 @@ rocm_update_solib_list ()
 
       gdb::unique_xmalloc_ptr<char> uri_bytes_holder (uri_bytes);
 
-      lm_info_svr4_up li = std::make_unique<lm_info_svr4> ();
+      /* Pass a dummy debug base.  */
+      lm_info_svr4_up li = std::make_unique<lm_info_svr4> (-1);
       li->l_addr = l_addr;
 
       /* Generate a unique name so that code objects with the same URI but
@@ -820,7 +829,8 @@ rocm_solib_target_inferior_created (inferior *inf)
   get_solib_info (inf)->solib_list.clear ();
 
   auto prev_ops = inf->pspace->release_solib_ops ();
-  auto rocm_ops = std::make_unique<rocm_solib_ops> (std::move (prev_ops));
+  auto rocm_ops
+    = std::make_unique<rocm_solib_ops> (inf->pspace, std::move (prev_ops));
   inf->pspace->set_solib_ops (std::move (rocm_ops));
 
   rocm_update_solib_list ();
@@ -838,9 +848,11 @@ rocm_solib_target_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   if (get_amd_dbgapi_process_id (follow_inf) == AMD_DBGAPI_PROCESS_NONE)
     return;
 
-  auto prev_ops = follow_inf->pspace->release_solib_ops ();
-  auto rocm_ops = std::make_unique<rocm_solib_ops> (std::move (prev_ops));
-  follow_inf->pspace->set_solib_ops (std::move (rocm_ops));
+  auto pspace = follow_inf->pspace;
+  auto prev_ops = pspace->release_solib_ops ();
+  auto rocm_ops
+    = std::make_unique<rocm_solib_ops> (pspace, std::move (prev_ops));
+  pspace->set_solib_ops (std::move (rocm_ops));
 
   get_solib_info (exec_inf)->solib_list.clear ();
 }

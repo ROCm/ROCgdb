@@ -808,10 +808,13 @@ core_file_command (const char *filename, int from_tty)
      .reg/1, .reg2/1, .reg/2, .reg2/2
 
    After calling this function the rest of the core file handling code can
-   treat this core file just like any other core file.  */
+   treat this core file just like any other core file.
+
+   CBFD is the core file being loaded, and INF is the inferior through
+   which the core file will be examined.  */
 
 static void
-rename_vmcore_idle_reg_sections (bfd *abfd, inferior *inf)
+rename_vmcore_idle_reg_sections (bfd *cbfd, inferior *inf)
 {
   /* Map from the bfd section to its lwpid (the /NN number).  */
   std::vector<std::pair<asection *, int>> sections_and_lwpids;
@@ -826,7 +829,7 @@ rename_vmcore_idle_reg_sections (bfd *abfd, inferior *inf)
   /* Look for all the .reg sections.  Record the section object and the
      lwpid which is extracted from the section name.  Spot if any have an
      lwpid of zero.  */
-  for (asection *sect : gdb_bfd_sections (current_program_space->core_bfd ()))
+  for (asection *sect : gdb_bfd_sections (cbfd))
     {
       if (startswith (bfd_section_name (sect), ".reg/"))
 	{
@@ -859,7 +862,7 @@ rename_vmcore_idle_reg_sections (bfd *abfd, inferior *inf)
   std::string replacement_lwpid_str;
   auto iter = sections_and_lwpids.begin ();
   int replacement_lwpid = 0;
-  for (asection *sect : gdb_bfd_sections (current_program_space->core_bfd ()))
+  for (asection *sect : gdb_bfd_sections (cbfd))
     {
       if (iter != sections_and_lwpids.end () && sect == iter->first)
 	{
@@ -897,7 +900,7 @@ rename_vmcore_idle_reg_sections (bfd *abfd, inferior *inf)
 				 static_cast<int> (len - 2),
 				 name, replacement_lwpid);
 	      char *name_buf
-		= static_cast<char *> (bfd_alloc (abfd, name_str.size () + 1));
+		= static_cast<char *> (bfd_alloc (cbfd, name_str.size () + 1));
 	      if (name_buf == nullptr)
 		error (_("failed to allocate space for section name '%s'"),
 		       name_str.c_str ());
@@ -1853,7 +1856,8 @@ core_target::info_proc (const char *args, enum info_proc_what request)
   /* Since this is the core file target, call the 'core_info_proc'
      method on gdbarch, not 'info_proc'.  */
   if (gdbarch_core_info_proc_p (gdbarch))
-    gdbarch_core_info_proc (gdbarch, args, request);
+    gdbarch_core_info_proc (gdbarch, current_program_space->core_bfd (),
+			    args, request);
 
   return true;
 }

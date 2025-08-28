@@ -902,8 +902,8 @@ extern void set_gdbarch_skip_trampoline_code (struct gdbarch *gdbarch, gdbarch_s
 
 /* Return a newly-allocated solib_ops object capable of providing the solibs for this architecture. */
 
-typedef solib_ops_up (gdbarch_make_solib_ops_ftype) ();
-extern solib_ops_up gdbarch_make_solib_ops (struct gdbarch *gdbarch);
+typedef solib_ops_up (gdbarch_make_solib_ops_ftype) (program_space *pspace);
+extern solib_ops_up gdbarch_make_solib_ops (struct gdbarch *gdbarch, program_space *pspace);
 extern void set_gdbarch_make_solib_ops (struct gdbarch *gdbarch, gdbarch_make_solib_ops_ftype *make_solib_ops);
 
 /* If in_solib_dynsym_resolve_code() returns true, and SKIP_SOLIB_RESOLVER
@@ -1716,26 +1716,13 @@ extern void set_gdbarch_info_proc (struct gdbarch *gdbarch, gdbarch_info_proc_ft
 
 /* Implement the "info proc" command for core files.  Note that there
    are two "info_proc"-like methods on gdbarch -- one for core files,
-   one for live targets. */
+   one for live targets.  CBFD is the core file being read from. */
 
 extern bool gdbarch_core_info_proc_p (struct gdbarch *gdbarch);
 
-typedef void (gdbarch_core_info_proc_ftype) (struct gdbarch *gdbarch, const char *args, enum info_proc_what what);
-extern void gdbarch_core_info_proc (struct gdbarch *gdbarch, const char *args, enum info_proc_what what);
+typedef void (gdbarch_core_info_proc_ftype) (struct gdbarch *gdbarch, struct bfd *cbfd, const char *args, enum info_proc_what what);
+extern void gdbarch_core_info_proc (struct gdbarch *gdbarch, struct bfd *cbfd, const char *args, enum info_proc_what what);
 extern void set_gdbarch_core_info_proc (struct gdbarch *gdbarch, gdbarch_core_info_proc_ftype *core_info_proc);
-
-/* Iterate over all objfiles in the order that makes the most sense
-   for the architecture to make global symbol searches.
-
-   CB is a callback function passed an objfile to be searched.  The iteration stops
-   if this function returns nonzero.
-
-   If not NULL, CURRENT_OBJFILE corresponds to the objfile being
-   inspected when the symbol search was requested. */
-
-typedef void (gdbarch_iterate_over_objfiles_in_search_order_ftype) (struct gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype cb, struct objfile *current_objfile);
-extern void gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype cb, struct objfile *current_objfile);
-extern void set_gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch, gdbarch_iterate_over_objfiles_in_search_order_ftype *iterate_over_objfiles_in_search_order);
 
 /* Ravenscar arch-dependent ops. */
 
