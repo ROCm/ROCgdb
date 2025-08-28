@@ -57,6 +57,7 @@ gdb_caching_proc find_amdgpu_devices {} {
     if {![gdb_simple_compile device_enumerator {
 	    #include <hip/hip_runtime.h>
 	    #include <stdio.h>
+	    #include <string.h>
 
 	    int
 	    main ()
@@ -67,7 +68,14 @@ gdb_caching_proc find_amdgpu_devices {} {
 		  {
 		    hipDeviceProp_t props;
 		    if (hipGetDeviceProperties (&props, i) == hipSuccess)
-		      printf ("%s\n", props.gcnArchName);
+		      {
+			/* Strip out the supported features list,
+			   like gfx90a:sramecc+:xnack-.  */
+			char *colon = strstr (props.gcnArchName, ":");
+			if (colon != nullptr)
+			  *colon = '\0';
+			printf ("%s\n", props.gcnArchName);
+		      }
 		  }
 	    }
 	} executable {hip}]} {
@@ -78,7 +86,7 @@ gdb_caching_proc find_amdgpu_devices {} {
     if {[lindex $result 0] == 0} {
 	set targets [lindex $result 1]
 	# Convert newline-separated string to a list.
-	return {*}$targets
+	return [list {*}$targets]
     }
 
     return {}
