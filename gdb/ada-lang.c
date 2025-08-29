@@ -13744,7 +13744,7 @@ public:
 	       -> "Xn::name(void)" and thus some Ada minimal symbols end up
 	       with the wrong language set.  Paper over that issue here.  */
 	    if (symbol_language == language_unknown
-		|| symbol_language == language_cplus)
+		|| is_cplus_dialect (symbol_language))
 	      symbol_language = language_ada;
 
 	    completion_list_add_name (tracker,

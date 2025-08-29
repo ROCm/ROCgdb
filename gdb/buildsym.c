@@ -522,7 +522,7 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
       struct subfile *s;
       language sublang = deduce_language_from_filename (subfile->name.c_str ());
 
-      if (sublang == language_cplus || sublang == language_fortran)
+      if (is_cplus_dialect (sublang) || sublang == language_fortran)
 	for (s = m_subfiles; s != NULL; s = s->next)
 	  if (s->language == language_c)
 	    s->language = sublang;
@@ -531,7 +531,7 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
   /* And patch up this file if necessary.  */
   if (subfile->language == language_c
       && m_subfiles != nullptr
-      && (m_subfiles->language == language_cplus
+      && (is_cplus_dialect (m_subfiles->language)
 	  || m_subfiles->language == language_fortran))
     subfile->language = m_subfiles->language;
 

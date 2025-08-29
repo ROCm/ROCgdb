@@ -564,7 +564,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	}
 
       if (abbrev->tag == DW_TAG_namespace
-	  && m_language == language_cplus
+	  && is_cplus_dialect (m_language)
 	  && strcmp (name, "::") == 0)
 	{
 	  /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they
@@ -582,7 +582,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
       if ((abbrev->tag == DW_TAG_class_type
 	   || abbrev->tag == DW_TAG_structure_type
 	   || abbrev->tag == DW_TAG_union_type)
-	  && m_language == language_cplus
+	  && is_cplus_dialect (m_language)
 	  && name == nullptr
 	  && linkage_name != nullptr)
 	{

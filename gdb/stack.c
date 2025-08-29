@@ -1282,7 +1282,7 @@ find_frame_funname (const frame_info_ptr &frame, enum language *funlang,
       *funlang = func->language ();
       if (funcp)
 	*funcp = func;
-      if (*funlang == language_cplus)
+      if (is_cplus_dialect (*funlang))
 	{
 	  /* It seems appropriate to use print_name() here,
 	     to display the demangled name that we already have
@@ -1511,7 +1511,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     {
       funname = func->print_name ();
       funlang = func->language ();
-      if (funlang == language_cplus)
+      if (is_cplus_dialect (funlang))
 	{
 	  /* It seems appropriate to use print_name() here,
 	     to display the demangled name that we already have

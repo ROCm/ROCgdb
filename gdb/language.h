@@ -765,7 +765,7 @@ struct symbol *
 /* "cast" really means conversion.  */
 /* FIXME -- should be a setting in language_defn.  */
 #define CAST_IS_CONVERSION(LANG) ((LANG)->la_language == language_c  || \
-				  (LANG)->la_language == language_cplus || \
+				  is_cplus_dialect ((LANG)->la_language) || \
 				  (LANG)->la_language == language_objc)
 
 /* Print out the current language settings: language, range and

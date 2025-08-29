@@ -196,7 +196,7 @@ cooked_index::get_main () const
 		 canonicalization, but again "main" is an
 		 exception.  */
 	      if ((entry->lang != language_ada
-		   && entry->lang != language_cplus)
+		   && !is_cplus_dialect (entry->lang))
 		  || strcmp (entry->name, "main") == 0)
 		{
 		  /* There won't be one better than this.  */

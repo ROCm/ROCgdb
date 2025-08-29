@@ -864,7 +864,7 @@ parse_symbol (SYMR *sh, union aux_ext *ax, char *ext_sh, int bigend,
 
       /* All functions in C++ have prototypes.  For C we don't have enough
 	 information in the debug info.  */
-      if (s->language () == language_cplus)
+      if (is_cplus_dialect (s->language ()))
 	s->type ()->set_is_prototyped (true);
 
       /* Create and enter a new lexical context.  */

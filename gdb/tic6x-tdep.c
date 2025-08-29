@@ -779,7 +779,7 @@ tic6x_return_value (struct gdbarch *gdbarch, struct value *function,
   /* In C++, when function returns an object, even its size is small
      enough, it stii has to be passed via reference, pointed by register
      A3.  */
-  if (current_language->la_language == language_cplus)
+  if (is_cplus_dialect (current_language->la_language))
     {
       if (type != NULL)
 	{

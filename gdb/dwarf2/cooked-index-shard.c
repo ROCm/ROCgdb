@@ -34,7 +34,7 @@ language_may_use_plain_main (enum language lang)
   /* No need to handle "unknown" here.  */
   return (lang == language_c
 	  || lang == language_objc
-	  || lang == language_cplus
+	  || is_cplus_dialect (lang)
 	  || lang == language_m2
 	  || lang == language_asm
 	  || lang == language_opencl
@@ -54,7 +54,7 @@ cooked_index_shard::create (sect_offset die_offset,
 {
   if (tag == DW_TAG_module || tag == DW_TAG_namespace)
     flags &= ~IS_STATIC;
-  else if (lang == language_cplus
+  else if (is_cplus_dialect (lang)
 	   && (tag == DW_TAG_class_type
 	       || tag == DW_TAG_interface_type
 	       || tag == DW_TAG_structure_type
@@ -274,7 +274,7 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 	    handle_gnat_encoded_entry (entry, gnat_entries.get (),
 				       new_gnat_entries);
 	}
-      else if (entry->lang == language_cplus || entry->lang == language_c)
+      else if (is_cplus_dialect (entry->lang) || entry->lang == language_c)
 	{
 	  auto [it, inserted] = seen_names.insert (entry);
 
@@ -283,7 +283,7 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 	      /* No entry with that name was present, compute the canonical
 		 name.  */
 	      gdb::unique_xmalloc_ptr<char> canon_name
-		= (entry->lang == language_cplus
+		= (is_cplus_dialect (entry->lang)
 		   ? cp_canonicalize_string (entry->name)
 		   : c_canonicalize_name (entry->name));
 	      if (canon_name == nullptr)
