@@ -91,10 +91,15 @@ run_tests ()
      lookup_name_info::make_paramless is well integrated with
      cp_remove_params_if_any.  gdb/cp-support.c has comprehensive
      testing of C++ specifics.  */
-  CHECK (language_cplus, "function()", "function");
-  CHECK (language_cplus, "function() const", "function");
-  CHECK (language_cplus, "A::B::C()", "A::B::C");
-  CHECK (language_cplus, "A::B::C", "A::B::C");
+  auto check_cpp_dialect = [] (enum language lang)
+    {
+      CHECK (lang, "function()", "function");
+      CHECK (lang, "function() const", "function");
+      CHECK (lang, "A::B::C()", "A::B::C");
+      CHECK (lang, "A::B::C", "A::B::C");
+    };
+
+  check_cpp_dialect (language_cplus);
 
 #undef CHECK
 #undef CHECK_INCOMPL
