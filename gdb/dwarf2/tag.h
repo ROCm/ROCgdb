@@ -95,7 +95,7 @@ tag_matches_domain (dwarf_tag tag, domain_search_flags search, language lang)
 	    || lang == language_opencl
 	    || lang == language_minimal)
 	  flags = SEARCH_STRUCT_DOMAIN;
-	else if (lang == language_cplus)
+	else if (is_cplus_dialect (lang))
 	  flags = SEARCH_STRUCT_DOMAIN | SEARCH_TYPE_DOMAIN;
 	else
 	  flags = SEARCH_TYPE_DOMAIN;

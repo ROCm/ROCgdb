@@ -372,7 +372,7 @@ value_user_defined_op (struct value **argp, gdb::array_view<value *> args,
 {
   struct value *result = NULL;
 
-  if (current_language->la_language == language_cplus)
+  if (is_cplus_dialect (current_language->la_language))
     {
       result = value_user_defined_cpp_op (args, name, static_memfuncp,
 					  noside);

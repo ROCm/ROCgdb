@@ -2429,7 +2429,7 @@ scan_xcoff_symtab (minimal_symbol_reader &reader,
 	       from C++ to C.  */
 	    if (tmp_language != language_unknown
 		&& (tmp_language != language_c
-		    || psymtab_language != language_cplus))
+		    || !is_cplus_dialect (psymtab_language)))
 	      psymtab_language = tmp_language;
 
 	    /* In C++, one may expect the same filename to come round many

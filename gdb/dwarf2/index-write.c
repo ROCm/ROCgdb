@@ -1208,7 +1208,7 @@ write_cooked_index (cooked_index *table,
 	  std::string encoded = ada_encode (name, false);
 	  name = obstack_strdup (symtab->obstack (), encoded.c_str ());
 	}
-      else if (entry->lang == language_cplus
+      else if (is_cplus_dialect (entry->lang)
 	       && (entry->flags & IS_LINKAGE) != 0)
 	{
 	  /* GDB never put C++ linkage names into .gdb_index.  The

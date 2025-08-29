@@ -553,7 +553,7 @@ cp_lookup_symbol_imports (const char *scope,
      scope, name, host_address_to_string (block),
      domain_name (domain).c_str ());
 
-  if (function != NULL && function->language () == language_cplus)
+  if (function != NULL && is_cplus_dialect (function->language ()))
     {
       /* Search the template parameters of the function's defining
 	 context.  */

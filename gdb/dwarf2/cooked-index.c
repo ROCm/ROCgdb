@@ -68,7 +68,7 @@ language_requires_canonicalization (enum language lang)
 {
   return (lang == language_ada
 	  || lang == language_c
-	  || lang == language_cplus);
+	  || is_cplus_dialect (lang));
 }
 
 /* Return true if a plain "main" could be the main program for this
@@ -81,7 +81,7 @@ language_may_use_plain_main (enum language lang)
   /* No need to handle "unknown" here.  */
   return (lang == language_c
 	  || lang == language_objc
-	  || lang == language_cplus
+	  || is_cplus_dialect (lang)
 	  || lang == language_m2
 	  || lang == language_asm
 	  || lang == language_opencl
@@ -399,14 +399,14 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 	entry->canonical = entry->name;
       else if (entry->lang == language_ada)
 	handle_gnat_encoded_entry (entry, gnat_entries.get ());
-      else if (entry->lang == language_cplus || entry->lang == language_c)
+      else if (is_cplus_dialect (entry->lang) || entry->lang == language_c)
 	{
 	  void **slot = htab_find_slot (seen_names.get (), entry,
 					INSERT);
 	  if (*slot == nullptr)
 	    {
 	      gdb::unique_xmalloc_ptr<char> canon_name
-		= (entry->lang == language_cplus
+		= (is_cplus_dialect (entry->lang)
 		   ? cp_canonicalize_string (entry->name)
 		   : c_canonicalize_name (entry->name));
 	      if (canon_name == nullptr)

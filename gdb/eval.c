@@ -103,7 +103,7 @@ expression::evaluate (struct type *expect_type, enum noside noside)
 {
   std::optional<enable_thread_stack_temporaries> stack_temporaries;
   if (target_has_execution () && inferior_ptid != null_ptid
-      && language_defn->la_language == language_cplus
+      && is_cplus_dialect (language_defn->la_language)
       && !thread_stack_temporaries_enabled_p (inferior_thread ()))
     stack_temporaries.emplace (inferior_thread ());
 
@@ -595,7 +595,7 @@ evaluate_subexp_do_call (expression *exp, enum noside noside,
      operator that should be used instead.  */
   std::vector<value *> vals;
   if (overload_resolution
-      && exp->language_defn->la_language == language_cplus
+      && is_cplus_dialect (exp->language_defn->la_language)
       && check_typedef (ftype)->code () == TYPE_CODE_STRUCT)
     {
       /* Include space for the `this' pointer at the start.  */
@@ -710,7 +710,7 @@ var_value_operation::evaluate_funcall (struct type *expect_type,
 				       const std::vector<operation_up> &args)
 {
   if (!overload_resolution
-      || exp->language_defn->la_language != language_cplus)
+      || !is_cplus_dialect (exp->language_defn->la_language))
     return operation::evaluate_funcall (expect_type, exp, noside, args);
 
   std::vector<value *> argvec (args.size ());
@@ -738,7 +738,7 @@ scope_operation::evaluate_funcall (struct type *expect_type,
 				   const std::vector<operation_up> &args)
 {
   if (!overload_resolution
-      || exp->language_defn->la_language != language_cplus)
+      || !is_cplus_dialect (exp->language_defn->la_language))
     return operation::evaluate_funcall (expect_type, exp, noside, args);
 
   /* Unpack it locally so we can properly handle overload
@@ -932,7 +932,7 @@ structop_base_operation::evaluate_funcall
   value *callee;
   const char *tstr = std::get<1> (m_storage).c_str ();
   if (overload_resolution
-      && exp->language_defn->la_language == language_cplus)
+      && is_cplus_dialect (exp->language_defn->la_language))
     {
       /* Language is C++, do some overload resolution before
 	 evaluation.  */
@@ -2733,7 +2733,7 @@ evaluate_subexp_for_sizeof_base (struct expression *exp, struct type *type)
      "When applied to a reference or a reference type, the result is
      the size of the referenced type."  */
   type = check_typedef (type);
-  if (exp->language_defn->la_language == language_cplus
+  if (is_cplus_dialect (exp->language_defn->la_language)
       && (TYPE_IS_REFERENCE (type)))
     type = check_typedef (type->target_type ());
   else if (exp->language_defn->la_language == language_fortran

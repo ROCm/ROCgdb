@@ -429,7 +429,7 @@ explicit_location_spec_lex_one (const char **inp,
 		  || linespec_lexer_lex_keyword (&(*inp)[1])))
 	{
 	  /* Special case: C++ operator,.  */
-	  if (language->la_language == language_cplus
+	  if (is_cplus_dialect (language->la_language)
 	      && startswith (*inp, CP_OPERATOR_STR))
 	    (*inp) += CP_OPERATOR_LEN;
 	  ++(*inp);

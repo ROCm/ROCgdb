@@ -2646,7 +2646,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (strncmp (tokstart, token.oper, 3) == 0)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	gdb_assert ((token.flags & FLAG_C) == 0);
 
@@ -2660,7 +2660,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (strncmp (tokstart, token.oper, 2) == 0)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	gdb_assert ((token.flags & FLAG_C) == 0);
 
@@ -2972,7 +2972,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (copy == token.oper)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	if ((token.flags & FLAG_C) != 0
 	    && par_state->language ()->la_language != language_c
@@ -2986,8 +2986,9 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
 	    if (lookup_symbol (copy.c_str (),
 			       pstate->expression_context_block,
 			       SEARCH_VFT,
-			       (par_state->language ()->la_language
-				== language_cplus ? &is_a_field_of_this
+			       (is_cplus_dialect
+				  (par_state->language ()->la_language)
+				? &is_a_field_of_this
 				: NULL)).symbol
 		!= NULL)
 	      {
@@ -3153,7 +3154,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
   yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 
   if (bsym.symbol == NULL
-      && par_state->language ()->la_language == language_cplus
+      && is_cplus_dialect (par_state->language ()->la_language)
       && is_a_field_of_this.type == NULL
       && lookup_minimal_symbol (current_program_space, copy.c_str ()).minsym == nullptr)
     return UNKNOWN_CPP_NAME;
@@ -3264,7 +3265,7 @@ yylex (void)
   if (current.token == NAME)
     current.token = classify_name (pstate, pstate->expression_context_block,
 				   is_quoted_name, last_lex_was_structop);
-  if (pstate->language ()->la_language != language_cplus
+  if (!is_cplus_dialect (pstate->language ()->la_language)
       || (current.token != TYPENAME && current.token != COLONCOLON
 	  && current.token != FILENAME))
     return current.token;

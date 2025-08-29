@@ -137,6 +137,14 @@ static_assert (nr_languages <= (1 << LANGUAGE_BITS));
 /* The number of bytes needed to represent all languages.  */
 #define LANGUAGE_BYTES ((LANGUAGE_BITS + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT)
 
+/* Check if LANG is the C++ language or one of its dialects.  */
+
+static inline bool
+is_cplus_dialect (enum language lang)
+{
+  return lang == language_cplus;
+}
+
 /* * A generic, not quite boolean, enumeration.  This is used for
    set/show commands in which the options are on/off/automatic.  */
 enum auto_boolean

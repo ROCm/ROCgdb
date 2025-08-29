@@ -809,8 +809,7 @@ linespec_lexer_lex_string (linespec_parser *parser)
 	      /* Don't interpret 'operator<' / 'operator<<' as a
 		 template parameter list though.  */
 	      if (*parser->lexer.stream == '<'
-		  && (parser->state.language->la_language
-		      == language_cplus)
+		  && is_cplus_dialect (parser->state.language->la_language)
 		  && (parser->lexer.stream - start) >= CP_OPERATOR_LEN)
 		{
 		  const char *op = parser->lexer.stream;
@@ -855,8 +854,7 @@ linespec_lexer_lex_string (linespec_parser *parser)
 	     operator name.  */
 	  else if (*parser->lexer.stream == ',')
 	    {
-	      if ((parser->state.language->la_language
-		   == language_cplus)
+	      if (is_cplus_dialect (parser->state.language->la_language)
 		  && (parser->lexer.stream - start) > CP_OPERATOR_LEN)
 		{
 		  const char *op = strstr (start, CP_OPERATOR_STR);

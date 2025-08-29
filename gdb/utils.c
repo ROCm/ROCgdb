@@ -2203,7 +2203,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
   const char *string1_start = string1;
   const char *end_str2 = string2 + string2_len;
   bool skip_spaces = true;
-  bool have_colon_op = (language == language_cplus
+  bool have_colon_op = (is_cplus_dialect (language)
 			|| language == language_rust
 			|| language == language_fortran);
 
@@ -2276,7 +2276,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	 string1: foo<A<a<b<...> > > > (...)
 	 string2: foo<A
       */
-      if (language == language_cplus && ignore_template_params
+      if (is_cplus_dialect (language) && ignore_template_params
 	  && *string1 == '<' && *string2 != '<')
 	{
 	  /* Skip any parameter list in STRING1.  */
@@ -2321,7 +2321,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	}
 
       /* Handle C++ user-defined operators.  */
-      else if (language == language_cplus
+      else if (is_cplus_dialect (language)
 	       && *string1 == 'o')
 	{
 	  if (cp_is_operator (string1, string1_start))

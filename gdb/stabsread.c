@@ -1572,7 +1572,7 @@ read_stabs_symtab_1 (minimal_symbol_reader &reader,
 	       from C++ to C.  */
 	    if (tmp_language != language_unknown
 		&& (tmp_language != language_c
-		    || dbx->ctx.psymtab_language != language_cplus))
+		    || !is_cplus_dialect (dbx->ctx.psymtab_language)))
 	      dbx->ctx.psymtab_language = tmp_language;
 
 	    if (pst == NULL)
@@ -1605,7 +1605,7 @@ read_stabs_symtab_1 (minimal_symbol_reader &reader,
 	       from C++ to C.  */
 	    if (tmp_language != language_unknown
 		&& (tmp_language != language_c
-		    || dbx->ctx.psymtab_language != language_cplus))
+		    || !is_cplus_dialect (dbx->ctx.psymtab_language)))
 	      dbx->ctx.psymtab_language = tmp_language;
 
 	    /* In C++, one may expect the same filename to come round many
@@ -1690,7 +1690,7 @@ read_stabs_symtab_1 (minimal_symbol_reader &reader,
 
 	  sym_len = 0;
 	  sym_name = NULL;	/* pacify "gcc -Werror" */
-	  if (dbx->ctx.psymtab_language == language_cplus)
+	  if (is_cplus_dialect (dbx->ctx.psymtab_language))
 	    {
 	      std::string name (namestring, p - namestring);
 	      gdb::unique_xmalloc_ptr<char> new_name
@@ -2506,7 +2506,7 @@ process_one_symbol (int type, int desc, CORE_ADDR valu, const char *name,
 				cstk.start_addr, cstk.start_addr + valu);
 
 	  /* For C++, set the block's scope.  */
-	  if (cstk.name->language () == language_cplus)
+	  if (is_cplus_dialect (cstk.name->language ()))
 	    cp_set_block_scope (cstk.name, block, &objfile->objfile_obstack);
 
 	  /* May be switching to an assembler file which may not be using
@@ -2884,7 +2884,7 @@ process_one_symbol (int type, int desc, CORE_ADDR valu, const char *name,
 					cstk.start_addr, valu);
 
 		  /* For C++, set the block's scope.  */
-		  if (cstk.name->language () == language_cplus)
+		  if (is_cplus_dialect (cstk.name->language ()))
 		    cp_set_block_scope (cstk.name, block,
 					&objfile->objfile_obstack);
 		}
@@ -3215,7 +3215,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
     normal:
       gdb::unique_xmalloc_ptr<char> new_name;
 
-      if (sym->language () == language_cplus)
+      if (is_cplus_dialect (sym->language ()))
 	{
 	  std::string name (string, p - string);
 	  new_name = cp_canonicalize_string (name.c_str ());
@@ -3231,7 +3231,7 @@ define_symbol (CORE_ADDR valu, const char *string, int desc, int type,
 	sym->compute_and_set_names (std::string_view (string, p - string), true,
 				    objfile->per_bfd);
 
-      if (sym->language () == language_cplus)
+      if (is_cplus_dialect (sym->language ()))
 	cp_scan_for_anonymous_namespaces (get_buildsym_compunit (), sym,
 					  objfile);
 
@@ -4093,7 +4093,7 @@ again:
 		return error_type (pp, objfile);
 	    }
 	  type_name = NULL;
-	  if (get_current_subfile ()->language == language_cplus)
+	  if (is_cplus_dialect (get_current_subfile ()->language))
 	    {
 	      std::string name (*pp, p - *pp);
 	      gdb::unique_xmalloc_ptr<char> new_name

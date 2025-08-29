@@ -5636,7 +5636,7 @@ compute_delayed_physnames (struct dwarf2_cu *cu)
   /* Only C++ delays computing physnames.  */
   if (cu->method_list.empty ())
     return;
-  gdb_assert (cu->lang () == language_cplus);
+  gdb_assert (is_cplus_dialect (cu->lang ()));
 
   for (const delayed_method_info &mi : cu->method_list)
     {
@@ -6419,7 +6419,7 @@ process_imported_unit_die (struct die_info *die, struct dwarf2_cu *cu)
 	 lang are already set.  */
       if (die->parent && die->parent->parent == NULL
 	  && per_cu->unit_type (false) == DW_UT_compile
-	  && per_cu->lang (false) == language_cplus)
+	  && is_cplus_dialect (per_cu->lang (false)))
 	return;
 
       /* If necessary, add it to the queue and load its DIEs.  */
@@ -6741,7 +6741,7 @@ dwarf2_compute_name (const char *name,
 
   /* These are the only languages we know how to qualify names in.  */
   if (name != NULL
-      && (lang == language_cplus
+      && (is_cplus_dialect (lang)
 	  || lang == language_fortran || lang == language_d
 	  || lang == language_rust))
     {
@@ -6783,7 +6783,7 @@ dwarf2_compute_name (const char *name,
 	     templates; two instantiated function templates are allowed to
 	     differ only by their return types, which we do not add here.  */
 
-	  if (lang == language_cplus && strchr (name, '<') == NULL)
+	  if (is_cplus_dialect (lang) && strchr (name, '<') == NULL)
 	    {
 	      struct attribute *attr;
 	      struct die_info *child;
@@ -6889,14 +6889,14 @@ dwarf2_compute_name (const char *name,
 	     information, if PHYSNAME.  */
 
 	  if (physname && die->tag == DW_TAG_subprogram
-	      && lang == language_cplus)
+	      && is_cplus_dialect (lang))
 	    {
 	      struct type *type = read_type_die (die, cu);
 
 	      c_type_print_args (type, &buf, 1, lang,
 				 &type_print_raw_options);
 
-	      if (lang == language_cplus)
+	      if (is_cplus_dialect (lang))
 		{
 		  /* Assume that an artificial first parameter is
 		     "this", but do not crash if it is not.  RealView
@@ -10205,7 +10205,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   /* If we have a DW_AT_specification, we might need to import using
      directives from the context of the specification DIE.  See the
      comment in determine_prefix.  */
-  if (cu->lang () == language_cplus
+  if (is_cplus_dialect (cu->lang ())
       && dwarf2_attr (die, DW_AT_specification, cu))
     {
       struct dwarf2_cu *spec_cu = cu;
@@ -10233,7 +10233,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 				     cstk.static_link, lowpc, highpc);
 
   /* For C++, set the block's scope.  */
-  if ((cu->lang () == language_cplus
+  if ((is_cplus_dialect (cu->lang ())
        || cu->lang () == language_fortran
        || cu->lang () == language_d
        || cu->lang () == language_rust)
@@ -12387,7 +12387,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   fnp = &flp->fnfields.emplace_back ();
 
   /* Delay processing of the physname until later.  */
-  if (cu->lang () == language_cplus)
+  if (is_cplus_dialect (cu->lang ()))
     add_to_method_list (type, i, flp->fnfields.size () - 1, fieldname,
 			die, cu);
   else
@@ -12867,7 +12867,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   name = dwarf2_name (die, cu);
   if (name != NULL)
     {
-      if (cu->lang  () == language_cplus
+      if (is_cplus_dialect (cu->lang ())
 	  || cu->lang () == language_d
 	  || cu->lang () == language_rust)
 	{
@@ -12905,7 +12905,7 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
       type->set_code (TYPE_CODE_STRUCT);
     }
 
-  if (cu->lang () == language_cplus && die->tag == DW_TAG_class_type)
+  if (is_cplus_dialect (cu->lang ()) && die->tag == DW_TAG_class_type)
     type->set_is_declared_class (true);
 
   /* Store the calling convention in the type if it's available in
@@ -14946,7 +14946,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 	      /* RealView does not mark THIS as const, which the testsuite
 		 expects.  GCC marks THIS as const in method definitions,
 		 but not in the class specifications (GCC PR 43053).  */
-	      if (cu->lang () == language_cplus
+	      if (is_cplus_dialect (cu->lang ())
 		  && !TYPE_CONST (arg_type)
 		  && ftype->field (iparams).is_artificial ())
 		{
@@ -16646,7 +16646,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu_data *scanning_per_cu,
       if (abbrev->tag == DW_TAG_namespace && *name == nullptr)
 	*name = "(anonymous namespace)";
 
-      if (m_language == language_cplus
+      if (is_cplus_dialect (m_language)
 	  && (abbrev->tag == DW_TAG_class_type
 	      || abbrev->tag == DW_TAG_interface_type
 	      || abbrev->tag == DW_TAG_structure_type
@@ -16808,7 +16808,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	}
 
       if (abbrev->tag == DW_TAG_namespace
-	  && m_language == language_cplus
+	  && is_cplus_dialect (m_language)
 	  && strcmp (name, "::") == 0)
 	{
 	  /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they
@@ -19600,7 +19600,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      sym->set_domain (VAR_DOMAIN);
 	    }
 	  else if (cu->lang () == language_c
-		   || cu->lang () == language_cplus
+		   || is_cplus_dialect (cu->lang ())
 		   || cu->lang () == language_objc
 		   || cu->lang () == language_opencl
 		   || cu->lang () == language_minimal)
@@ -19632,13 +19632,13 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      buildsym_compunit *builder = cu->get_builder ();
 	      list_to_add
 		= (cu->list_in_scope == builder->get_file_symbols ()
-		   && cu->lang () == language_cplus
+		   && is_cplus_dialect (cu->lang ())
 		   ? builder->get_global_symbols ()
 		   : cu->list_in_scope);
 
 	      /* The semantics of C++ state that "struct foo {
 		 ... }" also defines a typedef for "foo".  */
-	      if (cu->lang () == language_cplus
+	      if (is_cplus_dialect (cu->lang ())
 		  || cu->lang () == language_ada
 		  || cu->lang () == language_d
 		  || cu->lang () == language_rust)
@@ -19677,7 +19677,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 
 	  list_to_add
 	    = (cu->list_in_scope == cu->get_builder ()->get_file_symbols ()
-	       && cu->lang () == language_cplus
+	       && is_cplus_dialect (cu->lang ())
 	       ? cu->get_builder ()->get_global_symbols ()
 	       : cu->list_in_scope);
 	  break;
@@ -19720,7 +19720,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       /* For the benefit of old versions of GCC, check for anonymous
 	 namespaces based on the demangled name.  */
       if (!cu->processing_has_namespace_info
-	  && cu->lang () == language_cplus)
+	  && is_cplus_dialect (cu->lang ()))
 	cp_scan_for_anonymous_namespaces (cu->get_builder (), sym, objfile);
     }
   return (sym);
@@ -20313,7 +20313,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
   struct type *parent_type;
   const char *retval;
 
-  if (cu->lang () != language_cplus
+  if (!is_cplus_dialect (cu->lang ())
       && cu->lang () != language_fortran
       && cu->lang () != language_d
       && cu->lang () != language_rust)
@@ -20404,7 +20404,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	/* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they generated bogus
 	   DW_TAG_namespace DIEs with a name of "::" for the global namespace.
 	   Work around this problem here.  */
-	if (cu->lang () == language_cplus
+	if (is_cplus_dialect (cu->lang ())
 	    && strcmp (parent_type->name (), "::") == 0)
 	  return "";
 	/* We give a name to even anonymous namespaces.  */
@@ -20425,7 +20425,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
       case DW_TAG_compile_unit:
       case DW_TAG_partial_unit:
 	/* gcc-4.5 -gdwarf-4 can drop the enclosing namespace.  Cope.  */
-	if (cu->lang () == language_cplus
+	if (is_cplus_dialect (cu->lang ())
 	    && !per_objfile->per_bfd->types.empty ()
 	    && die->child != NULL
 	    && (die->tag == DW_TAG_class_type
@@ -20556,7 +20556,7 @@ dwarf2_canonicalize_name (const char *name, struct dwarf2_cu *cu,
   if (name == nullptr)
     return name;
 
-  if (cu->lang () == language_cplus)
+  if (is_cplus_dialect (cu->lang ()))
     {
       gdb::unique_xmalloc_ptr<char> canon_name
 	= cp_canonicalize_string (name);

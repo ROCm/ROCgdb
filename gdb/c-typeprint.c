@@ -297,7 +297,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
     }
   else if (printed_args == 0)
     {
-      if (language == language_cplus)
+      if (is_cplus_dialect (language))
 	gdb_printf (stream, "void");
     }
 
@@ -320,7 +320,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 	gdb_printf (stream, " volatile");
 
       if (TYPE_RESTRICT (domain))
-	gdb_printf (stream, (language == language_cplus
+	gdb_printf (stream, (is_cplus_dialect (language)
 			     ? " __restrict__"
 			     : " restrict"));
 
@@ -471,7 +471,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
-      gdb_printf (stream, (language == language_cplus
+      gdb_printf (stream, (is_cplus_dialect (language)
 			   ? "__restrict__"
 			   : "restrict"));
       did_print_modifier = 1;
@@ -535,7 +535,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 
       param_type = type->field (i).type ();
 
-      if (language == language_cplus && linkage_name)
+      if (is_cplus_dialect (language) && linkage_name)
 	{
 	  /* C++ standard, 13.1 Overloadable declarations, point 3, item:
 	     - Parameter declarations that differ only in the presence or
@@ -564,7 +564,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	}
     }
   else if (!printed_any
-	   && (type->is_prototyped () || language == language_cplus))
+	   && (type->is_prototyped () || is_cplus_dialect (language)))
     gdb_printf (stream, "void");
 
   gdb_printf (stream, ")");
@@ -1437,7 +1437,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 	     print too much than too little; but conversely not to
 	     print something egregiously outside the current
 	     language's syntax.  */
-	  if (language == language_cplus && type->target_type () != NULL)
+	  if (is_cplus_dialect (language) && type->target_type () != NULL)
 	    {
 	      struct type *underlying = check_typedef (type->target_type ());
 

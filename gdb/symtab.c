@@ -864,7 +864,7 @@ general_symbol_info::set_language (enum language language,
 				   struct obstack *obstack)
 {
   m_language = language;
-  if (language == language_cplus
+  if (is_cplus_dialect (language)
       || language == language_d
       || language == language_go
       || language == language_objc
@@ -1882,7 +1882,7 @@ demangle_for_lookup_info::demangle_for_lookup_info
 {
   demangle_result_storage storage;
 
-  if (lookup_name.ignore_parameters () && lang == language_cplus)
+  if (lookup_name.ignore_parameters () && is_cplus_dialect (lang))
     {
       gdb::unique_xmalloc_ptr<char> without_params
 	= cp_remove_params_if_any (lookup_name.c_str (),
@@ -1963,7 +1963,7 @@ demangle_for_lookup (const char *name, enum language lang,
 {
   /* If we are using C++, D, or Go, demangle the name before doing a
      lookup, so we can always binary search.  */
-  if (lang == language_cplus)
+  if (is_cplus_dialect (lang))
     {
       gdb::unique_xmalloc_ptr<char> demangled_name
 	= gdb_demangle (name, DMGL_ANSI | DMGL_PARAMS);
@@ -2728,7 +2728,7 @@ symbol::matches (domain_search_flags flags) const
 {
   /* C++ has a typedef for every tag, and the types are in the struct
      domain.  */
-  if (language () == language_cplus && (flags & SEARCH_TYPE_DOMAIN) != 0)
+  if (is_cplus_dialect (language ()) && (flags & SEARCH_TYPE_DOMAIN) != 0)
     flags |= SEARCH_STRUCT_DOMAIN;
 
   return search_flags_matches (flags, m_domain);
@@ -5762,7 +5762,7 @@ completion_list_add_symbol (completion_tracker &tracker,
      completion tracker.  The following converts the symbol name back to
      the msymbol name and removes the msymbol name from the completion
      tracker.  */
-  if (sym->language () == language_cplus
+  if (is_cplus_dialect (sym->language ())
       && sym->aclass () == LOC_BLOCK)
     {
       /* The call to canonicalize returns the empty string if the input
