@@ -18936,6 +18936,26 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
 	  lang = dwarf_lang_to_enum_language (*lang_val);
 	  if (lang_val <= DW_LANG_hi_user)
 	    dw_lang = (dwarf_source_language) *lang_val;
+
+	  /* The HIP compiler instead of setting DW_AT_language to DW_LANG_HIP
+	     sets it to DW_LANG_C_plus_plus_14.  As a workaround for the
+	     language detection, we fall back to checking the target
+	     architecture when the language is C++.  There are still 2 caveats:
+
+	     1) Erroneously labeling device codes written purely in C++ as HIP
+	     2) Not detecting the host HIP codes as HIP, but the emitted C++14
+
+	     Point (1) is quite unlikely.  Point (2) can be remedied for now
+	     with a "set language hip" command in GDB itself.  Still, this
+	     workaround works better than checking the "producer", since
+	     various providers tend to name them slightly differently.  */
+	  if (lang == language_cplus
+	      && (cu->per_objfile->per_bfd->obfd->arch_info->arch
+		  == bfd_arch_amdgcn))
+	    {
+	      lang = language_hip;
+	      dw_lang = DW_LANG_HIP;
+	    }
 	}
       else
 	lang = language_minimal;
