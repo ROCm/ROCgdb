@@ -38,6 +38,8 @@
 #include "gdbcore.h"
 #include "gdbarch.h"
 #include "c-exp.h"
+#include "inferior.h"
+#include "target.h"
 #include "arch-utils.h"
 
 /* Given a C string type, STR_TYPE, return the corresponding target
@@ -1224,6 +1226,137 @@ public:
 /* The single instance of the minimal language class.  */
 static minimal_language minimal_language_defn;
 
+/* Work-group position of the work-item assigned to the current lane.  */
+static constexpr char hip_builtin_thread_idx[] = "threadIdx";
+/* Grid position of the current work-group.  */
+static constexpr char hip_builtin_block_idx[] = "blockIdx";
+/* Sizes of the current work-group in the three dimensions.  */
+static constexpr char hip_builtin_block_dim[] = "blockDim";
+/* Sizes of the current grid in the three dimensions.  */
+static constexpr char hip_builtin_grid_dim[] = "gridDim";
+/* Platform's wave size that the current thread is running on.  */
+static constexpr char hip_builtin_warp_size[] = "warpSize";
+
+/* A TYPE_CODE_STRUCT with three 32-bit unsigned members: x, y, z.  */
+
+static type *
+hip_vec_type (gdbarch *gdbarch)
+{
+  type *vec_type = arch_composite_type (gdbarch, "__gdb_hip_builtin_vec",
+					TYPE_CODE_STRUCT);
+  type *uint32_type = builtin_type (gdbarch)->builtin_uint32;
+
+  append_composite_type_field (vec_type, "x", uint32_type);
+  append_composite_type_field (vec_type, "y", uint32_type);
+  append_composite_type_field (vec_type, "z", uint32_type);
+
+  return vec_type;
+}
+
+/* Instantiate a VEC_TYPE vector that is created by hip_vec_type ().
+   The instantiation would be like:
+
+   .x = NUMS[0]
+   .y = NUMS[1]
+   .z = NUMS[2]
+*/
+
+static value *
+hip_vec_make_value (gdbarch *gdbarch, type *vec_type, const vec3_u32_t &nums)
+{
+  gdb_byte bytes[12];
+  const bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  store_unsigned_integer (bytes + 0, 4, byte_order, nums[0]);
+  store_unsigned_integer (bytes + 4, 4, byte_order, nums[1]);
+  store_unsigned_integer (bytes + 8, 4, byte_order, nums[2]);
+
+  return value_from_contents (vec_type, bytes);
+}
+
+/* Return the value of a built-in SYMBOL ("threadIdx", "blockDim", etc.),
+   regardless of the frame context.  */
+
+static value *
+hip_read_variable (symbol *symbol, const frame_info_ptr &ignore)
+{
+  if (inferior_ptid == null_ptid)
+    return value::allocate (builtin_type (symbol->arch ())->builtin_void);
+
+  auto vec3_to_value = [&symbol] (const opt_vec3_u32_t &v)
+  {
+    if (v.has_value ())
+      return hip_vec_make_value (symbol->arch (), symbol->type (), v.value ());
+    else
+      return value::allocate_unavailable (symbol->type ());
+  };
+
+  auto size_to_value = [&symbol] (opt_size_t s)
+  {
+    if (s.has_value ())
+      return value_from_ulongest
+	(builtin_type (symbol->arch ())->builtin_unsigned_int, s.value ());
+    else
+      return value::allocate_unavailable (symbol->type ());
+  };
+
+  if (strcmp (symbol->natural_name (), hip_builtin_thread_idx) == 0)
+    {
+      return vec3_to_value
+	(target_lane_workgroup_pos (inferior_thread (),
+				    inferior_thread ()->current_simd_lane ()));
+    }
+  else if (strcmp (symbol->natural_name (), hip_builtin_block_idx) == 0)
+    return vec3_to_value (target_workgroup_grid_pos (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_block_dim) == 0)
+    return vec3_to_value (target_workgroup_sizes (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_grid_dim) == 0)
+    return vec3_to_value (target_grid_sizes (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_warp_size) == 0)
+    return size_to_value (target_wave_size (inferior_thread ()));
+
+  return nullptr;
+}
+
+/* Describe location for HIP's built-in symbols.  */
+
+static void
+hip_describe_location (symbol *symbol, CORE_ADDR addr, ui_file *stream)
+{
+  gdb_printf (stream, "HIP built-in symbol '%s'", symbol->print_name ());
+}
+
+/* Implement the tracepoint_var_ref method from symbol_computed_ops.  */
+
+static void
+hip_tracepoint_var_ref (symbol *symbol, agent_expr *ax, axs_value *value)
+{
+  error (_("not implemented: trace of HIP built-in symbol"));
+}
+
+/* Implement the generate_c_location method from symbol_computed_ops.  */
+
+static void
+hip_generate_c_location (symbol *symbol, string_file *stream,
+			 gdbarch *gdbarch, std::vector<bool> &registers_used,
+			 CORE_ADDR pc, const char *result_name)
+{
+  error (_("not implemented: compile translation of HIP built-in symbol"));
+}
+
+/* The set of location functions to evaluate HIP built-in symbols.  */
+const struct symbol_computed_ops hip_computed_ops_funcs = {
+  hip_read_variable,
+  nullptr, /* read_variable_at_entry */
+  hip_describe_location,
+  0, /* location_has_loclist */
+  hip_tracepoint_var_ref,
+  hip_generate_c_location,
+};
+
+/* The implementation index for the symbols with "LOC_COMPUTED" type.  */
+static int hip_lang_builtin_symbols_registered_index;
+
 /* A class for the HIP (Heterogeneous Interface for Portability) language.
    HIP is an extension of C++ and is intended for parallel programming
    on different platforms.  */
@@ -1244,7 +1377,94 @@ public:
 
   const char *natural_name () const override
   { return "HIP"; }
+
+  /* See language.h.  */
+
+  void language_arch_info (gdbarch *gdbarch,
+			   struct language_arch_info *lai) const override
+  {
+    cplus_language::language_arch_info (gdbarch, lai);
+    type *vec_type = hip_vec_type (gdbarch);
+
+    /* Create a built-in symbol from NAME and add it to the language_arch_info.
+       The NAME string must have a lifetime at least as long as the lifetime
+       of the created symbol.  */
+    auto add_builtin_symbol = [&] (const char *name)
+    {
+      symbol *sym = new (gdbarch_obstack (gdbarch)) struct symbol ();
+      sym->m_name = name;
+      sym->set_language (current_language->la_language, nullptr);
+      sym->owner.arch = gdbarch;
+      sym->set_is_objfile_owned (0);
+      sym->set_section_index (0);
+      sym->set_type (vec_type);
+      sym->set_domain (VAR_DOMAIN);
+      sym->set_aclass_index (hip_lang_builtin_symbols_registered_index);
+
+      lai->add_builtin_symbol (sym);
+    };
+
+    /* Add the built-in symbols for the HIP language.  Later, these symbols
+       will be picked up during a non-local symbol lookup.  */
+    add_builtin_symbol (hip_builtin_thread_idx);
+    add_builtin_symbol (hip_builtin_block_idx);
+    add_builtin_symbol (hip_builtin_block_dim);
+    add_builtin_symbol (hip_builtin_grid_dim);
+    add_builtin_symbol (hip_builtin_warp_size);
+  }
+
+  /* See language.h.  */
+
+  block_symbol lookup_symbol_nonlocal
+    (const char *name, const struct block *block,
+     const domain_search_flags domain) const override
+  {
+    /* Give the built-in symbols higher precedence over the globals.  */
+    if (domain & SEARCH_VAR_DOMAIN)
+      {
+	symbol *sym
+	  = language_lookup_builtin_symbol (this, get_current_arch (), name);
+
+	if (sym != nullptr)
+	  return block_symbol {sym, nullptr};
+      }
+
+    return cplus_language::lookup_symbol_nonlocal (name, block, domain);
+  }
+
+  void collect_symbol_completion_matches
+    (completion_tracker &tracker,
+     complete_symbol_mode mode,
+     symbol_name_match_type name_match_type,
+     const char *text,
+     const char *word,
+     enum type_code code) const override
+  {
+    lookup_name_info lookup_name (text, name_match_type, true);
+    auto add_builtin_completion = [&] (const char *builtin_name)
+    {
+      completion_list_add_name
+	(tracker, language_hip, builtin_name, lookup_name, text, word);
+    };
+
+    add_builtin_completion (hip_builtin_thread_idx);
+    add_builtin_completion (hip_builtin_block_idx);
+    add_builtin_completion (hip_builtin_block_dim);
+    add_builtin_completion (hip_builtin_grid_dim);
+    add_builtin_completion (hip_builtin_warp_size);
+
+    return cplus_language::collect_symbol_completion_matches
+      (tracker, mode, name_match_type, text, word, code);
+  }
 };
 
 /* The single instance of the HIP language class.  */
 static hip_language hip_language_defn;
+
+void _initialize_c_lang ();
+void
+_initialize_c_lang ()
+{
+  hip_lang_builtin_symbols_registered_index
+    = register_symbol_computed_impl (LOC_COMPUTED, &hip_computed_ops_funcs);
+}

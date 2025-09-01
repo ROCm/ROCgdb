@@ -2628,6 +2628,36 @@ target_lane_workgroup_pos_str (thread_info *thr, int lane)
   return current_inferior ()->top_target ()->lane_workgroup_pos_str (thr, lane);
 }
 
+opt_vec3_u32_t
+target_lane_workgroup_pos (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_workgroup_pos (thr, lane);
+}
+
+opt_vec3_u32_t
+target_workgroup_grid_pos (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->workgroup_grid_pos (thr);
+}
+
+opt_vec3_u32_t
+target_workgroup_sizes (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->workgroup_sizes (thr);
+}
+
+opt_vec3_u32_t
+target_grid_sizes (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->grid_sizes (thr);
+}
+
+opt_size_t
+target_wave_size (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->wave_size (thr);
+}
+
 const char *
 target_thread_name (struct thread_info *info)
 {

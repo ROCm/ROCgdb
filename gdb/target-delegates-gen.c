@@ -94,6 +94,11 @@ struct dummy_target : public target_ops
   std::string dispatch_pos_str (thread_info *arg0) override;
   std::string thread_workgroup_pos_str (thread_info *arg0) override;
   std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t lane_workgroup_pos (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t workgroup_grid_pos (thread_info *arg0) override;
+  opt_vec3_u32_t workgroup_sizes (thread_info *arg0) override;
+  opt_vec3_u32_t grid_sizes (thread_info *arg0) override;
+  opt_size_t wave_size (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -280,6 +285,11 @@ struct debug_target : public target_ops
   std::string dispatch_pos_str (thread_info *arg0) override;
   std::string thread_workgroup_pos_str (thread_info *arg0) override;
   std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t lane_workgroup_pos (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t workgroup_grid_pos (thread_info *arg0) override;
+  opt_vec3_u32_t workgroup_sizes (thread_info *arg0) override;
+  opt_vec3_u32_t grid_sizes (thread_info *arg0) override;
+  opt_size_t wave_size (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -1929,6 +1939,132 @@ debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
 	      target_debug_print_thread_info_p (arg0).c_str (),
 	      target_debug_print_int (arg1).c_str (),
 	      target_debug_print_std_string (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  return this->beneath ()->lane_workgroup_pos (arg0, arg1);
+}
+
+opt_vec3_u32_t
+dummy_target::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  target_debug_printf_nofunc ("-> %s->lane_workgroup_pos (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->lane_workgroup_pos (arg0, arg1);
+  target_debug_printf_nofunc ("<- %s->lane_workgroup_pos (%s, %s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_int (arg1).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::workgroup_grid_pos (thread_info *arg0)
+{
+  return this->beneath ()->workgroup_grid_pos (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::workgroup_grid_pos (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::workgroup_grid_pos (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->workgroup_grid_pos (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->workgroup_grid_pos (arg0);
+  target_debug_printf_nofunc ("<- %s->workgroup_grid_pos (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::workgroup_sizes (thread_info *arg0)
+{
+  return this->beneath ()->workgroup_sizes (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::workgroup_sizes (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::workgroup_sizes (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->workgroup_sizes (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->workgroup_sizes (arg0);
+  target_debug_printf_nofunc ("<- %s->workgroup_sizes (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::grid_sizes (thread_info *arg0)
+{
+  return this->beneath ()->grid_sizes (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::grid_sizes (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::grid_sizes (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->grid_sizes (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->grid_sizes (arg0);
+  target_debug_printf_nofunc ("<- %s->grid_sizes (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_size_t
+target_ops::wave_size (thread_info *arg0)
+{
+  return this->beneath ()->wave_size (arg0);
+}
+
+opt_size_t
+dummy_target::wave_size (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_size_t
+debug_target::wave_size (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->wave_size (...)", this->beneath ()->shortname ());
+  opt_size_t result
+    = this->beneath ()->wave_size (arg0);
+  target_debug_printf_nofunc ("<- %s->wave_size (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_size_t (result).c_str ());
   return result;
 }
 

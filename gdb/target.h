@@ -381,6 +381,15 @@ struct thread_info;		/* fwd decl for parameter list below: */
 typedef void async_callback_ftype (enum inferior_event_type event_type,
 				   void *context);
 
+template <typename T>
+using vec3_t = std::array<T, 3>;
+using vec3_u32_t = vec3_t<uint32_t>;
+using opt_vec3_u32_t = std::optional<vec3_u32_t>;
+
+/* An optional size as the return value.  */
+
+using opt_size_t = std::optional<size_t>;
+
 /* Normally target debug printing is purely type-based.  However,
    sometimes it is necessary to override the debug printing on a
    per-argument basis.  This macro can be used, attribute-style, to
@@ -726,6 +735,16 @@ struct target_ops
       TARGET_DEFAULT_FUNC (default_thread_workgroup_pos_str);
     virtual std::string lane_workgroup_pos_str (thread_info *, int)
       TARGET_DEFAULT_FUNC (default_lane_workgroup_pos_str);
+    virtual opt_vec3_u32_t lane_workgroup_pos (thread_info *, int)
+      TARGET_DEFAULT_RETURN (std::nullopt);
+    virtual opt_vec3_u32_t workgroup_grid_pos (thread_info *)
+      TARGET_DEFAULT_RETURN (std::nullopt);
+    virtual opt_vec3_u32_t workgroup_sizes (thread_info *)
+      TARGET_DEFAULT_RETURN (std::nullopt);
+    virtual opt_vec3_u32_t grid_sizes (thread_info *)
+      TARGET_DEFAULT_RETURN (std::nullopt);
+    virtual opt_size_t wave_size (thread_info *)
+      TARGET_DEFAULT_RETURN (std::nullopt);
     virtual thread_info *thread_handle_to_thread_info (const gdb_byte *,
 						       int,
 						       inferior *inf)
@@ -2011,6 +2030,21 @@ extern std::string target_dispatch_pos_str (thread_info *thr);
 extern std::string target_thread_workgroup_pos_str (thread_info *thr);
 /* Get the lane's workgroup position as a string.  */
 extern std::string target_lane_workgroup_pos_str (thread_info *thr, int lane);
+/* Get the coordinates of the work-item assigned to lane LANE of thread THR.
+   Return std::nullopt if the coordinates cannot be determined.  */
+extern opt_vec3_u32_t target_lane_workgroup_pos (thread_info *thr, int lane);
+/* Get the coordinates of the work-group that thread THR belongs to.
+   Return std::nullopt if the coordinates cannot be determined.  */
+extern opt_vec3_u32_t target_workgroup_grid_pos (thread_info *thr);
+/* Get the sizes in the x,y,z dimensions of the work-group that thread THR
+   belongs to.  Return std::nullopt if the sizes cannot be determined.  */
+extern opt_vec3_u32_t target_workgroup_sizes (thread_info *thr);
+/* Get the sizes in the x,y,z dimensions of the grid that thread THR
+   belongs to.  Return std::nullopt if the sizes cannot be determined.  */
+extern opt_vec3_u32_t target_grid_sizes (thread_info *thr);
+/* Get the lane count of the wave on the dispatch that thread THR
+   belongs to.  Return std::nullopt if the size cannot be determined.  */
+extern opt_size_t target_wave_size (thread_info *thr);
 
 /* Return a short string describing extra information about PID,
    e.g. "sleeping", "runnable", "running on LWP 3".  Null return value
