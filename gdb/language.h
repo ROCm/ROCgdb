@@ -145,6 +145,16 @@ struct language_arch_info
      LANG is the language for which type is being looked up.  */
   struct symbol *lookup_primitive_type_as_symbol (const char *name,
 						  enum language lang);
+
+  /* Add a built-in symbol.  */
+  void add_builtin_symbol (struct symbol *symbol)
+  {
+    m_builtin_symbols.push_back (symbol);
+  }
+
+  /* Lookup NAME in M_BUILTIN_SYMBOLS vector.  */
+  symbol *lookup_builtin_symbol (const char *name);
+
 private:
 
   /* A structure storing a type and a corresponding symbol.  The type is
@@ -202,6 +212,9 @@ private:
      which can be fetched by the symbol lookup machinery, should they be
      needed.  */
   std::vector<type_and_symbol> primitive_types_and_symbols;
+
+  /* Vector of symbols known to the language.  */
+  std::vector<symbol *> m_builtin_symbols;
 
   /* Type of elements of strings.  */
   struct type *m_string_char_type = nullptr;
@@ -754,6 +767,13 @@ struct symbol *
   language_lookup_primitive_type_as_symbol (const struct language_defn *l,
 					    struct gdbarch *gdbarch,
 					    const char *name);
+
+/* Wrapper around language_lookup_builtin_symbol to return the
+   corresponding symbol.  */
+
+struct symbol *language_lookup_builtin_symbol (const struct language_defn *l,
+					       struct gdbarch *gdbarch,
+					       const char *name);
 
 
 /* These macros define the behavior of the expression

@@ -1031,6 +1031,18 @@ language_arch_info::lookup_primitive_type_as_symbol (const char *name,
   return nullptr;
 }
 
+/* See language.h.  */
+
+struct symbol *
+language_arch_info::lookup_builtin_symbol (const char *name)
+{
+  for (struct symbol *sym : m_builtin_symbols)
+    if (strcmp (sym->natural_name (), name) == 0)
+      return sym;
+
+  return nullptr;
+}
+
 /* Helper for the language_lookup_primitive_type overloads to forward
    to the corresponding language's lookup_primitive_type overload.  */
 
@@ -1088,6 +1100,33 @@ language_lookup_primitive_type_as_symbol (const struct language_defn *la,
      it was found in.  Builtin types don't live in blocks.  We *could* give
      them one, but there is no current need so to keep things simple symbol
      lookup is extended to allow for BLOCK_FOUND to be NULL.  */
+
+  return sym;
+}
+
+/* See language.h.  */
+
+struct symbol *
+language_lookup_builtin_symbol (const struct language_defn *la,
+				struct gdbarch *gdbarch,
+				const char *name)
+{
+  struct language_gdbarch *ld = get_language_gdbarch (gdbarch);
+  struct language_arch_info &lai = ld->arch_info[la->la_language];
+
+  symbol_lookup_debug_printf ("language = \"%s\", gdbarch @ %s, name = "
+			      "\"%s\"",
+			      la->name (), host_address_to_string (gdbarch),
+			      name);
+
+  struct symbol *sym = lai.lookup_builtin_symbol (name);
+
+  symbol_lookup_debug_printf ("found symbol @ %s",
+			      host_address_to_string (sym));
+
+  /* Note: The result of symbol lookup is normally a symbol *and* the block
+     it was found in.  Built-in symbols don't live in blocks.  The symbol
+     lookup was already altered in the past to handle block-less cases.  */
 
   return sym;
 }
