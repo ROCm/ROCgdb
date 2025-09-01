@@ -435,6 +435,9 @@ file_ptr
 rocm_code_object_stream_memory::read (bfd *, void *buf, file_ptr size,
 				      file_ptr offset)
 {
+  if (size < 0 || offset < 0 || offset >= m_objfile_image.size ())
+    return -1;
+
   if (size > m_objfile_image.size () - offset)
     size = m_objfile_image.size () - offset;
 
