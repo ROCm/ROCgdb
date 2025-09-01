@@ -20119,6 +20119,33 @@ Show if descriptive types are ignored by @value{GDBN}.
 HIP@footnote{@url{https://rocm.docs.amd.com/projects/HIP/en/docs-develop/what_is_hip.html,
 Heterogeneous Interface for Portability}} programming language.
 
+@node HIP built-in variables
+@subsubsection HIP Built-in Variables
+These context variables exist throughout the lifetime of a HIP
+kernel.  @value{GDBN} can evaluate them in any expression, as
+long as the current language is @code{hip}.
+
+@table @var
+
+@item threadIdx
+The three-dimensional position of the current HIP thread (a.k.a.@: lane)
+within the HIP block.
+
+@item blockIdx
+The three-dimensional position of the current HIP block within the grid.
+
+@item blockDim
+Dimensions of the current HIP block.
+
+@item gridDim
+Dimensions of the current HIP grid in number of HIP blocks.
+
+@item warpSize
+The size of the wavefront for the dispatch that the current kernel
+belongs to.
+
+@end table
+
 @c TODO: Add any language specific differences.
 
 @node Unsupported Languages

@@ -397,4 +397,29 @@ target_debug_print_displaced_step_prepare_status
   (displaced_step_prepare_status s)
 { return displaced_step_prepare_status_str (s); }
 
+static std::string
+target_debug_print_opt_vec3_u32_t (opt_vec3_u32_t vec)
+{
+  std::string s = "{";
+  if (vec.has_value ())
+    {
+      const char *maybe_comma = "";
+      for (uint32_t n : *vec)
+	{
+	  string_appendf (s, "%s %" PRIu32, maybe_comma, n);
+	  maybe_comma = ",";
+	}
+    }
+  s += " }";
+  return s;
+}
+
+static std::string
+target_debug_print_opt_size_t (opt_size_t size)
+{
+  if (size.has_value ())
+    target_debug_print_size_t (*size);
+  return "";
+}
+
 #endif /* GDB_TARGET_DEBUG_H */
