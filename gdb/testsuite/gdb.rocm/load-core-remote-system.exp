@@ -27,7 +27,9 @@
 
 load_lib rocm.exp
 
-require allow_hipcc_tests {!is_remote host}
+require allow_rocm_core_tests
+require {!is_remote host}
+require allow_hipcc_tests
 
 standard_testfile .cpp
 

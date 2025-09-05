@@ -141,6 +141,18 @@ gdb_caching_proc allow_hipcc_tests {} {
     return 1
 }
 
+# Return true if GPU core dump tests are allowed.
+
+gdb_caching_proc allow_rocm_core_tests {} {
+    if {[istarget "*-mingw*"]} {
+	# GPU core dumps are not supported on Windows, neither runtime
+	# cores, nor with GDB's gcore command.
+	return 0
+    }
+
+    return 1
+}
+
 # The empty host object put in bundles when compiling assembly files.
 # As a speed optimization, avoid recompiling it over and over for each
 # testcase program.

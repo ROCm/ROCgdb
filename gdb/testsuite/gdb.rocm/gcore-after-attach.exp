@@ -25,6 +25,7 @@
 
 load_lib rocm.exp
 
+require allow_rocm_core_tests
 require allow_hipcc_tests
 require can_spawn_for_attach
 
