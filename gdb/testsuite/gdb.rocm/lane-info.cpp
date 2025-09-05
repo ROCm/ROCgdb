@@ -17,7 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
-#include <unistd.h>
+#include "gdb_watchdog.h"
 
 #define CHECK(cmd)                                                           \
   {                                                                          \
@@ -65,7 +65,7 @@ kernel ()
 int
 main ()
 {
-  alarm (30);
+  gdb_watchdog (30);
 
  /* If the wavefront size is 64 lanes, then this results in 2 waves, 1
      with 64 lanes used, and 1 with 5 lanes used.  If the wavefront
