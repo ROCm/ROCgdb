@@ -176,6 +176,7 @@ struct rocm_solib_ops : public solib_ops
   explicit rocm_solib_ops (program_space *pspace, solib_ops_up host_ops)
     : solib_ops (pspace), m_host_ops (std::move (host_ops))
   {
+    gdb_assert (dynamic_cast<rocm_solib_ops *> (m_host_ops.get ()) == nullptr);
   }
 
   /* The methods implemented by rocm_solib_ops.  */
@@ -831,10 +832,17 @@ rocm_solib_target_inferior_created (inferior *inf)
 {
   get_solib_info (inf)->solib_list.clear ();
 
-  auto prev_ops = inf->pspace->release_solib_ops ();
-  auto rocm_ops
-    = std::make_unique<rocm_solib_ops> (inf->pspace, std::move (prev_ops));
-  inf->pspace->set_solib_ops (std::move (rocm_ops));
+  program_space *pspace = inf->pspace;
+
+  /* In some cases of fork, the child's pspace will already have a
+     rocm_solib_ops.  */
+  if (dynamic_cast<const rocm_solib_ops *> (pspace->solib_ops ()) == nullptr)
+    {
+      auto prev_ops = pspace->release_solib_ops ();
+      auto rocm_ops
+	= std::make_unique<rocm_solib_ops> (pspace, std::move (prev_ops));
+      pspace->set_solib_ops (std::move (rocm_ops));
+    }
 
   rocm_update_solib_list ();
 
