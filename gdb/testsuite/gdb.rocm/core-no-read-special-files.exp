@@ -21,6 +21,10 @@
 
 load_lib rocm.exp
 
+# The /dev/kfd special file is Linux-specific.
+require {istarget *-linux*}
+
+require allow_rocm_core_tests
 require allow_hipcc_tests
 
 standard_testfile .cpp
