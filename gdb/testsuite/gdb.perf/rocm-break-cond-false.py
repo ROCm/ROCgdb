@@ -16,6 +16,7 @@
 
 from perftest import perftest
 
+
 # Set a breakpoint with a condition that evals false for all waves
 # except one.  GDB will need to step all (except one) waves over the
 # breakpoint.
