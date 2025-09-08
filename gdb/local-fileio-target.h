@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef LOCAL_FILEIO_TARGET_H
-#define LOCAL_FILEIO_TARGET_H
+#ifndef GDB_LOCAL_FILEIO_TARGET_H
+#define GDB_LOCAL_FILEIO_TARGET_H
 
 #include "gdbsupport/fileio.h"
 
@@ -105,4 +105,4 @@ class local_fileio_target : public Target
   { return local_fileio_readlink (inf, filename, target_errno); }
 };
 
-#endif
+#endif /* GDB_LOCAL_FILEIO_TARGET_H */
