@@ -1,0 +1,4 @@
+.*: warning: --enable-non-contiguous-regions may change behaviour for section .?\.bss.? from .*
+.*: warning: --enable-non-contiguous-regions may change behaviour for section .?\.bss\.MY_BUF.? from .*
+.*: error: --enable-non-contiguous-regions was not able to allocate the input section `.bss.MY_BUF' \(.*non-contiguous-mem-2\.o\) to an output section
+.*: final link failed

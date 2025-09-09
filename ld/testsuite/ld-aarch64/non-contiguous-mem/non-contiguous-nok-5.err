@@ -1,0 +1,7 @@
+.*: warning: .* may change behaviour for section `\.code\.1' from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section `\.code\.2' from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section `\.code\.3' from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section `\.code\.1' from .* \(assigned to \.ramu, but additional match: \.ramz\)
+.*: warning: .* may change behaviour for section `\.code\.2' from .* \(assigned to \.ramu, but additional match: \.ramz\)
+.*: warning: .* may change behaviour for section `\.code\.3' from .* \(assigned to \.ramu, but additional match: \.ramz\)
+`code4' referenced in section `\.code\.3' of .*: defined in discarded section `\.code\.4' of .*\Z
