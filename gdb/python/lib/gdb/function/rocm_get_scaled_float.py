@@ -16,8 +16,9 @@
 
 """$_mx_get_scaled_float"""
 
-import re
 import math
+import re
+
 import gdb
 
 
