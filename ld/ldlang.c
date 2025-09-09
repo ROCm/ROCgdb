@@ -5696,7 +5696,7 @@ size_input_section
   lang_input_section_type *is = &((*this_ptr)->input_section);
   asection *i = is->section;
   asection *o = output_section_statement->bfd_section;
-  *removed = 0;
+  *removed = false;
 
   if (link_info.non_contiguous_regions)
     {
@@ -5707,7 +5707,7 @@ size_input_section
 	 have reinitialized its size.  */
       if (i->already_assigned && i->already_assigned != o)
 	{
-	  *removed = 1;
+	  *removed = true;
 	  return dot;
 	}
     }
@@ -5770,7 +5770,7 @@ size_input_section
 			     "would overflow `%pA' after it changed size).\n"),
 			   i, i->output_section);
 
-		  *removed = 1;
+		  *removed = true;
 		  dot = end;
 		  i->output_section = NULL;
 		  return dot;
@@ -8440,9 +8440,14 @@ lang_propagate_lma_regions (void)
     }
 }
 
+/* Checks whether any input section was not allocated to an output section.
+   If such a case is found, emits an error for the corresponding input section
+   and stops the link process.  */
+
 static void
-warn_non_contiguous_discards (void)
+error_non_contiguous_unallocated_sections (void)
 {
+  bool removed_section = false;
   LANG_FOR_EACH_INPUT_STATEMENT (file)
     {
       if ((file->the_bfd->flags & (BFD_LINKER_CREATED | DYNAMIC)) != 0
@@ -8451,10 +8456,16 @@ warn_non_contiguous_discards (void)
 
       for (asection *s = file->the_bfd->sections; s != NULL; s = s->next)
 	if (s->output_section == NULL && !s->veneer)
-	  einfo (_("%P: warning: --enable-non-contiguous-regions "
-		   "discards section `%pA' from `%pB'\n"),
-		 s, file->the_bfd);
+	  {
+	    einfo (_("%P: error: --enable-non-contiguous-regions was not able "
+		     "to allocate the input section `%pA' (%pB) to an output "
+		     "section\n"),
+		   s, file->the_bfd);
+	    removed_section = true;
+	  }
     }
+  if (removed_section)
+    fatal (_("%P: final link failed\n"));
 }
 
 static void
@@ -8876,9 +8887,8 @@ lang_process (void)
   if (command_line.check_section_addresses)
     lang_check_section_addresses ();
 
-  if (link_info.non_contiguous_regions
-      && link_info.non_contiguous_regions_warnings)
-    warn_non_contiguous_discards ();
+  if (link_info.non_contiguous_regions)
+    error_non_contiguous_unallocated_sections ();
 
   /* Check any required symbols are known.  */
   ldlang_check_require_defined_symbols ();
