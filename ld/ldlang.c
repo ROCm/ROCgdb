@@ -5757,10 +5757,12 @@ size_input_section
 
 	      if (dot + TO_ADDR (i->size) > end)
 		{
-		  if (i->flags & SEC_LINKER_CREATED)
-		    fatal (_("%P: Output section `%pA' not large enough for "
-			     "the linker-created stubs section `%pA'.\n"),
-			   i->output_section, i);
+		  if (i->veneer)
+		    fatal (_("%P: Memory region `%s' not large enough for the "
+			     "linker-created stubs section `%pA' associated to "
+			     "output section `%pA'\n"),
+			   output_section_statement->region->name_list.name, i,
+			   i->output_section);
 
 		  if (i->rawsize && i->rawsize != i->size)
 		    fatal (_("%P: Relaxation not supported with "
@@ -8448,8 +8450,7 @@ warn_non_contiguous_discards (void)
 	continue;
 
       for (asection *s = file->the_bfd->sections; s != NULL; s = s->next)
-	if (s->output_section == NULL
-	    && (s->flags & SEC_LINKER_CREATED) == 0)
+	if (s->output_section == NULL && !s->veneer)
 	  einfo (_("%P: warning: --enable-non-contiguous-regions "
 		   "discards section `%pA' from `%pB'\n"),
 		 s, file->the_bfd);

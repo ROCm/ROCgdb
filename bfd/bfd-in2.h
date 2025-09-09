@@ -718,6 +718,12 @@ typedef struct bfd_section
   /* Nonzero if section contents should not be freed.  */
   unsigned int alloced:1;
 
+  /* Indicate that the section contains branch veneers.  This is used when
+     support for non-contiguous memory regions is enabled.  The veneers have
+     to be allocated to the same memory region as the code they are refered
+     by, i.e. they cannot be moved to a subsequent memory region.  */
+  unsigned int veneer : 1;
+
   /* Bits used by various backends.  The generic code doesn't touch
      these fields.  */
 

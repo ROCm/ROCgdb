@@ -3600,6 +3600,9 @@ void _bfd_link_reloc_status_error
   /* segment_mark, sec_info_type, use_rela_p, mmapped_p, alloced,   */ \
      0,            0,             0,          0,         0,            \
 								       \
+  /* veneer,                                                        */ \
+     0,                                                                \
+								       \
   /* sec_flg0, sec_flg1, sec_flg2, sec_flg3, sec_flg4, sec_flg5,    */ \
      0,        0,        0,        0,        0,        0,              \
 								       \
