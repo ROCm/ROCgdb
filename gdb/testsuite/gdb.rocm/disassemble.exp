@@ -108,7 +108,7 @@ gdb_test_multiple "n" "next after disassemble-next-line off" {
 
 # Check "set disassemble-next-line on followed by n".
 # vega20 sample output
-# There should be disassemble code printed identified by the presense of the character "=>"
+# There should be disassemble code printed identified by the presence of the character "=>"
 gdb_test_no_output "set disassemble-next-line on"
 gdb_test_multiple "n" "next after disassemble-next-line on" {
     -re "=>.*$gdb_prompt $" {
