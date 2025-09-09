@@ -3275,6 +3275,7 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
 			    stub_entry->target_section);
 
   stub_sec = stub_entry->stub_sec;
+  BFD_ASSERT (stub_sec->output_section != NULL);
 
   /* The layout must not change when a stub may be the target of another.  */
   if (htab->has_double_stub)
@@ -7083,6 +7084,7 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 	  sym = local_syms + r_symndx;
 	  sym_type = ELFNN_ST_TYPE (sym->st_info);
 	  sec = local_sections[r_symndx];
+	  BFD_ASSERT (sec->output_section != NULL);
 
 	  /* An object file might have a reference to a local
 	     undefined symbol.  This is a daft object file, but we
