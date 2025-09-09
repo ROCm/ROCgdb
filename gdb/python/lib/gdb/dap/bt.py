@@ -38,7 +38,7 @@ def _compute_parameters(frame, stack_format):
     result = []
     for arg in arg_iter:
         desc = []
-        name, val = symbol_value(arg, frame)
+        name, val, _ = symbol_value(arg, frame)
         # We don't try to use any particular language's syntax for the
         # output here.
         if stack_format["parameterTypes"]:

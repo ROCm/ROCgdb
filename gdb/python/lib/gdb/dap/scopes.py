@@ -55,8 +55,9 @@ def set_finish_value(val):
 # A helper function to compute the value of a symbol.  SYM is either a
 # gdb.Symbol, or an object implementing the SymValueWrapper interface.
 # FRAME is a frame wrapper, as produced by a frame filter.  Returns a
-# tuple of the form (NAME, VALUE), where NAME is the symbol's name and
-# VALUE is a gdb.Value.
+# tuple of the form (NAME, VALUE, None), where NAME is the symbol's
+# name and VALUE is a gdb.Value.  The 'None' is returned because this
+# function is called by fetch_one_child.
 @in_gdb_thread
 def symbol_value(sym, frame):
     inf_frame = frame.inferior_frame()
@@ -72,7 +73,7 @@ def symbol_value(sym, frame):
         val = sym.symbol().value(inf_frame)
     elif not isinstance(val, gdb.Value):
         val = gdb.Value(val)
-    return (name, val)
+    return (name, val, None)
 
 
 class _ScopeReference(BaseReference):
@@ -120,7 +121,9 @@ class _FinishScopeReference(_ScopeReference):
 
     def fetch_one_child(self, idx):
         assert idx == 0
-        return ("(return)", _last_return_value)
+        # It might be nice to return an evaluateName here; maybe this
+        # could be done by introducing a convenience variable.
+        return ("(return)", _last_return_value, None)
 
 
 class _RegisterReference(_ScopeReference):
@@ -134,12 +137,13 @@ class _RegisterReference(_ScopeReference):
 
     @in_gdb_thread
     def fetch_one_child(self, idx):
-        return (
-            self._var_list[idx].name,
+        name = self._var_list[idx].name
+        value = (
             frame_for_id(self._frameId)
             .inferior_frame()
-            .read_register(self._var_list[idx]),
+            .read_register(self._var_list[idx])
         )
+        return (name, value, "$" + name)
 
 
 @request("scopes")
