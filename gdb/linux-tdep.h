@@ -27,6 +27,17 @@
 struct inferior;
 struct regcache;
 
+#ifndef SEGV_CPERR
+#define SEGV_CPERR 10 /* Control protection error.  */
+#endif
+
+/* Flag which enables shadow stack in PR_SET_SHADOW_STACK_STATUS prctl.  */
+#ifndef PR_SHADOW_STACK_ENABLE
+#define PR_SHADOW_STACK_ENABLE (1UL << 0)
+#define PR_SHADOW_STACK_WRITE (1UL << 1)
+#define PR_SHADOW_STACK_PUSH (1UL << 2)
+#endif
+
 /* Enum used to define the extra fields of the siginfo type used by an
    architecture.  */
 enum linux_siginfo_extra_field_values
@@ -112,5 +123,12 @@ extern CORE_ADDR linux_get_hwcap2 (const std::optional<gdb::byte_vector> &auxv,
 /* Same as the above, but obtain all the inputs from the current inferior.  */
 
 extern CORE_ADDR linux_get_hwcap2 ();
+
+/* Returns true if ADDR belongs to a shadow stack memory range.  If this
+   is the case, assign the shadow stack memory range to RANGE
+   [start_address, end_address).  */
+
+extern bool linux_address_in_shadow_stack_mem_range
+  (CORE_ADDR addr, std::pair<CORE_ADDR, CORE_ADDR> *range);
 
 #endif /* GDB_LINUX_TDEP_H */

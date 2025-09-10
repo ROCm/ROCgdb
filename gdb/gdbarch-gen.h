@@ -1119,8 +1119,8 @@ extern void set_gdbarch_decode_memtag_section (struct gdbarch *gdbarch, gdbarch_
 
 extern bool gdbarch_core_xfer_shared_libraries_p (struct gdbarch *gdbarch);
 
-typedef ULONGEST (gdbarch_core_xfer_shared_libraries_ftype) (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
-extern ULONGEST gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+typedef ULONGEST (gdbarch_core_xfer_shared_libraries_ftype) (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+extern ULONGEST gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
 extern void set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries);
 
 /* Read offset OFFSET of TARGET_OBJECT_LIBRARIES_AIX formatted shared
@@ -1129,8 +1129,8 @@ extern void set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdb
 
 extern bool gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch);
 
-typedef ULONGEST (gdbarch_core_xfer_shared_libraries_aix_ftype) (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
-extern ULONGEST gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+typedef ULONGEST (gdbarch_core_xfer_shared_libraries_aix_ftype) (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+extern ULONGEST gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
 extern void set_gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdbarch_core_xfer_shared_libraries_aix_ftype *core_xfer_shared_libraries_aix);
 
 /* How the core target converts a PTID from a core file to a string. */
@@ -1141,31 +1141,31 @@ typedef std::string (gdbarch_core_pid_to_str_ftype) (struct gdbarch *gdbarch, pt
 extern std::string gdbarch_core_pid_to_str (struct gdbarch *gdbarch, ptid_t ptid);
 extern void set_gdbarch_core_pid_to_str (struct gdbarch *gdbarch, gdbarch_core_pid_to_str_ftype *core_pid_to_str);
 
-/* How the core target extracts the name of a thread from a core file. */
+/* How the core target extracts the name of a thread from core file CBFD. */
 
 extern bool gdbarch_core_thread_name_p (struct gdbarch *gdbarch);
 
-typedef const char * (gdbarch_core_thread_name_ftype) (struct gdbarch *gdbarch, struct thread_info *thr);
-extern const char * gdbarch_core_thread_name (struct gdbarch *gdbarch, struct thread_info *thr);
+typedef const char * (gdbarch_core_thread_name_ftype) (struct gdbarch *gdbarch, struct bfd &cbfd, struct thread_info *thr);
+extern const char * gdbarch_core_thread_name (struct gdbarch *gdbarch, struct bfd &cbfd, struct thread_info *thr);
 extern void set_gdbarch_core_thread_name (struct gdbarch *gdbarch, gdbarch_core_thread_name_ftype *core_thread_name);
 
 /* Read offset OFFSET of TARGET_OBJECT_SIGNAL_INFO signal information
-   from core file into buffer READBUF with length LEN.  Return the number
+   from core file CBFD into buffer READBUF with length LEN.  Return the number
    of bytes read (zero indicates EOF, a negative value indicates failure). */
 
 extern bool gdbarch_core_xfer_siginfo_p (struct gdbarch *gdbarch);
 
-typedef LONGEST (gdbarch_core_xfer_siginfo_ftype) (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
-extern LONGEST gdbarch_core_xfer_siginfo (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+typedef LONGEST (gdbarch_core_xfer_siginfo_ftype) (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
+extern LONGEST gdbarch_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len);
 extern void set_gdbarch_core_xfer_siginfo (struct gdbarch *gdbarch, gdbarch_core_xfer_siginfo_ftype *core_xfer_siginfo);
 
-/* Read x86 XSAVE layout information from core file into XSAVE_LAYOUT.
+/* Read x86 XSAVE layout information from core file CBFD into XSAVE_LAYOUT.
    Returns true if the layout was read successfully. */
 
 extern bool gdbarch_core_read_x86_xsave_layout_p (struct gdbarch *gdbarch);
 
-typedef bool (gdbarch_core_read_x86_xsave_layout_ftype) (struct gdbarch *gdbarch, x86_xsave_layout &xsave_layout);
-extern bool gdbarch_core_read_x86_xsave_layout (struct gdbarch *gdbarch, x86_xsave_layout &xsave_layout);
+typedef bool (gdbarch_core_read_x86_xsave_layout_ftype) (struct gdbarch *gdbarch, struct bfd &cbfd, x86_xsave_layout &xsave_layout);
+extern bool gdbarch_core_read_x86_xsave_layout (struct gdbarch *gdbarch, struct bfd &cbfd, x86_xsave_layout &xsave_layout);
 extern void set_gdbarch_core_read_x86_xsave_layout (struct gdbarch *gdbarch, gdbarch_core_read_x86_xsave_layout_ftype *core_read_x86_xsave_layout);
 
 /* BFD target to use when generating a core file. */
@@ -1879,3 +1879,31 @@ extern void set_gdbarch_use_target_description_from_corefile_notes (struct gdbar
 typedef core_file_exec_context (gdbarch_core_parse_exec_context_ftype) (struct gdbarch *gdbarch, bfd *cbfd);
 extern core_file_exec_context gdbarch_core_parse_exec_context (struct gdbarch *gdbarch, bfd *cbfd);
 extern void set_gdbarch_core_parse_exec_context (struct gdbarch *gdbarch, gdbarch_core_parse_exec_context_ftype *core_parse_exec_context);
+
+/* Some targets support special hardware-assisted control-flow protection
+   technologies.  For example, the Intel Control-Flow Enforcement Technology
+   (Intel CET) on x86 provides a shadow stack and indirect branch tracking.
+   To enable shadow stack support for inferior calls the shadow_stack_push
+   gdbarch hook has to be provided.  The get_shadow_stack_pointer gdbarch
+   hook has to be provided to enable displaced stepping.
+
+   Push NEW_ADDR to the shadow stack and update the shadow stack pointer. */
+
+extern bool gdbarch_shadow_stack_push_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_shadow_stack_push_ftype) (struct gdbarch *gdbarch, CORE_ADDR new_addr, regcache *regcache);
+extern void gdbarch_shadow_stack_push (struct gdbarch *gdbarch, CORE_ADDR new_addr, regcache *regcache);
+extern void set_gdbarch_shadow_stack_push (struct gdbarch *gdbarch, gdbarch_shadow_stack_push_ftype *shadow_stack_push);
+
+/* If possible, return the shadow stack pointer.  If the shadow stack
+   feature is enabled then set SHADOW_STACK_ENABLED to true, otherwise
+   set SHADOW_STACK_ENABLED to false.  This hook has to be provided to enable
+   displaced stepping for shadow stack enabled programs.
+   On some architectures, the shadow stack pointer is available even if the
+   feature is disabled.  So dependent on the target, an implementation of
+   this function may return a valid shadow stack pointer, but set
+   SHADOW_STACK_ENABLED to false. */
+
+typedef std::optional<CORE_ADDR> (gdbarch_get_shadow_stack_pointer_ftype) (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
+extern std::optional<CORE_ADDR> gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
+extern void set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, gdbarch_get_shadow_stack_pointer_ftype *get_shadow_stack_pointer);

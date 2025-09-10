@@ -47,6 +47,7 @@
 #include "gdbsupport/unordered_map.h"
 
 #include <ctype.h>
+#include <algorithm>
 
 /* This enum represents the values that the user can choose when
    informing the Linux kernel about which memory mappings will be
@@ -96,6 +97,10 @@ struct smaps_vmflags
     /* Memory map has memory tagging enabled.  */
 
     unsigned int memory_tagging : 1;
+
+    /* Memory map used for shadow stack.  */
+
+    unsigned int shadow_stack_memory : 1;
   };
 
 /* Data structure that holds the information contained in the
@@ -537,6 +542,8 @@ decode_vmflags (char *p, struct smaps_vmflags *v)
 	v->shared_mapping = 1;
       else if (strcmp (s, "mt") == 0)
 	v->memory_tagging = 1;
+      else if (strcmp (s, "ss") == 0)
+	v->shadow_stack_memory = 1;
     }
 }
 
@@ -1300,18 +1307,15 @@ linux_core_info_proc (struct gdbarch *gdbarch, struct bfd *cbfd,
    interface.  */
 
 static LONGEST
-linux_core_xfer_siginfo (struct gdbarch *gdbarch, gdb_byte *readbuf,
-			 ULONGEST offset, ULONGEST len)
+linux_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd,
+			 gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
 {
   thread_section_name section_name (".note.linuxcore.siginfo", inferior_ptid);
-  asection *section
-    = bfd_get_section_by_name (current_program_space->core_bfd (),
-			       section_name.c_str ());
-  if (section == NULL)
+  asection *section = bfd_get_section_by_name (&cbfd, section_name.c_str ());
+  if (section == nullptr)
     return -1;
 
-  if (!bfd_get_section_contents (current_program_space->core_bfd (), section,
-				 readbuf, offset, len))
+  if (!bfd_get_section_contents (&cbfd, section, readbuf, offset, len))
     return -1;
 
   return len;
@@ -3058,6 +3062,46 @@ show_dump_excluded_mappings (struct ui_file *file, int from_tty,
 {
   gdb_printf (file, _("Dumping of mappings marked with the VM_DONTDUMP"
 		      " flag is %s.\n"), value);
+}
+
+/* See linux-tdep.h.  */
+
+bool
+linux_address_in_shadow_stack_mem_range
+  (CORE_ADDR addr, std::pair<CORE_ADDR, CORE_ADDR> *range)
+{
+  if (!target_has_execution () || current_inferior ()->fake_pid_p)
+    return false;
+
+  const int pid = current_inferior ()->pid;
+
+  std::string smaps_file = string_printf ("/proc/%d/smaps", pid);
+
+  gdb::unique_xmalloc_ptr<char> data
+    = target_fileio_read_stralloc (nullptr, smaps_file.c_str ());
+
+  if (data == nullptr)
+    return false;
+
+  const std::vector<smaps_data> smaps
+    = parse_smaps_data (data.get (), std::move (smaps_file));
+
+  auto find_addr_mem_range = [&addr] (const smaps_data &map)
+    {
+      bool addr_in_mem_range
+	= (addr >= map.start_address && addr < map.end_address);
+      return (addr_in_mem_range && map.vmflags.shadow_stack_memory);
+    };
+  auto it = std::find_if (smaps.begin (), smaps.end (), find_addr_mem_range);
+
+  if (it != smaps.end ())
+    {
+      range->first = it->start_address;
+      range->second = it->end_address;
+      return true;
+    }
+
+  return false;
 }
 
 /* To be called from the various GDB_OSABI_LINUX handlers for the

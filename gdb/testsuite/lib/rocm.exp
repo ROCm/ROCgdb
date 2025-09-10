@@ -417,8 +417,8 @@ proc hip_device_is_less_than { version } {
 
 # Helper function for rocm_core_find.
 
-proc rocm_core_find_1 {coredir binfile {arg ""}} {
-    set destcore [core_find_1 $coredir $binfile $arg]
+proc rocm_core_find_1 {coredir binfile arg output_file} {
+    set destcore [core_find_1 $coredir $binfile $arg $output_file]
     set gpucore "$binfile.gpucore"
 
     # Search for a GPU core dump, if any.
@@ -455,8 +455,9 @@ proc rocm_core_find_1 {coredir binfile {arg ""}} {
 # dump and merges it with the CPU core dump found by core_find.  If either
 # of the GPU and host core dump is missing, return an empty string.
 
-proc rocm_core_find {binfile {deletefiles {}} {arg ""}} {
-    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg]
+proc rocm_core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}} {
+    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg \
+	    $output_file]
 }
 
 # Helper function calling "generate-core-file COREFILE_PATH".

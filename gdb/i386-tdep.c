@@ -897,6 +897,22 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
       displaced_debug_printf ("relocated return addr at %s to %s",
 			      paddress (gdbarch, esp),
 			      paddress (gdbarch, retaddr));
+
+      /* If shadow stack is enabled, we need to correct the return address
+	 on the shadow stack too.  */
+      bool shadow_stack_enabled;
+      std::optional<CORE_ADDR> ssp
+	= gdbarch_get_shadow_stack_pointer (gdbarch, regs,
+					    shadow_stack_enabled);
+      if (shadow_stack_enabled)
+	{
+	  gdb_assert (ssp.has_value ());
+	  write_memory_unsigned_integer (*ssp, retaddr_len, byte_order,
+					 retaddr);
+	  displaced_debug_printf ("relocated shadow stack return addr at %s "
+				  "to %s", paddress (gdbarch, *ssp),
+				  paddress (gdbarch, retaddr));
+	}
     }
 }
 
@@ -8580,7 +8596,8 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
   const struct tdesc_feature *feature_core;
 
   const struct tdesc_feature *feature_sse, *feature_avx, *feature_avx512,
-			     *feature_pkeys, *feature_segments;
+			     *feature_pkeys, *feature_segments,
+			     *feature_pl3_ssp;
   int i, num_regs, valid_p;
 
   if (! tdesc_has_registers (tdesc))
@@ -8605,6 +8622,9 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 
   /* Try PKEYS  */
   feature_pkeys = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pkeys");
+
+  /* Try Shadow Stack.  */
+  feature_pl3_ssp = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp");
 
   valid_p = 1;
 
@@ -8719,6 +8739,15 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 	valid_p &= tdesc_numbered_register (feature_pkeys, tdesc_data,
 					    I387_PKRU_REGNUM (tdep) + i,
 					    tdep->pkeys_register_names[i]);
+    }
+
+  if (feature_pl3_ssp != nullptr)
+    {
+      if (tdep->ssp_regnum < 0)
+	tdep->ssp_regnum = I386_PL3_SSP_REGNUM;
+
+      valid_p &= tdesc_numbered_register (feature_pl3_ssp, tdesc_data,
+					  tdep->ssp_regnum, "pl3_ssp");
     }
 
   return valid_p;
@@ -9097,23 +9126,25 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 
 
-/* Return the target description for a specified XSAVE feature mask.  */
+/* See i386-tdep.h.  */
 
 const struct target_desc *
-i386_target_description (uint64_t xcr0, bool segments)
+i386_target_description (uint64_t xstate_bv, bool segments)
 {
   static target_desc *i386_tdescs \
-    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*segments*/] = {};
+    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/] \
+    [2/*segments*/] = {};
   target_desc **tdesc;
 
-  tdesc = &i386_tdescs[(xcr0 & X86_XSTATE_SSE) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0]
+  tdesc = &i386_tdescs[(xstate_bv & X86_XSTATE_SSE) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
     [segments ? 1 : 0];
 
   if (*tdesc == NULL)
-    *tdesc = i386_create_target_description (xcr0, false, segments);
+    *tdesc = i386_create_target_description (xstate_bv, false, segments);
 
   return *tdesc;
 }

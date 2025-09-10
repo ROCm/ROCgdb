@@ -141,7 +141,8 @@ proc lane_apply {cmd lane_state_name valid_states} {
 }
 
 proc_with_prefix test {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if ![runto "bar" allow-pending message] {
 	return

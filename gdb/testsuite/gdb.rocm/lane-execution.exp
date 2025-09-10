@@ -113,7 +113,8 @@ proc setup {lane_then_name lane_else_name} {
     upvar $lane_then_name lane_then
     upvar $lane_else_name lane_else
 
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if ![runto "lane_pc_test" allow-pending] {
 	return 0

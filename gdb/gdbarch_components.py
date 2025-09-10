@@ -1887,7 +1887,12 @@ failed, otherwise, return the red length of READBUF.
 """,
     type="ULONGEST",
     name="core_xfer_shared_libraries",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
@@ -1899,7 +1904,12 @@ Return the number of bytes read (zero indicates failure).
 """,
     type="ULONGEST",
     name="core_xfer_shared_libraries_aix",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
@@ -1915,34 +1925,39 @@ How the core target converts a PTID from a core file to a string.
 
 Method(
     comment="""
-How the core target extracts the name of a thread from a core file.
+How the core target extracts the name of a thread from core file CBFD.
 """,
     type="const char *",
     name="core_thread_name",
-    params=[("struct thread_info *", "thr")],
+    params=[("struct bfd &", "cbfd"), ("struct thread_info *", "thr")],
     predicate=True,
 )
 
 Method(
     comment="""
 Read offset OFFSET of TARGET_OBJECT_SIGNAL_INFO signal information
-from core file into buffer READBUF with length LEN.  Return the number
+from core file CBFD into buffer READBUF with length LEN.  Return the number
 of bytes read (zero indicates EOF, a negative value indicates failure).
 """,
     type="LONGEST",
     name="core_xfer_siginfo",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
 Method(
     comment="""
-Read x86 XSAVE layout information from core file into XSAVE_LAYOUT.
+Read x86 XSAVE layout information from core file CBFD into XSAVE_LAYOUT.
 Returns true if the layout was read successfully.
 """,
     type="bool",
     name="core_read_x86_xsave_layout",
-    params=[("x86_xsave_layout &", "xsave_layout")],
+    params=[("struct bfd &", "cbfd"), ("x86_xsave_layout &", "xsave_layout")],
     predicate=True,
 )
 
@@ -2978,5 +2993,40 @@ which all assume current_inferior() is the one to read from.
     name="core_parse_exec_context",
     params=[("bfd *", "cbfd")],
     predefault="default_core_parse_exec_context",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Some targets support special hardware-assisted control-flow protection
+technologies.  For example, the Intel Control-Flow Enforcement Technology
+(Intel CET) on x86 provides a shadow stack and indirect branch tracking.
+To enable shadow stack support for inferior calls the shadow_stack_push
+gdbarch hook has to be provided.  The get_shadow_stack_pointer gdbarch
+hook has to be provided to enable displaced stepping.
+
+Push NEW_ADDR to the shadow stack and update the shadow stack pointer.
+""",
+    type="void",
+    name="shadow_stack_push",
+    params=[("CORE_ADDR", "new_addr"), ("regcache *", "regcache")],
+    predicate=True,
+)
+
+Method(
+    comment="""
+If possible, return the shadow stack pointer.  If the shadow stack
+feature is enabled then set SHADOW_STACK_ENABLED to true, otherwise
+set SHADOW_STACK_ENABLED to false.  This hook has to be provided to enable
+displaced stepping for shadow stack enabled programs.
+On some architectures, the shadow stack pointer is available even if the
+feature is disabled.  So dependent on the target, an implementation of
+this function may return a valid shadow stack pointer, but set
+SHADOW_STACK_ENABLED to false.
+""",
+    type="std::optional<CORE_ADDR>",
+    name="get_shadow_stack_pointer",
+    params=[("regcache *", "regcache"), ("bool &", "shadow_stack_enabled")],
+    predefault="default_get_shadow_stack_pointer",
     invalid=False,
 )

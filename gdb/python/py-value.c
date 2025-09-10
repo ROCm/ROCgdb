@@ -1288,6 +1288,30 @@ valpy_get_is_optimized_out (PyObject *self, void *closure)
   Py_RETURN_FALSE;
 }
 
+/* Implements gdb.Value.is_unavailable.  Return true if any part of the
+   value is unavailable.  */
+
+static PyObject *
+valpy_get_is_unavailable (PyObject *self, void *closure)
+{
+  struct value *value = ((value_object *) self)->value;
+  bool entirely_available = false;
+
+  try
+    {
+      entirely_available = value->entirely_available ();
+    }
+  catch (const gdb_exception &except)
+    {
+      return gdbpy_handle_gdb_exception (nullptr, except);
+    }
+
+  if (!entirely_available)
+    Py_RETURN_TRUE;
+
+  Py_RETURN_FALSE;
+}
+
 /* Implements gdb.Value.is_lazy.  */
 static PyObject *
 valpy_get_is_lazy (PyObject *self, void *closure)
@@ -1842,7 +1866,7 @@ valpy_long (PyObject *self)
 {
   struct value *value = ((value_object *) self)->value;
   struct type *type = value->type ();
-  LONGEST l = 0;
+  PyObject *result;
 
   try
     {
@@ -1858,17 +1882,57 @@ valpy_long (PyObject *self)
 	  && type->code () != TYPE_CODE_PTR)
 	error (_("Cannot convert value to long."));
 
-      l = value_as_long (value);
+      gdb::array_view<const gdb_byte> contents = value->contents ();
+#if PY_VERSION_HEX >= 0x030d0000
+      int flags = (type_byte_order (type) == BFD_ENDIAN_BIG
+		   ? Py_ASNATIVEBYTES_BIG_ENDIAN
+		   : Py_ASNATIVEBYTES_LITTLE_ENDIAN);
+      if (type->is_unsigned ())
+	flags |= Py_ASNATIVEBYTES_UNSIGNED_BUFFER;
+      result = PyLong_FromNativeBytes (contents.data (), contents.size (),
+				       flags);
+#else
+      /* Here we construct a call to "int.from_bytes", passing in the
+	 appropriate arguments.  We need a somewhat roundabout
+	 approach because int.from_bytes requires "signed" to be a
+	 keyword arg.  */
+
+      /* PyObject_Call requires a tuple argument.  */
+      gdbpy_ref<> empty_tuple (PyTuple_New (0));
+      if (empty_tuple == nullptr)
+	return nullptr;
+
+      /* Since we need a dictionary anyway, we pass all arguments as
+	 keywords, building the dictionary here.  */
+      gdbpy_ref<> args
+	(Py_BuildValue ("{sy#sssO}",
+			"bytes", contents.data (),
+			(Py_ssize_t) contents.size (),
+			"byteorder",
+			(type_byte_order (type) == BFD_ENDIAN_BIG
+			 ? "big" : "little"),
+			"signed",
+			type->is_unsigned ()
+			? Py_False : Py_True));
+      if (args == nullptr)
+	return nullptr;
+
+      /* Find the "int.from_bytes" callable.  */
+      gdbpy_ref<> callable (PyObject_GetAttrString ((PyObject *) &PyLong_Type,
+						    "from_bytes"));
+      if (callable == nullptr)
+	return nullptr;
+
+      result = PyObject_Call (callable.get (), empty_tuple.get (),
+			      args.get ());
+#endif
     }
   catch (const gdb_exception &except)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  if (type->is_unsigned ())
-    return gdb_py_object_from_ulongest (l).release ();
-  else
-    return gdb_py_object_from_longest (l).release ();
+  return result;
 }
 
 /* Implements conversion to float.  */
@@ -2194,6 +2258,9 @@ static gdb_PyGetSetDef value_object_getset[] = {
     "Boolean telling whether the value is optimized "
     "out (i.e., not available).",
     NULL },
+  { "is_unavailable", valpy_get_is_unavailable, nullptr,
+    "Boolean telling whether the value is unavailable.",
+    nullptr },
   { "type", valpy_get_type, NULL, "Type of the value.", NULL },
   { "dynamic_type", valpy_get_dynamic_type, NULL,
     "Dynamic type of the value.", NULL },

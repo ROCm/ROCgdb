@@ -2361,6 +2361,59 @@ proc build_file_normalize {filename} {
     return [file normalize $filename]
 }
 
+# Normalize a file name for the host machine and native Windows GDB.
+# This converts a Unix file name to a Windows filename,
+# per the mount table.  E.g., '/c/foo' (on MSYS2) or '/cygdrive/c/foo'
+# (on Cygwin) is converted to 'c:/foo'.
+
+proc host_file_normalize_mingw {filename unix_to_win} {
+    set filename [host_file_sanitize $filename]
+
+    # If the file name already starts with a drive letter (e.g.,
+    # C:/foo), we're done.  Don't let it fallthrough to "file
+    # normalize", which would misinterpret it as a relative file
+    # name.
+    if {[regexp {^[A-Z]:/} $filename]} {
+	return $filename
+    }
+
+    # Collapse all repeated forward slashes.
+    set filename [regsub -all {//+} $filename {/}]
+
+    # Strip trailing slash, except for root.
+    if {$filename ne "/" && [string match */ $filename]} {
+	set filename [string range $filename 0 end-1]
+    }
+
+    foreach {unix_filename win_filename} $unix_to_win {
+	set mount_len [string length $unix_filename]
+	if {[string equal -length $mount_len $unix_filename $filename]} {
+	    if {$unix_filename eq "/"} {
+		if {$filename eq "/"} {
+		    return "$win_filename"
+		} else {
+		    return "$win_filename$filename"
+		}
+	    } elseif {[string length $filename] == $mount_len} {
+		# Like "cygpath -ma" if the file name resolves to a
+		# drive letter, append a slash, to make it unambiguous
+		# that we resolved to the root of the drive and not
+		# the drive's current directory.
+		if {[string match {[A-Za-z]:} $win_filename]} {
+		    return "$win_filename/"
+		} else {
+		    return "$win_filename"
+		}
+	    } elseif {[string index $filename $mount_len] eq "/"} {
+		set rest [string range $filename $mount_len end]
+		return "$win_filename$rest"
+	    }
+	}
+    }
+
+    return [file normalize $filename]
+}
+
 # Normalize a file name for the host machine.  If running native
 # Windows GDB, this converts a Unix file name to a Windows filename,
 # per the mount table.  E.g., '/c/foo' (on MSYS2) or '/cygdrive/c/foo'
@@ -2368,30 +2421,9 @@ proc build_file_normalize {filename} {
 
 proc host_file_normalize {filename} {
     if {[ishost *-*-mingw*]} {
-	set filename [host_file_sanitize $filename]
-
-	# If the file name already starts with a drive letter (e.g.,
-	# C:/foo), we're done.  Don't let it fallthrough to "file
-	# normalize", which would misinterpret it as a relative file
-	# name.
-	if {[regexp {^[A-Z]:/} $filename]} {
-	    return $filename
-	}
-
 	# Get Unix => Windows map.
 	lassign [get_mount_point_map] _ unix_to_win
-
-	foreach {unix_filename win_filename} $unix_to_win {
-	    set mount_len [string length $unix_filename]
-	    if {[string equal -length $mount_len $unix_filename $filename]} {
-		if {[string length $filename] == $mount_len} {
-		    return "$win_filename/"
-		} elseif {[string index $filename $mount_len] eq "/"} {
-		    set rest [string range $filename $mount_len end]
-		    return "$win_filename$rest"
-		}
-	    }
-	}
+	return [host_file_normalize_mingw $filename $unix_to_win]
     }
 
     return [file normalize $filename]
@@ -4467,6 +4499,76 @@ gdb_caching_proc allow_tsx_tests {} {
     return $allow_tsx_tests
 }
 
+# Run a test on the target to check if it supports x86 shadow stack.  Return 1
+# if shadow stack is enabled, 0 otherwise.
+
+gdb_caching_proc allow_ssp_tests {} {
+    global srcdir subdir gdb_prompt hex
+
+    set me "allow_ssp_tests"
+
+    if { ![istarget i?86-*-*] && ![istarget x86_64-*-* ] } {
+	verbose "$me: target known to not support shadow stack."
+	return 0
+    }
+
+    # There is no need to check the actual HW in addition to ptrace support.
+    # We need both checks and ptrace will tell us about the HW state.
+    set compile_flags "{additional_flags=-fcf-protection=return}"
+    set src { int main() { return 0; } }
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	return 0
+    }
+
+    save_vars { ::env(GLIBC_TUNABLES) } {
+
+	append_environment GLIBC_TUNABLES "glibc.cpu.hwcaps" "SHSTK"
+
+	# No error message, compilation succeeded so now run it via gdb.
+	gdb_exit
+	gdb_start
+	gdb_reinitialize_dir $srcdir/$subdir
+	gdb_load $obj
+	if {![runto_main]} {
+	    remote_file build delete $obj
+	    return 0
+	}
+	set shadow_stack_disabled_re "(<unavailable>)"
+	if {[istarget *-*-linux*]} {
+	    # Starting with v6.6, the Linux kernel supports CET shadow stack.
+	    # Dependent on the target we can see a nullptr or "<unavailable>"
+	    # when shadow stack is supported by HW and the Linux kernel but
+	    # not enabled for the current thread (for example due to a lack
+	    # of compiler or glibc support for -fcf-protection).
+	    set shadow_stack_disabled_re "$shadow_stack_disabled_re|(.*0x0)"
+	}
+
+	set allow_ssp_tests 0
+	gdb_test_multiple "print \$pl3_ssp" "test shadow stack support" {
+	    -re -wrap "(.*$hex)((?!(.*0x0)).)" {
+		verbose -log "$me: Shadow stack support detected."
+		set allow_ssp_tests 1
+	    }
+	    -re -wrap $shadow_stack_disabled_re {
+		# In case shadow stack is not enabled (for example due to a
+		# lack of compiler or glibc support for -fcf-protection).
+		verbose -log "$me: Shadow stack is not enabled."
+	    }
+	    -re -wrap "void" {
+		# In case we don't have hardware or kernel support.
+		verbose -log "$me: No shadow stack support."
+	    }
+	}
+
+	gdb_exit
+    }
+
+    remote_file build delete $obj
+
+    verbose "$me: returning $allow_ssp_tests" 2
+    return $allow_ssp_tests
+}
+
 # Run a test on the target to see if it supports avx512bf16.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
@@ -4609,7 +4711,8 @@ gdb_caching_proc allow_lam_tests {} {
     # No error message, compilation succeeded so now run it via gdb.
 
     set allow_lam_tests 0
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     gdb_run_cmd
     gdb_expect {
 	-re ".*$inferior_exited_re with code.*${gdb_prompt} $" {
@@ -4892,7 +4995,8 @@ gdb_caching_proc allow_aarch64_sve_tests {} {
     }
 
     # Compilation succeeded so now run it via gdb.
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     gdb_run_cmd
     gdb_expect {
         -re ".*Illegal instruction.*${gdb_prompt} $" {
@@ -4952,7 +5056,8 @@ gdb_caching_proc aarch64_initialize_sve_information { } {
 	return [array get supported_vl]
     }
 
-    clean_restart $test_exec
+    clean_restart
+    gdb_load $test_exec
 
     if {![runto_main]} {
 	return [array get supported_vl]
@@ -5049,7 +5154,8 @@ gdb_caching_proc allow_aarch64_sme_tests {} {
     }
 
     # Compilation succeeded so now run it via gdb.
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     gdb_run_cmd
     gdb_expect {
 	-re ".*Illegal instruction.*${gdb_prompt} $" {
@@ -5109,7 +5215,8 @@ gdb_caching_proc aarch64_initialize_sme_information { } {
 	return [array get supported_svl]
     }
 
-    clean_restart $test_exec
+    clean_restart
+    gdb_load $test_exec
 
     if {![runto_main]} {
 	return [array get supported_svl]
@@ -5203,7 +5310,8 @@ gdb_caching_proc allow_aarch64_mops_tests {} {
     }
 
     # Compilation succeeded so now run it via gdb.
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     gdb_run_cmd
     gdb_expect {
 	-re ".*$inferior_exited_re with code 01.*${gdb_prompt} $" {
@@ -5224,6 +5332,61 @@ gdb_caching_proc allow_aarch64_mops_tests {} {
 
     verbose "$me:  returning $allow_mops_tests" 2
     return $allow_mops_tests
+}
+
+# Run a test on the target to see if it supports AArch64 GCS extensions.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_gcs_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_gcs_tests"
+
+    if { ![is_aarch64_target]} {
+	return 0
+    }
+
+    # Compile a program that tests the GCS feature.
+    set src {
+	#include <stdbool.h>
+	#include <sys/auxv.h>
+
+	/* Feature check for Guarded Control Stack.  */
+	#ifndef HWCAP_GCS
+	#define HWCAP_GCS (1ULL << 32)
+	#endif
+
+	int main (void) {
+	    bool gcs_supported = getauxval (AT_HWCAP) & HWCAP_GCS;
+
+	    /* Return success if GCS is supported.  */
+	    return !gcs_supported;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable]} {
+	return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    set allow_gcs_tests 0
+    clean_restart
+    gdb_load $obj
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: gcs support detected"
+	    set allow_gcs_tests 1
+	}
+	-re ".*$inferior_exited_re with code 01.*${gdb_prompt} $" {
+	    verbose -log "\n$me: gcs support not detected"
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_gcs_tests" 2
+    return $allow_gcs_tests
 }
 
 # A helper that compiles a test case to see if __int128 is supported.
@@ -9345,6 +9508,10 @@ proc clean_restart {{executable ""}} {
     gdb_reinitialize_dir $srcdir/$subdir
 
     if {$executable != ""} {
+	if { [file pathtype $executable] == "absolute" } {
+	    error "absolute path used"
+	}
+
 	set binfile [standard_output_file ${executable}]
 	return [gdb_load ${binfile}]
     }
@@ -9595,7 +9762,8 @@ gdb_caching_proc target_endianness {} {
         return 0
     }
 
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     if ![runto_main] {
         return 0
     }
@@ -9743,7 +9911,7 @@ proc with_tmpdir {{prefix "tmp"} {deletefiles {}} cb args} {
 
 # Helper function for core_find.
 
-proc core_find_1 {coredir binfile {arg ""}} {
+proc core_find_1 {coredir binfile arg output_file} {
     global objdir subdir
 
     set destcore "$binfile.core"
@@ -9763,7 +9931,7 @@ proc core_find_1 {coredir binfile {arg ""}} {
     # could have many core files lying around, and it may be difficult to
     # tell which one is ours, so let's run the program in a subdirectory.
     set found 0
-    catch "system \"(cd ${coredir}; ulimit -c unlimited; ${binfile} ${arg}; true) >/dev/null 2>&1\""
+    catch "system \"(cd ${coredir}; ulimit -c unlimited; ${binfile} ${arg}; true) >${output_file} 2>&1\""
     #      remote_exec host "${binfile}"
     set binfile_basename [file tail $binfile]
     foreach i [list \
@@ -9809,13 +9977,15 @@ proc core_find_1 {coredir binfile {arg ""}} {
     return $destcore
 }
 
-# Run BINFILE with arguments ARG in a temporary directory, and return the path
-# to a core dump generated during execution if any, empty string otherwise.
-# DELETEFILES is a list of files that should be removed from the temporary
-# directory before deleting it.
+# Run BINFILE with arguments ARG in a temporary directory, redirects the
+# sandard and error outputs to OUTPUT_FILE, and return the path to a core dump
+# generated during execution if any, empty string otherwise.  DELETEFILES is a
+# list of files that should be removed from the temporary directory before
+# deleting it.
 
-proc core_find {binfile {deletefiles {}} {arg ""}} {
-    return [with_tmpdir coredir $deletefiles core_find_1 $binfile $arg]
+proc core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}} {
+    return [with_tmpdir coredir $deletefiles core_find_1 [list $binfile $arg \
+	    $output_file]]
 }
 
 # gdb_target_symbol_prefix compiles a test program and then examines
@@ -9857,7 +10027,8 @@ gdb_caching_proc target_supports_scheduler_locking {} {
         return 0
     }
 
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
     if ![runto_main] {
         return 0
     }
@@ -11352,7 +11523,8 @@ gdb_caching_proc have_epilogue_line_info {} {
 	 return False
     }
 
-    clean_restart $obj
+    clean_restart
+    gdb_load $obj
 
     gdb_test_multiple "info line 6" "epilogue test" {
 	-re -wrap ".*starts at address.*and ends at.*" {

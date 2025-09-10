@@ -648,7 +648,7 @@ static int this_operand = -1;
 /* Are we processing a .insn directive?  */
 #define dot_insn() (i.tm.mnem_off == MN__insn)
 
-enum i386_flag_code i386_flag_code;
+static enum i386_flag_code i386_flag_code;
 #define flag_code i386_flag_code /* Permit to continue using original name.  */
 static unsigned int object_64bit;
 static unsigned int disallow_64bit_reloc;
@@ -861,7 +861,7 @@ static const char *cpu_arch_name = NULL;
 static char *cpu_sub_arch_name = NULL;
 
 /* CPU feature flags.  */
-i386_cpu_flags cpu_arch_flags = CPU_UNKNOWN_FLAGS;
+static i386_cpu_flags cpu_arch_flags = CPU_UNKNOWN_FLAGS;
 
 /* ISA extensions available in 64-bit mode only.  */
 static const i386_cpu_flags cpu_64_flags = CPU_ANY_64_FLAGS;
@@ -870,13 +870,13 @@ static const i386_cpu_flags cpu_64_flags = CPU_ANY_64_FLAGS;
 static int cpu_arch_tune_set = 0;
 
 /* Cpu we are generating instructions for.  */
-enum processor_type cpu_arch_tune = PROCESSOR_UNKNOWN;
+static enum processor_type cpu_arch_tune = PROCESSOR_UNKNOWN;
 
 /* CPU instruction set architecture used.  */
-enum processor_type cpu_arch_isa = PROCESSOR_UNKNOWN;
+static enum processor_type cpu_arch_isa = PROCESSOR_UNKNOWN;
 
 /* CPU feature flags of instruction set architecture used.  */
-i386_cpu_flags cpu_arch_isa_flags;
+static i386_cpu_flags cpu_arch_isa_flags;
 
 /* If set, conditional jumps are not automatically promoted to handle
    larger than a byte offset.  */
@@ -3517,7 +3517,12 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
       string = s;
 
       if (strcmp (string, "nojumps") == 0)
-	no_cond_jump_promotion = 1;
+	{
+	  if (cpu_arch_flags.bitfield.cpui386)
+	    as_bad (_("`%s' only supported with 16-bit architectures"), string);
+	  else
+	    no_cond_jump_promotion = true;
+	}
       else if (strcmp (string, "jumps") != 0)
 	{
 	  as_bad (_("no such architecture modifier: `%s'"), string);
@@ -3895,10 +3900,13 @@ pt (i386_operand_type t)
 #endif /* DEBUG386 */
 
 static bfd_reloc_code_real_type
-reloc (unsigned int size,
-       int pcrel,
-       int sign,
-       bfd_reloc_code_real_type other)
+_reloc (unsigned int size,
+	bool pcrel,
+	int sign,
+	bfd_reloc_code_real_type other,
+	bool code64,
+	const char *file,
+	unsigned int line)
 {
   if (other != NO_RELOC)
     {
@@ -3939,30 +3947,33 @@ reloc (unsigned int size,
 	    other = BFD_RELOC_SIZE64;
 	  if (pcrel)
 	    {
-	      as_bad (_("there are no pc-relative size relocations"));
+	      as_bad_where (file, line,
+			    _("there are no pc-relative size relocations"));
 	      return NO_RELOC;
 	    }
 	}
 #endif
 
       /* Sign-checking 4-byte relocations in 16-/32-bit code is pointless.  */
-      if (size == 4 && (flag_code != CODE_64BIT || disallow_64bit_reloc))
+      if (size == 4 && (!code64 || disallow_64bit_reloc))
 	sign = -1;
 
       rel = bfd_reloc_type_lookup (stdoutput, other);
       if (!rel)
-	as_bad (_("unknown relocation (%u)"), other);
+	as_bad_where (file, line, _("unknown relocation (%u)"), other);
       else if (size != bfd_get_reloc_size (rel))
-	as_bad (_("%u-byte relocation cannot be applied to %u-byte field"),
-		bfd_get_reloc_size (rel),
-		size);
+	as_bad_where (file, line,
+		      _("%u-byte relocation cannot be applied to %u-byte field"),
+		      bfd_get_reloc_size (rel), size);
       else if (pcrel && !rel->pc_relative)
-	as_bad (_("non-pc-relative relocation for pc-relative field"));
+	as_bad_where (file, line,
+		      _("non-pc-relative relocation for pc-relative field"));
       else if ((rel->complain_on_overflow == complain_overflow_signed
 		&& !sign)
 	       || (rel->complain_on_overflow == complain_overflow_unsigned
 		   && sign > 0))
-	as_bad (_("relocated field and relocation type differ in signedness"));
+	as_bad_where (file, line,
+		      _("relocated field and relocation type differ in signedness"));
       else
 	return other;
       return NO_RELOC;
@@ -3971,7 +3982,8 @@ reloc (unsigned int size,
   if (pcrel)
     {
       if (!sign)
-	as_bad (_("there are no unsigned pc-relative relocations"));
+	as_bad_where (file, line,
+		      _("there are no unsigned pc-relative relocations"));
       switch (size)
 	{
 	case 1: return BFD_RELOC_8_PCREL;
@@ -3979,7 +3991,8 @@ reloc (unsigned int size,
 	case 4: return BFD_RELOC_32_PCREL;
 	case 8: return BFD_RELOC_64_PCREL;
 	}
-      as_bad (_("cannot do %u byte pc-relative relocation"), size);
+      as_bad_where (file, line,
+		    _("cannot do %u byte pc-relative relocation"), size);
     }
   else
     {
@@ -3996,11 +4009,20 @@ reloc (unsigned int size,
 	  case 4: return BFD_RELOC_32;
 	  case 8: return BFD_RELOC_64;
 	  }
-      as_bad (_("cannot do %s %u byte relocation"),
-	      sign > 0 ? "signed" : "unsigned", size);
+      as_bad_where (file, line, _("cannot do %s %u byte relocation"),
+		    sign > 0 ? "signed" : "unsigned", size);
     }
 
   return NO_RELOC;
+}
+
+static bfd_reloc_code_real_type
+reloc (unsigned int size,
+       bool pcrel,
+       int sign,
+       bfd_reloc_code_real_type other)
+{
+  return _reloc (size, pcrel, sign, other, flag_code == CODE_64BIT, NULL, 0);
 }
 
 #ifdef OBJ_ELF
@@ -15650,6 +15672,23 @@ i386_att_operand (char *operand_string)
   return 1;			/* Normal return.  */
 }
 
+/* Initialize the tc_frag_data field of a fragment.  */
+
+void i386_frag_init (fragS *fragP, size_t max_bytes)
+{
+  memset (&fragP->tc_frag_data, 0, sizeof (fragP->tc_frag_data));
+  fragP->tc_frag_data.isa = cpu_arch_isa;
+  fragP->tc_frag_data.tune = cpu_arch_tune;
+  fragP->tc_frag_data.cpunop = cpu_arch_flags.bitfield.cpunop;
+  fragP->tc_frag_data.isanop = cpu_arch_isa_flags.bitfield.cpunop;
+  fragP->tc_frag_data.code = i386_flag_code;
+  fragP->tc_frag_data.max_bytes = max_bytes;
+  fragP->tc_frag_data.last_insn_normal
+    = (seg_info(now_seg)->tc_segment_info_data.last_insn.kind
+       == last_insn_other);
+  fragP->tc_frag_data.no_cond_jump_promotion = no_cond_jump_promotion;
+}
+
 /* Calculate the maximum variable size (i.e., excluding fr_fix)
    that an rs_machine_dependent frag may reach.  */
 
@@ -16137,18 +16176,15 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
       int old_fr_fix;
       fixS *fixP = NULL;
 
-      if (fragP->fr_var != NO_RELOC)
-	reloc_type = (enum bfd_reloc_code_real) fragP->fr_var;
-      else if (size == 2)
-	reloc_type = BFD_RELOC_16_PCREL;
+      reloc_type = (enum bfd_reloc_code_real) fragP->fr_var;
 #ifdef OBJ_ELF
-      else if (fragP->tc_frag_data.code == CODE_64BIT
-	       && fragP->fr_offset == 0
-	       && need_plt32_p (fragP->fr_symbol))
+      if (reloc_type == NO_RELOC
+	  && size != 2
+	  && fragP->tc_frag_data.code == CODE_64BIT
+	  && fragP->fr_offset == 0
+	  && need_plt32_p (fragP->fr_symbol))
 	reloc_type = BFD_RELOC_X86_64_PLT32;
 #endif
-      else
-	reloc_type = BFD_RELOC_32_PCREL;
 
       old_fr_fix = fragP->fr_fix;
       opcode = (unsigned char *) fragP->fr_opcode;
@@ -16162,12 +16198,25 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
 	  fixP = fix_new (fragP, old_fr_fix, size,
 			  fragP->fr_symbol,
 			  fragP->fr_offset, 1,
-			  reloc_type);
+			  _reloc (size, 1, 1, reloc_type,
+				  fragP->tc_frag_data.code == CODE_64BIT,
+				  fragP->fr_file, fragP->fr_line));
 	  break;
 
 	case COND_JUMP86:
-	  if (size == 2
-	      && (!no_cond_jump_promotion || fragP->fr_var != NO_RELOC))
+	  if (fragP->tc_frag_data.no_cond_jump_promotion
+	      && fragP->fr_var == NO_RELOC)
+	    {
+	      fragP->fr_fix += 1;
+	      fixP = fix_new (fragP, old_fr_fix, 1,
+			      fragP->fr_symbol,
+			      fragP->fr_offset, 1,
+			      BFD_RELOC_8_PCREL);
+	      fixP->fx_signed = 1;
+	      break;
+	    }
+
+	  if (size == 2)
 	    {
 	      /* Negate the condition, and branch past an
 		 unconditional jump.  */
@@ -16181,23 +16230,14 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
 	      fix_new (fragP, old_fr_fix + 2, 2,
 		       fragP->fr_symbol,
 		       fragP->fr_offset, 1,
-		       reloc_type);
+		       _reloc (size, 1, 1, reloc_type,
+			       fragP->tc_frag_data.code == CODE_64BIT,
+			       fragP->fr_file, fragP->fr_line));
 	      break;
 	    }
 	  /* Fall through.  */
 
 	case COND_JUMP:
-	  if (no_cond_jump_promotion && fragP->fr_var == NO_RELOC)
-	    {
-	      fragP->fr_fix += 1;
-	      fixP = fix_new (fragP, old_fr_fix, 1,
-			      fragP->fr_symbol,
-			      fragP->fr_offset, 1,
-			      BFD_RELOC_8_PCREL);
-	      fixP->fx_signed = 1;
-	      break;
-	    }
-
 	  /* This changes the byte-displacement jump 0x7N
 	     to the (d)word-displacement jump 0x0f,0x8N.  */
 	  opcode[1] = opcode[0] + 0x10;
@@ -16207,7 +16247,9 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
 	  fixP = fix_new (fragP, old_fr_fix + 1, size,
 			  fragP->fr_symbol,
 			  fragP->fr_offset, 1,
-			  reloc_type);
+			  _reloc (size, 1, 1, reloc_type,
+				  fragP->tc_frag_data.code == CODE_64BIT,
+				  fragP->fr_file, fragP->fr_line));
 	  break;
 
 	default:
@@ -16373,7 +16415,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
     }
   else
     {
-      if (no_cond_jump_promotion
+      if (fragP->tc_frag_data.no_cond_jump_promotion
 	  && TYPE_FROM_RELAX_STATE (fragP->fr_subtype) != UNCOND_JUMP)
 	as_warn_where (fragP->fr_file, fragP->fr_line,
 		       _("long jump required"));

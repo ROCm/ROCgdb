@@ -61,7 +61,8 @@ if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
 
 with_rocm_gpu_lock {
     foreach_with_prefix mode {zero shoff} {
-	clean_restart $::binfile
+	clean_restart
+	gdb_load $::binfile
 	gdb_test_no_output "set args $mode $hipmodule_path" "set args"
 
 	runto "printId" allow-pending

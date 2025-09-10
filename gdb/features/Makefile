@@ -204,6 +204,8 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	aarch64-fpu.xml \
 	aarch64-pauth.xml \
 	aarch64-mte.xml \
+	aarch64-gcs.xml \
+	aarch64-gcs-linux.xml \
 	arc/v1-core.xml \
 	arc/v1-aux.xml \
 	arc/v2-core.xml \
@@ -226,6 +228,7 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	i386/32bit-avx.xml \
 	i386/32bit-avx512.xml \
 	i386/32bit-segments.xml \
+	i386/32bit-ssp.xml \
 	i386/64bit-avx512.xml \
 	i386/64bit-core.xml \
 	i386/64bit-segments.xml \
@@ -233,6 +236,7 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	i386/64bit-linux.xml \
 	i386/64bit-sse.xml \
 	i386/pkeys.xml \
+	i386/64bit-ssp.xml \
 	i386/x32-core.xml \
 	loongarch/base32.xml \
 	loongarch/base64.xml \

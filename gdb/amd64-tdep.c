@@ -1934,6 +1934,22 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
       displaced_debug_printf ("relocated return addr at %s to %s",
 			      paddress (gdbarch, rsp),
 			      paddress (gdbarch, retaddr));
+
+      /* If shadow stack is enabled, we need to correct the return address
+	 on the shadow stack too.  */
+      bool shadow_stack_enabled;
+      std::optional<CORE_ADDR> ssp
+	= gdbarch_get_shadow_stack_pointer (gdbarch, regs,
+					    shadow_stack_enabled);
+      if (shadow_stack_enabled)
+	{
+	  gdb_assert (ssp.has_value ());
+	  write_memory_unsigned_integer (*ssp, retaddr_len, byte_order,
+					 retaddr);
+	  displaced_debug_printf ("relocated shadow stack return addr at %s "
+				  "to %s", paddress (gdbarch, *ssp),
+				  paddress (gdbarch, retaddr));
+	}
     }
 }
 
@@ -2570,6 +2586,124 @@ amd64_analyze_frame_setup (gdbarch *gdbarch, CORE_ADDR pc,
   return pc;
 }
 
+/* Check whether PC points at code pushing registers onto the stack.  If so,
+   update CACHE and return pc after those pushes or CURRENT_PC, whichever is
+   smaller.  Otherwise, return PC passed to this function.
+
+   In AMD64 prologue, we only expect GPRs being pushed onto the stack.  */
+
+static CORE_ADDR
+amd64_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
+			      amd64_frame_cache *cache)
+{
+  gdb_byte op;
+
+  /* Limit iterating to 16 GPRs available.  */
+  for (int i = 0; i < 16 && pc < current_pc; i++)
+    {
+      int reg = 0;
+      int pc_offset = 0;
+
+      if (target_read_code (pc, &op, 1) == -1)
+	return pc;
+
+      /* push %r8 - %r15 REX prefix.  We expect only REX.B to be set, but
+	 because, for example, REX.R would be "unused" if it were there,
+	 we mask opcode with 0xF1 in case compilers don't get rid of it
+	 "because it doesn't matter anyway".  */
+      if ((op & 0xF1) == 0x41)
+	{
+	  reg += 8;
+	  pc_offset = 1;
+
+	  if (target_read_code (pc + 1, &op, 1) == -1)
+	    return pc;
+	}
+
+      /* push %rax|%rcx|%rdx|%rbx|%rsp|%rbp|%rsi|%rdi
+
+	 or with 0x41 prefix:
+	 push %r8|%r9|%r10|%r11|%r12|%r13|%r14|%r15.  */
+      if (op < 0x50 || op > 0x57)
+	break;
+
+      reg += op - 0x50;
+
+      int regnum = amd64_arch_reg_to_regnum (reg);
+      cache->sp_offset += 8;
+      cache->saved_regs[regnum] = -cache->sp_offset;
+
+      pc += 1 + pc_offset;
+    }
+
+  return pc;
+}
+
+/* Check whether PC points at code allocating space on the stack.
+   If so, update CACHE and return pc past it or CURRENT_PC, whichever is
+   smaller.  Otherwise, return PC passed to this function.  */
+
+static CORE_ADDR
+amd64_analyze_stack_alloc (gdbarch *arch, CORE_ADDR pc, CORE_ADDR current_pc,
+			   amd64_frame_cache *cache)
+{
+  static const gdb_byte sub_imm8_rsp[]  = { 0x83, 0xec };
+  static const gdb_byte sub_imm32_rsp[] = { 0x81, 0xec };
+  static const gdb_byte lea_disp_rsp[]  = { 0x8D, 0x64 };
+
+  bfd_endian byte_order = gdbarch_byte_order (arch);
+  const CORE_ADDR start_pc = pc;
+
+  gdb_byte op;
+  if (target_read_code (pc, &op, 1) == -1)
+    return pc;
+
+  /* Check for REX.W, indicating 64-bit operand size (in this case, for
+     %rsp).  */
+  if (op == 0x48)
+    pc++;
+
+  if (current_pc <= pc)
+    return current_pc;
+
+  gdb_byte buf[2];
+  read_code (pc, buf, 2);
+
+  /* Check for instruction allocating space on the stack, which looks like
+       sub imm8/32, %rsp
+     or
+       lea -imm (%rsp), %rsp
+
+     and forward pc past it + update cache.  */
+
+  /* sub imm8, %rsp.  */
+  if (memcmp (buf, sub_imm8_rsp, 2) == 0)
+    {
+      /* Instruction is 3 bytes long.  The imm8 arg is the 3rd, single
+	 byte.  */
+      cache->sp_offset += read_code_integer (pc + 2, 1, byte_order);
+      return pc + 3;
+    }
+  /* sub imm32, %rsp.  */
+  else if (memcmp (buf, sub_imm32_rsp, 2) == 0)
+    {
+      /* Instruction is 6 bytes long.  The imm32 arg is stored in 4 bytes,
+	 starting from 3rd one.  */
+      cache->sp_offset += read_code_integer (pc + 2, 4, byte_order);
+      return pc + 6;
+    }
+  /* lea -imm (%rsp), %rsp.  */
+  else if (memcmp (buf, lea_disp_rsp, 2) == 0)
+    {
+      /* Instruction is 4 bytes long.  The imm arg is the 4th, single
+	 byte.  */
+      cache->sp_offset += -1 * read_code_integer (pc + 3, 1, byte_order);
+      return pc + 4;
+    }
+
+  return start_pc;
+}
+
 /* Do a limited analysis of the prologue at PC and update CACHE
    accordingly.  Bail out early if CURRENT_PC is reached.  Return the
    address where the analysis stopped.
@@ -2611,7 +2745,15 @@ amd64_analyze_prologue (gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR current_pc,
   if (current_pc <= pc)
     return current_pc;
 
-  return amd64_analyze_frame_setup (gdbarch, pc, current_pc, cache);
+  pc = amd64_analyze_frame_setup (gdbarch, pc, current_pc, cache);
+  if (current_pc <= pc)
+    return current_pc;
+
+  pc = amd64_analyze_register_saves (pc, current_pc, cache);
+  if (current_pc <= pc)
+    return current_pc;
+
+  return amd64_analyze_stack_alloc (gdbarch, pc, current_pc, cache);
 }
 
 /* Work around false termination of prologue - GCC PR debug/48827.
@@ -3412,6 +3554,9 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
       tdep->num_pkeys_regs = 1;
     }
 
+  if (tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp") != nullptr)
+    tdep->ssp_regnum = AMD64_PL3_SSP_REGNUM;
+
   tdep->num_byte_regs = 20;
   tdep->num_word_regs = 16;
   tdep->num_dword_regs = 16;
@@ -3568,23 +3713,24 @@ amd64_x32_none_init_abi (gdbarch_info info, gdbarch *arch)
 		      amd64_target_description (X86_XSTATE_SSE_MASK, true));
 }
 
-/* Return the target description for a specified XSAVE feature mask.  */
+/* See amd64-tdep.h.  */
 
 const struct target_desc *
-amd64_target_description (uint64_t xcr0, bool segments)
+amd64_target_description (uint64_t xstate_bv, bool segments)
 {
   static target_desc *amd64_tdescs \
-    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*segments*/] = {};
+    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/][2/*segments*/] = {};
   target_desc **tdesc;
 
-  tdesc = &amd64_tdescs[(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0]
+  tdesc = &amd64_tdescs[(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
     [segments ? 1 : 0];
 
   if (*tdesc == NULL)
-    *tdesc = amd64_create_target_description (xcr0, false, false,
-					      segments);
+    *tdesc = amd64_create_target_description (xstate_bv, false,
+					      false, segments);
 
   return *tdesc;
 }

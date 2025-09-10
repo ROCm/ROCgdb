@@ -427,13 +427,50 @@ loongarch_next_pc (struct regcache *regcache, CORE_ADDR cur_pc)
   return next_pc;
 }
 
+/* Calculate the destination address of a condition branch instruction under an
+   assumed true condition  */
+
+static CORE_ADDR
+cond_branch_destination_address (CORE_ADDR cur_pc, insn_t insn)
+{
+  size_t insn_len = loongarch_insn_length (insn);
+  CORE_ADDR next_pc = cur_pc + insn_len;
+
+  if ((insn & 0xfc000000) == 0x58000000)		/* beq	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x5c000000)		/* bne	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x60000000)		/* blt	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x64000000)		/* bge	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x68000000)		/* bltu	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x6c000000)		/* bgeu	rj, rd, offs16  */
+	next_pc = cur_pc + loongarch_decode_imm ("10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x40000000)		/* beqz	rj, offs21  */
+	next_pc = cur_pc + loongarch_decode_imm ("0:5|10:16<<2", insn, 1);
+  else if ((insn & 0xfc000000) == 0x44000000)		/* bnez	rj, offs21  */
+	next_pc = cur_pc + loongarch_decode_imm ("0:5|10:16<<2", insn, 1);
+  else if ((insn & 0xfc000300) == 0x48000000)		/* bceqz cj, offs21  */
+	next_pc = cur_pc + loongarch_decode_imm ("0:5|10:16<<2", insn, 1);
+  else if ((insn & 0xfc000300) == 0x48000100)		/* bcnez cj, offs21  */
+	next_pc = cur_pc + loongarch_decode_imm ("0:5|10:16<<2", insn, 1);
+
+  return next_pc;
+}
+
 /* We can't put a breakpoint in the middle of a ll/sc atomic sequence,
-   so look for the end of the sequence and put the breakpoint there.  */
+   so a breakpoint should be outside of atomic sequence in any case,
+   just look for the start and end of the sequence, and then restrict
+   the breakpoint outside of the atomic sequence.  */
 
 static std::vector<CORE_ADDR>
 loongarch_deal_with_atomic_sequence (struct regcache *regcache, CORE_ADDR cur_pc)
 {
   CORE_ADDR next_pc;
+  CORE_ADDR ll_insn_addr;
+  CORE_ADDR sc_insn_addr;
   std::vector<CORE_ADDR> next_pcs;
   insn_t insn = loongarch_fetch_instruction (cur_pc);
   size_t insn_len = loongarch_insn_length (insn);
@@ -443,6 +480,30 @@ loongarch_deal_with_atomic_sequence (struct regcache *regcache, CORE_ADDR cur_pc
   /* Look for a Load Linked instruction which begins the atomic sequence.  */
   if (!loongarch_insn_is_ll (insn))
     return {};
+
+  /* Record the address of a Load Linked instruction  */
+  ll_insn_addr = cur_pc;
+
+  for (int insn_count = 0; insn_count < atomic_sequence_length; ++insn_count)
+    {
+      cur_pc += insn_len;
+      insn = loongarch_fetch_instruction (cur_pc);
+
+      if (loongarch_insn_is_sc (insn))
+	{
+	  /* Record the address of a Store Conditional instruction  */
+	  sc_insn_addr = cur_pc;
+	  found_atomic_sequence_endpoint = true;
+	  break;
+	}
+    }
+
+  /* We didn't find a closing Store Conditional instruction, fallback to the standard code.  */
+  if (!found_atomic_sequence_endpoint)
+    return {};
+
+  /* Restore current PC with the address of a Load Linked instruction  */
+  cur_pc = ll_insn_addr;
 
   /* Assume that no atomic sequence is longer than "atomic_sequence_length" instructions.  */
   for (int insn_count = 0; insn_count < atomic_sequence_length; ++insn_count)
@@ -459,23 +520,19 @@ loongarch_deal_with_atomic_sequence (struct regcache *regcache, CORE_ADDR cur_pc
 	 which is outside of the ll/sc atomic instruction sequence.  */
       else if (loongarch_insn_is_cond_branch (insn))
 	{
-	  next_pc = loongarch_next_pc (regcache, cur_pc);
-	  if (next_pc != cur_pc + insn_len)
+	  next_pc = cond_branch_destination_address (cur_pc, insn);
+	  /* Restrict the breakpoint outside of the atomic sequence.  */
+	  if (next_pc < ll_insn_addr || next_pc > sc_insn_addr)
 	    next_pcs.push_back (next_pc);
 	}
       /* Look for a Store Conditional instruction which closes the atomic sequence.  */
       else if (loongarch_insn_is_sc (insn))
 	{
-	  found_atomic_sequence_endpoint = true;
 	  next_pc = cur_pc + insn_len;
 	  next_pcs.push_back (next_pc);
 	  break;
 	}
     }
-
-  /* We didn't find a closing Store Conditional instruction, fallback to the standard code.  */
-  if (!found_atomic_sequence_endpoint)
-    return {};
 
   return next_pcs;
 }

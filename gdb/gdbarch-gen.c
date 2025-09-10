@@ -272,6 +272,8 @@ struct gdbarch
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
   gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes = default_use_target_description_from_corefile_notes;
   gdbarch_core_parse_exec_context_ftype *core_parse_exec_context = default_core_parse_exec_context;
+  gdbarch_shadow_stack_push_ftype *shadow_stack_push = nullptr;
+  gdbarch_get_shadow_stack_pointer_ftype *get_shadow_stack_pointer = default_get_shadow_stack_pointer;
 };
 
 /* Create a new ``struct gdbarch'' based on information provided by
@@ -565,6 +567,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of read_core_file_mappings, invalid_p == 0.  */
   /* Skip verify of use_target_description_from_corefile_notes, invalid_p == 0.  */
   /* Skip verify of core_parse_exec_context, invalid_p == 0.  */
+  /* Skip verify of shadow_stack_push, has predicate.  */
+  /* Skip verify of get_shadow_stack_pointer, invalid_p == 0.  */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
 		    log.c_str ());
@@ -1475,6 +1479,15 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: core_parse_exec_context = <%s>\n",
 	      host_address_to_string (gdbarch->core_parse_exec_context));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_shadow_stack_push_p() = %d\n",
+	      gdbarch_shadow_stack_push_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: shadow_stack_push = <%s>\n",
+	      host_address_to_string (gdbarch->shadow_stack_push));
+  gdb_printf (file,
+	      "gdbarch_dump: get_shadow_stack_pointer = <%s>\n",
+	      host_address_to_string (gdbarch->get_shadow_stack_pointer));
   if (gdbarch->dump_tdep != NULL)
     gdbarch->dump_tdep (gdbarch, file);
 }
@@ -4239,13 +4252,13 @@ gdbarch_core_xfer_shared_libraries_p (struct gdbarch *gdbarch)
 }
 
 ULONGEST
-gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
+gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_xfer_shared_libraries != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_xfer_shared_libraries called\n");
-  return gdbarch->core_xfer_shared_libraries (gdbarch, readbuf, offset, len);
+  return gdbarch->core_xfer_shared_libraries (gdbarch, cbfd, readbuf, offset, len);
 }
 
 void
@@ -4263,13 +4276,13 @@ gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch)
 }
 
 ULONGEST
-gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
+gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_xfer_shared_libraries_aix != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_xfer_shared_libraries_aix called\n");
-  return gdbarch->core_xfer_shared_libraries_aix (gdbarch, readbuf, offset, len);
+  return gdbarch->core_xfer_shared_libraries_aix (gdbarch, cbfd, readbuf, offset, len);
 }
 
 void
@@ -4311,13 +4324,13 @@ gdbarch_core_thread_name_p (struct gdbarch *gdbarch)
 }
 
 const char *
-gdbarch_core_thread_name (struct gdbarch *gdbarch, struct thread_info *thr)
+gdbarch_core_thread_name (struct gdbarch *gdbarch, struct bfd &cbfd, struct thread_info *thr)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_thread_name != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_thread_name called\n");
-  return gdbarch->core_thread_name (gdbarch, thr);
+  return gdbarch->core_thread_name (gdbarch, cbfd, thr);
 }
 
 void
@@ -4335,13 +4348,13 @@ gdbarch_core_xfer_siginfo_p (struct gdbarch *gdbarch)
 }
 
 LONGEST
-gdbarch_core_xfer_siginfo (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
+gdbarch_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd, gdb_byte *readbuf, ULONGEST offset, ULONGEST len)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_xfer_siginfo != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_xfer_siginfo called\n");
-  return gdbarch->core_xfer_siginfo (gdbarch, readbuf, offset, len);
+  return gdbarch->core_xfer_siginfo (gdbarch, cbfd, readbuf, offset, len);
 }
 
 void
@@ -4359,13 +4372,13 @@ gdbarch_core_read_x86_xsave_layout_p (struct gdbarch *gdbarch)
 }
 
 bool
-gdbarch_core_read_x86_xsave_layout (struct gdbarch *gdbarch, x86_xsave_layout &xsave_layout)
+gdbarch_core_read_x86_xsave_layout (struct gdbarch *gdbarch, struct bfd &cbfd, x86_xsave_layout &xsave_layout)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->core_read_x86_xsave_layout != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_core_read_x86_xsave_layout called\n");
-  return gdbarch->core_read_x86_xsave_layout (gdbarch, xsave_layout);
+  return gdbarch->core_read_x86_xsave_layout (gdbarch, cbfd, xsave_layout);
 }
 
 void
@@ -5810,4 +5823,45 @@ set_gdbarch_core_parse_exec_context (struct gdbarch *gdbarch,
 				     gdbarch_core_parse_exec_context_ftype core_parse_exec_context)
 {
   gdbarch->core_parse_exec_context = core_parse_exec_context;
+}
+
+bool
+gdbarch_shadow_stack_push_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->shadow_stack_push != NULL;
+}
+
+void
+gdbarch_shadow_stack_push (struct gdbarch *gdbarch, CORE_ADDR new_addr, regcache *regcache)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->shadow_stack_push != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_shadow_stack_push called\n");
+  gdbarch->shadow_stack_push (gdbarch, new_addr, regcache);
+}
+
+void
+set_gdbarch_shadow_stack_push (struct gdbarch *gdbarch,
+			       gdbarch_shadow_stack_push_ftype shadow_stack_push)
+{
+  gdbarch->shadow_stack_push = shadow_stack_push;
+}
+
+std::optional<CORE_ADDR>
+gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->get_shadow_stack_pointer != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_get_shadow_stack_pointer called\n");
+  return gdbarch->get_shadow_stack_pointer (gdbarch, regcache, shadow_stack_enabled);
+}
+
+void
+set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch,
+				      gdbarch_get_shadow_stack_pointer_ftype get_shadow_stack_pointer)
+{
+  gdbarch->get_shadow_stack_pointer = get_shadow_stack_pointer;
 }

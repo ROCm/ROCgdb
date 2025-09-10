@@ -415,7 +415,12 @@ extern enum return_value_convention default_gdbarch_return_value
       struct regcache *regcache, struct value **read_value,
       const gdb_byte *writebuf);
 
-/* Architecture address space handling.  */
+/* Default implementation of gdbarch default_get_shadow_stack_pointer
+   method.  */
+extern std::optional<CORE_ADDR> default_get_shadow_stack_pointer
+  (gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
+
+  /* Architecture address space handling.  */
 
 /* Convert address space name to an address space id.  */
 extern std::optional<arch_addr_space_id> gdbarch_name_to_address_space_id

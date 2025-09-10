@@ -53,7 +53,8 @@ with_test_prefix "break DEVICE_FUNCTION_NAME" {
 #tbreak <device_function_name>
 #tbreak bit_extract_kernel
 with_test_prefix "tbreak DEVICE_FUNCTION_NAME" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "bit_extract_kernel" "allow-pending" "temporary"
     gdb_test "run" {.+hit\sTemporary\sbreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -64,7 +65,8 @@ with_test_prefix "tbreak DEVICE_FUNCTION_NAME" {
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
 with_test_prefix "break FILE:LINENO" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 }
@@ -74,7 +76,8 @@ with_test_prefix "break FILE:LINENO" {
 #break <lineNo>
 #e.g break 35
 with_test_prefix "break LINENO" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint $breakpoint_loc allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 }
@@ -82,7 +85,8 @@ with_test_prefix "break LINENO" {
 
 # Fetch thread Id and corresponding wave_id.
 # Set breakpoing in device code.
-clean_restart ${binfile}
+clean_restart
+gdb_load ${binfile}
 gdb_breakpoint "bit_extract_kernel" "allow-pending"
 gdb_test "run" {.+hit\sBreakpoint\s\d+.+\sbit_extract_kernel\s\(.*\)\sat.*}
 
@@ -104,7 +108,8 @@ verbose -log "wave_id=$wave_id"
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_thread==<threadno>
 with_test_prefix "break FILE:LINENO if DEVICE_THREAD_COND" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" allow-pending
     gdb_test "run" ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -115,7 +120,8 @@ with_test_prefix "break FILE:LINENO if DEVICE_THREAD_COND" {
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
 with_test_prefix "break FILE:LINE if WAVE_ID_CONDITION" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "$srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" allow-pending
     gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -134,7 +140,8 @@ with_test_prefix "break FILE:LINE if WAVE_ID_CONDITION" {
 #enable <breakpoint no>
 ##run //to hit the breakpoint in device thread after enabling the breakpoint
 with_test_prefix "break DEVICE_FUNCTION_NAME; enable/disable pkpoint" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     # Set breakpoing in device code
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
 
@@ -159,7 +166,8 @@ with_test_prefix "break DEVICE_FUNCTION_NAME; enable/disable pkpoint" {
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
 with_test_prefix "clear breakpoint in device thread" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test "continue" \
@@ -174,7 +182,8 @@ with_test_prefix "clear breakpoint in device thread" {
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
 with_test_prefix "delete breakpoint in device thread" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test "continue" \
@@ -190,7 +199,8 @@ with_test_prefix "delete breakpoint in device thread" {
 #break <file>:<lineNO>
 #e.g. break bit_extract_compile:35
 with_test_prefix "delete single breakpoint in device thread" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test "continue" \
@@ -210,7 +220,8 @@ with_test_prefix "delete single breakpoint in device thread" {
 #delete breakpoints
 ##run //to hit the breakpoint in device thread after enabling the breakpoint
 with_test_prefix "disable breakpoint in dev thread, then delete breakpoints" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     # Set breakpoing in device code
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
 

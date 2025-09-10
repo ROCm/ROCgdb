@@ -30,7 +30,8 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
     return -1
 }
 
-clean_restart $::binfile
+clean_restart
+gdb_load $::binfile
 runto_main
 gdb_test_no_output "set print repeats unlimited"
 

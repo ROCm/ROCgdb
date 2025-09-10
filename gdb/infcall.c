@@ -887,15 +887,21 @@ run_inferior_call (std::unique_ptr<call_thread_fsm> sm,
      call async_enable_stdin.  This changes the prompt state to
      PROMPT_NEEDED.
 
-     If the previous prompt state was PROMPT_NEEDED, then as
-     async_enable_stdin has already been called, nothing additional
-     needs to be done here.  */
+     If the previous prompt state was PROMPT_NEEDED, then async_enable_stdin
+     may or may not have been called, so do the same changes as in
+     async_enable_stdin.  */
   if (current_ui->prompt_state == PROMPT_BLOCKED)
     {
       if (call_thread->thread_fsm ()->finished_p ())
 	async_disable_stdin ();
       else
 	async_enable_stdin ();
+    }
+  else if (current_ui->prompt_state == PROMPT_NEEDED)
+    {
+      /* Copied from async_enable_stdin.  */
+      target_terminal::ours ();
+      current_ui->register_file_handler ();
     }
 
   /* If the infcall does NOT succeed, normal_stop will have already
@@ -1448,10 +1454,16 @@ call_function_by_hand_dummy (struct value *function,
   /* Create the dummy stack frame.  Pass in the call dummy address as,
      presumably, the ABI code knows where, in the call dummy, the
      return address should be pointed.  */
-  sp = gdbarch_push_dummy_call (gdbarch, function,
-				get_thread_regcache (inferior_thread ()),
-				bp_addr, args.size (), args.data (),
-				sp, return_method, struct_addr);
+  regcache *regcache = get_thread_regcache (inferior_thread ());
+  sp = gdbarch_push_dummy_call (gdbarch, function, regcache, bp_addr,
+				args.size (), args.data (), sp,
+				return_method, struct_addr);
+
+  /* Push the return address of the inferior (bp_addr) to the shadow stack
+     and update the shadow stack pointer.  As we don't execute a call
+     instruction to call the function we need to handle this manually.  */
+  if (gdbarch_shadow_stack_push_p (gdbarch))
+    gdbarch_shadow_stack_push (gdbarch, bp_addr, regcache);
 
   /* Set up a frame ID for the dummy frame so we can pass it to
      set_momentary_breakpoint.  We need to give the breakpoint a frame

@@ -1070,16 +1070,17 @@ core_target_open (const char *arg, int from_tty)
 
   target_preopen (from_tty);
 
+  /* The target_preopen call will remove any existing process stratum
+     target, which includes any existing core_target.  */
+  gdb_assert (current_inferior ()->process_target () == nullptr);
+
+  /* Which will clear up any existing core file BFD.  */
+  gdb_assert (current_program_space->core_bfd () == nullptr);
+
   std::string filename = extract_single_filename_arg (arg);
 
   if (filename.empty ())
-    {
-      if (current_program_space->core_bfd ())
-	error (_("No core file specified.  (Use `detach' "
-		 "to stop debugging a core file.)"));
-      else
-	error (_("No core file specified."));
-    }
+    error (_("No core file specified."));
 
   if (!IS_ABSOLUTE_PATH (filename.c_str ()))
     filename = gdb_abspath (filename);
@@ -1658,9 +1659,9 @@ core_target::xfer_partial (enum target_object object, const char *annex,
 	    return TARGET_XFER_E_IO;
 	  else
 	    {
-	      *xfered_len = gdbarch_core_xfer_shared_libraries (m_core_gdbarch,
-								readbuf,
-								offset, len);
+	      *xfered_len = gdbarch_core_xfer_shared_libraries
+		(m_core_gdbarch, *current_program_space->core_bfd (),
+		 readbuf, offset, len);
 
 	      if (*xfered_len == 0)
 		return TARGET_XFER_EOF;
@@ -1679,9 +1680,9 @@ core_target::xfer_partial (enum target_object object, const char *annex,
 	  else
 	    {
 	      *xfered_len
-		= gdbarch_core_xfer_shared_libraries_aix (m_core_gdbarch,
-							  readbuf, offset,
-							  len);
+		= gdbarch_core_xfer_shared_libraries_aix
+		(m_core_gdbarch, *current_program_space->core_bfd (),
+		 readbuf, offset, len);
 
 	      if (*xfered_len == 0)
 		return TARGET_XFER_EOF;
@@ -1697,8 +1698,10 @@ core_target::xfer_partial (enum target_object object, const char *annex,
 	  if (m_core_gdbarch != nullptr
 	      && gdbarch_core_xfer_siginfo_p (m_core_gdbarch))
 	    {
-	      LONGEST l = gdbarch_core_xfer_siginfo  (m_core_gdbarch, readbuf,
-						      offset, len);
+	      struct bfd *cbfd = current_program_space->core_bfd ();
+	      gdb_assert (cbfd != nullptr);
+	      LONGEST l = gdbarch_core_xfer_siginfo  (m_core_gdbarch, *cbfd,
+						      readbuf, offset, len);
 
 	      if (l >= 0)
 		{
@@ -1824,7 +1827,11 @@ core_target::thread_name (struct thread_info *thr)
 {
   if (m_core_gdbarch != nullptr
       && gdbarch_core_thread_name_p (m_core_gdbarch))
-    return gdbarch_core_thread_name (m_core_gdbarch, thr);
+    {
+      bfd *cbfd = current_program_space->core_bfd ();
+      gdb_assert (cbfd != nullptr);
+      return gdbarch_core_thread_name (m_core_gdbarch, *cbfd, thr);
+    }
   return NULL;
 }
 
@@ -1932,7 +1939,9 @@ core_target::fetch_x86_xsave_layout ()
       gdbarch_core_read_x86_xsave_layout_p (m_core_gdbarch))
     {
       x86_xsave_layout layout;
-      if (!gdbarch_core_read_x86_xsave_layout (m_core_gdbarch, layout))
+      bfd *cbfd = current_program_space->core_bfd ();
+      gdb_assert (cbfd != nullptr);
+      if (!gdbarch_core_read_x86_xsave_layout (m_core_gdbarch, *cbfd, layout))
 	return {};
 
       return layout;
