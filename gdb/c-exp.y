@@ -1254,12 +1254,12 @@ single_qualifier:
 			{ cpstate->type_stack.insert (tp_restrict); }
 	|	'@' NAME
 		{
-		  cpstate->type_stack.insert (pstate,
+		  cpstate->type_stack.insert (pstate->gdbarch (),
 					      copy_name ($2.stoken).c_str ());
 		}
 	|	'@' UNKNOWN_CPP_NAME
 		{
-		  cpstate->type_stack.insert (pstate,
+		  cpstate->type_stack.insert (pstate->gdbarch (),
 					      copy_name ($2.stoken).c_str ());
 		}
 	;
@@ -1309,15 +1309,13 @@ direct_abs_decl: '(' abs_decl ')'
 	|	direct_abs_decl array_mod
 			{
 			  cpstate->type_stack.push ($1);
-			  cpstate->type_stack.push ($2);
-			  cpstate->type_stack.push (tp_array);
+			  cpstate->type_stack.push (tp_array, $2);
 			  $$ = cpstate->type_stack.create ();
 			  cpstate->type_stacks.emplace_back ($$);
 			}
 	|	array_mod
 			{
-			  cpstate->type_stack.push ($1);
-			  cpstate->type_stack.push (tp_array);
+			  cpstate->type_stack.push (tp_array, $1);
 			  $$ = cpstate->type_stack.create ();
 			  cpstate->type_stacks.emplace_back ($$);
 			}
