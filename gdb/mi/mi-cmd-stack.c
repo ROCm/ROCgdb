@@ -29,10 +29,8 @@
 #include "valprint.h"
 #include "mi-getopt.h"
 #include "extension.h"
-#include <ctype.h>
 #include "mi-parse.h"
 #include <optional>
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "inferior.h"
 
 enum what_to_list { locals, arguments, all };

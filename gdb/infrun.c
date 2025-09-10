@@ -23,7 +23,6 @@
 #include "cli/cli-style.h"
 #include "displaced-stepping.h"
 #include "infrun.h"
-#include <ctype.h>
 #include "exceptions.h"
 #include "symtab.h"
 #include "frame.h"
@@ -9993,7 +9992,7 @@ handle_command (const char *args, int from_tty)
   for (char *arg : built_argv)
     {
       wordlen = strlen (arg);
-      for (digits = 0; isdigit (arg[digits]); digits++)
+      for (digits = 0; c_isdigit (arg[digits]); digits++)
 	{;
 	}
       allsigs = 0;

@@ -36,7 +36,6 @@
    to figure out what full symbol table entries need to be read in.  */
 
 
-#include <ctype.h>
 #include "maint.h"
 #include "symtab.h"
 #include "bfd.h"
@@ -52,7 +51,6 @@
 #include "cli/cli-utils.h"
 #include "gdbsupport/symbol.h"
 #include <algorithm>
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "gdbsupport/parallel-for.h"
 #include "inferior.h"
 

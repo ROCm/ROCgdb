@@ -19,7 +19,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "arch-utils.h"
-#include <ctype.h>
 #include "event-top.h"
 #include "exceptions.h"
 #include "gdbsupport/gdb_vecs.h"
@@ -1291,7 +1290,7 @@ condition_completer (struct cmd_list_element *cmd,
 	{
 	  tracker.advance_custom_word_point_by (1);
 	  /* We don't support completion of history indices.  */
-	  if (!isdigit (text[1]))
+	  if (!c_isdigit (text[1]))
 	    complete_internalvar (tracker, &text[1]);
 	  return;
 	}
@@ -10634,7 +10633,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       int len;
 
       len = exp_end - exp_start;
-      while (len > 0 && isspace (exp_start[len - 1]))
+      while (len > 0 && c_isspace (exp_start[len - 1]))
 	len--;
       error (_("Cannot watch constant value `%.*s'."), len, exp_start);
     }
@@ -14258,7 +14257,7 @@ strace_command (const char *arg, int from_tty)
 
   /* Decide if we are dealing with a static tracepoint marker (`-m'),
      or with a normal static tracepoint.  */
-  if (arg && startswith (arg, "-m") && isspace (arg[2]))
+  if (arg && startswith (arg, "-m") && c_isspace (arg[2]))
     {
       ops = &strace_marker_breakpoint_ops;
       locspec = new_linespec_location_spec (&arg,

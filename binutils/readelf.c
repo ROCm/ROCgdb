@@ -848,8 +848,8 @@ print_symbol_name (signed int width, const char * symbol)
 		  if (width_remaining < 8)
 		    break;
 		  printf ("\\u%02x%02x%02x",
-			  ((bytes[0] & 0x07) << 6) | ((bytes[1] & 0x3c) >> 2),
-			  ((bytes[1] & 0x03) << 6) | ((bytes[2] & 0x3c) >> 2),
+			  ((bytes[0] & 0x07) << 2) | ((bytes[1] & 0x30) >> 4),
+			  ((bytes[1] & 0x0f) << 4) | ((bytes[2] & 0x3c) >> 2),
 			  ((bytes[2] & 0x03) << 6) | (bytes[3] & 0x3f));
 
 		  break;
@@ -1910,12 +1910,14 @@ dump_relr_relocations (Filedata *          filedata,
       return false;
     }
 
+  uint64_t *alloc_relrs = NULL;
   if (relrs == NULL)
     {
       relrs = get_data (NULL, filedata, relr_offset, 1, relr_size,
 			_("RELR relocation data"));
       if (relrs == NULL)
 	return false;
+      alloc_relrs = relrs;
     }
 
   /* Paranoia.  */
@@ -2191,7 +2193,7 @@ dump_relr_relocations (Filedata *          filedata,
     }
 
   free (symtab);
-  free (relrs);
+  free (alloc_relrs);
   return true;
 }
 
@@ -9894,12 +9896,18 @@ display_relocations (Elf_Internal_Shdr *  section,
 
       if (symsec->sh_type != SHT_SYMTAB
 	  && symsec->sh_type != SHT_DYNSYM)
-	return false;
+	{
+	  free (relrs);
+	  return false;
+	}
     }
 
   if (symsec != NULL
       && !get_symtab (filedata, symsec, &symtab, &nsyms, &strtab, &strtablen))
-    return false;
+    {
+      free (relrs);
+      return false;
+    }
 
   bool res;
 
@@ -9911,8 +9919,7 @@ display_relocations (Elf_Internal_Shdr *  section,
 				   relrs,
 				   symtab, nsyms, strtab, strtablen,
 				   dump_reloc);
-      /* RELRS has been freed by dump_relr_relocations.  */
-      relrs = NULL;
+      free (relrs);
     }
   else
     res = dump_relocations (filedata, rel_offset, rel_size,
