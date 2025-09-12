@@ -2743,17 +2743,36 @@ wont_add_section_p (asection *section,
 
   if (discard)
     {
+      /* /DISCARD/ is seen first and the top-most clause has precedence on the
+	 next ones, thus the section will be dropped.  No need to warn about
+	 potential change in behavior with non-contiguous regions when the
+	 section is already dropped.  */
       if (section->output_section == NULL)
 	{
 	  /* This prevents future calls from assigning this section or
 	     warning about it again.  */
 	  section->output_section = bfd_abs_section_ptr;
 	}
-      else if (bfd_is_abs_section (section->output_section))
-	;
-      else if (link_info.non_contiguous_regions_warnings)
+      /* The /DISCARD/ clause follows clauses that assign the input section to
+	 an output section. Since /DISCARD/ does not have the precedence,
+	 /DISCARD/ is ignored.
+	 1. If the input section can be assigned to an output section,
+	    the link will succeed. The warning below is emitted with
+	    --enable-non-contiguous-regions-warnings so that the user can
+	    notice that /DISCARD/ did not do what he might have expected,
+	    i.e. discarding the input section.
+	 2. If the input section cannot be assigned, the link will fail
+	    with an error. The warning below is emitted with
+	    --enable-non-contiguous-regions-warnings so that the user can
+	    notice that /DISCARD/ was ignored for this input section, then
+	    leading to a link failure caused by not enough space in the output
+	    section for the input section.  */
+      else if (! bfd_is_abs_section (section->output_section)
+	       && link_info.non_contiguous_regions_warnings)
 	einfo (_("%P:%pS: warning: --enable-non-contiguous-regions makes "
-		 "section `%pA' from `%pB' match /DISCARD/ clause.\n"),
+		 "section `%pA' from `%pB' match /DISCARD/ clause.  If the "
+		 "section can be assigned to an output section, it won't be "
+		 "discarded.\n"),
 	       NULL, section, section->owner);
 
       return true;
