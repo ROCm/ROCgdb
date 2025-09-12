@@ -3,9 +3,29 @@
 
 *** Changes since GDB 17
 
+* Support for .gdb_index sections with version less than 7 has been
+  removed.
+
+* GDB now accepts --no-escape-args as an alternative to --args on the
+  command line.  GDB will not escape special shell characters within
+  arguments after --no-escape-args.
+
+* gdbserver now accepts --no-escape-args as a command line flag.  When
+  this flag is used gdbserver will not escape special shell characters
+  within the inferior arguments.
+
 * New targets
 
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
+
+* Changed remote packets
+
+single-inf-arg in qSupported
+  The new single-inf-arg feature within the qSupported packet allows
+  GDB to inform the stub that it would like to send the inferior
+  arguments as a single string within the vRun packet.  The stub can
+  reply with the single-inf-arg feature to indicate that it is able to
+  accept arguments as a single string.
 
 *** Changes in GDB 17
 

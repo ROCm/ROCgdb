@@ -1195,9 +1195,12 @@ extern struct value *address_of_variable (struct symbol *var,
 
 extern value *value_of_register (int regnum, const frame_info_ptr &next_frame);
 
-/* Same as the above, but the value is not fetched.  */
+/* Same as the above, but the value is not fetched.  If TYPE is
+   non-nullptr, use it as the value type.  Otherwise, 'register_type'
+   will be used to obtain the type.  */
 
-extern value *value_of_register_lazy (const frame_info_ptr &next_frame, int regnum);
+extern value *value_of_register_lazy (const frame_info_ptr &next_frame,
+				      int regnum, struct type *type = nullptr);
 
 /* Return the symbol's reading requirement.  */
 
@@ -1625,7 +1628,7 @@ extern struct value *make_cv_value (int, int, struct value *);
 
 extern struct value *varying_to_slice (struct value *);
 
-extern struct value *value_slice (struct value *, int, int);
+extern struct value *value_slice (struct value *, LONGEST, LONGEST);
 
 /* Create a complex number.  The type is the complex type; the values
    are cast to the underlying scalar type before the complex number is

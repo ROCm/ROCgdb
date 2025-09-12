@@ -55,7 +55,7 @@
 #define DW2_GDB_INDEX_SYMBOL_KIND_SET_VALUE(cu_index, value) \
   do { \
     gdb_assert ((value) >= GDB_INDEX_SYMBOL_KIND_TYPE \
-		&& (value) <= GDB_INDEX_SYMBOL_KIND_OTHER); \
+		&& (value) <= GDB_INDEX_SYMBOL_KIND_UNUSED5); \
     GDB_INDEX_SYMBOL_KIND_SET_VALUE((cu_index), (value)); \
   } while (0)
 
@@ -422,9 +422,46 @@ symtab_index_entry::minimize ()
   if (name == nullptr || cu_indices.empty ())
     return;
 
-  std::sort (cu_indices.begin (), cu_indices.end ());
+  /* We sort the indexes in a funny way: GDB_INDEX_SYMBOL_KIND_UNUSED5
+     is always sorted last; then otherwise we sort by numeric value.
+     This ensures that we prefer the definition when both a definition
+     and a declaration (stub type) are seen.  */
+  std::sort (cu_indices.begin (), cu_indices.end (),
+	     [] (offset_type vala, offset_type valb)
+	       {
+		 auto kinda = GDB_INDEX_SYMBOL_KIND_VALUE (vala);
+		 auto kindb = GDB_INDEX_SYMBOL_KIND_VALUE (valb);
+		 if (kinda != kindb)
+		   {
+		     /* Declaration sorts last.  */
+		     if (kinda == GDB_INDEX_SYMBOL_KIND_UNUSED5)
+		       return false;
+		     if (kindb == GDB_INDEX_SYMBOL_KIND_UNUSED5)
+		       return true;
+		   }
+		 return vala < valb;
+	       });
   auto from = std::unique (cu_indices.begin (), cu_indices.end ());
   cu_indices.erase (from, cu_indices.end ());
+
+  /* Rewrite GDB_INDEX_SYMBOL_KIND_UNUSED5.  This ensures that a type
+     declaration will be deleted by the subsequent squashing step, if
+     warranted.  */
+  for (auto &val : cu_indices)
+    {
+      gdb_index_symbol_kind kind = GDB_INDEX_SYMBOL_KIND_VALUE (val);
+      if (kind != GDB_INDEX_SYMBOL_KIND_UNUSED5)
+	continue;
+
+      offset_type newval = 0;
+      DW2_GDB_INDEX_CU_SET_VALUE (newval, GDB_INDEX_CU_VALUE (val));
+      DW2_GDB_INDEX_SYMBOL_STATIC_SET_VALUE
+	(newval, GDB_INDEX_SYMBOL_STATIC_VALUE (val));
+      DW2_GDB_INDEX_SYMBOL_KIND_SET_VALUE (newval,
+					   GDB_INDEX_SYMBOL_KIND_TYPE);
+
+      val = newval;
+    }
 
   /* We don't want to enter a type more than once, so
      remove any such duplicates from the list as well.  When doing
@@ -720,7 +757,7 @@ public:
 		   });
 
 	m_name_table_string_offs.push_back_reorder
-	  (m_debugstrlookup.lookup (name.c_str ())); /* ??? */
+	  (m_debugstrlookup.lookup (name.c_str ()));
 	m_name_table_entry_offs.push_back_reorder (m_entry_pool.size ());
 
 	for (const cooked_index_entry *entry : these_entries)
@@ -885,10 +922,21 @@ private:
   {
   public:
 
-    /* Object constructor to be called for current DWARF2_PER_BFD.  */
-    debug_str_lookup (dwarf2_per_bfd *per_bfd)
+    /* Object constructor to be called for current DWARF2_PER_BFD.
+       All .debug_str section strings are automatically stored.  */
+    explicit debug_str_lookup (dwarf2_per_bfd *per_bfd)
       : m_per_bfd (per_bfd)
     {
+      gdb_assert (per_bfd->str.readin);
+      const gdb_byte *data = per_bfd->str.buffer;
+      if (data == nullptr)
+	return;
+      while (data < per_bfd->str.buffer + per_bfd->str.size)
+	{
+	  const char *const s = reinterpret_cast<const char *> (data);
+	  m_str_table.emplace (c_str_view (s), data - per_bfd->str.buffer);
+	  data += strlen (s) + 1;
+	}
     }
 
     /* Return offset of symbol name S in the .debug_str section.  Add
@@ -896,13 +944,6 @@ private:
        yet.  */
     size_t lookup (const char *s)
     {
-      /* Most strings will have come from the string table
-	 already.  */
-      const gdb_byte *b = (const gdb_byte *) s;
-      if (b >= m_per_bfd->str.buffer
-	  && b < m_per_bfd->str.buffer + m_per_bfd->str.size)
-	return b - m_per_bfd->str.buffer;
-
       const auto it = m_str_table.find (c_str_view (s));
       if (it != m_str_table.end ())
 	return it->second;
@@ -1212,6 +1253,21 @@ write_cooked_index (cooked_index *table,
 		    const cu_index_map &cu_index_htab,
 		    struct mapped_symtab *symtab)
 {
+  gdb::unordered_set<const cooked_index_entry *> required_decl_entries;
+  for (const cooked_index_entry *entry : table->all_entries ())
+    {
+      /* Any type declaration that is used as a (non-trivial) parent
+	 entry must be written out.  */
+      if ((entry->flags & IS_TYPE_DECLARATION) == 0)
+	{
+	  for (const cooked_index_entry *parent = entry->get_parent ();
+	       parent != nullptr;
+	       parent = parent->get_parent ())
+	    if ((parent->flags & IS_TYPE_DECLARATION) != 0)
+	      required_decl_entries.insert (parent);
+	}
+    }
+
   for (const cooked_index_entry *entry : table->all_entries ())
     {
       const auto it = cu_index_htab.find (entry->per_cu);
@@ -1237,11 +1293,10 @@ write_cooked_index (cooked_index *table,
 	     be redundant are rare and not worth supporting.  */
 	  continue;
 	}
-      else if ((entry->flags & IS_TYPE_DECLARATION) != 0)
-	{
-	  /* Don't add type declarations to the index.  */
-	  continue;
-	}
+      /* Don't add most type declarations to the index.  */
+      else if ((entry->flags & IS_TYPE_DECLARATION) != 0
+	       && !required_decl_entries.contains (entry))
+	continue;
 
       gdb_index_symbol_kind kind;
       if (entry->tag == DW_TAG_subprogram
@@ -1252,7 +1307,16 @@ write_cooked_index (cooked_index *table,
 	       || entry->tag == DW_TAG_enumerator)
 	kind = GDB_INDEX_SYMBOL_KIND_VARIABLE;
       else if (tag_is_type (entry->tag))
-	kind = GDB_INDEX_SYMBOL_KIND_TYPE;
+	{
+	  /* If we added a type declaration, we want to note this
+	     fact for later, because we don't want a type declaration
+	     to cause the real definition to be omitted from the
+	     index.  GDB_INDEX_SYMBOL_KIND_UNUSED5 is used here, but
+	     rewritten later before the index is written.  */
+	  kind = ((entry->flags & IS_TYPE_DECLARATION) == 0
+		  ? GDB_INDEX_SYMBOL_KIND_TYPE
+		  : GDB_INDEX_SYMBOL_KIND_UNUSED5);
+	}
       else
 	kind = GDB_INDEX_SYMBOL_KIND_OTHER;
 

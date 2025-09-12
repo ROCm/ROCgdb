@@ -678,22 +678,9 @@ block_lookup_symbol (const struct block *block, const lookup_name_info &name,
 {
   if (!block->function ())
     {
-      struct symbol *other = NULL;
-
-      for (struct symbol *sym : block_iterator_range (block, &name))
-	{
-	  /* See comment related to PR gcc/debug/91507 in
-	     block_lookup_symbol_primary.  */
-	  if (best_symbol (sym, domain))
-	    return sym;
-	  /* This is a bit of a hack, but symbol_matches_domain might ignore
-	     STRUCT vs VAR domain symbols.  So if a matching symbol is found,
-	     make sure there is no "better" matching symbol, i.e., one with
-	     exactly the same domain.  PR 16253.  */
-	  if (sym->matches (domain))
-	    other = better_symbol (other, sym, domain);
-	}
-      return other;
+      best_symbol_tracker tracker;
+      tracker.search (nullptr, block, name, domain);
+      return tracker.currently_best.symbol;
     }
   else
     {
@@ -725,24 +712,13 @@ block_lookup_symbol (const struct block *block, const lookup_name_info &name,
 
 /* See block.h.  */
 
-struct symbol *
-block_lookup_symbol_primary (const struct block *block, const char *name,
+bool
+best_symbol_tracker::search (compunit_symtab *symtab,
+			     const struct block *block,
+			     const lookup_name_info &name,
 			     const domain_search_flags domain)
 {
-  struct symbol *sym, *other;
-  struct mdict_iterator mdict_iter;
-
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
-
-  /* Verify BLOCK is STATIC_BLOCK or GLOBAL_BLOCK.  */
-  gdb_assert (block->superblock () == NULL
-	      || block->superblock ()->superblock () == NULL);
-
-  other = NULL;
-  for (sym = mdict_iter_match_first (block->multidict (), lookup_name,
-				     &mdict_iter);
-       sym != NULL;
-       sym = mdict_iter_match_next (lookup_name, &mdict_iter))
+  for (symbol *sym : block_iterator_range (block, &name))
     {
       /* With the fix for PR gcc/debug/91507, we get for:
 	 ...
@@ -772,17 +748,28 @@ block_lookup_symbol_primary (const struct block *block, const char *name,
 	 the only option to make this work is improve the fallback to use the
 	 size of the minimal symbol.  Filed as PR exp/24989.  */
       if (best_symbol (sym, domain))
-	return sym;
+	{
+	  best_symtab = symtab;
+	  currently_best = { sym, block };
+	  return true;
+	}
 
       /* This is a bit of a hack, but 'matches' might ignore
 	 STRUCT vs VAR domain symbols.  So if a matching symbol is found,
 	 make sure there is no "better" matching symbol, i.e., one with
 	 exactly the same domain.  PR 16253.  */
       if (sym->matches (domain))
-	other = better_symbol (other, sym, domain);
+	{
+	  symbol *better = better_symbol (sym, currently_best.symbol, domain);
+	  if (better != currently_best.symbol)
+	    {
+	      best_symtab = symtab;
+	      currently_best = { better, block };
+	    }
+	}
     }
 
-  return other;
+  return false;
 }
 
 /* See block.h.  */

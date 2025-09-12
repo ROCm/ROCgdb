@@ -585,10 +585,6 @@ public:
   /* See quick_symbol_functions.  */
   void dump ();
 
-  /* Find all the symbols in OBJFILE named FUNC_NAME, and ensure that
-     the corresponding symbol tables are loaded.  */
-  void expand_symtabs_for_function (const char *func_name);
-
   /* See quick_symbol_functions.  */
   void expand_all_symtabs ();
 
@@ -600,14 +596,14 @@ public:
   void expand_symtabs_with_fullname (const char *fullname);
 
   /* See quick_symbol_functions.  */
-  bool expand_symtabs_matching
-    (expand_symtabs_file_matcher file_matcher,
+  bool search
+    (search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     expand_symtabs_symbol_matcher symbol_matcher,
-     expand_symtabs_expansion_listener expansion_notify,
+     search_symtabs_symbol_matcher symbol_matcher,
+     search_symtabs_expansion_listener listener,
      block_search_flags search_flags,
      domain_search_flags domain,
-     expand_symtabs_lang_matcher lang_matcher = nullptr);
+     search_symtabs_lang_matcher lang_matcher = nullptr);
 
   /* See quick_symbol_functions.  */
   struct compunit_symtab *

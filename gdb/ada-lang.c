@@ -183,7 +183,7 @@ static struct value *ada_search_struct_field (const char *, struct value *, int,
 					      struct type *);
 
 static int find_struct_field (const char *, struct type *, int,
-			      struct type **, int *, int *, int *, int *);
+			      struct type **, int *, int *, int *, LONGEST *);
 
 static int ada_resolve_function (std::vector<struct block_symbol> &,
 				 struct value **, int, const char *,
@@ -1312,7 +1312,7 @@ convert_from_hex_encoded (std::string &out, const char *str, int n)
 /* See ada-lang.h.  */
 
 std::string
-ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
+ada_decode (const char *encoded, bool wrap, bool translate)
 {
   int i;
   int len0;
@@ -1407,7 +1407,7 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
   while (i < len0)
     {
       /* Is this a symbol function?  */
-      if (operators && at_start_name && encoded[i] == 'O')
+      if (at_start_name && encoded[i] == 'O')
 	{
 	  int k;
 
@@ -1418,7 +1418,10 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
 			    op_len - 1) == 0)
 		  && !c_isalnum (encoded[i + op_len]))
 		{
-		  decoded.append (ada_opname_table[k].decoded);
+		  if (translate)
+		    decoded.append (ada_opname_table[k].decoded);
+		  else
+		    decoded.append (ada_opname_table[k].encoded);
 		  at_start_name = 0;
 		  i += op_len;
 		  break;
@@ -1506,28 +1509,60 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
 	    i++;
 	}
 
-      if (wide && i < len0 + 3 && encoded[i] == 'U' && c_isxdigit (encoded[i + 1]))
+      /* Handle wide characters while respecting the arguments to the
+	 function: we may want to copy them verbatim, but in this case
+	 we do not want to register that we've copied an upper-case
+	 character.  */
+      if (i < len0 + 3 && encoded[i] == 'U' && c_isxdigit (encoded[i + 1]))
 	{
-	  if (convert_from_hex_encoded (decoded, &encoded[i + 1], 2))
+	  if (translate)
 	    {
-	      i += 3;
+	      if (convert_from_hex_encoded (decoded, &encoded[i + 1], 2))
+		{
+		  i += 3;
+		  continue;
+		}
+	    }
+	  else
+	    {
+	      decoded.push_back (encoded[i]);
+	      ++i;
 	      continue;
 	    }
 	}
-      else if (wide && i < len0 + 5 && encoded[i] == 'W' && c_isxdigit (encoded[i + 1]))
+      else if (i < len0 + 5 && encoded[i] == 'W'
+	       && c_isxdigit (encoded[i + 1]))
 	{
-	  if (convert_from_hex_encoded (decoded, &encoded[i + 1], 4))
+	  if (translate)
 	    {
-	      i += 5;
+	      if (convert_from_hex_encoded (decoded, &encoded[i + 1], 4))
+		{
+		  i += 5;
+		  continue;
+		}
+	    }
+	  else
+	    {
+	      decoded.push_back (encoded[i]);
+	      ++i;
 	      continue;
 	    }
 	}
-      else if (wide && i < len0 + 10 && encoded[i] == 'W' && encoded[i + 1] == 'W'
+      else if (i < len0 + 10 && encoded[i] == 'W' && encoded[i + 1] == 'W'
 	       && c_isxdigit (encoded[i + 2]))
 	{
-	  if (convert_from_hex_encoded (decoded, &encoded[i + 2], 8))
+	  if (translate)
 	    {
-	      i += 10;
+	      if (convert_from_hex_encoded (decoded, &encoded[i + 2], 8))
+		{
+		  i += 10;
+		  continue;
+		}
+	    }
+	  else
+	    {
+	      decoded.push_back (encoded[i]);
+	      ++i;
 	      continue;
 	    }
 	}
@@ -1554,6 +1589,12 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
 	  at_start_name = 1;
 	  i += 2;
 	}
+      else if (isupper (encoded[i]) || encoded[i] == ' ')
+	{
+	  /* Decoded names should never contain any uppercase
+	     character.  */
+	  goto Suppress;
+	}
       else
 	{
 	  /* It's a character part of the decoded name, so just copy it
@@ -1561,16 +1602,6 @@ ada_decode (const char *encoded, bool wrap, bool operators, bool wide)
 	  decoded.push_back (encoded[i]);
 	  i += 1;
 	}
-    }
-
-  /* Decoded names should never contain any uppercase character.
-     Double-check this, and abort the decoding if we find one.  */
-
-  if (operators)
-    {
-      for (i = 0; i < decoded.length(); ++i)
-	if (c_isupper (decoded[i]) || decoded[i] == ' ')
-	  goto Suppress;
     }
 
   /* If the compiler added a suffix, append it now.  */
@@ -1598,6 +1629,13 @@ ada_decode_tests ()
   /* This isn't valid, but used to cause a crash.  PR gdb/30639.  The
      result does not really matter very much.  */
   SELF_CHECK (ada_decode ("44") == "44");
+
+  /* Check that the settings used by the DWARF reader have the desired
+     effect.  */
+  SELF_CHECK (ada_decode ("symada__cS", false, false) == "");
+  SELF_CHECK (ada_decode ("pkg__Oxor", false, false) == "pkg.Oxor");
+  SELF_CHECK (ada_decode ("pack__func_W017b", false, false)
+	      == "pack.func_W017b");
 }
 
 #endif
@@ -2139,8 +2177,8 @@ ada_type_of_array (struct value *arr, int bounds)
 	  arity -= 1;
 	  struct type *range_type
 	    = create_static_range_type (alloc, low->type (),
-					longest_to_int (value_as_long (low)),
-					longest_to_int (value_as_long (high)));
+					value_as_long (low),
+					value_as_long (high));
 	  elt_type = create_array_type (alloc, elt_type, range_type);
 	  INIT_GNAT_SPECIFIC (elt_type);
 
@@ -3084,7 +3122,7 @@ ada_value_ptr_subscript (struct value *arr, int arity, struct value **ind)
    this array is LOW, as per Ada rules.  */
 static struct value *
 ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
-			  int low, int high)
+			  LONGEST low, LONGEST high)
 {
   struct type *type0 = ada_check_typedef (type);
   struct type *base_index_type = type0->index_type ()->target_type ();
@@ -3095,7 +3133,7 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 			      (alloc, type0->target_type (), index_type,
 			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
 			       type0->field (0).bitsize ());
-  int base_low =  ada_discrete_type_low_bound (type0->index_type ());
+  LONGEST base_low = ada_discrete_type_low_bound (type0->index_type ());
   std::optional<LONGEST> base_low_pos, low_pos;
   CORE_ADDR base;
 
@@ -3119,7 +3157,7 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
 
 
 static struct value *
-ada_value_slice (struct value *array, int low, int high)
+ada_value_slice (struct value *array, LONGEST low, LONGEST high)
 {
   struct type *type = ada_check_typedef (array->type ());
   struct type *base_index_type = type->index_type ()->target_type ();
@@ -3392,7 +3430,7 @@ ada_array_length (struct value *arr, int n)
    less than LOW, then LOW-1 is used.  */
 
 static struct value *
-empty_array (struct type *arr_type, int low, int high)
+empty_array (struct type *arr_type, LONGEST low, LONGEST high)
 {
   struct type *arr_type0 = ada_check_typedef (arr_type);
   type_allocator alloc (arr_type0->index_type ()->target_type ());
@@ -5474,22 +5512,19 @@ map_matching_symbols (struct objfile *objfile,
 		      match_data &data)
 {
   data.objfile = objfile;
-  objfile->expand_symtabs_matching (nullptr, &lookup_name,
-				    nullptr, nullptr,
-				    global
-				    ? SEARCH_GLOBAL_BLOCK
-				    : SEARCH_STATIC_BLOCK,
-				    domain);
 
   const int block_kind = global ? GLOBAL_BLOCK : STATIC_BLOCK;
-  for (compunit_symtab *symtab : objfile->compunits ())
+  auto callback = [&] (compunit_symtab *symtab)
     {
       const struct block *block
 	= symtab->blockvector ()->block (block_kind);
-      if (!iterate_over_symbols_terminated (block, lookup_name,
-					    domain, data))
-	break;
-    }
+      return iterate_over_symbols_terminated (block, lookup_name,
+					      domain, data);
+    };
+
+  objfile->search (nullptr, &lookup_name, nullptr, callback,
+		   global ? SEARCH_GLOBAL_BLOCK : SEARCH_STATIC_BLOCK,
+		   domain);
 }
 
 /* Add to RESULT all non-local symbols whose name and domain match
@@ -6432,7 +6467,7 @@ ada_get_tsd_type (struct inferior *inf)
 
   if (data->tsd_type == 0)
     data->tsd_type
-      = lookup_transparent_type ("<ada__tags__type_specific_data>",
+      = lookup_transparent_type ("ada.tags.type_specific_data",
 				 SEARCH_TYPE_DOMAIN);
   return data->tsd_type;
 }
@@ -6900,7 +6935,7 @@ static int
 find_struct_field (const char *name, struct type *type, int offset,
 		   struct type **field_type_p,
 		   int *byte_offset_p, int *bit_offset_p, int *bit_size_p,
-		   int *index_p)
+		   LONGEST *index_p)
 {
   int i;
   int parent_offset = -1;
@@ -7014,12 +7049,10 @@ find_struct_field (const char *name, struct type *type, int offset,
 
 /* Number of user-visible fields in record type TYPE.  */
 
-static int
+static LONGEST
 num_visible_fields (struct type *type)
 {
-  int n;
-
-  n = 0;
+  LONGEST n = 0;
   find_struct_field (NULL, type, 0, NULL, NULL, NULL, NULL, &n);
   return n;
 }
@@ -9537,12 +9570,12 @@ void
 ada_name_association::assign (aggregate_assigner &assigner,
 			      operation_up &op)
 {
-  int index;
+  LONGEST index;
 
   if (ada_is_direct_array_type (assigner.lhs->type ()))
     {
       value *tem = m_val->evaluate (nullptr, assigner.exp, EVAL_NORMAL);
-      index = longest_to_int (value_as_long (tem));
+      index = value_as_long (tem);
     }
   else
     {
@@ -10273,8 +10306,7 @@ ada_ternop_slice_operation::evaluate (struct type *expect_type,
 	    to_fixed_array_type (type0->target_type (), NULL, 1);
 
 	  return ada_value_slice_from_ptr (array, arr_type0,
-					   longest_to_int (low_bound),
-					   longest_to_int (high_bound));
+					   low_bound, high_bound);
 	}
     }
   else if (noside == EVAL_AVOID_SIDE_EFFECTS)
@@ -10282,8 +10314,7 @@ ada_ternop_slice_operation::evaluate (struct type *expect_type,
   else if (high_bound < low_bound)
     return empty_array (array->type (), low_bound, high_bound);
   else
-    return ada_value_slice (array, longest_to_int (low_bound),
-			    longest_to_int (high_bound));
+    return ada_value_slice (array, low_bound, high_bound);
 }
 
 /* Implement BINOP_IN_BOUNDS.  */
@@ -13066,31 +13097,11 @@ ada_add_global_exceptions (compiled_regex *preg,
       return preg == nullptr || preg->exec (name, 0, NULL, 0) == 0;
     };
 
-
-  /* In Ada, the symbol "search name" is a linkage name, whereas the
-     regular expression used to do the matching refers to the natural
-     name.  So match against the decoded name.  */
-  expand_symtabs_matching (NULL,
-			   lookup_name_info::match_any (),
-			   [&] (const char *search_name)
-			   {
-			     std::string decoded = ada_decode (search_name);
-			     return name_matches_regex (decoded.c_str ());
-			   },
-			   NULL,
-			   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			   SEARCH_VAR_DOMAIN,
-			   [&] (enum language lang)
-			     {
-			       /* Try to skip non-Ada CUs.  */
-			       return lang == language_ada;
-			     });
-
   /* Iterate over all objfiles irrespective of scope or linker namespaces
      so we get all exceptions anywhere in the progspace.  */
   for (objfile *objfile : current_program_space->objfiles ())
     {
-      for (compunit_symtab *s : objfile->compunits ())
+      auto callback = [&] (compunit_symtab *s)
 	{
 	  const struct blockvector *bv = s->blockvector ();
 	  int i;
@@ -13109,7 +13120,30 @@ ada_add_global_exceptions (compiled_regex *preg,
 		    exceptions->push_back (info);
 		  }
 	    }
-	}
+
+	  return true;
+	};
+
+      /* In Ada, the symbol "search name" is a linkage name, whereas
+	 the regular expression used to do the matching refers to the
+	 natural name.  So match against the decoded name.  */
+      auto any = lookup_name_info::match_any ();
+      objfile->search
+	(nullptr,
+	 &any,
+	 [&] (const char *search_name)
+	   {
+	     std::string decoded = ada_decode (search_name);
+	     return name_matches_regex (decoded.c_str ());
+	   },
+	 callback,
+	 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+	 SEARCH_VAR_DOMAIN,
+	 [&] (enum language lang)
+	   {
+	     /* Try to skip non-Ada CUs.  */
+	     return lang == language_ada;
+	   });
     }
 }
 
@@ -13316,7 +13350,7 @@ ada_lookup_name_info::ada_lookup_name_info (const lookup_name_info &lookup_name)
       else
 	m_standard_p = false;
 
-      m_decoded_name = ada_decode (m_encoded_name.c_str (), true, false, false);
+      m_decoded_name = ada_decode (m_encoded_name.c_str (), true, false);
 
       /* If the name contains a ".", then the user is entering a fully
 	 qualified entity name, and the match must not be done in wild
@@ -13617,19 +13651,11 @@ public:
 					  const char *text, const char *word,
 					  enum type_code code) const override
   {
-    const struct block *b, *surrounding_static_block = 0;
+    const struct block *surrounding_static_block = 0;
 
     gdb_assert (code == TYPE_CODE_UNDEF);
 
     lookup_name_info lookup_name (text, name_match_type, true);
-
-    /* First, look at the partial symtab symbols.  */
-    expand_symtabs_matching (NULL,
-			     lookup_name,
-			     NULL,
-			     NULL,
-			     SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			     SEARCH_ALL_DOMAINS);
 
     /* At this point scan through the misc symbol vectors and add each
        symbol you find to the list.  Eventually we want to ignore
@@ -13672,7 +13698,9 @@ public:
     /* Search upwards from currently selected frame (so that we can
        complete on local vars.  */
 
-    for (b = get_selected_block (0); b != NULL; b = b->superblock ())
+    for (const block *b = get_selected_block (0);
+	 b != nullptr;
+	 b = b->superblock ())
       {
 	if (b->is_static_block ())
 	  surrounding_static_block = b;   /* For elmin of dups */
@@ -13694,43 +13722,36 @@ public:
 
     for (objfile *objfile : current_program_space->objfiles ())
       {
-	for (compunit_symtab *s : objfile->compunits ())
+	auto callback = [&] (compunit_symtab *s)
 	  {
 	    QUIT;
-	    b = s->blockvector ()->global_block ();
-	    for (struct symbol *sym : block_iterator_range (b))
+	    for (const block *b = s->blockvector ()->static_block ();
+		 b != nullptr;
+		 b = b->superblock ())
 	      {
-		if (completion_skip_symbol (mode, sym))
-		  continue;
+		/* Don't do this block twice.  */
+		if (b == surrounding_static_block)
+		  break;
 
-		completion_list_add_name (tracker,
-					  sym->language (),
-					  sym->linkage_name (),
-					  lookup_name, text, word);
+		for (struct symbol *sym : block_iterator_range (b))
+		  {
+		    if (completion_skip_symbol (mode, sym))
+		      continue;
+
+		    completion_list_add_name (tracker,
+					      sym->language (),
+					      sym->linkage_name (),
+					      lookup_name, text, word);
+		  }
 	      }
-	  }
-      }
 
-    for (objfile *objfile : current_program_space->objfiles ())
-      {
-	for (compunit_symtab *s : objfile->compunits ())
-	  {
-	    QUIT;
-	    b = s->blockvector ()->static_block ();
-	    /* Don't do this block twice.  */
-	    if (b == surrounding_static_block)
-	      continue;
-	    for (struct symbol *sym : block_iterator_range (b))
-	      {
-		if (completion_skip_symbol (mode, sym))
-		  continue;
+	    return true;
+	  };
 
-		completion_list_add_name (tracker,
-					  sym->language (),
-					  sym->linkage_name (),
-					  lookup_name, text, word);
-	      }
-	  }
+	objfile->search
+	  (nullptr, &lookup_name, nullptr, callback,
+	   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+	   SEARCH_ALL_DOMAINS);
       }
   }
 

@@ -2744,6 +2744,8 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 		}
 	      else if (feature == "error-message+")
 		cs.error_message_supported = true;
+	      else if (feature == "single-inf-arg+")
+		cs.single_inferior_argument = true;
 	      else
 		{
 		  /* Move the unknown features all together.  */
@@ -2870,6 +2872,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 
       if (target_supports_memory_tagging ())
 	strcat (own_buf, ";memory-tagging+");
+
+      if (cs.single_inferior_argument)
+	strcat (own_buf, ";single-inf-arg+");
 
       /* Reinitialize components as needed for the new connection.  */
       hostio_handle_new_gdb_connection ();
@@ -3463,7 +3468,20 @@ handle_v_run (char *own_buf)
   else
     program_path.set (new_program_name.get ());
 
-  program_args = gdb::remote_args::join (new_argv.get ());
+  if (cs.single_inferior_argument)
+    {
+      if (new_argv.get ().size () > 1)
+	{
+	  write_enn (own_buf);
+	  return;
+	}
+      else if (new_argv.get ().size () == 1)
+	program_args = std::string (new_argv.get ()[0]);
+      else
+	program_args.clear ();
+    }
+  else
+    program_args = gdb::remote_args::join (new_argv.get ());
 
   try
     {
@@ -3851,10 +3869,20 @@ gdbserver_usage (FILE *stream)
 	   "  --startup-with-shell\n"
 	   "                        Start PROG using a shell.  I.e., execs a shell that\n"
 	   "                        then execs PROG.  (default)\n"
+	   "                        To make use of globbing and variable subsitution for\n"
+	   "                        arguments passed directly on gdbserver invocation,\n"
+	   "                        see the --no-escape-args command line option in\n"
+	   "                        addition\n"
 	   "  --no-startup-with-shell\n"
 	   "                        Exec PROG directly instead of using a shell.\n"
-	   "                        Disables argument globbing and variable substitution\n"
-	   "                        on UNIX-like systems.\n"
+	   "  --no-escape-args\n"
+	   "                        If PROG is started using a shell (see the\n"
+	   "                        --[no-]startup-with-shell option),\n"
+	   "                        ARGS passed directly on gdbserver invocation are\n"
+	   "                        escaped, so no globbing or variable substitution\n"
+	   "                        happens for those. This option disables escaping, so\n"
+	   "                        globbing and variable substituation in the shell\n"
+	   "                        are done for ARGS on UNIX-like systems.\n"
 	   "\n"
 	   "Debug options:\n"
 	   "\n"
@@ -4110,6 +4138,7 @@ captured_main (int argc, char *argv[])
   volatile bool multi_mode = false;
   volatile bool attach = false;
   bool selftest = false;
+  bool escape_args = true;
 #if GDB_SELF_TEST
   std::vector<const char *> selftest_filters;
 
@@ -4132,7 +4161,7 @@ captured_main (int argc, char *argv[])
     OPT_DEBUG, OPT_DEBUG_FILE, OPT_DEBUG_FORMAT, OPT_DISABLE_PACKET,
     OPT_DISABLE_RANDOMIZATION, OPT_NO_DISABLE_RANDOMIZATION,
     OPT_STARTUP_WITH_SHELL, OPT_NO_STARTUP_WITH_SHELL, OPT_ONCE,
-    OPT_SELFTEST,
+    OPT_SELFTEST, OPT_NO_ESCAPE
   };
 
   static struct option longopts[] =
@@ -4157,6 +4186,7 @@ captured_main (int argc, char *argv[])
        OPT_NO_STARTUP_WITH_SHELL},
       {"once", no_argument, nullptr, OPT_ONCE},
       {"selftest", optional_argument, nullptr, OPT_SELFTEST},
+      {"no-escape-args", no_argument, nullptr, OPT_NO_ESCAPE},
       {nullptr, no_argument, nullptr, 0}
     };
 
@@ -4360,6 +4390,10 @@ captured_main (int argc, char *argv[])
 	  }
 	  break;
 
+	case OPT_NO_ESCAPE:
+	  escape_args = false;
+	  break;
+
 	case '?':
 	  /* Figuring out which element of ARGV contained the invalid
 	     argument is not simple.  There are a couple of cases we need
@@ -4475,7 +4509,8 @@ captured_main (int argc, char *argv[])
 
       int n = argc - (next_arg - argv);
       program_args
-	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]}, true);
+	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]},
+					escape_args);
 
       /* Wait till we are at first instruction in program.  */
       target_create_inferior (program_path.get (), program_args);

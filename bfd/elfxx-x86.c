@@ -3151,9 +3151,15 @@ _bfd_x86_elf_copy_indirect_symbol (struct bfd_link_info *info,
       eind->tls_type = GOT_UNKNOWN;
     }
 
-  /* Copy gotoff_ref so that elf_i386_adjust_dynamic_symbol will
+  /* Copy gotoff_ref so that _bfd_x86_elf_adjust_dynamic_symbol will
      generate a R_386_COPY reloc.  */
   edir->gotoff_ref |= eind->gotoff_ref;
+
+  /* Copy non_got_ref_without_indirect_extern_access so that
+     _bfd_x86_elf_adjust_dynamic_symbol will handle
+     GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS properly.  */
+  edir->non_got_ref_without_indirect_extern_access
+    |= eind->non_got_ref_without_indirect_extern_access;
 
   edir->zero_undefweak |= eind->zero_undefweak;
 

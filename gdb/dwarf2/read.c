@@ -853,6 +853,11 @@ static struct dwarf2_section_info *cu_debug_loc_section (struct dwarf2_cu *cu);
 static struct dwarf2_section_info *cu_debug_rnglists_section
   (struct dwarf2_cu *cu, dwarf_tag tag);
 
+static void dw_search_file_matcher
+  (dwarf2_per_objfile *per_objfile,
+   auto_bool_vector &cus_to_skip,
+   search_symtabs_file_matcher file_matcher);
+
 static void get_scope_pc_bounds (struct die_info *,
 				 unrelocated_addr *, unrelocated_addr *,
 				 struct dwarf2_cu *);
@@ -982,9 +987,6 @@ static void queue_comp_unit (dwarf2_per_cu *per_cu,
 			     dwarf2_per_objfile *per_objfile);
 
 static void process_queue (dwarf2_per_objfile *per_objfile);
-
-static bool is_ada_import_or_export (dwarf2_cu *cu, const char *name,
-				     const char *linkagename);
 
 /* Class, the destructor of which frees all allocated queue entries.  This
    will only have work to do if an error was thrown while processing the
@@ -1530,16 +1532,37 @@ struct readnow_functions : public dwarf2_base_index_functions
   {
   }
 
-  bool expand_symtabs_matching
-    (struct objfile *objfile,
-     expand_symtabs_file_matcher file_matcher,
-     const lookup_name_info *lookup_name,
-     expand_symtabs_symbol_matcher symbol_matcher,
-     expand_symtabs_expansion_listener expansion_notify,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     expand_symtabs_lang_matcher lang_matcher) override
+  bool search (struct objfile *objfile,
+	       search_symtabs_file_matcher file_matcher,
+	       const lookup_name_info *lookup_name,
+	       search_symtabs_symbol_matcher symbol_matcher,
+	       search_symtabs_expansion_listener listener,
+	       block_search_flags search_flags,
+	       domain_search_flags domain,
+	       search_symtabs_lang_matcher lang_matcher) override
   {
+    dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+    auto_bool_vector cus_to_skip;
+    dw_search_file_matcher (per_objfile, cus_to_skip, file_matcher);
+
+    for (const auto &per_cu : per_objfile->per_bfd->all_units)
+      {
+	QUIT;
+
+	/* Skip various types of unit that should not be searched
+	   directly: partial units and dummy units.  */
+	if (/* Note that we request the non-strict unit type here.  If
+	       there was an error while reading, like in
+	       dw-form-strx-out-of-bounds.exp, then the unit type may
+	       not be set.  */
+	    per_cu->unit_type (false) == DW_UT_partial
+	    || per_cu->unit_type (false) == 0
+	    || per_objfile->get_symtab (per_cu.get ()) == nullptr)
+	  continue;
+	if (!dw2_search_one (per_cu.get (), per_objfile, cus_to_skip,
+			     file_matcher, listener, lang_matcher))
+	  return false;
+      }
     return true;
   }
 };
@@ -1976,14 +1999,16 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 /* See read.h.  */
 
 bool
-dw2_expand_symtabs_matching_one
+dw2_search_one
   (dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile,
-   expand_symtabs_file_matcher file_matcher,
-   expand_symtabs_expansion_listener expansion_notify,
-   expand_symtabs_lang_matcher lang_matcher)
+   auto_bool_vector &cus_to_skip,
+   search_symtabs_file_matcher file_matcher,
+   search_symtabs_expansion_listener listener,
+   search_symtabs_lang_matcher lang_matcher)
 {
-  if (file_matcher != nullptr && !per_cu->mark)
+  /* Already visited, or intentionally skipped.  */
+  if (cus_to_skip.is_set (per_cu->index))
     return true;
 
   if (lang_matcher != nullptr)
@@ -1995,22 +2020,27 @@ dw2_expand_symtabs_matching_one
 	return true;
     }
 
-  bool symtab_was_null = !per_objfile->symtab_set_p (per_cu);
   compunit_symtab *symtab
     = dw2_instantiate_symtab (per_cu, per_objfile, false);
   gdb_assert (symtab != nullptr);
 
-  if (expansion_notify != NULL && symtab_was_null)
-    return expansion_notify (symtab);
+  if (listener != nullptr)
+    {
+      cus_to_skip.set (per_cu->index, true);
+      return listener (symtab);
+    }
 
   return true;
 }
 
-/* See read.h.  */
+/* If FILE_MATCHER is non-NULL, update CUS_TO_SKIP as appropriate
+   based on FILE_MATCHER.  */
 
-void
-dw_expand_symtabs_matching_file_matcher
-  (dwarf2_per_objfile *per_objfile, expand_symtabs_file_matcher file_matcher)
+static void
+dw_search_file_matcher
+  (dwarf2_per_objfile *per_objfile,
+   auto_bool_vector &cus_to_skip,
+   search_symtabs_file_matcher file_matcher)
 {
   if (file_matcher == NULL)
     return;
@@ -2026,54 +2056,50 @@ dw_expand_symtabs_matching_file_matcher
       QUIT;
 
       if (per_cu->is_debug_types)
-	continue;
-      per_cu->mark = 0;
-
-      /* We only need to look at symtabs not already expanded.  */
-      if (per_objfile->symtab_set_p (per_cu.get ()))
-	continue;
+	{
+	  cus_to_skip.set (per_cu->index, true);
+	  continue;
+	}
 
       if (per_cu->fnd != nullptr)
 	{
 	  file_and_directory *fnd = per_cu->fnd.get ();
 
 	  if (file_matcher (fnd->get_name (), false))
-	    {
-	      per_cu->mark = 1;
-	      continue;
-	    }
+	    continue;
 
 	  /* Before we invoke realpath, which can get expensive when many
 	     files are involved, do a quick comparison of the basenames.  */
 	  if ((basenames_may_differ
 	       || file_matcher (lbasename (fnd->get_name ()), true))
 	      && file_matcher (fnd->get_fullname (), false))
-	    {
-	      per_cu->mark = 1;
-	      continue;
-	    }
+	    continue;
 	}
 
       quick_file_names *file_data = dw2_get_file_names (per_cu.get (),
 							per_objfile);
       if (file_data == NULL)
-	continue;
-
-      if (visited_not_found.contains (file_data))
-	continue;
-      else if (visited_found.contains (file_data))
 	{
-	  per_cu->mark = 1;
+	  cus_to_skip.set (per_cu->index, true);
 	  continue;
 	}
 
+      if (visited_not_found.contains (file_data))
+	{
+	  cus_to_skip.set (per_cu->index, true);
+	  continue;
+	}
+      else if (visited_found.contains (file_data))
+	continue;
+
+      bool matched = false;
       for (int j = 0; j < file_data->num_file_names; ++j)
 	{
 	  const char *this_real_name;
 
 	  if (file_matcher (file_data->file_names[j], false))
 	    {
-	      per_cu->mark = 1;
+	      matched = true;
 	      break;
 	    }
 
@@ -2087,15 +2113,18 @@ dw_expand_symtabs_matching_file_matcher
 	  this_real_name = dw2_get_real_path (per_objfile, file_data, j);
 	  if (file_matcher (this_real_name, false))
 	    {
-	      per_cu->mark = 1;
+	      matched = true;
 	      break;
 	    }
 	}
 
-      if (per_cu->mark)
+      if (matched)
 	visited_found.insert (file_data);
       else
-	visited_not_found.insert (file_data);
+	{
+	  cus_to_skip.set (per_cu->index, true);
+	  visited_not_found.insert (file_data);
+	}
     }
 }
 
@@ -14572,21 +14601,22 @@ cooked_index_functions::find_compunit_symtab_by_address
 }
 
 bool
-cooked_index_functions::expand_symtabs_matching
+cooked_index_functions::search
   (objfile *objfile,
-   expand_symtabs_file_matcher file_matcher,
+   search_symtabs_file_matcher file_matcher,
    const lookup_name_info *lookup_name,
-   expand_symtabs_symbol_matcher symbol_matcher,
-   expand_symtabs_expansion_listener expansion_notify,
+   search_symtabs_symbol_matcher symbol_matcher,
+   search_symtabs_expansion_listener listener,
    block_search_flags search_flags,
    domain_search_flags domain,
-   expand_symtabs_lang_matcher lang_matcher)
+   search_symtabs_lang_matcher lang_matcher)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
   cooked_index *table = wait (objfile, true);
 
-  dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
+  auto_bool_vector cus_to_skip;
+  dw_search_file_matcher (per_objfile, cus_to_skip, file_matcher);
 
   /* This invariant is documented in quick-functions.h.  */
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
@@ -14596,10 +14626,8 @@ cooked_index_functions::expand_symtabs_matching
 	{
 	  QUIT;
 
-	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
-						file_matcher,
-						expansion_notify,
-						lang_matcher))
+	  if (!dw2_search_one (per_cu, per_objfile, cus_to_skip, file_matcher,
+			       listener, lang_matcher))
 	    return false;
 	}
       return true;
@@ -14674,13 +14702,8 @@ cooked_index_functions::expand_symtabs_matching
 	{
 	  QUIT;
 
-	  /* No need to consider symbols from expanded CUs.  */
-	  if (per_objfile->symtab_set_p (entry->per_cu))
-	    continue;
-
-	  /* If file-matching was done, we don't need to consider
-	     symbols from unmarked CUs.  */
-	  if (file_matcher != nullptr && !entry->per_cu->mark)
+	  /* We don't need to consider symbols from some CUs.  */
+	  if (cus_to_skip.is_set (entry->per_cu->index))
 	    continue;
 
 	  /* See if the symbol matches the type filter.  */
@@ -14697,13 +14720,26 @@ cooked_index_functions::expand_symtabs_matching
 		continue;
 	    }
 
+	  /* This is a bit of a hack to support .gdb_index.  Since
+	     .gdb_index does not record languages, and since we want
+	     to know the language to avoid excessive CU expansion due
+	     to false matches, if we see a symbol with an unknown
+	     language we find the CU's language.  Only the .gdb_index
+	     reader creates such symbols.  */
+	  enum language entry_lang = entry->lang;
+	  if (entry_lang == language_unknown)
+	    {
+	      entry->per_cu->ensure_lang (per_objfile);
+	      entry_lang = entry->per_cu->lang ();
+	    }
+
 	  /* We've found the base name of the symbol; now walk its
 	     parentage chain, ensuring that each component
 	     matches.  */
 	  bool found = true;
 
 	  const cooked_index_entry *parent = entry->get_parent ();
-	  const language_defn *lang_def = language_def (entry->lang);
+	  const language_defn *lang_def = language_def (entry_lang);
 	  for (int i = name_vec.size () - 1; i > 0; --i)
 	    {
 	      /* If we ran out of entries, or if this segment doesn't
@@ -14713,17 +14749,15 @@ cooked_index_functions::expand_symtabs_matching
 		  found = false;
 		  break;
 		}
-	      if (parent->lang != language_unknown)
+
+	      symbol_name_matcher_ftype *name_matcher
+		= (lang_def->get_symbol_name_matcher
+		   (segment_lookup_names[i-1]));
+	      if (!name_matcher (parent->canonical,
+				 segment_lookup_names[i-1], nullptr))
 		{
-		  symbol_name_matcher_ftype *name_matcher
-		    = lang_def->get_symbol_name_matcher
-		      (segment_lookup_names[i-1]);
-		  if (!name_matcher (parent->canonical,
-				     segment_lookup_names[i-1], nullptr))
-		    {
-		      found = false;
-		      break;
-		    }
+		  found = false;
+		  break;
 		}
 
 	      parent = parent->get_parent ();
@@ -14746,27 +14780,23 @@ cooked_index_functions::expand_symtabs_matching
 	     seems like the loop above could just examine every
 	     element of the name, avoiding the need to check here; but
 	     this is hard.  See PR symtab/32733.  */
-	  if (symbol_matcher != nullptr || entry->lang != language_unknown)
+	  auto_obstack temp_storage;
+	  const char *full_name = entry->full_name (&temp_storage,
+						    FOR_ADA_LINKAGE_NAME);
+	  if (symbol_matcher == nullptr)
 	    {
-	      auto_obstack temp_storage;
-	      const char *full_name = entry->full_name (&temp_storage,
-							FOR_ADA_LINKAGE_NAME);
-	      if (symbol_matcher == nullptr)
-		{
-		  symbol_name_matcher_ftype *name_matcher
-		    = (lang_def->get_symbol_name_matcher
-		       (lookup_name_without_params));
-		  if (!name_matcher (full_name, lookup_name_without_params,
-				     nullptr))
-		    continue;
-		}
-	      else if (!symbol_matcher (full_name))
+	      symbol_name_matcher_ftype *name_matcher
+		= (lang_def->get_symbol_name_matcher
+		   (lookup_name_without_params));
+	      if (!name_matcher (full_name, lookup_name_without_params,
+				 nullptr))
 		continue;
 	    }
+	  else if (!symbol_matcher (full_name))
+	    continue;
 
-	  if (!dw2_expand_symtabs_matching_one (entry->per_cu, per_objfile,
-						file_matcher,
-						expansion_notify, nullptr))
+	  if (!dw2_search_one (entry->per_cu, per_objfile, cus_to_skip,
+			       file_matcher, listener, nullptr))
 	    return false;
 	}
     }
@@ -15985,14 +16015,14 @@ add_ada_export_symbol (struct symbol *orig, const char *new_name,
   add_symbol_to_list (copy, list_to_add);
 }
 
-/* A helper function that decides if a given symbol is an Ada Pragma
-   Import or Pragma Export.  */
+/* See read.h.  */
 
-static bool
+bool
 is_ada_import_or_export (dwarf2_cu *cu, const char *name,
 			 const char *linkagename)
 {
   return (cu->lang () == language_ada
+	  && name != nullptr
 	  && linkagename != nullptr
 	  && !streq (name, linkagename)
 	  /* The following exclusions are necessary because symbols
