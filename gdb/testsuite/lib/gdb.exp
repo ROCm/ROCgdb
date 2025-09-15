@@ -9914,8 +9914,8 @@ proc core_find_1 {coredir binfile arg output_file} {
 # deleting it.
 
 proc core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}} {
-    return [with_tmpdir coredir $deletefiles core_find_1 [list $binfile $arg \
-	    $output_file]]
+    return [with_tmpdir coredir $deletefiles core_find_1 $binfile $arg \
+	    $output_file]
 }
 
 # gdb_target_symbol_prefix compiles a test program and then examines
