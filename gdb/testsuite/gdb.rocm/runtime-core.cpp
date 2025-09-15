@@ -24,6 +24,8 @@
 #include <list>
 #include <array>
 #include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                           \
   do                                                                         \

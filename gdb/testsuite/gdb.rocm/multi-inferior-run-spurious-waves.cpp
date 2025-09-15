@@ -23,6 +23,8 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <iostream>
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                                                 \
     {                                                                                              \

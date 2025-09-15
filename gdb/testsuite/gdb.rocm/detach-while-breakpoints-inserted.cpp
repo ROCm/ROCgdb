@@ -17,6 +17,7 @@
 
 #include <hip/hip_runtime.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 __device__ static void

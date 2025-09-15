@@ -25,6 +25,8 @@
    points for a more controlled execution.  */
 
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                           \
   {                                                                          \

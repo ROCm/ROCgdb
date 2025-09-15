@@ -18,6 +18,8 @@
 
 #include <hip/hip_runtime.h>
 #include <vector>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
