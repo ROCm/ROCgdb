@@ -18,6 +18,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <hip/hip_runtime.h>
 #include "gdb_watchdog.h"

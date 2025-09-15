@@ -18,6 +18,8 @@
 #ifdef DEVICE
 
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 constexpr unsigned int NUM_BREAKPOINT_HITS = 5;
 

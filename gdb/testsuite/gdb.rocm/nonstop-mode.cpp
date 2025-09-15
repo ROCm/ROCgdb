@@ -18,6 +18,7 @@
 
 #include <cstdio>
 #include <hip/hip_runtime.h>
+#include <stdlib.h>
 
 #if !defined(GRID_DIM)
 # error "Missing definition of GRID_DIM"

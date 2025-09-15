@@ -21,8 +21,9 @@
 #include <vector>
 #include <fstream>
 #include <string_view>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <elf.h>
 
 #define CHECK(cmd)                                                           \

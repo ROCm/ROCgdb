@@ -23,6 +23,8 @@
 #include <list>
 #include <array>
 #include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
 #include "gdb_watchdog.h"
 
 #define CHECK(cmd)                                                           \

@@ -17,6 +17,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "gdb_watchdog.h"
 
 #define CHECK(cmd)                                                           \
