@@ -44,7 +44,7 @@ proc_with_prefix test_per_inferior_parameters { } {
 	mi_gdb_test "-gdb-show --thread-group i${inf} inferior-tty" "\\^done,value=\"/inf${inf}-tty\",verbose=\"Terminal for future runs of program being debugged is \\\\\"/inf${inf}-tty\\\\\".\\\\n\"" "show inferior-tty"
 	mi_gdb_test "-gdb-show --thread-group i${inf} cwd" "\\^done,value=\"/inf${inf}-cwd\",verbose=\"Current working directory that will be used when starting the inferior is \\\\\"/inf${inf}-cwd\\\\\".\\\\n\"" "show cwd"
 	mi_gdb_test "-gdb-show --thread-group i${inf} args" "\\^done,value=\"/inf${inf}-args\",verbose=\"Argument list to give program being debugged when it is started is \\\\\"/inf${inf}-args\\\\\".\\\\n\"" "show args"
-	mi_gdb_test "-gdb-show --thread-group i${inf} remote exec-file" "\\^done,value=\"/inf${inf}-ref\",verbose=\"The remote pathname for \\\\\"run\\\\\" is \\\\\"/inf${inf}-ref\\\\\".\\\\n\"" "show remote exec-file"
+	mi_gdb_test "-gdb-show --thread-group i${inf} remote exec-file" "\\^done,value=\"/inf${inf}-ref\",verbose=\"The remote exec-file is \\\\\"/inf${inf}-ref\\\\\".\\\\n\"" "show remote exec-file"
 	mi_gdb_test "-gdb-show --thread-group i${inf} tdesc filename" "\\^done,value=\"/inf${inf}-tf\",verbose=\"The target description will be read from \\\\\"/inf${inf}-tf\\\\\".\\\\n\"" "show tdesc filename"
     }
 }

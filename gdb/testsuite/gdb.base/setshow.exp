@@ -521,7 +521,8 @@ proc_with_prefix test_argument_preceded_by_space {} {
 # $_gdb_setting_str convenience functions.
 
 proc_with_prefix test_per_inferior_settings {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     # The $_gdb_setting/$_gdb_setting_str tests require running inferiors,
     # because they allocate memory in the inferiors for the produced values.
@@ -562,7 +563,7 @@ proc_with_prefix test_per_inferior_settings {} {
 	gdb_test "show inferior-tty" "Terminal for future runs of program being debugged is \"/inf${inf}-tty\"."
 	gdb_test "show cwd" "Current working directory that will be used when starting the inferior is \"/inf${inf}-cwd\"."
 	gdb_test "show args" "Argument list to give program being debugged when it is started is \"/inf${inf}-args\"."
-	gdb_test "show remote exec-file" "The remote pathname for \"run\" is \"/inf${inf}-ref\"."
+	gdb_test "show remote exec-file" "The remote exec-file is \"/inf${inf}-ref\"."
 	gdb_test "show tdesc filename" "The target description will be read from \"/inf${inf}-tf\"."
 
 	if { $run } {
