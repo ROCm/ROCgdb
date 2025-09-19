@@ -540,8 +540,16 @@ protected:
 
   /* The per-objfile object.  */
   dwarf2_per_objfile *m_per_objfile;
+
   /* Result of each worker task.  */
   std::vector<result_type> m_results;
+
+#if CXX_STD_THREAD
+  /* Mutex to synchronize access to M_RESULTS when workers append their
+     result.  */
+  std::mutex m_results_mutex;
+#endif /* CXX_STD_THREAD */
+
   /* Any warnings emitted.  This is not in 'result_type' because (for
      the time being at least), it's only needed in do_reading, not in
      every worker.  Note that deferred_warnings uses gdb_stderr in its

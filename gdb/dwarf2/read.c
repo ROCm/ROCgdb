@@ -34,6 +34,7 @@
 #include "dwarf2/aranges.h"
 #include "dwarf2/attribute.h"
 #include "dwarf2/comp-unit-head.h"
+#include "dwarf2/cooked-index.h"
 #include "dwarf2/cu.h"
 #include "dwarf2/index-cache.h"
 #include "dwarf2/index-common.h"
@@ -50,7 +51,7 @@
 #include "bfd.h"
 #include "elf-bfd.h"
 #include "event-top.h"
-#include "gdbsupport/task-group.h"
+#include "gdbsupport/parallel-for.h"
 #include "maint.h"
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -94,7 +95,6 @@
 #include <unordered_set>
 #include "dwarf2/abbrev-table-cache.h"
 #include "cooked-index.h"
-#include "gdbsupport/thread-pool.h"
 #include "run-on-main-thread.h"
 #include "dwarf2/parent-map.h"
 #include "dwarf2/error.h"
@@ -4906,6 +4906,63 @@ public:
   }
 
 private:
+  /* The task for parallel workers that index units.  */
+  struct parallel_indexing_worker
+  {
+    parallel_indexing_worker (const char *step_name,
+			      cooked_index_debug_info *parent)
+      : m_scoped_time_it (step_name, parent->m_per_command_time),
+	m_parent (parent)
+    {
+    }
+
+    DISABLE_COPY_AND_ASSIGN (parallel_indexing_worker);
+
+    ~parallel_indexing_worker ()
+    {
+      bfd_thread_cleanup ();
+
+      /* Append the results of this worker to the parent instance.  */
+#if CXX_STD_THREAD
+      std::lock_guard<std::mutex> lock (m_parent->m_results_mutex);
+#endif
+      m_parent->m_results.emplace_back (result_type (m_thread_storage.release (),
+						     m_complaint_handler.release (),
+						     std::move (m_errors),
+						     m_thread_storage.release_parent_map ()));
+    }
+
+    void operator() (iterator_range<dwarf2_per_cu_data_up *> range)
+    {
+      for (auto &per_cu : range)
+	{
+	  try
+	    {
+	      process_psymtab_comp_unit (per_cu.get (),
+					 m_parent->m_per_objfile,
+					 &m_thread_storage);
+	    }
+	  catch (gdb_exception &except)
+	    {
+	      m_errors.push_back (std::move (except));
+	    }
+	}
+    }
+
+  private:
+    /* Measures the execution time of this worker.  */
+    scoped_time_it m_scoped_time_it;
+
+    /* Delayed complaints and errors recorded while indexing units.  */
+    complaint_interceptor m_complaint_handler;
+    std::vector<gdb_exception> m_errors;
+
+    /* Index storage for this worker.  */
+    cooked_index_storage m_thread_storage;
+
+    /* The instance that spawned this worker.  */
+    cooked_index_debug_info *m_parent;
+  };
 
   void do_reading () override;
 
@@ -4927,47 +4984,11 @@ private:
   /* An iterator for the comp units.  */
   typedef std::vector<dwarf2_per_cu_data_up>::iterator unit_iterator;
 
-  /* Process a batch of CUs.  This may be called multiple times in
-     separate threads.  TASK_NUMBER indicates which task this is --
-     the result is stored in that slot of M_RESULTS.  */
-  void process_cus (size_t task_number, unit_iterator first,
- 		    unit_iterator end);
-
   /* A storage object for "leftovers" -- see the 'start' method, but
      essentially things not parsed during the normal CU parsing
      passes.  */
   cooked_index_storage m_index_storage;
 };
-
-void
-cooked_index_debug_info::process_cus (size_t task_number, unit_iterator first,
-				      unit_iterator end)
-{
-  SCOPE_EXIT { bfd_thread_cleanup (); };
-
-  /* Ensure that complaints are handled correctly.  */
-  complaint_interceptor complaint_handler;
-
-  std::vector<gdb_exception> errors;
-  cooked_index_storage thread_storage;
-  for (auto inner = first; inner != end; ++inner)
-    {
-      dwarf2_per_cu_data *per_cu = inner->get ();
-      try
-	{
-	  process_psymtab_comp_unit (per_cu, m_per_objfile, &thread_storage);
-	}
-      catch (gdb_exception &except)
-	{
-	  errors.push_back (std::move (except));
-	}
-    }
-
-  m_results[task_number] = result_type (thread_storage.release (),
-					complaint_handler.release (),
-					std::move (errors),
-					thread_storage.release_parent_map ());
-}
 
 void
 cooked_index_debug_info::done_reading ()
@@ -5018,62 +5039,16 @@ cooked_index_debug_info::do_reading ()
 			       m_index_storage.get_addrmap (),
 			       &m_warnings);
 
-  /* We want to balance the load between the worker threads.  This is
-     done by using the size of each CU as a rough estimate of how
-     difficult it will be to operate on.  This isn't ideal -- for
-     example if dwz is used, the early CUs will all tend to be
-     "included" and won't be parsed independently.  However, this
-     heuristic works well for typical compiler output.  */
+  /* Launch parallel tasks to index units.
 
-  size_t total_size = 0;
-  for (const auto &per_cu : per_bfd->all_units)
-    total_size += per_cu->length ();
-
-  /* How many worker threads we plan to use.  We may not actually use
-     this many.  We use 1 as the minimum to avoid division by zero,
-     and anyway in the N==0 case the work will be done
-     synchronously.  */
-  const size_t n_worker_threads
-    = std::max (gdb::thread_pool::g_thread_pool->thread_count (), (size_t) 1);
-
-  /* How much effort should be put into each worker.  */
-  const size_t size_per_thread
-    = std::max (total_size / n_worker_threads, (size_t) 1);
-
-  /* Work is done in a task group.  */
-  gdb::task_group workers ([this] ()
-  {
-    this->done_reading ();
-  });
-
-  auto end = per_bfd->all_units.end ();
-  size_t task_count = 0;
-  for (auto iter = per_bfd->all_units.begin (); iter != end; )
-    {
-      auto last = iter;
-      /* Put all remaining CUs into the last task.  */
-      if (task_count == n_worker_threads - 1)
-	last = end;
-      else
-	{
-	  size_t chunk_size = 0;
-	  for (; last != end && chunk_size < size_per_thread; ++last)
-	    chunk_size += (*last)->length ();
-	}
-
-      gdb_assert (iter != last);
-      workers.add_task ([this, task_count, iter, last] ()
-	{
-	  scoped_time_it time_it ("DWARF indexing worker", m_per_command_time);
-	  process_cus (task_count, iter, last);
-	});
-
-      ++task_count;
-      iter = last;
-    }
-
-  m_results.resize (task_count);
-  workers.start ();
+     The (unfortunate) reason why we don't use
+     std::vector<dwarf2_per_cu_up>::iterator as the parallel-for-each iterator
+     type is that std::atomic won't work with that type when building with
+     -D_GLIBCXX_DEBUG.  */
+  gdb::parallel_for_each_async<1, dwarf2_per_cu_data_up *, parallel_indexing_worker>
+    (per_bfd->all_units.data (),
+     per_bfd->all_units.data () + per_bfd->all_units.size (),
+     [this] () { this->done_reading (); }, "DWARF indexing worker", this);
 }
 
 static void
