@@ -22,15 +22,9 @@ exclude = [
 "gdb/testsuite/lib",
 "gdb/testsuite/gdb.arch",
 "gdb/testsuite/gdb.base",
-"gdb/testsuite/gdb.btrace",
 "gdb/testsuite/gdb.cp",
 "gdb/testsuite/gdb.dwarf2",
-"gdb/testsuite/gdb.fortran",
-"gdb/testsuite/gdb.guile",
 "gdb/testsuite/gdb.mi",
-"gdb/testsuite/gdb.python",
-"gdb/testsuite/gdb.reverse",
-"gdb/testsuite/gdb.threads",
 "gdb/testsuite/gdb.trace",
 # IGNORE (document reason in trailing comment):
 "gdb/testsuite/gdb.stabs", # To be removed.
