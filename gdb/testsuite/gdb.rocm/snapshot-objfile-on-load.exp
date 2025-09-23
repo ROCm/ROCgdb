@@ -72,9 +72,17 @@ with_rocm_gpu_lock {
 
 	# Now force GDB to reload the shared library, to make sure it
 	# doesn't crash when it finds the corrupted code object image.
+	#
+	# Depending on the runtime version, GDB might be given the address
+	# of either 1) the original code object given to the runtime, or 2) a
+	# copy of the original code done by the runtime during load.
+	#
+	# In case #1, the client has scrambled the memory after the code object
+	# has been loaded, making it an invalid ELF.  We need to make sure that
+	# reloading it does not cause GDB to crash.  In case #2, we just
+	# reload the same binary image, which will work fine.
 	set any "\[^\r\n\]"
 	gdb_test_no_output "nosharedlibrary"
-	gdb_test "info shared" \
-	    "memory://${any}+: not in executable format: file format not recognized.*"
+	gdb_test "info shared" "memory://.*"
     }
 }
