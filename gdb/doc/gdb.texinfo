@@ -29399,7 +29399,7 @@ precision:
 
 @kindex set amdgpu precise-alu-exceptions
 @cindex AMD GPU precise ALU exceptions reporting
-@item set amdgpu plecise-alu-exceptions @var{mode}
+@item set amdgpu precise-alu-exceptions @var{mode}
 Controls how @acronym{AMD GPU} devices report ALU exceptions:
 
 @table @code
