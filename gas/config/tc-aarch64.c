@@ -5029,7 +5029,7 @@ parse_sys_reg (char **str, htab_t sys_regs,
 		  "name '%s'"), buf);
       if (!pstatefield_p && sysreg_checking_p
 	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->name,
-					       o->flags, &o->features))
+					       &o->features))
 	as_bad (_("selected processor does not support system register "
 		  "name '%s'"), buf);
       if (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags))
@@ -5073,8 +5073,7 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   if (!o || (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags)))
     return NULL;
 
-  if (!aarch64_sys_ins_reg_supported_p (cpu_variant,
-					o->name, o->flags, &o->features))
+  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o->name, &o->features))
     as_bad (_("selected processor does not support system register "
 	      "name '%s'"), buf);
   if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -10746,10 +10745,6 @@ struct aarch64_option_cpu_value_table
   const aarch64_feature_set require; /* Feature dependencies.  */
 };
 
-/* There are currently many feature bits with no corresponding flag for features implied by FEAT_D128.  We should combine or remove most of these in the future, but for now just make +d128 enable these dependencies as well.  */
-#define D128_FEATURE_DEPS AARCH64_FEATURES (8, LSE128, SCTLR2, FGT2, ATS1A, \
-					    AIE, S1PIE, S2PIE, TCR2)
-
 static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"crc",		AARCH64_FEATURE (CRC), AARCH64_NO_FEATURES},
   {"crypto",		AARCH64_FEATURES (2, AES, SHA2),
@@ -10826,7 +10821,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"the",		AARCH64_FEATURE (THE), AARCH64_NO_FEATURES},
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
-  {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
+  {"d128",		AARCH64_FEATURE (D128), AARCH64_FEATURES (2, LSE128, ATS1A)},
   {"sve-b16b16",	AARCH64_FEATURE (SVE_B16B16), AARCH64_NO_FEATURES},
   {"sve-bfscale",	AARCH64_FEATURE (SVE_BFSCALE), AARCH64_NO_FEATURES},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
