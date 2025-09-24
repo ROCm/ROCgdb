@@ -225,7 +225,7 @@ cooked_index_entry::full_name (struct obstack *storage, bool for_main,
     return local_name;
 
   const char *sep = default_sep;
-  switch (lang)
+  switch (strip_cplus_dialect (lang))
     {
     case language_cplus:
     case language_rust:

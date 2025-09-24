@@ -145,6 +145,15 @@ is_cplus_dialect (enum language lang)
   return lang == language_cplus;
 }
 
+/* If LANG is one of C++ dialects, return "language_cplus".
+   Else, return the LANG itself.  */
+
+static inline enum language
+strip_cplus_dialect (enum language lang)
+{
+  return is_cplus_dialect (lang) ? language_cplus : lang;
+}
+
 /* * A generic, not quite boolean, enumeration.  This is used for
    set/show commands in which the options are on/off/automatic.  */
 enum auto_boolean

@@ -147,7 +147,7 @@ source_cache::get_plain_source_lines (struct symtab *s,
 static const char *
 get_language_name (enum language lang)
 {
-  switch (lang)
+  switch (strip_cplus_dialect (lang))
     {
     case language_c:
     case language_objc:

@@ -15402,7 +15402,7 @@ dwarf2_init_complex_target_type (struct dwarf2_cu *cu,
   /* Try to find a suitable floating point builtin type of size BITS.
      We're going to use the name of this type as the name for the complex
      target type that we are about to create.  */
-  switch (cu->lang ())
+  switch (strip_cplus_dialect (cu->lang ()))
     {
     case language_fortran:
       switch (bits)
@@ -15882,7 +15882,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
 
   /* Set LOW_DEFAULT_IS_VALID if current language and DWARF version allow
      omitting DW_AT_lower_bound.  */
-  switch (cu->lang ())
+  switch (strip_cplus_dialect (cu->lang ()))
     {
     case language_c:
     case language_cplus:
@@ -17026,7 +17026,7 @@ cooked_index_functions::expand_symtabs_matching
 	if (!lang_matcher (lang))
 	  continue;
 
-	switch (lang)
+	switch (strip_cplus_dialect (lang))
 	  {
 	  case language_cplus:
 	  case language_rust:
