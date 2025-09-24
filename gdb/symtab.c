@@ -1030,7 +1030,7 @@ general_symbol_info::compute_and_set_names (std::string_view linkage_name,
 const char *
 general_symbol_info::natural_name () const
 {
-  switch (language ())
+  switch (strip_cplus_dialect (language ()))
     {
     case language_cplus:
     case language_d:
@@ -1056,7 +1056,7 @@ general_symbol_info::demangled_name () const
 {
   const char *dem_name = NULL;
 
-  switch (language ())
+  switch (strip_cplus_dialect (language ()))
     {
     case language_cplus:
     case language_d:

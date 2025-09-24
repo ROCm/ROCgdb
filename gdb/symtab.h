@@ -270,7 +270,7 @@ class lookup_name_info final
   /* Get the search name for searches in language LANG.  */
   const char *language_lookup_name (language lang) const
   {
-    switch (lang)
+    switch (strip_cplus_dialect (lang))
       {
       case language_ada:
 	return ada ().lookup_name ().c_str ();
@@ -292,7 +292,7 @@ class lookup_name_info final
     if (lang == language_ada)
       return ada ().split_name ();
     split_style style = split_style::NONE;
-    switch (lang)
+    switch (strip_cplus_dialect (lang))
       {
       case language_cplus:
       case language_rust:

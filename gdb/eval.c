@@ -227,7 +227,7 @@ unop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
 
   if (is_integral_type (type1))
     {
-      switch (language->la_language)
+      switch (strip_cplus_dialect (language->la_language))
 	{
 	default:
 	  /* Perform integral promotion for ANSI C/C++.
@@ -282,7 +282,7 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
   else if (type1->code () == TYPE_CODE_FLT
 	   || type2->code () == TYPE_CODE_FLT)
     {
-      switch (language->la_language)
+      switch (strip_cplus_dialect (language->la_language))
 	{
 	case language_c:
 	case language_cplus:
@@ -351,7 +351,7 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
 	  result_len = promoted_len1;
 	}
 
-      switch (language->la_language)
+      switch (strip_cplus_dialect (language->la_language))
 	{
 	case language_opencl:
 	  if (result_len

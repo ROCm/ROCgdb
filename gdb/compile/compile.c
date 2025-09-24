@@ -534,7 +534,7 @@ print_callback (void *ignore, const char *message)
 static std::unique_ptr<compile_instance>
 get_language_compile_context ()
 {
-  switch (current_language->la_language)
+  switch (strip_cplus_dialect (current_language->la_language))
     {
     case language_c:
       return c_get_compile_context ();
@@ -553,7 +553,7 @@ compute_program_language (compile_instance *inst, const char *input,
 			  const struct block *block,
 			  CORE_ADDR pc)
 {
-  switch (current_language->la_language)
+  switch (strip_cplus_dialect (current_language->la_language))
     {
     case language_c:
       return c_compute_program (inst, input, gdbarch, block, pc);
