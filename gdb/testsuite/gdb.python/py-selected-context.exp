@@ -129,3 +129,22 @@ gdb_test "down" [event_regexp 1 1.2 #0] \
     "move down a frame, event handler triggers"
 gdb_test "frame 1" [event_regexp 1 1.2 #1] \
     "select a frame, event handler triggers"
+
+# Check that switching threads via MI also triggers the Python
+# selected_context event.  Grab the regexp we expect for the CLI, pull
+# it apart, and wrap each line with the usual ~"...\n" wrapper we see
+# with MI.  Then add the MI '^done,....' line, and make this into
+# the expected output regexp.
+set cli_pattern [event_regexp 1 1.1 #0]
+set cli_pattern [string map {\r\n \n} $cli_pattern]
+set cli_pattern [split $cli_pattern \n]
+set mi_pattern {}
+foreach line $cli_pattern {
+    lappend mi_pattern "~\"$line\\\\n\""
+}
+lappend mi_pattern "\\^done,new-thread-id=\"1\",\[^\r\n\]+"
+set pattern [multi_line {*}$mi_pattern]
+
+# Switch threads using the MI.  Python event should trigger.
+gdb_test "interpreter-exec mi \"-thread-select 1\"" $pattern \
+    "mi thread switch triggers Python event"

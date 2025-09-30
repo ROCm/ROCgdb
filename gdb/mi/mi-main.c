@@ -536,6 +536,11 @@ mi_cmd_thread_select (const char *command, const char *const *argv, int argc)
 
   thread_select (argv[0], thr);
 
+  /* We don't call print_selected_inferior here as this never prints
+     anything when the output is MI like (as it is now).  MI consumers are
+     expected to derive the inferior change from the global thread-id
+     included in the print_selected_thread_frame output.  */
+
   print_selected_thread_frame (current_uiout,
 			       USER_SELECTED_THREAD | USER_SELECTED_FRAME);
 }
@@ -1965,14 +1970,33 @@ struct user_selected_context
     save_selected_frame (&m_previous_frame_id, &m_previous_frame_level);
   }
 
-  /* Return true if the user selected context has changed since this object
-     was created.  */
-  bool has_changed () const
+  /* Return a set of flags indicating which parts of the user selected
+     context have changed since this object was created, or 0 (the empty
+     set of flags) if nothing has changed.  */
+  user_selected_what what_changed () const
   {
+    /* If anything changed then we report both the thread and frame at a
+       minimum.  We optionally add the inferior if we know that it
+       changed.
+
+       This means that for pure frame changes, e.g. -stack-select-frame, we
+       still report both a thread and a frame, which isn't ideal, but
+       there's also the case where -thread-select is used to re-select the
+       current thread, in this case we'd still like to see the thread
+       reported, at least, that's what we have historically done.  */
+    user_selected_what state
+      = USER_SELECTED_THREAD | USER_SELECTED_FRAME;
+
     /* Did the selected thread change?  */
     if (m_previous_ptid != null_ptid && inferior_ptid != null_ptid
 	&& m_previous_ptid != inferior_ptid)
-      return true;
+      {
+	/* Did the inferior change too?  */
+	if (m_previous_ptid.pid () != inferior_ptid.pid ())
+	  state |= USER_SELECTED_INFERIOR;
+
+	return state;
+      }
 
     /* Grab details of the currently selected frame, for comparison.  */
     frame_id current_frame_id;
@@ -1981,7 +2005,7 @@ struct user_selected_context
 
     /* Did the selected frame level change?  */
     if (current_frame_level != m_previous_frame_level)
-      return true;
+      return state;
 
     /* Did the selected frame id change?  If the innermost frame is
        selected then the level will be -1, and the frame-id will be
@@ -1990,10 +2014,10 @@ struct user_selected_context
        other than the innermost frame selected.  */
     if (current_frame_level != -1
 	&& current_frame_id != m_previous_frame_id)
-      return true;
+      return state;
 
     /* Nothing changed!  */
-    return false;
+    return 0;
   }
 private:
   /* The previously selected thread.  This might be null_ptid if there was
@@ -2097,10 +2121,13 @@ mi_cmd_execute (struct mi_parse *parse)
 
   parse->cmd->invoke (parse);
 
-  if (!parse->cmd->preserve_user_selected_context ()
-      && current_user_selected_context.has_changed ())
-    interps_notify_user_selected_context_changed
-      (USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+  if (!parse->cmd->preserve_user_selected_context ())
+    {
+      user_selected_what what
+	= current_user_selected_context.what_changed ();
+      if (what != 0)
+	notify_user_selected_context_changed (what);
+    }
 }
 
 /* See mi-main.h.  */

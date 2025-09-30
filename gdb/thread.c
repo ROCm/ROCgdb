@@ -2009,10 +2009,19 @@ thread_command (const char *tidstr, int from_tty)
     }
   else
     {
+      inferior *previous_inferior = current_inferior ();
+
       thread_select (tidstr, parse_thread_id (tidstr, NULL));
 
-      notify_user_selected_context_changed
-	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+      user_selected_what selection = (USER_SELECTED_THREAD
+				      | USER_SELECTED_FRAME);
+
+      /* If the inferior changed as a consequence of the thread change,
+	 then let the user know.  */
+      if (previous_inferior != current_inferior ())
+	selection |= USER_SELECTED_INFERIOR;
+
+      notify_user_selected_context_changed (selection);
     }
 }
 

@@ -698,9 +698,21 @@ proc_with_prefix test_cli_thread { mode } {
 	}
     }
 
-    # Idea for the future: selecting a thread in a different inferior.  For now,
-    # GDB doesn't show an inferior switch, but if it did, it would be a nice
-    # place to test it.
+    with_test_prefix "thread 2.2" {
+	# Select a thread in a different inferior.  This should trigger an
+	# 'inferior changed' and 'thread changed' notification on the CLI,
+	# and a single MI async notification.
+	set mi_re [make_mi_re $mode 5 0 event]
+	set cli_re [make_cli_re $mode 2 2.2 0]
+
+	with_spawn_id $gdb_main_spawn_id {
+	    gdb_test "thread 2.2" $cli_re "select thread"
+	}
+
+	with_spawn_id $mi_spawn_id {
+	    match_re_or_ensure_no_output $mi_re "select thread, event on MI"
+	}
+    }
 }
 
 # Test frame selection from CLI.
@@ -995,9 +1007,21 @@ proc_with_prefix test_mi_thread_select { mode } {
 	}
     }
 
-    # Idea for the future: selecting a thread in a different inferior.  For now,
-    # GDB doesn't show an inferior switch, but if it did, it would be a nice
-    # place to test it.
+    with_test_prefix "thread 2.2" {
+	# Select a thread in a different inferior.  This should trigger an
+	# 'inferior changed' and 'thread changed' notification on the CLI,
+	# and a single MI async notification.
+	set mi_re [make_mi_re $mode 5 0 response]
+	set cli_re [make_cli_re $mode 2 2.2 0]
+
+	with_spawn_id $mi_spawn_id {
+	    mi_gdb_test "-thread-select 5" $mi_re "-thread-select"
+	}
+
+	with_spawn_id $gdb_main_spawn_id {
+	    match_re_or_ensure_no_output "$cli_re\r\n" "-thread-select, event on CLI"
+	}
+    }
 }
 
 proc_with_prefix test_mi_stack_select_frame { mode } {
@@ -1290,9 +1314,22 @@ proc_with_prefix test_cli_in_mi_thread { mode cli_in_mi_mode } {
 	}
     }
 
-    # Idea for the future: selecting a thread in a different inferior.  For now,
-    # GDB doesn't show an inferior switch, but if it did, it would be a nice
-    # place to test it.
+    with_test_prefix "thread 2.2" {
+	# Select a thread in a different inferior.  This should trigger an
+	# 'inferior changed' and 'thread changed' notification on the CLI,
+	# and a single MI async notification.
+	set command [make_cli_in_mi_command $cli_in_mi_mode "thread 2.2"]
+	set mi_re [make_cli_in_mi_re $command $cli_in_mi_mode $mode 1 2 2.2 5 0]
+	set cli_re [make_cli_re $mode 2 2.2 0]
+
+	with_spawn_id $mi_spawn_id {
+	    mi_gdb_test $command $mi_re "select thread"
+	}
+
+	with_spawn_id $gdb_main_spawn_id {
+	    match_re_or_ensure_no_output "$cli_re\r\n" "select thread, event on CLI"
+	}
+    }
 }
 
 # Test selecting the frame using a CLI command in the MI channel.
