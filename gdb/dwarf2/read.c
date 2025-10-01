@@ -51,6 +51,7 @@
 #include "elf-bfd.h"
 #include "event-top.h"
 #include "gdbsupport/task-group.h"
+#include "maint.h"
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "objfiles.h"
@@ -4875,6 +4876,7 @@ process_skeletonless_type_units (dwarf2_per_objfile *per_objfile,
 				 cooked_index_storage *storage)
 {
   skeleton_data data { per_objfile, storage };
+  scoped_time_it time_it ("DWARF skeletonless type units");
 
   /* Skeletonless TUs in DWP files without .gdb_index is not supported yet.  */
   if (get_dwp_file (per_objfile) == NULL
@@ -4976,11 +4978,16 @@ cooked_index_debug_info::done_reading ()
   /* Only handle the scanning results here.  Complaints and exceptions
      can only be dealt with on the main thread.  */
   std::vector<std::unique_ptr<cooked_index_shard>> indexes;
-  for (auto &one_result : m_results)
-    {
-      indexes.push_back (std::move (std::get<0> (one_result)));
-      m_all_parents_map.add_map (std::get<3> (one_result));
-    }
+
+  {
+    scoped_time_it time_it ("DWARF add parent map");
+
+    for (auto &one_result : m_results)
+      {
+	indexes.push_back (std::move (std::get<0> (one_result)));
+	m_all_parents_map.add_map (std::get<3> (one_result));
+      }
+  }
 
   /* This has to wait until we read the CUs, we need the list of DWOs.  */
   process_skeletonless_type_units (m_per_objfile, &m_index_storage);
@@ -5059,6 +5066,7 @@ cooked_index_debug_info::do_reading ()
       gdb_assert (iter != last);
       workers.add_task ([this, task_count, iter, last] ()
 	{
+	  scoped_time_it time_it ("DWARF indexing worker");
 	  process_cus (task_count, iter, last);
 	});
 

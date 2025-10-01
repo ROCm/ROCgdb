@@ -28,6 +28,7 @@
 #include "event-top.h"
 #include "exceptions.h"
 #include "split-name.h"
+#include "maint.h"
 #include "observable.h"
 #include "run-on-main-thread.h"
 #include <algorithm>
@@ -663,7 +664,11 @@ cooked_index::set_contents (vec_type &&vec, deferred_warnings *warn,
   for (auto &idx : m_vector)
     {
       auto this_index = idx.get ();
-      finalizers.add_task ([=] () { this_index->finalize (parent_maps); });
+      finalizers.add_task ([=] ()
+	{
+	  scoped_time_it time_it ("DWARF finalize worker");
+	  this_index->finalize (parent_maps);
+	});
     }
 
   finalizers.start ();
