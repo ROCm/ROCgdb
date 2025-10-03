@@ -3109,6 +3109,13 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
   CORE_ADDR best_end = 0;
   struct symtab *best_symtab = 0;
 
+  if (section == nullptr)
+    {
+      section = find_pc_overlay (pc);
+      if (section == nullptr)
+	section = find_pc_section (pc);
+    }
+
   /* Store here the first line number
      of a file which contains the line at the smallest pc after PC.
      If we don't find a line whose range contains PC,
@@ -3234,6 +3241,7 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
       if (notcurrent)
 	pc++;
       val.pc = pc;
+      val.section = section;
       return val;
     }
 
