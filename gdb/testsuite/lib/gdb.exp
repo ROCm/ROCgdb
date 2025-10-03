@@ -6448,11 +6448,35 @@ proc gdb_compile {source dest type options} {
         lappend new_options "early_flags=-fno-stack-protector"
     }
 
-    # hipcc defaults to -O2, so add -O0 to early flags for the hip language.
-    # If "optimize" is also requested, another -O flag (e.g. -O2) will be added
-    # to the flags, overriding this -O0.
-   if {[lsearch -exact $options hip] != -1} {
-        lappend new_options "early_flags=-O0 -ggdb"
+    if {[lsearch -exact $options hip] != -1} {
+	# The -g option enables an LLVM option that is essential for
+	# debugging (-mllvm -amdgpu-spill-cfi-saved-regs), but that
+	# unfortunately also affects code generation.  We don't want
+	# to hardcode -g here though, because some tests want to test
+	# debugging without debug info, and yet others want to compile
+	# their binary without debug info or with -gline-info-only,
+	# and then use the DWARF assembler to generate their own debug
+	# info.  Some features of the DWARF assembler rely on nodebug
+	# and debug binaries having the exact same generated code, so,
+	# explicitly compile with the LLVM option that -g would
+	# enable, and leave adding -g to the testcase, via the "debug"
+	# option, as normal.
+	#
+	# Disable -Wunused-command-line-argument to avoid warnings
+	# like:
+	#
+	#  clang: warning: argument unused during compilation: \
+	#    '-mllvm=-amdgpu-spill-cfi-saved-regs' [-Wunused-command-line-argument]
+	#
+	# These happen when we're compiling an executable _and_ all
+	# the input files are .o files, like: hipcc foo.o -o foo ...
+	#
+	# HIPCC defaults to -O2, so add -O0 to early flags for the HIP
+	# language.  If "optimize" is also requested, another -O flag
+	# (e.g. -O2) will be added to the flags, overriding this -O0.
+	lappend new_options "early_flags=-O0\
+			     -mllvm=-amdgpu-spill-cfi-saved-regs\
+			     -Wno-unused-command-line-argument"
     }
 
     # Because we link with libraries using their basename, we may need
