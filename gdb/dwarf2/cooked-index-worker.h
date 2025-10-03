@@ -27,11 +27,7 @@
 #include "dwarf2/read.h"
 #include "maint.h"
 #include "run-on-main-thread.h"
-
-#if CXX_STD_THREAD
-#include <mutex>
-#include <condition_variable>
-#endif /* CXX_STD_THREAD */
+#include "gdbsupport/cxx-thread.h"
 
 using cutu_reader_up = std::unique_ptr<cutu_reader>;
 
@@ -296,8 +292,14 @@ protected:
 
   /* The per-objfile object.  */
   dwarf2_per_objfile *m_per_objfile;
+
   /* Result of each worker task.  */
   std::vector<cooked_index_worker_result> m_results;
+
+  /* Mutex to synchronize access to M_RESULTS when workers append their
+     result.  */
+  gdb::mutex m_results_mutex;
+
   /* Any warnings emitted.  For the time being at least, this only
      needed in do_reading, not in every worker.  Note that
      deferred_warnings uses gdb_stderr in its constructor, and this
@@ -309,13 +311,12 @@ protected:
      parent relationships.  */
   parent_map_map m_all_parents_map;
 
-#if CXX_STD_THREAD
   /* Current state of this object.  */
   cooked_state m_state = cooked_state::INITIAL;
   /* Mutex and condition variable used to synchronize.  */
-  std::mutex m_mutex;
-  std::condition_variable m_cond;
-#endif /* CXX_STD_THREAD */
+  gdb::mutex m_mutex;
+  gdb::condition_variable m_cond;
+
   /* This flag indicates whether any complaints or exceptions that
      arose during scanning have been reported by 'wait'.  This may
      only be modified on the main thread.  */

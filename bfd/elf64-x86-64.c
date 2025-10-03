@@ -1626,6 +1626,16 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
       return true;
     }
 
+  if ((elf_section_type (sec) != SHT_PROGBITS
+       || (sec->flags & SEC_CODE) == 0))
+    {
+      reloc_howto_type *howto = elf_x86_64_rtype_to_howto (abfd,
+							   from_type);
+      _bfd_x86_elf_link_report_tls_invalid_section_error
+	(abfd, sec, symtab_hdr, h, sym, howto);
+      return false;
+    }
+
   /* Return TRUE if there is no transition.  */
   if (from_type == to_type
       || (from_type == R_X86_64_CODE_4_GOTTPOFF
@@ -2590,6 +2600,9 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	      /* Fake a STT_GNU_IFUNC symbol.  */
 	      h->root.root.string = bfd_elf_sym_name (abfd, symtab_hdr,
 						      isym, NULL);
+	      if (h->root.root.string == bfd_symbol_error_name)
+		goto error_return;
+
 	      h->type = STT_GNU_IFUNC;
 	      h->def_regular = 1;
 	      h->ref_regular = 1;
@@ -2752,6 +2765,16 @@ need_got:
 	      case R_X86_64_TLSDESC_CALL:
 		tls_type = GOT_TLS_GDESC;
 		break;
+	      }
+
+	    if (tls_type >= GOT_TLS_GD
+		&& tls_type <= GOT_TLS_GDESC
+		&& (elf_section_type (sec) != SHT_PROGBITS
+		    || (sec->flags & SEC_CODE) == 0))
+	      {
+		_bfd_x86_elf_link_report_tls_invalid_section_error
+		  (abfd, sec, symtab_hdr, h, isym, howto);
+		goto error_return;
 	      }
 
 	    if (h != NULL)

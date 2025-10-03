@@ -215,7 +215,7 @@ with_test_prefix "run control" {
     clean_restart
     gdb_load $binfile
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return
     }
 

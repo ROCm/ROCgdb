@@ -2456,6 +2456,8 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 
   if (htab->elf.sgotplt)
     {
+      asection *eh_frame;
+
       /* Don't allocate .got.plt section if there are no GOT nor PLT
 	 entries and there is no reference to _GLOBAL_OFFSET_TABLE_.  */
       if ((htab->elf.hgot == NULL
@@ -2468,7 +2470,11 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && (htab->elf.iplt == NULL
 	      || htab->elf.iplt->size == 0)
 	  && (htab->elf.igotplt == NULL
-	      || htab->elf.igotplt->size == 0))
+	      || htab->elf.igotplt->size == 0)
+	  && (!htab->elf.dynamic_sections_created
+	      || (eh_frame = bfd_get_section_by_name (output_bfd,
+						      ".eh_frame")) == NULL
+	      || eh_frame->rawsize == 0))
 	{
 	  htab->elf.sgotplt->size = 0;
 	  /* Solaris requires to keep _GLOBAL_OFFSET_TABLE_ even if it
@@ -3362,6 +3368,26 @@ _bfd_x86_elf_link_report_tls_transition_error
       break;
     }
 
+  bfd_set_error (bfd_error_bad_value);
+}
+
+/* Report TLS invalid section error.  */
+
+void
+_bfd_x86_elf_link_report_tls_invalid_section_error
+  (bfd *abfd, asection *sec, Elf_Internal_Shdr *symtab_hdr,
+   struct elf_link_hash_entry *h, Elf_Internal_Sym *sym,
+   reloc_howto_type *howto)
+{
+  const char *name;
+  if (h)
+    name = h->root.root.string;
+  else
+    name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
+  _bfd_error_handler
+    /* xgettext:c-format */
+    (_("%pB: relocation %s against thread local symbol `%s' in "
+       "invalid section `%pA'"), abfd, howto->name, name, sec);
   bfd_set_error (bfd_error_bad_value);
 }
 
