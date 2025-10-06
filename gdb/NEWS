@@ -23,6 +23,14 @@
   share them would usually lead to GDB crashing.  GDB now prevents
   this invalid sharing.
 
+* When connecting to a remote server, if the server supports the new
+  qExecAndArgs packet, then GDB will copy the argument string from the
+  server and update the 'args' setting, as if 'set args ...'  had been
+  used.  This means that the arguments are visible from GDB using
+  'show args', and that, if using the extended-remote protocol,
+  subsequent runs of the inferior will use the same arguments as the
+  first run.
+
 * New targets
 
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
@@ -51,6 +59,29 @@ single-inf-arg in qSupported
   arguments as a single string within the vRun packet.  The stub can
   reply with the single-inf-arg feature to indicate that it is able to
   accept arguments as a single string.
+
+* New remote packets
+
+qExecAndArgs
+  This packet returns the executable filename and argument string with
+  which the server was started.  If no such information was given to
+  the server then this is reflected in the reply.
+
+* Python API
+
+  ** New class gdb.Style for representing styles, a collection of
+     foreground and background gdb.Color objects, and an intensity.
+
+  ** New constants gdb.INTENSITY_NORMAL, gdb.INTENSITY_BOLD, and
+     gdb.INTENSITY_DIM for use with gdb.Style when representing
+     intensities.
+
+  ** New gdb.StyleParameterSet for creating custom style settings.
+     Use gdb.StyleParameterSet(NAME) to create 'set style NAME ...'
+     and 'show style NAME ...' parameters.
+
+  ** The gdb.write() function now takes an additional, optional,
+     'style' argument, which can be used to style the output.
 
 *** Changes in GDB 17
 

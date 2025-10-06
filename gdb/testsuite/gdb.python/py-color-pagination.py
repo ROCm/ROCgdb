@@ -43,4 +43,40 @@ class ColorTester(gdb.Command):
         write(mode, "\n")
 
 
+class StyleTester(gdb.Command):
+    def __init__(self):
+        super().__init__("style-fill", gdb.COMMAND_USER)
+
+    def invoke(self, args, from_tty):
+        mode = args
+        str = "<" + "-" * 78 + ">"
+        for i in range(0, 20):
+            for color_name in basic_colors:
+                c = gdb.Color(color_name)
+                s = gdb.Style(foreground=c)
+                write(mode, s.escape_sequence())
+                write(mode, str)
+
+        default = gdb.Style()
+        write(mode, default.escape_sequence())
+        write(mode, "\n")
+
+
+class StyleTester2(gdb.Command):
+    def __init__(self):
+        super().__init__("style-fill-v2", gdb.COMMAND_USER)
+
+    def invoke(self, args, from_tty):
+        str = "<" + "-" * 78 + ">"
+        for i in range(0, 20):
+            for color_name in basic_colors:
+                c = gdb.Color(color_name)
+                s = gdb.Style(foreground=c)
+                gdb.write(str, style=s)
+
+        gdb.write("\n")
+
+
 ColorTester()
+StyleTester()
+StyleTester2()

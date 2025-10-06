@@ -406,6 +406,9 @@ enum {
      inferior arguments as a single string.  */
   PACKET_vRun_single_argument,
 
+  /* Support the qExecAndArgs packet.  */
+  PACKET_qExecAndArgs,
+
   PACKET_MAX
 };
 
@@ -853,6 +856,84 @@ struct remote_features
   /* The per-remote target array which stores a remote's packet
      configurations.  */
   packet_config m_protocol_packets[PACKET_MAX];
+};
+
+/* Data structure used to hold the results of the qExecAndArgs packet.  */
+
+struct remote_exec_and_args_info
+{
+  /* The result state reflects whether the packet is supported by the
+     remote target, and then which bits of state the remote target actually
+     returned to GDB .  */
+  enum class state
+  {
+    /* The remote does not support the qExecAndArgs packet.  GDB
+       should not make assumptions about the remote target's executable
+       and arguments.  */
+    UNKNOWN,
+
+    /* The remote does understand the qExecAndArgs, no executable
+       (and/or arguments) were set at the remote end.  If GDB wants the
+       remote to start an inferior it will need to provide this information.  */
+    UNSET,
+
+    /* The remote does understand the qExecAndArgs, an executable
+       and/or arguments were set at the remote end and this information is
+       held within this object.  */
+    SET
+  };
+
+  /* Create an empty instance, STATE should be state::UNKNOWN or
+     state::UNSET only.  */
+  explicit remote_exec_and_args_info (state state = state::UNKNOWN)
+    : m_state (state)
+  {
+    gdb_assert (m_state != state::SET);
+  }
+
+  /* Create an instance in state::SET, move EXEC and ARGS into this
+     instance.  */
+  explicit remote_exec_and_args_info (std::string &&exec, std::string &&args)
+    : m_state (state::SET),
+      m_exec (std::move (exec)),
+      m_args (std::move (args))
+  { /* Nothing.  */ }
+
+  /* Is this object in state::SET?  */
+  bool is_set () const
+  {
+    return m_state == state::SET;
+  }
+
+  /* Is this object in state::UNSET?  */
+  bool is_unset () const
+  {
+    return m_state == state::UNSET;
+  }
+
+  /* Return the argument string.  Only call when is_set returns true.  */
+  const std::string &args () const
+  {
+    gdb_assert (m_state == state::SET);
+    return m_args;
+  }
+
+  /* Return the executable string.  Only call when is_set returns true.  */
+  const std::string &exec () const
+  {
+    gdb_assert (m_state == state::SET);
+    return m_exec;
+  }
+
+private:
+  /* The state of this instance.  */
+  state m_state = state::UNKNOWN;
+
+  /* The executable path returned from the remote target.  */
+  std::string m_exec;
+
+  /* The argument string returned from the remote target.  */
+  std::string m_args;
 };
 
 class remote_target : public process_stratum_target
@@ -1435,6 +1516,9 @@ public: /* Remote specific methods.  */
 
 private:
 
+  /* Fetch the executable filename and argument string from the remote.  */
+  remote_exec_and_args_info fetch_remote_executable_and_arguments ();
+
   bool start_remote_1 (int from_tty, int extended_p);
 
   /* The remote state.  Don't reference this directly.  Use the
@@ -1531,8 +1615,58 @@ remote_register_is_expedited (int regnum)
   return rs->last_seen_expedited_registers.count (regnum) > 0;
 }
 
+/* An enum used to track where the per-program-space remote exec-file data
+   came from.  This is useful when deciding which warnings to give to the
+   user.  */
+
+enum class remote_exec_source
+{
+  /* The remote exec-file has it's default (empty string) value, neither
+     the user, nor the remote target have tried to set the value yet.  */
+  DEFAULT_VALUE,
+
+  /* The remote exec-file value was set based on information fetched from
+     the remote target.  We warn the user if we are replacing a value they
+     supplied with one fetched from the remote target.  */
+  VALUE_FROM_REMOTE,
+
+  /* The remote exec-file value was set either directly by the user, or by
+     GDB after the inferior performed an exec.  */
+  VALUE_FROM_GDB,
+
+  /* The remote exec-file has it's default (empty string) value, but this
+     is because the user hasn't supplied a value yet, and the remote target
+     has specifically told GDB that it has no default executable available.  */
+  UNSET_VALUE,
+};
+
+/* Data held per program-space to represent the remote exec-file path.  The
+   first item in the pair is the exec-file path, this is set either by the
+   user with 'set remote exec-file', or automatically by GDB when
+   connecting to a remote target.
+
+   The second item in the pair is an enum flag that indicates where the
+   path value came from, or, when the path is the empty string, what this
+   actually means.  See show_remote_exec_file for details.  */
+using remote_exec_file_info = std::pair<std::string, remote_exec_source>;
+
 /* Per-program-space data key.  */
-static const registry<program_space>::key<std::string> remote_pspace_data;
+static const registry<program_space>::key<remote_exec_file_info>
+  remote_pspace_data;
+
+/* Retrieve the remote_exec_file_info object for PSPACE.  If no such object
+   yet exists then create a new one using the default constructor.  */
+
+static remote_exec_file_info &
+get_remote_exec_file_info (program_space *pspace)
+{
+  remote_exec_file_info *info = remote_pspace_data.get (pspace);
+  if (info == nullptr)
+    info = remote_pspace_data.emplace (pspace, "",
+				       remote_exec_source::DEFAULT_VALUE);
+  gdb_assert (info != nullptr);
+  return *info;
+}
 
 /* The size to align memory write packets, when practical.  The protocol
    does not guarantee any alignment, and gdb will generate short
@@ -1863,23 +1997,23 @@ remote_target::get_remote_state ()
 /* Fetch the remote exec-file from the current program space.  */
 
 static const std::string &
-get_remote_exec_file (void)
+get_remote_exec_file ()
 {
-  const std::string *remote_exec_file
-    = remote_pspace_data.get (current_program_space);
-  if (remote_exec_file == nullptr)
-    remote_exec_file = remote_pspace_data.emplace (current_program_space);
-  return *remote_exec_file;
+  const remote_exec_file_info &info
+    = get_remote_exec_file_info (current_program_space);
+  return info.first;
 }
 
 /* Set the remote exec file for PSPACE.  */
 
 static void
 set_pspace_remote_exec_file (struct program_space *pspace,
-			     const std::string &filename)
+			     const std::string &filename,
+			     remote_exec_source source)
 {
-  remote_pspace_data.clear (pspace);
-  remote_pspace_data.emplace (pspace, filename);
+  remote_exec_file_info &info = get_remote_exec_file_info (pspace);
+  info.first = filename;
+  info.second = source;
 }
 
 /* The "set remote exec-file" callback.  */
@@ -1887,8 +2021,8 @@ set_pspace_remote_exec_file (struct program_space *pspace,
 static void
 set_remote_exec_file_cb (const std::string &filename)
 {
-  set_pspace_remote_exec_file (current_program_space,
-			       filename);
+  set_pspace_remote_exec_file (current_program_space, filename,
+			       remote_exec_source::VALUE_FROM_GDB);
 }
 
 /* Implement the "show remote exec-file" command.  */
@@ -1897,12 +2031,19 @@ static void
 show_remote_exec_file (struct ui_file *file, int from_tty,
 		       struct cmd_list_element *cmd, const char *value)
 {
-  const std::string &filename = get_remote_exec_file ();
-  if (filename.empty ())
-    gdb_printf (file, _("The remote exec-file is unset, the default remote "
-			"executable will be used.\n"));
+  const remote_exec_file_info &info
+    = get_remote_exec_file_info (current_program_space);
+
+  if (info.second == remote_exec_source::DEFAULT_VALUE)
+    gdb_printf (file, _("The remote exec-file is unset, the default "
+			"remote executable will be used.\n"));
+  else if (info.second == remote_exec_source::UNSET_VALUE)
+    gdb_printf (file, _("The remote exec-file is unset, the remote has "
+			"no default executable set.\n"));
   else
-    gdb_printf (file, "The remote exec-file is \"%s\".\n", filename.c_str ());
+    gdb_printf (file, _("The remote exec-file is \"%ps\".\n"),
+		styled_string (file_name_style.style (),
+			       info.first.c_str ()));
 }
 
 static int
@@ -5157,6 +5298,93 @@ as_stop_reply_up (notif_event_up event)
   return stop_reply_up (stop_reply);
 }
 
+/* Read, decode, and return a hex-encoded string from *PTR.  Update *PTR to
+   point at the first character past the end of the string that was read
+   in.  */
+
+static std::string
+get_semicolon_delimited_hex_as_string (const char **ptr)
+{
+  const char *end = *ptr;
+
+  for (; *end != ';' && *end != '\0'; ++end)
+    ;
+
+  std::string str = hex2str (*ptr, (end - *ptr) / 2);
+  *ptr = end;
+  return str;
+}
+
+/* See declaration in class above.   */
+
+remote_exec_and_args_info
+remote_target::fetch_remote_executable_and_arguments ()
+{
+  /* Setup some constants.  This helps keep the return lines shorter in the
+     rest of this function.  */
+  constexpr remote_exec_and_args_info::state UNKNOWN
+    = remote_exec_and_args_info::state::UNKNOWN;
+  constexpr remote_exec_and_args_info::state UNSET
+    = remote_exec_and_args_info::state::UNSET;
+
+  if (m_features.packet_support (PACKET_qExecAndArgs) == PACKET_DISABLE)
+    return remote_exec_and_args_info (UNKNOWN);
+
+  struct remote_state *rs = get_remote_state ();
+
+  putpkt ("qExecAndArgs");
+  getpkt (&rs->buf, 0);
+
+  packet_result result
+    = m_features.packet_ok (rs->buf, PACKET_qExecAndArgs);
+  switch (result.status ())
+    {
+    case PACKET_ERROR:
+      warning (_("Remote error: %s"), result.err_msg ());
+      [[fallthrough]];
+    case PACKET_UNKNOWN:
+      return remote_exec_and_args_info (UNKNOWN);
+    case PACKET_OK:
+      break;
+    }
+
+  /* First character should be 'U', to indicate no information is set in
+     the server, or 'S' followed by the filename and arguments.  We treat
+     anything that is not a 'S' as if it were 'U'.  */
+  if (rs->buf[0] != 'S')
+    return remote_exec_and_args_info (UNSET);
+
+  if (rs->buf[1] != ';')
+    {
+      warning (_("missing first ';' in qExecAndArgs reply"));
+      return remote_exec_and_args_info (UNSET);
+    }
+
+  std::string filename, args;
+
+  try
+    {
+      const char *ptr = &rs->buf[2];
+      filename = get_semicolon_delimited_hex_as_string (&ptr);
+
+      /* PTR now points either at a semicolon, or at the end of the incoming
+	 buffer data.  If we are looking at a semicolon, then skip it.  */
+      if (*ptr == ';')
+	++ptr;
+
+      /* We'll collect the inferior arguments in ARGS.  */
+      args = get_semicolon_delimited_hex_as_string (&ptr);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      warning (_("unable to decode qExecAndArgs reply: %s"),
+	       ex.what ());
+      return remote_exec_and_args_info (UNKNOWN);
+    }
+
+  return remote_exec_and_args_info (std::move (filename), std::move (args));
+}
+
 /* Helper for remote_target::start_remote, start the remote connection and
    sync state.  Return true if everything goes OK, otherwise, return false.
    This function exists so that the scoped_restore created within it will
@@ -5240,6 +5468,41 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
       if ((m_features.packet_ok (rs->buf, PACKET_QStartNoAckMode)).status ()
 	  == PACKET_OK)
 	rs->noack_mode = 1;
+    }
+
+  remote_exec_and_args_info exec_and_args
+    = fetch_remote_executable_and_arguments ();
+
+  /* Update the inferior with the executable and argument string from the
+     target, these will be used when restarting the inferior, and also
+     allow the user to view this state.  */
+  if (exec_and_args.is_set ())
+    {
+      current_inferior ()->set_args (exec_and_args.args ());
+      if (!exec_and_args.exec ().empty ())
+	{
+	  remote_exec_file_info &info
+	    = get_remote_exec_file_info (current_program_space);
+	  if (info.second == remote_exec_source::VALUE_FROM_GDB
+	      && info.first != exec_and_args.exec ())
+	    warning (_("updating 'remote exec-file' to '%ps' to match "
+		       "remote target"),
+		     styled_string (file_name_style.style (),
+				    exec_and_args.exec ().c_str ()));
+	  info.first = exec_and_args.exec ();
+	  info.second = remote_exec_source::VALUE_FROM_REMOTE;
+	}
+    }
+  else if (exec_and_args.is_unset ())
+    {
+      remote_exec_file_info &info
+	= get_remote_exec_file_info (current_program_space);
+      if (info.second == remote_exec_source::DEFAULT_VALUE
+	  || info.second == remote_exec_source::VALUE_FROM_REMOTE)
+	{
+	  info.first.clear ();
+	  info.second = remote_exec_source::UNSET_VALUE;
+	}
     }
 
   if (extended_p)
@@ -6217,6 +6480,24 @@ remote_unpush_target (remote_target *target)
   for (inferior *inf : all_inferiors (target))
     {
       switch_to_inferior_no_thread (inf);
+
+      /* If this remote told INF specifically, that there was no inferior
+	 currently set, then reset this state back to GDB being in the
+	 default state.
+
+	 If however, the INF was set, either from the GDB side, or even
+	 from the remote side, then we retain the current setting.  The
+	 assumption is that the user is, or will, be debugging the same
+	 executable again in the future, so clearing an existing value
+	 would be unhelpful.  */
+      remote_exec_file_info &exec_info
+	= get_remote_exec_file_info (inf->pspace);
+      if (exec_info.second == remote_exec_source::UNSET_VALUE)
+	{
+	  gdb_assert (exec_info.first.empty ());
+	  exec_info.second = remote_exec_source::DEFAULT_VALUE;
+	}
+
       inf->pop_all_targets_at_and_above (process_stratum);
       generic_mourn_inferior ();
     }
@@ -6650,7 +6931,8 @@ remote_target::follow_exec (inferior *follow_inf, ptid_t ptid,
   if (is_target_filename (execd_pathname))
     execd_pathname += strlen (TARGET_SYSROOT_PREFIX);
 
-  set_pspace_remote_exec_file (follow_inf->pspace, execd_pathname);
+  set_pspace_remote_exec_file (follow_inf->pspace, execd_pathname,
+			       remote_exec_source::VALUE_FROM_GDB);
 }
 
 /* Same as remote_detach, but don't send the "D" packet; just disconnect.  */
@@ -16640,6 +16922,9 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
   add_packet_config_cmd (PACKET_vRun_single_argument,
 			 "single-inferior-argument-feature",
 			 "single-inferior-argument-feature", 0);
+
+  add_packet_config_cmd (PACKET_qExecAndArgs, "qExecAndArgs",
+			 "fetch-exec-and-args", 0);
 
   /* Assert that we've registered "set remote foo-packet" commands
      for all packet configs.  */

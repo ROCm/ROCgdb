@@ -3943,7 +3943,9 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	case DW_OP_reg29:
 	case DW_OP_reg30:
 	case DW_OP_reg31:
-	  ensure_have_frame (this->m_frame, "DW_OP_reg");
+	  /* The value of a register is relative to a frame, so we require a
+	     valid frame.  */
+	  ensure_have_frame (this->m_frame, "DW_OP_reg<n>");
 
 	  result = op - DW_OP_reg0;
 	  result_entry = std::make_shared<dwarf_register> (arch, result);
@@ -3951,6 +3953,10 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  break;
 
 	case DW_OP_regx:
+	  /* The value of a register is relative to a frame, so we require a
+	     valid frame.  */
+	  ensure_have_frame (this->m_frame, "DW_OP_regx");
+
 	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
 	  ensure_have_frame (this->m_frame, "DW_OP_regx");
 
