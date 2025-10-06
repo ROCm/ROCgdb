@@ -15527,12 +15527,13 @@ process_syminfo (Filedata * filedata)
   return true;
 }
 
-/* A macro which evaluates to TRUE if the region ADDR .. ADDR + NELEM
-   is contained by the region START .. END.  The types of ADDR, START
-   and END should all be the same.  Note both ADDR + NELEM and END
-   point to just beyond the end of the regions that are being tested.  */
-#define IN_RANGE(START,END,ADDR,NELEM)		\
-  (((ADDR) >= (START)) && ((ADDR) < (END)) && ((ADDR) + (NELEM) <= (END)))
+/* Check that reloc at R_OFFSET of size R_SIZE can apply to LEN bytes.  */
+
+static inline bool
+in_range (size_t len, bfd_vma r_offset, unsigned int r_size)
+{
+  return r_offset <= len && r_size <= len - r_offset;
+}
 
 /* Check to see if the given reloc needs to be handled in a target specific
    manner.  If so then process the reloc and return TRUE otherwise return
@@ -15546,7 +15547,7 @@ static bool
 target_specific_reloc_handling (Filedata *filedata,
 				Elf_Internal_Rela *reloc,
 				unsigned char *start,
-				unsigned char *end,
+				size_t size,
 				Elf_Internal_Sym *symtab,
 				uint64_t num_syms)
 {
@@ -15574,9 +15575,9 @@ target_specific_reloc_handling (Filedata *filedata,
 		unsigned int reloc_size = 0;
 		int leb_ret = 0;
 
-		if (reloc->r_offset < (size_t) (end - start))
-		  value = read_leb128 (start + reloc->r_offset, end, false,
-				       &reloc_size, &leb_ret);
+		if (reloc->r_offset < size)
+		  value = read_leb128 (start + reloc->r_offset, start + size,
+				       false, &reloc_size, &leb_ret);
 		if (leb_ret != 0 || reloc_size == 0 || reloc_size > 8)
 		  error (_("LoongArch ULEB128 field at 0x%lx contains invalid "
 			   "ULEB128 value\n"),
@@ -15674,8 +15675,8 @@ target_specific_reloc_handling (Filedata *filedata,
 		    break;
 		  case 11: /* R_MSP430_GNU_SET_ULEB128 */
 		  case 22: /* R_MSP430X_GNU_SET_ULEB128 */
-		    if (reloc->r_offset < (size_t) (end - start))
-		      read_leb128 (start + reloc->r_offset, end, false,
+		    if (reloc->r_offset < size)
+		      read_leb128 (start + reloc->r_offset, start + size, false,
 				   &reloc_size, &leb_ret);
 		    break;
 		  default:
@@ -15695,7 +15696,7 @@ target_specific_reloc_handling (Filedata *filedata,
 		    value = reloc->r_addend + (symtab[sym_index].st_value
 					       - saved_sym->st_value);
 
-		    if (IN_RANGE (start, end, start + reloc->r_offset, reloc_size))
+		    if (in_range (size, reloc->r_offset, reloc_size))
 		      byte_put (start + reloc->r_offset, value, reloc_size);
 		    else
 		      /* PR 21137 */
@@ -15755,7 +15756,7 @@ target_specific_reloc_handling (Filedata *filedata,
 		    value = reloc->r_addend + (symtab[sym_index].st_value
 					       - saved_sym->st_value);
 
-		    if (IN_RANGE (start, end, start + reloc->r_offset, reloc_size))
+		    if (in_range (size, reloc->r_offset, reloc_size))
 		      byte_put (start + reloc->r_offset, value, reloc_size);
 		    else
 		      error (_("MN10300 sym diff reloc contains invalid offset:"
@@ -15808,7 +15809,7 @@ target_specific_reloc_handling (Filedata *filedata,
 	    break;
 
 	  case 0x41: /* R_RL78_ABS32.  */
-	    if (IN_RANGE (start, end, start + reloc->r_offset, 4))
+	    if (in_range (size, reloc->r_offset, 4))
 	      byte_put (start + reloc->r_offset, value, 4);
 	    else
 	      error (_("RL78 sym diff reloc contains invalid offset: "
@@ -15818,7 +15819,7 @@ target_specific_reloc_handling (Filedata *filedata,
 	    return true;
 
 	  case 0x43: /* R_RL78_ABS16.  */
-	    if (IN_RANGE (start, end, start + reloc->r_offset, 2))
+	    if (in_range (size, reloc->r_offset, 2))
 	      byte_put (start + reloc->r_offset, value, 2);
 	    else
 	      error (_("RL78 sym diff reloc contains invalid offset: "
@@ -16651,7 +16652,6 @@ apply_relocations (Filedata *filedata,
 		   uint64_t *num_relocs_return)
 {
   Elf_Internal_Shdr * relsec;
-  unsigned char * end = start + size;
 
   if (relocs_return != NULL)
     {
@@ -16722,7 +16722,7 @@ apply_relocations (Filedata *filedata,
 
 	  reloc_type = get_reloc_type (filedata, rp->r_info);
 
-	  if (target_specific_reloc_handling (filedata, rp, start, end, symtab, num_syms))
+	  if (target_specific_reloc_handling (filedata, rp, start, size, symtab, num_syms))
 	    continue;
 	  else if (is_none_reloc (filedata, reloc_type))
 	    continue;
@@ -16785,8 +16785,7 @@ apply_relocations (Filedata *filedata,
 	      continue;
 	    }
 
-	  rloc = start + rp->r_offset;
-	  if (!IN_RANGE (start, end, rloc, reloc_size))
+	  if (!in_range (size, rp->r_offset, reloc_size))
 	    {
 	      warn (_("skipping invalid relocation offset %#" PRIx64
 		      " in section %s\n"),
@@ -16794,6 +16793,7 @@ apply_relocations (Filedata *filedata,
 		    printable_section_name (filedata, section));
 	      continue;
 	    }
+	  rloc = start + rp->r_offset;
 
 	  sym_index = get_reloc_symindex (rp->r_info);
 	  if (sym_index >= num_syms)
@@ -16880,7 +16880,7 @@ apply_relocations (Filedata *filedata,
       free (symtab);
       /* Let the target specific reloc processing code know that
 	 we have finished with these relocs.  */
-      target_specific_reloc_handling (filedata, NULL, NULL, NULL, NULL, 0);
+      target_specific_reloc_handling (filedata, NULL, NULL, 0, NULL, 0);
 
       if (relocs_return)
 	{
