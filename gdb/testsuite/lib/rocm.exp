@@ -54,6 +54,13 @@ gdb_caching_proc find_amdgpu_devices {} {
     # devices, one device per line.  We don't rely on
     # rocm_agent_enumerator because that does not exist on all
     # supported platforms.
+    #
+    # Compile without --offload-arch (which is fine because this is a
+    # host-only program), because otherwise gdb_compile would call
+    # hcc_amdgpu_targets to know which --offload-arch flags to pass to
+    # HIPCC, and we'd end up here again, resulting in infinite
+    # recursion.
+    set options {hip hip_no_offload_arch}
     if {![gdb_simple_compile device_enumerator {
 	    #include <hip/hip_runtime.h>
 	    #include <stdio.h>
@@ -78,7 +85,7 @@ gdb_caching_proc find_amdgpu_devices {} {
 		      }
 		  }
 	    }
-	} executable {hip}]} {
+	} executable $options]} {
 	return {}
     }
 
