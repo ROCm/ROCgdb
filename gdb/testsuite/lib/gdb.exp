@@ -5764,6 +5764,7 @@ proc quote_for_host { args } {
 #   - column-info/no-column-info: Enable/Disable generation of column table
 #     information.
 #   - dwarf5: Force compilation with dwarf-5 debug information.
+#   - hip_no_offload_arch: Do not pass --offload-arch to HIPCC.
 #
 # And here are some of the not too obscure options understood by DejaGnu that
 # influence the compilation:
@@ -6101,6 +6102,19 @@ proc gdb_compile {source dest type options} {
 	    # disable it.
 	    lappend new_options "ldflags=-Wl,-debug:none -Wl,-debug:dwarf"
 	}
+
+	# Unlike on Linux, on Windows, HIPCC doesn't automatically
+	# pick the available GPUs, and --offload-arch=native doesn't
+	# work either.  Explicitly pass one --offload-arch for each
+	# available device.  Do it on Linux too, just to minimize
+	# potential behavior differences between OSs.  But don't do it
+	# if the testcase explicitly used --offload-arch.
+	if {[lsearch -exact $options hip_no_offload_arch] == -1
+	    && [lsearch -regexp $options "--offload-arch="] == -1} {
+	    foreach gpu_target [hcc_amdgpu_targets] {
+		lappend new_options "early_flags=--offload-arch=$gpu_target"
+	    }
+	}
     }
 
     # Because we link with libraries using their basename, we may need
@@ -6250,6 +6264,16 @@ proc gdb_compile {source dest type options} {
 		    # C files (via '-x c').  Since we have a .c file,
 		    # force compilation in HIP mode ourselves.
 		    lappend unbuf_obj_options "additional_flags=-x hip"
+
+		    # Compile without --offload-arch (which is fine
+		    # because this object has no device code), because
+		    # otherwise, when compiling the GPU device
+		    # enumerator (see find_amdgpu_devices),
+		    # gdb_compile would call hcc_amdgpu_targets to
+		    # know which --offload-arch flags to pass to
+		    # HIPCC, and we'd end up here again, resulting in
+		    # infinite recursion.
+		    lappend unbuf_obj_options hip_no_offload_arch
 		}
 
 		set result [gdb_compile "${unbuf_src}" "${unbuf_obj}" object $unbuf_obj_options]
