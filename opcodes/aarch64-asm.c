@@ -40,7 +40,6 @@ static inline void
 insert_fields (aarch64_insn *code, aarch64_insn value, aarch64_insn mask, ...)
 {
   uint32_t num;
-  enum aarch64_field_kind kind;
   va_list va;
 
   va_start (va, mask);
@@ -48,9 +47,9 @@ insert_fields (aarch64_insn *code, aarch64_insn value, aarch64_insn mask, ...)
   assert (num <= 5);
   while (num--)
     {
-      kind = va_arg (va, enum aarch64_field_kind);
-      insert_field (kind, code, value, mask);
-      value >>= aarch64_fields[kind].width;
+      aarch64_field field = va_arg (va, aarch64_field);
+      insert_field (field, code, value, mask);
+      value >>= field.width;
     }
   va_end (va);
 }
@@ -63,14 +62,13 @@ insert_all_fields_after (const aarch64_operand *self, unsigned int start,
 			 aarch64_insn *code, aarch64_insn value)
 {
   unsigned int i;
-  enum aarch64_field_kind kind;
 
   for (i = ARRAY_SIZE (self->fields); i-- > start; )
-    if (self->fields[i] != FLD_NIL)
+    if (self->fields[i].width != 0)
       {
-	kind = self->fields[i];
-	insert_field (kind, code, value, 0);
-	value >>= aarch64_fields[kind].width;
+	aarch64_field field = self->fields[i];
+	insert_field (field, code, value, 0);
+	value >>= field.width;
       }
 }
 
@@ -349,7 +347,7 @@ aarch64_ins_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
     }
   insert_fields (code, QSsize, 0, 3, FLD_vldst_size, FLD_S, FLD_Q);
   gen_sub_field (FLD_asisdlso_opcode, 1, 2, &field);
-  insert_field_2 (&field, code, opcodeh2, 0);
+  insert_field (field, code, opcodeh2, 0);
 
   return true;
 }
@@ -500,7 +498,7 @@ aarch64_ins_advsimd_imm_modified (const aarch64_operand *self ATTRIBUTE_UNUSED,
       amount >>= 4;
       gen_sub_field (FLD_cmode, 0, 1, &field);		/* per word */
     }
-  insert_field_2 (&field, code, amount, 0);
+  insert_field (field, code, amount, 0);
 
   return true;
 }
@@ -753,7 +751,7 @@ aarch64_ins_addr_simm (const aarch64_operand *self,
   insert_field (FLD_Rn, code, info->addr.base_regno, 0);
   /* simm (imm9 or imm7) */
   imm = info->addr.offset.imm;
-  if (self->fields[0] == FLD_imm7
+  if (self->fields[0].width == 7
      || info->qualifier == AARCH64_OPND_QLF_imm_tag)
     /* scaled immediate in ld/st pair instructions..  */
     imm >>= get_logsz (aarch64_get_qualifier_esize (info->qualifier));
@@ -1868,7 +1866,7 @@ encode_asimd_fcvt (aarch64_inst *inst)
 	  || qualifier == AARCH64_OPND_QLF_V_2D);
   value = (qualifier == AARCH64_OPND_QLF_V_4S) ? 0 : 1;
   gen_sub_field (FLD_size, 0, 1, &field);
-  insert_field_2 (&field, &inst->value, value, 0);
+  insert_field (field, &inst->value, value, 0);
 }
 
 /* Encode size[0], i.e. bit 22, for
@@ -1881,7 +1879,7 @@ encode_asisd_fcvtxn (aarch64_inst *inst)
   aarch64_field field = AARCH64_FIELD_NIL;
   assert (inst->operands[0].qualifier == AARCH64_OPND_QLF_S_S);
   gen_sub_field (FLD_size, 0, 1, &field);
-  insert_field_2 (&field, &inst->value, val, 0);
+  insert_field (field, &inst->value, val, 0);
 }
 
 /* Encode the 'opc' field for e.g. FCVT <Dd>, <Sn>.  */
@@ -1899,7 +1897,7 @@ encode_fcvt (aarch64_inst *inst)
     case AARCH64_OPND_QLF_S_H: val = 3; break;
     default: abort ();
     }
-  insert_field_2 (&field, &inst->value, val, 0);
+  insert_field (field, &inst->value, val, 0);
 
   return;
 }
@@ -1998,7 +1996,7 @@ static void
 encode_sizeq (aarch64_inst *inst)
 {
   aarch64_insn sizeq;
-  enum aarch64_field_kind kind;
+  aarch64_field field;
   int idx;
 
   /* Get the index of the operand whose information we are going to use
@@ -2015,10 +2013,10 @@ encode_sizeq (aarch64_inst *inst)
      || inst->opcode->iclass == asisdlsep
      || inst->opcode->iclass == asisdlso
      || inst->opcode->iclass == asisdlsop)
-    kind = FLD_vldst_size;
+    field = FLD_vldst_size;
   else
-    kind = FLD_size;
-  insert_field (kind, &inst->value, (sizeq >> 1) & 0x3, inst->opcode->mask);
+    field = FLD_size;
+  insert_field (field, &inst->value, (sizeq >> 1) & 0x3, inst->opcode->mask);
 }
 
 /* Opcodes that have fields shared by multiple operands are usually flagged
@@ -2131,7 +2129,7 @@ do_special_encoding (struct aarch64_inst *inst)
       num = (int) value >> 1;
       assert (num >= 0 && num <= 3);
       gen_sub_field (FLD_imm5, 0, num + 1, &field);
-      insert_field_2 (&field, &inst->value, 1 << num, inst->opcode->mask);
+      insert_field (field, &inst->value, 1 << num, inst->opcode->mask);
     }
 
   if ((inst->opcode->flags & F_OPD_SIZE) && inst->opcode->iclass == sve2_urqvs)
@@ -2173,7 +2171,7 @@ do_special_encoding (struct aarch64_inst *inst)
 	      == AARCH64_OPND_CLASS_INT_REG);
       gen_sub_field (FLD_opc, 0, 1, &field);
       qualifier = inst->operands[0].qualifier;
-      insert_field_2 (&field, &inst->value,
+      insert_field (field, &inst->value,
 		      1 - aarch64_get_qualifier_standard_value (qualifier), 0);
     }
   /* Miscellaneous encoding as the last step.  */

@@ -998,14 +998,14 @@ typedef struct operand operand;
 
 static operand operands[] =
 {
-    {"NIL", "0", "0", "", "0", "{0}", "<none>", 0, 0, 0},
+    {"NIL", "0", "0", "", "0", "{}", "<none>", 0, 0, 0},
 #define F(...)	#__VA_ARGS__
 #define X(a,b,c,d,e,f,g)	\
     {#a, #b, #c, d, #e, "{"f"}", g, 0, 0, 0},
 #define Y(a,b,d,e,f,g)		\
     {#a, "ins_"#b, "ext_"#b, d, #e, "{"f"}", g, 0, 0, 0},
     AARCH64_OPERANDS
-    {"NIL", "0", "0", "", "0", "{0}", "DUMMY", 0, 0, 0},
+    {"NIL", "0", "0", "", "0", "{}", "DUMMY", 0, 0, 0},
 };
 
 #undef F

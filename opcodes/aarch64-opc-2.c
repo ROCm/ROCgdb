@@ -25,7 +25,7 @@
 
 const struct aarch64_operand aarch64_operands[] =
 {
-  {AARCH64_OPND_CLASS_NIL, "", 0, {0}, "<none>"},
+  {AARCH64_OPND_CLASS_NIL, "", 0, {}, "<none>"},
   {AARCH64_OPND_CLASS_INT_REG, "Rd", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {FLD_Rd}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rn", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {FLD_Rn}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rm", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {FLD_Rm}, "an integer register"},
@@ -377,7 +377,7 @@ const struct aarch64_operand aarch64_operands[] =
   {AARCH64_OPND_CLASS_SYSTEM, "GIC", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "Generic Interrupt Controller"},
   {AARCH64_OPND_CLASS_SYSTEM, "GICR", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "Generic Interrupt Controller"},
   {AARCH64_OPND_CLASS_SYSTEM, "GSB", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "Generic Interrupt Controller Synchronization Barrier"},
-  {AARCH64_OPND_CLASS_NIL, "", 0, {0}, "DUMMY"},
+  {AARCH64_OPND_CLASS_NIL, "", 0, {}, "DUMMY"},
 };
 
 /* Indexed by an enum aarch64_op enumerator, the value is the
