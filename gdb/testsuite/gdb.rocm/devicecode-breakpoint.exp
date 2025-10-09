@@ -115,10 +115,15 @@ with_test_prefix "break FILE:LINENO if DEVICE_THREAD_COND" {
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
 with_test_prefix "break FILE:LINE if WAVE_ID_CONDITION" {
-    clean_restart ${binfile}
-    gdb_breakpoint "$srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" allow-pending
-    gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
-    gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+    if [allow_python_tests] {
+	clean_restart
+	gdb_load ${binfile}
+	gdb_breakpoint "$srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" allow-pending
+	gdb_test "run" "Thread.+hit.+Breakpoint.*${testfile}.cpp:$breakpoint_loc.*"
+	gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
+    } else {
+      unsupported "missing python support"
+    }
 }
 
 
