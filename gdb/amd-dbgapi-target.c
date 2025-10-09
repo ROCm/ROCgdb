@@ -4076,6 +4076,13 @@ queue_find_command (const char *arg, int from_tty)
       std::vector<amd_dbgapi_queue_id_t> queues (&queue_list[0],
 						 &queue_list[queue_count]);
 
+      /* Sort queues so that the output does not depend on internal
+	 ROCdbgapi data structures, and is more stable across
+	 runs.  */
+      std::sort (queues.begin (), queues.end (),
+		 [] (amd_dbgapi_queue_id_t lhs, amd_dbgapi_queue_id_t rhs)
+		 { return lhs.handle < rhs.handle; });
+
       xfree (queue_list);
 
       for (auto &&queue_id : queues)
