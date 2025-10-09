@@ -776,7 +776,6 @@ set show_conv_list \
 	{$_shell_exitcode = 0} \
 	{$_linker_namespace_count = 0} \
 	{$_linker_namespace = <error: No registers.>}\
-	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
 	{$_wave_id = void} \
     }
 if {[allow_python_tests]} {
@@ -791,6 +790,7 @@ if {[allow_python_tests]} {
 	    {$_caller_matches = <internal function _caller_matches>} \
 	    {$_any_caller_is = <internal function _any_caller_is>} \
 	    {$_any_caller_matches = <internal function _any_caller_matches>} \
+	    {$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
 	}
 }
 
