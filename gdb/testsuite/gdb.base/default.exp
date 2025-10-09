@@ -701,7 +701,6 @@ set show_conv_list \
 	{$_gdb_minor = 3} \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \
-	{$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
 	{$_wave_id = void} \
     }
 if [allow_python_tests] {
@@ -716,6 +715,7 @@ if [allow_python_tests] {
 	    {$_caller_matches = <internal function _caller_matches>} \
 	    {$_any_caller_is = <internal function _any_caller_is>} \
 	    {$_any_caller_matches = <internal function _any_caller_matches>} \
+	    {$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
 	}
 }
 gdb_test_list_exact "show convenience" "show convenience" \
