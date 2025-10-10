@@ -1838,7 +1838,9 @@ struct compunit_symtab
 
   symtab_range filetabs () const
   {
-    return symtab_range (m_filetabs);
+    next_iterator<symtab> begin (m_filetabs);
+
+    return symtab_range (std::move (begin));
   }
 
   void add_filetab (symtab *filetab)

@@ -1368,18 +1368,18 @@ amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
   /* Disable forward progress requirement.  */
   require_forward_progress (scope_ptid, proc_target, false);
 
-  for (thread_info *thread : all_non_exited_threads (proc_target, scope_ptid))
+  for (thread_info &thread : all_non_exited_threads (proc_target, scope_ptid))
     {
-      if (!ptid_is_gpu (thread->ptid))
+      if (!ptid_is_gpu (thread.ptid))
 	continue;
 
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread.ptid);
       amd_dbgapi_status_t status;
 
-      wave_info &wi = get_thread_wave_info (thread);
+      wave_info &wi = get_thread_wave_info (&thread);
       amd_dbgapi_resume_mode_t &resume_mode = wi.last_resume_mode;
       amd_dbgapi_exceptions_t wave_exception;
-      if (thread->ptid == inferior_ptid)
+      if (thread.ptid == inferior_ptid)
 	{
 	  resume_mode = (step
 			 ? AMD_DBGAPI_RESUME_MODE_SINGLE_STEP
@@ -1527,10 +1527,10 @@ amd_dbgapi_target::stop (ptid_t ptid)
   for (auto *inf : all_inferiors (proc_target))
     /* Use the threads_safe iterator since stop_one_thread may delete the
        thread if it has exited.  */
-    for (auto *thread : inf->threads_safe ())
-      if (thread->state != THREAD_EXITED && thread->ptid.matches (ptid)
-	  && ptid_is_gpu (thread->ptid))
-	stop_one_thread (thread);
+    for (auto &thread : inf->threads_safe ())
+      if (thread.state != THREAD_EXITED && thread.ptid.matches (ptid)
+	  && ptid_is_gpu (thread.ptid))
+	stop_one_thread (&thread);
 }
 
 /* Callback for our async event handler.  */
@@ -1645,7 +1645,7 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 	  amd_dbgapi_debug_printf ("pushing amd-dbgapi target");
 	  info.inf->push_target (&the_amd_dbgapi_target);
 
-	  if (info.inf->pspace->cbfd == nullptr)
+	  if (get_inferior_core_bfd (info.inf) == nullptr)
 	    {
 	      insert_initial_watchpoints (&info);
 
@@ -1783,7 +1783,7 @@ add_gpu_thread (inferior *inf, ptid_t wave_ptid)
   thread_info *thread = add_thread_silent (proc_target, wave_ptid);
 
   /* When debugging a corefile, leave the threads marked as not executing.  */
-  if (inf->pspace->cbfd == nullptr)
+  if (get_inferior_core_bfd (inf) == nullptr)
     {
       set_running (proc_target, wave_ptid, true);
       set_executing (proc_target, wave_ptid, true);
@@ -1870,7 +1870,7 @@ process_one_event (amd_dbgapi_inferior_info &info,
 	       been adjusted before generating the corefile, so no need to
 	       re-do it now.  */
 	    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0
-		&& info.inf->pspace->cbfd == nullptr)
+		&& get_inferior_core_bfd (info.inf) == nullptr)
 	      {
 		regcache *regcache = get_thread_regcache (thread);
 		gdbarch *gdbarch = regcache->arch ();
@@ -2240,7 +2240,7 @@ set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 static void
 amd_dbgapi_finalize_core_attach (inferior *inf)
 {
-  gdb_assert (inf->pspace->cbfd != nullptr);
+  gdb_assert (get_inferior_core_bfd (inf) != nullptr);
 
   /* If the rocm runtime is not active for this inferior, there's
      nothing else to do.  */
@@ -2294,7 +2294,7 @@ attach_amd_dbgapi (inferior *inf)
   scoped_restore_current_thread restore_thread;
   switch_to_inferior_no_thread (inf);
 
-  if (!target_can_async_p () && inf->pspace->cbfd == nullptr)
+  if (!target_can_async_p () && get_inferior_core_bfd (inf) == nullptr)
     {
       warning (_("The amd-dbgapi target requires the target beneath to be "
 		 "asynchronous, GPU debugging is disabled"));
@@ -2624,15 +2624,15 @@ amd_dbgapi_target::update_thread_list ()
       /* Prune the wave_ids that already have a thread_info.  Any thread_info
 	 which does not have a corresponding wave_id represents a wave which
 	 is gone at this point and should be deleted.  */
-      for (thread_info *tp : inf->threads_safe ())
-	if (ptid_is_gpu (tp->ptid) && tp->state != THREAD_EXITED)
+      for (thread_info &tp : inf->threads_safe ())
+	if (ptid_is_gpu (tp.ptid) && tp.state != THREAD_EXITED)
 	  {
-	    auto it = threads.find (tp->ptid.tid ());
+	    auto it = threads.find (tp.ptid.tid ());
 
 	    if (it == threads.end ())
 	      {
-		auto wave_id = get_amd_dbgapi_wave_id (tp->ptid);
-		wave_info &wi = get_thread_wave_info (tp);
+		auto wave_id = get_amd_dbgapi_wave_id (tp.ptid);
+		wave_info &wi = get_thread_wave_info (&tp);
 
 		/* Waves that were stepping or in progress of being
 		   stopped are guaranteed to report a
@@ -2653,7 +2653,7 @@ amd_dbgapi_target::update_thread_list ()
 		  {
 		    amd_dbgapi_debug_printf ("wave_%ld disappeared, deleting it",
 					     wave_id.handle);
-		    delete_thread_silent (tp);
+		    delete_thread_silent (&tp);
 		  }
 	      }
 	    else
@@ -2798,7 +2798,7 @@ amd_dbgapi_target_inferior_created (inferior *inf)
      on a remote target) or we are not dealing with a core dump, we don't
      want to deal with it.  */
   if (inf->process_target () == get_native_target ()
-      || inf->pspace->cbfd != nullptr)
+      || get_inferior_core_bfd (inf) != nullptr)
     attach_amd_dbgapi (inf);
 }
 
@@ -2865,7 +2865,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
 	  scoped_restore_current_thread restore_thread;
-	  switch_to_thread (*child_inf->threads ().begin ());
+	  switch_to_thread (&*child_inf->threads ().begin ());
 	  attach_amd_dbgapi (child_inf);
 	}
     }
@@ -2915,7 +2915,7 @@ amd_dbgapi_client_process_get_info_callback
 	{
 	  /* Dbgapi expects AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE if the
 	     current inferior is an opened core dump.  */
-	  if (inf->pspace->cbfd != nullptr)
+	  if (get_inferior_core_bfd (inf) != nullptr)
 	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
 
 	  if (value_size != sizeof (amd_dbgapi_os_process_id_t))
@@ -2925,13 +2925,14 @@ amd_dbgapi_client_process_get_info_callback
 	}
     case AMD_DBGAPI_CLIENT_PROCESS_INFO_CORE_STATE:
 	{
-	  if (inf->pspace->cbfd == nullptr)
+	  bfd *core_bfd = get_inferior_core_bfd (inf);
+
+	  if (core_bfd == nullptr)
 	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
 
 	  const char *pseudo_sec_name = ".note.amdgpu.core_state";
 	  bfd_section *section
-	    = bfd_get_section_by_name (inf->pspace->cbfd.get (),
-				       pseudo_sec_name);
+	    = bfd_get_section_by_name (core_bfd, pseudo_sec_name);
 
 	  if (section == nullptr)
 	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
@@ -2942,14 +2943,14 @@ amd_dbgapi_client_process_get_info_callback
 
 	  gdb::unique_xmalloc_ptr<char> contents
 	    ((char *) xmalloc (note_size));
-	  if (!bfd_get_section_contents (inf->pspace->cbfd.get (), section,
+	  if (!bfd_get_section_contents (core_bfd, section,
 					 contents.get (), (file_ptr) 0,
 					 note_size))
 	    return AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE;
 
 	  amd_dbgapi_core_state_data_t *data
 	    = reinterpret_cast<amd_dbgapi_core_state_data_t *> (value);
-	  data->endianness = (bfd_big_endian (inf->pspace->cbfd.get ())
+	  data->endianness = (bfd_big_endian (core_bfd)
 			      ? AMD_DBGAPI_ENDIAN_BIG
 			      : AMD_DBGAPI_ENDIAN_LITTLE);
 	  data->size = note_size;

@@ -251,6 +251,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_FPRCVT,
   /* Point of Physical Storage.  */
   AARCH64_FEATURE_PoPS,
+  /* GICv5 (Generic Interrupt Controller) CPU Interface Extension.  */
+  AARCH64_FEATURE_GCIE,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -395,10 +397,8 @@ static_assert ((AA64_REPLICATE (REP_PLUS, AA64_REPVAL,
 					)
 #define AARCH64_ARCH_V9_6A_FEATURES(X)	(AARCH64_FEATBIT (X, V9_6A)	\
 					 | AARCH64_FEATBIT (X, CMPBR)	\
-					 | AARCH64_FEATBIT (X, FPRCVT)	\
 					 | AARCH64_FEATBIT (X, LSUI)	\
-					 | AARCH64_FEATBIT (X, OCCMO)	\
-					 | AARCH64_FEATBIT (X, SVE2p2))
+					 | AARCH64_FEATBIT (X, OCCMO))
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8A(X)	(AARCH64_FEATBIT (X, V8) \
@@ -943,6 +943,9 @@ enum aarch64_opnd
   AARCH64_OPND_RCPC3_ADDR_POSTIND,	 /* [<Xn|SP>], #<imm>.  */
   AARCH64_OPND_RCPC3_ADDR_PREIND_WB, 	 /* [<Xn|SP>, #<imm>]!.  */
   AARCH64_OPND_RCPC3_ADDR_OFFSET,
+  AARCH64_OPND_GIC,
+  AARCH64_OPND_GICR,
+  AARCH64_OPND_GSB,
 };
 
 /* Qualifier constrains an operand.  It either specifies a variant of an
@@ -1627,6 +1630,9 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_ic [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
+extern const aarch64_sys_ins_reg aarch64_sys_ins_gic [];
+extern const aarch64_sys_ins_reg aarch64_sys_ins_gicr [];
+extern const aarch64_sys_ins_reg aarch64_sys_ins_gsb [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_sr [];
 
 /* Shift/extending operator kinds.

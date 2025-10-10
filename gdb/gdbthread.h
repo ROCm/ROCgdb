@@ -783,7 +783,7 @@ extern struct thread_info *iterate_over_threads (thread_callback_func);
    Used like this, it walks over all threads of all inferiors of all
    targets:
 
-       for (thread_info *thr : all_threads ())
+       for (thread_info &thr : all_threads ())
 	 { .... }
 
    FILTER_PTID can be used to filter out threads that don't match.
@@ -822,15 +822,18 @@ all_non_exited_threads (process_stratum_target *proc_target = nullptr,
    currently-iterated thread.  When combined with range-for, this
    allow convenient patterns like this:
 
-     for (thread_info *t : all_threads_safe ())
+     for (thread_info &t : all_threads_safe ())
        if (some_condition ())
-	 delete f;
+	 delete &f;
 */
 
 inline all_threads_safe_range
 all_threads_safe ()
 {
-  return all_threads_safe_range (all_threads_iterator::begin_t {});
+  all_threads_iterator begin (all_threads_iterator::begin_t {});
+  all_threads_safe_iterator safe_begin (std::move (begin));
+
+  return all_threads_safe_range (std::move (safe_begin));
 }
 
 extern int thread_count (process_stratum_target *proc_target);
@@ -1031,10 +1034,8 @@ using thread_step_over_list_node
   = intrusive_member_node<thread_info, &thread_info::step_over_list_node>;
 using thread_step_over_list
   = intrusive_list<thread_info, thread_step_over_list_node>;
-using thread_step_over_list_iterator
-  = reference_to_pointer_iterator<thread_step_over_list::iterator>;
 using thread_step_over_list_safe_iterator
-  = basic_safe_iterator<thread_step_over_list_iterator>;
+  = basic_safe_iterator<thread_step_over_list::iterator>;
 using thread_step_over_list_safe_range
   = iterator_range<thread_step_over_list_safe_iterator>;
 

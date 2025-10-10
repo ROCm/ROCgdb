@@ -521,8 +521,7 @@ proc_with_prefix test_argument_preceded_by_space {} {
 # $_gdb_setting_str convenience functions.
 
 proc_with_prefix test_per_inferior_settings {} {
-    clean_restart
-    gdb_load $::binfile
+    clean_restart $::testfile
 
     # The $_gdb_setting/$_gdb_setting_str tests require running inferiors,
     # because they allocate memory in the inferiors for the produced values.

@@ -622,8 +622,8 @@ breakpoints_should_be_inserted_now (void)
 
       /* Don't remove breakpoints yet if, even though all threads are
 	 stopped, we still have events to process.  */
-      for (thread_info *tp : all_non_exited_threads ())
-	if (tp->resumed () && tp->has_pending_waitstatus ())
+      for (thread_info &tp : all_non_exited_threads ())
+	if (tp.resumed () && tp.has_pending_waitstatus ())
 	  return 1;
     }
   return 0;
@@ -721,8 +721,13 @@ all_breakpoints_safe ()
 tracepoint_range
 all_tracepoints ()
 {
-  return tracepoint_range (tracepoint_iterator (breakpoint_chain.begin ()),
-			   tracepoint_iterator (breakpoint_chain.end ()));
+  breakpoint_iterator begin (breakpoint_chain.begin ());
+  breakpoint_iterator end (breakpoint_chain.end ());
+  tracepoint_iterator tracepoint_begin (std::move (begin), end);
+  tracepoint_iterator tracepoint_end (end, end);
+
+  return tracepoint_range (std::move (tracepoint_begin),
+			   std::move (tracepoint_end));
 }
 
 /* Array is sorted by bp_location_ptr_is_less_than - primarily by the
@@ -3785,13 +3790,13 @@ create_overlay_event_breakpoint (void)
 {
   const char *const func_name = "_ovly_debug_event";
 
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
       struct breakpoint *b;
       struct breakpoint_objfile_data *bp_objfile_data;
       CORE_ADDR addr;
 
-      bp_objfile_data = get_breakpoint_objfile_data (objfile);
+      bp_objfile_data = get_breakpoint_objfile_data (&objfile);
 
       if (msym_not_found_p (bp_objfile_data->overlay_msym.minsym))
 	continue;
@@ -3800,7 +3805,7 @@ create_overlay_event_breakpoint (void)
 	{
 	  bound_minimal_symbol m
 	    = lookup_minimal_symbol_text (current_program_space, func_name,
-					  objfile);
+					  &objfile);
 	  if (m.minsym == NULL)
 	    {
 	      /* Avoid future lookups in this objfile.  */
@@ -3811,7 +3816,7 @@ create_overlay_event_breakpoint (void)
 	}
 
       addr = bp_objfile_data->overlay_msym.value_address ();
-      b = create_internal_breakpoint (objfile->arch (), addr,
+      b = create_internal_breakpoint (objfile.arch (), addr,
 				      bp_overlay_event);
       b->locspec = new_explicit_location_spec_function (func_name);
 
@@ -3936,19 +3941,19 @@ create_longjmp_master_breakpoint (void)
     {
       set_current_program_space (pspace);
 
-      for (objfile *obj : pspace->objfiles ())
+      for (objfile &obj : pspace->objfiles ())
 	{
 	  /* Skip separate debug object, it's handled in the loop below.  */
-	  if (obj->separate_debug_objfile_backlink != nullptr)
+	  if (obj.separate_debug_objfile_backlink != nullptr)
 	    continue;
 
 	  /* Try a probe kind breakpoint on main objfile.  */
-	  if (create_longjmp_master_breakpoint_probe (obj))
+	  if (create_longjmp_master_breakpoint_probe (&obj))
 	    continue;
 
 	  /* Try longjmp_names kind breakpoints on main and separate_debug
 	     objfiles.  */
-	  for (objfile *debug_objfile : obj->separate_debug_objfiles ())
+	  for (objfile *debug_objfile : obj.separate_debug_objfiles ())
 	    if (create_longjmp_master_breakpoint_names (debug_objfile))
 	      break;
 	}
@@ -3968,12 +3973,12 @@ create_std_terminate_master_breakpoint (void)
     {
       set_current_program_space (pspace);
 
-      for (objfile *objfile : pspace->objfiles ())
+      for (objfile &objfile : pspace->objfiles ())
 	{
 	  struct breakpoint *b;
 	  struct breakpoint_objfile_data *bp_objfile_data;
 
-	  bp_objfile_data = get_breakpoint_objfile_data (objfile);
+	  bp_objfile_data = get_breakpoint_objfile_data (&objfile);
 
 	  if (msym_not_found_p (bp_objfile_data->terminate_msym.minsym))
 	    continue;
@@ -3982,7 +3987,7 @@ create_std_terminate_master_breakpoint (void)
 	    {
 	      bound_minimal_symbol m
 		= lookup_minimal_symbol (current_program_space, func_name,
-					 objfile);
+					 &objfile);
 	      if (m.minsym == NULL || (m.minsym->type () != mst_text
 				       && m.minsym->type () != mst_file_text))
 		{
@@ -3993,7 +3998,7 @@ create_std_terminate_master_breakpoint (void)
 	      bp_objfile_data->terminate_msym = m;
 	    }
 
-	  b = create_internal_breakpoint (objfile->arch (),
+	  b = create_internal_breakpoint (objfile.arch (),
 					  bp_objfile_data->terminate_msym,
 					  bp_std_terminate_master);
 	  b->locspec = new_explicit_location_spec_function (func_name);
@@ -4097,19 +4102,19 @@ create_exception_master_breakpoint_hook (objfile *objfile)
 static void
 create_exception_master_breakpoint (void)
 {
-  for (objfile *obj : current_program_space->objfiles ())
+  for (objfile &obj : current_program_space->objfiles ())
     {
       /* Skip separate debug object.  */
-      if (obj->separate_debug_objfile_backlink)
+      if (obj.separate_debug_objfile_backlink)
 	continue;
 
       /* Try a probe kind breakpoint.  */
-      if (create_exception_master_breakpoint_probe (obj))
+      if (create_exception_master_breakpoint_probe (&obj))
 	continue;
 
       /* Iterate over main and separate debug objects and try an
 	 _Unwind_DebugHook kind breakpoint.  */
-      for (objfile *debug_objfile : obj->separate_debug_objfiles ())
+      for (objfile *debug_objfile : obj.separate_debug_objfiles ())
 	if (create_exception_master_breakpoint_hook (debug_objfile))
 	  break;
     }

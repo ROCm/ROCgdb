@@ -469,31 +469,45 @@ public:
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:
 
-       for (thread_info *thr : inf->threads ())
+       for (thread_info &thr : inf->threads ())
 	 { .... }
   */
   inf_threads_range threads ()
-  { return inf_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+
+    return inf_threads_range (std::move (begin));
+  }
 
   /* Returns a range adapter covering the inferior's non-exited
      threads.  Used like this:
 
-       for (thread_info *thr : inf->non_exited_threads ())
+       for (thread_info &thr : inf->non_exited_threads ())
 	 { .... }
   */
   inf_non_exited_threads_range non_exited_threads ()
-  { return inf_non_exited_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+    inf_non_exited_threads_iterator filtered_begin (std::move (begin));
+
+    return inf_non_exited_threads_range (std::move (filtered_begin));
+  }
 
   /* Like inferior::threads(), but returns a range adapter that can be
      used with range-for, safely.  I.e., it is safe to delete the
      currently-iterated thread, like this:
 
-     for (thread_info *t : inf->threads_safe ())
+     for (thread_info &t : inf->threads_safe ())
        if (some_condition ())
-	 delete f;
+	 delete &f;
   */
   inline safe_inf_threads_range threads_safe ()
-  { return safe_inf_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+    safe_inf_threads_iterator safe_begin (std::move (begin));
+
+    return safe_inf_threads_range (std::move (safe_begin));
+  }
 
   /* Find (non-exited) thread PTID of this inferior.  */
   thread_info *find_thread (ptid_t ptid);
@@ -839,7 +853,10 @@ extern intrusive_list<inferior> inferior_list;
 inline all_inferiors_safe_range
 all_inferiors_safe ()
 {
-  return all_inferiors_safe_range (nullptr, inferior_list);
+  all_inferiors_iterator begin (nullptr, inferior_list);
+  all_inferiors_safe_iterator safe_begin (std::move (begin));
+
+  return all_inferiors_safe_range (std::move (safe_begin));
 }
 
 /* Returns a range representing all inferiors, suitable to use with
@@ -852,7 +869,9 @@ all_inferiors_safe ()
 inline all_inferiors_range
 all_inferiors (process_stratum_target *proc_target = nullptr)
 {
-  return all_inferiors_range (proc_target, inferior_list);
+  all_inferiors_iterator begin (proc_target, inferior_list);
+
+  return all_inferiors_range (std::move (begin));
 }
 
 /* Return a range that can be used to walk over all inferiors with PID
@@ -861,7 +880,10 @@ all_inferiors (process_stratum_target *proc_target = nullptr)
 inline all_non_exited_inferiors_range
 all_non_exited_inferiors (process_stratum_target *proc_target = nullptr)
 {
-  return all_non_exited_inferiors_range (proc_target, inferior_list);
+  all_inferiors_iterator begin (proc_target, inferior_list);
+  all_non_exited_inferiors_iterator filtered_begin (std::move (begin));
+
+  return all_non_exited_inferiors_range (std::move (filtered_begin));
 }
 
 /* Prune away automatically added inferiors that aren't required

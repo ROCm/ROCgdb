@@ -918,9 +918,9 @@ try_thread_db_load_1 (struct thread_db_info *info)
 
       linux_stop_and_wait_all_lwps ();
 
-      for (const lwp_info *lp : all_lwps ())
-	if (lp->ptid.pid () == pid)
-	  thread_from_lwp (curr_thread, lp->ptid);
+      for (const lwp_info &lp : all_lwps ())
+	if (lp.ptid.pid () == pid)
+	  thread_from_lwp (curr_thread, lp.ptid);
 
       linux_unstop_all_lwps ();
     }
@@ -1074,17 +1074,17 @@ try_thread_db_load_from_pdir (const char *subdir)
   if (!auto_load_thread_db)
     return false;
 
-  for (objfile *obj : current_program_space->objfiles ())
-    if (libpthread_objfile_p (obj))
+  for (objfile &obj : current_program_space->objfiles ())
+    if (libpthread_objfile_p (&obj))
       {
-	if (try_thread_db_load_from_pdir_1 (obj, subdir))
+	if (try_thread_db_load_from_pdir_1 (&obj, subdir))
 	  return true;
 
 	/* We may have found the separate-debug-info version of
 	   libpthread, and it may live in a directory without a matching
 	   libthread_db.  */
-	if (obj->separate_debug_objfile_backlink != NULL)
-	  return try_thread_db_load_from_pdir_1 (obj->separate_debug_objfile_backlink,
+	if (obj.separate_debug_objfile_backlink != NULL)
+	  return try_thread_db_load_from_pdir_1 (obj.separate_debug_objfile_backlink,
 						 subdir);
 
 	return false;
@@ -1183,8 +1183,8 @@ thread_db_load_search (void)
 static bool
 has_libpthread (void)
 {
-  for (objfile *obj : current_program_space->objfiles ())
-    if (libpthread_objfile_p (obj))
+  for (objfile &obj : current_program_space->objfiles ())
+    if (libpthread_objfile_p (&obj))
       return true;
 
   return false;
@@ -1215,7 +1215,8 @@ thread_db_load (void)
     return false;
 
   /* Don't attempt to use thread_db for remote targets.  */
-  if (!(target_can_run () || current_program_space->core_bfd () != nullptr))
+  if (!(target_can_run ()
+	|| get_inferior_core_bfd (current_inferior ()) != nullptr))
     return false;
 
   if (thread_db_load_search ())
@@ -1706,12 +1707,12 @@ thread_db_target::thread_handle_to_thread_info (const gdb_byte *thread_handle,
     error (_("Thread handle size mismatch: %d vs %zu (from libthread_db)"),
 	   handle_len, sizeof (handle_tid));
 
-  for (thread_info *tp : inf->non_exited_threads ())
+  for (thread_info &tp : inf->non_exited_threads ())
     {
-      thread_db_thread_info *priv = get_thread_db_thread_info (tp);
+      thread_db_thread_info *priv = get_thread_db_thread_info (&tp);
 
       if (priv != NULL && handle_tid == priv->tid)
-	return tp;
+	return &tp;
     }
 
   return NULL;

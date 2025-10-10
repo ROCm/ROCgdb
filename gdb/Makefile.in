@@ -400,6 +400,7 @@ SUBDIR_PYTHON_SRCS = \
 	python/py-color.c \
 	python/py-connection.c \
 	python/py-continueevent.c \
+	python/py-corefile.c \
 	python/py-dap.c \
 	python/py-disasm.c \
 	python/py-event.c \
@@ -771,8 +772,8 @@ ALL_64_TARGET_OBS = \
 	mips-sde-tdep.o \
 	mips-tdep.o \
 	mips64-obsd-tdep.o \
-	riscv-linux-canonicalize-syscall-gen.o \
 	riscv-fbsd-tdep.o \
+	riscv-linux-canonicalize-syscall-gen.o \
 	riscv-linux-tdep.o \
 	riscv-none-tdep.o \
 	riscv-ravenscar-thread.o \
@@ -1933,6 +1934,7 @@ ALLDEPFILES = \
 	remote-sim.c \
 	riscv-fbsd-nat.c \
 	riscv-fbsd-tdep.c \
+	riscv-linux-canonicalize-syscall-gen.c \
 	riscv-linux-nat.c \
 	riscv-linux-tdep.c \
 	riscv-none-tdep.c \

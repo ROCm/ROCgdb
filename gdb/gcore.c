@@ -447,10 +447,10 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
       /* See if this region of memory lies inside a known file on disk.
 	 If so, we can avoid copying its contents by clearing SEC_LOAD.  */
 
-      for (objfile *objfile : current_program_space->objfiles ())
-	for (obj_section &objsec : objfile->sections ())
+      for (objfile &objfile : current_program_space->objfiles ())
+	for (obj_section &objsec : objfile.sections ())
 	  {
-	    bfd *abfd = objfile->obfd.get ();
+	    bfd *abfd = objfile.obfd.get ();
 	    asection *asec = objsec.the_bfd_section;
 	    bfd_vma align = (bfd_vma) 1 << bfd_section_alignment (asec);
 	    bfd_vma start = objsec.addr () & -align;
@@ -463,7 +463,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
 
 	       This BFD was synthesized from reading target memory,
 	       we don't want to omit that.  */
-	    if (objfile->separate_debug_objfile_backlink == NULL
+	    if (objfile.separate_debug_objfile_backlink == NULL
 		&& ((vaddr >= start && vaddr + size <= end)
 		    || (start >= vaddr && end <= vaddr + size))
 		&& !(bfd_get_file_flags (abfd) & BFD_IN_MEMORY))
@@ -554,14 +554,14 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
   bfd_vma temp_bottom = 0, temp_top = 0;
 
   /* Call callback function for each objfile section.  */
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section &objsec : objfile->sections ())
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &objsec : objfile.sections ())
       {
 	asection *isec = objsec.the_bfd_section;
 	flagword flags = bfd_section_flags (isec);
 
 	/* Separate debug info files are irrelevant for gcore.  */
-	if (objfile->separate_debug_objfile_backlink != NULL)
+	if (objfile.separate_debug_objfile_backlink != NULL)
 	  continue;
 
 	if ((flags & SEC_ALLOC) || (flags & SEC_LOAD))
@@ -861,9 +861,9 @@ gcore_find_signalled_thread ()
       && curr_thr->stop_signal () != GDB_SIGNAL_0)
     return curr_thr;
 
-  for (thread_info *thr : current_inferior ()->non_exited_threads ())
-    if (thr->stop_signal () != GDB_SIGNAL_0)
-      return thr;
+  for (thread_info &thr : current_inferior ()->non_exited_threads ())
+    if (thr.stop_signal () != GDB_SIGNAL_0)
+      return &thr;
 
   /* Default to the current thread, unless it has exited.  */
   if (curr_thr->state != THREAD_EXITED)

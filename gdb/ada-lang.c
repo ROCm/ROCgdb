@@ -5587,11 +5587,11 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
 
   bool is_wild_match = lookup_name.ada ().wild_match_p ();
 
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
-      map_matching_symbols (objfile, lookup_name, domain, global, data);
+      map_matching_symbols (&objfile, lookup_name, domain, global, data);
 
-      for (compunit_symtab *cu : objfile->compunits ())
+      for (compunit_symtab *cu : objfile.compunits ())
 	{
 	  const struct block *global_block
 	    = cu->blockvector ()->global_block ();
@@ -5608,8 +5608,8 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
       std::string bracket_name = std::string ("<_ada_") + name + '>';
       lookup_name_info name1 (bracket_name, symbol_name_match_type::FULL);
 
-      for (objfile *objfile : current_program_space->objfiles ())
-	map_matching_symbols (objfile, name1, domain, global, data);
+      for (objfile &objfile : current_program_space->objfiles ())
+	map_matching_symbols (&objfile, name1, domain, global, data);
     }
 }
 
@@ -6264,10 +6264,12 @@ ada_is_ignored_field (struct type *type, int field_num)
   {
     const char *name = type->field (field_num).name ();
 
-    /* Anonymous field names should not be printed.
-       brobecker/2007-02-20: I don't think this can actually happen
-       but we don't want to print the value of anonymous fields anyway.  */
-    if (name == NULL)
+    /* Anonymous field names should not be printed.  */
+    if (name == nullptr || name[0] == '\0')
+      return 1;
+
+    /* Skip artificial fields.  */
+    if (type->field (field_num).is_artificial ())
       return 1;
 
     /* Normally, fields whose name start with an underscore ("_")
@@ -13054,16 +13056,16 @@ ada_add_standard_exceptions (compiled_regex *preg,
 	  /* Iterate over all objfiles irrespective of scope or linker
 	     namespaces so we get all exceptions anywhere in the
 	     progspace.  */
-	  for (objfile *objfile : current_program_space->objfiles ())
+	  for (objfile &objfile : current_program_space->objfiles ())
 	    {
-	      for (minimal_symbol *msymbol : objfile->msymbols ())
+	      for (minimal_symbol *msymbol : objfile.msymbols ())
 		{
 		  if (match_name (msymbol->linkage_name (), lookup_name,
 				  nullptr)
 		      && msymbol->type () != mst_solib_trampoline)
 		    {
 		      ada_exc_info info
-			= {name, msymbol->value_address (objfile)};
+			= {name, msymbol->value_address (&objfile)};
 
 		      exceptions->push_back (info);
 		    }
@@ -13147,7 +13149,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 
   /* Iterate over all objfiles irrespective of scope or linker namespaces
      so we get all exceptions anywhere in the progspace.  */
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
       auto callback = [&] (compunit_symtab *s)
 	{
@@ -13176,7 +13178,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 	 the regular expression used to do the matching refers to the
 	 natural name.  So match against the decoded name.  */
       auto any = lookup_name_info::match_any ();
-      objfile->search
+      objfile.search
 	(nullptr,
 	 &any,
 	 [&] (const char *search_name)
@@ -13710,9 +13712,9 @@ public:
        anything that isn't a text symbol (everything else will be
        handled by the psymtab code above).  */
 
-    for (objfile *objfile : current_program_space->objfiles ())
+    for (objfile &objfile : current_program_space->objfiles ())
       {
-	for (minimal_symbol *msymbol : objfile->msymbols ())
+	for (minimal_symbol *msymbol : objfile.msymbols ())
 	  {
 	    QUIT;
 
@@ -13768,7 +13770,7 @@ public:
     /* Go through the symtabs and check the externs and statics for
        symbols which match.  */
 
-    for (objfile *objfile : current_program_space->objfiles ())
+    for (objfile &objfile : current_program_space->objfiles ())
       {
 	auto callback = [&] (compunit_symtab *s)
 	  {
@@ -13796,7 +13798,7 @@ public:
 	    return true;
 	  };
 
-	objfile->search
+	objfile.search
 	  (nullptr, &lookup_name, nullptr, callback,
 	   SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 	   SEARCH_ALL_DOMAINS);

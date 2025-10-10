@@ -78,6 +78,7 @@ DEFINE_OBSERVABLE (new_program_space);
 DEFINE_OBSERVABLE (free_program_space);
 DEFINE_OBSERVABLE (core_opened);
 DEFINE_OBSERVABLE (tui_enabled);
+DEFINE_OBSERVABLE (core_file_changed);
 
 } /* namespace observers */
 } /* namespace gdb */

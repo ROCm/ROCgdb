@@ -139,17 +139,17 @@ deprecated_show_value_hack (struct ui_file *file,
     case var_string:
     case var_string_noescape:
     case var_enum:
-      gdb_printf (file, (" is \"%s\".\n"), value);
+      gdb_printf (file, _(" is \"%s\".\n"), value);
       break;
 
     case var_optional_filename:
     case var_filename:
-      gdb_printf ((" is \"%ps\".\n"),
+      gdb_printf (file, _(" is \"%ps\".\n"),
 		  styled_string (file_name_style.style (), value));
       break;
 
     default:
-      gdb_printf (file, (" is %s.\n"), value);
+      gdb_printf (file, _(" is %s.\n"), value);
       break;
     }
 }
@@ -789,5 +789,3 @@ cmd_show_list (struct cmd_list_element *list, int from_tty)
 	}
     }
 }
-
-

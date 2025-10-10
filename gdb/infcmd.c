@@ -115,8 +115,8 @@ show_inferior_tty_command (struct ui_file *file, int from_tty,
 			   struct cmd_list_element *c, const char *value)
 {
   gdb_printf (file,
-	     _("Terminal for future runs of program being debugged "
-	       "is \"%s\".\n"), value);
+	      _("Terminal for future runs of program being debugged "
+		"is \"%s\".\n"), value);
 }
 
 /* Store the new value passed to 'set args'.  */
@@ -141,11 +141,9 @@ static void
 show_args_command (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
 {
-  /* Ignore the passed in value, pull the argument directly from the
-     inferior.  However, these should always be the same.  */
   gdb_printf (file, _("\
 Argument list to give program being debugged when it is started is \"%s\".\n"),
-	      current_inferior ()->args ().c_str ());
+	      value);
 }
 
 /* See gdbsupport/common-inferior.h.  */
@@ -1200,20 +1198,20 @@ signal_command (const char *signum_exp, int from_tty)
 
       thread_info *current = inferior_thread ();
 
-      for (thread_info *tp : all_non_exited_threads (resume_target, resume_ptid))
+      for (thread_info &tp : all_non_exited_threads (resume_target, resume_ptid))
 	{
-	  if (tp == current)
+	  if (&tp == current)
 	    continue;
 
-	  if (tp->stop_signal () != GDB_SIGNAL_0
-	      && signal_pass_state (tp->stop_signal ()))
+	  if (tp.stop_signal () != GDB_SIGNAL_0
+	      && signal_pass_state (tp.stop_signal ()))
 	    {
 	      if (!must_confirm)
 		gdb_printf (_("Note:\n"));
 	      gdb_printf (_("  Thread %s previously stopped with signal %s, %s.\n"),
-			  print_thread_id (tp),
-			  gdb_signal_to_name (tp->stop_signal ()),
-			  gdb_signal_to_string (tp->stop_signal ()));
+			  print_thread_id (&tp),
+			  gdb_signal_to_name (tp.stop_signal ()),
+			  gdb_signal_to_string (tp.stop_signal ()));
 	      must_confirm = 1;
 	    }
 	}
@@ -2476,12 +2474,12 @@ proceed_after_attach (inferior *inf)
   /* Backup current thread and selected frame.  */
   scoped_restore_current_thread restore_thread;
 
-  for (thread_info *thread : inf->non_exited_threads ())
-    if (!thread->executing ()
-	&& !thread->stop_requested
-	&& thread->stop_signal () == GDB_SIGNAL_0)
+  for (thread_info &thread : inf->non_exited_threads ())
+    if (!thread.executing ()
+	&& !thread.stop_requested
+	&& thread.stop_signal () == GDB_SIGNAL_0)
       {
-	switch_to_thread (thread);
+	switch_to_thread (&thread);
 	clear_proceed_status (0);
 	proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
       }
@@ -2585,10 +2583,10 @@ attach_post_wait (int from_tty, enum attach_post_wait_mode mode)
 	     stop.  For consistency, always select the thread with
 	     lowest GDB number, which should be the main thread, if it
 	     still exists.  */
-	  for (thread_info *thread : current_inferior ()->non_exited_threads ())
-	    if (thread->inf->num < lowest->inf->num
-		|| thread->per_inf_num < lowest->per_inf_num)
-	      lowest = thread;
+	  for (thread_info &thread : current_inferior ()->non_exited_threads ())
+	    if (thread.inf->num < lowest->inf->num
+		|| thread.per_inf_num < lowest->per_inf_num)
+	      lowest = &thread;
 
 	  switch_to_thread (lowest);
 	}
