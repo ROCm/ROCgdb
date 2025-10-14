@@ -295,8 +295,7 @@ aarch64_ext_regno (const aarch64_operand *self, aarch64_opnd_info *info,
 		   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 		   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  info->reg.regno = (extract_field (self->fields[0], code, 0)
-		     + get_operand_specific_data (self));
+  info->reg.regno = extract_all_fields (self, code);
   return true;
 }
 
@@ -584,7 +583,7 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
 			   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 			   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   aarch64_insn QSsize;		/* fields Q:S:size.  */
   aarch64_insn opcodeh2;	/* opcode<2:1> */
 
@@ -796,7 +795,7 @@ aarch64_ext_advsimd_imm_modified (const aarch64_operand *self ATTRIBUTE_UNUSED,
 {
   uint64_t imm;
   enum aarch64_opnd_qualifier opnd0_qualifier = inst->operands[0].qualifier;
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
 
   assert (info->idx == 1);
 
@@ -1892,8 +1891,7 @@ aarch64_ext_sve_aligned_reglist (const aarch64_operand *self,
 				 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
   unsigned int num_regs = get_operand_specific_data (self);
-  unsigned int val = extract_field (self->fields[0], code, 0);
-  info->reglist.first_regno = val * num_regs;
+  info->reglist.first_regno = extract_all_fields (self, code);
   info->reglist.num_regs = num_regs;
   info->reglist.stride = 1;
   return true;
@@ -2442,17 +2440,17 @@ aarch64_ext_x0_to_x30 (const aarch64_operand *self, aarch64_opnd_info *info,
   return info->reg.regno <= 30;
 }
 
-/* Decode an indexed register, with the first field being the register
-   number and the remaining fields being the index.  */
+/* Decode an indexed register, with the last five field bits holding the
+   register number and the remaining bits holding the index.  */
 bool
 aarch64_ext_simple_index (const aarch64_operand *self, aarch64_opnd_info *info,
 			  const aarch64_insn code,
 			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
 			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  int bias = get_operand_specific_data (self);
-  info->reglane.regno = extract_field (self->fields[0], code, 0) + bias;
-  info->reglane.index = extract_all_fields_after (self, 1, code);
+  unsigned int val = extract_all_fields (self, code);
+  info->reglane.regno = val & 31;
+  info->reglane.index = val >> 5;
   return true;
 }
 
@@ -2599,7 +2597,7 @@ decode_sizeq (aarch64_inst *inst)
 static int
 decode_asimd_fcvt (aarch64_inst *inst)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   aarch64_insn value;
   enum aarch64_opnd_qualifier qualifier;
 
@@ -2632,7 +2630,7 @@ decode_asimd_fcvt (aarch64_inst *inst)
 static int
 decode_asisd_fcvtxn (aarch64_inst *inst)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   gen_sub_field (FLD_size, 0, 1, &field);
   if (!extract_field_2 (&field, inst->value, 0))
     return 0;
@@ -2646,7 +2644,7 @@ decode_fcvt (aarch64_inst *inst)
 {
   enum aarch64_opnd_qualifier qualifier;
   aarch64_insn value;
-  const aarch64_field field = {15, 2};
+  const aarch64_field field = AARCH64_FIELD (15, 2);
 
   /* opc dstsize */
   value = extract_field_2 (&field, inst->value, 0);
@@ -2925,7 +2923,7 @@ do_special_decoding (aarch64_inst *inst)
 
   if (inst->opcode->flags & F_LDS_SIZE)
     {
-      aarch64_field field = {0, 0};
+      aarch64_field field = AARCH64_FIELD_NIL;
       assert (aarch64_get_operand_class (inst->opcode->operands[0])
 	      == AARCH64_OPND_CLASS_INT_REG);
       gen_sub_field (FLD_opc, 0, 1, &field);
@@ -4190,7 +4188,6 @@ print_aarch64_insn (bfd_vma pc, const aarch64_inst *inst,
       break;
     case ERR_UND:
     case ERR_UNP:
-    case ERR_NYI:
     default:
       break;
     }
@@ -4209,7 +4206,6 @@ print_insn_aarch64_word (bfd_vma pc,
       [ERR_OK]  = "_",
       [ERR_UND] = "undefined",
       [ERR_UNP] = "unpredictable",
-      [ERR_NYI] = "NYI"
     };
 
   enum err_type ret;
@@ -4231,18 +4227,10 @@ print_insn_aarch64_word (bfd_vma pc,
 
   ret = aarch64_decode_insn (word, &inst, no_aliases, errors);
 
-  if (((word >> 21) & 0x3ff) == 1)
-    {
-      /* RESERVED for ALES.  */
-      assert (ret != ERR_OK);
-      ret = ERR_NYI;
-    }
-
   switch (ret)
     {
     case ERR_UND:
     case ERR_UNP:
-    case ERR_NYI:
       /* Handle undefined instructions.  */
       info->insn_type = dis_noninsn;
       (*info->fprintf_styled_func) (info->stream,

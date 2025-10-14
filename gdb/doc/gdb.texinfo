@@ -51657,6 +51657,7 @@ All values are given in decimal representation.
   EPERM           1
   ENOENT          2
   EINTR           4
+  EIO             5
   EBADF           9
   EACCES         13
   EFAULT         14
@@ -51672,6 +51673,7 @@ All values are given in decimal representation.
   ENOSPC         28
   ESPIPE         29
   EROFS          30
+  ENOSYS         88
   ENAMETOOLONG   91
   EUNKNOWN       9999
 @end smallexample

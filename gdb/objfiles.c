@@ -474,8 +474,6 @@ objfile::~objfile ()
   /* It still may reference data modules have associated with the objfile and
      the symbol file data.  */
   forget_cached_source_info ();
-  for (compunit_symtab *cu : compunits ())
-    cu->finalize ();
 
   breakpoint_free_objfile (this);
   btrace_free_objfile (this);
@@ -557,9 +555,9 @@ objfile_relocate1 (struct objfile *objfile,
     return 0;
 
   /* OK, get all the symtabs.  */
-  for (compunit_symtab *cust : objfile->compunits ())
+  for (compunit_symtab &cust : objfile->compunits ())
     {
-      struct blockvector *bv = cust->blockvector ();
+      struct blockvector *bv = cust.blockvector ();
       int block_line_section = SECT_OFF_TEXT (objfile);
 
       if (bv->map () != nullptr)
@@ -682,7 +680,7 @@ objfile_rebase (struct objfile *objfile, CORE_ADDR slide)
 bool
 objfile::has_full_symbols ()
 {
-  return this->compunit_symtabs != nullptr;
+  return !this->compunit_symtabs.empty ();
 }
 
 /* See objfiles.h.  */

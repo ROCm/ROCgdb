@@ -429,7 +429,8 @@ void
 compunit_symtab::set_call_site_htab (call_site_htab_t &&call_site_htab)
 {
   gdb_assert (m_call_site_htab == nullptr);
-  m_call_site_htab = new call_site_htab_t (std::move (call_site_htab));
+  m_call_site_htab
+    = std::make_unique<call_site_htab_t> (std::move (call_site_htab));
 }
 
 /* See symtab.h.  */
@@ -494,11 +495,26 @@ compunit_symtab::forget_cached_source_info ()
 
 /* See symtab.h.  */
 
-void
-compunit_symtab::finalize ()
+compunit_symtab::compunit_symtab (struct objfile *objfile,
+				  const char *name_)
+  : m_objfile (objfile),
+    /* The name we record here is only for display/debugging purposes.
+       Just save the basename to avoid path issues (too long for
+       display, relative vs absolute, etc.).  */
+    name (obstack_strdup (&objfile->objfile_obstack, lbasename (name_))),
+    m_locations_valid (false),
+    m_epilogue_unwind_valid (false)
+{
+  symtab_create_debug_printf_v ("created compunit symtab %s for %s",
+				host_address_to_string (this),
+				name);
+}
+
+/* See symtab.h.  */
+
+compunit_symtab::~compunit_symtab ()
 {
   this->forget_cached_source_info ();
-  delete m_call_site_htab;
 }
 
 /* The relocated address of the minimal symbol, using the section
@@ -587,82 +603,6 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 	      && STRIP_DRIVE_SPEC (filename) == &filename[len - search_len]));
 }
 
-/* Check for a symtab of a specific name by searching some symtabs.
-   This is a helper function for callbacks of iterate_over_symtabs.
-
-   If NAME is not absolute, then REAL_PATH is NULL
-   If NAME is absolute, then REAL_PATH is the gdb_realpath form of NAME.
-
-   The return value, NAME, REAL_PATH and CALLBACK are identical to the
-   `map_symtabs_matching_filename' method of quick_symbol_functions.
-
-   FIRST and AFTER_LAST indicate the range of compunit symtabs to search.
-   Each symtab within the specified compunit symtab is also searched.
-   AFTER_LAST is one past the last compunit symtab to search; NULL means to
-   search until the end of the list.  */
-
-bool
-iterate_over_some_symtabs (const char *name,
-			   const char *real_path,
-			   struct compunit_symtab *first,
-			   struct compunit_symtab *after_last,
-			   gdb::function_view<bool (symtab *)> callback)
-{
-  struct compunit_symtab *cust;
-  const char* base_name = lbasename (name);
-
-  for (cust = first; cust != NULL && cust != after_last; cust = cust->next)
-    {
-      /* Skip included compunits.  */
-      if (cust->user != nullptr)
-	continue;
-
-      for (symtab *s : cust->filetabs ())
-	{
-	  if (compare_filenames_for_search (s->filename, name))
-	    {
-	      if (callback (s))
-		return true;
-	      continue;
-	    }
-
-	  /* Before we invoke realpath, which can get expensive when many
-	     files are involved, do a quick comparison of the basenames.  */
-	  if (! basenames_may_differ
-	      && FILENAME_CMP (base_name, lbasename (s->filename)) != 0)
-	    continue;
-
-	  if (compare_filenames_for_search (symtab_to_fullname (s), name))
-	    {
-	      if (callback (s))
-		return true;
-	      continue;
-	    }
-
-	  /* If the user gave us an absolute path, try to find the file in
-	     this symtab and use its absolute path.  */
-	  if (real_path != NULL)
-	    {
-	      const char *fullname = symtab_to_fullname (s);
-
-	      gdb_assert (IS_ABSOLUTE_PATH (real_path));
-	      gdb_assert (IS_ABSOLUTE_PATH (name));
-	      gdb::unique_xmalloc_ptr<char> fullname_real_path
-		= gdb_realpath (fullname);
-	      fullname = fullname_real_path.get ();
-	      if (FILENAME_CMP (real_path, fullname) == 0)
-		{
-		  if (callback (s))
-		    return true;
-		  continue;
-		}
-	    }
-	}
-    }
-
-  return false;
-}
-
 /* See symtab.h.  */
 
 void
@@ -680,16 +620,8 @@ iterate_over_symtabs (program_space *pspace, const char *name,
     }
 
   for (objfile &objfile : pspace->objfiles ())
-    if (iterate_over_some_symtabs (name, real_path.get (),
-				   objfile.compunit_symtabs, nullptr,
-				   callback))
-	return;
-
-  /* Same search rules as above apply here, but now we look through the
-     psymtabs.  */
-  for (objfile &objfile : pspace->objfiles ())
     if (objfile.map_symtabs_matching_filename (name, real_path.get (),
-						callback))
+					       callback))
       return;
 }
 
@@ -2320,14 +2252,14 @@ lookup_symbol_in_objfile_symtabs (struct objfile *objfile,
 
   lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
   best_symbol_tracker accum;
-  for (compunit_symtab *cust : objfile->compunits ())
+  for (compunit_symtab &cust : objfile->compunits ())
     {
       const struct blockvector *bv;
       const struct block *block;
 
-      bv = cust->blockvector ();
+      bv = cust.blockvector ();
       block = bv->block (block_index);
-      if (accum.search (cust, block, lookup_name, domain))
+      if (accum.search (&cust, block, lookup_name, domain))
 	break;
     }
 
@@ -2807,9 +2739,9 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 
   for (objfile &obj_file : current_program_space->objfiles ())
     {
-      for (compunit_symtab *cust : obj_file.compunits ())
+      for (compunit_symtab &cust : obj_file.compunits ())
 	{
-	  const struct blockvector *bv = cust->blockvector ();
+	  const struct blockvector *bv = cust.blockvector ();
 	  const struct block *global_block = bv->global_block ();
 	  CORE_ADDR start = global_block->start ();
 	  CORE_ADDR end = global_block->end ();
@@ -2822,7 +2754,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 	      if (bv->map ()->find (pc) == nullptr)
 		continue;
 
-	      return cust;
+	      return &cust;
 	    }
 
 	  CORE_ADDR range = end - start;
@@ -2868,7 +2800,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 	    }
 
 	  /* Cust is best found so far, save it.  */
-	  best_cust = cust;
+	  best_cust = &cust;
 	  best_cust_range = range;
 	}
     }
@@ -2930,9 +2862,9 @@ find_symbol_at_address (CORE_ADDR address)
 	 search the symtabs directly.  */
       if ((objfile.flags & OBJF_READNOW) != 0)
 	{
-	  for (compunit_symtab *symtab : objfile.compunits ())
+	  for (compunit_symtab &symtab : objfile.compunits ())
 	    {
-	      struct symbol *sym = search_symtab (symtab, address);
+	      struct symbol *sym = search_symtab (&symtab, address);
 	      if (sym != nullptr)
 		return sym;
 	    }
@@ -3372,9 +3304,9 @@ find_line_symtab (symtab *sym_tab, int line, int *index)
 
       for (objfile &objfile : current_program_space->objfiles ())
 	{
-	  for (compunit_symtab *cu : objfile.compunits ())
+	  for (compunit_symtab &cu : objfile.compunits ())
 	    {
-	      for (symtab *s : cu->filetabs ())
+	      for (symtab *s : cu.filetabs ())
 		{
 		  const struct linetable *l;
 		  int ind;
@@ -3631,11 +3563,10 @@ find_function_start_sal_1 (CORE_ADDR func_addr, obj_section *section,
 /* See symtab.h.  */
 
 symtab_and_line
-find_function_start_sal (CORE_ADDR func_addr, obj_section *section,
-			 bool funfirstline)
+find_function_start_sal (CORE_ADDR func_addr, bool funfirstline)
 {
   symtab_and_line sal
-    = find_function_start_sal_1 (func_addr, section, funfirstline);
+    = find_function_start_sal_1 (func_addr, nullptr, funfirstline);
 
   /* find_function_start_sal_1 does a linetable search, so it finds
      the symtab and linenumber, but not a symbol.  Fill in the
@@ -4607,9 +4538,9 @@ info_sources_worker (struct ui_out *uiout,
 	  sources_list.emplace (uiout, "sources");
 	}
 
-      for (compunit_symtab *cu : objfile.compunits ())
+      for (compunit_symtab &cu : objfile.compunits ())
 	{
-	  for (symtab *s : cu->filetabs ())
+	  for (symtab *s : cu.filetabs ())
 	    {
 	      const char *file = symtab_to_filename_for_display (s);
 	      const char *fullname = symtab_to_fullname (s);
@@ -4631,7 +4562,8 @@ info_sources_worker (struct ui_out *uiout,
   if (!group_by_objfile)
     {
       data.reset_output ();
-      map_symbol_filenames (data, true /*need_fullname*/);
+      current_program_space->map_symbol_filenames (data,
+						   true /*need_fullname*/);
     }
 }
 
@@ -4859,9 +4791,9 @@ global_symbol_searcher::add_matching_symbols
   domain_search_flags kind = m_kind;
 
   /* Add matching symbols (if not already present).  */
-  for (compunit_symtab *cust : objfile->compunits ())
+  for (compunit_symtab &cust : objfile->compunits ())
     {
-      const struct blockvector *bv  = cust->blockvector ();
+      const struct blockvector *bv  = cust.blockvector ();
 
       for (block_enum block : { GLOBAL_BLOCK, STATIC_BLOCK })
 	{
@@ -6290,9 +6222,9 @@ make_source_files_completion_list (const char *text)
 
   for (objfile &objfile : current_program_space->objfiles ())
     {
-      for (compunit_symtab *cu : objfile.compunits ())
+      for (compunit_symtab &cu : objfile.compunits ())
 	{
-	  for (symtab *s : cu->filetabs ())
+	  for (symtab *s : cu.filetabs ())
 	    {
 	      if (not_interesting_fname (s->filename))
 		continue;
@@ -6324,7 +6256,7 @@ make_source_files_completion_list (const char *text)
   datum.word = text;
   datum.text_len = text_len;
   datum.list = &list;
-  map_symbol_filenames (datum, false /*need_fullname*/);
+  current_program_space->map_symbol_filenames (datum, false /*need_fullname*/);
 
   return list;
 }

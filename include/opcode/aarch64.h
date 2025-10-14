@@ -205,6 +205,10 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SVE_AES2,
   /* SSVE_AES extension. */
   AARCH64_FEATURE_SSVE_AES,
+  /* SVE_BITPERM extension. */
+  AARCH64_FEATURE_SVE_BITPERM,
+  /* SSVE_BITPERM extension. */
+  AARCH64_FEATURE_SSVE_BITPERM,
   /* RCPC3 instructions.  */
   AARCH64_FEATURE_RCPC3,
   /* Checked Pointer Arithmetic instructions. */
@@ -253,11 +257,19 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_PoPS,
   /* GICv5 (Generic Interrupt Controller) CPU Interface Extension.  */
   AARCH64_FEATURE_GCIE,
+  /* SVE FEXPA instruction in streaming mode.  */
+  AARCH64_FEATURE_SSVE_FEXPA,
+  /* SME TMOP instructions.  */
+  AARCH64_FEATURE_SME_TMOP,
+  /* SME MOP4 instructions.  */
+  AARCH64_FEATURE_SME_MOP4,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
   /* +sve2 or +ssve-aes */
   AARCH64_FEATURE_SVE2_SSVE_AES,
+  /* +sve or +ssve-fexpa */
+  AARCH64_FEATURE_SVE_SSVE_FEXPA,
   /* +fp8fma+sve or +ssve-fp8fma  */
   AARCH64_FEATURE_FP8FMA_SVE,
   /* +fp8dot4+sve or +ssve-fp8dot4  */
@@ -861,8 +873,12 @@ enum aarch64_opnd
   AARCH64_OPND_SVE_ZtxN,	/* SVE vector register list in Zt.  */
   AARCH64_OPND_SME_Zdnx2,	/* SVE vector register list from [4:1]*2.  */
   AARCH64_OPND_SME_Zdnx4,	/* SVE vector register list from [4:2]*4.  */
-  AARCH64_OPND_SME_Zm,		/* SVE vector register list in 4-bit Zm.  */
-  AARCH64_OPND_SME_Zm_17,	/* SVE vector register list in [20:17].  */
+  AARCH64_OPND_SME_Zm,		/* SVE vector register in 4-bit Zm.  */
+  AARCH64_OPND_SME_Zm_17,	/* SVE vector register in [20:17].  */
+  AARCH64_OPND_SME_Zn_6_3,	/* SVE vector register in [8:6]*2.  */
+  AARCH64_OPND_SME_Zm_17_3,	/* SVE vector register in [19:17]*2+16.  */
+  AARCH64_OPND_SME_Znx2_6_3,	/* SVE vector register list from [8:6]*2.  */
+  AARCH64_OPND_SME_Zmx2_17_3,	/* SVE vector register list from [19:17]*2+16.  */
   AARCH64_OPND_SME_Zmx2,	/* SVE vector register list from [20:17]*2.  */
   AARCH64_OPND_SME_Zmx4,	/* SVE vector register list from [20:18]*4.  */
   AARCH64_OPND_SME_Znx2,	/* SVE vector register list from [9:6]*2.  */
@@ -899,6 +915,7 @@ enum aarch64_opnd
   AARCH64_OPND_SME_PnT_Wm_imm,      /* SME <Pn>.<T>[<Wm>, #<imm>].  */
   AARCH64_OPND_SME_SHRIMM4,	    /* 4-bit right shift, bits [19:16].  */
   AARCH64_OPND_SME_SHRIMM5,	    /* size + 5-bit right shift, bits [23:22,20:16].  */
+  AARCH64_OPND_SME_Zk_INDEX,	    /* Zk[index], bits [12:10,5:4].  */
   AARCH64_OPND_SME_Zm_INDEX1,	    /* Zn.T[index], bits [19:16,10].  */
   AARCH64_OPND_SME_Zm_INDEX2,	    /* Zn.T[index], bits [19:16,11:10].  */
   AARCH64_OPND_SME_Zm_INDEX2_3,	    /* Zn.T[index], bits [19:16,10,3].  */
@@ -1283,7 +1300,6 @@ enum err_type
   ERR_OK,
   ERR_UND,
   ERR_UNP,
-  ERR_NYI,
   ERR_VFI,
   ERR_NR_ENTRIES
 };

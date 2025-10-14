@@ -47,10 +47,250 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     {
                                       if (((word >> 23) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000000000xxxxxxxxxxxxxxxxxxxxx.  */
-                                          return A64_OPID_00000000_udf_UNDEFINED;
+                                          if (((word >> 20) & 0x1) == 0)
+                                            {
+                                              if (((word >> 31) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     000000000000xxxxxxxxxxxxxxxxxxxx.  */
+                                                  return A64_OPID_00000000_udf_UNDEFINED;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 3) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 4) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx0xxxxx0xxxx00xxx.  */
+                                                                  return A64_OPID_80000000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx1xxxxx0xxxx00xxx.  */
+                                                                  return A64_OPID_80008000_smop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx0xxxxx1xxxx00xxx.  */
+                                                                  return A64_OPID_80000200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx1xxxxx1xxxx00xxx.  */
+                                                                  return A64_OPID_80008200_smop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx0xxxxx0xxxx10xxx.  */
+                                                                  return A64_OPID_80000010_fmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx1xxxxx0xxxx10xxx.  */
+                                                                  return A64_OPID_80008010_smop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx0xxxxx1xxxx10xxx.  */
+                                                                  return A64_OPID_80000210_fmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     100000000000xxxx1xxxxx1xxxx10xxx.  */
+                                                                  return A64_OPID_80008210_smop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 4) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 100000000000xxxxxxxxxx0xxxx01xxx.  */
+                                                              return A64_OPID_80008008_smop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 100000000000xxxxxxxxxx1xxxx01xxx.  */
+                                                              return A64_OPID_80008208_smop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 100000000000xxxxxxxxxx0xxxx11xxx.  */
+                                                              return A64_OPID_80008018_smop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 100000000000xxxxxxxxxx1xxxx11xxx.  */
+                                                              return A64_OPID_80008218_smop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 3) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 4) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 9) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx0xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_80100000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx1xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_80108000_smop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx0xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_80100200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx1xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_80108200_smop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 9) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx0xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_80100010_fmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx1xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_80108010_smop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx0xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_80100210_fmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000000001xxxx1xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_80108210_smop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 4) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 9) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000000001xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_80108008_smop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000000001xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_80108208_smop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 9) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000000001xxxxxxxxxx0xxxx11xxx.  */
+                                                          return A64_OPID_80108018_smop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000000001xxxxxxxxxx1xxxx11xxx.  */
+                                                          return A64_OPID_80108218_smop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                       else
                                         {
@@ -92,19 +332,129 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     }
                                   else
                                     {
-                                      if (((word >> 4) & 0x1) == 0)
+                                      if (((word >> 3) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000000x10xxxxxxxxxxxxxxxx0xxxx.  */
-                                          return A64_OPID_80c00000_fmopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 23) & 0x1) == 0)
+                                            {
+                                              if (((word >> 15) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000000010xxxxx0xxxxxxxxxxx0xxx.  */
+                                                  return A64_OPID_80400000_ftmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000000010xxxxx1xxxxxxxxxxx0xxx.  */
+                                                  return A64_OPID_80408000_stmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 4) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000000110xxxxxxxxxxxxxxxx00xxx.  */
+                                                  return A64_OPID_80c00000_fmopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000000110xxxxxxxxxxxxxxxx10xxx.  */
+                                                  return A64_OPID_80c00010_fmops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                            }
                                         }
                                       else
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000000x10xxxxxxxxxxxxxxxx1xxxx.  */
-                                          return A64_OPID_80c00010_fmops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 15) & 0x1) == 0)
+                                            {
+                                              if (((word >> 4) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x100xxxx0xxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_80c00008_fmop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x101xxxx0xxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_80d00008_fmop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x100xxxx0xxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_80c00208_fmop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x101xxxx0xxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_80d00208_fmop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x100xxxx0xxxxx0xxxx11xxx.  */
+                                                          return A64_OPID_80c00018_fmop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x101xxxx0xxxxx0xxxx11xxx.  */
+                                                          return A64_OPID_80d00018_fmop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x100xxxx0xxxxx1xxxx11xxx.  */
+                                                          return A64_OPID_80c00218_fmop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0000000x101xxxx0xxxxx1xxxx11xxx.  */
+                                                          return A64_OPID_80d00218_fmop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                          else
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 x0000000x10xxxxx1xxxxxxxxxxx1xxx.  */
+                                              return A64_OPID_80408008_stmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                            }
                                         }
                                     }
                                 }
@@ -1040,10 +1390,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         {
                                           if (((word >> 30) & 0x1) == 0)
                                             {
-                                              /* 33222222222211111111110000000000
-                                                 10987654321098765432109876543210
-                                                 x0100000110xxxxxxxxxxxxxxxx0xxxx.  */
-                                              return A64_OPID_a0c00000_smopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                              if (((word >> 3) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0100000110xxxxxxxxxxxxxxxx00xxx.  */
+                                                  return A64_OPID_a0c00000_smopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000001100xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a0c00008_smop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000001101xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a0d00008_smop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000001100xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a0c00208_smop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000001101xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a0d00208_smop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
                                             }
                                           else
                                             {
@@ -1055,10 +1445,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         }
                                       else
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             xx100000110xxxxxxxxxxxxxxxx1xxxx.  */
-                                          return A64_OPID_a0c00010_smops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 3) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 xx100000110xxxxxxxxxxxxxxxx10xxx.  */
+                                              return A64_OPID_a0c00010_smops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 9) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000001100xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a0c00018_smop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000001101xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a0d00018_smop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000001100xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a0c00218_smop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000001101xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a0d00218_smop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1070,169 +1500,329 @@ aarch64_opcode_lookup_1 (uint32_t word)
                             {
                               if (((word >> 23) & 0x1) == 0)
                                 {
-                                  if (((word >> 30) & 0x1) == 0)
+                                  if (((word >> 29) & 0x1) == 0)
                                     {
-                                      if (((word >> 0) & 0x1) == 0)
+                                      if (((word >> 3) & 0x1) == 0)
                                         {
-                                          if (((word >> 13) & 0x1) == 0)
+                                          if (((word >> 4) & 0x1) == 0)
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              if (((word >> 9) & 0x1) == 0)
                                                 {
                                                   if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx000xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0200000_st1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM;
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000010xxxx0xxxxx0xxxx00xxx.  */
+                                                          return A64_OPID_80200000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000011xxxx0xxxxx0xxxx00xxx.  */
+                                                          return A64_OPID_80300000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx100xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0208000_st1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM;
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000010xxxx1xxxxx0xxxx00xxx.  */
+                                                          return A64_OPID_80208000_sumop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000011xxxx1xxxxx0xxxx00xxx.  */
+                                                          return A64_OPID_80308000_sumop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
                                                     }
                                                 }
                                               else
                                                 {
                                                   if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx010xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0204000_st1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000010xxxx0xxxxx1xxxx00xxx.  */
+                                                          return A64_OPID_80200200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000011xxxx0xxxxx1xxxx00xxx.  */
+                                                          return A64_OPID_80300200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx110xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a020c000_st1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000010xxxx1xxxxx1xxxx00xxx.  */
+                                                          return A64_OPID_80208200_sumop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx0000000011xxxx1xxxxx1xxxx00xxx.  */
+                                                          return A64_OPID_80308200_sumop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
                                                     }
                                                 }
                                             }
                                           else
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              if (((word >> 9) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 20) & 0x1) == 0)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         x0x00000001xxxxx001xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0202000_st1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                         xx0000000010xxxxxxxxxx0xxxx10xxx.  */
+                                                      return A64_OPID_80208010_sumop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         x0x00000001xxxxx101xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a020a000_st1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                         xx0000000011xxxxxxxxxx0xxxx10xxx.  */
+                                                      return A64_OPID_80308010_sumop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 20) & 0x1) == 0)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         x0x00000001xxxxx011xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0206000_st1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                         xx0000000010xxxxxxxxxx1xxxx10xxx.  */
+                                                      return A64_OPID_80208210_sumop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         x0x00000001xxxxx111xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a020e000_st1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                         xx0000000011xxxxxxxxxx1xxxx10xxx.  */
+                                                      return A64_OPID_80308210_sumop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
                                                     }
                                                 }
                                             }
                                         }
                                       else
                                         {
-                                          if (((word >> 13) & 0x1) == 0)
+                                          if (((word >> 9) & 0x1) == 0)
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              if (((word >> 20) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx000xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0200001_stnt1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx100xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0208001_stnt1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM;
-                                                    }
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xx0000000010xxxxxxxxxx0xxxxx1xxx.  */
+                                                  return A64_OPID_80200008_fmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zm_17_3;
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx010xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0204001_stnt1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL2;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx110xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a020c001_stnt1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL2;
-                                                    }
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xx0000000011xxxxxxxxxx0xxxxx1xxx.  */
+                                                  return A64_OPID_80300008_fmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zmx2_17_3;
                                                 }
                                             }
                                           else
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              if (((word >> 20) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx001xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0202001_stnt1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL1;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx101xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a020a001_stnt1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL1;
-                                                    }
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xx0000000010xxxxxxxxxx1xxxxx1xxx.  */
+                                                  return A64_OPID_80200208_fmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zm_17_3;
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx011xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0206001_stnt1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL3;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000001xxxxx111xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a020e001_stnt1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL3;
-                                                    }
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xx0000000011xxxxxxxxxx1xxxxx1xxx.  */
+                                                  return A64_OPID_80300208_fmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zmx2_17_3;
                                                 }
                                             }
                                         }
                                     }
                                   else
                                     {
-                                      /* 33222222222211111111110000000000
-                                         10987654321098765432109876543210
-                                         x1x00000001xxxxxxxxxxxxxxxxxxxxx.  */
-                                      return A64_OPID_e0200000_st1b_SME_ZA_HV_idx_ldstr_SVE_Pg3_SVE_ADDR_RR;
+                                      if (((word >> 30) & 0x1) == 0)
+                                        {
+                                          if (((word >> 0) & 0x1) == 0)
+                                            {
+                                              if (((word >> 13) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 14) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx000xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0200000_st1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx100xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0208000_st1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx010xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0204000_st1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx110xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a020c000_st1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 14) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx001xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0202000_st1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx101xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a020a000_st1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx011xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0206000_st1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx111xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a020e000_st1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 13) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 14) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx000xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0200001_stnt1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx100xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0208001_stnt1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx010xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0204001_stnt1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx110xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a020c001_stnt1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL2;
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 14) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx001xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0202001_stnt1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx101xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a020a001_stnt1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL1;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx011xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0206001_stnt1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000001xxxxx111xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a020e001_stnt1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RM_LSL3;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                      else
+                                        {
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             x1100000001xxxxxxxxxxxxxxxxxxxxx.  */
+                                          return A64_OPID_e0200000_st1b_SME_ZA_HV_idx_ldstr_SVE_Pg3_SVE_ADDR_RR;
+                                        }
                                     }
                                 }
                               else
@@ -1287,169 +1877,199 @@ aarch64_opcode_lookup_1 (uint32_t word)
                             {
                               if (((word >> 23) & 0x1) == 0)
                                 {
-                                  if (((word >> 30) & 0x1) == 0)
+                                  if (((word >> 29) & 0x1) == 0)
                                     {
-                                      if (((word >> 0) & 0x1) == 0)
+                                      if (((word >> 3) & 0x1) == 0)
                                         {
-                                          if (((word >> 13) & 0x1) == 0)
+                                          if (((word >> 15) & 0x1) == 0)
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 xx000000011xxxxx0xxxxxxxxxxx0xxx.  */
+                                              return A64_OPID_80600000_ftmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                            }
+                                          else
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 xx000000011xxxxx1xxxxxxxxxxx0xxx.  */
+                                              return A64_OPID_80608000_sutmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                            }
+                                        }
+                                      else
+                                        {
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             xx000000011xxxxxxxxxxxxxxxxx1xxx.  */
+                                          return A64_OPID_80600008_ftmopa_SME_ZAda_1b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                        }
+                                    }
+                                  else
+                                    {
+                                      if (((word >> 30) & 0x1) == 0)
+                                        {
+                                          if (((word >> 0) & 0x1) == 0)
+                                            {
+                                              if (((word >> 13) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 14) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx000xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0600000_st1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx000xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0600000_st1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx100xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0608000_st1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx100xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0608000_st1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx010xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0604000_st1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx110xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a060c000_st1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 14) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx010xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0604000_st1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx001xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0602000_st1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx101xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a060a000_st1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx110xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a060c000_st1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx011xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a0606000_st1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx111xxxxxxxxxxxx0.  */
+                                                          return A64_OPID_a060e000_st1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                 }
                                             }
                                           else
                                             {
-                                              if (((word >> 14) & 0x1) == 0)
+                                              if (((word >> 13) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 14) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx001xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0602000_st1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx000xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0600001_stnt1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx100xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0608001_stnt1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx101xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a060a000_st1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx010xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0604001_stnt1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx110xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a060c001_stnt1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 15) & 0x1) == 0)
+                                                  if (((word >> 14) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx011xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a0606000_st1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx001xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0602001_stnt1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx101xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a060a001_stnt1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx111xxxxxxxxxxxx0.  */
-                                                      return A64_OPID_a060e000_st1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx011xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a0606001_stnt1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x0100000011xxxxx111xxxxxxxxxxxx1.  */
+                                                          return A64_OPID_a060e001_stnt1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                       else
                                         {
-                                          if (((word >> 13) & 0x1) == 0)
-                                            {
-                                              if (((word >> 14) & 0x1) == 0)
-                                                {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx000xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0600001_stnt1b_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx100xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0608001_stnt1b_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                    }
-                                                }
-                                              else
-                                                {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx010xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0604001_stnt1w_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx110xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a060c001_stnt1w_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                    }
-                                                }
-                                            }
-                                          else
-                                            {
-                                              if (((word >> 14) & 0x1) == 0)
-                                                {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx001xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0602001_stnt1h_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx101xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a060a001_stnt1h_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                    }
-                                                }
-                                              else
-                                                {
-                                                  if (((word >> 15) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx011xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a0606001_stnt1d_SME_Zdnx2_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         x0x00000011xxxxx111xxxxxxxxxxxx1.  */
-                                                      return A64_OPID_a060e001_stnt1d_SME_Zdnx4_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                    }
-                                                }
-                                            }
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             x1100000011xxxxxxxxxxxxxxxxxxxxx.  */
+                                          return A64_OPID_e0600000_st1h_SME_ZA_HV_idx_ldstr_SVE_Pg3_SVE_ADDR_RR_LSL1;
                                         }
-                                    }
-                                  else
-                                    {
-                                      /* 33222222222211111111110000000000
-                                         10987654321098765432109876543210
-                                         x1x00000011xxxxxxxxxxxxxxxxxxxxx.  */
-                                      return A64_OPID_e0600000_st1h_SME_ZA_HV_idx_ldstr_SVE_Pg3_SVE_ADDR_RR_LSL1;
                                     }
                                 }
                               else
@@ -1458,10 +2078,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     {
                                       if (((word >> 30) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0x00000111xxxxxxxxxxxxxxxx0xxxx.  */
-                                          return A64_OPID_a0e00000_sumopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 3) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 x0x00000111xxxxxxxxxxxxxxxx00xxx.  */
+                                              return A64_OPID_a0e00000_sumopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 9) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         x0x000001110xxxxxxxxxx0xxxx01xxx.  */
+                                                      return A64_OPID_a0e00008_sumop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         x0x000001111xxxxxxxxxx0xxxx01xxx.  */
+                                                      return A64_OPID_a0f00008_sumop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         x0x000001110xxxxxxxxxx1xxxx01xxx.  */
+                                                      return A64_OPID_a0e00208_sumop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         x0x000001111xxxxxxxxxx1xxxx01xxx.  */
+                                                      return A64_OPID_a0f00208_sumop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                            }
                                         }
                                       else
                                         {
@@ -1473,10 +2133,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     }
                                   else
                                     {
-                                      /* 33222222222211111111110000000000
-                                         10987654321098765432109876543210
-                                         xxx00000111xxxxxxxxxxxxxxxx1xxxx.  */
-                                      return A64_OPID_a0e00010_sumops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                      if (((word >> 3) & 0x1) == 0)
+                                        {
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             xxx00000111xxxxxxxxxxxxxxxx10xxx.  */
+                                          return A64_OPID_a0e00010_sumops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                        }
+                                      else
+                                        {
+                                          if (((word >> 9) & 0x1) == 0)
+                                            {
+                                              if (((word >> 20) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xxx000001110xxxxxxxxxx0xxxx11xxx.  */
+                                                  return A64_OPID_a0e00018_sumop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xxx000001111xxxxxxxxxx0xxxx11xxx.  */
+                                                  return A64_OPID_a0f00018_sumop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 20) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xxx000001110xxxxxxxxxx1xxxx11xxx.  */
+                                                  return A64_OPID_a0e00218_sumop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     xxx000001111xxxxxxxxxx1xxxx11xxx.  */
+                                                  return A64_OPID_a0f00218_sumop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1520,17 +2220,97 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                 {
                                                   if (((word >> 3) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xx0000010000xxxxxxxxxxxxxxx000xx.  */
-                                                      return A64_OPID_c1000000_smlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                      if (((word >> 30) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx0xxxx000xx.  */
+                                                                  return A64_OPID_81000000_bfmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx0xxxx000xx.  */
+                                                                  return A64_OPID_81008000_usmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx1xxxx000xx.  */
+                                                                  return A64_OPID_81000200_bfmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx1xxxx000xx.  */
+                                                                  return A64_OPID_81008200_usmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x10000010000xxxxxxxxxxxxxxx000xx.  */
+                                                          return A64_OPID_c1000000_smlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xx0000010000xxxxxxxxxxxxxxx010xx.  */
-                                                      return A64_OPID_c1000008_smlsll_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                      if (((word >> 30) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx0xxxx010xx.  */
+                                                                  return A64_OPID_81000008_fmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx0xxxx010xx.  */
+                                                                  return A64_OPID_81008008_umop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx1xxxx010xx.  */
+                                                                  return A64_OPID_81000208_fmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx1xxxx010xx.  */
+                                                                  return A64_OPID_81008208_umop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x10000010000xxxxxxxxxxxxxxx010xx.  */
+                                                          return A64_OPID_c1000008_smlsll_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                        }
                                                     }
                                                 }
                                               else
@@ -1551,26 +2331,66 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                         {
                                                           if (((word >> 15) & 0x1) == 0)
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx0xx0xxxxxx000xxx.  */
-                                                              return A64_OPID_c1100000_smlall_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
-                                                            }
-                                                          else
-                                                            {
-                                                              if (((word >> 6) & 0x1) == 0)
+                                                              if (((word >> 30) & 0x1) == 0)
                                                                 {
-                                                                  /* 33222222222211111111110000000000
-                                                                     10987654321098765432109876543210
-                                                                     xx0000010001xxxx1xx0xxxxx0000xxx.  */
-                                                                  return A64_OPID_c1108000_smlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx0xxx000xxx.  */
+                                                                      return A64_OPID_81100000_bfmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx1xxx000xxx.  */
+                                                                      return A64_OPID_81100200_bfmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
                                                                 }
                                                               else
                                                                 {
                                                                   /* 33222222222211111111110000000000
                                                                      10987654321098765432109876543210
-                                                                     xx0000010001xxxx1xx0xxxxx1000xxx.  */
-                                                                  return A64_OPID_c1108040_fmlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                     x10000010001xxxx0xx0xxxxxx000xxx.  */
+                                                                  return A64_OPID_c1100000_smlall_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx0xxx000xxx.  */
+                                                                      return A64_OPID_81108000_usmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx1xxx000xxx.  */
+                                                                      return A64_OPID_81108200_usmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  if (((word >> 6) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x10000010001xxxx1xx0xxxxx0000xxx.  */
+                                                                      return A64_OPID_c1108000_smlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x10000010001xxxx1xx0xxxxx1000xxx.  */
+                                                                      return A64_OPID_c1108040_fmlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -1578,17 +2398,57 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                         {
                                                           if (((word >> 15) & 0x1) == 0)
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx0xx0xxxxxx001xxx.  */
-                                                              return A64_OPID_c1100008_smlsll_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx0xxx001xxx.  */
+                                                                      return A64_OPID_81100008_fmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx1xxx001xxx.  */
+                                                                      return A64_OPID_81100208_fmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx0xx0xxxxxx001xxx.  */
+                                                                  return A64_OPID_c1100008_smlsll_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                           else
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx1xx0xxxxxx001xxx.  */
-                                                              return A64_OPID_c1108008_smlsll_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx0xxx001xxx.  */
+                                                                      return A64_OPID_81108008_umop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx1xxx001xxx.  */
+                                                                      return A64_OPID_81108208_umop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx1xx0xxxxxx001xxx.  */
+                                                                  return A64_OPID_c1108008_smlsll_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -1667,17 +2527,97 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                 {
                                                   if (((word >> 3) & 0x1) == 0)
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xx0000010000xxxxxxxxxxxxxxx100xx.  */
-                                                      return A64_OPID_c1000010_umlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                      if (((word >> 30) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx0xxxx100xx.  */
+                                                                  return A64_OPID_81000010_bfmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx0xxxx100xx.  */
+                                                                  return A64_OPID_81008010_usmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx1xxxx100xx.  */
+                                                                  return A64_OPID_81000210_bfmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx1xxxx100xx.  */
+                                                                  return A64_OPID_81008210_usmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x10000010000xxxxxxxxxxxxxxx100xx.  */
+                                                          return A64_OPID_c1000010_umlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                        }
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xx0000010000xxxxxxxxxxxxxxx110xx.  */
-                                                      return A64_OPID_c1000018_umlsll_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                      if (((word >> 30) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 9) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx0xxxx110xx.  */
+                                                                  return A64_OPID_81000018_fmop4s_SME_ZAda_1b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx0xxxx110xx.  */
+                                                                  return A64_OPID_81008018_umop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx0xxxxx1xxxx110xx.  */
+                                                                  return A64_OPID_81000218_fmop4s_SME_ZAda_1b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x00000010000xxxx1xxxxx1xxxx110xx.  */
+                                                                  return A64_OPID_81008218_umop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                                }
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x10000010000xxxxxxxxxxxxxxx110xx.  */
+                                                          return A64_OPID_c1000018_umlsll_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                                        }
                                                     }
                                                 }
                                               else
@@ -1698,34 +2638,114 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                         {
                                                           if (((word >> 15) & 0x1) == 0)
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx0xx0xxxxxx010xxx.  */
-                                                              return A64_OPID_c1100010_umlall_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx0xxx010xxx.  */
+                                                                      return A64_OPID_81100010_bfmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx1xxx010xxx.  */
+                                                                      return A64_OPID_81100210_bfmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx0xx0xxxxxx010xxx.  */
+                                                                  return A64_OPID_c1100010_umlall_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                           else
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx1xx0xxxxxx010xxx.  */
-                                                              return A64_OPID_c1108010_umlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx0xxx010xxx.  */
+                                                                      return A64_OPID_81108010_usmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx1xxx010xxx.  */
+                                                                      return A64_OPID_81108210_usmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx1xx0xxxxxx010xxx.  */
+                                                                  return A64_OPID_c1108010_umlall_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                         }
                                                       else
                                                         {
                                                           if (((word >> 15) & 0x1) == 0)
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx0xx0xxxxxx011xxx.  */
-                                                              return A64_OPID_c1100018_umlsll_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx0xxx011xxx.  */
+                                                                      return A64_OPID_81100018_fmop4s_SME_ZAda_1b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx0xx0xx1xxx011xxx.  */
+                                                                      return A64_OPID_81100218_fmop4s_SME_ZAda_1b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx0xx0xxxxxx011xxx.  */
+                                                                  return A64_OPID_c1100018_umlsll_SME_ZA_array_off1x4_SME_Znx2_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                           else
                                                             {
-                                                              /* 33222222222211111111110000000000
-                                                                 10987654321098765432109876543210
-                                                                 xx0000010001xxxx1xx0xxxxxx011xxx.  */
-                                                              return A64_OPID_c1108018_umlsll_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                              if (((word >> 30) & 0x1) == 0)
+                                                                {
+                                                                  if (((word >> 9) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx0xxx011xxx.  */
+                                                                      return A64_OPID_81108018_umop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         x00000010001xxxx1xx0xx1xxx011xxx.  */
+                                                                      return A64_OPID_81108218_umop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                                    }
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010001xxxx1xx0xxxxxx011xxx.  */
+                                                                  return A64_OPID_c1108018_umlsll_SME_ZA_array_off1x4_SME_Znx4_SME_Zm_INDEX4_1;
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -2319,88 +3339,188 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                 {
                                   if (((word >> 3) & 0x1) == 0)
                                     {
-                                      if (((word >> 20) & 0x1) == 0)
+                                      if (((word >> 29) & 0x1) == 0)
                                         {
-                                          if (((word >> 29) & 0x1) == 0)
+                                          if (((word >> 30) & 0x1) == 0)
                                             {
-                                              /* 33222222222211111111110000000000
-                                                 10987654321098765432109876543210
-                                                 xx0000010100xxxxxxxxxxxxxxxx0xxx.  */
-                                              return A64_OPID_c1400000_fmlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
+                                              if (((word >> 15) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001010xxxxx0xxxxxxxxxxx0xxx.  */
+                                                  return A64_OPID_81400000_bftmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001010xxxxx1xxxxxxxxxxx0xxx.  */
+                                                  return A64_OPID_81408000_ustmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
                                             }
                                           else
                                             {
-                                              if (((word >> 13) & 0x1) == 0)
+                                              if (((word >> 4) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 14) & 0x1) == 0)
+                                                  if (((word >> 20) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx000xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a1400000_ld1b_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx100xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a1408000_ld1b_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         x10000010100xxxxxxxxxxxxxxx00xxx.  */
+                                                      return A64_OPID_c1400000_fmlall_SME_ZA_array_off2x4_SVE_Zn_SME_Zm_INDEX4_10;
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
+                                                      if (((word >> 5) & 0x1) == 0)
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx010xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a1404000_ld1w_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx0xx0xxxxxx000xxx.  */
+                                                                  return A64_OPID_c1500000_fmla_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx1xx0xxxxxx000xxx.  */
+                                                                  return A64_OPID_c1508000_fmla_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx0xx1xxxxxx000xxx.  */
+                                                                  return A64_OPID_c1501000_sdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx1xx1xxxxxx000xxx.  */
+                                                                  return A64_OPID_c1509000_sdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                                }
+                                                            }
                                                         }
                                                       else
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx110xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a140c000_ld1w_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx0xx0xxxxxx100xxx.  */
+                                                                  return A64_OPID_c1500020_svdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx1xx0xxxxxx100xxx.  */
+                                                                  return A64_OPID_c1508020_svdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                                }
+                                                            }
+                                                          else
+                                                            {
+                                                              if (((word >> 15) & 0x1) == 0)
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx0xx1xxxxxx100xxx.  */
+                                                                  return A64_OPID_c1501020_sdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                                }
+                                                              else
+                                                                {
+                                                                  /* 33222222222211111111110000000000
+                                                                     10987654321098765432109876543210
+                                                                     x10000010101xxxx1xx1xxxxxx100xxx.  */
+                                                                  return A64_OPID_c1509020_sdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 14) & 0x1) == 0)
+                                                  if (((word >> 5) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
+                                                      if (((word >> 12) & 0x1) == 0)
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx001xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a1402000_ld1h_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx0xxxxxx010xxx.  */
+                                                              return A64_OPID_c1500010_fmls_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx0xxxxxx010xxx.  */
+                                                              return A64_OPID_c1508010_fmls_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
                                                         }
                                                       else
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx101xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a140a000_ld1h_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx1xxxxxx010xxx.  */
+                                                              return A64_OPID_c1501010_udot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx1xxxxxx010xxx.  */
+                                                              return A64_OPID_c1509010_udot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
                                                         }
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
+                                                      if (((word >> 12) & 0x1) == 0)
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx011xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a1406000_ld1d_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx0xxxxxx110xxx.  */
+                                                              return A64_OPID_c1500030_uvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx0xxxxxx110xxx.  */
+                                                              return A64_OPID_c1508030_uvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
                                                         }
                                                       else
                                                         {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xx1000010100xxxx111xxxxxxxxx0xxx.  */
-                                                          return A64_OPID_a140e000_ld1d_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
+                                                          if (((word >> 15) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx1xxxxxx110xxx.  */
+                                                              return A64_OPID_c1501030_udot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx1xxxxxx110xxx.  */
+                                                              return A64_OPID_c1509030_udot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -2408,157 +3528,77 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         }
                                       else
                                         {
-                                          if (((word >> 4) & 0x1) == 0)
+                                          if (((word >> 13) & 0x1) == 0)
                                             {
-                                              if (((word >> 5) & 0x1) == 0)
+                                              if (((word >> 14) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 12) & 0x1) == 0)
+                                                  if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx000xxx.  */
-                                                          return A64_OPID_c1500000_fmla_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx000xxx.  */
-                                                          return A64_OPID_c1508000_fmla_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx000xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a1400000_ld1b_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx000xxx.  */
-                                                          return A64_OPID_c1501000_sdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx000xxx.  */
-                                                          return A64_OPID_c1509000_sdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx100xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a1408000_ld1b_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 12) & 0x1) == 0)
+                                                  if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx100xxx.  */
-                                                          return A64_OPID_c1500020_svdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx100xxx.  */
-                                                          return A64_OPID_c1508020_svdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx010xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a1404000_ld1w_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx100xxx.  */
-                                                          return A64_OPID_c1501020_sdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx100xxx.  */
-                                                          return A64_OPID_c1509020_sdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx110xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a140c000_ld1w_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                 }
                                             }
                                           else
                                             {
-                                              if (((word >> 5) & 0x1) == 0)
+                                              if (((word >> 14) & 0x1) == 0)
                                                 {
-                                                  if (((word >> 12) & 0x1) == 0)
+                                                  if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx010xxx.  */
-                                                          return A64_OPID_c1500010_fmls_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx010xxx.  */
-                                                          return A64_OPID_c1508010_fmls_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx001xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a1402000_ld1h_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx010xxx.  */
-                                                          return A64_OPID_c1501010_udot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx010xxx.  */
-                                                          return A64_OPID_c1509010_udot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx101xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a140a000_ld1h_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                 }
                                               else
                                                 {
-                                                  if (((word >> 12) & 0x1) == 0)
+                                                  if (((word >> 15) & 0x1) == 0)
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx110xxx.  */
-                                                          return A64_OPID_c1500030_uvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx110xxx.  */
-                                                          return A64_OPID_c1508030_uvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx011xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a1406000_ld1d_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
-                                                      if (((word >> 15) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx110xxx.  */
-                                                          return A64_OPID_c1501030_udot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx110xxx.  */
-                                                          return A64_OPID_c1509030_udot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx100001010xxxxx111xxxxxxxxx0xxx.  */
+                                                      return A64_OPID_a140e000_ld1d_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                 }
                                             }
@@ -2568,7 +3608,84 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     {
                                       if (((word >> 15) & 0x1) == 0)
                                         {
-                                          if (((word >> 20) & 0x1) == 0)
+                                          if (((word >> 29) & 0x1) == 0)
+                                            {
+                                              if (((word >> 30) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001010xxxxx0xxxxxxxxxxx1xxx.  */
+                                                  return A64_OPID_81400008_ftmopa_SME_ZAda_1b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 4) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 5) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx0xxxxxx001xxx.  */
+                                                              return A64_OPID_c1500008_fvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx1xxxxxx001xxx.  */
+                                                              return A64_OPID_c1501008_fdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x1000001010xxxxx0xxxxxxxxx101xxx.  */
+                                                          return A64_OPID_c1501028_usdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 5) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx0xxxxxx011xxx.  */
+                                                              return A64_OPID_c1500018_bfvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx1xxxxxx011xxx.  */
+                                                              return A64_OPID_c1501018_bfdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx0xxxxxx111xxx.  */
+                                                              return A64_OPID_c1500038_fdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx0xx1xxxxxx111xxx.  */
+                                                              return A64_OPID_c1501038_sudot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                          else
                                             {
                                               if (((word >> 13) & 0x1) == 0)
                                                 {
@@ -2576,14 +3693,14 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx000xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx000xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a1400008_ldnt1b_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx010xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx010xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a1404008_ldnt1w_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                 }
@@ -2593,89 +3710,99 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx001xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx001xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a1402008_ldnt1h_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx011xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx011xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a1406008_ldnt1d_SME_Ztx2_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x2xVL;
-                                                    }
-                                                }
-                                            }
-                                          else
-                                            {
-                                              if (((word >> 4) & 0x1) == 0)
-                                                {
-                                                  if (((word >> 5) & 0x1) == 0)
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx001xxx.  */
-                                                          return A64_OPID_c1500008_fvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx001xxx.  */
-                                                          return A64_OPID_c1501008_fdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                    }
-                                                  else
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xxx000010101xxxx0xxxxxxxxx101xxx.  */
-                                                      return A64_OPID_c1501028_usdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                    }
-                                                }
-                                              else
-                                                {
-                                                  if (((word >> 5) & 0x1) == 0)
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx011xxx.  */
-                                                          return A64_OPID_c1500018_bfvdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx011xxx.  */
-                                                          return A64_OPID_c1501018_bfdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                    }
-                                                  else
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx0xxxxxx111xxx.  */
-                                                          return A64_OPID_c1500038_fdot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx0xx1xxxxxx111xxx.  */
-                                                          return A64_OPID_c1501038_sudot_SME_ZA_array_off3_0_SME_Znx2_SME_Zm_INDEX2;
-                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                       else
                                         {
-                                          if (((word >> 20) & 0x1) == 0)
+                                          if (((word >> 29) & 0x1) == 0)
+                                            {
+                                              if (((word >> 30) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001010xxxxx1xxxxxxxxxxx1xxx.  */
+                                                  return A64_OPID_81408008_utmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 4) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 5) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx0xxxxxx001xxx.  */
+                                                              return A64_OPID_c1508008_fdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx1xxxxxx001xxx.  */
+                                                              return A64_OPID_c1509008_fdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx0xxxxxx101xxx.  */
+                                                              return A64_OPID_c1508028_usvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx1xxxxxx101xxx.  */
+                                                              return A64_OPID_c1509028_usdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 5) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x1000001010xxxxx1xxxxxxxxx011xxx.  */
+                                                          return A64_OPID_c1509018_bfdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 12) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx0xxxxxx111xxx.  */
+                                                              return A64_OPID_c1508038_suvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x1000001010xxxxx1xx1xxxxxx111xxx.  */
+                                                              return A64_OPID_c1509038_sudot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                          else
                                             {
                                               if (((word >> 13) & 0x1) == 0)
                                                 {
@@ -2683,14 +3810,14 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx100xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx100xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a1408008_ldnt1b_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx110xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx110xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a140c008_ldnt1w_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                 }
@@ -2700,82 +3827,15 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx101xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx101xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a140a008_ldnt1h_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
                                                     }
                                                   else
                                                     {
                                                       /* 33222222222211111111110000000000
                                                          10987654321098765432109876543210
-                                                         xxx000010100xxxx111xxxxxxxxx1xxx.  */
+                                                         xx100001010xxxxx111xxxxxxxxx1xxx.  */
                                                       return A64_OPID_a140e008_ldnt1d_SME_Ztx4_STRIDED_SME_PNg3_SVE_ADDR_RI_S4x4xVL;
-                                                    }
-                                                }
-                                            }
-                                          else
-                                            {
-                                              if (((word >> 4) & 0x1) == 0)
-                                                {
-                                                  if (((word >> 5) & 0x1) == 0)
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx001xxx.  */
-                                                          return A64_OPID_c1508008_fdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx001xxx.  */
-                                                          return A64_OPID_c1509008_fdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
-                                                    }
-                                                  else
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx101xxx.  */
-                                                          return A64_OPID_c1508028_usvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx101xxx.  */
-                                                          return A64_OPID_c1509028_usdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
-                                                    }
-                                                }
-                                              else
-                                                {
-                                                  if (((word >> 5) & 0x1) == 0)
-                                                    {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xxx000010101xxxx1xxxxxxxxx011xxx.  */
-                                                      return A64_OPID_c1509018_bfdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                    }
-                                                  else
-                                                    {
-                                                      if (((word >> 12) & 0x1) == 0)
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx0xxxxxx111xxx.  */
-                                                          return A64_OPID_c1508038_suvdot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
-                                                      else
-                                                        {
-                                                          /* 33222222222211111111110000000000
-                                                             10987654321098765432109876543210
-                                                             xxx000010101xxxx1xx1xxxxxx111xxx.  */
-                                                          return A64_OPID_c1509038_sudot_SME_ZA_array_off3_0_SME_Znx4_SME_Zm_INDEX2;
-                                                        }
                                                     }
                                                 }
                                             }
@@ -2937,10 +3997,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         {
                                           if (((word >> 30) & 0x1) == 0)
                                             {
-                                              /* 33222222222211111111110000000000
-                                                 10987654321098765432109876543210
-                                                 x0100001110xxxxxxxxxxxxxxxx0xxxx.  */
-                                              return A64_OPID_a1c00000_usmopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                              if (((word >> 3) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0100001110xxxxxxxxxxxxxxxx00xxx.  */
+                                                  return A64_OPID_a1c00000_usmopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011100xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a1c00008_usmop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011101xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a1d00008_usmop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011100xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a1c00208_usmop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011101xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a1d00208_usmop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
                                             }
                                           else
                                             {
@@ -3072,10 +4172,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         }
                                       else
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             xx100001110xxxxxxxxxxxxxxxx1xxxx.  */
-                                          return A64_OPID_a1c00010_usmops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 3) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 xx100001110xxxxxxxxxxxxxxxx10xxx.  */
+                                              return A64_OPID_a1c00010_usmops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 9) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011100xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a1c00018_usmop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011101xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a1d00018_usmop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011100xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a1c00218_usmop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011101xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a1d00218_usmop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -3089,36 +4229,306 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                 {
                                   if (((word >> 3) & 0x1) == 0)
                                     {
-                                      if (((word >> 4) & 0x1) == 0)
+                                      if (((word >> 22) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000001xx1xxxxxxxxxxxxxxxx00xxx.  */
-                                          return A64_OPID_81a00000_fmopa_SME_ZAda_2b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 4) & 0x1) == 0)
+                                            {
+                                              if (((word >> 23) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx0xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_81200000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx0xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_81300000_fmop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx1xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_81208000_umop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx1xxxxx0xxxx00xxx.  */
+                                                              return A64_OPID_81308000_umop4a_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx0xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_81200200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx0xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_81300200_fmop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx1xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_81208200_umop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx1xxxxx1xxxx00xxx.  */
+                                                              return A64_OPID_81308200_umop4a_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001101xxxxxxxxxxxxxxxx00xxx.  */
+                                                  return A64_OPID_81a00000_fmopa_SME_ZAda_2b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 23) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx0xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_81200010_fmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx0xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_81300010_fmop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx1xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_81208010_umop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx1xxxxx0xxxx10xxx.  */
+                                                              return A64_OPID_81308010_umop4s_SME_ZAda_2b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 15) & 0x1) == 0)
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx0xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_81200210_fmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx0xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_81300210_fmop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                      else
+                                                        {
+                                                          if (((word >> 20) & 0x1) == 0)
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010010xxxx1xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_81208210_umop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                            }
+                                                          else
+                                                            {
+                                                              /* 33222222222211111111110000000000
+                                                                 10987654321098765432109876543210
+                                                                 x00000010011xxxx1xxxxx1xxxx10xxx.  */
+                                                              return A64_OPID_81308210_umop4s_SME_ZAda_2b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001101xxxxxxxxxxxxxxxx10xxx.  */
+                                                  return A64_OPID_81a00010_fmops_SME_ZAda_2b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                            }
                                         }
                                       else
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000001xx1xxxxxxxxxxxxxxxx10xxx.  */
-                                          return A64_OPID_81a00010_fmops_SME_ZAda_2b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 15) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 x0000001x11xxxxx0xxxxxxxxxxx0xxx.  */
+                                              return A64_OPID_81600000_ftmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                            }
+                                          else
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 x0000001x11xxxxx1xxxxxxxxxxx0xxx.  */
+                                              return A64_OPID_81608000_utmopa_SME_ZAda_2b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
+                                            }
                                         }
                                     }
                                   else
                                     {
-                                      if (((word >> 4) & 0x1) == 0)
+                                      if (((word >> 22) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x0000001xx1xxxxxxxxxxxxxxxx01xxx.  */
-                                          return A64_OPID_81a00008_bfmopa_SME_ZAda_1b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 4) & 0x1) == 0)
+                                            {
+                                              if (((word >> 23) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010010xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_81200008_bfmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010011xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_81300008_bfmop4a_SME_ZAda_1b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010010xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_81200208_bfmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010011xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_81300208_bfmop4a_SME_ZAda_1b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001101xxxxxxxxxxxxxxxx01xxx.  */
+                                                  return A64_OPID_81a00008_bfmopa_SME_ZAda_1b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 23) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010010xxxxxxxxxx0xxxx11xxx.  */
+                                                          return A64_OPID_81200018_bfmop4s_SME_ZAda_1b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010011xxxxxxxxxx0xxxx11xxx.  */
+                                                          return A64_OPID_81300018_bfmop4s_SME_ZAda_1b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010010xxxxxxxxxx1xxxx11xxx.  */
+                                                          return A64_OPID_81200218_bfmop4s_SME_ZAda_1b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x00000010011xxxxxxxxxx1xxxx11xxx.  */
+                                                          return A64_OPID_81300218_bfmop4s_SME_ZAda_1b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0000001101xxxxxxxxxxxxxxxx11xxx.  */
+                                                  return A64_OPID_81a00018_bfmops_SME_ZAda_1b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                            }
                                         }
                                       else
                                         {
                                           /* 33222222222211111111110000000000
                                              10987654321098765432109876543210
-                                             x0000001xx1xxxxxxxxxxxxxxxx11xxx.  */
-                                          return A64_OPID_81a00018_bfmops_SME_ZAda_1b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                             x0000001x11xxxxxxxxxxxxxxxxx1xxx.  */
+                                          return A64_OPID_81600008_bftmopa_SME_ZAda_1b_SME_Znx2_SVE_Zm_16_SME_Zk_INDEX;
                                         }
                                     }
                                 }
@@ -6414,10 +7824,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         {
                                           if (((word >> 30) & 0x1) == 0)
                                             {
-                                              /* 33222222222211111111110000000000
-                                                 10987654321098765432109876543210
-                                                 x0100001111xxxxxxxxxxxxxxxx0xxxx.  */
-                                              return A64_OPID_a1e00000_umopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                              if (((word >> 3) & 0x1) == 0)
+                                                {
+                                                  /* 33222222222211111111110000000000
+                                                     10987654321098765432109876543210
+                                                     x0100001111xxxxxxxxxxxxxxxx00xxx.  */
+                                                  return A64_OPID_a1e00000_umopa_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 9) & 0x1) == 0)
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011110xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a1e00008_umop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011111xxxxxxxxxx0xxxx01xxx.  */
+                                                          return A64_OPID_a1f00008_umop4a_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                  else
+                                                    {
+                                                      if (((word >> 20) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011110xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a1e00208_umop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             x01000011111xxxxxxxxxx1xxxx01xxx.  */
+                                                          return A64_OPID_a1f00208_umop4a_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                        }
+                                                    }
+                                                }
                                             }
                                           else
                                             {
@@ -6429,10 +7879,50 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                         }
                                       else
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             xx100001111xxxxxxxxxxxxxxxx1xxxx.  */
-                                          return A64_OPID_a1e00010_umops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                          if (((word >> 3) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 xx100001111xxxxxxxxxxxxxxxx10xxx.  */
+                                              return A64_OPID_a1e00010_umops_SME_ZAda_3b_SVE_Pg3_SME_Pm_SVE_Zn_SVE_Zm_16;
+                                            }
+                                          else
+                                            {
+                                              if (((word >> 9) & 0x1) == 0)
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011110xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a1e00018_umop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011111xxxxxxxxxx0xxxx11xxx.  */
+                                                      return A64_OPID_a1f00018_umop4s_SME_ZAda_3b_SME_Zn_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                              else
+                                                {
+                                                  if (((word >> 20) & 0x1) == 0)
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011110xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a1e00218_umop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zm_17_3;
+                                                    }
+                                                  else
+                                                    {
+                                                      /* 33222222222211111111110000000000
+                                                         10987654321098765432109876543210
+                                                         xx1000011111xxxxxxxxxx1xxxx11xxx.  */
+                                                      return A64_OPID_a1f00218_umop4s_SME_ZAda_3b_SME_Znx2_6_3_SME_Zmx2_17_3;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -34859,7 +36349,7 @@ aarch64_find_alias_opcode (const aarch64_opcode *opcode)
       value = A64_OPID_d503323f_dsb_BARRIER_DSB_NXS;
       break;
     case A64_OPID_d5080000_sys_UIMM3_OP1_CRn_CRm_UIMM3_OP2_Rt:
-      value = A64_OPID_d5080000_gsb_GSB;
+      value = A64_OPID_d508001f_gsb_GSB;
       break;
     case A64_OPID_d5480000_sysp_UIMM3_OP1_CRn_CRm_UIMM3_OP2_Rt_PAIRREG_OR_XZR:
       value = A64_OPID_d5480000_tlbip_SYSREG_TLBIP_Rt_SYS_PAIRREG_OR_XZR;
@@ -35508,7 +36998,7 @@ aarch64_find_next_alias_opcode (const aarch64_opcode *opcode)
     case A64_OPID_d5033c9f_dfb:
       value = A64_OPID_d503309f_dsb_BARRIER;
       break;
-    case A64_OPID_d5080000_gsb_GSB:
+    case A64_OPID_d508001f_gsb_GSB:
       value = A64_OPID_d5080000_gicr_Rd_GICR;
       break;
     case A64_OPID_d5080000_gicr_Rd_GICR:
@@ -35763,6 +37253,8 @@ aarch64_extract_operand (const aarch64_operand *self,
     case AARCH64_OPND_SVE_Zt:
     case AARCH64_OPND_SME_Zm:
     case AARCH64_OPND_SME_Zm_17:
+    case AARCH64_OPND_SME_Zn_6_3:
+    case AARCH64_OPND_SME_Zm_17_3:
     case AARCH64_OPND_SME_ZAda_1b:
     case AARCH64_OPND_SME_ZAda_2b:
     case AARCH64_OPND_SME_ZAda_3b:
@@ -35807,6 +37299,7 @@ aarch64_extract_operand (const aarch64_operand *self,
     case AARCH64_OPND_SVE_Zm3_12_INDEX:
     case AARCH64_OPND_SME_PNn3_INDEX1:
     case AARCH64_OPND_SME_PNn3_INDEX2:
+    case AARCH64_OPND_SME_Zk_INDEX:
     case AARCH64_OPND_SME_Zm_INDEX1:
     case AARCH64_OPND_SME_Zm_INDEX2:
     case AARCH64_OPND_SME_Zm_INDEX2_3:
@@ -36081,6 +37574,8 @@ aarch64_extract_operand (const aarch64_operand *self,
       return aarch64_ext_sve_reglist (self, info, code, inst, errors);
     case AARCH64_OPND_SME_Zdnx2:
     case AARCH64_OPND_SME_Zdnx4:
+    case AARCH64_OPND_SME_Znx2_6_3:
+    case AARCH64_OPND_SME_Zmx2_17_3:
     case AARCH64_OPND_SME_Zmx2:
     case AARCH64_OPND_SME_Zmx4:
     case AARCH64_OPND_SME_Znx2:

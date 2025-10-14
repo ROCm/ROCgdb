@@ -30,6 +30,10 @@
 enum aarch64_field_kind
 {
   FLD_NIL,
+  FLD_CONST_0,
+  FLD_CONST_00,
+  FLD_CONST_01,
+  FLD_CONST_1,
   FLD_CRm,
   FLD_CRm_dsb_nxs,
   FLD_CRn,
@@ -66,10 +70,12 @@ enum aarch64_field_kind
   FLD_SME_Zdn2,
   FLD_SME_Zdn4,
   FLD_SME_Zm,
+  FLD_SME_Zm17_3,
   FLD_SME_Zm2,
   FLD_SME_Zm4,
   FLD_SME_Zn2,
   FLD_SME_Zn4,
+  FLD_SME_Zn6_3,
   FLD_SME_ZtT,
   FLD_SME_Zt3,
   FLD_SME_Zt2,
@@ -162,6 +168,7 @@ enum aarch64_field_kind
   FLD_imm2_0,
   FLD_imm2_1,
   FLD_imm2_2,
+  FLD_imm2_4,
   FLD_imm2_8,
   FLD_imm2_10,
   FLD_imm2_12,
@@ -242,14 +249,40 @@ enum aarch64_field_kind
   FLD_ZA5_4,
 };
 
-/* Field description.  */
+/* Field description.
+
+   If is_const is false, this identifies a bitfield in an instruction encoding
+   that has size WIDTH and has its least significant bit at position NUM.
+
+   If is_const is true, this represents the constant bit string of size WIDTH
+   bits stored in the least significant bits of NUM.  In this case, the
+   leading 8-WIDTH bits of VALUE must be zero.
+
+   A sequence of fields can be used to describe how instruction operands are
+   represented in the 32-bit instruction encoding.
+
+   For example, consider an instruction operand Zd that is an even numbered
+   register in z16-z30, with the middle three bits of the register number
+   stored in bits [19:17] of the encoding.  The register number can then be
+   constructed by concatenating:
+   - a constant bit '1' (represented here as {1, 1, true}),
+   - bits [19:17] of the encoding (represented here as {3, 17, false}), and
+   - a constant bit '0' (represented here as {1, 0, true}).
+   This sequence of fields fully describes both the constraints on which
+   register numbers are valid, and how valid register numbers are represented
+   in the instruction encoding.  */
 struct aarch64_field
 {
-  int lsb;
-  int width;
+  unsigned int width:8;
+  unsigned int num:7;
+  bool is_const:1;
 };
 
 typedef struct aarch64_field aarch64_field;
+
+#define AARCH64_FIELD(lsb, width) {width, lsb, false}
+#define AARCH64_FIELD_CONST(val, width) {width, val, true}
+#define AARCH64_FIELD_NIL {0, 0, false}
 
 extern const aarch64_field aarch64_fields[];
 
@@ -265,9 +298,9 @@ struct aarch64_operand
 
   unsigned int flags;
 
-  /* The associated instruction bit-fields; no operand has more than 4
+  /* The associated instruction bit-fields; no operand has more than 5
      bit-fields */
-  enum aarch64_field_kind fields[5];
+  enum aarch64_field_kind fields[6];
 
   /* Brief description */
   const char *desc;
@@ -484,7 +517,7 @@ gen_sub_field (enum aarch64_field_kind kind, int lsb_rel, int width, aarch64_fie
   const aarch64_field *field = &aarch64_fields[kind];
   if (lsb_rel < 0 || width <= 0 || lsb_rel + width > field->width)
     return 0;
-  ret->lsb = field->lsb + lsb_rel;
+  ret->num = field->num + lsb_rel;
   ret->width = width;
   return 1;
 }
@@ -496,10 +529,16 @@ static inline void
 insert_field_2 (const aarch64_field *field, aarch64_insn *code,
 		aarch64_insn value, aarch64_insn mask)
 {
-  assert (field->width < 32 && field->width >= 1 && field->lsb >= 0
-	  && field->lsb + field->width <= 32);
+  assert (field->width < 32 && field->width >= 1
+	  && (field->is_const ? (field->num < 1 << field->width)
+			      : (field->num + field->width <= 32)));
   value &= gen_mask (field->width);
-  value <<= field->lsb;
+  if (field->is_const)
+    {
+      assert (value == field->num);
+      return;
+    }
+  value <<= field->num;
   /* In some opcodes, field can be part of the base opcode, e.g. the size
      field in FADD.  The following helps avoid corrupt the base opcode.  */
   value &= ~mask;
@@ -514,9 +553,13 @@ extract_field_2 (const aarch64_field *field, aarch64_insn code,
 		 aarch64_insn mask)
 {
   aarch64_insn value;
+  /* Check for constant field.  */
+  if (field->is_const)
+    return field->num;
+
   /* Clear any bit that is a part of the base opcode.  */
   code &= ~mask;
-  value = (code >> field->lsb) & gen_mask (field->width);
+  value = (code >> field->num) & gen_mask (field->width);
   return value;
 }
 

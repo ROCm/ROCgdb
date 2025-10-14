@@ -33,6 +33,7 @@
 #include "quick-symbol.h"
 #include <forward_list>
 #include "gdbsupport/unordered_map.h"
+#include "gdbsupport/owning_intrusive_list.h"
 
 struct htab;
 struct objfile_data;
@@ -471,14 +472,18 @@ public:
   /* Return the program space associated with this objfile.  */
   program_space *pspace () { return m_pspace; }
 
+  using compunit_symtab_iterator
+    = owning_intrusive_list<compunit_symtab>::iterator;
+  using compunit_symtab_range = iterator_range<compunit_symtab_iterator>;
+
   /* A range adapter that makes it possible to iterate over all
      compunits in one objfile.  */
 
   compunit_symtab_range compunits ()
   {
-    next_iterator<compunit_symtab> begin (compunit_symtabs);
-
-    return compunit_symtab_range (std::move (begin));
+    auto begin = compunit_symtab_iterator (compunit_symtabs.begin ());
+    auto end = compunit_symtab_iterator (compunit_symtabs.end ());
+    return compunit_symtab_range (std::move (begin), std::move (end));
   }
 
   /* A range adapter that makes it possible to iterate over all
@@ -714,11 +719,6 @@ private:
   program_space *m_pspace;
 
 public:
-  /* List of compunits.
-     These are used to do symbol lookups and file/line-number lookups.  */
-
-  struct compunit_symtab *compunit_symtabs = nullptr;
-
   /* The object file's BFD.  Can be null if the objfile contains only
      minimal symbols (e.g. the run time common symbols for SunOS4) or
      if the objfile is a dynamic objfile (e.g. created by JIT reader
@@ -745,6 +745,11 @@ public:
      table from this object file.  */
 
   auto_obstack objfile_obstack;
+
+  /* List of compunits.
+     These are used to do symbol lookups and file/line-number lookups.  */
+
+  owning_intrusive_list<compunit_symtab> compunit_symtabs;
 
   /* Structure which keeps track of functions that manipulate objfile's
      of the same type as this objfile.  I.e. the function to read partial

@@ -245,12 +245,17 @@ static const autofilter_entry_type autofilter_symbollist_i386[] =
   { NULL, 0 }
 };
 
-#define PE_ARCH_i386	 1
-#define PE_ARCH_sh	 2
-#define PE_ARCH_mips	 3
-#define PE_ARCH_arm	 4
-#define PE_ARCH_arm_wince 5
-#define PE_ARCH_aarch64  6
+/* Internal identification of PE architectures.  */
+enum
+{
+  PE_ARCH_none,
+  PE_ARCH_i386,
+  PE_ARCH_sh,
+  PE_ARCH_arm,
+  PE_ARCH_arm_wince,
+  PE_ARCH_aarch64,
+  PE_ARCH_mcore,
+};
 
 /* Don't make it constant as underscore mode gets possibly overriden
    by target or -(no-)leading-underscore option.  */
@@ -305,7 +310,6 @@ static pe_details_type pe_detail_list[] =
     true,
     autofilter_symbollist_i386
   },
-#endif
   {
     "pei-shl",
     "pe-shl",
@@ -317,12 +321,22 @@ static pe_details_type pe_detail_list[] =
     autofilter_symbollist_generic
   },
   {
-    "pei-mips",
-    "pe-mips",
-    34 /* MIPS_R_RVA */,
+    "pei-mcore-little",
+    "pe-mcore-little",
+    7 /* IMAGE_REL_MCORE_RVA */,
     ~0, 0, ~0, /* none */
-    PE_ARCH_mips,
-    bfd_arch_mips,
+    PE_ARCH_mcore,
+    bfd_arch_mcore,
+    false,
+    autofilter_symbollist_generic
+  },
+  {
+    "pei-mcore-big",
+    "pe-mcore-big",
+    7 /* IMAGE_REL_MCORE_RVA */,
+    ~0, 0, ~0, /* none */
+    PE_ARCH_mcore,
+    bfd_arch_mcore,
     false,
     autofilter_symbollist_generic
   },
@@ -347,6 +361,7 @@ static pe_details_type pe_detail_list[] =
     false,
     autofilter_symbollist_generic
   },
+#endif
   {
     "pei-aarch64-little",
     "pe-aarch64-little",
@@ -1081,6 +1096,7 @@ build_filler_bfd (bool include_edata)
       edata_s = bfd_make_section_old_way (filler_bfd, ".edata");
       if (edata_s == NULL
 	  || !bfd_set_section_flags (edata_s, (SEC_HAS_CONTENTS
+					       | SEC_DATA
 					       | SEC_ALLOC
 					       | SEC_LOAD
 					       | SEC_KEEP
@@ -1095,7 +1111,7 @@ build_filler_bfd (bool include_edata)
   reloc_s = bfd_make_section_old_way (filler_bfd, ".reloc");
   if (reloc_s == NULL
       || !bfd_set_section_flags (reloc_s, (SEC_HAS_CONTENTS
-					   | SEC_ALLOC
+					   | SEC_DATA
 					   | SEC_LOAD
 					   | SEC_KEEP
 					   | SEC_IN_MEMORY)))
@@ -1702,15 +1718,6 @@ generate_reloc (bfd *abfd, struct bfd_link_info *info)
 		      reloc_data[total_relocs].type = IMAGE_REL_BASED_LOW;
 		      total_relocs++;
 		      break;
-		    case BITS_AND_SHIFT (16, 16):
-		      reloc_data[total_relocs].type = IMAGE_REL_BASED_HIGHADJ;
-		      /* FIXME: we can't know the symbol's right value
-			 yet, but we probably can safely assume that
-			 CE will relocate us in 64k blocks, so leaving
-			 it zero is safe.  */
-		      reloc_data[total_relocs].extra = 0;
-		      total_relocs++;
-		      break;
 		    case BITS_AND_SHIFT (26, 2):
 		      reloc_data[total_relocs].type =
                         IMAGE_REL_BASED_ARM_MOV32;
@@ -1764,9 +1771,6 @@ generate_reloc (bfd *abfd, struct bfd_link_info *info)
 	}
 
       reloc_sz += 2;
-
-      if (reloc_data[i].type == IMAGE_REL_BASED_HIGHADJ)
-	reloc_sz += 2;
     }
 
   reloc_sz = (reloc_sz + 3) & ~3;	/* 4-byte align.  */
@@ -2313,18 +2317,6 @@ static const unsigned char jmp_sh_bytes[] =
   0x01, 0xd0, 0x02, 0x60, 0x2b, 0x40, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* _function:
-	lui	$t0,<high:__imp_function>
-	lw	$t0,<low:__imp_function>
-	jr	$t0
-	nop                              */
-
-static const unsigned char jmp_mips_bytes[] =
-{
-  0x00, 0x00, 0x08, 0x3c,  0x00, 0x00, 0x08, 0x8d,
-  0x08, 0x00, 0x00, 0x01,  0x00, 0x00, 0x00, 0x00
-};
-
 static const unsigned char jmp_arm_bytes[] =
 {
   0x00, 0xc0, 0x9f, 0xe5,	/* ldr  ip, [pc] */
@@ -2386,10 +2378,6 @@ make_one (def_file_export *exp, bfd *parent, bool include_jmp_stub)
 	case PE_ARCH_sh:
 	  jmp_bytes = jmp_sh_bytes;
 	  jmp_byte_count = sizeof (jmp_sh_bytes);
-	  break;
-	case PE_ARCH_mips:
-	  jmp_bytes = jmp_mips_bytes;
-	  jmp_byte_count = sizeof (jmp_mips_bytes);
 	  break;
 	case PE_ARCH_arm:
 	case PE_ARCH_arm_wince:
@@ -2476,11 +2464,6 @@ make_one (def_file_export *exp, bfd *parent, bool include_jmp_stub)
 	  break;
 	case PE_ARCH_sh:
 	  quick_reloc (abfd, 8, BFD_RELOC_32, 2);
-	  break;
-	case PE_ARCH_mips:
-	  quick_reloc (abfd, 0, BFD_RELOC_HI16_S, 2);
-	  quick_reloc (abfd, 0, BFD_RELOC_LO16, 0); /* MIPS_R_PAIR */
-	  quick_reloc (abfd, 4, BFD_RELOC_LO16, 2);
 	  break;
 	case PE_ARCH_arm:
 	case PE_ARCH_arm_wince:
@@ -3716,8 +3699,11 @@ pe_exe_build_sections (bfd *abfd, struct bfd_link_info *info ATTRIBUTE_UNUSED)
 {
   pe_dll_id_target (bfd_get_target (abfd));
   pe_output_file_set_long_section_names (abfd);
-  build_filler_bfd (0);
-  pe_output_file_set_long_section_names (filler_bfd);
+  if (pe_dll_enable_reloc_section)
+    {
+      build_filler_bfd (false);
+      pe_output_file_set_long_section_names (filler_bfd);
+    }
 }
 
 void
