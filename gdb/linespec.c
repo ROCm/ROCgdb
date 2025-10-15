@@ -395,8 +395,8 @@ static struct line_offset
      linespec_parse_variable (struct linespec_state *self,
 			      const char *variable);
 
-static bool symbol_to_sal (struct symtab_and_line *result,
-			   bool funfirstline, struct symbol *sym);
+static std::optional<symtab_and_line> symbol_to_sal (bool funfirstline,
+						     symbol *sym);
 
 static void add_matching_symbols_to_info (const char *name,
 					  symbol_name_match_type name_match_type,
@@ -419,13 +419,11 @@ static std::vector<symtab_and_line> decode_digits_ordinary
    const linetable_entry **best_entry);
 
 static std::vector<symtab_and_line> decode_digits_list_mode
-  (struct linespec_state *self,
-   linespec *ls,
-   struct symtab_and_line val);
+  (linespec_state *self, linespec *ls, int line);
 
 static void minsym_found (struct linespec_state *self, struct objfile *objfile,
 			  struct minimal_symbol *msymbol,
-			  std::vector<symtab_and_line> *result);
+			  std::vector<symtab_and_line> &result);
 
 static bool compare_symbols (const block_symbol &a, const block_symbol &b);
 
@@ -1069,39 +1067,39 @@ linespec_lexer_peek_token (linespec_parser *parser)
 
 static void
 add_sal_to_sals (struct linespec_state *self,
-		 std::vector<symtab_and_line> *sals,
-		 struct symtab_and_line *sal,
+		 std::vector<symtab_and_line> &sals,
+		 const symtab_and_line &sal,
 		 const char *symname, bool literal_canonical)
 {
   /* We don't want two SALs with the same PC from the
      same program space.  */
-  for (const auto &s : *sals)
-    if (sal->pc == s.pc && sal->pspace == s.pspace)
+  for (const auto &s : sals)
+    if (sal.pc == s.pc && sal.pspace == s.pspace)
      return;
 
-  sals->push_back (*sal);
+  sals.push_back (sal);
 
   if (self->canonical)
     {
       linespec_canonical_name &canonical
 	= self->canonical_names.emplace_back ();
 
-      if (!literal_canonical && sal->symtab)
+      if (!literal_canonical && sal.symtab)
 	{
-	  symtab_to_fullname (sal->symtab);
+	  symtab_to_fullname (sal.symtab);
 
 	  /* Note that the filter doesn't have to be a valid linespec
 	     input.  We only apply the ":LINE" treatment to Ada for
 	     the time being.  */
-	  if (symname != NULL && sal->line != 0
+	  if (symname != NULL && sal.line != 0
 	      && self->language->la_language == language_ada)
 	    canonical.suffix = string_printf ("%s:%d", symname,
-					      sal->line);
+					      sal.line);
 	  else if (symname != NULL)
 	    canonical.suffix = symname;
 	  else
-	    canonical.suffix = string_printf ("%d", sal->line);
-	  canonical.symtab = sal->symtab;
+	    canonical.suffix = string_printf ("%d", sal.line);
+	  canonical.symtab = sal.symtab;
 	}
       else
 	{
@@ -2012,24 +2010,24 @@ create_sals_line_offset (struct linespec_state *self,
       use_default = true;
     }
 
-  symtab_and_line val;
-  val.line = ls->explicit_loc.line_offset.offset;
+  int line = ls->explicit_loc.line_offset.offset;
+
   switch (ls->explicit_loc.line_offset.sign)
     {
     case LINE_OFFSET_PLUS:
       if (ls->explicit_loc.line_offset.offset == 0)
-	val.line = 5;
+	line = 5;
       if (use_default)
-	val.line = self->default_line + val.line;
+	line = self->default_line + line;
       break;
 
     case LINE_OFFSET_MINUS:
       if (ls->explicit_loc.line_offset.offset == 0)
-	val.line = 15;
+	line = 15;
       if (use_default)
-	val.line = self->default_line - val.line;
+	line = self->default_line - line;
       else
-	val.line = -val.line;
+	line = -line;
       break;
 
     case LINE_OFFSET_NONE:
@@ -2038,7 +2036,7 @@ create_sals_line_offset (struct linespec_state *self,
 
   std::vector<symtab_and_line> values;
   if (self->list_mode)
-    values = decode_digits_list_mode (self, ls, val);
+    values = decode_digits_list_mode (self, ls, line);
   else
     {
       const linetable_entry *best_entry = NULL;
@@ -2049,7 +2047,7 @@ create_sals_line_offset (struct linespec_state *self,
       bool was_exact = true;
 
       std::vector<symtab_and_line> intermediate_results
-	= decode_digits_ordinary (self, ls, val.line, &best_entry);
+	= decode_digits_ordinary (self, ls, line, &best_entry);
       if (intermediate_results.empty () && best_entry != NULL)
 	{
 	  was_exact = false;
@@ -2130,14 +2128,14 @@ create_sals_line_offset (struct linespec_state *self,
 		&& sym != nullptr
 		&& sym->loc_class () == LOC_BLOCK
 		&& sal.pc == sym->value_block ()->entry_pc ()
-		&& val.line < sym->line ())
+		&& line < sym->line ())
 	      continue;
 
 	    if (self->funfirstline)
 	      skip_prologue_sal (&sal);
 
 	    sal.symbol = sym;
-	    add_sal_to_sals (self, &values, &sal,
+	    add_sal_to_sals (self, values, sal,
 			     sym ? sym->natural_name () : nullptr, false);
 	  }
     }
@@ -2147,11 +2145,11 @@ create_sals_line_offset (struct linespec_state *self,
       if (ls->explicit_loc.source_filename)
 	throw_error (NOT_FOUND_ERROR,
 		     _("No compiled code for line %d in file \"%s\"."),
-		     val.line, ls->explicit_loc.source_filename.get ());
+		     line, ls->explicit_loc.source_filename.get ());
       else
 	throw_error (NOT_FOUND_ERROR,
 		     _("No compiled code for line %d in the current file."),
-		     val.line);
+		     line);
     }
 
   return values;
@@ -2170,7 +2168,7 @@ convert_address_location_to_sals (struct linespec_state *self,
   sal.symbol = find_pc_sect_containing_function (sal.pc, sal.section);
 
   std::vector<symtab_and_line> sals;
-  add_sal_to_sals (self, &sals, &sal, core_addr_to_string (address), true);
+  add_sal_to_sals (self, sals, sal, core_addr_to_string (address), true);
 
   return sals;
 }
@@ -2185,16 +2183,15 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
   if (!ls->labels.label_symbols.empty ())
     {
       /* We have just a bunch of functions/methods or labels.  */
-      struct symtab_and_line sal;
-
       for (const auto &sym : ls->labels.label_symbols)
 	{
 	  struct program_space *pspace
 	    = sym.symbol->symtab ()->compunit ()->objfile ()->pspace ();
+	  std::optional<symtab_and_line> sal
+	    = symbol_to_sal (state->funfirstline, sym.symbol);
 
-	  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-	      && state->maybe_add_address (pspace, sal.pc))
-	    add_sal_to_sals (state, &sals, &sal,
+	  if (sal.has_value () && state->maybe_add_address (pspace, sal->pc))
+	    add_sal_to_sals (state, sals, *sal,
 			     sym.symbol->natural_name (), false);
 	}
     }
@@ -2256,10 +2253,12 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 
 	      if (!found_ifunc)
 		{
-		  symtab_and_line sal;
-		  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-		      && state->maybe_add_address (pspace, sal.pc))
-		    add_sal_to_sals (state, &sals, &sal,
+		  std::optional<symtab_and_line> sal
+		    = symbol_to_sal (state->funfirstline, sym.symbol);
+
+		  if (sal.has_value ()
+		      && state->maybe_add_address (pspace, sal->pc))
+		    add_sal_to_sals (state, sals, *sal,
 				     sym.symbol->natural_name (), false);
 		}
 	    }
@@ -2276,7 +2275,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 	    {
 	      program_space *pspace = elem.objfile->pspace ();
 	      set_current_program_space (pspace);
-	      minsym_found (state, elem.objfile, elem.minsym, &sals);
+	      minsym_found (state, elem.objfile, elem.minsym, sals);
 	    }
 	}
     }
@@ -3916,9 +3915,7 @@ find_label_symbols (struct linespec_state *self,
 /* A helper for create_sals_line_offset that handles the 'list_mode' case.  */
 
 static std::vector<symtab_and_line>
-decode_digits_list_mode (struct linespec_state *self,
-			 linespec *ls,
-			 struct symtab_and_line val)
+decode_digits_list_mode (linespec_state *self, linespec *ls, int line)
 {
   gdb_assert (self->list_mode);
 
@@ -3933,14 +3930,16 @@ decode_digits_list_mode (struct linespec_state *self,
       set_current_program_space (pspace);
 
       /* Simplistic search just for the list command.  */
-      val.symtab = find_line_symtab (elt, val.line, nullptr);
+      symtab_and_line val;
+      val.line = line;
+      val.symtab = find_line_symtab (elt, line, nullptr);
       if (val.symtab == NULL)
 	val.symtab = elt;
       val.pspace = pspace;
       val.pc = 0;
       val.explicit_line = true;
 
-      add_sal_to_sals (self, &values, &val, NULL, false);
+      add_sal_to_sals (self, values, val, NULL, false);
     }
 
   return values;
@@ -4053,7 +4052,7 @@ linespec_parse_variable (struct linespec_state *self, const char *variable)
 static void
 minsym_found (struct linespec_state *self, struct objfile *objfile,
 	      struct minimal_symbol *msymbol,
-	      std::vector<symtab_and_line> *result)
+	      std::vector<symtab_and_line> &result)
 {
   bool want_start_sal = false;
 
@@ -4096,7 +4095,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
   sal.section = find_pc_overlay (sal.pc);
 
   if (self->maybe_add_address (objfile->pspace (), sal.pc))
-    add_sal_to_sals (self, result, &sal, msymbol->natural_name (), false);
+    add_sal_to_sals (self, result, sal, msymbol->natural_name (), false);
 }
 
 /* Helper for search_minsyms_for_name that adds the symbol to the
@@ -4292,27 +4291,23 @@ add_matching_symbols_to_info (const char *name,
 /* Now come some functions that are called from multiple places within
    decode_line_1.  */
 
-static bool
-symbol_to_sal (struct symtab_and_line *result,
-	       bool funfirstline, struct symbol *sym)
+static std::optional<symtab_and_line>
+symbol_to_sal (bool funfirstline, symbol *sym)
 {
   if (sym->loc_class () == LOC_BLOCK)
-    {
-      *result = find_function_start_sal (sym, funfirstline);
-      return true;
-    }
+    return find_function_start_sal (sym, funfirstline);
   else
     {
       if (sym->loc_class () == LOC_LABEL && sym->value_address () != 0)
 	{
-	  *result = {};
-	  result->symtab = sym->symtab ();
-	  result->symbol = sym;
-	  result->line = sym->line ();
-	  result->pc = sym->value_address ();
-	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
-	  result->explicit_pc = 1;
-	  return true;
+	  symtab_and_line result;
+	  result.symtab = sym->symtab ();
+	  result.symbol = sym;
+	  result.line = sym->line ();
+	  result.pc = sym->value_address ();
+	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  result.explicit_pc = 1;
+	  return result;
 	}
       else if (funfirstline)
 	{
@@ -4321,17 +4316,17 @@ symbol_to_sal (struct symtab_and_line *result,
       else if (sym->line () != 0)
 	{
 	  /* We know its line number.  */
-	  *result = {};
-	  result->symtab = sym->symtab ();
-	  result->symbol = sym;
-	  result->line = sym->line ();
-	  result->pc = sym->value_address ();
-	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
-	  return true;
+	  symtab_and_line result;
+	  result.symtab = sym->symtab ();
+	  result.symbol = sym;
+	  result.line = sym->line ();
+	  result.pc = sym->value_address ();
+	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  return result;
 	}
     }
 
-  return false;
+  return std::nullopt;
 }
 
 linespec_result::~linespec_result ()
