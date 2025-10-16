@@ -2296,6 +2296,7 @@ elf_s390_relocate_section (bfd *output_bfd,
       bfd_reloc_status_type r;
       int tls_type;
       bool resolved_to_zero;
+      bool relax;
 
       r_type = ELF64_R_TYPE (rel->r_info);
       if (r_type == (int) R_390_GNU_VTINHERIT
@@ -2394,6 +2395,11 @@ elf_s390_relocate_section (bfd *output_bfd,
 
       resolved_to_zero = (h != NULL
 			  && UNDEFWEAK_NO_DYNAMIC_RELOC (info, h));
+
+      /* Rewrite instructions and related relocations if (1) relaxation
+	 disabled by default, (2) enabled by target, or (3) enabled by
+	 user.  Suppress rewriting if linker option --no-relax is used.  */
+      relax = info->disable_target_specific_optimizations <= 1;
 
       switch (r_type)
 	{
@@ -2517,7 +2523,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		     reference using larl we have to make sure that
 		     the symbol is 1. properly aligned and 2. it is no
 		     ABS symbol or will become one.  */
-		  if (h->def_regular
+		  if (relax
+		      && h->def_regular
 		      && SYMBOL_REFERENCES_LOCAL (info, h)
 		      /* lgrl rx,sym@GOTENT -> larl rx, sym */
 		      && ((r_type == R_390_GOTENT
@@ -2545,6 +2552,7 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      bfd_put_16 (output_bfd, new_insn,
 				  contents + rel->r_offset - 2);
 		      r_type = R_390_PC32DBL;
+		      rel->r_info = ELF64_R_INFO (r_symndx, r_type);
 		      rel->r_addend = 2;
 		      howto = elf_howto_table + r_type;
 		      relocation = h->root.u.def.value
@@ -2666,7 +2674,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		 either a load address of 0 or a trapping insn.
 		 This prevents the PLT32DBL relocation from overflowing in
 		 case the binary will be loaded at 4GB or more.  */
-	      if (h->root.type == bfd_link_hash_undefweak
+	      if (relax
+		  && h->root.type == bfd_link_hash_undefweak
 		  && !h->root.linker_def
 		  && (bfd_link_executable (info)
 		      || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
@@ -2685,6 +2694,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      /* larl rX,<weak sym> -> lay rX,0(0)  */
 		      bfd_put_16 (output_bfd, 0xe300 | reg, insn_start);
 		      bfd_put_32 (output_bfd, 0x71, insn_start + 2);
+		      rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		      rel->r_addend = 0;
 		      continue;
 		    }
 		  /* Replace branch relative and save long (brasl) with a trap.  */
@@ -2693,6 +2704,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      /* brasl rX,<weak sym> -> jg .+2 (6-byte trap)  */
 		      bfd_put_16 (output_bfd, 0xc0f4, insn_start);
 		      bfd_put_32 (output_bfd, 0x1, insn_start + 2);
+		      rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		      rel->r_addend = 0;
 		      continue;
 		    }
 		}
@@ -2777,7 +2790,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 	     either a load address of 0, a NOP, or a trapping insn.
 	     This prevents the PC32DBL relocation from overflowing in
 	     case the binary will be loaded at 4GB or more.  */
-	  if (h != NULL
+	  if (relax
+	      && h != NULL
 	      && h->root.type == bfd_link_hash_undefweak
 	      && !h->root.linker_def
 	      && (bfd_link_executable (info)
@@ -2797,6 +2811,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* larl rX,<weak sym> -> lay rX,0(0)  */
 		  bfd_put_16 (output_bfd, 0xe300 | reg, insn_start);
 		  bfd_put_32 (output_bfd, 0x71, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	      /* Replace prefetch data relative long (pfdrl) with a NOP  */
@@ -2805,6 +2821,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* Emit a 6-byte NOP: jgnop .  */
 		  bfd_put_16 (output_bfd, 0xc004, insn_start);
 		  bfd_put_32 (output_bfd, 0x0, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	      /* Replace the following instructions with a trap:
@@ -2822,6 +2840,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* Emit a 6-byte trap: jg .+2  */
 		  bfd_put_16 (output_bfd, 0xc0f4, insn_start);
 		  bfd_put_32 (output_bfd, 0x1, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	    }
