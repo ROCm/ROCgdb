@@ -131,6 +131,12 @@ sframe_get_fre_ra_mangled_p (uint8_t fre_info)
   return SFRAME_V1_FRE_MANGLED_RA_P (fre_info);
 }
 
+static bool
+sframe_get_fre_ra_undefined_p (uint8_t fre_info)
+{
+  return SFRAME_V2_FRE_RA_UNDEFINED_P (fre_info);
+}
+
 /* Access functions for info from function descriptor entry.  */
 
 static uint32_t
@@ -698,12 +704,15 @@ int32_t
 sframe_fre_get_cfa_offset (sframe_decoder_ctx *dctx,
 			   sframe_frame_row_entry *fre, int *errp)
 {
-  int32_t offset = sframe_get_fre_offset (fre, SFRAME_FRE_CFA_OFFSET_IDX, errp);
+  int err;
+  int32_t offset = sframe_get_fre_offset (fre, SFRAME_FRE_CFA_OFFSET_IDX, &err);
 
   /* For s390x undo adjustment of CFA offset (to enable 8-bit offsets).  */
-  if (sframe_decoder_get_abi_arch (dctx) == SFRAME_ABI_S390X_ENDIAN_BIG)
+  if (!err && sframe_decoder_get_abi_arch (dctx) == SFRAME_ABI_S390X_ENDIAN_BIG)
     offset = SFRAME_V2_S390X_CFA_OFFSET_DECODE (offset);
 
+  if (errp)
+    *errp = err;
   return offset;
 }
 
@@ -720,7 +729,8 @@ sframe_fre_get_fp_offset (sframe_decoder_ctx *dctx,
   int8_t fp_offset = sframe_decoder_get_fixed_fp_offset (dctx);
   /* If the FP offset is not being tracked, return the fixed FP offset
      from the SFrame header.  */
-  if (fp_offset != SFRAME_CFA_FIXED_FP_INVALID)
+  if (fp_offset != SFRAME_CFA_FIXED_FP_INVALID
+      && !sframe_get_fre_ra_undefined_p (fre->fre_info))
     {
       if (errp)
 	*errp = 0;
@@ -751,7 +761,8 @@ sframe_fre_get_ra_offset (sframe_decoder_ctx *dctx,
   int8_t ra_offset = sframe_decoder_get_fixed_ra_offset (dctx);
   /* If the RA offset was not being tracked, return the fixed RA offset
      from the SFrame header.  */
-  if (ra_offset != SFRAME_CFA_FIXED_RA_INVALID)
+  if (ra_offset != SFRAME_CFA_FIXED_RA_INVALID
+      && !sframe_get_fre_ra_undefined_p (fre->fre_info))
     {
       if (errp)
 	*errp = 0;
@@ -772,6 +783,18 @@ sframe_fre_get_ra_mangled_p (sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
     return sframe_set_errno (errp, SFRAME_ERR_FRE_INVAL);
 
   return sframe_get_fre_ra_mangled_p (fre->fre_info);
+}
+
+/* Get whether the RA is undefined (i.e. outermost frame).  */
+
+bool
+sframe_fre_get_ra_undefined_p (const sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
+			       const sframe_frame_row_entry *fre, int *errp)
+{
+  if (fre == NULL || !sframe_fre_sanity_check_p (fre))
+    return sframe_set_errno (errp, SFRAME_ERR_FRE_INVAL);
+
+  return sframe_get_fre_ra_undefined_p (fre->fre_info);
 }
 
 static int
@@ -1882,7 +1905,7 @@ sframe_encoder_write_sframe (sframe_encoder_ctx *encoder)
      - buffers must be malloc'd by the caller.  */
   if ((contents == NULL) || (buf_size < hdr_size))
     return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
-  if (fr_info == NULL)
+  if (ehp->sfh_num_fres > 0 && fr_info == NULL)
     return sframe_set_errno (&err, SFRAME_ERR_FRE_INVAL);
 
   /* Write out the FRE table first.
@@ -1904,6 +1927,13 @@ sframe_encoder_write_sframe (sframe_encoder_ctx *encoder)
       fdep = &fd_info->entry[i];
       fre_type = sframe_get_fre_type (fdep);
       num_fres = fdep->sfde_func_num_fres;
+
+      /* For FDEs without any FREs, set sfde_func_start_fre_off to zero.  */
+      if (num_fres == 0)
+	fdep->sfde_func_start_fre_off = 0;
+
+      if (num_fres > 0 && fr_info == NULL)
+	return sframe_set_errno (&err, SFRAME_ERR_FRE_INVAL);
 
       for (j = 0; j < num_fres; j++)
 	{

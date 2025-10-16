@@ -896,6 +896,13 @@ elf64_hppa_check_relocs (bfd *abfd,
 				   sec_symndx, rel->r_offset, rel->r_addend))
 	    goto err_out;
 
+	  /* Add symbol to dynamic symbol table.  */
+	  if (hh != NULL
+	      && bfd_link_pic (info)
+	      && ! (bfd_elf_link_record_local_dynamic_symbol
+		    (info, abfd, r_symndx)))
+	    goto err_out;
+
 	  /* If we are building a shared library and we just recorded
 	     a dynamic R_PARISC_FPTR64 relocation, then make sure the
 	     section symbol for this section ends up in the dynamic
@@ -903,7 +910,7 @@ elf64_hppa_check_relocs (bfd *abfd,
 	  if (bfd_link_pic (info) && dynrel_type == R_PARISC_FPTR64
 	      && ! (bfd_elf_link_record_local_dynamic_symbol
 		    (info, abfd, sec_symndx)))
-	    return false;
+	    goto err_out;
 	}
     }
 
@@ -1009,7 +1016,7 @@ allocate_global_data_dlt (struct elf_link_hash_entry *eh, void *data)
   return true;
 }
 
-/* Allocate space for a DLT.PLT entry.  */
+/* Allocate space for a PLT entry.  */
 
 static bool
 allocate_global_data_plt (struct elf_link_hash_entry *eh, void *data)
@@ -1072,7 +1079,7 @@ allocate_global_data_opd (struct elf_link_hash_entry *eh, void *data)
   struct elf64_hppa_link_hash_entry *hh = hppa_elf_hash_entry (eh);
   struct elf64_hppa_allocate_data *x = (struct elf64_hppa_allocate_data *)data;
 
-  if (hh && hh->want_opd)
+  if (hh->want_opd)
     {
       /* We never need an opd entry for a symbol which is not
 	 defined by this output file.  */
@@ -1451,16 +1458,6 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
 
       if (!discarded_section (hppa_info->other_rel_sec))
 	hppa_info->other_rel_sec->size += sizeof (Elf64_External_Rela);
-
-      /* Make sure this symbol gets into the dynamic symbol table if
-	 it is not already recorded.  */
-      if (eh->dynindx == -1 && eh->type != STT_PARISC_MILLI)
-	{
-	  BFD_ASSERT (rent->sec->owner == hh->owner);
-	  if (!bfd_elf_link_record_local_dynamic_symbol
-		(x->info, hh->owner, hh->sym_indx))
-	    return false;
-	}
     }
 
   /* Take care of the GOT and PLT relocations.  */
@@ -2233,11 +2230,7 @@ elf64_hppa_finalize_dlt (struct elf_link_hash_entry *eh, void *data)
   sdlt = hppa_info->dlt_sec;
   sdltrel = hppa_info->dlt_rel_sec;
 
-  /* H/DYN_H may refer to a local variable and we know it's
-     address, so there is no need to create a relocation.  Just install
-     the proper value into the DLT, note this shortcut can not be
-     skipped when building a shared library.  */
-  if (! bfd_link_pic (info) && hh && hh->want_dlt)
+  if (! bfd_link_pic (info) && hh->want_dlt)
     {
       bfd_vma value;
 
@@ -2418,6 +2411,7 @@ elf64_hppa_finalize_dynreloc (struct elf_link_hash_entry *eh,
 	  else
 	    rel.r_addend = rent->addend;
 
+	  BFD_ASSERT (dynindx != -1);
 	  rel.r_info = ELF64_R_INFO (dynindx, rent->type);
 
 	  loc = hppa_info->other_rel_sec->contents;

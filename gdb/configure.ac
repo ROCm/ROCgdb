@@ -1070,6 +1070,22 @@ AC_SUBST(PYTHON_CPPFLAGS)
 AC_SUBST(PYTHON_LIBS)
 AM_CONDITIONAL(HAVE_PYTHON, test "${have_libpython}" != no)
 
+# Check whether to build GDB against Python limited C API.
+AC_ARG_ENABLE([py-limited-api],
+	      [AS_HELP_STRING([--enable-py-limited-api],
+			      [enable build against the Python limited C API, default 'no'])],
+	      [GDB_CHECK_YES_NO_VAL([$enableval], [--enable-py-limited-api])],
+	      [enable_py_limited_api=no])
+
+if test "$enable_py_limited_api" == yes; then
+  # The minimal Python limited API version is currently set to 3.11 for the
+  # support of PyBuffer_FillInfo and PyBuffer_Release.
+  # The choice of the minimal version for the Python limited API won't be frozen
+  # until the end of the migration.
+  AC_DEFINE(Py_LIMITED_API, 0x030b0000,
+	    [Define if GDB should be built against the Python limited C API.])
+fi
+
 # -------------------- #
 # Check for libguile.  #
 # -------------------- #
@@ -1761,11 +1777,18 @@ if test "${gdb_native}" = yes; then
      AC_RUN_IFELSE(
        [AC_LANG_PROGRAM(
          [#include "Python.h"],
-         [int err;
+         [
+          const char *code = "import ctypes\n";
           Py_Initialize ();
-          err = PyRun_SimpleString ("import ctypes\n");
+          PyObject *main_module = PyImport_AddModule ("__main__");
+          PyObject *global_dict = PyModule_GetDict (main_module);
+          PyObject *local_dict = PyDict_New ();
+          PyObject *py_code = Py_CompileString (code, "test", Py_single_input);
+          if (py_code == NULL)
+            return 1;
+          PyObject *res = PyEval_EvalCode (py_code, global_dict, local_dict);
           Py_Finalize ();
-          return err == 0 ? 0 : 1;])],
+          return res ? 0 : 1;])],
        [dynamic_list=true], [], [true])
      LIBS="$old_LIBS"
      CFLAGS="$old_CFLAGS"
