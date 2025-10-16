@@ -47,11 +47,11 @@ proc do_test {} {
   set num_host_threads 0
   set gpu_thread_ids [list]
   gdb_test_multiple "info threads" "capture thread state" -lbl {
-    -re "$::decimal *Thread\[^\\n\]*" {
+    -re "$::decimal *Thread" {
       incr num_host_threads
       exp_continue
     }
-    -re "($::decimal) *AMDGPU Wave\[^\\n\]*" {
+    -re "($::decimal) *AMDGPU Wave" {
       lappend gpu_thread_ids $expect_out(1,string)
       exp_continue
     }
@@ -63,7 +63,7 @@ proc do_test {} {
 
   set wave_pcs [list]
   gdb_test_multiple "thread apply $gpu_thread_ids -- p/x \$pc" "capture GPU pcs" -lbl {
-    -re ".*Thread \$::decimal\[^\\n\]*" {
+    -re ".*Thread \$::decimal" {
       exp_continue
     }
     -re "$::decimal = ($::hex)" {
@@ -88,11 +88,11 @@ proc do_test {} {
   set num_core_host_threads 0
   set gpu_core_thread_ids [list]
   gdb_test_multiple "info threads" "" -lbl {
-    -re "$::decimal *Thread\[^\\n\]*" {
+    -re "$::decimal *Thread" {
       incr num_core_host_threads
       exp_continue
     }
-    -re "($::decimal) *AMDGPU Wave\[^\\n\]*" {
+    -re "($::decimal) *AMDGPU Wave" {
       lappend gpu_core_thread_ids $expect_out(1,string)
       exp_continue
     }
@@ -104,7 +104,7 @@ proc do_test {} {
 
   gdb_test_multiple "thread apply $gpu_core_thread_ids -- p/x \$pc" \
 		    "core wave PCs match live wave PCs" -lbl {
-    -re ".*Thread \$::decimal\[^\\n\]*" {
+    -re ".*Thread \$::decimal" {
       exp_continue
     }
     -re "$::decimal = ($::hex)" {
