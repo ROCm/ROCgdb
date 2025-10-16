@@ -276,10 +276,20 @@ value_arg_coerce (struct gdbarch *gdbarch, struct value *arg,
 	  return value_cast_pointers (type, arg, 0);
 
 	/* Cast the value to the reference's target type, and then
-	   convert it back to a reference.  This will issue an error
-	   if the value was not previously in memory - in some cases
-	   we should clearly be allowing this, but how?  */
+	   convert it back to a reference.  If the value is not already
+	   in memory (e.g., a literal), we need to allocate space in the
+	   inferior and copy it there.  */
 	new_value = value_cast (type->target_type (), arg);
+	if (new_value->lval () != lval_memory
+	    && (language_pass_by_reference (new_value->type ())
+		.trivially_copyable))
+	  {
+	    LONGEST length = check_typedef (new_value->type ())->length ();
+	    struct value *addr_val = value_allocate_space_in_inferior (length);
+	    CORE_ADDR addr = value_as_address (addr_val);
+	    new_value->force_lval (addr);
+	  }
+
 	new_value = value_ref (new_value, type->code ());
 	return new_value;
       }

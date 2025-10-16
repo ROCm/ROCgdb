@@ -63,3 +63,149 @@ gdb_test "print f1(MQR)" ".* = 53"
 gdb_test "print mf1(MQR)" ".* = 106"
 gdb_test "print mf2(MQR)" ".* = 106"
 gdb_test "print f3(Q.id)" ".* = 42"
+
+# Inferior function call tests which have reference arguments.
+# https://sourceware.org/bugzilla/show_bug.cgi?id=25957
+gdb_start_again "breakpoint-here"
+
+# Test functions taking const reference parameter.
+gdb_test "print const_ref_func(10)" \
+    "= 20" \
+    "call function with const ref param and literal"
+
+gdb_test "print const_ref_func(global_int)" \
+    "= 84" \
+    "call function with const ref param and global variable"
+
+gdb_test "print const_ref_func(local_var)" \
+    "= 30" \
+    "call function with const ref param and local variable"
+
+gdb_test "print const_ref_func(obj)" \
+    "= 10" \
+    "call function with const ref param and object"
+
+gdb_test "print const_ref_func(global_obj)" \
+    "= 20" \
+    "call function with const ref param and global object"
+
+gdb_test "print const_ref_func((TestClass) {42})" \
+    "= 84" \
+    "call function with const ref param and literal object"
+
+# Test functions taking non-const reference parameter.
+gdb_test "print ref_func(10)" \
+    "Cannot resolve function ref_func to any overloaded instance" \
+    "call function with non-const ref param and literal"
+
+gdb_test "print ref_func(global_int)" \
+    " = 43" \
+    "call function with non-const ref param and global variable"
+
+gdb_test "print ref_func(local_var)" \
+    " = 16" \
+    "call function with non-const ref param and local variable"
+
+gdb_test "print ref_func(obj)" \
+    "= 6" \
+    "call function with non-const ref param and object"
+
+gdb_test "print ref_func(global_obj)" \
+    "= 11" \
+    "call function with non-const ref param and global object"
+
+gdb_test "print ref_func((TestClass) {42})" \
+    "Cannot resolve function ref_func to any overloaded instance" \
+    "call function with ref param and literal object"
+
+# Test methods taking constant reference parameter.
+gdb_test "print obj.const_ref_method(5)" \
+    "= 10" \
+    "call const method with const ref param and literal"
+
+gdb_test "print obj.const_ref_method(global_int)" \
+    "= 47" \
+    "call const method with const ref param and global variable"
+
+gdb_test "print obj.const_ref_method(local_var)" \
+    "= 20" \
+    "call const method with const ref param and local variable"
+
+gdb_test "print obj.const_ref_method(obj)" \
+    "= 10" \
+    "call method with const ref param and object"
+
+gdb_test "print obj.const_ref_method((TestClass) {42})" \
+    "= 47" \
+    "call method with const ref param and literal object"
+
+# Test methods taking non-const reference parameters.
+gdb_test "print obj.ref_method(5)" \
+    "Cannot resolve method TestClass::ref_method to any overloaded instance" \
+    "call method with non-const ref param and literal"
+
+gdb_test "print obj.ref_method(global_int)" \
+    "= 89" \
+    "cal method with non-const ref param and global variable"
+
+gdb_test "print obj.ref_method(local_var)" \
+    " = 35" \
+    "call method with non-const ref param and local variable"
+
+gdb_test "print obj.ref_method(obj)" \
+    "= 15" \
+    "call method with non-const ref param and object"
+
+gdb_test "print obj.ref_method((TestClass) {42})" \
+    "Cannot resolve method TestClass::ref_method to any overloaded instance" \
+    "call method with non-const ref param and literal object"
+
+# Test global_obj methods taking constant reference parameter.
+gdb_test "print global_obj.const_ref_method(5)" \
+    "= 15" \
+    "call global const method with const ref param and literal"
+
+gdb_test "print global_obj.const_ref_method(global_int)" \
+    "= 52" \
+    "call global const method with const ref param and global variable"
+
+gdb_test "print global_obj.const_ref_method(local_var)" \
+    "= 25" \
+    "call global const method with const ref param and local variable"
+
+gdb_test "print global_obj.const_ref_method(obj)" \
+    "= 15" \
+    "call global method with const ref param and object"
+
+gdb_test "print global_obj.const_ref_method(global_obj)" \
+    "= 20" \
+    "call global method with const ref param and global object"
+
+gdb_test "print global_obj.const_ref_method((TestClass) {42})" \
+    "= 52" \
+    "call global method with const ref param and literal object"
+
+# Test global_obj methods taking non-const reference parameters.
+gdb_test "print global_obj.ref_method(5)" \
+    "Cannot resolve method TestClass::ref_method to any overloaded instance" \
+    "call global method with non-const ref param and literal"
+
+gdb_test "print global_obj.ref_method(global_int)" \
+    "= 94" \
+    "call global method with non-const ref param and global variable"
+
+gdb_test "print global_obj.ref_method(local_var)" \
+    "= 40" \
+    "call global method with non-const ref param and local variable"
+
+gdb_test "print global_obj.ref_method(obj)" \
+    "= 20" \
+    "call global method with non-const ref param and object"
+
+gdb_test "print global_obj.ref_method(global_obj)" \
+    "= 30" \
+    "call global method with non-const ref param and global object"
+
+gdb_test "print global_obj.ref_method ((TestClass) {42})" \
+    "Cannot resolve method TestClass::ref_method to any overloaded instance" \
+    "call global method with non-const ref param and literal object"

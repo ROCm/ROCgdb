@@ -60,6 +60,68 @@ int mf2(MultiChild& C)
   return mf1(C);
 }
 
+/* A class to be used by functions and methods exercising c++/25957.  */
+class TestClass
+{
+  public:
+  int value;
+
+  TestClass (int v) : value (v) {}
+
+  int
+  const_ref_method (const int &x) const
+  {
+    return value + x;
+  }
+
+  int
+  const_ref_method (const TestClass &obj) const
+  {
+    return value + obj.value;
+  }
+
+  int
+  ref_method (int &x)
+  {
+    return value + 2 * x;
+  }
+
+  int
+  ref_method (TestClass &obj)
+  {
+    return value + 2 * obj.value;
+  }
+};
+
+/* Define globals to be used by functions and methods exercising c++/25957.  */
+int global_int = 42;
+TestClass global_obj (10);
+
+/* Helper functions to test reference parameter behavior for c++/25957.  */
+int
+const_ref_func (const int &x)
+{
+  return x * 2;
+}
+
+int
+const_ref_func (const TestClass &obj)
+{
+  return obj.value * 2;
+}
+
+int
+ref_func (int &x)
+{
+  return x + 1;
+}
+
+int
+ref_func (TestClass &obj)
+{
+  return obj.value + 1;
+}
+
 int main(void)
 {
   Child Q(42);
@@ -76,5 +138,36 @@ int main(void)
 
   mf2(MQ);			/* Set breakpoint MQ here.  */
 
-  return 0;
+  TestClass obj (5);
+  int local_var = 15;
+
+  /* Prevent compiler from optimizing away the function and method calls.  */
+  int dummy_int = 99;
+  (void) const_ref_func (dummy_int);
+  (void) const_ref_func (global_int);
+  (void) const_ref_func (obj);
+  (void) const_ref_func (global_obj);
+  (void) ref_func (dummy_int);
+  (void) ref_func (global_int);
+  (void) ref_func (obj);
+  (void) ref_func (global_obj);
+  (void) obj.const_ref_method (dummy_int);
+  (void) obj.const_ref_method (global_int);
+  (void) obj.const_ref_method (obj);
+  (void) obj.const_ref_method (global_obj);
+  (void) obj.ref_method (dummy_int);
+  (void) obj.ref_method (global_int);
+  (void) obj.ref_method (obj);
+  (void) obj.ref_method (global_obj);
+  (void) global_obj.const_ref_method (dummy_int);
+  (void) global_obj.const_ref_method (global_int);
+  (void) global_obj.const_ref_method (obj);
+  (void) global_obj.const_ref_method (global_obj);
+  (void) global_obj.ref_method (dummy_int);
+  (void) global_obj.ref_method (global_int);
+  (void) global_obj.ref_method (obj);
+  (void) global_obj.ref_method (global_obj);
+
+  /* Breakpoint here for c++/25957 testing.  */
+  return 0;  /* breakpoint-here */
 }
