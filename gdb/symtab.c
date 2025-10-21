@@ -429,8 +429,9 @@ void
 compunit_symtab::set_call_site_htab (call_site_htab_t &&call_site_htab)
 {
   gdb_assert (m_call_site_htab == nullptr);
-  m_call_site_htab
-    = std::make_unique<call_site_htab_t> (std::move (call_site_htab));
+  if (!call_site_htab.empty ())
+    m_call_site_htab
+      = std::make_unique<call_site_htab_t> (std::move (call_site_htab));
 }
 
 /* See symtab.h.  */
@@ -678,7 +679,7 @@ gdb_mangle_name (struct type *type, int method_id, int signature_id)
 
   is_full_physname_constructor = is_constructor_name (physname);
 
-  is_constructor = is_full_physname_constructor 
+  is_constructor = is_full_physname_constructor
     || (newname && strcmp (field_name, newname) == 0);
 
   if (!is_destructor)
@@ -2142,7 +2143,7 @@ lookup_local_symbol (const char *name,
     return {};
 
   const char *scope = block->scope ();
-  
+
   while (!block->is_global_block () && !block->is_static_block ())
     {
       struct symbol *sym = lookup_symbol_in_block (name, match_type,
@@ -2707,7 +2708,7 @@ iterate_over_symbols_terminated
    This will read in debug info as necessary.  */
 
 struct compunit_symtab *
-find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
+find_compunit_symtab_for_pc_sect (CORE_ADDR pc, struct obj_section *section)
 {
   struct compunit_symtab *best_cust = NULL;
   CORE_ADDR best_cust_range = 0;
@@ -2762,7 +2763,7 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
 	      && range >= best_cust_range)
 	    /* Cust doesn't have a smaller range than best_cust, skip it.  */
 	    continue;
-	
+
 	  /* For an objfile that has its functions reordered,
 	     find_pc_psymtab will find the proper partial symbol table
 	     and we simply return its corresponding symtab.  */
@@ -2826,9 +2827,9 @@ find_pc_sect_compunit_symtab (CORE_ADDR pc, struct obj_section *section)
    Backward compatibility, no section.  */
 
 struct compunit_symtab *
-find_pc_compunit_symtab (CORE_ADDR pc)
+find_compunit_symtab_for_pc (CORE_ADDR pc)
 {
-  return find_pc_sect_compunit_symtab (pc, find_pc_mapped_section (pc));
+  return find_compunit_symtab_for_pc_sect (pc, find_pc_mapped_section (pc));
 }
 
 /* See symtab.h.  */
@@ -2903,7 +2904,7 @@ find_symbol_at_address (CORE_ADDR address)
    symtab.  */
 
 struct symtab_and_line
-find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
+find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 {
   /* Info on best line seen so far, and where it starts, and its file.  */
   const linetable_entry *best = NULL;
@@ -3018,17 +3019,17 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 	       should occur, we'd like to know about it, so error out,
 	       fatally.  */
 	    if (mfunsym.value_address () == pc)
-	      internal_error (_("Infinite recursion detected in find_pc_sect_line;"
+	      internal_error (_("Infinite recursion detected in find_sal_for_pc_sect;"
 		  "please file a bug report"));
 
-	    return find_pc_line (mfunsym.value_address (), 0);
+	    return find_sal_for_pc (mfunsym.value_address (), 0);
 	  }
       }
 
   symtab_and_line val;
   val.pspace = current_program_space;
 
-  compunit_symtab *cust = find_pc_sect_compunit_symtab (pc, section);
+  compunit_symtab *cust = find_compunit_symtab_for_pc_sect (pc, section);
   if (cust == NULL)
     {
       /* If no symbol information, return previous pc.  */
@@ -3176,20 +3177,20 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 /* Backward compatibility (no section).  */
 
 struct symtab_and_line
-find_pc_line (CORE_ADDR pc, int notcurrent)
+find_sal_for_pc (CORE_ADDR pc, int notcurrent)
 {
   struct obj_section *section;
 
   section = find_pc_overlay (pc);
   if (!pc_in_unmapped_range (pc, section))
-    return find_pc_sect_line (pc, section, notcurrent);
+    return find_sal_for_pc_sect (pc, section, notcurrent);
 
   /* If the original PC was an unmapped address then we translate this to a
      mapped address in order to lookup the sal.  However, as the user
      passed us an unmapped address it makes more sense to return a result
      that has the pc and end fields translated to unmapped addresses.  */
   pc = overlay_mapped_address (pc, section);
-  symtab_and_line sal = find_pc_sect_line (pc, section, notcurrent);
+  symtab_and_line sal = find_sal_for_pc_sect (pc, section, notcurrent);
   sal.pc = overlay_unmapped_address (sal.pc, section);
   sal.end = overlay_unmapped_address (sal.end, section);
   return sal;
@@ -3214,12 +3215,12 @@ sal_line_symtab_matches_p (const symtab_and_line &sal1,
 std::optional<CORE_ADDR>
 find_line_range_start (CORE_ADDR pc)
 {
-  struct symtab_and_line current_sal = find_pc_line (pc, 0);
+  struct symtab_and_line current_sal = find_sal_for_pc (pc, 0);
 
   if (current_sal.line == 0)
     return {};
 
-  struct symtab_and_line prev_sal = find_pc_line (current_sal.pc - 1, 0);
+  struct symtab_and_line prev_sal = find_sal_for_pc (current_sal.pc - 1, 0);
 
   /* If the previous entry is for a different line, that means we are already
      at the entry with the start PC for this line.  */
@@ -3234,7 +3235,7 @@ find_line_range_start (CORE_ADDR pc)
     {
       prev_pc = prev_sal.pc;
 
-      prev_sal = find_pc_line (prev_pc - 1, 0);
+      prev_sal = find_sal_for_pc (prev_pc - 1, 0);
 
       /* Did we notice a line change?  If so, we are done searching.  */
       if (!sal_line_symtab_matches_p (prev_sal, current_sal))
@@ -3247,13 +3248,13 @@ find_line_range_start (CORE_ADDR pc)
 /* See symtab.h.  */
 
 struct symtab *
-find_pc_line_symtab (CORE_ADDR pc)
+find_symtab_for_pc (CORE_ADDR pc)
 {
   struct symtab_and_line sal;
 
-  /* This always passes zero for NOTCURRENT to find_pc_line.
+  /* This always passes zero for NOTCURRENT to find_sal_for_pc.
      There are currently no callers that ever pass non-zero.  */
-  sal = find_pc_line (pc, 0);
+  sal = find_sal_for_pc (pc, 0);
   return sal.symtab;
 }
 
@@ -3310,7 +3311,7 @@ find_line_symtab (symtab *sym_tab, int line, int *index)
 		    continue;
 		  if (FILENAME_CMP (symtab_to_fullname (sym_tab),
 				    symtab_to_fullname (s)) != 0)
-		    continue;	
+		    continue;
 		  l = s->linetable ();
 		  ind = find_line_common (l, line, &exact, 0);
 		  if (ind >= 0)
@@ -3391,7 +3392,7 @@ find_pcs_for_symtab_line (struct symtab *symtab, int line,
    The source file is specified with a struct symtab.  */
 
 bool
-find_line_pc (struct symtab *symtab, int line, CORE_ADDR *pc)
+find_pc_for_line (struct symtab *symtab, int line, CORE_ADDR *pc)
 {
   const struct linetable *l;
   int ind;
@@ -3418,14 +3419,14 @@ find_line_pc (struct symtab *symtab, int line, CORE_ADDR *pc)
    Returns false if could not find the specified line.  */
 
 bool
-find_line_pc_range (struct symtab_and_line sal, CORE_ADDR *startptr,
+find_pc_range_for_sal (struct symtab_and_line sal, CORE_ADDR *startptr,
 		    CORE_ADDR *endptr)
 {
   CORE_ADDR startaddr;
   struct symtab_and_line found_sal;
 
   startaddr = sal.pc;
-  if (startaddr == 0 && !find_line_pc (sal.symtab, sal.line, &startaddr))
+  if (startaddr == 0 && !find_pc_for_line (sal.symtab, sal.line, &startaddr))
     return false;
 
   /* This whole function is based on address.  For example, if line 10 has
@@ -3435,7 +3436,7 @@ find_line_pc_range (struct symtab_and_line sal, CORE_ADDR *startptr,
      This also insures that we never give a range like "starts at 0x134
      and ends at 0x12c".  */
 
-  found_sal = find_pc_sect_line (startaddr, sal.section, 0);
+  found_sal = find_sal_for_pc_sect (startaddr, sal.section, 0);
   if (found_sal.line != sal.line)
     {
       /* The specified line (sal) has zero bytes.  */
@@ -3506,11 +3507,11 @@ find_line_common (const linetable *l, int lineno,
 }
 
 bool
-find_pc_line_pc_range (CORE_ADDR pc, CORE_ADDR *startptr, CORE_ADDR *endptr)
+find_line_pc_range_for_pc (CORE_ADDR pc, CORE_ADDR *startptr, CORE_ADDR *endptr)
 {
   struct symtab_and_line sal;
 
-  sal = find_pc_line (pc, 0);
+  sal = find_sal_for_pc (pc, 0);
   *startptr = sal.pc;
   *endptr = sal.end;
   return sal.symtab != 0;
@@ -3523,7 +3524,7 @@ static symtab_and_line
 find_function_start_sal_1 (CORE_ADDR func_addr, obj_section *section,
 			   bool funfirstline)
 {
-  symtab_and_line sal = find_pc_sect_line (func_addr, section, 0);
+  symtab_and_line sal = find_sal_for_pc_sect (func_addr, section, 0);
 
   if (funfirstline && sal.symtab != NULL
       && (sal.symtab->compunit ()->locations_valid ()
@@ -3566,7 +3567,7 @@ find_function_start_sal (CORE_ADDR func_addr, bool funfirstline)
   /* find_function_start_sal_1 does a linetable search, so it finds
      the symtab and linenumber, but not a symbol.  Fill in the
      function symbol too.  */
-  sal.symbol = find_pc_sect_containing_function (sal.pc, sal.section);
+  sal.symbol = find_symbol_for_pc_sect_maybe_inline (sal.pc, sal.section);
 
   return sal;
 }
@@ -3643,7 +3644,7 @@ skip_prologue_using_linetable (CORE_ADDR func_addr)
   if (!find_pc_partial_function (func_addr, nullptr, &start_pc, &end_pc))
     return {};
 
-  const struct symtab_and_line prologue_sal = find_pc_line (start_pc, 0);
+  const struct symtab_and_line prologue_sal = find_sal_for_pc (start_pc, 0);
   if (prologue_sal.symtab != nullptr
       && prologue_sal.symtab->language () != language_asm)
     {
@@ -3701,7 +3702,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 
   switch_to_program_space_and_thread (sal->pspace);
 
-  symbol *sym = find_pc_sect_function (sal->pc, sal->section);
+  symbol *sym = find_symbol_for_pc_sect (sal->pc, sal->section);
   objfile *objfile;
   CORE_ADDR pc;
   obj_section *section;
@@ -3761,7 +3762,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 	  if (linetable_pc)
 	    {
 	      pc = *linetable_pc;
-	      start_sal = find_pc_sect_line (pc, section, 0);
+	      start_sal = find_sal_for_pc_sect (pc, section, 0);
 	      force_skip = 1;
 	      continue;
 	    }
@@ -3783,7 +3784,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
       pc = overlay_mapped_address (pc, section);
 
       /* Calculate line number.  */
-      start_sal = find_pc_sect_line (pc, section, 0);
+      start_sal = find_sal_for_pc_sect (pc, section, 0);
 
       /* Check if gdbarch_skip_prologue left us in mid-line, and the next
 	 line is still part of the same function.  */
@@ -3796,7 +3797,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 	  /* First pc of next line */
 	  pc = start_sal.end;
 	  /* Recalculate the line number (might not be N+1).  */
-	  start_sal = find_pc_sect_line (pc, section, 0);
+	  start_sal = find_sal_for_pc_sect (pc, section, 0);
 	}
 
       /* On targets with executable formats that don't have a concept of
@@ -3808,7 +3809,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
 	{
 	  pc = gdbarch_skip_main_prologue (gdbarch, pc);
 	  /* Recalculate the line number (might not be N+1).  */
-	  start_sal = find_pc_sect_line (pc, section, 0);
+	  start_sal = find_sal_for_pc_sect (pc, section, 0);
 	  force_skip = 1;
 	}
     }
@@ -3826,7 +3827,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
     {
       pc = skip_prologue_using_lineinfo (pc, sym->symtab ());
       /* Recalculate the line number.  */
-      start_sal = find_pc_sect_line (pc, section, 0);
+      start_sal = find_sal_for_pc_sect (pc, section, 0);
     }
 
   /* If we're already past the prologue, leave SAL unchanged.  Otherwise
@@ -3889,7 +3890,7 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
   find_pc_partial_function (func_addr, NULL, &start_pc, &end_pc);
   start_pc += gdbarch_deprecated_function_start_offset (gdbarch);
 
-  prologue_sal = find_pc_line (start_pc, 0);
+  prologue_sal = find_sal_for_pc (start_pc, 0);
   if (prologue_sal.line != 0)
     {
       /* For languages other than assembly, treat two consecutive line
@@ -3928,7 +3929,7 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
 	{
 	  struct symtab_and_line sal;
 
-	  sal = find_pc_line (prologue_sal.end, 0);
+	  sal = find_sal_for_pc (prologue_sal.end, 0);
 	  if (sal.line == 0)
 	    break;
 	  /* Assume that a consecutive SAL for the same (or larger)
@@ -3995,10 +3996,10 @@ find_epilogue_using_linetable (CORE_ADDR func_addr)
      The lines of a function can be described by several line tables in case
      there are different files involved.  There's a corner case where a
      function epilogue is in a different file than a function start, and using
-     start_pc as argument to find_pc_line will mean we won't find the
+     start_pc as argument to find_sal_for_pc will mean we won't find the
      epilogue.  Instead, use "end_pc - 1" to maximize our chances of picking
      the line table containing an epilogue.  */
-  const struct symtab_and_line sal = find_pc_line (end_pc - 1, 0);
+  const struct symtab_and_line sal = find_sal_for_pc (end_pc - 1, 0);
   if (sal.symtab != nullptr && sal.symtab->language () != language_asm)
     {
       struct objfile *objfile = sal.symtab->compunit ()->objfile ();
@@ -4033,7 +4034,7 @@ find_epilogue_using_linetable (CORE_ADDR func_addr)
 	     This can happen when the linetable doesn't describe the full
 	     extent of the function.  This can be triggered with:
 	     - compiler-generated debug info, in the cornercase that the pc
-	       with which we call find_pc_line resides in a different file
+	       with which we call find_sal_for_pc resides in a different file
 	       than unrel_end, or
 	     - invalid dwarf assembly debug info.
 	     In the former case, there's no point in iterating further, simply
@@ -4109,7 +4110,7 @@ find_function_alias_target (bound_minimal_symbol msymbol)
   if (!msymbol_is_function (msymbol.objfile, msymbol.minsym, &func_addr))
     return NULL;
 
-  symbol *sym = find_pc_function (func_addr);
+  symbol *sym = find_symbol_for_pc (func_addr);
   if (sym != NULL
       && sym->loc_class () == LOC_BLOCK
       && sym->value_block ()->entry_pc () == func_addr)
@@ -4756,7 +4757,7 @@ global_symbol_searcher::expand_symtabs
 		     msymbols to the results list, and that requires that
 		     the symbols tables are expanded.  */
 		  if ((kind & SEARCH_FUNCTION_DOMAIN) != 0
-		      ? (find_pc_compunit_symtab
+		      ? (find_compunit_symtab_for_pc
 			 (msymbol->value_address (objfile)) == NULL)
 		      : (lookup_symbol_in_objfile_from_linkage_name
 			 (objfile, msymbol->linkage_name (),
@@ -4876,7 +4877,7 @@ global_symbol_searcher::add_matching_msymbols
 	      /* For functions we can do a quick check of whether the
 		 symbol might be found via find_pc_symtab.  */
 	      if ((kind & SEARCH_FUNCTION_DOMAIN) == 0
-		  || (find_pc_compunit_symtab
+		  || (find_compunit_symtab_for_pc
 		      (msymbol->value_address (objfile)) == NULL))
 		{
 		  if (lookup_symbol_in_objfile_from_linkage_name

@@ -709,7 +709,7 @@ btrace_find_line_range (CORE_ADDR pc)
   struct symtab *symtab;
   int nlines, i;
 
-  symtab = find_pc_line_symtab (pc);
+  symtab = find_symtab_for_pc (pc);
   if (symtab == NULL)
     return btrace_mk_line_range (NULL, 0, 0);
 
@@ -1093,7 +1093,7 @@ btrace_compute_src_line_range (const struct btrace_function *bfun,
     {
       struct symtab_and_line sal;
 
-      sal = find_pc_line (insn.pc, 0);
+      sal = find_sal_for_pc (insn.pc, 0);
       if (sal.symtab != symtab || sal.line == 0)
 	continue;
 

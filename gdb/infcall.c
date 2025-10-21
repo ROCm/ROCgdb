@@ -480,7 +480,7 @@ static const char *
 get_function_name (CORE_ADDR funaddr, char *buf, int buf_size)
 {
   {
-    struct symbol *symbol = find_pc_function (funaddr);
+    struct symbol *symbol = find_symbol_for_pc (funaddr);
 
     if (symbol)
       return symbol->print_name ();
@@ -1141,7 +1141,7 @@ call_function_by_hand_dummy (struct value *function,
 	/* Still aligned?  */
 	gdb_assert (sp == gdbarch_frame_align (gdbarch, sp));
 	/* NOTE: cagney/2002-09-18:
-	   
+
 	   On a RISC architecture, a void parameterless generic dummy
 	   frame (i.e., no parameters, no result) typically does not
 	   need to push anything the stack and hence can leave SP and

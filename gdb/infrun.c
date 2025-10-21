@@ -4999,7 +4999,7 @@ adjust_pc_after_break (struct thread_info *thread,
      generates these signals at breakpoints (the code has been in GDB since at
      least 1992) so I can not guess how to handle them here.
 
-     In earlier versions of GDB, a target with 
+     In earlier versions of GDB, a target with
      gdbarch_have_nonsteppable_watchpoint would have the PC after hitting a
      watchpoint affected by gdbarch_decr_pc_after_break.  I haven't found any
      target with both of these set in GDB history, and it seems unlikely to be
@@ -5098,7 +5098,7 @@ adjust_pc_after_break (struct thread_info *thread,
 	 differentiate between the two, as the latter needs adjusting
 	 but the former does not.
 
-	 The SIGTRAP can be due to a completed hardware single-step only if 
+	 The SIGTRAP can be due to a completed hardware single-step only if
 	  - we didn't insert software single-step breakpoints
 	  - this thread is currently being stepped
 
@@ -7186,8 +7186,8 @@ handle_signal_stop (struct execution_control_state *ecs)
 	  /* The user issued a step when stopped at a breakpoint.
 	     Maybe we should stop, maybe we should not - the delay
 	     slot *might* correspond to a line of source.  In any
-	     case, don't decide that here, just set 
-	     ecs->stepping_over_breakpoint, making sure we 
+	     case, don't decide that here, just set
+	     ecs->stepping_over_breakpoint, making sure we
 	     single-step again before breakpoints are re-inserted.  */
 	  ecs->event_thread->stepping_over_breakpoint = 1;
 	}
@@ -7988,7 +7988,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	  && ((ecs->event_thread->control.step_stack_frame_id
 	       != outer_frame_id)
 	      || (ecs->event_thread->control.step_start_function
-		  != find_pc_function (ecs->event_thread->stop_pc ())))))
+		  != find_symbol_for_pc (ecs->event_thread->stop_pc ())))))
     {
       CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
       CORE_ADDR real_stop_pc;
@@ -8015,7 +8015,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	{
 	  /* Any solib trampoline code can be handled in reverse
 	     by simply continuing to single-step.  We have already
-	     executed the solib function (backwards), and a few 
+	     executed the solib function (backwards), and a few
 	     steps will take us back through the trampoline to the
 	     caller.  */
 	  keep_going (ecs);
@@ -8092,7 +8092,7 @@ process_event_stop_test (struct execution_control_state *ecs)
       {
 	struct symtab_and_line tmp_sal;
 
-	tmp_sal = find_pc_line (ecs->stop_func_start, 0);
+	tmp_sal = find_sal_for_pc (ecs->stop_func_start, 0);
 	if (tmp_sal.line != 0
 	    && !function_name_is_marked_for_skip (ecs->stop_func_name,
 						  tmp_sal)
@@ -8156,7 +8156,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	{
 	  /* Any solib trampoline code can be handled in reverse
 	     by simply continuing to single-step.  We have already
-	     executed the solib function (backwards), and a few 
+	     executed the solib function (backwards), and a few
 	     steps will take us back through the trampoline to the
 	     caller.  */
 	  keep_going (ecs);
@@ -8170,7 +8170,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	  symtab_and_line sr_sal;
 	  sr_sal.pc = ecs->stop_func_start;
 	  sr_sal.pspace = get_frame_program_space (frame);
-	  insert_step_resume_breakpoint_at_sal (gdbarch, 
+	  insert_step_resume_breakpoint_at_sal (gdbarch,
 						sr_sal, null_frame_id);
 	  keep_going (ecs);
 	  return;
@@ -8181,10 +8181,10 @@ process_event_stop_test (struct execution_control_state *ecs)
      stack of inlined frames, even if GDB actually believes that it is in a
      more outer frame.  This is checked for below by calls to
      inline_skipped_frames.  */
-  stop_pc_sal = find_pc_line (ecs->event_thread->stop_pc (), 0);
+  stop_pc_sal = find_sal_for_pc (ecs->event_thread->stop_pc (), 0);
 
   /* NOTE: tausq/2004-05-24: This if block used to be done before all
-     the trampoline processing logic, however, there are some trampolines 
+     the trampoline processing logic, however, there are some trampolines
      that have no names, so we should do trampoline handling first.  */
   if (ecs->event_thread->control.step_over_calls == STEP_OVER_UNDEBUGGABLE
       && ecs->stop_func_name == nullptr
@@ -8794,12 +8794,12 @@ handle_step_into_function (struct gdbarch *gdbarch,
   fill_in_stop_func (gdbarch, ecs);
 
   compunit_symtab *cust
-    = find_pc_compunit_symtab (ecs->event_thread->stop_pc ());
+    = find_compunit_symtab_for_pc (ecs->event_thread->stop_pc ());
   if (cust != nullptr && cust->language () != language_asm)
     ecs->stop_func_start
       = gdbarch_skip_prologue_noexcept (gdbarch, ecs->stop_func_start);
 
-  symtab_and_line stop_func_sal = find_pc_line (ecs->stop_func_start, 0);
+  symtab_and_line stop_func_sal = find_sal_for_pc (ecs->stop_func_start, 0);
   /* Use the step_resume_break to step until the end of the prologue,
      even if that involves jumps (as it seems to on the vax under
      4.2).  */
@@ -8873,12 +8873,12 @@ handle_step_into_function_backward (struct gdbarch *gdbarch,
 
   fill_in_stop_func (gdbarch, ecs);
 
-  cust = find_pc_compunit_symtab (ecs->event_thread->stop_pc ());
+  cust = find_compunit_symtab_for_pc (ecs->event_thread->stop_pc ());
   if (cust != nullptr && cust->language () != language_asm)
     ecs->stop_func_start
       = gdbarch_skip_prologue_noexcept (gdbarch, ecs->stop_func_start);
 
-  stop_func_sal = find_pc_line (ecs->event_thread->stop_pc (), 0);
+  stop_func_sal = find_sal_for_pc (ecs->event_thread->stop_pc (), 0);
 
   /* OK, we're just going to keep stepping here.  */
   if (stop_func_sal.pc == ecs->event_thread->stop_pc ())
@@ -9115,12 +9115,12 @@ check_exception_resume (struct execution_control_state *ecs,
 
       /* The exception breakpoint is a thread-specific breakpoint on
 	 the unwinder's debug hook, declared as:
-	 
+
 	 void _Unwind_DebugHook (void *cfa, void *handler);
-	 
+
 	 The CFA argument indicates the frame to which control is
 	 about to be transferred.  HANDLER is the destination PC.
-	 
+
 	 We ignore the CFA and set a temporary breakpoint at HANDLER.
 	 This is not extremely efficient but it avoids issues in gdb
 	 with computing the DWARF CFA, and it also works even in weird
@@ -9473,7 +9473,7 @@ print_stop_location (const target_waitstatus &ws)
 	  && (tp->control.step_frame_id
 	      == get_frame_id (get_current_frame ()))
 	  && (tp->control.step_start_function
-	      == find_pc_function (tp->stop_pc ())))
+	      == find_symbol_for_pc (tp->stop_pc ())))
 	{
 	  symtab_and_line sal = find_frame_sal (get_selected_frame (nullptr));
 	  if (sal.symtab != tp->current_symtab)
@@ -10923,7 +10923,7 @@ By default, the debugger will use the same inferior."),
 			show_follow_exec_mode_string,
 			&setlist, &showlist);
 
-  add_setshow_enum_cmd ("scheduler-locking", class_run, 
+  add_setshow_enum_cmd ("scheduler-locking", class_run,
 			scheduler_enums, &scheduler_mode, _("\
 Set mode for locking scheduler during execution."), _("\
 Show mode for locking scheduler during execution."), _("\

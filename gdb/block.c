@@ -183,7 +183,7 @@ blockvector_for_pc_sect (CORE_ADDR pc, struct obj_section *section,
   if (cust == NULL)
     {
       /* First search all symtabs for one whose file contains our pc */
-      cust = find_pc_sect_compunit_symtab (pc, section);
+      cust = find_compunit_symtab_for_pc_sect (pc, section);
       if (cust == NULL)
 	return 0;
     }
@@ -219,7 +219,7 @@ call_site_for_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
   call_site *cs = nullptr;
 
   /* -1 as tail call PC can be already after the compilation unit range.  */
-  cust = find_pc_compunit_symtab (pc - 1);
+  cust = find_compunit_symtab_for_pc (pc - 1);
 
   if (cust != nullptr)
     cs = cust->find_call_site (pc);

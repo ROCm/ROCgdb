@@ -4140,7 +4140,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  offset = *op_ptr++;
 	  result_entry = fetch (offset);
 	  break;
-	  
+
 	case DW_OP_swap:
 	  {
 	    if (this->m_stack.size () < 2)
@@ -4535,7 +4535,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 					    address_type);
 	  }
 	  break;
-	
+
 	case DW_OP_entry_value:
 	case DW_OP_GNU_entry_value:
 	  {

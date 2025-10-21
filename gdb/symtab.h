@@ -286,7 +286,7 @@ class lookup_name_info final
   }
 
   /* A wrapper for ::split_name (see split-name.h) that splits this
-     name, and that handles any language-specific peculiarities.  */  
+     name, and that handles any language-specific peculiarities.  */
   std::vector<std::string_view> split_name (language lang) const
   {
     if (lang == language_ada)
@@ -922,7 +922,7 @@ constexpr domain_search_flags SEARCH_ALL_DOMAINS
 extern std::string domain_name (domain_search_flags);
 
 /* Convert a symbol domain to search flags.  */
-static inline domain_search_flags 
+static inline domain_search_flags
 to_search_flags (domain_enum domain)
 {
   return domain_search_flags (domain_search_flag (1 << domain));
@@ -1046,7 +1046,7 @@ enum location_class
      The linker might even remove the minimal symbol if the global
      symbol is never referenced, in which case the symbol remains
      unresolved.
-     
+
      GDB would normally find the symbol in the minimal symbol table if it will
      not find it in the full symbol table.  But a reference to an external
      symbol in a local block shadowing other definition requires full symbol
@@ -2047,7 +2047,7 @@ compunit_epilogue_unwind_valid (struct compunit_symtab *cust)
 
 
 /* The virtual function table is now an array of structures which have the
-   form { int16 offset, delta; void *pfn; }. 
+   form { int16 offset, delta; void *pfn; }.
 
    In normal virtual function tables, OFFSET is unused.
    DELTA is the amount which is added to the apparent object's base
@@ -2200,19 +2200,19 @@ extern struct type *lookup_enum (const char *, const struct block *);
    return value will not be an inlined function; the containing
    function will be returned instead.  */
 
-extern struct symbol *find_pc_function (CORE_ADDR);
+extern struct symbol *find_symbol_for_pc (CORE_ADDR);
 
 /* lookup the function corresponding to the address and section.  The
    return value will not be an inlined function; the containing
    function will be returned instead.  */
 
-extern struct symbol *find_pc_sect_function (CORE_ADDR, struct obj_section *);
+extern struct symbol *find_symbol_for_pc_sect (CORE_ADDR, struct obj_section *);
 
 /* lookup the function symbol corresponding to the address and
    section.  The return value will be the closest enclosing function,
    which might be an inline function.  */
 
-extern struct symbol *find_pc_sect_containing_function
+extern struct symbol *find_symbol_for_pc_sect_maybe_inline
   (CORE_ADDR pc, struct obj_section *section);
 
 /* Find the symbol at the given address.  Returns NULL if no symbol
@@ -2227,18 +2227,18 @@ extern struct symbol *find_symbol_at_address (CORE_ADDR);
    function (exclusive).  If the optional parameter BLOCK is non-null,
    then set *BLOCK to the address of the block corresponding to the
    function symbol, if such a symbol could be found during the lookup;
-   nullptr is used as a return value for *BLOCK if no block is found. 
+   nullptr is used as a return value for *BLOCK if no block is found.
    This function either succeeds or fails (not halfway succeeds).  If
    it succeeds, it sets *NAME, *ADDRESS, and *ENDADDR to real
    information and returns true.  If it fails, it sets *NAME, *ADDRESS
    and *ENDADDR to zero and returns false.
-   
+
    If the function in question occupies non-contiguous ranges,
    *ADDRESS and *ENDADDR are (subject to the conditions noted above) set
    to the start and end of the range in which PC is found.  Thus
    *ADDRESS <= PC < *ENDADDR with no intervening gaps (in which ranges
    from other functions might be found).
-   
+
    This property allows find_pc_partial_function to be used (as it had
    been prior to the introduction of non-contiguous range support) by
    various tdep files for finding a start address and limit address
@@ -2249,9 +2249,9 @@ extern struct symbol *find_symbol_at_address (CORE_ADDR);
    argument can be made that prologue analysis ought to be performed
    starting from the entry pc even when PC is within some other range.
    This might suggest that *ADDRESS and *ENDADDR ought to be set to the
-   limits of the entry pc range, but that will cause the 
+   limits of the entry pc range, but that will cause the
    *ADDRESS <= PC < *ENDADDR condition to be violated; many of the
-   callers of find_pc_partial_function expect this condition to hold. 
+   callers of find_pc_partial_function expect this condition to hold.
 
    Callers which require the start and/or end addresses for the range
    containing the entry pc should instead call
@@ -2302,14 +2302,14 @@ extern void clear_pc_function_cache (void);
 
 /* lookup full symbol table by address.  */
 
-extern struct compunit_symtab *find_pc_compunit_symtab (CORE_ADDR);
+extern struct compunit_symtab *find_compunit_symtab_for_pc (CORE_ADDR);
 
 /* lookup full symbol table by address and section.  */
 
 extern struct compunit_symtab *
-  find_pc_sect_compunit_symtab (CORE_ADDR, struct obj_section *);
+  find_compunit_symtab_for_pc_sect (CORE_ADDR, struct obj_section *);
 
-extern bool find_pc_line_pc_range (CORE_ADDR, CORE_ADDR *, CORE_ADDR *);
+extern bool find_line_pc_range_for_pc (CORE_ADDR, CORE_ADDR *, CORE_ADDR *);
 
 extern void reread_symbols (int from_tty);
 
@@ -2399,12 +2399,12 @@ struct symtab_and_line
 /* Given a pc value, return line number it is in.  Second arg nonzero means
    if pc is on the boundary use the previous statement's line number.  */
 
-extern struct symtab_and_line find_pc_line (CORE_ADDR, int);
+extern struct symtab_and_line find_sal_for_pc (CORE_ADDR, int);
 
 /* Same function, but specify a section as well as an address.  */
 
-extern struct symtab_and_line find_pc_sect_line (CORE_ADDR,
-						 struct obj_section *, int);
+extern struct symtab_and_line find_sal_for_pc_sect (CORE_ADDR,
+						    obj_section *, int);
 
 /* Given PC, and assuming it is part of a range of addresses that is part of
    a line, go back through the linetable and find the starting PC of that
@@ -2422,16 +2422,16 @@ extern struct symtab_and_line find_pc_sect_line (CORE_ADDR,
 
 extern std::optional<CORE_ADDR> find_line_range_start (CORE_ADDR pc);
 
-/* Wrapper around find_pc_line to just return the symtab.  */
+/* Wrapper around find_sal_for_pc to just return the symtab.  */
 
-extern struct symtab *find_pc_line_symtab (CORE_ADDR);
+extern struct symtab *find_symtab_for_pc (CORE_ADDR);
 
 /* Given a symtab and line number, return the pc there.  */
 
-extern bool find_line_pc (struct symtab *, int, CORE_ADDR *);
+extern bool find_pc_for_line (struct symtab *, int, CORE_ADDR *);
 
-extern bool find_line_pc_range (struct symtab_and_line, CORE_ADDR *,
-				CORE_ADDR *);
+extern bool find_pc_range_for_sal (struct symtab_and_line, CORE_ADDR *,
+				   CORE_ADDR *);
 
 extern void resolve_sal_pc (struct symtab_and_line *);
 

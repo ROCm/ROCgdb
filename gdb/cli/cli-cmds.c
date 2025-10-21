@@ -1040,7 +1040,7 @@ edit_command (const char *arg, int from_tty)
 		   paddress (get_current_arch (), sal.pc));
 
 	  gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-	  sym = find_pc_function (sal.pc);
+	  sym = find_symbol_for_pc (sal.pc);
 	  if (sym)
 	    gdb_printf ("%ps is in %ps (%ps:%ps).\n",
 			styled_string (address_style.style (),
@@ -1313,7 +1313,7 @@ list_command (const char *arg, int from_tty)
 		 selected frame, and finding the line associated to it.  */
 	      frame_info_ptr frame = get_selected_frame (nullptr);
 	      CORE_ADDR curr_pc = get_frame_pc (frame);
-	      cursal = find_pc_line (curr_pc, 0);
+	      cursal = find_sal_for_pc (curr_pc, 0);
 
 	      if (cursal.symtab == nullptr)
 		error
@@ -1476,7 +1476,7 @@ list_command (const char *arg, int from_tty)
 	       paddress (get_current_arch (), sal.pc));
 
       gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-      sym = find_pc_function (sal.pc);
+      sym = find_symbol_for_pc (sal.pc);
       if (sym)
 	gdb_printf ("%s is in %s (%s:%d).\n",
 		    paddress (gdbarch, sal.pc),

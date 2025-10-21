@@ -224,7 +224,7 @@ strip_bg_char (const char *args, int *bg_char_p)
 void
 post_create_inferior (int from_tty, bool set_pspace_solib_ops)
 {
-  /* Be sure we own the terminal in case write operations are performed.  */ 
+  /* Be sure we own the terminal in case write operations are performed.  */
   target_terminal::ours_for_output ();
 
   infrun_debug_show_threads ("threads in the newly created inferior",
@@ -530,7 +530,7 @@ static void
 starti_command (const char *args, int from_tty)
 {
   run_command_1 (args, from_tty, RUN_STOP_AT_FIRST_INSN);
-} 
+}
 
 static bool
 proceed_thread_callback (struct thread_info *thread)
@@ -746,7 +746,7 @@ set_step_frame (thread_info *tp)
   set_step_info (tp, frame, sal);
 
   CORE_ADDR pc = get_frame_pc (frame);
-  tp->control.step_start_function = find_pc_function (pc);
+  tp->control.step_start_function = find_symbol_for_pc (pc);
 }
 
 /* Step until outside of current statement.  */
@@ -967,15 +967,15 @@ prepare_one_step (thread_info *tp, struct step_command_fsm *sm)
 	    }
 
 	  pc = get_frame_pc (frame);
-	  find_pc_line_pc_range (pc,
-				 &tp->control.step_range_start,
-				 &tp->control.step_range_end);
+	  find_line_pc_range_for_pc (pc,
+				     &tp->control.step_range_start,
+				     &tp->control.step_range_end);
 
 	  if (execution_direction == EXEC_REVERSE)
 	    {
-	      symtab_and_line sal = find_pc_line (pc, 0);
+	      symtab_and_line sal = find_sal_for_pc (pc, 0);
 	      symtab_and_line sal_start
-		= find_pc_line (tp->control.step_range_start, 0);
+		= find_sal_for_pc (tp->control.step_range_start, 0);
 
 	      if (sal.line == sal_start.line)
 		/* Executing in reverse, the step_range_start address is in
@@ -1096,7 +1096,7 @@ jump_command (const char *arg, int from_tty)
 
   /* See if we are trying to jump to another function.  */
   fn = get_frame_function (get_current_frame ());
-  sfn = find_pc_sect_containing_function (sal.pc,
+  sfn = find_symbol_for_pc_sect_maybe_inline (sal.pc,
 					  find_pc_mapped_section (sal.pc));
   if (fn != nullptr && sfn != fn)
     {
@@ -1355,7 +1355,7 @@ until_next_command (int from_tty)
      not).  */
 
   pc = get_frame_pc (frame);
-  func = find_pc_function (pc);
+  func = find_symbol_for_pc (pc);
 
   if (!func)
     {
@@ -1371,7 +1371,7 @@ until_next_command (int from_tty)
     }
   else
     {
-      sal = find_pc_line (pc, 0);
+      sal = find_sal_for_pc (pc, 0);
 
       tp->control.step_range_start = func->value_block ()->entry_pc ();
       tp->control.step_range_end = sal.end;
@@ -1672,7 +1672,7 @@ finish_backward (struct finish_command_fsm *sm)
   if (find_pc_partial_function (pc, nullptr, &func_addr, nullptr) == 0)
     error (_("Cannot find bounds of current function"));
 
-  sal = find_pc_line (func_addr, 0);
+  sal = find_sal_for_pc (func_addr, 0);
   alt_entry_point = sal.pc;
   entry_point = alt_entry_point;
 
@@ -1731,7 +1731,7 @@ finish_forward (struct finish_command_fsm *sm, const frame_info_ptr &frame)
   struct symtab_and_line sal;
   struct thread_info *tp = inferior_thread ();
 
-  sal = find_pc_line (get_frame_pc (frame), 0);
+  sal = find_sal_for_pc (get_frame_pc (frame), 0);
   sal.pc = get_frame_pc (frame);
 
   sm->breakpoint = set_momentary_breakpoint (gdbarch, sal,
@@ -1837,7 +1837,7 @@ finish_command (const char *arg, int from_tty)
 
   /* Find the function we will return from.  */
   frame_info_ptr callee_frame = get_selected_frame (nullptr);
-  sm->function = find_pc_function (get_frame_pc (callee_frame));
+  sm->function = find_symbol_for_pc (get_frame_pc (callee_frame));
   sm->return_buf = 0;    /* Initialize buffer address is not available.  */
 
   /* Determine the return convention.  If it is RETURN_VALUE_STRUCT_CONVENTION,
@@ -2050,7 +2050,7 @@ set_environment_command (const char *arg, int from_tty)
   if (p != 0 && val != 0)
     {
       /* We have both a space and an equals.  If the space is before the
-	 equals, walk forward over the spaces til we see a nonspace 
+	 equals, walk forward over the spaces til we see a nonspace
 	 (possibly the equals).  */
       if (p > val)
 	while (*val == ' ')

@@ -625,7 +625,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   CORE_ADDR name_location = 0;
   struct obj_section *section = NULL;
   const char *name_temp = "";
-  
+
   /* Let's say it is mapped (not unmapped).  */
   *unmapped = 0;
 
@@ -641,7 +641,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
 	}
     }
 
-  /* Try to find the address in both the symbol table and the minsyms. 
+  /* Try to find the address in both the symbol table and the minsyms.
      In most cases, we'll prefer to use the symbol instead of the
      minsym.  However, there are cases (see below) where we'll choose
      to use the minsym instead.  */
@@ -654,7 +654,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
      symbols anyway).  */
   bound_minimal_symbol msymbol
     = lookup_minimal_symbol_by_pc_section (addr, section);
-  symbol = find_pc_sect_function (addr, section);
+  symbol = find_symbol_for_pc_sect (addr, section);
 
   if (symbol)
     {
@@ -683,7 +683,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   if (msymbol.minsym != NULL)
     {
       /* Use the minsym if no symbol is found.
-      
+
 	 Additionally, use the minsym instead of a (found) symbol if
 	 the following conditions all hold:
 	   1) The prefer_sym_over_minsym flag is false.
@@ -737,7 +737,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
     {
       struct symtab_and_line sal;
 
-      sal = find_pc_sect_line (addr, section, 0);
+      sal = find_sal_for_pc_sect (addr, section, 0);
 
       if (sal.symtab)
 	{
@@ -835,7 +835,7 @@ find_instruction_backward (struct gdbarch *gdbarch, CORE_ADDR addr,
   do
     {
       pcs.clear ();
-      sal = find_pc_sect_line (loop_start, NULL, 1);
+      sal = find_sal_for_pc_sect (loop_start, NULL, 1);
       if (sal.line <= 0)
 	{
 	  /* We reach here when line info is not available.  In this case,
@@ -2060,7 +2060,7 @@ undisplay_command (const char *args, int from_tty)
   dont_repeat ();
 }
 
-/* Display a single auto-display.  
+/* Display a single auto-display.
    Do nothing if the display cannot be printed in the current context,
    or if the display is disabled.  */
 
@@ -2718,7 +2718,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 
   if (*s++ != '"')
     error (_("Bad format string, non-terminated '\"'."));
-  
+
   s = skip_spaces (s);
 
   if (*s != ',' && *s != 0)

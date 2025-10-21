@@ -2025,7 +2025,7 @@ select_frame (const frame_info_ptr &fi)
 	 block.  */
       if (get_frame_address_in_block_if_available (fi, &pc))
 	{
-	  struct compunit_symtab *cust = find_pc_compunit_symtab (pc);
+	  struct compunit_symtab *cust = find_compunit_symtab_for_pc (pc);
 
 	  if (cust != NULL
 	      && cust->language () != current_language->la_language
@@ -2959,7 +2959,7 @@ find_frame_sal (const frame_info_ptr &frame)
     return {};
 
   notcurrent = (*pc != get_frame_address_in_block (frame));
-  return find_pc_line (*pc, notcurrent);
+  return find_sal_for_pc (*pc, notcurrent);
 }
 
 /* Per "frame.h", return the ``address'' of the frame.  Code should
@@ -3186,7 +3186,7 @@ get_frame_language (const frame_info_ptr &frame)
 
   if (pc_p)
     {
-      struct compunit_symtab *cust = find_pc_compunit_symtab (pc);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (pc);
 
       if (cust != NULL)
 	return cust->language ();

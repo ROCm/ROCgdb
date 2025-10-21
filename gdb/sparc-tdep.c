@@ -115,7 +115,7 @@ static int
 sparc_is_unimp_insn (CORE_ADDR pc)
 {
   const unsigned long insn = sparc_fetch_instruction (pc);
-  
+
   return ((insn & 0xc1c00000) == 0);
 }
 
@@ -773,7 +773,7 @@ sparc_alloc_frame_cache (void)
    of each function prologue when compiling with -fstack-check.  If one of
    such sequences starts at START_PC, then return the address of the
    instruction immediately past this sequence.  Otherwise, return START_PC.  */
-   
+
 static CORE_ADDR
 sparc_skip_stack_check (const CORE_ADDR start_pc)
 {
@@ -883,7 +883,7 @@ sparc_skip_stack_check (const CORE_ADDR start_pc)
       /* We found a valid stack-check sequence, return the new PC.  */
       return pc;
     }
-  
+
   /* Third sequence: A probing loop.
 	 [first three instructions above]
 	 sub  %g1, %g4, %g4
@@ -1249,7 +1249,7 @@ sparc32_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 
   cache = sparc_frame_cache (this_frame, this_cache);
 
-  sym = find_pc_function (cache->pc);
+  sym = find_symbol_for_pc (cache->pc);
   if (sym)
     {
       cache->struct_return_p = sparc32_struct_return_from_sym (sym);
@@ -1552,7 +1552,7 @@ static int
 sparc32_dwarf2_struct_return_p (const frame_info_ptr &this_frame)
 {
   CORE_ADDR pc = get_frame_address_in_block (this_frame);
-  struct symbol *sym = find_pc_function (pc);
+  struct symbol *sym = find_symbol_for_pc (pc);
 
   if (sym)
     return sparc32_struct_return_from_sym (sym);

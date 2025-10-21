@@ -515,7 +515,7 @@ pspy_block_for_pc (PyObject *o, PyObject *args)
       scoped_restore_current_program_space saver;
 
       set_current_program_space (self->pspace);
-      cust = find_pc_compunit_symtab (pc);
+      cust = find_compunit_symtab_for_pc (pc);
 
       if (cust != NULL && cust->objfile () != NULL)
 	block = block_for_pc (pc);
@@ -559,7 +559,7 @@ pspy_find_pc_line (PyObject *o, PyObject *args)
 
       set_current_program_space (self->pspace);
 
-      sal = find_pc_line (pc, 0);
+      sal = find_sal_for_pc (pc, 0);
       result = symtab_and_line_to_sal_object (sal);
     }
   catch (const gdb_exception &except)

@@ -55,7 +55,7 @@ tui_display_main ()
 	  tui_batch_rendering defer;
 
 	  tui_update_source_windows_with_addr (gdbarch, addr);
-	  struct symtab *s = find_pc_line_symtab (addr);
+	  struct symtab *s = find_symtab_for_pc (addr);
 	  tui_location.set_location (s);
 	}
     }
@@ -182,7 +182,7 @@ tui_source_window_base::update_source_window_with_addr (struct gdbarch *gdbarch,
 {
   struct symtab_and_line sal {};
   if (addr != 0)
-    sal = find_pc_line (addr, 0);
+    sal = find_sal_for_pc (addr, 0);
 
   maybe_update (gdbarch, sal);
 }
@@ -194,7 +194,7 @@ tui_update_source_windows_with_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   struct symtab_and_line sal {};
   if (addr != 0)
-    sal = find_pc_line (addr, 0);
+    sal = find_sal_for_pc (addr, 0);
 
   for (struct tui_source_window_base *win_info : tui_source_windows ())
     win_info->update_source_window (gdbarch, sal);
@@ -208,7 +208,7 @@ tui_update_source_windows_with_line (struct symtab_and_line sal)
   struct gdbarch *gdbarch = nullptr;
   if (sal.symtab != nullptr)
     {
-      find_line_pc (sal.symtab, sal.line, &sal.pc);
+      find_pc_for_line (sal.symtab, sal.line, &sal.pc);
       gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
     }
 
@@ -493,7 +493,7 @@ tui_source_window_base::refill ()
 	{
 	  frame_info_ptr fi = deprecated_safe_get_selected_frame ();
 	  if (fi != nullptr)
-	    sal = find_pc_line (get_frame_pc (fi), 0);
+	    sal = find_sal_for_pc (get_frame_pc (fi), 0);
 	}
     }
 

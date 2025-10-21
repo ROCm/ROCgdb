@@ -31,8 +31,6 @@
 #include <list>
 #include <sys/types.h>
 #include <fcntl.h>
-#include "gdbcore.h"
-#include "gdbsupport/gdb_regex.h"
 #include "symfile.h"
 #include "objfiles.h"
 #include "annotate.h"
@@ -234,7 +232,7 @@ get_source_location (program_space *pspace)
 }
 
 /* See source.h.  */
-   
+
 symtab_and_line
 get_current_source_symtab_and_line (program_space *pspace)
 {
@@ -246,7 +244,7 @@ get_current_source_symtab_and_line (program_space *pspace)
   cursal.line = loc->line ();
   cursal.pc = 0;
   cursal.end = 0;
-  
+
   return cursal;
 }
 
@@ -257,7 +255,7 @@ get_current_source_symtab_and_line (program_space *pspace)
    process of determining a new default may call the caller!
    Use get_current_source_symtab_and_line only to get whatever
    we have without erroring out or trying to get a default.  */
-   
+
 void
 set_default_source_symtab_and_line (void)
 {
@@ -275,7 +273,7 @@ set_default_source_symtab_and_line (void)
    (the returned sal pc and end fields are not valid.)
    and set the current default to whatever is in SAL.
    NOTE: The returned sal pc and end fields are not valid.  */
-   
+
 struct symtab_and_line
 set_current_source_symtab_and_line (const symtab_and_line &sal)
 {
@@ -1157,7 +1155,7 @@ find_and_open_source (const char *filename,
 
 /* Open a source file given a symtab S.  Returns a file descriptor or
    negative errno for error.
-   
+
    This function is a convenience function to find_and_open_source.  */
 
 scoped_fd
@@ -1278,7 +1276,7 @@ symtab_to_fullname (struct symtab *s)
 	  if (s->fullname () == nullptr)
 	    s->set_fullname (std::move (fullname));
 	}
-    } 
+    }
 
   return s->fullname ();
 }
@@ -1574,7 +1572,7 @@ info_line_command (const char *arg, int from_tty)
 	  gdb_printf ("\n");
 	}
       else if (sal.line > 0
-	       && find_line_pc_range (sal, &start_pc, &end_pc))
+	       && find_pc_range_for_sal (sal, &start_pc, &end_pc))
 	{
 	  gdbarch *gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
 
@@ -1768,7 +1766,7 @@ static void
 show_substitute_path_command (const char *args, int from_tty)
 {
   char *from = NULL;
-  
+
   gdb_argv argv (args);
 
   /* We expect zero or one argument.  */
