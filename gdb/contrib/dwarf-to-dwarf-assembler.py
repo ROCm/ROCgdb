@@ -196,7 +196,11 @@ class DWARFAttribute:
             applicable.
         """
         s = lbrace
-        s += self.name + " "
+        if isinstance(self.name, int):
+            s += "DW_AT_" + hex(self.name)
+        else:
+            s += self.name
+        s += " "
         s += self._format_value(offset_die_lookup)
 
         # Only explicitly state form if it's not a reference.
@@ -622,7 +626,7 @@ def main(argv):
     except IndexError:
         print("Usage:", file=sys.stderr)
         print("python ./asm_to_dwarf_assembler.py <path/to/elf/file>", file=sys.stderr)
-        sys.exit(errno.EOPNOTSUP)
+        sys.exit(errno.EOPNOTSUPP)
 
     try:
         with open(filename, "rb") as elf_file:
