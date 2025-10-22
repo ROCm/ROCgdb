@@ -918,7 +918,6 @@ ALL_TARGET_OBS = \
 
 # Object files for reading specific types of debug information.
 coff_SRCS = coffread.c coff-pe-read.c
-dbx_SRCS = dbxread.c
 elf_SRCS = elfread.c stap-probe.c dtrace-probe.c
 macho_SRCS = machoread.c
 mips_SRCS = mipsread.c
@@ -1202,7 +1201,6 @@ COMMON_SFILES = \
 	source.c \
 	source-cache.c \
 	split-name.c \
-	stabsread.c \
 	stack.c \
 	std-regs.c \
 	symfile.c \
@@ -1473,7 +1471,10 @@ HFILES_NO_SRCDIR = \
 	gdb-demangle.h \
 	gdb_expat.h \
 	gdb_proc_service.h \
-	gdb-stabs.h \
+	gdb_vfork.h \
+	gdb_wchar.h \
+	gdbarch.h \
+	gdbcore.h \
 	gdbthread.h \
 	gdbtypes.h \
 	gdb_vfork.h \
@@ -1678,7 +1679,6 @@ HFILES_NO_SRCDIR = \
 	sparc-ravenscar-thread.h \
 	sparc-tdep.h \
 	split-name.h \
-	stabsread.h \
 	stack.h \
 	stap-probe.h \
 	svr4-tls-tdep.h \
