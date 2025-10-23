@@ -24463,6 +24463,7 @@ heterogeneous queue IDs using the qualified
 
 @item info dispatches @r{[}-full@r{]} @r{[}@var{dispatch-id-list}@r{]}
 @kindex info dispatches
+@anchor{info dispatches}
 The @code{info dispatches} command lists the following information for each
 heterogeneous dispatch (in this order):
 
@@ -29209,6 +29210,13 @@ Indicates the memory fence is performed at the agent memory scope.
 
 An @acronym{AMD GPU} wavefront is represented in @value{GDBN} as a
 thread.
+
+@cindex AMD GPU thread names
+@cindex AMD GPU wave names
+@value{GDBN} determines the name of the wavefront based on the name of
+its kernel function.  If the name would be longer than 16 characters,
+it is truncated and a hash of the non-truncated name is appended.  See
+@ref{thread name} and @ref{info dispatches}.
 
 An @acronym{AMD GPU} wavefront can enter the halt state by:
 

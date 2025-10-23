@@ -45,6 +45,7 @@
 #include "tid-parse.h"
 #include "bfd/elf-bfd.h"
 #include "elf/amdgpu.h"
+#include "cp-support.h"
 
 #include <dlfcn.h>
 #include <map>
@@ -964,39 +965,119 @@ amd_dbgapi_target::thread_name (thread_info *tp)
   if (!ptid_is_gpu (tp->ptid))
     return beneath ()->thread_name (tp);
 
-  /* Return the process's comm value—that is, the command name associated with
-     the process.  */
+  /* The GPU runtime has no concept of wave names, but we can still
+     come up with some default helpful names.  We find the wave's
+     kernel entry address, find its symbol name, and base the wave's
+     name on that.
 
-  char comm_path[128];
-  xsnprintf (comm_path, sizeof (comm_path), "/proc/%ld/comm",
-	     (long) tp->ptid.pid ());
+     Some kernel entry point functions have very long names, so we
+     have a hardcoded length limit.  Very long names are not really
+     useful to users, and would make "info threads" output unuseable
+     otherwise.  If the function name is longer than the limit, we
+     trim it and append a 4-characters hash of the trimmed function
+     name so that two trimmed function names with the same prefix
+     (before the cutoff) have a chance of being distinguishable.
 
-  gdb_file_up comm_file = gdb_fopen_cloexec (comm_path, "r");
-  if (!comm_file)
+     We strip away all namespaces and template arguments, and only
+     look at the function name.
+
+     E.g.:
+
+       Wave name        <= Entry point symbol name
+       ================    ====================================
+       kern             <= kernel (int)
+       kern_ns          <= ABCDEFGHIJKLMNOPQRSTUVWXYZ::kern_ns ()
+       anonymous        <= (anonymous namespace)::anonymous ()
+       long_kernel-0245 <= long_kernel_name_0123456789 ()
+       long_kernel-479c <= long_kernel_name_abcdefghijklmnopqrstuvwxyz ()
+
+     Note: we use a hash instead of the entry point address so that
+     the number is stable across runs.  */
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
+
+  amd_dbgapi_dispatch_id_t dispatch_id;
+  if (amd_dbgapi_wave_get_info (wave_id,
+				AMD_DBGAPI_WAVE_INFO_DISPATCH,
+				sizeof (dispatch_id), &dispatch_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
     return nullptr;
 
-#if !defined(TASK_COMM_LEN)
-#define TASK_COMM_LEN 16 /* As defined in the kernel's sched.h.  */
-#endif
+  amd_dbgapi_global_address_t kernel_addr;
+  if (amd_dbgapi_dispatch_get_info
+      (dispatch_id,
+       AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
+       sizeof (kernel_addr), &kernel_addr)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return nullptr;
 
-  static char comm_buf[TASK_COMM_LEN];
-  const char *comm_value;
-
-  comm_value = fgets (comm_buf, sizeof (comm_buf), comm_file.get ());
-  comm_buf[sizeof (comm_buf) - 1] = '\0';
-
-  /* Make sure there is no newline at the end.  */
-  if (comm_value)
+  bound_minimal_symbol msymbol
+    = lookup_minimal_symbol_by_pc_section (kernel_addr, nullptr);
+  if (msymbol.minsym != nullptr)
     {
-      for (int i = 0; i < sizeof (comm_buf); i++)
-	if (comm_buf[i] == '\n')
-	  {
-	    comm_buf[i] = '\0';
-	    break;
-	  }
+      static std::string thread_name;
+      constexpr size_t name_max_size = 16;
+
+      const char *msym_name = msymbol.minsym->print_name ();
+
+      /* Strip the parameters from the demangled function name.  */
+      gdb::unique_xmalloc_ptr<char> no_param = cp_remove_params (msym_name);
+      if (no_param != nullptr)
+	thread_name = no_param.get ();
+      else
+	thread_name = msym_name;
+
+      const char *name = thread_name.c_str ();
+
+      /* Strip all leading namespaces.  This avoids having to decide
+	 what to do with "(anonymous namespace)::foo(), which is a
+	 long name.  */
+      const char *colon = find_toplevel_char (name, ':');
+      while (colon != nullptr && colon[1] == ':')
+	{
+	  name = colon + 2;
+	  colon = find_toplevel_char (name, ':');
+	}
+      if (name != thread_name.c_str ())
+	{
+	  thread_name.erase (0, name - thread_name.c_str ());
+	  name = thread_name.c_str ();
+	}
+
+      /* Strip template parameters, we want just the function
+	 name.  */
+      const char *templ_args = find_toplevel_char (name, '<');
+      if (templ_args != nullptr)
+	thread_name.resize (templ_args - name);
+
+      size_t len = thread_name.size ();
+
+      /* Trim and append a hash if too large.  */
+      if (len > name_max_size)
+	{
+	  /* Compute the cleaned up name hash.  We don't distinguish
+	     names of kernels in different namespaces, different
+	     arguments or different template parameters when the name
+	     fits, so don't consider those parts for hashing either.
+	     Do this before we trim the right side to make room for
+	     the hash.  */
+	  hashval_t hash = htab_hash_string (name);
+
+	  thread_name.reserve (name_max_size);
+	  /* Leave space for '-' plus 4 hex characters of hash.  */
+	  thread_name.resize (name_max_size - 1 - 4);
+
+	  /* Fold hash down to 16 bits, for 4 hex characters.  */
+	  static_assert (sizeof (hash) == 4);
+	  hash = (hash >> 16) ^ (hash & 0xffff);
+
+	  string_appendf (thread_name, "-%04x", hash);
+	}
+
+      return thread_name.c_str ();
     }
 
-  return comm_value;
+  return nullptr;
 }
 
 std::string
