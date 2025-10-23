@@ -1847,7 +1847,8 @@ amdgpu_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
   size_t work_group_item_sizes[3];
   for (int i = 0; i < 3; i++)
     {
-      size_t item_start = group_ids[i] * work_group_sizes[i];
+      size_t item_start
+	= static_cast<size_t> (group_ids[i]) * work_group_sizes[i];
       size_t item_end = item_start + work_group_sizes[i];
       if (item_end > grid_sizes[i])
 	item_end = grid_sizes[i];

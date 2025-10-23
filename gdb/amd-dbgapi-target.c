@@ -656,7 +656,8 @@ struct work_item_info
   {
     for (int i = 0; i < 3; i++)
       {
-	size_t work_item_start = work_group_ids[i] * work_group_sizes[i];
+	size_t work_item_start
+	  = static_cast<size_t> (work_group_ids[i]) * work_group_sizes[i];
 	size_t work_item_end = work_item_start + work_group_sizes[i];
 	if (work_item_end > grid_sizes[i])
 	  work_item_end = grid_sizes[i];

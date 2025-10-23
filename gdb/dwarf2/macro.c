@@ -589,7 +589,8 @@ dwarf_decode_macro_bytes (dwarf2_per_objfile *per_objfile,
 	    const char *macinfo_str = (macinfo_type == DW_MACRO_define_strx ?
 				       "DW_MACRO_define_strx" : "DW_MACRO_undef_strx");
 
-	    if (*str_offsets_base + offset_index * offset_size
+	    if (*str_offsets_base
+		  + static_cast<size_t> (offset_index) * offset_size
 		>= str_offsets_section->size)
 	      {
 		complaint (_("%s pointing outside of .debug_str_offsets section "
