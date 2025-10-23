@@ -18,6 +18,11 @@
 
 # Test the various rocgdb disassemble commands on the kernel code.
 # disassembly command shows assembly instructions.
+#
+# Optimized executables: Please note this test takes into account different
+# optimization levels for some of its patterns.  Optimized binaries may have
+# different instructions and execution flow, which makes documenting the
+# individual outputs ineffective.  See comments across the test.
 
 load_lib rocm.exp
 
@@ -57,11 +62,12 @@ gdb_continue_to_breakpoint "kernel"
 #  End of assembler dump.
 gdb_test_sequence "disassemble /r kernel" "disassemble raw" [list \
     "Dump of assembler code for function kernel\\(\\):" \
-    "\\s+$hex\\s+<\\+0>:\\s+(\[0-9a-fA-F]+\\s)+\[^\r\n\]+" \
+    "\[ \t\]+$hex <\\+0>:\[ \t\]+(\[0-9a-fA-F]+\[ \t\]+)+\[^\r\n\]+" \
     "End of assembler dump\." \
 ]
 
-# Check "disassemble /m kernel".
+# The /m and /s options are visually equivalent, so we check both using the
+# same pattern.
 #
 # Sample vega20 output:
 #
@@ -73,12 +79,17 @@ gdb_test_sequence "disassemble /r kernel" "disassemble raw" [list \
 #  .
 #  .
 #  End of assembler dump.
-gdb_test_sequence "disassemble /m kernel" "disassemble machine code" [list \
-    "Dump of assembler code for function kernel\\(\\):" \
-    "$decimal\\s+\{" \
-    "\\s+$hex\\s+<\\+0>:\\s+\[^\n\r\]+" \
-    "End of assembler dump\." \
-]
+#
+# With optimized executables gdb may show any of the source lines depending on
+# the compiler output.
+foreach_with_prefix mode {"m" "s"} {
+    gdb_test_sequence "disassemble /$mode kernel" "disassemble machine code" [list \
+	"Dump of assembler code for function kernel\\(\\):" \
+	"$decimal\[ \t\]+(\{|\}|tid \+= 1;|volatile int tid = threadIdx\.x)" \
+	"\[ \t\]+$hex <\\+0>:\[ \t\]+\[^\n\r\]+" \
+	"End of assembler dump\." \
+    ]
+}
 
 # Check "x/3i kernel".
 #
@@ -88,9 +99,9 @@ gdb_test_sequence "disassemble /m kernel" "disassemble machine code" [list \
 #  0x7efe8de01608 <kernel()+8>: s_mov_b32 s33, 0
 #  0x7efe8de0160c <kernel()+12>:        s_add_u32 flat_scratch_lo, s4, s7
 gdb_test_sequence "x/3i kernel" "disassemble 3 instructions" [list \
-    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)" \
-    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)" \
-    "\\s+$hex\\s+<kernel\\(\\)\\+?($decimal)?>:(\\s*)"
+    "\[ \t\]+$hex <kernel\\(\\)\\+?($decimal)?>:(\[ \t\]*)" \
+    "\[ \t\]+$hex <kernel\\(\\)\\+?($decimal)?>:(\[ \t\]*)" \
+    "\[ \t\]+$hex <kernel\\(\\)\\+?($decimal)?>:(\[ \t\]*)"
 ]
 
 # Check set disassemble-next-line off followed by n.

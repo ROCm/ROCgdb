@@ -35,7 +35,8 @@
 /* Kernel entry point. */
 __global__ void kernel ()
 {
-  int tid = threadIdx.x;
+  /* Make tid volatile so we can test optimized executables.  */
+  volatile int tid = threadIdx.x;
   tid += 1;
   tid += 1;
 }
