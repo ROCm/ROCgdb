@@ -1,0 +1,212 @@
+# Copyright 2025 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the GDB thread name of GPU waves.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Custom comparison procedure, for sorting kernel name/function
+# tuples.  Sorts first by name and then by function.
+proc compare_name_func_list {x y} {
+    # Compare first elements (names), if they're different.
+    set x0 [lindex $x 0]
+    set y0 [lindex $y 0]
+    if {$x0 ne $y0} {
+	return [string compare $x0 $y0]
+    }
+
+    # Otherwise, compare second elements (function).
+    set x1 [lindex $x 1]
+    set y1 [lindex $y 1]
+    return [string compare $x1 $y1]
+}
+
+# Rebuild a list of lists into canonical list representation (i.e.,
+# get rid of spaces/newlines).  LST is the outer list to normalize.
+# DEPTH is how many levels of nested lists to normalize.
+proc normalize_list {lst depth} {
+    set lst [list {*}$lst]
+
+    if {$depth > 1} {
+	for {set i 0} {$i < [llength $lst]} {incr i} {
+	    set el [lindex $lst $i]
+	    set el [normalize_list $el [expr {$depth - 1}]]
+	    lset lst $i $el
+	}
+    }
+
+    return $lst
+}
+
+# Sorted list of {'kernel name' 'wave name' 'kernel entry function'}
+# tuples.
+set all_kernels_info {
+    {anonymous                                    anonymous        {(anonymous namespace)::anonymous ()}}
+    {c_kern                                       c_kern           {c_kern ()}}
+    {kern                                         kern             {kern ()}}
+    {kern-1                                       kern             {kern ()}}
+    {kern_ns                                      kern_ns          {NS::kern_ns ()}}
+    {long_kernel_name_0123456789                  long_kernel-0245 {long_kernel_name_0123456789 ()}}
+    {long_kernel_name_abcdefghijklmnopqrstuvwxyz  long_kernel-479c {long_kernel_name_abcdefghijklmnopqrstuvwxyz ()}}
+    {templ_non_type                               templ_non_type   {templ_non_type<(E)0> ()}}
+    {templ_type                                   templ_type       {templ_type<int, long> (args=2, args=2)}}
+}
+
+# KERNEL is the kernel to launch.  It is either the name of a kernel
+# as listed in ALL_KERNELS_INFO, or "all", to launch all.
+
+proc do_test {kernel} {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart
+    }
+    gdb_load $::binfile
+
+    gdb_test "set args $kernel"
+
+    if {$kernel == "all"} {
+	# By default, the runtime allows 4 hardware queues max, which
+	# limits us to 4 concurrent streams/kernels.  Launching all
+	# kernels at the same time needs than that, so bump it up.
+	gdb_test_no_output "set environment GPU_MAX_HW_QUEUES=32"
+    }
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	# Set a breakpoint on each requested kernel, and wait until
+	# all expected threads/waves report a breakpoint hit.
+
+	set num_waves 0
+	foreach entry $::all_kernels_info {
+	    set func [lindex $entry 0]
+	    if {$kernel eq "all" || $func eq $kernel} {
+
+		# "kern-1" is really an overload of "kern" that takes
+		# one extra argument.
+		if {$func eq "kern-1"} {
+		    set bp_func "kern"
+		} else {
+		    set bp_func $func
+		}
+
+		gdb_test "with breakpoint pending on -- break $bp_func" \
+		    "Breakpoint $::decimal \\($bp_func\\) pending\\." \
+		    "break on $func"
+
+		incr num_waves
+	    }
+	}
+
+	gdb_assert {$num_waves > 0} "ok number of waves"
+
+	set hits 0
+	gdb_test_multiple "c&" "continue to all breakpoint hits" {
+	    -re "$::gdb_prompt " {
+		verbose -log "<PROMPT>"
+		gdb_test_multiple "" $gdb_test_name {
+		    -re "hit Breakpoint \[1-9\]" {
+			incr hits
+			verbose -log "<HIT-BREAKPOINT $hits>"
+			if {$hits < $num_waves} {
+			    exp_continue
+			} else {
+			    pass $gdb_test_name
+			}
+		    }
+		}
+	    }
+	}
+
+	set any "\[^\r\n\]+"
+	set ws "\[ \t]+"
+
+	# Count of waves seen in "info threads".
+	set seen_waves_count 0
+
+	# A list of wave name/function pairs, one entry per wave seen.
+	set seen_name_func_list {}
+
+	gdb_test_multiple "info threads" "" {
+	    -re "AMDGPU Wave ${any} \\(0,0,0\\)/0 \"(\[^\"\]+)\"${ws}(${any}) at " {
+		set name $expect_out(1,string)
+		set func $expect_out(2,string)
+		verbose -log ""
+		verbose -log "<NAME $name>"
+		verbose -log "<FUNC $func>"
+		lappend seen_name_func_list [list $name $func]
+		incr seen_waves_count
+		if {$seen_waves_count < $num_waves} {
+		    exp_continue
+		} else {
+		    pass $gdb_test_name
+		}
+	    }
+	}
+
+	# Sort so we can compare with EXPECTED_NAME_FUNC_LIST below.
+	set seen_name_func_list \
+	    [lsort -command compare_name_func_list $seen_name_func_list]
+
+	# Build list of expected {'kernel name' 'kernel entry
+	# function'} tuples.
+	set expected_name_func_list {}
+	foreach entry $::all_kernels_info {
+	    set func [lindex $entry 0]
+	    if {$kernel eq "all" || $func eq $kernel} {
+		set kern_name [lindex $entry 1]
+		set entry_func [lindex $entry 2]
+		lappend expected_name_func_list [list $kern_name $entry_func]
+	    }
+	}
+
+	# Rebuild outer and inner lists into canonical list
+	# representation for comparison below.
+	set expected_name_func_list [normalize_list $expected_name_func_list 2]
+
+	verbose -log "<EXPECTED $expected_name_func_list>"
+	verbose -log "<SEEN     $seen_name_func_list>"
+	gdb_assert {$expected_name_func_list eq $seen_name_func_list} \
+	    "kernel names"
+    }
+}
+
+# Wrapper around do_test that sets a prefix.
+proc do_test_prefix {kernel} {
+    with_test_prefix $kernel {
+	do_test $kernel
+    }
+}
+
+# Running all kernels at once requires bumping GPU_MAX_HW_QUEUES.  In
+# case that ever breaks, we first test running to each kernel
+# individually, one by one.
+foreach entry $all_kernels_info {
+    set func [lindex $entry 0]
+    do_test_prefix $func
+}
+
+# Test running and debugging all kernels at once.
+do_test_prefix "all"
