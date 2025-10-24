@@ -2699,21 +2699,6 @@ iterate_over_symbols (const struct block *block,
   return true;
 }
 
-/* See symtab.h.  */
-
-bool
-iterate_over_symbols_terminated
-  (const struct block *block,
-   const lookup_name_info &name,
-   const domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback)
-{
-  if (!iterate_over_symbols (block, name, domain, callback))
-    return false;
-  struct block_symbol block_sym = {nullptr, block};
-  return callback (&block_sym);
-}
-
 /* Find the compunit symtab associated with PC and SECTION.
    This will read in debug info as necessary.  */
 
@@ -3359,13 +3344,12 @@ done:
    exactly match LINE.  Returns an empty vector if there are no exact
    matches, but updates BEST_ITEM in this case.  */
 
-std::vector<CORE_ADDR>
-find_pcs_for_symtab_line (struct symtab *symtab, int line,
-			  const linetable_entry **best_item)
+std::vector<const linetable_entry *>
+find_linetable_entries_for_symtab_line (struct symtab *symtab, int line,
+					const linetable_entry **best_item)
 {
   int start = 0;
-  std::vector<CORE_ADDR> result;
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  std::vector<const linetable_entry *> result;
 
   /* First, collect all the PCs that are at this line.  */
   while (1)
@@ -3389,7 +3373,7 @@ find_pcs_for_symtab_line (struct symtab *symtab, int line,
 	  break;
 	}
 
-      result.push_back (symtab->linetable ()->item[idx].pc (objfile));
+      result.push_back (&symtab->linetable ()->item[idx]);
       start = idx + 1;
     }
 

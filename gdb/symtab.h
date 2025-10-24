@@ -2796,7 +2796,7 @@ bool compare_glob_filenames_for_search (const char *filename,
 void iterate_over_symtabs (program_space *pspace, const char *name,
 			   gdb::function_view<bool (symtab *)> callback);
 
-std::vector<CORE_ADDR> find_pcs_for_symtab_line
+std::vector<const linetable_entry *> find_linetable_entries_for_symtab_line
     (struct symtab *symtab, int line, const linetable_entry **best_entry);
 
 /* Prototype for callbacks for LA_ITERATE_OVER_SYMBOLS.  The callback
@@ -2819,16 +2819,6 @@ bool iterate_over_symbols (const struct block *block,
 			   const lookup_name_info &name,
 			   const domain_search_flags domain,
 			   gdb::function_view<symbol_found_callback_ftype> callback);
-
-/* Like iterate_over_symbols, but if all calls to CALLBACK return
-   true, then calls CALLBACK one additional time with a block_symbol
-   that has a valid block but a NULL symbol.  */
-
-bool iterate_over_symbols_terminated
-  (const struct block *block,
-   const lookup_name_info &name,
-   const domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback);
 
 /* Storage type used by demangle_for_lookup.  demangle_for_lookup
    either returns a const char * pointer that points to either of the

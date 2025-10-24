@@ -2244,8 +2244,8 @@ gdbpy_is_value_object (PyObject *obj)
   return PyObject_TypeCheck (obj, &value_object_type);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_values (void)
+static int
+gdbpy_initialize_values ()
 {
   return gdbpy_type_ready (&value_object_type);
 }
@@ -2382,8 +2382,7 @@ PyTypeObject value_object_type = {
   0,				  /*tp_getattro*/
   0,				  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
-  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES
-  | Py_TPFLAGS_BASETYPE,	  /*tp_flags*/
+  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
   "GDB value object",		  /* tp_doc */
   0,				  /* tp_traverse */
   0,				  /* tp_clear */
