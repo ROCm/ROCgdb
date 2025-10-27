@@ -377,7 +377,7 @@ proc info_thread_get_wave_list { } {
 proc get_current_gpu_arch {} {
     set arch ""
     gdb_test_multiple "info agents" "" -lbl {
-	-re "\r\n\\*\[^\r\n\]*gfx(\[a-f0-9\]+)\[^\r\n\]+" {
+	-re "\r\n\\*\[^\r\n\]*gfx(\[a-f0-9\]+) \[^\r\n\]+" {
 	    set arch $expect_out(1,string)
 	    exp_continue
 	}
