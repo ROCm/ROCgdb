@@ -20,9 +20,9 @@
    private_lane address space to test the watchpoints in different
    address spaces.
 
-   The __syncthreads intrinsic call is used to force out a watchpoint
-   hit event being reported by the target on specific synchronisation
-   points for a more controlled execution.  */
+   The WAIT_MEM macro is used to force out a watchpoint hit event being
+   reported by the target on specific synchronisation points for a more
+   controlled execution.  */
 
 #include <hip/hip_runtime.h>
 #include <stdio.h>
@@ -39,6 +39,15 @@
       }                                                                      \
   }
 
+#define WAIT_MEM						\
+  asm volatile (".if .amdgcn.gfx_generation_number < 10\n"	\
+		"  s_waitcnt 0\n"				\
+		".elseif .amdgcn.gfx_generation_number < 11\n"	\
+		"  s_waitcnt_vscnt null, 0\n"			\
+		".else\n"					\
+		"  s_wait_idle\n"				\
+		".endif")
+
 __device__ void
 change_memory (char *private_ptr, int *global_ptr)
 {
@@ -46,13 +55,13 @@ change_memory (char *private_ptr, int *global_ptr)
      correctly depending on the address space that that address
      belongs to.  */
   *(private_ptr + 3) = 'c';
-  __syncthreads ();
+  WAIT_MEM;
 
   *private_ptr = 'c';
-  __syncthreads ();
+  WAIT_MEM;
 
   *global_ptr = 2;
-  __syncthreads ();
+  WAIT_MEM;
 }
 
 /* Kernel entry point.  Initialise and change the addresses in different
@@ -66,21 +75,21 @@ kernel (int *global_ptr)
   /* Only testing watchpoints in global and private_lane address
      spaces.  */
   array[3] = 'b';
-  __syncthreads ();
+  WAIT_MEM;
 
   array[0] = 'b';
-  __syncthreads ();
+  WAIT_MEM;
 
   *global_ptr = 1;
-  __syncthreads ();
+  WAIT_MEM;
 
   change_memory (&array[0], global_ptr);
 
   array[3] = 'd';
-  __syncthreads ();
+  WAIT_MEM;
 
   *global_ptr = 3;
-  __syncthreads ();
+  WAIT_MEM;
 }
 
 int
