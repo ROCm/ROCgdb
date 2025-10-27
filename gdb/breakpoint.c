@@ -71,9 +71,6 @@
 #include "cli/cli-decode.h"
 #include "break-cond-parse.h"
 
-/* readline include files */
-#include "readline/tilde.h"
-
 /* readline defines this.  */
 #undef savestring
 
@@ -14669,7 +14666,8 @@ save_breakpoints (const char *filename, int from_tty,
       return;
     }
 
-  gdb::unique_xmalloc_ptr<char> expanded_filename (tilde_expand (filename));
+  gdb::unique_xmalloc_ptr<char> expanded_filename
+    = gdb_rl_tilde_expand (filename);
 
   stdio_file fp;
 

@@ -32,7 +32,6 @@
 #include "regcache.h"
 #include "regset.h"
 #include "gdb_bfd.h"
-#include "readline/tilde.h"
 #include "infrun.h"
 #include <algorithm>
 #include "gdbsupport/gdb_unlinker.h"
@@ -163,7 +162,7 @@ gcore_command (const char *args, int from_tty)
     }
 
   if (args && *args)
-    corefilename.reset (tilde_expand (args));
+    corefilename = gdb_rl_tilde_expand (args);
   else
     {
       /* Default corefile name is "core.PID".  */

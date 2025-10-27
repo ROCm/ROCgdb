@@ -710,9 +710,6 @@ struct elf_link_hash_table
   /* The __ehdr_start symbol.  */
   struct elf_link_hash_entry *hehdr_start;
 
-  /* A pointer to information used to merge SEC_MERGE sections.  */
-  void *merge_info;
-
   /* Used to link stabs in sections.  */
   struct stab_info stab_info;
 
@@ -1896,9 +1893,6 @@ struct bfd_elf_section_data
      FIXME: In the future it might be better to change this into a list
      of secondary reloc sections, making lookup easier and faster.  */
   bool has_secondary_relocs;
-
-  /* A pointer used for various section optimizations.  */
-  void *sec_info;
 };
 
 #define elf_section_data(sec) ((struct bfd_elf_section_data*)(sec)->used_by_bfd)
@@ -2369,8 +2363,6 @@ extern bool _bfd_elf_link_hash_table_init
    unsigned int);
 extern bool _bfd_elf_slurp_version_tables
   (bfd *, bool);
-extern bool _bfd_elf_merge_sections
-  (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_match_sections_by_type
   (bfd *, const asection *, bfd *, const asection *);
 extern bool bfd_elf_is_group_section

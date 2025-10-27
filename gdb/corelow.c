@@ -36,7 +36,6 @@
 #include "regset.h"
 #include "symfile.h"
 #include "exec.h"
-#include "readline/tilde.h"
 #include "solib.h"
 #include "filenames.h"
 #include "progspace.h"

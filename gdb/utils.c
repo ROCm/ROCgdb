@@ -82,6 +82,7 @@
 #include "arch-utils.h"
 #include "gdbsupport/gdb_tilde_expand.h"
 #include "gdbsupport/eintr.h"
+#include "readline/tilde.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -3618,6 +3619,14 @@ strip_leading_path_elements (const char *path, int n)
     }
 
   return p;
+}
+
+/* See utils.h.  */
+
+gdb::unique_xmalloc_ptr<char>
+gdb_rl_tilde_expand (const char *path)
+{
+  return gdb::unique_xmalloc_ptr<char> (tilde_expand (path));
 }
 
 /* See utils.h.  */

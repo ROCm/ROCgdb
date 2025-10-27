@@ -133,8 +133,9 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   ((t)->dyn_prop (DYN_PROP_VARIANT_PARTS) != nullptr)
 
 /* * True if this type has a dynamic length.  */
-#define TYPE_HAS_DYNAMIC_LENGTH(t) \
-  ((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)
+#define TYPE_HAS_DYNAMIC_LENGTH(t)			\
+  (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
+   || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
 /* * Instruction-space delimited type.  This is for Harvard architectures
    which have separate instruction and data address spaces (and perhaps
@@ -456,6 +457,9 @@ enum dynamic_prop_node_kind
 
   /* A property holding the size of the type.  */
   DYN_PROP_BYTE_SIZE,
+
+  /* A property holding the size of the type, in bits.  */
+  DYN_PROP_BIT_SIZE,
 };
 
 /* * List for dynamic type attributes.  */
@@ -1930,26 +1934,6 @@ extern unsigned type_align (struct type *);
    2.  Returns false if the given value does not fit in the available
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
-
-/* Property accessors for the type data location.  */
-#define TYPE_DATA_LOCATION(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_DATA_LOCATION))
-#define TYPE_DATA_LOCATION_BATON(thistype) \
-  TYPE_DATA_LOCATION (thistype)->data.baton
-#define TYPE_DATA_LOCATION_ADDR(thistype) \
-  (TYPE_DATA_LOCATION (thistype)->const_val ())
-#define TYPE_DATA_LOCATION_KIND(thistype) \
-  (TYPE_DATA_LOCATION (thistype)->kind ())
-#define TYPE_DYNAMIC_LENGTH(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_BYTE_SIZE))
-
-/* Property accessors for the type allocated/associated.  */
-#define TYPE_ALLOCATED_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_ALLOCATED))
-#define TYPE_ASSOCIATED_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_ASSOCIATED))
-#define TYPE_RANK_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_RANK))
 
 /* C++ */
 

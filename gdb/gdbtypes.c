@@ -2072,15 +2072,16 @@ is_dynamic_type_internal (struct type *type, bool top_level)
      but it makes sense in this context, because the point is to determine
      whether any part of the type needs to be resolved before it can
      be exploited.  */
-  if (TYPE_DATA_LOCATION (type) != NULL
-      && (TYPE_DATA_LOCATION_KIND (type) == PROP_LOCEXPR
-	  || TYPE_DATA_LOCATION_KIND (type) == PROP_LOCLIST))
+  if (dynamic_prop *dyn_prop = type->dyn_prop (DYN_PROP_DATA_LOCATION);
+      (dyn_prop != nullptr
+       && (dyn_prop->kind () == PROP_LOCEXPR
+	   || dyn_prop->kind () == PROP_LOCLIST)))
     return true;
 
-  if (TYPE_ASSOCIATED_PROP (type))
+  if (type->dyn_prop (DYN_PROP_ASSOCIATED))
     return true;
 
-  if (TYPE_ALLOCATED_PROP (type))
+  if (type->dyn_prop (DYN_PROP_ALLOCATED))
     return true;
 
   struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_VARIANT_PARTS);
@@ -2316,7 +2317,7 @@ resolve_dynamic_array_or_string_1 (struct type *type,
      not allocated/associated, as such we just ignore this property.  This
      is fine as GDB only checks the allocated/associated on the outer most
      dimension of the array.  */
-  prop = TYPE_ALLOCATED_PROP (type);
+  prop = type->dyn_prop (DYN_PROP_ALLOCATED);
   if (prop != NULL && resolve_p
       && dwarf2_evaluate_property (prop, frame, addr_stack, &value))
     {
@@ -2325,7 +2326,7 @@ resolve_dynamic_array_or_string_1 (struct type *type,
 	resolve_p = false;
     }
 
-  prop = TYPE_ASSOCIATED_PROP (type);
+  prop = type->dyn_prop (DYN_PROP_ASSOCIATED);
   if (prop != NULL && resolve_p
       && dwarf2_evaluate_property (prop, frame, addr_stack, &value))
     {
@@ -2429,7 +2430,7 @@ resolve_dynamic_array_or_string (struct type *type,
   type = copy_type (type);
 
   /* Resolve the rank property to get rank value.  */
-  struct dynamic_prop *prop = TYPE_RANK_PROP (type);
+  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_RANK);
   if (dwarf2_evaluate_property (prop, frame, addr_stack, &value))
     {
       prop->set_const_val (value);
@@ -2889,10 +2890,21 @@ resolve_dynamic_type_internal (struct type *type,
     return type;
 
   std::optional<CORE_ADDR> type_length;
-  prop = TYPE_DYNAMIC_LENGTH (type);
-  if (prop != NULL
+  dynamic_prop_node_kind type_kind = DYN_PROP_BYTE_SIZE;
+  prop = type->dyn_prop (DYN_PROP_BYTE_SIZE);
+  if (prop != nullptr
       && dwarf2_evaluate_property (prop, frame, addr_stack, &value))
     type_length = value;
+  else
+    {
+      prop = type->dyn_prop (DYN_PROP_BIT_SIZE);
+      if (prop != nullptr
+	  && dwarf2_evaluate_property (prop, frame, addr_stack, &value))
+	{
+	  type_kind = DYN_PROP_BIT_SIZE;
+	  type_length = align_up (value, 8) / 8;
+	}
+    }
 
   if (type->code () == TYPE_CODE_TYPEDEF)
     {
@@ -2968,11 +2980,11 @@ resolve_dynamic_type_internal (struct type *type,
   if (type_length.has_value ())
     {
       resolved_type->set_length (*type_length);
-      resolved_type->remove_dyn_prop (DYN_PROP_BYTE_SIZE);
+      resolved_type->remove_dyn_prop (type_kind);
     }
 
   /* Resolve data_location attribute.  */
-  prop = TYPE_DATA_LOCATION (resolved_type);
+  prop = resolved_type->dyn_prop (DYN_PROP_DATA_LOCATION);
   if (prop != NULL
       && dwarf2_evaluate_property (prop, frame, addr_stack, &value))
     {
@@ -4525,7 +4537,7 @@ types_deeply_equal (struct type *type1, struct type *type2)
 int
 type_not_allocated (const struct type *type)
 {
-  struct dynamic_prop *prop = TYPE_ALLOCATED_PROP (type);
+  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_ALLOCATED);
 
   return prop != nullptr && prop->is_constant () && prop->const_val () == 0;
 }
@@ -4536,7 +4548,7 @@ type_not_allocated (const struct type *type)
 int
 type_not_associated (const struct type *type)
 {
-  struct dynamic_prop *prop = TYPE_ASSOCIATED_PROP (type);
+  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_ASSOCIATED);
 
   return prop != nullptr && prop->is_constant () && prop->const_val () == 0;
 }
@@ -5367,21 +5379,21 @@ recursive_dump_type (struct type *type, int spaces)
     }
   gdb_puts ("\n");
   gdb_printf ("%*snfields %d ", spaces, "", type->num_fields ());
-  if (TYPE_ASSOCIATED_PROP (type) != nullptr
-      || TYPE_ALLOCATED_PROP (type) != nullptr)
+  if (type->dyn_prop (DYN_PROP_ASSOCIATED) != nullptr
+      || type->dyn_prop (DYN_PROP_ALLOCATED) != nullptr)
     {
       gdb_printf ("%*s", spaces, "");
-      if (TYPE_ASSOCIATED_PROP (type) != nullptr)
+      if (type->dyn_prop (DYN_PROP_ASSOCIATED) != nullptr)
 	{
 	  gdb_printf ("associated ");
-	  dump_dynamic_prop (*TYPE_ASSOCIATED_PROP (type));
+	  dump_dynamic_prop (*type->dyn_prop (DYN_PROP_ASSOCIATED));
 	}
-      if (TYPE_ALLOCATED_PROP (type) != nullptr)
+      if (type->dyn_prop (DYN_PROP_ALLOCATED) != nullptr)
 	{
-	  if (TYPE_ASSOCIATED_PROP (type) != nullptr)
+	  if (type->dyn_prop (DYN_PROP_ASSOCIATED) != nullptr)
 	    gdb_printf ("  ");
 	  gdb_printf ("allocated ");
-	  dump_dynamic_prop (*TYPE_ALLOCATED_PROP (type));
+	  dump_dynamic_prop (*type->dyn_prop (DYN_PROP_ALLOCATED));
 	}
       gdb_printf ("\n");
     }

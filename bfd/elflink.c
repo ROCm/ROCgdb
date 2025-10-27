@@ -3438,7 +3438,6 @@ _bfd_elf_link_sec_merge_syms (struct elf_link_hash_entry *h, void *data)
       h->root.u.def.value =
 	_bfd_merged_section_offset (output_bfd,
 				    &h->root.u.def.section,
-				    elf_section_data (sec)->sec_info,
 				    h->root.u.def.value);
     }
 
@@ -6114,18 +6113,10 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 		&& (!stab->name[5] ||
 		    (stab->name[5] == '.' && ISDIGIT (stab->name[6])))
 		&& (stab->flags & SEC_MERGE) == 0
-		&& !bfd_is_abs_section (stab->output_section))
-	      {
-		struct bfd_elf_section_data *secdata;
-
-		secdata = elf_section_data (stab);
-		if (! _bfd_link_section_stabs (abfd, &htab->stab_info, stab,
-					       stabstr, &secdata->sec_info,
-					       &string_offset))
-		  goto error_return;
-		if (secdata->sec_info)
-		  stab->sec_info_type = SEC_INFO_TYPE_STABS;
-	    }
+		&& !bfd_is_abs_section (stab->output_section)
+		&& !_bfd_link_section_stabs (abfd, &htab->stab_info, stab,
+					     stabstr, &string_offset))
+	      goto error_return;
 	}
     }
 
@@ -8167,53 +8158,6 @@ bfd_elf_size_dynsym_hash_dynstr (bfd *output_bfd, struct bfd_link_info *info)
   return true;
 }
 
-/* Make sure sec_info_type is cleared if sec_info is cleared too.  */
-
-static void
-merge_sections_remove_hook (bfd *abfd ATTRIBUTE_UNUSED,
-			    asection *sec)
-{
-  BFD_ASSERT (sec->sec_info_type == SEC_INFO_TYPE_MERGE);
-  sec->sec_info_type = SEC_INFO_TYPE_NONE;
-}
-
-/* Finish SHF_MERGE section merging.  */
-
-bool
-_bfd_elf_merge_sections (bfd *obfd, struct bfd_link_info *info)
-{
-  bfd *ibfd;
-  asection *sec;
-
-  if (ENABLE_CHECKING && !is_elf_hash_table (info->hash))
-    abort ();
-
-  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
-    if ((ibfd->flags & DYNAMIC) == 0
-	&& bfd_get_flavour (ibfd) == bfd_target_elf_flavour
-	&& (elf_elfheader (ibfd)->e_ident[EI_CLASS]
-	    == get_elf_backend_data (obfd)->s->elfclass))
-      for (sec = ibfd->sections; sec != NULL; sec = sec->next)
-	if ((sec->flags & SEC_MERGE) != 0
-	    && !bfd_is_abs_section (sec->output_section))
-	  {
-	    struct bfd_elf_section_data *secdata;
-
-	    secdata = elf_section_data (sec);
-	    if (! _bfd_add_merge_section (obfd,
-					  &elf_hash_table (info)->merge_info,
-					  sec, &secdata->sec_info))
-	      return false;
-	    else if (secdata->sec_info)
-	      sec->sec_info_type = SEC_INFO_TYPE_MERGE;
-	  }
-
-  if (elf_hash_table (info)->merge_info != NULL)
-    return _bfd_merge_sections (obfd, info, elf_hash_table (info)->merge_info,
-				merge_sections_remove_hook);
-  return true;
-}
-
 /* Create an entry in an ELF linker hash table.  */
 
 struct bfd_hash_entry *
@@ -8449,7 +8393,6 @@ _bfd_elf_link_hash_table_free (bfd *obfd)
   htab = (struct elf_link_hash_table *) obfd->link.hash;
   if (htab->dynstr != NULL)
     _bfd_elf_strtab_free (htab->dynstr);
-  _bfd_merge_sections_free (htab->merge_info);
   /* NB: htab->dynamic->contents is always allocated by bfd_realloc.  */
   if (htab->dynamic != NULL)
     {
@@ -9180,10 +9123,7 @@ set_symbol_value (bfd *bfd_with_globals,
      to "defined" and give it a value.  */
   h = get_link_hash_entry (elf_sym_hashes (bfd_with_globals), symidx, extsymoff);
   if (h == NULL)
-    {
-      /* FIXMEL What should we do ?  */
-      return false;
-    }
+    return false;
   h->root.type = bfd_link_hash_defined;
   h->root.u.def.value = val;
   h->root.u.def.section = bfd_abs_section_ptr;
@@ -11496,9 +11436,7 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 	  else if (isec->sec_info_type == SEC_INFO_TYPE_MERGE
 		   && ELF_ST_TYPE (isym->st_info) != STT_SECTION)
 	    isym->st_value =
-	      _bfd_merged_section_offset (output_bfd, &isec,
-					  elf_section_data (isec)->sec_info,
-					  isym->st_value);
+	      _bfd_merged_section_offset (output_bfd, &isec, isym->st_value);
 	}
 
       *ppsection = isec;
@@ -12231,13 +12169,11 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 	case SEC_INFO_TYPE_STABS:
 	  if (! (_bfd_write_section_stabs
 		 (output_bfd,
-		  &elf_hash_table (flinfo->info)->stab_info,
-		  o, &elf_section_data (o)->sec_info, contents)))
+		  &elf_hash_table (flinfo->info)->stab_info, o, contents)))
 	    return false;
 	  break;
 	case SEC_INFO_TYPE_MERGE:
-	  if (! _bfd_write_merged_section (output_bfd, o,
-					   elf_section_data (o)->sec_info))
+	  if (! _bfd_write_merged_section (output_bfd, o))
 	    return false;
 	  break;
 	case SEC_INFO_TYPE_EH_FRAME:
@@ -14707,7 +14643,7 @@ bfd_elf_gc_sections (bfd *abfd, struct bfd_link_info *info)
 						   false))
 	{
 	  _bfd_elf_parse_eh_frame (sub, info, sec, &cookie);
-	  if (elf_section_data (sec)->sec_info
+	  if (sec->sec_info
 	      && (sec->flags & SEC_LINKER_CREATED) == 0)
 	    elf_eh_frame_section (sub) = sec;
 	  fini_reloc_cookie_for_section (&cookie, sec);
@@ -15220,7 +15156,6 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 	    return -1;
 
 	  if (_bfd_discard_section_stabs (abfd, i,
-					  elf_section_data (i)->sec_info,
 					  bfd_elf_reloc_symbol_deleted_p,
 					  &cookie))
 	    changed = 1;
