@@ -32,6 +32,26 @@ gdb_test_multiple "set architecture amdgcn:gfx90a" "set arch" {
     }
 }
 
+set seen_header 0
+set seen_register 0
+
 # The actual output isn't terribly important, we want to verify that GDB doesn't
 # internal-error.
-gdb_test "maintenance print registers" ".*Name.*"
+gdb_test_multiple "maintenance print registers" "list all registers" -lbl {
+    -re "Name\[ \t\]+Nr\[ \t\]+Rel\[ \t\]+Offset\[ \t\]+Size\[ \t\]+Type" {
+	# Match the header.
+	incr seen_header
+	exp_continue
+    }
+
+    -re "$::decimal\[ \t\]+$::decimal\[ \t\]+$::decimal\[ \t\]+$::decimal" {
+	# Match the registers.
+	incr seen_register
+	exp_continue
+    }
+
+    -re "$::gdb_prompt " {
+	# We are done.  Validate that we've seen a header and registers.
+	gdb_assert { $seen_header == 1 && $seen_register > 0 } $gdb_test_name
+    }
+}
