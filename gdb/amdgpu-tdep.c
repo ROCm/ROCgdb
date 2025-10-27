@@ -41,13 +41,28 @@ constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK = 0xff00000000000000;
    that represent the address space information.  */
 constexpr unsigned int AMDGPU_ADDRESS_SPACE_BIT_OFFSET = 56;
 
+/* Return true if INFO is of an AMDGPU architecture.  */
+
+static bool
+is_amdgpu_arch (const bfd_arch_info *info)
+{
+  return info->arch == bfd_arch_amdgcn;
+}
+
 /* See amdgpu-tdep.h.  */
 
 bool
 is_amdgpu_arch (struct gdbarch *arch)
 {
-  gdb_assert (arch != nullptr);
-  return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
+  return is_amdgpu_arch (gdbarch_bfd_arch_info (arch));
+}
+
+/* See amdgpu-tdep.h.  */
+
+bool
+is_amdgpu_arch (bfd *abfd)
+{
+  return is_amdgpu_arch (abfd->arch_info);
 }
 
 /* See amdgpu-tdep.h.  */
