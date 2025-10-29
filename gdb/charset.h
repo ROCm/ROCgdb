@@ -159,10 +159,9 @@ class wchar_iterator
    character.  */
 char host_letter_to_control_character (char c);
 
-#if WORDS_BIGENDIAN
-#define HOST_UTF32 "UTF-32BE"
-#else
-#define HOST_UTF32 "UTF-32LE"
-#endif
+/* Helper function that returns the best UTF-32 compatible encoding for the
+   host among UTF-32 and UCS-4.  */
+
+const char *host_utf32 ();
 
 #endif /* GDB_CHARSET_H */

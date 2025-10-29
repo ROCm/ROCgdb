@@ -462,6 +462,37 @@ host_letter_to_control_character (char c)
   return c & 0237;
 }
 
+const char *
+host_utf32 ()
+{
+  static const char *encoding = [] ()
+    {
+      static std::array<const char *, 2> candidates =
+#if WORDS_BIGENDIAN
+	{"UTF-32BE", "UCS-4BE"}
+#else
+	{"UTF-32LE", "UCS-4LE"}
+#endif
+      ;
+
+      for (auto c : candidates)
+	{
+	  iconv_t conv_descriptor = iconv_open (c, c);
+	  if (conv_descriptor != (iconv_t) -1)
+	    {
+	      iconv_close (conv_descriptor);
+	      return c;
+	    }
+	}
+
+      /* Neither UTF-32 nor UCS-4 are really supported on this system.  Return
+	 any as a fallback.  */
+      return candidates[0];
+    } ();
+
+  return encoding;
+}
+
 
 /* Public character management functions.  */
 
