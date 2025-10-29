@@ -34,13 +34,15 @@ foreach_with_prefix pie { "nopie" "pie" } {
     set binfile [standard_output_file $testfile-$pie]
 
     set board [target_info name]
-    if [board_info $board exists mathlib] {
+    if {[board_info $board exists mathlib]} {
 	set mathlib [board_info $dest mathlib]
 	set_board_info mathlib ""
+	# tclint-disable-next-line command-args
 	set err [eval $compile]
 	set_board_info mathlib $mathlib
     } else {
 	set_board_info mathlib ""
+	# tclint-disable-next-line command-args
 	set err [eval $compile]
 	unset_board_info mathlib
     }
@@ -49,7 +51,8 @@ foreach_with_prefix pie { "nopie" "pie" } {
 	return -1
     }
 
-    clean_restart $binfile
+    clean_restart
+    gdb_load $binfile
 
     gdb_breakpoint "*marker"
 

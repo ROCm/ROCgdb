@@ -101,7 +101,8 @@ proc run_and_wait_break_hits {mode cmd bp_hit_re {test ""}} {
 proc test {mode} {
     global gdb_prompt binfile
 
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
 
     if {$mode == "non-stop"} {
 	gdb_test_no_output "set non-stop on"

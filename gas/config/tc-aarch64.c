@@ -564,6 +564,9 @@ static htab_t aarch64_barrier_opt_hsh;
 static htab_t aarch64_nzcv_hsh;
 static htab_t aarch64_pldop_hsh;
 static htab_t aarch64_hint_opt_hsh;
+static htab_t aarch64_sys_ins_gic_hsh;
+static htab_t aarch64_sys_ins_gicr_hsh;
+static htab_t aarch64_sys_ins_gsb_hsh;
 
 /* Stuff needed to resolve the label ambiguity
    As:
@@ -5029,7 +5032,7 @@ parse_sys_reg (char **str, htab_t sys_regs,
 		  "name '%s'"), buf);
       if (!pstatefield_p && sysreg_checking_p
 	  && !aarch64_sys_ins_reg_supported_p (cpu_variant, o->name,
-					       o->flags, &o->features))
+					       &o->features))
 	as_bad (_("selected processor does not support system register "
 		  "name '%s'"), buf);
       if (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags))
@@ -5073,8 +5076,7 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   if (!o || (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags)))
     return NULL;
 
-  if (!aarch64_sys_ins_reg_supported_p (cpu_variant,
-					o->name, o->flags, &o->features))
+  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o->name, &o->features))
     as_bad (_("selected processor does not support system register "
 	      "name '%s'"), buf);
   if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -6862,6 +6864,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Zt:
 	case AARCH64_OPND_SME_Zm:
 	case AARCH64_OPND_SME_Zm_17:
+	case AARCH64_OPND_SME_Zn_6_3:
+	case AARCH64_OPND_SME_Zm_17_3:
 	  reg_type = REG_TYPE_Z;
 	  goto vector_reg;
 
@@ -6935,6 +6939,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Zm4_INDEX:
 	case AARCH64_OPND_SVE_Zn_INDEX:
 	case AARCH64_OPND_SVE_Zn_5_INDEX:
+	case AARCH64_OPND_SME_Zk_INDEX:
 	case AARCH64_OPND_SME_Zm_INDEX1:
 	case AARCH64_OPND_SME_Zm_INDEX2:
 	case AARCH64_OPND_SME_Zm_INDEX2_3:
@@ -7036,6 +7041,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_ZtxN:
 	case AARCH64_OPND_SME_Zdnx2:
 	case AARCH64_OPND_SME_Zdnx4:
+	case AARCH64_OPND_SME_Znx2_6_3:
+	case AARCH64_OPND_SME_Zmx2_17_3:
 	case AARCH64_OPND_SME_Zmx2:
 	case AARCH64_OPND_SME_Zmx4:
 	case AARCH64_OPND_SME_Znx2:
@@ -8080,6 +8087,22 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  inst.base.operands[i].sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
+	  goto sys_reg_ins;
+
+	case AARCH64_OPND_GIC:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_ins_gic_hsh, false);
+	  goto sys_reg_ins;
+
+	case AARCH64_OPND_GICR:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_ins_gicr_hsh, false);
+	  goto sys_reg_ins;
+
+	case AARCH64_OPND_GSB:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_ins_gsb_hsh, false);
+
 	sys_reg_ins:
 	  if (inst.base.operands[i].sysins_op == NULL)
 	    {
@@ -10214,18 +10237,10 @@ aarch64_after_parse_args (void)
 const char *
 elf64_aarch64_target_format (void)
 {
-#ifdef TE_CLOUDABI
-  /* FIXME: What to do for ilp32_p ?  */
-  if (target_big_endian)
-    return "elf64-bigaarch64-cloudabi";
-  else
-    return "elf64-littleaarch64-cloudabi";
-#else
   if (target_big_endian)
     return ilp32_p ? "elf32-bigaarch64" : "elf64-bigaarch64";
   else
     return ilp32_p ? "elf32-littleaarch64" : "elf64-littleaarch64";
-#endif
 }
 
 void
@@ -10421,6 +10436,9 @@ md_begin (void)
   aarch64_nzcv_hsh = str_htab_create ();
   aarch64_pldop_hsh = str_htab_create ();
   aarch64_hint_opt_hsh = str_htab_create ();
+  aarch64_sys_ins_gic_hsh = str_htab_create ();
+  aarch64_sys_ins_gicr_hsh = str_htab_create ();
+  aarch64_sys_ins_gsb_hsh = str_htab_create ();
 
   fill_instruction_hash_table ();
 
@@ -10543,6 +10561,18 @@ md_begin (void)
 	checked_hash_insert (aarch64_hint_opt_hsh, upper_name,
 			     aarch64_hint_options + i);
     }
+
+  for (i = 0; aarch64_sys_ins_gic[i].name != NULL; i++)
+    sysreg_hash_insert (aarch64_sys_ins_gic_hsh, aarch64_sys_ins_gic[i].name,
+			aarch64_sys_ins_gic + i);
+
+  for (i = 0; aarch64_sys_ins_gicr[i].name != NULL; i++)
+    sysreg_hash_insert (aarch64_sys_ins_gicr_hsh, aarch64_sys_ins_gicr[i].name,
+			aarch64_sys_ins_gicr + i);
+
+  for (i = 0; aarch64_sys_ins_gsb[i].name != NULL; i++)
+    sysreg_hash_insert (aarch64_sys_ins_gsb_hsh, aarch64_sys_ins_gsb[i].name,
+			aarch64_sys_ins_gsb + i);
 
   /* Set the cpu variant based on the command-line options.  */
   if (!mcpu_cpu_opt)
@@ -10754,10 +10784,6 @@ struct aarch64_option_cpu_value_table
   const aarch64_feature_set require; /* Feature dependencies.  */
 };
 
-/* There are currently many feature bits with no corresponding flag for features implied by FEAT_D128.  We should combine or remove most of these in the future, but for now just make +d128 enable these dependencies as well.  */
-#define D128_FEATURE_DEPS AARCH64_FEATURES (8, LSE128, SCTLR2, FGT2, ATS1A, \
-					    AIE, S1PIE, S2PIE, TCR2)
-
 static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"crc",		AARCH64_FEATURE (CRC), AARCH64_NO_FEATURES},
   {"crypto",		AARCH64_FEATURES (2, AES, SHA2),
@@ -10808,7 +10834,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve2-sha3",		AARCH64_FEATURE (SVE2_SHA3),
 			AARCH64_FEATURES (2, SVE2, SHA3)},
   {"sve2-bitperm",	AARCH64_FEATURE (SVE2_BITPERM),
-			AARCH64_FEATURE (SVE2)},
+			AARCH64_FEATURES (2, SVE2, SVE_BITPERM)},
   {"sme",		AARCH64_FEATURE (SME),
 			AARCH64_FEATURES (3, BFLOAT16, F16, COMPNUM)},
   {"sme-f64",		AARCH64_FEATURE (SME_F64F64), AARCH64_FEATURE (SME)},
@@ -10834,7 +10860,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"the",		AARCH64_FEATURE (THE), AARCH64_NO_FEATURES},
   {"rasv2",		AARCH64_FEATURE (RASv2), AARCH64_FEATURE (RAS)},
   {"ite",		AARCH64_FEATURE (ITE), AARCH64_NO_FEATURES},
-  {"d128",		AARCH64_FEATURE (D128), D128_FEATURE_DEPS},
+  {"d128",		AARCH64_FEATURE (D128), AARCH64_FEATURES (2, LSE128, ATS1A)},
   {"sve-b16b16",	AARCH64_FEATURE (SVE_B16B16), AARCH64_NO_FEATURES},
   {"sve-bfscale",	AARCH64_FEATURE (SVE_BFSCALE), AARCH64_NO_FEATURES},
   {"sme2p1",		AARCH64_FEATURE (SME2p1), AARCH64_FEATURE (SME2)},
@@ -10844,7 +10870,11 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"f8f16mm",		AARCH64_FEATURE (F8F16MM), AARCH64_FEATURES (2, SIMD, FP8)},
   {"sve-aes",		AARCH64_FEATURE (SVE_AES), AARCH64_FEATURE (AES)},
   {"sve-aes2",		AARCH64_FEATURE (SVE_AES2), AARCH64_NO_FEATURES},
-  {"ssve-aes",	AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURES (2, SME2, SVE_AES)},
+  {"ssve-aes",		AARCH64_FEATURE (SSVE_AES),
+			AARCH64_FEATURES (2, SME2, SVE_AES)},
+  {"sve-bitperm",	AARCH64_FEATURE (SVE_BITPERM), AARCH64_NO_FEATURES},
+  {"ssve-bitperm",	AARCH64_FEATURE (SSVE_BITPERM),
+			AARCH64_FEATURES (2, SME2, SVE_BITPERM)},
   {"rcpc3",		AARCH64_FEATURE (RCPC3), AARCH64_FEATURE (RCPC2)},
   {"cpa",		AARCH64_FEATURE (CPA), AARCH64_NO_FEATURES},
   {"faminmax",		AARCH64_FEATURE (FAMINMAX), AARCH64_FEATURE (SIMD)},
@@ -10871,6 +10901,10 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"pops",		AARCH64_FEATURE (PoPS), AARCH64_NO_FEATURES},
   {"sve2p2",		AARCH64_FEATURE (SVE2p2), AARCH64_FEATURE (SVE2p1)},
   {"sme2p2",		AARCH64_FEATURE (SME2p2), AARCH64_FEATURE (SME2p1)},
+  {"gcie",		AARCH64_FEATURE (GCIE), AARCH64_NO_FEATURES},
+  {"ssve-fexpa",	AARCH64_FEATURE (SSVE_FEXPA), AARCH64_FEATURE (SME2)},
+  {"sme-tmop",		AARCH64_FEATURE (SME_TMOP), AARCH64_FEATURE (SME2)},
+  {"sme-mop4",		AARCH64_FEATURE (SME_MOP4), AARCH64_FEATURE (SME2)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
@@ -10885,6 +10919,8 @@ struct aarch64_virtual_dependency_table
 static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
   {AARCH64_FEATURE (SVE2), AARCH64_FEATURE (SVE2_SSVE_AES)},
   {AARCH64_FEATURE (SSVE_AES), AARCH64_FEATURE (SVE2_SSVE_AES)},
+  {AARCH64_FEATURE (SVE), AARCH64_FEATURE (SVE_SSVE_FEXPA)},
+  {AARCH64_FEATURE (SSVE_FEXPA), AARCH64_FEATURE (SVE_SSVE_FEXPA)},
   {AARCH64_FEATURES (2, FP8FMA, SVE2), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURE (SSVE_FP8FMA), AARCH64_FEATURE (FP8FMA_SVE)},
   {AARCH64_FEATURES (2, FP8DOT4, SVE2), AARCH64_FEATURE (FP8DOT4_SVE)},

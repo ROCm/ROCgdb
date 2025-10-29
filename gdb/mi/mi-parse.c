@@ -23,7 +23,6 @@
 #include "mi-cmds.h"
 #include "mi-parse.h"
 
-#include <ctype.h>
 #include "cli/cli-utils.h"
 #include "language.h"
 
@@ -62,7 +61,7 @@ mi_parse_escape (const char **string_ptr)
 	  while (++count < 3)
 	    {
 	      c = (**string_ptr);
-	      if (isdigit (c) && c != '8' && c != '9')
+	      if (c_isdigit (c) && c != '8' && c != '9')
 		{
 		  (*string_ptr)++;
 		  i *= 8;
@@ -163,7 +162,7 @@ mi_parse::parse_argv ()
 		return;
 	      }
 	    /* Insist on trailing white space.  */
-	    if (chp[1] != '\0' && !isspace (chp[1]))
+	    if (chp[1] != '\0' && !c_isspace (chp[1]))
 	      {
 		freeargv (argv);
 		return;
@@ -194,7 +193,7 @@ mi_parse::parse_argv ()
 	    int len;
 	    const char *start = chp;
 
-	    while (*chp != '\0' && !isspace (*chp))
+	    while (*chp != '\0' && !c_isspace (*chp))
 	      {
 		chp++;
 	      }
@@ -324,7 +323,7 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
   {
     const char *tmp = chp + 1;	/* discard ``-'' */
 
-    for (; *chp && !isspace (*chp); chp++)
+    for (; *chp && !c_isspace (*chp); chp++)
       ;
     this->command = make_unique_xstrndup (tmp, chp - tmp);
   }
@@ -412,7 +411,7 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
       else
 	break;
 
-      if (*chp != '\0' && !isspace (*chp))
+      if (*chp != '\0' && !c_isspace (*chp))
 	error (_("Invalid value for the '%s' option"), option);
       chp = skip_spaces (chp);
     }

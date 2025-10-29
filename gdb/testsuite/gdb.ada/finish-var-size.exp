@@ -18,18 +18,18 @@ load_lib "ada.exp"
 require allow_ada_tests
 
 # GCC 12 has the needed fix.
-require {expr [gcc_major_version] >= 12}
+require {gnat_version_compare >= 12}
 
 standard_ada_testfile p
 
 set opts {}
 lappend opts debug
-if { [have_fvar_tracking] } {
+if { [ada_fvar_tracking] } {
     lappend opts additional_flags=-fvar-tracking
 }
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable $opts] != ""} {
-  return -1
+  return
 }
 
 clean_restart ${testfile}

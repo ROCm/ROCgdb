@@ -85,7 +85,8 @@ if {$threadid == ""} {
 
 verbose -log "threadid=$threadid"
 
-clean_restart ${binfile}
+clean_restart
+gdb_load ${binfile}
 
 # Turn on non-stop mode.
 with_test_prefix "non-stop" {

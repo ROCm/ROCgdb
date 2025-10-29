@@ -816,10 +816,6 @@ static bfd *reldyn_sorting_bfd;
 #define ABI_N32_P(abfd) \
   ((elf_elfheader (abfd)->e_flags & EF_MIPS_ABI2) != 0)
 
-/* Nonzero if ABFD is using the N64 ABI.  */
-#define ABI_64_P(abfd) \
-  (get_elf_backend_data (abfd)->s->elfclass == ELFCLASS64)
-
 /* Nonzero if ABFD is using NewABI conventions.  */
 #define NEWABI_P(abfd) (ABI_N32_P (abfd) || ABI_64_P (abfd))
 
@@ -3463,8 +3459,21 @@ mips_elf_count_got_entry (struct bfd_link_info *info,
 					entry->symndx < 0
 					? &entry->d.h->root : NULL);
     }
-  else if (entry->symndx >= 0 || entry->d.h->global_got_area == GGA_NONE)
+  else if (entry->symndx >= 0)
     g->local_gotno += 1;
+  else if (entry->d.h->global_got_area == GGA_NONE)
+    {
+      /* On VxWorks, calls can refer directly to the .got.plt entry,
+	 in which case they won't have an entry in the regular GOT.
+	 This is arranged for in `mips_elf_count_got_symbols' and we
+	 need to refrain from counting these entries for the regular
+	 GOT here.  */
+      if (mips_elf_hash_table (info)->root.target_os != is_vxworks
+	  || entry->d.h->root.dynindx == -1
+	  || !entry->d.h->got_only_for_calls
+	  || entry->d.h->root.plt.plist->mips_offset == MINUS_ONE)
+	g->local_gotno += 1;
+    }
   else
     g->global_gotno += 1;
 }
@@ -4536,14 +4545,11 @@ mips_elf_resolve_got_page_ref (void **refp, void *data)
 	 specifies the offset _from_ the first byte.  */
       if (sec->flags & SEC_MERGE)
 	{
-	  void *secinfo;
-
-	  secinfo = elf_section_data (sec)->sec_info;
 	  if (ELF_ST_TYPE (isym->st_info) == STT_SECTION)
-	    addend = _bfd_merged_section_offset (ref->u.abfd, &sec, secinfo,
+	    addend = _bfd_merged_section_offset (ref->u.abfd, &sec,
 						 isym->st_value + ref->addend);
 	  else
-	    addend = _bfd_merged_section_offset (ref->u.abfd, &sec, secinfo,
+	    addend = _bfd_merged_section_offset (ref->u.abfd, &sec,
 						 isym->st_value) + ref->addend;
 	}
       else
@@ -10075,7 +10081,7 @@ _bfd_mips_elf_late_size_sections (bfd *output_bfd,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->root.interp;
 	  BFD_ASSERT (s != NULL);
 	  s->size
 	    = strlen (ELF_DYNAMIC_INTERPRETER (output_bfd)) + 1;

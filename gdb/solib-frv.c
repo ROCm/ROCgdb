@@ -26,11 +26,14 @@
 #include "gdb_bfd.h"
 #include "inferior.h"
 #include "solib-frv.h"
+#include "gdbcore.h"
 
 /* solib_ops for FR-V systems.  */
 
 struct frv_solib_ops : public solib_ops
 {
+  using solib_ops::solib_ops;
+
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_solib (program_space *pspace) const override;
   void create_inferior_hook (int from_tty) const override;
@@ -41,9 +44,9 @@ struct frv_solib_ops : public solib_ops
 /* See solib-frv.h.  */
 
 solib_ops_up
-make_frv_solib_ops ()
+make_frv_solib_ops (program_space *pspace)
 {
-  return std::make_unique<frv_solib_ops> ();
+  return std::make_unique<frv_solib_ops> (pspace);
 }
 
 /* FR-V pointers are four bytes wide.  */
@@ -216,6 +219,13 @@ struct ext_link_map
 
 struct lm_info_frv final : public lm_info
 {
+  lm_info_frv (int_elf32_fdpic_loadmap *map, CORE_ADDR got_value,
+	       CORE_ADDR lm_addr)
+    : map (map), got_value (got_value), lm_addr (lm_addr)
+  {}
+
+  DISABLE_COPY_AND_ASSIGN (lm_info_frv);
+
   ~lm_info_frv ()
   {
     xfree (this->map);
@@ -224,11 +234,11 @@ struct lm_info_frv final : public lm_info
   }
 
   /* The loadmap, digested into an easier to use form.  */
-  int_elf32_fdpic_loadmap *map = NULL;
+  int_elf32_fdpic_loadmap *map;
   /* The GOT address for this link map entry.  */
-  CORE_ADDR got_value = 0;
+  CORE_ADDR got_value;
   /* The link map address, needed for frv_fetch_objfile_link_map().  */
-  CORE_ADDR lm_addr = 0;
+  CORE_ADDR lm_addr;
 
   /* Cached dynamic symbol table and dynamic relocs initialized and
      used only by find_canonical_descriptor_in_load_object().
@@ -332,7 +342,7 @@ frv_solib_ops::current_sos () const
      solib_create_inferior_hook().   (See post_create_inferior() in
      infcmd.c.)  */
   if (main_executable_lm_info == 0
-      && current_program_space->core_bfd () != nullptr)
+      && get_inferior_core_bfd (current_inferior ()) != nullptr)
     frv_relocate_main_executable ();
 
   /* Fetch the GOT corresponding to the main executable.  */
@@ -383,13 +393,6 @@ frv_solib_ops::current_sos () const
 	      break;
 	    }
 
-	  auto &sop = sos.emplace_back (*this);
-	  auto li = std::make_unique<lm_info_frv> ();
-	  li->map = loadmap;
-	  li->got_value = got_addr;
-	  li->lm_addr = lm_addr;
-	  sop.lm_info = std::move (li);
-
 	  /* Fetch the name.  */
 	  addr = extract_unsigned_integer (lm_buf.l_name,
 					   sizeof (lm_buf.l_name),
@@ -401,11 +404,12 @@ frv_solib_ops::current_sos () const
 
 	  if (name_buf == nullptr)
 	    warning (_("Can't read pathname for link map entry."));
-	  else
-	    {
-	      sop.name = name_buf.get ();
-	      sop.original_name = sop.name;
-	    }
+
+	  sos.emplace_back (std::make_unique<lm_info_frv> (loadmap, got_addr,
+							   lm_addr),
+			    name_buf != nullptr ? name_buf.get () : "",
+			    name_buf != nullptr ? name_buf.get () : "",
+			    *this);
 	}
       else
 	{
@@ -741,23 +745,22 @@ frv_relocate_main_executable (void)
     error (_("Unable to load the executable's loadmap."));
 
   delete main_executable_lm_info;
-  main_executable_lm_info = new lm_info_frv;
-  main_executable_lm_info->map = ldm;
+  main_executable_lm_info = new lm_info_frv (ldm, 0, 0);
 
   objfile *objf = current_program_space->symfile_object_file;
   section_offsets new_offsets (objf->section_offsets.size ());
   changed = 0;
 
-  for (obj_section *osect : objf->sections ())
+  for (obj_section &osect : objf->sections ())
     {
       CORE_ADDR orig_addr, addr, offset;
       int osect_idx;
       int seg;
-      
-      osect_idx = osect - objf->sections_start;
+
+      osect_idx = &osect - objf->sections_start;
 
       /* Current address of section.  */
-      addr = osect->addr ();
+      addr = osect.addr ();
       /* Offset from where this section started.  */
       offset = objf->section_offsets[osect_idx];
       /* Original address prior to any past relocations.  */
@@ -901,7 +904,7 @@ frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
   /* Attempt to find the name of the function.  If the name is available,
      it'll be used as an aid in finding matching functions in the dynamic
      symbol table.  */
-  sym = find_pc_function (entry_point);
+  sym = find_symbol_for_pc (entry_point);
   if (sym == 0)
     name = 0;
   else
@@ -994,7 +997,7 @@ find_canonical_descriptor_in_load_object
       lm->dyn_relocs = (arelent **) xmalloc (storage_needed);
 
       /* Fetch the dynamic relocs.  */
-      lm->dyn_reloc_count 
+      lm->dyn_reloc_count
 	= bfd_canonicalize_dynamic_reloc (abfd, lm->dyn_relocs, lm->dyn_syms);
     }
 

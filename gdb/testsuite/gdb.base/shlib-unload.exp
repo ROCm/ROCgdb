@@ -57,7 +57,7 @@ set bp_disabled_re "warning: Temporarily disabling breakpoints for unloaded shar
 # assuming that GDB has disabled some breakpoints.
 set stop_after_bp_re [multi_line \
 			  "^$::bp_disabled_re" \
-			  "[expr $::bp_line + 1]\\s+assert \\(res == 0\\);"]
+			  "[expr {$::bp_line + 1}]\\s+assert \\(res == 0\\);"]
 
 # Checking that a breakpoint with multiple locations in a shared
 # library only triggers a single breakpoint modified event from
@@ -69,7 +69,8 @@ proc_with_prefix test_bp_modified_events {} {
 	return
     }
 
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if {![runto_main]} {
 	return
@@ -114,7 +115,8 @@ proc_with_prefix test_bp_modified_events {} {
 # Check that GDB disables dprintf breakpoints within a shared library
 # when the shared library is unloaded.
 proc_with_prefix test_dprintf_after_unload {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if {![runto_main]} {
 	return
@@ -143,7 +145,8 @@ proc_with_prefix test_dprintf_after_unload {} {
 # inferior.  We should not get an error about re-setting the dprintf
 # breakpoint.
 proc_with_prefix test_dprintf_with_rerun {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if {![runto_main]} {
 	return
@@ -238,7 +241,8 @@ proc_with_prefix test_silent_nosharedlib {} {
     }
 
     foreach_with_prefix type { breakpoint dprintf } {
-	clean_restart $::binfile
+	clean_restart
+	gdb_load $::binfile
 
 	if {![runto_main]} {
 	    return

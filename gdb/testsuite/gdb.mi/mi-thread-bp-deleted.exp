@@ -24,9 +24,9 @@ set MIFLAGS "-i=mi"
 
 # We need to do things a little differently when using the remote protocol.
 set is_remote \
-    [expr [target_info exists gdb_protocol] \
-	 && ([string equal [target_info gdb_protocol] "remote"] \
-	     || [string equal [target_info gdb_protocol] "extended-remote"])]
+    [expr {[target_info exists gdb_protocol] \
+	       && ([string equal [target_info gdb_protocol] "remote"] \
+		       || [string equal [target_info gdb_protocol] "extended-remote"])}]
 
 standard_testfile
 
@@ -47,7 +47,7 @@ foreach_mi_ui_mode mode {
     save_vars { GDBFLAGS } {
 	append GDBFLAGS " -ex \"maint set target-non-stop on\""
 	append GDBFLAGS " -ex \"set mi-async on\""
-	mi_clean_restart $binfile $start_ops
+	mi_clean_restart $::testfile $start_ops
     }
 
     mi_runto_main

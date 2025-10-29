@@ -18,10 +18,14 @@ load_lib dwarf.exp
 # This test can only be run on targets which support DWARF-2 and use gas.
 require dwarf2_support
 
+# When using readnow, the index isn't used, which invalidates this
+# test.
+require !readnow
+
 standard_testfile _start.c debug-names.S
 
 set func_info_vars \
-    [get_func_info _start [list debug additional_flags=-nostartfiles]]
+    [get_func_info _start [list debug ldflags=-nostartfiles]]
 
 # Create the DWARF.
 set asm_file [standard_output_file $srcfile2]
@@ -36,32 +40,36 @@ Dwarf::assemble {
     }
 
     cu { label cu_label version $dwarf_version } {
-	compile_unit {{language @DW_LANG_C}} {
+	compile_unit {
+	    DW_AT_language @DW_LANG_C
+	} {
 	    subprogram {
-		{DW_AT_name _start}
-		{DW_AT_low_pc $_start_start DW_FORM_addr}
-		{DW_AT_high_pc $_start_end DW_FORM_addr}
+		DW_AT_name _start
+		DW_AT_low_pc $_start_start DW_FORM_addr
+		DW_AT_high_pc $_start_end DW_FORM_addr
 	    }
 	}
     }
 
     tu { label tu_label version $dwarf_version } 0x8ece66f4224fddb3 "" {
-	type_unit {{language @DW_LANG_C}} {
+	type_unit {
+	    DW_AT_language @DW_LANG_C
+	} {
 	    declare_labels int_type
 
 	    structure_type {
-		{name struct_with_int_member}
-		{byte_size 4 sdata}
+		DW_AT_name struct_with_int_member
+		DW_AT_byte_size 4 sdata
 	    } {
 		member {
-		    {name member}
-		    {type :$int_type}
+		    DW_AT_name member
+		    DW_AT_type :$int_type
 		}
 	    }
 	    int_type: base_type {
-		{name int}
-		{encoding @DW_ATE_signed}
-		{byte_size 4 sdata}
+		DW_AT_name int
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_byte_size 4 sdata
 	    }
 	}
     }
@@ -75,8 +83,8 @@ Dwarf::assemble {
     }
 }
 
-if [prepare_for_testing "failed to prepare" $testfile "${asm_file} ${srcfile}" \
-	[list additional_flags=-nostartfiles]] {
+if {[prepare_for_testing "failed to prepare" $testfile "${asm_file} ${srcfile}" \
+	 [list ldflags=-nostartfiles]]} {
     return -1
 }
 

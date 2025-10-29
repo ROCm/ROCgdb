@@ -35,7 +35,6 @@
 #include "inferior.h"
 #include <algorithm>
 #include "completer.h"
-#include "readline/tilde.h"
 #include "cli/cli-style.h"
 
 /* Types.  */
@@ -453,10 +452,6 @@ get_arch_data (struct gdbarch *gdbarch)
     result = tdesc_data.emplace (gdbarch);
   return result;
 }
-
-/* The string manipulated by the "set tdesc filename ..." command.  */
-
-static std::string tdesc_filename_cmd_string;
 
 /* Fetch the current target's description, and switch the current
    architecture to one which incorporates that description.  */
@@ -1217,6 +1212,7 @@ set_tdesc_filename (const std::string &value)
   target_desc_info *tdesc_info = &current_inferior ()->tdesc_info;
 
   tdesc_info->filename = value;
+
   target_clear_description ();
   target_find_description ();
 }
@@ -1226,7 +1222,9 @@ set_tdesc_filename (const std::string &value)
 static const std::string &
 get_tdesc_filename ()
 {
-  return current_inferior ()->tdesc_info.filename;
+  target_desc_info *tdesc_info = &current_inferior ()->tdesc_info;
+
+  return tdesc_info->filename;
 }
 
 static void
@@ -1234,8 +1232,6 @@ show_tdesc_filename_cmd (struct ui_file *file, int from_tty,
 			 struct cmd_list_element *c,
 			 const char *value)
 {
-  value = current_inferior ()->tdesc_info.filename.data ();
-
   if (value != NULL && *value != '\0')
     gdb_printf (file,
 		_("The target description will be read from \"%ps\".\n"),
@@ -1863,7 +1859,7 @@ maintenance_check_xml_descriptions (const char *dir, int from_tty)
   if (dir == NULL)
     error (_("Missing dir name"));
 
-  gdb::unique_xmalloc_ptr<char> dir1 (tilde_expand (dir));
+  gdb::unique_xmalloc_ptr<char> dir1 = gdb_rl_tilde_expand (dir);
   std::string feature_dir (dir1.get ());
   unsigned int failed = 0;
 

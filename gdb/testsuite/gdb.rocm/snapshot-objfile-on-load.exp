@@ -30,6 +30,15 @@
 #
 # This test checks that GDB can handle a program which disposes of its objfile
 # buffer while the associated code is still running on the device.
+#
+# In addition, it forces GDB to reload the objfile after it has been
+# corrupted, to make sure GDB won't crash if it attaches to a running
+# program and encounters already-corrupted images.
+#
+# Test different variants of corrupted images:
+#
+#  - fully zeroed-out buffer
+#  - corrupted section offset in ELF header
 
 load_lib rocm.exp
 
@@ -51,13 +60,30 @@ if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
 }
 
 with_rocm_gpu_lock {
+    foreach_with_prefix mode {zero shoff} {
+	clean_restart
+	gdb_load $::binfile
+	gdb_test_no_output "set args $mode $hipmodule_path" "set args"
 
-clean_restart $::binfile
-gdb_test_no_output "set args ${hipmodule_path}" "set args"
-runto "printId" allow-pending
-gdb_test "bt" \
-    [multi_line \
-	"#0\[ \t\]*printId \\(\\) at \[^\r\n\]+" \
-	"#1\[ \t\]*${::hex} in kernel \\(\\) at \[^\r\n\]+"]
+	runto "printId" allow-pending
+	gdb_test "bt" \
+	    [multi_line \
+		 "#0\[ \t\]*printId \\(\\) at \[^\r\n\]+" \
+		 "#1\[ \t\]*${::hex} in kernel \\(\\) at \[^\r\n\]+"]
 
+	# Now force GDB to reload the shared library, to make sure it
+	# doesn't crash when it finds the corrupted code object image.
+	#
+	# Depending on the runtime version, GDB might be given the address
+	# of either 1) the original code object given to the runtime, or 2) a
+	# copy of the original code done by the runtime during load.
+	#
+	# In case #1, the client has scrambled the memory after the code object
+	# has been loaded, making it an invalid ELF.  We need to make sure that
+	# reloading it does not cause GDB to crash.  In case #2, we just
+	# reload the same binary image, which will work fine.
+	set any "\[^\r\n\]"
+	gdb_test_no_output "nosharedlibrary"
+	gdb_test "info shared" "memory://.*"
+    }
 }

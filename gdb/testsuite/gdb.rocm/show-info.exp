@@ -33,6 +33,8 @@ if ![runto_main] {
     return -1
 }
 
+set ws "\[ \t\]"
+
 gdb_test "info queues" "No queues are currently active\\." "info queues, no queues"
 
 # Set breakpoint in device code.
@@ -58,7 +60,7 @@ gdb_test_multiple "info agents" "dbgapi properly configured" {
     set seen_error 1
     exp_continue
   }
-  -re "Device \[0-9a-zA-Z\]\{4\}:\[0-9a-zA-Z\]\{4\}(\\.\[0-9a-zA-Z\]\{2\})?\\s" {
+  -re "Device \[0-9a-zA-Z\]\{4\}:\[0-9a-zA-Z\]\{4\}(\\.\[0-9a-zA-Z\]\{2\})?${ws}" {
     set seen_error 1
     exp_continue
   }
@@ -133,10 +135,10 @@ set file_uri "file://$file_path\($range_specifier\)?"
 set code_object_uri "\($memory_uri\)|\($file_uri\)"
 
 gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
-    "From\\s+To\\s+Syms\\s+Read\\s+Shared Object Library" \
-    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$file_path" \
-    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$code_object_uri" \
-    "$hex\\s+$hex\\s+(Yes|No)\\s(\\(\\*\\))?\\s+$code_object_uri"
+    "From${ws}+To${ws}+Syms${ws}+Read${ws}+Shared Object Library" \
+    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$file_path" \
+    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri" \
+    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri"
 ]
 
 #Test6
@@ -169,14 +171,22 @@ set queue_ids [list]
 # queue the current wave belongs to).
 set queue_info_lines [list]
 
-set table_header_regex "\\s+Target\\s+Id\\s+Type\\s+Read\\s+Write\\s+Size\\s+Address\\s*"
+# A list of agent id's for each queue entry.
+set agent_ids [list]
+
+# A list of OS queue id's for each queue entry.
+set os_ids [list]
+
+set table_header_regex "${ws}+Target${ws}+Id${ws}+Type${ws}+Read${ws}+Write${ws}+Size${ws}+Address${ws}*"
 gdb_test_multiple "info queues" "info queues with queues" {
     -re $table_header_regex {
 	set seen_header 1
 	exp_continue
     }
-    -re "\r\n(\\*?\\s*(\\d+)\\s+AMDGPU Queue\\s+\\d+:\\d+ \\(QID \\d+\\)\\s+(HSA|PM4|DMA|XGMI|Unknown)\\s+(\\d+\\s+)?(\\d+\\s+)?\\d+\\s+$::hex)" {
+    -re "\r\n(\\*?${ws}*(\\d+)${ws}+AMDGPU Queue${ws}+(\\d+):\\d+ \\(QID (\\d+)\\)${ws}+(HSA|PM4|DMA|XGMI|Unknown)${ws}+(\\d+${ws}+)?(\\d+${ws}+)?\\d+${ws}+${::hex}${ws}*(?=\r\n))" {
 	lappend queue_ids $expect_out(2,string)
+	lappend agent_ids $expect_out(3,string)
+	lappend os_ids $expect_out(4,string)
 	lappend queue_info_lines $expect_out(1,string)
 
 	exp_continue
@@ -186,10 +196,22 @@ gdb_test_multiple "info queues" "info queues with queues" {
     }
 }
 
+# Check that "info queues" lists queues in order.  This ensures that
+# we captured all the queues.
+set ok 1
+for {set i 0} {$i < [llength $queue_ids]} {incr i} {
+    set qnum [lindex $queue_ids $i]
+    if {$qnum != [expr {$i + 1}]} {
+	verbose -log "Mismatch: entry $i has queue number $qnum, expected [expr {$i+1}]"
+	set ok 0
+    }
+}
+gdb_assert $ok "queue numbers in expected order"
+
 # Check that we can get infos for queues individually.
 for { set i 0 } { $i < [llength $queue_ids] } { incr i } {
     gdb_test "info queue [lindex $queue_ids $i]" \
-	"$table_header_regex\r\n[string_to_regexp [lindex $queue_info_lines $i]].*" \
+	"$table_header_regex\r\n[string_to_regexp [lindex $queue_info_lines $i]]" \
 	"info queue, queue $i"
 
 }
@@ -197,10 +219,38 @@ for { set i 0 } { $i < [llength $queue_ids] } { incr i } {
 # Check the path where we provide an invalid queue id.
 # Pick the highest queue_id seen + 1.
 if {[llength $queue_ids] > 0} {
-    set invalid_id [expr [tcl::mathfunc::max {*}$queue_ids] + 1]
+    # The highest is the last.
+    set invalid_id [expr [llength $queue_ids] + 1]
     gdb_test "info queues $invalid_id" \
 	"No active queues match '$invalid_id'\\." \
 	"info queues, no match"
+
+    # Test the "queue find [regexp]" command.
+
+    # Invalid ID.
+    gdb_test "queue find 1:$invalid_id" \
+	     "No queues match '1:$invalid_id'" \
+	     "queue find, no match"
+
+    # Valid ID.
+
+    # Fetch the index of the last entry.
+    set index [expr [llength $queue_ids] - 1]
+
+    # Fetch the queue, agent and OS ids.
+    set valid_id [lindex $queue_ids $index]
+    set agent_id [lindex $agent_ids $index]
+    set os_id [lindex $os_ids $index]
+    gdb_test "queue find $agent_id\[:\]$valid_id" \
+	     "Queue $valid_id has Target Id 'AMDGPU Queue $agent_id:$valid_id \\(QID $os_id\\)'" \
+	     "queue find, match"
+
+    # Everything.  The list is sorted per-inferior.
+    set sequence [list]
+    for {set i 0} {$i < [expr [llength $queue_ids]]} {incr i} {
+	lappend sequence "Queue [lindex $queue_ids $i] has Target Id 'AMDGPU Queue [lindex $agent_ids $i]:[lindex $queue_ids $i] \\(QID [lindex $os_ids $i]\\)'"
+    }
+    gdb_test_sequence "queue find ." "" $sequence
 }
 
 gdb_test "clear bit_extract_kernel" "Deleted breakpoint.*"

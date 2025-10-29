@@ -61,7 +61,13 @@ struct solib : intrusive_list_node<solib>
   /* Constructor
 
      OPS is the solib_ops implementation providing this solib.  */
-  explicit solib (const solib_ops &ops) : m_ops (&ops) {}
+  explicit solib (lm_info_up lm_info, std::string original_name,
+		  std::string name, const solib_ops &ops)
+    : lm_info (std::move (lm_info)),
+      original_name (std::move (original_name)),
+      name (std::move (name)),
+      m_ops (&ops)
+  {}
 
   /* Return the solib_ops implementation providing this solib.  */
   const solib_ops &ops () const
@@ -135,8 +141,18 @@ private:
 /* A unique pointer to an solib.  */
 using solib_up = std::unique_ptr<solib>;
 
+/* Callback type for the 'iterate_over_objfiles_in_search_order'
+   methods.  */
+
+using iterate_over_objfiles_in_search_order_cb_ftype
+  = gdb::function_view<bool (objfile *)>;
+
 struct solib_ops
 {
+  explicit solib_ops (program_space *pspace)
+    : m_pspace (pspace)
+  {}
+
   virtual ~solib_ops () = default;
 
   /* Adjust the section binding addresses by the base address at
@@ -263,6 +279,22 @@ struct solib_ops
      The supports_namespaces method must return true for this to be called.  */
   virtual std::vector<const solib *> get_solibs_in_ns (int ns) const
   { gdb_assert_not_reached ("namespaces not supported"); }
+
+  /* Iterate over all objfiles of the program space in the order that makes the
+     most sense for the architecture to make global symbol searches.
+
+     CB is a callback function passed an objfile to be searched.  The iteration
+     stops if this function returns true.
+
+     If not nullptr, CURRENT_OBJFILE corresponds to the objfile being inspected
+     when the symbol search was requested.  */
+  virtual void iterate_over_objfiles_in_search_order
+    (iterate_over_objfiles_in_search_order_cb_ftype cb,
+     objfile *current_objfile) const;
+
+protected:
+  /* The program space for which this solib_ops was created.  */
+  program_space *m_pspace;
 };
 
 /* A unique pointer to an solib_ops.  */
@@ -376,5 +408,9 @@ extern void update_solib_breakpoints (void);
 /* Handle an solib event by calling solib_add.  */
 
 extern void handle_solib_event (void);
+
+/* Calculate the number of linker namespaces active in PSPACE.  */
+
+extern int solib_linker_namespace_count (program_space *pspace);
 
 #endif /* GDB_SOLIB_H */

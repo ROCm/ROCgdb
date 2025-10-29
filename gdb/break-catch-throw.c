@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "arch-utils.h"
-#include <ctype.h>
 #include "breakpoint.h"
 #include "exceptions.h"
 #include "inferior.h"
@@ -367,11 +366,11 @@ handle_gnu_v3_exceptions (int tempflag, std::string &&except_rx,
 
 /* Look for an "if" token in *STRING.  The "if" token must be preceded
    by whitespace.
-   
+
    If there is any non-whitespace text between *STRING and the "if"
    token, then it is returned in a newly-xmalloc'd string.  Otherwise,
    this returns NULL.
-   
+
    STRING is updated to point to the "if" token, if it exists, or to
    the end of the string.  */
 
@@ -420,7 +419,7 @@ catch_exception_event (enum exception_event_kind ex_event,
 
   cond_string = ep_parse_optional_if_clause (&arg);
 
-  if ((*arg != '\0') && !isspace (*arg))
+  if ((*arg != '\0') && !c_isspace (*arg))
     error (_("Junk at end of arguments."));
 
   if (ex_event != EX_EVENT_THROW

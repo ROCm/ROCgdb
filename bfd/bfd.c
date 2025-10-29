@@ -296,9 +296,6 @@ CODE_FRAGMENT
 .  {* Set if this is the linker input BFD.  *}
 .  unsigned int is_linker_input : 1;
 .
-.  {* Set if this is the strip input BFD.  *}
-.  unsigned int is_strip_input : 1;
-.
 .  {* If this is an input for a compiler plug-in library.  *}
 .  ENUM_BITFIELD (bfd_plugin_format) plugin_format : 2;
 .
@@ -2647,9 +2644,6 @@ DESCRIPTION
 .
 .#define bfd_lookup_section_flags(link_info, flag_info, section) \
 .	BFD_SEND (abfd, _bfd_lookup_section_flags, (link_info, flag_info, section))
-.
-.#define bfd_merge_sections(abfd, link_info) \
-.	BFD_SEND (abfd, _bfd_merge_sections, (abfd, link_info))
 .
 .#define bfd_is_group_section(abfd, sec) \
 .	BFD_SEND (abfd, _bfd_is_group_section, (abfd, sec))

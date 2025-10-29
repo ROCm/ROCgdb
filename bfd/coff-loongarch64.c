@@ -18,9 +18,8 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
-
-#ifndef COFF_WITH_peLoongArch64
-#define COFF_WITH_peLoongArch64
+#ifndef COFF_WITH_PE
+#error non-PE COFF unsupported
 #endif
 
 #include "sysdep.h"
@@ -116,6 +115,7 @@ const bfd_target
   15,				/* Ar_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
 
      /* Data conversion functions.  */
      bfd_getl64, bfd_getl_signed_64, bfd_putl64,

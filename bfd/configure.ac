@@ -45,21 +45,11 @@ ACX_LARGEFILE
 
 changequote(,)dnl
 case "${target}" in
-    hppa*64*-*-*) ;;
     *-*-*aout*| i[3-7]86-*-msdos* | ns32k-*-* | pdp11-*-*)
 changequote([,])dnl
 	if test "$plugins" = "yes"; then
 	    if test "${enable_plugins+set}" = set; then
 		AC_MSG_WARN(Enabling plugins for AOUT is experimental)
-	    else
-		plugins=no
-	    fi
-	fi ;;
-    hppa*-*-hpux* | *-*-*vms* | \
-    powerpc*-*-aix* | powerpc-*-beos* | powerpc-*-macos* | rs6000-*-*)
-	if test "$plugins" = "yes"; then
-	    if test "${enable_plugins+set}" = set; then
-		AC_MSG_WARN(Enabling plugins may result in ar creating non-standard archives for ${target})
 	    else
 		plugins=no
 	    fi
@@ -353,7 +343,7 @@ AC_SUBST(TDEFINES)
 # 64-bit support needs to be compiled in.  Currently, it will be included if
 # the default or any other explicitly requested target requires it; it
 # will not be included on a 32-bit host if no 64-bit target is requested, and
-# no "--with-64-bit-bfd" option is given, even if "--enable-targets=all" is
+# no "--enable-64-bit-bfd" option is given, even if "--enable-targets=all" is
 # used.
 
 # uniq the default and selected vectors in all the configured targets.
@@ -409,9 +399,7 @@ do
     aarch64_elf32_be_vec)	 tb="$tb elf32-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf32.lo $elf"; target_size=64 ;;
     aarch64_elf32_le_vec)	 tb="$tb elf32-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf32.lo $elf"; target_size=64 ;;
     aarch64_elf64_be_vec)	   tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo $elf"; target_size=64 ;;
-    aarch64_elf64_be_cloudabi_vec) tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo $elf"; target_size=64 ;;
     aarch64_elf64_le_vec)	   tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo $elf"; target_size=64 ;;
-    aarch64_elf64_le_cloudabi_vec) tb="$tb elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo $elf"; target_size=64 ;;
     aarch64_mach_o_vec)		 tb="$tb mach-o-aarch64.lo"; target_size=64 ;;
     aarch64_pei_le_vec)		 tb="$tb pei-aarch64.lo pe-aarch64igen.lo $coff"; target_size=64 ;;
     aarch64_pe_le_vec)		 tb="$tb pe-aarch64.lo pe-aarch64igen.lo $coff"; target_size=64 ;;
@@ -663,7 +651,6 @@ do
     x86_64_coff_vec)		 tb="$tb coff-x86_64.lo $coff"; target_size=64 ;;
     x86_64_elf32_vec)		 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo elf32.lo $elf"; target_size=64 ;;
     x86_64_elf64_vec)		 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
-    x86_64_elf64_cloudabi_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
     x86_64_elf64_fbsd_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
     x86_64_elf64_sol2_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
     x86_64_mach_o_vec)		 tb="$tb mach-o-x86-64.lo" ;;

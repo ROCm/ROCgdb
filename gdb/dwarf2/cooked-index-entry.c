@@ -19,7 +19,6 @@
 
 #include "dwarf2/cooked-index-entry.h"
 #include "dwarf2/tag.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "gdbsupport/selftest.h"
 
 /* See cooked-index-entry.h.  */
@@ -57,7 +56,7 @@ cooked_index_entry::compare (const char *stra, const char *strb,
 	 template functions" section in the manual.  */
       if (c == '<')
 	return '\0';
-      return TOLOWER ((unsigned char) c);
+      return c_tolower (c);
     };
 
   unsigned char a = munge (*stra);
@@ -189,8 +188,15 @@ cooked_index_entry::full_name (struct obstack *storage,
       break;
 
     case language_ada:
+      /* If GNAT emits hierarchical names (patches not in at the time
+	 of writing), then we need to compute the linkage name here.
+	 However for traditional GNAT, the linkage name will be in
+	 'name'.  Detect this by looking for "__"; see also
+	 cooked_index_shard::finalize.  */
       if ((name_flags & FOR_ADA_LINKAGE_NAME) != 0)
 	{
+	  if (strstr (name, "__") != nullptr)
+	    return name;
 	  sep = "__";
 	  break;
 	}

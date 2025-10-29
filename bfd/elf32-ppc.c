@@ -5485,7 +5485,7 @@ ppc_elf_late_size_sections (bfd *output_bfd,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (htab->elf.dynobj, ".interp");
+	  s = elf_hash_table (info)->interp;
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
@@ -6115,14 +6115,14 @@ ppc_elf_relax_section (bfd *abfd,
   if (htab->params->ppc476_workaround
       || htab->params->pic_fixup > 0)
     {
-      if (elf_section_data (isec)->sec_info == NULL)
+      if (isec->sec_info == NULL)
 	{
-	  elf_section_data (isec)->sec_info
+	  isec->sec_info
 	    = bfd_zalloc (abfd, sizeof (struct ppc_elf_relax_info));
-	  if (elf_section_data (isec)->sec_info == NULL)
+	  if (isec->sec_info == NULL)
 	    return false;
 	}
-      relax_info = elf_section_data (isec)->sec_info;
+      relax_info = isec->sec_info;
       trampbase -= relax_info->workaround_size;
     }
 
@@ -6382,9 +6382,7 @@ ppc_elf_relax_section (bfd *abfd,
 		toff += irel->r_addend;
 
 	      toff
-		= _bfd_merged_section_offset (abfd, &tsec,
-					      elf_section_data (tsec)->sec_info,
-					      toff);
+		= _bfd_merged_section_offset (abfd, &tsec, toff);
 
 	      if (sym_type != STT_SECTION
 		  && r_type != R_PPC_PLTREL24)
@@ -7019,7 +7017,7 @@ ppc_elf_relocate_section (bfd *output_bfd,
 		    && !strcmp (input_section->output_section->name,
 				".tls_vars"));
   if (input_section->sec_info_type == SEC_INFO_TYPE_TARGET)
-    relax_info = elf_section_data (input_section)->sec_info;
+    relax_info = input_section->sec_info;
   rel = wrel = relocs;
   relend = relocs + input_section->reloc_count;
   for (; rel < relend; wrel++, rel++)

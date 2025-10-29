@@ -18,6 +18,8 @@
 #ifdef DEVICE
 
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 constexpr unsigned int NUM_BREAKPOINT_HITS = 5;
 
@@ -36,7 +38,6 @@ kernel ()
 #else
 
 #include <hip/hip_runtime.h>
-#include <unistd.h>
 
 constexpr unsigned int NUM_ITEMS_PER_BLOCK = 256;
 constexpr unsigned int NUM_BLOCKS = 128;

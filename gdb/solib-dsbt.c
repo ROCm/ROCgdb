@@ -27,6 +27,7 @@
 #include "solib-dsbt.h"
 #include "elf/common.h"
 #include "cli/cli-cmds.h"
+#include "gdbcore.h"
 
 #define GOT_MODULE_OFFSET 4
 
@@ -123,6 +124,8 @@ struct dbst_ext_link_map
 
 struct dsbt_solib_ops : public solib_ops
 {
+  using solib_ops::solib_ops;
+
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_solib (program_space *pspace) const override;
   void create_inferior_hook (int from_tty) const override;
@@ -133,22 +136,28 @@ struct dsbt_solib_ops : public solib_ops
 /* See solib-dsbt.h.  */
 
 solib_ops_up
-make_dsbt_solib_ops ()
+make_dsbt_solib_ops (program_space *pspace)
 {
-  return std::make_unique<dsbt_solib_ops> ();
+  return std::make_unique<dsbt_solib_ops> (pspace);
 }
 
 /* Link map info to include in an allocated solib entry */
 
 struct lm_info_dsbt final : public lm_info
 {
+  explicit lm_info_dsbt (int_elf32_dsbt_loadmap *map)
+    : map (map)
+  {}
+
+  DISABLE_COPY_AND_ASSIGN (lm_info_dsbt);
+
   ~lm_info_dsbt ()
   {
     xfree (this->map);
   }
 
   /* The loadmap, digested into an easier to use form.  */
-  int_elf32_dsbt_loadmap *map = NULL;
+  int_elf32_dsbt_loadmap *map;
 };
 
 /* Per pspace dsbt specific data.  */
@@ -541,7 +550,7 @@ dsbt_solib_ops::current_sos () const
      solib_create_inferior_hook.   (See post_create_inferior in
      infcmd.c.)  */
   if (info->main_executable_lm_info == 0
-      && current_program_space->core_bfd () != nullptr)
+      && get_inferior_core_bfd (current_inferior ()) != nullptr)
     dsbt_relocate_main_executable ();
 
   /* Locate the address of the first link map struct.  */
@@ -602,9 +611,6 @@ dsbt_solib_ops::current_sos () const
 	      break;
 	    }
 
-	  auto &sop = sos.emplace_back (*this);
-	  auto li = std::make_unique<lm_info_dsbt> ();
-	  li->map = loadmap;
 	  /* Fetch the name.  */
 	  addr = extract_unsigned_integer (lm_buf.l_name,
 					   sizeof (lm_buf.l_name),
@@ -619,12 +625,12 @@ dsbt_solib_ops::current_sos () const
 	      if (solib_dsbt_debug)
 		gdb_printf (gdb_stdlog, "current_sos: name = %s\n",
 			    name_buf.get ());
-
-	      sop.name = name_buf.get ();
-	      sop.original_name = sop.name;
 	    }
 
-	  sop.lm_info = std::move (li);
+	  sos.emplace_back (std::make_unique<lm_info_dsbt> (loadmap),
+			    name_buf != nullptr ? name_buf.get () : "",
+			    name_buf != nullptr ? name_buf.get () : "",
+			    *this);
 	}
       else
 	{
@@ -807,23 +813,22 @@ dsbt_relocate_main_executable (void)
   ldm = info->exec_loadmap;
 
   delete info->main_executable_lm_info;
-  info->main_executable_lm_info = new lm_info_dsbt;
-  info->main_executable_lm_info->map = ldm;
+  info->main_executable_lm_info = new lm_info_dsbt (ldm);
 
   objfile *objf = current_program_space->symfile_object_file;
   section_offsets new_offsets (objf->section_offsets.size ());
   changed = 0;
 
-  for (obj_section *osect : objf->sections ())
+  for (obj_section &osect : objf->sections ())
     {
       CORE_ADDR orig_addr, addr, offset;
       int osect_idx;
       int seg;
 
-      osect_idx = osect - objf->sections_start;
+      osect_idx = &osect - objf->sections_start;
 
       /* Current address of section.  */
-      addr = osect->addr ();
+      addr = osect.addr ();
       /* Offset from where this section started.  */
       offset = objf->section_offsets[osect_idx];
       /* Original address prior to any past relocations.  */

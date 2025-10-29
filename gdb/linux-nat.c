@@ -42,7 +42,6 @@
 #include "elf-bfd.h"
 #include "gregset.h"
 #include "gdbcore.h"
-#include <ctype.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "inf-loop.h"
@@ -151,7 +150,7 @@ not when it is delivered.  SIGCONT resumes the entire thread group and SIGKILL
 kills the entire thread group.
 
 A delivered SIGSTOP would stop the entire thread group, not just the thread we
-tkill'd.  But we never let the SIGSTOP be delivered; we always intercept and 
+tkill'd.  But we never let the SIGSTOP be delivered; we always intercept and
 cancel it (by PTRACE_CONT without passing SIGSTOP).
 
 We could use a real-time signal instead.  This would solve those problems; we
@@ -482,8 +481,8 @@ num_lwps (int pid)
 {
   int count = 0;
 
-  for (const lwp_info *lp ATTRIBUTE_UNUSED : all_lwps ())
-    if (lp->ptid.pid () == pid)
+  for (const lwp_info &lp : all_lwps ())
+    if (lp.ptid.pid () == pid)
       count++;
 
   return count;
@@ -549,8 +548,8 @@ linux_nat_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 	  /* Note that we consult the parent's architecture instead of
 	     the child's because there's no inferior for the child at
 	     this point.  */
-	  if (!gdbarch_software_single_step_p (target_thread_architecture
-					       (parent_ptid)))
+	  if (!gdbarch_get_next_pcs_p (target_thread_architecture
+				       (parent_ptid)))
 	    {
 	      int status;
 
@@ -708,7 +707,9 @@ static intrusive_list<lwp_info> lwp_list;
 lwp_info_range
 all_lwps ()
 {
-  return lwp_info_range (lwp_list.begin ());
+  lwp_info_iterator begin (lwp_list.begin ());
+
+  return lwp_info_range (std::move (begin));
 }
 
 /* See linux-nat.h.  */
@@ -716,7 +717,7 @@ all_lwps ()
 lwp_info_safe_range
 all_lwps_safe ()
 {
-  return lwp_info_safe_range (lwp_list.begin ());
+  return lwp_info_safe_range (all_lwps ());
 }
 
 /* Add LP to sorted-by-reverse-creation-order doubly-linked list.  */
@@ -931,12 +932,12 @@ struct lwp_info *
 iterate_over_lwps (ptid_t filter,
 		   gdb::function_view<iterate_over_lwps_ftype> callback)
 {
-  for (lwp_info *lp : all_lwps_safe ())
+  for (lwp_info &lp : all_lwps_safe ())
     {
-      if (lp->ptid.matches (filter))
+      if (lp.ptid.matches (filter))
 	{
-	  if (callback (lp) != 0)
-	    return lp;
+	  if (callback (&lp) != 0)
+	    return &lp;
 	}
     }
 
@@ -2142,9 +2143,9 @@ linux_handle_extended_wait (struct lwp_info *lp, int status)
 	 PTRACE_GETEVENTMSG, we'd still need to lookup the
 	 corresponding LWP object, and it would be an extra ptrace
 	 syscall, so this way may even be more efficient.  */
-      for (lwp_info *other_lp : all_lwps_safe ())
-	if (other_lp != lp && other_lp->ptid.pid () == lp->ptid.pid ())
-	  exit_lwp (other_lp);
+      for (lwp_info &other_lp : all_lwps_safe ())
+	if (&other_lp != lp && other_lp.ptid.pid () == lp->ptid.pid ())
+	  exit_lwp (&other_lp);
 
       return 0;
     }
@@ -3857,11 +3858,11 @@ linux_proc_xfer_memory_partial (int pid, gdb_byte *readbuf,
 static lwp_info *
 find_stopped_lwp (int pid)
 {
-  for (lwp_info *lp : all_lwps ())
-    if (lp->ptid.pid () == pid
-	&& lp->stopped
-	&& !is_lwp_marked_dead (lp))
-      return lp;
+  for (lwp_info &lp : all_lwps ())
+    if (lp.ptid.pid () == pid
+	&& lp.stopped
+	&& !is_lwp_marked_dead (&lp))
+      return &lp;
   return nullptr;
 }
 
@@ -3963,13 +3964,13 @@ linux_nat_target::update_thread_list ()
 
   /* Update the processor core that each lwp/thread was last seen
      running on.  */
-  for (lwp_info *lwp : all_lwps ())
+  for (lwp_info &lwp : all_lwps ())
     {
       /* Avoid accessing /proc if the thread hasn't run since we last
 	 time we fetched the thread's core.  Accessing /proc becomes
 	 noticeably expensive when we have thousands of LWPs.  */
-      if (lwp->core == -1)
-	lwp->core = linux_common_core_of_thread (lwp->ptid);
+      if (lwp.core == -1)
+	lwp.core = linux_common_core_of_thread (lwp.ptid);
     }
 }
 
@@ -4382,7 +4383,7 @@ linux_nat_target::can_async_p ()
 {
   /* This flag should be checked in the common target.c code.  */
   gdb_assert (target_async_permitted);
-  
+
   /* Otherwise, this targets is always able to support async mode.  */
   return true;
 }
@@ -4697,8 +4698,8 @@ maintenance_info_lwps (const char *arg, int from_tty)
      figure out the widest ptid string.  We'll use this to build our
      output table below.  */
   size_t ptid_width = 8;
-  for (lwp_info *lp : all_lwps ())
-    ptid_width = std::max (ptid_width, lp->ptid.to_string ().size ());
+  for (lwp_info &lp : all_lwps ())
+    ptid_width = std::max (ptid_width, lp.ptid.to_string ().size ());
 
   /* Setup the table headers.  */
   struct ui_out *uiout = current_uiout;
@@ -4708,13 +4709,13 @@ maintenance_info_lwps (const char *arg, int from_tty)
   uiout->table_body ();
 
   /* Display one table row for each lwp_info.  */
-  for (lwp_info *lp : all_lwps ())
+  for (lwp_info &lp : all_lwps ())
     {
       ui_out_emit_tuple tuple_emitter (uiout, "lwp-entry");
 
-      thread_info *th = linux_target->find_thread (lp->ptid);
+      thread_info *th = linux_target->find_thread (lp.ptid);
 
-      uiout->field_string ("lwp-ptid", lp->ptid.to_string ().c_str ());
+      uiout->field_string ("lwp-ptid", lp.ptid.to_string ().c_str ());
       if (th == nullptr)
 	uiout->field_string ("thread-info", "None");
       else

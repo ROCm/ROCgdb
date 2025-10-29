@@ -34,7 +34,8 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart
+gdb_load $binfile
 
 
 #
@@ -53,7 +54,7 @@ proc local_compiler_xfail_check { } {
     if {[test_compiler_info gcc-2-*]} {
 	if { ![test_debug_format "HP"] \
 		&& ![test_debug_format "DWARF \[0-9\]"] } then {
-	    setup_xfail "*-*-*" 
+	    setup_xfail "*-*-*"
 	}
     }
 }
@@ -68,7 +69,7 @@ proc local_compiler_xfail_check_2 { } {
     }
 }
 
-gdb_test "break marker1" "Breakpoint $decimal at .*" 
+gdb_test "break marker1" "Breakpoint $decimal at .*"
 
 gdb_test_multiple "cont" "up from marker1" {
     -re "Break.* marker1 \\(\\) at .*:$decimal.*$gdb_prompt $" {

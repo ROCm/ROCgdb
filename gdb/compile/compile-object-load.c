@@ -22,7 +22,6 @@
 #include "command.h"
 #include "objfiles.h"
 #include "gdbcore.h"
-#include "readline/tilde.h"
 #include "bfdlink.h"
 #include "cli/cli-cmds.h"
 #include "regcache.h"
@@ -484,7 +483,7 @@ get_out_value_type (struct symbol *func_sym, struct objfile *objfile,
 	     "in compiled module \"%s\"."),
 	   gdb_type_from_ptr->code (), COMPILE_I_EXPR_VAL,
 	   objfile_name (objfile));
-  
+
   retval = gdb_type_from_ptr;
   switch (gdb_type_from_ptr->code ())
     {
@@ -613,7 +612,7 @@ compile_object_load (const compile_file_names &file_names,
   struct type *expect_return_type;
 
   gdb::unique_xmalloc_ptr<char> filename
-    (tilde_expand (file_names.object_file ()));
+    = gdb_rl_tilde_expand (file_names.object_file ());
 
   gdb_bfd_ref_ptr abfd (gdb_bfd_open (filename.get (), gnutarget));
   if (abfd == NULL)

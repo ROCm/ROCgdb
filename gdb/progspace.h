@@ -24,6 +24,7 @@
 #include "solib.h"
 #include "target.h"
 #include "gdb_bfd.h"
+#include "quick-symbol.h"
 #include "registry.h"
 #include "gdbsupport/safe-iterator.h"
 #include "gdbsupport/intrusive_list.h"
@@ -184,17 +185,18 @@ struct program_space
      a program space.  */
   ~program_space ();
 
-  using objfiles_iterator
-    = reference_to_pointer_iterator<intrusive_list<objfile>::iterator>;
+  using objfiles_iterator = intrusive_list<objfile>::iterator;
   using objfiles_range = iterator_range<objfiles_iterator>;
 
   /* Return an iterable object that can be used to iterate over all
      objfiles.  The basic use is in a foreach, like:
 
-     for (objfile *objf : pspace->objfiles ()) { ... }  */
+     for (objfile &objf : pspace->objfiles ()) { ... }  */
   objfiles_range objfiles ()
   {
-    return objfiles_range (objfiles_iterator (m_objfiles_list.begin ()));
+    objfiles_iterator begin (m_objfiles_list.begin ());
+
+    return objfiles_range (std::move (begin));
   }
 
   using objfiles_safe_range = basic_safe_range<objfiles_range>;
@@ -202,15 +204,32 @@ struct program_space
   /* An iterable object that can be used to iterate over all objfiles.
      The basic use is in a foreach, like:
 
-     for (objfile *objf : pspace->objfiles_safe ()) { ... }
+     for (objfile &objf : pspace->objfiles_safe ()) { ... }
 
      This variant uses a basic_safe_iterator so that objfiles can be
      deleted during iteration.  */
   objfiles_safe_range objfiles_safe ()
   {
-    return objfiles_safe_range
-      (objfiles_range (objfiles_iterator (m_objfiles_list.begin ())));
+    return objfiles_safe_range (this->objfiles ());
   }
+
+  /* Iterate over all objfiles of the program space in the order that makes the
+     most sense to make global symbol searches.
+
+     CB is a callback function passed an objfile to be searched.  The iteration stops
+     if this function returns true.
+
+     If not nullptr, CURRENT_OBJFILE corresponds to the objfile being
+     inspected when the symbol search was requested.  */
+  void iterate_over_objfiles_in_search_order
+    (iterate_over_objfiles_in_search_order_cb_ftype cb,
+     objfile *current_objfile);
+
+  /* Wrapper around the quick_symbol_functions map_symbol_filenames
+     "method".  Map function FUN over every file, in every objfile in
+     this program space.  See
+     quick_symbol_functions.map_symbol_filenames for details.  */
+  void map_symbol_filenames (symbol_filename_listener fun, bool need_fullname);
 
   /* Add OBJFILE to the list of objfiles, putting it just before
      BEFORE.  If BEFORE is nullptr, it will go at the end of the
@@ -293,9 +312,6 @@ struct program_space
     ebfd = std::move (abfd);
   }
 
-  bfd *core_bfd () const
-  { return cbfd.get ();  }
-
   /* Reset saved solib data at the start of an solib event.  This lets
      us properly collect the data when calling solib_add, so it can then
      later be printed.  */
@@ -339,9 +355,6 @@ struct program_space
   gdb_bfd_ref_ptr ebfd;
   /* The last-modified time, from when the exec was brought in.  */
   long ebfd_mtime = 0;
-
-  /* Binary file diddling handle for the core file.  */
-  gdb_bfd_ref_ptr cbfd;
 
   /* The address space attached to this program space.  More than one
      program space may be bound to the same address space.  In the

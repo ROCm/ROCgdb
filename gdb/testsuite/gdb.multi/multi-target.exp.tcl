@@ -53,7 +53,7 @@ proc add_inferior {num target binfile {gcorefile ""}} {
 	    return 0
 	}
     }
-    if ![runto "all_started"] then {
+    if { ![runto "all_started"] } {
 	return 0
     }
     delete_breakpoints
@@ -65,9 +65,9 @@ proc prepare_core {} {
     global gcorefile gcore_created
     global binfile
 
-    clean_restart ${binfile}
+    clean_restart ${::testfile}
 
-    if ![runto all_started] then {
+    if { ![runto all_started] } {
 	return -1
     }
 
@@ -114,7 +114,7 @@ proc setup {non-stop {multi_process ""}} {
 	# Make GDB read files from the local file system, not through the
 	# remote targets, to speed things up.
 	set ::GDBFLAGS "${::GDBFLAGS} -ex \"set sysroot\""
-	clean_restart ${binfile}
+	clean_restart ${::testfile}
     }
 
     # multi-target depends on target running in non-stop mode.  Force
@@ -123,13 +123,13 @@ proc setup {non-stop {multi_process ""}} {
 
     gdb_test_no_output "set non-stop ${non-stop}"
 
-    if {${multi_process} ne ""} then {
+    if {${multi_process} ne ""} {
 	gdb_test \
 	    "set remote multiprocess-feature-packet $multi_process" \
 	    "Support for the 'multiprocess-feature' packet on future remote targets is set to \"${multi_process}\"."
     }
 
-    if ![runto all_started] then {
+    if { ![runto all_started] } {
 	return 0
     }
 
@@ -184,7 +184,7 @@ proc multi_target_prepare {} {
 	return 0
     }
 
-    if { [prepare_for_testing "failed to prepare" ${binfile} "${srcfile}" \
+    if { [prepare_for_testing "failed to prepare" $::testfile $srcfile \
 	      {debug pthreads}] } {
 	return 0
     }

@@ -27,7 +27,8 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {}] !
     return -1
 }
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 # Insert a breakpoint in FUNCTION and verifies that the breakpoint was
 # inserted at the expected location.  EXPECTED_LOCATION should be an
@@ -36,7 +37,7 @@ proc insert_breakpoint {function expected_location} {
     global gdb_prompt
     global expect_out
     global hex
-    
+
     set address ""
 
     # Insert a breakpoint using the given function name, and extract

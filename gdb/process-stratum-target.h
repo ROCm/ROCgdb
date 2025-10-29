@@ -86,6 +86,11 @@ public:
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *obfd,
 						     int *notes_size) override;
 
+  /* Assume sub-classes are not shareable.  Those that are need to mark
+     themselves as such.  */
+  bool is_shareable () override
+  { return false; }
+
   /* True if any thread is, or may be executing.  We need to track
      this separately because until we fully sync the thread list, we
      won't know whether the target is fully stopped, even if we see

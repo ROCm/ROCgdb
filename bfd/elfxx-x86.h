@@ -102,9 +102,6 @@
    header.  */
 #define PLT_SFRAME_FDE_START_OFFSET	sizeof (sframe_header)
 
-#define ABI_64_P(abfd) \
-  (get_elf_backend_data (abfd)->s->elfclass == ELFCLASS64)
-
 /* If ELIMINATE_COPY_RELOCS is non-zero, the linker will try to avoid
    copying dynamic variables from a shared lib into an app's dynbss
    section, and instead use a dynamic relocation to point into the
@@ -225,15 +222,14 @@
 
 /* TRUE if this input relocation should be copied to output.  H->dynindx
    may be -1 if this symbol was marked to become local.  STV_PROTECTED
-   symbols with indirect external access are local. */
+   symbols are local. */
 #define COPY_INPUT_RELOC_P(IS_X86_64, INFO, H, R_TYPE) \
   ((H) != NULL \
    && (H)->dynindx != -1 \
    && (X86_PCREL_TYPE_P (IS_X86_64, R_TYPE) \
        || !(bfd_link_executable (INFO) \
 	    || SYMBOLIC_BIND ((INFO), (H)) \
-	    || ((INFO)->indirect_extern_access > 0 \
-		&& ELF_ST_VISIBILITY ((H)->other) == STV_PROTECTED)) \
+	    || ELF_ST_VISIBILITY ((H)->other) == STV_PROTECTED) \
        || !(H)->def_regular))
 
 /* TRUE if this is actually a static link, or it is a -Bsymbolic link
@@ -603,7 +599,6 @@ struct elf_x86_link_hash_table
   struct elf_link_hash_table elf;
 
   /* Short-cuts to get to dynamic linker sections.  */
-  asection *interp;
   asection *plt_eh_frame;
   asection *plt_second;
   asection *plt_second_eh_frame;
@@ -651,13 +646,13 @@ struct elf_x86_link_hash_table
   /* The index of the next R_X86_64_IRELATIVE entry in .rela.plt.  */
   bfd_vma next_irelative_index;
 
+  /* The .rela.tls/.rel.tls section for R_386_TLS_DESC or R_X86_64_TLSDESC
+     relocation.  */
+  asection *rel_tls_desc;
+
   /* The (unloaded but important) .rel.plt.unloaded section on VxWorks.
      This is used for i386 only.  */
   asection *srelplt2;
-
-  /* The index of the next unused R_386_TLS_DESC slot in .rel.plt.  This
-     is only used for i386.  */
-  bfd_vma next_tls_desc_index;
 
   /* DT_RELR bitmap.  */
   struct elf_dt_relr_bitmap dt_relr_bitmap;
@@ -670,6 +665,13 @@ struct elf_x86_link_hash_table
 
   /* Number of relative reloc generation pass.  */
   unsigned int generate_relative_reloc_pass;
+
+  /* TRUE if inputs have R_386_TLS_DESC_CALL or R_X86_64_TLSDESC_CALL
+     relocation.  */
+  unsigned int has_tls_desc_call : 1;
+
+  /* TRUE if inputs call ___tls_get_addr.  This is only used for i386.  */
+  unsigned int has_tls_get_addr_call : 1;
 
    /* Value used to fill the unused bytes of the first PLT entry.  This
       is only used for i386.  */
@@ -865,6 +867,9 @@ extern bool _bfd_elf_x86_size_relative_relocs
 extern bool _bfd_elf_x86_finish_relative_relocs
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
+extern asection * _bfd_elf_x86_get_reloc_section
+  (bfd *, const char *) ATTRIBUTE_HIDDEN;
+
 extern void _bfd_elf32_write_addend 
   (bfd *, uint64_t, void *) ATTRIBUTE_HIDDEN;
 extern void _bfd_elf64_write_addend
@@ -943,6 +948,10 @@ extern void _bfd_x86_elf_link_report_tls_transition_error
    const Elf_Internal_Rela *, const char *, const char *,
    enum elf_x86_tls_error_type);
 
+extern void _bfd_x86_elf_link_report_tls_invalid_section_error
+  (bfd *, asection *, Elf_Internal_Shdr *, struct elf_link_hash_entry *,
+   Elf_Internal_Sym *, reloc_howto_type *);
+
 #define bfd_elf64_mkobject \
   _bfd_x86_elf_mkobject
 #define bfd_elf32_mkobject \
@@ -988,6 +997,8 @@ extern void _bfd_x86_elf_link_report_tls_transition_error
   _bfd_elf_x86_size_relative_relocs
 #define elf_backend_finish_relative_relocs \
   _bfd_elf_x86_finish_relative_relocs
+#define elf_backend_get_reloc_section \
+  _bfd_elf_x86_get_reloc_section
 #define elf_backend_use_mmap true
 
 #define ELF_P_ALIGN ELF_MINPAGESIZE

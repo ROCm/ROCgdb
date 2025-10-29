@@ -671,6 +671,8 @@ mips_linux_in_dynsym_stub (CORE_ADDR pc)
 template <typename Base>
 struct mips_linux_svr4_solib_ops : public Base
 {
+  using Base::Base;
+
   bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
 };
 
@@ -700,9 +702,9 @@ using mips_linux_ilp32_svr4_solib_ops
 /* Return a new solib_ops for ILP32 Linux/MIPS systems.  */
 
 static solib_ops_up
-make_mips_linux_ilp32_svr4_solib_ops ()
+make_mips_linux_ilp32_svr4_solib_ops (program_space *pspace)
 {
-  return std::make_unique<mips_linux_ilp32_svr4_solib_ops> ();
+  return std::make_unique<mips_linux_ilp32_svr4_solib_ops> (pspace);
 }
 
 /* solib_ops for LP64 Linux/MIPS systems.  */
@@ -713,9 +715,9 @@ using mips_linux_lp64_svr4_solib_ops
 /* Return a new solib_ops for LP64 Linux/MIPS systems.  */
 
 static solib_ops_up
-make_mips_linux_lp64_svr4_solib_ops ()
+make_mips_linux_lp64_svr4_solib_ops (program_space *pspace)
 {
-  return std::make_unique<mips_linux_lp64_svr4_solib_ops> ();
+  return std::make_unique<mips_linux_lp64_svr4_solib_ops> (pspace);
 }
 
 /* See the comments for SKIP_SOLIB_RESOLVER at the top of infrun.c,
@@ -1605,7 +1607,7 @@ mips_linux_init_abi (struct gdbarch_info info,
 
   set_gdbarch_skip_solib_resolver (gdbarch, mips_linux_skip_resolver);
 
-  set_gdbarch_software_single_step (gdbarch, mips_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, mips_software_single_step);
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,

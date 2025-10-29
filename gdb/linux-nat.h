@@ -137,6 +137,10 @@ public:
   std::vector<static_tracepoint_marker>
     static_tracepoint_markers_by_strid (const char *id) override;
 
+  /* Linux ptrace targets are shareable.  */
+  bool is_shareable () override final
+  { return true; }
+
   /* Methods that are meant to overridden by the concrete
      arch-specific target instance.  */
 
@@ -295,8 +299,7 @@ struct lwp_info : intrusive_list_node<lwp_info>
 
 /* lwp_info iterator and range types.  */
 
-using lwp_info_iterator
-  = reference_to_pointer_iterator<intrusive_list<lwp_info>::iterator>;
+using lwp_info_iterator = intrusive_list<lwp_info>::iterator;
 using lwp_info_range = iterator_range<lwp_info_iterator>;
 using lwp_info_safe_range = basic_safe_range<lwp_info_range>;
 

@@ -126,7 +126,7 @@ sympy_get_addr_class (PyObject *self, void *closure)
 
   SYMPY_REQUIRE_VALID (self, symbol);
 
-  return gdb_py_object_from_longest (symbol->aclass ()).release ();
+  return gdb_py_object_from_longest (symbol->loc_class ()).release ();
 }
 
 /* Implement gdb.Symbol.domain attribute.  Return the domain as an
@@ -156,42 +156,39 @@ static PyObject *
 sympy_is_constant (PyObject *self, void *closure)
 {
   struct symbol *symbol = NULL;
-  enum address_class theclass;
 
   SYMPY_REQUIRE_VALID (self, symbol);
 
-  theclass = symbol->aclass ();
+  location_class loc_class = symbol->loc_class ();
 
-  return PyBool_FromLong (theclass == LOC_CONST || theclass == LOC_CONST_BYTES);
+  return PyBool_FromLong (loc_class == LOC_CONST || loc_class == LOC_CONST_BYTES);
 }
 
 static PyObject *
 sympy_is_function (PyObject *self, void *closure)
 {
   struct symbol *symbol = NULL;
-  enum address_class theclass;
 
   SYMPY_REQUIRE_VALID (self, symbol);
 
-  theclass = symbol->aclass ();
+  location_class loc_class = symbol->loc_class ();
 
-  return PyBool_FromLong (theclass == LOC_BLOCK);
+  return PyBool_FromLong (loc_class == LOC_BLOCK);
 }
 
 static PyObject *
 sympy_is_variable (PyObject *self, void *closure)
 {
   struct symbol *symbol = NULL;
-  enum address_class theclass;
 
   SYMPY_REQUIRE_VALID (self, symbol);
 
-  theclass = symbol->aclass ();
+  location_class loc_class = symbol->loc_class ();
 
   return PyBool_FromLong (!symbol->is_argument ()
-			  && (theclass == LOC_LOCAL || theclass == LOC_REGISTER
-			      || theclass == LOC_STATIC || theclass == LOC_COMPUTED
-			      || theclass == LOC_OPTIMIZED_OUT));
+			  && (loc_class == LOC_LOCAL || loc_class == LOC_REGISTER
+			      || loc_class == LOC_STATIC || loc_class == LOC_COMPUTED
+			      || loc_class == LOC_OPTIMIZED_OUT));
 }
 
 /* Implementation of Symbol.is_artificial.  */
@@ -279,7 +276,7 @@ sympy_value (PyObject *self, PyObject *args)
     }
 
   SYMPY_REQUIRE_VALID (self, symbol);
-  if (symbol->aclass () == LOC_TYPEDEF)
+  if (symbol->loc_class () == LOC_TYPEDEF)
     {
       PyErr_SetString (PyExc_TypeError, "cannot get the value of a typedef");
       return NULL;
@@ -605,17 +602,15 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 
       /* Expand any symtabs that contain potentially matching symbols.  */
       lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
-      expand_symtabs_matching (NULL, lookup_name, NULL, NULL,
-			       SEARCH_STATIC_BLOCK, flags);
 
-      for (objfile *objfile : current_program_space->objfiles ())
+      for (objfile &objfile : current_program_space->objfiles ())
 	{
-	  for (compunit_symtab *cust : objfile->compunits ())
+	  auto callback = [&] (compunit_symtab *cust)
 	    {
 	      /* Skip included compunits to prevent including compunits from
 		 being searched twice.  */
 	      if (cust->user != nullptr)
-		continue;
+		return true;
 
 	      const struct blockvector *bv = cust->blockvector ();
 	      const struct block *block = bv->static_block ();
@@ -628,13 +623,18 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 		  if (symbol != nullptr)
 		    {
 		      PyObject *sym_obj = symbol_to_symbol_object (symbol);
-		      if (sym_obj == nullptr)
-			return nullptr;
-		      if (PyList_Append (return_list.get (), sym_obj) == -1)
-			return nullptr;
+		      if (sym_obj == nullptr
+			  || PyList_Append (return_list.get (), sym_obj) == -1)
+			return false;
 		    }
 		}
-	    }
+
+	      return true;
+	    };
+
+	  if (!objfile.search (nullptr, &lookup_name, nullptr, callback,
+			       SEARCH_STATIC_BLOCK, flags))
+	    return nullptr;
 	}
     }
   catch (const gdb_exception &except)
@@ -645,8 +645,8 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
   return return_list.release ();
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_symbols (void)
+static int
+gdbpy_initialize_symbols ()
 {
   if (gdbpy_type_ready (&symbol_object_type) < 0)
     return -1;

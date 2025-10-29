@@ -29,7 +29,7 @@
 	.arch armv8.8-a
 	rw_sys_reg allint   // V8_8A
 
-	.arch armv8.9-a
+	.arch armv8.9-a+profile
 	rw_sys_reg pfar_el1   // PFAR
 	rw_sys_reg pir_el1   // S1PIE
 	rw_sys_reg pmecr_el1   // SEBEP
@@ -49,7 +49,7 @@
 
 	.arch armv9.5-a
 	rw_sys_reg vdisr_el3   // E3DES
-	rw_sys_reg spmzr_el0   // SPMU2
+	rw_sys_reg spmzr_el0 r=0   // SPMU2
 	rw_sys_reg mdstepop_el1   // STEP2
 	rw_sys_reg gpcbw_el3   // V9_5A
 
@@ -82,6 +82,8 @@
 	rw_sys_reg pan   // PAN
 	.arch_extension ssbs
 	rw_sys_reg ssbs   // SSBS
+	.arch_extension gcie
+	rw_sys_reg icc_apr_el1   // GCIE
 
 	.arch_extension d128 // For the msrr and mrrs instructions.
 	.arch_extension the

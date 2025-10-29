@@ -1,4 +1,4 @@
-# Copyright 2024 Free Software Foundation, Inc.
+# Copyright 2024-2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -46,7 +46,7 @@ proc gdb_test_with_xfail { cmd re cond} {
 	    pass $gdb_test_name
 	}
 	-re -wrap "The inferior has not yet allocated storage for thread-local variables.*" {
-	    if [ uplevel 1 [list expr $cond]] {
+	    if {[ uplevel 1 [list expr $cond]]} {
 		xfail $gdb_test_name
 	    } else {
 		fail $gdb_test_name
@@ -56,12 +56,13 @@ proc gdb_test_with_xfail { cmd re cond} {
 }
 
 proc do_tests {force_internal_tls} {
-    clean_restart $::binfile
-    if ![runto_main] {
+    clean_restart
+    gdb_load $::binfile
+    if {![runto_main]} {
 	return
     }
 
-    if $force_internal_tls {
+    if {$force_internal_tls} {
 	gdb_test_no_output "maint set force-internal-tls-address-lookup on"
     }
 
@@ -284,11 +285,12 @@ proc do_tests {force_internal_tls} {
     }
 
     # Finish test early if no core file was made.
-    if !$core_supported {
+    if {!$core_supported} {
 	return
     }
 
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     set core_loaded [gdb_core_cmd $corefile "load corefile"]
     if { $core_loaded == -1 } {
@@ -296,7 +298,7 @@ proc do_tests {force_internal_tls} {
     }
 
     with_test_prefix "core file" {
-	if $force_internal_tls {
+	if {$force_internal_tls} {
 	    gdb_test_no_output "maint set force-internal-tls-address-lookup on"
 	}
 

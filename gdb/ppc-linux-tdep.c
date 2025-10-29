@@ -61,7 +61,6 @@
 #include "cli/cli-utils.h"
 #include "parser-defs.h"
 #include "user-regs.h"
-#include <ctype.h>
 #include "elf-bfd.h"
 #include "producer.h"
 #include "target-float.h"
@@ -119,7 +118,7 @@
    actually called, the code in the PLT is hit and the function is
    resolved.  In order to better illustrate this, an example is in
    order; the following example is from the gdb testsuite.
-	    
+
 	We start the program shmain.
 
 	    [kev@arroyo testsuite]$ ../gdb gdb.base/shmain
@@ -143,7 +142,7 @@
 	Now run 'til main.
 
 	    (gdb) r
-	    Starting program: gdb.base/shmain 
+	    Starting program: gdb.base/shmain
 	    Breakpoint 1 at 0xffaf790: file gdb.base/shr1.c, line 19.
 
 	    Breakpoint 2, main ()
@@ -252,7 +251,7 @@ static enum return_value_convention
 ppc_linux_return_value (struct gdbarch *gdbarch, struct value *function,
 			struct type *valtype, struct regcache *regcache,
 			struct value **read_value, const gdb_byte *writebuf)
-{  
+{
   gdb_byte *readbuf = nullptr;
   if (read_value != nullptr)
     {
@@ -309,6 +308,8 @@ static const struct ppc_insn_pattern powerpc32_plt_stub_so_2[] =
 
 struct ppc_linux_ilp32_svr4_solib_ops : public linux_ilp32_svr4_solib_ops
 {
+  using linux_ilp32_svr4_solib_ops::linux_ilp32_svr4_solib_ops;
+
   /* Check if PC is in PLT stub.  For non-secure PLT, stub is in .plt
      section.  For secure PLT, stub is in .text and we need to check
      instruction patterns.  */
@@ -319,9 +320,9 @@ struct ppc_linux_ilp32_svr4_solib_ops : public linux_ilp32_svr4_solib_ops
 /* Return a new solib_ops for ILP32 PowerPC/Linux systems.  */
 
 static solib_ops_up
-make_ppc_linux_ilp32_svr4_solib_ops ()
+make_ppc_linux_ilp32_svr4_solib_ops (program_space *pspace)
 {
-  return std::make_unique<ppc_linux_ilp32_svr4_solib_ops> ();
+  return std::make_unique<ppc_linux_ilp32_svr4_solib_ops> (pspace);
 }
 
 /* See ppc_linux_ilp32_svr4_solib_ops.  */
@@ -1304,7 +1305,7 @@ ppc64_linux_sighandler_cache_init (const struct tramp_frame *self,
 static struct tramp_frame ppc32_linux_sigaction_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x380000ac, ULONGEST_MAX }, /* li r0, 172 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
     { TRAMP_SENTINEL_INSN },
@@ -1325,7 +1326,7 @@ static struct tramp_frame ppc64_linux_sigaction_tramp_frame = {
 static struct tramp_frame ppc32_linux_sighandler_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x38000077, ULONGEST_MAX }, /* li r0,119 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
     { TRAMP_SENTINEL_INSN },
@@ -1335,7 +1336,7 @@ static struct tramp_frame ppc32_linux_sighandler_tramp_frame = {
 static struct tramp_frame ppc64_linux_sighandler_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x38210080, ULONGEST_MAX }, /* addi r1,r1,128 */
     { 0x38000077, ULONGEST_MAX }, /* li r0,119 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
@@ -1710,10 +1711,10 @@ static int
 ppc_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == 'i' /* Literal number.  */
-	  || (isdigit (*s) && s[1] == '('
-	      && isdigit (s[2])) /* Displacement.  */
-	  || (*s == '(' && isdigit (s[1])) /* Register indirection.  */
-	  || isdigit (*s)); /* Register value.  */
+	  || (c_isdigit (*s) && s[1] == '('
+	      && c_isdigit (s[2])) /* Displacement.  */
+	  || (*s == '(' && c_isdigit (s[1])) /* Register indirection.  */
+	  || c_isdigit (*s)); /* Register value.  */
 }
 
 /* Implementation of `gdbarch_stap_parse_special_token', as defined in
@@ -1723,7 +1724,7 @@ static expr::operation_up
 ppc_stap_parse_special_token (struct gdbarch *gdbarch,
 			      struct stap_parse_info *p)
 {
-  if (isdigit (*p->arg))
+  if (c_isdigit (*p->arg))
     {
       /* This temporary pointer is needed because we have to do a lookahead.
 	  We could be dealing with a register displacement, and in such case
@@ -1732,7 +1733,7 @@ ppc_stap_parse_special_token (struct gdbarch *gdbarch,
       char *regname;
       int len;
 
-      while (isdigit (*s))
+      while (c_isdigit (*s))
 	++s;
 
       if (*s == '(')
@@ -2301,7 +2302,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
 
       set_gdbarch_skip_solib_resolver (gdbarch, glibc_skip_solib_resolver);
     }
-  
+
   if (tdep->wordsize == 8)
     {
       if (tdep->elf_abi == POWERPC_ELF_V1)

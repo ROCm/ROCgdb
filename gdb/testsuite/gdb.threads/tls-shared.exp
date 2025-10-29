@@ -29,7 +29,7 @@ if { [gdb_compile_shlib_pthreads ${srcdir}/${subdir}/${srcfile_lib} ${binfile_li
 }
 
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 gdb_load_shlib ${binfile_lib}
 
 if {![runto_main]} {
@@ -52,6 +52,6 @@ gdb_test "break $line_number" \
 gdb_test "continue" \
 	"main .* at .*:.*return 0.*break here to check result.*" \
         "continue to break"
-# This is more of a gcc/glibc test, really. 
+# This is more of a gcc/glibc test, really.
 #
 gdb_test "print result" "3"

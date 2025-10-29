@@ -30,7 +30,7 @@
 	rw_sys_reg pmccntsvr_el1 w=0  // PMUv3_SS
 
 	rw_sys_reg vdisr_el3   // E3DES
-	rw_sys_reg spmzr_el0   // SPMU2
+	rw_sys_reg spmzr_el0 r=0   // SPMU2
 	rw_sys_reg mdstepop_el1   // STEP2
 	rw_sys_reg gpcbw_el3   // V9_5A
 
@@ -49,6 +49,7 @@
 	rw_sys_reg disr_el1   // RAS
 	rw_sys_reg pan   // PAN
 	rw_sys_reg ssbs   // SSBS
+	rw_sys_reg icc_apr_el1   // GCIE
 
 	.arch_extension d128 // For the msrr and mrrs instructions.
 	rw_sys_reg_128 rcwmask_el1 xreg1=x2 xreg2=x3  // THE

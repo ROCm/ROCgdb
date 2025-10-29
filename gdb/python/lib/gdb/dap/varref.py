@@ -146,6 +146,10 @@ class BaseReference(ABC):
         if self._children is None:
             self._children = [None] * self.child_count()
         for idx in range(start, start + count):
+            if idx >= len(self._children):
+                raise DAPException(
+                    f"requested child {idx} outside range of variable {self._ref}"
+                )
             if self._children[idx] is None:
                 (name, value) = self.fetch_one_child(idx)
                 name = self._compute_name(name)
@@ -242,7 +246,11 @@ class VariableReference(BaseReference):
             # changed DAP to allow memory references for any of the
             # variable response requests, and to lift the restriction
             # to pointer-to-function from Variable.
-            if self._value.type.strip_typedefs().code == gdb.TYPE_CODE_PTR:
+            if (
+                self._value.type.strip_typedefs().code == gdb.TYPE_CODE_PTR
+                and not self._value.is_optimized_out
+                and not self._value.is_unavailable
+            ):
                 result["memoryReference"] = hex(int(self._value))
         if client_bool_capability("supportsVariableType"):
             result["type"] = str(self._value.type)

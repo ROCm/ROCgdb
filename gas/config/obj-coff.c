@@ -43,7 +43,7 @@
    attributes when a directive has no valid flags or the "w" flag is
    used.  This default should be appropriate for most.  */
 #ifndef TC_COFF_SECTION_DEFAULT_ATTRIBUTES
-#define TC_COFF_SECTION_DEFAULT_ATTRIBUTES (SEC_LOAD | SEC_DATA)
+#define TC_COFF_SECTION_DEFAULT_ATTRIBUTES (SEC_ALLOC | SEC_LOAD | SEC_DATA)
 #endif
 
 /* This is used to hold the symbol built by a sequence of pseudo-ops
@@ -1015,12 +1015,10 @@ obj_coff_val (int ignore ATTRIBUTE_UNUSED)
 	}
       else if (! streq (S_GET_NAME (def_symbol_in_progress), symbol_name))
 	{
-	  expressionS exp;
-
-	  exp.X_op = O_symbol;
-	  exp.X_add_symbol = symbol_find_or_make (symbol_name);
-	  exp.X_op_symbol = NULL;
-	  exp.X_add_number = 0;
+	  expressionS exp = {
+	    .X_op = O_symbol,
+	    .X_add_symbol = symbol_find_or_make (symbol_name)
+	  };
 	  symbol_set_value_expression (def_symbol_in_progress, &exp);
 
 	  /* If the segment is undefined when the forward reference is
@@ -1605,6 +1603,8 @@ obj_coff_section (int ignore ATTRIBUTE_UNUSED)
 		case 'n':
 		  /* Section not loaded.  */
 		  flags &=~ SEC_LOAD;
+		  if (!is_bss)
+		    flags &= ~SEC_ALLOC;
 		  flags |= SEC_NEVER_LOAD;
 		  load_removed = 1;
 		  break;
@@ -1617,7 +1617,7 @@ obj_coff_section (int ignore ATTRIBUTE_UNUSED)
 		  /* Data section.  */
 		  flags |= SEC_DATA;
 		  if (! load_removed)
-		    flags |= SEC_LOAD;
+		    flags |= SEC_LOAD | SEC_ALLOC;
 		  flags &=~ SEC_READONLY;
 		  break;
 
@@ -1641,7 +1641,7 @@ obj_coff_section (int ignore ATTRIBUTE_UNUSED)
 		     otherwise set the SEC_DATA flag.  */
 		  flags |= (attr == 'x' || (flags & SEC_CODE) ? SEC_CODE : SEC_DATA);
 		  if (! load_removed)
-		    flags |= SEC_LOAD;
+		    flags |= SEC_LOAD | SEC_ALLOC;
 		  /* Note - the READONLY flag is set here, even for the 'x'
 		     attribute in order to be compatible with the MSVC
 		     linker.  */

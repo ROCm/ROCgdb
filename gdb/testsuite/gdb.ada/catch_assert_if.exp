@@ -20,7 +20,7 @@ require allow_ada_tests gnat_runtime_has_debug_info
 standard_ada_testfile bla
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnata ]] != "" } {
-   return -1
+   return
 }
 
 clean_restart ${testfile}
@@ -35,7 +35,7 @@ set sp "\[ \t\]*"
 #  - continue, the program exits.
 
 if {![runto_main]} {
-   return 0
+   return
 }
 
 gdb_test "catch assert if Global_Var = 2" \

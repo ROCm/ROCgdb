@@ -474,7 +474,7 @@ display_one_tib (ptid_t ptid)
       tib_size = FULL_TIB_SIZE;
       max = tib_size / size;
     }
-  
+
   tib = (gdb_byte *) alloca (tib_size);
 
   if (!target_get_tib_address (ptid, &thread_local_base))
@@ -489,7 +489,7 @@ display_one_tib (ptid_t ptid)
     {
       gdb_printf (_("Unable to read thread information "
 		    "block for %s at address %s\n"),
-		  target_pid_to_str (ptid).c_str (), 
+		  target_pid_to_str (ptid).c_str (),
 		  paddress (current_inferior ()->arch (), thread_local_base));
       return -1;
     }
@@ -500,7 +500,7 @@ display_one_tib (ptid_t ptid)
 
   index = (gdb_byte *) tib;
 
-  /* All fields have the size of a pointer, this allows to iterate 
+  /* All fields have the size of a pointer, this allows to iterate
      using the same for loop for both layouts.  */
   for (i = 0; i < max; i++)
     {
@@ -511,8 +511,8 @@ display_one_tib (ptid_t ptid)
 	gdb_printf (_("TIB[0x%s] is 0x%s\n"), phex (i * size, 2),
 		    phex (val, size));
       index += size;
-    } 
-  return 1;  
+    }
+  return 1;
 }
 
 /* Display thread information block of the current thread.  */
@@ -548,43 +548,6 @@ windows_xfer_shared_library (const char* so_name, CORE_ADDR load_addr,
 
   xml += paddress (gdbarch, load_addr + text_offset);
   xml += "\"/></library>";
-}
-
-/* Implement the "iterate_over_objfiles_in_search_order" gdbarch
-   method.  It searches all objfiles, starting with CURRENT_OBJFILE
-   first (if not NULL).
-
-   On Windows, the system behaves a little differently when two
-   objfiles each define a global symbol using the same name, compared
-   to other platforms such as GNU/Linux for instance.  On GNU/Linux,
-   all instances of the symbol effectively get merged into a single
-   one, but on Windows, they remain distinct.
-
-   As a result, it usually makes sense to start global symbol searches
-   with the current objfile before expanding it to all other objfiles.
-   This helps for instance when a user debugs some code in a DLL that
-   refers to a global variable defined inside that DLL.  When trying
-   to print the value of that global variable, it would be unhelpful
-   to print the value of another global variable defined with the same
-   name, but in a different DLL.  */
-
-static void
-windows_iterate_over_objfiles_in_search_order
-  (gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype cb,
-   objfile *current_objfile)
-{
-  if (current_objfile)
-    {
-      if (cb (current_objfile))
-	return;
-    }
-
-  for (objfile *objfile : current_program_space->objfiles ())
-    if (objfile != current_objfile)
-      {
-	if (cb (objfile))
-	  return;
-      }
 }
 
 static void
@@ -866,15 +829,20 @@ windows_get_siginfo_type (struct gdbarch *gdbarch)
 
 struct windows_solib_ops : target_solib_ops
 {
+  using target_solib_ops::target_solib_ops;
+
   void create_inferior_hook (int from_tty) const override;
+  void iterate_over_objfiles_in_search_order
+    (iterate_over_objfiles_in_search_order_cb_ftype cb,
+     objfile *current_objfile) const override;
 };
 
 /* Return a new solib_ops for Windows systems.  */
 
 static solib_ops_up
-make_windows_solib_ops ()
+make_windows_solib_ops (program_space *pspace)
 {
-  return std::make_unique<windows_solib_ops> ();
+  return std::make_unique<windows_solib_ops> (pspace);
 }
 
 /* Implement the "solib_create_inferior_hook" solib_ops method.  */
@@ -925,6 +893,43 @@ windows_solib_ops::create_inferior_hook (int from_tty) const
     }
 }
 
+/* Implement the "iterate_over_objfiles_in_search_order" gdbarch
+   method.  It searches all objfiles, starting with CURRENT_OBJFILE
+   first (if not NULL).
+
+   On Windows, the system behaves a little differently when two
+   objfiles each define a global symbol using the same name, compared
+   to other platforms such as GNU/Linux for instance.  On GNU/Linux,
+   all instances of the symbol effectively get merged into a single
+   one, but on Windows, they remain distinct.
+
+   As a result, it usually makes sense to start global symbol searches
+   with the current objfile before expanding it to all other objfiles.
+   This helps for instance when a user debugs some code in a DLL that
+   refers to a global variable defined inside that DLL.  When trying
+   to print the value of that global variable, it would be unhelpful
+   to print the value of another global variable defined with the same
+   name, but in a different DLL.  */
+
+void
+windows_solib_ops::iterate_over_objfiles_in_search_order
+  (iterate_over_objfiles_in_search_order_cb_ftype cb,
+   objfile *current_objfile) const
+{
+  if (current_objfile)
+    {
+      if (cb (current_objfile))
+	return;
+    }
+
+  for (objfile &objfile : m_pspace->objfiles ())
+    if (&objfile != current_objfile)
+      {
+	if (cb (&objfile))
+	  return;
+      }
+}
+
 /* Common parts for gdbarch initialization for the Windows and Cygwin OS
    ABIs.  */
 
@@ -937,9 +942,6 @@ windows_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Canonical paths on this target look like
      `c:\Program Files\Foo App\mydll.dll', for example.  */
   set_gdbarch_has_dos_based_file_system (gdbarch, 1);
-
-  set_gdbarch_iterate_over_objfiles_in_search_order
-    (gdbarch, windows_iterate_over_objfiles_in_search_order);
 
   set_gdbarch_make_solib_ops (gdbarch, make_windows_solib_ops);
 
@@ -1160,13 +1162,11 @@ core_process_module_section (bfd *abfd, asection *sect, void *obj)
 
 ULONGEST
 windows_core_xfer_shared_libraries (struct gdbarch *gdbarch,
-				    gdb_byte *readbuf,
+				    struct bfd &cbfd, gdb_byte *readbuf,
 				    ULONGEST offset, ULONGEST len)
 {
   cpms_data data { gdbarch, "<library-list>\n", 0 };
-  bfd_map_over_sections (current_program_space->core_bfd (),
-			 core_process_module_section,
-			 &data);
+  bfd_map_over_sections (&cbfd, core_process_module_section, &data);
   data.xml += "</library-list>\n";
 
   ULONGEST len_avail = data.xml.length ();

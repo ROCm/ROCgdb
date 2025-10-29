@@ -160,7 +160,7 @@ enum explicit_location_match_type
    will quote it.  That's why we switch between
    current_language->word_break_characters () and
    gdb_completer_command_word_break_characters.  I'm not sure when
-   we need this behavior (perhaps for funky characters in C++ 
+   we need this behavior (perhaps for funky characters in C++
    symbols?).  */
 
 /* Variables which are necessary for fancy command line editing.  */
@@ -212,7 +212,7 @@ static const char gdb_completer_file_name_quote_characters[] = "'\"";
    symbols but don't want to complete on anything else either.  */
 
 void
-noop_completer (struct cmd_list_element *ignore, 
+noop_completer (struct cmd_list_element *ignore,
 		completion_tracker &tracker,
 		const char *text, const char *prefix)
 {
@@ -2164,7 +2164,7 @@ complete_line (completion_tracker &tracker,
 /* Complete on command names.  Used by "help".  */
 
 void
-command_completer (struct cmd_list_element *ignore, 
+command_completer (struct cmd_list_element *ignore,
 		   completion_tracker &tracker,
 		   const char *text, const char *word)
 {
@@ -3006,7 +3006,7 @@ gdb_printable_part (char *pathname)
 
   temp = strrchr (pathname, '/');
 #if defined (__MSDOS__)
-  if (temp == 0 && ISALPHA ((unsigned char)pathname[0]) && pathname[1] == ':')
+  if (temp == 0 && c_isalpha (pathname[0]) && pathname[1] == ':')
     temp = pathname + 1;
 #endif
 
@@ -3183,7 +3183,7 @@ gdb_print_filename (char *to_print, char *full_pathname, int prefix_bytes,
 		    const struct match_list_displayer *displayer)
 {
   int printed_len, extension_char, slen, tlen;
-  char *s, c, *new_full_pathname;
+  char c, *new_full_pathname;
   const char *dn;
   extern int _rl_complete_mark_directories;
 
@@ -3220,7 +3220,7 @@ gdb_print_filename (char *to_print, char *full_pathname, int prefix_bytes,
 	    dn = "/";		/* don't turn /// into // */
 	  else
 	    dn = full_pathname;
-	  s = tilde_expand (dn);
+	  char *s = gdb_rl_tilde_expand (dn).release ();
 	  if (rl_directory_completion_hook)
 	    (*rl_directory_completion_hook) (&s);
 
@@ -3245,20 +3245,22 @@ gdb_print_filename (char *to_print, char *full_pathname, int prefix_bytes,
 
 	  xfree (new_full_pathname);
 	  to_print[-1] = c;
+
+	  xfree (s);
 	}
       else
 	{
-	  s = tilde_expand (full_pathname);
+	  gdb::unique_xmalloc_ptr<char> s
+	    = gdb_rl_tilde_expand (full_pathname);
 #if defined (VISIBLE_STATS)
 	  if (rl_visible_stats)
 	    extension_char = stat_char (s);
 	  else
 #endif
-	    if (gdb_path_isdir (s))
+	    if (gdb_path_isdir (s.get ()))
 	      extension_char = '/';
 	}
 
-      xfree (s);
       if (extension_char)
 	{
 	  displayer->putch (displayer, extension_char);

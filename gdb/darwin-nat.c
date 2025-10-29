@@ -47,7 +47,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
-#include <ctype.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
 #include <libproc.h>
@@ -1691,7 +1690,7 @@ darwin_attach_pid (struct inferior *inf)
 static struct thread_info *
 thread_info_from_private_thread_info (darwin_thread_info *pti)
 {
-  for (struct thread_info *it : all_threads ())
+  for (struct thread_info &it : all_threads ())
     {
       darwin_thread_info *iter_pti = get_darwin_thread_info (it);
 

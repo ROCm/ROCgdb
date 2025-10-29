@@ -1,4 +1,4 @@
-/* DIE indexing 
+/* DIE indexing
 
    Copyright (C) 2022-2025 Free Software Foundation, Inc.
 
@@ -74,7 +74,7 @@
    .          v                          /  |  \
    .   wait (MAIN_AVAILABLE)          finalization
    .          |                          \  |  /
-   .          v                           \ | /        
+   .          v                           \ | /
    .        done                      state = FINALIZED
    .                                        |
    .                                        v
@@ -237,15 +237,15 @@ struct cooked_index_functions : public dwarf2_base_index_functions
     dwarf2_base_index_functions::expand_all_symtabs (objfile);
   }
 
-  bool expand_symtabs_matching
+  bool search
     (struct objfile *objfile,
-     expand_symtabs_file_matcher file_matcher,
+     search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     expand_symtabs_symbol_matcher symbol_matcher,
-     expand_symtabs_expansion_listener expansion_notify,
+     search_symtabs_symbol_matcher symbol_matcher,
+     search_symtabs_expansion_listener listener,
      block_search_flags search_flags,
      domain_search_flags domain,
-     expand_symtabs_lang_matcher lang_matcher) override;
+     search_symtabs_lang_matcher lang_matcher) override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, bound_minimal_symbol msymbol,
@@ -260,8 +260,8 @@ struct cooked_index_functions : public dwarf2_base_index_functions
 			     bool need_fullname) override
   {
     wait (objfile, true);
-    return (dwarf2_base_index_functions::map_symbol_filenames
-	    (objfile, fun, need_fullname));
+    dwarf2_base_index_functions::map_symbol_filenames (objfile, fun,
+						       need_fullname);
   }
 
   void compute_main_name (struct objfile *objfile) override

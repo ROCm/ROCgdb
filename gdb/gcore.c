@@ -32,7 +32,6 @@
 #include "regcache.h"
 #include "regset.h"
 #include "gdb_bfd.h"
-#include "readline/tilde.h"
 #include "infrun.h"
 #include <algorithm>
 #include "gdbsupport/gdb_unlinker.h"
@@ -163,7 +162,7 @@ gcore_command (const char *args, int from_tty)
     }
 
   if (args && *args)
-    corefilename.reset (tilde_expand (args));
+    corefilename = gdb_rl_tilde_expand (args);
   else
     {
       /* Default corefile name is "core.PID".  */
@@ -309,7 +308,7 @@ call_target_sbrk (int sbrk_arg)
     return (bfd_vma) 0;
 
   gdbarch = sbrk_objf->arch ();
-  target_sbrk_arg = value_from_longest (builtin_type (gdbarch)->builtin_int, 
+  target_sbrk_arg = value_from_longest (builtin_type (gdbarch)->builtin_int,
 					sbrk_arg);
   gdb_assert (target_sbrk_arg);
   ret = call_function_by_hand (sbrk_fn, NULL, target_sbrk_arg);
@@ -421,8 +420,8 @@ make_output_phdrs (bfd *obfd, asection *osec)
    DATA is 'bfd *' for the core file GDB is creating.  */
 
 static int
-gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
-		       int write, int exec, int modified, bool memory_tagged,
+gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
+		       bool write, bool exec, bool modified, bool memory_tagged,
 		       void *data)
 {
   bfd *obfd = (bfd *) data;
@@ -432,7 +431,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
   /* If the memory segment has no permissions set, ignore it, otherwise
      when we later try to access it for read/write, we'll get an error
      or jam the kernel.  */
-  if (read == 0 && write == 0 && exec == 0 && modified == 0)
+  if (!read && !write && !exec && !modified)
     {
       if (info_verbose)
 	gdb_printf ("Ignore segment, %s bytes at %s\n",
@@ -442,19 +441,19 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
       return 0;
     }
 
-  if (write == 0 && modified == 0 && !solib_keep_data_in_core (vaddr, size))
+  if (!write && !modified && !solib_keep_data_in_core (vaddr, size))
     {
       /* See if this region of memory lies inside a known file on disk.
 	 If so, we can avoid copying its contents by clearing SEC_LOAD.  */
 
-      for (objfile *objfile : current_program_space->objfiles ())
-	for (obj_section *objsec : objfile->sections ())
+      for (objfile &objfile : current_program_space->objfiles ())
+	for (obj_section &objsec : objfile.sections ())
 	  {
-	    bfd *abfd = objfile->obfd.get ();
-	    asection *asec = objsec->the_bfd_section;
+	    bfd *abfd = objfile.obfd.get ();
+	    asection *asec = objsec.the_bfd_section;
 	    bfd_vma align = (bfd_vma) 1 << bfd_section_alignment (asec);
-	    bfd_vma start = objsec->addr () & -align;
-	    bfd_vma end = (objsec->endaddr () + align - 1) & -align;
+	    bfd_vma start = objsec.addr () & -align;
+	    bfd_vma end = (objsec.endaddr () + align - 1) & -align;
 
 	    /* Match if either the entire memory region lies inside the
 	       section (i.e. a mapping covering some pages of a large
@@ -463,7 +462,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
 
 	       This BFD was synthesized from reading target memory,
 	       we don't want to omit that.  */
-	    if (objfile->separate_debug_objfile_backlink == NULL
+	    if (objfile.separate_debug_objfile_backlink == NULL
 		&& ((vaddr >= start && vaddr + size <= end)
 		    || (start >= vaddr && end <= vaddr + size))
 		&& !(bfd_get_file_flags (abfd) & BFD_IN_MEMORY))
@@ -476,7 +475,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
     keep:;
     }
 
-  if (write == 0)
+  if (!write)
     flags |= SEC_READONLY;
 
   if (exec)
@@ -512,8 +511,8 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
 
 static int
 gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
-				      int read, int write, int exec,
-				      int modified, bool memory_tagged,
+				      bool read, bool write, bool exec,
+				      bool modified, bool memory_tagged,
 				      void *data)
 {
   /* Are there memory tags in this particular memory map entry?  */
@@ -554,14 +553,14 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
   bfd_vma temp_bottom = 0, temp_top = 0;
 
   /* Call callback function for each objfile section.  */
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section *objsec : objfile->sections ())
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &objsec : objfile.sections ())
       {
-	asection *isec = objsec->the_bfd_section;
+	asection *isec = objsec.the_bfd_section;
 	flagword flags = bfd_section_flags (isec);
 
 	/* Separate debug info files are irrelevant for gcore.  */
-	if (objfile->separate_debug_objfile_backlink != NULL)
+	if (objfile.separate_debug_objfile_backlink != NULL)
 	  continue;
 
 	if ((flags & SEC_ALLOC) || (flags & SEC_LOAD))
@@ -569,11 +568,11 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	    int size = bfd_section_size (isec);
 	    int ret;
 
-	    ret = (*func) (objsec->addr (), size,
-			   1, /* All sections will be readable.  */
+	    ret = (*func) (objsec.addr (), size,
+			   true, /* All sections will be readable.  */
 			   (flags & SEC_READONLY) == 0, /* Writable.  */
 			   (flags & SEC_CODE) != 0, /* Executable.  */
-			   1, /* MODIFIED is unknown, pass it as true.  */
+			   true, /* MODIFIED is unknown, pass it as true.  */
 			   false, /* No memory tags in the object file.  */
 			   obfd);
 	    if (ret != 0)
@@ -584,10 +583,10 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
   /* Make a stack segment.  */
   if (derive_stack_segment (&temp_bottom, &temp_top))
     (*func) (temp_bottom, temp_top - temp_bottom,
-	     1, /* Stack section will be readable.  */
-	     1, /* Stack section will be writable.  */
-	     0, /* Stack section will not be executable.  */
-	     1, /* Stack section will be modified.  */
+	     true, /* Stack section will be readable.  */
+	     true, /* Stack section will be writable.  */
+	     false, /* Stack section will not be executable.  */
+	     true, /* Stack section will be modified.  */
 	     false, /* No memory tags in the object file.  */
 	     obfd);
 
@@ -595,10 +594,10 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
   if (derive_heap_segment (current_program_space->exec_bfd (), &temp_bottom,
 			   &temp_top))
     (*func) (temp_bottom, temp_top - temp_bottom,
-	     1, /* Heap section will be readable.  */
-	     1, /* Heap section will be writable.  */
-	     0, /* Heap section will not be executable.  */
-	     1, /* Heap section will be modified.  */
+	     true, /* Heap section will be readable.  */
+	     true, /* Heap section will be writable.  */
+	     false, /* Heap section will not be executable.  */
+	     true, /* Heap section will be modified.  */
 	     false, /* No memory tags in the object file.  */
 	     obfd);
 
@@ -861,9 +860,9 @@ gcore_find_signalled_thread ()
       && curr_thr->stop_signal () != GDB_SIGNAL_0)
     return curr_thr;
 
-  for (thread_info *thr : current_inferior ()->non_exited_threads ())
-    if (thr->stop_signal () != GDB_SIGNAL_0)
-      return thr;
+  for (thread_info &thr : current_inferior ()->non_exited_threads ())
+    if (thr.stop_signal () != GDB_SIGNAL_0)
+      return &thr;
 
   /* Default to the current thread, unless it has exited.  */
   if (curr_thr->state != THREAD_EXITED)

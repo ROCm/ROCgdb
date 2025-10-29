@@ -710,6 +710,9 @@
 /* Define if the python directory should be relocated when GDB is moved. */
 #undef PYTHON_PATH_RELOCATABLE
 
+/* Define if GDB should be built against the Python limited C API. */
+#undef Py_LIMITED_API
+
 /* Relocated directory for source files. */
 #undef RELOC_SRCDIR
 
@@ -744,6 +747,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Which binary file formats were requested at configure time. */
+#undef SUPPORTED_BINARY_FILE_FORMATS
 
 /* automatically load a system-wide gdbinit file */
 #undef SYSTEM_GDBINIT

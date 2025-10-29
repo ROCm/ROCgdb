@@ -165,8 +165,7 @@ private:
 
 using mi_command_py_up = std::unique_ptr<mi_command_py>;
 
-extern PyTypeObject micmdpy_object_type
-	CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("micmdpy_object");
+extern PyTypeObject micmdpy_object_type;
 
 /* Holds a Python object containing the string 'invoke'.  */
 
@@ -350,7 +349,7 @@ micmdpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       PyErr_SetString (PyExc_ValueError, _("MI command name is empty."));
       return -1;
     }
-  else if ((name_len < 2) || (name[0] != '-') || !isalnum (name[1]))
+  else if ((name_len < 2) || (name[0] != '-') || !c_isalnum (name[1]))
     {
       PyErr_SetString (PyExc_ValueError,
 		       _("MI command name does not start with '-'"
@@ -361,7 +360,7 @@ micmdpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
     {
       for (int i = 2; i < name_len; i++)
 	{
-	  if (!isalnum (name[i]) && name[i] != '-')
+	  if (!c_isalnum (name[i]) && name[i] != '-')
 	    {
 	      PyErr_Format
 		(PyExc_ValueError,
@@ -443,7 +442,7 @@ micmdpy_dealloc (PyObject *obj)
 
 /* Python initialization for the MI commands components.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
+static int
 gdbpy_initialize_micommands ()
 {
   micmdpy_object_type.tp_new = PyType_GenericNew;

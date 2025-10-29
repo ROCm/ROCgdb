@@ -515,12 +515,17 @@ run_dump_test "pr27491-3"
 run_dump_test "pr27491-4"
 run_dump_test "dt-relr-1a"
 run_dump_test "dt-relr-1b"
+run_dump_test "dt-relr-1c"
+run_dump_test "dt-relr-1d"
+run_dump_test "dt-relr-2"
 run_dump_test "pr28870"
 run_dump_test "pr28894"
 run_dump_test "pr30787"
 run_dump_test "pr31047"
 run_dump_test "pr32191"
 run_dump_test "pr33260"
+run_dump_test "pr33260-2"
+run_dump_test "pr28387"
 
 if { !([istarget "i?86-*-linux*"]
        || [istarget "i?86-*-gnu*"]
@@ -711,7 +716,7 @@ if { [isnative]
 	[list \
 	    "Build pr17689.so" \
 	    "-shared" \
-	    "-fPIC -Wa,-mrelax-relocations=yes" \
+	    "-fPIC $DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { pr17689a.c } \
 	    {} \
 	    "pr17689.so" \
@@ -735,7 +740,7 @@ if { [isnative]
 	[list \
 	    "Build pr17689.a" \
 	    "" \
-	    "-Wa,-mrelax-relocations=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { pr17689b.S } \
 	    {} \
 	    "pr17689.a" \
@@ -743,7 +748,7 @@ if { [isnative]
 	[list \
 	    "Build pr17689 with PIE and GOTOFF" \
 	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie" \
-	    "-Wa,-mrelax-relocations=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { dummy.c } \
 	    {{readelf {-Wr} pr17689.rd}} \
 	    "pr17689" \
@@ -751,7 +756,7 @@ if { [isnative]
 	[list \
 	    "Build pr17689 with PIE, -z now and GOTOFF" \
 	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie -Wl,-z,now" \
-	    "-Wa,-mrelax-relocations=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { dummy.c } \
 	    {{readelf {-Wr} pr17689now.rd}} \
 	    "pr17689now" \
@@ -759,7 +764,7 @@ if { [isnative]
 	[list \
 	    "Build pr17689ver with PIE and GOTOFF" \
 	    "tmpdir/pr17689b.o tmpdir/pr17689ver.so -pie" \
-	    "-Wa,-mrelax-relocations=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { dummy.c } \
 	    {{readelf {-Wr} pr17689ver.rd}} \
 	    "pr17689ver" \
@@ -767,7 +772,7 @@ if { [isnative]
 	[list \
 	    "Build pr17827 with PIE and GOTOFF" \
 	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie" \
-	    "-Wa,-mrelax-relocations=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mrelax-relocations=yes" \
 	    { dummy.c } \
 	    {{readelf {-Wr} pr17827.rd}} \
 	    "pr17827" \
@@ -873,7 +878,7 @@ if { [isnative]
 	[list \
 	    "Build property 1 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-no-copy.S} \
 	    {{readelf {-n} property-1a.r}} \
 	    "property-1.o" \
@@ -897,7 +902,7 @@ if { [isnative]
 	[list \
 	    "Build property 2 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-stack.S} \
 	    {{readelf {-n} property-2a.r}} \
 	    "property-2.o" \
@@ -921,7 +926,7 @@ if { [isnative]
 	[list \
 	    "Build property 3 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-x86-1.S property-stack.S} \
 	    {{readelf {-n} property-3a.r}} \
 	    "property-3.o" \
@@ -945,7 +950,7 @@ if { [isnative]
 	[list \
 	    "Build property 4 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-x86-2.S property-x86-1.S property-stack.S} \
 	    {{readelf {-n} property-4a.r}} \
 	    "property-4.o" \
@@ -977,7 +982,7 @@ if { [isnative]
 	[list \
 	    "Build property 5 (.o)" \
 	    "-r -nostdlib -Wl,-z,stack-size=0x900000" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-x86-2.S property-x86-1.S property-stack.S} \
 	    {{readelf {-n} property-5a.r}} \
 	    "property-5.o" \
@@ -1001,7 +1006,7 @@ if { [isnative]
 	[list \
 	    "Build property-6.o" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {property-6b.c property-stack.S} \
 	    {{readelf {-n} property-2a.r}} \
 	    "property-6.o" \
@@ -1068,6 +1073,7 @@ if { [isnative]
 	    { dummy.c } \
 	    "pr17689" \
 	    "pr17689.out" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS" \
 	] \
 	[list \
 	    "Run pr17689 with PIE, -z now and GOTOFF" \
@@ -1076,6 +1082,7 @@ if { [isnative]
 	    { dummy.c } \
 	    "pr17689now" \
 	    "pr17689.out" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS" \
 	] \
 	[list \
 	    "Run pr17689ver with PIE and GOTOFF" \
@@ -1084,6 +1091,7 @@ if { [isnative]
 	    { dummy.c } \
 	    "pr17689ver" \
 	    "pr17689.out" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS" \
 	] \
 	[list \
 	    "Run pr18900" \
@@ -1319,7 +1327,7 @@ if { [isnative]
 	[list \
 	    "Build pr28875" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed tmpdir/pr28875.so" \
-	    "$NOPIE_CFLAGS" \
+	    "$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
 	    { pr28875b.c } \
 	    {{error_output "pr28875.err"}} \
 	    "pr28875" \
@@ -1327,7 +1335,7 @@ if { [isnative]
 	[list \
 	    "Build pr21997-1" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed,-z,notext tmpdir/pr21997-1.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr21997-1b.c } \
 	    {{error_output "pr21997-1.err"}} \
 	    "pr21997-1" \
@@ -1514,6 +1522,45 @@ run_ld_link_tests [list \
 	"pr21626" \
     ] \
 ]
+
+# The musl C library does not support --gnu-tls-tag nor --gnu2-tls-tag.
+if { ![istarget *-*-musl]
+     && [check_compiler_available] } {
+    run_cc_link_tests [list \
+	[list \
+	    "Build gnu-tls-1a.so" \
+	    "-shared -Wl,--no-as-needed,--gnu-tls-tag" \
+	    "-fPIC" \
+	    { gnu-tls-1.s } \
+	    {{readelf {-W --version-info} gnu-tls-1a.rd}} \
+	    "gnu-tls-1a.so" \
+	] \
+	[list \
+	    "Build gnu-tls-1b.so" \
+	    "-shared -Wl,--no-as-needed,--no-gnu-tls-tag" \
+	    "-fPIC" \
+	    { gnu-tls-1.s } \
+	    {{readelf {-W --version-info} gnu-tls-1b.rd}} \
+	    "gnu-tls-1b.so" \
+	] \
+	[list \
+	    "Build gnu2-tls-1a.so" \
+	    "-shared -Wl,--no-as-needed,--gnu2-tls-tag" \
+	    "-fPIC" \
+	    { gnu2-tls-1.s } \
+	    {{readelf {-W --version-info} gnu2-tls-1a.rd}} \
+	    "gnu2-tls-1a.so" \
+	] \
+	[list \
+	    "Build gnu2-tls-1b.so" \
+	    "-shared -Wl,--no-as-needed,--no-gnu2-tls-tag" \
+	    "-fPIC" \
+	    { gnu2-tls-1.s } \
+	    {{readelf {-W --version-info} gnu2-tls-1b.rd}} \
+	    "gnu2-tls-1b.so" \
+	] \
+    ]
+}
 
 # Linux only tests
 run_dump_test "pltgot-1"

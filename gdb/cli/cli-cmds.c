@@ -20,7 +20,6 @@
 
 #include "arch-utils.h"
 #include "exceptions.h"
-#include "readline/tilde.h"
 #include "completer.h"
 #include "target.h"
 #include "gdbsupport/gdb_wait.h"
@@ -302,8 +301,8 @@ with_command_completer_1 (const char *set_cmd_prefix,
      command as if it was a "set" command.  */
   if (delim == text
       || delim == nullptr
-      || !isspace (delim[-1])
-      || !(isspace (delim[2]) || delim[2] == '\0'))
+      || !c_isspace (delim[-1])
+      || !(c_isspace (delim[2]) || delim[2] == '\0'))
     {
       std::string new_text = std::string (set_cmd_prefix) + text;
       tracker.advance_custom_word_point_by (-(int) strlen (set_cmd_prefix));
@@ -521,7 +520,7 @@ cd_command (const char *dir, int from_tty)
   dont_repeat ();
 
   gdb::unique_xmalloc_ptr<char> dir_holder
-    (tilde_expand (dir != NULL ? dir : "~"));
+    = gdb_rl_tilde_expand (dir != NULL ? dir : "~");
   dir = dir_holder.get ();
 
   if (chdir (dir) < 0)
@@ -639,7 +638,8 @@ find_and_open_script (const char *script_file, int search_path)
   openp_flags search_flags = OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH;
   std::optional<open_script> opened;
 
-  gdb::unique_xmalloc_ptr<char> file (tilde_expand (script_file));
+  gdb::unique_xmalloc_ptr<char> file
+    = gdb_rl_tilde_expand (script_file);
 
   if (search_path)
     search_flags |= OPF_SEARCH_IN_PATH;
@@ -786,14 +786,14 @@ source_command (const char *args, int from_tty)
 	  if (args[0] != '-')
 	    break;
 
-	  if (args[1] == 'v' && isspace (args[2]))
+	  if (args[1] == 'v' && c_isspace (args[2]))
 	    {
 	      source_verbose = 1;
 
 	      /* Skip passed -v.  */
 	      args = &args[3];
 	    }
-	  else if (args[1] == 's' && isspace (args[2]))
+	  else if (args[1] == 's' && c_isspace (args[2]))
 	    {
 	      search_path = 1;
 
@@ -1040,7 +1040,7 @@ edit_command (const char *arg, int from_tty)
 		   paddress (get_current_arch (), sal.pc));
 
 	  gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-	  sym = find_pc_function (sal.pc);
+	  sym = find_symbol_for_pc (sal.pc);
 	  if (sym)
 	    gdb_printf ("%ps is in %ps (%ps:%ps).\n",
 			styled_string (address_style.style (),
@@ -1185,7 +1185,7 @@ pipe_command_completer (struct cmd_list_element *ignore,
     delimiter = opts.delimiter.c_str ();
 
   /* Check if we're past option values already.  */
-  if (text > org_text && !isspace (text[-1]))
+  if (text > org_text && !c_isspace (text[-1]))
     return;
 
   const char *delim = strstr (text, delimiter);
@@ -1313,7 +1313,7 @@ list_command (const char *arg, int from_tty)
 		 selected frame, and finding the line associated to it.  */
 	      frame_info_ptr frame = get_selected_frame (nullptr);
 	      CORE_ADDR curr_pc = get_frame_pc (frame);
-	      cursal = find_pc_line (curr_pc, 0);
+	      cursal = find_sal_for_pc (curr_pc, 0);
 
 	      if (cursal.symtab == nullptr)
 		error
@@ -1476,7 +1476,7 @@ list_command (const char *arg, int from_tty)
 	       paddress (get_current_arch (), sal.pc));
 
       gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-      sym = find_pc_function (sal.pc);
+      sym = find_symbol_for_pc (sal.pc);
       if (sym)
 	gdb_printf ("%s is in %s (%s:%d).\n",
 		    paddress (gdbarch, sal.pc),
@@ -1671,7 +1671,7 @@ disassemble_command (const char *arg, int from_tty)
       if (*p == '\0')
 	error (_("Missing modifier."));
 
-      while (*p && ! isspace (*p))
+      while (*p && ! c_isspace (*p))
 	{
 	  switch (*p++)
 	    {
@@ -1948,8 +1948,8 @@ alias_command_completer (struct cmd_list_element *ignore,
      typing COMMAND DEFAULT-ARGS...  */
   if (delim != text
       && delim != nullptr
-      && isspace (delim[-1])
-      && (isspace (delim[1]) || delim[1] == '\0'))
+      && c_isspace (delim[-1])
+      && (c_isspace (delim[1]) || delim[1] == '\0'))
     {
       std::string new_text = std::string (delim + 1);
 

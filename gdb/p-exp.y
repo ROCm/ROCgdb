@@ -43,7 +43,6 @@
    Probably also lots of other problems, less well defined PM.  */
 %{
 
-#include <ctype.h>
 #include "expression.h"
 #include "value.h"
 #include "parser-defs.h"
@@ -817,13 +816,13 @@ parse_number (struct parser_state *par_state,
     {
       /* Handle suffixes: 'f' for float, 'l' for long double.
 	 FIXME: This appears to be an extension -- do we want this?  */
-      if (len >= 1 && tolower (p[len - 1]) == 'f')
+      if (len >= 1 && c_tolower (p[len - 1]) == 'f')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_float;
 	  len--;
 	}
-      else if (len >= 1 && tolower (p[len - 1]) == 'l')
+      else if (len >= 1 && c_tolower (p[len - 1]) == 'l')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_long_double;
@@ -1089,9 +1088,9 @@ yylex (void)
   if (explen > 2)
     for (const auto &token : tokentab3)
       if (strncasecmp (tokstart, token.oper, 3) == 0
-	  && (!isalpha (token.oper[0]) || explen == 3
-	      || (!isalpha (tokstart[3])
-		  && !isdigit (tokstart[3]) && tokstart[3] != '_')))
+	  && (!c_isalpha (token.oper[0]) || explen == 3
+	      || (!c_isalpha (tokstart[3])
+		  && !c_isdigit (tokstart[3]) && tokstart[3] != '_')))
 	{
 	  pstate->lexptr += 3;
 	  yylval.opcode = token.opcode;
@@ -1102,9 +1101,9 @@ yylex (void)
   if (explen > 1)
     for (const auto &token : tokentab2)
       if (strncasecmp (tokstart, token.oper, 2) == 0
-	  && (!isalpha (token.oper[0]) || explen == 2
-	      || (!isalpha (tokstart[2])
-		  && !isdigit (tokstart[2]) && tokstart[2] != '_')))
+	  && (!c_isalpha (token.oper[0]) || explen == 2
+	      || (!c_isalpha (tokstart[2])
+		  && !c_isdigit (tokstart[2]) && tokstart[2] != '_')))
 	{
 	  pstate->lexptr += 2;
 	  yylval.opcode = token.opcode;
@@ -1519,7 +1518,7 @@ yylex (void)
     /* Call lookup_symtab, not lookup_partial_symtab, in case there are
        no psymtabs (coff, xcoff, or some future change to blow away the
        psymtabs once once symbols are read).  */
-    if ((sym && sym->aclass () == LOC_BLOCK)
+    if ((sym && sym->loc_class () == LOC_BLOCK)
 	|| lookup_symtab (current_program_space, tmp.c_str ()))
       {
 	yylval.ssym.sym.symbol = sym;
@@ -1528,7 +1527,7 @@ yylex (void)
 	free (uptokstart);
 	return BLOCKNAME;
       }
-    if (sym && sym->aclass () == LOC_TYPEDEF)
+    if (sym && sym->loc_class () == LOC_TYPEDEF)
 	{
 #if 1
 	  /* Despite the following flaw, we need to keep this code enabled.
@@ -1597,7 +1596,7 @@ yylex (void)
 					 SEARCH_VFT, NULL).symbol;
 		      if (cur_sym)
 			{
-			  if (cur_sym->aclass () == LOC_TYPEDEF)
+			  if (cur_sym->loc_class () == LOC_TYPEDEF)
 			    {
 			      best_sym = cur_sym;
 			      pstate->lexptr = p;

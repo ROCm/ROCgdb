@@ -61,7 +61,8 @@ proc_with_prefix test_mi_lanes {} {
     set lane_re_I "\\\{id=\"$decimal\",state=\"I\",target-id=\"$any\"\\\}"
     set lane_re "($lane_re_A|$lane_re_I)"
 
-    mi_clean_restart $::binfile
+    mi_clean_restart
+    mi_gdb_load $::binfile
 
     with_test_prefix "no execution" {
 	set no_thr_selected_err "\\^error,msg=\"No thread selected\\.\""

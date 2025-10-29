@@ -8428,26 +8428,6 @@ bfd_generic_lookup_section_flags (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 
 /*
 INTERNAL_FUNCTION
-	bfd_generic_merge_sections
-
-SYNOPSIS
-	bool bfd_generic_merge_sections
-	  (bfd *, struct bfd_link_info *);
-
-DESCRIPTION
-	Provides default handling for SEC_MERGE section merging for back ends
-	which don't have SEC_MERGE support -- i.e., does nothing.
-*/
-
-bool
-bfd_generic_merge_sections (bfd *abfd ATTRIBUTE_UNUSED,
-			    struct bfd_link_info *link_info ATTRIBUTE_UNUSED)
-{
-  return true;
-}
-
-/*
-INTERNAL_FUNCTION
 	bfd_generic_get_relocated_section_contents
 
 SYNOPSIS
@@ -8554,12 +8534,30 @@ bfd_generic_get_relocated_section_contents (bfd *abfd,
 	      r = bfd_reloc_ok;
 	    }
 	  else
-	    r = bfd_perform_relocation (input_bfd,
-					*parent,
-					data,
-					input_section,
-					relocatable ? abfd : NULL,
-					&error_message);
+	    {
+	      if ((symbol->flags & BSF_SECTION_SYM)
+		  && symbol->section->sec_info_type == SEC_INFO_TYPE_MERGE
+		  /* This, while apparently necessary, feels bogus.  */
+		  && !(symbol->section->flags & SEC_DEBUGGING))
+		{
+		  asection *sec = symbol->section;
+
+		  (*parent)->addend =
+		    _bfd_merged_section_offset (abfd, &sec, (*parent)->addend);
+		  /* We may not change symbol->section, so the output_offset
+		     adjustment done in bfd_perform_relocation() needs taking
+		     care of (and compensating) here.  */
+		  (*parent)->addend +=
+		    sec->output_offset - symbol->section->output_offset;
+		}
+
+	      r = bfd_perform_relocation (input_bfd,
+					  *parent,
+					  data,
+					  input_section,
+					  relocatable ? abfd : NULL,
+					  &error_message);
+	    }
 
 	  if (relocatable)
 	    {

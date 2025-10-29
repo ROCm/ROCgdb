@@ -2384,7 +2384,7 @@ loongarch_elf_late_size_sections (bfd *output_bfd,
       if (bfd_link_executable (info) && !info->nointerp)
 	{
 	  const char *interpreter;
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->elf.interp;
 	  BFD_ASSERT (s != NULL);
 
 	  if (elf_elfheader (output_bfd)->e_ident[EI_CLASS] == ELFCLASS32)
@@ -4401,7 +4401,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_LARCH_TLS_LE_LO12_R:
 	case R_LARCH_TLS_LE64_LO20:
 	case R_LARCH_TLS_LE64_HI12:
-	  BFD_ASSERT (resolved_local && elf_hash_table (info)->tls_sec);
+	  BFD_ASSERT (bfd_link_executable (info));
 
 	  relocation += rel->r_addend;
 	  relocation = tlsoff (info, relocation);
@@ -6016,9 +6016,7 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
 	   if (symtype == STT_SECTION)
 	     symval += rel->r_addend;
 
-	   symval = _bfd_merged_section_offset (abfd, &sym_sec,
-				elf_section_data (sym_sec)->sec_info,
-				symval);
+	   symval = _bfd_merged_section_offset (abfd, &sym_sec, symval);
 
 	   if (symtype != STT_SECTION)
 	     symval += rel->r_addend;

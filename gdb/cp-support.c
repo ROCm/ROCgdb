@@ -35,7 +35,6 @@
 #include "namespace.h"
 #include <signal.h>
 #include "gdbsupport/gdb_setjmp.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "gdbsupport/selftest.h"
 #include "gdbsupport/gdb-sigmask.h"
 #include <atomic>
@@ -105,7 +104,7 @@ static int
 cp_already_canonical (const char *string)
 {
   /* Identifier start character [a-zA-Z_].  */
-  if (!ISIDST (string[0]))
+  if (!c_isalpha (string[0]) || string[0] == '_')
     return 0;
 
   /* These are the only two identifiers which canonicalize to other
@@ -117,7 +116,7 @@ cp_already_canonical (const char *string)
     return 0;
 
   /* Identifier character [a-zA-Z0-9_].  */
-  while (ISIDNUM (string[1]))
+  while (c_isalpha (string[1]) || c_isdigit (string[1]) || string[1] == '_')
     string++;
 
   if (string[1] == '\0')
@@ -150,7 +149,8 @@ inspect_type (struct demangle_parse_info *info,
 
   try
     {
-      sym = lookup_symbol (name, 0, SEARCH_VFT, 0).symbol;
+      sym = lookup_symbol (name, 0, (SEARCH_TYPE_DOMAIN
+				     | SEARCH_STRUCT_DOMAIN), 0).symbol;
     }
   catch (const gdb_exception &except)
     {
@@ -165,7 +165,7 @@ inspect_type (struct demangle_parse_info *info,
 	{
 	  const char *new_name = (*finder) (otype, data);
 
-	  if (new_name != NULL)
+	  if (new_name != nullptr && strcmp (new_name, name) != 0)
 	    {
 	      ret_comp->u.s_name.s = new_name;
 	      ret_comp->u.s_name.len = strlen (new_name);
@@ -378,9 +378,10 @@ replace_typedefs_qualified_name (struct demangle_parse_info *info,
 	  struct demangle_component newobj;
 
 	  buf.write (d_left (comp)->u.s_name.s, d_left (comp)->u.s_name.len);
-	  newobj.type = DEMANGLE_COMPONENT_NAME;
-	  newobj.u.s_name.s = obstack_strdup (&info->obstack, buf.string ());
-	  newobj.u.s_name.len = buf.size ();
+	  cplus_demangle_fill_name (&newobj,
+				    obstack_strdup (&info->obstack,
+						    buf.string ()),
+				    buf.size ());
 	  if (inspect_type (info, &newobj, finder, data))
 	    {
 	      char *s;
@@ -504,7 +505,8 @@ replace_typedefs (struct demangle_parse_info *info,
 	      try
 		{
 		  sym = lookup_symbol (local_name.get (), 0,
-				       SEARCH_VFT, 0).symbol;
+				       (SEARCH_TYPE_DOMAIN
+					| SEARCH_STRUCT_DOMAIN), 0).symbol;
 		}
 	      catch (const gdb_exception &except)
 		{
@@ -704,7 +706,7 @@ mangled_name_to_comp (const char *mangled_name, int options,
 							       options);
   if (demangled_name == NULL)
    return NULL;
-  
+
   /* If we could demangle the name, parse it to build the component
      tree.  */
   std::unique_ptr<demangle_parse_info> info
@@ -1135,7 +1137,7 @@ cp_find_first_component_aux (const char *name, int permissive)
 	      && startswith (name + index, CP_OPERATOR_STR))
 	    {
 	      index += CP_OPERATOR_LEN;
-	      while (ISSPACE(name[index]))
+	      while (c_isspace(name[index]))
 		++index;
 	      switch (name[index])
 		{
@@ -1472,17 +1474,14 @@ add_symbol_overload_list_qualified (const char *func_name,
 				     ? selected_block->objfile ()
 				     : nullptr);
 
-  gdbarch_iterate_over_objfiles_in_search_order
-    (current_objfile ? current_objfile->arch () : current_inferior ()->arch (),
-     [func_name, surrounding_static_block, &overload_list]
+  lookup_name_info base_lookup (func_name, symbol_name_match_type::FULL);
+  lookup_name_info lookup_name = base_lookup.make_ignore_params ();
+
+  current_program_space->iterate_over_objfiles_in_search_order
+    ([func_name, surrounding_static_block, &overload_list, lookup_name]
      (struct objfile *obj)
        {
-	 /* Look through the partial symtabs for all symbols which
-	    begin by matching FUNC_NAME.  Make sure we read that
-	    symbol table in.  */
-	 obj->expand_symtabs_for_function (func_name);
-
-	 for (compunit_symtab *cust : obj->compunits ())
+	 auto callback = [&] (compunit_symtab *cust)
 	   {
 	     QUIT;
 	     const struct block *b = cust->blockvector ()->global_block ();
@@ -1490,11 +1489,17 @@ add_symbol_overload_list_qualified (const char *func_name,
 
 	     b = cust->blockvector ()->static_block ();
 	     /* Don't do this block twice.  */
-	     if (b == surrounding_static_block)
-	       continue;
+	     if (b != surrounding_static_block)
+	       add_symbol_overload_list_block (func_name, b, overload_list);
+	     return true;
+	   };
 
-	     add_symbol_overload_list_block (func_name, b, overload_list);
-	   }
+	 /* Look through the partial symtabs for all symbols which
+	    begin by matching FUNC_NAME.  Make sure we read that
+	    symbol table in.  */
+	 obj->search (nullptr, &lookup_name, nullptr, callback,
+		      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+		      SEARCH_FUNCTION_DOMAIN);
 
 	 return 0;
        }, current_objfile);
@@ -1518,7 +1523,7 @@ cp_lookup_rtti_type (const char *name, const struct block *block)
       return NULL;
     }
 
-  if (rtti_sym->aclass () != LOC_TYPEDEF)
+  if (rtti_sym->loc_class () != LOC_TYPEDEF)
     {
       warning (_("RTTI symbol for class '%s' is not a type"), name);
       return NULL;
@@ -2349,7 +2354,7 @@ find_toplevel_char (const char *s, char c)
 	      scan += CP_OPERATOR_LEN;
 	      if (*scan == c)
 		return scan;
-	      while (ISSPACE (*scan))
+	      while (c_isspace (*scan))
 		{
 		  ++scan;
 		  if (*scan == c)

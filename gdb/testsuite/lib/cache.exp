@@ -24,26 +24,9 @@ proc ignore_pass { msg } {
 
 # Call proc real_name and return the result, while ignoring calls to pass.
 proc gdb_do_cache_wrap {real_name args} {
-    if { [info procs save_pass] != "" } {
-	return [uplevel 2 $real_name]
+    with_override pass ignore_pass {
+	return [uplevel 2 [list $real_name {*}$args]]
     }
-
-    rename pass save_pass
-    rename ignore_pass pass
-
-    set code [catch {uplevel 2 [list $real_name {*}$args]} result]
-
-    rename pass ignore_pass
-    rename save_pass pass
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif {$code > 1} {
-	return -code $code $result
-    }
-
-    return $result
 }
 
 # Global written to by gdb_exit_called proc.  Is set to true to
@@ -295,6 +278,7 @@ proc gdb_do_cache {name args} {
 proc gdb_caching_proc {name arglist body} {
     # Define the underlying proc that we'll call.
     set real_name gdb_real__$name
+    # tclint-disable-next-line command-args
     proc $real_name $arglist $body
 
     # Define the advertised proc.
@@ -303,5 +287,6 @@ proc gdb_caching_proc {name arglist body} {
 	lappend caching_proc_body $$arg
     }
     set caching_proc_body [join $caching_proc_body]
+    # tclint-disable-next-line command-args
     proc $name $arglist $caching_proc_body
 }

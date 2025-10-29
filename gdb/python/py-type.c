@@ -34,8 +34,7 @@ struct type_object
   struct type *type;
 };
 
-extern PyTypeObject type_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("type_object");
+extern PyTypeObject type_object_type;
 
 /* A Field object.  */
 struct field_object
@@ -46,8 +45,7 @@ struct field_object
   PyObject *dict;
 };
 
-extern PyTypeObject field_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("field_object");
+extern PyTypeObject field_object_type;
 
 /* A type iterator object.  */
 struct typy_iterator_object {
@@ -60,8 +58,7 @@ struct typy_iterator_object {
   type_object *source;
 };
 
-extern PyTypeObject type_iterator_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("typy_iterator_object");
+extern PyTypeObject type_iterator_object_type;
 
 /* This is used to initialize various gdb.TYPE_ constants.  */
 struct pyty_code
@@ -842,11 +839,11 @@ typy_lookup_typename (const char *type_name, const struct block *block)
   try
     {
       if (startswith (type_name, "struct "))
-	type = lookup_struct (type_name + 7, NULL);
+	type = lookup_struct (type_name + 7, block);
       else if (startswith (type_name, "union "))
-	type = lookup_union (type_name + 6, NULL);
+	type = lookup_union (type_name + 6, block);
       else if (startswith (type_name, "enum "))
-	type = lookup_enum (type_name + 5, NULL);
+	type = lookup_enum (type_name + 5, block);
       else
 	type = lookup_typename (current_language,
 				type_name, block, 0);
@@ -1045,9 +1042,9 @@ typy_template_argument (PyObject *self, PyObject *args)
     }
 
   sym = TYPE_TEMPLATE_ARGUMENT (type, argno);
-  if (sym->aclass () == LOC_TYPEDEF)
+  if (sym->loc_class () == LOC_TYPEDEF)
     return type_to_type_object (sym->type ());
-  else if (sym->aclass () == LOC_OPTIMIZED_OUT)
+  else if (sym->loc_class () == LOC_OPTIMIZED_OUT)
     {
       PyErr_Format (PyExc_RuntimeError,
 		    _("Template argument is optimized out"));
@@ -1312,10 +1309,9 @@ static PyObject *
 typy_has_key (PyObject *self, PyObject *args)
 {
   struct type *type = ((type_object *) self)->type;
-  const char *field;
-  int i;
+  const char *field_name;
 
-  if (!PyArg_ParseTuple (args, "s", &field))
+  if (!PyArg_ParseTuple (args, "s", &field_name))
     return NULL;
 
   /* We want just fields of this type, not of base types, so instead of
@@ -1326,11 +1322,11 @@ typy_has_key (PyObject *self, PyObject *args)
   if (type == NULL)
     return NULL;
 
-  for (i = 0; i < type->num_fields (); i++)
+  for (const auto &field : type->fields ())
     {
-      const char *t_field_name = type->field (i).name ();
+      const char *t_field_name = field.name ();
 
-      if (t_field_name && (strcmp_iw (t_field_name, field) == 0))
+      if (t_field_name && (strcmp_iw (t_field_name, field_name) == 0))
 	Py_RETURN_TRUE;
     }
   Py_RETURN_FALSE;
@@ -1512,8 +1508,8 @@ gdbpy_lookup_type (PyObject *self, PyObject *args, PyObject *kw)
   return type_to_type_object (type);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_types (void)
+static int
+gdbpy_initialize_types ()
 {
   if (gdbpy_type_ready (&type_object_type) < 0)
     return -1;

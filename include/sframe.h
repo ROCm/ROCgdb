@@ -183,7 +183,7 @@ typedef struct sframe_header
 #define SFRAME_AARCH64_PAUTH_KEY_A    0 /* Key A.  */
 #define SFRAME_AARCH64_PAUTH_KEY_B    1 /* Key B.  */
 
-typedef struct sframe_func_desc_entry
+typedef struct sframe_func_desc_entry_v2
 {
   /* Function start address.  Encoded as a signed offset, relative to the
      beginning of the current FDE.  */
@@ -210,7 +210,9 @@ typedef struct sframe_func_desc_entry
      SFRAME_FDE_TYPE_PCMASK.  */
   uint8_t sfde_func_rep_size;
   uint16_t sfde_func_padding2;
-} ATTRIBUTE_PACKED sframe_func_desc_entry;
+} ATTRIBUTE_PACKED sframe_func_desc_entry_v2;
+
+typedef sframe_func_desc_entry_v2 sframe_func_desc_entry;
 
 /* Macros to compose and decompose function info in FDE.  */
 
@@ -287,6 +289,7 @@ typedef struct sframe_fre_info
 #define SFRAME_V1_FRE_OFFSET_COUNT(data)	  (((data) >> 1) & 0xf)
 #define SFRAME_V1_FRE_OFFSET_SIZE(data)		  (((data) >> 5) & 0x3)
 #define SFRAME_V1_FRE_MANGLED_RA_P(data)	  (((data) >> 7) & 0x1)
+#define SFRAME_V2_FRE_RA_UNDEFINED_P(data)	  (SFRAME_V1_FRE_OFFSET_COUNT (data) == 0)
 
 /* SFrame Frame Row Entry definitions.
 

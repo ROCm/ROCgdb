@@ -168,7 +168,8 @@ proc_with_prefix test_mi_data_read_memory {} {
 }
 
 with_rocm_gpu_lock {
-    mi_clean_restart $::binfile
+    mi_clean_restart
+    mi_gdb_load $::binfile
     mi_runto "aspace_test" -pending
 
     test_mi_memory_changed

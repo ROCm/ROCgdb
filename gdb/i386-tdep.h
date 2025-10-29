@@ -195,6 +195,10 @@ struct i386_gdbarch_tdep : gdbarch_tdep_base
   /* PKEYS register names.  */
   const char * const *pkeys_register_names = nullptr;
 
+  /* Register number for the shadow stack pointer register.  If supported,
+     set this to a value >= 0.  */
+  int ssp_regnum = -1;
+
   /* Register number for %fsbase.  If supported, set this to a value
      >= 0.  */
   int fsbase_regnum = -1;
@@ -297,8 +301,16 @@ enum i386_regnum
   I386_ZMM0H_REGNUM,		/* %zmm0h */
   I386_ZMM7H_REGNUM = I386_ZMM0H_REGNUM + 7,
   I386_PKRU_REGNUM,
+  I386_PL3_SSP_REGNUM,
   I386_FSBASE_REGNUM,
-  I386_GSBASE_REGNUM
+  I386_GSBASE_REGNUM,
+
+  I386_NUM_REGS,	/* Calculated from last *_REGNUM entry.  */
+  I386_SSE_NUM_REGS = I386_MXCSR_REGNUM + 1,
+  I386_AVX_NUM_REGS = I386_YMM7H_REGNUM + 1,
+  I386_AVX512_NUM_REGS = I386_ZMM7H_REGNUM + 1,
+  I386_PKEYS_NUM_REGS = I386_PKRU_REGNUM + 1
+  /* STOP!  New *_REGNUM entries should be added before I386_NUM_REGS.  */
 };
 
 /* Register numbers of RECORD_REGMAP.  */
@@ -334,12 +346,6 @@ enum record_i386_regnum
 
 #define I386_NUM_GREGS	16
 #define I386_NUM_XREGS  9
-
-#define I386_SSE_NUM_REGS	(I386_MXCSR_REGNUM + 1)
-#define I386_AVX_NUM_REGS	(I386_YMM7H_REGNUM + 1)
-#define I386_AVX512_NUM_REGS	(I386_ZMM7H_REGNUM + 1)
-#define I386_PKEYS_NUM_REGS	(I386_PKRU_REGNUM + 1)
-#define I386_NUM_REGS		(I386_GSBASE_REGNUM + 1)
 
 /* Size of the largest register.  */
 #define I386_MAX_REGISTER_SIZE	64
@@ -454,8 +460,11 @@ extern int i386_svr4_reg_to_regnum (struct gdbarch *gdbarch, int reg);
 
 extern int i386_process_record (struct gdbarch *gdbarch,
 				struct regcache *regcache, CORE_ADDR addr);
-extern const struct target_desc *i386_target_description (uint64_t xcr0,
-							  bool segments);
+
+/* Return the target description for the specified xsave features as
+   defined in XSTATE_BV and SEGMENTS.  */
+extern const struct target_desc *i386_target_description
+  (uint64_t xstate_bv, bool segments);
 
 /* Functions and variables exported from i386-bsd-tdep.c.  */
 

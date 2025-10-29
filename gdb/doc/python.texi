@@ -5,7 +5,7 @@
 @c Invariant Sections being ``Free Software'' and ``Free Software Needs
 @c Free Documentation'', with the Front-Cover Texts being ``A GNU Manual,''
 @c and with the Back-Cover Texts as in (a) below.
-@c 
+@c
 @c (a) The FSF's Back-Cover Text is: ``You are free to copy and modify
 @c this GNU Manual.  Buying copies from GNU Press supports the FSF in
 @c developing GNU and promoting software freedom.''
@@ -76,7 +76,7 @@ If given an argument, the @code{python} command will evaluate the
 argument as a Python command.  For example:
 
 @smallexample
-(@value{GDBP}) python print 23
+(@value{GDBP}) python print(23)
 23
 @end smallexample
 
@@ -88,7 +88,7 @@ containing @code{end}.  For example:
 
 @smallexample
 (@value{GDBP}) python
->print 23
+>print(23)
 >end
 23
 @end smallexample
@@ -226,6 +226,7 @@ optional arguments while skipping others.  Example:
                                 using Python.
 * Lazy Strings In Python::      Python representation of lazy strings.
 * Colors In Python::            Python representation of colors.
+* Styles In Python::            Python representation of styles.
 * Architectures In Python::     Python representation of architectures.
 * Registers In Python::         Python representation of registers.
 * Connections In Python::       Python representation of connections.
@@ -233,6 +234,7 @@ optional arguments while skipping others.  Example:
 * Disassembly In Python::       Instruction Disassembly In Python
 * Missing Debug Info In Python:: Handle missing debug info from Python.
 * Missing Objfiles In Python::  Handle objfiles from Python.
+* Core Files In Python::        Python representation of core files.
 @end menu
 
 @node Basic Python
@@ -451,7 +453,7 @@ will be @code{None} and 0 respectively.  This is identical to
 historical compatibility.
 @end defun
 
-@defun gdb.write (string @r{[}, stream@r{]})
+@defun gdb.write (string @r{[}, stream@r{]} @r{[}, style@r{]})
 Print a string to @value{GDBN}'s paginated output stream.  The
 optional @var{stream} determines the stream to print to.  The default
 stream is @value{GDBN}'s standard output stream.  Possible stream
@@ -474,6 +476,13 @@ values are:
 @value{GDBN}'s log stream (@pxref{Logging Output}).
 @end table
 
+The @var{style} should be a @code{gdb.Style} object (@pxref{Styles In
+Python}), or @code{None} (the default).  If @var{style} is @code{None}
+then the current style for @var{stream} will be applied to @var{text}.
+If @var{style} is a @code{gdb.Style} object, then this style is
+applied to @var{text}, after which the default output style is
+restored.
+
 Writing to @code{sys.stdout} or @code{sys.stderr} will automatically
 call this function and will automatically direct the output to the
 relevant stream.
@@ -485,7 +494,7 @@ contents are displayed immediately.  @value{GDBN} will flush the
 contents of a stream automatically when it encounters a newline in the
 buffer.  The optional @var{stream} determines the stream to flush.  The
 default stream is @value{GDBN}'s standard output stream.  Possible
-stream values are: 
+stream values are:
 
 @table @code
 @findex STDOUT
@@ -568,7 +577,7 @@ If @var{prompt_hook} is callable, @value{GDBN} will call the method
 assigned to this operation before a prompt is displayed by
 @value{GDBN}.
 
-The parameter @code{current_prompt} contains the current @value{GDBN} 
+The parameter @code{current_prompt} contains the current @value{GDBN}
 prompt.  This method must return a Python string, or @code{None}.  If
 a string is returned, the @value{GDBN} prompt will be set to that
 string.  If @code{None} is returned, @value{GDBN} will continue to use
@@ -747,7 +756,7 @@ depends on @code{set python print-stack} (@pxref{Python Commands}).
 Example:
 
 @smallexample
-(@value{GDBP}) python print foo
+(@value{GDBP}) python print(foo)
 Traceback (most recent call last):
   File "<string>", line 1, in <module>
 NameError: name 'foo' is not defined
@@ -910,7 +919,26 @@ this attribute holds @code{None}.
 @cindex optimized out value in Python
 @defvar Value.is_optimized_out
 This read-only boolean attribute is true if the compiler optimized out
-this value, thus it is not available for fetching from the inferior.
+this value, or any part of this value, and thus it is not available
+for fetching from the inferior.
+@end defvar
+
+@cindex unavailable values in Python
+@defvar Value.is_unavailable
+This read-only boolean attribute is true if this value, or any part of
+this value, is not available to @value{GDBN}.  Where an optimized out
+value has been removed from the program by the compiler, an
+unavailable value does exist in the program, but @value{GDBN} is
+unable to fetch it.
+
+Some reasons why this might occur include, but are not limited to: a
+core file format that @value{GDBN} doesn't fully understand; during
+live debugging if the debug API has no mechanism to access the
+required state, e.g.@: the kernel gives an error when trying to read a
+particular register set; or reading a value from @value{GDBN}'s
+history, when only a partial value was stored, e.g.@: due to the
+@kbd{max-value-size} setting (@pxref{set
+max-value-size,,max-value-size}).
 @end defvar
 
 @defvar Value.type
@@ -936,17 +964,17 @@ it will just return the static type of the value as in @kbd{ptype foo}
 
 @defvar Value.is_lazy
 The value of this read-only boolean attribute is @code{True} if this
-@code{gdb.Value} has not yet been fetched from the inferior.  
-@value{GDBN} does not fetch values until necessary, for efficiency.  
+@code{gdb.Value} has not yet been fetched from the inferior.
+@value{GDBN} does not fetch values until necessary, for efficiency.
 For example:
 
 @smallexample
 myval = gdb.parse_and_eval ('somevar')
 @end smallexample
 
-The value of @code{somevar} is not fetched at this time.  It will be 
+The value of @code{somevar} is not fetched at this time.  It will be
 fetched when the value is needed, or when the @code{fetch_lazy}
-method is invoked.  
+method is invoked.
 @end defvar
 
 @defvar Value.bytes
@@ -1324,7 +1352,7 @@ and encoded until a null of appropriate width is found.
 @end defun
 
 @defun Value.fetch_lazy ()
-If the @code{gdb.Value} object is currently a lazy value 
+If the @code{gdb.Value} object is currently a lazy value
 (@code{gdb.Value.is_lazy} is @code{True}), then the value is
 fetched from the inferior.  Any errors that occur in the process
 will produce a Python exception.
@@ -1917,7 +1945,7 @@ settings.  During a @code{print} or other operation, the values will
 reflect any flags that are temporarily in effect.
 
 @smallexample
-(gdb) python print (gdb.print_options ()['max_elements'])
+(gdb) python print(gdb.print_options ()['max_elements'])
 200
 @end smallexample
 @end defun
@@ -3368,27 +3396,27 @@ defined as follows:
 class MyClass_geta(gdb.xmethod.XMethod):
     def __init__(self):
         gdb.xmethod.XMethod.__init__(self, 'geta')
- 
+
     def get_worker(self, method_name):
         if method_name == 'geta':
             return MyClassWorker_geta()
- 
- 
+
+
 class MyClass_sum(gdb.xmethod.XMethod):
     def __init__(self):
         gdb.xmethod.XMethod.__init__(self, 'sum')
- 
+
     def get_worker(self, method_name):
         if method_name == 'operator+':
             return MyClassWorker_plus()
- 
- 
+
+
 class MyClassMatcher(gdb.xmethod.XMethodMatcher):
     def __init__(self):
         gdb.xmethod.XMethodMatcher.__init__(self, 'MyClassMatcher')
         # List of methods 'managed' by this matcher
         self.methods = [MyClass_geta(), MyClass_sum()]
- 
+
     def match(self, class_type, method_name):
         if class_type.tag != 'MyClass':
             return None
@@ -3398,7 +3426,7 @@ class MyClassMatcher(gdb.xmethod.XMethodMatcher):
                 worker = method.get_worker(method_name)
                 if worker:
                     workers.append(worker)
- 
+
         return workers
 @end smallexample
 
@@ -3426,18 +3454,18 @@ class MyClassWorker_geta(gdb.xmethod.XMethodWorker):
 
     def get_result_type(self, obj):
         return gdb.lookup_type('int')
- 
+
     def __call__(self, obj):
         return obj['a_']
- 
- 
+
+
 class MyClassWorker_plus(gdb.xmethod.XMethodWorker):
     def get_arg_types(self):
         return gdb.lookup_type('MyClass')
 
     def get_result_type(self, obj):
         return gdb.lookup_type('int')
- 
+
     def __call__(self, obj, other):
         return obj['a_'] + other['a_']
 @end smallexample
@@ -3480,12 +3508,12 @@ class MyTemplate
 public:
   MyTemplate () : dsize_(10), data_ (new T [10]) @{ @}
   ~MyTemplate () @{ delete [] data_; @}
- 
+
   int footprint (void)
   @{
     return sizeof (T) * dsize_ + sizeof (MyTemplate<T>);
   @}
- 
+
 private:
   int dsize_;
   T *data_;
@@ -3511,12 +3539,12 @@ class MyTemplateWorker_footprint(gdb.xmethod.XMethodWorker):
         return (self.class_type.sizeof +
                 obj['dsize_'] *
                 self.class_type.template_argument(0).sizeof)
- 
- 
+
+
 class MyTemplateMatcher_footprint(gdb.xmethod.XMethodMatcher):
     def __init__(self):
         gdb.xmethod.XMethodMatcher.__init__(self, 'MyTemplateMatcher')
- 
+
     def match(self, class_type, method_name):
         if (re.match('MyTemplate<[ \t\n]*[_a-zA-Z][ _a-zA-Z0-9]*>',
                      class_type.tag) and
@@ -3605,6 +3633,15 @@ Either a string or a sequence of strings can be assigned to this
 attribute.  When a string is assigned, it is assumed to have any
 necessary quoting for the shell; when a sequence is assigned, the
 quoting is applied by @value{GDBN}.
+@end defvar
+
+@defvar Inferior.corefile
+If a core file has been loaded into this inferior (@pxref{core-file
+command}), then this contains a @code{gdb.Corefile} object that
+represents the loaded core file (@pxref{Core Files In Python}).
+
+If no core file has been loaded into this inferior, then this
+attribute contains @code{None}.
 @end defvar
 
 A @code{gdb.Inferior} object has the following methods:
@@ -3808,7 +3845,7 @@ Emits @code{events.ExitedEvent}, which indicates that the inferior has
 exited.  @code{events.ExitedEvent} has two attributes:
 
 @defvar ExitedEvent.exit_code
-An integer representing the exit code, if available, which the inferior 
+An integer representing the exit code, if available, which the inferior
 has returned.  (The exit code could be unavailable if, for example,
 @value{GDBN} detaches from the inferior.) If the exit code is unavailable,
 the attribute does not exist.
@@ -3863,7 +3900,7 @@ Also emits @code{gdb.BreakpointEvent}, which extends
 been hit, and has the following attributes:
 
 @defvar BreakpointEvent.breakpoints
-A sequence containing references to all the breakpoints (type 
+A sequence containing references to all the breakpoints (type
 @code{gdb.Breakpoint}) that were hit.
 @xref{Breakpoints In Python}, for details of the @code{gdb.Breakpoint} object.
 @end defvar
@@ -4615,7 +4652,7 @@ Arguments are separated by spaces and may be quoted.
 Example:
 
 @smallexample
-print gdb.string_to_argv ("1 2\ \\\"3 '4 \"5' \"6 '7\"")
+print(gdb.string_to_argv ("1 2\ \\\"3 '4 \"5' \"6 '7\""))
 ['1', '2 "3', '4 "5', "6 '7"]
 @end smallexample
 
@@ -5292,6 +5329,7 @@ the parameters @kbd{plugin-name feature-1} and @kbd{plugin-name
 feature-2}, then the @kbd{plugin-name} would need to be a prefix
 command (@pxref{CLI Commands In Python}).
 
+@anchor{gdb.ParameterPrefix}
 However, when creating parameters, you will almost always need to
 create two prefix commands, one as a @kbd{set} sub-command, and one as
 a @kbd{show} sub-command.  @value{GDBN} provides the
@@ -5377,6 +5415,117 @@ gdb.ParameterPrefix("plugin-name", gdb.COMMAND_NONE,
 ExampleParam("plugin-name feature-1")
 ExampleParam("plugin-name feature-2")
 @end smallexample
+
+@anchor{Creating Style Parameters}
+The helper class @code{gdb.StyleParameterSet} exists to make it easier
+to create new styles.  @value{GDBN} places style settings under
+@samp{show style @dots{}} and @samp{set style @dots{}}, an example of a style
+is @samp{filename}.  Each style is really a prefix command (@pxref{CLI
+Commands In Python}), with sub-commands @samp{foreground},
+@samp{background}, and optionally, @samp{intensity}.
+
+It is simple enough to create a new style using two @code{gdb.Command}
+objects for the prefix commands (one for @samp{set}, and one for
+@samp{show}), and three @code{gdb.Parameter} objects, one each for the
+@samp{foreground}, @samp{background}, and @samp{intensity}.  You would
+also want to take care to craft the help text so that the new style
+behaves the same as the existing styles.
+
+Or, you can use the @code{gdb.StyleParameterSet} class, which takes
+care of all this, as the following example shows:
+
+@smallexample
+@group
+(@value{GDBP}) python s = gdb.StyleParameterSet("my-style")
+(@value{GDBP}) show style my-style
+style my-style background:  The "my-style" style background color is: none
+style my-style foreground:  The "my-style" style foreground color is: none
+style my-style intensity:  The "my-style" style display intensity is: normal
+(@value{GDBP})
+@end group
+@end smallexample
+
+You might also want to group a number of styles within a new prefix,
+similar to how @value{GDBN} groups disassembler related styles within
+the @samp{style disassembler} prefix.  This can be done using
+@code{gdb.ParameterPrefix} (@pxref{gdb.ParameterPrefix}), as in this
+example:
+
+@smallexample
+@group
+(@value{GDBP}) python gdb.ParameterPrefix("style group", gdb.COMMAND_NONE)
+(@value{GDBP}) python s_a = gdb.StyleParameterSet("group aa")
+(@value{GDBP}) python s_b = gdb.StyleParameterSet("group bb")
+(@value{GDBP}) show style group
+style group aa background:  The "group aa" style background color is: none
+style group aa foreground:  The "group aa" style foreground color is: none
+style group aa intensity:  The "group aa" style display intensity is: normal
+style group bb background:  The "group bb" style background color is: none
+style group bb foreground:  The "group bb" style foreground color is: none
+style group bb intensity:  The "group bb" style display intensity is: normal
+(@value{GDBP})
+@end group
+@end smallexample
+
+The @code{gdb.StyleParameterSet} class has the following methods and
+attributes:
+
+@defun StyleParameterSet.__init__(name, @w{add_intensity=@code{True}}, @w{doc=@code{None}})
+Create a new style group based on @var{name}, which is a string.  For
+example if @var{name} is @samp{my-style}, then @value{GDBN} will
+create the prefix commands @samp{set style my-style} and @samp{show
+style my-style}.  Within these prefix commands will be
+@samp{foreground}, @samp{background}, and @samp{intensity} parameters
+with the appropriate types.
+
+It is also possible for @var{name} to consist of multiple words, so
+long as each prefix command (except the last one) already exists.  For
+example, it is valid to use a @var{name} value of @samp{disassembler
+my-style}, as the @samp{disassembler} prefix command already exists.
+@value{GDBN} would then create @samp{set style disassembler my-style}
+and @samp{show style disassembler my-style}, and within the
+@samp{my-style} prefixes will be the @samp{foreground},
+@samp{background}, and @samp{intensity} parameters with the
+appropriate types.
+
+Every style requires a @samp{foreground} and @samp{background}, but
+not every style needs an @samp{intensity}.  If @var{add_intensity} is
+@code{True} (the default), then the @samp{intensity} parameter will be
+created.  If @var{add_intensity} is @code{False}, then the
+@samp{intensity} parameter will not be created.
+
+If the @samp{intensity} parameter is not created, then the
+@code{gdb.Style} (@pxref{Styles In Python}) created from this
+@code{gdb.StyleParameterSet} will have @code{gdb.INTENSITY_NORMAL}.
+
+The @var{doc} should be a string which will be used as the help text
+for the @var{name} prefix command.  This text is used as the
+@code{Command.__doc__} value for the @code{gdb.Command} object that is
+the prefix command object (@pxref{CLI Commands In Python}).  If
+@var{doc} is @code{None} (the default) then a basic default help text
+is used.
+@end defun
+
+@defun StyleParameterSet.apply(string)
+Equivalent to @code{StyleParameterSet.style.apply(string)}.  Returns a
+copy of @var{string} with escape sequences added to the start and end.
+The escape sequence at the start applies this style, and the escape
+sequence at the end restores the terminal default.
+
+If styling is disabled (i.e.@: @samp{set style enabled off}), then no
+escape sequences are added and this method returns a copy of
+@var{string}.
+@end defun
+
+@defvar StyleParameterSet.style
+This read/write attribute holds a @code{gdb.Style} object
+(@pxref{Styles In Python}), that is a named style associated with this
+style parameter group.
+@end defvar
+
+@defvar StyleParameterSet.value
+This is an alias for @code{StyleParameterSet.style}, see above.
+@end defvar
 
 @node Functions In Python
 @subsubsection Writing new convenience functions
@@ -5832,7 +5981,7 @@ Two @code{gdb.Frame} objects can be compared for equality with the @code{==}
 operator, like:
 
 @smallexample
-(@value{GDBP}) python print gdb.newest_frame() == gdb.selected_frame ()
+(@value{GDBP}) python print(gdb.newest_frame() == gdb.selected_frame ())
 True
 @end smallexample
 
@@ -5928,7 +6077,7 @@ compatibility.
 This frame is the outermost.
 
 @item gdb.FRAME_UNWIND_UNAVAILABLE
-Cannot unwind further, because that would require knowing the 
+Cannot unwind further, because that would require knowing the
 values of registers or memory that have not been collected.
 
 @item gdb.FRAME_UNWIND_INNER_ID
@@ -6269,12 +6418,14 @@ up such variables, iterate over the variables of the function's
 
 There can be multiple global symbols with static linkage with the same
 name.  This function will only return the first matching symbol that
-it finds.  Which symbol is found depends on where @value{GDBN} is
+it finds.  Which symbol is found depends on where the program is
 currently stopped, as @value{GDBN} will first search for matching
-symbols in the current object file, and then search all other object
-files.  If the application is not yet running then @value{GDBN} will
-search all object files in the order they appear in the debug
-information.
+symbols in the current compilation unit.  If it finds no match, or if
+there is no current compilation unit (perhaps because the program is
+not running), then @code{gdb.lookup_static_symbol} will return an
+unspecified matching symbol.  To safely handle the case of multiple
+static symbols with the same name, an application can use
+@code{gdb.lookup_static_symbols}.
 @end defun
 
 @defun gdb.lookup_static_symbols (name @r{[}, domain@r{]})
@@ -7064,22 +7215,22 @@ is not writable.
 
 A finish breakpoint is a temporary breakpoint set at the return address of
 a frame, based on the @code{finish} command.  @code{gdb.FinishBreakpoint}
-extends @code{gdb.Breakpoint}.  The underlying breakpoint will be disabled 
-and deleted when the execution will run out of the breakpoint scope (i.e.@: 
+extends @code{gdb.Breakpoint}.  The underlying breakpoint will be disabled
+and deleted when the execution will run out of the breakpoint scope (i.e.@:
 @code{Breakpoint.stop} or @code{FinishBreakpoint.out_of_scope} triggered).
-Finish breakpoints are thread specific and must be create with the right 
-thread selected.  
- 
+Finish breakpoints are thread specific and must be create with the right
+thread selected.
+
 @defun FinishBreakpoint.__init__ (@r{[}frame@r{]} @r{[}, internal@r{]})
 Create a finish breakpoint at the return address of the @code{gdb.Frame}
 object @var{frame}.  If @var{frame} is not provided, this defaults to the
 newest frame.  The optional @var{internal} argument allows the breakpoint to
-become invisible to the user.  @xref{Breakpoints In Python}, for further 
+become invisible to the user.  @xref{Breakpoints In Python}, for further
 details about this argument.
 @end defun
 
 @defun FinishBreakpoint.out_of_scope (self)
-In some circumstances (e.g.@: @code{longjmp}, C@t{++} exceptions, @value{GDBN} 
+In some circumstances (e.g.@: @code{longjmp}, C@t{++} exceptions, @value{GDBN}
 @code{return} command, @dots{}), a function may not properly terminate, and
 thus never hit the finish breakpoint.  When @value{GDBN} notices such a
 situation, the @code{out_of_scope} callback will be triggered.
@@ -7092,17 +7243,17 @@ class MyFinishBreakpoint (gdb.FinishBreakpoint)
     def stop (self):
         print ("normal finish")
         return True
-    
+
     def out_of_scope ():
         print ("abnormal finish")
-@end smallexample 
+@end smallexample
 @end defun
 
 @defvar FinishBreakpoint.return_value
-When @value{GDBN} is stopped at a finish breakpoint and the frame 
+When @value{GDBN} is stopped at a finish breakpoint and the frame
 used to build the @code{gdb.FinishBreakpoint} object had debug symbols, this
 attribute will contain a @code{gdb.Value} object corresponding to the return
-value of the function.  The value will be @code{None} if the function return 
+value of the function.  The value will be @code{None} if the function return
 type is @code{void} or if the return value was not computable.  This attribute
 is not writable.
 @end defvar
@@ -7261,6 +7412,146 @@ Direct 24-bit RGB colors.
 @end table
 
 It is not possible to sub-class the @code{Color} class.
+
+@node Styles In Python
+@subsubsection Python representation of styles
+
+@cindex styles in python
+@tindex gdb.Style
+
+A style object contains the foreground and background colors
+(@pxref{Colors In Python}), along with an intensity, and can be used
+to apply this styling to output produced from Python.
+
+@value{GDBN} has many styles builtin (@pxref{Output Styling}), and
+style objects can be created that apply these builtin styles to Python
+output.  It is also possible to create new styles which can be used to
+style Python output (@pxref{Creating Style Parameters}).
+
+The style class is called @code{gdb.Style}, and has the following
+methods and attributes:
+
+@defun Style.__init__ (style_name)
+Create a @code{gdb.Style} that represents a builtin named style.  The
+@var{style_name} must be a non-empty string that names a style that
+exists as a setting in @value{GDBN} within @samp{set style @dots{}}.  For
+example, the string @samp{"filename"} can be used to create a
+@code{gdb.Style} object representing the @samp{set style filename}
+style.
+
+If @var{style_name} names an unknown style then a @code{RuntimeError}
+exception is raised.
+@end defun
+
+@defun Style.__init__ (foreground=@code{None}, background=@code{None}, intensity=gdb.INTENSITY_NORMAL)
+Create a custom @code{gdb.Style}, manually specifying the three
+individual components.  All of the arguments are optional.  By
+default, if no arguments are given, then the default style will be
+created, this will produce output with the default terminal foreground
+and background colors, along with the normal level of intensity
+(i.e.@: neither bold, nor dim).
+
+The @var{foreground} and @var{background} arguments should either be
+@code{None}, in which case the terminal default colors are used, or a
+@code{gdb.Color} object (@pxref{Colors In Python}).  Any other object
+type will result in a @code{TypeError} exception being raised.
+
+The @var{intensity} argument should be one of the intensity constants
+defined below (@pxref{Style Intensities}).  Passing a none integer
+value results in a @code{TypeError} exception, and passing an invalid
+constant results in a @code{ValueError} exception.
+@end defun
+
+@defun Style.escape_sequence ()
+If styling is enabled (@pxref{Output Styling}, then this method
+returns the string which is the terminal escape sequence necessary to
+apply this @code{gdb.Style}.
+
+If styling is disabled then this method returns the empty string.
+
+If this is a named style, which for some reason can no longer be read,
+then a @code{RuntimeError} exception is raised.
+@end defun
+
+@defun Style.apply (string)
+This method returns @var{string}, which must be a @code{str} object,
+with an escape sequence at both the start, and at the end.  The escape
+sequence at the start applies this style, while the escape sequence at
+the end applies the terminal's default style.
+
+The effect of this is that, printing the result of this method, will
+print @var{string} with this style applied.  Future output will be
+printed with the terminal's default style.
+
+If styling is currently disabled (@pxref{Output Styling}), then
+@code{Style.apply} just returns a copy of @var{string} with no escape
+sequences added.
+
+If this is a named style, which for some reason can no longer be read,
+then a @code{RuntimeError} exception is raised.
+@end defun
+
+@defvar Style.foreground
+This read/write attribute contains the @code{gdb.Color} object
+representing this style's foreground color.  Writing to this attribute
+updates the style's foreground color.
+
+If the @code{gdb.Style} object was created using a named style (i.e.@:
+using the single argument @var{style_name} @code{__init__} method),
+then the underlying setting will be updated.
+
+For unnamed styles, only the @code{gdb.Style} object will change.
+@end defvar
+
+@defvar Style.background
+This read/write attribute contains the @code{gdb.Color} object
+representing this style's background color.  Writing to this attribute
+updates the style's background color.
+
+If the @code{gdb.Style} object was created using a named style (i.e.@:
+using the single argument @var{style_name} @code{__init__} method),
+then the underlying setting will be updated.
+
+For unnamed styles, only the @code{gdb.Style} object will change.
+@end defvar
+
+@defvar Style.intensity
+This read/write attribute contains the intensity for this style, and
+will be one of the constants defined below (@pxref{Style
+Intensities}).  Writing to this attribute updates the style's
+intensity.
+
+It is also possible to write @code{None} to this attribute, this is
+equivalent of writing @code{gdb.INTENSITY_NORMAL}.  This attribute
+will never read as @code{None}.
+
+If the @code{gdb.Style} object was created using a named style (i.e.@:
+using the single argument @var{style_name} @code{__init__} method),
+then the underlying setting will be updated.
+
+For unnamed styles, only the @code{gdb.Style} object will change.
+@end defvar
+
+@anchor{Style Intensities}
+The following constants are defined to represent the different style
+intensities:
+
+@table @code
+@findex INTENSITY_NORMAL
+@findex gdb.INTENSITY_NORMAL
+@item gdb.INTENSITY_NORMAL
+This is the terminal's default intensity.
+
+@findex INTENSITY_BOLD
+@findex gdb.INTENSITY_BOLD
+@item gdb.INTENSITY_BOLD
+This is for bold text.
+
+@findex INTENSITY_DIM
+@findex gdb.INTENSITY_DIM
+@item gdb.INTENSITY_DIM
+This is for dim text.
+@end table
 
 @node Architectures In Python
 @subsubsection Python representation of architectures
@@ -8605,6 +8896,106 @@ handlers, all of the matching handlers are enabled.  The
 @code{enabled} field of each matching handler is set to @code{True}.
 @end table
 
+@node Core Files In Python
+@subsubsection Core Files In Python
+@cindex python, core files
+
+When a core file is loaded into an inferior (@pxref{Inferiors In
+Python}) for examination (@pxref{core-file command}), information
+about the core file is contained in a @code{gdb.Corefile} object.
+
+The @code{gdb.Corefile} for an inferior can be accessed using the
+@code{Inferior.corefile} attribute.  This will be @code{None} if
+no core file is loaded.
+
+A @code{gdb.Corefile} object has the following attributes:
+
+@defvar Corefile.filename
+This read only attribute contains a non-empty string, the file name of
+the core file.  Attempting to access this attribute on an invalid
+@code{gdb.Corefile} object will raise a @code{RuntimeError} exception.
+@end defvar
+
+A @code{gdb.Corefile} object has the following methods:
+
+@defun Corefile.is_valid ()
+Returns @code{True} if the @code{gdb.Corefile} object is valid,
+@code{False} if not.  A @code{gdb.Corefile} object will become invalid
+when the core file is unloaded from the inferior using the
+@kbd{core-file} command (@pxref{core-file command}), or if the
+inferior in which the core file is loaded is deleted.  All other
+@code{gdb.Corefile} methods and attributes will throw an exception if
+it is invalid at the time the method is called, or the attribute
+accessed.
+@end defun
+
+@defun Corefile.mapped_files ()
+Return a list of @code{gdb.CorefileMappedFile} (see below) objects
+representing files that were mapped into the process when the core
+file was created.  This information is read from the @samp{NT_FILE}
+core file note on Linux.  Not every target supports accessing this
+information, for targets without support, an empty list will be
+returned.
+@end defun
+
+One may add arbitrary attributes to @code{gdb.Corefile} objects in the
+usual Python way.  This is useful if, for example, one needs to do
+some extra record keeping associated with the corefile.
+@xref{choosing attribute names}, for guidance on selecting a suitable
+name for new attributes.
+
+The @code{Corefile.mapped_files ()} method returns a list of
+@code{gdb.CorefileMappedFile} objects.  Each of these objects
+represents a file that was fully, or partially, mapped into the
+processes address space when the core file was created.
+
+A @code{gdb.CorefileMappedFile} object has the following attributes:
+
+@defvar CorefileMappedFile.filename
+This read only attribute contains a non-empty string, the file name of
+the mapped file.
+@end defvar
+
+@defvar CorefileMappedFile.build_id
+This read only attribute contains a non-empty string or @code{None}.
+This is the build-id of the mapped file extracted from the core file,
+or @code{None} if there was no build-id, or @value{GDBN} was unable to
+extract the build-id.
+@end defvar
+
+@defvar CorefileMappedFile.is_main_executable
+This read only attribute is @code{True} if @value{GDBN} believes this
+mapping represents the main executable for which this core file was
+created.  This will be @code{False} for all other mappings.
+@end defvar
+
+@defvar CorefileMappedFile.regions
+This read only attribute contains a list of
+@code{gdb.CorefileMappedFileRegion} objects.  Each of these objects
+describes a region of the file that was mapped into the process when
+the core file was created, further details are given below.
+@end defvar
+
+The @code{gdb.CorefileMappedFileRegion} object describes which part of
+a file that was mapped into a process when the core file was created.
+
+A @code{gdb.CorefileMappedFile} object has the following attributes:
+
+@defvar CorefileMappedFileRegion.start
+This read only attribute contains the start address of this mapping
+within the inferior.
+@end defvar
+
+@defvar CorefileMappedFileRegion.end
+This read only attribute contains end address of this mapping within
+the inferior.
+@end defvar
+
+@defvar CorefileMappedFileRegion.file_offset
+This read only attribute contains the offset within the mapped file
+for this mapping.
+@end defvar
+
 @node Python Auto-loading
 @subsection Python Auto-loading
 @cindex Python auto-loading
@@ -8740,7 +9131,7 @@ Then in gdb:
 (gdb) start
 (gdb) python import gdb.types
 (gdb) python foo_ref = gdb.parse_and_eval("foo_ref")
-(gdb) python print gdb.types.get_basic_type(foo_ref.type)
+(gdb) python print(gdb.types.get_basic_type(foo_ref.type))
 int
 @end smallexample
 
@@ -8773,9 +9164,9 @@ Then in @value{GDBN}:
 @smallexample
 (@value{GDBP}) python import gdb.types
 (@value{GDBP}) python struct_a = gdb.lookup_type("struct A")
-(@value{GDBP}) python print struct_a.keys ()
+(@value{GDBP}) python print(struct_a.keys ())
 @{['a', '']@}
-(@value{GDBP}) python print [k for k,v in gdb.types.deep_items(struct_a)]
+(@value{GDBP}) python print([k for k,v in gdb.types.deep_items(struct_a)])
 @{['a', 'b0', 'b1']@}
 @end smallexample
 

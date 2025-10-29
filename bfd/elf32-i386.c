@@ -1166,6 +1166,15 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
       return true;
     }
 
+  if ((elf_section_type (sec) != SHT_PROGBITS
+       || (sec->flags & SEC_CODE) == 0))
+    {
+      reloc_howto_type *howto = elf_i386_rtype_to_howto (from_type);
+      _bfd_x86_elf_link_report_tls_invalid_section_error
+	(abfd, sec, symtab_hdr, h, sym, howto);
+      return false;
+    }
+
   /* Return TRUE if there is no transition.  */
   if (from_type == to_type)
     return true;
@@ -1607,6 +1616,8 @@ elf_i386_scan_relocs (bfd *abfd,
 	      /* Fake a STT_GNU_IFUNC symbol.  */
 	      h->root.root.string = bfd_elf_sym_name (abfd, symtab_hdr,
 						      isym, NULL);
+	      if (h->root.root.string == bfd_symbol_error_name)
+		goto error_return;
 	      h->type = STT_GNU_IFUNC;
 	      h->def_regular = 1;
 	      h->ref_regular = 1;
@@ -1687,6 +1698,10 @@ elf_i386_scan_relocs (bfd *abfd,
 	  size_reloc = true;
 	  goto do_size;
 
+	case R_386_TLS_DESC_CALL:
+	  htab->has_tls_desc_call = 1;
+	  goto need_got;
+
 	case R_386_TLS_IE_32:
 	case R_386_TLS_IE:
 	case R_386_TLS_GOTIE:
@@ -1698,7 +1713,7 @@ elf_i386_scan_relocs (bfd *abfd,
 	case R_386_GOT32X:
 	case R_386_TLS_GD:
 	case R_386_TLS_GOTDESC:
-	case R_386_TLS_DESC_CALL:
+ need_got:
 	  /* This symbol requires a global offset table entry.  */
 	  {
 	    int tls_type, old_tls_type;
@@ -1725,6 +1740,16 @@ elf_i386_scan_relocs (bfd *abfd,
 	      case R_386_TLS_IE:
 	      case R_386_TLS_GOTIE:
 		tls_type = GOT_TLS_IE_POS; break;
+	      }
+
+	    if (tls_type >= GOT_TLS_GD
+		&& tls_type <= GOT_TLS_GDESC
+		&& (elf_section_type (sec) != SHT_PROGBITS
+		    || (sec->flags & SEC_CODE) == 0))
+	      {
+		_bfd_x86_elf_link_report_tls_invalid_section_error
+		  (abfd, sec, symtab_hdr, h, isym, howto);
+		goto error_return;
 	      }
 
 	    if (h != NULL)
@@ -3159,7 +3184,6 @@ elf_i386_relocate_section (bfd *output_bfd,
 
 	      if (GOT_TLS_GDESC_P (tls_type))
 		{
-		  bfd_byte *loc;
 		  outrel.r_info = ELF32_R_INFO (indx, R_386_TLS_DESC);
 		  BFD_ASSERT (htab->sgotplt_jump_table_size + offplt + 8
 			      <= htab->elf.sgotplt->size);
@@ -3167,13 +3191,8 @@ elf_i386_relocate_section (bfd *output_bfd,
 				     + htab->elf.sgotplt->output_offset
 				     + offplt
 				     + htab->sgotplt_jump_table_size);
-		  sreloc = htab->elf.srelplt;
-		  loc = sreloc->contents;
-		  loc += (htab->next_tls_desc_index++
-			  * sizeof (Elf32_External_Rel));
-		  BFD_ASSERT (loc + sizeof (Elf32_External_Rel)
-			      <= sreloc->contents + sreloc->size);
-		  bfd_elf32_swap_reloc_out (output_bfd, &outrel, loc);
+		  sreloc = htab->rel_tls_desc;
+		  elf_append_rel (output_bfd, sreloc, &outrel);
 		  if (indx == 0)
 		    {
 		      BFD_ASSERT (! unresolved_reloc);
@@ -4356,7 +4375,7 @@ elf_i386_get_synthetic_symtab (bfd *abfd,
 	      if (lazy_ibt_plt != NULL
 		  && (memcmp (plt_contents + lazy_ibt_plt->plt0_entry_size,
 			      lazy_ibt_plt->plt_entry,
-			      lazy_ibt_plt->plt_got_offset) == 0))
+			      lazy_ibt_plt->plt_reloc_offset) == 0))
 		plt_type = plt_lazy | plt_second;
 	      else
 		plt_type = plt_lazy;
@@ -4369,7 +4388,7 @@ elf_i386_get_synthetic_symtab (bfd *abfd,
 	      if (lazy_ibt_plt != NULL
 		  && (memcmp (plt_contents + lazy_ibt_plt->plt0_entry_size,
 			      lazy_ibt_plt->pic_plt_entry,
-			      lazy_ibt_plt->plt_got_offset) == 0))
+			      lazy_ibt_plt->plt_reloc_offset) == 0))
 		plt_type = plt_lazy | plt_pic | plt_second;
 	      else
 		plt_type = plt_lazy | plt_pic;
@@ -4492,6 +4511,50 @@ elf_i386_link_setup_gnu_properties (struct bfd_link_info *info)
   return _bfd_x86_elf_link_setup_gnu_properties (info, &init_table);
 }
 
+static void
+elf_i386_add_glibc_version_dependency
+  (struct elf_find_verdep_info *rinfo)
+{
+  int i = 0;
+  const char *version[4] = { NULL, NULL, NULL, NULL };
+  bool auto_version[4] = { false, false, false, false };
+  struct elf_x86_link_hash_table *htab;
+
+  if (rinfo->info->enable_dt_relr)
+    {
+      version[i] = "GLIBC_ABI_DT_RELR";
+      i++;
+    }
+
+  htab = elf_x86_hash_table (rinfo->info, I386_ELF_DATA);
+  if (htab != NULL)
+    {
+      if (htab->params->gnu2_tls_version_tag && htab->has_tls_desc_call)
+	{
+	  version[i] = "GLIBC_ABI_GNU2_TLS";
+	  /* 2 == auto, enable if libc.so defines the GLIBC_ABI_GNU2_TLS
+	     version.  */
+	  if (htab->params->gnu2_tls_version_tag == 2)
+	    auto_version[i] = true;
+	  i++;
+	}
+      if (htab->params->gnu_tls_version_tag
+	  && htab->has_tls_get_addr_call)
+	{
+	  version[i] = "GLIBC_ABI_GNU_TLS";
+	  /* 2 == auto, enable if libc.so defines the GLIBC_ABI_GNU_TLS
+	     version.  */
+	  if (htab->params->gnu_tls_version_tag == 2)
+	    auto_version[i] = true;
+	  i++;
+	}
+    }
+
+  if (i != 0)
+    _bfd_elf_link_add_glibc_version_dependency (rinfo, version,
+						auto_version);
+}
+
 #define TARGET_LITTLE_SYM		i386_elf32_vec
 #define TARGET_LITTLE_NAME		"elf32-i386"
 #define ELF_ARCH			bfd_arch_i386
@@ -4532,12 +4595,16 @@ elf_i386_link_setup_gnu_properties (struct bfd_link_info *info)
 #define elf_backend_relocate_section	      elf_i386_relocate_section
 #define elf_backend_setup_gnu_properties      elf_i386_link_setup_gnu_properties
 #define elf_backend_hide_symbol		      _bfd_x86_elf_hide_symbol
+#define elf_backend_add_glibc_version_dependency \
+  elf_i386_add_glibc_version_dependency
 
 #define elf_backend_linux_prpsinfo32_ugid16	true
 
 #define	elf32_bed			      elf32_i386_bed
 
 #include "elf32-target.h"
+
+#undef elf_backend_add_glibc_version_dependency
 
 /* FreeBSD support.  */
 
@@ -4585,6 +4652,9 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
 #define	TARGET_LITTLE_SYM		i386_elf32_sol2_vec
 #undef	TARGET_LITTLE_NAME
 #define	TARGET_LITTLE_NAME		"elf32-i386-sol2"
+
+#undef	ELF_MAXPAGESIZE
+#define ELF_MAXPAGESIZE			0x10000
 
 #undef	ELF_TARGET_OS
 #define	ELF_TARGET_OS			is_solaris
@@ -4712,6 +4782,9 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 
 #undef	ELF_MACHINE_CODE
 #define	ELF_MACHINE_CODE		EM_IAMCU
+
+#undef	ELF_MAXPAGESIZE
+#define ELF_MAXPAGESIZE			0x1000
 
 #undef	ELF_TARGET_OS
 #undef	ELF_OSABI

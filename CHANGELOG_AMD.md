@@ -3,6 +3,13 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
+## ROCgdb-X for ROCm-next
+
+### Added
+
+- GDB now determines the name of AMD GPU threads based on the name of
+  their kernel function.
+
 ## ROCgdb-16-2 for ROCm-7.0
 
 ### Added

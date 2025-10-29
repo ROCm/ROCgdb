@@ -48,7 +48,6 @@
 #include "language.h"
 #include "f-lang.h"
 #include "block.h"
-#include <ctype.h>
 #include <algorithm>
 #include "type-stack.h"
 #include "f-exp.h"
@@ -1061,8 +1060,8 @@ parse_number (struct parser_state *par_state,
   while (len-- > 0)
     {
       c = *p++;
-      if (isupper (c))
-	c = tolower (c);
+      if (c_isupper (c))
+	c = c_tolower (c);
       if (len == 0 && c == 'l')
 	long_p = 1;
       else if (len == 0 && c == 'u')
@@ -1160,8 +1159,7 @@ push_kind_type (LONGEST val, struct type *type)
       ival = static_cast <int> (val);
     }
 
-  type_stack->push (ival);
-  type_stack->push (tp_kind);
+  type_stack->push (tp_kind, ival);
 }
 
 /* Helper function for convert_to_kind_type.  */
@@ -1663,7 +1661,7 @@ yylex (void)
       {
 	result = lookup_symbol (tmp.c_str (), pstate->expression_context_block,
 				domain, NULL);
-	if (result.symbol && result.symbol->aclass () == LOC_TYPEDEF)
+	if (result.symbol && result.symbol->loc_class () == LOC_TYPEDEF)
 	  {
 	    yylval.tsym.type = result.symbol->type ();
 	    return TYPENAME;

@@ -29,7 +29,8 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
      return -1
 }
 
-clean_restart ${binfile}
+clean_restart
+gdb_load $binfile
 
 gdb_test_no_output "set print sevenbit-strings"
 gdb_test_no_output "set print address off"
@@ -274,7 +275,7 @@ gdb_test "whatis (enum misordered @data) v_misordered" \
 	"type = @data enum misordered" \
 	"(enum misordered @data)"
 
-# 
+#
 # Pointers
 #
 

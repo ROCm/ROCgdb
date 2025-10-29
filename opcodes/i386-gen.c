@@ -47,7 +47,7 @@ typedef struct dependency
 static const dependency isa_dependencies[] =
 {
   { "UNKNOWN",
-    "~(IAMCU|MPX)" },
+    "~(IAMCU|MPX|AMX_TRANSPOSE)" },
   { "GENERIC32",
     "386" },
   { "GENERIC64",
@@ -297,6 +297,8 @@ static const dependency isa_dependencies[] =
     "64" },
   { "APX_F",
     "XSAVE|64" },
+  { "PadLock",
+    "FXSR" },
   { "PadLockRNG2",
     "PadLock" },
   { "PadLockPHE2",

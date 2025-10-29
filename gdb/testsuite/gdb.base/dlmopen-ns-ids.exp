@@ -38,16 +38,80 @@ if { [build_executable "failed to build" $testfile $srcfile \
     return
 }
 
+# Return a list of shared libraries extract from the "info sharedlibrary"
+# command.  Each item in the list is itself a list with the following items:
+#
+#  - "from" address
+#  - "to" address
+#  - namespace ID
+#  - name (file path)
+
+proc get_info_shared {} {
+    set from_re "($::hex)\\s+"
+    set to_re "($::hex)\\s+"
+    set ns_re "(?:($::decimal)\\s+)?"
+    set syms_read_re "(Yes( \\(\\*\\))?|No)\\s+"
+    set name_re "(\[^\r\n\]+)"
+    set libs {}
+
+    gdb_test_multiple "info sharedlibrary" "" {
+	-re {From\s+To\s+(Linker NS\s+)?Syms Read\s+Shared Object Library\r\n} {
+	    exp_continue
+	}
+
+	-re "^${from_re}${to_re}${ns_re}${syms_read_re}${name_re}\r\n" {
+	    set from $expect_out(1,string)
+	    set to $expect_out(2,string)
+	    set ns $expect_out(3,string)
+	    set name $expect_out(4,string)
+
+    	    lappend libs [list $from $to $ns $name]
+	    exp_continue
+	}
+
+	-re {^\(\*\): Shared library is missing debugging information\.\r\n} {
+	    exp_continue
+	}
+
+	-re "^$::gdb_prompt " {
+	    pass $gdb_test_name
+	}
+    }
+
+    return $libs
+}
+
+# Verify that "info sharedlibrary" does not contain duplicate entries.
+
+proc check_no_duplicates {} {
+    with_test_prefix "check no duplicates" {
+	set libs [get_info_shared]
+	array set seen {}
+	set seen_duplicate 0
+
+	foreach lib $libs {
+	    if {[info exists seen($lib)]} {
+		verbose -log "already seen: $lib"
+		set seen_duplicate 1
+	    }
+
+	    set seen($lib) 1
+	}
+
+	gdb_assert {!$seen_duplicate} "no duplicates"
+    }
+}
+
 # Run the command "info sharedlibrary" and get the first namespace
 # for the so
 proc get_first_so_ns {} {
     set ns -1
     set lib_regexp [string_to_regexp ${::binfile_lib}]
     gdb_test_multiple "info sharedlibrary $::so_name" "get SO namespace" -lbl {
-	-re "\r\nFrom\\s+To\\s+\(NS\\s+\)?Syms\\s+Read\\s+Shared Object Library(?=\r\n)" {
+	-re "\r\nFrom\\s+To\\s+\(Linker NS\\s+\)?Syms\\s+Read\\s+Shared Object Library(?=\r\n)" {
 	    exp_continue
 	}
-	-re "\r\n$::hex\\s+$::hex\\s+\\\[\\\[($::decimal)\\\]\\\]\\s+\[^\r\n]+${lib_regexp}(?=\r\n)" {
+	-re "\r\n$::hex\\s+$::hex\\s+($::decimal)\\s+\[^\r\n]+${lib_regexp}(?=\r\n)" {
 	    if {$ns == -1} {
 		set ns $expect_out(1,string)
 	    }
@@ -62,7 +126,8 @@ proc get_first_so_ns {} {
 # Run the tests relating to the command "info sharedlibrary", to
 # verify that the namespace ID is consistent.
 proc test_info_shared {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if { ![runto_main] } {
 	return
@@ -78,8 +143,10 @@ proc test_info_shared {} {
 
     # Next, test that we *do* print a namespace column after loading SOs.
     gdb_test "info sharedlibrary" \
-	"From\\s+To\\s+NS\\s+Syms\\s+Read\\s+Shared Object Library.*" \
+	"From\\s+To\\s+Linker NS\\s+Syms\\s+Read\\s+Shared Object Library.*" \
 	"after loading everything"
+
+    check_no_duplicates
 
     gdb_assert {[get_first_so_ns] == 1} "before closing any library"
 
@@ -107,11 +174,14 @@ proc test_info_shared {} {
 
 # Run all tests related to the linkage namespaces convenience
 # variables, _active_namespaces and _current_namespaces.
+# Also tests that the namespace ID is only printed at the correct
+# times.
 proc_with_prefix test_conv_vars {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
-    gdb_test "print \$_active_linker_namespaces" "1" \
-	"1 namespace before starting inferior"
+    gdb_test "print \$_linker_namespace_count" "0" \
+	"0 namespace before starting inferior"
     gdb_test "print \$_linker_namespace" "No registers." \
 	"No current namespace before starting inferior"
 
@@ -119,7 +189,7 @@ proc_with_prefix test_conv_vars {} {
 	return
     }
 
-    gdb_test "print \$_active_linker_namespaces" "1" \
+    gdb_test "print \$_linker_namespace_count" "1" \
 	"Before activating namespaces"
     gdb_test "print \$_linker_namespace" ".* = 0" \
 	"Still in the default namespace"
@@ -141,17 +211,18 @@ proc_with_prefix test_conv_vars {} {
 	"print namespace of selected frame"
 
     gdb_continue_to_breakpoint "first dlclose"
-    gdb_test "print \$_active_linker_namespaces" "4" "all SOs loaded"
+    gdb_test "print \$_linker_namespace_count" "4" "all SOs loaded"
 
     gdb_test "next" ".*second dlclose.*" "close one SO"
-    gdb_test "print \$_active_linker_namespaces" "3" "one SOs unloaded"
+    gdb_test "print \$_linker_namespace_count" "3" "one SOs unloaded"
     gdb_test "next" ".*third dlclose.*" "close another SO"
-    gdb_test "print \$_active_linker_namespaces" "2" "two SOs unloaded"
+    gdb_test "print \$_linker_namespace_count" "2" "two SOs unloaded"
 
     # Restarting GDB so that we can test setting a breakpoint
     # using the convenience variable, while a proper bp syntax
     # isn't implemented for namespaces
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
     if {![runto_main]} {
 	return
     }
@@ -167,7 +238,8 @@ proc_with_prefix test_conv_vars {} {
 
 # Run several tests relating to the command "info namespaces".
 proc test_info_linker_namespaces {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     # Check that "info linker-namespaces" while the inferior is not running
     # doesn't crash.
@@ -186,50 +258,44 @@ proc test_info_linker_namespaces {} {
 
     # First, test printing a single namespace, and ensure all of
     # them are correct, using both syntaxes.
-    set found_all_libs false
-    gdb_test_multiple "info linker-namespaces \[\[0\]\]" "print namespace 0" -lbl {
-	-re "^\r\nThere are ($::decimal) libraries loaded in linker namespace \\\[\\\[0\\\]\\\]" {
-	    # Some systems may add libc and libm to every loaded namespace,
-	    # others may load only one or neither, because the SO doesn't
-	    # actually use either library.  The best we can do is check if
-	    # we found the dynamic linker, and up to 2 more libraries.
-	    set libs $expect_out(1,string)
-	    set found_all_libs [expr $libs - 1 <= 2]
-	    exp_continue
-	}
-	-re "^\r\n$::gdb_prompt $" {
-	    gdb_assert $found_all_libs "the correct number of libraries was reported"
-	}
-	-re "(^\r\n)?\[^\r\n\]+(?=\r\n)" {
-	    exp_continue
+    set n_libraries 999
+
+    gdb_test_multiple "info linker-namespaces \[\[0\]\]" "print namespace 0" {
+	-re -wrap "($::decimal) librar(?:y|ies) loaded in linker namespace 0:.*" {
+	    set n_libraries $expect_out(1,string)
 	}
     }
+
+    # Some systems may add libc and libm to every loaded namespace,
+    # others may load only one or neither, because the SO doesn't
+    # actually use either library.  The best we can do is check if
+    # we found the dynamic linker, and up to 2 more libraries.
+    gdb_assert {$n_libraries <= 3}  "the correct number of libraries was reported"
+
+    set binfile_lib_re [string_to_regexp $::binfile_lib]
+
     foreach_with_prefix ns {1 2 3} {
 	set found_test_so false
-	set found_all_libs false
-	gdb_test_multiple "info linker-namespaces $ns" "print namespace $ns" -lbl {
-	    -re "^\r\nThere are ($::decimal) libraries loaded in linker namespace \\\[\\\[$ns\\\]\\\]" {
-		set libs $expect_out(1,string)
-		# Some systems may add libc and libm to every loaded namespace,
-		# others may load only one or neither, because the SO doesn't
-		# actually use either library.  The best we can do is check if
-		# we found the dynamic linker, the test SO, and maybe up to 2
-		# more libraries.
-		set found_all_libs [expr $libs - 2 <= 2]
+	set n_libraries 999
+
+	gdb_test_multiple "info linker-namespaces $ns" "print namespace $ns" {
+	    -re ".*($::decimal) librar(?:y|ies) loaded in linker namespace $ns:\r\n" {
+		set n_libraries $expect_out(1,string)
 		exp_continue
 	    }
-	    -re "^\r\n\[^\r\n\]+${::binfile_lib}\[^\r\n\]*(?=\r\n)" {
+
+	    -re -wrap "${binfile_lib_re}.*" {
 		set found_test_so true
-		exp_continue
-	    }
-	    -re "^\r\n$::gdb_prompt $" {
-		gdb_assert $found_test_so "this testfle's SO was reported"
-		gdb_assert $found_all_libs "the correct number of libraries was reported"
-	    }
-	    -re "(^\r\n)?\[^\r\n\]+(?=\r\n)" {
-		exp_continue
 	    }
 	}
+
+	# Some systems may add libc and libm to every loaded namespace,
+	# others may load only one or neither, because the SO doesn't
+	# actually use either library.  The best we can do is check if
+	# we found the dynamic linker, the test SO, and maybe up to 2
+	# more libraries.
+	gdb_assert {$n_libraries <= 4} "the correct number of libraries was reported"
+	gdb_assert {$found_test_so} "this testfile's SO was reported"
     }
 
     # These patterns are simpler, and purposefully glob multiple lines.
@@ -237,14 +303,15 @@ proc test_info_linker_namespaces {} {
     # without worrying about the libraries printed, since that was tested
     # above.
     gdb_test "info linker-namespaces" \
-	[multi_line "There are 4 linker namespaces loaded" \
-		    "There are $::decimal libraries loaded in linker namespace ..0.." \
+	[multi_line "There are 4 linker namespaces loaded\\." \
+		    "" \
+		    "$::decimal librar(y|ies) loaded in linker namespace 0:" \
 		    ".*" \
-		    "There are $::decimal libraries loaded in linker namespace ..1.." \
+		    "$::decimal librar(y|ies) loaded in linker namespace 1:" \
 		    ".*" \
-		    "There are $::decimal libraries loaded in linker namespace ..2.." \
+		    "$::decimal librar(y|ies) loaded in linker namespace 2:" \
 		    ".*" \
-		    "There are $::decimal libraries loaded in linker namespace ..3.." \
+		    "$::decimal librar(y|ies) loaded in linker namespace 3:" \
 		    ".*" ] "print namespaces with no argument"
 }
 

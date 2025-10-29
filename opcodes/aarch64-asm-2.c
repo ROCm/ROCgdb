@@ -556,6 +556,9 @@ aarch64_find_real_opcode (const aarch64_opcode *opcode)
     case A64_OPID_d503323f_dsb_BARRIER_DSB_NXS:
       value = A64_OPID_d503323f_dsb_BARRIER_DSB_NXS;
       break;
+    case A64_OPID_d508001f_gsb_GSB:
+    case A64_OPID_d5080000_gicr_Rd_GICR:
+    case A64_OPID_d5080000_gic_GIC_Rd:
     case A64_OPID_d50b72e0_trcit_Rt:
     case A64_OPID_d5097280_brb_BRBOP_Rt_IN_SYS_ALIASES:
     case A64_OPID_d50b73c0_cosp_SYSREG_SR_Rt:
@@ -828,6 +831,8 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_SVE_Zt:
     case AARCH64_OPND_SME_Zm:
     case AARCH64_OPND_SME_Zm_17:
+    case AARCH64_OPND_SME_Zn_6_3:
+    case AARCH64_OPND_SME_Zm_17_3:
     case AARCH64_OPND_SME_ZAda_1b:
     case AARCH64_OPND_SME_ZAda_2b:
     case AARCH64_OPND_SME_ZAda_3b:
@@ -867,6 +872,7 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_SVE_Zm3_12_INDEX:
     case AARCH64_OPND_SME_PNn3_INDEX1:
     case AARCH64_OPND_SME_PNn3_INDEX2:
+    case AARCH64_OPND_SME_Zk_INDEX:
     case AARCH64_OPND_SME_Zm_INDEX1:
     case AARCH64_OPND_SME_Zm_INDEX2:
     case AARCH64_OPND_SME_Zm_INDEX2_3:
@@ -1012,6 +1018,9 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
     case AARCH64_OPND_SYSREG_SR:
+    case AARCH64_OPND_GIC:
+    case AARCH64_OPND_GICR:
+    case AARCH64_OPND_GSB:
       return aarch64_ins_sysins_op (self, info, code, inst, errors);
     case AARCH64_OPND_BARRIER:
     case AARCH64_OPND_BARRIER_ISB:
@@ -1135,6 +1144,8 @@ aarch64_insert_operand (const aarch64_operand *self,
       return aarch64_ins_sve_reglist (self, info, code, inst, errors);
     case AARCH64_OPND_SME_Zdnx2:
     case AARCH64_OPND_SME_Zdnx4:
+    case AARCH64_OPND_SME_Znx2_6_3:
+    case AARCH64_OPND_SME_Zmx2_17_3:
     case AARCH64_OPND_SME_Zmx2:
     case AARCH64_OPND_SME_Zmx4:
     case AARCH64_OPND_SME_Znx2:

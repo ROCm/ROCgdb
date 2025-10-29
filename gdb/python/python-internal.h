@@ -24,34 +24,6 @@
 #include "extension-priv.h"
 #include "registry.h"
 
-/* These WITH_* macros are defined by the CPython API checker that
-   comes with the Python plugin for GCC.  See:
-   https://gcc-python-plugin.readthedocs.org/en/latest/cpychecker.html
-   The checker defines a WITH_ macro for each attribute it
-   exposes.  Note that we intentionally do not use
-   'cpychecker_returns_borrowed_ref' -- that idiom is forbidden in
-   gdb.  */
-
-#ifdef WITH_CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF_ATTRIBUTE
-#define CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF(ARG)		\
-  __attribute__ ((cpychecker_type_object_for_typedef (ARG)))
-#else
-#define CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF(ARG)
-#endif
-
-#ifdef WITH_CPYCHECKER_SETS_EXCEPTION_ATTRIBUTE
-#define CPYCHECKER_SETS_EXCEPTION __attribute__ ((cpychecker_sets_exception))
-#else
-#define CPYCHECKER_SETS_EXCEPTION
-#endif
-
-#ifdef WITH_CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION_ATTRIBUTE
-#define CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION		\
-  __attribute__ ((cpychecker_negative_result_sets_exception))
-#else
-#define CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-#endif
-
 /* /usr/include/features.h on linux systems will define _POSIX_C_SOURCE
    if it sees _GNU_SOURCE (which config.h will define).
    pyconfig.h defines _POSIX_C_SOURCE to a different value than
@@ -89,8 +61,6 @@
 #include "py-ref.h"
 
 static_assert (PY_VERSION_HEX >= 0x03040000);
-
-#define Py_TPFLAGS_CHECKTYPES 0
 
 /* If Python.h does not define WITH_THREAD, then the various
    GIL-related functions will not be defined.  However,
@@ -351,20 +321,13 @@ extern int gdb_python_initialized;
 
 extern PyObject *gdb_module;
 extern PyObject *gdb_python_module;
-extern PyTypeObject value_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("value_object");
-extern PyTypeObject block_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF("block_object");
-extern PyTypeObject symbol_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("symbol_object");
-extern PyTypeObject event_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
-extern PyTypeObject breakpoint_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("breakpoint_object");
-extern PyTypeObject frame_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("frame_object");
-extern PyTypeObject thread_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("thread_object");
+extern PyTypeObject value_object_type;
+extern PyTypeObject block_object_type;
+extern PyTypeObject symbol_object_type;
+extern PyTypeObject event_object_type;
+extern PyTypeObject breakpoint_object_type;
+extern PyTypeObject frame_object_type;
+extern PyTypeObject thread_object_type;
 
 /* Ensure that breakpoint_object_type is initialized and return true.  If
    breakpoint_object_type can't be initialized then set a suitable Python
@@ -503,7 +466,12 @@ PyObject *gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 					   const char *encoding,
 					   struct type *type);
 PyObject *gdbpy_inferiors (PyObject *unused, PyObject *unused2);
-PyObject *gdbpy_create_ptid_object (ptid_t ptid);
+
+/* Return a reference to a new Python Tuple object representing a ptid_t.
+   The object is a tuple containing (pid, lwp, tid).  */
+
+extern gdbpy_ref<> gdbpy_create_ptid_object (ptid_t ptid);
+
 PyObject *gdbpy_selected_thread (PyObject *self, PyObject *args);
 PyObject *gdbpy_selected_inferior (PyObject *self, PyObject *args);
 PyObject *gdbpy_string_to_argv (PyObject *self, PyObject *args);
@@ -564,6 +532,20 @@ struct symtab *symtab_object_to_symtab (PyObject *obj);
 struct symtab_and_line *sal_object_to_symtab_and_line (PyObject *obj);
 frame_info_ptr frame_object_to_frame_info (PyObject *frame_obj);
 struct gdbarch *arch_object_to_gdbarch (PyObject *obj);
+
+/* Return true if OBJ is a gdb.Style object.  OBJ must not be NULL.  */
+
+extern bool gdbpy_is_style (PyObject *obj);
+
+/* Return the ui_file_style from OBJ, a gdb.Style object.  OBJ must not be
+   NULL.
+
+   It is possible that OBJ is a gdb.Style object, but the underlying style
+   cannot be fetched for some reason.  If this happens then a Python error
+   is set and an empty optional is returned.  */
+
+extern std::optional<ui_file_style>
+  gdbpy_style_object_to_ui_file_style (PyObject *obj);
 
 extern PyObject *gdbpy_execute_mi_command (PyObject *self, PyObject *args,
 					   PyObject *kw);
@@ -987,8 +969,7 @@ extern PyObject *gdbpy_gdb_error;
 extern PyObject *gdbpy_gdb_memory_error;
 extern PyObject *gdbpy_gdberror_exc;
 
-extern void gdbpy_convert_exception (const struct gdb_exception &)
-    CPYCHECKER_SETS_EXCEPTION;
+extern void gdbpy_convert_exception (const struct gdb_exception &);
 
  /* Use this in a 'catch' block to convert the exception E to a Python
     exception and return value VAL to signal that an exception occurred.
@@ -1002,8 +983,7 @@ gdbpy_handle_gdb_exception (T val, const gdb_exception &e)
   return val;
 }
 
-int get_addr_from_python (PyObject *obj, CORE_ADDR *addr)
-    CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+int get_addr_from_python (PyObject *obj, CORE_ADDR *addr);
 
 gdbpy_ref<> gdb_py_object_from_longest (LONGEST l);
 gdbpy_ref<> gdb_py_object_from_ulongest (ULONGEST l);
@@ -1012,8 +992,7 @@ int gdb_py_int_as_long (PyObject *, long *);
 PyObject *gdb_py_generic_dict (PyObject *self, void *closure);
 
 int gdb_pymodule_addobject (PyObject *module, const char *name,
-			    PyObject *object)
-  CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+			    PyObject *object);
 
 
 /* Return a Python string (str) object that represents SELF.  SELF can be
@@ -1108,6 +1087,14 @@ extern std::optional<int> gdbpy_print_insn (struct gdbarch *gdbarch,
 					    CORE_ADDR address,
 					    disassemble_info *info);
 
+/* Return the gdb.Corefile object representing the core file loaded into
+   the program space of INF, or None if there is no core file loaded.  INF
+   must not be NULL.  If an error occurs then NULL is returned, and a
+   suitable Python error will be set.  */
+
+extern gdbpy_ref<> gdbpy_core_file_from_inferior (inferior *inf);
+
+
 /* A wrapper for PyType_Ready that also automatically registers the
    type in the appropriate module.  Returns 0 on success, -1 on error.
    If MOD is supplied, then the type is added to that module.  If MOD
@@ -1138,7 +1125,7 @@ gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
 # define PyType_Ready POISONED_PyType_Ready
 #endif
 
-/* A class to manage lifecycle of Python objects for objects that are "owned" 
+/* A class to manage lifecycle of Python objects for objects that are "owned"
    by an objfile or a gdbarch.  It keeps track of Python objects and when
    the "owning" object (objfile or gdbarch) is about to be freed, ensures that
    all Python objects "owned" by that object are properly invalidated.
@@ -1148,9 +1135,9 @@ gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
    on demand and it is deleted when owning object is about to be freed.
 
    The storage class must provide two member types:
-     
-     * obj_type - the type of Python object whose lifecycle is managed. 
-     * val_type - the type of GDB structure the Python objects are 
+
+     * obj_type - the type of Python object whose lifecycle is managed.
+     * val_type - the type of GDB structure the Python objects are
        representing.
 
    It must also provide following methods:
@@ -1239,9 +1226,9 @@ struct gdbpy_default_invalidator
 };
 
 /* A "storage" implementation suitable for temporary (on-demand) objects.  */
-template <typename P, 
-          typename V, 
-          V* P::*val_slot, 
+template <typename P,
+          typename V,
+          V* P::*val_slot,
 	  typename Invalidator = gdbpy_default_invalidator<P, V, val_slot>>
 class gdbpy_tracking_registry_storage
 {
@@ -1253,7 +1240,7 @@ public:
   {
     gdb_assert (obj != nullptr && obj->*val_slot != nullptr);
 
-    m_objects.insert (obj);    
+    m_objects.insert (obj);
   }
 
   void remove (obj_type *obj)
@@ -1261,7 +1248,7 @@ public:
     gdb_assert (obj != nullptr && obj->*val_slot != nullptr);
     gdb_assert (m_objects.contains (obj));
 
-    m_objects.erase (obj);    
+    m_objects.erase (obj);
   }
 
   ~gdbpy_tracking_registry_storage ()
@@ -1284,9 +1271,9 @@ protected:
    drops all their references the Python object is deallocated and removed
    from storage.
    */
-template <typename P, 
-          typename V, 
-          V* P::*val_slot, 
+template <typename P,
+          typename V,
+          V* P::*val_slot,
 	  typename Invalidator = gdbpy_default_invalidator<P, V, val_slot>>
 class gdbpy_memoizing_registry_storage
 {

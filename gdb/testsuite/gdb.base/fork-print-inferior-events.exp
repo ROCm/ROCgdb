@@ -73,7 +73,8 @@ set i 0
 foreach_with_prefix print_inferior_events { "on" "off" } {
     foreach_with_prefix follow_fork_mode { "child" "parent" } {
 	foreach_with_prefix detach_on_fork { "on" "off" } {
-	    clean_restart $binfile
+	    clean_restart
+	    gdb_load $binfile
 	    gdb_test_no_output "set print inferior-events $print_inferior_events"
 	    gdb_test_no_output "set follow-fork-mode $follow_fork_mode"
 	    gdb_test_no_output "set detach-on-fork $detach_on_fork"
@@ -82,7 +83,7 @@ foreach_with_prefix print_inferior_events { "on" "off" } {
 	    # Always add the "Starting program..." string so that we
 	    # match exactly the lines we want.
 	    set output "Starting program: $binfile\\s*\r\n${thread_db_re}${output}${thread_db_re}${exited_normally_re}"
-	    set i [expr $i + 1]
+	    set i [expr {$i + 1}]
 	    gdb_test "run" $output
 	}
     }

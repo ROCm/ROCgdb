@@ -20,14 +20,14 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
 
 if {![runto pck.adb:20]} {
   return
-} 
+}
 
 gdb_test_no_output "set print frame-arguments all"
 

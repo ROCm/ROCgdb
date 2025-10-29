@@ -130,7 +130,7 @@ extern unsigned long signal_pid;
 struct client_state
 {
   client_state ():
-    own_buf ((char *) xmalloc (PBUFSIZ + 1)) 
+    own_buf ((char *) xmalloc (PBUFSIZ + 1))
   {}
 
   /* The thread set with an `Hc' packet.  `Hc' is deprecated in favor of
@@ -197,6 +197,11 @@ struct client_state
      are not supported with qRcmd and m packets, but are still supported
      everywhere else.  This is for backward compatibility reasons.  */
   bool error_message_supported = false;
+
+  /* If true then we've agreed that the debugger will send all inferior
+     arguments as a single string.  When false the debugger will attempt
+     to split the inferior arguments before sending them.  */
+  bool single_inferior_argument = false;
 };
 
 client_state &get_client_state ();

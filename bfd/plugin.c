@@ -99,7 +99,6 @@ dlerror (void)
 #define bfd_plugin_bfd_link_split_section	      _bfd_generic_link_split_section
 #define bfd_plugin_bfd_gc_sections		      bfd_generic_gc_sections
 #define bfd_plugin_bfd_lookup_section_flags	      bfd_generic_lookup_section_flags
-#define bfd_plugin_bfd_merge_sections		      bfd_generic_merge_sections
 #define bfd_plugin_bfd_is_group_section		      bfd_generic_is_group_section
 #define bfd_plugin_bfd_group_name		      bfd_generic_group_name
 #define bfd_plugin_bfd_discard_group		      bfd_generic_discard_group
@@ -378,6 +377,7 @@ bfd_plugin_open_input (bfd *ibfd, struct ld_plugin_input_file *file)
 
   iobfd = ibfd;
   while (iobfd->my_archive
+	 && iobfd->my_archive->iovec == iobfd->iovec
 	 && !bfd_is_thin_archive (iobfd->my_archive))
     iobfd = iobfd->my_archive;
   file->name = bfd_get_filename (iobfd);
@@ -470,6 +470,7 @@ bfd_plugin_close_file_descriptor (bfd *abfd, int fd)
   else
     {
       while (abfd->my_archive
+	     && abfd->my_archive->iovec == abfd->iovec
 	     && !bfd_is_thin_archive (abfd->my_archive))
 	abfd = abfd->my_archive;
 
@@ -656,16 +657,6 @@ bfd_link_plugin_object_p (bfd *abfd)
   if (ld_plugin_object_p)
     return ld_plugin_object_p (abfd, false) != NULL;
   return false;
-}
-
-extern const bfd_target plugin_vec;
-
-/* Return TRUE if TARGET is a pointer to plugin_vec.  */
-
-bool
-bfd_plugin_target_p (const bfd_target *target)
-{
-  return target == &plugin_vec;
 }
 
 /* Register OBJECT_P to be used by bfd_plugin_object_p.  */
@@ -991,6 +982,7 @@ const bfd_target plugin_vec =
   15,				/* ar_max_namelen.  */
   255,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
 
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,
   bfd_getl32, bfd_getl_signed_32, bfd_putl32,
@@ -1002,30 +994,26 @@ const bfd_target plugin_vec =
   {				/* bfd_check_format.  */
     _bfd_dummy_target,
     bfd_plugin_object_p,
-    bfd_generic_archive_p,
+    _bfd_dummy_target,
     _bfd_dummy_target
   },
   {				/* bfd_set_format.  */
     _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
-    _bfd_generic_mkarchive,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
   {				/* bfd_write_contents.  */
     _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
-    _bfd_write_archive_contents,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
 
   BFD_JUMP_TABLE_GENERIC (bfd_plugin),
   BFD_JUMP_TABLE_COPY (bfd_plugin),
   BFD_JUMP_TABLE_CORE (bfd_plugin),
-#ifdef USE_64_BIT_ARCHIVE
-  BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_64_bit),
-#else
-  BFD_JUMP_TABLE_ARCHIVE (_bfd_archive_coff),
-#endif
+  BFD_JUMP_TABLE_ARCHIVE (_bfd_noarchive),
   BFD_JUMP_TABLE_SYMBOLS (bfd_plugin),
   BFD_JUMP_TABLE_RELOCS (_bfd_norelocs),
   BFD_JUMP_TABLE_WRITE (bfd_plugin),

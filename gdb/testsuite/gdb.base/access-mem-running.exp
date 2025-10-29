@@ -32,10 +32,11 @@ proc test { non_stop } {
 
     save_vars { GDBFLAGS } {
       append GDBFLAGS " -ex \"set non-stop $non_stop\""
-      clean_restart ${binfile}
+      clean_restart
+      gdb_load $binfile
     }
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
 
@@ -113,7 +114,7 @@ proc test { non_stop } {
 }
 
 foreach non_stop { "off" "on" } {
-    set stop_mode [expr ($non_stop=="off")?"all-stop":"non-stop"]
+    set stop_mode [expr {($non_stop=="off")?"all-stop":"non-stop"}]
     with_test_prefix "$stop_mode" {
 	test $non_stop
     }

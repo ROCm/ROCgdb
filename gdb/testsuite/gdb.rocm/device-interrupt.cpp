@@ -18,10 +18,10 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
-#include <signal.h>
-#include <unistd.h>
 #include <hip/hip_runtime.h>
+#include "gdb_watchdog.h"
 
 #define CHECK(cmd)                                                           \
   {                                                                          \
@@ -44,13 +44,6 @@ kernel ()
     __builtin_amdgcn_s_sleep (1);
 }
 
-static void
-sigalrm_handler (int signo)
-{
-  fprintf (stderr, "whoops, timeout\n");
-  exit (1);
-}
-
 int
 main (int argc, char **argv)
 {
@@ -58,8 +51,7 @@ main (int argc, char **argv)
 		      0 /*dynamicShared*/, 0 /*stream*/);
 
   /* Don't run forever.  */
-  signal (SIGALRM, sigalrm_handler);
-  alarm (10);
+  gdb_watchdog (10);
 
   /* Wait until kernel finishes.  In this case, this blocks
      "forever".  */

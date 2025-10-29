@@ -65,13 +65,28 @@ constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK_2 = 0xc000000000000000;
 static_assert (AMDGPU_ADDRESS_SPACE_MASK
 	       == (AMDGPU_ADDRESS_SPACE_MASK_1 | AMDGPU_ADDRESS_SPACE_MASK_2));
 
+/* Return true if INFO is of an AMDGPU architecture.  */
+
+static bool
+is_amdgpu_arch (const bfd_arch_info *info)
+{
+  return info->arch == bfd_arch_amdgcn;
+}
+
 /* See amdgpu-tdep.h.  */
 
 bool
 is_amdgpu_arch (struct gdbarch *arch)
 {
-  gdb_assert (arch != nullptr);
-  return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
+  return is_amdgpu_arch (gdbarch_bfd_arch_info (arch));
+}
+
+/* See amdgpu-tdep.h.  */
+
+bool
+is_amdgpu_arch (bfd *abfd)
+{
+  return is_amdgpu_arch (abfd->arch_info);
 }
 
 /* See amdgpu-tdep.h.  */
@@ -1623,7 +1638,7 @@ amdgpu_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
-      struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (func_addr);
 
       /* Clang always emits a line note before the prologue and another
 	 one after.  We trust clang to emit usable line notes.  */

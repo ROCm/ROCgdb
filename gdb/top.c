@@ -69,7 +69,6 @@
 
 #include "event-top.h"
 #include <sys/stat.h>
-#include <ctype.h>
 #include "ui-out.h"
 #include "cli-out.h"
 #include "tracepoint.h"
@@ -1312,7 +1311,7 @@ print_gdb_version (struct ui_file *stream, bool interactive)
   /* Second line is a copyright notice.  */
 
   gdb_printf (stream,
-	      "Copyright (C) 2024 Free Software Foundation, Inc.\n");
+	      "Copyright (C) 2025 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on
@@ -1595,6 +1594,11 @@ This GDB was configured as follows:\n\
     gdb_printf (stream, _("\
 	     --with-system-gdbinit-dir=%s%s\n\
 "), SYSTEM_GDBINIT_DIR, SYSTEM_GDBINIT_DIR_RELOCATABLE ? " (relocatable)" : "");
+
+#ifdef SUPPORTED_BINARY_FILE_FORMATS
+  gdb_printf (stream, _("\
+	     --enable-binary-file-formats=%s\n"), SUPPORTED_BINARY_FILE_FORMATS);
+#endif
 
   /* We assume "relocatable" will be printed at least once, thus we always
      print this text.  It's a reasonably safe assumption for now.  */

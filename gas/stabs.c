@@ -229,14 +229,14 @@ s_stab_generic (int what,
 	obstack_free (&notes, stab_secname);
 
       subseg_set (stab, 0);
-      if (!seg_info (stab)->hadone)
+      if (!seg_info (stab)->stab_seen)
 	{
 	  bfd_set_section_flags (stab,
 				 SEC_READONLY | SEC_RELOC | SEC_DEBUGGING);
 #ifdef INIT_STAB_SECTION
 	  INIT_STAB_SECTION (stab, stabstr);
 #endif
-	  seg_info (stab)->hadone = 1;
+	  seg_info (stab)->stab_seen = 1;
 	}
     }
   else if (freenames)
@@ -296,26 +296,6 @@ s_stab_generic (int what,
 	goto out;
       SKIP_WHITESPACE ();
     }
-
-#ifdef TC_PPC
-#ifdef OBJ_ELF
-  /* Solaris on PowerPC has decided that .stabd can take 4 arguments, so if we were
-     given 4 arguments, make it a .stabn */
-  else if (what == 'd')
-    {
-      char *save_location = input_line_pointer;
-
-      SKIP_WHITESPACE ();
-      if (*input_line_pointer == ',')
-	{
-	  input_line_pointer++;
-	  what = 'n';
-	}
-      else
-	input_line_pointer = save_location;
-    }
-#endif /* OBJ_ELF */
-#endif /* TC_PPC */
 
 #ifndef NO_LISTING
   if (listing)

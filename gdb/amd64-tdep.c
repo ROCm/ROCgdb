@@ -61,7 +61,7 @@
 
 /* Register information.  */
 
-static const char * const amd64_register_names[] = 
+static const char * const amd64_register_names[] =
 {
   "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp",
 
@@ -79,7 +79,7 @@ static const char * const amd64_register_names[] =
   "mxcsr",
 };
 
-static const char * const amd64_ymm_names[] = 
+static const char * const amd64_ymm_names[] =
 {
   "ymm0", "ymm1", "ymm2", "ymm3",
   "ymm4", "ymm5", "ymm6", "ymm7",
@@ -95,7 +95,7 @@ static const char * const amd64_ymm_avx512_names[] =
   "ymm28", "ymm29", "ymm30", "ymm31"
 };
 
-static const char * const amd64_ymmh_names[] = 
+static const char * const amd64_ymmh_names[] =
 {
   "ymm0h", "ymm1h", "ymm2h", "ymm3h",
   "ymm4h", "ymm5h", "ymm6h", "ymm7h",
@@ -329,7 +329,7 @@ static const char * const amd64_byte_names[] =
 
 static const char * const amd64_word_names[] =
 {
-  "ax", "bx", "cx", "dx", "si", "di", "bp", "", 
+  "ax", "bx", "cx", "dx", "si", "di", "bp", "",
   "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w"
 };
 
@@ -337,7 +337,7 @@ static const char * const amd64_word_names[] =
 
 static const char * const amd64_dword_names[] =
 {
-  "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", 
+  "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp",
   "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d",
   "eip"
 };
@@ -513,20 +513,19 @@ amd64_has_unaligned_fields (struct type *type)
   if (type->code () == TYPE_CODE_STRUCT
       || type->code () == TYPE_CODE_UNION)
     {
-      for (int i = 0; i < type->num_fields (); i++)
+      for (const auto &field : type->fields ())
 	{
-	  struct type *subtype = check_typedef (type->field (i).type ());
+	  struct type *subtype = check_typedef (field.type ());
 
 	  /* Ignore static fields, empty fields (for example nested
 	     empty structures), and bitfields (these are handled by
 	     the caller).  */
-	  if (type->field (i).is_static ()
-	      || (type->field (i).bitsize () == 0
-		  && subtype->length () == 0)
-	      || type->field (i).is_packed ())
+	  if (field.is_static ()
+	      || (field.bitsize () == 0 && subtype->length () == 0)
+	      || field.is_packed ())
 	    continue;
 
-	  int bitpos = type->field (i).loc_bitpos ();
+	  int bitpos = field.loc_bitpos ();
 
 	  if (bitpos % 8 != 0)
 	    return true;
@@ -1022,7 +1021,7 @@ if (return_method == return_method_struct)
      containing ellipsis (...) in the declaration) %al is used as
      hidden argument to specify the number of SSE registers used.  */
   regcache_raw_write_unsigned (regcache, AMD64_RAX_REGNUM, sse_reg);
-  return sp; 
+  return sp;
 }
 
 static CORE_ADDR
@@ -1180,6 +1179,15 @@ static bool
 vex3_prefix_p (gdb_byte pfx)
 {
   return pfx == 0xc4;
+}
+
+/* True if PFX is the start of an XOP prefix.  */
+
+static bool
+xop_prefix_p (const gdb_byte *pfx)
+{
+  gdb_byte m = pfx[1] & 0x1f;
+  return pfx[0] == 0x8f && m >= 8;
 }
 
 /* Return true if PFX is the start of the 4-byte EVEX prefix.  */
@@ -1352,7 +1360,7 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
       details->enc_prefix_offset = insn - start;
       insn += 2;
     }
-  else if (vex3_prefix_p (*insn))
+  else if (vex3_prefix_p (*insn) || xop_prefix_p (insn))
     {
       details->enc_prefix_offset = insn - start;
       insn += 3;
@@ -1384,13 +1392,12 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
     }
   else if (prefix != nullptr && vex2_prefix_p (*prefix))
     {
-      need_modrm = twobyte_has_modrm[*insn];
+      /* All VEX2 instructions need ModR/M, except vzeroupper/vzeroall.  */
+      need_modrm = *insn != 0x77 ? 1 : 0;
       details->opcode_len = 2;
     }
   else if (prefix != nullptr && vex3_prefix_p (*prefix))
     {
-      need_modrm = twobyte_has_modrm[*insn];
-
       gdb_byte m = prefix[1] & 0x1f;
       if (m == 0)
 	{
@@ -1399,12 +1406,16 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
 	}
       else if (m == 1)
 	{
-	  /* Escape 0x0f.  */
+	  /* Escape 0x0f.  All VEX3 instructions in this map need ModR/M,
+	     except vzeroupper/vzeroall.  */
+	  need_modrm = *insn != 0x77 ? 1 : 0;
 	  details->opcode_len = 2;
 	}
       else if (m == 2 || m == 3)
 	{
-	  /* Escape 0x0f 0x38 or 0x0f 0x3a.  */
+	  /* Escape 0x0f 0x38 or 0x0f 0x3a.  All VEX3 instructions in
+	     this map need ModR/M.  */
+	  need_modrm = 1;
 	  details->opcode_len = 3;
 	}
       else if (m == 7)
@@ -1420,7 +1431,8 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
     }
   else if (prefix != nullptr && evex_prefix_p (*prefix))
     {
-      need_modrm = twobyte_has_modrm[*insn];
+      /* All EVEX instructions need ModR/M.  */
+      need_modrm = 1;
 
       gdb_byte m = prefix[1] & 0x7;
       if (m == 1)
@@ -1438,6 +1450,11 @@ amd64_get_insn_details (gdb_byte *insn, struct amd64_insn *details)
 	  /* Unknown opcode map.  */
 	  return;
 	}
+    }
+  else if (prefix != nullptr && xop_prefix_p (prefix))
+    {
+      details->opcode_len = 1;
+      need_modrm = 1;
     }
   else if (*insn == TWO_BYTE_OPCODE_ESCAPE)
     {
@@ -1509,7 +1526,7 @@ fixup_riprel (const struct amd64_insn &details, gdb_byte *insn,
 	{
 	  /* VEX.!B is set implicitly.  */
 	}
-      else if (vex3_prefix_p (pfx[0]))
+      else if (vex3_prefix_p (pfx[0]) || xop_prefix_p (pfx))
 	pfx[1] |= VEX3_NOT_B;
       else if (evex_prefix_p (pfx[0]))
 	{
@@ -1917,6 +1934,22 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
       displaced_debug_printf ("relocated return addr at %s to %s",
 			      paddress (gdbarch, rsp),
 			      paddress (gdbarch, retaddr));
+
+      /* If shadow stack is enabled, we need to correct the return address
+	 on the shadow stack too.  */
+      bool shadow_stack_enabled;
+      std::optional<CORE_ADDR> ssp
+	= gdbarch_get_shadow_stack_pointer (gdbarch, regs,
+					    shadow_stack_enabled);
+      if (shadow_stack_enabled)
+	{
+	  gdb_assert (ssp.has_value ());
+	  write_memory_unsigned_integer (*ssp, retaddr_len, byte_order,
+					 retaddr);
+	  displaced_debug_printf ("relocated shadow stack return addr at %s "
+				  "to %s", paddress (gdbarch, *ssp),
+				  paddress (gdbarch, retaddr));
+	}
     }
 }
 
@@ -2180,7 +2213,7 @@ amd64_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
 		pushq -8(%reg)
 
      "andq $-XXX, %rsp" can be either 4 bytes or 7 bytes:
-     
+
 	0x48 0x83 0xe4 0xf0			andq $-16, %rsp
 	0x48 0x81 0xe4 0x00 0xff 0xff 0xff	andq $-256, %rsp
    */
@@ -2246,7 +2279,7 @@ amd64_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
       /* MOD must be binary 10 and R/M must be binary 100.  */
       if ((buf[offset + 2] & 0xc7) != 0x44)
 	return pc;
-      
+
       /* REG has register number.  */
       r = (buf[offset + 2] >> 3) & 7;
 
@@ -2312,7 +2345,7 @@ amd64_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
 
 static CORE_ADDR
 amd64_x32_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
-			       struct amd64_frame_cache *cache) 
+			       struct amd64_frame_cache *cache)
 {
   /* There are 2 code sequences to re-align stack before the frame
      gets set up:
@@ -2344,12 +2377,12 @@ amd64_x32_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
 		[addr32] pushq -8(%reg)
 
      "andq $-XXX, %rsp" can be either 4 bytes or 7 bytes:
-     
+
 	0x48 0x83 0xe4 0xf0			andq $-16, %rsp
 	0x48 0x81 0xe4 0x00 0xff 0xff 0xff	andq $-256, %rsp
 
      "andl $-XXX, %esp" can be either 3 bytes or 6 bytes:
-     
+
 	0x83 0xe4 0xf0			andl $-16, %esp
 	0x81 0xe4 0x00 0xff 0xff 0xff	andl $-256, %esp
    */
@@ -2421,7 +2454,7 @@ amd64_x32_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
       /* MOD must be binary 10 and R/M must be binary 100.  */
       if ((buf[offset + 2] & 0xc7) != 0x44)
 	return pc;
-      
+
       /* REG has register number.  */
       r = (buf[offset + 2] >> 3) & 7;
 
@@ -2553,6 +2586,124 @@ amd64_analyze_frame_setup (gdbarch *gdbarch, CORE_ADDR pc,
   return pc;
 }
 
+/* Check whether PC points at code pushing registers onto the stack.  If so,
+   update CACHE and return pc after those pushes or CURRENT_PC, whichever is
+   smaller.  Otherwise, return PC passed to this function.
+
+   In AMD64 prologue, we only expect GPRs being pushed onto the stack.  */
+
+static CORE_ADDR
+amd64_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
+			      amd64_frame_cache *cache)
+{
+  gdb_byte op;
+
+  /* Limit iterating to 16 GPRs available.  */
+  for (int i = 0; i < 16 && pc < current_pc; i++)
+    {
+      int reg = 0;
+      int pc_offset = 0;
+
+      if (target_read_code (pc, &op, 1) == -1)
+	return pc;
+
+      /* push %r8 - %r15 REX prefix.  We expect only REX.B to be set, but
+	 because, for example, REX.R would be "unused" if it were there,
+	 we mask opcode with 0xF1 in case compilers don't get rid of it
+	 "because it doesn't matter anyway".  */
+      if ((op & 0xF1) == 0x41)
+	{
+	  reg += 8;
+	  pc_offset = 1;
+
+	  if (target_read_code (pc + 1, &op, 1) == -1)
+	    return pc;
+	}
+
+      /* push %rax|%rcx|%rdx|%rbx|%rsp|%rbp|%rsi|%rdi
+
+	 or with 0x41 prefix:
+	 push %r8|%r9|%r10|%r11|%r12|%r13|%r14|%r15.  */
+      if (op < 0x50 || op > 0x57)
+	break;
+
+      reg += op - 0x50;
+
+      int regnum = amd64_arch_reg_to_regnum (reg);
+      cache->sp_offset += 8;
+      cache->saved_regs[regnum] = -cache->sp_offset;
+
+      pc += 1 + pc_offset;
+    }
+
+  return pc;
+}
+
+/* Check whether PC points at code allocating space on the stack.
+   If so, update CACHE and return pc past it or CURRENT_PC, whichever is
+   smaller.  Otherwise, return PC passed to this function.  */
+
+static CORE_ADDR
+amd64_analyze_stack_alloc (gdbarch *arch, CORE_ADDR pc, CORE_ADDR current_pc,
+			   amd64_frame_cache *cache)
+{
+  static const gdb_byte sub_imm8_rsp[]  = { 0x83, 0xec };
+  static const gdb_byte sub_imm32_rsp[] = { 0x81, 0xec };
+  static const gdb_byte lea_disp_rsp[]  = { 0x8D, 0x64 };
+
+  bfd_endian byte_order = gdbarch_byte_order (arch);
+  const CORE_ADDR start_pc = pc;
+
+  gdb_byte op;
+  if (target_read_code (pc, &op, 1) == -1)
+    return pc;
+
+  /* Check for REX.W, indicating 64-bit operand size (in this case, for
+     %rsp).  */
+  if (op == 0x48)
+    pc++;
+
+  if (current_pc <= pc)
+    return current_pc;
+
+  gdb_byte buf[2];
+  read_code (pc, buf, 2);
+
+  /* Check for instruction allocating space on the stack, which looks like
+       sub imm8/32, %rsp
+     or
+       lea -imm (%rsp), %rsp
+
+     and forward pc past it + update cache.  */
+
+  /* sub imm8, %rsp.  */
+  if (memcmp (buf, sub_imm8_rsp, 2) == 0)
+    {
+      /* Instruction is 3 bytes long.  The imm8 arg is the 3rd, single
+	 byte.  */
+      cache->sp_offset += read_code_integer (pc + 2, 1, byte_order);
+      return pc + 3;
+    }
+  /* sub imm32, %rsp.  */
+  else if (memcmp (buf, sub_imm32_rsp, 2) == 0)
+    {
+      /* Instruction is 6 bytes long.  The imm32 arg is stored in 4 bytes,
+	 starting from 3rd one.  */
+      cache->sp_offset += read_code_integer (pc + 2, 4, byte_order);
+      return pc + 6;
+    }
+  /* lea -imm (%rsp), %rsp.  */
+  else if (memcmp (buf, lea_disp_rsp, 2) == 0)
+    {
+      /* Instruction is 4 bytes long.  The imm arg is the 4th, single
+	 byte.  */
+      cache->sp_offset += -1 * read_code_integer (pc + 3, 1, byte_order);
+      return pc + 4;
+    }
+
+  return start_pc;
+}
+
 /* Do a limited analysis of the prologue at PC and update CACHE
    accordingly.  Bail out early if CURRENT_PC is reached.  Return the
    address where the analysis stopped.
@@ -2594,7 +2745,15 @@ amd64_analyze_prologue (gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR current_pc,
   if (current_pc <= pc)
     return current_pc;
 
-  return amd64_analyze_frame_setup (gdbarch, pc, current_pc, cache);
+  pc = amd64_analyze_frame_setup (gdbarch, pc, current_pc, cache);
+  if (current_pc <= pc)
+    return current_pc;
+
+  pc = amd64_analyze_register_saves (pc, current_pc, cache);
+  if (current_pc <= pc)
+    return current_pc;
+
+  return amd64_analyze_stack_alloc (gdbarch, pc, current_pc, cache);
 }
 
 /* Work around false termination of prologue - GCC PR debug/48827.
@@ -2625,14 +2784,14 @@ amd64_skip_xmm_prologue (CORE_ADDR pc, CORE_ADDR start_pc)
   if (pc == start_pc)
     return pc;
 
-  start_pc_sal = find_pc_sect_line (start_pc, NULL, 0);
+  start_pc_sal = find_sal_for_pc_sect (start_pc, NULL, 0);
   if (start_pc_sal.symtab == NULL
       || producer_is_gcc_ge_4 (start_pc_sal.symtab->compunit ()
 			       ->producer ()) < 6
       || start_pc_sal.pc != start_pc || pc >= start_pc_sal.end)
     return pc;
 
-  next_sal = find_pc_sect_line (start_pc_sal.end, NULL, 0);
+  next_sal = find_sal_for_pc_sect (start_pc_sal.end, NULL, 0);
   if (next_sal.line != start_pc_sal.line)
     return pc;
 
@@ -2691,7 +2850,7 @@ amd64_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
-      struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (func_addr);
 
       /* LLVM backend (Clang/Flang) always emits a line note before the
 	 prologue and another one after.  We trust clang and newer Intel
@@ -3074,7 +3233,7 @@ amd64_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 static int
 amd64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  struct compunit_symtab *cust = find_pc_compunit_symtab (pc);
+  struct compunit_symtab *cust = find_compunit_symtab_for_pc (pc);
 
   if (cust != nullptr && cust->producer () != nullptr
       && producer_is_llvm (cust->producer ()))
@@ -3096,7 +3255,7 @@ amd64_epilogue_frame_sniffer_1 (const struct frame_unwind *self,
     return 0;
 
   bool unwind_valid_p
-    = compunit_epilogue_unwind_valid (find_pc_compunit_symtab (pc));
+    = compunit_epilogue_unwind_valid (find_compunit_symtab_for_pc (pc));
   if (override_p)
     {
       if (unwind_valid_p)
@@ -3220,7 +3379,7 @@ static const struct frame_unwind_legacy amd64_epilogue_frame_unwind (
   amd64_epilogue_frame_unwind_stop_reason,
   amd64_epilogue_frame_this_id,
   amd64_frame_prev_register,
-  NULL, 
+  NULL,
   amd64_epilogue_frame_sniffer
 );
 
@@ -3395,6 +3554,9 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
       tdep->num_pkeys_regs = 1;
     }
 
+  if (tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp") != nullptr)
+    tdep->ssp_regnum = AMD64_PL3_SSP_REGNUM;
+
   tdep->num_byte_regs = 20;
   tdep->num_word_regs = 16;
   tdep->num_dword_regs = 16;
@@ -3551,23 +3713,24 @@ amd64_x32_none_init_abi (gdbarch_info info, gdbarch *arch)
 		      amd64_target_description (X86_XSTATE_SSE_MASK, true));
 }
 
-/* Return the target description for a specified XSAVE feature mask.  */
+/* See amd64-tdep.h.  */
 
 const struct target_desc *
-amd64_target_description (uint64_t xcr0, bool segments)
+amd64_target_description (uint64_t xstate_bv, bool segments)
 {
   static target_desc *amd64_tdescs \
-    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*segments*/] = {};
+    [2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/][2/*segments*/] = {};
   target_desc **tdesc;
 
-  tdesc = &amd64_tdescs[(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0]
+  tdesc = &amd64_tdescs[(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
     [segments ? 1 : 0];
 
   if (*tdesc == NULL)
-    *tdesc = amd64_create_target_description (xcr0, false, false,
-					      segments);
+    *tdesc = amd64_create_target_description (xstate_bv, false,
+					      false, segments);
 
   return *tdesc;
 }
@@ -3755,6 +3918,42 @@ test_amd64_get_insn_details (void)
   updated_insn
     = { 0x62, 0xf1, 0x7c, 0x48, 0x28, 0x81, 0x00, 0xfc, 0xff, 0xff };
   fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  SELF_CHECK (insn == updated_insn);
+
+  /* INSN: vpblendw $0x7,%xmm4,%xmm6,%xmm2, vex3 prefix.  */
+  insn = { 0xc4, 0xe3, 0x49, 0x0e, 0xd4, 0x07 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 3);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == 4);
+
+  /* INSN: vpblendw $0x7,0xff(%rip),%ymm6,%ymm2, vex3 prefix.  */
+  insn = { 0xc4, 0xe3, 0x4d, 0x0e, 0x15, 0xff, 0x00, 0x00, 0x00, 0x07 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 3);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == 4);
+
+  /* INSN: vpblendw $0x7,0xff(%ecx),%ymm6,%ymm2, vex3 prefix.  */
+  fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  updated_insn
+    = { 0xc4, 0xe3, 0x4d, 0x0e, 0x91, 0xff, 0x00, 0x00, 0x00, 0x07 };
+  SELF_CHECK (insn == updated_insn);
+
+  /* INSN: vpcomtrueuq 0x0(%rip),%xmm7,%xmm0, xop prefix.  */
+  insn = { 0x8f, 0xe8, 0x40, 0xef, 0x05, 0x00, 0x00, 0x00, 0x00, 0x07 };
+  amd64_get_insn_details (insn.data (), &details);
+  SELF_CHECK (details.opcode_len == 1);
+  SELF_CHECK (details.enc_prefix_offset == 0);
+  SELF_CHECK (details.opcode_offset == 3);
+  SELF_CHECK (details.modrm_offset == 4);
+
+  /* INSN: vpcomtrueuq 0x0(%ecx),%xmm7,%xmm0, xop prefix.  */
+  fixup_riprel (details, insn.data (), ECX_REG_NUM);
+  updated_insn
+    = { 0x8f, 0xe8, 0x40, 0xef, 0x81, 0x00, 0x00, 0x00, 0x00, 0x07 };
   SELF_CHECK (insn == updated_insn);
 }
 

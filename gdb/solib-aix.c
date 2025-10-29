@@ -28,6 +28,8 @@
 
 struct aix_solib_ops : public solib_ops
 {
+  using solib_ops::solib_ops;
+
   void relocate_section_addresses (solib &so, target_section *) const override;
   void create_inferior_hook (int from_tty) const override;
   owning_intrusive_list<solib> current_sos () const override;
@@ -37,9 +39,9 @@ struct aix_solib_ops : public solib_ops
 /* See solib-aix.h.  */
 
 solib_ops_up
-make_aix_solib_ops ()
+make_aix_solib_ops (program_space *pspace)
 {
-  return std::make_unique<aix_solib_ops> ();
+  return std::make_unique<aix_solib_ops> (pspace);
 }
 
 /* Our private data in struct solib.  */
@@ -493,10 +495,8 @@ aix_solib_ops::current_sos () const
 	}
 
       /* Add it to the list.  */
-      auto &new_solib = sos.emplace_back (*this);
-      new_solib.original_name = so_name;
-      new_solib.name = so_name;
-      new_solib.lm_info = std::make_unique<lm_info_aix> (info);
+      sos.emplace_back (std::make_unique<lm_info_aix> (info), so_name, so_name,
+			*this);
     }
 
   return sos;
@@ -620,9 +620,9 @@ aix_solib_ops::bfd_open (const char *pathname) const
 static struct obj_section *
 data_obj_section_from_objfile (struct objfile *objfile)
 {
-  for (obj_section *osect : objfile->sections ())
-    if (strcmp (bfd_section_name (osect->the_bfd_section), ".data") == 0)
-      return osect;
+  for (obj_section &osect : objfile->sections ())
+    if (strcmp (bfd_section_name (osect.the_bfd_section), ".data") == 0)
+      return &osect;
 
   return NULL;
 }

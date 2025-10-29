@@ -76,8 +76,9 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
 # Confine non-stop mode only to this test.
 save_vars { ::GDBFLAGS } {
     append ::GDBFLAGS " -ex \"set non-stop on\""
-    clean_restart $::binfile
+    clean_restart
 }
+gdb_load $::binfile
 
 # Based on the output of "info threads", return the number of running threads.
 # (Inspired by gdb.threads/linux-dp.exp)

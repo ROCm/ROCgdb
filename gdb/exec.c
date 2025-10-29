@@ -1,4 +1,4 @@
-/* Work with executable files, for GDB. 
+/* Work with executable files, for GDB.
 
    Copyright (C) 1988-2025 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
@@ -40,10 +40,8 @@
 #include "build-id.h"
 
 #include <fcntl.h>
-#include "readline/tilde.h"
 #include "gdbcore.h"
 
-#include <ctype.h>
 #include <sys/stat.h>
 #include "solib.h"
 #include <algorithm>
@@ -533,7 +531,7 @@ Use the \"file\" or \"exec-file\" command."));
    Note that we have to explicitly ignore additional args, since we can
    be called from file_command(), which also calls symbol_file_command()
    which can take multiple args.
-   
+
    If ARGS is NULL, we just want to close the exec file.  */
 
 static void
@@ -558,7 +556,8 @@ exec_file_command (const char *args, int from_tty)
       if (*argv == NULL)
 	error (_("No executable file name was specified"));
 
-      gdb::unique_xmalloc_ptr<char> filename (tilde_expand (*argv));
+      gdb::unique_xmalloc_ptr<char> filename
+	= gdb_rl_tilde_expand (*argv);
       exec_file_attach (filename.get (), from_tty);
     }
   else
@@ -652,13 +651,13 @@ program_space::add_target_sections (struct objfile *objfile)
   gdb_assert (objfile != nullptr);
 
   /* Compute the number of sections to add.  */
-  for (obj_section *osect : objfile->sections ())
+  for (obj_section &osect : objfile->sections ())
     {
-      if (bfd_section_size (osect->the_bfd_section) == 0)
+      if (bfd_section_size (osect.the_bfd_section) == 0)
 	continue;
 
-      m_target_sections.emplace_back (osect->addr (), osect->endaddr (),
-				      osect->the_bfd_section, objfile);
+      m_target_sections.emplace_back (osect.addr (), osect.endaddr (),
+				      osect.the_bfd_section, objfile);
     }
 }
 
@@ -963,8 +962,8 @@ print_section_info (const std::vector<target_section> *t, bfd *abfd)
 		 styled_string (file_name_style.style (),
 				bfd_get_filename (abfd)));
 
-      entry_point = gdbarch_addr_bits_remove (gdbarch, 
-					      bfd_get_start_address (abfd) 
+      entry_point = gdbarch_addr_bits_remove (gdbarch,
+					      bfd_get_start_address (abfd)
 						+ displacement);
       gdb_printf (_("\tEntry point: %s\n"),
 		  paddress (gdbarch, entry_point));
@@ -1014,7 +1013,7 @@ set_section_command (const char *args, int from_tty)
     error (_("Must specify section name and its virtual address"));
 
   /* Parse out section name.  */
-  for (secname = args; !isspace (*args); args++);
+  for (secname = args; !c_isspace (*args); args++);
   unsigned seclen = args - secname;
 
   /* Parse out new virtual address.  */

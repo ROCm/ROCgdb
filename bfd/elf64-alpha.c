@@ -2809,7 +2809,7 @@ elf64_alpha_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = elf_hash_table (info)->interp;
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
@@ -4261,8 +4261,6 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		  msec = sec;
 		  ent->addend =
 		    _bfd_merged_section_offset (output_bfd, &msec,
-						elf_section_data (sec)->
-						  sec_info,
 						sym->st_value + ent->addend);
 		  ent->addend -= sym->st_value;
 		  ent->addend += msec->output_section->vma

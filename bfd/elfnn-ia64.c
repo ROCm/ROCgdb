@@ -557,9 +557,7 @@ elfNN_ia64_relax_section (bfd *abfd, asection *sec,
 	   if (symtype == STT_SECTION)
 	     toff += irel->r_addend;
 
-	   toff = _bfd_merged_section_offset (abfd, &tsec,
-					      elf_section_data (tsec)->sec_info,
-					      toff);
+	   toff = _bfd_merged_section_offset (abfd, &tsec, toff);
 
 	   if (symtype != STT_SECTION)
 	     toff += irel->r_addend;
@@ -3007,7 +3005,7 @@ elfNN_ia64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
   if (ia64_info->root.dynamic_sections_created
       && bfd_link_executable (info) && !info->nointerp)
     {
-      sec = bfd_get_linker_section (dynobj, ".interp");
+      sec = ia64_info->root.interp;
       BFD_ASSERT (sec != NULL);
       sec->contents = (bfd_byte *) ELF_DYNAMIC_INTERPRETER;
       sec->alloced = 1;
@@ -3868,8 +3866,6 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
 		      msec = sym_sec;
 		      dynent->addend =
 			_bfd_merged_section_offset (output_bfd, &msec,
-						    elf_section_data (msec)->
-						    sec_info,
 						    sym->st_value
 						    + dynent->addend);
 		      dynent->addend -= sym->st_value;

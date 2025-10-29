@@ -16,8 +16,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include "gdb_watchdog.h"
 
 __device__ static void
 add_one (int *out)
@@ -38,7 +39,7 @@ int
 main ()
 {
   /* Make sure we don't run forever.  */
-  alarm (30);
+  gdb_watchdog (30);
 
   int *result_ptr, result;
   hipError_t error = hipMalloc (&result_ptr, sizeof (int));

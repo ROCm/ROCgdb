@@ -335,7 +335,7 @@ struct rust_parser
     return std::string (current_string_val.ptr, current_string_val.length);
   }
 
-  /* A pointer to this is installed globally.  */
+  /* Storage for use while parsing.  */
   auto_obstack obstack;
 
   /* The parser state gdb gave us.  */
@@ -1232,14 +1232,14 @@ rust_parser::name_to_operation (const std::string &name)
   struct block_symbol sym = lookup_symbol (name.c_str (),
 					   pstate->expression_context_block,
 					   SEARCH_VFT);
-  if (sym.symbol != nullptr && sym.symbol->aclass () != LOC_TYPEDEF)
+  if (sym.symbol != nullptr && sym.symbol->loc_class () != LOC_TYPEDEF)
     return make_operation<var_value_operation> (sym);
 
   struct type *type = nullptr;
 
   if (sym.symbol != nullptr)
     {
-      gdb_assert (sym.symbol->aclass () == LOC_TYPEDEF);
+      gdb_assert (sym.symbol->loc_class () == LOC_TYPEDEF);
       type = sym.symbol->type ();
     }
   if (type == nullptr)
@@ -2008,7 +2008,7 @@ rust_parser::parse_path_expr ()
       struct type *type = rust_lookup_type (path.c_str ());
       if (type == nullptr)
 	error (_("Could not find type '%s'"), path.c_str ());
-      
+
       return parse_struct_expr (type);
     }
   else if (current_token == '(')

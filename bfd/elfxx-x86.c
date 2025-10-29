@@ -366,7 +366,7 @@ elf_x86_allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 	htab->elf.srelgot->size += htab->sizeof_reloc;
       if (GOT_TLS_GDESC_P (tls_type))
 	{
-	  htab->elf.srelplt->size += htab->sizeof_reloc;
+	  htab->rel_tls_desc->size += htab->sizeof_reloc;
 	  if (bed->target_id == X86_64_ELF_DATA)
 	    htab->elf.tlsdesc_plt = (bfd_vma) -1;
 	}
@@ -882,6 +882,8 @@ _bfd_x86_elf_link_check_relocs (bfd *abfd, struct bfd_link_info *info)
 		  h = (struct elf_link_hash_entry *) h->root.u.i.link;
 		  elf_x86_hash_entry (h)->tls_get_addr = 1;
 		}
+
+	      htab->has_tls_get_addr_call = 1;
 	    }
 
 	  /* Pass NULL for __ehdr_start which will be defined by
@@ -2155,6 +2157,16 @@ _bfd_elf_x86_finish_relative_relocs (struct bfd_link_info *info)
   return true;
 }
 
+asection *
+_bfd_elf_x86_get_reloc_section (bfd *abfd, const char *name)
+{
+  /* Treat .rel.tls/.rela.tls section the same as .rel.plt/.rela.plt
+     section.  */
+  if (strcmp (name, ".tls") == 0)
+    name = ".plt";
+  return _bfd_elf_plt_get_reloc_section (abfd, name);
+}
+
 bool
 _bfd_elf_x86_valid_reloc_p (asection *input_section,
 			    struct bfd_link_info *info,
@@ -2374,7 +2386,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 		    srel->size += htab->sizeof_reloc;
 		  if (GOT_TLS_GDESC_P (*local_tls_type))
 		    {
-		      htab->elf.srelplt->size += htab->sizeof_reloc;
+		      htab->rel_tls_desc->size += htab->sizeof_reloc;
 		      if (bed->target_id == X86_64_ELF_DATA)
 			htab->elf.tlsdesc_plt = (bfd_vma) -1;
 		    }
@@ -2415,7 +2427,6 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
      so that R_{386,X86_64}_IRELATIVE entries come last.  */
   if (htab->elf.srelplt)
     {
-      htab->next_tls_desc_index = htab->elf.srelplt->reloc_count;
       htab->sgotplt_jump_table_size
 	= elf_x86_compute_jump_table_size (htab);
       htab->next_irelative_index = htab->elf.srelplt->reloc_count - 1;
@@ -2445,6 +2456,8 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 
   if (htab->elf.sgotplt)
     {
+      asection *eh_frame;
+
       /* Don't allocate .got.plt section if there are no GOT nor PLT
 	 entries and there is no reference to _GLOBAL_OFFSET_TABLE_.  */
       if ((htab->elf.hgot == NULL
@@ -2457,7 +2470,11 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && (htab->elf.iplt == NULL
 	      || htab->elf.iplt->size == 0)
 	  && (htab->elf.igotplt == NULL
-	      || htab->elf.igotplt->size == 0))
+	      || htab->elf.igotplt->size == 0)
+	  && (!htab->elf.dynamic_sections_created
+	      || (eh_frame = bfd_get_section_by_name (output_bfd,
+						      ".eh_frame")) == NULL
+	      || eh_frame->rawsize == 0))
 	{
 	  htab->elf.sgotplt->size = 0;
 	  /* Solaris requires to keep _GLOBAL_OFFSET_TABLE_ even if it
@@ -3140,9 +3157,15 @@ _bfd_x86_elf_copy_indirect_symbol (struct bfd_link_info *info,
       eind->tls_type = GOT_UNKNOWN;
     }
 
-  /* Copy gotoff_ref so that elf_i386_adjust_dynamic_symbol will
+  /* Copy gotoff_ref so that _bfd_x86_elf_adjust_dynamic_symbol will
      generate a R_386_COPY reloc.  */
   edir->gotoff_ref |= eind->gotoff_ref;
+
+  /* Copy non_got_ref_without_indirect_extern_access so that
+     _bfd_x86_elf_adjust_dynamic_symbol will handle
+     GNU_PROPERTY_1_NEEDED_INDIRECT_EXTERN_ACCESS properly.  */
+  edir->non_got_ref_without_indirect_extern_access
+    |= eind->non_got_ref_without_indirect_extern_access;
 
   edir->zero_undefweak |= eind->zero_undefweak;
 
@@ -3345,6 +3368,26 @@ _bfd_x86_elf_link_report_tls_transition_error
       break;
     }
 
+  bfd_set_error (bfd_error_bad_value);
+}
+
+/* Report TLS invalid section error.  */
+
+void
+_bfd_x86_elf_link_report_tls_invalid_section_error
+  (bfd *abfd, asection *sec, Elf_Internal_Shdr *symtab_hdr,
+   struct elf_link_hash_entry *h, Elf_Internal_Sym *sym,
+   reloc_howto_type *howto)
+{
+  const char *name;
+  if (h)
+    name = h->root.root.string;
+  else
+    name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
+  _bfd_error_handler
+    /* xgettext:c-format */
+    (_("%pB: relocation %s against thread local symbol `%s' in "
+       "invalid section `%pA'"), abfd, howto->name, name, sec);
   bfd_set_error (bfd_error_bad_value);
 }
 
@@ -3648,7 +3691,7 @@ _bfd_x86_elf_link_symbol_references_local (struct bfd_link_info *info,
       || (h->root.type == bfd_link_hash_undefweak
 	  && (ELF_ST_VISIBILITY (h->other) != STV_DEFAULT
 	      || (bfd_link_executable (info)
-		  && htab->interp == NULL)
+		  && htab->elf.interp == NULL)
 	      || info->dynamic_undefined_weak == 0))
       || ((h->def_regular || ELF_COMMON_DEF_P (h))
 	  && info->version_info != NULL
@@ -4604,6 +4647,8 @@ _bfd_x86_elf_link_setup_gnu_properties
 	    htab->sframe_plt = init_table->sframe_non_lazy_plt;
 	}
     }
+  else if (lazy_plt)
+    htab->sframe_plt = init_table->sframe_lazy_plt;
   else
     htab->sframe_plt = NULL;
 
@@ -4683,15 +4728,12 @@ _bfd_x86_elf_link_setup_gnu_properties
     {
       /* Whe creating executable, set the contents of the .interp
 	 section to the interpreter.  */
-      if (bfd_link_executable (info) && !info->nointerp)
+      asection *s = htab->elf.interp;
+      if (s != NULL)
 	{
-	  asection *s = bfd_get_linker_section (dynobj, ".interp");
-	  if (s == NULL)
-	    abort ();
 	  s->size = htab->dynamic_interpreter_size;
 	  s->contents = (unsigned char *) htab->dynamic_interpreter;
 	  s->alloced = 1;
-	  htab->interp = s;
 	}
 
       if (normal_target)
@@ -4737,6 +4779,14 @@ _bfd_x86_elf_link_setup_gnu_properties
 	      htab->plt_second = sec;
 	    }
 	}
+
+      sec = bfd_make_section_anyway_with_flags
+	(dynobj, bed->rela_plts_and_copies_p ? ".rela.tls" : ".rel.tls",
+	 bed->dynamic_sec_flags | SEC_READONLY);
+      if (sec == NULL
+	  || !bfd_set_section_alignment (sec, bed->s->log_file_align))
+	return false;
+      htab->rel_tls_desc = sec;
 
       if (!info->no_ld_generated_unwind_info)
 	{

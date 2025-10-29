@@ -230,7 +230,7 @@ riscv_linux_syscall_record (struct regcache *regcache,
 {
   gdb_assert (regcache != nullptr);
 
-  enum gdb_syscall syscall_gdb = riscv64_canonicalize_syscall (svc_number);
+  enum gdb_syscall syscall_gdb = riscv_linux_canonicalize_syscall (svc_number);
 
   if (record_debug > 1)
     gdb_printf (gdb_stdlog, "Made syscall %s.\n", plongest (svc_number));
@@ -261,12 +261,11 @@ riscv_linux_syscall_record (struct regcache *regcache,
   return 0;
 }
 
-/* Initialize the riscv64_linux_record_tdep.  */
+/* Initialize the riscv_linux_record_tdep.  */
 
 static void
-riscv64_linux_record_tdep_init (struct gdbarch *gdbarch,
-				struct linux_record_tdep &
-				riscv_linux_record_tdep)
+riscv_linux_record_tdep_init (struct gdbarch *gdbarch,
+			      struct linux_record_tdep &riscv_linux_record_tdep)
 {
   gdb_assert (gdbarch != nullptr);
 
@@ -502,6 +501,28 @@ riscv_linux_get_tls_dtp_offset (struct gdbarch *gdbarch, ptid_t ptid,
     return 0;
 }
 
+/* Function to extract syscall number.  */
+
+static LONGEST
+riscv_linux_get_syscall_number (struct gdbarch *gdbarch, thread_info *thread)
+{
+  struct regcache *regcache = get_thread_regcache (thread);
+  LONGEST ret;
+
+  /* Getting the system call number from the register.
+     When dealing with riscv architecture, this information
+     is stored in $a7 register.  */
+  if (regcache->cooked_read (RISCV_A7_REGNUM, &ret)
+      != register_status::REG_VALID)
+    {
+      warning (_ ("Can not read a7 register"));
+      return -1;
+    }
+
+  /* The result.  */
+  return ret;
+}
+
 /* Initialize RISC-V Linux ABI info.  */
 
 static void
@@ -511,7 +532,7 @@ riscv_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   linux_init_abi (info, gdbarch, 0);
 
-  set_gdbarch_software_single_step (gdbarch, riscv_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, riscv_software_single_step);
 
   set_solib_svr4_ops (gdbarch, (riscv_isa_xlen (gdbarch) == 4
 				? make_linux_ilp32_svr4_solib_ops
@@ -539,7 +560,11 @@ riscv_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->syscall_next_pc = riscv_linux_syscall_next_pc;
   tdep->riscv_syscall_record = riscv_linux_syscall_record;
 
-  riscv64_linux_record_tdep_init (gdbarch, riscv_linux_record_tdep);
+  riscv_linux_record_tdep_init (gdbarch, riscv_linux_record_tdep);
+
+  /* Functions for 'catch syscall'.  */
+  set_gdbarch_xml_syscall_file (gdbarch, "syscalls/riscv-linux.xml");
+  set_gdbarch_get_syscall_number (gdbarch, riscv_linux_get_syscall_number);
 }
 
 /* Initialize RISC-V Linux target support.  */

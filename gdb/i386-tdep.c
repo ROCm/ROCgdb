@@ -61,7 +61,6 @@
 #include "stap-probe.h"
 #include "user-regs.h"
 #include "expression.h"
-#include <ctype.h>
 #include <algorithm>
 #include <unordered_set>
 #include "producer.h"
@@ -897,6 +896,22 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
       displaced_debug_printf ("relocated return addr at %s to %s",
 			      paddress (gdbarch, esp),
 			      paddress (gdbarch, retaddr));
+
+      /* If shadow stack is enabled, we need to correct the return address
+	 on the shadow stack too.  */
+      bool shadow_stack_enabled;
+      std::optional<CORE_ADDR> ssp
+	= gdbarch_get_shadow_stack_pointer (gdbarch, regs,
+					    shadow_stack_enabled);
+      if (shadow_stack_enabled)
+	{
+	  gdb_assert (ssp.has_value ());
+	  write_memory_unsigned_integer (*ssp, retaddr_len, byte_order,
+					 retaddr);
+	  displaced_debug_printf ("relocated shadow stack return addr at %s "
+				  "to %s", paddress (gdbarch, *ssp),
+				  paddress (gdbarch, retaddr));
+	}
     }
 }
 
@@ -1788,7 +1803,7 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
-      struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (func_addr);
 
       /* LLVM backend (Clang/Flang) always emits a line note before the
 	 prologue and another one after.  We trust clang and newer Intel
@@ -2182,7 +2197,7 @@ i386_epilogue_frame_sniffer_1 (const struct frame_unwind *self,
     return 0;
 
   bool unwind_valid_p
-    = compunit_epilogue_unwind_valid (find_pc_compunit_symtab (pc));
+    = compunit_epilogue_unwind_valid (find_compunit_symtab_for_pc (pc));
   if (override_p)
     {
       if (unwind_valid_p)
@@ -3879,9 +3894,9 @@ int
 i386_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == '$' /* Literal number.  */
-	  || (isdigit (*s) && s[1] == '(' && s[2] == '%') /* Displacement.  */
+	  || (c_isdigit (*s) && s[1] == '(' && s[2] == '%') /* Displacement.  */
 	  || (*s == '(' && s[1] == '%') /* Register indirection.  */
-	  || (*s == '%' && isalpha (s[1]))); /* Register access.  */
+	  || (*s == '%' && c_isalpha (s[1]))); /* Register access.  */
 }
 
 /* Helper function for i386_stap_parse_special_token.
@@ -3898,7 +3913,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 {
   const char *s = p->arg;
 
-  if (isdigit (*s) || *s == '-' || *s == '+')
+  if (c_isdigit (*s) || *s == '-' || *s == '+')
     {
       bool got_minus[3];
       int i;
@@ -3916,7 +3931,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[0] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[0] = strtol (s, &endp, 10);
@@ -3937,7 +3952,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[1] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[1] = strtol (s, &endp, 10);
@@ -3958,7 +3973,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[2] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[2] = strtol (s, &endp, 10);
@@ -3970,7 +3985,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       if (*s++ != ')')
@@ -4031,7 +4046,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
 {
   const char *s = p->arg;
 
-  if (isdigit (*s) || *s == '(' || *s == '-' || *s == '+')
+  if (c_isdigit (*s) || *s == '(' || *s == '-' || *s == '+')
     {
       bool offset_minus = false;
       long offset = 0;
@@ -4049,10 +4064,10 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
 	  offset_minus = true;
 	}
 
-      if (offset_minus && !isdigit (*s))
+      if (offset_minus && !c_isdigit (*s))
 	return {};
 
-      if (isdigit (*s))
+      if (c_isdigit (*s))
 	{
 	  char *endp;
 
@@ -4066,7 +4081,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       if (*s != ',' || s[1] != '%')
@@ -4082,7 +4097,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       len_index = s - start;
@@ -8580,7 +8595,8 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
   const struct tdesc_feature *feature_core;
 
   const struct tdesc_feature *feature_sse, *feature_avx, *feature_avx512,
-			     *feature_pkeys, *feature_segments;
+			     *feature_pkeys, *feature_segments,
+			     *feature_pl3_ssp;
   int i, num_regs, valid_p;
 
   if (! tdesc_has_registers (tdesc))
@@ -8605,6 +8621,9 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 
   /* Try PKEYS  */
   feature_pkeys = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pkeys");
+
+  /* Try Shadow Stack.  */
+  feature_pl3_ssp = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp");
 
   valid_p = 1;
 
@@ -8719,6 +8738,15 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 	valid_p &= tdesc_numbered_register (feature_pkeys, tdesc_data,
 					    I387_PKRU_REGNUM (tdep) + i,
 					    tdep->pkeys_register_names[i]);
+    }
+
+  if (feature_pl3_ssp != nullptr)
+    {
+      if (tdep->ssp_regnum < 0)
+	tdep->ssp_regnum = I386_PL3_SSP_REGNUM;
+
+      valid_p &= tdesc_numbered_register (feature_pl3_ssp, tdesc_data,
+					  tdep->ssp_regnum, "pl3_ssp");
     }
 
   return valid_p;
@@ -9097,23 +9125,25 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 
 
-/* Return the target description for a specified XSAVE feature mask.  */
+/* See i386-tdep.h.  */
 
 const struct target_desc *
-i386_target_description (uint64_t xcr0, bool segments)
+i386_target_description (uint64_t xstate_bv, bool segments)
 {
   static target_desc *i386_tdescs \
-    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*segments*/] = {};
+    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/] \
+    [2/*segments*/] = {};
   target_desc **tdesc;
 
-  tdesc = &i386_tdescs[(xcr0 & X86_XSTATE_SSE) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0]
+  tdesc = &i386_tdescs[(xstate_bv & X86_XSTATE_SSE) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
+    [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
     [segments ? 1 : 0];
 
   if (*tdesc == NULL)
-    *tdesc = i386_create_target_description (xcr0, false, segments);
+    *tdesc = i386_create_target_description (xstate_bv, false, segments);
 
   return *tdesc;
 }

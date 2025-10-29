@@ -46,7 +46,6 @@
 #include <langinfo.h>
 #include <iconv.h>
 #include "gdbsupport/filestuff.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "tracepoint.h"
 #include <inttypes.h>
 #include "gdbsupport/common-inferior.h"
@@ -5006,23 +5005,31 @@ regsets_fetch_inferior_registers (struct regsets_info *regsets_info,
       if (res < 0)
 	{
 	  if (errno == EIO
-	      || (errno == EINVAL && regset->type == OPTIONAL_REGS))
+	      || (errno == EINVAL
+		  && (regset->type == OPTIONAL_REGS
+		      || regset->type == OPTIONAL_RUNTIME_REGS)))
 	    {
 	      /* If we get EIO on a regset, or an EINVAL and the regset is
-		 optional, do not try it again for this process mode.  */
+		 optional, do not try it again for this process mode.
+		 Even if the regset can be enabled at runtime it is safe
+		 to deactivate the regset in case of EINVAL, as we know
+		 the regset itself was the invalid argument of the ptrace
+		 call which means that it's unsupported by the kernel.  */
 	      disable_regset (regsets_info, regset);
 	    }
-	  else if (errno == ENODATA)
+	  else if (errno == ENODATA
+		   || (errno == ENODEV
+		       && regset->type == OPTIONAL_RUNTIME_REGS)
+		   || errno == ESRCH)
 	    {
-	      /* ENODATA may be returned if the regset is currently
-		 not "active".  This can happen in normal operation,
-		 so suppress the warning in this case.  */
-	    }
-	  else if (errno == ESRCH)
-	    {
-	      /* At this point, ESRCH should mean the process is
-		 already gone, in which case we simply ignore attempts
-		 to read its registers.  */
+	      /* ENODATA or ENODEV may be returned if the regset is
+		 currently not "active".  For ENODEV we additionally check
+		 if the register set is of type OPTIONAL_RUNTIME_REGS.
+		 This can happen in normal operation, so suppress the
+		 warning in this case.
+		 ESRCH should mean the process is already gone at this
+		 point, in which case we simply ignore attempts to read
+		 its registers.  */
 	    }
 	  else
 	    {
@@ -5104,11 +5111,25 @@ regsets_store_inferior_registers (struct regsets_info *regsets_info,
       if (res < 0)
 	{
 	  if (errno == EIO
-	      || (errno == EINVAL && regset->type == OPTIONAL_REGS))
+	      || (errno == EINVAL
+		   && (regset->type == OPTIONAL_REGS
+		       || regset->type == OPTIONAL_RUNTIME_REGS)))
 	    {
 	      /* If we get EIO on a regset, or an EINVAL and the regset is
-		 optional, do not try it again for this process mode.  */
+		 optional, do not try it again for this process mode.
+		 Even if the regset can be enabled at runtime it is safe
+		 to deactivate the regset in case of EINVAL, as we know
+		 the regset itself was the invalid argument of the ptrace
+		 call which means that it's unsupported by the kernel.  */
 	      disable_regset (regsets_info, regset);
+	    }
+	  else if (errno == ENODEV
+		   && regset->type == OPTIONAL_RUNTIME_REGS)
+	    {
+	      /* If we get ENODEV on a regset and the regset can be
+		 enabled at runtime try it again for this process mode.
+		 This can happen in normal operation, so suppress the
+		 warning in this case.  */
 	    }
 	  else if (errno == ESRCH)
 	    {
@@ -6990,7 +7011,7 @@ replace_non_ascii (char *dest, const char *name)
   const char *result = dest;
   while (*name != '\0')
     {
-      if (!ISPRINT (*name))
+      if (!c_isprint (*name))
 	*dest++ = '?';
       else
 	*dest++ = *name;

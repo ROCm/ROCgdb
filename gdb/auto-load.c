@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
 #include "auto-load.h"
 #include "gdbsupport/gdb_vecs.h"
 #include "progspace.h"
@@ -31,7 +30,6 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-decode.h"
 #include "cli/cli-setshow.h"
-#include "readline/tilde.h"
 #include "completer.h"
 #include "fnmatch.h"
 #include "top.h"
@@ -270,7 +268,8 @@ auto_load_safe_path_vec_update (void)
   for (size_t i = 0; i < len; i++)
     {
       gdb::unique_xmalloc_ptr<char> &in_vec = auto_load_safe_path_vec[i];
-      gdb::unique_xmalloc_ptr<char> expanded (tilde_expand (in_vec.get ()));
+      gdb::unique_xmalloc_ptr<char> expanded
+	= gdb_rl_tilde_expand (in_vec.get ());
       gdb::unique_xmalloc_ptr<char> real_path = gdb_realpath (expanded.get ());
 
       /* Ensure the current entry is at least tilde_expand-ed.  ORIGINAL makes
@@ -463,7 +462,7 @@ filename_is_in_auto_load_safe_path_vec (const char *filename,
 	pattern = p.get ();
 	break;
       }
-  
+
   if (pattern == NULL)
     {
       if (*filename_realp == NULL)
@@ -1045,7 +1044,7 @@ execute_script_contents (struct auto_load_pspace_info *pspace_info,
       buf = name_holder.c_str ();
       for (p = buf; *p != '\0'; ++p)
 	{
-	  if (isspace (*p))
+	  if (c_isspace (*p))
 	    break;
 	}
       /* We don't allow nameless scripts, they're not helpful to the user.  */

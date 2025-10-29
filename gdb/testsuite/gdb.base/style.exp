@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require {!is_remote host}
+
 load_lib gdb-python.exp
 
 # Test CLI output styling.
@@ -48,7 +50,7 @@ proc clean_restart_and_disable { prefix args } {
     global currently_disabled_style
 
     with_test_prefix "$prefix" {
-	eval "clean_restart $args"
+	clean_restart {*}$args
 
 	if { $currently_disabled_style != "" } {
 	    set st $currently_disabled_style
@@ -75,7 +77,7 @@ proc run_style_tests { } {
 
 	# Restart GDB with the correct TERM variable setting, this
 	# means that GDB will enable styling.
-	clean_restart_and_disable "restart 1" ${binfile}
+	clean_restart_and_disable "restart 1" $::testfile
 
 	set readnow [readnow]
 
@@ -161,7 +163,7 @@ proc run_style_tests { } {
 	    # - 4 leading spaces
 	    # - argv string
 	    # - closing parenthesis
-	    set line_len [expr 4 + $argv_len + 1]
+	    set line_len [expr {4 + $argv_len + 1}]
 
 	    if { $argv == "argv=0x0" && $width >= 27 } {
 		# Embedded target with no argv support.
@@ -356,7 +358,7 @@ proc test_disable_disassembler_styling { } {
 
 	# Restart GDB with the correct TERM variable setting, this
 	# means that GDB will enable styling.
-	clean_restart_and_disable "restart 3" $::binfile
+	clean_restart_and_disable "restart 3" $::testfile
 
 	set styled_hex [limited_style $::hex address]
 	set main [limited_style main function]
@@ -471,7 +473,7 @@ proc test_disassembler_error_handling { } {
 
 	# Restart GDB with the correct TERM variable setting, this
 	# means that GDB will enable styling.
-	clean_restart_and_disable "restart 4" $::binfile
+	clean_restart_and_disable "restart 4" $::testfile
 
 	# Disable use of libopcodes for styling.  As this function is
 	# only called when Python Pygments module is available, we
@@ -845,14 +847,14 @@ proc previous_line_is_ok { str } {
     # Then compare string lengths to get a count of the '\033'
     # charactes present in STR.
     regsub -all "\033" $str {} stripped
-    set count [expr [string length $str] - [string length $stripped]]
+    set count [expr {[string length $str] - [string length $stripped]}]
 
     # If STR switched styles, then it _must_ switch back again,
     # otherwise the pagination prompt will be in the wrong style.
     # This means that there _must_ be an even number of '\033'
     # characters in STR.  If there is not then we switched style, but
     # failed to switch back.
-    if { [expr $count % 2] != 0 } {
+    if {$count % 2 != 0} {
 	return false
     }
 
@@ -883,7 +885,8 @@ proc previous_line_is_ok { str } {
 # prompt, the previous line disables styling as expected.
 proc test_pagination_prompt_styling {} {
     with_ansi_styling_terminal {
-	clean_restart $::binfile
+	clean_restart
+	gdb_load $::binfile
     }
 
     if {![runto_main]} {
@@ -979,7 +982,8 @@ proc test_pagination_prompt_styling {} {
 # default style once the logging file has finished.
 proc test_pagination_continue_styling_1 { length } {
     with_ansi_styling_terminal {
-	clean_restart $::binfile
+	clean_restart
+	gdb_load $::binfile
     }
 
     set filename [string repeat "ax" $length]
@@ -1034,7 +1038,8 @@ proc test_pagination_continue_styling { } {
 # Check to see if the Python styling of disassembler output is
 # expected or not, this styling requires Python support in GDB, and
 # the Python pygments module to be available.
-clean_restart ${binfile}
+clean_restart
+gdb_load $binfile
 if {[allow_python_tests] && [gdb_py_module_available "pygments"]} {
     set python_disassembly_styling true
 } else {

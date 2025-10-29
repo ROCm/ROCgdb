@@ -197,7 +197,7 @@ mipsnbsd_fill_fpreg (const struct regcache *regcache, char *fpregs, int regno)
   for (i = gdbarch_fp0_regnum (gdbarch);
        i <= mips_regnum (gdbarch)->fp_control_status;
        i++)
-    if ((regno == i || regno == -1) 
+    if ((regno == i || regno == -1)
 	&& ! gdbarch_cannot_store_register (gdbarch, i))
       regcache->raw_collect
 	(i, (fpregs + ((i - gdbarch_fp0_regnum (gdbarch))
@@ -214,7 +214,7 @@ mipsnbsd_fill_fpreg (const struct regcache *regcache, char *fpregs, int regno)
 	addu	a0, sp, 16
 	li	v0, 295			# __sigreturn14
 	syscall
-   
+
    Each instruction has a unique encoding, so we simply attempt to match
    the instruction the PC is pointing to with any of the above instructions.
    If there is a hit, we know the offset to the start of the designated
@@ -292,6 +292,8 @@ mipsnbsd_cannot_store_register (struct gdbarch *gdbarch, int regno)
 
 struct mips_nbsd_ilp32_svr4_solib_ops : public svr4_solib_ops
 {
+  using svr4_solib_ops::svr4_solib_ops;
+
   /* NetBSD/MIPS uses a slightly different `struct link_map' than the
      other NetBSD platforms.  */
   link_map_offsets *fetch_link_map_offsets () const override;
@@ -300,9 +302,9 @@ struct mips_nbsd_ilp32_svr4_solib_ops : public svr4_solib_ops
 /* Return a new solib_ops for ILP32 NetBSD/MIPS systems.  */
 
 static solib_ops_up
-make_mips_nbsd_ilp32_svr4_solib_ops ()
+make_mips_nbsd_ilp32_svr4_solib_ops (program_space *pspace)
 {
-  return std::make_unique<mips_nbsd_ilp32_svr4_solib_ops> ();
+  return std::make_unique<mips_nbsd_ilp32_svr4_solib_ops> (pspace);
 }
 
 /* See mips_nbsd_ilp32_svr4_solib_ops.  */
@@ -313,7 +315,7 @@ mips_nbsd_ilp32_svr4_solib_ops::fetch_link_map_offsets () const
   static struct link_map_offsets lmo;
   static struct link_map_offsets *lmp = NULL;
 
-  if (lmp == NULL) 
+  if (lmp == NULL)
     {
       lmp = &lmo;
 
@@ -340,6 +342,8 @@ mips_nbsd_ilp32_svr4_solib_ops::fetch_link_map_offsets () const
 
 struct mips_nbsd_lp64_svr4_solib_ops : public svr4_solib_ops
 {
+  using svr4_solib_ops::svr4_solib_ops;
+
   /* NetBSD/MIPS uses a slightly different `struct link_map' than the
      other NetBSD platforms.  */
   link_map_offsets *fetch_link_map_offsets () const override;
@@ -348,9 +352,9 @@ struct mips_nbsd_lp64_svr4_solib_ops : public svr4_solib_ops
 /* Return a new solib_ops for LP64 NetBSD/MIPS systems.  */
 
 static solib_ops_up
-make_mips_nbsd_lp64_svr4_solib_ops ()
+make_mips_nbsd_lp64_svr4_solib_ops (program_space *pspace)
 {
-  return std::make_unique<mips_nbsd_lp64_svr4_solib_ops> ();
+  return std::make_unique<mips_nbsd_lp64_svr4_solib_ops> (pspace);
 }
 
 /* See mips_nbsd_lp64_svr4_solib_ops.  */
@@ -375,7 +379,7 @@ mips_nbsd_lp64_svr4_solib_ops::fetch_link_map_offsets () const
       /* Everything we need is in the first 40 bytes.  */
       lmo.link_map_size = 48;
       lmo.l_addr_offset = 0;
-      lmo.l_name_offset = 16; 
+      lmo.l_name_offset = 16;
       lmo.l_ld_offset = 24;
       lmo.l_next_offset = 32;
       lmo.l_prev_offset = 40;
@@ -399,7 +403,7 @@ mipsnbsd_init_abi (struct gdbarch_info info,
   set_gdbarch_cannot_fetch_register (gdbarch, mipsnbsd_cannot_fetch_register);
   set_gdbarch_cannot_store_register (gdbarch, mipsnbsd_cannot_store_register);
 
-  set_gdbarch_software_single_step (gdbarch, mips_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, mips_software_single_step);
 
   /* NetBSD/mips has SVR4-style shared libraries.  */
   set_solib_svr4_ops (gdbarch, (gdbarch_ptr_bit (gdbarch) == 32

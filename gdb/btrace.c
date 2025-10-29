@@ -39,7 +39,6 @@
 #include "record-btrace.h"
 
 #include <inttypes.h>
-#include <ctype.h>
 #include <algorithm>
 #include <string>
 
@@ -558,7 +557,7 @@ ftrace_update_function (struct btrace_thread_info *btinfo,
      only a minimal symbol.  */
   if (pc.has_value ())
     {
-      fun = find_pc_function (*pc);
+      fun = find_symbol_for_pc (*pc);
       bound_minimal_symbol bmfun = lookup_minimal_symbol_by_pc (*pc);
       mfun = bmfun.minsym;
 
@@ -2366,8 +2365,8 @@ btrace_free_objfile (struct objfile *objfile)
 {
   DEBUG ("free objfile");
 
-  for (thread_info *tp : all_non_exited_threads ())
-    btrace_clear (tp);
+  for (thread_info &tp : all_non_exited_threads ())
+    btrace_clear (&tp);
 }
 
 /* See btrace.h.  */
@@ -3258,7 +3257,7 @@ get_uint (const char **arg)
   begin = *arg;
   pos = skip_spaces (begin);
 
-  if (!isdigit (*pos))
+  if (!c_isdigit (*pos))
     error (_("Expected positive number, got: %s."), pos);
 
   number = strtoul (pos, &end, 10);
@@ -3277,7 +3276,7 @@ get_context_size (const char **arg)
 {
   const char *pos = skip_spaces (*arg);
 
-  if (!isdigit (*pos))
+  if (!c_isdigit (*pos))
     error (_("Expected positive number, got: %s."), pos);
 
   char *end;

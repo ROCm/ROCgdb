@@ -972,7 +972,13 @@ append build_tests {
    {pr26580-b.c} {} "libpr26580-2.so"}
 }
 
+set old_CFLAGS "$CFLAGS_FOR_TARGET_TEST"
+set old_CXXFLAGS "$CXXFLAGS_FOR_TARGET_TEST"
+append CFLAGS_FOR_TARGET_TEST " $NOSANITIZE_CFLAGS"
+append CXXFLAGS_FOR_TARGET_TEST " $NOSANITIZE_CFLAGS"
 run_cc_link_tests $build_tests
+set CFLAGS_FOR_TARGET_TEST "$old_CFLAGS"
+set CXXFLAGS_FOR_TARGET_TEST "$old_CXXFLAGS"
 
 run_cc_link_tests [list \
     [list \
@@ -1009,6 +1015,20 @@ run_cc_link_tests [list \
 	 {nm {-u -D} pr26302.nd} \
 	 {nm {-u -D --with-symbol-versions} pr26302.nd}} \
 	"pr26302b.so" \
+    ] \
+    [list \
+	"Build pr33409a.o" \
+	"" \
+	"$DIRECT_EXTERN_ACCESS_CFLAGS" \
+	{pr33409a.c} \
+    ] \
+    [list \
+	"Build pr33409.so" \
+	"-shared" \
+	"-fPIC" \
+	{pr33409b.c} \
+	{} \
+	"pr33409.so" \
     ] \
 ]
 
@@ -1200,6 +1220,17 @@ set run_tests [list \
      "tmpdir/pr31482b-no-lto.so tmpdir/pr31482c-no-lto.a \
       tmpdir/pr31482d-no-lto.a" \
     ] \
+    [list "Run pr33409" \
+     "-Wl,-z,text" \
+     "" \
+     {pr33409c.c} \
+     "pr33409" \
+     "pass.out" \
+     "$NO_DIRECT_EXTERN_ACCESS_CFLAGS" \
+     "c" \
+     "" \
+     "tmpdir/pr33409a.o tmpdir/pr33409.so" \
+    ] \
 ]
 
 # NetBSD ELF systems do not currently support the .*_array sections.
@@ -1259,10 +1290,10 @@ if [check_libdl_available] {
   # XFAIL on NetBSD ELF systems as they do not currently support the .*_array
   # sections.
   # Disable all sanitizers.
-  set old_CFLAGS "$CFLAGS_FOR_TARGET"
-  append CFLAGS_FOR_TARGET " $NOSANITIZE_CFLAGS"
+  set old_CFLAGS "$CFLAGS_FOR_TARGET_TEST"
+  append CFLAGS_FOR_TARGET_TEST " $NOSANITIZE_CFLAGS"
   run_ld_link_exec_tests $dlopen_run_tests "*-*-netbsd*"
-  set CFLAGS_FOR_TARGET "$old_CFLAGS"
+  set CFLAGS_FOR_TARGET_TEST "$old_CFLAGS"
 }
 
 # Check --no-add-needed and --no-copy-dt-needed-entries

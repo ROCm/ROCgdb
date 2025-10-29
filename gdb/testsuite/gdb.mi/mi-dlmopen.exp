@@ -65,9 +65,19 @@ if { $dyln_name eq "" } {
 set bp_main [gdb_get_line_number "bp.main" $srcfile]
 set bp_loaded [gdb_get_line_number "bp.loaded" $srcfile]
 
+# If the dynamic linker path contains a symlink, some instances show the real
+# path instead of the original path.  Accept both.
+lassign [remote_exec target realpath "$dyln_name"] realpath_ret dyln_realpath_name
+
+if { $realpath_ret == 0 } {
+    set dyln_realpath_name [string trim $dyln_realpath_name]
+} else {
+    set dyln_realpath_name "not-a-valid-path"
+}
+
 # Return true if FILENAME is the dynamic linker.  Otherwise return false.
 proc is_dyln { filename } {
-    return [expr {$filename eq $::dyln_name}]
+    return [expr {$filename eq $::dyln_name || $filename eq $::dyln_realpath_name}]
 }
 
 # Run 'info sharedlibrary' and count the number of mappings that look
@@ -81,7 +91,7 @@ proc get_dyld_info {} {
     set dyld_count 0
     set dyld_start_addr ""
     gdb_test_multiple "info sharedlibrary" "" {
-	-re "~\"From\\s+To(\\s+NS)?\\s+Syms\\s+Read\\s+Shared Object Library\\\\n\"\r\n" {
+	-re "~\"From\\s+To(\\s+Linker NS)?\\s+Syms\\s+Read\\s+Shared Object Library\\\\n\"\r\n" {
 	    exp_continue
 	}
 	-re "^~\"($::hex)\\s+${::hex}(\\s+$::decimal)?\\s+\[^/\]+(/\[^\r\n\]+)\\\\n\"\r\n" {
@@ -122,7 +132,7 @@ proc get_dyld_info {} {
 # number of unload events for the libraries created for this test, and
 # additionally, check for dynamic linker unload events.
 proc check_solib_unload_events {} {
-    mi_clean_restart $::binfile
+    mi_clean_restart $::testfile
 
     if {[mi_runto_main] == -1} {
 	return

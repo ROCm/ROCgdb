@@ -26,34 +26,49 @@
 struct type;
 struct expr_builder;
 
-/* For parsing of complicated types.
-   An array should be preceded in the list by the size of the array.  */
+/* The kind of element on the stack of types and qualifiers, used for
+   parsing complicated types.  */
 enum type_pieces
-  {
-    tp_end = -1, 
-    tp_pointer, 
-    tp_reference, 
-    tp_rvalue_reference,
-    tp_array, 
-    tp_function,
-    tp_function_with_arguments,
-    tp_const, 
-    tp_volatile, 
-    tp_space_identifier,
-    tp_atomic,
-    tp_restrict,
-    tp_type_stack,
-    tp_kind
-  };
+{
+  /* This is returned by pop() to indicate that the stack is empty.
+     Note that it may not be pushed by the user.  */
+  tp_end = -1,
+  tp_pointer,
+  tp_reference,
+  tp_rvalue_reference,
+  /* An array type, where the dimension is pushed on the stack as
+     well.  */
+  tp_array,
+  tp_function,
+  /* A function with argument types; the types are also pushed on the
+     stack.  */
+  tp_function_with_arguments,
+  tp_const,
+  tp_volatile,
+  /* An address space identifier.  The address space is also pushed on
+     the stack.  */
+  tp_space_identifier,
+  tp_atomic,
+  tp_restrict,
+  /* A separate type stack, which is also pushed onto this type
+     stack.  */
+  tp_type_stack,
+  /* Fortran-specific, specifies the kind.  */
+  tp_kind,
+};
 
-/* The stack can contain either an enum type_pieces or an int.  */
+/* Items on the type stack.  */
 union type_stack_elt
-  {
-    enum type_pieces piece;
-    int int_val;
-    struct type_stack *stack_val;
-    std::vector<struct type *> *typelist_val;
-  };
+{
+  /* An ordinary type qualifier.  */
+  enum type_pieces piece;
+  /* An integer value.  Currently only used for address spaces.  */
+  int int_val;
+  /* Another type stack.  */
+  struct type_stack *stack_val;
+  /* A list of types.  */
+  std::vector<struct type *> *typelist_val;
+};
 
 /* The type stack is an instance of this structure.  */
 
@@ -80,17 +95,30 @@ public:
 
   void insert (enum type_pieces tp);
 
+  /* Push an ordinary element on the type stack.  This can be used for
+     any element that doesn't require any extra data.  */
   void push (enum type_pieces tp)
   {
+    /* tp_end can only be returned by this class, not pushed.  The
+       others require a payload on the stack and so can only be pushed
+       by the appropriate method.  */
+    gdb_assert (tp != tp_end);
+    gdb_assert (!requires_payload (tp));
     type_stack_elt elt;
     elt.piece = tp;
     m_elements.push_back (elt);
   }
 
-  void push (int n)
+  /* Push an element and an integer value onto the stack.  The integer
+     value is pushed first, followed by TP.  Only piece kinds that
+     accept an integer argument are allowed.  */
+  void push (enum type_pieces tp, int n)
   {
+    gdb_assert (tp == tp_array || tp == tp_space_identifier || tp == tp_kind);
     type_stack_elt elt;
     elt.int_val = n;
+    m_elements.push_back (elt);
+    elt.piece = tp;
     m_elements.push_back (elt);
   }
 
@@ -101,11 +129,12 @@ public:
     type_stack_elt elt;
     elt.stack_val = stack;
     m_elements.push_back (elt);
-    push (tp_type_stack);
+    elt.piece = tp_type_stack;
+    m_elements.push_back (elt);
   }
 
-  /* Push a function type with arguments onto the global type stack.
-     LIST holds the argument types.  If the final item in LIST is NULL,
+  /* Push a function type with arguments onto this type stack.  LIST
+     holds the argument types.  If the final item in LIST is NULL,
      then the function will be varargs.  */
 
   void push (std::vector<struct type *> *list)
@@ -113,34 +142,50 @@ public:
     type_stack_elt elt;
     elt.typelist_val = list;
     m_elements.push_back (elt);
-    push (tp_function_with_arguments);
+    elt.piece = tp_function_with_arguments;
+    m_elements.push_back (elt);
   }
 
+  /* Pop the topmost element of the stack and return it.
+
+     If the stack is empty, tp_end is returned.
+
+     If the topmost element requires a payload -- for example,
+     tp_array takes an integer parameter -- then the value is returned
+     but *not* popped from the stack.  Instead the appropriate
+     payload-specific pop_* method (e.g., pop_int) must then be
+     called.  This somewhat odd approach ensures that the stack can't
+     be put into an invalid state.  */
   enum type_pieces pop ()
   {
     if (m_elements.empty ())
       return tp_end;
     type_stack_elt elt = m_elements.back ();
-    m_elements.pop_back ();
+    if (!requires_payload (elt.piece))
+      m_elements.pop_back ();
     return elt.piece;
   }
 
   int pop_int ()
   {
-    if (m_elements.empty ())
-      {
-	/* "Can't happen".  */
-	return 0;
-      }
+    gdb_assert (m_elements.size () >= 2);
     type_stack_elt elt = m_elements.back ();
+    m_elements.pop_back ();
+    type_pieces tp = elt.piece;
+    gdb_assert (tp == tp_array || tp == tp_space_identifier || tp == tp_kind);
+    elt = m_elements.back ();
     m_elements.pop_back ();
     return elt.int_val;
   }
 
   std::vector<struct type *> *pop_typelist ()
   {
-    gdb_assert (!m_elements.empty ());
+    gdb_assert (m_elements.size () >= 2);
     type_stack_elt elt = m_elements.back ();
+    m_elements.pop_back ();
+    type_pieces tp = elt.piece;
+    gdb_assert (tp == tp_function_with_arguments);
+    elt = m_elements.back ();
     m_elements.pop_back ();
     return elt.typelist_val;
   }
@@ -149,8 +194,12 @@ public:
 
   struct type_stack *pop_type_stack ()
   {
-    gdb_assert (!m_elements.empty ());
+    gdb_assert (m_elements.size () >= 2);
     type_stack_elt elt = m_elements.back ();
+    m_elements.pop_back ();
+    type_pieces tp = elt.piece;
+    gdb_assert (tp == tp_type_stack);
+    elt = m_elements.back ();
     m_elements.pop_back ();
     return elt.stack_val;
   }
@@ -163,7 +212,7 @@ public:
      stack is a tp_pointer, and the new values are inserted above the
      first item.  */
 
-  void insert (struct expr_builder *pstate, const char *string);
+  void insert (struct gdbarch *gdbarch, const char *string);
 
   /* Append the elements of the type stack FROM to the type stack
      THIS.  Always returns THIS.  */
@@ -188,14 +237,22 @@ public:
 
 private:
 
-  /* A helper function for insert_type and insert_type_address_space.
-     This does work of expanding the type stack and inserting the new
-     element, ELEMENT, into the stack at location SLOT.  */
+  /* A helper function for the insert methods.  This does work of
+     expanding the type stack and inserting the new element, ELEMENT,
+     into the stack at location SLOT.  */
 
   void insert_into (int slot, union type_stack_elt element)
   {
     gdb_assert (slot <= m_elements.size ());
     m_elements.insert (m_elements.begin () + slot, element);
+  }
+
+  /* Return true if TP requires some payload element.  */
+  bool requires_payload (type_pieces tp) const
+  {
+    return (tp == tp_array || tp == tp_kind || tp == tp_type_stack
+	    || tp == tp_function_with_arguments
+	    || tp == tp_space_identifier);
   }
 
 

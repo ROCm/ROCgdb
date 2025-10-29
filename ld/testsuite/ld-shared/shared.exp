@@ -37,7 +37,8 @@ if { ![check_shared_lib_support] } {
 
 # This test can only be run on a couple of ELF platforms.
 # Square bracket expressions seem to confuse istarget.
-if { ![istarget hppa*64*-*-hpux*] \
+if {    ![istarget *-*-solaris2*] \
+     && ![istarget hppa*64*-*-hpux*] \
      && ![istarget hppa*-*-linux*] \
      && ![istarget i?86-*-elf*] \
      && ![istarget i?86-*-linux*] \
@@ -51,7 +52,6 @@ if { ![istarget hppa*64*-*-hpux*] \
      && ![istarget powerpc*-*-linux*] \
      && ![istarget powerpc*-*-sysv4*] \
      && ![istarget sparc*-*-elf] \
-     && ![istarget sparc*-*-solaris2*] \
      && ![istarget sparc*-*-linux*] \
      && ![istarget arm*-*-linux*] \
      && ![istarget alpha*-*-linux*] \
@@ -62,13 +62,20 @@ if { ![istarget hppa*64*-*-hpux*] \
     return
 }
 
+set need_direct_extern_access ""
+if { [istarget i?86-*-linux*]
+     || [istarget i?86-*-gnu*] } then {
+    # These targets need direct extern access in some tests.
+    set need_direct_extern_access "$DIRECT_EXTERN_ACCESS_CFLAGS"
+}
+
 set tmpdir tmpdir
 set SHCFLAG ""
 set shared_needs_pic "no"
 
 # Disable all sanitizers.
-set old_CFLAGS "$CFLAGS_FOR_TARGET"
-append CFLAGS_FOR_TARGET " $NOSANITIZE_CFLAGS"
+set old_CFLAGS "$CFLAGS_FOR_TARGET_TEST"
+append CFLAGS_FOR_TARGET_TEST " $NOSANITIZE_CFLAGS"
 
 if { [is_xcoff_format] } {
     # Not all the useful features are available with AIX shared
@@ -104,7 +111,7 @@ if [istarget arm*-*-linux*] {
 	set file [open $tmpdir/movw-detect.c w]
 	puts $file "void foo(void) { __asm (\"movw r0, #0\"); }"
 	close $file
-	if [run_host_cmd_yesno "$CC_FOR_TARGET" "$CFLAGS_FOR_TARGET -c $tmpdir/movw-detect.c -o $tmpdir/movw-detect.o"] {
+	if [run_host_cmd_yesno "$CC_FOR_TARGET" "$CFLAGS_FOR_TARGET_TEST -c $tmpdir/movw-detect.c -o $tmpdir/movw-detect.o"] {
 	    set shared_needs_pic "yes"
 	}
     }
@@ -217,14 +224,15 @@ if ![ld_compile "$CC_FOR_TARGET $NOPIE_CFLAGS $SHCFLAG" $srcdir/$subdir/main.c $
     # will need to do more relocation work.  However, note that not
     # using -fpic will cause some of the tests to return different
     # results.  Make sure that PLT is used since PLT is expected.
-    if { ![ld_compile "$CC_FOR_TARGET $PLT_CFLAGS $NOPIE_CFLAGS $SHCFLAG" $srcdir/$subdir/sh1.c $tmpdir/sh1np.o]
-	 || ![ld_compile "$CC_FOR_TARGET $PLT_CFLAGS $NOPIE_CFLAGS $SHCFLAG" $srcdir/$subdir/sh2.c $tmpdir/sh2np.o] } {
+    if { ![ld_compile "$CC_FOR_TARGET $PLT_CFLAGS $NOPIE_CFLAGS $SHCFLAG $need_direct_extern_access" $srcdir/$subdir/sh1.c $tmpdir/sh1np.o]
+	 || ![ld_compile "$CC_FOR_TARGET $PLT_CFLAGS $NOPIE_CFLAGS $SHCFLAG $need_direct_extern_access" $srcdir/$subdir/sh2.c $tmpdir/sh2np.o] } {
 	unsupported "shared (non PIC)"
     } else { if { [is_xcoff_format] } {
 	shared_test shnp "shared (non PIC)" mainnp.o sh1np.o sh2np.o xcoff "" $NOPIE_LDFLAGS
     } else {
-	# Solaris defaults to -z text.
-	setup_xfail "*-*-solaris2*"
+	# 64-bit Solaris requires PIC.
+	setup_xfail "sparcv9*-*-solaris2*"
+	setup_xfail "x86_64-*-solaris2*"
 	setup_xfail "ia64-*-linux*"
 	setup_xfail "alpha*-*-linux*"
 	setup_xfail "powerpc-*-linux-musl"
@@ -270,7 +278,7 @@ if ![ld_compile "$CC_FOR_TARGET $NOPIE_CFLAGS $SHCFLAG" $srcdir/$subdir/main.c $
 	    setup_xfail "arm*-*-linux*"
 	}
 	setup_xfail "aarch64*-*-linux*"
-	# Solaris defaults to -z text.
+	# Solaris refuses to map shared objects with non-zero load addresses.
 	setup_xfail "*-*-solaris2*"
 	shared_test shnp "shared (non PIC, load offset)" \
 		mainnp.o sh1np.o sh2np.o shared \
@@ -305,8 +313,9 @@ if ![ld_compile "$CC_FOR_TARGET $SHCFLAG $picflag" $srcdir/$subdir/main.c $tmpdi
         if { [is_xcoff_format] } {
 	    shared_test shmpnp "shared (PIC main, non PIC so)" mainp.o sh1np.o sh2np.o xcoff "" $NOPIE_LDFLAGS
 	} else {
-	    # Solaris defaults to -z text.
-	    setup_xfail "*-*-solaris2*"
+	    # 64-bit Solaris requires PIC.
+	    setup_xfail "sparcv9*-*-solaris2*"
+	    setup_xfail "x86_64-*-solaris2*"
 	    setup_xfail "ia64-*-linux*"
 	    setup_xfail "alpha*-*-linux*"
 	    setup_xfail "powerpc-*-linux-musl"
@@ -343,4 +352,4 @@ if ![ld_compile "$CC_FOR_TARGET $SHCFLAG $picflag" $srcdir/$subdir/main.c $tmpdi
     }
 }
 
-set CFLAGS_FOR_TARGET "$old_CFLAGS"
+set CFLAGS_FOR_TARGET_TEST "$old_CFLAGS"

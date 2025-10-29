@@ -177,6 +177,13 @@ static const registry<inferior>::key<solib_info> rocm_solib_data;
 
 struct rocm_solib_ops : public solib_ops
 {
+  /* HOST_OPS is the host solib_ops that rocm_solib_ops hijacks / wraps,
+     in order to provide support for ROCm code objects.  */
+  explicit rocm_solib_ops (program_space *pspace)
+    : solib_ops (pspace)
+  {
+  }
+
   /* The methods implemented by rocm_solib_ops.  */
   owning_intrusive_list<solib> current_sos () const override;
   void create_inferior_hook (int from_tty) const override;
@@ -229,13 +236,7 @@ rocm_solib_ops::clear_so (const solib &so) const
 
 void
 rocm_solib_ops::clear_solib (program_space *pspace) const
-{
-  /* The rocm solib data is stored per inferior, make sure to clear all
-     inferiors bound to PSPACE.  */
-  for (inferior *inferior : all_inferiors ())
-    if (inferior->pspace == pspace)
-      get_solib_info (inferior)->solib_list.clear ();
-}
+{ }
 
 void
 rocm_solib_ops::handle_event () const
@@ -252,12 +253,12 @@ rocm_solib_ops::solibs_from_rocm_sos (const std::vector<rocm_so> &sos) const
 
   for (const rocm_so &so : sos)
     {
-      auto &newobj = dst.emplace_back (*this);
-
-      newobj.lm_info = std::make_unique<lm_info_rocm> (*so.lm_info);
-      newobj.name = so.name;
-      newobj.original_name = so.unique_name;
+      auto &new_obj
+	= dst.emplace_back (std::make_unique<lm_info_rocm> (*so.lm_info),
+			    so.unique_name, so.name, *this);
+      new_obj.provider = this;
     }
+
 
   return dst;
 }
@@ -447,6 +448,9 @@ file_ptr
 rocm_code_object_stream_memory::read (bfd *, void *buf, file_ptr size,
 				      file_ptr offset)
 {
+  if (size < 0 || offset < 0 || offset >= m_objfile_image.size ())
+    return -1;
+
   if (size > m_objfile_image.size () - offset)
     size = m_objfile_image.size () - offset;
 
@@ -466,7 +470,7 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
   protocol_end += protocol_delim.length ();
 
   std::transform (protocol.begin (), protocol.end (), protocol.begin (),
-		  [] (unsigned char c) { return std::tolower (c); });
+		  [] (unsigned char c) { return c_tolower (c); });
 
   std::string_view path;
   size_t path_end = uri.find_first_of ("#?", protocol_end);
@@ -481,8 +485,8 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
   for (size_t i = 0; i < path.length (); ++i)
     if (path[i] == '%'
 	&& i < path.length () - 2
-	&& std::isxdigit (path[i + 1])
-	&& std::isxdigit (path[i + 2]))
+	&& c_isxdigit (path[i + 1])
+	&& c_isxdigit (path[i + 2]))
       {
 	std::string_view hex_digits = path.substr (i + 1, 2);
 	decoded_path += std::stoi (std::string (hex_digits), 0, 16);
@@ -687,8 +691,7 @@ rocm_solib_ops::bfd_open (const char *pathname) const
 	}
     }
 
-  gdb_assert (gdbarch_from_bfd (abfd.get ()) != nullptr);
-  gdb_assert (is_amdgpu_arch (gdbarch_from_bfd (abfd.get ())));
+  gdb_assert (is_amdgpu_arch (abfd.get ()));
 
   return abfd;
 }
@@ -788,7 +791,7 @@ rocm_solib_target_inferior_created (inferior *inf)
      pspace will already have a rocm_solib_ops.  */
   if (rocm_ops == nullptr)
     {
-      auto rocm_ops_holder = std::make_unique<rocm_solib_ops> ();
+      auto rocm_ops_holder = std::make_unique<rocm_solib_ops> (inf->pspace);
       rocm_ops = rocm_ops_holder.get ();
       pspace->set_alt_solib_ops (std::move (rocm_ops_holder));
     }
@@ -808,7 +811,8 @@ rocm_solib_target_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   if (get_amd_dbgapi_process_id (follow_inf) == AMD_DBGAPI_PROCESS_NONE)
     return;
 
-  follow_inf->pspace->set_alt_solib_ops (std::make_unique<rocm_solib_ops> ());
+  follow_inf->pspace->set_alt_solib_ops
+    (std::make_unique<rocm_solib_ops> (follow_inf->pspace));
   get_solib_info (exec_inf)->solib_list.clear ();
 }
 

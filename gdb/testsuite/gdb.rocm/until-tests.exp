@@ -67,7 +67,8 @@ with_test_prefix "until with scheduler-locking on" {
 
 # Until tests without specifying location.
 with_test_prefix "until without location; scheduler-locking on" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test_no_output "set scheduler-locking on"
@@ -82,7 +83,8 @@ with_test_prefix "until without location; scheduler-locking on" {
 
 # Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
 with_test_prefix "until after conditional breakpoint" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" allow-pending
     gdb_test "run" \
         ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
@@ -121,7 +123,8 @@ proc run_and_wait {test} {
 
 # Until and other tests in non-stop mode.
 with_test_prefix "until with non-stop on" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_test_no_output "set non-stop on"
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     run_and_wait "run to bit_extract_kernel Breakpoint"

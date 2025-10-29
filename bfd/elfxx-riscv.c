@@ -1303,6 +1303,8 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvksc", "+zvks,+zvbc", check_implicit_always},
   {"zvks", "+zvksed,+zvksh,+zvkb,+zvkt", check_implicit_always},
 
+  {"sdtrig", "+zicsr", check_implicit_always},
+
   {"smaia", "+ssaia", check_implicit_always},
   {"smcdeleg", "+ssccfg", check_implicit_always},
   {"smcsrind", "+sscsrind", check_implicit_always},
@@ -1322,6 +1324,7 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"sscounterenw", "+zicsr", check_implicit_always},
   {"ssctr", "+zicsr", check_implicit_always},
   {"ssstateen", "+zicsr", check_implicit_always},
+  {"ssstrict", "+zicsr", check_implicit_always},
   {"sstc", "+zicsr", check_implicit_always},
   {"sstvala", "+zicsr", check_implicit_always},
   {"sstvecd", "+zicsr", check_implicit_always},
@@ -1552,6 +1555,7 @@ static const struct riscv_supported_ext riscv_supported_std_z_ext[] =
 
 static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
 {
+  {"sdtrig",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sha",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shcounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"shgatpa",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1576,6 +1580,7 @@ static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"sscounterenw",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"ssstrict",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sstc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sstvala",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"sstvecd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -3437,8 +3442,8 @@ _bfd_riscv_elf_link_setup_gnu_properties (struct bfd_link_info *info,
 					    | SEC_READONLY | SEC_HAS_CONTENTS
 					    | SEC_DATA));
 	  if (sec == NULL)
-	    info->callbacks->einfo (
-	      _ ("%F%P: failed to create GNU property section\n"));
+	    info->callbacks->fatal (
+	      _("%P: failed to create GNU property section\n"));
 
 	  elf_section_type (sec) = SHT_NOTE;
 	}

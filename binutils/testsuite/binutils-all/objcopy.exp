@@ -1313,6 +1313,7 @@ if [is_elf_format] {
     run_dump_test "group-7b"
     run_dump_test "group-7c"
     run_dump_test "copy-1"
+    run_dump_test "copy-7"
     run_dump_test "note-1"
     # Use copytest.o from the note-1 test to determine ELF32 or ELF64
     if [is_elf64 tmpdir/copytest.o] {
@@ -1462,18 +1463,23 @@ proc objcopy_test_without_global_symbol { } {
     global OBJDUMPFLAGS
     global srcdir
     global subdir
+    global CFLAGS_FOR_TARGET
 
     set test "strip without global symbol "
 
-    if { [target_compile $srcdir/$subdir/pr19547.c tmpdir/pr19547.o object debug] != "" } {
+    set opts "debug"
+    if [string match "*-fsanitize=*" $CFLAGS_FOR_TARGET] {
+	append opts " additional_flags=-fno-sanitize=all"
+    }
+
+    set objfile tmpdir/pr19547.o
+    if { [target_compile $srcdir/$subdir/pr19547.c $objfile object $opts] != "" } {
 	untested $test
 	return
     }
 
     if [is_remote host] {
-	set objfile [remote_download host tmpdir/pr19547.o]
-    } else {
-	set objfile tmpdir/pr19547.o
+	set objfile [remote_download host $objfile]
     }
 
     set exec_output [binutils_run $OBJCOPY "$OBJCOPYFLAGS --strip-unneeded $objfile"]
@@ -1566,3 +1572,33 @@ if { ![is_xcoff_format] } {
 }
 
 run_dump_test "rename-section-01"
+
+proc objcopy_tek2bin {} {
+    global OBJCOPY
+    global OBJDUMP
+    global srcdir
+    global subdir
+
+    set tek $srcdir/$subdir/tek2.obj
+    set out tmpdir/tek2bin
+    if [is_remote host] {
+	set tek [remote_download host $tek]
+	set out tek2bin
+    }
+
+    set got [binutils_run $OBJCOPY "-O binary $tek $out"]
+    if ![string equal "" $got] then {
+	send_log "$got\n"
+	fail "objcopy tek2bin"
+    } else {
+	set got [binutils_run $OBJDUMP "-s -b binary $out"]
+	if {![regexp ".* 0000 000031 .*" $got]} {
+	    fail "objcopy tek2bin (objdump)"
+	} else {
+	    pass "objcopy tek2bin"
+	}
+    }
+    remote_file host delete $out
+}
+
+objcopy_tek2bin

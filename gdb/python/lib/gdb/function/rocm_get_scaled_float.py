@@ -16,8 +16,9 @@
 
 """$_mx_get_scaled_float"""
 
-import re
 import math
+import re
+
 import gdb
 
 
@@ -198,7 +199,7 @@ def hipexp_ocp_fp_re():
 
 
 class _MxGetScaledFloat(gdb.Function):
-    """$_mx_get_scaled_float - get scaled values(s) of ROCm microscaling objects
+    """$_mx_get_scaled_float - get scaled values(s) of ROCm microscaling objects.
 
     Usage: $_mx_get_scaled_float(mx_scalar, mx_scale=1)
 

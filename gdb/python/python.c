@@ -27,11 +27,9 @@
 #include "value.h"
 #include "language.h"
 #include "gdbsupport/event-loop.h"
-#include "readline/tilde.h"
 #include "python.h"
 #include "extension-priv.h"
 #include "cli/cli-utils.h"
-#include <ctype.h>
 #include "location.h"
 #include "run-on-main-thread.h"
 #include "observable.h"
@@ -1202,15 +1200,22 @@ gdbpy_post_event (PyObject *self, PyObject *args)
 static PyObject *
 gdbpy_interrupt (PyObject *self, PyObject *args)
 {
+#ifdef __MINGW32__
   {
-    /* Make sure the interrupt isn't delivered immediately somehow.
-       This probably is not truly needed, but at the same time it
-       seems more clear to be explicit about the intent.  */
     gdbpy_allow_threads temporarily_exit_python;
     scoped_disable_cooperative_sigint_handling no_python_sigint;
 
     set_quit_flag ();
   }
+#else
+  {
+    /* For targets with support kill() just send SIGINT.  This will be
+       handled as if the user hit Ctrl+C.  This isn't exactly the same as
+       the above, which directly sets the quit flag.  Consider, for
+       example, every place that install_sigint_handler is called.  */
+    kill (getpid (), SIGINT);
+  }
+#endif
 
   Py_RETURN_NONE;
 }
@@ -1561,29 +1566,49 @@ static PyObject *
 gdbpy_write (PyObject *self, PyObject *args, PyObject *kw)
 {
   const char *arg;
-  static const char *keywords[] = { "text", "stream", NULL };
+  static const char *keywords[] = { "text", "stream", "style", nullptr };
   int stream_type = 0;
+  PyObject *style_obj = Py_None;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &arg,
-					&stream_type))
-    return NULL;
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|iO", keywords, &arg,
+					&stream_type, &style_obj))
+    return nullptr;
+
+  if (style_obj != Py_None && !gdbpy_is_style (style_obj))
+    {
+      PyErr_Format
+	(PyExc_TypeError,
+	 _("'style' argument must be gdb.Style or None, not %s."),
+	 Py_TYPE (style_obj)->tp_name);
+      return nullptr;
+    }
 
   try
     {
+      ui_file *stream;
       switch (stream_type)
 	{
 	case 1:
-	  {
-	    gdb_printf (gdb_stderr, "%s", arg);
-	    break;
-	  }
+	  stream = gdb_stderr;
+	  break;
 	case 2:
-	  {
-	    gdb_printf (gdb_stdlog, "%s", arg);
-	    break;
-	  }
+	  stream = gdb_stdlog;
+	  break;
 	default:
-	  gdb_printf (gdb_stdout, "%s", arg);
+	  stream = gdb_stdout;
+	  break;
+	}
+
+      if (style_obj == Py_None)
+	gdb_puts (arg, stream);
+      else
+	{
+	  std::optional<ui_file_style> style
+	    = gdbpy_style_object_to_ui_file_style (style_obj);
+	  if (!style.has_value ())
+	    return nullptr;
+
+	  fputs_styled (arg, style.value (), stream);
 	}
     }
   catch (const gdb_exception &except)
@@ -2406,7 +2431,17 @@ gdbpy_gdb_exiting (int exit_code)
     gdbpy_print_stack ();
 }
 
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.
+
+   We used to do this for 3.10 and newer to avoid Py_SetProgramName
+   deprecation in 3.11.
+
+   With 3.9 and the py_initialize_catch_abort approach, we run into a problem
+   where exit is called instead of abort, making gdb exit (possibly
+   https://github.com/python/cpython/issues/107827).  Using the PyConfig
+   mechanism (available starting 3.8) fixes that.  Todo: see if we have the
+   same problem for 3.8, and if we can apply the same fix.  */
+#if PY_VERSION_HEX < 0x03090000
 /* Signal handler to convert a SIGABRT into an exception.  */
 
 static void
@@ -2458,7 +2493,8 @@ py_initialize ()
        ? AUTO_BOOLEAN_TRUE
        : AUTO_BOOLEAN_FALSE);
 
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.  */
+#if PY_VERSION_HEX < 0x03090000
   /* Python documentation indicates that the memory given
      to Py_SetProgramName cannot be freed.  However, it seems that
      at least Python 3.7.4 Py_SetProgramName takes a copy of the
@@ -2499,9 +2535,8 @@ py_initialize ()
   }
 #endif
 
-  /* Py_SetProgramName was deprecated in Python 3.11.  Use PyConfig
-     mechanisms for Python 3.10 and newer.  */
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.  */
+#if PY_VERSION_HEX < 0x03090000
   /* Note that Py_SetProgramName expects the string it is passed to
      remain alive for the duration of the program's execution, so
      it is not freed after this call.  */
@@ -3167,8 +3202,7 @@ Print a warning." },
 
 /* Define all the event objects.  */
 #define GDB_PY_DEFINE_EVENT_TYPE(name, py_name, doc, base) \
-  PyTypeObject name##_event_object_type		    \
-	CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object") \
+  PyTypeObject name##_event_object_type \
     = { \
       PyVarObject_HEAD_INIT (NULL, 0)				\
       "gdb." py_name,                             /* tp_name */ \

@@ -56,7 +56,8 @@ with_test_prefix "bp on symbol, next" {
 # Set the symbolic breakpont in device code and turn on scheduler-locking.
 # Run "next", step, enable/disable <breakpont no>,continue commands.
 with_test_prefix "break on symbol, next, step, enable-disable" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     gdb_test "run" \
 	{.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
@@ -81,7 +82,8 @@ with_test_prefix "break on symbol, next, step, enable-disable" {
 # Set the breakpont through line no and turn on scheduler-locking.
 # Check "info agents", "info threads", "show architecture", "show convenience"
 # "info breakpoint" etc. commands in it.
-clean_restart ${binfile}
+clean_restart
+gdb_load ${binfile}
 gdb_breakpoint $srcfile:$breakpoint_loc allow-pending
 gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 gdb_test_no_output "set scheduler-locking on"

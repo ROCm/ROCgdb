@@ -1626,6 +1626,16 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
       return true;
     }
 
+  if ((elf_section_type (sec) != SHT_PROGBITS
+       || (sec->flags & SEC_CODE) == 0))
+    {
+      reloc_howto_type *howto = elf_x86_64_rtype_to_howto (abfd,
+							   from_type);
+      _bfd_x86_elf_link_report_tls_invalid_section_error
+	(abfd, sec, symtab_hdr, h, sym, howto);
+      return false;
+    }
+
   /* Return TRUE if there is no transition.  */
   if (from_type == to_type
       || (from_type == R_X86_64_CODE_4_GOTTPOFF
@@ -1717,7 +1727,9 @@ elf_x86_64_need_pic (struct bfd_link_info *info,
     {
       object = _("a shared object");
       if (!pic)
-	pic = _("; recompile with -fPIC");
+	pic = (howto->type == R_X86_64_TPOFF32
+	       ? _("; local-exec is incompatible with -shared")
+	       : _("; recompile with -fPIC"));
     }
   else
     {
@@ -2588,6 +2600,9 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	      /* Fake a STT_GNU_IFUNC symbol.  */
 	      h->root.root.string = bfd_elf_sym_name (abfd, symtab_hdr,
 						      isym, NULL);
+	      if (h->root.root.string == bfd_symbol_error_name)
+		goto error_return;
+
 	      h->type = STT_GNU_IFUNC;
 	      h->def_regular = 1;
 	      h->ref_regular = 1;
@@ -2684,7 +2699,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	  goto create_got;
 
 	case R_X86_64_TPOFF32:
-	  if (!bfd_link_executable (info) && ABI_64_P (abfd))
+	  if (!bfd_link_executable (info))
 	    {
 	      elf_x86_64_need_pic (info, abfd, sec, h, symtab_hdr, isym,
 				   &x86_64_elf_howto_table[r_type]);
@@ -2693,6 +2708,10 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	  if (eh != NULL)
 	    eh->zero_undefweak &= 0x2;
 	  break;
+
+	case R_X86_64_TLSDESC_CALL:
+	  htab->has_tls_desc_call = 1;
+	  goto need_got;
 
 	case R_X86_64_GOTTPOFF:
 	case R_X86_64_CODE_4_GOTTPOFF:
@@ -2715,7 +2734,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_X86_64_GOTPLT64:
 	case R_X86_64_GOTPC32_TLSDESC:
 	case R_X86_64_CODE_4_GOTPC32_TLSDESC:
-	case R_X86_64_TLSDESC_CALL:
+need_got:
 	  /* This symbol requires a global offset table entry.	*/
 	  {
 	    int tls_type, old_tls_type;
@@ -2746,6 +2765,16 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 	      case R_X86_64_TLSDESC_CALL:
 		tls_type = GOT_TLS_GDESC;
 		break;
+	      }
+
+	    if (tls_type >= GOT_TLS_GD
+		&& tls_type <= GOT_TLS_GDESC
+		&& (elf_section_type (sec) != SHT_PROGBITS
+		    || (sec->flags & SEC_CODE) == 0))
+	      {
+		_bfd_x86_elf_link_report_tls_invalid_section_error
+		  (abfd, sec, symtab_hdr, h, isym, howto);
+		goto error_return;
 	      }
 
 	    if (h != NULL)
@@ -4623,7 +4652,7 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 				     + htab->elf.sgotplt->output_offset
 				     + offplt
 				     + htab->sgotplt_jump_table_size);
-		  sreloc = htab->elf.srelplt;
+		  sreloc = htab->rel_tls_desc;
 		  if (indx == 0)
 		    outrel.r_addend = relocation - _bfd_x86_elf_dtpoff_base (info);
 		  else
@@ -5848,7 +5877,7 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 	    {
 	      if (memcmp (plt_contents + lazy_ibt_plt->plt_entry_size,
 			  lazy_ibt_plt->plt_entry,
-			  lazy_ibt_plt->plt_got_offset) == 0)
+			  lazy_ibt_plt->plt_reloc_offset) == 0)
 		{
 		  /* The fist entry in the lazy IBT PLT is the same as
 		     the lazy PLT.  */
@@ -5870,7 +5899,7 @@ elf_x86_64_get_synthetic_symtab (bfd *abfd,
 	      if (memcmp (plt_contents
 			  + lazy_bnd_ibt_plt->plt_entry_size,
 			  lazy_bnd_ibt_plt->plt_entry,
-			  lazy_bnd_ibt_plt->plt_got_offset) == 0)
+			  lazy_bnd_ibt_plt->plt_reloc_offset) == 0)
 		lazy_plt = lazy_bnd_ibt_plt;
 	      else
 		lazy_plt = lazy_bnd_plt;
@@ -6242,8 +6271,9 @@ static void
 elf_x86_64_add_glibc_version_dependency
   (struct elf_find_verdep_info *rinfo)
 {
-  unsigned int i = 0;
-  const char *version[3] = { NULL, NULL, NULL };
+  int i = 0, mark_plt = -1;
+  const char *version[4] = { NULL, NULL, NULL, NULL };
+  bool auto_version[4] = { false, false, false, false };
   struct elf_x86_link_hash_table *htab;
 
   if (rinfo->info->enable_dt_relr)
@@ -6253,14 +6283,41 @@ elf_x86_64_add_glibc_version_dependency
     }
 
   htab = elf_x86_hash_table (rinfo->info, X86_64_ELF_DATA);
-  if (htab != NULL && htab->params->mark_plt)
+  if (htab != NULL)
     {
-      version[i] = "GLIBC_2.36";
-      i++;
+      if (htab->params->gnu2_tls_version_tag && htab->has_tls_desc_call)
+	{
+	  version[i] = "GLIBC_ABI_GNU2_TLS";
+	  /* 2 == auto, enable if libc.so defines the GLIBC_ABI_GNU2_TLS
+	     version.  */
+	  if (htab->params->gnu2_tls_version_tag == 2)
+	    auto_version[i] = true;
+	  i++;
+	}
+      if (htab->params->mark_plt)
+	{
+	  mark_plt = i;
+	  auto_version[i] = true;
+	  version[i] = "GLIBC_ABI_DT_X86_64_PLT";
+	  i++;
+	}
     }
 
-  if (i != 0)
-    _bfd_elf_link_add_glibc_version_dependency (rinfo, version);
+  if (i == 0
+      || !_bfd_elf_link_add_glibc_version_dependency (rinfo, version,
+						      auto_version))
+    return;
+
+  if (mark_plt < 0 || auto_version[mark_plt])
+    return;
+
+  /* Add the GLIBC_2.36 version dependency if libc.so doesn't have
+     GLIBC_ABI_DT_X86_64_PLT.  */
+  version[0] = "GLIBC_2.36";
+  auto_version[0] = false;
+  version[1] = NULL;
+  _bfd_elf_link_add_glibc_version_dependency (rinfo, version,
+					      auto_version);
 }
 
 static const struct bfd_elf_special_section
@@ -6281,7 +6338,7 @@ elf_x86_64_special_sections[]=
 #define ELF_TARGET_ID			    X86_64_ELF_DATA
 #define ELF_MACHINE_CODE		    EM_X86_64
 #define ELF_MAXPAGESIZE			    0x1000
-#define ELF_COMMONPAGESIZE		    0x1000
+#define ELF_COMMONPAGESIZE		    ELF_MAXPAGESIZE
 
 #define elf_backend_can_gc_sections	    1
 #define elf_backend_can_refcount	    1
@@ -6355,20 +6412,7 @@ elf_x86_64_special_sections[]=
 
 #include "elf64-target.h"
 
-/* CloudABI support.  */
-
-#undef	TARGET_LITTLE_SYM
-#define TARGET_LITTLE_SYM		    x86_64_elf64_cloudabi_vec
-#undef	TARGET_LITTLE_NAME
-#define TARGET_LITTLE_NAME		    "elf64-x86-64-cloudabi"
-
-#undef	ELF_OSABI
-#define	ELF_OSABI			    ELFOSABI_CLOUDABI
-
-#undef	elf64_bed
-#define elf64_bed elf64_x86_64_cloudabi_bed
-
-#include "elf64-target.h"
+#undef elf_backend_add_glibc_version_dependency
 
 /* FreeBSD support.  */
 
@@ -6392,7 +6436,10 @@ elf_x86_64_special_sections[]=
 #undef  TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		    "elf64-x86-64-sol2"
 
-#undef ELF_TARGET_OS
+#undef	ELF_MAXPAGESIZE
+#define ELF_MAXPAGESIZE			    0x100000
+
+#undef	ELF_TARGET_OS
 #define	ELF_TARGET_OS			    is_solaris
 
 /* Restore default: we cannot use ELFOSABI_SOLARIS, otherwise ELFOSABI_NONE
@@ -6453,8 +6500,8 @@ elf64_x86_64_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUS
 #undef ELF_ARCH
 #define ELF_ARCH			    bfd_arch_i386
 
-#undef	ELF_MACHINE_CODE
-#define ELF_MACHINE_CODE		    EM_X86_64
+#undef	ELF_MAXPAGESIZE
+#define ELF_MAXPAGESIZE			    0x1000
 
 #undef	ELF_TARGET_OS
 #undef	ELF_OSABI
@@ -6475,6 +6522,10 @@ elf64_x86_64_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUS
 #undef elf_backend_bfd_from_remote_memory
 #define elf_backend_bfd_from_remote_memory \
   _bfd_elf32_bfd_from_remote_memory
+
+#undef elf_backend_add_glibc_version_dependency
+#define elf_backend_add_glibc_version_dependency \
+  elf_x86_64_add_glibc_version_dependency
 
 #undef elf_backend_size_info
 #define elf_backend_size_info \

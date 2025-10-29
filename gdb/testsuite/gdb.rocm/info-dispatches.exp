@@ -1,0 +1,188 @@
+# Copyright (C) 2025 Free Software Foundation, Inc.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# These tests check commands for retrieving information about
+# dispatches; specifically, "info dispatches" with multiple
+# dispatches, its -full argument, and a dispatch id argument.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if { [prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile { debug hip }] } {
+    return -1
+}
+
+with_rocm_gpu_lock {
+
+    save_vars { GDBFLAGS } {
+	append GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart $testfile
+    }
+
+    if ![runto_main] {
+	return -1
+    }
+
+    gdb_test "show non-stop"  \
+	     "Controlling the inferior in non-stop mode is on.*"
+
+    gdb_test "info dispatches" "No dispatches are currently active\\."  \
+	     "info dispatches, no dispatches"
+
+    gdb_breakpoint "single_wave_kernel1" "allow-pending"
+    gdb_breakpoint "single_wave_kernel2" "allow-pending"
+
+    set kernel1_thread 0
+    set kernel2_thread 0
+
+    gdb_test_multiple "continue -a &" "continue to gpu breakpoints" {
+	-re "Continuing\\.\r\n$::gdb_prompt " {
+	    pass $gdb_test_name
+	}
+    }
+
+    # Match the breakpoint hit events one by one, otherwise we might run into
+    # racing issues due to the order of the output in non-stop mode.
+    gdb_test_multiple "" "wait for gpu stops" -lbl {
+	-re "Thread ($::decimal)\[^\r\n\]* hit Breakpoint\[^\r\n\]*, single_wave_kernel($::decimal) \\(\\)\[^\r\n\]*" {
+	    set thread_number "$expect_out(1,string)"
+	    set kernel_thread_number "$expect_out(2,string)"
+
+	    if { $kernel_thread_number == 1 } {
+		set kernel1_thread $thread_number
+	    } else {
+		set kernel2_thread $thread_number
+	    }
+
+	    if { $kernel1_thread != 0 && $kernel2_thread != 0 } {
+		pass $gdb_test_name
+	    } else {
+		exp_continue
+	    }
+	}
+    }
+
+    # Test `dispatch find [regexp]`.
+    gdb_test "dispatch find single_wave_kernel3" "No dispatches match.*"  \
+	     "dispatch find, no match"
+    gdb_test "dispatch find single_wave_kernel1" "has Kernel Function.*"  \
+	     "dispatch find, match"
+
+    # Switch to the single_wave_kernel1 thread to test
+    # `info dispatches` when one dispatch has a leading *.
+    gdb_test "thread $kernel1_thread" \
+	     "Switching to thread $kernel1_thread.*kernel1.*"	\
+	     "switch to kernel1 thread"
+
+    set seen_header 0
+    set leading_star 0
+    set dispatch_ids [list]
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
+
+    # Sample output:
+    #
+    #   Id   Target Id                      Grid    Workgroup Fence   Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel1()
+    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel2()
+    #
+    gdb_test_multiple "info dispatches" "info dispatches with multiple dispatches" -lbl {
+	-re "$table_header_regex" {
+	    incr seen_header
+	    exp_continue
+	}
+
+	-re "(\\*?) *($::decimal) *AMDGPU Dispatch" {
+	    # Match entries iteratively, as the selected item may appear first
+	    # or second in the list depending on thread ordering.
+	    lappend dispatch_ids $expect_out(2,string)
+
+	    if { $expect_out(1,string) eq "*" } {
+		incr leading_star
+	    }
+	    exp_continue
+	}
+
+	-re "$::gdb_prompt $" {
+	    gdb_assert { [llength $dispatch_ids] == 2 && $seen_header == 1 && $leading_star == 1 } $gdb_test_name
+	}
+    }
+
+    # `info dispatches -full` when one dispatch has a leading *.
+
+    set seen_header 0
+    set leading_star 0
+    set dispatch_ids [list]
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Address\[ \t\]+Spaces\[ \t\]+Kernel\[ \t\]+Descriptor\[ \t\]+Kernel\[ \t\]+Args\[ \t\]+Completion\[ \t\]+Signal\[ \t\]+Kernel\[ \t\]+Function"
+
+    # Save kernel1 dispatch id for the next test.
+    set kernel1_dispatch 0
+
+    # Sample output:
+    #   Id   Target Id                      Grid    Workgroup Fence   Address Spaces        Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8740 0x00007ffee0c00000 (nil)              single_wave_kernel1()
+    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8780 0x00007ffee0200000 (nil)              single_wave_kernel2()
+    #
+    gdb_test_multiple "info dispatches -full" "info dispatches with full arg" -lbl {
+	-re "$table_header_regex" {
+	    incr seen_header
+	    exp_continue
+	}
+
+	-re "(\\*?) *($::decimal) *AMDGPU Dispatch" {
+	    # Match entries iteratively, as the selected item may appear first
+	    # or second in the list depending on thread ordering.
+	    if { $expect_out(1,string) eq "*" } {
+		incr leading_star
+		set kernel1_dispatch $expect_out(2,string)
+	    }
+	    lappend dispatch_ids $expect_out(2,string)
+	    exp_continue
+	}
+
+	-re "$::gdb_prompt $" {
+	    gdb_assert { [llength $dispatch_ids] == 2 && $seen_header == 1 && $leading_star == 1 } $gdb_test_name
+	}
+    }
+
+    # Test `info dispatches [single_wave_kernel1 dispatch id]`.
+    # The dispatch with the leading star in `info dispatches -full` is kernel1
+    # since we set `thread $kernel1_thread`.  This dispatch is in
+    # KERNEL1_DISPATCH.
+
+    set seen_header 0
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
+
+    # Sample output:
+    #
+    #   Id   Target Id                      Grid    Workgroup Fence   Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel1()
+    #
+    gdb_test_multiple "info dispatches $kernel1_dispatch" \
+		      "info dispatches given a dispatch id" -lbl {
+	-re "$table_header_regex" {
+	    incr seen_header
+	    exp_continue
+	}
+	-re "\\\* +($::decimal) *AMDGPU Dispatch" {
+	    gdb_assert { $seen_header == 1 && $expect_out(1,string) == $kernel1_dispatch } $gdb_test_name
+	}
+    }
+}

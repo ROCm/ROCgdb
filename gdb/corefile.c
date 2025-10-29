@@ -68,13 +68,14 @@ reopen_exec_file (void)
 void
 validate_files (void)
 {
-  if (current_program_space->exec_bfd () && current_program_space->core_bfd ())
+  bfd *ebfd = current_program_space->exec_bfd ();
+  bfd *cbfd = get_inferior_core_bfd (current_inferior ());
+
+  if (ebfd != nullptr && cbfd != nullptr)
     {
-      if (!core_file_matches_executable_p (current_program_space->core_bfd (),
-					   current_program_space->exec_bfd ()))
+      if (!core_file_matches_executable_p (cbfd, ebfd))
 	warning (_("core file may not match specified executable file."));
-      else if (gdb_bfd_get_mtime (current_program_space->exec_bfd ())
-	       > gdb_bfd_get_mtime (current_program_space->core_bfd ()))
+      else if (gdb_bfd_get_mtime (ebfd) > gdb_bfd_get_mtime (cbfd))
 	warning (_("exec file is newer than core file."));
     }
 }
@@ -190,7 +191,7 @@ read_code (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
    if successful.  */
 
 int
-safe_read_memory_integer (CORE_ADDR memaddr, int len, 
+safe_read_memory_integer (CORE_ADDR memaddr, int len,
 			  enum bfd_endian byte_order,
 			  LONGEST *return_value)
 {
@@ -273,7 +274,7 @@ read_memory_typed_address (CORE_ADDR addr, struct type *type)
 /* See gdbcore.h.  */
 
 void
-write_memory (CORE_ADDR memaddr, 
+write_memory (CORE_ADDR memaddr,
 	      const bfd_byte *myaddr, ssize_t len)
 {
   int status;
@@ -305,7 +306,7 @@ write_memory_with_notification (CORE_ADDR memaddr, const bfd_byte *myaddr,
 /* Store VALUE at ADDR in the inferior as a LEN-byte unsigned
    integer.  */
 void
-write_memory_unsigned_integer (CORE_ADDR addr, int len, 
+write_memory_unsigned_integer (CORE_ADDR addr, int len,
 			       enum bfd_endian byte_order,
 			       ULONGEST value)
 {
@@ -318,7 +319,7 @@ write_memory_unsigned_integer (CORE_ADDR addr, int len,
 /* Store VALUE at ADDR in the inferior as a LEN-byte signed
    integer.  */
 void
-write_memory_signed_integer (CORE_ADDR addr, int len, 
+write_memory_signed_integer (CORE_ADDR addr, int len,
 			     enum bfd_endian byte_order,
 			     LONGEST value)
 {

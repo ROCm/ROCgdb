@@ -46,7 +46,7 @@ extern "C" {
 #define NUM_SHDR_ENTRIES(shdr) ((shdr)->sh_entsize > 0 ? (shdr)->sh_size / (shdr)->sh_entsize : 0)
 
 /* If size isn't specified as 64 or 32, NAME macro should fail.  */
-#ifndef NAME
+#if !defined(NAME) && defined(ARCH_SIZE)
 #if ARCH_SIZE == 64
 #define NAME(x, y) x ## 64 ## _ ## y
 #endif
@@ -710,9 +710,6 @@ struct elf_link_hash_table
   /* The __ehdr_start symbol.  */
   struct elf_link_hash_entry *hehdr_start;
 
-  /* A pointer to information used to merge SEC_MERGE sections.  */
-  void *merge_info;
-
   /* Used to link stabs in sections.  */
   struct stab_info stab_info;
 
@@ -774,6 +771,7 @@ struct elf_link_hash_table
   asection *dynsym;
   asection *srelrdyn;
   asection *dynamic;
+  asection *interp;
 };
 
 /* Returns TRUE if the hash table is a struct elf_link_hash_table.  */
@@ -1895,9 +1893,6 @@ struct bfd_elf_section_data
      FIXME: In the future it might be better to change this into a list
      of secondary reloc sections, making lookup easier and faster.  */
   bool has_secondary_relocs;
-
-  /* A pointer used for various section optimizations.  */
-  void *sec_info;
 };
 
 #define elf_section_data(sec) ((struct bfd_elf_section_data*)(sec)->used_by_bfd)
@@ -1917,6 +1912,9 @@ struct bfd_elf_section_data
 
 #define get_elf_backend_data(abfd) \
    xvec_get_elf_backend_data ((abfd)->xvec)
+
+#define ABI_64_P(abfd) \
+  (get_elf_backend_data (abfd)->s->elfclass == ELFCLASS64)
 
 /* The least object attributes (within an attributes subsection) known
    for any target.  Some code assumes that the value 0 is not used and
@@ -2365,8 +2363,6 @@ extern bool _bfd_elf_link_hash_table_init
    unsigned int);
 extern bool _bfd_elf_slurp_version_tables
   (bfd *, bool);
-extern bool _bfd_elf_merge_sections
-  (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_match_sections_by_type
   (bfd *, const asection *, bfd *, const asection *);
 extern bool bfd_elf_is_group_section
@@ -2608,7 +2604,7 @@ extern bool _bfd_elf_create_dynamic_sections
 extern bool _bfd_elf_create_got_section
   (bfd *, struct bfd_link_info *);
 extern asection *_bfd_elf_section_for_symbol
-  (struct elf_reloc_cookie *, unsigned long, bool);
+  (struct elf_reloc_cookie *, unsigned long);
 extern struct elf_link_hash_entry *_bfd_elf_define_linkage_sym
   (bfd *, struct bfd_link_info *, asection *, const char *);
 extern void _bfd_elf_init_1_index_section
@@ -2631,8 +2627,8 @@ extern bool _bfd_elf_link_output_relocs
   (bfd *, asection *, Elf_Internal_Shdr *, Elf_Internal_Rela *,
    struct elf_link_hash_entry **);
 
-extern void _bfd_elf_link_add_glibc_version_dependency
-  (struct elf_find_verdep_info *, const char *const []);
+extern bool _bfd_elf_link_add_glibc_version_dependency
+  (struct elf_find_verdep_info *, const char *const [], bool *);
 
 extern void _bfd_elf_link_add_dt_relr_dependency
   (struct elf_find_verdep_info *);
@@ -2926,6 +2922,8 @@ extern char *elfcore_write_prxfpreg
 extern char *elfcore_write_xstatereg
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_x86_segbases
+  (bfd *, char *, int *, const void *, int);
+extern char *elfcore_write_i386_tls
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_ppc_vmx
   (bfd *, char *, int *, const void *, int);

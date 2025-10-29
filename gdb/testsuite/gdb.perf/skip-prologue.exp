@@ -28,7 +28,7 @@ set executable $testfile
 set expfile $testfile.exp
 
 # make check-perf RUNTESTFLAGS='skip-prologue.exp SKIP_PROLOGUE_COUNT=500'
-if ![info exists SKIP_PROLOGUE_COUNT] {
+if {![info exists SKIP_PROLOGUE_COUNT]} {
     set SKIP_PROLOGUE_COUNT 500
 }
 
@@ -51,7 +51,7 @@ PerfTest::assemble {
     global binfile
     global gdb_prompt
 
-    clean_restart $binfile
+    clean_restart $::testfile
 
     if ![runto_main] {
 	return -1

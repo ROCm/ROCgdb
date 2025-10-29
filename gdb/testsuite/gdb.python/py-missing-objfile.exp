@@ -134,7 +134,7 @@ proc clean_restart_load_python {} {
 # For sanity, lets check that we can load the specify the executable
 # and then load the core-file the easy way.
 with_test_prefix "initial sanity check" {
-    clean_restart $binfile
+    clean_restart $::testfile
     load_core_file
     check_loaded_debug true true
 }
@@ -182,6 +182,11 @@ with_test_prefix "no objfiles available" {
     load_core_file
     check_loaded_debug false false
 }
+
+# The following tests assume that the build-ids of binfile and libfile can be
+# found in the core file.
+require {expect_build_id_in_core_file $binfile}
+require {expect_build_id_in_core_file $libfile}
 
 with_test_prefix "all objfiles available" {
     # Another sanity check that GDB can find the files via the

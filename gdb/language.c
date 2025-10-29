@@ -28,7 +28,6 @@
    return data out of a "language-specific" struct pointer that is set
    whenever the working language changes.  That would be a lot faster.  */
 
-#include <ctype.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -574,7 +573,7 @@ add_set_language_command ()
    any non-NULL struct language_defn.skip_trampoline() functions.
    Return the result from the first that returns non-zero, or 0 if all
    `fail'.  */
-CORE_ADDR 
+CORE_ADDR
 skip_language_trampoline (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   for (const auto &lang : language_defn::languages)
@@ -976,7 +975,7 @@ language_arch_info::type_and_symbol::alloc_type_symbol
   symbol->set_section_index (0);
   symbol->set_type (type);
   symbol->set_domain (TYPE_DOMAIN);
-  symbol->set_aclass_index (LOC_TYPEDEF);
+  symbol->set_loc_class_index (LOC_TYPEDEF);
   return symbol;
 }
 

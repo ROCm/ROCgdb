@@ -10250,7 +10250,7 @@ ppc64_elf_late_size_sections (bfd *output_bfd,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->elf.interp;
 	  if (s == NULL)
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
@@ -12226,9 +12226,9 @@ ppc_build_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
       struct elf_link_hash_entry *h;
       size_t len1, len2;
       char *name;
-      const char *const stub_str[] = { "long_branch",
-				       "plt_branch",
-				       "plt_call" };
+      static const char stub_str[][16] = { "long_branch",
+					   "plt_branch",
+					   "plt_call" };
 
       len1 = strlen (stub_str[stub_entry->type.main - 1]);
       len2 = strlen (stub_entry->root.string);

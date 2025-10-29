@@ -22,7 +22,6 @@
 #include "tdesc.h"
 #include "gdbsupport/rsp-low.h"
 #include "gdbsupport/signals-state-save-restore.h"
-#include <ctype.h>
 #include <unistd.h>
 #if HAVE_SIGNAL_H
 #include <signal.h>
@@ -1427,7 +1426,7 @@ parse_debug_format_options (const char *arg, int is_monitor)
   debug_timestamp = 0;
 
   /* First remove leading spaces, for "monitor set debug-format".  */
-  while (isspace (*arg))
+  while (c_isspace (*arg))
     ++arg;
 
   std::vector<gdb::unique_xmalloc_ptr<char>> options
@@ -1473,8 +1472,8 @@ parse_debug_format_options (const char *arg, int is_monitor)
 struct debug_opt
 {
   /* NAME is the name of this debug option, this should be a simple string
-     containing no whitespace, starting with a letter from isalpha(), and
-     contain only isalnum() characters and '_' underscore and '-' hyphen.
+     containing no whitespace, starting with a letter from c_isalpha(), and
+     contain only c_isalnum() characters and '_' underscore and '-' hyphen.
 
      SETTER is a callback function used to set the debug variable.  This
      callback will be passed true to enable the debug setting, or false to
@@ -1483,7 +1482,7 @@ struct debug_opt
     : m_name (name),
       m_setter (setter)
   {
-    gdb_assert (isalpha (*name));
+    gdb_assert (c_isalpha (*name));
   }
 
   /* Called to enable or disable the debug setting.  */
@@ -2745,6 +2744,8 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 		}
 	      else if (feature == "error-message+")
 		cs.error_message_supported = true;
+	      else if (feature == "single-inf-arg+")
+		cs.single_inferior_argument = true;
 	      else
 		{
 		  /* Move the unknown features all together.  */
@@ -2871,6 +2872,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 
       if (target_supports_memory_tagging ())
 	strcat (own_buf, ";memory-tagging+");
+
+      if (cs.single_inferior_argument)
+	strcat (own_buf, ";single-inf-arg+");
 
       /* Reinitialize components as needed for the new connection.  */
       hostio_handle_new_gdb_connection ();
@@ -3086,6 +3090,34 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	write_enn (own_buf);
 
       *new_packet_len_p = strlen (own_buf);
+      return;
+    }
+
+  if (strcmp ("qExecAndArgs", own_buf) == 0)
+    {
+      if (program_path.get () == nullptr)
+	sprintf (own_buf, "U");
+      else
+	{
+	  std::string packet ("S;");
+
+	  packet += bin2hex ((const gdb_byte *) program_path.get (),
+			     strlen (program_path.get ()));
+	  packet += ";";
+
+	  packet += bin2hex ((const gdb_byte *) program_args.c_str (),
+			     program_args.length ());
+	  packet += ";";
+
+	  if (packet.size () > PBUFSIZ)
+	    {
+	      sprintf (own_buf, "E.Program name and arguments too long.");
+	      return;
+	    }
+
+	  strcpy (own_buf, packet.c_str ());
+	  *new_packet_len_p = packet.size ();
+	}
       return;
     }
 
@@ -3464,7 +3496,20 @@ handle_v_run (char *own_buf)
   else
     program_path.set (new_program_name.get ());
 
-  program_args = gdb::remote_args::join (new_argv.get ());
+  if (cs.single_inferior_argument)
+    {
+      if (new_argv.get ().size () > 1)
+	{
+	  write_enn (own_buf);
+	  return;
+	}
+      else if (new_argv.get ().size () == 1)
+	program_args = std::string (new_argv.get ()[0]);
+      else
+	program_args.clear ();
+    }
+  else
+    program_args = gdb::remote_args::join (new_argv.get ());
 
   try
     {
@@ -3812,7 +3857,7 @@ static void
 gdbserver_version (void)
 {
   printf ("GNU gdbserver %s%s\n"
-	  "Copyright (C) 2024 Free Software Foundation, Inc.\n"
+	  "Copyright (C) 2025 Free Software Foundation, Inc.\n"
 	  "gdbserver is free software, covered by the "
 	  "GNU General Public License.\n"
 	  "This gdbserver was configured as \"%s\"\n",
@@ -3852,10 +3897,20 @@ gdbserver_usage (FILE *stream)
 	   "  --startup-with-shell\n"
 	   "                        Start PROG using a shell.  I.e., execs a shell that\n"
 	   "                        then execs PROG.  (default)\n"
+	   "                        To make use of globbing and variable substitution for\n"
+	   "                        arguments passed directly on gdbserver invocation,\n"
+	   "                        see the --no-escape-args command line option in\n"
+	   "                        addition\n"
 	   "  --no-startup-with-shell\n"
 	   "                        Exec PROG directly instead of using a shell.\n"
-	   "                        Disables argument globbing and variable substitution\n"
-	   "                        on UNIX-like systems.\n"
+	   "  --no-escape-args\n"
+	   "                        If PROG is started using a shell (see the\n"
+	   "                        --[no-]startup-with-shell option),\n"
+	   "                        ARGS passed directly on gdbserver invocation are\n"
+	   "                        escaped, so no globbing or variable substitution\n"
+	   "                        happens for those. This option disables escaping, so\n"
+	   "                        globbing and variable substitution in the shell\n"
+	   "                        are done for ARGS on UNIX-like systems.\n"
 	   "\n"
 	   "Debug options:\n"
 	   "\n"
@@ -4111,6 +4166,7 @@ captured_main (int argc, char *argv[])
   volatile bool multi_mode = false;
   volatile bool attach = false;
   bool selftest = false;
+  bool escape_args = true;
 #if GDB_SELF_TEST
   std::vector<const char *> selftest_filters;
 
@@ -4133,7 +4189,7 @@ captured_main (int argc, char *argv[])
     OPT_DEBUG, OPT_DEBUG_FILE, OPT_DEBUG_FORMAT, OPT_DISABLE_PACKET,
     OPT_DISABLE_RANDOMIZATION, OPT_NO_DISABLE_RANDOMIZATION,
     OPT_STARTUP_WITH_SHELL, OPT_NO_STARTUP_WITH_SHELL, OPT_ONCE,
-    OPT_SELFTEST,
+    OPT_SELFTEST, OPT_NO_ESCAPE
   };
 
   static struct option longopts[] =
@@ -4158,6 +4214,7 @@ captured_main (int argc, char *argv[])
        OPT_NO_STARTUP_WITH_SHELL},
       {"once", no_argument, nullptr, OPT_ONCE},
       {"selftest", optional_argument, nullptr, OPT_SELFTEST},
+      {"no-escape-args", no_argument, nullptr, OPT_NO_ESCAPE},
       {nullptr, no_argument, nullptr, 0}
     };
 
@@ -4173,27 +4230,60 @@ captured_main (int argc, char *argv[])
      If getopt_long is free to reorder ARGV then it will try to steal those
      arguments for itself.  */
   while ((longindex = -1,
-	  optc = getopt_long (argc, argv, "+", longopts, &longindex)) != -1)
+	  optc = getopt_long (argc, argv, "+:", longopts, &longindex)) != -1)
     {
-      /* We only support '--option=value' form, not '--option value'.  To
-	 achieve this, if global OPTARG points to the start of the previous
-	 ARGV entry, then we must have used the second (unsupported) form,
-	 so set OPTARG to NULL and decrement OPTIND to make it appear that
-	 there was no value passed.  If the option requires an argument,
-	 then this means we should convert OPTC to '?' to indicate an
-	 error.  */
-      if (longindex != -1
-	  && longopts[longindex].has_arg != no_argument)
-	{
-	  if (optarg == argv[optind - 1])
-	    {
-	      optarg = nullptr;
-	      --optind;
-	    }
+      /* As a GNU extension, getopt_long supports '--arg value' form,
+	 without an '=' symbol between the 'arg' and the 'value'.  This
+	 block aids in supporting this form.
 
-	  if (longopts[longindex].has_arg == required_argument
-	      && optarg == nullptr)
-	    optc = '?';
+	 If we found a matching entry in LONGOPTS, the entry has an
+	 optional argument, and OPTARG is NULL, then this indicates that we
+	 saw the '--arg value' form. Look at the next ARGV entry to see if
+	 it exists, and doesn't look like a port number, or the start of
+	 another argument.  If this is the case, then make the next ARGV
+	 entry the argument value.  Otherwise, continue with no
+	 argument.
+
+	 If we found a matching entry in LONGOPTS, the entry has a required
+	 argument, then OPTARG will not be NULL.  In this case, if the
+	 start of OPTARG is the start of the previous ARGV entry, then this
+	 indicates we saw the '--arg value' form.  If OPTARG looks like a
+	 port number, or the start of another argument, then assume the
+	 user didn't in fact pass a value, but forgot.  Pretend we are
+	 missing the argument value.  */
+      if (longindex != -1
+	  && ((longopts[longindex].has_arg == optional_argument
+	       &&optarg == nullptr)
+	      || (longopts[longindex].has_arg == required_argument
+		  && optarg == argv[optind - 1])))
+	{
+	  if (longopts[longindex].has_arg == optional_argument)
+	    {
+	      /* Claim the next entry from ARGV as the argument value.  */
+	      optarg = argv[optind];
+	      optind++;
+	    }
+	  else
+	    gdb_assert (optarg != nullptr);
+
+	  if (optarg == nullptr
+	      || strcmp (optarg, "-") == 0
+	      || strcmp (optarg, STDIO_CONNECTION_NAME) == 0
+	      || startswith (optarg, "--")
+	      || strchr (optarg, ':') != nullptr)
+	    {
+	      /* OPTARG is NULL, looks like a port number, or could be the
+		 start of another argument.  Clear OPTARG as we don't have
+		 an argument, and decrement OPTIND so the next call to
+		 getopt will process this as an argument.  */
+	      optarg = nullptr;
+	      optind--;
+
+	      /* For required arguments, if we don't have an argument, then
+		 this is an error, set OPTC to reflect this.  */
+	      if (longopts[longindex].has_arg == required_argument)
+		optc = ':';
+	    }
 	}
 
       switch (optc)
@@ -4361,6 +4451,11 @@ captured_main (int argc, char *argv[])
 	  }
 	  break;
 
+	case OPT_NO_ESCAPE:
+	  escape_args = false;
+	  break;
+
+	case ':':
 	case '?':
 	  /* Figuring out which element of ARGV contained the invalid
 	     argument is not simple.  There are a couple of cases we need
@@ -4387,7 +4482,11 @@ captured_main (int argc, char *argv[])
 	  else
 	    bad_arg = argv[optind];
 
-	  fprintf (stderr, "Unknown argument: %s\n", bad_arg.c_str ());
+	  if (optc == '?')
+	    fprintf (stderr, _("Unknown argument: %s\n"), bad_arg.c_str ());
+	  else
+	    fprintf (stderr, _("Missing argument value for: %s\n"),
+		     bad_arg.c_str ());
 	  exit (1);
 	}
     }
@@ -4474,9 +4573,13 @@ captured_main (int argc, char *argv[])
     {
       program_path.set (next_arg[0]);
 
+      if (program_path.get () == nullptr)
+	error (_("No program to debug"));
+
       int n = argc - (next_arg - argv);
       program_args
-	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]}, true);
+	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]},
+					escape_args);
 
       /* Wait till we are at first instruction in program.  */
       target_create_inferior (program_path.get (), program_args);

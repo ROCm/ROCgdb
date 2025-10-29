@@ -38,7 +38,6 @@
 #include "filenames.h"
 #include "exec.h"
 #include "observable.h"
-#include "readline/tilde.h"
 #include "solib.h"
 #include "interps.h"
 #include "filesystem.h"
@@ -473,6 +472,18 @@ solib_ops::bfd_open (const char *pathname) const
   return solib_bfd_open (pathname);
 }
 
+/* See solib.h.  */
+
+void
+solib_ops::iterate_over_objfiles_in_search_order
+  (iterate_over_objfiles_in_search_order_cb_ftype cb,
+   objfile *current_objfile) const
+{
+  for (objfile &objfile : m_pspace->objfiles ())
+    if (cb (&objfile))
+      return;
+}
+
 /* Given a pointer to one of the shared objects in our list of mapped
    objects, use the recorded name to open a bfd descriptor for the
    object, build a section table, relocate all the section addresses
@@ -488,7 +499,8 @@ solib_ops::bfd_open (const char *pathname) const
 static int
 solib_map_sections (solib &so)
 {
-  gdb::unique_xmalloc_ptr<char> filename (tilde_expand (so.name.c_str ()));
+  gdb::unique_xmalloc_ptr<char> filename
+    = gdb_rl_tilde_expand (so.name.c_str ());
   gdb_bfd_ref_ptr abfd (so.ops ().bfd_open (filename.get ()));
 
   /* If we have a core target then the core target might have some helpful
@@ -632,16 +644,13 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
 	{
 	  /* Have we already loaded this shared object?  */
 	  so.objfile = nullptr;
-	  for (objfile *objfile : current_program_space->objfiles ())
-	    {
-	      if (filename_cmp (objfile_name (objfile), so.name.c_str ())
-		    == 0
-		  && objfile->addr_low == so.addr_low)
-		{
-		  so.objfile = objfile;
-		  break;
-		}
-	    }
+	  for (objfile &objfile : current_program_space->objfiles ())
+	    if (objfile.addr_low == so.addr_low)
+	      {
+		so.objfile = &objfile;
+		break;
+	      }
+
 	  if (so.objfile == NULL)
 	    {
 	      section_addr_info sap
@@ -1056,7 +1065,7 @@ print_solib_list_table (std::vector<const solib *> solib_list,
     uiout->table_header (addr_width - 1, ui_left, "from", "From");
     uiout->table_header (addr_width - 1, ui_left, "to", "To");
     if (print_namespace)
-      uiout->table_header (5, ui_left, "namespace", "NS");
+      uiout->table_header (9, ui_left, "namespace", "Linker NS");
     uiout->table_header (12 - 1, ui_left, "syms-read", "Syms Read");
     uiout->table_header (0, ui_noalign, "name", "Shared Object Library");
 
@@ -1084,7 +1093,7 @@ print_solib_list_table (std::vector<const solib *> solib_list,
 	  {
 	    try
 	      {
-		uiout->field_fmt ("namespace", "[[%d]]", ops->find_solib_ns (*so));
+		uiout->field_fmt ("namespace", "%d", ops->find_solib_ns (*so));
 	      }
 	    catch (const gdb_exception_error &er)
 	      {
@@ -1182,7 +1191,7 @@ info_linker_namespace_command (const char *pattern, int from_tty)
 
   if (pattern == nullptr || pattern[0] == '\0')
     {
-      uiout->message (_("There are %d linker namespaces loaded\n"),
+      uiout->message (_("There are %d linker namespaces loaded.\n"),
 		      ops->num_active_namespaces ());
 
       int printed = 0;
@@ -1219,27 +1228,26 @@ info_linker_namespace_command (const char *pattern, int from_tty)
 	(std::make_pair (ns, ops->get_solibs_in_ns (ns)));
     }
 
-  bool ns_separator = false;
-
   for (const auto &[ns, solibs_to_print] : all_solibs_to_print)
     {
-      if (ns_separator)
-	uiout->message ("\n\n");
-      else
-	ns_separator = true;
+      uiout->message ("\n");
 
       if (solibs_to_print.size () == 0)
 	{
-	  uiout->message (_("Linker namespace [[%d]] is not active.\n"), ns);
+	  uiout->message (_("Linker namespace %d is not active.\n"), ns);
 	  /* If we got here, a specific namespace was requested, so there
 	     will only be one vector.  We can leave early.  */
 	  break;
 	}
-      uiout->message
-	(_("There are %zu libraries loaded in linker namespace [[%d]]\n"),
-	 solibs_to_print.size (), ns);
-      uiout->message
-	(_("Displaying libraries for linker namespace [[%d]]:\n"), ns);
+
+      if (solibs_to_print.size () == 1)
+	uiout->message
+	  (_("1 library loaded in linker namespace %d:\n"), ns);
+      else
+	uiout->message
+	  (_("%zu libraries loaded in linker namespace %d:\n"),
+	   solibs_to_print.size (), ns);
+
 
       print_solib_list_table (solibs_to_print, false);
     }
@@ -1448,8 +1456,8 @@ reload_shared_libraries_1 (int from_tty)
       if (from_tty)
 	add_flags |= SYMFILE_VERBOSE;
 
-      gdb::unique_xmalloc_ptr<char> filename (
-	tilde_expand (so.original_name.c_str ()));
+      gdb::unique_xmalloc_ptr<char> filename
+	= gdb_rl_tilde_expand (so.original_name.c_str ());
 
       gdb_bfd_ref_ptr abfd = so.ops ().bfd_open (filename.get ());
       if (abfd != NULL)
@@ -1502,13 +1510,13 @@ reload_shared_libraries (const char *ignored, int from_tty,
 {
   reload_shared_libraries_1 (from_tty);
 
-  /* Creating inferior hooks here has two purposes.  First, if we reload 
+  /* Creating inferior hooks here has two purposes.  First, if we reload
      shared libraries then the address of solib breakpoint we've computed
      previously might be no longer valid.  For example, if we forgot to set
      solib-absolute-prefix and are setting it right now, then the previous
      breakpoint address is plain wrong.  Second, installing solib hooks
      also implicitly figures were ld.so is and loads symbols for it.
-     Absent this call, if we've just connected to a target and set 
+     Absent this call, if we've just connected to a target and set
      solib-absolute-prefix or solib-search-path, we'll lose all information
      about ld.so.  */
   if (target_has_execution ())
@@ -1847,6 +1855,18 @@ remove_user_added_objfile (struct objfile *objfile)
     }
 }
 
+/* See solib.h.  */
+
+int
+solib_linker_namespace_count (program_space *pspace)
+{
+  if (const auto ops = pspace->solib_ops (); ops != nullptr
+      && ops->supports_namespaces ())
+    return ops->num_active_namespaces ();
+
+  return 0;
+}
+
 /* Implementation of the linker_namespace convenience variable.
 
    This returns the GDB internal identifier of the linker namespace,
@@ -1882,6 +1902,23 @@ static const struct internalvar_funcs linker_namespace_funcs =
   nullptr,
 };
 
+static value *
+linker_namespace_count_make_value (gdbarch *gdbarch, internalvar *var,
+				   void *ignore)
+{
+  return value_from_longest
+    (builtin_type (gdbarch)->builtin_int,
+     solib_linker_namespace_count (current_program_space));
+}
+
+/* Implementation of `$_linker_namespace_count' variable.  */
+
+static const struct internalvar_funcs linker_namespace_count_funcs =
+{
+  linker_namespace_count_make_value,
+  nullptr,
+};
+
 INIT_GDB_FILE (solib)
 {
   gdb::observers::free_objfile.attach (remove_user_added_objfile, "solib");
@@ -1896,7 +1933,8 @@ INIT_GDB_FILE (solib)
      for consistency.  */
   create_internalvar_type_lazy ("_linker_namespace",
 				&linker_namespace_funcs, nullptr);
-  set_internalvar_integer (lookup_internalvar ("_active_linker_namespaces"), 1);
+  create_internalvar_type_lazy ("_linker_namespace_count",
+				&linker_namespace_count_funcs, nullptr);
 
   add_com (
     "sharedlibrary", class_files, sharedlibrary_command,

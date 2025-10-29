@@ -21,11 +21,11 @@ set MIFLAGS "-i=mi"
 standard_testfile .cc
 set opts {debug c++}
 
-if [build_executable $testfile.exp $testfile $srcfile $opts] {
+if {[build_executable $testfile.exp $testfile $srcfile $opts]} {
     return -1
 }
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 

@@ -1187,6 +1187,14 @@ target_stack::push (target_ops *t)
   if (m_stack[stratum].get () != nullptr)
     unpush (m_stack[stratum].get ());
 
+  /* If this target can't be shared, then check that the target doesn't
+     already appear on some other target stack.  */
+  if (!t->is_shareable ())
+    for (inferior *inf : all_inferiors ())
+      if (inf->target_is_pushed (t))
+	internal_error (_("Attempt to push unshareable target: %s."),
+			t->shortname ());
+
   /* Now add the new one.  */
   m_stack[stratum] = std::move (ref);
 
@@ -1282,7 +1290,7 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
       try
 	{
 	  CORE_ADDR lm_addr;
-	  
+
 	  /* Fetch the load module address for this objfile.  */
 	  lm_addr = gdbarch_fetch_tls_load_module_address (gdbarch,
 							   objfile);
@@ -3563,7 +3571,7 @@ target_fileio_read_alloc (struct inferior *inf, const char *filename,
 
 /* See target.h.  */
 
-gdb::unique_xmalloc_ptr<char> 
+gdb::unique_xmalloc_ptr<char>
 target_fileio_read_stralloc (struct inferior *inf, const char *filename)
 {
   gdb_byte *buffer;
@@ -3863,11 +3871,11 @@ target_pass_ctrlc (void)
       if (proc_target == NULL)
 	continue;
 
-      for (thread_info *thr : inf->non_exited_threads ())
+      for (thread_info &thr : inf->non_exited_threads ())
 	{
 	  /* A thread can be THREAD_STOPPED and executing, while
 	     running an infcall.  */
-	  if (thr->state == THREAD_RUNNING || thr->executing ())
+	  if (thr.state == THREAD_RUNNING || thr.executing ())
 	    {
 	      /* We can get here quite deep in target layers.  Avoid
 		 switching thread context or anything that would

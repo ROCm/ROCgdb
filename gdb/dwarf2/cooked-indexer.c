@@ -20,6 +20,9 @@
 #include "dwarf2/cooked-indexer.h"
 #include "dwarf2/cooked-index-worker.h"
 #include "dwarf2/error.h"
+#include "dwarf2/read.h"
+#include "cp-support.h"
+#include "demangle.h"
 #include "gdb-hip-test-mode.h"
 
 /* See cooked-indexer.h.  */
@@ -308,7 +311,7 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 	   || abbrev->tag == DW_TAG_namespace)
 	  && abbrev->has_children)
 	*flags |= IS_TYPE_DECLARATION;
-      else
+      else if (!is_ada_import_or_export (reader->cu (), *name, *linkage_name))
 	{
 	  *linkage_name = nullptr;
 	  *name = nullptr;
@@ -517,7 +520,8 @@ cooked_indexer::index_dies (cutu_reader *reader,
       /* If a DIE parent is a DW_TAG_subprogram, then the DIE is only
 	 interesting if it's a DW_TAG_subprogram or a DW_TAG_entry_point.  */
       bool die_interesting
-	= (abbrev->interesting
+	= ((abbrev->interesting
+	    || (m_language == language_ada && abbrev->maybe_ada_import))
 	   && (parent_entry == nullptr
 	       || parent_entry->tag != DW_TAG_subprogram
 	       || abbrev->tag == DW_TAG_subprogram
@@ -553,6 +557,11 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	  flags &= ~IS_STATIC;
 	  flags |= parent_entry->flags & IS_STATIC;
 	}
+      else if (abbrev->tag == DW_TAG_imported_declaration)
+	{
+	  /* Match the full reader.  */
+	  flags &= ~IS_STATIC;
+	}
 
       if (abbrev->tag == DW_TAG_namespace
 	  && m_language == language_cplus
@@ -563,6 +572,30 @@ cooked_indexer::index_dies (cutu_reader *reader,
 	     for the global namespace.  Work around this problem
 	     here.  */
 	  name = nullptr;
+	}
+
+      /* An otherwise anonymous type might be given a name (via
+	 typedef) for linkage purposes, and gdb tries to handle this
+	 case.  See anon-struct.exp.  In this case, GCC will emit a
+	 funny thing: a linkage name for the type, but in "type" form.
+	 That is, it will not start with _Z.  */
+      if ((abbrev->tag == DW_TAG_class_type
+	   || abbrev->tag == DW_TAG_structure_type
+	   || abbrev->tag == DW_TAG_union_type)
+	  && m_language == language_cplus
+	  && name == nullptr
+	  && linkage_name != nullptr)
+	{
+	  gdb::unique_xmalloc_ptr<char> dem
+	    = gdb_demangle (linkage_name, DMGL_GNU_V3 | DMGL_TYPES);
+	  if (dem != nullptr)
+	    {
+	      /* We're only interested in the last component.  */
+	      std::vector<std::string_view> split
+		= split_name (dem.get (), split_style::CXX);
+	      name = m_index_storage->add (split.back ());
+	      linkage_name = nullptr;
+	    }
 	}
 
       cooked_index_entry *this_entry = nullptr;

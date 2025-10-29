@@ -899,7 +899,7 @@ i386_linux_intx80_sysenter_syscall_record (struct regcache *regcache)
     {
       gdb_printf (gdb_stderr,
 		  _("Process record and replay target doesn't "
-		    "support syscall number %s\n"), 
+		    "support syscall number %s\n"),
 		  plongest (syscall_native));
       return -1;
     }
@@ -1044,6 +1044,8 @@ int i386_linux_gregset_reg_offset[] =
   -1, -1, -1, -1, -1, -1, -1, -1, /* k0 ... k7 (AVX512)  */
   -1, -1, -1, -1, -1, -1, -1, -1, /* zmm0 ... zmm7 (AVX512)  */
   -1,				  /* PKRU register  */
+  -1,				  /* SSP register.  */
+  -1, -1,			  /* fs/gs base registers.  */
   11 * 4,			  /* "orig_eax"  */
 };
 
@@ -1105,11 +1107,10 @@ i386_linux_core_read_xsave_info (bfd *abfd, x86_xsave_layout &layout)
 /* See i386-linux-tdep.h.  */
 
 bool
-i386_linux_core_read_x86_xsave_layout (struct gdbarch *gdbarch,
+i386_linux_core_read_x86_xsave_layout (struct gdbarch *gdbarch, bfd &cbfd,
 				       x86_xsave_layout &layout)
 {
-  return i386_linux_core_read_xsave_info (current_program_space->core_bfd (),
-					  layout) != 0;
+  return i386_linux_core_read_xsave_info (&cbfd, layout) != 0;
 }
 
 /* See arch/x86-linux-tdesc.h.  */
@@ -1197,7 +1198,7 @@ i386_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 /* Linux kernel shows PC value after the 'int $0x80' instruction even if
    inferior is still inside the syscall.  On next PTRACE_SINGLESTEP it will
    finish the syscall but PC will not change.
-   
+
    Some vDSOs contain 'int $0x80; ret' and during stepping out of the syscall
    i386_displaced_step_fixup would keep PC at the displaced pad location.
    As PC is pointing to the 'ret' instruction before the step
@@ -1205,7 +1206,7 @@ i386_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
    and PC should not be adjusted.  In reality it finished syscall instead and
    PC should get relocated back to its vDSO address.  Hide the 'ret'
    instruction by 'nop' so that i386_displaced_step_fixup is not confused.
-   
+
    It is not fully correct as the bytes in struct
    displaced_step_copy_insn_closure will not match the inferior code.  But we
    would need some new flag in displaced_step_copy_insn_closure otherwise to
@@ -1492,6 +1493,9 @@ i386_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
 INIT_GDB_FILE (i386_linux_tdep)
 {
+  gdb_assert (ARRAY_SIZE (i386_linux_gregset_reg_offset)
+	      == I386_LINUX_NUM_REGS);
+
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_LINUX,
 			  i386_linux_init_abi);
 }

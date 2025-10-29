@@ -170,8 +170,7 @@ make_setting (parmpy_object *s)
     gdb_assert_not_reached ("unhandled var type");
 }
 
-extern PyTypeObject parmpy_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("parmpy_object");
+extern PyTypeObject parmpy_object_type;
 
 /* Some handy string constants.  */
 static PyObject *set_doc_cst;
@@ -297,7 +296,7 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	{
 	  cmp = PyObject_IsTrue (value);
 	  if (cmp < 0 )
-	    return -1;	
+	    return -1;
 	  if (cmp == 1)
 	    self->value.autoboolval = AUTO_BOOLEAN_TRUE;
 	  else
@@ -953,8 +952,8 @@ parmpy_dealloc (PyObject *obj)
 }
 
 /* Initialize the 'parameters' module.  */
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_parameters (void)
+static int
+gdbpy_initialize_parameters ()
 {
   int i;
 

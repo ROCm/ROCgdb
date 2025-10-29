@@ -17,6 +17,7 @@
 
 #include "hip/hip_runtime.h"
 #include <cstdio>
+#include <stdlib.h>
 #include <vector>
 
 #define CHECK(cmd)                                                           \

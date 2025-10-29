@@ -139,6 +139,11 @@ DESCRIPTION
 .#define TARGET_KEEP_UNUSED_SECTION_SYMBOLS true
 .#endif
 .
+.{* Define to TRUE if section merging is supported by the backend.  *}
+.#ifndef TARGET_MERGE_SECTIONS
+.#define TARGET_MERGE_SECTIONS false
+.#endif
+.
 	This is the structure which defines the type of BFD this is.  The
 	<<xvec>> member of the struct <<bfd>> itself points here.  Each
 	module that implements access to a different target under BFD,
@@ -219,6 +224,9 @@ CODE_FRAGMENT
 .
 . {* TRUE if unused section symbols should be kept.  *}
 .  bool keep_unused_section_symbols;
+.
+.  {* TRUE if section merging is supported by the backend.  *}
+.  bool merge_sections;
 .
 .  {* Entries for byte swapping for data. These are different from the
 .     other entry points, since they don't take a BFD as the first argument.
@@ -461,7 +469,6 @@ BFD_JUMP_TABLE macros.
 .  NAME##_bfd_link_check_relocs, \
 .  NAME##_bfd_gc_sections, \
 .  NAME##_bfd_lookup_section_flags, \
-.  NAME##_bfd_merge_sections, \
 .  NAME##_bfd_is_group_section, \
 .  NAME##_bfd_group_name, \
 .  NAME##_bfd_discard_group, \
@@ -516,9 +523,6 @@ BFD_JUMP_TABLE macros.
 .  {* Sets the bitmask of allowed and disallowed section flags.  *}
 .  bool (*_bfd_lookup_section_flags) (struct bfd_link_info *,
 .				      struct flag_info *, asection *);
-.
-.  {* Attempt to merge SEC_MERGE sections.  *}
-.  bool (*_bfd_merge_sections) (bfd *, struct bfd_link_info *);
 .
 .  {* Is this section a member of a group?  *}
 .  bool (*_bfd_is_group_section) (bfd *, const struct bfd_section *);
@@ -676,9 +680,7 @@ to find an alternative output format that is suitable.
 extern const bfd_target aarch64_elf32_be_vec;
 extern const bfd_target aarch64_elf32_le_vec;
 extern const bfd_target aarch64_elf64_be_vec;
-extern const bfd_target aarch64_elf64_be_cloudabi_vec;
 extern const bfd_target aarch64_elf64_le_vec;
-extern const bfd_target aarch64_elf64_le_cloudabi_vec;
 extern const bfd_target aarch64_mach_o_vec;
 extern const bfd_target aarch64_pei_le_vec;
 extern const bfd_target aarch64_pe_le_vec;
@@ -929,7 +931,6 @@ extern const bfd_target wasm32_elf32_vec;
 extern const bfd_target x86_64_coff_vec;
 extern const bfd_target x86_64_elf32_vec;
 extern const bfd_target x86_64_elf64_vec;
-extern const bfd_target x86_64_elf64_cloudabi_vec;
 extern const bfd_target x86_64_elf64_fbsd_vec;
 extern const bfd_target x86_64_elf64_sol2_vec;
 extern const bfd_target x86_64_mach_o_vec;
@@ -987,9 +988,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&aarch64_elf32_be_vec,
 	&aarch64_elf32_le_vec,
 	&aarch64_elf64_be_vec,
-	&aarch64_elf64_be_cloudabi_vec,
 	&aarch64_elf64_le_vec,
-	&aarch64_elf64_le_cloudabi_vec,
 	&aarch64_mach_o_vec,
 	&aarch64_pe_le_vec,
 	&aarch64_pei_le_vec,
@@ -1341,7 +1340,6 @@ static const bfd_target * const _bfd_target_vector[] =
 	&x86_64_coff_vec,
 	&x86_64_elf32_vec,
 	&x86_64_elf64_vec,
-	&x86_64_elf64_cloudabi_vec,
 	&x86_64_elf64_fbsd_vec,
 	&x86_64_elf64_sol2_vec,
 	&x86_64_mach_o_vec,

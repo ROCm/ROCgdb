@@ -36,7 +36,6 @@
 #include "valprint.h"
 #include "cli/cli-decode.h"
 #include "extension.h"
-#include <ctype.h>
 #include "tracepoint.h"
 #include "cp-abi.h"
 #include "user-regs.h"
@@ -1435,12 +1434,15 @@ value::address () const
 {
   if (m_lval != lval_memory)
     return 0;
+
   if (m_parent != NULL)
     return m_parent->address () + m_offset;
-  if (NULL != TYPE_DATA_LOCATION (type ()))
+
+  if (dynamic_prop *dyn_prop = type ()->dyn_prop (DYN_PROP_DATA_LOCATION);
+      dyn_prop != nullptr)
     {
-      gdb_assert (TYPE_DATA_LOCATION (type ())->is_constant ());
-      return TYPE_DATA_LOCATION_ADDR (type ());
+      gdb_assert (dyn_prop->is_constant ());
+      return dyn_prop->const_val ();
     }
 
   return m_location.address + m_offset;
@@ -1695,15 +1697,15 @@ value::set_component_location (const struct value *whole)
   /* If the WHOLE value has a dynamically resolved location property then
      update the address of the COMPONENT.  */
   type = whole->type ();
-  if (NULL != TYPE_DATA_LOCATION (type)
-      && TYPE_DATA_LOCATION (type)->is_constant ())
-    set_address (TYPE_DATA_LOCATION_ADDR (type));
+  if (dynamic_prop *dyn_prop = type->dyn_prop (DYN_PROP_DATA_LOCATION);
+      dyn_prop != nullptr && dyn_prop->is_constant ())
+    set_address (dyn_prop->const_val ());
 
   /* Similarly, if the COMPONENT value has a dynamically resolved location
      property then update its address.  */
   type = this->type ();
-  if (NULL != TYPE_DATA_LOCATION (type)
-      && TYPE_DATA_LOCATION (type)->is_constant ())
+  if (dynamic_prop *dyn_prop = type->dyn_prop (DYN_PROP_DATA_LOCATION);
+      dyn_prop != nullptr && dyn_prop->is_constant ())
     {
       /* If the COMPONENT has a dynamic location, and is an
 	 lval_internalvar_component, then we change it to a lval_memory.
@@ -1729,7 +1731,8 @@ value::set_component_location (const struct value *whole)
 	}
       else
 	gdb_assert (this->lval () == lval_memory);
-      set_address (TYPE_DATA_LOCATION_ADDR (type));
+
+      set_address (dyn_prop->const_val ());
     }
 }
 
@@ -3149,13 +3152,13 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       v->set_offset (this->offset ());
       v->set_embedded_offset (offset + embedded_offset () + boffset);
     }
-  else if (NULL != TYPE_DATA_LOCATION (type))
+  else if (NULL != type->dyn_prop (DYN_PROP_DATA_LOCATION))
     {
       /* Field is a dynamic data member.  */
 
       gdb_assert (0 == offset);
       /* We expect an already resolved data location.  */
-      gdb_assert (TYPE_DATA_LOCATION (type)->is_constant ());
+      gdb_assert (type->dyn_prop (DYN_PROP_DATA_LOCATION)->is_constant ());
       /* For dynamic data types defer memory allocation
 	 until we actual access the value.  */
       v = value::allocate_lazy (type);
@@ -3727,9 +3730,12 @@ value_from_contents_and_address (struct type *type,
     v = value::allocate_lazy (resolved_type);
   else
     v = value_from_contents (resolved_type, valaddr);
-  if (TYPE_DATA_LOCATION (resolved_type_no_typedef) != NULL
-      && TYPE_DATA_LOCATION (resolved_type_no_typedef)->is_constant ())
-    address = TYPE_DATA_LOCATION_ADDR (resolved_type_no_typedef);
+
+  if (dynamic_prop *dyn_prop
+	= resolved_type_no_typedef->dyn_prop (DYN_PROP_DATA_LOCATION);
+      dyn_prop != nullptr && dyn_prop->is_constant ())
+    address = dyn_prop->const_val ();
+
   v->set_lval (lval_memory);
   v->set_address (address);
   return v;
@@ -3766,11 +3772,11 @@ value_from_history_ref (const char *h, const char **endp)
     len = 2;
 
   /* Find length of numeral string.  */
-  for (; isdigit (h[len]); len++)
+  for (; c_isdigit (h[len]); len++)
     ;
 
   /* Make sure numeral string is not part of an identifier.  */
-  if (h[len] == '_' || isalpha (h[len]))
+  if (h[len] == '_' || c_isalpha (h[len]))
     return NULL;
 
   /* Now collect the index value.  */
@@ -3778,7 +3784,7 @@ value_from_history_ref (const char *h, const char **endp)
     {
       if (len == 2)
 	{
-	  /* For some bizarre reason, "$$" is equivalent to "$$1", 
+	  /* For some bizarre reason, "$$" is equivalent to "$$1",
 	     rather than to "$$0" as it ought to be!  */
 	  index = -1;
 	  *endp += len;

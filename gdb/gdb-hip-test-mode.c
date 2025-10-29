@@ -87,10 +87,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, const char *name)
   return gdb_hip_test_mode_frob_names (objfile, std::string_view (name)).data ();
 }
 
-void _initialize_gdb_hip_test_mode ();
-
-void
-_initialize_gdb_hip_test_mode ()
+INIT_GDB_FILE (gdb_hip_test_mode)
 {
   const char *p = getenv ("GDB_HIP_TEST_MODE");
   if (p != nullptr)
