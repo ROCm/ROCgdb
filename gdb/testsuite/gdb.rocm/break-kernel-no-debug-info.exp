@@ -45,7 +45,7 @@ with_rocm_gpu_lock {
 	"Breakpoint $::decimal \\(kern\\) pending."
 
     gdb_test "continue" \
-	"Thread $::decimal hit Breakpoint $::decimal, $::hex in kern.*"
+	"Thread $::decimal.*hit Breakpoint $::decimal, with lane $::decimal, $::hex in kern\\(\\)\[^\r\n\]+"
 
     gdb_test "continue" \
 	"Inferior 1 .* exited normally.*" \
