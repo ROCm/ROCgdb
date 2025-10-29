@@ -2906,6 +2906,13 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
   CORE_ADDR best_end = 0;
   struct symtab *best_symtab = 0;
 
+  if (section == nullptr)
+    {
+      section = find_pc_overlay (pc);
+      if (section == nullptr)
+	section = find_pc_section (pc);
+    }
+
   /* Store here the first line number
      of a file which contains the line at the smallest pc after PC.
      If we don't find a line whose range contains PC,
@@ -2966,7 +2973,7 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
    * rather than the stub address.
    *
    * Assumptions being made about the minimal symbol table:
-   *   1. lookup_minimal_symbol_by_pc() will return a trampoline only
+   *   1. lookup_minimal_symbol_by_pc_section() will return a trampoline only
    *      if we're really in the trampoline.s If we're beyond it (say
    *      we're in "foo" in the above example), it'll have a closer
    *      symbol (the "foo" text symbol for example) and will not
@@ -2977,7 +2984,7 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
    *      check for the address being the same, to avoid an
    *      infinite recursion.
    */
-  bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (pc);
+  bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc_section (pc, section);
   if (msymbol.minsym != NULL)
     if (msymbol.minsym->type () == mst_solib_trampoline)
       {
@@ -3031,6 +3038,7 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
       if (notcurrent)
 	pc++;
       val.pc = pc;
+      val.section = section;
       return val;
     }
 
@@ -3553,10 +3561,10 @@ find_function_start_sal_1 (CORE_ADDR func_addr, obj_section *section,
 /* See symtab.h.  */
 
 symtab_and_line
-find_function_start_sal (CORE_ADDR func_addr, bool funfirstline)
+find_function_start_sal (CORE_ADDR func_addr, obj_section *section, bool funfirstline)
 {
   symtab_and_line sal
-    = find_function_start_sal_1 (func_addr, nullptr, funfirstline);
+    = find_function_start_sal_1 (func_addr, section, funfirstline);
 
   /* find_function_start_sal_1 does a linetable search, so it finds
      the symtab and linenumber, but not a symbol.  Fill in the
