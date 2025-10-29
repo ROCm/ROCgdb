@@ -600,7 +600,7 @@ lex_multibyte_char (const char *text, int *len)
     return 0;
 
   auto_obstack result;
-  convert_between_encodings (host_charset (), HOST_UTF32,
+  convert_between_encodings (host_charset (), host_utf32 (),
 			     (const gdb_byte *) text,
 			     quote, 1, &result, translit_none);
 
@@ -730,7 +730,7 @@ rust_parser::lex_string ()
 	  if (is_byte)
 	    obstack_1grow (&obstack, value);
 	  else
-	    convert_between_encodings (HOST_UTF32, "UTF-8",
+	    convert_between_encodings (host_utf32 (), "UTF-8",
 				       (gdb_byte *) &value,
 				       sizeof (value), sizeof (value),
 				       &obstack, translit_none);

@@ -983,7 +983,7 @@ ada_encode_1 (const char *decoded, bool throw_errors)
 	{
 	  convert_between_encodings
 	    (host_charset (),
-	     is_utf8 ? HOST_UTF32 : ada_source_charset,
+	     is_utf8 ? host_utf32 () : ada_source_charset,
 	     (const gdb_byte *) encoding_buffer.c_str (),
 	     encoding_buffer.length (), 1,
 	     &storage, translit_none);
@@ -1062,7 +1062,7 @@ ada_fold_name (std::string_view name, bool throw_on_error = false)
       try
 	{
 	  convert_between_encodings
-	    (host_charset (), HOST_UTF32,
+	    (host_charset (), host_utf32 (),
 	     (const gdb_byte *) name.data (),
 	     name.length (), 1,
 	     &storage, translit_none);
@@ -1110,7 +1110,7 @@ ada_fold_name (std::string_view name, bool throw_on_error = false)
       auto_obstack reconverted;
       try
 	{
-	  convert_between_encodings (HOST_UTF32,
+	  convert_between_encodings (host_utf32 (),
 				     host_charset (),
 				     (const gdb_byte *) chars,
 				     num_chars * sizeof (uint32_t),
@@ -1288,7 +1288,7 @@ convert_from_hex_encoded (std::string &out, const char *str, int n)
 				     &bytes, translit_none);
 	}
       else
-	convert_between_encodings (HOST_UTF32, host_charset (),
+	convert_between_encodings (host_utf32 (), host_charset (),
 				   (const gdb_byte *) &value,
 				   sizeof (value), sizeof (value),
 				   &bytes, translit_none);
