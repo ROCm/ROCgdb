@@ -966,7 +966,9 @@ _bfd_x86_elf_check_relocs (bfd *abfd,
 	  goto error_return;
 	}
 
-      h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx, symtab_hdr);
+      h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx,
+					symtab_hdr->sh_info,
+					NUM_SHDR_ENTRIES (symtab_hdr));
 
       if (X86_NEED_DYNAMIC_RELOC_TYPE_P (is_x86_64, r_type)
 	  && NEED_DYNAMIC_RELOCATION_P (is_x86_64, info, true, h, sec,
@@ -1194,7 +1196,9 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
       else
 	{
 	  /* Get H and SEC for GENERATE_DYNAMIC_RELOCATION_P below.  */
-	  h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx, symtab_hdr);
+	  h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx,
+					    symtab_hdr->sh_info,
+					    NUM_SHDR_ENTRIES (symtab_hdr));
 	  if (h == NULL)
 	    {
 	      /* FIXMEL: Issue an error message ?  */
@@ -3711,9 +3715,9 @@ _bfd_x86_elf_link_symbol_references_local (struct bfd_link_info *info,
 asection *
 _bfd_x86_elf_gc_mark_hook (asection *sec,
 			   struct bfd_link_info *info,
-			   Elf_Internal_Rela *rel,
+			   struct elf_reloc_cookie *cookie,
 			   struct elf_link_hash_entry *h,
-			   Elf_Internal_Sym *sym)
+			   unsigned int symndx)
 {
   /* Compiler should optimize this out.  */
   if (((unsigned int) R_X86_64_GNU_VTINHERIT
@@ -3723,14 +3727,14 @@ _bfd_x86_elf_gc_mark_hook (asection *sec,
     abort ();
 
   if (h != NULL)
-    switch (ELF32_R_TYPE (rel->r_info))
+    switch (ELF32_R_TYPE (cookie->rel->r_info))
       {
       case R_X86_64_GNU_VTINHERIT:
       case R_X86_64_GNU_VTENTRY:
 	return NULL;
       }
 
-  return _bfd_elf_gc_mark_hook (sec, info, rel, h, sym);
+  return _bfd_elf_gc_mark_hook (sec, info, cookie, h, symndx);
 }
 
 static bfd_vma
