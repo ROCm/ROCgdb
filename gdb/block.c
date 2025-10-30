@@ -119,7 +119,8 @@ block::inlined_p () const
 }
 
 /* A helper function that checks whether PC is in the blockvector BL.
-   It returns the containing block if there is one, or else NULL.  */
+   It returns the innermost lexical block containing the specified pc 
+   if there is one, or else NULL.  */
 
 static const struct block *
 find_block_in_blockvector (const struct blockvector *bl, CORE_ADDR pc)
@@ -183,7 +184,7 @@ blockvector_for_pc_sect (CORE_ADDR pc, struct obj_section *section,
   if (cust == NULL)
     {
       /* First search all symtabs for one whose file contains our pc */
-      cust = find_pc_sect_compunit_symtab (pc, section);
+      cust = find_compunit_symtab_for_pc_sect (pc, section);
       if (cust == NULL)
 	return 0;
     }
@@ -219,7 +220,7 @@ call_site_for_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
   call_site *cs = nullptr;
 
   /* -1 as tail call PC can be already after the compilation unit range.  */
-  cust = find_pc_compunit_symtab (pc - 1);
+  cust = find_compunit_symtab_for_pc (pc - 1);
 
   if (cust != nullptr)
     cs = cust->find_call_site (pc);
@@ -325,10 +326,11 @@ block::set_scope (const char *scope, struct obstack *obstack)
 next_range<using_direct>
 block::get_using () const
 {
-  if (m_namespace_info == nullptr)
-    return {};
-  else
-    return next_range<using_direct> (m_namespace_info->using_decl);
+  next_iterator<using_direct> begin (m_namespace_info != nullptr
+				     ? m_namespace_info->using_decl
+				     : nullptr);
+
+  return next_range<using_direct> (std::move (begin));
 }
 
 /* See block.h.  */
@@ -626,7 +628,7 @@ block_iterator_next (struct block_iterator *iterator)
 bool
 best_symbol (struct symbol *a, const domain_search_flags domain)
 {
-  if (a->aclass () == LOC_UNRESOLVED)
+  if (a->loc_class () == LOC_UNRESOLVED)
     return false;
 
   if ((domain & SEARCH_VAR_DOMAIN) != 0)
@@ -652,10 +654,10 @@ better_symbol (struct symbol *a, struct symbol *b,
   if (b->matches (domain) && !a->matches (domain))
     return b;
 
-  if (a->aclass () != LOC_UNRESOLVED && b->aclass () == LOC_UNRESOLVED)
+  if (a->loc_class () != LOC_UNRESOLVED && b->loc_class () == LOC_UNRESOLVED)
     return a;
 
-  if (b->aclass () != LOC_UNRESOLVED && a->aclass () == LOC_UNRESOLVED)
+  if (b->loc_class () != LOC_UNRESOLVED && a->loc_class () == LOC_UNRESOLVED)
     return b;
 
   return a;
@@ -678,22 +680,9 @@ block_lookup_symbol (const struct block *block, const lookup_name_info &name,
 {
   if (!block->function ())
     {
-      struct symbol *other = NULL;
-
-      for (struct symbol *sym : block_iterator_range (block, &name))
-	{
-	  /* See comment related to PR gcc/debug/91507 in
-	     block_lookup_symbol_primary.  */
-	  if (best_symbol (sym, domain))
-	    return sym;
-	  /* This is a bit of a hack, but symbol_matches_domain might ignore
-	     STRUCT vs VAR domain symbols.  So if a matching symbol is found,
-	     make sure there is no "better" matching symbol, i.e., one with
-	     exactly the same domain.  PR 16253.  */
-	  if (sym->matches (domain))
-	    other = better_symbol (other, sym, domain);
-	}
-      return other;
+      best_symbol_tracker tracker;
+      tracker.search (nullptr, block, name, domain);
+      return tracker.currently_best.symbol;
     }
   else
     {
@@ -725,24 +714,13 @@ block_lookup_symbol (const struct block *block, const lookup_name_info &name,
 
 /* See block.h.  */
 
-struct symbol *
-block_lookup_symbol_primary (const struct block *block, const char *name,
+bool
+best_symbol_tracker::search (compunit_symtab *symtab,
+			     const struct block *block,
+			     const lookup_name_info &name,
 			     const domain_search_flags domain)
 {
-  struct symbol *sym, *other;
-  struct mdict_iterator mdict_iter;
-
-  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
-
-  /* Verify BLOCK is STATIC_BLOCK or GLOBAL_BLOCK.  */
-  gdb_assert (block->superblock () == NULL
-	      || block->superblock ()->superblock () == NULL);
-
-  other = NULL;
-  for (sym = mdict_iter_match_first (block->multidict (), lookup_name,
-				     &mdict_iter);
-       sym != NULL;
-       sym = mdict_iter_match_next (lookup_name, &mdict_iter))
+  for (symbol *sym : block_iterator_range (block, &name))
     {
       /* With the fix for PR gcc/debug/91507, we get for:
 	 ...
@@ -772,17 +750,28 @@ block_lookup_symbol_primary (const struct block *block, const char *name,
 	 the only option to make this work is improve the fallback to use the
 	 size of the minimal symbol.  Filed as PR exp/24989.  */
       if (best_symbol (sym, domain))
-	return sym;
+	{
+	  best_symtab = symtab;
+	  currently_best = { sym, block };
+	  return true;
+	}
 
       /* This is a bit of a hack, but 'matches' might ignore
 	 STRUCT vs VAR domain symbols.  So if a matching symbol is found,
 	 make sure there is no "better" matching symbol, i.e., one with
 	 exactly the same domain.  PR 16253.  */
       if (sym->matches (domain))
-	other = better_symbol (other, sym, domain);
+	{
+	  symbol *better = better_symbol (sym, currently_best.symbol, domain);
+	  if (better != currently_best.symbol)
+	    {
+	      best_symtab = symtab;
+	      currently_best = { better, block };
+	    }
+	}
     }
 
-  return other;
+  return false;
 }
 
 /* See block.h.  */
@@ -827,6 +816,44 @@ make_blockranges (struct objfile *objfile,
   for (int i = 0; i < n; i++)
     blr->range[i] = rangevec[i];
   return blr;
+}
+
+/* See block.h.  */
+
+bool
+blockvector::block_less_than (const struct block *b1, const struct block *b2)
+{
+  /* Blocks with lower start address must come before blocks with higher start
+     address.  If two blocks start at the same address,  enclosing block 
+     should come before nested blocks.  Function find_block_in_blockvector() 
+     depends on this ordering, allowing it to use binary search to find 
+     inner-most block for given address.  */
+  CORE_ADDR start1 = b1->start ();
+  CORE_ADDR start2 = b2->start ();
+
+  if (start1 != start2)
+    return start1 < start2;
+
+  return (b1->end () > b2->end ());
+}
+
+/* See block.h.  */
+
+void
+blockvector::append_block (struct block *block)
+{
+  gdb_assert ((num_blocks () == GLOBAL_BLOCK && block->is_global_block ())
+	      || (num_blocks () == STATIC_BLOCK && block->is_static_block ())
+	      || (num_blocks () >= FIRST_LOCAL_BLOCK
+		  && !block_less_than (block, m_blocks.back ())));
+
+  m_blocks.push_back (block);
+}
+
+blockvector::~blockvector ()
+{
+  for (struct block *bl : m_blocks)
+    mdict_free (bl->multidict ());
 }
 
 /* Implement 'maint info blocks' command.  If passed an argument then
@@ -932,9 +959,7 @@ maintenance_info_blocks (const char *arg, int from_tty)
 
 
 
-void _initialize_block ();
-void
-_initialize_block ()
+INIT_GDB_FILE (block)
 {
   add_cmd ("blocks", class_maintenance, maintenance_info_blocks,
 	   _("\

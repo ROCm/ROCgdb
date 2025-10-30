@@ -18,6 +18,8 @@
 */
 
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                           \
   {                                                                          \
@@ -33,24 +35,35 @@
 __global__ void
 kernel ()
 {
-  asm("s_nop	0");
+  asm("	  .globl GETPC			    			  \n\t"
+      "	  .globl SWAPPC	      					  \n\t"
+      "	  .globl CALL	     		    			  \n\t"
+      "	  .globl SETPC	      		    			  \n\t"
+      "	  .globl END_OF_TESTS					  \n\t"
 
-  asm("s_getpc_b64	[s0, s1]\n\t" /* getpc breakpoint here */
-      "s_add_u32	s2, s0, 16\n\t"
-      "s_addc_u32	s3, s1, 0");
+      "	  s_nop		0					  \n\t"
 
-  asm("s_swappc_b64	[s0, s1], [s2, s3]\n\t" /* swappc breakpoint here */
-      "s_trap	2");
+      "GETPC:	    						  \n\t"
+      "	  s_getpc_b64	[s4, s5]				  \n\t"
+      "	  s_add_u32	s6, s4, 16				  \n\t"
+      "	  s_addc_u32	s7, s5, 0				  \n\t"
 
-  asm("s_call_b64	[s0,s1], 1\n\t" /* call breakpoint here */
-      "s_trap	2\n\t"
-      "s_add_u32	s2, s0, 20\n\t"
-      "s_addc_u32	s3, s1, 0");
+      "SWAPPC:	      						  \n\t"
+      "	  s_swappc_b64	[s4, s5], [s6, s7]			  \n\t"
+      "	  s_trap	2					  \n\t"
 
-  asm("s_setpc_b64	[s2, s3]\n\t" /* setpc breakpoint here */
-      "s_trap	2");
+      "CALL:	    						  \n\t"
+      "	  s_call_b64	[s4, s5], 1				  \n\t"
+      "	  s_trap		2				  \n\t"
+      "	  s_add_u32	s6, s4, 20				  \n\t"
+      "	  s_addc_u32	s7, s5, 0				  \n\t"
 
-  asm("s_nop	0"); /* last breakpoint here */
+      "SETPC:	    						  \n\t"
+      "	  s_setpc_b64	[s6, s7]				  \n\t"
+      "	  s_trap	2					  \n\t"
+
+      "END_OF_TESTS:						  \n\t"
+      "	  s_nop		1" ::: "s4", "s5", "s6", "s7");
 }
 
 int

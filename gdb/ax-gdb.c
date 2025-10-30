@@ -303,7 +303,7 @@ gen_traced_pop (struct agent_expr *ax, struct axs_value *value)
 	   larger than will fit in a stack, so just mark it for
 	   collection and be done with it.  */
 	ax_reg_mask (ax, value->u.reg);
-       
+
 	/* But if the register points to a string, assume the value
 	   will fit on the stack and push it anyway.  */
 	if (string_trace)
@@ -525,7 +525,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
     return computed_ops->tracepoint_var_ref (var, ax, value);
 
   /* I'm imitating the code in read_var_value.  */
-  switch (var->aclass ())
+  switch (var->loc_class ())
     {
     case LOC_CONST:		/* A constant, like an enum value.  */
       ax_const_l (ax, (LONGEST) var->value_longest ());
@@ -538,8 +538,7 @@ gen_var_ref (struct agent_expr *ax, struct axs_value *value, struct symbol *var)
       break;
 
     case LOC_CONST_BYTES:
-      internal_error (_("gen_var_ref: LOC_CONST_BYTES "
-			"symbols are not supported"));
+      error (_("gen_var_ref: LOC_CONST_BYTES symbols are not supported"));
 
       /* Variable at a fixed location in memory.  Easy.  */
     case LOC_STATIC:
@@ -1425,7 +1424,7 @@ gen_struct_ref (struct agent_expr *ax, struct axs_value *value,
 
   /* Search through fields and base classes recursively.  */
   found = gen_struct_ref_recursive (ax, value, field, 0, type);
-  
+
   if (!found)
     error (_("Couldn't find member named `%s' in struct/union/class `%s'"),
 	   field, type->name ());
@@ -1458,7 +1457,7 @@ gen_static_field (struct agent_expr *ax, struct axs_value *value,
       if (sym)
 	{
 	  gen_var_ref (ax, value, sym);
-  
+
 	  /* Don't error if the value was optimized out, we may be
 	     scanning all static fields and just want to pass over this
 	     and continue with the rest.  */
@@ -1501,7 +1500,7 @@ gen_struct_elt_for_reference (struct agent_expr *ax, struct axs_value *value,
 	  if (t->field (i).is_packed ())
 	    error (_("pointers to bitfield members not allowed"));
 
-	  /* FIXME we need a way to do "want_address" equivalent */	  
+	  /* FIXME we need a way to do "want_address" equivalent */
 
 	  error (_("Cannot reference non-static field \"%s\""), fieldname);
 	}
@@ -1523,7 +1522,7 @@ gen_namespace_elt (struct agent_expr *ax, struct axs_value *value,
   int found = gen_maybe_namespace_elt (ax, value, curtype, name);
 
   if (!found)
-    error (_("No symbol \"%s\" in namespace \"%s\"."), 
+    error (_("No symbol \"%s\" in namespace \"%s\"."),
 	   name, curtype->name ());
 
   return found;
@@ -2178,7 +2177,7 @@ gen_expr_binop_rest (struct expression *exp,
       gen_binop (ax, value, value1, value2,
 		 aop_bit_or, aop_bit_or, 0, "bitwise or");
       break;
-      
+
     case BINOP_BITWISE_XOR:
       gen_binop (ax, value, value1, value2,
 		 aop_bit_xor, aop_bit_xor, 0, "bitwise exclusive-or");
@@ -2593,7 +2592,7 @@ maint_agent_printf_command (const char *cmdrest, int from_tty)
 
   if (*cmdrest++ != '"')
     error (_("Bad format string, non-terminated '\"'."));
-  
+
   cmdrest = skip_spaces (cmdrest);
 
   if (*cmdrest != ',' && *cmdrest != 0)
@@ -2634,9 +2633,7 @@ maint_agent_printf_command (const char *cmdrest, int from_tty)
 
 /* Initialization code.  */
 
-void _initialize_ax_gdb ();
-void
-_initialize_ax_gdb ()
+INIT_GDB_FILE (ax_gdb)
 {
   add_cmd ("agent", class_maintenance, maint_agent_command,
 	   _("\

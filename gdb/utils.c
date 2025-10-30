@@ -18,7 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
 #include "gdbsupport/gdb_wait.h"
 #include "gdbsupport/scoped_signal_handler.h"
 #include "event-top.h"
@@ -76,7 +75,6 @@
 #include "gdbsupport/scope-exit.h"
 #include "gdbarch.h"
 #include "cli-out.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "bt-utils.h"
 #include "gdbsupport/buildargv.h"
 #include "pager.h"
@@ -84,6 +82,7 @@
 #include "arch-utils.h"
 #include "gdbsupport/gdb_tilde_expand.h"
 #include "gdbsupport/eintr.h"
+#include "readline/tilde.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -1010,7 +1009,7 @@ parse_escape (struct gdbarch *gdbarch, const char **string_ptr)
 	  while (++count < 3)
 	    {
 	      c = (**string_ptr);
-	      if (ISDIGIT (c) && c != '8' && c != '9')
+	      if (c_isdigit (c) && c != '8' && c != '9')
 		{
 		  (*string_ptr)++;
 		  i *= 8;
@@ -1403,7 +1402,26 @@ pager_file::emit_style_escape (const ui_file_style &style)
     {
       m_applied_style = style;
       if (m_paging)
-	m_stream->emit_style_escape (style);
+	{
+	  /* Previous style changes will have been sent to m_stream via
+	     escape sequences encoded in the m_wrap_buffer.  As a result,
+	     the m_stream->m_applied_style will not have been updated.
+
+	     If we now use m_stream->emit_style_escape, then the required
+	     style might not actually be emitted as the requested style
+	     might happen to match the out of date value in
+	     m_stream->m_applied_style.
+
+	     Instead, send the style change directly using m_stream->puts.
+
+	     However, we track what style is currently applied to the
+	     underlying stream in m_stream_style, this is updated whenever
+	     m_wrap_buffer is flushed to the underlying stream.  And so, if
+	     the style we are applying matches what we know is currently
+	     applied to the underlying stream, then we can skip sending
+	     this style to the stream.  */
+	  this->set_stream_style (m_applied_style);
+	}
       else
 	m_wrap_buffer.append (style.to_ansi ());
     }
@@ -1426,8 +1444,8 @@ pager_file::prompt_for_continue ()
 
   scoped_restore save_paging = make_scoped_restore (&m_paging, true);
 
-  /* Clear the current styling.  */
-  m_stream->emit_style_escape (ui_file_style ());
+  /* Clear the current styling on ourselves and the managed stream.  */
+  this->emit_style_escape (ui_file_style ());
 
   if (annotation_level > 1)
     m_stream->puts (("\n\032\032pre-prompt-for-continue\n"));
@@ -1510,6 +1528,7 @@ pager_file::flush_wrap_buffer ()
   if (!m_paging && !m_wrap_buffer.empty ())
     {
       m_stream->puts (m_wrap_buffer.c_str ());
+      m_stream_style = m_applied_style;
       m_wrap_buffer.clear ();
     }
 }
@@ -1684,10 +1703,25 @@ pager_file::puts (const char *linebuffer)
 	  else if (*linebuffer == '\033'
 		   && skip_ansi_escape (linebuffer, &skip_bytes))
 	    {
-	      m_wrap_buffer.append (linebuffer, skip_bytes);
-	      /* Note that we don't consider this a character, so we
+	      /* We don't consider escape sequences as characters, so we
 		 don't increment chars_printed here.  */
-	      linebuffer += skip_bytes;
+
+	      size_t style_len;
+	      ui_file_style style;
+	      if (style.parse (linebuffer, &style_len)
+		  && style_len <= skip_bytes)
+		{
+		  this->emit_style_escape (style);
+
+		  linebuffer += style_len;
+		  skip_bytes -= style_len;
+		}
+
+	      if (skip_bytes > 0)
+		{
+		  m_wrap_buffer.append (linebuffer, skip_bytes);
+		  linebuffer += skip_bytes;
+		}
 	    }
 	  else if (*linebuffer == '\r')
 	    {
@@ -1726,7 +1760,8 @@ pager_file::puts (const char *linebuffer)
 		     current applied style to how it was at the WRAP_COLUMN
 		     location.  */
 		  m_applied_style = m_wrap_style;
-		  m_stream->emit_style_escape (ui_file_style ());
+		  this->set_stream_style (ui_file_style ());
+
 		  /* If we aren't actually wrapping, don't output
 		     newline -- if chars_per_line is right, we
 		     probably just overflowed anyway; if it's wrong,
@@ -1754,7 +1789,7 @@ pager_file::puts (const char *linebuffer)
 
 		  /* Having finished inserting the wrapping we should
 		     restore the style as it was at the WRAP_COLUMN.  */
-		  m_stream->emit_style_escape (m_wrap_style);
+		  this->set_stream_style (m_wrap_style);
 
 		  /* The WRAP_BUFFER will still contain content, and that
 		     content might set some alternative style.  Restore
@@ -1769,7 +1804,7 @@ pager_file::puts (const char *linebuffer)
 		  m_wrap_column = 0;	/* And disable fancy wrap */
 		}
 	      else if (did_paginate)
-		m_stream->emit_style_escape (save_style);
+		this->emit_style_escape (save_style);
 	    }
 	}
 
@@ -1790,7 +1825,7 @@ void
 pager_file::write (const char *buf, long length_buf)
 {
   /* We have to make a string here because the pager uses
-     skip_ansi_escape, which requires NUL-termination.  */
+     examine_ansi_escape, which requires NUL-termination.  */
   std::string str (buf, length_buf);
   this->puts (str.c_str ());
 }
@@ -2034,7 +2069,7 @@ fprintf_symbol (struct ui_file *stream, const char *name,
 static bool
 valid_identifier_name_char (int ch)
 {
-  return (ISALNUM (ch) || ch == '_');
+  return (c_isalnum (ch) || ch == '_');
 }
 
 /* Skip to end of token, or to END, whatever comes first.  Input is
@@ -2044,7 +2079,7 @@ static const char *
 cp_skip_operator_token (const char *token, const char *end)
 {
   const char *p = token;
-  while (p != end && !ISSPACE (*p) && *p != '(')
+  while (p != end && !c_isspace (*p) && *p != '(')
     {
       if (valid_identifier_name_char (*p))
 	{
@@ -2098,9 +2133,9 @@ cp_skip_operator_token (const char *token, const char *end)
 static void
 skip_ws (const char *&string1, const char *&string2, const char *end_str2)
 {
-  while (ISSPACE (*string1))
+  while (c_isspace (*string1))
     string1++;
-  while (string2 < end_str2 && ISSPACE (*string2))
+  while (string2 < end_str2 && c_isspace (*string2))
     string2++;
 }
 
@@ -2164,7 +2199,7 @@ skip_template_parameter_list (const char **name)
       /* Skip any whitespace that might occur after the closing of the
 	 parameter list, but only if it is the end of parameter list.  */
       const char *q = p;
-      while (ISSPACE (*q))
+      while (c_isspace (*q))
 	++q;
       if (*q == '>')
 	p = q;
@@ -2196,8 +2231,8 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
   while (1)
     {
       if (skip_spaces
-	  || ((ISSPACE (*string1) && !valid_identifier_name_char (*string2))
-	      || (ISSPACE (*string2) && !valid_identifier_name_char (*string1))))
+	  || ((c_isspace (*string1) && !valid_identifier_name_char (*string2))
+	      || (c_isspace (*string2) && !valid_identifier_name_char (*string1))))
 	{
 	  skip_ws (string1, string2, end_str2);
 	  skip_spaces = false;
@@ -2230,7 +2265,7 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  if (match_for_lcd != NULL && abi_start != string1)
 	    match_for_lcd->mark_ignored_range (abi_start, string1);
 
-	  while (ISSPACE (*string1))
+	  while (c_isspace (*string1))
 	    string1++;
 	}
 
@@ -2297,9 +2332,9 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  string1++;
 	  string2++;
 
-	  while (ISSPACE (*string1))
+	  while (c_isspace (*string1))
 	    string1++;
-	  while (string2 < end_str2 && ISSPACE (*string2))
+	  while (string2 < end_str2 && c_isspace (*string2))
 	    string2++;
 	  continue;
 	}
@@ -2399,14 +2434,13 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
       if (case_sensitivity == case_sensitive_on && *string1 != *string2)
 	break;
       if (case_sensitivity == case_sensitive_off
-	  && (TOLOWER ((unsigned char) *string1)
-	      != TOLOWER ((unsigned char) *string2)))
+	  && c_tolower (*string1) != c_tolower (*string2))
 	break;
 
       /* If we see any non-whitespace, non-identifier-name character
 	 (any of "()<>*&" etc.), then skip spaces the next time
 	 around.  */
-      if (!ISSPACE (*string1) && !valid_identifier_name_char (*string1))
+      if (!c_isspace (*string1) && !valid_identifier_name_char (*string1))
 	skip_spaces = true;
 
       string1++;
@@ -3119,16 +3153,16 @@ strcmp_iw_ordered (const char *string1, const char *string2)
 
       while (*string1 != '\0' && *string2 != '\0')
 	{
-	  while (ISSPACE (*string1))
+	  while (c_isspace (*string1))
 	    string1++;
-	  while (ISSPACE (*string2))
+	  while (c_isspace (*string2))
 	    string2++;
 
 	  switch (case_pass)
 	  {
 	    case case_sensitive_off:
-	      c1 = TOLOWER ((unsigned char) *string1);
-	      c2 = TOLOWER ((unsigned char) *string2);
+	      c1 = c_tolower (*string1);
+	      c2 = c_tolower (*string2);
 	      break;
 	    case case_sensitive_on:
 	      c1 = *string1;
@@ -3172,7 +3206,7 @@ strcmp_iw_ordered (const char *string1, const char *string2)
 
       if (case_pass == case_sensitive_on)
 	return 0;
-      
+
       /* Otherwise the strings were equal in case insensitive way, make
 	 a more fine grained comparison in a case sensitive way.  */
 
@@ -3274,17 +3308,17 @@ string_to_core_addr (const char *my_string)
 {
   CORE_ADDR addr = 0;
 
-  if (my_string[0] == '0' && TOLOWER (my_string[1]) == 'x')
+  if (my_string[0] == '0' && c_tolower (my_string[1]) == 'x')
     {
       /* Assume that it is in hex.  */
       int i;
 
       for (i = 2; my_string[i] != '\0'; i++)
 	{
-	  if (ISDIGIT (my_string[i]))
+	  if (c_isdigit (my_string[i]))
 	    addr = (my_string[i] - '0') + (addr * 16);
-	  else if (ISXDIGIT (my_string[i]))
-	    addr = (TOLOWER (my_string[i]) - 'a' + 0xa) + (addr * 16);
+	  else if (c_isxdigit (my_string[i]))
+	    addr = (c_tolower (my_string[i]) - 'a' + 0xa) + (addr * 16);
 	  else
 	    error (_("invalid hex \"%s\""), my_string);
 	}
@@ -3296,7 +3330,7 @@ string_to_core_addr (const char *my_string)
 
       for (i = 0; my_string[i] != '\0'; i++)
 	{
-	  if (ISDIGIT (my_string[i]))
+	  if (c_isdigit (my_string[i]))
 	    addr = (my_string[i] - '0') + (addr * 10);
 	  else
 	    error (_("invalid decimal \"%s\""), my_string);
@@ -3589,6 +3623,14 @@ strip_leading_path_elements (const char *path, int n)
 
 /* See utils.h.  */
 
+gdb::unique_xmalloc_ptr<char>
+gdb_rl_tilde_expand (const char *path)
+{
+  return gdb::unique_xmalloc_ptr<char> (tilde_expand (path));
+}
+
+/* See utils.h.  */
+
 void
 copy_bitwise (gdb_byte *dest, ULONGEST dest_offset,
 	      const gdb_byte *source, ULONGEST source_offset,
@@ -3734,9 +3776,7 @@ test_assign_set_return_if_changed ()
 }
 #endif
 
-void _initialize_utils ();
-void
-_initialize_utils ()
+INIT_GDB_FILE (utils)
 {
   add_setshow_uinteger_cmd ("width", class_support, &chars_per_line, _("\
 Set number of characters where GDB should wrap lines of its output."), _("\

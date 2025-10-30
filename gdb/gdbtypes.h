@@ -133,8 +133,9 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   ((t)->dyn_prop (DYN_PROP_VARIANT_PARTS) != nullptr)
 
 /* * True if this type has a dynamic length.  */
-#define TYPE_HAS_DYNAMIC_LENGTH(t) \
-  ((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)
+#define TYPE_HAS_DYNAMIC_LENGTH(t)			\
+  (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
+   || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
 /* * Instruction-space delimited type.  This is for Harvard architectures
    which have separate instruction and data address spaces (and perhaps
@@ -456,6 +457,9 @@ enum dynamic_prop_node_kind
 
   /* A property holding the size of the type.  */
   DYN_PROP_BYTE_SIZE,
+
+  /* A property holding the size of the type, in bits.  */
+  DYN_PROP_BIT_SIZE,
 };
 
 /* * List for dynamic type attributes.  */
@@ -480,7 +484,10 @@ enum field_loc_kind
     FIELD_LOC_KIND_ENUMVAL,	/**< enumval */
     FIELD_LOC_KIND_PHYSADDR,	/**< physaddr */
     FIELD_LOC_KIND_PHYSNAME,	/**< physname */
-    FIELD_LOC_KIND_DWARF_BLOCK	/**< dwarf_block */
+    /* A DWARF block that computes the address of the field.  */
+    FIELD_LOC_KIND_DWARF_BLOCK_ADDR,	/**< dwarf_block */
+    /* A DWARF block that computes the bit offset of the field.  */
+    FIELD_LOC_KIND_DWARF_BLOCK_BITPOS,
   };
 
 /* * A discriminant to determine which field in the
@@ -616,6 +623,13 @@ struct field
     return m_loc_kind;
   }
 
+  /* Return true if this location has either "DWARF block" kind.  */
+  bool loc_is_dwarf_block () const
+  {
+    return (m_loc_kind == FIELD_LOC_KIND_DWARF_BLOCK_ADDR
+	    || m_loc_kind == FIELD_LOC_KIND_DWARF_BLOCK_BITPOS);
+  }
+
   LONGEST loc_bitpos () const
   {
     gdb_assert (m_loc_kind == FIELD_LOC_KIND_BITPOS);
@@ -666,13 +680,19 @@ struct field
 
   dwarf2_locexpr_baton *loc_dwarf_block () const
   {
-    gdb_assert (m_loc_kind == FIELD_LOC_KIND_DWARF_BLOCK);
+    gdb_assert (loc_is_dwarf_block ());
     return m_loc.dwarf_block;
   }
 
-  void set_loc_dwarf_block (dwarf2_locexpr_baton *dwarf_block)
+  void set_loc_dwarf_block_addr (dwarf2_locexpr_baton *dwarf_block)
   {
-    m_loc_kind = FIELD_LOC_KIND_DWARF_BLOCK;
+    m_loc_kind = FIELD_LOC_KIND_DWARF_BLOCK_ADDR;
+    m_loc.dwarf_block = dwarf_block;
+  }
+
+  void set_loc_dwarf_block_bitpos (dwarf2_locexpr_baton *dwarf_block)
+  {
+    m_loc_kind = FIELD_LOC_KIND_DWARF_BLOCK_BITPOS;
     m_loc.dwarf_block = dwarf_block;
   }
 
@@ -979,7 +999,7 @@ struct main_type
      because we can allocate the space for a type before
      we know what to put in it.  */
 
-  union 
+  union
   {
     struct field *fields;
 
@@ -1011,7 +1031,7 @@ struct main_type
 
 struct type
 {
-  /* Get the type code of this type. 
+  /* Get the type code of this type.
 
      Note that the code can be TYPE_CODE_TYPEDEF, so if you want the real
      type, you need to do `check_typedef (type)->code ()`.  */
@@ -1064,17 +1084,18 @@ struct type
     this->main_type->m_nfields = num_fields;
   }
 
-  /* Get the fields array of this type.  */
-  struct field *fields () const
-  {
-    return this->main_type->flds_bnds.fields;
-  }
-
   /* Get the field at index IDX.  */
   struct field &field (int idx) const
   {
     gdb_assert (idx >= 0 && idx < num_fields ());
     return this->fields ()[idx];
+  }
+
+  /* Return an array view of the fields.  */
+  gdb::array_view<struct field> fields () const
+  {
+    return gdb::make_array_view (this->main_type->flds_bnds.fields,
+				 num_fields ());
   }
 
   /* Set the fields array of this type.  */
@@ -1616,7 +1637,7 @@ struct fn_field
   const char *physname;
 
   /* * The function type for the method.
-	       
+
      (This comment used to say "The return value of the method", but
      that's wrong.  The function type is expected here, i.e. something
      with TYPE_CODE_METHOD, and *not* the return-value type).  */
@@ -1914,26 +1935,6 @@ extern unsigned type_align (struct type *);
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
 
-/* Property accessors for the type data location.  */
-#define TYPE_DATA_LOCATION(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_DATA_LOCATION))
-#define TYPE_DATA_LOCATION_BATON(thistype) \
-  TYPE_DATA_LOCATION (thistype)->data.baton
-#define TYPE_DATA_LOCATION_ADDR(thistype) \
-  (TYPE_DATA_LOCATION (thistype)->const_val ())
-#define TYPE_DATA_LOCATION_KIND(thistype) \
-  (TYPE_DATA_LOCATION (thistype)->kind ())
-#define TYPE_DYNAMIC_LENGTH(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_BYTE_SIZE))
-
-/* Property accessors for the type allocated/associated.  */
-#define TYPE_ALLOCATED_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_ALLOCATED))
-#define TYPE_ASSOCIATED_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_ASSOCIATED))
-#define TYPE_RANK_PROP(thistype) \
-  ((thistype)->dyn_prop (DYN_PROP_RANK))
-
 /* C++ */
 
 #define TYPE_SELF_TYPE(thistype) internal_type_self_type (thistype)
@@ -2182,7 +2183,7 @@ extern const struct builtin_type *builtin_type (struct gdbarch *gdbarch);
 /* * Return the type table for the specified objfile.  */
 
 extern const struct builtin_type *builtin_type (struct objfile *objfile);
- 
+
 /* Explicit floating-point formats.  See "floatformat.h".  */
 extern const struct floatformat *floatformats_ieee_half[BFD_ENDIAN_UNKNOWN];
 extern const struct floatformat *floatformats_ieee_single[BFD_ENDIAN_UNKNOWN];
@@ -2454,8 +2455,9 @@ extern struct type *lookup_memberptr_type (struct type *, struct type *);
 extern struct type *lookup_methodptr_type (struct type *);
 
 extern void smash_to_method_type (struct type *type, struct type *self_type,
-				  struct type *to_type, struct field *args,
-				  int nargs, int varargs);
+				  struct type *to_type,
+				  gdb::array_view<struct field> args,
+				  int varargs);
 
 extern void smash_to_memberptr_type (struct type *, struct type *,
 				     struct type *);
@@ -2510,11 +2512,25 @@ extern struct type *lookup_pointer_type (struct type *);
 
 extern struct type *make_function_type (struct type *, struct type **);
 
-extern struct type *lookup_function_type (struct type *);
+/* Given a return type and argument types, create new function type.
+   If the final type in PARAM_TYPES is NULL, create a varargs function.
+   New type is allocated using ALLOC.  */
+extern struct type *create_function_type (type_allocator &alloc,
+					  struct type *return_type,
+					  int nparams,
+					  struct type **param_types);
 
-extern struct type *lookup_function_type_with_arguments (struct type *,
-							 int,
-							 struct type **);
+/* Like create_function_type, but allocate the new function type at
+   the same obstack as RETURN_TYPE and with unspecified number of
+   parameters and their types.  */
+extern struct type *lookup_function_type (struct type *return_type);
+
+/* Like create_function_type, but allocate the new function type at
+   the same obstack as RETURN_TYPE.  */
+extern struct type *lookup_function_type_with_arguments
+					(struct type *return_type,
+					 int nparams,
+					 struct type **param_types);
 
 /* Create a range type using ALLOC.
 

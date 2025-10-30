@@ -21,7 +21,7 @@ require {gnat_version_compare >= 11}
 standard_ada_testfile prog
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -41,13 +41,13 @@ gdb_test_multiple "ptype Long_Long_Long_Integer" "" {
     }
 }
 
-require {expr $lll_int_size == 8 || $lll_int_size == 16}
+require {expr {$lll_int_size == 8 || $lll_int_size == 16}}
 
 gdb_test "print x" " = $max"
-gdb_test "print x / 2" " = [expr $max / 2]"
-gdb_test "print (x / 4) * 2" " = [expr ($max / 4) * 2]"
+gdb_test "print x / 2" " = [expr {$max / 2}]"
+gdb_test "print (x / 4) * 2" " = [expr {($max / 4) * 2}]"
 gdb_test "print x - x" " = 0"
-gdb_test "print x - 99 + 1" " = [expr $max - 99 + 1]"
+gdb_test "print x - 99 + 1" " = [expr {$max - 99 + 1}]"
 gdb_test "print -x" " = -$max"
 gdb_test "print +x" " = $max"
 

@@ -372,7 +372,7 @@ static int
 ia64_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* Rationale behind not permitting stores to bspstore...
-  
+
      The IA-64 architecture provides bspstore and bsp which refer
      memory locations in the RSE's backing store.  bspstore is the
      next location which will be written when the RSE needs to write
@@ -914,9 +914,7 @@ ia64_linux_nat_target::low_status_is_event (int status)
 				 || WSTOPSIG (status) == SIGILL);
 }
 
-void _initialize_ia64_linux_nat ();
-void
-_initialize_ia64_linux_nat ()
+INIT_GDB_FILE (ia64_linux_nat)
 {
   /* Register the target.  */
   linux_target = &the_ia64_linux_nat_target;

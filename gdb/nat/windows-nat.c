@@ -927,7 +927,7 @@ bad_GetConsoleFontSize (HANDLE w, DWORD nFont)
   size.Y = 12;
   return size;
 }
- 
+
 /* See windows-nat.h.  */
 
 bool

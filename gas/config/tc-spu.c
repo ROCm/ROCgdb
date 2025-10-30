@@ -273,7 +273,7 @@ md_assemble (char *op)
 
   /* try to find the instruction in the hash table */
 
-  if ((format = (struct spu_opcode *) str_hash_find (op_hash, op)) == NULL)
+  if ((format = str_hash_find (op_hash, op)) == NULL)
     {
       as_bad (_("Invalid mnemonic '%s'"), op);
       return;
@@ -298,7 +298,7 @@ md_assemble (char *op)
 	  insn.reloc[i] = BFD_RELOC_NONE;
 	}
       insn.opcode = format->opcode;
-      insn.tag = (enum spu_insns) (format - spu_opcodes);
+      insn.tag = format - spu_opcodes;
 
       syntax_error_arg = 0;
       syntax_error_param = 0;
@@ -569,7 +569,7 @@ get_reg (const char *param, struct spu_insn *insn, int arg, int accept_expr)
       char *save_ptr;
       expressionS ex;
       save_ptr = input_line_pointer;
-      input_line_pointer = (char *)param;
+      input_line_pointer = (char *) param;
       expression (&ex);
       param = input_line_pointer;
       input_line_pointer = save_ptr;
@@ -721,16 +721,11 @@ md_create_short_jump (char *ptr,
 		      fragS *frag,
 		      symbolS *to_symbol)
 {
-  ptr[0] = (char) 0xc0;
+  ptr[0] = 0xc0;
   ptr[1] = 0x00;
   ptr[2] = 0x00;
   ptr[3] = 0x00;
-  fix_new (frag,
-	   ptr - frag->fr_literal,
-	   4,
-	   to_symbol,
-	   (offsetT) 0,
-	   0,
+  fix_new (frag, ptr - frag->fr_literal, 4, to_symbol, 0, 0,
 	   BFD_RELOC_SPU_PCREL16);
 }
 
@@ -743,16 +738,11 @@ md_create_long_jump (char *ptr,
 		     fragS *frag,
 		     symbolS *to_symbol)
 {
-  ptr[0] = (char) 0xc0;
+  ptr[0] = 0xc0;
   ptr[1] = 0x00;
   ptr[2] = 0x00;
   ptr[3] = 0x00;
-  fix_new (frag,
-	   ptr - frag->fr_literal,
-	   4,
-	   to_symbol,
-	   (offsetT) 0,
-	   0,
+  fix_new (frag, ptr - frag->fr_literal, 4, to_symbol, 0, 0,
 	   BFD_RELOC_SPU_PCREL16);
 }
 #endif
@@ -872,7 +862,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("reloc %d not supported by object file format"),
@@ -950,7 +940,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   valueT val = *valP;
   char *place = fixP->fx_where + fixP->fx_frag->fr_literal;
 
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     {
       /* We can't actually support subtracting a symbol.  */
       as_bad_subtract (fixP);

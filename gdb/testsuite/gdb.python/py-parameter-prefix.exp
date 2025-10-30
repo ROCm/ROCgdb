@@ -23,25 +23,26 @@ require allow_python_tests
 
 clean_restart
 
-# Helper proc to generate the output of 'help MODE PREFIX', where MODE
-# will be either 'set' or 'show'.  The HELP_TEXT is the expected help
-# text for this prefix command, this should not be a regexp, as this
-# proc converts the text to a regexp.
-#
-# Return a single regexp which should match the output.
-proc make_help_re { mode prefix help_text } {
+# Helper proc to generate the output of 'show PREFIX' commands for the
+# case where the prefix command doesn't handle unknown sub-commands.
+# In this case GDB will list the value of every sub-command under
+# PREFIX.
+proc make_show_prefix_re { prefix } {
+    return "$prefix param-1:\\s+The current value of '$prefix param-1' is \"off\"\\."
+}
+
+# Helper proc to generate the help text that describes all of the sub
+# commands under PREFIX.  The MODE is either 'set' or 'show'.  This
+# output will appear for 'help MODE PREFIX' and also for 'set PREFIX'.
+proc make_sub_cmd_help_re { mode prefix } {
     if { $mode == "set" } {
 	set word "Set"
     } else {
 	set word "Show"
     }
 
-    set help_re [string_to_regexp $help_text]
-
     return \
 	[multi_line \
-	     "$help_re" \
-	     "" \
 	     "List of \"$mode $prefix\" subcommands:" \
 	     "" \
 	     "$mode $prefix param-1 -- $word the current value of '$prefix param-1'\\." \
@@ -50,6 +51,22 @@ proc make_help_re { mode prefix help_text } {
 	     "Type \"apropos word\" to search for commands related to \"word\"\\." \
 	     "Type \"apropos -v word\" for full documentation of commands related to \"word\"\\." \
 	     "Command name abbreviations are allowed if unambiguous\\."]
+}
+
+# Helper proc to generate the output of 'help MODE PREFIX', where MODE
+# will be either 'set' or 'show'.  The HELP_TEXT is the expected help
+# text for this prefix command, this should not be a regexp, as this
+# proc converts the text to a regexp.
+#
+# Return a single regexp which should match the output.
+proc make_help_re { mode prefix help_text } {
+    set help_re [string_to_regexp $help_text]
+
+    return \
+	[multi_line \
+	     "$help_re" \
+	     "" \
+	     [make_sub_cmd_help_re $mode $prefix]]
 }
 
 # Create gdb.ParameterPrefix without using a sub-class, both with, and
@@ -91,6 +108,14 @@ proc_with_prefix test_basic_usage {} {
 	    gdb_test "$mode $prefix xxx" \
 		"^Undefined $mode $prefix command: \"xxx\"\\.  Try \"help $mode $prefix\"\\."
 	}
+    }
+
+    foreach prefix { prefix-1 prefix-2 prefix-3 } {
+	gdb_test "set $prefix" \
+	    [make_sub_cmd_help_re "set" $prefix]
+
+	gdb_test "show $prefix" \
+	    [make_show_prefix_re $prefix]
     }
 }
 
@@ -152,6 +177,14 @@ proc_with_prefix test_simple_sub_class {} {
 	    gdb_test "$mode $prefix xxx" \
 		"^Undefined $mode $prefix command: \"xxx\"\\.  Try \"help $mode $prefix\"\\."
 	}
+    }
+
+    foreach prefix { prefix-4 prefix-5 prefix-6 prefix-7 } {
+	gdb_test "set $prefix" \
+	    [make_sub_cmd_help_re "set" $prefix]
+
+	gdb_test "show $prefix" \
+	    [make_show_prefix_re $prefix]
     }
 }
 
@@ -220,6 +253,24 @@ proc_with_prefix test_prefix_with_invoke {} {
     send_gdb "\n"
     gdb_test "" "^\r\ninvoke_show \\(d\\): \"xxx yyy\" True" \
 	"repeat show prefix-10 xxx yyy"
+
+    gdb_test "set prefix-8" \
+	"^invoke_set \\(a\\): \"\" True"
+
+    gdb_test "show prefix-8" \
+	[make_show_prefix_re "prefix-8"]
+
+    gdb_test "set prefix-9" \
+	[make_sub_cmd_help_re "set" "prefix-9"]
+
+    gdb_test "show prefix-9" \
+	"^invoke_show \\(b\\): \"\" True"
+
+    gdb_test "set prefix-10" \
+	"^invoke_set \\(c\\): \"\" True"
+
+    gdb_test "show prefix-10" \
+	"^invoke_show \\(d\\): \"\" True"
 }
 
 # Create ParameterPrefix sub-classes that make use of the
@@ -279,7 +330,53 @@ proc_with_prefix test_dont_repeat {} {
 	"repeat show prefix-12 xxx yyy"
 }
 
+# Create a parameter prefixm, and immediately add another prefix under
+# the first.  The important thing here is that the second prefix is
+# created into an otherwise empty prefix as this triggered a bug at
+# one point.
+proc_with_prefix test_nested {} {
+    gdb_test_multiline "Create nested parameter prefixes" \
+	"python" "" \
+	"gdb.ParameterPrefix('prefix-13', gdb.COMMAND_NONE)" "" \
+	"gdb.ParameterPrefix('prefix-13 prefix-14', gdb.COMMAND_NONE)" "" \
+	"gdb.Parameter('prefix-13 param-1', gdb.COMMAND_NONE, gdb.PARAM_BOOLEAN)" "" \
+	"gdb.Parameter('prefix-13 param-2', gdb.COMMAND_NONE, gdb.PARAM_BOOLEAN)" "" \
+	"gdb.Parameter('prefix-13 prefix-14 param-3', gdb.COMMAND_NONE, gdb.PARAM_BOOLEAN)" "" \
+	"gdb.Parameter('prefix-13 prefix-14 param-4', gdb.COMMAND_NONE, gdb.PARAM_BOOLEAN)" "" \
+	"end" ""
+
+    gdb_test "show prefix-13 prefix-14" \
+	[multi_line \
+	     "^prefix-13 prefix-14 param-3:  The current value of 'prefix-13 prefix-14 param-3' is \"off\"\\." \
+	     "prefix-13 prefix-14 param-4:  The current value of 'prefix-13 prefix-14 param-4' is \"off\"\\."]
+
+    gdb_test "show prefix-13" \
+	[multi_line \
+	     "^prefix-13 param-1:  The current value of 'prefix-13 param-1' is \"off\"\\." \
+	     "prefix-13 param-2:  The current value of 'prefix-13 param-2' is \"off\"\\." \
+	     "prefix-13 prefix-14 param-3:  The current value of 'prefix-13 prefix-14 param-3' is \"off\"\\." \
+	     "prefix-13 prefix-14 param-4:  The current value of 'prefix-13 prefix-14 param-4' is \"off\"\\."]
+
+    gdb_test "set prefix-13 prefix-14" \
+	[multi_line \
+	     "" \
+	     "set prefix-13 prefix-14 param-3 -- Set the current value of 'prefix-13 prefix-14 param-3'\\." \
+	     "set prefix-13 prefix-14 param-4 -- Set the current value of 'prefix-13 prefix-14 param-4'\\." \
+	     "" \
+	     ".*"]
+
+    gdb_test "set prefix-13" \
+	[multi_line \
+	     "" \
+	     "set prefix-13 param-1 -- Set the current value of 'prefix-13 param-1'\\." \
+	     "set prefix-13 param-2 -- Set the current value of 'prefix-13 param-2'\\." \
+	     "set prefix-13 prefix-14 -- This command is not documented\\." \
+	     "" \
+	     ".*"]
+}
+
 test_basic_usage
 test_simple_sub_class
 test_prefix_with_invoke
 test_dont_repeat
+test_nested

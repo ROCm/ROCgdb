@@ -236,6 +236,7 @@ static unsigned int bundle_lock_depth;
 static void do_s_func (int end_p, const char *default_prefix);
 static void s_altmacro (int);
 static void s_bad_end (int);
+static void s_errwarn_if (int);
 static void s_reloc (int);
 static int hex_float (int, char *);
 static segT get_known_segmented_expression (expressionS * expP);
@@ -401,6 +402,7 @@ static const pseudo_typeS potable[] = {
   {"equiv", s_set, 1},
   {"eqv", s_set, -1},
   {"err", s_err, 0},
+  {"errif", s_errwarn_if, 1},
   {"error", s_errwarn, 1},
   {"exitm", s_mexit, 0},
 /* extend  */
@@ -515,6 +517,7 @@ static const pseudo_typeS potable[] = {
   {"xdef", s_globl, 0},
   {"xref", s_ignore, 0},
   {"xstabs", s_xstab, 's'},
+  {"warnif", s_errwarn_if, 0},
   {"warning", s_errwarn, 0},
   {"weakref", s_weakref, 0},
   {"word", cons, 2},
@@ -682,11 +685,11 @@ start_bundle (void)
 
 /* Calculate the maximum size after relaxation of the region starting
    at the given frag and extending through frag_now (which is unfinished).  */
-static unsigned int
+static valueT
 pending_bundle_size (fragS *frag)
 {
-  unsigned int offset = frag->fr_fix;
-  unsigned int size = 0;
+  valueT offset = frag->fr_fix;
+  valueT size = 0;
 
   gas_assert (frag != frag_now);
   gas_assert (frag->fr_type == rs_align_code);
@@ -709,14 +712,14 @@ pending_bundle_size (fragS *frag)
   if (frag->fr_type == rs_machine_dependent)
     size += md_frag_max_var (frag);
 
-  gas_assert (size >= offset);
+  gas_assert (size >= offset || now_seg == absolute_section);
 
   return size - offset;
 }
 
 /* Finish off the frag created to ensure bundle alignment.  */
 static void
-finish_bundle (fragS *frag, unsigned int size)
+finish_bundle (fragS *frag, valueT size)
 {
   gas_assert (bundle_align_p2 > 0);
   gas_assert (frag->fr_type == rs_align_code);
@@ -760,20 +763,20 @@ assemble_one (char *line)
     {
       /* Make sure this hasn't pushed the locked sequence
 	 past the bundle size.  */
-      unsigned int bundle_size = pending_bundle_size (bundle_lock_frag);
-      if (bundle_size > 1U << bundle_align_p2)
-	as_bad (_ (".bundle_lock sequence at %u bytes, "
-		   "but .bundle_align_mode limit is %u bytes"),
-		bundle_size, 1U << bundle_align_p2);
+      valueT bundle_size = pending_bundle_size (bundle_lock_frag);
+      if (bundle_size > (valueT) 1 << bundle_align_p2)
+	as_bad (_ (".bundle_lock sequence at %" PRIu64 " bytes, "
+		   "but .bundle_align_mode limit is %" PRIu64 " bytes"),
+		(uint64_t) bundle_size, (uint64_t) 1 << bundle_align_p2);
     }
   else if (bundle_align_p2 > 0)
     {
-      unsigned int insn_size = pending_bundle_size (insn_start_frag);
+      valueT insn_size = pending_bundle_size (insn_start_frag);
 
-      if (insn_size > 1U << bundle_align_p2)
-	as_bad (_("single instruction is %u bytes long, "
-		  "but .bundle_align_mode limit is %u bytes"),
-		insn_size, 1U << bundle_align_p2);
+      if (insn_size > (valueT) 1 << bundle_align_p2)
+	as_bad (_("single instruction is %" PRIu64 " bytes long, "
+		  "but .bundle_align_mode limit is %" PRIu64 " bytes"),
+		(uint64_t) insn_size, (uint64_t) 1 << bundle_align_p2);
 
       finish_bundle (insn_start_frag, insn_size);
     }
@@ -891,6 +894,8 @@ read_a_source_file (const char *name)
 #ifdef WARN_COMMENTS
   found_comment = 0;
 #endif
+
+  set_identify_name (name);
 
   buffer = input_scrub_new_file (name);
 
@@ -1232,7 +1237,7 @@ read_a_source_file (const char *name)
 				   || pop->poc_handler == s_globl
 				   || pop->poc_handler == s_ignore)))
 			{
-			  do_align (1, (char *) NULL, 0, 0);
+			  do_align (1, NULL, 0, 0);
 			  mri_pending_align = 0;
 
 			  if (line_label != NULL)
@@ -1293,7 +1298,7 @@ read_a_source_file (const char *name)
 
 		      if (mri_pending_align)
 			{
-			  do_align (1, (char *) NULL, 0, 0);
+			  do_align (1, NULL, 0, 0);
 			  mri_pending_align = 0;
 			  if (line_label != NULL)
 			    {
@@ -1437,14 +1442,15 @@ read_a_source_file (const char *name)
 #endif
 }
 
-/* Convert O_constant expression EXP into the equivalent O_big representation.
-   Take the sign of the number from SIGN rather than X_add_number.  */
+/* Convert O_constant expression EXP into the equivalent O_big
+   representation.  */
 
-static void
-convert_to_bignum (expressionS *exp, int sign)
+static bool
+convert_to_bignum (expressionS *exp)
 {
   valueT value;
   unsigned int i;
+  bool sign = !exp->X_unsigned && exp->X_extrabit;
 
   value = exp->X_add_number;
   for (i = 0; i < sizeof (exp->X_add_number) / CHARS_PER_LITTLENUM; i++)
@@ -1458,6 +1464,9 @@ convert_to_bignum (expressionS *exp, int sign)
     generic_bignum[i++] = sign ? LITTLENUM_MASK : 0;
   exp->X_op = O_big;
   exp->X_add_number = i;
+  exp->X_unsigned = !sign;
+
+  return sign;
 }
 
 /* For most MRI pseudo-ops, the line actually ends at the first
@@ -1616,7 +1625,7 @@ s_align (signed int arg, int bytes_p)
     {
       if (arg < 0)
 	as_warn (_("expected fill pattern missing"));
-      do_align (align, (char *) NULL, 0, max);
+      do_align (align, NULL, 0, max);
     }
   else
     {
@@ -1849,7 +1858,7 @@ s_comm_internal (int param,
     symbolP = (*comm_parse_extra) (param, symbolP, size);
   else
     {
-      S_SET_VALUE (symbolP, (valueT) size);
+      S_SET_VALUE (symbolP, size);
       S_SET_EXTERNAL (symbolP);
       S_SET_SEGMENT (symbolP, bfd_com_section_ptr);
     }
@@ -1948,10 +1957,7 @@ s_mri_common (int small ATTRIBUTE_UNUSED)
 
   if (line_label != NULL)
     {
-      expressionS exp;
-      exp.X_op = O_symbol;
-      exp.X_add_symbol = sym;
-      exp.X_add_number = 0;
+      expressionS exp = { .X_op = O_symbol, .X_add_symbol = sym };
       symbol_set_value_expression (line_label, &exp);
       symbol_set_frag (line_label, &zero_address_frag);
       S_SET_SEGMENT (line_label, expr_section);
@@ -1986,7 +1992,7 @@ s_data (int ignore ATTRIBUTE_UNUSED)
   else
     section = data_section;
 
-  subseg_set (section, (subsegT) temp);
+  subseg_set (section, temp);
 
   demand_empty_rest_of_line ();
 }
@@ -2233,6 +2239,63 @@ s_errwarn (int err)
   demand_empty_rest_of_line ();
 }
 
+/* Handle the .errif and .warnif pseudo-ops.  */
+
+static struct deferred_diag {
+  struct deferred_diag *next;
+  const char *file;
+  unsigned int lineno;
+  bool err;
+  expressionS exp;
+} *deferred_diag_head, **deferred_diag_tail = &deferred_diag_head;
+
+static void
+s_errwarn_if (int err)
+{
+  struct deferred_diag *diag = XNEW (struct deferred_diag);
+  int errcnt = had_errors ();
+
+  deferred_expression (&diag->exp);
+  if (errcnt != had_errors ())
+    {
+      ignore_rest_of_line ();
+      free (diag);
+      return;
+    }
+
+  diag->err = err;
+  diag->file = as_where (&diag->lineno);
+  diag->next = NULL;
+  *deferred_diag_tail = diag;
+  deferred_diag_tail = &diag->next;
+
+  demand_empty_rest_of_line ();
+}
+
+void
+evaluate_deferred_diags (void)
+{
+  struct deferred_diag *diag;
+
+  while ((diag = deferred_diag_head) != NULL)
+    {
+      if (!resolve_expression (&diag->exp) || diag->exp.X_op != O_constant)
+	as_warn_where (diag->file, diag->lineno,
+		       _("expression does not evaluate to a constant"));
+      else if (diag->exp.X_add_number == 0)
+	;
+      else if (diag->err)
+	as_bad_where (diag->file, diag->lineno,
+		      _(".errif expression evaluates to true"));
+      else
+	as_warn_where (diag->file, diag->lineno,
+		       _(".warnif expression evaluates to true"));
+      deferred_diag_head = diag->next;
+      free (diag);
+    }
+  deferred_diag_tail = &deferred_diag_head;
+}
+
 /* Handle the MRI fail pseudo-op.  */
 
 void
@@ -2332,10 +2395,8 @@ s_fill (int ignore ATTRIBUTE_UNUSED)
 
       if (rep_exp.X_op == O_constant)
 	{
-	  p = frag_var (rs_fill, (int) size, (int) size,
-			(relax_substateT) 0, (symbolS *) 0,
-			(offsetT) rep_exp.X_add_number,
-			(char *) 0);
+	  p = frag_var (rs_fill, size, size, 0, NULL,
+			rep_exp.X_add_number, NULL);
 	}
       else
 	{
@@ -2359,11 +2420,10 @@ s_fill (int ignore ATTRIBUTE_UNUSED)
 	      rep_sym = make_expr_symbol (&rep_exp);
 	    }
 
-	  p = frag_var (rs_space, (int) size, (int) size,
-			(relax_substateT) 0, rep_sym, (offsetT) 0, (char *) 0);
+	  p = frag_var (rs_space, size, size, 0, rep_sym, 0, NULL);
 	}
 
-      memset (p, 0, (unsigned int) size);
+      memset (p, 0, size);
 
       /* The magic number BSD_FILL_SIZE_CROCK_4 is from BSD 4.2 VAX
 	 flavoured AS.  The following bizarre behaviour is to be
@@ -2374,7 +2434,7 @@ s_fill (int ignore ATTRIBUTE_UNUSED)
       md_number_to_chars (p, fill,
 			  (size > BSD_FILL_SIZE_CROCK_4
 			   ? BSD_FILL_SIZE_CROCK_4
-			   : (int) size));
+			   : size));
       /* Note: .fill (),0 emits no frag (since we are asked to .fill 0 bytes)
 	 but emits no error message because it seems a legal thing to do.
 	 It is a degenerate case of .fill but could be emitted by a
@@ -2700,7 +2760,7 @@ s_lsym (int ignore ATTRIBUTE_UNUSED)
 		     (exp.X_op == O_constant
 		      ? absolute_section
 		      : reg_section));
-      S_SET_VALUE (symbolP, (valueT) exp.X_add_number);
+      S_SET_VALUE (symbolP, exp.X_add_number);
     }
   else
     {
@@ -2909,7 +2969,7 @@ do_org (segT segment, expressionS *exp, int fill)
 	  off = 0;
 	}
 
-      p = frag_var (rs_org, 1, 1, (relax_substateT) 0, sym, off, (char *) 0);
+      p = frag_var (rs_org, 1, 1, 0, sym, off, NULL);
       *p = fill;
     }
 }
@@ -3114,7 +3174,7 @@ s_rept (int expand_count)
 {
   size_t count;
 
-  count = (size_t) get_absolute_expression ();
+  count = get_absolute_expression ();
 
   do_repeat (count, "REPT", "ENDR", expand_count ? "" : NULL);
 }
@@ -3422,7 +3482,7 @@ s_space (int mult)
 	}
       else
 	{
-	  do_align (1, (char *) NULL, 0, 0);
+	  do_align (1, NULL, 0, 0);
 	  if (line_label != NULL)
 	    {
 	      symbol_set_frag (line_label, frag_now);
@@ -3528,8 +3588,7 @@ s_space (int mult)
 	    }
 
 	  if (!need_pass_2)
-	    p = frag_var (rs_fill, 1, 1, (relax_substateT) 0, (symbolS *) 0,
-			  (offsetT) total, (char *) 0);
+	    p = frag_var (rs_fill, 1, 1, 0, NULL, total, NULL);
 	}
       else
 	{
@@ -3546,8 +3605,7 @@ s_space (int mult)
 	    }
 
 	  if (!need_pass_2)
-	    p = frag_var (rs_space, 1, 1, (relax_substateT) 0,
-			  make_expr_symbol (&exp), (offsetT) 0, (char *) 0);
+	    p = frag_var (rs_space, 1, 1, 0, make_expr_symbol (&exp), 0, NULL);
 	}
 
       if ((val.X_op != O_constant || val.X_add_number != 0) && in_bss ())
@@ -3837,7 +3895,7 @@ s_float_space (int float_type)
       char *p;
 
       p = frag_more (flen);
-      memcpy (p, temp, (unsigned int) flen);
+      memcpy (p, temp, flen);
     }
 
   demand_empty_rest_of_line ();
@@ -3875,7 +3933,7 @@ s_text (int ignore ATTRIBUTE_UNUSED)
   int temp;
 
   temp = get_absolute_expression ();
-  subseg_set (text_section, (subsegT) temp);
+  subseg_set (text_section, temp);
   demand_empty_rest_of_line ();
 }
 
@@ -4061,6 +4119,9 @@ pseudo_set (symbolS *symbolP)
 
   know (symbolP);		/* NULL pointer is logic error.  */
 
+#ifdef md_expr_init_rest
+  md_expr_init_rest (&exp);
+#endif
   if (!S_IS_FORWARD_REF (symbolP))
     (void) expression (&exp);
   else
@@ -4273,7 +4334,7 @@ cons_worker (int nbytes,	/* 1=.byte, 2=.word, 4=.long.  */
 
 #ifdef TC_M68K
       if (flag_m68k_mri)
-	parse_mri_cons (&exp, (unsigned int) nbytes);
+	parse_mri_cons (&exp, nbytes);
       else
 #endif
 	{
@@ -4285,7 +4346,7 @@ cons_worker (int nbytes,	/* 1=.byte, 2=.word, 4=.long.  */
 	      return;
 	    }
 #endif
-	  ret = TC_PARSE_CONS_EXPRESSION (&exp, (unsigned int) nbytes);
+	  ret = TC_PARSE_CONS_EXPRESSION (&exp, nbytes);
 	}
 
       if (rva)
@@ -4295,7 +4356,7 @@ cons_worker (int nbytes,	/* 1=.byte, 2=.word, 4=.long.  */
 	  else
 	    as_fatal (_("rva without symbol"));
 	}
-      emit_expr_with_reloc (&exp, (unsigned int) nbytes, ret);
+      emit_expr_with_reloc (&exp, nbytes, ret);
 #ifdef TC_CONS_FIX_CHECK
       TC_CONS_FIX_CHECK (&exp, nbytes, *cur_fix);
 #endif
@@ -4501,7 +4562,7 @@ emit_expr_with_reloc (expressionS *exp,
 	   && nbytes == 2
 	   && exp->X_op == O_constant
 	   && (exp->X_add_number == -1 || exp->X_add_number == 0xffff))
-    listing_source_line ((unsigned int) dwarf_line);
+    listing_source_line (dwarf_line);
   else if (nbytes == 4
 	   && exp->X_op == O_constant
 	   && exp->X_add_number >= 0)
@@ -4578,7 +4639,7 @@ emit_expr_with_reloc (expressionS *exp,
       /* We can ignore any carry out, because it will be handled by
 	 extra_digit if it is needed.  */
 
-      extra_digit = (valueT) -1;
+      extra_digit = -1;
       op = O_big;
     }
 
@@ -4614,7 +4675,7 @@ emit_expr_with_reloc (expressionS *exp,
     as_bad (_("attempt to store non-zero value in section `%s'"),
 	    segment_name (now_seg));
 
-  p = frag_more ((int) nbytes);
+  p = frag_more (nbytes);
 
   if (reloc != TC_PARSE_CONS_RETURN_NONE)
     {
@@ -4651,8 +4712,7 @@ emit_expr_with_reloc (expressionS *exp,
      pass to md_number_to_chars, handle it as a bignum.  */
   if (op == O_constant && nbytes > sizeof (valueT))
     {
-      extra_digit = exp->X_unsigned ? 0 : -1;
-      convert_to_bignum (exp, !exp->X_unsigned);
+      extra_digit = -convert_to_bignum (exp);
       op = O_big;
     }
 
@@ -4692,7 +4752,7 @@ emit_expr_with_reloc (expressionS *exp,
 		   (uint64_t) get, (uint64_t) use);
 	}
       /* Put bytes in right order.  */
-      md_number_to_chars (p, use, (int) nbytes);
+      md_number_to_chars (p, use, nbytes);
     }
   else if (op == O_big)
     {
@@ -4741,7 +4801,7 @@ emit_expr_with_reloc (expressionS *exp,
 
       if (nbytes == 1)
 	{
-	  md_number_to_chars (p, (valueT) generic_bignum[0], 1);
+	  md_number_to_chars (p, generic_bignum[0], 1);
 	  return;
 	}
       know (nbytes % CHARS_PER_LITTLENUM == 0);
@@ -4759,7 +4819,7 @@ emit_expr_with_reloc (expressionS *exp,
 	  while (size >= CHARS_PER_LITTLENUM)
 	    {
 	      --nums;
-	      md_number_to_chars (p, (valueT) *nums, CHARS_PER_LITTLENUM);
+	      md_number_to_chars (p, *nums, CHARS_PER_LITTLENUM);
 	      size -= CHARS_PER_LITTLENUM;
 	      p += CHARS_PER_LITTLENUM;
 	    }
@@ -4769,7 +4829,7 @@ emit_expr_with_reloc (expressionS *exp,
 	  nums = generic_bignum;
 	  while (size >= CHARS_PER_LITTLENUM)
 	    {
-	      md_number_to_chars (p, (valueT) *nums, CHARS_PER_LITTLENUM);
+	      md_number_to_chars (p, *nums, CHARS_PER_LITTLENUM);
 	      ++nums;
 	      size -= CHARS_PER_LITTLENUM;
 	      p += CHARS_PER_LITTLENUM;
@@ -5101,7 +5161,7 @@ float_cons (/* Clobbers input_line-pointer, checks end-of-line.  */
 	  while (--count >= 0)
 	    {
 	      p = frag_more (length);
-	      memcpy (p, temp, (unsigned int) length);
+	      memcpy (p, temp, length);
 	    }
 	}
       SKIP_WHITESPACE ();
@@ -5171,7 +5231,7 @@ unsigned int
 sizeof_leb128 (valueT value, int sign)
 {
   if (sign)
-    return sizeof_sleb128 ((offsetT) value);
+    return sizeof_sleb128 (value);
   else
     return sizeof_uleb128 (value);
 }
@@ -5230,7 +5290,7 @@ unsigned int
 output_leb128 (char *p, valueT value, int sign)
 {
   if (sign)
-    return output_sleb128 (p, (offsetT) value);
+    return output_sleb128 (p, value);
   else
     return output_uleb128 (p, value);
 }
@@ -5371,12 +5431,14 @@ emit_leb128_expr (expressionS *exp, int sign)
     }
   else if (op == O_constant
 	   && sign
-	   && (exp->X_add_number < 0) == !exp->X_extrabit)
+	   && (exp->X_unsigned
+	       ? exp->X_add_number < 0
+	       : (exp->X_add_number < 0) != exp->X_extrabit))
     {
       /* We're outputting a signed leb128 and the sign of X_add_number
 	 doesn't reflect the sign of the original value.  Convert EXP
 	 to a correctly-extended bignum instead.  */
-      convert_to_bignum (exp, exp->X_extrabit);
+      convert_to_bignum (exp);
       op = O_big;
     }
 
@@ -5394,7 +5456,7 @@ emit_leb128_expr (expressionS *exp, int sign)
 
   /* Let check_eh_frame know that data is being emitted.  nbytes == -1 is
      a signal that this is leb128 data.  It shouldn't optimize this away.  */
-  nbytes = (unsigned int) -1;
+  nbytes = -1u;
   if (check_eh_frame (exp, &nbytes))
     abort ();
 
@@ -5442,7 +5504,7 @@ emit_leb128_expr (expressionS *exp, int sign)
 	 resolve things later.  */
 
       frag_var (rs_leb128, sizeof_uleb128 (~(valueT) 0), 0, sign,
-		make_expr_symbol (exp), 0, (char *) NULL);
+		make_expr_symbol (exp), 0, NULL);
     }
 }
 
@@ -6234,7 +6296,7 @@ char				/* Return terminator.  */
 get_absolute_expression_and_terminator (long *val_pointer /* Return value of expression.  */)
 {
   /* FIXME: val_pointer should probably be offsetT *.  */
-  *val_pointer = (long) get_absolute_expression ();
+  *val_pointer = get_absolute_expression ();
   return (*input_line_pointer++);
 }
 
@@ -6289,7 +6351,7 @@ demand_copy_string (int *lenP)
       /* JF this next line is so demand_copy_C_string will return a
 	 null terminated string.  */
       obstack_1grow (&notes, '\0');
-      retval = (char *) obstack_finish (&notes);
+      retval = obstack_finish (&notes);
     }
   else
     {
@@ -6298,7 +6360,7 @@ demand_copy_string (int *lenP)
       ignore_rest_of_line ();
     }
   *lenP = len;
-  return (retval);
+  return retval;
 }
 
 /* In:	Input_line_pointer->next character.
@@ -6508,7 +6570,7 @@ s_include (int arg ATTRIBUTE_UNUSED)
 	}
 
       obstack_1grow (&notes, '\0');
-      filename = (char *) obstack_finish (&notes);
+      filename = obstack_finish (&notes);
       while (!is_end_of_stmt (*input_line_pointer))
 	++input_line_pointer;
     }
@@ -6708,7 +6770,7 @@ s_bundle_lock (int arg ATTRIBUTE_UNUSED)
 void
 s_bundle_unlock (int arg ATTRIBUTE_UNUSED)
 {
-  unsigned int size;
+  valueT size;
 
   demand_empty_rest_of_line ();
 
@@ -6726,10 +6788,10 @@ s_bundle_unlock (int arg ATTRIBUTE_UNUSED)
 
   size = pending_bundle_size (bundle_lock_frag);
 
-  if (size > 1U << bundle_align_p2)
-    as_bad (_(".bundle_lock sequence is %u bytes, "
-	      "but bundle size is only %u bytes"),
-	    size, 1u << bundle_align_p2);
+  if (size > (valueT) 1 << bundle_align_p2)
+    as_bad (_(".bundle_lock sequence is %" PRIu64 " bytes, "
+	      "but bundle size is only %" PRIu64 " bytes"),
+	    (uint64_t) size, (uint64_t) 1 << bundle_align_p2);
   else
     finish_bundle (bundle_lock_frag, size);
 

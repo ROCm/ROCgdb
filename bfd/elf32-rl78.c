@@ -772,7 +772,8 @@ rl78_elf_relocate_section
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_RL78_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	{
@@ -1889,9 +1890,7 @@ rl78_offset_for_reloc (bfd *			abfd,
 	    {
 	      if ((ssec->flags & SEC_MERGE)
 		  && ssec->sec_info_type == SEC_INFO_TYPE_MERGE)
-		symval = _bfd_merged_section_offset (abfd, & ssec,
-						     elf_section_data (ssec)->sec_info,
-						     symval);
+		symval = _bfd_merged_section_offset (abfd, & ssec, symval);
 	    }
 
 	  /* Now make the offset relative to where the linker is putting it.  */

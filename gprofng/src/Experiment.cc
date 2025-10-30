@@ -541,9 +541,13 @@ Experiment::ExperimentHandler::startElement (char*, char*, char *qName, Attribut
 	    exp->platform = RISCV;
 	  else
 	    exp->platform = Sparc;
-	  exp->need_swap_endian = (DbeSession::platform == Sparc) ?
-		  (exp->platform != Sparc) : (exp->platform == Sparc);
 	  exp->architecture = xstrdup (str);
+	}
+      str = attrs->getValue (NTXT ("bigendian"));
+      if (str != NULL)
+	{
+	  exp->bigendian = *str == '1';
+	  exp->need_swap_endian = DbeSession::is_bigendian () != exp->bigendian;
 	}
       str = attrs->getValue (NTXT ("pagesz"));
       if (str != NULL)
@@ -1314,6 +1318,7 @@ Experiment::Experiment ()
   exp_maj_version = 0;
   exp_min_version = 0;
   platform = Unknown;
+  bigendian = DbeSession::is_bigendian();  // can be changed in log.xml reading
   wsize = Wnone;
   page_size = 4096;
   npages = 0;
@@ -6806,7 +6811,8 @@ Experiment::copy_file_to_common_archive (const char *name, const char *aname,
  * @return 0 - success
  */
 int
-Experiment::copy_file (char *name, char *aname, int hide_msg, char *common_archive, int relative_path)
+Experiment::copy_file (const char *name, const char *aname, int hide_msg,
+		       const char *common_archive, int relative_path)
 {
   if (common_archive)
     {

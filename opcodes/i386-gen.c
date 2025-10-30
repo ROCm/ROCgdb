@@ -47,7 +47,7 @@ typedef struct dependency
 static const dependency isa_dependencies[] =
 {
   { "UNKNOWN",
-    "~(IAMCU|MPX)" },
+    "~(IAMCU|MPX|AMX_TRANSPOSE)" },
   { "GENERIC32",
     "386" },
   { "GENERIC64",
@@ -276,7 +276,7 @@ static const dependency isa_dependencies[] =
   { "AMX_MOVRS",
     "AMX_TILE" },
   { "AMX_AVX512",
-    "AMX_TILE|AVX10_2" },
+    "AMX_TILE|AVX512F" },
   { "KL",
     "SSE2" },
   { "WIDEKL",
@@ -297,6 +297,8 @@ static const dependency isa_dependencies[] =
     "64" },
   { "APX_F",
     "XSAVE|64" },
+  { "PadLock",
+    "FXSR" },
   { "PadLockRNG2",
     "PadLock" },
   { "PadLockPHE2",
@@ -2062,8 +2064,8 @@ process_i386_opcodes (FILE *table)
   process_copyright (fp);
 
   fprintf (table, "\n/* i386 mnemonics table.  */\n\n");
-  fprintf (table, "const char i386_mnemonics[] =\n");
-  fprintf (fp, "\nextern const char i386_mnemonics[];\n\n");
+  fprintf (table, "static const char i386_mnemonics[] =\n");
+  fprintf (fp, "\nstatic const char i386_mnemonics[];\n\n");
 
   str = NULL;
   for (l = strlen (opcode_array[offs = j = 0]->name); j < i; j++)

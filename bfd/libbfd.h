@@ -276,16 +276,13 @@ extern bool _bfd_generic_get_section_contents
 #define _bfd_generic_bfd_merge_private_bfd_data \
   _bfd_bool_bfd_link_true
 #define _bfd_generic_bfd_set_private_flags _bfd_bool_bfd_uint_true
-#define _bfd_generic_bfd_copy_private_section_data \
-  _bfd_bool_bfd_asection_bfd_asection_true
+extern bool _bfd_generic_bfd_copy_private_section_data
+  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *)
+  ATTRIBUTE_HIDDEN;
 #define _bfd_generic_bfd_copy_private_symbol_data \
   _bfd_bool_bfd_asymbol_bfd_asymbol_true
 #define _bfd_generic_bfd_copy_private_header_data _bfd_bool_bfd_bfd_true
 #define _bfd_generic_bfd_print_private_bfd_data _bfd_bool_bfd_ptr_true
-
-extern bool _bfd_generic_init_private_section_data
-  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *)
-  ATTRIBUTE_HIDDEN;
 
 /* Routines to use for BFD_JUMP_TABLE_CORE when there is no core file
    support.  Use BFD_JUMP_TABLE_CORE (_bfd_nocore).  */
@@ -498,7 +495,6 @@ extern bool _bfd_nolink_bfd_relax_section
 #define _bfd_nolink_bfd_gc_sections _bfd_bool_bfd_link_false_error
 extern bool _bfd_nolink_bfd_lookup_section_flags
   (struct bfd_link_info *, struct flag_info *, asection *) ATTRIBUTE_HIDDEN;
-#define _bfd_nolink_bfd_merge_sections _bfd_bool_bfd_link_false_error
 extern bool _bfd_nolink_bfd_is_group_section
   (bfd *, const asection *) ATTRIBUTE_HIDDEN;
 extern const char *_bfd_nolink_bfd_group_name
@@ -697,26 +693,15 @@ extern bfd_reloc_status_type _bfd_relocate_contents
 extern bfd_reloc_status_type _bfd_clear_contents
   (reloc_howto_type *, bfd *, asection *, bfd_byte *, bfd_vma) ATTRIBUTE_HIDDEN;
 
-/* Register a SEC_MERGE section as a candidate for merging.  */
-
-extern bool _bfd_add_merge_section
-  (bfd *, void **, asection *, void **) ATTRIBUTE_HIDDEN;
-
-/* Attempt to merge SEC_MERGE sections.  */
-
-extern bool _bfd_merge_sections
-  (bfd *, struct bfd_link_info *, void *, void (*) (bfd *, asection *))
-  ATTRIBUTE_HIDDEN;
-
 /* Write out a merged section.  */
 
 extern bool _bfd_write_merged_section
-  (bfd *, asection *, void *) ATTRIBUTE_HIDDEN;
+  (bfd *, asection *) ATTRIBUTE_HIDDEN;
 
 /* Find an offset within a modified SEC_MERGE section.  */
 
 extern bfd_vma _bfd_merged_section_offset
-  (bfd *, asection **, void *, bfd_vma) ATTRIBUTE_HIDDEN;
+  (bfd *, asection **, bfd_vma) ATTRIBUTE_HIDDEN;
 
 /* Tidy up when done.  */
 
@@ -1014,7 +999,7 @@ struct bfd_iovec
   int (*bstat) (struct bfd *abfd, struct stat *sb);
   /* Mmap a part of the files. ADDR, LEN, PROT, FLAGS and OFFSET are the usual
      mmap parameter, except that LEN and OFFSET do not need to be page
-     aligned.  Returns (void *)-1 on failure, mmapped address on success.
+     aligned.  Returns MAP_FAILED on failure, mmapped address on success.
      Also write in MAP_ADDR the address of the page aligned buffer and in
      MAP_LEN the size mapped (a page multiple).  Use unmap with MAP_ADDR and
      MAP_LEN to unmap.  */
@@ -3230,6 +3215,7 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_AARCH64_LD_GOT_LO12_NC",
   "BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_LO12_NC",
   "BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC",
+  "BFD_RELOC_AARCH64_BRANCH9",
   "BFD_RELOC_TILEPRO_COPY",
   "BFD_RELOC_TILEPRO_GLOB_DAT",
   "BFD_RELOC_TILEPRO_JMP_SLOT",
@@ -3639,9 +3625,6 @@ bool bfd_generic_gc_sections
 bool bfd_generic_lookup_section_flags
    (struct bfd_link_info *, struct flag_info *, asection *) ATTRIBUTE_HIDDEN;
 
-bool bfd_generic_merge_sections
-   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
-
 bfd_byte *bfd_generic_get_relocated_section_contents
    (bfd *abfd,
     struct bfd_link_info *link_info,
@@ -3696,8 +3679,8 @@ bool _bfd_unrecognized_reloc
   /* symbol,                                                        */ \
      (struct bfd_symbol *) SYM,                                        \
 								       \
-  /* map_head, map_tail, already_assigned, type                     */ \
-     { NULL }, { NULL }, NULL,             0                           \
+  /* map_head, map_tail, already_assigned, sec_info, type           */ \
+     { NULL }, { NULL }, NULL,             NULL,     0                 \
 								       \
   }
 
@@ -3707,18 +3690,18 @@ bool _bfd_unrecognized_reloc
 
 /* Extracted from stabs.c.  */
 bool _bfd_link_section_stabs
-   (bfd *, struct stab_info *, asection *, asection *, void **,
+   (bfd *, struct stab_info *, asection *, asection *,
     bfd_size_type *) ATTRIBUTE_HIDDEN;
 
 bool _bfd_discard_section_stabs
-   (bfd *, asection *, void *, bool (*) (bfd_vma, void *), void *) ATTRIBUTE_HIDDEN;
+   (bfd *, asection *, bool (*) (bfd_vma, void *), void *) ATTRIBUTE_HIDDEN;
 
 bool _bfd_write_section_stabs
-   (bfd *, struct stab_info *, asection *, void **, bfd_byte *) ATTRIBUTE_HIDDEN;
+   (bfd *, struct stab_info *, asection *, bfd_byte *) ATTRIBUTE_HIDDEN;
 
 bool _bfd_write_stab_strings (bfd *, struct stab_info *) ATTRIBUTE_HIDDEN;
 
-bfd_vma _bfd_stab_section_offset (asection *, void *, bfd_vma) ATTRIBUTE_HIDDEN;
+bfd_vma _bfd_stab_section_offset (asection *, bfd_vma) ATTRIBUTE_HIDDEN;
 
 /* Extracted from targets.c.  */
 #ifdef __cplusplus

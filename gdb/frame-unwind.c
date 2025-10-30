@@ -49,6 +49,7 @@ static constexpr std::initializer_list<const frame_unwind *>
   standard_unwinders =
 {
   &dummy_frame_unwind,
+#if defined(DWARF_FORMAT_AVAILABLE)
   /* The DWARF tailcall sniffer must come before the inline sniffer.
      Otherwise, we can end up in a situation where a DWARF frame finds
      tailcall information, but then the inline sniffer claims a frame
@@ -57,6 +58,7 @@ static constexpr std::initializer_list<const frame_unwind *>
      activated if the newer frame was created using the DWARF
      unwinder, and it also found tailcall information.  */
   &dwarf2_tailcall_frame_unwind,
+#endif
   &inline_frame_unwind,
 };
 
@@ -295,8 +297,16 @@ struct value *
 frame_unwind_got_register (const frame_info_ptr &frame,
 			   int regnum, int new_regnum)
 {
+  struct gdbarch *gdbarch = frame_unwind_arch (frame);
+  struct type *regnum_type = register_type (gdbarch, regnum);
+  struct type *new_regnum_type = register_type (gdbarch, new_regnum);
+
+  /* REGNUM has been copied into NEW_REGNUM, therefore, the former
+     must be smaller or equal in size to the latter.  */
+  gdb_assert (regnum_type->length () <= new_regnum_type->length ());
+
   return value_of_register_lazy (get_next_frame_sentinel_okay (frame),
-				 new_regnum);
+				 new_regnum, regnum_type);
 }
 
 /* Return a value which indicates that FRAME saved REGNUM in memory at
@@ -612,9 +622,7 @@ maintenance_enable_frame_unwinders (const char *args, int from_tty)
   enable_disable_frame_unwinders (args, from_tty, true);
 }
 
-void _initialize_frame_unwind ();
-void
-_initialize_frame_unwind ()
+INIT_GDB_FILE (frame_unwind)
 {
   /* Add "maint info frame-unwinders".  */
   add_cmd ("frame-unwinders",

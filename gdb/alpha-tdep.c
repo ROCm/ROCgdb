@@ -43,6 +43,9 @@
 #include "alpha-tdep.h"
 #include <algorithm>
 
+#include "target-descriptions.h"
+#include "features/alpha.c"
+
 /* Instruction decoding.  The notations for registers, immediates and
    opcodes are the same as the one used in Compaq's Alpha architecture
    handbook.  */
@@ -75,60 +78,38 @@ static const int subq_opcode = 0x10;
 static const int subq_function = 0x29;
 
 
-/* Return the name of the REGNO register.
+/* Alpha registers using their software names.
 
    An empty name corresponds to a register number that used to
    be used for a virtual register.  That virtual register has
    been removed, but the index is still reserved to maintain
    compatibility with existing remote alpha targets.  */
 
-static const char *
-alpha_register_name (struct gdbarch *gdbarch, int regno)
+static const char * const alpha_register_names[] =
 {
-  static const char * const register_names[] =
-  {
-    "v0",   "t0",   "t1",   "t2",   "t3",   "t4",   "t5",   "t6",
-    "t7",   "s0",   "s1",   "s2",   "s3",   "s4",   "s5",   "fp",
-    "a0",   "a1",   "a2",   "a3",   "a4",   "a5",   "t8",   "t9",
-    "t10",  "t11",  "ra",   "t12",  "at",   "gp",   "sp",   "zero",
-    "f0",   "f1",   "f2",   "f3",   "f4",   "f5",   "f6",   "f7",
-    "f8",   "f9",   "f10",  "f11",  "f12",  "f13",  "f14",  "f15",
-    "f16",  "f17",  "f18",  "f19",  "f20",  "f21",  "f22",  "f23",
-    "f24",  "f25",  "f26",  "f27",  "f28",  "f29",  "f30",  "fpcr",
-    "pc",   "",     "unique"
-  };
-
-  static_assert (ALPHA_NUM_REGS == ARRAY_SIZE (register_names));
-  return register_names[regno];
-}
+  "v0",   "t0",   "t1",   "t2",   "t3",   "t4",   "t5",   "t6",
+  "t7",   "s0",   "s1",   "s2",   "s3",   "s4",   "s5",   "fp",
+  "a0",   "a1",   "a2",   "a3",   "a4",   "a5",   "t8",   "t9",
+  "t10",  "t11",  "ra",   "t12",  "at",   "gp",   "sp",   "zero",
+  "f0",   "f1",   "f2",   "f3",   "f4",   "f5",   "f6",   "f7",
+  "f8",   "f9",   "f10",  "f11",  "f12",  "f13",  "f14",  "f15",
+  "f16",  "f17",  "f18",  "f19",  "f20",  "f21",  "f22",  "f23",
+  "f24",  "f25",  "f26",  "f27",  "f28",  "f29",  "f30",  "fpcr",
+  "pc",   "",     "unique"
+};
+static_assert (ALPHA_NUM_REGS == ARRAY_SIZE (alpha_register_names));
 
 static int
 alpha_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
-  return (strlen (alpha_register_name (gdbarch, regno)) == 0);
+  return (strlen (alpha_register_names[regno]) == 0);
 }
 
 static int
 alpha_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == ALPHA_ZERO_REGNUM
-	  || strlen (alpha_register_name (gdbarch, regno)) == 0);
-}
-
-static struct type *
-alpha_register_type (struct gdbarch *gdbarch, int regno)
-{
-  if (regno == ALPHA_SP_REGNUM || regno == ALPHA_GP_REGNUM)
-    return builtin_type (gdbarch)->builtin_data_ptr;
-  if (regno == ALPHA_PC_REGNUM)
-    return builtin_type (gdbarch)->builtin_func_ptr;
-
-  /* Don't need to worry about little vs big endian until 
-     some jerk tries to port to alpha-unicosmk.  */
-  if (regno >= ALPHA_FP0_REGNUM && regno < ALPHA_FP0_REGNUM + 31)
-    return builtin_type (gdbarch)->builtin_double;
-
-  return builtin_type (gdbarch)->builtin_int64;
+	  || strlen (alpha_register_names[regno]) == 0);
 }
 
 /* Is REGNUM a member of REGGROUP?  */
@@ -137,7 +118,7 @@ static int
 alpha_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			   const struct reggroup *group)
 {
-  /* Filter out any registers eliminated, but whose regnum is 
+  /* Filter out any registers eliminated, but whose regnum is
      reserved for backward compatibility, e.g. the vfp.  */
   if (*gdbarch_register_name (gdbarch, regnum) == '\0')
     return 0;
@@ -529,7 +510,7 @@ alpha_extract_return_value (struct type *valtype, struct regcache *regcache,
     }
 }
 
-/* Insert the given value into REGCACHE as if it was being 
+/* Insert the given value into REGCACHE as if it was being
    returned by a function.  */
 
 static void
@@ -656,7 +637,7 @@ alpha_after_prologue (CORE_ADDR pc)
   if (!find_pc_partial_function (pc, NULL, &func_addr, &func_end))
     return 0;
 
-  sal = find_pc_line (func_addr, 0);
+  sal = find_sal_for_pc (func_addr, 0);
   if (sal.end < func_end)
     return sal.end;
 
@@ -755,7 +736,7 @@ static const int stq_c_opcode = 0x2f;
 
 /* Checks for an atomic sequence of instructions beginning with a LDL_L/LDQ_L
    instruction and ending with a STL_C/STQ_C instruction.  If such a sequence
-   is found, attempt to step through it.  A breakpoint is placed at the end of 
+   is found, attempt to step through it.  A breakpoint is placed at the end of
    the sequence.  */
 
 static std::vector<CORE_ADDR>
@@ -767,7 +748,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
   unsigned int insn = alpha_read_insn (gdbarch, loc);
   int insn_count;
   int index;
-  int last_breakpoint = 0; /* Defaults to 0 (no breakpoints placed).  */  
+  int last_breakpoint = 0; /* Defaults to 0 (no breakpoints placed).  */
   const int atomic_sequence_length = 16; /* Instruction sequence length.  */
   int bc_insn_count = 0; /* Conditional branch instruction count.  */
 
@@ -776,7 +757,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
       && INSN_OPCODE (insn) != ldq_l_opcode)
     return {};
 
-  /* Assume that no atomic sequence is longer than "atomic_sequence_length" 
+  /* Assume that no atomic sequence is longer than "atomic_sequence_length"
      instructions.  */
   for (insn_count = 0; insn_count < atomic_sequence_length; ++insn_count)
     {
@@ -784,7 +765,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
       insn = alpha_read_insn (gdbarch, loc);
 
       /* Assume that there is at most one branch in the atomic
-	 sequence.  If a branch is found, put a breakpoint in 
+	 sequence.  If a branch is found, put a breakpoint in
 	 its destination address.  */
       if (INSN_OPCODE (insn) >= br_opcode)
 	{
@@ -819,7 +800,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
   breaks[0] = loc;
 
   /* Check for duplicated breakpoints.  Check also for a breakpoint
-     placed (branch instruction's destination) anywhere in sequence.  */ 
+     placed (branch instruction's destination) anywhere in sequence.  */
   if (last_breakpoint
       && (breaks[1] == breaks[0]
 	  || (breaks[1] >= pc && breaks[1] <= closing_insn)))
@@ -895,7 +876,7 @@ alpha_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
 static CORE_ADDR
 alpha_sigtramp_register_address (struct gdbarch *gdbarch,
 				 CORE_ADDR sigcontext_addr, int regnum)
-{ 
+{
   alpha_gdbarch_tdep *tdep = gdbarch_tdep<alpha_gdbarch_tdep> (gdbarch);
 
   if (regnum >= 0 && regnum < 32)
@@ -903,7 +884,7 @@ alpha_sigtramp_register_address (struct gdbarch *gdbarch,
   else if (regnum >= ALPHA_FP0_REGNUM && regnum < ALPHA_FP0_REGNUM + 32)
     return sigcontext_addr + tdep->sc_fpregs_offset + regnum * 8;
   else if (regnum == ALPHA_PC_REGNUM)
-    return sigcontext_addr + tdep->sc_pc_offset; 
+    return sigcontext_addr + tdep->sc_pc_offset;
 
   return 0;
 }
@@ -1112,7 +1093,7 @@ Otherwise, you told GDB there was a function where there isn't one, or\n\
    something about the traditional layout of alpha stack frames.  */
 
 struct alpha_heuristic_unwind_cache
-{ 
+{
   CORE_ADDR vfp;
   CORE_ADDR start_pc;
   trad_frame_saved_reg *saved_regs;
@@ -1142,7 +1123,7 @@ alpha_heuristic_analyze_probing_loop (struct gdbarch *gdbarch, CORE_ADDR *pc,
 	subq    REG_INDEX,0x1,REG_INDEX
 	lda     REG_PROBE,<immediate>(REG_PROBE)
 	bne     REG_INDEX, LOOP_START
- 
+
 	lda     sp,<immediate>(REG_PROBE)
 
      If anything different is found, the function returns without
@@ -1168,14 +1149,14 @@ alpha_heuristic_analyze_probing_loop (struct gdbarch *gdbarch, CORE_ADDR *pc,
   cur_frame_size -= MEM_DISP (insn);
 
   /* stq     zero,<immediate>(REG_PROBE) */
-  
+
   cur_pc += ALPHA_INSN_SIZE;
   insn = alpha_read_insn (gdbarch, cur_pc);
   if (INSN_OPCODE (insn) != stq_opcode
       || MEM_RA (insn) != 0x1f
       || MEM_RB (insn) != reg_probe)
     return;
-  
+
   /* subq    REG_INDEX,0x1,REG_INDEX */
 
   cur_pc += ALPHA_INSN_SIZE;
@@ -1187,9 +1168,9 @@ alpha_heuristic_analyze_probing_loop (struct gdbarch *gdbarch, CORE_ADDR *pc,
       || OPR_RA (insn) != reg_index
       || OPR_RC (insn) != reg_index)
     return;
-  
+
   /* lda     REG_PROBE,<immediate>(REG_PROBE) */
-  
+
   cur_pc += ALPHA_INSN_SIZE;
   insn = alpha_read_insn (gdbarch, cur_pc);
   if (INSN_OPCODE (insn) != lda_opcode
@@ -1422,7 +1403,7 @@ alpha_heuristic_frame_prev_register (const frame_info_ptr &this_frame,
      the correct place.  */
   if (regnum == ALPHA_PC_REGNUM)
     regnum = info->return_reg;
-  
+
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
@@ -1541,7 +1522,7 @@ alpha_fill_fp_regs (const struct regcache *regcache,
 
 /* Return nonzero if the G_floating register value in REG is equal to
    zero for FP control instructions.  */
-   
+
 static int
 fp_register_zero_p (LONGEST reg)
 {
@@ -1616,7 +1597,7 @@ alpha_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	  case 0x35:              /* FBNE */
 	    regno += gdbarch_fp0_regnum (gdbarch);
 	}
-      
+
       rav = regcache_raw_get_signed (regcache, regno);
 
       switch (op)
@@ -1655,7 +1636,7 @@ alpha_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	  break;
 
 	/* Floating point branches.  */
-	
+
 	case 0x31:              /* FBEQ */
 	  if (fp_register_zero_p (rav))
 	    goto branch_taken;
@@ -1715,10 +1696,38 @@ alpha_software_single_step (struct regcache *regcache)
 static struct gdbarch *
 alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
+  tdesc_arch_data_up tdesc_data;
+  const struct target_desc *tdesc = info.target_desc;
+
   /* Find a candidate among extant architectures.  */
   arches = gdbarch_list_lookup_by_info (arches, &info);
   if (arches != NULL)
     return arches->gdbarch;
+
+  if (tdesc == nullptr)
+    tdesc = tdesc_alpha;
+
+  /* Validate target description.  */
+  if (tdesc_has_registers (tdesc))
+    {
+      const struct tdesc_feature *feature;
+      bool valid_p;
+
+      feature = tdesc_find_feature (tdesc, "org.gnu.gdb.alpha.core");
+      if (feature == nullptr)
+	return nullptr;
+
+      tdesc_data = tdesc_data_alloc ();
+      valid_p = true;
+      for (int i = 0; i < ALPHA_NUM_REGS; ++i)
+	valid_p &= tdesc_numbered_register (feature, tdesc_data.get (), i,
+					    alpha_register_names[i]);
+
+      if (!valid_p)
+	return nullptr;
+    }
+
+  gdb_assert (tdesc_data != nullptr);
 
   gdbarch *gdbarch
     = gdbarch_alloc (&info, gdbarch_tdep_up (new alpha_gdbarch_tdep));
@@ -1756,8 +1765,7 @@ alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_pc_regnum (gdbarch, ALPHA_PC_REGNUM);
   set_gdbarch_fp0_regnum (gdbarch, ALPHA_FP0_REGNUM);
 
-  set_gdbarch_register_name (gdbarch, alpha_register_name);
-  set_gdbarch_register_type (gdbarch, alpha_register_type);
+  tdesc_use_registers (gdbarch, tdesc, std::move (tdesc_data));
 
   set_gdbarch_cannot_fetch_register (gdbarch, alpha_cannot_fetch_register);
   set_gdbarch_cannot_store_register (gdbarch, alpha_cannot_store_register);
@@ -1789,7 +1797,7 @@ alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_cannot_step_breakpoint (gdbarch, 1);
 
   /* Handles single stepping of atomic sequences.  */
-  set_gdbarch_software_single_step (gdbarch, alpha_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, alpha_software_single_step);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
@@ -1815,12 +1823,12 @@ alpha_dwarf2_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_base_append_sniffer (gdbarch, dwarf2_frame_base_sniffer);
 }
 
-void _initialize_alpha_tdep ();
-void
-_initialize_alpha_tdep ()
+INIT_GDB_FILE (alpha_tdep)
 {
 
   gdbarch_register (bfd_arch_alpha, alpha_gdbarch_init, NULL);
+
+  initialize_tdesc_alpha ();
 
   /* Let the user set the fence post for heuristic_proc_start.  */
 

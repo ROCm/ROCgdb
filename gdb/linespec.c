@@ -35,7 +35,6 @@
 #include "interps.h"
 #include "target.h"
 #include "arch-utils.h"
-#include <ctype.h>
 #include "cli/cli-utils.h"
 #include "filenames.h"
 #include "ada-lang.h"
@@ -230,7 +229,7 @@ collect_info::add_symbol (block_symbol *bsym)
 {
   /* In list mode, add all matching symbols, regardless of class.
      This allows the user to type "list a_global_variable".  */
-  if (bsym->symbol->aclass () == LOC_BLOCK || this->state->list_mode)
+  if (bsym->symbol->loc_class () == LOC_BLOCK || this->state->list_mode)
     this->result.symbols->push_back (*bsym);
 
   /* Continue iterating.  */
@@ -396,8 +395,8 @@ static struct line_offset
      linespec_parse_variable (struct linespec_state *self,
 			      const char *variable);
 
-static bool symbol_to_sal (struct symtab_and_line *result,
-			   bool funfirstline, struct symbol *sym);
+static std::optional<symtab_and_line> symbol_to_sal (bool funfirstline,
+						     symbol *sym);
 
 static void add_matching_symbols_to_info (const char *name,
 					  symbol_name_match_type name_match_type,
@@ -420,13 +419,11 @@ static std::vector<symtab_and_line> decode_digits_ordinary
    const linetable_entry **best_entry);
 
 static std::vector<symtab_and_line> decode_digits_list_mode
-  (struct linespec_state *self,
-   linespec *ls,
-   struct symtab_and_line val);
+  (linespec_state *self, linespec *ls, int line);
 
 static void minsym_found (struct linespec_state *self, struct objfile *objfile,
 			  struct minimal_symbol *msymbol,
-			  std::vector<symtab_and_line> *result);
+			  std::vector<symtab_and_line> &result);
 
 static bool compare_symbols (const block_symbol &a, const block_symbol &b);
 
@@ -459,7 +456,7 @@ linespec_lexer_lex_number (linespec_parser *parser, linespec_token *tokenp)
       ++(parser->lexer.stream);
     }
 
-  while (isdigit (*parser->lexer.stream))
+  while (c_isdigit (*parser->lexer.stream))
     {
       ++tokenp->data.string.length;
       ++(parser->lexer.stream);
@@ -468,7 +465,7 @@ linespec_lexer_lex_number (linespec_parser *parser, linespec_token *tokenp)
   /* If the next character in the input buffer is not a space, comma,
      quote, or colon, this input does not represent a number.  */
   if (*parser->lexer.stream != '\0'
-      && !isspace (*parser->lexer.stream) && *parser->lexer.stream != ','
+      && !c_isspace (*parser->lexer.stream) && *parser->lexer.stream != ','
       && *parser->lexer.stream != ':'
       && !strchr (linespec_quote_characters, *parser->lexer.stream))
     {
@@ -512,7 +509,7 @@ linespec_lexer_lex_keyword (const char *p)
 	      if (i == FORCE_KEYWORD_INDEX && p[len] == '\0')
 		return linespec_keywords[i];
 
-	      if (!isspace (p[len]))
+	      if (!c_isspace (p[len]))
 		continue;
 
 	      if (i == FORCE_KEYWORD_INDEX)
@@ -524,7 +521,7 @@ linespec_lexer_lex_keyword (const char *p)
 		      int nextlen = strlen (linespec_keywords[j]);
 
 		      if (strncmp (p, linespec_keywords[j], nextlen) == 0
-			  && isspace (p[nextlen]))
+			  && c_isspace (p[nextlen]))
 			return linespec_keywords[i];
 		    }
 		}
@@ -538,7 +535,7 @@ linespec_lexer_lex_keyword (const char *p)
 		      int nextlen = strlen (linespec_keywords[j]);
 
 		      if (strncmp (p, linespec_keywords[j], nextlen) == 0
-			  && isspace (p[nextlen]))
+			  && c_isspace (p[nextlen]))
 			return NULL;
 		    }
 		}
@@ -763,7 +760,7 @@ linespec_lexer_lex_string (linespec_parser *parser)
 
       while (1)
 	{
-	  if (isspace (*parser->lexer.stream))
+	  if (c_isspace (*parser->lexer.stream))
 	    {
 	      p = skip_spaces (parser->lexer.stream);
 	      /* When we get here we know we've found something followed by
@@ -841,14 +838,14 @@ linespec_lexer_lex_string (linespec_parser *parser)
 		{
 		  const char *op = parser->lexer.stream;
 
-		  while (op > start && isspace (op[-1]))
+		  while (op > start && c_isspace (op[-1]))
 		    op--;
 		  if (op - start >= CP_OPERATOR_LEN)
 		    {
 		      op -= CP_OPERATOR_LEN;
 		      if (strncmp (op, CP_OPERATOR_STR, CP_OPERATOR_LEN) == 0
 			  && (op == start
-			      || !(isalnum (op[-1]) || op[-1] == '_')))
+			      || !(c_isalnum (op[-1]) || op[-1] == '_')))
 			{
 			  /* This is an operator name.  Keep going.  */
 			  ++(parser->lexer.stream);
@@ -1070,33 +1067,39 @@ linespec_lexer_peek_token (linespec_parser *parser)
 
 static void
 add_sal_to_sals (struct linespec_state *self,
-		 std::vector<symtab_and_line> *sals,
-		 struct symtab_and_line *sal,
+		 std::vector<symtab_and_line> &sals,
+		 const symtab_and_line &sal,
 		 const char *symname, bool literal_canonical)
 {
-  sals->push_back (*sal);
+  /* We don't want two SALs with the same PC from the
+     same program space.  */
+  for (const auto &s : sals)
+    if (sal.pc == s.pc && sal.pspace == s.pspace)
+     return;
+
+  sals.push_back (sal);
 
   if (self->canonical)
     {
       linespec_canonical_name &canonical
 	= self->canonical_names.emplace_back ();
 
-      if (!literal_canonical && sal->symtab)
+      if (!literal_canonical && sal.symtab)
 	{
-	  symtab_to_fullname (sal->symtab);
+	  symtab_to_fullname (sal.symtab);
 
 	  /* Note that the filter doesn't have to be a valid linespec
 	     input.  We only apply the ":LINE" treatment to Ada for
 	     the time being.  */
-	  if (symname != NULL && sal->line != 0
+	  if (symname != NULL && sal.line != 0
 	      && self->language->la_language == language_ada)
 	    canonical.suffix = string_printf ("%s:%d", symname,
-					      sal->line);
+					      sal.line);
 	  else if (symname != NULL)
 	    canonical.suffix = symname;
 	  else
-	    canonical.suffix = string_printf ("%d", sal->line);
-	  canonical.symtab = sal->symtab;
+	    canonical.suffix = string_printf ("%d", sal.line);
+	  canonical.symtab = sal.symtab;
 	}
       else
 	{
@@ -1132,14 +1135,9 @@ iterate_over_all_matching_symtabs
 
       set_current_program_space (pspace);
 
-      for (objfile *objfile : pspace->objfiles ())
+      for (objfile &objfile : pspace->objfiles ())
 	{
-	  objfile->expand_symtabs_matching (NULL, &lookup_name, NULL, NULL,
-					    (SEARCH_GLOBAL_BLOCK
-					     | SEARCH_STATIC_BLOCK),
-					    domain);
-
-	  for (compunit_symtab *cu : objfile->compunits ())
+	  auto expand_callback = [&] (compunit_symtab *cu)
 	    {
 	      struct symtab *symtab = cu->primary_filetab ();
 
@@ -1166,7 +1164,12 @@ iterate_over_all_matching_symtabs
 			 });
 		    }
 		}
-	    }
+
+	      return true;
+	    };
+
+	  objfile.search (nullptr, &lookup_name, nullptr, expand_callback,
+			  SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK, domain);
 	}
     }
 }
@@ -1442,7 +1445,7 @@ decode_line_2 (struct linespec_state *self,
   if (select_mode == multiple_symbols_cancel && items.size () > 1)
     error (_("canceled because the command is ambiguous\n"
 	     "See set/show multiple-symbol."));
-  
+
   if (select_mode == multiple_symbols_all || items.size () == 1)
     {
       convert_results_to_lsals (self, result);
@@ -1553,7 +1556,7 @@ symbol_not_found_error (const char *symbol, const char *filename)
     }
 }
 
-/* Throw an appropriate error when an unexpected token is encountered 
+/* Throw an appropriate error when an unexpected token is encountered
    in the input.  */
 
 [[noreturn]] static void
@@ -1636,7 +1639,7 @@ linespec_parse_line_offset (const char *string)
   else
     line_offset.sign = LINE_OFFSET_NONE;
 
-  if (*string != '\0' && !isdigit (*string))
+  if (*string != '\0' && !c_isdigit (*string))
     error (_("malformed line offset: \"%s\""), start);
 
   /* Right now, we only allow base 10 for offsets.  */
@@ -2007,24 +2010,24 @@ create_sals_line_offset (struct linespec_state *self,
       use_default = true;
     }
 
-  symtab_and_line val;
-  val.line = ls->explicit_loc.line_offset.offset;
+  int line = ls->explicit_loc.line_offset.offset;
+
   switch (ls->explicit_loc.line_offset.sign)
     {
     case LINE_OFFSET_PLUS:
       if (ls->explicit_loc.line_offset.offset == 0)
-	val.line = 5;
+	line = 5;
       if (use_default)
-	val.line = self->default_line + val.line;
+	line = self->default_line + line;
       break;
 
     case LINE_OFFSET_MINUS:
       if (ls->explicit_loc.line_offset.offset == 0)
-	val.line = 15;
+	line = 15;
       if (use_default)
-	val.line = self->default_line - val.line;
+	line = self->default_line - line;
       else
-	val.line = -val.line;
+	line = -line;
       break;
 
     case LINE_OFFSET_NONE:
@@ -2033,7 +2036,7 @@ create_sals_line_offset (struct linespec_state *self,
 
   std::vector<symtab_and_line> values;
   if (self->list_mode)
-    values = decode_digits_list_mode (self, ls, val);
+    values = decode_digits_list_mode (self, ls, line);
   else
     {
       const linetable_entry *best_entry = NULL;
@@ -2044,7 +2047,7 @@ create_sals_line_offset (struct linespec_state *self,
       bool was_exact = true;
 
       std::vector<symtab_and_line> intermediate_results
-	= decode_digits_ordinary (self, ls, val.line, &best_entry);
+	= decode_digits_ordinary (self, ls, line, &best_entry);
       if (intermediate_results.empty () && best_entry != NULL)
 	{
 	  was_exact = false;
@@ -2123,16 +2126,16 @@ create_sals_line_offset (struct linespec_state *self,
 	       line 16 will also result in a breakpoint in main, at line 17.  */
 	    if (!was_exact
 		&& sym != nullptr
-		&& sym->aclass () == LOC_BLOCK
+		&& sym->loc_class () == LOC_BLOCK
 		&& sal.pc == sym->value_block ()->entry_pc ()
-		&& val.line < sym->line ())
+		&& line < sym->line ())
 	      continue;
 
 	    if (self->funfirstline)
 	      skip_prologue_sal (&sal);
 
 	    sal.symbol = sym;
-	    add_sal_to_sals (self, &values, &sal,
+	    add_sal_to_sals (self, values, sal,
 			     sym ? sym->natural_name () : nullptr, false);
 	  }
     }
@@ -2142,11 +2145,11 @@ create_sals_line_offset (struct linespec_state *self,
       if (ls->explicit_loc.source_filename)
 	throw_error (NOT_FOUND_ERROR,
 		     _("No compiled code for line %d in file \"%s\"."),
-		     val.line, ls->explicit_loc.source_filename.get ());
+		     line, ls->explicit_loc.source_filename.get ());
       else
 	throw_error (NOT_FOUND_ERROR,
 		     _("No compiled code for line %d in the current file."),
-		     val.line);
+		     line);
     }
 
   return values;
@@ -2158,14 +2161,18 @@ static std::vector<symtab_and_line>
 convert_address_location_to_sals (struct linespec_state *self,
 				  CORE_ADDR address)
 {
-  symtab_and_line sal = find_pc_line (address, 0);
+  symtab_and_line sal = find_sal_for_pc (address, 0);
   sal.pc = address;
   sal.section = find_pc_overlay (address);
+
+  if (sal.section == nullptr)
+    sal.section = find_pc_section (address);
+
   sal.explicit_pc = 1;
-  sal.symbol = find_pc_sect_containing_function (sal.pc, sal.section);
+  sal.symbol = find_symbol_for_pc_sect_maybe_inline (sal.pc, sal.section);
 
   std::vector<symtab_and_line> sals;
-  add_sal_to_sals (self, &sals, &sal, core_addr_to_string (address), true);
+  add_sal_to_sals (self, sals, sal, core_addr_to_string (address), true);
 
   return sals;
 }
@@ -2180,16 +2187,15 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
   if (!ls->labels.label_symbols.empty ())
     {
       /* We have just a bunch of functions/methods or labels.  */
-      struct symtab_and_line sal;
-
       for (const auto &sym : ls->labels.label_symbols)
 	{
 	  struct program_space *pspace
 	    = sym.symbol->symtab ()->compunit ()->objfile ()->pspace ();
+	  std::optional<symtab_and_line> sal
+	    = symbol_to_sal (state->funfirstline, sym.symbol);
 
-	  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-	      && state->maybe_add_address (pspace, sal.pc))
-	    add_sal_to_sals (state, &sals, &sal,
+	  if (sal.has_value () && state->maybe_add_address (pspace, sal->pc))
+	    add_sal_to_sals (state, sals, *sal,
 			     sym.symbol->natural_name (), false);
 	}
     }
@@ -2218,7 +2224,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 
 	      if (state->funfirstline
 		   && !ls->minimal_symbols.empty ()
-		   && sym.symbol->aclass () == LOC_BLOCK)
+		   && sym.symbol->loc_class () == LOC_BLOCK)
 		{
 		  const CORE_ADDR addr
 		    = sym.symbol->value_block ()->entry_pc ();
@@ -2251,10 +2257,12 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 
 	      if (!found_ifunc)
 		{
-		  symtab_and_line sal;
-		  if (symbol_to_sal (&sal, state->funfirstline, sym.symbol)
-		      && state->maybe_add_address (pspace, sal.pc))
-		    add_sal_to_sals (state, &sals, &sal,
+		  std::optional<symtab_and_line> sal
+		    = symbol_to_sal (state->funfirstline, sym.symbol);
+
+		  if (sal.has_value ()
+		      && state->maybe_add_address (pspace, sal->pc))
+		    add_sal_to_sals (state, sals, *sal,
 				     sym.symbol->natural_name (), false);
 		}
 	    }
@@ -2271,7 +2279,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 	    {
 	      program_space *pspace = elem.objfile->pspace ();
 	      set_current_program_space (pspace);
-	      minsym_found (state, elem.objfile, elem.minsym, &sals);
+	      minsym_found (state, elem.objfile, elem.minsym, sals);
 	    }
 	}
     }
@@ -3355,7 +3363,7 @@ decode_compound_collector::operator () (block_symbol *bsym)
   struct type *t;
   struct symbol *sym = bsym->symbol;
 
-  if (sym->aclass () != LOC_TYPEDEF)
+  if (sym->loc_class () != LOC_TYPEDEF)
     return true; /* Continue iterating.  */
 
   t = sym->type ();
@@ -3597,43 +3605,6 @@ find_method (struct linespec_state *self,
 
 
 
-namespace {
-
-/* This function object is a callback for iterate_over_symtabs, used
-   when collecting all matching symtabs.  */
-
-class symtab_collector
-{
-public:
-  symtab_collector () = default;
-
-  DISABLE_COPY_AND_ASSIGN (symtab_collector);
-
-  /* Callable as a symbol_found_callback_ftype callback.  */
-  bool operator () (struct symtab *symtab)
-  {
-    if (m_symtab_table.insert (symtab).second)
-      m_symtabs.push_back (symtab);
-
-    return false;
-  }
-
-  /* Return an rvalue reference to the collected symtabs.  */
-  std::vector<symtab *> &&release_symtabs ()
-  {
-    return std::move (m_symtabs);
-  }
-
-private:
-  /* The result vector of symtabs.  */
-  std::vector<symtab *> m_symtabs;
-
-  /* This is used to ensure the symtabs are unique.  */
-  gdb::unordered_set<const symtab *> m_symtab_table;
-};
-
-} // namespace
-
 /* Given a file name, return a list of all matching symtabs.  If
    SEARCH_PSPACE is not NULL, the search is restricted to just that
    program space.  */
@@ -3642,7 +3613,17 @@ static std::vector<symtab *>
 collect_symtabs_from_filename (const char *file,
 			       struct program_space *search_pspace)
 {
-  symtab_collector collector;
+  /* The result vector of symtabs.  */
+  std::vector<symtab *> symtabs;
+  /* This is used to ensure the symtabs are unique.  */
+  gdb::unordered_set<const symtab *> symtab_table;
+
+  auto collector = [&] (struct symtab *symtab)
+    {
+      if (symtab_table.insert (symtab).second)
+	symtabs.push_back (symtab);
+      return false;
+    };
 
   /* Find that file's data.  */
   if (search_pspace == NULL)
@@ -3658,7 +3639,10 @@ collect_symtabs_from_filename (const char *file,
   else
     iterate_over_symtabs (search_pspace, file, collector);
 
-  return collector.release_symtabs ();
+  /* It is tempting to use the unordered_dense 'extract' method here,
+     and remove the separate vector -- but it's unclear if ordering
+     matters.  */
+  return symtabs;
 }
 
 /* Return all the symtabs associated to the FILENAME.  If SEARCH_PSPACE is
@@ -3762,7 +3746,7 @@ find_linespec_symbols (struct linespec_state *state,
   if (canon != nullptr)
     lookup_name = canon.get ();
 
-  /* It's important to not call expand_symtabs_matching unnecessarily
+  /* It's important to not call search unnecessarily
      as it can really slow things down (by unnecessarily expanding
      potentially 1000s of symtabs, which when debugging some apps can
      cost 100s of seconds).  Avoid this to some extent by *first* calling
@@ -3935,9 +3919,7 @@ find_label_symbols (struct linespec_state *self,
 /* A helper for create_sals_line_offset that handles the 'list_mode' case.  */
 
 static std::vector<symtab_and_line>
-decode_digits_list_mode (struct linespec_state *self,
-			 linespec *ls,
-			 struct symtab_and_line val)
+decode_digits_list_mode (linespec_state *self, linespec *ls, int line)
 {
   gdb_assert (self->list_mode);
 
@@ -3952,14 +3934,16 @@ decode_digits_list_mode (struct linespec_state *self,
       set_current_program_space (pspace);
 
       /* Simplistic search just for the list command.  */
-      val.symtab = find_line_symtab (elt, val.line, nullptr);
+      symtab_and_line val;
+      val.line = line;
+      val.symtab = find_line_symtab (elt, line, nullptr);
       if (val.symtab == NULL)
 	val.symtab = elt;
       val.pspace = pspace;
       val.pc = 0;
       val.explicit_line = true;
 
-      add_sal_to_sals (self, &values, &val, NULL, false);
+      add_sal_to_sals (self, values, val, NULL, false);
     }
 
   return values;
@@ -3978,23 +3962,24 @@ decode_digits_ordinary (struct linespec_state *self,
   std::vector<symtab_and_line> sals;
   for (const auto &elt : ls->file_symtabs)
     {
-      std::vector<CORE_ADDR> pcs;
+      std::vector<const linetable_entry *> pcs;
 
       /* The logic above should ensure this.  */
       gdb_assert (elt != NULL);
 
-      program_space *pspace = elt->compunit ()->objfile ()->pspace ();
+      objfile *objfile = elt->compunit ()->objfile ();
+      program_space *pspace = objfile->pspace ();
       set_current_program_space (pspace);
 
-      pcs = find_pcs_for_symtab_line (elt, line, best_entry);
-      for (CORE_ADDR pc : pcs)
+      pcs = find_linetable_entries_for_symtab_line (elt, line, best_entry);
+      for (auto linetable_entry : pcs)
 	{
 	  symtab_and_line sal;
 	  sal.pspace = pspace;
 	  sal.symtab = elt;
 	  sal.line = line;
 	  sal.explicit_line = true;
-	  sal.pc = pc;
+	  sal.pc = linetable_entry->pc (objfile);
 	  sals.push_back (std::move (sal));
 	}
     }
@@ -4072,12 +4057,13 @@ linespec_parse_variable (struct linespec_state *self, const char *variable)
 static void
 minsym_found (struct linespec_state *self, struct objfile *objfile,
 	      struct minimal_symbol *msymbol,
-	      std::vector<symtab_and_line> *result)
+	      std::vector<symtab_and_line> &result)
 {
   bool want_start_sal = false;
 
   CORE_ADDR func_addr;
   bool is_function = msymbol_is_function (objfile, msymbol, &func_addr);
+  obj_section *section = msymbol->obj_section (objfile);
 
   if (is_function)
     {
@@ -4085,7 +4071,15 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
 
       if (msymbol->type () == mst_text_gnu_ifunc
 	  || msymbol->type () == mst_data_gnu_ifunc)
-	want_start_sal = gnu_ifunc_resolve_name (msym_name, &func_addr);
+	{
+	  want_start_sal = gnu_ifunc_resolve_name (msym_name, &func_addr);
+
+	  /* We have found a different pc by resolving the ifunc. The
+	     section from the minsym may not be the same as the ifunc
+	     implementation.  Do not trust it.  */
+	  if (want_start_sal)
+	    section = nullptr;
+	}
       else
 	want_start_sal = true;
     }
@@ -4093,7 +4087,7 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
   symtab_and_line sal;
 
   if (is_function && want_start_sal)
-    sal = find_function_start_sal (func_addr, NULL, self->funfirstline);
+    sal = find_function_start_sal (func_addr, section, self->funfirstline);
   else
     {
       sal.objfile = objfile;
@@ -4105,12 +4099,18 @@ minsym_found (struct linespec_state *self, struct objfile *objfile,
       else
 	sal.pc = msymbol->value_address (objfile);
       sal.pspace = current_program_space;
+
+      /* The minsym does not correspond to an ifunc that could be
+	 resolved.  The section from the minsym may thus be trusted,
+	 and cannot be nullptr (since the minsym is from an objfile).
+	 Ensure all resulting sals have a non-null section when
+	 possible.  */
+      gdb_assert (section != nullptr);
+      sal.section = section;
     }
 
-  sal.section = msymbol->obj_section (objfile);
-
   if (self->maybe_add_address (objfile->pspace (), sal.pc))
-    add_sal_to_sals (self, result, &sal, msymbol->natural_name (), false);
+    add_sal_to_sals (self, result, sal, msymbol->natural_name (), false);
 }
 
 /* Helper for search_minsyms_for_name that adds the symbol to the
@@ -4128,7 +4128,7 @@ add_minsym (struct minimal_symbol *minsym, struct objfile *objfile,
       CORE_ADDR func_addr;
       if (msymbol_is_function (objfile, minsym, &func_addr))
 	{
-	  symtab_and_line sal = find_pc_sect_line (func_addr, NULL, 0);
+	  symtab_and_line sal = find_sal_for_pc_sect (func_addr, NULL, 0);
 
 	  if (symtab != sal.symtab)
 	    return;
@@ -4166,12 +4166,12 @@ search_minsyms_for_name (struct collect_info *info,
 
 	  set_current_program_space (pspace);
 
-	  for (objfile *objfile : pspace->objfiles ())
+	  for (objfile &objfile : pspace->objfiles ())
 	    {
-	      iterate_over_minimal_symbols (objfile, name,
+	      iterate_over_minimal_symbols (&objfile, name,
 					    [&] (struct minimal_symbol *msym)
 					    {
-					      add_minsym (msym, objfile, nullptr,
+					      add_minsym (msym, &objfile, nullptr,
 							  info->state->list_mode,
 							  &minsyms);
 					      return false;
@@ -4306,27 +4306,23 @@ add_matching_symbols_to_info (const char *name,
 /* Now come some functions that are called from multiple places within
    decode_line_1.  */
 
-static bool
-symbol_to_sal (struct symtab_and_line *result,
-	       bool funfirstline, struct symbol *sym)
+static std::optional<symtab_and_line>
+symbol_to_sal (bool funfirstline, symbol *sym)
 {
-  if (sym->aclass () == LOC_BLOCK)
-    {
-      *result = find_function_start_sal (sym, funfirstline);
-      return true;
-    }
+  if (sym->loc_class () == LOC_BLOCK)
+    return find_function_start_sal (sym, funfirstline);
   else
     {
-      if (sym->aclass () == LOC_LABEL && sym->value_address () != 0)
+      if (sym->loc_class () == LOC_LABEL && sym->value_address () != 0)
 	{
-	  *result = {};
-	  result->symtab = sym->symtab ();
-	  result->symbol = sym;
-	  result->line = sym->line ();
-	  result->pc = sym->value_address ();
-	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
-	  result->explicit_pc = 1;
-	  return true;
+	  symtab_and_line result;
+	  result.symtab = sym->symtab ();
+	  result.symbol = sym;
+	  result.line = sym->line ();
+	  result.pc = sym->value_address ();
+	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  result.explicit_pc = 1;
+	  return result;
 	}
       else if (funfirstline)
 	{
@@ -4335,17 +4331,17 @@ symbol_to_sal (struct symtab_and_line *result,
       else if (sym->line () != 0)
 	{
 	  /* We know its line number.  */
-	  *result = {};
-	  result->symtab = sym->symtab ();
-	  result->symbol = sym;
-	  result->line = sym->line ();
-	  result->pc = sym->value_address ();
-	  result->pspace = result->symtab->compunit ()->objfile ()->pspace ();
-	  return true;
+	  symtab_and_line result;
+	  result.symtab = sym->symtab ();
+	  result.symbol = sym;
+	  result.line = sym->line ();
+	  result.pc = sym->value_address ();
+	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  return result;
 	}
     }
 
-  return false;
+  return std::nullopt;
 }
 
 linespec_result::~linespec_result ()

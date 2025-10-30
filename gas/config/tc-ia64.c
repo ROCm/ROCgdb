@@ -741,7 +741,7 @@ typedef struct unw_rec_list {
   struct unw_rec_list *next;
 } unw_rec_list;
 
-#define SLOT_NUM_NOT_SET        (unsigned)-1
+#define SLOT_NUM_NOT_SET        -1UL
 
 /* Linked list of saved prologue counts.  A very poor
    implementation of a map from label numbers to prologue counts.  */
@@ -853,20 +853,20 @@ set_section (char *name)
 /* Map 's' to SHF_IA_64_SHORT.  */
 
 bfd_vma
-ia64_elf_section_letter (int letter, const char **ptr_msg)
+ia64_elf_section_letter (int letter, const char **extra)
 {
   if (letter == 's')
     return SHF_IA_64_SHORT;
-  else if (letter == 'o')
-    return SHF_LINK_ORDER;
 #ifdef TE_VMS
   else if (letter == 'O')
     return SHF_IA_64_VMS_OVERLAID;
   else if (letter == 'g')
     return SHF_IA_64_VMS_GLOBAL;
+  *extra = "g,s,O";
+#else
+  *extra = "s";
 #endif
 
-  *ptr_msg = _("bad .section directive: want a,o,s,w,x,M,S,G,T in string");
   return -1;
 }
 
@@ -1045,9 +1045,9 @@ obj_elf_vms_common (int ignore ATTRIBUTE_UNUSED)
   const char *sec_name;
   char *sym_name;
   char c;
-  offsetT size;
-  offsetT cur_size;
-  offsetT temp;
+  valueT size;
+  valueT cur_size;
+  valueT temp;
   symbolS *symbolP;
   segT current_seg = now_seg;
   subsegT current_subseg = now_subseg;
@@ -1109,7 +1109,7 @@ obj_elf_vms_common (int ignore ATTRIBUTE_UNUSED)
 
   temp = get_absolute_expression ();
   size = temp;
-  size &= ((offsetT) 2 << (stdoutput->arch_info->bits_per_address - 1)) - 1;
+  size &= ((valueT) 2 << (stdoutput->arch_info->bits_per_address - 1)) - 1;
   if (temp != size)
     {
       as_warn (_("size (%ld) out of range, ignored"), (long) temp);
@@ -1150,11 +1150,9 @@ obj_elf_vms_common (int ignore ATTRIBUTE_UNUSED)
   record_alignment (now_seg, log_align);
 
   cur_size = bfd_section_size (now_seg);
-  if ((int) size > cur_size)
+  if (size > cur_size)
     {
-      char *pfrag
-        = frag_var (rs_fill, 1, 1, (relax_substateT)0, NULL,
-                    (valueT)size - (valueT)cur_size, NULL);
+      char *pfrag = frag_var (rs_fill, 1, 1, 0, NULL, size - cur_size, NULL);
       *pfrag = 0;
       bfd_set_section_size (now_seg, size);
     }
@@ -3574,7 +3572,7 @@ start_unwind_section (const segT text_seg, int sec_index)
       suffix += sizeof (".gnu.linkonce.t.") - 1;
     }
 
-  sec_name = concat (prefix, suffix, NULL);
+  sec_name = concat (prefix, suffix, (const char *) NULL);
 
   /* Handle COMDAT group.  */
   if ((text_seg->flags & SEC_LINK_ONCE) != 0
@@ -3593,7 +3591,8 @@ start_unwind_section (const segT text_seg, int sec_index)
 	}
 
       /* We have to construct a fake section directive.  */
-      section = concat (sec_name, ",\"aG\",@progbits,", group_name, ",comdat", NULL);
+      section = concat (sec_name, ",\"aG\",@progbits,", group_name,
+			",comdat", (const char *) NULL);
       set_section (section);
       free (section);
     }
@@ -3657,7 +3656,7 @@ generate_unwind_image (const segT text_seg)
       unwind.info = expr_build_dot ();
 
       frag_var (rs_machine_dependent, size, size, 0, 0,
-		(offsetT) (long) unwind.personality_routine,
+		(intptr_t) unwind.personality_routine,
 		(char *) list);
 
       /* Add the personality address to the image.  */
@@ -5096,7 +5095,7 @@ dot_pred_rel (int type)
       if (count == 0)
 	mask = ~(valueT) 0;
       clear_qp_mutex (mask);
-      clear_qp_implies (mask, (valueT) 0);
+      clear_qp_implies (mask, 0);
       break;
     case 'i':
       if (count != 2 || p1 == -1 || p2 == -1)
@@ -5368,7 +5367,7 @@ declare_register_set (const char *prefix,
 		      unsigned int num_regs,
 		      unsigned int base_regnum)
 {
-  char name[8];
+  char name[16];
   unsigned int i;
 
   for (i = 0; i < num_regs; ++i)
@@ -10646,7 +10645,7 @@ md_assemble (char *str)
 
   ch = get_symbol_name (&temp);
   mnemonic = temp;
-  pdesc = (struct pseudo_opcode *) str_hash_find (md.pseudo_hash, mnemonic);
+  pdesc = str_hash_find (md.pseudo_hash, mnemonic);
   if (pdesc)
     {
       (void) restore_line_pointer (ch);
@@ -11664,8 +11663,7 @@ ia64_float_to_chars_bigendian (char *lit, LITTLENUM_TYPE *words,
 {
   while (prec--)
     {
-      number_to_chars_bigendian (lit, (long) (*words++),
-				 sizeof (LITTLENUM_TYPE));
+      number_to_chars_bigendian (lit, *words++, sizeof (LITTLENUM_TYPE));
       lit += sizeof (LITTLENUM_TYPE);
     }
 }
@@ -11676,7 +11674,7 @@ ia64_float_to_chars_littleendian (char *lit, LITTLENUM_TYPE *words,
 {
   while (prec--)
     {
-      number_to_chars_littleendian (lit, (long) (words[prec]),
+      number_to_chars_littleendian (lit, words[prec],
 				    sizeof (LITTLENUM_TYPE));
       lit += sizeof (LITTLENUM_TYPE);
     }
@@ -11779,7 +11777,7 @@ dot_alias (int section)
 
   /* Check if alias has been used before.  */
 
-  h = (struct alias *) str_hash_find (ahash, alias);
+  h = str_hash_find (ahash, alias);
   if (h)
     {
       if (strcmp (h->name, name))
@@ -11790,7 +11788,7 @@ dot_alias (int section)
     }
 
   /* Check if name already has an alias.  */
-  a = (const char *) str_hash_find (nhash, name);
+  a = str_hash_find (nhash, name);
   if (a)
     {
       if (strcmp (a, alias))

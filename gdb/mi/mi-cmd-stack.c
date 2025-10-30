@@ -29,10 +29,8 @@
 #include "valprint.h"
 #include "mi-getopt.h"
 #include "extension.h"
-#include <ctype.h>
 #include "mi-parse.h"
 #include <optional>
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "inferior.h"
 
 enum what_to_list { locals, arguments, all };
@@ -402,9 +400,9 @@ mi_cmd_stack_list_args (const char *command, const char *const *argv, int argc)
     }
 }
 
-/* Print a list of the local variables (including arguments) for the 
+/* Print a list of the local variables (including arguments) for the
    current frame.  ARGC must be 1 and ARGV[0] specify if only the names,
-   or both names and values of the variables must be printed.  See 
+   or both names and values of the variables must be printed.  See
    parse_print_value for possible values.  */
 
 void
@@ -604,7 +602,7 @@ list_args_or_locals (const frame_print_options &fp_opts,
 	{
 	  int print_me = 0;
 
-	  switch (sym->aclass ())
+	  switch (sym->loc_class ())
 	    {
 	    default:
 	    case LOC_UNDEF:	/* catches errors        */

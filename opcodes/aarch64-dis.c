@@ -149,7 +149,6 @@ aarch64_insn
 extract_fields (aarch64_insn code, aarch64_insn mask, ...)
 {
   uint32_t num;
-  const aarch64_field *field;
   enum aarch64_field_kind kind;
   va_list va;
 
@@ -160,8 +159,7 @@ extract_fields (aarch64_insn code, aarch64_insn mask, ...)
   while (num--)
     {
       kind = va_arg (va, enum aarch64_field_kind);
-      field = &fields[kind];
-      value <<= field->width;
+      value <<= aarch64_fields[kind].width;
       value |= extract_field (kind, code, mask);
     }
   va_end (va);
@@ -184,7 +182,7 @@ extract_all_fields_after (const aarch64_operand *self, unsigned int start,
        i < ARRAY_SIZE (self->fields) && self->fields[i] != FLD_NIL; ++i)
     {
       kind = self->fields[i];
-      value <<= fields[kind].width;
+      value <<= aarch64_fields[kind].width;
       value |= extract_field (kind, code, 0);
     }
   return value;
@@ -297,8 +295,7 @@ aarch64_ext_regno (const aarch64_operand *self, aarch64_opnd_info *info,
 		   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 		   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  info->reg.regno = (extract_field (self->fields[0], code, 0)
-		     + get_operand_specific_data (self));
+  info->reg.regno = extract_all_fields (self, code);
   return true;
 }
 
@@ -501,23 +498,23 @@ aarch64_ext_ldst_reglist (const aarch64_operand *self ATTRIBUTE_UNUSED,
   /* Number of elements in each structure to be loaded/stored.  */
   unsigned expected_num = get_opcode_dependent_value (inst->opcode);
 
-  struct
+  static const struct
     {
-      unsigned is_reserved;
-      unsigned num_regs;
-      unsigned num_elements;
+      unsigned num_regs:8;
+      unsigned num_elements:8;
+      bool is_reserved:1;
     } data [] =
-  {   {0, 4, 4},
-      {1, 4, 4},
-      {0, 4, 1},
-      {0, 4, 2},
-      {0, 3, 3},
-      {1, 3, 3},
-      {0, 3, 1},
-      {0, 1, 1},
-      {0, 2, 2},
-      {1, 2, 2},
-      {0, 2, 1},
+  {   {4, 4, false},
+      {4, 4, true},
+      {4, 1, false},
+      {4, 2, false},
+      {3, 3, false},
+      {3, 3, true},
+      {3, 1, false},
+      {1, 1, false},
+      {2, 2, false},
+      {2, 2, true},
+      {2, 1, false},
   };
 
   /* Rt */
@@ -586,7 +583,7 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
 			   const aarch64_inst *inst ATTRIBUTE_UNUSED,
 			   aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   aarch64_insn QSsize;		/* fields Q:S:size.  */
   aarch64_insn opcodeh2;	/* opcode<2:1> */
 
@@ -798,7 +795,7 @@ aarch64_ext_advsimd_imm_modified (const aarch64_operand *self ATTRIBUTE_UNUSED,
 {
   uint64_t imm;
   enum aarch64_opnd_qualifier opnd0_qualifier = inst->operands[0].qualifier;
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
 
   assert (info->idx == 1);
 
@@ -1240,7 +1237,8 @@ aarch64_ext_addr_simm (const aarch64_operand *self, aarch64_opnd_info *info,
   info->addr.base_regno = extract_field (FLD_Rn, code, 0);
   /* simm (imm9 or imm7)  */
   imm = extract_field (self->fields[0], code, 0);
-  info->addr.offset.imm = sign_extend (imm, fields[self->fields[0]].width - 1);
+  info->addr.offset.imm
+    = sign_extend (imm, aarch64_fields[self->fields[0]].width - 1);
   if (self->fields[0] == FLD_imm7
       || info->qualifier == AARCH64_OPND_QLF_imm_tag)
     /* scaled immediate in ld/st pair instructions.  */
@@ -1429,6 +1427,9 @@ aarch64_ext_sysins_op (const aarch64_operand *self ATTRIBUTE_UNUSED,
 
   switch (info->type)
     {
+    case AARCH64_OPND_GIC: sysins_ops = aarch64_sys_ins_gic; break;
+    case AARCH64_OPND_GICR: sysins_ops = aarch64_sys_ins_gicr; break;
+    case AARCH64_OPND_GSB: sysins_ops = aarch64_sys_ins_gsb; break;
     case AARCH64_OPND_SYSREG_AT: sysins_ops = aarch64_sys_regs_at; break;
     case AARCH64_OPND_SYSREG_DC: sysins_ops = aarch64_sys_regs_dc; break;
     case AARCH64_OPND_SYSREG_IC: sysins_ops = aarch64_sys_regs_ic; break;
@@ -1890,8 +1891,7 @@ aarch64_ext_sve_aligned_reglist (const aarch64_operand *self,
 				 aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
   unsigned int num_regs = get_operand_specific_data (self);
-  unsigned int val = extract_field (self->fields[0], code, 0);
-  info->reglist.first_regno = val * num_regs;
+  info->reglist.first_regno = extract_all_fields (self, code);
   info->reglist.num_regs = num_regs;
   info->reglist.stride = 1;
   return true;
@@ -2440,17 +2440,17 @@ aarch64_ext_x0_to_x30 (const aarch64_operand *self, aarch64_opnd_info *info,
   return info->reg.regno <= 30;
 }
 
-/* Decode an indexed register, with the first field being the register
-   number and the remaining fields being the index.  */
+/* Decode an indexed register, with the last five field bits holding the
+   register number and the remaining bits holding the index.  */
 bool
 aarch64_ext_simple_index (const aarch64_operand *self, aarch64_opnd_info *info,
 			  const aarch64_insn code,
 			  const aarch64_inst *inst ATTRIBUTE_UNUSED,
 			  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  int bias = get_operand_specific_data (self);
-  info->reglane.regno = extract_field (self->fields[0], code, 0) + bias;
-  info->reglane.index = extract_all_fields_after (self, 1, code);
+  unsigned int val = extract_all_fields (self, code);
+  info->reglane.regno = val & 31;
+  info->reglane.index = val >> 5;
   return true;
 }
 
@@ -2597,7 +2597,7 @@ decode_sizeq (aarch64_inst *inst)
 static int
 decode_asimd_fcvt (aarch64_inst *inst)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   aarch64_insn value;
   enum aarch64_opnd_qualifier qualifier;
 
@@ -2630,7 +2630,7 @@ decode_asimd_fcvt (aarch64_inst *inst)
 static int
 decode_asisd_fcvtxn (aarch64_inst *inst)
 {
-  aarch64_field field = {0, 0};
+  aarch64_field field = AARCH64_FIELD_NIL;
   gen_sub_field (FLD_size, 0, 1, &field);
   if (!extract_field_2 (&field, inst->value, 0))
     return 0;
@@ -2644,7 +2644,7 @@ decode_fcvt (aarch64_inst *inst)
 {
   enum aarch64_opnd_qualifier qualifier;
   aarch64_insn value;
-  const aarch64_field field = {15, 2};
+  const aarch64_field field = AARCH64_FIELD (15, 2);
 
   /* opc dstsize */
   value = extract_field_2 (&field, inst->value, 0);
@@ -2746,7 +2746,16 @@ do_special_decoding (aarch64_inst *inst)
     {
       idx = select_operand_for_sf_field_coding (inst->opcode);
       value = extract_field (FLD_sf, inst->value, 0);
-      inst->operands[idx].qualifier = get_greg_qualifier_from_value (value);
+      if (inst->opcode->iclass == fprcvtfloat2int
+	  || inst->opcode->iclass == fprcvtint2float)
+	{
+	  if (value == 0)
+	    inst->operands[idx].qualifier = AARCH64_OPND_QLF_S_S;
+	  else
+	    inst->operands[idx].qualifier = AARCH64_OPND_QLF_S_D;
+	}
+      else
+	inst->operands[idx].qualifier = get_greg_qualifier_from_value (value);
       if (inst->operands[idx].qualifier == AARCH64_OPND_QLF_ERR)
 	return 0;
       if ((inst->opcode->flags & F_N)
@@ -2831,6 +2840,23 @@ do_special_decoding (aarch64_inst *inst)
 	}
     }
 
+  if (inst->opcode->flags & F_LSFE_SZ)
+    {
+      value = extract_field (FLD_ldst_size, inst->value, 0);
+
+      if (value > 0x3)
+	return 0;
+
+      for (int i = 0;
+	   aarch64_operands[inst->operands[i].type].op_class != AARCH64_OPND_CLASS_ADDRESS;
+	   i++)
+	{
+	  inst->operands[i].qualifier = get_sreg_qualifier_from_value (value);
+	  if (inst->operands[i].qualifier == AARCH64_OPND_QLF_ERR)
+	    return 0;
+	}
+    }
+
   if (inst->opcode->flags & F_T)
     {
       /* Num of consecutive '0's on the right side of imm5<3:0>.  */
@@ -2897,7 +2923,7 @@ do_special_decoding (aarch64_inst *inst)
 
   if (inst->opcode->flags & F_LDS_SIZE)
     {
-      aarch64_field field = {0, 0};
+      aarch64_field field = AARCH64_FIELD_NIL;
       assert (aarch64_get_operand_class (inst->opcode->operands[0])
 	      == AARCH64_OPND_CLASS_INT_REG);
       gen_sub_field (FLD_opc, 0, 1, &field);
@@ -3577,8 +3603,23 @@ aarch64_decode_variant_using_iclass (aarch64_inst *inst)
       variant = extract_field (FLD_SVE_sz2, inst->value, 0);
       break;
 
+    case sve_size_sd3:
+      variant = extract_field (FLD_SVE_sz3, inst->value, 0);
+      break;
+
+    case sve_size_sd4:
+      variant = extract_field (FLD_SVE_sz4, inst->value, 0);
+      break;
+
     case sve_size_hsd2:
       i = extract_field (FLD_SVE_size, inst->value, 0);
+      if (i < 1)
+	return false;
+      variant = i - 1;
+      break;
+
+    case sve_size_hsd3:
+      i = extract_field (FLD_len, inst->value, 0);
       if (i < 1)
 	return false;
       variant = i - 1;
@@ -4147,7 +4188,6 @@ print_aarch64_insn (bfd_vma pc, const aarch64_inst *inst,
       break;
     case ERR_UND:
     case ERR_UNP:
-    case ERR_NYI:
     default:
       break;
     }
@@ -4166,7 +4206,6 @@ print_insn_aarch64_word (bfd_vma pc,
       [ERR_OK]  = "_",
       [ERR_UND] = "undefined",
       [ERR_UNP] = "unpredictable",
-      [ERR_NYI] = "NYI"
     };
 
   enum err_type ret;
@@ -4188,18 +4227,10 @@ print_insn_aarch64_word (bfd_vma pc,
 
   ret = aarch64_decode_insn (word, &inst, no_aliases, errors);
 
-  if (((word >> 21) & 0x3ff) == 1)
-    {
-      /* RESERVED for ALES.  */
-      assert (ret != ERR_OK);
-      ret = ERR_NYI;
-    }
-
   switch (ret)
     {
     case ERR_UND:
     case ERR_UNP:
-    case ERR_NYI:
       /* Handle undefined instructions.  */
       info->insn_type = dis_noninsn;
       (*info->fprintf_styled_func) (info->stream,

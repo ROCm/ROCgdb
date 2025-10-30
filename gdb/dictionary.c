@@ -1,5 +1,5 @@
 /* Routines for name->symbol lookups in GDB.
-   
+
    Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    Contributed by David Carlton <carlton@bactrian.org> and by Kealia,
@@ -20,12 +20,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
 #include "gdbsupport/gdb_obstack.h"
 #include "symtab.h"
 #include "buildsym.h"
 #include "dictionary.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "gdbsupport/unordered_map.h"
 #include "language.h"
 
@@ -45,7 +43,7 @@
    is:
 
    * Add a new element DICT_<IMPL> to dict_type.
-   
+
    * Create a new structure dictionary_<impl>.  If your new
    implementation is a variant of an existing one, make sure that
    their structs have the same initial data members.  Define accessor
@@ -502,7 +500,7 @@ dict_size (const struct dictionary *dict)
 {
   return (DICT_VECTOR (dict))->size (dict);
 }
- 
+
 /* Now come functions (well, one function, currently) that are
    implemented generically by means of the vtable.  Typically, they're
    rarely used.  */
@@ -541,7 +539,7 @@ iterator_next_hashed (struct dict_iterator *iterator)
   struct symbol *next;
 
   next = DICT_ITERATOR_CURRENT (iterator)->hash_next;
-  
+
   if (next == NULL)
     return iterator_hashed_advance (iterator);
   else
@@ -561,7 +559,7 @@ iterator_hashed_advance (struct dict_iterator *iterator)
   for (i = DICT_ITERATOR_INDEX (iterator) + 1; i < nbuckets; ++i)
     {
       struct symbol *sym = DICT_HASHED_BUCKET (dict, i);
-      
+
       if (sym != NULL)
 	{
 	  DICT_ITERATOR_INDEX (iterator) = i;
@@ -590,7 +588,7 @@ iter_match_first_hashed (const struct dictionary *dict,
   /* Loop through the symbols in the given bucket, breaking when SYM
      first matches.  If SYM never matches, it will be set to NULL;
      either way, we have the right return value.  */
-  
+
   for (sym = DICT_HASHED_BUCKET (dict, hash_index);
        sym != NULL;
        sym = sym->hash_next)
@@ -708,7 +706,7 @@ expand_hashtable (struct dictionary *dict)
       struct symbol *sym, *next_sym;
 
       sym = old_buckets[i];
-      if (sym != NULL) 
+      if (sym != NULL)
 	{
 	  for (next_sym = sym->hash_next;
 	       next_sym != NULL;
@@ -735,7 +733,7 @@ language_defn::search_name_hash (const char *string0) const
      are lower-cased identifiers).  The <suffix> (which can be empty)
      encodes additional information about the denoted entity.  This
      routine hashes such names to msymbol_hash_iw(Pn).  It actually
-     does this for a superset of both valid Pi and of <suffix>, but 
+     does this for a superset of both valid Pi and of <suffix>, but
      in other cases it simply returns msymbol_hash_iw(STRING0).  */
 
   const char *string;
@@ -772,7 +770,7 @@ language_defn::search_name_hash (const char *string0) const
 
 	      if (c == 'B' && string[3] == '_')
 		{
-		  for (string += 4; ISDIGIT (*string); ++string)
+		  for (string += 4; c_isdigit (*string); ++string)
 		    ;
 		  continue;
 		}
@@ -861,7 +859,7 @@ iter_match_next_linear (const lookup_name_info &name,
     }
 
   DICT_ITERATOR_INDEX (iterator) = i;
-  
+
   return retval;
 }
 
@@ -913,6 +911,9 @@ struct multidictionary
   /* The number of language dictionaries currently allocated.
      Only used for expandable dictionaries.  */
   unsigned short n_allocated_dictionaries;
+
+  /* The type of dictionary.  */
+  enum dict_type type;
 };
 
 /* A helper function to collate symbols on the pending list by language.  */
@@ -950,16 +951,12 @@ mdict_create_hashed (struct obstack *obstack,
   retval->dictionaries
     = XOBNEWVEC (obstack, struct dictionary *, nsyms.size ());
   retval->n_allocated_dictionaries = nsyms.size ();
+  retval->type = DICT_HASHED;
 
   int idx = 0;
-  for (const auto &pair : nsyms)
-    {
-      enum language language = pair.first;
-      std::vector<symbol *> symlist = pair.second;
-
-      retval->dictionaries[idx++]
-	= dict_create_hashed (obstack, language, symlist);
-    }
+  for (const auto &[language, symlist] : nsyms)
+    retval->dictionaries[idx++] = dict_create_hashed (obstack, language,
+						      symlist);
 
   return retval;
 }
@@ -976,6 +973,7 @@ mdict_create_hashed_expandable (enum language language)
   retval->n_allocated_dictionaries = 1;
   retval->dictionaries = XNEW (struct dictionary *);
   retval->dictionaries[0] = dict_create_hashed_expandable (language);
+  retval->type = DICT_HASHED_EXPANDABLE;
 
   return retval;
 }
@@ -995,16 +993,12 @@ mdict_create_linear (struct obstack *obstack,
   retval->dictionaries
     = XOBNEWVEC (obstack, struct dictionary *, nsyms.size ());
   retval->n_allocated_dictionaries = nsyms.size ();
+  retval->type = DICT_LINEAR;
 
   int idx = 0;
-  for (const auto &pair : nsyms)
-    {
-      enum language language = pair.first;
-      std::vector<symbol *> symlist = pair.second;
-
-      retval->dictionaries[idx++]
-	= dict_create_linear (obstack, language, symlist);
-    }
+  for (const auto &[language, symlist] : nsyms)
+    retval->dictionaries[idx++] = dict_create_linear (obstack, language,
+						      symlist);
 
   return retval;
 }
@@ -1021,6 +1015,7 @@ mdict_create_linear_expandable (enum language language)
   retval->n_allocated_dictionaries = 1;
   retval->dictionaries = XNEW (struct dictionary *);
   retval->dictionaries[0] = dict_create_linear_expandable (language);
+  retval->type = DICT_LINEAR_EXPANDABLE;
 
   return retval;
 }
@@ -1030,15 +1025,12 @@ mdict_create_linear_expandable (enum language language)
 void
 mdict_free (struct multidictionary *mdict)
 {
-  /* Grab the type of dictionary being used.  */
-  enum dict_type type = mdict->dictionaries[0]->vector->type;
-
   /* Loop over all dictionaries and free them.  */
   for (unsigned short idx = 0; idx < mdict->n_allocated_dictionaries; ++idx)
     dict_free (mdict->dictionaries[idx]);
 
   /* Free the dictionary list, if needed.  */
-  switch (type)
+  switch (mdict->type)
     {
     case DICT_HASHED:
     case DICT_LINEAR:
@@ -1048,6 +1040,7 @@ mdict_free (struct multidictionary *mdict)
     case DICT_HASHED_EXPANDABLE:
     case DICT_LINEAR_EXPANDABLE:
       xfree (mdict->dictionaries);
+      xfree (mdict);
       break;
     }
 }
@@ -1079,10 +1072,7 @@ create_new_language_dictionary (struct multidictionary *mdict,
 {
   struct dictionary *retval = nullptr;
 
-  /* We use the first dictionary entry to decide what create function
-     to call.  Not optimal but sufficient.  */
-  gdb_assert (mdict->dictionaries[0] != nullptr);
-  switch (mdict->dictionaries[0]->vector->type)
+  switch (mdict->type)
     {
     case DICT_HASHED:
     case DICT_LINEAR:
@@ -1135,10 +1125,8 @@ mdict_add_pending (struct multidictionary *mdict,
   gdb::unordered_map<enum language, std::vector<symbol *>> nsyms
     = collate_pending_symbols_by_language (symbol_list);
 
-  for (const auto &pair : nsyms)
+  for (const auto &[language, symlist] : nsyms)
     {
-      enum language language = pair.first;
-      std::vector<symbol *> symlist = pair.second;
       struct dictionary *dict = find_language_dictionary (mdict, language);
 
       if (dict == nullptr)

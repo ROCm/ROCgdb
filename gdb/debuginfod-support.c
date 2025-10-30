@@ -18,6 +18,7 @@
 
 #include "diagnostics.h"
 #include <errno.h>
+#include "gdbsupport/cleanups.h"
 #include "gdbsupport/scoped_fd.h"
 #include "debuginfod-support.h"
 #include <optional>
@@ -594,9 +595,7 @@ maint_get_debuginfod_download_sections ()
 
 /* Register debuginfod commands.  */
 
-void _initialize_debuginfod ();
-void
-_initialize_debuginfod ()
+INIT_GDB_FILE (debuginfod)
 {
   /* set/show debuginfod */
   add_setshow_prefix_cmd ("debuginfod", class_run,

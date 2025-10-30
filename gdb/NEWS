@@ -1,7 +1,120 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 16
+*** Changes since GDB 17
+
+* Support for .gdb_index sections with version less than 7 has been
+  removed.
+
+* GDB now accepts --no-escape-args as an alternative to --args on the
+  command line.  GDB will not escape special shell characters within
+  arguments after --no-escape-args.
+
+* gdbserver now accepts --no-escape-args as a command line flag.  When
+  this flag is used gdbserver will not escape special shell characters
+  within the inferior arguments.
+
+* The add-inferior, clone-inferior, and MI -add-inferior commands will
+  now give a warning, and create the new inferior without a
+  connection, when the current inferior's connection, at the time the
+  command is given, is unshareable.  For example, the core-file target
+  cannot be shared between inferiors, nor can the Window native
+  target.  These targets could never really be shared.  Attempting to
+  share them would usually lead to GDB crashing.  GDB now prevents
+  this invalid sharing.
+
+* When connecting to a remote server, if the server supports the new
+  qExecAndArgs packet, then GDB will copy the argument string from the
+  server and update the 'args' setting, as if 'set args ...'  had been
+  used.  This means that the arguments are visible from GDB using
+  'show args', and that, if using the extended-remote protocol,
+  subsequent runs of the inferior will use the same arguments as the
+  first run.
+
+* Support for stabs debug information has been removed.
+
+* Support for the binary file format dbx has been removed.
+
+* New targets
+
+GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
+
+* New commands
+
+maintenance test-remote-args ARGS
+  Test splitting and joining of inferior arguments ARGS as they would
+  be split and joined when being passed to a remote target.
+
+* Changed commands
+
+maintenance info program-spaces
+  This command no longer displays the core file name.
+
+info inferiors
+  If an inferior has a core file loaded, then this will be displayed
+  as an additional line under the inferior's table entry in the
+  output.
+
+* Changed remote packets
+
+single-inf-arg in qSupported
+  The new single-inf-arg feature within the qSupported packet allows
+  GDB to inform the stub that it would like to send the inferior
+  arguments as a single string within the vRun packet.  The stub can
+  reply with the single-inf-arg feature to indicate that it is able to
+  accept arguments as a single string.
+
+* New remote packets
+
+qExecAndArgs
+  This packet returns the executable filename and argument string with
+  which the server was started.  If no such information was given to
+  the server then this is reflected in the reply.
+
+* Python API
+
+  ** New class gdb.Style for representing styles, a collection of
+     foreground and background gdb.Color objects, and an intensity.
+
+  ** New constants gdb.INTENSITY_NORMAL, gdb.INTENSITY_BOLD, and
+     gdb.INTENSITY_DIM for use with gdb.Style when representing
+     intensities.
+
+  ** New gdb.StyleParameterSet for creating custom style settings.
+     Use gdb.StyleParameterSet(NAME) to create 'set style NAME ...'
+     and 'show style NAME ...' parameters.
+
+  ** The gdb.write() function now takes an additional, optional,
+     'style' argument, which can be used to style the output.
+
+  ** New gdb.Corefile class which represents a loaded core file.  This
+     has an attribute Corefile.filename, the file name of the loaded
+     core file, and a method Corefile.is_valid(), which returns False
+     when a Corefile object becomes invalid (e.g. when the core file
+     is unloaded).  There is also Corefile.mapped_files() which
+     returns a list of CorefileMappedFile objects, representing files
+     that were mapped into the core file when it was created.
+
+  ** New gdb.CorefileMappedFile type representing a file that was
+     mapped when the core file was created.  Has read-only attributes
+     filename (string), build_id (string), is_main_executable
+     (boolean), and regions (list of CorefileMappedFileRegion objects).
+
+  ** New gdb.CorefileMappedFileRegion type, which represents a mapped
+     region of a file (see gdb.CorefileMappedFile above).  Has
+     read-only attributes start, end, and file_offset.
+
+  ** New Inferior.corefile attribute.  This read only attribute
+     contains the gdb.Corefile object if a core file is loaded into
+     the inferior, otherwise, this contains None.
+
+*** Changes in GDB 17
+
+* Debugging Linux programs that use x86-64 or x86-64 with 32-bit pointer
+  size (X32) Shadow Stacks are now supported.
+
+* Support for the shadow stack pointer register on x86-64 or x86-64 with
+  32-bit pointer size (X32) GNU/Linux.
 
 * Debugger Adapter Protocol changes
 
@@ -35,16 +148,19 @@
   a -h or --help option, which prints each options and a brief
   description.
 
-* On systems that support linkage namespaces, the output of the command
+* The gcore script now has a -g option that lets you specify the GDB
+  binary invoked by gcore.
+
+* On systems that support linker namespaces, the output of the command
   "info sharedlibraries" may add one more column, NS, which identifies the
   namespace into which the library was loaded, if more than one namespace
   is active.
 
-* New built-in convenience variables $_active_linker_namespaces and
-  $_current_linker_namespace.  These show the number of active linkage
+* New built-in convenience variables $linker_namespace_count and
+  $_linker_namespace.  These show the number of active linker
   namespaces, and the namespace to which the current location belongs to.
-  In systems that don't support linkage namespaces, these always return 1
-  and [[0]] respectively.
+  In systems that don't support linker namespaces, or if the inferior hasn't
+  started yet, these always return the integer 0.
 
 * Add record full support for rv64gc architectures
 
@@ -53,6 +169,15 @@
 
 * The Windows native target now supports non-stop mode.  This feature
   requires Windows 10 or later.
+
+* Debugging Linux programs that use AArch64 Guarded Control Stacks is now
+  supported.
+
+* New "--binary-output" command line option instructs GDB to set the
+  translation mode of its stdout/stderr to binary mode.  This disables
+  Line Feed translation.  MS-Windows only.
+
+* The "catch syscall" command now works on riscv*-linux* targets.
 
 * New commands
 
@@ -156,6 +281,19 @@ info threads [-gid] [-stopped] [-running] [ID]...
      and 'show' gdb.Command prefixes, suitable for use with new
      gdb.Parameters.
 
+  ** Prefix commands (gdb.Command sub-classes) that don't have an
+     invoke method will now behave like builtin prefix commands when
+     invoked without a sub-command name.  This means printing the help
+     text for all sub-commands, unless the prefix command is a 'show'
+     command, in which case the value of all sub-commands is printed.
+
+  ** New gdb.warning() function that takes a string and prints it as a
+     warning, with GDB's standard 'warning' prefix.
+
+  ** New attribute gdb.Value.is_unavailable, this checks for
+     unavailability like gdb.Value.is_optimized_out checks for
+     optimized out values.
+
 * Guile API
 
   ** New type <gdb:color> for dealing with colors.
@@ -168,6 +306,12 @@ info threads [-gid] [-stopped] [-running] [ID]...
      empty string for make-parameter means GDB will only display the
      #:set_doc or #:show_doc strings in the set/show help output.
 
+  ** Prefix commands (using make-command) that don't have a #:invoke
+     property will now behave like builtin prefix commands when
+     invoked without a sub-command name.  This means printing the help
+     text for all sub-commands, unless the prefix command is a 'show'
+     command, in which case the value of all sub-commands is printed.
+
 * New remote packets
 
 binary-upload in qSupported reply
@@ -176,6 +320,11 @@ binary-upload in qSupported reply
   stub doesn't report this feature supported, then GDB will not use
   the 'x' packet.
 
+vFile:lstat
+  Return information about files on the remote system.  Like
+  vFile:stat but if the filename is a symbolic link, return
+  information about the link itself, the file the link refers to.
+
 * Changed remote packets
 
 qXfer:threads:read
@@ -183,6 +332,11 @@ qXfer:threads:read
   attribute for a thread element.  The attribute indicates what GDB
   should print as the target ID of the thread, for example in the
   "info threads" command or when switching to the thread.
+
+vFile:stat
+  Previously, gdbserver incorrectly implemented this packet using
+  lstat rather than stat.  This has now been corrected.  The
+  documentation has also been clarified.
 
 * MI changes
 
@@ -199,9 +353,30 @@ qXfer:threads:read
 * Support for stabs debugging format and the a.out/dbx object format is
   deprecated, and will be removed in GDB 18.
 
+* Configure changes
+
+--enable-binary-file-formats=[FORMAT,...]
+--enable-binary-file-formats=all
+  A user can now decide to only compile support for certain file formats.
+  The available formats at this point are: dbx, coff, xcoff, elf, mach-o
+  and mips.  Some targets require specific file formats to be available,
+  and in such cases, the configure script will warn the user and add
+  support anyway.  By default, all formats will be compiled in, to
+  continue the behavior from before adding the switch.
+
 * A new configure option was added, allowing support for the compile
   subsystem to be disabled at configure time, in the form of
   --disable-gdb-compile.
+
+* A new configure option was added, allowing support for DWARF debug
+  information to be disabled at configure time.  The flag is
+  --disable-gdb-dwarf-support.
+
+* A new configure option was added, allowing support for mdebug/ecoff
+  debug information to be disabled at configure time.  The flag to do
+  that is --disable-gdb-mdebug-support.
+
+* The Alpha target now supports target descriptions.
 
 *** Changes in GDB 16
 

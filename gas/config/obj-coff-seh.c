@@ -64,7 +64,7 @@ get_pxdata_name (segT seg, const char *base_name)
   else
     name = dollar;
 
-  sname = notes_concat (base_name, name, NULL);
+  sname = notes_concat (base_name, name, (const char *) NULL);
 
   return sname;
 }
@@ -121,7 +121,7 @@ seh_hash_insert (const char *name, struct seh_seg_list *item)
 static struct seh_seg_list *
 seh_hash_find (char *name)
 {
-  return (struct seh_seg_list *) str_hash_find (seh_hash, name);
+  return str_hash_find (seh_hash, name);
 }
 
 static struct seh_seg_list *

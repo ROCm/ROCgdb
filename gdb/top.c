@@ -34,6 +34,7 @@
 #include "value.h"
 #include "language.h"
 #include "terminal.h"
+#include "gdbsupport/cleanups.h"
 #include "gdbsupport/job-control.h"
 #include "annotate.h"
 #include "completer.h"
@@ -68,7 +69,6 @@
 
 #include "event-top.h"
 #include <sys/stat.h>
-#include <ctype.h>
 #include "ui-out.h"
 #include "cli-out.h"
 #include "tracepoint.h"
@@ -415,7 +415,7 @@ wait_sync_command_done (void)
      point.  */
   scoped_enable_commit_resumed enable ("sync wait");
 
-  while (gdb_do_one_event () >= 0)
+  while (current_interpreter ()->do_one_event () >= 0)
     if (ui->prompt_state != PROMPT_BLOCKED)
       break;
 }
@@ -1031,7 +1031,7 @@ gdb_readline_wrapper (const char *prompt)
     (*after_char_processing_hook) ();
   gdb_assert (after_char_processing_hook == NULL);
 
-  while (gdb_do_one_event () >= 0)
+  while (current_interpreter ()->do_one_event () >= 0)
     if (gdb_readline_wrapper_done)
       break;
 
@@ -1311,7 +1311,7 @@ print_gdb_version (struct ui_file *stream, bool interactive)
   /* Second line is a copyright notice.  */
 
   gdb_printf (stream,
-	      "Copyright (C) 2024 Free Software Foundation, Inc.\n");
+	      "Copyright (C) 2025 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on
@@ -1594,6 +1594,11 @@ This GDB was configured as follows:\n\
     gdb_printf (stream, _("\
 	     --with-system-gdbinit-dir=%s%s\n\
 "), SYSTEM_GDBINIT_DIR, SYSTEM_GDBINIT_DIR_RELOCATABLE ? " (relocatable)" : "");
+
+#ifdef SUPPORTED_BINARY_FILE_FORMATS
+  gdb_printf (stream, _("\
+	     --enable-binary-file-formats=%s\n"), SUPPORTED_BINARY_FILE_FORMATS);
+#endif
 
   /* We assume "relocatable" will be printed at least once, thus we always
      print this text.  It's a reasonably safe assumption for now.  */
@@ -2347,9 +2352,7 @@ gdb_init ()
   init_colorsupport_var ();
 }
 
-void _initialize_top ();
-void
-_initialize_top ()
+INIT_GDB_FILE (top)
 {
   /* Determine a default value for the history filename.  */
   const char *tmpenv = getenv ("GDBHISTFILE");

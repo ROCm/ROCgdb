@@ -159,6 +159,18 @@ static const char *const aarch64_mte_register_names[] =
   "tag_ctl"
 };
 
+static const char *const aarch64_gcs_register_names[] = {
+  /* Guarded Control Stack Pointer Register.  */
+  "gcspr"
+};
+
+static const char *const aarch64_gcs_linux_register_names[] = {
+  /* Field in struct user_gcs.  */
+  "gcs_features_enabled",
+  /* Field in struct user_gcs.  */
+  "gcs_features_locked",
+};
+
 static int aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
 
 /* AArch64 prologue cache structure.  */
@@ -1014,7 +1026,7 @@ aarch64_scan_prologue (const frame_info_ptr &this_frame,
   if (find_pc_partial_function (block_addr, NULL, &prologue_start,
 				&prologue_end))
     {
-      struct symtab_and_line sal = find_pc_line (prologue_start, 0);
+      struct symtab_and_line sal = find_sal_for_pc (prologue_start, 0);
 
       if (sal.line == 0)
 	{
@@ -1395,6 +1407,12 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 	  reg->how = DWARF2_FRAME_REG_SAME_VALUE;
 	  return;
 	}
+    }
+  if (tdep->has_gcs () && tdep->fn_prev_gcspr != nullptr
+      && regnum == tdep->gcs_reg_base)
+    {
+      reg->how = DWARF2_FRAME_REG_FN;
+      reg->loc.fn = tdep->fn_prev_gcspr;
     }
 }
 
@@ -1873,6 +1891,55 @@ pass_in_v_vfp_candidate (struct gdbarch *gdbarch, struct regcache *regcache,
     default:
       return false;
     }
+}
+
+/* Push LR_VALUE to the Guarded Control Stack.  */
+
+static void
+aarch64_push_gcs_entry (regcache *regs, CORE_ADDR lr_value)
+{
+  gdbarch *arch = regs->arch ();
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (arch);
+  CORE_ADDR gcs_addr;
+
+  register_status status = regs->cooked_read (tdep->gcs_reg_base, &gcs_addr);
+  if (status != REG_VALID)
+    error (_("Can't read $gcspr."));
+
+  gcs_addr -= 8;
+  gdb_byte buf[8];
+  store_integer (buf, gdbarch_byte_order (arch), lr_value);
+  if (target_write_memory (gcs_addr, buf, sizeof (buf)) != 0)
+    error (_("Can't write to Guarded Control Stack."));
+
+  /* Update GCSPR.  */
+  regcache_cooked_write_unsigned (regs, tdep->gcs_reg_base, gcs_addr);
+}
+
+/* Remove the newest entry from the Guarded Control Stack.  */
+
+static void
+aarch64_pop_gcs_entry (regcache *regs)
+{
+  gdbarch *arch = regs->arch ();
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (arch);
+  CORE_ADDR gcs_addr;
+
+  register_status status = regs->cooked_read (tdep->gcs_reg_base, &gcs_addr);
+  if (status != REG_VALID)
+    error (_("Can't read $gcspr."));
+
+  /* Update GCSPR.  */
+  regcache_cooked_write_unsigned (regs, tdep->gcs_reg_base, gcs_addr + 8);
+}
+
+/* Implement the "shadow_stack_push" gdbarch method.  */
+
+static void
+aarch64_shadow_stack_push (gdbarch *gdbarch, CORE_ADDR new_addr,
+			   regcache *regcache)
+{
+  aarch64_push_gcs_entry (regcache, new_addr);
 }
 
 /* Implement the "push_dummy_call" gdbarch method.  */
@@ -3557,6 +3624,9 @@ struct aarch64_displaced_step_copy_insn_closure
   /* PC adjustment offset after displaced stepping.  If 0, then we don't
      write the PC back, assuming the PC is already the right address.  */
   int32_t pc_adjust = 0;
+
+  /* True if it's a branch instruction that saves the link register.  */
+  bool linked_branch = false;
 };
 
 /* Data when visiting instructions for displaced stepping.  */
@@ -3608,6 +3678,12 @@ aarch64_displaced_step_b (const int is_bl, const int32_t offset,
       /* Update LR.  */
       regcache_cooked_write_unsigned (dsd->regs, AARCH64_LR_REGNUM,
 				      data->insn_addr + 4);
+      dsd->dsc->linked_branch = true;
+      bool gcs_is_enabled;
+      gdbarch_get_shadow_stack_pointer (dsd->regs->arch (), dsd->regs,
+					gcs_is_enabled);
+      if (gcs_is_enabled)
+	aarch64_push_gcs_entry (dsd->regs, data->insn_addr + 4);
     }
 }
 
@@ -3766,6 +3842,12 @@ aarch64_displaced_step_others (const uint32_t insn,
       aarch64_emit_insn (dsd->insn_buf, insn & 0xffdfffff);
       regcache_cooked_write_unsigned (dsd->regs, AARCH64_LR_REGNUM,
 				      data->insn_addr + 4);
+      dsd->dsc->linked_branch = true;
+      bool gcs_is_enabled;
+      gdbarch_get_shadow_stack_pointer (dsd->regs->arch (), dsd->regs,
+					gcs_is_enabled);
+      if (gcs_is_enabled)
+	aarch64_push_gcs_entry (dsd->regs, data->insn_addr + 4);
     }
   else
     aarch64_emit_insn (dsd->insn_buf, insn);
@@ -3862,19 +3944,23 @@ aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 			      CORE_ADDR from, CORE_ADDR to,
 			      struct regcache *regs, bool completed_p)
 {
+  aarch64_displaced_step_copy_insn_closure *dsc
+    = (aarch64_displaced_step_copy_insn_closure *) dsc_;
   CORE_ADDR pc = regcache_read_pc (regs);
 
-  /* If the displaced instruction didn't complete successfully then all we
-     need to do is restore the program counter.  */
+  /* If the displaced instruction didn't complete successfully then we need
+     to restore the program counter, and perhaps the Guarded Control Stack.  */
   if (!completed_p)
     {
+      bool gcs_is_enabled;
+      gdbarch_get_shadow_stack_pointer (gdbarch, regs, gcs_is_enabled);
+      if (dsc->linked_branch && gcs_is_enabled)
+	aarch64_pop_gcs_entry (regs);
+
       pc = from + (pc - to);
       regcache_write_pc (regs, pc);
       return;
     }
-
-  aarch64_displaced_step_copy_insn_closure *dsc
-    = (aarch64_displaced_step_copy_insn_closure *) dsc_;
 
   displaced_debug_printf ("PC after stepping: %s (was %s).",
 			  paddress (gdbarch, pc), paddress (gdbarch, to));
@@ -4045,6 +4131,14 @@ aarch64_features_from_target_desc (const struct target_desc *tdesc)
   /* Check for the SME2 feature.  */
   features.sme2 = (tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.sme2")
 		   != nullptr);
+
+  /* Check for the GCS feature.  */
+  features.gcs = (tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.gcs")
+		  != nullptr);
+
+  /* Check for the GCS Linux feature.  */
+  features.gcs_linux = (tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.gcs.linux")
+			!= nullptr);
 
   return features;
 }
@@ -4590,6 +4684,48 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     int first_w_regnum = num_pseudo_regs;
     num_pseudo_regs += 31;
 
+  const tdesc_feature *feature_gcs
+    = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.gcs");
+  int first_gcs_regnum = -1;
+  /* Add the GCS registers.  */
+  if (feature_gcs != nullptr)
+    {
+      first_gcs_regnum = num_regs;
+      /* Validate the descriptor provides the mandatory GCS registers and
+	 allocate their numbers.  */
+      for (i = 0; i < ARRAY_SIZE (aarch64_gcs_register_names); i++)
+	valid_p &= tdesc_numbered_register (feature_gcs, tdesc_data.get (),
+					    first_gcs_regnum + i,
+					    aarch64_gcs_register_names[i]);
+
+      num_regs += i;
+    }
+
+  if (!valid_p)
+    return nullptr;
+
+  const tdesc_feature *feature_gcs_linux
+    = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.gcs.linux");
+  int first_gcs_linux_regnum = -1;
+  /* Add the GCS Linux registers.  */
+  if (feature_gcs_linux != nullptr && feature_gcs == nullptr)
+    {
+      /* This feature depends on the GCS feature.  */
+      return nullptr;
+    }
+  else if (feature_gcs_linux != nullptr)
+    {
+      first_gcs_linux_regnum = num_regs;
+      /* Validate the descriptor provides the mandatory GCS Linux registers
+	 and allocate their numbers.  */
+      for (i = 0; i < ARRAY_SIZE (aarch64_gcs_linux_register_names); i++)
+	valid_p &= tdesc_numbered_register (feature_gcs_linux, tdesc_data.get (),
+					    first_gcs_linux_regnum + i,
+					    aarch64_gcs_linux_register_names[i]);
+
+      num_regs += i;
+    }
+
   if (!valid_p)
     return nullptr;
 
@@ -4611,6 +4747,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->mte_reg_base = first_mte_regnum;
   tdep->tls_regnum_base = first_tls_regnum;
   tdep->tls_register_count = tls_register_count;
+  tdep->gcs_reg_base = first_gcs_regnum;
+  tdep->gcs_linux_reg_base = first_gcs_linux_regnum;
 
   /* Set the SME register set details.  The pseudo-registers will be adjusted
      later.  */
@@ -4638,7 +4776,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       aarch64_breakpoint::bp_from_kind);
   set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
-  set_gdbarch_software_single_step (gdbarch, aarch64_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, aarch64_software_single_step);
 
   /* Information about registers, etc.  */
   set_gdbarch_sp_regnum (gdbarch, AARCH64_SP_REGNUM);
@@ -4732,6 +4870,9 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_gen_return_address (gdbarch, aarch64_gen_return_address);
 
   set_gdbarch_get_pc_address_flags (gdbarch, aarch64_get_pc_address_flags);
+
+  if (tdep->has_gcs ())
+    set_gdbarch_shadow_stack_push (gdbarch, aarch64_shadow_stack_push);
 
   tdesc_use_registers (gdbarch, tdesc, std::move (tdesc_data));
 
@@ -4905,6 +5046,11 @@ aarch64_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 	      pulongest (tdep->sme_tile_pseudo_base));
   gdb_printf (file, _("aarch64_dump_tdep: sme_svq = %s\n"),
 	      pulongest (tdep->sme_svq));
+
+  gdb_printf (file, _("aarch64_dump_tdep: gcs_reg_base = %d\n"),
+	      tdep->gcs_reg_base);
+  gdb_printf (file, _("aarch64_dump_tdep: gcs_linux_reg_base = %d\n"),
+	      tdep->gcs_linux_reg_base);
 }
 
 #if GDB_SELF_TEST
@@ -4914,9 +5060,7 @@ static void aarch64_process_record_test (void);
 }
 #endif
 
-void _initialize_aarch64_tdep ();
-void
-_initialize_aarch64_tdep ()
+INIT_GDB_FILE (aarch64_tdep)
 {
   gdbarch_register (bfd_arch_aarch64, aarch64_gdbarch_init,
 		    aarch64_dump_tdep);

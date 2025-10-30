@@ -1376,7 +1376,6 @@ bfin_relocate_section (bfd * output_bfd,
   asection *sgot;
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
-  int i = 0;
 
   dynobj = elf_hash_table (info)->dynobj;
   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
@@ -1387,7 +1386,7 @@ bfin_relocate_section (bfd * output_bfd,
 
   rel = relocs;
   relend = relocs + input_section->reloc_count;
-  for (; rel < relend; rel++, i++)
+  for (; rel < relend; rel++)
     {
       int r_type;
       reloc_howto_type *howto;
@@ -1442,7 +1441,8 @@ bfin_relocate_section (bfd * output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_BFIN_UNUSED0,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -2583,7 +2583,8 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_BFIN_UNUSED0,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -4049,7 +4050,7 @@ elf32_bfinfdpic_late_size_sections (bfd *output_bfd,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->interp;
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (bfd_byte *) ELF_DYNAMIC_INTERPRETER;
@@ -5141,7 +5142,7 @@ bfin_late_size_sections (bfd * output_bfd ATTRIBUTE_UNUSED,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = elf_hash_table (info)->interp;
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;

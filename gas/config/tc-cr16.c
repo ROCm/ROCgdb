@@ -119,7 +119,6 @@ const size_t md_longopts_size = sizeof (md_longopts);
 static void
 l_cons (int nbytes)
 {
-  int c;
   expressionS exp;
 
 #ifdef md_flush_pending_output
@@ -141,7 +140,6 @@ l_cons (int nbytes)
   md_cons_align (nbytes);
 #endif
 
-  c = 0;
   do
     {
       unsigned int bits_available = BITS_PER_CHAR * nbytes;
@@ -235,8 +233,7 @@ l_cons (int nbytes)
 
       if ((*(input_line_pointer) == '@') && (*(input_line_pointer +1) == 'c'))
 	code_label = 1;
-      emit_expr (&exp, (unsigned int) nbytes);
-      ++c;
+      emit_expr (&exp, nbytes);
       if ((*(input_line_pointer) == '@') && (*(input_line_pointer +1) == 'c'))
 	{
 	  input_line_pointer +=3;
@@ -329,7 +326,7 @@ get_register (char *reg_name)
 {
   const reg_entry *rreg;
 
-  rreg = (const reg_entry *) str_hash_find (reg_hash, reg_name);
+  rreg = str_hash_find (reg_hash, reg_name);
 
   if (rreg != NULL)
     return rreg->value.reg_val;
@@ -350,10 +347,10 @@ get_register_pair (char *reg_name)
       tmp_rp[0] = '(';
       strcat (tmp_rp, reg_name);
       strcat (tmp_rp,")");
-      rreg = (const reg_entry *) str_hash_find (regp_hash, tmp_rp);
+      rreg = str_hash_find (regp_hash, tmp_rp);
     }
   else
-    rreg = (const reg_entry *) str_hash_find (regp_hash, reg_name);
+    rreg = str_hash_find (regp_hash, reg_name);
 
   if (rreg != NULL)
     return rreg->value.reg_val;
@@ -368,7 +365,7 @@ get_index_register (char *reg_name)
 {
   const reg_entry *rreg;
 
-  rreg = (const reg_entry *) str_hash_find (reg_hash, reg_name);
+  rreg = str_hash_find (reg_hash, reg_name);
 
   if ((rreg != NULL)
       && ((rreg->value.reg_val == 12) || (rreg->value.reg_val == 13)))
@@ -383,7 +380,7 @@ get_index_register_pair (char *reg_name)
 {
   const reg_entry *rreg;
 
-  rreg = (const reg_entry *) str_hash_find (regp_hash, reg_name);
+  rreg = str_hash_find (regp_hash, reg_name);
 
   if (rreg != NULL)
     {
@@ -404,7 +401,7 @@ get_pregister (char *preg_name)
 {
   const reg_entry *prreg;
 
-  prreg = (const reg_entry *) str_hash_find (preg_hash, preg_name);
+  prreg = str_hash_find (preg_hash, preg_name);
 
   if (prreg != NULL)
     return prreg->value.preg_val;
@@ -419,7 +416,7 @@ get_pregisterp (char *preg_name)
 {
   const reg_entry *prreg;
 
-  prreg = (const reg_entry *) str_hash_find (pregp_hash, preg_name);
+  prreg = str_hash_find (pregp_hash, preg_name);
 
   if (prreg != NULL)
     return prreg->value.preg_val;
@@ -636,14 +633,14 @@ md_estimate_size_before_relax (fragS *fragp, asection *seg)
 }
 
 void
-md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, fragS *fragP)
+md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
+		 asection *sec ATTRIBUTE_UNUSED,
+		 fragS *fragP)
 {
   /* 'opcode' points to the start of the instruction, whether
      we need to change the instruction's fixed encoding.  */
   char *opcode = &fragP->fr_literal[0] + fragP->fr_fix;
   bfd_reloc_code_real_type reloc;
-
-  subseg_change (sec, 0);
 
   switch (fragP->fr_subtype)
     {
@@ -760,7 +757,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
       switch (fixP->fx_r_type)
 	{
 	case BFD_RELOC_CR16_NUM8:
-	  bfd_put_8 (stdoutput, (unsigned char) val, buf);
+	  bfd_put_8 (stdoutput, val, buf);
 	  break;
 	case BFD_RELOC_CR16_NUM16:
 	  bfd_put_16 (stdoutput, val, buf);
@@ -2456,7 +2453,7 @@ print_insn (ins *insn)
   /* Write the instruction encoding to frag.  */
   for (i = 0; i < insn_size; i++)
     {
-      md_number_to_chars (this_frag, (valueT) words[i], 2);
+      md_number_to_chars (this_frag, words[i], 2);
       this_frag += 2;
     }
 }
@@ -2469,7 +2466,7 @@ cr16_assemble (const char *op, char *param)
   ins cr16_ins;
 
   /* Find the instruction.  */
-  instruction = (const inst *) str_hash_find (cr16_inst_hash, op);
+  instruction = str_hash_find (cr16_inst_hash, op);
   if (instruction == NULL)
     {
       as_bad (_("Unknown opcode: `%s'"), op);
@@ -2514,7 +2511,7 @@ md_assemble (char *op)
       strcpy (param1, get_b_cc (op));
       strcat (param1,",");
       strcat (param1, param);
-      param = (char *) &param1;
+      param = param1;
       cr16_assemble ("b", param);
       return;
     }
@@ -2539,7 +2536,7 @@ md_assemble (char *op)
     {
       strcpy (param1, param);
       /* Find the instruction.  */
-      instruction = (const inst *) str_hash_find (cr16_inst_hash, op);
+      instruction = str_hash_find (cr16_inst_hash, op);
       parse_operands (&cr16_ins, param1);
       if (((&cr16_ins)->arg[0].type == arg_ic)
 	  && ((&cr16_ins)->arg[0].constant >= 0))

@@ -50,7 +50,6 @@ extern "C"
 }
 
 
-#include <ctype.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <sys/ptrace.h>
@@ -585,7 +584,7 @@ gnu_nat_target::make_proc (struct inf *inf, mach_port_t port, int tid)
   return proc;
 }
 
-/* Frees PROC and any resources it uses, and returns the value of PROC's 
+/* Frees PROC and any resources it uses, and returns the value of PROC's
    next field.  */
 struct proc *
 gnu_nat_target::_proc_free (struct proc *proc)
@@ -859,7 +858,7 @@ gnu_nat_target::inf_set_traced (struct inf *inf, int on)
 {
   if (on == inf->traced)
     return;
-  
+
   if (inf->task && !inf->task->dead)
     /* Make it take effect immediately.  */
     {
@@ -2624,7 +2623,7 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
 		     last_protection & VM_PROT_READ,
 		     last_protection & VM_PROT_WRITE,
 		     last_protection & VM_PROT_EXECUTE,
-		     1, /* MODIFIED is unknown, pass it as true.  */
+		     true, /* MODIFIED is unknown, pass it as true.  */
 		     false, /* No memory tags in the object file.  */
 		     data);
 	  last_region_address = region_address;
@@ -2926,7 +2925,7 @@ set_sig_thread_cmd (const char *args, int from_tty)
 {
   struct inf *inf = cur_inf ();
 
-  if (!args || (!isdigit (*args) && strcmp (args, "none") != 0))
+  if (!args || (!c_isdigit (*args) && strcmp (args, "none") != 0))
     error (_("Illegal argument to \"set signal-thread\" command.\n"
 	     "Should be a thread ID, or \"none\"."));
 
@@ -3135,14 +3134,14 @@ The default value is \"off\"."),
   add_cmd ("pause", no_class, show_thread_default_pause_cmd, _("\
 Show whether new threads are suspended while gdb has control."),
 	   &show_thread_default_cmd_list);
-  
+
   add_cmd ("run", class_run, set_thread_default_run_cmd, _("\
 Set whether new threads are allowed to run (once gdb has noticed them)."),
 	   &set_thread_default_cmd_list);
   add_cmd ("run", no_class, show_thread_default_run_cmd, _("\
 Show whether new threads are allowed to run (once gdb has noticed them)."),
 	   &show_thread_default_cmd_list);
-  
+
   add_cmd ("detach-suspend-count", class_run, set_thread_default_detach_sc_cmd,
 	   _("Set the default detach-suspend-count value for new threads."),
 	   &set_thread_default_cmd_list);
@@ -3434,9 +3433,7 @@ to the thread's initial suspend-count when gdb notices the threads."),
 	   &thread_cmd_list);
 }
 
-void _initialize_gnu_nat ();
-void
-_initialize_gnu_nat ()
+INIT_GDB_FILE (gnu_nat)
 {
   proc_server = getproc ();
 

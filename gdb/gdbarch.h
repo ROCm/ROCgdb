@@ -33,6 +33,7 @@
 #include "registry.h"
 #include "gdbtypes.h"
 #include "expression.h"
+#include "solib.h"
 
 struct floatformat;
 struct ui_file;
@@ -76,12 +77,6 @@ struct gdbarch_tdep_base
 };
 
 using gdbarch_tdep_up = std::unique_ptr<gdbarch_tdep_base>;
-
-/* Callback type for the 'iterate_over_objfiles_in_search_order'
-   gdbarch  method.  */
-
-using iterate_over_objfiles_in_search_order_cb_ftype
-  = gdb::function_view<bool(objfile *)>;
 
 /* Callback type for regset section iterators.  The callback usually
    invokes the REGSET's supply or collect method, to which it must

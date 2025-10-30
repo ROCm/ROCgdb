@@ -337,7 +337,7 @@ gnuv3_rtti_type (struct value *value,
 				   + vtable->embedded_offset ()).minsym;
   if (! vtable_symbol)
     return NULL;
-  
+
   /* The symbol's demangled name should be something like "vtable for
      CLASS", where CLASS is the name of the run-time type of VALUE.
      If we didn't like this approach, we could instead look in the
@@ -476,7 +476,7 @@ gnuv3_baseclass_offset (struct type *type, int index,
     return TYPE_BASECLASS_BITPOS (type, index) / 8;
 
   /* If we have a DWARF expression for the offset, evaluate it.  */
-  if (type->field (index).loc_kind () == FIELD_LOC_KIND_DWARF_BLOCK)
+  if (type->field (index).loc_kind () == FIELD_LOC_KIND_DWARF_BLOCK_ADDR)
     {
       struct dwarf2_property_baton baton;
       baton.property_type
@@ -1189,14 +1189,14 @@ gnuv3_get_type_from_type_info (struct value *type_info_ptr)
 /* Determine if we are currently in a C++ thunk.  If so, get the address
    of the routine we are thunking to and continue to there instead.  */
 
-static CORE_ADDR 
+static CORE_ADDR
 gnuv3_skip_trampoline (const frame_info_ptr &frame, CORE_ADDR stop_pc)
 {
   CORE_ADDR real_stop_pc, method_stop_pc, func_addr;
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct obj_section *section;
   const char *thunk_name, *fn_name;
-  
+
   real_stop_pc = gdbarch_skip_trampoline_code (gdbarch, frame, stop_pc);
   if (real_stop_pc == 0)
     real_stop_pc = stop_pc;
@@ -1570,9 +1570,7 @@ init_gnuv3_ops (void)
   gnu_v3_abi_ops.pass_by_reference = gnuv3_pass_by_reference;
 }
 
-void _initialize_gnu_v3_abi ();
-void
-_initialize_gnu_v3_abi ()
+INIT_GDB_FILE (gnu_v3_abi)
 {
   init_gnuv3_ops ();
 

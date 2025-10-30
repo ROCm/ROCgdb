@@ -27,7 +27,7 @@ if {[is_remote host]} {
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	   executable \
-	   [list debug "additional_flags=-DOUTDIR=\"$outdir/\""]] != "" } {
+	   [list debug additional_flags=[quote_for_host -DOUTDIR_=$outdir/]]] != "" } {
     untested "failed to compile"
     return -1
 }
@@ -39,9 +39,10 @@ if {[file exists $dir2] && ![file writable $dir2]} {
 system "rm -rf [standard_output_file *.fileio.test]"
 
 set oldtimeout $timeout
-set timeout [expr "$timeout + 60"]
+set timeout [expr {$timeout + 60}]
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 gdb_test_no_output "set print sevenbit-strings"
 gdb_test_no_output "set print address off"
 gdb_test_no_output "set width 0"
@@ -50,7 +51,7 @@ if {![runto_main]} {
     return
 }
 
-gdb_test "break stop" "Breakpoint .*$srcfile.*" 
+gdb_test "break stop" "Breakpoint .*$srcfile.*"
 
 set stop_msg ".*Breakpoint .* stop \\(\\) at.*$srcfile:.*static void stop \\(void\\) {}.*"
 
@@ -72,7 +73,7 @@ gdb_test continue \
 
 gdb_test "continue" ".*" ""
 
-catch "system \"chmod -f -w [standard_output_file nowrt.fileio.test]\""
+catch {system "chmod -f -w [standard_output_file nowrt.fileio.test]"}
 
 # If the user is root, we will always have write permission.
 if { [root_user] } {
@@ -240,7 +241,7 @@ gdb_test continue \
 
 # This test fails on Cygwin because unlink() succeeds on Win32 systems
 # in that situation.
-if [ishost *cygwin*] {
+if {[ishost *cygwin*]} {
     setup_xfail "*-*-*"
 }
 # If the user is root, we will always have write permission.

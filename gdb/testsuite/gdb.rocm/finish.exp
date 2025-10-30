@@ -30,7 +30,8 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
     return -1
 }
 
-clean_restart $::binfile
+clean_restart
+gdb_load $::binfile
 runto_main
 gdb_test_no_output "set print repeats unlimited"
 
@@ -53,8 +54,8 @@ proc_with_prefix structWithCharArray {} {
     # in registers (V0 and V1).  Above that, we allocate one register per element
     # in the struct (recursively), up to 32 registers.
     foreach_with_prefix size { 1 2 4 8 9 16 32 } {
-	gdb_breakpoint "returnSized<${size}ul> if \$_lane == 3" "allow-pending"
-	gdb_continue_to_breakpoint "returnSized<${size}ul>"
+	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" "allow-pending"
+	gdb_continue_to_breakpoint "returnSized<${size}>"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\\{data = \"d\{$size\}\"\\\}"
     }
@@ -63,17 +64,17 @@ proc_with_prefix structWithCharArray {} {
     # ref.  Since the hidden first parameter is not returned available when the
     # function returns, GDB cannot print the actual value.
     foreach_with_prefix size { 64 128 } {
-	gdb_breakpoint "returnSized<${size}ul> if \$_lane == 3" "allow-pending"
-	gdb_continue_to_breakpoint "returnSized<${size}ul>"
+	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" "allow-pending"
+	gdb_continue_to_breakpoint "returnSized<${size}>"
 	gdb_test "finish" \
-	    "Value returned has type: Custom<char, ${size}ul>. Cannot determine contents"
+	    "Value returned has type: Custom<char, ${size}>. Cannot determine contents"
     }
 }
 
 proc_with_prefix unionMember {} {
     foreach_with_prefix size  { 2 4 6 8 16 } {
-	gdb_breakpoint "returnCustomWithUnion<${size}ul>" "allow-pending"
-	gdb_continue_to_breakpoint "returnCustomWithUnion<${size}ul>"
+	gdb_breakpoint "returnCustomWithUnion<${size}>" "allow-pending"
+	gdb_continue_to_breakpoint "returnCustomWithUnion<${size}>"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\\{data = \\\{(\\\{as_int = 1633771873, as_chars = \"aaaa\"\\\}(, )?)\{$size\}\\\}\\\}"
     }
@@ -107,7 +108,7 @@ proc_with_prefix pointer {} {
     gdb_breakpoint "returnPtr if \$_lane == 4"
     gdb_continue_to_breakpoint "returnPtr"
     gdb_test "finish" \
-	"Value returned is \\\$$::decimal = \\(const Custom<char, 8ul> \\*\\) $::hex <returnPtr\\(\\)::vv>"
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> \\*\\) $::hex <returnPtr\\(\\)::vv>"
 
     gdb_breakpoint "returnPtr2 if \$_lane == 3"
     with_test_prefix "private address" {
@@ -128,7 +129,7 @@ proc_with_prefix reference {} {
     gdb_breakpoint "returnRef if \$_lane == 4"
     gdb_continue_to_breakpoint "returnRef"
     gdb_test "finish" \
-	"Value returned is \\\$$::decimal = \\(const Custom<char, 8ul> &\\) @$::hex: \\{data = \"abcdefgh\"\\}"
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> &\\) @$::hex: \\{data = \"abcdefgh\"\\}"
 
     gdb_breakpoint "returnRef2 if \$_lane == 4"
     with_test_prefix "private address" {

@@ -29,7 +29,7 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
     return -1
 }
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 
@@ -624,8 +624,8 @@ mi_gdb_test "-var-list-children anone" \
 
 
 # Record fp
-if ![mi_gdb_test "p/x \$fp" ".*($hex).*\\^done" "print FP register"] {
-    set fp $expect_out(3,string) 
+if {![mi_gdb_test "p/x \$fp" ".*($hex).*\\^done" "print FP register"]} {
+    set fp $expect_out(3,string)
 }
 
 mi_continue_to "incr_a"

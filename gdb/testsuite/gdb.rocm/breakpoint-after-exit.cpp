@@ -16,8 +16,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <unistd.h>
 #include <hip/hip_runtime.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define CHECK(cmd)                                                           \
   {                                                                          \

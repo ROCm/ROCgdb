@@ -27,6 +27,14 @@
 #pragma GCC optimize("-fno-hoist-adjacent-loads")
 #endif
 
+#if defined (__GNUC__) && !defined (__clang__) \
+  && ((__GNUC__ >= 12 && __GNUC__ <= 15)       \
+      || (__GNUC__ == 16 && __GNUC_MINOR__ < 1))
+/* Work around PR gcc/120987 starting gcc 12, and assume it will be fixed in
+   the gcc 16.1 release.  */
+#pragma GCC optimize("-fno-ipa-modref")
+#endif
+
 #include <gdbsupport/config.h>
 
 #undef PACKAGE_NAME
@@ -208,12 +216,17 @@
 #include "errors.h"
 #include "print-utils.h"
 #include "common-debug.h"
-#include "cleanups.h"
 #include "common-exceptions.h"
 #include "gdbsupport/poison.h"
 
 /* Pull in gdb::unique_xmalloc_ptr.  */
 #include "gdbsupport/gdb_unique_ptr.h"
+
+/* Note that there's no simple way to enforce the use of the c-ctype
+   functions.  We can't poison the <ctype.h> functions (see
+   safe-ctype.h) because that will provoke errors from libstdc++
+   headers.  */
+#include "c-ctype.h"
 
 /* sbrk on macOS is not useful for our purposes, since sbrk(0) always
    returns the same value.  brk/sbrk on macOS is just an emulation

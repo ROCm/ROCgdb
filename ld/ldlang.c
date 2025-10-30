@@ -43,13 +43,8 @@
 #include "hashtab.h"
 #include "elf-bfd.h"
 #include "bfdver.h"
-
-#if BFD_SUPPORTS_PLUGINS
+#include <errno.h>
 #include "plugin.h"
-#endif
-
-/* FIXME: Put it here to avoid NAME conflict from ldgram.h.  */
-#include "elf-bfd.h"
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER) ((size_t) & (((TYPE*) 0)->MEMBER))
@@ -60,6 +55,9 @@
    of two, so we can use shifts.  */
 #define TO_ADDR(X) ((X) >> opb_shift)
 #define TO_SIZE(X) ((X) << opb_shift)
+
+/* The maximum nested group depth.  */
+#define MAX_NESTED_GROUP_DEPTH 100
 
 /* Local variables.  */
 static struct obstack stat_obstack;
@@ -2856,14 +2854,24 @@ lang_add_section (lang_statement_list_type *ptr,
       /* Only set SEC_READONLY flag on the first input section.  */
       flags &= ~ SEC_READONLY;
 
-      /* Keep SEC_MERGE and SEC_STRINGS only if they are the same.  */
-      if ((output->bfd_section->flags & (SEC_MERGE | SEC_STRINGS))
-	  != (flags & (SEC_MERGE | SEC_STRINGS))
-	  || ((flags & SEC_MERGE) != 0
-	      && output->bfd_section->entsize != section->entsize))
+      /* Keep entry size, SEC_MERGE, and SEC_STRINGS only if entry sizes are
+	 the same.  */
+      if (output->bfd_section->entsize != section->entsize)
 	{
-	  output->bfd_section->flags &= ~ (SEC_MERGE | SEC_STRINGS);
-	  flags &= ~ (SEC_MERGE | SEC_STRINGS);
+	  output->bfd_section->entsize = 0;
+	  flags &= ~(SEC_MERGE | SEC_STRINGS);
+	}
+
+      /* Keep SEC_MERGE and SEC_STRINGS (each) only if they are the same.  */
+      if ((output->bfd_section->flags ^ flags) & SEC_MERGE)
+	{
+	  output->bfd_section->flags &= ~SEC_MERGE;
+	  flags &= ~SEC_MERGE;
+	}
+      if ((output->bfd_section->flags ^ flags) & SEC_STRINGS)
+	{
+	  output->bfd_section->flags &= ~SEC_STRINGS;
+	  flags &= ~SEC_STRINGS;
 	}
     }
   output->bfd_section->flags |= flags;
@@ -2874,12 +2882,11 @@ lang_add_section (lang_statement_list_type *ptr,
       /* This must happen after flags have been updated.  The output
 	 section may have been created before we saw its first input
 	 section, eg. for a data statement.  */
-      bfd_init_private_section_data (section->owner, section,
+      bfd_copy_private_section_data (section->owner, section,
 				     link_info.output_bfd,
 				     output->bfd_section,
 				     &link_info);
-      if ((flags & SEC_MERGE) != 0)
-	output->bfd_section->entsize = section->entsize;
+      output->bfd_section->entsize = section->entsize;
     }
 
   if ((flags & SEC_TIC54X_BLOCK) != 0
@@ -3629,26 +3636,27 @@ enum open_bfd_mode
     OPEN_BFD_FORCE = 1,
     OPEN_BFD_RESCAN = 2
   };
-#if BFD_SUPPORTS_PLUGINS
 static lang_input_statement_type *plugin_insert = NULL;
 static struct bfd_link_hash_entry *plugin_undefs = NULL;
-#endif
 
 static void
 open_input_bfds (lang_statement_union_type *s,
 		 lang_output_section_statement_type *os,
-		 enum open_bfd_mode mode)
+		 enum open_bfd_mode mode,
+		 unsigned int *nested_group_count_p)
 {
   for (; s != NULL; s = s->header.next)
     {
       switch (s->header.type)
 	{
 	case lang_constructors_statement_enum:
-	  open_input_bfds (constructor_list.head, os, mode);
+	  open_input_bfds (constructor_list.head, os, mode,
+			   nested_group_count_p);
 	  break;
 	case lang_output_section_statement_enum:
 	  os = &s->output_section_statement;
-	  open_input_bfds (os->children.head, os, mode);
+	  open_input_bfds (os->children.head, os, mode,
+			   nested_group_count_p);
 	  break;
 	case lang_wild_statement_enum:
 	  /* Maybe we should load the file's symbols.  */
@@ -3657,36 +3665,35 @@ open_input_bfds (lang_statement_union_type *s,
 	      && !wildcardp (s->wild_statement.filename)
 	      && !archive_path (s->wild_statement.filename))
 	    lookup_name (s->wild_statement.filename);
-	  open_input_bfds (s->wild_statement.children.head, os, mode);
+	  open_input_bfds (s->wild_statement.children.head, os, mode,
+			   nested_group_count_p);
 	  break;
 	case lang_group_statement_enum:
 	  {
 	    struct bfd_link_hash_entry *undefs;
-#if BFD_SUPPORTS_PLUGINS
 	    lang_input_statement_type *plugin_insert_save;
-#endif
 
 	    /* We must continually search the entries in the group
 	       until no new symbols are added to the list of undefined
 	       symbols.  */
 
+	    ++*nested_group_count_p;
+
 	    do
 	      {
-#if BFD_SUPPORTS_PLUGINS
 		plugin_insert_save = plugin_insert;
-#endif
 		undefs = link_info.hash->undefs_tail;
 		open_input_bfds (s->group_statement.children.head, os,
-				 mode | OPEN_BFD_FORCE);
+				 mode | OPEN_BFD_FORCE,
+				 nested_group_count_p);
 	      }
 	    while (undefs != link_info.hash->undefs_tail
-#if BFD_SUPPORTS_PLUGINS
 		   /* Objects inserted by a plugin, which are loaded
 		      before we hit this loop, may have added new
 		      undefs.  */
-		   || (plugin_insert != plugin_insert_save && plugin_undefs)
-#endif
-		   );
+		   || (plugin_insert != plugin_insert_save && plugin_undefs));
+
+	    --*nested_group_count_p;
 	  }
 	  break;
 	case lang_target_statement_enum:
@@ -3699,6 +3706,10 @@ open_input_bfds (lang_statement_union_type *s,
 	      lang_statement_list_type add;
 	      bfd *abfd;
 
+	      if (*nested_group_count_p >= MAX_NESTED_GROUP_DEPTH)
+		fatal (_("%P: group nested too deeply in linker script '%s'\n"),
+		       s->input_statement.filename);
+
 	      s->input_statement.target = current_target;
 
 	      /* If we are being called from within a group, and this
@@ -3707,10 +3718,8 @@ open_input_bfds (lang_statement_union_type *s,
 		 has been loaded already.  Do the same for a rescan.
 		 Likewise reload --as-needed shared libs.  */
 	      if (mode != OPEN_BFD_NORMAL
-#if BFD_SUPPORTS_PLUGINS
 		  && ((mode & OPEN_BFD_RESCAN) == 0
 		      || plugin_insert == NULL)
-#endif
 		  && s->input_statement.flags.loaded
 		  && (abfd = s->input_statement.the_bfd) != NULL
 		  && ((bfd_get_format (abfd) == bfd_archive
@@ -3754,12 +3763,10 @@ open_input_bfds (lang_statement_union_type *s,
 		    }
 		}
 	    }
-#if BFD_SUPPORTS_PLUGINS
 	  /* If we have found the point at which a plugin added new
 	     files, clear plugin_insert to enable archive rescan.  */
 	  if (&s->input_statement == plugin_insert)
 	    plugin_insert = NULL;
-#endif
 	  break;
 	case lang_assignment_statement_enum:
 	  if (s->assignment_statement.exp->type.node_class != etree_assert)
@@ -7345,11 +7352,9 @@ lang_check (void)
        file != NULL;
        file = file->next)
     {
-#if BFD_SUPPORTS_PLUGINS
       /* Don't check format of files claimed by plugin.  */
       if (file->flags.claimed)
 	continue;
-#endif /* BFD_SUPPORTS_PLUGINS */
       input_bfd = file->the_bfd;
       compatible
 	= bfd_arch_get_compatible (input_bfd, link_info.output_bfd,
@@ -7876,10 +7881,8 @@ lang_gc_sections (void)
       LANG_FOR_EACH_INPUT_STATEMENT (f)
 	{
 	  asection *sec;
-#if BFD_SUPPORTS_PLUGINS
 	  if (f->flags.claimed)
 	    continue;
-#endif
 	  for (sec = f->the_bfd->sections; sec != NULL; sec = sec->next)
 	    if ((sec->flags & SEC_DEBUGGING) == 0
 		|| strcmp (sec->name, ".stabstr") != 0)
@@ -8023,7 +8026,6 @@ lang_relax_sections (bool need_layout)
     }
 }
 
-#if BFD_SUPPORTS_PLUGINS
 /* Find the insert point for the plugin's replacement files.  We
    place them after the first claimed real object file, or if the
    first claimed object is an archive member, after the last real
@@ -8151,7 +8153,6 @@ find_next_input_statement (lang_statement_union_type **s)
     }
   return s;
 }
-#endif /* BFD_SUPPORTS_PLUGINS */
 
 /* Insert SRCLIST into DESTLIST after given element by chaining
    on FIELD as the next-pointer.  (Counterintuitively does not need
@@ -8288,6 +8289,8 @@ lang_os_merge_sort_children (void)
 void
 lang_process (void)
 {
+  unsigned int nested_group_count = 0;
+
   lang_os_merge_sort_children ();
 
   /* Finalize dynamic list.  */
@@ -8319,7 +8322,8 @@ lang_process (void)
   /* Create a bfd for each input file.  */
   current_target = default_target;
   lang_statement_iteration++;
-  open_input_bfds (statement_list.head, NULL, OPEN_BFD_NORMAL);
+  open_input_bfds (statement_list.head, NULL, OPEN_BFD_NORMAL,
+		   &nested_group_count);
 
   /* Now that open_input_bfds has processed assignments and provide
      statements we can give values to symbolic origin/length now.  */
@@ -8327,7 +8331,6 @@ lang_process (void)
 
   ldemul_before_plugin_all_symbols_read ();
 
-#if BFD_SUPPORTS_PLUGINS
   if (link_info.lto_plugin_active)
     {
       lang_statement_list_type added;
@@ -8354,7 +8357,8 @@ lang_process (void)
 	last_os = ((lang_output_section_statement_type *)
 		   ((char *) lang_os_list.tail
 		    - offsetof (lang_output_section_statement_type, next)));
-      open_input_bfds (*added.tail, last_os, OPEN_BFD_NORMAL);
+      open_input_bfds (*added.tail, last_os, OPEN_BFD_NORMAL,
+		       &nested_group_count);
       if (plugin_undefs == link_info.hash->undefs_tail)
 	plugin_undefs = NULL;
       /* Restore the global list pointer now they have all been added.  */
@@ -8405,7 +8409,8 @@ lang_process (void)
 	  /* Rescan archives in case new undefined symbols have appeared.  */
 	  files = file_chain;
 	  lang_statement_iteration++;
-	  open_input_bfds (statement_list.head, NULL, OPEN_BFD_RESCAN);
+	  open_input_bfds (statement_list.head, NULL, OPEN_BFD_RESCAN,
+			   &nested_group_count);
 	  lang_list_remove_tail (&file_chain, &files);
 	  while (files.head != NULL)
 	    {
@@ -8438,9 +8443,7 @@ lang_process (void)
 	    }
 	}
     }
-  else
-#endif /* BFD_SUPPORTS_PLUGINS */
-    if (bfd_link_relocatable (&link_info))
+  else if (bfd_link_relocatable (&link_info))
     {
       /* Check if .gnu_object_only section should be created.  */
       bfd *p;
@@ -10494,7 +10497,7 @@ setup_section (bfd *ibfd, sec_ptr isection, void *p)
 
   /* Allow the BFD backend to copy any private data it understands
      from the input section to the output section.  */
-  if (!bfd_copy_private_section_data (ibfd, isection, obfd, osection))
+  if (!bfd_copy_private_section_data (ibfd, isection, obfd, osection, NULL))
     {
       err = _("failed to copy private data");
       goto loser;
@@ -10695,6 +10698,9 @@ cmdline_add_object_only_section (bfd_byte *contents, size_t size)
       goto loser;
     }
 
+  /* This is a linker input BFD.  */
+  ibfd->is_linker_input = 1;
+
   if (!bfd_check_format_matches (ibfd, bfd_object, &matching))
     {
       err = bfd_errmsg (bfd_get_error ());
@@ -10840,9 +10846,18 @@ cmdline_add_object_only_section (bfd_byte *contents, size_t size)
       fatal (_("%P: failed to finish output with object-only section\n"));
     }
 
+  /* ibfd needs to be closed *after* obfd, otherwise ld may crash with a
+     segmentation fault.  */
+  if (!bfd_close (ibfd))
+    fatal (_("%P: failed to close input\n"));
+
   /* Must be freed after bfd_close ().  */
   free (isympp);
   free (osympp);
+
+  /* Must unlink to ensure rename works on Windows.  */
+  if (unlink (output_filename) && errno != ENOENT)
+    fatal (_("%P: failed to unlink %s\n"), output_filename);
 
   if (rename (ofilename, output_filename))
     {
@@ -10854,10 +10869,14 @@ cmdline_add_object_only_section (bfd_byte *contents, size_t size)
   return;
 
 loser:
-  free (isympp);
-  free (osympp);
   if (obfd)
     bfd_close (obfd);
+  /* ibfd needs to be closed *after* obfd, otherwise ld may crash with a
+     segmentation fault.  */
+  if (ibfd)
+    bfd_close (ibfd);
+  free (isympp);
+  free (osympp);
   if (ofilename)
     {
       unlink (ofilename);
@@ -10876,6 +10895,7 @@ cmdline_emit_object_only_section (void)
   size_t size, off;
   bfd_byte *contents;
   struct stat st;
+  unsigned int nested_group_count = 0;
 
   /* Get a temporary object-only file.  */
   output_filename = make_temp_file (".obj-only.o");
@@ -10886,6 +10906,9 @@ cmdline_emit_object_only_section (void)
 
   lang_init (true);
   ldexp_init (true);
+
+  /* Allow lang_add_section to add new sections.  */
+  map_head_is_link_order = false;
 
   /* Set up the object-only output. */
   lang_final ();
@@ -10909,7 +10932,8 @@ cmdline_emit_object_only_section (void)
   cmdline_get_object_only_input_files ();
 
   /* Open object-only input files.  */
-  open_input_bfds (statement_list.head, NULL, OPEN_BFD_NORMAL);
+  open_input_bfds (statement_list.head, NULL, OPEN_BFD_NORMAL,
+		   &nested_group_count);
 
   ldemul_after_open ();
 

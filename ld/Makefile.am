@@ -171,7 +171,6 @@ ALL_EMULATION_SOURCES = \
 	earmelf_linux.c \
 	earmelf_linux_eabi.c \
 	earmelf_linux_fdpiceabi.c \
-	earmelf_nacl.c \
 	earmelf_nbsd.c \
 	earmelf_phoenix.c \
 	earmelf_vxworks.c \
@@ -181,7 +180,6 @@ ALL_EMULATION_SOURCES = \
 	earmelfb_linux.c \
 	earmelfb_linux_eabi.c \
 	earmelfb_linux_fdpiceabi.c \
-	earmelfb_nacl.c \
 	earmelfb_nbsd.c \
 	earmnto.c \
 	earmpe.c \
@@ -375,8 +373,6 @@ ALL_EMULATION_SOURCES = \
 ALL_EMULATIONS = $(ALL_EMULATION_SOURCES:.c=.@OBJEXT@)
 
 ALL_64_EMULATION_SOURCES = \
-	eaarch64cloudabi.c \
-	eaarch64cloudabib.c \
 	eaarch64elf.c \
 	eaarch64elf32.c \
 	eaarch64elf32b.c \
@@ -459,7 +455,6 @@ ALL_64_EMULATION_SOURCES = \
 	eelf64tilegx_be.c \
 	eelf_mipsel_haiku.c \
 	eelf_x86_64.c \
-	eelf_x86_64_cloudabi.c \
 	eelf_x86_64_fbsd.c \
 	eelf_x86_64_haiku.c \
 	eelf_x86_64_sol2.c \

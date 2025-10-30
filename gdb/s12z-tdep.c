@@ -516,7 +516,7 @@ s12z_print_ccw_info (struct gdbarch *gdbarch,
 	    gdb_putc (ccw_bits[b], file);
 	}
       else
-	gdb_putc (tolower (ccw_bits[b]), file);
+	gdb_putc (c_tolower (ccw_bits[b]), file);
     }
   gdb_putc ('\n', file);
 }
@@ -662,9 +662,7 @@ s12z_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_s12z_tdep ();
-void
-_initialize_s12z_tdep ()
+INIT_GDB_FILE (s12z_tdep)
 {
   gdbarch_register (bfd_arch_s12z, s12z_gdbarch_init, NULL);
 }

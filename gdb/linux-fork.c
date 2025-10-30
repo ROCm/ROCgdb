@@ -37,7 +37,6 @@
 #include "gdbsupport/eintr.h"
 #include "target/waitstatus.h"
 #include <dirent.h>
-#include <ctype.h>
 
 #include <list>
 
@@ -420,7 +419,7 @@ fork_save_infrun_state (struct fork_info *fp)
       /* Now find actual file positions.  */
       rewinddir (d);
       while ((de = readdir (d)) != NULL)
-	if (isdigit (de->d_name[0]))
+	if (c_isdigit (de->d_name[0]))
 	  {
 	    tmp = strtol (&de->d_name[0], NULL, 10);
 	    fp->filepos[tmp] = call_lseek (tmp, 0, SEEK_CUR);
@@ -904,7 +903,7 @@ print_checkpoints (struct ui_out *uiout, inferior *req_inf, fork_info *req_fi)
 		   : fi.pc);
 	      uiout->field_core_addr ("addr", get_current_arch (), pc);
 
-	      symtab_and_line sal = find_pc_line (pc, 0);
+	      symtab_and_line sal = find_sal_for_pc (pc, 0);
 	      if (sal.symtab)
 		{
 		  uiout->text (", file ");
@@ -970,7 +969,7 @@ inf_has_multiple_threads ()
 
   /* Return true as soon as we see the second thread of the current
      inferior.  */
-  for (thread_info *tp ATTRIBUTE_UNUSED : current_inferior ()->threads ())
+  for (thread_info &tp ATTRIBUTE_UNUSED : current_inferior ()->threads ())
     if (++count > 1)
       return true;
 
@@ -1114,9 +1113,7 @@ restart_command (const char *args, int from_tty)
   linux_fork_context (fp, from_tty, inf);
 }
 
-void _initialize_linux_fork ();
-void
-_initialize_linux_fork ()
+INIT_GDB_FILE (linux_fork)
 {
   /* Checkpoint command: create a fork of the inferior process
      and set it aside for later debugging.  */

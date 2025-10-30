@@ -1201,15 +1201,15 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (info.bfd_arch_info && info.bfd_arch_info->mach != 0)
     {
-      const bfd_arch_info_type *coldfire_arch = 
+      const bfd_arch_info_type *coldfire_arch =
 	bfd_lookup_arch (bfd_arch_m68k, bfd_mach_mcf_isa_a_nodiv);
 
       if (coldfire_arch
-	  && ((*info.bfd_arch_info->compatible) 
+	  && ((*info.bfd_arch_info->compatible)
 	      (info.bfd_arch_info, coldfire_arch)))
 	flavour = m68k_coldfire_flavour;
     }
-  
+
   /* Try to figure out if the arch uses floating registers to return
      floating point values from functions.  On ColdFire, floating
      point values are returned in D0.  */
@@ -1365,9 +1365,7 @@ m68k_osabi_sniffer (bfd *abfd)
   return osabi;
 }
 
-void _initialize_m68k_tdep ();
-void
-_initialize_m68k_tdep ()
+INIT_GDB_FILE (m68k_tdep)
 {
   gdbarch_register (bfd_arch_m68k, m68k_gdbarch_init, m68k_dump_tdep);
 

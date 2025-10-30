@@ -21,10 +21,6 @@
 # The entry points for this test are in the various
 # gdb.dwarf2/macro-source-path-*.exp files.
 
-load_lib dwarf.exp
-
-require dwarf2_support
-
 standard_testfile macro-source-path.c
 
 lassign [function_range main $srcdir/$subdir/$srcfile] \
@@ -55,7 +51,7 @@ proc do_test { test_name lines_version DW_AT_name main_file_idx directories
 	    set ::directories $directories
 	    set ::file_names $file_names
 	    set ::is_64 $is_64
-	    set 32_or_64 [expr $is_64 ? 64 : 32]
+	    set 32_or_64 [expr {$is_64 ? 64 : 32}]
 
 	    set asm_file [standard_output_file ${::testfile}-${test_name}-${32_or_64}.S]
 	    Dwarf::assemble $asm_file {
@@ -68,24 +64,24 @@ proc do_test { test_name lines_version DW_AT_name main_file_idx directories
 
 		cu {} {
 		    DW_TAG_compile_unit {
-			    {DW_AT_producer "My C Compiler"}
-			    {DW_AT_language @DW_LANG_C11}
-			    {DW_AT_name $::DW_AT_name}
-			    {DW_AT_comp_dir $comp_dir}
-			    {DW_AT_stmt_list $Llines DW_FORM_sec_offset}
-			    {DW_AT_macros $cu_macros DW_FORM_sec_offset}
+			    DW_AT_producer "My C Compiler"
+			    DW_AT_language @DW_LANG_C11
+			    DW_AT_name $::DW_AT_name
+			    DW_AT_comp_dir $comp_dir
+			    DW_AT_stmt_list $Llines DW_FORM_sec_offset
+			    DW_AT_macros $cu_macros DW_FORM_sec_offset
 		    } {
 			declare_labels int_type
 
 			int_type: DW_TAG_base_type {
-			    {DW_AT_byte_size 4 DW_FORM_sdata}
-			    {DW_AT_encoding  @DW_ATE_signed}
-			    {DW_AT_name int}
+			    DW_AT_byte_size 4 DW_FORM_sdata
+			    DW_AT_encoding  @DW_ATE_signed
+			    DW_AT_name int
 			}
 
 			DW_TAG_subprogram {
-			    {MACRO_AT_func {main}}
-			    {type :$int_type}
+			    MACRO_AT_func {main}
+			    DW_AT_type :$int_type
 			}
 		    }
 		}
@@ -153,7 +149,7 @@ proc do_test { test_name lines_version DW_AT_name main_file_idx directories
 		}
 	    }
 
-	    if ![runto_main] {
+	    if {![runto_main]} {
 		return
 	    }
 

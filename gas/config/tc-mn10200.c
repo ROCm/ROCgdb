@@ -328,7 +328,6 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
   static unsigned long label_count = 0;
   char buf[40];
 
-  subseg_change (sec, 0);
   if (fragP->fr_subtype == 0)
     {
       fix_new (fragP, fragP->fr_fix + 1, 1, fragP->fr_symbol,
@@ -676,7 +675,7 @@ valueT
 md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_section_alignment (seg);
-  return ((addr + (1 << align) - 1) & -(1 << align));
+  return ((addr + ((valueT) 1 << align) - 1) & -((valueT) 1 << align));
 }
 
 void
@@ -697,7 +696,7 @@ md_begin (void)
     {
       if (strcmp (prev_name, op->name))
 	{
-	  prev_name = (char *) op->name;
+	  prev_name = op->name;
 	  str_hash_insert (mn10200_hash, op->name, op, 0);
 	}
       op++;
@@ -734,7 +733,7 @@ check_operand (unsigned long insn ATTRIBUTE_UNUSED,
 
       test = val;
 
-      if (test < (offsetT) min || test > (offsetT) max)
+      if (test < min || test > max)
 	return 0;
       else
 	return 1;
@@ -828,8 +827,7 @@ mn10200_insert_operand (unsigned long *insnp,
   if (operand->bits < 24
       && (operand->flags & MN10200_OPERAND_NOCHECK) == 0)
     {
-      long min, max;
-      offsetT test;
+      offsetT min, max;
 
       if ((operand->flags & MN10200_OPERAND_SIGNED) != 0)
 	{
@@ -842,19 +840,17 @@ mn10200_insert_operand (unsigned long *insnp,
 	  min = 0;
 	}
 
-      test = val;
-
-      if (test < (offsetT) min || test > (offsetT) max)
-	as_warn_value_out_of_range (_("operand"), test, (offsetT) min, (offsetT) max, file, line);
+      if (val < min || val > max)
+	as_warn_value_out_of_range (_("operand"), val, min, max, file, line);
     }
 
   if ((operand->flags & MN10200_OPERAND_EXTENDED) == 0)
     {
-      *insnp |= (((long) val & ((1 << operand->bits) - 1))
+      *insnp |= ((val & ((1 << operand->bits) - 1))
 		 << (operand->shift + shift));
 
       if ((operand->flags & MN10200_OPERAND_REPEATED) != 0)
-	*insnp |= (((long) val & ((1 << operand->bits) - 1))
+	*insnp |= ((val & ((1 << operand->bits) - 1))
 		   << (operand->shift + shift + 2));
     }
   else
@@ -884,7 +880,7 @@ md_assemble (char *str)
     *s++ = '\0';
 
   /* Find the first opcode with the proper name.  */
-  opcode = (struct mn10200_opcode *) str_hash_find (mn10200_hash, str);
+  opcode = str_hash_find (mn10200_hash, str);
   if (opcode == NULL)
     {
       as_bad (_("Unrecognized opcode: `%s'"), str);
@@ -900,7 +896,6 @@ md_assemble (char *str)
   for (;;)
     {
       const char *errmsg = NULL;
-      int op_idx;
       char *hold;
       int extra_shift = 0;
 
@@ -910,9 +905,9 @@ md_assemble (char *str)
       next_opindex = 0;
       insn = opcode->opcode;
       extension = 0;
-      for (op_idx = 1, opindex_ptr = opcode->operands;
+      for (opindex_ptr = opcode->operands;
 	   *opindex_ptr != 0;
-	   opindex_ptr++, op_idx++)
+	   opindex_ptr++)
 	{
 	  const struct mn10200_operand *operand;
 	  expressionS ex;
@@ -1318,7 +1313,7 @@ md_assemble (char *str)
 
 	      fixP = fix_new_exp (frag_now, f - frag_now->fr_literal + offset,
 				  reloc_size, &fixups[i].exp, pcrel,
-				  ((bfd_reloc_code_real_type) reloc));
+				  reloc);
 
 	      /* PC-relative offsets are from the first byte of the
 		 next instruction, not from the start of the current

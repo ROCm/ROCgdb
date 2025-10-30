@@ -27,6 +27,12 @@
 
 #define RISCV_UNKNOWN_VERSION -1
 
+typedef enum
+{
+    PLT_NORMAL            = 0x0,  /* Normal plts.  */
+    PLT_ZICFILP_UNLABELED = 0x1   /* Landing pad unlabeled plts.  */
+} riscv_plt_type;
+
 struct riscv_elf_params
 {
   /* Whether to relax code sequences to GP-relative addressing.  */
@@ -113,6 +119,9 @@ extern bool
 riscv_update_subset (riscv_parse_subset_t *, const char *);
 
 extern bool
+riscv_update_subset_norvc (riscv_parse_subset_t *);
+
+extern bool
 riscv_subset_supports (riscv_parse_subset_t *, const char *);
 
 extern bool
@@ -128,3 +137,16 @@ extern void
 bfd_elf32_riscv_set_data_segment_info (struct bfd_link_info *, int *);
 extern void
 bfd_elf64_riscv_set_data_segment_info (struct bfd_link_info *, int *);
+
+extern bfd *
+_bfd_riscv_elf_link_setup_gnu_properties (struct bfd_link_info *, uint32_t *);
+
+extern enum elf_property_kind
+_bfd_riscv_elf_parse_gnu_properties (bfd *, unsigned int, bfd_byte *,
+				     unsigned int);
+
+extern bool
+_bfd_riscv_elf_merge_gnu_properties (struct bfd_link_info *, bfd *,
+				     elf_property *, elf_property *, uint32_t);
+
+#define elf_backend_parse_gnu_properties _bfd_riscv_elf_parse_gnu_properties

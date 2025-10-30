@@ -89,9 +89,6 @@ aarch64-*-elf | aarch64-*-rtems* | aarch64-*-genode*)
 			targ_emul=aarch64elf
 			targ_extra_emuls="aarch64elf32 aarch64elf32b aarch64elfb armelf armelfb"
 			;;
-aarch64-*-cloudabi*)	targ_emul=aarch64cloudabi
-			targ_extra_emuls=aarch64cloudabib
-			;;
 aarch64-*-freebsd*)	targ_emul=aarch64fbsd
 			targ_extra_emuls="aarch64fbsdb aarch64elf"
 			;;
@@ -230,14 +227,6 @@ arm*-*-uclinuxfdpiceabi)
 arm*-*-linux-*)		targ_emul=armelf_linux
 			targ_extra_emuls="armelf armelfb armelfb_linux"
 			targ_extra_libpath="armelfb_linux"
-			;;
-arm*b-*-nacl*)		targ_emul=armelfb_nacl
-			targ_extra_emuls="armelf_nacl"
-			targ_extra_libpath=$targ_extra_emuls
-			;;
-arm*-*-nacl*)		targ_emul=armelf_nacl
-			targ_extra_emuls="armelfb_nacl"
-			targ_extra_libpath=$targ_extra_emuls
 			;;
 arm*-*-uclinux*eabi*)	targ_emul=armelf_linux_eabi
 			targ_extra_emuls=armelfb_linux_eabi
@@ -714,7 +703,7 @@ powerpc-*-vxworks*)
 powerpc*-*-elf* | powerpc*-*-eabi* | powerpc*-*-sysv* \
   | powerpc*-*-linux* | powerpc*-*-netbsd* | powerpc*-*-openbsd* \
   | powerpc*-*-rtems* \
-  | powerpc*-*-solaris* | powerpc*-*-kaos* | powerpc*-*-vxworks*)
+  | powerpc*-*-kaos* | powerpc*-*-vxworks*)
 			case "${targ}" in
 			powerpc64*)
 			    targ_emul=elf64ppc
@@ -999,8 +988,6 @@ vax-*-linux-*)		targ_emul=elf32vax
 visium-*-elf)		targ_emul=elf32visium
 			;;
 x86_64-*-rdos*)		targ_emul=elf64rdos
-			;;
-x86_64-*-cloudabi*)	targ_emul=elf_x86_64_cloudabi
 			;;
 x86_64-*-haiku*)	targ_emul=elf_x86_64_haiku
 			targ_extra_emuls="elf_x86_64 elf_i386_haiku"

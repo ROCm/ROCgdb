@@ -48,6 +48,7 @@
 #include "arch-utils.h"
 #include "xml-syscall.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "svr4-tls-tdep.h"
 #include "linux-record.h"
 #include "record-full.h"
@@ -60,7 +61,6 @@
 #include "cli/cli-utils.h"
 #include "parser-defs.h"
 #include "user-regs.h"
-#include <ctype.h>
 #include "elf-bfd.h"
 #include "producer.h"
 #include "target-float.h"
@@ -86,8 +86,6 @@
 #include "features/rs6000/powerpc-e500l.c"
 #include "dwarf2/frame.h"
 
-/* Shared library operations for PowerPC-Linux.  */
-static solib_ops powerpc_so_ops;
 
 /* The syscall's XML filename for PPC and PPC64.  */
 #define XML_SYSCALL_FILENAME_PPC "syscalls/ppc-linux.xml"
@@ -120,7 +118,7 @@ static solib_ops powerpc_so_ops;
    actually called, the code in the PLT is hit and the function is
    resolved.  In order to better illustrate this, an example is in
    order; the following example is from the gdb testsuite.
-	    
+
 	We start the program shmain.
 
 	    [kev@arroyo testsuite]$ ../gdb gdb.base/shmain
@@ -144,7 +142,7 @@ static solib_ops powerpc_so_ops;
 	Now run 'til main.
 
 	    (gdb) r
-	    Starting program: gdb.base/shmain 
+	    Starting program: gdb.base/shmain
 	    Breakpoint 1 at 0xffaf790: file gdb.base/shr1.c, line 19.
 
 	    Breakpoint 2, main ()
@@ -253,7 +251,7 @@ static enum return_value_convention
 ppc_linux_return_value (struct gdbarch *gdbarch, struct value *function,
 			struct type *valtype, struct regcache *regcache,
 			struct value **read_value, const gdb_byte *writebuf)
-{  
+{
   gdb_byte *readbuf = nullptr;
   if (read_value != nullptr)
     {
@@ -306,16 +304,35 @@ static const struct ppc_insn_pattern powerpc32_plt_stub_so_2[] =
 /* The max number of insns we check using ppc_insns_match_pattern.  */
 #define POWERPC32_PLT_CHECK_LEN (ARRAY_SIZE (powerpc32_plt_stub) - 1)
 
-/* Check if PC is in PLT stub.  For non-secure PLT, stub is in .plt
-   section.  For secure PLT, stub is in .text and we need to check
-   instruction patterns.  */
+/* solib_ops for ILP32 PowerPC/Linux systems.  */
 
-static bool
-powerpc_linux_in_dynsym_resolve_code (CORE_ADDR pc)
+struct ppc_linux_ilp32_svr4_solib_ops : public linux_ilp32_svr4_solib_ops
+{
+  using linux_ilp32_svr4_solib_ops::linux_ilp32_svr4_solib_ops;
+
+  /* Check if PC is in PLT stub.  For non-secure PLT, stub is in .plt
+     section.  For secure PLT, stub is in .text and we need to check
+     instruction patterns.  */
+
+  bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
+};
+
+/* Return a new solib_ops for ILP32 PowerPC/Linux systems.  */
+
+static solib_ops_up
+make_ppc_linux_ilp32_svr4_solib_ops (program_space *pspace)
+{
+  return std::make_unique<ppc_linux_ilp32_svr4_solib_ops> (pspace);
+}
+
+/* See ppc_linux_ilp32_svr4_solib_ops.  */
+
+bool
+ppc_linux_ilp32_svr4_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
 {
   /* Check whether PC is in the dynamic linker.  This also checks
      whether it is in the .plt section, used by non-PIC executables.  */
-  if (svr4_in_dynsym_resolve_code (pc))
+  if (linux_ilp32_svr4_solib_ops::in_dynsym_resolve_code (pc))
     return true;
 
   /* Check if we are in the resolver.  */
@@ -1288,7 +1305,7 @@ ppc64_linux_sighandler_cache_init (const struct tramp_frame *self,
 static struct tramp_frame ppc32_linux_sigaction_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x380000ac, ULONGEST_MAX }, /* li r0, 172 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
     { TRAMP_SENTINEL_INSN },
@@ -1309,7 +1326,7 @@ static struct tramp_frame ppc64_linux_sigaction_tramp_frame = {
 static struct tramp_frame ppc32_linux_sighandler_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x38000077, ULONGEST_MAX }, /* li r0,119 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
     { TRAMP_SENTINEL_INSN },
@@ -1319,7 +1336,7 @@ static struct tramp_frame ppc32_linux_sighandler_tramp_frame = {
 static struct tramp_frame ppc64_linux_sighandler_tramp_frame = {
   SIGTRAMP_FRAME,
   4,
-  { 
+  {
     { 0x38210080, ULONGEST_MAX }, /* addi r1,r1,128 */
     { 0x38000077, ULONGEST_MAX }, /* li r0,119 */
     { 0x44000002, ULONGEST_MAX }, /* sc */
@@ -1694,10 +1711,10 @@ static int
 ppc_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == 'i' /* Literal number.  */
-	  || (isdigit (*s) && s[1] == '('
-	      && isdigit (s[2])) /* Displacement.  */
-	  || (*s == '(' && isdigit (s[1])) /* Register indirection.  */
-	  || isdigit (*s)); /* Register value.  */
+	  || (c_isdigit (*s) && s[1] == '('
+	      && c_isdigit (s[2])) /* Displacement.  */
+	  || (*s == '(' && c_isdigit (s[1])) /* Register indirection.  */
+	  || c_isdigit (*s)); /* Register value.  */
 }
 
 /* Implementation of `gdbarch_stap_parse_special_token', as defined in
@@ -1707,7 +1724,7 @@ static expr::operation_up
 ppc_stap_parse_special_token (struct gdbarch *gdbarch,
 			      struct stap_parse_info *p)
 {
-  if (isdigit (*p->arg))
+  if (c_isdigit (*p->arg))
     {
       /* This temporary pointer is needed because we have to do a lookahead.
 	  We could be dealing with a register displacement, and in such case
@@ -1716,7 +1733,7 @@ ppc_stap_parse_special_token (struct gdbarch *gdbarch,
       char *regname;
       int len;
 
-      while (isdigit (*s))
+      while (c_isdigit (*s))
 	++s;
 
       if (*s == '(')
@@ -2265,8 +2282,6 @@ ppc_linux_init_abi (struct gdbarch_info info,
 
       /* Shared library handling.  */
       set_gdbarch_skip_trampoline_code (gdbarch, ppc_skip_trampoline_code);
-      set_solib_svr4_fetch_link_map_offsets
-	(gdbarch, linux_ilp32_fetch_link_map_offsets);
 
       /* Setting the correct XML syscall filename.  */
       set_xml_syscall_file_name (gdbarch, XML_SYSCALL_FILENAME_PPC);
@@ -2283,18 +2298,11 @@ ppc_linux_init_abi (struct gdbarch_info info,
       else
 	set_gdbarch_gcore_bfd_target (gdbarch, "elf32-powerpc");
 
-      if (powerpc_so_ops.in_dynsym_resolve_code == NULL)
-	{
-	  powerpc_so_ops = svr4_so_ops;
-	  /* Override dynamic resolve function.  */
-	  powerpc_so_ops.in_dynsym_resolve_code =
-	    powerpc_linux_in_dynsym_resolve_code;
-	}
-      set_gdbarch_so_ops (gdbarch, &powerpc_so_ops);
+      set_solib_svr4_ops (gdbarch, make_ppc_linux_ilp32_svr4_solib_ops);
 
       set_gdbarch_skip_solib_resolver (gdbarch, glibc_skip_solib_resolver);
     }
-  
+
   if (tdep->wordsize == 8)
     {
       if (tdep->elf_abi == POWERPC_ELF_V1)
@@ -2317,8 +2325,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
 
       /* Shared library handling.  */
       set_gdbarch_skip_trampoline_code (gdbarch, ppc64_skip_trampoline_code);
-      set_solib_svr4_fetch_link_map_offsets
-	(gdbarch, linux_lp64_fetch_link_map_offsets);
+      set_solib_svr4_ops (gdbarch, make_linux_lp64_svr4_solib_ops);
 
       /* Setting the correct XML syscall filename.  */
       set_xml_syscall_file_name (gdbarch, XML_SYSCALL_FILENAME_PPC64);
@@ -2392,9 +2399,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
 
 }
 
-void _initialize_ppc_linux_tdep ();
-void
-_initialize_ppc_linux_tdep ()
+INIT_GDB_FILE (ppc_linux_tdep)
 {
   /* Register for all sub-families of the POWER/PowerPC: 32-bit and
      64-bit PowerPC, and the older rs6k.  */

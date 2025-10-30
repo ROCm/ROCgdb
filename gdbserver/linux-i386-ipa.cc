@@ -131,7 +131,7 @@ initialize_fast_tracepoint_trampoline_buffer (void)
   FILE *f = fopen ("/proc/sys/vm/mmap_min_addr", "r");
 
   if (!f)
-    {    
+    {
       snprintf (buf, sizeof (buf), "mmap_min_addr open failed: %s",
 		safe_strerror (errno));
       set_trampoline_buffer_space (0, 0, buf);
@@ -140,9 +140,9 @@ initialize_fast_tracepoint_trampoline_buffer (void)
 
   if (fgets (buf, IPA_BUFSIZ, f))
     sscanf (buf, "%llu", &mmap_min_addr);
-      
+
   fclose (f);
-      
+
   buffer_size = buffer_end - mmap_min_addr;
 
   if (buffer_size >= min_buffer_size)
@@ -174,9 +174,9 @@ initialize_fast_tracepoint_trampoline_buffer (void)
 const struct target_desc *
 get_ipa_tdesc (int idx)
 {
-  uint64_t xcr0 = x86_linux_tdesc_idx_to_xcr0 (idx);
+  uint64_t xstate_bv = x86_linux_tdesc_idx_to_xstate_bv (idx);
 
-  return i386_linux_read_description (xcr0);
+  return i386_linux_read_description (xstate_bv);
 }
 
 /* Allocate buffer for the jump pads.  On i386, we can reach an arbitrary
@@ -199,5 +199,5 @@ initialize_low_tracepoint (void)
 {
   initialize_fast_tracepoint_trampoline_buffer ();
   for (int i = 0; i < x86_linux_i386_tdesc_count (); i++)
-    i386_linux_read_description (x86_linux_tdesc_idx_to_xcr0 (i));
+    i386_linux_read_description (x86_linux_tdesc_idx_to_xstate_bv (i));
 }

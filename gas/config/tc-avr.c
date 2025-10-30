@@ -841,12 +841,10 @@ md_begin (void)
   for (i = 0; i < ARRAY_SIZE (avr_no_sreg); ++i)
     {
       gas_assert (str_hash_find (avr_hash, avr_no_sreg[i]));
-      str_hash_insert (avr_no_sreg_hash, avr_no_sreg[i],
-		       (void *) 4 /* dummy */, 0);
+      str_hash_insert_int (avr_no_sreg_hash, avr_no_sreg[i], 0 /* dummy */, 0);
     }
 
-  avr_gccisr_opcode = (struct avr_opcodes_s*) str_hash_find (avr_hash,
-							     "__gcc_isr");
+  avr_gccisr_opcode = str_hash_find (avr_hash, "__gcc_isr");
   gas_assert (avr_gccisr_opcode);
 
   bfd_set_arch_mach (stdoutput, TARGET_ARCH, avr_mcu->mach);
@@ -1425,10 +1423,10 @@ avr_operands (struct avr_opcodes_s *opcode, char **line)
 	  && AVR_SKIP_P (frag_now->tc_frag_data.prev_opcode))
 	as_warn (_("skipping two-word instruction"));
 
-      bfd_putl32 ((bfd_vma) bin, frag);
+      bfd_putl32 (bin, frag);
     }
   else
-    bfd_putl16 ((bfd_vma) bin, frag);
+    bfd_putl16 (bin, frag);
 
   frag_now->tc_frag_data.prev_opcode = bin;
   *line = str;
@@ -1442,7 +1440,7 @@ valueT
 md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_section_alignment (seg);
-  return ((addr + (1 << align) - 1) & (-1UL << align));
+  return (addr + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 /* If you define this macro, it should return the offset between the
@@ -1454,7 +1452,7 @@ md_section_align (asection *seg, valueT addr)
 long
 md_pcrel_from_section (fixS *fixp, segT sec)
 {
-  if (fixp->fx_addsy != (symbolS *) NULL
+  if (fixp->fx_addsy != NULL
       && (!S_IS_DEFINED (fixp->fx_addsy)
 	  || (S_GET_SEGMENT (fixp->fx_addsy) != sec)))
     return 0;
@@ -1521,7 +1519,7 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
   unsigned long insn;
   long value = *valP;
 
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
   else if (fixP->fx_pcrel)
@@ -1569,7 +1567,7 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
       fixP->fx_subsy = NULL;
   }
   /* We don't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   /* For the DIFF relocs, write the value into the object file while still
@@ -1590,10 +1588,10 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
       *where = value;
 	  break;
     case BFD_RELOC_AVR_DIFF16:
-      bfd_putl16 ((bfd_vma) value, where);
+      bfd_putl16 (value, where);
       break;
     case BFD_RELOC_AVR_DIFF32:
-      bfd_putl32 ((bfd_vma) value, where);
+      bfd_putl32 (value, where);
       break;
     case BFD_RELOC_AVR_CALL:
       break;
@@ -1621,7 +1619,7 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
 	  value = (value << 3) & 0x3f8;
-	  bfd_putl16 ((bfd_vma) (value | insn), where);
+	  bfd_putl16 (value | insn, where);
 	  break;
 
 	case BFD_RELOC_AVR_13_PCREL:
@@ -1642,15 +1640,15 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 	    }
 
 	  value &= 0xfff;
-	  bfd_putl16 ((bfd_vma) (value | insn), where);
+	  bfd_putl16 (value | insn, where);
 	  break;
 
 	case BFD_RELOC_32:
-	  bfd_putl32 ((bfd_vma) value, where);
+	  bfd_putl32 (value, where);
 	  break;
 
 	case BFD_RELOC_16:
-	  bfd_putl16 ((bfd_vma) value, where);
+	  bfd_putl16 (value, where);
 	  break;
 
 	case BFD_RELOC_8:
@@ -1661,14 +1659,14 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 	  break;
 
 	case BFD_RELOC_AVR_16_PM:
-	  bfd_putl16 ((bfd_vma) (value >> 1), where);
+	  bfd_putl16 (value >> 1, where);
 	  break;
 
 	case BFD_RELOC_AVR_LDI:
 	  if (value > 255)
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value), where);
 	  break;
 
 	case BFD_RELOC_AVR_LDS_STS_16:
@@ -1677,78 +1675,78 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 			   _("operand out of range: 0x%lx"),
 			   (unsigned long)value);
 	  insn |= ((value & 0xF) | ((value & 0x30) << 5) | ((value & 0x40) << 2));
-	  bfd_putl16 ((bfd_vma) insn, where);
+	  bfd_putl16 (insn, where);
 	  break;
 
 	case BFD_RELOC_AVR_6:
 	  if ((value > 63) || (value < 0))
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
-	  bfd_putl16 ((bfd_vma) insn | ((value & 7) | ((value & (3 << 3)) << 7)
-					| ((value & (1 << 5)) << 8)), where);
+	  bfd_putl16 (insn | ((value & 7) | ((value & (3 << 3)) << 7)
+			      | ((value & (1 << 5)) << 8)), where);
 	  break;
 
 	case BFD_RELOC_AVR_6_ADIW:
 	  if ((value > 63) || (value < 0))
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
-	  bfd_putl16 ((bfd_vma) insn | (value & 0xf) | ((value & 0x30) << 2), where);
+	  bfd_putl16 (insn | (value & 0xf) | ((value & 0x30) << 2), where);
 	  break;
 
 	case BFD_RELOC_AVR_LO8_LDI:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value), where);
 	  break;
 
 	case BFD_RELOC_AVR_HI8_LDI:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 8), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 8), where);
 	  break;
 
 	case BFD_RELOC_AVR_MS8_LDI:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 24), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 24), where);
 	  break;
 
 	case BFD_RELOC_AVR_HH8_LDI:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 16), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 16), where);
 	  break;
 
 	case BFD_RELOC_AVR_LO8_LDI_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value), where);
 	  break;
 
 	case BFD_RELOC_AVR_HI8_LDI_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 8), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 8), where);
 	  break;
 
 	case BFD_RELOC_AVR_MS8_LDI_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 24), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 24), where);
 	  break;
 
 	case BFD_RELOC_AVR_HH8_LDI_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 16), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 16), where);
 	  break;
 
 	case BFD_RELOC_AVR_LO8_LDI_PM:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 1), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 1), where);
 	  break;
 
 	case BFD_RELOC_AVR_HI8_LDI_PM:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 9), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 9), where);
 	  break;
 
 	case BFD_RELOC_AVR_HH8_LDI_PM:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (value >> 17), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (value >> 17), where);
 	  break;
 
 	case BFD_RELOC_AVR_LO8_LDI_PM_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 1), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 1), where);
 	  break;
 
 	case BFD_RELOC_AVR_HI8_LDI_PM_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 9), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 9), where);
 	  break;
 
 	case BFD_RELOC_AVR_HH8_LDI_PM_NEG:
-	  bfd_putl16 ((bfd_vma) insn | LDI_IMMEDIATE (-value >> 17), where);
+	  bfd_putl16 (insn | LDI_IMMEDIATE (-value >> 17), where);
 	  break;
 
 	case BFD_RELOC_AVR_CALL:
@@ -1761,8 +1759,8 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 			    _("odd address operand: %ld"), value);
 	    value >>= 1;
 	    x |= ((value & 0x10000) | ((value << 3) & 0x1f00000)) >> 16;
-	    bfd_putl16 ((bfd_vma) x, where);
-	    bfd_putl16 ((bfd_vma) (value & 0xffff), where + 2);
+	    bfd_putl16 (x, where);
+	    bfd_putl16 (value & 0xffff, where + 2);
 	  }
 	  break;
 
@@ -1787,14 +1785,14 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 	  if (value > 63)
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
-	  bfd_putl16 ((bfd_vma) insn | ((value & 0x30) << 5) | (value & 0x0f), where);
+	  bfd_putl16 (insn | ((value & 0x30) << 5) | (value & 0x0f), where);
 	  break;
 
 	case BFD_RELOC_AVR_PORT5:
 	  if (value > 31)
 	    as_bad_where (fixP->fx_file, fixP->fx_line,
 			  _("operand out of range: %ld"), value);
-	  bfd_putl16 ((bfd_vma) insn | ((value & 0x1f) << 3), where);
+	  bfd_putl16 (insn | ((value & 0x1f) << 3), where);
 	  break;
 	}
     }
@@ -1858,7 +1856,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED,
 
   reloc->howto = bfd_reloc_type_lookup (stdoutput, code);
 
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("reloc %d not supported by object file format"),
@@ -1885,7 +1883,7 @@ md_assemble (char *str)
   if (!op[0])
     as_bad (_("can't find opcode "));
 
-  opcode = (struct avr_opcodes_s *) str_hash_find (avr_hash, op);
+  opcode = str_hash_find (avr_hash, op);
 
   if (opcode && !avr_opt.all_opcodes)
     {
@@ -2192,8 +2190,7 @@ avr_output_property_record (char * const frag_base, char *frag_ptr,
   fix->fx_line = 0;
   frag_ptr += 4;
 
-  md_number_to_chars (frag_ptr, (bfd_byte) record->type, 1);
-  frag_ptr += 1;
+  *frag_ptr++ = record->type & 0xff;
 
   /* Write out the rest of the data.  */
   switch (record->type)
@@ -2464,7 +2461,7 @@ avr_update_gccisr (struct avr_opcodes_s *opcode, int reg1, int reg2)
   /* SREG: Look up instructions that don't clobber SREG.  */
 
   if (!avr_isr.need_sreg
-      && !str_hash_find (avr_no_sreg_hash, opcode->name))
+      && str_hash_find_int (avr_no_sreg_hash, opcode->name) < 0)
     {
       avr_isr.need_sreg = 1;
     }
@@ -2507,8 +2504,7 @@ avr_emit_insn (const char *insn, int reg, char **pwhere)
 {
   const int sreg = 0x3f;
   unsigned bin = 0;
-  const struct avr_opcodes_s *op
-    = (struct avr_opcodes_s*) str_hash_find (avr_hash, insn);
+  const struct avr_opcodes_s *op = str_hash_find (avr_hash, insn);
 
   /* We only have to deal with: IN, OUT, PUSH, POP, CLR, LDI 0, MOV R1.
      All of these deal with at least one Reg and are 1-word instructions.  */
@@ -2549,7 +2545,7 @@ avr_emit_insn (const char *insn, int reg, char **pwhere)
 		|| 0 == strcmp ("mov", op->name)
 		|| 0 == strcmp ("ldi", op->name));
 
-  bfd_putl16 ((bfd_vma) bin, *pwhere);
+  bfd_putl16 (bin, *pwhere);
   (*pwhere) += 2 * op->insn_size;
 }
 

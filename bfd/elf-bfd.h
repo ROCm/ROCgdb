@@ -46,7 +46,7 @@ extern "C" {
 #define NUM_SHDR_ENTRIES(shdr) ((shdr)->sh_entsize > 0 ? (shdr)->sh_size / (shdr)->sh_entsize : 0)
 
 /* If size isn't specified as 64 or 32, NAME macro should fail.  */
-#ifndef NAME
+#if !defined(NAME) && defined(ARCH_SIZE)
 #if ARCH_SIZE == 64
 #define NAME(x, y) x ## 64 ## _ ## y
 #endif
@@ -503,12 +503,21 @@ struct sframe_func_bfdinfo
   unsigned int func_reloc_index;
 };
 
+/* Link state information of the SFrame section.  */
+enum sframe_sec_state
+{
+  SFRAME_SEC_DECODED = 1,
+  SFRAME_SEC_MERGED,
+};
+
 /* SFrame decoder info.
    Contains all information for a decoded .sframe section.  */
 struct sframe_dec_info
 {
   /* Decoder context.  */
   struct sframe_decoder_ctx *sfd_ctx;
+  /* SFrame section state as it progresses through the link process.  */
+  enum sframe_sec_state sfd_state;
   /* Number of function descriptor entries in this .sframe.  */
   unsigned int sfd_fde_count;
   /* Additional information for linking.  */
@@ -596,8 +605,7 @@ enum elf_target_os
 {
   is_normal,
   is_solaris,	/* Solaris.  */
-  is_vxworks,	/* VxWorks.  */
-  is_nacl	/* Native Client.  */
+  is_vxworks	/* VxWorks.  */
 };
 
 /* Used by bfd_sym_from_r_symndx to cache a small number of local
@@ -702,9 +710,6 @@ struct elf_link_hash_table
   /* The __ehdr_start symbol.  */
   struct elf_link_hash_entry *hehdr_start;
 
-  /* A pointer to information used to merge SEC_MERGE sections.  */
-  void *merge_info;
-
   /* Used to link stabs in sections.  */
   struct stab_info stab_info;
 
@@ -766,6 +771,7 @@ struct elf_link_hash_table
   asection *dynsym;
   asection *srelrdyn;
   asection *dynamic;
+  asection *interp;
 };
 
 /* Returns TRUE if the hash table is a struct elf_link_hash_table.  */
@@ -1887,9 +1893,6 @@ struct bfd_elf_section_data
      FIXME: In the future it might be better to change this into a list
      of secondary reloc sections, making lookup easier and faster.  */
   bool has_secondary_relocs;
-
-  /* A pointer used for various section optimizations.  */
-  void *sec_info;
 };
 
 #define elf_section_data(sec) ((struct bfd_elf_section_data*)(sec)->used_by_bfd)
@@ -1909,6 +1912,9 @@ struct bfd_elf_section_data
 
 #define get_elf_backend_data(abfd) \
    xvec_get_elf_backend_data ((abfd)->xvec)
+
+#define ABI_64_P(abfd) \
+  (get_elf_backend_data (abfd)->s->elfclass == ELFCLASS64)
 
 /* The least object attributes (within an attributes subsection) known
    for any target.  Some code assumes that the value 0 is not used and
@@ -2357,8 +2363,6 @@ extern bool _bfd_elf_link_hash_table_init
    unsigned int);
 extern bool _bfd_elf_slurp_version_tables
   (bfd *, bool);
-extern bool _bfd_elf_merge_sections
-  (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_match_sections_by_type
   (bfd *, const asection *, bfd *, const asection *);
 extern bool bfd_elf_is_group_section
@@ -2384,10 +2388,8 @@ extern bool _bfd_elf_copy_private_header_data
   (bfd *, bfd *);
 extern bool _bfd_elf_copy_private_symbol_data
   (bfd *, asymbol *, bfd *, asymbol *);
-extern bool _bfd_elf_init_private_section_data
-  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *);
 extern bool _bfd_elf_copy_private_section_data
-  (bfd *, asection *, bfd *, asection *);
+  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *);
 extern bool _bfd_elf_write_object_contents
   (bfd *);
 extern bool _bfd_elf_write_corefile_contents
@@ -2540,6 +2542,8 @@ extern bool _bfd_elf_discard_section_sframe
   (asection *, bool (*) (bfd_vma, void *), struct elf_reloc_cookie *);
 extern bool _bfd_elf_merge_section_sframe
   (bfd *, struct bfd_link_info *, asection *, bfd_byte *);
+extern bfd_vma _bfd_elf_sframe_section_offset
+  (bfd *, struct bfd_link_info *, asection *, bfd_vma);
 extern bool _bfd_elf_write_section_sframe
   (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_set_section_sframe (bfd *, struct bfd_link_info *);
@@ -2600,7 +2604,7 @@ extern bool _bfd_elf_create_dynamic_sections
 extern bool _bfd_elf_create_got_section
   (bfd *, struct bfd_link_info *);
 extern asection *_bfd_elf_section_for_symbol
-  (struct elf_reloc_cookie *, unsigned long, bool);
+  (struct elf_reloc_cookie *, unsigned long);
 extern struct elf_link_hash_entry *_bfd_elf_define_linkage_sym
   (bfd *, struct bfd_link_info *, asection *, const char *);
 extern void _bfd_elf_init_1_index_section
@@ -2623,8 +2627,8 @@ extern bool _bfd_elf_link_output_relocs
   (bfd *, asection *, Elf_Internal_Shdr *, Elf_Internal_Rela *,
    struct elf_link_hash_entry **);
 
-extern void _bfd_elf_link_add_glibc_version_dependency
-  (struct elf_find_verdep_info *, const char *[]);
+extern bool _bfd_elf_link_add_glibc_version_dependency
+  (struct elf_find_verdep_info *, const char *const [], bool *);
 
 extern void _bfd_elf_link_add_dt_relr_dependency
   (struct elf_find_verdep_info *);
@@ -2918,6 +2922,8 @@ extern char *elfcore_write_prxfpreg
 extern char *elfcore_write_xstatereg
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_x86_segbases
+  (bfd *, char *, int *, const void *, int);
+extern char *elfcore_write_i386_tls
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_ppc_vmx
   (bfd *, char *, int *, const void *, int);
@@ -3264,42 +3270,39 @@ extern asection _bfd_elf_large_com_section;
    link, we remove such relocations.  Otherwise, we just want the
    section contents zeroed and avoid any special processing.  */
 #define RELOC_AGAINST_DISCARDED_SECTION(info, input_bfd, input_section,	\
-					rel, count, relend,		\
+					rel, count, relend, rnone,	\
 					howto, index, contents)		\
   {									\
-    int i_;								\
     _bfd_clear_contents (howto, input_bfd, input_section,		\
 			 contents, rel[index].r_offset);		\
 									\
+    /* For ld -r, remove relocations in debug and sframe sections	\
+       against symbols defined in discarded sections.  Not done for	\
+       others.  In particular the .eh_frame editing code expects	\
+       such relocs to be present.  */					\
     if (bfd_link_relocatable (info)					\
-	&& (input_section->flags & SEC_DEBUGGING))			\
+	&& ((input_section->flags & SEC_DEBUGGING) != 0			\
+	    || elf_section_type (input_section) == SHT_GNU_SFRAME))	\
       {									\
-	/* Only remove relocations in debug sections since other	\
-	   sections may require relocations.  */			\
-	Elf_Internal_Shdr *rel_hdr;					\
+	Elf_Internal_Shdr *rel_hdr					\
+	  = _bfd_elf_single_rel_hdr (input_section->output_section);	\
 									\
-	rel_hdr = _bfd_elf_single_rel_hdr (input_section->output_section); \
+	rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+	rel_hdr = _bfd_elf_single_rel_hdr (input_section);		\
+	rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
 									\
-	/* Avoid empty output section.  */				\
-	if (rel_hdr->sh_size > rel_hdr->sh_entsize)			\
-	  {								\
-	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
-	    rel_hdr = _bfd_elf_single_rel_hdr (input_section);		\
-	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+	memmove (rel, rel + count,					\
+		 (relend - rel - count) * sizeof (*rel));		\
 									\
-	    memmove (rel, rel + count,					\
-		     (relend - rel - count) * sizeof (*rel));		\
-									\
-	    input_section->reloc_count -= count;			\
-	    relend -= count;						\
-	    rel--;							\
-	    continue;							\
-	  }								\
+	input_section->reloc_count -= count;				\
+	relend -= count;						\
+	rel--;								\
+	continue;							\
       }									\
 									\
-    for (i_ = 0; i_ < count; i_++)					\
+    for (int i_ = 0; i_ < count; i_++)					\
       {									\
-	rel[i_].r_info = 0;						\
+	rel[i_].r_info = rnone;						\
 	rel[i_].r_addend = 0;						\
       }									\
     rel += count - 1;							\

@@ -133,11 +133,9 @@ struct cached_frame_info
   cached_reg_t reg[0];
 };
 
-extern PyTypeObject pending_frame_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("pending_frame_object");
+extern PyTypeObject pending_frame_object_type;
 
-extern PyTypeObject unwind_info_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("unwind_info_object");
+extern PyTypeObject unwind_info_object_type;
 
 /* An enum returned by pyuw_object_attribute_to_pointer, a function which
    is used to extract an attribute from a Python object.  */
@@ -287,6 +285,8 @@ pyuw_create_unwind_info (PyObject *pyo_pending_frame,
 
   unwind_info_object *unwind_info
     = PyObject_New (unwind_info_object, &unwind_info_object_type);
+  if (unwind_info == nullptr)
+    return nullptr;
 
   unwind_info->frame_id = frame_id;
   Py_INCREF (pyo_pending_frame);
@@ -1015,8 +1015,8 @@ pyuw_on_new_gdbarch (gdbarch *newarch)
 
 /* Initialize unwind machinery.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_unwind (void)
+static int
+gdbpy_initialize_unwind ()
 {
   gdb::observers::new_architecture.attach (pyuw_on_new_gdbarch, "py-unwind");
 
@@ -1029,9 +1029,7 @@ gdbpy_initialize_unwind (void)
   return 0;
 }
 
-void _initialize_py_unwind ();
-void
-_initialize_py_unwind ()
+INIT_GDB_FILE (py_unwind)
 {
   add_setshow_boolean_cmd
       ("py-unwind", class_maintenance, &pyuw_debug,

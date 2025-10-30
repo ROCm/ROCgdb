@@ -214,9 +214,11 @@ static bool
 MY_bfd_copy_private_section_data (bfd *ibfd,
 				  asection *isec ATTRIBUTE_UNUSED,
 				  bfd *obfd,
-				  asection *osec ATTRIBUTE_UNUSED)
+				  asection *osec ATTRIBUTE_UNUSED,
+				  struct bfd_link_info *link_info)
 {
-  if (bfd_get_flavour (ibfd) == bfd_target_aout_flavour
+  if (link_info == NULL
+      && bfd_get_flavour (ibfd) == bfd_target_aout_flavour
       && bfd_get_flavour (obfd) == bfd_target_aout_flavour)
     obj_aout_subformat (obfd) = obj_aout_subformat (ibfd);
   return true;
@@ -493,9 +495,6 @@ MY_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
 #ifndef MY_bfd_lookup_section_flags
 #define MY_bfd_lookup_section_flags bfd_generic_lookup_section_flags
 #endif
-#ifndef MY_bfd_merge_sections
-#define MY_bfd_merge_sections bfd_generic_merge_sections
-#endif
 #ifndef MY_bfd_is_group_section
 #define MY_bfd_is_group_section bfd_generic_is_group_section
 #endif
@@ -561,9 +560,6 @@ MY_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
 #ifndef MY_bfd_merge_private_bfd_data
 #define MY_bfd_merge_private_bfd_data _bfd_generic_bfd_merge_private_bfd_data
 #endif
-
-#define MY_init_private_section_data \
-  _bfd_generic_init_private_section_data
 
 #ifndef MY_bfd_copy_private_symbol_data
 #define MY_bfd_copy_private_symbol_data _bfd_generic_bfd_copy_private_symbol_data
@@ -649,6 +645,7 @@ const bfd_target MY (vec) =
   15,				/* AR_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
 #ifdef TARGET_IS_BIG_ENDIAN_P
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,
      bfd_getb32, bfd_getb_signed_32, bfd_putb32,

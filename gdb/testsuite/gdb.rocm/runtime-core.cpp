@@ -20,9 +20,12 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
-#include <unistd.h>
 #include <list>
 #include <array>
+#include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
+#include "gdb_watchdog.h"
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
@@ -91,7 +94,7 @@ main (int argc, char **argv)
 {
   /* Make sure that the process terminates if the exception is not caught by
      the ROCr runtime.  */
-  alarm (30);
+  gdb_watchdog (30);
 
   if (argc != 2)
     {

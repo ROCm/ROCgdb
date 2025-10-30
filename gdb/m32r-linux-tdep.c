@@ -36,6 +36,7 @@
 
 #include "m32r-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "gdbarch.h"
 
 
@@ -461,8 +462,7 @@ m32r_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   /* Core file support.  */
   set_gdbarch_iterate_over_regset_sections
@@ -473,9 +473,7 @@ m32r_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					     svr4_fetch_objfile_link_map);
 }
 
-void _initialize_m32r_linux_tdep ();
-void
-_initialize_m32r_linux_tdep ()
+INIT_GDB_FILE (m32r_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_m32r, 0, GDB_OSABI_LINUX,
 			  m32r_linux_init_abi);

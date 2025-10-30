@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-#include <ctype.h>
 
 #include "block.h"
 #include "c-lang.h"
@@ -126,15 +125,15 @@ rust_underscore_fields (struct type *type)
 
   if (type->code () != TYPE_CODE_STRUCT)
     return false;
-  for (int i = 0; i < type->num_fields (); ++i)
+  for (const auto &field : type->fields ())
     {
-      if (!type->field (i).is_static ())
+      if (!field.is_static ())
 	{
 	  char buf[20];
 
 	  xsnprintf (buf, sizeof (buf), "%d", field_number);
 
-	  const char *field_name = type->field (i).name ();
+	  const char *field_name = field.name ();
 	  if (startswith (field_name, "__"))
 	    field_name += 2;
 	  if (strcmp (buf, field_name) != 0)
@@ -376,11 +375,11 @@ rust_array_like_element_type (struct type *type)
 {
   /* Caller must check this.  */
   gdb_assert (rust_slice_type_p (type));
-  for (int i = 0; i < type->num_fields (); ++i)
+  for (const auto &field : type->fields ())
     {
-      if (strcmp (type->field (i).name (), "data_ptr") == 0)
+      if (strcmp (field.name (), "data_ptr") == 0)
 	{
-	  struct type *base_type = type->field (i).type ()->target_type ();
+	  struct type *base_type = field.type ()->target_type ();
 	  if (rewrite_slice_type (base_type, nullptr, 0, nullptr))
 	    return nullptr;
 	  return base_type;
@@ -667,7 +666,7 @@ rust_language::value_print_inner
     case TYPE_CODE_PTR:
       {
 	LONGEST low_bound, high_bound;
-	
+
 	if (type->target_type ()->code () == TYPE_CODE_ARRAY
 	    && rust_u8_type_p (type->target_type ()->target_type ())
 	    && get_array_bounds (type->target_type (), &low_bound,
@@ -1017,9 +1016,9 @@ rust_internal_print_type (struct type *type, const char *varstring,
 	  }
 	gdb_puts ("{\n", stream);
 
-	for (int i = 0; i < type->num_fields (); ++i)
+	for (const auto &field : type->fields ())
 	  {
-	    const char *name = type->field (i).name ();
+	    const char *name = field.name ();
 
 	    QUIT;
 
@@ -1788,7 +1787,7 @@ rust_language::emitchar (int ch, struct type *chtype,
     gdb_puts ("\\t", stream);
   else if (ch == '\0')
     gdb_puts ("\\0", stream);
-  else if (ch >= 32 && ch <= 127 && isprint (ch))
+  else if (ch >= 32 && ch <= 127 && c_isprint (ch))
     gdb_putc (ch, stream);
   else if (ch <= 255)
     gdb_printf (stream, "\\x%02x", ch);

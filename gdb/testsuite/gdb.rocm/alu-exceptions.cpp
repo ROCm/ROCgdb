@@ -19,17 +19,7 @@
 #include <hip/hip_runtime.h>
 #include <iostream>
 #include <limits>
-
-#define CHECK(cmd)							\
-  {									\
-    hipError_t error = cmd;						\
-    if (error != hipSuccess)						\
-      {									\
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",			\
-		 hipGetErrorString (error), error, __FILE__, __LINE__);	\
-	exit (EXIT_FAILURE);						\
-      }									\
-  }
+#include <cstdlib>
 
 __device__ void
 enable_alu_exceptions ()
@@ -127,6 +117,14 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  CHECK (hipDeviceSynchronize ());
-  return EXIT_SUCCESS;
+  hipError_t err = hipDeviceSynchronize ();
+  if (err == hipErrorLaunchFailure)
+    {
+      /* Depending on the system configuration, the HIP runtime might or might
+	 not call abort(3) when it receives the GPU error.  Make sure to call
+	 it ourself so the testcase can match the SIGABRT.  */
+      abort ();
+    }
+
+  return (err == hipSuccess) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

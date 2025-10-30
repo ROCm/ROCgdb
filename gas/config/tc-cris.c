@@ -877,7 +877,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
 
     case ENCODE_RELAX (STATE_COND_BRANCH, STATE_DWORD):
       gen_cond_branch_32 (fragP->fr_opcode, var_partp, fragP,
-			  fragP->fr_symbol, (symbolS *) NULL,
+			  fragP->fr_symbol, NULL,
 			  fragP->fr_offset);
       /* Ten bytes added: a branch, nop and a jump.  */
       var_part_size = 2 + 2 + 4 + 2;
@@ -885,7 +885,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
 
     case ENCODE_RELAX (STATE_COND_BRANCH_PIC, STATE_DWORD):
       gen_cond_branch_32 (fragP->fr_opcode, var_partp, fragP,
-			  fragP->fr_symbol, (symbolS *) NULL,
+			  fragP->fr_symbol, NULL,
 			  fragP->fr_offset);
       /* Twelve bytes added: a branch, nop and a pic-branch-32.  */
       var_part_size = 2 + 2 + 4 + 2 + 2;
@@ -893,7 +893,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
 
     case ENCODE_RELAX (STATE_COND_BRANCH_V32, STATE_DWORD):
       gen_cond_branch_32 (fragP->fr_opcode, var_partp, fragP,
-			  fragP->fr_symbol, (symbolS *) NULL,
+			  fragP->fr_symbol, NULL,
 			  fragP->fr_offset);
       /* Twelve bytes added: a branch, nop and another branch and nop.  */
       var_part_size = 2 + 2 + 2 + 4 + 2;
@@ -1274,7 +1274,7 @@ md_assemble (char *str)
       opcodep = cris_insn_first_word_frag ();
 
       /* Output the prefix opcode.  */
-      md_number_to_chars (opcodep, (long) prefix.opcode, 2);
+      md_number_to_chars (opcodep, prefix.opcode, 2);
 
       /* Having a specified reloc only happens for DIP and for BDAP with
 	 PIC or TLS operands, but it is ok to drop through here for the other
@@ -1324,7 +1324,7 @@ md_assemble (char *str)
     opcodep = frag_more (2);
 
   /* Output the instruction opcode.  */
-  md_number_to_chars (opcodep, (long) (output_instruction.opcode), 2);
+  md_number_to_chars (opcodep, output_instruction.opcode, 2);
 
   /* Output the symbol-dependent instruction stuff.  */
   if (output_instruction.insn_type == CRIS_INSN_BRANCH)
@@ -1392,8 +1392,7 @@ md_assemble (char *str)
 			 ? 12 : 10);
 
 	  gen_cond_branch_32 (opcodep, cond_jump, frag_now,
-			      output_instruction.expr.X_add_symbol,
-			      (symbolS *) NULL,
+			      output_instruction.expr.X_add_symbol, NULL,
 			      output_instruction.expr.X_add_number);
 	}
     }
@@ -1552,7 +1551,7 @@ cris_process_instruction (char *insn_text, struct cris_instruction *out_insnp,
     }
 
   /* Find the instruction.  */
-  instruction = (struct cris_opcode *) str_hash_find (op_hash, insn_text);
+  instruction = str_hash_find (op_hash, insn_text);
   if (instruction == NULL)
     {
       as_bad (_("Unknown opcode: `%s'"), insn_text);
@@ -4039,16 +4038,15 @@ void
 md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 {
   /* This assignment truncates upper bits if valueT is 64 bits (as with
-     --enable-64-bit-bfd), which is fine here, though we cast to avoid
-     any compiler warnings.  */
-  long val = (long) *valP;
+     --enable-64-bit-bfd), which is fine here.  */
+  long val = *valP;
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
 
   if (fixP->fx_addsy == 0 && !fixP->fx_pcrel)
     fixP->fx_done = 1;
 
   /* We can't actually support subtracting a symbol.  */
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   /* This operand-type is scaled.  */

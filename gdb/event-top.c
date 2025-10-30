@@ -1180,6 +1180,9 @@ quit (void)
       throw_forced_quit ("SIGTERM");
     }
 
+  /* Pressing ^C cancels i-search.  Tell readline that a ^C happened.  */
+  rl_callback_sigcleanup ();
+
 #ifdef __MSDOS__
   /* No steenking SIGINT will ever be coming our way when the
      program is resumed.  Don't lie.  */
@@ -1650,9 +1653,7 @@ show_debug_event_loop_command (struct ui_file *file, int from_tty,
   gdb_printf (file, _("Event loop debugging is %s.\n"), value);
 }
 
-void _initialize_event_top ();
-void
-_initialize_event_top ()
+INIT_GDB_FILE (event_top)
 {
   add_setshow_enum_cmd ("event-loop", class_maintenance,
 			debug_event_loop_enum,

@@ -24,7 +24,7 @@ set old_gcc [gnat_version_compare < 8]
 
 proc gdb_test_with_xfail { cmd re re_xfail msg } {
     global scenario old_gcc
-    set have_xfail [expr $old_gcc && [string equal "$scenario" "minimal"]]
+    set have_xfail [expr {$old_gcc && [string equal "$scenario" "minimal"]}]
 
     gdb_test_multiple $cmd $msg {
 	-re -wrap $re  {
@@ -44,7 +44,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
     lappend flags debug
 
     if {[gdb_compile_ada "${srcfile}" "${binfile}-${scenario}" executable $flags] != ""} {
-	return -1
+	return
     }
 
     clean_restart ${testfile}-${scenario}

@@ -1340,14 +1340,6 @@ Method(
     predicate=True,
 )
 
-Method(
-    type="int",
-    name="stabs_argument_has_addr",
-    params=[("struct type *", "type")],
-    predefault="default_stabs_argument_has_addr",
-    invalid=False,
-)
-
 Value(
     type="int",
     name="frame_red_zone_size",
@@ -1534,7 +1526,7 @@ the condition is true, so that we ensure forward progress when stepping
 past a conditional branch to self.
 """,
     type="std::vector<CORE_ADDR>",
-    name="software_single_step",
+    name="get_next_pcs",
     params=[("struct regcache *", "regcache")],
     predicate=True,
 )
@@ -1570,12 +1562,12 @@ Function(
     invalid=False,
 )
 
-Value(
-    comment="Vtable of solib operations functions.",
-    type="const solib_ops *",
-    name="so_ops",
-    predefault="&solib_target_so_ops",
-    printer="host_address_to_string (gdbarch->so_ops)",
+Function(
+    comment="Return a newly-allocated solib_ops object capable of providing the solibs for this architecture.",
+    type="solib_ops_up",
+    name="make_solib_ops",
+    params=[("program_space *", "pspace")],
+    predefault="make_target_solib_ops",
     invalid=False,
 )
 
@@ -1887,7 +1879,12 @@ failed, otherwise, return the red length of READBUF.
 """,
     type="ULONGEST",
     name="core_xfer_shared_libraries",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
@@ -1899,7 +1896,12 @@ Return the number of bytes read (zero indicates failure).
 """,
     type="ULONGEST",
     name="core_xfer_shared_libraries_aix",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
@@ -1915,34 +1917,39 @@ How the core target converts a PTID from a core file to a string.
 
 Method(
     comment="""
-How the core target extracts the name of a thread from a core file.
+How the core target extracts the name of a thread from core file CBFD.
 """,
     type="const char *",
     name="core_thread_name",
-    params=[("struct thread_info *", "thr")],
+    params=[("struct bfd &", "cbfd"), ("struct thread_info *", "thr")],
     predicate=True,
 )
 
 Method(
     comment="""
 Read offset OFFSET of TARGET_OBJECT_SIGNAL_INFO signal information
-from core file into buffer READBUF with length LEN.  Return the number
+from core file CBFD into buffer READBUF with length LEN.  Return the number
 of bytes read (zero indicates EOF, a negative value indicates failure).
 """,
     type="LONGEST",
     name="core_xfer_siginfo",
-    params=[("gdb_byte *", "readbuf"), ("ULONGEST", "offset"), ("ULONGEST", "len")],
+    params=[
+        ("struct bfd &", "cbfd"),
+        ("gdb_byte *", "readbuf"),
+        ("ULONGEST", "offset"),
+        ("ULONGEST", "len"),
+    ],
     predicate=True,
 )
 
 Method(
     comment="""
-Read x86 XSAVE layout information from core file into XSAVE_LAYOUT.
+Read x86 XSAVE layout information from core file CBFD into XSAVE_LAYOUT.
 Returns true if the layout was read successfully.
 """,
     type="bool",
     name="core_read_x86_xsave_layout",
-    params=[("x86_xsave_layout &", "xsave_layout")],
+    params=[("struct bfd &", "cbfd"), ("x86_xsave_layout &", "xsave_layout")],
     predicate=True,
 )
 
@@ -2040,7 +2047,7 @@ receive control again (e.g. by placing a software breakpoint instruction into
 the displaced instruction buffer).
 
 The default implementation returns false on all targets that provide a
-gdbarch_software_single_step routine, and true otherwise.
+gdbarch_get_next_pcs routine, and true otherwise.
 """,
     type="bool",
     name="displaced_step_hw_singlestep",
@@ -2703,33 +2710,16 @@ Method(
     comment="""
 Implement the "info proc" command for core files.  Note that there
 are two "info_proc"-like methods on gdbarch -- one for core files,
-one for live targets.
+one for live targets.  CBFD is the core file being read from.
 """,
     type="void",
     name="core_info_proc",
-    params=[("const char *", "args"), ("enum info_proc_what", "what")],
-    predicate=True,
-)
-
-Method(
-    comment="""
-Iterate over all objfiles in the order that makes the most sense
-for the architecture to make global symbol searches.
-
-CB is a callback function passed an objfile to be searched.  The iteration stops
-if this function returns nonzero.
-
-If not NULL, CURRENT_OBJFILE corresponds to the objfile being
-inspected when the symbol search was requested.
-""",
-    type="void",
-    name="iterate_over_objfiles_in_search_order",
     params=[
-        ("iterate_over_objfiles_in_search_order_cb_ftype", "cb"),
-        ("struct objfile *", "current_objfile"),
+        ("struct bfd *", "cbfd"),
+        ("const char *", "args"),
+        ("enum info_proc_what", "what"),
     ],
-    predefault="default_iterate_over_objfiles_in_search_order",
-    invalid=False,
+    predicate=True,
 )
 
 Value(
@@ -2995,5 +2985,40 @@ which all assume current_inferior() is the one to read from.
     name="core_parse_exec_context",
     params=[("bfd *", "cbfd")],
     predefault="default_core_parse_exec_context",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Some targets support special hardware-assisted control-flow protection
+technologies.  For example, the Intel Control-Flow Enforcement Technology
+(Intel CET) on x86 provides a shadow stack and indirect branch tracking.
+To enable shadow stack support for inferior calls the shadow_stack_push
+gdbarch hook has to be provided.  The get_shadow_stack_pointer gdbarch
+hook has to be provided to enable displaced stepping.
+
+Push NEW_ADDR to the shadow stack and update the shadow stack pointer.
+""",
+    type="void",
+    name="shadow_stack_push",
+    params=[("CORE_ADDR", "new_addr"), ("regcache *", "regcache")],
+    predicate=True,
+)
+
+Method(
+    comment="""
+If possible, return the shadow stack pointer.  If the shadow stack
+feature is enabled then set SHADOW_STACK_ENABLED to true, otherwise
+set SHADOW_STACK_ENABLED to false.  This hook has to be provided to enable
+displaced stepping for shadow stack enabled programs.
+On some architectures, the shadow stack pointer is available even if the
+feature is disabled.  So dependent on the target, an implementation of
+this function may return a valid shadow stack pointer, but set
+SHADOW_STACK_ENABLED to false.
+""",
+    type="std::optional<CORE_ADDR>",
+    name="get_shadow_stack_pointer",
+    params=[("regcache *", "regcache"), ("bool &", "shadow_stack_enabled")],
+    predefault="default_get_shadow_stack_pointer",
     invalid=False,
 )

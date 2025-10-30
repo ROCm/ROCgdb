@@ -178,7 +178,7 @@ md_assemble (char *str)
 
   if (nlen == 0)
     as_bad (_("can't find opcode "));
-  opcode = (moxie_opc_info_t *) str_hash_find (opcode_hash_control, op_start);
+  opcode = str_hash_find (opcode_hash_control, op_start);
   *op_end = pend;
 
   if (opcode == NULL)
@@ -590,7 +590,7 @@ md_atof (int type, char *litP, int *sizeP)
 
   for (i = prec - 1; i >= 0; i--)
     {
-      md_number_to_chars (litP, (valueT) words[i], 2);
+      md_number_to_chars (litP, words[i], 2);
       litP += 2;
     }
 
@@ -731,14 +731,13 @@ static valueT
 md_chars_to_number (char * buf, int n)
 {
   valueT result = 0;
-  unsigned char * where = (unsigned char *) buf;
 
   if (target_big_endian)
     {
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (*where++ & 255);
+	  result |= (*buf++ & 255);
 	}
     }
   else
@@ -746,7 +745,7 @@ md_chars_to_number (char * buf, int n)
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (where[n] & 255);
+	  result |= (buf[n] & 255);
 	}
     }
 

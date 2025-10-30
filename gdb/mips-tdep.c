@@ -488,7 +488,7 @@ msymbol_is_micromips (struct minimal_symbol *msym)
 static void
 mips_make_symbol_special (struct symbol *sym, struct objfile *objfile)
 {
-  if (sym->aclass () == LOC_BLOCK)
+  if (sym->loc_class () == LOC_BLOCK)
     {
       /* We are in symbol reading so it is OK to cast away constness.  */
       struct block *block = (struct block *) sym->value_block ();
@@ -8974,9 +8974,7 @@ mips_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 	      mips_fpu_type_str (mips_get_fpu_type (gdbarch)));
 }
 
-void _initialize_mips_tdep ();
-void
-_initialize_mips_tdep ()
+INIT_GDB_FILE (mips_tdep)
 {
   static struct cmd_list_element *mipsfpulist = NULL;
 

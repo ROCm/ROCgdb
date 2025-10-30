@@ -26,9 +26,9 @@ if {[gdb_compile \
 }
 
 
-clean_restart ${binfile}
+clean_restart $testfile
 
-if ![runto bar] {
+if {![runto bar]} {
   untested "could not run to bar"
   return -1
 }

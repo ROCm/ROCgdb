@@ -421,6 +421,7 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 
 /* ABI names for selected x-registers.  */
 
+#define X_ZERO 0
 #define X_RA 1
 #define X_SP 2
 #define X_GP 3
@@ -492,18 +493,18 @@ enum riscv_insn_class
   INSN_CLASS_NONE,
 
   INSN_CLASS_I,
-  INSN_CLASS_C,
+  INSN_CLASS_ZCA,
   INSN_CLASS_M,
   INSN_CLASS_F,
   INSN_CLASS_D,
   INSN_CLASS_Q,
-  INSN_CLASS_F_AND_C,
-  INSN_CLASS_D_AND_C,
+  INSN_CLASS_ZCF,
+  INSN_CLASS_ZCD,
   INSN_CLASS_ZICOND,
   INSN_CLASS_ZICSR,
   INSN_CLASS_ZIFENCEI,
   INSN_CLASS_ZIHINTNTL,
-  INSN_CLASS_ZIHINTNTL_AND_C,
+  INSN_CLASS_ZIHINTNTL_AND_ZCA,
   INSN_CLASS_ZIHINTPAUSE,
   INSN_CLASS_ZIMOP,
   INSN_CLASS_ZMMUL,

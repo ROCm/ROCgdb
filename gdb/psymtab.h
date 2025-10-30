@@ -111,7 +111,9 @@ public:
 
   partial_symtab_range range ()
   {
-    return partial_symtab_range (psymtabs);
+    next_iterator<partial_symtab> begin (psymtabs);
+
+    return partial_symtab_range (std::move (begin));
   }
 
 
@@ -184,10 +186,10 @@ struct partial_symbol
   ENUM_BITFIELD(domain_enum) domain : SYMBOL_DOMAIN_BITS;
 
   /* Address class (for info_symbols).  Note that we don't allow
-     synthetic "aclass" values here at present, simply because there's
+     synthetic "loc_class" values here at present, simply because there's
      no need.  */
 
-  ENUM_BITFIELD(address_class) aclass : SYMBOL_ACLASS_BITS;
+  ENUM_BITFIELD(location_class) loc_class : SYMBOL_LOC_CLASS_BITS;
 };
 
 /* A convenience enum to give names to some constants used when
@@ -333,7 +335,7 @@ struct partial_symtab
      If COPY_NAME is true, make a copy of NAME, otherwise use the passed
      reference.
 
-     THECLASS is the type of symbol.
+     LOC_CLASS is the type of symbol.
 
      SECTION is the index of the section of OBJFILE in which the symbol is found.
 
@@ -348,7 +350,7 @@ struct partial_symtab
 
   void add_psymbol (std::string_view name,
 		    bool copy_name, domain_enum domain,
-		    enum address_class theclass,
+		    location_class loc_class,
 		    int section,
 		    psymbol_placement where,
 		    unrelocated_addr coreaddr,
@@ -626,15 +628,15 @@ struct psymbol_functions : public quick_symbol_functions
 
   void expand_all_symtabs (struct objfile *objfile) override;
 
-  bool expand_symtabs_matching
+  bool search
     (struct objfile *objfile,
-     expand_symtabs_file_matcher file_matcher,
+     search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     expand_symtabs_symbol_matcher symbol_matcher,
-     expand_symtabs_expansion_listener expansion_notify,
+     search_symtabs_symbol_matcher symbol_matcher,
+     search_symtabs_expansion_listener listener,
      block_search_flags search_flags,
      domain_search_flags kind,
-     expand_symtabs_lang_matcher lang_matcher) override;
+     search_symtabs_lang_matcher lang_matcher) override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, bound_minimal_symbol msymbol, CORE_ADDR pc,

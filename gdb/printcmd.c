@@ -55,7 +55,6 @@
 #include "source.h"
 #include "gdbsupport/byte-vector.h"
 #include <optional>
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "inferior.h"
 
 /* Chain containing all defined memory-tag subcommands.  */
@@ -626,7 +625,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   CORE_ADDR name_location = 0;
   struct obj_section *section = NULL;
   const char *name_temp = "";
-  
+
   /* Let's say it is mapped (not unmapped).  */
   *unmapped = 0;
 
@@ -642,7 +641,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
 	}
     }
 
-  /* Try to find the address in both the symbol table and the minsyms. 
+  /* Try to find the address in both the symbol table and the minsyms.
      In most cases, we'll prefer to use the symbol instead of the
      minsym.  However, there are cases (see below) where we'll choose
      to use the minsym instead.  */
@@ -655,7 +654,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
      symbols anyway).  */
   bound_minimal_symbol msymbol
     = lookup_minimal_symbol_by_pc_section (addr, section);
-  symbol = find_pc_sect_function (addr, section);
+  symbol = find_symbol_for_pc_sect (addr, section);
 
   if (symbol)
     {
@@ -684,7 +683,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   if (msymbol.minsym != NULL)
     {
       /* Use the minsym if no symbol is found.
-      
+
 	 Additionally, use the minsym instead of a (found) symbol if
 	 the following conditions all hold:
 	   1) The prefer_sym_over_minsym flag is false.
@@ -738,7 +737,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
     {
       struct symtab_and_line sal;
 
-      sal = find_pc_sect_line (addr, section, 0);
+      sal = find_sal_for_pc_sect (addr, section, 0);
 
       if (sal.symtab)
 	{
@@ -772,10 +771,10 @@ pc_prefix (CORE_ADDR addr)
   if (has_stack_frames ())
     {
       frame_info_ptr frame;
-      CORE_ADDR pc;
+      std::optional<CORE_ADDR> pc;
 
       frame = get_selected_frame (NULL);
-      if (get_frame_pc_if_available (frame, &pc) && pc == addr)
+      if ((pc = get_frame_pc_if_available (frame)) && *pc == addr)
 	return "=> ";
     }
   return "   ";
@@ -836,7 +835,7 @@ find_instruction_backward (struct gdbarch *gdbarch, CORE_ADDR addr,
   do
     {
       pcs.clear ();
-      sal = find_pc_sect_line (loop_start, NULL, 1);
+      sal = find_sal_for_pc_sect (loop_start, NULL, 1);
       if (sal.line <= 0)
 	{
 	  /* We reach here when line info is not available.  In this case,
@@ -1310,7 +1309,9 @@ should_validate_memtags (gdbarch *gdbarch, struct value *value)
     return false;
 
   /* We do.  Check whether it includes any tags.  */
-  return target_is_address_tagged (gdbarch, value_as_address (value));
+  struct type *val_type = value->type ();
+  const gdb_byte *data = value->contents ().data ();
+  return target_is_address_tagged (gdbarch, unpack_pointer (val_type, data));
 }
 
 /* Helper for parsing arguments for print_command_1.  */
@@ -1511,28 +1512,28 @@ info_symbol_command (const char *arg, int from_tty)
     error_no_arg (_("address"));
 
   addr = parse_and_eval_address (arg);
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section *osect : objfile->sections ())
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &osect : objfile.sections ())
       {
 	/* Only process each object file once, even if there's a separate
 	   debug file.  */
-	if (objfile->separate_debug_objfile_backlink)
+	if (objfile.separate_debug_objfile_backlink)
 	  continue;
 
-	sect_addr = overlay_mapped_address (addr, osect);
+	sect_addr = overlay_mapped_address (addr, &osect);
 
-	if (osect->contains (sect_addr)
+	if (osect.contains (sect_addr)
 	    && (msymbol
 		= lookup_minimal_symbol_by_pc_section (sect_addr,
-						       osect).minsym))
+						       &osect).minsym))
 	  {
 	    const char *obj_name, *mapped, *sec_name, *msym_name;
 	    const char *loc_string;
 
 	    matches = 1;
-	    offset = sect_addr - msymbol->value_address (objfile);
-	    mapped = section_is_mapped (osect) ? _("mapped") : _("unmapped");
-	    sec_name = osect->the_bfd_section->name;
+	    offset = sect_addr - msymbol->value_address (&objfile);
+	    mapped = section_is_mapped (&osect) ? _("mapped") : _("unmapped");
+	    sec_name = osect.the_bfd_section->name;
 	    msym_name = msymbol->print_name ();
 
 	    /* Don't print the offset if it is zero.
@@ -1546,12 +1547,12 @@ info_symbol_command (const char *arg, int from_tty)
 	    else
 	      loc_string = msym_name;
 
-	    gdb_assert (osect->objfile && objfile_name (osect->objfile));
-	    obj_name = objfile_name (osect->objfile);
+	    gdb_assert (osect.objfile && objfile_name (osect.objfile));
+	    obj_name = objfile_name (osect.objfile);
 
 	    if (current_program_space->multi_objfile_p ())
-	      if (pc_in_unmapped_range (addr, osect))
-		if (section_is_overlay (osect))
+	      if (pc_in_unmapped_range (addr, &osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in load address range of "
 				"%s overlay section %s of %s\n"),
 			      loc_string, mapped, sec_name, obj_name);
@@ -1560,15 +1561,15 @@ info_symbol_command (const char *arg, int from_tty)
 				"section %s of %s\n"),
 			      loc_string, sec_name, obj_name);
 	      else
-		if (section_is_overlay (osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in %s overlay section %s of %s\n"),
 			      loc_string, mapped, sec_name, obj_name);
 		else
 		  gdb_printf (_("%s in section %s of %s\n"),
 			      loc_string, sec_name, obj_name);
 	    else
-	      if (pc_in_unmapped_range (addr, osect))
-		if (section_is_overlay (osect))
+	      if (pc_in_unmapped_range (addr, &osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in load address range of %s overlay "
 				"section %s\n"),
 			      loc_string, mapped, sec_name);
@@ -1577,7 +1578,7 @@ info_symbol_command (const char *arg, int from_tty)
 		    (_("%s in load address range of section %s\n"),
 		     loc_string, sec_name);
 	      else
-		if (section_is_overlay (osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in %s overlay section %s\n"),
 			      loc_string, mapped, sec_name);
 		else
@@ -1673,7 +1674,7 @@ info_address_command (const char *exp, int from_tty)
       return;
     }
 
-  switch (sym->aclass ())
+  switch (sym->loc_class ())
     {
     case LOC_CONST:
     case LOC_CONST_BYTES:
@@ -2059,7 +2060,7 @@ undisplay_command (const char *args, int from_tty)
   dont_repeat ();
 }
 
-/* Display a single auto-display.  
+/* Display a single auto-display.
    Do nothing if the display cannot be printed in the current context,
    or if the display is disabled.  */
 
@@ -2717,7 +2718,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 
   if (*s++ != '"')
     error (_("Bad format string, non-terminated '\"'."));
-  
+
   s = skip_spaces (s);
 
   if (*s != ',' && *s != 0)
@@ -2730,7 +2731,6 @@ ui_printf (const char *arg, struct ui_file *stream)
   {
     int nargs_wanted;
     int i;
-    const char *current_substring;
 
     nargs_wanted = 0;
     for (auto &&piece : fpieces)
@@ -2759,7 +2759,8 @@ ui_printf (const char *arg, struct ui_file *stream)
     i = 0;
     for (auto &&piece : fpieces)
       {
-	current_substring = piece.string;
+	const char *current_substring = fpieces.piece_str (piece);
+
 	switch (piece.argclass)
 	  {
 	  case string_arg:
@@ -3211,9 +3212,7 @@ memory_tag_check_command (const char *args, int from_tty)
     }
 }
 
-void _initialize_printcmd ();
-void
-_initialize_printcmd ()
+INIT_GDB_FILE (printcmd)
 {
   struct cmd_list_element *c;
 

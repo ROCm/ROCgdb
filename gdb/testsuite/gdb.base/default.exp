@@ -32,14 +32,14 @@ set timeout 60
 gdb_test "add-symbol-file" "add-symbol-file takes a file name and an address"
 
 # test append
-gdb_test "append" "List of \"append\" subcommands:.*" 
-gdb_test "append binary" "List of \"append binary\" subcommands:.*" 
-gdb_test "append memory" "Missing filename\." 
-gdb_test "append value"  "Missing filename\." 
-gdb_test "append binary memory" "Missing filename\." 
-gdb_test "append binary value"  "Missing filename\." 
+gdb_test "append" "List of \"append\" subcommands:.*"
+gdb_test "append binary" "List of \"append binary\" subcommands:.*"
+gdb_test "append memory" "Missing filename\."
+gdb_test "append value"  "Missing filename\."
+gdb_test "append binary memory" "Missing filename\."
+gdb_test "append binary value"  "Missing filename\."
 
-if !$use_gdb_stub {
+if {!$use_gdb_stub} {
     gdb_test_multiple "attach" "attach" {
 	-re "Argument required .(process-id|program) to attach.*$gdb_prompt $"\
 	    { pass "attach" }
@@ -60,7 +60,7 @@ if !$use_gdb_stub {
 	gdb_test $i "No default breakpoint address now." "break \"$i\" abbreviation"
     }
 
-    
+
     gdb_test "backtrace" "No stack."
 
     # ba and bac are no longer unique command prefixes. So these tests
@@ -149,21 +149,21 @@ gdb_test "down" "No stack.*"
 #test down-silently
 gdb_test "down-silently" "No stack."
 # test dump
-gdb_test "dump" "List of \"dump\" subcommands:.*" 
-gdb_test "dump binary" "List of \"dump binary\" subcommands:.*" 
-gdb_test "dump ihex" "List of \"dump ihex\" subcommands:.*" 
-gdb_test "dump memory" "Missing filename\." 
-gdb_test "dump srec" "List of \"dump srec\" subcommands:.*" 
-gdb_test "dump tekhex" "List of \"dump tekhex\" subcommands:.*" 
-gdb_test "dump value" "Missing filename\." 
-gdb_test "dump binary memory" "Missing filename\." 
-gdb_test "dump binary value"  "Missing filename\." 
-gdb_test "dump ihex memory" "Missing filename\." 
-gdb_test "dump ihex value"  "Missing filename\." 
-gdb_test "dump srec memory" "Missing filename\." 
-gdb_test "dump srec value"  "Missing filename\." 
-gdb_test "dump tekhex memory" "Missing filename\." 
-gdb_test "dump tekhex value"  "Missing filename\." 
+gdb_test "dump" "List of \"dump\" subcommands:.*"
+gdb_test "dump binary" "List of \"dump binary\" subcommands:.*"
+gdb_test "dump ihex" "List of \"dump ihex\" subcommands:.*"
+gdb_test "dump memory" "Missing filename\."
+gdb_test "dump srec" "List of \"dump srec\" subcommands:.*"
+gdb_test "dump tekhex" "List of \"dump tekhex\" subcommands:.*"
+gdb_test "dump value" "Missing filename\."
+gdb_test "dump binary memory" "Missing filename\."
+gdb_test "dump binary value"  "Missing filename\."
+gdb_test "dump ihex memory" "Missing filename\."
+gdb_test "dump ihex value"  "Missing filename\."
+gdb_test "dump srec memory" "Missing filename\."
+gdb_test "dump srec value"  "Missing filename\."
+gdb_test "dump tekhex memory" "Missing filename\."
+gdb_test "dump tekhex value"  "Missing filename\."
 #test echo
 gdb_test_no_output "echo" "echo"
 #test enable breakpoints delete
@@ -528,7 +528,7 @@ gdb_test "ptype" "The history is empty."
 gdb_test "pwd" "Working directory .*"
 
 #test run "r" abbreviation
-if $use_gdb_stub {
+if {$use_gdb_stub} {
     # Only extended-remote supports "run".
 } else {
     gdb_test_multiple "r" "run \"r\" abbreviation" {
@@ -550,7 +550,7 @@ if $use_gdb_stub {
 }
 
 #test run
-if $use_gdb_stub {
+if {$use_gdb_stub} {
     # Only extended-remote supports "run".
 } else {
     gdb_test_multiple "run" "run" {
@@ -765,7 +765,6 @@ set show_conv_list \
 	{$_probe_arg10 = <error: No frame selected>} \
 	{$_probe_arg11 = <error: No frame selected>} \
 	{$_cimag = <internal function _cimag>} \
-	{$_colorsupport = "monochrome"} \
 	{$_creal = <internal function _creal>} \
 	{$_isvoid = <internal function _isvoid>} \
 	{$_shell = <internal function _shell>} \
@@ -773,14 +772,13 @@ set show_conv_list \
 	{$_gdb_maint_setting = <internal function _gdb_maint_setting>} \
 	{$_gdb_setting_str = <internal function _gdb_setting_str>} \
 	{$_gdb_setting = <internal function _gdb_setting>} \
-	{$_gdb_major = 17} \
-	{$_gdb_minor = 1} \
 	{$_shell_exitsignal = void} \
 	{$_shell_exitcode = 0} \
-	{$_active_linker_namespaces = 1} \
-	{$_current_linker_namespace = <error: No registers.>}\
+	{$_linker_namespace_count = 0} \
+	{$_linker_namespace = <error: No registers.>}\
+	{$_wave_id = void} \
     }
-if [allow_python_tests] {
+if {[allow_python_tests]} {
     append show_conv_list \
 	{
 	    {$_memeq = <internal function _memeq>} \
@@ -792,12 +790,55 @@ if [allow_python_tests] {
 	    {$_caller_matches = <internal function _caller_matches>} \
 	    {$_any_caller_is = <internal function _any_caller_is>} \
 	    {$_any_caller_matches = <internal function _any_caller_matches>} \
+	    {$_mx_get_scaled_float = <internal function _mx_get_scaled_float>} \
 	}
 }
-gdb_test_list_exact "show convenience" "show convenience" \
-    "\[^\r\n\]+\[\r\n\]+" \
-    "\[^\r\n\]+" \
-    $show_conv_list
+
+set lines [gdb_get_lines_no_pass "show convenience"]
+set matches 0
+set all_found 1
+foreach s $show_conv_list {
+    if { ![regexp (^|\r\n)[string_to_regexp $s](\r\n|$) $lines] } {
+	verbose -log "didn't match: '$s'"
+	set all_found 0
+	break
+    }
+    incr matches
+}
+
+set re_var [string_to_regexp {$_colorsupport}]
+if { [is_remote host] } {
+    set re_val {[^\r\n]+}
+} else {
+    set re_val [string_to_regexp {"monochrome"}]
+}
+if { [regexp "$re_var = $re_val" $lines] } {
+    incr matches
+} else {
+    set all_found 0
+}
+
+set re_vars \
+    [list \
+	 [string_to_regexp {$_gdb_major}] \
+	 [string_to_regexp {$_gdb_minor}]]
+foreach re_var $re_vars {
+    if { [regexp "$re_var = $decimal" $lines] } {
+	incr matches
+    } else {
+	set all_found 0
+    }
+}
+
+if { [regexp [string_to_regexp {$_tlb = void}] $lines] } {
+    incr matches
+} else {
+    # Convenience variable _tlb is added only if support for windows targets
+    # is enabled.  Don't complain if it's missing.
+}
+
+gdb_assert { $all_found && $matches == [count_newlines $lines] } \
+    "show convenience"
 
 #test show directories
 gdb_test "show directories" "Source directories searched: .cdir\[:;\].cwd"

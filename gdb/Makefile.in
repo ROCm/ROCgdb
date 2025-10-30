@@ -400,6 +400,7 @@ SUBDIR_PYTHON_SRCS = \
 	python/py-color.c \
 	python/py-connection.c \
 	python/py-continueevent.c \
+	python/py-corefile.c \
 	python/py-dap.c \
 	python/py-disasm.c \
 	python/py-event.c \
@@ -431,6 +432,7 @@ SUBDIR_PYTHON_SRCS = \
 	python/py-registers.c \
 	python/py-signalevent.c \
 	python/py-stopevent.c \
+	python/py-style.c \
 	python/py-symbol.c \
 	python/py-symtab.c \
 	python/py-threadevent.c \
@@ -770,8 +772,8 @@ ALL_64_TARGET_OBS = \
 	mips-sde-tdep.o \
 	mips-tdep.o \
 	mips64-obsd-tdep.o \
-	riscv-canonicalize-syscall-gen.o \
 	riscv-fbsd-tdep.o \
+	riscv-linux-canonicalize-syscall-gen.o \
 	riscv-linux-tdep.o \
 	riscv-none-tdep.o \
 	riscv-ravenscar-thread.o \
@@ -892,6 +894,7 @@ ALL_TARGET_OBS = \
 	solib-dsbt.o \
 	solib-frv.o \
 	solib-svr4.o \
+	solib-svr4-linux.o \
 	sparc-linux-tdep.o \
 	sparc-netbsd-tdep.o \
 	sparc-obsd-tdep.o \
@@ -907,12 +910,20 @@ ALL_TARGET_OBS = \
 	vax-tdep.o \
 	windows-tdep.o \
 	x86-tdep.o \
-	xcoffread.o \
 	xstormy16-tdep.o \
 	xtensa-config.o \
 	xtensa-linux-tdep.o \
 	xtensa-tdep.o \
 	z80-tdep.o
+
+# Object files for reading specific types of debug information.
+coff_SRCS = coffread.c coff-pe-read.c
+elf_SRCS = elfread.c stap-probe.c dtrace-probe.c
+macho_SRCS = machoread.c
+mips_SRCS = mipsread.c
+xcoff_SRCS = xcoffread.c
+FORMAT_SRCS = @FORMAT_SRCS@
+FORMAT_OBS = $(patsubst %.c,%.o,$(FORMAT_SRCS))
 
 # The following native-target dependent variables are defined on
 # configure.nat.
@@ -1070,8 +1081,6 @@ COMMON_SFILES = \
 	c-varobj.c \
 	charset.c \
 	cli-out.c \
-	coff-pe-read.c \
-	coffread.c \
 	complaints.c \
 	completer.c \
 	copying.c \
@@ -1085,7 +1094,6 @@ COMMON_SFILES = \
 	d-lang.c \
 	d-namespace.c \
 	d-valprint.c \
-	dbxread.c \
 	dcache.c \
 	debug.c \
 	debuginfod-support.c \
@@ -1093,36 +1101,6 @@ COMMON_SFILES = \
 	disasm.c \
 	displaced-stepping.c \
 	dummy-frame.c \
-	dwarf2/abbrev.c \
-	dwarf2/abbrev-table-cache.c \
-	dwarf2/ada-imported.c \
-	dwarf2/aranges.c \
-	dwarf2/attribute.c \
-	dwarf2/cooked-index.c \
-	dwarf2/cooked-index-entry.c \
-	dwarf2/cooked-index-shard.c \
-	dwarf2/cooked-index-worker.c \
-	dwarf2/cooked-indexer.c \
-	dwarf2/cu.c \
-	dwarf2/die.c \
-	dwarf2/dwz.c \
-	dwarf2/expr.c \
-	dwarf2/frame-tailcall.c \
-	dwarf2/frame.c \
-	dwarf2/index-cache.c \
-	dwarf2/index-common.c \
-	dwarf2/index-write.c \
-	dwarf2/leb.c \
-	dwarf2/line-header.c \
-	dwarf2/loc.c \
-	dwarf2/macro.c \
-	dwarf2/parent-map.c \
-	dwarf2/read.c \
-	dwarf2/read-debug-names.c \
-	dwarf2/read-gdb-index.c \
-	dwarf2/section.c \
-	dwarf2/stringify.c \
-	dwarf2/unit-head.c \
 	extract-store-integer.c \
 	eval.c \
 	event-top.c \
@@ -1175,7 +1153,6 @@ COMMON_SFILES = \
 	maint.c \
 	maint-test-options.c \
 	maint-test-settings.c \
-	mdebugread.c \
 	mem-break.c \
 	memattr.c \
 	memory-map.c \
@@ -1183,7 +1160,6 @@ COMMON_SFILES = \
 	memtag.c \
 	minidebug.c \
 	minsyms.c \
-	mipsread.c \
 	namespace.c \
 	objc-lang.c \
 	objfiles.c \
@@ -1225,7 +1201,6 @@ COMMON_SFILES = \
 	source.c \
 	source-cache.c \
 	split-name.c \
-	stabsread.c \
 	stack.c \
 	std-regs.c \
 	symfile.c \
@@ -1276,7 +1251,6 @@ SFILES = \
 	d-exp.y \
 	dtrace-probe.c \
 	elf-none-tdep.c \
-	elfread.c \
 	f-exp.y \
 	gcore-elf.c \
 	gdb.c \
@@ -1304,32 +1278,68 @@ SFILES = \
 # right, it is probably easiest just to list .h files here directly.
 
 HFILES_NO_SRCDIR = \
+	aarch32-linux-nat.h \
 	aarch32-tdep.h \
+	aarch64-fbsd-tdep.h \
+	aarch64-linux-tdep.h \
+	aarch64-nat.h \
 	aarch64-ravenscar-thread.h \
 	aarch64-tdep.h \
+	ada-casefold.h \
+	ada-exp.h \
 	ada-lang.h \
 	addrmap.h \
 	alpha-bsd-tdep.h \
 	alpha-tdep.h \
 	amd-dbgapi-hdep.h \
 	amd-dbgapi-target.h \
+	amd64-bsd-nat.h \
 	amd64-darwin-tdep.h \
+	amd64-fbsd-tdep.h \
 	amd64-linux-tdep.h \
 	amd64-nat.h \
 	amd64-ravenscar-thread.h \
 	amd64-tdep.h \
 	amdgpu-tdep.h \
 	annotate.h \
-	arc-tdep.h \
+	arch/aarch32.h \
+	arch/aarch64-gcs-linux.h \
+	arch/aarch64.h \
+	arch/aarch64-insn.h \
+	arch/aarch64-mte.h \
+	arch/aarch64-mte-linux.h \
+	arch/aarch64-scalable-linux.h \
+	arch/amd64.h \
+	arch/amd64-linux-tdesc.h \
+	arch/arc.h \
+	arch/arm-get-next-pcs.h \
+	arch/arm.h \
+	arch/arm-linux.h \
+	arch/csky.h \
+	arch/i386.h \
+	arch/i386-linux-tdesc.h \
+	arch/loongarch.h \
+	arch/loongarch-insn.h \
+	arch/loongarch-syscall.h \
+	arch/ppc-linux-common.h \
+	arch/ppc-linux-tdesc.h \
+	arch/riscv.h \
+	arch/tic6x.h \
 	arch-utils.h \
+	arch/x86-linux-tdesc-features.h \
+	arch/x86-linux-tdesc.h \
+	arch/xtensa.h \
+	arc-linux-tdep.h \
+	arc-tdep.h \
+	arm-fbsd-tdep.h \
 	arm-linux-tdep.h \
 	arm-netbsd-tdep.h \
 	arm-tdep.h \
 	async-event.h \
 	auto-load.h \
 	auxv.h \
-	ax.h \
 	ax-gdb.h \
+	ax.h \
 	bcache.h \
 	bfd-target.h \
 	bfin-tdep.h \
@@ -1338,96 +1348,164 @@ HFILES_NO_SRCDIR = \
 	breakpoint.h \
 	bsd-kvm.h \
 	bsd-uthread.h \
+	btrace.h \
 	bt-utils.h \
 	build-id.h \
-	buildsym-legacy.h \
 	buildsym.h \
-	c-lang.h \
+	buildsym-legacy.h \
+	c-exp.h \
+	cgen-remap.h \
 	charset.h \
 	charset-list.h \
+	c-lang.h \
+	cli/cli-cmds.h \
+	cli/cli-decode.h \
+	cli/cli-interp.h \
+	cli/cli-option.h \
+	cli/cli-script.h \
+	cli/cli-setshow.h \
+	cli/cli-style.h \
+	cli/cli-utils.h \
 	cli-out.h \
 	coff-pe-read.h \
 	command.h \
+	compile/compile-c.h \
+	compile/compile-cplus.h \
+	compile/compile.h \
+	compile/compile-internal.h \
+	compile/compile-object-load.h \
+	compile/compile-object-run.h \
+	compile/gcc-c-plugin.h \
+	compile/gcc-cp-plugin.h \
 	complaints.h \
 	completer.h \
+	config/djgpp/langinfo.h \
+	config/djgpp/nl_types.h \
+	config/i386/nm-x86-gnu.h \
+	config/nm-linux.h \
+	config/sparc/nm-sol2.h \
 	cp-abi.h \
 	cp-support.h \
+	cris-tdep.h \
 	csky-tdep.h \
-	d-lang.h \
+	c-support.h \
+	ctfread.h \
 	darwin-nat.h \
 	dcache.h \
+	debuginfod-support.h \
 	defs.h \
 	dicos-tdep.h \
 	dictionary.h \
 	disasm-flags.h \
 	disasm.h \
+	disasm-selftests.h \
+	displaced-stepping.h \
+	d-lang.h \
 	dummy-frame.h \
+	dwarf2/abbrev.h \
+	dwarf2/abbrev-table-cache.h \
 	dwarf2/aranges.h \
-	dwarf2/cooked-index.h \
+	dwarf2/attribute.h \
+	dwarf2/call-site.h \
 	dwarf2/cooked-index-entry.h \
+	dwarf2/cooked-indexer.h \
+	dwarf2/cooked-index.h \
 	dwarf2/cooked-index-shard.h \
 	dwarf2/cooked-index-worker.h \
-	dwarf2/cooked-indexer.h \
 	dwarf2/cu.h \
-	dwarf2/frame-tailcall.h \
-	dwarf2/frame.h \
+	dwarf2/die.h \
+	dwarf2/dwz.h \
+	dwarf2/error.h \
 	dwarf2/expr.h \
+	dwarf2/file-and-dir.h \
+	dwarf2/frame.h \
+	dwarf2/frame-tailcall.h \
 	dwarf2/index-cache.h \
 	dwarf2/index-common.h \
+	dwarf2/index-write.h \
+	dwarf2/leb.h \
+	dwarf2/line-header.h \
+	dwarf2/line-program.h \
 	dwarf2/loc.h \
-	dwarf2/read.h \
+	dwarf2/macro.h \
+	dwarf2/mapped-index.h \
+	dwarf2/parent-map.h \
+	dwarf2/public.h \
 	dwarf2/read-debug-names.h \
 	dwarf2/read-gdb-index.h \
+	dwarf2/read.h \
+	dwarf2/section.h \
+	dwarf2/sect-names.h \
+	dwarf2/stringify.h \
+	dwarf2/tag.h \
+	dwarf2/types.h \
+	dwarf2/unit-head.h \
+	elf-none-tdep.h \
 	event-top.h \
 	exceptions.h \
 	exec.h \
+	expop.h \
 	expression.h \
 	extension.h \
 	extension-priv.h \
 	extract-store-integer.h \
 	f-array-walker.h \
-	f-lang.h \
 	fbsd-nat.h \
 	fbsd-tdep.h \
+	f-exp.h \
+	filename-seen-cache.h \
 	filesystem.h \
-	frame.h \
+	f-lang.h \
 	frame-base.h \
+	frame.h \
+	frame-id.h \
 	frame-unwind.h \
 	frv-tdep.h \
 	ft32-tdep.h \
 	gcore-elf.h \
 	gcore.h \
+	gdbarch-gen.h \
+	gdbarch.h \
 	gdb_bfd.h \
+	gdbcore.h \
 	gdb_curses.h \
+	gdb-demangle.h \
 	gdb_expat.h \
 	gdb_proc_service.h \
-	gdb-stabs.h \
 	gdb_vfork.h \
 	gdb_wchar.h \
 	gdbarch.h \
 	gdbcore.h \
 	gdbthread.h \
 	gdbtypes.h \
+	gdb_vfork.h \
+	gdb_wchar.h \
 	glibc-tdep.h \
 	gmp-utils.h \
 	gnu-nat.h \
+	gnu-nat-mig.h \
 	go-lang.h \
 	gregset.h \
+	guile/guile.h \
+	guile/guile-internal.h \
 	hppa-bsd-tdep.h \
 	hppa-linux-offsets.h \
 	hppa-tdep.h \
 	i386-bsd-nat.h \
 	i386-darwin-tdep.h \
+	i386-fbsd-tdep.h \
 	i386-linux-tdep.h \
 	i386-tdep.h \
 	i387-tdep.h \
 	ia64-libunwind-tdep.h \
 	ia64-tdep.h \
+	infcall.h \
 	inf-child.h \
+	inferior.h \
+	inferior-iter.h \
 	inf-loop.h \
 	inf-ptrace.h \
-	infcall.h \
-	inferior.h \
+	infrun.h \
 	inline-frame.h \
 	interps.h \
 	jit.h \
@@ -1435,11 +1513,13 @@ HFILES_NO_SRCDIR = \
 	linespec.h \
 	linux-fork.h \
 	linux-nat.h \
+	linux-nat-trad.h \
 	linux-record.h \
 	linux-tdep.h \
 	local-fileio-target.h \
 	location.h \
 	loongarch-tdep.h \
+	m2-exp.h \
 	m2-lang.h \
 	m32r-tdep.h \
 	m68k-tdep.h \
@@ -1447,104 +1527,208 @@ HFILES_NO_SRCDIR = \
 	macroscope.h \
 	macrotab.h \
 	main.h \
+	maint.h \
 	mdebugread.h \
 	memattr.h \
 	memory-map.h \
 	memrange.h \
+	memtag.h \
 	microblaze-tdep.h \
+	mi/mi-cmd-break.h \
+	mi/mi-cmds.h \
+	mi/mi-common.h \
+	mi/mi-console.h \
+	mi/mi-getopt.h \
+	mi/mi-interp.h \
+	mi/mi-main.h \
+	mi/mi-out.h \
+	mi/mi-parse.h \
+	minsyms.h \
+	mips-fbsd-tdep.h \
 	mips-linux-tdep.h \
 	mips-netbsd-tdep.h \
 	mips-tdep.h \
 	mn10300-tdep.h \
 	moxie-tdep.h \
+	namespace.h \
+	nat/aarch64-hw-point.h \
+	nat/aarch64-linux.h \
+	nat/aarch64-linux-hw-point.h \
+	nat/aarch64-mte-linux-ptrace.h \
+	nat/aarch64-scalable-linux-ptrace.h \
+	nat/aarch64-scalable-linux-sigcontext.h \
+	nat/amd64-linux-siginfo.h \
+	nat/fork-inferior.h \
+	nat/gdb_ptrace.h \
+	nat/gdb_thread_db.h \
+	nat/glibc_thread_db.h \
+	nat/i386-linux.h \
+	nat/linux-btrace.h \
+	nat/linux-namespaces.h \
+	nat/linux-nat.h \
+	nat/linux-osdata.h \
+	nat/linux-personality.h \
+	nat/linux-procfs.h \
+	nat/linux-ptrace.h \
+	nat/linux-waitpid.h \
+	nat/loongarch-hw-point.h \
+	nat/loongarch-linux.h \
+	nat/loongarch-linux-hw-point.h \
+	nat/mips-linux-watch.h \
+	nat/netbsd-nat.h \
+	nat/ppc-linux.h \
+	nat/riscv-linux-tdesc.h \
+	nat/windows-nat.h \
+	nat/x86-cpuid.h \
+	nat/x86-dregs.h \
+	nat/x86-gcc-cpuid.h \
+	nat/x86-linux-dregs.h \
+	nat/x86-linux.h \
+	nat/x86-linux-tdesc.h \
+	nat/x86-xstate.h \
+	nds32-tdep.h \
 	netbsd-nat.h \
 	netbsd-tdep.h \
-	nds32-tdep.h \
-	elf-none-tdep.h \
 	objc-lang.h \
+	objfile-flags.h \
 	objfiles.h \
 	obsd-nat.h \
 	obsd-tdep.h \
+	observable.h \
 	or1k-linux-tdep.h \
+	or1k-tdep.h \
 	osabi.h \
 	osdata.h \
-	p-lang.h \
+	pager.h \
 	parser-defs.h \
+	p-lang.h \
+	ppc64-tdep.h \
 	ppc-fbsd-tdep.h \
 	ppc-linux-tdep.h \
 	ppc-netbsd-tdep.h \
 	ppc-obsd-tdep.h \
 	ppc-ravenscar-thread.h \
 	ppc-tdep.h \
-	ppc64-tdep.h \
 	probe.h \
-	proc-utils.h \
+	process-stratum-target.h \
 	procfs.h \
-	progspace.h \
+	proc-utils.h \
+	producer.h \
 	progspace-and-thread.h \
+	progspace.h \
 	prologue-value.h \
 	psymtab.h \
+	python/py-color.h \
+	python/py-event.h \
+	python/py-events.h \
+	python/py-instruction.h \
+	python/py-record-btrace.h \
+	python/py-record-full.h \
+	python/py-record.h \
+	python/py-ref.h \
+	python/py-stopevent.h \
+	python/python.h \
+	python/python-internal.h \
+	python/py-uiout.h \
+	quick-symbol.h \
 	ravenscar-thread.h \
-	record.h \
+	record-btrace.h \
 	record-full.h \
+	record.h \
 	regcache.h \
+	regformats/regdef.h \
 	reggroups.h \
+	registry.h \
 	regset.h \
-	remote.h \
 	remote-fileio.h \
+	remote.h \
 	remote-notif.h \
 	riscv-fbsd-tdep.h \
+	riscv-linux-tdep.h \
 	riscv-ravenscar-thread.h \
 	riscv-tdep.h \
 	rs6000-aix-tdep.h \
 	run-on-main-thread.h \
+	rust-exp.h \
+	rust-lang.h \
 	s390-linux-tdep.h \
 	s390-tdep.h \
+	scoped-mock-context.h \
 	selftest-arch.h \
 	sentinel-frame.h \
 	ser-base.h \
 	ser-event.h \
+	serial.h \
 	ser-tcp.h \
 	ser-unix.h \
-	serial.h \
 	sh-tdep.h \
 	sim-regno.h \
 	skip.h \
 	sol2-tdep.h \
-	solib.h \
 	solib-aix.h \
 	solib-darwin.h \
+	solib-dsbt.h \
+	solib-frv.h \
+	solib.h \
 	solib-svr4.h \
+	solib-svr4-linux.h \
 	solib-target.h \
-	source.h \
 	source-cache.h \
+	source.h \
+	sparc64-tdep.h \
 	sparc-nat.h \
 	sparc-ravenscar-thread.h \
 	sparc-tdep.h \
-	sparc64-tdep.h \
 	split-name.h \
-	stabsread.h \
 	stack.h \
 	stap-probe.h \
 	svr4-tls-tdep.h \
+	symfile-add-flags.h \
 	symfile.h \
 	symtab.h \
-	target.h \
+	target-connection.h \
 	target-dcache.h \
+	target-debug.h \
 	target-descriptions.h \
+	target-float.h \
+	target.h \
+	target/resume.h \
+	target-section.h \
+	target/target.h \
+	target/wait.h \
+	target/waitstatus.h \
 	terminal.h \
+	test-target.h \
+	thread-fsm.h \
+	thread-iter.h \
+	tic6x-tdep.h \
 	tid-parse.h \
+	tilegx-tdep.h \
 	top.h \
 	tracectf.h \
 	tracefile.h \
 	tracepoint.h \
 	trad-frame.h \
-	target-float.h \
 	tramp-frame.h \
-	type-stack.h \
+	tui/tui-command.h \
+	tui/tui-data.h \
+	tui/tui-disasm.h \
+	tui/tui-file.h \
+	tui/tui.h \
+	tui/tui-hooks.h \
+	tui/tui-io.h \
+	tui/tui-layout.h \
+	tui/tui-location.h \
+	tui/tui-regs.h \
+	tui/tui-source.h \
+	tui/tui-status.h \
+	tui/tui-wingeneral.h \
+	tui/tui-win.h \
+	tui/tui-winsource.h \
 	typeprint.h \
-	ui.h \
+	type-stack.h \
 	ui-file.h \
+	ui.h \
 	ui-out.h \
 	ui-style.h \
 	user-regs.h \
@@ -1557,111 +1741,18 @@ HFILES_NO_SRCDIR = \
 	windows-nat.h \
 	windows-tdep.h \
 	x86-bsd-nat.h \
+	x86-fbsd-nat.h \
 	x86-linux-nat.h \
 	x86-nat.h \
+	x86-tdep.h \
 	xcoffread.h \
 	xml-builtin.h \
 	xml-support.h \
 	xml-syscall.h \
 	xml-tdesc.h \
 	xtensa-tdep.h \
-	arch/aarch32.h \
-	arch/aarch64.h \
-	arch/aarch64-insn.h \
-	arch/aarch64-mte.h \
-	arch/aarch64-mte-linux.h \
-	arch/aarch64-scalable-linux.h \
-	arch/amd64-linux-tdesc.h \
-	arch/arc.h \
-	arch/arm.h \
-	arch/i386-linux-tdesc.h \
-	arch/i386.h \
-	arch/loongarch.h \
-	arch/ppc-linux-common.h \
-	arch/ppc-linux-tdesc.h \
-	arch/riscv.h \
-	arch/x86-linux-tdesc-features.h \
-	arch/x86-linux-tdesc.h \
-	cli/cli-cmds.h \
-	cli/cli-decode.h \
-	cli/cli-script.h \
-	cli/cli-setshow.h \
-	cli/cli-style.h \
-	cli/cli-utils.h \
-	compile/compile.h \
-	compile/compile-c.h \
-	compile/compile-cplus.h \
-	compile/compile-internal.h \
-	compile/compile-object-load.h \
-	compile/compile-object-run.h \
-	compile/gcc-c-plugin.h \
-	compile/gcc-cp-plugin.h \
-	config/nm-linux.h \
-	config/djgpp/langinfo.h \
-	config/djgpp/nl_types.h \
-	config/i386/nm-i386gnu.h \
-	config/sparc/nm-sol2.h \
-	mi/mi-cmds.h \
-	mi/mi-common.h \
-	mi/mi-console.h \
-	mi/mi-getopt.h \
-	mi/mi-main.h \
-	mi/mi-out.h \
-	mi/mi-parse.h \
-	nat/aarch64-linux.h \
-	nat/aarch64-linux-hw-point.h \
-	nat/aarch64-mte-linux-ptrace.h \
-	nat/aarch64-scalable-linux-ptrace.h \
-	nat/aarch64-scalable-linux-sigcontext.h \
-	nat/amd64-linux-siginfo.h \
-	nat/gdb_ptrace.h \
-	nat/gdb_thread_db.h \
-	nat/fork-inferior.h \
-	nat/i386-linux.h \
-	nat/linux-btrace.h \
-	nat/linux-namespaces.h \
-	nat/linux-nat.h \
-	nat/linux-osdata.h \
-	nat/linux-personality.h \
-	nat/linux-ptrace.h \
-	nat/linux-waitpid.h \
-	nat/loongarch-hw-point.h \
-	nat/loongarch-linux.h \
-	nat/loongarch-linux-hw-point.h \
-	nat/mips-linux-watch.h \
-	nat/ppc-linux.h \
-	nat/x86-cpuid.h \
-	nat/x86-dregs.h \
-	nat/x86-gcc-cpuid.h \
-	nat/x86-linux.h \
-	nat/x86-linux-dregs.h \
-	nat/x86-linux-tdesc.h \
-	python/py-event.h \
-	python/py-events.h \
-	python/py-stopevent.h \
-	python/python.h \
-	python/python-internal.h \
-	regformats/regdef.h \
-	target/resume.h \
-	target/target.h \
-	target/wait.h \
-	target/waitstatus.h \
-	tui/tui.h \
-	tui/tui-command.h \
-	tui/tui-data.h \
-	tui/tui-disasm.h \
-	tui/tui-file.h \
-	tui/tui-hooks.h \
-	tui/tui-io.h \
-	tui/tui-layout.h \
-	tui/tui-location.h \
-	tui/tui-regs.h \
-	tui/tui-source.h \
-	tui/tui-status.h \
-	tui/tui-win.h \
-	tui/tui-wingeneral.h \
-	tui/tui-winsource.h \
-	x86-tdep.h
+	yy-remap.h \
+	z80-tdep.h
 
 # Header files that already have srcdir in them, or which are in objdir.
 
@@ -1846,6 +1937,7 @@ ALLDEPFILES = \
 	remote-sim.c \
 	riscv-fbsd-nat.c \
 	riscv-fbsd-tdep.c \
+	riscv-linux-canonicalize-syscall-gen.c \
 	riscv-linux-nat.c \
 	riscv-linux-tdep.c \
 	riscv-none-tdep.c \
@@ -1905,7 +1997,6 @@ ALLDEPFILES = \
 	x86-gnu-nat.c \
 	x86-nat.c \
 	x86-tdep.c \
-	xcoffread.c \
 	xstormy16-tdep.c \
 	xtensa-config.c \
 	xtensa-linux-nat.c \
@@ -1919,6 +2010,41 @@ TAGFILES_NO_SRCDIR = $(SFILES) $(HFILES_NO_SRCDIR) $(ALLDEPFILES) \
 	$(CONFIG_SRCS)
 TAGFILES_WITH_SRCDIR = $(HFILES_WITH_SRCDIR)
 
+# Files that are used to support certain debuginfo formats
+DWARF2_SRCS = \
+	dwarf2/abbrev.c \
+	dwarf2/abbrev-table-cache.c \
+	dwarf2/ada-imported.c \
+	dwarf2/aranges.c \
+	dwarf2/attribute.c \
+	dwarf2/cooked-index.c \
+	dwarf2/cooked-index-entry.c \
+	dwarf2/cooked-index-shard.c \
+	dwarf2/cooked-index-worker.c \
+	dwarf2/cooked-indexer.c \
+	dwarf2/cu.c \
+	dwarf2/die.c \
+	dwarf2/dwz.c \
+	dwarf2/expr.c \
+	dwarf2/frame-tailcall.c \
+	dwarf2/frame.c \
+	dwarf2/index-cache.c \
+	dwarf2/index-common.c \
+	dwarf2/index-write.c \
+	dwarf2/leb.c \
+	dwarf2/line-header.c \
+	dwarf2/line-program.c \
+	dwarf2/loc.c \
+	dwarf2/macro.c \
+	dwarf2/parent-map.c \
+	dwarf2/read.c \
+	dwarf2/read-debug-names.c \
+	dwarf2/read-gdb-index.c \
+	dwarf2/section.c \
+	dwarf2/stringify.c \
+	dwarf2/unit-head.c
+DWARF2_OBS = $(patsubst %.c,%.o, $(DWARF2_SRCS))
+
 COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	mi/mi-common.o \
 	version.o \
@@ -1926,7 +2052,8 @@ COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	$(patsubst %.c,%.o,$(COMMON_SFILES)) \
 	$(SUBDIR_CLI_OBS) \
 	$(SUBDIR_MI_OBS) \
-	$(SUBDIR_TARGET_OBS)
+	$(SUBDIR_TARGET_OBS) \
+	$(FORMAT_OBS)
 
 SUBDIRS = doc @subdirs@ data-directory
 CLEANDIRS = $(SUBDIRS)
@@ -2283,8 +2410,7 @@ TAGS: $(TAGFILES_NO_SRCDIR) $(TAGFILES_WITH_SRCDIR)
 		echo $(srcdir)/$$i ; \
 	done ; for i in $(TAGFILES_WITH_SRCDIR); do \
 		echo $$i ; \
-	done) | sed -e 's/\.o$$/\.c/'` \
-	`find $(srcdir)/config -name '*.h' -print`
+	done) | sed -e 's/\.o$$/\.c/'`
 
 tags: TAGS
 

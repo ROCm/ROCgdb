@@ -35,9 +35,10 @@
 #include "frame-unwind.h"
 #include "tramp-frame.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 
 static int
-microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch, 
+microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
 					   struct bp_target_info *bp_tgt)
 {
   CORE_ADDR addr = bp_tgt->reqstd_address;
@@ -84,7 +85,7 @@ microblaze_linux_sigtramp_cache (const frame_info_ptr &next_frame,
 
   /* Registers saved on stack.  */
   for (regnum = 0; regnum < MICROBLAZE_BTR_REGNUM; regnum++)
-    trad_frame_set_reg_addr (this_cache, regnum, 
+    trad_frame_set_reg_addr (this_cache, regnum,
 			     gpregs + regnum * MICROBLAZE_REGISTER_SIZE);
   trad_frame_set_id (this_cache, frame_id_build (base, func));
 }
@@ -102,7 +103,7 @@ microblaze_linux_sighandler_cache_init (const struct tramp_frame *self,
 				   0);
 }
 
-static struct tramp_frame microblaze_linux_sighandler_tramp_frame = 
+static struct tramp_frame microblaze_linux_sighandler_tramp_frame =
 {
   SIGTRAMP_FRAME,
   4,
@@ -125,18 +126,15 @@ microblaze_linux_init_abi (struct gdbarch_info info,
 					microblaze_linux_memory_remove_breakpoint);
 
   /* Shared library handling.  */
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   /* Trampolines.  */
   tramp_frame_prepend_unwinder (gdbarch,
 				&microblaze_linux_sighandler_tramp_frame);
 }
 
-void _initialize_microblaze_linux_tdep ();
-void
-_initialize_microblaze_linux_tdep ()
+INIT_GDB_FILE (microblaze_linux_tdep)
 {
-  gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX, 
+  gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX,
 			  microblaze_linux_init_abi);
 }

@@ -418,7 +418,7 @@ cp_lookup_symbol_via_imports (const char *scope,
 
   /* Due to a GCC bug, we need to know the boundaries of the current block
      to know if a certain using directive is valid.  */
-  symtab_and_line boundary_sal = find_pc_line (block->end () - 1, 0);
+  symtab_and_line boundary_sal = find_sal_for_pc (block->end () - 1, 0);
 
   /* Go through the using directives.  If any of them add new names to
      the namespace we're searching in, see if we can find a match by
@@ -1051,9 +1051,7 @@ maintenance_cplus_namespace (const char *args, int from_tty)
   gdb_printf (_("The `maint namespace' command was removed.\n"));
 }
 
-void _initialize_cp_namespace ();
-void
-_initialize_cp_namespace ()
+INIT_GDB_FILE (cp_namespace)
 {
   struct cmd_list_element *cmd;
 

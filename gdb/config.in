@@ -39,6 +39,9 @@
 /* Define to BFD's default target vector. */
 #undef DEFAULT_BFD_VEC
 
+/* defined if dwarf format was requested. */
+#undef DWARF_FORMAT_AVAILABLE
+
 /* Handle .ctf type-info sections */
 #undef ENABLE_LIBCTF
 
@@ -92,6 +95,9 @@
 
 /* Define if amd-dbgapi is being linked in. */
 #undef HAVE_AMD_DBGAPI
+
+/* Define to 1 if you have the <asm/termios.h> header file. */
+#undef HAVE_ASM_TERMIOS_H
 
 /* Define to 1 if you have the `btowc' function. */
 #undef HAVE_BTOWC
@@ -243,6 +249,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <IOKit/serial/ioss.h> header file. */
+#undef HAVE_IOKIT_SERIAL_IOSS_H
 
 /* Define to 1 if you have the `kinfo_getfile' function. */
 #undef HAVE_KINFO_GETFILE
@@ -639,6 +648,9 @@
    */
 #undef LT_OBJDIR
 
+/* defined if mdebug format was requested. */
+#undef MDEBUG_FORMAT_AVAILABLE
+
 /* Name of this package. */
 #undef PACKAGE
 
@@ -698,6 +710,9 @@
 /* Define if the python directory should be relocated when GDB is moved. */
 #undef PYTHON_PATH_RELOCATABLE
 
+/* Define if GDB should be built against the Python limited C API. */
+#undef Py_LIMITED_API
+
 /* Relocated directory for source files. */
 #undef RELOC_SRCDIR
 
@@ -732,6 +747,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Which binary file formats were requested at configure time. */
+#undef SUPPORTED_BINARY_FILE_FORMATS
 
 /* automatically load a system-wide gdbinit file */
 #undef SYSTEM_GDBINIT

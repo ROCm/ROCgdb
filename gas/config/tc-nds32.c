@@ -3452,8 +3452,9 @@ nds32_lookup_pseudo_opcode (const char *str)
 
   for (i = 0; i < maxlen; i++)
     {
-      if (is_whitespace (op[i] = str[i]))
+      if (is_end_of_stmt (str[i]) || is_whitespace (str[i]))
 	break;
+      op[i] = str[i];
     }
   op[i] = '\0';
 
@@ -3896,7 +3897,7 @@ nds32_adjust_label (int n)
   /* Only frag by alignment when needed.
      Otherwise, it will fail to optimize labels on 4-byte boundary.  (bug8454)
      See md_convert_frag () and RELAX_SET_RELAXABLE (frag) for details.  */
-  if (frag_now_fix () & ((1 << n) -1 ))
+  if (frag_now_fix () & (((addressT) 1 << n) - 1))
     {
       if (subseg_text_p (now_seg))
 	{
@@ -3921,7 +3922,7 @@ nds32_adjust_label (int n)
 
       old_frag  = symbol_get_frag (label);
       old_value = S_GET_VALUE (label);
-      new_value = (valueT) frag_now_fix ();
+      new_value = frag_now_fix ();
 
       /* Multiple labels may be on the same address.  And the last symbol
 	 may not be a label at all, e.g., register name, external function names,
@@ -4015,7 +4016,7 @@ add_mapping_symbol (enum mstate state, unsigned int padding_byte,
 
   /* start adding mapping symbol  */
   seg_info (now_seg)->tc_segment_info_data.mapstate = state;
-  make_mapping_symbol (state, (valueT) frag_now_fix () + padding_byte,
+  make_mapping_symbol (state, frag_now_fix () + padding_byte,
 		       frag_now, align);
 }
 
@@ -4093,7 +4094,8 @@ nds32_relax_relocs (int relax)
     {"", "",};
 
   name = input_line_pointer;
-  while (*input_line_pointer && !is_whitespace (*input_line_pointer))
+  while (!is_end_of_stmt (*input_line_pointer)
+	 && !is_whitespace (*input_line_pointer))
     input_line_pointer++;
   saved_char = *input_line_pointer;
   *input_line_pointer = 0;
@@ -4208,8 +4210,6 @@ struct relax_hint_id *record_id_head = NULL;
 /* Is the buffer large enough?  */
 #define MAX_BUFFER 12
 
-static char *nds_itoa (int n);
-
 static char *
 nds_itoa (int n)
 {
@@ -4230,7 +4230,8 @@ nds32_relax_hint (int mode ATTRIBUTE_UNUSED)
   struct relax_hint_id *record_id;
 
   name = input_line_pointer;
-  while (*input_line_pointer && !is_whitespace (*input_line_pointer))
+  while (!is_end_of_stmt (*input_line_pointer)
+	 && !is_whitespace (*input_line_pointer))
     input_line_pointer++;
   saved_char = *input_line_pointer;
   *input_line_pointer = 0;
@@ -4363,7 +4364,8 @@ nds32_flag (int ignore ATTRIBUTE_UNUSED)
 
   /* Skip whitespaces.  */
   name = input_line_pointer;
-  while (*input_line_pointer && !is_whitespace (*input_line_pointer))
+  while (!is_end_of_stmt (*input_line_pointer)
+	 && !is_whitespace (*input_line_pointer))
     input_line_pointer++;
   saved_char = *input_line_pointer;
   *input_line_pointer = 0;
@@ -4400,7 +4402,8 @@ ict_model (int ignore ATTRIBUTE_UNUSED)
 
   /* Skip whitespaces.  */
   name = input_line_pointer;
-  while (*input_line_pointer && !is_whitespace (*input_line_pointer))
+  while (!is_end_of_stmt (*input_line_pointer)
+	 && !is_whitespace (*input_line_pointer))
     input_line_pointer++;
   saved_char = *input_line_pointer;
   *input_line_pointer = 0;
@@ -5209,7 +5212,7 @@ static struct nds32_relax_hint_table relax_ls_table[] =
    elimination itself or not, we have to return the next instruction range.  */
 
 static int
-nds32_elf_sethi_range (struct nds32_relocs_pattern *pattern)
+nds32_elf_sethi_range (const struct nds32_relocs_pattern *pattern)
 {
   int range = 0;
   while (pattern)
@@ -5658,12 +5661,12 @@ static struct nds32_hint_map hint_map [] =
 /* Find the relaxation pattern according to instructions.  */
 
 static bool
-nds32_find_reloc_table (struct nds32_relocs_pattern *relocs_pattern,
+nds32_find_reloc_table (const struct nds32_relocs_pattern *relocs_pattern,
 			struct nds32_relax_hint_table *hint_info)
 {
   unsigned int opcode, seq_size;
   enum nds32_br_range range;
-  struct nds32_relocs_pattern *pattern, *hi_pattern = NULL;
+  const struct nds32_relocs_pattern *pattern, *hi_pattern = NULL;
   const char *opc = NULL;
   relax_info_t *relax_info = NULL;
   nds32_relax_fixup_info_t *fixup_info, *hint_fixup;
@@ -5928,9 +5931,8 @@ nds32_match_hint_insn (struct nds32_opcode *opcode, uint32_t seq)
 static void
 nds32_elf_append_relax_relocs (const char *key, const void *value)
 {
-  struct nds32_relocs_pattern *relocs_pattern =
-    (struct nds32_relocs_pattern *) value;
-  struct nds32_relocs_pattern *pattern_temp, *pattern_now;
+  const struct nds32_relocs_pattern *relocs_pattern = value;
+  const struct nds32_relocs_pattern *pattern_temp, *pattern_now;
   symbolS *sym, *hi_sym = NULL;
   expressionS exp;
   fragS *fragP;
@@ -5947,7 +5949,7 @@ nds32_elf_append_relax_relocs (const char *key, const void *value)
   char *where;
   int pcrel;
 
-  if (!relocs_pattern)
+  if (!relocs_pattern || !relocs_pattern->opcode)
     return;
 
   if (!nds32_find_reloc_table (relocs_pattern, &hint_info))
@@ -6265,7 +6267,7 @@ static int
 nds32_elf_append_relax_relocs_traverse (void **slot, void *arg ATTRIBUTE_UNUSED)
 {
   string_tuple_t *tuple = *((string_tuple_t **) slot);
-  nds32_elf_append_relax_relocs (tuple->key, tuple->value);
+  nds32_elf_append_relax_relocs (tuple->key, (const void *) tuple->value);
   return 1;
 }
 
@@ -6609,7 +6611,7 @@ md_section_align (segT segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
 
-  return ((size + (1 << align) - 1) & ((valueT) -1 << align));
+  return (size + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 /* GAS will call this function when a symbol table lookup fails, before it
@@ -7353,8 +7355,7 @@ md_atof (int type, char *litP, int *sizeP)
     {
       for (i = 0; i < prec; i++)
 	{
-	  md_number_to_chars (litP, (valueT) words[i],
-			      sizeof (LITTLENUM_TYPE));
+	  md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
 	  litP += sizeof (LITTLENUM_TYPE);
 	}
     }
@@ -7362,8 +7363,7 @@ md_atof (int type, char *litP, int *sizeP)
     {
       for (i = prec - 1; i >= 0; i--)
 	{
-	  md_number_to_chars (litP, (valueT) words[i],
-			      sizeof (LITTLENUM_TYPE));
+	  md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
 	  litP += sizeof (LITTLENUM_TYPE);
 	}
     }
@@ -7687,10 +7687,10 @@ nds32_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       return;
     }
 
-  if (fixP->fx_addsy == (symbolS *) NULL)
+  if (fixP->fx_addsy == NULL)
     fixP->fx_done = 1;
 
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     {
       /* HOW DIFF RELOCATION WORKS.
 
@@ -7831,7 +7831,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
   code = fixP->fx_r_type;
 
   reloc->howto = bfd_reloc_type_lookup (stdoutput, code);
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixP->fx_file, fixP->fx_line,
 		    _("internal error: can't export reloc type %d (`%s')"),

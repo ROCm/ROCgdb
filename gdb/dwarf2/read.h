@@ -20,9 +20,6 @@
 #ifndef GDB_DWARF2_READ_H
 #define GDB_DWARF2_READ_H
 
-#if CXX_STD_THREAD
-#include <mutex>
-#endif
 #include <queue>
 #include "dwarf2/abbrev.h"
 #include "dwarf2/unit-head.h"
@@ -32,6 +29,7 @@
 #include "dwarf2/section.h"
 #include "dwarf2/cu.h"
 #include "dwarf2/dwz.h"
+#include "gdbsupport/cxx-thread.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbsupport/function-view.h"
 #include "gdbsupport/packed.h"
@@ -47,7 +45,6 @@ struct tu_stats
   int nr_symtab_sharers = 0;
   int nr_stmt_less_type_units = 0;
   int nr_all_type_units_reallocs = 0;
-  int nr_tus = 0;
 };
 
 struct abbrev_table_cache;
@@ -55,6 +52,7 @@ struct dwarf2_cu;
 struct dwarf2_debug_sections;
 struct dwarf2_per_bfd;
 struct dwarf2_per_cu;
+struct file_entry;
 struct mapped_index;
 struct mapped_debug_names;
 struct signatured_type;
@@ -128,7 +126,6 @@ struct dwarf2_per_cu
       lto_artificial (false),
       queued (false),
       m_header_read_in (false),
-      mark (false),
       files_read (false),
       scanned (false),
       section (section),
@@ -190,16 +187,11 @@ public:
      any of the current compilation units are processed.  */
   packed<bool, 1> queued;
 
-  /* True if HEADER has been read in.
-
-     Don't access this field directly.  It should be private, but we can't make
-     it private at the moment.  */
+private:
+  /* True if HEADER has been read in.  */
   mutable packed<bool, 1> m_header_read_in;
 
-  /* A temporary mark bit used when iterating over all CUs in
-     expand_symtabs_matching.  */
-  packed<unsigned int, 1> mark;
-
+public:
   /* True if we've tried to read the file table.  There will be no
      point in trying to read it again next time.  */
   packed<bool, 1> files_read;
@@ -236,15 +228,14 @@ public:
   /* Backlink to the owner of this.  */
   dwarf2_per_bfd *per_bfd;
 
+private:
   /* DWARF header of this unit.  Note that dwarf2_cu reads its own version of
      the header, which may differ from this one, since it may pass
      rch_kind::TYPE to read_unit_head, whereas for dwarf2_per_cu we always pass
-     ruh_kind::COMPILE.
-
-     Don't access this field directly, use the get_header method instead.  It
-     should be private, but we can't make it private at the moment.  */
+     ruh_kind::COMPILE.  */
   mutable unit_head m_header;
 
+public:
   /* The file and directory for this CU.  This is cached so that we
      don't need to re-examine the DWO in some situations.  This may be
      nullptr, depending on the CU; for example a partial unit won't
@@ -295,6 +286,10 @@ public:
     gdb_assert (m_length != 0);
     return m_length;
   }
+
+  /* Return true if the length of this CU has been set.  */
+  bool length_is_set () const
+  { return m_length != 0; }
 
   void set_length (unsigned int length, bool strict_p = true)
   {
@@ -515,24 +510,10 @@ struct dwarf2_per_bfd
   const char *filename () const
   { return bfd_get_filename (this->obfd); }
 
-  /* Return the CU given its index.  */
-  dwarf2_per_cu *get_cu (int index) const
+  /* Return the unit given its index.  */
+  dwarf2_per_cu *get_unit (int index) const
   {
     return this->all_units[index].get ();
-  }
-
-  /* Return the CU given its index in the CU table in the index.  */
-  dwarf2_per_cu *get_index_cu (int index) const
-  {
-    if (this->all_comp_units_index_cus.empty ())
-      return get_cu (index);
-
-    return this->all_comp_units_index_cus[index];
-  }
-
-  dwarf2_per_cu *get_index_tu (int index) const
-  {
-    return this->all_comp_units_index_tus[index];
   }
 
   /* Return the separate '.dwz' debug file.  If there is no
@@ -619,13 +600,9 @@ public:
      the target compilation unit of a particular reference.  */
   std::vector<dwarf2_per_cu_up> all_units;
 
-  /* The all_units vector contains both CUs and TUs.  Provide views on the
-     vector that are limited to either the CU part or the TU part.  */
-  gdb::array_view<dwarf2_per_cu_up> all_comp_units;
-  gdb::array_view<dwarf2_per_cu_up> all_type_units;
-
-  std::vector<dwarf2_per_cu *> all_comp_units_index_cus;
-  std::vector<dwarf2_per_cu *> all_comp_units_index_tus;
+  /* Number of compilation and type units in the ALL_UNITS vector.  */
+  unsigned int num_comp_units = 0;
+  unsigned int num_type_units = 0;
 
   /* Set of signatured_types, used to look up by signature.  */
   signatured_type_set signatured_types;
@@ -637,10 +614,8 @@ public:
   /* Set of dwo_file objects.  */
   dwo_file_up_set dwo_files;
 
-#if CXX_STD_THREAD
   /* Mutex to synchronize access to DWO_FILES.  */
-  std::mutex dwo_files_lock;
-#endif
+  gdb::mutex dwo_files_lock;
 
   /* The DWP file if there is one, or NULL.  */
   dwp_file_up dwp_file;
@@ -688,6 +663,36 @@ public:
   std::string captured_debug_dir;
 };
 
+/* Scoped object to remove all units from PER_BFD and clear other associated
+   fields in case of failure.  */
+
+struct scoped_remove_all_units
+{
+  explicit scoped_remove_all_units (dwarf2_per_bfd &per_bfd)
+    : m_per_bfd (&per_bfd)
+  {}
+
+  DISABLE_COPY_AND_ASSIGN (scoped_remove_all_units);
+
+  ~scoped_remove_all_units ()
+  {
+    if (m_per_bfd == nullptr)
+      return;
+
+    m_per_bfd->all_units.clear ();
+    m_per_bfd->num_comp_units = 0;
+    m_per_bfd->num_type_units = 0;
+  }
+
+  /* Disable this object.  Call this to keep the units of M_PER_BFD on the
+     success path.  */
+  void disable () { m_per_bfd = nullptr; }
+
+private:
+  /* This is nullptr if the object is disabled.  */
+  dwarf2_per_bfd *m_per_bfd;
+};
+
 /* An iterator for all_units that is based on index.  This
    approach makes it possible to iterate over all_units safely,
    when some caller in the loop may add new units.  */
@@ -710,7 +715,7 @@ public:
 
   dwarf2_per_cu *operator* () const
   {
-    return m_per_bfd->get_cu (m_index);
+    return m_per_bfd->get_unit (m_index);
   }
 
   bool operator== (const all_units_iterator &other) const
@@ -1207,32 +1212,51 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 			     bool need_fullname) override;
 };
 
-/* If FILE_MATCHER is NULL or if PER_CU has
-   dwarf2_per_cu_quick_data::MARK set (see
-   dw_expand_symtabs_matching_file_matcher), expand the CU and call
-   EXPANSION_NOTIFY on it.  */
+/* This is used to track whether a CU has already been visited during
+   symbol expansion.  It is an auto-resizing bool vector.  */
+class auto_bool_vector
+{
+public:
 
-extern bool dw2_expand_symtabs_matching_one
+  auto_bool_vector () = default;
+
+  /* Return true if element I is set.  */
+  bool is_set (size_t i) const
+  {
+    if (i < m_vec.size ())
+      return m_vec[i];
+    return false;
+  }
+
+  /* Set a value in this vector, growing it automatically.  */
+  void set (size_t i, bool value)
+  {
+    if (m_vec.size () < i + 1)
+      m_vec.resize (i + 1);
+    m_vec[i] = value;
+  }
+
+private:
+  std::vector<bool> m_vec;
+};
+
+/* If FILE_MATCHER is NULL and if CUS_TO_SKIP does not include the
+   CU's index, expand the CU and call LISTENER on it.  */
+
+extern bool dw2_search_one
   (dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile,
-   expand_symtabs_file_matcher file_matcher,
-   expand_symtabs_expansion_listener expansion_notify,
-   expand_symtabs_lang_matcher lang_matcher);
-
-/* If FILE_MATCHER is non-NULL, set all the
-   dwarf2_per_cu_quick_data::MARK of the current DWARF2_PER_OBJFILE
-   that match FILE_MATCHER.  */
-
-extern void dw_expand_symtabs_matching_file_matcher
-  (dwarf2_per_objfile *per_objfile,
-   expand_symtabs_file_matcher file_matcher);
+   auto_bool_vector &cus_to_skip,
+   search_symtabs_file_matcher file_matcher,
+   search_symtabs_expansion_listener listener,
+   search_symtabs_lang_matcher lang_matcher);
 
 /* Return pointer to string at .debug_str offset STR_OFFSET.  */
 
 extern const char *read_indirect_string_at_offset
   (dwarf2_per_objfile *per_objfile, LONGEST str_offset);
 
-/* Initialize the views on all_units.  */
+/* Finalize the all_units vector.  */
 
 extern void finalize_all_units (dwarf2_per_bfd *per_bfd);
 
@@ -1277,14 +1301,17 @@ extern pc_bounds_kind dwarf2_get_pc_bounds (die_info *die,
 					    dwarf2_cu *cu, addrmap_mutable *map,
 					    void *datum);
 
-/* Locate the .debug_info compilation unit from CU's objfile which contains
-   the DIE at OFFSET.  Raises an error on failure.  */
+/* Locate the unit in PER_OBJFILE which contains the DIE at TARGET.  Raises an
+   error on failure.  */
 
-extern dwarf2_per_cu *dwarf2_find_containing_comp_unit (sect_offset sect_off,
-							unsigned int
-							  offset_in_dwz,
-							dwarf2_per_bfd
-							  *per_bfd);
+extern dwarf2_per_cu *dwarf2_find_containing_unit
+  (const section_and_offset &target, dwarf2_per_objfile *per_objfile);
+
+/* Locate the unit starting at START in PER_BFD.  Return nullptr if not
+   found.  */
+
+extern dwarf2_per_cu *dwarf2_find_unit (const section_and_offset &start,
+					dwarf2_per_bfd *per_bfd);
 
 /* Decode simple location descriptions.
 
@@ -1326,5 +1353,47 @@ extern int dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 
 extern file_and_directory &find_file_and_directory (die_info *die,
 						    dwarf2_cu *cu);
+
+
+/* Return the section that ATTR, an attribute with ref form, references.  */
+
+extern const dwarf2_section_info &get_section_for_ref
+  (const attribute &attr, dwarf2_cu *cu);
+
+/* A convenience function to find the proper .debug_line section for a CU.  */
+
+extern struct dwarf2_section_info *get_debug_line_section
+  (struct dwarf2_cu *cu);
+
+/* Start a subfile for DWARF.  FILENAME is the name of the file and
+   DIRNAME the name of the source directory which contains FILENAME
+   or NULL if not known.
+   This routine tries to keep line numbers from identical absolute and
+   relative file names in a common subfile.
+
+   Using the `list' example from the GDB testsuite, which resides in
+   /srcdir and compiling it with Irix6.2 cc in /compdir using a filename
+   of /srcdir/list0.c yields the following debugging information for list0.c:
+
+   DW_AT_name:          /srcdir/list0.c
+   DW_AT_comp_dir:      /compdir
+   files.files[0].name: list0.h
+   files.files[0].dir:  /srcdir
+   files.files[1].name: list0.c
+   files.files[1].dir:  /srcdir
+
+   The line number information for list0.c has to end up in a single
+   subfile, so that `break /srcdir/list0.c:1' works as expected.
+   start_subfile will ensure that this happens provided that we pass the
+   concatenation of files.files[1].dir and files.files[1].name as the
+   subfile's name.  */
+extern void dwarf2_start_subfile (dwarf2_cu *cu, const file_entry &fe,
+				  const line_header &lh);
+
+/* A helper function that decides if a given symbol is an Ada Pragma
+   Import or Pragma Export.  */
+
+extern bool is_ada_import_or_export (dwarf2_cu *cu, const char *name,
+				     const char *linkagename);
 
 #endif /* GDB_DWARF2_READ_H */

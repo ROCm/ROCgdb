@@ -20,14 +20,14 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
 
 if {![runto_main]} {
   return
-} 
+}
 
 # Some variables used to simplify the maintenance of some of
 # the regular expressions below.

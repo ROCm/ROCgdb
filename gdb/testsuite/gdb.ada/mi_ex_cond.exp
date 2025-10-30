@@ -20,7 +20,7 @@ require allow_ada_tests gnat_runtime_has_debug_info
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-bargs additional_flags=-static additional_flags=-margs ]] != "" } {
-  return -1
+  return
 }
 
 # A global variable used to simplify the maintenance of some of
@@ -30,7 +30,7 @@ set any_nb "\[0-9\]+"
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 

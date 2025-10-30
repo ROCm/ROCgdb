@@ -23,6 +23,9 @@
 #include "gdbsupport/gdb_select.h"
 #include "inferior.h"
 #include "cli/cli-style.h"
+#include "command.h"
+#include "cli/cli-cmds.h"
+#include "terminal.h"
 
 #include <windows.h>
 #include <signal.h>
@@ -444,4 +447,13 @@ install_sigint_handler (c_c_handler_ftype *fn)
   c_c_handler_ftype *result = current_handler;
   current_handler = fn;
   return result;
+}
+
+/* See terminal.h.  */
+
+void
+set_output_translation_mode_binary ()
+{
+  setmode (fileno (stdout), O_BINARY);
+  setmode (fileno (stderr), O_BINARY);
 }

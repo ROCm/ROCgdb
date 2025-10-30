@@ -453,7 +453,7 @@ void _bfd_XXi_swap_lineno_in (bfd *, void *, void *);
 unsigned _bfd_XXi_swap_lineno_out (bfd *, void *, void *);
 void _bfd_XXi_swap_aouthdr_in (bfd *, void *, void *);
 unsigned _bfd_XXi_swap_aouthdr_out (bfd *, void *, void *);
-unsigned _bfd_XXi_swap_scnhdr_out (bfd *, void *, void *);
+unsigned _bfd_XXi_swap_scnhdr_out (bfd *, void *, void *, const asection *);
 bool _bfd_XX_print_private_bfd_data_common (bfd *, void *);
 bool _bfd_XX_bfd_copy_private_bfd_data_common (bfd *, bfd *);
 void _bfd_XX_get_symbol_info (bfd *, asymbol *, symbol_info *);
@@ -473,7 +473,7 @@ CODEVIEW_INFO *_bfd_XXi_slurp_codeview_record
 unsigned _bfd_XX_only_swap_filehdr_out  (bfd *, void *, void *);
 unsigned _bfd_XXi_only_swap_filehdr_out (bfd *, void *, void *);
 bool _bfd_XX_bfd_copy_private_section_data
-  (bfd *, asection *, bfd *, asection *);
+  (bfd *, asection *, bfd *, asection *, struct bfd_link_info *);
 
 bool _bfd_pe_print_ce_compressed_pdata (bfd *, void *);
 bool _bfd_pe64_print_ce_compressed_pdata (bfd *, void *);

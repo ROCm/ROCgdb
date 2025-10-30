@@ -173,12 +173,12 @@ f_language::f_type_print_varspec_suffix (struct type *type,
 	print_rank_only = true;
       else if (type_not_allocated (type))
 	print_rank_only = true;
-      else if ((TYPE_ASSOCIATED_PROP (type)
-		&& !TYPE_ASSOCIATED_PROP (type)->is_constant ())
-	       || (TYPE_ALLOCATED_PROP (type)
-		   && !TYPE_ALLOCATED_PROP (type)->is_constant ())
-	       || (TYPE_DATA_LOCATION (type)
-		   && !TYPE_DATA_LOCATION (type)->is_constant ()))
+      else if ((type->dyn_prop (DYN_PROP_ASSOCIATED)
+		&& !type->dyn_prop (DYN_PROP_ASSOCIATED)->is_constant ())
+	       || (type->dyn_prop (DYN_PROP_ALLOCATED)
+		   && !type->dyn_prop (DYN_PROP_ALLOCATED)->is_constant ())
+	       || (type->dyn_prop (DYN_PROP_DATA_LOCATION)
+		   && !type->dyn_prop (DYN_PROP_DATA_LOCATION)->is_constant ()))
 	{
 	  /* This case exist when we ptype a typename which has the dynamic
 	     properties but cannot be resolved as there is no object.  */
@@ -299,8 +299,6 @@ void
 f_language::f_type_print_base (struct type *type, struct ui_file *stream,
 			       int show, int level) const
 {
-  int index;
-
   QUIT;
 
   stream->wrap_here (4);
@@ -414,28 +412,30 @@ f_language::f_type_print_base (struct type *type, struct ui_file *stream,
       if (show > 0)
 	f_type_print_derivation_info (type, stream);
 
-      gdb_puts (" ", stream);
-
-      gdb_puts (type->name (), stream);
+      if (type->name () != nullptr)
+	{
+	  gdb_puts (" ", stream);
+	  gdb_puts (type->name (), stream);
+	}
 
       /* According to the definition,
 	 we only print structure elements in case show > 0.  */
       if (show > 0)
 	{
 	  gdb_puts ("\n", stream);
-	  for (index = 0; index < type->num_fields (); index++)
+	  for (const auto &field : type->fields ())
 	    {
-	      f_type_print_base (type->field (index).type (), stream,
-				 show - 1, level + 4);
+	      f_type_print_base (field.type (), stream, show - 1, level + 4);
 	      gdb_puts (" :: ", stream);
-	      fputs_styled (type->field (index).name (),
+	      fputs_styled (field.name (),
 			    variable_name_style.style (), stream);
-	      f_type_print_varspec_suffix (type->field (index).type (),
+	      f_type_print_varspec_suffix (field.type (),
 					   stream, show - 1, 0, 0, 0, false);
 	      gdb_puts ("\n", stream);
 	    }
 	  gdb_printf (stream, "%*sEnd Type ", level, "");
-	  gdb_puts (type->name (), stream);
+	  if (type->name () != nullptr)
+	    gdb_puts (type->name (), stream);
 	}
       break;
 

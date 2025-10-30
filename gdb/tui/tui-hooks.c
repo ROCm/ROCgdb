@@ -142,7 +142,7 @@ tui_refresh_frame_and_register_information ()
 static void
 tui_dummy_print_frame_info_listing_hook (struct symtab *s,
 					 int line,
-					 int stopline, 
+					 int stopline,
 					 int noerror)
 {
 }
@@ -262,9 +262,7 @@ tui_remove_hooks (void)
   tui_attach_detach_observers (false);
 }
 
-void _initialize_tui_hooks ();
-void
-_initialize_tui_hooks ()
+INIT_GDB_FILE (tui_hooks)
 {
   /* Install the permanent hooks.  */
   gdb::observers::new_objfile.attach (tui_new_objfile_hook, "tui-hooks");

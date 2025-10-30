@@ -54,10 +54,8 @@ struct thread_info;
 #include "symfile-add-flags.h"
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/forward-scope-exit.h"
-#include "gdbsupport/gdb_unique_ptr.h"
 #include "gdbsupport/intrusive_list.h"
 
-#include "gdbsupport/common-inferior.h"
 #include "gdbthread.h"
 
 #include "process-stratum-target.h"
@@ -213,7 +211,14 @@ extern ptid_t gdb_startup_inferior (pid_t pid, int num_traps);
 
 extern void setup_inferior (int from_tty);
 
-extern void post_create_inferior (int from_tty);
+/* Common actions to take after creating any sort of inferior, by any
+   means (running, attaching, connecting, et cetera).  The target
+   should be stopped.
+
+   If SET_PSPACE_SOLIB_OPS is true, initialize the program space's solib
+   provider using the current inferior's architecture.  */
+
+extern void post_create_inferior (int from_tty, bool set_pspace_solib_ops);
 
 extern void attach_command (const char *, int);
 
@@ -464,31 +469,45 @@ public:
   /* Returns a range adapter covering the inferior's threads,
      including exited threads.  Used like this:
 
-       for (thread_info *thr : inf->threads ())
+       for (thread_info &thr : inf->threads ())
 	 { .... }
   */
   inf_threads_range threads ()
-  { return inf_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+
+    return inf_threads_range (std::move (begin));
+  }
 
   /* Returns a range adapter covering the inferior's non-exited
      threads.  Used like this:
 
-       for (thread_info *thr : inf->non_exited_threads ())
+       for (thread_info &thr : inf->non_exited_threads ())
 	 { .... }
   */
   inf_non_exited_threads_range non_exited_threads ()
-  { return inf_non_exited_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+    inf_non_exited_threads_iterator filtered_begin (std::move (begin));
+
+    return inf_non_exited_threads_range (std::move (filtered_begin));
+  }
 
   /* Like inferior::threads(), but returns a range adapter that can be
      used with range-for, safely.  I.e., it is safe to delete the
      currently-iterated thread, like this:
 
-     for (thread_info *t : inf->threads_safe ())
+     for (thread_info &t : inf->threads_safe ())
        if (some_condition ())
-	 delete f;
+	 delete &f;
   */
   inline safe_inf_threads_range threads_safe ()
-  { return safe_inf_threads_range (this->thread_list.begin ()); }
+  {
+    inf_threads_iterator begin (this->thread_list.begin ());
+    safe_inf_threads_iterator safe_begin (std::move (begin));
+
+    return safe_inf_threads_range (std::move (safe_begin));
+  }
 
   /* Find (non-exited) thread PTID of this inferior.  */
   thread_info *find_thread (ptid_t ptid);
@@ -675,30 +694,6 @@ public:
   /* Per inferior data-pointers required by other GDB modules.  */
   registry<inferior> registry_fields;
 
-  /* Add SO_OPS to the list of secondary solib provider, if not already
-     present.  */
-  void push_solib_ops (const solib_ops *so_ops)
-  {
-    if (std::find (m_solib_ops.begin (), m_solib_ops.end (),
-		   so_ops) == m_solib_ops.end ())
-      m_solib_ops.push_back (so_ops);
-  }
-
-  const std::vector<const solib_ops *> &
-  so_ops () { return m_solib_ops; }
-
-  /* Remove SO_OPS from the list of secondary solib providers.  */
-  void pop_solib_ops (const solib_ops *so_ops)
-  {
-    auto iter = std::find (m_solib_ops.begin (),
-			   m_solib_ops.end (),
-			   so_ops);
-
-    /* TODO some cleanup here.  */
-    if (iter != m_solib_ops.end ())
-      m_solib_ops.erase (iter);
-  }
-
 private:
 
   /* Unpush TARGET and assert that it worked.  */
@@ -706,10 +701,6 @@ private:
 
   /* The inferior's target stack.  */
   target_stack m_target_stack;
-
-  /* The gdbarch's solib_ops is the main solist provider, but we can
-     register additional providers here.  */
-  std::vector<const solib_ops *> m_solib_ops;
 
   /* The name of terminal device to use for I/O.  */
   std::string m_terminal;
@@ -862,7 +853,10 @@ extern intrusive_list<inferior> inferior_list;
 inline all_inferiors_safe_range
 all_inferiors_safe ()
 {
-  return all_inferiors_safe_range (nullptr, inferior_list);
+  all_inferiors_iterator begin (nullptr, inferior_list);
+  all_inferiors_safe_iterator safe_begin (std::move (begin));
+
+  return all_inferiors_safe_range (std::move (safe_begin));
 }
 
 /* Returns a range representing all inferiors, suitable to use with
@@ -875,7 +869,9 @@ all_inferiors_safe ()
 inline all_inferiors_range
 all_inferiors (process_stratum_target *proc_target = nullptr)
 {
-  return all_inferiors_range (proc_target, inferior_list);
+  all_inferiors_iterator begin (proc_target, inferior_list);
+
+  return all_inferiors_range (std::move (begin));
 }
 
 /* Return a range that can be used to walk over all inferiors with PID
@@ -884,7 +880,10 @@ all_inferiors (process_stratum_target *proc_target = nullptr)
 inline all_non_exited_inferiors_range
 all_non_exited_inferiors (process_stratum_target *proc_target = nullptr)
 {
-  return all_non_exited_inferiors_range (proc_target, inferior_list);
+  all_inferiors_iterator begin (proc_target, inferior_list);
+  all_non_exited_inferiors_iterator filtered_begin (std::move (begin));
+
+  return all_non_exited_inferiors_range (std::move (filtered_begin));
 }
 
 /* Prune away automatically added inferiors that aren't required
@@ -898,9 +897,10 @@ extern struct inferior *add_inferior_with_spaces (void);
 /* Print the current selected inferior.  */
 extern void print_selected_inferior (struct ui_out *uiout);
 
-/* Switch to inferior NEW_INF, a new inferior, and unless
-   NO_CONNECTION is true, push the process_stratum_target of ORG_INF
-   to NEW_INF.  */
+/* Switch to inferior NEW_INF, a new inferior, and unless NO_CONNECTION is
+   true, or the process_stratum_target of ORG_INF is not shareable, or the
+   process_stratum_target cannot start new inferiors, push the
+   process_stratum_target of ORG_INF to NEW_INF.  */
 
 extern void switch_to_inferior_and_push_target
   (inferior *new_inf, bool no_connection, inferior *org_inf);

@@ -148,7 +148,7 @@ proc test_tab_complete_within_line_multiple { input_line back_count \
 	[join [list \
 		   [string range $input_line 0 end-$back_count] \
 		   ${add_completed_line} \
-		   [string range $input_line end-[expr $back_count - 1] end]] \
+		   [string range $input_line end-[expr {$back_count - 1}] end]] \
 	     ""]
     set expanded_line_re [string_to_regexp $expanded_line]
 
@@ -166,7 +166,7 @@ proc test_tab_complete_within_line_multiple { input_line back_count \
     set after_tab_re "^$input_line_re"
     set after_tab_re "$after_tab_re\\\x08{$back_count}"
     set after_tab_re "$after_tab_re${completion::bell_re}"
-    set tail [string range $input_line end-[expr $back_count - 1] end]
+    set tail [string range $input_line end-[expr {$back_count - 1}] end]
     set after_tab_re "$after_tab_re$add_completed_line_re"
     set after_tab_re "$after_tab_re[string_to_regexp $tail]"
     set after_tab_re "$after_tab_re\\\x08{$back_count}"
@@ -218,7 +218,7 @@ proc test_tab_complete_within_line_unique { input_line back_count insert_str } {
     set re [string_to_regexp $input_line]
     set re $re\\\x08{$back_count}
     set re $re[string_to_regexp $insert_str]
-    set tail [string range $input_line end-[expr $back_count - 1] end]
+    set tail [string range $input_line end-[expr {$back_count - 1}] end]
     set re $re[string_to_regexp $tail]
     set re $re\\\x08{$back_count}
 
@@ -385,7 +385,7 @@ proc run_quoting_and_escaping_tests { root } {
 		      remove-symbol-file \
 		      "target core" "target exec" "target tfile" \
 		      "maint print c-tdesc" "save gdb-index"
-		      "save gdb-index -dwarf-5" }
+		      "save gdb-index -dwarf-5" "shell ls"}
     if { [allow_compile_tests] } {
 	lappend all_cmds "compile file"
     }
@@ -406,6 +406,31 @@ proc run_quoting_and_escaping_tests { root } {
 	set cmd "maintenance test-options $sub_cmd -filename"
 	with_test_prefix "cmd=$cmd" {
 	    run_quoting_and_escaping_tests_1 $root $cmd
+	}
+    }
+
+    # Some additional testing of shell command.  Test 'shell' and '!'
+    # when there are multiple filenames on the command line.  This
+    # focuses on completion of the final filename.  There is also some
+    # testing of the shell command above, this tests completion within
+    # the line.
+    foreach_with_prefix shell_cmd { "shell " "!" "pipe print 1 | " } {
+	foreach suffix { "aaa/aa bb" "bb2/dir 1/unique file" } {
+	    set dir $root/$suffix
+
+	    regsub -all " " "$dir" "\\ " dir_with_backslash
+
+	    with_test_prefix "suffix='$suffix'" {
+		with_test_prefix "with_backslash" {
+		    run_quoting_and_escaping_tests_1 $root "${shell_cmd}ls $dir_with_backslash"
+		}
+		with_test_prefix "with double quotes" {
+		    run_quoting_and_escaping_tests_1 $root "${shell_cmd}ls \"$dir\""
+		}
+		with_test_prefix "with single quotes" {
+		    run_quoting_and_escaping_tests_1 $root "${shell_cmd}ls '$dir'"
+		}
+	    }
 	}
     }
 }

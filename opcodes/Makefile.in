@@ -115,7 +115,9 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../bfd/acinclude.m4 \
 	$(top_srcdir)/../bfd/warning.m4 $(top_srcdir)/../config/acx.m4 \
 	$(top_srcdir)/../config/bfd64.m4 \
+	$(top_srcdir)/../config/clang-plugin.m4 \
 	$(top_srcdir)/../config/depstand.m4 \
+	$(top_srcdir)/../config/gcc-plugin.m4 \
 	$(top_srcdir)/../config/gettext-sister.m4 \
 	$(top_srcdir)/../config/gettext.m4 \
 	$(top_srcdir)/../config/iconv.m4 \
@@ -330,6 +332,7 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
+LLVM_CONFIG = @LLVM_CONFIG@
 LN_S = @LN_S@
 LTLIBICONV = @LTLIBICONV@
 LTLIBINTL = @LTLIBINTL@
@@ -746,7 +749,7 @@ MOSTLYCLEANFILES = aarch64-gen$(EXEEXT_FOR_BUILD) i386-gen$(EXEEXT_FOR_BUILD) \
 	z8kgen$(EXEEXT_FOR_BUILD) opc2c$(EXEEXT_FOR_BUILD)
 
 MAINTAINERCLEANFILES = $(srcdir)/aarch64-asm-2.c $(srcdir)/aarch64-dis-2.c \
-	$(srcdir)/aarch64-opc-2.c \
+	$(srcdir)/aarch64-opc-2.c $(srcdir)/aarch64-tbl-2.h \
 	$(srcdir)/i386-tbl.h $(srcdir)/i386-init.h $(srcdir)/i386-mnem.h \
 	$(srcdir)/ia64-asmtab.c $(srcdir)/z8k-opc.h \
 	$(srcdir)/msp430-decode.c \
@@ -1493,6 +1496,14 @@ $(srcdir)/aarch64-dis-2.c: @MAINT@ aarch64-gen$(exeext_for_build)
 	$(AM_V_GEN)./aarch64-gen$(exeext_for_build) --gen-dis > $@
 $(srcdir)/aarch64-opc-2.c: @MAINT@ aarch64-gen$(exeext_for_build)
 	$(AM_V_GEN)./aarch64-gen$(exeext_for_build) --gen-opc > $@
+$(srcdir)/aarch64-tbl-2.h: @MAINT@ aarch64-gen$(exeext_for_build)
+	$(AM_V_GEN)./aarch64-gen$(exeext_for_build) --gen-idx > $@
+
+aarch64-asm-2.lo: $(srcdir)/aarch64-tbl-2.h $(srcdir)/aarch64-asm-2.c
+
+aarch64-dis-2.lo: $(srcdir)/aarch64-tbl-2.h $(srcdir)/aarch64-dis-2.c
+
+aarch64-opc-2.lo: $(srcdir)/aarch64-tbl-2.h $(srcdir)/aarch64-opc-2.c
 
 i386-gen$(EXEEXT_FOR_BUILD): i386-gen.o $(BUILD_LIB_DEPS)
 	$(AM_V_CCLD)$(LINK_FOR_BUILD) i386-gen.o $(BUILD_LIBS)

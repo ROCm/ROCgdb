@@ -31,7 +31,7 @@ set executable $testfile
 set expfile $testfile.exp
 
 # make check-perf RUNTESTFLAGS='solib.exp SOLIB_COUNT=1024'
-if ![info exists SOLIB_COUNT] {
+if {![info exists SOLIB_COUNT]} {
     set SOLIB_COUNT 128
 }
 
@@ -72,7 +72,7 @@ PerfTest::assemble {
 } {
     global binfile
 
-    clean_restart $binfile
+    clean_restart $::testfile
 
     if ![runto_main] {
 	return -1

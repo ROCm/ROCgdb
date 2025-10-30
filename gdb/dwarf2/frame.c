@@ -784,7 +784,7 @@ dwarf2_frame_find_quirks (struct dwarf2_frame_state *fs,
 {
   struct compunit_symtab *cust;
 
-  cust = find_pc_compunit_symtab (fs->pc);
+  cust = find_compunit_symtab_for_pc (fs->pc);
   if (cust == NULL)
     return;
 
@@ -1213,7 +1213,7 @@ dwarf2_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
   if (cache->tailcall_cache)
     {
       struct value *val;
-      
+
       val = dwarf2_tailcall_prev_register_first (this_frame,
 						 &cache->tailcall_cache,
 						 regnum);
@@ -1513,7 +1513,7 @@ static const registry<objfile>::key<comp_unit> dwarf2_frame_objfile_data;
    way.  Several "pointer encodings" are supported.  The encoding
    that's used for a particular FDE is determined by the 'R'
    augmentation in the associated CIE.  The argument of this
-   augmentation is a single byte.  
+   augmentation is a single byte.
 
    The address can be encoded as 2 bytes, 4 bytes, 8 bytes, or as a
    LEB128.  This is encoded in bits 0, 1 and 2.  Bit 3 encodes whether
@@ -1685,18 +1685,18 @@ set_comp_unit (struct objfile *objfile, struct comp_unit *unit)
 static struct dwarf2_fde *
 dwarf2_frame_find_fde (CORE_ADDR *pc, dwarf2_per_objfile **out_per_objfile)
 {
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
       CORE_ADDR offset;
 
-      if (objfile->obfd == nullptr)
+      if (objfile.obfd == nullptr)
 	continue;
 
-      comp_unit *unit = find_comp_unit (objfile);
+      comp_unit *unit = find_comp_unit (&objfile);
       if (unit == NULL)
 	{
-	  dwarf2_build_frame_info (objfile);
-	  unit = find_comp_unit (objfile);
+	  dwarf2_build_frame_info (&objfile);
+	  unit = find_comp_unit (&objfile);
 	}
       gdb_assert (unit != NULL);
 
@@ -1704,8 +1704,8 @@ dwarf2_frame_find_fde (CORE_ADDR *pc, dwarf2_per_objfile **out_per_objfile)
       if (fde_table->empty ())
 	continue;
 
-      gdb_assert (!objfile->section_offsets.empty ());
-      offset = objfile->text_section_offset ();
+      gdb_assert (!objfile.section_offsets.empty ());
+      offset = objfile.text_section_offset ();
 
       gdb_assert (!fde_table->empty ());
       unrelocated_addr seek_pc = (unrelocated_addr) (*pc - offset);
@@ -1718,7 +1718,7 @@ dwarf2_frame_find_fde (CORE_ADDR *pc, dwarf2_per_objfile **out_per_objfile)
 	{
 	  *pc = (CORE_ADDR) (*it)->initial_location + offset;
 	  if (out_per_objfile != nullptr)
-	    *out_per_objfile = get_dwarf2_per_objfile (objfile);
+	    *out_per_objfile = get_dwarf2_per_objfile (&objfile);
 
 	  return *it;
 	}
@@ -2100,7 +2100,7 @@ decode_frame_entry (struct gdbarch *gdbarch,
 
 	 This becomes a problem when you have some other producer that
 	 creates frame sections that are not as strictly aligned.  That
-	 produces a hole in the frame info that gets filled by the 
+	 produces a hole in the frame info that gets filled by the
 	 linker with zeros.
 
 	 The GCC behavior is arguably a bug, but it's effectively now
@@ -2313,9 +2313,7 @@ dwarf2_build_frame_info (struct objfile *objfile)
   set_comp_unit (objfile, unit.release ());
 }
 
-void _initialize_dwarf2_frame ();
-void
-_initialize_dwarf2_frame ()
+INIT_GDB_FILE (dwarf2_frame)
 {
 #if GDB_SELF_TEST
   selftests::register_test_foreach_arch ("execute_cfa_program",

@@ -297,7 +297,7 @@ dummy_frame_sniffer (const struct frame_unwind *self,
      entry point, or some random address on the stack.  Trying to use
      that PC to apply standard frame ID unwind techniques is just
      asking for trouble.  */
-  
+
   /* Don't bother unless there is at least one dummy frame.  */
   if (dummy_frame_stack != NULL)
     {
@@ -425,9 +425,7 @@ maintenance_print_dummy_frames (const char *args, int from_tty)
     }
 }
 
-void _initialize_dummy_frame ();
-void
-_initialize_dummy_frame ()
+INIT_GDB_FILE (dummy_frame)
 {
   add_cmd ("dummy-frames", class_maintenance, maintenance_print_dummy_frames,
 	   _("Print the contents of the internal dummy-frame stack."),

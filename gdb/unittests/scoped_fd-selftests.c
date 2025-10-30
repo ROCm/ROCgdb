@@ -74,7 +74,7 @@ test_to_file ()
   SELF_CHECK (sfd.get () >= 0);
 
   unlink (filename);
-  
+
   gdb_file_up file = sfd.to_file ("rw");
   SELF_CHECK (file != nullptr);
   SELF_CHECK (sfd.get () == -1);
@@ -92,9 +92,7 @@ run_tests ()
 } /* namespace scoped_fd */
 } /* namespace selftests */
 
-void _initialize_scoped_fd_selftests ();
-void
-_initialize_scoped_fd_selftests ()
+INIT_GDB_FILE (scoped_fd_selftests)
 {
   selftests::register_test ("scoped_fd",
 			    selftests::scoped_fd::run_tests);

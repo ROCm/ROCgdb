@@ -73,7 +73,8 @@ proc one_jit_test {solib_binfiles_target match_str} {
 	global main_loader_binfile main_loader_srcfile
 	global main_solib_binfile main_solib_binfile_target main_solib_srcfile
 
-	clean_restart $main_loader_binfile
+	clean_restart
+	gdb_load $main_loader_binfile
 	gdb_locate_shlib $main_solib_binfile
 
 	# This is just to help debugging when things fail
@@ -101,10 +102,10 @@ proc one_jit_test {solib_binfiles_target match_str} {
 
 	# Poke desired values directly into inferior instead of using "set args"
 	# because "set args" does not work under gdbserver.
-	gdb_test_no_output "set var argc=[expr $count + 1]" "forging argc"
+	gdb_test_no_output "set var argc=[expr {$count + 1}]" "forging argc"
 	gdb_test_no_output "set var argv=fake_argv" "forging argv"
 	for {set i 1} {$i <= $count} {incr i} {
-	    set binfile_target [lindex $solib_binfiles_target [expr $i-1]]
+	    set binfile_target [lindex $solib_binfiles_target [expr {$i-1}]]
 	    gdb_test_no_output "set var argv\[$i\]=\"${binfile_target}\"" \
 		"forging argv\[$i\]"
 	}

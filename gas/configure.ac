@@ -117,6 +117,15 @@ AC_ARG_ENABLE(elf_stt_common,
   yes)  ac_default_elf_stt_common=1 ;;
 esac])dnl
 
+ac_default_sframe=unset
+# Provide a configure time option to override our default.
+AC_ARG_ENABLE(default-sframe,
+	      AS_HELP_STRING([--enable-default-sframe],
+	      [generate SFrame by default]),
+[case "${enableval}" in
+  yes) ac_default_sframe=1 ;;
+  no)  ac_default_sframe=0 ;;
+esac])dnl
 
 # Decide if the ELF assembler should default to generating
 # GNU Build notes if none are provided by the input.
@@ -288,15 +297,6 @@ changequote(,)dnl
 changequote([,])dnl
 	AC_DEFINE(AIX_WEAK_SUPPORT, 1,
 		  [Define if using AIX 5.2 value for C_WEAKEXT.])
-	;;
-      ppc-*-solaris*)
-	if test ${this_target} = $target; then
-	  AC_DEFINE(TARGET_SOLARIS_COMMENT, 1,
-		    [Define if default target is PowerPC Solaris.])
-	fi
-	if test x${endian} = xbig; then
-	  AC_MSG_ERROR(Solaris must be configured little endian)
-	fi
 	;;
     esac
 
@@ -757,6 +757,13 @@ AC_DEFINE_UNQUOTED(DEFAULT_GENERATE_ELF_STT_COMMON,
   [Define to 1 if you want to generate ELF common symbols with the
    STT_COMMON type by default.])
 
+if test ${ac_default_sframe} = unset; then
+  ac_default_sframe=0
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_SFRAME,
+  $ac_default_sframe,
+  [Define to 1 if you want to emit SFrames by default.])
+
 AC_DEFINE_UNQUOTED(DEFAULT_GENERATE_BUILD_NOTES,
   $ac_default_generate_build_notes,
   [Define to 1 if you want to generate GNU Build attribute notes
@@ -942,7 +949,6 @@ AM_PROG_LEX
 
 ALL_LINGUAS="es fi fr id ja ru rw sv tr uk zh_CN"
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)

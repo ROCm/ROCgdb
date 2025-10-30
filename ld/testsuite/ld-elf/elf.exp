@@ -86,6 +86,9 @@ run_ld_link_tests [list \
 
 if [is_elf64 tmpdir/symbol3w.a] {
     set ASFLAGS "$ASFLAGS --defsym ALIGN=3"
+    if { [istarget powerpc*-*-linux*] } {
+	set LDFLAGS "$LDFLAGS --no-ld-generated-unwind-info"
+    }
     set pr23900_1_exp "pr23900-1-64.rd"
     set pr25490_2_exp "pr25490-2-64.rd"
     set pr25490_3_exp "pr25490-3-64.rd"
@@ -229,7 +232,6 @@ proc target_defaults_to_execstack {} {
 }
 
 if {   [istarget *-*-*linux*]
-    || [istarget *-*-nacl*]
     || [istarget *-*-gnu*] } {
     run_ld_link_tests [list \
 	[list "stack exec" \
@@ -286,6 +288,13 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-a.s} \
 	    {{ld pr29072.a.warn}} \
 	    "pr29072-a.exe"] \
+	[list "Test --error-execstack with an executable .note.GNU-stack" \
+	    "--warn-execstack --error-execstack" \
+	    "" \
+	    "" \
+	    {pr29072-a.s} \
+	     {{ld gnu_execstack.err}} \
+	    "gnu_execstack.exe"] \
 	[list "PR 29072 (warn about -z execstack)" \
 	    "-z execstack --warn-execstack --no-error-execstack" \
 	    "" \
@@ -293,6 +302,13 @@ if {   [istarget *-*-*linux*]
 	    {stack.s} \
 	     {{ld pr29072.c.warn}} \
 	    "pr29072-c.exe"] \
+	[list "Test --error-execstack with -z execstack" \
+	    "-z execstack --warn-execstack --error-execstack" \
+	    "" \
+	    "" \
+	    {stack.s} \
+	     {{ld z_execstack.err}} \
+	    "execstack.exe"] \
 	[list "PR ld/29072 (suppress warnings about executable stack)" \
 	    "-e 0 --no-warn-execstack" \
 	    "" \
@@ -300,13 +316,20 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-a.s} \
 	    {} \
 	    "pr29072-d.exe"] \
-	[list "Ensure that a warning issued when creating a segment with RWX permissions" \
+	[list "Ensure that a warning is issued when creating a segment with RWX permissions" \
 	    "-e 0 -Tnobits-1.t --warn-rwx-segments --no-error-rwx-segments" \
 	    "" \
 	    "" \
 	    {nobits-1.s} \
 	     {{ld rwx-segments-1.l}} \
 	    "rwx-segments-1.exe"] \
+	[list "Ensure that a error can be issued when creating a segment with RWX permissions" \
+	    "-e 0 -Tnobits-1.t --warn-rwx-segments --error-rwx-segments" \
+	    "" \
+	    "" \
+	    {nobits-1.s} \
+	     {{ld rwx-segments-3.err}} \
+	    "rwx-segments-3.exe"] \
 	[list "Ensure that a warning issued when creating a TLS segment with execute permission" \
 	    "-e 0 -T rwx-segments-2.t --warn-rwx-segments --no-error-rwx-segments" \
 	    "" \
@@ -314,6 +337,13 @@ if {   [istarget *-*-*linux*]
 	    {size-2.s} \
 	     {{ld rwx-segments-2.l}} \
 	    "rwx-segments-2.exe"] \
+	[list "Ensure that an error cn be issued when creating a TLS segment with execute permission" \
+	    "-e 0 -T rwx-segments-2.t --warn-rwx-segments --error-rwx-segments" \
+	    "" \
+	    "" \
+	    {size-2.s} \
+	     {{ld rwx-segments-4.err}} \
+	    "rwx-segments-4.exe"] \
 	[list "Ensure that the RWX warning can be suppressed" \
 	    "-e 0 -Tnobits-1.t --no-warn-rwx-segments" \
 	    "" \
@@ -334,6 +364,16 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-b.s} \
 	    {{ld pr29072.b.warn}} \
 	    "pr29072-b.exe"] \
+	]
+
+      run_ld_link_tests [list \
+	[list "error when .note.GNU-stack is absent" \
+	 "-e 0 -z stack-size=0x123400 --warn-execstack --error-execstack" \
+	 "" \
+	 "" \
+	 {pr29072-b.s} \
+	 {{ld missing-execstack.err}} \
+	 "missing-execstack.exe"] \
 	]
     } else {
 	run_ld_link_tests [list \
@@ -445,7 +485,6 @@ set xfails "*-*-netbsd*"
 run_ld_link_exec_tests $array_tests $xfails
 
 if { [istarget *-*-linux*]
-     || [istarget *-*-nacl*]
      || [istarget *-*-gnu*] } {
     run_ld_link_exec_tests $array_tests_pie $xfails
 

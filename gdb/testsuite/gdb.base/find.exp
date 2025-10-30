@@ -22,7 +22,8 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart
+gdb_load $binfile
 
 gdb_test "break $srcfile:stop_here" \
     "Breakpoint.*at.* file .*$srcfile, line.*" \
@@ -164,7 +165,7 @@ gdb_test "find /w search_buf, +search_buf_size, 0x12345678" \
 
 # For native targets, test a pattern straddling a chunk boundary.
 
-if [isnative] {
+if {[isnative]} {
     gdb_test_no_output "set *(int32_t*) &search_buf\[${CHUNK_SIZE}-1\] = 0xfdb97531" ""
     gdb_test "find /w search_buf, +search_buf_size, 0xfdb97531" \
     "${hex_number}${one_pattern_found}" \

@@ -25,7 +25,6 @@
 #include "inferior.h"
 #include "infrun.h"
 #include "value.h"
-#include <ctype.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <setjmp.h>
@@ -1284,9 +1283,7 @@ gdbsim_target::memory_map ()
   return result;
 }
 
-void _initialize_remote_sim ();
-void
-_initialize_remote_sim ()
+INIT_GDB_FILE (remote_sim)
 {
   struct cmd_list_element *c;
 

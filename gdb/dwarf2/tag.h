@@ -22,6 +22,7 @@
 
 #include "dwarf2.h"
 #include "symtab.h"
+#include "read-gdb-index.h"
 
 /* Return true if TAG represents a type, false otherwise.  */
 
@@ -102,6 +103,10 @@ tag_matches_domain (dwarf_tag tag, domain_search_flags search, language lang)
       }
       break;
 
+    case DW_TAG_imported_declaration:
+      /* DW_TAG_imported_declaration isn't necessarily a type, but the
+	 scanner doesn't track the referent, and the full reader
+	 also currently puts it in TYPE_DOMAIN.  */
     case DW_TAG_padding:
     case DW_TAG_array_type:
     case DW_TAG_pointer_type:
@@ -139,6 +144,13 @@ tag_matches_domain (dwarf_tag tag, domain_search_flags search, language lang)
 	flags = SEARCH_TYPE_DOMAIN;
       else
 	flags = SEARCH_MODULE_DOMAIN;
+      break;
+
+    case DW_TAG_GDB_INDEX_OTHER:
+      flags = SEARCH_MODULE_DOMAIN | SEARCH_TYPE_DOMAIN;
+      break;
+    case DW_TAG_GDB_INDEX_TYPE:
+      flags = SEARCH_STRUCT_DOMAIN | SEARCH_TYPE_DOMAIN;
       break;
     }
 

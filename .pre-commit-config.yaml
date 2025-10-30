@@ -39,15 +39,16 @@
 
 minimum_pre_commit_version: 3.2.0
 default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 25.1.0
+    rev: 25.9.0
     hooks:
       - id: black
         types_or: [file]
         files: 'gdb/.*\.py(\.in)?$'
   - repo:  https://github.com/pycqa/flake8
-    rev: 7.2.0
+    rev: 7.3.0
     hooks:
     - id: flake8
       types_or: [file]
@@ -61,7 +62,7 @@ repos:
       files: '^gdb/(gdb-gdb\.py\.in|[^/]+\.py|python/.+\.py|testsuite/[^/]+\.py)$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+    rev: 7.0.0
     hooks:
     - id: isort
       types_or: [file]
@@ -88,3 +89,18 @@ repos:
       verbose: true
       always_run: true
       stages: [commit-msg]
+    - id: check-gnu-style
+      name: check-gnu-style
+      language: script
+      entry: gdb/contrib/check-gnu-style-pre-commit.sh
+      files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
+      exclude: '.*/testsuite/.*'
+      verbose: true
+      stages: [pre-commit]
+  - repo: https://github.com/nmoroze/tclint
+    rev: v0.6.1
+    hooks:
+    - id: tclint
+      args: [--config, gdb/tclint.toml]
+      types_or: [file]
+      files: 'gdb/testsuite/.*\.(exp|tcl)$'

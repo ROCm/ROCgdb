@@ -38,7 +38,6 @@
 #include "gdbsupport/gdb_obstack.h"
 #include "objfiles.h"
 #include "typeprint.h"
-#include <ctype.h>
 #include "expop.h"
 #include "c-exp.h"
 #include "inferior.h"
@@ -492,7 +491,7 @@ fake_method::fake_method (type_instance_flags flags,
 
 fake_method::~fake_method ()
 {
-  xfree (m_type.fields ());
+  xfree (m_type.fields ().data ());
 }
 
 namespace expr
@@ -1181,8 +1180,8 @@ ternop_slice_operation::evaluate (struct type *expect_type,
   struct value *upper
     = std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
 
-  int lowbound = value_as_long (low);
-  int upperbound = value_as_long (upper);
+  LONGEST lowbound = value_as_long (low);
+  LONGEST upperbound = value_as_long (upper);
   return value_slice (array, lowbound, upperbound - lowbound + 1);
 }
 
@@ -2055,7 +2054,7 @@ eval_op_objc_msgcall (struct type *expect_type, struct expression *exp,
 	(exp->gdbarch, addr, current_inferior ()->top_target ());
 
       /* Is it a high_level symbol?  */
-      sym = find_pc_function (addr);
+      sym = find_symbol_for_pc (addr);
       if (sym != NULL)
 	method = value_of_variable (sym, 0);
     }
@@ -2285,14 +2284,18 @@ logical_and_operation::evaluate (struct type *expect_type,
     }
   else
     {
+      type *type = language_bool_type (exp->language_defn,
+				       exp->gdbarch);
+      if (noside == EVAL_AVOID_SIDE_EFFECTS)
+	return value::zero (type, not_lval);
+
       bool tem = value_logical_not (arg1);
       if (!tem)
 	{
 	  arg2 = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
 	  tem = value_logical_not (arg2);
 	}
-      struct type *type = language_bool_type (exp->language_defn,
-					      exp->gdbarch);
+
       return value_from_longest (type, !tem);
     }
 }
@@ -2314,6 +2317,11 @@ logical_or_operation::evaluate (struct type *expect_type,
     }
   else
     {
+      type *type = language_bool_type (exp->language_defn,
+				       exp->gdbarch);
+      if (noside == EVAL_AVOID_SIDE_EFFECTS)
+	return value::zero (type, not_lval);
+
       bool tem = value_logical_not (arg1);
       if (tem)
 	{
@@ -2321,8 +2329,6 @@ logical_or_operation::evaluate (struct type *expect_type,
 	  tem = value_logical_not (arg2);
 	}
 
-      struct type *type = language_bool_type (exp->language_defn,
-					      exp->gdbarch);
       return value_from_longest (type, !tem);
     }
 }
@@ -2558,27 +2564,26 @@ unop_extract_operation::evaluate (struct type *expect_type,
 
 }
 
-
 /* Helper for evaluate_subexp_for_address.  */
 
 static value *
-evaluate_subexp_for_address_base (struct expression *exp, enum noside noside,
-				  value *x)
+evaluate_subexp_for_address_base (enum noside noside, value *x)
 {
   if (noside == EVAL_AVOID_SIDE_EFFECTS)
     {
       struct type *type = check_typedef (x->type ());
+      enum type_code typecode = type->code ();
 
       if (TYPE_IS_REFERENCE (type))
 	return value::zero (lookup_pointer_type (type->target_type ()),
-			   not_lval);
-      else if (x->lval () == lval_memory || value_must_coerce_to_target (x))
-	return value::zero (lookup_pointer_type (x->type ()),
-			   not_lval);
+			    not_lval);
+      else if (x->lval () == lval_memory || value_must_coerce_to_target (x)
+	       || typecode == TYPE_CODE_STRUCT || typecode == TYPE_CODE_UNION)
+	return value::zero (lookup_pointer_type (x->type ()), not_lval);
       else
-	error (_("Attempt to take address of "
-		 "value not located in memory."));
+	error (_("Attempt to take address of value not located in memory."));
     }
+
   return value_addr (x);
 }
 
@@ -2598,7 +2603,7 @@ value *
 operation::evaluate_for_address (struct expression *exp, enum noside noside)
 {
   value *val = evaluate (nullptr, exp, noside);
-  return evaluate_subexp_for_address_base (exp, noside, val);
+  return evaluate_subexp_for_address_base (noside, val);
 }
 
 value *
@@ -2625,7 +2630,7 @@ unop_ind_base_operation::evaluate_for_address (struct expression *exp,
   if (unop_user_defined_p (UNOP_IND, x))
     {
       x = value_x_unop (x, UNOP_IND, noside);
-      return evaluate_subexp_for_address_base (exp, noside, x);
+      return evaluate_subexp_for_address_base (noside, x);
     }
 
   return coerce_array (x);
@@ -2679,11 +2684,11 @@ var_value_operation::evaluate_for_address (struct expression *exp,
   if (noside == EVAL_AVOID_SIDE_EFFECTS)
     {
       struct type *type = lookup_pointer_type (var->type ());
-      enum address_class sym_class = var->aclass ();
+      location_class loc_class = var->loc_class ();
 
-      if (sym_class == LOC_CONST
-	  || sym_class == LOC_CONST_BYTES
-	  || sym_class == LOC_REGISTER)
+      if (loc_class == LOC_CONST
+	  || loc_class == LOC_CONST_BYTES
+	  || loc_class == LOC_REGISTER)
 	error (_("Attempt to take address of register or constant."));
 
       return value::zero (type, not_lval);

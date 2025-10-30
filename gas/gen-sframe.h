@@ -21,6 +21,16 @@
 #ifndef GENSFRAME_H
 #define GENSFRAME_H
 
+/* Errors shouldn't be emitted either if SFrames are default-enabled, as
+   we interpret default-enabled as "opportunistic SFrames".  Users don't
+   want to be bothered by something preventing emission of SFrames in
+   such a case.  */
+#define sframe_as_bad(format, ...) \
+  do {					       \
+    if (flag_gen_sframe == GEN_SFRAME_ENABLED) \
+      as_bad (format, ##__VA_ARGS__);	       \
+  } while (0)
+
 #define SFRAME_FRE_ELEM_LOC_REG		0
 #define SFRAME_FRE_ELEM_LOC_STACK	1
 
@@ -54,6 +64,9 @@ struct sframe_row_entry
 
   /* Whether the return address is mangled with pauth code.  */
   bool mangled_ra_p;
+
+  /* Whether RA is undefined.  */
+  bool ra_undefined_p;
 
   /* Track CFA base (architectural) register ID.  */
   unsigned int cfa_base_reg;

@@ -44,7 +44,7 @@ if {!$readnow_p} {
 }
 
 # Restart so we don't have expanded symtabs after the previous test.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 # Test looking up a global symbol before we runto_main as this is the
 # point where we don't have a current frame, and we don't want to
@@ -70,37 +70,14 @@ gdb_test "python print (gdb.lookup_global_symbol('qq').needs_frame)" \
     "print whether qq needs a frame"
 
 # Similarly, test looking up a static symbol before we runto_main.
-set rr_line [gdb_get_line_number "line of rr"]
-set rr_line_alt [gdb_get_line_number "line of other rr" py-symbol-2.c]
 gdb_test "python print (gdb.lookup_global_symbol ('qqrr') is None)" "True" \
     "lookup_global_symbol for static var"
 
-set cmd "python print (gdb.lookup_static_symbol ('rr').line)"
-gdb_test_multiple $cmd "print line number of rr" {
-    -re -wrap "$rr_line" {
-	pass $gdb_test_name
-    }
-    -re -wrap "$rr_line_alt" {
-	if { $readnow_p } {
-	    setup_kfail "symtab/25857" *-*-*
-	}
-	fail $gdb_test_name
-    }
-}
-
-set cmd "python print (gdb.lookup_static_symbol ('rr').value ())"
-gdb_test_multiple $cmd "print value of rr" {
-    -re -wrap "42" {
-	pass $gdb_test_name
-    }
-    -re -wrap "99" {
-	if { $readnow_p } {
-	    setup_kfail "symtab/25857" *-*-*
-	}
-	fail $gdb_test_name
-    }
-}
-    
+# Either "rr" static symbol is a valid result.
+set rr_line_1 [gdb_get_line_number "line of rr"]
+set rr_line_2 [gdb_get_line_number "line of other rr" py-symbol-2.c]
+gdb_test "python print (gdb.lookup_static_symbol ('rr').line)" "($rr_line_1|$rr_line_2)"
+gdb_test "python print (gdb.lookup_static_symbol ('rr').value ())" "(42|99)"
 
 gdb_test "python print (gdb.lookup_static_symbol ('rr').needs_frame)" \
     "False" \
@@ -215,8 +192,10 @@ gdb_test "python print (t\[0\].symtab)" "${py_symbol_c}" "get symtab"
 # C++ tests
 # Recompile binary.
 lappend opts c++
-if {[prepare_for_testing "failed to prepare" "${binfile}-cxx" \
-	 [list $srcfile $srcfile2] $opts]} {
+set testfile $testfile-cxx
+set binfile [standard_output_file $testfile]
+if { [prepare_for_testing "failed to prepare" $testfile \
+	  [list $srcfile $srcfile2] $opts] } {
     return -1
 }
 
@@ -252,7 +231,7 @@ gdb_test "python print (cplusfunc.addr_class == gdb.SYMBOL_LOC_BLOCK)" "True" "t
 # Test is_valid when the objfile is unloaded.  This must be the last
 # test as it unloads the object file in GDB.
 # Start with a fresh gdb.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 if {![runto_main]} {
     return 0
 }

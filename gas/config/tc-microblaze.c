@@ -244,8 +244,7 @@ microblaze_s_lcomm (int xxx ATTRIBUTE_UNUSED)
   if (S_GET_SEGMENT (symbolP) == current_seg)
     symbol_get_frag (symbolP)->fr_symbol = 0;
   symbol_set_frag (symbolP, frag_now);
-  pfrag = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP, size,
-		    (char *) 0);
+  pfrag = frag_var (rs_org, 1, 1, 0, symbolP, size, NULL);
   *pfrag = 0;
   S_SET_SIZE (symbolP, size);
   S_SET_SEGMENT (symbolP, current_seg);
@@ -334,6 +333,9 @@ microblaze_s_weakext (int ignore ATTRIBUTE_UNUSED)
 	  SKIP_WHITESPACE ();
 	}
 
+#ifdef md_expr_init_rest
+      md_expr_init_rest (&exp);
+#endif
       expression (&exp);
       if (exp.X_op != O_symbol)
 	{
@@ -485,7 +487,7 @@ parse_reg (char * s, unsigned * reg)
         }
       else
         as_bad (_("register expected, but saw '%.6s'"), s);
-      if ((int) tmpreg >= MIN_PVR_REGNUM && tmpreg <= MAX_PVR_REGNUM)
+      if (tmpreg - MIN_PVR_REGNUM <= MAX_PVR_REGNUM - MIN_PVR_REGNUM)
         *reg = REG_PVR + tmpreg;
       else
         {
@@ -514,7 +516,7 @@ parse_reg (char * s, unsigned * reg)
       else
 	as_bad (_("register expected, but saw '%.6s'"), s);
 
-      if ((int) tmpreg >= MIN_REGNUM && tmpreg <= MAX_REGNUM)
+      if (tmpreg - MIN_REGNUM <= MAX_REGNUM - MIN_REGNUM)
         *reg = tmpreg;
       else
 	{
@@ -551,7 +553,7 @@ parse_reg (char * s, unsigned * reg)
           else
             as_bad (_("register expected, but saw '%.6s'"), s);
 
-          if ((int)tmpreg >= MIN_REGNUM && tmpreg <= MAX_REGNUM)
+          if (tmpreg - MIN_REGNUM <= MAX_REGNUM - MIN_REGNUM)
             *reg = tmpreg;
           else
 	    {
@@ -914,7 +916,7 @@ md_assemble (char * str)
       return;
     }
 
-  opcode = (struct op_code_struct *) str_hash_find (opcode_hash_control, name);
+  opcode = str_hash_find (opcode_hash_control, name);
   if (opcode == NULL)
     {
       as_bad (_("unknown opcode \"%s\""), name);
@@ -1044,13 +1046,9 @@ md_assemble (char * str)
 
           count = 32 - reg1;
           if (streq (name, "lmi"))
-	    opcode
-	      = (struct op_code_struct *) str_hash_find (opcode_hash_control,
-							 "lwi");
+	    opcode = str_hash_find (opcode_hash_control, "lwi");
           else
-	    opcode
-	      = (struct op_code_struct *) str_hash_find (opcode_hash_control,
-							 "swi");
+	    opcode = str_hash_find (opcode_hash_control, "swi");
           if (opcode == NULL)
             {
               as_bad (_("unknown opcode \"%s\""), "lwi");
@@ -1082,9 +1080,7 @@ md_assemble (char * str)
           if ((temp != 0) && (temp != 0xFFFF8000))
 	    {
               /* Needs an immediate inst.  */
-	      opcode1
-		= (struct op_code_struct *) str_hash_find (opcode_hash_control,
-							   "imm");
+	      opcode1 = str_hash_find (opcode_hash_control, "imm");
               if (opcode1 == NULL)
                 {
                   as_bad (_("unknown opcode \"%s\""), "imm");
@@ -1618,9 +1614,7 @@ md_assemble (char * str)
       if ((temp != 0) && (temp != 0xFFFF8000))
 	{
           /* Needs an immediate inst.  */
-	  opcode1
-	    = (struct op_code_struct *) str_hash_find (opcode_hash_control,
-						       "imm");
+	  opcode1 = str_hash_find (opcode_hash_control, "imm");
           if (opcode1 == NULL)
             {
               as_bad (_("unknown opcode \"%s\""), "imm");
@@ -1686,9 +1680,7 @@ md_assemble (char * str)
       if ((temp != 0) && (temp != 0xFFFF8000))
 	{
           /* Needs an immediate inst.  */
-          opcode1
-	    = (struct op_code_struct *) str_hash_find (opcode_hash_control,
-						       "imm");
+          opcode1 = str_hash_find (opcode_hash_control, "imm");
           if (opcode1 == NULL)
             {
               as_bad (_("unknown opcode \"%s\""), "imm");
@@ -1761,9 +1753,7 @@ md_assemble (char * str)
       if ((temp != 0) && (temp != 0xFFFF8000))
 	{
           /* Needs an immediate inst.  */
-          opcode1
-	    = (struct op_code_struct *) str_hash_find (opcode_hash_control,
-						       "imm");
+          opcode1 = str_hash_find (opcode_hash_control, "imm");
           if (opcode1 == NULL)
             {
               as_bad (_("unknown opcode \"%s\""), "imm");
@@ -1885,17 +1875,15 @@ md_atof (int type, char * litP, int * sizeP)
     {
       for (i = prec - 1; i >= 0; i--)
         {
-          md_number_to_chars (litP, (valueT) words[i],
-                              sizeof (LITTLENUM_TYPE));
-          litP += sizeof (LITTLENUM_TYPE);
+	  md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
+	  litP += sizeof (LITTLENUM_TYPE);
         }
     }
   else
     for (i = 0; i < prec; i++)
       {
-        md_number_to_chars (litP, (valueT) words[i],
-                            sizeof (LITTLENUM_TYPE));
-        litP += sizeof (LITTLENUM_TYPE);
+	md_number_to_chars (litP, words[i], sizeof (LITTLENUM_TYPE));
+	litP += sizeof (LITTLENUM_TYPE);
       }
 
   return NULL;
@@ -2054,7 +2042,7 @@ md_apply_fix (fixS *   fixP,
   const char *       file = fixP->fx_file ? fixP->fx_file : _("unknown");
   const char * symname;
   /* Note: use offsetT because it is signed, valueT is unsigned.  */
-  offsetT      val  = (offsetT) * valp;
+  offsetT      val  = *valp;
   int          i;
   struct op_code_struct * opcode1;
   unsigned long inst1;
@@ -2185,8 +2173,7 @@ md_apply_fix (fixS *   fixP,
 	buf[i + INST_WORD_SIZE] = buf[i];
 
       /* Generate the imm instruction.  */
-      opcode1
-	= (struct op_code_struct *) str_hash_find (opcode_hash_control, "imm");
+      opcode1 = str_hash_find (opcode_hash_control, "imm");
       if (opcode1 == NULL)
 	{
 	  as_bad (_("unknown opcode \"%s\""), "imm");
@@ -2234,8 +2221,7 @@ md_apply_fix (fixS *   fixP,
 	buf[i + INST_WORD_SIZE] = buf[i];
 
       /* Generate the imm instruction.  */
-      opcode1
-	= (struct op_code_struct *) str_hash_find (opcode_hash_control, "imm");
+      opcode1 = str_hash_find (opcode_hash_control, "imm");
       if (opcode1 == NULL)
 	{
 	  as_bad (_("unknown opcode \"%s\""), "imm");
@@ -2459,7 +2445,7 @@ md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
      we leave the add number alone for the linker to fix it later.
      Only account for the PC pre-bump (No PC-pre-bump on the Microblaze). */
 
-  if (fixp->fx_addsy != (symbolS *) NULL
+  if (fixp->fx_addsy != NULL
       && (!S_IS_DEFINED (fixp->fx_addsy)
           || (S_GET_SEGMENT (fixp->fx_addsy) != sec)))
     return 0;

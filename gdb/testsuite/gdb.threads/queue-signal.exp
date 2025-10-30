@@ -20,9 +20,9 @@ if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
-if ![runto_main] {
+if {![runto_main]} {
    return 0
 }
 

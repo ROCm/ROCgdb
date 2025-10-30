@@ -97,12 +97,12 @@ default_macro_scope ()
 {
   struct symtab_and_line sal;
   frame_info_ptr frame;
-  CORE_ADDR pc;
+  std::optional<CORE_ADDR> pc;
 
   /* If there's a selected frame, use its PC.  */
   frame = deprecated_safe_get_selected_frame ();
-  if (frame && get_frame_pc_if_available (frame, &pc))
-    sal = find_pc_line (pc, 0);
+  if (frame && (pc = get_frame_pc_if_available (frame)))
+    sal = find_sal_for_pc (*pc, 0);
 
   /* Fall back to the current listing position.  */
   else
@@ -149,9 +149,7 @@ standard_macro_lookup (const char *name, const macro_scope &ms)
   return result;
 }
 
-void _initialize_macroscope ();
-void
-_initialize_macroscope ()
+INIT_GDB_FILE (macroscope)
 {
   macro_user_macros = new_macro_table (NULL, NULL, NULL);
   macro_set_main (macro_user_macros, "<user-defined>");

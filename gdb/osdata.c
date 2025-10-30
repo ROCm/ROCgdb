@@ -209,7 +209,7 @@ info_osdata (const char *type)
 
   if (*type == '\0' && nrows == 0)
     error (_("Available types of OS data not reported."));
-  
+
   if (!osdata->items.empty ())
     {
       last = &osdata->items.back ();
@@ -287,9 +287,7 @@ info_osdata_command (const char *arg, int from_tty)
   info_osdata (arg);
 }
 
-void _initialize_osdata ();
-void
-_initialize_osdata ()
+INIT_GDB_FILE (osdata)
 {
   add_info ("os", info_osdata_command,
 	   _("Show OS data ARG."));

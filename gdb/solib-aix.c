@@ -24,6 +24,26 @@
 #include "xcoffread.h"
 #include "observable.h"
 
+/* solib_ops for AIX systems.  */
+
+struct aix_solib_ops : public solib_ops
+{
+  using solib_ops::solib_ops;
+
+  void relocate_section_addresses (solib &so, target_section *) const override;
+  void create_inferior_hook (int from_tty) const override;
+  owning_intrusive_list<solib> current_sos () const override;
+  gdb_bfd_ref_ptr bfd_open (const char *pathname) const override;
+};
+
+/* See solib-aix.h.  */
+
+solib_ops_up
+make_aix_solib_ops (program_space *pspace)
+{
+  return std::make_unique<aix_solib_ops> (pspace);
+}
+
 /* Our private data in struct solib.  */
 
 struct lm_info_aix final : public lm_info
@@ -306,10 +326,9 @@ solib_aix_bss_data_overlap (bfd *abfd)
   return 0;
 }
 
-/* Implement the "relocate_section_addresses" solib_ops method.  */
-
-static void
-solib_aix_relocate_section_addresses (solib &so, target_section *sec)
+void
+aix_solib_ops::relocate_section_addresses (solib &so,
+					   target_section *sec) const
 {
   struct bfd_section *bfd_sect = sec->the_bfd_section;
   bfd *abfd = bfd_sect->owner;
@@ -410,10 +429,8 @@ solib_aix_get_section_offsets (struct objfile *objfile,
   return offsets;
 }
 
-/* Implement the "solib_create_inferior_hook" solib_ops method.  */
-
-static void
-solib_aix_solib_create_inferior_hook (int from_tty)
+void
+aix_solib_ops::create_inferior_hook (int from_tty) const
 {
   const char *warning_msg = "unable to relocate main executable";
 
@@ -441,10 +458,8 @@ solib_aix_solib_create_inferior_hook (int from_tty)
     }
 }
 
-/* Implement the "current_sos" solib_ops method.  */
-
-static owning_intrusive_list<solib>
-solib_aix_current_sos ()
+owning_intrusive_list<solib>
+aix_solib_ops::current_sos () const
 {
   std::optional<std::vector<lm_info_aix>> &library_list
     = solib_aix_get_library_list (current_inferior (), NULL);
@@ -480,19 +495,15 @@ solib_aix_current_sos ()
 	}
 
       /* Add it to the list.  */
-      auto &new_solib = sos.emplace_back ();
-      new_solib.original_name = so_name;
-      new_solib.name = so_name;
-      new_solib.lm_info = std::make_unique<lm_info_aix> (info);
+      sos.emplace_back (std::make_unique<lm_info_aix> (info), so_name, so_name,
+			*this);
     }
 
   return sos;
 }
 
-/* Implement the "bfd_open" solib_ops method.  */
-
-static gdb_bfd_ref_ptr
-solib_aix_bfd_open (const char *pathname)
+gdb_bfd_ref_ptr
+aix_solib_ops::bfd_open (const char *pathname) const
 {
   /* The pathname is actually a synthetic filename with the following
      form: "/path/to/sharedlib(member.o)" (double-quotes excluded).
@@ -506,7 +517,7 @@ solib_aix_bfd_open (const char *pathname)
   int found_file;
 
   if (pathname[path_len - 1] != ')')
-    return solib_bfd_open (pathname);
+    return solib_ops::bfd_open (pathname);
 
   /* Search for the associated parens.  */
   sep = strrchr (pathname, '(');
@@ -516,7 +527,7 @@ solib_aix_bfd_open (const char *pathname)
 	 to open pathname without decoding, possibly leading to
 	 a failure), rather than triggering an assert failure).  */
       warning (_("missing '(' in shared object pathname: %s"), pathname);
-      return solib_bfd_open (pathname);
+      return solib_ops::bfd_open (pathname);
     }
   filename_len = sep - pathname;
 
@@ -609,9 +620,9 @@ solib_aix_bfd_open (const char *pathname)
 static struct obj_section *
 data_obj_section_from_objfile (struct objfile *objfile)
 {
-  for (obj_section *osect : objfile->sections ())
-    if (strcmp (bfd_section_name (osect->the_bfd_section), ".data") == 0)
-      return osect;
+  for (obj_section &osect : objfile->sections ())
+    if (strcmp (bfd_section_name (osect.the_bfd_section), ".data") == 0)
+      return &osect;
 
   return NULL;
 }
@@ -659,27 +670,7 @@ solib_aix_normal_stop_observer (struct bpstat *unused_1, int unused_2)
   data->library_list.reset ();
 }
 
-/* The solib_ops for AIX targets.  */
-const solib_ops solib_aix_so_ops =
-{
-  solib_aix_relocate_section_addresses,
-  nullptr,
-  nullptr,
-  solib_aix_solib_create_inferior_hook,
-  solib_aix_current_sos,
-  nullptr,
-  nullptr,
-  solib_aix_bfd_open,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  default_find_solib_addr,
-};
-
-void _initialize_solib_aix ();
-void
-_initialize_solib_aix ()
+INIT_GDB_FILE (solib_aix)
 {
   gdb::observers::normal_stop.attach (solib_aix_normal_stop_observer,
 				      "solib-aix");

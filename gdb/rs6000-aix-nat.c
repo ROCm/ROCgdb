@@ -23,7 +23,6 @@
 #include "symfile.h"
 #include "objfiles.h"
 #include "bfd.h"
-#include "gdb-stabs.h"
 #include "regcache.h"
 #include "arch-utils.h"
 #include "inf-child.h"
@@ -1062,9 +1061,7 @@ rs6000_nat_target::xfer_shared_libraries
     }
 }
 
-void _initialize_rs6000_nat ();
-void
-_initialize_rs6000_nat ()
+INIT_GDB_FILE (rs6000_nat)
 {
   add_inf_child_target (&the_rs6000_nat_target);
 }

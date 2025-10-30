@@ -30,7 +30,6 @@
 #include "symtab.h"
 #include "symfile.h"
 #include "objfiles.h"
-#include "stabsread.h"
 #include "probe.h"
 #include "arch-utils.h"
 #include "gdbtypes.h"
@@ -47,7 +46,6 @@
 #include <string_view>
 #include "dwarf2/public.h"
 #include "cli/cli-cmds.h"
-#include "gdb-stabs.h"
 
 /* Whether ctf should always be read, or only if no dwarf is present.  */
 static bool always_read_ctf;
@@ -780,9 +778,8 @@ elf_gnu_ifunc_resolve_by_cache (const char *name, CORE_ADDR *addr_p)
 
      To search other namespaces, we would need to provide context, e.g. in
      form of an objfile in that namespace.  */
-  gdbarch_iterate_over_objfiles_in_search_order
-    (current_inferior ()->arch (),
-     [name, &addr_p, &found] (struct objfile *objfile)
+  current_program_space->iterate_over_objfiles_in_search_order
+    ([name, &addr_p, &found] (struct objfile *objfile)
        {
 	 htab_t htab;
 	 elf_gnu_ifunc_cache *entry_p;
@@ -834,9 +831,8 @@ elf_gnu_ifunc_resolve_by_got (const char *name, CORE_ADDR *addr_p)
 
      To search other namespaces, we would need to provide context, e.g. in
      form of an objfile in that namespace.  */
-  gdbarch_iterate_over_objfiles_in_search_order
-    (current_inferior ()->arch (),
-     [name, name_got_plt, &addr_p, &found] (struct objfile *objfile)
+  current_program_space->iterate_over_objfiles_in_search_order
+    ([name, name_got_plt, &addr_p, &found] (struct objfile *objfile)
        {
 	 bfd *obfd = objfile->obfd.get ();
 	 struct gdbarch *gdbarch = objfile->arch ();
@@ -979,7 +975,7 @@ elf_gnu_ifunc_resolver_stop (code_breakpoint *b)
 
   if (b_return == b)
     {
-      /* No need to call find_pc_line for symbols resolving as this is only
+      /* No need to call find_sal_for_pc for symbols resolving as this is only
 	 a helper breakpoint never shown to the user.  */
 
       symtab_and_line sal;
@@ -1054,7 +1050,7 @@ elf_gnu_ifunc_resolver_return_stop (code_breakpoint *b)
 
   b->type = bp_breakpoint;
   update_breakpoint_locations (b, current_program_space,
-			       find_function_start_sal (resolved_pc, NULL, true),
+			       find_function_start_sal (resolved_pc, nullptr, true),
 			       {});
 }
 
@@ -1213,134 +1209,6 @@ elf_symfile_read_dwarf2 (struct objfile *objfile,
   return has_dwarf2;
 }
 
-/* find_text_range --- find start and end of loadable code sections
-
-   The find_text_range function finds the shortest address range that
-   encloses all sections containing executable code, and stores it in
-   objfile's text_addr and text_size members.
-
-   dbx_symfile_read will use this to finish off the partial symbol
-   table, in some cases.  */
-
-static void
-find_text_range (bfd * sym_bfd, struct objfile *objfile)
-{
-  asection *sec;
-  int found_any = 0;
-  CORE_ADDR start = 0;
-  CORE_ADDR end = 0;
-
-  for (sec = sym_bfd->sections; sec; sec = sec->next)
-    if (bfd_section_flags (sec) & SEC_CODE)
-      {
-	CORE_ADDR sec_start = bfd_section_vma (sec);
-	CORE_ADDR sec_end = sec_start + bfd_section_size (sec);
-
-	if (found_any)
-	  {
-	    if (sec_start < start)
-	      start = sec_start;
-	    if (sec_end > end)
-	      end = sec_end;
-	  }
-	else
-	  {
-	    start = sec_start;
-	    end = sec_end;
-	  }
-
-	found_any = 1;
-      }
-
-  if (!found_any)
-    error (_("Can't find any code sections in symbol file"));
-
-  DBX_TEXT_ADDR (objfile) = start;
-  DBX_TEXT_SIZE (objfile) = end - start;
-}
-
-/* Scan and build partial symbols for an ELF symbol file.
-   This ELF file has already been processed to get its minimal symbols.
-
-   This routine is the equivalent of dbx_symfile_init and dbx_symfile_read
-   rolled into one.
-
-   OBJFILE is the object file we are reading symbols from.
-   ADDR is the address relative to which the symbols are (e.g.
-   the base address of the text segment).
-   STABSECT is the BFD section information for the .stab section.
-   STABSTROFFSET and STABSTRSIZE define the location in OBJFILE where the
-   .stabstr section exists.
-
-   This routine is mostly copied from dbx_symfile_init and dbx_symfile_read,
-   adjusted for elf details.  */
-
-void
-elfstab_build_psymtabs (struct objfile *objfile, asection *stabsect,
-			file_ptr stabstroffset, unsigned int stabstrsize)
-{
-  int val;
-  bfd *sym_bfd = objfile->obfd.get ();
-  const char *name = bfd_get_filename (sym_bfd);
-
-  stabsread_new_init ();
-
-  /* Allocate struct to keep track of stab reading.  */
-  dbx_objfile_data_key.emplace (objfile);
-  dbx_symfile_info *key = dbx_objfile_data_key.get (objfile);
-
-  /* Find the first and last text address.  dbx_symfile_read seems to
-     want this.  */
-  find_text_range (sym_bfd, objfile);
-
-#define	ELF_STABS_SYMBOL_SIZE	12	/* XXX FIXME XXX */
-  DBX_SYMBOL_SIZE (objfile) = ELF_STABS_SYMBOL_SIZE;
-  DBX_SYMCOUNT (objfile)
-    = bfd_section_size (stabsect) / DBX_SYMBOL_SIZE (objfile);
-  DBX_STRINGTAB_SIZE (objfile) = stabstrsize;
-  DBX_SYMTAB_OFFSET (objfile) = stabsect->filepos;
-  DBX_STAB_SECTION (objfile) = stabsect;
-
-  if (stabstrsize > bfd_get_size (sym_bfd))
-    error (_("ridiculous string table size: %d bytes"), stabstrsize);
-  DBX_STRINGTAB (objfile) = (char *)
-    obstack_alloc (&objfile->objfile_obstack, stabstrsize + 1);
-  OBJSTAT (objfile, sz_strtab += stabstrsize + 1);
-
-  /* Now read in the string table in one big gulp.  */
-
-  val = bfd_seek (sym_bfd, stabstroffset, SEEK_SET);
-  if (val < 0)
-    perror_with_name (name);
-  val = bfd_read (DBX_STRINGTAB (objfile), stabstrsize, sym_bfd);
-  if (val != stabstrsize)
-    perror_with_name (name);
-
-  stabsread_new_init ();
-  free_header_files ();
-  init_header_files ();
-
-  key->ctx.processing_acc_compilation = 1;
-
-  key->ctx.symbuf_read = 0;
-  key->ctx.symbuf_left = bfd_section_size (stabsect);
-
-  scoped_restore restore_stabs_data = make_scoped_restore (&key->ctx.stabs_data);
-  gdb::unique_xmalloc_ptr<gdb_byte> data_holder;
-
-  key->ctx.stabs_data = symfile_relocate_debug_section (objfile, stabsect, NULL);
-  if (key->ctx.stabs_data)
-    data_holder.reset (key->ctx.stabs_data);
-
-  /* In an elf file, we've already installed the minimal symbols that came
-     from the elf (non-stab) symbol table, so always act like an
-     incremental load here.  dbx_symfile_read should not generate any new
-     minimal symbols, since we will have already read the ELF dynamic symbol
-     table and normal symbol entries won't be in the ".stab" section; but in
-     case it does, it will install them itself.  */
-  read_stabs_symtab (objfile, 0);
-}
-
 /* Scan and build partial symbols for a symbol file.
    We have been initialized by a call to elf_symfile_init, which
    currently does nothing.
@@ -1356,7 +1224,6 @@ elfstab_build_psymtabs (struct objfile *objfile, asection *stabsect,
    We look for sections with specific names, to tell us what debug
    format to look for:  FIXME!!!
 
-   elfstab_build_psymtabs() handles STABS symbols;
    mdebug_build_psymtabs() handles ECOFF debugging information.
 
    Note that ELF files have a "minimal" symbol table, which looks a lot
@@ -1403,20 +1270,7 @@ elf_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
 	elfmdebug_build_psymtabs (objfile, swap, ei.mdebugsect);
     }
   if (ei.stabsect)
-    {
-      asection *str_sect;
-
-      /* Stab sections have an associated string table that looks like
-	 a separate section.  */
-      str_sect = bfd_get_section_by_name (abfd, ".stabstr");
-
-      /* FIXME should probably warn about a stab section without a stabstr.  */
-      if (str_sect)
-	elfstab_build_psymtabs (objfile,
-				ei.stabsect,
-				str_sect->filepos,
-				bfd_section_size (str_sect));
-    }
+    warning ("stabs debug information is not supported.");
 
   /* Read the CTF section only if there is no DWARF info.  */
   if (always_read_ctf && ei.ctfsect)
@@ -1517,9 +1371,7 @@ static const struct gnu_ifunc_fns elf_gnu_ifunc_fns =
   elf_gnu_ifunc_resolver_return_stop
 };
 
-void _initialize_elfread ();
-void
-_initialize_elfread ()
+INIT_GDB_FILE (elfread)
 {
   add_symtab_fns (bfd_target_elf_flavour, &elf_sym_fns);
 

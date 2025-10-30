@@ -157,7 +157,6 @@ AM_PROG_LEX
 
 ALL_LINGUAS="bg ca da es fi fr hr id it ja pt ro ru rw sk sr sv tr uk vi zh_CN zh_TW"
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)
@@ -202,9 +201,9 @@ GCC_AC_FUNC_MMAP
 AC_CHECK_FUNCS(fseeko fseeko64 getc_unlocked mkdtemp mkstemp utimensat utimes)
 
 AC_MSG_CHECKING([for mbstate_t])
-AC_TRY_COMPILE([#include <wchar.h>],
-[mbstate_t teststate;],
-have_mbstate_t=yes, have_mbstate_t=no)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <wchar.h>]],
+[[mbstate_t teststate;]])],
+[have_mbstate_t=yes],[have_mbstate_t=no])
 AC_MSG_RESULT($have_mbstate_t)
 if test x"$have_mbstate_t" = xyes; then
   AC_DEFINE(HAVE_MBSTATE_T,1,[Define if mbstate_t exists in wchar.h.])
@@ -466,7 +465,7 @@ changequote([,])dnl
     powerpc*-*-aix* | rs6000-*-aix*)
 	od_vectors="$od_vectors objdump_private_desc_xcoff"
 	;;
-    *-*-pe* | *-*-cygwin* | *-*-mingw*)
+    *-*-pe* | *-*-cygwin* | *-*-mingw* | *-*-interix*)
 	 od_vectors="$od_vectors objdump_private_desc_pe"
 	 ;;
     *-*-darwin*)

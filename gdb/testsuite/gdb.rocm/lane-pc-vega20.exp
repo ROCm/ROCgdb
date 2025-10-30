@@ -1341,7 +1341,8 @@ if  { [gdb_compile_ocl_kernel "$asmfile_dwarf ${srcdir}/${subdir}/${asmfile_kern
     return -1
 }
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 # Don't skip over code regions where the current lane is inactive.
 gdb_test_no_output "maint set lane-divergence-support off"

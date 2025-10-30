@@ -705,7 +705,7 @@ rl78_cons_fix_new (fragS *	frag,
 	type = BFD_RELOC_RL78_DIFF;
     }
 
-  fixP = fix_new_exp (frag, where, (int) size, exp, 0, type);
+  fixP = fix_new_exp (frag, where, size, exp, 0, type);
   switch (exp->X_md)
     {
       /* These are intended to have values larger than the container,
@@ -1420,7 +1420,7 @@ md_apply_fix (struct fix * f ATTRIBUTE_UNUSED,
     return;
 
   op = f->fx_frag->fr_literal + f->fx_where;
-  val = (unsigned long) * t;
+  val = *t;
 
   if (f->fx_addsy == NULL)
     f->fx_done = 1;
@@ -1508,5 +1508,5 @@ valueT
 md_section_align (segT segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
-  return ((size + (1 << align) - 1) & -(1 << align));
+  return (size + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }

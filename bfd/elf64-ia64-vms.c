@@ -3472,8 +3472,6 @@ elf64_ia64_relocate_section (bfd *output_bfd,
 		      msec = sym_sec;
 		      dynent->addend =
 			_bfd_merged_section_offset (output_bfd, &msec,
-						    elf_section_data (msec)->
-						    sec_info,
 						    sym->st_value
 						    + dynent->addend);
 		      dynent->addend -= sym->st_value;
@@ -3518,7 +3516,8 @@ elf64_ia64_relocate_section (bfd *output_bfd,
 	 section contents zeroed.  Avoid any special processing.  */
       if (sym_sec != NULL && discarded_section (sym_sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_IA64_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;

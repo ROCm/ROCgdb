@@ -19,6 +19,7 @@
    Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
    02110-1301, USA.  */
 
+#ifndef TC_PPC
 #define TC_PPC
 
 #include "opcode/ppc.h"
@@ -215,6 +216,9 @@ extern void ppc_new_dot_label (symbolS *);
 extern const char       ppc_symbol_chars[];
 #define tc_symbol_chars ppc_symbol_chars
 
+#define tc_comment_chars ppc_comment_chars
+extern const char ppc_comment_chars[];
+
 #ifdef OBJ_ELF
 
 /* Support for SHT_ORDERED */
@@ -223,9 +227,6 @@ extern int ppc_section_flags (flagword, bfd_vma, int);
 
 #define md_elf_section_type(STR, LEN)		ppc_section_type (STR, LEN)
 #define md_elf_section_flags(FLAGS, ATTR, TYPE)	ppc_section_flags (FLAGS, ATTR, TYPE)
-
-#define tc_comment_chars ppc_comment_chars
-extern const char *ppc_comment_chars;
 
 #define md_elf_section_letter		ppc_elf_section_letter
 extern bfd_vma ppc_elf_section_letter (int, const char **);
@@ -367,3 +368,5 @@ extern int ppc_dwarf2_line_min_insn_length;
 #define DWARF2_DEFAULT_RETURN_COLUMN    0x41
 #define DWARF2_CIE_DATA_ALIGNMENT       ppc_cie_data_alignment
 #define EH_FRAME_ALIGNMENT		2
+
+#endif /* TC_PPC */

@@ -33,6 +33,27 @@
 #include "mach-o.h"
 #include "mach-o/external.h"
 
+/* solib_ops for Darwin systems.  */
+
+struct darwin_solib_ops : public solib_ops
+{
+  using solib_ops::solib_ops;
+
+  void relocate_section_addresses (solib &so, target_section *) const override;
+  void clear_solib (program_space *pspace) const override;
+  void create_inferior_hook (int from_tty) const override;
+  owning_intrusive_list<solib> current_sos () const override;
+  gdb_bfd_ref_ptr bfd_open (const char *pathname) const override;
+};
+
+/* See solib-darwin.h.  */
+
+solib_ops_up
+make_darwin_solib_ops (program_space *pspace)
+{
+  return std::make_unique<darwin_solib_ops> (pspace);
+}
+
 struct gdb_dyld_image_info
 {
   /* Base address (which corresponds to the Mach-O header).  */
@@ -137,8 +158,12 @@ darwin_load_image_infos (struct darwin_info *info)
 
 struct lm_info_darwin final : public lm_info
 {
+  explicit lm_info_darwin (CORE_ADDR lm_addr)
+    : lm_addr (lm_addr)
+  {}
+
   /* The target location of lm.  */
-  CORE_ADDR lm_addr = 0;
+  CORE_ADDR lm_addr;
 };
 
 /* Lookup the value for a specific symbol.  */
@@ -188,10 +213,8 @@ find_program_interpreter (void)
   return buf;
 }
 
-/* Build a list of currently loaded shared objects.  See solib-svr4.c.  */
-
-static owning_intrusive_list<solib>
-darwin_current_sos ()
+owning_intrusive_list<solib>
+darwin_solib_ops::current_sos () const
 {
   type *ptr_type
     = builtin_type (current_inferior ()->arch ())->builtin_data_ptr;
@@ -250,15 +273,8 @@ darwin_current_sos ()
 	break;
 
       /* Create and fill the new struct solib element.  */
-      auto &newobj = sos.emplace_back ();
-
-      auto li = std::make_unique<lm_info_darwin> ();
-
-      newobj.name = file_path.get ();
-      newobj.original_name = newobj.name;
-      li->lm_addr = load_addr;
-
-      newobj.lm_info = std::move (li);
+      sos.emplace_back (std::make_unique<lm_info_darwin> (load_addr),
+			file_path.get (), file_path.get (), *this);
     }
 
   return sos;
@@ -457,10 +473,8 @@ darwin_solib_read_all_image_info_addr (struct darwin_info *info)
   info->all_image_addr = extract_unsigned_integer (buf, len, BFD_ENDIAN_BIG);
 }
 
-/* Shared library startup support.  See documentation in solib-svr4.c.  */
-
-static void
-darwin_solib_create_inferior_hook (int from_tty)
+void
+darwin_solib_ops::create_inferior_hook (int from_tty) const
 {
   /* Everything below only makes sense if we have a running inferior.  */
   if (!target_has_execution ())
@@ -560,8 +574,8 @@ darwin_solib_create_inferior_hook (int from_tty)
     create_solib_event_breakpoint (current_inferior ()->arch (), notifier);
 }
 
-static void
-darwin_clear_solib (program_space *pspace)
+void
+darwin_solib_ops::clear_solib (program_space *pspace) const
 {
   darwin_info *info = get_darwin_info (pspace);
 
@@ -572,8 +586,9 @@ darwin_clear_solib (program_space *pspace)
 /* The section table is built from bfd sections using bfd VMAs.
    Relocate these VMAs according to solib info.  */
 
-static void
-darwin_relocate_section_addresses (solib &so, target_section *sec)
+void
+darwin_solib_ops::relocate_section_addresses (solib &so,
+					      target_section *sec) const
 {
   auto *li = gdb::checked_static_cast<lm_info_darwin *> (so.lm_info.get ());
 
@@ -592,9 +607,9 @@ darwin_relocate_section_addresses (solib &so, target_section *sec)
   if (sec->addr < so.addr_low)
     so.addr_low = sec->addr;
 }
-
-static gdb_bfd_ref_ptr
-darwin_bfd_open (const char *pathname)
+
+gdb_bfd_ref_ptr
+darwin_solib_ops::bfd_open (const char *pathname) const
 {
   int found_file;
 
@@ -622,20 +637,3 @@ darwin_bfd_open (const char *pathname)
 
   return res;
 }
-
-const solib_ops darwin_so_ops =
-{
-  darwin_relocate_section_addresses,
-  nullptr,
-  darwin_clear_solib,
-  darwin_solib_create_inferior_hook,
-  darwin_current_sos,
-  nullptr,
-  nullptr,
-  darwin_bfd_open,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  default_find_solib_addr,
-};

@@ -90,14 +90,15 @@ if { $res < 0 || $res == "" } {
 }
 
 set wait_status [remote_wait target 60]
-set have_standalone [expr [lindex $wait_status 0] == 0]
+set have_standalone [expr {[lindex $wait_status 0] == 0}]
 gdb_assert { $have_standalone } "collect standalone signals state"
 remote_close target
 
 # Now run the program through gdb, and dump its initial signal actions
 # and mask in "gdb.txt".
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 if {![runto_main]} {
     return -1

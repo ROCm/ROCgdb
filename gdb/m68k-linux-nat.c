@@ -129,7 +129,7 @@ fetch_register (struct regcache *regcache, int regno)
       memcpy (&buf[i], &val, sizeof (long));
       regaddr += sizeof (long);
       if (errno != 0)
-	error (_("Couldn't read register %s (#%d): %s."), 
+	error (_("Couldn't read register %s (#%d): %s."),
 	       gdbarch_register_name (gdbarch, regno),
 	       regno, safe_strerror (errno));
     }
@@ -494,7 +494,7 @@ m68k_linux_nat_target::store_registers (struct regcache *regcache, int regno)
 /* Fetch the thread-local storage pointer for libthread_db.  */
 
 ps_err_e
-ps_get_thread_area (struct ps_prochandle *ph, 
+ps_get_thread_area (struct ps_prochandle *ph,
 		    lwpid_t lwpid, int idx, void **base)
 {
   if (ptrace (PTRACE_GET_THREAD_AREA, lwpid, NULL, base) < 0)
@@ -508,9 +508,7 @@ ps_get_thread_area (struct ps_prochandle *ph,
   return PS_OK;
 }
 
-void _initialize_m68k_linux_nat ();
-void
-_initialize_m68k_linux_nat ()
+INIT_GDB_FILE (m68k_linux_nat)
 {
   /* Register the target.  */
   linux_target = &the_m68k_linux_nat_target;

@@ -37,7 +37,7 @@
 
    NOTE: This enumeration must match the op_rank array in expr.c.  */
 
-typedef enum
+typedef enum operatorT
 {
   /* An illegal expression.  */
   O_illegal,
@@ -122,19 +122,15 @@ typedef struct expressionS
   /* A number to add.  */
   offsetT X_add_number;
 
-  /* The type of the expression.  We can't assume that an arbitrary
-     compiler can handle a bitfield of enum type.  FIXME: We could
-     check this using autoconf.  */
-#ifdef __GNUC__
-  operatorT X_op : 8;
-#else
-  unsigned char X_op;
-#endif
+  /* The type of the expression.  */
+  ENUM_BITFIELD (operatorT) X_op : 8;
 
-  /* Non-zero if X_add_number should be regarded as unsigned.  This is
-     only valid for O_constant expressions.  It is only used when an
-     O_constant must be extended into a bignum (i.e., it is not used
-     when performing arithmetic on these values).
+  /* Non-zero if the expression value should be regarded as unsigned.  This is
+     only valid for
+     - O_constant expressions, where it is only used when an O_constant must be
+       extended into a bignum (i.e., it is not used when performing arithmetic
+       on these values),
+     - O_big integer expressions, i.e. when X_add_number is positive.
      FIXME: This field is not set very reliably.  */
   unsigned int X_unsigned : 1;
   /* This is used to implement "word size + 1 bit" arithmetic, so that e.g.
@@ -143,9 +139,7 @@ typedef struct expressionS
      signed word.  */
   unsigned int X_extrabit : 1;
 
-  /* 7 additional bits can be defined if needed.  */
-
-  /* Machine dependent field */
+  /* Machine dependent field.  */
   unsigned short X_md;
 } expressionS;
 

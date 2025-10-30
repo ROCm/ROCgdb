@@ -53,7 +53,6 @@
 #include <optional>
 #include "gdbsupport/byte-vector.h"
 
-#include <ctype.h>
 #include "gdbsupport/run-time-clock.h"
 #include <chrono>
 #include "progspace-and-thread.h"
@@ -595,13 +594,13 @@ mi_cmd_thread_list_ids (const char *command, const char *const *argv, int argc)
   {
     ui_out_emit_tuple tuple_emitter (current_uiout, "thread-ids");
 
-    for (thread_info *tp : all_non_exited_threads ())
+    for (thread_info &tp : all_non_exited_threads ())
       {
-	if (tp->ptid == inferior_ptid)
-	  current_thread = tp->global_num;
+	if (tp.ptid == inferior_ptid)
+	  current_thread = tp.global_num;
 
 	num++;
-	current_uiout->field_signed ("thread-id", tp->global_num);
+	current_uiout->field_signed ("thread-id", tp.global_num);
       }
   }
 
@@ -2420,7 +2419,7 @@ mi_cmd_trace_find (const char *command, const char *const *argv, int argc)
 	error (_("Could not find the specified line"));
 
       CORE_ADDR start_pc, end_pc;
-      if (sal.line > 0 && find_line_pc_range (sal, &start_pc, &end_pc))
+      if (sal.line > 0 && find_pc_range_for_sal (sal, &start_pc, &end_pc))
 	tfind_1 (tfind_range, 0, start_pc, end_pc - 1, 0);
       else
 	error (_("Could not find the specified line"));
@@ -2832,9 +2831,7 @@ mi_parse_thread_group_id (const char *id)
   return (int) num;
 }
 
-void _initialize_mi_main ();
-void
-_initialize_mi_main ()
+INIT_GDB_FILE (mi_main)
 {
   set_show_commands mi_async_cmds
     = add_setshow_boolean_cmd ("mi-async", class_run,

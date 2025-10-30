@@ -1200,7 +1200,7 @@ fix_new_hppa (fragS *frag,
     new_fix = fix_new_exp (frag, where, size, exp, pcrel, r_type);
   else
     new_fix = fix_new (frag, where, size, add_symbol, offset, pcrel, r_type);
-  new_fix->tc_fix_data = (void *) hppa_fix;
+  new_fix->tc_fix_data = hppa_fix;
   hppa_fix->fx_r_type = r_type;
   hppa_fix->fx_r_field = r_field;
   hppa_fix->fx_r_format = r_format;
@@ -1265,8 +1265,7 @@ cons_fix_new_hppa (fragS *frag, int where, int size, expressionS *exp,
       hppa_field_selector = e_fsel;
     }
 
-  fix_new_hppa (frag, where, size,
-		(symbolS *) NULL, (offsetT) 0, exp, 0, rel_type,
+  fix_new_hppa (frag, where, size, NULL, 0, exp, 0, rel_type,
 		hppa_field_selector, size * 8, 0, 0);
 }
 
@@ -1351,7 +1350,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
   if (fixp->fx_addsy == 0)
     return &no_relocs;
 
-  hppa_fixp = (struct hppa_fix_struct *) fixp->tc_fix_data;
+  hppa_fixp = fixp->tc_fix_data;
   gas_assert (hppa_fixp != 0);
   gas_assert (section != 0);
 
@@ -1447,7 +1446,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
 					    (bfd_reloc_code_real_type) code);
       reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
-      gas_assert (reloc->howto && (unsigned int) code == reloc->howto->type);
+      gas_assert (reloc->howto && code == reloc->howto->type);
       break;
     }
 #else /* OBJ_SOM */
@@ -1563,7 +1562,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
 
   if (fragP->fr_type == rs_machine_dependent)
     {
-      switch ((int) fragP->fr_subtype)
+      switch (fragP->fr_subtype)
 	{
 	case 0:
 	  fragP->fr_type = rs_fill;
@@ -1590,7 +1589,7 @@ valueT
 md_section_align (asection *segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
-  int align2 = (1 << align) - 1;
+  valueT align2 = ((valueT) 1 << align) - 1;
 
   return (size + align2) & ~align2;
 }
@@ -1726,7 +1725,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     fixP->fx_done = 1;
 
   /* There should be a HPPA specific fixup associated with the GAS fixup.  */
-  hppa_fixP = (struct hppa_fix_struct *) fixP->tc_fix_data;
+  hppa_fixP = fixP->tc_fix_data;
   if (hppa_fixP == NULL)
     {
       as_bad_where (fixP->fx_file, fixP->fx_line,
@@ -3210,7 +3209,7 @@ pa_ip (char *str)
     }
 
   /* Look up the opcode in the hash table.  */
-  if ((insn = (struct pa_opcode *) str_hash_find (op_hash, str)) == NULL)
+  if ((insn = str_hash_find (op_hash, str)) == NULL)
     {
       as_bad (_("Unknown opcode: `%s'"), str);
       return;
@@ -5762,7 +5761,7 @@ md_assemble (char *str)
 		  where = frag_more (0);
 		  u = UNWIND_LOW32 (&last_call_info->ci_unwind.descriptor);
 		  fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-				NULL, (offsetT) 0, NULL,
+				NULL, 0, NULL,
 				0, R_HPPA_ENTRY, e_fsel, 0, 0, u);
 		}
 #endif
@@ -5786,7 +5785,7 @@ md_assemble (char *str)
   /* If necessary output more stuff.  */
   if (the_insn.reloc != R_HPPA_NONE)
     fix_new_hppa (frag_now, (to - frag_now->fr_literal), 4, NULL,
-		  (offsetT) 0, &the_insn.exp, the_insn.pcrel,
+		  0, &the_insn.exp, the_insn.pcrel,
 		  (int) the_insn.reloc, the_insn.field_selector,
 		  the_insn.format, the_insn.arg_reloc, 0);
 
@@ -5856,7 +5855,7 @@ pa_brtab (int begin ATTRIBUTE_UNUSED)
   char *where = frag_more (0);
 
   fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-		NULL, (offsetT) 0, NULL,
+		NULL, 0, NULL,
 		0, begin ? R_HPPA_BEGIN_BRTAB : R_HPPA_END_BRTAB,
 		e_fsel, 0, 0, 0);
 #endif
@@ -5880,7 +5879,7 @@ pa_try (int begin ATTRIBUTE_UNUSED)
      the beginning and end of exception handling regions).  */
 
   fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-		NULL, (offsetT) 0, begin ? NULL : &exp,
+		NULL, 0, begin ? NULL : &exp,
 		0, begin ? R_HPPA_BEGIN_TRY : R_HPPA_END_TRY,
 		e_fsel, 0, 0, 0);
 #endif
@@ -6019,10 +6018,8 @@ pa_build_unwind_subspace (struct call_info *call_info)
 
   /* Relocation info. for start offset of the function.  */
   md_number_to_chars (p, 0, 4);
-  fix_new_hppa (frag_now, p - frag_now->fr_literal, 4,
-		symbolP, (offsetT) 0,
-		(expressionS *) NULL, 0, reloc,
-		e_fsel, 32, 0, 0);
+  fix_new_hppa (frag_now, p - frag_now->fr_literal, 4, symbolP, 0,
+		NULL, 0, reloc, e_fsel, 32, 0, 0);
 
   /* Relocation info. for end offset of the function.
 
@@ -6033,9 +6030,8 @@ pa_build_unwind_subspace (struct call_info *call_info)
      finished with its work.  */
   md_number_to_chars (p + 4, 0, 4);
   fix_new_hppa (frag_now, p + 4 - frag_now->fr_literal, 4,
-		call_info->end_symbol, (offsetT) 0,
-		(expressionS *) NULL, 0, reloc,
-		e_fsel, 32, 0, 0);
+		call_info->end_symbol, 0,
+		NULL, 0, reloc, e_fsel, 32, 0, 0);
 
   /* Dump the descriptor.  */
   unwind = UNWIND_LOW32 (&call_info->ci_unwind.descriptor);
@@ -6335,8 +6331,7 @@ pa_entry (int unused ATTRIBUTE_UNUSED)
       where = frag_more (0);
       u = UNWIND_LOW32 (&last_call_info->ci_unwind.descriptor);
       fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-		    NULL, (offsetT) 0, NULL,
-		    0, R_HPPA_ENTRY, e_fsel, 0, 0, u);
+		    NULL, 0, NULL, 0, R_HPPA_ENTRY, e_fsel, 0, 0, u);
     }
 #endif
 }
@@ -6494,8 +6489,7 @@ process_exit (void)
      if we split the unwind bits up between the relocations which
      denote the entry and exit points.  */
   fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-		NULL, (offsetT) 0,
-		NULL, 0, R_HPPA_EXIT, e_fsel, 0, 0,
+		NULL, 0, NULL, 0, R_HPPA_EXIT, e_fsel, 0, 0,
 		UNWIND_HIGH32 (&last_call_info->ci_unwind.descriptor));
 #endif
 }
@@ -6621,7 +6615,7 @@ pa_type_args (symbolS *symbolP, int is_export)
      than BFD understands.  This is how we get this information
      to the SOM BFD backend.  */
 #ifdef obj_set_symbol_type
-  obj_set_symbol_type (bfdsym, (int) type);
+  obj_set_symbol_type (bfdsym, type);
 #else
   (void) type;
 #endif
@@ -7011,8 +7005,8 @@ pa_procend (int unused ATTRIBUTE_UNUSED)
 		  where = frag_more (0);
 		  u = UNWIND_LOW32 (&last_call_info->ci_unwind.descriptor);
 		  fix_new_hppa (frag_now, where - frag_now->fr_literal, 0,
-				NULL, (offsetT) 0, NULL,
-				0, R_HPPA_ENTRY, e_fsel, 0, 0, u);
+				NULL, 0, NULL, 0, R_HPPA_ENTRY, e_fsel,
+				0, 0, u);
 		}
 #endif
 	    }
@@ -7554,7 +7548,6 @@ pa_subspace (int create_new)
       /* Now that all the flags are set, update an existing subspace,
 	 or create a new one.  */
       if (ssd)
-
 	current_subspace = update_subspace (space, ss_name, loadable,
 					    code_only, comdat, common,
 					    dup_common, sort, zero, access_ctr,
@@ -7979,7 +7972,7 @@ pa_subsegment_to_subspace (asection *seg, subsegT subseg)
 	  for (subspace_chain = space_chain->sd_subspaces;
 	       subspace_chain;
 	       subspace_chain = subspace_chain->ssd_next)
-	    if (subspace_chain->ssd_subseg == (int) subseg)
+	    if (subspace_chain->ssd_subseg == subseg)
 	      return subspace_chain;
 	}
     }
@@ -8317,7 +8310,7 @@ hppa_fix_adjustable (fixS *fixp)
 #endif
   struct hppa_fix_struct *hppa_fix;
 
-  hppa_fix = (struct hppa_fix_struct *) fixp->tc_fix_data;
+  hppa_fix = fixp->tc_fix_data;
 
 #ifdef OBJ_ELF
   /* LR/RR selectors are implicitly used for a number of different relocation
@@ -8436,14 +8429,14 @@ hppa_force_relocation (struct fix *fixp)
 {
   struct hppa_fix_struct *hppa_fixp;
 
-  hppa_fixp = (struct hppa_fix_struct *) fixp->tc_fix_data;
+  hppa_fixp = fixp->tc_fix_data;
 #ifdef OBJ_SOM
-  if (fixp->fx_r_type == (int) R_HPPA_ENTRY
-      || fixp->fx_r_type == (int) R_HPPA_EXIT
-      || fixp->fx_r_type == (int) R_HPPA_BEGIN_BRTAB
-      || fixp->fx_r_type == (int) R_HPPA_END_BRTAB
-      || fixp->fx_r_type == (int) R_HPPA_BEGIN_TRY
-      || fixp->fx_r_type == (int) R_HPPA_END_TRY
+  if (fixp->fx_r_type == R_HPPA_ENTRY
+      || fixp->fx_r_type == R_HPPA_EXIT
+      || fixp->fx_r_type == R_HPPA_BEGIN_BRTAB
+      || fixp->fx_r_type == R_HPPA_END_BRTAB
+      || fixp->fx_r_type == R_HPPA_BEGIN_TRY
+      || fixp->fx_r_type == R_HPPA_END_TRY
       || (fixp->fx_addsy != NULL && fixp->fx_subsy != NULL
 	  && (hppa_fixp->segment->flags & SEC_CODE) != 0))
     return 1;
@@ -8545,7 +8538,7 @@ pa_vtable_entry (int ignore ATTRIBUTE_UNUSED)
       hppa_fix->fx_r_format = 32;
       hppa_fix->fx_arg_reloc = 0;
       hppa_fix->segment = now_seg;
-      new_fix->tc_fix_data = (void *) hppa_fix;
+      new_fix->tc_fix_data = hppa_fix;
       new_fix->fx_r_type = (int) R_PARISC_GNU_VTENTRY;
     }
 }
@@ -8566,7 +8559,7 @@ pa_vtable_inherit (int ignore ATTRIBUTE_UNUSED)
       hppa_fix->fx_r_format = 32;
       hppa_fix->fx_arg_reloc = 0;
       hppa_fix->segment = now_seg;
-      new_fix->tc_fix_data = (void *) hppa_fix;
+      new_fix->tc_fix_data = hppa_fix;
       new_fix->fx_r_type = (int) R_PARISC_GNU_VTINHERIT;
     }
 }

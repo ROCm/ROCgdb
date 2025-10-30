@@ -22,6 +22,7 @@
 
 #include "sysdep.h"
 #include "bfd.h"
+#include "libbfd.h"
 
 #define TARGET_SYM		x86_64_pei_vec
 #define TARGET_NAME		"pei-x86-64"
@@ -51,6 +52,8 @@
   COFF_ALIGNMENT_FIELD_EMPTY, COFF_ALIGNMENT_FIELD_EMPTY, 4 }, \
 { COFF_SECTION_NAME_PARTIAL_MATCH (".idata"), \
   COFF_ALIGNMENT_FIELD_EMPTY, COFF_ALIGNMENT_FIELD_EMPTY, 2 }, \
+{ COFF_SECTION_NAME_PARTIAL_MATCH (".didat"), \
+  COFF_ALIGNMENT_FIELD_EMPTY, COFF_ALIGNMENT_FIELD_EMPTY, 2 }, \
 { COFF_SECTION_NAME_EXACT_MATCH (".pdata"), \
   COFF_ALIGNMENT_FIELD_EMPTY, COFF_ALIGNMENT_FIELD_EMPTY, 2 }, \
 { COFF_SECTION_NAME_PARTIAL_MATCH (".debug"), \
@@ -58,9 +61,6 @@
 { COFF_SECTION_NAME_PARTIAL_MATCH (".gnu.linkonce.wi."), \
   COFF_ALIGNMENT_FIELD_EMPTY, COFF_ALIGNMENT_FIELD_EMPTY, 0 }
 
-#include "sysdep.h"
-#include "bfd.h"
-#include "libbfd.h"
 #include "coff/x86_64.h"
 #include "coff/internal.h"
 #include "coff/pe.h"

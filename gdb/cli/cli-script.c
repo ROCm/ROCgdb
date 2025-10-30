@@ -19,7 +19,6 @@
 
 #include "event-top.h"
 #include "value.h"
-#include <ctype.h>
 
 #include "ui-out.h"
 #include "top.h"
@@ -829,7 +828,7 @@ locate_arg (const char *p)
   while ((p = strchr (p, '$')))
     {
       if (startswith (p, "$arg")
-	  && (isdigit (p[4]) || p[4] == 'c'))
+	  && (c_isdigit (p[4]) || p[4] == 'c'))
 	return p;
       p++;
     }
@@ -932,7 +931,7 @@ line_first_arg (const char *p)
 {
   const char *first_arg = p + find_command_name_length (p);
 
-  return skip_spaces (first_arg); 
+  return skip_spaces (first_arg);
 }
 
 /* Process one input line.  If the command is an "end", return such an
@@ -1324,9 +1323,9 @@ validate_comname (const char **comname)
 
   /* Find the last word of the argument.  */
   p = *comname + strlen (*comname);
-  while (p > *comname && isspace (p[-1]))
+  while (p > *comname && c_isspace (p[-1]))
     p--;
-  while (p > *comname && !isspace (p[-1]))
+  while (p > *comname && !c_isspace (p[-1]))
     p--;
   last_word = p;
 
@@ -1384,7 +1383,7 @@ do_define_command (const char *comname, int from_tty,
   const char *comfull;
   int  hook_type      = CMD_NO_HOOK;
   int  hook_name_size = 0;
-   
+
 #define	HOOK_STRING	"hook-"
 #define	HOOK_LEN 5
 #define HOOK_POST_STRING "hookpost-"
@@ -1751,9 +1750,7 @@ show_user_1 (struct cmd_list_element *c, const char *prefix, const char *name,
 
 }
 
-void _initialize_cli_script ();
-void
-_initialize_cli_script ()
+INIT_GDB_FILE (cli_script)
 {
   struct cmd_list_element *c;
 

@@ -659,8 +659,8 @@ display_utf8 (const unsigned char * in, char * out, unsigned int * consumed)
 
 	case 4:
 	  out += sprintf (out, "\\u%02x%02x%02x",
-		  ((in[0] & 0x07) << 6) | ((in[1] & 0x3c) >> 2),
-		  ((in[1] & 0x03) << 6) | ((in[2] & 0x3c) >> 2),
+		  ((in[0] & 0x07) << 2) | ((in[1] & 0x30) >> 4),
+		  ((in[1] & 0x0f) << 4) | ((in[2] & 0x3c) >> 2),
 		  ((in[2] & 0x03) << 6) | ((in[3] & 0x3f)));
 	  break;
 	default:
@@ -1106,6 +1106,9 @@ remove_useless_symbols (asymbol **symbols, long count)
       if (bfd_is_und_section (sym->section)
 	  || bfd_is_com_section (sym->section))
 	continue;
+      if (strstr (sym->name, "gnu_compiled")
+	  || strstr (sym->name, "gcc2_compiled"))
+	continue;
 
       *out_ptr++ = sym;
     }
@@ -1170,18 +1173,6 @@ compare_symbols (const void *ap, const void *bp)
   bn = bfd_asymbol_name (b);
   anl = strlen (an);
   bnl = strlen (bn);
-
-  /* The symbols gnu_compiled and gcc2_compiled convey no real
-     information, so put them after other symbols with the same value.  */
-  af = (strstr (an, "gnu_compiled") != NULL
-	|| strstr (an, "gcc2_compiled") != NULL);
-  bf = (strstr (bn, "gnu_compiled") != NULL
-	|| strstr (bn, "gcc2_compiled") != NULL);
-
-  if (af && ! bf)
-    return 1;
-  if (! af && bf)
-    return -1;
 
   /* We use a heuristic for the file name, to try to sort it after
      more useful symbols.  It may not work on non Unix systems, but it
@@ -4092,11 +4083,7 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 	  || sym == NULL
 	  || sym->section != section
 	  || bfd_asymbol_value (sym) > addr
-	  || ((sym->flags & BSF_OBJECT) == 0
-	      && (strstr (bfd_asymbol_name (sym), "gnu_compiled")
-		  == NULL)
-	      && (strstr (bfd_asymbol_name (sym), "gcc2_compiled")
-		  == NULL))
+	  || (sym->flags & BSF_OBJECT) == 0
 	  || (sym->flags & BSF_FUNCTION) != 0)
 	insns = true;
       else
@@ -4498,6 +4485,10 @@ dump_dwarf_section (bfd *abfd, asection *section,
   else
     match = name;
 
+  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour
+      && elf_section_type (section) == SHT_GNU_SFRAME)
+    match = ".sframe";
+
   for (i = 0; i < max; i++)
     if ((strcmp (debug_displays [i].section.uncompressed_name, match) == 0
 	 || strcmp (debug_displays [i].section.compressed_name, match) == 0
@@ -4551,8 +4542,8 @@ dump_dwarf (bfd *abfd, bool is_mainfile)
       break;
     }
 
-  init_dwarf_regnames_by_bfd_arch_and_mach (bfd_get_arch (abfd),
-					    bfd_get_mach (abfd));
+  init_dwarf_by_bfd_arch_and_mach (bfd_get_arch (abfd),
+				   bfd_get_mach (abfd));
 
   bfd_map_over_sections (abfd, dump_dwarf_section, (void *) &is_mainfile);
 }
@@ -4987,44 +4978,33 @@ dump_ctf (bfd *abfd ATTRIBUTE_UNUSED, const char *sect_name ATTRIBUTE_UNUSED,
 #endif
 
 static void
-dump_section_sframe (bfd *abfd ATTRIBUTE_UNUSED,
-		     const char * sect_name)
+dump_sframe_section (bfd *abfd, const char *sect_name, bool is_mainfile)
+
 {
-  asection *sec;
-  sframe_decoder_ctx *sfd_ctx = NULL;
-  bfd_size_type sf_size;
-  bfd_byte *sframe_data;
-  bfd_vma sf_vma;
-  int err = 0;
-
-  if (sect_name == NULL)
-    sect_name = ".sframe";
-
-  sec = read_section (abfd, sect_name, &sframe_data);
-  if (sec == NULL)
+  /* Error checking for user provided SFrame section name, if any.  */
+  if (sect_name)
     {
-      my_bfd_nonfatal (bfd_get_filename (abfd));
-      return;
+      asection *sec = bfd_get_section_by_name (abfd, sect_name);
+      if (sec == NULL)
+	{
+	  printf (_("No %s section present\n\n"), sanitize_string (sect_name));
+	  return;
+	}
+      /* Starting with Binutils 2.45, SFrame sections have section type
+	 SHT_GNU_SFRAME.  For SFrame sections from Binutils 2.44 or earlier,
+	 check explcitly for SFrame sections of type SHT_PROGBITS and name
+	 ".sframe" to allow them.  */
+      else if (bfd_get_flavour (abfd) != bfd_target_elf_flavour
+	       || (elf_section_type (sec) != SHT_GNU_SFRAME
+		   && !(elf_section_type (sec) == SHT_PROGBITS
+			&& strcmp (sect_name, ".sframe") == 0)))
+	{
+	  printf (_("Section %s does not contain SFrame data\n\n"),
+		  sanitize_string (sect_name));
+	  return;
+	}
     }
-  sf_size = bfd_section_size (sec);
-  sf_vma = bfd_section_vma (sec);
-
-  /* Decode the contents of the section.  */
-  sfd_ctx = sframe_decode ((const char*)sframe_data, sf_size, &err);
-  if (!sfd_ctx)
-    {
-      my_bfd_nonfatal (bfd_get_filename (abfd));
-      free (sframe_data);
-      return;
-    }
-
-  printf (_("Contents of the SFrame section %s:"),
-	  sanitize_string (sect_name));
-  /* Dump the contents as text.  */
-  dump_sframe (sfd_ctx, sf_vma);
-
-  sframe_decoder_free (&sfd_ctx);
-  free (sframe_data);
+  dump_dwarf (abfd, is_mainfile);
 }
 
 
@@ -5846,7 +5826,7 @@ dump_bfd (bfd *abfd, bool is_mainfile)
 	dump_ctf (abfd, dump_ctf_section_name, dump_ctf_parent_name,
 		  dump_ctf_parent_section_name);
       if (dump_sframe_section_info)
-	dump_section_sframe (abfd, dump_sframe_section_name);
+	dump_sframe_section (abfd, dump_sframe_section_name, is_mainfile);
       if (dump_stab_section_info)
 	dump_stabs (abfd);
       if (dump_reloc_info && ! disassemble)
@@ -6310,7 +6290,9 @@ main (int argc, char **argv)
 	  seenflag = true;
 	  if (optarg)
 	    {
-	      if (dwarf_select_sections_by_names (optarg))
+	      if (strcmp (optarg, "sframe-internal-only") == 0)
+		warn (_("Unrecognized debug option 'sframe-internal-only'\n"));
+	      else if (dwarf_select_sections_by_names (optarg))
 		dump_dwarf_section_info = true;
 	    }
 	  else
@@ -6351,8 +6333,17 @@ main (int argc, char **argv)
 #endif
 	case OPTION_SFRAME:
 	  dump_sframe_section_info = true;
+
 	  if (optarg)
 	    dump_sframe_section_name = xstrdup (optarg);
+	  else
+	    dump_sframe_section_name = ".sframe";
+
+	  /* Error checking for dump_sframe_section_name is done in
+	     dump_sframe_section ().  Initialize for now with the default
+	     internal name: "sframe-internal-only".  */
+	  dwarf_select_sections_by_names ("sframe-internal-only");
+
 	  seenflag = true;
 	  break;
 	case 'G':

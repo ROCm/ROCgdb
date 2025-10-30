@@ -16,6 +16,8 @@
 standard_testfile
 set executable ${testfile}
 
+require allow_multi_inferior_tests
+
 # Multiple inferiors are needed, therefore both native and extended gdbserver
 # modes are supported.  Only non-extended gdbserver is not supported.
 require !use_gdb_stub
@@ -36,7 +38,7 @@ gdb_test_no_output "set breakpoint always-inserted on"
 # displaced-stepping is also needed as other GDB sometimes still removes the
 # breakpoints, even with always-inserted on.
 # Without the support this test just is not as thorough as it could be.
-if [support_displaced_stepping] {
+if {[support_displaced_stepping]} {
     gdb_test_no_output "set displaced-stepping on"
 }
 

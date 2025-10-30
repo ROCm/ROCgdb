@@ -466,7 +466,6 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
   static unsigned long label_count = 0;
   char buf[40];
 
-  subseg_change (sec, 0);
   if (fragP->fr_subtype == 0)
     {
       fix_new (fragP, fragP->fr_fix + 1, 1, fragP->fr_symbol,
@@ -902,7 +901,7 @@ md_section_align (asection *seg, valueT addr)
 {
   int align = bfd_section_alignment (seg);
 
-  return ((addr + (1 << align) - 1) & -(1 << align));
+  return (addr + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 void
@@ -923,7 +922,7 @@ md_begin (void)
     {
       if (strcmp (prev_name, op->name))
 	{
-	  prev_name = (char *) op->name;
+	  prev_name = op->name;
 	  str_hash_insert (mn10300_hash, op->name, op, 0);
 	}
       op++;
@@ -1103,7 +1102,7 @@ check_operand (const struct mn10300_operand *operand,
 
       test = val;
 
-      if (test < (offsetT) min || test > (offsetT) max)
+      if (test < min || test > max)
 	return false;
     }
   return true;
@@ -1146,8 +1145,9 @@ mn10300_insert_operand (unsigned long *insnp,
 
       test = val;
 
-      if (test < (offsetT) min || test > (offsetT) max)
-	as_warn_value_out_of_range (_("operand"), test, (offsetT) min, (offsetT) max, file, line);
+      if (test < min || test > max)
+	as_warn_value_out_of_range (_("operand"), test, (offsetT) min,
+				    (offsetT) max, file, line);
     }
 
   if ((operand->flags & MN10300_OPERAND_SPLIT) != 0)
@@ -1209,20 +1209,20 @@ mn10300_insert_operand (unsigned long *insnp,
     }
   else if ((operand->flags & MN10300_OPERAND_EXTENDED) == 0)
     {
-      *insnp |= (((long) val & ((1 << operand->bits) - 1))
+      *insnp |= ((val & ((1 << operand->bits) - 1))
 		 << (operand->shift + shift));
 
       if ((operand->flags & MN10300_OPERAND_REPEATED) != 0)
-	*insnp |= (((long) val & ((1 << operand->bits) - 1))
+	*insnp |= ((val & ((1 << operand->bits) - 1))
 		   << (operand->shift + shift + operand->bits));
     }
   else
     {
-      *extensionp |= (((long) val & ((1 << operand->bits) - 1))
+      *extensionp |= ((val & ((1 << operand->bits) - 1))
 		      << (operand->shift + shift));
 
       if ((operand->flags & MN10300_OPERAND_REPEATED) != 0)
-	*extensionp |= (((long) val & ((1 << operand->bits) - 1))
+	*extensionp |= ((val & ((1 << operand->bits) - 1))
 			<< (operand->shift + shift + operand->bits));
     }
 }
@@ -1247,7 +1247,7 @@ md_assemble (char *str)
     *s++ = '\0';
 
   /* Find the first opcode with the proper name.  */
-  opcode = (struct mn10300_opcode *) str_hash_find (mn10300_hash, str);
+  opcode = str_hash_find (mn10300_hash, str);
   if (opcode == NULL)
     {
       as_bad (_("Unrecognized opcode: `%s'"), str);
@@ -2145,7 +2145,7 @@ md_assemble (char *str)
 
 	      fixP = fix_new_exp (frag_now, f - frag_now->fr_literal + offset,
 				  reloc_size / 8, &fixups[i].exp, pcrel,
-				  ((bfd_reloc_code_real_type) reloc));
+				  reloc);
 
 	      if (pcrel)
 		fixP->fx_offset += offset;
@@ -2312,7 +2312,7 @@ md_estimate_size_before_relax (fragS *fragp, asection *seg)
 long
 md_pcrel_from (fixS *fixp)
 {
-  if (fixp->fx_addsy != (symbolS *) NULL
+  if (fixp->fx_addsy != NULL
       && (!S_IS_DEFINED (fixp->fx_addsy) || S_IS_WEAK (fixp->fx_addsy)))
     /* The symbol is undefined or weak.  Let the linker figure it out.  */
     return 0;
@@ -2325,7 +2325,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 {
   char * fixpos = fixP->fx_where + fixP->fx_frag->fr_literal;
   int size = 0;
-  int value = (int) * valP;
+  int value = *valP;
 
   gas_assert (fixP->fx_r_type < BFD_RELOC_UNUSED);
 

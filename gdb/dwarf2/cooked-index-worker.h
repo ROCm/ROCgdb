@@ -25,11 +25,9 @@
 #include "dwarf2/cooked-index-shard.h"
 #include "dwarf2/types.h"
 #include "dwarf2/read.h"
-
-#if CXX_STD_THREAD
-#include <mutex>
-#include <condition_variable>
-#endif /* CXX_STD_THREAD */
+#include "maint.h"
+#include "run-on-main-thread.h"
+#include "gdbsupport/cxx-thread.h"
 
 using cutu_reader_up = std::unique_ptr<cutu_reader>;
 
@@ -85,6 +83,13 @@ public:
 			 name, parent_entry, per_cu);
   }
 
+  /* Add a copy of NAME to the index.  Return a pointer to the
+     copy.  */
+  const char *add (std::string_view name)
+  {
+    return m_shard->add (name);
+  }
+
   /* Install the current addrmap into the shard being constructed,
      then transfer ownership of the index to the caller.  */
   cooked_index_shard_up release_shard ()
@@ -99,6 +104,12 @@ public:
   addrmap_mutable *get_addrmap ()
   {
     return &m_addrmap;
+  }
+
+  /* Set the mutable addrmap.  */
+  void set_addrmap (addrmap_mutable new_map)
+  {
+    m_addrmap = std::move (new_map);
   }
 
   /* Return the parent_map that is currently being created.  */
@@ -208,7 +219,7 @@ enum class cooked_state
 
    This is an abstract base class that defines the basic behavior of
    scanners.  Separate concrete implementations exist for scanning
-   .debug_names and .debug_info.  */
+   .debug_names, .gdb_index, and .debug_info.  */
 
 class cooked_index_worker
 {
@@ -216,8 +227,12 @@ public:
 
   explicit cooked_index_worker (dwarf2_per_objfile *per_objfile)
     : m_per_objfile (per_objfile),
-      m_cache_store (global_index_cache, per_objfile->per_bfd)
-  { }
+      m_cache_store (global_index_cache, per_objfile->per_bfd),
+      m_per_command_time (per_command_time)
+  {
+    /* Make sure we capture per_command_time from the main thread.  */
+    gdb_assert (is_main_thread ());
+  }
   virtual ~cooked_index_worker ()
   { }
   DISABLE_COPY_AND_ASSIGN (cooked_index_worker);
@@ -277,8 +292,14 @@ protected:
 
   /* The per-objfile object.  */
   dwarf2_per_objfile *m_per_objfile;
+
   /* Result of each worker task.  */
   std::vector<cooked_index_worker_result> m_results;
+
+  /* Mutex to synchronize access to M_RESULTS when workers append their
+     result.  */
+  gdb::mutex m_results_mutex;
+
   /* Any warnings emitted.  For the time being at least, this only
      needed in do_reading, not in every worker.  Note that
      deferred_warnings uses gdb_stderr in its constructor, and this
@@ -290,13 +311,12 @@ protected:
      parent relationships.  */
   parent_map_map m_all_parents_map;
 
-#if CXX_STD_THREAD
   /* Current state of this object.  */
   cooked_state m_state = cooked_state::INITIAL;
   /* Mutex and condition variable used to synchronize.  */
-  std::mutex m_mutex;
-  std::condition_variable m_cond;
-#endif /* CXX_STD_THREAD */
+  gdb::mutex m_mutex;
+  gdb::condition_variable m_cond;
+
   /* This flag indicates whether any complaints or exceptions that
      arose during scanning have been reported by 'wait'.  This may
      only be modified on the main thread.  */
@@ -307,6 +327,9 @@ protected:
   std::optional<gdb_exception> m_failed;
   /* An object used to write to the index cache.  */
   index_cache_store_context m_cache_store;
+
+  /* Captured value of per_command_time.  */
+  bool m_per_command_time;
 };
 
 using cooked_index_worker_up = std::unique_ptr<cooked_index_worker>;

@@ -140,15 +140,15 @@ proc test_one_sig_reverse {prevsig} {
 	    } else {
 		xfail "$testmsg (handled)"
 	    }
-	}	    
+	}
     }
 }
 
-clean_restart $binfile
+clean_restart $::testfile
 
 runto gen_ABRT
 
-if [supports_process_record] {
+if {[supports_process_record]} {
     # Activate process record/replay
     gdb_test_no_output "record" "turn on process record"
 }

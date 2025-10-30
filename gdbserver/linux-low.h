@@ -42,7 +42,12 @@ enum regset_type {
   GENERAL_REGS,
   FP_REGS,
   EXTENDED_REGS,
-  OPTIONAL_REGS, /* Do not error if the regset cannot be accessed.  */
+  OPTIONAL_REGS, /* Do not error if the regset cannot be accessed.
+		    Disable the regset instead.  */
+  OPTIONAL_RUNTIME_REGS, /* Some optional regsets can only be accessed
+			    dependent on the execution flow.  For such
+			    access errors don't show a warning and don't
+			    disable the regset.  */
 };
 
 /* The arch's regsets array initializer must be terminated with a NULL
@@ -304,6 +309,8 @@ public:
   int multifs_open (int pid, const char *filename, int flags,
 		    mode_t mode) override;
 
+  int multifs_lstat (int pid, const char *filename, struct stat *st) override;
+
   int multifs_unlink (int pid, const char *filename) override;
 
   ssize_t multifs_readlink (int pid, const char *filename, char *buf,
@@ -555,7 +562,7 @@ private:
   process_info *add_linux_process_no_mem_file (int pid, int attached);
 
   /* Free resources associated to PROC and remove it.  */
-  void remove_linux_process (process_info *proc); 
+  void remove_linux_process (process_info *proc);
 
   /* Add a new thread.  */
   lwp_info *add_lwp (ptid_t ptid);

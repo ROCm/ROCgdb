@@ -661,6 +661,87 @@ proc strip_test_with_saving_a_symbol { } {
 
 strip_test_with_saving_a_symbol
 
+# Test stripping an archive.
+
+proc strip_test_archive { } {
+    global AR
+    global CC
+    global STRIP
+    global srcdir
+    global subdir
+
+    set test "strip -g on archive"
+
+    if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog.o object debug] != "" } {
+	untested $test
+	return
+    }
+
+    set stripobjfile tmpdir/striptestprog.o
+    set stripobjarchive testprog.o
+    if [is_remote host] {
+	set archive libstrip.a
+	set objfile [remote_download host tmpdir/testprog.o]
+	remote_file host delete $archive
+	remote_file host delete $stripobjfile
+	remote_file host delete $stripobjarchive
+    } else {
+	set archive tmpdir/libstrip.a
+	set objfile tmpdir/testprog.o
+	remote_file build delete $stripobjfile
+	remote_file build delete $stripobjarchive
+    }
+
+    remote_file build delete tmpdir/libstrip.a
+
+    set exec_output [binutils_run $STRIP "-g -o $stripobjfile $objfile"]
+    set exec_output [prune_warnings $exec_output]
+    if ![string equal "" $exec_output] {
+	fail $test
+	return
+    }
+
+    set exec_output [binutils_run $AR "rc $archive ${objfile}"]
+    set exec_output [prune_warnings $exec_output]
+    if ![string equal "" $exec_output] {
+	fail $test
+	return
+    }
+
+    set exec_output [binutils_run $STRIP "-g $archive"]
+    set exec_output [prune_warnings $exec_output]
+    if ![string equal "" $exec_output] {
+	fail $test
+	return
+    }
+
+    set exec_output [binutils_run $AR "x $archive"]
+    set exec_output [prune_warnings $exec_output]
+    if ![string equal "" $exec_output] {
+	fail $test
+	return
+    }
+
+    if [is_remote host] {
+	set stripobjfile [remote_download host $stripobjfile]
+	set stripobjarchive [remote_download host $stripobjarchive]
+    }
+
+    send_log "cmp $stripobjarchive $stripobjfile\n"
+    verbose "cmp $stripobjarchive $stripobjfile"
+    set status [remote_exec build cmp "$stripobjarchive $stripobjfile"]
+    set exec_output [lindex $status 1]
+    set exec_output [prune_warnings $exec_output]
+
+    if [string equal "" $exec_output] then {
+	pass $test
+    } else {
+	fail $test
+    }
+}
+
+strip_test_archive
+
 # Build a final executable.
 
 set exe [exeext]
@@ -1212,7 +1293,7 @@ proc objcopy_test_elf_common_symbols {} {
 # ia64 specific tests
 if { ([istarget "ia64-*-elf*"]
        || [istarget "ia64-*-linux*"]) } {
-    objcopy_test "ia64 link order" link-order.s object "" ""
+    objcopy_test "ia64 link order" link-order.s object "-x" ""
 }
 
 # ELF specific tests
@@ -1232,6 +1313,7 @@ if [is_elf_format] {
     run_dump_test "group-7b"
     run_dump_test "group-7c"
     run_dump_test "copy-1"
+    run_dump_test "copy-7"
     run_dump_test "note-1"
     # Use copytest.o from the note-1 test to determine ELF32 or ELF64
     if [is_elf64 tmpdir/copytest.o] {
@@ -1381,18 +1463,23 @@ proc objcopy_test_without_global_symbol { } {
     global OBJDUMPFLAGS
     global srcdir
     global subdir
+    global CFLAGS_FOR_TARGET
 
     set test "strip without global symbol "
 
-    if { [target_compile $srcdir/$subdir/pr19547.c tmpdir/pr19547.o object debug] != "" } {
+    set opts "debug"
+    if [string match "*-fsanitize=*" $CFLAGS_FOR_TARGET] {
+	append opts " additional_flags=-fno-sanitize=all"
+    }
+
+    set objfile tmpdir/pr19547.o
+    if { [target_compile $srcdir/$subdir/pr19547.c $objfile object $opts] != "" } {
 	untested $test
 	return
     }
 
     if [is_remote host] {
-	set objfile [remote_download host tmpdir/pr19547.o]
-    } else {
-	set objfile tmpdir/pr19547.o
+	set objfile [remote_download host $objfile]
     }
 
     set exec_output [binutils_run $OBJCOPY "$OBJCOPYFLAGS --strip-unneeded $objfile"]
@@ -1485,3 +1572,33 @@ if { ![is_xcoff_format] } {
 }
 
 run_dump_test "rename-section-01"
+
+proc objcopy_tek2bin {} {
+    global OBJCOPY
+    global OBJDUMP
+    global srcdir
+    global subdir
+
+    set tek $srcdir/$subdir/tek2.obj
+    set out tmpdir/tek2bin
+    if [is_remote host] {
+	set tek [remote_download host $tek]
+	set out tek2bin
+    }
+
+    set got [binutils_run $OBJCOPY "-O binary $tek $out"]
+    if ![string equal "" $got] then {
+	send_log "$got\n"
+	fail "objcopy tek2bin"
+    } else {
+	set got [binutils_run $OBJDUMP "-s -b binary $out"]
+	if {![regexp ".* 0000 000031 .*" $got]} {
+	    fail "objcopy tek2bin (objdump)"
+	} else {
+	    pass "objcopy tek2bin"
+	}
+    }
+    remote_file host delete $out
+}
+
+objcopy_tek2bin

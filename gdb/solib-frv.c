@@ -18,7 +18,6 @@
 
 
 #include "extract-store-integer.h"
-#include "gdbcore.h"
 #include "solib.h"
 #include "frv-tdep.h"
 #include "objfiles.h"
@@ -26,6 +25,29 @@
 #include "elf/frv.h"
 #include "gdb_bfd.h"
 #include "inferior.h"
+#include "solib-frv.h"
+#include "gdbcore.h"
+
+/* solib_ops for FR-V systems.  */
+
+struct frv_solib_ops : public solib_ops
+{
+  using solib_ops::solib_ops;
+
+  void relocate_section_addresses (solib &so, target_section *) const override;
+  void clear_solib (program_space *pspace) const override;
+  void create_inferior_hook (int from_tty) const override;
+  owning_intrusive_list<solib> current_sos () const override;
+  bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
+};
+
+/* See solib-frv.h.  */
+
+solib_ops_up
+make_frv_solib_ops (program_space *pspace)
+{
+  return std::make_unique<frv_solib_ops> (pspace);
+}
 
 /* FR-V pointers are four bytes wide.  */
 enum { FRV_PTR_SIZE = 4 };
@@ -197,6 +219,13 @@ struct ext_link_map
 
 struct lm_info_frv final : public lm_info
 {
+  lm_info_frv (int_elf32_fdpic_loadmap *map, CORE_ADDR got_value,
+	       CORE_ADDR lm_addr)
+    : map (map), got_value (got_value), lm_addr (lm_addr)
+  {}
+
+  DISABLE_COPY_AND_ASSIGN (lm_info_frv);
+
   ~lm_info_frv ()
   {
     xfree (this->map);
@@ -205,11 +234,11 @@ struct lm_info_frv final : public lm_info
   }
 
   /* The loadmap, digested into an easier to use form.  */
-  int_elf32_fdpic_loadmap *map = NULL;
+  int_elf32_fdpic_loadmap *map;
   /* The GOT address for this link map entry.  */
-  CORE_ADDR got_value = 0;
+  CORE_ADDR got_value;
   /* The link map address, needed for frv_fetch_objfile_link_map().  */
-  CORE_ADDR lm_addr = 0;
+  CORE_ADDR lm_addr;
 
   /* Cached dynamic symbol table and dynamic relocs initialized and
      used only by find_canonical_descriptor_in_load_object().
@@ -293,11 +322,8 @@ lm_base (void)
   return lm_base_cache;
 }
 
-
-/* Implement the "current_sos" solib_ops method.  */
-
-static owning_intrusive_list<solib>
-frv_current_sos ()
+owning_intrusive_list<solib>
+frv_solib_ops::current_sos () const
 {
   bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
   CORE_ADDR lm_addr, mgot;
@@ -316,7 +342,7 @@ frv_current_sos ()
      solib_create_inferior_hook().   (See post_create_inferior() in
      infcmd.c.)  */
   if (main_executable_lm_info == 0
-      && current_program_space->core_bfd () != nullptr)
+      && get_inferior_core_bfd (current_inferior ()) != nullptr)
     frv_relocate_main_executable ();
 
   /* Fetch the GOT corresponding to the main executable.  */
@@ -367,13 +393,6 @@ frv_current_sos ()
 	      break;
 	    }
 
-	  auto &sop = sos.emplace_back ();
-	  auto li = std::make_unique<lm_info_frv> ();
-	  li->map = loadmap;
-	  li->got_value = got_addr;
-	  li->lm_addr = lm_addr;
-	  sop.lm_info = std::move (li);
-
 	  /* Fetch the name.  */
 	  addr = extract_unsigned_integer (lm_buf.l_name,
 					   sizeof (lm_buf.l_name),
@@ -385,11 +404,12 @@ frv_current_sos ()
 
 	  if (name_buf == nullptr)
 	    warning (_("Can't read pathname for link map entry."));
-	  else
-	    {
-	      sop.name = name_buf.get ();
-	      sop.original_name = sop.name;
-	    }
+
+	  sos.emplace_back (std::make_unique<lm_info_frv> (loadmap, got_addr,
+							   lm_addr),
+			    name_buf != nullptr ? name_buf.get () : "",
+			    name_buf != nullptr ? name_buf.get () : "",
+			    *this);
 	}
       else
 	{
@@ -414,8 +434,8 @@ static CORE_ADDR interp_text_sect_high;
 static CORE_ADDR interp_plt_sect_low;
 static CORE_ADDR interp_plt_sect_high;
 
-static bool
-frv_in_dynsym_resolve_code (CORE_ADDR pc)
+bool
+frv_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
 {
   return ((pc >= interp_text_sect_low && pc < interp_text_sect_high)
 	  || (pc >= interp_plt_sect_low && pc < interp_plt_sect_high)
@@ -725,23 +745,22 @@ frv_relocate_main_executable (void)
     error (_("Unable to load the executable's loadmap."));
 
   delete main_executable_lm_info;
-  main_executable_lm_info = new lm_info_frv;
-  main_executable_lm_info->map = ldm;
+  main_executable_lm_info = new lm_info_frv (ldm, 0, 0);
 
   objfile *objf = current_program_space->symfile_object_file;
   section_offsets new_offsets (objf->section_offsets.size ());
   changed = 0;
 
-  for (obj_section *osect : objf->sections ())
+  for (obj_section &osect : objf->sections ())
     {
       CORE_ADDR orig_addr, addr, offset;
       int osect_idx;
       int seg;
-      
-      osect_idx = osect - objf->sections_start;
+
+      osect_idx = &osect - objf->sections_start;
 
       /* Current address of section.  */
-      addr = osect->addr ();
+      addr = osect.addr ();
       /* Offset from where this section started.  */
       offset = objf->section_offsets[osect_idx];
       /* Original address prior to any past relocations.  */
@@ -776,8 +795,8 @@ frv_relocate_main_executable (void)
    to be relocated.  The shared library breakpoints also need to be
    enabled.  */
 
-static void
-frv_solib_create_inferior_hook (int from_tty)
+void
+frv_solib_ops::create_inferior_hook (int from_tty) const
 {
   /* Relocate main executable.  */
   frv_relocate_main_executable ();
@@ -790,8 +809,8 @@ frv_solib_create_inferior_hook (int from_tty)
     }
 }
 
-static void
-frv_clear_solib (program_space *pspace)
+void
+frv_solib_ops::clear_solib (program_space *pspace) const
 {
   lm_base_cache = 0;
   enable_break2_done = 0;
@@ -801,8 +820,9 @@ frv_clear_solib (program_space *pspace)
   main_executable_lm_info = NULL;
 }
 
-static void
-frv_relocate_section_addresses (solib &so, target_section *sec)
+void
+frv_solib_ops::relocate_section_addresses (solib &so,
+					   target_section *sec) const
 {
   int seg;
   auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
@@ -884,7 +904,7 @@ frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
   /* Attempt to find the name of the function.  If the name is available,
      it'll be used as an aid in finding matching functions in the dynamic
      symbol table.  */
-  sym = find_pc_function (entry_point);
+  sym = find_symbol_for_pc (entry_point);
   if (sym == 0)
     name = 0;
   else
@@ -977,7 +997,7 @@ find_canonical_descriptor_in_load_object
       lm->dyn_relocs = (arelent **) xmalloc (storage_needed);
 
       /* Fetch the dynamic relocs.  */
-      lm->dyn_reloc_count 
+      lm->dyn_reloc_count
 	= bfd_canonicalize_dynamic_reloc (abfd, lm->dyn_relocs, lm->dyn_syms);
     }
 
@@ -1063,20 +1083,3 @@ frv_fetch_objfile_link_map (struct objfile *objfile)
   /* Not found!  */
   return 0;
 }
-
-const solib_ops frv_so_ops =
-{
-  frv_relocate_section_addresses,
-  nullptr,
-  frv_clear_solib,
-  frv_solib_create_inferior_hook,
-  frv_current_sos,
-  nullptr,
-  frv_in_dynsym_resolve_code,
-  solib_bfd_open,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  default_find_solib_addr,
-};

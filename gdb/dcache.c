@@ -396,7 +396,7 @@ dcache_alloc (DCACHE *dcache, CORE_ADDR addr)
 }
 
 /* Using the data cache DCACHE, store in *PTR the contents of the byte at
-   address ADDR in the remote machine.  
+   address ADDR in the remote machine.
 
    Returns 1 for success, 0 for error.  */
 
@@ -587,7 +587,7 @@ dcache_print_line (DCACHE *dcache, int index)
       gdb_printf (_("No such cache line exists.\n"));
       return;
     }
-    
+
   db = (struct dcache_block *) n->value;
 
   gdb_printf (_("Line %d: address %s [%d hits]\n"),
@@ -695,9 +695,7 @@ set_dcache_line_size (const char *args, int from_tty,
   target_dcache_invalidate (current_program_space->aspace);
 }
 
-void _initialize_dcache ();
-void
-_initialize_dcache ()
+INIT_GDB_FILE (dcache)
 {
   add_setshow_boolean_cmd ("remotecache", class_support,
 			   &dcache_enabled_p, _("\

@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile opcall
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -70,6 +70,12 @@ proc test_with_menu {command result} {
 	    } else {
 		fail $command
 	    }
+	}
+	"Argument to arithmetic operation not a number or boolean." {
+	    fail $command
+	}
+	-re "No definition of \".*\" in current context." {
+	    fail $command
 	}
 	timeout {
 	    fail "$command (timeout)"

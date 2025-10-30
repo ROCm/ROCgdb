@@ -33,6 +33,7 @@ gl_PROG_BISON([BISON],[3.0.4])
 
 AC_DISABLE_SHARED
 LT_INIT
+AC_C_BIGENDIAN
 
 GPROFNG_LIBADD="-L../../libiberty -liberty"
 if test "$enable_shared" = "yes"; then
@@ -243,6 +244,10 @@ AC_SUBST(GPROFNG_CPPFLAGS, [${gprofng_cppflags}])
 
 AC_CHECK_DECLS([basename])
 AC_CHECK_FUNCS(clock_gettime strsignal)
+
+# For riscv builds inside incomplete environments such as during intermediate
+# steps of cross toolchain building, or with outdated Linux headers.
+AC_CHECK_HEADERS(asm/hwprobe.h)
 
 clock_gettime_link=
 # At least for glibc, clock_gettime is in librt.  But don't

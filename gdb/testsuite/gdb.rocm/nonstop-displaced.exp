@@ -31,8 +31,9 @@ if {[build_executable "failed to prepare ${testfile}" \
 
 save_vars { GDBFLAGS } {
     append GDBFLAGS " -ex \"set non-stop on\""
-    clean_restart ${binfile}
+    clean_restart
 }
+gdb_load ${binfile}
 
 with_rocm_gpu_lock {
 

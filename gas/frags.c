@@ -69,20 +69,24 @@ frag_alloc_check (const struct obstack *ob)
 }
 
 /* Allocate a frag on the specified obstack.
-   Call this routine from everywhere else, so that all the weird alignment
-   hackery can be done in just one place.  */
+   Call this routine every time a new frag is made, so that the
+   alignment hackery can be done in just one place.  */
 
 fragS *
 frag_alloc (struct obstack *ob, size_t extra)
 {
   fragS *ptr;
-  int oalign;
 
-  (void) obstack_alloc (ob, 0);
-  oalign = obstack_alignment_mask (ob);
-  obstack_alignment_mask (ob) = 0;
-  ptr = (fragS *) obstack_alloc (ob, extra + SIZEOF_STRUCT_FRAG);
-  obstack_alignment_mask (ob) = oalign;
+  /* This will align the obstack so the next struct we allocate on it
+     will begin at a correct boundary.  */
+  (void) obstack_finish (ob);
+  /* Do not use obstack_alloc here.  If you do, you'll need to turn
+     off alignment as otherwise obstack_alloc will align the end of
+     the frag (via obstack_finish adjusting obstack next_free
+     pointer), making it seem like the frag already has contents in
+     fr_literal.  */
+  obstack_blank (ob, extra + SIZEOF_STRUCT_FRAG);
+  ptr = obstack_base (ob);
   memset (ptr, 0, SIZEOF_STRUCT_FRAG);
   totalfrags++;
   return ptr;
@@ -172,9 +176,6 @@ frag_new (size_t old_frags_var_max_size
   /* Make sure its type is valid.  */
   gas_assert (frag_now->fr_type != 0);
 
-  /* This will align the obstack so the next struct we allocate on it
-     will begin at a correct boundary.  */
-  obstack_finish (&frchain_now->frch_obstack);
   frchP = frchain_now;
   know (frchP);
   former_last_fragP = frchP->frch_last;
@@ -325,8 +326,7 @@ frag_align (int alignment, int fill_character, int max)
     {
       char *p;
 
-      p = frag_var (rs_align, 1, 1, (relax_substateT) max,
-		    (symbolS *) 0, (offsetT) alignment, (char *) 0);
+      p = frag_var (rs_align, 1, 1, max, NULL, alignment, NULL);
       *p = fill_character;
     }
 }
@@ -344,8 +344,7 @@ frag_align_pattern (int alignment, const char *fill_pattern,
 {
   char *p;
 
-  p = frag_var (rs_align, n_fill, n_fill, (relax_substateT) max,
-		(symbolS *) 0, (offsetT) alignment, (char *) 0);
+  p = frag_var (rs_align, n_fill, n_fill, max, NULL, alignment, NULL);
   memcpy (p, fill_pattern, n_fill);
 }
 
@@ -367,9 +366,8 @@ frag_align_code (int alignment, int max)
 {
   char *p;
 
-  p = frag_var (rs_align_code, MAX_MEM_FOR_RS_ALIGN_CODE (alignment, max), 1,
-		(relax_substateT) max, (symbolS *) 0,
-		(offsetT) alignment, (char *) 0);
+  p = frag_var (rs_align_code, MAX_MEM_FOR_RS_ALIGN_CODE (alignment, max),
+		1, max, NULL, alignment, NULL);
   *p = NOP_OPCODE;
 }
 

@@ -34,6 +34,7 @@ if {[build_executable $testfile.exp $testfile $srcfile] == -1} {
 
 set corefile [core_find $binfile {}]
 if {$corefile == ""} {
+    untested "unable to create or find corefile"
     return
 }
 
@@ -46,7 +47,8 @@ set backup_filename \
     [standard_output_file coredir.[getpid]/coremmap.data.backup]
 remote_exec host "mv ${data_filename} ${backup_filename}"
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 # Load the core file.  The 'coremap.data' file cannot be found by GDB,
 # but all the mappings for that file are r/w and should be present in

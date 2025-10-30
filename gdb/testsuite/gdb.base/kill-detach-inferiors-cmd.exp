@@ -19,11 +19,12 @@
 # commands.
 
 require can_spawn_for_attach
+require allow_multi_inferior_tests
 
 standard_testfile
 set executable $testfile
 
-if [prepare_for_testing "failed to prepare" $executable] {
+if {[prepare_for_testing "failed to prepare" $executable]} {
     return -1
 }
 

@@ -461,7 +461,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 		 just want to print their addresses.  Print ??? for args whose
 		 address we do not know.  We pass 2 as "recurse" to val_print
 		 because our standard indentation here is 4 spaces, and
-		 val_print indents 2 for each recurse.  */ 
+		 val_print indents 2 for each recurse.  */
 
 	      annotate_arg_value (arg->val->type ());
 
@@ -759,7 +759,7 @@ print_frame_args (const frame_print_options &fp_opts,
 	      break;
 	    }
 
-	  switch (sym->aclass ())
+	  switch (sym->loc_class ())
 	    {
 	    case LOC_ARG:
 	    case LOC_REF_ARG:
@@ -814,7 +814,7 @@ print_frame_args (const frame_print_options &fp_opts,
 	      nsym = lookup_symbol_search_name (sym->search_name (),
 						b, SEARCH_VAR_DOMAIN).symbol;
 	      gdb_assert (nsym != NULL);
-	      if (nsym->aclass () == LOC_REGISTER
+	      if (nsym->loc_class () == LOC_REGISTER
 		  && !nsym->is_argument ())
 		{
 		  /* There is a LOC_ARG/LOC_REGISTER pair.  This means
@@ -1166,10 +1166,10 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
 
   if (set_current_sal)
     {
-      CORE_ADDR pc;
+      std::optional<CORE_ADDR> pc;
 
-      if (get_frame_pc_if_available (frame, &pc))
-	last_displayed_symtab_info.set (sal.pspace, pc, sal.symtab, sal.line);
+      if ((pc = get_frame_pc_if_available (frame)))
+	last_displayed_symtab_info.set (sal.pspace, *pc, sal.symtab, sal.line);
       else
 	last_displayed_symtab_info.invalidate ();
     }
@@ -1326,16 +1326,15 @@ print_frame (struct ui_out *uiout,
   enum language funlang = language_unknown;
   struct value_print_options opts;
   struct symbol *func;
-  CORE_ADDR pc = 0;
-  int pc_p;
+  std::optional <CORE_ADDR> pc;
 
-  pc_p = get_frame_pc_if_available (frame, &pc);
+  pc = get_frame_pc_if_available (frame);
 
   gdb::unique_xmalloc_ptr<char> funname
     = find_frame_funname (frame, &funlang, &func);
 
   annotate_frame_begin (print_level ? frame_relative_level (frame) : 0,
-			gdbarch, pc);
+			gdbarch, pc.value_or (0));
 
   {
     ui_out_emit_tuple tuple_emitter (uiout, "frame");
@@ -1353,8 +1352,8 @@ print_frame (struct ui_out *uiout,
 	  || print_what == LOC_AND_ADDRESS)
 	{
 	  annotate_frame_address ();
-	  if (pc_p)
-	    print_pc (uiout, gdbarch, frame, pc);
+	  if (pc.has_value ())
+	    print_pc (uiout, gdbarch, frame, *pc);
 	  else
 	    uiout->field_string ("addr", "<unavailable>",
 				 metadata_style.style ());
@@ -1381,7 +1380,7 @@ print_frame (struct ui_out *uiout,
 	  }
 	else
 	  numargs = -1;
-    
+
 	{
 	  ui_out_emit_list list_emitter (uiout, "args");
 	  try
@@ -1401,7 +1400,7 @@ print_frame (struct ui_out *uiout,
     if (print_what != SHORT_LOCATION && sal.symtab)
       {
 	const char *filename_display;
-      
+
 	filename_display = symtab_to_filename_for_display (sal.symtab);
 	annotate_frame_source_begin ();
 	uiout->wrap_hint (3);
@@ -1423,7 +1422,7 @@ print_frame (struct ui_out *uiout,
       }
 
     if (print_what != SHORT_LOCATION
-	&& pc_p && (funname == NULL || sal.symtab == NULL))
+	&& pc.has_value () && (funname == NULL || sal.symtab == NULL))
       {
 	const char *lib
 	  = solib_name_from_address (get_frame_program_space (frame),
@@ -1482,8 +1481,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
   enum language funlang = language_unknown;
   const char *pc_regname;
   struct gdbarch *gdbarch;
-  CORE_ADDR frame_pc;
-  int frame_pc_p;
+  std::optional<CORE_ADDR> frame_pc;
   /* Initialize it to avoid "may be used uninitialized" warning.  */
   CORE_ADDR caller_pc = 0;
   int caller_pc_p = 0;
@@ -1504,7 +1502,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
        get_frame_pc().  */
     pc_regname = "pc";
 
-  frame_pc_p = get_frame_pc_if_available (fi, &frame_pc);
+  frame_pc = get_frame_pc_if_available (fi);
   func = get_frame_function (fi);
   symtab_and_line sal = find_frame_sal (fi);
   s = sal.symtab;
@@ -1526,9 +1524,9 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	    funname = func_only.get ();
 	}
     }
-  else if (frame_pc_p)
+  else if (frame_pc.has_value ())
     {
-      bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (frame_pc);
+      bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (*frame_pc);
       if (msymbol.minsym != NULL)
 	{
 	  funname = msymbol.minsym->print_name ();
@@ -1549,7 +1547,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
   gdb_puts (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str ());
   gdb_printf (":\n");
   gdb_printf (" %s = ", pc_regname);
-  if (frame_pc_p)
+  if (frame_pc.has_value ())
     gdb_puts (paddress (gdbarch, get_frame_pc (fi)));
   else
     fputs_styled ("<unavailable>", metadata_style.style (), gdb_stdout);
@@ -2222,7 +2220,7 @@ iterate_over_block_locals (const struct block *b,
 {
   for (struct symbol *sym : block_iterator_range (b))
     {
-      switch (sym->aclass ())
+      switch (sym->loc_class ())
 	{
 	case LOC_CONST:
 	case LOC_CONST_BYTES:
@@ -2341,9 +2339,9 @@ print_frame_local_vars (const frame_info_ptr &frame,
 {
   struct print_variable_and_value_data cb_data;
   const struct block *block;
-  CORE_ADDR pc;
+  std::optional<CORE_ADDR> pc;
 
-  if (!get_frame_pc_if_available (frame, &pc))
+  if (!(pc = get_frame_pc_if_available (frame)))
     {
       if (!quiet)
 	gdb_printf (stream,
@@ -2503,11 +2501,11 @@ print_frame_arg_vars (const frame_info_ptr &frame,
 {
   struct print_variable_and_value_data cb_data;
   struct symbol *func;
-  CORE_ADDR pc;
+  std::optional<CORE_ADDR> pc;
   std::optional<compiled_regex> preg;
   std::optional<compiled_regex> treg;
 
-  if (!get_frame_pc_if_available (frame, &pc))
+  if (!(pc = get_frame_pc_if_available (frame)))
     {
       if (!quiet)
 	gdb_printf (stream,
@@ -3070,7 +3068,7 @@ frame_apply_level_cmd_completer (struct cmd_list_element *ignore,
 
   /* Check if we're past a valid LEVEL already.  */
   if (levels.finished ()
-      && cmd > text && !isspace (cmd[-1]))
+      && cmd > text && !c_isspace (cmd[-1]))
     return;
 
   /* We're past LEVELs, advance word point.  */
@@ -3104,7 +3102,7 @@ frame_apply_cmd_completer (struct cmd_list_element *ignore,
     return;
 
   /* Check if we're past a valid COUNT already.  */
-  if (cmd > text && !isspace (cmd[-1]))
+  if (cmd > text && !c_isspace (cmd[-1]))
     return;
 
   /* We're past COUNT, advance word point.  */
@@ -3266,9 +3264,7 @@ static struct cmd_list_element *select_frame_cmd_list = NULL;
 /* Commands with a prefix of `info frame'.  */
 static struct cmd_list_element *info_frame_cmd_list = NULL;
 
-void _initialize_stack ();
-void
-_initialize_stack ()
+INIT_GDB_FILE (stack)
 {
   struct cmd_list_element *cmd;
 

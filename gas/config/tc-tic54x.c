@@ -478,7 +478,7 @@ tic54x_bss (int x ATTRIBUTE_UNUSED)
   char c;
   char *name;
   char *p;
-  int words;
+  offsetT words;
   segT current_seg;
   subsegT current_subseg;
   symbolS *symbolP;
@@ -504,7 +504,7 @@ tic54x_bss (int x ATTRIBUTE_UNUSED)
   words = get_absolute_expression ();
   if (words < 0)
     {
-      as_bad (_(".bss size %d < 0!"), words);
+      as_bad (_(".bss size %d < 0!"), (int) words);
       ignore_rest_of_line ();
       return;
     }
@@ -533,11 +533,10 @@ tic54x_bss (int x ATTRIBUTE_UNUSED)
   symbolP = symbol_find_or_make (name);
 
   if (S_GET_SEGMENT (symbolP) == bss_section)
-    symbol_get_frag (symbolP)->fr_symbol = (symbolS *) NULL;
+    symbol_get_frag (symbolP)->fr_symbol = NULL;
 
   symbol_set_frag (symbolP, frag_now);
-  p = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP,
-		(offsetT) (words * OCTETS_PER_BYTE), (char *) 0);
+  p = frag_var (rs_org, 1, 1, 0, symbolP, words * OCTETS_PER_BYTE, NULL);
   *p = 0;			/* Fill char.  */
 
   S_SET_SEGMENT (symbolP, bss_section);
@@ -574,11 +573,11 @@ stag_add_field_symbols (struct stag *stag,
 
   /* Construct a symbol for every field contained within this structure
      including fields within structure fields.  */
-  prefix = concat (path, *path ? "." : "", NULL);
+  prefix = concat (path, *path ? "." : "", (const char *) NULL);
 
   while (field != NULL)
     {
-      char *name = concat (prefix, field->name, NULL);
+      char *name = concat (prefix, field->name, (const char *) NULL);
       char *freename = name;
 
       if (rootsym == NULL)
@@ -594,7 +593,8 @@ stag_add_field_symbols (struct stag *stag,
 	{
 	  subsym_ent_t *ent = xmalloc (sizeof (*ent));
 	  ent->u.s = concat (S_GET_NAME (rootsym), "+", root_stag_name,
-			     name + strlen (S_GET_NAME (rootsym)), NULL);
+			     name + strlen (S_GET_NAME (rootsym)),
+			     (const char *) NULL);
 	  ent->freekey = 1;
 	  ent->freeval = 1;
 	  ent->isproc = 0;
@@ -801,7 +801,7 @@ tic54x_tag (int ignore ATTRIBUTE_UNUSED)
 {
   char *name;
   int c = get_symbol_name (&name);
-  struct stag *stag = (struct stag *) str_hash_find (stag_hash, name);
+  struct stag *stag = str_hash_find (stag_hash, name);
 
   if (!stag)
     {
@@ -860,7 +860,7 @@ tic54x_tag (int ignore ATTRIBUTE_UNUSED)
 static void
 tic54x_struct_field (int type)
 {
-  int size;
+  unsigned int size;
   int count = 1;
   int new_bitfield_offset = 0;
   int field_align = current_stag->current_bitfield_offset != 0;
@@ -964,12 +964,12 @@ tic54x_struct_field (int type)
   if (current_stag->is_union)
     {
       /* Note we treat the element as if it were an array of COUNT.  */
-      if (current_stag->size < (unsigned) size * count)
+      if (current_stag->size < size * count)
 	current_stag->size = size * count;
     }
   else
     {
-      abs_section_offset += (unsigned) size * count;
+      abs_section_offset += size * count;
       current_stag->current_bitfield_offset = new_bitfield_offset;
     }
   line_label = NULL;
@@ -1149,7 +1149,7 @@ tic54x_global (int type)
 static void
 free_subsym_ent (void *ent)
 {
-  string_tuple_t *tuple = (string_tuple_t *) ent;
+  string_tuple_t *tuple = ent;
   subsym_ent_t *val = (void *) tuple->value;
   if (val->freekey)
     free ((void *) tuple->key);
@@ -1169,7 +1169,7 @@ subsym_htab_create (void)
 static void
 free_local_label_ent (void *ent)
 {
-  string_tuple_t *tuple = (string_tuple_t *) ent;
+  string_tuple_t *tuple = ent;
   free ((void *) tuple->key);
   free ((void *) tuple->value);
   free (ent);
@@ -1295,10 +1295,8 @@ tic54x_space (int arg)
       bi->seg = now_seg;
       bi->type = bes;
       bi->sym = label;
-      p = frag_var (rs_machine_dependent,
-		    65536 * 2, 1, (relax_substateT) 0,
-		    make_expr_symbol (&expn), (offsetT) 0,
-		    (char *) bi);
+      p = frag_var (rs_machine_dependent, 65536 * 2, 1, 0,
+		    make_expr_symbol (&expn), 0, (char *) bi);
       if (p)
 	*p = 0;
 
@@ -1362,9 +1360,7 @@ tic54x_space (int arg)
     }
 
   if (!need_pass_2)
-    p = frag_var (rs_fill, 1, 1,
-		  (relax_substateT) 0, (symbolS *) 0,
-		  (offsetT) octets, (char *) 0);
+    p = frag_var (rs_fill, 1, 1, 0, NULL, octets, NULL);
 
   /* Make note of how many bits of this word we've allocated so far.  */
   frag_now->tc_frag_data = bit_offset;
@@ -1470,9 +1466,7 @@ tic54x_usect (int x ATTRIBUTE_UNUSED)
 
   seg_info (seg)->bss = 1;	/* Uninitialized data.  */
 
-  p = frag_var (rs_fill, 1, 1,
-		(relax_substateT) 0, (symbolS *) line_label,
-		size * OCTETS_PER_BYTE, (char *) 0);
+  p = frag_var (rs_fill, 1, 1, 0, line_label, size * OCTETS_PER_BYTE, NULL);
   *p = 0;
 
   if (blocking_flag)
@@ -1801,17 +1795,15 @@ tic54x_field (int ignore ATTRIBUTE_UNUSED)
 	      struct bit_info *bi = XNEW (struct bit_info);
 	      /* We don't know the previous offset at this time, so store the
 		 info we need and figure it out later.  */
-	      expressionS size_exp;
-
-	      size_exp.X_op = O_constant;
-	      size_exp.X_add_number = size;
+	      expressionS size_exp = {
+		.X_op = O_constant,
+		.X_add_number = size
+	      };
 	      bi->seg = now_seg;
 	      bi->type = TYPE_FIELD;
 	      bi->value = value;
-	      p = frag_var (rs_machine_dependent,
-			    4, 1, (relax_substateT) 0,
-			    make_expr_symbol (&size_exp), (offsetT) 0,
-			    (char *) bi);
+	      p = frag_var (rs_machine_dependent, 4, 1, 0,
+			    make_expr_symbol (&size_exp), 0, (char *) bi);
 	      goto getout;
 	    }
 	  else if (bit_offset == 0 || bit_offset + size > 16)
@@ -1839,7 +1831,7 @@ tic54x_field (int ignore ATTRIBUTE_UNUSED)
 
 	  /* OR in existing value.  */
 	  if (alloc_frag->tc_frag_data)
-	    value |= ((unsigned short) p[1] << 8) | p[0];
+	    value |= ((uint16_t) p[1] << 8) | p[0];
 	  md_number_to_chars (p, value, 2);
 	  alloc_frag->tc_frag_data += size;
 	  if (alloc_frag->tc_frag_data == 16)
@@ -2379,7 +2371,7 @@ tic54x_mlib (int ignore ATTRIBUTE_UNUSED)
       /* Write to a temporary file, then use s_include to include it
 	 a bit of a hack.  */
       ftmp = fopen (fname, "w+b");
-      fwrite ((void *) buf, size, 1, ftmp);
+      fwrite (buf, size, 1, ftmp);
       if (size == 0 || buf[size - 1] != '\n')
 	fwrite ("\n", 1, 1, ftmp);
       fclose (ftmp);
@@ -2733,7 +2725,7 @@ subsym_isreg (char *a, char *ignore ATTRIBUTE_UNUSED)
 static int
 subsym_structsz (char *name, char *ignore ATTRIBUTE_UNUSED)
 {
-  struct stag *stag = (struct stag *) str_hash_find (stag_hash, name);
+  struct stag *stag = str_hash_find (stag_hash, name);
 
   if (stag)
     return stag->size;
@@ -3667,7 +3659,7 @@ encode_integer (tic54x_insn *insn,
 static int
 encode_condition (tic54x_insn *insn, struct opstruct *operand)
 {
-  tic54x_symbol *cc = (tic54x_symbol *) str_hash_find (cc_hash, operand->buf);
+  tic54x_symbol *cc = str_hash_find (cc_hash, operand->buf);
   if (!cc)
     {
       as_bad (_("Unrecognized condition code \"%s\""), operand->buf);
@@ -3727,7 +3719,7 @@ encode_condition (tic54x_insn *insn, struct opstruct *operand)
 static int
 encode_cc3 (tic54x_insn *insn, struct opstruct *operand)
 {
-  tic54x_symbol *cc3 = (tic54x_symbol *) str_hash_find (cc3_hash, operand->buf);
+  tic54x_symbol *cc3 = str_hash_find (cc3_hash, operand->buf);
   int value = cc3 ? cc3->value : operand->exp.X_add_number << 8;
 
   if ((value & 0x0300) != value)
@@ -3756,7 +3748,7 @@ encode_arx (tic54x_insn *insn, struct opstruct *operand)
 static int
 encode_cc2 (tic54x_insn *insn, struct opstruct *operand)
 {
-  tic54x_symbol *cc2 = (tic54x_symbol *) str_hash_find (cc2_hash, operand->buf);
+  tic54x_symbol *cc2 = str_hash_find (cc2_hash, operand->buf);
 
   if (!cc2)
     {
@@ -3915,8 +3907,7 @@ encode_operand (tic54x_insn *insn, enum optype type, struct opstruct *operand)
 			     0, 65535, 0xFFFF);
     case OP_SBIT:
       {
-	tic54x_symbol *sbit = (tic54x_symbol *)
-	  str_hash_find (sbit_hash, operand->buf);
+	tic54x_symbol *sbit = str_hash_find (sbit_hash, operand->buf);
 	int value = is_absolute (operand) ?
 	  operand->exp.X_add_number : (sbit ? sbit->value : -1);
 	int reg = 0;
@@ -3946,16 +3937,14 @@ encode_operand (tic54x_insn *insn, enum optype type, struct opstruct *operand)
       if (strcasecmp (operand->buf, "st0") == 0
 	  || strcasecmp (operand->buf, "st1") == 0)
 	{
-	  insn->opcode[0].word |=
-	    ((unsigned short) (operand->buf[2] - '0')) << 9;
+	  insn->opcode[0].word |= ((uint16_t) (operand->buf[2] - '0')) << 9;
 	  return 1;
 	}
       else if (operand->exp.X_op == O_constant
 	       && (operand->exp.X_add_number == 0
 		   || operand->exp.X_add_number == 1))
 	{
-	  insn->opcode[0].word |=
-	    ((unsigned short) (operand->exp.X_add_number)) << 9;
+	  insn->opcode[0].word |= ((uint16_t) (operand->exp.X_add_number)) << 9;
 	  return 1;
 	}
       as_bad (_("Invalid status register \"%s\""), operand->buf);
@@ -4010,7 +3999,7 @@ emit_insn (tic54x_insn *insn)
       char *p = frag_more (size);
 
       if (size == 2)
-	md_number_to_chars (p, (valueT) insn->opcode[i].word, 2);
+	md_number_to_chars (p, insn->opcode[i].word, 2);
       else
 	md_number_to_chars (p, (valueT) insn->opcode[i].word << 16, 4);
 
@@ -4170,7 +4159,7 @@ optimize_insn (tic54x_insn *insn)
 static int
 tic54x_parse_insn (tic54x_insn *insn, char *line)
 {
-  insn->tm = (insn_template *) str_hash_find (op_hash, insn->mnemonic);
+  insn->tm = str_hash_find (op_hash, insn->mnemonic);
   if (!insn->tm)
     {
       as_bad (_("Unrecognized instruction \"%s\""), insn->mnemonic);
@@ -4193,8 +4182,7 @@ tic54x_parse_insn (tic54x_insn *insn, char *line)
 	  /* SUCCESS! now try some optimizations.  */
 	  if (optimize_insn (insn))
 	    {
-	      insn->tm = (insn_template *) str_hash_find (op_hash,
-							  insn->mnemonic);
+	      insn->tm = str_hash_find (op_hash, insn->mnemonic);
 	      continue;
 	    }
 
@@ -4229,7 +4217,7 @@ next_line_shows_parallel (char *next_line)
 static int
 tic54x_parse_parallel_insn_firstline (tic54x_insn *insn, char *line)
 {
-  insn->tm = (insn_template *) str_hash_find (parop_hash, insn->mnemonic);
+  insn->tm = str_hash_find (parop_hash, insn->mnemonic);
   if (!insn->tm)
     {
       as_bad (_("Unrecognized parallel instruction \"%s\""),
@@ -5054,13 +5042,13 @@ tic54x_undefined_symbol (char *name)
   tic54x_symbol *sym;
 
   /* Not sure how to handle predefined symbols.  */
-  if ((sym = (tic54x_symbol *) str_hash_find (cc_hash, name)) != NULL
-      || (sym = (tic54x_symbol *) str_hash_find (cc2_hash, name)) != NULL
-      || (sym = (tic54x_symbol *) str_hash_find (cc3_hash, name)) != NULL
+  if ((sym = str_hash_find (cc_hash, name)) != NULL
+      || (sym = str_hash_find (cc2_hash, name)) != NULL
+      || (sym = str_hash_find (cc3_hash, name)) != NULL
       || str_hash_find (misc_symbol_hash, name) != NULL
-      || (sym = (tic54x_symbol *) str_hash_find (sbit_hash, name)) != NULL
-      || (sym = (tic54x_symbol *) str_hash_find (reg_hash, name)) != NULL
-      || (sym = (tic54x_symbol *) str_hash_find (mmreg_hash, name)) != NULL
+      || (sym = str_hash_find (sbit_hash, name)) != NULL
+      || (sym = str_hash_find (reg_hash, name)) != NULL
+      || (sym = str_hash_find (mmreg_hash, name)) != NULL
       || !strcasecmp (name, "a")
       || !strcasecmp (name, "b"))
     {
@@ -5279,7 +5267,7 @@ tic54x_relax_frag (fragS *frag, long stretch ATTRIBUTE_UNUSED)
 
 	      valueT value = bi->value;
 	      value <<= available - size;
-	      value |= ((unsigned short) p[1] << 8) | p[0];
+	      value |= ((uint16_t) p[1] << 8) | p[0];
 	      md_number_to_chars (p, value, 2);
 	      if ((prev_frag->tc_frag_data += size) == 16)
 		prev_frag->tc_frag_data = 0;

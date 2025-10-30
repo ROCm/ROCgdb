@@ -238,13 +238,10 @@ sparc64fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* FreeBSD/sparc64 has SVR4-style shared libraries.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_lp64_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_svr4_lp64_solib_ops);
 }
 
-void _initialize_sparc64fbsd_tdep ();
-void
-_initialize_sparc64fbsd_tdep ()
+INIT_GDB_FILE (sparc64fbsd_tdep)
 {
   gdbarch_register_osabi (bfd_arch_sparc, bfd_mach_sparc_v9,
 			  GDB_OSABI_FREEBSD, sparc64fbsd_init_abi);

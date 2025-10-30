@@ -694,11 +694,12 @@ public:
   typedef std::forward_iterator_tag iterator_category;
   typedef int difference_type;
 
-  explicit all_windows_threads_iterator (all_non_exited_threads_iterator base_iter)
-    : m_base_iter (base_iter)
+  explicit all_windows_threads_iterator (all_non_exited_threads_iterator base_iter,
+					 all_non_exited_threads_iterator base_end)
+    : m_base_iter (base_iter), m_base_end (base_end)
   {}
 
-  windows_thread_info *operator* () const { return as_windows_thread_info (*m_base_iter); }
+  windows_thread_info &operator* () const { return *as_windows_thread_info (&*m_base_iter); }
 
   all_windows_threads_iterator &operator++ ()
   {
@@ -717,6 +718,7 @@ private:
   void advance ();
 
   all_non_exited_threads_iterator m_base_iter;
+  all_non_exited_threads_iterator m_base_end;
 };
 
 void
@@ -728,8 +730,8 @@ all_windows_threads_iterator::advance ()
     {
       ++m_base_iter;
     }
-  while (*m_base_iter != nullptr
-	 && as_windows_thread_info (*m_base_iter) == nullptr);
+  while (m_base_iter != m_base_end
+	 && as_windows_thread_info (&(*m_base_iter)) == nullptr);
 }
 
 /* The range for all_windows_threads, below.  */
@@ -743,7 +745,8 @@ public:
 
   all_windows_threads_iterator begin () const;
   all_windows_threads_iterator end () const
-  { return all_windows_threads_iterator (m_base_range.end ()); }
+  { return all_windows_threads_iterator (m_base_range.end (),
+					 m_base_range.end ()); }
 
 private:
   all_non_exited_threads_range m_base_range;
@@ -755,9 +758,10 @@ all_windows_threads_range::begin () const
   /* Find the first thread owned by the windows-nat target, if
      any.  */
   auto begin = m_base_range.begin ();
-  while (*begin != nullptr && as_windows_thread_info (*begin) == nullptr)
+  while (begin != m_base_range.end ()
+	 && as_windows_thread_info (&(*begin)) == nullptr)
     ++begin;
-  return all_windows_threads_iterator (begin);
+  return all_windows_threads_iterator (begin, m_base_range.end ());
 }
 
 /* Return a range that can be used to walk over all non-exited Windows
@@ -818,7 +822,12 @@ wait_for_single (HANDLE handle, DWORD howlong)
 {
   while (true)
     {
-      DWORD r = WaitForSingleObject (handle, howlong);
+      /* Using an INFINITE argument to WaitForSingleObject may cause a system
+	 deadlock.  Avoid it by waiting for a bit in a loop instead.  */
+      DWORD milliseconds = howlong == INFINITE ? 100 : howlong;
+      DWORD r = WaitForSingleObject (handle, milliseconds);
+      if (howlong == INFINITE && r == WAIT_TIMEOUT)
+	continue;
       if (r == WAIT_OBJECT_0)
 	return;
       if (r == WAIT_FAILED)
@@ -1681,14 +1690,14 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
 				      windows_continue_flags cont_flags)
 {
   if ((cont_flags & (WCONT_LAST_CALL | WCONT_KILLED)) == 0)
-    for (auto *th : all_windows_threads ())
+    for (auto &th : all_windows_threads ())
       {
-	if ((id == -1 || id == (int) th->tid)
-	    && th->pending_status.kind () != TARGET_WAITKIND_IGNORE)
+	if ((id == -1 || id == (int) th.tid)
+	    && th.pending_status.kind () != TARGET_WAITKIND_IGNORE)
 	  {
 	    DEBUG_EVENTS ("got matching pending stop event "
 			  "for 0x%x, not resuming",
-			  th->tid);
+			  th.tid);
 
 	    /* There's no need to really continue, because there's already
 	       another event pending.  However, we do need to inform the
@@ -1702,43 +1711,43 @@ windows_nat_target::windows_continue (DWORD continue_status, int id,
      Cygwin "sig" thread in the main iteration, though.  That one is
      only resumed when the target signaled thread is resumed.  See
      "Cygwin signals" in the intro section.  */
-  for (auto *th : all_windows_threads ())
-    if (th->suspended
+  for (auto &th : all_windows_threads ())
+    if (th.suspended
 #ifdef __CYGWIN__
-	&& th->signaled_thread == nullptr
+	&& th.signaled_thread == nullptr
 #endif
-	&& (id == -1 || id == (int) th->tid))
+	&& (id == -1 || id == (int) th.tid))
       {
-	windows_process.continue_one_thread (th, cont_flags);
+	windows_process.continue_one_thread (&th, cont_flags);
 
 #ifdef __CYGWIN__
 	/* See if we're resuming a thread that caught a Cygwin signal.
 	   If so, also resume the Cygwin runtime's "sig" thread.  */
-	if (th->cygwin_sig_thread != nullptr)
+	if (th.cygwin_sig_thread != nullptr)
 	  {
 	    DEBUG_EVENTS ("\"sig\" thread %d (0x%x) blocked by "
 			  "just-resumed thread %d (0x%x)",
-			  th->cygwin_sig_thread->tid,
-			  th->cygwin_sig_thread->tid,
-			  th->tid, th->tid);
+			  th.cygwin_sig_thread->tid,
+			  th.cygwin_sig_thread->tid,
+			  th.tid, th.tid);
 
 	    inferior *inf = find_inferior_pid (this,
 					       windows_process.process_id);
 	    thread_info *sig_thr
 	      = inf->find_thread (ptid_t (windows_process.process_id,
-					  th->cygwin_sig_thread->tid));
+					  th.cygwin_sig_thread->tid));
 	    if (sig_thr->internal_state () == THREAD_INT_RUNNING)
 	      {
 		DEBUG_EVENTS ("\"sig\" thread %d (0x%x) meant to be running, "
 			      "continuing it now",
-			      th->cygwin_sig_thread->tid,
-			      th->cygwin_sig_thread->tid);
-		windows_process.continue_one_thread (th->cygwin_sig_thread,
+			      th.cygwin_sig_thread->tid,
+			      th.cygwin_sig_thread->tid);
+		windows_process.continue_one_thread (th.cygwin_sig_thread,
 						     cont_flags);
 	      }
 	    /* Break the chain.  */
-	    th->cygwin_sig_thread->signaled_thread = nullptr;
-	    th->cygwin_sig_thread = nullptr;
+	    th.cygwin_sig_thread->signaled_thread = nullptr;
+	    th.cygwin_sig_thread = nullptr;
 	  }
 #endif
       }
@@ -2051,10 +2060,10 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 void
 windows_nat_target::stop (ptid_t ptid)
 {
-  for (thread_info *thr : all_non_exited_threads (this))
+  for (thread_info &thr : all_non_exited_threads (this))
     {
-      if (thr->ptid.matches (ptid))
-	stop_one_thread (as_windows_thread_info (thr), SK_EXTERNAL);
+      if (thr.ptid.matches (ptid))
+	stop_one_thread (as_windows_thread_info (&thr), SK_EXTERNAL);
     }
 }
 
@@ -2078,8 +2087,8 @@ windows_nat_target::thread_events (bool enable)
 bool
 windows_nat_target::any_resumed_thread ()
 {
-  for (thread_info *thread : all_non_exited_threads (this))
-    if (thread->internal_state () == THREAD_INT_RUNNING)
+  for (thread_info &thread : all_non_exited_threads (this))
+    if (thread.internal_state () == THREAD_INT_RUNNING)
       return true;
   return false;
 }
@@ -2121,14 +2130,14 @@ windows_nat_target::get_windows_debug_event
   /* If there is a relevant pending stop, report it now.  See the
      comment by the definition of "windows_thread_info::pending_status"
      for details on why this is needed.  */
-  for (thread_info *thread : all_threads_safe ())
+  for (thread_info &thread : all_threads_safe ())
     {
-      if (thread->inf->process_target () != this)
+      if (thread.inf->process_target () != this)
 	continue;
 
-      auto *th = as_windows_thread_info (thread);
+      auto *th = as_windows_thread_info (&thread);
       if (th != nullptr
-	  && thread->internal_state () == THREAD_INT_RUNNING
+	  && thread.internal_state () == THREAD_INT_RUNNING
 	  && th->suspended
 	  && th->pending_status.kind () != TARGET_WAITKIND_IGNORE)
 	{
@@ -2136,7 +2145,7 @@ windows_nat_target::get_windows_debug_event
 	  th->pending_status.set_ignore ();
 	  *current_event = th->last_event;
 	  DEBUG_EVENTS ("reporting pending event for 0x%x", th->tid);
-	  return thread->ptid;
+	  return thread.ptid;
 	}
     }
 
@@ -2614,8 +2623,8 @@ windows_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 	      /* All-stop, suspend all threads until they are
 		 explicitly resumed.  */
 	      if (!target_is_non_stop_p ())
-		for (auto *thr : all_windows_threads ())
-		  thr->suspend ();
+		for (auto &thr : all_windows_threads ())
+		  thr.suspend ();
 
 	      th->stopping = SK_NOT_STOPPING;
 	    }
@@ -3027,20 +3036,20 @@ windows_nat_target::detach (inferior *inf, int from_tty)
      the signal that the thread would be resumed with, so that we set
      the right reply_later value, and also, so that we clear the trace
      flag.  */
-  for (thread_info *tp : inf->non_exited_threads ())
+  for (thread_info &tp : inf->non_exited_threads ())
     {
-      if (tp->internal_state () != THREAD_INT_RUNNING)
+      if (tp.internal_state () != THREAD_INT_RUNNING)
 	{
-	  windows_thread_info *wth = windows_process.find_thread (tp->ptid);
-	  gdb_signal signo = get_detach_signal (this, tp->ptid);
+	  windows_thread_info *wth = windows_process.find_thread (tp.ptid);
+	  gdb_signal signo = get_detach_signal (this, tp.ptid);
 
 	  if (signo != wth->last_sig
 	      || (signo != GDB_SIGNAL_0 && !signal_pass_state (signo)))
 	    signo = GDB_SIGNAL_0;
 
-	  DWORD cstatus = prepare_resume (wth, tp, 0, signo);
+	  DWORD cstatus = prepare_resume (wth, &tp, 0, signo);
 
-	  if (!m_continued && tp->ptid == get_last_debug_event_ptid ())
+	  if (!m_continued && tp.ptid == get_last_debug_event_ptid ())
 	    continue_status = cstatus;
 	}
     }
@@ -3084,8 +3093,8 @@ windows_nat_target::detach (inferior *inf, int from_tty)
 
 	/* Count how many threads have pending reply-later events.  */
 	size_t reply_later_events_left = 0;
-	for (auto *th : all_windows_threads ())
-	  if (th->reply_later != 0)
+	for (auto &th : all_windows_threads ())
+	  if (th.reply_later != 0)
 	    reply_later_events_left++;
 
 	DEBUG_EVENTS ("flushing %zu reply-later events",
@@ -3436,7 +3445,7 @@ redir_set_redirection (const char *s, int *inp, int *out, int *err)
   /* cmd.exe recognizes "&N" only immediately after the redirection symbol.  */
   if (*s != '&')
     {
-      while (isspace (*s))  /* skip whitespace before file name */
+      while (c_isspace (*s))  /* skip whitespace before file name */
 	s++;
       *d++ = ' ';	    /* separate file name with a single space */
     }
@@ -3463,7 +3472,7 @@ redir_set_redirection (const char *s, int *inp, int *out, int *err)
 	    s++;
 	  *d++ = *s++;
 	}
-      else if (isspace (*s) && !quote)
+      else if (c_isspace (*s) && !quote)
 	break;
       else
 	*d++ = *s++;
@@ -3499,7 +3508,7 @@ redirect_inferior_handles (const char *cmd_orig, char *cmd,
   int quote = 0;
   bool retval = false;
 
-  while (isspace (*s))
+  while (c_isspace (*s))
     *d++ = *s++;
 
   while (*s)
@@ -3942,8 +3951,8 @@ windows_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
 static bool
 already_dead ()
 {
-  for (windows_thread_info *th : all_windows_threads ())
-    if (th->h != nullptr)
+  for (windows_thread_info &th : all_windows_threads ())
+    if (th.h != nullptr)
       return false;
   return true;
 }
@@ -4158,9 +4167,7 @@ windows_nat_target::always_non_stop_p ()
   return supports_non_stop ();
 }
 
-void _initialize_windows_nat ();
-void
-_initialize_windows_nat ()
+INIT_GDB_FILE (windows_nat)
 {
   x86_dr_low.set_control = windows_set_dr7;
   x86_dr_low.set_addr = windows_set_dr;
@@ -4271,9 +4278,9 @@ Use \"%ps\" or \"%ps\" command to load executable/libraries directly."),
 void
 windows_nat_target::debug_registers_changed_all_threads ()
 {
-  for (auto *th : all_windows_threads ())
+  for (auto &th : all_windows_threads ())
     {
-      th->debug_registers_changed = true;
+      th.debug_registers_changed = true;
 
       /* Note we don't SuspendThread => update debug regs =>
 	 ResumeThread, because SuspendThread is actually asynchronous
@@ -4285,7 +4292,7 @@ windows_nat_target::debug_registers_changed_all_threads ()
 	 a pending stop to be handled by windows_nat_target::wait.
 	 This means we only stop each thread once, and, we don't block
 	 waiting for each individual thread stop.  */
-      stop_one_thread (th, SK_INTERNAL);
+      stop_one_thread (&th, SK_INTERNAL);
     }
 }
 
@@ -4384,9 +4391,7 @@ windows_nat_target::thread_alive (ptid_t ptid)
   return WaitForSingleObject (th->h, 0) != WAIT_OBJECT_0;
 }
 
-void _initialize_check_for_gdb_ini ();
-void
-_initialize_check_for_gdb_ini ()
+INIT_GDB_FILE (check_for_gdb_ini)
 {
   char *homedir;
   if (inhibit_gdbinit)

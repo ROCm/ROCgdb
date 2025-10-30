@@ -27,12 +27,6 @@
 extern const char *strsignal (int);
 #endif
 
-static void identify (const char *);
-static void as_show_where (void);
-static void as_warn_internal (const char *, unsigned int, char *);
-static void as_bad_internal (const char *, unsigned int, char *);
-static void signal_crash (int) ATTRIBUTE_NORETURN;
-
 /* Despite the rest of the comments in this file, (FIXME-SOON),
    here is the current scheme for error messages etc:
 
@@ -72,8 +66,16 @@ static void signal_crash (int) ATTRIBUTE_NORETURN;
    as_abort () is used for logic failure (assert or abort, signal).
 */
 
+static const char *ident_name;
+
+void
+set_identify_name (const char *name)
+{
+  ident_name = name;
+}
+
 static void
-identify (const char *file)
+identify (void)
 {
   static int identified;
 
@@ -81,14 +83,8 @@ identify (const char *file)
     return;
   identified++;
 
-  if (!file)
-    {
-      unsigned int x;
-      file = as_where (&x);
-    }
-
-  if (file)
-    fprintf (stderr, "%s: ", file);
+  if (ident_name && *ident_name)
+    fprintf (stderr, "%s: ", ident_name);
   fprintf (stderr, _("Assembler messages:\n"));
 }
 
@@ -121,7 +117,7 @@ as_show_where (void)
   unsigned int line;
 
   file = as_where_top (&line);
-  identify (file);
+  identify ();
   if (file)
     {
       if (line != 0)
@@ -151,33 +147,12 @@ as_info_where (const char *file, unsigned int line, unsigned int indent,
 	   file, line, (int)indent, "", _("Info: "), buffer);
 }
 
-/* Send to stderr a string as a warning, and locate warning
-   in input file(s).
-   Please only use this for when we have some recovery action.
-   Please explain in string (which may have '\n's) what recovery was
-   done.  */
-
-void
-as_tsktsk (const char *format, ...)
-{
-  va_list args;
-
-  as_show_where ();
-  va_start (args, format);
-  vfprintf (stderr, format, args);
-  va_end (args);
-  (void) putc ('\n', stderr);
-  as_report_context ();
-}
-
-/* The common portion of as_warn and as_warn_where.  */
+/* The common portion of as_warn, as_warn_where, and as_tsktsk.  */
 
 static void
 as_warn_internal (const char *file, unsigned int line, char *buffer)
 {
   bool context = false;
-
-  ++warning_count;
 
   if (file == NULL)
     {
@@ -185,7 +160,7 @@ as_warn_internal (const char *file, unsigned int line, char *buffer)
       context = true;
     }
 
-  identify (file);
+  identify ();
   if (file)
     {
       if (line != 0)
@@ -218,10 +193,12 @@ as_warn (const char *format, ...)
 
   if (!flag_no_warnings)
     {
+      ++warning_count;
+
       va_start (args, format);
       vsnprintf (buffer, sizeof (buffer), format, args);
       va_end (args);
-      as_warn_internal ((char *) NULL, 0, buffer);
+      as_warn_internal (NULL, 0, buffer);
     }
 }
 
@@ -237,11 +214,31 @@ as_warn_where (const char *file, unsigned int line, const char *format, ...)
 
   if (!flag_no_warnings)
     {
+      ++warning_count;
+
       va_start (args, format);
       vsnprintf (buffer, sizeof (buffer), format, args);
       va_end (args);
       as_warn_internal (file, line, buffer);
     }
+}
+
+/* Send to stderr a string as a warning, and locate warning
+   in input file(s).
+   Please only use this for when we have some recovery action.
+   Please explain in string (which may have '\n's) what recovery was
+   done.  */
+
+void
+as_tsktsk (const char *format, ...)
+{
+  va_list args;
+  char buffer[2000];
+
+  va_start (args, format);
+  vsnprintf (buffer, sizeof (buffer), format, args);
+  va_end (args);
+  as_warn_internal (NULL, 0, buffer);
 }
 
 /* The common portion of as_bad and as_bad_where.  */
@@ -259,7 +256,7 @@ as_bad_internal (const char *file, unsigned int line, char *buffer)
       context = true;
     }
 
-  identify (file);
+  identify ();
   if (file)
     {
       if (line != 0)
@@ -294,7 +291,7 @@ as_bad (const char *format, ...)
   vsnprintf (buffer, sizeof (buffer), format, args);
   va_end (args);
 
-  as_bad_internal ((char *) NULL, 0, buffer);
+  as_bad_internal (NULL, 0, buffer);
 }
 
 /* Like as_bad but the file name and line number are passed in.

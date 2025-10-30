@@ -218,7 +218,7 @@ md_begin (void)
   /* Initialize special operator hash table.  */
   special_operator_hash = str_htab_create ();
 #define INSERT_SPECIAL_OP(name)					\
-  str_hash_insert (special_operator_hash, #name, (void *) O_##name, 0)
+  str_hash_insert_int (special_operator_hash, #name, O_##name, 0)
 
   INSERT_SPECIAL_OP(lo16);
   INSERT_SPECIAL_OP(hi16);
@@ -265,29 +265,29 @@ md_begin (void)
     {
       char buf[64];
 
-      str_hash_insert (main_reg_hash, tilepro_register_names[i],
-		       (void *) (long) (i | CANONICAL_REG_NAME_FLAG), 0);
+      str_hash_insert_int (main_reg_hash, tilepro_register_names[i],
+			   i | CANONICAL_REG_NAME_FLAG, 0);
 
       /* See if we should insert a noncanonical alias, like r63.  */
       sprintf (buf, "r%d", i);
       if (strcmp (buf, tilepro_register_names[i]) != 0)
-	str_hash_insert (main_reg_hash, xstrdup (buf),
-			 (void *) (long) (i | NONCANONICAL_REG_NAME_FLAG), 0);
+	str_hash_insert_int (main_reg_hash, xstrdup (buf),
+			     i | NONCANONICAL_REG_NAME_FLAG, 0);
     }
 
   /* Insert obsolete backwards-compatibility register names.  */
-  str_hash_insert (main_reg_hash, "io0",
-		   (void *) (long) (TREG_IDN0 | CANONICAL_REG_NAME_FLAG), 0);
-  str_hash_insert (main_reg_hash, "io1",
-		   (void *) (long) (TREG_IDN1 | CANONICAL_REG_NAME_FLAG), 0);
-  str_hash_insert (main_reg_hash, "us0",
-		   (void *) (long) (TREG_UDN0 | CANONICAL_REG_NAME_FLAG), 0);
-  str_hash_insert (main_reg_hash, "us1",
-		   (void *) (long) (TREG_UDN1 | CANONICAL_REG_NAME_FLAG), 0);
-  str_hash_insert (main_reg_hash, "us2",
-		   (void *) (long) (TREG_UDN2 | CANONICAL_REG_NAME_FLAG), 0);
-  str_hash_insert (main_reg_hash, "us3",
-		   (void *) (long) (TREG_UDN3 | CANONICAL_REG_NAME_FLAG), 0);
+  str_hash_insert_int (main_reg_hash, "io0",
+		       TREG_IDN0 | CANONICAL_REG_NAME_FLAG, 0);
+  str_hash_insert_int (main_reg_hash, "io1",
+		       TREG_IDN1 | CANONICAL_REG_NAME_FLAG, 0);
+  str_hash_insert_int (main_reg_hash, "us0",
+		       TREG_UDN0 | CANONICAL_REG_NAME_FLAG, 0);
+  str_hash_insert_int (main_reg_hash, "us1",
+		       TREG_UDN1 | CANONICAL_REG_NAME_FLAG, 0);
+  str_hash_insert_int (main_reg_hash, "us2",
+		       TREG_UDN2 | CANONICAL_REG_NAME_FLAG, 0);
+  str_hash_insert_int (main_reg_hash, "us3",
+		       TREG_UDN3 | CANONICAL_REG_NAME_FLAG, 0);
 
 }
 
@@ -387,13 +387,13 @@ apply_special_operator (operatorT op, int num)
   switch (op)
     {
     case O_lo16:
-      return (signed short)num;
+      return (int16_t) num;
 
     case O_hi16:
-      return (signed short)(num >> 16);
+      return (int16_t) (num >> 16);
 
     case O_ha16:
-      return (signed short)((num + 0x8000) >> 16);
+      return (int16_t) ((num + 0x8000) >> 16);
 
     default:
       abort ();
@@ -846,10 +846,8 @@ tilepro_flush_bundle (void)
       /* Figure out what pipe the fnop must be in via arithmetic.
        * p0 + p1 + p2 must sum to the sum of TILEPRO_PIPELINE_Y[012].  */
       current_bundle[0].pipe =
-	(tilepro_pipeline)((TILEPRO_PIPELINE_Y0
-			    + TILEPRO_PIPELINE_Y1
-			    + TILEPRO_PIPELINE_Y2) -
-			   (current_bundle[1].pipe + current_bundle[2].pipe));
+	(TILEPRO_PIPELINE_Y0 + TILEPRO_PIPELINE_Y1 + TILEPRO_PIPELINE_Y2
+	 - current_bundle[1].pipe - current_bundle[2].pipe);
     }
 
   check_illegal_reg_writes ();
@@ -878,8 +876,8 @@ tilepro_flush_bundle (void)
 					f);
     }
 
-  number_to_chars_littleendian (f, (unsigned int)bits, 4);
-  number_to_chars_littleendian (f + 4, (unsigned int)(bits >> 32), 4);
+  number_to_chars_littleendian (f, bits, 4);
+  number_to_chars_littleendian (f + 4, bits >> 32, 4);
   current_bundle_index = 0;
 
   /* Emit DWARF2 debugging information.  */
@@ -915,10 +913,10 @@ tilepro_parse_name (char *name, expressionS *e, char *nextcharP)
   else
     {
       /* Look up the operator in our table.  */
-      void *val = str_hash_find (special_operator_hash, name);
-      if (val == 0)
+      int opint = str_hash_find_int (special_operator_hash, name);
+      if (opint < 0)
 	return 0;
-      op = (operatorT)(long)val;
+      op = opint;
     }
 
   /* Restore old '(' and skip it.  */
@@ -977,12 +975,10 @@ parse_reg_expression (expressionS* expression)
   char *regname;
   char terminating_char = get_symbol_name (&regname);
 
-  void* pval = str_hash_find (main_reg_hash, regname);
-
-  if (pval == NULL)
+  int regno_and_flags = str_hash_find_int (main_reg_hash, regname);
+  if (regno_and_flags < 0)
     as_bad (_("Expected register, got '%s'."), regname);
 
-  int regno_and_flags = (int)(size_t)pval;
   int regno = EXTRACT_REGNO(regno_and_flags);
 
   if ((regno_and_flags & NONCANONICAL_REG_NAME_FLAG)
@@ -1229,7 +1225,7 @@ md_atof (int type, char *litP, int *sizeP)
      the bigendian 386.  */
   for (wordP = words + prec - 1; prec--;)
     {
-      md_number_to_chars (litP, (valueT) (*wordP--), sizeof (LITTLENUM_TYPE));
+      md_number_to_chars (litP, *wordP--, sizeof (LITTLENUM_TYPE));
       litP += sizeof (LITTLENUM_TYPE);
     }
   return 0;

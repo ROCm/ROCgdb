@@ -34,7 +34,7 @@ set opts {}
 lappend opts debug
 
 set compilation_succeeded 0
-for { set size $max } { $size >= $min } { set size [expr $size / 2] } {
+for { set size $max } { $size >= $min } { set size [expr {$size / 2}] } {
     set try_opts [concat $opts [list additional_flags=-gnateDCRASHGDB=$size]]
     # Use gdb_compile_ada_1 to prevent failed compilations from producing a
     # FAIL.
@@ -46,7 +46,7 @@ for { set size $max } { $size >= $min } { set size [expr $size / 2] } {
     set compilation_succeeded 1
     break
 }
-require {expr $compilation_succeeded}
+require {expr {$compilation_succeeded}}
 
 foreach_with_prefix varname {Arr Packed_Arr} {
     clean_restart ${testfile}

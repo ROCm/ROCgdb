@@ -28,8 +28,8 @@ require isnative
 # I/O bandwidth.
 
 if { [istarget "*-*-*bsd*"]
-     || [istarget "*-*-solaris*"] 
-     || [istarget "*-*-darwin*"] 
+     || [istarget "*-*-solaris*"]
+     || [istarget "*-*-darwin*"]
      || [istarget "*-*-cygwin*"] } {
     untested "kernel lacks sparse corefile support (PR gdb/1551)"
     return
@@ -117,7 +117,8 @@ proc test {dumper} {
 
     # Run GDB on the bigcore program up-to where it will dump core.
 
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load $binfile
     gdb_test_no_output "set print sevenbit-strings"
     gdb_test_no_output "set width 0"
 

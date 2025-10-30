@@ -55,6 +55,20 @@ static void child_terminal_ours_1 (target_terminal_state);
 
 static struct serial *stdin_serial;
 
+/* See terminal.h.  */
+
+scoped_gdb_ttystate::scoped_gdb_ttystate ()
+{
+  m_ttystate = serial_get_tty_state (stdin_serial);
+}
+
+/* See terminal.h.  */
+
+scoped_gdb_ttystate::~scoped_gdb_ttystate ()
+{
+  serial_set_tty_state (stdin_serial, m_ttystate);
+}
+
 /* Terminal related info we need to keep track of.  Each inferior
    holds an instance of this structure --- we save it whenever the
    corresponding inferior stops, and restore it to the terminal when
@@ -161,6 +175,15 @@ set_initial_gdb_ttystate (void)
       our_terminal_info.process_group = tcgetpgrp (0);
 #endif
     }
+}
+
+/* See terminal.h.  */
+
+void
+restore_initial_gdb_ttystate ()
+{
+  if (initial_gdb_ttystate != nullptr)
+    serial_set_tty_state (stdin_serial, initial_gdb_ttystate);
 }
 
 /* Does GDB have a terminal (on stdin)?  */
@@ -523,15 +546,15 @@ child_interrupt (struct target_ops *self)
 {
   /* Interrupt the first inferior that has a resumed thread.  */
   thread_info *resumed = NULL;
-  for (thread_info *thr : all_non_exited_threads ())
+  for (thread_info &thr : all_non_exited_threads ())
     {
-      if (thr->internal_state () == THREAD_INT_RUNNING)
+      if (thr.internal_state () == THREAD_INT_RUNNING)
 	{
-	  resumed = thr;
+	  resumed = &thr;
 	  break;
 	}
-      if (thr->has_pending_waitstatus ())
-	resumed = thr;
+      if (thr.has_pending_waitstatus ())
+	resumed = &thr;
     }
 
   if (resumed != NULL)
@@ -944,9 +967,7 @@ initialize_stdin_serial (void)
   stdin_serial = serial_fdopen (0);
 }
 
-void _initialize_inflow ();
-void
-_initialize_inflow ()
+INIT_GDB_FILE (inflow)
 {
   add_info ("terminal", info_terminal_command,
 	    _("Print inferior's saved terminal status."));

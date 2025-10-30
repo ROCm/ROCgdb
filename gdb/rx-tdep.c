@@ -433,9 +433,9 @@ rx_frame_type (const frame_info_ptr &this_frame, void **this_cache)
 
   /* No cached value; scan the function.  The frame type is cached in
      rx_analyze_prologue / rx_analyze_frame_prologue.  */
-  
+
   pc = get_frame_pc (this_frame);
-  
+
   /* Attempt to find the last address in the function.  If it cannot
      be determined, set the limit to be a short ways past the frame's
      pc.  */
@@ -1063,9 +1063,7 @@ rx_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 /* Register the above initialization routine.  */
 
-void _initialize_rx_tdep ();
-void
-_initialize_rx_tdep ()
+INIT_GDB_FILE (rx_tdep)
 {
   gdbarch_register (bfd_arch_rx, rx_gdbarch_init);
   initialize_tdesc_rx ();

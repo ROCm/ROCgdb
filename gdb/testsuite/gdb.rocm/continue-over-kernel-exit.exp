@@ -51,7 +51,8 @@ if { [build_executable "failed to prepare" \
 #
 proc do_test { step_over_mode finish_how } {
     with_rocm_gpu_lock {
-	clean_restart $::binfile
+	clean_restart
+	gdb_load $::binfile
 
 	if { $step_over_mode == "none" } {
 	    # Nothing to do.

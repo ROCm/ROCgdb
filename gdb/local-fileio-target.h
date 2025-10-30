@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef LOCAL_FILEIO_TARGET_H
-#define LOCAL_FILEIO_TARGET_H
+#ifndef GDB_LOCAL_FILEIO_TARGET_H
+#define GDB_LOCAL_FILEIO_TARGET_H
 
 #include "gdbsupport/fileio.h"
 
@@ -44,10 +44,10 @@ extern int local_fileio_pread (int fd, gdb_byte *read_buf, int len,
 extern int local_fileio_fstat (int fd, struct stat *sb, fileio_error
 			       *target_errno);
 
-/* Generic implementation of target_ops::fileio_stat using the local
+/* Generic implementation of target_ops::fileio_lstat using the local
    filesystem.  */
-extern int local_fileio_stat (inferior *inf, const char *filename,
-			      struct stat *sb, fileio_error *target_errno);
+extern int local_fileio_lstat (inferior *inf, const char *filename,
+			       struct stat *sb, fileio_error *target_errno);
 
 /* Generic implementation of target_ops::fileio_close using the local
    filesystem.  */
@@ -87,9 +87,9 @@ class local_fileio_target : public Target
   int fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno) override
   { return local_fileio_fstat (fd, sb, target_errno); }
 
-  int fileio_stat (struct inferior *inf, const char *filename,
-		   struct stat *sb, fileio_error *target_errno) override
-  { return local_fileio_stat (inf, filename, sb, target_errno); }
+  int fileio_lstat (struct inferior *inf, const char *filename,
+		    struct stat *sb, fileio_error *target_errno) override
+  { return local_fileio_lstat (inf, filename, sb, target_errno); }
 
   int fileio_close (int fd, fileio_error *target_errno) override
   { return local_fileio_close (fd, target_errno); }
@@ -105,4 +105,4 @@ class local_fileio_target : public Target
   { return local_fileio_readlink (inf, filename, target_errno); }
 };
 
-#endif
+#endif /* GDB_LOCAL_FILEIO_TARGET_H */

@@ -58,7 +58,7 @@ proc_with_prefix record_initial_logfile {} {
 
     # Connect to gdbserver.
     if {![gdb_target_cmd $gdbserver_protocol $gdbserver_gdbport] == 0} {
-	unsupported "$testfile (couldn't start gdbserver)"
+	unsupported "couldn't start gdbserver"
 	return
     }
 
@@ -70,9 +70,8 @@ proc_with_prefix record_initial_logfile {} {
 # Connect to gdbreply using the global REMOTELOG.  Runs to a breakpoint
 # in main.
 proc_with_prefix replay_without_error {} {
-    global binfile
     global remotelog
-    clean_restart $binfile
+    clean_restart $::testfile
     # Make sure we're disconnected, in case we're testing with an
     # extended-remote board, therefore already connected.
     gdb_test "disconnect" ".*"
@@ -85,7 +84,7 @@ proc_with_prefix replay_without_error {} {
 
     # Connect to gdbreplay.
     if {![gdb_target_cmd $gdbserver_protocol $gdbserver_gdbport] == 0} {
-	unsupported "$testfile (couldn't start gdbreplay)"
+	unsupported "couldn't start gdbreplay"
 	return
     }
     gdb_breakpoint main
@@ -97,7 +96,6 @@ proc_with_prefix replay_without_error {} {
 # copy of REMOTELOG.  Attempt to connect to the remote and expect to see
 # the error reported by GDB.
 proc_with_prefix replay_with_mustreplyempty_error {} {
-    global binfile
     global remotelog
     global testfile
     set newline E.errtext
@@ -105,9 +103,9 @@ proc_with_prefix replay_with_mustreplyempty_error {} {
 
     # Modify the log file by changing the *response* to
     # the vMustReplayEmty packet to an error.
-    update_log $remotelog $output_file "vMustReplyEmpty" $newline
+    update_log $remotelog $output_file "vMustReplyEmpty" $newline true
 
-    clean_restart $binfile
+    clean_restart $::testfile
     # Make sure we're disconnected, in case we're testing with an
     # extended-remote board, therefore already connected.
     gdb_test "disconnect" ".*"

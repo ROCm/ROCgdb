@@ -695,9 +695,7 @@ tic4x_seg_alloc (char *name ATTRIBUTE_UNUSED,
     {
       char *p;
 
-      p = frag_var (rs_fill, 1, 1, (relax_substateT) 0,
-		    (symbolS *) symbolP,
-		    size * OCTETS_PER_BYTE, (char *) 0);
+      p = frag_var (rs_fill, 1, 1, 0, symbolP, size * OCTETS_PER_BYTE, NULL);
       *p = 0;
     }
 }
@@ -772,8 +770,7 @@ tic4x_bss (int x ATTRIBUTE_UNUSED)
 
   symbol_set_frag (symbolP, frag_now);
 
-  p = frag_var (rs_org, 1, 1, (relax_substateT) 0, symbolP,
-		size * OCTETS_PER_BYTE, (char *) 0);
+  p = frag_var (rs_org, 1, 1, 0, symbolP, size * OCTETS_PER_BYTE, NULL);
   *p = 0;			/* Fill char.  */
 
   S_SET_SEGMENT (symbolP, bss_section);
@@ -2450,8 +2447,7 @@ md_assemble (char *str)
 
   if (insn->in_use)
     {
-      if ((insn->inst = (struct tic4x_inst *)
-	   str_hash_find (tic4x_op_hash, insn->name)) == NULL)
+      if ((insn->inst = str_hash_find (tic4x_op_hash, insn->name)) == NULL)
 	{
 	  as_bad (_("Unknown opcode `%s'."), insn->name);
 	  insn->parallel = 0;
@@ -2585,15 +2581,13 @@ md_atof (int type, char *litP, int *sizeP)
   for (wordP = words; wordP<(words+prec) ; wordP+=2)
     {
       if (wordP < (words + prec - 1)) /* Dump wordP[1] (if we have one).  */
-        {
-          md_number_to_chars (litP, (valueT) (wordP[1]),
-                              sizeof (LITTLENUM_TYPE));
-          litP += sizeof (LITTLENUM_TYPE);
-        }
+	{
+	  md_number_to_chars (litP, wordP[1], sizeof (LITTLENUM_TYPE));
+	  litP += sizeof (LITTLENUM_TYPE);
+	}
 
       /* Dump wordP[0] */
-      md_number_to_chars (litP, (valueT) (wordP[0]),
-                          sizeof (LITTLENUM_TYPE));
+      md_number_to_chars (litP, wordP[0], sizeof (LITTLENUM_TYPE));
       litP += sizeof (LITTLENUM_TYPE);
     }
   return NULL;
@@ -2820,7 +2814,7 @@ md_undefined_symbol (char *name)
       char *s = name + 1;
       int lab = 0;
 
-      while (ISDIGIT ((unsigned char) *s))
+      while (ISDIGIT (*s))
 	{
 	  lab = lab * 10 + *s - '0';
 	  s++;
@@ -3004,7 +2998,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixP)
   reloc->address = fixP->fx_frag->fr_address + fixP->fx_where;
   reloc->address /= OCTETS_PER_BYTE;
   reloc->howto = bfd_reloc_type_lookup (stdoutput, fixP->fx_r_type);
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixP->fx_file, fixP->fx_line,
 		    _("Reloc %d not supported by object file format"),

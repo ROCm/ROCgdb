@@ -509,7 +509,7 @@ insert_operand (struct kvxinsn *insn, struct kvx_operand *opdef,
       {
 	char *ilp_save = input_line_pointer;
 	input_line_pointer = tok->tok;
-	expressionS exp = { 0 };
+	expressionS exp;
 	expression (&exp);
 	input_line_pointer = ilp_save;
 
@@ -700,7 +700,7 @@ assemble_insn (const struct kvxopc * opcode, struct token_list *tok, struct kvxi
   insn->immx1 = NOIMMX;
 
   struct token_list *tok_ = tok;
-  struct kvx_operand **format = (struct kvx_operand **) opcode->format;
+  struct kvx_operand *const *format = opcode->format;
 
   while (tok_)
     {
@@ -1021,7 +1021,7 @@ kvx_print_insn (struct kvxopc * op ATTRIBUTE_UNUSED)
 
   /* This is a hack which works because the Bundling is the same for all cores
      for now.  */
-  switch ((int) op->bundling)
+  switch (op->bundling)
     {
     case Bundling_kv3_v1_ALL:
       insn_type = "ALL  ";
@@ -1109,7 +1109,7 @@ kvx_reorder_bundle (struct kvxinsn *bundle_insn[], int bundle_insncnt)
       tag = -1, exu = -1;
       /* This is a hack. It works because all the Bundling are the same for all
          cores for now.  */
-      switch ((int) find_bundling (kvxinsn))
+      switch (find_bundling (kvxinsn))
 	{
 	case Bundling_kv3_v1_ALL:
 	  if (bundle_insncnt > 1)
@@ -1441,8 +1441,8 @@ kvx_set_cpu (void)
 static int
 kvxop_compar (const void *a, const void *b)
 {
-  const struct kvxopc *opa = (const struct kvxopc *) a;
-  const struct kvxopc *opb = (const struct kvxopc *) b;
+  const struct kvxopc *opa = a;
+  const struct kvxopc *opb = b;
   int res = strcmp (opa->as_op, opb->as_op);
 
   if (res)
@@ -1644,7 +1644,7 @@ md_apply_fix (fixS * fixP, valueT * valueP, segT segmentP ATTRIBUTE_UNUSED)
   valueT image;
   arelent *rel;
 
-  rel = (arelent *) xmalloc (sizeof (arelent));
+  rel = xmalloc (sizeof (arelent));
 
   rel->howto = bfd_reloc_type_lookup (stdoutput, fixP->fx_r_type);
   if (rel->howto == NULL)
@@ -2524,8 +2524,7 @@ kvx_handle_align (fragS *fragP)
   static unsigned int nop_single = 0;
   if (!nop_single)
     {
-      const struct kvxopc *opcode =
-	(struct kvxopc *) str_hash_find (env.opcode_hash, "nop");
+      const struct kvxopc *opcode = str_hash_find (env.opcode_hash, "nop");
 
       if (opcode == NULL)
 	as_fatal

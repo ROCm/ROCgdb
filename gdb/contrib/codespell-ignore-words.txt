@@ -1,3 +1,5 @@
 configury
 SME
 Synopsys
+HSA
+offen

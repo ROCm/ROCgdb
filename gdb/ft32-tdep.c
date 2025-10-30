@@ -180,9 +180,9 @@ ft32_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
      is the address of __prolog_$rN.
      __prolog_$rN pushes registers from 13 through n inclusive.
      So for example CALL __prolog_$r15 is equivalent to:
-       PUSH $r13 
-       PUSH $r14 
-       PUSH $r15 
+       PUSH $r13
+       PUSH $r14
+       PUSH $r15
      Note that PROLOGS[0] through PROLOGS[12] are unused.  */
   CORE_ADDR prologs[32];
 
@@ -303,7 +303,7 @@ ft32_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	  /* Don't use line number debug info for assembly source files.  */
 	  if ((sym != NULL) && sym->language () != language_asm)
 	    {
-	      sal = find_pc_line (func_addr, 0);
+	      sal = find_sal_for_pc (func_addr, 0);
 	      if (sal.end && sal.end < func_end)
 		{
 		  /* Found a line number, use it as end of prologue.  */
@@ -621,9 +621,7 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 /* Register this machine's init routine.  */
 
-void _initialize_ft32_tdep ();
-void
-_initialize_ft32_tdep ()
+INIT_GDB_FILE (ft32_tdep)
 {
   gdbarch_register (bfd_arch_ft32, ft32_gdbarch_init);
 }

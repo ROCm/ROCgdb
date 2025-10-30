@@ -2268,6 +2268,9 @@ elfNN_aarch64_howto_from_bfd_reloc (bfd_reloc_code_real_type code)
   if (code == BFD_RELOC_AARCH64_NONE)
     return &elfNN_aarch64_howto_none;
 
+  if (code == BFD_RELOC_AARCH64_BRANCH9)
+    return &elfNN_aarch64_howto_none;
+
   return NULL;
 }
 
@@ -2618,6 +2621,9 @@ struct elf_aarch64_link_hash_table
 
   /* Don't apply link-time values for dynamic relocations.  */
   int no_apply_dynamic_relocs;
+
+  /* Memtag Extension mode of operation.  */
+  aarch64_memtag_opts memtag_opts;
 
   /* The number of bytes in the initial entry in the PLT.  */
   bfd_size_type plt_header_size;
@@ -5006,13 +5012,15 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
 			       int fix_erratum_835769,
 			       erratum_84319_opts fix_erratum_843419,
 			       int no_apply_dynamic_relocs,
-			       const aarch64_protection_opts *sw_protections)
+			       const aarch64_protection_opts *sw_protections,
+			       const aarch64_memtag_opts *memtag_opts)
 {
   struct elf_aarch64_link_hash_table *globals;
 
   globals = elf_aarch64_hash_table (link_info);
   globals->pic_veneer = pic_veneer;
   globals->fix_erratum_835769 = fix_erratum_835769;
+  globals->memtag_opts = *memtag_opts;
   /* If the default options are used, then ERRAT_ADR will be set by default
      which will enable the ADRP->ADR workaround for the erratum 843419
      workaround.  */
@@ -7051,7 +7059,8 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_AARCH64_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
@@ -8456,10 +8465,9 @@ elfNN_aarch64_modify_headers (bfd *abfd,
 			      struct bfd_link_info *info)
 {
   struct elf_segment_map *m;
-  unsigned int segment_count = 0;
   Elf_Internal_Phdr *p;
 
-  for (m = elf_seg_map (abfd); m != NULL; m = m->next, segment_count++)
+  for (m = elf_seg_map (abfd); m != NULL; m = m->next)
     {
       /* We are only interested in the memory tag segment that will be dumped
 	 to a core file.  If we have no memory tags or this isn't a core file we
@@ -9478,7 +9486,7 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
     {
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->root.interp;
 	  if (s == NULL)
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
@@ -9772,7 +9780,20 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 		   && !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0))
 	    return false;
 	}
+
+      if (is_aarch64_elf (output_bfd)
+	  && htab->memtag_opts.memtag_mode != AARCH64_MEMTAG_MODE_NONE
+	  && !add_dynamic_entry (DT_AARCH64_MEMTAG_MODE,
+				 htab->memtag_opts.memtag_mode == AARCH64_MEMTAG_MODE_ASYNC))
+	return false;
+
+      if (is_aarch64_elf (output_bfd)
+	  && htab->memtag_opts.memtag_stack == 1
+	  && !add_dynamic_entry (DT_AARCH64_MEMTAG_STACK,
+				 htab->memtag_opts.memtag_stack == 1))
+	return false;
     }
+
 #undef add_dynamic_entry
 
   return true;
@@ -10762,24 +10783,5 @@ const struct elf_size_info elfNN_aarch64_size_info =
 
 #undef	elf_backend_obj_attrs_section
 #define elf_backend_obj_attrs_section		SEC_AARCH64_ATTRIBUTES
-
-#include "elfNN-target.h"
-
-/* CloudABI support.  */
-
-#undef	TARGET_LITTLE_SYM
-#define	TARGET_LITTLE_SYM	aarch64_elfNN_le_cloudabi_vec
-#undef	TARGET_LITTLE_NAME
-#define	TARGET_LITTLE_NAME	"elfNN-littleaarch64-cloudabi"
-#undef	TARGET_BIG_SYM
-#define	TARGET_BIG_SYM		aarch64_elfNN_be_cloudabi_vec
-#undef	TARGET_BIG_NAME
-#define	TARGET_BIG_NAME		"elfNN-bigaarch64-cloudabi"
-
-#undef	ELF_OSABI
-#define	ELF_OSABI		ELFOSABI_CLOUDABI
-
-#undef	elfNN_bed
-#define	elfNN_bed		elfNN_aarch64_cloudabi_bed
 
 #include "elfNN-target.h"

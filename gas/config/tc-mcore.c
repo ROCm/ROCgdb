@@ -882,7 +882,7 @@ md_assemble (char * str)
       return;
     }
 
-  opcode = (mcore_opcode_info *) str_hash_find (opcode_hash_control, name);
+  opcode = str_hash_find (opcode_hash_control, name);
   if (opcode == NULL)
     {
       as_bad (_("unknown opcode \"%s\""), name);
@@ -2139,7 +2139,7 @@ md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
   /* If the symbol is undefined or defined in another section
      we leave the add number alone for the linker to fix it later.
      Only account for the PC pre-bump (which is 2 bytes on the MCore).  */
-  if (fixp->fx_addsy != (symbolS *) NULL
+  if (fixp->fx_addsy != NULL
       && (! S_IS_DEFINED (fixp->fx_addsy)
 	  || (S_GET_SEGMENT (fixp->fx_addsy) != sec)))
 

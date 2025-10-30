@@ -278,7 +278,7 @@ md_apply_fix (fixS *fixP, valueT *valueP, segT seg ATTRIBUTE_UNUSED)
 {
   valueT value = * valueP;
 
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   if (fixP->fx_addsy == NULL)
@@ -332,8 +332,7 @@ bignum_copy (LITTLENUM_TYPE *in,
       LITTLENUM_TYPE *p;	/* -> most significant (non-zero) input
 				      littlenum.  */
 
-      memcpy ((void *) out, (void *) in,
-	      (unsigned int) out_length << LITTLENUM_SHIFT);
+      memcpy (out, in, (unsigned int) out_length << LITTLENUM_SHIFT);
       for (p = in + in_length - 1; p >= in; --p)
 	{
 	  if (*p)
@@ -346,11 +345,10 @@ bignum_copy (LITTLENUM_TYPE *in,
     }
   else
     {
-      memcpy ((char *) out, (char *) in,
-	      (unsigned int) in_length << LITTLENUM_SHIFT);
+      memcpy (out, in, (unsigned int) in_length << LITTLENUM_SHIFT);
 
       if (out_length > in_length)
-	memset ((char *) (out + in_length), '\0',
+	memset (out + in_length, 0,
 		(unsigned int) (out_length - in_length) << LITTLENUM_SHIFT);
 
       significant_littlenums_dropped = 0;
@@ -1882,7 +1880,7 @@ vip (struct vit *vitP,		/* We build an exploded instruction here.  */
       /* Here with instring pointing to what better be an op-name, and p
          pointing to character just past that.
          We trust instring points to an op-name, with no whitespace.  */
-      vwP = (struct vot_wot *) str_hash_find (op_hash, instring);
+      vwP = str_hash_find (op_hash, instring);
       /* Restore char after op-code.  */
       *p = c;
       if (vwP == 0)
@@ -3356,7 +3354,7 @@ vax_cons_fix_new (fragS *frag, int where, unsigned int nbytes, expressionS *exp,
 	 : nbytes == 2 ? BFD_RELOC_16
 	 : BFD_RELOC_32);
 
-  fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
+  fix_new_exp (frag, where, nbytes, exp, 0, r);
 }
 
 const char *

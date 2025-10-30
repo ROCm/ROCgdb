@@ -27,6 +27,8 @@
 #include "elf/s390.h"
 #include "elf-s390.h"
 #include "dwarf2.h"
+#include "sframe.h"
+#include "sframe-api.h"
 #include <stdarg.h>
 
 /* In case we're on a 32-bit machine, construct a 64-bit "-1" value
@@ -594,6 +596,49 @@ static const bfd_byte elf_s390x_eh_frame_plt[] =
   DW_CFA_nop, DW_CFA_nop, DW_CFA_nop
 };
 
+/* .sframe covering the .plt section.  */
+
+/* This must be the same as sframe_get_hdr_size (sfh).  For s390x, this value
+   is the same as sizeof (sframe_header) because there is no SFrame auxilliary
+   header.  */
+#define PLT_SFRAME_FDE_START_OFFSET	sizeof (sframe_header)
+
+#define SFRAME_PLT0_MAX_NUM_FRES 1
+#define SFRAME_PLTN_MAX_NUM_FRES 1
+
+struct elf_s390x_sframe_plt
+{
+  unsigned int plt0_entry_size;
+  unsigned int plt0_num_fres;
+  const sframe_frame_row_entry *plt0_fres[SFRAME_PLT0_MAX_NUM_FRES];
+
+  unsigned int pltn_entry_size;
+  unsigned int pltn_num_fres;
+  const sframe_frame_row_entry *pltn_fres[SFRAME_PLTN_MAX_NUM_FRES];
+};
+
+/* .sframe FRE covering the PLT0/PLTn .plt section entry.  */
+static const sframe_frame_row_entry elf_s390x_sframe_plt_fre =
+{
+  0, /* SFrame FRE start address.  */
+  { SFRAME_V2_S390X_CFA_OFFSET_ENCODE (160), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* Offset bytes.  */
+  SFRAME_V1_FRE_INFO (SFRAME_BASE_REG_SP, 1, SFRAME_FRE_OFFSET_1B) /* FRE info.  */
+};
+
+/* SFrame helper object for PLT.  */
+static const struct elf_s390x_sframe_plt elf_s390x_sframe_plt =
+{
+  PLT_FIRST_ENTRY_SIZE,
+  1, /* Number of FREs for PLT0.  */
+  /* Array of SFrame FREs for PLT0.  */
+  { &elf_s390x_sframe_plt_fre },
+
+  PLT_ENTRY_SIZE,
+  1, /* Number of FREs for PLTn.  */
+  /* Array of SFrame FREs for PLTn.  */
+  { &elf_s390x_sframe_plt_fre },
+};
+
 
 /* s390 ELF linker hash entry.  */
 
@@ -687,6 +732,11 @@ struct elf_s390_link_hash_table
   /* Short-cuts to get to dynamic linker sections.  */
   asection *irelifunc;
   asection *plt_eh_frame;
+
+  sframe_encoder_ctx *plt_cfe_ctx;
+  asection *plt_sframe;
+  /* The .sframe helper object for .plt section.  */
+  const struct elf_s390x_sframe_plt *sframe_plt;
 
   union {
     bfd_signed_vma refcount;
@@ -1513,6 +1563,137 @@ elf_s390_adjust_dynamic_symbol (struct bfd_link_info *info,
   return _bfd_elf_adjust_dynamic_copy (info, h, s);
 }
 
+/* Create SFrame stack trace info for the PLT entries in the .plt section.  */
+
+static bool
+_bfd_s390_elf_create_sframe_plt (struct bfd_link_info *info)
+{
+  struct elf_s390_link_hash_table *htab;
+
+  unsigned int plt0_entry_size;
+  unsigned char func_info;
+  uint32_t fre_type;
+  /* The dynamic plt section for which .sframe stack trace information is being
+     created.  */
+  asection *dpltsec;
+
+  int err = 0;
+
+  sframe_encoder_ctx **ectx = NULL;
+  unsigned plt_entry_size = 0;
+  unsigned int num_pltn_fres = 0;
+  unsigned int num_pltn_entries = 0;
+  const sframe_frame_row_entry * const *pltn_fres;
+
+  htab = elf_s390_hash_table (info);
+  ectx = &htab->plt_cfe_ctx;
+  dpltsec = htab->elf.splt;
+
+  plt0_entry_size = htab->sframe_plt->plt0_entry_size;
+  plt_entry_size = htab->sframe_plt->pltn_entry_size;
+  pltn_fres = htab->sframe_plt->pltn_fres;
+  num_pltn_fres = htab->sframe_plt->pltn_num_fres;
+  num_pltn_entries = (dpltsec->size - plt0_entry_size) / plt_entry_size;
+
+  *ectx = sframe_encode (SFRAME_VERSION_2,
+			 SFRAME_F_FDE_FUNC_START_PCREL,
+			 SFRAME_ABI_S390X_ENDIAN_BIG,
+			 SFRAME_CFA_FIXED_FP_INVALID,
+			 SFRAME_CFA_FIXED_RA_INVALID,
+			 &err);
+
+  /* FRE type is dependent on the size of the function.  */
+  fre_type = sframe_calc_fre_type (dpltsec->size);
+  func_info = sframe_fde_create_func_info (fre_type, SFRAME_FDE_TYPE_PCINC);
+
+  /* Add SFrame FDE and the associated FREs for PLT0 if PLT0 has been
+     generated.  */
+  if (plt0_entry_size)
+    {
+      /* Add SFrame FDE for PLT0, the function start address is updated later
+	 at _bfd_elf_merge_section_sframe time.  */
+      sframe_encoder_add_funcdesc_v2 (*ectx,
+				      0, /* func start addr.  */
+				      plt0_entry_size,
+				      func_info,
+				      0, /* Rep block size.  */
+				      0 /* Num FREs.  */);
+      sframe_frame_row_entry plt0_fre;
+      unsigned int num_plt0_fres = htab->sframe_plt->plt0_num_fres;
+      for (unsigned int j = 0; j < num_plt0_fres; j++)
+	{
+	  plt0_fre = *(htab->sframe_plt->plt0_fres[j]);
+	  sframe_encoder_add_fre (*ectx, 0, &plt0_fre);
+	}
+    }
+
+  if (num_pltn_entries)
+    {
+      /* PLTn entries use an SFrame FDE of type
+	 SFRAME_FDE_TYPE_PCMASK to exploit the repetitive
+	 pattern of the instructions in these entries.  Using this SFrame FDE
+	 type helps in keeping the SFrame stack trace info for PLTn entries
+	 compact.  */
+      func_info	= sframe_fde_create_func_info (fre_type,
+					       SFRAME_FDE_TYPE_PCMASK);
+      /* Add the SFrame FDE for all PCs starting at the first PLTn entry (hence,
+	 function start address = plt0_entry_size.  As usual, this will be
+	 updated later at _bfd_elf_merge_section_sframe, by when the
+	 sections are relocated.  */
+      sframe_encoder_add_funcdesc_v2 (*ectx,
+				      plt0_entry_size, /* func start addr.  */
+				      dpltsec->size - plt0_entry_size,
+				      func_info,
+				      plt_entry_size,
+				      0 /* Num FREs.  */);
+
+      sframe_frame_row_entry pltn_fre;
+      /* Now add the FREs for PLTn.  Simply adding the FREs suffices due
+	 to the usage of SFRAME_FDE_TYPE_PCMASK above.  */
+      for (unsigned int j = 0; j < num_pltn_fres; j++)
+	{
+	  unsigned int func_idx = plt0_entry_size ? 1 : 0;
+	  pltn_fre = *(pltn_fres[j]);
+	  sframe_encoder_add_fre (*ectx, func_idx, &pltn_fre);
+	}
+    }
+
+  return true;
+}
+
+/* Write contents of the .sframe section.  */
+
+static bool
+_bfd_s390_elf_write_sframe_plt (struct bfd_link_info *info)
+{
+  struct elf_s390_link_hash_table *htab;
+  sframe_encoder_ctx *ectx;
+  size_t sec_size;
+  asection *sec;
+  bfd *dynobj;
+
+  int err = 0;
+
+  htab = elf_s390_hash_table (info);
+  dynobj = htab->elf.dynobj;
+
+  ectx = htab->plt_cfe_ctx;
+  sec = htab->plt_sframe;
+
+  BFD_ASSERT (ectx);
+
+  void *contents = sframe_encoder_write (ectx, &sec_size, &err);
+
+  sec->size = (bfd_size_type) sec_size;
+  sec->contents = (unsigned char *) bfd_zalloc (dynobj, sec->size);
+  sec->alloced = 1;
+  memcpy (sec->contents, contents, sec_size);
+
+  sframe_encoder_free (&ectx);
+
+  return true;
+}
+
 /* Allocate space in .plt, .got and associated reloc sections for
    dynamic relocs.  */
 
@@ -1765,7 +1946,7 @@ elf_s390_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->elf.interp;
 	  if (s == NULL)
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
@@ -1892,6 +2073,25 @@ elf_s390_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	htab->plt_eh_frame->size = sizeof (elf_s390x_eh_frame_plt);
     }
 
+  /* No need to size the .sframe section explicitly because the write-out
+     mechanism is different.  Simply prep up the FDE/FRE for the
+     .plt section.  */
+  if (_bfd_elf_sframe_present (info))
+    {
+      if (htab->plt_sframe != NULL
+	  && htab->elf.splt != NULL
+	  && htab->elf.splt->size != 0
+	  && !bfd_is_abs_section (htab->elf.splt->output_section))
+	{
+	  _bfd_s390_elf_create_sframe_plt (info);
+	  /* FIXME - Dirty Hack.  Set the size to something non-zero for now,
+	     so that the section does not get stripped out below.  The precise
+	     size of this section is known only when the contents are
+	     serialized in _bfd_s390x_elf_write_sframe_plt.  */
+	  htab->plt_sframe->size = sizeof (sframe_header) + 1;
+	}
+    }
+
   /* We now have determined the sizes of the various dynamic sections.
      Allocate memory for them.  */
   relocs = false;
@@ -1904,6 +2104,7 @@ elf_s390_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  || s == htab->elf.sgot
 	  || s == htab->elf.sgotplt
 	  || s == htab->plt_eh_frame
+	  || s == htab->plt_sframe
 	  || s == htab->elf.sdynbss
 	  || s == htab->elf.sdynrelro
 	  || s == htab->elf.iplt
@@ -1960,6 +2161,11 @@ elf_s390_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if ((s->flags & SEC_HAS_CONTENTS) == 0)
 	continue;
 
+      /* Skip allocating contents for .sframe section as it is written
+	 out differently.  See below.  */
+      if (s == htab->plt_sframe)
+	continue;
+
       /* Allocate memory for the section contents.  We use bfd_zalloc
 	 here in case unused entries are not reclaimed before the
 	 section's contents are written out.  This should not happen,
@@ -1979,6 +2185,15 @@ elf_s390_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	      htab->plt_eh_frame->size);
       bfd_put_32 (dynobj, htab->elf.splt->size,
 		  htab->plt_eh_frame->contents + PLT_FDE_LEN_OFFSET);
+    }
+
+  if (_bfd_elf_sframe_present (info))
+    {
+      if (htab->plt_sframe != NULL
+	  && htab->elf.splt != NULL
+	  && htab->elf.splt->size != 0
+	  && htab->plt_sframe->contents == NULL)
+	_bfd_s390_elf_write_sframe_plt (info);
     }
 
   return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
@@ -2081,6 +2296,7 @@ elf_s390_relocate_section (bfd *output_bfd,
       bfd_reloc_status_type r;
       int tls_type;
       bool resolved_to_zero;
+      bool relax;
 
       r_type = ELF64_R_TYPE (rel->r_info);
       if (r_type == (int) R_390_GNU_VTINHERIT
@@ -2171,13 +2387,19 @@ elf_s390_relocate_section (bfd *output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_390_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	continue;
 
       resolved_to_zero = (h != NULL
 			  && UNDEFWEAK_NO_DYNAMIC_RELOC (info, h));
+
+      /* Rewrite instructions and related relocations if (1) relaxation
+	 disabled by default, (2) enabled by target, or (3) enabled by
+	 user.  Suppress rewriting if linker option --no-relax is used.  */
+      relax = info->disable_target_specific_optimizations <= 1;
 
       switch (r_type)
 	{
@@ -2301,7 +2523,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		     reference using larl we have to make sure that
 		     the symbol is 1. properly aligned and 2. it is no
 		     ABS symbol or will become one.  */
-		  if (h->def_regular
+		  if (relax
+		      && h->def_regular
 		      && SYMBOL_REFERENCES_LOCAL (info, h)
 		      /* lgrl rx,sym@GOTENT -> larl rx, sym */
 		      && ((r_type == R_390_GOTENT
@@ -2329,6 +2552,7 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      bfd_put_16 (output_bfd, new_insn,
 				  contents + rel->r_offset - 2);
 		      r_type = R_390_PC32DBL;
+		      rel->r_info = ELF64_R_INFO (r_symndx, r_type);
 		      rel->r_addend = 2;
 		      howto = elf_howto_table + r_type;
 		      relocation = h->root.u.def.value
@@ -2450,7 +2674,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		 either a load address of 0 or a trapping insn.
 		 This prevents the PLT32DBL relocation from overflowing in
 		 case the binary will be loaded at 4GB or more.  */
-	      if (h->root.type == bfd_link_hash_undefweak
+	      if (relax
+		  && h->root.type == bfd_link_hash_undefweak
 		  && !h->root.linker_def
 		  && (bfd_link_executable (info)
 		      || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
@@ -2469,6 +2694,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      /* larl rX,<weak sym> -> lay rX,0(0)  */
 		      bfd_put_16 (output_bfd, 0xe300 | reg, insn_start);
 		      bfd_put_32 (output_bfd, 0x71, insn_start + 2);
+		      rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		      rel->r_addend = 0;
 		      continue;
 		    }
 		  /* Replace branch relative and save long (brasl) with a trap.  */
@@ -2477,6 +2704,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		      /* brasl rX,<weak sym> -> jg .+2 (6-byte trap)  */
 		      bfd_put_16 (output_bfd, 0xc0f4, insn_start);
 		      bfd_put_32 (output_bfd, 0x1, insn_start + 2);
+		      rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		      rel->r_addend = 0;
 		      continue;
 		    }
 		}
@@ -2561,7 +2790,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 	     either a load address of 0, a NOP, or a trapping insn.
 	     This prevents the PC32DBL relocation from overflowing in
 	     case the binary will be loaded at 4GB or more.  */
-	  if (h != NULL
+	  if (relax
+	      && h != NULL
 	      && h->root.type == bfd_link_hash_undefweak
 	      && !h->root.linker_def
 	      && (bfd_link_executable (info)
@@ -2581,6 +2811,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* larl rX,<weak sym> -> lay rX,0(0)  */
 		  bfd_put_16 (output_bfd, 0xe300 | reg, insn_start);
 		  bfd_put_32 (output_bfd, 0x71, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	      /* Replace prefetch data relative long (pfdrl) with a NOP  */
@@ -2589,6 +2821,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* Emit a 6-byte NOP: jgnop .  */
 		  bfd_put_16 (output_bfd, 0xc004, insn_start);
 		  bfd_put_32 (output_bfd, 0x0, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	      /* Replace the following instructions with a trap:
@@ -2606,6 +2840,8 @@ elf_s390_relocate_section (bfd *output_bfd,
 		  /* Emit a 6-byte trap: jg .+2  */
 		  bfd_put_16 (output_bfd, 0xc0f4, insn_start);
 		  bfd_put_32 (output_bfd, 0x1, insn_start + 2);
+		  rel->r_info = ELF64_R_INFO (0, R_390_NONE);
+		  rel->r_addend = 0;
 		  continue;
 		}
 	    }
@@ -3781,6 +4017,34 @@ elf_s390_finish_dynamic_sections (bfd *output_bfd,
 	}
     }
 
+  /* Make any adjustment if necessary and merge .sframe section to
+     create the final .sframe section for output_bfd.  */
+  if (htab->plt_sframe != NULL
+      && htab->plt_sframe->contents != NULL)
+    {
+      if (htab->elf.splt != NULL
+	  && htab->elf.splt->size != 0
+	  && (htab->elf.splt->flags & SEC_EXCLUDE) == 0
+	  && htab->elf.splt->output_section != NULL
+	  && htab->plt_sframe->output_section != NULL)
+	{
+	  bfd_vma plt_start = htab->elf.splt->output_section->vma;
+	  bfd_vma sframe_start = htab->plt_sframe->output_section->vma
+				   + htab->plt_sframe->output_offset
+				   + PLT_SFRAME_FDE_START_OFFSET;
+	  bfd_put_signed_32 (dynobj, plt_start - sframe_start,
+			     htab->plt_sframe->contents
+			     + PLT_SFRAME_FDE_START_OFFSET);
+	}
+      if (htab->plt_sframe->sec_info_type == SEC_INFO_TYPE_SFRAME)
+	{
+	  if (! _bfd_elf_merge_section_sframe (output_bfd, info,
+					       htab->plt_sframe,
+					       htab->plt_sframe->contents))
+	    return false;
+	}
+    }
+
   return true;
 }
 
@@ -4021,6 +4285,8 @@ elf_s390_create_dynamic_sections (bfd *dynobj,
   if (htab == NULL)
     return false;
 
+  htab->sframe_plt = &elf_s390x_sframe_plt;
+
   if (htab->elf.splt != NULL)
     {
       /* Create .eh_frame section for .plt section.  */
@@ -4041,6 +4307,22 @@ elf_s390_create_dynamic_sections (bfd *dynobj,
                 return false;
             }
         }
+
+      /* Create .sframe section for .plt section.  */
+      if (!info->no_ld_generated_unwind_info)
+	{
+	  flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY
+			    | SEC_HAS_CONTENTS | SEC_IN_MEMORY
+			    | SEC_LINKER_CREATED);
+
+	  htab->plt_sframe = bfd_make_section_anyway_with_flags (dynobj,
+								 ".sframe",
+								 flags);
+	  if (htab->plt_sframe == NULL)
+	    return false;
+
+	  elf_section_type (htab->plt_sframe) = SHT_GNU_SFRAME;
+	}
     }
 
   return true;

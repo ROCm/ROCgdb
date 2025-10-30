@@ -21,13 +21,13 @@ load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
 standard_testfile "mi-read-memory"
- 
+
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}.c" "${binfile}" executable {debug}] != "" } {
      untested "failed to compile"
      return -1
 }
 
-mi_clean_restart $binfile
+mi_clean_restart $::testfile
 mi_runto_main
 mi_next_to "main" "" "mi-read-memory.c" "20" "next at main"
 

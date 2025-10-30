@@ -1267,7 +1267,7 @@ tic6x_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   dwarf2_frame_set_init_reg (gdbarch, tic6x_dwarf2_frame_init_reg);
 
   /* Single stepping.  */
-  set_gdbarch_software_single_step (gdbarch, tic6x_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, tic6x_software_single_step);
 
   /* Call dummy code.  */
   set_gdbarch_frame_align (gdbarch, tic6x_frame_align);
@@ -1293,9 +1293,7 @@ tic6x_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_tic6x_tdep ();
-void
-_initialize_tic6x_tdep ()
+INIT_GDB_FILE (tic6x_tdep)
 {
   gdbarch_register (bfd_arch_tic6x, tic6x_gdbarch_init);
 }

@@ -36,7 +36,7 @@ set allow_float_test [allow_float_test]
 set flags {}
 lappend flags debug
 lappend_include_file flags $srcdir/lib/unbuffer_output.c
-if [support_complex_tests] {
+if {[support_complex_tests]} {
     lappend flags "additional_flags=-DTEST_COMPLEX"
 }
 
@@ -49,13 +49,14 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 
 # Start with a fresh gdb.
 
-clean_restart ${binfile}
+clean_restart
+gdb_load $binfile
 gdb_test_no_output "set print sevenbit-strings"
 gdb_test_no_output "set print address off"
 gdb_test_no_output "set width 0"
 
 
-if [gdb_skip_stdio_test "varargs.exp"] {
+if {[gdb_skip_stdio_test "varargs.exp"]} {
     # Nothing in this module is testable without printf.
     return
 }
@@ -92,7 +93,7 @@ if {$allow_float_test} {
 
 
 # Test _Complex type here if supported.
-if [support_complex_tests] {
+if {[support_complex_tests]} {
     global gdb_prompt
 
     set test "print find_max_float_real(4, fc1, fc2, fc3, fc4)"

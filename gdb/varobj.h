@@ -121,7 +121,7 @@ struct varobj
 
   /* The value of this expression or subexpression.  A NULL value
      indicates there was an error getting this value.
-     Invariant: if varobj_value_is_changeable_p (this) is non-zero, 
+     Invariant: if varobj_value_is_changeable_p (this) is non-zero,
      the value is either NULL, or not lazy.  */
   value_ref_ptr value;
 
@@ -148,7 +148,7 @@ struct varobj
   std::string print_value;
 
   /* Is this variable frozen.  Frozen variables are never implicitly
-     updated by -var-update * 
+     updated by -var-update *
      or -var-update <direct-or-indirect-parent>.  */
   bool frozen = false;
 

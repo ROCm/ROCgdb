@@ -5372,17 +5372,17 @@ static bool
 som_bfd_copy_private_section_data (bfd *ibfd,
 				   asection *isection,
 				   bfd *obfd,
-				   asection *osection)
+				   asection *osection,
+				   struct bfd_link_info *link_info)
 {
-  size_t amt;
-
   /* One day we may try to grok other private data.  */
-  if (ibfd->xvec->flavour != bfd_target_som_flavour
+  if (link_info != NULL
+      || ibfd->xvec->flavour != bfd_target_som_flavour
       || obfd->xvec->flavour != bfd_target_som_flavour
       || (!som_is_space (isection) && !som_is_subspace (isection)))
     return true;
 
-  amt = sizeof (struct som_copyable_section_data_struct);
+  size_t amt = sizeof (struct som_copyable_section_data_struct);
   som_section_data (osection)->copy_data = bfd_zalloc (obfd, amt);
   if (som_section_data (osection)->copy_data == NULL)
     return false;
@@ -5401,7 +5401,8 @@ som_bfd_copy_private_section_data (bfd *ibfd,
 	{
 	  /* User has specified a subspace without its containing space.  */
 	  _bfd_error_handler (_("%pB[%pA]: no output section for space %pA"),
-	    obfd, osection, som_section_data (osection)->copy_data->container);
+			      obfd, osection,
+			      som_section_data (osection)->copy_data->container);
 	  return false;
 	}
     }
@@ -6770,7 +6771,6 @@ som_bfd_link_split_section (bfd *abfd ATTRIBUTE_UNUSED, asection *sec)
 #define som_bfd_final_link			_bfd_generic_final_link
 #define som_bfd_gc_sections			bfd_generic_gc_sections
 #define som_bfd_lookup_section_flags		bfd_generic_lookup_section_flags
-#define som_bfd_merge_sections			bfd_generic_merge_sections
 #define som_bfd_is_group_section		bfd_generic_is_group_section
 #define som_bfd_group_name			bfd_generic_group_name
 #define som_bfd_discard_group			bfd_generic_discard_group
@@ -6779,7 +6779,6 @@ som_bfd_link_split_section (bfd *abfd ATTRIBUTE_UNUSED, asection *sec)
 #define som_bfd_link_hide_symbol		_bfd_generic_link_hide_symbol
 #define som_bfd_define_start_stop		bfd_generic_define_start_stop
 #define som_bfd_merge_private_bfd_data		_bfd_generic_bfd_merge_private_bfd_data
-#define som_init_private_section_data		_bfd_generic_init_private_section_data
 #define som_bfd_copy_private_header_data	_bfd_generic_bfd_copy_private_header_data
 #define som_bfd_set_private_flags		_bfd_generic_bfd_set_private_flags
 #define som_find_inliner_info			_bfd_nosymbols_find_inliner_info
@@ -6805,6 +6804,7 @@ const bfd_target hppa_som_vec =
   14,				/* AR_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,
   bfd_getb32, bfd_getb_signed_32, bfd_putb32,
   bfd_getb16, bfd_getb_signed_16, bfd_putb16,	/* Data.  */

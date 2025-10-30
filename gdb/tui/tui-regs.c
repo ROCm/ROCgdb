@@ -422,7 +422,7 @@ tui_register_info::rerender (WINDOW *handle, int field_width)
        to code that causes the compiler to generate an unused-value
        warning.  */
     (void) wstandout (handle);
-      
+
   mvwaddnstr (handle, y, x, content.c_str (), field_width - 1);
   if (content.size () < field_width)
     waddstr (handle, n_spaces (field_width - content.size ()));
@@ -566,9 +566,7 @@ tui_reggroup_completer (struct cmd_list_element *ignore,
   complete_on_enum (tracker, extra, text, word);
 }
 
-void _initialize_tui_regs ();
-void
-_initialize_tui_regs ()
+INIT_GDB_FILE (tui_regs)
 {
   struct cmd_list_element **tuicmd, *cmd;
 

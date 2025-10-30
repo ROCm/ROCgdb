@@ -152,7 +152,7 @@ public:
   /* In the mutable address map MAP, associate the addresses from START
      to END_INCLUSIVE that are currently associated with NULL with OBJ
      instead.  Addresses mapped to an object other than NULL are left
-     unchanged.
+     unchanged.  Return true if the full range is mapped to OBJ.
 
      As the name suggests, END_INCLUSIVE is also mapped to OBJ.  This
      convention is unusual, but it allows callers to accurately specify
@@ -186,7 +186,7 @@ public:
      semantics than to provide an interface which allows it to be
      implemented efficiently, but doesn't reveal too much of the
      representation.  */
-  void set_empty (CORE_ADDR start, CORE_ADDR end_inclusive,
+  bool set_empty (CORE_ADDR start, CORE_ADDR end_inclusive,
 		  void *obj);
 
   /* Clear this addrmap.  */
@@ -200,7 +200,7 @@ private:
      transition at address T if T-1 and T map to different objects.
 
      Any addresses below the first node map to NULL.  (Unlike
-     fixed maps, we have no entry at (CORE_ADDR) 0; it doesn't 
+     fixed maps, we have no entry at (CORE_ADDR) 0; it doesn't
      simplify enough.)
 
      The last region is assumed to end at CORE_ADDR_MAX.

@@ -45,6 +45,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/scoped_ignore_signal.h"
 #include "gdbsupport/buildargv.h"
+#include "gdbsupport/cleanups.h"
 
 /* Hold "compile" commands.  */
 
@@ -436,7 +437,7 @@ static const char *
 get_selected_pc_producer_options (void)
 {
   CORE_ADDR pc = get_frame_pc (get_selected_frame (NULL));
-  struct compunit_symtab *symtab = find_pc_compunit_symtab (pc);
+  struct compunit_symtab *symtab = find_compunit_symtab_for_pc (pc);
   const char *cs;
 
   if (symtab == NULL || symtab->producer () == NULL
@@ -868,9 +869,7 @@ compile_command (const char *args, int from_tty)
 /* See compile.h.  */
 cmd_list_element *compile_cmd_element = nullptr;
 
-void _initialize_compile ();
-void
-_initialize_compile ()
+INIT_GDB_FILE (compile)
 {
   compile_cmd_element = add_prefix_cmd ("compile", class_obscure,
 					compile_command,

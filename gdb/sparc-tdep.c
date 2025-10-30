@@ -115,7 +115,7 @@ static int
 sparc_is_unimp_insn (CORE_ADDR pc)
 {
   const unsigned long insn = sparc_fetch_instruction (pc);
-  
+
   return ((insn & 0xc1c00000) == 0);
 }
 
@@ -773,7 +773,7 @@ sparc_alloc_frame_cache (void)
    of each function prologue when compiling with -fstack-check.  If one of
    such sequences starts at START_PC, then return the address of the
    instruction immediately past this sequence.  Otherwise, return START_PC.  */
-   
+
 static CORE_ADDR
 sparc_skip_stack_check (const CORE_ADDR start_pc)
 {
@@ -883,7 +883,7 @@ sparc_skip_stack_check (const CORE_ADDR start_pc)
       /* We found a valid stack-check sequence, return the new PC.  */
       return pc;
     }
-  
+
   /* Third sequence: A probing loop.
 	 [first three instructions above]
 	 sub  %g1, %g4, %g4
@@ -1249,7 +1249,7 @@ sparc32_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 
   cache = sparc_frame_cache (this_frame, this_cache);
 
-  sym = find_pc_function (cache->pc);
+  sym = find_symbol_for_pc (cache->pc);
   if (sym)
     {
       cache->struct_return_p = sparc32_struct_return_from_sym (sym);
@@ -1541,18 +1541,10 @@ sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
 }
 
 static int
-sparc32_stabs_argument_has_addr (struct gdbarch *gdbarch, struct type *type)
-{
-  return (sparc_structure_or_union_p (type)
-	  || (sparc_floating_p (type) && type->length () == 16)
-	  || sparc_complex_floating_p (type));
-}
-
-static int
 sparc32_dwarf2_struct_return_p (const frame_info_ptr &this_frame)
 {
   CORE_ADDR pc = get_frame_address_in_block (this_frame);
-  struct symbol *sym = find_pc_function (pc);
+  struct symbol *sym = find_symbol_for_pc (pc);
 
   if (sym)
     return sparc32_struct_return_from_sym (sym);
@@ -1859,8 +1851,6 @@ sparc32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_push_dummy_call (gdbarch, sparc32_push_dummy_call);
 
   set_gdbarch_return_value_as_value (gdbarch, sparc32_return_value);
-  set_gdbarch_stabs_argument_has_addr
-    (gdbarch, sparc32_stabs_argument_has_addr);
 
   set_gdbarch_skip_prologue (gdbarch, sparc32_skip_prologue);
 
@@ -1874,7 +1864,7 @@ sparc32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_frame_args_skip (gdbarch, 8);
 
-  set_gdbarch_software_single_step (gdbarch, sparc_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, sparc_software_single_step);
   set_gdbarch_write_pc (gdbarch, sparc_write_pc);
 
   set_gdbarch_dummy_id (gdbarch, sparc_dummy_id);
@@ -2264,9 +2254,7 @@ const struct sparc_fpregmap sparc32_bsd_fpregmap =
   32 * 4,			/* %fsr */
 };
 
-void _initialize_sparc_tdep ();
-void
-_initialize_sparc_tdep ()
+INIT_GDB_FILE (sparc_tdep)
 {
   gdbarch_register (bfd_arch_sparc, sparc32_gdbarch_init);
 }

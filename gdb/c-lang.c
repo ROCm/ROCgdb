@@ -34,7 +34,6 @@
 #include "cp-abi.h"
 #include "cp-support.h"
 #include "gdbsupport/gdb_obstack.h"
-#include <ctype.h>
 #include "gdbcore.h"
 #include "gdbarch.h"
 #include "c-exp.h"
@@ -314,7 +313,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 	  if (extract_unsigned_integer (contents + i * width,
 					width, byte_order) == 0)
 	    break;
-  
+
       /* I is now either a user-defined length, the number of non-null
 	 characters, or FETCHLIMIT.  */
       *length = i * width;
@@ -369,7 +368,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 	&& extract_unsigned_integer (buffer->get () + *length - width,
 				     width, byte_order) == 0)
       *length -= width;
-  
+
   /* The read_string function will return the number of bytes read.
      If length returned from read_string was > 0, return the number of
      characters read by dividing the number of bytes by width.  */
@@ -410,7 +409,7 @@ convert_ucn (const char *p, const char *limit, const char *dest_charset,
   gdb_byte data[4];
   int i;
 
-  for (i = 0; i < length && p < limit && ISXDIGIT (*p); ++i, ++p)
+  for (i = 0; i < length && p < limit && c_isxdigit (*p); ++i, ++p)
     result = (result << 4) + fromhex (*p);
 
   for (i = 3; i >= 0; --i)
@@ -452,7 +451,7 @@ convert_octal (struct type *type, const char *p,
   unsigned long value = 0;
 
   for (i = 0;
-       i < 3 && p < limit && ISDIGIT (*p) && *p != '8' && *p != '9';
+       i < 3 && p < limit && c_isdigit (*p) && *p != '8' && *p != '9';
        ++i)
     {
       value = 8 * value + fromhex (*p);
@@ -475,7 +474,7 @@ convert_hex (struct type *type, const char *p,
 {
   unsigned long value = 0;
 
-  while (p < limit && ISXDIGIT (*p))
+  while (p < limit && c_isxdigit (*p))
     {
       value = 16 * value + fromhex (*p);
       ++p;
@@ -485,13 +484,6 @@ convert_hex (struct type *type, const char *p,
 
   return p;
 }
-
-#define ADVANCE					\
-  do {						\
-    ++p;					\
-    if (p == limit)				\
-      error (_("Malformed escape sequence"));	\
-  } while (0)
 
 /* Convert an escape sequence to a target format.  TYPE is the target
    character type to use, and DEST_CHARSET is the name of the target
@@ -504,19 +496,30 @@ static const char *
 convert_escape (struct type *type, const char *dest_charset,
 		const char *p, const char *limit, struct obstack *output)
 {
+  auto advance = [&] ()
+    {
+      ++p;
+      if (p == limit)
+	error (_("Malformed escape sequence"));
+    };
+
   /* Skip the backslash.  */
-  ADVANCE;
+  advance ();
 
   switch (*p)
     {
     case '\\':
-      obstack_1grow (output, '\\');
+      /* Convert the backslash itself.  This is probably overkill but
+	 it doesn't hurt to do the full conversion.  */
+      convert_between_encodings (host_charset (), dest_charset,
+				 (const gdb_byte *) p, 1, 1,
+				 output, translit_none);
       ++p;
       break;
 
     case 'x':
-      ADVANCE;
-      if (!ISXDIGIT (*p))
+      advance ();
+      if (!c_isxdigit (*p))
 	error (_("\\x used with no following hex digits."));
       p = convert_hex (type, p, limit, output);
       break;
@@ -537,8 +540,8 @@ convert_escape (struct type *type, const char *dest_charset,
       {
 	int length = *p == 'u' ? 4 : 8;
 
-	ADVANCE;
-	if (!ISXDIGIT (*p))
+	advance ();
+	if (!c_isxdigit (*p))
 	  error (_("\\u used with no following hex digits"));
 	p = convert_ucn (p, limit, dest_charset, output, length);
       }

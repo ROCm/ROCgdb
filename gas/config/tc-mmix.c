@@ -504,7 +504,7 @@ get_operands (int max_operands, char *s, expressionS *exp)
   /* Mark the end of the valid operands with an illegal expression.  */
   exp[numexp].X_op = O_illegal;
 
-  return (numexp);
+  return numexp;
 }
 
 /* Get the value of a special register, or -1 if the name does not match
@@ -835,7 +835,7 @@ md_assemble (char *str)
       *operands++ = '\0';
     }
 
-  instruction = (struct mmix_opcode *) str_hash_find (mmix_opcode_hash, str);
+  instruction = str_hash_find (mmix_opcode_hash, str);
   if (instruction == NULL)
     {
       as_bad (_("unknown opcode: `%s'"), str);
@@ -1912,7 +1912,7 @@ mmix_assemble_return_nonzero (char *str)
   /* Normal instruction handling downcases, so we must too.  */
   while (ISALNUM (*s2))
     {
-      if (ISUPPER ((unsigned char) *s2))
+      if (ISUPPER (*s2))
 	*s2 = TOLOWER (*s2);
       s2++;
     }
@@ -2426,12 +2426,11 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
 void
 md_apply_fix (fixS *fixP, valueT *valP, segT segment)
 {
-  char *buf  = fixP->fx_where + fixP->fx_frag->fr_literal;
+  char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
   /* Note: use offsetT because it is signed, valueT is unsigned.  */
-  offsetT val  = (offsetT) * valP;
-  segT symsec
-    = (fixP->fx_addsy == NULL
-       ? absolute_section : S_GET_SEGMENT (fixP->fx_addsy));
+  offsetT val = *valP;
+  segT symsec = (fixP->fx_addsy == NULL
+		 ? absolute_section : S_GET_SEGMENT (fixP->fx_addsy));
 
   /* If the fix is relative to a symbol which is not defined, or, (if
      pcrel), not in the same segment as the fix, we cannot resolve it
@@ -2490,8 +2489,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment)
     case BFD_RELOC_MMIX_PUSHJ_STUBBABLE:
       /* If this fixup is out of range, punt to the linker to emit an
 	 error.  This should only happen with -no-expand.  */
-      if (val < -(((offsetT) 1 << 19)/2)
-	  || val >= ((offsetT) 1 << 19)/2 - 1
+      if (val < -((1 << 19) / 2)
+	  || val >= (1 << 19) / 2 - 1
 	  || (val & 3) != 0)
 	{
 	  if (warn_on_expansion)
@@ -2514,8 +2513,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT segment)
     case BFD_RELOC_MMIX_JMP:
       /* If this fixup is out of range, punt to the linker to emit an
 	 error.  This should only happen with -no-expand.  */
-      if (val < -(((offsetT) 1 << 27)/2)
-	  || val >= ((offsetT) 1 << 27)/2 - 1
+      if (val < -((1 << 27) / 2)
+	  || val >= (1 << 27) / 2 - 1
 	  || (val & 3) != 0)
 	{
 	  if (warn_on_expansion)
@@ -2774,7 +2773,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
 		  && (bfd_vma) val + 256 > lowest_data_loc
 		  && bfd_is_abs_section (addsec))
 		{
-		  val -= (offsetT) lowest_data_loc;
+		  val -= lowest_data_loc;
 		  addsy = section_symbol (data_section);
 		}
 	      /* Likewise text section.  */
@@ -2782,7 +2781,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
 		       && (bfd_vma) val + 256 > lowest_text_loc
 		       && bfd_is_abs_section (addsec))
 		{
-		  val -= (offsetT) lowest_text_loc;
+		  val -= lowest_text_loc;
 		  addsy = section_symbol (text_section);
 		}
 	    }
@@ -3283,7 +3282,7 @@ mmix_force_relocation (fixS *fixP)
 long
 md_pcrel_from_section (fixS *fixP, segT sec)
 {
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
     {
@@ -3438,9 +3437,8 @@ mmix_md_relax_frag (segT seg, fragS *fragP, long stretch)
 	if (fragP == seginfo->tc_segment_info_data.last_stubfrag)
 	  seginfo->tc_segment_info_data.nstubs = 0;
 
-	return
-	   (mmix_relax_table[fragP->fr_subtype].rlx_length
-	    - mmix_relax_table[prev_type].rlx_length);
+	return (mmix_relax_table[fragP->fr_subtype].rlx_length
+		- mmix_relax_table[prev_type].rlx_length);
       }
 
     case ENCODE_RELAX (STATE_PUSHJ, STATE_MAX):
@@ -3635,7 +3633,7 @@ mmix_md_finish (void)
       if (! merge_gregs)
 	continue;
 
-      osymval = (offsetT) S_GET_VALUE (symbolP);
+      osymval = S_GET_VALUE (symbolP);
       osymfrag = symbol_get_frag (symbolP);
 
       /* If the symbol isn't defined, we can't say that another symbol
@@ -3687,10 +3685,8 @@ mmix_md_finish (void)
 static int
 cmp_greg_symbol_fixes (const void *parg, const void *qarg)
 {
-  const struct mmix_symbol_greg_fixes *p
-    = (const struct mmix_symbol_greg_fixes *) parg;
-  const struct mmix_symbol_greg_fixes *q
-    = (const struct mmix_symbol_greg_fixes *) qarg;
+  const struct mmix_symbol_greg_fixes *p = parg;
+  const struct mmix_symbol_greg_fixes *q = qarg;
 
   return p->offs > q->offs ? 1 : p->offs < q->offs ? -1 : 0;
 }
@@ -3728,7 +3724,7 @@ mmix_frob_file (void)
 	}
 
       sym = fixP->fx_addsy;
-      offs = (offsetT) fixP->fx_offset;
+      offs = fixP->fx_offset;
 
       /* If the symbol is defined, then it must be resolved to a section
 	 symbol at this time, or else we don't know how to handle it.  */
@@ -3751,7 +3747,7 @@ mmix_frob_file (void)
 	  && (bfd_vma) offs + 256 > lowest_data_loc
 	  && bfd_is_abs_section (S_GET_SEGMENT (sym)))
 	{
-	  offs -= (offsetT) lowest_data_loc;
+	  offs -= lowest_data_loc;
 	  sym = section_symbol (data_section);
 	}
       /* Likewise text section.  */
@@ -3759,7 +3755,7 @@ mmix_frob_file (void)
 	       && (bfd_vma) offs + 256 > lowest_text_loc
 	       && bfd_is_abs_section (S_GET_SEGMENT (sym)))
 	{
-	  offs -= (offsetT) lowest_text_loc;
+	  offs -= lowest_text_loc;
 	  sym = section_symbol (text_section);
 	}
 
@@ -4087,7 +4083,7 @@ s_loc (int ignore ATTRIBUTE_UNUSED)
 	  loc_asserts->frag = frag_now;
 	}
 
-      p = frag_var (rs_org, 1, 1, (relax_substateT) 0, sym, off, (char *) 0);
+      p = frag_var (rs_org, 1, 1, 0, sym, off, NULL);
       *p = 0;
     }
 
@@ -4257,7 +4253,7 @@ mmix_cons (int nbytes)
       exp.X_unsigned = 0;
       exp.X_add_symbol = NULL;
       exp.X_op_symbol = NULL;
-      emit_expr (&exp, (unsigned int) nbytes);
+      emit_expr (&exp, nbytes);
     }
   else
     do
@@ -4275,7 +4271,7 @@ mmix_cons (int nbytes)
 		exp.X_op = O_constant;
 		exp.X_add_number = c;
 		exp.X_unsigned = 1;
-		emit_expr (&exp, (unsigned int) nbytes);
+		emit_expr (&exp, nbytes);
 	      }
 
 	    if (input_line_pointer[-1] != '\"')
@@ -4292,7 +4288,7 @@ mmix_cons (int nbytes)
 	  default:
 	    {
 	      expression (&exp);
-	      emit_expr (&exp, (unsigned int) nbytes);
+	      emit_expr (&exp, nbytes);
 	      SKIP_WHITESPACE ();
 	    }
 	    break;

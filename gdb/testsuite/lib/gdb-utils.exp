@@ -20,10 +20,10 @@
 
 proc gdb_init_commands {} {
     set commands ""
-    if [target_info exists gdb_init_command] {
+    if {[target_info exists gdb_init_command]} {
 	lappend commands [target_info gdb_init_command]
     }
-    if [target_info exists gdb_init_commands] {
+    if {[target_info exists gdb_init_commands]} {
 	set commands [concat $commands [target_info gdb_init_commands]]
     }
     return $commands
@@ -70,6 +70,8 @@ proc style {str style} {
     set fg 39
     set bg 49
     set intensity 22
+    set italic 23
+    set underline 24
     set reverse 27
     switch -exact -- $style {
 	title { set intensity 1 }
@@ -84,7 +86,7 @@ proc style {str style} {
 	line-number { set intensity 2 }
 	none { return $str }
     }
-    return "\033\\\[${fg};${bg};${intensity};${reverse}m${str}\033\\\[m"
+    return "\033\\\[${fg};${bg};${intensity};${italic};${underline};${reverse}m${str}\033\\\[m"
 }
 
 # gdb_get_bp_addr num
@@ -163,6 +165,7 @@ proc version_compare { l1 op l2 } {
 	if {$v1 == $v2} {
 	    continue
 	}
+	# tclint-disable-next-line unbraced-expr
 	return [expr $v1 $op $v2]
     }
 
@@ -242,4 +245,10 @@ proc with_lock { lock_file body } {
     } else {
 	return -code $code $result
     }
+}
+
+# Alias for subst -nobackslashes -nocommands.
+
+proc subst_vars { str } {
+    tailcall subst -nobackslashes -nocommands $str
 }

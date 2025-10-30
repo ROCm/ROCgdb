@@ -52,7 +52,7 @@ FILE *errorf;
 #endif
 
 static flagword bfin_flags = DEFAULT_FLAGS | DEFAULT_FDPIC;
-static const char *bfin_pic_flag = DEFAULT_FDPIC ? "-mfdpic" : (const char *)0;
+static const char *bfin_pic_flag = DEFAULT_FDPIC ? "-mfdpic" : NULL;
 
 /* Blackfin specific function to handle FD-PIC pointer initializations.  */
 
@@ -614,7 +614,7 @@ md_operand (expressionS * expressionP)
 symbolS *
 md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
 {
-  return (symbolS *) 0;
+  return NULL;
 }
 
 int
@@ -806,7 +806,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
   reloc->addend = fixp->fx_offset;
   reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
 
-  if (reloc->howto == (reloc_howto_type *) NULL)
+  if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    /* xgettext:c-format.  */
@@ -824,7 +824,7 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
 long
 md_pcrel_from_section (fixS *fixP, segT sec)
 {
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (!S_IS_DEFINED (fixP->fx_addsy)
       || S_GET_SEGMENT (fixP->fx_addsy) != sec))
     {
@@ -937,7 +937,7 @@ Expr_Node_Create (Expr_Node_Type type,
 {
 
 
-  Expr_Node *node = (Expr_Node *) allocate (sizeof (Expr_Node));
+  Expr_Node *node = allocate (sizeof (Expr_Node));
   node->type = type;
   node->value = value;
   node->Left_Child = Left_Child;
@@ -1857,8 +1857,8 @@ bfin_gen_loop (Expr_Node *exp, REG_T reg, int rop, REG_T preg)
   symbolS *sym;
 
   loopsym = exp->value.s_value;
-  lbeginsym = (char *) xmalloc (strlen (loopsym) + strlen ("__BEGIN") + 5);
-  lendsym = (char *) xmalloc (strlen (loopsym) + strlen ("__END") + 5);
+  lbeginsym = xmalloc (strlen (loopsym) + strlen ("__BEGIN") + 5);
+  lendsym = xmalloc (strlen (loopsym) + strlen ("__END") + 5);
 
   lbeginsym[0] = 0;
   lendsym[0] = 0;
@@ -1902,7 +1902,7 @@ bfin_loop_beginend (Expr_Node *exp, int begin)
   const char *suffix = begin ? "__BEGIN" : "__END";
 
   loopsym = exp->value.s_value;
-  label_name = (char *) xmalloc (strlen (loopsym) + strlen (suffix) + 5);
+  label_name = xmalloc (strlen (loopsym) + strlen (suffix) + 5);
 
   label_name[0] = 0;
 

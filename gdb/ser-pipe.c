@@ -81,7 +81,7 @@ pipe_open (struct serial *scb, const char *name)
      fork() due to the fact that autoconf will ``#define vfork fork''
      on certain platforms.  */
   pid = vfork ();
-  
+
   /* Error.  */
   if (pid == -1)
     {
@@ -236,9 +236,7 @@ static const struct serial_ops pipe_ops =
   ser_unix_write_prim
 };
 
-void _initialize_ser_pipe ();
-void
-_initialize_ser_pipe ()
+INIT_GDB_FILE (ser_pipe)
 {
   serial_add_interface (&pipe_ops);
 }

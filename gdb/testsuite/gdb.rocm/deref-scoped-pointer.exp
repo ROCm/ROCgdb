@@ -52,7 +52,8 @@ proc test_print_each_lane {print_what {kfail 0}} {
 }
 
 proc test {} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     set loc [gdb_get_line_number "set breakpoint here"]
 

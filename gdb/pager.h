@@ -68,6 +68,16 @@ private:
   /* Flush the wrap buffer to STREAM, if necessary.  */
   void flush_wrap_buffer ();
 
+  /* Set the style of m_stream to STYLE.  */
+  void set_stream_style (const ui_file_style &style)
+  {
+    if (m_stream->can_emit_style_escape () && m_stream_style != style)
+      {
+	m_stream->puts (style.to_ansi ().c_str ());
+	m_stream_style = style;
+      }
+  }
+
   /* Contains characters which are waiting to be output (they have
      already been counted in chars_printed).  */
   std::string m_wrap_buffer;
@@ -81,6 +91,12 @@ private:
 
   /* The style applied at the time that wrap_here was called.  */
   ui_file_style m_wrap_style;
+
+  /* The style currently applied to m_stream.  While m_applied_style is the
+     style that is applied to new content added to m_wrap_buffer, the
+     m_stream_style reflects changes that have been flushed to the managed
+     stream.  */
+  ui_file_style m_stream_style;
 
   /* This is temporarily set when paging.  This will cause some
      methods to change their behavior to ignore the wrap buffer.  */

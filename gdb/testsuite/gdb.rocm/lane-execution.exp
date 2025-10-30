@@ -60,22 +60,59 @@ my_lineno \
     "if_2_cond" "if_2_then" "if_2_else" "if_2_end" \
     "if_3_cond" "if_3_then" "if_3_else" "if_3_end"
 
-# Issue a "next" command, expecting to step at a source line with a
-# LABEL comment.
+# On some systems, stepping out of the 'else' branch brings you to the
+# 'then' branch directly.  On other systems, that stops at the 'if'
+# condition first, and so we need another step to get to the 'then'
+# branch.  This variable is true for the latter systems.  It is
+# set/cleared by the 'setup' procedure below, which detects the system
+# we have.
+set step_out_of_else_stops_at_cond 0
 
-proc do_next {label} {
-    gdb_test "next" \
-	"$label.*" \
-	"next to \"$label\""
+# Issue a "step" or "next" command, expecting to stop at a source line
+# with LABEL text.  MESSAGE is the message to use.
+
+proc do_step_1 {cmd label {message ""}} {
+    if {$message eq ""} {
+	set message "$cmd to \"$label\""
+    }
+    gdb_test $cmd "$label.*" $message
 }
 
-# Issue a "step" command, expecting to step at a source line with a
-# LABEL comment.
+# Like do_step_1, but for the case of stepping out of an 'else'
+# branch.
 
-proc do_step {label} {
-    gdb_test "step" \
-	"$label.*" \
-	"step to \"$label\""
+proc do_step_out_of_else_1 {cmd label label_cond} {
+    do_step_1 $cmd $label
+    if {$::step_out_of_else_stops_at_cond} {
+	do_step_1 $cmd $label_cond \
+	    "$cmd to \"$label_cond\" after \"$label\""
+    }
+}
+
+# Convenience wrapper around do_step_1, for the "step" command.
+
+proc do_step {label {message ""}} {
+    do_step_1 "step" $label $message
+}
+
+# Convenience wrapper around do_step_out_of_else_1, for the "step"
+# command.
+
+proc do_step_out_of_else {label label_cond} {
+    do_step_out_of_else_1 "step" $label $label_cond
+}
+
+# Convenience wrapper around do_step_1, for the "next" command.
+
+proc do_next {label {message ""}} {
+    do_step_1 "next" $label $message
+}
+
+# Convenience wrapper around do_step_out_of_else_1, for the "next"
+# command.
+
+proc do_next_out_of_else {label label_cond} {
+    do_step_out_of_else_1 "next" $label $label_cond
 }
 
 # Switch to lane LANE, expecting that GDB does not print a warning
@@ -113,7 +150,8 @@ proc setup {lane_then_name lane_else_name} {
     upvar $lane_then_name lane_then
     upvar $lane_else_name lane_else
 
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     if ![runto "lane_pc_test" allow-pending] {
 	return 0
@@ -149,7 +187,25 @@ proc setup {lane_then_name lane_else_name} {
 	return 0
     }
 
-    do_step " if_0_then "
+    # Check if we're on a system where stepping out of 'else' stops at
+    # the 'if' condition first, and so we need another step to get to
+    # the 'then' branch.
+    set ::step_out_of_else_stops_at_cond 0
+
+    gdb_test_multiple "step" "probe step at end of else" {
+	-re -wrap " if_0_then .*" {
+	    pass $gdb_test_name
+	}
+	-re -wrap " if_0_cond .*" {
+	    if {!$::step_out_of_else_stops_at_cond} {
+		set ::step_out_of_else_stops_at_cond 1
+		send_gdb "step\n"
+		exp_continue
+	    } else {
+		fail $gdb_test_name
+	    }
+	}
+    }
     do_step "const_struct.int_elem"
     gdb_test_no_output "maint set lane-divergence-support on"
 
@@ -223,7 +279,7 @@ proc test_step {branch} {
 	    gdb_test "bt" \
 		[multi_line \
 		     "bt" \
-		     "#0  foo \\(val=.*\\) at .*/${::srcfile}:${::decimal}" \
+		     "#0  foo \\(val=.*\\) at .*${::srcfile}:${::decimal}" \
 		     "#1  $::hex in lane_pc_test \\(.*\\) at .*:$::if_2_then_line" \
 		     "#2  $::hex in kernel .*"] \
 		"bt on then lane"
@@ -243,14 +299,14 @@ proc test_step {branch} {
 		"if_1_else" \
 		"else lane active at if_1_else"
 
-	    do_step " if_1_else_2 "
+	    do_step_out_of_else " if_1_else_2 " " if_1_cond "
 	    do_step " if_2_cond "
-	    do_step " if_2_else "
+	    do_step_out_of_else " if_2_else " " if_2_cond "
 	}
 
 	# The last "if" condition is always false for all lanes.
 	do_step " if_3_cond "
-	do_step " if_3_else "
+	do_step_out_of_else " if_3_else " " if_3_cond "
 	do_step "atomicAdd "
     }
 }
@@ -326,14 +382,14 @@ proc test_next {branch} {
 		"if_1_else" \
 		"else lane active at if_1_else"
 
-	    do_next " if_1_else_2 "
+	    do_next_out_of_else " if_1_else_2 " " if_1_cond "
 	    do_next " if_2_cond "
-	    do_next " if_2_else "
+	    do_next_out_of_else " if_2_else " " if_2_cond "
 	}
 
 	# The last "if" condition is always false for all lanes.
 	do_next " if_3_cond "
-	do_next " if_3_else "
+	do_next_out_of_else " if_3_else " " if_3_cond "
 	do_next "atomicAdd "
     }
 }
