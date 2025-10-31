@@ -1803,21 +1803,30 @@ enum bfd_architecture
 #define bfd_mach_loongarch32   1
 #define bfd_mach_loongarch64   2
   bfd_arch_amdgcn,     /* AMDGCN */
-#define bfd_mach_amdgcn_unknown 0x000
-#define bfd_mach_amdgcn_gfx900  0x02c
-#define bfd_mach_amdgcn_gfx904  0x02e
-#define bfd_mach_amdgcn_gfx906  0x02f
-#define bfd_mach_amdgcn_gfx908  0x030
-#define bfd_mach_amdgcn_gfx90a  0x03f
-#define bfd_mach_amdgcn_gfx1010 0x033
-#define bfd_mach_amdgcn_gfx1011 0x034
-#define bfd_mach_amdgcn_gfx1012 0x035
-#define bfd_mach_amdgcn_gfx1030 0x036
-#define bfd_mach_amdgcn_gfx1031 0x037
-#define bfd_mach_amdgcn_gfx1032 0x038
-#define bfd_mach_amdgcn_gfx1100 0x041
-#define bfd_mach_amdgcn_gfx1101 0x046
-#define bfd_mach_amdgcn_gfx1102 0x047
+#define bfd_mach_amdgcn_unknown         0x000
+#define bfd_mach_amdgcn_gfx900          0x02c
+#define bfd_mach_amdgcn_gfx904          0x02e
+#define bfd_mach_amdgcn_gfx906          0x02f
+#define bfd_mach_amdgcn_gfx908          0x030
+#define bfd_mach_amdgcn_gfx90a          0x03f
+#define bfd_mach_amdgcn_gfx942          0x04c
+#define bfd_mach_amdgcn_gfx950          0x04f
+#define bfd_mach_amdgcn_gfx1010         0x033
+#define bfd_mach_amdgcn_gfx1011         0x034
+#define bfd_mach_amdgcn_gfx1012         0x035
+#define bfd_mach_amdgcn_gfx1030         0x036
+#define bfd_mach_amdgcn_gfx1031         0x037
+#define bfd_mach_amdgcn_gfx1032         0x038
+#define bfd_mach_amdgcn_gfx1100         0x041
+#define bfd_mach_amdgcn_gfx1101         0x046
+#define bfd_mach_amdgcn_gfx1102         0x047
+#define bfd_mach_amdgcn_gfx1150         0x043
+#define bfd_mach_amdgcn_gfx1151         0x04a
+#define bfd_mach_amdgcn_gfx1152         0x055
+#define bfd_mach_amdgcn_gfx1153         0x058
+#define bfd_mach_amdgcn_gfx1200         0x048
+#define bfd_mach_amdgcn_gfx1201         0x04e
+#define bfd_mach_amdgcn_gfx1250         0x049
   bfd_arch_last
   };
 
