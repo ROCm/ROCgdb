@@ -113,7 +113,7 @@
 #define EF_AMDGPU_GENERIC_VERSION_V              0xff000000
 #define EF_AMDGPU_GENERIC_VERSION_V_SHIFT        24
 
-/* Notes.  */
+/* Notes. */
 
 #define NT_AMDGPU_METADATA                32
 #define NT_AMDGPU_CORE_STATE              33

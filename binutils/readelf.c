@@ -4999,13 +4999,14 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
       /* Extensions for HSA v6+.  */
       if (abiversion >= ELFABIVERSION_AMDGPU_HSA_V6)
 	{
-	  int generic_v;
+	  unsigned int generic_v;
 
 	  generic_v = ((e_flags & EF_AMDGPU_GENERIC_VERSION_V)
 		       >> EF_AMDGPU_GENERIC_VERSION_V_SHIFT);
 
 	  if (generic_v > 0)
-	    out += sprintf (out, _(", generic_v%d"), generic_v);
+	    out += sprintf (out, _(", generic v%u"), generic_v);
+
 	  e_flags &= ~EF_AMDGPU_GENERIC_VERSION_V;
 	}
     }
