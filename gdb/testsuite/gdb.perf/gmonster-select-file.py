@@ -15,7 +15,7 @@
 
 # Measure performance of selecting a file to debug.
 
-from perftest import measure, perftest, utils
+from perftest import perftest, utils
 
 
 class GmonsterSelectFile(perftest.TestCaseWithBasicMeasurements):
@@ -36,6 +36,5 @@ class GmonsterSelectFile(perftest.TestCaseWithBasicMeasurements):
             this_run_binfile = "%s-%s" % (self.binfile, utils.convert_spaces(run))
             iteration = 5
             while iteration > 0:
-                func = lambda: self._doit(this_run_binfile)
-                self.measure.measure(func, run)
+                self.measure.measure(lambda: self._doit(this_run_binfile), run)
                 iteration -= 1

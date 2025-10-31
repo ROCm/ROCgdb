@@ -52,15 +52,14 @@ class break_unwinding(Unwinder):
             return None
 
         block = gdb.block_for_pc(pc)
-        if block == None:
+        if block is None:
             return None
         func = block.function
-        if func == None:
+        if func is None:
             return None
         if str(func) != "break_bt_here":
             return None
 
-        global break_bt_here_frame_id
         if break_bt_here_frame_id is None:
             return None
 
