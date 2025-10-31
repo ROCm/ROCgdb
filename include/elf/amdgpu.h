@@ -29,6 +29,7 @@
 #define ELFABIVERSION_AMDGPU_HSA_V3 1
 #define ELFABIVERSION_AMDGPU_HSA_V4 2
 #define ELFABIVERSION_AMDGPU_HSA_V5 3
+#define ELFABIVERSION_AMDGPU_HSA_V6 4
 
 /* Processor selection mask for EF_AMDGPU_MACH_* values.  */
 
@@ -107,6 +108,11 @@
 #define EF_AMDGPU_FEATURE_SRAMECC_ANY_V4         0x400
 #define EF_AMDGPU_FEATURE_SRAMECC_OFF_V4         0x800
 #define EF_AMDGPU_FEATURE_SRAMECC_ON_V4          0xc00
+
+/* Code object v6 machine flags.  */
+
+#define EF_AMDGPU_GENERIC_VERSION_V              0xff000000
+#define EF_AMDGPU_GENERIC_VERSION_V_SHIFT        24
 
 /* Notes. */
 
