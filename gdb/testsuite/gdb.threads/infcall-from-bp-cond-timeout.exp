@@ -155,7 +155,7 @@ proc run_test { target_async target_non_stop non_stop other_thread_bp unwind } {
 		 "Continuing\\." \
 		 ".*" \
 		 "Thread ${::decimal} \"infcall-from-bp\" received signal SIGSEGV, Segmentation fault\\." \
-		 "\\\[Switching to Thread \[^\r\n\]+\\\]" \
+		 "\\\[Switching to thread $::decimal \\\(Thread\[^\r\n\]+\\\]" \
 		 "${::hex} in do_segfault \\(\\) at \[^\r\n\]+:${::segfault_line}" \
 		 "${::decimal}\\s+\[^\r\n\]+Segfault here\[^\r\n\]+"] \
 	    "hit the segfault"
