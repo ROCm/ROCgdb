@@ -80,7 +80,7 @@ public:
 
   enum record_method record_method (ptid_t ptid) override;
 
-  void stop_recording () override;
+  bool stop_recording () override;
   void info_record () override;
 
   void insn_history (int size, gdb_disassembly_flags flags) override;
@@ -123,8 +123,6 @@ public:
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
 
   void stop (ptid_t) override;
-  void update_thread_list () override;
-  bool thread_alive (ptid_t ptid) override;
   void goto_record_begin () override;
   void goto_record_end () override;
   void goto_record (ULONGEST insn) override;
@@ -408,16 +406,25 @@ record_btrace_target_open (const char *args, int from_tty)
 
 /* The stop_recording method of target record-btrace.  */
 
-void
+bool
 record_btrace_target::stop_recording ()
 {
   DEBUG ("stop recording");
 
+  /* Check that before so stop recording is atomic.  */
+  for (thread_info &tp : current_inferior ()->non_exited_threads ())
+    if (tp.state == THREAD_RUNNING)
+      error (_("You cannot stop recording while threads are running."));
+
+  bool is_replaying = record_is_replaying (inferior_ptid);
+  record_stop_replaying ();
   record_btrace_auto_disable ();
 
   for (thread_info &tp : current_inferior ()->non_exited_threads ())
     if (tp.btrace.target != NULL)
       btrace_disable (&tp);
+
+  return is_replaying;
 }
 
 /* The disconnect method of target record-btrace.  */
@@ -2136,12 +2143,34 @@ record_btrace_start_replaying (struct thread_info *tp)
 static void
 record_btrace_stop_replaying (struct thread_info *tp)
 {
-  struct btrace_thread_info *btinfo;
+  struct btrace_thread_info *btinfo = &tp->btrace;
 
-  btinfo = &tp->btrace;
+  if (btinfo->replay == nullptr)
+    return;
+
+  switch (tp->state)
+    {
+    case THREAD_STOPPED:
+      /* Forget why we stopped; it was at a different location.  */
+      tp->set_stop_reason (TARGET_STOPPED_BY_NO_REASON);
+      tp->set_stop_signal (GDB_SIGNAL_0);
+      tp->control.stop_step = 0;
+
+      if (tp->has_pending_waitstatus ())
+	tp->clear_pending_waitstatus ();
+
+      bpstat_clear (&tp->control.stop_bpstat);
+      break;
+
+    case THREAD_RUNNING:
+      error (_("Cannot stop replaying a running thread."));
+
+    case THREAD_EXITED:
+      gdb_assert_not_reached ("unexpected thread state");
+    }
 
   xfree (btinfo->replay);
-  btinfo->replay = NULL;
+  btinfo->replay = nullptr;
 
   /* Make sure we're not leaving any stale registers.  */
   registers_changed_thread (tp);
@@ -2162,9 +2191,14 @@ record_btrace_stop_replaying_at_end (struct thread_info *tp)
     return;
 
   btrace_insn_end (&end, btinfo);
+  if (btrace_insn_cmp (replay, &end) != 0)
+    return;
 
-  if (btrace_insn_cmp (replay, &end) == 0)
-    record_btrace_stop_replaying (tp);
+  xfree (replay);
+  btinfo->replay = nullptr;
+
+  /* Discard any frames from the btrace unwinder.  */
+  reinit_frame_cache ();
 }
 
 /* The resume method of target record-btrace.  */
@@ -2310,14 +2344,14 @@ btrace_step_spurious (void)
   return status;
 }
 
-/* Return a target_waitstatus indicating that the thread was not resumed.  */
+/* Return a target_waitstatus indicating that nothing is moving.  */
 
 static struct target_waitstatus
-btrace_step_no_resumed (void)
+btrace_step_no_moving_threads (void)
 {
   struct target_waitstatus status;
 
-  status.set_no_resumed ();
+  status.set_ignore ();
 
   return status;
 }
@@ -2622,7 +2656,7 @@ record_btrace_target::wait (ptid_t ptid, struct target_waitstatus *status,
 
   if (moving.empty ())
     {
-      *status = btrace_step_no_resumed ();
+      *status = btrace_step_no_moving_threads ();
 
       DEBUG ("wait ended by %s: %s", null_ptid.to_string ().c_str (),
 	     status->to_string ().c_str ());
@@ -2760,7 +2794,7 @@ record_btrace_target::can_execute_reverse ()
 bool
 record_btrace_target::stopped_by_sw_breakpoint ()
 {
-  if (record_is_replaying (minus_one_ptid))
+  if (record_is_replaying (inferior_ptid))
     {
       struct thread_info *tp = inferior_thread ();
 
@@ -2775,7 +2809,7 @@ record_btrace_target::stopped_by_sw_breakpoint ()
 bool
 record_btrace_target::stopped_by_hw_breakpoint ()
 {
-  if (record_is_replaying (minus_one_ptid))
+  if (record_is_replaying (inferior_ptid))
     {
       struct thread_info *tp = inferior_thread ();
 
@@ -2783,32 +2817,6 @@ record_btrace_target::stopped_by_hw_breakpoint ()
     }
 
   return this->beneath ()->stopped_by_hw_breakpoint ();
-}
-
-/* The update_thread_list method of target record-btrace.  */
-
-void
-record_btrace_target::update_thread_list ()
-{
-  /* We don't add or remove threads during replay.  */
-  if (record_is_replaying (minus_one_ptid))
-    return;
-
-  /* Forward the request.  */
-  this->beneath ()->update_thread_list ();
-}
-
-/* The thread_alive method of target record-btrace.  */
-
-bool
-record_btrace_target::thread_alive (ptid_t ptid)
-{
-  /* We don't add or remove threads during replay.  */
-  if (record_is_replaying (minus_one_ptid))
-    return true;
-
-  /* Forward the request.  */
-  return this->beneath ()->thread_alive (ptid);
 }
 
 /* Set the replay branch trace instruction iterator.  If IT is NULL, replay
@@ -2819,6 +2827,9 @@ record_btrace_set_replay (struct thread_info *tp,
 			  const struct btrace_insn_iterator *it)
 {
   struct btrace_thread_info *btinfo;
+
+  if (tp->state == THREAD_RUNNING)
+    error (_("You cannot do that while the thread is running."));
 
   btinfo = &tp->btrace;
 

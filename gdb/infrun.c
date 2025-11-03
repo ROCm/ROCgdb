@@ -2442,7 +2442,7 @@ user_visible_resume_ptid (int step)
       resume_ptid = inferior_ptid;
     }
   else if ((scheduler_mode == schedlock_replay)
-	   && target_record_will_replay (minus_one_ptid, execution_direction))
+	   && target_record_will_replay (inferior_ptid, execution_direction))
     {
       /* User-settable 'scheduler' mode requires solo thread resume in replay
 	 mode.  */
@@ -3154,16 +3154,14 @@ notify_about_to_proceed ()
 void
 clear_proceed_status (int step)
 {
-  /* With scheduler-locking replay, stop replaying other threads if we're
-     not replaying the user-visible resume ptid.
+  /* With scheduler-locking replay, stop replaying other threads in the
+     same process if we're not replaying the selected thread.
 
      This is a convenience feature to not require the user to explicitly
      stop replaying the other threads.  We're assuming that the user's
      intent is to resume tracing the recorded process.  */
   if (!non_stop && scheduler_mode == schedlock_replay
-      && target_record_is_replaying (minus_one_ptid)
-      && !target_record_will_replay (user_visible_resume_ptid (step),
-				     execution_direction))
+      && !target_record_will_replay (inferior_ptid, execution_direction))
     target_record_stop_replaying ();
 
   if (!non_stop && inferior_ptid != null_ptid)
@@ -3247,8 +3245,7 @@ schedlock_applies (struct thread_info *tp)
 	  || (scheduler_mode == schedlock_step
 	      && tp->control.stepping_command)
 	  || (scheduler_mode == schedlock_replay
-	      && target_record_will_replay (minus_one_ptid,
-					    execution_direction)));
+	      && target_record_will_replay (tp->ptid, execution_direction)));
 }
 
 /* When FORCE_P is false, set process_stratum_target::COMMIT_RESUMED_STATE
