@@ -32,6 +32,32 @@ if {![runto_main]} {
     return -1
 }
 
+set existing_pp_count 0
+set seen_lines 0
+
+# First check and fetch how many pretty printers we have.
+gdb_test_multiple "disable pretty-printer" "list number of pretty-printers" -lbl {
+    -re "($::decimal) printers disabled" {
+	set existing_pp_count $expect_out(1,string)
+	incr seen_lines
+	exp_continue
+    }
+
+    -re "0 of $::decimal printers enabled" {
+	incr seen_lines
+	exp_continue
+    }
+
+    -re "$::gdb_prompt $" {
+	gdb_assert { $seen_lines == 2 } $gdb_test_name
+    }
+}
+
+gdb_test_sequence "enable pretty-printer" "re-enable existing pretty-printers" [list \
+    "$existing_pp_count printers enabled" \
+    "$existing_pp_count of $existing_pp_count printers enabled"
+]
+
 gdb_test "b [gdb_get_line_number {break to inspect} ${testfile}.c ]" \
     ".*Breakpoint.*"
 gdb_test "continue" ".*Breakpoint.*"
@@ -55,7 +81,9 @@ gdb_test "print flt" " = x=<42> y=<43>" \
 gdb_test "print ss" " = a=<a=<1> b=<$hex>> b=<a=<2> b=<$hex>>" \
     "print ss enabled #1"
 
-set num_pp 6
+# We test 6 pretty-printers for gdb, but we need to account for
+# pretty-printers that have been loaded in gdb already.
+set num_pp [expr {$existing_pp_count + 6}]
 
 gdb_test "disable pretty-printer" \
     "$num_pp printers disabled.*0 of $num_pp printers enabled"
@@ -75,7 +103,7 @@ gdb_test "disable pretty-printer global lookup_function_lookup_test" \
     "1 printer disabled.*[expr {$num_pp - 1}] of $num_pp printers enabled"
 
 gdb_test "disable pretty-printer global pp-test;.*" \
-    "[expr {$num_pp - 1}] printers disabled.*0 of $num_pp printers enabled"
+    "[expr {$num_pp - $existing_pp_count - 1}] printers disabled.*$existing_pp_count of $num_pp printers enabled"
 
 gdb_test "info pretty-printer global .*function" \
     {.*function_lookup_test \[disabled\].*} \
@@ -92,13 +120,13 @@ gdb_test "print ss" " = {a = {a = 1, b = $hex}, b = {a = 2, b = $hex}}" \
     "print ss disabled"
 
 gdb_test "enable pretty-printer global lookup_function_lookup_test" \
-    "1 printer enabled.*1 of $num_pp printers enabled"
+    "1 printer enabled.*[expr {1 + $existing_pp_count}] of $num_pp printers enabled"
 
 # This doesn't enable any printers because each subprinter in the collection
 # is still individually disabled.  But this is still needed, to enable the
 # collection itself.
 gdb_test "enable pretty-printer global pp-test" \
-    "0 printers enabled.*1 of $num_pp printers enabled"
+    "0 printers enabled.*[expr {1 + $existing_pp_count}] of $num_pp printers enabled"
 
 gdb_test "enable pretty-printer global pp-test;.*ss.*" \
     "2 printers enabled.*[expr {$num_pp - 3}] of $num_pp printers enabled"
