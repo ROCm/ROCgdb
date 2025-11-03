@@ -2062,8 +2062,9 @@ windows_nat_target::stop (ptid_t ptid)
 {
   for (thread_info &thr : all_non_exited_threads (this))
     {
-      if (thr.ptid.matches (ptid))
-	stop_one_thread (as_windows_thread_info (&thr), SK_EXTERNAL);
+      auto *th = as_windows_thread_info (&thr);
+      if (th != nullptr && thr.ptid.matches (ptid))
+	stop_one_thread (th, SK_EXTERNAL);
     }
 }
 
