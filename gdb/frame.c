@@ -1637,7 +1637,7 @@ put_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
       else
 	{
 	  copy (curr_src, dst_value->contents_writeable ().slice (offset, curr_len));
-	  put_frame_register (next_frame, regnum, dst_value->contents (),
+	  put_frame_register (next_frame, regnum, dst_value->contents_raw (),
 			      dst_value->offset ());
 	}
 
