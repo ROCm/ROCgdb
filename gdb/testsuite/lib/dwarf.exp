@@ -372,7 +372,7 @@ proc function_range { func src {options {debug}} } {
 
     shared_gdb_start_use $src $options
 
-    if [istarget "amdgcn-amd-amdhsa"] {
+    if {[istarget "amdgcn-amd-amdhsa"]} {
 	# For AMDGCN, we need to run the program, so we have access to
 	# the device code.
 	if {![runto_main]} {
@@ -442,7 +442,7 @@ proc function_range { func src {options {debug}} } {
 	}
     }
 
-    if [istarget "amdgcn-amd-amdhsa"] {
+    if {[istarget "amdgcn-amd-amdhsa"]} {
 
 	# Find out the start address of the device code DSO, to
 	# subtract it from the function's start address.  IOW, we want
@@ -459,7 +459,7 @@ proc function_range { func src {options {debug}} } {
 	}
 
 	# XXX: Need to add 0x1000, but I'm not sure exactly why...
-	set adj_func_start [expr $func_start - $dso_start + 0x1000]
+	set adj_func_start [expr {$func_start - $dso_start + 0x1000}]
 
 	verbose -log "func_start = $func_start"
 	verbose -log "dso_start = $dso_start"

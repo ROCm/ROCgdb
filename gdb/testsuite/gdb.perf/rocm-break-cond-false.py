@@ -16,6 +16,8 @@
 
 from perftest import perftest
 
+import gdb
+
 
 # Set a breakpoint with a condition that evals false for all waves
 # except one.  GDB will need to step all (except one) waves over the
@@ -38,5 +40,4 @@ class ROCmBreakCondFalse(perftest.TestCaseWithBasicMeasurements):
         gdb.execute("set pagination off", False, True)
         gdb.execute("set breakpoint pending on", False, True)
         gdb.execute('break kernel if $_streq($_wave_id, "(0,0,0)/0")', False, True)
-        func = lambda: self._run()
-        self.measure.measure(func, 1)
+        self.measure.measure(self._run, 1)

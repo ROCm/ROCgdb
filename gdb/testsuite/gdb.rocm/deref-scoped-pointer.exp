@@ -56,7 +56,7 @@ proc test {} {
 
     set loc [gdb_get_line_number "set breakpoint here"]
 
-    if ![runto "$::srcfile:$loc" allow-pending message] {
+    if {![runto "$::srcfile:$loc" allow-pending message]} {
 	return
     }
 

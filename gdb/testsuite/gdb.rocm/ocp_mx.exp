@@ -181,8 +181,9 @@ proc_with_prefix scalefunc_checks {} {
 }
 
 proc do_test {} {
-    clean_restart $::binfile
-    if ![runto_main] {
+    clean_restart
+    gdb_load $::binfile
+    if {![runto_main]} {
 	fail "can't run to main"
 	return -1
     }

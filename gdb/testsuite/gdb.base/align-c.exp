@@ -19,7 +19,7 @@
 # This tests that C11 _Alignof works in gdb, and that it agrees with the
 # compiler.
 
-if [istarget "amdgcn-amd-amdhsa"] {
+if {[istarget "amdgcn-amd-amdhsa"]} {
     # We always compile as C++, so no use running this testcase (and
     # failing).  gdb.base/align-c++.exp already covers testing in C++
     # mode.

@@ -32,7 +32,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 # can be either "stepi" or "nexti".
 proc test_step_until {cmd until_regexp} {
 
-    if ![runto kernel allow-pending qualified message] {
+    if {![runto kernel allow-pending qualified message]} {
 	return
     }
 
