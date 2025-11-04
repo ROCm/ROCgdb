@@ -62,7 +62,7 @@ kernel ()
      different lanes yield a different value.  GDB should behave the
      same.  */
   assert (global_ptr != nullptr);
-  printf ("global_ptr=%p, *global_ptr=%lx\n", global_ptr, *global_ptr);
+  printf ("global_ptr=%p, *global_ptr=%zx\n", global_ptr, *global_ptr);
 
   done (); /* set breakpoint here */
 
@@ -70,7 +70,7 @@ kernel ()
      or skip part of the testcase.  */
   if (global_ptr2 != nullptr)
     {
-      printf ("global_ptr2=%p, *global_ptr2=%lx\n", global_ptr2, *global_ptr2);
+      printf ("global_ptr2=%p, *global_ptr2=%zx\n", global_ptr2, *global_ptr2);
       /* GDB made global_ptr2 point to &local_var too.  If GDB wrote
 	 to global_ptr2 correctly, this should pass.  */
       assert (global_ptr == global_ptr2);
