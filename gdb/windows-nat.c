@@ -3039,9 +3039,12 @@ windows_nat_target::detach (inferior *inf, int from_tty)
      flag.  */
   for (thread_info &tp : inf->non_exited_threads ())
     {
+      auto *wth = as_windows_thread_info (&tp);
+      if (wth == nullptr)
+	continue;
+
       if (tp.internal_state () != THREAD_INT_RUNNING)
 	{
-	  windows_thread_info *wth = windows_process.find_thread (tp.ptid);
 	  gdb_signal signo = get_detach_signal (this, tp.ptid);
 
 	  if (signo != wth->last_sig
