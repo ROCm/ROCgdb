@@ -6746,7 +6746,7 @@ restart_threads (struct thread_info *event_thread, inferior *inf)
 	}
     }
 
-  if (!schedlock_applies (event_thread))
+  if (event_thread != nullptr && !schedlock_applies (event_thread))
     {
       /* FIXME: we might want to use some filter here.  */
       prevent_new_threads (false, nullptr, -1, "restart_threads");
