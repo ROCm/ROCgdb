@@ -506,6 +506,13 @@ struct blockvector
      blocks are appended in correct order.  */
   void append_block (struct block *block);
 
+  /* Lookup the innermost lexical block containing ADDR.  Returns the block
+     if there is one, NULL otherwise.  */
+  const struct block *lookup (CORE_ADDR addr) const;
+
+  /* Return true if the blockvector contains ADDR, false otherwise.  */
+  bool contains (CORE_ADDR addr) const;
+
 private:
   /* An address map mapping addresses to blocks in this blockvector.
      This pointer is zero if the blocks' start and end addresses are
@@ -524,8 +531,6 @@ extern const struct blockvector *blockvector_for_pc (CORE_ADDR,
 extern const struct blockvector *
   blockvector_for_pc_sect (CORE_ADDR, struct obj_section *,
 			   const struct block **, struct compunit_symtab *);
-
-extern int blockvector_contains_pc (const struct blockvector *bv, CORE_ADDR pc);
 
 extern struct call_site *call_site_for_pc (struct gdbarch *gdbarch,
 					   CORE_ADDR pc);
