@@ -185,7 +185,7 @@ if {[gdb_compile [list ${binfile}1.o ${binfile}2.o] \
 
 clean_restart $testfile
 
-if [istarget "amdgcn-amd-amdhsa"] {
+if {[istarget "amdgcn-amd-amdhsa"]} {
     # Need to run to main to have the device symbols available.
     if {![runto_main]} {
 	fail "cannot run to main"
@@ -329,7 +329,7 @@ gdb_test_no_output "set complaints 1"
 
 gdb_load [standard_output_file ${testfile}-r]
 
-if [istarget "amdgcn-amd-amdhsa"] {
+if {[istarget "amdgcn-amd-amdhsa"]} {
     if {![runto_main]} {
 	fail "cannot run to main"
 	return

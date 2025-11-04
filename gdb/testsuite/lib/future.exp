@@ -191,7 +191,7 @@ proc gdb_find_eu-unstrip {} {
 proc gdb_find_coremerge {} {
     global GDB
     global COREMERGE
-    if [info exists COREMERGE] {
+    if {[info exists COREMERGE]} {
 	return $COREMERGE
     }
 
@@ -205,7 +205,7 @@ proc gdb_find_coremerge {} {
     # next to it.  Try to account for the cases where both have been built
     # with --with-program-prefix, which is usual when building ROCgdb.
     set path_components [file split $GDB]
-    set gdbname [lindex $path_components [expr [llength $path_components] - 1]]
+    set gdbname [lindex $path_components [expr {[llength $path_components] - 1}]]
     set prefix [string trim $gdbname gdb]
     set coremerge [file join [file dirname $GDB] "${prefix}coremerge"]
     if { [file executable $coremerge] } {

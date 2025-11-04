@@ -5392,7 +5392,7 @@ proc skip_inline_var_tests {} {
 # software or hardware.
 
 proc allow_watchpoint_tests {} {
-    if [istarget "amdgcn-amd-amdhsa"] {
+    if {[istarget "amdgcn-amd-amdhsa"]} {
 	# Until the compiler emits proper DWARF for variables.
 	# Otherwise, we'd run into very long timeout sequences,
 	# particularly on tests that use software watchpoints.
@@ -6188,7 +6188,7 @@ proc gdb_compile {source dest type options} {
     set new_options {}
     if {[lsearch -exact $options rust] != -1} {
 	# -fdiagnostics-color is not a rustcc option.
-    } elseif {[lsearch -exact $options hip] != -1} { 
+    } elseif {[lsearch -exact $options hip] != -1} {
 	# -fdiagnostics-color is not a hipcc option.
     } else {
 	# icx/clang compilers support the -fdiagnostics-color option for

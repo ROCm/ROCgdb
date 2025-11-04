@@ -47,7 +47,7 @@ proc do_test { } {
     clean_restart
     gdb_load $::binfile
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return
     }
 
