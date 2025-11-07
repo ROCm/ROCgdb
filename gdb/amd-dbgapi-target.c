@@ -153,7 +153,7 @@ struct wave_coordinates
   amd_dbgapi_dispatch_id_t dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
   amd_dbgapi_queue_id_t queue_id = AMD_DBGAPI_QUEUE_NONE;
   amd_dbgapi_agent_id_t agent_id = AMD_DBGAPI_AGENT_NONE;
-  uint32_t group_ids[3] {UINT32_MAX, UINT32_MAX, UINT32_MAX};
+  vec3_u32_t group_ids {UINT32_MAX, UINT32_MAX, UINT32_MAX};
   uint32_t wave_in_group = UINT32_MAX;
 
   explicit wave_coordinates (amd_dbgapi_wave_id_t wave_id)
@@ -533,7 +533,7 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 static std::string
 dispatch_pos_string (thread_info *tp)
 {
-  uint32_t group_ids[3];
+  vec3_u32_t group_ids;
   if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD, group_ids)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return "(?,?,?)/?";
@@ -605,7 +605,7 @@ thread_workgroup_pos_string (thread_info *tp)
    SIZES is the sizes of each axis.  */
 
 static void
-flatid_to_id (uint32_t coord_id[3], size_t flatid, const size_t sizes[3])
+flatid_to_id (vec3_u32_t &coord_id, size_t flatid, const vec3_t<size_t> &sizes)
 {
   coord_id[2] = flatid / (sizes[0] * sizes[1]);
 
@@ -629,13 +629,13 @@ struct work_item_info
   amd_dbgapi_agent_id_t agent_id;
 
   /* Grid sizes in work-items.  */
-  uint32_t grid_sizes[3];
+  vec3_u32_t grid_sizes;
 
   /* Grid's work-group sizes in work-items.  */
-  uint16_t work_group_sizes[3];
+  vec3_t<uint16_t> work_group_sizes;
 
   /* Grid work-group coordinates.  */
-  uint32_t work_group_ids[3];
+  vec3_u32_t work_group_ids;
 
   /* Wave in work-group.  */
   uint32_t wave_in_group;
@@ -652,7 +652,7 @@ struct work_item_info
   /* Store in PARTIAL_WORKGROUP_SIZES the work-group item sizes for
      each axis, taking into account the work-items that actually fit
      in the grid.  */
-  void partial_work_group_sizes (size_t partial_work_group_sizes[3]) const
+  void partial_work_group_sizes (vec3_t<size_t> &partial_wg_sizes) const
   {
     for (int i = 0; i < 3; i++)
       {
@@ -661,7 +661,7 @@ struct work_item_info
 	size_t work_item_end = work_item_start + work_group_sizes[i];
 	if (work_item_end > grid_sizes[i])
 	  work_item_end = grid_sizes[i];
-	partial_work_group_sizes[i] = work_item_end - work_item_start;
+	partial_wg_sizes[i] = work_item_end - work_item_start;
       }
   }
 };
@@ -710,14 +710,14 @@ lane_workgroup_pos_string (thread_info *tp, int lane)
 
   if (make_work_item_info (tp, &wi))
     {
-      size_t partial_work_group_sizes[3];
+      vec3_t<size_t> partial_wg_sizes;
 
-      wi.partial_work_group_sizes (partial_work_group_sizes);
+      wi.partial_work_group_sizes (partial_wg_sizes);
 
       size_t work_item_flatid = wi.flatid (lane);
 
-      uint32_t work_item_ids[3];
-      flatid_to_id (work_item_ids, work_item_flatid, partial_work_group_sizes);
+      vec3_u32_t work_item_ids;
+      flatid_to_id (work_item_ids, work_item_flatid, partial_wg_sizes);
 
       return string_printf ("[%d,%d,%d]",
 			    work_item_ids[0], work_item_ids[1], work_item_ids[2]);
@@ -734,7 +734,7 @@ lane_target_id_string (thread_info *tp, int lane)
   amd_dbgapi_dispatch_id_t dispatch_id;
   amd_dbgapi_queue_id_t queue_id;
   amd_dbgapi_agent_id_t agent_id;
-  uint32_t group_ids[3];
+  vec3_u32_t group_ids;
 
   std::string str = "AMDGPU Lane ";
 
@@ -3392,7 +3392,8 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
   if (ptid_is_gpu (inferior_ptid))
     {
       amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-      uint32_t group_ids[3], wave_in_group;
+      vec3_u32_t group_ids;
+      uint32_t wave_in_group;
 
       if (amd_dbgapi_wave_get_info (wave_id,
 				    AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
@@ -4185,7 +4186,7 @@ queue_find_command (const char *arg, int from_tty)
 
 template <typename T>
 static std::string
-ndim_string (uint32_t dims, T *sizes)
+ndim_string (uint32_t dims, T &sizes)
 {
   std::stringstream ss;
 
@@ -4351,7 +4352,7 @@ info_dispatches_command (const char *args, int from_tty)
 		  error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
 			 get_status_string (status));
 
-		uint32_t grid_sizes[3];
+		vec3_u32_t grid_sizes;
 		if ((status = amd_dbgapi_dispatch_get_info (
 		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 		       sizeof (grid_sizes), &grid_sizes[0]))
@@ -4364,7 +4365,7 @@ info_dispatches_command (const char *args, int from_tty)
 			      ndim_string (dims, grid_sizes).size ());
 
 		/* workgroup  */
-		uint16_t work_group_sizes[3];
+		vec3_t<uint16_t> work_group_sizes;
 		if ((status = amd_dbgapi_dispatch_get_info (
 		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		       sizeof (work_group_sizes), &work_group_sizes[0]))
@@ -4493,7 +4494,7 @@ info_dispatches_command (const char *args, int from_tty)
 	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
 		     get_status_string (status));
 
-	    uint32_t grid_sizes[3];
+	    vec3_u32_t grid_sizes;
 	    if ((status = amd_dbgapi_dispatch_get_info (
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 		   sizeof (grid_sizes), &grid_sizes[0]))
@@ -4504,7 +4505,7 @@ info_dispatches_command (const char *args, int from_tty)
 	    uiout->field_string ("grid", ndim_string (dims, grid_sizes));
 
 	    /* workgroup  */
-	    uint16_t work_group_sizes[3];
+	    vec3_t<uint16_t> work_group_sizes;
 	    if ((status = amd_dbgapi_dispatch_get_info (
 		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 		   sizeof (work_group_sizes), &work_group_sizes[0]))
