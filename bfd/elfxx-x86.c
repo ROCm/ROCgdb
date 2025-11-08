@@ -29,6 +29,14 @@
 #define ELF64_DYNAMIC_INTERPRETER "/lib/ld64.so.1"
 #define ELFX32_DYNAMIC_INTERPRETER "/lib/ldx32.so.1"
 
+/* ??? This repeats *COM* id of zero.  sec->id is supposed to be unique,
+   but current usage would allow all of _bfd_std_section to be zero.  */
+static const asymbol lcomm_sym
+  = GLOBAL_SYM_INIT ("LARGE_COMMON", &bfd_elf_large_com_section);
+asection bfd_elf_large_com_section
+  = BFD_FAKE_SECTION (bfd_elf_large_com_section, &lcomm_sym,
+		      "LARGE_COMMON", 0, SEC_IS_COMMON);
+
 bool
 _bfd_x86_elf_mkobject (bfd *abfd)
 {
@@ -731,7 +739,7 @@ _bfd_x86_elf_link_hash_table_create (bfd *abfd)
       ret->relative_r_type = R_X86_64_RELATIVE;
       ret->relative_r_name = "R_X86_64_RELATIVE";
       ret->ax_register = "RAX";
-      ret->elf_append_reloc = elf_append_rela;
+      ret->elf_append_reloc = _bfd_elf_append_rela;
       ret->elf_write_addend_in_got = _bfd_elf64_write_addend;
     }
   if (ABI_64_P (abfd))
@@ -763,7 +771,7 @@ _bfd_x86_elf_link_hash_table_create (bfd *abfd)
 	  ret->relative_r_type = R_386_RELATIVE;
 	  ret->relative_r_name = "R_386_RELATIVE";
 	  ret->ax_register = "EAX";
-	  ret->elf_append_reloc = elf_append_rel;
+	  ret->elf_append_reloc = _bfd_elf_append_rel;
 	  ret->elf_write_addend = _bfd_elf32_write_addend;
 	  ret->elf_write_addend_in_got = _bfd_elf32_write_addend;
 	  ret->dynamic_interpreter = ELF32_DYNAMIC_INTERPRETER;
@@ -1179,7 +1187,7 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
 	    case SHN_X86_64_LCOMMON:
 	      if (!is_x86_64)
 		abort ();
-	      sec = &_bfd_elf_large_com_section;
+	      sec = &bfd_elf_large_com_section;
 	      break;
 	    default:
 	      sec = bfd_section_from_elf_index (abfd, isym->st_shndx);
@@ -4967,8 +4975,8 @@ _bfd_x86_elf_link_fixup_gnu_properties
 }
 
 void
-_bfd_elf_linker_x86_set_options (struct bfd_link_info * info,
-				 struct elf_linker_x86_params *params)
+bfd_elf_linker_x86_set_options (struct bfd_link_info *info,
+				struct elf_linker_x86_params *params)
 {
   const struct elf_backend_data *bed
     = get_elf_backend_data (info->output_bfd);

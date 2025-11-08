@@ -1,5 +1,6 @@
-# Copyright 2016-2025 Free Software Foundation, Inc.
+#!/bin/sh
 
+# Copyright (C) 2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -13,17 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-standard_testfile
+set -e
 
-if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable \
-	 {pie}] != "" } {
-    return -1
-}
-
-clean_restart ${::testfile}
-if {![runto_main]} {
-    return 0
-}
-
-# Formerly: Cannot access memory at address 0xffffef7c0698
-gdb_test "p (int) thread_local_var" " = 42" "thread local storage"
+git --no-pager diff --staged --check "$@"

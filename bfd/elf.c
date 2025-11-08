@@ -2398,10 +2398,10 @@ _bfd_elf_get_symbol_version_string (bfd *abfd, asymbol *symbol,
 /* Display ELF-specific fields of a symbol.  */
 
 void
-bfd_elf_print_symbol (bfd *abfd,
-		      void *filep,
-		      asymbol *symbol,
-		      bfd_print_symbol_type how)
+_bfd_elf_print_symbol (bfd *abfd,
+		       void *filep,
+		       asymbol *symbol,
+		       bfd_print_symbol_type how)
 {
   FILE *file = (FILE *) filep;
   const char *symname = (symbol->name != bfd_symbol_error_name
@@ -3484,8 +3484,8 @@ bfd_section_from_phdr (bfd *abfd, Elf_Internal_Phdr *hdr, int hdr_index)
     case PT_NOTE:
       if (! _bfd_elf_make_section_from_phdr (abfd, hdr, hdr_index, "note"))
 	return false;
-      if (! elf_read_notes (abfd, hdr->p_offset, hdr->p_filesz,
-			    hdr->p_align))
+      if (! _bfd_elf_read_notes (abfd, hdr->p_offset, hdr->p_filesz,
+				 hdr->p_align))
 	return false;
       return true;
 
@@ -5086,9 +5086,9 @@ elf_modify_segment_map (bfd *abfd,
    NEED_LAYOUT if the section layout is changed.  */
 
 bool
-_bfd_elf_map_sections_to_segments (bfd *abfd,
-				   struct bfd_link_info *info,
-				   bool *need_layout)
+bfd_elf_map_sections_to_segments (bfd *abfd,
+				  struct bfd_link_info *info,
+				  bool *need_layout)
 {
   unsigned int count;
   struct elf_segment_map *m;
@@ -5907,7 +5907,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
   unsigned int opb = bfd_octets_per_byte (abfd, NULL);
 
   if (link_info == NULL
-      && !_bfd_elf_map_sections_to_segments (abfd, link_info, NULL))
+      && !bfd_elf_map_sections_to_segments (abfd, link_info, NULL))
     return false;
 
   alloc = 0;
@@ -13173,8 +13173,8 @@ elf_parse_notes (bfd *abfd, char *buf, size_t size, file_ptr offset,
 }
 
 bool
-elf_read_notes (bfd *abfd, file_ptr offset, bfd_size_type size,
-		size_t align)
+_bfd_elf_read_notes (bfd *abfd, file_ptr offset, bfd_size_type size,
+		     size_t align)
 {
   char *buf;
 
@@ -13464,15 +13464,6 @@ _bfd_elf_get_synthetic_symtab (bfd *abfd,
 
   return n;
 }
-
-/* It is only used by x86-64 so far.
-   ??? This repeats *COM* id of zero.  sec->id is supposed to be unique,
-   but current usage would allow all of _bfd_std_section to be zero.  */
-static const asymbol lcomm_sym
-  = GLOBAL_SYM_INIT ("LARGE_COMMON", &_bfd_elf_large_com_section);
-asection _bfd_elf_large_com_section
-  = BFD_FAKE_SECTION (_bfd_elf_large_com_section, &lcomm_sym,
-		      "LARGE_COMMON", 0, SEC_IS_COMMON);
 
 bool
 _bfd_elf_final_write_processing (bfd *abfd)

@@ -332,7 +332,7 @@ _bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
    actual contents and size of these sections later.  */
 
 bool
-_bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
+bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 {
   flagword flags;
   asection *s;
@@ -3617,7 +3617,7 @@ _bfd_elf_symbol_refs_local_p (struct elf_link_hash_entry *h,
    aligned.  Returns the first TLS output section.  */
 
 struct bfd_section *
-_bfd_elf_tls_setup (bfd *obfd, struct bfd_link_info *info)
+bfd_elf_tls_setup (bfd *obfd, struct bfd_link_info *info)
 {
   struct bfd_section *sec, *tls;
   unsigned int align = 0;
@@ -3910,8 +3910,7 @@ _bfd_elf_strip_zero_sized_dynamic_sections (struct bfd_link_info *info)
     {
       /* Regenerate program headers.  */
       elf_seg_map (info->output_bfd) = NULL;
-      return _bfd_elf_map_sections_to_segments (info->output_bfd, info,
-						NULL);
+      return bfd_elf_map_sections_to_segments (info->output_bfd, info, NULL);
     }
 
   return true;
@@ -3961,7 +3960,7 @@ bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
 	  }
     }
 
-  if (!_bfd_elf_link_create_dynamic_sections (hash_table->dynobj, info))
+  if (!bfd_elf_link_create_dynamic_sections (hash_table->dynobj, info))
     return -1;
 
   if (!_bfd_elf_add_dynamic_entry (info, DT_NEEDED, strindex))
@@ -4578,7 +4577,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	  && info->output_bfd->xvec == abfd->xvec
 	  && !htab->dynamic_sections_created)
 	{
-	  if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
+	  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
 	    goto error_return;
 	}
     }
@@ -4799,7 +4798,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
       /* Create dynamic sections for backends that require that be done
 	 before setup_gnu_properties.  */
       if (add_needed
-	  && !_bfd_elf_link_create_dynamic_sections (abfd, info))
+	  && !bfd_elf_link_create_dynamic_sections (abfd, info))
 	return false;
 
       /* Save the DT_AUDIT entry for the linker emulation code. */
@@ -5740,7 +5739,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 
 		  /* Create dynamic sections for backends that require
 		     that be done before setup_gnu_properties.  */
-		  if (!_bfd_elf_link_create_dynamic_sections (abfd, info))
+		  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
 		    goto error_free_vers;
 		  add_needed = true;
 		}
@@ -6797,7 +6796,7 @@ compute_bucket_count (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 /* Size any SHT_GROUP section for ld -r.  */
 
 bool
-_bfd_elf_size_group_sections (struct bfd_link_info *info)
+bfd_elf_size_group_sections (struct bfd_link_info *info)
 {
   bfd *ibfd;
   asection *s;
@@ -7429,7 +7428,7 @@ bfd_elf_size_dynamic_sections (bfd *output_bfd,
     }
 
   if (bfd_link_relocatable (info)
-      && !_bfd_elf_size_group_sections (info))
+      && !bfd_elf_size_group_sections (info))
     return false;
 
   /* Determine any GNU_STACK segment requirements, after the backend
@@ -8971,8 +8970,8 @@ bfd_elf_match_symbols_in_sections (asection *sec1, asection *sec2,
 /* Return TRUE if 2 section types are compatible.  */
 
 bool
-_bfd_elf_match_sections_by_type (bfd *abfd, const asection *asec,
-				 bfd *bbfd, const asection *bsec)
+bfd_elf_match_sections_by_type (bfd *abfd, const asection *asec,
+				bfd *bbfd, const asection *bsec)
 {
   if (asec == NULL
       || bsec == NULL
@@ -11712,7 +11711,7 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 
       if ((o->flags & SEC_LINKER_CREATED) != 0)
 	{
-	  /* Section was created by _bfd_elf_link_create_dynamic_sections
+	  /* Section was created by bfd_elf_link_create_dynamic_sections()
 	     or somesuch.  */
 	  continue;
 	}
@@ -13779,7 +13778,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	  if ((o->flags & SEC_LINKER_CREATED) == 0)
 	    {
 	      /* At this point, we are only interested in sections
-		 created by _bfd_elf_link_create_dynamic_sections.  */
+		 created by bfd_elf_link_create_dynamic_sections().  */
 	      continue;
 	    }
 	  if (htab->stab_info.stabstr == o)
@@ -15620,7 +15619,7 @@ _bfd_elf_copy_link_hash_symbol_type (bfd *abfd,
 /* Append a RELA relocation REL to section S in BFD.  */
 
 void
-elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
+_bfd_elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
   bfd_byte *loc = s->contents + (s->reloc_count++ * bed->s->sizeof_rela);
@@ -15631,7 +15630,7 @@ elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 /* Append a REL relocation REL to section S in BFD.  */
 
 void
-elf_append_rel (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
+_bfd_elf_append_rel (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
   bfd_byte *loc = s->contents + (s->reloc_count++ * bed->s->sizeof_rel);

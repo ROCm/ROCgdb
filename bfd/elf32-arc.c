@@ -2071,7 +2071,7 @@ elf_arc_check_relocs (bfd *			 abfd,
 		  {
 		    if (info->dynamic
 			&& ! htab->dynamic_sections_created
-			&& ! _bfd_elf_link_create_dynamic_sections (abfd, info))
+			&& ! bfd_elf_link_create_dynamic_sections (abfd, info))
 		      return false;
 		    sreloc = _bfd_elf_make_dynamic_reloc_section (sec, dynobj,
 								  2, abfd,
@@ -2842,7 +2842,7 @@ elf32_arc_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
     }
 }
 
-const struct elf_size_info arc_elf32_size_info =
+static const struct elf_size_info arc_elf32_size_info =
 {
   sizeof (Elf32_External_Ehdr),
   sizeof (Elf32_External_Phdr),

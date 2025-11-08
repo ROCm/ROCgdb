@@ -5825,7 +5825,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 		}
 
 	      sreloc = globals->root.irelifunc;
-	      elf_append_rela (output_bfd, sreloc, &outrel);
+	      _bfd_elf_append_rela (output_bfd, sreloc, &outrel);
 
 	      /* If this reloc is against an external symbol, we
 		 do not want to fiddle with the addend.  Otherwise,
@@ -6290,7 +6290,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 	  outrel.r_offset = got_entry_addr;
 	  outrel.r_info = ELFNN_R_INFO (0, AARCH64_R (RELATIVE));
 	  outrel.r_addend = orig_value;
-	  elf_append_rela (output_bfd, s, &outrel);
+	  _bfd_elf_append_rela (output_bfd, s, &outrel);
 	}
       break;
 
@@ -10612,7 +10612,7 @@ elfNN_aarch64_merge_gnu_properties (struct bfd_link_info *info,
 /* We use this so we can override certain functions
    (though currently we don't).  */
 
-const struct elf_size_info elfNN_aarch64_size_info =
+static const struct elf_size_info elfNN_aarch64_size_info =
 {
   sizeof (ElfNN_External_Ehdr),
   sizeof (ElfNN_External_Phdr),
