@@ -115,6 +115,18 @@ startswith (const char *str, const std::string_view &prefix)
   return strncmp (str, prefix.data (), prefix.length ()) == 0;
 }
 
+/* Return true if the end of STR matches PATTERN, false otherwise.
+
+   This can be replaced with std::string_view::ends_with when we require
+   C++20.  */
+
+static inline bool
+endswith (std::string_view str, std::string_view pattern)
+{
+  return (str.length () >= pattern.length ()
+	  && str.substr (str.length () - pattern.length ()) == pattern);
+}
+
 /* Return true if the strings are equal.  */
 
 static inline bool

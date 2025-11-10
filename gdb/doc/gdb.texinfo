@@ -51205,6 +51205,12 @@ gdb-index} (@pxref{Index Files}).  The index section is
 DWARF-specific; some knowledge of DWARF is assumed in this
 description.
 
+Note that the @code{.gdb_index} format does not support describing
+skeletonless type units, that is, type units in @file{.dwo} files that
+don't have a corresponding skeleton in the main file.  @value{GDBN}
+will refuse to generate a @code{.gdb_index} index for such executables.
+Consider using the @code{.debug_names} format instead.
+
 The mapped index file format is designed to be directly
 @code{mmap}able on any architecture.  In most cases, a datum is
 represented using a little-endian 32-bit integer value, called an
