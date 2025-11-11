@@ -93,19 +93,21 @@ _bfd_elf_link_keep_memory (struct bfd_link_info *info)
   return true;
 }
 
-static struct elf_link_hash_entry *
-get_link_hash_entry (struct elf_link_hash_entry **  sym_hashes,
-		     unsigned int                   symndx,
-		     unsigned int                   ext_sym_start)
+struct elf_link_hash_entry *
+_bfd_elf_get_link_hash_entry (struct elf_link_hash_entry **sym_hashes,
+			      unsigned int symndx,
+			      unsigned int ext_sym_start,
+			      unsigned int num_sym)
 {
   if (sym_hashes == NULL
       /* Guard against corrupt input.  See PR 32636 for an example.  */
-      || symndx < ext_sym_start)
+      || symndx < ext_sym_start
+      || symndx >= num_sym)
     return NULL;
 
   struct elf_link_hash_entry *h = sym_hashes[symndx - ext_sym_start];
 
-  /* The hash might be empty.  See PR 32641 for an example of this.  */
+  /* The hash might be empty when bad_symtab.  Also see PR32641.  */
   if (h == NULL)
     return NULL;
 
@@ -116,28 +118,48 @@ get_link_hash_entry (struct elf_link_hash_entry **  sym_hashes,
   return h;
 }
 
-struct elf_link_hash_entry *
-_bfd_elf_get_link_hash_entry (struct elf_link_hash_entry **  sym_hashes,
-			      unsigned int                   symndx,
-			      Elf_Internal_Shdr *            symtab_hdr)
+static struct elf_link_hash_entry *
+get_ext_sym_hash_from_cookie (struct elf_reloc_cookie *cookie,
+			      unsigned int symndx)
 {
-  if (symtab_hdr == NULL)
+  if (cookie == NULL)
     return NULL;
 
-  return get_link_hash_entry (sym_hashes, symndx, symtab_hdr->sh_info);
+  return _bfd_elf_get_link_hash_entry (elf_sym_hashes (cookie->abfd), symndx,
+				       cookie->extsymoff, cookie->num_sym);
 }
 
-static struct elf_link_hash_entry *
-get_ext_sym_hash_from_cookie (struct elf_reloc_cookie *cookie, unsigned long r_symndx)
+asection *
+_bfd_get_local_sym_section (struct elf_reloc_cookie *cookie,
+			    unsigned int symndx)
 {
-  if (cookie == NULL || cookie->sym_hashes == NULL)
+  if (symndx >= cookie->locsymcount)
     return NULL;
-  
-  if (r_symndx >= cookie->locsymcount
-      || ELF_ST_BIND (cookie->locsyms[r_symndx].st_info) != STB_LOCAL)
-    return get_link_hash_entry (cookie->sym_hashes, r_symndx, cookie->extsymoff);
 
-  return NULL;
+  bfd *abfd = cookie->abfd;
+  if (elf_loc_shndx (abfd) == NULL)
+    {
+      Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+      Elf_Internal_Sym *locsyms = bfd_elf_get_elf_syms (abfd, symtab_hdr,
+							cookie->locsymcount, 0,
+							NULL, NULL, NULL);
+      if (locsyms == NULL)
+	return NULL;
+      unsigned int *loc_shndx
+	= bfd_alloc (abfd, cookie->locsymcount * sizeof (*loc_shndx));
+      if (loc_shndx == NULL)
+	return NULL;
+      elf_loc_shndx (abfd) = loc_shndx;
+      for (unsigned int i = 0; i < cookie->locsymcount; i++)
+	{
+	  loc_shndx[i] = locsyms[i].st_shndx;
+	  if (ELF_ST_BIND (locsyms[i].st_info) != STB_LOCAL)
+	    loc_shndx[i] = SHN_BAD;
+	}
+      free (locsyms);
+    }
+
+  return bfd_section_from_elf_index (abfd, elf_loc_shndx (abfd)[symndx]);
 }
 
 asection *
@@ -157,8 +179,7 @@ _bfd_elf_section_for_symbol (struct elf_reloc_cookie *cookie,
 	return NULL;
     }
 
-  Elf_Internal_Sym *isym = &cookie->locsyms[r_symndx];
-  return bfd_section_from_elf_index (cookie->abfd, isym->st_shndx);
+  return _bfd_get_local_sym_section (cookie, r_symndx);
 }
 
 /* Define a symbol in a dynamic linkage section.  */
@@ -4823,8 +4844,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	{
 	  /* We store a pointer to the hash table entry for each
 	     external symbol.  */
-	  size_t amt = extsymcount * sizeof (struct elf_link_hash_entry *);
-	  sym_hash = (struct elf_link_hash_entry **) bfd_zalloc (abfd, amt);
+	  sym_hash = bfd_zalloc (abfd, extsymcount * sizeof (*sym_hash));
 	  if (sym_hash == NULL)
 	    goto error_free_sym;
 	  elf_sym_hashes (abfd) = sym_hash;
@@ -9090,6 +9110,7 @@ static bool
 set_symbol_value (bfd *bfd_with_globals,
 		  Elf_Internal_Sym *isymbuf,
 		  size_t locsymcount,
+		  size_t num_sym,
 		  size_t symidx,
 		  bfd_vma val)
 {
@@ -9121,7 +9142,8 @@ set_symbol_value (bfd *bfd_with_globals,
 
   /* It is a global symbol: set its link type
      to "defined" and give it a value.  */
-  h = get_link_hash_entry (elf_sym_hashes (bfd_with_globals), symidx, extsymoff);
+  h = _bfd_elf_get_link_hash_entry (elf_sym_hashes (bfd_with_globals), symidx,
+				    extsymoff, num_sym);
   if (h == NULL)
     return false;
   h->root.type = bfd_link_hash_defined;
@@ -11336,6 +11358,7 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
   Elf_Internal_Shdr *symtab_hdr;
   size_t locsymcount;
   size_t extsymoff;
+  size_t num_sym;
   Elf_Internal_Sym *isymbuf;
   Elf_Internal_Sym *isym;
   Elf_Internal_Sym *isymend;
@@ -11359,10 +11382,11 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
   if ((input_bfd->flags & DYNAMIC) != 0)
     return true;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
+  num_sym = symtab_hdr->sh_size / bed->s->sizeof_sym;
   if (elf_bad_symtab (input_bfd))
     {
-      locsymcount = symtab_hdr->sh_size / bed->s->sizeof_sym;
+      locsymcount = num_sym;
       extsymoff = 0;
     }
   else
@@ -11602,7 +11626,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 	    {
 	      struct elf_link_hash_entry *h;
 
-	      h = get_link_hash_entry (sym_hashes, symndx, extsymoff);
+	      h = _bfd_elf_get_link_hash_entry (sym_hashes, symndx,
+						extsymoff, num_sym);
 	      if (h == NULL)
 		{
 		  _bfd_error_handler
@@ -11747,7 +11772,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 		  || (elf_bad_symtab (input_bfd)
 		      && flinfo->sections[r_symndx] == NULL))
 		{
-		  h = get_link_hash_entry (sym_hashes, r_symndx, extsymoff);
+		  h = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx,
+						    extsymoff, num_sym);
 
 		  /* Badly formatted input files can contain relocs that
 		     reference non-existant symbols.  Check here so that
@@ -11823,8 +11849,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 		    return false;
 
 		  /* Symbol evaluated OK.  Update to absolute value.  */
-		  if (!set_symbol_value (input_bfd, isymbuf, locsymcount, r_symndx,
-					 val))
+		  if (!set_symbol_value (input_bfd, isymbuf, locsymcount,
+					 num_sym, r_symndx, val))
 		    return false;
 
 		  continue;
@@ -11988,8 +12014,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
 			 reloc to point to the global hash table entry
 			 for this symbol.  The symbol index is then
 			 set at the end of bfd_elf_final_link.  */
-		      rh = get_link_hash_entry (elf_sym_hashes (input_bfd),
-						r_symndx, extsymoff);
+		      rh = _bfd_elf_get_link_hash_entry (sym_hashes, r_symndx,
+							 extsymoff, num_sym);
 		      if (rh == NULL)
 			{
 			  /* FIXME: Generate an error ?  */
@@ -13811,9 +13837,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 /* Initialize COOKIE for input bfd ABFD.  */
 
 static bool
-init_reloc_cookie (struct elf_reloc_cookie *cookie,
-		   struct bfd_link_info *info, bfd *abfd,
-		   bool keep_memory)
+init_reloc_cookie (struct elf_reloc_cookie *cookie, bfd *abfd)
 {
   Elf_Internal_Shdr *symtab_hdr;
   const struct elf_backend_data *bed;
@@ -13822,11 +13846,10 @@ init_reloc_cookie (struct elf_reloc_cookie *cookie,
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
 
   cookie->abfd = abfd;
-  cookie->sym_hashes = elf_sym_hashes (abfd);
-  cookie->bad_symtab = elf_bad_symtab (abfd);
-  if (cookie->bad_symtab)
+  cookie->num_sym = symtab_hdr->sh_size / bed->s->sizeof_sym;
+  if (elf_bad_symtab (abfd))
     {
-      cookie->locsymcount = symtab_hdr->sh_size / bed->s->sizeof_sym;
+      cookie->locsymcount = cookie->num_sym;
       cookie->extsymoff = 0;
     }
   else
@@ -13840,37 +13863,15 @@ init_reloc_cookie (struct elf_reloc_cookie *cookie,
   else
     cookie->r_sym_shift = 32;
 
-  cookie->locsyms = (Elf_Internal_Sym *) symtab_hdr->contents;
-  if (cookie->locsyms == NULL && cookie->locsymcount != 0)
-    {
-      cookie->locsyms = bfd_elf_get_elf_syms (abfd, symtab_hdr,
-					      cookie->locsymcount, 0,
-					      NULL, NULL, NULL);
-      if (cookie->locsyms == NULL)
-	{
-	  info->callbacks->einfo (_("%P%X: can not read symbols: %E\n"));
-	  return false;
-	}
-      if (keep_memory || _bfd_elf_link_keep_memory (info))
-	{
-	  symtab_hdr->contents = (bfd_byte *) cookie->locsyms;
-	  info->cache_size += (cookie->locsymcount
-			       * sizeof (Elf_Internal_Sym));
-	}
-    }
   return true;
 }
 
 /* Free the memory allocated by init_reloc_cookie, if appropriate.  */
 
 static void
-fini_reloc_cookie (struct elf_reloc_cookie *cookie, bfd *abfd)
+fini_reloc_cookie (struct elf_reloc_cookie *cookie ATTRIBUTE_UNUSED,
+		   bfd *abfd ATTRIBUTE_UNUSED)
 {
-  Elf_Internal_Shdr *symtab_hdr;
-
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  if (symtab_hdr->contents != (unsigned char *) cookie->locsyms)
-    free (cookie->locsyms);
 }
 
 /* Initialize the relocation information in COOKIE for input section SEC
@@ -13918,7 +13919,7 @@ init_reloc_cookie_for_section (struct elf_reloc_cookie *cookie,
 			       struct bfd_link_info *info,
 			       asection *sec, bool keep_memory)
 {
-  if (!init_reloc_cookie (cookie, info, sec->owner, keep_memory))
+  if (!init_reloc_cookie (cookie, sec->owner))
     goto error1;
   if (!init_reloc_cookie_rels (cookie, info, sec->owner, sec,
 			       keep_memory))
@@ -13947,14 +13948,14 @@ fini_reloc_cookie_for_section (struct elf_reloc_cookie *cookie,
 /* Default gc_mark_hook.  */
 
 asection *
-_bfd_elf_gc_mark_hook (asection *sec,
+_bfd_elf_gc_mark_hook (asection *sec ATTRIBUTE_UNUSED,
 		       struct bfd_link_info *info ATTRIBUTE_UNUSED,
-		       Elf_Internal_Rela *rel ATTRIBUTE_UNUSED,
+		       struct elf_reloc_cookie *cookie,
 		       struct elf_link_hash_entry *h,
-		       Elf_Internal_Sym *sym)
+		       unsigned int symndx)
 {
   if (h == NULL)
-    return bfd_section_from_elf_index (sec->owner, sym->st_shndx);
+    return _bfd_get_local_sym_section (cookie, symndx);
 
   switch (h->root.type)
     {
@@ -13975,9 +13976,9 @@ _bfd_elf_gc_mark_hook (asection *sec,
 static asection *
 elf_gc_mark_debug_section (asection *sec ATTRIBUTE_UNUSED,
 			   struct bfd_link_info *info ATTRIBUTE_UNUSED,
-			   Elf_Internal_Rela *rel ATTRIBUTE_UNUSED,
+			   struct elf_reloc_cookie *cookie,
 			   struct elf_link_hash_entry *h,
-			   Elf_Internal_Sym *sym)
+			   unsigned int symndx)
 {
   if (h != NULL)
     {
@@ -13990,8 +13991,7 @@ elf_gc_mark_debug_section (asection *sec ATTRIBUTE_UNUSED,
   else
     {
       /* Return the local debug definition section.  */
-      asection *isec = bfd_section_from_elf_index (sec->owner,
-						   sym->st_shndx);
+      asection *isec = _bfd_get_local_sym_section (cookie, symndx);
       if (isec != NULL && (isec->flags & SEC_DEBUGGING) != 0)
 	return isec;
     }
@@ -14024,8 +14024,7 @@ _bfd_elf_gc_mark_rsec (struct bfd_link_info *info, asection *sec,
       if (r_symndx >= cookie->locsymcount)
 	return NULL;
 
-      return (*gc_mark_hook) (sec, info, cookie->rel, NULL,
-			      &cookie->locsyms[r_symndx]);
+      return (*gc_mark_hook) (sec, info, cookie, NULL, r_symndx);
     }
 
   bool was_marked = h->mark;
@@ -14058,7 +14057,7 @@ _bfd_elf_gc_mark_rsec (struct bfd_link_info *info, asection *sec,
 	}
     }
 
-  return (*gc_mark_hook) (sec, info, cookie->rel, h, NULL);
+  return (*gc_mark_hook) (sec, info, cookie, h, 0);
 }
 
 /* COOKIE->rel describes a relocation against section SEC, which is
@@ -14587,7 +14586,7 @@ bfd_elf_parse_eh_frame_entries (bfd *abfd ATTRIBUTE_UNUSED,
       if (sec == NULL || sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
 	continue;
 
-      if (!init_reloc_cookie (&cookie, info, ibfd, false))
+      if (!init_reloc_cookie (&cookie, ibfd))
 	return false;
 
       for (sec = ibfd->sections; sec; sec = sec->next)
@@ -15063,16 +15062,16 @@ bfd_elf_reloc_symbol_deleted_p (bfd_vma offset, void *cookie)
 {
   struct elf_reloc_cookie *rcookie = (struct elf_reloc_cookie *) cookie;
 
-  if (rcookie->bad_symtab)
+  if (elf_bad_symtab (rcookie->abfd))
     rcookie->rel = rcookie->rels;
 
   for (; rcookie->rel < rcookie->relend; rcookie->rel++)
     {
       unsigned long r_symndx;
 
-      if (! rcookie->bad_symtab)
-	if (rcookie->rel->r_offset > offset)
-	  return false;
+      if (!elf_bad_symtab (rcookie->abfd)
+	  && rcookie->rel->r_offset > offset)
+	return false;
       if (rcookie->rel->r_offset != offset)
 	continue;
 
@@ -15102,12 +15101,7 @@ bfd_elf_reloc_symbol_deleted_p (bfd_vma offset, void *cookie)
 	  /* It's not a relocation against a global symbol,
 	     but it could be a relocation against a local
 	     symbol for a discarded section.  */
-	  asection *isec;
-	  Elf_Internal_Sym *isym;
-
-	  /* Need to: get the symbol; get the section.  */
-	  isym = &rcookie->locsyms[r_symndx];
-	  isec = bfd_section_from_elf_index (rcookie->abfd, isym->st_shndx);
+	  asection *isec = _bfd_get_local_sym_section (cookie, r_symndx);
 	  if (isec != NULL
 	      && (isec->kept_section != NULL
 		  || discarded_section (isec)))
@@ -15283,7 +15277,7 @@ bfd_elf_discard_info (bfd *output_bfd, struct bfd_link_info *info)
 
       if (bed->elf_backend_discard_info != NULL)
 	{
-	  if (!init_reloc_cookie (&cookie, info, abfd, false))
+	  if (!init_reloc_cookie (&cookie, abfd))
 	    return -1;
 
 	  if ((*bed->elf_backend_discard_info) (abfd, &cookie, info))

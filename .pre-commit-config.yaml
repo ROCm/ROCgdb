@@ -46,7 +46,7 @@ repos:
     hooks:
       - id: black
         types_or: [file]
-        files: 'gdb/.*\.py(\.in)?$'
+        files: '^gdb/.*\.py(\.in)?$'
   - repo:  https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
@@ -59,14 +59,14 @@ repos:
       #  - gdb/python/**/*.py
       #  - gdb/testsuite/*.py
       #
-      files: '^gdb/(gdb-gdb\.py\.in|[^/]+\.py|python/.+\.py|testsuite/[^/]+\.py)$'
+      files: '^gdb/.*\.py(\.in)?$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
     rev: 7.0.0
     hooks:
     - id: isort
       types_or: [file]
-      files: 'gdb/.*\.py(\.in)?$'
+      files: '^gdb/.*\.py(\.in)?$'
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -103,4 +103,4 @@ repos:
     - id: tclint
       args: [--config, gdb/tclint.toml]
       types_or: [file]
-      files: 'gdb/testsuite/.*\.(exp|tcl)$'
+      files: '^gdb/testsuite/.*\.(exp|tcl)$'

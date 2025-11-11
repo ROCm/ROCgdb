@@ -91,7 +91,9 @@ with_test_prefix "private lane watchpoints" {
 	    ".*Hardware watchpoint.*array.*Old value = \\\"aaab\\\".*New value = \\\"baab\\\".*"] \
 	"change array content from aaab string to baab string"
 
-    gdb_test "bt" "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*" "inside kernel"
+    # Backtrace outputs may appear with or without the PC address.
+    set bt_pattern "#\[0-9\]  (0x\[0-9a-fA-F\]+ in )?"
+    gdb_test "bt" "${bt_pattern}kernel.*" "inside kernel"
 
 
     gdb_breakpoint "change_memory" "allow-pending" "qualified"
@@ -118,8 +120,8 @@ with_test_prefix "private lane watchpoints" {
 
     gdb_test "bt" \
 	[multi_line \
-	    "#\[0-9\]  0x\[0-9a-fA-F\]+ in change_memory.*" \
-	    "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*"] \
+	    "${bt_pattern}change_memory.*" \
+	    "${bt_pattern}kernel.*"] \
 	"inside change_memory"
 
     delete_breakpoints
@@ -136,7 +138,7 @@ with_test_prefix "private lane watchpoints" {
 	    ".*Hardware watchpoint.*-location \\\*\\\(\\\(char \\\*\\\) private_lane#$elem_3_addr\\\).*Old value = 99.*New value = 100.*"] \
 	"change an array element value from letter c to letter d"
 
-    gdb_test "bt" "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*" "inside kernel again"
+    gdb_test "bt" "${bt_pattern}kernel.*" "inside kernel again"
 }
 
 clean_restart
@@ -169,7 +171,7 @@ with_test_prefix "global memory watchpoint" {
 	    ".*Hardware watchpoint.*-location \\\*global_ptr.*Old value = 0.*New value = 1.*"] \
 	"change global_ptr content from 0 to 1"
 
-    gdb_test "bt" "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*" "inside kernel"
+    gdb_test "bt" "${bt_pattern}kernel.*" "inside kernel"
 
     # Check if watchpoint is also hit in a callee frame.
     set pattern ""
@@ -182,8 +184,8 @@ with_test_prefix "global memory watchpoint" {
 
     gdb_test "bt" \
 	[multi_line \
-	    "#\[0-9\]  0x\[0-9a-fA-F\]+ in change_memory.*" \
-	    "#\[0-9\]  0x\[0-9a-fA-F\]+ in kernel.*"] \
+	    "${bt_pattern}change_memory.*" \
+	    "${bt_pattern}kernel.*"] \
 	"inside change_memory"
 }
 

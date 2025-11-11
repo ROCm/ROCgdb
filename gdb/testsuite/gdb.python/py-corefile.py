@@ -15,6 +15,8 @@
 
 import pathlib
 
+import gdb
+
 
 class Mapping:
     def __init__(self, mapping, region):
@@ -114,7 +116,6 @@ class ShowBuildIds(gdb.Command):
             if len(b) > longest_build_id:
                 longest_build_id = len(b)
 
-        count = 0
         core_mapped_files = inf.corefile.mapped_files()
         for m in core_mapped_files:
             p = pathlib.Path(m.filename).resolve()

@@ -14,6 +14,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import gdb
+
+
 class MytypePrinter:
     """pretty print my type"""
 
@@ -21,7 +24,7 @@ class MytypePrinter:
         self.val = val
 
     def to_string(self):
-        calls = gdb.parse_and_eval("f()")
+        gdb.parse_and_eval("f()")
         return "mytype is %s" % self.val["x"]
 
 

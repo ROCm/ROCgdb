@@ -18,6 +18,8 @@ Full documentation for ROCgdb is available at
   - `gfx950`
   - `gfx1150`
   - `gfx1151`
+- Support for FP4, FP6 and FP8 micro-scaling (MX) data types with the `gfx950`
+  architecture.
 
 ### Removed
 
