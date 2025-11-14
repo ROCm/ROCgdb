@@ -653,7 +653,7 @@ struct elf_s390_link_hash_entry
 #define GOT_NORMAL	1
 #define GOT_TLS_GD	2
 #define GOT_TLS_IE	3
-#define GOT_TLS_IE_NLT	3
+#define GOT_TLS_IE_NLT	4	/* Initial Exec, no literal pool entry.  */
   unsigned char tls_type;
 
   /* For pointer equality reasons we might need to change the symbol
@@ -1325,7 +1325,7 @@ elf_s390_check_relocs (bfd *abfd,
 	      if (ELF64_R_TYPE (rel->r_info) == R_390_PC16
 		  || ELF64_R_TYPE (rel->r_info) == R_390_PC12DBL
 		  || ELF64_R_TYPE (rel->r_info) == R_390_PC16DBL
-		  || ELF64_R_TYPE (rel->r_info) == R_390_PC16DBL
+		  || ELF64_R_TYPE (rel->r_info) == R_390_PC24DBL
 		  || ELF64_R_TYPE (rel->r_info) == R_390_PC32
 		  || ELF64_R_TYPE (rel->r_info) == R_390_PC32DBL
 		  || ELF64_R_TYPE (rel->r_info) == R_390_PC64)
@@ -1776,9 +1776,9 @@ allocate_dynrelocs (struct elf_link_hash_entry *h,
       elf_s390_adjust_gotplt((struct elf_s390_link_hash_entry *) h);
     }
 
-  /* If R_390_TLS_{IE64,GOTIE64,GOTIE12,IEENT} symbol is now local to
+  /* If R_390_TLS_{IE64,GOTIE64,GOTIE12,GOTIE20,IEENT} symbol is now local to
      the binary, we can optimize a bit. IE64 and GOTIE64 get converted
-     to R_390_TLS_LE64 requiring no TLS entry. For GOTIE12 and IEENT
+     to R_390_TLS_LE64 requiring no TLS entry. For GOTIE12, GOTIE20, and IEENT
      we can save the dynamic TLS relocation.  */
   if (h->got.refcount > 0
       && !bfd_link_dll (info)
@@ -3773,7 +3773,8 @@ elf_s390_finish_dynamic_symbol (bfd *output_bfd,
       if (h->dynindx == -1
 	  || (h->root.type != bfd_link_hash_defined
 	      && h->root.type != bfd_link_hash_defweak)
-	  || htab->elf.srelbss == NULL)
+	  || htab->elf.srelbss == NULL
+	  || htab->elf.sreldynrelro == NULL)
 	abort ();
 
       rela.r_offset = (h->root.u.def.value
