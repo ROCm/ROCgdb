@@ -7658,6 +7658,7 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"tlbiel",	X(31,274),	X_MASK|1<<20,POWER9,	0,		{RB, RSO, RIC, PRS, X_R}},
 {"tlbiel",	X(31,274),	XRTLRA_MASK, POWER4,	POWER9|PPC476,	{RB, LOPT}},
 
+{"mtlpl",	X(31,275),	XRA_MASK,    FUTURE,	0,		{RB, RS}},
 {"mfapidi",	X(31,275),	X_MASK,	     BOOKE,	E500|TITAN,	{RT, RA}},
 
 {"lqarx",	X(31,276),  XEH_MASK|Q_MASK, POWER8,	0,		{RTQ, RAX, RBX, EH}},
@@ -8869,6 +8870,7 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"lfddx",	X(31,803),	X_MASK,	     E500MC,	0,		{FRT, RA, RB}},
 
 {"lvtrxl",	X(31,805),	X_MASK,	     E6500,	0,		{VD, RA0, RB}},
+{"ccmclean",	X(31,806),	XRTRARB_MASK,FUTURE,	0,		{0}},
 {"stvepx",	X(31,807),	X_MASK,	     E6500,	0,		{VS, RA0, RB}},
 {"lvrxl",	X(31,807),	X_MASK,	     CELL,	0,		{VD, RA0, RB}},
 
@@ -8932,6 +8934,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 
 {"divso",	XO(31,363,1,0),	XO_MASK,     M601,	0,		{RT, RA, RB}},
 {"divso.",	XO(31,363,1,1),	XO_MASK,     M601,	0,		{RT, RA, RB}},
+
+{"ccmrl",	X(31,870),	XRTRARB_MASK,FUTURE,	0,		{0}},
 
 {"lxvb16x",	X(31,876),	XX1_MASK,    PPCVSX3,	0,		{XT6, RA0, RB}},
 
