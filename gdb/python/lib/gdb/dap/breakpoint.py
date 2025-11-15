@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+from collections import defaultdict
 from contextlib import contextmanager
 
 # These are deprecated in 3.9, but required in older versions.
@@ -92,10 +93,10 @@ gdb.events.breakpoint_deleted.connect(_bp_deleted)
 
 # Map from the breakpoint "kind" (like "function") to a second map, of
 # breakpoints of that type.  The second map uses the breakpoint spec
-# as a key, and the gdb.Breakpoint itself as a value.  This is used to
-# implement the clearing behavior specified by the protocol, while
-# allowing for reuse when a breakpoint can be kept.
-breakpoint_map = {}
+# as a key, and a list of gdb.Breakpoint objects as a value.  This is
+# used to implement the clearing behavior specified by the protocol,
+# while allowing for reuse when a breakpoint can be kept.
+_breakpoint_map = {}
 
 
 @in_gdb_thread
@@ -149,11 +150,11 @@ def _remove_entries(table, *names):
 @in_gdb_thread
 def _set_breakpoints(kind, specs, creator):
     # Try to reuse existing breakpoints if possible.
-    if kind in breakpoint_map:
-        saved_map = breakpoint_map[kind]
+    if kind in _breakpoint_map:
+        saved_map = _breakpoint_map[kind]
     else:
         saved_map = {}
-    breakpoint_map[kind] = {}
+    _breakpoint_map[kind] = defaultdict(list)
     result = []
     with suppress_new_breakpoint_event():
         for spec in specs:
@@ -170,8 +171,8 @@ def _set_breakpoints(kind, specs, creator):
             # report these as an "unverified" breakpoint.
             bp = None
             try:
-                if keyspec in saved_map:
-                    bp = saved_map.pop(keyspec)
+                if keyspec in saved_map and len(saved_map[keyspec]) > 0:
+                    bp = saved_map[keyspec].pop()
                 else:
                     bp = creator(**spec)
 
@@ -184,7 +185,7 @@ def _set_breakpoints(kind, specs, creator):
                     )
 
                 # Reaching this spot means success.
-                breakpoint_map[kind][keyspec] = bp
+                _breakpoint_map[kind][keyspec].append(bp)
                 result.append(_breakpoint_descriptor(bp))
             # Exceptions other than gdb.error are possible here.
             except Exception as e:
@@ -205,8 +206,9 @@ def _set_breakpoints(kind, specs, creator):
                 )
 
         # Delete any breakpoints that were not reused.
-        for entry in saved_map.values():
-            entry.delete()
+        for sub_map in saved_map.values():
+            for entry in sub_map:
+                entry.delete()
     return result
 
 

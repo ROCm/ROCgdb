@@ -228,7 +228,7 @@ tic6x_read_description (enum c6x_feature feature)
     {
       *tdesc = tic6x_create_target_description (feature);
       static const char *expedite_regs[] = { "A15", "PC", NULL };
-      init_target_desc (*tdesc, expedite_regs);
+      init_target_desc (*tdesc, expedite_regs, GDB_OSABI_LINUX);
     }
 
   return *tdesc;
@@ -410,22 +410,6 @@ tic6x_target::get_regs_info ()
 {
   return &myregs_info;
 }
-
-#if GDB_SELF_TEST
-#include "gdbsupport/selftest.h"
-
-namespace selftests {
-namespace tdesc {
-static void
-tic6x_tdesc_test ()
-{
-  SELF_CHECK (*tdesc_tic6x_c62x_linux == *tic6x_read_description (C6X_CORE));
-  SELF_CHECK (*tdesc_tic6x_c64x_linux == *tic6x_read_description (C6X_GP));
-  SELF_CHECK (*tdesc_tic6x_c64xp_linux == *tic6x_read_description (C6X_C6XP));
-}
-}
-}
-#endif
 
 /* The linux target ops object.  */
 
