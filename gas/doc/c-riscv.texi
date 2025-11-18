@@ -781,6 +781,11 @@ The XAndesVSIntLoad extension provides vector load instructions for INT4 data in
 
 It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
 
+@item XAndesVPackFPH
+The XAndesVPackFPH extension provides vector packed FP16 fused multiply-add instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
 @item XCvAlu
 The XCvAlu extension provides instructions for general ALU operations.
 

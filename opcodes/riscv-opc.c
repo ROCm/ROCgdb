@@ -2361,6 +2361,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"nds.vln8.v",  0, INSN_CLASS_XANDESVSINTLOAD, "Vd,0(s)Vm", MATCH_NDS_VLN8_V, MASK_NDS_VLN8_V, match_opcode, INSN_DREF},
 {"nds.vlnu8.v", 0, INSN_CLASS_XANDESVSINTLOAD, "Vd,0(s)Vm", MATCH_NDS_VLNU8_V, MASK_NDS_VLNU8_V, match_opcode, INSN_DREF},
 
+/* Vendor-specific (Andes) XAndesVPackFPH instructions.  */
+{"nds.vfpmadt.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADT_VF, MASK_NDS_VFPMADT_VF, match_opcode, 0},
+{"nds.vfpmadb.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF, match_opcode, 0},
+
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 {"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
 {"cv.msu",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MSU,      MASK_CV_MSU, match_opcode, 0},
