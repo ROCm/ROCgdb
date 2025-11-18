@@ -167,6 +167,7 @@ All available -march extensions for RISC-V:
 	smmpm                                   1.0
 	sspm                                    1.0
 	supm                                    1.0
+	xandesbfhcvt                            5.0
 	xcvalu                                  1.0
 	xcvbi                                   1.0
 	xcvbitmanip                             1.0

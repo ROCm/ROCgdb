@@ -2349,6 +2349,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"hsv.w",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_W, MASK_HSV_W, match_opcode, INSN_DREF|INSN_4_BYTE },
 {"hsv.d",      64, INSN_CLASS_H, "t,0(s)", MATCH_HSV_D, MASK_HSV_D, match_opcode, INSN_DREF|INSN_8_BYTE },
 
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+{"nds.fcvt.s.bf16", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_S_BF16, MASK_NDS_FCVT_S_BF16, match_opcode, 0},
+{"nds.fcvt.bf16.s", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S, match_opcode, 0},
+
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 {"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
 {"cv.msu",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MSU,      MASK_CV_MSU, match_opcode, 0},

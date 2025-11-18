@@ -2601,6 +2601,11 @@
 #define MASK_VFQWBDOTA_ALT_VV 0xfc00707f
 #define MATCH_VFBDOTA_VV 0xac001077
 #define MASK_VFBDOTA_VV 0xfc00707f
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+#define MATCH_NDS_FCVT_S_BF16 0x1405b
+#define MASK_NDS_FCVT_S_BF16 0xfe0ff07f
+#define MATCH_NDS_FCVT_BF16_S 0x1c05b
+#define MASK_NDS_FCVT_BF16_S 0xfe0ff07f
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 #define MATCH_CV_MAC       0x9000302b
 #define MASK_CV_MAC        0xfe00707f
@@ -5043,6 +5048,9 @@ DECLARE_INSN(sd_rl, MATCH_SDR, MASK_SDR)
 DECLARE_INSN(sctrclr, MATCH_SCTRCLR, MASK_SCTRCLR)
 /* Smrnmi instruction */
 DECLARE_INSN(mnret, MATCH_MNRET, MASK_MNRET)
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+DECLARE_INSN(nds_fcvt_s_bf16, MATCH_NDS_FCVT_S_BF16, MASK_NDS_FCVT_S_BF16)
+DECLARE_INSN(nds_fcvt_bf16_s, MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */

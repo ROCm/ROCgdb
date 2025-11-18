@@ -1652,6 +1652,7 @@ static const struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 
 static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
+  {"xandesbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xcvalu",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbi",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbitmanip",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
@@ -3086,6 +3087,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
       return riscv_subset_supports (rps, "h");
+    case INSN_CLASS_XANDESBFHCVT:
+      return riscv_subset_supports (rps, "xandesbfhcvt");
     case INSN_CLASS_XCVALU:
       return riscv_subset_supports (rps, "xcvalu");
     case INSN_CLASS_XCVBI:
@@ -3432,6 +3435,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "svinval";
     case INSN_CLASS_H:
       return _("h");
+    case INSN_CLASS_XANDESBFHCVT:
+      return "xandesbfhcvt";
     case INSN_CLASS_XCVALU:
       return "xcvalu";
     case INSN_CLASS_XCVBI:
