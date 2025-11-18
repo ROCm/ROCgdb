@@ -791,6 +791,11 @@ The XAndesVDot extension provides vector dot product instructions.
 
 It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
 
+@item XAndesVSIntH
+The XAndesVSIntH extension provides INT4 vector load and INT4/INT8 vector floating-point widening instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
 @item XCvAlu
 The XCvAlu extension provides instructions for general ALU operations.
 

@@ -2628,6 +2628,17 @@
 #define MASK_NDS_VD4DOTU_VV 0xfc00707f
 #define MATCH_NDS_VD4DOTSU_VV 0x1400405b
 #define MASK_NDS_VD4DOTSU_VV 0xfc00707f
+/* Vendor-specific (Andes) XAndesVSIntH instructions.  */
+#define MATCH_NDS_VLE4_V 0x600405b
+#define MASK_NDS_VLE4_V 0xfff0707f
+#define MATCH_NDS_VFWCVT_F_N_V 0x2405b
+#define MASK_NDS_VFWCVT_F_N_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_NU_V 0x2c05b
+#define MASK_NDS_VFWCVT_F_NU_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_B_V 0x3405b
+#define MASK_NDS_VFWCVT_F_B_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_BU_V 0x3c05b
+#define MASK_NDS_VFWCVT_F_BU_V 0xfc0ff07f
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 #define MATCH_CV_MAC       0x9000302b
 #define MASK_CV_MAC        0xfe00707f
@@ -5086,6 +5097,12 @@ DECLARE_INSN(nds_vfpmadb_vf, MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF)
 DECLARE_INSN(nds_vd4dots_vv, MATCH_NDS_VD4DOTS_VV, MASK_NDS_VD4DOTS_VV)
 DECLARE_INSN(nds_vd4dotu_vv, MATCH_NDS_VD4DOTU_VV, MASK_NDS_VD4DOTU_VV)
 DECLARE_INSN(nds_vd4dotsu_vv, MATCH_NDS_VD4DOTSU_VV, MASK_NDS_VD4DOTSU_VV)
+/* Vendor-specific (Andes) XAndesVSIntH instructions.  */
+DECLARE_INSN(nds_vle4_v, MATCH_NDS_VLE4_V, MASK_NDS_VLE4_V)
+DECLARE_INSN(nds_vfwcvt_f_n_v, MATCH_NDS_VFWCVT_F_N_V, MASK_NDS_VFWCVT_F_N_V)
+DECLARE_INSN(nds_vfwcvt_f_nu_v, MATCH_NDS_VFWCVT_F_NU_V, MASK_NDS_VFWCVT_F_NU_V)
+DECLARE_INSN(nds_vfwcvt_f_b_v, MATCH_NDS_VFWCVT_F_B_V, MASK_NDS_VFWCVT_F_B_V)
+DECLARE_INSN(nds_vfwcvt_f_bu_v, MATCH_NDS_VFWCVT_F_BU_V, MASK_NDS_VFWCVT_F_BU_V)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */
