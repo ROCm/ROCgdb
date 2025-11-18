@@ -771,6 +771,11 @@ The XAndesBFHCvt extension provides scalar BF16 and FP32 conversion instructions
 
 It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
 
+@item XAndesVBFHCvt
+The XAndesVBFHCvt extension provides vector BF16 and FP32 conversion instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
 @item XCvAlu
 The XCvAlu extension provides instructions for general ALU operations.
 

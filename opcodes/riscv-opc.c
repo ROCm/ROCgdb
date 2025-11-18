@@ -2353,6 +2353,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"nds.fcvt.s.bf16", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_S_BF16, MASK_NDS_FCVT_S_BF16, match_opcode, 0},
 {"nds.fcvt.bf16.s", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S, match_opcode, 0},
 
+/* Vendor-specific (Andes) XAndesVBFHCvt instructions.  */
+{"nds.vfwcvt.s.bf16", 0, INSN_CLASS_XANDESVBFHCVT, "Vd,Vt", MATCH_NDS_VFWCVT_S_BF16, MASK_NDS_VFWCVT_S_BF16, match_opcode, 0},
+{"nds.vfncvt.bf16.s", 0, INSN_CLASS_XANDESVBFHCVT, "Vd,Vt", MATCH_NDS_VFNCVT_BF16_S, MASK_NDS_VFNCVT_BF16_S, match_opcode, 0},
+
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 {"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
 {"cv.msu",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MSU,      MASK_CV_MSU, match_opcode, 0},
