@@ -776,6 +776,11 @@ The XAndesVBFHCvt extension provides vector BF16 and FP32 conversion instruction
 
 It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
 
+@item XAndesVSIntLoad
+The XAndesVSIntLoad extension provides vector load instructions for INT4 data into 8-bit elements.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
 @item XCvAlu
 The XCvAlu extension provides instructions for general ALU operations.
 

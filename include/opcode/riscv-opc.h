@@ -2611,6 +2611,11 @@
 #define MASK_NDS_VFWCVT_S_BF16 0xfe0ff07f
 #define MATCH_NDS_VFNCVT_BF16_S 0xc05b
 #define MASK_NDS_VFNCVT_BF16_S 0xfe0ff07f
+/* Vendor-specific (Andes) XAndesVSIntLoad instructions.  */
+#define MATCH_NDS_VLN8_V 0x420405b
+#define MASK_NDS_VLN8_V 0xfdf0707f
+#define MATCH_NDS_VLNU8_V 0x430405b
+#define MASK_NDS_VLNU8_V 0xfdf0707f
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 #define MATCH_CV_MAC       0x9000302b
 #define MASK_CV_MAC        0xfe00707f
@@ -5059,6 +5064,9 @@ DECLARE_INSN(nds_fcvt_bf16_s, MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S)
 /* Vendor-specific (Andes) XAndesVBFHCvt instructions.  */
 DECLARE_INSN(nds_vfwcvt_s_bf16, MATCH_NDS_VFWCVT_S_BF16, MASK_NDS_VFWCVT_S_BF16)
 DECLARE_INSN(nds_vfncvt_bf16_s, MATCH_NDS_VFNCVT_BF16_S, MASK_NDS_VFNCVT_BF16_S)
+/* Vendor-specific (Andes) XAndesVSIntLoad instructions.  */
+DECLARE_INSN(nds_vln8_v, MATCH_NDS_VLN8_V, MASK_NDS_VLN8_V)
+DECLARE_INSN(nds_vlnu8_v, MATCH_NDS_VLNU8_V, MASK_NDS_VLNU8_V)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */
