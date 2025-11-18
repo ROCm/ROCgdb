@@ -2365,6 +2365,11 @@ const struct riscv_opcode riscv_opcodes[] =
 {"nds.vfpmadt.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADT_VF, MASK_NDS_VFPMADT_VF, match_opcode, 0},
 {"nds.vfpmadb.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF, match_opcode, 0},
 
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+{"nds.vd4dots.vv",  0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTS_VV, MASK_NDS_VD4DOTS_VV, match_opcode, 0},
+{"nds.vd4dotu.vv",  0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTU_VV, MASK_NDS_VD4DOTU_VV, match_opcode, 0},
+{"nds.vd4dotsu.vv", 0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTSU_VV, MASK_NDS_VD4DOTSU_VV, match_opcode, 0},
+
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 {"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
 {"cv.msu",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MSU,      MASK_CV_MSU, match_opcode, 0},

@@ -2621,6 +2621,13 @@
 #define MASK_NDS_VFPMADT_VF 0xfc00707f
 #define MATCH_NDS_VFPMADB_VF 0xc00405b
 #define MASK_NDS_VFPMADB_VF 0xfc00707f
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+#define MATCH_NDS_VD4DOTS_VV 0x1000405b
+#define MASK_NDS_VD4DOTS_VV 0xfc00707f
+#define MATCH_NDS_VD4DOTU_VV 0x1c00405b
+#define MASK_NDS_VD4DOTU_VV 0xfc00707f
+#define MATCH_NDS_VD4DOTSU_VV 0x1400405b
+#define MASK_NDS_VD4DOTSU_VV 0xfc00707f
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 #define MATCH_CV_MAC       0x9000302b
 #define MASK_CV_MAC        0xfe00707f
@@ -5075,6 +5082,10 @@ DECLARE_INSN(nds_vlnu8_v, MATCH_NDS_VLNU8_V, MASK_NDS_VLNU8_V)
 /* Vendor-specific (Andes) XAndesVPackFPH instructions.  */
 DECLARE_INSN(nds_vfpmadt_vf, MATCH_NDS_VFPMADT_VF, MASK_NDS_VFPMADT_VF)
 DECLARE_INSN(nds_vfpmadb_vf, MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF)
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+DECLARE_INSN(nds_vd4dots_vv, MATCH_NDS_VD4DOTS_VV, MASK_NDS_VD4DOTS_VV)
+DECLARE_INSN(nds_vd4dotu_vv, MATCH_NDS_VD4DOTU_VV, MASK_NDS_VD4DOTU_VV)
+DECLARE_INSN(nds_vd4dotsu_vv, MATCH_NDS_VD4DOTSU_VV, MASK_NDS_VD4DOTSU_VV)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */
