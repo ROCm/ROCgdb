@@ -40,43 +40,41 @@ producer_is_gcc_ge_4 (const char *producer)
 
 /* See producer.h.  */
 
-int
+bool
 producer_is_gcc (const char *producer, int *major, int *minor)
 {
-  const char *cs;
+  if (producer == nullptr)
+    return false;
 
-  if (producer != NULL && startswith (producer, "GNU "))
-    {
-      int maj, min;
+  const char gnu_prefix[] = "GNU ";
+  if (!startswith (producer, gnu_prefix))
+    return false;
 
-      if (major == NULL)
-	major = &maj;
-      if (minor == NULL)
-	minor = &min;
+  /* Skip "GNU " prefix.  */
+  const char *cs = &producer[strlen (gnu_prefix)];
 
-      /* Skip GNU.  */
-      cs = &producer[strlen ("GNU ")];
+  /* Bail out for "GNU AS ".  */
+  if (startswith (cs, "AS "))
+    return false;
 
-      /* Bail out for GNU AS.  */
-      if (startswith (cs, "AS "))
-	return 0;
+  /* Skip any identifier after "GNU " - such as "C11" "C++" or "Java".
+     A full producer string might look like:
+     "GNU C 4.7.2"
+     "GNU Fortran 4.8.2 20140120 (Red Hat 4.8.2-16) -mtune=generic ..."
+     "GNU C++14 5.0.0 20150123 (experimental)".  */
+  while (*cs && !c_isspace (*cs))
+    cs++;
+  if (*cs && c_isspace (*cs))
+    cs++;
 
-      /* Skip any identifier after "GNU " - such as "C11" "C++" or "Java".
-	 A full producer string might look like:
-	 "GNU C 4.7.2"
-	 "GNU Fortran 4.8.2 20140120 (Red Hat 4.8.2-16) -mtune=generic ..."
-	 "GNU C++14 5.0.0 20150123 (experimental)"
-      */
-      while (*cs && !c_isspace (*cs))
-	cs++;
-      if (*cs && c_isspace (*cs))
-	cs++;
-      if (sscanf (cs, "%d.%d", major, minor) == 2)
-	return 1;
-    }
+  int maj, min;
+  if (major == nullptr)
+    major = &maj;
+  if (minor == nullptr)
+    minor = &min;
+  int matches = sscanf (cs, "%d.%d", major, minor);
 
-  /* Not recognized as GCC.  */
-  return 0;
+  return matches == 2;
 }
 
 /* See producer.h.  */
@@ -185,23 +183,24 @@ producer_is_llvm (const char *producer)
 bool
 producer_is_clang (const char *producer, int *major, int *minor)
 {
-  if (producer != nullptr && startswith (producer, "clang version "))
-    {
-      int maj, min;
-      if (major == nullptr)
-	major = &maj;
-      if (minor == nullptr)
-	minor = &min;
+  if (producer == nullptr)
+    return false;
 
-      /* The full producer string will look something like
-	 "clang version XX.X.X ..."
-	 So we can safely ignore all characters before the first digit.  */
-      const char *cs = producer + strlen ("clang version ");
+  const char clang_prefix[] = "clang version ";
+  if (!startswith (producer, clang_prefix))
+    return false;
 
-      if (sscanf (cs, "%d.%d", major, minor) == 2)
-	return true;
-    }
-  return false;
+  /* Skip "clang version " prefix.  */
+  const char *cs = producer + strlen (clang_prefix);
+
+  int maj, min;
+  if (major == nullptr)
+    major = &maj;
+  if (minor == nullptr)
+    minor = &min;
+  int matches = sscanf (cs, "%d.%d", major, minor);
+
+  return matches == 2;
 }
 
 /* See producer.h.  */
@@ -218,7 +217,7 @@ producer_is_realview (const char *producer)
     "ARM C/C++ Compiler, RVCT"
   };
 
-  if (producer == NULL)
+  if (producer == nullptr)
     return false;
 
   for (const char *ident : arm_idents)
@@ -246,10 +245,9 @@ producer_parsing_tests ()
   }
 
   {
-    static const char extern_f_14_0[] = "\
-Intel(R) Fortran Intel(R) 64 Compiler XE for applications running on \
-Intel(R) 64, \
-Version 14.0.1.074 Build 20130716";
+    static const char extern_f_14_0[]
+      = ("Intel(R) Fortran Intel(R) 64 Compiler XE for applications running on"
+	 " Intel(R) 64,	Version 14.0.1.074 Build 20130716");
 
     int major = 0, minor = 0;
     SELF_CHECK (producer_is_icc (extern_f_14_0, &major, &minor)
@@ -258,10 +256,9 @@ Version 14.0.1.074 Build 20130716";
   }
 
   {
-    static const char intern_f_14[] = "\
-Intel(R) Fortran Intel(R) 64 Compiler XE for applications running on \
-Intel(R) 64, \
-Version 14.0";
+    static const char intern_f_14[]
+      = ("Intel(R) Fortran Intel(R) 64 Compiler XE for applications running on"
+	 " Intel(R) 64, Version 14.0");
 
     int major = 0, minor = 0;
     SELF_CHECK (producer_is_icc (intern_f_14, &major, &minor)
@@ -270,10 +267,9 @@ Version 14.0";
   }
 
   {
-    static const char intern_c_14[] = "\
-Intel(R) C++ Intel(R) 64 Compiler XE for applications running on \
-Intel(R) 64, \
-Version 14.0";
+    static const char intern_c_14[]
+      = ("Intel(R) C++ Intel(R) 64 Compiler XE for applications running on"
+	 " Intel(R) 64, Version 14.0");
     int major = 0, minor = 0;
     SELF_CHECK (producer_is_icc (intern_c_14, &major, &minor)
 		&& major == 14 && minor == 0);
@@ -281,10 +277,9 @@ Version 14.0";
   }
 
   {
-    static const char intern_c_18[] = "\
-Intel(R) C++ Intel(R) 64 Compiler for applications running on \
-Intel(R) 64, \
-Version 18.0 Beta";
+    static const char intern_c_18[]
+      = ("Intel(R) C++ Intel(R) 64 Compiler for applications running on"
+	 " Intel(R) 64, Version 18.0 Beta");
     int major = 0, minor = 0;
     SELF_CHECK (producer_is_icc (intern_c_18, &major, &minor)
 		&& major == 18 && minor == 0);
@@ -292,7 +287,7 @@ Version 18.0 Beta";
 
   {
     static const char gnu[] = "GNU C 4.7.2";
-    SELF_CHECK (!producer_is_icc (gnu, NULL, NULL));
+    SELF_CHECK (!producer_is_icc (gnu, nullptr, nullptr));
 
     int major = 0, minor = 0;
     SELF_CHECK (producer_is_gcc (gnu, &major, &minor)
@@ -302,7 +297,7 @@ Version 18.0 Beta";
   {
     static const char gnu_exp[] = "GNU C++14 5.0.0 20150123 (experimental)";
     int major = 0, minor = 0;
-    SELF_CHECK (!producer_is_icc (gnu_exp, NULL, NULL));
+    SELF_CHECK (!producer_is_icc (gnu_exp, nullptr, nullptr));
     SELF_CHECK (producer_is_gcc (gnu_exp, &major, &minor)
 		&& major == 5 && minor == 0);
   }
@@ -310,7 +305,7 @@ Version 18.0 Beta";
   {
     static const char clang_llvm_exp[] = "clang version 12.0.0 (CLANG: bld#8)";
     int major = 0, minor = 0;
-    SELF_CHECK (!producer_is_icc (clang_llvm_exp, NULL, NULL));
+    SELF_CHECK (!producer_is_icc (clang_llvm_exp, nullptr, nullptr));
     SELF_CHECK (!producer_is_gcc (clang_llvm_exp, &major, &minor));
     SELF_CHECK (producer_is_llvm (clang_llvm_exp));
   }
@@ -318,7 +313,7 @@ Version 18.0 Beta";
   {
     static const char flang_llvm_exp[] = " F90 Flang - 1.5 2017-05-01";
     int major = 0, minor = 0;
-    SELF_CHECK (!producer_is_icc (flang_llvm_exp, NULL, NULL));
+    SELF_CHECK (!producer_is_icc (flang_llvm_exp, nullptr, nullptr));
     SELF_CHECK (!producer_is_gcc (flang_llvm_exp, &major, &minor));
     SELF_CHECK (producer_is_llvm (flang_llvm_exp));
   }

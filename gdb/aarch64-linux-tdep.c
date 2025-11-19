@@ -167,6 +167,7 @@
 #define AARCH64_TPIDR2_MAGIC			0x54504902
 #define AARCH64_ZT_MAGIC			0x5a544e01
 #define AARCH64_GCS_MAGIC			0x47435300
+#define AARCH64_FPMR_MAGIC			0x46504d52
 
 /* Defines for the extra_context that follows an AARCH64_EXTRA_MAGIC.  */
 #define AARCH64_EXTRA_DATAP_OFFSET		8
@@ -212,6 +213,9 @@
 #define AARCH64_GCS_CONTEXT_GCSPR_OFFSET	8
 /* features_enabled value offset in the GCS signal frame context.  */
 #define AARCH64_GCS_CONTEXT_FEATURES_ENABLED_OFFSET	16
+
+/* FPMR constants.  */
+#define AARCH64_FPMR_OFFSET			8
 
 /* Holds information about the signal frame.  */
 struct aarch64_linux_sigframe
@@ -260,6 +264,12 @@ struct aarch64_linux_sigframe
   uint64_t gcspr;
   /* Flags indicating which GCS features are enabled for the thread.  */
   uint64_t gcs_features_enabled;
+
+  /* True if we have an FPMR entry in the signal context, false otherwise.  */
+  bool fpmr_available = false;
+  /* FPMR value.  */
+  CORE_ADDR fpmr = 0;
+
 };
 
 /* Read an aarch64_ctx, returning the magic value, and setting *SIZE to the
@@ -576,6 +586,22 @@ aarch64_linux_read_signal_frame_info (const frame_info_ptr &this_frame,
 	    section += size;
 	    break;
 	  }
+	case AARCH64_FPMR_MAGIC:
+	  {
+	    gdb_byte buf[8];
+	    if (target_read_memory (section + AARCH64_FPMR_OFFSET,
+				    buf, 8) != 0)
+	      {
+		warning (_("Failed to read the FPMR section address from the"
+			   " signal frame context."));
+		section += size;
+		break;
+	      }
+	    signal_frame.fpmr = extract_unsigned_integer (buf, 8, byte_order);
+	    signal_frame.fpmr_available = true;
+	    section += size;
+	    break;
+	  }
 	case AARCH64_EXTRA_MAGIC:
 	  {
 	    /* Extra is always the last valid section in reserved and points to
@@ -739,6 +765,13 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 	}
     }
 
+  /* Handle FPMR.  */
+  if (tdep->has_fpmr () && signal_frame.fpmr_available != 0)
+  {
+    trad_frame_set_reg_value (this_cache, tdep->fpmr_regnum,
+			      signal_frame.fpmr);
+  }
+
   /* Restore the tpidr2 register, if the target supports it and if there is
      an entry for it.  */
   if (signal_frame.tpidr2_section != 0 && tdep->has_tls ()
@@ -791,6 +824,7 @@ aarch64_linux_sigframe_prev_arch (const frame_info_ptr &this_frame,
   aarch64_features features = aarch64_features_from_target_desc (tdesc);
   features.vq = sve_vq_from_vl (signal_frame.vl);
   features.svq = (uint8_t) sve_vq_from_vl (signal_frame.svl);
+  features.fpmr = signal_frame.fpmr_available;
 
   struct gdbarch_info info;
   info.bfd_arch_info = bfd_lookup_arch (bfd_arch_aarch64, bfd_mach_aarch64);
@@ -1601,6 +1635,23 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 	}
     }
 
+  if (tdep->has_fpmr ())
+    {
+      const struct regcache_map_entry fpmr_regmap[] =
+	{
+	  { 1, tdep->fpmr_regnum, sizeof (uint64_t) },
+	  { 0 }
+	};
+
+      const struct regset aarch64_linux_fpmr_regset =
+	{
+	  fpmr_regmap, regcache_supply_regset, regcache_collect_regset
+	};
+
+      cb (".reg-aarch-fpmr", sizeof (uint64_t), sizeof (uint64_t),
+	  &aarch64_linux_fpmr_regset, "FPMR", cb_data);
+    }
+
   if (tdep->has_pauth ())
     {
       /* Create this on the fly in order to handle the variable location.  */
@@ -1712,6 +1763,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
   features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
   features.mte = hwcap2 & HWCAP2_MTE;
+  features.fpmr = hwcap2 & HWCAP2_FPMR;
 
   /* Handle the TLS section.  */
   asection *tls = bfd_get_section_by_name (abfd, ".reg-aarch-tls");

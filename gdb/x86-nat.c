@@ -21,8 +21,6 @@
 #include "cli/cli-cmds.h"
 #include "inferior.h"
 
-#include <unordered_map>
-
 /* Support for hardware watchpoints and breakpoints using the x86
    debug registers.
 
@@ -40,7 +38,11 @@ struct x86_dr_low_type x86_dr_low;
 /* Hash table storing per-process data.  We don't bind this to a
    per-inferior registry because of targets like x86 GNU/Linux that
    need to keep track of processes that aren't bound to any inferior
-   (e.g., fork children, checkpoints).  */
+   (e.g., fork children, checkpoints).
+
+   Use std::unordered_map rather than gdb::unordered_map, because the
+   location of entries must not change across two x86_debug_reg_state(ptid_t)
+   calls.  */
 
 static std::unordered_map<pid_t,
 			  struct x86_debug_reg_state> x86_debug_process_state;

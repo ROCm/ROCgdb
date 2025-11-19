@@ -24,9 +24,8 @@
 #include "gdbarch.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
-#include <unordered_map>
 
-/* Provide std::unordered_map::Hash for amd_dbgapi_register_id_t.  */
+/* Provide gdb::unordered_map::Hash for amd_dbgapi_register_id_t.  */
 struct register_id_hash
 {
   size_t
@@ -36,7 +35,7 @@ struct register_id_hash
   }
 };
 
-/* Provide std::unordered_map::Equal for amd_dbgapi_register_id_t.  */
+/* Provide gdb::unordered_map::Equal for amd_dbgapi_register_id_t.  */
 struct register_id_equal_to
 {
   bool
