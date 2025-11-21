@@ -9,6 +9,11 @@ Full documentation for ROCgdb is available at
 
 - GDB now determines the name of AMD GPU threads based on the name of
   their kernel function.
+- Initial support for debugging HIP applications on Windows.  Support
+  is currently limited to the gfx120x architectures (gfx1200 and
+  gfx1201), and multi-GPU configurations are not supported.  See the
+  "AMD GPU restrictions" section of the ROCgdb manual for the complete
+  list of Windows-specific limitations.
 
 ## ROCgdb-16-2 for ROCm-7.0
 
