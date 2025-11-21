@@ -14145,25 +14145,22 @@ cooked_index_functions::search
 	      || !entry->matches (domain))
 	    continue;
 
-	  if (lang_matcher != nullptr)
+	  /* If LANG_MATCHER is non-NULL, try to skip CUs with a
+	     non-matching language.  The other case here is a bit of a
+	     hack to support .gdb_index.  Since .gdb_index does not
+	     record languages, and since we want to know the language
+	     to avoid excessive CU expansion due to false matches, if
+	     we see a symbol with an unknown language we find the CU's
+	     language.  Only the .gdb_index reader creates such
+	     symbols.  */
+	  enum language entry_lang = entry->lang;
+	  if (lang_matcher != nullptr || entry_lang == language_unknown)
 	    {
-	      /* Try to skip CUs with non-matching language.  */
 	      entry->per_cu->ensure_lang (per_objfile);
-	      if (!entry->per_cu->maybe_multi_language ()
+	      if (lang_matcher != nullptr
+		  && !entry->per_cu->maybe_multi_language ()
 		  && !lang_matcher (entry->per_cu->lang ()))
 		continue;
-	    }
-
-	  /* This is a bit of a hack to support .gdb_index.  Since
-	     .gdb_index does not record languages, and since we want
-	     to know the language to avoid excessive CU expansion due
-	     to false matches, if we see a symbol with an unknown
-	     language we find the CU's language.  Only the .gdb_index
-	     reader creates such symbols.  */
-	  enum language entry_lang = entry->lang;
-	  if (entry_lang == language_unknown)
-	    {
-	      entry->per_cu->ensure_lang (per_objfile);
 	      entry_lang = entry->per_cu->lang ();
 	    }
 
