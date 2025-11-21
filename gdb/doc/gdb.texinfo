@@ -29053,15 +29053,30 @@ The
 @url{https://github.com/ROCm-Developer-Tools/HIP/blob/master/docs/markdown/hip_kernel_language.md,
 HIP Programming Language} is supported.
 
-When compiling, the @w{@option{-g}} option should be used to produce
-debugging information suitable for use by @value{GDBN}.  The
-@w{@option{--offload-arch}} option is used to specify the @acronym{AMD
-GPU} chips that the executable is required to support.  For example,
-to compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
-@acronym{AMD GPU} devices, with no optimization:
+When compiling on Linux, the @w{@option{-g}} option should be used to
+produce debugging information suitable for use by @value{GDBN}.
+
+On Windows, the @option{-g} option produces PDB files containing
+CodeView debug information for the host code, which @value{GDBN} does
+not support.  To enable host code debugging, pass the
+@w{@option{-gdwarf -Wl,-debug:dwarf}} options to @acronym{HIPCC} to
+generate DWARF debug information instead, which @value{GDBN} supports.
+
+The @w{@option{--offload-arch}} option is used to specify the @acronym{AMD
+GPU} chips that the executable is required to support.
+
+For example, to compile a HIP program that can utilize ``Vega 10'' and
+``Vega 7nm'' @acronym{AMD GPU} devices on Linux, with no optimization:
 
 @smallexample
 hipcc -O0 -g --offload-arch=gfx900 --offload-arch=gfx906 bit_extract.cpp -o bit_extract
+@end smallexample
+
+To compile a HIP program that can utilize the @samp{gfx1201}
+@acronym{AMD GPU} device on Windows, with no optimization:
+
+@smallexample
+hipcc -O0 -gdwarf -Wl,-debug:dwarf --offload-arch=gfx1201 bit_extract.cpp -o bit_extract.exe
 @end smallexample
 
 The @acronym{AMD ROCm} compiler maps HIP source language device
@@ -29668,7 +29683,9 @@ suppress delivering a signal.
 
 Note that some @acronym{AMD GPU} architectures may have restrictions
 on supressing delivering signals to a wavefront (@pxref{AMD GPU Signal
-Restrictions, , @acronym{AMD GPU} Signal Restrictions}).
+Restrictions, , @acronym{AMD GPU} Signal Restrictions}).  See also
+@ref{AMD GPU Signal Restrictions on Windows, ,@acronym{AMD GPU} Signal
+Restrictions on Windows}.
 
 @subsubsection @acronym{AMD GPU} Memory Violation Reporting
 @anchor{AMDGPU Memory Violation Reporting}
@@ -29894,7 +29911,8 @@ Loaded from `/opt/rocm-4.5.0/lib/librocm-dbgapi.so.0'
 process including host (CPU) and device (GPU) threads.  Such file can be
 generated either by @value{GDBN} itself using the @command{gcore} command
 (@pxref{Core File Generation}) or by the @acronym{AMD ROCm} runtime and the
-Linux kernel.
+Linux kernel.  This is supported only on operating systems that
+use the ELF format for core files.
 
 When the core dump is generated outside of @value{GDBN}, then two distinct
 files are produced:
@@ -30032,7 +30050,7 @@ The thread's number within the heterogeneous work-group.
 @end table
 
 @item
-The @acronym{AMD ROCm} compiler currently has the following
+The @acronym{AMD GPU} compiler currently has the following
 limitations:
 
 @itemize @bullet{}
@@ -30478,6 +30496,49 @@ while in a clause.
 
 @end enumerate
 
+In addition, the following Windows-specific restrictions apply:
+
+@enumerate
+
+@item
+Windows is supported only on the @samp{gfx120x} architectures
+(@samp{gfx1200} and @samp{gfx1201}).
+
+@item
+Multi-GPU configurations involving more than one @acronym{AMD GPU} are
+not supported.
+
+@item
+Generating or loading @acronym{AMD GPU} core dumps (@pxref{AMD GPU
+core dumps}) is not supported on Windows.
+
+@item
+Python scripting is not supported.
+
+@anchor{AMD GPU Signal Restrictions on Windows}
+@item
+Due to an @acronym{AMD HIP} runtime limitation, it is not currently
+possible to pass intercepted signals (SIGFPE, SIGSEGV, etc.) to the
+inferior, even if the user requests otherwise.  Signals are always
+suppressed by the runtime.
+
+@item
+The @acronym{HIPCC} compiler on Windows defaults to producing PDB
+files containing CodeView debug information for the host code.
+@value{GDBN} does not support this debug format.  To enable host code
+debugging, pass the @w{@option{-gdwarf -Wl,-debug:dwarf}} options to
+@acronym{HIPCC} to generate DWARF debug information instead, which
+@value{GDBN} supports.
+
+@item
+The @acronym{HIPCC} compiler on Windows emits host code that targets
+the Microsoft x64 ABI conventions and MSVC C++ ABI.  @value{GDBN} does
+not fully support these, which may lead to incorrect symbol names,
+misprinted C++ objects, and similar issues when debugging host code.
+These limitations do not affect debugging @acronym{AMD GPU}
+device-side code.
+
+@end enumerate
 
 @node RISC-V
 @subsection RISC-V
