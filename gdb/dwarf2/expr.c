@@ -1159,7 +1159,6 @@ dwarf_memory::deref (const frame_info_ptr &frame,
   gdb::byte_vector read_buf (type->length (), 0);
   size_t size_in_bits = actual_size * HOST_CHAR_BIT;
   gdb_byte *buf_ptr = read_buf.data ();
-  bool passed_in_buf = false;
 
   if (big_endian)
     buf_ptr += type->length () - actual_size;
@@ -1172,25 +1171,23 @@ dwarf_memory::deref (const frame_info_ptr &frame,
 
   /* We shouldn't have a case where we read from a passed in
      memory and the same memory being marked as stack. */
-  if (!m_stack && this_size && addr_info != nullptr
-      && addr_info->valaddr.data () != nullptr)
+  if (!m_stack
+      && this_size != 0
+      && addr_info != nullptr
+      && m_offset >= addr_info->addr
+      && m_offset + this_size <= (addr_info->addr
+				  + addr_info->valaddr.size ()))
     {
-      CORE_ADDR offset = (CORE_ADDR) m_offset - addr_info->addr;
       /* Using second buffer here because the copy_bitwise
 	 doesn't support in place copy.  */
       gdb::byte_vector temp_buf (this_size);
-
-      if (offset < addr_info->valaddr.size ()
-	  && offset + this_size <= addr_info->valaddr.size ())
-	{
-	  memcpy (temp_buf.data (), addr_info->valaddr.data (), this_size);
-	  copy_bitwise (buf_ptr, 0, temp_buf.data (),
-			m_bit_suboffset, size_in_bits, big_endian);
-	  passed_in_buf = true;
-	}
+      CORE_ADDR offset_in_buf = m_offset - addr_info->addr;
+      memcpy (temp_buf.data (), addr_info->valaddr.data () + offset_in_buf,
+	      this_size);
+      copy_bitwise (buf_ptr, 0, temp_buf.data (),
+		    m_bit_suboffset, size_in_bits, big_endian);
     }
-
-  if (!passed_in_buf)
+  else
     {
       int optimized, unavailable;
 
