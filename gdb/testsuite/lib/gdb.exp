@@ -6408,6 +6408,25 @@ proc quote_for_host { args } {
     return $str
 }
 
+# Rename SRC to DST, ignoring EBUSY.  This is used when multiple
+# parallel workers all want to rename their copy of SRC to DST, as an
+# atomic commit, and it doesn't matter which one wins, as all the
+# copies are identical.
+proc file_rename_atomic {src dst} {
+    set rc [catch { file rename -force -- $src $dst } err opts]
+
+    if {$rc} {
+	set code [dict get $opts -errorcode]
+	if {[llength $code] >= 2 && [lindex $code 1] eq "EBUSY"} {
+	    # Normal parallel race loss.
+	} else {
+	    error $err $opts
+	}
+    }
+
+    return $rc
+}
+
 # Set while linker_supports_manifest_embed is running its test link,
 # so that the inner gdb_compile that link goes through skips the
 # manifest-embedding logic and doesn't recurse back into the probe.
@@ -6491,7 +6510,7 @@ proc gdb_windows_manifest_obj {} {
     if {[info exists ::GDB_PARALLEL]} {
 	# Make sure to write the .o file atomically.  (Note
 	# GDB_PARALLEL mode does not support remote host testing.)
-	file rename -force -- $obj $saved
+	file_rename_atomic $obj $saved
     } else {
 	remote_download host $obj $saved
     }
@@ -7019,7 +7038,7 @@ proc gdb_compile {source dest type options} {
 		    # Make sure to write the .o file atomically.
 		    # (Note GDB_PARALLEL mode does not support remote
 		    # host testing.)
-		    file rename -force -- $unbuf_obj $gdb_saved_set_unbuffered_mode_obj
+		    file_rename_atomic $unbuf_obj $gdb_saved_set_unbuffered_mode_obj
 		} else {
 		    remote_download host $unbuf_obj $gdb_saved_set_unbuffered_mode_obj
 		}
