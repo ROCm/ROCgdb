@@ -529,7 +529,7 @@ elfNN_loongarch_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   flagword in_flags = elf_elfheader (ibfd)->e_flags;
   flagword out_flags = elf_elfheader (obfd)->e_flags;
 
-  if (!is_loongarch_elf (ibfd) || !is_loongarch_elf (obfd))
+  if (!is_loongarch_elf (ibfd))
     return true;
 
   if (strcmp (bfd_get_target (ibfd), bfd_get_target (obfd)) != 0)
@@ -6538,7 +6538,7 @@ loongarch_elf_copy_indirect_symbol (struct bfd_link_info *info,
   _bfd_elf_link_hash_copy_indirect (info, dir, ind);
 }
 
-#define PRSTATUS_SIZE		    0x1d8
+#define PRSTATUS_SIZE		    0x1e0
 #define PRSTATUS_OFFSET_PR_CURSIG   0xc
 #define PRSTATUS_OFFSET_PR_PID	    0x20
 #define ELF_GREGSET_T_SIZE	    0x168

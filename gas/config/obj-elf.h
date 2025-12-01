@@ -36,6 +36,7 @@
 #include "bfd/elf-bfd.h"
 
 #include "targ-cpu.h"
+#include "obj-elf-attr.h"
 
 #ifdef TC_ALPHA
 #define ECOFF_DEBUGGING (alpha_flag_mdebug > 0)
@@ -204,9 +205,6 @@ extern void obj_elf_vtable_inherit (int);
 extern void obj_elf_vtable_entry (int);
 extern struct fix * obj_elf_get_vtable_inherit (void);
 extern struct fix * obj_elf_get_vtable_entry (void);
-extern bool obj_elf_seen_attribute
-  (int, unsigned int);
-extern int obj_elf_vendor_attribute (int);
 
 /* BFD wants to write the udata field, which is a no-no for the
    predefined section symbols in bfd/section.c.  They are read-only.  */

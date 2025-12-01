@@ -11158,13 +11158,7 @@ elf_link_output_extsym (struct bfd_hash_entry *bh, void *data)
 	  else
 	    {
 	      if (h->verinfo.vertree == NULL)
-		{
-		  iversym.vs_vers = 1;
-		  if (elf_tdata (flinfo->output_bfd)->cverdefs == 0)
-		    /* Defined symbol has no version if there is no
-		       linker version script.  */
-		    noversion = true;
-		}
+		iversym.vs_vers = 1;
 	      else
 		iversym.vs_vers = h->verinfo.vertree->vernum + 1;
 	      if (flinfo->info->create_default_symver)
@@ -12715,7 +12709,7 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	     _bfd_elf_compute_section_file_positions.  */
 	  bfd_set_section_size (o, attr_size);
 	  if (attr_size > 0)
-	    elf_obj_build_attributes (abfd) = o;
+	    elf_obj_object_attributes (abfd) = o;
 	  else
 	    remove_section = true;
 	}
@@ -13830,7 +13824,7 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
   if (! _bfd_elf_write_section_sframe (abfd, info))
     goto error_return;
 
-  if (! _bfd_elf_write_section_build_attributes (abfd, info))
+  if (! _bfd_elf_write_section_object_attributes (abfd, info))
     goto error_ret2;
 
   if (info->callbacks->emit_ctf)
@@ -14198,7 +14192,7 @@ _bfd_elf_gc_mark_debug_special_section_group (asection *grp)
   /* First scan to see if group contains any section other than debug
      and special section.  */
   ssec = msec = elf_next_in_group (grp);
-  do
+  while (msec != NULL)
     {
       if ((msec->flags & SEC_DEBUGGING) == 0)
 	is_debug_grp = false;
@@ -14207,19 +14201,22 @@ _bfd_elf_gc_mark_debug_special_section_group (asection *grp)
 	is_special_grp = false;
 
       msec = elf_next_in_group (msec);
+      if (msec == ssec)
+	break;
     }
-  while (msec != ssec);
 
   /* If this is a pure debug section group or pure special section group,
      keep all sections in this group.  */
   if (is_debug_grp || is_special_grp)
     {
-      do
+      msec = ssec;
+      while (msec != NULL)
 	{
 	  msec->gc_mark = 1;
 	  msec = elf_next_in_group (msec);
+	  if (msec == ssec)
+	    break;
 	}
-      while (msec != ssec);
     }
 }
 
@@ -14652,6 +14649,8 @@ bfd_elf_gc_sections (bfd *abfd, struct bfd_link_info *info)
       asection *sec;
       struct elf_reloc_cookie cookie;
 
+      if (bfd_get_flavour (sub) != bfd_target_elf_flavour)
+	continue;
       sec = sub->sections;
       if (sec == NULL || sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
 	continue;

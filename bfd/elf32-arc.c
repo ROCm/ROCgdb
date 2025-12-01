@@ -485,8 +485,7 @@ arc_elf_print_private_bfd_data (bfd *abfd, void * ptr)
 static bool
 arc_elf_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
 {
-  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
-      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour)
     return true;
 
   BFD_ASSERT (!elf_flags_init (obfd)
@@ -868,8 +867,7 @@ arc_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   if (! _bfd_generic_verify_endian_match (ibfd, info))
     return false;
 
-  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
-      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour)
     return true;
 
   /* Collect ELF flags.  */
@@ -2911,7 +2909,7 @@ elf32_arc_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
    string or both.  */
 
 static int
-elf32_arc_obj_attrs_arg_type (int tag)
+elf32_arc_obj_attrs_arg_type (obj_attr_tag_t tag)
 {
   if (tag == Tag_ARC_CPU_name
 	   || tag == Tag_ARC_ISA_config

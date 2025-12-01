@@ -46,6 +46,7 @@
 #include <vector>
 #include "gdbsupport/underlying.h"
 #include "gdbsupport/byte-vector.h"
+#include "gdbsupport/selftest.h"
 #include "extract-store-integer.h"
 
 static struct value *dwarf2_evaluate_loc_desc_full

@@ -164,7 +164,7 @@ class SentenceDotEndCheck:
 class FunctionParenthesisCheck:
     # TODO: filter out GTY stuff
     def __init__(self):
-        self.re = re.compile(r'\w(\s{2,})?(\()')
+        self.re = re.compile(r'\w+(\s{2,})?(\()')
 
     def check(self, filename, lineno, line):
         if '#define' in line:
@@ -172,6 +172,8 @@ class FunctionParenthesisCheck:
 
         m = self.re.search(line)
         if m != None:
+            if m.group() == '_(' or m.group() == 'operator(':
+                return None
             return CheckError(filename, lineno,
                 line[:m.start(2)] + error_string(m.group(2)) + line[m.end(2):],
                 'there should be exactly one space between function name ' \
@@ -217,7 +219,7 @@ class BracesOnSeparateLineCheck:
                 line[:m.start(2)] + error_string(m.group(2)) + line[m.end(2):],
                 'braces should be on a separate line', m.start(2))
 
-class TrailinigOperatorCheck:
+class TrailingOperatorCheck:
     def __init__(self):
         regex = r'^\s.*(([^a-zA-Z_]\*)|([-%<=&|^?])|([^*]/)|([^:][+]))$'
         self.re = re.compile(regex)
@@ -272,7 +274,7 @@ def check_GNU_style_file(file, format):
         SentenceSeparatorCheck(), SentenceEndOfCommentCheck(),
         SentenceDotEndCheck(), FunctionParenthesisCheck(),
         SquareBracketCheck(), ClosingParenthesisCheck(),
-        BracesOnSeparateLineCheck(), TrailinigOperatorCheck(),
+        BracesOnSeparateLineCheck(), TrailingOperatorCheck(),
         SpacesAndTabsMixedCheck()]
     errors = []
 

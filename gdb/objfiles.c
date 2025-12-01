@@ -515,33 +515,15 @@ objfile::~objfile ()
 }
 
 
-/* A helper function for objfile_relocate1 that relocates a single
-   symbol.  */
-
-static void
-relocate_one_symbol (struct symbol *sym, struct objfile *objfile,
-		     const section_offsets &delta)
-{
-  /* The RS6000 code from which this was taken skipped
-     any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
-     But I'm leaving out that test, on the theory that
-     they can't possibly pass the tests below.  */
-  if ((sym->loc_class () == LOC_LABEL
-       || sym->loc_class () == LOC_STATIC)
-      && sym->section_index () >= 0)
-    sym->set_value_address (sym->value_address ()
-			    + delta[sym->section_index ()]);
-}
-
 /* Relocate OBJFILE to NEW_OFFSETS.  There should be OBJFILE->NUM_SECTIONS
    entries in new_offsets.  SEPARATE_DEBUG_OBJFILE is not touched here.
    Return non-zero iff any change happened.  */
 
 static int
 objfile_relocate1 (struct objfile *objfile,
-		   const section_offsets &new_offsets)
+		   gdb::array_view<const CORE_ADDR> new_offsets)
 {
-  section_offsets delta (objfile->section_offsets.size ());
+  std::vector<CORE_ADDR> delta (objfile->section_offsets.size ());
 
   int something_changed = 0;
 
@@ -556,34 +538,11 @@ objfile_relocate1 (struct objfile *objfile,
 
   /* OK, get all the symtabs.  */
   for (compunit_symtab &cust : objfile->compunits ())
-    {
-      struct blockvector *bv = cust.blockvector ();
-      int block_line_section = SECT_OFF_TEXT (objfile);
-
-      if (bv->map () != nullptr)
-	bv->map ()->relocate (delta[block_line_section]);
-
-      for (block *b : bv->blocks ())
-	{
-	  b->set_start (b->start () + delta[block_line_section]);
-	  b->set_end (b->end () + delta[block_line_section]);
-
-	  for (blockrange &r : b->ranges ())
-	    {
-	      r.set_start (r.start () + delta[block_line_section]);
-	      r.set_end (r.end () + delta[block_line_section]);
-	    }
-
-	  /* We only want to iterate over the local symbols, not any
-	     symbols in included symtabs.  */
-	  for (struct symbol *sym : b->multidict_symbols ())
-	    relocate_one_symbol (sym, objfile, delta);
-	}
-    }
+    cust.blockvector ()->relocate (objfile, delta);
 
   /* Relocate isolated symbols.  */
   for (symbol *iter = objfile->template_symbols; iter; iter = iter->hash_next)
-    relocate_one_symbol (iter, objfile, delta);
+    iter->relocate (delta);
 
   for (int i = 0; i < objfile->section_offsets.size (); ++i)
     objfile->section_offsets[i] = new_offsets[i];
@@ -615,7 +574,7 @@ objfile_relocate1 (struct objfile *objfile,
 
 void
 objfile_relocate (struct objfile *objfile,
-		  const section_offsets &new_offsets)
+		  gdb::array_view<const CORE_ADDR> new_offsets)
 {
   int changed = 0;
 
@@ -636,7 +595,7 @@ objfile_relocate (struct objfile *objfile,
 
       gdb_assert (debug_objfile->section_offsets.size ()
 		  == gdb_bfd_count_sections (debug_objfile->obfd.get ()));
-      section_offsets new_debug_offsets
+      std::vector<CORE_ADDR> new_debug_offsets
 	(debug_objfile->section_offsets.size ());
       relative_addr_info_to_section_offsets (new_debug_offsets, objfile_addrs);
 
@@ -655,7 +614,7 @@ objfile_relocate (struct objfile *objfile,
 static int
 objfile_rebase1 (struct objfile *objfile, CORE_ADDR slide)
 {
-  section_offsets new_offsets (objfile->section_offsets.size (), slide);
+  std::vector<CORE_ADDR> new_offsets (objfile->section_offsets.size (), slide);
   return objfile_relocate1 (objfile, new_offsets);
 }
 

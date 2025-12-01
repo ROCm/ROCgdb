@@ -3035,8 +3035,7 @@ csky_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   if (! _bfd_generic_verify_endian_match (ibfd, info))
     return false;
 
-  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
-      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour)
     return true;
 
   /* Merge ".csky.attribute" section.  */
@@ -5254,7 +5253,7 @@ csky_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
    string or both.  */
 
 static int
-elf32_csky_obj_attrs_arg_type (int tag)
+elf32_csky_obj_attrs_arg_type (obj_attr_tag_t tag)
 {
   switch (tag)
     {

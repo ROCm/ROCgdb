@@ -2060,7 +2060,7 @@ bfd_arm_process_before_allocation (bfd *		   abfd,
 
       /* Load the relocs.  */
       /* FIXME: there may be a storage leak here.  */
-      i = _bfd_coff_read_internal_relocs (abfd, sec, 1, 0, 0, 0);
+      i = bfd_coff_read_internal_relocs (abfd, sec, true, NULL, false, NULL);
 
       BFD_ASSERT (i != 0);
 
@@ -2193,8 +2193,7 @@ coff_arm_merge_private_bfd_data (bfd * ibfd, struct bfd_link_info *info)
   /* If the two formats are different we cannot merge anything.
      This is not an error, since it is permissable to change the
      input and output formats.  */
-  if (   ibfd->xvec->flavour != bfd_target_coff_flavour
-      || obfd->xvec->flavour != bfd_target_coff_flavour)
+  if (ibfd->xvec->flavour != bfd_target_coff_flavour)
     return true;
 
   /* Determine what should happen if the input ARM architecture
