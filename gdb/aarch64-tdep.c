@@ -54,7 +54,6 @@
 
 #include "opcode/aarch64.h"
 #include <algorithm>
-#include <unordered_map>
 
 /* For inferior_ptid and current_inferior ().  */
 #include "inferior.h"
@@ -66,7 +65,8 @@
 #define HA_MAX_NUM_FLDS		4
 
 /* All possible aarch64 target descriptors.  */
-static gdb::unordered_map <aarch64_features, target_desc *> tdesc_aarch64_map;
+static gdb::unordered_map <aarch64_features, const_target_desc_up>
+  tdesc_aarch64_map;
 
 /* The standard register names, and all the valid aliases for them.
    We're not adding fp here, that name is already taken, see
@@ -1102,12 +1102,10 @@ aarch64_make_prologue_cache_1 (const frame_info_ptr &this_frame,
 static struct aarch64_prologue_cache *
 aarch64_make_prologue_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
-  struct aarch64_prologue_cache *cache;
-
   if (*this_cache != NULL)
     return (struct aarch64_prologue_cache *) *this_cache;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct aarch64_prologue_cache);
+  auto *cache = frame_obstack_zalloc<aarch64_prologue_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
   *this_cache = cache;
 
@@ -1236,12 +1234,10 @@ static const frame_unwind_legacy aarch64_prologue_unwind (
 static struct aarch64_prologue_cache *
 aarch64_make_stub_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
-  struct aarch64_prologue_cache *cache;
-
   if (*this_cache != NULL)
     return (struct aarch64_prologue_cache *) *this_cache;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct aarch64_prologue_cache);
+  auto *cache = frame_obstack_zalloc<aarch64_prologue_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
   *this_cache = cache;
 
@@ -4033,15 +4029,12 @@ aarch64_read_description (const aarch64_features &features)
     error (_("VQ is %" PRIu64 ", maximum supported value is %d"), features.vq,
 	   AARCH64_MAX_SVE_VQ);
 
-  struct target_desc *tdesc = tdesc_aarch64_map[features];
+  const_target_desc_up &tdesc = tdesc_aarch64_map[features];
 
-  if (tdesc == NULL)
-    {
-      tdesc = aarch64_create_target_description (features);
-      tdesc_aarch64_map[features] = tdesc;
-    }
+  if (tdesc == nullptr)
+    tdesc = aarch64_create_target_description (features);
 
-  return tdesc;
+  return tdesc.get ();
 }
 
 /* Return the VQ used when creating the target description TDESC.  */

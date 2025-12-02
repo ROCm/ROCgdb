@@ -118,17 +118,20 @@ proc build_executable_and_dwo_files { testname executable options args } {
 	# Currently don't support compiling thread based tests here.
 	# If this is required then look to build_executable_from_specs
 	# for inspiration.
+	untested "option not supported"
 	return -1
     }
     if {[lsearch -exact $options rust] != -1} {
 	# Currently don't support compiling rust tests here.  If this
 	# is required then look to build_executable_from_specs for
 	# inspiration.
+	untested "rust not supported"
 	return -1
     }
 
     # Must be run on local host due to use of objcopy.
     if {[is_remote host]} {
+	untested "using remote host"
 	return -1
     }
 
@@ -631,6 +634,9 @@ namespace eval Dwarf {
     # table.
     variable _abbrev_num
 
+    # The next available abbrev number in the (single) DWO abbrev table.
+    variable _dwo_abbrev_num
+
     # The string table for this assembly.  The key is the string; the
     # value is the label for that string.
     variable _strings
@@ -1076,8 +1082,17 @@ namespace eval Dwarf {
     # table.
     proc _get_abbrev_num {} {
 	variable _abbrev_num
-	set res $_abbrev_num
-	incr _abbrev_num
+	variable _dwo_abbrev_num
+	variable _cu_is_fission
+
+	if { $_cu_is_fission } {
+	    set res $_dwo_abbrev_num
+	    incr _dwo_abbrev_num
+	} else {
+	    set res $_abbrev_num
+	    incr _abbrev_num
+	}
+
 	return $res
     }
 
@@ -1127,17 +1142,44 @@ namespace eval Dwarf {
 	}
     }
 
-    proc _section {name {flags ""} {type ""}} {
-	if {$name == ".debug_str"} {
-	    # Hard-code this because it's always desirable.
-	    _emit "        .section $name, \"MS\", %progbits, 1"
-	} elseif {$flags == "" && $type == ""} {
-	    _emit "        .section $name"
-	} elseif {$type == ""} {
-	    _emit "        .section $name, \"$flags\""
-	} else {
-	    _emit "        .section $name, \"$flags\", %$type"
+    proc _section {name {options {}}} {
+	parse_options {
+	    { flags "" }
+	    { type "" }
+	    { group_signature "" }
+	    { linkage "" }
 	}
+
+	if { $name == ".debug_str" } {
+	    # Hard-code this because it's always desirable.
+	    _emit "        .section .debug_str, \"MS\", %progbits, 1"
+	    return
+	}
+
+	set directive ".section $name"
+
+	if { $flags != "" } {
+	    append directive ",\"$flags\""
+	}
+
+	if { $type != "" } {
+	    # Can't specify a type without flags.
+	    if { $flags == "" } {
+		append directive ", \"\""
+	    }
+
+	    append directive ", %$type"
+	}
+
+	if { $group_signature != "" } {
+	    append directive ", $group_signature"
+	}
+
+	if { $linkage != "" } {
+	    append directive ", $linkage"
+	}
+
+	_emit "        $directive"
     }
 
     # SECTION_SPEC is a list of arguments to _section.
@@ -1687,8 +1729,17 @@ namespace eval Dwarf {
 	_section $section
 
 	set cu_num [incr _cu_count]
-	set my_abbrevs [_compute_label "abbrev${cu_num}_begin"]
-	set _abbrev_num 1
+
+	# Since .dwo files are not linked, we can't use a label to point to a
+	# specific place in the .debug_abbrev section.  For .dwo files, we
+	# therefore use a single abbrev table (at offset 0) shared by all units
+	# in that file.
+	if { $_cu_is_fission } {
+	    set my_abbrevs 0
+	} else {
+	    set my_abbrevs [_compute_label "abbrev${cu_num}_begin"]
+	    set _abbrev_num 1
+	}
 
 	set _cu_label [_compute_label "cu${cu_num}_begin"]
 	set start_label [_compute_label "cu${cu_num}_start"]
@@ -1755,9 +1806,11 @@ namespace eval Dwarf {
 
 	uplevel $_level $body
 
-	_defer_output $_abbrev_section {
-	    # Emit the terminator.
-	    _op .byte 0x0 "Abbrev end - Terminator"
+	if { !$_cu_is_fission } {
+	    _defer_output $_abbrev_section {
+		# Emit the terminator.
+		_op .byte 0x0 "Abbrev end - Terminator"
+	    }
 	}
 
 	define_label $end_label
@@ -1827,11 +1880,26 @@ namespace eval Dwarf {
 	    set _abbrev_section "$_abbrev_section.dwo"
 	}
 
-	_section $section
+	# The specific format of the signature is arbitrary.
+	_section $section {
+	    flags G
+	    type progbits
+	    group_signature sig.$signature
+	    linkage comdat
+	}
 
 	set cu_num [incr _cu_count]
-	set my_abbrevs [_compute_label "abbrev${cu_num}_begin"]
-	set _abbrev_num 1
+
+	# Since .dwo files are not linked, we can't use a label to point to a
+	# specific place in the .debug_abbrev section.  For .dwo files, we
+	# therefore use a single abbrev table (at offset 0) shared by all units
+	# in that file.
+	if { $_cu_is_fission } {
+	    set my_abbrevs 0
+	} else {
+	    set my_abbrevs [_compute_label "abbrev${cu_num}_begin"]
+	    set _abbrev_num 1
+	}
 
 	set _cu_label [_compute_label "cu${cu_num}_begin"]
 	set start_label [_compute_label "cu${cu_num}_start"]
@@ -1885,9 +1953,11 @@ namespace eval Dwarf {
 
 	uplevel $_level $body
 
-	_defer_output $_abbrev_section {
-	    # Emit the terminator.
-	    _op .byte 0x0 "Abbrev end - Terminator"
+	if { !$_cu_is_fission } {
+	    _defer_output $_abbrev_section {
+		# Emit the terminator.
+		_op .byte 0x0 "Abbrev end - Terminator"
+	    }
 	}
 
 	define_label $end_label
@@ -3288,7 +3358,10 @@ namespace eval Dwarf {
 
     # Emit a note section holding the given build-id.
     proc build_id {buildid} {
-	_defer_output {.note.gnu.build-id a note} {
+	_defer_output {.note.gnu.build-id {
+			   flags a
+			   type note
+		       }} {
 	    # From elf/common.h.
 	    set NT_GNU_BUILD_ID 3
 
@@ -3656,6 +3729,7 @@ namespace eval Dwarf {
 	variable _debug_ranges_64_bit
 	variable _debug_addr_index
 	variable _level
+	variable _dwo_abbrev_num
 
 	if { [llength $options] == 1 } {
 	    set options [list filename [lindex $options 0]]
@@ -3688,8 +3762,8 @@ namespace eval Dwarf {
 
 	set _line_count 0
 	set _debug_ranges_64_bit [is_64_target]
-
 	set _debug_addr_index 0
+	set _dwo_abbrev_num 1
 
 	# Dummy CU at the start to ensure that the first CU in $body is not
 	# the first in .debug_info.
@@ -3711,9 +3785,19 @@ namespace eval Dwarf {
 	    dummy_cu
 	}
 
+	# If we wrote any abbrev in .debug_abbrev.dwo, write the terminator.
+	if { $_dwo_abbrev_num > 1 } {
+	    _defer_output .debug_abbrev.dwo {
+		# Emit the terminator.
+		_op .byte 0x0 "Abbrev end - Terminator"
+	    }
+	}
+
 	_write_deferred_output
 
-	_section .note.GNU-stack "" progbits
+	_section .note.GNU-stack {
+	    type progbits
+	}
 
 	if { $file_id == "" } {
 	    catch {close $_output_file}

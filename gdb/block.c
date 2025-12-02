@@ -818,12 +818,17 @@ blockvector::append_block (struct block *block)
 const struct block *
 blockvector::lookup (CORE_ADDR addr) const
 {
-  const struct block *b;
-  int bot, top, half;
+  const CORE_ADDR start = global_block ()->start ();
+  const CORE_ADDR end = global_block ()->end ();
+
+  /* Check if the given address falls into the global block.  If not, this
+     blockvector definitely does not contain any block at ADDR.  */
+  if (addr < start || end <= addr)
+    return nullptr;
 
   /* If we have an addrmap mapping code addresses to blocks, then use
      that.  */
-  if (map ())
+  if (map () != nullptr)
     return (const struct block *) map ()->find (addr);
 
   /* Otherwise, use binary search to find the last block that starts
@@ -832,14 +837,15 @@ blockvector::lookup (CORE_ADDR addr) const
      They both have the same START,END values.
      Historically this code would choose STATIC_BLOCK over GLOBAL_BLOCK but the
      fact that this choice was made was subtle, now we make it explicit.  */
-  gdb_assert (blocks ().size () >= 2);
-  bot = STATIC_BLOCK;
-  top = blocks ().size ();
+  gdb_assert (num_blocks () >= 2);
+
+  int bot = STATIC_BLOCK;
+  int top = num_blocks ();
 
   while (top - bot > 1)
     {
-      half = (top - bot + 1) >> 1;
-      b = block (bot + half);
+      auto half = (top - bot + 1) >> 1;
+      auto b = block (bot + half);
       if (b->start () <= addr)
 	bot += half;
       else
@@ -850,15 +856,15 @@ blockvector::lookup (CORE_ADDR addr) const
 
   while (bot >= STATIC_BLOCK)
     {
-      b = block (bot);
-      if (!(b->start () <= addr))
-	return NULL;
+      auto b = block (bot);
+      if (b->start () > addr)
+	return nullptr;
       if (b->end () > addr)
 	return b;
       bot--;
     }
 
-  return NULL;
+  return nullptr;
 }
 
 /* See block.h.  */
@@ -866,7 +872,34 @@ blockvector::lookup (CORE_ADDR addr) const
 bool
 blockvector::contains (CORE_ADDR addr) const
 {
-  return lookup (addr) != nullptr;
+  auto b = lookup (addr);
+  if (b == nullptr)
+    return false;
+
+  /* Handle the case that the blockvector has no address map but still has
+     "holes".  For example, consider the following blockvector:
+
+	B0    0x1000 - 0x4000   (global block)
+	B1    0x1000 - 0x4000   (static block)
+	 B3   0x1000 - 0x2000
+				(hole)
+	 B4   0x3000 - 0x4000
+
+     In this case, the above blockvector does not contain address 0x2500 but
+     lookup (0x2500) would return the blockvector's static block.
+
+     So here we check if the returned block is a static block and if yes, still
+     return false.  However, if the blockvector contains no blocks other than
+     the global and static blocks and ADDR falls into the static block,
+     conservatively return true.
+
+     See comment in find_compunit_symtab_for_pc_sect, symtab.c.
+
+     Also, note that if the blockvector in the above example would contain
+     an address map, then lookup (0x2500) would return NULL instead of
+     the static block.
+   */
+  return b != static_block () || num_blocks () == 2;
 }
 
 /* See block.h.  */

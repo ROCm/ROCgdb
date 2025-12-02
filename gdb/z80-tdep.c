@@ -562,7 +562,6 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
   ULONGEST this_base;
   int i;
   gdb_byte buf[sizeof(void*)];
-  struct z80_unwind_cache *info;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   z80_gdbarch_tdep *tdep = gdbarch_tdep<z80_gdbarch_tdep> (gdbarch);
   int addr_len = tdep->addr_length;
@@ -570,7 +569,7 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
   if (*this_prologue_cache)
     return (struct z80_unwind_cache *) *this_prologue_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct z80_unwind_cache);
+  auto *info = frame_obstack_zalloc<z80_unwind_cache> ();
   memset (info, 0, sizeof (*info));
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
   *this_prologue_cache = info;
@@ -1086,8 +1085,10 @@ z80_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct target_desc *tdesc = info.target_desc;
 
   if (!tdesc_has_registers (tdesc))
-    /* Pick a default target description.  */
-    tdesc = tdesc_z80;
+    {
+      /* Pick a default target description.  */
+      tdesc = tdesc_z80.get ();
+    }
 
   /* Check any target description for validity.  */
   if (tdesc_has_registers (tdesc))

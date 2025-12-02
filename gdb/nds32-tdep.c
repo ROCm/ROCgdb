@@ -551,10 +551,9 @@ struct nds32_frame_cache
 static struct nds32_frame_cache *
 nds32_alloc_frame_cache (void)
 {
-  struct nds32_frame_cache *cache;
   int i;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct nds32_frame_cache);
+  auto *cache = frame_obstack_zalloc<nds32_frame_cache> ();
 
   /* Initialize fp_offset to check if FP is set in prologue.  */
   cache->fp_offset = INVALID_OFFSET;
@@ -1975,7 +1974,7 @@ nds32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     return best_arch->gdbarch;
 
   if (!tdesc_has_registers (tdesc))
-    tdesc = tdesc_nds32;
+    tdesc = tdesc_nds32.get ();
 
   tdesc_data = tdesc_data_alloc ();
 

@@ -932,7 +932,6 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   const int num_regs = gdbarch_num_cooked_regs (gdbarch);
-  struct dwarf2_frame_cache *cache;
   struct dwarf2_fde *fde;
   CORE_ADDR entry_pc;
   const gdb_byte *instr;
@@ -941,8 +940,8 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     return (struct dwarf2_frame_cache *) *this_cache;
 
   /* Allocate a new cache.  */
-  cache = FRAME_OBSTACK_ZALLOC (struct dwarf2_frame_cache);
-  cache->reg = FRAME_OBSTACK_CALLOC (num_regs, struct dwarf2_frame_state_reg);
+  auto *cache = frame_obstack_zalloc<struct dwarf2_frame_cache> ();
+  cache->reg = frame_obstack_calloc<dwarf2_frame_state_reg> (num_regs);
   *this_cache = cache;
 
   /* Unwind the PC.
@@ -1334,7 +1333,6 @@ void *
 dwarf2_frame_allocate_fn_data (const frame_info_ptr &this_frame, void **this_cache,
 			       fn_prev_register cookie, unsigned long size)
 {
-  struct dwarf2_frame_fn_data *fn_data = nullptr;
   struct dwarf2_frame_cache *cache
     = dwarf2_frame_cache (this_frame, this_cache);
 
@@ -1343,7 +1341,7 @@ dwarf2_frame_allocate_fn_data (const frame_info_ptr &this_frame, void **this_cac
   gdb_assert (data == nullptr);
 
   /* No object found, lets create a new instance.  */
-  fn_data = FRAME_OBSTACK_ZALLOC (struct dwarf2_frame_fn_data);
+  auto *fn_data = frame_obstack_zalloc<dwarf2_frame_fn_data> ();
   fn_data->cookie = cookie;
   fn_data->data = frame_obstack_zalloc (size);
   fn_data->next = cache->fn_data;

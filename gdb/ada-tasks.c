@@ -61,7 +61,8 @@ enum task_states
   Asynchronous_Hold,
   Interrupt_Server_Blocked_On_Event_Flag,
   Activating,
-  Acceptor_Delay_Sleep
+  Acceptor_Delay_Sleep,
+  Suspension_Object_Sleep,
 };
 
 /* A short description corresponding to each possible task state.  */
@@ -83,7 +84,8 @@ static const char * const task_states[] = {
   N_("Asynchronous Hold"),
   "",
   N_("Activating"),
-  N_("Selective Wait")
+  N_("Selective Wait"),
+  N_("Suspension object sleep")
 };
 
 /* Return a string representing the task state.  */

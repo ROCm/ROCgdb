@@ -1493,11 +1493,12 @@ adjust_eh_frame_local_symbols (const asection *sec,
 }
 
 /* This function is called for each input file before the .eh_frame
-   section is relocated.  It discards duplicate CIEs and FDEs for discarded
-   functions.  The function returns TRUE iff any entries have been
-   deleted.  */
+   section is relocated.  It discards duplicate CIEs and FDEs for
+   discarded functions.  The function returns 0 when no changes are
+   made, 1 when .eh_frame data has been edited and 2 when the editing
+   results in a section size change.  */
 
-bool
+int
 _bfd_elf_discard_section_eh_frame
    (bfd *abfd, struct bfd_link_info *info, asection *sec,
     bool (*reloc_symbol_deleted_p) (bfd_vma, void *),
@@ -1622,10 +1623,11 @@ _bfd_elf_discard_section_eh_frame
 
   eh_alignment = 4;
   offset = (offset + eh_alignment - 1) & -eh_alignment;
-  sec->rawsize = sec->size;
+  if (sec->rawsize == 0)
+    sec->rawsize = sec->size;
+  if (sec->size != offset)
+    changed = 2;
   sec->size = offset;
-  if (sec->size != sec->rawsize)
-    changed = 1;
 
   if (changed)
     {
@@ -2290,6 +2292,34 @@ _bfd_elf_write_section_eh_frame (bfd *abfd,
   return bfd_set_section_contents (abfd, sec->output_section,
 				   contents, (file_ptr) sec->output_offset,
 				   sec->size);
+}
+
+/* A handy wrapper for writing linker generated .eh_frame sections
+   with contents that may need to be extended beyond the initial size
+   allocated.  */
+
+bool
+_bfd_elf_write_linker_section_eh_frame (bfd *obfd, struct bfd_link_info *info,
+					asection *sec, bfd_byte *bigbuf)
+{
+  bfd_size_type initial_size = sec->rawsize != 0 ? sec->rawsize : sec->size;
+  memcpy (bigbuf, sec->contents, initial_size);
+  if (!_bfd_elf_write_section_eh_frame (obfd, info, sec, bigbuf))
+    return false;
+  if (sec->size > initial_size)
+    {
+      if (sec->alloced)
+	sec->contents = bfd_alloc (sec->owner, sec->size);
+      else
+	{
+	  free (sec->contents);
+	  sec->contents = bfd_malloc (sec->size);
+	}
+      if (sec->contents == NULL)
+	return false;
+    }
+  memcpy (sec->contents, bigbuf, sec->size);
+  return true;
 }
 
 /* Helper function used to sort .eh_frame_hdr search table by increasing

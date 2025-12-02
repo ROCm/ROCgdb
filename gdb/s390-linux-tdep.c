@@ -358,10 +358,10 @@ s390_core_read_description (struct gdbarch *gdbarch,
 		vx ? tdesc_s390_vx_linux64 :
 		te ? tdesc_s390_te_linux64 :
 		v2 ? tdesc_s390_linux64v2 :
-		v1 ? tdesc_s390_linux64v1 : tdesc_s390_linux64);
+		v1 ? tdesc_s390_linux64v1 : tdesc_s390_linux64).get ();
       else
 	return (v2 ? tdesc_s390_linux32v2 :
-		v1 ? tdesc_s390_linux32v1 : tdesc_s390_linux32);
+		v1 ? tdesc_s390_linux32v1 : tdesc_s390_linux32).get ();
 
     case s390x_sizeof_gregset:
       return (gs ? tdesc_s390x_gs_linux64 :
@@ -369,7 +369,7 @@ s390_core_read_description (struct gdbarch *gdbarch,
 	      vx ? tdesc_s390x_vx_linux64 :
 	      te ? tdesc_s390x_te_linux64 :
 	      v2 ? tdesc_s390x_linux64v2 :
-	      v1 ? tdesc_s390x_linux64v1 : tdesc_s390x_linux64);
+	      v1 ? tdesc_s390x_linux64v1 : tdesc_s390x_linux64).get ();
 
     default:
       return NULL;
@@ -396,7 +396,6 @@ s390_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
   s390_gdbarch_tdep *tdep = gdbarch_tdep<s390_gdbarch_tdep> (gdbarch);
   int word_size = gdbarch_ptr_bit (gdbarch) / 8;
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  struct s390_sigtramp_unwind_cache *info;
   ULONGEST this_sp, prev_sp;
   CORE_ADDR next_ra, next_cfa, sigreg_ptr, sigreg_high_off;
   int i;
@@ -404,7 +403,7 @@ s390_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
   if (*this_prologue_cache)
     return (struct s390_sigtramp_unwind_cache *) *this_prologue_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct s390_sigtramp_unwind_cache);
+  auto *info = frame_obstack_zalloc<s390_sigtramp_unwind_cache> ();
   *this_prologue_cache = info;
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 

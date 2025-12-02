@@ -1588,7 +1588,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   gdb::array_view<CORE_ADDR> push_values,
 			   bool *is_reference)
 {
-  if (dlbaton == NULL || dlbaton->size == 0)
+  if (dlbaton->size == 0)
     return 0;
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
@@ -1653,9 +1653,6 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
 			  CORE_ADDR *value,
 			  gdb::array_view<CORE_ADDR> push_values)
 {
-  if (prop == NULL)
-    return false;
-
   /* Evaluating a property should not change the current language.
      Without this here this could happen if the code below selects a
      frame.  */

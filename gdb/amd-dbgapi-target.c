@@ -352,7 +352,7 @@ struct amd_dbgapi_target final : public target_ops
   int remove_watchpoint (CORE_ADDR addr, int len, enum target_hw_bp_type type,
 			 struct expression *cond) override;
   bool stopped_by_watchpoint () override;
-  bool stopped_data_address (CORE_ADDR *addr_p) override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
 
   bool stopped_by_sw_breakpoint () override;
   bool stopped_by_hw_breakpoint () override;
@@ -1486,47 +1486,42 @@ amd_dbgapi_target::stopped_by_watchpoint ()
   return watchpoints.count != 0;
 }
 
-bool
-amd_dbgapi_target::stopped_data_address (CORE_ADDR *addr_p)
+std::vector<CORE_ADDR>
+amd_dbgapi_target::stopped_data_addresses ()
 {
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
   if (!ptid_is_gpu (inferior_ptid))
-    return beneath ()->stopped_data_address (addr_p);
+    return beneath ()->stopped_data_addresses ();
 
-  amd_dbgapi_watchpoint_list_t watchpoints;
+  amd_dbgapi_watchpoint_list_t watchpoints = {};
   if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
 				AMD_DBGAPI_WAVE_INFO_WATCHPOINTS,
 				sizeof (watchpoints), &watchpoints)
       != AMD_DBGAPI_STATUS_SUCCESS)
-    return false;
+    return {};
 
-  /* Compute the intersection between the triggered watchpoint ranges.  */
-  CORE_ADDR start = std::numeric_limits<CORE_ADDR>::min ();
-  CORE_ADDR finish = std::numeric_limits<CORE_ADDR>::max ();
-  for (size_t i = 0; i < watchpoints.count; ++i)
+  /* Ensure watchpoints.watchpoints_ids is freed on exit.  */
+  gdb::unique_xmalloc_ptr<amd_dbgapi_watchpoint_id_t>
+    watchpoint_holder (watchpoints.watchpoint_ids);
+
+  std::vector<CORE_ADDR> watch_addr_hit;
+  for (amd_dbgapi_watchpoint_id_t watch_id
+       : gdb::make_array_view (watchpoints.watchpoint_ids, watchpoints.count))
     {
-      amd_dbgapi_watchpoint_id_t watchpoint = watchpoints.watchpoint_ids[i];
-      auto it
-	= std::find_if (info.watchpoint_map.begin (),
-			info.watchpoint_map.end (),
-			[watchpoint] (
-			  const decltype (info.watchpoint_map)::value_type
-			    &value)
-			{ return value.second.second == watchpoint; });
-      if (it != info.watchpoint_map.end ())
-	{
-	  start = std::max (start, it->first);
-	  finish = std::min (finish, it->second.first);
-	}
-    }
-  free (watchpoints.watchpoint_ids);
+      auto it = std::find_if (info.watchpoint_map.begin (),
+			      info.watchpoint_map.end (),
+			      [watch_id] (auto &watch_info)
+				{
+				  return watch_info.second.second == watch_id;
+				});
 
-  /* infrun does not seem to care about the exact address, anything within
-     the watched address range is good enough to identify the watchpoint.  */
-  *addr_p = start;
-  return start < finish;
+      /* We should not receive hits for watchpoints we have not inserted.  */
+      if (it != info.watchpoint_map.end ())
+	watch_addr_hit.push_back (it->first);
+    }
+  return watch_addr_hit;
 }
 
 void

@@ -204,6 +204,8 @@ struct elf_link_hash_entry
   unsigned int non_elf : 1;
   /* Symbol version information.  */
   ENUM_BITFIELD (elf_symbol_version) versioned : 2;
+  /* Symbol is a base symbol.  */
+  unsigned int base_symbol : 1;
   /* Symbol was forced to local scope due to a version script file.  */
   unsigned int forced_local : 1;
   /* Symbol was forced to be dynamic due to a version script file.  */
@@ -637,6 +639,9 @@ struct elf_link_hash_table
   /* Whether dynamic relocations are present.  */
   bool dynamic_relocs;
 
+  /* TRUE if there are local dynamic symbols.  */
+  bool has_local_dynsyms;
+
   /* True if this target has relocatable executables, so needs dynamic
      section symbols.  */
   bool is_relocatable_executable;
@@ -652,6 +657,9 @@ struct elf_link_hash_table
 
   /* TRUE when we are handling DT_NEEDED entries.  */
   bool handling_dt_needed;
+
+  /* TRUE if there are base symbols.  */
+  bool has_base_symbols;
 
   /* The BFD used to hold special sections created by the linker.
      This will be the first BFD found which requires these sections to
@@ -1305,7 +1313,7 @@ struct elf_backend_data
      output file.  The FINISH_DYNAMIC_SYMBOL will have been called on
      all dynamic symbols.  */
   bool (*elf_backend_finish_dynamic_sections)
-    (bfd *output_bfd, struct bfd_link_info *info);
+    (bfd *output_bfd, struct bfd_link_info *info, bfd_byte *);
 
   /* A function to do any beginning processing needed for the ELF file
      before building the ELF headers and computing file positions.  */
@@ -2542,7 +2550,7 @@ extern void _bfd_elf_parse_eh_frame
 extern bool _bfd_elf_end_eh_frame_parsing
   (struct bfd_link_info *info) ATTRIBUTE_HIDDEN;
 
-extern bool _bfd_elf_discard_section_eh_frame
+extern int _bfd_elf_discard_section_eh_frame
   (bfd *, struct bfd_link_info *, asection *,
    bool (*) (bfd_vma, void *), struct elf_reloc_cookie *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_adjust_eh_frame_global_symbol
@@ -2553,7 +2561,9 @@ extern bfd_vma _bfd_elf_eh_frame_section_offset
   (bfd *, struct bfd_link_info *, asection *, bfd_vma) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_write_section_eh_frame
   (bfd *, struct bfd_link_info *, asection *, bfd_byte *) ATTRIBUTE_HIDDEN;
-bool _bfd_elf_write_section_eh_frame_entry
+extern bool _bfd_elf_write_linker_section_eh_frame
+  (bfd *, struct bfd_link_info *, asection *, bfd_byte *) ATTRIBUTE_HIDDEN;
+extern bool _bfd_elf_write_section_eh_frame_entry
   (bfd *, struct bfd_link_info *, asection *, bfd_byte *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_fixup_eh_frame_hdr
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
