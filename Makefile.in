@@ -1122,6 +1122,7 @@ configure-host:  \
     maybe-configure-zlib \
     maybe-configure-gnulib \
     maybe-configure-gdbsupport \
+    maybe-configure-libdemangle-msvc \
     maybe-configure-gdbserver \
     maybe-configure-gdb \
     maybe-configure-expect \
@@ -1299,6 +1300,7 @@ all-host: maybe-all-zlib
 @endif zlib-no-bootstrap
 all-host: maybe-all-gnulib
 all-host: maybe-all-gdbsupport
+all-host: maybe-all-libdemangle-msvc
 all-host: maybe-all-gdbserver
 all-host: maybe-all-gdb
 all-host: maybe-all-expect
@@ -2759,6 +2761,7 @@ check: do-check
 # Only include modules actually being configured and built.
 .PHONY: check-host
 check-host:  \
+    maybe-check-libdemangle-msvc \
     maybe-check-bfd \
     maybe-check-opcodes \
     maybe-check-binutils \
@@ -35516,6 +35519,86 @@ maintainer-clean-gdbsupport:
 	  || exit 1
 
 @endif gdbsupport
+
+
+
+.PHONY: configure-libdemangle-msvc maybe-configure-libdemangle-msvc
+maybe-configure-libdemangle-msvc:
+@if gcc-bootstrap
+configure-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+maybe-configure-libdemangle-msvc: configure-libdemangle-msvc
+configure-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(HOST_EXPORTS)  \
+	echo Configuring in $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd "$(HOST_SUBDIR)/libdemangle-msvc" || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) \
+	  $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias}  \
+	  || exit 1
+@endif libdemangle-msvc
+
+
+
+
+.PHONY: all-libdemangle-msvc maybe-all-libdemangle-msvc
+maybe-all-libdemangle-msvc:
+@if gcc-bootstrap
+all-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+TARGET-libdemangle-msvc=all
+maybe-all-libdemangle-msvc: all-libdemangle-msvc
+all-libdemangle-msvc: configure-libdemangle-msvc
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS)  \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) $(EXTRA_HOST_FLAGS) $(STAGE1_FLAGS_TO_PASS)  \
+		$(TARGET-libdemangle-msvc))
+@endif libdemangle-msvc
+
+
+
+
+.PHONY: check-libdemangle-msvc maybe-check-libdemangle-msvc
+maybe-check-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-check-libdemangle-msvc: check-libdemangle-msvc
+
+check-libdemangle-msvc:
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS)  \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  check)
+
+@endif libdemangle-msvc
+
+.PHONY: install-libdemangle-msvc maybe-install-libdemangle-msvc
+maybe-install-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-libdemangle-msvc: install-libdemangle-msvc
+
+install-libdemangle-msvc:
+
+@endif libdemangle-msvc
 
 
 
@@ -68597,6 +68680,7 @@ all-stagetrain-binutils: maybe-all-stagetrain-bfd
 all-stagefeedback-binutils: maybe-all-stagefeedback-bfd
 all-stageautoprofile-binutils: maybe-all-stageautoprofile-bfd
 all-stageautofeedback-binutils: maybe-all-stageautofeedback-bfd
+all-binutils: maybe-all-libdemangle-msvc
 all-binutils: maybe-all-build-flex
 all-stage1-binutils: maybe-all-build-flex
 all-stage2-binutils: maybe-all-build-flex
@@ -69206,6 +69290,7 @@ configure-gdb: maybe-all-gettext
 configure-gdb: maybe-all-bfd
 configure-gdb: maybe-all-libiconv
 all-gdb: maybe-all-libiberty
+all-gdb: maybe-all-libdemangle-msvc
 all-gdb: maybe-all-libiconv
 all-gdb: maybe-all-opcodes
 all-gdb: maybe-all-libdecnumber

@@ -65,7 +65,9 @@ extern "C" {
    Note if this limit is disabled then stack exhaustion is possible when
    demangling pathologically complicated strings.  Bug reports about stack
    exhaustion when the option is enabled will be rejected.  */
-#define DMGL_NO_RECURSE_LIMIT (1 << 18)
+#define DMGL_NO_RECURSE_LIMIT (1 << 18) 
+
+#define DMGL_MSVC	 (1 << 19)	/* Include MSVC-specific output formats.  */
 
 /* If DMGL_NO_RECURSE_LIMIT is not enabled, then this is the value used as
    the maximum depth of recursion allowed.  It should be enough for any
@@ -162,10 +164,22 @@ dlang_demangle (const char *mangled, int options);
 extern int
 rust_demangle_callback (const char *mangled, int options,
                         demangle_callbackref callback, void *opaque);
-
-
 extern char *
 rust_demangle (const char *mangled, int options);
+
+/* MSVC-specific demangling function.
+   Returns demangled string or NULL.  */
+extern char *
+msvc_demangle (const char *mangled, int options);
+
+/* Get class name from MSVC mangled name.
+   Includes the class full scope.  */
+extern char *
+msvc_class_name_from_physname (const char *physname);
+
+/* Get function name (unqualified name) from MSVC mangled name. */
+extern char *
+msvc_method_name_from_physname (const char *physname);
 
 enum gnu_v3_ctor_kinds {
   gnu_v3_complete_object_ctor = 1,

@@ -1,0 +1,150 @@
+?foo@@YAXXZ
+void foo(void)
+
+?bar@@YAHDH@Z
+int bar(char, int)
+
+?baz@@YAXH@Z
+void baz(int)
+
+?qux@@YGXPAH@Z
+void qux(int *)
+
+?m1@C@@QAEXXZ
+void C::m1(void)
+
+?m2@C@@QAEHXZ
+int C::m2(void)
+
+?m3@C@@IAEXI@Z
+void C::m3(unsigned int)
+
+?m4@C@@MAEHXZ
+virtual int C::m4(void)
+
+?stdcallFunc@@YGXXZ
+void stdcallFunc(void)
+
+?fastcallFunc@@YGFH@Z
+short fastcallFunc(int)
+
+?ptrFunc@@YGHPAH@Z
+int ptrFunc(int *)
+
+?restrictFunc@@YGXQAI@Z
+void restrictFunc(unsigned int *const)
+
+?throwFunc@@YGXH@Z
+void throwFunc(int)
+
+?noexFunc@@YGXH@Z
+void noexFunc(int)
+
+?declspecFunc@@YGXH@Z
+void declspecFunc(int)
+
+?templ1@?$vector@H@@QAEXH@Z
+void vector<int>::templ1(int)
+
+??$func@H@@YAHH@Z
+int func<int>(int)
+
+??$templ2@V?$vector@H@@@@YA?AV?$vector@H@@I@Z
+vector<int> templ2< vector<int>>(unsigned int)
+
+?sum@@YAHAAVPM4@@PEAPEAVPM5@@PEAVPM2@PM1@@VPM3@@@Z
+int sum( PM4 &, PM5 **, PM1::PM2 *, PM3)
+
+?log@PM2@@QEAAXPECVPM2@@@Z
+void PM2::log( PM2 volatile *)
+
+?log@PM2@@QEBAUPM3@@PEAEPEBHPEBUPM4@@AEBUData@PM2@@ZZ
+PM3 PM2::log(unsigned char *, int const *, PM4 const *, PM2::Data const &, ...) const
+ 
+?apply@Func@@YAXP6AHH@Z@Z
+void Func::apply(int ( *)(int))
+ 
+?apply@Func@@QAAXP6AUPM1@PM2@@H@Z@Z
+void Func::apply( PM2::PM1 ( *)(int))
+ 
+?callback@Cb@@QEAAXP6AXH@Z@Z
+void Cb::callback(void ( *)(int))
+
+?call_both@@YAXP6A_NH@ZP6AMHD@Z@Z
+void call_both(bool ( *)(int), float ( *)(int, char))
+
+?call_both@@YAXP6A?AVX@@HAEBVZ@Y@@@Z@Z
+void call_both( X ( *)(int, Y::Z const &))
+
+??$_Immortalize_memcpy_image@V_Iostream_error_category2@std@@@std@@YAAEBV_Iostream_error_category2@0@XZ!
+std::_Iostream_error_category2 const & std::_Immortalize_memcpy_image< std::_Iostream_error_category2>(void)
+ 
+??$_Immortalize_memcpy_image@V_Iostream_error_category2@std@@@std@@YAAEBV_Iostream_error_category2@0@XZ!
+std::_Iostream_error_category2 const & std::_Immortalize_memcpy_image< std::_Iostream_error_category2>(void)
+
+##### NO PARAMS TESTING  ######
+ 
+?flush@?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV12@XZ! NO_PARAMS
+std::basic_ostream<char, std::char_traits<char>> & std::basic_ostream<char, std::char_traits<char>>::flush
+
+?rdbuf@?$basic_ios@DU?$char_traits@D@std@@@std@@QEBAPEAV?$basic_streambuf@DU?$char_traits@D@std@@@2@XZ! NO_PARAMS
+std::basic_streambuf<char, std::char_traits<char>> * std::basic_ios<char, std::char_traits<char>>::rdbuf const
+
+?sputc@?$basic_streambuf@DU?$char_traits@D@std@@@std@@QEAAHD@Z! NO_PARAMS
+int std::basic_streambuf<char, std::char_traits<char>>::sputc
+
+?foo@@YAXXZ NO_PARAMS
+void foo
+
+?bar@@YAHDH@Z NO_PARAMS
+int bar
+
+?qux@@YGXPAH@Z NO_PARAMS
+void qux
+
+?baz@@YAXH@Z NO_PARAMS
+void baz
+
+?m1@C@@QAEXXZ NO_PARAMS
+void C::m1
+
+##### MSVC_FULL TESTING ######
+
+?foo@@YAXXZ MSVC_FULL
+void __cdecl foo(void)
+
+?bar@@YAHDH@Z MSVC_FULL
+int __cdecl bar(char, int)
+
+?baz@@YAXH@Z MSVC_FULL
+void __cdecl baz(int)
+
+?qux@@YGXPAH@Z MSVC_FULL
+void __stdcall qux(int *)
+
+?m1@C@@QAEXXZ MSVC_FULL
+public: void __thiscall C::m1(void)
+
+?m2@C@@QAEHXZ MSVC_FULL
+public: int __thiscall C::m2(void)
+
+?m3@C@@IAEXI@Z MSVC_FULL
+protected: void __thiscall C::m3(unsigned int)
+
+?m4@C@@MAEHXZ MSVC_FULL NO_PARAMS
+int __thiscall C::m4
+
+?stdcallFunc@@YGXXZ MSVC_FULL NO_PARAMS
+void __stdcall stdcallFunc
+
+?fastcallFunc@@YGFH@Z MSVC_FULL NO_PARAMS
+short __stdcall fastcallFunc
+
+?ptrFunc@@YGHPAH@Z MSVC_FULL NO_PARAMS
+int __stdcall ptrFunc
+
+?restrictFunc@@YGXQAI@Z MSVC_FULL NO_PARAMS
+void __stdcall restrictFunc
+
+?throwFunc@@YGXH@Z MSVC_FULL NO_PARAMS
+void __stdcall throwFunc

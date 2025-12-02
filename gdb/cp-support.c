@@ -730,6 +730,11 @@ cp_class_name_from_physname (const char *physname)
   std::unique_ptr<demangle_parse_info> info;
   int done;
 
+  if (physname != NULL && physname[0] == '?')
+    {
+      return msvc_class_name_from_physname (physname);
+    }
+
   info = mangled_name_to_comp (physname, DMGL_ANSI,
 			       &storage, &demangled_name);
   if (info == NULL)
@@ -875,6 +880,9 @@ method_name_from_physname (const char *physname)
   gdb::unique_xmalloc_ptr<char> ret;
   struct demangle_component *ret_comp;
   std::unique_ptr<demangle_parse_info> info;
+
+  if (physname != NULL && physname[0] == '?')
+    return msvc_method_name_from_physname (physname);
 
   info = mangled_name_to_comp (physname, DMGL_ANSI,
 			       &storage, &demangled_name);
@@ -1652,7 +1660,8 @@ gdb_demangle (const char *name, int options)
 #endif
 
   if (crash_signal == 0)
-    result.reset (bfd_demangle (NULL, name, options | DMGL_VERBOSE));
+    result.reset (bfd_demangle_new (nullptr, name, options | DMGL_VERBOSE,
+				    msvc_demangle));
 
 #ifdef HAVE_WORKING_FORK
   if (catch_demangler_crashes)

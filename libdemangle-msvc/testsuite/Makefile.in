@@ -1,0 +1,35 @@
+## Simple Makefile for testsuite
+# Copyright (C) 2026 Advanced Micro Devices, Inc.
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
+top_builddir = @top_builddir@
+builddir = @builddir@
+
+CXX = @CXX@
+CXXFLAGS = @CXXFLAGS@
+EXEEXT = @EXEEXT@
+
+CPPFLAGS = \
+	-include $(top_builddir)/config.h \
+	-I$(srcdir)/.. \
+	-I$(srcdir)/../llvm/include \
+	-I$(srcdir)/../../include
+
+# Default target - don't build tests unless explicitly requested
+all:
+
+test-msvc-demangle$(EXEEXT): $(srcdir)/test-msvc-demangle.cpp ../libdemangle-msvc.a
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $(srcdir)/test-msvc-demangle.cpp ../libdemangle-msvc.a
+
+check: test-msvc-demangle$(EXEEXT) $(srcdir)/msvc-demangle-expected
+	./test-msvc-demangle$(EXEEXT) < $(srcdir)/msvc-demangle-expected
+
+clean:
+	rm -f test-msvc-demangle$(EXEEXT) *.o
+
+distclean: clean
+	rm -f Makefile
+
+.PHONY: all check clean distclean
