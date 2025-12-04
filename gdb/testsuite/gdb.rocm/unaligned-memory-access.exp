@@ -1,0 +1,271 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test unaligned memory accesses to variables in different address
+# spaces.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return -1
+}
+
+# Test accessing the array using sizes from 1 to 8, at offsets 0
+# through 7.  Test both reading and writing.
+#
+# When the array is in the private swizzled address space (i.e., a
+# local variable), memory accesses are done in chunks of at most 4
+# bytes per row of 4 bytes.
+#
+# E.g., for an 8-byte array variable in private swizzled memory, with
+# these contents:
+#
+#  { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 }
+#
+# we have this in the raw, unswizzled memory view (32 x 4 byte rows):
+#
+#  unswizzled address |0x?00                               |0x?80
+#  lane               |             0              | 1..31 |             0             | 1..31 | ...
+#  contents           | 0x11 | 0x22 | 0x33 | 0x44  |  ...  | 0x55 | 0x66 | 0x77 | 0x88 |  ...  | ...
+#
+# If e.g., we're reading 4 bytes starting at &array[1] for lane 0 (at
+# 0x?01), then the debugger must read 3 bytes from the first row
+# (0x?01 .. 0x?03), and then 1 byte from the second row (at 0x?80).
+# The first read copies the 3 bytes to a GDB internal buffer at offset
+# 0 (a word-aligned CPU VMA), and the second read copies the 1 byte to
+# the same buffer at offset 3 (non-word-aligned CPU VMA).  This
+# non-word-aligned CPU VMA access used to fail on Windows (in
+# dbgapi/KMD).
+
+proc test_array {var_name} {
+
+    ############################################################
+    # Reads.
+
+    with_test_prefix "read size 1" {
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 0)" \
+	    " = \\{0x11\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 1)" \
+	    " = \\{0x22\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 2)" \
+	    " = \\{0x33\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 3)" \
+	    " = \\{0x44\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 4)" \
+	    " = \\{0x55\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 5)" \
+	    " = \\{0x66\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 6)" \
+	    " = \\{0x77\\}"
+	gdb_test "p/x {unsigned char\[1\]}($var_name.array + 7)" \
+	    " = \\{0x88\\}"
+    }
+
+    with_test_prefix "read size 2" {
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 2)" \
+	    " = \\{0x33, 0x44\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 3)" \
+	    " = \\{0x44, 0x55\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 4)" \
+	    " = \\{0x55, 0x66\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 5)" \
+	    " = \\{0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[2\]}($var_name.array + 6)" \
+	    " = \\{0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 3" {
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33\\}"
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33, 0x44\\}"
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 2)" \
+	    " = \\{0x33, 0x44, 0x55\\}"
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 3)" \
+	    " = \\{0x44, 0x55, 0x66\\}"
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 4)" \
+	    " = \\{0x55, 0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[3\]}($var_name.array + 5)" \
+	    " = \\{0x66, 0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 4" {
+	gdb_test "p/x {unsigned char\[4\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33, 0x44\\}"
+	gdb_test "p/x {unsigned char\[4\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33, 0x44, 0x55\\}"
+	gdb_test "p/x {unsigned char\[4\]}($var_name.array + 2)" \
+	    " = \\{0x33, 0x44, 0x55, 0x66\\}"
+	gdb_test "p/x {unsigned char\[4\]}($var_name.array + 3)" \
+	    " = \\{0x44, 0x55, 0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[4\]}($var_name.array + 4)" \
+	    " = \\{0x55, 0x66, 0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 5" {
+	gdb_test "p/x {unsigned char\[5\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33, 0x44, 0x55\\}"
+	gdb_test "p/x {unsigned char\[5\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33, 0x44, 0x55, 0x66\\}"
+	gdb_test "p/x {unsigned char\[5\]}($var_name.array + 2)" \
+	    " = \\{0x33, 0x44, 0x55, 0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[5\]}($var_name.array + 3)" \
+	    " = \\{0x44, 0x55, 0x66, 0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 6" {
+	gdb_test "p/x {unsigned char\[6\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33, 0x44, 0x55, 0x66\\}"
+	gdb_test "p/x {unsigned char\[6\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33, 0x44, 0x55, 0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[6\]}($var_name.array + 2)" \
+	    " = \\{0x33, 0x44, 0x55, 0x66, 0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 7" {
+	gdb_test "p/x {unsigned char\[7\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77\\}"
+	gdb_test "p/x {unsigned char\[7\]}($var_name.array + 1)" \
+	    " = \\{0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88\\}"
+    }
+
+    with_test_prefix "read size 8" {
+	gdb_test "p/x {unsigned char\[8\]}($var_name.array + 0)" \
+	    " = \\{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88\\}"
+    }
+
+    ############################################################
+    # Writes (+ reads).
+
+    with_test_prefix "write size 1" {
+	for {set i 0} {$i <= 7} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[1\]}($var_name.array + $i) = {0xaa}" \
+		" = \\{0xaa\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa\\}"
+    }
+
+    with_test_prefix "write size 2" {
+	for {set i 0} {$i <= 6} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[2\]}($var_name.array + $i) = {0xbb, 0xcc}" \
+		" = \\{0xbb, 0xcc\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xcc\\}"
+    }
+
+    with_test_prefix "write size 3" {
+	for {set i 0} {$i <= 5} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[3\]}($var_name.array + $i) = {0xcc, 0xdd, 0xee}" \
+		" = \\{0xcc, 0xdd, 0xee\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xdd, 0xee\\}"
+    }
+
+    with_test_prefix "write size 4" {
+	for {set i 0} {$i <= 4} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[4\]}($var_name.array + $i) = {0xdd, 0xee, 0xff, 0x11}" \
+		" = \\{0xdd, 0xee, 0xff, 0x11\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xee, 0xff, 0x11\\}"
+    }
+
+    with_test_prefix "write size 5" {
+	for {set i 0} {$i <= 3} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[5\]}($var_name.array + $i) = {0xee, 0xff, 0x11, 0x22, 0x33}" \
+		" = \\{0xee, 0xff, 0x11, 0x22, 0x33\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xee, 0xee, 0xee, 0xee, 0xff, 0x11, 0x22, 0x33\\}"
+    }
+
+    with_test_prefix "write size 6" {
+	for {set i 0} {$i <= 2} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[6\]}($var_name.array + $i) = {0xff, 0x11, 0x22, 0x33, 0x44, 0x55}" \
+		" = \\{0xff, 0x11, 0x22, 0x33, 0x44, 0x55\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0xff, 0xff, 0xff, 0x11, 0x22, 0x33, 0x44, 0x55\\}"
+    }
+
+    with_test_prefix "write size 7" {
+	for {set i 0} {$i <= 1} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[7\]}($var_name.array + $i) = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}" \
+		" = \\{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0x11, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77\\}"
+    }
+
+    with_test_prefix "write size 8" {
+	for {set i 0} {$i <= 0} {incr i} {
+	    gdb_test \
+		"p/x {unsigned char\[8\]}($var_name.array + $i) = {0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99}" \
+		" = \\{0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99\\}"
+	}
+	gdb_test \
+	    "p/x $var_name.array" \
+	    " = \\{0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99\\}"
+    }
+}
+
+proc test {} {
+    if {![runto_main]} {
+	return
+    }
+
+    # Set breakpoint in device code, past array initialization.
+    gdb_breakpoint [gdb_get_line_number "break here"] allow-pending
+    gdb_continue_to_breakpoint "done" ".*break here.*"
+
+    test_array "local"
+    test_array "global"
+    test_array "shared"
+}
+
+clean_restart
+gdb_load ${binfile}
+
+with_rocm_gpu_lock {
+    test
+}
