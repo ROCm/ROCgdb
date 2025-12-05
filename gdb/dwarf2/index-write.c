@@ -876,7 +876,7 @@ private:
     explicit debug_str_lookup (dwarf2_per_bfd *per_bfd)
       : m_per_bfd (per_bfd)
     {
-      gdb_assert (per_bfd->str.readin);
+      gdb_assert (per_bfd->str.read_in);
       const gdb_byte *data = per_bfd->str.buffer;
       if (data == nullptr)
 	return;
@@ -1252,6 +1252,7 @@ write_cooked_index (cooked_index *table,
 	  || entry->tag == DW_TAG_entry_point)
 	kind = GDB_INDEX_SYMBOL_KIND_FUNCTION;
       else if (entry->tag == DW_TAG_variable
+	       || entry->tag == DW_TAG_member
 	       || entry->tag == DW_TAG_constant
 	       || entry->tag == DW_TAG_enumerator)
 	kind = GDB_INDEX_SYMBOL_KIND_VARIABLE;

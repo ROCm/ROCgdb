@@ -79,31 +79,14 @@ struct objc_method {
 static const registry<objfile>::key<unsigned int> objc_objfile_data;
 
 /* Lookup a structure type named "struct NAME", visible in lexical
-   block BLOCK.  If NOERR is nonzero, return zero if NAME is not
-   suitably defined.  */
+   block BLOCK.  Return nullptr if no such type is found.  */
 
 struct symbol *
-lookup_struct_typedef (const char *name, const struct block *block, int noerr)
+lookup_struct_noerr (const char *name, const struct block *block)
 {
-  struct symbol *sym;
-
-  sym = lookup_symbol (name, block, SEARCH_STRUCT_DOMAIN, 0).symbol;
-
-  if (sym == NULL)
-    {
-      if (noerr)
-	return 0;
-      else
-	error (_("No struct type named %s."), name);
-    }
-  if (sym->type ()->code () != TYPE_CODE_STRUCT)
-    {
-      if (noerr)
-	return 0;
-      else
-	error (_("This context has class, union or enum %s, not a struct."),
-	       name);
-    }
+  symbol *sym = lookup_symbol (name, block, SEARCH_STRUCT_DOMAIN, 0).symbol;
+  if (sym == nullptr || sym->type ()->code () != TYPE_CODE_STRUCT)
+    return nullptr;
   return sym;
 }
 
@@ -168,9 +151,17 @@ lookup_child_selector (struct gdbarch *gdbarch, const char *selname)
   return value_as_long (call_function_by_hand (function, NULL, selstring));
 }
 
-struct value *
-value_nsstring (struct gdbarch *gdbarch, const char *ptr, int len)
+namespace expr
 {
+
+struct value *
+objc_nsstring_operation::evaluate (struct type *expect_type,
+				   struct expression *exp,
+				   enum noside noside)
+{
+  const std::string &str = std::get<0> (m_storage);
+  struct gdbarch *gdbarch = exp->gdbarch;
+
   struct type *char_type = builtin_type (gdbarch)->builtin_char;
   struct value *stringValue[3];
   struct value *function, *nsstringValue;
@@ -178,10 +169,11 @@ value_nsstring (struct gdbarch *gdbarch, const char *ptr, int len)
   struct type *type;
 
   if (!target_has_execution ())
-    return 0;		/* Can't call into inferior to create NSString.  */
+    error (_("evaluation of this expression "
+	     "requires the target program to be active"));
 
-  stringValue[2] = value_string(ptr, len, char_type);
-  stringValue[2] = value_coerce_array(stringValue[2]);
+  stringValue[2] = value_string (str.c_str (), str.size () + 1, char_type);
+  stringValue[2] = value_coerce_array (stringValue[2]);
   /* _NSNewStringFromCString replaces "istr" after Lantern2A.  */
   if (lookup_minimal_symbol (current_program_space,
 			     "_NSNewStringFromCString").minsym != nullptr)
@@ -212,9 +204,9 @@ value_nsstring (struct gdbarch *gdbarch, const char *ptr, int len)
   else
     error (_("NSString: internal error -- no way to create new NSString"));
 
-  sym = lookup_struct_typedef("NSString", 0, 1);
+  sym = lookup_struct_noerr ("NSString", 0);
   if (sym == NULL)
-    sym = lookup_struct_typedef("NXString", 0, 1);
+    sym = lookup_struct_noerr ("NXString", 0);
   if (sym == NULL)
     type = builtin_type (gdbarch)->builtin_data_ptr;
   else
@@ -223,6 +215,8 @@ value_nsstring (struct gdbarch *gdbarch, const char *ptr, int len)
   nsstringValue->deprecated_set_type (type);
   return nsstringValue;
 }
+
+} /* namespace expr */
 
 /* Class representing the Objective-C language.  */
 

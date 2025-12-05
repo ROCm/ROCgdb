@@ -36,16 +36,12 @@ extern int find_objc_msgcall (CORE_ADDR pc, CORE_ADDR *new_pc);
 extern const char *find_imps (const char *method,
 			      std::vector<const char *> *symbol_names);
 
-extern struct value *value_nsstring (struct gdbarch *gdbarch,
-				     const char *ptr, int len);
-
 /* for parsing Objective C */
 extern void start_msglist (void);
 extern void add_msglist (struct stoken *str, int addcolon);
 extern int end_msglist (struct parser_state *);
 
-struct symbol *lookup_struct_typedef (const char *name,
-				      const struct block *block,
-				      int noerr);
+struct symbol *lookup_struct_noerr (const char *name,
+				    const struct block *block);
 
 #endif /* GDB_OBJC_LANG_H */

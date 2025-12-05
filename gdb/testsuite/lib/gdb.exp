@@ -5050,7 +5050,7 @@ proc aarch64_supports_sve_vl { length } {
 }
 
 # Run a test on the target to see if it supports Aarch64 SME extensions.
-# Return 0 if so, 1 if it does not.  Note this causes a restart of GDB.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
 
 gdb_caching_proc allow_aarch64_sme_tests {} {
     global srcdir subdir gdb_prompt inferior_exited_re
@@ -7106,15 +7106,11 @@ proc gdb_compile_shlib_pthreads {sources dest options} {
 proc gdb_compile_objc {source dest type options} {
     set built_binfile 0
     set why_msg "unrecognized error"
-    foreach lib {-lobjc -lpthreads -lpthread -lthread solaris} {
+    set base_libs {-lgnustep-base -lobjc}
+    foreach lib {-lpthreads -lpthread -lthread "-lpthread -lposix4"} {
 	# This kind of wipes out whatever libs the caller may have
-	# set.  Or maybe theirs will override ours.  How infelicitous.
-	if { $lib == "solaris" } {
-	    set lib "-lpthread -lposix4"
-	}
-	if { $lib != "-lobjc" } {
-	  set lib "-lobjc $lib"
-	}
+	# set.	Or maybe theirs will override ours.  How infelicitous.
+	set lib "$base_libs $lib"
 	set options_with_lib [concat $options [list libs=$lib quiet]]
 	set ccout [gdb_compile $source $dest $type $options_with_lib]
 	switch -regexp -- $ccout {
@@ -11921,6 +11917,10 @@ proc section_get {exec section} {
 # Otherwise, return false.
 
 proc expect_build_id_in_core_file { filename } {
+    if {![file exists $filename]} {
+	error "File not found: $filename"
+    }
+
     # I'm not sure if other kernels take care to add the first page of
     # each ELF into the core file.  If they do then this test can be
     # relaxed.
