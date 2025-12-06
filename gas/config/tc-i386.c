@@ -1049,6 +1049,12 @@ const relax_typeS md_relax_table[] =
   { STRING_COMMA_LEN (#n), false, PROCESSOR_NONE, vsz_ ## v, \
     CPU_ ## e ## _FLAGS, CPU_ ## d ## _FLAGS }
 
+#define CPU_ANY_APX_NCI_NDD_NF_FLAGS \
+  { .bitfield = \
+    { .cpuapx_nci = true, \
+      .cpuapx_ndd = true, \
+      .cpuapx_nf = true } }
+
 static const arch_entry cpu_arch[] =
 {
   /* Do not replace the first two entries - i386_target_format() and
@@ -1091,6 +1097,7 @@ static const arch_entry cpu_arch[] =
   ARCH (znver3, ZNVER, ZNVER3, false),
   ARCH (znver4, ZNVER, ZNVER4, false),
   ARCH (znver5, ZNVER, ZNVER5, false),
+  ARCH (znver6, ZNVER, ZNVER6, false),
   ARCH (btver1, BT, BTVER1, false),
   ARCH (btver2, BT, BTVER2, false),
 
@@ -1208,6 +1215,7 @@ static const arch_entry cpu_arch[] =
   VECARCH (avx512_bf16, AVX512_BF16, ANY_AVX512_BF16, reset),
   VECARCH (avx512_vp2intersect, AVX512_VP2INTERSECT,
 	   ANY_AVX512_VP2INTERSECT, reset),
+  VECARCH (avx512_bmm, AVX512_BMM, ANY_AVX512_BMM, reset),
   SUBARCH (tdx, TDX, TDX, false),
   SUBARCH (enqcmd, ENQCMD, ENQCMD, false),
   SUBARCH (serialize, SERIALIZE, SERIALIZE, false),
@@ -1239,7 +1247,11 @@ static const arch_entry cpu_arch[] =
   SUBARCH (pbndkb, PBNDKB, PBNDKB, false),
   VECARCH (avx10.1, AVX10_1, ANY_AVX512F, set),
   SUBARCH (user_msr, USER_MSR, USER_MSR, false),
-  SUBARCH (apx_f, APX_F, APX_F, false),
+  SUBARCH (apx_f, APX_F, ANY_APX_F, false),
+  SUBARCH (apx_nci, APX_NCI, ANY_APX_NCI, false),
+  SUBARCH (apx_ndd, APX_NDD, ANY_APX_NDD, false),
+  SUBARCH (apx_nf, APX_NF, ANY_APX_NF, false),
+  SUBARCH (apx_nci_ndd_nf, APX_NCI_NDD_NF, ANY_APX_NCI_NDD_NF, false),
   VECARCH (avx10.2, AVX10_2, ANY_AVX10_2, set),
   SUBARCH (gmism2, GMISM2, GMISM2, false),
   SUBARCH (gmiccs, GMICCS, GMICCS, false),
@@ -1383,10 +1395,10 @@ gotrel[] =
     { .bitfield = { .imm32 = 1, .imm64 = 1 } }, false },
 #endif
     { STRING_COMMA_LEN ("PLTOFF"),   { _dummy_first_bfd_reloc_code_real,
-				       BFD_RELOC_X86_64_PLTOFF64 },
+				       BFD_RELOC_64_PLTOFF },
     { .bitfield = { .imm64 = 1 } }, true },
     { STRING_COMMA_LEN ("PLT"),      { BFD_RELOC_386_PLT32,
-				       BFD_RELOC_X86_64_PLT32    },
+				       BFD_RELOC_32_PLT_PCREL },
     OPERAND_TYPE_IMM32_32S_DISP32, false },
     { STRING_COMMA_LEN ("GOTPLT"),   { _dummy_first_bfd_reloc_code_real,
 				       BFD_RELOC_X86_64_GOTPLT64 },
@@ -1943,6 +1955,10 @@ cpu_flags_all_zero (const union i386_cpu_flags *x)
 {
   switch (ARRAY_SIZE(x->array))
     {
+    case 6:
+      if (x->array[5])
+	return 0;
+      /* Fall through.  */
     case 5:
       if (x->array[4])
 	return 0;
@@ -1972,6 +1988,10 @@ cpu_flags_equal (const union i386_cpu_flags *x,
 {
   switch (ARRAY_SIZE(x->array))
     {
+    case 6:
+      if (x->array[5] != y->array[5])
+	return 0;
+      /* Fall through.  */
     case 5:
       if (x->array[4] != y->array[4])
 	return 0;
@@ -2009,6 +2029,9 @@ cpu_flags_and (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 6:
+      x.array [5] &= y.array [5];
+      /* Fall through.  */
     case 5:
       x.array [4] &= y.array [4];
       /* Fall through.  */
@@ -2035,6 +2058,9 @@ cpu_flags_or (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 6:
+      x.array [5] |= y.array [5];
+      /* Fall through.  */
     case 5:
       x.array [4] |= y.array [4];
       /* Fall through.  */
@@ -2061,6 +2087,9 @@ cpu_flags_and_not (i386_cpu_flags x, i386_cpu_flags y)
 {
   switch (ARRAY_SIZE (x.array))
     {
+    case 6:
+      x.array [5] &= ~y.array [5];
+      /* Fall through.  */
     case 5:
       x.array [4] &= ~y.array [4];
       /* Fall through.  */
@@ -2328,6 +2357,17 @@ cpu_flags_match (const insn_template *t)
 
 	  memset (&any, 0, sizeof (any));
 	}
+    }
+  else if (t->opcode_modifier.evex
+	   /* Implicitly !t->opcode_modifier.vex.  */
+	   && all.bitfield.cpuapx_f
+	   && (t->opcode_modifier.nf
+	       || (all.bitfield.cpuadx && t->opcode_modifier.vexvvvv)))
+    {
+      /* APX_NDD can't be combined with other ISAs in the opcode table.
+	 Respective entries (ADCX, ADOX, LZCNT, POPCNT, and TZCNT) use APX_F
+	 instead, which are amended here.  No need to clear cpuapx_f, though. */
+      all.bitfield.cpuapx_ndd = true;
     }
 
   if (flag_code != CODE_64BIT)
@@ -2669,11 +2709,11 @@ operand_size_match (const insn_template *t)
     {
       unsigned int given = i.operands - j - 1;
 
-      /* For FMA4 and XOP insns VEX.W controls just the first two
-	 register operands. And APX_F insns just swap the two source operands,
+      /* For FMA4 and XOP insns VEX.W controls just the first two register
+	 operands.  And APX_F / APX_NDD insns just swap the two source operands,
 	 with the 3rd one being the destination.  */
       if (is_cpu (t, CpuFMA4) || is_cpu (t, CpuXOP)
-	  || is_cpu (t, CpuAPX_F))
+	  || is_cpu (t, CpuAPX_F)|| is_cpu (t, CpuAPX_NDD))
 	given = j < 2 ? 1 - j : j;
 
       if (i.types[given].bitfield.class == Reg
@@ -3925,15 +3965,11 @@ _reloc (unsigned int size,
       if (size == 8)
 	switch (other)
 	  {
+	  case BFD_RELOC_64_PLTOFF:
+	  case BFD_RELOC_X86_64_GOTPLT64:
+	    return other;
 	  case BFD_RELOC_X86_64_GOT32:
 	    return BFD_RELOC_X86_64_GOT64;
-	    break;
-	  case BFD_RELOC_X86_64_GOTPLT64:
-	    return BFD_RELOC_X86_64_GOTPLT64;
-	    break;
-	  case BFD_RELOC_X86_64_PLTOFF64:
-	    return BFD_RELOC_X86_64_PLTOFF64;
-	    break;
 	  case BFD_RELOC_X86_64_GOTPC32:
 	    other = BFD_RELOC_X86_64_GOTPC64;
 	    break;
@@ -4104,7 +4140,7 @@ tc_i386_fix_adjustable (fixS *fixP)
   /* Resolve PLT32 relocation against local symbol to section only for
      PC-relative relocations.  */
   if (fixP->fx_r_type == BFD_RELOC_386_PLT32
-      || fixP->fx_r_type == BFD_RELOC_X86_64_PLT32)
+      || fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL)
     return fixP->fx_pcrel;
   return 1;
 }
@@ -9597,12 +9633,13 @@ match_template (char mnem_suffix)
 	      /* Try reversing direction of operands.  */
 	      j = is_cpu (t, CpuFMA4)
 		  || is_cpu (t, CpuXOP)
-		  || is_cpu (t, CpuAPX_F) ? 1 : i.operands - 1;
+		  || is_cpu (t, CpuAPX_F)
+		  || is_cpu (t, CpuAPX_NDD) ? 1 : i.operands - 1;
 	      overlap0 = operand_type_and (i.types[0], operand_types[j]);
 	      overlap1 = operand_type_and (i.types[j], operand_types[0]);
 	      overlap2 = operand_type_and (i.types[1], operand_types[1]);
 	      gas_assert (t->operands != 3 || !check_register
-			  || is_cpu (t, CpuAPX_F));
+			  || is_cpu (t, CpuAPX_F) || is_cpu (t, CpuAPX_NDD));
 	      if (!operand_type_match (overlap0, i.types[0])
 		  || !operand_type_match (overlap1, i.types[j])
 		  || (t->operands == 3
@@ -11743,7 +11780,7 @@ output_jump (void)
   if (flag_code == CODE_64BIT && size == 4
       && jump_reloc == NO_RELOC && i.op[0].disps->X_add_number == 0
       && need_plt32_p (i.op[0].disps->X_add_symbol))
-    jump_reloc = BFD_RELOC_X86_64_PLT32;
+    jump_reloc = BFD_RELOC_32_PLT_PCREL;
 #endif
 
   jump_reloc = reloc (size, 1, 1, jump_reloc);
@@ -13389,7 +13426,7 @@ x86_cons (expressionS *exp, int size)
 	      *input_line_pointer = c;
 	    }
 	  else if ((got_reloc == BFD_RELOC_386_PLT32
-		    || got_reloc == BFD_RELOC_X86_64_PLT32)
+		    || got_reloc == BFD_RELOC_32_PLT_PCREL)
 		   && exp->X_op != O_symbol)
 	    {
 	      char c = *input_line_pointer;
@@ -15733,7 +15770,7 @@ elf_symbol_resolved_in_segment_p (symbolS *fr_symbol, offsetT fr_var)
     switch ((enum bfd_reloc_code_real) fr_var)
       {
       case BFD_RELOC_386_PLT32:
-      case BFD_RELOC_X86_64_PLT32:
+      case BFD_RELOC_32_PLT_PCREL:
 	/* Symbol with PLT relocation may be preempted. */
 	return 0;
       default:
@@ -16194,7 +16231,7 @@ md_estimate_size_before_relax (fragS *fragP, segT segment)
 	  && fragP->tc_frag_data.code == CODE_64BIT
 	  && fragP->fr_offset == 0
 	  && need_plt32_p (fragP->fr_symbol))
-	reloc_type = BFD_RELOC_X86_64_PLT32;
+	reloc_type = BFD_RELOC_32_PLT_PCREL;
 #endif
 
       old_fr_fix = fragP->fr_fix;
@@ -16598,7 +16635,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     switch (fixP->fx_r_type)
       {
       case BFD_RELOC_386_PLT32:
-      case BFD_RELOC_X86_64_PLT32:
+      case BFD_RELOC_32_PLT_PCREL:
 	/* Make the jump instruction point to the address of the operand.
 	   At runtime we merely add the offset to the actual PLT entry.
 	   NB: Subtract the offset size only for jump instructions.  */
@@ -18315,7 +18352,7 @@ i386_validate_fix (fixS *fixp)
       if (fixp->fx_addsy
 	  && fixp->fx_pcrel
 	  && (fixp->fx_r_type == BFD_RELOC_386_PLT32
-	      || fixp->fx_r_type == BFD_RELOC_X86_64_PLT32)
+	      || fixp->fx_r_type == BFD_RELOC_32_PLT_PCREL)
 	  && symbol_section_p (fixp->fx_addsy))
 	fixp->fx_r_type = BFD_RELOC_32_PCREL;
       if (!object_64bit)
@@ -18391,7 +18428,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 #endif
       /* Fall through.  */
 
-    case BFD_RELOC_X86_64_PLT32:
+    case BFD_RELOC_32_PLT_PCREL:
     case BFD_RELOC_X86_64_GOT32:
     case BFD_RELOC_X86_64_GOTPCREL:
     case BFD_RELOC_X86_64_GOTPCRELX:
@@ -18430,7 +18467,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_X86_64_GOTPCREL64:
     case BFD_RELOC_X86_64_GOTPC64:
     case BFD_RELOC_X86_64_GOTPLT64:
-    case BFD_RELOC_X86_64_PLTOFF64:
+    case BFD_RELOC_64_PLTOFF:
     case BFD_RELOC_X86_64_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_CODE_4_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_CODE_5_GOTPC32_TLSDESC:
@@ -18544,7 +18581,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  case BFD_RELOC_X86_64_GOTPCREL64:
 	  case BFD_RELOC_X86_64_GOTPC64:
 	  case BFD_RELOC_X86_64_GOTPLT64:
-	  case BFD_RELOC_X86_64_PLTOFF64:
+	  case BFD_RELOC_64_PLTOFF:
 	    as_bad_where (fixp->fx_file, fixp->fx_line,
 			  _("cannot represent relocation type %s in x32 mode"),
 			  bfd_get_reloc_code_name (code));
@@ -18558,7 +18595,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
       else
 	switch (code)
 	  {
-	  case BFD_RELOC_X86_64_PLT32:
+	  case BFD_RELOC_32_PLT_PCREL:
 	  case BFD_RELOC_X86_64_GOT32:
 	  case BFD_RELOC_X86_64_GOTPCREL:
 	  case BFD_RELOC_X86_64_GOTPCRELX:

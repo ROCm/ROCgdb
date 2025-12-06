@@ -322,9 +322,14 @@ extern std::string ada_encode (const char *, bool fold = true);
 
 extern const char *ada_enum_name (const char *);
 
-extern int ada_is_modular_type (struct type *);
+/* True iff TYPE is an Ada modular type.  */
 
-extern ULONGEST ada_modulus (struct type *);
+extern bool ada_is_modular_type (struct type *);
+
+/* Return the upper bound of a modular type.  If the upper bound is
+   non-constant, returns an empty optional.  */
+
+extern std::optional<ULONGEST> ada_modular_bound (struct type *);
 
 extern struct value *ada_value_ind (struct value *);
 

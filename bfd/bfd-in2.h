@@ -3885,7 +3885,6 @@ enum bfd_reloc_code_real
 
   /* x86-64/elf relocations.  */
   BFD_RELOC_X86_64_GOT32,
-  BFD_RELOC_X86_64_PLT32,
   BFD_RELOC_X86_64_COPY,
   BFD_RELOC_X86_64_GLOB_DAT,
   BFD_RELOC_X86_64_JUMP_SLOT,
@@ -3906,7 +3905,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_X86_64_GOTPCREL64,
   BFD_RELOC_X86_64_GOTPC64,
   BFD_RELOC_X86_64_GOTPLT64,
-  BFD_RELOC_X86_64_PLTOFF64,
   BFD_RELOC_X86_64_GOTPC32_TLSDESC,
   BFD_RELOC_X86_64_TLSDESC_CALL,
   BFD_RELOC_X86_64_TLSDESC,
@@ -4121,9 +4119,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_PPC64_GOT_TPREL_PCREL34,
   BFD_RELOC_PPC64_GOT_DTPREL_PCREL34,
   BFD_RELOC_PPC64_TLS_PCREL,
-
-  /* IBM 370/390 relocations.  */
-  BFD_RELOC_I370_D12,
 
   /* The type of reloc used to build a constructor table - at the moment
      probably a 32 bit wide absolute relocation, but the target can choose.
@@ -5705,10 +5700,6 @@ enum bfd_reloc_code_real
 
   /* Scenix IP2K - 7-bit sp or dp offset.  */
   BFD_RELOC_IP2K_FR_OFFSET,
-
-  /* Scenix VPE4K coprocessor - data/insn-space addressing.  */
-  BFD_RELOC_VPE4KMATH_DATA,
-  BFD_RELOC_VPE4KMATH_INSN,
 
   /* These two relocations are used by the linker to determine which of
      the entries in a C++ virtual function table are actually used.  When
