@@ -1325,7 +1325,7 @@ set cc_flags "-DKERNEL_SO_PATH=\"${shlibfile_path}\"\
 set options [list debug hip additional_flags=$cc_flags]
 
 if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
-        ${options}] } {
+	${options}] } {
     untested "HIP application failed to compile"
     return -1
 }
