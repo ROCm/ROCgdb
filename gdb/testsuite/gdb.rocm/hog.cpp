@@ -55,4 +55,3 @@ main ()
   CHECK (hipDeviceSynchronize ());
   return 0;
 }
-

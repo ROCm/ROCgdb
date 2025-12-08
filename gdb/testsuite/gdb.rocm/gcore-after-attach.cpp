@@ -46,4 +46,3 @@ main (int argc, char* argv[])
   kern<<<1, 1>>> ();
   CHECK (hipDeviceSynchronize ());
 }
-
