@@ -433,7 +433,7 @@ public:
 
   /* Convert DWARF entry into a DWARF value.  TYPE defines a
      desired type of the returned DWARF value if it already
-     doesnt have one.  */
+     doesn't have one.  */
   virtual std::shared_ptr<dwarf_value> to_value (struct type *type) = 0;
 
   /* Convert DWARF entry to the matching struct value representation
@@ -451,7 +451,7 @@ dwarf_entry::~dwarf_entry () = default;
 /* Location description entry found on a DWARF expression evaluation
    stack.
 
-   Types of locations descirbed can be: register location, memory
+   Types of locations described can be: register location, memory
    location, implicit location, implicit pointer location, undefined
    location and composite location (composed out of any of the location
    types including another composite location).  */
@@ -504,7 +504,7 @@ public:
   /* Convert DWARF entry into a DWARF value.  If the conversion
      from that location description kind to a value is not supported
      the result is an empty pointer.  TYPE defines a desired type of
-     the returned DWARF value if it already doesnt have one.  */
+     the returned DWARF value if it already doesn't have one.  */
   virtual std::shared_ptr<dwarf_value> to_value (struct type *type) override
   {
     ill_formed_expression ();
@@ -1246,10 +1246,10 @@ public:
       m_regnum (regnum), m_on_entry (on_entry)
   {}
 
-  dwarf_register (const dwarf_register &registr)
-    : dwarf_location (registr),
-      m_regnum (registr.m_regnum),
-      m_on_entry (registr.m_on_entry)
+  dwarf_register (const dwarf_register &reg)
+    : dwarf_location (reg),
+      m_regnum (reg.m_regnum),
+      m_on_entry (reg.m_on_entry)
   {}
 
   std::shared_ptr<dwarf_entry> clone () const override
@@ -2109,7 +2109,7 @@ dwarf_composite::is_implicit_ptr_at (LONGEST bit_offset, int bit_length) const
     }
 
     /* The case where the requested range goes outside of the
-       underlaying location range is currently described as a
+       underlying location range is currently described as a
        access through a synthetic pointer.  Check for this kind
        of access seems to be covered by the same closure hook as
        the implicit pointer check.  This means that if the
@@ -2743,7 +2743,7 @@ private:
 
   /* Scope dependency of the evaluated expression.
 
-     A DWARF expression can be determined to be scope dependant
+     A DWARF expression can be determined to be scope dependent
      (frame, thread and SIMD lane).  That information is
      gathered here during the evaluation and recorded in the resulting
      struct value object.  */
