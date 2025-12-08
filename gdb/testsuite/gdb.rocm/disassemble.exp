@@ -110,10 +110,10 @@ gdb_test_sequence "x/3i kernel" "disassemble 3 instructions" [list \
 gdb_test_no_output "set disassemble-next-line off"
 gdb_test_multiple "n" "next after disassemble-next-line off" {
     -re "=>.*$gdb_prompt $" {
-        fail $gdb_test_name
+	fail $gdb_test_name
     }
     -re "$gdb_prompt $" {
-        pass $gdb_test_name
+	pass $gdb_test_name
     }
 }
 
@@ -123,10 +123,10 @@ gdb_test_multiple "n" "next after disassemble-next-line off" {
 gdb_test_no_output "set disassemble-next-line on"
 gdb_test_multiple "n" "next after disassemble-next-line on" {
     -re "=>.*$gdb_prompt $" {
-        pass $gdb_test_name
+	pass $gdb_test_name
     }
     -re "$gdb_prompt $" {
-        fail $gdb_test_name
+	fail $gdb_test_name
     }
 }
 
