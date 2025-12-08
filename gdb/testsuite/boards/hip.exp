@@ -163,7 +163,7 @@ proc gdb_compile_pthreads {source dest type options} {
 proc do_gpu_lock_release {} {
     global gpu_lock_rc
     if {[info exists gpu_lock_rc]} {
-        lock_file_release $gpu_lock_rc
+	lock_file_release $gpu_lock_rc
 	unset gpu_lock_rc
     }
 }
