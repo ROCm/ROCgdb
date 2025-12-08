@@ -42,8 +42,8 @@ proc_with_prefix process_attach_cmdline_tests {} {
     global decimal
 
     if ![isnative] then {
-        unsupported "command attach test"
-        return 0
+	unsupported "command attach test"
+	return 0
     }
 
     set test_spawn_id [spawn_wait_for_attach $binfile]
