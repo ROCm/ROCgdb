@@ -308,7 +308,7 @@ proc gdb_compile_ocl {source dest type options} {
 
 	# target_compile always adds -lm which is not supported for
 	# kernel compilation.
-        set board [target_info name]
+	set board [target_info name]
 	if [board_info $board exists mathlib] {
 	    set mathlib [board_info $board mathlib]
 	    set_board_info mathlib ""
@@ -334,14 +334,14 @@ proc gdb_compile_ocl {source dest type options} {
 proc info_threads_get_wave_count { inf_num } {
     set wave_count 0
     gdb_test_multiple "info threads ${inf_num}.*" "" {
-        -re "AMDGPU Wave\[^\r\n\]+\r\n" {
-            incr wave_count
-            exp_continue
-        }
+	-re "AMDGPU Wave\[^\r\n\]+\r\n" {
+	    incr wave_count
+	    exp_continue
+	}
 
-        -re "$::gdb_prompt " {
-            pass $gdb_test_name
-        }
+	-re "$::gdb_prompt " {
+	    pass $gdb_test_name
+	}
     }
 
     return $wave_count
