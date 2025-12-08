@@ -1794,7 +1794,7 @@ update_all_relocations (size_t nentries)
   if (!all_relocations_root)
     {
       sz = nentries * sizeof (elf_relocation);
-      all_relocations_root = (elf_relocation *) xmalloc (sz);
+      all_relocations_root = xmalloc (sz);
       all_relocations = all_relocations_root;
       all_relocations_count = nentries;
     }
@@ -1802,11 +1802,11 @@ update_all_relocations (size_t nentries)
     {
       size_t orig_count = all_relocations_count;
       sz = (orig_count + nentries) * sizeof (elf_relocation);
-      all_relocations_root = (elf_relocation *)
-	xrealloc (all_relocations_root, sz);
+      all_relocations_root = xrealloc (all_relocations_root, sz);
       all_relocations = all_relocations_root + orig_count;
       all_relocations_count += nentries;
     }
+  memset (all_relocations, 0, nentries * sizeof (elf_relocation));
 }
 
 static uint64_t
@@ -3082,12 +3082,14 @@ get_solaris_section_type (unsigned long type)
 {
   switch (type)
     {
-    case SHT_SUNW_symtabnsort:
-      return "SUNW_symtabnsort";
-    case SHT_SUNW_ancillary:
-      return "SUNW_ancillary";
+    case SHT_SUNW_ctf:
+      return "SUNW_ctf";
+    case SHT_SUNW_symnsort:
+      return "SUNW_symnsort";
     case SHT_SUNW_phname:
       return "SUNW_phname";
+    case SHT_SUNW_ancillary:
+      return "SUNW_ancillary";
     case SHT_SUNW_capchain:
       return "SUNW_capchain";
     case SHT_SUNW_capinfo:
@@ -10072,13 +10074,11 @@ process_relocs (Filedata * filedata)
       size_t i;
       bool found = false;
 
-      for (i = 0, section = filedata->section_headers;
-	   i < filedata->file_header.e_shnum;
-	   i++, section++)
-	{
+      section = filedata->section_headers;
+      if (section != NULL)
+	for (i = 0; i < filedata->file_header.e_shnum; i++, section++)
 	  if (display_relocations (section, filedata, do_reloc))
 	    found = true;
-	}
 
       if (do_reloc && ! found)
 	{
