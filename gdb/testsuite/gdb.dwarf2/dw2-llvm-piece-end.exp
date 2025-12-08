@@ -189,4 +189,3 @@ switch $endian {
 }
 
 gdb_test "print/x var_array" " = \\{${val}\\}" "var_array print"
-

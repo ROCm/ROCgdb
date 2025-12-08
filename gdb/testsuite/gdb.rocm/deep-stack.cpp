@@ -67,4 +67,3 @@ main ()
   CHECK (hipDeviceSynchronize ());
   return EXIT_SUCCESS;
 }
-
