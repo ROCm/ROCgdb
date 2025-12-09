@@ -14691,6 +14691,18 @@ print_symbol_size (uint64_t vma, int base)
     }
 }
 
+/* The AArch64, ARM and RISC-V architectures define mapping
+   symbols (eg $d, $x, $t) which sometime should be ignored.  */
+
+static bool
+is_mapping_symbol (const char * name)
+{
+  return name[0] == '$'
+    && name [1] != 0
+    /* FIXME: Check that name[1] is lower case ASCII ?  */
+    && name [2] == 0;
+}
+
 /* Print information on a single symbol.  */
 
 static void
@@ -14825,17 +14837,20 @@ print_symbol (Filedata *           filedata,
     warn (_("local symbol %" PRIu64 " found at index >= %s's sh_info value of %u\n"),
 	  symbol_index, printable_section_name (filedata, section), section->sh_info);
 
-  /* Local symbols whose value is larger than their section's size are suspicious
-     especially if that section is mergeable - and hence might change offsets of
-     the contents inside the section.  */
+  /* Local symbols (in objec files) whose value is larger than their section's
+     size are suspicious especially if that section is mergeable - and hence
+     might change offsets of the contents inside the section.   Note - for
+     some reason we can get mapping symbols that do not relate to their
+     section's contents - so we ignore those type of symbol as well.  */
   if (ELF_ST_BIND (psym->st_info) == STB_LOCAL
+      && filedata->file_header.e_type == ET_REL
       && ! is_special
       && is_valid
       && psym->st_shndx < filedata->file_header.e_shnum
       && filedata->section_headers != NULL
-      /* FIXME: Should we warn for non-mergeable sections ? */
       && (filedata->section_headers[psym->st_shndx].sh_flags & SHF_MERGE)
-      && psym->st_value > filedata->section_headers[psym->st_shndx].sh_size)
+      && psym->st_value > filedata->section_headers[psym->st_shndx].sh_size
+      && ! is_mapping_symbol (strtab + psym->st_name))
     warn (_("local symbol %s has a value (%#" PRIx64 ") which is larger than mergeable section %s's size (%#" PRIx64 ")\n"),
 	  strtab + psym->st_name,
 	  psym->st_value,
@@ -23060,9 +23075,7 @@ get_symbol_for_build_attribute (Filedata *filedata,
 
 	/* The AArch64, ARM and RISC-V architectures define mapping symbols
 	   (eg $d, $x, $t) which we want to ignore.  */
-	if (ba_cache.strtab[sym->st_name] == '$'
-	    && ba_cache.strtab[sym->st_name + 1] != 0
-	    && ba_cache.strtab[sym->st_name + 2] == 0)
+	if (is_mapping_symbol (ba_cache.strtab + sym->st_name))
 	  continue;
 
 	if (is_open_attr)
