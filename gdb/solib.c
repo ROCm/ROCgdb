@@ -592,8 +592,7 @@ solib::clear ()
 
 lm_info::~lm_info () = default;
 
-/* Read in symbols for shared object SO.  If SYMFILE_VERBOSE is set in FLAGS,
-   be chatty about it.  Return true if any symbols were actually loaded.  */
+/* See solib.h.  */
 
 bool
 solib_read_symbols (solib &so, symfile_add_flags flags)
@@ -601,52 +600,50 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
   if (so.symbols_loaded)
     {
       /* If needed, we've already warned in our caller.  */
+      return false;
     }
-  else if (so.abfd == NULL)
+
+  if (so.abfd == nullptr)
     {
-      /* We've already warned about this library, when trying to open
-	 it.  */
+      /* We've already warned about this library, when trying to open it.  */
+      return false;
     }
-  else
+
+  flags |= current_inferior ()->symfile_flags;
+
+  try
     {
-      flags |= current_inferior ()->symfile_flags;
+      /* Have we already loaded this shared object?  */
+      so.objfile = nullptr;
+      for (objfile &objfile : current_program_space->objfiles ())
+	if (objfile.addr_low == so.addr_low)
+	  {
+	    so.objfile = &objfile;
+	    break;
+	  }
 
-      try
+      if (so.objfile == nullptr)
 	{
-	  /* Have we already loaded this shared object?  */
-	  so.objfile = nullptr;
-	  for (objfile &objfile : current_program_space->objfiles ())
-	    if (objfile.addr_low == so.addr_low)
-	      {
-		so.objfile = &objfile;
-		break;
-	      }
-
-	  if (so.objfile == NULL)
-	    {
-	      section_addr_info sap
-		= build_section_addr_info_from_section_table (so.sections);
-	      gdb_bfd_ref_ptr tmp_bfd = so.abfd;
-	      so.objfile
-		= symbol_file_add_from_bfd (tmp_bfd, so.name.c_str (),
-					    flags, &sap, OBJF_SHARED, nullptr);
-	      so.objfile->addr_low = so.addr_low;
-	    }
-
-	  so.symbols_loaded = true;
-	}
-      catch (const gdb_exception_error &e)
-	{
-	  exception_fprintf (gdb_stderr, e,
-			     _("Error while reading shared"
-			       " library symbols for %s:\n"),
-			     so.name.c_str ());
+	  section_addr_info sap
+	    = build_section_addr_info_from_section_table (so.sections);
+	  gdb_bfd_ref_ptr tmp_bfd = so.abfd;
+	  so.objfile = symbol_file_add_from_bfd (tmp_bfd, so.name.c_str (),
+						 flags, &sap, OBJF_SHARED,
+						 nullptr);
+	  so.objfile->addr_low = so.addr_low;
 	}
 
-      return true;
+      so.symbols_loaded = true;
+    }
+  catch (const gdb_exception_error &e)
+    {
+      exception_fprintf (gdb_stderr, e,
+			 _("Error while reading shared"
+			   " library symbols for %s:\n"),
+			 so.name.c_str ());
     }
 
-  return false;
+  return true;
 }
 
 /* Return true if KNOWN->objfile is used by any other solib object
