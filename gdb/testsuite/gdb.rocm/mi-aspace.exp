@@ -45,7 +45,23 @@ proc_with_prefix test_mi_memory_changed {} {
 
 	-re "\\^done,value=\"($hex) <global_var>\"\r\n${mi_gdb_prompt}" {
 	    set global_var_addr $expect_out(1,string)
+	    if {[istarget *-*-mingw*]} {
+		# So we get a KPASS when GDB gains support the MSVC
+		# mangling scheme and we remember to remove the fail
+		# regexp below.
+		setup_kfail "*-*-*" "xxxx"
+	    }
 	    pass $gdb_test_name
+	}
+	-re "\\^done,value=\"($hex) <\\?global_var@@3HA>\"\r\n${mi_gdb_prompt}" {
+	    set global_var_addr $expect_out(1,string)
+	    # Tolerate MSVC mangling scheme, and let the testcase
+	    # proceed.  We shouldn't see it anywhere else other than
+	    # Windows, though.
+	    if {[istarget *-*-mingw*]} {
+		setup_kfail "*-*-*" "xxxx"
+	    }
+	    fail $gdb_test_name
 	}
     }
 
