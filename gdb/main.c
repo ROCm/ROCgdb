@@ -61,6 +61,7 @@
 #include "bt-utils.h"
 #include "terminal.h"
 #include "logging-file.h"
+#include "filesystem.h"
 
 /* The selected interpreter.  */
 std::string interpreter_p;
@@ -717,7 +718,7 @@ captured_main_1 (struct captured_main_args *context)
     = xstrprintf ("%s: ", gdb_program_name);
   warning_pre_print = tmp_warn_preprint.get ();
 
-  current_directory = getcwd (NULL, 0);
+  current_directory = gdb_getcwd (NULL, 0);
   if (current_directory == NULL)
     perror_warning_with_name (_("error finding working directory"));
 

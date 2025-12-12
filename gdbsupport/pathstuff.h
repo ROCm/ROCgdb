@@ -33,6 +33,11 @@
 /* String containing the current directory (what getwd would return).  */
 extern char *current_directory;
 
+/* Normalize backslashes to forward slashes in the null-terminated
+   PATH string.  Returns PATH.  */
+
+extern char *normalize_slashes (char *path);
+
 /* Return the real path of FILENAME, expanding all the symbolic links.
 
    Contrary to "gdb_abspath", this function does not use

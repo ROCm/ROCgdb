@@ -539,6 +539,12 @@ win32_process_target::create_inferior (const char *program,
      }
   cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path, PATH_MAX);
   program = real_path;
+#else
+  /* Convert the executable path to backslash separators, so the
+     inferior observes native backslashes in its own program name.  */
+  std::string program_native = program;
+  std::replace (program_native.begin (), program_native.end (), '/', '\\');
+  program = program_native.c_str ();
 #endif
 
   OUTMSG2 (("Command line is \"%s %s\"\n", program, args));

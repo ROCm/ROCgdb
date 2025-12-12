@@ -3062,7 +3062,11 @@ windows_nat_target::create_inferior (const char *exec_file,
       si.dwFlags |= STARTF_USESTDHANDLES;
     }
 
-  toexec = exec_file;
+  /* Convert the executable path to backslash separators, so the
+     inferior observes native backslashes in its own program name.  */
+  std::string toexec_native = exec_file;
+  std::replace (toexec_native.begin (), toexec_native.end (), '/', '\\');
+  toexec = toexec_native.c_str ();
   /* Build the command line, a space-separated list of tokens where
      the first token is the name of the module to be executed.
      To avoid ambiguities introduced by spaces in the module name,

@@ -87,6 +87,22 @@
 
 * Support for native Thread Local Storage (TLS) variables on Windows.
 
+* GDB now normalizes backslashes to forward slashes on Windows.
+
+  E.g., depending on compiler and build system used by your project,
+  previously GDB could show a mix of slash styles, like for example:
+
+     C:/proj/src\main.c
+
+  GDB will now consistently show forward slashes:
+
+     C:/proj/src/main.c
+
+  This impacts all interpreters, including the CLI, the TUI, the
+  GDB/MI interface, and the Debug Adapter Protocol, and affects
+  everywhere GDB shows a filename/dirname: source filenames,
+  executable filename, shared libraries, the cd/pwd commands, etc.
+
 * GDB now supports libipt v2.2 events originating from Event Tracing (set
   record btrace pt event-tracing on) on a FRED-enabled system and from
   Trigger Tracing.

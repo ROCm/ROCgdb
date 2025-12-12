@@ -19,6 +19,8 @@
 #ifndef GDB_FILESYSTEM_H
 #define GDB_FILESYSTEM_H
 
+#include "gdbsupport/pathstuff.h"
+
 extern const char file_system_kind_auto[];
 extern const char file_system_kind_unix[];
 extern const char file_system_kind_dos_based[];
@@ -54,5 +56,47 @@ extern const char *target_lbasename (const char *kind, const char *name);
    resolved to the real kind.  That is, you never see "auto" as a
    result from this function.  */
 extern const char *effective_target_file_system_kind (void);
+
+/* Return true if GDB should normalize backslashes to forward slashes.
+   This is true if GDB is running on a system with a DOS-based
+   filesystem (e.g., Windows), or, if cross debugging and the target
+   itself has a DOS-based filesystem (e.g., remote debugging Windows
+   GDBserver from Linux).  */
+extern bool should_normalize_slashes ();
+
+/* Normalizes backslashes to forward slashes in a path string if
+   necessary, extending the lifetime of the normalized copy for the
+   duration of the object's scope.
+
+   The constructor takes a pointer-to-pointer and updates *PATH to
+   point at the normalized string when normalization is needed, so
+   callers need only:
+
+     scoped_normalized_path path_storage (&path);
+
+   and then use PATH directly without a separate reassignment.  */
+struct scoped_normalized_path
+{
+  explicit scoped_normalized_path (const char **path)
+  {
+    gdb_assert (path != nullptr);
+    gdb_assert (*path != nullptr);
+
+    if (should_normalize_slashes ())
+      {
+	m_normalized = *path;
+	normalize_slashes (&m_normalized[0]);
+	*path = m_normalized.c_str ();
+      }
+  }
+
+private:
+  /* The normalized version of PATH if normalization was necessary,
+     empty otherwise.  */
+  std::string m_normalized;
+};
+
+/* Like getcwd but normalizes slashes if needed.  */
+extern char *gdb_getcwd (char *buf, size_t size);
 
 #endif /* GDB_FILESYSTEM_H */
