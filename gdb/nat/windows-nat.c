@@ -18,6 +18,7 @@
 
 #include "nat/windows-nat.h"
 #include "gdbsupport/common-debug.h"
+#include "gdbsupport/pathstuff.h"
 #include "target/target.h"
 
 #undef GetModuleFileNameEx
@@ -258,6 +259,8 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
       unsigned err = (unsigned) GetLastError ();
       throw_winerror_with_name (_("Error getting executable filename"), err);
     }
+
+  normalize_slashes (exe_name_ret, len);
 #endif
 
     return 1;	/* success */

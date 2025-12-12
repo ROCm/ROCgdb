@@ -2832,6 +2832,10 @@ allocate_symtab (struct compunit_symtab *cust, const char *filename,
   struct symtab *symtab
     = OBSTACK_ZALLOC (&objfile->objfile_obstack, struct symtab);
 
+  std::string normalized_filename = filename;
+  normalize_slashes (&normalized_filename[0]);
+  filename = normalized_filename.c_str ();
+
   symtab->filename = objfile->intern (filename);
   symtab->filename_for_id = objfile->intern (filename_for_id);
   symtab->set_language (deduce_language_from_filename (filename));

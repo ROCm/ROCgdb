@@ -1207,6 +1207,7 @@ windows_make_so (const char *name, LPVOID load_addr)
       strcat (buf, "\\ntdll.dll");
     }
 
+  normalize_slashes (buf);
   so->name = buf;
 #else
   wchar_t buf[__PMAX];

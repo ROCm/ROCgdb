@@ -32,6 +32,24 @@ char *current_directory;
 
 /* See gdbsupport/pathstuff.h.  */
 
+void
+normalize_slashes (char *path)
+{
+  for (char *p = path; *p != '\0'; ++p)
+    if (*p == '\\')
+      *p = '/';
+}
+
+/* See gdbsupport/pathstuff.h.  */
+
+void
+normalize_slashes (char *path, size_t len)
+{
+  std::replace (path, path + len, '\\', '/');
+}
+
+/* See gdbsupport/pathstuff.h.  */
+
 gdb::unique_xmalloc_ptr<char>
 gdb_realpath (const char *filename)
 {
@@ -68,7 +86,10 @@ gdb_realpath (const char *filename)
        we might not be able to display the original casing in a given
        path.  */
     if (len > 0 && len < MAX_PATH)
-      return make_unique_xstrdup (buf);
+      {
+	normalize_slashes (buf, len);
+	return make_unique_xstrdup (buf);
+      }
   }
 #else
   {
