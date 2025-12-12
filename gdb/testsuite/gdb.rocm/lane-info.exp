@@ -447,10 +447,15 @@ proc_with_prefix test {} {
 
 	    # Interrupt threads/waves, to prepare for following tests.
 	    with_test_prefix "stop waves" {
+		if {[istarget *-*-mingw*]} {
+		    set sig "SIGTRAP"
+		} else {
+		    set sig "SIGINT"
+		}
 		gdb_test_multiple "interrupt" "" {
 		    -re "$::gdb_prompt " {
 			gdb_test_multiple "" $gdb_test_name {
-			    -re "received signal SIGINT" {
+			    -re "received signal $sig" {
 				pass $gdb_test_name
 			    }
 			}

@@ -51,7 +51,7 @@ proc test {schedlock interrupt_how} {
     gdb_continue_to_breakpoint "kernel"
     gdb_test_no_output "set scheduler-locking $schedlock"
 
-    if {$schedlock == "on"} {
+    if {$schedlock == "on" && ![istarget *-*-mingw*]} {
 	# Until the issue is fixed, use a low timeout to avoid wasting
 	# much testing time.
 	set intr_timeout 1
@@ -60,6 +60,12 @@ proc test {schedlock interrupt_how} {
     }
 
     proc maybe_kfail {schedlock} {
+	# Windows always spawns a new host thread to handle Ctrl-C, so
+	# we don't expect a hang there.
+	if {[istarget *-*-mingw*]} {
+	    return
+	}
+
 	if {$schedlock == "on"} {
 	    setup_kfail "*-*-*" "xxxx"
 	}
@@ -88,10 +94,15 @@ proc test {schedlock interrupt_how} {
 	}
 	gdb_test_multiple "interrupt" "" {
 	    -re "$gdb_prompt " {
+		if {[istarget *-*-mingw*]} {
+		    set sig "SIGTRAP"
+		} else {
+		    set sig "SIGINT"
+		}
 		maybe_kfail $schedlock
 		gdb_test_multiple "" "interrupt" {
 		    -timeout $intr_timeout
-		    -re "Thread .* received signal SIGINT," {
+		    -re "Thread .* received signal $sig," {
 			pass $gdb_test_name
 		    }
 		}
