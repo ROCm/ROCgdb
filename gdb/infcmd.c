@@ -2001,12 +2001,18 @@ info_program_command (const char *args, int from_tty)
 		styled_string (command_style.style (), "info registers"));
 }
 
+
+/* A helper function that prints some info from ENV.  If ENV is
+   nullptr, then the host environment is used; otherwise the provided
+   environment is used.  VAR is either NULL, or the name of the
+   variable to display.  */
+
 static void
-environment_info (const char *var, int from_tty)
+display_environment (const gdb_environ *env, const char *var)
 {
   if (var)
     {
-      const char *val = current_inferior ()->environment.get (var);
+      const char *val = env == nullptr ? getenv (var) : env->get (var);
 
       if (val)
 	{
@@ -2024,7 +2030,9 @@ environment_info (const char *var, int from_tty)
     }
   else
     {
-      char **envp = current_inferior ()->environment.envp ();
+      char **envp = env == nullptr ? environ : env->envp ();
+      if (envp == nullptr)
+	return;
 
       for (int idx = 0; envp[idx] != nullptr; ++idx)
 	{
@@ -2035,7 +2043,23 @@ environment_info (const char *var, int from_tty)
 }
 
 static void
-set_environment_command (const char *arg, int from_tty)
+environment_info (const char *var, int from_tty)
+{
+  display_environment (&current_inferior ()->environment, var);
+}
+
+static void
+local_environment_info (const char *var, int from_tty)
+{
+  display_environment (nullptr, var);
+}
+
+/* A helper to set an environment variable.  ARG is the string passed
+   to 'set environment', i.e., the variable and value to use.  ENV is
+   the environment in which the variable will be set.  */
+
+static void
+set_var_in_environment (gdb_environ *env, const char *arg)
 {
   const char *p, *val;
   int nullset = 0;
@@ -2090,24 +2114,83 @@ set_environment_command (const char *arg, int from_tty)
       gdb_printf (_("Setting environment variable "
 		    "\"%s\" to null value.\n"),
 		  var.c_str ());
-      current_inferior ()->environment.set (var.c_str (), "");
+      if (env == nullptr)
+	setenv (var.c_str (), "", 1);
+      else
+	env->set (var.c_str (), "");
     }
   else
-    current_inferior ()->environment.set (var.c_str (), val);
+    {
+      if (env == nullptr)
+	setenv (var.c_str (), val, 1);
+      else
+	env->set (var.c_str (), val);
+    }
+}
+
+static void
+set_environment_command (const char *arg, int from_tty)
+{
+  set_var_in_environment (&current_inferior ()->environment, arg);
+}
+
+static void
+set_local_environment_command (const char *arg, int from_tty)
+{
+  set_var_in_environment (nullptr, arg);
+}
+
+/* A helper to unset an environment variable.  ENV is the environment
+   in which the variable will be unset.  VAR is the name of the
+   variable, or NULL meaning unset all variables.  */
+
+static void
+unset_var_in_environment (gdb_environ *env, const char *var, int from_tty)
+{
+  if (var == 0)
+    {
+      /* If there is no clearenv, don't bother asking the question.  */
+#ifndef HAVE_CLEARENV
+      if (env == nullptr)
+	from_tty = 0;
+#endif
+
+      /* If there is no argument, delete all environment variables.
+	 Ask for confirmation if reading from the terminal.  */
+      if (!from_tty || query (_("Delete all environment variables? ")))
+	{
+	  /* This was handled above.  */
+	  if (env == nullptr)
+	    {
+#ifdef HAVE_CLEARENV
+	      clearenv ();
+#else
+	      error (_("Cannot clear the local environment on this host."));
+#endif
+	    }
+	  else
+	    env->clear ();
+	}
+    }
+  else
+    {
+      if (env == nullptr)
+	unsetenv (var);
+      else
+	env->unset (var);
+    }
 }
 
 static void
 unset_environment_command (const char *var, int from_tty)
 {
-  if (var == 0)
-    {
-      /* If there is no argument, delete all environment variables.
-	 Ask for confirmation if reading from the terminal.  */
-      if (!from_tty || query (_("Delete all environment variables? ")))
-	current_inferior ()->environment.clear ();
-    }
-  else
-    current_inferior ()->environment.unset (var);
+  unset_var_in_environment (&current_inferior ()->environment, var, from_tty);
+}
+
+static void
+unset_local_environment_command (const char *var, int from_tty)
+{
+  unset_var_in_environment (nullptr, var, from_tty);
 }
 
 /* Handle the execution path (PATH variable).  */
@@ -2498,7 +2581,7 @@ setup_inferior (int from_tty)
   /* If no exec file is yet known, try to determine it from the
      process itself.  */
   if (current_program_space->exec_filename () == nullptr)
-    exec_file_locate_attach (inferior_ptid.pid (), 1, from_tty);
+    exec_file_locate_attach (inferior->pid, 1, from_tty);
   else
     {
       reopen_exec_file ();
@@ -2506,7 +2589,7 @@ setup_inferior (int from_tty)
     }
 
   /* Take any necessary post-attaching actions for this platform.  */
-  target_post_attach (inferior_ptid.pid ());
+  target_post_attach (inferior->pid);
 
   post_create_inferior (from_tty, true);
 }
@@ -3135,6 +3218,14 @@ give the program being debugged.  With no arguments, prints the entire\n\
 environment to be given to the program."), &showlist);
   set_cmd_completer (c, noop_completer);
 
+  c = add_cmd ("local-environment", no_class, local_environment_info, _("\
+The local environment, or one variable's value.\n\
+With an argument VAR, prints the value of environment variable VAR to\n\
+use locally.  With no arguments, prints the entire local environment.\n\
+The local environment by commands that run a process locally, for\n\
+example \"shell\"."), &showlist);
+  set_cmd_completer (c, noop_completer);
+
   add_basic_prefix_cmd ("unset", no_class,
 			_("Complement to certain \"set\" commands."),
 			&unsetlist, 0, &cmdlist);
@@ -3145,11 +3236,27 @@ This does not affect the program until the next \"run\" command."),
 	       &unsetlist);
   set_cmd_completer (c, noop_completer);
 
+  c = add_cmd ("local-environment", class_run,
+	       unset_local_environment_command, _("\
+Cancel local environment variable VAR."),
+	       &unsetlist);
+  set_cmd_completer (c, noop_completer);
+
   c = add_cmd ("environment", class_run, set_environment_command, _("\
 Set environment variable value to give the program.\n\
 Arguments are VAR VALUE where VAR is variable name and VALUE is value.\n\
 VALUES of environment variables are uninterpreted strings.\n\
 This does not affect the program until the next \"run\" command."),
+	       &setlist);
+  set_cmd_completer (c, noop_completer);
+
+  c = add_cmd ("local-environment", class_run,
+	       set_local_environment_command, _("\
+Set local environment variable value.\n\
+Arguments are VAR VALUE where VAR is variable name and VALUE is value.\n\
+VALUES of environment variables are uninterpreted strings.\n\
+The local environment by commands that run a process locally, for\n\
+example \"shell\"."),
 	       &setlist);
   set_cmd_completer (c, noop_completer);
 

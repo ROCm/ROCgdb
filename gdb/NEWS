@@ -6,6 +6,9 @@
 * Support for .gdb_index sections with version less than 7 has been
   removed.
 
+* Support for Guile 2.0 has been removed.  Guile 2.2 is now the minimal
+  supported Guile version.
+
 * GDB now accepts --no-escape-args as an alternative to --args on the
   command line.  GDB will not escape special shell characters within
   arguments after --no-escape-args.
@@ -54,6 +57,13 @@
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
 
 * New commands
+
+set local-environment
+show local-environment
+unset local-environment
+  Analogs of the existing "environment" commands that affect GDB's own
+  environment.  The local environment is used by "shell", "pipe", and
+  other commands that launch a subprocess other than an inferior.
 
 maintenance test-remote-args ARGS
   Test splitting and joining of inferior arguments ARGS as they would
@@ -126,6 +136,14 @@ qExecAndArgs
   ** New Inferior.corefile attribute.  This read only attribute
      contains the gdb.Corefile object if a core file is loaded into
      the inferior, otherwise, this contains None.
+
+* Guile API
+
+  ** Procedures 'memory-port-read-buffer-size',
+     'set-memory-port-read-buffer-size!', 'memory-port-write-buffer-size',
+     and 'set-memory-port-write-buffer-size!' have been removed.  They were
+     deprecated since GDB 10.  Users who need to control the size of a
+     memory port's internal buffer can use the 'setvbuf' procedure.
 
 *** Changes in GDB 17
 
@@ -1875,7 +1893,7 @@ GNU/Linux/OpenRISC		or1k*-*-linux*
     the '-force' flag of the CLI's "cond" command.
 
  ** '-file-list-exec-source-files [--group-by-objfile]
- 	                          [--basename | --dirname]
+	                          [--basename | --dirname]
                                   [--] [REGEXP]'
 
     The existing -file-list-exec-source-files command now takes an

@@ -16,6 +16,8 @@
 #
 # Support library for testing ROCm (AMD GPU) GDB features.
 
+# tclint-disable redefined-builtin
+
 # ROCM_PATH is used by hipcc as well.
 if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path $::env(ROCM_PATH)
@@ -309,7 +311,7 @@ proc gdb_compile_ocl {source dest type options} {
 	# target_compile always adds -lm which is not supported for
 	# kernel compilation.
 	set board [target_info name]
-	if [board_info $board exists mathlib] {
+	if {[board_info $board exists mathlib]} {
 	    set mathlib [board_info $board mathlib]
 	    set_board_info mathlib ""
 	    set result [target_compile $source $dest $type $options]

@@ -232,7 +232,7 @@ proc switch_to_lane_branch {branch lane_then lane_else} {
 
 proc test_step {branch} {
     with_test_prefix "step: $branch" {
-	if ![setup lane_then lane_else] {
+	if {![setup lane_then lane_else]} {
 	    return
 	}
 
@@ -315,7 +315,7 @@ proc test_step {branch} {
 
 proc test_step_divergent {branch} {
     with_test_prefix "step divergent: $branch" {
-	if ![setup lane_then lane_else] {
+	if {![setup lane_then lane_else]} {
 	    return
 	}
 
@@ -344,7 +344,7 @@ proc test_step_divergent {branch} {
 
 proc test_next {branch} {
     with_test_prefix "next: $branch" {
-	if ![setup lane_then lane_else] {
+	if {![setup lane_then lane_else]} {
 	    return
 	}
 
@@ -398,7 +398,7 @@ proc test_next {branch} {
 # some lane or lanes.
 
 proc_with_prefix test_breakpoint_lane_cond {} {
-    if ![setup lane_then lane_else] {
+    if {![setup lane_then lane_else]} {
 	return
     }
 

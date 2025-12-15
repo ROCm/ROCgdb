@@ -1389,19 +1389,15 @@ reg_type_mask (aarch64_reg_type reg_type)
 
    It returns PARSE_FAIL if the register list is invalid.
 
-   If HAS_QUALIFIER is true, the registers in the list must have qualifiers
-   or the list is invalid.
-   If HAS_QUALIFIER is false, the registers in the list must not have
-   qualifiers or the list is invalid.
+   If HAS_QUALIFIER is true, the registers must have type suffixes.
+   Otherwise, the registers must not have type suffixes.
 
-   The list contains one to four registers.
-   Each register can be one of:
-   <Vt>.<T>[<index>]
-   <Vt>.<T>
-   All <T> should be identical.
-   All <index> should be identical.
-   There are restrictions on <Vt> numbers which are checked later
-   (by reg_list_valid_p).  */
+   If the register list contains typed SIMD registers without an element count
+   (e.g. "v0.h"), then the register list must be indexed.
+
+   The list must contain one to four registers, and all type suffixes must be
+   identical.  Restrictions on register numbers are checked later (by
+   reg_list_valid_p).  */
 
 static int
 parse_vector_reg_list (char **ccp, aarch64_reg_type type,
@@ -10823,6 +10819,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sha3",		AARCH64_FEATURE (SHA3), AARCH64_FEATURE (SHA2)},
   {"rng",		AARCH64_FEATURE (RNG), AARCH64_NO_FEATURES},
   {"ssbs",		AARCH64_FEATURE (SSBS), AARCH64_NO_FEATURES},
+  {"lscp",		AARCH64_FEATURE (LSCP), AARCH64_NO_FEATURES},
   {"memtag",		AARCH64_FEATURE (MEMTAG), AARCH64_NO_FEATURES},
   {"occmo",		AARCH64_FEATURE (OCCMO), AARCH64_NO_FEATURES},
   {"cmpbr",		AARCH64_FEATURE (CMPBR), AARCH64_NO_FEATURES},

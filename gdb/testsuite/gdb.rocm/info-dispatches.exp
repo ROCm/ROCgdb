@@ -37,7 +37,7 @@ with_rocm_gpu_lock {
 	clean_restart $testfile
     }
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
 

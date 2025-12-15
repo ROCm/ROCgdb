@@ -41,7 +41,7 @@ proc_with_prefix process_attach_cmdline_tests {} {
     global GDBFLAGS
     global decimal
 
-    if ![isnative] then {
+    if {![isnative]} then {
 	unsupported "command attach test"
 	return 0
     }

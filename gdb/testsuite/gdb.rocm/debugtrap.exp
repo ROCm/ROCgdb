@@ -41,7 +41,7 @@ proc_with_prefix do_test_under_debugger {} {
     gdb_load $::binfile
 
     with_rocm_gpu_lock {
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return
 	}
 

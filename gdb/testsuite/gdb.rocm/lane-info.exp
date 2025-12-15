@@ -144,7 +144,7 @@ proc_with_prefix test {} {
     clean_restart
     gdb_load $::binfile
 
-    if ![runto "bar" allow-pending message] {
+    if {![runto "bar" allow-pending message]} {
 	return
     }
 

@@ -31,7 +31,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 with_rocm_gpu_lock {
 
 # Run to main and break
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main and break in program ${testfile}."
     return -1
 }
@@ -120,7 +120,7 @@ with_test_prefix "break FILE:LINENO if DEVICE_THREAD_COND" {
 #break <file>:<lineNO> <device thread condition>
 #e.g. break bit_extract_compile:35 if $_streq($_wave_id,(0,0,1)/2)
 with_test_prefix "break FILE:LINE if WAVE_ID_CONDITION" {
-    if [allow_python_tests] {
+    if {[allow_python_tests]} {
 	clean_restart
 	gdb_load ${binfile}
 	gdb_breakpoint "$srcfile:$breakpoint_loc if \$_streq(\$_wave_id,\"$wave_id\")" allow-pending

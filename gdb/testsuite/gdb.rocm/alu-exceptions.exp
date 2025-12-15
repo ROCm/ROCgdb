@@ -38,7 +38,7 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 
 	with_rocm_gpu_lock {
 	    gdb_test_no_output "set args $exception_name"
-	    if ![runto_main] {
+	    if {![runto_main]} {
 		return
 	    }
 
@@ -114,7 +114,7 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 	with_rocm_gpu_lock {
 	    gdb_test_no_output "set args $exception_name"
 	    gdb_test_no_output "set amdgpu precise-alu-exceptions on"
-	    if ![runto_main] {
+	    if {![runto_main]} {
 		return
 	    }
 
@@ -138,7 +138,7 @@ with_test_prefix "check_precise_alu_support" {
 
     with_rocm_gpu_lock {
 	gdb_test_no_output "set amdgpu precise-alu-exceptions on"
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return
 	}
 

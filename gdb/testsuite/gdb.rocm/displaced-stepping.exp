@@ -58,7 +58,7 @@ with_rocm_gpu_lock {
 
     gdb_test_no_output "set displaced-stepping on"
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	fail "can't run to main"
 	return -1
     }

@@ -35,7 +35,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 with_rocm_gpu_lock {
 
 with_test_prefix "private lane watchpoints" {
-    if ![runto_main] {
+    if {![runto_main]} {
 	fail "can't run to main"
 	return -1
     }
@@ -145,7 +145,7 @@ clean_restart
 gdb_load ${binfile}
 
 with_test_prefix "global memory watchpoint" {
-    if ![runto_main] {
+    if {![runto_main]} {
 	fail "can't run to main"
 	return -1
     }
@@ -190,7 +190,7 @@ with_test_prefix "global memory watchpoint" {
 }
 
 with_test_prefix "Watchpoint and thread scope change " {
-    if ![runto_main] {
+    if {![runto_main]} {
 	fail "can't run to main"
 	return -1
     }

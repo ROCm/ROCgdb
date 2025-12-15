@@ -458,7 +458,7 @@ make_ranges_from_sorted_vector (const std::vector<int> &numbers,
   for (auto it = start + 1; it != numbers.end(); it++)
     {
       if ((previous_value + 1) < *it)
-        {
+	{
 	  /* The current range ends.  */
 	  has_brackets = true;
 
@@ -475,9 +475,9 @@ make_ranges_from_sorted_vector (const std::vector<int> &numbers,
 	    }
 
 	  /* The current value is the beginning of a new range.  */
-          start = it;
-          result += " " + std::to_string (*start);
-        }
+	  start = it;
+	  result += " " + std::to_string (*start);
+	}
       previous_value = *it;
     }
 

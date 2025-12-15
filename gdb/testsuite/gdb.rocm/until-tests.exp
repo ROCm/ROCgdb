@@ -43,7 +43,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" \
 
 with_rocm_gpu_lock {
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }
@@ -56,9 +56,9 @@ gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 with_test_prefix "until with scheduler-locking on" {
     gdb_test_no_output "set scheduler-locking on"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-	"bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
 	"info line at breakpoint_loc + 3"
     gdb_test_no_output "set scheduler-locking off"
     gdb_test "clear bit_extract_kernel"
@@ -73,8 +73,8 @@ with_test_prefix "until without location; scheduler-locking on" {
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test_no_output "set scheduler-locking on"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+1].*" \
+    gdb_test "until" "\[^\r\n\]*[expr {$breakpoint_loc+1}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+1}].*" \
 	"info line at breakpoint_loc + 1"
     gdb_test_no_output "set scheduler-locking off"
     gdb_test "clear bit_extract_kernel"
@@ -89,9 +89,9 @@ with_test_prefix "until after conditional breakpoint" {
     gdb_test "run" \
 	".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-	"bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
 	"info line at breakppoint_loc + 3"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 }
@@ -132,9 +132,9 @@ with_test_prefix "until with non-stop on" {
     gdb_test "thread $threadid" \
 	"Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-	"bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
 	"info line at breakpoint_loc + 3"
     gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 }

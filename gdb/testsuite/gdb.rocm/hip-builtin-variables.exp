@@ -167,7 +167,7 @@ proc check_builtin_variables_notfound {} {
 #   device code.
 
 with_rocm_gpu_lock {
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
 

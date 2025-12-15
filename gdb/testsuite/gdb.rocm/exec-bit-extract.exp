@@ -44,7 +44,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 
 with_rocm_gpu_lock {
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }

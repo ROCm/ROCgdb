@@ -1352,7 +1352,7 @@ gdb_test_no_output "maint set lane-divergence-support off"
 gdb_test \
     "set exec-wrapper env 'LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${rocm_path}/lib'"
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }

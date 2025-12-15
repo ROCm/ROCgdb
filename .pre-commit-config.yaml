@@ -104,10 +104,16 @@ repos:
       files: '^(gdb(support|server)?)/.*$'
       pass_filenames: true
       stages: [pre-commit]
+    - id: pre-commit-setup
+      name: pre-commit-setup
+      language: script
+      entry: gdb/contrib/pre-commit-setup.py
+      always_run: true
+      require_serial: true
   - repo: https://github.com/nmoroze/tclint
-    rev: v0.6.1
+    rev: v0.6.2
     hooks:
     - id: tclint
-      args: [--config, gdb/tclint.toml]
+      args: [--config, gdb/tclint.toml, --commands, gdb/testsuite/tclint-plugin.py]
       types_or: [file]
       files: '^gdb/testsuite/.*\.(exp|tcl)$'

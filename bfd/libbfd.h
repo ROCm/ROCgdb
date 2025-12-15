@@ -3590,6 +3590,19 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_LARCH_TLS_LD_PCREL20_S2",
   "BFD_RELOC_LARCH_TLS_GD_PCREL20_S2",
   "BFD_RELOC_LARCH_TLS_DESC_PCREL20_S2",
+  "BFD_RELOC_LARCH_CALL30",
+  "BFD_RELOC_LARCH_PCADD_HI20",
+  "BFD_RELOC_LARCH_PCADD_LO12",
+  "BFD_RELOC_LARCH_GOT_PCADD_HI20",
+  "BFD_RELOC_LARCH_GOT_PCADD_LO12",
+  "BFD_RELOC_LARCH_TLS_IE_PCADD_HI20",
+  "BFD_RELOC_LARCH_TLS_IE_PCADD_LO12",
+  "BFD_RELOC_LARCH_TLS_LD_PCADD_HI20",
+  "BFD_RELOC_LARCH_TLS_LD_PCADD_LO12",
+  "BFD_RELOC_LARCH_TLS_GD_PCADD_HI20",
+  "BFD_RELOC_LARCH_TLS_GD_PCADD_LO12",
+  "BFD_RELOC_LARCH_TLS_DESC_PCADD_HI20",
+  "BFD_RELOC_LARCH_TLS_DESC_PCADD_LO12",
  "@@overflow: BFD_RELOC_UNUSED@@",
 };
 #endif
@@ -3627,6 +3640,14 @@ bool _bfd_unrecognized_reloc
    (bfd * abfd,
     sec_ptr section,
     unsigned int r_type) ATTRIBUTE_HIDDEN;
+
+void _bfd_link_reloc_status_error
+   (bfd *abfd,
+    struct bfd_link_info *link_info,
+    asection *input_section,
+    arelent *reloc_entry,
+    char *error_message,
+    bfd_reloc_status_type r) ATTRIBUTE_HIDDEN;
 
 /* Extracted from section.c.  */
 #define BFD_FAKE_SECTION(SEC, SYM, NAME, IDX, FLAGS)                   \

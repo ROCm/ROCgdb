@@ -173,7 +173,7 @@ producer_is_llvm (const char *producer)
 	  || (p != nullptr && p[-1] == ' '))
 	return true;
       if (startswith (producer, " F90 Flang "))
-        return true;
+	return true;
     }
   return false;
 }

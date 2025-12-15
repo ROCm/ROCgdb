@@ -1367,7 +1367,7 @@ dwarf_register::write (const frame_info_ptr &initial_frame, const gdb_byte *buf,
       || bit_size % HOST_CHAR_BIT != 0)
     {
       /* Contents is copied non-byte-aligned into the register.
-         Need some bits from original register value.  */
+	 Need some bits from original register value.  */
       read_from_register (frame, gdb_regnum,
 			  total_bits_to_skip / HOST_CHAR_BIT,
 			  temp_buf, optimized, unavailable);
@@ -1655,7 +1655,7 @@ private:
 void
 dwarf_implicit_pointer::read (const frame_info_ptr &frame, gdb_byte *buf,
 			      int buf_bit_offset, size_t bit_size,
-                              LONGEST bits_to_skip, size_t location_bit_limit,
+			      LONGEST bits_to_skip, size_t location_bit_limit,
 			      bool big_endian, int *optimized,
 			      int *unavailable) const
 {
@@ -1910,7 +1910,7 @@ dwarf_composite::read (const frame_info_ptr &frame, gdb_byte *buf,
       LONGEST piece_bit_size = m_pieces[i].m_size;
 
       if (total_bits_to_skip < piece_bit_size)
-        break;
+	break;
 
       total_bits_to_skip -= piece_bit_size;
     }
@@ -1921,7 +1921,7 @@ dwarf_composite::read (const frame_info_ptr &frame, gdb_byte *buf,
       LONGEST actual_bit_size = piece_bit_size;
 
       if (actual_bit_size > bit_size)
-        actual_bit_size = bit_size;
+	actual_bit_size = bit_size;
 
       m_pieces[i].m_location->read (frame, buf, buf_bit_offset,
 				    actual_bit_size, total_bits_to_skip,
@@ -1969,7 +1969,7 @@ dwarf_composite::write (const frame_info_ptr &frame, const gdb_byte *buf,
       LONGEST actual_bit_size = piece_bit_size;
 
       if (actual_bit_size > bit_size)
-        actual_bit_size = bit_size;
+	actual_bit_size = bit_size;
 
       m_pieces[i].m_location->write (frame, buf, buf_bit_offset,
 				     actual_bit_size, total_bits_to_skip,
@@ -2333,7 +2333,7 @@ dwarf_value_binary_op (std::shared_ptr<const dwarf_value> arg1,
   value *result = value_binop (arg1_value, arg2_value, op);
 
   return std::make_shared<dwarf_value> (result->contents_raw ().data (),
-				        result->type ());
+					result->type ());
 }
 
 /* Apply a negation operation on ARG and return a new value entry
