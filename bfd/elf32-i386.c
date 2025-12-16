@@ -216,20 +216,20 @@ elf_i386_reloc_type_lookup (bfd *abfd,
       TRACE ("BFD_RELOC_386_PLT32");
       return &elf_howto_table[R_386_PLT32];
 
-    case BFD_RELOC_386_COPY:
-      TRACE ("BFD_RELOC_386_COPY");
+    case BFD_RELOC_COPY:
+      TRACE ("BFD_RELOC_COPY");
       return &elf_howto_table[R_386_COPY];
 
-    case BFD_RELOC_386_GLOB_DAT:
-      TRACE ("BFD_RELOC_386_GLOB_DAT");
+    case BFD_RELOC_GLOB_DAT:
+      TRACE ("BFD_RELOC_GLOB_DAT");
       return &elf_howto_table[R_386_GLOB_DAT];
 
-    case BFD_RELOC_386_JUMP_SLOT:
-      TRACE ("BFD_RELOC_386_JUMP_SLOT");
+    case BFD_RELOC_JMP_SLOT:
+      TRACE ("BFD_RELOC_JMP_SLOT");
       return &elf_howto_table[R_386_JUMP_SLOT];
 
-    case BFD_RELOC_386_RELATIVE:
-      TRACE ("BFD_RELOC_386_RELATIVE");
+    case BFD_RELOC_RELATIVE:
+      TRACE ("BFD_RELOC_RELATIVE");
       return &elf_howto_table[R_386_RELATIVE];
 
     case BFD_RELOC_386_GOTOFF:
@@ -322,8 +322,8 @@ elf_i386_reloc_type_lookup (bfd *abfd,
       TRACE ("BFD_RELOC_386_TLS_DESC");
       return &elf_howto_table[R_386_TLS_DESC - R_386_tls_offset];
 
-    case BFD_RELOC_386_IRELATIVE:
-      TRACE ("BFD_RELOC_386_IRELATIVE");
+    case BFD_RELOC_IRELATIVE:
+      TRACE ("BFD_RELOC_IRELATIVE");
       return &elf_howto_table[R_386_IRELATIVE - R_386_tls_offset];
 
     case BFD_RELOC_386_GOT32X:

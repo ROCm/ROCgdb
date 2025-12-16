@@ -372,22 +372,22 @@ _bfd_sparc_elf_reloc_type_lookup (bfd *abfd,
     case BFD_RELOC_SPARC_WPLT30:
       return &_bfd_sparc_elf_howto_table[R_SPARC_WPLT30];
 
-    case BFD_RELOC_SPARC_COPY:
+    case BFD_RELOC_COPY:
       return &_bfd_sparc_elf_howto_table[R_SPARC_COPY];
 
-    case BFD_RELOC_SPARC_GLOB_DAT:
+    case BFD_RELOC_GLOB_DAT:
       return &_bfd_sparc_elf_howto_table[R_SPARC_GLOB_DAT];
 
-    case BFD_RELOC_SPARC_JMP_SLOT:
+    case BFD_RELOC_JMP_SLOT:
       return &_bfd_sparc_elf_howto_table[R_SPARC_JMP_SLOT];
 
-    case BFD_RELOC_SPARC_RELATIVE:
+    case BFD_RELOC_RELATIVE:
       return &_bfd_sparc_elf_howto_table[R_SPARC_RELATIVE];
 
     case BFD_RELOC_SPARC_UA32:
       return &_bfd_sparc_elf_howto_table[R_SPARC_UA32];
 
-    case BFD_RELOC_SPARC_PLT32:
+    case BFD_RELOC_32_PLT_PCREL:
       return &_bfd_sparc_elf_howto_table[R_SPARC_PLT32];
 
     case BFD_RELOC_SPARC_10:
@@ -438,7 +438,7 @@ _bfd_sparc_elf_reloc_type_lookup (bfd *abfd,
     case BFD_RELOC_SPARC_DISP64:
       return &_bfd_sparc_elf_howto_table[R_SPARC_DISP64];
 
-    case BFD_RELOC_SPARC_PLT64:
+    case BFD_RELOC_64_PLT_PCREL:
       return &_bfd_sparc_elf_howto_table[R_SPARC_PLT64];
 
     case BFD_RELOC_SPARC_HIX22:
@@ -567,7 +567,7 @@ _bfd_sparc_elf_reloc_type_lookup (bfd *abfd,
     case BFD_RELOC_SPARC_JMP_IREL:
       return &sparc_jmp_irel_howto;
 
-    case BFD_RELOC_SPARC_IRELATIVE:
+    case BFD_RELOC_IRELATIVE:
       return &sparc_irelative_howto;
 
     case BFD_RELOC_VTABLE_INHERIT:

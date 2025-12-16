@@ -1403,8 +1403,7 @@ list_command (const char *arg, int from_tty)
   const char *beg = arg;
   size_t beg_len = arg1 - beg;
 
-  while (*arg1 == ' ' || *arg1 == '\t')
-    arg1++;
+  arg1 = skip_spaces (arg1);
   if (*arg1 == ',')
     {
       no_end = 0;
@@ -1416,8 +1415,7 @@ list_command (const char *arg, int from_tty)
 	  return;
 	}
       arg1++;
-      while (*arg1 == ' ' || *arg1 == '\t')
-	arg1++;
+      arg1 = skip_spaces (arg1);
       if (*arg1 == 0)
 	dummy_end = 1;
       else

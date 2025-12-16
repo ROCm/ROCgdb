@@ -1475,10 +1475,8 @@ pager_file::prompt_for_continue ()
 
   if (ignore != NULL)
     {
-      char *p = ignore.get ();
+      char *p = skip_spaces (ignore.get ());
 
-      while (*p == ' ' || *p == '\t')
-	++p;
       if (p[0] == 'q')
 	/* Do not call quit here; there is no possibility of SIGINT.  */
 	throw_quit ("Quit");
@@ -1550,9 +1548,10 @@ gdb_flush (struct ui_file *stream)
 
 /* See utils.h.  */
 
-int
+unsigned int
 get_chars_per_line ()
 {
+  gdb_assert (chars_per_line > 0);
   return chars_per_line;
 }
 
