@@ -951,7 +951,7 @@ shell_escape (const char *arg, int from_tty)
 static void
 shell_command (const char *arg, int from_tty)
 {
-  scoped_gdb_ttystate save_restore_gdb_ttystate;
+  scoped_restore_tty_state save_restore_gdb_ttystate;
   restore_initial_gdb_ttystate ();
 
   shell_escape (arg, from_tty);
@@ -1251,14 +1251,6 @@ list_around_line (const char *arg, symtab_and_line cursal)
 static void
 list_command (const char *arg, int from_tty)
 {
-  struct symbol *sym;
-  const char *arg1;
-  int no_end = 1;
-  int dummy_end = 0;
-  int dummy_beg = 0;
-  int linenum_beg = 0;
-  const char *p;
-
   /* Pull in the current default source line if necessary.  */
   if (arg == NULL || ((arg[0] == '+' || arg[0] == '-' || arg[0] == '.') && arg[1] == '\0'))
     {
@@ -1364,12 +1356,50 @@ list_command (const char *arg, int from_tty)
 
   std::vector<symtab_and_line> sals;
   symtab_and_line sal, sal_end;
+  bool dummy_beg = false;
+  bool linenum_beg = false;
 
-  arg1 = arg;
+  const char *arg1 = skip_spaces (arg);
   if (*arg1 == ',')
-    dummy_beg = 1;
+    dummy_beg = true;
   else
     {
+      /* Are we looking at a number?  */
+      char *end_ptr;
+      long int lineno = strtol (arg1, &end_ptr, 10);
+
+      /* If END_PTR is different to ARG1 then strtol parsed something, but
+	 strtol will accept numbers with a '+' or '-' prefix, which we
+	 don't want to handle here, hence the c_isdigit check.  */
+      if (end_ptr != arg1 && c_isdigit (*arg1))
+	{
+	  /* Some digits were found.  */
+	  end_ptr = skip_spaces (end_ptr);
+
+	  /* Check for valid line format or for an invalid line number.  */
+	  if (*end_ptr != '\0' && *end_ptr != ',')
+	    error (_("Junk at end of line specification: %s"), end_ptr);
+
+	  if (*end_ptr == '\0')
+	    {
+	      /* Ensure LINENO isn't going to overflow when we convert it
+		 to an integer below.  */
+	      if (lineno >= INT_MAX || lineno <= INT_MIN)
+		error (_("Line number %.*s out of range"),
+		       (int) (end_ptr - arg1), arg1);
+
+	      /* We only have a line number.  */
+	      set_default_source_symtab_and_line ();
+	      symtab_and_line cursal
+		= get_current_source_symtab_and_line (current_program_space);
+	      cursal.line = static_cast<int> (lineno);
+	      list_around_line (nullptr, cursal);
+	      return;
+	    }
+
+	  linenum_beg = true;
+	}
+
       location_spec_up locspec
 	= string_to_location_spec (&arg1, current_language);
 
@@ -1393,20 +1423,17 @@ list_command (const char *arg, int from_tty)
       sal = sals[0];
     }
 
-  /* Record whether the BEG arg is all digits.  */
-
-  for (p = arg; p != arg1 && *p >= '0' && *p <= '9'; p++);
-  linenum_beg = (p == arg1);
-
   /* Save the range of the first argument, in case we need to let the
      user know it was ambiguous.  */
   const char *beg = arg;
   size_t beg_len = arg1 - beg;
+  bool dummy_end = false;
+  bool no_end = true;
 
   arg1 = skip_spaces (arg1);
   if (*arg1 == ',')
     {
-      no_end = 0;
+      no_end = false;
       if (sals.size () > 1)
 	{
 	  ambiguous_line_spec (sals,
@@ -1416,8 +1443,8 @@ list_command (const char *arg, int from_tty)
 	}
       arg1++;
       arg1 = skip_spaces (arg1);
-      if (*arg1 == 0)
-	dummy_end = 1;
+      if (*arg1 == '\0')
+	dummy_end = true;
       else
 	{
 	  /* Save the last argument, in case we need to let the user
@@ -1427,7 +1454,7 @@ list_command (const char *arg, int from_tty)
 	  location_spec_up locspec
 	    = string_to_location_spec (&arg1, current_language);
 
-	  if (*arg1)
+	  if (*arg1 != '\0')
 	    error (_("Junk at end of line specification."));
 
 	  std::vector<symtab_and_line> sals_end
@@ -1451,7 +1478,7 @@ list_command (const char *arg, int from_tty)
 	}
     }
 
-  if (*arg1)
+  if (*arg1 != '\0')
     error (_("Junk at end of line specification."));
 
   if (!no_end && !dummy_beg && !dummy_end
@@ -1463,19 +1490,17 @@ list_command (const char *arg, int from_tty)
   /* If line was specified by address,
      first print exactly which line, and which file.
 
-     In this case, sal.symtab == 0 means address is outside of all
+     In this case, sal.symtab == NULL means address is outside of all
      known source files, not that user failed to give a filename.  */
   if (*arg == '*')
     {
-      struct gdbarch *gdbarch;
-
-      if (sal.symtab == 0)
+      if (sal.symtab == nullptr)
 	error (_("No source file for address %s."),
 	       paddress (get_current_arch (), sal.pc));
 
-      gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-      sym = find_symbol_for_pc (sal.pc);
-      if (sym)
+      struct gdbarch *gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
+      struct symbol *sym = find_symbol_for_pc (sal.pc);
+      if (sym != nullptr)
 	gdb_printf ("%ps is in %s (%ps:%ps).\n",
 		    styled_string (address_style.style (),
 				   paddress (gdbarch, sal.pc)),
@@ -1498,7 +1523,7 @@ list_command (const char *arg, int from_tty)
      imply a symtab, it must be an undebuggable symbol which means no
      source code.  */
 
-  if (!linenum_beg && sal.symtab == 0)
+  if (!dummy_beg && !linenum_beg && sal.symtab == nullptr)
     error (_("No line number known for %s."), arg);
 
   /* If this command is repeated with RET,
@@ -1507,7 +1532,7 @@ list_command (const char *arg, int from_tty)
   if (from_tty)
     set_repeat_arguments ("");
 
-  if (dummy_beg && sal_end.symtab == 0)
+  if (dummy_beg && sal_end.symtab == nullptr)
     error (_("No default source file yet.  Do \"help list\"."));
   if (dummy_beg)
     {
@@ -1515,19 +1540,15 @@ list_command (const char *arg, int from_tty)
 				source_lines_range::BACKWARD);
       print_source_lines (sal_end.symtab, range, 0);
     }
-  else if (sal.symtab == 0)
+  else if (sal.symtab == nullptr)
     error (_("No default source file yet.  Do \"help list\"."));
   else if (no_end)
     {
-      for (int i = 0; i < sals.size (); i++)
+      for (const symtab_and_line &s : sals)
 	{
-	  sal = sals[i];
-	  int first_line = sal.line - get_lines_to_list () / 2;
-	  if (first_line < 1)
-	    first_line = 1;
 	  if (sals.size () > 1)
-	    print_sal_location (sal);
-	  print_source_lines (sal.symtab, source_lines_range (first_line), 0);
+	    print_sal_location (s);
+	  list_around_line (nullptr, s);
 	}
     }
   else if (dummy_end)
@@ -2734,7 +2755,7 @@ Show mode for script filename extension recognition."), _("\
 off  == no filename extension recognition (all sourced files are GDB scripts)\n\
 soft == evaluate script according to filename extension, fallback to GDB script\n\
 strict == evaluate script according to filename extension,\n\
-          error if not supported"
+	  error if not supported"
   ),
 			NULL,
 			show_script_ext_mode,
