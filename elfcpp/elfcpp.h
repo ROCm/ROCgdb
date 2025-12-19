@@ -1,6 +1,6 @@
 // elfcpp.h -- main header file for elfcpp    -*- C++ -*-
 
-// Copyright (C) 2006-2024 Free Software Foundation, Inc.
+// Copyright (C) 2006-2025 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of elfcpp.
@@ -951,7 +951,9 @@ const int VER_FLG_INFO = 0x4;
 
 // Special constants found in the SHT_GNU_versym entries.
 
+// Symbol is a local symbol or an unversioned symbol with global binding.
 const int VER_NDX_LOCAL = 0;
+// Symbol is a base symbol with global binding.
 const int VER_NDX_GLOBAL = 1;
 
 // A SHT_GNU_versym section holds 16-bit words.  This bit is set if

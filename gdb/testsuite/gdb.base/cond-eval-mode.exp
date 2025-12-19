@@ -1,4 +1,4 @@
-#   Copyright 2012-2024 Free Software Foundation, Inc.
+#   Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ gdb_test_multiple $test_target $test_target {
 # We now know that the target supports target-side conditional
 # evaluation.  Now make sure we can force-disable the
 # ConditionalBreakpoints RSP feature.
-if [gdb_protocol_is_remote] {
+if {[gdb_protocol_is_remote]} {
     gdb_test \
 	"set remote conditional-breakpoints-packet off" \
 	"Support for the 'ConditionalBreakpoints' packet on the current remote target is set to \"off\"."

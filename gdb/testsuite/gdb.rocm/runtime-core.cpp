@@ -1,5 +1,5 @@
 /* Copyright (C) 2023-2024 Free Software Foundation, Inc.
-   Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -20,12 +20,15 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
-#include <unistd.h>
 #include <list>
 #include <array>
 #include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
+<<<<<<< HEAD
+=======
+#include "gdb_watchdog.h"
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 #define CHECK(cmd)                                                           \
   do                                                                         \
@@ -94,7 +97,7 @@ main (int argc, char **argv)
 {
   /* Make sure that the process terminates if the exception is not caught by
      the ROCr runtime.  */
-  alarm (30);
+  gdb_watchdog (30);
 
   if (argc != 2)
     {

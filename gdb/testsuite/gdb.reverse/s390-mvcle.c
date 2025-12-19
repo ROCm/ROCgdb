@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2015-2024 Free Software Foundation, Inc.
+   Copyright 2015-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -39,9 +39,9 @@ mvcle (void)
   register size_t nsrc asm("r5") = sizeof src;
   asm volatile ("0: mvcle 2, 4, 0x69\n"
 		"jo 0b\n"
-                : "=r" (pdst), "=r" (ndst), "=r" (psrc), "=r" (nsrc)
-                : "0" (pdst), "1" (ndst), "2" (psrc), "3" (nsrc)
-                : "cc", "memory");
+		: "=r" (pdst), "=r" (ndst), "=r" (psrc), "=r" (nsrc)
+		: "0" (pdst), "1" (ndst), "2" (psrc), "3" (nsrc)
+		: "cc", "memory");
 }
 
 int

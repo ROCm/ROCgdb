@@ -1,4 +1,4 @@
-# Copyright 2014-2024 Free Software Foundation, Inc.
+# Copyright 2014-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -136,7 +136,7 @@ with_test_prefix "read-only" {
     }
 
     # Come up with different value.
-    set patch [expr 255 - $orig]
+    set patch [expr {255 - $orig}]
 
     # Write PATCH to memory.
     set written -1

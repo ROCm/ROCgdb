@@ -3,7 +3,7 @@
 (echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
 /* This file is part of GLD, the Gnu Linker.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -88,9 +88,7 @@ gld${EMULATION_NAME}_handle_option (int optc)
 	  lang_add_output_format (buf, NULL, NULL, 0);
 	}
       else
-	{
-	  einfo (_("%F%P: invalid COFF format version %s\n"), optarg);
-	}
+	fatal (_("%P: invalid COFF format version %s\n"), optarg);
       break;
     }
   return false;

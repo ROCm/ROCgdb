@@ -1,6 +1,6 @@
 /* Python interface to lazy strings.
 
-   Copyright (C) 2010-2024 Free Software Foundation, Inc.
+   Copyright (C) 2010-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,7 +32,7 @@ struct lazy_string_object {
   /*  Holds the encoding that will be applied to the string
       when the string is printed by GDB.  If the encoding is set
       to None then GDB will select the most appropriate
-      encoding when the sting is printed.  */
+      encoding when the string is printed.  */
   char *encoding;
 
   /* If TYPE is an array: If the length is known, then this value is the
@@ -52,8 +52,7 @@ struct lazy_string_object {
   PyObject *type;
 };
 
-extern PyTypeObject lazy_string_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("lazy_string_object");
+extern PyTypeObject lazy_string_object_type;
 
 static PyObject *
 stpy_get_address (PyObject *self, void *closure)
@@ -242,8 +241,8 @@ gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
   return (PyObject *) str_obj;
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_lazy_string (void)
+static int
+gdbpy_initialize_lazy_string ()
 {
   return gdbpy_type_ready (&lazy_string_object_type);
 }

@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,115 +25,127 @@ require dwarf2_support
 
 standard_testfile .cc .S
 
+set debug_flags {}
+lappend debug_flags debug
+lappend debug_flags c++
+
+set nodebug_flags {}
+lappend nodebug_flags nodebug
+lappend nodebug_flags c++
+
+get_func_info main $debug_flags
+
+
 set asm_file [standard_output_file $srcfile2]
 Dwarf::assemble $asm_file {
     cu {} {
 	DW_TAG_compile_unit {
-	    {DW_AT_language @DW_LANG_C_plus_plus}
+	    DW_AT_language @DW_LANG_C_plus_plus
 	} {
 	    declare_labels int float template_var1 template_var2 template_var3
 
 	    int: DW_TAG_base_type {
-		{DW_AT_name "int"}
-		{DW_AT_byte_size 4 DW_FORM_data1}
-		{DW_AT_encoding @DW_ATE_signed}
+		DW_AT_name "int"
+		DW_AT_byte_size 4 DW_FORM_data1
+		DW_AT_encoding @DW_ATE_signed
 	    }
 
 	    float: base_type {
-		{DW_AT_name float}
-		{DW_AT_byte_size 4 DW_FORM_sdata}
-		{DW_AT_encoding @DW_ATE_float}
+		DW_AT_name float
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding @DW_ATE_float
 	    }
 
 	    DW_TAG_subprogram {
-		{DW_AT_name "main"}
-		{MACRO_AT_range "main"}
-		{DW_AT_type :$int}
-		{DW_AT_external 1 DW_FORM_flag}
+		DW_AT_name "main"
+		DW_AT_low_pc $::main_start DW_FORM_addr
+		DW_AT_high_pc $::main_end DW_FORM_addr
+		DW_AT_type :$int
+		DW_AT_external 1 DW_FORM_flag
 	    } {
 		DW_TAG_variable {
-		    {DW_AT_name "var1"}
-		    {DW_AT_type :$template_var1}
+		    DW_AT_name "var1"
+		    DW_AT_type :$template_var1
 		}
 		DW_TAG_variable {
-		    {DW_AT_name "var2"}
-		    {DW_AT_type :$template_var2}
+		    DW_AT_name "var2"
+		    DW_AT_type :$template_var2
 		}
 		DW_TAG_variable {
-		    {DW_AT_name "var3"}
-		    {DW_AT_type :$template_var3}
+		    DW_AT_name "var3"
+		    DW_AT_type :$template_var3
 		}
 	    }
 
 	    # A variable whose type is a template instantiation with two
 	    # template parameters, one unnamed.
 	    template_var1: DW_TAG_structure_type {
-		{DW_AT_name "template_var1<int, float>"}
+		DW_AT_name "template_var1<int, float>"
 	    } {
 		DW_TAG_member {
-		    {DW_AT_name "me"}
-		    {DW_AT_type :$int}
+		    DW_AT_name "me"
+		    DW_AT_type :$int
 		}
 		DW_TAG_member {
-		    {DW_AT_name "me2"}
-		    {DW_AT_type :$float}
+		    DW_AT_name "me2"
+		    DW_AT_type :$float
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_type :$int}
+		    DW_AT_type :$int
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_name "second"}
-		    {DW_AT_type :$float}
+		    DW_AT_name "second"
+		    DW_AT_type :$float
 		}
 	    }
 
 	    # A variable whose type is a template instantiation with two
 	    # template parameters, both unnamed.
 	    template_var2: DW_TAG_class_type {
-		{DW_AT_name "template_var2<int, float>"}
+		DW_AT_name "template_var2<int, float>"
 	    } {
 		DW_TAG_member {
-		    {DW_AT_name "me"}
-		    {DW_AT_type :$int}
+		    DW_AT_name "me"
+		    DW_AT_type :$int
 		}
 		DW_TAG_member {
-		    {DW_AT_name "me2"}
-		    {DW_AT_type :$float}
+		    DW_AT_name "me2"
+		    DW_AT_type :$float
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_type :$int}
+		    DW_AT_type :$int
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_type :$float}
+		    DW_AT_type :$float
 		}
 	    }
 
 	    # A variable whose type is a template instantiation with four
 	    # template arguments, two types, two values, all unnamed.
 	    template_var3: DW_TAG_structure_type {
-		{DW_AT_name "template_var3<0, int, 11, float>"}
+		DW_AT_name "template_var3<0, int, 11, float>"
 	    } {
 		DW_TAG_member {
-		    {DW_AT_name "me"}
-		    {DW_AT_type :$int}
+		    DW_AT_name "me"
+		    DW_AT_type :$int
 		}
 		DW_TAG_member {
-		    {DW_AT_name "me2"}
-		    {DW_AT_type :$float}
+		    DW_AT_name "me2"
+		    DW_AT_type :$float
 		}
 		DW_TAG_template_value_param {
-		    {DW_AT_type :$int}
-		    {DW_AT_const_value 0 DW_FORM_sdata}
+		    DW_AT_type :$int
+		    DW_AT_const_value 0 DW_FORM_sdata
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_type :$int}
+		    DW_AT_type :$int
 		}
 		DW_TAG_template_value_param {
-		    {DW_AT_type :$int}
-		    {DW_AT_const_value 11 DW_FORM_sdata}
+		    DW_AT_type :$int
+		    DW_AT_const_value 11 DW_FORM_sdata
 		}
 		DW_TAG_template_type_param {
-		    {DW_AT_type :$float}
+		    DW_AT_type :$float
 		}
 	    }
 	}
@@ -141,11 +153,11 @@ Dwarf::assemble $asm_file {
 }
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
-	[list $srcfile $asm_file] {nodebug c++}] } {
+	[list $srcfile $asm_file] $nodebug_flags] } {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -162,7 +174,7 @@ gdb_test "ptype var2" [multi_line \
     "}"]
 
 gdb_test "ptype var3" [multi_line \
-    "type = struct template_var3<0, int, 11, float> \\\[with <unnamed1> = int, <unnamed3> = float\\\] {" \
+    "type = struct template_var3<0, int, 11, float> \\\[with <unnamed0> = 0, <unnamed1> = int, <unnamed2> = 11, <unnamed3> = float\\\] {" \
     "    <unnamed1> me;" \
     "    <unnamed3> me2;" \
     "}"]

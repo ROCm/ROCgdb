@@ -1,6 +1,6 @@
 /* kvx-parse.c -- Recursive decent parser driver for the KVX ISA
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by Kalray SA.
 
    This file is part of GAS.
@@ -68,7 +68,7 @@ has_relocation_of_size (const struct kvx_reloc **relocs)
   if (!relocs)
     return 0;
 
-  struct kvx_reloc **relocs_it = (struct kvx_reloc **) relocs;
+  const struct kvx_reloc **relocs_it = relocs;
   int has_only_one_p = relocs[0] && !relocs[1];
 
   while (*relocs_it)
@@ -101,15 +101,13 @@ has_relocation_of_size (const struct kvx_reloc **relocs)
   return 0;
 }
 
-struct pseudo_func *
-kvx_get_pseudo_func2 (symbolS * sym, struct kvx_reloc **relocs);
-struct pseudo_func *
-kvx_get_pseudo_func2 (symbolS *sym, struct kvx_reloc **relocs)
+static struct pseudo_func *
+kvx_get_pseudo_func2 (symbolS *sym, const struct kvx_reloc **relocs)
 {
   if (!relocs)
     return NULL;
 
-  struct kvx_reloc **relocs_it = (struct kvx_reloc **) relocs;
+  const struct kvx_reloc **relocs_it = relocs;
 
   for (int i = 0; i < 26; i++)
   {
@@ -409,7 +407,7 @@ promote_token (struct token_s tok)
 	  : tok.class_id;
       case CAT_IMMEDIATE:
 	{
-	  expressionS exp = { 0 };
+	  expressionS exp;
 	  char *ilp_save = input_line_pointer;
 	  input_line_pointer = tok.insn + tok.begin;
 	  expression (&exp);
@@ -460,9 +458,9 @@ get_token_class (struct token_s *token, struct token_classes *classes, int insn_
 {
   int cur = 0;
   int found = 0;
-  int tok_sz = token->end - token->begin;
+  size_t tok_sz = token->end - token->begin;
   char *tok = token->insn + token->begin;
-  expressionS exp = {0};
+  expressionS exp;
 
   token->val = 0;
   int token_val_p = 0;
@@ -559,7 +557,7 @@ get_token_class (struct token_s *token, struct token_classes *classes, int insn_
 	  for (int i = 0; !found && i < class[cur].sz; ++i)
 	    {
 	      const char *ref = class[cur].class_values[i];
-	      found = ((long) strlen (ref) == tok_sz) && !strncmp (tok, ref, tok_sz);
+	      found = (strlen (ref) == tok_sz) && !strncmp (tok, ref, tok_sz);
 	      token->val = i;
 	    }
 
@@ -597,12 +595,12 @@ read_token (struct token_s *tok)
     {
       if ('0' <= str[*begin - i] && str[*begin - i] <= '9')
 	last_imm_p = 1;
-      else if (str[*begin - i] != ' ' && str[*begin - i] != '\t')
+      else if (!is_whitespace (str[*begin - i]))
 	break;
     }
 
   /* Eat up all leading spaces.  */
-  while (str[*begin] && (str[*begin] == ' ' || str[*begin] == '\n'))
+  while (str[*begin] && (is_whitespace (str[*begin]) || str[*begin] == '\n'))
     *begin += 1;
 
   *end = *begin;
@@ -624,7 +622,9 @@ read_token (struct token_s *tok)
       }
 
       if (str[*begin] == '.'
-	  && (!(*begin > 0 && (str[*begin - 1] == ' ' || is_delim(str[*begin - 1])))
+	  && (!(*begin > 0
+		&& (is_whitespace (str[*begin - 1])
+		    || is_delim (str[*begin - 1])))
 	    || last_imm_p))
 	modifier_p = 1;
 
@@ -633,7 +633,8 @@ read_token (struct token_s *tok)
 	*end += 1;
 
       /* Stop when reaching the start of the new token. */
-      while (!(!str[*end] || is_delim (str[*end]) || str[*end] == ' ' || (modifier_p && str[*end] == '.')))
+      while (!(!str[*end] || is_delim (str[*end]) || is_whitespace (str[*end])
+	     || (modifier_p && str[*end] == '.')))
 	*end += 1;
 
     }
@@ -668,7 +669,7 @@ static struct token_list *
 create_token (struct token_s tok, int len, int loc)
 {
   struct token_list *tl = calloc (1, sizeof *tl);
-  int tok_sz = tok.end - tok.begin;
+  size_t tok_sz = tok.end - tok.begin;
   tl->tok = calloc (tok_sz + 1, sizeof (char));
   memcpy (tl->tok, tok.insn + tok.begin, tok_sz * sizeof (char));
   tl->val = tok.val;

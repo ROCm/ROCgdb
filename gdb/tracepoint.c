@@ -1,6 +1,6 @@
 /* Tracing functionality for remote targets in custom GDB protocol
 
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -73,7 +73,7 @@
    large.  (400 - 31)/2 == 184 */
 #define MAX_AGENT_EXPR_LEN	184
 
-/* 
+/*
    Tracepoint.c:
 
    This module defines the following debugger commands:
@@ -208,16 +208,16 @@ set_tracepoint_num (int num)
 static void
 set_traceframe_context (const frame_info_ptr &trace_frame)
 {
-  CORE_ADDR trace_pc;
+  std::optional<CORE_ADDR> trace_pc;
   struct symbol *traceframe_fun;
   symtab_and_line traceframe_sal;
 
   /* Save as globals for internal use.  */
   if (trace_frame != NULL
-      && get_frame_pc_if_available (trace_frame, &trace_pc))
+      && (trace_pc = get_frame_pc_if_available (trace_frame)))
     {
-      traceframe_sal = find_pc_line (trace_pc, 0);
-      traceframe_fun = find_pc_function (trace_pc);
+      traceframe_sal = find_sal_for_pc (*trace_pc, 0);
+      traceframe_fun = find_symbol_for_pc (*trace_pc);
 
       /* Save linenumber as "$trace_line", a debugger variable visible to
 	 users.  */
@@ -308,12 +308,12 @@ validate_trace_state_variable_name (const char *name)
 
   /* All digits in the name is reserved for value history
      references.  */
-  for (p = name; isdigit (*p); p++)
+  for (p = name; c_isdigit (*p); p++)
     ;
   if (*p == '\0')
     error (_("$%s is not a valid trace state variable name"), name);
 
-  for (p = name; isalnum (*p) || *p == '_'; p++)
+  for (p = name; c_isalnum (*p) || *p == '_'; p++)
     ;
   if (*p != '\0')
     error (_("$%s is not a valid trace state variable name"), name);
@@ -339,7 +339,7 @@ trace_variable_command (const char *args, int from_tty)
     error (_("Name of trace variable should start with '$'"));
 
   name_start = p;
-  while (isalnum (*p) || *p == '_')
+  while (c_isalnum (*p) || *p == '_')
     p++;
   std::string name (name_start, p - name_start);
 
@@ -486,8 +486,8 @@ save_trace_state_variables (struct ui_file *fp)
 /* ACTIONS functions: */
 
 /* The three functions:
-   collect_pseudocommand, 
-   while_stepping_pseudocommand, and 
+   collect_pseudocommand,
+   while_stepping_pseudocommand, and
    end_actions_pseudocommand
    are placeholders for "commands" that are actually ONLY to be used
    within a tracepoint action list.  If the actual function is ever called,
@@ -689,14 +689,14 @@ validate_actionline (const char *line, tracepoint *t)
 		       (exp->op.get ()));
 		  sym = vvop->get_symbol ();
 
-		  if (sym->aclass () == LOC_CONST)
+		  if (sym->loc_class () == LOC_CONST)
 		    {
 		      error (_("constant `%s' (value %s) "
 			       "will not be collected."),
 			     sym->print_name (),
 			     plongest (sym->value_longest ()));
 		    }
-		  else if (sym->aclass () == LOC_OPTIMIZED_OUT)
+		  else if (sym->loc_class () == LOC_OPTIMIZED_OUT)
 		    {
 		      error (_("`%s' is optimized away "
 			       "and cannot be collected."),
@@ -916,11 +916,11 @@ collection_list::collect_symbol (struct symbol *sym,
   int treat_as_expr = 0;
 
   len = check_typedef (sym->type ())->length ();
-  switch (sym->aclass ())
+  switch (sym->loc_class ())
     {
     default:
       gdb_printf ("%s: don't know symbol class %d\n",
-		  sym->print_name (), sym->aclass ());
+		  sym->print_name (), sym->loc_class ());
       break;
     case LOC_CONST:
       gdb_printf ("constant %s (value %s) will not be collected.\n",
@@ -1170,7 +1170,7 @@ collection_list::stringify ()
       QUIT;			/* Allow user to bail out with ^C.  */
       if (info_verbose)
 	{
-	  gdb_printf ("(%d, %s, %ld)\n", 
+	  gdb_printf ("(%d, %s, %ld)\n",
 		      m_memranges[i].type,
 		      paddress (current_inferior ()->arch (),
 				m_memranges[i].start),
@@ -1638,7 +1638,7 @@ start_tracing (const char *notes)
   /* Send down all the trace state variables too.  */
   for (const trace_state_variable &tsv : tvariables)
     target_download_trace_state_variable (tsv);
-  
+
   /* Tell target to treat text-like sections as transparent.  */
   target_trace_set_readonly_regions ();
   /* Set some mode flags.  */
@@ -1740,7 +1740,7 @@ tstatus_command (const char *args, int from_tty)
 {
   struct trace_status *ts = current_trace_status ();
   int status;
-  
+
   status = target_get_trace_status (ts);
 
   if (status == -1)
@@ -1963,7 +1963,7 @@ trace_status_mi (int on_stop)
 	      stopping_tracepoint = ts->stopping_tracepoint;
 	      break;
 	    }
-	  
+
 	  if (stop_reason)
 	    {
 	      uiout->field_string ("stop-reason", stop_reason);
@@ -2083,7 +2083,7 @@ tfind_1 (enum trace_find_type type, int num,
 
   target_frameno = target_trace_find (type, num, addr1, addr2,
 				      &target_tracept);
-  
+
   if (type == tfind_number
       && num == -1
       && target_frameno == -1)
@@ -2095,12 +2095,12 @@ tfind_1 (enum trace_find_type type, int num,
       /* A request for a non-existent trace frame has failed.
 	 Our response will be different, depending on FROM_TTY:
 
-	 If FROM_TTY is true, meaning that this command was 
+	 If FROM_TTY is true, meaning that this command was
 	 typed interactively by the user, then give an error
 	 and DO NOT change the state of traceframe_number etc.
 
 	 However if FROM_TTY is false, meaning that we're either
-	 in a script, a loop, or a user-defined command, then 
+	 in a script, a loop, or a user-defined command, then
 	 DON'T give an error, but DO change the state of
 	 traceframe_number etc. to invalid.
 
@@ -2112,7 +2112,7 @@ tfind_1 (enum trace_find_type type, int num,
 	 failed WITHOUT aborting.  This allows you to write
 	 scripts that search through the trace buffer until the end,
 	 and then continue on to do something else.  */
-  
+
       if (from_tty)
 	error (_("Target failed to find requested trace frame."));
       else
@@ -2126,7 +2126,7 @@ tfind_1 (enum trace_find_type type, int num,
 #endif
 	}
     }
-  
+
   tp = get_tracepoint_by_number_on_target (target_tracept);
 
   reinit_frame_cache ();
@@ -2203,13 +2203,13 @@ check_trace_running (struct trace_status *status)
     error (_("May not look at trace frames while trace is running."));
 }
 
-/* trace_find_command takes a trace frame number n, 
-   sends "QTFrame:<n>" to the target, 
+/* trace_find_command takes a trace frame number n,
+   sends "QTFrame:<n>" to the target,
    and accepts a reply that may contain several optional pieces
    of information: a frame number, a tracepoint number, and an
    indication of whether this is a trap frame or a stepping frame.
 
-   The minimal response is just "OK" (which indicates that the 
+   The minimal response is just "OK" (which indicates that the
    target does not give us a frame number or a tracepoint number).
    Instead of that, the target may send us a string containing
    any combination of:
@@ -2224,7 +2224,7 @@ tfind_command_1 (const char *args, int from_tty)
   int frameno = -1;
 
   check_trace_running (current_trace_status ());
-  
+
   if (args == 0 || *args == 0)
     { /* TFIND with no args means find NEXT trace frame.  */
       if (traceframe_number == -1)
@@ -2238,7 +2238,7 @@ tfind_command_1 (const char *args, int from_tty)
 	error (_("not debugging trace buffer"));
       else if (from_tty && traceframe_number == 0)
 	error (_("already at start of trace buffer"));
-      
+
       frameno = traceframe_number - 1;
       }
   /* A hack to work around eval's need for fp to have been collected.  */
@@ -2323,7 +2323,7 @@ tfind_tracepoint_command (const char *args, int from_tty)
    This command will take a sourceline for argument, just like BREAK
    or TRACE (ie. anything that "decode_line_1" can handle).
 
-   With no argument, this command will find the next trace frame 
+   With no argument, this command will find the next trace frame
    corresponding to a source line OTHER THAN THE CURRENT ONE.  */
 
 static void
@@ -2334,7 +2334,7 @@ tfind_line_command (const char *args, int from_tty)
   symtab_and_line sal;
   if (args == 0 || *args == 0)
     {
-      sal = find_pc_line (get_frame_pc (get_current_frame ()), 0);
+      sal = find_sal_for_pc (get_frame_pc (get_current_frame ()), 0);
     }
   else
     {
@@ -2347,7 +2347,7 @@ tfind_line_command (const char *args, int from_tty)
     error (_("No line number information available."));
 
   CORE_ADDR start_pc, end_pc;
-  if (sal.line > 0 && find_line_pc_range (sal, &start_pc, &end_pc))
+  if (sal.line > 0 && find_pc_range_for_sal (sal, &start_pc, &end_pc))
     {
       if (start_pc == end_pc)
 	{
@@ -2360,9 +2360,9 @@ tfind_line_command (const char *args, int from_tty)
 	  print_address (get_current_arch (), start_pc, gdb_stdout);
 	  gdb_stdout->wrap_here (2);
 	  gdb_printf (" but contains no code.\n");
-	  sal = find_pc_line (start_pc, 0);
+	  sal = find_sal_for_pc (start_pc, 0);
 	  if (sal.line > 0
-	      && find_line_pc_range (sal, &start_pc, &end_pc)
+	      && find_pc_range_for_sal (sal, &start_pc, &end_pc)
 	      && start_pc != end_pc)
 	    gdb_printf ("Attempting to find line %ps instead.\n",
 			styled_string (line_number_style.style (),
@@ -2508,12 +2508,12 @@ info_scope_command (const char *args_in, int from_tty)
 					     gdb_stdout);
 	  else
 	    {
-	      switch (sym->aclass ())
+	      switch (sym->loc_class ())
 		{
 		default:
 		case LOC_UNDEF:	/* Messed up symbol?  */
 		  gdb_printf ("a bogus symbol, class %d.\n",
-			      sym->aclass ());
+			      sym->loc_class ());
 		  count--;		/* Don't count this one.  */
 		  continue;
 		case LOC_CONST:
@@ -2818,7 +2818,7 @@ encode_source_string (int tpnum, ULONGEST addr,
   if (80 + strlen (srctype) > buf_size)
     error (_("Buffer too small for source encoding"));
   sprintf (buf, "%x:%s:%s:%x:%x:",
-	   tpnum, phex_nz (addr, sizeof (addr)),
+	   tpnum, phex_nz (addr),
 	   srctype, 0, (int) strlen (src));
   if (strlen (buf) + strlen (src) * 2 >= buf_size)
     error (_("Source string too long for buffer"));
@@ -3617,8 +3617,8 @@ print_one_static_tracepoint_marker (int count,
 
   uiout->field_core_addr ("addr", marker.gdbarch, marker.address);
 
-  sal = find_pc_line (marker.address, 0);
-  sym = find_pc_sect_function (marker.address, NULL);
+  sal = find_sal_for_pc (marker.address, 0);
+  sym = find_symbol_for_pc_sect (marker.address, NULL);
   if (sym)
     {
       uiout->text ("in ");
@@ -3919,9 +3919,7 @@ static const struct internalvar_funcs sdata_funcs =
 cmd_list_element *while_stepping_cmd_element = nullptr;
 
 /* module initialization */
-void _initialize_tracepoint ();
-void
-_initialize_tracepoint ()
+INIT_GDB_FILE (tracepoint)
 {
   struct cmd_list_element *c;
 

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2002-2024 Free Software Foundation, Inc.
+   Copyright 2002-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
    This file is copied from schedlock.c.  */
 
 #include <stdio.h>
@@ -42,7 +42,7 @@ int main() {
       {
 	args[i] = 1; /* Init value.  */
 	res = pthread_create(&threads[i],
-		             NULL,
+			     NULL,
 			     thread_function,
 			     (void *) i);
       }
@@ -51,16 +51,16 @@ int main() {
     while (!all_started)
       {
 	all_started = 1;
-        for (i = 0; i < NUM; i++)
-          {
-            if (args[i] == 1)
+	for (i = 0; i < NUM; i++)
+	  {
+	    if (args[i] == 1)
 	      {
-	        all_started = 0;
-	        break;
+		all_started = 0;
+		break;
 	      }
-          }  
+	  }
       }
-	
+
     args[i] = 1;
     /* Break here */
     thread_function ((void *) i);
@@ -75,4 +75,3 @@ void *thread_function(void *arg) {
     (*myp) ++;  /* Increment so parent knows child started.  */
     pthread_barrier_wait(&mybarrier);
 }
-

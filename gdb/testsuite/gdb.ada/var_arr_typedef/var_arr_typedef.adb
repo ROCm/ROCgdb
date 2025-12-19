@@ -1,4 +1,4 @@
---  Copyright 2015-2024 Free Software Foundation, Inc.
+--  Copyright 2015-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -24,5 +24,5 @@ procedure Var_Arr_Typedef is
 
    A : constant Array_Type (1 .. Identity (4)) := (VA, VA, VB, VB);
 begin
-   Do_Nothing (A); --  BREAK
+   Do_Nothing (A'Address); --  BREAK
 end Var_Arr_Typedef;

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -68,8 +68,8 @@ main (int argc, char ** argv)
   pthread_barrier_wait (&barrier);
 
   execl (prog,
-         prog,
-         (char *) NULL);
+	 prog,
+	 (char *) NULL);
   perror ("execl failed");
   exit (1);
 }

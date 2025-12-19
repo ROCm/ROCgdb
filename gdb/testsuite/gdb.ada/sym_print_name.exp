@@ -1,4 +1,4 @@
-# Copyright 2008-2024 Free Software Foundation, Inc.
+# Copyright 2008-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -38,16 +38,15 @@ set test_name "multiple matches for symbol integervar"
 gdb_test_multiple "print integervar" "$test_name" \
 {
       -re "$menu" {
-          pass "$test_name"
+	  pass "$test_name"
       }
 
       default {
-          fail "$test_name"
+	  fail "$test_name"
       }
 }
 
 # Select the first choice from the multiple-choice menu above.
 gdb_test "1" \
-         "= 48" \
-         "select first choice from multiple-choice menu"
-
+	 "= 48" \
+	 "select first choice from multiple-choice menu"

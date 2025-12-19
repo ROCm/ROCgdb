@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2024 Free Software Foundation, Inc.
+# Copyright (C) 2008-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,9 +24,9 @@ require {istarget "powerpc*"} allow_vsx_tests
 standard_testfile
 
 set compile_flags {debug nowarnings quiet}
-if [test_compiler_info gcc*] {
+if {[test_compiler_info gcc*]} {
     set compile_flags "$compile_flags additional_flags=-maltivec additional_flags=-mabi=altivec"
-} elseif [test_compiler_info xlc*] {
+} elseif {[test_compiler_info xlc*]} {
     set compile_flags "$compile_flags additional_flags=-qaltivec"
 } else {
     warning "unknown compiler"
@@ -105,9 +105,9 @@ for {set i 0} {$i < 32} {incr i 1} {
 
 # 2: Set VS0~VS31 registers and check if it reflects on F0~F31.
 for {set i 0} {$i < 32} {incr i 1} {
-        for {set j 0} {$j < 4} {incr j 1} {
-           gdb_test_no_output "set \$vs$i.v4_int32\[$j\] = 0xdeadbeef"
-        }
+	for {set j 0} {$j < 4} {incr j 1} {
+	   gdb_test_no_output "set \$vs$i.v4_int32\[$j\] = 0xdeadbeef"
+	}
 }
 
 for {set i 0} {$i < 32} {incr i 1} {
@@ -122,9 +122,9 @@ for {set i 0} {$i < 32} {incr i 1} {
 
 # 1: Set VR0~VR31 registers and check if it reflects on VS32~VS63.
 for {set i 0} {$i < 32} {incr i 1} {
-        for {set j 0} {$j < 4} {incr j 1} {
-           gdb_test_no_output "set \$vr$i.v4_int32\[$j\] = 1"
-        }
+	for {set j 0} {$j < 4} {incr j 1} {
+	   gdb_test_no_output "set \$vr$i.v4_int32\[$j\] = 1"
+	}
 }
 
 for {set i 32} {$i < 64} {incr i 1} {
@@ -132,9 +132,9 @@ for {set i 32} {$i < 64} {incr i 1} {
 }
 # 2: Set VS32~VS63 registers and check if it reflects on VR0~VR31.
 for {set i 32} {$i < 64} {incr i 1} {
-        for {set j 0} {$j < 4} {incr j 1} {
-           gdb_test_no_output "set \$vs$i.v4_int32\[$j\] = 1"
-        }
+	for {set j 0} {$j < 4} {incr j 1} {
+	   gdb_test_no_output "set \$vs$i.v4_int32\[$j\] = 1"
+	}
 }
 
 for {set i 0} {$i < 32} {incr i 1} {
@@ -164,9 +164,9 @@ for {set i 0} {$i < 32} {incr i 1} {
 
 # 2: Set VR0~VR31 registers and check if it reflects on F32~F63.
 for {set i 0} {$i < 32} {incr i 1} {
-        for {set j 0} {$j < 4} {incr j 1} {
-           gdb_test_no_output "set \$vr$i.v4_int32\[$j\] = 0xdeadbeef"
-        }
+	for {set j 0} {$j < 4} {incr j 1} {
+	   gdb_test_no_output "set \$vr$i.v4_int32\[$j\] = 0xdeadbeef"
+	}
 }
 
 for {set i 32} {$i < 64} {incr i 1} {
@@ -184,7 +184,8 @@ if {!$core_supported} {
   return -1
 }
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 set core_loaded [gdb_core_cmd "$corefile" "re-load generated corefile"]
 if { $core_loaded == -1 } {

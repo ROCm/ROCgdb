@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -43,8 +43,6 @@
 #include "gp-experiment.h"
 #include "collect.h"
 #include "StringBuilder.h"
-
-#define SP_COLLECTOR_FOUNDER "SP_COLLECTOR_FOUNDER"
 
 extern char **environ;
 
@@ -1481,7 +1479,8 @@ collect::usage ()
     "See also:\n"
     "\n"
     "gprofng(1), gprofng-archive(1), gprofng-display-html(1), "
-    "gpgprofng-display-src(1), gprofng-display-text(1)\n"));
+    "gpgprofng-display-src(1), gprofng-display-text(1)\n"
+    "\nReport bugs to <https://sourceware.org/bugzilla/>\n"));
 }
 
 void

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ main ()
   d.f = 4;
 #endif
   enum E e;
-  
+
   st.a = 3;
   st.b = 5;
 
@@ -84,6 +84,6 @@ main ()
   struct flex_member *f = (struct flex_member *) malloc (100);
   f->items[0] = 111;
   f->items[1] = 222;
-  
+
   return 0;      /* break to inspect struct and array.  */
 }

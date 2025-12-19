@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux x86 (i386 and x86-64).
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,6 +25,7 @@
 #include "gdbsupport/x86-xstate.h"
 #include "x86-nat.h"
 #include "nat/x86-linux.h"
+#include "i386-linux-tdep.h"
 
 struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
 {
@@ -52,14 +53,14 @@ struct x86_linux_nat_target : public x86_nat_target<linux_nat_target>
   bool stopped_by_watchpoint () override
   { return linux_nat_target::stopped_by_watchpoint (); }
 
-  bool stopped_data_address (CORE_ADDR *addr_p) override
-  { return linux_nat_target::stopped_data_address (addr_p); }
+  std::vector<CORE_ADDR> stopped_data_addresses () override
+  { return linux_nat_target::stopped_data_addresses (); }
 
   bool low_stopped_by_watchpoint () override
   { return x86_nat_target::stopped_by_watchpoint (); }
 
   bool low_stopped_data_address (CORE_ADDR *addr_p) override
-  { return x86_nat_target::stopped_data_address (addr_p); }
+  { return x86_stopped_data_address (addr_p); }
 
   void low_new_fork (struct lwp_info *parent, pid_t child_pid) override;
 
@@ -91,5 +92,30 @@ private:
 
 extern ps_err_e x86_linux_get_thread_area (pid_t pid, void *addr,
 					   unsigned int *base_addr);
+
+/* Fetch the value of the shadow stack pointer register from process/thread
+   TID and store it to GDB's register cache.  */
+
+extern void x86_linux_fetch_ssp (regcache *regcache, const int tid);
+
+/* Read the value of the shadow stack pointer from GDB's register cache
+   and store it in the shadow stack pointer register of process/thread TID.
+   Throw an error in case of failure.  */
+
+extern void x86_linux_store_ssp (const regcache *regcache, const int tid);
+
+/* Fetch the tls related registers for thread TID from the kernel and place
+   them into REGCACHE.  If REGNUM is -1 then all 3 tls registers are
+   fetched, otherwise only the register matching REGNUM is fetched.  A tls
+   register number is one for which i386_is_tls_regnum_p returns true.  */
+
+extern void i386_fetch_tls_regs (regcache *regcache, int tid, int regnum);
+
+/* Store the tls related registers for thread TID from REGCACHE back in to
+   the kernel.  If REGNUM is -1 then all 3 tls registers are stored,
+   otherwise only the register matching REGNUM is stored.  A tls register
+   number is one for which i386_is_tls_regnum_p returns true.  */
+
+extern void i386_store_tls_regs (regcache *regcache, int tid, int regnum);
 
 #endif /* GDB_X86_LINUX_NAT_H */

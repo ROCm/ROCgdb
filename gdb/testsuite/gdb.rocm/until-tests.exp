@@ -1,5 +1,5 @@
 # Copyright (C) 2019-2024 Free Software Foundation, Inc.
-# Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -43,7 +43,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" \
 
 with_rocm_gpu_lock {
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }
@@ -56,10 +56,10 @@ gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 with_test_prefix "until with scheduler-locking on" {
     gdb_test_no_output "set scheduler-locking on"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
-        "info line at breakpoint_loc + 3"
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
+	"info line at breakpoint_loc + 3"
     gdb_test_no_output "set scheduler-locking off"
     gdb_test "clear bit_extract_kernel"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -67,14 +67,15 @@ with_test_prefix "until with scheduler-locking on" {
 
 # Until tests without specifying location.
 with_test_prefix "until without location; scheduler-locking on" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test_no_output "set scheduler-locking on"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until" "\[^\r\n\]*[expr $breakpoint_loc+1].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+1].*" \
-        "info line at breakpoint_loc + 1"
+    gdb_test "until" "\[^\r\n\]*[expr {$breakpoint_loc+1}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+1}].*" \
+	"info line at breakpoint_loc + 1"
     gdb_test_no_output "set scheduler-locking off"
     gdb_test "clear bit_extract_kernel"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
@@ -82,15 +83,16 @@ with_test_prefix "until without location; scheduler-locking on" {
 
 # Until tests and other tests after setting conditional breakpoint on AMDGPU thread.
 with_test_prefix "until after conditional breakpoint" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" allow-pending
     gdb_test "run" \
-        ".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
+	".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
-        "info line at breakppoint_loc + 3"
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
+	"info line at breakppoint_loc + 3"
     gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+}
 }
 
@@ -121,18 +123,19 @@ proc run_and_wait {test} {
 
 # Until and other tests in non-stop mode.
 with_test_prefix "until with non-stop on" {
-    clean_restart ${binfile}
+    clean_restart
+    gdb_load ${binfile}
     gdb_test_no_output "set non-stop on"
     gdb_breakpoint "bit_extract_kernel" "allow-pending"
     run_and_wait "run to bit_extract_kernel Breakpoint"
 
     gdb_test "thread $threadid" \
-        "Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
+	"Switching to thread $threadid, lane 0 \\(AMDGPU Lane .*"
     gdb_test "info line" "Line $breakpoint_loc.*"
-    gdb_test "until [expr $breakpoint_loc+3]" \
-        "bit_extract_kernel.+${testfile}.cpp:[expr $breakpoint_loc+3].+[expr $breakpoint_loc+3].*"
-    gdb_test "info line" "Line [expr $breakpoint_loc+3].*" \
-        "info line at breakpoint_loc + 3"
+    gdb_test "until [expr {$breakpoint_loc+3}]" \
+	"bit_extract_kernel.+${testfile}.cpp:[expr {$breakpoint_loc+3}].+[expr {$breakpoint_loc+3}].*"
+    gdb_test "info line" "Line [expr {$breakpoint_loc+3}].*" \
+	"info line at breakpoint_loc + 3"
     gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+}
 }
 

@@ -2,7 +2,7 @@
 
 # ver_test_14.sh -- a test case for version scripts
 
-# Copyright (C) 2018-2024 Free Software Foundation, Inc.
+# Copyright (C) 2018-2025 Free Software Foundation, Inc.
 # Written by Cary Coutant <ccoutant@gmail.com>.
 
 # This file is part of gold.
@@ -35,9 +35,23 @@ check()
     fi
 }
 
+check_missing()
+{
+    if grep -q "$2" "$1"
+    then
+	echo "Found unexpected symbol in $1:"
+	echo "   $2"
+	echo ""
+	echo "Actual output below:"
+	cat "$1"
+	exit 1
+    fi
+}
+
 check ver_test_14.syms "V1 *\(0x[0-9a-f][048c]\)\? t2()$"
 check ver_test_14.syms "V1 *\(0x[0-9a-f][048c]\)\? t3()$"
 check ver_test_14.syms "V1 *\(0x[0-9a-f][048c]\)\? t4()$"
-check ver_test_14.syms "Base *\(0x[0-9a-f][048c]\)\? t4_2a$"
+check ver_test_14.syms "t4_2a$"
+check_missing ver_test_14.syms "Base *\(0x[0-9a-f][048c]\)\? t4_2a$"
 
 exit 0

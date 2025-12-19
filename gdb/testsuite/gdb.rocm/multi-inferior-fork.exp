@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -22,6 +22,7 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests
+require allow_fork_tests
 
 standard_testfile .cpp
 
@@ -30,7 +31,8 @@ if {[build_executable "failed to prepare" ${binfile} ${srcfile} {debug hip}]} {
 }
 
 proc do_test { stop_at } {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     gdb_test_no_output "set follow-fork-mode child"
 

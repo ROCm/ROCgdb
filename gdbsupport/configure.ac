@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB support library
-dnl Copyright (C) 2020-2024 Free Software Foundation, Inc.
+dnl Copyright (C) 2020-2025 Free Software Foundation, Inc.
 dnl
 dnl This program is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ fi
 case ${host} in
   *mingw32*)
     AC_DEFINE(USE_WIN32API, 1,
-              [Define if we should use the Windows API, instead of the
+	      [Define if we should use the Windows API, instead of the
 	       POSIX API.  On Windows, we use the Windows API when
 	       building for MinGW, but the POSIX API when building
 	       for Cygwin.])

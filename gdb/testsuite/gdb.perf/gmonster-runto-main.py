@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 Free Software Foundation, Inc.
+# Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 
 # Measure performance of running to main.
 
-from perftest import measure, perftest, utils
+from perftest import perftest, utils
 
 
 class GmonsterRuntoMain(perftest.TestCaseWithBasicMeasurements):
@@ -33,6 +33,5 @@ class GmonsterRuntoMain(perftest.TestCaseWithBasicMeasurements):
             utils.select_file(this_run_binfile)
             iteration = 5
             while iteration > 0:
-                func = lambda: utils.runto_main()
-                self.measure.measure(func, run)
+                self.measure.measure(lambda: utils.runto_main(), run)
                 iteration -= 1

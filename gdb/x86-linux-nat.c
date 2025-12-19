@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux x86 (i386 and x86-64).
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,6 +41,7 @@
 #include "nat/x86-linux.h"
 #include "nat/x86-linux-dregs.h"
 #include "nat/linux-ptrace.h"
+#include "x86-tdep.h"
 #include "nat/x86-linux-tdesc.h"
 
 /* linux_nat_target::low_new_fork implementation.  */
@@ -97,15 +98,19 @@ const struct target_desc *
 x86_linux_nat_target::read_description ()
 {
   /* The x86_linux_tdesc_for_tid call only reads xcr0 the first time it is
-     called, the xcr0 value is stored here and reused on subsequent calls.  */
-  static uint64_t xcr0_storage;
+     called.  Also it checks the enablement state of features which are
+     not configured in xcr0, such as CET shadow stack.  Once the supported
+     features are identified, the XSTATE_BV_STORAGE value is configured
+     accordingly and preserved for subsequent calls of this function.  */
+  static uint64_t xstate_bv_storage;
 
   if (inferior_ptid == null_ptid)
     return this->beneath ()->read_description ();
 
   int tid = inferior_ptid.pid ();
 
-  return x86_linux_tdesc_for_tid (tid, &xcr0_storage, &this->m_xsave_layout);
+  return x86_linux_tdesc_for_tid (tid, &xstate_bv_storage,
+				  &this->m_xsave_layout);
 }
 
 
@@ -210,9 +215,113 @@ x86_linux_get_thread_area (pid_t pid, void *addr, unsigned int *base_addr)
 }
 
 
-void _initialize_x86_linux_nat ();
+/* See x86-linux-nat.h.  */
+
 void
-_initialize_x86_linux_nat ()
+x86_linux_fetch_ssp (regcache *regcache, const int tid)
+{
+  uint64_t ssp = 0x0;
+  iovec iov {&ssp, sizeof (ssp)};
+
+  /* The shadow stack may be enabled and disabled at runtime.  Reading the
+     ssp might fail as shadow stack was not activated for the current
+     thread.  We don't want to show a warning but silently return.  The
+     register will be shown as unavailable for the user.  */
+  if (ptrace (PTRACE_GETREGSET, tid, NT_X86_SHSTK, &iov) != 0)
+    return;
+
+  x86_supply_ssp (regcache, ssp);
+}
+
+/* See x86-linux-nat.h.  */
+
+void
+x86_linux_store_ssp (const regcache *regcache, const int tid)
+{
+  uint64_t ssp = 0x0;
+  iovec iov {&ssp, sizeof (ssp)};
+  x86_collect_ssp (regcache, ssp);
+
+  /* Dependent on the target the ssp register can be unavailable or
+     nullptr when shadow stack is supported by HW and the Linux kernel but
+     not enabled for the current thread.  In case of nullptr, GDB tries to
+     restore the shadow stack pointer after an inferior call.  The ptrace
+     call with PTRACE_SETREGSET will fail here with errno ENODEV.  We
+     don't want to throw an error in this case but silently continue.  */
+  errno = 0;
+  if ((ptrace (PTRACE_SETREGSET, tid, NT_X86_SHSTK, &iov) != 0)
+      && (errno != ENODEV))
+    perror_with_name (_("Failed to write pl3_ssp register"));
+}
+
+/* Copy from BUFFER into REGCACHE, supplying the tls gdt entry registers.
+   Use REGNUM to decide exactly which registers are copied.  */
+
+static void
+i386_supply_tls_regs (regcache *regcache, int regnum,
+		      gdb::array_view<user_desc> buffer)
+{
+  gdb_assert (buffer.size () == 3);
+
+  for (int i = 0; i < 3; ++i)
+    {
+      if (regnum == -1 || regnum == I386_LINUX_TLS_GDT_0 + i)
+	regcache->raw_supply (I386_LINUX_TLS_GDT_0 + i,
+			      buffer.slice (i, 1).data ());
+    }
+}
+
+/* Copy from REGCACHE into BUFFER, collecting the tls gdt entry
+   registers.  Use REGNUM to decide which registers are copied.  */
+
+static void
+i386_collect_tls_regs (regcache *regcache, int regnum,
+			gdb::array_view<user_desc> buffer)
+{
+  gdb_assert (buffer.size () == 3);
+
+  for (int i = 0; i < 3; ++i)
+    {
+      if (regnum == -1 || regnum == I386_LINUX_TLS_GDT_0 + i)
+	regcache->raw_collect (I386_LINUX_TLS_GDT_0 + i,
+			       buffer.slice (i, 1).data ());
+    }
+}
+
+/* See x86-linux-nat.h.  */
+
+void
+i386_fetch_tls_regs (regcache *regcache, int tid, int regnum)
+{
+  user_desc tls_ud[3];
+  if (!i386_ptrace_get_tls_data (tid, tls_ud))
+    perror_with_name (_("Couldn't get TLS area data"));
+
+  i386_supply_tls_regs (regcache, regnum, tls_ud);
+}
+
+/* See x86-linux-nat.h.   */
+
+void
+i386_store_tls_regs (regcache *regcache, int tid, int regnum)
+{
+  /* Read current values in to TLS_UD.  */
+  user_desc tls_ud[3];
+  if (!i386_ptrace_get_tls_data (tid, tls_ud))
+    perror_with_name (_("Couldn't get TLS area data"));
+
+  /* Write new values from regcache into TLS_UD.  Overwriting the
+     current values.  */
+  i386_collect_tls_regs (regcache, regnum, tls_ud);
+
+  /* Write the new values back to the kernel.  */
+  if (!i386_ptrace_set_tls_data (tid, tls_ud))
+    perror_with_name (_("Couldn't write TLS area data"));
+}
+
+
+
+INIT_GDB_FILE (x86_linux_nat)
 {
   /* Initialize the debug register function vectors.  */
   x86_dr_low.set_control = x86_linux_dr_set_control;

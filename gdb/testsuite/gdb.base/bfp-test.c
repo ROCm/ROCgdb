@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2005-2024 Free Software Foundation, Inc.
+   Copyright 2005-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -27,6 +27,6 @@ int main()
   b32 = 1.5f;
   b64 = 2.25;
   b128 = 3.375l;
- 
+
   return 0;
 }

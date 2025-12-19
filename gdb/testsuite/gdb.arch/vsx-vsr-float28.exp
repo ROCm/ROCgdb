@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2024 Free Software Foundation, Inc.
+# Copyright (C) 2008-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,9 +23,9 @@ require {istarget "powerpc*"} allow_vsx_tests
 standard_testfile
 
 set compile_flags {debug nowarnings quiet}
-if [test_compiler_info gcc*] {
+if {[test_compiler_info gcc*]} {
     set compile_flags "$compile_flags additional_flags=-maltivec additional_flags=-mabi=altivec"
-} elseif [test_compiler_info xlc*] {
+} elseif {[test_compiler_info xlc*]} {
     set compile_flags "$compile_flags additional_flags=-qaltivec"
 } else {
     warning "unknown compiler"
@@ -75,6 +75,3 @@ if {$endianness == "big"} {
 gdb_test "p/f \$vs1" "$vector_field"
 
 gdb_exit
-
-
-

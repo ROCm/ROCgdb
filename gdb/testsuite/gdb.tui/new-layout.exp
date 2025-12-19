@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,15 +45,12 @@ gdb_test "tui new-layout example src 1 src 1" \
 gdb_test "tui new-layout example src 1" \
     "New layout does not contain the \"cmd\" window"
 
-# Avoid unbalanced curly braces problems with tcl 8.5.
-if { [tcl_version_at_least 8 6] } {
-    gdb_test "tui new-layout example src 1\}" \
-	"Extra '\}' in layout specification"
-    gdb_test "tui new-layout example {src 1} 1\}" \
-	"Extra '\}' in layout specification"
-    gdb_test "tui new-layout example \{src 1" \
-	"Missing '\}' in layout specification"
-}
+gdb_test "tui new-layout example src 1\}" \
+    "Extra '\}' in layout specification"
+gdb_test "tui new-layout example {src 1} 1\}" \
+    "Extra '\}' in layout specification"
+gdb_test "tui new-layout example \{src 1" \
+    "Missing '\}' in layout specification"
 
 # Each entry of this list describes a layout, and some associated
 # tests.  The items within each entry are:
@@ -84,7 +81,7 @@ set layouts \
 proc check_boxes {boxes} {
     set boxno 1
     foreach box $boxes {
-	eval Term::check_box [list "box $boxno"] $box
+	Term::check_box "box $boxno" {*}$box
 	incr boxno
     }
 }
@@ -150,4 +147,7 @@ Term::check_box "before cmd_only: src box in src layout" 0 0 80 15
 Term::command "layout cmd_only"
 
 Term::command "layout src"
+
+# Flush out and check the resulting src box.
+Term::command "print 1"
 Term::check_box "after cmd_only: src box in src layout" 0 0 80 15

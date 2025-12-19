@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2008-2024 Free Software Foundation, Inc.
+   Copyright 2008-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ extern void hide (int);
 /* Test register variable
    Requires -- compiler honors 'register'.  */
 
-void 
+void
 register_state (void)
 {
   register int a = 0;
@@ -88,7 +88,7 @@ module_global_state (void)
 
 /* main test driver */
 
-int 
+int
 main (int argc, char **argv)
 {
   register_state ();	/* begin main */
@@ -96,6 +96,6 @@ main (int argc, char **argv)
   function_static_state ();
   module_static_state ();
   module_global_state ();
-  
+
   return 0;		/* end main */
 }

@@ -1,6 +1,6 @@
 /* Read a symbol table in MIPS' format (Third-Eye).
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    Contributed by Alessandro Forin (af@cs.cmu.edu) at CMU.  Major work
    by Per Bothner, John Gilmore and Ian Lance Taylor at Cygnus Support.
@@ -26,7 +26,6 @@
 #include "bfd.h"
 #include "symtab.h"
 #include "objfiles.h"
-#include "stabsread.h"
 #include "mdebugread.h"
 
 #include "coff/sym.h"
@@ -49,7 +48,6 @@ read_alphacoff_dynamic_symtab (minimal_symbol_reader &,
 static void
 mipscoff_new_init (struct objfile *ignore)
 {
-  stabsread_new_init ();
 }
 
 /* Initialize to read a symbol file (nothing to do).  */
@@ -66,19 +64,15 @@ mipscoff_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
 {
   bfd *abfd = objfile->obfd.get ();
 
-  minimal_symbol_reader reader (objfile);
-
   /* Now that the executable file is positioned at symbol table,
      process it and define symbols accordingly.  */
 
-  if (!((*ecoff_backend (abfd)->debug_swap.read_debug_info)
-	(abfd, NULL, &ecoff_data (abfd)->debug_info)))
-    error (_("Error reading symbol table: %s"), bfd_errmsg (bfd_get_error ()));
-
-  mdebug_build_psymtabs (reader, objfile, &ecoff_backend (abfd)->debug_swap,
-			 &ecoff_data (abfd)->debug_info);
+  mipsmdebug_build_psymtabs (objfile, &ecoff_backend (abfd)->debug_swap,
+			     &ecoff_data (abfd)->debug_info);
 
   /* Add alpha coff dynamic symbols.  */
+
+  minimal_symbol_reader reader (objfile);
 
   read_alphacoff_dynamic_symtab (reader, objfile);
 
@@ -374,9 +368,7 @@ static const struct sym_fns ecoff_sym_fns =
   NULL,				/* sym_probe_fns */
 };
 
-void _initialize_mipsread ();
-void
-_initialize_mipsread ()
+INIT_GDB_FILE (mipsread)
 {
   add_symtab_fns (bfd_target_ecoff_flavour, &ecoff_sym_fns);
 }

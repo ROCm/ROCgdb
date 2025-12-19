@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,6 +37,6 @@ gdb_test_no_output "set always-read-ctf on"
 gdb_load $binfile
 
 # Same thing with struct and union.
-gdb_test "ptype struct A" "type = struct A \{\[\r\n\]+\[ \t\]+struct B \\*foo;\[\r\n\]+\}.*" "ptype structure A"
-gdb_test "ptype struct B" "type = struct B \{\[\r\n\]+\[ \t\]+struct B \\*next;\[\r\n\]+\}.*" "ptype structure B"
+gdb_test "ptype struct A" "type = struct A \{\[\r\n\]+\[ \t\]+long a;\[\r\n\]+\[ \t\]+struct B \\*foo;\[\r\n\]+\}.*" "ptype structure A"
+gdb_test "ptype struct B" "type = struct B \{\[\r\n\]+\[ \t\]+int foo;\[\r\n\]+\[ \t\]+struct A \\*bar;\[\r\n\]+\}.*" "ptype structure B"
 gdb_test "ptype struct C" "type = struct C \{\[\r\n\]+\[ \t\]+struct B \\*foo;\[\r\n\]+\[ \t\]+int b;\[\r\n\]+\}.*" "ptype structure C"

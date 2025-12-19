@@ -1,6 +1,6 @@
 /* Readline support for Python.
 
-   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+   Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,11 +29,7 @@
 
 static char *
 gdbpy_readline_wrapper (FILE *sys_stdin, FILE *sys_stdout,
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 4
 			const char *prompt)
-#else
-			char *prompt)
-#endif
 {
   int n;
   const char *p = NULL;
@@ -86,8 +82,8 @@ gdbpy_readline_wrapper (FILE *sys_stdin, FILE *sys_stdout,
 
 /* Initialize Python readline support.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_gdb_readline (void)
+static int
+gdbpy_initialize_gdb_readline ()
 {
   /* Python's readline module conflicts with GDB's use of readline
      since readline is not reentrant.  Ideally, a reentrant wrapper to

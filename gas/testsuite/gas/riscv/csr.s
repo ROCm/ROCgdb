@@ -3,7 +3,7 @@
 	csrw \val, a1
 	.endm
 
-	# Supported privileged specs, 1.10, 1.11 and 1.12.
+	# Supported privileged specs, 1.10, 1.11, 1.12 and 1.13.
 
 	# User Counter/Timers
 	csr cycle
@@ -101,6 +101,7 @@
 	csr mstatus
 	csr misa
 	csr medeleg
+	csr medelegh		# Added in 1.13
 	csr mideleg
 	csr mie
 	csr mtvec
@@ -303,6 +304,7 @@
 	# Hypervisor Trap Setup
 	csr hstatus
 	csr hedeleg
+	csr hedelegh		# Added in 1.13
 	csr hideleg
 	csr hie
 	csr hcounteren
@@ -416,6 +418,12 @@
 	csr vsieh
 	csr vsiph
 
+	# Ssccfg or Smcdeleg
+	csr scountinhibit
+
+	# Zicfiss
+	csr ssp
+
 	# Sscsrind
 	csr siselect
 	csr sireg
@@ -469,6 +477,13 @@
 	csr stimecmph
 	csr vstimecmp
 	csr vstimecmph
+
+	# Smctr/Ssctr
+	csr sctrctl
+	csr sctrstatus
+	csr sctrdepth
+	csr vsctrctl
+	csr mctrctl
 
 	# Supported in previous priv spec, but dropped now
 
@@ -531,3 +546,6 @@
 
 	# Zcmt
 	csr jvt
+
+	# Ssqosid
+	csr srmcfg

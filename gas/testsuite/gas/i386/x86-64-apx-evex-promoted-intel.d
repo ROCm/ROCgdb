@@ -118,6 +118,10 @@ Disassembly of section \.text:
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7d 08 f8 bc 87 23 01 00 00[	 ]+movdir64b[	 ]+r31,\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 f9 8c 87 23 01 00 00[	 ]+movdiri[	 ]+DWORD PTR \[r31\+rax\*4\+0x123\],r25d
 [	 ]*[a-f0-9]+:[	 ]*62 4c fc 08 f9 bc 87 23 01 00 00[	 ]+movdiri[	 ]+QWORD PTR \[r31\+rax\*4\+0x123\],r31
+[	 ]*[a-f0-9]+:[	 ]*62 cc 7c 08 8a 84 87 23 01 00 00[	 ]+movrs[	 ]+r16b,BYTE PTR \[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 ec 7d 08 8b 94 80 23 01 00 00[	 ]+movrs[	 ]+r18w,WORD PTR \[r16\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 8b 8c 87 23 01 00 00[	 ]+movrs[	 ]+r25d,DWORD PTR \[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 6c fc 08 8b bc 80 23 01 00 00[	 ]+movrs[	 ]+r31,QWORD PTR \[r16\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 5a 6f 08 f5 d1[	 ]+pdep[	 ]+r10d,edx,r25d
 [	 ]*[a-f0-9]+:[	 ]*62 5a 87 08 f5 df[	 ]+pdep[	 ]+r11,r15,r31
 [	 ]*[a-f0-9]+:[	 ]*62 da 37 00 f5 94 87 23 01 00 00[	 ]+pdep[	 ]+edx,r25d,DWORD PTR \[r31\+rax\*4\+0x123\]
@@ -136,6 +140,10 @@ Disassembly of section \.text:
 [	 ]*[a-f0-9]+:[	 ]*62 5a 87 00 f7 bc 87 23 01 00 00[	 ]+shrx[	 ]+r15,QWORD PTR \[r31\+rax\*4\+0x123\],r31
 [	 ]*[a-f0-9]+:[	 ]*62 da 7d 08 49 84 87 23 01 00 00[	 ]+sttilecfg[	 ]+\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7f 08 4b b4 87 23 01 00 00[	 ]+tileloadd tmm6,\[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 b2 7b 08 4a b4 fd 00 00 00 10[	 ]+tileloaddrs[	 ]+tmm6,\[rbp\+r31\*8\+0x10000000\]
+[	 ]*[a-f0-9]+:[	 ]*62 fa 7f 08 4a 1c 20[	 ]+tileloaddrs[	 ]+tmm3,\[r16\+riz\*1\]
+[	 ]*[a-f0-9]+:[	 ]*62 9a 7d 08 4a b4 f7 00 00 00 10[	 ]+tileloaddrst1[	 ]+tmm6,\[r31\+r14\*8\+0x10000000\]
+[	 ]*[a-f0-9]+:[	 ]*62 fa 7d 08 4a 1c 20[	 ]+tileloaddrst1[	 ]+tmm3,\[r16\+riz\*1\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7d 08 4b b4 87 23 01 00 00[	 ]+tileloaddt1 tmm6,\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7e 08 4b b4 87 23 01 00 00[	 ]+tilestored[	 ]+\[r31\+rax\*4\+0x123\],tmm6
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 66 8c 87 23 01 00 00[	 ]+wrssd[	 ]+\[r31\+rax\*4\+0x123\],r25d
@@ -249,6 +257,10 @@ Disassembly of section \.text:
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7d 08 f8 bc 87 23 01 00 00[	 ]+movdir64b[	 ]+r31,\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 f9 8c 87 23 01 00 00[	 ]+movdiri[	 ]+DWORD PTR \[r31\+rax\*4\+0x123\],r25d
 [	 ]*[a-f0-9]+:[	 ]*62 4c fc 08 f9 bc 87 23 01 00 00[	 ]+movdiri[	 ]+QWORD PTR \[r31\+rax\*4\+0x123\],r31
+[	 ]*[a-f0-9]+:[	 ]*62 cc 7c 08 8a 84 87 23 01 00 00[	 ]+movrs[	 ]+r16b,BYTE PTR \[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 ec 7d 08 8b 94 80 23 01 00 00[	 ]+movrs[	 ]+r18w,WORD PTR \[r16\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 8b 8c 87 23 01 00 00[	 ]+movrs[	 ]+r25d,DWORD PTR \[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 6c fc 08 8b bc 80 23 01 00 00[	 ]+movrs[	 ]+r31,QWORD PTR \[r16\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 5a 6f 08 f5 d1[	 ]+pdep[	 ]+r10d,edx,r25d
 [	 ]*[a-f0-9]+:[	 ]*62 5a 87 08 f5 df[	 ]+pdep[	 ]+r11,r15,r31
 [	 ]*[a-f0-9]+:[	 ]*62 da 37 00 f5 94 87 23 01 00 00[	 ]+pdep[	 ]+edx,r25d,DWORD PTR \[r31\+rax\*4\+0x123\]
@@ -267,6 +279,10 @@ Disassembly of section \.text:
 [	 ]*[a-f0-9]+:[	 ]*62 5a 87 00 f7 bc 87 23 01 00 00[	 ]+shrx[	 ]+r15,QWORD PTR \[r31\+rax\*4\+0x123\],r31
 [	 ]*[a-f0-9]+:[	 ]*62 da 7d 08 49 84 87 23 01 00 00[	 ]+sttilecfg[	 ]+\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7f 08 4b b4 87 23 01 00 00[	 ]+tileloadd tmm6,\[r31\+rax\*4\+0x123\]
+[	 ]*[a-f0-9]+:[	 ]*62 b2 7b 08 4a b4 fd 00 00 00 10[	 ]+tileloaddrs[	 ]+tmm6,\[rbp\+r31\*8\+0x10000000\]
+[	 ]*[a-f0-9]+:[	 ]*62 fa 7f 08 4a 1c 20[	 ]+tileloaddrs[	 ]+tmm3,\[r16\+riz\*1\]
+[	 ]*[a-f0-9]+:[	 ]*62 9a 7d 08 4a b4 f7 00 00 00 10[	 ]+tileloaddrst1[	 ]+tmm6,\[r31\+r14\*8\+0x10000000\]
+[	 ]*[a-f0-9]+:[	 ]*62 fa 7d 08 4a 1c 20[	 ]+tileloaddrst1[	 ]+tmm3,\[r16\+riz\*1\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7d 08 4b b4 87 23 01 00 00[	 ]+tileloaddt1 tmm6,\[r31\+rax\*4\+0x123\]
 [	 ]*[a-f0-9]+:[	 ]*62 da 7e 08 4b b4 87 23 01 00 00[	 ]+tilestored[	 ]+\[r31\+rax\*4\+0x123\],tmm6
 [	 ]*[a-f0-9]+:[	 ]*62 4c 7c 08 66 8c 87 23 01 00 00[	 ]+wrssd[	 ]+\[r31\+rax\*4\+0x123\],r25d

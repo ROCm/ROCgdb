@@ -1,4 +1,4 @@
-# Copyright 2002-2024 Free Software Foundation, Inc.
+# Copyright 2002-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,12 +26,6 @@ set endian "auto"
 
 set formats {binary ihex srec tekhex  verilog}
 
-if {[istarget "alpha*-*-*"]} {
-    # SREC etc cannot handle 64-bit addresses.  Force the test
-    # program into the low 31 bits of the address space.
-    lappend options "ldflags=-Wl,-taso"
-}
-
 # Runs the command 'print zero_all ()'.  Uses the PRINT_ZERO_ALL_COUNT
 # global to ensure the test names are unique.
 set print_zero_all_count 0
@@ -47,12 +41,9 @@ proc print_zero_all { } {
 # this causes addresses to be out of range for IHEX.
 lappend options {nopie}
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable ${options}] != "" } {
-     untested "failed to compile"
-     return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile $options] != 0 } {
+    return
 }
-
-clean_restart $binfile
 
 gdb_test "dump mem /dev/null 0x10 0x20" "Cannot access memory at address 0x10" \
 	 "inaccessible memory is reported"
@@ -113,14 +104,7 @@ set endian [get_endianness]
 # Now generate some dump files.
 
 proc make_dump_file { command msg } {
-  global gdb_prompt
-
-    gdb_test_multiple "${command}" "$msg" {
-	-re ".*\[Ee\]rror.*$gdb_prompt $"      { fail $msg }
-	-re ".*\[Ww\]arning.*$gdb_prompt $"    { fail $msg }
-	-re ".*\[Uu\]ndefined .*$gdb_prompt $" { fail $msg }
-	-re ".*$gdb_prompt $"                  { pass $msg }
-    }
+    gdb_test_no_output "${command}" "$msg"
 }
 
 make_dump_file "dump val [set intarr1.bin] intarray" \
@@ -204,7 +188,7 @@ proc capture_pointer_with_type { pointer } {
 	    # Expected output of "p ${pointer}" is like "$7 = (int (*)[32]) 0x804a0e0",
 	    # and we want to extract "(int (*)[32]) 0x804a0e0" from it via
 	    # following regexp.
-	    if [regexp " \\(.*\\).* 0x\[0-9a-fA-F\]+" $expect_out(0,string) output_string] {
+	    if {[regexp " \\(.*\\).* 0x\[0-9a-fA-F\]+" $expect_out(0,string) output_string]} {
 		# OUTPUT_STRING is expected to be like "(int (*)[32]) 0x804a0e0".
 		pass "$test"
 	    } else {
@@ -273,12 +257,12 @@ make_dump_file \
 
 proc test_restore_saved_value { restore_args msg oldval newval } {
     global gdb_prompt
-    
+
     gdb_test "restore $restore_args" \
 	"Restoring .*" \
 	"$msg; file restored ok"
     if { ![string compare $oldval \
-	       [capture_value $newval "$msg"]] } then { 
+	       [capture_value $newval "$msg"]] } then {
 	pass "$msg; value restored ok"
     } else {
 	fail "$msg; value restored ok"
@@ -410,7 +394,7 @@ test_restore_saved_value "[set intstr1.bin] binary $struct2_start" \
 #
 # test restore with start/stop addresses.
 #
-# For this purpose, we will restore just the third element of the array, 
+# For this purpose, we will restore just the third element of the array,
 # and check to see that adjacent elements are not modified.
 #
 # We will need the address and offset of the third and fourth elements.
@@ -461,7 +445,7 @@ gdb_test "print intarray\[4\] == 0" " = 1" "element 4 not changed - 4"
 if {![string compare $is64bitonly "no"]} {
   print_zero_all
 
-  # restore with expressions 
+  # restore with expressions
   test_restore_saved_value \
 	"[set intarr3.srec] (char*)${array2_start}-(char*)${array_start} &intarray\[3\] &intarray\[4\]" \
 	"array partial with expressions" 4 "intarray2\[3\]"
@@ -487,7 +471,7 @@ gdb_file_cmd ${binfile}
 # Now fix the endianness at the correct state.
 
 gdb_test_multiple "set endian $endian" "set endianness" {
-    -re ".* (big|little) endian.*$gdb_prompt $" { 
+    -re ".* (big|little) endian.*$gdb_prompt $" {
 	pass "setting $endian endianness"
     }
 }
@@ -510,10 +494,10 @@ if { ![string compare $struct_val \
 
 proc test_reload_saved_value { filename msg oldval newval } {
     global gdb_prompt
-    
+
     gdb_file_cmd $filename
     if { ![string compare $oldval \
-	       [capture_value $newval "$msg"]] } then { 
+	       [capture_value $newval "$msg"]] } then {
 	pass "$msg; value restored ok"
     } else {
 	fail "$msg; value restored ok"

@@ -1,11 +1,11 @@
 /* Common target-dependent code for NetBSD systems.
 
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
-  
+
    This file is part of GDB.
-  
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3 of the License, or

@@ -1,6 +1,6 @@
 /* Target-dependent code for the Sanyo Xstormy16a (LC590000) processor.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -133,18 +133,18 @@ xstormy16_type_is_scalar (struct type *t)
 	  && t->code () != TYPE_CODE_ARRAY);
 }
 
-/* Function: xstormy16_use_struct_convention 
+/* Function: xstormy16_use_struct_convention
    Returns non-zero if the given struct type will be returned using
    a special convention, rather than the normal function return method.
    7sed in the contexts of the "return" command, and of
-   target function calls from the debugger.  */ 
+   target function calls from the debugger.  */
 
 static int
 xstormy16_use_struct_convention (struct type *type)
 {
   return !xstormy16_type_is_scalar (type)
 	 || type->length () > E_MAX_RETTYPE_SIZE_IN_REGS;
-} 
+}
 
 /* Function: xstormy16_extract_return_value
    Find a function's return value in the appropriate registers (in
@@ -163,15 +163,15 @@ xstormy16_extract_return_value (struct type *type, struct regcache *regcache,
 
 /* Function: xstormy16_store_return_value
    Copy the function return value from VALBUF into the
-   proper location for a function return. 
+   proper location for a function return.
    Called only in the context of the "return" command.  */
 
-static void 
+static void
 xstormy16_store_return_value (struct type *type, struct regcache *regcache,
 			      const gdb_byte *valbuf)
 {
   if (type->length () == 1)
-    {    
+    {
       /* Add leading zeros to the value.  */
       gdb_byte buf[xstormy16_reg_size];
       memset (buf, 0, xstormy16_reg_size);
@@ -368,7 +368,7 @@ xstormy16_analyze_prologue (struct gdbarch *gdbarch,
 	;
 
       /* Optional copying of args in r2-r7 to stack.  */
-      /* 72DS HHHH   mov.b (rD, 0xHHHH), r(S-8) 
+      /* 72DS HHHH   mov.b (rD, 0xHHHH), r(S-8)
 	 (bit3 always 1, bit2-0 = reg) */
       /* 73DS HHHH   mov.w (rD, 0xHHHH), r(S-8) */
       else if ((inst & 0xfed8) == 0x72d8 && (inst & 0x0007) >= 2)
@@ -392,11 +392,11 @@ xstormy16_analyze_prologue (struct gdbarch *gdbarch,
 }
 
 /* Function: xstormy16_skip_prologue
-   If the input address is in a function prologue, 
+   If the input address is in a function prologue,
    returns the address of the end of the prologue;
    else returns the input address.
 
-   Note: the input address is likely to be the function start, 
+   Note: the input address is likely to be the function start,
    since this function is mainly used for advancing a breakpoint
    to the first line, or stepping to the first line when we have
    stepped into a function call.  */
@@ -428,14 +428,14 @@ xstormy16_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       /* Don't use line number debug info for assembly source files.  */
       if (sym && sym->language () != language_asm)
 	{
-	  sal = find_pc_line (func_addr, 0);
+	  sal = find_sal_for_pc (func_addr, 0);
 	  if (sal.end && sal.end < func_end)
 	    {
 	      /* Found a line number, use it as end of prologue.  */
 	      return sal.end;
 	    }
 	}
-      /* No useable line symbol.  Use result of prologue parsing method.  */
+      /* No usable line symbol.  Use result of prologue parsing method.  */
       return plg_end;
     }
 
@@ -546,14 +546,14 @@ xstormy16_find_jmp_table_entry (struct gdbarch *gdbarch, CORE_ADDR faddr)
       if (!strcmp (faddr_sect->the_bfd_section->name, ".plt"))
 	return faddr;
 
-      for (obj_section *osect : faddr_sect->objfile->sections ())
+      for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (!strcmp (osect->the_bfd_section->name, ".plt"))
+	  if (!strcmp (osect.the_bfd_section->name, ".plt"))
 	    {
 	      CORE_ADDR addr, endaddr;
 
-	      addr = osect->addr ();
-	      endaddr = osect->endaddr ();
+	      addr = osect.addr ();
+	      endaddr = osect.endaddr ();
 
 	      for (; addr < endaddr; addr += 2 * xstormy16_inst_size)
 		{
@@ -636,10 +636,9 @@ xstormy16_address_to_pointer (struct gdbarch *gdbarch,
 static struct xstormy16_frame_cache *
 xstormy16_alloc_frame_cache (void)
 {
-  struct xstormy16_frame_cache *cache;
   int i;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct xstormy16_frame_cache);
+  auto *cache = frame_obstack_zalloc<xstormy16_frame_cache> ();
 
   cache->base = 0;
   cache->saved_sp = 0;
@@ -728,15 +727,16 @@ xstormy16_frame_base_address (const frame_info_ptr &this_frame, void **this_cach
   return cache->base;
 }
 
-static const struct frame_unwind xstormy16_frame_unwind = {
+static const struct frame_unwind_legacy xstormy16_frame_unwind (
   "xstormy16 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   xstormy16_frame_this_id,
   xstormy16_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static const struct frame_base xstormy16_frame_base = {
   &xstormy16_frame_unwind,
@@ -827,9 +827,7 @@ xstormy16_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
    Initializer function for the Sanyo Xstormy16a module.
    Called by gdb at start-up.  */
 
-void _initialize_xstormy16_tdep ();
-void
-_initialize_xstormy16_tdep ()
+INIT_GDB_FILE (xstormy16_tdep)
 {
   gdbarch_register (bfd_arch_xstormy16, xstormy16_gdbarch_init);
 }

@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 # Some targets can't call functions, so don't even bother with this
 # test.
 
-if [target_info exists gdb,cannot_call_functions] {
+if {[target_info exists gdb,cannot_call_functions]} {
     unsupported "this target can not call functions"
     continue
 }
@@ -28,7 +28,7 @@ set float_types { tf td tld }
 set complex_types { tfc tdc tldc }
 
 set compile_flags {debug}
-if [support_complex_tests] {
+if {[support_complex_tests]} {
     lappend compile_flags "additional_flags=-DTEST_COMPLEX"
     lappend compile_flags "additional_flags=-Wno-psabi"
 }
@@ -56,9 +56,6 @@ proc I2A { n } {
 proc start_nested_structs_test { lang types } {
     global testfile
     global srcfile
-    global binfile
-    global subdir
-    global srcdir
     global compile_flags
 
     standard_testfile infcall-nested-structs.c
@@ -75,13 +72,10 @@ proc start_nested_structs_test { lang types } {
 	append testfile "-" "$t"
     }
 
-    if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable "${flags}"] != "" } {
-	unresolved "failed to compile"
+    if { [prepare_for_testing "prepare for testing" \
+	      $testfile $srcfile $flags] } {
 	return 0
     }
-
-    # Start with a fresh gdb.
-    clean_restart ${binfile}
 
     # Make certain that the output is consistent
     gdb_test_no_output "set print sevenbit-strings"
@@ -91,7 +85,7 @@ proc start_nested_structs_test { lang types } {
     gdb_test_no_output "set print elements 300"
 
     # Advance to main
-    if { ![runto_main] } then {
+    if { ![runto_main] } {
 	return 0
     }
 
@@ -112,12 +106,12 @@ proc run_tests { lang types } {
     global gdb_prompt
 
     foreach {name} {struct_01_01 struct_01_02 struct_01_03 struct_01_04
-                    struct_02_01 struct_02_02 struct_02_03 struct_02_04
-                    struct_04_01 struct_04_02 struct_04_03 struct_04_04
-                    struct_05_01 struct_05_02 struct_05_03 struct_05_04
-                    struct_static_02_01 struct_static_02_02 struct_static_02_03 struct_static_02_04
-                    struct_static_04_01 struct_static_04_02 struct_static_04_03 struct_static_04_04
-                    struct_static_06_01 struct_static_06_02 struct_static_06_03 struct_static_06_04} {
+		    struct_02_01 struct_02_02 struct_02_03 struct_02_04
+		    struct_04_01 struct_04_02 struct_04_03 struct_04_04
+		    struct_05_01 struct_05_02 struct_05_03 struct_05_04
+		    struct_static_02_01 struct_static_02_02 struct_static_02_03 struct_static_02_04
+		    struct_static_04_01 struct_static_04_02 struct_static_04_03 struct_static_04_04
+		    struct_static_06_01 struct_static_06_02 struct_static_06_03 struct_static_06_04} {
 
 	# Only run static member tests on C++
 	if { $lang == "c" && [regexp "static" $name match] } {
@@ -163,7 +157,7 @@ foreach ta $int_types {
     start_gdb_and_run_tests $lang $ta
 }
 
-if [support_complex_tests] {
+if {[support_complex_tests]} {
     foreach ta $complex_types {
 	start_gdb_and_run_tests $lang $ta
     }

@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ while {$loop && $continue_count < 100} {
 	    pass "$test (false warning)"
 	}
     }
-    set continue_count [expr $continue_count + 1]
+    set continue_count [expr {$continue_count + 1}]
 }
 
 set test "p gdb_test_infcall ()"

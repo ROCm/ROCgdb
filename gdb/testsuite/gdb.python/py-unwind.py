@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 Free Software Foundation, Inc.
+# Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -106,7 +106,6 @@ class TestUnwinder(Unwinder):
             unwind_info.add_saved_register(value=previous_ip, register="rip")
             unwind_info.add_saved_register(register="rsp", value=previous_sp)
 
-            global add_saved_register_errors
             try:
                 unwind_info.add_saved_register("nosuchregister", previous_sp)
             except ValueError as ve:
@@ -230,7 +229,6 @@ def capture_all_frame_information():
 # Assert that every entry in the global ALL_FRAME_INFORMATION list was
 # matched by the validating_unwinder.
 def check_all_frame_information_matched():
-    global all_frame_information
     for entry in all_frame_information:
         assert entry["matched"]
 
@@ -245,8 +243,6 @@ class validating_unwinder(Unwinder):
     def __call__(self, pending_frame):
         info = capture_frame_information(pending_frame)
         level = info["level"]
-
-        global all_frame_information
         old_info = all_frame_information[level]
 
         assert old_info is not None
@@ -254,7 +250,7 @@ class validating_unwinder(Unwinder):
 
         for key, value in info.items():
             assert key in old_info, key + " not in old_info"
-            assert type(value) == type(old_info[key])
+            assert type(value) is type(old_info[key])
             if isinstance(value, gdb.Block):
                 assert value.start == old_info[key].start
                 assert value.end == old_info[key].end
@@ -265,6 +261,26 @@ class validating_unwinder(Unwinder):
 
         old_info["matched"] = True
         return None
+
+
+class bad_object_unwinder(Unwinder):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def __call__(self, pending_frame):
+
+        if pending_frame.level() != 1:
+            return None
+
+        class Blah:
+            def __init__(self):
+                pass
+
+            @property
+            def __class__(self):
+                raise RuntimeError("error in Blah.__class__")
+
+        return Blah()
 
 
 print("Python script imported")

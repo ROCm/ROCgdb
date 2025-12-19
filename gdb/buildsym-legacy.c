@@ -1,5 +1,5 @@
 /* Legacy support routines for building symbol tables in GDB's internal format.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -83,15 +83,6 @@ outermost_context_p ()
 {
   gdb_assert (buildsym_compunit != nullptr);
   return buildsym_compunit->outermost_context_p ();
-}
-
-/* See buildsym.h.  */
-
-int
-get_context_stack_depth ()
-{
-  gdb_assert (buildsym_compunit != nullptr);
-  return buildsym_compunit->get_context_stack_depth ();
 }
 
 /* See buildsym.h.  */

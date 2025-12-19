@@ -3,6 +3,22 @@
 Full documentation for ROCgdb is available at
 [rocm.docs.amd.com/rocgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/index.html)
 
+<<<<<<< HEAD
+=======
+## ROCgdb-X for ROCm-next
+
+### Added
+
+- GDB now determines the name of AMD GPU threads based on the name of
+  their kernel function.
+- Support for the HIP language and its built-in variables:
+  - `threadIdx`
+  - `blockIdx`
+  - `blockDim`
+  - `gridDim`
+  - `warpSize`
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 ## ROCgdb-16-2 for ROCm-7.0
 
 ### Added
@@ -11,6 +27,11 @@ Full documentation for ROCgdb is available at
   - `gfx950`
   - `gfx1150`
   - `gfx1151`
+<<<<<<< HEAD
+=======
+- Support for FP4, FP6 and FP8 micro-scaling (MX) data types with the `gfx950`
+  architecture.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 ### Removed
 

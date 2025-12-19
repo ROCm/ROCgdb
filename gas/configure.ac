@@ -3,7 +3,7 @@ dnl
 dnl And be careful when changing it!  If you must add tests with square
 dnl brackets, be sure changequote invocations surround it.
 dnl
-dnl   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+dnl   Copyright (C) 2012-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -84,17 +84,6 @@ AC_ARG_ENABLE(default_compressed_debug_sections_algorithm,
    zstd) ac_default_compressed_debug_sections_algorithm=COMPRESS_DEBUG_ZSTD ;;
 esac])dnl
 
-# PR gas/19520
-# Decide if x86 assembler should generate relax relocations.
-ac_default_x86_relax_relocations=unset
-# Provide a configure time option to override our default.
-AC_ARG_ENABLE(x86_relax_relocations,
-	      AS_HELP_STRING([--enable-x86-relax-relocations],
-	      [generate x86 relax relocations by default]),
-[case "${enableval}" in
-  no)  ac_default_x86_relax_relocations=0 ;;
-esac])dnl
-
 # PR gas/32022
 # Decide if x86 assembler should check TLS relocation.
 ac_default_x86_tls_check=unset
@@ -117,6 +106,15 @@ AC_ARG_ENABLE(elf_stt_common,
   yes)  ac_default_elf_stt_common=1 ;;
 esac])dnl
 
+ac_default_sframe=unset
+# Provide a configure time option to override our default.
+AC_ARG_ENABLE(default-sframe,
+	      AS_HELP_STRING([--enable-default-sframe],
+	      [generate SFrame by default]),
+[case "${enableval}" in
+  yes) ac_default_sframe=1 ;;
+  no)  ac_default_sframe=0 ;;
+esac])dnl
 
 # Decide if the ELF assembler should default to generating
 # GNU Build notes if none are provided by the input.
@@ -267,17 +265,6 @@ for this_target in $target $canon_targets ; do
 	fi
 	;;
 
-      i386-*-solaris2 \
-      | x86_64-*-solaris2 \
-      | i386-*-solaris2.[[0-9]] \
-      | i386-*-solaris2.1[[01]] \
-      | x86_64-*-solaris2.1[[01]])
-	if test ${this_target} = $target \
-	   && test ${ac_default_x86_relax_relocations} = unset; then
-	  ac_default_x86_relax_relocations=0
-	fi
-	;;
-
       microblaze*)
         ;;
 
@@ -288,15 +275,6 @@ changequote(,)dnl
 changequote([,])dnl
 	AC_DEFINE(AIX_WEAK_SUPPORT, 1,
 		  [Define if using AIX 5.2 value for C_WEAKEXT.])
-	;;
-      ppc-*-solaris*)
-	if test ${this_target} = $target; then
-	  AC_DEFINE(TARGET_SOLARIS_COMMENT, 1,
-		    [Define if default target is PowerPC Solaris.])
-	fi
-	if test x${endian} = xbig; then
-	  AC_MSG_ERROR(Solaris must be configured little endian)
-	fi
 	;;
     esac
 
@@ -392,8 +370,11 @@ changequote([,])dnl
 	    use_ef_mips_abi_o32=1
 	    ;;
 	esac
-	# If Vendor is IMG, then MIPSr6 is used
+	# If target vendor is IMG, then MIPSr6 is used.
 	case ${target} in
+	  mips64*-img-*)
+	    mips_cpu=mips64r6
+	    ;;
 	  mips*-img-*)
 	    mips_cpu=mips32r6
 	    ;;
@@ -448,6 +429,19 @@ changequote([,])dnl
 	*opcodes*) shared_opcodes=true ;;
 	*) shared_opcodes=false ;;
 	esac
+	;;
+    esac
+
+    # Does the target support Object Attributes ?
+    case ${cpu_type} in
+      arc* | arm* | csky | m68k | mips* | msp430 | ppc* \
+      | riscv* | s390* | sparc* | tic6x)
+	for f in config/obj-elf-attr.o; do
+	  case " $extra_objects " in
+	    *" $f "*) ;;
+	    *) extra_objects="$extra_objects $f" ;;
+	  esac
+	done
 	;;
     esac
 
@@ -650,7 +644,7 @@ changequote([,])dnl
         fi
         AC_MSG_RESULT($with_isa_spec)
 
-        # --with-priv-spec=[1.9.1|1.10|1.11|1.12].
+        # --with-priv-spec=[1.9.1|1.10|1.11|1.12|1.13].
         AC_MSG_CHECKING(for default configuration of --with-priv-spec)
         if test "x${with_priv_spec}" != x; then
           AC_DEFINE_UNQUOTED(DEFAULT_RISCV_PRIV_SPEC, "$with_priv_spec",
@@ -732,13 +726,6 @@ changequote([,])dnl
 
 done
 
-if test ${ac_default_x86_relax_relocations} = unset; then
-  ac_default_x86_relax_relocations=1
-fi
-AC_DEFINE_UNQUOTED(DEFAULT_GENERATE_X86_RELAX_RELOCATIONS,
-  $ac_default_x86_relax_relocations,
-  [Define to 1 if you want to generate x86 relax relocations by default.])
-
 if test ${ac_default_x86_tls_check} = unset; then
   ac_default_x86_tls_check=1
 fi
@@ -753,6 +740,13 @@ AC_DEFINE_UNQUOTED(DEFAULT_GENERATE_ELF_STT_COMMON,
   $ac_default_elf_stt_common,
   [Define to 1 if you want to generate ELF common symbols with the
    STT_COMMON type by default.])
+
+if test ${ac_default_sframe} = unset; then
+  ac_default_sframe=0
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_SFRAME,
+  $ac_default_sframe,
+  [Define to 1 if you want to emit SFrames by default.])
 
 AC_DEFINE_UNQUOTED(DEFAULT_GENERATE_BUILD_NOTES,
   $ac_default_generate_build_notes,
@@ -939,7 +933,6 @@ AM_PROG_LEX
 
 ALL_LINGUAS="es fi fr id ja ru rw sv tr uk zh_CN"
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)

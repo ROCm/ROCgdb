@@ -1,4 +1,4 @@
-/* Copyright (C) 2017-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,16 +20,19 @@
 
 #include "../features/aarch64-core.c"
 #include "../features/aarch64-fpu.c"
+#include "../features/aarch64-fpmr.c"
 #include "../features/aarch64-sve.c"
 #include "../features/aarch64-pauth.c"
 #include "../features/aarch64-mte.c"
 #include "../features/aarch64-sme.c"
 #include "../features/aarch64-sme2.c"
 #include "../features/aarch64-tls.c"
+#include "../features/aarch64-gcs.c"
+#include "../features/aarch64-gcs-linux.c"
 
 /* See arch/aarch64.h.  */
 
-target_desc *
+target_desc_up
 aarch64_create_target_description (const aarch64_features &features)
 {
   target_desc_up tdesc = allocate_target_description ();
@@ -65,7 +68,16 @@ aarch64_create_target_description (const aarch64_features &features)
   if (features.sme2)
     regnum = create_feature_aarch64_sme2 (tdesc.get (), regnum);
 
-  return tdesc.release ();
+  if (features.gcs)
+    regnum = create_feature_aarch64_gcs (tdesc.get (), regnum);
+
+  if (features.gcs_linux)
+    regnum = create_feature_aarch64_gcs_linux (tdesc.get (), regnum);
+
+  if (features.fpmr)
+    regnum = create_feature_aarch64_fpmr (tdesc.get (), regnum);
+
+  return tdesc;
 }
 
 /* See arch/aarch64.h.  */

@@ -1,7 +1,7 @@
 /* DWARF 2 Expression Evaluator.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Berlin (dan@dberlin.org)
 
@@ -37,6 +37,7 @@
 #include "inferior.h"
 #include "objfiles.h"
 #include "observable.h"
+#include "extract-store-integer.h"
 
 /* This holds gdbarch-specific types used by the DWARF expression
    evaluator.  See comments in execute_stack_op.  */
@@ -76,7 +77,7 @@ ensure_have_frame (const frame_info_ptr &frame, const char *context)
 /* Ensure that a PER_CU is defined and throw an exception otherwise.  */
 
 static void
-ensure_have_per_cu (dwarf2_per_cu_data *per_cu, const char* op_name)
+ensure_have_per_cu (dwarf2_per_cu *per_cu, const char *op_name)
 {
   if (per_cu == nullptr)
     throw_error (GENERIC_ERROR,
@@ -150,7 +151,7 @@ read_from_register (const frame_info_ptr &frame, int regnum,
 
   frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
 			 optimized, unavailable, &lval, &address, &realnum,
-			 temp_buf.data ());
+			 temp_buf);
 
   if (!*optimized && !*unavailable)
      memcpy (buf.data (), (char *) temp_buf.data () + offset, length);
@@ -194,7 +195,7 @@ write_to_register (const frame_info_ptr &frame, int regnum,
 
   frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
 			 optimized, unavailable, &lval, &address, &realnum,
-			 temp_buf.data ());
+			 temp_buf);
 
   if (!*optimized && !*unavailable)
     {
@@ -433,7 +434,7 @@ public:
 
   /* Convert DWARF entry into a DWARF value.  TYPE defines a
      desired type of the returned DWARF value if it already
-     doesnt have one.  */
+     doesn't have one.  */
   virtual std::shared_ptr<dwarf_value> to_value (struct type *type) = 0;
 
   /* Convert DWARF entry to the matching struct value representation
@@ -451,7 +452,7 @@ dwarf_entry::~dwarf_entry () = default;
 /* Location description entry found on a DWARF expression evaluation
    stack.
 
-   Types of locations descirbed can be: register location, memory
+   Types of locations described can be: register location, memory
    location, implicit location, implicit pointer location, undefined
    location and composite location (composed out of any of the location
    types including another composite location).  */
@@ -504,7 +505,7 @@ public:
   /* Convert DWARF entry into a DWARF value.  If the conversion
      from that location description kind to a value is not supported
      the result is an empty pointer.  TYPE defines a desired type of
-     the returned DWARF value if it already doesnt have one.  */
+     the returned DWARF value if it already doesn't have one.  */
   virtual std::shared_ptr<dwarf_value> to_value (struct type *type) override
   {
     ill_formed_expression ();
@@ -1158,7 +1159,6 @@ dwarf_memory::deref (const frame_info_ptr &frame,
   gdb::byte_vector read_buf (type->length (), 0);
   size_t size_in_bits = actual_size * HOST_CHAR_BIT;
   gdb_byte *buf_ptr = read_buf.data ();
-  bool passed_in_buf = false;
 
   if (big_endian)
     buf_ptr += type->length () - actual_size;
@@ -1171,25 +1171,23 @@ dwarf_memory::deref (const frame_info_ptr &frame,
 
   /* We shouldn't have a case where we read from a passed in
      memory and the same memory being marked as stack. */
-  if (!m_stack && this_size && addr_info != nullptr
-      && addr_info->valaddr.data () != nullptr)
+  if (!m_stack
+      && this_size != 0
+      && addr_info != nullptr
+      && m_offset >= addr_info->addr
+      && m_offset + this_size <= (addr_info->addr
+				  + addr_info->valaddr.size ()))
     {
-      CORE_ADDR offset = (CORE_ADDR) m_offset - addr_info->addr;
       /* Using second buffer here because the copy_bitwise
 	 doesn't support in place copy.  */
       gdb::byte_vector temp_buf (this_size);
-
-      if (offset < addr_info->valaddr.size ()
-	  && offset + this_size <= addr_info->valaddr.size ())
-	{
-	  memcpy (temp_buf.data (), addr_info->valaddr.data (), this_size);
-	  copy_bitwise (buf_ptr, 0, temp_buf.data (),
-			m_bit_suboffset, size_in_bits, big_endian);
-	  passed_in_buf = true;
-	}
+      CORE_ADDR offset_in_buf = m_offset - addr_info->addr;
+      memcpy (temp_buf.data (), addr_info->valaddr.data () + offset_in_buf,
+	      this_size);
+      copy_bitwise (buf_ptr, 0, temp_buf.data (),
+		    m_bit_suboffset, size_in_bits, big_endian);
     }
-
-  if (!passed_in_buf)
+  else
     {
       int optimized, unavailable;
 
@@ -1249,10 +1247,10 @@ public:
       m_regnum (regnum), m_on_entry (on_entry)
   {}
 
-  dwarf_register (const dwarf_register &registr)
-    : dwarf_location (registr),
-      m_regnum (registr.m_regnum),
-      m_on_entry (registr.m_on_entry)
+  dwarf_register (const dwarf_register &reg)
+    : dwarf_location (reg),
+      m_regnum (reg.m_regnum),
+      m_on_entry (reg.m_on_entry)
   {}
 
   std::shared_ptr<dwarf_entry> clone () const override
@@ -1369,7 +1367,7 @@ dwarf_register::write (const frame_info_ptr &initial_frame, const gdb_byte *buf,
       || bit_size % HOST_CHAR_BIT != 0)
     {
       /* Contents is copied non-byte-aligned into the register.
-         Need some bits from original register value.  */
+	 Need some bits from original register value.  */
       read_from_register (frame, gdb_regnum,
 			  total_bits_to_skip / HOST_CHAR_BIT,
 			  temp_buf, optimized, unavailable);
@@ -1576,7 +1574,7 @@ class dwarf_implicit_pointer : public dwarf_location
 public:
   dwarf_implicit_pointer (gdbarch *arch,
 			  dwarf2_per_objfile *per_objfile,
-			  dwarf2_per_cu_data *per_cu,
+			  dwarf2_per_cu *per_cu,
 			  int addr_size, sect_offset die_offset,
 			  LONGEST offset, LONGEST bit_suboffset = 0)
     : dwarf_location (arch, offset, bit_suboffset),
@@ -1645,7 +1643,7 @@ private:
   dwarf2_per_objfile *m_per_objfile;
 
   /* Compilation unit context of the implicit pointer.  */
-  dwarf2_per_cu_data *m_per_cu;
+  dwarf2_per_cu *m_per_cu;
 
   /* Address size for the evaluation.  */
   int m_addr_size;
@@ -1657,7 +1655,7 @@ private:
 void
 dwarf_implicit_pointer::read (const frame_info_ptr &frame, gdb_byte *buf,
 			      int buf_bit_offset, size_t bit_size,
-                              LONGEST bits_to_skip, size_t location_bit_limit,
+			      LONGEST bits_to_skip, size_t location_bit_limit,
 			      bool big_endian, int *optimized,
 			      int *unavailable) const
 {
@@ -1729,7 +1727,7 @@ dwarf_implicit_pointer::to_gdb_value (const frame_info_ptr &frame,
 class dwarf_composite : public dwarf_location
 {
 public:
-  dwarf_composite (gdbarch *arch, dwarf2_per_cu_data *per_cu,
+  dwarf_composite (gdbarch *arch, dwarf2_per_cu *per_cu,
 		   LONGEST offset = 0, LONGEST bit_suboffset = 0)
     : dwarf_location (arch, offset, bit_suboffset), m_per_cu (per_cu)
   {}
@@ -1823,7 +1821,7 @@ private:
   };
 
   /* Compilation unit context of the pointer.  */
-  dwarf2_per_cu_data *m_per_cu;
+  dwarf2_per_cu *m_per_cu;
 
   /* Vector of composite pieces.  */
   std::vector<piece> m_pieces;
@@ -1912,7 +1910,7 @@ dwarf_composite::read (const frame_info_ptr &frame, gdb_byte *buf,
       LONGEST piece_bit_size = m_pieces[i].m_size;
 
       if (total_bits_to_skip < piece_bit_size)
-        break;
+	break;
 
       total_bits_to_skip -= piece_bit_size;
     }
@@ -1923,7 +1921,7 @@ dwarf_composite::read (const frame_info_ptr &frame, gdb_byte *buf,
       LONGEST actual_bit_size = piece_bit_size;
 
       if (actual_bit_size > bit_size)
-        actual_bit_size = bit_size;
+	actual_bit_size = bit_size;
 
       m_pieces[i].m_location->read (frame, buf, buf_bit_offset,
 				    actual_bit_size, total_bits_to_skip,
@@ -1971,7 +1969,7 @@ dwarf_composite::write (const frame_info_ptr &frame, const gdb_byte *buf,
       LONGEST actual_bit_size = piece_bit_size;
 
       if (actual_bit_size > bit_size)
-        actual_bit_size = bit_size;
+	actual_bit_size = bit_size;
 
       m_pieces[i].m_location->write (frame, buf, buf_bit_offset,
 				     actual_bit_size, total_bits_to_skip,
@@ -2112,7 +2110,7 @@ dwarf_composite::is_implicit_ptr_at (LONGEST bit_offset, int bit_length) const
     }
 
     /* The case where the requested range goes outside of the
-       underlaying location range is currently described as a
+       underlying location range is currently described as a
        access through a synthetic pointer.  Check for this kind
        of access seems to be covered by the same closure hook as
        the implicit pointer check.  This means that if the
@@ -2335,7 +2333,7 @@ dwarf_value_binary_op (std::shared_ptr<const dwarf_value> arg1,
   value *result = value_binop (arg1_value, arg2_value, op);
 
   return std::make_shared<dwarf_value> (result->contents_raw ().data (),
-				        result->type ());
+					result->type ());
 }
 
 /* Apply a negation operation on ARG and return a new value entry
@@ -2657,8 +2655,7 @@ gdb_value_to_dwarf_entry (gdbarch *arch, struct value *value)
    found at SECT_OFF.  */
 
 static value *
-sect_variable_value (sect_offset sect_off,
-		     dwarf2_per_cu_data *per_cu,
+sect_variable_value (sect_offset sect_off, dwarf2_per_cu *per_cu,
 		     dwarf2_per_objfile *per_objfile)
 {
   const char *var_name = nullptr;
@@ -2713,7 +2710,7 @@ struct dwarf_expr_context
      can be specified to override the range of memory addresses with
      the passed in buffer.  */
   struct value *evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			  dwarf2_per_cu_data *per_cu,
+			  dwarf2_per_cu *per_cu,
 			  const frame_info_ptr &frame,
 			  std::vector<value *> *init_values,
 			  const property_addr_info *addr_info,
@@ -2739,14 +2736,14 @@ private:
   frame_info_ptr m_frame = nullptr;
 
   /* Compilation unit used for the evaluation.  */
-  dwarf2_per_cu_data *m_per_cu = nullptr;
+  dwarf2_per_cu *m_per_cu = nullptr;
 
   /* Property address info used for the evaluation.  */
   const property_addr_info *m_addr_info = nullptr;
 
   /* Scope dependency of the evaluated expression.
 
-     A DWARF expression can be determined to be scope dependant
+     A DWARF expression can be determined to be scope dependent
      (frame, thread and SIMD lane).  That information is
      gathered here during the evaluation and recorded in the resulting
      struct value object.  */
@@ -2985,7 +2982,7 @@ dwarf_expr_context::push_dwarf_reg_entry_value
   ensure_have_per_cu (this->m_per_cu, "DW_OP_entry_value");
   ensure_have_frame (this->m_frame, "DW_OP_entry_value");
 
-  dwarf2_per_cu_data *caller_per_cu;
+  dwarf2_per_cu *caller_per_cu;
   dwarf2_per_objfile *caller_per_objfile;
   frame_info_ptr caller_frame = get_prev_frame (this->m_frame);
   struct call_site_parameter *parameter
@@ -3053,7 +3050,7 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 
 value *
 dwarf_expr_context::evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-			      dwarf2_per_cu_data *per_cu,
+			      dwarf2_per_cu *per_cu,
 			      const frame_info_ptr &frame,
 			      std::vector<value *> *init_values,
 			      const property_addr_info *addr_info,
@@ -3726,6 +3723,27 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
   return op_ptr;
 }
 
+/* Return true if, for an expr evaluated in the context of FRAME, we can
+   assume that DW_OP_entry_value (expr) == expr.
+
+   We can assume this right after executing a call, when stopped at the
+   start of the called function, in other words, when:
+   - FRAME is the innermost frame, and
+   - FRAME->pc is the first insn in a function.  */
+
+static bool
+trivial_entry_value (frame_info_ptr frame)
+{
+  bool innermost_frame = frame_relative_level (frame) == 0;
+
+  /* Get pc corresponding to frame.  Use get_frame_address_in_block to make
+     sure we get a pc in the correct function in the case of tail calls.  */
+  CORE_ADDR pc = get_frame_address_in_block (frame);
+  bool at_first_insn = find_function_type (pc) != nullptr;
+
+  return innermost_frame && at_first_insn;
+}
+
 void
 dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 				      const gdb_byte *op_end)
@@ -3922,7 +3940,9 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	case DW_OP_reg29:
 	case DW_OP_reg30:
 	case DW_OP_reg31:
-	  ensure_have_frame (this->m_frame, "DW_OP_reg");
+	  /* The value of a register is relative to a frame, so we require a
+	     valid frame.  */
+	  ensure_have_frame (this->m_frame, "DW_OP_reg<n>");
 
 	  result = op - DW_OP_reg0;
 	  result_entry = std::make_shared<dwarf_register> (arch, result);
@@ -3930,6 +3950,10 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  break;
 
 	case DW_OP_regx:
+	  /* The value of a register is relative to a frame, so we require a
+	     valid frame.  */
+	  ensure_have_frame (this->m_frame, "DW_OP_regx");
+
 	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
 	  ensure_have_frame (this->m_frame, "DW_OP_regx");
 
@@ -4113,7 +4137,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	  offset = *op_ptr++;
 	  result_entry = fetch (offset);
 	  break;
-	  
+
 	case DW_OP_swap:
 	  {
 	    if (this->m_stack.size () < 2)
@@ -4508,13 +4532,15 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 					    address_type);
 	  }
 	  break;
-	
+
 	case DW_OP_entry_value:
 	case DW_OP_GNU_entry_value:
 	  {
 	    uint64_t len;
 	    CORE_ADDR deref_size;
 	    union call_site_parameter_u kind_u;
+
+	    ensure_have_frame (this->m_frame, "DW_OP_entry_value");
 
 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &len);
 	    if (op_ptr + len > op_end)
@@ -4524,6 +4550,16 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    if (kind_u.dwarf_reg != -1)
 	      {
 		op_ptr += len;
+
+		if (trivial_entry_value (this->m_frame))
+		  {
+		    /* We can assume that DW_OP_entry_value (expr) == expr.
+		       Handle as DW_OP_regx.  */
+		    result_entry = std::make_shared<dwarf_register>
+		      (arch, kind_u.dwarf_reg);
+		    break;
+		  }
+
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u,
 						  -1 /* deref_size */);
@@ -4538,6 +4574,26 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 		if (deref_size == -1)
 		  deref_size = this->m_addr_size;
 		op_ptr += len;
+
+		if (trivial_entry_value (this->m_frame))
+		  {
+		    /* We can assume that DW_OP_entry_value (expr) == expr.
+		       Handle as DW_OP_bregx;DW_OP_deref_size.  */
+
+		    auto location
+		      = std::make_shared<dwarf_register> (arch,
+							  kind_u.dwarf_reg);
+		    std::shared_ptr<dwarf_value> regval
+		      = location->deref (this->m_frame, this->m_addr_info,
+					 address_type);
+		    result_entry
+		      = regval->to_location (arch)->deref (this->m_frame,
+							   this->m_addr_info,
+							   address_type,
+							   deref_size);
+		    break;
+		  }
+
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u, deref_size);
 		goto no_push;
@@ -4689,7 +4745,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 
 value *
 dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
-		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu_data *per_cu,
+		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu *per_cu,
 		 const frame_info_ptr &frame, int addr_size,
 		 std::vector<value *> *init_values,
 		 const property_addr_info *addr_info,

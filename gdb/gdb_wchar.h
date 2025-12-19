@@ -1,5 +1,5 @@
 /* Wide characters for gdb
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,7 +20,7 @@
 #define GDB_GDB_WCHAR_H
 
 /* We handle three different modes here.
-   
+
    Capable systems have the full suite: wchar_t support and iconv
    (perhaps via GNU libiconv).  On these machines, full functionality
    is available.  Note that full functionality is dependent on us
@@ -28,12 +28,12 @@
    practice this means we look for __STDC_ISO_10646__ (where we know
    the name of the wchar_t encoding) or GNU libiconv, where we can use
    "wchar_t".
-   
+
    DJGPP is known to have libiconv but not wchar_t support.  On
    systems like this, we use the narrow character functions.  The full
    functionality is available to the user, but many characters (those
    outside the narrow range) will be displayed as escapes.
-   
+
    Finally, some systems do not have iconv, or are really broken
    (e.g., Solaris, which almost has all of this working, but where
    just enough is broken to make it too hard to use).  Here we provide
@@ -113,8 +113,8 @@ typedef char gdb_wchar_t;
 typedef int gdb_wint_t;
 
 #define gdb_wcslen strlen
-#define gdb_iswprint isprint
-#define gdb_iswxdigit isxdigit
+#define gdb_iswprint c_isprint
+#define gdb_iswxdigit c_isxdigit
 #define gdb_btowc /* empty */
 #define gdb_WEOF EOF
 

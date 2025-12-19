@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ def run_send_packet_test():
     # find them, mark the ones we do find.
     for thr in threads_xml:
         id = thr.get("id")
-        if not id in all_threads:
+        if id not in all_threads:
             raise "found unexpected thread in remote thread list"
         else:
             all_threads[id] = True
@@ -144,7 +144,7 @@ def run_set_global_var_test():
         res = conn.send_packet("X%x,4:\xff\xff\xff\xff" % addr)
     except UnicodeError:
         saw_error = True
-    except:
+    except Exception:
         assert False
 
     assert saw_error

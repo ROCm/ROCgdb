@@ -1,6 +1,6 @@
 /* Parse a printf-style format string.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,14 +22,11 @@
 format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 			      bool value_extension)
 {
-  const char *s;
+  const char *s = *arg;
   const char *string;
-  const char *prev_start;
-  const char *percent_loc;
-  char *sub_start, *current_substring;
-  enum argclass this_argclass;
 
-  s = *arg;
+  /* Buffer to hold the escaped-processed version of the string.  */
+  std::string de_escaped;
 
   if (gdb_extensions)
     {
@@ -40,10 +37,6 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
     {
       /* Parse the format-control string and copy it into the string STRING,
 	 processing some kinds of escape sequence.  */
-
-      char *f = (char *) alloca (strlen (s) + 1);
-      string = f;
-
       while (*s != '"' && *s != '\0')
 	{
 	  int c = *s++;
@@ -56,34 +49,34 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	      switch (c = *s++)
 		{
 		case '\\':
-		  *f++ = '\\';
+		  de_escaped += '\\';
 		  break;
 		case 'a':
-		  *f++ = '\a';
+		  de_escaped += '\a';
 		  break;
 		case 'b':
-		  *f++ = '\b';
+		  de_escaped += '\b';
 		  break;
 		case 'e':
-		  *f++ = '\e';
+		  de_escaped += '\e';
 		  break;
 		case 'f':
-		  *f++ = '\f';
+		  de_escaped += '\f';
 		  break;
 		case 'n':
-		  *f++ = '\n';
+		  de_escaped += '\n';
 		  break;
 		case 'r':
-		  *f++ = '\r';
+		  de_escaped += '\r';
 		  break;
 		case 't':
-		  *f++ = '\t';
+		  de_escaped += '\t';
 		  break;
 		case 'v':
-		  *f++ = '\v';
+		  de_escaped += '\v';
 		  break;
 		case '"':
-		  *f++ = '"';
+		  de_escaped += '"';
 		  break;
 		default:
 		  /* ??? TODO: handle other escape sequences.  */
@@ -93,29 +86,23 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	      break;
 
 	    default:
-	      *f++ = c;
+	      de_escaped += c;
 	    }
 	}
 
-      /* Terminate our escape-processed copy.  */
-      *f++ = '\0';
+      string = de_escaped.c_str ();
 
       /* Whether the format string ended with double-quote or zero, we're
 	 done with it; it's up to callers to complain about syntax.  */
       *arg = s;
     }
 
-  /* Need extra space for the '\0's.  Doubling the size is sufficient.  */
-
-  current_substring = (char *) xmalloc (strlen (string) * 2 + 1000);
-  m_storage.reset (current_substring);
-
   /* Now scan the string for %-specs and see what kinds of args they want.
      argclass classifies the %-specs so we can give printf-type functions
      something of the right size.  */
-
   const char *f = string;
-  prev_start = string;
+  const char *prev_start = string;
+
   while (*f)
     if (*f++ == '%')
       {
@@ -135,16 +122,15 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	    continue;
 	  }
 
-	sub_start = current_substring;
+	std::string::size_type sub_start = m_storage.size ();
 
-	strncpy (current_substring, prev_start, f - 1 - prev_start);
-	current_substring += f - 1 - prev_start;
-	*current_substring++ = '\0';
+	m_storage.append (prev_start, f - 1 - prev_start);
+	m_storage += '\0';
 
-	if (*sub_start != '\0')
+	if (m_storage[sub_start] != '\0')
 	  m_pieces.emplace_back (sub_start, literal_piece, 0);
 
-	percent_loc = f - 1;
+	const char *percent_loc = f - 1;
 
 	/* Check the validity of the format specifier, and work
 	   out what argument it expects.  We only accept C89
@@ -250,6 +236,8 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	      }
 	    break;
 	}
+
+	argclass this_argclass;
 
 	switch (*f)
 	  {
@@ -381,7 +369,7 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 
 	f++;
 
-	sub_start = current_substring;
+	sub_start = m_storage.size ();
 
 	if (lcount > 1 && !seen_i64 && USE_PRINTF_I64)
 	  {
@@ -389,11 +377,9 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	       Convert %lld to %I64d.  */
 	    int length_before_ll = f - percent_loc - 1 - lcount;
 
-	    strncpy (current_substring, percent_loc, length_before_ll);
-	    strcpy (current_substring + length_before_ll, "I64");
-	    current_substring[length_before_ll + 3] =
-	      percent_loc[length_before_ll + lcount];
-	    current_substring += length_before_ll + 4;
+	    m_storage.append (percent_loc, length_before_ll);
+	    m_storage += "I64";
+	    m_storage += percent_loc[length_before_ll + lcount];
 	  }
 	else if (this_argclass == wide_string_arg
 		 || this_argclass == wide_char_arg)
@@ -401,18 +387,13 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	    /* Convert %ls or %lc to %s.  */
 	    int length_before_ls = f - percent_loc - 2;
 
-	    strncpy (current_substring, percent_loc, length_before_ls);
-	    strcpy (current_substring + length_before_ls, "s");
-	    current_substring += length_before_ls + 2;
+	    m_storage.append (percent_loc, length_before_ls);
+	    m_storage += "s";
 	  }
 	else
-	  {
-	    strncpy (current_substring, percent_loc, f - percent_loc);
-	    current_substring += f - percent_loc;
-	  }
+	  m_storage.append (percent_loc, f - percent_loc);
 
-	*current_substring++ = '\0';
-
+	m_storage += '\0';
 	prev_start = f;
 
 	m_pieces.emplace_back (sub_start, this_argclass, n_int_args);
@@ -422,11 +403,9 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 
   if (f > prev_start)
     {
-      sub_start = current_substring;
-
-      strncpy (current_substring, prev_start, f - prev_start);
-      current_substring += f - prev_start;
-      *current_substring++ = '\0';
+      std::string::size_type sub_start = m_storage.size ();
+      m_storage.append (prev_start, f - prev_start);
+      /* No need for a final '\0', std::string already has one.  */
 
       m_pieces.emplace_back (sub_start, literal_piece, 0);
     }

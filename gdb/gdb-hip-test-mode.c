@@ -1,7 +1,7 @@
 /* GDB HIP testing mode.
 
    Copyright (C) 2021-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -87,10 +87,7 @@ gdb_hip_test_mode_frob_names (struct objfile *objfile, const char *name)
   return gdb_hip_test_mode_frob_names (objfile, std::string_view (name)).data ();
 }
 
-void _initialize_gdb_hip_test_mode ();
-
-void
-_initialize_gdb_hip_test_mode ()
+INIT_GDB_FILE (gdb_hip_test_mode)
 {
   const char *p = getenv ("GDB_HIP_TEST_MODE");
   if (p != nullptr)

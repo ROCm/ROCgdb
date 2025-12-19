@@ -1,5 +1,5 @@
 /* Support for printing C and C++ types for GDB, the GNU debugger.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -251,8 +251,8 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 			   enum language language,
 			   const struct type_print_options *flags)
 {
-  struct field *args = mtype->fields ();
-  int nargs = mtype->num_fields ();
+  auto args = mtype->fields ();
+  int nargs = args.size ();
   int varargs = mtype->has_varargs ();
   int i;
 
@@ -297,7 +297,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
     }
   else if (printed_args == 0)
     {
-      if (language == language_cplus)
+      if (is_cplus_dialect (language))
 	gdb_printf (stream, "void");
     }
 
@@ -320,7 +320,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 	gdb_printf (stream, " volatile");
 
       if (TYPE_RESTRICT (domain))
-	gdb_printf (stream, (language == language_cplus
+	gdb_printf (stream, (is_cplus_dialect (language)
 			     ? " __restrict__"
 			     : " restrict"));
 
@@ -337,7 +337,7 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
    On outermost call, SHOW > 0 means should ignore
    any typename for TYPE and show its details.
    SHOW is always zero on recursive calls.
-   
+
    NEED_POST_SPACE is non-zero when a space will be be needed
    between a trailing qualifier and a field, variable, or function
    name.  */
@@ -471,7 +471,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
-      gdb_printf (stream, (language == language_cplus
+      gdb_printf (stream, (is_cplus_dialect (language)
 			   ? "__restrict__"
 			   : "restrict"));
       did_print_modifier = 1;
@@ -515,16 +515,15 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 		   int linkage_name, enum language language,
 		   const struct type_print_options *flags)
 {
-  int i;
   int printed_any = 0;
 
   gdb_printf (stream, "(");
 
-  for (i = 0; i < type->num_fields (); i++)
+  for (const auto &field : type->fields ())
     {
       struct type *param_type;
 
-      if (type->field (i).is_artificial () && linkage_name)
+      if (field.is_artificial () && linkage_name)
 	continue;
 
       if (printed_any)
@@ -533,9 +532,9 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	  stream->wrap_here (4);
 	}
 
-      param_type = type->field (i).type ();
+      param_type = field.type ();
 
-      if (language == language_cplus && linkage_name)
+      if (is_cplus_dialect (language) && linkage_name)
 	{
 	  /* C++ standard, 13.1 Overloadable declarations, point 3, item:
 	     - Parameter declarations that differ only in the presence or
@@ -564,7 +563,7 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	}
     }
   else if (!printed_any
-	   && (type->is_prototyped () || language == language_cplus))
+	   && (type->is_prototyped () || is_cplus_dialect (language)))
     gdb_printf (stream, "void");
 
   gdb_printf (stream, ")");
@@ -744,7 +743,7 @@ c_type_print_varspec_suffix (struct type *type,
 	    || type->bounds ()->high.kind () == PROP_LOCLIST)
 	  gdb_printf (stream, "variable length");
 	else if (get_array_bounds (type, &low_bound, &high_bound))
-	  gdb_printf (stream, "%s", 
+	  gdb_printf (stream, "%s",
 		      plongest (high_bound - low_bound + 1));
 	gdb_printf (stream, (is_vector ? ")))" : "]"));
 
@@ -806,36 +805,32 @@ c_type_print_template_args (const struct type_print_options *flags,
 			    struct type *type, struct ui_file *stream,
 			    enum language language)
 {
-  int first = 1, i;
-
-  if (flags->raw)
+  if (flags->raw || TYPE_N_TEMPLATE_ARGUMENTS (type) == 0)
     return;
 
-  for (i = 0; i < TYPE_N_TEMPLATE_ARGUMENTS (type); ++i)
+  stream->wrap_here (4);
+  gdb_printf (stream, _("[with "));
+
+  for (int i = 0; i < TYPE_N_TEMPLATE_ARGUMENTS (type); ++i)
     {
       struct symbol *sym = TYPE_TEMPLATE_ARGUMENT (type, i);
 
-      if (sym->aclass () != LOC_TYPEDEF)
-	continue;
-
-      if (first)
-	{
-	  stream->wrap_here (4);
-	  gdb_printf (stream, _("[with %s = "), sym->linkage_name ());
-	  first = 0;
-	}
-      else
+      if (i > 0)
 	{
 	  gdb_puts (", ", stream);
 	  stream->wrap_here (9);
-	  gdb_printf (stream, "%s = ", sym->linkage_name ());
 	}
 
-      c_print_type (sym->type (), "", stream, -1, 0, language, flags);
+      gdb_printf (stream, "%ps = ",
+		  styled_string (variable_name_style.style (),
+				 sym->linkage_name ()));
+      if (sym->loc_class () == LOC_TYPEDEF)
+	c_print_type (sym->type (), "", stream, -1, 0, language, flags);
+      else
+	print_variable_value (sym, {}, stream, 0, language_def (language));
     }
 
-  if (!first)
-    gdb_puts (_("] "), stream);
+  gdb_puts (_("] "), stream);
 }
 
 /* Use 'print_spaces', but take into consideration the
@@ -1405,7 +1400,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
       if (type->is_declared_class ())
 	gdb_printf (stream, "class ");
       /* Print the tag name if it exists.
-	 The aCC compiler emits a spurious 
+	 The aCC compiler emits a spurious
 	 "{unnamed struct}"/"{unnamed union}"/"{unnamed enum}"
 	 tag for unnamed struct/union/enum's, which we don't
 	 want to print.  */
@@ -1437,7 +1432,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 	     print too much than too little; but conversely not to
 	     print something egregiously outside the current
 	     language's syntax.  */
-	  if (language == language_cplus && type->target_type () != NULL)
+	  if (is_cplus_dialect (language) && type->target_type () != NULL)
 	    {
 	      struct type *underlying = check_typedef (type->target_type ());
 

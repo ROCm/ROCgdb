@@ -1,5 +1,5 @@
 /* MI Command Set - file commands.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.
@@ -20,15 +20,13 @@
 #include "mi-cmds.h"
 #include "mi-getopt.h"
 #include "mi-interp.h"
+#include "progspace.h"
 #include "ui-out.h"
 #include "symtab.h"
 #include "source.h"
-#include "objfiles.h"
 #include "solib.h"
-#include "solist.h"
-#include "gdbsupport/gdb_regex.h"
 
-/* Return to the client the absolute path and line number of the 
+/* Return to the client the absolute path and line number of the
    current file being executed.  */
 
 void
@@ -36,7 +34,7 @@ mi_cmd_file_list_exec_source_file (const char *command,
 				   const char *const *argv, int argc)
 {
   struct ui_out *uiout = current_uiout;
-  
+
   if (!mi_valid_noargs ("-file-list-exec-source-file", argc, argv))
     error (_("-file-list-exec-source-file: Usage: No args"));
 
@@ -164,10 +162,10 @@ mi_cmd_file_list_shared_libraries (const char *command,
 
   for (const solib &so : current_program_space->solibs ())
     {
-      if (so.so_name.empty ())
+      if (so.name.empty ())
 	continue;
 
-      if (pattern != nullptr && !re_exec (so.so_name.c_str ()))
+      if (pattern != nullptr && !re_exec (so.name.c_str ()))
 	continue;
 
       ui_out_emit_tuple tuple_emitter (uiout, NULL);

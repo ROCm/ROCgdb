@@ -1,6 +1,6 @@
 /* Inline frame unwinder for GDB.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -270,41 +270,36 @@ inline_frame_sniffer (const struct frame_unwind *self,
   return 1;
 }
 
-const struct frame_unwind inline_frame_unwind = {
+const struct frame_unwind_legacy inline_frame_unwind (
   "inline",
   INLINE_FRAME,
+  FRAME_UNWIND_GDB,
   default_frame_unwind_stop_reason,
   inline_frame_this_id,
   inline_frame_prev_register,
   NULL,
   inline_frame_sniffer
-};
+);
 
-/* Return non-zero if BLOCK, an inlined function block containing PC,
+/* Return true if BLOCK, an inlined function block containing PC,
    has a group of contiguous instructions starting at PC (but not
-   before it).  */
+   before it).  BV is the blockvector holding BLOCK.  */
 
-static int
-block_starting_point_at (CORE_ADDR pc, const struct block *block)
+static bool
+block_starting_point_at (const blockvector *bv, CORE_ADDR pc,
+			 const struct block *block)
 {
-  const struct blockvector *bv;
-  const struct block *new_block;
-
-  bv = blockvector_for_pc (pc, NULL);
-  if (bv->map () == nullptr)
-    return 0;
-
-  new_block = (const struct block *) bv->map ()->find (pc - 1);
+  const struct block *new_block = bv->lookup (pc - 1);
   if (new_block == NULL)
-    return 1;
+    return true;
 
   if (new_block == block || block->contains (new_block))
-    return 0;
+    return false;
 
   /* The immediately preceding address belongs to a different block,
      which is not a child of this one.  Treat this as an entrance into
      BLOCK.  */
-  return 1;
+  return true;
 }
 
 /* Loop over the stop chain and determine if execution stopped in an
@@ -360,8 +355,9 @@ gather_inline_frames (CORE_ADDR this_pc)
   /* Build the list of inline frames starting at THIS_PC.  After the loop,
      CUR_BLOCK is expected to point at the first function symbol (inlined or
      not) "containing" the inline frames starting at THIS_PC.  */
-  const block *cur_block = block_for_pc (this_pc);
-  if (cur_block == nullptr)
+  const block *cur_block;
+  const blockvector *bv = blockvector_for_pc (this_pc, &cur_block);
+  if (bv == nullptr)
     return {};
 
   std::vector<const symbol *> function_symbols;
@@ -374,7 +370,7 @@ gather_inline_frames (CORE_ADDR this_pc)
 	  /* See comments in inline_frame_this_id about this use
 	     of BLOCK_ENTRY_PC.  */
 	  if (cur_block->entry_pc () == this_pc
-	      || block_starting_point_at (this_pc, cur_block))
+	      || block_starting_point_at (bv, this_pc, cur_block))
 	    function_symbols.push_back (cur_block->function ());
 	  else
 	    break;
@@ -614,9 +610,7 @@ maintenance_info_inline_frames (const char *arg, int from_tty)
 
 
 
-void _initialize_inline_frame ();
-void
-_initialize_inline_frame ()
+INIT_GDB_FILE (inline_frame)
 {
   add_cmd ("inline-frames", class_maintenance, maintenance_info_inline_frames,
 	   _("\

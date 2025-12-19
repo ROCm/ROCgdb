@@ -1,5 +1,5 @@
 /* Mach-O support for BFD.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -48,7 +48,6 @@
 #define bfd_mach_o_get_section_contents		      _bfd_generic_get_section_contents
 #define bfd_mach_o_bfd_gc_sections		      bfd_generic_gc_sections
 #define bfd_mach_o_bfd_lookup_section_flags	      bfd_generic_lookup_section_flags
-#define bfd_mach_o_bfd_merge_sections		      bfd_generic_merge_sections
 #define bfd_mach_o_bfd_is_group_section		      bfd_generic_is_group_section
 #define bfd_mach_o_bfd_group_name		      bfd_generic_group_name
 #define bfd_mach_o_bfd_discard_group		      bfd_generic_discard_group
@@ -74,7 +73,6 @@
 #define bfd_mach_o_write_armap			  _bfd_noarchive_write_armap
 #define bfd_mach_o_get_elt_at_index		  _bfd_noarchive_get_elt_at_index
 #define bfd_mach_o_update_armap_timestamp	  _bfd_noarchive_update_armap_timestamp
-#define bfd_mach_o_init_private_section_data	  _bfd_generic_init_private_section_data
 
 #define TARGET_NAME_BACKEND XCONCAT2(TARGET_NAME,_backend)
 
@@ -136,6 +134,7 @@ const bfd_target TARGET_NAME =
   16,				/* ar_max_namelen.  */
   TARGET_PRIORITY,	/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
 
 #if TARGET_BIG_ENDIAN
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,

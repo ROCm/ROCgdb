@@ -1,4 +1,4 @@
-# Copyright 2008-2024 Free Software Foundation, Inc.
+# Copyright 2008-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -339,5 +339,3 @@ gdb_assert ![string compare $acc_7_3_initial $acc_7_3_final] \
 
 gdb_assert ![string compare $fpscr_initial $fpscr_final] \
     "check fpscr initial versus final"
-
-

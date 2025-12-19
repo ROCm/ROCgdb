@@ -1,4 +1,4 @@
-/* Copyright 2019-2024 Free Software Foundation, Inc.
+/* Copyright 2019-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -68,4 +68,3 @@ main ()
 
   return 0;
 }
-

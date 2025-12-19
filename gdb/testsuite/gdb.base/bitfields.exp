@@ -1,4 +1,4 @@
-# Copyright 1992-2024 Free Software Foundation, Inc.
+# Copyright 1992-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -165,7 +165,7 @@ proc bitfield_at_offset {} {
     global srcfile
 
     gdb_breakpoint break5
-    if [gdb_test "cont" "Break.*break5 \\(\\) at .*$srcfile:$decimal.*" "continuing to break5"] {
+    if {[gdb_test "cont" "Break.*break5 \\(\\) at .*$srcfile:$decimal.*" "continuing to break5"]} {
 	return
     }
 

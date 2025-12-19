@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 
 # This script is auto-loaded when the py-auto-load-chaining-f2.o
 # object is loaded.
+
+import gdb
 
 print("Entering f2.o auto-load script")
 

@@ -1,6 +1,6 @@
 // copy_test_relro.cc -- test copy relocs against read-only and relro symbols.
 
-// Copyright (C) 2016-2024 Free Software Foundation, Inc.
+// Copyright (C) 2016-2025 Free Software Foundation, Inc.
 // Written by Cary Coutant <ccoutant@gmail.com>.
 
 // This file is part of gold.
@@ -39,7 +39,7 @@ sigjmp_buf jmp;
 
 void segv(int)
 {
-  ++segfaults;
+  segfaults = segfaults + 1;
   siglongjmp(jmp, 1);
 }
 

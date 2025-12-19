@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 Free Software Foundation, Inc.
+# Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 # is that here we do not pre-expand the symtab: we don't want include
 # GDB's slowness in searching expanded symtabs first to color these results.
 
-from perftest import measure, perftest, utils
+from perftest import perftest, utils
 
 
 class PrintCerr(perftest.TestCaseWithBasicMeasurements):
@@ -45,6 +45,7 @@ class PrintCerr(perftest.TestCaseWithBasicMeasurements):
             iteration = 5
             while iteration > 0:
                 utils.safe_execute("mt flush symbol-cache")
-                func = lambda: utils.safe_execute("print gm_std::cerr")
-                self.measure.measure(func, run)
+                self.measure.measure(
+                    lambda: utils.safe_execute("print gm_std::cerr"), run
+                )
                 iteration -= 1

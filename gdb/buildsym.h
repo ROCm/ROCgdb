@@ -1,5 +1,5 @@
 /* Build symbol tables in GDB's internal format.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,6 +19,7 @@
 #ifndef GDB_BUILDSYM_H
 #define GDB_BUILDSYM_H
 
+#include "block.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "symtab.h"
 #include "addrmap.h"
@@ -55,7 +56,7 @@ struct subfile
   struct subfile *next = nullptr;
   std::string name;
 
-  /* This field is analoguous in function to symtab::filename_for_id.
+  /* This field is analogous in function to symtab::filename_for_id.
 
      It is used to look up existing subfiles in calls to start_subfile.  */
   std::string name_for_id;
@@ -287,11 +288,6 @@ struct buildsym_compunit
     return &m_context_stack.back ();
   }
 
-  int get_context_stack_depth () const
-  {
-    return m_context_stack.size ();
-  }
-
   struct subfile *get_current_subfile ()
   {
     return m_current_subfile;
@@ -327,10 +323,10 @@ struct buildsym_compunit
   struct context_stack pop_context ();
 
   struct block *end_compunit_symtab_get_static_block
-    (CORE_ADDR end_addr, int expandable, int required);
+    (CORE_ADDR end_addr, bool expandable, bool required);
 
   struct compunit_symtab *end_compunit_symtab_from_static_block
-    (struct block *static_block, int expandable);
+    (struct block *static_block, bool expandable);
 
   struct compunit_symtab *end_compunit_symtab (CORE_ADDR end_addr);
 
@@ -347,14 +343,11 @@ private:
 				       struct pending_block *old_blocks,
 				       const struct dynamic_prop *static_link,
 				       CORE_ADDR start, CORE_ADDR end,
-				       int is_global, int expandable);
+				       bool is_global, bool expandable);
 
-  struct blockvector *make_blockvector ();
+  blockvector_up make_blockvector ();
 
   void watch_main_source_file_lossage ();
-
-  struct compunit_symtab *end_compunit_symtab_with_blockvector
-    (struct block *static_block, int expandable);
 
   /* The objfile we're reading debug info from.  */
   struct objfile *m_objfile;
@@ -384,8 +377,11 @@ private:
      the same lifetime as objfile.  */
   const char *m_debugformat = nullptr;
 
-  /* The compunit we are building.  */
-  struct compunit_symtab *m_compunit_symtab = nullptr;
+  /* The compunit we are building.  If the symtab is owned by this
+     object, both fields are set.  For a re-opened symtab, only
+     m_compunit_symtab is set.  */
+  std::unique_ptr<compunit_symtab> m_owned_compunit_symtab;
+  compunit_symtab *m_compunit_symtab;
 
   /* Language of this compunit_symtab.  */
   enum language m_language;
@@ -448,7 +444,7 @@ private:
   struct pending *m_local_symbols = nullptr;
 };
 
-
+using buildsym_compunit_up = std::unique_ptr<buildsym_compunit>;
 
 extern void add_symbol_to_list (struct symbol *symbol,
 				struct pending **listhead);

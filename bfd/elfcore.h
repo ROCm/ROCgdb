@@ -1,5 +1,5 @@
 /* ELF core file support for BFD.
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -350,7 +350,7 @@ NAME(_bfd_elf, core_find_build_id)
     }
 
   elf_swap_ehdr_in (abfd, &x_ehdr, &i_ehdr);
-#if DEBUG
+#if DEBUG & 1
   elf_debug_file (&i_ehdr);
 #endif
 
@@ -381,8 +381,8 @@ NAME(_bfd_elf, core_find_build_id)
 
       if (i_phdr->p_type == PT_NOTE && i_phdr->p_filesz > 0)
 	{
-	  elf_read_notes (abfd, offset + i_phdr->p_offset,
-			  i_phdr->p_filesz, i_phdr->p_align);
+	  _bfd_elf_read_notes (abfd, offset + i_phdr->p_offset,
+			       i_phdr->p_filesz, i_phdr->p_align);
 
 	  /* Make sure ABFD returns to processing the program headers.  */
 	  if (bfd_seek (abfd,

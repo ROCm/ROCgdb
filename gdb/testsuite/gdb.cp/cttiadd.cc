@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1998-2024 Free Software Foundation, Inc.
+   Copyright 1998-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ int main()
   extern void add1();
   extern void subr2();
   extern void subr3();
-  
+
   c = 'a';
   i = 2;
   f = 4.5;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Free Software Foundation, Inc.
+/* Copyright (C) 2024-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,7 @@
 #ifndef GDBSUPPORT_UNORDERED_MAP_H
 #define GDBSUPPORT_UNORDERED_MAP_H
 
-#include "unordered_dense.h"
+#include "unordered_dense/unordered_dense.h"
 
 namespace gdb
 {

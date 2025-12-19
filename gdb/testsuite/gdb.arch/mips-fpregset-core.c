@@ -1,6 +1,6 @@
 /* This test is part of GDB, the GNU debugger.
 
-   Copyright 2018-2024 Free Software Foundation, Inc.
+   Copyright 2018-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ main (void)
 
      mips-fpregset-core.f: In function 'main':
      mips-fpregset-core.f:66:3: error: more than 30 operands in 'asm'
-        asm (
-        ^~~
+	asm (
+	^~~
 
      and still have complete 32 FGR coverage with FP64 ABIs.  Using
      a complex type breaks o32 GCC though, so use plain `double' with

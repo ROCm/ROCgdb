@@ -1,6 +1,6 @@
 /* Support for GDB maintenance commands.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -21,15 +21,12 @@
 
 
 #include "arch-utils.h"
-#include <ctype.h>
 #include <cmath>
 #include <signal.h>
 #include "command.h"
 #include "symtab.h"
 #include "block.h"
 #include "gdbtypes.h"
-#include "demangle.h"
-#include "gdbcore.h"
 #include "expression.h"
 #include "language.h"
 #include "symfile.h"
@@ -40,6 +37,9 @@
 #include "gdbsupport/selftest.h"
 #include "inferior.h"
 #include "gdbsupport/thread-pool.h"
+#include "event-top.h"
+#include "cp-support.h"
+#include "gdbcore.h"
 
 #include "cli/cli-decode.h"
 #include "cli/cli-utils.h"
@@ -107,6 +107,18 @@ maintenance_demangle (const char *args, int from_tty)
 {
   gdb_printf (_("This command has been moved to \"%ps\".\n"),
 	      styled_string (command_style.style (), "demangle"));
+}
+
+/* Print the canonical form of a name.  */
+
+static void
+maintenance_canonicalize (const char *args, int from_tty)
+{
+  gdb::unique_xmalloc_ptr<char> canon = cp_canonicalize_string (args);
+  if (canon == nullptr)
+    gdb_printf ("No change.\n");
+  else
+    gdb_printf ("canonical = %s\n", canon.get ());
 }
 
 static void
@@ -373,6 +385,8 @@ maint_print_all_sections (const char *header, bfd *abfd, objfile *objfile,
 
   for (asection *sect : gdb_bfd_sections (abfd))
     {
+      QUIT;
+
       obj_section *osect = nullptr;
 
       if (objfile != nullptr)
@@ -451,19 +465,19 @@ maintenance_info_sections (const char *arg, int from_tty)
   gdb::option::process_options
     (&arg, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_ERROR, group);
 
-  for (objfile *ofile : current_program_space->objfiles ())
+  for (objfile &ofile : current_program_space->objfiles ())
     {
-      if (ofile->obfd == current_program_space->exec_bfd ())
-	maint_print_all_sections (_("Exec file: "), ofile->obfd.get (),
-				  ofile, arg);
+      if (ofile.obfd == current_program_space->exec_bfd ())
+	maint_print_all_sections (_("Exec file: "), ofile.obfd.get (),
+				  &ofile, arg);
       else if (opts.all_objects)
-	maint_print_all_sections (_("Object file: "), ofile->obfd.get (),
-				  ofile, arg);
+	maint_print_all_sections (_("Object file: "), ofile.obfd.get (),
+				  &ofile, arg);
     }
 
-  if (current_program_space->core_bfd () != nullptr)
-    maint_print_all_sections (_("Core file: "),
-			      current_program_space->core_bfd (), nullptr, arg);
+  bfd *cbfd = get_inferior_core_bfd (current_inferior ());
+  if (cbfd != nullptr)
+    maint_print_all_sections (_("Core file: "), cbfd, nullptr, arg);
 }
 
 /* Implement the "maintenance info target-sections" command.  */
@@ -557,9 +571,9 @@ maintenance_translate_address (const char *arg, int from_tty)
   sect = NULL;
   p = arg;
 
-  if (!isdigit (*p))
+  if (!c_isdigit (*p))
     {				/* See if we have a valid section name.  */
-      while (*p && !isspace (*p))	/* Find end of section name.  */
+      while (*p && !c_isspace (*p))	/* Find end of section name.  */
 	p++;
       if (*p == '\000')		/* End of command?  */
 	error (_("Need to specify section name and address"));
@@ -567,10 +581,10 @@ maintenance_translate_address (const char *arg, int from_tty)
       int arg_len = p - arg;
       p = skip_spaces (p + 1);
 
-      for (objfile *objfile : current_program_space->objfiles ())
-	for (obj_section *iter : objfile->sections ())
+      for (objfile &objfile : current_program_space->objfiles ())
+	for (obj_section &iter : objfile.sections ())
 	  {
-	    if (strncmp (iter->the_bfd_section->name, arg, arg_len) == 0)
+	    if (strncmp (iter.the_bfd_section->name, arg, arg_len) == 0)
 	      goto found;
 	  }
 
@@ -956,14 +970,14 @@ count_symtabs_and_blocks (int *nr_symtabs_ptr, int *nr_compunit_symtabs_ptr,
      current_program_space may be NULL.  */
   if (current_program_space != NULL)
     {
-      for (objfile *o : current_program_space->objfiles ())
+      for (objfile &o : current_program_space->objfiles ())
 	{
-	  for (compunit_symtab *cu : o->compunits ())
+	  for (compunit_symtab &cu : o.compunits ())
 	    {
 	      ++nr_compunit_symtabs;
-	      nr_blocks += cu->blockvector ()->num_blocks ();
-	      nr_symtabs += std::distance (cu->filetabs ().begin (),
-					   cu->filetabs ().end ());
+	      nr_blocks += cu.blockvector ()->num_blocks ();
+	      nr_symtabs += std::distance (cu.filetabs ().begin (),
+					   cu.filetabs ().end ());
 	    }
 	}
     }
@@ -1137,6 +1151,31 @@ set_per_command_cmd (const char *args, int from_tty)
       }
 }
 
+<<<<<<< HEAD
+=======
+/* Handle "mt set per-command time".  Warn if per-thread run time
+   information is not possible.  */
+
+static void
+maintenance_set_command_time_cmd (const char *args, int from_tty,
+				  cmd_list_element *c)
+{
+  /* No point warning if this platform can't use multiple threads at
+     all.  */
+#if CXX_STD_THREAD
+  static bool already_warned = false;
+  if (per_command_time
+      && !get_run_time_thread_scope_available ()
+      && !already_warned)
+    {
+      warning (_("\
+per-thread run time information not available on this platform"));
+      already_warned = true;
+    }
+#endif
+}
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 /* See maint.h.  */
 
 scoped_time_it::scoped_time_it (const char *what, bool enabled)
@@ -1265,9 +1304,7 @@ Selftests have been disabled for this build.\n"));
 }
 
 
-void _initialize_maint_cmds ();
-void
-_initialize_maint_cmds ()
+INIT_GDB_FILE (maint_cmds)
 {
   struct cmd_list_element *cmd;
 
@@ -1386,6 +1423,12 @@ This command has been moved to \"demangle\"."),
 		 &maintenancelist);
   deprecate_cmd (cmd, "demangle");
 
+  cmd = add_cmd ("canonicalize", class_maintenance, maintenance_canonicalize,
+		 _("\
+Show the canonical form of a C++ name.\n\
+Usage: maintenance canonicalize NAME"),
+		 &maintenancelist);
+
   add_prefix_cmd ("per-command", class_maintenance, set_per_command_cmd, _("\
 Per-command statistics settings."),
 		    &per_command_setlist,
@@ -1403,7 +1446,7 @@ Show whether to display per-command execution time."),
 			   _("\
 If enabled, the execution time for each command will be\n\
 displayed following the command's output."),
-			   NULL, NULL,
+			   maintenance_set_command_time_cmd, NULL,
 			   &per_command_setlist, &per_command_showlist);
 
   add_setshow_boolean_cmd ("space", class_maintenance,

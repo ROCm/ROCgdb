@@ -1,4 +1,4 @@
-# Copyright 2014-2024 Free Software Foundation, Inc.
+# Copyright 2014-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable {debug additional_flags=-gnat12}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -33,4 +33,4 @@ runto "foo.adb:$bp_location"
 gdb_test_no_output "maintenance set ada ignore-descriptive-types"
 
 gdb_test "ptype array_type" \
-         " = array \\(5 \\.\\. 10\\) of natural" \
+	 " = array \\(5 \\.\\. 10\\) of natural" \

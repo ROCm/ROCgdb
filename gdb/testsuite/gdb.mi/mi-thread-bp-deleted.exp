@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,9 +24,9 @@ set MIFLAGS "-i=mi"
 
 # We need to do things a little differently when using the remote protocol.
 set is_remote \
-    [expr [target_info exists gdb_protocol] \
-	 && ([string equal [target_info gdb_protocol] "remote"] \
-	     || [string equal [target_info gdb_protocol] "extended-remote"])]
+    [expr {[target_info exists gdb_protocol] \
+	       && ([string equal [target_info gdb_protocol] "remote"] \
+		       || [string equal [target_info gdb_protocol] "extended-remote"])}]
 
 standard_testfile
 
@@ -36,8 +36,6 @@ if { [build_executable "failed to prepare" $testfile $srcfile \
 }
 
 foreach_mi_ui_mode mode {
-    mi_gdb_exit
-
     if {$mode eq "separate"} {
 	set start_ops "separate-mi-tty"
     } else {
@@ -49,7 +47,7 @@ foreach_mi_ui_mode mode {
     save_vars { GDBFLAGS } {
 	append GDBFLAGS " -ex \"maint set target-non-stop on\""
 	append GDBFLAGS " -ex \"set mi-async on\""
-	mi_clean_restart $binfile $start_ops
+	mi_clean_restart $::testfile $start_ops
     }
 
     mi_runto_main
@@ -279,4 +277,8 @@ foreach_mi_ui_mode mode {
 	"set do_spin variable in inferior, inferior should now finish"
     mi_expect_stop "breakpoint-hit" "breakpt" ".*" ".*" "$::decimal" \
 	{"" "disp=\"keep\""} "stop in breakpt at the end of the test"
+
+    # mi_clean_restart and gdb_finish call gdb_exit, which doesn't work for
+    # separate-mi-tty.  Use mi_gdb_exit instead.
+    mi_gdb_exit
 }

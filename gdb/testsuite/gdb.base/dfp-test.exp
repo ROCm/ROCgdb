@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2024 Free Software Foundation, Inc.
+# Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,13 +22,9 @@ standard_testfile .c
 
 # Try to compile the test case.  If we can't, assume the
 # toolchain does not yet provide DFP support and bail out.
-if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {quiet debug}] != "" } {
-    unsupported "decimal floating point not supported for this target."
-    verbose "Skipping DFP tests."
-    return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile {quiet debug}] != 0 } {
+    return
 }
-
-clean_restart ${binfile}
 
 if {![runto_main]} {
     return

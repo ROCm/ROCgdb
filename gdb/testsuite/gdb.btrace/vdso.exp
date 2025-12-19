@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 #
-# Copyright 2014-2024 Free Software Foundation, Inc.
+# Copyright 2014-2025 Free Software Foundation, Inc.
 #
 # Contributed by Intel Corp. <markus.t.metzger@intel.com>
 #
@@ -23,11 +23,11 @@
 require allow_btrace_tests
 
 standard_testfile
-if [prepare_for_testing "failed to prepare" $testfile $srcfile] {
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -47,7 +47,7 @@ with_test_prefix "replay" {
 	set replay_gettimeofday [capture_command_output "disassemble gettimeofday" ""]
 
 	# the two disassemblies must be identical
-	if ![string compare $live_gettimeofday $replay_gettimeofday]  {
+	if {![string compare $live_gettimeofday $replay_gettimeofday]} {
 		pass "disassemble gettimeofday"
 	} else {
 		fail "disassemble gettimeofday"

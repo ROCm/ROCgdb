@@ -1,6 +1,6 @@
 /* Python interface to blocks.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -72,8 +72,7 @@ struct block_syms_iterator_object {
       }									\
   } while (0)
 
-extern PyTypeObject block_syms_iterator_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("block_syms_iterator_object");
+extern PyTypeObject block_syms_iterator_object_type;
 static const registry<objfile>::key<htab, htab_deleter>
      blpy_objfile_data_key;
 
@@ -147,6 +146,37 @@ blpy_get_superblock (PyObject *self, void *closure)
     return block_to_block_object (super_block, self_obj->objfile);
 
   Py_RETURN_NONE;
+}
+
+/* Implement gdb.Block.subblocks attribute.  Return a list of gdb.Block
+   objects that are direct children of this block.  */
+
+static PyObject *
+blpy_get_subblocks (PyObject *self, void *closure)
+{
+  const struct block *block;
+
+  BLPY_REQUIRE_VALID (self, block);
+
+  gdbpy_ref<> list (PyList_New (0));
+  if (list == nullptr)
+    return nullptr;
+
+  compunit_symtab *cu = block->global_block ()->compunit ();
+
+  for (const struct block *each : cu->blockvector ()->blocks ())
+    {
+      if (each->superblock () == block)
+	{
+	  gdbpy_ref<> item (block_to_block_object (each, cu->objfile ()));
+
+	  if (item.get () == nullptr
+	      || PyList_Append (list.get (), item.get ()) == -1)
+	    return nullptr;
+	}
+    }
+
+  return list.release ();
 }
 
 /* Return the global block associated to this block.  */
@@ -325,6 +355,9 @@ block_to_block_object (const struct block *block, struct objfile *objfile)
     }
 
   result = PyObject_New (block_object, &block_object_type);
+  if (result == nullptr)
+    return nullptr;
+
   result->block = block;
   result->objfile = objfile;
 
@@ -437,7 +470,13 @@ blpy_repr (PyObject *self)
   unsigned int written_symbols = 0;
   const int len = mdict_size (block->multidict ());
   static constexpr int SYMBOLS_TO_SHOW = 5;
-  for (struct symbol *symbol : block_iterator_range (block))
+
+  /* Don't use block_iterator_range here as that will find symbols through
+     included symtabs (for global and static blocks), while LEN only counts
+     symbols that are actually in BLOCK itself.  As this is really only for
+     basic debug to allow blocks to be identified, we limit ourselves to
+     just printing the symbols that are actually in BLOCK.  */
+  for (struct symbol *symbol : block->multidict_symbols ())
     {
       if (written_symbols == SYMBOLS_TO_SHOW)
 	{
@@ -489,8 +528,8 @@ blpy_richcompare (PyObject *self, PyObject *other, int op)
   return PyBool_FromLong (equal == expected);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_blocks (void)
+static int
+gdbpy_initialize_blocks ()
 {
   block_object_type.tp_new = PyType_GenericNew;
   if (gdbpy_type_ready (&block_object_type) < 0)
@@ -529,6 +568,8 @@ static gdb_PyGetSetDef block_object_getset[] = {
     "Whether this block is a static block.", NULL },
   { "is_global", blpy_is_global, NULL,
     "Whether this block is a global block.", NULL },
+  { "subblocks", blpy_get_subblocks, nullptr,
+    "List of blocks contained in this block.", nullptr },
   { NULL }  /* Sentinel */
 };
 

@@ -1,6 +1,6 @@
 /* libthread_db assisted debugging support, generic parts.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,7 +43,6 @@
 #include "auto-load.h"
 #include "cli/cli-utils.h"
 #include <signal.h>
-#include <ctype.h>
 #include "nat/linux-namespaces.h"
 #include <algorithm>
 #include "gdbsupport/pathstuff.h"
@@ -517,7 +516,7 @@ thread_db_find_new_threads_silently (thread_info *stopped)
 	 where calls to td_thr_get_info fail with TD_ERR for statically linked
 	 executables if td_thr_get_info is called before glibc has initialized
 	 itself.
-	 
+
 	 If the nptl bug is NOT present in the inferior and still thread_db
 	 reports an error return 1.  It means the inferior has corrupted thread
 	 list and GDB should fall back only to LWPs.
@@ -778,9 +777,6 @@ check_thread_db (struct thread_db_info *info, bool log_progress)
     }
   catch (const gdb_exception_error &except)
     {
-      if (warning_pre_print)
-	gdb_puts (warning_pre_print, gdb_stderr);
-
       exception_fprintf (gdb_stderr, except,
 			 _("libthread_db integrity checks failed: "));
 
@@ -922,9 +918,9 @@ try_thread_db_load_1 (struct thread_db_info *info)
 
       linux_stop_and_wait_all_lwps ();
 
-      for (const lwp_info *lp : all_lwps ())
-	if (lp->ptid.pid () == pid)
-	  thread_from_lwp (curr_thread, lp->ptid);
+      for (const lwp_info &lp : all_lwps ())
+	if (lp.ptid.pid () == pid)
+	  thread_from_lwp (curr_thread, lp.ptid);
 
       linux_unstop_all_lwps ();
     }
@@ -1078,17 +1074,17 @@ try_thread_db_load_from_pdir (const char *subdir)
   if (!auto_load_thread_db)
     return false;
 
-  for (objfile *obj : current_program_space->objfiles ())
-    if (libpthread_objfile_p (obj))
+  for (objfile &obj : current_program_space->objfiles ())
+    if (libpthread_objfile_p (&obj))
       {
-	if (try_thread_db_load_from_pdir_1 (obj, subdir))
+	if (try_thread_db_load_from_pdir_1 (&obj, subdir))
 	  return true;
 
 	/* We may have found the separate-debug-info version of
 	   libpthread, and it may live in a directory without a matching
 	   libthread_db.  */
-	if (obj->separate_debug_objfile_backlink != NULL)
-	  return try_thread_db_load_from_pdir_1 (obj->separate_debug_objfile_backlink,
+	if (obj.separate_debug_objfile_backlink != NULL)
+	  return try_thread_db_load_from_pdir_1 (obj.separate_debug_objfile_backlink,
 						 subdir);
 
 	return false;
@@ -1187,8 +1183,8 @@ thread_db_load_search (void)
 static bool
 has_libpthread (void)
 {
-  for (objfile *obj : current_program_space->objfiles ())
-    if (libpthread_objfile_p (obj))
+  for (objfile &obj : current_program_space->objfiles ())
+    if (libpthread_objfile_p (&obj))
       return true;
 
   return false;
@@ -1219,7 +1215,8 @@ thread_db_load (void)
     return false;
 
   /* Don't attempt to use thread_db for remote targets.  */
-  if (!(target_can_run () || current_program_space->core_bfd () != nullptr))
+  if (!(target_can_run ()
+	|| get_inferior_core_bfd (current_inferior ()) != nullptr))
     return false;
 
   if (thread_db_load_search ())
@@ -1309,10 +1306,10 @@ check_pid_namespace_match (inferior *inf)
 	 libthread_db.  */
       if (!linux_ns_same (inf->pid, LINUX_NS_PID))
 	{
-	  warning (_ ("Target and debugger are in different PID "
-		      "namespaces; thread lists and other data are "
-		      "likely unreliable.  "
-		      "Connect to gdbserver inside the container."));
+	  warning (_("Target and debugger are in different PID "
+		     "namespaces; thread lists and other data are "
+		     "likely unreliable.  "
+		     "Connect to gdbserver inside the container."));
 	}
     }
 }
@@ -1710,12 +1707,12 @@ thread_db_target::thread_handle_to_thread_info (const gdb_byte *thread_handle,
     error (_("Thread handle size mismatch: %d vs %zu (from libthread_db)"),
 	   handle_len, sizeof (handle_tid));
 
-  for (thread_info *tp : inf->non_exited_threads ())
+  for (thread_info &tp : inf->non_exited_threads ())
     {
-      thread_db_thread_info *priv = get_thread_db_thread_info (tp);
+      thread_db_thread_info *priv = get_thread_db_thread_info (&tp);
 
       if (priv != NULL && handle_tid == priv->tid)
-	return tp;
+	return &tp;
     }
 
   return NULL;
@@ -1984,9 +1981,7 @@ maintenance_check_libthread_db (const char *args, int from_tty)
   check_thread_db (info, true);
 }
 
-void _initialize_thread_db ();
-void
-_initialize_thread_db ()
+INIT_GDB_FILE (thread_db)
 {
   /* Defer loading of libthread_db.so until inferior is running.
      This allows gdb to load correct libthread_db for a given

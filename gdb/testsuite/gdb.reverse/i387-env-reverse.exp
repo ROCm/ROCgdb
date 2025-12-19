@@ -1,4 +1,4 @@
-# Copyright 2009-2024 Free Software Foundation, Inc.
+# Copyright 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ set location [gdb_get_line_number "END I387-FLOAT-REVERSE"]
 gdb_test_no_output "record"  "Turn on process record"
 # This can take awhile.
 set oldtimeout $timeout
-set timeout [expr $oldtimeout + 120]
+set timeout [expr {$oldtimeout + 120}]
 gdb_test "until $location" ".*$srcfile:$location.*" \
     "record to end of main"
 set timeout $oldtimeout

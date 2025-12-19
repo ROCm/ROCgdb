@@ -1,5 +1,5 @@
 /* Remote target callback routines.
-   Copyright 1995-2024 Free Software Foundation, Inc.
+   Copyright 1995-2025 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions.
 
    This file is part of GDB.
@@ -990,7 +990,7 @@ cb_host_to_target_stat (host_callback *cb, const struct stat *hs, void *ts)
 
   while (m)
     {
-      char *q = strchr (m, ',');
+      const char *q = strchr (m, ',');
       int size;
 
       /* FIXME: Use sscanf? */

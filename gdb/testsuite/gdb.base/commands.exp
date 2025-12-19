@@ -1,4 +1,4 @@
-#   Copyright 1988-2024 Free Software Foundation, Inc.
+#   Copyright 1988-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -255,7 +255,7 @@ proc_with_prefix infrun_breakpoint_command_test {} {
     delete_breakpoints
     gdb_test "break factorial if value == 5" "Breakpoint.*at.*"
 
-# infrun_breakpoint_command_test - This test was broken into two parts 
+# infrun_breakpoint_command_test - This test was broken into two parts
 # to get around a synchronization problem in expect.
 # part1: issue the gdb command "commands"
 # part2: send the list of commands
@@ -547,7 +547,7 @@ proc_with_prefix user_defined_command_manyargs_test {} {
 
     set expected "nargs=$nargs:"
     for {set i 1} {$i <= $nargs} {incr i} {
-	append expected " " [expr 2 * $i]
+	append expected " " [expr {2 * $i}]
     }
 
     gdb_test $cmd $expected "execute command"
@@ -580,10 +580,10 @@ proc_with_prefix watchpoint_command_test {} {
     set wp_id -1
 
     gdb_test_multiple "watch local_var" "watch local_var" {
-        -re "\[Ww\]atchpoint (\[0-9\]*): local_var.*$gdb_prompt $" {
-            set wp_id $expect_out(1,string)
-            pass "watch local_var"
-        }
+	-re "\[Ww\]atchpoint (\[0-9\]*): local_var.*$gdb_prompt $" {
+	    set wp_id $expect_out(1,string)
+	    pass "watch local_var"
+	}
     }
 
     if {$wp_id == -1} {return}
@@ -658,7 +658,7 @@ proc_with_prefix test_command_prompt_position {} {
 	    gdb_test_multiple "printf \"Now the value is %d\\n\", value" $test {
 		-re "^printf.*value\r\n>$" {
 		    gdb_test_multiple "end" $test {
-			-re "^end\r\n$gdb_prompt $" { 
+			-re "^end\r\n$gdb_prompt $" {
 			    pass $test
 			}
 		    }
@@ -672,7 +672,7 @@ proc_with_prefix test_command_prompt_position {} {
 
 proc_with_prefix deprecated_command_test {} {
     gdb_test "maintenance deprecate blah" "Can't find command.*" \
-          "tried to deprecate non-existing command"
+	  "tried to deprecate non-existing command"
 
     gdb_test_no_output "maintenance deprecate p \"new_p\"" "maintenance deprecate p \"new_p\" /1/"
     gdb_test "p 5" \
@@ -681,7 +681,7 @@ proc_with_prefix deprecated_command_test {} {
     gdb_test "p 5" ".\[0-9\]* = 5.*" "deprecated warning goes away /1/"
 
     gdb_test_no_output "maintenance deprecate p \"new_p\"" "maintenance deprecate p \"new_p\" /2/"
-    gdb_test_no_output "maintenance deprecate print \"new_print\"" 
+    gdb_test_no_output "maintenance deprecate print \"new_print\""
     gdb_test "p 5" \
 	    "Warning: command 'print' \\(p\\) is deprecated.*Use 'new_print'.*" \
 	    "both alias and command are deprecated"
@@ -750,31 +750,31 @@ proc_with_prefix bp_deleted_in_command_test {} {
     # Create a breakpoint, and associate a command-list to it, with
     # one command that deletes this breakpoint.
     gdb_test "break factorial" \
-             "Breakpoint \[0-9\]+ at .*: file .*run.c, line \[0-9\]+\."
-    
+	     "Breakpoint \[0-9\]+ at .*: file .*run.c, line \[0-9\]+\."
+
     gdb_test_multiple "commands" "begin commands" {
       -re "Type commands for breakpoint.*>$" {
-          pass "begin commands"
+	  pass "begin commands"
       }
     }
     gdb_test_multiple "silent" "add silent command" {
-        -re ">$" {
+	-re ">$" {
 	    pass "add silent command"
 	}
     }
     gdb_test_multiple "clear factorial" "add clear command" {
-        -re ">$" {
+	-re ">$" {
 	    pass "add clear command"
 	}
     }
     gdb_test_multiple "printf \"factorial command-list executed\\n\"" \
 	"add printf command" {
-        -re ">$" {
+	-re ">$" {
 	    pass "add printf command"
 	}
     }
     gdb_test_multiple "cont" "add cont command" {
-        -re ">$" {
+	-re ">$" {
 	    pass "add cont command"
 	}
     }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2008-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,8 +19,11 @@
 
 #include <stdio.h>
 
-static int __gdb_set_unbuffered_output (void) __attribute__ ((constructor));
-static int
+/* Use an explicit priority so that this runs before constructors of
+   namespace-scope C++ objects (which may output to stdout/stderr).
+   Lower priorities run first.  Constructor priorities from 0 to 100
+   are reserved for the implementation.  */
+static void __attribute__ ((constructor (101)))
 __gdb_set_unbuffered_output (void)
 {
   setvbuf (stdout, NULL, _IONBF, BUFSIZ);

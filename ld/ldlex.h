@@ -1,5 +1,5 @@
 /* ldlex.h -
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -46,6 +46,7 @@ enum option_values
   OPTION_MAP,
   OPTION_NO_DEMANGLE,
   OPTION_NO_KEEP_MEMORY,
+  OPTION_NO_STATS,
   OPTION_NO_WARN_MISMATCH,
   OPTION_NO_WARN_SEARCH_MISMATCH,
   OPTION_NOINHIBIT_EXEC,
@@ -145,11 +146,9 @@ enum option_values
   OPTION_WARN_ALTERNATE_EM,
   OPTION_REDUCE_MEMORY_OVERHEADS,
   OPTION_MAX_CACHE_SIZE,
-#if BFD_SUPPORTS_PLUGINS
   OPTION_PLUGIN,
   OPTION_PLUGIN_OPT,
   OPTION_PLUGIN_SAVE_TEMPS,
-#endif /* BFD_SUPPORTS_PLUGINS */
   OPTION_DEFAULT_SCRIPT,
   OPTION_PRINT_OUTPUT_FORMAT,
   OPTION_PRINT_SYSROOT,
@@ -246,7 +245,6 @@ enum option_values
   OPTION_LIBPATH,
   OPTION_NOLIBPATH,
   /* Used by emultempl/alphaelf.em.  */
-  OPTION_TASO,
   OPTION_SECUREPLT,
   OPTION_NO_SECUREPLT,
   /* Used by emultempl/armelf.em.  */
@@ -471,6 +469,12 @@ enum option_values
   OPTION_NO_LITERAL_MOVEMENT,
   OPTION_ABI_WINDOWED,
   OPTION_ABI_CALL0,
+  /* Used by emultempl/elf-x86-glibc.em.  */
+  OPTION_GNU2_TLS_VERSION_TAG,
+  OPTION_NO_GNU2_TLS_VERSION_TAG,
+  /* Used by emultempl/elf-i386-glibc.em.  */
+  OPTION_GNU_TLS_VERSION_TAG,
+  OPTION_NO_GNU_TLS_VERSION_TAG,
 };
 
 /* The initial parser states.  */

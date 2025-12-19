@@ -1,5 +1,5 @@
 /* Internal interfaces for the Windows code
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -895,7 +895,7 @@ bad_GetConsoleFontSize (HANDLE w, DWORD nFont)
   size.Y = 12;
   return size;
 }
- 
+
 /* See windows-nat.h.  */
 
 bool

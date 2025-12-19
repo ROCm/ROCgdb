@@ -1,5 +1,5 @@
 # Copyright (C) 2019-2024 Free Software Foundation, Inc.
-# Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -28,7 +28,7 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 
 with_rocm_gpu_lock {
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }
@@ -201,7 +201,11 @@ gdb_test_multiple "info queues" "info queues with queues" {
 set ok 1
 for {set i 0} {$i < [llength $queue_ids]} {incr i} {
     set qnum [lindex $queue_ids $i]
+<<<<<<< HEAD
     if {$qnum != [expr {$i + 1}]} {
+=======
+    if {$qnum != $i + 1} {
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 	verbose -log "Mismatch: entry $i has queue number $qnum, expected [expr {$i+1}]"
 	set ok 0
     }
@@ -220,7 +224,11 @@ for { set i 0 } { $i < [llength $queue_ids] } { incr i } {
 # Pick the highest queue_id seen + 1.
 if {[llength $queue_ids] > 0} {
     # The highest is the last.
+<<<<<<< HEAD
     set invalid_id [expr [llength $queue_ids] + 1]
+=======
+    set invalid_id [expr {[llength $queue_ids] + 1}]
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
     gdb_test "info queues $invalid_id" \
 	"No active queues match '$invalid_id'\\." \
 	"info queues, no match"
@@ -235,7 +243,11 @@ if {[llength $queue_ids] > 0} {
     # Valid ID.
 
     # Fetch the index of the last entry.
+<<<<<<< HEAD
     set index [expr [llength $queue_ids] - 1]
+=======
+    set index [expr {[llength $queue_ids] - 1}]
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
     # Fetch the queue, agent and OS ids.
     set valid_id [lindex $queue_ids $index]
@@ -245,9 +257,15 @@ if {[llength $queue_ids] > 0} {
 	     "Queue $valid_id has Target Id 'AMDGPU Queue $agent_id:$valid_id \\(QID $os_id\\)'" \
 	     "queue find, match"
 
+<<<<<<< HEAD
     # Everything
     set sequence [list]
     for {set i [expr [llength $queue_ids] - 1]} {$i >= 0} {incr i -1} {
+=======
+    # Everything.  The list is sorted per-inferior.
+    set sequence [list]
+    for {set i 0} {$i < [llength $queue_ids]} {incr i} {
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 	lappend sequence "Queue [lindex $queue_ids $i] has Target Id 'AMDGPU Queue [lindex $agent_ids $i]:[lindex $queue_ids $i] \\(QID [lindex $os_ids $i]\\)'"
     }
     gdb_test_sequence "queue find ." "" $sequence

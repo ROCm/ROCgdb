@@ -1,6 +1,6 @@
 // icf_test.cc -- a test case for gold
 
-// Copyright (C) 2009-2024 Free Software Foundation, Inc.
+// Copyright (C) 2009-2025 Free Software Foundation, Inc.
 // Test case from PR 21066 submitted by Gandhi Shaheen
 
 // This file is part of gold.
@@ -47,10 +47,11 @@ void raise_second_exception()
 }
 
 template<typename E>
-void capture_exception_of_type(volatile callback_fn_t f)
+void capture_exception_of_type(callback_fn_t f)
 {
+  volatile callback_fn_t vf = f;
   try {
-    f();
+    vf();
   } catch (E& e) {
     puts("caught expected exception");
   } catch (...) {

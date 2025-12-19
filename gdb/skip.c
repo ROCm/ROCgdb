@@ -1,6 +1,6 @@
 /* Skipping uninteresting files and functions while stepping.
 
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
+   Copyright (C) 2011-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -72,10 +72,6 @@ public:
   void enable () { m_enabled = true; };
   void disable () { m_enabled = false; };
 
-  /* Disable copy.  */
-  skiplist_entry (const skiplist_entry &) = delete;
-  void operator= (const skiplist_entry &) = delete;
-
 private:
   /* Key that grants access to the constructor.  */
   struct private_key {};
@@ -86,6 +82,9 @@ public:
   skiplist_entry (bool file_is_glob, std::string &&file,
 		  bool function_is_regexp, std::string &&function,
 		  private_key);
+
+  /* Disable copy.  */
+  DISABLE_COPY_AND_ASSIGN (skiplist_entry);
 
 private:
   /* Return true if we're stopped at a file to be skipped.  */
@@ -488,20 +487,20 @@ skiplist_entry::do_skip_file_p (const symtab_and_line &function_sal) const
   if (debug_skip)
     gdb_printf (gdb_stdlog,
 		"skip: checking if file %s matches non-glob %s...",
-		function_sal.symtab->filename, m_file.c_str ());
+		function_sal.symtab->filename (), m_file.c_str ());
 
   bool result;
 
   /* Check first sole SYMTAB->FILENAME.  It may not be a substring of
      symtab_to_fullname as it may contain "./" etc.  */
-  if (compare_filenames_for_search (function_sal.symtab->filename,
+  if (compare_filenames_for_search (function_sal.symtab->filename (),
 				    m_file.c_str ()))
     result = true;
 
   /* Before we invoke realpath, which can get expensive when many
      files are involved, do a quick comparison of the basenames.  */
   else if (!basenames_may_differ
-	   && filename_cmp (lbasename (function_sal.symtab->filename),
+	   && filename_cmp (lbasename (function_sal.symtab->filename ()),
 			    lbasename (m_file.c_str ())) != 0)
     result = false;
   else
@@ -524,14 +523,14 @@ skiplist_entry::do_skip_gfile_p (const symtab_and_line &function_sal) const
   if (debug_skip)
     gdb_printf (gdb_stdlog,
 		"skip: checking if file %s matches glob %s...",
-		function_sal.symtab->filename, m_file.c_str ());
+		function_sal.symtab->filename (), m_file.c_str ());
 
   bool result;
 
   /* Check first sole SYMTAB->FILENAME.  It may not be a substring of
      symtab_to_fullname as it may contain "./" etc.  */
-  if (gdb_filename_fnmatch (m_file.c_str (), function_sal.symtab->filename,
-			    FNM_FILE_NAME | FNM_NOESCAPE) == 0)
+  if (gdb_filename_fnmatch (m_file.c_str (), function_sal.symtab->filename (),
+			    FNM_NOESCAPE) == 0)
     result = true;
 
   /* Before we invoke symtab_to_fullname, which is expensive, do a quick
@@ -541,15 +540,15 @@ skiplist_entry::do_skip_gfile_p (const symtab_and_line &function_sal) const
      isn't much of a win.  Oh well.  */
   else if (!basenames_may_differ
       && gdb_filename_fnmatch (lbasename (m_file.c_str ()),
-			       lbasename (function_sal.symtab->filename),
-			       FNM_FILE_NAME | FNM_NOESCAPE) != 0)
+			       lbasename (function_sal.symtab->filename ()),
+			       FNM_NOESCAPE) != 0)
     result = false;
   else
     {
       /* Note: symtab_to_fullname caches its result, thus we don't have to.  */
       const char *fullname = symtab_to_fullname (function_sal.symtab);
 
-      result = compare_glob_filenames_for_search (fullname, m_file.c_str ());
+      result = gdb_filename_fnmatch (m_file.c_str (), fullname, FNM_NOESCAPE);
     }
 
   if (debug_skip)
@@ -657,9 +656,7 @@ complete_skip_number (cmd_list_element *cmd,
     }
 }
 
-void _initialize_step_skip ();
-void
-_initialize_step_skip ()
+INIT_GDB_FILE (step_skip)
 {
   static struct cmd_list_element *skiplist = NULL;
   struct cmd_list_element *c;

@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
 
@@ -246,7 +246,7 @@ info_mach_ports_command (const char *args, int from_tty)
 	      gdb_printf (_("%u"), ref);
 	    gdb_printf (_(" refs)"));
 	  }
-      
+
       if (task == task_self ())
 	{
 	  if (port == task_self())
@@ -549,7 +549,7 @@ darwin_debug_regions (task_t task, mach_vm_address_t address, int max)
 	  count = VM_REGION_BASIC_INFO_COUNT_64;
 	  kret =
 	    mach_vm_region (task, &address, &size, VM_REGION_BASIC_INFO_64,
-		 	      (vm_region_info_t) &info, &count, &object_name);
+			      (vm_region_info_t) &info, &count, &object_name);
 	  if (kret != KERN_SUCCESS)
 	    {
 	      size = 0;
@@ -700,7 +700,7 @@ info_mach_regions_command (const char *args, int from_tty)
   task = get_task_from_args (args);
   if (task == TASK_NULL)
     return;
-  
+
   darwin_debug_regions (task, 0, -1);
 }
 
@@ -712,7 +712,7 @@ info_mach_regions_recurse_command (const char *args, int from_tty)
   task = get_task_from_args (args);
   if (task == TASK_NULL)
     return;
-  
+
   darwin_debug_regions_recurse (task);
 }
 
@@ -828,7 +828,7 @@ info_mach_exceptions_command (const char *args, int from_tty)
       if (inferior_ptid == null_ptid)
 	gdb_printf (_("No inferior running\n"));
       inf = current_inferior ();
-      
+
       darwin_inferior *priv = get_darwin_inferior (inf);
 
       kret = task_get_exception_ports
@@ -839,9 +839,7 @@ info_mach_exceptions_command (const char *args, int from_tty)
     }
 }
 
-void _initialize_darwin_info_commands ();
-void
-_initialize_darwin_info_commands ()
+INIT_GDB_FILE (darwin_info_commands)
 {
   add_info ("mach-tasks", info_mach_tasks_command,
 	    _("Get list of tasks in system."));

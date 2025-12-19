@@ -1,4 +1,4 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ if {[gdb_compile "$srcdir/$subdir/$srcfile" $binfile executable {debug c++}] != 
 
 
 proc make_breakpoints_pattern { expect_fixed_output bp_num loc1_en loc2_en } {
-    if $expect_fixed_output {
+    if {$expect_fixed_output} {
 	return "bkpt=\{number=\"${bp_num}\",type=\"breakpoint\",.*,locations=\\\[\{number=\"${bp_num}\\.1\",enabled=\"${loc1_en}\",.*\},\{number=\"${bp_num}\\.2\",enabled=\"${loc2_en}\",.*\}\\\]\}"
     } else {
 	return "bkpt=\{number=\"${bp_num}\",type=\"breakpoint\",.*\},\{number=\"${bp_num}\\.1\",enabled=\"${loc1_en}\",.*\},\{number=\"${bp_num}\\.2\",enabled=\"${loc2_en}\",.*\}"
@@ -56,11 +56,11 @@ proc do_test { mi_version use_fix_flag expect_fixed_output } {
 	    global MIFLAGS decimal binfile
 	    set MIFLAGS "-i=mi${mi_version}"
 
-	    mi_clean_restart $binfile
+	    mi_clean_restart $::testfile
 
 	    mi_runto_main
 
-	    if $use_fix_flag {
+	    if {$use_fix_flag} {
 		mi_gdb_test "-fix-multi-location-breakpoint-output" "\\^done" \
 		    "send -fix-multi-location-breakpoint-output"
 	    }

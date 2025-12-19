@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024 Free Software Foundation, Inc.
+# Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,10 +33,10 @@ set skip_func_file [standard_output_file $srcfile2]
 set expfile $testfile.exp
 
 # make check-perf RUNTESTFLAGS='skip-command.exp SKIP_STEP_COUNT=1000 ...'
-if ![info exists SKIP_STEP_COUNT] {
+if {![info exists SKIP_STEP_COUNT]} {
     set SKIP_STEP_COUNT 1000
 }
-if ![info exists SKIP_DIRECTIVE_COUNT] {
+if {![info exists SKIP_DIRECTIVE_COUNT]} {
     set SKIP_DIRECTIVE_COUNT 1000
 }
 
@@ -91,7 +91,7 @@ proc write_skip_func_source { file_name func_name_prefix nr_funcs } {
 proc run_skip_bench { kind text } {
     global SKIP_STEP_COUNT SKIP_DIRECTIVE_COUNT
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
 
@@ -99,7 +99,7 @@ proc run_skip_bench { kind text } {
 
     for { set i 0 } { $i < 5 } { incr i } {
 	with_test_prefix "iter $i" {
-	    set nr_skips [expr $i * $SKIP_DIRECTIVE_COUNT]
+	    set nr_skips [expr {$i * $SKIP_DIRECTIVE_COUNT}]
 	    install_skips $kind $text $nr_skips
 	    gdb_test_python_run \
 		"SkipCommand\(\"skip-$kind-$nr_skips\", ${SKIP_STEP_COUNT}\)"
@@ -120,7 +120,7 @@ PerfTest::assemble {
     return 0
 } {
     global binfile
-    clean_restart $binfile
+    clean_restart $::testfile
     return 0
 } {
     global SKIP_STEP_COUNT SKIP_DIRECTIVE_COUNT

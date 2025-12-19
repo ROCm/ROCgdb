@@ -1,5 +1,5 @@
 /* Remote serial support interface definitions for GDB, the GNU Debugger.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -126,7 +126,7 @@ extern void serial_write (struct serial *scb, const void *buf, size_t count);
 
 /* Write a printf style string onto the serial port.  */
 
-extern void serial_printf (struct serial *desc, 
+extern void serial_printf (struct serial *desc,
 			   const char *,...) ATTRIBUTE_PRINTF (2, 3);
 
 /* Allow pending output to drain.  */
@@ -152,7 +152,8 @@ extern void serial_send_break (struct serial *scb);
 extern void serial_raw (struct serial *scb);
 
 /* Return a pointer to a newly malloc'd ttystate containing the state
-   of the tty.  */
+   of the tty.  Can return NULL if the current tty state could not be
+   read, for example, if GDB's stdin is not a terminal.  */
 
 extern serial_ttystate serial_get_tty_state (struct serial *scb);
 
@@ -240,7 +241,7 @@ struct serial
        immediately forwarded to gdb_stderr.  This may be -1.
        If != -1, this descriptor should be non-blocking or
        ops->avail should be non-NULL.  */
-    int error_fd;               
+    int error_fd;
     const struct serial_ops *ops; /* Function vector */
     void *state;       		/* Local context info for open FD */
     serial_ttystate ttystate;	/* Not used (yet) */

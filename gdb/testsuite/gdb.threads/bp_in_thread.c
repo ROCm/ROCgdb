@@ -1,6 +1,6 @@
 /* A small multi-threaded test case.
 
-   Copyright 2004-2024 Free Software Foundation, Inc.
+   Copyright 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -70,4 +70,3 @@ main (void)
 
   return 0;
 }
-

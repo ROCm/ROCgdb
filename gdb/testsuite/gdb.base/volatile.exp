@@ -1,4 +1,4 @@
-# Copyright 1997-2024 Free Software Foundation, Inc.
+# Copyright 1997-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 #           const volatile pointers to const vars
 #           const volatile pointers to volatile vars
 #           ... etc.  (you get the idea)
-# Mostly with char and unsigned char.                    
+# Mostly with char and unsigned char.
 
 #
 # test running programs
@@ -54,7 +54,7 @@ proc local_compiler_xfail_check { } {
     if {[test_compiler_info gcc-2-*]} {
 	if { ![test_debug_format "HP"] \
 		&& ![test_debug_format "DWARF \[0-9\]"] } then {
-	    setup_xfail "*-*-*" 
+	    setup_xfail "*-*-*"
 	}
     }
 }

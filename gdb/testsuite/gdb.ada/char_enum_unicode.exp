@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ standard_ada_testfile foo
 
 set flags [list debug additional_flags=-gnatW8]
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable $flags] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}

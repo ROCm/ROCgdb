@@ -1,4 +1,4 @@
---  Copyright 2023-2024 Free Software Foundation, Inc.
+--  Copyright 2023-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -19,15 +19,14 @@ procedure Prog is
 begin
 
    begin
-      raise Program_Error;
+      raise Constraint_Error;
    exception
       when others =>
          null;
    end;
 
    begin
-      Global_Var := 23;
-      raise Program_Error;
+      raise Program_Error;      -- EXPECTED
    exception
       when others =>
          null;

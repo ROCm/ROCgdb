@@ -1,5 +1,5 @@
 dnl Sanitization-related configure macro for GDB
-dnl Copyright (C) 2018-2024 Free Software Foundation, Inc.
+dnl Copyright (C) 2018-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -19,7 +19,7 @@ dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 AC_DEFUN([AM_GDB_UBSAN],[
 AC_ARG_ENABLE(ubsan,
   AS_HELP_STRING([--enable-ubsan],
-                 [enable undefined behavior sanitizer (auto/yes/no)]),
+		 [enable undefined behavior sanitizer (auto/yes/no)]),
   [],enable_ubsan=no)
 if test "x$enable_ubsan" = xauto; then
   if $development; then

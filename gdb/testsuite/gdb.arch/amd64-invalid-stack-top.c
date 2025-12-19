@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2014-2024 Free Software Foundation, Inc.
+   Copyright 2014-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ make_invalid_ptr (void)
 {
   int page_size, ans;
   void *ptr;
-  
+
   page_size = getpagesize ();
   ptr =  mmap (0, page_size, PROT_NONE,
 	       MAP_PRIVATE | MAP_ANONYMOUS,
@@ -61,13 +61,13 @@ make_invalid_ptr (void)
   return ptr;
 }
 
-int 
+int
 main (void)
 {
   void *invalid_ptr;
 
   invalid_ptr = make_invalid_ptr ();
   func1 (invalid_ptr);
-  
+
   return 0;
 }

@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,17 +37,13 @@ proc get_first_maint_bp_num { } {
     return ""
 }
 
-standard_testfile .c
-
 # This testcase just needs a "Hello world" source file, reuse
 # gdb.base/main.c instead of adding a new one.
-if  { [gdb_compile "${srcdir}/${subdir}/main.c" "${binfile}" executable {debug}] != "" } {
-    untested "failed to compile"
-    return -1
-}
+standard_testfile main.c
 
-# Start with a fresh gdb.
-clean_restart ${binfile}
+if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
+    return
+}
 
 if {![runto_main]} {
     return 0
@@ -68,4 +64,3 @@ gdb_test "clear *$bp_addr" \
 gdb_test "maint info break $bp_num" \
     "$bp_num.*$bp_addr.*" \
     "maint info breakpoint \$bp_num after clear"
-

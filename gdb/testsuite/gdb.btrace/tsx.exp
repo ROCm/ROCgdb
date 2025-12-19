@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 #
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 require allow_btrace_pt_tests allow_tsx_tests
 
 standard_testfile .c x86-tsx.S
-if [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" {debug}] {
+if {[prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" {debug}]} {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -59,15 +59,15 @@ set abort_3 \
 set test "speculation indication"
 gdb_test_multiple "record instruction-history" $test {
     -re "$abort_1.*$gdb_prompt $" {
-        pass $test
+	pass $test
     }
     -re "$abort_2.*$gdb_prompt $" {
-        pass $test
+	pass $test
     }
     -re -wrap "$abort_3.*" {
-        pass $gdb_test_name
+	pass $gdb_test_name
     }
     -re  "$begin_to_end.*$gdb_prompt $" {
-        pass $test
+	pass $test
     }
 }

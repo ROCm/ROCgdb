@@ -1,5 +1,5 @@
 # Expect script for various ELF tests.
-#   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -86,6 +86,9 @@ run_ld_link_tests [list \
 
 if [is_elf64 tmpdir/symbol3w.a] {
     set ASFLAGS "$ASFLAGS --defsym ALIGN=3"
+    if { [istarget powerpc*-*-linux*] } {
+	set LDFLAGS "$LDFLAGS --no-ld-generated-unwind-info"
+    }
     set pr23900_1_exp "pr23900-1-64.rd"
     set pr25490_2_exp "pr25490-2-64.rd"
     set pr25490_3_exp "pr25490-3-64.rd"
@@ -199,15 +202,17 @@ proc target_defaults_to_execstack {} {
 
     # If the linker has been configured with --enable-default-execstack=no then
     # this proc should always return 0.
-    if { [file exists $base_dir/config.status] } {
-	set status [remote_exec host grep "enable-default-execstack=no" $base_dir/config.status]
+    set f $base_dir/config.h
+    set s {DEFAULT_LD_EXECSTACK\ 0}
+    if { [file exists $f] } {
+	set status [remote_exec host grep $s $f]
 	if { [lindex $status 0] == 0 } {
 	    return 0
 	} else {
-	    verbose -log "$base_dir/config.status does not contain enable-default-execstack=no"
+	    verbose -log "$f does not contain $s"
 	}
     } else {
-	verbose -log "there is no file $base_dir/config.status"
+	verbose -log "there is no file $f"
     }
     
     if {   [istarget "aarch64*-*-*"]
@@ -227,7 +232,6 @@ proc target_defaults_to_execstack {} {
 }
 
 if {   [istarget *-*-*linux*]
-    || [istarget *-*-nacl*]
     || [istarget *-*-gnu*] } {
     run_ld_link_tests [list \
 	[list "stack exec" \
@@ -284,6 +288,13 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-a.s} \
 	    {{ld pr29072.a.warn}} \
 	    "pr29072-a.exe"] \
+	[list "Test --error-execstack with an executable .note.GNU-stack" \
+	    "--warn-execstack --error-execstack" \
+	    "" \
+	    "" \
+	    {pr29072-a.s} \
+	     {{ld gnu_execstack.err}} \
+	    "gnu_execstack.exe"] \
 	[list "PR 29072 (warn about -z execstack)" \
 	    "-z execstack --warn-execstack --no-error-execstack" \
 	    "" \
@@ -291,6 +302,13 @@ if {   [istarget *-*-*linux*]
 	    {stack.s} \
 	     {{ld pr29072.c.warn}} \
 	    "pr29072-c.exe"] \
+	[list "Test --error-execstack with -z execstack" \
+	    "-z execstack --warn-execstack --error-execstack" \
+	    "" \
+	    "" \
+	    {stack.s} \
+	     {{ld z_execstack.err}} \
+	    "execstack.exe"] \
 	[list "PR ld/29072 (suppress warnings about executable stack)" \
 	    "-e 0 --no-warn-execstack" \
 	    "" \
@@ -298,13 +316,20 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-a.s} \
 	    {} \
 	    "pr29072-d.exe"] \
-	[list "Ensure that a warning issued when creating a segment with RWX permissions" \
+	[list "Ensure that a warning is issued when creating a segment with RWX permissions" \
 	    "-e 0 -Tnobits-1.t --warn-rwx-segments --no-error-rwx-segments" \
 	    "" \
 	    "" \
 	    {nobits-1.s} \
 	     {{ld rwx-segments-1.l}} \
 	    "rwx-segments-1.exe"] \
+	[list "Ensure that a error can be issued when creating a segment with RWX permissions" \
+	    "-e 0 -Tnobits-1.t --warn-rwx-segments --error-rwx-segments" \
+	    "" \
+	    "" \
+	    {nobits-1.s} \
+	     {{ld rwx-segments-3.err}} \
+	    "rwx-segments-3.exe"] \
 	[list "Ensure that a warning issued when creating a TLS segment with execute permission" \
 	    "-e 0 -T rwx-segments-2.t --warn-rwx-segments --no-error-rwx-segments" \
 	    "" \
@@ -312,6 +337,13 @@ if {   [istarget *-*-*linux*]
 	    {size-2.s} \
 	     {{ld rwx-segments-2.l}} \
 	    "rwx-segments-2.exe"] \
+	[list "Ensure that an error cn be issued when creating a TLS segment with execute permission" \
+	    "-e 0 -T rwx-segments-2.t --warn-rwx-segments --error-rwx-segments" \
+	    "" \
+	    "" \
+	    {size-2.s} \
+	     {{ld rwx-segments-4.err}} \
+	    "rwx-segments-4.exe"] \
 	[list "Ensure that the RWX warning can be suppressed" \
 	    "-e 0 -Tnobits-1.t --no-warn-rwx-segments" \
 	    "" \
@@ -332,6 +364,16 @@ if {   [istarget *-*-*linux*]
 	    {pr29072-b.s} \
 	    {{ld pr29072.b.warn}} \
 	    "pr29072-b.exe"] \
+	]
+
+      run_ld_link_tests [list \
+	[list "error when .note.GNU-stack is absent" \
+	 "-e 0 -z stack-size=0x123400 --warn-execstack --error-execstack" \
+	 "" \
+	 "" \
+	 {pr29072-b.s} \
+	 {{ld missing-execstack.err}} \
+	 "missing-execstack.exe"] \
 	]
     } else {
 	run_ld_link_tests [list \
@@ -443,7 +485,6 @@ set xfails "*-*-netbsd*"
 run_ld_link_exec_tests $array_tests $xfails
 
 if { [istarget *-*-linux*]
-     || [istarget *-*-nacl*]
      || [istarget *-*-gnu*] } {
     run_ld_link_exec_tests $array_tests_pie $xfails
 
@@ -497,6 +538,17 @@ if { [istarget *-*-linux*]
 	]
     }
 
+    run_cc_link_tests [list \
+	[list \
+	    "Build pr32690.so" \
+	    "-shared" \
+	    "-O2 -fPIC" \
+	    { pr32690b.c } \
+	    {} \
+	    "pr32690.so" \
+	] \
+    ]
+
     run_ld_link_exec_tests [list \
 	[list \
 	    "Run mbind2a" \
@@ -515,6 +567,18 @@ if { [istarget *-*-linux*]
 	    "mbind2b" \
 	    "pass.out" \
 	    "-O2 -I../bfd" \
+	] \
+	[list \
+	    "Run pr32690" \
+	    "-pie -Wl,-z,now" \
+	    "" \
+	    { pr32690a.c } \
+	    "pr32690" \
+	    "pass.out" \
+	    "-O2 -fPIE" \
+	    "C" \
+	    {} \
+	    "-Wl,-R,tmpdir tmpdir/pr32690.so" \
 	] \
     ]
 }

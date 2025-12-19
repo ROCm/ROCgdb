@@ -1,6 +1,6 @@
 /* Parse expressions for GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    Modified from expread.y by the Department of Computer Science at the
    State University of New York at Buffalo, 1991.
@@ -29,7 +29,6 @@
    during the process of parsing; the lower levels of the tree always
    come first in the result.  */
 
-#include <ctype.h>
 #include "arch-utils.h"
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -60,8 +59,8 @@ show_expressiondebug (struct ui_file *file, int from_tty,
 }
 
 
-/* True if an expression parser should set yydebug.  */
-static bool parser_debug;
+/* See parser-defs.h.  */
+bool parser_debug;
 
 static void
 show_parserdebug (struct ui_file *file, int from_tty,
@@ -599,16 +598,16 @@ fits_in_type (int n_sign, const gdb_mpz &n, int type_bits, bool type_signed_p)
   return n < max;
 }
 
-/* This function avoids direct calls to fprintf 
+/* This function avoids direct calls to fprintf
    in the parser generated debug code.  */
 void
 parser_fprintf (FILE *x, const char *y, ...)
-{ 
+{
   va_list args;
 
   va_start (args, y);
   if (x == stderr)
-    gdb_vprintf (gdb_stderr, y, args); 
+    gdb_vprintf (gdb_stderr, y, args);
   else
     {
       gdb_printf (gdb_stderr, " Unknown FILE used.\n");
@@ -617,9 +616,7 @@ parser_fprintf (FILE *x, const char *y, ...)
   va_end (args);
 }
 
-void _initialize_parse ();
-void
-_initialize_parse ()
+INIT_GDB_FILE (parse)
 {
   add_setshow_zuinteger_cmd ("expression", class_maintenance,
 			     &expressiondebug,

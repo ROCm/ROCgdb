@@ -1,6 +1,6 @@
 /* Target-dependent code for the HP PA-RISC architecture.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
    University of Utah (pa-gdb-bugs@cs.utah.edu).
@@ -33,6 +33,8 @@
 #include "trad-frame.h"
 #include "frame-unwind.h"
 #include "frame-base.h"
+#include "remote.h"
+#include "target-descriptions.h"
 
 #include "gdbcore.h"
 #include "cli/cli-cmds.h"
@@ -42,6 +44,14 @@
 #include <algorithm>
 
 static bool hppa_debug = false;
+
+/* Properties (for struct target_desc) describing the g/G packet
+   layout.  */
+#define PROPERTY_GP32 "internal: transfers-32bit-registers"
+#define PROPERTY_GP64 "internal: transfers-64bit-registers"
+
+static target_desc_up hppa_tdesc32;
+static target_desc_up hppa_tdesc64;
 
 /* Some local constants.  */
 static const int hppa32_num_regs = 128;
@@ -79,8 +89,8 @@ struct hppa_objfile_private
   };
 
 /* hppa-specific object data -- unwind and solib info.
-   TODO/maybe: think about splitting this into two parts; the unwind data is 
-   common to all hppa targets, but is only used in this file; we can register 
+   TODO/maybe: think about splitting this into two parts; the unwind data is
+   common to all hppa targets, but is only used in this file; we can register
    that separately and make this static. The solib data is probably hpux-
    specific, so we can create a separate extern objfile_data that is registered
    by hppa-hpux-tdep.c and shared with pa64solib.c and somsolib.c.  */
@@ -97,10 +107,10 @@ static const registry<objfile>::key<hppa_objfile_private>
 #define UNWIND_ENTRY_SIZE 16
 #define STUB_UNWIND_ENTRY_SIZE 8
 
-/* Routines to extract various sized constants out of hppa 
+/* Routines to extract various sized constants out of hppa
    instructions.  */
 
-/* This assumes that no garbage lies outside of the lower bits of 
+/* This assumes that no garbage lies outside of the lower bits of
    value.  */
 
 static int
@@ -191,7 +201,7 @@ hppa_extract_17 (unsigned word)
 		      (word & 0x1) << 16, 17) << 2;
 }
 
-CORE_ADDR 
+CORE_ADDR
 hppa_symbol_address(const char *sym)
 {
   bound_minimal_symbol minsym
@@ -204,7 +214,7 @@ hppa_symbol_address(const char *sym)
 
 
 
-/* Compare the start address for two unwind entries returning 1 if 
+/* Compare the start address for two unwind entries returning 1 if
    the first address is larger than the second, -1 if the second is
    larger than the first, and zero if they are equal.  */
 
@@ -264,7 +274,7 @@ internalize_unwinds (struct objfile *objfile, struct unwind_table_entry *table,
 	  low_text_segment_address = -1;
 
 	  bfd_map_over_sections (objfile->obfd.get (),
-				 record_text_segment_lowaddr, 
+				 record_text_segment_lowaddr,
 				 &low_text_segment_address);
 
 	  text_offset = low_text_segment_address;
@@ -487,18 +497,18 @@ find_unwind_entry (CORE_ADDR pc)
       return NULL;
     }
 
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
       struct hppa_unwind_info *ui;
       ui = NULL;
-      struct hppa_objfile_private *priv = hppa_objfile_priv_data.get (objfile);
+      struct hppa_objfile_private *priv = hppa_objfile_priv_data.get (&objfile);
       if (priv)
 	ui = priv->unwind_info;
 
       if (!ui)
 	{
-	  read_unwind_info (objfile);
-	  priv = hppa_objfile_priv_data.get (objfile);
+	  read_unwind_info (&objfile);
+	  priv = hppa_objfile_priv_data.get (&objfile);
 	  if (priv == NULL)
 	    error (_("Internal error reading unwind information."));
 	  ui = priv->unwind_info;
@@ -549,9 +559,9 @@ find_unwind_entry (CORE_ADDR pc)
 
 /* Implement the stack_frame_destroyed_p gdbarch method.
 
-   The epilogue is defined here as the area either on the `bv' instruction 
+   The epilogue is defined here as the area either on the `bv' instruction
    itself or an instruction which destroys the function's stack frame.
-   
+
    We do not assume that the epilogue is at the end of a function as we can
    also have return sequences in the middle of a function.  */
 
@@ -569,14 +579,14 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   inst = extract_unsigned_integer (buf, 4, byte_order);
 
-  /* The most common way to perform a stack adjustment ldo X(sp),sp 
+  /* The most common way to perform a stack adjustment ldo X(sp),sp
      We are destroying a stack frame if the offset is negative.  */
   if ((inst & 0xffffc000) == 0x37de0000
       && hppa_extract_14 (inst) < 0)
     return 1;
 
   /* ldw,mb D(sp),X or ldd,mb D(sp),X */
-  if (((inst & 0x0fc010e0) == 0x0fc010e0 
+  if (((inst & 0x0fc010e0) == 0x0fc010e0
        || (inst & 0x0fc010e0) == 0x0fc010e0)
       && hppa_extract_14 (inst) < 0)
     return 1;
@@ -692,7 +702,7 @@ hppa64_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 
    We simply allocate the appropriate amount of stack space and put
    arguments into their proper slots.  */
-   
+
 static CORE_ADDR
 hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			struct regcache *regcache, CORE_ADDR bp_addr,
@@ -796,7 +806,7 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      write_memory (param_end - param_ptr, param_val, param_len);
 
 	      /* There are some cases when we don't know the type
-		 expected by the callee (e.g. for variadic functions), so 
+		 expected by the callee (e.g. for variadic functions), so
 		 pass the parameters in both general and fp regs.  */
 	      if (param_ptr <= 48)
 		{
@@ -920,12 +930,12 @@ hppa64_convert_code_addr_to_fptr (struct gdbarch *gdbarch, CORE_ADDR code)
   if (!(sec->the_bfd_section->flags & SEC_CODE))
     return code;
 
-  for (obj_section *opd : sec->objfile->sections ())
+  for (obj_section &opd : sec->objfile->sections ())
     {
-      if (strcmp (opd->the_bfd_section->name, ".opd") == 0)
+      if (strcmp (opd.the_bfd_section->name, ".opd") == 0)
 	{
-	  for (CORE_ADDR addr = opd->addr ();
-	       addr < opd->endaddr ();
+	  for (CORE_ADDR addr = opd.addr ();
+	       addr < opd.endaddr ();
 	       addr += 2 * 8)
 	    {
 	      ULONGEST opdaddr;
@@ -1731,7 +1741,7 @@ restart:
       /* Bump the PC.  */
       pc += 4;
 
-      /* !stop_before_branch, so also look at the insn in the delay slot 
+      /* !stop_before_branch, so also look at the insn in the delay slot
 	 of the branch.  */
       if (final_iteration)
 	break;
@@ -1774,7 +1784,7 @@ after_prologue (CORE_ADDR pc)
     return 0;
 
   /* Get the line associated with FUNC_ADDR.  */
-  sal = find_pc_line (func_addr, 0);
+  sal = find_sal_for_pc (func_addr, 0);
 
   /* There are only two cases to consider.  First, the end of the source line
      is within the function bounds.  In that case we return the end of the
@@ -1795,7 +1805,7 @@ after_prologue (CORE_ADDR pc)
 /* To skip prologues, I use this predicate.  Returns either PC itself
    if the code at PC does not look like a function prologue; otherwise
    returns an address that (if we're lucky) follows the prologue.
-   
+
    hppa_skip_prologue is called by gdb to place a breakpoint in a function.
    It doesn't necessarily skips all the insns in the prologue.  In fact
    we might not want to skip all the insns because a prologue insn may
@@ -1854,7 +1864,6 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int word_size = gdbarch_ptr_bit (gdbarch) / 8;
-  struct hppa_frame_cache *cache;
   long saved_gr_mask;
   long saved_fr_mask;
   long frame_size;
@@ -1874,7 +1883,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 		    paddress (gdbarch, ((struct hppa_frame_cache *)*this_cache)->base));
       return (struct hppa_frame_cache *) (*this_cache);
     }
-  cache = FRAME_OBSTACK_ZALLOC (struct hppa_frame_cache);
+  auto *cache = frame_obstack_zalloc<struct hppa_frame_cache> ();
   (*this_cache) = cache;
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -1894,7 +1903,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
       /* Frame pointer gets saved into a special location.  */
       if (u->Save_SP && i == HPPA_FP_REGNUM)
 	continue;
-	
+
       saved_gr_mask |= (1 << i);
     }
 
@@ -1924,12 +1933,12 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     int looking_for_rp = u->Save_RP;
     int fp_loc = -1;
 
-    /* We have to use skip_prologue_hard_way instead of just 
+    /* We have to use skip_prologue_hard_way instead of just
        skip_prologue_using_sal, in case we stepped into a function without
        symbol information.  hppa_skip_prologue also bounds the returned
        pc by the passed in pc, so it will not return a pc in the next
        function.
-       
+
        We used to call hppa_skip_prologue to find the end of the prologue,
        but if some non-prologue instructions get scheduled into the prologue,
        and the program is compiled with debug information, the "easy" way
@@ -1981,7 +1990,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 
 	/* Note the interesting effects of this instruction.  */
 	frame_size += prologue_inst_adjust_sp (inst);
-	
+
 	/* There are limited ways to store the return pointer into the
 	   stack.  */
 	if (inst == 0x6bc23fd9) /* stw rp,-0x14(sr0,sp) */
@@ -1994,13 +2003,13 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	    looking_for_rp = 0;
 	    cache->saved_regs[HPPA_RP_REGNUM].set_addr (-24);
 	  }
-	else if (inst == 0x0fc212c1 
+	else if (inst == 0x0fc212c1
 		 || inst == 0x73c23fe1) /* std rp,-0x10(sr0,sp) */
 	  {
 	    looking_for_rp = 0;
 	    cache->saved_regs[HPPA_RP_REGNUM].set_addr (-16);
 	  }
-	
+
 	/* Check to see if we saved SP into the stack.  This also
 	   happens to indicate the location of the saved frame
 	   pointer.  */
@@ -2014,7 +2023,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	  {
 	    fp_in_r1 = 1;
 	  }
-	
+
 	/* Account for general and floating-point register saves.  */
 	reg = inst_saves_gr (inst);
 	if (reg >= 3 && reg <= 18
@@ -2031,7 +2040,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	    else
 	      {
 		CORE_ADDR offset;
-		
+
 		if ((inst >> 26) == 0x1c)
 		  offset = (inst & 0x1 ? -(1 << 13) : 0)
 		    | (((inst >> 4) & 0x3ff) << 3);
@@ -2039,7 +2048,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 		  offset = hppa_low_hppa_sign_extend (inst & 0x1f, 5);
 		else
 		  offset = hppa_extract_14 (inst);
-		
+
 		/* Handle code with and without frame pointers.  */
 		if (u->Save_SP)
 		  cache->saved_regs[reg].set_addr (offset);
@@ -2049,20 +2058,20 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	      }
 	  }
 
-	/* GCC handles callee saved FP regs a little differently.  
-	   
+	/* GCC handles callee saved FP regs a little differently.
+
 	   It emits an instruction to put the value of the start of
 	   the FP store area into %r1.  It then uses fstds,ma with a
 	   basereg of %r1 for the stores.
 
 	   HP CC emits them at the current stack pointer modifying the
 	   stack pointer as it stores each register.  */
-	
+
 	/* ldo X(%r3),%r1 or ldo X(%r30),%r1.  */
 	if ((inst & 0xffffc000) == 0x34610000
 	    || (inst & 0xffffc000) == 0x37c10000)
 	  fp_loc = hppa_extract_14 (inst);
-	
+
 	reg = inst_saves_fr (inst);
 	if (reg >= 12 && reg <= 21)
 	  {
@@ -2084,7 +2093,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 		fp_loc += 8;
 	      }
 	  }
-	
+
 	/* Quit if we hit any kind of branch the previous iteration.  */
 	if (final_iteration)
 	  break;
@@ -2112,37 +2121,37 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 
      /* Check to see if a frame pointer is available, and use it for
 	frame unwinding if it is.
- 
+
 	There are some situations where we need to rely on the frame
 	pointer to do stack unwinding.  For example, if a function calls
 	alloca (), the stack pointer can get adjusted inside the body of
 	the function.  In this case, the ABI requires that the compiler
 	maintain a frame pointer for the function.
- 
+
 	The unwind record has a flag (alloca_frame) that indicates that
-	a function has a variable frame; unfortunately, gcc/binutils 
+	a function has a variable frame; unfortunately, gcc/binutils
 	does not set this flag.  Instead, whenever a frame pointer is used
 	and saved on the stack, the Save_SP flag is set.  We use this to
 	decide whether to use the frame pointer for unwinding.
-	
-	TODO: For the HP compiler, maybe we should use the alloca_frame flag 
+
+	TODO: For the HP compiler, maybe we should use the alloca_frame flag
 	instead of Save_SP.  */
- 
+
      fp = get_frame_register_unsigned (this_frame, HPPA_FP_REGNUM);
 
      if (u->alloca_frame)
        fp -= u->Total_frame_size << 3;
- 
+
      if (get_frame_pc (this_frame) >= prologue_end
 	 && (u->Save_SP || u->alloca_frame) && fp != 0)
       {
 	cache->base = fp;
- 
+
 	if (hppa_debug)
 	  gdb_printf (gdb_stdlog, " (base=%s) [frame pointer]",
 		      paddress (gdbarch, cache->base));
       }
-     else if (u->Save_SP 
+     else if (u->Save_SP
 	      && cache->saved_regs[HPPA_SP_REGNUM].is_addr ())
       {
 	    /* Both we're expecting the SP to be saved and the SP has been
@@ -2189,7 +2198,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     {
       if (cache->saved_regs[HPPA_RP_REGNUM].is_addr ())
 	{
-	  cache->saved_regs[HPPA_PCOQ_HEAD_REGNUM] = 
+	  cache->saved_regs[HPPA_PCOQ_HEAD_REGNUM] =
 	    cache->saved_regs[HPPA_RP_REGNUM];
 	  if (hppa_debug)
 	    gdb_printf (gdb_stdlog, " (pc=rp) [stack] } ");
@@ -2216,7 +2225,7 @@ hppa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 
      So if we are at offset c, the r3 value that we want is not yet saved
      on the stack, but it's been overwritten.  The prologue analyzer will
-     set fp_in_r1 when it sees the copy insn so we know to get the value 
+     set fp_in_r1 when it sees the copy insn so we know to get the value
      from r1 instead.  */
   if (u->Save_SP && !cache->saved_regs[HPPA_FP_REGNUM].is_addr ()
       && fp_in_r1)
@@ -2282,16 +2291,16 @@ hppa_frame_unwind_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_frame_unwind =
-{
+static const struct frame_unwind_legacy hppa_frame_unwind (
   "hppa unwind table",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_frame_this_id,
   hppa_frame_prev_register,
   NULL,
   hppa_frame_unwind_sniffer
-};
+);
 
 /* This is a generic fallback frame unwinder that kicks in if we fail all
    the other ones.  Normally we would expect the stub and regular unwinder
@@ -2306,7 +2315,6 @@ hppa_fallback_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  struct hppa_frame_cache *cache;
   unsigned int frame_size = 0;
   int found_rp = 0;
   CORE_ADDR start_pc;
@@ -2316,7 +2324,7 @@ hppa_fallback_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 		"{ hppa_fallback_frame_cache (frame=%d) -> ",
 		frame_relative_level (this_frame));
 
-  cache = FRAME_OBSTACK_ZALLOC (struct hppa_frame_cache);
+  auto *cache = frame_obstack_zalloc<struct hppa_frame_cache> ();
   (*this_cache) = cache;
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -2361,7 +2369,7 @@ hppa_fallback_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     {
       cache->saved_regs[HPPA_RP_REGNUM].set_addr (cache->saved_regs[HPPA_RP_REGNUM].addr ()
 						  + cache->base);
-      cache->saved_regs[HPPA_PCOQ_HEAD_REGNUM] = 
+      cache->saved_regs[HPPA_PCOQ_HEAD_REGNUM] =
 	cache->saved_regs[HPPA_RP_REGNUM];
     }
   else
@@ -2378,7 +2386,7 @@ static void
 hppa_fallback_frame_this_id (const frame_info_ptr &this_frame, void **this_cache,
 			     struct frame_id *this_id)
 {
-  struct hppa_frame_cache *info = 
+  struct hppa_frame_cache *info =
     hppa_fallback_frame_cache (this_frame, this_cache);
 
   (*this_id) = frame_id_build (info->base, get_frame_func (this_frame));
@@ -2395,16 +2403,16 @@ hppa_fallback_frame_prev_register (const frame_info_ptr &this_frame,
 					  info->saved_regs, regnum);
 }
 
-static const struct frame_unwind hppa_fallback_frame_unwind =
-{
+static const struct frame_unwind_legacy hppa_fallback_frame_unwind (
   "hppa prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_fallback_frame_this_id,
   hppa_fallback_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Stub frames, used for all kinds of call stubs.  */
 struct hppa_stub_unwind_cache
@@ -2417,12 +2425,10 @@ static struct hppa_stub_unwind_cache *
 hppa_stub_frame_unwind_cache (const frame_info_ptr &this_frame,
 			      void **this_cache)
 {
-  struct hppa_stub_unwind_cache *info;
-
   if (*this_cache)
     return (struct hppa_stub_unwind_cache *) *this_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct hppa_stub_unwind_cache);
+  auto *info = frame_obstack_zalloc<hppa_stub_unwind_cache> ();
   *this_cache = info;
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -2477,15 +2483,16 @@ hppa_stub_unwind_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_stub_frame_unwind = {
+static const struct frame_unwind_legacy hppa_stub_frame_unwind (
   "hppa stub",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_stub_frame_this_id,
   hppa_stub_frame_prev_register,
   NULL,
   hppa_stub_unwind_sniffer
-};
+);
 
 CORE_ADDR
 hppa_unwind_pc (struct gdbarch *gdbarch, const frame_info_ptr &next_frame)
@@ -2741,7 +2748,7 @@ static struct insn_pattern hppa_long_branch_stub[] = {
   /* ldil LR'xxx,%r1 */
   { 0x20200000, 0xffe00000 },
   /* be,n RR'xxx(%sr4,%r1) */
-  { 0xe0202002, 0xffe02002 }, 
+  { 0xe0202002, 0xffe02002 },
   { 0, 0 }
 };
 
@@ -2751,7 +2758,7 @@ static struct insn_pattern hppa_long_branch_pic_stub[] = {
   /* addil LR'xxx - ($PIC_pcrel$0 - 4), %r1 */
   { 0x28200000, 0xffe00000 },
   /* be,n RR'xxxx - ($PIC_pcrel$0 - 8)(%sr4, %r1) */
-  { 0xe0202002, 0xffe02002 }, 
+  { 0xe0202002, 0xffe02002 },
   { 0, 0 }
 };
 
@@ -2977,6 +2984,19 @@ hppa_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
 
    -- chastain 2003-12-18  */
 
+static void
+hppa_register_g_packet_guesses (struct gdbarch *gdbarch)
+{
+  /* If the size matches the set of 32-bit or 64-bit integer registers,
+     assume that's what we've got.  */
+  register_remote_g_packet_guess (gdbarch, hppa32_num_regs * 4,
+				  hppa_tdesc32.get ());
+  register_remote_g_packet_guess (gdbarch, hppa64_num_regs * 8,
+				  hppa_tdesc64.get ());
+
+  /* Otherwise we don't have a useful guess.  */
+}
+
 static struct gdbarch *
 hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -2990,14 +3010,33 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     = gdbarch_alloc (&info, gdbarch_tdep_up (new hppa_gdbarch_tdep));
   hppa_gdbarch_tdep *tdep = gdbarch_tdep<hppa_gdbarch_tdep> (gdbarch);
 
-  /* Determine from the bfd_arch_info structure if we are dealing with
-     a 32 or 64 bits architecture.  If the bfd_arch_info is not available,
-     then default to a 32bit machine.  */
-  if (info.bfd_arch_info != NULL)
-    tdep->bytes_per_address =
-      info.bfd_arch_info->bits_per_address / info.bfd_arch_info->bits_per_byte;
+  /* Determine from the target description if we are dealing with
+     a 32 or 64 bits architecture.  If the target description is not
+     available, then check whether bfd_arch_info could be used.
+     Otherwise default to a 32-bit machine.
+  */
+  if (info.target_desc != nullptr)
+    {
+      if (tdesc_property (info.target_desc, PROPERTY_GP64) != nullptr)
+	tdep->bytes_per_address = 8;
+      else if (tdesc_property (info.target_desc, PROPERTY_GP32) != nullptr)
+	tdep->bytes_per_address = 4;
+      else
+	{
+	  warning (_("The target returned a target description but this GDB "
+		     "doesn't support target descriptions for the HP/PA"
+		     "architecture.  Assuming standard 32-bit register"
+		     "layout."));
+	  tdep->bytes_per_address = 4;
+	}
+    }
+  else if (info.bfd_arch_info != nullptr)
+      tdep->bytes_per_address =
+	info.bfd_arch_info->bits_per_address / info.bfd_arch_info->bits_per_byte;
   else
     tdep->bytes_per_address = 4;
+
+  hppa_register_g_packet_guesses (gdbarch);
 
   tdep->find_global_pointer = hppa_find_global_pointer;
 
@@ -3076,7 +3115,7 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     default:
       internal_error (_("bad switch"));
     }
-      
+
   /* Struct return methods.  */
   switch (tdep->bytes_per_address)
     {
@@ -3089,7 +3128,7 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     default:
       internal_error (_("bad switch"));
     }
-      
+
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, hppa_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, hppa_breakpoint::bp_from_kind);
   set_gdbarch_pseudo_register_read (gdbarch, hppa_pseudo_register_read);
@@ -3113,16 +3152,19 @@ hppa_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 {
   hppa_gdbarch_tdep *tdep = gdbarch_tdep<hppa_gdbarch_tdep> (gdbarch);
 
-  gdb_printf (file, "bytes_per_address = %d\n", 
+  gdb_printf (file, "bytes_per_address = %d\n",
 	      tdep->bytes_per_address);
   gdb_printf (file, "elf = %s\n", tdep->is_elf ? "yes" : "no");
 }
 
-void _initialize_hppa_tdep ();
-void
-_initialize_hppa_tdep ()
+INIT_GDB_FILE (hppa_tdep)
 {
   gdbarch_register (bfd_arch_hppa, hppa_gdbarch_init, hppa_dump_tdep);
+  hppa_tdesc32 = allocate_target_description ();
+  set_tdesc_property (hppa_tdesc32.get(), PROPERTY_GP32, "");
+
+  hppa_tdesc64 = allocate_target_description ();
+  set_tdesc_property (hppa_tdesc64.get(), PROPERTY_GP64, "");
 
   add_cmd ("unwind", class_maintenance, unwind_command,
 	   _("Print unwind table entry at given address."),

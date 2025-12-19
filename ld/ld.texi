@@ -1,6 +1,6 @@
 \input texinfo
 @setfilename ld.info
-@c Copyright (C) 1991-2024 Free Software Foundation, Inc.
+@c Copyright (C) 1991-2025 Free Software Foundation, Inc.
 @syncodeindex ky cp
 @c man begin INCLUDE
 @include configdoc.texi
@@ -56,7 +56,7 @@ This file documents the @sc{gnu} linker LD
 @end ifset
 version @value{VERSION}.
 
-Copyright @copyright{} 1991-2024 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2025 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -93,7 +93,7 @@ section entitled ``GNU Free Documentation License''.
 
 @vskip 0pt plus 1filll
 @c man begin COPYRIGHT
-Copyright @copyright{} 1991-2024 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2025 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -531,7 +531,9 @@ named @var{entry}, the linker will try to parse @var{entry} as a number,
 and use that as the entry address (the number will be interpreted in
 base 10; you may use a leading @samp{0x} for base 16, or a leading
 @samp{0} for base 8).  @xref{Entry Point}, for a discussion of defaults
-and other ways of specifying the entry point.
+and other ways of specifying the entry point.  For i386 PE, @var{entry}
+can be also the original function name (without the leading underscore
+and/or the trailing stdcall @samp{@@number} when applicable).
 
 @kindex --exclude-libs
 @item --exclude-libs @var{lib},@var{lib},...
@@ -1022,7 +1024,7 @@ Write a @dfn{dependency file} to @var{depfile}.  This file contains a rule
 suitable for @code{make} describing the output file and all the input files
 that were read to produce it.  The output is similar to the compiler's
 output with @samp{-M -MP} (@pxref{Preprocessor Options,, Options
-Controlling the Preprocessor, gcc.info, Using the GNU Compiler
+Controlling the Preprocessor, gcc, Using the GNU Compiler
 Collection}).  Note that there is no option like the compiler's @samp{-MM},
 to exclude ``system files'' (which is not a well-specified concept in the
 linker, unlike ``system headers'' in the compiler).  So the output from
@@ -1083,8 +1085,8 @@ something as follows:
 @kindex --pop-state
 @cindex pop state governing input file handling
 @item --pop-state
-Undoes the effect of --push-state, restores the previous values of the
-flags governing input file handling.
+Undoes the effect of @option{--push-state}, restores the previous values
+of the flags governing input file handling.
 
 @kindex -q
 @kindex --emit-relocs
@@ -1125,6 +1127,18 @@ partial linking is only supported if that input file does not contain any
 relocations.  Different output formats can have further restrictions; for
 example some @code{a.out}-based formats do not support partial linking
 with input files in other formats at all.
+
+When the relocatable output contains both contents which require
+link-time optimization (LTO) and contents which don't require LTO,
+a .gnu_object_only section will be created to contain a relocatable
+object file, as if @samp{-r} is applied to all relocatable inputs
+which don't require LTO.  When processing a relocatable input with
+a .gnu_object_only section, the linker will extract the .gnu_object_only
+section as a separate input.
+
+Note that since @samp{-r} groups some sections from different input files
+together, there may be negative impacts on code size and locality in
+final executable or shared library.
 
 This option does the same thing as @samp{-i}.
 
@@ -1590,6 +1604,14 @@ Disable relocation overflow check.  This can be used to disable
 relocation overflow check if there will be no dynamic relocation
 overflow at run-time.  Supported for x86_64.
 
+@item memory-seal
+@item nomemory-seal
+Instruct the executable or shared library that the all PT_LOAD segments
+should be sealed to avoid further manipulation (such as changing the
+protection flags, the segment size, or remove the mapping).
+This is a security hardening that requires system support.  This
+generates GNU_PROPERTY_MEMORY_SEAL in .note.gnu.property section
+
 @item now
 When generating an executable or shared library, mark it to tell the
 dynamic linker to resolve all symbols when the program is started, or
@@ -1722,6 +1744,34 @@ Supported for Linux/i386 and Linux/x86_64.
 @end table
 
 Other keywords are ignored for Solaris compatibility.
+
+@item --gnu-tls-tag
+@itemx --no-gnu-tls-tag
+Add @code{GLIBC_ABI_GNU_TLS} version tag dependency in output programs
+and shared libraries when linking against glibc if input relocatable
+object files call @code{___tls_get_addr}.  The output will fail to load
+and run at run-time against glibc which doesn't define the
+@code{GLIBC_ABI_GNU_TLS} version tag.  Unless disabled by the
+@option{--disable-gnu-tls-tag} configure option at the linker build
+time, when no options are specified, linker will add the
+@code{GLIBC_ABI_GNU_TLS} version tag dependency if inputs have
+@code{___tls_get_addr} call and libc.so defines the
+@code{GLIBC_ABI_GNU_TLS} version tag.  Supported for Linux/i386.
+
+@item --gnu2-tls-tag
+@itemx --no-gnu2-tls-tag
+Add @code{GLIBC_ABI_GNU2_TLS} version tag dependency in output programs
+and shared libraries when linking against glibc if input relocatable
+object files have @code{R_386_TLS_DESC_CALL} or
+@code{R_X86_64_TLSDESC_CALL} relocation.  The output will fail to load
+and run at run-time against glibc which doesn't define the
+@code{GLIBC_ABI_GNU2_TLS} version tag.  Unless disabled by the
+@option{--disable-gnu2-tls-tag} configure option at the linker build
+time, when no options are specified, linker will add the
+@code{GLIBC_ABI_GNU2_TLS} version tag dependency if inputs have
+@code{R_386_TLS_DESC_CALL} or @code{R_X86_64_TLSDESC_CALL} relocation
+and libc.so defines the @code{GLIBC_ABI_GNU2_TLS} version tag.
+Supported for Linux/i386 and Linux/x86_64.
 
 @kindex -(
 @cindex groups of archives
@@ -2163,6 +2213,9 @@ Memory region         Used Size  Region Size  %age Used
              ROM:        256 KB         1 MB     25.00%
              RAM:          32 B         2 GB      0.00%
 @end smallexample
+
+Note: if you want to find out about the memory usage of the linker
+itself, then the @option{--stats} option will do this.
 
 @cindex help
 @cindex usage
@@ -2686,9 +2739,75 @@ more than @var{count} relocations one output section will contain that
 many relocations.  @var{count} defaults to a value of 32768.
 
 @kindex --stats
-@item --stats
+@item --stats[=@var{filename}]
 Compute and display statistics about the operation of the linker, such
 as execution time and memory usage.
+
+If the optional @var{filename} argument is not supplied then only
+basic information is reported, and it is sent to the standard error
+output stream.  If the @var{filename} argument is supplied then
+extended information is written to the named file.  If @var{filename}
+is set to just the @var{-} symbol, then the extended information is
+sent to the standard output stream.  If the @var{filename} starts with
+@var{+} then the file is opened in append mode rather than overwrite
+mode.
+
+If the @option{-Map} option has been enabled then the information is
+also recorded in the map file as well.  Note: if both the
+@option{--stats} option and the @option{-Map} options have been given
+@var{filename} arguments and they match, then the information will
+only be written out once not twice.
+
+If the @code{LD_STATS} environment variable is defined then this
+behaves likes the @option{--stats} option.  If the variable's value is
+a string then this will used as the name of a file into which the
+information should be recorded.  Otherwise the information
+will be sent to the standard output stream.  Using the environment
+variable allows stats to be recorded without having to alter the
+linker's command line.  Note: if both the environment variable and the
+@option{--stats} option are used then the @option{--stats} option
+takes precedence.
+
+The extended information reported includes the cpu time used and, if
+the @var{getrusage()} system library call is available then memory use
+is recorded as well.  This information is reported for individual
+parts of the linking process which are referred to as @emph{phases}.
+In addition the information is also reported for a special phase
+called @emph{ALL} which covers the entire linking process.  Note that
+individual phases can contain or overlap with each other so it should
+not be assumed that the overall resources used by the linker is the
+sum of the resources used by the individual phases.
+
+In addition when extended information is being reported the linker
+version, command line arguments and linker start time are also
+included.  This makes it easier to handle the situation where multiple
+links are being invoked by a build system and to indentify exactly
+which arguments were responsible for producing the statistics that are
+reported.
+
+The extended output looks something like this:
+
+@smallexample
+Stats: linker version: (GNU Binutils) 2.44.50.20250401
+Stats: linker started: Wed Apr  2 09:36:41 2025
+Stats: args: ld -z norelro -z nomemory-seal -z no-separate-code -o a.out [...]
+
+Stats: phase               cpu time    memory      user time    system time    
+Stats: name                (microsec)   (KiB)      (seconds)      (seconds)    
+Stats: ALL                   390082    217740              0              0    
+Stats: ctf processing            12         0              0              0    
+Stats: string merge            1324         0              0              0    
+Stats: parsing                  349       288              0              0    
+Stats: plugins                    1         0              0              0    
+Stats: processing files      259616    214524              0              0    
+Stats: write                 116493         0              0              0    
+@end smallexample
+
+@kindex --no-stats
+@item --no-stats
+Disables the reporting of usage statistics, should it have been
+enabled via the @option{--stats} command line option or the
+@var{LD_STATS} environment variable.
 
 @kindex --sysroot=@var{directory}
 @item --sysroot=@var{directory}
@@ -3151,6 +3270,8 @@ close to @var{number}.  Increasing this value can reduce the length of
 time it takes the linker to perform its tasks, at the expense of
 increasing the linker's memory requirements.  Similarly reducing this
 value can reduce the memory requirements at the expense of speed.
+The default value is 4051 under normal circumstances and 1021 if the
+@option{--reduce-memory-overheads} command line option is used.
 
 @kindex --hash-style=@var{style}
 @item --hash-style=@var{style}
@@ -3216,7 +3337,10 @@ enable other tradeoffs in future versions of the linker.
 @item --max-cache-size=@var{size}
 @command{ld} normally caches the relocation information and symbol tables
 of input files in memory with the unlimited size.  This option sets the
-maximum cache size to @var{size}.
+maximum cache size to @var{size}.  Note - if the
+@option{--no-keep-memory} command line option has been used then the
+linker acts as if the maximum cache size has been set to 0 - ie
+nothing is retained.
 
 @kindex --build-id
 @kindex --build-id=@var{style}
@@ -3692,7 +3816,8 @@ of the PE file header:
 @item --high-entropy-va
 @itemx --disable-high-entropy-va
 Image is compatible with 64-bit address space layout randomization
-(ASLR).  This option is enabled by default for 64-bit PE images.
+(ASLR).  This option is enabled by default for 64-bit PE images in
+MinGW targets.
 
 This option also implies @option{--dynamicbase} and
 @option{--enable-reloc-section}.
@@ -3702,9 +3827,9 @@ This option also implies @option{--dynamicbase} and
 @itemx --disable-dynamicbase
 The image base address may be relocated using address space layout
 randomization (ASLR).  This feature was introduced with MS Windows
-Vista for i386 PE targets.  This option is enabled by default but
-can be disabled via the @option{--disable-dynamicbase} option.
-This option also implies @option{--enable-reloc-section}.
+Vista for i386 PE targets.  This option is enabled by default for MinGW
+targets but can be disabled via the @option{--disable-dynamicbase}
+option. This option also implies @option{--enable-reloc-section}.
 
 @kindex --forceinteg
 @item --forceinteg
@@ -3717,7 +3842,7 @@ default.
 @item --disable-nxcompat
 The image is compatible with the Data Execution Prevention.
 This feature was introduced with MS Windows XP SP2 for i386 PE
-targets.  The option is enabled by default.
+targets.  The option is enabled by default for MinGW targets.
 
 @kindex --no-isolation
 @item --no-isolation
@@ -4057,6 +4182,15 @@ If the PE/COFF specific @option{--insert-timestamp} is active and the
 @env{SOURCE_DATE_EPOCH} environment variable is defined, then the
 timestamp value in this variable will be inserted into the COFF header
 instead of the current time.
+
+@kindex LD_STATS
+@cindex LD_STATS
+If the @code{LD_STATS} environment variable is defined then linker
+resource use information will be recorded, just as if the
+@option{--stats} option had been used.  If the @code{LD_STATS}
+variable has a string value then this will used as the name of a file
+into which the information should be stored.  Otherwise the information
+will be sent to the standard output stream.
 
 @c man end
 @end ifset
@@ -5945,7 +6079,13 @@ parentheses.  The following types are defined:
 
 @item NOLOAD
 The section should be marked as not loadable, so that it will not be
-loaded into memory when the program is run.
+loaded into memory when the program is run.  When generating an ELF
+output file, the memory space is allocated for the section at run-time,
+except for SHT_NOTE sections.  For other output files, no memory space
+is allocated at run-time.
+
+Note - the ELF behaviour is a bug that may change to be consistent
+with non-ELF targets.
 
 @item READONLY
 The section should be marked as read-only.
@@ -6676,8 +6816,8 @@ depends upon @samp{VERS_1.1}.  The script binds the symbol @samp{foo2}
 to the version node @samp{VERS_1.2}.
 
 Finally, the version script defines node @samp{VERS_2.0}.  This node
-depends upon @samp{VERS_1.2}.  The scripts binds the symbols @samp{bar1}
-and @samp{bar2} are bound to the version node @samp{VERS_2.0}.
+depends upon @samp{VERS_1.2}.  The script binds the symbols @samp{bar1}
+and @samp{bar2} to the version node @samp{VERS_2.0}.
 
 When the linker finds a symbol defined in a library which is not
 specifically bound to a version node, it will effectively bind it to an
@@ -8035,9 +8175,9 @@ in certain ARM1176 processors.  The workaround is enabled by default if you
 are targeting ARM v6 (excluding ARM v6T2) or earlier.  It can be disabled
 unconditionally by specifying @samp{--no-fix-arm1176}.
 
-Further information is available in the ``ARM1176JZ-S and ARM1176JZF-S
-Programmer Advice Notice'' available on the ARM documentation website at:
-http://infocenter.arm.com/.
+Further information is available in ``ARM1176JZ-S and ARM1176JZF-S
+Programmer Advice Notice'' (UAN0002) available on the Arm documentation
+website at @uref{https://developer.arm.com/}.
 
 @cindex STM32L4xx erratum workaround
 @kindex --fix-stm32l4xx-629360
@@ -8235,19 +8375,52 @@ mark the output with GCS.
 
 @kindex -z gcs-report[=none|warning|error]
 @cindex Control warnings for missing GCS markings.
-The @samp{-z gcs-report[=none|warning|error]} specifies how to report the missing
-GCS markings on inputs, i.e. the GNU_PROPERTY_AARCH64_FEATURE_1_GCS property.
-By default, if the option is omitted and @samp{-z gcs} is provided, warnings are
-emitted.
+The @samp{-z gcs-report[=none|warning|error]} option specifies how to report the
+missing GCS markings on inputs, i.e. the GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+property. By default, if the option is omitted and @samp{-z gcs} is provided,
+warnings are emitted.
 @itemize
 @item @samp{none} disables any warning messages.
 @item @samp{warning} (the default value) emits warning messages when input objects
-composing the link unit are missing GCS markings, or dynamic objects containing
-external symbols used in the link unit.
+composing the link unit are missing GCS markings.
 @item @samp{error} turns the warning messages into errors.
 @end itemize
 If issues are found, a maximum of 20 messages will be emitted, and then a summary
 with the total number of issues will be displayed at the end.
+
+@kindex -z gcs-report-dynamic=none|warning|error
+@cindex Control warnings for missing GCS markings on dynamic input objects.
+The @samp{-z gcs-report-dynamic=none|warning|error} option specifies how to
+report the missing GCS markings on dynamic input objects, i.e. the
+GNU_PROPERTY_AARCH64_FEATURE_1_GCS property. By default, if the option is
+omitted, it inherits the value of @samp{-z gcs-report}. However, the inherited
+value is capped to @samp{warning} as some user might want to only report errors
+in the currently built module, and not the shared dependencies. It is therefore
+necessary to use an explicit @samp{-z gcs-report-dynamic=error} option if you
+want the linker to error on GCS issues in the shared libraries.
+@itemize
+@item @samp{none} disables any warning messages.
+@item @samp{warning} emits warning messages when dynamic objects are missing
+GCS markings.
+@item @samp{error} turns the warning messages into errors.
+@end itemize
+If issues are found, a maximum of 20 messages will be emitted, and then a summary
+with the total number of issues will be displayed at the end.
+
+@kindex -z memtag-mode=@var{mode}
+@cindex MTE modes of operation
+The @samp{-z memtag-mode=mode} specifies the MTE mode of operation.
+The value of @samp{mode} can be one of @samp{none}, @samp{sync} or
+@samp{async}.  The specified modes determine the value of the
+@samp{DT_AARCH64_MEMTAG_MODE} dynamic tag.  The @samp{sync} mode
+implies precise exceptions, with the runtime providing the exact
+instruction where the fault occurred, and the exact faulting address.
+The @samp{async} mode implies imprecise exceptions.
+
+@kindex -z memtag-stack
+@cindex Mark program stack for MTE protection
+The @samp{-z memtag-stack} specifies that output object uses MTE
+instructions for stack memory usage.
 
 @ifclear GENERIC
 @lowersections
@@ -9561,7 +9734,7 @@ format can be supported simply by creating a new BFD back end and adding
 it to the library.  To conserve runtime memory, however, the linker and
 associated tools are usually configured to support only a subset of the
 object file formats available.  You can use @code{objdump -i}
-(@pxref{objdump,,objdump,binutils.info,The GNU Binary Utilities}) to
+(@pxref{objdump,,objdump,binutils,The GNU Binary Utilities}) to
 list all the formats available for your configuration.
 
 @cindex BFD requirements

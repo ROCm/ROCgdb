@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -44,7 +44,7 @@ proc test_remote { remote host_is_target } {
 	if { $host_is_target } {
 	    set res [remote_file $other_remote exists $file]
 	    gdb_assert { $res != $exists_ok } \
-		"$other_remote copy does not exist"	
+		"$other_remote copy does not exist"
 	}
     }
 
@@ -80,7 +80,7 @@ proc test_remote { remote host_is_target } {
 	set build_file [remote_upload $remote $file]
 	gdb_assert { [string equal [file tail $build_file] $file] == 1 } \
 	    "remote_upload returns valid value"
-	
+
 	set res [remote_file $remote delete $file]
 	gdb_assert { [string equal $res $delete_ok] == 1 } \
 	    "remove $remote copy"
@@ -92,7 +92,7 @@ proc test_remote { remote host_is_target } {
 	if { $host_is_target } {
 	    set res [remote_file $other_remote exists $file]
 	    gdb_assert { $res != $exists_ok } \
-		"$other_remote copy does not exist"	
+		"$other_remote copy does not exist"
 	}
 
 	set res [remote_file build exists $file]

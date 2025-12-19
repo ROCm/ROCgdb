@@ -1,6 +1,6 @@
 /* Target description declarations shared between gdb, gdbserver and IPA.
 
-   Copyright (C) 2018-2024 Free Software Foundation, Inc.
+   Copyright (C) 2018-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,27 +20,29 @@
 #ifndef GDB_ARCH_PPC_LINUX_TDESC_H
 #define GDB_ARCH_PPC_LINUX_TDESC_H
 
+#include "gdbsupport/tdesc.h"
+
 struct target_desc;
 
-extern const struct target_desc *tdesc_powerpc_32l;
-extern const struct target_desc *tdesc_powerpc_altivec32l;
-extern const struct target_desc *tdesc_powerpc_vsx32l;
-extern const struct target_desc *tdesc_powerpc_isa205_32l;
-extern const struct target_desc *tdesc_powerpc_isa205_altivec32l;
-extern const struct target_desc *tdesc_powerpc_isa205_vsx32l;
-extern const struct target_desc *tdesc_powerpc_isa205_ppr_dscr_vsx32l;
-extern const struct target_desc *tdesc_powerpc_isa207_vsx32l;
-extern const struct target_desc *tdesc_powerpc_isa207_htm_vsx32l;
-extern const struct target_desc *tdesc_powerpc_e500l;
+extern const_target_desc_up tdesc_powerpc_32l;
+extern const_target_desc_up tdesc_powerpc_altivec32l;
+extern const_target_desc_up tdesc_powerpc_vsx32l;
+extern const_target_desc_up tdesc_powerpc_isa205_32l;
+extern const_target_desc_up tdesc_powerpc_isa205_altivec32l;
+extern const_target_desc_up tdesc_powerpc_isa205_vsx32l;
+extern const_target_desc_up tdesc_powerpc_isa205_ppr_dscr_vsx32l;
+extern const_target_desc_up tdesc_powerpc_isa207_vsx32l;
+extern const_target_desc_up tdesc_powerpc_isa207_htm_vsx32l;
+extern const_target_desc_up tdesc_powerpc_e500l;
 
-extern const struct target_desc *tdesc_powerpc_64l;
-extern const struct target_desc *tdesc_powerpc_altivec64l;
-extern const struct target_desc *tdesc_powerpc_vsx64l;
-extern const struct target_desc *tdesc_powerpc_isa205_64l;
-extern const struct target_desc *tdesc_powerpc_isa205_altivec64l;
-extern const struct target_desc *tdesc_powerpc_isa205_vsx64l;
-extern const struct target_desc *tdesc_powerpc_isa205_ppr_dscr_vsx64l;
-extern const struct target_desc *tdesc_powerpc_isa207_vsx64l;
-extern const struct target_desc *tdesc_powerpc_isa207_htm_vsx64l;
+extern const_target_desc_up tdesc_powerpc_64l;
+extern const_target_desc_up tdesc_powerpc_altivec64l;
+extern const_target_desc_up tdesc_powerpc_vsx64l;
+extern const_target_desc_up tdesc_powerpc_isa205_64l;
+extern const_target_desc_up tdesc_powerpc_isa205_altivec64l;
+extern const_target_desc_up tdesc_powerpc_isa205_vsx64l;
+extern const_target_desc_up tdesc_powerpc_isa205_ppr_dscr_vsx64l;
+extern const_target_desc_up tdesc_powerpc_isa207_vsx64l;
+extern const_target_desc_up tdesc_powerpc_isa207_htm_vsx64l;
 
 #endif /* GDB_ARCH_PPC_LINUX_TDESC_H */

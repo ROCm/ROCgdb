@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Free Software Foundation, Inc.
+# Copyright 1999-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 # Test setup routines that work with the MI interpreter.
 
 load_lib gdb-utils.exp
+
+# tclint-disable redefined-builtin
 
 # The variable mi_gdb_prompt is a regexp which matches the gdb mi prompt.
 # Set it if it is not already set.
@@ -65,7 +67,7 @@ proc mi_uncatched_gdb_exit {} {
 	sid_exit
     }
 
-    if ![info exists gdb_spawn_id] {
+    if {![info exists gdb_spawn_id]} {
 	return
     }
 
@@ -99,7 +101,7 @@ proc mi_uncatched_gdb_exit {} {
 	close -i $mi_spawn_id
     }
 
-    if ![is_remote host] {
+    if {![is_remote host]} {
 	remote_close host
     }
     unset gdb_spawn_id
@@ -131,7 +133,7 @@ proc mi_create_inferior_pty {} {
     }
 }
 
-# Create a new pty, and reate a new MI UI (using the new-ui command) on it.
+# Create a new pty, and create a new MI UI (using the new-ui command) on it.
 #
 # Return a list with the spawn id for that pty and the pty file name.
 
@@ -247,7 +249,7 @@ proc default_mi_gdb_start { { flags {} } } {
 	return [mi_gdb_start_separate_mi_tty $flags]
     }
 
-    # Set the default value, it may be overriden later by specific testfile.
+    # Set the default value, it may be overridden later by specific testfile.
     set use_gdb_stub [target_info exists use_gdb_stub]
 
     # Start SID.
@@ -256,7 +258,7 @@ proc default_mi_gdb_start { { flags {} } } {
 	sid_start
     }
 
-    if [info exists gdb_spawn_id] {
+    if {[info exists gdb_spawn_id]} {
 	return 0
     }
 
@@ -340,12 +342,12 @@ proc default_mi_gdb_start { { flags {} } } {
 # baseboard file.
 #
 proc mi_gdb_start { args } {
-  return [eval default_mi_gdb_start $args]
+    return [default_mi_gdb_start {*}$args]
 }
 
 # Many of the tests depend on setting breakpoints at various places and
 # running until that breakpoint is reached.  At times, we want to start
-# with a clean-slate with respect to breakpoints, so this utility proc 
+# with a clean-slate with respect to breakpoints, so this utility proc
 # lets us do this without duplicating this code everywhere.
 #
 
@@ -386,7 +388,7 @@ proc mi_gdb_reinitialize_dir { subdir } {
     global mi_gdb_prompt
     global MIFLAGS
 
-    if [is_remote host] {
+    if {[is_remote host]} {
 	return ""
     }
 
@@ -487,7 +489,7 @@ proc mi_gdb_file_cmd { arg } {
 
     set last_loaded_file $arg
 
-    if [is_remote host] {
+    if {[is_remote host]} {
 	set arg [remote_download host $arg]
 	if { $arg == "" } {
 	    error "download failed"
@@ -553,7 +555,7 @@ proc mi_gdb_target_load { } {
     global GDB
     global mi_gdb_prompt
 
-    if [target_info exists gdb_load_timeout] {
+    if {[target_info exists gdb_load_timeout]} {
 	set loadtimeout [target_info gdb_load_timeout]
     } else {
 	set loadtimeout 1600
@@ -700,11 +702,11 @@ proc mi_gdb_test { args } {
 	set message $command
     }
 
-    if [llength $args]==4 {
+    if {[llength $args] == 4} {
 	set ipattern [lindex $args 3]
     }
 
-    if [llength $args]==5 {
+    if {[llength $args] == 5} {
 	set question_string [lindex $args 3]
 	set response_string [lindex $args 4]
     } else {
@@ -729,7 +731,7 @@ proc mi_gdb_test { args } {
 	while { "$string" != "" } {
 	    set foo [string first "\n" "$string"]
 	    set len [string length "$string"]
-	    if { $foo < [expr $len - 1] } {
+	    if {$foo < $len - 1} {
 		set str [string range "$string" 0 $foo]
 		if { [send_gdb "$str"] != "" } {
 		    perror "Couldn't send $command to GDB."
@@ -738,7 +740,7 @@ proc mi_gdb_test { args } {
 		    -re "\[\r\n\]" { }
 		    timeout { }
 		}
-		set string [string range "$string" [expr $foo + 1] end]
+		set string [string range "$string" [expr {$foo + 1}] end]
 	    } else {
 		break
 	    }
@@ -750,11 +752,11 @@ proc mi_gdb_test { args } {
 	}
     }
 
-    if [info exists timeout] {
+    if {[info exists timeout]} {
 	set tmt $timeout
     } else {
 	global timeout
-	if [info exists timeout] {
+	if {[info exists timeout]} {
 	    set tmt $timeout
 	} else {
 	    set tmt 60
@@ -786,13 +788,13 @@ proc mi_gdb_test { args } {
 	    # and $expect_out(2,string) is the MI output command.
 	    # If $expect_out(1,string) is "", then there was no MI input command here.
 
-	    # NOTE, there is no trailing anchor because with GDB/MI, 
-	    # asynchronous responses can happen at any point, causing more 
-	    # data to be available.  Normally an anchor is used to make 
-	    # sure the end of the output is matched, however, $mi_gdb_prompt 
-	    # is just as good of an anchor since mi_gdb_test is meant to 
-	    # match a single mi output command.  If a second GDB/MI output 
-	    # response is sent, it will be in the buffer for the next 
+	    # NOTE, there is no trailing anchor because with GDB/MI,
+	    # asynchronous responses can happen at any point, causing more
+	    # data to be available.  Normally an anchor is used to make
+	    # sure the end of the output is matched, however, $mi_gdb_prompt
+	    # is just as good of an anchor since mi_gdb_test is meant to
+	    # match a single mi output command.  If a second GDB/MI output
+	    # response is sent, it will be in the buffer for the next
 	    # time mi_gdb_test is called.
 	    if {![string match "" $message]} {
 		pass "$message"
@@ -863,7 +865,7 @@ proc mi_gdb_test { args } {
 
     # If the GDB output matched, compare the inferior output.
     if { $result == 0 } {
-	if [ info exists ipattern ] {
+	if {[ info exists ipattern ]} {
 	    if { ![target_info exists gdb,noinferiorio] } {
 		global gdb_spawn_id inferior_spawn_id
 
@@ -957,8 +959,8 @@ proc mi_run_cmd_full {use_mi_command args} {
 	return -1
     }
 
-    if $use_gdb_stub {
-	if [target_info exists gdb,do_reload_on_run] {
+    if {$use_gdb_stub} {
+	if {[target_info exists gdb,do_reload_on_run]} {
 	    send_gdb "${run_prefix}continue\n"
 	    gdb_expect 60 {
 		-re "${run_match}\\^running\[\r\n\]+\\*running,thread-id=\"\[^\"\]+\"\r\n$mi_gdb_prompt" {}
@@ -968,7 +970,7 @@ proc mi_run_cmd_full {use_mi_command args} {
 	    return 0
 	}
 
-	if [target_info exists gdb,start_symbol] {
+	if {[target_info exists gdb,start_symbol]} {
 	    set start [target_info gdb,start_symbol]
 	} else {
 	    set start "start"
@@ -1010,14 +1012,14 @@ proc mi_run_cmd_full {use_mi_command args} {
 # -exec-continue, as appropriate.  ARGS are passed verbatim to
 # mi_run_cmd_full.
 proc mi_run_cmd {args} {
-    return [eval mi_run_cmd_full 1 $args]
+    return [mi_run_cmd_full 1 {*}$args]
 }
 
 # A wrapper for mi_run_cmd_full which uses the CLI commands 'run' and
 # 'continue', as appropriate.  ARGS are passed verbatim to
 # mi_run_cmd_full.
 proc mi_run_with_cli {args} {
-    return [eval mi_run_cmd_full 0 $args]
+    return [mi_run_cmd_full 0 {*}$args]
 }
 
 # Starts fresh GDB binary and loads an optional executable into GDB.
@@ -1044,6 +1046,9 @@ proc mi_clean_restart {{executable ""} {flags {}}} {
     mi_gdb_reinitialize_dir $srcdir/$subdir
 
     if {$executable != ""} {
+	if { [file pathtype $executable] == "absolute" } {
+	    error "absolute path used"
+	}
 	set binfile [standard_output_file ${executable}]
 	return [mi_gdb_load ${binfile}]
     }
@@ -1285,7 +1290,7 @@ proc mi_expect_stop { reason func args file line extra test } {
 	   set r "reason=$reason,"
 	} else {
 	   set r "reason=\"$reason\","
-	}	
+	}
     }
 
 
@@ -1397,7 +1402,7 @@ proc mi_continue_to {func} {
 # returns the breakpoint regexp from that procedure.
 
 proc mi_create_breakpoint {location test args} {
-    set bp [eval mi_make_breakpoint $args]
+    set bp [mi_make_breakpoint {*}$args]
     mi_gdb_test "222-break-insert $location" "222\\^done,$bp" $test
     return $bp
 }
@@ -1406,7 +1411,7 @@ proc mi_create_breakpoint {location test args} {
 # locations using mi_make_breakpoint_multi instead.
 
 proc mi_create_breakpoint_multi {location test args} {
-    set bp [eval mi_make_breakpoint_multi $args]
+    set bp [mi_make_breakpoint_multi {*}$args]
     mi_gdb_test "222-break-insert $location" "222\\^done,$bp" $test
     return $bp
 }
@@ -1414,7 +1419,7 @@ proc mi_create_breakpoint_multi {location test args} {
 # Like mi_create_breakpoint, but creates a pending breakpoint.
 
 proc mi_create_breakpoint_pending {location test args} {
-    set bp [eval mi_make_breakpoint_pending $args]
+    set bp [mi_make_breakpoint_pending {*}$args]
     mi_gdb_test "222-break-insert $location" ".*\r\n222\\^done,$bp" $test
     return $bp
 }
@@ -1709,16 +1714,16 @@ proc mi_prepare_inline_tests { filename } {
 	    set prefix [string range $content 0 $start]
 	    set prefix_newlines [count_newlines $prefix]
 
-	    set line_number [expr $line_number+$prefix_newlines]
+	    set line_number [expr {$line_number+$prefix_newlines}]
 	    set comment_line $line_number
 
-	    set comment [string range $content [expr $start+3] [expr $end-1]]
+	    set comment [string range $content [expr {$start+3}] [expr {$end-1}]]
 
 	    set comment_newlines [count_newlines $comment]
-	    set line_number [expr $line_number+$comment_newlines]
+	    set line_number [expr {$line_number+$comment_newlines}]
 
 	    set comment [string trim $comment]
-	    set content [string range $content [expr $end+3] \
+	    set content [string range $content [expr {$end+3}] \
 			     [string length $content]]
 	    lappend mi_autotest_data [list $comment $comment_line]
 	} else {
@@ -1910,7 +1915,7 @@ proc mi_run_inline_test { testcase } {
     foreach c $commands {
 	set statements [lindex $c 0]
 	set line [lindex $c 1]
-	set line [expr $line-1]
+	set line [expr {$line-1}]
 
 	# We want gdb to be stopped at the expression immediately
 	# before the comment.  If this is the first comment, the
@@ -1949,6 +1954,7 @@ proc mi_run_inline_test { testcase } {
 	# have direct access to global variables that the
 	# main 'exp' file has set up.  But it's not yet clear,
 	# will need more experience to be sure.
+	# tclint-disable-next-line command-args
 	eval $statements
     }
 
@@ -1956,40 +1962,41 @@ proc mi_run_inline_test { testcase } {
 }
 
 proc get_mi_thread_list {name} {
-  global expect_out
-
-  # MI will return a list of thread ids:
-  #
-  # -thread-list-ids
-  # ^done,thread-ids=[thread-id="1",thread-id="2",...],number-of-threads="N"
-  # (gdb)
-  mi_gdb_test "-thread-list-ids" \
-    {.*\^done,thread-ids={(thread-id="[0-9]+"(,)?)+},current-thread-id="[0-9]+",number-of-threads="[0-9]+"} \
-    "-thread_list_ids ($name)"
-
-  set output {}
-  if {[info exists expect_out(buffer)]} {
-    set output $expect_out(buffer)
-  }
-
-  set thread_list {}
-  if {![regexp {thread-ids=\{(thread-id="[0-9]+"(,)?)*\}} $output threads]} {
-    fail "finding threads in MI output ($name)"
-  } else {
-    pass "finding threads in MI output ($name)"
-
-    # Make list of console threads
-    set start [expr {[string first \{ $threads] + 1}]
-    set end   [expr {[string first \} $threads] - 1}]
-    set threads [string range $threads $start $end]
-    foreach thread [split $threads ,] {
-      if {[scan $thread {thread-id="%d"} num]} {
-	lappend thread_list $num
-      }
+    # MI will return a list of thread ids:
+    #
+    # -thread-list-ids
+    # ^done,thread-ids={thread-id="1",thread-id="2",...},number-of-threads="N"
+    # (gdb)
+    #
+    # In case there are too many threads, the expect buffer would
+    # become full.  Process the buffer contents in small chunks.
+    set thread_list {}
+    set num_threads "unknown"
+    set test "$name: get MI thread list"
+    gdb_test_multiple "-thread-list-ids" $test -prompt "$::mi_gdb_prompt" {
+	-re "done,thread-ids=\{" {
+	    exp_continue
+	}
+	-re "^thread-id=\"($::decimal)\"(,|\})" {
+	    lappend thread_list $expect_out(1,string)
+	    exp_continue
+	}
+	-re "^,current-thread-id=\"$::decimal\"" {
+	    exp_continue
+	}
+	-re "^,number-of-threads=\"($::decimal)\"" {
+	    set num_threads $expect_out(1,string)
+	    exp_continue
+	}
+	-re "^\r\n$::mi_gdb_prompt" {
+	    pass $gdb_test_name
+	}
     }
-  }
 
-  return $thread_list
+    gdb_assert {[llength $thread_list] == $num_threads} \
+	"$name: found thread ids in MI output"
+
+    return $thread_list
 }
 
 # Helper function for check_mi_and_console_threads.
@@ -2006,7 +2013,7 @@ proc check_mi_and_console_threads_1 { name } {
 
   # GDB will return a list of thread ids and some more info:
   #
-  # (gdb) 
+  # (gdb)
   # -interpreter-exec console "info threads"
   # ~"  4 Thread 2051 (LWP 7734)  0x401166b1 in __libc_nanosleep () at __libc_nanosleep:-1"
   # ~"  3 Thread 1026 (LWP 7733)   () at __libc_nanosleep:-1"
@@ -2101,7 +2108,7 @@ proc check_mi_and_console_threads { name } {
 proc mi_locate_shlib { file } {
     global mi_spawn_id
 
-    if ![info exists mi_spawn_id] {
+    if {![info exists mi_spawn_id]} {
 	perror "mi_locate_shlib: GDB is not running"
     }
 
@@ -2281,19 +2288,23 @@ namespace eval ::varobj_tree {
   proc mi_varobj_tree_dump_variable {variable_name {cmd send_log} {term "\n"}} {
     upvar #0 $variable_name varobj
 
+    # tclint-disable-next-line command-args
     eval "$cmd \"VAR = $variable_name$term\""
 
     # Explicitly encode the array indices, since outputting them
     # in some logical order is better than what "array names" might
     # return.
     foreach idx {obj_name parent display_name type path_expr} {
+      # tclint-disable-next-line command-args
       eval "$cmd \"\t$idx = $varobj($idx)$term\""
     }
 
     # Output children
     set num [llength $varobj(children)]
+    # tclint-disable-next-line command-args
     eval "$cmd \"\tnum_children = $num$term\""
     if {$num > 0} {
+      # tclint-disable-next-line command-args
       eval "$cmd \"\tchildren = $varobj(children)$term\""
     }
   }
@@ -2685,7 +2696,7 @@ proc mi_make_info_frame_regexp {args} {
 proc mi_info_frame { test args } {
     parse_some_args {{frame ""} {thread ""}}
 
-    set re [eval mi_make_info_frame_regexp $args]
+    set re [mi_make_info_frame_regexp {*}$args]
 
     set cmd "235-stack-info-frame"
     if {$frame ne ""} {
@@ -3041,7 +3052,7 @@ proc mi_get_valueof { fmt exp default {test ""} } {
 proc foreach_mi_ui_mode { var_name body } {
     upvar 1 $var_name var
 
-    if [gdb_debug_enabled] {
+    if {[gdb_debug_enabled]} {
        # gdb debug doesn't work for separate-mi-tty.
        set modes {"main"}
     } else {
@@ -3050,16 +3061,16 @@ proc foreach_mi_ui_mode { var_name body } {
 
     foreach var $modes {
        with_test_prefix "$var_name=$var" {
-           set code [catch {uplevel 1 $body} result]
+	   set code [catch {uplevel 1 $body} result]
        }
 
        if {$code == 1} {
-           global errorInfo errorCode
-           return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+	   global errorInfo errorCode
+	   return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
        } elseif {$code == 3} {
-           break
+	   break
        } elseif {$code == 2} {
-           return -code $code $result
+	   return -code $code $result
        }
     }
 }

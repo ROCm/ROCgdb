@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024 Free Software Foundation, Inc.
+# Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from perftest import perftest
+
+import gdb
 
 
 class SkipCommand(perftest.TestCaseWithBasicMeasurements):
@@ -31,5 +33,4 @@ class SkipCommand(perftest.TestCaseWithBasicMeasurements):
 
     def execute_test(self):
         for i in range(1, 5):
-            func = lambda: self._run(i * self.step)
-            self.measure.measure(func, i * self.step)
+            self.measure.measure(lambda: self._run(i * self.step), i * self.step)

@@ -1,6 +1,6 @@
 /* Self tests for parallel_for_each
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -81,6 +81,7 @@ test_one (do_foreach_t do_foreach, int upper_bound)
 
   for (int i = 0; i < output.size (); ++i)
     SELF_CHECK (output[i] == i * 2);
+<<<<<<< HEAD
 }
 
 /* Run all tests on the parallel-for-each implementation DO_FOREACH.  */
@@ -95,9 +96,28 @@ test_one_function (int n_threads, do_foreach_t do_foreach)
   test_one (do_foreach, 0);
   test_one (do_foreach, 1);
   test_one (do_foreach, 1000);
+=======
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
+}
+
+/* Run all tests on the parallel-for-each implementation DO_FOREACH.  */
+
+static void
+<<<<<<< HEAD
+=======
+test_one_function (int n_threads, do_foreach_t do_foreach)
+{
+  save_restore_n_threads saver;
+  gdb::thread_pool::g_thread_pool->set_thread_count (n_threads);
+
+  /* Test with a few arbitrary number of items.  */
+  test_one (do_foreach, 0);
+  test_one (do_foreach, 1);
+  test_one (do_foreach, 1000);
 }
 
 static void
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 test_parallel_for_each ()
 {
   struct test_worker
@@ -161,9 +181,13 @@ test_parallel_for_each ()
 
 #endif /* CXX_STD_THREAD */
 
+<<<<<<< HEAD
 void _initialize_parallel_for_selftests ();
 void
 _initialize_parallel_for_selftests ()
+=======
+INIT_GDB_FILE (parallel_for_selftests)
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 {
 #ifdef CXX_STD_THREAD
   selftests::register_test ("parallel_for",

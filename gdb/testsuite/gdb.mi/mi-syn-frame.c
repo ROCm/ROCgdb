@@ -24,7 +24,7 @@ foo (void)
 {
 }
 
-void 
+void
 bar (void)
 {
   *(volatile char *)0 = 0;    /* try to cause a segfault */
@@ -47,7 +47,7 @@ handler (int sig)
   subroutine (sig);
 }
 
-/* The first statement in subroutine () is a place for a breakpoint.  
+/* The first statement in subroutine () is a place for a breakpoint.
    Without it, the breakpoint is put on the while comparison and will
    be hit at each iteration. */
 
@@ -66,4 +66,3 @@ have_a_very_merry_interrupt (void)
   alarm (1);
   sleep (2);  /* We'll receive that signal while sleeping */
 }
-

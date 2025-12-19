@@ -1,6 +1,6 @@
 /* This test program is part of GDB, the GNU debugger.
 
-   Copyright 1992-2024 Free Software Foundation, Inc.
+   Copyright 1992-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -254,15 +254,15 @@ int main ()
 
   v_short = 3;
   v_signed_short = 4;
-  v_unsigned_short = 5;    
+  v_unsigned_short = 5;
 
   v_int = 6;
   v_signed_int = 7;
-  v_unsigned_int = 8;    
+  v_unsigned_int = 8;
 
   v_long = 9;
   v_signed_long = 10;
-  v_unsigned_long = 11;    
+  v_unsigned_long = 11;
 
 #ifndef NO_LONG_LONG
   v_long_long = 12;

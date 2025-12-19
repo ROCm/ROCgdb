@@ -1,5 +1,5 @@
 /* Target definitions for NN-bit ELF
-   Copyright (C) 1993-2024 Free Software Foundation, Inc.
+   Copyright (C) 1993-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -225,8 +225,6 @@
   _bfd_elf_copy_private_symbol_data
 #endif
 
-#define bfd_elfNN_init_private_section_data \
-  _bfd_elf_init_private_section_data
 #ifndef bfd_elfNN_bfd_copy_private_section_data
 #define bfd_elfNN_bfd_copy_private_section_data \
   _bfd_elf_copy_private_section_data
@@ -280,11 +278,10 @@
 #define bfd_elfNN_bfd_define_start_stop bfd_elf_define_start_stop
 #endif
 #ifndef bfd_elfNN_bfd_final_link
-#define bfd_elfNN_bfd_final_link	bfd_elf_final_link
+#define bfd_elfNN_bfd_final_link	_bfd_elf_final_link
 #endif
-#ifndef bfd_elfNN_bfd_merge_sections
-#define bfd_elfNN_bfd_merge_sections	_bfd_elf_merge_sections
-#endif
+#undef TARGET_MERGE_SECTIONS
+#define TARGET_MERGE_SECTIONS true
 #else /* ! defined (elf_backend_relocate_section) */
 /* If no backend relocate_section routine, use the generic linker.
    Note - this will prevent the port from being able to use some of
@@ -307,9 +304,6 @@
 #endif
 #ifndef bfd_elfNN_bfd_final_link
 #define bfd_elfNN_bfd_final_link	_bfd_generic_final_link
-#endif
-#ifndef bfd_elfNN_bfd_merge_sections
-#define bfd_elfNN_bfd_merge_sections	bfd_generic_merge_sections
 #endif
 #endif /* ! defined (elf_backend_relocate_section) */
 
@@ -346,7 +340,7 @@
 #endif
 
 #ifndef bfd_elfNN_print_symbol
-#define bfd_elfNN_print_symbol bfd_elf_print_symbol
+#define bfd_elfNN_print_symbol _bfd_elf_print_symbol
 #endif
 
 #ifndef elf_symbol_leading_char
@@ -814,7 +808,7 @@
   (ELF_ARCH == bfd_arch_unknown ? 2 : ELF_OSABI == ELFOSABI_NONE ? 1 : 0)
 #endif
 
-extern const struct elf_size_info _bfd_elfNN_size_info;
+extern const struct elf_size_info _bfd_elfNN_size_info ATTRIBUTE_HIDDEN;
 
 static const struct elf_backend_data elfNN_bed =
 {
@@ -1029,6 +1023,7 @@ const bfd_target TARGET_BIG_SYM =
 
   /* TRUE if unused section symbols should be kept.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS,
+  TARGET_MERGE_SECTIONS,
 
   /* Routines to byte-swap various sized integers from the data sections */
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,
@@ -1134,6 +1129,7 @@ const bfd_target TARGET_LITTLE_SYM =
 
   /* TRUE if unused section symbols should be kept.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS,
+  TARGET_MERGE_SECTIONS,
 
   /* Routines to byte-swap various sized integers from the data sections */
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,

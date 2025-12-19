@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@ require dwarf2_support
 
 standard_testfile .S main.c
 
-if [prepare_for_testing "failed to prepare" ${testfile} \
-	[list $srcfile $srcfile2] {nodebug}] {
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list $srcfile $srcfile2] {nodebug}]} {
     return -1
 }
 
@@ -34,7 +34,7 @@ test
 
 save_vars { GDBFLAGS } {
     set GDBFLAGS "$GDBFLAGS --readnow"
-    clean_restart ${binfile}
+    clean_restart ${::testfile}
 }
 
 with_test_prefix "readnow" {

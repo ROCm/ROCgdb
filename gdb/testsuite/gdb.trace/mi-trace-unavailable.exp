@@ -1,4 +1,4 @@
-# Copyright 2013-2024 Free Software Foundation, Inc.
+# Copyright 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,11 +21,11 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug nopi
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
-if ![gdb_target_supports_trace] {
+if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
     return -1
 }
@@ -35,7 +35,7 @@ gdb_exit
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-mi_clean_restart $binfile
+mi_clean_restart $testfile
 mi_runto_main
 
 mi_gdb_test "-break-insert marker" \
@@ -129,16 +129,16 @@ proc test_trace_unavailable { data_source } {
 
 	set pcnum -1
 	set gpr0num -1
-	if [is_amd64_regs_target] {
+	if {[is_amd64_regs_target]} {
 	    set pcnum 16
 	    set gpr0num 0
-	} elseif [is_x86_like_target] {
+	} elseif {[is_x86_like_target]} {
 	    set pcnum 8
 	    set gpr0num 0
-	} elseif [is_aarch64_target] {
+	} elseif {[is_aarch64_target]} {
 	    set pcnum 32
 	    set gpr0num 0
-	} elseif [istarget "powerpc*-*-*"] {
+	} elseif {[istarget "powerpc*-*-*"]} {
 	    set pcnum 64
 	    set gpr0num 0
 	} elseif { [istarget "s390*-*-*"] } {

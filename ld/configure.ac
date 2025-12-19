@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script
 dnl
-dnl   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+dnl   Copyright (C) 2012-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -27,6 +27,19 @@ AC_CANONICAL_BUILD
 AM_INIT_AUTOMAKE
 AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE
+
+case $target in
+  *-*-solaris2*)
+    case "$SHELL" in
+      *bash*)
+        ;;
+      *)
+        # PR 32580: Force use of bash to avoid corrupt linker scripts.
+        SHELL=/bin/bash
+        ;;
+    esac
+    ;;
+esac
 
 AC_PROG_CC
 AC_PROG_CXX
@@ -232,6 +245,37 @@ AC_ARG_ENABLE(mark-plt,
   no) ac_default_ld_z_mark_plt=0 ;;
 esac])
 
+# Decide if --gnu2-tls-tag should be enabled in ELF i386 and x86-64
+# linkers by default.
+ac_default_ld_enable_gnu2_tls_tag=unset
+AC_ARG_ENABLE(gnu2-tls-tag,
+	      AS_HELP_STRING([--enable-gnu2-tls-tag],
+	      [enable --gnu2-tls-tag in ELF i386/x86-64 linker by default]),
+[case "${enableval}" in
+  yes) ac_default_ld_enable_gnu2_tls_tag=1 ;;
+  no) ac_default_ld_enable_gnu2_tls_tag=0 ;;
+esac])
+
+# Decide if --gnu-tls-tag should be enabled in ELF i386 linker by default.
+ac_default_ld_enable_gnu_tls_tag=unset
+AC_ARG_ENABLE(gnu-tls-tag,
+	      AS_HELP_STRING([--enable-gnu-tls-tag],
+	      [enable --gnu-tls-tag in ELF i386 linker by default]),
+[case "${enableval}" in
+  yes) ac_default_ld_enable_gnu_tls_tag=1 ;;
+  no) ac_default_ld_enable_gnu_tls_tag=0 ;;
+esac])
+
+# Decide if -z memory-seal should be enabled in ELF linker by default.
+ac_default_ld_z_memory_seal=unset
+AC_ARG_ENABLE(memory-seal,
+	      AS_HELP_STRING([--enable-memory-seal],
+	      [enable -z memory-seal in ELF linker by default]),
+[case "${enableval}" in
+  yes) ac_default_ld_z_memory_seal=1 ;;
+  no) ac_default_ld_z_memory_seal=0 ;;
+esac])
+
 
 # By default warn when an executable stack is created due to object files
 # requesting such, not when the user specifies -z execstack.
@@ -303,7 +347,7 @@ esac],
 [case "${target}" in
   # Enable gnu hash only on GNU targets, but not mips
   mips*-*-*) enable_default_hash_style=sysv ;;
-  *-*-gnu* | *-*-linux* | *-*-nacl*) enable_default_hash_style=both ;;
+  *-*-gnu* | *-*-linux*) enable_default_hash_style=both ;;
   *) enable_default_hash_style=sysv ;;
 esac])
 
@@ -379,7 +423,6 @@ fi
 
 ALL_LINGUAS="bg da de es fi fr ga id it ja pt_BR ru sr sv tr uk vi zh_CN zh_TW"
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AC_EXEEXT
 
@@ -404,11 +447,11 @@ AC_SUBST(NATIVE_LIB_DIRS)
 AC_CHECK_HEADERS(fcntl.h elf-hints.h limits.h inttypes.h stdint.h \
 		 sys/file.h sys/mman.h sys/param.h sys/stat.h sys/time.h \
 		 sys/types.h unistd.h)
-AC_CHECK_FUNCS(close glob lseek mkstemp open realpath waitpid)
+AC_CHECK_FUNCS(close getrusage glob lseek mkstemp open realpath waitpid)
 
 BFD_BINARY_FOPEN
 
-AC_CHECK_DECLS([environ, stpcpy])
+AC_CHECK_DECLS([environ, stpcpy, strtoull])
 
 GCC_AC_FUNC_MMAP
 
@@ -485,11 +528,11 @@ do
       EMUL=$targ_emul
     fi
 
-    if test x${enable_64_bit_bfd} = xno; then
+    if test x${have_64_bit_bfd} = xno; then
       . ${srcdir}/../bfd/config.bfd
     fi
 
-    if test x${enable_64_bit_bfd} = xyes; then
+    if test x${have_64_bit_bfd} = xyes; then
       targ_extra_emuls="$targ_extra_emuls $targ64_extra_emuls"
       targ_extra_libpath="$targ_extra_libpath $targ64_extra_libpath"
     fi
@@ -617,6 +660,30 @@ AC_DEFINE_UNQUOTED(DEFAULT_LD_Z_MARK_PLT,
   $ac_default_ld_z_mark_plt,
   [Define to 1 if you want to enable -z mark-plt in ELF x86-64 linker by default.])
 
+if test "${ac_default_ld_z_memory_seal}" = unset; then
+  ac_default_ld_z_memory_seal=0
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_LD_Z_MEMORY_SEAL,
+  $ac_default_ld_z_memory_seal,
+  [Define to 1 if you want to enable -z memory_seal in ELF linker by default.])
+
+if test "${ac_default_ld_enable_gnu2_tls_tag}" = unset; then
+  # Default to enable --gnu2-tls-tag if libc.so has the GLIBC_ABI_GNU2_TLS
+  # version.
+  ac_default_ld_enable_gnu2_tls_tag=2
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_LD_GNU2_TLS_TAG,
+  $ac_default_ld_enable_gnu2_tls_tag,
+  [Define to 1 if you want to enable --gnu2-tls-tag in ELF i386/x86-64 linker by default.])
+
+if test "${ac_default_ld_enable_gnu_tls_tag}" = unset; then
+  # Default to enable --gnu-tls-tag if libc.so has the GLIBC_ABI_GNU_TLS
+  # version.
+  ac_default_ld_enable_gnu_tls_tag=2
+fi
+AC_DEFINE_UNQUOTED(DEFAULT_LD_GNU_TLS_TAG,
+  $ac_default_ld_enable_gnu_tls_tag,
+  [Define to 1 if you want to enable --gnu-tls-tag in ELF i386 linker by default.])
 
 AC_DEFINE_UNQUOTED(DEFAULT_LD_WARN_EXECSTACK,
   $ac_default_ld_warn_execstack,
@@ -669,7 +736,7 @@ AC_SUBST(TDIRS)
 AM_SUBST_NOTMAKE(TDIRS)
 
 if test x${all_targets} = xtrue; then
-  if test x${enable_64_bit_bfd} = xyes; then
+  if test x${have_64_bit_bfd} = xyes; then
     EMULATION_OFILES='$(ALL_EMULATIONS) $(ALL_64_EMULATIONS)'
     EMUL_EXTRA_OFILES='$(ALL_EMUL_EXTRA_OFILES) $(ALL_64_EMUL_EXTRA_OFILES)'
   else

@@ -1,6 +1,6 @@
 /* Target-dependent code for the NEC V850 for GDB, the GNU debugger.
 
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -277,15 +277,15 @@ struct v850_gdbarch_tdep : gdbarch_tdep_base
 };
 
 struct v850_frame_cache
-{ 
+{
   /* Base address.  */
   CORE_ADDR base;
   LONGEST sp_offset;
   CORE_ADDR pc;
-  
+
   /* Flag showing that a frame has been created in the prologue code.  */
   int uses_fp;
-  
+
   /* Saved registers.  */
   trad_frame_saved_reg *saved_regs;
 };
@@ -302,9 +302,9 @@ static const char *
 v850_register_name (struct gdbarch *gdbarch, int regnum)
 {
   static const char *v850_reg_names[] =
-  { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", 
-    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", 
-    "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23", 
+  { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+    "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
     "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31",
     "eipc", "eipsw", "fepc", "fepsw", "ecr", "psw", "sr6", "sr7",
     "sr8", "sr9", "sr10", "sr11", "sr12", "sr13", "sr14", "sr15",
@@ -566,7 +566,7 @@ v850_use_struct_convention (struct gdbarch *gdbarch, struct type *type)
 	}
       return 0;
     }
-    
+
   /* The value is a union which contains at least one field which
      would be returned in registers according to these rules ->
      returned in register.  */
@@ -903,7 +903,7 @@ v850_analyze_prologue (struct gdbarch *gdbarch,
       else if (insn == ((E_EP_REGNUM << 11) | 0x0000 | E_R1_REGNUM))
 	/* mov r1,ep */
 	ep_used = 0;
-      else if (((insn & 0x07ff) == (0x0760 | E_SP_REGNUM)	
+      else if (((insn & 0x07ff) == (0x0760 | E_SP_REGNUM)
 		|| (pi->uses_fp
 		    && (insn & 0x07ff) == (0x0760 | E_FP_REGNUM)))
 	       && pifsr
@@ -952,7 +952,7 @@ v850_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
     {
       struct symtab_and_line sal;
 
-      sal = find_pc_line (func_addr, 0);
+      sal = find_sal_for_pc (func_addr, 0);
       if (sal.line != 0 && sal.end < func_end)
 	return sal.end;
 
@@ -1214,9 +1214,7 @@ v850_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 static struct v850_frame_cache *
 v850_alloc_frame_cache (const frame_info_ptr &this_frame)
 {
-  struct v850_frame_cache *cache;
-
-  cache = FRAME_OBSTACK_ZALLOC (struct v850_frame_cache);
+  auto *cache = frame_obstack_zalloc<v850_frame_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   /* Base address.  */
@@ -1320,15 +1318,16 @@ v850_frame_this_id (const frame_info_ptr &this_frame, void **this_cache,
   *this_id = frame_id_build (cache->saved_regs[E_SP_REGNUM].addr (), cache->pc);
 }
 
-static const struct frame_unwind v850_frame_unwind = {
+static const struct frame_unwind_legacy v850_frame_unwind (
   "v850 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   v850_frame_this_id,
   v850_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 v850_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
@@ -1460,9 +1459,7 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_v850_tdep ();
-void
-_initialize_v850_tdep ()
+INIT_GDB_FILE (v850_tdep)
 {
   gdbarch_register (bfd_arch_v850, v850_gdbarch_init);
   gdbarch_register (bfd_arch_v850_rh850, v850_gdbarch_init);

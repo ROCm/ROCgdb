@@ -1,5 +1,5 @@
 # Copyright (C) 2022-2024 Free Software Foundation, Inc.
-# Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,36 +62,36 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	DW_TAG_compile_unit {
-	    {DW_AT_name var-access.c}
-	    {DW_AT_comp_dir /tmp}
+	    DW_AT_name var-access.c
+	    DW_AT_comp_dir /tmp
 	} {
 	    declare_labels int_type_label char_type_label
 
 	    # Define int type.
 	    int_type_label: DW_TAG_base_type {
-		{DW_AT_name "int"}
-		{DW_AT_encoding @DW_ATE_signed}
-		{DW_AT_byte_size 4 DW_FORM_sdata}
+		DW_AT_name "int"
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_byte_size 4 DW_FORM_sdata
 	    }
 
 	    # Define char type.
 	    char_type_label: DW_TAG_base_type {
-		{DW_AT_name "char"}
-		{DW_AT_encoding @DW_ATE_signed}
-		{DW_AT_byte_size 1 DW_FORM_sdata}
+		DW_AT_name "char"
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_byte_size 1 DW_FORM_sdata
 	    }
 
 	    DW_TAG_subprogram {
-		{DW_AT_name main}
-		{DW_AT_low_pc $main_start addr}
-		{DW_AT_high_pc $main_length data8}
+		DW_AT_name main
+		DW_AT_low_pc $main_start addr
+		DW_AT_high_pc $main_length data8
 	    } {
 		# Define variable 'a' with all extensions from
 		# DW_OP_LLVM_ namespace.
 		DW_TAG_variable {
-		    {DW_AT_name a}
-		    {DW_AT_type :$int_type_label}
-		    {DW_AT_location {
+		    DW_AT_name a
+		    DW_AT_type :$int_type_label
+		    DW_AT_location {
 			# This is not a meaningful expression.  It's a
 			# list of all the opcodes we want to be sure we
 			# can dump with 'info address'.
@@ -108,16 +108,16 @@ Dwarf::assemble $asm_file {
 			DW_OP_LLVM_piece_end
 			DW_OP_LLVM_call_frame_entry_reg $dwarf_regnum
 			DW_OP_LLVM_aspace_bregx $dwarf_regnum 0
-		    } SPECIAL_expr}
+		    } SPECIAL_expr
 		}
 
 		# Define a variable 'b', which location can be printed
 		# in a nicer way, as the expression does not contain the
 		# LLVM DWARF extensions.
 		DW_TAG_variable {
-		    {DW_AT_name b}
-		    {DW_AT_type :$int_type_label}
-		    {DW_AT_location {
+		    DW_AT_name b
+		    DW_AT_type :$int_type_label
+		    DW_AT_location {
 			DW_OP_reg0
 			DW_OP_piece 4
 			DW_OP_regx $dwarf_regnum
@@ -130,16 +130,16 @@ Dwarf::assemble $asm_file {
 			DW_OP_addr 4
 			DW_OP_form_tls_address
 			DW_OP_piece 4
-		    } SPECIAL_expr}
+		    } SPECIAL_expr
 		}
 
 		# Define variable 'c' with the conceptually same location
 		# description as variable 'a', using the equivalent
 		# operations from DW_OP_LLVM_USER_ namespace.
 		DW_TAG_variable {
-		    {DW_AT_name c}
-		    {DW_AT_type :$int_type_label}
-		    {DW_AT_location {
+		    DW_AT_name c
+		    DW_AT_type :$int_type_label
+		    DW_AT_location {
 			# This is not a meaningful expression.  It's a
 			# list of all the opcodes we want to be sure we
 			# can dump with 'info address'.
@@ -156,15 +156,15 @@ Dwarf::assemble $asm_file {
 			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
 			DW_OP_LLVM_user DW_OP_LLVM_USER_call_frame_entry_reg $dwarf_regnum
 			DW_OP_LLVM_user DW_OP_LLVM_USER_aspace_bregx $dwarf_regnum 0
-		    } SPECIAL_expr}
+		    } SPECIAL_expr
 		}
 
 		# Define variable 'd' with some extensions that can
 		# still be printed.
 		DW_TAG_variable {
-		    {DW_AT_name d}
-		    {DW_AT_type :$char_type_label}
-		    {DW_AT_location {
+		    DW_AT_name d
+		    DW_AT_type :$char_type_label
+		    DW_AT_location {
 			DW_OP_addr $buf_var
 			DW_OP_lit0
 			DW_OP_LLVM_form_aspace_address
@@ -181,16 +181,16 @@ Dwarf::assemble $asm_file {
 			DW_OP_LLVM_bit_offset
 			DW_OP_bit_piece 8 4
 			DW_OP_LLVM_piece_end
-		    } SPECIAL_expr}
+		    } SPECIAL_expr
 		}
 
 		# Define variable 'e' with the conceptually same location
 		# description as variable 'd', using the equivalent
 		# operations from DW_OP_LLVM_USER_ namespace.
 		DW_TAG_variable {
-		    {DW_AT_name e}
-		    {DW_AT_type :$char_type_label}
-		    {DW_AT_location {
+		    DW_AT_name e
+		    DW_AT_type :$char_type_label
+		    DW_AT_location {
 			DW_OP_addr $buf_var
 			DW_OP_lit0
 			DW_OP_LLVM_user DW_OP_LLVM_USER_form_aspace_address
@@ -207,7 +207,7 @@ Dwarf::assemble $asm_file {
 			DW_OP_LLVM_user DW_OP_LLVM_USER_bit_offset
 			DW_OP_bit_piece 8 4
 			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
-		    } SPECIAL_expr}
+		    } SPECIAL_expr
 		}
 	    }
 	}
@@ -219,7 +219,7 @@ if { [prepare_for_testing ${testfile}.exp ${testfile} \
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

@@ -1,6 +1,6 @@
 /* Target-dependent code for the Z80.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -494,7 +494,7 @@ z80_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   if (prologue_end != 0)
     {
-      struct symtab_and_line prologue_sal = find_pc_line (func_addr, 0);
+      struct symtab_and_line prologue_sal = find_sal_for_pc (func_addr, 0);
       struct compunit_symtab *compunit = prologue_sal.symtab->compunit ();
       const char *debug_format = compunit->debugformat ();
 
@@ -562,7 +562,6 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
   ULONGEST this_base;
   int i;
   gdb_byte buf[sizeof(void*)];
-  struct z80_unwind_cache *info;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   z80_gdbarch_tdep *tdep = gdbarch_tdep<z80_gdbarch_tdep> (gdbarch);
   int addr_len = tdep->addr_length;
@@ -570,7 +569,7 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
   if (*this_prologue_cache)
     return (struct z80_unwind_cache *) *this_prologue_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct z80_unwind_cache);
+  auto *info = frame_obstack_zalloc<z80_unwind_cache> ();
   memset (info, 0, sizeof (*info));
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
   *this_prologue_cache = info;
@@ -961,12 +960,12 @@ z80_overlay_update_1 (struct obj_section *osect)
   i = 0;
 
   /* we have interest for sections with same VMA */
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section *sect : objfile->sections ())
-      if (section_is_overlay (sect))
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &sect : objfile.sections ())
+      if (section_is_overlay (&sect))
 	{
-	  sect->ovly_mapped = (lma == bfd_section_lma (sect->the_bfd_section));
-	  i |= sect->ovly_mapped; /* true, if at least one section is mapped */
+	  sect.ovly_mapped = (lma == bfd_section_lma (sect.the_bfd_section));
+	  i |= sect.ovly_mapped; /* true, if at least one section is mapped */
 	}
   return i;
 }
@@ -984,19 +983,19 @@ z80_overlay_update (struct obj_section *osect)
     return;
 
   /* Update all sections, even if only one was requested.  */
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section *sect : objfile->sections ())
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &sect : objfile.sections ())
       {
-	if (!section_is_overlay (sect))
+	if (!section_is_overlay (&sect))
 	  continue;
 
-	asection *bsect = sect->the_bfd_section;
+	asection *bsect = sect.the_bfd_section;
 	bfd_vma lma = bfd_section_lma (bsect);
 	bfd_vma vma = bfd_section_vma (bsect);
 
 	for (int i = 0; i < cache_novly_regions; ++i)
 	  if (cache_ovly_region_table[i][Z80_VMA] == vma)
-	    sect->ovly_mapped =
+	    sect.ovly_mapped =
 	      (cache_ovly_region_table[i][Z80_MAPPED_TO_LMA] == lma);
       }
 }
@@ -1063,11 +1062,10 @@ z80_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
   return 0;
 }
 
-static const struct frame_unwind
-z80_frame_unwind =
-{
+static const struct frame_unwind_legacy z80_frame_unwind (
   "z80",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   z80_frame_this_id,
   z80_frame_prev_register,
@@ -1075,7 +1073,7 @@ z80_frame_unwind =
   default_frame_sniffer
   /*dealloc_cache*/
   /*prev_arch*/
-};
+);
 
 /* Initialize the gdbarch struct for the Z80 arch */
 static struct gdbarch *
@@ -1087,8 +1085,10 @@ z80_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct target_desc *tdesc = info.target_desc;
 
   if (!tdesc_has_registers (tdesc))
-    /* Pick a default target description.  */
-    tdesc = tdesc_z80;
+    {
+      /* Pick a default target description.  */
+      tdesc = tdesc_z80.get ();
+    }
 
   /* Check any target description for validity.  */
   if (tdesc_has_registers (tdesc))
@@ -1174,7 +1174,7 @@ z80_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_skip_prologue (gdbarch, z80_skip_prologue);
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan); // falling stack
 
-  set_gdbarch_software_single_step (gdbarch, z80_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, z80_software_single_step);
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, z80_breakpoint_kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, z80_sw_breakpoint_from_kind);
   set_gdbarch_insn_is_call (gdbarch, z80_insn_is_call);
@@ -1332,14 +1332,14 @@ ez80_ddfd_insn_table[] =
   { 0007, 0307, 2, insn_default }, //"ld rr,(ii+d)"
   { 0061, 0377, 2, insn_default }, //"ld ii,(ii+d)"
   /* common instructions */
-  { 0011, 0367, 2, insn_default }, //"add ii,rr"
+  { 0011, 0317, 1, insn_default }, //"add ii,rr"
   { 0041, 0377, 3, insn_default }, //"ld ii,nn"
   { 0042, 0367, 3, insn_default }, //"ld (nn),ii", "ld ii,(nn)"
   { 0043, 0367, 1, insn_default }, //"inc ii", "dec ii"
   { 0044, 0366, 1, insn_default }, //"inc/dec iih/iil"
   { 0046, 0367, 2, insn_default }, //"ld iih,n", "ld iil,n"
   { 0064, 0376, 2, insn_default }, //"inc (ii+d)", "dec (ii+d)"
-  { 0066, 0377, 2, insn_default }, //"ld (ii+d),n"
+  { 0066, 0377, 3, insn_default }, //"ld (ii+d),n"
   { 0166, 0377, 0, insn_default }, //not an instruction
   { 0160, 0370, 2, insn_default }, //"ld (ii+d),r"
   { 0104, 0306, 1, insn_default }, //"ld r,iih", "ld r,iil"
@@ -1361,7 +1361,7 @@ ez80_adl_ddfd_insn_table[] =
 {
   { 0007, 0307, 2, insn_default }, //"ld rr,(ii+d)"
   { 0061, 0377, 2, insn_default }, //"ld ii,(ii+d)"
-  { 0011, 0367, 1, insn_default }, //"add ii,rr"
+  { 0011, 0317, 1, insn_default }, //"add ii,rr"
   { 0041, 0377, 4, insn_default }, //"ld ii,nn"
   { 0042, 0367, 4, insn_default }, //"ld (nn),ii", "ld ii,(nn)"
   { 0043, 0367, 1, insn_default }, //"inc ii", "dec ii"
@@ -1456,10 +1456,7 @@ z80_get_insn_info (struct gdbarch *gdbarch, const gdb_byte *buf, int *size)
   while (1);
 }
 
-extern initialize_file_ftype _initialize_z80_tdep;
-
-void
-_initialize_z80_tdep ()
+INIT_GDB_FILE (z80_tdep)
 {
   gdbarch_register (bfd_arch_z80, z80_gdbarch_init);
   initialize_tdesc_z80 ();

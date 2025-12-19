@@ -1,6 +1,6 @@
 /* Scheme interface to blocks.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -537,7 +537,7 @@ bkscm_print_block_syms_progress_smob (SCM self, SCM port,
 	  {
 	    struct compunit_symtab *cust;
 
-	    gdbscm_printf (port, " %s", 
+	    gdbscm_printf (port, " %s",
 			   i_smob->iter.which == GLOBAL_BLOCK
 			   ? "global" : "static");
 	    if (i_smob->iter.idx != -1)
@@ -676,7 +676,7 @@ gdbscm_lookup_block (SCM pc_scm)
   gdbscm_gdb_exception exc {};
   try
     {
-      cust = find_pc_compunit_symtab (pc);
+      cust = find_compunit_symtab_for_pc (pc);
 
       if (cust != NULL && cust->objfile () != NULL)
 	block = block_for_pc (pc);

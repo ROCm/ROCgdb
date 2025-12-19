@@ -1,5 +1,9 @@
 /* Copyright 2024 Free Software Foundation, Inc.
+<<<<<<< HEAD
    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+=======
+   Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
    This file is part of GDB.
 

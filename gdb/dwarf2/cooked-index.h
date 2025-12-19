@@ -1,6 +1,6 @@
-/* DIE indexing 
+/* DIE indexing
 
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,19 +20,15 @@
 #ifndef GDB_DWARF2_COOKED_INDEX_H
 #define GDB_DWARF2_COOKED_INDEX_H
 
-#include "dwarf2.h"
-#include "dwarf2/types.h"
+#include "dwarf2/cooked-index-entry.h"
 #include "symtab.h"
-#include "hashtab.h"
 #include "quick-symbol.h"
-#include "gdbsupport/gdb_obstack.h"
 #include "addrmap.h"
-#include "gdbsupport/iterator-range.h"
 #include "dwarf2/mapped-index.h"
 #include "dwarf2/read.h"
-#include "dwarf2/abbrev-table-cache.h"
 #include "dwarf2/parent-map.h"
 #include "gdbsupport/range-chain.h"
+<<<<<<< HEAD
 #include "complaints.h"
 #include "maint.h"
 #include "run-on-main-thread.h"
@@ -582,6 +578,10 @@ protected:
   /* Captured value of per_command_time.  */
   bool m_per_command_time;
 };
+=======
+#include "dwarf2/cooked-index-shard.h"
+#include "dwarf2/cooked-index-worker.h"
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 /* The main index of DIEs.
 
@@ -592,6 +592,14 @@ protected:
    possible in worker threads, and (2) to start the work as early as
    possible.  This combination should help hide the effort from the
    user to the maximum possible degree.
+
+   There are a number of different objects involved in this process.
+   Most of them are temporary -- they are created to handle different
+   phases of scanning, then discarded when possible.  The "steady
+   state" objects are index itself (cooked_index, below), which holds
+   the entries (cooked_index_entry), and the implementation of the
+   "quick" API (e.g., cooked_index_functions, though there are
+   other variants).
 
    . Main Thread                |       Worker Threads
    ============================================================
@@ -618,12 +626,13 @@ protected:
    .          v                          /  |  \
    .   wait (MAIN_AVAILABLE)          finalization
    .          |                          \  |  /
-   .          v                           \ | /        
+   .          v                           \ | /
    .        done                      state = FINALIZED
    .                                        |
    .                                        v
    .                              maybe write to index cache
    .                                  state = CACHE_DONE
+   .                                 ~cooked_index_worker
    .
    .
    .   if main thread calls...
@@ -639,28 +648,17 @@ protected:
 class cooked_index : public dwarf_scanner_base
 {
 public:
-
-  /* A convenience typedef for the vector that is contained in this
-     object.  */
-  using vec_type = std::vector<std::unique_ptr<cooked_index_shard>>;
-
-  cooked_index (dwarf2_per_objfile *per_objfile,
-		std::unique_ptr<cooked_index_worker> &&worker);
+  cooked_index (cooked_index_worker_up &&worker);
   ~cooked_index () override;
 
   DISABLE_COPY_AND_ASSIGN (cooked_index);
 
   /* Start reading the DWARF.  */
-  void start_reading ();
+  void start_reading () override;
 
   /* Called by cooked_index_worker to set the contents of this index
-     and transition to the MAIN_AVAILABLE state.  WARN is used to
-     collect any warnings that may arise when writing to the cache.
-     PARENT_MAPS is used when resolving pending parent links.
-     PARENT_MAPS may be NULL if there are no IS_PARENT_DEFERRED
-     entries in VEC.  */
-  void set_contents (vec_type &&vec, deferred_warnings *warn,
-		     const parent_map_map *parent_maps);
+     and transition to the MAIN_AVAILABLE state.  */
+  void set_contents ();
 
   /* A range over a vector of subranges.  */
   using range = range_chain<cooked_index_shard::range>;
@@ -675,19 +673,21 @@ public:
   {
     wait (cooked_state::FINALIZED, true);
     std::vector<cooked_index_shard::range> result_range;
-    result_range.reserve (m_vector.size ());
-    for (auto &entry : m_vector)
-      result_range.push_back (entry->all_entries ());
+    result_range.reserve (m_shards.size ());
+    for (auto &shard : m_shards)
+      result_range.push_back (shard->all_entries ());
     return range (std::move (result_range));
   }
 
   /* Look up ADDR in the address map, and return either the
      corresponding CU, or nullptr if the address could not be
      found.  */
-  dwarf2_per_cu_data *lookup (unrelocated_addr addr) override;
+  dwarf2_per_cu *lookup (unrelocated_addr addr) override;
 
   /* Return a new vector of all the addrmaps used by all the indexes
-     held by this object.  */
+     held by this object.
+
+     Elements of the vector may be nullptr.  */
   std::vector<const addrmap *> get_addrmaps ();
 
   /* Return the entry that is believed to represent the program's
@@ -725,14 +725,12 @@ private:
 
   /* The vector of cooked_index objects.  This is stored because the
      entries are stored on the obstacks in those objects.  */
-  vec_type m_vector;
+  std::vector<cooked_index_shard_up> m_shards;
 
   /* This tracks the current state.  When this is nullptr, it means
      that the state is CACHE_DONE -- it's important to note that only
      the main thread may change the value of this pointer.  */
-  std::unique_ptr<cooked_index_worker> m_state;
-
-  dwarf2_per_bfd *m_per_bfd;
+  cooked_index_worker_up m_state;
 };
 
 /* An implementation of quick_symbol_functions for the cooked DWARF
@@ -750,7 +748,7 @@ struct cooked_index_functions : public dwarf2_base_index_functions
     return table;
   }
 
-  struct compunit_symtab *find_compunit_symtab_by_address
+  struct symbol *find_symbol_by_address
     (struct objfile *objfile, CORE_ADDR address) override;
 
   bool has_unexpanded_symtabs (struct objfile *objfile) override
@@ -791,16 +789,15 @@ struct cooked_index_functions : public dwarf2_base_index_functions
     dwarf2_base_index_functions::expand_all_symtabs (objfile);
   }
 
-  bool expand_symtabs_matching
+  bool search
     (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     search_symtabs_symbol_matcher symbol_matcher,
+     search_symtabs_expansion_listener listener,
      block_search_flags search_flags,
      domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-       override;
+     search_symtabs_lang_matcher lang_matcher) override;
 
   struct compunit_symtab *find_pc_sect_compunit_symtab
     (struct objfile *objfile, bound_minimal_symbol msymbol,
@@ -811,14 +808,12 @@ struct cooked_index_functions : public dwarf2_base_index_functions
 	    (objfile, msymbol, pc, section, warn_if_readin));
   }
 
-  void map_symbol_filenames
-       (struct objfile *objfile,
-	gdb::function_view<symbol_filename_ftype> fun,
-	bool need_fullname) override
+  void map_symbol_filenames (objfile *objfile, symbol_filename_listener fun,
+			     bool need_fullname) override
   {
     wait (objfile, true);
-    return (dwarf2_base_index_functions::map_symbol_filenames
-	    (objfile, fun, need_fullname));
+    dwarf2_base_index_functions::map_symbol_filenames (objfile, fun,
+						       need_fullname);
   }
 
   void compute_main_name (struct objfile *objfile) override

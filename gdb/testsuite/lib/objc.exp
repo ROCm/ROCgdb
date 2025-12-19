@@ -1,6 +1,6 @@
 # This test code is part of GDB, the GNU debugger.
 
-# Copyright 2010-2024 Free Software Foundation, Inc.
+# Copyright 2010-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,11 +19,12 @@
 # The result is 1 (true) for success, 0 (false) for failure.
 
 proc set_lang_objc {} {
-    if [gdb_test_no_output "set language objective-c"] {
+    if {[gdb_test_no_output "set language objective-c"]} {
 	return 0
     }
-    if [gdb_test "show language" ".* source language is \"objective-c\"." \
-	   "set language to \"objective-c\""] {
+    if {[gdb_test "show language" \
+	     [string_to_regexp {The current source language is "objective-c".}] \
+	     {set language to "objective-c"}]} {
 	return 0
     }
     return 1

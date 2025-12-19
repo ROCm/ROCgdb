@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 /* Architecture tests for intel i386 platform.  */
 
-void 
+void
 inc_dec_tests (void)
 {
   asm ("inc %eax");
@@ -38,7 +38,7 @@ inc_dec_tests (void)
   asm ("dec %edi");
 } /* end inc_dec_tests */
 
-int 
+int
 main ()
 {
   inc_dec_tests ();

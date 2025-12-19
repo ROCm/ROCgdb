@@ -1,5 +1,5 @@
 /* BFD back-end for IBM RS/6000 "XCOFF" files.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Written by Metin G. Ozisik, Mimi Phuong-Thao Vo, and John Gilmore.
    Archive support from Damon A. Permezel.
    Contributed by IBM Corporation and Cygnus Support.
@@ -1929,7 +1929,7 @@ xcoff_write_armap_old (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
   i = 0;
   archive_iterator_begin (&iterator, abfd);
   while (i < orl_count && archive_iterator_next (&iterator))
-    while (map[i].u.abfd == iterator.current.member)
+    while (map[i].abfd == iterator.current.member)
       {
 	H_PUT_32 (abfd, iterator.current.offset, buf);
 	if (bfd_write (buf, 4, abfd) != 4)
@@ -2054,7 +2054,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
        current_bfd = current_bfd->archive_next)
     {
       arch_info = bfd_get_arch_info (current_bfd);
-      while (map[i].u.abfd == current_bfd)
+      while (map[i].abfd == current_bfd)
 	{
 	  string_length = strlen (*map[i].name) + 1;
 	  if (arch_info->bits_per_address == 64)
@@ -2151,7 +2151,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       while (i < orl_count && archive_iterator_next (&iterator))
 	{
 	  arch_info = bfd_get_arch_info (iterator.current.member);
-	  while (map[i].u.abfd == iterator.current.member)
+	  while (map[i].abfd == iterator.current.member)
 	    {
 	      if (arch_info->bits_per_address == 32)
 		{
@@ -2169,7 +2169,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
 	   current_bfd = current_bfd->archive_next)
 	{
 	  arch_info = bfd_get_arch_info (current_bfd);
-	  while (map[i].u.abfd == current_bfd)
+	  while (map[i].abfd == current_bfd)
 	    {
 	      if (arch_info->bits_per_address == 32)
 		{
@@ -2235,7 +2235,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       while (i < orl_count && archive_iterator_next (&iterator))
 	{
 	  arch_info = bfd_get_arch_info (iterator.current.member);
-	  while (map[i].u.abfd == iterator.current.member)
+	  while (map[i].abfd == iterator.current.member)
 	    {
 	      if (arch_info->bits_per_address == 64)
 		{
@@ -2253,7 +2253,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
 	   current_bfd = current_bfd->archive_next)
 	{
 	  arch_info = bfd_get_arch_info (current_bfd);
-	  while (map[i].u.abfd == current_bfd)
+	  while (map[i].abfd == current_bfd)
 	    {
 	      if (arch_info->bits_per_address == 64)
 		{
@@ -4352,7 +4352,7 @@ xcoff_generate_rtinit  (bfd *abfd, const char *init, const char *fini,
   filehdr.f_symptr = scnhdr.s_relptr + scnhdr.s_nreloc * RELSZ;
 
   bfd_coff_swap_filehdr_out (abfd, &filehdr, filehdr_ext);
-  bfd_coff_swap_scnhdr_out (abfd, &scnhdr, scnhdr_ext);
+  bfd_coff_swap_scnhdr_out (abfd, &scnhdr, scnhdr_ext, NULL);
   bool ret = true;
   if (bfd_write (filehdr_ext, FILHSZ, abfd) != FILHSZ
       || bfd_write (scnhdr_ext, SCNHSZ, abfd) != SCNHSZ
@@ -4456,8 +4456,6 @@ const struct xcoff_dwsect_name xcoff_dwsect_names[] = {
 #define _bfd_xcoff_get_section_contents _bfd_generic_get_section_contents
 
 /* For copy private data entry points.  */
-#define _bfd_xcoff_init_private_section_data \
-  _bfd_generic_init_private_section_data
 #define _bfd_xcoff_bfd_copy_private_bfd_data \
   _bfd_xcoff_copy_private_bfd_data
 #define _bfd_xcoff_bfd_merge_private_bfd_data \
@@ -4523,7 +4521,6 @@ coff_find_nearest_line_with_alt
 #define _bfd_xcoff_bfd_link_split_section _bfd_generic_link_split_section
 #define _bfd_xcoff_bfd_gc_sections bfd_generic_gc_sections
 #define _bfd_xcoff_bfd_lookup_section_flags bfd_generic_lookup_section_flags
-#define _bfd_xcoff_bfd_merge_sections bfd_generic_merge_sections
 #define _bfd_xcoff_bfd_is_group_section bfd_generic_is_group_section
 #define _bfd_xcoff_bfd_group_name bfd_generic_group_name
 #define _bfd_xcoff_bfd_discard_group bfd_generic_discard_group
@@ -4584,7 +4581,6 @@ static const struct xcoff_backend_data_rec bfd_xcoff_backend_data =
       xcoff_ppc_relocate_section,
       coff_rtype_to_howto,
       NULL,			/* _bfd_coff_adjust_symndx */
-      _bfd_generic_link_add_one_symbol,
       coff_link_output_has_begun,
       coff_final_link_postscript,
       NULL			/* print_pdata.  */
@@ -4658,6 +4654,7 @@ const bfd_target rs6000_xcoff_vec =
     15,				/* ar_max_namelen */
     0,				/* match priority.  */
     TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+    TARGET_MERGE_SECTIONS,
 
     /* data */
     bfd_getb64,
@@ -4774,7 +4771,6 @@ static const struct xcoff_backend_data_rec bfd_pmac_xcoff_backend_data =
       xcoff_ppc_relocate_section,
       coff_rtype_to_howto,
       NULL,			/* _bfd_coff_adjust_symndx */
-      _bfd_generic_link_add_one_symbol,
       coff_link_output_has_begun,
       coff_final_link_postscript,
       NULL			/* print_pdata.  */
@@ -4848,6 +4844,7 @@ const bfd_target powerpc_xcoff_vec =
     15,				/* ar_max_namelen */
     0,				/* match priority.  */
     TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+    TARGET_MERGE_SECTIONS,
 
     /* data */
     bfd_getb64,

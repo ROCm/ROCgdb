@@ -1,6 +1,6 @@
 /* Rust language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 2016-2024 Free Software Foundation, Inc.
+   Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-#include <ctype.h>
 
 #include "block.h"
 #include "c-lang.h"
@@ -116,7 +115,8 @@ rust_tuple_type_p (struct type *type)
 }
 
 /* Return true if all non-static fields of a structlike type are in a
-   sequence like __0, __1, __2.  */
+   sequence like 0, 1, 2.  "__" prefixes are also accepted -- rustc
+   emits "__0" but gccrs emits "0".  */
 
 static bool
 rust_underscore_fields (struct type *type)
@@ -125,14 +125,18 @@ rust_underscore_fields (struct type *type)
 
   if (type->code () != TYPE_CODE_STRUCT)
     return false;
-  for (int i = 0; i < type->num_fields (); ++i)
+  for (const auto &field : type->fields ())
     {
-      if (!type->field (i).is_static ())
+      if (!field.is_static ())
 	{
 	  char buf[20];
 
-	  xsnprintf (buf, sizeof (buf), "__%d", field_number);
-	  if (strcmp (buf, type->field (i).name ()) != 0)
+	  xsnprintf (buf, sizeof (buf), "%d", field_number);
+
+	  const char *field_name = field.name ();
+	  if (startswith (field_name, "__"))
+	    field_name += 2;
+	  if (strcmp (buf, field_name) != 0)
 	    return false;
 	  field_number++;
 	}
@@ -301,8 +305,8 @@ rewrite_slice_type (struct type *in_type, struct type **new_type,
     }
   else
     {
-    if (!rewrite_slice_type (field_type, &rewritten, bound,
-			     additional_length))
+      if (!rewrite_slice_type (field_type, &rewritten, bound,
+			       additional_length))
 	return false;
       if (additional_length == nullptr)
 	return true;
@@ -371,11 +375,11 @@ rust_array_like_element_type (struct type *type)
 {
   /* Caller must check this.  */
   gdb_assert (rust_slice_type_p (type));
-  for (int i = 0; i < type->num_fields (); ++i)
+  for (const auto &field : type->fields ())
     {
-      if (strcmp (type->field (i).name (), "data_ptr") == 0)
+      if (strcmp (field.name (), "data_ptr") == 0)
 	{
-	  struct type *base_type = type->field (i).type ()->target_type ();
+	  struct type *base_type = field.type ()->target_type ();
 	  if (rewrite_slice_type (base_type, nullptr, 0, nullptr))
 	    return nullptr;
 	  return base_type;
@@ -662,7 +666,7 @@ rust_language::value_print_inner
     case TYPE_CODE_PTR:
       {
 	LONGEST low_bound, high_bound;
-	
+
 	if (type->target_type ()->code () == TYPE_CODE_ARRAY
 	    && rust_u8_type_p (type->target_type ()->target_type ())
 	    && get_array_bounds (type->target_type (), &low_bound,
@@ -1012,9 +1016,9 @@ rust_internal_print_type (struct type *type, const char *varstring,
 	  }
 	gdb_puts ("{\n", stream);
 
-	for (int i = 0; i < type->num_fields (); ++i)
+	for (const auto &field : type->fields ())
 	  {
-	    const char *name = type->field (i).name ();
+	    const char *name = field.name ();
 
 	    QUIT;
 
@@ -1137,13 +1141,22 @@ rust_slice_type (const char *name, struct type *elt_type,
 
 
 
-/* A helper for rust_evaluate_subexp that handles OP_RANGE.  */
+namespace expr
+{
 
 struct value *
-rust_range (struct type *expect_type, struct expression *exp,
-	    enum noside noside, enum range_flag kind,
-	    struct value *low, struct value *high)
+rust_range_operation::evaluate (struct type *expect_type,
+				struct expression *exp,
+				enum noside noside)
 {
+  auto kind = std::get<0> (m_storage);
+  value *low = nullptr;
+  if (std::get<1> (m_storage) != nullptr)
+    low = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
+  value *high = nullptr;
+  if (std::get<2> (m_storage) != nullptr)
+    high = std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
+
   struct value *addrval, *result;
   CORE_ADDR addr;
   struct type *range_type;
@@ -1220,6 +1233,8 @@ rust_range (struct type *expect_type, struct expression *exp,
   return result;
 }
 
+} /* namespace expr */
+
 /* A helper function to compute the range and kind given a range
    value.  TYPE is the type of the range value.  RANGE is the range
    value.  LOW, HIGH, and KIND are out parameters.  The LOW and HIGH
@@ -1261,13 +1276,16 @@ rust_compute_range (struct type *type, struct value *range,
     }
 }
 
-/* A helper for rust_evaluate_subexp that handles BINOP_SUBSCRIPT.  */
+namespace expr
+{
 
 struct value *
-rust_subscript (struct type *expect_type, struct expression *exp,
-		enum noside noside, bool for_addr,
-		struct value *lhs, struct value *rhs)
+rust_subscript_operation::subscript (struct expression *exp,
+				     enum noside noside, bool for_addr)
 {
+  value *lhs = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
+  value *rhs = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
+
   struct value *result;
   struct type *rhstype;
   LONGEST low, high_bound;
@@ -1408,9 +1426,6 @@ rust_subscript (struct type *expect_type, struct expression *exp,
   return result;
 }
 
-namespace expr
-{
-
 struct value *
 rust_unop_ind_operation::evaluate (struct type *expect_type,
 				   struct expression *exp,
@@ -1455,7 +1470,7 @@ eval_op_rust_array (struct type *expect_type, struct expression *exp,
   if (copies < 0)
     error (_("Array with negative number of elements"));
 
-  if (noside == EVAL_NORMAL)
+  if (noside == EVAL_NORMAL && copies > 0)
     return value_array (0, std::vector<value *> (copies, elt));
   else
     {
@@ -1476,7 +1491,7 @@ rust_struct_anon::evaluate (struct type *expect_type,
   value *lhs = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
   int field_number = std::get<0> (m_storage);
 
-  struct type *type = lhs->type ();
+  struct type *type = check_typedef (lhs->type ());
 
   if (type->code () == TYPE_CODE_STRUCT)
     {
@@ -1772,7 +1787,7 @@ rust_language::emitchar (int ch, struct type *chtype,
     gdb_puts ("\\t", stream);
   else if (ch == '\0')
     gdb_puts ("\\0", stream);
-  else if (ch >= 32 && ch <= 127 && isprint (ch))
+  else if (ch >= 32 && ch <= 127 && c_isprint (ch))
     gdb_putc (ch, stream);
   else if (ch <= 255)
     gdb_printf (stream, "\\x%02x", ch);

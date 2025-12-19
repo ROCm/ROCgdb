@@ -1,5 +1,5 @@
 /* BFD back-end for PDP-11 a.out binaries.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -2839,9 +2839,6 @@ aout_link_check_archive_element (bfd *abfd,
 static bool
 aout_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 {
-  bool (*add_one_symbol)
-    (struct bfd_link_info *, bfd *, const char *, flagword, asection *,
-     bfd_vma, const char *, bool, bool, struct bfd_link_hash_entry **);
   struct external_nlist *syms;
   bfd_size_type sym_count;
   char *strings;
@@ -2874,10 +2871,6 @@ aout_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
   if (sym_hash == NULL && sym_count != 0)
     return false;
   obj_aout_sym_hashes (abfd) = sym_hash;
-
-  add_one_symbol = aout_backend_info (abfd)->add_one_symbol;
-  if (add_one_symbol == NULL)
-    add_one_symbol = _bfd_generic_link_add_one_symbol;
 
   p = syms;
   pend = p + sym_count;
@@ -2951,7 +2944,7 @@ aout_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 	  break;
 	}
 
-      if (! ((*add_one_symbol)
+      if (! (_bfd_generic_link_add_one_symbol
 	     (info, abfd, name, flags, section, value, string, copy, false,
 	      (struct bfd_link_hash_entry **) sym_hash)))
 	return false;
@@ -4651,6 +4644,7 @@ const bfd_target MY (vec) =
   15,				/* AR_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
   bfd_getl64, bfd_getl_signed_64, bfd_putl64,
      bfd_getp32, bfd_getp_signed_32, bfd_putp32,
      bfd_getl16, bfd_getl_signed_16, bfd_putl16, /* Data.  */

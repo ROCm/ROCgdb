@@ -1,4 +1,4 @@
-# Copyright (C) 2003-2024 Free Software Foundation, Inc.
+# Copyright (C) 2003-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,37 +35,35 @@ set binfile [standard_output_file $testfile]
 set lib1_sl [standard_output_file shreloc1.sl]
 set lib2_sl [standard_output_file shreloc2.sl]
 
-set lib_opts "debug"
+set lib_opts {debug shlib}
 set exec_opts [list debug shlib=$lib1_sl shlib=$lib2_sl]
 
 if {([istarget "*pc-cygwin"] || [istarget "*pc-mingw32"]) } {
     lappend lib_opts "ldflags=-Wl,--image-base,0x04000000"
 }
 
-if [test_compiler_info "xlc-*"] {
+if {[test_compiler_info "xlc-*"]} {
 
-    # IBM's xlc compiler does not add static variables to the ELF symbol 
-    # table by default.  We need this option to make the variables show 
-    # up in "maint print msymbols". 
+    # IBM's xlc compiler does not add static variables to the ELF symbol
+    # table by default.  We need this option to make the variables show
+    # up in "maint print msymbols".
 
     lappend lib_opts "additional_flags=-qstatsym"
 
 }
 
-if { [gdb_compile_shlib $lib1src $lib1_sl $lib_opts] != ""} {
-    untested "could not build $lib1_sl."
-    return -1
-} elseif { [gdb_compile_shlib $lib2src $lib2_sl $lib_opts] != ""} {
-    untested "could not build $lib1_s2."
-    return -1
-} elseif { [gdb_compile $srcfile $binfile executable $exec_opts] != ""} {
-    untested "could not build $binfile."
-    return -1
+if { [build_executable "build shlib 1" $lib1_sl $lib1src $lib_opts] != 0} {
+    return
 }
 
-# Start with a fresh gdb.
+if { [build_executable "build shlib " $lib2_sl $lib2src $lib_opts] != 0} {
+    return
+}
 
-clean_restart $binfile
+if { [prepare_for_testing "prepare" $testfile $srcfile $exec_opts] != 0} {
+    return
+}
+
 gdb_load_shlib $lib1_sl
 gdb_load_shlib $lib2_sl
 
@@ -193,13 +191,13 @@ proc check_different {var msymfile} {
     return 1
 }
 
-if [is_remote host] {
+if {[is_remote host]} {
     set msymfile shreloc.txt
 } else {
     set msymfile [standard_output_file shreloc.txt]
 }
 
-if [send_gdb_discard "maint print msymbols ${msymfile}"] {
+if {[send_gdb_discard "maint print msymbols ${msymfile}"]} {
     if {[check_different "static_var_\[12\]" "${msymfile}"]} {
 	pass "(msymbol) relocated static vars have different addresses"
     } else {

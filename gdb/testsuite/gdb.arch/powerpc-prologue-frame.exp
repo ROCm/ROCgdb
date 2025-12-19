@@ -1,4 +1,4 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,13 +26,13 @@ if {[gdb_compile \
 }
 
 
-clean_restart ${binfile}
+clean_restart $testfile
 
-if ![runto bar] {
+if {![runto bar]} {
   untested "could not run to bar"
   return -1
 }
 
 gdb_test "bt" \
-         "#0\[ \t\]*$hex in bar.*\r\n#1\[ \t\]*$hex in foo.*\r\n#2\[ \t\]*$hex in main.*" \
-         "Backtrace to the main frame"
+	 "#0\[ \t\]*$hex in bar.*\r\n#1\[ \t\]*$hex in foo.*\r\n#2\[ \t\]*$hex in main.*" \
+	 "Backtrace to the main frame"

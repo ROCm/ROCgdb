@@ -1,5 +1,5 @@
 /* tc-loongarch.h -- Header file for tc-loongarch.c.
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of GAS.
@@ -20,8 +20,6 @@
 
 #ifndef TC_LOONGARCH
 #define TC_LOONGARCH
-
-#include "opcode/loongarch.h"
 
 #define TARGET_BYTES_BIG_ENDIAN 0
 #define TARGET_ARCH bfd_arch_loongarch
@@ -80,26 +78,19 @@ extern int loongarch_force_relocation (struct fix *);
 /* If subsy of BFD_RELOC32/64 and PC in same segment, and without relax
    or PC at start of subsy or with relax but sub_symbol_segment not in
    SEC_CODE, we generate 32/64_PCREL.  */
-#define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEG) \
-  (!(LARCH_opts.thin_add_sub \
-     && ((FIX)->fx_r_type == BFD_RELOC_32 \
-	 ||(FIX)->fx_r_type == BFD_RELOC_64) \
-     && (!LARCH_opts.relax \
-	|| S_GET_VALUE (FIX->fx_subsy) \
-	   == FIX->fx_frag->fr_address + FIX->fx_where \
-	|| (LARCH_opts.relax \
-	   && ((S_GET_SEGMENT (FIX->fx_subsy)->flags & SEC_CODE) == 0)))))
+extern bool loongarch_force_relocation_sub_local (struct fix *, asection *);
+#define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEC) \
+  loongarch_force_relocation_sub_local (FIX, SEC)
 
 #define TC_VALIDATE_FIX_SUB(FIX, SEG) 1
 #define DIFF_EXPR_OK 1
 
 /* Postpone text-section label subtraction calculation until linking, since
    linker relaxations might change the deltas.  */
+extern bool loongarch_force_relocation_sub_same(struct fix *, asection *);
 #define TC_FORCE_RELOCATION_SUB_SAME(FIX, SEC)	\
-  (LARCH_opts.relax ?  \
-    (GENERIC_FORCE_RELOCATION_SUB_SAME (FIX, SEC)	\
-      || ((SEC)->flags & SEC_CODE) != 0)		\
-    : (GENERIC_FORCE_RELOCATION_SUB_SAME (FIX, SEC))) \
+  (loongarch_force_relocation_sub_same (FIX, SEC) \
+   || GENERIC_FORCE_RELOCATION_SUB_SAME (FIX, SEC))
 
 #define TC_LINKRELAX_FIXUP(seg) ((seg->flags & SEC_CODE)  \
 				    || (seg->flags & SEC_DEBUGGING))
@@ -117,7 +108,8 @@ extern int loongarch_force_relocation (struct fix *);
    FDE Code Alignment Factor (DWARF2_LINE_MIN_INSN_LENGTH) should be 1
    because DW_CFA_advance_loc need to be relocated in bytes
    when linker relaxation.  */
-#define DWARF2_CIE_DATA_ALIGNMENT     (-8)
+extern int loongarch_cie_data_alignment;
+#define DWARF2_CIE_DATA_ALIGNMENT loongarch_cie_data_alignment
 #define DWARF2_DEFAULT_RETURN_COLUMN  1	    /* FDE Return Address Register.  */
 
 #define tc_cfi_frame_initial_instructions	\
@@ -139,9 +131,9 @@ extern void loongarch_pre_output_hook (void);
 
 #define SUB_SEGMENT_ALIGN(SEG, FRCHAIN) 0
 
-#define HANDLE_ALIGN(fragp) loongarch_handle_align (fragp)
+#define HANDLE_ALIGN(sec, fragp) loongarch_handle_align (fragp)
 extern void loongarch_handle_align (struct frag *);
-#define MAX_MEM_FOR_RS_ALIGN_CODE (3 + 4)
+#define MAX_MEM_FOR_RS_ALIGN_CODE(p2align, max) (3 + 4)
 
 #define elf_tc_final_processing loongarch_elf_final_processing
 extern void loongarch_elf_final_processing (void);

@@ -1,5 +1,5 @@
 /* Target-dependent code for the 32-bit OpenRISC 1000, for the GDB.
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,7 +29,6 @@
 #include "gdbtypes.h"
 #include "target.h"
 #include "regcache.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "reggroups.h"
 #include "arch-utils.h"
 #include "frame-unwind.h"
@@ -468,7 +467,7 @@ or1k_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
       if (0 != prologue_end)
 	{
-	  struct symtab_and_line prologue_sal = find_pc_line (start_pc, 0);
+	  struct symtab_and_line prologue_sal = find_sal_for_pc (start_pc, 0);
 	  struct compunit_symtab *compunit
 	    = prologue_sal.symtab->compunit ();
 	  const char *debug_format = compunit->debugformat ();
@@ -1125,16 +1124,17 @@ or1k_frame_prev_register (const frame_info_ptr &this_frame,
 
 /* Data structures for the normal prologue-analysis-based unwinder.  */
 
-static const struct frame_unwind or1k_frame_unwind = {
+static const struct frame_unwind_legacy or1k_frame_unwind (
   "or1k prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   or1k_frame_this_id,
   or1k_frame_prev_register,
   NULL,
   default_frame_sniffer,
-  NULL,
-};
+  NULL
+);
 
 /* Architecture initialization for OpenRISC 1000.  */
 
@@ -1234,7 +1234,7 @@ or1k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (!tdesc_has_registers (info.target_desc))
     /* Pick a default target description.  */
-    tdesc = tdesc_or1k;
+    tdesc = tdesc_or1k.get ();
 
   /* Check any target description for validity.  */
   if (tdesc_has_registers (tdesc))
@@ -1285,9 +1285,7 @@ or1k_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 }
 
 
-void _initialize_or1k_tdep ();
-void
-_initialize_or1k_tdep ()
+INIT_GDB_FILE (or1k_tdep)
 {
   /* Register this architecture.  */
   gdbarch_register (bfd_arch_or1k, or1k_gdbarch_init, or1k_dump_tdep);

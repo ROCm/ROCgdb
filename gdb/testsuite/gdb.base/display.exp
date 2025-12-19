@@ -1,4 +1,4 @@
-#   Copyright 1997-2024 Free Software Foundation, Inc.
+#   Copyright 1997-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 # Preserve the old timeout, and set a new one that should be
 # sufficient to avoid timing out during this test.
 set oldtimeout $timeout
-set timeout [expr "$timeout + 60"]
+set timeout [expr {$timeout + 60}]
 verbose "Timeout is now $timeout seconds" 2
 
 # use this to debug:
@@ -43,7 +43,7 @@ verbose "Timeout is now $timeout seconds" 2
 
 # Some coverage stuff
 #
-if !$use_gdb_stub {
+if {!$use_gdb_stub} {
     gdb_test "kill" ".*The program is not being run.*"
     gdb_test "detach" ".*"
     gdb_test "run" ".*"
@@ -52,7 +52,7 @@ if !$use_gdb_stub {
     gdb_test "kill" ".*" "kill again"
     gdb_test "detach" ".*" "detach again"
 
-    clean_restart $binfile
+    clean_restart $testfile
 }
 
 # Ok, on to real life

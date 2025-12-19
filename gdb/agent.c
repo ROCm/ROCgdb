@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -52,8 +52,8 @@ set_can_use_agent (const char *args, int from_tty, struct cmd_list_element *c)
     {
       /* Since the setting was off, we may not have observed the objfiles and
 	 therefore not looked up the required symbols.  Do so now.  */
-      for (objfile *objfile : current_program_space->objfiles ())
-	if (agent_look_up_symbols (objfile) == 0)
+      for (objfile &objfile : current_program_space->objfiles ())
+	if (agent_look_up_symbols (&objfile) == 0)
 	  break;
     }
   if (target_use_agent (can_use) == 0)
@@ -73,9 +73,7 @@ agent_new_objfile (struct objfile *objfile)
   agent_look_up_symbols (objfile);
 }
 
-void _initialize_agent ();
-void
-_initialize_agent ()
+INIT_GDB_FILE (agent)
 {
   gdb::observers::new_objfile.attach (agent_new_objfile,
 				      "agent");

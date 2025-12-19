@@ -1,4 +1,4 @@
-! Copyright 2004-2024 Free Software Foundation, Inc.
+! Copyright 2004-2025 Free Software Foundation, Inc.
 !
 ! This program is free software; you can redistribute it and/or modify
 ! it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 ! source file:
 !
 !	#include <stdio.h>
-!	
+!
 !	main()
 !	{
 !	  printf("hello world\n");
@@ -32,13 +32,13 @@
 !	sub1()
 !	{
 !	  int buf[64];
-!	
+!
 !	}
-!	
+!
 !	sub2()
 !	{
 !	  int buf[65];
-!	
+!
 !	}
 !
 ! We use a pregenerated assembly file as the test input to avoid possible
@@ -72,7 +72,7 @@ _main:
 	mov	r14,r15
 	lds.l	@r15+,pr
 	mov.l	@r15+,r14
-	rts	
+	rts
 	nop
 .L6:
 	.align 2
@@ -99,7 +99,7 @@ _sub1:
 	mov	r14,r15
 	lds.l	@r15+,pr
 	mov.l	@r15+,r14
-	rts	
+	rts
 	nop
 	.align 1
 .L8:
@@ -119,7 +119,7 @@ _sub2:
 	mov	r14,r15
 	lds.l	@r15+,pr
 	mov.l	@r15+,r14
-	rts	
+	rts
 	nop
 	.align 1
 .L11:

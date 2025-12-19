@@ -1,5 +1,5 @@
 /* Code dealing with "using" directives for GDB.
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -112,7 +112,7 @@ using_direct::valid_line (unsigned int boundary) const
   try
     {
       CORE_ADDR curr_pc = get_frame_pc (get_selected_frame (nullptr));
-      symtab_and_line curr_sal = find_pc_line (curr_pc, 0);
+      symtab_and_line curr_sal = find_sal_for_pc (curr_pc, 0);
       return (decl_line <= curr_sal.line)
 	     || (decl_line >= boundary);
     }

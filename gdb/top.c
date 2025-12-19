@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,6 +34,7 @@
 #include "value.h"
 #include "language.h"
 #include "terminal.h"
+#include "gdbsupport/cleanups.h"
 #include "gdbsupport/job-control.h"
 #include "annotate.h"
 #include "completer.h"
@@ -68,7 +69,6 @@
 
 #include "event-top.h"
 #include <sys/stat.h>
-#include <ctype.h>
 #include "ui-out.h"
 #include "cli-out.h"
 #include "tracepoint.h"
@@ -84,10 +84,6 @@
 #endif
 
 extern void initialize_all_files (void);
-
-#define PROMPT(X) the_prompts.prompt_stack[the_prompts.top + X].prompt
-#define PREFIX(X) the_prompts.prompt_stack[the_prompts.top + X].prefix
-#define SUFFIX(X) the_prompts.prompt_stack[the_prompts.top + X].suffix
 
 /* Default command line prompt.  This is overridden in some configs.  */
 
@@ -385,7 +381,7 @@ check_frame_language_change (void)
   /* Warn the user if the working language does not match the language
      of the current frame.  Only warn the user if we are actually
      running the program, i.e. there is a stack.  */
-  /* FIXME: This should be cacheing the frame and only running when
+  /* FIXME: This should be caching the frame and only running when
      the frame changes.  */
 
   if (warn_frame_lang_mismatch && has_stack_frames ())
@@ -419,7 +415,7 @@ wait_sync_command_done (void)
      point.  */
   scoped_enable_commit_resumed enable ("sync wait");
 
-  while (gdb_do_one_event () >= 0)
+  while (current_interpreter ()->do_one_event () >= 0)
     if (ui->prompt_state != PROMPT_BLOCKED)
       break;
 }
@@ -471,8 +467,7 @@ execute_command (const char *p, int from_tty)
 
   target_log_command (p);
 
-  while (*p == ' ' || *p == '\t')
-    p++;
+  p = skip_spaces (p);
   if (*p)
     {
       const char *cmd = p;
@@ -549,12 +544,10 @@ execute_command (const char *p, int from_tty)
 	   that can be followed by its args), report the list of
 	   subcommands.  */
 	{
-	  std::string prefixname = c->prefixname ();
-	  std::string prefixname_no_space
-	    = prefixname.substr (0, prefixname.length () - 1);
+	  std::string prefixname = c->prefixname_no_space ();
 	  gdb_printf
 	    ("\"%s\" must be followed by the name of a subcommand.\n",
-	     prefixname_no_space.c_str ());
+	     prefixname.c_str ());
 	  help_list (*c->subcommands, prefixname.c_str (), all_commands,
 		     gdb_stdout);
 	}
@@ -1037,7 +1030,7 @@ gdb_readline_wrapper (const char *prompt)
     (*after_char_processing_hook) ();
   gdb_assert (after_char_processing_hook == NULL);
 
-  while (gdb_do_one_event () >= 0)
+  while (current_interpreter ()->do_one_event () >= 0)
     if (gdb_readline_wrapper_done)
       break;
 
@@ -1317,7 +1310,7 @@ print_gdb_version (struct ui_file *stream, bool interactive)
   /* Second line is a copyright notice.  */
 
   gdb_printf (stream,
-	      "Copyright (C) 2024 Free Software Foundation, Inc.\n");
+	      "Copyright (C) 2025 Free Software Foundation, Inc.\n");
 
   /* Following the copyright is a brief statement that the program is
      free software, that users are free to copy and change it on
@@ -1363,17 +1356,134 @@ There is NO WARRANTY, to the extent permitted by law.",
 		  styled_string (file_name_style.style (),
 				 REPORT_BUGS_TO));
     }
-  gdb_printf (stream,
-	      _("Find the GDB manual and other documentation \
-resources online at:\n    <%ps>."),
-	      styled_string (file_name_style.style (),
-			     "http://www.gnu.org/software/gdb/documentation/"));
-  gdb_printf (stream, "\n\n");
-  gdb_printf (stream, _("For help, type \"%ps\".\n"),
+}
+
+/* Unicode Block “Box Drawing” chars.  UTF-8 string literals have type:
+   - const char[N]    (until C++20), or
+   - const char8_t[N] (since C++20).
+   Assign them to a variable to stabilize the type.
+*/
+static const char bd_heavy_horizontal[] = u8"\u2501";
+static const char bd_heavy_vertical[] = u8"\u2503";
+static const char bd_heavy_down_and_right[] = u8"\u250f";
+static const char bd_heavy_down_and_left[] = u8"\u2513";
+static const char bd_heavy_up_and_right[] = u8"\u2517";
+static const char bd_heavy_up_and_left[] = u8"\u251b";
+
+/* Print MESSAGE to STREAM in lines of maximum size WIDTH, so that it fits
+   in an ascii art box of width WIDTH+4.  Messages may be broken on
+   spaces.  */
+static void
+box_one_message (ui_file *stream, std::string message, int width)
+{
+  const char *wall = emojis_ok () ? bd_heavy_vertical : "|";
+  while (!message.empty ())
+    {
+      std::string line;
+      int n_escape_chars = 0;
+      const char *escape = message.c_str ();
+      while ((escape = strchr (escape, '\033')) != nullptr)
+	{
+	  int tmp;
+	  if (skip_ansi_escape (escape, &tmp))
+	    n_escape_chars += tmp;
+	  else
+	    break;
+	  escape += tmp;
+	}
+      if ((message.length () - n_escape_chars) > width)
+	{
+	  line = message.substr (0, message.rfind (" ", width));
+	  message = message.substr (line.length ());
+	}
+      else
+	{
+	  line = message;
+	  message = "";
+	}
+
+      if ((line.length () - n_escape_chars) < width)
+	line.append (width - line.length () + n_escape_chars, ' ');
+
+      gdb_printf (stream, "%s %s %s\n", wall, line.c_str (), wall);
+    }
+}
+
+/* Print some hints about how to use GDB in a very visible manner.  */
+void
+print_gdb_hints (struct ui_file *stream)
+{
+  unsigned int width = get_chars_per_line ();
+
+  /* Arbitrarily setting maximum width to 80 characters, so that
+     things are big and visible but not overwhelming.  */
+  if (80 < width)
+    width = 80;
+
+  gdb_assert (width > 0);
+
+  std::string docs_url = "http://www.gnu.org/software/gdb/documentation/";
+  std::array<string_file, 4> styled_msg {
+    string_file (true),
+    string_file (true),
+    string_file (true),
+    string_file (true)
+  };
+
+  gdb_printf (&styled_msg[0], _("Find the GDB manual online at:"));
+  gdb_printf (&styled_msg[1], _("%ps."),
+	      styled_string (file_name_style.style (), docs_url.c_str ()));
+  gdb_printf (&styled_msg[2], _("For help, type \"%ps\"."),
 	      styled_string (command_style.style (), "help"));
-  gdb_printf (stream,
-	      _("Type \"%ps\" to search for commands related to \"word\"."),
-	      styled_string (command_style.style (), "apropos word"));
+  gdb_printf (&styled_msg[3],
+	      _("Type \"%ps\" to search for commands related to <word>."),
+	      styled_string (command_style.style (), "apropos <word>"));
+
+  /* If there isn't enough space to display the longest URL in a boxed
+     style, then don't use the box, the terminal will break the output
+     where needed.  The longest URL is used because the other messages may
+     be broken into multiple lines, but URLs can't.
+
+     The ' + 1' after the URL accounts for the period that is placed after
+     the URL.
+
+     The '+ 4' accounts for the box and inner white space.  We add the 4 to
+     the string length rather than subtract from the width as the width
+     could be less than 4, and we want to avoid wrap around.  */
+  if (width < docs_url.length () + 1 + 4)
+    {
+      for (string_file &msg : styled_msg)
+	gdb_printf (stream, "%s\n", msg.c_str ());
+    }
+  else
+    {
+      gdb_assert (width > 4);
+
+      std::string sep (width - 2, '-');
+
+      if (emojis_ok ())
+	{
+	  gdb_printf (stream, "%s", bd_heavy_down_and_right);
+	  for (int i = 0; i < (width - 2); i++)
+	    gdb_printf (stream, "%s", bd_heavy_horizontal);
+	  gdb_printf (stream, "%s\n", bd_heavy_down_and_left);
+	}
+      else
+	gdb_printf (stream, "+%s+\n", sep.c_str ());
+
+      for (string_file &msg : styled_msg)
+	box_one_message (stream, msg.release (), width - 4);
+
+      if (emojis_ok ())
+	{
+	  gdb_printf (stream, "%s", bd_heavy_up_and_right);
+	  for (int i = 0; i < (width - 2); i++)
+	    gdb_printf (stream, "%s", bd_heavy_horizontal);
+	  gdb_printf (stream, "%s\n", bd_heavy_up_and_left);
+	}
+      else
+	gdb_printf (stream, "+%s+\n", sep.c_str ());
+    }
 }
 
 /* Print the details of GDB build-time configuration.  */
@@ -1581,7 +1691,7 @@ This GDB was configured as follows:\n\
 "), DEBUGDIR, DEBUGDIR_RELOCATABLE ? " (relocatable)" : "");
 
 #ifdef ADDITIONAL_DEBUG_DIRS
-  gdb_printf (stream, _ ("\
+  gdb_printf (stream, _("\
 	     --with-additional-debug-dirs=%s\n\
 "), ADDITIONAL_DEBUG_DIRS);
 #endif
@@ -1600,6 +1710,11 @@ This GDB was configured as follows:\n\
     gdb_printf (stream, _("\
 	     --with-system-gdbinit-dir=%s%s\n\
 "), SYSTEM_GDBINIT_DIR, SYSTEM_GDBINIT_DIR_RELOCATABLE ? " (relocatable)" : "");
+
+#ifdef SUPPORTED_BINARY_FILE_FORMATS
+  gdb_printf (stream, _("\
+	     --enable-binary-file-formats=%s\n"), SUPPORTED_BINARY_FILE_FORMATS);
+#endif
 
   /* We assume "relocatable" will be printed at least once, thus we always
      print this text.  It's a reasonably safe assumption for now.  */
@@ -2134,6 +2249,17 @@ show_startup_quiet (struct ui_file *file, int from_tty,
 }
 
 static void
+init_colorsupport_var ()
+{
+  const std::vector<color_space> &cs = colorsupport ();
+  std::string s;
+  for (color_space c : cs)
+    s.append (s.empty () ? "" : ",").append (color_space_name (c));
+  struct internalvar *colorsupport_var = create_internalvar ("_colorsupport");
+  set_internalvar_string (colorsupport_var, s.c_str ());
+}
+
+static void
 init_main (void)
 {
   /* Initialize the prompt to a simple "(gdb) " prompt or to whatever
@@ -2337,11 +2463,12 @@ gdb_init ()
      during startup.  */
   set_language (language_c);
   expected_language = current_language;	/* Don't warn about the change.  */
+
+  /* Create $_colorsupport convenience variable.  */
+  init_colorsupport_var ();
 }
 
-void _initialize_top ();
-void
-_initialize_top ()
+INIT_GDB_FILE (top)
 {
   /* Determine a default value for the history filename.  */
   const char *tmpenv = getenv ("GDBHISTFILE");

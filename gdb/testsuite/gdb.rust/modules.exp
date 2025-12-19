@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024 Free Software Foundation, Inc.
+# Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,20 +21,20 @@ require {can_compile rust}
 
 standard_testfile .rs
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug rust}]} {
-    return -1
+    return
 }
 
 set line [gdb_get_line_number "set breakpoint here"]
 if {![runto ${srcfile}:$line]} {
     untested "could not run to breakpoint"
-    return -1
+    return
 }
 
 # Currently a closure type is not described by rustc.
 # https://github.com/rust-lang/rust/issues/33121
 # gdb_test "call f2()" "lambda f2"
 
-if ![target_info exists gdb,noinferiorio] {
+if { ![target_info exists gdb,noinferiorio] } {
     gdb_test_stdio "call f3()" "mod1::inner::innest::f3"
     gdb_test_stdio "call self::f2()" "mod1::inner::innest::f2"
     gdb_test_stdio "call self::super::f2()" "mod1::inner::f2"

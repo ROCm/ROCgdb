@@ -1,4 +1,4 @@
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 # check that all fortran standard datatypes will be
 # handled correctly when using as VLA's
 
-if ![fortran_runto_main] {
+if {![fortran_runto_main]} {
     return -1
 }
 

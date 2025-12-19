@@ -1,6 +1,6 @@
 /* Target-dependent code for Renesas M32R, for GDB.
 
-   Copyright (C) 1996-2024 Free Software Foundation, Inc.
+   Copyright (C) 1996-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -53,26 +53,26 @@ m32r_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 
 
 /* Breakpoints
- 
+
    The little endian mode of M32R is unique.  In most of architectures,
    two 16-bit instructions, A and B, are placed as the following:
-  
+
    Big endian:
    A0 A1 B0 B1
-  
+
    Little endian:
    A1 A0 B1 B0
-  
+
    In M32R, they are placed like this:
-  
+
    Big endian:
    A0 A1 B0 B1
-  
+
    Little endian:
    B1 B0 A1 A0
-  
+
    This is because M32R always fetches instructions in 32-bit.
-  
+
    The following functions take care of this behavior.  */
 
 static int
@@ -463,7 +463,7 @@ m32r_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   if (find_pc_partial_function (pc, NULL, &func_addr, &func_end))
     {
-      sal = find_pc_line (func_addr, 0);
+      sal = find_sal_for_pc (func_addr, 0);
 
       if (sal.line != 0 && sal.end <= func_end)
 	{
@@ -524,13 +524,11 @@ m32r_frame_unwind_cache (const frame_info_ptr &this_frame,
   ULONGEST this_base;
   unsigned long op;
   int i;
-  struct m32r_unwind_cache *info;
-
 
   if ((*this_prologue_cache))
     return (struct m32r_unwind_cache *) (*this_prologue_cache);
 
-  info = FRAME_OBSTACK_ZALLOC (struct m32r_unwind_cache);
+  auto *info = frame_obstack_zalloc<m32r_unwind_cache> ();
   (*this_prologue_cache) = info;
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -746,7 +744,7 @@ m32r_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 }
 
 
-/* Given a return value in `regbuf' with a type `valtype', 
+/* Given a return value in `regbuf' with a type `valtype',
    extract and copy its value into `valbuf'.  */
 
 static void
@@ -831,15 +829,16 @@ m32r_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
-static const struct frame_unwind m32r_frame_unwind = {
+static const struct frame_unwind_legacy m32r_frame_unwind (
   "m32r prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   m32r_frame_this_id,
   m32r_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 m32r_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
@@ -907,9 +906,7 @@ m32r_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_m32r_tdep ();
-void
-_initialize_m32r_tdep ()
+INIT_GDB_FILE (m32r_tdep)
 {
   gdbarch_register (bfd_arch_m32r, m32r_gdbarch_init);
 }

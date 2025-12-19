@@ -1,5 +1,5 @@
 /* An iterator wrapper that yields pointers instead of references.
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -38,9 +38,8 @@ struct reference_to_pointer_iterator
 
   /* Construct a reference_to_pointer_iterator, passing args to the underlying
      iterator.  */
-  template <typename... Args>
-  reference_to_pointer_iterator (Args &&...args)
-    : m_it (std::forward<Args> (args)...)
+  explicit reference_to_pointer_iterator (IteratorType it)
+    : m_it (std::move (it))
   {}
 
   /* Create a past-the-end iterator.

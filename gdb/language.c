@@ -1,7 +1,6 @@
 /* Multiple source language support for GDB.
 
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -29,7 +28,6 @@
    return data out of a "language-specific" struct pointer that is set
    whenever the working language changes.  That would be a lot faster.  */
 
-#include <ctype.h>
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "value.h"
@@ -575,7 +573,7 @@ add_set_language_command ()
    any non-NULL struct language_defn.skip_trampoline() functions.
    Return the result from the first that returns non-zero, or 0 if all
    `fail'.  */
-CORE_ADDR 
+CORE_ADDR
 skip_language_trampoline (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   for (const auto &lang : language_defn::languages)
@@ -676,14 +674,6 @@ bool
 language_defn::is_string_type_p (struct type *type) const
 {
   return c_is_string_type_p (type);
-}
-
-/* See language.h.  */
-
-std::unique_ptr<compile_instance>
-language_defn::get_compile_instance () const
-{
-  return {};
 }
 
 /* The default implementation of the get_symbol_name_matcher_inner method
@@ -985,7 +975,7 @@ language_arch_info::type_and_symbol::alloc_type_symbol
   symbol->set_section_index (0);
   symbol->set_type (type);
   symbol->set_domain (TYPE_DOMAIN);
-  symbol->set_aclass_index (LOC_TYPEDEF);
+  symbol->set_loc_class_index (LOC_TYPEDEF);
   return symbol;
 }
 
@@ -1038,6 +1028,18 @@ language_arch_info::lookup_primitive_type_as_symbol (const char *name,
   type_and_symbol *tas = lookup_primitive_type_and_symbol (name);
   if (tas != nullptr)
     return tas->symbol (lang);
+  return nullptr;
+}
+
+/* See language.h.  */
+
+struct symbol *
+language_arch_info::lookup_builtin_symbol (const char *name)
+{
+  for (struct symbol *sym : m_builtin_symbols)
+    if (strcmp (sym->natural_name (), name) == 0)
+      return sym;
+
   return nullptr;
 }
 
@@ -1102,11 +1104,36 @@ language_lookup_primitive_type_as_symbol (const struct language_defn *la,
   return sym;
 }
 
+/* See language.h.  */
+
+struct symbol *
+language_lookup_builtin_symbol (const struct language_defn *la,
+				struct gdbarch *gdbarch,
+				const char *name)
+{
+  struct language_gdbarch *ld = get_language_gdbarch (gdbarch);
+  struct language_arch_info &lai = ld->arch_info[la->la_language];
+
+  symbol_lookup_debug_printf ("language = \"%s\", gdbarch @ %s, name = "
+			      "\"%s\"",
+			      la->name (), host_address_to_string (gdbarch),
+			      name);
+
+  struct symbol *sym = lai.lookup_builtin_symbol (name);
+
+  symbol_lookup_debug_printf ("found symbol @ %s",
+			      host_address_to_string (sym));
+
+  /* Note: The result of symbol lookup is normally a symbol *and* the block
+     it was found in.  Built-in symbols don't live in blocks.  The symbol
+     lookup was already altered in the past to handle block-less cases.  */
+
+  return sym;
+}
+
 /* Initialize the language routines.  */
 
-void _initialize_language ();
-void
-_initialize_language ()
+INIT_GDB_FILE (language)
 {
   static const char *const type_or_range_names[]
     = { "on", "off", "warn", "auto", NULL };

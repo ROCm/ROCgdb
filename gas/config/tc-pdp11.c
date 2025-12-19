@@ -1,5 +1,5 @@
 /* tc-pdp11.c - pdp11-specific -
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -239,12 +239,12 @@ md_number_to_chars (char con[], valueT value, int nbytes)
 
 void
 md_apply_fix (fixS *fixP,
-	       valueT * valP,
-	       segT seg ATTRIBUTE_UNUSED)
+	      valueT *valP,
+	      segT seg ATTRIBUTE_UNUSED)
 {
   valueT code;
   valueT mask;
-  valueT val = * valP;
+  valueT val = *valP;
   char *buf;
   int shift;
   int size;
@@ -320,7 +320,7 @@ md_chars_to_number (unsigned char *con, int nbytes)
 static char *
 skip_whitespace (char *str)
 {
-  while (*str == ' ' || *str == '\t')
+  while (is_whitespace (*str))
     str++;
   return str;
 }
@@ -328,7 +328,7 @@ skip_whitespace (char *str)
 static char *
 find_whitespace (char *str)
 {
-  while (*str != ' ' && *str != '\t' && *str != 0)
+  while (!is_whitespace (*str) && *str != 0)
     str++;
   return str;
 }
@@ -710,7 +710,7 @@ md_assemble (char *instruction_string)
 
   c = *p;
   *p = '\0';
-  op = (struct pdp11_opcode *)str_hash_find (insn_hash, str);
+  op = str_hash_find (insn_hash, str);
   *p = c;
   if (op == 0)
     {
@@ -1430,9 +1430,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED,
   arelent *reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 

@@ -1,4 +1,4 @@
-# Copyright 2010-2024 Free Software Foundation, Inc.
+# Copyright 2010-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ set opts {}
 
 lappend opts nopie
 
-if [info exists COMPILE] {
+if {[info exists COMPILE]} {
     # make check RUNTESTFLAGS='gdb.dwarf2/implptr.exp COMPILE=1 CC_FOR_TARGET=gcc\ -m32'
     set srcfile ${csrcfile}
     lappend opts debug optimize=-O2
@@ -41,7 +41,7 @@ if {[prepare_for_testing "failed to prepare" ${testfile} $srcfile $opts]} {
 # Additional test to verify the referenced CU is not aged out.
 gdb_test_no_output "maintenance set dwarf max-cache-age 0"
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -63,7 +63,7 @@ proc implptr_test_bar {} {
 proc implptr_test_baz {} {
     global csrcfile
     set line [gdb_get_line_number "baz breakpoint" $csrcfile]
-    gdb_test "break implptr.c:$line" "Breakpoint 3.*" \
+    gdb_test "break add" "Breakpoint 3.*" \
 	"set baz breakpoint for implptr"
     gdb_continue_to_breakpoint "continue to baz breakpoint for implptr"
 

@@ -1,6 +1,6 @@
 /* This test program is part of GDB, The GNU debugger.
 
-   Copyright 2004-2024 Free Software Foundation, Inc.
+   Copyright 2004-2025 Free Software Foundation, Inc.
 
    Originally written by Jeff Johnston <jjohnstn@redhat.com>,
    contributed by Red Hat
@@ -50,7 +50,7 @@ thread_function (void *arg)
   return NULL;
 }
 
-int 
+int
 main (int argc, char **argv)
 {
   pthread_attr_t attr;

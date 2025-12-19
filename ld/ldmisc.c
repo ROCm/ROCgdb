@@ -1,5 +1,5 @@
 /* ldmisc.c
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
    Written by Steve Chamberlain of Cygnus Support.
 
    This file is part of the GNU Binutils.
@@ -37,12 +37,32 @@
 #include "ldmain.h"
 #include "ldfile.h"
 
+static size_t
+count_modifiers (const char *scan)
+{
+  size_t mods = strspn (scan, "-+ #0");
+
+  while (scan[mods] != '0' && ISDIGIT (scan[mods]))
+    ++mods;
+  if (scan[mods] == '.')
+    ++mods;
+  while (scan[mods] != '0' && ISDIGIT (scan[mods]))
+    ++mods;
+
+  return mods;
+}
+
+static char *
+make_cfmt (const char *fmt, int nr)
+{
+  return xasprintf ("%%%.*s", nr, fmt);
+}
+
 /*
  %% literal %
  %C clever filename:linenumber with function
  %D like %C, but no function name
  %E current bfd error or errno
- %F error is fatal
  %G like %D, but only function name
  %H like %C but in addition emit section+offset
  %P print program name
@@ -70,7 +90,6 @@
 void
 vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 {
-  bool fatal = false;
   const char *scan;
   int arg_type;
   unsigned int arg_count = 0;
@@ -120,6 +139,9 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	      arg_no = *scan - '1';
 	      scan += 2;
 	    }
+
+	  /* Skip most modifiers that printf() permits.  */
+	  scan += count_modifiers (scan);
 
 	  arg_type = Bad;
 	  switch (*scan++)
@@ -219,6 +241,8 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 
       if (*fmt == '%')
 	{
+	  size_t mods;
+
 	  fmt++;
 
 	  arg_no = arg_count;
@@ -228,8 +252,14 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	      fmt += 2;
 	    }
 
+	  /* Record modifiers that printf() permits and that we support.  */
+	  mods = count_modifiers (fmt);
+	  fmt += mods;
+
 	  switch (*fmt++)
 	    {
+	      char *cfmt;
+
 	    case '\0':
 	      --fmt;
 	      /* Fall through.  */
@@ -280,11 +310,6 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	      }
 	      break;
 
-	    case 'F':
-	      /* Error is fatal.  */
-	      fatal = true;
-	      break;
-
 	    case 'P':
 	      /* Print program name.  */
 	      fprintf (fp, "%s", program_name);
@@ -324,7 +349,7 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 		if (abfd != NULL)
 		  {
 		    if (!bfd_generic_link_read_symbols (abfd))
-		      einfo (_("%F%P: %pB: could not read symbols: %E\n"), abfd);
+		      fatal (_("%P: %pB: could not read symbols: %E\n"), abfd);
 
 		    asymbols = bfd_get_outsymbols (abfd);
 		  }
@@ -521,56 +546,32 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 		    }
 		  fprintf (fp, "%s", name);
 		}
-	      else
+	      else /* Native (host) void* pointer, like printf().  */
 		{
-		  /* native (host) void* pointer, like printf */
-		  fprintf (fp, "%p", args[arg_no].p);
+		  /* Fallthru */
+	    case 's': /* Arbitrary string, like printf().  */
+		  cfmt = make_cfmt (fmt - 1 - mods, mods + 1);
+		  fprintf (fp, cfmt, args[arg_no].p);
+		  free (cfmt);
 		  ++arg_count;
 		}
 	      break;
 
-	    case 's':
-	      /* arbitrary string, like printf */
-	      fprintf (fp, "%s", (char *) args[arg_no].p);
+	    case 'd': /* Integer, like printf().  */
+	    case 'u': /* Unsigned integer, like printf().  */
+	    case 'x': /* Unsigned integer, like printf().  */
+	      cfmt = make_cfmt (fmt - 1 - mods, mods + 1);
+	      fprintf (fp, cfmt, args[arg_no].i);
+	      free (cfmt);
 	      ++arg_count;
 	      break;
 
-	    case 'd':
-	      /* integer, like printf */
-	      fprintf (fp, "%d", args[arg_no].i);
-	      ++arg_count;
-	      break;
-
-	    case 'u':
-	      /* unsigned integer, like printf */
-	      fprintf (fp, "%u", args[arg_no].i);
-	      ++arg_count;
-	      break;
-
-	    case 'x':
-	      /* unsigned integer, like printf */
-	      fprintf (fp, "%x", args[arg_no].i);
-	      ++arg_count;
-	      break;
-
-	    case 'l':
-	      if (*fmt == 'd')
+	    case 'l': /* (Unsigned) long integer, like printf().  */
+	      if (*fmt == 'd' || *fmt == 'u' || *fmt == 'x')
 		{
-		  fprintf (fp, "%ld", args[arg_no].l);
-		  ++arg_count;
-		  ++fmt;
-		  break;
-		}
-	      else if (*fmt == 'u')
-		{
-		  fprintf (fp, "%lu", args[arg_no].l);
-		  ++arg_count;
-		  ++fmt;
-		  break;
-		}
-	      else if (*fmt == 'x')
-		{
-		  fprintf (fp, "%lx", args[arg_no].l);
+		  cfmt = make_cfmt (fmt - 1 - mods, mods + 2);
+		  fprintf (fp, cfmt, args[arg_no].l);
+		  free (cfmt);
 		  ++arg_count;
 		  ++fmt;
 		  break;
@@ -586,9 +587,6 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 
   if (is_warning && config.fatal_warnings)
     config.make_executable = false;
-
-  if (fatal)
-    xexit (1);
 }
 
 /* Format info message and print on stdout.  */
@@ -618,6 +616,21 @@ einfo (const char *fmt, ...)
   vfinfo (stderr, fmt, arg, true);
   va_end (arg);
   fflush (stderr);
+}
+
+/* Fatal error.  */
+
+void
+fatal (const char *fmt, ...)
+{
+  va_list arg;
+
+  fflush (stdout);
+  va_start (arg, fmt);
+  vfinfo (stderr, fmt, arg, true);
+  va_end (arg);
+  fflush (stderr);
+  xexit (1);
 }
 
 /* The buffer size for each command-line option warning.  */
@@ -698,7 +711,7 @@ output_unknown_cmdline_warnings (void)
 void
 info_assert (const char *file, unsigned int line)
 {
-  einfo (_("%F%P: internal error %s %d\n"), file, line);
+  fatal (_("%P: internal error %s %d\n"), file, line);
 }
 
 /* ('m' for map) Format info message and print on map.  */
@@ -767,8 +780,7 @@ ld_abort (const char *file, int line, const char *fn)
   else
     einfo (_("%P: internal error: aborting at %s:%d\n"),
 	   file, line);
-  einfo (_("%F%P: please report this bug\n"));
-  xexit (1);
+  fatal (_("%P: please report this bug\n"));
 }
 
 /* Decode a hexadecimal character. Return -1 on error. */

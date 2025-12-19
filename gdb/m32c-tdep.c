@@ -1,6 +1,6 @@
 /* Renesas M32C target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1438,8 +1438,8 @@ m32c_is_arg_reg (struct m32c_pv_state *state, pv_t value)
      relative to the original value of the SP).  */
 
 static int
-m32c_is_arg_spill (struct m32c_pv_state *st, 
-		   struct srcdest loc, 
+m32c_is_arg_spill (struct m32c_pv_state *st,
+		   struct srcdest loc,
 		   pv_t value)
 {
   gdbarch *arch = st->arch;
@@ -1451,10 +1451,10 @@ m32c_is_arg_spill (struct m32c_pv_state *st,
 	  && ! st->stack->find_reg (st->arch, value.reg, 0));
 }
 
-/* Return non-zero if a store of VALUE to LOC is probably 
+/* Return non-zero if a store of VALUE to LOC is probably
    copying the struct return address into an address register
    for immediate use.  This is basically a "spill" into the
-   address register, instead of onto the stack. 
+   address register, instead of onto the stack.
 
    The prerequisites are:
    - value being stored is original value of the FIRST arg register;
@@ -1463,7 +1463,7 @@ m32c_is_arg_spill (struct m32c_pv_state *st,
 
 static int
 m32c_is_struct_return (struct m32c_pv_state *st,
-		       struct srcdest loc, 
+		       struct srcdest loc,
 		       pv_t value)
 {
   gdbarch *arch = st->arch;
@@ -1867,7 +1867,7 @@ m32c_analyze_frame_prologue (const frame_info_ptr &this_frame,
       if (! func_start)
 	stop_addr = func_start;
 
-      *this_prologue_cache = FRAME_OBSTACK_ZALLOC (struct m32c_prologue);
+      *this_prologue_cache = frame_obstack_zalloc<m32c_prologue> ();
       m32c_analyze_prologue (get_frame_arch (this_frame),
 			     func_start, stop_addr,
 			     (struct m32c_prologue *) *this_prologue_cache);
@@ -1955,15 +1955,16 @@ m32c_prev_register (const frame_info_ptr &this_frame,
 }
 
 
-static const struct frame_unwind m32c_unwind = {
+static const struct frame_unwind_legacy m32c_unwind (
   "m32c prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   m32c_this_id,
   m32c_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 
 /* Inferior calls.  */
@@ -2452,11 +2453,11 @@ m32c_m16c_address_to_pointer (struct gdbarch *gdbarch,
 	     below, this value might be useful if converted back into
 	     an address by GDB, but will otherwise, almost certainly,
 	     be garbage.
-	     
+
 	     Using this masked result does seem to be useful
 	     in gdb.cp/cplusfuncs.exp in which ~40 FAILs turn into
 	     PASSes.  These results appear to be correct as well.
-	     
+
 	     We print a warning here so that the user can make a
 	     determination about whether the result is useful or not.  */
 	  ptrval = addr & 0xffff;
@@ -2536,7 +2537,7 @@ m32c_m16c_pointer_to_address (struct gdbarch *gdbarch,
 	  for (aspace = 1; aspace <= 15; aspace++)
 	    {
 	      ptr_msym = lookup_minimal_symbol_by_pc ((aspace << 16) | ptr);
-	      
+
 	      if (ptr_msym.minsym)
 		ptr |= aspace << 16;
 	    }
@@ -2557,7 +2558,7 @@ m32c_virtual_frame_pointer (struct gdbarch *gdbarch, CORE_ADDR pc,
 
   regcache *regcache = get_thread_regcache (inferior_thread ());
   m32c_gdbarch_tdep *tdep = gdbarch_tdep<m32c_gdbarch_tdep> (gdbarch);
-  
+
   if (!find_pc_partial_function (pc, &name, &func_addr, &func_end))
     internal_error (_("No virtual frame pointer available"));
 
@@ -2623,7 +2624,7 @@ m32c_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 #if 0
   /* I'm dropping the dwarf2 sniffer because it has a few problems.
      They may be in the dwarf2 cfi code in GDB, or they may be in
-     the debug info emitted by the upstream toolchain.  I don't 
+     the debug info emitted by the upstream toolchain.  I don't
      know which, but I do know that the prologue analyzer works better.
      MVS 04/13/06  */
   dwarf2_append_sniffers (gdbarch);
@@ -2652,9 +2653,7 @@ m32c_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_m32c_tdep ();
-void
-_initialize_m32c_tdep ()
+INIT_GDB_FILE (m32c_tdep)
 {
   gdbarch_register (bfd_arch_m32c, m32c_gdbarch_init);
 

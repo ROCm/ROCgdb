@@ -1,5 +1,5 @@
-/* Copyright (C) 1992-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -61,7 +61,8 @@ enum task_states
   Asynchronous_Hold,
   Interrupt_Server_Blocked_On_Event_Flag,
   Activating,
-  Acceptor_Delay_Sleep
+  Acceptor_Delay_Sleep,
+  Suspension_Object_Sleep,
 };
 
 /* A short description corresponding to each possible task state.  */
@@ -83,7 +84,8 @@ static const char * const task_states[] = {
   N_("Asynchronous Hold"),
   "",
   N_("Activating"),
-  N_("Selective Wait")
+  N_("Selective Wait"),
+  N_("Suspension object sleep")
 };
 
 /* Return a string representing the task state.  */
@@ -349,7 +351,7 @@ ada_get_task_number (thread_info *thread)
 
 /* Return the task number of the task running in inferior INF which
    matches TASK_ID , or zero if the task could not be found.  */
- 
+
 static int
 get_task_number_from_id (CORE_ADDR task_id, struct inferior *inf)
 {
@@ -1325,7 +1327,7 @@ info_task (struct ui_out *uiout, const char *taskno_str, struct inferior *inf)
 /* If ARG is empty or null, then print a list of all Ada tasks.
    Otherwise, print detailed information about the task whose ID
    is ARG.
-   
+
    Does nothing if the program doesn't use Ada tasking.  */
 
 static void
@@ -1378,7 +1380,7 @@ task_command_1 (const char *taskno_str, int from_tty, struct inferior *inf)
   if (!ada_task_is_alive (task_info))
     error (_("Cannot switch to task %s: Task is no longer running"),
 	   task_to_str (taskno, task_info).c_str ());
-   
+
   /* On some platforms, the thread list is not updated until the user
      performs a thread-related operation (by using the "info threads"
      command, for instance).  So this thread list may not be up to date
@@ -1651,9 +1653,7 @@ task_apply_command (const char *tidlist, int from_tty)
 			      from_tty, flags);
 }
 
-void _initialize_tasks ();
-void
-_initialize_tasks ()
+INIT_GDB_FILE (tasks)
 {
   /* Attach various observers.  */
   gdb::observers::normal_stop.attach (ada_tasks_normal_stop_observer,

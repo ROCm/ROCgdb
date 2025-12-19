@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -183,7 +183,7 @@ static __attribute__ ((always_inline)) inline void *
 __collector_getpc ()
 {
   void *r;
-#if defined(__x86_64)
+#if defined(__x86_64__)
   __asm__ __volatile__("lea (%%rip), %0" : "=r" (r));
 #else
   __asm__ __volatile__("call  1f \n"

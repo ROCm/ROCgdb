@@ -1,6 +1,6 @@
 /* Unwinder test program.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -166,4 +166,3 @@ asm(".text\n"
     "    popl  %ebp\n"
     "    leal  -4(%eax), %esp\n"
     "    ret\n");
-

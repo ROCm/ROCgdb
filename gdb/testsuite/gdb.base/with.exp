@@ -1,7 +1,7 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2019-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright 2019-2025 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
     return -1
 }
 
-clean_restart $binfile
+clean_restart $testfile
 
 # Test "maint with".  VALUES is a list of values.  A nested "with" is
 # performed with each combination of pair of values from this list.
@@ -179,15 +179,18 @@ with_test_prefix "user-defined" {
 
 # Check repeating.
 with_test_prefix "repeat" {
-    clean_restart $binfile
+    clean_restart $testfile
 
     # "with" with no command reinvokes the previous command.
+
+    # Test after a "no repeat" command (which "delete" is).
+    gdb_test "delete 9999" "No breakpoint number 9999\\."
     gdb_test "with language ada" \
 	"No previous command to relaunch" \
 	"reinvoke with no previous command to relaunch"
 
+    # Test after a repeatable command.
     gdb_test "print g_s" " = {a = 1, b = 2, c = 3}"
-
     gdb_test "with language ada" \
 	" = \\(a => 1, b => 2, c => 3\\)" \
 	"reinvoke with language"
@@ -210,9 +213,9 @@ with_test_prefix "repeat" {
 
 # Basic run control.
 with_test_prefix "run control" {
-    clean_restart $binfile
+    clean_restart $testfile
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return
     }
 
@@ -221,13 +224,17 @@ with_test_prefix "run control" {
 	"return 0;.*=>.*"
 }
 
-# Some parameters are not global, but per-inferior.  Make sure we save and
-# restore the correct value, based on the current inferior.
+# Some parameters are not global, but per-inferior.  Make sure we save
+# and restore the correct value, based on the current inferior.  If a
+# per-inferior parameter does not provide a getter for the value
+# (depending on the current inferior), the `with` environment will not
+# save (and later restore) the proper value if the last modified
+# inferior is not the current one.
 with_test_prefix "per-inferior parameters" {
     clean_restart
 
     # Add a second inferior.
-    gdb_test "add-inferior" "Added inferior 2"
+    gdb_test "add-inferior" "Added inferior 2.*"
 
     # Set some parameters on each inferior.
     foreach_with_prefix inf {1 2} {

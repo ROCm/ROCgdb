@@ -1,4 +1,4 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,20 +16,20 @@
 # Test that we can follow forks properly when the executable is
 # position-independent.
 
+require allow_fork_tests
+
 standard_testfile
 
 set opts [list debug pie]
 
-if [build_executable "failed to prepare" $testfile $srcfile $opts] {
+if {[build_executable "failed to prepare" $testfile $srcfile $opts]} {
     return
 }
 
 proc setup_test {detach_on_fork {follow_fork_mode "parent"}} {
-    global binfile
+    clean_restart $::testfile
 
-    clean_restart ${binfile}
-
-    if ![runto_main] {
+    if {![runto_main]} {
 	return
     }
 

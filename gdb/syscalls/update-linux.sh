@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2022-2024 Free Software Foundation, Inc.
+# Copyright (C) 2022-2025 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -39,6 +39,9 @@ startyear=2009
 case "$f" in
     *aarch64-linux.xml.in)
 	startyear=2015
+	;;
+    *riscv-linux.xml.in)
+	startyear=2025
 	;;
 esac
 

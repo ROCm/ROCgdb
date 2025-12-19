@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@ proc delete_memory_regions {} {
 
     gdb_test_multiple "delete mem" "delete mem" {
        -re "Delete all memory regions.*y or n.*$" {
-           send_gdb "y\n"
-           exp_continue
+	   send_gdb "y\n"
+	   exp_continue
        }
        -re "$gdb_prompt $" { }
     }

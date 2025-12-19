@@ -1,4 +1,4 @@
-/* Copyright 2007-2024 Free Software Foundation, Inc.
+/* Copyright 2007-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@
    It was generated using
    "gcc -g -O9 -S -o gate.s gate.c -fasynchronous-unwind-tables",
    using the following source file:
-  
-  
-  	void *gate (void *(*gate) (void *data), void *data)
-  	{
-  	  return 1 + (*gate) (data);
-  	}
-  
+
+
+	void *gate (void *(*gate) (void *data), void *data)
+	{
+	  return 1 + (*gate) (data);
+	}
+
    Changes are marked as `CHANGE' below.  */
 
 	.file	"gate.c"

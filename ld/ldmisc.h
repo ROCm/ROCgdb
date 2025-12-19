@@ -1,5 +1,5 @@
 /* ldmisc.h -
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -23,6 +23,7 @@
 
 extern void vfinfo (FILE *fp, const char *fmt, va_list arg, bool is_warning);
 extern void einfo (const char *, ...);
+extern void fatal (const char *, ...) ATTRIBUTE_NORETURN;
 extern void minfo (const char *, ...);
 extern void info_msg (const char *, ...);
 extern void lfinfo (FILE *, const char *, ...);

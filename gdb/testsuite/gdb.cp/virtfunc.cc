@@ -1,6 +1,6 @@
 /* This test script is part of GDB, the GNU debugger.
 
-   Copyright 1993-2024 Free Software Foundation, Inc.
+   Copyright 1993-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 // E : B (V) D C
 //
 
-class VA 
+class VA
 {
 public:
     int va;
@@ -175,10 +175,10 @@ void test_calls()
 	TEST(pBe->vvb(), 411);
 	TEST(pDe->vvb(), 411);
 
-        TEST(pEe->vd(), 282);
-        TEST(pEe->fvb(), 311);
-    
-        TEST(pEe->D::vg(), 102);
+	TEST(pEe->vd(), 282);
+	TEST(pEe->fvb(), 311);
+
+	TEST(pEe->D::vg(), 102);
 	printf("Did %d tests, of which %d failed.\n", all_count, failed_count);
 }
 
@@ -191,7 +191,7 @@ int main()
 
     test_calls();
     return 0;
-    
+
 }
 
 int A::f() {return 1;}

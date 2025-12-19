@@ -1,5 +1,9 @@
 # Copyright 2024 Free Software Foundation, Inc.
+<<<<<<< HEAD
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+=======
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 # This file is part of GDB.
 
@@ -76,8 +80,14 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
 # Confine non-stop mode only to this test.
 save_vars { ::GDBFLAGS } {
     append ::GDBFLAGS " -ex \"set non-stop on\""
+<<<<<<< HEAD
     clean_restart $::binfile
 }
+=======
+    clean_restart
+}
+gdb_load $::binfile
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 # Based on the output of "info threads", return the number of running threads.
 # (Inspired by gdb.threads/linux-dp.exp)

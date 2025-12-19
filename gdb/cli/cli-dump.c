@@ -1,6 +1,6 @@
 /* Dump-to-file commands, for GDB, the GNU debugger.
 
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    Contributed by Red Hat.
 
@@ -23,9 +23,7 @@
 #include "cli/cli-cmds.h"
 #include "value.h"
 #include "completer.h"
-#include <ctype.h>
 #include "target.h"
-#include "readline/tilde.h"
 #include "gdbcore.h"
 #include "cli/cli-utils.h"
 #include "gdb_bfd.h"
@@ -78,7 +76,7 @@ scan_filename (const char **cmd, const char *defname)
     }
   gdb_assert (filename != NULL);
 
-  return gdb::unique_xmalloc_ptr<char> (tilde_expand (filename.get ()));
+  return gdb_rl_tilde_expand (filename.get ());
 }
 
 static gdb_bfd_ref_ptr
@@ -129,7 +127,7 @@ static struct cmd_list_element *binary_dump_cmdlist;
 static struct cmd_list_element *binary_append_cmdlist;
 
 static void
-dump_binary_file (const char *filename, const char *mode, 
+dump_binary_file (const char *filename, const char *mode,
 		  const bfd_byte *buf, ULONGEST len)
 {
   int status;
@@ -144,8 +142,8 @@ dump_binary_file (const char *filename, const char *mode,
 }
 
 static void
-dump_bfd_file (const char *filename, const char *mode, 
-	       const char *target, CORE_ADDR vaddr, 
+dump_bfd_file (const char *filename, const char *mode,
+	       const char *target, CORE_ADDR vaddr,
 	       const bfd_byte *buf, ULONGEST len)
 {
   asection *osection;
@@ -193,7 +191,7 @@ dump_memory_to_file (const char *cmd, const char *mode, const char *file_format)
      value.  */
   gdb::byte_vector buf (count);
   read_memory (lo, buf.data (), count);
-  
+
   /* Have everything.  Open/write the data.  */
   if (file_format == NULL || strcmp (file_format, "binary") == 0)
     dump_binary_file (filename.get (), mode, buf.data (), count);
@@ -241,7 +239,7 @@ dump_value_to_file (const char *cmd, const char *mode, const char *file_format)
 	}
 
       dump_bfd_file (filename.get (), mode, file_format, vaddr,
-		     val->contents ().data (), 
+		     val->contents ().data (),
 		     val->type ()->length ());
     }
 }
@@ -347,7 +345,7 @@ add_dump_command (const char *name,
   struct cmd_list_element *c;
   struct dump_context *d;
 
-  c = add_cmd (name, all_commands, descr, &dump_cmdlist);
+  c = add_cmd (name, no_class, descr, &dump_cmdlist);
   set_cmd_completer (c, deprecated_filename_completer);
   d = XNEW (struct dump_context);
   d->func = func;
@@ -355,7 +353,7 @@ add_dump_command (const char *name,
   c->set_context (d);
   c->func = call_dump_func;
 
-  c = add_cmd (name, all_commands, descr, &append_cmdlist);
+  c = add_cmd (name, no_class, descr, &append_cmdlist);
   set_cmd_completer (c, deprecated_filename_completer);
   d = XNEW (struct dump_context);
   d->func = func;
@@ -365,10 +363,10 @@ add_dump_command (const char *name,
 
   /* Replace "Dump " at start of docstring with "Append " (borrowed
      from [deleted] deprecated_add_show_from_set).  */
-  if (   c->doc[0] == 'W' 
-      && c->doc[1] == 'r' 
+  if (   c->doc[0] == 'W'
+      && c->doc[1] == 'r'
       && c->doc[2] == 'i'
-      && c->doc[3] == 't' 
+      && c->doc[3] == 't'
       && c->doc[4] == 'e'
       && c->doc[5] == ' ')
     c->doc = concat ("Append ", c->doc + 6, (char *)NULL);
@@ -397,8 +395,8 @@ restore_one_section (bfd *ibfd, asection *isec,
   if (sec_end <= load_start
       || (load_end > 0 && sec_start >= load_end))
     {
-      /* No, no useable data in this section.  */
-      gdb_printf (_("skipping section %s...\n"), 
+      /* No, no usable data in this section.  */
+      gdb_printf (_("skipping section %s...\n"),
 		  bfd_section_name (isec));
       return;
     }
@@ -416,12 +414,12 @@ restore_one_section (bfd *ibfd, asection *isec,
   /* Get the data.  */
   gdb::byte_vector buf (size);
   if (!bfd_get_section_contents (ibfd, isec, buf.data (), 0, size))
-    error (_("Failed to read bfd file %s: '%s'."), bfd_get_filename (ibfd), 
+    error (_("Failed to read bfd file %s: '%s'."), bfd_get_filename (ibfd),
 	   bfd_errmsg (bfd_get_error ()));
 
   gdb_printf ("Restoring section %s (0x%lx to 0x%lx)",
-	      bfd_section_name (isec), 
-	      (unsigned long) sec_start, 
+	      bfd_section_name (isec),
+	      (unsigned long) sec_start,
 	      (unsigned long) sec_end);
 
   if (load_offset != 0 || load_start != 0 || load_end != 0)
@@ -464,7 +462,7 @@ restore_binary_file (const char *filename, CORE_ADDR load_offset,
     perror_with_name (filename);
 
   if (len <= load_start)
-    error (_("Start address is greater than length of binary file %s."), 
+    error (_("Start address is greater than length of binary file %s."),
 	   filename);
 
   /* Chop off "len" if it exceeds the requested load_end addr.  */
@@ -474,9 +472,9 @@ restore_binary_file (const char *filename, CORE_ADDR load_offset,
   if (load_start > 0)
     len -= load_start;
 
-  gdb_printf 
-    ("Restoring binary file %s into memory (0x%lx to 0x%lx)\n", 
-     filename, 
+  gdb_printf
+    ("Restoring binary file %s into memory (0x%lx to 0x%lx)\n",
+     filename,
      (unsigned long) (load_start + load_offset),
      (unsigned long) (load_start + load_offset + len));
 
@@ -564,9 +562,7 @@ restore_command (const char *args, int from_tty)
     }
 }
 
-void _initialize_cli_dump ();
-void
-_initialize_cli_dump ()
+INIT_GDB_FILE (cli_dump)
 {
   struct cmd_list_element *c;
 
@@ -581,119 +577,119 @@ _initialize_cli_dump ()
 			0/*allow-unknown*/,
 			&cmdlist);
 
-  add_dump_command ("memory", dump_memory_command, "\
+  add_dump_command ("memory", dump_memory_command, _("\
 Write contents of memory to a raw binary file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory within the\n\
-range [START .. STOP) to the specified FILE in raw target ordered bytes.");
+range [START .. STOP) to the specified FILE in raw target ordered bytes."));
 
-  add_dump_command ("value", dump_value_command, "\
+  add_dump_command ("value", dump_value_command, _("\
 Write the value of an expression to a raw binary file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION to\n\
-the specified FILE in raw target ordered bytes.");
+the specified FILE in raw target ordered bytes."));
 
-  add_basic_prefix_cmd ("srec", all_commands,
+  add_basic_prefix_cmd ("srec", no_class,
 			_("Write target code/data to an srec file."),
 			&srec_cmdlist,
-			0 /*allow-unknown*/, 
+			0 /*allow-unknown*/,
 			&dump_cmdlist);
 
-  add_basic_prefix_cmd ("ihex", all_commands,
+  add_basic_prefix_cmd ("ihex", no_class,
 			_("Write target code/data to an intel hex file."),
 			&ihex_cmdlist,
-			0 /*allow-unknown*/, 
+			0 /*allow-unknown*/,
 			&dump_cmdlist);
 
-  add_basic_prefix_cmd ("verilog", all_commands,
+  add_basic_prefix_cmd ("verilog", no_class,
 			_("Write target code/data to a verilog hex file."),
 			&verilog_cmdlist,
 			0 /*allow-unknown*/,
 			&dump_cmdlist);
 
-  add_basic_prefix_cmd ("tekhex", all_commands,
+  add_basic_prefix_cmd ("tekhex", no_class,
 			_("Write target code/data to a tekhex file."),
 			&tekhex_cmdlist,
-			0 /*allow-unknown*/, 
+			0 /*allow-unknown*/,
 			&dump_cmdlist);
 
-  add_basic_prefix_cmd ("binary", all_commands,
+  add_basic_prefix_cmd ("binary", no_class,
 			_("Write target code/data to a raw binary file."),
 			&binary_dump_cmdlist,
-			0 /*allow-unknown*/, 
+			0 /*allow-unknown*/,
 			&dump_cmdlist);
 
-  add_basic_prefix_cmd ("binary", all_commands,
+  add_basic_prefix_cmd ("binary", no_class,
 			_("Append target code/data to a raw binary file."),
 			&binary_append_cmdlist,
-			0 /*allow-unknown*/, 
+			0 /*allow-unknown*/,
 			&append_cmdlist);
 
-  add_cmd ("memory", all_commands, dump_srec_memory, _("\
+  add_cmd ("memory", no_class, dump_srec_memory, _("\
 Write contents of memory to an srec file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory\n\
 within the range [START .. STOP) to the specified FILE in srec format."),
 	   &srec_cmdlist);
 
-  add_cmd ("value", all_commands, dump_srec_value, _("\
+  add_cmd ("value", no_class, dump_srec_value, _("\
 Write the value of an expression to an srec file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in srec format."),
 	   &srec_cmdlist);
 
-  add_cmd ("memory", all_commands, dump_ihex_memory, _("\
+  add_cmd ("memory", no_class, dump_ihex_memory, _("\
 Write contents of memory to an ihex file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory within\n\
 the range [START .. STOP) to the specified FILE in intel hex format."),
 	   &ihex_cmdlist);
 
-  add_cmd ("value", all_commands, dump_ihex_value, _("\
+  add_cmd ("value", no_class, dump_ihex_value, _("\
 Write the value of an expression to an ihex file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in intel hex format."),
 	   &ihex_cmdlist);
 
-  add_cmd ("memory", all_commands, dump_verilog_memory, _("\
+  add_cmd ("memory", no_class, dump_verilog_memory, _("\
 Write contents of memory to a verilog hex file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory within\n\
 the range [START .. STOP) to the specified FILE in verilog hex format."),
 	   &verilog_cmdlist);
 
-  add_cmd ("value", all_commands, dump_verilog_value, _("\
+  add_cmd ("value", no_class, dump_verilog_value, _("\
 Write the value of an expression to a verilog hex file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in verilog hex format."),
 	   &verilog_cmdlist);
 
-  add_cmd ("memory", all_commands, dump_tekhex_memory, _("\
+  add_cmd ("memory", no_class, dump_tekhex_memory, _("\
 Write contents of memory to a tekhex file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory\n\
 within the range [START .. STOP) to the specified FILE in tekhex format."),
 	   &tekhex_cmdlist);
 
-  add_cmd ("value", all_commands, dump_tekhex_value, _("\
+  add_cmd ("value", no_class, dump_tekhex_value, _("\
 Write the value of an expression to a tekhex file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in tekhex format."),
 	   &tekhex_cmdlist);
 
-  add_cmd ("memory", all_commands, dump_binary_memory, _("\
+  add_cmd ("memory", no_class, dump_binary_memory, _("\
 Write contents of memory to a raw binary file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory\n\
 within the range [START .. STOP) to the specified FILE in binary format."),
 	   &binary_dump_cmdlist);
 
-  add_cmd ("value", all_commands, dump_binary_value, _("\
+  add_cmd ("value", no_class, dump_binary_value, _("\
 Write the value of an expression to a raw binary file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in raw target ordered bytes."),
 	   &binary_dump_cmdlist);
 
-  add_cmd ("memory", all_commands, append_binary_memory, _("\
+  add_cmd ("memory", no_class, append_binary_memory, _("\
 Append contents of memory to a raw binary file.\n\
 Arguments are FILE START STOP.  Writes the contents of memory within the\n\
 range [START .. STOP) to the specified FILE in raw target ordered bytes."),
 	   &binary_append_cmdlist);
 
-  add_cmd ("value", all_commands, append_binary_value, _("\
+  add_cmd ("value", no_class, append_binary_value, _("\
 Append the value of an expression to a raw binary file.\n\
 Arguments are FILE EXPRESSION.  Writes the value of EXPRESSION\n\
 to the specified FILE in raw target ordered bytes."),

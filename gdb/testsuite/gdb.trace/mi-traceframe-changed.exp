@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,11 +45,10 @@ remote_file target delete $tfile_basic
 
 proc test_tfind_tfile { } {
     with_test_prefix "tfile" {
-	global binfile
 	global decimal
 	global tfile_basic
 
-	mi_clean_restart $binfile
+	mi_clean_restart $::testfile
 
 	mi_gdb_test "-target-select tfile ${tfile_basic}" \
 	    ".*=breakpoint-created,bkpt=\{number=\"${decimal}\",type=\"tracepoint\",disp=\"keep\",enabled=\"y\",.*,func=\"write_basic_trace_file\".*\\^connected" \
@@ -79,7 +78,7 @@ proc test_tfind_tfile { } {
 
 # If tracefile is generated successfully, copy tracefile to host and
 # run tests.
-if [generate_tracefile $binfile] {
+if {[generate_tracefile $binfile]} {
     if {!$purely_local} {
 	# Copy tracefile from target to host.
 	remote_download host [remote_upload target tfile-basic.tf] \
@@ -92,8 +91,8 @@ if [generate_tracefile $binfile] {
 # Change to a different test case in order to run it on target, and get
 # several traceframes.
 standard_testfile status-stop.c
-append testfile -1
-append binfile -1
+append testfile "-1"
+append binfile "-1"
 set executable $testfile
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
@@ -106,11 +105,11 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 
 clean_restart $executable
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
-if ![gdb_target_supports_trace] {
+if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
     return -1
 }
@@ -120,9 +119,8 @@ gdb_exit
 proc test_tfind_remote { } {
     with_test_prefix "remote" {
 	global decimal
-	global binfile
 
-	mi_clean_restart $binfile
+	mi_clean_restart $::testfile
 	mi_runto_main
 
 	mi_gdb_test "-break-insert end" "\\^done.*" "break end"

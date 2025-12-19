@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -117,6 +117,7 @@ proc dap_to_ton {obj} {
 
 # Format the object OBJ, in TON format, as JSON and send it to gdb.
 proc _dap_send_ton {obj} {
+    # tclint-disable-next-line command-args
     set json [namespace eval ton::2json $obj]
     # FIXME this is wrong for non-ASCII characters.
     set len [string length $json]
@@ -170,7 +171,7 @@ proc _dap_read_json {} {
     }
 
     if {$seen_timeout} {
-	error "timeout reading json header"	
+	error "timeout reading json header"
     }
     if {$seen_eof} {
 	error "eof reading json header"
@@ -200,7 +201,7 @@ proc _dap_read_json {} {
 	}
 
 	if {$seen_timeout} {
-	    error "timeout reading json header"	
+	    error "timeout reading json header"
 	}
 	if {$seen_eof} {
 	    error "eof reading json header"
@@ -211,6 +212,7 @@ proc _dap_read_json {} {
 
     global last_ton
     set last_ton [ton::json2ton $json]
+    # tclint-disable-next-line command-args
     return [namespace eval ton::2dict $last_ton]
 }
 
@@ -229,9 +231,9 @@ proc dap_read_response {cmd num} {
 	set d [_dap_read_json]
 	if {[dict get $d type] == "response"} {
 	    if {[dict get $d request_seq] != $num} {
-		error "saw wrong request_seq in $obj"
+		error "saw wrong request_seq in $d"
 	    } elseif {[dict get $d command] != $cmd} {
-		error "saw wrong command in $obj"
+		error "saw wrong command in $d"
 	    } else {
 		return [list $d $result]
 	    }
@@ -443,7 +445,7 @@ proc dap_search_output {name rx events} {
 # key/value pairs given in ARGS.  NAME is used as the test name.
 proc dap_match_values {name d args} {
     foreach {key value} $args {
-	if {[eval dict get [list $d] $key] != $value} {
+	if {[dict get $d {*}$key] != $value} {
 	    fail "$name (checking $key)"
 	    return ""
 	}
@@ -494,7 +496,7 @@ proc dap_wait_for_event_and_check {name type args} {
 
     set result [_dap_wait_for_event $type]
     set event [lindex $result 0]
-    eval dap_match_values [list $name $event] $args
+    dap_match_values $name $event {*}$args
 
     return $result
 }

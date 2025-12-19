@@ -1,6 +1,6 @@
 /* Frame unwinder for ia64 frames using the libunwind library.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    Written by Jeff Johnston, contributed by Red Hat Inc.
 
@@ -158,7 +158,6 @@ libunwind_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
   unw_addr_space_t as;
   unw_word_t fp;
   unw_regnum_t uw_sp_regnum;
-  struct libunwind_frame_cache *cache;
   struct libunwind_descr *descr;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   int ret;
@@ -167,7 +166,7 @@ libunwind_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     return (struct libunwind_frame_cache *) *this_cache;
 
   /* Allocate a new cache.  */
-  cache = FRAME_OBSTACK_ZALLOC (struct libunwind_frame_cache);
+  auto *cache = frame_obstack_zalloc<libunwind_frame_cache> ();
 
   cache->func_addr = get_frame_func (this_frame);
   if (cache->func_addr == 0)
@@ -185,7 +184,7 @@ libunwind_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     cache->func_addr = get_frame_pc (this_frame);
 
   /* Get a libunwind cursor to the previous frame.
-  
+
      We do this by initializing a cursor.  Libunwind treats a new cursor
      as the top of stack and will get the current register set via the
      libunwind register accessor.  Now, we provide the platform-specific
@@ -277,8 +276,8 @@ libunwind_frame_sniffer (const struct frame_unwind *self,
       return 0;
     }
 
- 
-  /* Check to see if we have libunwind info by checking if we are in a 
+
+  /* Check to see if we have libunwind info by checking if we are in a
      signal frame.  If it doesn't return an error, we have libunwind info
      and can use libunwind.  */
   ret = unw_is_signal_frame_p (&cursor);
@@ -318,7 +317,7 @@ libunwind_frame_prev_register (const frame_info_ptr &this_frame,
 
   if (cache == NULL)
     return frame_unwind_got_constant (this_frame, regnum, 0);
-  
+
   /* Convert from gdb register number to libunwind register number.  */
   descr = libunwind_descr (get_frame_arch (this_frame));
   uw_regnum = descr->gdb2uw (regnum);
@@ -369,10 +368,10 @@ libunwind_frame_prev_register (const frame_info_ptr &this_frame,
     }
 
   return val;
-} 
+}
 
 /* The following is a glue routine to call the libunwind unwind table
-   search function to get unwind information for a specified ip address.  */ 
+   search function to get unwind information for a specified ip address.  */
 int
 libunwind_search_unwind_table (void *as, long ip, void *di,
 			       void *pi, int need_unwind_info, void *args)
@@ -486,7 +485,7 @@ libunwind_get_reg_special (struct gdbarch *gdbarch, readable_regcache *regcache,
 
   return 0;
 }
-  
+
 static int
 libunwind_load (void)
 {
@@ -564,7 +563,7 @@ libunwind_load (void)
     = (unw_find_dyn_list_p_ftype *) dlsym (handle, find_dyn_list_name);
   if (unw_find_dyn_list_p == NULL)
     return 0;
-   
+
   return 1;
 }
 
@@ -574,9 +573,7 @@ libunwind_is_initialized (void)
   return libunwind_initialized;
 }
 
-void _initialize_libunwind_frame ();
-void
-_initialize_libunwind_frame ()
+INIT_GDB_FILE (libunwind_frame)
 {
   libunwind_initialized = libunwind_load ();
 }

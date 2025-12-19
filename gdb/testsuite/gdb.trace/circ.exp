@@ -1,4 +1,4 @@
-# Copyright 1998-2024 Free Software Foundation, Inc.
+# Copyright 1998-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug nowarning
 #
 
 # Set a tracepoint on given func.  The tracepoint is set at entry
-# address and not 'after prologue' address because we use 
+# address and not 'after prologue' address because we use
 # 'tfind pc func' to find the corresponding trace frame afterwards,
 # and that looks for entry address.
 proc set_a_tracepoint { func } {

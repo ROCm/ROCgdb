@@ -1,4 +1,4 @@
-# Copyright 2017-2024 Free Software Foundation, Inc.
+# Copyright 2017-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ if { [test_compiler_info "clang*"] } {
 
 set have_nested_function_support 0
 set opts {openmp debug}
-if [support_nested_function_tests] {
+if {[support_nested_function_tests]} {
     lappend opts "additional_flags=-DHAVE_NESTED_FUNCTION_SUPPORT"
     set have_nested_function_support 1
 }
@@ -191,7 +191,7 @@ with_test_prefix "multi_scope" {
 # Nested functions in C are a GNU extension, so only do the nested function
 # tests if compiling with -DHAVE_NESTED_FUNCTION_SUPPORT was successful.
 
-if $have_nested_function_support {
+if {$have_nested_function_support} {
     with_test_prefix "nested_func" {
 	gdb_breakpoint [gdb_get_line_number "nested_func: tn="]
 

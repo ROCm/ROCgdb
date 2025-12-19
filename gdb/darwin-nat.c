@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    Contributed by AdaCore.
 
@@ -47,7 +47,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
-#include <ctype.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
 #include <libproc.h>
@@ -1691,12 +1690,12 @@ darwin_attach_pid (struct inferior *inf)
 static struct thread_info *
 thread_info_from_private_thread_info (darwin_thread_info *pti)
 {
-  for (struct thread_info *it : all_threads ())
+  for (struct thread_info &it : all_threads ())
     {
-      darwin_thread_info *iter_pti = get_darwin_thread_info (it);
+      darwin_thread_info *iter_pti = get_darwin_thread_info (&it);
 
       if (iter_pti->gdb_port == pti->gdb_port)
-	return it;
+	return &it;
     }
 
   gdb_assert_not_reached ("did not find gdb thread for darwin thread");
@@ -1853,7 +1852,7 @@ copy_shell_to_cache (const char *shell, const std::string &new_name)
     error (_("Could not open shell (%s) for reading: %s"),
 	   shell, safe_strerror (errno));
 
-  std::string new_dir = ldirname (new_name.c_str ());
+  std::string new_dir = gdb_ldirname (new_name.c_str ());
   if (!mkdir_recursive (new_dir.c_str ()))
     error (_("Could not make cache directory \"%s\": %s"),
 	   new_dir.c_str (), safe_strerror (errno));
@@ -2469,9 +2468,7 @@ darwin_nat_target::supports_multi_process ()
   return true;
 }
 
-void _initialize_darwin_nat ();
-void
-_initialize_darwin_nat ()
+INIT_GDB_FILE (darwin_nat)
 {
   kern_return_t kret;
 

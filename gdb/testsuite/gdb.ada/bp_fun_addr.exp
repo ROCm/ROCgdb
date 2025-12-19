@@ -1,4 +1,4 @@
-# Copyright 2016-2024 Free Software Foundation, Inc.
+# Copyright 2016-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,16 +20,15 @@ require allow_ada_tests
 standard_ada_testfile bp_fun_addr
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
 
 gdb_test "break *bp_fun_addr'address" \
-         "Breakpoint \[0-9\]+ at.*: file .*bp_fun_addr.adb, line \[0-9\]+."
+	 "Breakpoint \[0-9\]+ at.*: file .*bp_fun_addr.adb, line \[0-9\]+."
 
 gdb_run_cmd
 gdb_test "" \
-         "Breakpoint $decimal, bp_fun_addr \\(\\).*" \
-         "run until breakpoint at bp_fun_addr'address"
-
+	 "Breakpoint $decimal, bp_fun_addr \\(\\).*" \
+	 "run until breakpoint at bp_fun_addr'address"

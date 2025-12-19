@@ -1,7 +1,7 @@
 /* Observers
 
-   Copyright (C) 2016-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2016-2025 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -103,9 +103,14 @@ extern observable<inferior */* parent_inf */, inferior */* child_inf */,
 extern observable<solib &/* solib */> solib_loaded;
 
 /* The shared library SOLIB has been unloaded from program space PSPACE.
+   The SILENT argument indicates that GDB doesn't wish to notify the CLI
+   about any non-error consequences of unloading the solib, e.g. when
+   breakpoints are disabled.
+
    Note  when gdb calls this observer, the library's symbols have not
    been unloaded yet, and thus are still available.  */
-extern observable<program_space *, const solib &/* solib */> solib_unloaded;
+extern observable<program_space *, const solib &/* solib */,
+		  bool /* still_in_use */, bool /* silent */> solib_unloaded;
 
 /* The symbol file specified by OBJFILE has been loaded.  */
 extern observable<struct objfile */* objfile */> new_objfile;
@@ -257,6 +262,12 @@ extern observable <program_space */* pspace */> free_program_space;
 extern observable <inferior * /* inf */ > core_opened;
 
 extern observable<bool /* enabled */> tui_enabled;
+
+/* The core file loaded into the program space inferior INF has changed.
+   The process of changing has completed, i.e. when unloading, the unload
+   is now complete.  When loading a new core file, the load is complete,
+   shared libraries have been loaded, registers and threads read in, etc.  */
+extern observable<inferior */* inf */> core_file_changed;
 
 } /* namespace observers */
 

@@ -3,7 +3,7 @@
    Low level functions to implement Operating System specific
    code to manipulate x86 debug registers.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -31,7 +31,7 @@
 
 /* Use this function to set x86_dr_low debug_register_length field
    rather than setting it directly to check that the length is only
-   set once.  It also enables the 'maint set/show show-debug-regs' 
+   set once.  It also enables the 'maint set/show show-debug-regs'
    command.  */
 
 extern void x86_set_debug_register_length (int len);
@@ -104,8 +104,14 @@ struct x86_nat_target : public BaseTarget
   bool stopped_by_watchpoint () override
   { return x86_stopped_by_watchpoint (); }
 
-  bool stopped_data_address (CORE_ADDR *addr_p) override
-  { return x86_stopped_data_address (addr_p); }
+  std::vector<CORE_ADDR> stopped_data_addresses () override
+  {
+    CORE_ADDR addr;
+    if (x86_stopped_data_address (&addr))
+      return { addr };
+
+    return {};
+  }
 
   /* A target must provide an implementation of the
      "supports_stopped_by_hw_breakpoint" target method before this

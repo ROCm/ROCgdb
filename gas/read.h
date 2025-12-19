@@ -1,5 +1,5 @@
 /* read.h - of read.c
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -29,17 +29,20 @@ extern bool input_from_string;
 
 #ifdef PERMIT_WHITESPACE
 #define SKIP_WHITESPACE()			\
-  ((*input_line_pointer == ' ') ? ++input_line_pointer : 0)
+  (is_whitespace (*input_line_pointer) ? ++input_line_pointer : 0)
 #define SKIP_ALL_WHITESPACE()			\
-  while (*input_line_pointer == ' ') ++input_line_pointer
+  while (is_whitespace (*input_line_pointer)) ++input_line_pointer
 #else
-#define SKIP_WHITESPACE() know (*input_line_pointer != ' ' )
+#define SKIP_WHITESPACE() know (!is_whitespace (*input_line_pointer))
 #define SKIP_ALL_WHITESPACE() SKIP_WHITESPACE()
 #endif
 
-#define	LEX_NAME	(1)	/* may continue a name */
+#define LEX_NAME	(1)	/* may continue a name */
 #define LEX_BEGIN_NAME	(2)	/* may begin a name */
 #define LEX_END_NAME	(4)	/* ends a name */
+#define LEX_WHITE	(8)	/* whitespace */
+#define LEX_EOS	(0x10)  /* end of statement */
+#define LEX_EOL	(0x20)  /* end of line */
 
 #define is_name_beginner(c) \
   ( lex_type[(unsigned char) (c)] & LEX_BEGIN_NAME )
@@ -47,14 +50,19 @@ extern bool input_from_string;
   ( lex_type[(unsigned char) (c)] & LEX_NAME       )
 #define is_name_ender(c) \
   ( lex_type[(unsigned char) (c)] & LEX_END_NAME   )
+#define is_whitespace(c) \
+  ( lex_type[(unsigned char) (c)] & LEX_WHITE      )
+
+/* Don't allow safe-ctype.h's counterparts to be used.  */
+#undef ISSPACE
+#undef ISBLANK
 
 /* The distinction of "line" and "statement" sadly is blurred by unhelpful
-   naming of e.g. the underlying array.  Most users really mean "end of
-   statement".  Going forward only these wrappers are supposed to be used.  */
+   naming in a few places.  Most users really mean "end of statement".  */
 #define is_end_of_stmt(c) \
-  (is_end_of_line[(unsigned char) (c)])
+  ( lex_type[(unsigned char) (c)] & (LEX_EOS | LEX_EOL) )
 #define is_end_of_line(c) \
-  (is_end_of_line[(unsigned char) (c)] == 1)
+  ( lex_type[(unsigned char) (c)] & LEX_EOL )
 
 #ifndef is_a_char
 #define CHAR_MASK	(0xff)
@@ -63,7 +71,6 @@ extern bool input_from_string;
 #endif /* is_a_char() */
 
 extern char lex_type[];
-extern char is_end_of_line[];
 
 extern int is_it_end_of_statement (void);
 extern char *find_end_of_line (char *, int);
@@ -152,7 +159,7 @@ extern void stabs_begin (void);
 extern void stabs_end (void);
 extern void do_repeat (size_t, const char *, const char *, const char *);
 extern void end_repeat (int);
-extern void do_parse_cons_expression (expressionS *, int);
+extern TC_PARSE_CONS_RETURN_TYPE do_parse_cons_expression (expressionS *, int);
 extern void generate_lineno_debug (void);
 extern void do_align (unsigned int align, char *fill, unsigned int length,
 		      unsigned int max);
@@ -162,6 +169,7 @@ extern symbolS *s_comm_internal (int, symbolS *(*) (int, symbolS *, addressT));
 extern symbolS *s_lcomm_internal (int, symbolS *, addressT);
 extern void temp_ilp (char *);
 extern void restore_ilp (void);
+extern void evaluate_deferred_diags (void);
 extern void s_file_string (char *);
 
 extern void s_abort (int) ATTRIBUTE_NORETURN;

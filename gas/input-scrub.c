@@ -1,5 +1,5 @@
 /* input_scrub.c - Break up input buffers into whole numbers of lines.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -23,7 +23,6 @@
 #include "input-file.h"
 #include "sb.h"
 #include "listing.h"
-#include "macro.h"
 
 /*
  * O/S independent module to supply buffers of sanitised source code
@@ -151,6 +150,21 @@ input_scrub_reinit (void)
   memcpy (buffer_start, BEFORE_STRING, (int) BEFORE_SIZE);
 }
 
+/* Finish off old buffers.  */
+
+static void
+input_scrub_free (void)
+{
+  if (sb_index != (size_t) -1)
+    {
+      sb_kill (&from_sb);
+      sb_index = -1;
+    }
+  free (buffer_start);
+  buffer_start = NULL;
+  input_file_end ();
+}
+
 /* Push the state of input reading and scrubbing so that we can #include.
    The return value is a 'void *' (fudged for old compilers) to a save
    area, which can be restored by passing it to input_scrub_pop().  */
@@ -189,7 +203,7 @@ input_scrub_pop (struct input_save *saved)
 {
   char *saved_position;
 
-  input_scrub_end ();		/* Finish off old buffer */
+  input_scrub_free ();
 
   input_file_pop (saved->input_file_save);
   saved_position = saved->saved_position;
@@ -242,12 +256,9 @@ input_scrub_begin (void)
 void
 input_scrub_end (void)
 {
-  if (buffer_start)
-    {
-      free (buffer_start);
-      buffer_start = 0;
-      input_file_end ();
-    }
+  while (next_saved_file != NULL)
+    input_scrub_pop (next_saved_file);
+  input_scrub_free ();
 }
 
 /* Start reading input from a new file.
@@ -291,13 +302,12 @@ input_scrub_include_sb (sb *from, char *position, enum expansion expansion)
       ++macro_nest;
     }
 
+#ifdef md_macro_start
   if (expansion == expanding_macro)
     {
-#ifdef md_macro_start
       md_macro_start ();
-#endif
-      increment_macro_nesting_depth ();
     }
+#endif
 
   next_saved_file = input_scrub_push (position);
 
@@ -343,7 +353,6 @@ input_scrub_next_buffer (char **bufp)
     {
       if (sb_index >= from_sb.len)
 	{
-	  sb_kill (&from_sb);
 	  if (from_sb_expansion == expanding_macro)
 	    {
 	      cond_finish_check (macro_nest);
@@ -352,7 +361,6 @@ input_scrub_next_buffer (char **bufp)
 	         data.  */
 	      md_macro_end ();
 #endif
-	      decrement_macro_nesting_depth ();
 	    }
 	  if (from_sb_expansion != expanding_app)
 	    --macro_nest;
@@ -411,8 +419,8 @@ input_scrub_next_buffer (char **bufp)
       partial_size = limit - p;
 
       /* Save the fragment after that last newline.  */
-      memcpy (save_source, partial_where, (int) AFTER_SIZE);
-      memcpy (partial_where, AFTER_STRING, (int) AFTER_SIZE);
+      memcpy (save_source, partial_where, AFTER_SIZE);
+      memcpy (partial_where, AFTER_STRING, AFTER_SIZE);
       return partial_where;
 
     read_more:

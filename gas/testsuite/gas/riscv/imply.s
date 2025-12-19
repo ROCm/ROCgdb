@@ -1,6 +1,6 @@
-.macro imply string base=i
+.macro imply string base=i xlen=32
 .option push
-.option arch, rv32\base\string
+.option arch, rv\xlen\base\string
 nop
 .option pop
 .endm
@@ -21,6 +21,13 @@ imply zacas
 imply a
 
 imply xsfvcp
+imply xsfvqmaccqoq
+imply xsfvqmaccdod
+imply xsfvfnrclipxfqf
+
+imply xtheadvector
+imply xtheadzvamo
+
 imply v
 imply zvfh
 imply zvfhmin
@@ -43,11 +50,10 @@ imply zve32x_zvl256b
 imply zve32x_zvl128b
 imply zve32x_zvl64b
 
-imply zcb
-imply zcd
-imply zcf
-imply zcmp
-imply zcmop
+imply zicfilp
+imply zicfiss
+
+imply sha
 
 imply shcounterenw
 imply shgatpa
@@ -58,6 +64,9 @@ imply shvstvecd
 imply h
 imply zhinx
 imply zhinxmin
+
+imply zcd
+imply zcf
 
 imply q
 imply zqinx
@@ -72,6 +81,21 @@ imply zfhmin
 imply zfinx
 imply f
 
+imply zce,if,32
+imply zce,if,64
+imply zce,id,32
+imply zce,id,64
+imply zce
+imply zcb
+imply zcmp
+imply zcmop
+imply zcmt
+imply c,if,32
+imply c,if,64
+imply c,id,32
+imply c,id,64
+imply c
+
 imply b
 
 imply zk
@@ -85,18 +109,24 @@ imply zvksg
 imply zvksc
 imply zvks
 
+imply sdtrig
+
 imply smaia
+imply smcdeleg
 imply smcsrind
 imply smcntrpmf
+imply smrnmi
 imply smstateen
 imply smepmp
 imply smdbltrp
 
 imply ssaia
+imply ssccfg
 imply sscsrind
 imply sscofpmf
 imply sscounterenw
 imply ssstateen
+imply ssstrict
 imply sstc
 imply sstvala
 imply sstvecd

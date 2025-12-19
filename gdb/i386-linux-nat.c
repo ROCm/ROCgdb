@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux i386.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -105,7 +105,7 @@ fetch_register (struct regcache *regcache, int regno)
   val = ptrace (PTRACE_PEEKUSER, tid,
 		i386_linux_gregset_reg_offset[regno], 0);
   if (errno != 0)
-    error (_("Couldn't read register %s (#%d): %s."), 
+    error (_("Couldn't read register %s (#%d): %s."),
 	   gdbarch_register_name (regcache->arch (), regno),
 	   regno, safe_strerror (errno));
 
@@ -221,7 +221,7 @@ store_regs (const struct regcache *regcache, int tid, int regno)
     perror_with_name (_("Couldn't get registers"));
 
   fill_gregset (regcache, &regs, regno);
-  
+
   if (ptrace (PTRACE_SETREGS, tid, 0, (int) &regs) < 0)
     perror_with_name (_("Couldn't write registers"));
 }
@@ -239,7 +239,7 @@ static void store_regs (const struct regcache *regcache, int tid, int regno) {}
 /* Fill GDB's register array with the floating-point register values in
    *FPREGSETP.  */
 
-void 
+void
 supply_fpregset (struct regcache *regcache, const elf_fpregset_t *fpregsetp)
 {
   i387_supply_fsave (regcache, -1, fpregsetp);
@@ -401,7 +401,7 @@ store_fpxregs (const struct regcache *regcache, int tid, int regno)
 
   if (have_ptrace_getfpxregs == TRIBOOL_FALSE)
     return 0;
-  
+
   if (ptrace (PTRACE_GETFPXREGS, tid, 0, &fpxregs) == -1)
     {
       if (errno == EIO)
@@ -447,6 +447,8 @@ store_fpxregs (const struct regcache *regcache, int tid, int regno)
 void
 i386_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
 {
+  gdbarch *gdbarch = regcache->arch ();
+  const i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
   pid_t tid;
 
   /* Use the old method of peeking around in `struct user' if the
@@ -470,6 +472,9 @@ i386_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
      zero.  */
   if (regno == -1)
     {
+      if (tdep->i386_linux_tls)
+	i386_fetch_tls_regs (regcache, tid, regno);
+
       fetch_regs (regcache, tid);
 
       /* The call above might reset `have_ptrace_getregs'.  */
@@ -514,6 +519,12 @@ i386_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
       return;
     }
 
+  if (tdep->i386_linux_tls && i386_is_tls_regnum_p (regno))
+    {
+      i386_fetch_tls_regs (regcache, tid, regno);
+      return;
+    }
+
   internal_error (_("Got request for bad register number %d."), regno);
 }
 
@@ -523,6 +534,8 @@ i386_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
 void
 i386_linux_nat_target::store_registers (struct regcache *regcache, int regno)
 {
+  gdbarch *gdbarch = regcache->arch ();
+  const i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
   pid_t tid;
 
   /* Use the old method of poking around in `struct user' if the
@@ -545,6 +558,8 @@ i386_linux_nat_target::store_registers (struct regcache *regcache, int regno)
      store_fpxregs can fail, and return zero.  */
   if (regno == -1)
     {
+      if (tdep->i386_linux_tls)
+	i386_store_tls_regs (regcache, tid, regno);
       store_regs (regcache, tid, regno);
       if (store_xstateregs (regcache, tid, regno))
 	return;
@@ -575,6 +590,12 @@ i386_linux_nat_target::store_registers (struct regcache *regcache, int regno)
 	 registers, so just write the FP registers in the traditional
 	 way.  */
       store_fpregs (regcache, tid, regno);
+      return;
+    }
+
+  if (tdep->i386_linux_tls && i386_is_tls_regnum_p (regno))
+    {
+      i386_store_tls_regs (regcache, tid, regno);
       return;
     }
 
@@ -696,9 +717,7 @@ i386_linux_nat_target::low_resume (ptid_t ptid, int step, enum gdb_signal signal
     perror_with_name (("ptrace"));
 }
 
-void _initialize_i386_linux_nat ();
-void
-_initialize_i386_linux_nat ()
+INIT_GDB_FILE (i386_linux_nat)
 {
   linux_target = &the_i386_linux_nat_target;
 

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1997-2024 Free Software Foundation, Inc.
+   Copyright 1997-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ int foo (int i)
 }
 
 extern "C" int bar (int k, unsigned long eharg, int flag);
-    
+
 int bar (int k, unsigned long eharg, int flag)
 {
   return 1;
@@ -47,7 +47,7 @@ int main()
   catch (int x) {
     catcher (x);
   }
-  
+
   try {
     try {
       j = foo (20);
@@ -61,6 +61,6 @@ int main()
     catcher (y);
   }
 
-  // Not caught 
+  // Not caught
   foo (20);
 }

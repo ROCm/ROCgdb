@@ -1,5 +1,5 @@
 /* Darwin support for GDB, the GNU debugger.
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 
    Contributed by Apple Computer, Inc.
 
@@ -59,7 +59,7 @@ int i386_darwin_thread_state_reg_offset[] =
   15 * 4    /* GS */
 };
 
-const int i386_darwin_thread_state_num_regs = 
+const int i386_darwin_thread_state_num_regs =
   ARRAY_SIZE (i386_darwin_thread_state_reg_offset);
 
 /* Assuming THIS_FRAME is a Darwin sigtramp routine, return the
@@ -204,11 +204,11 @@ i386_darwin_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			      arg_type->length ());
 
 	      /* The System V ABI says that:
-		 
+
 		 "An argument's size is increased, if necessary, to make it a
 		 multiple of [32-bit] words.  This may require tail padding,
 		 depending on the size of the argument."
-		 
+
 		 This makes sure the stack stays word-aligned.  */
 	      args_space += align_up (arg_type->length (), 4);
 	    }
@@ -271,7 +271,7 @@ i386_darwin_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
      alignment.  */
   set_gdbarch_long_double_bit (gdbarch, 128);
 
-  set_gdbarch_so_ops (gdbarch, &darwin_so_ops);
+  set_gdbarch_make_solib_ops (gdbarch, make_darwin_solib_ops);
 }
 
 static enum gdb_osabi
@@ -279,16 +279,14 @@ i386_mach_o_osabi_sniffer (bfd *abfd)
 {
   if (!bfd_check_format (abfd, bfd_object))
     return GDB_OSABI_UNKNOWN;
-  
+
   if (bfd_get_arch (abfd) == bfd_arch_i386)
     return GDB_OSABI_DARWIN;
 
   return GDB_OSABI_UNKNOWN;
 }
 
-void _initialize_i386_darwin_tdep ();
-void
-_initialize_i386_darwin_tdep ()
+INIT_GDB_FILE (i386_darwin_tdep)
 {
   gdbarch_register_osabi_sniffer (bfd_arch_unknown, bfd_target_mach_o_flavour,
 				  i386_mach_o_osabi_sniffer);

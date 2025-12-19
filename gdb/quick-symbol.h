@@ -1,6 +1,6 @@
 /* "Quick" symbol functions
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,6 +20,8 @@
 #ifndef GDB_QUICK_SYMBOL_H
 #define GDB_QUICK_SYMBOL_H
 
+#include "symtab.h"
+
 /* Like block_enum, but used as flags to pass to lookup functions.  */
 
 enum block_search_flag_values
@@ -30,33 +32,35 @@ enum block_search_flag_values
 
 DEF_ENUM_FLAGS_TYPE (enum block_search_flag_values, block_search_flags);
 
-/* Callback for quick_symbol_functions->map_symbol_filenames.  */
+/* Callback for quick_symbol_functions::map_symbol_filenames.  */
 
-typedef void (symbol_filename_ftype) (const char *filename,
-				      const char *fullname);
+using symbol_filename_listener
+  = gdb::function_view<void (const char *filename, const char *fullname)>;
 
-/* Callback for quick_symbol_functions->expand_symtabs_matching
-   to match a file name.  */
+/* Callback for quick_symbol_functions::search to match a file
+   name.  */
 
-typedef bool (expand_symtabs_file_matcher_ftype) (const char *filename,
-						  bool basenames);
+using search_symtabs_file_matcher
+  = gdb::function_view<bool (const char *filename, bool basenames)>;
 
-/* Callback for quick_symbol_functions->expand_symtabs_matching
-   to match a symbol name.  */
+/* Callback for quick_symbol_functions::search to match a symbol
+   name.  */
 
-typedef bool (expand_symtabs_symbol_matcher_ftype) (const char *name);
+using search_symtabs_symbol_matcher
+  = gdb::function_view<bool (const char *name)>;
 
-/* Callback for quick_symbol_functions->expand_symtabs_matching
-   to match a language.  */
+/* Callback for quick_symbol_functions::search to match a
+   language.  */
 
-typedef bool (expand_symtabs_lang_matcher_ftype) (enum language lang);
+using search_symtabs_lang_matcher
+  = gdb::function_view<bool (enum language lang)>;
 
-/* Callback for quick_symbol_functions->expand_symtabs_matching
-   to be called after a symtab has been expanded.  If this returns
-   true, more symtabs are checked; if it returns false, iteration
-   stops.  */
+/* Callback for quick_symbol_functions::search to be called when
+   symtab matches (perhaps expanding it first).  If this returns true,
+   more symtabs are checked; if it returns false, iteration stops.  */
 
-typedef bool (expand_symtabs_exp_notify_ftype) (compunit_symtab *symtab);
+using search_symtabs_expansion_listener
+  = gdb::function_view<bool (compunit_symtab *symtab)>;
 
 /* The "quick" symbol functions exist so that symbol readers can
    avoiding an initial read of all the symbols.  For example, symbol
@@ -65,13 +69,6 @@ typedef bool (expand_symtabs_exp_notify_ftype) (compunit_symtab *symtab);
 
    The quick symbol functions are generally opaque: the underlying
    representation is hidden from the caller.
-
-   In general, these functions should only look at whatever special
-   index the symbol reader creates -- looking through the symbol
-   tables themselves is handled by generic code.  If a function is
-   defined as returning a "symbol table", this means that the function
-   should only return a newly-created symbol table; it should not
-   examine pre-existing ones.
 
    The exact list of functions here was determined in an ad hoc way
    based on gdb's history.  */
@@ -125,11 +122,11 @@ struct quick_symbol_functions
   /* Read all symbol tables associated with OBJFILE.  */
   virtual void expand_all_symtabs (struct objfile *objfile) = 0;
 
-  /* Expand all symbol tables in OBJFILE matching some criteria.
+  /* Search all symbol tables in OBJFILE matching some criteria.
 
-     If LANG_MATCHER returns false, expansion of the symbol table may be
-     skipped.  It may also not be skipped, which the caller needs to take into
-     account.
+     If LANG_MATCHER returns false, search of the symbol table may be
+     skipped.  It may also not be skipped, which the caller needs to
+     take into account.
 
      FILE_MATCHER is called for each file in OBJFILE.  The file name
      is passed to it.  If the matcher returns false, the file is
@@ -139,7 +136,7 @@ struct quick_symbol_functions
      part).
 
      If the file is not skipped, and SYMBOL_MATCHER and LOOKUP_NAME are NULL,
-     the symbol table is expanded.
+     the symbol table is searched.
 
      Otherwise, individual symbols are considered.
 
@@ -151,21 +148,23 @@ struct quick_symbol_functions
      Note that if SYMBOL_MATCHER is non-NULL, then LOOKUP_NAME must
      also be provided.
 
-     Otherwise, the symbol's symbol table is expanded and the
-     notification function is called.  If the notification function
-     returns false, execution stops and this method returns false.
-     Otherwise, more files are considered.  This method will return
-     true if all calls to the notification function return true.  */
-  virtual bool expand_symtabs_matching
+     Otherwise, the symbol's symbol table is expanded if needed.
+
+     Then (regardless of whether the symbol table was already
+     expanded, or just expanded in response to this search), LISTENER
+     is called.  If LISTENER returns false, execution stops and this
+     method returns false.  Otherwise, more files are considered.
+     This method returns true if all calls to LISTENER return
+     true.  */
+  virtual bool search
     (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
+     search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
+     search_symtabs_symbol_matcher symbol_matcher,
+     search_symtabs_expansion_listener listener,
      block_search_flags search_flags,
      domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher
-       = nullptr) = 0;
+     search_symtabs_lang_matcher lang_matcher = nullptr) = 0;
 
   /* Return the comp unit from OBJFILE that contains PC and
      SECTION.  Return NULL if there is no such compunit.  This
@@ -177,22 +176,20 @@ struct quick_symbol_functions
     (struct objfile *objfile, bound_minimal_symbol msymbol, CORE_ADDR pc,
      struct obj_section *section, int warn_if_readin) = 0;
 
-  /* Return the comp unit from OBJFILE that contains a symbol at
-     ADDRESS.  Return NULL if there is no such comp unit.  Unlike
-     find_pc_sect_compunit_symtab, any sort of symbol (not just text
-     symbols) can be considered, and only exact address matches are
-     considered.  */
-  virtual struct compunit_symtab *find_compunit_symtab_by_address
+  /* Return the symbol from OBJFILE at ADDRESS.  Return NULL if there is
+     no such symbol.  Any sort of symbol (not just text symbols) can be
+     considered, and only exact address matches are considered.  */
+  virtual struct symbol *find_symbol_by_address
     (struct objfile *objfile, CORE_ADDR address) = 0;
 
-  /* Call a callback for every file defined in OBJFILE whose symtab is
-     not already read in.  FUN is the callback.  It is passed the
-     file's FILENAME and the file's FULLNAME (if need_fullname is
-     non-zero).  */
-  virtual void map_symbol_filenames
-       (struct objfile *objfile,
-	gdb::function_view<symbol_filename_ftype> fun,
-	bool need_fullname) = 0;
+  /* Call FUN for every file defined in OBJFILE whose symtab is
+     not already read in.
+
+     FUN is passed the file's FILENAME and the file's FULLNAME (if need_fullname
+     is true).  */
+  virtual void map_symbol_filenames (objfile *objfile,
+				     symbol_filename_listener fun,
+				     bool need_fullname) = 0;
 
   /* Compute the name and language of the main function for the given
      objfile.  Normally this is done during symbol reading, but this

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2003-2024 Free Software Foundation, Inc.
+   Copyright 2003-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ namespace N {
        int i = 3;
 
        while (i > 0)
-         --i;
+	 --i;
      }
   };
 }
@@ -38,8 +38,8 @@ public:
 
     A()
     {
-        a=1;
-        aa=2;
+	a=1;
+	aa=2;
     }
     value_type afoo();
     value_type foo();
@@ -54,12 +54,12 @@ public:
 
     B()
     {
-        b=3;
-        bb=4;
+	b=3;
+	bb=4;
     }
     A::value_type bfoo();
     A::value_type foo();
-    
+
 };
 
 
@@ -71,12 +71,12 @@ public:
 
     C()
     {
-        c=5;
-        cc=6;
+	c=5;
+	cc=6;
     }
     int cfoo();
     int foo();
-    
+
 };
 
 
@@ -88,12 +88,12 @@ public:
 
     D()
     {
-        d =7;
-        dd=8;
+	d =7;
+	dd=8;
     }
     value_type dfoo();
     value_type foo();
-    
+
 };
 
 
@@ -104,12 +104,12 @@ public:
 
     E()
     {
-        e =9;
-        ee=10;
+	e =9;
+	ee=10;
     }
     value_type efoo();
     value_type foo();
-    
+
 };
 
 
@@ -120,12 +120,12 @@ public:
 
     F()
     {
-        f =11;
-        ff=12;
+	f =11;
+	ff=12;
     }
     value_type ffoo();
     value_type foo();
-    
+
 };
 
 class G : private A, public B, protected C {
@@ -138,16 +138,16 @@ public:
 
     G()
     {
-        g =13;
-        gg =14;
-        a=15;
-        b=16;
-        c=17;
-        
+	g =13;
+	gg =14;
+	a=15;
+	b=16;
+	c=17;
+
     }
     int gfoo();
     int foo();
-    
+
 };
 
 class Z : public A
@@ -226,43 +226,43 @@ int G::gfoo() {
 A::value_type A::foo()
 {
     return 7;
-    
+
 }
 
 A::value_type B::foo()
 {
     return 8;
-    
+
 }
 
 A::value_type C::foo()
 {
     return 9;
-    
+
 }
 
 D::value_type D::foo()
 {
     return 10;
-    
+
 }
 
 E::value_type E::foo()
 {
     return 11;
-    
+
 }
 
 F::value_type F::foo()
 {
     return 12;
-    
+
 }
 
 int G::foo()
 {
     return 13;
-    
+
 }
 
 
@@ -285,7 +285,7 @@ int main(void)
     ZZ zz_instance;
 
     marker1(); // marker1-returns-here
-    
+
     a_instance.a = 20; // marker1-returns-here
     a_instance.aa = 21;
     b_instance.b = 22;
@@ -309,5 +309,5 @@ int main(void)
     dobj.doit ();
     foo2 ();
     return 0;
-    
+
 }

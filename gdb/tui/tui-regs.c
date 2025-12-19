@@ -1,6 +1,6 @@
 /* TUI display registers in window.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -36,45 +36,6 @@
 
 #include "gdb_curses.h"
 
-/* A subclass of string_file that expands tab characters.  */
-class tab_expansion_file : public string_file
-{
-public:
-
-  tab_expansion_file () = default;
-
-  void write (const char *buf, long length_buf) override;
-
-private:
-
-  int m_column = 0;
-};
-
-void
-tab_expansion_file::write (const char *buf, long length_buf)
-{
-  for (long i = 0; i < length_buf; ++i)
-    {
-      if (buf[i] == '\t')
-	{
-	  do
-	    {
-	      string_file::write (" ", 1);
-	      ++m_column;
-	    }
-	  while ((m_column % 8) != 0);
-	}
-      else
-	{
-	  string_file::write (&buf[i], 1);
-	  if (buf[i] == '\n')
-	    m_column = 0;
-	  else
-	    ++m_column;
-	}
-    }
-}
-
 /* Get the register from the frame and return a printable
    representation of it.  */
 
@@ -84,8 +45,9 @@ tui_register_format (const frame_info_ptr &frame, int regnum)
   struct gdbarch *gdbarch = get_frame_arch (frame);
 
   /* Expand tabs into spaces, since ncurses on MS-Windows doesn't.  */
-  tab_expansion_file stream;
-  gdbarch_print_registers_info (gdbarch, &stream, frame, regnum, 1);
+  string_file stream;
+  tab_expansion_file expander (&stream);
+  gdbarch_print_registers_info (gdbarch, &expander, frame, regnum, 1);
 
   /* Remove the possible \n.  */
   std::string str = stream.release ();
@@ -422,7 +384,7 @@ tui_register_info::rerender (WINDOW *handle, int field_width)
        to code that causes the compiler to generate an unused-value
        warning.  */
     (void) wstandout (handle);
-      
+
   mvwaddnstr (handle, y, x, content.c_str (), field_width - 1);
   if (content.size () < field_width)
     waddstr (handle, n_spaces (field_width - content.size ()));
@@ -566,9 +528,7 @@ tui_reggroup_completer (struct cmd_list_element *ignore,
   complete_on_enum (tracker, extra, text, word);
 }
 
-void _initialize_tui_regs ();
-void
-_initialize_tui_regs ()
+INIT_GDB_FILE (tui_regs)
 {
   struct cmd_list_element **tuicmd, *cmd;
 

@@ -1,7 +1,6 @@
 /* GDB target debugging macros
 
-   Copyright (C) 2014-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2014-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -188,6 +187,10 @@ target_debug_print_std_vector_mem_region (const std::vector<mem_region> &vec)
 { return host_address_to_string (vec.data ()); }
 
 static std::string
+target_debug_print_std_vector_CORE_ADDR (const std::vector<CORE_ADDR> &vec)
+{ return host_address_to_string (vec.data ()); }
+
+static std::string
 target_debug_print_std_vector_static_tracepoint_marker
   (const std::vector<static_tracepoint_marker> &vec)
 { return host_address_to_string (vec.data ()); }
@@ -311,6 +314,10 @@ static std::string
 target_debug_print_target_waitstatus_p (struct target_waitstatus *status)
 { return status->to_string (); }
 
+static std::string
+target_debug_print_const_target_waitstatus_r (const target_waitstatus &status)
+{ return status.to_string (); }
+
 /* Functions that are used via TARGET_DEBUG_PRINTER.  */
 
 static std::string
@@ -364,10 +371,6 @@ target_debug_print_gdb_byte_vector_r (gdb::byte_vector &vector)
 { return target_debug_print_const_gdb_byte_vector_r (vector); }
 
 static std::string
-target_debug_print_const_target_waitstatus_r (const target_waitstatus &status)
-{ return status.to_string (); }
-
-static std::string
 target_debug_print_x86_xsave_layout (const x86_xsave_layout &layout)
 {
   std::string s = string_printf ("{ sizeof_xsave=%d", layout.sizeof_xsave);
@@ -394,7 +397,36 @@ target_debug_print_displaced_step_finish_status (displaced_step_finish_status s)
 { return displaced_step_finish_status_str (s); }
 
 static std::string
-target_debug_print_displaced_step_prepare_status (displaced_step_prepare_status s)
+target_debug_print_displaced_step_prepare_status
+  (displaced_step_prepare_status s)
 { return displaced_step_prepare_status_str (s); }
 
+<<<<<<< HEAD
+=======
+static std::string
+target_debug_print_opt_vec3_u32_t (opt_vec3_u32_t vec)
+{
+  std::string s = "{";
+  if (vec.has_value ())
+    {
+      const char *maybe_comma = "";
+      for (uint32_t n : *vec)
+	{
+	  string_appendf (s, "%s %" PRIu32, maybe_comma, n);
+	  maybe_comma = ",";
+	}
+    }
+  s += " }";
+  return s;
+}
+
+static std::string
+target_debug_print_opt_size_t (opt_size_t size)
+{
+  if (size.has_value ())
+    target_debug_print_size_t (*size);
+  return "";
+}
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 #endif /* GDB_TARGET_DEBUG_H */

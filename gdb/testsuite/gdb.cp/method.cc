@@ -67,7 +67,7 @@ int main()
   a.x = k * 2;
 
   k = a.foo(13);
-  
+
   k += a.bar(15);
 
   // Test for CHFts23426 follows
@@ -75,6 +75,3 @@ int main()
   f.getFunky(1, 2);
   return 0;
 }
-
-
-

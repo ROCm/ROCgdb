@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux AArch64.
 
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
+   Copyright (C) 2011-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -51,6 +51,7 @@
 #include "gdb_proc_service.h"
 #include "arch-utils.h"
 
+#include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte-linux.h"
 
 #include "nat/aarch64-mte-linux-ptrace.h"
@@ -74,7 +75,7 @@ public:
 
   /* Add our hardware breakpoint and watchpoint implementation.  */
   bool stopped_by_watchpoint () override;
-  bool stopped_data_address (CORE_ADDR *) override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
 
   int can_do_single_step () override;
 
@@ -542,6 +543,109 @@ store_tlsregs_to_thread (struct regcache *regcache)
     perror_with_name (_("unable to store TLS register"));
 }
 
+/* Fill GDB's register array with the GCS register values from
+   the current thread.  */
+
+static void
+fetch_gcsregs_from_thread (regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  gdb_assert (tdep->gcs_reg_base != -1);
+  gdb_assert (tdep->gcs_linux_reg_base != -1);
+
+  user_gcs user_gcs;
+  iovec iovec;
+
+  iovec.iov_base = &user_gcs;
+  iovec.iov_len = sizeof (user_gcs);
+
+  int tid = get_ptrace_pid (regcache->ptid ());
+  if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_GCS, &iovec) != 0)
+    perror_with_name (_("Unable to fetch GCS registers"));
+
+  regcache->raw_supply (tdep->gcs_reg_base, &user_gcs.gcspr_el0);
+  regcache->raw_supply (tdep->gcs_linux_reg_base, &user_gcs.features_enabled);
+  regcache->raw_supply (tdep->gcs_linux_reg_base + 1,
+			&user_gcs.features_locked);
+}
+
+/* Store to the current thread the valid GCS register set in the GDB's
+   register array.  */
+
+static void
+store_gcsregs_to_thread (regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  gdb_assert (tdep->gcs_reg_base != -1);
+  gdb_assert (tdep->gcs_linux_reg_base != -1);
+
+  if (REG_VALID != regcache->get_register_status (tdep->gcs_reg_base)
+      || REG_VALID != regcache->get_register_status (tdep->gcs_linux_reg_base)
+      || REG_VALID
+	   != regcache->get_register_status (tdep->gcs_linux_reg_base + 1))
+    return;
+
+  user_gcs user_gcs;
+  regcache->raw_collect (tdep->gcs_reg_base, &user_gcs.gcspr_el0);
+  regcache->raw_collect (tdep->gcs_linux_reg_base, &user_gcs.features_enabled);
+  regcache->raw_collect (tdep->gcs_linux_reg_base + 1,
+			 &user_gcs.features_locked);
+
+  iovec iovec;
+  iovec.iov_base = &user_gcs;
+  iovec.iov_len = sizeof (user_gcs);
+
+  int tid = get_ptrace_pid (regcache->ptid ());
+  if (ptrace (PTRACE_SETREGSET, tid, NT_ARM_GCS, &iovec) != 0)
+    perror_with_name (_("Unable to store GCS registers"));
+}
+
+/* Fill GDB's REGCACHE with the FPMR register set content from the
+   thread associated with REGCACHE.  */
+
+static void
+fetch_fpmr_from_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+    int tid = regcache->ptid ().lwp ();
+
+    struct iovec iov;
+    uint64_t val;
+    iov.iov_base = &val;
+    iov.iov_len = sizeof (val);
+
+    if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_FPMR, &iov) < 0)
+      perror_with_name (_("Unable to fetch FPMR register set"));
+    regcache->raw_supply (tdep->fpmr_regnum, &val);
+}
+
+/* Store the NT_ARM_FPMR register set contents from GDB's REGCACHE to the
+    thread associated with REGCACHE.  */
+
+static void
+store_fpmr_to_thread (struct regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  int tid = regcache->ptid ().lwp ();
+
+  struct iovec iov;
+  uint64_t val;
+  iov.iov_base = &val;
+  iov.iov_len = sizeof (val);
+
+  regcache->raw_collect (tdep->fpmr_regnum, (char *) &val);
+  if (ptrace (PTRACE_SETREGSET, tid, NT_ARM_FPMR, &iov) < 0)
+    perror_with_name (_("Unable to store FPMR register set"));
+}
+
 /* The AArch64 version of the "fetch_registers" target_ops method.  Fetch
    REGNO from the target and place the result into REGCACHE.  */
 
@@ -577,6 +681,12 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_sme2 ())
 	fetch_zt_from_thread (regcache);
+
+      if (tdep->has_gcs_linux ())
+	fetch_gcsregs_from_thread (regcache);
+
+      if (tdep->has_fpmr ())
+	fetch_fpmr_from_thread (regcache);
     }
   /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
@@ -609,6 +719,14 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
 	   && regno >= tdep->tls_regnum_base
 	   && regno < tdep->tls_regnum_base + tdep->tls_register_count)
     fetch_tlsregs_from_thread (regcache);
+  /* GCS register?  */
+  else if (tdep->has_gcs_linux ()
+	   && (regno == tdep->gcs_reg_base || regno == tdep->gcs_linux_reg_base
+	       || regno == tdep->gcs_linux_reg_base + 1))
+    fetch_gcsregs_from_thread (regcache);
+  /* FPMR?  */
+  else if (tdep->has_fpmr () && (regno == tdep->fpmr_regnum))
+    fetch_fpmr_from_thread (regcache);
 }
 
 /* A version of the "fetch_registers" target_ops method used when running
@@ -649,7 +767,7 @@ aarch64_linux_nat_target::fetch_registers (struct regcache *regcache,
 }
 
 /* The AArch64 version of the "store_registers" target_ops method.  Copy
-   the value of register REGNO from REGCACHE into the the target.  */
+   the value of register REGNO from REGCACHE into the target.  */
 
 static void
 aarch64_store_registers (struct regcache *regcache, int regno)
@@ -680,6 +798,12 @@ aarch64_store_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_sme2 ())
 	store_zt_to_thread (regcache);
+
+      if (tdep->has_gcs_linux ())
+	store_gcsregs_to_thread (regcache);
+
+      if (tdep->has_fpmr ())
+	store_fpmr_to_thread (regcache);
     }
   /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
@@ -706,13 +830,21 @@ aarch64_store_registers (struct regcache *regcache, int regno)
 	   && regno >= tdep->tls_regnum_base
 	   && regno < tdep->tls_regnum_base + tdep->tls_register_count)
     store_tlsregs_to_thread (regcache);
+  /* GCS register?  */
+  else if (tdep->has_gcs_linux ()
+	   && (regno == tdep->gcs_reg_base || regno == tdep->gcs_linux_reg_base
+	       || regno == tdep->gcs_linux_reg_base + 1))
+    store_gcsregs_to_thread (regcache);
+  /* FPMR?  */
+  else if (tdep->has_fpmr () && regno == tdep->fpmr_regnum)
+    store_fpmr_to_thread (regcache);
 
   /* PAuth registers are read-only.  */
 }
 
 /* A version of the "store_registers" target_ops method used when running
    32-bit ARM code on an AArch64 target.  Copy the value of register REGNO
-   from REGCACHE into the the target.  */
+   from REGCACHE into the target.  */
 
 static void
 aarch32_store_registers (struct regcache *regcache, int regno)
@@ -881,6 +1013,7 @@ aarch64_linux_nat_target::read_description ()
      active or not.  */
   features.vq = aarch64_sve_get_vq (tid);
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
+  features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
   features.mte = hwcap2 & HWCAP2_MTE;
   features.tls = aarch64_tls_register_count (tid);
   /* SME feature check.  */
@@ -889,6 +1022,9 @@ aarch64_linux_nat_target::read_description ()
   /* Check for SME2 support.  */
   if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
     features.sme2 = supports_zt_registers (tid);
+
+  /* Check for FPMR.  */
+  features.fpmr = hwcap2 & HWCAP2_FPMR;
 
   return aarch64_read_description (features);
 }
@@ -922,21 +1058,21 @@ aarch64_linux_nat_target::low_siginfo_fixup (siginfo_t *native, gdb_byte *inf,
   return false;
 }
 
-/* Implement the "stopped_data_address" target_ops method.  */
+/* Implement the "stopped_data_addresses" target_ops method.  */
 
-bool
-aarch64_linux_nat_target::stopped_data_address (CORE_ADDR *addr_p)
+std::vector<CORE_ADDR>
+aarch64_linux_nat_target::stopped_data_addresses ()
 {
   siginfo_t siginfo;
   struct aarch64_debug_reg_state *state;
 
   if (!linux_nat_get_siginfo (inferior_ptid, &siginfo))
-    return false;
+    return {};
 
   /* This must be a hardware breakpoint.  */
   if (siginfo.si_signo != SIGTRAP
       || (siginfo.si_code & 0xffff) != TRAP_HWBKPT)
-    return false;
+    return {};
 
   /* Make sure to ignore the top byte, otherwise we may not recognize a
      hardware watchpoint hit.  The stopped data addresses coming from the
@@ -947,7 +1083,7 @@ aarch64_linux_nat_target::stopped_data_address (CORE_ADDR *addr_p)
 
   /* Check if the address matches any watched address.  */
   state = aarch64_get_debug_reg_state (inferior_ptid.pid ());
-  return aarch64_stopped_data_address (state, addr_trap, addr_p);
+  return aarch64_stopped_data_addresses (state, addr_trap);
 }
 
 /* Implement the "stopped_by_watchpoint" target_ops method.  */
@@ -955,7 +1091,7 @@ aarch64_linux_nat_target::stopped_data_address (CORE_ADDR *addr_p)
 bool
 aarch64_linux_nat_target::stopped_by_watchpoint ()
 {
-  return stopped_data_address (nullptr);
+  return !stopped_data_addresses ().empty ();
 }
 
 /* Implement the "can_do_single_step" target_ops method.  */
@@ -1068,9 +1204,7 @@ aarch64_linux_nat_target::is_address_tagged (gdbarch *gdbarch, CORE_ADDR address
   return gdbarch_tagged_address_p (gdbarch, address);
 }
 
-void _initialize_aarch64_linux_nat ();
-void
-_initialize_aarch64_linux_nat ()
+INIT_GDB_FILE (aarch64_linux_nat)
 {
   aarch64_initialize_hw_point ();
 

@@ -1,6 +1,6 @@
 /* GDB/Scheme pretty-printing.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -73,7 +73,7 @@ struct pretty_printer_smob
   /* A procedure called to look up the printer for the given value.
      The procedure is called as (lookup gdb:pretty-printer value).
      The result should either be a gdb:pretty-printer object that will print
-     the value, or #f if the value is not recognized.  */     
+     the value, or #f if the value is not recognized.  */
   SCM lookup;
 
   /* Note: Attaching subprinters to this smob is left to Scheme.  */
@@ -427,9 +427,9 @@ ppscm_search_pp_list (SCM list, SCM value)
 static SCM
 ppscm_find_pretty_printer_from_objfiles (SCM value)
 {
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
-      objfile_smob *o_smob = ofscm_objfile_smob_from_objfile (objfile);
+      objfile_smob *o_smob = ofscm_objfile_smob_from_objfile (&objfile);
       SCM pp
 	= ppscm_search_pp_list (ofscm_objfile_smob_pretty_printers (o_smob),
 				value);
@@ -572,7 +572,7 @@ ppscm_pretty_print_one_value (SCM printer, struct value **out_value,
 /* Return the display hint for PRINTER as a Scheme object.
    The caller is responsible for ensuring PRINTER is a
    <gdb:pretty-printer-worker> object.  */
- 
+
 static SCM
 ppscm_get_display_hint_scm (SCM printer)
 {
@@ -597,9 +597,9 @@ ppscm_get_display_hint_enum (SCM printer)
   if (scm_is_string (hint))
     {
       if (gdbscm_is_true (scm_string_equal_p (hint, ppscm_array_string)))
-	return HINT_STRING;
+	return HINT_ARRAY;
       if (gdbscm_is_true (scm_string_equal_p (hint, ppscm_map_string)))
-	return HINT_STRING;
+	return HINT_MAP;
       if (gdbscm_is_true (scm_string_equal_p (hint, ppscm_string_string)))
 	return HINT_STRING;
       return HINT_ERROR;
@@ -678,7 +678,7 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
       if (hint == HINT_STRING)
 	{
 	  struct type *type = builtin_type (gdbarch)->builtin_char;
-	  
+
 	  language->printstr (stream, type, (gdb_byte *) string.get (),
 			      length, NULL, 0, options);
 	}

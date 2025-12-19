@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2009-2024 Free Software Foundation, Inc.
+# Copyright 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executab
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 gdb_test_no_output "set can-use-hw-watchpoints 1" ""
 
@@ -44,8 +44,8 @@ if {![runto_main]} {
 }
 
 gdb_test "break thread_started" \
-         "Breakpoint 2 at .*: file .*${srcfile}, line .*" \
-         "breakpoint on thread_started"
+	 "Breakpoint 2 at .*: file .*${srcfile}, line .*" \
+	 "breakpoint on thread_started"
 
 # Run the program until all threads have hit thread_started.
 # We use this as the vehicle to determine when gdb is aware
@@ -89,7 +89,7 @@ set x_thread_loc "thread_function \\\(arg=.*\\\) at .*watchthreads.c:$x_inc_line
 
 # X is incremented under a mutex, so we should get NR_THREADS * X_INCR_COUNT
 # hits.
-set limit [expr $NR_THREADS*$X_INCR_COUNT]
+set limit [expr {$NR_THREADS*$X_INCR_COUNT}]
 set x_count 0
 set done 0
 
@@ -102,7 +102,7 @@ for {set i 0} {!$done && $i < $limit} {incr i} {
 	-re "(.*Hardware watchpoint.*)$gdb_prompt $" {
 	    set string $expect_out(1,string)
 
-	    if [regexp "Hardware watchpoint 3: x\[^\r\]*\r\[^\r\]*\r\[^\r\]*Old value = $x_count\[^\r\]*\r\[^\r\]*New value = [expr $x_count+1]\r" $string] {
+	    if {[regexp "Hardware watchpoint 3: x\[^\r\]*\r\[^\r\]*\r\[^\r\]*Old value = $x_count\[^\r\]*\r\[^\r\]*New value = [expr {$x_count+1}]\r" $string]} {
 		incr x_count
 		set test_flag 1
 	    } else {

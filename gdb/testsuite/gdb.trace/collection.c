@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1998-2024 Free Software Foundation, Inc.
+   Copyright 1998-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ typedef struct TEST_STRUCT {
 
 typedef int test_array [4];
 
-/* 
+/*
  * Global variables to be collected
  */
 
@@ -61,12 +61,12 @@ struct global_pieces {
  * Additional globals used in arithmetic tests
  */
 
-signed char  c0,  c1,  c2,  c3,  c4,  c5,  c6,  c7, 
-             c8,  c9,  c10, c11, c12, c13, c14, c15, cminus;
+signed char  c0,  c1,  c2,  c3,  c4,  c5,  c6,  c7,
+	     c8,  c9,  c10, c11, c12, c13, c14, c15, cminus;
 signed short s0,  s1,  s2,  s3,  s4,  s5,  s6,  s7,
-             s8,  s9,  s10, s11, s12, s13, s14, s15, sminus;
+	     s8,  s9,  s10, s11, s12, s13, s14, s15, sminus;
 signed long  l0,  l1,  l2,  l3,  l4,  l5,  l6,  l7,
-             l8,  l9,  l10, l11, l12, l13, l14, l15, lminus;
+	     l8,  l9,  l10, l11, l12, l13, l14, l15, lminus;
 
 
 /*
@@ -101,8 +101,8 @@ int args_test_func (argc, argi, argf, argd, argstruct, argarray)
 int argstruct_test_func (argstruct)
      test_struct argstruct;
 {
-  return (int) argstruct.memberc + argstruct.memberi + 
-                 argstruct.memberf + argstruct.memberd;
+  return (int) argstruct.memberc + argstruct.memberi +
+		 argstruct.memberf + argstruct.memberd;
 }
 
 /* Test collecting array args. */

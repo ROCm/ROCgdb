@@ -1,7 +1,7 @@
 /* Target-dependent code for the AMDGPU architectures.
 
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -41,13 +41,28 @@ constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK = 0xff00000000000000;
    that represent the address space information.  */
 constexpr unsigned int AMDGPU_ADDRESS_SPACE_BIT_OFFSET = 56;
 
+/* Return true if INFO is of an AMDGPU architecture.  */
+
+static bool
+is_amdgpu_arch (const bfd_arch_info *info)
+{
+  return info->arch == bfd_arch_amdgcn;
+}
+
 /* See amdgpu-tdep.h.  */
 
 bool
 is_amdgpu_arch (struct gdbarch *arch)
 {
-  gdb_assert (arch != nullptr);
-  return gdbarch_bfd_arch_info (arch)->arch == bfd_arch_amdgcn;
+  return is_amdgpu_arch (gdbarch_bfd_arch_info (arch));
+}
+
+/* See amdgpu-tdep.h.  */
+
+bool
+is_amdgpu_arch (bfd *abfd)
+{
+  return is_amdgpu_arch (abfd->arch_info);
 }
 
 /* See amdgpu-tdep.h.  */
@@ -69,7 +84,7 @@ amdgpu_register_name (struct gdbarch *gdbarch, int regnum)
      However, at most one register with a given name is actually allocated for
      a specific wave.  If INFERIOR_PTID represents a GPU wave, we query
      amd-dbgapi to know whether the requested register actually exists for the
-     current wave, so there won't be duplicates in the the register names we
+     current wave, so there won't be duplicates in the register names we
      report for that wave.
 
      But there are two known cases where INFERIOR_PTID doesn't represent a GPU
@@ -767,7 +782,7 @@ using amd_dbgapi_register_type_enum_up
 
 /* Map type lookup names to types.  */
 using amd_dbgapi_register_type_map
-  = std::unordered_map<std::string, amd_dbgapi_register_type_up>;
+  = gdb::unordered_map<std::string, amd_dbgapi_register_type_up>;
 
 /* Parse S as a ULONGEST, raise an error on overflow.  */
 
@@ -1274,8 +1289,7 @@ amdgpu_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
   if (*this_cache != nullptr)
     return (struct amdgpu_frame_cache *) *this_cache;
 
-  struct amdgpu_frame_cache *cache
-    = FRAME_OBSTACK_ZALLOC (struct amdgpu_frame_cache);
+  auto *cache = frame_obstack_zalloc<struct amdgpu_frame_cache> ();
   (*this_cache) = cache;
 
   cache->pc = get_frame_func (this_frame);
@@ -1315,17 +1329,18 @@ amdgpu_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const frame_unwind amdgpu_frame_unwind = {
+static const frame_unwind_legacy amdgpu_frame_unwind (
   "amdgpu",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   amdgpu_frame_this_id,
   amdgpu_frame_prev_register,
   nullptr,
   default_frame_sniffer,
   nullptr,
-  nullptr,
-};
+  nullptr
+);
 
 static int
 print_insn_amdgpu (bfd_vma memaddr, struct disassemble_info *info)
@@ -1581,7 +1596,7 @@ amdgpu_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
-      struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (func_addr);
 
       /* Clang always emits a line note before the prologue and another
 	 one after.  We trust clang to emit usable line notes.  */
@@ -1831,7 +1846,8 @@ amdgpu_used_lanes_count (struct gdbarch *gdbarch, thread_info *tp)
   size_t work_group_item_sizes[3];
   for (int i = 0; i < 3; i++)
     {
-      size_t item_start = group_ids[i] * work_group_sizes[i];
+      size_t item_start
+	= static_cast<size_t> (group_ids[i]) * work_group_sizes[i];
       size_t item_end = item_start + work_group_sizes[i];
       if (item_end > grid_sizes[i])
 	item_end = grid_sizes[i];
@@ -2262,10 +2278,7 @@ amdgpu_register_type_parse_test ()
 
 #endif
 
-void _initialize_amdgpu_tdep ();
-
-void
-_initialize_amdgpu_tdep ()
+INIT_GDB_FILE (amdgpu_tdep)
 {
   gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL,
 		    amdgpu_supports_arch_info);

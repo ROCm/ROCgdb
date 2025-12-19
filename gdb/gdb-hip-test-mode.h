@@ -1,7 +1,7 @@
 /* GDB HIP testing mode.
 
    Copyright (C) 2021-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_HIP_TEST_MODE_H
-#define GDB_HIP_TEST_MODE_H
+#ifndef GDB_GDB_HIP_TEST_MODE_H
+#define GDB_GDB_HIP_TEST_MODE_H
 
 #include <string_view>
 
@@ -30,4 +30,4 @@ const char *gdb_hip_test_mode_frob_names (struct objfile *objfile,
 std::string_view gdb_hip_test_mode_frob_names (struct objfile *objfile,
 					       std::string_view name);
 
-#endif
+#endif /* GDB_GDB_HIP_TEST_MODE_H */

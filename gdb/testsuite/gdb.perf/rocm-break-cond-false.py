@@ -1,5 +1,5 @@
 # Copyright (C) 2021-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,11 @@
 
 from perftest import perftest
 
+<<<<<<< HEAD
+=======
+import gdb
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 # Set a breakpoint with a condition that evals false for all waves
 # except one.  GDB will need to step all (except one) waves over the
@@ -38,5 +43,4 @@ class ROCmBreakCondFalse(perftest.TestCaseWithBasicMeasurements):
         gdb.execute("set pagination off", False, True)
         gdb.execute("set breakpoint pending on", False, True)
         gdb.execute('break kernel if $_streq($_wave_id, "(0,0,0)/0")', False, True)
-        func = lambda: self._run()
-        self.measure.measure(func, 1)
+        self.measure.measure(self._run, 1)

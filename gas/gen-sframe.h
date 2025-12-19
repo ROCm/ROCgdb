@@ -1,5 +1,5 @@
 /* gen-sframe.h - Support for generating SFrame.
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -21,10 +21,21 @@
 #ifndef GENSFRAME_H
 #define GENSFRAME_H
 
+/* Errors shouldn't be emitted either if SFrames are default-enabled, as
+   we interpret default-enabled as "opportunistic SFrames".  Users don't
+   want to be bothered by something preventing emission of SFrames in
+   such a case.  */
+#define sframe_as_bad(format, ...) \
+  do {					       \
+    if (flag_gen_sframe == GEN_SFRAME_ENABLED) \
+      as_bad (format, __VA_ARGS__);            \
+  } while (0)
+
 #define SFRAME_FRE_ELEM_LOC_REG		0
 #define SFRAME_FRE_ELEM_LOC_STACK	1
 
-#define SFRAME_FRE_BASE_REG_INVAL	((unsigned int)-1)
+/* An invalid register number.  */
+#define SFRAME_FRE_REG_INVALID		((unsigned int)-1)
 
 /* SFrame Frame Row Entry (FRE).
 
@@ -54,6 +65,9 @@ struct sframe_row_entry
 
   /* Whether the return address is mangled with pauth code.  */
   bool mangled_ra_p;
+
+  /* Whether RA is undefined.  */
+  bool ra_undefined_p;
 
   /* Track CFA base (architectural) register ID.  */
   unsigned int cfa_base_reg;
@@ -134,10 +148,6 @@ enum sframe_xlate_err
 unsigned char
 sframe_get_abi_arch_callback (const char *target_arch,
 			      int big_endian_p);
-
-/* The list of all FDEs with data in SFrame internal representation.  */
-
-extern struct sframe_func_entry *all_sframe_fdes;
 
 /* SFrame version specific operations structure.  */
 

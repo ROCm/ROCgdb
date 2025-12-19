@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,9 +44,9 @@ gdb_test "print i" ".* = 0" "print i before assigned to 1"
 
 gdb_test "next" "i = 1" "next to 'i = 1' line"
 gdb_test "next" "j = 2" "next to 'j = 2' line"
-# At that point, 
+# At that point,
 # i should be equal to 1
-gdb_test "print i" " = 1" 
+gdb_test "print i" " = 1"
 # but j should still be equal to zero
 gdb_test "print j" " = 0" "test j value before assignment"
 

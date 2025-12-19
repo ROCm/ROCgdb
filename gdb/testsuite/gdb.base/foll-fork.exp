@@ -1,4 +1,4 @@
-#   Copyright 1997-2024 Free Software Foundation, Inc.
+#   Copyright 1997-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 # Test relies on checking follow-fork output. Do not run if gdb debug is
 # enabled as it will be redirected to the log.
 require !gdb_debug_enabled
+
+require allow_fork_tests
 
 standard_testfile
 
@@ -65,8 +67,8 @@ proc_with_prefix check_fork_catchpoints {} {
 # the followed process stops where it is expected to stop, that processes
 # are detached (or not) as expected, and that the inferior list has the
 # expected contents after following the fork.  WHO is the argument to
-# the 'set follow-fork-mode' command, DETACH is the argument to the 
-# 'set detach-on-fork' command, and CMD is the GDB command used to 
+# the 'set follow-fork-mode' command, DETACH is the argument to the
+# 'set detach-on-fork' command, and CMD is the GDB command used to
 # execute the program past the fork.  If the value of WHO or DETACH is
 # 'default', the corresponding GDB command is skipped for that test.
 # The value of CMD must be either 'next 2' or 'continue'.

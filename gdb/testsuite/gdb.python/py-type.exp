@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,8 +33,9 @@ proc build_inferior {exefile lang} {
 }
 
 # Restart GDB.
-proc restart_gdb {exefile} { 
-  clean_restart $exefile
+proc restart_gdb {exefile} {
+  clean_restart
+  gdb_load $exefile
 
   if {![runto_main]} {
       return
@@ -53,7 +54,7 @@ proc test_fields {lang} {
 
     # .fields() of a typedef should still return the underlying field list
     gdb_test "python print (len(gdb.parse_and_eval('ts').type.fields()))" "2" \
-        "$lang typedef field list"
+	"$lang typedef field list"
 
     if {$lang == "c++"} {
       # Test usage with a class
@@ -134,7 +135,7 @@ proc test_fields {lang} {
 
     # Test conversion to bool on scalar types
     gdb_test "python print (not not st.type\['a'\].type)" "True"
-  
+
     # Test regression PR python/10805
     gdb_py_test_silent_cmd "print (ar)" "print value(ar)" 1
     gdb_py_test_silent_cmd "python ar = gdb.history (0)" "get value (ar) from history" 1
@@ -144,9 +145,9 @@ proc test_fields {lang} {
 
     # Test gdb.Type.array.
     gdb_test "python print (ar\[0\].cast(ar\[0\].type.array(1)))" \
-        ".1, 2." "cast to array with one argument"
+	".1, 2." "cast to array with one argument"
     gdb_test "python print (ar\[0\].cast(ar\[0\].type.array(0, 1)))" \
-        ".1, 2." "cast to array with two arguments"
+	".1, 2." "cast to array with two arguments"
 
     gdb_test "python print (ar\[0\].type == ar\[0\].type)" "True"
 
@@ -253,9 +254,9 @@ proc test_template {} {
 	|| [test_compiler_info {gcc-4-[0-4]-*}]} {
 	set have_older_gcc 1
     }
-    if $have_older_gcc { setup_xfail *-*-* }
+    if {$have_older_gcc} { setup_xfail *-*-* }
     gdb_test "python print (ttype.template_argument(1))" "23"
-    if $have_older_gcc { setup_xfail *-*-* }
+    if {$have_older_gcc} { setup_xfail *-*-* }
     gdb_test "python print (isinstance(ttype.template_argument(1), gdb.Value))" \
 	"True"
 
@@ -324,6 +325,19 @@ proc test_type_equality {} {
     }
 }
 
+# Test type identity
+proc test_type_identity {} {
+    gdb_test_no_output "python v1 = gdb.parse_and_eval('global_unsigned_int')"
+    gdb_test_no_output "python v2 = gdb.parse_and_eval('global_unsigned_int')"
+
+    gdb_test "python print(v1.type is v2.type)" "True"
+
+    gdb_test_no_output "python t1 = gdb.lookup_type ('char')"
+    gdb_test_no_output "python t2 = gdb.lookup_type ('char')"
+
+    gdb_test "python print(t1 is t2)" "True"
+}
+
 # Test the gdb.Type.is_scalar property.
 proc test_is_scalar { lang } {
     if {$lang == "c++"} {
@@ -376,7 +390,14 @@ if { [build_inferior "${binfile}" "c"] == 0 } {
       test_is_scalar "c"
       test_is_signed "c"
       test_type_equality
+      test_type_identity
   }
+
+  gdb_test "python print(gdb.lookup_type('int').const().volatile())" \
+    "const volatile int"
+  gdb_test "python print(gdb.lookup_type('int').volatile().const())" \
+    "const volatile int" \
+    "volatile const int"
 }
 
 # Perform C++ Tests.
@@ -392,6 +413,7 @@ if { [build_inferior "${binfile}-cxx" "c++"] == 0 } {
       test_is_scalar "c++"
       test_is_signed "c++"
       test_type_equality
+      test_type_identity
   }
 }
 

@@ -1,7 +1,7 @@
 /* GDB routines for manipulating objfiles.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -35,7 +35,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "gdbsupport/gdb_obstack.h"
-#include "hashtab.h"
 
 #include "breakpoint.h"
 #include "block.h"
@@ -192,7 +191,7 @@ objfile_lookup_static_link (struct objfile *objfile,
 
 static void
 add_to_objfile_sections (struct bfd *abfd, struct bfd_section *asect,
-			      struct objfile *objfile, int force)
+			 struct objfile *objfile, int force)
 {
   struct obj_section *section;
 
@@ -475,8 +474,6 @@ objfile::~objfile ()
   /* It still may reference data modules have associated with the objfile and
      the symbol file data.  */
   forget_cached_source_info ();
-  for (compunit_symtab *cu : compunits ())
-    cu->finalize ();
 
   breakpoint_free_objfile (this);
   btrace_free_objfile (this);
@@ -518,33 +515,15 @@ objfile::~objfile ()
 }
 
 
-/* A helper function for objfile_relocate1 that relocates a single
-   symbol.  */
-
-static void
-relocate_one_symbol (struct symbol *sym, struct objfile *objfile,
-		     const section_offsets &delta)
-{
-  /* The RS6000 code from which this was taken skipped
-     any symbols in STRUCT_DOMAIN or UNDEF_DOMAIN.
-     But I'm leaving out that test, on the theory that
-     they can't possibly pass the tests below.  */
-  if ((sym->aclass () == LOC_LABEL
-       || sym->aclass () == LOC_STATIC)
-      && sym->section_index () >= 0)
-    sym->set_value_address (sym->value_address ()
-			    + delta[sym->section_index ()]);
-}
-
 /* Relocate OBJFILE to NEW_OFFSETS.  There should be OBJFILE->NUM_SECTIONS
    entries in new_offsets.  SEPARATE_DEBUG_OBJFILE is not touched here.
    Return non-zero iff any change happened.  */
 
 static int
-objfile_relocate1 (struct objfile *objfile, 
-		   const section_offsets &new_offsets)
+objfile_relocate1 (struct objfile *objfile,
+		   gdb::array_view<const CORE_ADDR> new_offsets)
 {
-  section_offsets delta (objfile->section_offsets.size ());
+  std::vector<CORE_ADDR> delta (objfile->section_offsets.size ());
 
   int something_changed = 0;
 
@@ -558,35 +537,12 @@ objfile_relocate1 (struct objfile *objfile,
     return 0;
 
   /* OK, get all the symtabs.  */
-  for (compunit_symtab *cust : objfile->compunits ())
-    {
-      struct blockvector *bv = cust->blockvector ();
-      int block_line_section = SECT_OFF_TEXT (objfile);
-
-      if (bv->map () != nullptr)
-	bv->map ()->relocate (delta[block_line_section]);
-
-      for (block *b : bv->blocks ())
-	{
-	  b->set_start (b->start () + delta[block_line_section]);
-	  b->set_end (b->end () + delta[block_line_section]);
-
-	  for (blockrange &r : b->ranges ())
-	    {
-	      r.set_start (r.start () + delta[block_line_section]);
-	      r.set_end (r.end () + delta[block_line_section]);
-	    }
-
-	  /* We only want to iterate over the local symbols, not any
-	     symbols in included symtabs.  */
-	  for (struct symbol *sym : b->multidict_symbols ())
-	    relocate_one_symbol (sym, objfile, delta);
-	}
-    }
+  for (compunit_symtab &cust : objfile->compunits ())
+    cust.blockvector ()->relocate (objfile, delta);
 
   /* Relocate isolated symbols.  */
   for (symbol *iter = objfile->template_symbols; iter; iter = iter->hash_next)
-    relocate_one_symbol (iter, objfile, delta);
+    iter->relocate (delta);
 
   for (int i = 0; i < objfile->section_offsets.size (); ++i)
     objfile->section_offsets[i] = new_offsets[i];
@@ -595,12 +551,12 @@ objfile_relocate1 (struct objfile *objfile,
   get_objfile_pspace_data (objfile->pspace ())->section_map_dirty = 1;
 
   /* Update the table in exec_ops, used to read memory.  */
-  for (obj_section *s : objfile->sections ())
+  for (obj_section &s : objfile->sections ())
     {
-      int idx = s - objfile->sections_start;
+      int idx = &s - objfile->sections_start;
 
       exec_set_section_address (bfd_get_filename (objfile->obfd.get ()), idx,
-				s->addr ());
+				s.addr ());
     }
 
   /* Data changed.  */
@@ -618,7 +574,7 @@ objfile_relocate1 (struct objfile *objfile,
 
 void
 objfile_relocate (struct objfile *objfile,
-		  const section_offsets &new_offsets)
+		  gdb::array_view<const CORE_ADDR> new_offsets)
 {
   int changed = 0;
 
@@ -639,7 +595,7 @@ objfile_relocate (struct objfile *objfile,
 
       gdb_assert (debug_objfile->section_offsets.size ()
 		  == gdb_bfd_count_sections (debug_objfile->obfd.get ()));
-      section_offsets new_debug_offsets
+      std::vector<CORE_ADDR> new_debug_offsets
 	(debug_objfile->section_offsets.size ());
       relative_addr_info_to_section_offsets (new_debug_offsets, objfile_addrs);
 
@@ -658,7 +614,7 @@ objfile_relocate (struct objfile *objfile,
 static int
 objfile_rebase1 (struct objfile *objfile, CORE_ADDR slide)
 {
-  section_offsets new_offsets (objfile->section_offsets.size (), slide);
+  std::vector<CORE_ADDR> new_offsets (objfile->section_offsets.size (), slide);
   return objfile_relocate1 (objfile, new_offsets);
 }
 
@@ -681,18 +637,18 @@ objfile_rebase (struct objfile *objfile, CORE_ADDR slide)
 /* See objfiles.h.  */
 
 bool
-objfile_has_full_symbols (objfile *objfile)
+objfile::has_full_symbols ()
 {
-  return objfile->compunit_symtabs != nullptr;
+  return !this->compunit_symtabs.empty ();
 }
 
 /* See objfiles.h.  */
 
 bool
-objfile_has_symbols (objfile *objfile)
+objfile::has_symbols ()
 {
-  for (::objfile *o : objfile->separate_debug_objfiles ())
-    if (o->has_partial_symbols () || objfile_has_full_symbols (o))
+  for (::objfile *o : this->separate_debug_objfiles ())
+    if (o->has_partial_symbols () || o->has_full_symbols ())
       return true;
 
   return false;
@@ -703,8 +659,8 @@ objfile_has_symbols (objfile *objfile)
 bool
 have_partial_symbols (program_space *pspace)
 {
-  for (objfile *ofp : pspace->objfiles ())
-    if (ofp->has_partial_symbols ())
+  for (objfile &ofp : pspace->objfiles ())
+    if (ofp.has_partial_symbols ())
       return true;
 
   return false;
@@ -715,8 +671,8 @@ have_partial_symbols (program_space *pspace)
 bool
 have_full_symbols (program_space *pspace)
 {
-  for (objfile *ofp : pspace->objfiles ())
-    if (objfile_has_full_symbols (ofp))
+  for (objfile &ofp : pspace->objfiles ())
+    if (ofp.has_full_symbols ())
       return true;
 
   return false;
@@ -728,13 +684,13 @@ have_full_symbols (program_space *pspace)
 void
 objfile_purge_solibs (program_space *pspace)
 {
-  for (objfile *objf : pspace->objfiles_safe ())
+  for (objfile &objf : pspace->objfiles_safe ())
     {
       /* We assume that the solib package has been purged already, or will
 	 be soon.  */
 
-      if (!(objf->flags & OBJF_USERLOADED) && (objf->flags & OBJF_SHARED))
-	objf->unlink ();
+      if (!(objf.flags & OBJF_USERLOADED) && (objf.flags & OBJF_SHARED))
+	objf.unlink ();
     }
 }
 
@@ -743,8 +699,8 @@ objfile_purge_solibs (program_space *pspace)
 bool
 have_minimal_symbols (program_space *pspace)
 {
-  for (objfile *ofp : pspace->objfiles ())
-    if (ofp->per_bfd->minimal_symbol_count > 0)
+  for (objfile &ofp : pspace->objfiles ())
+    if (ofp.per_bfd->minimal_symbol_count > 0)
       return true;
 
   return false;
@@ -798,10 +754,10 @@ sort_cmp (const struct obj_section *sect1, const obj_section *sect2)
 	     second case shouldn't occur during normal use, but std::sort
 	     does check that '!(a < a)' when compiled in debug mode.  */
 
-	  for (const obj_section *osect : objfile1->sections ())
-	    if (osect == sect2)
+	  for (const obj_section &osect : objfile1->sections ())
+	    if (&osect == sect2)
 	      return false;
-	    else if (osect == sect1)
+	    else if (&osect == sect1)
 	      return true;
 
 	  /* We should have found one of the sections before getting here.  */
@@ -811,10 +767,10 @@ sort_cmp (const struct obj_section *sect1, const obj_section *sect2)
 	{
 	  /* Sort on sequence number of the objfile in the chain.  */
 
-	  for (objfile *objfile : current_program_space->objfiles ())
-	    if (objfile == objfile1)
+	  for (objfile &objfile : current_program_space->objfiles ())
+	    if (&objfile == objfile1)
 	      return true;
-	    else if (objfile == objfile2)
+	    else if (&objfile == objfile2)
 	      return false;
 
 	  /* We should have found one of the objfiles before getting here.  */
@@ -1001,9 +957,9 @@ update_section_map (struct program_space *pspace,
   xfree (map);
 
   alloc_size = 0;
-  for (objfile *objfile : pspace->objfiles ())
-    for (obj_section *s : objfile->sections ())
-      if (insert_section_p (objfile->obfd.get (), s->the_bfd_section))
+  for (objfile &objfile : pspace->objfiles ())
+    for (obj_section &s : objfile.sections ())
+      if (insert_section_p (objfile.obfd.get (), s.the_bfd_section))
 	alloc_size += 1;
 
   /* This happens on detach/attach (e.g. in gdb.base/attach.exp).  */
@@ -1017,10 +973,10 @@ update_section_map (struct program_space *pspace,
   map = XNEWVEC (struct obj_section *, alloc_size);
 
   i = 0;
-  for (objfile *objfile : pspace->objfiles ())
-    for (obj_section *s : objfile->sections ())
-      if (insert_section_p (objfile->obfd.get (), s->the_bfd_section))
-	map[i++] = s;
+  for (objfile &objfile : pspace->objfiles ())
+    for (obj_section &s : objfile.sections ())
+      if (insert_section_p (objfile.obfd.get (), s.the_bfd_section))
+	map[i++] = &s;
 
   std::sort (map, map + alloc_size, sort_cmp);
   map_size = filter_debuginfo_sections(map, alloc_size);
@@ -1135,14 +1091,28 @@ is_addr_in_objfile (CORE_ADDR addr, const struct objfile *objfile)
   if (objfile == NULL)
     return false;
 
-  for (obj_section *osect : objfile->sections ())
+  if (objfile->sections_start == nullptr)
     {
-      if (section_is_overlay (osect) && !section_is_mapped (osect))
-	continue;
-
-      if (osect->contains (addr))
-	return true;
+      /* Objfiles created dynamically by the JIT reader API (and possibly by
+	 other means too) do not have sections.  For such "dynamic" objfiles
+	 walk over all compunits and check if any of them contains given
+	 ADDR.  */
+      for (const compunit_symtab &cu : objfile->compunits ())
+	if (cu.contains (addr))
+	  return true;
     }
+  else
+    {
+      for (obj_section &osect : objfile->sections ())
+	{
+	  if (section_is_overlay (&osect) && !section_is_mapped (&osect))
+	    continue;
+
+	  if (osect.contains (addr))
+	    return true;
+	}
+    }
+
   return false;
 }
 
@@ -1152,32 +1122,14 @@ bool
 shared_objfile_contains_address_p (struct program_space *pspace,
 				   CORE_ADDR address)
 {
-  for (objfile *objfile : pspace->objfiles ())
+  for (objfile &objfile : pspace->objfiles ())
     {
-      if ((objfile->flags & OBJF_SHARED) != 0
-	  && is_addr_in_objfile (address, objfile))
+      if ((objfile.flags & OBJF_SHARED) != 0
+	  && is_addr_in_objfile (address, &objfile))
 	return true;
     }
 
   return false;
-}
-
-/* The default implementation for the "iterate_over_objfiles_in_search_order"
-   gdbarch method.  It is equivalent to use the objfiles iterable,
-   searching the objfiles in the order they are stored internally,
-   ignoring CURRENT_OBJFILE.
-
-   On most platforms, it should be close enough to doing the best
-   we can without some knowledge specific to the architecture.  */
-
-void
-default_iterate_over_objfiles_in_search_order
-  (gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype cb,
-   objfile *current_objfile)
-{
-  for (objfile *objfile : current_program_space->objfiles ())
-    if (cb (objfile))
-	return;
 }
 
 /* See objfiles.h.  */

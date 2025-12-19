@@ -1,4 +1,4 @@
---  Copyright 2018-2024 Free Software Foundation, Inc.
+--  Copyright 2018-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -20,4 +20,3 @@ procedure Expr_R821_013 is
 begin
    Do_Nothing (Val'Address); -- STOP
 end Expr_R821_013;
-

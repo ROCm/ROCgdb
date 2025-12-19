@@ -1,5 +1,5 @@
 /* Copyright (C) 2022-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -34,7 +34,12 @@
 
 struct Empty {};
 
-template<typename T, size_t N>
+/* Note: we use "int" instead of "size_t" here and throughout so that
+   the N constant does not end up with suffixes in function
+   prototypes.  E.g., We get "returnSized<1>" instead
+   "returnSized<1ul>" or "returnSized<1ull>" depending on the
+   underlying type of size_t.  */
+template<typename T, int N>
 struct Custom
 {
   T data[N];
@@ -99,7 +104,7 @@ returnEmpty ()
   return {};
 }
 
-template<size_t N>
+template<int N>
 __device__ static Custom<char, N>
 returnSized ()
 {
@@ -110,12 +115,12 @@ returnSized ()
   return ret;
 }
 
-template<size_t N>
+template<int N>
 __device__ static Custom<Union, N>
 returnCustomWithUnion ()
 {
   Custom<Union, N> ret;
-  for (size_t i = 0; i < N; i++)
+  for (int i = 0; i < N; i++)
     ret.data[i].as_int = 0x61616161;
   return ret;
 }

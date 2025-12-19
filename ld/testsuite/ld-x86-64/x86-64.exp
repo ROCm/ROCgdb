@@ -1,5 +1,5 @@
 # Expect script for ld-x86_64 tests
-#   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -216,6 +216,11 @@ set x86_64tests {
     {"Build textrel-1" "-no-pie -melf_x86_64 -z nocopyreloc --warn-textrel"
      "tmpdir/textrel-1.so"
      "--64" { textrel-1b.s } {{ld "textrel-1.err"}} "textrel-1"}
+    {"Build pr32665"
+     "-melf_x86_64"
+     "" ""
+     { pr32665.o.bz2 }
+     {{ld "pr32665.err"}} "pr32665"}
 }
 
 run_ld_link_tests $x86_64tests
@@ -529,6 +534,12 @@ run_dump_test "dt-relr-1a"
 run_dump_test "dt-relr-1a-x32"
 run_dump_test "dt-relr-1b"
 run_dump_test "dt-relr-1b-x32"
+run_dump_test "dt-relr-1c"
+run_dump_test "dt-relr-1c-x32"
+run_dump_test "dt-relr-1d"
+run_dump_test "dt-relr-1d-x32"
+run_dump_test "dt-relr-2"
+run_dump_test "dt-relr-2-x32"
 run_dump_test "pr30787"
 run_dump_test "pr31047"
 run_dump_test "pr31047-x32"
@@ -544,13 +555,64 @@ run_dump_test "tlsdesc4"
 run_dump_test "tlsdesc5"
 run_dump_test "pr32191"
 run_dump_test "pr32191-x32"
+run_dump_test "pr32591-1a"
+run_dump_test "pr32591-1a-x32"
+run_dump_test "pr32591-1b"
+run_dump_test "pr32591-1b-x32"
+run_dump_test "pr32591-1c"
+run_dump_test "pr32591-1c-x32"
+run_dump_test "pr32591-1d"
+run_dump_test "pr32591-1d-x32"
+run_dump_test "pr32591-2"
+run_dump_test "pr32591-2-x32"
+run_dump_test "pr32591-3"
+run_dump_test "pr32591-3-x32"
+run_dump_test "pr32591-4"
+run_dump_test "pr32591-4-x32"
+run_dump_test "pr32809"
+run_dump_test "pr33260"
+run_dump_test "pr33260-x32"
+run_dump_test "pr33260-2"
+run_dump_test "pr33260-2-x32"
+run_dump_test "pr33292"
+run_dump_test "pr33292-x32"
+run_dump_test "pr28387"
+run_dump_test "pr28387-x32"
+run_dump_test "tls-le-pic-1"
+run_dump_test "tls-le-pic-1-x32"
+run_dump_test "tls-le-pic-2"
+run_dump_test "tls-le-pic-2-x32"
+run_dump_test "tls-le-pic-3"
+run_dump_test "tls-le-pic-3-x32"
 
 if { ![skip_sframe_tests] } {
     run_dump_test "sframe-simple-1"
+    run_dump_test "sframe-reloc-1"
     run_dump_test "sframe-plt-1"
     run_dump_test "sframe-ibt-plt-1"
     run_dump_test "sframe-pltgot-1"
     run_dump_test "sframe-pltgot-2"
+
+    run_ld_link_tests [list \
+	[list \
+	    "Build sframe-reloc-2.o" \
+	    "-m elf_x86_64 -r" \
+	    "" \
+	    "--64 --gsframe" \
+	    {sframe-reloc-2a.s sframe-reloc-2b.s} \
+	    "" \
+	    "sframe-reloc-2.o" \
+	] \
+	[list \
+	    "Build sframe-reloc-2" \
+	    "-m elf_x86_64 tmpdir/sframe-reloc-2.o" \
+	    "" \
+	    "--64 --gsframe" \
+	    {dummy.s} \
+	    "" \
+	    "sframe-reloc-2" \
+	] \
+    ]
 }
 
 if ![istarget "x86_64-*-linux*"] {
@@ -651,6 +713,11 @@ run_dump_test "apx-load1b"
 run_dump_test "apx-load1c"
 run_dump_test "apx-load1d"
 run_dump_test "load2"
+run_dump_test "load3a"
+run_dump_test "load3b"
+run_dump_test "load4"
+run_dump_test "load5a"
+run_dump_test "load5b"
 run_dump_test "call1a"
 run_dump_test "call1b"
 run_dump_test "call1c"
@@ -726,8 +793,6 @@ run_dump_test "pr19609-3b"
 run_dump_test "pr19609-4a"
 run_dump_test "pr19609-4b"
 run_dump_test "pr19609-4c"
-run_dump_test "pr19609-4d"
-run_dump_test "pr19609-4e"
 run_dump_test "pr19609-5a"
 run_dump_test "pr19609-5b"
 run_dump_test "pr19609-5c"
@@ -956,7 +1021,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build pr17689.so" \
 	    "-shared" \
-	    "-fPIC -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -fPIC -Wa,-mx86-used-note=yes" \
 	    { pr17689a.c } \
 	    {} \
 	    "pr17689.so" \
@@ -964,7 +1029,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build pr17689now.so with -z now" \
 	    "-shared -Wl,-z,now" \
-	    "-fPIC -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -fPIC -Wa,-mx86-used-note=yes" \
 	    { pr17689a.c } \
 	    {{readelf {-Wr} pr17689now.rd}} \
 	    "pr17689now.so" \
@@ -972,30 +1037,30 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build pr17689b.o" \
 	    "" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr17689b.S } \
 	    {} \
 	] \
 	[list \
 	    "Build pr17689 with PIE without -fPIE" \
-	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie -Wl,-z,noindirect-extern-access" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    {{readelf {-Wr} pr17689.rd}} \
 	    "pr17689" \
 	] \
 	[list \
 	    "Build pr17689 with PIE -z now without -fPIE" \
-	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie -Wl,-z,now" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "tmpdir/pr17689b.o tmpdir/pr17689.so -pie -Wl,-z,now -Wl,-z,noindirect-extern-access" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    {{readelf {-Wr} pr17689now.rd}} \
 	    "pr17689now" \
 	] \
 	[list \
 	    "Build pr17827 with PIE without -fPIE" \
-	    "-Wl,--as-needed tmpdir/pr17689b.o tmpdir/pr17689.so -pie" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "-Wl,--as-needed tmpdir/pr17689b.o tmpdir/pr17689.so -pie -Wl,-z,noindirect-extern-access" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    {{readelf {-Wr} pr17827.rd}} \
 	    "pr17827" \
@@ -1100,7 +1165,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build property 1 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-no-copy.S} \
 	    {{readelf {-n} property-1a.r}} \
 	    "property-1.o" \
@@ -1124,7 +1189,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build property 2 (.o)" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {pass.c property-stack.S} \
 	    {{readelf {-n} property-2a.r}} \
 	    "property-2.o" \
@@ -1148,7 +1213,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build property-6.o" \
 	    "-r -nostdlib" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    {property-6b.c property-stack.S} \
 	    {{readelf {-n} property-2a.r}} \
 	    "property-6.o" \
@@ -1179,16 +1244,16 @@ if { [isnative] && [check_compiler_available] } {
 	] \
 	[list \
 	    "Build pr22001-1.so" \
-	    "-shared" \
-	    "-fPIC -Wa,-mx86-used-note=yes" \
+	    "-shared -Wl,-z,noindirect-extern-access" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -fPIC -Wa,-mx86-used-note=yes" \
 	    { pr22001-1a.c } \
 	    {} \
 	    "pr22001-1.so" \
 	] \
 	[list \
 	    "Build pr22001-1a" \
-	    "$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed,-z,notext tmpdir/pr22001-1.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed,-z,notext,-z,noindirect-extern-access tmpdir/pr22001-1.so" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr22001-1b.c } \
 	    {{error_output "pr22001-1a.err"}} \
 	    "pr22001-1a" \
@@ -1196,7 +1261,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build pr21997-1.so" \
 	    "-shared" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { property-stack.S property-no-copy.S pr21997-1a.S } \
 	    {} \
 	    "pr21997-1.so" \
@@ -1204,7 +1269,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build pr21997-1a" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed,-z,notext tmpdir/pr21997-1.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr21997-1b.c } \
 	    {{error_output "pr21997-1a.err"}} \
 	    "pr21997-1a" \
@@ -1350,7 +1415,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build protected-func-2 without PIE" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed tmpdir/libprotected-func-2b.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { protected-func-1b.c } \
 	    {{error_output "pr28875-func.err"}} \
 	    "protected-func-2" \
@@ -1366,7 +1431,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build protected-func-2a without PIE" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed tmpdir/libprotected-func-2c.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { protected-func-1b.c } \
 	    {{error_output "pr28875-func.err"}} \
 	    "protected-func-2a" \
@@ -1390,7 +1455,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Build protected-data-1 without PIE" \
 	    "$NOPIE_LDFLAGS -Wl,--no-as-needed tmpdir/libprotected-data-1b.so" \
-	    "$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { protected-data-1b.c } \
 	    {{error_output "pr28875-data.err"}} \
 	    "protected-data-1" \
@@ -1484,7 +1549,7 @@ if { [isnative] && [check_compiler_available] } {
 		{ pr22001-1c.c } \
 		"pr22001-1b" \
 		"pass.out" \
-		"$NOPIE_CFLAGS" \
+		"$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS" \
 	    ] \
 	    [list \
 		"Run pr25416-5a (GDesc -> IE -maddress-mode=short)" \
@@ -1552,8 +1617,8 @@ if { [isnative] && [check_compiler_available] } {
 	run_cc_link_tests [list \
 	    [list \
 		"Build pr22001-1b" \
-		"$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed,-z,notext tmpdir/pr22001-1.so" \
-		"$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+		"$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed,-z,notext,-z,noindirect-extern-access tmpdir/pr22001-1.so" \
+		"$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 		{ pr22001-1c.c } \
 		{{error_output "pr22001-1b.err"}} \
 		"pr22001-1b" \
@@ -1561,14 +1626,14 @@ if { [isnative] && [check_compiler_available] } {
 	    [list \
 		"Build pr21997-1b" \
 		"$NOPIE_LDFLAGS -Wl,--no-as-needed,-z,notext tmpdir/pr21997-1.so" \
-		"$NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
+		"$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS -Wa,-mx86-used-note=yes" \
 		{ pr21997-1c.c } \
 		{{error_output "pr21997-1b.err"}} \
 		"pr21997-1b" \
 	    ] \
 	    [list \
 		"Build lam-u48.so" \
-		"-shared -Wl,-z,lam-u48" \
+		"-shared -Wl,-z,lam-u48,-z,noindirect-extern-access" \
 		"" \
 		{dummy.s} \
 		{{readelf -n lam-u48.rd}}  \
@@ -1576,7 +1641,7 @@ if { [isnative] && [check_compiler_available] } {
 	    ] \
 	    [list \
 		"Build lam-u57.so" \
-		"-shared -Wl,-z,lam-u57" \
+		"-shared -Wl,-z,lam-u57,-z,noindirect-extern-access" \
 		"" \
 		{dummy.s} \
 		{{readelf -n lam-u57.rd}}  \
@@ -1608,23 +1673,23 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Run copyreloc-main with PIE without -fPIE" \
 	    "-Wl,--as-needed -pie tmpdir/copyreloc-main.o tmpdir/copyreloc-lib.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    "copyreloc-main" \
 	    "copyreloc-main.out" \
 	] \
 	[list \
 	    "Run pr17689 with PIE without -fPIE" \
-	    "-Wl,--no-as-needed -pie tmpdir/pr17689b.o tmpdir/pr17689.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "-Wl,--no-as-needed,-z,noindirect-extern-access -pie tmpdir/pr17689b.o tmpdir/pr17689.so" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    "pr17689" \
 	    "pr17689.out" \
 	] \
 	[list \
 	    "Run pr17689 with PIE -z now without -fPIE" \
-	    "-Wl,--as-needed,-z,now -pie tmpdir/pr17689b.o tmpdir/pr17689.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "-Wl,--as-needed,-z,now,-z,noindirect-extern-access -pie tmpdir/pr17689b.o tmpdir/pr17689.so" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { dummy.s } \
 	    "pr17689now" \
 	    "pr17689.out" \
@@ -1699,25 +1764,25 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Run pr22001-1a (PIC 1)" \
 	    "$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed tmpdir/pr22001-1.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr22001-1b.c } \
 	    "pr22001-1a-pic-1" \
 	    "pass.out" \
-	    "-fPIC" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -fPIC" \
 	] \
 	[list \
 	    "Run pr22001-1a (PIC 2)" \
 	    "-pie -Wl,-z,nocopyreloc,--no-as-needed tmpdir/pr22001-1.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr22001-1b.c } \
 	    "pr22001-1a-pic-2" \
 	    "pass.out" \
-	    "-fPIC" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -fPIC" \
 	] \
 	[list \
 	    "Run pr22001-1b (PIC 1)" \
 	    "$NOPIE_LDFLAGS -Wl,-z,nocopyreloc,--no-as-needed tmpdir/pr22001-1.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr22001-1c.c } \
 	    "pr22001-1b-pic-1" \
 	    "pass.out" \
@@ -1726,7 +1791,7 @@ if { [isnative] && [check_compiler_available] } {
 	[list \
 	    "Run pr22001-1b (PIC 2)" \
 	    "-pie -Wl,-z,nocopyreloc,--no-as-needed tmpdir/pr22001-1.so" \
-	    "-Wa,-mx86-used-note=yes" \
+	    "$DIRECT_EXTERN_ACCESS_CFLAGS -Wa,-mx86-used-note=yes" \
 	    { pr22001-1c.c } \
 	    "pr22001-1b-pic-2" \
 	    "pass.out" \
@@ -2145,10 +2210,10 @@ if { [isnative] && [check_compiler_available] } {
 	}
     }
 
-    undefined_weak "$NOPIE_CFLAGS" "$NOPIE_LDFLAGS"
-    undefined_weak "-fPIE" ""
+    undefined_weak "$DIRECT_EXTERN_ACCESS_CFLAGS $NOPIE_CFLAGS" "$NOPIE_LDFLAGS"
+    undefined_weak "-fPIE" "$NOPIE_LDFLAGS"
     undefined_weak "-fPIE" "-pie"
-    undefined_weak "-fPIE" "-Wl,-z,nodynamic-undefined-weak"
+    undefined_weak "-fPIE" "$NOPIE_LDFLAGS -Wl,-z,nodynamic-undefined-weak"
     undefined_weak "-fPIE" "-pie -Wl,-z,nodynamic-undefined-weak"
 }
 
@@ -2309,7 +2374,7 @@ run_dump_test "ibt-plt-3b-x32"
 run_dump_test "ibt-plt-3c-x32"
 run_dump_test "ibt-plt-3d-x32"
 
-# Skip -z mark-plt tests on MUSL.
+# Skip -z mark-plt and --gnu2-tls-tag tests on MUSL.
 if { [istarget "x86_64-*-musl*"]} {
     set ASFLAGS "$saved_ASFLAGS"
     return
@@ -2334,6 +2399,30 @@ if { [check_compiler_available] } {
 	    {{readelf {-W --version-info} mark-plt-1a.rd} \
 	     {readelf {-W --version-info} mark-plt-1b.rd}} \
 	    "mark-plt-1.so" \
+	] \
+	[list \
+	    "Build mark-plt-2.so" \
+	    "-shared -Wl,--no-as-needed,-z,mark-plt,-z,nopack-relative-relocs" \
+	    "-fPIC" \
+	    { mark-plt-2.s } \
+	    {{readelf {-W --version-info} mark-plt-2.rd}} \
+	    "mark-plt-2.so" \
+	] \
+	[list \
+	    "Build gnu2-tls-1a.so" \
+	    "-shared -Wl,--no-as-needed,--gnu2-tls-tag" \
+	    "-fPIC" \
+	    { gnu2-tls-1.s } \
+	    {{readelf {-W --version-info} gnu2-tls-1a.rd}} \
+	    "gnu2-tls-1a.so" \
+	] \
+	[list \
+	    "Build gnu2-tls-1b.so" \
+	    "-shared -Wl,--no-as-needed,--no-gnu2-tls-tag" \
+	    "-fPIC" \
+	    { gnu2-tls-1.s } \
+	    {{readelf {-W --version-info} gnu2-tls-1b.rd}} \
+	    "gnu2-tls-1b.so" \
 	] \
     ]
 }

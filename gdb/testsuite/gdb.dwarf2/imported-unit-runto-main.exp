@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ set asm_file [standard_output_file ${srcfile2}]
 
 # We need to know the size of integer types in order to write some of the
 # debugging info we'd like to generate.
-if [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] {
+if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
     return -1
 }
 
@@ -37,31 +37,31 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	cu_label: partial_unit {
-	    {language @DW_LANG_C}
-	    {name "imported_unit.c"}
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name "imported_unit.c"
 	} {
 	    int_label: base_type {
-		{byte_size $int_size sdata}
-		{encoding @DW_ATE_signed}
-		{name int}
+		DW_AT_byte_size $int_size sdata
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_name int
 	    }
 
 	    main_label: subprogram {
-		{name main}
-		{type :$int_label}
-		{external 1 flag}
+		DW_AT_name main
+		DW_AT_type :$int_label
+		DW_AT_external 1 flag
 	    }
 	}
     }
 
     cu {} {
 	compile_unit {
-	    {language @DW_LANG_C}
-	    {name "<artificial>"}
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name "<artificial>"
 	} {
 	    subprogram {
-		{abstract_origin %$main_label}
-		{MACRO_AT_range {main}}
+		DW_AT_abstract_origin %$main_label
+		MACRO_AT_range {main}
 	    }
 	}
     }
@@ -77,6 +77,6 @@ if { [ensure_gdb_index $binfile] == -1 } {
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 runto main

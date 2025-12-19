@@ -1,5 +1,5 @@
 /* scfidw2gen.c - Support for emission of synthesized Dwarf2 CFI.
-   Copyright (C) 2023 Free Software Foundation, Inc.
+   Copyright (C) 2023-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -113,6 +113,7 @@ const pseudo_typeS scfi_pseudo_table[] =
     { "cfi_restore_state", dot_scfi_ignore, 0 },
     { "cfi_window_save", dot_scfi_ignore, 0 },
     { "cfi_negate_ra_state", dot_scfi_ignore, 0 },
+    { "cfi_negate_ra_state_with_pc", dot_scfi_ignore, 0 },
     { "cfi_escape", dot_scfi_ignore, 0 },
     { "cfi_personality", dot_scfi_ignore, 0 },
     { "cfi_personality_id", dot_scfi_ignore, 0 },
@@ -132,7 +133,7 @@ scfi_dot_cfi_startproc (const symbolS *start_sym)
       return;
     }
 
-  cfi_new_fde ((symbolS *)start_sym);
+  cfi_new_fde ((symbolS *)start_sym, false);
 
   cfi_set_sections ();
 

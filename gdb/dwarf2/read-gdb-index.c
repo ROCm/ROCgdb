@@ -1,6 +1,6 @@
 /* Reading code for .gdb_index
 
-   Copyright (C) 2023-2024 Free Software Foundation, Inc.
+   Copyright (C) 2023-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,15 +22,71 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
 #include "complaints.h"
+#include "dwarf2/index-common.h"
 #include "dwz.h"
 #include "event-top.h"
 #include "gdb/gdb-index.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
-#include "mapped-index.h"
+#include "cooked-index.h"
 #include "read.h"
+#include "extract-store-integer.h"
+#include "cp-support.h"
+#include "symtab.h"
+#include "gdbsupport/selftest.h"
+#include "tag.h"
 
 /* When true, do not reject deprecated .gdb_index sections.  */
 static bool use_deprecated_index_sections = false;
+
+struct dwarf2_gdb_index : public cooked_index_functions
+{
+  /* This dumps minimal information about the index.
+     It is called via "mt print objfiles".
+     One use is to verify .gdb_index has been loaded by the
+     gdb.dwarf2/gdb-index.exp testcase.  */
+  void dump (struct objfile *objfile) override;
+};
+
+/* This is a cooked index as ingested from .gdb_index.  */
+
+class cooked_gdb_index : public cooked_index
+{
+public:
+
+  cooked_gdb_index (cooked_index_worker_up worker,
+		    int version)
+    : cooked_index (std::move (worker)),
+      version (version)
+  { }
+
+  /* This can't be used to write an index.  */
+  cooked_index *index_for_writing () override
+  { return nullptr; }
+
+  quick_symbol_functions_up make_quick_functions () const override
+  { return quick_symbol_functions_up (new dwarf2_gdb_index); }
+
+  bool version_check () const override
+  {
+    return version >= 8;
+  }
+
+  /* Index data format version.  */
+  int version;
+};
+
+/* See above.  */
+
+void
+dwarf2_gdb_index::dump (struct objfile *objfile)
+{
+  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+
+  cooked_gdb_index *index = (gdb::checked_static_cast<cooked_gdb_index *>
+			     (per_objfile->per_bfd->index_table.get ()));
+  gdb_printf (".gdb_index: version %d\n", index->version);
+  cooked_index_functions::dump (objfile);
+}
 
 /* This is a view into the index that converts from bytes to an
    offset_type, and allows indexing.  Unaligned bytes are specifically
@@ -72,13 +128,17 @@ private:
   gdb::array_view<const gdb_byte> m_bytes;
 };
 
-/* A description of .gdb_index index.  The file format is described in
-   a comment by the code that writes the index.  */
+/* A worker for reading .gdb_index.  The file format is described in
+   the manual.  */
 
-struct mapped_gdb_index final : public mapped_index_base
+struct mapped_gdb_index
 {
   /* Index data format version.  */
   int version = 0;
+
+  /* Compile units followed by type units, in the order as found in the
+     index.  Indices found in index entries can index directly into this.  */
+  std::vector<dwarf2_per_cu *> units;
 
   /* The address table data.  */
   gdb::array_view<const gdb_byte> address_table;
@@ -92,8 +152,17 @@ struct mapped_gdb_index final : public mapped_index_base
   /* The shortcut table data.  */
   gdb::array_view<const gdb_byte> shortcut_table;
 
-  /* An address map that maps from PC to dwarf2_per_cu_data.  */
+  /* An address map that maps from PC to dwarf2_per_cu.  */
   addrmap_fixed *index_addrmap = nullptr;
+
+  /* The name of 'main', or nullptr if not known.  */
+  const char *main_name = nullptr;
+
+  /* The language of 'main', if known.  */
+  enum language main_lang = language_minimal;
+
+  /* The result we're constructing.  */
+  cooked_index_worker_result result;
 
   /* Return the index into the constant pool of the name of the IDXth
      symbol in the symbol table.  */
@@ -109,232 +178,225 @@ struct mapped_gdb_index final : public mapped_index_base
     return symbol_table[2 * idx + 1];
   }
 
-  bool symbol_name_slot_invalid (offset_type idx) const override
+  /* Return whether the name at IDX in the symbol table should be
+     ignored.  */
+  bool symbol_name_slot_invalid (offset_type idx) const
   {
-    return (symbol_name_index (idx) == 0
-	    && symbol_vec_index (idx) == 0);
+    return symbol_name_index (idx) == 0 && symbol_vec_index (idx) == 0;
   }
 
   /* Convenience method to get at the name of the symbol at IDX in the
      symbol table.  */
-  const char *symbol_name_at
-    (offset_type idx, dwarf2_per_objfile *per_objfile) const override
+  const char *symbol_name_at (offset_type idx,
+			      dwarf2_per_objfile *per_objfile) const
   {
     return (const char *) (this->constant_pool.data ()
 			   + symbol_name_index (idx));
   }
 
-  size_t symbol_name_count () const override
+  size_t symbol_name_count () const
   { return this->symbol_table.size () / 2; }
 
-  quick_symbol_functions_up make_quick_functions () const override;
+  /* Set the name and language of the main function from the shortcut
+     table.  */
+  void set_main_name (dwarf2_per_objfile *per_objfile);
 
-  bool version_check () const override
-  {
-    return version >= 8;
-  }
-
-  dwarf2_per_cu_data *lookup (unrelocated_addr addr) override
-  {
-    if (index_addrmap == nullptr)
-      return nullptr;
-
-    void *obj = index_addrmap->find (static_cast<CORE_ADDR> (addr));
-    return static_cast<dwarf2_per_cu_data *> (obj);
-  }
+  /* Build the symbol name component sorted vector, if we haven't
+     yet.  */
+  void build_name_components (dwarf2_per_objfile *per_objfile);
 };
 
-struct dwarf2_gdb_index : public dwarf2_base_index_functions
-{
-  /* This dumps minimal information about the index.
-     It is called via "mt print objfiles".
-     One use is to verify .gdb_index has been loaded by the
-     gdb.dwarf2/gdb-index.exp testcase.  */
-  void dump (struct objfile *objfile) override;
-
-  bool expand_symtabs_matching
-    (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-     const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-       override;
-};
-
-/* This dumps minimal information about the index.
-   It is called via "mt print objfiles".
-   One use is to verify .gdb_index has been loaded by the
-   gdb.dwarf2/gdb-index.exp testcase.  */
+/* See declaration.  */
 
 void
-dwarf2_gdb_index::dump (struct objfile *objfile)
+mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
 {
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+  std::vector<std::pair<std::string_view, std::vector<cooked_index_entry *>>>
+    need_parents;
+  gdb::unordered_map<std::string_view, cooked_index_entry *> by_name;
 
-  mapped_gdb_index *index = (gdb::checked_static_cast<mapped_gdb_index *>
-			     (per_objfile->per_bfd->index_table.get ()));
-  gdb_printf (".gdb_index: version %d\n", index->version);
-  gdb_printf ("\n");
-}
-
-/* Helper for dw2_expand_matching symtabs.  Called on each symbol
-   matched, to expand corresponding CUs that were marked.  IDX is the
-   index of the symbol name that matched.  */
-
-static bool
-dw2_expand_marked_cus
-  (dwarf2_per_objfile *per_objfile, offset_type idx,
-   gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-   gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-   block_search_flags search_flags,
-   domain_search_flags kind,
-   gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-{
-  offset_type vec_len, vec_idx;
-  bool global_seen = false;
-  mapped_gdb_index &index
-    = *(gdb::checked_static_cast<mapped_gdb_index *>
-	(per_objfile->per_bfd->index_table.get ()));
-
-  offset_view vec (index.constant_pool.slice (index.symbol_vec_index (idx)));
-  vec_len = vec[0];
-  for (vec_idx = 0; vec_idx < vec_len; ++vec_idx)
+  auto count = this->symbol_name_count ();
+  for (offset_type idx = 0; idx < count; idx++)
     {
-      offset_type cu_index_and_attrs = vec[vec_idx + 1];
-      /* This value is only valid for index versions >= 7.  */
-      int is_static = GDB_INDEX_SYMBOL_STATIC_VALUE (cu_index_and_attrs);
-      gdb_index_symbol_kind symbol_kind =
-	GDB_INDEX_SYMBOL_KIND_VALUE (cu_index_and_attrs);
-      int cu_index = GDB_INDEX_CU_VALUE (cu_index_and_attrs);
-      /* Only check the symbol attributes if they're present.
-	 Indices prior to version 7 don't record them,
-	 and indices >= 7 may elide them for certain symbols
-	 (gold does this).  */
-      int attrs_valid =
-	(index.version >= 7
-	 && symbol_kind != GDB_INDEX_SYMBOL_KIND_NONE);
+      if (this->symbol_name_slot_invalid (idx))
+	continue;
 
-      /* Work around gold/15646.  */
-      if (attrs_valid
-	  && !is_static
-	  && symbol_kind == GDB_INDEX_SYMBOL_KIND_TYPE)
+      const char *name = this->symbol_name_at (idx, per_objfile);
+
+      /* This code only knows how to break apart components of C++
+	 symbol names (and other languages that use '::' as
+	 namespace/module separator) and Ada symbol names.
+
+	 It's unfortunate that we need the language, but since it is
+	 really only used to rebuild full names, pairing it with the
+	 split method is fine.  */
+      enum language lang;
+      std::vector<std::string_view> components;
+      if (strstr (name, "::") != nullptr)
 	{
-	  if (global_seen)
-	    continue;
-
-	  global_seen = true;
+	  components = split_name (name, split_style::CXX);
+	  lang = language_cplus;
+	}
+      else if (strchr (name, '<') != nullptr)
+	{
+	  /* Guess that this is a template and so a C++ name.  */
+	  components.emplace_back (name);
+	  lang = language_cplus;
+	}
+      else if (strstr (name, "__") != nullptr)
+	{
+	  /* The Ada case is handled during finalization, because gdb
+	     does not write the synthesized package names into the
+	     index.  */
+	  components.emplace_back (name);
+	  lang = language_ada;
+	}
+      else
+	{
+	  components = split_name (name, split_style::DOT_STYLE);
+	  /* Mark ordinary names as having an unknown language.  This
+	     is a hack to avoid problems with some Ada names.  */
+	  lang = (components.size () == 1) ? language_unknown : language_go;
 	}
 
-      /* Only check the symbol's kind if it has one.  */
-      if (attrs_valid)
+      std::vector<cooked_index_entry *> these_entries;
+      offset_view vec (constant_pool.slice (symbol_vec_index (idx)));
+      offset_type vec_len = vec[0];
+      for (offset_type vec_idx = 0; vec_idx < vec_len; ++vec_idx)
 	{
-	  if (is_static)
-	    {
-	      if ((search_flags & SEARCH_STATIC_BLOCK) == 0)
-		continue;
-	    }
-	  else
-	    {
-	      if ((search_flags & SEARCH_GLOBAL_BLOCK) == 0)
-		continue;
-	    }
+	  offset_type cu_index_and_attrs = vec[vec_idx + 1];
+	  gdb_index_symbol_kind symbol_kind
+	    = GDB_INDEX_SYMBOL_KIND_VALUE (cu_index_and_attrs);
+	  /* Only use a symbol if the attributes are present.  Indices
+	     prior to version 7 don't record them, and indices >= 7
+	     may elide them for certain symbols (gold does this).  */
+	  if (symbol_kind == GDB_INDEX_SYMBOL_KIND_NONE)
+	    continue;
 
-	  domain_search_flags mask = 0;
+	  int is_static = GDB_INDEX_SYMBOL_STATIC_VALUE (cu_index_and_attrs);
+
+	  int cu_index = GDB_INDEX_CU_VALUE (cu_index_and_attrs);
+	  /* Don't crash on bad data.  */
+	  if (cu_index >= units.size ())
+	    {
+	      complaint (_(".gdb_index entry has bad CU index"
+			   " [in module %s]"),
+			 objfile_name (per_objfile->objfile));
+	      continue;
+	    }
+	  dwarf2_per_cu *per_cu = units[cu_index];
+
+	  enum language this_lang = lang;
+	  dwarf_tag tag;
 	  switch (symbol_kind)
 	    {
 	    case GDB_INDEX_SYMBOL_KIND_VARIABLE:
-	      mask = SEARCH_VAR_DOMAIN;
+	      tag = DW_TAG_variable;
 	      break;
 	    case GDB_INDEX_SYMBOL_KIND_FUNCTION:
-	      mask = SEARCH_FUNCTION_DOMAIN;
+	      tag = DW_TAG_subprogram;
 	      break;
 	    case GDB_INDEX_SYMBOL_KIND_TYPE:
-	      mask = SEARCH_TYPE_DOMAIN | SEARCH_STRUCT_DOMAIN;
+	      if (is_static)
+		tag = (dwarf_tag) DW_TAG_GDB_INDEX_TYPE;
+	      else
+		{
+		  tag = DW_TAG_structure_type;
+		  this_lang = language_cplus;
+		}
 	      break;
+	      /* The "default" should not happen, but we mention it to
+		 avoid an uninitialized warning.  */
+	    default:
 	    case GDB_INDEX_SYMBOL_KIND_OTHER:
-	      mask = SEARCH_MODULE_DOMAIN;
+	      tag = (dwarf_tag) DW_TAG_GDB_INDEX_OTHER;
 	      break;
 	    }
-	  if ((kind & mask) == 0)
-	    continue;
+
+	  cooked_index_flag flags = 0;
+	  if (is_static)
+	    flags |= IS_STATIC;
+	  if (main_name != nullptr
+	      && tag == DW_TAG_subprogram
+	      && strcmp (name, main_name) == 0)
+	    {
+	      flags |= IS_MAIN;
+	      this_lang = main_lang;
+	      /* Don't bother looking for another.  */
+	      main_name = nullptr;
+	    }
+
+	  /* Note that this assumes the final component ends in \0.  */
+	  cooked_index_entry *entry = result.add (per_cu->sect_off (), tag,
+						  flags, this_lang,
+						  components.back ().data (),
+						  nullptr, per_cu);
+	  /* Don't bother pushing if we do not need a parent.  */
+	  if (components.size () > 1)
+	    these_entries.push_back (entry);
+
+	  /* We don't care exactly which entry ends up in this
+	     map.  */
+	  by_name[std::string_view (name)] = entry;
 	}
 
-      /* Don't crash on bad data.  */
-      if (cu_index >= per_objfile->per_bfd->all_units.size ())
+      if (components.size () > 1)
 	{
-	  complaint (_(".gdb_index entry has bad CU index"
-		       " [in module %s]"), objfile_name (per_objfile->objfile));
-	  continue;
-	}
+	  std::string_view penultimate = components[components.size () - 2];
+	  std::string_view prefix (name, &penultimate.back () + 1 - name);
 
-      dwarf2_per_cu_data *per_cu = per_objfile->per_bfd->get_cu (cu_index);
-      if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile, file_matcher,
-					    expansion_notify, lang_matcher))
-	return false;
+	  need_parents.emplace_back (prefix, std::move (these_entries));
+	}
     }
 
-  return true;
-}
-
-bool
-dwarf2_gdb_index::expand_symtabs_matching
-    (struct objfile *objfile,
-     gdb::function_view<expand_symtabs_file_matcher_ftype> file_matcher,
-     const lookup_name_info *lookup_name,
-     gdb::function_view<expand_symtabs_symbol_matcher_ftype> symbol_matcher,
-     gdb::function_view<expand_symtabs_exp_notify_ftype> expansion_notify,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     gdb::function_view<expand_symtabs_lang_matcher_ftype> lang_matcher)
-{
-  dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
-
-  dw_expand_symtabs_matching_file_matcher (per_objfile, file_matcher);
-
-  /* This invariant is documented in quick-functions.h.  */
-  gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
-  if (lookup_name == nullptr)
+  for (const auto &[prefix, entries] : need_parents)
     {
-      for (dwarf2_per_cu_data *per_cu
-	     : all_units_range (per_objfile->per_bfd))
+      auto iter = by_name.find (prefix);
+      /* If we can't find the parent entry, just lose.  It should
+	 always be there.  We could synthesize it from the components,
+	 if we kept those, but that seems like overkill.  */
+      if (iter != by_name.end ())
 	{
-	  QUIT;
-
-	  if (!dw2_expand_symtabs_matching_one (per_cu, per_objfile,
-						file_matcher,
-						expansion_notify,
-						lang_matcher))
-	    return false;
+	  for (cooked_index_entry *entry : entries)
+	    entry->set_parent (iter->second);
 	}
-      return true;
     }
-
-  mapped_gdb_index &index
-    = *(gdb::checked_static_cast<mapped_gdb_index *>
-	(per_objfile->per_bfd->index_table.get ()));
-
-  bool result
-    = dw2_expand_symtabs_matching_symbol (index, *lookup_name,
-					  symbol_matcher,
-					  [&] (offset_type idx)
-    {
-      if (!dw2_expand_marked_cus (per_objfile, idx, file_matcher,
-				  expansion_notify, search_flags, domain,
-				  lang_matcher))
-	return false;
-      return true;
-    }, per_objfile, lang_matcher);
-
-  return result;
 }
 
-quick_symbol_functions_up
-mapped_gdb_index::make_quick_functions () const
+/* The worker that reads a mapped index and fills in a
+   cooked_index_worker_result.  */
+
+class gdb_index_worker : public cooked_index_worker
 {
-  return quick_symbol_functions_up (new dwarf2_gdb_index);
+public:
+
+  gdb_index_worker (dwarf2_per_objfile *per_objfile,
+		    std::unique_ptr<mapped_gdb_index> map)
+    : cooked_index_worker (per_objfile),
+      map (std::move (map))
+  { }
+
+  void do_reading () override;
+
+  /* The map we're reading.  */
+  std::unique_ptr<mapped_gdb_index> map;
+};
+
+void
+gdb_index_worker::do_reading ()
+{
+  complaint_interceptor complaint_handler;
+  map->build_name_components (m_per_objfile);
+
+  m_results.push_back (std::move (map->result));
+  m_results[0].done_reading (complaint_handler.release ());
+
+  /* No longer needed.  */
+  map.reset ();
+
+  done_reading ();
+
+  bfd_thread_cleanup ();
 }
 
 /* A helper function that reads the .gdb_index from BUFFER and fills
@@ -363,41 +425,15 @@ read_gdb_index_from_buffer (const char *filename,
 
   /* Version check.  */
   offset_type version = metadata[0];
-  /* Versions earlier than 3 emitted every copy of a psymbol.  This
-     causes the index to behave very poorly for certain requests.  Version 3
-     contained incomplete addrmap.  So, it seems better to just ignore such
-     indices.  */
-  if (version < 4)
+  /* GDB now requires the symbol attributes, which were added in
+     version 7.  */
+  if (version < 7)
     {
       static int warning_printed = 0;
       if (!warning_printed)
 	{
 	  warning (_("Skipping obsolete .gdb_index section in %s."),
 		   filename);
-	  warning_printed = 1;
-	}
-      return 0;
-    }
-  /* Index version 4 uses a different hash function than index version
-     5 and later.
-
-     Versions earlier than 6 did not emit psymbols for inlined
-     functions.  Using these files will cause GDB not to be able to
-     set breakpoints on inlined functions by name, so we ignore these
-     indices unless the user has done
-     "set use-deprecated-index-sections on".  */
-  if (version < 6 && !deprecated_ok)
-    {
-      static int warning_printed = 0;
-      if (!warning_printed)
-	{
-	  warning (_("\
-Skipping deprecated .gdb_index section in %s.\n\
-Do \"%ps\" before the file is read\n\
-to use the section anyway."),
-		   filename,
-		   styled_string (command_style.style (),
-				  "set use-deprecated-index-sections on"));
 	  warning_printed = 1;
 	}
       return 0;
@@ -470,7 +506,7 @@ static void
 create_cus_from_gdb_index_list (dwarf2_per_bfd *per_bfd,
 				const gdb_byte *cu_list, offset_type n_elements,
 				struct dwarf2_section_info *section,
-				int is_dwz)
+				int is_dwz, std::vector<dwarf2_per_cu *> &units)
 {
   for (offset_type i = 0; i < n_elements; i += 2)
     {
@@ -481,10 +517,10 @@ create_cus_from_gdb_index_list (dwarf2_per_bfd *per_bfd,
       ULONGEST length = extract_unsigned_integer (cu_list + 8, 8, BFD_ENDIAN_LITTLE);
       cu_list += 2 * 8;
 
-      dwarf2_per_cu_data_up per_cu
-	= create_cu_from_index_list (per_bfd, section, is_dwz, sect_off,
-				     length);
-      per_bfd->all_units.push_back (std::move (per_cu));
+      dwarf2_per_cu_up per_cu = per_bfd->allocate_per_cu (section, sect_off,
+							  length, is_dwz);
+      units.emplace_back (per_cu.get ());
+      per_bfd->all_units.emplace_back (std::move (per_cu));
     }
 }
 
@@ -494,20 +530,21 @@ create_cus_from_gdb_index_list (dwarf2_per_bfd *per_bfd,
 static void
 create_cus_from_gdb_index (dwarf2_per_bfd *per_bfd,
 			   const gdb_byte *cu_list, offset_type cu_list_elements,
+			   std::vector<dwarf2_per_cu *> &units,
 			   const gdb_byte *dwz_list, offset_type dwz_elements)
 {
   gdb_assert (per_bfd->all_units.empty ());
   per_bfd->all_units.reserve ((cu_list_elements + dwz_elements) / 2);
 
   create_cus_from_gdb_index_list (per_bfd, cu_list, cu_list_elements,
-				  &per_bfd->infos[0], 0);
+				  &per_bfd->infos[0], 0, units);
 
   if (dwz_elements == 0)
     return;
 
-  dwz_file *dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   create_cus_from_gdb_index_list (per_bfd, dwz_list, dwz_elements,
-				  &dwz->info, 1);
+				  &dwz->info, 1, units);
 }
 
 /* Create the signatured type hash table from the index.  */
@@ -515,54 +552,85 @@ create_cus_from_gdb_index (dwarf2_per_bfd *per_bfd,
 static void
 create_signatured_type_table_from_gdb_index
   (dwarf2_per_bfd *per_bfd, struct dwarf2_section_info *section,
-   const gdb_byte *bytes, offset_type elements)
+   const gdb_byte *bytes, offset_type elements,
+   std::vector<dwarf2_per_cu *> &units)
 {
-  htab_up sig_types_hash = allocate_signatured_type_table ();
+  signatured_type_set sig_types_hash;
 
   for (offset_type i = 0; i < elements; i += 3)
     {
-      signatured_type_up sig_type;
-      ULONGEST signature;
-      void **slot;
-      cu_offset type_offset_in_tu;
-
       static_assert (sizeof (ULONGEST) >= 8);
       sect_offset sect_off
 	= (sect_offset) extract_unsigned_integer (bytes, 8, BFD_ENDIAN_LITTLE);
-      type_offset_in_tu
+	cu_offset type_offset_in_tu
 	= (cu_offset) extract_unsigned_integer (bytes + 8, 8,
 						BFD_ENDIAN_LITTLE);
-      signature = extract_unsigned_integer (bytes + 16, 8, BFD_ENDIAN_LITTLE);
+      ULONGEST signature
+	= extract_unsigned_integer (bytes + 16, 8, BFD_ENDIAN_LITTLE);
       bytes += 3 * 8;
 
-      sig_type = per_bfd->allocate_signatured_type (signature);
+      /* The length of the type unit is unknown at this time.  It gets
+	 (presumably) set by a cutu_reader when it gets expanded later.  */
+      signatured_type_up sig_type
+	= per_bfd->allocate_signatured_type (section, sect_off, 0 /* length */,
+					     false /* is_dwz */, signature);
       sig_type->type_offset_in_tu = type_offset_in_tu;
-      sig_type->section = section;
-      sig_type->sect_off = sect_off;
 
-      slot = htab_find_slot (sig_types_hash.get (), sig_type.get (), INSERT);
-      *slot = sig_type.get ();
-
+      sig_types_hash.emplace (sig_type.get ());
+      units.emplace_back (sig_type.get ());
       per_bfd->all_units.emplace_back (sig_type.release ());
     }
 
   per_bfd->signatured_types = std::move (sig_types_hash);
 }
 
-/* Read the address map data from the mapped GDB index.  */
+/* Read the address map data from the mapped GDB index.  Return true if no
+   errors were found, otherwise return false.  */
 
-static void
+static bool
 create_addrmap_from_gdb_index (dwarf2_per_objfile *per_objfile,
 			       mapped_gdb_index *index)
 {
-  dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
-  const gdb_byte *iter, *end;
+  objfile *objfile = per_objfile->objfile;
 
   addrmap_mutable mutable_map;
 
-  iter = index->address_table.data ();
-  end = iter + index->address_table.size ();
+  /* Build an unrelocated address map of the sections in this objfile.  */
+  addrmap_mutable sect_map;
+  for (obj_section &s : objfile->sections ())
+    {
+      if (s.addr_unrel () >= s.endaddr_unrel ())
+	continue;
 
+      CORE_ADDR start = CORE_ADDR (s.addr_unrel ());
+      CORE_ADDR end_inclusive = CORE_ADDR (s.endaddr_unrel ()) - 1;
+      sect_map.set_empty (start, end_inclusive, &s);
+    }
+
+  auto find_section
+    = [&] (ULONGEST addr, struct obj_section *&cached_section)
+    {
+      if (cached_section != nullptr
+	  && cached_section->contains (unrelocated_addr (addr)))
+	return cached_section;
+
+      cached_section = (struct obj_section *) sect_map.find (addr);
+      return cached_section;
+    };
+
+  auto invalid_range_warning = [&] (ULONGEST lo, ULONGEST hi)
+    {
+      warning (_(".gdb_index address table has invalid range (%s - %s),"
+		 " ignoring .gdb_index"),
+	       hex_string (lo), hex_string (hi));
+      return false;
+    };
+
+  /* Cache the section for possible reuse on the next entry.  */
+  struct obj_section *prev_sect = nullptr;
+
+  const gdb_byte *iter = index->address_table.data ();
+  const gdb_byte *end = iter + index->address_table.size ();
   while (iter < end)
     {
       ULONGEST hi, lo, cu_index;
@@ -573,40 +641,51 @@ create_addrmap_from_gdb_index (dwarf2_per_objfile *per_objfile,
       cu_index = extract_unsigned_integer (iter, 4, BFD_ENDIAN_LITTLE);
       iter += 4;
 
-      if (lo > hi)
+      if (lo >= hi)
+	return invalid_range_warning (lo, hi);
+
+      if (cu_index >= index->units.size ())
 	{
-	  complaint (_(".gdb_index address table has invalid range (%s - %s)"),
+	  warning (_(".gdb_index address table has invalid CU number %u,"
+		     " ignoring .gdb_index"),
+		   (unsigned) cu_index);
+	  return false;
+	}
+
+      /* Variable hi is the exclusive upper bound, get the inclusive one.  */
+      CORE_ADDR hi_incl = hi - 1;
+
+      struct obj_section *lo_sect = find_section (lo, prev_sect);
+      struct obj_section *hi_sect = find_section (hi_incl, prev_sect);
+      if (lo_sect == nullptr || hi_sect == nullptr)
+	return invalid_range_warning (lo, hi);
+
+      bool full_range_p
+	= mutable_map.set_empty (lo, hi_incl, index->units[cu_index]);
+      if (!full_range_p)
+	{
+	  warning (_(".gdb_index address table has a range (%s - %s) that"
+		     " overlaps with an earlier range, ignoring .gdb_index"),
 		     hex_string (lo), hex_string (hi));
-	  continue;
+	  return false;
 	}
-
-      if (cu_index >= per_bfd->all_units.size ())
-	{
-	  complaint (_(".gdb_index address table has invalid CU number %u"),
-		     (unsigned) cu_index);
-	  continue;
-	}
-
-      mutable_map.set_empty (lo, hi - 1, per_bfd->get_cu (cu_index));
     }
 
-  index->index_addrmap
-    = new (&per_bfd->obstack) addrmap_fixed (&per_bfd->obstack, &mutable_map);
+  index->result.set_addrmap (std::move (mutable_map));
+
+  return true;
 }
 
-/* Sets the name and language of the main function from the shortcut table.  */
-
-static void
-set_main_name_from_gdb_index (dwarf2_per_objfile *per_objfile,
-			      mapped_gdb_index *index)
+void
+mapped_gdb_index::set_main_name (dwarf2_per_objfile *per_objfile)
 {
   const auto expected_size = 2 * sizeof (offset_type);
-  if (index->shortcut_table.size () < expected_size)
+  if (this->shortcut_table.size () < expected_size)
     /* The data in the section is not present, is corrupted or is in a version
        we don't know about.  Regardless, we can't make use of it.  */
     return;
 
-  auto ptr = index->shortcut_table.data ();
+  auto ptr = this->shortcut_table.data ();
   const auto dw_lang = extract_unsigned_integer (ptr, 4, BFD_ENDIAN_LITTLE);
   if (dw_lang >= DW_LANG_hi_user)
     {
@@ -622,18 +701,16 @@ set_main_name_from_gdb_index (dwarf2_per_objfile *per_objfile,
     }
   ptr += 4;
 
-  const auto lang = dwarf_lang_to_enum_language (dw_lang);
+  main_lang = dwarf_lang_to_enum_language (dw_lang);
   const auto name_offset = extract_unsigned_integer (ptr,
 						     sizeof (offset_type),
 						     BFD_ENDIAN_LITTLE);
-  const auto name = (const char *) (index->constant_pool.data () + name_offset);
-
-  set_objfile_main_name (per_objfile->objfile, name, (enum language) lang);
+  main_name = (const char *) (this->constant_pool.data () + name_offset);
 }
 
 /* See read-gdb-index.h.  */
 
-int
+bool
 dwarf2_read_gdb_index
   (dwarf2_per_objfile *per_objfile,
    get_gdb_index_contents_ftype get_gdb_index_contents,
@@ -641,15 +718,15 @@ dwarf2_read_gdb_index
 {
   const gdb_byte *cu_list, *types_list, *dwz_list = NULL;
   offset_type cu_list_elements, types_list_elements, dwz_list_elements = 0;
-  struct dwz_file *dwz;
   struct objfile *objfile = per_objfile->objfile;
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
+  scoped_remove_all_units remove_all_units (*per_bfd);
 
   gdb::array_view<const gdb_byte> main_index_contents
     = get_gdb_index_contents (objfile, per_bfd);
 
   if (main_index_contents.empty ())
-    return 0;
+    return false;
 
   auto map = std::make_unique<mapped_gdb_index> ();
   if (!read_gdb_index_from_buffer (objfile_name (objfile),
@@ -657,15 +734,15 @@ dwarf2_read_gdb_index
 				   main_index_contents, map.get (), &cu_list,
 				   &cu_list_elements, &types_list,
 				   &types_list_elements))
-    return 0;
+    return false;
 
   /* Don't use the index if it's empty.  */
   if (map->symbol_table.empty ())
-    return 0;
+    return false;
 
   /* If there is a .dwz file, read it so we can get its CU list as
      well.  */
-  dwz = dwarf2_get_dwz_file (per_bfd);
+  dwz_file *dwz = per_bfd->get_dwz_file ();
   if (dwz != NULL)
     {
       mapped_gdb_index dwz_map;
@@ -676,22 +753,22 @@ dwarf2_read_gdb_index
 	= get_gdb_index_contents_dwz (objfile, dwz);
 
       if (dwz_index_content.empty ())
-	return 0;
+	return false;
 
-      if (!read_gdb_index_from_buffer (bfd_get_filename (dwz->dwz_bfd.get ()),
+      if (!read_gdb_index_from_buffer (dwz->filename (),
 				       1, dwz_index_content, &dwz_map,
 				       &dwz_list, &dwz_list_elements,
 				       &dwz_types_ignore,
 				       &dwz_types_elements_ignore))
 	{
 	  warning (_("could not read '.gdb_index' section from %s; skipping"),
-		   bfd_get_filename (dwz->dwz_bfd.get ()));
-	  return 0;
+		   dwz->filename ());
+	  return false;
 	}
     }
 
-  create_cus_from_gdb_index (per_bfd, cu_list, cu_list_elements, dwz_list,
-			     dwz_list_elements);
+  create_cus_from_gdb_index (per_bfd, cu_list, cu_list_elements, map->units,
+			     dwz_list, dwz_list_elements);
 
   if (types_list_elements)
     {
@@ -699,10 +776,7 @@ dwarf2_read_gdb_index
 	 an index.  */
       if (per_bfd->infos.size () > 1
 	  || per_bfd->types.size () > 1)
-	{
-	  per_bfd->all_units.clear ();
-	  return 0;
-	}
+	return false;
 
       dwarf2_section_info *section
 	= (per_bfd->types.size () == 1
@@ -710,26 +784,30 @@ dwarf2_read_gdb_index
 	   : &per_bfd->infos[0]);
 
       create_signatured_type_table_from_gdb_index (per_bfd, section, types_list,
-						   types_list_elements);
+						   types_list_elements,
+						   map->units);
     }
 
   finalize_all_units (per_bfd);
 
-  create_addrmap_from_gdb_index (per_objfile, map.get ());
+  if (!create_addrmap_from_gdb_index (per_objfile, map.get ()))
+    return false;
 
-  set_main_name_from_gdb_index (per_objfile, map.get ());
+  map->set_main_name (per_objfile);
 
-  per_bfd->index_table = std::move (map);
-  per_bfd->quick_file_names_table =
-    create_quick_file_names_table (per_bfd->all_units.size ());
+  int version = map->version;
+  auto worker = std::make_unique<gdb_index_worker> (per_objfile,
+						    std::move (map));
+  auto idx = std::make_unique<cooked_gdb_index> (std::move (worker),
+						 version);
 
-  return 1;
+  per_bfd->start_reading (std::move (idx));
+  remove_all_units.disable ();
+
+  return true;
 }
 
-void _initialize_read_gdb_index ();
-
-void
-_initialize_read_gdb_index ()
+INIT_GDB_FILE (read_gdb_index)
 {
   add_setshow_boolean_cmd ("use-deprecated-index-sections",
 			   no_class, &use_deprecated_index_sections, _("\

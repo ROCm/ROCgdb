@@ -1,6 +1,6 @@
 /* Python interface to btrace instruction history.
 
-   Copyright 2016-2024 Free Software Foundation, Inc.
+   Copyright 2016-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -213,7 +213,7 @@ recpy_bt_insn_sal (PyObject *self, void *closure)
 
   try
     {
-      result = symtab_and_line_to_sal_object (find_pc_line (insn->pc, 0));
+      result = symtab_and_line_to_sal_object (find_sal_for_pc (insn->pc, 0));
     }
   catch (const gdb_exception &except)
     {
@@ -987,8 +987,8 @@ static PyMappingMethods btpy_list_mapping_methods =
 
 /* Sets up the btrace record API.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_btrace (void)
+static int
+gdbpy_initialize_btrace ()
 {
   btpy_list_type.tp_new = PyType_GenericNew;
   btpy_list_type.tp_flags = Py_TPFLAGS_DEFAULT;

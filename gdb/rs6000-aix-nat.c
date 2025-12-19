@@ -1,6 +1,6 @@
 /* IBM RS/6000 native-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,7 +23,6 @@
 #include "symfile.h"
 #include "objfiles.h"
 #include "bfd.h"
-#include "gdb-stabs.h"
 #include "regcache.h"
 #include "arch-utils.h"
 #include "inf-child.h"
@@ -690,16 +689,16 @@ rs6000_nat_target::read_description ()
    if (ARCH64())
      {
        if (__power_vsx ())
-	 return tdesc_powerpc_vsx64;
+	 return tdesc_powerpc_vsx64.get ();
        else if (__power_vmx ())
-	 return tdesc_powerpc_altivec64;
+	 return tdesc_powerpc_altivec64.get ();
      }
    else
      {
        if (__power_vsx ())
-	 return tdesc_powerpc_vsx32;
+	 return tdesc_powerpc_vsx32.get ();
        else if (__power_vmx ())
-	 return tdesc_powerpc_altivec32;
+	 return tdesc_powerpc_altivec32.get ();
      }
    return NULL;
 }
@@ -1062,9 +1061,7 @@ rs6000_nat_target::xfer_shared_libraries
     }
 }
 
-void _initialize_rs6000_nat ();
-void
-_initialize_rs6000_nat ()
+INIT_GDB_FILE (rs6000_nat)
 {
   add_inf_child_target (&the_rs6000_nat_target);
 }

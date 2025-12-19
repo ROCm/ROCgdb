@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2019-2024 Free Software Foundation, Inc.
+   Copyright 2019-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -143,8 +143,8 @@ struct s9
       int a;
       struct
       {
-        int b;
-        int c;
+	int b;
+	int c;
       };
     } d1;
   };
@@ -174,8 +174,8 @@ struct s10
       int a;
       struct
       {
-        int b[10];
-        int c;
+	int b[10];
+	int c;
       };
     } d1;
   };

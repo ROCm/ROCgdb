@@ -1,6 +1,6 @@
 /* Test program for byte registers.
 
-   Copyright 2010-2024 Free Software Foundation, Inc.
+   Copyright 2010-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -39,7 +39,7 @@ main (int argc, char **argv)
        "mov 8(%0), %%ecx\n\t"
        "mov 12(%0), %%edx\n\t"
        : /* no output operands */
-       : "r" (data) 
+       : "r" (data)
        : "eax", "ebx", "ecx", "edx");
 
   asm ("nop" /* first breakpoint here */

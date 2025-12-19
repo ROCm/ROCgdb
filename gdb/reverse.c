@@ -1,6 +1,6 @@
 /* Reverse execution and reverse debugging.
 
-   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,7 +29,7 @@
 /* User interface:
    reverse-step, reverse-next etc.  */
 
-/* exec_reverse_once -- accepts an arbitrary gdb command (string), 
+/* exec_reverse_once -- accepts an arbitrary gdb command (string),
    and executes it with exec-direction set to 'reverse'.
 
    Used to implement reverse-next etc. commands.  */
@@ -44,7 +44,8 @@ exec_reverse_once (const char *cmd, const char *args, int from_tty)
 	   cmd);
 
   if (!target_can_execute_reverse ())
-    error (_("Target %s does not support this command."), target_shortname ());
+    error (_("Reverse execution is not currently supported.\n"
+	     "You may need to record the execution first."));
 
   std::string reverse_command = string_printf ("%s %s", cmd, args ? args : "");
   scoped_restore restore_exec_dir
@@ -125,7 +126,7 @@ save_bookmark_command (const char *args, int from_tty)
   bookmark &b = all_bookmarks.emplace_back ();
   b.number = ++bookmark_count;
   b.pc = regcache_read_pc (regcache);
-  b.sal = find_pc_line (b.pc, 0);
+  b.sal = find_sal_for_pc (b.pc, 0);
   b.sal.pspace = get_frame_program_space (get_current_frame ());
   b.opaque_data.reset (bookmark_id);
 
@@ -277,9 +278,7 @@ info_bookmarks_command (const char *args, int from_tty)
     }
 }
 
-void _initialize_reverse ();
-void
-_initialize_reverse ()
+INIT_GDB_FILE (reverse)
 {
   cmd_list_element *reverse_step_cmd
    = add_com ("reverse-step", class_run, reverse_step, _("\

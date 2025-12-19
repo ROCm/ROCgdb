@@ -1,6 +1,6 @@
 /* I/O, string, cleanup, and other random utilities for GDB.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -134,15 +134,16 @@ private:
 extern int gdb_filename_fnmatch (const char *pattern, const char *string,
 				 int flags);
 
-extern void substitute_path_component (char **stringp, const char *from,
-				       const char *to);
-
-std::string ldirname (const char *filename);
+std::string gdb_ldirname (const char *filename);
 
 extern int count_path_elements (const char *path);
 
 extern const char *strip_leading_path_elements (const char *path, int n);
-
+
+/* Wrapper around readline's tilde_expand, to return a unique pointer.  */
+
+extern gdb::unique_xmalloc_ptr<char> gdb_rl_tilde_expand (const char *path);
+
 /* GDB output, ui_file utilities.  */
 
 struct ui_file;
@@ -157,9 +158,10 @@ extern void wrap_here (int);
 
 extern void reinitialize_more_filter (void);
 
-/* Return the number of characters in a line.  */
+/* Return the number of characters in a line.  Will never be zero, but can
+   be UINT_MAX, which indicates unlimited characters per line.  */
 
-extern int get_chars_per_line ();
+extern unsigned int get_chars_per_line ();
 
 extern bool pagination_enabled;
 
@@ -431,14 +433,11 @@ class scoped_restore_warning_hook
 public:
   explicit scoped_restore_warning_hook (warning_hook_handler new_handler);
 
+  DISABLE_COPY_AND_ASSIGN (scoped_restore_warning_hook);
+
   ~scoped_restore_warning_hook ();
 
 private:
-  scoped_restore_warning_hook (const scoped_restore_warning_hook &other)
-    = delete;
-  scoped_restore_warning_hook &operator= (const scoped_restore_warning_hook &)
-    = delete;
-
   warning_hook_handler m_save;
 };
 

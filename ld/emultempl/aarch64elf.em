@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 #   Contributed by ARM Ltd.
 #
 # This file is part of the GNU Binutils.
@@ -39,6 +39,12 @@ static aarch64_protection_opts sw_protections = {
   .bti_report = MARKING_WARN,
   .gcs_type = GCS_IMPLICIT,
   .gcs_report = MARKING_WARN,
+  .gcs_report_dynamic = MARKING_UNSET,
+};
+
+static aarch64_memtag_opts memtag_opts = {
+  .memtag_mode = AARCH64_MEMTAG_MODE_NONE,
+  .memtag_stack = 0,
 };
 
 #define COMPILE_TIME_STRLEN(s) \
@@ -309,7 +315,7 @@ gld${EMULATION_NAME}_finish (void)
 	}
     }
 
-  finish_default ();
+  ldelf_finish ();
 }
 
 /* This is a convenient point to tell BFD about target specific flags.
@@ -323,7 +329,7 @@ aarch64_elf_create_output_section_statements (void)
 	 These will only be created if the output format is an AArch64 format,
 	 hence we do not support linking and changing output formats at the
 	 same time.  Use a link followed by objcopy to change output formats.  */
-      einfo (_("%F%P: error: cannot change output format "
+      fatal (_("%P: error: cannot change output format "
 	       "whilst linking %s binaries\n"), "AArch64");
       return;
     }
@@ -334,7 +340,8 @@ aarch64_elf_create_output_section_statements (void)
 				 pic_veneer,
 				 fix_erratum_835769, fix_erratum_843419,
 				 no_apply_dynamic_relocs,
-				 &sw_protections);
+				 &sw_protections,
+				 &memtag_opts);
 
   stub_file = lang_add_input_file ("linker stubs",
 				   lang_input_file_is_fake_enum,
@@ -345,7 +352,7 @@ aarch64_elf_create_output_section_statements (void)
 			      bfd_get_arch (link_info.output_bfd),
 			      bfd_get_mach (link_info.output_bfd)))
     {
-      einfo (_("%F%P: can not create BFD: %E\n"));
+      fatal (_("%P: can not create BFD: %E\n"));
       return;
     }
 
@@ -357,18 +364,20 @@ static bool
 aarch64_parse_feature_report_option (const char *_optarg,
 				     const char *report_opt,
 				     const size_t report_opt_len,
+				     bool allow_empty_value,
 				     aarch64_feature_marking_report *level)
 {
   if (strncmp (_optarg, report_opt, report_opt_len) != 0)
     return false;
 
-  if (strlen (_optarg) == report_opt_len
-      || strcmp (_optarg + report_opt_len, "=warning") == 0)
+  if (strcmp (_optarg + report_opt_len, "=warning") == 0)
     *level = MARKING_WARN;
   else if (strcmp (_optarg + report_opt_len, "=none") == 0)
     *level = MARKING_NONE;
   else if (strcmp (_optarg + report_opt_len, "=error") == 0)
     *level = MARKING_ERROR;
+  else if (allow_empty_value && strlen (_optarg) == report_opt_len)
+    *level = MARKING_WARN;
   else
     einfo (_("%X%P: error: unrecognized value '-z %s'\n"), _optarg);
 
@@ -382,7 +391,7 @@ aarch64_parse_bti_report_option (const char *_optarg)
   #define BTI_REPORT_LEN  COMPILE_TIME_STRLEN (BTI_REPORT)
 
   return aarch64_parse_feature_report_option (_optarg, BTI_REPORT,
-    BTI_REPORT_LEN, &sw_protections.bti_report);
+    BTI_REPORT_LEN, true, &sw_protections.bti_report);
 
   #undef BTI_REPORT
   #undef BTI_REPORT_LEN
@@ -395,10 +404,23 @@ aarch64_parse_gcs_report_option (const char *_optarg)
   #define GCS_REPORT_LEN  COMPILE_TIME_STRLEN (GCS_REPORT)
 
   return aarch64_parse_feature_report_option (_optarg, GCS_REPORT,
-    GCS_REPORT_LEN, &sw_protections.gcs_report);
+    GCS_REPORT_LEN, true, &sw_protections.gcs_report);
 
   #undef GCS_REPORT
   #undef GCS_REPORT_LEN
+}
+
+static bool
+aarch64_parse_gcs_report_dynamic_option (const char *_optarg)
+{
+  #define GCS_REPORT_DYNAMIC      "gcs-report-dynamic"
+  #define GCS_REPORT_DYNAMIC_LEN  COMPILE_TIME_STRLEN (GCS_REPORT_DYNAMIC)
+
+  return aarch64_parse_feature_report_option (_optarg, GCS_REPORT_DYNAMIC,
+    GCS_REPORT_DYNAMIC_LEN, false, &sw_protections.gcs_report_dynamic);
+
+  #undef GCS_REPORT_DYNAMIC
+  #undef GCS_REPORT_DYNAMIC_LEN
 }
 
 static bool
@@ -424,6 +446,31 @@ aarch64_parse_gcs_option (const char *_optarg)
   #undef GCS
   #undef GCS_LEN
 }
+
+static bool
+aarch64_parse_memtag_mode_option (const char *_optarg)
+{
+  #define MEMTAG_MODE      "memtag-mode"
+  #define MEMTAG_MODE_LEN  COMPILE_TIME_STRLEN (MEMTAG_MODE)
+
+  if (strncmp (_optarg, MEMTAG_MODE, MEMTAG_MODE_LEN) != 0)
+    return false;
+
+  if (strcmp (_optarg + MEMTAG_MODE_LEN, "=none") == 0)
+    memtag_opts.memtag_mode = AARCH64_MEMTAG_MODE_NONE;
+  else if (strcmp (_optarg + MEMTAG_MODE_LEN, "=sync") == 0)
+    memtag_opts.memtag_mode = AARCH64_MEMTAG_MODE_SYNC;
+  else if (strcmp (_optarg + MEMTAG_MODE_LEN, "=async") == 0)
+    memtag_opts.memtag_mode = AARCH64_MEMTAG_MODE_ASYNC;
+  else
+    einfo (_("%X%P: error: unrecognized value '-z %s'\n"), _optarg);
+
+  return true;
+
+  #undef MEMTAG_MODE
+  #undef MEMTAG_MODE_LEN
+}
+
 EOF
 
 # Define some shell vars to insert bits of code into the standard elf
@@ -494,6 +541,25 @@ PARSE_AND_LIST_OPTIONS='
                                            and output have GCS marking.\n\
                                          error: Emit error when the input objects are missing GCS markings\n\
                                            and output have GCS marking.\n"));
+  fprintf (file, _("\
+  -z gcs-report-dynamic=none|warning|error   Emit warning/error on mismatch of GCS marking between the current link\n\
+                                             unit and input dynamic objects.\n\
+                                               none: Does not emit any warning/error messages.\n\
+                                               warning: Emit warning when the input objects are missing GCS markings\n\
+                                                 and output have GCS marking.\n\
+                                               error: Emit error when the input objects are missing GCS markings\n\
+                                                 and output have GCS marking.\n"));
+  fprintf (file, _("\
+  -z memtag-mode[=none|sync|async]     Select Memory Tagging Extension mode of operation to use.\n\
+                                       Emits a DT_AARCH64_MEMTAG_MODE dynamic tag for the binary.\n\
+                                       This entry is only valid on the main executable.  It is\n\
+                                       ignored in the dynamically loaded objects by the loader.\n\
+                                         none (default): Disable MTE checking of memory reads and writes.\n\
+                                         sync: Enable precise exceptions when mismatched address and\n\
+                                               allocation tags detected on load/store operations.\n\
+                                         async: Enable imprecise exceptions.\n"));
+  fprintf (file, _("\
+  -z memtag-stack               Mark program stack with MTE protection.\n"));
 '
 
 PARSE_AND_LIST_ARGS_CASE_Z_AARCH64='
@@ -503,10 +569,16 @@ PARSE_AND_LIST_ARGS_CASE_Z_AARCH64='
 	{}
      else if (strcmp (optarg, "pac-plt") == 0)
 	sw_protections.plt_type |= PLT_PAC;
+     else if (aarch64_parse_gcs_report_dynamic_option (optarg))
+	{}
      else if (aarch64_parse_gcs_report_option (optarg))
 	{}
      else if (aarch64_parse_gcs_option (optarg))
 	{}
+     else if (aarch64_parse_memtag_mode_option (optarg))
+	{}
+     else if (strcmp (optarg, "memtag-stack") == 0)
+	memtag_opts.memtag_stack = 1;
 '
 PARSE_AND_LIST_ARGS_CASE_Z="$PARSE_AND_LIST_ARGS_CASE_Z $PARSE_AND_LIST_ARGS_CASE_Z_AARCH64"
 
@@ -557,7 +629,7 @@ PARSE_AND_LIST_ARGS_CASES='
 
 	group_size = bfd_scan_vma (optarg, &end, 0);
 	if (*end)
-	  einfo (_("%F%P: invalid number `%s'\''\n"), optarg);
+	  fatal (_("%P: invalid number `%s'\''\n"), optarg);
       }
       break;
 '

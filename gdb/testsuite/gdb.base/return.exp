@@ -1,4 +1,4 @@
-# Copyright (C) 1992-2024 Free Software Foundation, Inc.
+# Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,8 +36,8 @@ proc return_tests { } {
 	    send_gdb "step\n"
 	    exp_continue
 	}
-	-re ".*in main after func1.*$gdb_prompt $" { 
-	    pass "simple return" 
+	-re ".*in main after func1.*$gdb_prompt $" {
+	    pass "simple return"
 	}
     }
 

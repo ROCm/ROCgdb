@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2004-2024 Free Software Foundation, Inc.
+   Copyright 2004-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -215,7 +215,7 @@ func:
 	.uleb128	5
 	.byte		2
 	.4byte		.Lfunc_2
-	
+
 	.byte		3	/* DW_LNS_advance_line */
 	.sleb128	1	/* ... to 8 */
 

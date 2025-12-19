@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -30,16 +30,6 @@
 #include "collect.h"
 #include "StringBuilder.h"
 #include "Settings.h"
-
-#define	STDEBUFSIZE	24000
-
-#define LIBGP_COLLECTOR             "libgp-collector.so"
-#define GPROFNG_PRELOAD_LIBDIRS     "GPROFNG_PRELOAD_LIBDIRS"
-#define SP_COLLECTOR_EXPNAME        "SP_COLLECTOR_EXPNAME"
-#define SP_COLLECTOR_FOLLOW_SPEC    "SP_COLLECTOR_FOLLOW_SPEC"
-#define SP_COLLECTOR_PARAMS         "SP_COLLECTOR_PARAMS"
-#define SP_COLLECTOR_FOUNDER        "SP_COLLECTOR_FOUNDER"
-#define SP_COLLECTOR_ORIGIN_COLLECT "SP_COLLECTOR_ORIGIN_COLLECT"
 
 static const char *LD_AUDIT[] = {
   //    "LD_AUDIT",	Do not set LD_AUDIT on Linux

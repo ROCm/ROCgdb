@@ -1,6 +1,6 @@
 /* Common target-dependent code for ppc64 GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -507,7 +507,7 @@ static const struct ppc_insn_pattern ppc64_standard_linkage12[] =
 	10000388:   7d 69 03 a6     mtctr   r11
 	1000038c:   e8 42 80 80     ld      r2,-32640(r2)
 	10000390:   28 22 00 00     cmpldi  r2,0
-	10000394:   4c e2 04 20     bnectr+ 
+	10000394:   4c e2 04 20     bnectr+
 	10000398:   48 00 03 a0     b       10000738 <printf@plt>
 
    - But since this is the first time that PLT entry has been used, it
@@ -754,7 +754,7 @@ ppc64_convert_from_func_ptr_addr (struct gdbarch *gdbarch,
   /* Check if ADDR points to a function descriptor.  */
   if (s && strcmp (s->the_bfd_section->name, ".opd") == 0)
     {
-      /* There may be relocations that need to be applied to the .opd 
+      /* There may be relocations that need to be applied to the .opd
 	 section.  Unfortunately, this function may be called at a time
 	 where these relocations have not yet been performed -- this can
 	 happen for example shortly after a library has been loaded with
@@ -793,11 +793,12 @@ ppc64_convert_from_func_ptr_addr (struct gdbarch *gdbarch,
    from that symbol.  */
 
 void
-ppc64_elf_make_msymbol_special (asymbol *sym, struct minimal_symbol *msym)
+ppc64_elf_make_msymbol_special (const asymbol *sym,
+				struct minimal_symbol *msym)
 {
   if ((sym->flags & BSF_SYNTHETIC) != 0 && sym->udata.p != NULL)
     {
-      elf_symbol_type *elf_sym = (elf_symbol_type *) sym->udata.p;
+      const elf_symbol_type *elf_sym = (const elf_symbol_type *) sym->udata.p;
       msym->set_size (elf_sym->internal_elf_sym.st_size);
     }
 }

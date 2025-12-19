@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2024 Free Software Foundation, Inc.
+# Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 
 # Test a printer with a bad children iterator.
 
-import re
 
 import gdb.printing
 
@@ -34,7 +33,6 @@ class BadChildrenContainerPrinter1(object):
 
     @staticmethod
     def _bad_iterator(pointer, len):
-        start = pointer
         end = pointer + len
         while pointer != end:
             yield "intentional violation of children iterator protocol"
@@ -55,7 +53,6 @@ class BadChildrenContainerPrinter2(object):
 
     @staticmethod
     def _bad_iterator(pointer, len):
-        start = pointer
         end = pointer + len
         while pointer != end:
             # The first argument is supposed to be a string.

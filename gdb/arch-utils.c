@@ -1,7 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -49,7 +49,7 @@
 bool
 default_displaced_step_hw_singlestep (struct gdbarch *gdbarch)
 {
-  return !gdbarch_software_single_step_p (gdbarch);
+  return !gdbarch_get_next_pcs_p (gdbarch);
 }
 
 CORE_ADDR
@@ -258,7 +258,7 @@ cannot_register_not (struct gdbarch *gdbarch, int regnum)
    cooked or raw.  */
 
 void
-legacy_virtual_frame_pointer (struct gdbarch *gdbarch, 
+legacy_virtual_frame_pointer (struct gdbarch *gdbarch,
 			      CORE_ADDR pc,
 			      int *frame_regnum,
 			      LONGEST *frame_offset)
@@ -321,12 +321,6 @@ default_floatformat_for_type (struct gdbarch *gdbarch,
 int
 generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			    struct type *type)
-{
-  return 0;
-}
-
-int
-default_stabs_argument_has_addr (struct gdbarch *gdbarch, struct type *type)
 {
   return 0;
 }
@@ -593,7 +587,7 @@ gdbarch_update_p (inferior *inf, struct gdbarch_info info)
     info.abfd = inf->pspace->exec_bfd ();
 
   if (info.abfd == NULL)
-    info.abfd = inf->pspace->core_bfd ();
+    info.abfd = get_inferior_core_bfd (inf);
 
   /* Check for the current target description.  */
   if (info.target_desc == NULL)
@@ -693,7 +687,7 @@ void
 initialize_current_architecture (void)
 {
   arches = gdbarch_printable_names ();
-  
+
   /* Find a default architecture.  */
   if (default_bfd_arch == NULL)
     {
@@ -1312,6 +1306,16 @@ default_gdbarch_return_value
 				readbuf, writebuf);
 }
 
+/* See arch-utils.h.  */
+
+std::optional<CORE_ADDR>
+default_get_shadow_stack_pointer (gdbarch *gdbarch, regcache *regcache,
+				  bool &shadow_stack_enabled)
+{
+  shadow_stack_enabled = false;
+  return {};
+}
+
 obstack *gdbarch_obstack (gdbarch *arch)
 {
   return &arch->obstack;
@@ -1619,12 +1623,10 @@ core_file_exec_context::environment () const
   return e;
 }
 
-void _initialize_gdbarch_utils ();
-void
-_initialize_gdbarch_utils ()
+INIT_GDB_FILE (gdbarch_utils)
 {
   add_setshow_enum_cmd ("endian", class_support,
-			endian_enum, &set_endian_string, 
+			endian_enum, &set_endian_string,
 			_("Set endianness of target."),
 			_("Show endianness of target."),
 			NULL, set_endian, show_endian,

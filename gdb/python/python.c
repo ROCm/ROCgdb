@@ -1,6 +1,6 @@
 /* General python/gdb code
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,15 +27,14 @@
 #include "value.h"
 #include "language.h"
 #include "gdbsupport/event-loop.h"
-#include "readline/tilde.h"
 #include "python.h"
 #include "extension-priv.h"
 #include "cli/cli-utils.h"
-#include <ctype.h>
 #include "location.h"
 #include "run-on-main-thread.h"
 #include "observable.h"
 #include "build-id.h"
+#include "cli/cli-style.h"
 
 #if GDB_SELF_TEST
 #include "gdbsupport/selftest.h"
@@ -77,6 +76,7 @@ static const char *gdbpy_should_print_stack = python_excp_message;
 #include "interps.h"
 #include "event-top.h"
 #include "py-event.h"
+#include "py-color.h"
 
 /* True if Python has been successfully initialized, false
    otherwise.  */
@@ -126,7 +126,8 @@ static bool gdbpy_check_quit_flag (const struct extension_language_defn *);
 static enum ext_lang_rc gdbpy_before_prompt_hook
   (const struct extension_language_defn *, const char *current_gdb_prompt);
 static std::optional<std::string> gdbpy_colorize
-  (const std::string &filename, const std::string &contents);
+  (const std::string &filename, const std::string &contents,
+   enum language lang);
 static std::optional<std::string> gdbpy_colorize_disasm
 (const std::string &content, gdbarch *gdbarch);
 static ext_lang_missing_file_result gdbpy_handle_missing_debuginfo
@@ -511,6 +512,12 @@ gdbpy_parameter_value (const setting &var)
 	return host_string_to_python_string (str).release ();
       }
 
+    case var_color:
+      {
+	const ui_file_style::color &color = var.get<ui_file_style::color> ();
+	return create_color_object (color).release ();
+      }
+
     case var_boolean:
       {
 	if (var.get<bool> ())
@@ -653,12 +660,14 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
   const char *arg;
   PyObject *from_tty_obj = nullptr;
   PyObject *to_string_obj = nullptr;
-  static const char *keywords[] = { "command", "from_tty", "to_string",
-				    nullptr };
+  PyObject *styling = nullptr;
+  static const char *keywords[]
+    = { "command", "from_tty", "to_string", "styling", nullptr };
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!O!", keywords, &arg,
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!O!O!", keywords, &arg,
 					&PyBool_Type, &from_tty_obj,
-					&PyBool_Type, &to_string_obj))
+					&PyBool_Type, &to_string_obj,
+					&PyBool_Type, &styling))
     return nullptr;
 
   bool from_tty = false;
@@ -677,6 +686,15 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
       if (cmp < 0)
 	return nullptr;
       to_string = (cmp != 0);
+    }
+
+  bool styling_p = !to_string;
+  if (styling != nullptr)
+    {
+      int cmp = PyObject_IsTrue (styling);
+      if (cmp < 0)
+	return nullptr;
+      styling_p = (cmp != 0);
     }
 
   std::string to_string_res;
@@ -738,14 +756,29 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
 
 	scoped_restore save_uiout = make_scoped_restore (&current_uiout);
 
+	/* If the Python 'styling' argument was False then temporarily
+	   disable styling.  Otherwise, don't do anything, styling could
+	   already be disabled for some other reason, we shouldn't override
+	   that and force styling on.  */
+	std::optional<scoped_disable_styling> disable_styling;
+	if (!styling_p)
+	  disable_styling.emplace ();
+
 	/* Use the console interpreter uiout to have the same print format
 	   for console or MI.  */
 	interp = interp_lookup (current_ui, "console");
 	current_uiout = interp->interp_ui_out ();
 
 	if (to_string)
-	  to_string_res = execute_control_commands_to_string (lines.get (),
-							      from_tty);
+	  {
+	    /* Pass 'true' here to always request styling, however, if
+	       the scoped_disable_styling disabled styling, or the user
+	       has globally disabled styling, then the output will not be
+	       styled.  */
+	    to_string_res
+	      = execute_control_commands_to_string (lines.get (), from_tty,
+						    true);
+	  }
 	else
 	  execute_control_commands (lines.get (), from_tty);
       }
@@ -765,7 +798,8 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
     }
 
   if (to_string)
-    return PyUnicode_FromString (to_string_res.c_str ());
+    return PyUnicode_Decode (to_string_res.c_str (), to_string_res.size (),
+			     host_charset (), nullptr);
   Py_RETURN_NONE;
 }
 
@@ -1166,15 +1200,22 @@ gdbpy_post_event (PyObject *self, PyObject *args)
 static PyObject *
 gdbpy_interrupt (PyObject *self, PyObject *args)
 {
+#ifdef __MINGW32__
   {
-    /* Make sure the interrupt isn't delivered immediately somehow.
-       This probably is not truly needed, but at the same time it
-       seems more clear to be explicit about the intent.  */
     gdbpy_allow_threads temporarily_exit_python;
     scoped_disable_cooperative_sigint_handling no_python_sigint;
 
     set_quit_flag ();
   }
+#else
+  {
+    /* For targets with support kill() just send SIGINT.  This will be
+       handled as if the user hit Ctrl+C.  This isn't exactly the same as
+       the above, which directly sets the quit flag.  Consider, for
+       example, every place that install_sigint_handler is called.  */
+    kill (getpid (), SIGINT);
+  }
+#endif
 
   Py_RETURN_NONE;
 }
@@ -1260,7 +1301,8 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 /* This is the extension_language_ops.colorize "method".  */
 
 static std::optional<std::string>
-gdbpy_colorize (const std::string &filename, const std::string &contents)
+gdbpy_colorize (const std::string &filename, const std::string &contents,
+		enum language lang)
 {
   if (!gdb_python_initialized)
     return {};
@@ -1294,6 +1336,13 @@ gdbpy_colorize (const std::string &filename, const std::string &contents)
       return {};
     }
 
+  gdbpy_ref<> lang_arg (PyUnicode_FromString (language_str (lang)));
+  if (lang_arg == nullptr)
+    {
+      gdbpy_print_stack ();
+      return {};
+    }
+
   /* The pygments library, which is what we currently use for applying
      styling, is happy to take input as a bytes object, and to figure out
      the encoding for itself.  This removes the need for us to figure out
@@ -1314,6 +1363,7 @@ gdbpy_colorize (const std::string &filename, const std::string &contents)
   gdbpy_ref<> result (PyObject_CallFunctionObjArgs (hook.get (),
 						    fname_arg.get (),
 						    contents_arg.get (),
+						    lang_arg.get (),
 						    nullptr));
   if (result == nullptr)
     {
@@ -1516,29 +1566,49 @@ static PyObject *
 gdbpy_write (PyObject *self, PyObject *args, PyObject *kw)
 {
   const char *arg;
-  static const char *keywords[] = { "text", "stream", NULL };
+  static const char *keywords[] = { "text", "stream", "style", nullptr };
   int stream_type = 0;
+  PyObject *style_obj = Py_None;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &arg,
-					&stream_type))
-    return NULL;
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|iO", keywords, &arg,
+					&stream_type, &style_obj))
+    return nullptr;
+
+  if (style_obj != Py_None && !gdbpy_is_style (style_obj))
+    {
+      PyErr_Format
+	(PyExc_TypeError,
+	 _("'style' argument must be gdb.Style or None, not %s."),
+	 Py_TYPE (style_obj)->tp_name);
+      return nullptr;
+    }
 
   try
     {
+      ui_file *stream;
       switch (stream_type)
 	{
 	case 1:
-	  {
-	    gdb_printf (gdb_stderr, "%s", arg);
-	    break;
-	  }
+	  stream = gdb_stderr;
+	  break;
 	case 2:
-	  {
-	    gdb_printf (gdb_stdlog, "%s", arg);
-	    break;
-	  }
+	  stream = gdb_stdlog;
+	  break;
 	default:
-	  gdb_printf (gdb_stdout, "%s", arg);
+	  stream = gdb_stdout;
+	  break;
+	}
+
+      if (style_obj == Py_None)
+	gdb_puts (arg, stream);
+      else
+	{
+	  std::optional<ui_file_style> style
+	    = gdbpy_style_object_to_ui_file_style (style_obj);
+	  if (!style.has_value ())
+	    return nullptr;
+
+	  fputs_styled (arg, style.value (), stream);
 	}
     }
   catch (const gdb_exception &except)
@@ -1567,16 +1637,53 @@ gdbpy_flush (PyObject *self, PyObject *args, PyObject *kw)
     {
     case 1:
       {
-	gdb_flush (gdb_stderr);
+	if (gdb_stderr != nullptr)
+	  gdb_flush (gdb_stderr);
 	break;
       }
     case 2:
       {
-	gdb_flush (gdb_stdlog);
+	if (gdb_stdlog != nullptr)
+	  gdb_flush (gdb_stdlog);
 	break;
       }
     default:
-      gdb_flush (gdb_stdout);
+      if (gdb_stdout != nullptr)
+	gdb_flush (gdb_stdout);
+    }
+
+  Py_RETURN_NONE;
+}
+
+/* Implement gdb.warning().  Takes a single text string argument and emit a
+   warning using GDB's 'warning' function.  The input text string must not
+   be empty.  */
+
+static PyObject *
+gdbpy_warning (PyObject *self, PyObject *args, PyObject *kw)
+{
+  const char *text;
+  static const char *keywords[] = { "text", nullptr };
+
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s", keywords, &text))
+    return nullptr;
+
+  if (strlen (text) == 0)
+    {
+      PyErr_SetString (PyExc_ValueError,
+		       _("Empty text string passed to gdb.warning"));
+      return nullptr;
+    }
+
+  try
+    {
+      warning ("%s", text);
+    }
+  catch (const gdb_exception &ex)
+    {
+      /* The warning() call probably cannot throw an exception.  But just
+	 in case it ever does.  */
+      return gdbpy_handle_gdb_exception (nullptr, ex);
     }
 
   Py_RETURN_NONE;
@@ -2324,7 +2431,17 @@ gdbpy_gdb_exiting (int exit_code)
     gdbpy_print_stack ();
 }
 
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.
+
+   We used to do this for 3.10 and newer to avoid Py_SetProgramName
+   deprecation in 3.11.
+
+   With 3.9 and the py_initialize_catch_abort approach, we run into a problem
+   where exit is called instead of abort, making gdb exit (possibly
+   https://github.com/python/cpython/issues/107827).  Using the PyConfig
+   mechanism (available starting 3.8) fixes that.  Todo: see if we have the
+   same problem for 3.8, and if we can apply the same fix.  */
+#if PY_VERSION_HEX < 0x03090000
 /* Signal handler to convert a SIGABRT into an exception.  */
 
 static void
@@ -2376,7 +2493,8 @@ py_initialize ()
        ? AUTO_BOOLEAN_TRUE
        : AUTO_BOOLEAN_FALSE);
 
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.  */
+#if PY_VERSION_HEX < 0x03090000
   /* Python documentation indicates that the memory given
      to Py_SetProgramName cannot be freed.  However, it seems that
      at least Python 3.7.4 Py_SetProgramName takes a copy of the
@@ -2398,7 +2516,7 @@ py_initialize ()
      /foo/lib/pythonX.Y/...
      This must be done before calling Py_Initialize.  */
   gdb::unique_xmalloc_ptr<char> progname
-    (concat (ldirname (python_libdir.c_str ()).c_str (), SLASH_STRING, "bin",
+    (concat (gdb_ldirname (python_libdir.c_str ()).c_str (), SLASH_STRING, "bin",
 	      SLASH_STRING, "python", (char *) NULL));
 
   {
@@ -2417,9 +2535,8 @@ py_initialize ()
   }
 #endif
 
-  /* Py_SetProgramName was deprecated in Python 3.11.  Use PyConfig
-     mechanisms for Python 3.10 and newer.  */
-#if PY_VERSION_HEX < 0x030a0000
+/* Use PyConfig mechanisms for Python 3.9 and newer.  */
+#if PY_VERSION_HEX < 0x03090000
   /* Note that Py_SetProgramName expects the string it is passed to
      remain alive for the duration of the program's execution, so
      it is not freed after this call.  */
@@ -2627,7 +2744,7 @@ test_python ()
 
 #undef CHECK_OUTPUT
 
-} // namespace selftests
+} /* namespace selftests */
 #endif /* GDB_SELF_TEST */
 
 #endif /* HAVE_PYTHON */
@@ -2635,9 +2752,7 @@ test_python ()
 /* See python.h.  */
 cmd_list_element *python_cmd_element = nullptr;
 
-void _initialize_python ();
-void
-_initialize_python ()
+INIT_GDB_FILE (python)
 {
   cmd_list_element *python_interactive_cmd
     =	add_com ("python-interactive", class_obscure,
@@ -3076,13 +3191,18 @@ Return the current print options." },
     METH_VARARGS | METH_KEYWORDS,
     "notify_mi (name, data) -> None\n\
 Output async record to MI channels if any." },
+
+  { "warning", (PyCFunction) gdbpy_warning,
+    METH_VARARGS | METH_KEYWORDS,
+    "warning (text) -> None\n\
+Print a warning." },
+
   {NULL, NULL, 0, NULL}
 };
 
 /* Define all the event objects.  */
 #define GDB_PY_DEFINE_EVENT_TYPE(name, py_name, doc, base) \
-  PyTypeObject name##_event_object_type		    \
-	CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object") \
+  PyTypeObject name##_event_object_type \
     = { \
       PyVarObject_HEAD_INIT (NULL, 0)				\
       "gdb." py_name,                             /* tp_name */ \

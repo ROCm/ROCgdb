@@ -1,4 +1,4 @@
-;; Copyright (C) 2008-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2025 Free Software Foundation, Inc.
 ;;
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -248,13 +248,13 @@
     (hash-set! dict "ss" make-pp_ss-printer)
     (hash-set! dict "const S &" make-pp_s-printer)
     (hash-set! dict "SSS" make-pp_sss-printer)
-    
+
     (hash-set! dict "VirtualTest" make-pp_multiple_virtual-printer)
     (hash-set! dict "Vbase1" make-pp_vbase1-printer)
 
     (hash-set! dict "struct nullstr" make-pp_nullstr-printer)
     (hash-set! dict "nullstr" make-pp_nullstr-printer)
-    
+
     ;; Note that we purposely omit the typedef names here.
     ;; Printer lookup is based on canonical name.
     ;; However, we do need both tagged and untagged variants, to handle

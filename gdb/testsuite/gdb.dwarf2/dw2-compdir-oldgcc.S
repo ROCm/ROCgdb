@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -151,7 +151,7 @@ gcc43:	.globl gcc43
 	.byte		1			/* Minimum insn length */
 	.byte		1			/* default_is_stmt */
 	.byte		1			/* line_base */
- 	.byte		1			/* line_range */
+	.byte		1			/* line_range */
 	.byte		4			/* opcode_base */
 
 	/* Standard lengths */
@@ -200,7 +200,7 @@ gcc43:	.globl gcc43
 	.byte		1			/* Minimum insn length */
 	.byte		1			/* default_is_stmt */
 	.byte		1			/* line_base */
- 	.byte		1			/* line_range */
+	.byte		1			/* line_range */
 	.byte		4			/* opcode_base */
 
 	/* Standard lengths */

@@ -1,4 +1,4 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,10 +25,8 @@ set testfile2 "jit-reader-execd"
 set srcfile2 ${testfile2}.c
 set binfile2 [standard_output_file ${testfile2}]
 
-if {[gdb_compile "${srcdir}/${subdir}/${srcfile2}" "${binfile2}" \
-	 executable {debug}] != ""} {
-    untested "failed to compile"
-    return -1
+if { [build_executable "build exec'd file" $testfile2 $srcfile2] != 0 } {
+    return
 }
 
 if { [is_remote target] } {
@@ -37,13 +35,9 @@ if { [is_remote target] } {
 
 set compile_options [list debug additional_flags=-DPROGRAM=\"$binfile2\"]
 
-if {[gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
-	 executable $compile_options] != ""} {
-    untested "failed to compile"
-    return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile $compile_options] != 0 } {
+    return
 }
-
-clean_restart $binfile
 
 if {![runto_main]} {
     return

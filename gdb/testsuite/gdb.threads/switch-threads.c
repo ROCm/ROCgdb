@@ -1,6 +1,6 @@
 /* A minimal multi-threaded test case.
 
-   Copyright 2003-2024 Free Software Foundation, Inc.
+   Copyright 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -40,5 +40,5 @@ int main()
   pthread_create (&thr, NULL, thread_func, NULL);
   pthread_join (thr, &ret);
   for (x = 0; x < 10; x++)
-    foo ();  
+    foo ();
 }

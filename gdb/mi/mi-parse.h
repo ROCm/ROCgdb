@@ -1,8 +1,6 @@
 /* MI Command Set - MI Command Parser.
-
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
-
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.

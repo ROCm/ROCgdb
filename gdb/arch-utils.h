@@ -1,7 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -262,9 +262,6 @@ extern int default_code_of_frame_writable (struct gdbarch *gdbarch,
 extern int generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
 				       struct type *type);
 
-extern int default_stabs_argument_has_addr (struct gdbarch *gdbarch,
-					    struct type *type);
-
 extern int generic_instruction_nullified (struct gdbarch *gdbarch,
 					  struct regcache *regcache);
 
@@ -415,7 +412,16 @@ extern enum return_value_convention default_gdbarch_return_value
       struct regcache *regcache, struct value **read_value,
       const gdb_byte *writebuf);
 
+<<<<<<< HEAD
 /* Architecture address space handling.  */
+=======
+/* Default implementation of gdbarch default_get_shadow_stack_pointer
+   method.  */
+extern std::optional<CORE_ADDR> default_get_shadow_stack_pointer
+  (gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
+
+  /* Architecture address space handling.  */
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 /* Convert address space name to an address space id.  */
 extern std::optional<arch_addr_space_id> gdbarch_name_to_address_space_id

@@ -1,6 +1,6 @@
 /* AMDGPU ELF support for BFD.
 
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -74,6 +74,11 @@
 #define EF_AMDGPU_MACH_AMDGCN_GFX1102 0x047
 #define EF_AMDGPU_MACH_AMDGCN_GFX1150 0x043
 #define EF_AMDGPU_MACH_AMDGCN_GFX1151 0x04a
+<<<<<<< HEAD
+=======
+#define EF_AMDGPU_MACH_AMDGCN_GFX1152 0x055
+#define EF_AMDGPU_MACH_AMDGCN_GFX1153 0x058
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 #define EF_AMDGPU_MACH_AMDGCN_GFX1200 0x048
 #define EF_AMDGPU_MACH_AMDGCN_GFX942  0x04c
 #define EF_AMDGPU_MACH_AMDGCN_GFX1201 0x04e

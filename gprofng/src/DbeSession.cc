@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -2014,6 +2014,17 @@ DbeSession::is_omp_available ()
 	}
     }
   return status_ompavail == 1;
+}
+
+bool
+DbeSession::is_bigendian ()
+{
+#ifdef WORDS_BIGENDIAN
+  return true;
+#else
+  return false;
+#endif
+
 }
 
 bool

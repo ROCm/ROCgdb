@@ -1,7 +1,6 @@
 /* TUI window generic functions.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -46,7 +45,6 @@
 #include "tui/tui-win.h"
 
 #include "gdb_curses.h"
-#include <ctype.h>
 #include "readline/readline.h"
 #include <signal.h>
 #include <string_view>
@@ -58,8 +56,8 @@ static void tui_scroll_forward_command (const char *, int);
 static void tui_scroll_backward_command (const char *, int);
 static void tui_scroll_left_command (const char *, int);
 static void tui_scroll_right_command (const char *, int);
-static void parse_scrolling_args (const char *, 
-				  struct tui_win_info **, 
+static void parse_scrolling_args (const char *,
+				  struct tui_win_info **,
 				  int *);
 
 
@@ -147,7 +145,7 @@ static const char *tui_active_border_mode = "bold-standout";
 static void
 show_tui_active_border_mode (struct ui_file *file,
 			     int from_tty,
-			     struct cmd_list_element *c, 
+			     struct cmd_list_element *c,
 			     const char *value)
 {
   gdb_printf (file, _("\
@@ -157,9 +155,9 @@ The attribute mode to use for the active TUI window border is \"%s\".\n"),
 
 static const char *tui_border_mode = "normal";
 static void
-show_tui_border_mode (struct ui_file *file, 
+show_tui_border_mode (struct ui_file *file,
 		      int from_tty,
-		      struct cmd_list_element *c, 
+		      struct cmd_list_element *c,
 		      const char *value)
 {
   gdb_printf (file, _("\
@@ -169,9 +167,9 @@ The attribute mode to use for the TUI window borders is \"%s\".\n"),
 
 static const char *tui_border_kind = "acs";
 static void
-show_tui_border_kind (struct ui_file *file, 
+show_tui_border_kind (struct ui_file *file,
 		      int from_tty,
-		      struct cmd_list_element *c, 
+		      struct cmd_list_element *c,
 		      const char *value)
 {
   gdb_printf (file, _("The kind of border for TUI windows is \"%s\".\n"),
@@ -501,7 +499,7 @@ tui_resize_all (void)
     {
 #ifdef HAVE_RESIZE_TERM
       resize_term (screenheight, screenwidth);
-#endif      
+#endif
       /* Turn keypad off while we resize.  */
       keypad (tui_cmd_win ()->handle.get (), FALSE);
       tui_update_gdb_sizes ();
@@ -970,6 +968,8 @@ tui_set_win_size (const char *arg, bool set_width_p)
 	      new_size = curr_size + input_no;
 	    }
 
+	  tui_batch_rendering defer;
+
 	  /* Now change the window's height, and adjust
 	     all other windows around it.  */
 	  if (set_width_p)
@@ -1023,7 +1023,7 @@ tui_win_info::max_width () const
 }
 
 static void
-parse_scrolling_args (const char *arg, 
+parse_scrolling_args (const char *arg,
 		      struct tui_win_info **win_to_scroll,
 		      int *num_to_scroll)
 {
@@ -1040,7 +1040,7 @@ parse_scrolling_args (const char *arg,
       /* Process the number of lines to scroll.  */
       std::string copy = arg;
       buf_ptr = &copy[0];
-      if (isdigit (*buf_ptr))
+      if (c_isdigit (*buf_ptr))
 	{
 	  char *num_str;
 
@@ -1083,14 +1083,6 @@ parse_scrolling_args (const char *arg,
 
 static cmd_list_element *tui_window_cmds = nullptr;
 
-/* Called to implement 'tui window'.  */
-
-static void
-tui_window_command (const char *args, int from_tty)
-{
-  help_list (tui_window_cmds, "tui window ", all_commands, gdb_stdout);
-}
-
 /* See tui-win.h.  */
 
 bool tui_left_margin_verbose = false;
@@ -1098,9 +1090,7 @@ bool tui_left_margin_verbose = false;
 /* Function to initialize gdb commands, for tui window
    manipulation.  */
 
-void _initialize_tui_win ();
-void
-_initialize_tui_win ()
+INIT_GDB_FILE (tui_win)
 {
   static struct cmd_list_element *tui_setlist;
   static struct cmd_list_element *tui_showlist;
@@ -1126,9 +1116,9 @@ Usage: tabset N"));
   deprecate_cmd (tabset_cmd, "set tui tab-width");
 
   /* Setup the 'tui window' list of command.  */
-  add_prefix_cmd ("window", class_tui, tui_window_command,
-		  _("Text User Interface window commands."),
-		  &tui_window_cmds, 1, tui_get_cmd_list ());
+  add_basic_prefix_cmd ("window", class_tui,
+			_("Text User Interface window commands."),
+			&tui_window_cmds, 1, tui_get_cmd_list ());
 
   cmd_list_element *winheight_cmd
     = add_cmd ("height", class_tui, tui_set_win_height_command, _("\

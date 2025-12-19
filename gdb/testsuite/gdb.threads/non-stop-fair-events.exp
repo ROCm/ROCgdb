@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2024 Free Software Foundation, Inc.
+# Copyright (C) 2014-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options] == -1}
 
 gdb_test_no_output "set non-stop on"
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -49,7 +49,7 @@ proc get_value {var test} {
 	-re ".*= ($decimal).*\r\n$gdb_prompt $" {
 	    set value $expect_out(1,string)
 	    pass "$test"
-        }
+	}
     }
     return ${value}
 }

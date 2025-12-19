@@ -1,7 +1,7 @@
 /* Target-dependent code for the AMDGPU architectures.
 
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -24,9 +24,8 @@
 #include "gdbarch.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
-#include <unordered_map>
 
-/* Provide std::unordered_map::Hash for amd_dbgapi_register_id_t.  */
+/* Provide gdb::unordered_map::Hash for amd_dbgapi_register_id_t.  */
 struct register_id_hash
 {
   size_t
@@ -36,7 +35,7 @@ struct register_id_hash
   }
 };
 
-/* Provide std::unordered_map::Equal for amd_dbgapi_register_id_t.  */
+/* Provide gdb::unordered_map::Equal for amd_dbgapi_register_id_t.  */
 struct register_id_equal_to
 {
   bool
@@ -99,7 +98,12 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
 };
 
 /* Return true if GDBARCH is of an AMDGPU architecture.  */
+
 bool is_amdgpu_arch (struct gdbarch *gdbarch);
+
+/* Return true if ABFD is of an AMDGPU architecture.  */
+
+bool is_amdgpu_arch (bfd *abfd);
 
 /* Return the amdgpu-specific data associated to ARCH.  */
 

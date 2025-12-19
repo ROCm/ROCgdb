@@ -1,5 +1,5 @@
 /* Internal interfaces for the GNU/Linux specific target code for gdbserver.
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,7 +42,12 @@ enum regset_type {
   GENERAL_REGS,
   FP_REGS,
   EXTENDED_REGS,
-  OPTIONAL_REGS, /* Do not error if the regset cannot be accessed.  */
+  OPTIONAL_REGS, /* Do not error if the regset cannot be accessed.
+		    Disable the regset instead.  */
+  OPTIONAL_RUNTIME_REGS, /* Some optional regsets can only be accessed
+			    dependent on the execution flow.  For such
+			    access errors don't show a warning and don't
+			    disable the regset.  */
 };
 
 /* The arch's regsets array initializer must be terminated with a NULL
@@ -141,7 +146,7 @@ class linux_process_target : public process_stratum_target
 public:
 
   int create_inferior (const char *program,
-		       const std::vector<char *> &program_args) override;
+		       const std::string &program_args) override;
 
   void post_create_inferior () override;
 
@@ -199,7 +204,7 @@ public:
 
   bool stopped_by_watchpoint () override;
 
-  CORE_ADDR stopped_data_address () override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
 
   bool supports_read_offsets () override;
 
@@ -303,6 +308,8 @@ public:
 
   int multifs_open (int pid, const char *filename, int flags,
 		    mode_t mode) override;
+
+  int multifs_lstat (int pid, const char *filename, struct stat *st) override;
 
   int multifs_unlink (int pid, const char *filename) override;
 
@@ -555,7 +562,7 @@ private:
   process_info *add_linux_process_no_mem_file (int pid, int attached);
 
   /* Free resources associated to PROC and remove it.  */
-  void remove_linux_process (process_info *proc); 
+  void remove_linux_process (process_info *proc);
 
   /* Add a new thread.  */
   lwp_info *add_lwp (ptid_t ptid);
@@ -650,7 +657,7 @@ protected:
 
   virtual bool low_stopped_by_watchpoint ();
 
-  virtual CORE_ADDR low_stopped_data_address ();
+  virtual std::vector<CORE_ADDR> low_stopped_data_addresses ();
 
   /* Hooks to reformat register data for PEEKUSR/POKEUSR (in particular
      for registers smaller than an xfer unit).  */
@@ -856,10 +863,9 @@ struct lwp_info
   enum target_stop_reason stop_reason = TARGET_STOPPED_BY_NO_REASON;
 
   /* On architectures where it is possible to know the data address of
-     a triggered watchpoint, STOPPED_DATA_ADDRESS is non-zero, and
-     contains such data address.  Only valid if STOPPED_BY_WATCHPOINT
-     is true.  */
-  CORE_ADDR stopped_data_address = 0;
+     a triggered watchpoint, STOPPED_DATA_ADDRESS is the list of such
+     data addresses.  Only valid if STOPPED_BY_WATCHPOINT is true.  */
+  std::vector<CORE_ADDR> stopped_data_addresses;
 
   /* If this is non-zero, it is a breakpoint to be reinserted at our next
      stop (SIGTRAP stops only).  */

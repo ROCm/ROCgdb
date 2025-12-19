@@ -1,6 +1,6 @@
 /* Target dependent code for ARC architecture, for GDB.
 
-   Copyright 2005-2024 Free Software Foundation, Inc.
+   Copyright 2005-2025 Free Software Foundation, Inc.
    Contributed by Synopsys Inc.
 
    This file is part of GDB.
@@ -1663,7 +1663,7 @@ arc_make_frame_cache (const frame_info_ptr &this_frame)
   CORE_ADDR entrypoint, prologue_end;
   if (find_pc_partial_function (block_addr, NULL, &entrypoint, &prologue_end))
     {
-      struct symtab_and_line sal = find_pc_line (entrypoint, 0);
+      struct symtab_and_line sal = find_sal_for_pc (entrypoint, 0);
       CORE_ADDR prev_pc = get_frame_pc (this_frame);
       if (sal.line == 0)
 	/* No line info so use current PC.  */
@@ -1688,9 +1688,8 @@ arc_make_frame_cache (const frame_info_ptr &this_frame)
     }
 
   /* Allocate new frame cache instance and space for saved register info.
-     FRAME_OBSTACK_ZALLOC will initialize fields to zeroes.  */
-  struct arc_frame_cache *cache
-    = FRAME_OBSTACK_ZALLOC (struct arc_frame_cache);
+     frame_obstack_zalloc will initialize fields to zeroes.  */
+  auto *cache = frame_obstack_zalloc<arc_frame_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   arc_analyze_prologue (gdbarch, entrypoint, prologue_end, cache);
@@ -1824,7 +1823,7 @@ arc_make_sigtramp_frame_cache (const frame_info_ptr &this_frame)
   arc_gdbarch_tdep *tdep = gdbarch_tdep<arc_gdbarch_tdep> (arch);
 
   /* Allocate new frame cache instance and space for saved register info.  */
-  struct arc_frame_cache *cache = FRAME_OBSTACK_ZALLOC (struct arc_frame_cache);
+  auto *cache = frame_obstack_zalloc<arc_frame_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   /* Get the stack pointer and use it as the frame base.  */
@@ -1910,9 +1909,10 @@ arc_sigtramp_frame_sniffer (const struct frame_unwind *self,
    the fallback unwinder, we use the default frame sniffer, which always
    accepts the frame.  */
 
-static const struct frame_unwind arc_frame_unwind = {
+static const struct frame_unwind_legacy arc_frame_unwind (
   "arc prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   arc_frame_this_id,
   arc_frame_prev_register,
@@ -1920,15 +1920,16 @@ static const struct frame_unwind arc_frame_unwind = {
   default_frame_sniffer,
   NULL,
   NULL
-};
+);
 
 /* Structure defining the ARC signal frame unwind functions.  Custom
    sniffer is used, because this frame must be accepted only in the right
    context.  */
 
-static const struct frame_unwind arc_sigtramp_frame_unwind = {
+static const struct frame_unwind_legacy arc_sigtramp_frame_unwind (
   "arc sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   arc_sigtramp_frame_this_id,
   arc_sigtramp_frame_prev_register,
@@ -1936,7 +1937,7 @@ static const struct frame_unwind arc_sigtramp_frame_unwind = {
   arc_sigtramp_frame_sniffer,
   NULL,
   NULL
-};
+);
 
 
 static const struct frame_base arc_normal_base = {
@@ -2456,9 +2457,7 @@ dump_arc_instruction_command (const char *args, int from_tty)
   arc_insn_dump (insn);
 }
 
-void _initialize_arc_tdep ();
-void
-_initialize_arc_tdep ()
+INIT_GDB_FILE (arc_tdep)
 {
   gdbarch_register (bfd_arch_arc, arc_gdbarch_init, arc_dump_tdep);
 

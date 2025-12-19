@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ lappend srcfile_flags nopie
 set srcfile2_flags $srcfile_flags
 set ldflags $srcfile_flags
 
-if [info exists COMPILE] {
+if {[info exists COMPILE]} {
     standard_testfile unwind-on-each-insn.c unwind-on-each-insn-foo.c
     # When updating the .s file, use these flags to generate the file:
     #lappend srcfile2_flags additional_flags=-save-temps

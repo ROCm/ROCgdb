@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2007-2024 Free Software Foundation, Inc.
+   Copyright 2007-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -121,21 +121,21 @@ struct decstruct
 
 static _Decimal32
 arg0_32 (_Decimal32 arg0, _Decimal32 arg1, _Decimal32 arg2,
-         _Decimal32 arg3, _Decimal32 arg4, _Decimal32 arg5)
+	 _Decimal32 arg3, _Decimal32 arg4, _Decimal32 arg5)
 {
   return arg0;
 }
 
 static _Decimal64
 arg0_64 (_Decimal64 arg0, _Decimal64 arg1, _Decimal64 arg2,
-         _Decimal64 arg3, _Decimal64 arg4, _Decimal64 arg5)
+	 _Decimal64 arg3, _Decimal64 arg4, _Decimal64 arg5)
 {
   return arg0;
 }
 
 static _Decimal128
 arg0_128 (_Decimal128 arg0, _Decimal128 arg1, _Decimal128 arg2,
-         _Decimal128 arg3, _Decimal128 arg4, _Decimal128 arg5)
+	 _Decimal128 arg3, _Decimal128 arg4, _Decimal128 arg5)
 {
   return arg0;
 }

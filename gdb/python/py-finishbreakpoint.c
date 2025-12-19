@@ -1,6 +1,6 @@
 /* Python interface to finish breakpoints
 
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
+   Copyright (C) 2011-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -61,8 +61,7 @@ struct finish_breakpoint_object
   struct frame_id initiating_frame;
 };
 
-extern PyTypeObject finish_breakpoint_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("finish_breakpoint_object");
+extern PyTypeObject finish_breakpoint_object_type;
 
 /* Python function to get the 'return_value' attribute of
    FinishBreakpoint.  */
@@ -175,7 +174,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   struct frame_id frame_id;
   PyObject *internal = NULL;
   int internal_bp = 0;
-  CORE_ADDR pc;
+  std::optional<CORE_ADDR> pc;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|OO", keywords,
 					&frame_obj, &internal))
@@ -249,9 +248,9 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   try
     {
-      if (get_frame_pc_if_available (frame, &pc))
+      if ((pc = get_frame_pc_if_available (frame)))
 	{
-	  struct symbol *function = find_pc_function (pc);
+	  struct symbol *function = find_symbol_for_pc (*pc);
 	  if (function != nullptr)
 	    {
 	      struct type *ret_type =
@@ -433,8 +432,8 @@ bpfinishpy_handle_exit (struct inferior *inf)
 
 /* Initialize the Python finish breakpoint code.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_finishbreakpoints (void)
+static int
+gdbpy_initialize_finishbreakpoints ()
 {
   if (!gdbpy_breakpoint_init_breakpoint_type ())
     return -1;

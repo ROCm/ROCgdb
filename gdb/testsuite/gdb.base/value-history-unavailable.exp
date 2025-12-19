@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Free Software Foundation, Inc.
+# Copyright (C) 2023-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,18 +21,17 @@ if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
     return -1
 }
 
-if ![runto_main] then {
-    perror "couldn't run to breakpoint"
-    continue
+if {![runto_main]} {
+    return
 }
 
 set target_char_mask [get_valueof "/u" "a.x\[0]" "255" "get target char mask"]
 set target_char_bit 0
-for {set i $target_char_mask} {$i > 0} {set i [expr $i >> 1]} {
+for {set i $target_char_mask} {$i > 0} {set i [expr {$i >> 1}]} {
     incr target_char_bit
 }
 set target_char_rank -1
-for {set i $target_char_bit} {$i > 0} {set i [expr $i >> 1]} {
+for {set i $target_char_bit} {$i > 0} {set i [expr {$i >> 1}]} {
     incr target_char_rank
 }
 

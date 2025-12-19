@@ -1,5 +1,5 @@
 /* BFD library support routines for architectures.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Hacked by John Gilmore and Steve Chamberlain of Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -583,6 +583,11 @@ DESCRIPTION
 .#define bfd_mach_amdgcn_gfx1102         0x047
 .#define bfd_mach_amdgcn_gfx1150         0x043
 .#define bfd_mach_amdgcn_gfx1151         0x04a
+<<<<<<< HEAD
+=======
+.#define bfd_mach_amdgcn_gfx1152         0x055
+.#define bfd_mach_amdgcn_gfx1153         0x058
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 .#define bfd_mach_amdgcn_gfx12_generic   0x059
 .#define bfd_mach_amdgcn_gfx1200         0x048
 .#define bfd_mach_amdgcn_gfx1201         0x04e

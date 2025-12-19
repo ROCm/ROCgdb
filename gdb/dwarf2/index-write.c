@@ -1,6 +1,6 @@
 /* DWARF index writing support for GDB.
 
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -38,14 +38,11 @@
 #include "objfiles.h"
 #include "ada-lang.h"
 #include "dwarf2/tag.h"
-#include "gdbsupport/gdb_tilde_expand.h"
 #include "dwarf2/read-debug-names.h"
+#include "extract-store-integer.h"
 
 #include <algorithm>
-#include <cmath>
 #include <map>
-#include <unordered_map>
-#include <unordered_set>
 
 /* Ensure only legit values are used.  */
 #define DW2_GDB_INDEX_SYMBOL_STATIC_SET_VALUE(cu_index, value) \
@@ -58,7 +55,7 @@
 #define DW2_GDB_INDEX_SYMBOL_KIND_SET_VALUE(cu_index, value) \
   do { \
     gdb_assert ((value) >= GDB_INDEX_SYMBOL_KIND_TYPE \
-		&& (value) <= GDB_INDEX_SYMBOL_KIND_OTHER); \
+		&& (value) < GDB_INDEX_SYMBOL_KIND_UNUSED5); \
     GDB_INDEX_SYMBOL_KIND_SET_VALUE((cu_index), (value)); \
   } while (0)
 
@@ -131,6 +128,15 @@ public:
     ::store_unsigned_integer (grow (len), len, byte_order, val);
   }
 
+  /* Accept a host-format integer in VAL and write it in the buffer at offset
+     OFFSET as a target-format integer which is LEN bytes long.  */
+  void write_uint (size_t offset, size_t len, bfd_endian byte_order,
+		   ULONGEST val)
+  {
+    gdb_assert (offset + len <= m_vec.size ());
+    ::store_unsigned_integer (&m_vec[offset], len, byte_order, val);
+  }
+
   /* Copy VALUE to the end of the buffer, little-endian.  */
   void append_offset (offset_type value)
   {
@@ -178,9 +184,8 @@ struct symtab_index_entry
      of this name.  */
   std::vector<offset_type> cu_indices;
 
-  /* Minimize CU_INDICES, sorting them and removing duplicates as
-     appropriate.  */
-  void minimize ();
+  /* Sort CU_INDICES.  */
+  void sort ();
 };
 
 /* The symbol table.  This is a power-of-2-sized hash table.  */
@@ -192,16 +197,16 @@ struct mapped_symtab
   }
 
   /* If there are no elements in the symbol table, then reduce the table
-     size to zero.  Otherwise call symtab_index_entry::minimize each entry
+     size to zero.  Otherwise call symtab_index_entry::sort each entry
      in the symbol table.  */
 
-  void minimize ()
+  void minimize_and_sort ()
   {
     if (m_element_count == 0)
       m_data.resize (0);
 
     for (symtab_index_entry &item : m_data)
-      item.minimize ();
+      item.sort ();
   }
 
   /* Add an entry to SYMTAB.  NAME is the name of the symbol.  CU_INDEX is
@@ -306,7 +311,8 @@ mapped_symtab::hash_expand ()
 
 /* See mapped_symtab class declaration.  */
 
-void mapped_symtab::sort ()
+void
+mapped_symtab::sort ()
 {
   /* Move contents out of this->data vector.  */
   std::vector<symtab_index_entry> original_data = std::move (m_data);
@@ -410,31 +416,18 @@ mapped_symtab::add_index_entry (const char *name, int is_static,
 /* See symtab_index_entry.  */
 
 void
-symtab_index_entry::minimize ()
+symtab_index_entry::sort ()
 {
   if (name == nullptr || cu_indices.empty ())
     return;
 
-  std::sort (cu_indices.begin (), cu_indices.end ());
+  /* Sort the entries based on the CU offset.  */
+  std::sort (cu_indices.begin (), cu_indices.end (),
+	     [] (offset_type vala, offset_type valb)
+	       {
+		 return vala < valb;
+	       });
   auto from = std::unique (cu_indices.begin (), cu_indices.end ());
-  cu_indices.erase (from, cu_indices.end ());
-
-  /* We don't want to enter a type more than once, so
-     remove any such duplicates from the list as well.  When doing
-     this, we want to keep the entry from the first CU -- but this is
-     implicit due to the sort.  This choice is done because it's
-     similar to what gdb historically did for partial symbols.  */
-  std::unordered_set<offset_type> seen;
-  from = std::remove_if (cu_indices.begin (), cu_indices.end (),
-			 [&] (offset_type val)
-    {
-      gdb_index_symbol_kind kind = GDB_INDEX_SYMBOL_KIND_VALUE (val);
-      if (kind != GDB_INDEX_SYMBOL_KIND_TYPE)
-	return false;
-
-      val &= ~GDB_INDEX_CU_MASK;
-      return !seen.insert (val).second;
-    });
   cu_indices.erase (from, cu_indices.end ());
 }
 
@@ -470,7 +463,7 @@ private:
   const char *const m_cstr;
 };
 
-/* A std::unordered_map::hasher for c_str_view that uses the right
+/* A gdb::unordered_map::hasher for c_str_view that uses the right
    hash function for strings in a mapped index.  */
 class c_str_view_hasher
 {
@@ -481,7 +474,7 @@ public:
   }
 };
 
-/* A std::unordered_map::hasher for std::vector<>.  */
+/* A gdb::unordered_map::hasher for std::vector<>.  */
 template<typename T>
 class vector_hasher
 {
@@ -502,7 +495,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
   {
     /* Elements are sorted vectors of the indices of all the CUs that
        hold an object of this name.  */
-    std::unordered_map<std::vector<offset_type>, offset_type,
+    gdb::unordered_map<std::vector<offset_type>, offset_type,
 		       vector_hasher<offset_type>>
       symbol_hash_table;
 
@@ -529,7 +522,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
   }
 
   /* Now write out the hash table.  */
-  std::unordered_map<c_str_view, offset_type, c_str_view_hasher> str_table;
+  gdb::unordered_map<c_str_view, offset_type, c_str_view_hasher> str_table;
   for (const auto &entry : *symtab)
     {
       offset_type str_off, vec_off;
@@ -555,8 +548,7 @@ write_hash_table (mapped_symtab *symtab, data_buf &output, data_buf &cpool)
     }
 }
 
-using cu_index_map
-  = std::unordered_map<const dwarf2_per_cu_data *, unsigned int>;
+using cu_index_map = gdb::unordered_map<const dwarf2_per_cu *, unsigned int>;
 
 /* Helper struct for building the address table.  */
 struct addrmap_index_data
@@ -597,8 +589,7 @@ add_address_entry (data_buf &addr_vec,
 int
 addrmap_index_data::operator() (CORE_ADDR start_addr, const void *obj)
 {
-  const dwarf2_per_cu_data *per_cu
-    = static_cast<const dwarf2_per_cu_data *> (obj);
+  const dwarf2_per_cu *per_cu = static_cast<const dwarf2_per_cu *> (obj);
 
   if (previous_valid)
     add_address_entry (addr_vec,
@@ -671,15 +662,11 @@ public:
   /* Insert one symbol.  */
   void insert (const cooked_index_entry *entry)
   {
-    /* These entries are synthesized by the reader, and so should not
-       be written.  */
-    if (entry->lang == language_ada && entry->tag == DW_TAG_namespace)
+    /* Synthesized entries should not be written.  */
+    if ((entry->flags & IS_SYNTHESIZED) != 0)
       return;
 
-    const auto insertpair
-      = m_name_to_value_set.try_emplace (c_str_view (entry->name));
-    entry_list &elist = insertpair.first->second;
-    elist.entries.push_back (entry);
+    m_name_to_value_set[entry->name].emplace_back (entry);
   }
 
   /* Build all the tables.  All symbols must be already inserted.
@@ -693,25 +680,16 @@ public:
     m_name_table_string_offs.reserve (name_count);
     m_name_table_entry_offs.reserve (name_count);
 
-    /* The name table is indexed from 1.  The numbers are needed here
-       so that parent entries can be handled correctly.  */
-    int next_name = 1;
-    for (auto &item : m_name_to_value_set)
-      item.second.index = next_name++;
-
     /* The next available abbrev number.  */
     int next_abbrev = 1;
 
-    for (auto &item : m_name_to_value_set)
+    for (auto &[name, these_entries] : m_name_to_value_set)
       {
-	const c_str_view &name = item.first;
-	entry_list &these_entries = item.second;
-
 	/* Sort the items within each bucket.  This ensures that the
 	   generated index files will be the same no matter the order in
 	   which symbols were added into the index.  */
-	std::sort (these_entries.entries.begin (),
-		   these_entries.entries.end (),
+	std::sort (these_entries.begin (),
+		   these_entries.end (),
 		   [] (const cooked_index_entry *a,
 		       const cooked_index_entry *b)
 		   {
@@ -728,19 +706,19 @@ public:
 		   });
 
 	m_name_table_string_offs.push_back_reorder
-	  (m_debugstrlookup.lookup (name.c_str ())); /* ??? */
+	  (m_debugstrlookup.lookup (name.c_str ()));
 	m_name_table_entry_offs.push_back_reorder (m_entry_pool.size ());
 
-	for (const cooked_index_entry *entry : these_entries.entries)
+	for (const cooked_index_entry *entry : these_entries)
 	  {
-	    unit_kind kind = (entry->per_cu->is_debug_types
+	    unit_kind kind = (entry->per_cu->is_debug_types ()
 			      ? unit_kind::tu
 			      : unit_kind::cu);
-	    /* Currently Ada parentage is synthesized by the
-	       reader and so must be ignored here.  */
-	    const cooked_index_entry *parent = (entry->lang == language_ada
-						? nullptr
-						: entry->get_parent ());
+	    /* Some Ada parentage is synthesized by the reader and so
+	       must be ignored here.  */
+	    const cooked_index_entry *parent = entry->get_parent ();
+	    if (parent != nullptr && (parent->flags & IS_SYNTHESIZED) != 0)
+	      parent = nullptr;
 
 	    int &idx = m_indexkey_to_idx[index_key (entry->tag,
 						    kind,
@@ -761,7 +739,8 @@ public:
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_ref_addr);
 		m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_language);
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
-		if ((entry->flags & IS_STATIC) != 0)
+		if (!tag_is_type (entry->tag)
+		    && (entry->flags & IS_STATIC) != 0)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_internal);
 		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
@@ -779,7 +758,7 @@ public:
 		if (parent != nullptr)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_parent);
-		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_data4);
 		  }
 
 		/* Terminate attributes list.  */
@@ -787,6 +766,14 @@ public:
 		m_abbrev_table.append_unsigned_leb128 (0);
 	      }
 
+	    /* Record the offset in the pool at which this entry will
+	       reside.  */
+	    const auto offset_inserted
+	      = (m_entry_pool_offsets.emplace (entry, m_entry_pool.size ())
+		 .second);
+	    gdb_assert (offset_inserted);
+
+	    /* Write the entry to the pool.  */
 	    m_entry_pool.append_unsigned_leb128 (idx);
 
 	    const auto it = m_cu_index_htab.find (entry->per_cu);
@@ -801,11 +788,11 @@ public:
 
 	    if (parent != nullptr)
 	      {
-		c_str_view par_name (parent->name);
-		auto name_iter = m_name_to_value_set.find (par_name);
-		gdb_assert (name_iter != m_name_to_value_set.end ());
-		gdb_assert (name_iter->second.index != 0);
-		m_entry_pool.append_unsigned_leb128 (name_iter->second.index);
+		m_offsets_to_patch.emplace_back (m_entry_pool.size (), parent);
+
+		/* Write a dummy number, this gets patched later.  */
+		m_entry_pool.append_uint (4, m_dwarf5_byte_order,
+					  0xfafafafa);
 	      }
 	  }
 
@@ -815,6 +802,15 @@ public:
 
     /* Terminate tags list.  */
     m_abbrev_table.append_unsigned_leb128 (0);
+
+    /* Write the parent offset values.  */
+    for (const auto &[reloc_offset, parent] : m_offsets_to_patch)
+      {
+	const auto parent_offset_it = m_entry_pool_offsets.find (parent);
+	gdb_assert (parent_offset_it != m_entry_pool_offsets.cend ());
+	m_entry_pool.write_uint (reloc_offset, 4, m_dwarf5_byte_order,
+				 parent_offset_it->second);
+      }
   }
 
   /* Return .debug_names names count.  This must be called only after
@@ -862,7 +858,7 @@ public:
     m_debugstrlookup.file_write (file_str);
   }
 
-  void add_cu (dwarf2_per_cu_data *per_cu, offset_type index)
+  void add_cu (const dwarf2_per_cu *per_cu, offset_type index)
   {
     m_cu_index_htab.emplace (per_cu, index);
   }
@@ -875,11 +871,21 @@ private:
   {
   public:
 
-    /* Object constructor to be called for current DWARF2_PER_BFD.  */
-    debug_str_lookup (dwarf2_per_bfd *per_bfd)
-      : m_abfd (per_bfd->obfd),
-	m_per_bfd (per_bfd)
+    /* Object constructor to be called for current DWARF2_PER_BFD.
+       All .debug_str section strings are automatically stored.  */
+    explicit debug_str_lookup (dwarf2_per_bfd *per_bfd)
+      : m_per_bfd (per_bfd)
     {
+      gdb_assert (per_bfd->str.read_in);
+      const gdb_byte *data = per_bfd->str.buffer;
+      if (data == nullptr)
+	return;
+      while (data < per_bfd->str.buffer + per_bfd->str.size)
+	{
+	  const char *const s = reinterpret_cast<const char *> (data);
+	  m_str_table.emplace (c_str_view (s), data - per_bfd->str.buffer);
+	  data += strlen (s) + 1;
+	}
     }
 
     /* Return offset of symbol name S in the .debug_str section.  Add
@@ -887,13 +893,6 @@ private:
        yet.  */
     size_t lookup (const char *s)
     {
-      /* Most strings will have come from the string table
-	 already.  */
-      const gdb_byte *b = (const gdb_byte *) s;
-      if (b >= m_per_bfd->str.buffer
-	  && b < m_per_bfd->str.buffer + m_per_bfd->str.size)
-	return b - m_per_bfd->str.buffer;
-
       const auto it = m_str_table.find (c_str_view (s));
       if (it != m_str_table.end ())
 	return it->second;
@@ -911,8 +910,7 @@ private:
     }
 
   private:
-    std::unordered_map<c_str_view, size_t, c_str_view_hasher> m_str_table;
-    bfd *const m_abfd;
+    gdb::unordered_map<c_str_view, size_t, c_str_view_hasher> m_str_table;
     dwarf2_per_bfd *m_per_bfd;
 
     /* Data to add at the end of .debug_str for new needed symbol names.  */
@@ -950,7 +948,7 @@ private:
     const bool has_parent;
   };
 
-  /* Provide std::unordered_map::hasher for index_key.  */
+  /* Provide gdb::unordered_map::hasher for index_key.  */
   class index_key_hasher
   {
   public:
@@ -1060,15 +1058,26 @@ private:
     offset_vec_tmpl<OffsetSize> m_name_table_entry_offs;
   };
 
-  struct entry_list
-  {
-    unsigned index = 0;
-    std::vector<const cooked_index_entry *> entries;
-  };
+  /* Store the index entries for each name.
 
-  /* Store value of each symbol.  Note that we rely on the sorting
-     behavior of map to make the output stable.  */
-  std::map<c_str_view, entry_list> m_name_to_value_set;
+     Note that we rely on the sorting behavior of map to make the output
+     stable.  */
+  std::map<c_str_view, std::vector<const cooked_index_entry *>>
+    m_name_to_value_set;
+
+  /* Offset at which each entry is written in the entry pool.  */
+  gdb::unordered_map<const cooked_index_entry *, offset_type>
+    m_entry_pool_offsets;
+
+  /* The locations where we need to patch offset to entries.
+
+     The first element of the pair is the offset into the pool that needs to
+     be patched.
+
+     The second element is the entry the offset to which needs to be
+     patched in.  */
+  std::vector<std::pair<offset_type, const cooked_index_entry *>>
+    m_offsets_to_patch;
 
   const bfd_endian m_dwarf5_byte_order;
   dwarf_tmpl<uint32_t> m_dwarf32;
@@ -1079,7 +1088,7 @@ private:
 
   /* Map each used .debug_names abbreviation tag parameter to its
      index value.  */
-  std::unordered_map<index_key, int, index_key_hasher> m_indexkey_to_idx;
+  gdb::unordered_map<index_key, int, index_key_hasher> m_indexkey_to_idx;
 
   /* .debug_names abbreviation table.  */
   data_buf m_abbrev_table;
@@ -1101,7 +1110,7 @@ check_dwarf64_offsets (dwarf2_per_bfd *per_bfd)
 {
   for (const auto &per_cu : per_bfd->all_units)
     {
-      if (to_underlying (per_cu->sect_off)
+      if (to_underlying (per_cu->sect_off ())
 	  >= (static_cast<uint64_t> (1) << 32))
 	return true;
     }
@@ -1193,6 +1202,21 @@ write_cooked_index (cooked_index *table,
 		    const cu_index_map &cu_index_htab,
 		    struct mapped_symtab *symtab)
 {
+  gdb::unordered_set<const cooked_index_entry *> required_decl_entries;
+  for (const cooked_index_entry *entry : table->all_entries ())
+    {
+      /* Any type declaration that is used as a (non-trivial) parent
+	 entry must be written out.  */
+      if ((entry->flags & IS_TYPE_DECLARATION) == 0)
+	{
+	  for (const cooked_index_entry *parent = entry->get_parent ();
+	       parent != nullptr;
+	       parent = parent->get_parent ())
+	    if ((parent->flags & IS_TYPE_DECLARATION) != 0)
+	      required_decl_entries.insert (parent);
+	}
+    }
+
   for (const cooked_index_entry *entry : table->all_entries ())
     {
       const auto it = cu_index_htab.find (entry->per_cu);
@@ -1208,7 +1232,7 @@ write_cooked_index (cooked_index *table,
 	  std::string encoded = ada_encode (name, false);
 	  name = obstack_strdup (symtab->obstack (), encoded.c_str ());
 	}
-      else if (entry->lang == language_cplus
+      else if (is_cplus_dialect (entry->lang)
 	       && (entry->flags & IS_LINKAGE) != 0)
 	{
 	  /* GDB never put C++ linkage names into .gdb_index.  The
@@ -1218,17 +1242,17 @@ write_cooked_index (cooked_index *table,
 	     be redundant are rare and not worth supporting.  */
 	  continue;
 	}
-      else if ((entry->flags & IS_TYPE_DECLARATION) != 0)
-	{
-	  /* Don't add type declarations to the index.  */
-	  continue;
-	}
+      /* Don't add most type declarations to the index.  */
+      else if ((entry->flags & IS_TYPE_DECLARATION) != 0
+	       && !required_decl_entries.contains (entry))
+	continue;
 
       gdb_index_symbol_kind kind;
       if (entry->tag == DW_TAG_subprogram
 	  || entry->tag == DW_TAG_entry_point)
 	kind = GDB_INDEX_SYMBOL_KIND_FUNCTION;
       else if (entry->tag == DW_TAG_variable
+	       || entry->tag == DW_TAG_member
 	       || entry->tag == DW_TAG_constant
 	       || entry->tag == DW_TAG_enumerator)
 	kind = GDB_INDEX_SYMBOL_KIND_VARIABLE;
@@ -1259,7 +1283,7 @@ write_shortcuts_table (cooked_index *table, data_buf &shortcuts,
       if (dw_lang != 0)
 	{
 	  auto_obstack obstack;
-	  const auto main_name = main_info->full_name (&obstack, true);
+	  const auto main_name = main_info->full_name (&obstack, FOR_MAIN);
 
 	  main_name_offset = cpool.size ();
 	  cpool.append_cstr0 (main_name);
@@ -1268,6 +1292,40 @@ write_shortcuts_table (cooked_index *table, data_buf &shortcuts,
 
   shortcuts.append_offset (dw_lang);
   shortcuts.append_offset (main_name_offset);
+}
+
+/* Get sorted (by section offset) lists of comp units and type units.  */
+
+static std::pair<std::vector<const dwarf2_per_cu *>,
+		 std::vector<const signatured_type *>>
+get_unit_lists (const dwarf2_per_bfd &per_bfd)
+{
+  std::vector<const dwarf2_per_cu *> comp_units;
+  std::vector<const signatured_type *> type_units;
+
+  for (const auto &unit : per_bfd.all_units)
+    if (unit->is_debug_types ())
+      type_units.emplace_back (static_cast<const signatured_type *>
+			       (unit.get ()));
+    else
+      comp_units.emplace_back (unit.get ());
+
+  auto by_sect_off = [] (const dwarf2_per_cu *lhs, const dwarf2_per_cu *rhs)
+		       { return lhs->sect_off () < rhs->sect_off (); };
+
+  /* Sort both lists, even though it is technically not always required:
+
+      - while .gdb_index requires the CU list to be sorted, DWARF 5 doesn't
+	say anything about the order of CUs in .debug_names.
+      - .gdb_index doesn't require the TU list to be sorted, and DWARF 5
+	doesn't say anything about the order of TUs in .debug_names.
+
+     However, it helps make sure that GDB produce a stable and predictable
+     output, which is nice.  */
+  std::sort (comp_units.begin (), comp_units.end (), by_sect_off);
+  std::sort (type_units.begin (), type_units.end (), by_sect_off);
+
+  return {std::move (comp_units), std::move (type_units)};
 }
 
 /* Write contents of a .gdb_index section for OBJFILE into OUT_FILE.
@@ -1280,52 +1338,51 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
 		FILE *out_file, FILE *dwz_out_file)
 {
   mapped_symtab symtab;
-  data_buf objfile_cu_list;
-  data_buf dwz_cu_list;
 
-  /* While we're scanning CU's create a table that maps a dwarf2_per_cu_data
-     (which is what addrmap records) to its index (which is what is recorded
-     in the index file).  This will later be needed to write the address
-     table.  */
+  /* While we're scanning CU's create a table that maps a dwarf2_per_cu (which
+     is what addrmap records) to its index (which is what is recorded in the
+     index file).  This will later be needed to write the address table.  */
   cu_index_map cu_index_htab;
   cu_index_htab.reserve (per_bfd->all_units.size ());
 
-  /* Store out the .debug_type CUs, if any.  */
-  data_buf types_cu_list;
-
-  /* The CU list is already sorted, so we don't need to do additional
-     work here.  */
-
+  auto [comp_units, type_units] = get_unit_lists (*per_bfd);
   int counter = 0;
-  for (int i = 0; i < per_bfd->all_units.size (); ++i)
-    {
-      dwarf2_per_cu_data *per_cu = per_bfd->all_units[i].get ();
 
+  /* Write comp units.  */
+  data_buf objfile_cu_list;
+  data_buf dwz_cu_list;
+
+  for (const dwarf2_per_cu *per_cu : comp_units)
+    {
       const auto insertpair = cu_index_htab.emplace (per_cu, counter);
       gdb_assert (insertpair.second);
-
-      /* See enhancement PR symtab/30838.  */
-      gdb_assert (!(per_cu->is_dwz && per_cu->is_debug_types));
 
       /* The all_units list contains CUs read from the objfile as well as
 	 from the eventual dwz file.  We need to place the entry in the
 	 corresponding index.  */
-      data_buf &cu_list = (per_cu->is_debug_types
-			   ? types_cu_list
-			   : per_cu->is_dwz ? dwz_cu_list : objfile_cu_list);
+      data_buf &cu_list = per_cu->is_dwz () ? dwz_cu_list : objfile_cu_list;
       cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
-			   to_underlying (per_cu->sect_off));
-      if (per_cu->is_debug_types)
-	{
-	  signatured_type *sig_type = (signatured_type *) per_cu;
-	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
-			       to_underlying (sig_type->type_offset_in_tu));
-	  cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
-			       sig_type->signature);
-	}
-      else
-	cu_list.append_uint (8, BFD_ENDIAN_LITTLE, per_cu->length ());
+			   to_underlying (per_cu->sect_off ()));
+      cu_list.append_uint (8, BFD_ENDIAN_LITTLE, per_cu->length ());
+      ++counter;
+    }
 
+  /* Write type units.  */
+  data_buf types_cu_list;
+
+  for (const signatured_type *sig_type : type_units)
+    {
+      const auto insertpair = cu_index_htab.emplace (sig_type, counter);
+      gdb_assert (insertpair.second);
+
+      /* See enhancement PR symtab/30838.  */
+      gdb_assert (!sig_type->is_dwz ());
+
+      types_cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
+				 to_underlying (sig_type->sect_off ()));
+      types_cu_list.append_uint (8, BFD_ENDIAN_LITTLE,
+				 to_underlying (sig_type->type_offset_in_tu));
+      types_cu_list.append_uint (8, BFD_ENDIAN_LITTLE, sig_type->signature);
       ++counter;
     }
 
@@ -1334,14 +1391,15 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   /* Dump the address map.  */
   data_buf addr_vec;
   for (auto map : table->get_addrmaps ())
-    write_address_map (map, addr_vec, cu_index_htab);
+    if (map != nullptr)
+      write_address_map (map, addr_vec, cu_index_htab);
 
   /* Ensure symbol hash is built domestically.  */
   symtab.sort ();
 
   /* Now that we've processed all symbols we can shrink their cu_indices
      lists.  */
-  symtab.minimize ();
+  symtab.minimize_and_sort ();
 
   data_buf symtab_vec, constant_pool;
 
@@ -1371,31 +1429,35 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   const enum bfd_endian dwarf5_byte_order
     = bfd_big_endian (per_bfd->obfd) ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE;
 
-  /* The CU list is already sorted, so we don't need to do additional
-     work here.  Also, the debug_types entries do not appear in
-     all_units, but only in their own hash table.  */
-  data_buf cu_list;
-  data_buf types_cu_list;
+  auto [comp_units, type_units] = get_unit_lists (*per_bfd);
   debug_names nametable (per_bfd, dwarf5_is_dwarf64, dwarf5_byte_order);
-  int counter = 0;
-  int types_counter = 0;
-  for (int i = 0; i < per_bfd->all_units.size (); ++i)
+  data_buf comp_unit_list;
+  int comp_unit_counter = 0;
+
+  for (const auto per_cu : comp_units)
     {
-      dwarf2_per_cu_data *per_cu = per_bfd->all_units[i].get ();
+      nametable.add_cu (per_cu, comp_unit_counter);
+      comp_unit_list.append_uint (nametable.dwarf5_offset_size (),
+				  dwarf5_byte_order,
+				  to_underlying (per_cu->sect_off ()));
+      comp_unit_counter++;
+    }
 
-      int &this_counter = per_cu->is_debug_types ? types_counter : counter;
-      data_buf &this_list = per_cu->is_debug_types ? types_cu_list : cu_list;
+  data_buf type_unit_list;
+  int type_unit_counter = 0;
 
-      nametable.add_cu (per_cu, this_counter);
-      this_list.append_uint (nametable.dwarf5_offset_size (),
-			     dwarf5_byte_order,
-			     to_underlying (per_cu->sect_off));
-      ++this_counter;
+  for (const auto per_cu : type_units)
+    {
+      nametable.add_cu (per_cu, type_unit_counter);
+      type_unit_list.append_uint (nametable.dwarf5_offset_size (),
+				  dwarf5_byte_order,
+				  to_underlying (per_cu->sect_off ()));
+      type_unit_counter++;
     }
 
    /* Verify that all units are represented.  */
-  gdb_assert (counter == per_bfd->all_comp_units.size ());
-  gdb_assert (types_counter == per_bfd->all_type_units.size ());
+  gdb_assert (comp_unit_counter == per_bfd->num_comp_units);
+  gdb_assert (type_unit_counter == per_bfd->num_type_units);
 
   for (const cooked_index_entry *entry : table->all_entries ())
     nametable.insert (entry);
@@ -1407,11 +1469,11 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   const offset_type bytes_of_header
     = ((dwarf5_is_dwarf64 ? 12 : 4)
        + 2 + 2 + 7 * 4
-       + sizeof (dwarf5_augmentation));
+       + sizeof (dwarf5_augmentation_3));
   size_t expected_bytes = 0;
   expected_bytes += bytes_of_header;
-  expected_bytes += cu_list.size ();
-  expected_bytes += types_cu_list.size ();
+  expected_bytes += comp_unit_list.size ();
+  expected_bytes += type_unit_list.size ();
   expected_bytes += nametable.bytes ();
   data_buf header;
 
@@ -1434,11 +1496,11 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   header.append_uint (2, dwarf5_byte_order, 0);
 
   /* comp_unit_count - The number of CUs in the CU list.  */
-  header.append_uint (4, dwarf5_byte_order, counter);
+  header.append_uint (4, dwarf5_byte_order, comp_unit_counter);
 
   /* local_type_unit_count - The number of TUs in the local TU
      list.  */
-  header.append_uint (4, dwarf5_byte_order, types_counter);
+  header.append_uint (4, dwarf5_byte_order, type_unit_counter);
 
   /* foreign_type_unit_count - The number of TUs in the foreign TU
      list.  */
@@ -1459,15 +1521,15 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
 
   /* augmentation_string_size - The size in bytes of the augmentation
      string.  This value is rounded up to a multiple of 4.  */
-  static_assert (sizeof (dwarf5_augmentation) % 4 == 0);
-  header.append_uint (4, dwarf5_byte_order, sizeof (dwarf5_augmentation));
-  header.append_array (dwarf5_augmentation);
+  static_assert (sizeof (dwarf5_augmentation_3) % 4 == 0);
+  header.append_uint (4, dwarf5_byte_order, sizeof (dwarf5_augmentation_3));
+  header.append_array (dwarf5_augmentation_3);
 
   gdb_assert (header.size () == bytes_of_header);
 
   header.file_write (out_file);
-  cu_list.file_write (out_file);
-  types_cu_list.file_write (out_file);
+  comp_unit_list.file_write (out_file);
+  type_unit_list.file_write (out_file);
   nametable.file_write (out_file, out_file_str);
 
   assert_file_size (out_file, expected_bytes);
@@ -1646,20 +1708,20 @@ save_gdb_index_command (const char *args, int from_tty)
   dw_index_kind index_kind
     = (opts.dwarf_5 ? dw_index_kind::DEBUG_NAMES : dw_index_kind::GDB_INDEX);
 
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
       /* If the objfile does not correspond to an actual file, skip it.  */
-      if ((objfile->flags & OBJF_NOT_FILENAME) != 0)
+      if ((objfile.flags & OBJF_NOT_FILENAME) != 0)
 	continue;
 
-      dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
+      dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (&objfile);
 
       if (per_objfile != NULL)
 	{
 	  try
 	    {
-	      const char *basename = lbasename (objfile_name (objfile));
-	      const dwz_file *dwz = dwarf2_get_dwz_file (per_objfile->per_bfd);
+	      const char *basename = lbasename (objfile_name (&objfile));
+	      const dwz_file *dwz = per_objfile->per_bfd->get_dwz_file ();
 	      const char *dwz_basename = NULL;
 
 	      if (dwz != NULL)
@@ -1672,7 +1734,7 @@ save_gdb_index_command (const char *args, int from_tty)
 	    {
 	      exception_fprintf (gdb_stderr, except,
 				 _("Error while writing index for `%s': "),
-				 objfile_name (objfile));
+				 objfile_name (&objfile));
 	    }
 	}
 
@@ -1753,9 +1815,7 @@ gdb_index ()
 } /* selftests namespace.  */
 #endif
 
-void _initialize_dwarf_index_write ();
-void
-_initialize_dwarf_index_write ()
+INIT_GDB_FILE (dwarf_index_write)
 {
 #if GDB_SELF_TEST
   selftests::register_test ("gdb_index", selftests::gdb_index);

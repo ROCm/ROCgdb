@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -285,9 +285,6 @@ env_ld_preload_strip (char *envv)
   for (int v = 0; SP_PRELOAD[v]; v++)
     if (env_strip (envv, sp_preloads[v]))
       return 0;
-  if (line_mode != LM_CLOSED)
-    TprintfT (DBG_LT2, "env_ld_preload_strip(): WARNING - could not strip SP_PRELOADS from '%s'\n",
-	      envv);
   return -2;
 }
 

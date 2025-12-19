@@ -1,7 +1,6 @@
 /* Cache and manage the values of registers for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,6 +28,7 @@
 #include "reggroups.h"
 #include "observable.h"
 #include "regset.h"
+#include "gdbsupport/unordered_map.h"
 #include <unordered_map>
 #include "cli/cli-cmds.h"
 
@@ -180,10 +180,9 @@ register_size (struct gdbarch *gdbarch, int regnum)
 /* See gdbsupport/common-regcache.h.  */
 
 int
-regcache_register_size (const reg_buffer_common *regcache, int n)
+reg_buffer::register_size (int regnum) const
 {
-  return register_size
-    (gdb::checked_static_cast<const struct regcache *> (regcache)->arch (), n);
+  return ::register_size (this->arch (), regnum);
 }
 
 reg_buffer::reg_buffer (gdbarch *gdbarch, bool has_pseudo)
@@ -351,12 +350,12 @@ using ptid_regcache_map
 
 /* Type holding regcaches for a given pid.  */
 
-using pid_ptid_regcache_map = std::unordered_map<int, ptid_regcache_map>;
+using pid_ptid_regcache_map = gdb::unordered_map<int, ptid_regcache_map>;
 
 /* Type holding regcaches for a given target.  */
 
 using target_pid_ptid_regcache_map
-  = std::unordered_map<process_stratum_target *, pid_ptid_regcache_map>;
+  = gdb::unordered_map<process_stratum_target *, pid_ptid_regcache_map>;
 
 /* Global structure containing the existing regcaches.  */
 
@@ -940,7 +939,7 @@ register_status
 readable_regcache::read_part (int regnum, int offset,
 			      gdb::array_view<gdb_byte> dst, bool is_raw)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + dst.size () <= reg_size);
@@ -984,7 +983,7 @@ void
 reg_buffer::raw_collect_part (int regnum, int offset,
 			      gdb::array_view<gdb_byte> dst) const
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + dst.size () <= reg_size);
@@ -1014,7 +1013,7 @@ register_status
 regcache::write_part (int regnum, int offset,
 		      gdb::array_view<const gdb_byte> src, bool is_raw)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + src.size () <= reg_size);
@@ -1066,7 +1065,7 @@ void
 reg_buffer::raw_supply_part (int regnum, int offset,
 			     gdb::array_view<const gdb_byte> src)
 {
-  int reg_size = register_size (arch (), regnum);
+  int reg_size = register_size (regnum);
 
   gdb_assert (offset >= 0);
   gdb_assert (offset + src.size () <= reg_size);
@@ -1237,8 +1236,7 @@ regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
 				    const gdb_byte *in_buf, gdb_byte *out_buf,
 				    int slot_size, int offs) const
 {
-  struct gdbarch *gdbarch = arch ();
-  int reg_size = std::min (register_size (gdbarch, regnum), slot_size);
+  int reg_size = std::min (register_size (regnum), slot_size);
 
   /* Use part versions and reg_size to prevent possible buffer overflows when
      accessing the regcache.  */
@@ -1255,7 +1253,7 @@ regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
   else if (in_buf != nullptr)
     {
       /* Zero-extend the register value if the slot is smaller than the register.  */
-      if (slot_size < register_size (gdbarch, regnum))
+      if (slot_size < register_size (regnum))
 	out_regcache->raw_supply_zeroed (regnum);
       out_regcache->raw_supply_part (regnum, 0,
 				     gdb::make_array_view (in_buf + offs,
@@ -1843,9 +1841,10 @@ reg_buffer_raw_compare_zero_len_test ()
   const regcache *regcache
     = get_thread_arch_regcache (&inf, ptid_t (1, 1), inf.arch ());
 
-  /* The buffer address is irrelevant since we end up comparing 0 bytes, we just
-     need to pass something.  */
-  gdb_byte buf;
+  /* The buffer address is irrelevant since we end up comparing 0 bytes, we
+     just need to pass something.  The variable needs to be initialized to
+     avoid compiler warnings about uninitialized values.  */
+  gdb_byte buf = 0;
   SELF_CHECK (regcache->raw_compare (0, &buf, register_size (inf.arch (), 0)));
 }
 
@@ -1913,32 +1912,13 @@ public:
   {}
 };
 
-/* Return true if regcache::cooked_{read,write}_test should be skipped for
-   GDBARCH.  */
-
-static bool
-selftest_skiparch (struct gdbarch *gdbarch)
-{
-  const char *name = gdbarch_bfd_arch_info (gdbarch)->printable_name;
-
-  /* Avoid warning:
-       Running selftest regcache::cooked_{read,write}_test::m68hc11.
-       warning: No frame soft register found in the symbol table.
-       Stack backtrace will not work.
-     We could instead capture the output and then filter out the warning, but
-     that seems more trouble than it's worth.  */
-  return (strcmp (name, "m68hc11") == 0
-	  || strcmp (name, "m68hc12") == 0
-	  || strcmp (name, "m68hc12:HCS12") == 0);
-}
-
 /* Test regcache::cooked_read gets registers from raw registers and
    memory instead of target to_{fetch,store}_registers.  */
 
 static void
 cooked_read_test (struct gdbarch *gdbarch)
 {
-  if (selftest_skiparch (gdbarch))
+  if (selftest_skip_warning_arch (gdbarch))
     return;
 
   scoped_mock_context<target_ops_no_register> mockctx (gdbarch);
@@ -2076,7 +2056,7 @@ cooked_read_test (struct gdbarch *gdbarch)
 static void
 cooked_write_test (struct gdbarch *gdbarch)
 {
-  if (selftest_skiparch (gdbarch))
+  if (selftest_skip_warning_arch (gdbarch))
     return;
 
   /* Create a mock environment.  A process_stratum target pushed.  */
@@ -2231,12 +2211,10 @@ regcache_thread_ptid_changed ()
   gdb_assert (regcaches.empty ());
 }
 
-} // namespace selftests
+} /* namespace selftests */
 #endif /* GDB_SELF_TEST */
 
-void _initialize_regcache ();
-void
-_initialize_regcache ()
+INIT_GDB_FILE (regcache)
 {
   struct cmd_list_element *c;
 

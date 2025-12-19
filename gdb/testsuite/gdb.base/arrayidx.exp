@@ -1,4 +1,4 @@
-# Copyright 2005-2024 Free Software Foundation, Inc.
+# Copyright 2005-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,12 +19,9 @@
 
 standard_testfile .c
 
-if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-    untested "failed to compile"
-    return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
+    return
 }
-
-clean_restart ${binfile}
 
 if {![runto_main]} {
     return
@@ -33,27 +30,25 @@ if {![runto_main]} {
 # First, print the array without the indexes
 
 gdb_test_no_output "set print array-indexes off" \
-         "set print array-indexes to off"
+	 "set print array-indexes to off"
 
 gdb_test "show print array-indexes" \
-         "Printing of array indexes is off\\." \
-         "show print array-indexes is off"
+	 "Printing of array indexes is off\\." \
+	 "show print array-indexes is off"
 
 gdb_test "print array" \
-         "\\{1, 2, 3, 4\\}" \
-         "print array with array-indexes off"
+	 "\\{1, 2, 3, 4\\}" \
+	 "print array with array-indexes off"
 
 # Second, print the same array with the indexes
 
 gdb_test_no_output "set print array-indexes on" \
-         "set print array-indexes to on"
+	 "set print array-indexes to on"
 
 gdb_test "show print array-indexes" \
-         "Printing of array indexes is on\\." \
-         "show print array-indexes is on"
+	 "Printing of array indexes is on\\." \
+	 "show print array-indexes is on"
 
 gdb_test "print array" \
-         "\\{\\\[0\\\] = 1, \\\[1\\\] = 2, \\\[2\\\] = 3, \\\[3\\\] = 4\\}" \
-         "print array with array-indexes on"
-
-
+	 "\\{\\\[0\\\] = 1, \\\[1\\\] = 2, \\\[2\\\] = 3, \\\[3\\\] = 4\\}" \
+	 "print array with array-indexes on"

@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ if { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${objfile} object {debug}] != "
 
 clean_restart ${executable}
 
-if ![runto_main] {
+if {![runto_main]} {
     return 0
 }
 

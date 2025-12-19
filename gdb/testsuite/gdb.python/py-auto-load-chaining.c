@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2021-2024 Free Software Foundation, Inc.
+   Copyright 2021-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ allocate_page (void)
   void *addr;
   int pgsize = sysconf(_SC_PAGE_SIZE);
   addr = mmap (NULL, pgsize, PROT_EXEC | PROT_READ | PROT_WRITE,
-               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (addr == MAP_FAILED)
     perror ("mmap");
 }

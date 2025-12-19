@@ -1,4 +1,4 @@
-# Copyright 2007-2024 Free Software Foundation, Inc.
+# Copyright 2007-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -32,15 +32,13 @@ set sp "\[ \t\]*"
 
 if {![runto break_me]} {
   return
-} 
+}
 
 # First, print all the arrays without indexes
 
 gdb_test_no_output "set print frame-arguments scalars" \
-         "set print frame-arguments scalars"
+	 "set print frame-arguments scalars"
 
 gdb_test "frame 1" \
-         "#1$sp$any_addr in pck.call_me \\(int=1, flt=2.0, bln=true, ary=\\.\\.\\., chr=106 'j', sad=\\(system.address\\) $any_addr, rec=\\.\\.\\.\\).*" \
-         "display frame 1 with frame-arguments set to scalars"
-
-
+	 "#1$sp$any_addr in pck.call_me \\(int=1, flt=2.0, bln=true, ary=\\.\\.\\., chr=106 'j', sad=\\(system.address\\) $any_addr, rec=\\.\\.\\.\\).*" \
+	 "display frame 1 with frame-arguments set to scalars"

@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -42,6 +42,10 @@ with_test_prefix no-args {
 		gdb_assert { [foo] == 2 }
 	    }
 	}
+
+	with_test_prefix "foo1 again" {
+	    gdb_assert { [foo] == 1 }
+	}
     }
 
     with_test_prefix after {
@@ -50,11 +54,11 @@ with_test_prefix no-args {
 }
 
 proc foo { {a 0} } {
-    return [expr $a + 1]
+    return [expr {$a + 1}]
 }
 
 proc foo_plus_1 { {a 0} } {
-    return [expr $a + 2]
+    return [expr {$a + 2}]
 }
 
 with_test_prefix default-arg {

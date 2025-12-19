@@ -1,6 +1,6 @@
 /* Definitions for targets which report shared library events.
 
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "objfiles.h"
-#include "solist.h"
+#include "solib.h"
 #include "symtab.h"
 #include "symfile.h"
 #include "target.h"
@@ -29,10 +29,6 @@
 /* Private data for each loaded library.  */
 struct lm_info_target final : public lm_info
 {
-  /* The library's name.  The name is normally kept in the struct
-     so_list; it is only here during XML parsing.  */
-  std::string name;
-
   /* The target can either specify segment bases or section bases, not
      both.  */
 
@@ -46,14 +42,23 @@ struct lm_info_target final : public lm_info
 
   /* The cached offsets for each section of this shared library,
      determined from SEGMENT_BASES, or SECTION_BASES.  */
-  section_offsets offsets;
+  std::vector<CORE_ADDR> offsets;
 };
 
 using lm_info_target_up = std::unique_ptr<lm_info_target>;
 
+/* Type used to convey the information about one target library while parsing
+   the XML.  */
+
+struct target_library
+{
+  std::string name;
+  lm_info_target_up info;
+};
+
 #if !defined(HAVE_LIBEXPAT)
 
-static std::vector<lm_info_target_up>
+static std::vector<target_library>
 solib_target_parse_libraries (const char *library)
 {
   static int have_warned;
@@ -80,17 +85,17 @@ library_list_start_segment (struct gdb_xml_parser *parser,
 			    void *user_data,
 			    std::vector<gdb_xml_value> &attributes)
 {
-  auto *list = (std::vector<lm_info_target_up> *) user_data;
-  lm_info_target *last = list->back ().get ();
+  const auto list = static_cast<std::vector<target_library> *> (user_data);
+  target_library &last = list->back ();
   ULONGEST *address_p
     = (ULONGEST *) xml_find_attribute (attributes, "address")->value.get ();
   CORE_ADDR address = (CORE_ADDR) *address_p;
 
-  if (!last->section_bases.empty ())
+  if (!last.info->section_bases.empty ())
     gdb_xml_error (parser,
 		   _("Library list with both segments and sections"));
 
-  last->segment_bases.push_back (address);
+  last.info->segment_bases.push_back (address);
 }
 
 static void
@@ -99,17 +104,17 @@ library_list_start_section (struct gdb_xml_parser *parser,
 			    void *user_data,
 			    std::vector<gdb_xml_value> &attributes)
 {
-  auto *list = (std::vector<lm_info_target_up> *) user_data;
-  lm_info_target *last = list->back ().get ();
+  const auto list = static_cast<std::vector<target_library> *> (user_data);
+  target_library &last = list->back ();
   ULONGEST *address_p
     = (ULONGEST *) xml_find_attribute (attributes, "address")->value.get ();
   CORE_ADDR address = (CORE_ADDR) *address_p;
 
-  if (!last->segment_bases.empty ())
+  if (!last.info->segment_bases.empty ())
     gdb_xml_error (parser,
 		   _("Library list with both segments and sections"));
 
-  last->section_bases.push_back (address);
+  last.info->section_bases.push_back (address);
 }
 
 /* Handle the start of a <library> element.  */
@@ -120,12 +125,12 @@ library_list_start_library (struct gdb_xml_parser *parser,
 			    void *user_data,
 			    std::vector<gdb_xml_value> &attributes)
 {
-  auto *list = (std::vector<lm_info_target_up> *) user_data;
-  lm_info_target *item = new lm_info_target;
-  item->name
+  const auto list = static_cast<std::vector<target_library> *> (user_data);
+  std::string name
     = (const char *) xml_find_attribute (attributes, "name")->value.get ();
 
-  list->emplace_back (item);
+  list->emplace_back (target_library { std::move (name),
+				       std::make_unique<lm_info_target> () });
 }
 
 static void
@@ -133,10 +138,10 @@ library_list_end_library (struct gdb_xml_parser *parser,
 			  const struct gdb_xml_element *element,
 			  void *user_data, const char *body_text)
 {
-  auto *list = (std::vector<lm_info_target_up> *) user_data;
-  lm_info_target *lm_info = list->back ().get ();
+  const auto list = static_cast<std::vector<target_library> *> (user_data);
+  target_library &last = list->back ();
 
-  if (lm_info->segment_bases.empty () && lm_info->section_bases.empty ())
+  if (last.info->segment_bases.empty () && last.info->section_bases.empty ())
     gdb_xml_error (parser, _("No segment or section bases defined"));
 }
 
@@ -209,10 +214,10 @@ static const struct gdb_xml_element library_list_elements[] = {
   { NULL, NULL, NULL, GDB_XML_EF_NONE, NULL, NULL }
 };
 
-static std::vector<lm_info_target_up>
+static std::vector<target_library>
 solib_target_parse_libraries (const char *library)
 {
-  std::vector<lm_info_target_up> result;
+  std::vector<target_library> result;
 
   if (gdb_xml_parse_quick (_("target library list"), "library-list.dtd",
 			   library_list_elements, library, &result) == 0)
@@ -226,8 +231,8 @@ solib_target_parse_libraries (const char *library)
 }
 #endif
 
-static owning_intrusive_list<solib>
-solib_target_current_sos (void)
+owning_intrusive_list<solib>
+target_solib_ops::current_sos () const
 {
   owning_intrusive_list<solib> sos;
 
@@ -239,31 +244,20 @@ solib_target_current_sos (void)
     return {};
 
   /* Parse the list.  */
-  std::vector<lm_info_target_up> library_list
+  std::vector<target_library> library_list
     = solib_target_parse_libraries (library_document->data ());
 
   /* Build a struct solib for each entry on the list.  */
-  for (lm_info_target_up &info : library_list)
-    {
-      auto &new_solib = sos.emplace_back ();
-
-      /* We don't need a copy of the name in INFO anymore.  */
-      new_solib.so_name = std::move (info->name);
-      new_solib.so_original_name = new_solib.so_name;
-      new_solib.lm_info = std::move (info);
-    }
+  for (auto &library : library_list)
+    sos.emplace_back (std::move (library.info), library.name, library.name,
+		      *this);
 
   return sos;
 }
 
-static void
-solib_target_solib_create_inferior_hook (int from_tty)
-{
-  /* Nothing needed.  */
-}
-
-static void
-solib_target_relocate_section_addresses (solib &so, target_section *sec)
+void
+target_solib_ops::relocate_section_addresses (solib &so,
+					      target_section *sec) const
 {
   CORE_ADDR offset;
   auto *li = gdb::checked_static_cast<lm_info_target *> (so.lm_info.get ());
@@ -291,7 +285,7 @@ solib_target_relocate_section_addresses (solib &so, target_section *sec)
 	  if (num_alloc_sections != li->section_bases.size ())
 	    warning (_("\
 Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
-		     so.so_name.c_str ());
+		     so.name.c_str ());
 	  else
 	    {
 	      int bases_index = 0;
@@ -334,7 +328,7 @@ Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
 
 	  if (data == NULL)
 	    warning (_("\
-Could not relocate shared library \"%s\": no segments"), so.so_name.c_str ());
+Could not relocate shared library \"%s\": no segments"), so.name.c_str ());
 	  else
 	    {
 	      ULONGEST orig_delta;
@@ -345,7 +339,7 @@ Could not relocate shared library \"%s\": no segments"), so.so_name.c_str ());
 						    li->segment_bases.size (),
 						    li->segment_bases.data ()))
 		warning (_("\
-Could not relocate shared library \"%s\": bad offsets"), so.so_name.c_str ());
+Could not relocate shared library \"%s\": bad offsets"), so.name.c_str ());
 
 	      /* Find the range of addresses to report for this library in
 		 "info sharedlibrary".  Report any consecutive segments
@@ -382,16 +376,8 @@ Could not relocate shared library \"%s\": bad offsets"), so.so_name.c_str ());
   sec->endaddr += offset;
 }
 
-static int
-solib_target_open_symbol_file_object (int from_tty)
-{
-  /* We can't locate the main symbol file based on the target's
-     knowledge; the user has to specify it.  */
-  return 0;
-}
-
-static int
-solib_target_in_dynsym_resolve_code (CORE_ADDR pc)
+bool
+target_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
 {
   /* We don't have a range of addresses for the dynamic linker; there
      may not be one in the program's address space.  So only report
@@ -399,19 +385,10 @@ solib_target_in_dynsym_resolve_code (CORE_ADDR pc)
   return in_plt_section (pc);
 }
 
-const solib_ops solib_target_so_ops =
+/* See solib-target.h.  */
+
+solib_ops_up
+make_target_solib_ops (program_space *pspace)
 {
-  solib_target_relocate_section_addresses,
-  nullptr,
-  nullptr,
-  solib_target_solib_create_inferior_hook,
-  solib_target_current_sos,
-  solib_target_open_symbol_file_object,
-  solib_target_in_dynsym_resolve_code,
-  solib_bfd_open,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  default_find_solib_addr,
-};
+  return std::make_unique<target_solib_ops> (pspace);
+}

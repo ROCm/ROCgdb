@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Free Software Foundation, Inc.
+# Copyright (C) 2024-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,10 +41,10 @@ handler_last_filename = None
 # A helper function that makes some assertions about the arguments
 # passed to a MissingObjfileHandler.__call__() method.
 def check_args(pspace, buildid, filename):
-    assert type(filename) == str
+    assert type(filename) is str
     assert filename != ""
-    assert type(pspace) == gdb.Progspace
-    assert type(buildid) == str
+    assert type(pspace) is gdb.Progspace
+    assert type(buildid) is str
     assert buildid != ""
 
 
@@ -65,7 +65,7 @@ class handler(MissingObjfileHandler):
         self._mode = Mode.RETURN_NONE
 
     def __call__(self, pspace, buildid, filename):
-        global handler_call_log, handler_last_buildid, handler_last_filename
+        global handler_last_buildid, handler_last_filename
         check_args(pspace, buildid, filename)
         handler_call_log.append(self.name)
         handler_last_buildid = buildid
@@ -135,7 +135,6 @@ class exception_handler(MissingObjfileHandler):
         self.exception_type = None
 
     def __call__(self, pspace, buildid, filename):
-        global handler_call_log
         check_args(pspace, buildid, filename)
         handler_call_log.append(self.name)
         assert self.exception_type is not None
@@ -148,7 +147,6 @@ class exception_handler(MissingObjfileHandler):
 # then be checked from the test script.
 class log_handler(MissingObjfileHandler):
     def __call__(self, pspace, buildid, filename):
-        global handler_call_log
         check_args(pspace, buildid, filename)
         handler_call_log.append(self.name)
         return None

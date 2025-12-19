@@ -1,6 +1,6 @@
 /* GNU/Linux/x86-64 specific low level interface, for the remote server
    for GDB.
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -52,6 +52,8 @@
 #include "nat/x86-linux.h"
 #include "nat/x86-linux-dregs.h"
 #include "nat/x86-linux-tdesc.h"
+
+#include <asm/ldt.h>
 
 #ifdef __x86_64__
 static target_desc_up tdesc_amd64_linux_no_xml;
@@ -132,6 +134,10 @@ public:
 
   int get_ipa_tdesc_idx () override;
 
+  /* Override these to provide access to i386 TLS state.  */
+  void fetch_registers (regcache *regcache, int regno) override;
+  void store_registers (regcache *regcache, int regno) override;
+
 protected:
 
   void low_arch_setup () override;
@@ -158,7 +164,7 @@ protected:
 
   bool low_stopped_by_watchpoint () override;
 
-  CORE_ADDR low_stopped_data_address () override;
+  std::vector<CORE_ADDR> low_stopped_data_addresses () override;
 
   /* collect_ptrace_register/supply_ptrace_register are not needed in the
      native i386 case (no registers smaller than an xfer unit), and are not
@@ -211,7 +217,7 @@ struct arch_process_info
 /* Mapping between the general-purpose registers in `struct user'
    format and GDB's register array layout.
    Note that the transfer layout uses 64-bit regs.  */
-static /*const*/ int i386_regmap[] = 
+static /*const*/ int i386_regmap[] =
 {
   RAX * 8, RCX * 8, RDX * 8, RBX * 8,
   RSP * 8, RBP * 8, RSI * 8, RDI * 8,
@@ -253,7 +259,8 @@ static const int x86_64_regmap[] =
   -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1,
-  -1					/* pkru  */
+  -1,					/* pkru  */
+  -1					/* CET user mode register PL3_SSP.  */
 };
 
 #define X86_64_NUM_REGS (sizeof (x86_64_regmap) / sizeof (x86_64_regmap[0]))
@@ -263,7 +270,7 @@ static const int x86_64_regmap[] =
 
 /* Mapping between the general-purpose registers in `struct user'
    format and GDB's register array layout.  */
-static /*const*/ int i386_regmap[] = 
+static /*const*/ int i386_regmap[] =
 {
   EAX * 4, ECX * 4, EDX * 4, EBX * 4,
   UESP * 4, EBP * 4, ESI * 4, EDI * 4,
@@ -406,6 +413,18 @@ x86_target::low_cannot_fetch_register (int regno)
 }
 
 static void
+x86_fill_ssp_reg (regcache *regcache, void *buf)
+{
+  collect_register_by_name (regcache, "pl3_ssp", buf);
+}
+
+static void
+x86_store_ssp_reg (regcache *regcache, const void *buf)
+{
+  supply_register_by_name (regcache, "pl3_ssp", buf);
+}
+
+static void
 collect_register_i386 (struct regcache *regcache, int regno, void *buf)
 {
   collect_register (regcache, regno, buf);
@@ -544,6 +563,8 @@ static struct regset_info x86_regsets[] =
     x86_fill_gregset, x86_store_gregset },
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_X86_XSTATE, 0,
     EXTENDED_REGS, x86_fill_xstateregset, x86_store_xstateregset },
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_X86_SHSTK, 0,
+    OPTIONAL_RUNTIME_REGS, x86_fill_ssp_reg, x86_store_ssp_reg },
 # ifndef __x86_64__
 #  ifdef HAVE_PTRACE_GETFPXREGS
   { PTRACE_GETFPXREGS, PTRACE_SETFPXREGS, 0, sizeof (elf_fpxregset_t),
@@ -557,6 +578,105 @@ static struct regset_info x86_regsets[] =
 #endif /* HAVE_PTRACE_GETREGS */
   NULL_REGSET
 };
+
+/* Fetch TLS area data from the kernel and copy it into REGCACHE.  REGNO
+   indicates which TLS area register is wanted, or -1 for all of them.
+
+   If anything goes wrong then this function will return without updating
+   REGCACHE.  */
+
+static void
+fetch_tls_area_register (regcache *regcache, int regno)
+{
+  int tid = current_thread->id.lwp ();
+
+  /* Fetch all the TLS area data from the kernel.  */
+  user_desc tls_ud[3];
+  if (!i386_ptrace_get_tls_data (tid, tls_ud))
+    {
+      warning (_("failed to read TLS GDT entries for register read"));
+      return;
+    }
+
+  /* Now copy the values from TLS_UD back into the register cache.  */
+  int tls_regno[3] = {
+    find_regno (regcache->tdesc, "i386_tls_gdt_0"),
+    find_regno (regcache->tdesc, "i386_tls_gdt_1"),
+    find_regno (regcache->tdesc, "i386_tls_gdt_2")
+  };
+
+  for (int i = 0; i < std::size (tls_regno); ++i)
+    supply_register (regcache, tls_regno[i], &tls_ud[i]);
+}
+
+/* See class declaration above.  */
+
+void
+x86_target::fetch_registers (regcache *regcache, int regno)
+{
+  linux_process_target::fetch_registers (regcache, regno);
+
+#ifdef __x86_64__
+  if (!is_64bit_tdesc (current_thread))
+#endif
+    {
+      fetch_tls_area_register (regcache, regno);
+    }
+}
+
+/* Copy TLS area data from REGCACHE back to the kernel.  REGNO indicates
+   which TLS area register should be copied, or -1 for all of them.  If
+   anything goes wrong then return immediately; some of the register may
+   have been written back to the kernel in this case.  */
+
+static void
+store_tls_area_registers (regcache *regcache, int regno)
+{
+  int tid = current_thread->id.lwp ();
+
+  /* Read current TLS area data from the kernel into TLS_UD.  We then
+     overwrite this with values from REGCACHE, and finally, copy the
+     updated values back to the kernel.  */
+  user_desc tls_ud[3];
+  if (!i386_ptrace_get_tls_data (tid, tls_ud))
+    {
+      warning (_("failed to read TLS GDT entries for register store"));
+      return;
+    }
+
+  int tls_regno[] = {
+    find_regno (regcache->tdesc, "i386_tls_gdt_0"),
+    find_regno (regcache->tdesc, "i386_tls_gdt_1"),
+    find_regno (regcache->tdesc, "i386_tls_gdt_2")
+  };
+
+  /* Now copy data from REGCACHE over the top of the values written
+     into TLS_UD.  */
+  for (int i = 0; i < std::size (tls_regno); ++i)
+    collect_register (regcache, tls_regno[i], &tls_ud[i]);
+
+  /* And write the contents of TLS_UD back to the kernel.  We ignore the
+     return value from this call; if anything went wrong then there's
+     nothing we can do about it.  */
+  if (!i386_ptrace_set_tls_data (tid, tls_ud))
+    warning (_("failed to write updated TLS GDT entries for register store"));
+
+}
+
+/* See class declaration above.  */
+
+void
+x86_target::store_registers (regcache *regcache, int regno)
+{
+  linux_process_target::store_registers (regcache, regno);
+
+#ifdef __x86_64__
+  if (!is_64bit_tdesc (current_thread))
+#endif
+    {
+      store_tls_area_registers (regcache, regno);
+    }
+}
 
 bool
 x86_target::low_supports_breakpoints ()
@@ -712,15 +832,15 @@ x86_target::low_stopped_by_watchpoint ()
   return x86_dr_stopped_by_watchpoint (&proc->priv->arch_private->debug_reg_state);
 }
 
-CORE_ADDR
-x86_target::low_stopped_data_address ()
+std::vector<CORE_ADDR>
+x86_target::low_stopped_data_addresses ()
 {
   struct process_info *proc = current_process ();
   CORE_ADDR addr;
   if (x86_dr_stopped_data_address (&proc->priv->arch_private->debug_reg_state,
 				   &addr))
-    return addr;
-  return 0;
+    return { addr };
+  return {};
 }
 
 /* Called when a new process is created.  */
@@ -873,7 +993,7 @@ x86_linux_read_description ()
   bool have_ptrace_getregset_was_unknown
     = have_ptrace_getregset == TRIBOOL_UNKNOWN;
 
-  /* Get pointers to where we should store the xcr0 and xsave_layout
+  /* Get pointers to where we should store the xstate_bv and xsave_layout
      values.  These will be filled in by x86_linux_tdesc_for_tid the first
      time that the function is called.  Subsequent calls will not modify
      the stored values.  */
@@ -894,7 +1014,23 @@ x86_linux_read_description ()
 	   regset++)
 	{
 	  if (regset->get_request == PTRACE_GETREGSET)
-	    regset->size = xsave_len;
+	    {
+	      if (regset->nt_type == NT_X86_XSTATE)
+		regset->size = xsave_len;
+	      else if (regset->nt_type == NT_X86_SHSTK)
+		{
+		  /* We must configure the size of the NT_X86_SHSTK regset
+		     from non-zero value to it's appropriate size, even though
+		     the ptrace call is only tested for NT_X86_XSTATE request,
+		     because the NT_X86_SHSTK regset is of type
+		     OPTIONAL_RUNTIME_REGS.  A ptrace call with NT_X86_SHSTK
+		     request may only be successful later on, once shadow
+		     stack is enabled for the current thread.  */
+		    regset->size = sizeof (CORE_ADDR);
+		}
+	      else
+		gdb_assert_not_reached ("invalid regset type.");
+	    }
 	  else if (regset->type != GENERAL_REGS)
 	    regset->size = 0;
 	}
@@ -2887,17 +3023,16 @@ x86_target::get_ipa_tdesc_idx ()
 		  || tdesc == tdesc_amd64_linux_no_xml.get ()
 #endif /* __x86_64__ */
 		  );
-      return x86_linux_xcr0_to_tdesc_idx (X86_XSTATE_SSE_MASK);
+      return x86_linux_xstate_bv_to_tdesc_idx (X86_XSTATE_SSE_MASK);
     }
 
-  /* The xcr0 value and xsave layout value are cached when the target
+  /* The xstate_bv value and xsave layout value are cached when the target
      description is read.  Grab their cache location, and use the cached
      value to calculate a tdesc index.  */
   std::pair<uint64_t *, x86_xsave_layout *> storage
     = i387_get_xsave_storage ();
-  uint64_t xcr0 = *storage.first;
 
-  return x86_linux_xcr0_to_tdesc_idx (xcr0);
+  return x86_linux_xstate_bv_to_tdesc_idx (*storage.first);
 }
 
 /* The linux target ops object.  */

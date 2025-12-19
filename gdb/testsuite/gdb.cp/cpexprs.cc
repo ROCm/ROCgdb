@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2008-2024 Free Software Foundation, Inc.
+   Copyright 2008-2025 Free Software Foundation, Inc.
 
    Contributed by Red Hat, originally written by Keith Seitz.
 
@@ -175,7 +175,7 @@ public:
 
   int operator% (base const& o) const { // base::operator%
     return foo_ % o.foo_; }
-  
+
   base operator%= (base const& o) { // base::operator%=
     foo_ %= o.foo_; return *this; }
 
@@ -232,7 +232,7 @@ public:
 
   base operator|= (base const& o) { // base::operator|=
     foo_ |= o.foo_; return *this; }
-  
+
   int operator^ (base const& o) const { // base::operator^
     return foo_ ^ o.foo_; }
 

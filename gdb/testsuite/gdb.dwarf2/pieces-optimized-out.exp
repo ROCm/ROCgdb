@@ -1,4 +1,4 @@
-# Copyright 2013-2024 Free Software Foundation, Inc.
+# Copyright 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ if {[prepare_for_testing "failed to prepare" ${testfile} $srcfile $opts]} {
     return -1
 }
 
-if ![runto foo] {
+if {![runto foo]} {
     return -1
 }
 
@@ -46,4 +46,3 @@ gdb_test "p s.b" " = <optimized out>" "print s.b"
 gdb_test "p s.c" " = <optimized out>" "print s.c"
 gdb_test "p s.d" " = <optimized out>" "print s.d"
 gdb_test "p s.d + 1" "value has been optimized out" "print s.d + 1"
-

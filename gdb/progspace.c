@@ -1,6 +1,6 @@
 /* Program and address space management, for GDB, the GNU debugger.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,6 @@
 #include "objfiles.h"
 #include "gdbcore.h"
 #include "solib.h"
-#include "solist.h"
 #include "gdbthread.h"
 #include "inferior.h"
 #include <algorithm>
@@ -147,6 +146,31 @@ program_space::free_all_objfiles ()
 /* See progspace.h.  */
 
 void
+program_space::iterate_over_objfiles_in_search_order
+  (iterate_over_objfiles_in_search_order_cb_ftype cb, objfile *current_objfile)
+{
+  if (m_solib_ops != nullptr)
+    return m_solib_ops->iterate_over_objfiles_in_search_order
+      (cb, current_objfile);
+
+  for (auto &objfile : this->objfiles ())
+    if (cb (&objfile))
+      return;
+}
+
+/* See progspace.h.  */
+
+void
+program_space::map_symbol_filenames (symbol_filename_listener fun,
+				     bool need_fullname)
+{
+  for (objfile &objfile : objfiles ())
+    objfile.map_symbol_filenames (fun, need_fullname);
+}
+
+/* See progspace.h.  */
+
+void
 program_space::add_objfile (std::unique_ptr<objfile> &&objfile,
 			    struct objfile *before)
 {
@@ -183,13 +207,13 @@ program_space::remove_objfile (struct objfile *objfile)
 struct objfile *
 program_space::objfile_for_address (CORE_ADDR address)
 {
-  for (auto iter : objfiles ())
+  for (auto &iter : objfiles ())
     {
       /* Don't check separate debug objfiles.  */
-      if (iter->separate_debug_objfile_backlink != nullptr)
+      if (iter.separate_debug_objfile_backlink != nullptr)
 	continue;
-      if (is_addr_in_objfile (address, iter))
-	return iter;
+      if (is_addr_in_objfile (address, &iter))
+	return &iter;
     }
   return nullptr;
 }
@@ -202,12 +226,14 @@ program_space::exec_close ()
   if (ebfd != nullptr)
     {
       /* Removing target sections may close the exec_ops target.
-	 Clear ebfd before doing so to prevent recursion.  */
-      bfd *saved_ebfd = ebfd.get ();
+	 Clear ebfd before doing so to prevent recursion.  We
+	 move it to another ref_ptr instead of saving it to a raw
+	 pointer to avoid it looking like possible use-after-free.  */
+      gdb_bfd_ref_ptr saved_ebfd = std::move (ebfd);
       ebfd.reset (nullptr);
       ebfd_mtime = 0;
 
-      remove_target_sections (saved_ebfd);
+      remove_target_sections (saved_ebfd.get ());
 
       m_exec_filename.reset ();
     }
@@ -287,11 +313,10 @@ print_program_space (struct ui_out *uiout, int requested)
   /* There should always be at least one.  */
   gdb_assert (count > 0);
 
-  ui_out_emit_table table_emitter (uiout, 4, count, "pspaces");
+  ui_out_emit_table table_emitter (uiout, 3, count, "pspaces");
   uiout->table_header (1, ui_left, "current", "");
   uiout->table_header (4, ui_left, "id", "Id");
   uiout->table_header (longest_exec_name, ui_left, "exec", "Executable");
-  uiout->table_header (17, ui_left, "core", "Core File");
   uiout->table_body ();
 
   for (struct program_space *pspace : program_spaces)
@@ -315,12 +340,6 @@ print_program_space (struct ui_out *uiout, int requested)
 			     file_name_style.style ());
       else
 	uiout->field_skip ("exec");
-
-      if (pspace->cbfd != nullptr)
-	uiout->field_string ("core", bfd_get_filename (pspace->cbfd.get ()),
-			     file_name_style.style ());
-      else
-	uiout->field_skip ("core");
 
       /* Print extra info that doesn't really fit in tabular form.
 	 Currently, we print the list of inferiors bound to a pspace.

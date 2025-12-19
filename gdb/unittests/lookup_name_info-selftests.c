@@ -1,6 +1,6 @@
 /* Self tests for lookup_name_info for GDB, the GNU debugger.
 
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -91,20 +91,27 @@ run_tests ()
      lookup_name_info::make_paramless is well integrated with
      cp_remove_params_if_any.  gdb/cp-support.c has comprehensive
      testing of C++ specifics.  */
-  CHECK (language_cplus, "function()", "function");
-  CHECK (language_cplus, "function() const", "function");
-  CHECK (language_cplus, "A::B::C()", "A::B::C");
-  CHECK (language_cplus, "A::B::C", "A::B::C");
+  auto check_cpp_dialect = [] (enum language lang)
+    {
+      CHECK (lang, "function()", "function");
+      CHECK (lang, "function() const", "function");
+      CHECK (lang, "A::B::C()", "A::B::C");
+      CHECK (lang, "A::B::C", "A::B::C");
+
+      CHECK (lang, "Foozle<int>::fogey<Empty<int>> (Empty<int>)",
+	     "Foozle<int>::fogey<Empty<int> >");
+    };
+
+  check_cpp_dialect (language_cplus);
+  check_cpp_dialect (language_hip);
 
 #undef CHECK
 #undef CHECK_INCOMPL
 }
 
-}} // namespace selftests::lookup_name
+}} /* namespace selftests::lookup_name */
 
-void _initialize_lookup_name_info_selftests ();
-void
-_initialize_lookup_name_info_selftests ()
+INIT_GDB_FILE (lookup_name_info_selftests)
 {
   selftests::register_test ("lookup_name_info",
 			    selftests::lookup_name::run_tests);

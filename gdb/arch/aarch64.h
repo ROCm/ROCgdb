@@ -1,6 +1,6 @@
 /* Common target-dependent functionality for AArch64.
 
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -34,6 +34,7 @@ struct aarch64_features
   uint64_t vq = 0;
   bool pauth = false;
   bool mte = false;
+  bool fpmr = false;
 
   /* A positive TLS value indicates the number of TLS registers available.  */
   uint8_t tls = 0;
@@ -51,6 +52,12 @@ struct aarch64_features
 
   /* Whether SME2 is supported.  */
   bool sme2 = false;
+
+  /* Whether Guarded Control Stack is supported.  */
+  bool gcs = false;
+
+  /* Whether Guarded Control Stack Linux features are supported.  */
+  bool gcs_linux = false;
 };
 
 inline bool operator==(const aarch64_features &lhs, const aarch64_features &rhs)
@@ -60,7 +67,10 @@ inline bool operator==(const aarch64_features &lhs, const aarch64_features &rhs)
     && lhs.mte == rhs.mte
     && lhs.tls == rhs.tls
     && lhs.svq == rhs.svq
-    && lhs.sme2 == rhs.sme2;
+    && lhs.sme2 == rhs.sme2
+    && lhs.gcs == rhs.gcs
+    && lhs.gcs_linux == rhs.gcs_linux
+    && lhs.fpmr == rhs.fpmr;
 }
 
 namespace std
@@ -86,6 +96,12 @@ namespace std
 
       /* SME2 feature.  */
       h = h << 1 | features.sme2;
+
+      h = h << 1 | features.gcs;
+      h = h << 1 | features.gcs_linux;
+
+      /* FPMR feature.  */
+      h = h << 1 | features.fpmr;
       return h;
     }
   };
@@ -93,7 +109,7 @@ namespace std
 
 /* Create the aarch64 target description.  */
 
-target_desc *
+target_desc_up
   aarch64_create_target_description (const aarch64_features &features);
 
 /* Given a pointer value POINTER and a MASK of non-address bits, remove the
@@ -229,5 +245,10 @@ enum aarch64_regnum
 
 /* Size of the SME2 ZT0 register in bytes.  */
 #define AARCH64_SME2_ZT0_SIZE 64
+
+/* Feature check for Floating Point Mode Register.  */
+#ifndef HWCAP2_FPMR
+#define HWCAP2_FPMR (1ULL << 48)
+#endif /* HWCAP2_FPMR */
 
 #endif /* GDB_ARCH_AARCH64_H */

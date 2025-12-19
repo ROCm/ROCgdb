@@ -1,6 +1,6 @@
 /* YACC parser for C expressions, for GDB.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -36,7 +36,6 @@
 
 %{
 
-#include <ctype.h>
 #include "expression.h"
 #include "value.h"
 #include "parser-defs.h"
@@ -53,6 +52,7 @@
 #include "type-stack.h"
 #include "target-float.h"
 #include "c-exp.h"
+#include "macroexp.h"
 
 #define parse_type(ps) builtin_type (ps->gdbarch ())
 
@@ -107,7 +107,34 @@ struct c_parse_state
 
   /* The type stack.  */
   struct type_stack type_stack;
+
+  /* When set, a name token is not looked up.  This can be useful when
+     the search domain is known by context.  TYPE_CODE_UNDEF is used
+     to mean "unset" here -- typically only types with tags (enum,
+     struct, class, union) use this feature, but TYPE_CODE_VOID is
+     also used to avoid the lookup for field names.  */
+  type_code assume_classification = TYPE_CODE_UNDEF;
 };
+
+/* Used for field names, which skip name lookup.  */
+struct qualified_name_token
+{
+  /* The prefix, if any.  This can be nullptr.  */
+  const char *prefix;
+  /* The field name itself.  */
+  const char *name;
+  /* True if the COMPLETE token was seen.  */
+  bool complete;
+};
+
+/* A convenient overload of copy_name.  */
+static std::string
+copy_name (qualified_name_token token)
+{
+  if (token.prefix == nullptr)
+    return token.name;
+  return std::string (token.prefix) + "::" + token.name;
+}
 
 /* This is set and cleared in c_parse.  */
 
@@ -120,6 +147,8 @@ static int yylex (void);
 static void yyerror (const char *);
 
 static int type_aggregate_p (struct type *);
+
+static void handle_qualified_field_name (qualified_name_token token);
 
 using namespace expr;
 %}
@@ -141,6 +170,7 @@ using namespace expr;
     } typed_val_float;
     struct type *tval;
     struct stoken sval;
+    qualified_name_token qval;
     struct typed_stoken tsval;
     struct ttype tsym;
     struct symtoken ssym;
@@ -161,7 +191,7 @@ using namespace expr;
 static int parse_number (struct parser_state *par_state,
 			 const char *, int, int, YYSTYPE *);
 static struct stoken operator_stoken (const char *);
-static struct stoken typename_stoken (const char *);
+static qualified_name_token typename_stoken (const char *);
 static void check_parameter_typelist (std::vector<struct type *> *);
 
 #if defined(YYBISON) && YYBISON < 30800
@@ -172,7 +202,7 @@ static void c_print_token (FILE *file, int type, YYSTYPE value);
 
 %type <voidval> exp exp1 type_exp start variable qualified_name lcurly function_method
 %type <lval> rcurly
-%type <tval> type typebase scalar_type
+%type <tval> type typebase scalar_type tag_name_or_complete
 %type <tvec> nonempty_typelist func_mod parameter_typelist
 /* %type <bval> block */
 
@@ -195,15 +225,17 @@ static void c_print_token (FILE *file, int type, YYSTYPE value);
    nonterminal "name", which matches either NAME or TYPENAME.  */
 
 %token <tsval> STRING
-%token <sval> NSSTRING		/* ObjC Foundation "NSString" literal */
-%token SELECTOR			/* ObjC "@selector" pseudo-operator   */
+%token <tsval> NSSTRING		/* ObjC Foundation "NSString" literal */
+%token <sval> SELECTOR		/* ObjC "@selector" pseudo-operator   */
 %token <tsval> CHAR
 %token <ssym> NAME /* BLOCKNAME defined below to give it higher precedence. */
 %token <ssym> UNKNOWN_CPP_NAME
 %token <voidval> COMPLETE
 %token <tsym> TYPENAME
 %token <theclass> CLASSNAME	/* ObjC Class name */
-%type <sval> name field_name
+%type <sval> name
+%type <qval> qual_field_name field_name field_name_or_complete
+%type <qval> field_or_destructor
 %type <svec> string_exp
 %type <ssym> name_not_typename
 %type <tsym> type_name
@@ -365,115 +397,71 @@ exp	:	ALIGNOF '(' type_exp ')'	%prec UNARY
 			{ pstate->wrap<unop_alignof_operation> (); }
 	;
 
-exp	:	exp ARROW field_name
+exp	:	exp ARROW
 			{
-			  pstate->push_new<structop_ptr_operation>
-			    (pstate->pop (), copy_name ($3));
+			  cpstate->assume_classification = TYPE_CODE_VOID;
 			}
-	;
-
-exp	:	exp ARROW field_name COMPLETE
+		field_name_or_complete
 			{
-			  structop_base_operation *op
-			    = new structop_ptr_operation (pstate->pop (),
-							  copy_name ($3));
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
-			}
-	;
+			  cpstate->assume_classification = TYPE_CODE_UNDEF;
 
-exp	:	exp ARROW COMPLETE
-			{
-			  structop_base_operation *op
-			    = new structop_ptr_operation (pstate->pop (), "");
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
+			  if ($4.prefix != nullptr)
+			    {
+			      handle_qualified_field_name ($4);
+			      /* exp->type::name becomes exp->*(&type::name) */
+			      /* Note: this doesn't work if name is a
+				 static member!  FIXME */
+			      pstate->wrap<unop_addr_operation> ();
+			      pstate->wrap2<structop_mptr_operation> ();
+			    }
+			  else
+			    {
+			      structop_base_operation *op
+				= new structop_ptr_operation (pstate->pop (),
+							      copy_name ($4));
+			      if ($4.complete)
+				pstate->mark_struct_expression (op);
+			      pstate->push (operation_up (op));
+			    }
 			}
-	;
-
-exp	:	exp ARROW '~' name
-			{
-			  pstate->push_new<structop_ptr_operation>
-			    (pstate->pop (), "~" + copy_name ($4));
-			}
-	;
-
-exp	:	exp ARROW '~' name COMPLETE
-			{
-			  structop_base_operation *op
-			    = new structop_ptr_operation (pstate->pop (),
-							  "~" + copy_name ($4));
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
-			}
-	;
-
-exp	:	exp ARROW qualified_name
-			{ /* exp->type::name becomes exp->*(&type::name) */
-			  /* Note: this doesn't work if name is a
-			     static member!  FIXME */
-			  pstate->wrap<unop_addr_operation> ();
-			  pstate->wrap2<structop_mptr_operation> (); }
 	;
 
 exp	:	exp ARROW_STAR exp
 			{ pstate->wrap2<structop_mptr_operation> (); }
 	;
 
-exp	:	exp '.' field_name
+exp	:	exp '.'
 			{
-			  if (pstate->language ()->la_language
-			      == language_opencl)
+			  cpstate->assume_classification = TYPE_CODE_VOID;
+			}
+		field_name_or_complete
+			{
+			  cpstate->assume_classification = TYPE_CODE_UNDEF;
+
+			  if ($4.prefix != nullptr)
+			    {
+			      handle_qualified_field_name ($4);
+			      /* exp.type::name becomes exp.*(&type::name) */
+			      /* Note: this doesn't work if name is a
+				 static member!  FIXME */
+			      pstate->wrap<unop_addr_operation> ();
+			      pstate->wrap2<structop_member_operation> ();
+			    }
+			  else if (pstate->language ()->la_language
+				   == language_opencl
+				   && !$4.complete)
 			    pstate->push_new<opencl_structop_operation>
-			      (pstate->pop (), copy_name ($3));
+			      (pstate->pop (), copy_name ($4));
 			  else
-			    pstate->push_new<structop_operation>
-			      (pstate->pop (), copy_name ($3));
+			    {
+			      structop_base_operation *op
+				= new structop_operation (pstate->pop (),
+							  copy_name ($4));
+			      if ($4.complete)
+				pstate->mark_struct_expression (op);
+			      pstate->push (operation_up (op));
+			    }
 			}
-	;
-
-exp	:	exp '.' field_name COMPLETE
-			{
-			  structop_base_operation *op
-			    = new structop_operation (pstate->pop (),
-						      copy_name ($3));
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
-			}
-	;
-
-exp	:	exp '.' COMPLETE
-			{
-			  structop_base_operation *op
-			    = new structop_operation (pstate->pop (), "");
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
-			}
-	;
-
-exp	:	exp '.' '~' name
-			{
-			  pstate->push_new<structop_operation>
-			    (pstate->pop (), "~" + copy_name ($4));
-			}
-	;
-
-exp	:	exp '.' '~' name COMPLETE
-			{
-			  structop_base_operation *op
-			    = new structop_operation (pstate->pop (),
-						      "~" + copy_name ($4));
-			  pstate->mark_struct_expression (op);
-			  pstate->push (operation_up (op));
-			}
-	;
-
-exp	:	exp '.' qualified_name
-			{ /* exp.type::name becomes exp.*(&type::name) */
-			  /* Note: this doesn't work if name is a
-			     static member!  FIXME */
-			  pstate->wrap<unop_addr_operation> ();
-			  pstate->wrap2<structop_member_operation> (); }
 	;
 
 exp	:	exp DOT_STAR exp
@@ -932,10 +920,10 @@ exp	:	DOLLAR_VARIABLE
 			}
 	;
 
-exp	:	SELECTOR '(' name ')'
+exp	:	SELECTOR
 			{
 			  pstate->push_new<objc_selector_operation>
-			    (copy_name ($3));
+			    (copy_name ($1));
 			}
 	;
 
@@ -1049,12 +1037,12 @@ exp	:	string_exp
 			}
 	;
 
-exp     :	NSSTRING	/* ObjC NextStep NSString constant
-				 * of the form '@' '"' string '"'.
-				 */
+exp     :	NSSTRING
 			{
+			  /* ObjC NextStep NSString constant of the
+			     form '@' '"' string '"'.  */
 			  pstate->push_new<objc_nsstring_operation>
-			    (copy_name ($1));
+			    (std::string ($1.ptr, $1.length));
 			}
 	;
 
@@ -1267,12 +1255,12 @@ single_qualifier:
 			{ cpstate->type_stack.insert (tp_restrict); }
 	|	'@' NAME
 		{
-		  cpstate->type_stack.insert (pstate,
+		  cpstate->type_stack.insert (pstate->gdbarch (),
 					      copy_name ($2.stoken).c_str ());
 		}
 	|	'@' UNKNOWN_CPP_NAME
 		{
-		  cpstate->type_stack.insert (pstate,
+		  cpstate->type_stack.insert (pstate->gdbarch (),
 					      copy_name ($2.stoken).c_str ());
 		}
 	;
@@ -1322,15 +1310,13 @@ direct_abs_decl: '(' abs_decl ')'
 	|	direct_abs_decl array_mod
 			{
 			  cpstate->type_stack.push ($1);
-			  cpstate->type_stack.push ($2);
-			  cpstate->type_stack.push (tp_array);
+			  cpstate->type_stack.push (tp_array, $2);
 			  $$ = cpstate->type_stack.create ();
 			  cpstate->type_stacks.emplace_back ($$);
 			}
 	|	array_mod
 			{
-			  cpstate->type_stack.push ($1);
-			  cpstate->type_stack.push (tp_array);
+			  cpstate->type_stack.push (tp_array, $1);
 			  $$ = cpstate->type_stack.create ();
 			  cpstate->type_stacks.emplace_back ($$);
 			}
@@ -1510,71 +1496,37 @@ typebase
 			{
 			  $$ = init_complex_type (nullptr, $2);
 			}
-	|	STRUCT name
-			{ $$
-			    = lookup_struct (copy_name ($2).c_str (),
-					     pstate->expression_context_block);
-			}
-	|	STRUCT COMPLETE
+	|	STRUCT
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_STRUCT,
-						       "", 0);
-			  $$ = NULL;
+			  cpstate->assume_classification = TYPE_CODE_STRUCT;
 			}
-	|	STRUCT name COMPLETE
+		tag_name_or_complete
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_STRUCT,
-						       $2.ptr, $2.length);
-			  $$ = NULL;
+			  $$ = $3;
 			}
-	|	CLASS name
-			{ $$ = lookup_struct
-			    (copy_name ($2).c_str (),
-			     pstate->expression_context_block);
-			}
-	|	CLASS COMPLETE
+	|	CLASS
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_STRUCT,
-						       "", 0);
-			  $$ = NULL;
+			  cpstate->assume_classification = TYPE_CODE_STRUCT;
 			}
-	|	CLASS name COMPLETE
+		tag_name_or_complete
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_STRUCT,
-						       $2.ptr, $2.length);
-			  $$ = NULL;
+			  $$ = $3;
 			}
-	|	UNION name
-			{ $$
-			    = lookup_union (copy_name ($2).c_str (),
-					    pstate->expression_context_block);
-			}
-	|	UNION COMPLETE
+	|	ENUM
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_UNION,
-						       "", 0);
-			  $$ = NULL;
+			  cpstate->assume_classification = TYPE_CODE_ENUM;
 			}
-	|	UNION name COMPLETE
+		tag_name_or_complete
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_UNION,
-						       $2.ptr, $2.length);
-			  $$ = NULL;
+			  $$ = $3;
 			}
-	|	ENUM name
-			{ $$ = lookup_enum (copy_name ($2).c_str (),
-					    pstate->expression_context_block);
-			}
-	|	ENUM COMPLETE
+	|	UNION
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_ENUM, "", 0);
-			  $$ = NULL;
+			  cpstate->assume_classification = TYPE_CODE_UNION;
 			}
-	|	ENUM name COMPLETE
+		tag_name_or_complete
 			{
-			  pstate->mark_completion_tag (TYPE_CODE_ENUM, $2.ptr,
-						       $2.length);
-			  $$ = NULL;
+			  $$ = $3;
 			}
 		/* It appears that this rule for templates is never
 		   reduced; template recognition happens by lookahead
@@ -1799,13 +1751,66 @@ oper:	OPERATOR NEW
 			}
 	;
 
+qual_field_name:
+	qual_field_name COLONCOLON name
+		{
+		  $$.complete = false;
+		  if ($1.prefix == nullptr)
+		    $$.prefix = $1.name;
+		  else
+		    $$.prefix = obconcat (&cpstate->expansion_obstack,
+					  $1.prefix, "::", $1.name, nullptr);
+		  $$.name = obstack_strndup (&cpstate->expansion_obstack,
+					     $3.ptr, $3.length);
+		}
+	| name
+		{
+		  $$.complete = false;
+		  $$.prefix = nullptr;
+		  $$.name = obstack_strndup (&cpstate->expansion_obstack,
+					     $1.ptr, $1.length);
+		}
+	;
+
+field_or_destructor:
+	qual_field_name
+	| qual_field_name COLONCOLON '~' name
+		{
+		  $$.complete = false;
+		  if ($1.prefix == nullptr)
+		    $$.prefix = $1.name;
+		  else
+		    $$.prefix = obconcat (&cpstate->expansion_obstack,
+					  $1.prefix, "::", $1.name, nullptr);
+		  char *name
+		    = (char *) obstack_alloc (&cpstate->expansion_obstack,
+					      $4.length + 2);
+		  name[0] = '~';
+		  memcpy (&name[1], $4.ptr, $4.length);
+		  name[$4.length + 1] = '\0';
+		  $$.name = name;
+		}
+	| '~' name
+		{
+		  $$.complete = false;
+		  $$.prefix = nullptr;
+		  char *name
+		    = (char *) obstack_alloc (&cpstate->expansion_obstack,
+					      $2.length + 2);
+		  name[0] = '~';
+		  memcpy (&name[1], $2.ptr, $2.length);
+		  name[$2.length + 1] = '\0';
+		  $$.name = name;
+		}
+	;
+
 /* This rule exists in order to allow some tokens that would not normally
    match the 'name' rule to appear as fields within a struct.  The example
    that initially motivated this was the RISC-V target which models the
    floating point registers as a union with fields called 'float' and
    'double'.  */
 field_name
-	:	name
+	:	field_or_destructor
 	|	DOUBLE_KEYWORD { $$ = typename_stoken ("double"); }
 	|	FLOAT_KEYWORD { $$ = typename_stoken ("float"); }
 	|	INT_KEYWORD { $$ = typename_stoken ("int"); }
@@ -1813,6 +1818,61 @@ field_name
 	|	SHORT { $$ = typename_stoken ("short"); }
 	|	SIGNED_KEYWORD { $$ = typename_stoken ("signed"); }
 	|	UNSIGNED { $$ = typename_stoken ("unsigned"); }
+	;
+
+field_name_or_complete
+	:	field_name
+	|	field_name COMPLETE
+			{
+			  $$ = $1;
+			  $$.complete = true;
+			}
+	|	COMPLETE
+			{
+			  $$ = typename_stoken ("");
+			  $$.complete = true;
+			}
+	;
+
+/* This rule is used when the preceding token is a keyword that takes
+   a tag name (e.g., "struct").  The "caller" should disable name
+   lookup, see c_parse_state::assume_classification.  */
+tag_name_or_complete
+	:	NAME
+		{
+		  switch (cpstate->assume_classification)
+		    {
+		    case TYPE_CODE_STRUCT:
+		      $$ = lookup_struct (copy_name ($1.stoken).c_str (),
+					  pstate->expression_context_block);
+		      break;
+		    case TYPE_CODE_ENUM:
+		      $$ = lookup_enum (copy_name ($1.stoken).c_str (),
+					pstate->expression_context_block);
+		      break;
+		    case TYPE_CODE_UNION:
+		      $$ = lookup_union (copy_name ($1.stoken).c_str (),
+					 pstate->expression_context_block);
+		      break;
+		    default:
+		      gdb_assert_not_reached ();
+		    }
+		  cpstate->assume_classification = TYPE_CODE_UNDEF;
+		}
+	|	COMPLETE
+		{
+		  pstate->mark_completion_tag (cpstate->assume_classification,
+					       "", 0);
+		  cpstate->assume_classification = TYPE_CODE_UNDEF;
+		  $$ = nullptr;
+		}
+	|	NAME COMPLETE
+		{
+		  pstate->mark_completion_tag (cpstate->assume_classification,
+					       $1.stoken.ptr, $1.stoken.length);
+		  cpstate->assume_classification = TYPE_CODE_UNDEF;
+		  $$ = nullptr;
+		}
 	;
 
 name	:	NAME { $$ = $1.stoken; }
@@ -1830,7 +1890,7 @@ name_not_typename :	NAME
    the parser can't tell whether NAME_OR_INT is a name_not_typename (=variable,
    =exp) or just an exp.  If name_not_typename was ever used in an lvalue
    context where only a name could occur, this might be useful.
-  	|	NAME_OR_INT
+	|	NAME_OR_INT
  */
 	|	oper
 			{
@@ -1872,12 +1932,10 @@ operator_stoken (const char *op)
 
 /* Returns a stoken of the type named TYPE.  */
 
-static struct stoken
+static qualified_name_token
 typename_stoken (const char *type)
 {
-  struct stoken st = { type, 0 };
-  st.length = strlen (type);
-  return st;
+  return qualified_name_token { nullptr, type, false };
 };
 
 /* Return true if the type is aggregate-like.  */
@@ -1975,13 +2033,13 @@ parse_number (struct parser_state *par_state,
 	  len -= 2;
 	}
       /* Handle suffixes: 'f' for float, 'l' for long double.  */
-      else if (len >= 1 && TOLOWER (buf[len - 1]) == 'f')
+      else if (len >= 1 && c_tolower (buf[len - 1]) == 'f')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_float;
 	  len -= 1;
 	}
-      else if (len >= 1 && TOLOWER (buf[len - 1]) == 'l')
+      else if (len >= 1 && c_tolower (buf[len - 1]) == 'l')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_long_double;
@@ -2187,9 +2245,9 @@ c_parse_escape (const char **ptr, struct obstack *output)
       if (output)
 	obstack_grow_str (output, "\\x");
       ++tokptr;
-      if (!ISXDIGIT (*tokptr))
+      if (!c_isxdigit (*tokptr))
 	error (_("\\x escape without a following hex digit"));
-      while (ISXDIGIT (*tokptr))
+      while (c_isxdigit (*tokptr))
 	{
 	  if (output)
 	    obstack_1grow (output, *tokptr);
@@ -2212,7 +2270,7 @@ c_parse_escape (const char **ptr, struct obstack *output)
 	if (output)
 	  obstack_grow_str (output, "\\");
 	for (i = 0;
-	     i < 3 && ISDIGIT (*tokptr) && *tokptr != '8' && *tokptr != '9';
+	     i < 3 && c_isdigit (*tokptr) && *tokptr != '8' && *tokptr != '9';
 	     ++i)
 	  {
 	    if (output)
@@ -2237,9 +2295,9 @@ c_parse_escape (const char **ptr, struct obstack *output)
 	    obstack_1grow (output, *tokptr);
 	  }
 	++tokptr;
-	if (!ISXDIGIT (*tokptr))
+	if (!c_isxdigit (*tokptr))
 	  error (_("\\%c escape without a following hex digit"), c);
-	for (i = 0; i < len && ISXDIGIT (*tokptr); ++i)
+	for (i = 0; i < len && c_isxdigit (*tokptr); ++i)
 	  {
 	    if (output)
 	      obstack_1grow (output, *tokptr);
@@ -2613,6 +2671,43 @@ static bool last_was_structop;
 /* Depth of parentheses.  */
 static int paren_depth;
 
+/* Lex an Objective-C @selector.  Return true if lexed.  In this case,
+   sets the resulting token and updates the lex pointer.  Otherwise
+   returns false and updates nothing.  */
+
+static bool
+lex_selector (const char **lex_ptr, struct stoken *token)
+{
+  const char *p = *lex_ptr;
+
+  if (!startswith (p, "selector"))
+    return false;
+
+  p += strlen ("selector");
+  p = skip_spaces (p);
+  if (*p != '(')
+    return false;
+  ++p;
+
+  /* The selector name matches [A-Za-z0-9:_-]+.  We could probably be
+     a bit more refined but meh.  */
+  const char *start = p;
+  while (c_isalnum (*p) || *p == ':' || *p == '_' || *p == '-')
+    ++p;
+  if (p == start)
+    return false;
+  const char *end = p;
+
+  p = skip_spaces (p);
+  if (*p != ')')
+    return false;
+  ++p;
+
+  *lex_ptr = p;
+  *token = { start, (int) (end - start) };
+  return true;
+}
+
 /* Read one token, getting characters through lexptr.  */
 
 static int
@@ -2646,7 +2741,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (strncmp (tokstart, token.oper, 3) == 0)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	gdb_assert ((token.flags & FLAG_C) == 0);
 
@@ -2660,7 +2755,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (strncmp (tokstart, token.oper, 2) == 0)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	gdb_assert ((token.flags & FLAG_C) == 0);
 
@@ -2821,19 +2916,18 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
 
 	if (par_state->language ()->la_language == language_objc)
 	  {
-	    size_t len = strlen ("selector");
-
-	    if (strncmp (p, "selector", len) == 0
-		&& (p[len] == '\0' || ISSPACE (p[len])))
+	    struct stoken sel_token;
+	    if (lex_selector (&p, &sel_token))
 	      {
-		pstate->lexptr = p + len;
+		pstate->lexptr = p;
+		yylval.sval = sel_token;
 		return SELECTOR;
 	      }
 	    else if (*p == '"')
 	      goto parse_string;
 	  }
 
-	while (ISSPACE (*p))
+	while (c_isspace (*p))
 	  p++;
 	size_t len = strlen ("entry");
 	if (strncmp (p, "entry", len) == 0 && !c_ident_is_alnum (p[len])
@@ -2951,10 +3045,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
       && (tokstart[namelen] == ' ' || tokstart[namelen] == '\t')
       && ! scanning_macro_expansion ())
     {
-      const char *p = tokstart + namelen + 1;
-
-      while (*p == ' ' || *p == '\t')
-	p++;
+      const char *p = skip_spaces (tokstart + namelen + 1);
       if (*p >= '0' && *p <= '9')
 	return 0;
     }
@@ -2972,7 +3063,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
     if (copy == token.oper)
       {
 	if ((token.flags & FLAG_CXX) != 0
-	    && par_state->language ()->la_language != language_cplus)
+	    && !is_cplus_dialect (par_state->language ()->la_language))
 	  break;
 	if ((token.flags & FLAG_C) != 0
 	    && par_state->language ()->la_language != language_c
@@ -2985,10 +3076,7 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
 
 	    if (lookup_symbol (copy.c_str (),
 			       pstate->expression_context_block,
-			       SEARCH_VFT,
-			       (par_state->language ()->la_language
-				== language_cplus ? &is_a_field_of_this
-				: NULL)).symbol
+			       SEARCH_VFT, &is_a_field_of_this).symbol
 		!= NULL)
 	      {
 		/* The keyword is shadowed.  */
@@ -3049,15 +3137,10 @@ classify_name (struct parser_state *par_state, const struct block *block,
 
   std::string copy = copy_name (yylval.sval);
 
-  /* Initialize this in case we *don't* use it in this call; that way
-     we can refer to it unconditionally below.  */
-  memset (&is_a_field_of_this, 0, sizeof (is_a_field_of_this));
-
   bsym = lookup_symbol (copy.c_str (), block, SEARCH_VFT,
-			par_state->language ()->name_of_this ()
-			? &is_a_field_of_this : NULL);
+			&is_a_field_of_this);
 
-  if (bsym.symbol && bsym.symbol->aclass () == LOC_BLOCK)
+  if (bsym.symbol && bsym.symbol->loc_class () == LOC_BLOCK)
     {
       yylval.ssym.sym = bsym;
       yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
@@ -3090,7 +3173,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	 filename.  However, if the name was quoted, then it is better
 	 to check for a filename or a block, since this is the only
 	 way the user has of requiring the extension to be used.  */
-      if ((is_a_field_of_this.type == NULL && !is_after_structop) 
+      if ((is_a_field_of_this.type == NULL && !is_after_structop)
 	  || is_quoted_name)
 	{
 	  /* See if it's a file name. */
@@ -3105,7 +3188,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	}
     }
 
-  if (bsym.symbol && bsym.symbol->aclass () == LOC_TYPEDEF)
+  if (bsym.symbol && bsym.symbol->loc_class () == LOC_TYPEDEF)
     {
       yylval.tsym.type = bsym.symbol->type ();
       return TYPENAME;
@@ -3121,8 +3204,8 @@ classify_name (struct parser_state *par_state, const struct block *block,
 	  struct symbol *sym;
 
 	  yylval.theclass.theclass = Class;
-	  sym = lookup_struct_typedef (copy.c_str (),
-				       par_state->expression_context_block, 1);
+	  sym = lookup_struct_noerr (copy.c_str (),
+				     par_state->expression_context_block);
 	  if (sym)
 	    yylval.theclass.type = sym->type ();
 	  return CLASSNAME;
@@ -3153,7 +3236,7 @@ classify_name (struct parser_state *par_state, const struct block *block,
   yylval.ssym.is_a_field_of_this = is_a_field_of_this.type != NULL;
 
   if (bsym.symbol == NULL
-      && par_state->language ()->la_language == language_cplus
+      && is_cplus_dialect (par_state->language ()->la_language)
       && is_a_field_of_this.type == NULL
       && lookup_minimal_symbol (current_program_space, copy.c_str ()).minsym == nullptr)
     return UNKNOWN_CPP_NAME;
@@ -3200,7 +3283,7 @@ classify_inner_name (struct parser_state *par_state,
       return ERROR;
     }
 
-  switch (yylval.ssym.sym.symbol->aclass ())
+  switch (yylval.ssym.sym.symbol->loc_class ())
     {
     case LOC_BLOCK:
     case LOC_LABEL:
@@ -3227,6 +3310,48 @@ classify_inner_name (struct parser_state *par_state,
       return NAME;
     }
   internal_error (_("not reached"));
+}
+
+/* A helper function for the specific case of a qualified field name,
+   like "obj->type1::type2::field".  This takes the type prefix
+   ("type1::type2" in the example) and finds the corresponding type.
+   It will either throw an exception, or push a scope_operation on the
+   operation stack.  */
+static void
+handle_qualified_field_name (qualified_name_token token)
+{
+  struct type *type = nullptr;
+  std::string accum;
+  for (const auto name : split_name (token.prefix, split_style::CXX))
+    {
+      std::string current (name);
+
+      if (accum.empty ())
+	accum = name;
+      else
+	accum = accum + "::" + current;
+
+      yylval.ssym.stoken.ptr = current.c_str ();
+      yylval.ssym.stoken.length = current.size ();
+      yylval.ssym.sym = {};
+      yylval.ssym.is_a_field_of_this = 0;
+
+      int kind = classify_inner_name (pstate,
+				      pstate->expression_context_block,
+				      type);
+      if (kind != TYPENAME)
+	error (_("could not find type '%s'"), accum.c_str ());
+
+      type = yylval.tsym.type;
+    }
+
+  type = check_typedef (type);
+  if (!type_aggregate_p (type))
+    error (_("`%s' is not defined as an aggregate type."),
+	   TYPE_SAFE_NAME (type));
+  if (token.name[0] == '~')
+    destructor_name_p (token.name, type);
+  pstate->push_new<scope_operation> (type, token.name);
 }
 
 /* The outer level of a two-level lexer.  This calls the inner lexer
@@ -3261,12 +3386,16 @@ yylex (void)
      subsequent code is C++-only; but also depends on seeing a "::" or
      name-like token.  */
   current.token = lex_one_token (pstate, &is_quoted_name);
-  if (current.token == NAME)
+  if (cpstate->assume_classification == TYPE_CODE_UNDEF
+      && current.token == NAME)
     current.token = classify_name (pstate, pstate->expression_context_block,
 				   is_quoted_name, last_lex_was_structop);
-  if (pstate->language ()->la_language != language_cplus
+  if (!is_cplus_dialect (pstate->language ()->la_language)
       || (current.token != TYPENAME && current.token != COLONCOLON
-	  && current.token != FILENAME))
+	  && current.token != FILENAME
+	  && (cpstate->assume_classification == TYPE_CODE_UNDEF
+	      || current.token != NAME))
+      || cpstate->assume_classification == TYPE_CODE_VOID)
     return current.token;
 
   /* Read any sequence of alternating "::" and name-like tokens into
@@ -3307,7 +3436,8 @@ yylex (void)
     search_block = NULL;
   else
     {
-      gdb_assert (current.token == TYPENAME);
+      gdb_assert (current.token == TYPENAME
+		  || cpstate->assume_classification != TYPE_CODE_UNDEF);
       search_block = pstate->expression_context_block;
       obstack_grow (&name_obstack, current.value.sval.ptr,
 		    current.value.sval.length);
@@ -3330,8 +3460,11 @@ yylex (void)
 	  int classification;
 
 	  yylval = next.value;
-	  classification = classify_inner_name (pstate, search_block,
-						context_type);
+	  if (cpstate->assume_classification != TYPE_CODE_UNDEF)
+	    classification = NAME;
+	  else
+	    classification = classify_inner_name (pstate, search_block,
+						  context_type);
 	  /* We keep going until we either run out of names, or until
 	     we have a qualified name which is not a type.  */
 	  if (classification != TYPENAME && classification != NAME)
@@ -3341,7 +3474,7 @@ yylex (void)
 	  checkpoint = next_to_examine;
 
 	  /* Update the partial name we are constructing.  */
-	  if (context_type != NULL)
+	  if (next_to_examine > 1)
 	    {
 	      /* We don't want to put a leading "::" into the name.  */
 	      obstack_grow_str (&name_obstack, "::");
@@ -3356,7 +3489,8 @@ yylex (void)
 
 	  last_was_coloncolon = 0;
 
-	  if (classification == NAME)
+	  if (cpstate->assume_classification == TYPE_CODE_UNDEF
+	      && classification == NAME)
 	    break;
 
 	  context_type = yylval.tsym.type;
@@ -3403,18 +3537,18 @@ c_parse (struct parser_state *par_state)
   c_parse_state cstate;
   scoped_restore cstate_restore = make_scoped_restore (&cpstate, &cstate);
 
-  gdb::unique_xmalloc_ptr<struct macro_scope> macro_scope;
+  macro_scope macro_scope;
 
   if (par_state->expression_context_block)
     macro_scope
-      = sal_macro_scope (find_pc_line (par_state->expression_context_pc, 0));
+      = sal_macro_scope (find_sal_for_pc (par_state->expression_context_pc, 0));
   else
     macro_scope = default_macro_scope ();
-  if (! macro_scope)
+  if (!macro_scope.is_valid ())
     macro_scope = user_macro_scope ();
 
   scoped_restore restore_macro_scope
-    = make_scoped_restore (&expression_macro_scope, macro_scope.get ());
+    = make_scoped_restore (&expression_macro_scope, &macro_scope);
 
   scoped_restore restore_yydebug = make_scoped_restore (&yydebug,
 							par_state->debug);
@@ -3459,6 +3593,7 @@ c_print_token (FILE *file, int type, YYSTYPE value)
 
     case NSSTRING:
     case DOLLAR_VARIABLE:
+    case SELECTOR:
       parser_fprintf (file, "sval<%s>", copy_name (value.sval).c_str ());
       break;
 

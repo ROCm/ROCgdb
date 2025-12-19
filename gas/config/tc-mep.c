@@ -1,5 +1,5 @@
 /* tc-mep.c -- Assembler for the Toshiba Media Processor.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1381,7 +1381,7 @@ valueT
 md_section_align (segT segment, valueT size)
 {
   int align = bfd_section_alignment (segment);
-  return ((size + (1 << align) - 1) & -(1 << align));
+  return (size + ((valueT) 1 << align) - 1) & -((valueT) 1 << align);
 }
 
 
@@ -1807,7 +1807,7 @@ mep_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 long
 md_pcrel_from_section (fixS *fixP, segT sec)
 {
-  if (fixP->fx_addsy != (symbolS *) NULL
+  if (fixP->fx_addsy != NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
 	  || S_IS_WEAK (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
@@ -2051,10 +2051,10 @@ mep_fix_adjustable (fixS *fixP)
 {
   bfd_reloc_code_real_type reloc_type;
 
-  if ((int) fixP->fx_r_type >= (int) BFD_RELOC_UNUSED)
+  if (fixP->fx_r_type >= BFD_RELOC_UNUSED)
     {
       const CGEN_INSN *insn = NULL;
-      int opindex = (int) fixP->fx_r_type - (int) BFD_RELOC_UNUSED;
+      int opindex = fixP->fx_r_type - BFD_RELOC_UNUSED;
       const CGEN_OPERAND *operand
 	= cgen_operand_lookup_by_num(gas_cgen_cpu_desc, opindex);
       reloc_type = md_cgen_lookup_reloc (insn, operand, fixP);
@@ -2081,12 +2081,12 @@ mep_fix_adjustable (fixS *fixP)
 }
 
 bfd_vma
-mep_elf_section_letter (int letter, const char **ptrmsg)
+mep_elf_section_letter (int letter, const char **extra)
 {
   if (letter == 'v')
     return SHF_MEP_VLIW;
 
-  *ptrmsg = _("bad .section directive: want a,v,w,x,M,S in string");
+  *extra = "v";
   return -1;
 }
 

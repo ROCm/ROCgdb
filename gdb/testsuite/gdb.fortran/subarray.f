@@ -1,4 +1,4 @@
-c Copyright 2005-2024 Free Software Foundation, Inc.
+c Copyright 2005-2025 Free Software Foundation, Inc.
 
 c This program is free software; you can redistribute it and/or modify
 c it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ c by Wu Zhou. (woodzltc@cn.ibm.com)
         character *7 str
         integer array(7)
 
-c Initialize character array "str" and integer array "array". 
+c Initialize character array "str" and integer array "array".
         str = 'abcdefg'
         do i = 1, 7
           array(i) = i

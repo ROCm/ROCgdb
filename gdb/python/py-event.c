@@ -1,6 +1,6 @@
 /* Python interface to inferior events.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -53,8 +53,8 @@ evpy_add_attribute (PyObject *event, const char *name, PyObject *attr)
 
 /* Initialize the Python event code.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_event (void)
+static int
+gdbpy_initialize_event ()
 {
   return gdbpy_type_ready (&event_object_type);
 }

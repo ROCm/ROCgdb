@@ -1,4 +1,4 @@
-#   Copyright 1997-2024 Free Software Foundation, Inc.
+#   Copyright 1997-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ set lib2src  ${srcdir}/${subdir}/${srcfile3}
 set lib1     [standard_output_file shr1.sl]
 set lib2     [standard_output_file shr2.sl]
 
-set lib_opts "debug"
+set lib_opts {debug shlib}
 
 set exec_opts {}
 lappend exec_opts debug
@@ -50,16 +50,18 @@ lappend exec_opts shlib=$lib1
 lappend exec_opts shlib=$lib2
 lappend_include_file exec_opts $srcdir/lib/unbuffer_output.c
 
-if { [gdb_compile_shlib ${lib1src} ${lib1} $lib_opts] != ""
-     || [gdb_compile_shlib ${lib2src} ${lib2} $lib_opts] != ""
-     || [gdb_compile ${srcfile} ${binfile} executable $exec_opts] != ""} {
-    untested "failed to compile"
-    return -1
+if { [build_executable "build shlib 1" $lib1 $lib1src $lib_opts] != 0 } {
+    return
 }
 
-# Start with a fresh gdb.
+if { [build_executable "build shlib 2" $lib2 $lib2src $lib_opts] != 0 } {
+    return
+}
 
-clean_restart ${binfile}
+if { [prepare_for_testing "prepare" $testfile $srcfile $exec_opts] != 0 } {
+    return
+}
+
 gdb_load_shlib $lib1
 gdb_load_shlib $lib2
 
@@ -78,7 +80,7 @@ gdb_test "next 2" "g = shr1\\(g\\);" "next to shr1"
 gdb_test "print g" "\[0-9\]* = 1"
 
 #step -over
-if ![gdb_skip_stdio_test "next over shr1"] {
+if {![gdb_skip_stdio_test "next over shr1"]} {
     gdb_test_stdio "next" \
 	"address of sgs is $hex" \
 	"g = shr2\\(g\\);" \
@@ -92,7 +94,7 @@ if ![gdb_skip_stdio_test "next over shr1"] {
 gdb_test "print g" "\[0-9\]* = 2" "print g two"
 
 #print shr1(1)
-if ![gdb_skip_stdio_test "print shr1(1)"] {
+if {![gdb_skip_stdio_test "print shr1(1)"]} {
     gdb_test_stdio "print shr1(1)" \
 	"address of sgs is $hex" \
 	"\[0-9\]* = 2" \
@@ -100,7 +102,7 @@ if ![gdb_skip_stdio_test "print shr1(1)"] {
 }
 
 #print shr1(g)
-if ![gdb_skip_stdio_test "print shr1(g)"] {
+if {![gdb_skip_stdio_test "print shr1(g)"]} {
     gdb_test_stdio "print shr1(g)" \
 	"address of sgs is $hex" \
 	"\[0-9\]* = 4" \
@@ -119,7 +121,7 @@ gdb_test "continue" \
 
 
 #print shr1(1)
-if ![gdb_skip_stdio_test "print shr1(1) 2nd time"] {
+if {![gdb_skip_stdio_test "print shr1(1) 2nd time"]} {
     gdb_test_stdio "print shr1(1)" \
 	"address of sgs is $hex" \
 	"\[0-9\]* = 2" \
@@ -161,7 +163,7 @@ gdb_test "step" "mainshr1 \\(g=4\\) at.*return 2.g;" \
 
 # Start with a fresh gdb.
 
-clean_restart $binfile
+clean_restart $testfile
 
 # PR's 16495, 18213
 # test that we can re-set breakpoints in shared libraries

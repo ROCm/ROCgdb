@@ -1,4 +1,4 @@
-# Copyright 2024 Free Software Foundation, Inc.
+# Copyright 2024-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,20 +33,20 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	compile_unit {
-	    {language @DW_LANG_C_plus_plus}
-	    {name $srcfile}
+	    DW_AT_language @DW_LANG_C_plus_plus
+	    DW_AT_name $srcfile
 	} {
 	    subprogram {
-		{MACRO_AT_range {func_demangled_test}}
-		{linkage_name "_FUNC_WRONG_MANGLED__"}
-		{name "func_demangled_test"}
-		{external 1 flag}
+		MACRO_AT_range {func_demangled_test}
+		DW_AT_linkage_name "_FUNC_WRONG_MANGLED__"
+		DW_AT_name "func_demangled_test"
+		DW_AT_external 1 flag
 	    }
 	    subprogram {
-		{MACRO_AT_range {main}}
-		{external 1 flag}
-		{name main}
-		{main_subprogram 1 flag}
+		MACRO_AT_range {main}
+		DW_AT_external 1 flag
+		DW_AT_name main
+		DW_AT_main_subprogram 1 flag
 	    }
 	}
     }
@@ -57,7 +57,7 @@ if {[prepare_for_testing "failed to prepare" ${testfile} \
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

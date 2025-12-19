@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2008-2024 Free Software Foundation, Inc.
+   Copyright 2008-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ public:
 	{
 	  function1 (val);
 	}
-      catch (...) 
+      catch (...)
 	{
 	  cout << "Caught and handled function1 exception" << endl;
 	}
@@ -123,8 +123,8 @@ resumebpt_test (int x)
   return x;
 }
 
-int main () 
-{ 
+int main ()
+{
   int testval = -1;
 
   try

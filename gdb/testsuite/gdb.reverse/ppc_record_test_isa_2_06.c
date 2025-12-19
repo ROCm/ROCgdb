@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,4 +36,3 @@ main ()
   __asm__ __volatile__ ("xvsqrtsp 0, 1");
   ra = 0;                               /* stop 2 */
 }
-

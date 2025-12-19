@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -105,7 +105,7 @@ allocate_target_description (void)
 /* See gdbsupport/tdesc.h.  */
 
 void
-target_desc_deleter::operator() (struct target_desc *target_desc) const
+target_desc_deleter::operator() (const target_desc *target_desc) const
 {
   delete target_desc;
 }

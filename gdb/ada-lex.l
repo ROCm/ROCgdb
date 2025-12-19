@@ -1,5 +1,5 @@
 /* FLEX lexer for Ada expressions, for GDB. -*- c++ -*-
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -164,11 +164,11 @@ static void rewind_to_char (int);
 		}
 
 {NUM10}"#"{NUM16}"."{NUM16}"#"{EXP} {
-                   error (_("Based real literals not implemented yet."));
+		   error (_("Based real literals not implemented yet."));
 		}
 
 {NUM10}"#"{NUM16}"."{NUM16}"#" {
-                   error (_("Based real literals not implemented yet."));
+		   error (_("Based real literals not implemented yet."));
 		}
 
 <INITIAL>"'"({GRAPHIC}|\")"'" {
@@ -178,9 +178,9 @@ static void rewind_to_char (int);
 		}
 
 <INITIAL>"'[\""{HEXDIG}{2,}"\"]'"   {
-                   ULONGEST v = strtoulst (yytext+3, nullptr, 16);
+		   ULONGEST v = strtoulst (yytext+3, nullptr, 16);
 		   yylval.typed_char.val = v;
-                   yylval.typed_char.type = type_for_char (pstate, v);
+		   yylval.typed_char.type = type_for_char (pstate, v);
 		   return CHARLIT;
 		}
 
@@ -188,29 +188,29 @@ static void rewind_to_char (int);
 	   digits here.  Currently there's no support for wide or
 	   wide-wide strings.  */
 \"({GRAPHIC}|"[\""({HEXDIG}{2,}|\")"\"]")*\"   {
-	           yylval.sval = processString (yytext+1, yyleng-2);
+		   yylval.sval = processString (yytext+1, yyleng-2);
 		   return STRING;
 		}
 
 \"              {
-                   error (_("ill-formed or non-terminated string literal"));
+		   error (_("ill-formed or non-terminated string literal"));
 		}
 
 
 if		{
-                  rewind_to_char ('i');
+		  rewind_to_char ('i');
 		  return 0;
 		}
 
 task            {
-                  rewind_to_char ('t');
+		  rewind_to_char ('t');
 		  return 0;
 		}
 
 thread{WHITE}+{DIG} {
-                  /* This keyword signals the end of the expression and
-                     will be processed separately.  */
-                  rewind_to_char ('t');
+		  /* This keyword signals the end of the expression and
+		     will be processed separately.  */
+		  rewind_to_char ('t');
 		  return 0;
 		}
 
@@ -243,7 +243,7 @@ xor		{ return XOR; }
 true		{ return TRUEKEYWORD; }
 false		{ return FALSEKEYWORD; }
 
-        /* ATTRIBUTES */
+	/* ATTRIBUTES */
 
 {TICK}([a-z][a-z_]*)?{COMPLETE}? { BEGIN INITIAL; return processAttribute (yytext); }
 
@@ -277,17 +277,17 @@ false		{ return FALSEKEYWORD; }
 		      return 0;
 		    }
 		  else
- 		    {
+		    {
 		      ada_parser->paren_depth -= 1;
 		      return ')';
 		    }
 		}
 
 "."{WHITE}*{ID}{COMPLETE}? {
-	 	  yylval.sval = processId (yytext+1, yyleng-1);
+		  yylval.sval = processId (yytext+1, yyleng-1);
 		  if (yytext[yyleng - 1] == COMPLETE_CHAR)
 		    return DOT_COMPLETE;
-	          return DOT_ID;
+		  return DOT_ID;
 		}
 
 "."{WHITE}*{COMPLETE} {
@@ -297,25 +297,25 @@ false		{ return FALSEKEYWORD; }
 		}
 
 {ID}({WHITE}*"."{WHITE}*({ID}|\"{OPER}\"))*(" "*"'"|{COMPLETE})?  {
-                  int all_posn = find_dot_all (yytext);
+		  int all_posn = find_dot_all (yytext);
 
-                  if (all_posn == -1 && yytext[yyleng-1] == '\'')
+		  if (all_posn == -1 && yytext[yyleng-1] == '\'')
 		    {
 		      BEGIN BEFORE_QUAL_QUOTE;
 		      yyless (yyleng-1);
 		    }
-                  else if (all_posn >= 0)
+		  else if (all_posn >= 0)
 		    yyless (all_posn);
 		  bool is_completion = yytext[yyleng - 1] == COMPLETE_CHAR;
-                  yylval.sval = processId (yytext, yyleng);
-                  return is_completion ? NAME_COMPLETE : NAME;
-               }
+		  yylval.sval = processId (yytext, yyleng);
+		  return is_completion ? NAME_COMPLETE : NAME;
+	       }
 
 
 	/* GDB EXPRESSION CONSTRUCTS  */
 
 "'"[^']+"'"{WHITE}*:: {
-                  yyless (yyleng - 2);
+		  yyless (yyleng - 2);
 		  yylval.sval = processId (yytext, yyleng);
 		  return NAME;
 		}
@@ -335,7 +335,6 @@ false		{ return FALSEKEYWORD; }
 .		{ error (_("Invalid character '%s' in expression."), yytext); }
 %%
 
-#include <ctype.h>
 /* Initialize the lexer for processing new expression. */
 
 static void
@@ -355,7 +354,7 @@ canonicalizeNumeral (char *s1, const char *s2)
     {
       if (*s2 != '_')
 	{
-	  *s1 = tolower(*s2);
+	  *s1 = c_tolower(*s2);
 	  s1 += 1;
 	}
     }
@@ -376,7 +375,7 @@ processInt (struct parser_state *par_state, const char *base0,
   long exp;
   int base;
   /* For the based literal with an "f" prefix, we'll return a
-     floating-point number.  This counts the the number of "l"s seen,
+     floating-point number.  This counts the number of "l"s seen,
      to decide the width of the floating-point number to return.  -1
      means no "f".  */
   int floating_point_l_count = -1;
@@ -411,7 +410,7 @@ processInt (struct parser_state *par_state, const char *base0,
     exp = strtol(exp0, (char **) NULL, 10);
 
   gdb_mpz result;
-  while (isxdigit (*num0))
+  while (c_isxdigit (*num0))
     {
       int dig = fromhex (*num0);
       if (dig >= base)
@@ -527,7 +526,7 @@ processId (const char *name0, int len)
   struct stoken result;
 
   result.ptr = name;
-  while (len > 0 && isspace (name0[len-1]))
+  while (len > 0 && c_isspace (name0[len-1]))
     len -= 1;
 
   if (name0[0] == '<' || strstr (name0, "___") != NULL)
@@ -549,12 +548,12 @@ processId (const char *name0, int len)
 	}
       else if (in_quotes)
 	name[i++] = name0[i0++];
-      else if (isalnum (name0[i0]))
+      else if (c_isalnum (name0[i0]))
 	{
-	  name[i] = tolower (name0[i0]);
+	  name[i] = c_tolower (name0[i0]);
 	  i += 1; i0 += 1;
 	}
-      else if (isspace (name0[i0]))
+      else if (c_isspace (name0[i0]))
 	i0 += 1;
       else if (name0[i0] == '\'')
 	{
@@ -573,7 +572,7 @@ processId (const char *name0, int len)
 }
 
 /* Return TEXT[0..LEN-1], a string literal without surrounding quotes,
-   with special hex character notations replaced with characters. 
+   with special hex character notations replaced with characters.
    Result valid until the next call to ada_parse.  */
 
 static struct stoken
@@ -590,13 +589,13 @@ processString (const char *text, int len)
   while (p < lim)
     {
       if (p[0] == '[' && p[1] == '"' && p+2 < lim)
-         {
-           if (p[2] == '"')  /* "...["""]... */
-             {
-               *q = '"';
+	 {
+	   if (p[2] == '"')  /* "...["""]... */
+	     {
+	       *q = '"';
 	       p += 4;
 	     }
-           else
+	   else
 	     {
 	       const char *end;
 	       ULONGEST chr = strtoulst (p + 2, &end, 16);
@@ -605,9 +604,9 @@ processString (const char *text, int len)
 	       *q = (char) chr;
 	       p = end + 1;
 	     }
-         }
+	 }
        else
-         *q = *p;
+	 *q = *p;
        q += 1;
        p += 1;
      }
@@ -634,10 +633,10 @@ find_dot_all (const char *str)
 
 	do
 	  i += 1;
-	while (isspace (str[i]));
+	while (c_isspace (str[i]));
 
 	if (strncasecmp (str + i, "all", 3) == 0
-	    && !isalnum (str[i + 3]) && str[i + 3] != '_')
+	    && !c_isalnum (str[i + 3]) && str[i + 3] != '_')
 	  return i0;
       }
   return -1;
@@ -653,7 +652,7 @@ subseqMatch (const char *subseq, const char *str)
     return 1;
   else if (str[0] == '\0')
     return 0;
-  else if (tolower (subseq[0]) == tolower (str[0]))
+  else if (c_tolower (subseq[0]) == c_tolower (str[0]))
     return subseqMatch (subseq+1, str+1) || subseqMatch (subseq, str+1);
   else
     return subseqMatch (subseq, str+1);
@@ -690,7 +689,7 @@ processAttribute (const char *str)
 {
   gdb_assert (*str == '\'');
   ++str;
-  while (isspace (*str))
+  while (c_isspace (*str))
     ++str;
 
   int len = strlen (str);
@@ -749,15 +748,15 @@ static void
 rewind_to_char (int ch)
 {
   pstate->lexptr -= yyleng;
-  while (toupper (*pstate->lexptr) != toupper (ch))
+  while (c_toupper (*pstate->lexptr) != c_toupper (ch))
     pstate->lexptr -= 1;
   yyrestart (NULL);
 }
 
 /* Dummy definition to suppress warnings about unused static definitions. */
 typedef void (*dummy_function) ();
-dummy_function ada_flex_use[] = 
-{ 
+dummy_function ada_flex_use[] =
+{
   (dummy_function) yyunput
 };
 

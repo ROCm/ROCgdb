@@ -1,5 +1,5 @@
 /* aarch64-opc.c -- AArch64 opcode support.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -223,221 +223,226 @@ aarch64_select_operand_for_sizeq_field_coding (const aarch64_opcode *opcode)
 
 /* Instruction bit-fields.
 +   Keep synced with 'enum aarch64_field_kind'.  */
-const aarch64_field fields[] =
+const aarch64_field aarch64_fields[] =
 {
-    {  0,  0 },	/* NIL.  */
-    {  8,  4 },	/* CRm: in the system instructions.  */
-    { 10,  2 }, /* CRm_dsb_nxs: 2-bit imm. encoded in CRm<3:2>.  */
-    { 12,  4 },	/* CRn: in the system instructions.  */
-    { 10,  8 }, /* CSSC_imm8.  */
-    { 11,  1 },	/* H: in advsimd scalar x indexed element instructions.  */
-    { 21,  1 },	/* L: in advsimd scalar x indexed element instructions.  */
-    {  0,  5 },	/* LSE128_Rt: Shared input+output operand register.  */
-    { 16,  5 },	/* LSE128_Rt2: Shared input+output operand register 2.  */
-    { 20,  1 },	/* M: in advsimd scalar x indexed element instructions.  */
-    { 22,  1 },	/* N: in logical (immediate) instructions.  */
-    { 30,  1 },	/* Q: in most AdvSIMD instructions.  */
-    { 10,  5 },	/* Ra: in fp instructions.  */
-    {  0,  5 },	/* Rd: in many integer instructions.  */
-    { 16,  5 },	/* Rm: in ld/st reg offset and some integer inst.  */
-    {  5,  5 },	/* Rn: in many integer instructions.  */
-    { 16,  5 },	/* Rs: in load/store exclusive instructions.  */
-    {  0,  5 },	/* Rt: in load/store instructions.  */
-    { 10,  5 },	/* Rt2: in load/store pair instructions.  */
-    { 12,  1 },	/* S: in load/store reg offset instructions.  */
-    { 12,  2 }, /* SM3_imm2: Indexed element SM3 2 bits index immediate.  */
-    {  1,  3 }, /* SME_Pdx2: predicate register, multiple of 2, [3:1].  */
-    { 13,  3 }, /* SME_Pm: second source scalable predicate register P0-P7.  */
-    {  0,  3 }, /* SME_PNd3: PN0-PN7, bits [2:0].  */
-    {  5,  3 }, /* SME_PNn3: PN0-PN7, bits [7:5].  */
-    { 16,  1 }, /* SME_Q: Q class bit, bit 16.  */
-    { 16,  2 }, /* SME_Rm: index base register W12-W15 [17:16].  */
-    { 13,  2 }, /* SME_Rv: vector select register W12-W15, bits [14:13].  */
-    { 15,  1 }, /* SME_V: (horizontal / vertical tiles), bit 15.  */
-    { 10,  1 }, /* SME_VL_10: VLx2 or VLx4, bit [10].  */
-    { 13,  1 }, /* SME_VL_13: VLx2 or VLx4, bit [13].  */
-    {  0,  1 }, /* SME_ZAda_1b: tile ZA0-ZA1.  */
-    {  0,  2 }, /* SME_ZAda_2b: tile ZA0-ZA3.  */
-    {  0,  3 }, /* SME_ZAda_3b: tile ZA0-ZA7.  */
-    {  4,  1 }, /* SME_ZdnT: upper bit of Zt, bit [4].  */
-    {  1,  4 }, /* SME_Zdn2: Z0-Z31, multiple of 2, bits [4:1].  */
-    {  0,  2 }, /* SME_Zdn2_0: lower 2 bits of Zt, bits [1:0].  */
-    {  2,  3 }, /* SME_Zdn4: Z0-Z31, multiple of 4, bits [4:2].  */
-    { 16,  4 }, /* SME_Zm: Z0-Z15, bits [19:16].  */
-    { 17,  4 }, /* SME_Zm2: Z0-Z31, multiple of 2, bits [20:17].  */
-    { 18,  3 }, /* SME_Zm4: Z0-Z31, multiple of 4, bits [20:18].  */
-    {  6,  4 }, /* SME_Zn2: Z0-Z31, multiple of 2, bits [9:6].  */
-    {  7,  3 }, /* SME_Zn4: Z0-Z31, multiple of 4, bits [9:7].  */
-    {  4,  1 }, /* SME_ZtT: upper bit of Zt, bit [4].  */
-    {  0,  3 }, /* SME_Zt3: lower 3 bits of Zt, bits [2:0].  */
-    {  0,  2 }, /* SME_Zt2: lower 2 bits of Zt, bits [1:0].  */
-    { 23,  1 }, /* SME_i1: immediate field, bit 23.  */
-    { 12,  2 }, /* SME_size_12: bits [13:12].  */
-    { 22,  2 }, /* SME_size_22: size<1>, size<0> class field, [23:22].  */
-    { 23,  1 }, /* SME_sz_23: bit [23].  */
-    { 22,  1 }, /* SME_tszh: immediate and qualifier field, bit 22.  */
-    { 18,  3 }, /* SME_tszl: immediate and qualifier field, bits [20:18].  */
-    { 0,   8 }, /* SME_zero_mask: list of up to 8 tile names separated by commas [7:0].  */
-    {  4,  1 }, /* SVE_M_4: Merge/zero select, bit 4.  */
-    { 14,  1 }, /* SVE_M_14: Merge/zero select, bit 14.  */
-    { 16,  1 }, /* SVE_M_16: Merge/zero select, bit 16.  */
-    { 17,  1 }, /* SVE_N: SVE equivalent of N.  */
-    {  0,  4 }, /* SVE_Pd: p0-p15, bits [3,0].  */
-    { 10,  3 }, /* SVE_Pg3: p0-p7, bits [12,10].  */
-    {  5,  4 }, /* SVE_Pg4_5: p0-p15, bits [8,5].  */
-    { 10,  4 }, /* SVE_Pg4_10: p0-p15, bits [13,10].  */
-    { 16,  4 }, /* SVE_Pg4_16: p0-p15, bits [19,16].  */
-    { 16,  4 }, /* SVE_Pm: p0-p15, bits [19,16].  */
-    {  5,  4 }, /* SVE_Pn: p0-p15, bits [8,5].  */
-    {  0,  4 }, /* SVE_Pt: p0-p15, bits [3,0].  */
-    {  5,  5 }, /* SVE_Rm: SVE alternative position for Rm.  */
-    { 16,  5 }, /* SVE_Rn: SVE alternative position for Rn.  */
-    {  0,  5 }, /* SVE_Vd: Scalar SIMD&FP register, bits [4,0].  */
-    {  5,  5 }, /* SVE_Vm: Scalar SIMD&FP register, bits [9,5].  */
-    {  5,  5 }, /* SVE_Vn: Scalar SIMD&FP register, bits [9,5].  */
-    {  5,  5 }, /* SVE_Za_5: SVE vector register, bits [9,5].  */
-    { 16,  5 }, /* SVE_Za_16: SVE vector register, bits [20,16].  */
-    {  0,  5 }, /* SVE_Zd: SVE vector register. bits [4,0].  */
-    {  5,  5 }, /* SVE_Zm_5: SVE vector register, bits [9,5].  */
-    { 16,  5 }, /* SVE_Zm_16: SVE vector register, bits [20,16]. */
-    {  5,  5 }, /* SVE_Zn: SVE vector register, bits [9,5].  */
-    {  0,  5 }, /* SVE_Zt: SVE vector register, bits [4,0].  */
-    {  5,  1 }, /* SVE_i1: single-bit immediate.  */
-    { 23,  1 }, /* SVE_i1_23: single-bit immediate.  */
-    { 22,  2 }, /* SVE_i2: 2-bit index, bits [23,22].  */
-    { 20,  1 }, /* SVE_i2h: high bit of 2bit immediate, bits.  */
-    { 22,  1 }, /* SVE_i3h: high bit of 3-bit immediate.  */
-    { 19,  2 }, /* SVE_i3h2: two high bits of 3bit immediate, bits [20,19].  */
-    { 22,  2 }, /* SVE_i3h3: two high bits of 3bit immediate, bits [22,23].  */
-    { 11,  1 }, /* SVE_i3l: low bit of 3-bit immediate.  */
-    { 12,  1 }, /* SVE_i3l2: low bit of 3-bit immediate, bit 12.  */
-    { 10,  2 }, /* SVE_i4l2: two low bits of 4bit immediate, bits [11,10].  */
-    { 16,  3 }, /* SVE_imm3: 3-bit immediate field.  */
-    { 16,  4 }, /* SVE_imm4: 4-bit immediate field.  */
-    {  5,  5 }, /* SVE_imm5: 5-bit immediate field.  */
-    { 16,  5 }, /* SVE_imm5b: secondary 5-bit immediate field.  */
-    { 16,  6 }, /* SVE_imm6: 6-bit immediate field.  */
-    { 14,  7 }, /* SVE_imm7: 7-bit immediate field.  */
-    {  5,  8 }, /* SVE_imm8: 8-bit immediate field.  */
-    {  5,  9 }, /* SVE_imm9: 9-bit immediate field.  */
-    { 11,  6 }, /* SVE_immr: SVE equivalent of immr.  */
-    {  5,  6 }, /* SVE_imms: SVE equivalent of imms.  */
-    { 10,  2 }, /* SVE_msz: 2-bit shift amount for ADR.  */
-    {  5,  5 }, /* SVE_pattern: vector pattern enumeration.  */
-    {  0,  4 }, /* SVE_prfop: prefetch operation for SVE PRF[BHWD].  */
-    { 16,  1 }, /* SVE_rot1: 1-bit rotation amount.  */
-    { 10,  2 }, /* SVE_rot2: 2-bit rotation amount.  */
-    { 10,  1 }, /* SVE_rot3: 1-bit rotation amount at bit 10.  */
-    { 17,  2 }, /* SVE_size: 2-bit element size, bits [18,17].  */
-    { 22,  1 }, /* SVE_sz: 1-bit element size select.  */
-    { 30,  1 }, /* SVE_sz2: 1-bit element size select.  */
-    { 16,  4 }, /* SVE_tsz: triangular size select.  */
-    { 22,  2 }, /* SVE_tszh: triangular size select high, bits [23,22].  */
-    {  8,  2 }, /* SVE_tszl_8: triangular size select low, bits [9,8].  */
-    { 19,  2 }, /* SVE_tszl_19: triangular size select low, bits [20,19].  */
-    { 14,  1 }, /* SVE_xs_14: UXTW/SXTW select (bit 14).  */
-    { 22,  1 }, /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
-    { 22,  1 },	/* S_imm10: in LDRAA and LDRAB instructions.  */
-    { 16,  3 },	/* abc: a:b:c bits in AdvSIMD modified immediate.  */
-    { 13,  3 },	/* asisdlso_opcode: opcode in advsimd ld/st single element.  */
-    { 19,  5 },	/* b40: in the test bit and branch instructions.  */
-    { 31,  1 },	/* b5: in the test bit and branch instructions.  */
-    { 12,  4 },	/* cmode: in advsimd modified immediate instructions.  */
-    { 12,  4 },	/* cond: condition flags as a source operand.  */
-    {  0,  4 },	/* cond2: condition in truly conditional-executed inst.  */
-    {  5,  5 },	/* defgh: d:e:f:g:h bits in AdvSIMD modified immediate.  */
-    { 21,  2 },	/* hw: in move wide constant instructions.  */
-    {  0,  1 },	/* imm1_0: general immediate in bits [0].  */
-    {  2,  1 },	/* imm1_2: general immediate in bits [2].  */
-    {  3,  1 },	/* imm1_3: general immediate in bits [3].  */
-    {  8,  1 },	/* imm1_8: general immediate in bits [8].  */
-    { 10,  1 },	/* imm1_10: general immediate in bits [10].  */
-    { 14,  1 },	/* imm1_14: general immediate in bits [14].  */
-    { 15,  1 },	/* imm1_15: general immediate in bits [15].  */
-    { 16,  1 },	/* imm1_16: general immediate in bits [16].  */
-    {  0,  2 },	/* imm2_0: general immediate in bits [1:0].  */
-    {  1,  2 },	/* imm2_1: general immediate in bits [2:1].  */
-    {  2,  2 },	/* imm2_2: general immediate in bits [3:2].  */
-    {  8,  2 },	/* imm2_8: general immediate in bits [9:8].  */
-    { 10,  2 }, /* imm2_10: 2-bit immediate, bits [11:10] */
-    { 12,  2 }, /* imm2_12: 2-bit immediate, bits [13:12] */
-    { 13,  2 }, /* imm2_13: 2-bit immediate, bits [14:13] */
-    { 15,  2 }, /* imm2_15: 2-bit immediate, bits [16:15] */
-    { 16,  2 }, /* imm2_16: 2-bit immediate, bits [17:16] */
-    { 19,  2 }, /* imm2_19: 2-bit immediate, bits [20:19] */
-    {  0,  3 },	/* imm3_0: general immediate in bits [2:0].  */
-    {  5,  3 },	/* imm3_5: general immediate in bits [7:5].  */
-    { 10,  3 },	/* imm3_10: in add/sub extended reg instructions.  */
-    { 12,  3 },	/* imm3_12: general immediate in bits [14:12].  */
-    { 14,  3 },	/* imm3_14: general immediate in bits [16:14].  */
-    { 15,  3 },	/* imm3_15: general immediate in bits [17:15].  */
-    { 19,  3 },	/* imm3_19: general immediate in bits [21:19].  */
-    {  0,  4 },	/* imm4_0: in rmif instructions.  */
-    {  5,  4 }, /* imm4_5: in SME instructions.  */
-    { 10,  4 },	/* imm4_10: in adddg/subg instructions.  */
-    { 11,  4 },	/* imm4_11: in advsimd ext and advsimd ins instructions.  */
-    { 14,  4 },	/* imm4_14: general immediate in bits [17:14].  */
-    { 16,  5 },	/* imm5: in conditional compare (immediate) instructions.  */
-    { 10,  6 },	/* imm6_10: in add/sub reg shifted instructions.  */
-    { 15,  6 },	/* imm6_15: in rmif instructions.  */
-    { 15,  7 },	/* imm7: in load/store pair pre/post index instructions.  */
-    { 13,  8 },	/* imm8: in floating-point scalar move immediate inst.  */
-    { 12,  9 },	/* imm9: in load/store pre/post index instructions.  */
-    { 10, 12 },	/* imm12: in ld/st unsigned imm or add/sub shifted inst.  */
-    {  5, 14 },	/* imm14: in test bit and branch instructions.  */
-    {  0, 16 },	/* imm16_0: in udf instruction. */
-    {  5, 16 },	/* imm16_5: in exception instructions.  */
-    { 17,  1 }, /* imm17_1: in 1 bit element index.  */
-    { 17,  2 }, /* imm17_2: in 2 bits element index.  */
-    {  5, 19 },	/* imm19: e.g. in CBZ.  */
-    {  0, 26 },	/* imm26: in unconditional branch instructions.  */
-    { 16,  3 },	/* immb: in advsimd shift by immediate instructions.  */
-    { 19,  4 },	/* immh: in advsimd shift by immediate instructions.  */
-    {  5, 19 },	/* immhi: e.g. in ADRP.  */
-    { 29,  2 },	/* immlo: e.g. in ADRP.  */
-    { 16,  6 },	/* immr: in bitfield and logical immediate instructions.  */
-    { 10,  6 },	/* imms: in bitfield and logical immediate instructions.  */
-    { 11,  1 },	/* index: in ld/st inst deciding the pre/post-index.  */
-    { 24,  1 },	/* index2: in ld/st pair inst deciding the pre/post-index.  */
-    { 30,  2 },	/* ldst_size: size field in ld/st reg offset inst.  */
-    { 13,  2 },	/* len: in advsimd tbl/tbx instructions.  */
-    { 30,  1 },	/* lse_sz: in LSE extension atomic instructions.  */
-    {  0,  4 },	/* nzcv: flag bit specifier, encoded in the "nzcv" field.  */
-    { 29,  1 },	/* op: in AdvSIMD modified immediate instructions.  */
-    { 19,  2 },	/* op0: in the system instructions.  */
-    { 16,  3 },	/* op1: in the system instructions.  */
-    {  5,  3 },	/* op2: in the system instructions.  */
-    { 22,  2 },	/* opc: in load/store reg offset instructions.  */
-    { 23,  1 },	/* opc1: in load/store reg offset instructions.  */
-    { 12,  4 },	/* opcode: in advsimd load/store instructions.  */
-    { 13,  3 },	/* option: in ld/st reg offset + add/sub extended reg inst.  */
-    { 11,  2 }, /* rotate1: FCMLA immediate rotate.  */
-    { 13,  2 }, /* rotate2: Indexed element FCMLA immediate rotate.  */
-    { 12,  1 }, /* rotate3: FCADD immediate rotate.  */
-    { 10,  6 },	/* scale: in the fixed-point scalar to fp converting inst.  */
-    { 31,  1 },	/* sf: in integer data processing instructions.  */
-    { 22,  2 },	/* shift: in add/sub reg/imm shifted instructions.  */
-    { 22,  2 },	/* size: in most AdvSIMD and floating-point instructions.  */
-    { 22,  1 }, /* sz: 1-bit element size select.  */
-    { 22,  2 },	/* type: floating point type field in fp data inst.  */
-    { 10,  2 },	/* vldst_size: size field in the AdvSIMD load/store inst.  */
-    {  5,  3 }, /* off3: immediate offset used to calculate slice number in a
-		   ZA tile.  */
-    {  5,  2 }, /* off2: immediate offset used to calculate slice number in
-		   a ZA tile.  */
-    {  7,  1 }, /* ZAn_1: name of the 1bit encoded ZA tile.  */
-    {  5,  1 }, /* ol: immediate offset used to calculate slice number in a ZA
-		   tile.  */
-    {  6,  2 }, /* ZAn_2: name of the 2bit encoded ZA tile.  */
-    {  5,  3 }, /* ZAn_3: name of the 3bit encoded ZA tile.  */
-    {  6,  1 }, /* ZAn: name of the bit encoded ZA tile.  */
-    { 12,  4 },	/* opc2: in rcpc3 ld/st inst deciding the pre/post-index.  */
-    { 30,  2 },	/* rcpc3_size: in rcpc3 ld/st, field controls Rt/Rt2 width.  */
-    {  5,  1 },	/* FLD_brbop: used in BRB to mean IALL or INJ.  */
-    {  8,  1 }, /* ZA8_1: name of the 1 bit encoded ZA tile ZA0-ZA1.  */
-    {  7,  2 }, /* ZA7_2: name of the 2 bits encoded ZA tile ZA0-ZA3.  */
-    {  6,  3 }, /* ZA6_3: name of the 3 bits encoded ZA tile ZA0-ZA7.  */
-    {  5,  4 }, /* ZA5_4: name of the 4 bits encoded ZA tile ZA0-ZA15.  */
+    AARCH64_FIELD_NIL,	/* NIL.  */
+    AARCH64_FIELD_CONST (0, 1),	/* CONST_0.  */
+    AARCH64_FIELD_CONST (0, 2),	/* CONST_00.  */
+    AARCH64_FIELD_CONST (1, 2),	/* CONST_01.  */
+    AARCH64_FIELD_CONST (1, 1),	/* CONST_1.  */
+    AARCH64_FIELD ( 8, 4), /* CRm: in the system instructions.  */
+    AARCH64_FIELD (10, 2), /* CRm_dsb_nxs: 2-bit imm. encoded in CRm<3:2>.  */
+    AARCH64_FIELD (12, 4), /* CRn: in the system instructions.  */
+    AARCH64_FIELD (10, 8), /* CSSC_imm8.  */
+    AARCH64_FIELD (11, 1), /* H: in advsimd scalar x indexed element instructions.  */
+    AARCH64_FIELD (21, 1), /* L: in advsimd scalar x indexed element instructions.  */
+    AARCH64_FIELD ( 0, 5), /* LSE128_Rt: Shared input+output operand register.  */
+    AARCH64_FIELD (16, 5), /* LSE128_Rt2: Shared input+output operand register 2.  */
+    AARCH64_FIELD (20, 1), /* M: in advsimd scalar x indexed element instructions.  */
+    AARCH64_FIELD (22, 1), /* N: in logical (immediate) instructions.  */
+    AARCH64_FIELD (30, 1), /* Q: in most AdvSIMD instructions.  */
+    AARCH64_FIELD (10, 5), /* Ra: in fp instructions.  */
+    AARCH64_FIELD ( 0, 5), /* Rd: in many integer instructions.  */
+    AARCH64_FIELD (16, 5), /* Rm: in ld/st reg offset and some integer inst.  */
+    AARCH64_FIELD ( 5, 5), /* Rn: in many integer instructions.  */
+    AARCH64_FIELD (16, 5), /* Rs: in load/store exclusive instructions.  */
+    AARCH64_FIELD ( 0, 5), /* Rt: in load/store instructions.  */
+    AARCH64_FIELD (10, 5), /* Rt2: in load/store pair instructions.  */
+    AARCH64_FIELD (12, 1), /* S: in load/store reg offset instructions.  */
+    AARCH64_FIELD (12, 2), /* SM3_imm2: Indexed element SM3 2 bits index immediate.  */
+    AARCH64_FIELD ( 1, 3), /* SME_Pdx2: predicate register, multiple of 2, [3:1].  */
+    AARCH64_FIELD (13, 3), /* SME_Pm: second source scalable predicate register P0-P7.  */
+    AARCH64_FIELD ( 0, 3), /* SME_PNd3: PN0-PN7, bits [2:0].  */
+    AARCH64_FIELD ( 5, 3), /* SME_PNn3: PN0-PN7, bits [7:5].  */
+    AARCH64_FIELD (16, 1), /* SME_Q: Q class bit, bit 16.  */
+    AARCH64_FIELD (16, 2), /* SME_Rm: index base register W12-W15 [17:16].  */
+    AARCH64_FIELD (13, 2), /* SME_Rv: vector select register W12-W15, bits [14:13].  */
+    AARCH64_FIELD (15, 1), /* SME_V: (horizontal / vertical tiles), bit 15.  */
+    AARCH64_FIELD (10, 1), /* SME_VL_10: VLx2 or VLx4, bit [10].  */
+    AARCH64_FIELD (13, 1), /* SME_VL_13: VLx2 or VLx4, bit [13].  */
+    AARCH64_FIELD ( 0, 1), /* SME_ZAda_1b: tile ZA0-ZA1.  */
+    AARCH64_FIELD ( 0, 2), /* SME_ZAda_2b: tile ZA0-ZA3.  */
+    AARCH64_FIELD ( 0, 3), /* SME_ZAda_3b: tile ZA0-ZA7.  */
+    AARCH64_FIELD ( 1, 4), /* SME_Zdn2: Z0-Z31, multiple of 2, bits [4:1].  */
+    AARCH64_FIELD ( 2, 3), /* SME_Zdn4: Z0-Z31, multiple of 4, bits [4:2].  */
+    AARCH64_FIELD (16, 4), /* SME_Zm: Z0-Z15, bits [19:16].  */
+    AARCH64_FIELD (17, 3), /* SME_Zm17_3: Z0-Z15/Z16-Z31, multiple of 2, bits [19:17].  */
+    AARCH64_FIELD (17, 4), /* SME_Zm2: Z0-Z31, multiple of 2, bits [20:17].  */
+    AARCH64_FIELD (18, 3), /* SME_Zm4: Z0-Z31, multiple of 4, bits [20:18].  */
+    AARCH64_FIELD ( 6, 4), /* SME_Zn2: Z0-Z31, multiple of 2, bits [9:6].  */
+    AARCH64_FIELD ( 7, 3), /* SME_Zn4: Z0-Z31, multiple of 4, bits [9:7].  */
+    AARCH64_FIELD ( 6, 3), /* SME_Zn6_3: Z0-Z15/Z16-Z31, multiple of 2, bits [8:6].  */
+    AARCH64_FIELD ( 4, 1), /* SME_ZtT: upper bit of Zt, bit [4].  */
+    AARCH64_FIELD ( 0, 3), /* SME_Zt3: lower 3 bits of Zt, bits [2:0].  */
+    AARCH64_FIELD ( 0, 2), /* SME_Zt2: lower 2 bits of Zt, bits [1:0].  */
+    AARCH64_FIELD (23, 1), /* SME_i1: immediate field, bit 23.  */
+    AARCH64_FIELD (12, 2), /* SME_size_12: bits [13:12].  */
+    AARCH64_FIELD (22, 2), /* SME_size_22: size<1>, size<0> class field, [23:22].  */
+    AARCH64_FIELD (23, 1), /* SME_sz_23: bit [23].  */
+    AARCH64_FIELD (22, 1), /* SME_tszh: immediate and qualifier field, bit 22.  */
+    AARCH64_FIELD (18, 3), /* SME_tszl: immediate and qualifier field, bits [20:18].  */
+    AARCH64_FIELD (0,  8), /* SME_zero_mask: list of up to 8 tile names separated by commas [7:0].  */
+    AARCH64_FIELD ( 4, 1), /* SVE_M_4: Merge/zero select, bit 4.  */
+    AARCH64_FIELD (14, 1), /* SVE_M_14: Merge/zero select, bit 14.  */
+    AARCH64_FIELD (16, 1), /* SVE_M_16: Merge/zero select, bit 16.  */
+    AARCH64_FIELD (17, 1), /* SVE_N: SVE equivalent of N.  */
+    AARCH64_FIELD ( 0, 4), /* SVE_Pd: p0-p15, bits [3,0].  */
+    AARCH64_FIELD (10, 3), /* SVE_Pg3: p0-p7, bits [12,10].  */
+    AARCH64_FIELD ( 5, 4), /* SVE_Pg4_5: p0-p15, bits [8,5].  */
+    AARCH64_FIELD (10, 4), /* SVE_Pg4_10: p0-p15, bits [13,10].  */
+    AARCH64_FIELD (16, 4), /* SVE_Pg4_16: p0-p15, bits [19,16].  */
+    AARCH64_FIELD (16, 4), /* SVE_Pm: p0-p15, bits [19,16].  */
+    AARCH64_FIELD ( 5, 4), /* SVE_Pn: p0-p15, bits [8,5].  */
+    AARCH64_FIELD ( 0, 4), /* SVE_Pt: p0-p15, bits [3,0].  */
+    AARCH64_FIELD ( 5, 5), /* SVE_Rm: SVE alternative position for Rm.  */
+    AARCH64_FIELD (16, 5), /* SVE_Rn: SVE alternative position for Rn.  */
+    AARCH64_FIELD ( 0, 5), /* SVE_Vd: Scalar SIMD&FP register, bits [4,0].  */
+    AARCH64_FIELD ( 5, 5), /* SVE_Vm: Scalar SIMD&FP register, bits [9,5].  */
+    AARCH64_FIELD ( 5, 5), /* SVE_Vn: Scalar SIMD&FP register, bits [9,5].  */
+    AARCH64_FIELD ( 5, 5), /* SVE_Za_5: SVE vector register, bits [9,5].  */
+    AARCH64_FIELD (16, 5), /* SVE_Za_16: SVE vector register, bits [20,16].  */
+    AARCH64_FIELD ( 0, 5), /* SVE_Zd: SVE vector register. bits [4,0].  */
+    AARCH64_FIELD ( 5, 5), /* SVE_Zm_5: SVE vector register, bits [9,5].  */
+    AARCH64_FIELD (16, 5), /* SVE_Zm_16: SVE vector register, bits [20,16]. */
+    AARCH64_FIELD ( 5, 5), /* SVE_Zn: SVE vector register, bits [9,5].  */
+    AARCH64_FIELD ( 0, 5), /* SVE_Zt: SVE vector register, bits [4,0].  */
+    AARCH64_FIELD ( 5, 1), /* SVE_i1: single-bit immediate.  */
+    AARCH64_FIELD (23, 1), /* SVE_i1_23: single-bit immediate.  */
+    AARCH64_FIELD (22, 2), /* SVE_i2: 2-bit index, bits [23,22].  */
+    AARCH64_FIELD (20, 1), /* SVE_i2h: high bit of 2bit immediate, bits.  */
+    AARCH64_FIELD (22, 1), /* SVE_i3h: high bit of 3-bit immediate.  */
+    AARCH64_FIELD (19, 2), /* SVE_i3h2: two high bits of 3bit immediate, bits [20,19].  */
+    AARCH64_FIELD (22, 2), /* SVE_i3h3: two high bits of 3bit immediate, bits [22,23].  */
+    AARCH64_FIELD (11, 1), /* SVE_i3l: low bit of 3-bit immediate.  */
+    AARCH64_FIELD (12, 1), /* SVE_i3l2: low bit of 3-bit immediate, bit 12.  */
+    AARCH64_FIELD (10, 2), /* SVE_i4l2: two low bits of 4bit immediate, bits [11,10].  */
+    AARCH64_FIELD (16, 3), /* SVE_imm3: 3-bit immediate field.  */
+    AARCH64_FIELD (16, 4), /* SVE_imm4: 4-bit immediate field.  */
+    AARCH64_FIELD ( 5, 5), /* SVE_imm5: 5-bit immediate field.  */
+    AARCH64_FIELD (16, 5), /* SVE_imm5b: secondary 5-bit immediate field.  */
+    AARCH64_FIELD (16, 6), /* SVE_imm6: 6-bit immediate field.  */
+    AARCH64_FIELD (14, 7), /* SVE_imm7: 7-bit immediate field.  */
+    AARCH64_FIELD ( 5, 8), /* SVE_imm8: 8-bit immediate field.  */
+    AARCH64_FIELD ( 5, 9), /* SVE_imm9: 9-bit immediate field.  */
+    AARCH64_FIELD (11, 6), /* SVE_immr: SVE equivalent of immr.  */
+    AARCH64_FIELD ( 5, 6), /* SVE_imms: SVE equivalent of imms.  */
+    AARCH64_FIELD (10, 2), /* SVE_msz: 2-bit shift amount for ADR.  */
+    AARCH64_FIELD ( 5, 5), /* SVE_pattern: vector pattern enumeration.  */
+    AARCH64_FIELD ( 0, 4), /* SVE_prfop: prefetch operation for SVE PRF[BHWD].  */
+    AARCH64_FIELD (16, 1), /* SVE_rot1: 1-bit rotation amount.  */
+    AARCH64_FIELD (10, 2), /* SVE_rot2: 2-bit rotation amount.  */
+    AARCH64_FIELD (10, 1), /* SVE_rot3: 1-bit rotation amount at bit 10.  */
+    AARCH64_FIELD (17, 2), /* SVE_size: 2-bit element size, bits [18,17].  */
+    AARCH64_FIELD (22, 1), /* SVE_sz: 1-bit element size select.  */
+    AARCH64_FIELD (30, 1), /* SVE_sz2: 1-bit element size select.  */
+    AARCH64_FIELD (17, 1), /* SVE_sz3: 1-bit element size select.  */
+    AARCH64_FIELD (14, 1), /* SVE_sz4: 1-bit element size select.  */
+    AARCH64_FIELD (16, 4), /* SVE_tsz: triangular size select.  */
+    AARCH64_FIELD (22, 2), /* SVE_tszh: triangular size select high, bits [23,22].  */
+    AARCH64_FIELD ( 8, 2), /* SVE_tszl_8: triangular size select low, bits [9,8].  */
+    AARCH64_FIELD (19, 2), /* SVE_tszl_19: triangular size select low, bits [20,19].  */
+    AARCH64_FIELD (14, 1), /* SVE_xs_14: UXTW/SXTW select (bit 14).  */
+    AARCH64_FIELD (22, 1), /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
+    AARCH64_FIELD (22, 1), /* S_imm10: in LDRAA and LDRAB instructions.  */
+    AARCH64_FIELD (16, 3), /* abc: a:b:c bits in AdvSIMD modified immediate.  */
+    AARCH64_FIELD (13, 3), /* asisdlso_opcode: opcode in advsimd ld/st single element.  */
+    AARCH64_FIELD (19, 5), /* b40: in the test bit and branch instructions.  */
+    AARCH64_FIELD (31, 1), /* b5: in the test bit and branch instructions.  */
+    AARCH64_FIELD (12, 4), /* cmode: in advsimd modified immediate instructions.  */
+    AARCH64_FIELD (12, 4), /* cond: condition flags as a source operand.  */
+    AARCH64_FIELD ( 0, 4), /* cond2: condition in truly conditional-executed inst.  */
+    AARCH64_FIELD ( 5, 5), /* defgh: d:e:f:g:h bits in AdvSIMD modified immediate.  */
+    AARCH64_FIELD (21, 2), /* hw: in move wide constant instructions.  */
+    AARCH64_FIELD ( 0, 1), /* imm1_0: general immediate in bits [0].  */
+    AARCH64_FIELD ( 2, 1), /* imm1_2: general immediate in bits [2].  */
+    AARCH64_FIELD ( 3, 1), /* imm1_3: general immediate in bits [3].  */
+    AARCH64_FIELD ( 8, 1), /* imm1_8: general immediate in bits [8].  */
+    AARCH64_FIELD (10, 1), /* imm1_10: general immediate in bits [10].  */
+    AARCH64_FIELD (14, 1), /* imm1_14: general immediate in bits [14].  */
+    AARCH64_FIELD (15, 1), /* imm1_15: general immediate in bits [15].  */
+    AARCH64_FIELD (16, 1), /* imm1_16: general immediate in bits [16].  */
+    AARCH64_FIELD ( 0, 2), /* imm2_0: general immediate in bits [1:0].  */
+    AARCH64_FIELD ( 1, 2), /* imm2_1: general immediate in bits [2:1].  */
+    AARCH64_FIELD ( 2, 2), /* imm2_2: general immediate in bits [3:2].  */
+    AARCH64_FIELD ( 4, 2), /* imm2_4: general immediate in bits [5:4].  */
+    AARCH64_FIELD ( 8, 2), /* imm2_8: general immediate in bits [9:8].  */
+    AARCH64_FIELD (10, 2), /* imm2_10: 2-bit immediate, bits [11:10] */
+    AARCH64_FIELD (12, 2), /* imm2_12: 2-bit immediate, bits [13:12] */
+    AARCH64_FIELD (13, 2), /* imm2_13: 2-bit immediate, bits [14:13] */
+    AARCH64_FIELD (15, 2), /* imm2_15: 2-bit immediate, bits [16:15] */
+    AARCH64_FIELD (16, 2), /* imm2_16: 2-bit immediate, bits [17:16] */
+    AARCH64_FIELD (19, 2), /* imm2_19: 2-bit immediate, bits [20:19] */
+    AARCH64_FIELD ( 0, 3), /* imm3_0: general immediate in bits [2:0].  */
+    AARCH64_FIELD ( 5, 3), /* imm3_5: general immediate in bits [7:5].  */
+    AARCH64_FIELD (10, 3), /* imm3_10: in add/sub extended reg instructions.  */
+    AARCH64_FIELD (12, 3), /* imm3_12: general immediate in bits [14:12].  */
+    AARCH64_FIELD (14, 3), /* imm3_14: general immediate in bits [16:14].  */
+    AARCH64_FIELD (15, 3), /* imm3_15: general immediate in bits [17:15].  */
+    AARCH64_FIELD (19, 3), /* imm3_19: general immediate in bits [21:19].  */
+    AARCH64_FIELD ( 0, 4), /* imm4_0: in rmif instructions.  */
+    AARCH64_FIELD ( 5, 4), /* imm4_5: in SME instructions.  */
+    AARCH64_FIELD (10, 4), /* imm4_10: in adddg/subg instructions.  */
+    AARCH64_FIELD (11, 4), /* imm4_11: in advsimd ext and advsimd ins instructions.  */
+    AARCH64_FIELD (14, 4), /* imm4_14: general immediate in bits [17:14].  */
+    AARCH64_FIELD (16, 5), /* imm5: in conditional compare (immediate) instructions.  */
+    AARCH64_FIELD (10, 6), /* imm6_10: in add/sub reg shifted instructions.  */
+    AARCH64_FIELD (15, 6), /* imm6_15: in rmif instructions.  */
+    AARCH64_FIELD (15, 7), /* imm7: in load/store pair pre/post index instructions.  */
+    AARCH64_FIELD (13, 8), /* imm8: in floating-point scalar move immediate inst.  */
+    AARCH64_FIELD (12, 9), /* imm9: in load/store pre/post index instructions.  */
+    AARCH64_FIELD ( 5, 9), /* imm9_5: in CB<cc> (immediate).  */
+    AARCH64_FIELD (10,12), /* imm12: in ld/st unsigned imm or add/sub shifted inst.  */
+    AARCH64_FIELD ( 5,14), /* imm14: in test bit and branch instructions.  */
+    AARCH64_FIELD ( 0,16), /* imm16_0: in udf instruction. */
+    AARCH64_FIELD ( 5,16), /* imm16_5: in exception instructions.  */
+    AARCH64_FIELD (17, 1), /* imm17_1: in 1 bit element index.  */
+    AARCH64_FIELD (17, 2), /* imm17_2: in 2 bits element index.  */
+    AARCH64_FIELD ( 5,19), /* imm19: e.g. in CBZ.  */
+    AARCH64_FIELD ( 0,26), /* imm26: in unconditional branch instructions.  */
+    AARCH64_FIELD (16, 3), /* immb: in advsimd shift by immediate instructions.  */
+    AARCH64_FIELD (19, 4), /* immh: in advsimd shift by immediate instructions.  */
+    AARCH64_FIELD ( 5,19), /* immhi: e.g. in ADRP.  */
+    AARCH64_FIELD (29, 2), /* immlo: e.g. in ADRP.  */
+    AARCH64_FIELD (16, 6), /* immr: in bitfield and logical immediate instructions.  */
+    AARCH64_FIELD (10, 6), /* imms: in bitfield and logical immediate instructions.  */
+    AARCH64_FIELD (11, 1), /* index: in ld/st inst deciding the pre/post-index.  */
+    AARCH64_FIELD (24, 1), /* index2: in ld/st pair inst deciding the pre/post-index.  */
+    AARCH64_FIELD (30, 2), /* ldst_size: size field in ld/st reg offset inst.  */
+    AARCH64_FIELD (13, 2), /* len: in advsimd tbl/tbx instructions.  */
+    AARCH64_FIELD (30, 1), /* lse_sz: in LSE extension atomic instructions.  */
+    AARCH64_FIELD ( 0, 4), /* nzcv: flag bit specifier, encoded in the "nzcv" field.  */
+    AARCH64_FIELD (29, 1), /* op: in AdvSIMD modified immediate instructions.  */
+    AARCH64_FIELD (19, 2), /* op0: in the system instructions.  */
+    AARCH64_FIELD (16, 3), /* op1: in the system instructions.  */
+    AARCH64_FIELD ( 5, 3), /* op2: in the system instructions.  */
+    AARCH64_FIELD (22, 2), /* opc: in load/store reg offset instructions.  */
+    AARCH64_FIELD (23, 1), /* opc1: in load/store reg offset instructions.  */
+    AARCH64_FIELD (12, 4), /* opcode: in advsimd load/store instructions.  */
+    AARCH64_FIELD (13, 3), /* option: in ld/st reg offset + add/sub extended reg inst.  */
+    AARCH64_FIELD (11, 2), /* rotate1: FCMLA immediate rotate.  */
+    AARCH64_FIELD (13, 2), /* rotate2: Indexed element FCMLA immediate rotate.  */
+    AARCH64_FIELD (12, 1), /* rotate3: FCADD immediate rotate.  */
+    AARCH64_FIELD (10, 6), /* scale: in the fixed-point scalar to fp converting inst.  */
+    AARCH64_FIELD (31, 1), /* sf: in integer data processing instructions.  */
+    AARCH64_FIELD (22, 2), /* shift: in add/sub reg/imm shifted instructions.  */
+    AARCH64_FIELD (22, 2), /* size: in most AdvSIMD and floating-point instructions.  */
+    AARCH64_FIELD (22, 1), /* sz: 1-bit element size select.  */
+    AARCH64_FIELD (22, 2), /* type: floating point type field in fp data inst.  */
+    AARCH64_FIELD (10, 2), /* vldst_size: size field in the AdvSIMD load/store inst.  */
+    AARCH64_FIELD ( 5, 3), /* off3: immediate offset used to calculate slice number in a ZA tile.  */
+    AARCH64_FIELD ( 5, 2), /* off2: immediate offset used to calculate slice number in a ZA tile.  */
+    AARCH64_FIELD ( 7, 1), /* ZAn_1: name of the 1bit encoded ZA tile.  */
+    AARCH64_FIELD ( 5, 1), /* ol: immediate offset used to calculate slice number in a ZA tile. */
+    AARCH64_FIELD ( 6, 2), /* ZAn_2: name of the 2bit encoded ZA tile.  */
+    AARCH64_FIELD ( 5, 3), /* ZAn_3: name of the 3bit encoded ZA tile.  */
+    AARCH64_FIELD ( 6, 1), /* ZAn: name of the bit encoded ZA tile.  */
+    AARCH64_FIELD (12, 4), /* opc2: in rcpc3 ld/st inst deciding the pre/post-index.  */
+    AARCH64_FIELD (30, 2), /* rcpc3_size: in rcpc3 ld/st, field controls Rt/Rt2 width.  */
+    AARCH64_FIELD ( 5, 1), /* FLD_brbop: used in BRB to mean IALL or INJ.  */
+    AARCH64_FIELD ( 8, 1), /* ZA8_1: name of the 1 bit encoded ZA tile ZA0-ZA1.  */
+    AARCH64_FIELD ( 7, 2), /* ZA7_2: name of the 2 bits encoded ZA tile ZA0-ZA3.  */
+    AARCH64_FIELD ( 6, 3), /* ZA6_3: name of the 3 bits encoded ZA tile ZA0-ZA7.  */
+    AARCH64_FIELD ( 5, 4), /* ZA5_4: name of the 4 bits encoded ZA tile ZA0-ZA15.  */
 };
 
 enum aarch64_operand_class
@@ -592,12 +597,14 @@ const struct aarch64_name_value_pair aarch64_barrier_dsb_nxs_options[4] =
 const struct aarch64_name_value_pair aarch64_hint_options[] =
 {
   /* BTI.  This is also the F_DEFAULT entry for AARCH64_OPND_BTI_TARGET.  */
-  { " ",	HINT_ENCODE (HINT_OPD_F_NOPRINT, 0x20) },
+  { "r",	HINT_OPD_R },		/* BTI R.  */
   { "csync",	HINT_OPD_CSYNC },	/* PSB CSYNC.  */
   { "dsync",	HINT_OPD_DSYNC },	/* GCSB DSYNC.  */
   { "c",	HINT_OPD_C },		/* BTI C.  */
   { "j",	HINT_OPD_J },		/* BTI J.  */
   { "jc",	HINT_OPD_JC },		/* BTI JC.  */
+  { "keep",	HINT_OPD_KEEP },	/* STSHH KEEP  */
+  { "strm",	HINT_OPD_STRM },	/* STSHH STRM  */
   { NULL,	HINT_OPD_NULL },
 };
 
@@ -631,7 +638,7 @@ const struct aarch64_name_value_pair aarch64_prfops[32] =
   { "pstl3strm", B(2, 3, 1) },
   { "pstslckeep", B(2, 4, 0) },
   { "pstslcstrm", B(2, 4, 1) },
-  { NULL, 0x18 },
+  { "ir", B(3, 1, 0) },
   { NULL, 0x19 },
   { NULL, 0x1a },
   { NULL, 0x1b },
@@ -811,7 +818,7 @@ struct operand_qualifier_data
 };
 
 /* Indexed by the operand qualifier enumerators.  */
-struct operand_qualifier_data aarch64_opnd_qualifiers[] =
+static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 {
   {0, 0, 0, "NIL", OQK_NIL},
 
@@ -1895,6 +1902,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    return 0;
 	  break;
 
+	case AARCH64_OPND_SME_Zn_INDEX2_19:
 	case AARCH64_OPND_SVE_Zm2_22_INDEX:
 	  size = get_operand_fields_width (get_operand_from_code (type));
 	  if (!check_reglane (opnd, mismatch_detail, idx, "z", 0, 31, 0, 3))
@@ -1917,7 +1925,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 
 	case AARCH64_OPND_SME_PNn3_INDEX1:
 	case AARCH64_OPND_SME_PNn3_INDEX2:
-	  size = get_operand_field_width (get_operand_from_code (type), 1);
+	  size = get_operand_field_width (get_operand_from_code (type), 0);
 	  if (!check_reglane (opnd, mismatch_detail, idx, "pn", 8, 15,
 			      0, (1 << size) - 1))
 	    return false;
@@ -1955,16 +1963,46 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	case AARCH64_OPND_SME_Zm_INDEX4_2:
 	case AARCH64_OPND_SME_Zm_INDEX4_3:
 	case AARCH64_OPND_SME_Zm_INDEX4_10:
-	  size = get_operand_fields_width (get_operand_from_code (type)) - 4;
+	  size = get_operand_fields_width (get_operand_from_code (type)) - 5;
 	  if (!check_reglane (opnd, mismatch_detail, idx, "z", 0, 15,
 			      0, (1 << size) - 1))
 	    return false;
 	  break;
 
+	case AARCH64_OPND_SME_Zk_INDEX:
+	  if (!check_reglane (opnd, mismatch_detail, idx, "z", 0, 31, 0, 3))
+	    return false;
+	  if ((opnd->reglane.regno & 20) != 20)
+	    {
+	      set_other_error (mismatch_detail, idx,
+			       _("register out of range"));
+	      return false;
+	    }
+	  break;
+
 	case AARCH64_OPND_SME_Zm:
+	case AARCH64_OPND_SME_Zm_17:
 	  if (opnd->reg.regno > 15)
 	    {
 	      set_invalid_regno_error (mismatch_detail, idx, "z", 0, 15);
+	      return false;
+	    }
+	  break;
+
+	case AARCH64_OPND_SME_Zn_6_3:
+	  if (opnd->reg.regno > 15 || opnd->reg.regno % 2 != 0)
+	    {
+	      set_other_error (mismatch_detail, idx,
+			       _("register out of range"));
+	      return false;
+	    }
+	  break;
+
+	case AARCH64_OPND_SME_Zm_17_3:
+	  if (opnd->reg.regno < 16 || opnd->reg.regno % 2 != 0)
+	    {
+	      set_other_error (mismatch_detail, idx,
+			       _("register out of range"));
 	      return false;
 	    }
 	  break;
@@ -1988,6 +2026,8 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	case AARCH64_OPND_SME_Pdx2:
 	case AARCH64_OPND_SME_Zdnx2:
 	case AARCH64_OPND_SME_Zdnx4:
+	case AARCH64_OPND_SME_Znx2_6_3:
+	case AARCH64_OPND_SME_Zmx2_17_3:
 	case AARCH64_OPND_SME_Zmx2:
 	case AARCH64_OPND_SME_Zmx4:
 	case AARCH64_OPND_SME_Znx2:
@@ -1996,7 +2036,11 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  num = get_operand_specific_data (&aarch64_operands[type]);
 	  if (!check_reglist (opnd, mismatch_detail, idx, num, 1))
 	    return false;
-	  if ((opnd->reglist.first_regno % num) != 0)
+	  if (((opnd->reglist.first_regno % num) != 0)
+	      || (type == AARCH64_OPND_SME_Znx2_6_3
+		  && opnd->reglist.first_regno > 15)
+	      || (type == AARCH64_OPND_SME_Zmx2_17_3
+		  && opnd->reglist.first_regno < 16))
 	    {
 	      set_other_error (mismatch_detail, idx,
 			       _("start register out of range"));
@@ -2004,7 +2048,6 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
-	case AARCH64_OPND_SME_Zdnx4_STRIDED:
 	case AARCH64_OPND_SME_Ztx2_STRIDED:
 	case AARCH64_OPND_SME_Ztx4_STRIDED:
 	  /* 2-register lists have a stride of 8 and 4-register lists
@@ -2420,6 +2463,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
+	case AARCH64_OPND_ADDR_PCREL9:
 	case AARCH64_OPND_ADDR_PCREL14:
 	case AARCH64_OPND_ADDR_PCREL19:
 	case AARCH64_OPND_ADDR_PCREL21:
@@ -2545,12 +2589,16 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  assert (opnd->shifter.operator_present == 0);
 	  break;
 
-	case AARCH64_OPND_SVE_ADDR_R:
 	case AARCH64_OPND_SVE_ADDR_RR:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL2:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL3:
 	case AARCH64_OPND_SVE_ADDR_RR_LSL4:
+	case AARCH64_OPND_SVE_ADDR_RM:
+	case AARCH64_OPND_SVE_ADDR_RM_LSL1:
+	case AARCH64_OPND_SVE_ADDR_RM_LSL2:
+	case AARCH64_OPND_SVE_ADDR_RM_LSL3:
+	case AARCH64_OPND_SVE_ADDR_RM_LSL4:
 	case AARCH64_OPND_SVE_ADDR_RX:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL1:
 	case AARCH64_OPND_SVE_ADDR_RX_LSL2:
@@ -3245,7 +3293,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
-	case AARCH64_OPND_SME_ZT0_INDEX2_12:
+	case AARCH64_OPND_SME_ZT0_INDEX_MUL_VL:
 	  if (!value_in_range_p (opnd->imm.value, 0, 3))
 	    {
 	      set_elem_idx_out_of_range_error (mismatch_detail, idx, 0, 3);
@@ -4015,28 +4063,41 @@ static void
 print_sme_za_list (char *buf, size_t size, int mask,
 		   struct aarch64_styler *styler)
 {
-  const char* zan[] = { "za",    "za0.h", "za1.h", "za0.s",
-                        "za1.s", "za2.s", "za3.s", "za0.d",
-                        "za1.d", "za2.d", "za3.d", "za4.d",
-                        "za5.d", "za6.d", "za7.d", " " };
-  const int zan_v[] = { 0xff, 0x55, 0xaa, 0x11,
-                        0x22, 0x44, 0x88, 0x01,
-                        0x02, 0x04, 0x08, 0x10,
-                        0x20, 0x40, 0x80, 0x00 };
-  int i, k;
-  const int ZAN_SIZE = sizeof(zan) / sizeof(zan[0]);
+  static const struct {
+    unsigned char mask;
+    char name[7];
+  } zan[] = {
+    { 0xff, "za" },
+    { 0x55, "za0.h" },
+    { 0xaa, "za1.h" },
+    { 0x11, "za0.s" },
+    { 0x22, "za1.s" },
+    { 0x44, "za2.s" },
+    { 0x88, "za3.s" },
+    { 0x01, "za0.d" },
+    { 0x02, "za1.d" },
+    { 0x04, "za2.d" },
+    { 0x08, "za3.d" },
+    { 0x10, "za4.d" },
+    { 0x20, "za5.d" },
+    { 0x40, "za6.d" },
+    { 0x80, "za7.d" },
+    { 0x00, " " },
+  };
+  int k;
 
   k = snprintf (buf, size, "{");
-  for (i = 0; i < ZAN_SIZE; i++)
+  for (unsigned int i = 0; i < ARRAY_SIZE (zan); i++)
     {
-      if ((mask & zan_v[i]) == zan_v[i])
-        {
-          mask &= ~zan_v[i];
-          if (k > 1)
+      if ((mask & zan[i].mask) == zan[i].mask)
+	{
+	  mask &= ~zan[i].mask;
+	  if (k > 1)
 	    k += snprintf (buf + k, size - k, ", ");
 
-	  k += snprintf (buf + k, size - k, "%s", style_reg (styler, zan[i]));
-        }
+	  k += snprintf (buf + k, size - k, "%s",
+			 style_reg (styler, zan[i].name));
+	}
       if (mask == 0)
         break;
     }
@@ -4330,6 +4391,9 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Zn:
     case AARCH64_OPND_SVE_Zt:
     case AARCH64_OPND_SME_Zm:
+    case AARCH64_OPND_SME_Zm_17:
+    case AARCH64_OPND_SME_Zn_6_3:
+    case AARCH64_OPND_SME_Zm_17_3:
       if (opnd->qualifier == AARCH64_OPND_QLF_NIL)
        snprintf (buf, size, "%s", style_reg (styler, "z%d", opnd->reg.regno));
       else
@@ -4342,7 +4406,8 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_ZtxN:
     case AARCH64_OPND_SME_Zdnx2:
     case AARCH64_OPND_SME_Zdnx4:
-    case AARCH64_OPND_SME_Zdnx4_STRIDED:
+    case AARCH64_OPND_SME_Znx2_6_3:
+    case AARCH64_OPND_SME_Zmx2_17_3:
     case AARCH64_OPND_SME_Zmx2:
     case AARCH64_OPND_SME_Zmx4:
     case AARCH64_OPND_SME_Znx2:
@@ -4364,6 +4429,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Zm4_11_INDEX:
     case AARCH64_OPND_SVE_Zm4_INDEX:
     case AARCH64_OPND_SVE_Zn_INDEX:
+    case AARCH64_OPND_SME_Zk_INDEX:
     case AARCH64_OPND_SME_Zm_INDEX1:
     case AARCH64_OPND_SME_Zm_INDEX2:
     case AARCH64_OPND_SME_Zm_INDEX2_3:
@@ -4379,6 +4445,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SME_Zn_INDEX1_16:
     case AARCH64_OPND_SME_Zn_INDEX2_15:
     case AARCH64_OPND_SME_Zn_INDEX2_16:
+    case AARCH64_OPND_SME_Zn_INDEX2_19:
     case AARCH64_OPND_SME_Zn_INDEX3_14:
     case AARCH64_OPND_SME_Zn_INDEX3_15:
     case AARCH64_OPND_SME_Zn_INDEX4_14:
@@ -4785,6 +4852,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       snprintf (buf, size, "%s", style_addr (styler, "#0x%" PRIx64 , addr));
       break;
 
+    case AARCH64_OPND_ADDR_PCREL9:
     case AARCH64_OPND_ADDR_PCREL14:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
@@ -4821,12 +4889,16 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_ADDR_REGOFF:
-    case AARCH64_OPND_SVE_ADDR_R:
     case AARCH64_OPND_SVE_ADDR_RR:
     case AARCH64_OPND_SVE_ADDR_RR_LSL1:
     case AARCH64_OPND_SVE_ADDR_RR_LSL2:
     case AARCH64_OPND_SVE_ADDR_RR_LSL3:
     case AARCH64_OPND_SVE_ADDR_RR_LSL4:
+    case AARCH64_OPND_SVE_ADDR_RM:
+    case AARCH64_OPND_SVE_ADDR_RM_LSL1:
+    case AARCH64_OPND_SVE_ADDR_RM_LSL2:
+    case AARCH64_OPND_SVE_ADDR_RM_LSL3:
+    case AARCH64_OPND_SVE_ADDR_RM_LSL4:
     case AARCH64_OPND_SVE_ADDR_RX:
     case AARCH64_OPND_SVE_ADDR_RX_LSL1:
     case AARCH64_OPND_SVE_ADDR_RX_LSL2:
@@ -4924,54 +4996,62 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_SYSREG:
     case AARCH64_OPND_SYSREG128:
-      for (i = 0; aarch64_sys_regs[i].name; ++i)
-	{
-	  const aarch64_sys_reg *sr = aarch64_sys_regs + i;
+      {
+	int min_mismatch = 999;
+	int best_index = -1;
+	uint32_t op_flags = opnd->sysreg.flags;
+	for (i = 0; aarch64_sys_regs[i].name; ++i)
+	  {
+	    const aarch64_sys_reg *sr = aarch64_sys_regs + i;
 
-	  bool exact_match
-	    = (!(sr->flags & (F_REG_READ | F_REG_WRITE))
-	    || (sr->flags & opnd->sysreg.flags) == opnd->sysreg.flags)
-	    && AARCH64_CPU_HAS_ALL_FEATURES (features, sr->features);
+	    if (!(aarch64_sys_regs[i].value == opnd->sysreg.value)
+		|| aarch64_sys_reg_deprecated_p (aarch64_sys_regs[i].flags)
+		|| aarch64_sys_reg_alias_p (aarch64_sys_regs[i].flags))
+	      continue;
 
-	  /* Try and find an exact match, But if that fails, return the first
-	     partial match that was found.  */
-	  if (aarch64_sys_regs[i].value == opnd->sysreg.value
-	      && ! aarch64_sys_reg_deprecated_p (aarch64_sys_regs[i].flags)
-	      && ! aarch64_sys_reg_alias_p (aarch64_sys_regs[i].flags)
-	      && (name == NULL || exact_match))
-	    {
-	      name = aarch64_sys_regs[i].name;
-	      if (exact_match)
-		{
-		  if (notes)
-		    *notes = NULL;
+	    int mismatch_score = 0;
+	    if (!AARCH64_CPU_HAS_ALL_FEATURES (features, sr->features))
+	      mismatch_score += 1;
+	    /* This read/write check only works during disassembly.  During
+	       assembly the value of op_flags was copied from sr->flags.  */
+	    if (((sr->flags & F_REG_READ) && (op_flags & F_REG_WRITE))
+		|| ((sr->flags & F_REG_WRITE) && (op_flags & F_REG_READ)))
+	      mismatch_score += 2;
+
+	    if (mismatch_score < min_mismatch)
+	      {
+		min_mismatch = mismatch_score;
+		best_index = i;
+		if (mismatch_score == 0)
 		  break;
-		}
+	      }
+	  }
+	if (best_index == -1)
+	  {
+	    /* Use encoding-based name for unrecognised system register.  */
+	    unsigned int value = opnd->sysreg.value;
+	    snprintf (buf, size, "%s",
+		      style_reg (styler, "s%u_%u_c%u_c%u_%u",
+				 (value >> 14) & 0x3, (value >> 11) & 0x7,
+				 (value >> 7) & 0xf, (value >> 3) & 0xf,
+				 value & 0x7));
+	  }
+	else
+	  {
+	    const aarch64_sys_reg *sr = aarch64_sys_regs + best_index;
+	    snprintf (buf, size, "%s", style_reg (styler, sr->name));
 
-	      /* If we didn't match exactly, that means the presense of a flag
-		 indicates what we didn't want for this instruction.  e.g. If
-		 F_REG_READ is there, that means we were looking for a write
-		 register.  See aarch64_ext_sysreg.  */
-	      if (aarch64_sys_regs[i].flags & F_REG_WRITE)
-		*notes = _("reading from a write-only register");
-	      else if (aarch64_sys_regs[i].flags & F_REG_READ)
-		*notes = _("writing to a read-only register");
-	    }
-	}
-
-      if (name)
-	snprintf (buf, size, "%s", style_reg (styler, name));
-      else
-	{
-	  /* Implementation defined system register.  */
-	  unsigned int value = opnd->sysreg.value;
-	  snprintf (buf, size, "%s",
-		    style_reg (styler, "s%u_%u_c%u_c%u_%u",
-			       (value >> 14) & 0x3, (value >> 11) & 0x7,
-			       (value >> 7) & 0xf, (value >> 3) & 0xf,
-			       value & 0x7));
-	}
-      break;
+	    /* Add a note if we violated read/write constraints.  */
+	    if (notes && min_mismatch)
+	      {
+		if ((sr->flags & F_REG_READ) && (op_flags & F_REG_WRITE))
+		  *notes = _("writing to a read-only register");
+		else if ((sr->flags & F_REG_WRITE) && (op_flags & F_REG_READ))
+		  *notes = _("reading from a write-only register");
+	      }
+	  }
+	break;
+      }
 
     case AARCH64_OPND_PSTATEFIELD:
       for (i = 0; aarch64_pstatefields[i].name; ++i)
@@ -4991,6 +5071,9 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 		style_reg (styler, aarch64_pstatefields[i].name));
       break;
 
+    case AARCH64_OPND_GIC:
+    case AARCH64_OPND_GICR:
+    case AARCH64_OPND_GSB:
     case AARCH64_OPND_SYSREG_AT:
     case AARCH64_OPND_SYSREG_DC:
     case AARCH64_OPND_SYSREG_IC:
@@ -5021,11 +5104,12 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_PRFOP:
-      if (opnd->prfop->name != NULL)
-	snprintf (buf, size, "%s", style_sub_mnem (styler, opnd->prfop->name));
+      if ((opnd->prfop->name == NULL)
+          || (opcode->iclass != ldst_pos && opnd->prfop->value == 0x18))
+        snprintf (buf, size, "%s",
+                  style_imm (styler, "#0x%02x", opnd->prfop->value));
       else
-	snprintf (buf, size, "%s", style_imm (styler, "#0x%02x",
-					      opnd->prfop->value));
+        snprintf (buf, size, "%s", style_sub_mnem (styler, opnd->prfop->name));
       break;
 
     case AARCH64_OPND_RPRFMOP:
@@ -5055,7 +5139,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       snprintf (buf, size, "%s[%s]", style_reg (styler, "zt0"),
 		style_imm (styler, "%d", (int) opnd->imm.value));
       break;
-    case AARCH64_OPND_SME_ZT0_INDEX2_12:
+    case AARCH64_OPND_SME_ZT0_INDEX_MUL_VL:
       snprintf (buf, size, "%s[%s, %s]", style_reg (styler, "zt0"),
 		style_imm (styler, "%d", (int) opnd->imm.value),
 		style_sub_mnem (styler, "mul vl"));
@@ -5070,9 +5154,12 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_BTI_TARGET:
-      if ((HINT_FLAG (opnd->hint_option->value) & HINT_OPD_F_NOPRINT) == 0)
-	snprintf (buf, size, "%s",
-		  style_sub_mnem (styler, opnd->hint_option->name));
+      snprintf (buf, size, "%s",
+		style_sub_mnem (styler, opnd->hint_option->name));
+      break;
+
+    case AARCH64_OPND_STSHH_POLICY:
+      snprintf (buf, size, "%s", style_sub_mnem (styler, opnd->hint_option->name));
       break;
 
     case AARCH64_OPND_MOPS_ADDR_Rd:
@@ -5163,18 +5250,18 @@ const aarch64_sys_reg aarch64_pstatefields [] =
   { "spsel",	0x05, F_REG_MAX_VALUE (1), AARCH64_NO_FEATURES },
   { "daifset",	0x1e, F_REG_MAX_VALUE (15), AARCH64_NO_FEATURES },
   { "daifclr",	0x1f, F_REG_MAX_VALUE (15), AARCH64_NO_FEATURES },
-  { "pan",	0x04, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (PAN) },
-  { "uao",	0x03, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (V8_2A) },
-  { "ssbs",	0x19, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (SSBS) },
-  { "dit",	0x1a, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (V8_4A) },
-  { "tco",	0x1c, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-  { "svcrsm",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x2,0x1) | F_REG_MAX_VALUE (1)
-		      | F_ARCHEXT, AARCH64_FEATURE (SME) },
-  { "svcrza",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x4,0x1) | F_REG_MAX_VALUE (1)
-		      | F_ARCHEXT, AARCH64_FEATURE (SME) },
-  { "svcrsmza",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x6,0x1) | F_REG_MAX_VALUE (1)
-		      | F_ARCHEXT, AARCH64_FEATURE (SME) },
-  { "allint",	0x08, F_REG_MAX_VALUE (1) | F_ARCHEXT, AARCH64_FEATURE (V8_8A) },
+  { "pan",	0x04, F_REG_MAX_VALUE (1), AARCH64_FEATURE (PAN) },
+  { "uao",	0x03, F_REG_MAX_VALUE (1), AARCH64_FEATURE (V8_2A) },
+  { "ssbs",	0x19, F_REG_MAX_VALUE (1), AARCH64_FEATURE (SSBS) },
+  { "dit",	0x1a, F_REG_MAX_VALUE (1), AARCH64_FEATURE (V8_4A) },
+  { "tco",	0x1c, F_REG_MAX_VALUE (1), AARCH64_FEATURE (MEMTAG) },
+  { "svcrsm",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x2,0x1) | F_REG_MAX_VALUE (1),
+    AARCH64_FEATURE (SME) },
+  { "svcrza",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x4,0x1) | F_REG_MAX_VALUE (1),
+    AARCH64_FEATURE (SME) },
+  { "svcrsmza",	0x1b, PSTATE_ENCODE_CRM_AND_IMM (0x6,0x1) | F_REG_MAX_VALUE (1),
+    AARCH64_FEATURE (SME) },
+  { "allint",	0x08, F_REG_MAX_VALUE (1), AARCH64_FEATURE (V8_8A) },
   { 0,	CPENC (0,0,0,0,0), 0, AARCH64_NO_FEATURES },
 };
 
@@ -5182,9 +5269,6 @@ bool
 aarch64_pstatefield_supported_p (const aarch64_feature_set features,
 				 const aarch64_sys_reg *reg)
 {
-  if (!(reg->flags & F_ARCHEXT))
-    return true;
-
   return AARCH64_CPU_HAS_ALL_FEATURES (features, reg->features);
 }
 
@@ -5199,33 +5283,41 @@ const aarch64_sys_ins_reg aarch64_sys_regs_ic[] =
 const aarch64_sys_ins_reg aarch64_sys_regs_dc[] =
 {
     { "zva",	    CPENS (3, C7, C4, 1),  F_HASXT, AARCH64_NO_FEATURES },
-    { "gva",	    CPENS (3, C7, C4, 3),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "gzva",	    CPENS (3, C7, C4, 4),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "gva",	    CPENS (3, C7, C4, 3),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "gzva",	    CPENS (3, C7, C4, 4),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "ivac",       CPENS (0, C7, C6, 1),  F_HASXT, AARCH64_NO_FEATURES },
-    { "igvac",      CPENS (0, C7, C6, 3),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "igsw",       CPENS (0, C7, C6, 4),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "igvac",      CPENS (0, C7, C6, 3),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "igsw",       CPENS (0, C7, C6, 4),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "isw",	    CPENS (0, C7, C6, 2),  F_HASXT, AARCH64_NO_FEATURES },
-    { "igdvac",	    CPENS (0, C7, C6, 5),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "igdsw",	    CPENS (0, C7, C6, 6),  F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "igdvac",	    CPENS (0, C7, C6, 5),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "igdsw",	    CPENS (0, C7, C6, 6),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cigdvaps",   CPENS (0, C7, C15, 5), F_HASXT, AARCH64_FEATURES (2, MEMTAG, PoPS) },
+    { "civaps",     CPENS (0, C7, C15, 1), F_HASXT, AARCH64_FEATURE (PoPS) },
     { "cvac",       CPENS (3, C7, C10, 1), F_HASXT, AARCH64_NO_FEATURES },
-    { "cgvac",      CPENS (3, C7, C10, 3), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cgdvac",     CPENS (3, C7, C10, 5), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgvac",      CPENS (3, C7, C10, 3), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgdvac",     CPENS (3, C7, C10, 5), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cvaoc",      CPENS (3, C7, C11, 0), F_HASXT, AARCH64_FEATURE (OCCMO) },
+    { "cgdvaoc",    CPENS (3, C7, C11, 7), F_HASXT, AARCH64_FEATURES (2, OCCMO, MEMTAG) },
     { "csw",	    CPENS (0, C7, C10, 2), F_HASXT, AARCH64_NO_FEATURES },
-    { "cgsw",       CPENS (0, C7, C10, 4), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cgdsw",	    CPENS (0, C7, C10, 6), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgsw",       CPENS (0, C7, C10, 4), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgdsw",	    CPENS (0, C7, C10, 6), F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "cvau",       CPENS (3, C7, C11, 1), F_HASXT, AARCH64_NO_FEATURES },
-    { "cvap",       CPENS (3, C7, C12, 1), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (V8_2A) },
-    { "cgvap",      CPENS (3, C7, C12, 3), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cgdvap",     CPENS (3, C7, C12, 5), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cvadp",      CPENS (3, C7, C13, 1), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (CVADP) },
-    { "cgvadp",     CPENS (3, C7, C13, 3), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cgdvadp",    CPENS (3, C7, C13, 5), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "cvap",       CPENS (3, C7, C12, 1), F_HASXT, AARCH64_FEATURE (V8_2A) },
+    { "cgvap",      CPENS (3, C7, C12, 3), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgdvap",     CPENS (3, C7, C12, 5), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cvadp",      CPENS (3, C7, C13, 1), F_HASXT, AARCH64_FEATURE (CVADP) },
+    { "cgvadp",     CPENS (3, C7, C13, 3), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cgdvadp",    CPENS (3, C7, C13, 5), F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "civac",      CPENS (3, C7, C14, 1), F_HASXT, AARCH64_NO_FEATURES },
-    { "cigvac",     CPENS (3, C7, C14, 3), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cigdvac",    CPENS (3, C7, C14, 5), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "cigvac",     CPENS (3, C7, C14, 3), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cigdvac",    CPENS (3, C7, C14, 5), F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "cisw",       CPENS (0, C7, C14, 2), F_HASXT, AARCH64_NO_FEATURES },
-    { "cigsw",      CPENS (0, C7, C14, 4), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
-    { "cigdsw",     CPENS (0, C7, C14, 6), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (MEMTAG) },
+    { "cigsw",      CPENS (0, C7, C14, 4), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "cigdsw",     CPENS (0, C7, C14, 6), F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "civaoc",     CPENS (3, C7, C15, 0), F_HASXT, AARCH64_FEATURE (OCCMO) },
+    { "cigdvaoc",   CPENS (3, C7, C15, 7), F_HASXT, AARCH64_FEATURES (2, OCCMO, MEMTAG) },
+    { "cipae",      CPENS (4, C7, C14, 0), F_HASXT, AARCH64_FEATURE (V8_7A) },
+    { "cigdpae",    CPENS (4, C7, C14, 7), F_HASXT, AARCH64_FEATURE (V8_7A) },
     { "cipapa",     CPENS (6, C7, C14, 1), F_HASXT, AARCH64_NO_FEATURES },
     { "cigdpapa",   CPENS (6, C7, C14, 5), F_HASXT, AARCH64_NO_FEATURES },
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
@@ -5245,11 +5337,11 @@ const aarch64_sys_ins_reg aarch64_sys_regs_at[] =
     { "s1e2w",      CPENS (4, C7, C8, 1), F_HASXT, AARCH64_NO_FEATURES },
     { "s1e3r",      CPENS (6, C7, C8, 0), F_HASXT, AARCH64_NO_FEATURES },
     { "s1e3w",      CPENS (6, C7, C8, 1), F_HASXT, AARCH64_NO_FEATURES },
-    { "s1e1rp",     CPENS (0, C7, C9, 0), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (V8_2A) },
-    { "s1e1wp",     CPENS (0, C7, C9, 1), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (V8_2A) },
-    { "s1e1a",      CPENS (0, C7, C9, 2), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (ATS1A) },
-    { "s1e2a",      CPENS (4, C7, C9, 2), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (ATS1A) },
-    { "s1e3a",      CPENS (6, C7, C9, 2), F_HASXT | F_ARCHEXT, AARCH64_FEATURE (ATS1A) },
+    { "s1e1rp",     CPENS (0, C7, C9, 0), F_HASXT, AARCH64_FEATURE (V8_2A) },
+    { "s1e1wp",     CPENS (0, C7, C9, 1), F_HASXT, AARCH64_FEATURE (V8_2A) },
+    { "s1e1a",      CPENS (0, C7, C9, 2), F_HASXT, AARCH64_FEATURE (ATS1A) },
+    { "s1e2a",      CPENS (4, C7, C9, 2), F_HASXT, AARCH64_FEATURE (ATS1A) },
+    { "s1e3a",      CPENS (6, C7, C9, 2), F_HASXT, AARCH64_FEATURE (ATS1A) },
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
@@ -5262,7 +5354,7 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
 
 #define TLBI_XS_OP(OP, CODE, FLAGS) \
     { OP, CODE, FLAGS, AARCH64_NO_FEATURES }, \
-    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS | F_ARCHEXT, AARCH64_FEATURE (XS) },
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS) },
 
     TLBI_XS_OP ( "vmalle1",   CPENS (0, C8, C7, 0), 0)
     TLBI_XS_OP ( "vae1",      CPENS (0, C8, C7, 1), F_HASXT | F_REG_128)
@@ -5299,8 +5391,8 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
 
 #undef TLBI_XS_OP
 #define TLBI_XS_OP(OP, CODE, FLAGS) \
-    { OP, CODE, FLAGS | F_ARCHEXT, AARCH64_FEATURE (V8_4A) }, \
-    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS | F_ARCHEXT, AARCH64_FEATURE (XS) },
+    { OP, CODE, FLAGS, AARCH64_FEATURE (V8_4A) }, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS) },
 
     TLBI_XS_OP ( "vmalle1os",    CPENS (0, C8, C1, 0), 0 )
     TLBI_XS_OP ( "vae1os",       CPENS (0, C8, C1, 1), F_HASXT | F_REG_128 )
@@ -5355,13 +5447,57 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
+const aarch64_sys_ins_reg aarch64_sys_ins_gic[] =
+{
+    { "cdaff", CPENS (0,C12,C1,3), 0, AARCH64_NO_FEATURES },
+    { "cddi", CPENS (0,C12,C2,0), 0, AARCH64_NO_FEATURES },
+    { "cddis", CPENS (0,C12,C1,0), 0, AARCH64_NO_FEATURES },
+    { "cden", CPENS (0,C12,C1,1), 0, AARCH64_NO_FEATURES },
+    { "cdeoi", CPENS (0,C12,C1,7), 0, AARCH64_NO_FEATURES },
+    { "cdhm", CPENS (0,C12,C2,1), 0, AARCH64_NO_FEATURES },
+    { "cdpend", CPENS (0,C12,C1,4), 0, AARCH64_NO_FEATURES },
+    { "cdpri", CPENS (0,C12,C1,2), 0, AARCH64_NO_FEATURES },
+    { "cdrcfg", CPENS (0,C12,C1,5), 0, AARCH64_NO_FEATURES },
+    { "vdaff", CPENS (4,C12,C1,3), 0, AARCH64_NO_FEATURES },
+    { "vddi", CPENS (4,C12,C2,0), 0, AARCH64_NO_FEATURES },
+    { "vddis", CPENS (4,C12,C1,0), 0, AARCH64_NO_FEATURES },
+    { "vden", CPENS (4,C12,C1,1), 0, AARCH64_NO_FEATURES },
+    { "vdhm", CPENS (4,C12,C2,1), 0, AARCH64_NO_FEATURES },
+    { "vdpend", CPENS (4,C12,C1,4), 0, AARCH64_NO_FEATURES },
+    { "vdpri", CPENS (4,C12,C1,2), 0, AARCH64_NO_FEATURES },
+    { "vdrcfg", CPENS (4,C12,C1,5), 0, AARCH64_NO_FEATURES },
+    { "ldaff", CPENS (6,C12,C1,3), 0, AARCH64_NO_FEATURES },
+    { "lddi", CPENS (6,C12,C2,0), 0, AARCH64_NO_FEATURES },
+    { "lddis", CPENS (6,C12,C1,0), 0, AARCH64_NO_FEATURES },
+    { "lden", CPENS (6,C12,C1,1), 0, AARCH64_NO_FEATURES },
+    { "ldhm", CPENS (6,C12,C2,1), 0, AARCH64_NO_FEATURES },
+    { "ldpend", CPENS (6,C12,C1,4), 0, AARCH64_NO_FEATURES },
+    { "ldpri", CPENS (6,C12,C1,2), 0, AARCH64_NO_FEATURES },
+    { "ldrcfg", CPENS (6,C12,C1,5), 0, AARCH64_NO_FEATURES },
+    { 0, CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
+};
+
+const aarch64_sys_ins_reg aarch64_sys_ins_gicr[] =
+{
+    { "cdia", CPENS (0,C12,C3,0), 0, AARCH64_NO_FEATURES },
+    { "cdnmia", CPENS (0,C12,C3,1), 0, AARCH64_NO_FEATURES },
+    { 0, CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
+};
+
+const aarch64_sys_ins_reg aarch64_sys_ins_gsb[] =
+{
+    { "sys", CPENS (0,C12,0,0), 0, AARCH64_NO_FEATURES },
+    { "ack", CPENS (0,C12,0,1), 0, AARCH64_NO_FEATURES },
+    { 0, CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
+};
+
 const aarch64_sys_ins_reg aarch64_sys_regs_sr[] =
 {
     /* RCTX is somewhat unique in a way that it has different values
        (op2) based on the instruction in which it is used (cfp/dvp/cpp).
        Thus op2 is masked out and instead encoded directly in the
        aarch64_opcode_table entries for the respective instructions.  */
-    { "rctx",   CPENS(3,C7,C3,0), F_HASXT | F_ARCHEXT | F_REG_WRITE, AARCH64_FEATURE (PREDRES) }, /* WO */
+    { "rctx",   CPENS(3,C7,C3,0), F_HASXT | F_REG_WRITE, AARCH64_FEATURE (PREDRES) }, /* WO */
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
@@ -5374,7 +5510,6 @@ aarch64_sys_ins_reg_has_xt (const aarch64_sys_ins_reg *sys_ins_reg)
 extern bool
 aarch64_sys_ins_reg_supported_p (const aarch64_feature_set features,
 				 const char *reg_name,
-				 uint32_t reg_flags,
 				 const aarch64_feature_set *reg_features)
 {
   /* Armv8-R has no EL3.  */
@@ -5384,9 +5519,6 @@ aarch64_sys_ins_reg_supported_p (const aarch64_feature_set features,
       if (suffix && !strcmp (suffix, "_el3"))
 	return false;
     }
-
-  if (!(reg_flags & F_ARCHEXT))
-    return true;
 
   return AARCH64_CPU_HAS_ALL_FEATURES (features, *reg_features);
 }
@@ -5692,10 +5824,21 @@ verify_constraints (const struct aarch64_inst *inst,
 	{
 	  /* Check to see if the MOVPRFX SVE instruction is followed by an SVE
 	     instruction for better error messages.  */
-	  if (!opcode->avariant
-	      || (!AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SVE)
-		  && !AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SVE2)
-		  && !AARCH64_CPU_HAS_FEATURE (*opcode->avariant, SVE2p1)))
+	  bool sve_operand_p = false;
+	  for (int i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
+	    {
+	      enum aarch64_operand_class op_class
+		= aarch64_get_operand_class (opcode->operands[i]);
+	      if (op_class == AARCH64_OPND_CLASS_SVE_REG
+		  || op_class == AARCH64_OPND_CLASS_SVE_REGLIST
+		  || op_class == AARCH64_OPND_CLASS_PRED_REG)
+		{
+		  sve_operand_p = true;
+		  break;
+		}
+	    }
+
+	  if (!sve_operand_p)
 	    {
 	      mismatch_detail->kind = AARCH64_OPDE_SYNTAX_ERROR;
 	      mismatch_detail->error = _("SVE instruction expected after "

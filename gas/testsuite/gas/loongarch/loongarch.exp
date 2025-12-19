@@ -1,5 +1,5 @@
 # Expect script for LoongArch assembler tests.
-#   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -36,5 +36,7 @@ if [istarget loongarch*-*-*] {
   if [istarget loongarch64-*-*] {
     run_list_test "illegal-operand"
     run_list_test "pseudo_op_option_fail"
+    run_list_test "negative_right_shift"
+    run_list_test "div_zero"
   }
 }

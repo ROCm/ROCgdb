@@ -1,6 +1,6 @@
 /* Handle JIT code generation in the inferior for GDB, the GNU Debugger.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -40,7 +40,6 @@
 #include "gdbsupport/gdb-dlfcn.h"
 #include <sys/stat.h>
 #include "gdb_bfd.h"
-#include "readline/tilde.h"
 #include "completer.h"
 #include <forward_list>
 
@@ -80,9 +79,9 @@ maint_info_jit_cmd (const char *args, int from_tty)
   std::optional<ui_out_emit_table> table_emitter;
 
   /* Print a line for each JIT-ed objfile.  */
-  for (objfile *obj : inf->pspace->objfiles ())
+  for (objfile &obj : inf->pspace->objfiles ())
     {
-      if (obj->jited_data == nullptr)
+      if (obj.jited_data == nullptr)
 	continue;
 
       if (!printed_header)
@@ -91,7 +90,7 @@ maint_info_jit_cmd (const char *args, int from_tty)
 
 	  /* The +2 allows for the leading '0x', then one character for
 	     every 4-bits.  */
-	  int addr_width = 2 + (gdbarch_ptr_bit (obj->arch ()) / 4);
+	  int addr_width = 2 + (gdbarch_ptr_bit (obj.arch ()) / 4);
 
 	  /* The std::max here selects between the width of an address (as
 	     a string) and the width of the column header string.  */
@@ -109,12 +108,12 @@ maint_info_jit_cmd (const char *args, int from_tty)
 
       ui_out_emit_tuple tuple_emitter (current_uiout, "jit-objfile");
 
-      current_uiout->field_core_addr ("jit_code_entry-address", obj->arch (),
-				      obj->jited_data->addr);
-      current_uiout->field_core_addr ("symfile-address", obj->arch (),
-				      obj->jited_data->symfile_addr);
+      current_uiout->field_core_addr ("jit_code_entry-address", obj.arch (),
+				      obj.jited_data->addr);
+      current_uiout->field_core_addr ("symfile-address", obj.arch (),
+				      obj.jited_data->symfile_addr);
       current_uiout->field_unsigned ("symfile-size",
-				      obj->jited_data->symfile_size);
+				      obj.jited_data->symfile_size);
       current_uiout->text ("\n");
     }
 }
@@ -179,7 +178,8 @@ jit_reader_load_command (const char *args, int from_tty)
 {
   if (args == NULL)
     error (_("No reader name provided."));
-  gdb::unique_xmalloc_ptr<char> file (tilde_expand (args));
+  gdb::unique_xmalloc_ptr<char> file
+    = gdb_rl_tilde_expand (args);
 
   if (loaded_jit_reader != NULL)
     error (_("JIT reader already loaded.  Run jit-reader-unload first."));
@@ -517,10 +517,7 @@ jit_symtab_close_impl (struct gdb_symbol_callbacks *cb,
 static void
 finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 {
-  struct compunit_symtab *cust;
-  size_t blockvector_size;
   CORE_ADDR begin, end;
-  struct blockvector *bv;
 
   int actual_nblocks = FIRST_LOCAL_BLOCK + stab->nblocks;
 
@@ -533,9 +530,11 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       return a.end > b.end;
     });
 
-  cust = allocate_compunit_symtab (objfile, stab->file_name.c_str ());
+  auto cusymtab = std::make_unique<compunit_symtab> (objfile,
+						     stab->file_name.c_str ());
+  compunit_symtab *cust
+    = add_compunit_symtab_to_objfile (std::move (cusymtab));
   symtab *filetab = allocate_symtab (cust, stab->file_name.c_str ());
-  add_compunit_symtab_to_objfile (cust);
 
   /* JIT compilers compile in memory.  */
   cust->set_dirname (nullptr);
@@ -553,18 +552,12 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       filetab->set_linetable (new_table);
     }
 
-  blockvector_size = (sizeof (struct blockvector)
-		      + (actual_nblocks - 1) * sizeof (struct block *));
-  bv = (struct blockvector *) obstack_alloc (&objfile->objfile_obstack,
-					     blockvector_size);
-  cust->set_blockvector (bv);
+  auto bv = std::make_unique<blockvector> (actual_nblocks);
 
   /* At the end of this function, (begin, end) will contain the PC range this
      entire blockvector spans.  */
-  bv->set_map (nullptr);
   begin = stab->blocks.front ().begin;
   end = stab->blocks.front ().end;
-  bv->set_num_blocks (actual_nblocks);
 
   /* First run over all the gdb_block objects, creating a real block
      object for each.  Simultaneously, keep setting the real_block
@@ -584,7 +577,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
       /* The name.  */
       block_name->set_domain (FUNCTION_DOMAIN);
-      block_name->set_aclass_index (LOC_BLOCK);
+      block_name->set_loc_class_index (LOC_BLOCK);
       block_name->set_symtab (filetab);
       block_name->set_type (lookup_function_type (block_type));
       block_name->set_value_block (new_block);
@@ -648,6 +641,9 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 	  gdb_block_iter.real_block->set_superblock (bv->static_block ());
 	}
     }
+
+  /* Move just built blockvector over to CUST.  */
+  cust->set_blockvector (std::move (bv));
 }
 
 /* Called when closing a gdb_objfile.  Converts OBJ to a proper
@@ -833,10 +829,10 @@ jit_register_code (struct gdbarch *gdbarch,
 static struct objfile *
 jit_find_objf_with_entry_addr (CORE_ADDR entry_addr)
 {
-  for (objfile *objf : current_program_space->objfiles ())
+  for (objfile &objf : current_program_space->objfiles ())
     {
-      if (objf->jited_data != nullptr && objf->jited_data->addr == entry_addr)
-	return objf;
+      if (objf.jited_data != nullptr && objf.jited_data->addr == entry_addr)
+	return &objf;
     }
 
   return NULL;
@@ -853,9 +849,9 @@ jit_breakpoint_deleted (struct breakpoint *b)
 
   for (bp_location &iter : b->locations ())
     {
-      for (objfile *objf : iter.pspace->objfiles ())
+      for (objfile &objf : iter.pspace->objfiles ())
 	{
-	  jiter_objfile_data *jiter_data = objf->jiter_data.get ();
+	  jiter_objfile_data *jiter_data = objf.jiter_data.get ();
 
 	  if (jiter_data != nullptr
 	      && jiter_data->jit_breakpoint == iter.owner)
@@ -873,44 +869,44 @@ jit_breakpoint_deleted (struct breakpoint *b)
 static void
 jit_breakpoint_re_set_internal (struct gdbarch *gdbarch, program_space *pspace)
 {
-  for (objfile *the_objfile : pspace->objfiles ())
+  for (objfile &the_objfile : pspace->objfiles ())
     {
       /* Skip separate debug objects.  */
-      if (the_objfile->separate_debug_objfile_backlink != nullptr)
+      if (the_objfile.separate_debug_objfile_backlink != nullptr)
 	continue;
 
-      if (the_objfile->skip_jit_symbol_lookup)
+      if (the_objfile.skip_jit_symbol_lookup)
 	continue;
 
       /* Lookup the registration symbol.  If it is missing, then we
 	 assume we are not attached to a JIT.  */
       bound_minimal_symbol reg_symbol
-	= lookup_minimal_symbol_text (pspace, jit_break_name, the_objfile);
+	= lookup_minimal_symbol_text (pspace, jit_break_name, &the_objfile);
       if (reg_symbol.minsym == NULL
 	  || reg_symbol.value_address () == 0)
 	{
 	  /* No need to repeat the lookup the next time.  */
-	  the_objfile->skip_jit_symbol_lookup = true;
+	  the_objfile.skip_jit_symbol_lookup = true;
 	  continue;
 	}
 
       bound_minimal_symbol desc_symbol
 	= lookup_minimal_symbol_linkage (jit_descriptor_name,
-					 the_objfile, true);
+					 &the_objfile, true);
       if (desc_symbol.minsym == NULL
 	  || desc_symbol.value_address () == 0)
 	{
 	  /* No need to repeat the lookup the next time.  */
-	  the_objfile->skip_jit_symbol_lookup = true;
+	  the_objfile.skip_jit_symbol_lookup = true;
 	  continue;
 	}
 
       jiter_objfile_data *objf_data
-	= get_jiter_objfile_data (the_objfile);
+	= get_jiter_objfile_data (&the_objfile);
       objf_data->register_code = reg_symbol.minsym;
       objf_data->descriptor = desc_symbol.minsym;
 
-      CORE_ADDR addr = objf_data->register_code->value_address (the_objfile);
+      CORE_ADDR addr = objf_data->register_code->value_address (&the_objfile);
       jit_debug_printf ("breakpoint_addr = %s", paddress (gdbarch, addr));
 
       /* Check if we need to re-create the breakpoint.  */
@@ -987,8 +983,10 @@ jit_unwind_reg_get_impl (struct gdb_unwind_callbacks *cb, int regnum)
   size = register_size (frame_arch, gdb_reg);
   value = ((struct gdb_reg_value *)
 	   xmalloc (sizeof (struct gdb_reg_value) + size - 1));
-  value->defined = deprecated_frame_register_read (priv->this_frame, gdb_reg,
-						   value->value);
+  value->defined
+    = deprecated_frame_register_read (priv->this_frame, gdb_reg,
+				      gdb::make_array_view (value->value,
+							    size));
   value->size = size;
   value->free = reg_value_free_impl;
   return value;
@@ -1098,7 +1096,7 @@ jit_frame_prev_register (const frame_info_ptr &this_frame, void **cache, int reg
     return frame_unwind_got_optimized (this_frame, reg);
 
   gdbarch = priv->regcache->arch ();
-  gdb_byte *buf = (gdb_byte *) alloca (register_size (gdbarch, reg));
+  gdb::byte_vector buf (register_size (gdbarch, reg));
   enum register_status status = priv->regcache->cooked_read (reg, buf);
 
   if (status == REG_VALID)
@@ -1110,17 +1108,17 @@ jit_frame_prev_register (const frame_info_ptr &this_frame, void **cache, int reg
 /* Relay everything back to the unwinder registered by the JIT debug
    info reader.*/
 
-static const struct frame_unwind jit_frame_unwind =
-{
+static const struct frame_unwind_legacy jit_frame_unwind (
   "jit",
   NORMAL_FRAME,
+  FRAME_UNWIND_EXTENSION,
   default_frame_unwind_stop_reason,
   jit_frame_this_id,
   jit_frame_prev_register,
   NULL,
   jit_frame_sniffer,
   jit_dealloc_cache
-};
+);
 
 
 /* This is the information that is stored at jit_gdbarch_data for each
@@ -1174,14 +1172,14 @@ jit_inferior_init (inferior *inf)
 
   jit_breakpoint_re_set_internal (gdbarch, pspace);
 
-  for (objfile *jiter : pspace->objfiles ())
+  for (objfile &jiter : pspace->objfiles ())
     {
-      if (jiter->jiter_data == nullptr)
+      if (jiter.jiter_data == nullptr)
 	continue;
 
       /* Read the descriptor so we can check the version number and load
 	 any already JITed functions.  */
-      if (!jit_read_descriptor (gdbarch, &descriptor, jiter))
+      if (!jit_read_descriptor (gdbarch, &descriptor, &jiter))
 	continue;
 
       /* Check that the version number agrees with that we support.  */
@@ -1246,10 +1244,10 @@ jit_breakpoint_re_set (void)
 static void
 jit_inferior_exit_hook (struct inferior *inf)
 {
-  for (objfile *objf : current_program_space->objfiles_safe ())
+  for (objfile &objf : current_program_space->objfiles_safe ())
     {
-      if (objf->jited_data != nullptr && objf->jited_data->addr != 0)
-	objf->unlink ();
+      if (objf.jited_data != nullptr && objf.jited_data->addr != 0)
+	objf.unlink ();
     }
 }
 
@@ -1311,9 +1309,7 @@ show_jit_reader_directory (const char *args, int from_tty)
 			     jit_reader_dir.c_str ()));
 }
 
-void _initialize_jit ();
-void
-_initialize_jit ()
+INIT_GDB_FILE (jit)
 {
   jit_reader_dir = relocate_gdb_directory (JIT_READER_DIR,
 					   JIT_READER_DIR_RELOCATABLE);

@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,4 +63,3 @@ gdb_test "delete 2"
 gdb_test "break $asm_file0:func" \
     "Breakpoint 3 at 0x\[0-9a-fA-F\]+: .*$asm_file0.*(2 locations).*" \
     "set a break-point at function in all instances for a selected ASM file."
-

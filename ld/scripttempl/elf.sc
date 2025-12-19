@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2024 Free Software Foundation, Inc.
+# Copyright (C) 2014-2025 Free Software Foundation, Inc.
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -244,7 +244,7 @@ RELA_IPLT=".rela.iplt    ${RELOCATING-0} :
 DYNAMIC=".dynamic      ${RELOCATING-0} : { *(.dynamic) }"
 RODATA=".${RODATA_NAME}       ${RELOCATING-0} : { *(.${RODATA_NAME}${RELOCATING+ .${RODATA_NAME}.* .gnu.linkonce.r.*}) }"
 DATARELRO=".data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }"
-DISCARDED="/DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }"
+DISCARDED="/DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) *(.gnu_object_only) }"
 if test -z "${NO_SMALL_DATA}"; then
   SBSS=".${SBSS_NAME}         ${RELOCATING-0} :
   {
@@ -417,7 +417,7 @@ EOF
 emit_header()
 {
 cat <<EOF
-/* Copyright (C) 2014-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2014-2025 Free Software Foundation, Inc.
 
    Copying and distribution of this script, with or without modification,
    are permitted in any medium without royalty provided the copyright
@@ -727,23 +727,25 @@ cat <<EOF
   .exception_ranges ${RELOCATING-0} : ONLY_IF_RO { *(.exception_ranges${RELOCATING+*}) }
 
   ${TEXT_PLT+${PLT_NEXT_DATA+${PLT} ${OTHER_PLT_SECTIONS}}}
+EOF
 
+test -n "${RELOCATING}" && cat <<EOF
   /* Various note sections.  Placed here so that they are always included
      in the read-only segment and not treated as orphan sections.  The
      current orphan handling algorithm does place note sections after R/O
      data, but this is not guaranteed to always be the case.  */
-  .note.build-id :      { *(.note.build-id) } ${RELOCATING+${REGION}}
-  .note.GNU-stack :     { *(.note.GNU-stack) } ${RELOCATING+${REGION}}
-  .note.gnu-property :  { *(.note.gnu-property) } ${RELOCATING+${REGION}}
-  .note.ABI-tag :       { *(.note.ABI-tag) } ${RELOCATING+${REGION}}
-  .note.package :       { *(.note.package) } ${RELOCATING+${REGION}}
-  .note.dlopen :        { *(.note.dlopen) } ${RELOCATING+${REGION}}
-  .note.netbsd.ident :  { *(.note.netbsd.ident) } ${RELOCATING+${REGION}}
-  .note.openbsd.ident : { *(.note.openbsd.ident) } ${RELOCATING+${REGION}}
+  .note.build-id :      { *(.note.build-id) } ${REGION}
+  .note.GNU-stack :     { *(.note.GNU-stack) } ${REGION}
+  .note.gnu.property :  { *(.note.gnu.property) } ${REGION}
+  .note.ABI-tag :       { *(.note.ABI-tag) } ${REGION}
+  .note.package :       { *(.note.package) } ${REGION}
+  .note.dlopen :        { *(.note.dlopen) } ${REGION}
+  .note.netbsd.ident :  { *(.note.netbsd.ident) } ${REGION}
+  .note.openbsd.ident : { *(.note.openbsd.ident) } ${REGION}
 
-  ${RELOCATING+${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (__${ETEXT_NAME} = .);}}
-  ${RELOCATING+${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (_${ETEXT_NAME} = .);}}
-  ${RELOCATING+${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (${ETEXT_NAME} = .);}}
+  ${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (__${ETEXT_NAME} = .);}
+  ${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (_${ETEXT_NAME} = .);}
+  ${ETEXT_LAST_IN_RODATA_SEGMENT+PROVIDE (${ETEXT_NAME} = .);}
 EOF
 }
 
@@ -912,7 +914,7 @@ emit_large_bss()
     return
   fi
 
-  if test "$1" == "0"; then
+  if test "$1" = "0"; then
     if test -n "${LARGE_BSS_AFTER_BSS}"; then
       return
     fi

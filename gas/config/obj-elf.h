@@ -1,5 +1,5 @@
 /* ELF object file format.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -36,6 +36,7 @@
 #include "bfd/elf-bfd.h"
 
 #include "targ-cpu.h"
+#include "obj-elf-attr.h"
 
 #ifdef TC_ALPHA
 #define ECOFF_DEBUGGING (alpha_flag_mdebug > 0)
@@ -204,9 +205,6 @@ extern void obj_elf_vtable_inherit (int);
 extern void obj_elf_vtable_entry (int);
 extern struct fix * obj_elf_get_vtable_inherit (void);
 extern struct fix * obj_elf_get_vtable_entry (void);
-extern bool obj_elf_seen_attribute
-  (int, unsigned int);
-extern int obj_elf_vendor_attribute (int);
 
 /* BFD wants to write the udata field, which is a no-no for the
    predefined section symbols in bfd/section.c.  They are read-only.  */
@@ -224,11 +222,7 @@ void elf_obj_symbol_new_hook (symbolS *);
 #define obj_symbol_new_hook	elf_obj_symbol_new_hook
 #endif
 
-void elf_obj_symbol_clone_hook (symbolS *, symbolS *);
-#ifndef obj_symbol_clone_hook
-#define obj_symbol_clone_hook	elf_obj_symbol_clone_hook
-#endif
-
+void elf_copy_symbol_size (symbolS *, symbolS *);
 void elf_copy_symbol_attributes (symbolS *, symbolS *);
 #ifndef OBJ_COPY_SYMBOL_ATTRIBUTES
 #define OBJ_COPY_SYMBOL_ATTRIBUTES(DEST, SRC) \

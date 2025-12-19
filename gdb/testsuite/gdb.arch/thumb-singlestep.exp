@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ set testfile "thumb-singlestep"
 set srcfile ${testfile}.S
 
 set additional_flags "additional_flags=-mthumb"
-if [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} [list debug $additional_flags]] {
+if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} [list debug $additional_flags]]} {
     return -1
 }
 
@@ -33,4 +33,3 @@ if {![runto_main]} {
 # pass instruction "push".
 gdb_test "si" "blx	foo.*" "single step"
 gdb_test "si" "foo \\(\\) at .*${srcfile}.*mov r0,#42.*" "step into foo"
-

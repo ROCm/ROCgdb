@@ -1,5 +1,5 @@
 /* Low level interface to Windows debugging, for gdbserver.
-   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 
    Contributed by Leo Zayas.  Based on "win32-nat.c" from GDB.
 
@@ -62,9 +62,9 @@ gdbserver_windows_process windows_process;
 
 int using_threads = 1;
 
-const struct target_desc *win32_tdesc;
+const_target_desc_up win32_tdesc;
 #ifdef __x86_64__
-const struct target_desc *wow64_win32_tdesc;
+const_target_desc_up wow64_win32_tdesc;
 #endif
 
 #define NUM_REGS (the_low_target.num_regs ())
@@ -240,13 +240,13 @@ win32_process_target::stopped_by_watchpoint ()
     return false;
 }
 
-CORE_ADDR
-win32_process_target::stopped_data_address ()
+std::vector<CORE_ADDR>
+win32_process_target::stopped_data_addresses ()
 {
   if (the_low_target.stopped_data_address != NULL)
-    return the_low_target.stopped_data_address ();
+    return { the_low_target.stopped_data_address () };
   else
-    return 0;
+    return {};
 }
 
 
@@ -326,10 +326,10 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
   proc = add_process (pid, attached);
 #ifdef __x86_64__
   if (windows_process.wow64_process)
-    proc->tdesc = wow64_win32_tdesc;
+    proc->tdesc = wow64_win32_tdesc.get ();
   else
 #endif
-    proc->tdesc = win32_tdesc;
+    proc->tdesc = win32_tdesc.get ();
   child_init_thread_list ();
   windows_process.child_initialization_done = 0;
 
@@ -490,14 +490,11 @@ create_process (const char *program, char *args,
   return ret;
 }
 
-/* Start a new process.
-   PROGRAM is the program name.
-   PROGRAM_ARGS is the vector containing the inferior's args.
-   Returns the new PID on success, -1 on failure.  Registers the new
-   process with the process list.  */
+/* See target.h.  */
+
 int
 win32_process_target::create_inferior (const char *program,
-				       const std::vector<char *> &program_args)
+				       const std::string &program_args)
 {
   client_state &cs = get_client_state ();
 #ifndef USE_WIN32API
@@ -508,8 +505,7 @@ win32_process_target::create_inferior (const char *program,
   DWORD flags;
   PROCESS_INFORMATION pi;
   DWORD err;
-  std::string str_program_args = construct_inferior_arguments (program_args);
-  char *args = (char *) str_program_args.c_str ();
+  char *args = (char *) program_args.c_str ();
 
   /* win32_wait needs to know we're not attaching.  */
   windows_process.attaching = 0;

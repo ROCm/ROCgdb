@@ -1,6 +1,6 @@
 /* Native support code for PPC AIX, for GDB the GNU debugger.
 
-   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 
    Free Software Foundation, Inc.
 
@@ -153,7 +153,7 @@ rs6000_aix_supply_vsxregset (const struct regset *regset, struct regcache *regca
     {
       int i, offset = 0;
 
-      for (i = tdep->ppc_vsr0_upper_regnum; i < tdep->ppc_vsr0_upper_regnum 
+      for (i = tdep->ppc_vsr0_upper_regnum; i < tdep->ppc_vsr0_upper_regnum
 						     + 32; i++, offset += 8)
 	ppc_supply_reg (regcache, i, (const gdb_byte *) vsxregs, offset, 8);
 
@@ -328,15 +328,16 @@ aix_sighandle_frame_sniffer (const struct frame_unwind *self,
 
 /* AIX signal handler frame unwinder */
 
-static const struct frame_unwind aix_sighandle_frame_unwind = {
+static const struct frame_unwind_legacy aix_sighandle_frame_unwind (
   "rs6000 aix sighandle",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   aix_sighandle_frame_this_id,
   aix_sighandle_frame_prev_register,
   NULL,
   aix_sighandle_frame_sniffer
-};
+);
 
 /* Core file support.  */
 
@@ -469,13 +470,13 @@ ppc_aix_core_read_description (struct gdbarch *gdbarch,
     arch64 = 1;
 
   if (vsx && arch64)
-    return tdesc_powerpc_vsx64;
+    return tdesc_powerpc_vsx64.get ();
   else if (vsx && !arch64)
-    return tdesc_powerpc_vsx32;
+    return tdesc_powerpc_vsx32.get ();
   else if (altivec && arch64)
-    return tdesc_powerpc_altivec64;
+    return tdesc_powerpc_altivec64.get ();
   else if (altivec && !arch64)
-    return tdesc_powerpc_altivec32;
+    return tdesc_powerpc_altivec32.get ();
 
   return NULL;
 }
@@ -543,17 +544,17 @@ rs6000_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
    return_val example( float, int);
 
-   eabi: 
+   eabi:
    float in fp0, int in r3
    offset of stack on overflow 8/16
    for varargs, must go by type.
    power open:
    float in r3&r4, int in r5
-   offset of stack on overflow different 
-   both: 
+   offset of stack on overflow different
+   both:
    return in r3 or f0.  If no float, must study how gcc emulates floats;
    pay attention to arg promotion.
-   User may have to cast\args to handle promotion correctly 
+   User may have to cast\args to handle promotion correctly
    since gdb won't know if prototype supplied or not.  */
 
   for (argno = 0, argbytes = 0; argno < nargs && ii < 8; ++ii)
@@ -640,7 +641,7 @@ ran_out_of_registers_for_arguments:
   /* Stack pointer must be quadword aligned.  */
   sp &= -16;
 
-  /* If there are more arguments, allocate space for them in 
+  /* If there are more arguments, allocate space for them in
      the stack, then push them starting from the ninth one.  */
 
   if ((argno < nargs) || argbytes)
@@ -674,7 +675,7 @@ ran_out_of_registers_for_arguments:
       regcache_raw_write_signed (regcache,
 				 gdbarch_sp_regnum (gdbarch), sp);
 
-      /* If the last argument copied into the registers didn't fit there 
+      /* If the last argument copied into the registers didn't fit there
 	 completely, push the rest of it into stack.  */
 
       if (argbytes)
@@ -1024,7 +1025,7 @@ rs6000_software_single_step (struct regcache *regcache)
   std::vector<CORE_ADDR> next_pcs = ppc_deal_with_atomic_sequence (regcache);
   if (!next_pcs.empty ())
     return next_pcs;
-  
+
   /* Here 0xfc000000 is the opcode mask to detect a P10 prefix instruction.  */
   if ((insn & 0xfc000000) == 1 << 26)
     breaks[0] = loc + 2 * PPC_INSN_SIZE;
@@ -1329,6 +1330,7 @@ rs6000_aix_ld_info_to_xml (struct gdbarch *gdbarch, const gdb_byte *ldi_buf,
 
 static ULONGEST
 rs6000_aix_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
+					   struct bfd &cbfd,
 					   gdb_byte *readbuf,
 					   ULONGEST offset,
 					   ULONGEST len)
@@ -1336,8 +1338,7 @@ rs6000_aix_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
   struct bfd_section *ldinfo_sec;
   int ldinfo_size;
 
-  ldinfo_sec = bfd_get_section_by_name (current_program_space->core_bfd (),
-					".ldinfo");
+  ldinfo_sec = bfd_get_section_by_name (&cbfd, ".ldinfo");
   if (ldinfo_sec == NULL)
     error (_("cannot find .ldinfo section from core file: %s"),
 	   bfd_errmsg (bfd_get_error ()));
@@ -1345,8 +1346,7 @@ rs6000_aix_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
 
   gdb::byte_vector ldinfo_buf (ldinfo_size);
 
-  if (! bfd_get_section_contents (current_program_space->core_bfd (),
-				  ldinfo_sec, ldinfo_buf.data (), 0,
+  if (! bfd_get_section_contents (&cbfd, ldinfo_sec, ldinfo_buf.data (), 0,
 				  ldinfo_size))
     error (_("unable to read .ldinfo section from core file: %s"),
 	  bfd_errmsg (bfd_get_error ()));
@@ -1361,7 +1361,7 @@ rs6000_aix_init_osabi (struct gdbarch_info info, struct gdbarch *gdbarch)
   ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   /* RS6000/AIX does not support PT_STEP.  Has to be simulated.  */
-  set_gdbarch_software_single_step (gdbarch, rs6000_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, rs6000_software_single_step);
 
   /* Displaced stepping is currently not supported in combination with
      software single-stepping.  These override the values set by
@@ -1410,13 +1410,11 @@ rs6000_aix_init_osabi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_wchar_signed (gdbarch, 0);
   set_gdbarch_auto_wide_charset (gdbarch, rs6000_aix_auto_wide_charset);
 
-  set_gdbarch_so_ops (gdbarch, &solib_aix_so_ops);
+  set_gdbarch_make_solib_ops (gdbarch, make_aix_solib_ops);
   frame_unwind_append_unwinder (gdbarch, &aix_sighandle_frame_unwind);
 }
 
-void _initialize_rs6000_aix_tdep ();
-void
-_initialize_rs6000_aix_tdep ()
+INIT_GDB_FILE (rs6000_aix_tdep)
 {
   gdbarch_register_osabi_sniffer (bfd_arch_rs6000,
 				  bfd_target_xcoff_flavour,
@@ -1430,4 +1428,3 @@ _initialize_rs6000_aix_tdep ()
   gdbarch_register_osabi (bfd_arch_powerpc, 0, GDB_OSABI_AIX,
 			  rs6000_aix_init_osabi);
 }
-

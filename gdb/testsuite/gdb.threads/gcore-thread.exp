@@ -1,4 +1,4 @@
-# Copyright 2002-2024 Free Software Foundation, Inc.
+# Copyright 2002-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ if {[istarget "*-*-linux"]} {
 set opts [list debug]
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${objfile}" object $opts] != ""
     || ([gdb_compile_pthreads "${objfile}" "${binfile}" executable [concat $opts {ldflags=-Wl,-z,norelro}] ] != ""
-        && [gdb_compile_pthreads "${objfile}" "${binfile}" executable $opts] != "") } {
+	&& [gdb_compile_pthreads "${objfile}" "${binfile}" executable $opts] != "") } {
     return -1
 }
 
@@ -123,7 +123,7 @@ proc load_core { filename } {
     }
 
     # FIXME: now what can we test about the thread state?
-    # We do not know for certain that there should be at least 
+    # We do not know for certain that there should be at least
     # three threads, because who knows what kind of many-to-one
     # mapping various OS's may do?  Let's assume that there must
     # be at least two threads:
@@ -143,7 +143,7 @@ proc load_core { filename } {
 }
 
 foreach name { corefile core0file } {
-    set filename [subst $$name]
+    set filename [subst_vars $$name]
     if { $filename == "" } {
 	continue
     }

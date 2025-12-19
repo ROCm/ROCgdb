@@ -1,6 +1,6 @@
 /* This test script is part of GDB, the GNU debugger.
 
-   Copyright 2007-2024 Free Software Foundation, Inc.
+   Copyright 2007-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ main ()
   t._m2_contents = (char *)&data;
   t._m2_high = 4;
   /* include the <nul> in the string, even though high is set to 4.  */
-  
+
   for (i=0; i<6; i++)
     data[i] = input[i];
   return foo (t);

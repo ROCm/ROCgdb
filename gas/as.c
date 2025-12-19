@@ -1,5 +1,5 @@
 /* as.c - GAS main program.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -111,6 +111,12 @@ unsigned int dwarf_level = 3;
 #if defined OBJ_ELF || defined OBJ_MAYBE_ELF
 int flag_use_elf_stt_common = DEFAULT_GENERATE_ELF_STT_COMMON;
 bool flag_generate_build_notes = DEFAULT_GENERATE_BUILD_NOTES;
+#endif
+
+/* If DEFAULT_SFRAME is 0 instead, flag_gen_sframe gets the default
+   enum value GEN_SFRAME_DEFAULT_NONE.  */
+#if DEFAULT_SFRAME
+enum gen_sframe_option flag_gen_sframe = GEN_SFRAME_CONFIG_ENABLED;
 #endif
 
 segT reg_section;
@@ -311,7 +317,8 @@ Options:\n\
   fprintf (stream, _("\
                           generate GNU Build notes if none are present in the input\n"));
   fprintf (stream, _("\
-  --gsframe               generate SFrame stack trace information\n"));
+  --gsframe[={no|yes}]    whether to generate SFrame stack trace information\n\
+                          (default: %s)\n"), DEFAULT_SFRAME ? "yes" : "no");
 # if defined (TARGET_USE_SCFI) && defined (TARGET_USE_GINSN)
   fprintf (stream, _("\
   --scfi=experimental     Synthesize DWARF CFI for hand-written asm\n\
@@ -469,10 +476,12 @@ parse_args (int * pargc, char *** pargv)
       OPTION_EMULATION,
       OPTION_DEBUG_PREFIX_MAP,
       OPTION_DEFSYM,
+#ifndef NO_LISTING
       OPTION_LISTING_LHS_WIDTH,
       OPTION_LISTING_LHS_WIDTH2, /* = STD_BASE + 10 */
       OPTION_LISTING_RHS_WIDTH,
       OPTION_LISTING_CONT_LINES,
+#endif
       OPTION_DEPFILE,
       OPTION_GSTABS,
       OPTION_GSTABS_PLUS,
@@ -484,6 +493,7 @@ parse_args (int * pargc, char *** pargv)
       OPTION_GDWARF_CIE_VERSION,
       OPTION_GCODEVIEW,
       OPTION_STRIP_LOCAL_ABSOLUTE,
+      OPTION_EMIT_LOCAL_ABSOLUTE,
       OPTION_TRADITIONAL_FORMAT,
       OPTION_WARN,
       OPTION_TARGET_HELP,
@@ -536,7 +546,7 @@ parse_args (int * pargc, char *** pargv)
     ,{"elf-stt-common", required_argument, NULL, OPTION_ELF_STT_COMMON}
     ,{"sectname-subst", no_argument, NULL, OPTION_SECTNAME_SUBST}
     ,{"generate-missing-build-notes", required_argument, NULL, OPTION_ELF_BUILD_NOTES}
-    ,{"gsframe", no_argument, NULL, OPTION_SFRAME}
+    ,{"gsframe", optional_argument, NULL, OPTION_SFRAME}
 # if defined (TARGET_USE_SCFI) && defined (TARGET_USE_GINSN)
     ,{"scfi", required_argument, NULL, OPTION_SCFI}
 # endif
@@ -573,10 +583,12 @@ parse_args (int * pargc, char *** pargv)
        ports use -k to enable PIC assembly.  */
     ,{"keep-locals", no_argument, NULL, 'L'}
     ,{"keep-locals", no_argument, NULL, 'L'}
+#ifndef NO_LISTING
     ,{"listing-lhs-width", required_argument, NULL, OPTION_LISTING_LHS_WIDTH}
     ,{"listing-lhs-width2", required_argument, NULL, OPTION_LISTING_LHS_WIDTH2}
     ,{"listing-rhs-width", required_argument, NULL, OPTION_LISTING_RHS_WIDTH}
     ,{"listing-cont-lines", required_argument, NULL, OPTION_LISTING_CONT_LINES}
+#endif
     ,{"MD", required_argument, NULL, OPTION_DEPFILE}
     ,{"mri", no_argument, NULL, 'M'}
     ,{"nocpp", no_argument, NULL, OPTION_NOCPP}
@@ -586,6 +598,7 @@ parse_args (int * pargc, char *** pargv)
     ,{"reduce-memory-overheads", no_argument, NULL, OPTION_REDUCE_MEMORY_OVERHEADS}
     ,{"statistics", no_argument, NULL, OPTION_STATISTICS}
     ,{"strip-local-absolute", no_argument, NULL, OPTION_STRIP_LOCAL_ABSOLUTE}
+    ,{"emit-local-absolute", no_argument, NULL, OPTION_EMIT_LOCAL_ABSOLUTE}
     ,{"version", no_argument, NULL, OPTION_VERSION}
     ,{"verbose", no_argument, NULL, 'v'}
     ,{"target-help", no_argument, NULL, OPTION_TARGET_HELP}
@@ -684,6 +697,10 @@ parse_args (int * pargc, char *** pargv)
 	  flag_strip_local_absolute = 1;
 	  break;
 
+	case OPTION_EMIT_LOCAL_ABSOLUTE:
+	  flag_strip_local_absolute = -1;
+	  break;
+
 	case OPTION_TRADITIONAL_FORMAT:
 	  flag_traditional_format = 1;
 	  break;
@@ -704,7 +721,7 @@ parse_args (int * pargc, char *** pargv)
 	case OPTION_VERSION:
 	  /* This output is intended to follow the GNU standards document.  */
 	  printf (_("GNU assembler %s\n"), BFD_VERSION_STRING);
-	  printf (_("Copyright (C) 2024 Free Software Foundation, Inc.\n"));
+	  printf (_("Copyright (C) 2025 Free Software Foundation, Inc.\n"));
 	  printf (_("\
 This program is free software; you may redistribute it under the terms of\n\
 the GNU General Public License version 3 or later.\n\
@@ -781,7 +798,7 @@ This program has absolutely no warranty.\n"));
 	    if (*s == '\0')
 	      as_fatal (_("bad defsym; format is --defsym name=value"));
 	    *s++ = '\0';
-	    i = bfd_scan_vma (s, (const char **) NULL, 0);
+	    i = bfd_scan_vma (s, NULL, 0);
 	    n = XNEW (struct defsym_list);
 	    n->next = defsyms;
 	    n->name = optarg;
@@ -918,6 +935,7 @@ This program has absolutely no warranty.\n"));
 	  flag_keep_locals = 1;
 	  break;
 
+#ifndef NO_LISTING
 	case OPTION_LISTING_LHS_WIDTH:
 	  listing_lhs_width = atoi (optarg);
 	  if (listing_lhs_width_second < listing_lhs_width)
@@ -925,7 +943,7 @@ This program has absolutely no warranty.\n"));
 	  break;
 	case OPTION_LISTING_LHS_WIDTH2:
 	  {
-	    int tmp = atoi (optarg);
+	    unsigned int tmp = atoi (optarg);
 
 	    if (tmp > listing_lhs_width)
 	      listing_lhs_width_second = tmp;
@@ -937,6 +955,7 @@ This program has absolutely no warranty.\n"));
 	case OPTION_LISTING_CONT_LINES:
 	  listing_lhs_cont_lines = atoi (optarg);
 	  break;
+#endif /* NO_LISTING */
 
 	case 'M':
 	  flag_mri = 1;
@@ -1026,7 +1045,17 @@ This program has absolutely no warranty.\n"));
 	  break;
 
 	case OPTION_SFRAME:
-	  flag_gen_sframe = 1;
+	  if (optarg)
+	    {
+	      if (strcasecmp (optarg, "no") == 0)
+		flag_gen_sframe = GEN_SFRAME_DISABLED;
+	      else if (strcasecmp (optarg, "yes") == 0)
+		flag_gen_sframe = GEN_SFRAME_ENABLED;
+	      else
+		as_fatal (_("Invalid --gsframe option: `%s'"), optarg);
+	    }
+	  else
+	    flag_gen_sframe = GEN_SFRAME_ENABLED;
 	  break;
 
 #endif /* OBJ_ELF */
@@ -1157,6 +1186,26 @@ This program has absolutely no warranty.\n"));
 #endif
 }
 
+/* Pre-define a symbol with its name derived from TMPL (wrapping in
+   GAS(...)), to value VAL.  */
+
+void
+predefine_symbol (const char *tmpl, valueT val)
+{
+  char *name = xasprintf ("GAS(%s)", tmpl);
+  symbolS *s;
+
+  /* Also put the symbol in the symbol table, if requested.  */
+  if (flag_strip_local_absolute < 0)
+    s = symbol_new (name, absolute_section, &zero_address_frag, val);
+  else
+    s = symbol_create (name, absolute_section, &zero_address_frag, val);
+  S_CLEAR_EXTERNAL (s);
+  symbol_table_insert (s);
+
+  xfree (name);
+}
+
 static void
 dump_statistics (void)
 {
@@ -1198,6 +1247,10 @@ perform_an_assembly_pass (int argc, char ** argv)
 #ifndef OBJ_MACH_O
   subseg_set (text_section, 0);
 #endif
+
+  predefine_symbol ("version", BFD_VERSION);
+  if (strstr (BFD_VERSION_STRING, "." XSTRING (BFD_VERSION_DATE)) != NULL)
+    predefine_symbol ("date", BFD_VERSION_DATE);
 
   /* This may add symbol table entries, which requires having an open BFD,
      and sections already created.  */
@@ -1382,7 +1435,9 @@ gas_init (void)
 int
 main (int argc, char ** argv)
 {
+#ifndef NO_LISTING
   char ** argv_orig = argv;
+#endif
   struct stat sob;
 
   gas_early_init (&argc, &argv);

@@ -1,5 +1,5 @@
-# Copyright (C) 2002-2024 Free Software Foundation, Inc.
-# 
+# Copyright (C) 2002-2025 Free Software Foundation, Inc.
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -26,9 +26,9 @@ require allow_altivec_tests
 standard_testfile
 
 set compile_flags {debug nowarnings}
-if [test_compiler_info gcc*] {
+if {[test_compiler_info gcc*]} {
     set compile_flags "$compile_flags additional_flags=-maltivec additional_flags=-mabi=altivec"
-} elseif [test_compiler_info xlc*] {
+} elseif {[test_compiler_info xlc*]} {
     set compile_flags "$compile_flags additional_flags=-qaltivec"
 } else {
     warning "unknown compiler"
@@ -59,9 +59,9 @@ gdb_test "set print frame-arguments all"
 
 # set all the registers integer portions to 1
 for {set i 0} {$i < 32} {incr i 1} {
-        for {set j 0} {$j < 4} {incr j 1} {
-           gdb_test "set \$vr$i.v4_int32\[$j\] = 1" "" "set reg vr$i.v4si.f\[$j\]"
-        }
+	for {set j 0} {$j < 4} {incr j 1} {
+	   gdb_test "set \$vr$i.v4_int32\[$j\] = 1" "" "set reg vr$i.v4si.f\[$j\]"
+	}
 }
 
 gdb_test "set \$vscr = 1" "" ""
@@ -134,11 +134,11 @@ gdb_test "continue" \
   "Breakpoint $decimal, vector_fun .a=.0xfefefefe, 0xfefefefe, 0xfefefefe, 0xfefefefe., b=.0x1010101, 0x1010101, 0x1010101, 0x1010101.*altivec-regs.c.*vec_splat_u8.2..;" \
   "continue to vector_fun"
 
-# Do a next over the assignment to vector 'a'. 
+# Do a next over the assignment to vector 'a'.
 gdb_test "next" ".*b = \\(\\(vector unsigned int\\) vec_splat_u8\\(3\\)\\);" \
   "next (1)"
 
-# Do a next over the assignment to vector 'b'. 
+# Do a next over the assignment to vector 'b'.
 gdb_test "next" "c = vec_add \\(a, b\\);" \
   "next (2)"
 
@@ -174,6 +174,3 @@ gdb_test "down" \
 gdb_test "finish" \
   "Run till exit from .0  vector_fun \\(a=.0x2020202, 0x2020202, 0x2020202, 0x2020202., b=.0x3030303, 0x3030303, 0x3030303, 0x3030303.\\) at.*altivec-regs.c.*in main \\(\\) at.*altivec-regs.c.*z = vector_fun \\(x, y\\);.*Value returned is.*= .0x5050505, 0x5050505, 0x5050505, 0x5050505." \
   "finish returned correct value"
-
-
-

@@ -1,4 +1,4 @@
-# Copyright 2002-2024 Free Software Foundation, Inc.
+# Copyright 2002-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 # There is absolutely no warranty for GDB.  Type "show warranty" for details.
 # This GDB was configured as "i686-pc-linux-gnu"...
 # (gdb) run
-# Starting program: /home/jimb/foo/play/killed 
+# Starting program: /home/jimb/foo/play/killed
 # [New Thread 1024 (LWP 6487)]
 # [New Thread 2049 (LWP 6488)]
 # [New Thread 1026 (LWP 6489)]
@@ -42,17 +42,17 @@
 # Cannot find thread 2049: generic error
 # (gdb) The program is running.  Exit anyway? (y or n) y
 # Cannot find thread 2049: generic error
-# (gdb) 
+# (gdb)
 # [7]+  Stopped                 $D6/gdb/gdb -nw killed
 # $ kill %7
-# 
+#
 # [7]+  Stopped                 $D6/gdb/gdb -nw killed
 # $ kill -9 %7
-# 
+#
 # [7]+  Stopped                 $D6/gdb/gdb -nw killed
-# $ 
+# $
 # [7]+  Killed                  $D6/gdb/gdb -nw killed
-# $ 
+# $
 
 
 standard_testfile
@@ -62,7 +62,7 @@ if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executab
 }
 
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 gdb_run_cmd
 gdb_test "" "" "run program to completion"
@@ -71,16 +71,16 @@ gdb_test "" "" "run program to completion"
 send_gdb "quit\n"
 gdb_expect {
     -re "Quit anyway\\? \\(y or n\\) $" {
-        send_gdb "y\n"
-        exp_continue
+	send_gdb "y\n"
+	exp_continue
     }
     eof {
-        pass "GDB exits after multi-threaded program exits messily"
+	pass "GDB exits after multi-threaded program exits messily"
     }
     -re "Cannot find thread ${decimal}: generic error\[\r\n\]*$gdb_prompt $" {
-        kfail "gdb/568" "GDB exits after multi-threaded program exits messily"
+	kfail "gdb/568" "GDB exits after multi-threaded program exits messily"
     }
     timeout {
-        fail "GDB exits after multi-threaded program exits messily (timeout)"
+	fail "GDB exits after multi-threaded program exits messily (timeout)"
     }
 }

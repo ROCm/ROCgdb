@@ -1,6 +1,6 @@
 /* GNU/Linux on ARM target support.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,6 +41,7 @@
 #include "arm-tdep.h"
 #include "arm-linux-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "glibc-tdep.h"
 #include "arch-utils.h"
 #include "inferior.h"
@@ -55,7 +56,6 @@
 #include "stap-probe.h"
 #include "parser-defs.h"
 #include "user-regs.h"
-#include <ctype.h>
 #include "elf/common.h"
 
 /* Under ARM GNU/Linux the traditional way of performing a breakpoint
@@ -93,11 +93,11 @@ static const gdb_byte arm_linux_thumb2_be_breakpoint[] = { 0xf7, 0xf0, 0xa0, 0x0
 
 static const gdb_byte arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa0 };
 
-/* Description of the longjmp buffer.  The buffer is treated as an array of 
+/* Description of the longjmp buffer.  The buffer is treated as an array of
    elements of size ARM_LINUX_JB_ELEMENT_SIZE.
 
    The location of saved registers in this buffer (in particular the PC
-   to use after longjmp is called) varies depending on the ABI (in 
+   to use after longjmp is called) varies depending on the ABI (in
    particular the FP model) and also (possibly) the C Library.  */
 #define ARM_LINUX_JB_ELEMENT_SIZE	ARM_INT_REGISTER_SIZE
 /* For the FPA model the PC is at offset 21 in the buffer.  */
@@ -144,7 +144,7 @@ static const gdb_byte arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa
    with the real function address.  Subsequent calls go through steps
    1, 2 and 3 and end up calling the real code.
 
-   1) In the code: 
+   1) In the code:
 
    b    function_call
    bl   function_call
@@ -870,7 +870,7 @@ arm_linux_get_syscall_number (struct gdbarch *gdbarch,
     }
   else
     {
-      enum bfd_endian byte_order_for_code = 
+      enum bfd_endian byte_order_for_code =
 	gdbarch_byte_order_for_code (gdbarch);
 
       /* PC gets incremented before the syscall-stop, so read the
@@ -918,9 +918,9 @@ arm_linux_get_next_pcs_syscall_next_pc (struct arm_get_next_pcs *self)
   else
     {
       struct gdbarch *gdbarch = regcache->arch ();
-      enum bfd_endian byte_order_for_code = 
+      enum bfd_endian byte_order_for_code =
 	gdbarch_byte_order_for_code (gdbarch);
-      unsigned long this_instr = 
+      unsigned long this_instr =
 	read_memory_unsigned_integer (pc, 4, byte_order_for_code);
 
       unsigned long svc_operand = (0x00ffffff & this_instr);
@@ -1035,7 +1035,7 @@ arm_linux_copy_svc (struct gdbarch *gdbarch, struct regcache *regs,
       gdb_assert (inferior_thread ()->control.step_resume_breakpoint
 		  == NULL);
 
-      sal = find_pc_line (return_to, 0);
+      sal = find_sal_for_pc (return_to, 0);
       sal.pc = return_to;
       sal.section = find_pc_overlay (return_to);
       sal.explicit_pc = 1;
@@ -1166,10 +1166,10 @@ arm_linux_displaced_step_copy_insn (struct gdbarch *gdbarch,
 static int
 arm_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
-  return (*s == '#' || *s == '$' || isdigit (*s) /* Literal number.  */
+  return (*s == '#' || *s == '$' || c_isdigit (*s) /* Literal number.  */
 	  || *s == '[' /* Register indirection or
 			  displacement.  */
-	  || isalpha (*s)); /* Register value.  */
+	  || c_isalpha (*s)); /* Register value.  */
 }
 
 /* This routine is used to parse a special token in ARM's assembly.
@@ -1201,7 +1201,7 @@ arm_stap_parse_special_token (struct gdbarch *gdbarch,
       start = tmp;
 
       /* Register name.  */
-      while (isalnum (*tmp))
+      while (c_isalnum (*tmp))
 	++tmp;
 
       if (*tmp != ',')
@@ -1211,7 +1211,7 @@ arm_stap_parse_special_token (struct gdbarch *gdbarch,
       regname = (char *) alloca (len + 2);
 
       offset = 0;
-      if (isdigit (*start))
+      if (c_isdigit (*start))
 	{
 	  /* If we are dealing with a register whose name begins with a
 	     digit, it means we should prefix the name with the letter
@@ -1361,8 +1361,8 @@ arm_canonicalize_syscall (int syscall)
     case 86: return gdb_sys_uselib;
     case 87: return gdb_sys_swapon;
     case 88: return gdb_sys_reboot;
-    case 89: return gdb_old_readdir;
-    case 90: return gdb_old_mmap;
+    case 89: return gdb_sys_old_readdir;
+    case 90: return gdb_sys_old_mmap;
     case 91: return gdb_sys_munmap;
     case 92: return gdb_sys_truncate;
     case 93: return gdb_sys_ftruncate;
@@ -1629,7 +1629,9 @@ arm_canonicalize_syscall (int syscall)
     case 363: return gdb_sys_rt_tgsigqueueinfo;
     case 364: return gdb_sys_perf_event_open;
     case 365: return gdb_sys_recvmmsg;
+      */
     case 366: return gdb_sys_accept4;
+      /*
     case 367: return gdb_sys_fanotify_init;
     case 368: return gdb_sys_fanotify_mark;
     case 369: return gdb_sys_prlimit64;
@@ -1799,11 +1801,10 @@ arm_linux_init_abi (struct gdbarch_info info,
     }
   tdep->jb_elt_size = ARM_LINUX_JB_ELEMENT_SIZE;
 
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   /* Single stepping.  */
-  set_gdbarch_software_single_step (gdbarch, arm_linux_software_single_step);
+  set_gdbarch_get_next_pcs (gdbarch, arm_linux_software_single_step);
 
   /* Shared library handling.  */
   set_gdbarch_skip_trampoline_code (gdbarch, arm_linux_skip_trampoline_code);
@@ -2024,9 +2025,7 @@ arm_linux_init_abi (struct gdbarch_info info,
   set_gdbarch_gcc_target_options (gdbarch, arm_linux_gcc_target_options);
 }
 
-void _initialize_arm_linux_tdep ();
-void
-_initialize_arm_linux_tdep ()
+INIT_GDB_FILE (arm_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_arm, 0, GDB_OSABI_LINUX,
 			  arm_linux_init_abi);

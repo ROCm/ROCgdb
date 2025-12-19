@@ -1,4 +1,4 @@
-# Copyright 2000-2024 Free Software Foundation, Inc.
+# Copyright 2000-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -77,12 +77,12 @@ proc finish_void { } {
 proc finish_abbreviation { abbrev } {
 
     if {![runto "int_func"]} {
-        return -1
+	return -1
     }
 
     gdb_test "$abbrev" \
-             "Value returned is .* = 1" \
-             "Testing the \"$abbrev\" abbreviation for \"finish\""
+	     "Value returned is .* = 1" \
+	     "Testing the \"$abbrev\" abbreviation for \"finish\""
 }
 
 # Test "set print finish off".

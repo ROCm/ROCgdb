@@ -1,6 +1,6 @@
 /* Target-dependent code for s390.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,6 +20,7 @@
 #ifndef GDB_S390_TDEP_H
 #define GDB_S390_TDEP_H
 
+#include "gdbsupport/tdesc.h"
 #include "prologue-value.h"
 #include "gdbarch.h"
 
@@ -82,6 +83,7 @@ enum
   op1_lgfi = 0xc0,   op2_lgfi = 0x01,
   op_lr    = 0x18,
   op_lgr   = 0xb904,
+  op_ldgr  = 0xb3c1,
   op_l     = 0x58,
   op1_ly   = 0xe3,   op2_ly   = 0x58,
   op1_lg   = 0xe3,   op2_lg   = 0x04,
@@ -319,7 +321,7 @@ extern struct value *s390_trad_frame_prev_register
     (const frame_info_ptr &this_frame, struct trad_frame_saved_reg saved_regs[],
      int regnum);
 
-extern const struct target_desc *tdesc_s390_linux32;
-extern const struct target_desc *tdesc_s390x_linux64;
+extern const_target_desc_up tdesc_s390_linux32;
+extern const_target_desc_up tdesc_s390x_linux64;
 
 #endif /* GDB_S390_TDEP_H */

@@ -1,4 +1,4 @@
---  Copyright 2012-2024 Free Software Foundation, Inc.
+--  Copyright 2012-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -48,4 +48,3 @@ begin
    Do_Nothing (My_Object'Address);             -- STOP2
    Do_Nothing (My_P_Object'Address);
 end Foo;
-

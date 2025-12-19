@@ -1,5 +1,5 @@
 /* Generic stabs parsing for gas.
-   Copyright (C) 1989-2024 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -163,7 +163,7 @@ aout_process_stab (int what, const char *string, int type, int other, int desc)
       /* .stabd sets the name to NULL.  Why?  */
       S_SET_NAME (symbol, NULL);
       symbol_set_frag (symbol, frag_now);
-      S_SET_VALUE (symbol, (valueT) frag_now_fix ());
+      S_SET_VALUE (symbol, frag_now_fix ());
     }
 
   symbol_append (symbol, symbol_lastP, &symbol_rootP, &symbol_lastP);
@@ -229,14 +229,14 @@ s_stab_generic (int what,
 	obstack_free (&notes, stab_secname);
 
       subseg_set (stab, 0);
-      if (!seg_info (stab)->hadone)
+      if (!seg_info (stab)->stab_seen)
 	{
 	  bfd_set_section_flags (stab,
 				 SEC_READONLY | SEC_RELOC | SEC_DEBUGGING);
 #ifdef INIT_STAB_SECTION
 	  INIT_STAB_SECTION (stab, stabstr);
 #endif
-	  seg_info (stab)->hadone = 1;
+	  seg_info (stab)->stab_seen = 1;
 	}
     }
   else if (freenames)
@@ -297,33 +297,13 @@ s_stab_generic (int what,
       SKIP_WHITESPACE ();
     }
 
-#ifdef TC_PPC
-#ifdef OBJ_ELF
-  /* Solaris on PowerPC has decided that .stabd can take 4 arguments, so if we were
-     given 4 arguments, make it a .stabn */
-  else if (what == 'd')
-    {
-      char *save_location = input_line_pointer;
-
-      SKIP_WHITESPACE ();
-      if (*input_line_pointer == ',')
-	{
-	  input_line_pointer++;
-	  what = 'n';
-	}
-      else
-	input_line_pointer = save_location;
-    }
-#endif /* OBJ_ELF */
-#endif /* TC_PPC */
-
 #ifndef NO_LISTING
   if (listing)
     {
       switch (type)
 	{
 	case N_SLINE:
-	  listing_source_line ((unsigned int) desc);
+	  listing_source_line (desc);
 	  break;
 	case N_SO:
 	case N_SOL:
@@ -358,10 +338,10 @@ s_stab_generic (int what,
       /* At least for now, stabs in a special stab section are always
 	 output as 12 byte blocks of information.  */
       p = frag_more (8);
-      md_number_to_chars (p, (valueT) stroff, 4);
-      md_number_to_chars (p + 4, (valueT) type, 1);
-      md_number_to_chars (p + 5, (valueT) other, 1);
-      md_number_to_chars (p + 6, (valueT) desc, 2);
+      md_number_to_chars (p, stroff, 4);
+      md_number_to_chars (p + 4, type, 1);
+      md_number_to_chars (p + 5, other, 1);
+      md_number_to_chars (p + 6, desc, 2);
 
       if (what == 's' || what == 'n')
 	{

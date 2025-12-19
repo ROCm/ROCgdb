@@ -1,7 +1,7 @@
 /* Get info from stack frames; convert between frames, blocks,
    functions and pc values.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -131,7 +131,7 @@ get_frame_function (const frame_info_ptr &frame)
    Returns 0 if function is not known.  */
 
 struct symbol *
-find_pc_sect_function (CORE_ADDR pc, struct obj_section *section)
+find_symbol_for_pc_sect (CORE_ADDR pc, struct obj_section *section)
 {
   const struct block *b = block_for_pc_sect (pc, section);
 
@@ -141,19 +141,19 @@ find_pc_sect_function (CORE_ADDR pc, struct obj_section *section)
 }
 
 /* Return the function containing pc value PC.
-   Returns 0 if function is not known.  
+   Returns 0 if function is not known.
    Backward compatibility, no section */
 
 struct symbol *
-find_pc_function (CORE_ADDR pc)
+find_symbol_for_pc (CORE_ADDR pc)
 {
-  return find_pc_sect_function (pc, find_pc_mapped_section (pc));
+  return find_symbol_for_pc_sect (pc, find_pc_mapped_section (pc));
 }
 
 /* See symtab.h.  */
 
 struct symbol *
-find_pc_sect_containing_function (CORE_ADDR pc, struct obj_section *section)
+find_symbol_for_pc_sect_maybe_inline (CORE_ADDR pc, struct obj_section *section)
 {
   const block *bl = block_for_pc_sect (pc, section);
 
@@ -236,7 +236,7 @@ find_pc_partial_function_sym (CORE_ADDR pc,
     goto return_cached_value;
 
   msymbol = lookup_minimal_symbol_by_pc_section (mapped_pc, section);
-  compunit_symtab = find_pc_sect_compunit_symtab (mapped_pc, section);
+  compunit_symtab = find_compunit_symtab_for_pc_sect (mapped_pc, section);
 
   if (compunit_symtab != NULL)
     {
@@ -249,7 +249,7 @@ find_pc_partial_function_sym (CORE_ADDR pc,
 	 address of the function.  This will happen when the function
 	 has more than one range and the entry pc is not within the
 	 lowest range of addresses.  */
-      f = find_pc_sect_function (mapped_pc, section);
+      f = find_symbol_for_pc_sect (mapped_pc, section);
       if (f != NULL
 	  && (msymbol.minsym == NULL
 	      || (f->value_block ()->entry_pc ()
@@ -419,7 +419,7 @@ find_function_entry_range_from_pc (CORE_ADDR pc, const char **name,
 struct type *
 find_function_type (CORE_ADDR pc)
 {
-  struct symbol *sym = find_pc_function (pc);
+  struct symbol *sym = find_symbol_for_pc (pc);
 
   if (sym != NULL && sym->value_block ()->entry_pc () == pc)
     return sym->type ();

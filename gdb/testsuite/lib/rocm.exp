@@ -1,5 +1,5 @@
-# Copyright (C) 2019-2024 Free Software Foundation, Inc.
-# Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2019-2025 Free Software Foundation, Inc.
+# Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #
 # Support library for testing ROCm (AMD GPU) GDB features.
 
+<<<<<<< HEAD
 # ROCM_PATH is used by hipcc as well.
 if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path $::env(ROCM_PATH)
@@ -56,6 +57,91 @@ gdb_caching_proc find_amdgpu_devices {} {
     }
 
     return $hip_gpu_devices
+=======
+# tclint-disable redefined-builtin
+
+# ROCM_PATH is used by hipcc as well.
+if {[info exists ::env(ROCM_PATH)]} {
+    set rocm_path $::env(ROCM_PATH)
+} else {
+    set rocm_path "/opt/rocm"
+}
+
+# Act as a drop-in replacement for "remote_exec host"
+# that logs the failures.
+
+proc log_host_exec { cmd } {
+    set result [remote_exec host "$cmd"]
+    set exit_status [lindex $result 0]
+    if {$exit_status != 0} {
+	# -1 indicates that $cmd could not be executed at all.
+	if {$exit_status == -1} {
+	    verbose -log "Cannot execute $cmd."
+	} else {
+	    verbose -log "$cmd returned an error."
+	}
+    }
+
+    return $result
+}
+
+# Detect available AMDGPU devices.
+#
+# Return a list of GPU devices that do exist on the system.
+# The list will be empty when there's no GPU or the execution
+# of the enumerator program does not succeed.  It is up to the
+# caller of this procedure what should happen when an empty
+# list is returned.
+
+gdb_caching_proc find_amdgpu_devices {} {
+    # Compile and run a simple custom HIP program that lists all GPU
+    # devices, one device per line.  We don't rely on
+    # rocm_agent_enumerator because that does not exist on all
+    # supported platforms.
+    #
+    # Compile without --offload-arch (which is fine because this is a
+    # host-only program), because otherwise gdb_compile would call
+    # hcc_amdgpu_targets to know which --offload-arch flags to pass to
+    # HIPCC, and we'd end up here again, resulting in infinite
+    # recursion.
+    set options {hip hip_no_offload_arch}
+    if {![gdb_simple_compile device_enumerator {
+	    #include <hip/hip_runtime.h>
+	    #include <stdio.h>
+	    #include <string.h>
+
+	    int
+	    main ()
+	    {
+	      int device_count;
+	      if (hipGetDeviceCount (&device_count) == hipSuccess)
+		for (int i = 0; i < device_count; i++)
+		  {
+		    hipDeviceProp_t props;
+		    if (hipGetDeviceProperties (&props, i) == hipSuccess)
+		      {
+			/* Strip out the supported features list,
+			   like gfx90a:sramecc+:xnack-.  */
+			char *colon = strstr (props.gcnArchName, ":");
+			if (colon != nullptr)
+			  *colon = '\0';
+			printf ("%s\n", props.gcnArchName);
+		      }
+		  }
+	    }
+	} executable $options]} {
+	return {}
+    }
+
+    set result [log_host_exec "$obj"]
+    if {[lindex $result 0] == 0} {
+	set targets [lindex $result 1]
+	# Convert newline-separated string to a list.
+	return [list {*}$targets]
+    }
+
+    return {}
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 }
 
 # Get the list of GPU targets to compile for.
@@ -82,8 +168,12 @@ gdb_caching_proc allow_hipcc_tests {} {
 	return {0 "remote debugging"}
     }
 
-    if {![istarget "*-linux*"]} {
-	return {0 "target platform is not Linux"}
+    # Check a hardcoded set of targets as an optimization, so that we
+    # save one external program invocation (of 'GDB --configuration')
+    # when GDB is not configured with amd-dbgapi support.  External
+    # program invocations have a non-negligible time cost on Windows.
+    if {![istarget "*-linux*"] && ![istarget "*-mingw*"]} {
+	return {0 "target platform is not supported"}
     }
 
     # Ensure that GDB is built with amd-dbgapi support.
@@ -92,12 +182,19 @@ gdb_caching_proc allow_hipcc_tests {} {
 	return {0 "amd-dbgapi not supported"}
     }
 
+<<<<<<< HEAD
     # Check if there's any GPU device to run the tests on.
+=======
+    # Check if there's any GPU device to run the tests on.  If this
+    # works, then we also know we have a working hipcc compiler
+    # available.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
     set devices [find_amdgpu_devices]
     if {[llength $devices] == 0} {
 	return {0 "no suitable amdgpu targets found"}
     }
 
+<<<<<<< HEAD
     # Check if we have a working hipcc compiler available.
     # TARGETS won't be empty, because there's at least one GPU device.
     set targets [hcc_amdgpu_targets]
@@ -122,6 +219,23 @@ gdb_caching_proc allow_hipcc_tests {} {
     return 1
 }
 
+=======
+    return 1
+}
+
+# Return true if GPU core dump tests are allowed.
+
+gdb_caching_proc allow_rocm_core_tests {} {
+    if {[istarget "*-mingw*"]} {
+	# GPU core dumps are not supported on Windows, neither runtime
+	# cores, nor with GDB's gcore command.
+	return 0
+    }
+
+    return 1
+}
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 # The empty host object put in bundles when compiling assembly files.
 # As a speed optimization, avoid recompiling it over and over for each
 # testcase program.
@@ -270,8 +384,8 @@ proc gdb_compile_ocl {source dest type options} {
 
 	# target_compile always adds -lm which is not supported for
 	# kernel compilation.
-        set board [target_info name]
-	if [board_info $board exists mathlib] {
+	set board [target_info name]
+	if {[board_info $board exists mathlib]} {
 	    set mathlib [board_info $board mathlib]
 	    set_board_info mathlib ""
 	    set result [target_compile $source $dest $type $options]
@@ -296,14 +410,14 @@ proc gdb_compile_ocl {source dest type options} {
 proc info_threads_get_wave_count { inf_num } {
     set wave_count 0
     gdb_test_multiple "info threads ${inf_num}.*" "" {
-        -re "AMDGPU Wave\[^\r\n\]+\r\n" {
-            incr wave_count
-            exp_continue
-        }
+	-re "AMDGPU Wave\[^\r\n\]+\r\n" {
+	    incr wave_count
+	    exp_continue
+	}
 
-        -re "$::gdb_prompt " {
-            pass $gdb_test_name
-        }
+	-re "$::gdb_prompt " {
+	    pass $gdb_test_name
+	}
     }
 
     return $wave_count
@@ -339,7 +453,11 @@ proc info_thread_get_wave_list { } {
 proc get_current_gpu_arch {} {
     set arch ""
     gdb_test_multiple "info agents" "" -lbl {
+<<<<<<< HEAD
 	-re "\r\n\\*\[^\r\n\]*gfx(\[a-f0-9\]+)\[^\r\n\]+" {
+=======
+	-re "\r\n\\*\[^\r\n\]*gfx(\[a-f0-9\]+) \[^\r\n\]+" {
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 	    set arch $expect_out(1,string)
 	    exp_continue
 	}
@@ -398,8 +516,8 @@ proc hip_device_is_less_than { version } {
 
 # Helper function for rocm_core_find.
 
-proc rocm_core_find_1 {coredir binfile {arg ""}} {
-    set destcore [core_find_1 $coredir $binfile $arg]
+proc rocm_core_find_1 {coredir binfile arg output_file} {
+    set destcore [core_find_1 $coredir $binfile $arg $output_file]
     set gpucore "$binfile.gpucore"
 
     # Search for a GPU core dump, if any.
@@ -436,8 +554,9 @@ proc rocm_core_find_1 {coredir binfile {arg ""}} {
 # dump and merges it with the CPU core dump found by core_find.  If either
 # of the GPU and host core dump is missing, return an empty string.
 
-proc rocm_core_find {binfile {deletefiles {}} {arg ""}} {
-    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg]
+proc rocm_core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}} {
+    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg \
+	    $output_file]
 }
 
 # Helper function calling "generate-core-file COREFILE_PATH".

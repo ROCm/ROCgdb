@@ -2,7 +2,7 @@
 
 # Build script to build GDB with all targets enabled.
 
-# Copyright (C) 2008-2024 Free Software Foundation, Inc.
+# Copyright (C) 2008-2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -131,7 +131,7 @@ fi
 # Did the previous configure attempt fail?  If it did restart from scratch
 if test -d ${dir} -a ! -r ${dir}/Makefile
 then
-  echo ... removing partially configured 
+  echo ... removing partially configured
   rm -rf ${dir}
   if test -d ${dir}
   then
@@ -209,7 +209,7 @@ mv arch gdb_archs
 if test "${targexp}" != ""
 then
   alltarg=`cat gdb_archs | grep ${targexp}`
-else 
+else
   alltarg=`cat gdb_archs`
 fi
 rm -f gdb_archs
@@ -237,7 +237,7 @@ EOF
   else
     echo " OK"
   fi
-  
+
   # Create a sed script that cleans up the output from GDB.
   rm -f mbuild.sed
   # Rules to replace <0xNNNN> with the corresponding function's name.
@@ -261,7 +261,7 @@ echo "done."
 # Clean up build directory if necessary.
 if ${clean}
 then
-  echo "cleanning up $dir"
+  echo "cleaning up $dir"
   rm -rf ${dir}
 fi
 

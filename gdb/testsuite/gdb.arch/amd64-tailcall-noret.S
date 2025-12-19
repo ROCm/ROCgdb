@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2013-2024 Free Software Foundation, Inc.
+   Copyright 2013-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ mayret:
 	jne	.L8
 # BLOCK 3 freq:9996 seq:1
 # PRED: 2 [100.0%]  (fallthru,can_fallthru)
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	rep
 	ret
 # BLOCK 4 freq:4 seq:2
@@ -126,7 +126,7 @@ main:
 	addq	$8, %rsp
 .LCFI3:
 	.cfi_def_cfa_offset 8
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE12:

@@ -1,4 +1,4 @@
-# Copyright (C) 2013-2024 Free Software Foundation, Inc.
+# Copyright (C) 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ class MeasurementVmSize(Measurement):
             t = open(file_path)
             v = t.read()
             t.close()
-        except:
+        except Exception:
             return 0
         i = v.index(key)
         v = v[i:].split(None, 3)

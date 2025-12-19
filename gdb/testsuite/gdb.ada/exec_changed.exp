@@ -1,4 +1,4 @@
-# Copyright 2005-2024 Free Software Foundation, Inc.
+# Copyright 2005-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ standard_ada_testfile first
 
 # Build the first test program (note that cygwin needs the $EXEEXT).
 if {[gdb_compile_ada "${srcfile}" "${binfile}$EXEEXT" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 # Build the second test program
@@ -33,7 +33,7 @@ set srcfile2 ${srcdir}/${subdir}/${testdir}/second.adb
 set binfile2 [standard_output_file second$EXEEXT]
 
 if {[gdb_compile_ada "${srcfile2}" "${binfile2}" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
@@ -52,12 +52,12 @@ gdb_load ${common_binfile}
 # Start the program, we should land in the program main procedure
 if { [gdb_start_cmd] < 0 } {
     fail start
-    return -1
+    return
 }
 
 gdb_test "" \
-         "first \\(\\) at .*first.adb.*" \
-         "start first"
+	 "first \\(\\) at .*first.adb.*" \
+	 "start first"
 
 # Restore first executable to its original name, and move
 # second executable into its place.  Ensure that the new
@@ -78,13 +78,13 @@ if { [gdb_start_cmd] < 0 } {
     fail "start second"
 } else {
     gdb_test "" \
-             "second \\(\\) at .*second.adb.*" \
-             "start second"
+	     "second \\(\\) at .*second.adb.*" \
+	     "start second"
 }
 
 # Try again, this time with just changing the file time of first.
 
-clean_restart "${binfile}$EXEEXT"
+clean_restart "${::testfile}$EXEEXT"
 
 # Ensure we don't accidentally use the main symbol cache.
 gdb_test_no_output "mt set symbol-cache-size 0"

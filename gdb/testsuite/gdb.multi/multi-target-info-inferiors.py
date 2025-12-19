@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -54,14 +54,9 @@ def info_connections():
         print(fmt % (prefix, c.num, make_target_connection_string(c), c.description))
 
 
-def inf_num(i):
-    return i.num
-
-
 # Print information about each inferior, and the connection it is
 # using.
 def info_inferiors():
-    all_inferiors = sorted(gdb.inferiors(), key=inf_num)
     for i in gdb.inferiors():
         print(
             "Inferior %d, Connection #%d: %s"

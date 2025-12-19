@@ -55,7 +55,7 @@ m4_include(../gdbsupport/ptrace.m4)
 
 m4_include(ax_cxx_compile_stdcxx.m4)
 
-dnl written by Guido Draheim <guidod@gmx.de>, original by Alexandre Oliva 
+dnl written by Guido Draheim <guidod@gmx.de>, original by Alexandre Oliva
 dnl Version 1.3 (2001/03/02)
 dnl source http://www.gnu.org/software/ac-archive/Miscellaneous/ac_define_dir.html
 
@@ -181,7 +181,7 @@ dnl VARIABLE_RELOCATABLE to 1; otherwise it is defined as 0.
 AC_DEFUN([GDB_AC_DEFINE_RELOCATABLE], [
   if test "x$exec_prefix" = xNONE || test "x$exec_prefix" = 'x${prefix}'; then
      if test "x$prefix" = xNONE; then
-     	test_prefix=/usr/local
+	test_prefix=/usr/local
      else
 	test_prefix=$prefix
      fi
@@ -267,17 +267,7 @@ dnl similar to Guile's 'GUILE_PROGS' macro.)
 AC_DEFUN([GDB_GUILE_PROGRAM_NAMES], [
   AC_CACHE_CHECK([for the absolute file name of the 'guild' command],
     [ac_cv_guild_program_name],
-    [ac_cv_guild_program_name="`$1 --variable guild $2`"
-
-     # In Guile up to 2.0.11 included, guile-2.0.pc would not define
-     # the 'guild' and 'bindir' variables.  In that case, try to guess
-     # what the program name is, at the risk of getting it wrong if
-     # Guile was configured with '--program-suffix' or similar.
-     if test "x$ac_cv_guild_program_name" = "x"; then
-       guile_exec_prefix="`$1 --variable exec_prefix $2`"
-       ac_cv_guild_program_name="$guile_exec_prefix/bin/guild"
-     fi
-  ])
+    [ac_cv_guild_program_name="`$1 --variable guild $2`"])
 
   if ! "$ac_cv_guild_program_name" --version >&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
     AC_MSG_ERROR(['$ac_cv_guild_program_name' appears to be unusable])

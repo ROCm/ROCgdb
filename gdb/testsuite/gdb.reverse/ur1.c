@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1992-2024 Free Software Foundation, Inc.
+   Copyright 1992-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
    simply as places to try setting breakpoints at.  They are
    explicitly "one-line functions" to verify that this case works
    (some versions of gcc have or have had problems with this).
-  
+
    These functions are in a separate source file to prevent an
    optimizing compiler from inlining them and optimizing them away. */
 

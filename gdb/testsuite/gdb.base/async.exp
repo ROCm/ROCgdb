@@ -1,4 +1,4 @@
-#   Copyright 1999-2024 Free Software Foundation, Inc.
+#   Copyright 1999-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ proc test_background {command before_prompt after_prompt {message ""}} {
     global gdb_prompt
 
     if {$message eq ""} {
-        set message $command
+	set message $command
     }
 
     send_gdb "$command\n"
@@ -109,7 +109,7 @@ gdb_test_multiple {x/2i $pc} "$test" {
     }
 }
 set next_insn_is_stmt \
-    [expr [lsearch -regexp $is_stmt 0x0*$next_insn_addr] != -1]
+    [expr {[lsearch -regexp $is_stmt 0x0*$next_insn_addr] != -1}]
 
 if { $next_insn_is_stmt } {
     set prefix ""

@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,12 +22,12 @@ require {can_compile rust}
 standard_testfile .rs
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug rust}]} {
-    return -1
+    return
 }
 
 if {[ensure_gdb_index $binfile -dwarf-5] == -1} {
     untested "error adding gdb index"
-    return -1
+    return
 }
 
 gdb_exit

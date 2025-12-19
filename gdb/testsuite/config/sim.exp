@@ -1,5 +1,5 @@
 # Test Framework Driver for GDB driving a builtin simulator
-#   Copyright 1994-2024 Free Software Foundation, Inc.
+#   Copyright 1994-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ set_board_info gdb_protocol "sim"
 #
 proc gdb_target_sim { } {
     global gdb_prompt
-    
+
     set target_sim_options "[board_info target gdb,target_sim_options]"
 
     send_gdb "target sim $target_sim_options\n"
@@ -32,7 +32,7 @@ proc gdb_target_sim { } {
 	-re "Connected to the simulator.*$gdb_prompt $"	{
 	    verbose "Set target to sim"
 	}
-	timeout { 
+	timeout {
 	    perror "Couldn't set target for simulator."
 	    return -1
 	}

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -55,18 +55,18 @@ main (void)
       '---'---'---'---'---'---.
       |       |       |       |  <- line alignment
        ^^^^^^^         ^^^^^^^
-          |               |
-          + line1         + line2
+	  |               |
+	  + line1         + line2
 
      Or:
 
       .---.---.---.---.---.---.
       | U | M | U | U | M | U |
       '---'---'---'---'---'---.
-          |       |       |      <- line alignment
-           ^^^^^^^ ^^^^^^^
-              |       |
-        line1 +       + line2
+	  |       |       |      <- line alignment
+	   ^^^^^^^ ^^^^^^^
+	      |       |
+	line1 +       + line2
 
     Note we really want to test that dcache behaves correctly when
     reading a cache line fails.  We're just using unmapped memory as

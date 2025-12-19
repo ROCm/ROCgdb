@@ -1,5 +1,5 @@
 # Expect script for simple PE tests that require the just-built binutils only.
-#   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -137,6 +137,9 @@ run_dump_test "orphan"
 run_dump_test "orphan_nu"
 
 run_dump_test "reloc"
+run_dump_test "reloc2a"
+run_dump_test "reloc2b"
+run_dump_test "reloc2c"
 
 run_dump_test "weakdef-1"
 
@@ -189,3 +192,7 @@ if [check_shared_lib_support] {
     run_dump_test "symbols-ordinals-hints-imports-dlltool"
     set ASFLAGS $old_ASFLAGS
 }
+
+run_dump_test "image-fixup-16"
+run_dump_test "image-fixup-32"
+run_dump_test "image-fixup-64"

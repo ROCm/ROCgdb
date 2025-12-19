@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2004-2024 Free Software Foundation, Inc.
+   Copyright 2004-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -192,7 +192,7 @@ main ()
       }
     close (fd);
   }
-  
+
   /* Compute an initial chunk size.  The math is dodgy but it works
      for the moment.  Perhaps there's a constant around somewhere.
      Limit this to max_core_size bytes - no point in trying to

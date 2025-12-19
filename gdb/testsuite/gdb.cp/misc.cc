@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1993-2024 Free Software Foundation, Inc.
+   Copyright 1993-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -286,7 +286,7 @@ void inheritance1 (void)
   g_anon_union.one = 1;
   g_anon_union.a = 2;
 
-  inheritance2 ();	
+  inheritance2 ();
 }
 
 // ======================== static member functions =====================
@@ -392,7 +392,7 @@ void inheritance3 (void)
   g_vE.vE::ve = 27;
   g_vE.vE::vx = 28;
 
-  inheritance4 ();	
+  inheritance4 ();
 }
 
 // ======================================================================

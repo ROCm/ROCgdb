@@ -1,5 +1,5 @@
 /* YACC grammar for Modula-2 expressions, for GDB.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
    Generated from expread.y (now c-exp.y) and contributed by the Department
    of Computer Science at the State University of New York at Buffalo, 1991.
 
@@ -34,7 +34,7 @@
    with include files (<malloc.h> and <stdlib.h> for example) just became
    too messy, particularly when such includes can be inserted at random
    times by the parser generator.  */
-   
+
 %{
 
 #include "expression.h"
@@ -96,8 +96,8 @@ using namespace expr;
 %type <voidval> exp type_exp start set
 %type <voidval> variable
 %type <tval> type
-%type <bval> block 
-%type <sym> fblock 
+%type <bval> block
+%type <sym> fblock
 
 %token <lval> INT HEX ERROR
 %token <ulval> UINT M2_TRUE M2_FALSE CHAR
@@ -139,7 +139,7 @@ using namespace expr;
 %right '^' DOT '[' '('
 %right NOT '~'
 %left COLONCOLON QID
-/* This is not an actual token ; it is used for precedence. 
+/* This is not an actual token ; it is used for precedence.
 %right QID
 */
 
@@ -338,8 +338,8 @@ non_empty_arglist
 
 non_empty_arglist
 	:       non_empty_arglist ',' exp %prec ABOVE_COMMA
-     	       	    	{ pstate->arglist_len++; }
-     	;
+			{ pstate->arglist_len++; }
+	;
 
 /* GDB construct */
 exp	:	'{' type '}' exp  %prec UNARY
@@ -489,7 +489,7 @@ exp	:	STRING
 	;
 
 /* This will be used for extensions later.  Like adding modules.  */
-block	:	fblock	
+block	:	fblock
 			{ $$ = $1->value_block (); }
 	;
 
@@ -500,14 +500,14 @@ fblock	:	BLOCKNAME
 					     SEARCH_VFT, 0).symbol;
 			  $$ = sym;}
 	;
-			     
+
 
 /* GDB scope operator */
 fblock	:	block COLONCOLON BLOCKNAME
 			{ struct symbol *tem
 			    = lookup_symbol (copy_name ($3).c_str (), $1,
 					     SEARCH_VFT, 0).symbol;
-			  if (!tem || tem->aclass () != LOC_BLOCK)
+			  if (!tem || tem->loc_class () != LOC_BLOCK)
 			    error (_("No function \"%s\" in specified context."),
 				   copy_name ($3).c_str ());
 			  $$ = tem;
@@ -928,7 +928,7 @@ yylex (void)
 
     sym = lookup_symbol (tmp.c_str (), pstate->expression_context_block,
 			 SEARCH_VFT, 0).symbol;
-    if (sym && sym->aclass () == LOC_BLOCK)
+    if (sym && sym->loc_class () == LOC_BLOCK)
       return BLOCKNAME;
     if (lookup_typename (pstate->language (),
 			 tmp.c_str (), pstate->expression_context_block, 1))
@@ -936,7 +936,7 @@ yylex (void)
 
     if(sym)
     {
-      switch(sym->aclass ())
+      switch(sym->loc_class ())
        {
        case LOC_STATIC:
        case LOC_REGISTER:

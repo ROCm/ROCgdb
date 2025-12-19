@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2024 Free Software Foundation, Inc.
+// Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,11 +17,14 @@
 #![allow(unused_variables)]
 #![allow(unused_assignments)]
 
+// Use repr(C) and extern "C" to force the compiler to present a
+// C-like interface, facilitating inferior calls.
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 struct Hold<T>(T);
 
-pub fn identity<T>(x: T) -> T { x }
+pub extern "C" fn identity<T>(x: T) -> T { x }
 
 fn dowhatever() { () }
 

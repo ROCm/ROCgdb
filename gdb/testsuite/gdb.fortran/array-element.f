@@ -1,4 +1,4 @@
-c Copyright 2005-2024 Free Software Foundation, Inc.
+c Copyright 2005-2025 Free Software Foundation, Inc.
 
 c This program is free software; you can redistribute it and/or modify
 c it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ c by Wu Zhou. (woodzltc@cn.ibm.com)
 
         subroutine sub(a,n)
         dimension a(n)
-        do 100 i = 1, n 
+        do 100 i = 1, n
           a(i) = i
 100     continue
         return

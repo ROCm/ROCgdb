@@ -35,4 +35,78 @@ Disassembly of section \.text:
 .*:	(d8 1d 22 f0|f0 22 1d d8) 	xvmulhsh vs1,vs2,vs3
 .*:	(90 b3 95 f2|f2 95 b3 90) 	xvmulhuw vs20,vs21,vs22
 .*:	(d6 a3 8a f2|f2 8a a3 d6) 	xvmulhuh vs20,vs42,vs52
+.*:	(10 36 44 f0|f0 44 36 10) 	xxaes128encp vs2,vs4,vs6
+.*:	(10 36 44 f0|f0 44 36 10) 	xxaes128encp vs2,vs4,vs6
+.*:	(12 2e 44 f0|f0 44 2e 12) 	xxaes192encp vs2,vs4,vs36
+.*:	(12 2e 44 f0|f0 44 2e 12) 	xxaes192encp vs2,vs4,vs36
+.*:	(16 26 23 f0|f0 23 26 16) 	xxaes256encp vs32,vs34,vs36
+.*:	(16 26 23 f0|f0 23 26 16) 	xxaes256encp vs32,vs34,vs36
+.*:	(50 36 44 f0|f0 44 36 50) 	xxaes128decp vs2,vs4,vs6
+.*:	(50 36 44 f0|f0 44 36 50) 	xxaes128decp vs2,vs4,vs6
+.*:	(52 2e 44 f0|f0 44 2e 52) 	xxaes192decp vs2,vs4,vs36
+.*:	(52 2e 44 f0|f0 44 2e 52) 	xxaes192decp vs2,vs4,vs36
+.*:	(56 26 23 f0|f0 23 26 56) 	xxaes256decp vs32,vs34,vs36
+.*:	(56 26 23 f0|f0 23 26 56) 	xxaes256decp vs32,vs34,vs36
+.*:	(90 96 00 f2|f2 00 96 90) 	xxaes128genlkp vs16,vs18
+.*:	(90 96 00 f2|f2 00 96 90) 	xxaes128genlkp vs16,vs18
+.*:	(92 9e 20 f1|f1 20 9e 92) 	xxaes192genlkp vs40,vs50
+.*:	(92 9e 20 f1|f1 20 9e 92) 	xxaes192genlkp vs40,vs50
+.*:	(92 b6 81 f2|f2 81 b6 92) 	xxaes256genlkp vs20,vs54
+.*:	(92 b6 81 f2|f2 81 b6 92) 	xxaes256genlkp vs20,vs54
+.*:	(d0 1e 22 f0|f0 22 1e d0) 	xxgfmul128gcm vs1,vs2,vs3
+.*:	(d0 1e 22 f0|f0 22 1e d0) 	xxgfmul128gcm vs1,vs2,vs3
+.*:	(d6 0f e0 f3|f3 e0 0f d6) 	xxgfmul128xts vs31,vs32,vs33
+.*:	(d6 0f e0 f3|f3 e0 0f d6) 	xxgfmul128xts vs31,vs32,vs33
+.*:	(06 00 00 00|00 00 00 06) 	paddis  r12,r9,15
+.*:	(3d 89 00 0f|0f 00 89 3d) 
+.*:	(06 00 00 00|00 00 00 06) 	paddis  r12,r9,15
+.*:	(3d 89 00 0f|0f 00 89 3d) 
+.*:	(06 00 ff ff|ff ff 00 06) 	paddis  r12,r9,-32769
+.*:	(3d 89 7f ff|ff 7f 89 3d) 
+.*:	(06 00 ff ff|ff ff 00 06) 	paddis  r12,r9,-32769
+.*:	(3d 89 7f ff|ff 7f 89 3d) 
+.*:	(06 10 00 00|00 00 10 06) 	paddis  r9,0,25,1	# e4
+.*:	(3d 20 00 19|19 00 20 3d) 
+.*:	(06 00 7f ff|ff 7f 00 06) 	plis    r24,2147483647
+.*:	(3f 00 ff ff|ff ff 00 3f) 
+.*:	(06 00 7f ff|ff 7f 00 06) 	plis    r24,2147483647
+.*:	(3f 00 ff ff|ff ff 00 3f) 
+.*:	(60 00 00 00|00 00 00 60) 	nop
+.*:	(06 00 7f ff|ff 7f 00 06) 	plis    r24,2147483647
+.*:	(3f 00 ff ff|ff ff 00 3f) 
+.*:	(06 00 80 00|00 80 00 06) 	paddis  r30,r10,-2147483648
+.*:	(3f ca 00 00|00 00 ca 3f) 
+.*:	(06 00 80 00|00 80 00 06) 	paddis  r30,r10,-2147483648
+.*:	(3f ca 00 00|00 00 ca 3f) 
+.*:	(06 00 80 00|00 80 00 06) 	paddis  r30,r10,-2147483648
+.*:	(3f ca 00 00|00 00 ca 3f) 
+.*:	(60 00 00 00|00 00 00 60) 	nop
+.*:	(06 00 7f ff|ff 7f 00 06) 	paddis  r30,r10,2147483647
+.*:	(3f ca ff ff|ff ff ca 3f) 
+.*:	(06 00 7f ff|ff 7f 00 06) 	paddis  r30,r10,2147483647
+.*:	(3f ca ff ff|ff ff ca 3f) 
+.*:	(06 00 7f ff|ff 7f 00 06) 	paddis  r30,r10,2147483647
+.*:	(3f ca ff ff|ff ff ca 3f) 
+.*:	(60 00 00 00|00 00 00 60) 	nop
+.*:	(06 10 7f ff|ff 7f 10 06) 	paddis  r15,0,2147483647,1	# 140
+.*	(3d e0 ff ff|ff ff e0 3d) 
+.*:	(06 10 7f ff|ff 7f 10 06) 	paddis  r15,0,2147483647,1	# 148
+.*	(3d e0 ff ff|ff ff e0 3d) 
+.*:	(03 a8 b8 11|11 b8 a8 03) 	vucmprhn v13,v24,v21
+.*:	(43 b0 b8 11|11 b8 b0 43) 	vucmprln v13,v24,v22
+.*:	(83 b0 d8 11|11 d8 b0 83) 	vucmprhb v14,v24,v22
+.*:	(c3 a8 d8 11|11 d8 a8 c3) 	vucmprlb v14,v24,v21
+.*:	(03 b1 f8 11|11 f8 b1 03) 	vucmprhh v15,v24,v22
+.*:	(43 a9 f8 11|11 f8 a9 43) 	vucmprlh v15,v24,v21
+.*:	(83 b1 a0 12|12 a0 b1 83) 	vupkhsntob v21,v22
+.*:	(83 a9 81 12|12 81 a9 83) 	vupklsntob v20,v21
+.*:	(83 91 2b 12|12 2b 91 83) 	vupkint4tobf16 v17,v18,3
+.*:	(83 c9 e3 11|11 e3 c9 83) 	vupkint8tobf16 v15,v25,1
+.*:	(83 c1 17 12|12 17 c1 83) 	vupkint4tofp32 v16,v24,7
+.*:	(83 b9 2f 12|12 2f b9 83) 	vupkint8tofp32 v17,v23,3
+.*:	(da 9e 72 7c|7c 72 9e da) 	lxvpb32x vs34,r18,r19
+.*:	(da af 74 7c|7c 74 af da) 	stxvpb32x vs34,r20,r21
+.*:	(4c 06 00 7c|7c 00 06 4c) 	ccmclean
+.*:	(cc 06 00 7c|7c 00 06 cc) 	ccmrl
+.*:	(26 22 40 7c|7c 40 22 26) 	mtlpl   r4,r2
 #pass

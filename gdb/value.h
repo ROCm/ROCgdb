@@ -1,7 +1,7 @@
 /* Definitions for values of C expressions, for GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -169,7 +169,7 @@ public:
 					       type *type = nullptr);
 
   /* Same as `allocate_register_lazy`, but make the value non-lazy.
-  
+
      The caller is responsible for filling the value's contents.  */
   static struct value *allocate_register (const frame_info_ptr &next_frame,
 					  int regnum, type *type = nullptr);
@@ -182,6 +182,9 @@ public:
 
   /* Allocate NOT_LVAL value for type TYPE being OPTIMIZED_OUT.  */
   static struct value *allocate_optimized_out (struct type *type);
+
+  /* Allocate NOT_LVAL value for type TYPE being UNAVAILABLE.  */
+  static struct value *allocate_unavailable (struct type *type);
 
   /* Create a value of type TYPE that is zero, and return it.  */
   static struct value *zero (struct type *type, enum lval_type lv);
@@ -981,7 +984,7 @@ struct lval_funcs
      This may simply return the same closure, if VALUE's is
      reference-counted or statically allocated.
 
-     This may be NULL, in which case VALUE's closure is re-used in the
+     This may be NULL, in which case VALUE's closure is reused in the
      new value.  */
   void *(*copy_closure) (const struct value *v);
 
@@ -1078,9 +1081,18 @@ extern gdb_mpz value_as_mpz (struct value *val);
 extern LONGEST unpack_long (struct type *type, const gdb_byte *valaddr);
 extern CORE_ADDR unpack_pointer (struct type *type, const gdb_byte *valaddr);
 
+/* Unpack a field FIELDNO of the specified TYPE, from the anonymous
+   object at VALADDR.  See unpack_bits_as_long for more details.  */
+
 extern LONGEST unpack_field_as_long (struct type *type,
 				     const gdb_byte *valaddr,
 				     int fieldno);
+
+/* Unpack a field, FIELD, from the anonymous object at VALADDR.  See
+   unpack_bits_as_long for more details.  */
+
+extern LONGEST unpack_field_as_long (const gdb_byte *valaddr,
+				     struct field *field);
 
 /* Unpack a bitfield of the specified FIELD_TYPE, from the object at
    VALADDR, and store the result in *RESULT.
@@ -1152,6 +1164,8 @@ extern value *default_value_from_register (gdbarch *gdbarch, type *type,
 					   ULONGEST offset,
 					   ULONGEST bit_offset);
 
+extern ULONGEST default_dwarf2_reg_piece_offset (gdbarch *gdbarch, int regnum, ULONGEST size);
+
 /* VALUE must be an lval_register value.  If regnum is the value's
    associated register number, and len the length of the value's type,
    read one or more registers in VALUE's frame, starting with register REGNUM,
@@ -1184,9 +1198,12 @@ extern struct value *address_of_variable (struct symbol *var,
 
 extern value *value_of_register (int regnum, const frame_info_ptr &next_frame);
 
-/* Same as the above, but the value is not fetched.  */
+/* Same as the above, but the value is not fetched.  If TYPE is
+   non-nullptr, use it as the value type.  Otherwise, 'register_type'
+   will be used to obtain the type.  */
 
-extern value *value_of_register_lazy (const frame_info_ptr &next_frame, int regnum);
+extern value *value_of_register_lazy (const frame_info_ptr &next_frame,
+				      int regnum, struct type *type = nullptr);
 
 /* Return the symbol's reading requirement.  */
 
@@ -1334,10 +1351,9 @@ extern struct value *value_struct_elt (struct value **argp,
 				       const char *name, int *static_memfuncp,
 				       const char *err);
 
-extern struct value *value_struct_elt_bitpos (struct value **argp,
+extern struct value *value_struct_elt_bitpos (struct value *val,
 					      int bitpos,
-					      struct type *field_type,
-					      const char *err);
+					      struct type *field_type);
 
 extern struct value *value_aggregate_elt (struct type *curtype,
 					  const char *name,
@@ -1594,10 +1610,27 @@ extern int val_print_string (struct type *elttype, const char *encoding,
 			     struct ui_file *stream,
 			     const struct value_print_options *options);
 
+/* Print the value in stack frame FRAME of a variable specified by a
+   struct symbol.  STREAM is the ui_file on which to print the value.
+   INDENT specifies the number of indent levels to print before
+   printing the variable name.  LANGUAGE is the language to use for
+   printing.  */
+
+extern void print_variable_value (symbol *var,
+				  const frame_info_ptr &frame,
+				  ui_file *stream, int indent,
+				  const language_defn *language);
+
+/* Print the value in stack frame FRAME of a variable specified by a
+   struct symbol.  NAME is the name to print; if NULL then VAR's print
+   name will be used.  STREAM is the ui_file on which to print the
+   value.  INDENT specifies the number of indent levels to print
+   before printing the variable name.  */
+
 extern void print_variable_and_value (const char *name,
-				      struct symbol *var,
+				      symbol *var,
 				      const frame_info_ptr &frame,
-				      struct ui_file *stream,
+				      ui_file *stream,
 				      int indent);
 
 extern void typedef_print (struct type *type, struct symbol *news,
@@ -1615,7 +1648,7 @@ extern struct value *make_cv_value (int, int, struct value *);
 
 extern struct value *varying_to_slice (struct value *);
 
-extern struct value *value_slice (struct value *, int, int);
+extern struct value *value_slice (struct value *, LONGEST, LONGEST);
 
 /* Create a complex number.  The type is the complex type; the values
    are cast to the underlying scalar type before the complex number is

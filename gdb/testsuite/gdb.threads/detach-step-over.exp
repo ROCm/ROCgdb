@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,6 +50,8 @@
 
 require can_spawn_for_attach
 
+require allow_multi_inferior_tests
+
 standard_testfile
 
 set bp_lineno [gdb_get_line_number "Set breakpoint here"]
@@ -64,7 +66,7 @@ proc start_gdb_for_test {condition_eval target_non_stop non_stop displaced} {
 	append ::GDBFLAGS " -ex \"set non-stop $non_stop\""
 	append ::GDBFLAGS " -ex \"set displaced $displaced\""
 	append ::GDBFLAGS " -ex \"set schedule-multiple on\""
-	clean_restart $::binfile
+	clean_restart $::testfile
     }
 
     gdb_test_no_output "set breakpoint condition-evaluation $condition_eval"
@@ -227,7 +229,7 @@ proc_with_prefix test_detach_command {condition_eval target_non_stop non_stop di
 
 	    set running_count 0
 	    set interrupted 0
-	    set running_expected [expr ($::n_threads + 1) * 2]
+	    set running_expected [expr {($::n_threads + 1) * 2}]
 	    gdb_test_multiple "info threads" "threads running" {
 		-re "\\(running\\)" {
 		    incr running_count
@@ -355,7 +357,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options] == -1}
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

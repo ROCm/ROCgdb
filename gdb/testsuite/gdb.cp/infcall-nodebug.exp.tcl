@@ -1,5 +1,5 @@
 # This testcase is part of GDB, the GNU debugger.
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 # the rest of the test can be complied with debug information.  Whilst we
 # are at it, also test functions with debug information and C functions too.
 
-if [target_info exists gdb,cannot_call_functions] {
+if {[target_info exists gdb,cannot_call_functions]} {
     unsupported "this target can not call functions"
     continue
 }
@@ -71,9 +71,9 @@ proc build_and_run_test { lang symbols } {
 
     # Startup and run to main.
 
-    clean_restart $binfile
+    clean_restart $::testfile
 
-    if ![runto_main] then {
+    if { ![runto_main] } {
 	return
     }
 

@@ -1,5 +1,5 @@
 /* Thread management interface, for the remote server for GDB.
-   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -32,7 +32,6 @@
 #include <dlfcn.h>
 #endif
 #include <limits.h>
-#include <ctype.h>
 
 struct thread_db
 {
@@ -849,7 +848,7 @@ thread_db_handle_monitor_command (char *mon)
 	free (libthread_db_search_path);
 
       /* Skip leading space (if any).  */
-      while (isspace (*cp))
+      while (c_isspace (*cp))
 	++cp;
 
       if (*cp == '\0')

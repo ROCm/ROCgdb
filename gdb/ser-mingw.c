@@ -1,6 +1,6 @@
 /* Serial interface for local (hardwired) serial ports on Windows systems
 
-   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -281,10 +281,10 @@ ser_windows_wait_handle (struct serial *scb, HANDLE *read, HANDLE *except)
      cleared, and we get a duplicated event, if the last batch
      of characters included at least two arriving close together.  */
   if (!SetCommMask (h, 0))
-    warning (_("ser_windows_wait_handle: reseting mask failed"));
+    warning (_("ser_windows_wait_handle: resetting mask failed"));
 
   if (!SetCommMask (h, EV_RXCHAR))
-    warning (_("ser_windows_wait_handle: reseting mask failed (2)"));
+    warning (_("ser_windows_wait_handle: resetting mask failed (2)"));
 
   /* There's a potential race condition here; we must check cbInQue
      and not wait if that's nonzero.  */
@@ -432,13 +432,13 @@ select_thread_wait (struct ser_console_state *state)
      the started state, or that we exit this thread.  */
   wait_events[0] = state->start_select;
   wait_events[1] = state->exit_select;
-  if (WaitForMultipleObjects (2, wait_events, FALSE, INFINITE) 
+  if (WaitForMultipleObjects (2, wait_events, FALSE, INFINITE)
       != WAIT_OBJECT_0)
     /* Either the EXIT_SELECT event was signaled (requesting that the
        thread exit) or an error has occurred.  In either case, we exit
        the thread.  */
     ExitThread (0);
-  
+
   /* We are now in the started state.  */
   SetEvent (state->have_started);
 }
@@ -1058,7 +1058,7 @@ gdb_pipe (int pdes[2])
 struct net_windows_state
 {
   struct ser_console_state base;
-  
+
   HANDLE sock_event;
 };
 
@@ -1338,9 +1338,7 @@ static const struct serial_ops tcp_ops =
   net_windows_done_wait_handle
 };
 
-void _initialize_ser_windows ();
-void
-_initialize_ser_windows ()
+INIT_GDB_FILE (ser_windows)
 {
   WSADATA wsa_data;
 

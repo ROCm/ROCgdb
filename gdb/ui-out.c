@@ -1,6 +1,6 @@
 /* Output generating routines for GDB.
 
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions.
    Written by Fernando Nasser for Cygnus.
@@ -594,7 +594,7 @@ ui_out::vmessage (const ui_file_style &in_style, const char *format,
 
   for (auto &&piece : fpieces)
     {
-      const char *current_substring = piece.string;
+      const char *current_substring = fpieces.piece_str (piece);
 
       gdb_assert (piece.n_int_args >= 0 && piece.n_int_args <= 2);
       int intvals[2] = { 0, 0 };

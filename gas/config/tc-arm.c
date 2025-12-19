@@ -1,5 +1,5 @@
 /* tc-arm.c -- Assemble for the ARM
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
    Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
 	Modified by David Taylor (dtaylor@armltd.co.uk)
 	Cirrus coprocessor mods by Aldy Hernandez (aldyh@redhat.com)
@@ -920,20 +920,16 @@ struct asm_opcode
 #define BAD_CDE_COPROC	_("coprocessor for insn is not enabled for cde")
 #define UNPRED_REG(R)	_("using " R " results in unpredictable behaviour")
 #define THUMB1_RELOC_ONLY  _("relocation valid in thumb1 code only")
-#define MVE_NOT_IT	_("Warning: instruction is UNPREDICTABLE in an IT " \
-			  "block")
-#define MVE_NOT_VPT	_("Warning: instruction is UNPREDICTABLE in a VPT " \
-			  "block")
-#define MVE_BAD_PC	_("Warning: instruction is UNPREDICTABLE with PC" \
-			  " operand")
-#define MVE_BAD_SP	_("Warning: instruction is UNPREDICTABLE with SP" \
-			  " operand")
+#define MVE_NOT_IT	_("instruction is UNPREDICTABLE in an IT block")
+#define MVE_NOT_VPT	_("instruction is UNPREDICTABLE in a VPT block")
+#define MVE_BAD_PC	_("instruction is UNPREDICTABLE with PC operand")
+#define MVE_BAD_SP	_("instruction is UNPREDICTABLE with SP operand")
 #define BAD_SIMD_TYPE	_("bad type in SIMD instruction")
 #define BAD_MVE_AUTO	\
   _("GAS auto-detection mode and -march=all is deprecated for MVE, please" \
     " use a valid -march or -mcpu option.")
-#define BAD_MVE_SRCDEST	_("Warning: 32-bit element size and same destination "\
-			  "and source operands makes instruction UNPREDICTABLE")
+#define BAD_MVE_SRCDEST	_("32-bit element size and same destination and " \
+			  "source operands makes instruction UNPREDICTABLE")
 #define BAD_EL_TYPE	_("bad element type for instruction")
 #define MVE_BAD_QREG	_("MVE vector register Q[0..7] expected")
 #define BAD_PACBTI	_("selected processor does not support PACBTI extention")
@@ -1081,7 +1077,7 @@ const char FLT_CHARS[] = "rRsSfFdDxXeEpPHh";
 
 /* Separator character handling.  */
 
-#define skip_whitespace(str)  do { if (*(str) == ' ') ++(str); } while (0)
+#define skip_whitespace(str)  do { if (is_whitespace (*(str))) ++(str); } while (0)
 
 enum fp_16bit_format
 {
@@ -1377,7 +1373,7 @@ arm_reg_parse_multi (char **ccp)
     p++;
   while (ISALPHA (*p) || ISDIGIT (*p) || *p == '_');
 
-  reg = (struct reg_entry *) str_hash_find_n (arm_reg_hsh, start, p - start);
+  reg = str_hash_find_n (arm_reg_hsh, start, p - start);
 
   if (!reg)
     return NULL;
@@ -1474,7 +1470,7 @@ parse_neon_type (struct neon_type *type, char **str)
   while (type->elems < NEON_MAX_TYPE_ELS)
     {
       enum neon_el_type thistype = NT_untyped;
-      unsigned thissize = -1u;
+      unsigned long thissize = -1ul;
 
       if (*ptr != '.')
 	break;
@@ -1499,27 +1495,23 @@ parse_neon_type (struct neon_type *type, char **str)
 	  goto done;
 	case 'b':
 	  thistype = NT_bfloat;
-	  switch (TOLOWER (*(++ptr)))
+	  if (TOLOWER (*(++ptr)) != 'f')
 	    {
-	    case 'f':
-	      ptr += 1;
-	      thissize = strtoul (ptr, &ptr, 10);
-	      if (thissize != 16)
-		{
-		  as_bad (_("bad size %d in type specifier"), thissize);
-		  return FAIL;
-		}
-	      goto done;
-	    case '0': case '1': case '2': case '3': case '4':
-	    case '5': case '6': case '7': case '8': case '9':
-	    case ' ': case '.':
 	      as_bad (_("unexpected type character `b' -- did you mean `bf'?"));
 	      return FAIL;
-	    default:
-	      break;
 	    }
-	  break;
+	  ptr += 1;
+	  if (!ISDIGIT (*ptr) || *ptr == '0')
+	    goto unexpected;
+	  thissize = strtoul (ptr, &ptr, 10);
+	  if (thissize != 16)
+	    {
+	      as_bad (_("bad size %lu in type specifier"), thissize);
+	      return FAIL;
+	    }
+	  goto done;
 	default:
+	unexpected:
 	  as_bad (_("unexpected character `%c' in type specifier"), *ptr);
 	  return FAIL;
 	}
@@ -1532,12 +1524,14 @@ parse_neon_type (struct neon_type *type, char **str)
       else
 	{
 	parsesize:
+	  if (!ISDIGIT (*ptr) || *ptr == '0')
+	    goto unexpected;
 	  thissize = strtoul (ptr, &ptr, 10);
 
 	  if (thissize != 8 && thissize != 16 && thissize != 32
 	      && thissize != 64)
 	    {
-	      as_bad (_("bad size %d in type specifier"), thissize);
+	      as_bad (_("bad size %lu in type specifier"), thissize);
 	      return FAIL;
 	    }
 	}
@@ -1979,7 +1973,7 @@ parse_reg_list (char ** strp, enum reg_list_els etype)
 		    {
 		      if (range & (1 << i))
 			as_tsktsk
-			  (_("Warning: duplicated register (r%d) in register list"),
+			  (_("duplicated register (r%d) in register list"),
 			   i);
 		      else
 			range |= 1 << i;
@@ -1988,10 +1982,10 @@ parse_reg_list (char ** strp, enum reg_list_els etype)
 		}
 
 	      if (range & (1 << reg))
-		as_tsktsk (_("Warning: duplicated register (r%d) in register list"),
+		as_tsktsk (_("duplicated register (r%d) in register list"),
 			   reg);
 	      else if (reg <= cur_reg)
-		as_tsktsk (_("Warning: register range not in ascending order"));
+		as_tsktsk (_("register range not in ascending order"));
 
 	      range |= 1 << reg;
 	      cur_reg = reg;
@@ -2029,7 +2023,7 @@ parse_reg_list (char ** strp, enum reg_list_els etype)
 		  regno &= -regno;
 		  regno = (1 << regno) - 1;
 		  as_tsktsk
-		    (_("Warning: duplicated register (r%d) in register list"),
+		    (_("duplicated register (r%d) in register list"),
 		     regno);
 		}
 
@@ -2512,8 +2506,7 @@ parse_reloc (char **str)
   if (*q != ')')
     return -1;
 
-  if ((r = (struct reloc_entry *)
-       str_hash_find_n (arm_reloc_hsh, p, q - p)) == NULL)
+  if ((r = str_hash_find_n (arm_reloc_hsh, p, q - p)) == NULL)
     return -1;
 
   *str = q + 1;
@@ -2528,7 +2521,7 @@ insert_reg_alias (char *str, unsigned number, int type)
   struct reg_entry *new_reg;
   const char *name;
 
-  if ((new_reg = (struct reg_entry *) str_hash_find (arm_reg_hsh, str)) != 0)
+  if ((new_reg = str_hash_find (arm_reg_hsh, str)) != 0)
     {
       if (new_reg->builtin)
 	as_warn (_("ignoring attempt to redefine built-in register '%s'"), str);
@@ -2598,7 +2591,7 @@ create_register_alias (char * newname, char *p)
   if (*oldname == '\0')
     return false;
 
-  old = (struct reg_entry *) str_hash_find (arm_reg_hsh, oldname);
+  old = str_hash_find (arm_reg_hsh, oldname);
   if (!old)
     {
       as_warn (_("unknown register '%s' -- .req ignored"), oldname);
@@ -2845,8 +2838,7 @@ s_unreq (int a ATTRIBUTE_UNUSED)
     as_bad (_("invalid syntax for .unreq directive"));
   else
     {
-      struct reg_entry *reg
-	= (struct reg_entry *) str_hash_find (arm_reg_hsh, name);
+      struct reg_entry *reg = str_hash_find (arm_reg_hsh, name);
 
       if (!reg)
 	as_bad (_("unknown register alias '%s'"), name);
@@ -2870,7 +2862,7 @@ s_unreq (int a ATTRIBUTE_UNUSED)
 	  nbuf = strdup (name);
 	  for (p = nbuf; *p; p++)
 	    *p = TOUPPER (*p);
-	  reg = (struct reg_entry *) str_hash_find (arm_reg_hsh, nbuf);
+	  reg = str_hash_find (arm_reg_hsh, nbuf);
 	  if (reg)
 	    {
 	      str_hash_delete (arm_reg_hsh, nbuf);
@@ -2881,7 +2873,7 @@ s_unreq (int a ATTRIBUTE_UNUSED)
 
 	  for (p = nbuf; *p; p++)
 	    *p = TOLOWER (*p);
-	  reg = (struct reg_entry *) str_hash_find (arm_reg_hsh, nbuf);
+	  reg = str_hash_find (arm_reg_hsh, nbuf);
 	  if (reg)
 	    {
 	      str_hash_delete (arm_reg_hsh, nbuf);
@@ -3107,13 +3099,13 @@ find_real_start (symbolS * symbolP)
   if (S_IS_LOCAL (symbolP) || name[0] == '.')
     return symbolP;
 
-  real_start = concat (STUB_NAME, name, NULL);
+  real_start = concat (STUB_NAME, name, (const char *) NULL);
   new_target = symbol_find (real_start);
   free (real_start);
 
   if (new_target == NULL)
     {
-      as_warn (_("Failed to find real start of function: %s\n"), name);
+      as_warn (_("Failed to find real start of function: %s"), name);
       new_target = symbolP;
     }
 
@@ -3267,7 +3259,6 @@ s_thumb_set (int equiv)
 	 for this symbol.  */
       if (listing & LISTING_SYMBOLS)
 	{
-	  extern struct list_info_struct * listing_tail;
 	  fragS * dummy_frag = (fragS * ) xmalloc (sizeof (fragS));
 
 	  memset (dummy_frag, 0, sizeof (fragS));
@@ -3442,7 +3433,11 @@ s_ccs_def (int name)
   if (codecomposer_syntax)
     s_globl (name);
   else
+#ifdef OBJ_COFF
+    obj_coff_def (name);
+#else
     as_bad (_(".def pseudo-op only available with -mccs flag."));
+#endif
 }
 
 /* Directives: Literal pools.  */
@@ -3675,7 +3670,7 @@ tc_start_label_without_colon (void)
     {
       const char *label = input_line_pointer;
 
-      while (!is_end_of_line[(int) label[-1]])
+      while (!is_end_of_stmt (label[-1]))
 	--label;
 
       if (*label == '.')
@@ -3707,7 +3702,7 @@ symbol_locate (symbolS *    symbolP,
 
   name_length = strlen (name) + 1;   /* +1 for \0.  */
   obstack_grow (&notes, name, name_length);
-  preserved_copy_of_name = (char *) obstack_finish (&notes);
+  preserved_copy_of_name = obstack_finish (&notes);
 
 #ifdef tc_canonicalize_symbol_name
   preserved_copy_of_name =
@@ -3850,12 +3845,11 @@ s_arm_elf_cons (int nbytes)
 	    emit_expr (&exp, (unsigned int) nbytes);
 	  else
 	    {
-	      reloc_howto_type *howto = (reloc_howto_type *)
-		  bfd_reloc_type_lookup (stdoutput,
-					 (bfd_reloc_code_real_type) reloc);
+	      reloc_howto_type *howto = bfd_reloc_type_lookup (stdoutput,
+							       reloc);
 	      int size = bfd_get_reloc_size (howto);
 
-	      if (reloc == BFD_RELOC_ARM_PLT32)
+	      if (reloc == BFD_RELOC_32_PLT_PCREL)
 		{
 		  as_bad (_("(plt) is only valid on branch targets"));
 		  reloc = BFD_RELOC_UNUSED;
@@ -4264,7 +4258,7 @@ s_arm_unwind_save_pseudo (int regno)
       add_unwind_opcode (op, 1);
       break;
     default:
-      as_bad (_("Unknown register no. encountered: %d\n"), regno);
+      as_bad (_("Unknown register no. encountered: %d"), regno);
     }
 }
 
@@ -4357,10 +4351,10 @@ parse_dot_save (char **str_p, int prev_reg)
       if (!in_range)
 	{
 	  if (core_regs & (1 << reg))
-	    as_tsktsk (_("Warning: duplicated register (r%d) in register list"),
+	    as_tsktsk (_("duplicated register (r%d) in register list"),
 		       reg);
 	  else if (reg <= prev_reg)
-	    as_tsktsk (_("Warning: register list not in ascending order"));
+	    as_tsktsk (_("register list not in ascending order"));
 
 	  core_regs |= (1 << reg);
 	  prev_reg = reg;
@@ -4377,7 +4371,7 @@ parse_dot_save (char **str_p, int prev_reg)
 	  for (i = prev_reg + 1; i <= reg; i++)
 	    {
 	      if (core_regs & (1 << i))
-		as_tsktsk (_("Warning: duplicated register (r%d) in register list"),
+		as_tsktsk (_("duplicated register (r%d) in register list"),
 			   i);
 	      else
 		core_regs |= 1 << i;
@@ -4978,9 +4972,9 @@ s_arm_unwind_raw (int ignored ATTRIBUTE_UNUSED)
 static void
 s_arm_eabi_attribute (int ignored ATTRIBUTE_UNUSED)
 {
-  int tag = obj_elf_vendor_attribute (OBJ_ATTR_PROC);
+  obj_attr_tag_t tag = obj_attr_v1_process_attribute (OBJ_ATTR_PROC);
 
-  if (tag >= 0 && tag < NUM_KNOWN_OBJ_ATTRIBUTES)
+  if (tag < NUM_KNOWN_OBJ_ATTRIBUTES)
     attributes_set_explicitly[tag] = 1;
 }
 
@@ -5055,7 +5049,8 @@ set_fp16_format (int dummy ATTRIBUTE_UNUSED)
   new_format = ARM_FP16_FORMAT_DEFAULT;
 
   name = input_line_pointer;
-  while (*input_line_pointer && !ISSPACE (*input_line_pointer))
+  while (!is_end_of_stmt (*input_line_pointer)
+	 && !is_whitespace (*input_line_pointer))
     input_line_pointer++;
 
   saved_char = *input_line_pointer;
@@ -5366,7 +5361,7 @@ parse_qfloat_immediate (char **ccp, int *immed)
     return FAIL;
   else
     {
-      for (; *fpnum != '\0' && *fpnum != ' ' && *fpnum != '\n'; fpnum++)
+      for (; *fpnum != '\0' && !is_whitespace (*fpnum) && *fpnum != '\n'; fpnum++)
 	if (*fpnum == '.' || *fpnum == 'e' || *fpnum == 'E')
 	  {
 	    found_fpchar = 1;
@@ -5453,9 +5448,7 @@ parse_shift (char **str, int i, enum parse_shift_mode mode)
       return FAIL;
     }
 
-  shift_name
-    = (const struct asm_shift_name *) str_hash_find_n (arm_shift_hsh, *str,
-						       p - *str);
+  shift_name = str_hash_find_n (arm_shift_hsh, *str, p - *str);
 
   if (shift_name == NULL)
     {
@@ -6263,8 +6256,7 @@ parse_psr (char **str, bool lhs)
 	  || strncasecmp (start, "psr", 3) == 0)
 	p = start + strcspn (start, "rR") + 1;
 
-      psr = (const struct asm_psr *) str_hash_find_n (arm_v7m_psr_hsh, start,
-						      p - start);
+      psr = str_hash_find_n (arm_v7m_psr_hsh, start, p - start);
 
       if (!psr)
 	return FAIL;
@@ -6366,8 +6358,7 @@ parse_psr (char **str, bool lhs)
 	}
       else
 	{
-	  psr = (const struct asm_psr *) str_hash_find_n (arm_psr_hsh, start,
-							  p - start);
+	  psr = str_hash_find_n (arm_psr_hsh, start, p - start);
 	  if (!psr)
 	    goto error;
 
@@ -6564,7 +6555,7 @@ parse_cond (char **str)
       n++;
     }
 
-  c = (const struct asm_cond *) str_hash_find_n (arm_cond_hsh, cond, n);
+  c = str_hash_find_n (arm_cond_hsh, cond, n);
   if (!c)
     {
       inst.error = _("condition required");
@@ -6587,8 +6578,7 @@ parse_barrier (char **str)
   while (ISALPHA (*q))
     q++;
 
-  o = (const struct asm_barrier_opt *) str_hash_find_n (arm_barrier_opt_hsh, p,
-							q - p);
+  o = str_hash_find_n (arm_barrier_opt_hsh, p, q - p);
   if (!o)
     return FAIL;
 
@@ -9314,11 +9304,11 @@ encode_branch (int default_reloc)
 {
   if (inst.operands[0].hasreloc)
     {
-      constraint (inst.operands[0].imm != BFD_RELOC_ARM_PLT32
+      constraint (inst.operands[0].imm != BFD_RELOC_32_PLT_PCREL
 		  && inst.operands[0].imm != BFD_RELOC_ARM_TLS_CALL,
 		  _("the only valid suffixes here are '(plt)' and '(tlscall)'"));
-      inst.relocs[0].type = inst.operands[0].imm == BFD_RELOC_ARM_PLT32
-	? BFD_RELOC_ARM_PLT32
+      inst.relocs[0].type = inst.operands[0].imm == BFD_RELOC_32_PLT_PCREL
+	? BFD_RELOC_32_PLT_PCREL
 	: thumb_mode ? BFD_RELOC_ARM_THM_TLS_CALL : BFD_RELOC_ARM_TLS_CALL;
     }
   else
@@ -9465,7 +9455,7 @@ struct deprecated_coproc_regs_s
 };
 
 #define DEPR_ACCESS_V8 \
-  N_("This coprocessor register access is deprecated in ARMv8")
+  N_("this coprocessor register access is deprecated in ARMv8")
 
 /* Table of all deprecated coprocessor registers.  */
 static struct deprecated_coproc_regs_s deprecated_coproc_regs[] =
@@ -9527,7 +9517,7 @@ do_co_reg (void)
 	    && inst.operands[4].reg == r->crm
 	    && inst.operands[5].imm == r->opc2)
 	  {
-	    if (! ARM_CPU_IS_ANY (cpu_variant)
+	    if (!(r->obs_msg && check_obsolete (&r->obsoleted, r->obs_msg))
 		&& warn_on_deprecated
 		&& ARM_CPU_HAS_FEATURE (cpu_variant, r->deprecated))
 	      as_tsktsk ("%s", r->dep_msg);
@@ -12029,7 +12019,7 @@ do_t_branch23 (void)
      the branch encoding is now needed to deal with TLSCALL relocs.
      So if we see a PLT reloc now, put it back to how it used to be to
      keep the preexisting behaviour.  */
-  if (inst.relocs[0].type == BFD_RELOC_ARM_PLT32)
+  if (inst.relocs[0].type == BFD_RELOC_32_PLT_PCREL)
     inst.relocs[0].type = BFD_RELOC_THUMB_PCREL_BRANCH23;
 
 #if defined(OBJ_COFF)
@@ -15434,7 +15424,7 @@ do_vfp_nsyn_opcode (const char *opname)
 {
   const struct asm_opcode *opcode;
 
-  opcode = (const struct asm_opcode *) str_hash_find (arm_ops_hsh, opname);
+  opcode = str_hash_find (arm_ops_hsh, opname);
 
   if (!opcode)
     abort ();
@@ -17964,7 +17954,7 @@ do_mve_vhcadd (void)
   constraint (rot != 90 && rot != 270, _("immediate out of range"));
 
   if (et.size == 32 && inst.operands[0].reg == inst.operands[2].reg)
-    as_tsktsk (_("Warning: 32-bit element size and same first and third "
+    as_tsktsk (_("32-bit element size and same first and third "
 		 "operand makes instruction UNPREDICTABLE"));
 
   mve_encode_qqq (0, et.size);
@@ -19736,7 +19726,7 @@ do_neon_rev (void)
 
   if (ARM_CPU_HAS_FEATURE (cpu_variant, mve_ext) && elsize == 64
       && inst.operands[0].reg == inst.operands[1].reg)
-    as_tsktsk (_("Warning: 64-bit element size and same destination and source"
+    as_tsktsk (_("64-bit element size and same destination and source"
 		 " operands makes instruction UNPREDICTABLE"));
 
   gas_assert (elsize != 0);
@@ -21287,7 +21277,7 @@ do_vcadd (void)
       et = neon_check_type (3, rs, N_EQK, N_EQK, N_KEY | N_F16 | N_F32 | N_I8
 			    | N_I16 | N_I32);
       if (et.size == 32 && inst.operands[0].reg == inst.operands[2].reg)
-	as_tsktsk (_("Warning: 32-bit element size and same first and third "
+	as_tsktsk (_("32-bit element size and same first and third "
 		     "operand makes instruction UNPREDICTABLE"));
     }
 
@@ -22228,8 +22218,8 @@ fix_new_arm (fragS *	   frag,
       break;
 
     default:
-      new_fix = (fixS *) fix_new (frag, where, size, make_expr_symbol (exp), 0,
-				  pc_rel, (enum bfd_reloc_code_real) reloc);
+      new_fix = fix_new (frag, where, size, make_expr_symbol (exp), 0,
+			 pc_rel, reloc);
       break;
     }
 
@@ -22450,7 +22440,7 @@ opcode_lookup (char **str)
   /* Scan up to the end of the mnemonic, which must end in white space,
      '.' (in unified mode, or for Neon/VFP instructions), or end of string.  */
   for (base = end = *str; *end != '\0'; end++)
-    if (*end == ' ' || *end == '.')
+    if (is_whitespace (*end) || *end == '.')
       break;
 
   if (end == base)
@@ -22481,15 +22471,15 @@ opcode_lookup (char **str)
 	  if (parse_neon_type (&inst.vectype, str) == FAIL)
 	    return NULL;
 	}
-      else if (end[offset] != '\0' && end[offset] != ' ')
+
+      if (**str != '\0' && !is_whitespace (**str))
 	return NULL;
     }
   else
     *str = end;
 
   /* Look for unaffixed or special-case affixed mnemonic.  */
-  opcode = (const struct asm_opcode *) str_hash_find_n (arm_ops_hsh, base,
-							end - base);
+  opcode = str_hash_find_n (arm_ops_hsh, base, end - base);
   cond = NULL;
   if (opcode)
     {
@@ -22503,7 +22493,7 @@ opcode_lookup (char **str)
       if (warn_on_deprecated && unified_syntax)
 	as_tsktsk (_("conditional infixes are deprecated in unified syntax"));
       affix = base + (opcode->tag - OT_odd_infix_0);
-      cond = (const struct asm_cond *) str_hash_find_n (arm_cond_hsh, affix, 2);
+      cond = str_hash_find_n (arm_cond_hsh, affix, 2);
       gas_assert (cond);
 
       inst.cond = cond->value;
@@ -22516,9 +22506,8 @@ opcode_lookup (char **str)
     if (end - base < 2)
       return NULL;
      affix = end - 1;
-     cond = (const struct asm_cond *) str_hash_find_n (arm_vcond_hsh, affix, 1);
-     opcode = (const struct asm_opcode *) str_hash_find_n (arm_ops_hsh, base,
-							   affix - base);
+     cond = str_hash_find_n (arm_vcond_hsh, affix, 1);
+     opcode = str_hash_find_n (arm_ops_hsh, base, affix - base);
 
      /* A known edge case is a conflict between an 'e' as a suffix for an
 	Else of a VPT predication block and an 'ne' suffix for an IT block.
@@ -22550,9 +22539,8 @@ opcode_lookup (char **str)
 
       /* Look for suffixed mnemonic.  */
       affix = end - 2;
-      cond = (const struct asm_cond *) str_hash_find_n (arm_cond_hsh, affix, 2);
-      opcode = (const struct asm_opcode *) str_hash_find_n (arm_ops_hsh, base,
-							    affix - base);
+      cond = str_hash_find_n (arm_cond_hsh, affix, 2);
+      opcode = str_hash_find_n (arm_ops_hsh, base, affix - base);
     }
 
   if (opcode && cond)
@@ -22601,14 +22589,13 @@ opcode_lookup (char **str)
 
   /* Look for infixed mnemonic in the usual position.  */
   affix = base + 3;
-  cond = (const struct asm_cond *) str_hash_find_n (arm_cond_hsh, affix, 2);
+  cond = str_hash_find_n (arm_cond_hsh, affix, 2);
   if (!cond)
     return NULL;
 
   memcpy (save, affix, 2);
   memmove (affix, affix + 2, (end - affix) - 2);
-  opcode = (const struct asm_opcode *) str_hash_find_n (arm_ops_hsh, base,
-							(end - base) - 2);
+  opcode = str_hash_find_n (arm_ops_hsh, base, (end - base) - 2);
   memmove (affix + 2, affix, (end - affix) - 2);
   memcpy (affix, save, 2);
 
@@ -22833,8 +22820,7 @@ handle_pred_state (void)
 		{
 		  if (unified_syntax
 		      && !(implicit_it_mode & IMPLICIT_IT_MODE_ARM))
-		    as_tsktsk (_("Warning: conditional outside an IT block"\
-				 " for Thumb."));
+		    as_tsktsk (_("conditional outside an IT block for Thumb"));
 		}
 	      else
 		{
@@ -23913,7 +23899,7 @@ static struct reloc_entry reloc_names[] =
 {
   { "got",     BFD_RELOC_ARM_GOT32   },	 { "GOT",     BFD_RELOC_ARM_GOT32   },
   { "gotoff",  BFD_RELOC_ARM_GOTOFF  },	 { "GOTOFF",  BFD_RELOC_ARM_GOTOFF  },
-  { "plt",     BFD_RELOC_ARM_PLT32   },	 { "PLT",     BFD_RELOC_ARM_PLT32   },
+  { "plt",     BFD_RELOC_32_PLT_PCREL},	 { "PLT",     BFD_RELOC_32_PLT_PCREL},
   { "target1", BFD_RELOC_ARM_TARGET1 },	 { "TARGET1", BFD_RELOC_ARM_TARGET1 },
   { "target2", BFD_RELOC_ARM_TARGET2 },	 { "TARGET2", BFD_RELOC_ARM_TARGET2 },
   { "sbrel",   BFD_RELOC_ARM_SBREL32 },	 { "SBREL",   BFD_RELOC_ARM_SBREL32 },
@@ -26053,14 +26039,13 @@ static valueT
 md_chars_to_number (char * buf, int n)
 {
   valueT result = 0;
-  unsigned char * where = (unsigned char *) buf;
 
   if (target_big_endian)
     {
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (*where++ & 255);
+	  result |= (*buf++ & 255);
 	}
     }
   else
@@ -26068,7 +26053,7 @@ md_chars_to_number (char * buf, int n)
       while (n--)
 	{
 	  result <<= 8;
-	  result |= (where[n] & 255);
+	  result |= (buf[n] & 255);
 	}
     }
 
@@ -26605,10 +26590,6 @@ arm_handle_align (fragS * fragP)
 
   bytes = fragP->fr_next->fr_address - fragP->fr_address - fragP->fr_fix;
   p = fragP->fr_literal + fragP->fr_fix;
-  fix = 0;
-
-  if (bytes > MAX_MEM_FOR_RS_ALIGN_CODE)
-    bytes &= MAX_MEM_FOR_RS_ALIGN_CODE;
 
   gas_assert ((fragP->tc_frag_data.thumb_mode & MODE_RECORDED) != 0);
 
@@ -26639,11 +26620,9 @@ arm_handle_align (fragS * fragP)
 #endif
     }
 
-  fragP->fr_var = noop_size;
-
-  if (bytes & (noop_size - 1))
+  fix = bytes & (noop_size - 1);
+  if (fix != 0)
     {
-      fix = bytes & (noop_size - 1);
 #ifdef OBJ_ELF
       insert_data_mapping_symbol (state, fragP->fr_fix, fragP, fix);
 #endif
@@ -26667,45 +26646,12 @@ arm_handle_align (fragS * fragP)
       noop_size = 4;
     }
 
-  while (bytes >= noop_size)
-    {
-      memcpy (p, noop, noop_size);
-      p += noop_size;
-      bytes -= noop_size;
-      fix += noop_size;
-    }
-
   fragP->fr_fix += fix;
-}
-
-/* Called from md_do_align.  Used to create an alignment
-   frag in a code section.  */
-
-void
-arm_frag_align_code (int n, int max)
-{
-  char * p;
-
-  /* We assume that there will never be a requirement
-     to support alignments greater than MAX_MEM_FOR_RS_ALIGN_CODE bytes.  */
-  if (max > MAX_MEM_FOR_RS_ALIGN_CODE)
+  if (bytes != 0)
     {
-      char err_msg[128];
-
-      sprintf (err_msg,
-	_("alignments greater than %d bytes not supported in .text sections."),
-	MAX_MEM_FOR_RS_ALIGN_CODE + 1);
-      as_fatal ("%s", err_msg);
+      fragP->fr_var = noop_size;
+      memcpy (p, noop, noop_size);
     }
-
-  p = frag_var (rs_align_code,
-		MAX_MEM_FOR_RS_ALIGN_CODE,
-		1,
-		(relax_substateT) max,
-		(symbolS *) NULL,
-		(offsetT) n,
-		(char *) NULL);
-  *p = 0;
 }
 
 /* Perform target specific initialisation of a frag.
@@ -27299,7 +27245,7 @@ md_pcrel_from_section (fixS * fixP, segT seg)
 
     case BFD_RELOC_ARM_PCREL_BRANCH:
     case BFD_RELOC_ARM_PCREL_JUMP:
-    case BFD_RELOC_ARM_PLT32:
+    case BFD_RELOC_32_PLT_PCREL:
 #ifdef TE_WINCE
       /* When handling fixups immediately, because we have already
 	 discovered the value of a symbol, or the address of the frag involved
@@ -28251,7 +28197,7 @@ md_apply_fix (fixS *	fixP,
 	}
       /* Fall through.  */
 
-    case BFD_RELOC_ARM_PLT32:
+    case BFD_RELOC_32_PLT_PCREL:
 #endif
     case BFD_RELOC_ARM_PCREL_BRANCH:
       temp = 3;
@@ -29358,9 +29304,8 @@ tc_gen_reloc (asection *section, fixS *fixp)
   arelent * reloc;
   bfd_reloc_code_real_type code;
 
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
@@ -29474,7 +29419,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
     case BFD_RELOC_ARM_GOT32:
     case BFD_RELOC_ARM_GOTOFF:
     case BFD_RELOC_ARM_GOT_PREL:
-    case BFD_RELOC_ARM_PLT32:
+    case BFD_RELOC_32_PLT_PCREL:
     case BFD_RELOC_ARM_TARGET1:
     case BFD_RELOC_ARM_ROSEGREL32:
     case BFD_RELOC_ARM_SBREL32:
@@ -29803,7 +29748,7 @@ arm_fix_adjustable (fixS * fixP)
     return false;
 
   /* Don't allow symbols to be discarded on GOT related relocs.	 */
-  if (fixP->fx_r_type == BFD_RELOC_ARM_PLT32
+  if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
       || fixP->fx_r_type == BFD_RELOC_ARM_GOT32
       || fixP->fx_r_type == BFD_RELOC_ARM_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_ARM_TLS_GD32
@@ -29857,10 +29802,6 @@ elf32_arm_target_format (void)
   return (target_big_endian
 	  ? "elf32-bigarm-vxworks"
 	  : "elf32-littlearm-vxworks");
-#elif defined (TE_NACL)
-  return (target_big_endian
-	  ? "elf32-bigarm-nacl"
-	  : "elf32-littlearm-nacl");
 #else
   if (arm_fdpic)
     {
@@ -30051,7 +29992,7 @@ arm_adjust_symtab (void)
     }
 
   /* Remove any overlapping mapping symbols generated by alignment frags.  */
-  bfd_map_over_sections (stdoutput, check_mapping_symbols, (char *) 0);
+  bfd_map_over_sections (stdoutput, check_mapping_symbols, NULL);
   /* Now do generic ELF adjustments.  */
   elf_adjust_symtab ();
 #endif
@@ -30121,7 +30062,7 @@ md_begin (void)
     {
       struct reloc_entry * entry = reloc_names + i;
 
-      if (arm_is_eabi() && entry->reloc == BFD_RELOC_ARM_PLT32)
+      if (arm_is_eabi() && entry->reloc == BFD_RELOC_32_PLT_PCREL)
 	/* This makes encode_branch() use the EABI versions of this relocation.  */
 	entry->reloc = BFD_RELOC_UNUSED;
 
@@ -31863,7 +31804,7 @@ arm_parse_arch (const char *str)
 	return true;
       }
 
-  as_bad (_("unknown architecture `%s'\n"), str);
+  as_bad (_("unknown architecture `%s'"), str);
   return false;
 }
 
@@ -31879,7 +31820,7 @@ arm_parse_fpu (const char * str)
 	return true;
       }
 
-  as_bad (_("unknown floating point format `%s'\n"), str);
+  as_bad (_("unknown floating point format `%s'"), str);
   return false;
 }
 
@@ -31895,7 +31836,7 @@ arm_parse_float_abi (const char * str)
 	return true;
       }
 
-  as_bad (_("unknown floating point abi `%s'\n"), str);
+  as_bad (_("unknown floating point abi `%s'"), str);
   return false;
 }
 
@@ -31911,7 +31852,7 @@ arm_parse_eabi (const char * str)
 	meabi_flags = opt->value;
 	return true;
       }
-  as_bad (_("unknown EABI `%s'\n"), str);
+  as_bad (_("unknown EABI `%s'"), str);
   return false;
 }
 #endif
@@ -32189,7 +32130,7 @@ static const cpu_arch_ver_table cpu_arch_ver[] =
 /* Set an attribute if it has not already been set by the user.  */
 
 static void
-aeabi_set_attribute_int (int tag, int value)
+aeabi_set_attribute_int (obj_attr_tag_t tag, int value)
 {
   if (tag < 1
       || tag >= NUM_KNOWN_OBJ_ATTRIBUTES
@@ -32200,7 +32141,7 @@ aeabi_set_attribute_int (int tag, int value)
 }
 
 static void
-aeabi_set_attribute_string (int tag, const char *value)
+aeabi_set_attribute_string (obj_attr_tag_t tag, const char *value)
 {
   if (tag < 1
       || tag >= NUM_KNOWN_OBJ_ATTRIBUTES
@@ -32423,7 +32364,7 @@ aeabi_set_public_attributes (void)
   if (arch == -1)
     arch = get_aeabi_cpu_arch_from_fset (&flags_arch, &flags_ext, &profile, 0);
   if (arch == -1)
-    as_bad (_("no architecture contains all the instructions used\n"));
+    as_bad (_("no architecture contains all the instructions used"));
 
   /* Tag_CPU_name.  */
   if (selected_cpu_name[0])
@@ -32683,7 +32624,7 @@ s_arm_arch (int ignored ATTRIBUTE_UNUSED)
 	return;
       }
 
-  as_bad (_("unknown architecture `%s'\n"), name);
+  as_bad (_("unknown architecture `%s'"), name);
   *input_line_pointer = saved_char;
   ignore_rest_of_line ();
 }
@@ -32719,7 +32660,7 @@ s_arm_object_arch (int ignored ATTRIBUTE_UNUSED)
 	return;
       }
 
-  as_bad (_("unknown architecture `%s'\n"), name);
+  as_bad (_("unknown architecture `%s'"), name);
   *input_line_pointer = saved_char;
   ignore_rest_of_line ();
 }
@@ -32798,8 +32739,12 @@ s_arm_arch_extension (int ignored ATTRIBUTE_UNUSED)
 
 	if (i == nb_allowed_archs)
 	  {
-	    as_bad (_("architectural extension `%s' is not allowed for the "
-		      "current base architecture"), name);
+	    if (adding_value)
+	      as_bad (_("architectural extension `%s' is not allowed for the "
+			"current base architecture"), name);
+	    else
+	      as_tsktsk (_("disabling feature `%s' has no effect on the "
+			   "current base architecture"), name);
 	    break;
 	  }
 
@@ -32821,7 +32766,7 @@ s_arm_arch_extension (int ignored ATTRIBUTE_UNUSED)
       }
 
   if (opt->name == NULL)
-    as_bad (_("unknown architecture extension `%s'\n"), name);
+    as_bad (_("unknown architecture extension `%s'"), name);
 
   *input_line_pointer = saved_char;
 }
@@ -32862,7 +32807,7 @@ s_arm_fpu (int ignored ATTRIBUTE_UNUSED)
 	return;
       }
 
-  as_bad (_("unknown floating point format `%s'\n"), name);
+  as_bad (_("unknown floating point format `%s'"), name);
   *input_line_pointer = saved_char;
   ignore_rest_of_line ();
 }

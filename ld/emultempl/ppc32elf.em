@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -238,7 +238,7 @@ ppc_finish (void)
     lang_for_each_statement (no_zero_padding);
   if (!ppc_finish_symbols (&link_info))
     einfo (_("%X%P: ppc_finish_symbols problem %E\n"));
-  finish_default ();
+  ldelf_finish ();
 }
 
 EOF
@@ -366,7 +366,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 	  char *end;
 	  unsigned long val = strtoul (optarg, &end, 0);
 	  if (*end || val > 5)
-	    einfo (_("%F%P: invalid --plt-align `%s'\''\n"), optarg);
+	    fatal (_("%P: invalid --plt-align `%s'\''\n"), optarg);
 	  params.plt_stub_align = val;
 	}
       else
@@ -399,7 +399,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 	  if (*end
 	      || (params.pagesize < 4096 && params.pagesize != 0)
 	      || params.pagesize != (params.pagesize & -params.pagesize))
-	    einfo (_("%F%P: invalid pagesize `%s'\''\n"), optarg);
+	    fatal (_("%P: invalid pagesize `%s'\''\n"), optarg);
 	}
       break;
 

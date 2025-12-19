@@ -1,4 +1,4 @@
---  Copyright 2019-2024 Free Software Foundation, Inc.
+--  Copyright 2019-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -19,5 +19,3 @@ package body Pck is
       null;
    end Do_Nothing;
 end Pck;
-
-

@@ -1,5 +1,5 @@
 /* Interface for functions using gregset and fpregset types.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -52,7 +52,7 @@ extern void supply_fpregset (struct regcache *regcache,
 			     const gdb_fpregset_t *fpregs);
 
 /* Copy register values from GDB's register cache into
-   the native target gregset/fpregset.  If regno is -1, 
+   the native target gregset/fpregset.  If regno is -1,
    copy all the registers.  */
 
 extern void fill_gregset (const struct regcache *regcache,

@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -21,6 +21,7 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests
+require allow_fork_tests
 
 standard_testfile .c
 
@@ -29,7 +30,7 @@ if {[prepare_for_testing "failed to prepare $testfile" $testfile $srcfile {debug
 }
 
 with_rocm_gpu_lock {
-    if ![runto_main] {
+    if {![runto_main]} {
 	return
     }
 

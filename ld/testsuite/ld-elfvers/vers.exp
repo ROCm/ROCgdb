@@ -1,5 +1,5 @@
 # Expect script for ld-version tests
-#   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+#   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -35,7 +35,8 @@ if { ![check_shared_lib_support] } {
 # This test can only be run on a couple of ELF platforms.
 # Square bracket expressions seem to confuse istarget.
 # This is similar to the test that is used in ld-shared, BTW.
-if { ![istarget hppa*64*-*-hpux*]
+if { ![istarget *-*-solaris2*]
+     && ![istarget hppa*64*-*-hpux*]
      && ![istarget hppa*-*-linux*]
      && ![istarget i?86-*-elf*]
      && ![istarget i?86-*-linux*]
@@ -48,7 +49,6 @@ if { ![istarget hppa*64*-*-hpux*]
      && ![istarget powerpc*-*-linux*]
      && ![istarget powerpc*-*-sysv4*]
      && ![istarget sparc*-*-elf]
-     && ![istarget sparc*-*-solaris2*]
      && ![istarget sparc*-*-linux*]
      && ![istarget aarch64*-*-linux*]
      && ![istarget arm*-*-linux*]
@@ -58,6 +58,13 @@ if { ![istarget hppa*64*-*-hpux*]
      && ![istarget sh\[34\]*-*-linux*]
      && ![istarget x86_64-*-linux*] } {
     return
+}
+
+set need_direct_extern_access ""
+if { [istarget i?86-*-linux*]
+     || [istarget i?86-*-gnu*] } then {
+    # These targets need direct extern access in some tests.
+    set need_direct_extern_access "$DIRECT_EXTERN_ACCESS_CFLAGS"
 }
 
 set diff diff
@@ -558,7 +565,8 @@ proc build_vers_lib_no_pic { test source libname other mapfile verexp versymexp 
   global shared
   # Make sure that PLT is used since PLT is expected.
   global PLT_CFLAGS
-  build_binary "$shared -z notext" $PLT_CFLAGS $test $source $libname $other $mapfile $verexp $versymexp $symexp ""
+  global need_direct_extern_access
+  build_binary "$shared -z notext" "$PLT_CFLAGS $need_direct_extern_access" $test $source $libname $other $mapfile $verexp $versymexp $symexp ""
 }
 
 proc build_vers_lib_pic { test source libname other mapfile verexp versymexp symexp } {
@@ -961,7 +969,10 @@ if [string match "yes" $pic] then {
 build_vers_lib_pic "vers26a" vers26a.c vers26a "" vers26a.map vers26a.ver vers26a.dsym ""
 build_vers_lib_pic "vers26b1" vers26b.c vers26b1 "" "" vers26b.ver vers26b.dsym ""
 build_vers_lib_pic "vers26b2" vers26b.c vers26b2 "vers26a.so vers26b1.so vers26a.o" "" vers26b.ver vers26b.dsym ""
-if [string match "yes" $pic] then {
+if { [istarget x86_64-*-linux*] || [istarget x86_64-*-solaris2*] } then {
+    # gcc -fPIC generates code that ld rejects.
+    unsupported "vers26b3"
+} elseif [string match "yes" $pic] then {
     xfail "vers26b3"
 } else {
     build_vers_lib_no_pic "vers26b3" vers26b.c vers26b3 "vers26a.so vers26b1.so vers26a.o" "" vers26b.ver vers26b.dsym ""
@@ -1007,3 +1018,108 @@ build_vers_lib_pic "vers31" vers31.c vers31 "" vers31.map vers31.ver vers31.dsym
 # Test #32 -- linker --defsym
 build_vers_lib_pic "vers32a" vers32a.c vers32a "" vers32.map vers32a.ver vers32a.dsym ""
 build_vers_lib_pic_flags "vers32b" vers32b.c vers32b "vers32a.so" vers32.map vers32b.ver vers32b.dsym "" "--defsym foo=0"
+
+proc base_symbol_test { ldflags } {
+    run_cc_link_tests [list \
+	[list \
+	    "Build libpr33577-unversioned.so ($ldflags)" \
+	    "$ldflags -shared -Wl,-soname,libpr33577.so" \
+	    "-fPIC" \
+	    { pr33577-unversioned.c } \
+	    {{readelf {--dyn-syms -W} pr33577-unversioned-a.rd} \
+	     {readelf {--dyn-syms -W} pr33577-unversioned-b.rd}} \
+	    "libpr33577-unversioned.so" \
+	] \
+	[list \
+	    "Build libpr33577-versioned.so ($ldflags)" \
+	    "$ldflags -shared -Wl,-soname,libpr33577.so,--version-script=pr33577.map" \
+	    "-fPIC" \
+	    { pr33577-versioned.c } \
+	    {{readelf {--dyn-syms -W} pr33577-versioned-a.rd} \
+	     {readelf {--dyn-syms -W} pr33577-versioned-b.rd}} \
+	    "libpr33577-versioned.so" \
+	] \
+    ]
+
+    set cmd "cp tmpdir/libpr33577-unversioned.so tmpdir/libpr33577.so"
+    send_log "$cmd\n"
+    remote_exec host "$cmd"
+
+    run_cc_link_tests [list \
+	[list \
+	    "Build pr33577a with tmpdir/libpr33577-unversioned.so ($ldflags)" \
+	    "" \
+	    "" \
+	    { pr33577a.c } \
+	    "" \
+	    "pr33577a" \
+	    "c" \
+	    "tmpdir/libpr33577.so" \
+	] \
+    ]
+
+    if [isnative] {
+	run_ld_link_exec_tests [list \
+	    [list \
+		"Run pr33577a with tmpdir/libpr33577-unversioned.so ($ldflags)" \
+		"-Wl,-R,tmpdir" \
+		"" \
+		{ pr33577a.c } \
+		"pr33577a" \
+		"pass.out" \
+		"" \
+		"c" \
+		"" \
+		"tmpdir/libpr33577.so" \
+	    ] \
+	] \
+    }
+
+    set cmd "cp tmpdir/libpr33577-versioned.so tmpdir/libpr33577.so"
+    send_log "$cmd\n"
+    remote_exec host "$cmd"
+
+    run_cc_link_tests [list \
+	[list \
+	    "Build pr33577b with tmpdir/libpr33577-versioned.so ($ldflags)" \
+	    "-Wl,-R,tmpdir" \
+	    "" \
+	    { pr33577b.c } \
+	    "" \
+	    "pr33577b" \
+	    "c" \
+	    "tmpdir/libpr33577.so" \
+	] \
+    ]
+
+    if [isnative] {
+	set test_name "Run pr33577a with tmpdir/libpr33577-versioned.so ($ldflags)"
+	set cmd tmpdir/pr33577a
+	send_log "$cmd\n"
+	set got [remote_exec host "$cmd"]
+	if { [lindex $got 0] == 0 && [regexp "PASS" [lindex $got 1]] } then {
+	    pass "$test_name"
+	} else {
+	    send_log "$got\n"
+	    fail "$test_name"
+	}
+
+	set test_name "Run pr33577b with tmpdir/libpr33577-versioned.so ($ldflags)"
+	set cmd tmpdir/pr33577b
+	send_log "$cmd\n"
+	set got [remote_exec host "$cmd"]
+	if { [lindex $got 0] == 0 && [regexp "PASS" [lindex $got 1]] } then {
+	    pass "$test_name"
+	} else {
+	    send_log "$got\n"
+	    fail "$test_name"
+	}
+    }
+}
+
+base_symbol_test "-Wl,--as-needed,--hash-style=sysv"
+base_symbol_test "-Wl,--as-needed,--hash-style=gnu"
+base_symbol_test "-Wl,--as-needed,--hash-style=both"
+base_symbol_test "-Wl,--no-as-needed,--hash-style=sysv"
+base_symbol_test "-Wl,--no-as-needed,--hash-style=gnu"
+base_symbol_test "-Wl,--no-as-needed,--hash-style=both"

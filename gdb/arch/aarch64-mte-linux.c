@@ -1,6 +1,6 @@
 /* Common Linux target-dependent functionality for AArch64 MTE
 
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -74,4 +74,3 @@ aarch64_mte_unpack_tags (gdb::byte_vector &tags, bool skip_first)
   /* Update the original tags vector.  */
   tags = std::move (unpacked_tags);
 }
-

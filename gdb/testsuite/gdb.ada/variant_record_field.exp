@@ -1,4 +1,4 @@
-# Copyright 2024 Free Software Foundation, Inc.
+# Copyright 2024-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,10 @@ load_lib "ada.exp"
 
 require allow_ada_tests
 
+# LLVM does not have -Og, and anyway this is a regression test for a
+# GCC bug.
+require ada_og
+
 standard_ada_testfile foo
 
 # The compiler used to emit an invalid DWARF expression for the record
@@ -28,7 +32,7 @@ standard_ada_testfile foo
 # making guarantees beyond -Og though, so test that.
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug optimize=-Og]] != ""} {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -42,7 +46,7 @@ gdb_test_multiple "$test" "$test" {
 	pass $test
     }
     -re "\\(kind => five, i => <error reading variable: access outside bounds of object>" {
-	if { [gcc_major_version] <= 14 } {
+	if { [gnat_version_compare < 15] } {
 	    setup_xfail *-*-*
 	}
 	fail $test

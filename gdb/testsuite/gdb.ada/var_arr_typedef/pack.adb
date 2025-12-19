@@ -1,4 +1,4 @@
---  Copyright 2015-2024 Free Software Foundation, Inc.
+--  Copyright 2015-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,6 @@ package body Pack is
       return I;
    end Identity;
 
-   procedure Do_Nothing (A : Array_Type) is null;
+   procedure Do_Nothing (A : System.Address) is null;
 
 end Pack;

@@ -1,5 +1,5 @@
 /* MI Command Set - MI Option Parser.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.
@@ -95,7 +95,7 @@ mi_getopt_allow_unknown (const char *prefix, int argc,
   return mi_getopt_1 (prefix, argc, argv, opts, oind, oarg, 0);
 }
 
-int 
+int
 mi_valid_noargs (const char *prefix, int argc, const char *const *argv)
 {
   int oind = 0;

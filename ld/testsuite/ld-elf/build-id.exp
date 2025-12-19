@@ -1,5 +1,5 @@
 # Expect script for --build-id tests.
-#   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -31,7 +31,6 @@ if { [istarget frv-*-*] || [istarget lm32-*-*] } {
 
 if { !([istarget *-*-linux*]
        || [istarget arm*-*-uclinuxfdpiceabi]
-       || [istarget *-*-nacl*]
        || [istarget *-*-gnu*]) } then {
     return
 }

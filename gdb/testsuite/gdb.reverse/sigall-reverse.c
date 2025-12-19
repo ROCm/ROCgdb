@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -397,7 +397,7 @@ gen_ABRT (void)
 {
   kill (getpid (), SIGABRT);
   return 0;
-}  
+}
 
 int x;
 
@@ -446,7 +446,7 @@ gen_HUP (void)
   handle_HUP (0);
 #endif
 return 0;
-}  
+}
 
 int
 gen_QUIT (void)
@@ -677,7 +677,7 @@ gen_USR2 (void)
   handle_USR2 (0);
 #endif
 return 0;
-}  
+}
 
 int
 gen_PWR (void)

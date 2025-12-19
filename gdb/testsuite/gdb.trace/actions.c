@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1998-2024 Free Software Foundation, Inc.
+   Copyright 1998-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -54,12 +54,12 @@ void gdb_recursion_test (int, int, int, int,  int,  int,  int);
 typedef void (*gdb_recursion_test_fp) (int, int, int, int,  int,  int,  int);
 gdb_recursion_test_fp gdb_recursion_test_ptr = gdb_recursion_test;
 
-void gdb_recursion_test (int depth, 
-			 int q1, 
-			 int q2, 
-			 int q3, 
-			 int q4, 
-			 int q5, 
+void gdb_recursion_test (int depth,
+			 int q1,
+			 int q2,
+			 int q3,
+			 int q4,
+			 int q5,
 			 int q6)
 {	/* gdb_recursion_test line 0 */
   int q = q1;						/* gdbtestline 1 */
@@ -86,13 +86,13 @@ unsigned long   gdb_c_test( unsigned long *parm )
    unsigned long *stack_ptr;
    unsigned long end_of_stack;
 
-   ridiculously_long_variable_name_with_equally_long_string_assignment = 
+   ridiculously_long_variable_name_with_equally_long_string_assignment =
      "ridiculously long variable name with equally long string assignment";
    local_static = 9;
    local_static_sizeof = sizeof (struct GDB_STRUCT_TEST);
    local_long = local_reg + 1;
    stack_ptr  = (unsigned long *) &local_long;
-   end_of_stack = 
+   end_of_stack =
      (unsigned long) &stack_ptr + sizeof(stack_ptr) + sizeof(end_of_stack) - 1;
 
    gdb_char_test   = gdb_struct1_test.c = (char)   ((long) parm[1] & 0xff);
@@ -136,9 +136,7 @@ static void end ()	/* called after everything else */
 }
 
 int
-main (argc, argv, envp)
-     int argc;
-     char *argv[], **envp;
+main (int argc, char *argv[], char **envp)
 {
   int i;
   unsigned long myparms[10];
@@ -154,4 +152,3 @@ main (argc, argv, envp)
   end ();
   return 0;
 }
-

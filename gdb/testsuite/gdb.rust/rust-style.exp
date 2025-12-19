@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,13 +23,13 @@ with_ansi_styling_terminal {
     standard_testfile .rs
     if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	     {debug rust}]} {
-	return -1
+	return
     }
 
     set line [gdb_get_line_number "breakpoint"]
     if {![runto ${srcfile}:$line]} {
 	untested "could not run to breakpoint"
-	return -1
+	return
     }
 
     set vfield [style value variable]

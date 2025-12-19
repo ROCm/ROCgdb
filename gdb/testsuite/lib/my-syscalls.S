@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2020-2024 Free Software Foundation, Inc.
+   Copyright 2020-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -62,6 +62,17 @@ NAME:				;\
 	/* x0, x1 and x2 already contain the right arguments.  */ \
 NAME ## _syscall:		;\
 	svc #0
+
+#elif defined(__loongarch64)
+
+#define SYSCALL(NAME, NR)	\
+.global NAME			;\
+NAME:				;\
+        li.w	$a7, NR		;\
+	/* a0, a1 and a2 already contain the right arguments.  */ \
+NAME ## _syscall:		;\
+        syscall 0		;\
+        ret
 
 #else
 # error "Unsupported architecture"

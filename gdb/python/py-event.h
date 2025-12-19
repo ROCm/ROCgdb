@@ -1,6 +1,6 @@
 /* Python interface to inferior events.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -27,8 +27,7 @@
 
 /* Declare all event types.  */
 #define GDB_PY_DEFINE_EVENT_TYPE(name, py_name, doc, base) \
-  extern PyTypeObject name##_event_object_type		    \
-	CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("event_object");
+  extern PyTypeObject name##_event_object_type;
 #include "py-event-types.def"
 #undef GDB_PY_DEFINE_EVENT_TYPE
 
@@ -82,7 +81,6 @@ extern int emit_clear_objfiles_event (program_space *pspace);
 
 extern void evpy_dealloc (PyObject *self);
 extern int evpy_add_attribute (PyObject *event,
-			       const char *name, PyObject *attr)
-  CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION;
+			       const char *name, PyObject *attr);
 
 #endif /* GDB_PYTHON_PY_EVENT_H */

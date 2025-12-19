@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Free Software Foundation, Inc.
+# Copyright (C) 2023-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,13 +25,13 @@ require !use_gdb_stub
 
 standard_testfile simple.rs
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug rust}]} {
-    return -1
+    return
 }
 
 # Verify that "start" lands inside the right procedure.
 if {[gdb_start_cmd] < 0} {
     unsupported "start failed"
-    return -1
+    return
 }
 
 gdb_test "" \

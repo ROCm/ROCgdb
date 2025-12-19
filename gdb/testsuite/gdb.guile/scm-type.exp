@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,13 +38,14 @@ proc build_inferior {exefile lang} {
 proc restart_gdb {exefile} {
     global srcdir subdir
 
-    clean_restart $exefile
+    clean_restart
+    gdb_load $exefile
 
     if { ![allow_guile_tests] } {
 	return 0
     }
 
-    if ![gdb_guile_runto_main] {
+    if {![gdb_guile_runto_main]} {
 	return 0
     }
     gdb_scm_test_silent_cmd "guile (use-modules (gdb iterator))" \
@@ -274,7 +275,7 @@ proc test_range {} {
 if { [build_inferior "${binfile}" "c"] < 0 } {
     return
 }
-if ![restart_gdb "${binfile}"] {
+if {![restart_gdb "${binfile}"]} {
     return
 }
 
@@ -290,7 +291,7 @@ with_test_prefix "lang_c" {
 if { [build_inferior "${binfile}-cxx" "c++"] < 0 } {
     return
 }
-if ![restart_gdb "${binfile}-cxx"] {
+if {![restart_gdb "${binfile}-cxx"]} {
     return
 }
 

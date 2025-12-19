@@ -1,6 +1,6 @@
 /* Helper routines for C++ support in GDB.
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by David Carlton and by Kealia, Inc.
 
@@ -34,7 +34,7 @@
 #include "language.h"
 #include "namespace.h"
 #include "inferior.h"
-#include <map>
+#include "gdbsupport/unordered_map.h"
 #include <string>
 #include <string.h>
 
@@ -354,6 +354,9 @@ cp_lookup_symbol_in_namespace (const char *the_namespace, const char *name,
   return sym;
 }
 
+/* Type used for collecting symbols.  Maps names to symbols.  */
+using symbol_map = gdb::unordered_map<std::string, block_symbol>;
+
 /* This version of the function is internal, use the wrapper unless
    the list of ambiguous symbols is needed.
 
@@ -393,8 +396,7 @@ cp_lookup_symbol_via_imports (const char *scope,
 			      const int search_scope_first,
 			      const int declaration_only,
 			      const int search_parents,
-			      std::map<std::string,
-				       struct block_symbol>& found_symbols)
+			      symbol_map &found_symbols)
 {
   struct block_symbol sym = {};
   int len;
@@ -416,7 +418,7 @@ cp_lookup_symbol_via_imports (const char *scope,
 
   /* Due to a GCC bug, we need to know the boundaries of the current block
      to know if a certain using directive is valid.  */
-  symtab_and_line boundary_sal = find_pc_line (block->end () - 1, 0);
+  symtab_and_line boundary_sal = find_sal_for_pc (block->end () - 1, 0);
 
   /* Go through the using directives.  If any of them add new names to
      the namespace we're searching in, see if we can find a match by
@@ -511,7 +513,7 @@ cp_lookup_symbol_via_imports (const char *scope,
 			      const int declaration_only,
 			      const int search_parents)
 {
-  std::map<std::string, struct block_symbol> found_symbols;
+  symbol_map found_symbols;
 
   cp_lookup_symbol_via_imports(scope, name, block, domain, 0,
 			       declaration_only, search_parents,
@@ -553,7 +555,7 @@ cp_lookup_symbol_imports (const char *scope,
      scope, name, host_address_to_string (block),
      domain_name (domain).c_str ());
 
-  if (function != NULL && function->language () == language_cplus)
+  if (function != NULL && is_cplus_dialect (function->language ()))
     {
       /* Search the template parameters of the function's defining
 	 context.  */
@@ -926,7 +928,7 @@ cp_lookup_nested_symbol (struct type *parent_type,
     case TYPE_CODE_NAMESPACE:
     case TYPE_CODE_UNION:
     case TYPE_CODE_ENUM:
-    /* NOTE: Handle modules here as well, because Fortran is re-using the C++
+    /* NOTE: Handle modules here as well, because Fortran is reusing the C++
        specific code to lookup nested symbols in modules, by calling the
        method lookup_symbol_nonlocal, which ends up here.  */
     case TYPE_CODE_MODULE:
@@ -1049,9 +1051,7 @@ maintenance_cplus_namespace (const char *args, int from_tty)
   gdb_printf (_("The `maint namespace' command was removed.\n"));
 }
 
-void _initialize_cp_namespace ();
-void
-_initialize_cp_namespace ()
+INIT_GDB_FILE (cp_namespace)
 {
   struct cmd_list_element *cmd;
 

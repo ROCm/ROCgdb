@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2024 Free Software Foundation, Inc.
+# Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -330,21 +330,6 @@ switch -glob $target_triplet {
     }
 }
 
-# This test is for any COFF target.
-# We omit the ARM toolchains because they define locals to
-#  start with '.', which eliminates .eos, .text etc from the output.
-# Omit c54x, since .tag and .def mean something different on that target
-if {   ([istarget *-*-coff*] && ![istarget *c4x*-*-coff] && ![istarget *c54x*-*-coff]) \
-     ||([istarget *-*-pe*] && ![istarget arm*-*-pe*]) \
-     || [istarget i*86-*-aix*] \
-     || [istarget i*86-*-go32*] \
-     || [istarget i*86-*-cygwin*] \
-     || [istarget x86_64-*-mingw*] \
-     || [istarget i*86-*-*nt] \
-     || [istarget i*86-*-interix*] } {
-    run_dump_test cofftag
-}
-
 # Test omitting conditionals from listings.
 proc test_cond {} {
     global comp_output
@@ -449,6 +434,22 @@ if { ![istarget "pdp11-*-*"] } {
     run_dump_test octa
 }
 
+# Some x86 flavors use '/' as a comment char, yet that can be suppressed.
+# Some other target use '/' or '%' as a comment char, without a way to
+# suppress it.
+if { [istarget "i?86-*-*"] || [istarget "x86_64-*-*"] } {
+    run_dump_test quad-div {{as --divide}}
+    run_dump_test quad-div2 {{as --divide}}
+    run_dump_test octa-div {{as --divide}}
+} elseif { ![istarget "mcore-*-*"]
+	   && ![istarget "mmix-*-*"]
+	   && ![istarget "pdp11-*-*"]
+	   && ![istarget "pj*-*-*"] } {
+    run_dump_test quad-div
+    run_dump_test quad-div2
+    run_dump_test octa-div
+}
+
 # .set works differently on some targets.
 switch -glob $target_triplet {
     alpha*-*-* { }
@@ -484,6 +485,19 @@ switch -glob $target_triplet {
     }
     default {
 	run_list_test "end"
+    }
+}
+
+# This test uses a local label, which some targets don't support.
+# MeP can't deal with forward ref labels in .uleb128.
+switch -glob $target_triplet {
+    *c54x*-*-* { }
+    hppa*-*-* { }
+    ia64-*-*vms* { }
+    mep-*-* { }
+    sh-*-pe* { }
+    default {
+	run_list_test "cond-diag"
     }
 }
 
@@ -564,4 +578,31 @@ run_dump_test "pr27381"
 run_dump_test "multibyte1"
 run_dump_test "multibyte2"
 run_list_test "multibyte3" "--multibyte-handling=warn"
-run_list_test "multibyte3" "-f --multibyte-handling=warn"
+run_list_test "multibyte3" "-f --multibyte-handling=warn" "all multibyte3 -f"
+
+# EVAX has an extra line printed by objdump when there are no relocations,
+# and doesn't appear to enter absolute symbols into the symbol table.
+# SOM (HPPA) won't properly handle at least the latter two tests.
+switch -glob $target_triplet {
+    alpha-*-*vms* { }
+    hppa-*-hpux* { }
+    default {
+	run_dump_test "version"
+	# Non-ELF symbol tables may include section symbols.
+	# MSP430 adds references to library symbols.
+	# RL78 includes a special absolute symbol.
+	if { [is_elf_format]
+	     && ![istarget "msp430*-*-*"]
+	     && ![istarget "rl78*-*-*"] } {
+	    run_dump_test "version2"
+	}
+	# ECOFF/XCOFF don't look to (reliably) emit local absolute symbols.
+	# IA64, when targeting HPUX, deliberately omits unreferenced symbols.
+	if { ![is_xcoff_format]
+	     && ![istarget "alpha-*-linux*ecoff*"]
+	     && ![istarget "alpha-*-osf*"]
+	     && ![istarget "ia64-*-hpux*"] } {
+	    run_dump_test "version3"
+	}
+    }
+}

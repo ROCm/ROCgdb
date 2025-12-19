@@ -1,7 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2014-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright 2014-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,7 +46,7 @@ main:
 	.loc 1 3 0
 	popq	%rbp
 	.cfi_def_cfa 7, 8
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE0:

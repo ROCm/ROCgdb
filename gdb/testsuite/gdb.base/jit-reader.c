@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,7 +43,7 @@ struct reader_state
 static enum gdb_status
 read_debug_info (struct gdb_reader_funcs *self,
 		 struct gdb_symbol_callbacks *cbs,
-                 void *memory, long memory_sz)
+		 void *memory, long memory_sz)
 {
   struct jithost_abi *symfile = memory;
   struct gdb_object *object = cbs->object_open (cbs);
@@ -92,7 +92,7 @@ free_reg_value (struct gdb_reg_value *value)
 
 static void
 write_register (struct gdb_unwind_callbacks *callbacks, int dw_reg,
-                uintptr_t value)
+		uintptr_t value)
 {
   const int size = sizeof (uintptr_t);
   struct gdb_reg_value *reg_val =

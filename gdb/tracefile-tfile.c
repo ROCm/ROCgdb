@@ -1,6 +1,6 @@
 /* Trace file TFILE format support in GDB.
 
-   Copyright (C) 1997-2024 Free Software Foundation, Inc.
+   Copyright (C) 1997-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,6 @@
 
 #include "extract-store-integer.h"
 #include "tracefile.h"
-#include "readline/tilde.h"
 #include "gdbsupport/filestuff.h"
 #include "gdbsupport/rsp-low.h"
 #include "regcache.h"
@@ -121,7 +120,7 @@ tfile_start (struct trace_file_writer *self, const char *filename)
   struct tfile_trace_file_writer *writer
     = (struct tfile_trace_file_writer *) self;
 
-  writer->pathname = tilde_expand (filename);
+  writer->pathname = gdb_rl_tilde_expand (filename).release ();
   writer->fp = gdb_fopen_cloexec (writer->pathname, "wb").release ();
   if (writer->fp == NULL)
     error (_("Unable to open file '%s' for saving trace data (%s)"),
@@ -194,12 +193,12 @@ tfile_write_status (struct trace_file_writer *self,
   if (ts->start_time)
     {
       fprintf (writer->fp, ";starttime:%s",
-      phex_nz (ts->start_time, sizeof (ts->start_time)));
+      phex_nz (ts->start_time));
     }
   if (ts->stop_time)
     {
       fprintf (writer->fp, ";stoptime:%s",
-      phex_nz (ts->stop_time, sizeof (ts->stop_time)));
+      phex_nz (ts->stop_time));
     }
   if (ts->notes != NULL)
     {
@@ -254,7 +253,7 @@ tfile_write_uploaded_tp (struct trace_file_writer *self,
   char buf[MAX_TRACE_UPLOAD];
 
   fprintf (writer->fp, "tp T%x:%s:%c:%x:%x",
-	   utp->number, phex_nz (utp->addr, sizeof (utp->addr)),
+	   utp->number, phex_nz (utp->addr),
 	   (utp->enabled ? 'E' : 'D'), utp->step, utp->pass);
   if (utp->type == bp_fast_tracepoint)
     fprintf (writer->fp, ":F%x", utp->orig_size);
@@ -265,10 +264,10 @@ tfile_write_uploaded_tp (struct trace_file_writer *self,
   fprintf (writer->fp, "\n");
   for (const auto &act : utp->actions)
     fprintf (writer->fp, "tp A%x:%s:%s\n",
-	     utp->number, phex_nz (utp->addr, sizeof (utp->addr)), act.get ());
+	     utp->number, phex_nz (utp->addr), act.get ());
   for (const auto &act : utp->step_actions)
     fprintf (writer->fp, "tp S%x:%s:%s\n",
-	     utp->number, phex_nz (utp->addr, sizeof (utp->addr)), act.get ());
+	     utp->number, phex_nz (utp->addr), act.get ());
   if (utp->at_string)
     {
       encode_source_string (utp->number, utp->addr,
@@ -290,7 +289,7 @@ tfile_write_uploaded_tp (struct trace_file_writer *self,
       fprintf (writer->fp, "tp Z%s\n", buf);
     }
   fprintf (writer->fp, "tp V%x:%s:%x:%s\n",
-	   utp->number, phex_nz (utp->addr, sizeof (utp->addr)),
+	   utp->number, phex_nz (utp->addr),
 	   utp->hit_count,
 	   phex_nz (utp->traceframe_usage,
 		    sizeof (utp->traceframe_usage)));
@@ -567,7 +566,7 @@ tfile_target_open (const char *arg, int from_tty)
 
   merge_uploaded_tracepoints (&uploaded_tps);
 
-  post_create_inferior (from_tty);
+  post_create_inferior (from_tty, true);
 }
 
 /* Interpret the given line from the definitions part of the trace
@@ -1116,9 +1115,7 @@ tfile_append_tdesc_line (const char *line)
   trace_tdesc += "\n";
 }
 
-void _initialize_tracefile_tfile ();
-void
-_initialize_tracefile_tfile ()
+INIT_GDB_FILE (tracefile_tfile)
 {
   add_target (tfile_target_info, tfile_target_open,
 	      filename_maybe_quoted_completer);

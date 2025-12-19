@@ -1,5 +1,5 @@
 /* a.out object file format
-   Copyright (C) 1989-2024 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -155,7 +155,7 @@ obj_aout_line (int ignore ATTRIBUTE_UNUSED)
   /* Assume delimiter is part of expression.
      BSD4.2 as fails with delightful bug, so we
      are not being incompatible here.  */
-  new_logical_line ((char *) NULL, (int) (get_absolute_expression ()));
+  new_logical_line (NULL, get_absolute_expression ());
   demand_empty_rest_of_line ();
 }
 

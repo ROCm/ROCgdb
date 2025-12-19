@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2024 Free Software Foundation, Inc.
+# Copyright (C) 2010-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,17 +19,31 @@ import sys
 import threading
 import traceback
 from contextlib import contextmanager
+from importlib import reload
 
-# Python 3 moved "reload"
-if sys.version_info >= (3, 4):
-    from importlib import reload
-else:
-    from imp import reload
-
-import _gdb
-
+# The star import imports _gdb names.  When the names are used locally, they
+# trigger F405 warnings unless added to the explicit import list.
 # Note that two indicators are needed here to silence flake8.
 from _gdb import *  # noqa: F401,F403
+from _gdb import (
+    COMMAND_NONE,
+    INTENSITY_BOLD,
+    INTENSITY_DIM,
+    INTENSITY_NORMAL,
+    PARAM_COLOR,
+    PARAM_ENUM,
+    STDERR,
+    STDOUT,
+    Color,
+    Command,
+    Parameter,
+    Style,
+    execute,
+    flush,
+    parameter,
+    selected_inferior,
+    write,
+)
 
 # isort: split
 
@@ -60,14 +74,14 @@ class _GdbFile(object):
             self.write(line)
 
     def flush(self):
-        _gdb.flush(stream=self.stream)
+        flush(stream=self.stream)
 
     def write(self, s):
-        _gdb.write(s, stream=self.stream)
+        write(s, stream=self.stream)
 
 
-sys.stdout = _GdbFile(_gdb.STDOUT)
-sys.stderr = _GdbFile(_gdb.STDERR)
+sys.stdout = _GdbFile(STDOUT)
+sys.stderr = _GdbFile(STDERR)
 
 # Default prompt hook does nothing.
 prompt_hook = None
@@ -189,7 +203,7 @@ def GdbSetPythonDirectory(dir):
 
 def current_progspace():
     "Return the current Progspace."
-    return _gdb.selected_inferior().progspace
+    return selected_inferior().progspace
 
 
 def objfiles():
@@ -226,14 +240,14 @@ def set_parameter(name, value):
             value = "on"
         else:
             value = "off"
-    _gdb.execute("set " + name + " " + str(value), to_string=True)
+    execute("set " + name + " " + str(value), to_string=True)
 
 
 @contextmanager
 def with_parameter(name, value):
     """Temporarily set the GDB parameter NAME to VALUE.
     Note that this is a context manager."""
-    old_value = _gdb.parameter(name)
+    old_value = parameter(name)
     set_parameter(name, value)
     try:
         # Nothing that useful to return.
@@ -392,3 +406,330 @@ def _handle_missing_objfile(pspace, buildid, filename):
     return _handle_missing_files(
         pspace, "objfile", lambda h: h(pspace, buildid, filename)
     )
+
+
+class ParameterPrefix:
+    # A wrapper around gdb.Command for creating set/show prefixes.
+    #
+    # When creating a gdb.Parameter sub-classes, it is sometimes necessary
+    # to first create a gdb.Command object in order to create the needed
+    # command prefix.  However, for parameters, we actually need two
+    # prefixes, a 'set' prefix, and a 'show' prefix.  With this helper
+    # class, a single instance of this class will create both prefixes at
+    # once.
+    #
+    # It is important that this class-level documentation not be a __doc__
+    # string.  Users are expected to sub-class this ParameterPrefix class
+    # and add their own documentation.  If they don't, then GDB will
+    # generate a suitable doc string.  But, if this (parent) class has a
+    # __doc__ string of its own, then sub-classes will inherit that __doc__
+    # string, and GDB will not understand that it needs to generate one.
+
+    class _PrefixCommand(Command):
+        """A gdb.Command used to implement both the set and show prefixes.
+
+        This documentation string is not used as the prefix command
+        documentation as it is overridden in the __init__ method below."""
+
+        # This private method is connected to the 'invoke' attribute within
+        # this _PrefixCommand object if the containing ParameterPrefix
+        # object has an invoke_set or invoke_show method.
+        #
+        # This method records within self.__delegate which _PrefixCommand
+        # object is currently active, and then calls the correct invoke
+        # method on the delegat object (the ParameterPrefix sub-class
+        # object).
+        #
+        # Recording the currently active _PrefixCommand object is important;
+        # if from the invoke method the user calls dont_repeat, then this is
+        # forwarded to the currently active _PrefixCommand object.
+        def __invoke(self, args, from_tty):
+
+            # A helper class for use as part of a Python 'with' block.
+            # Records which gdb.Command object is currently running its
+            # invoke method.
+            class MarkActiveCallback:
+                # The CMD is a _PrefixCommand object, and the DELEGATE is
+                # the ParameterPrefix class, or sub-class object.  At this
+                # point we simple record both of these within the
+                # MarkActiveCallback object.
+                def __init__(self, cmd, delegate):
+                    self.__cmd = cmd
+                    self.__delegate = delegate
+
+                # Record the currently active _PrefixCommand object within
+                # the outer ParameterPrefix sub-class object.
+                def __enter__(self):
+                    self.__delegate.active_prefix = self.__cmd
+
+                # Once the invoke method has completed, then clear the
+                # _PrefixCommand object that was stored into the outer
+                # ParameterPrefix sub-class object.
+                def __exit__(self, exception_type, exception_value, traceback):
+                    self.__delegate.active_prefix = None
+
+            # The self.__cb attribute is set when the _PrefixCommand object
+            # is created, and is either invoke_set or invoke_show within the
+            # ParameterPrefix sub-class object.
+            assert callable(self.__cb)
+
+            # Record the currently active _PrefixCommand object within the
+            # ParameterPrefix sub-class object, then call the relevant
+            # invoke method within the ParameterPrefix sub-class object.
+            with MarkActiveCallback(self, self.__delegate):
+                self.__cb(args, from_tty)
+
+        @staticmethod
+        def __find_callback(delegate, mode):
+            """The MODE is either 'set' or 'show'.  Look for an invoke_MODE method
+            on DELEGATE, if a suitable method is found, then return it, otherwise,
+            return None.
+            """
+            cb = getattr(delegate, "invoke_" + mode, None)
+            if callable(cb):
+                return cb
+            return None
+
+        def __init__(self, mode, name, cmd_class, delegate, doc=None):
+            """Setup this gdb.Command.  Mode is a string, either 'set' or 'show'.
+            NAME is the name for this prefix command, that is, the
+            words that appear after both 'set' and 'show' in the
+            command name.  CMD_CLASS is the usual enum.  And DELEGATE
+            is the gdb.ParameterPrefix object this prefix is part of.
+            """
+            assert mode == "set" or mode == "show"
+            if doc is None:
+                self.__doc__ = delegate.__doc__
+            else:
+                self.__doc__ = doc
+            self.__cb = self.__find_callback(delegate, mode)
+            self.__delegate = delegate
+            if self.__cb is not None:
+                self.invoke = self.__invoke
+            super().__init__(mode + " " + name, cmd_class, prefix=True)
+
+    def __init__(self, name, cmd_class, doc=None):
+        """Create a _PrefixCommand for both the set and show prefix commands.
+        NAME is the command name without either the leading 'set ' or
+        'show ' strings, and CMD_CLASS is the usual enum value.
+        """
+        self.active_prefix = None
+        self._set_prefix_cmd = self._PrefixCommand("set", name, cmd_class, self, doc)
+        self._show_prefix_cmd = self._PrefixCommand("show", name, cmd_class, self, doc)
+
+    # When called from within an invoke method the self.active_prefix
+    # attribute should be set to a gdb.Command sub-class (a _PrefixCommand
+    # object, see above).  Forward the dont_repeat call to this object to
+    # register the actual command as none repeating.
+    def dont_repeat(self):
+        if self.active_prefix is not None:
+            self.active_prefix.dont_repeat()
+
+
+class StyleParameterSet:
+    """Create new style parameters.
+
+    A style parameter is a set of parameters that start with 'set style ...'
+    and 'show style ...'.  For example 'filename' is a style parameter, and
+    'disassembler symbol' is another style parameter.
+
+    The name of the style parameter is really a prefix command.  Under this
+    we must have two commands 'foreground' and 'background', which are color
+    parameters.  A third, optional command 'intensity', is an enum with
+    values 'normal', 'bold', and 'dim'.
+
+    A StyleParameterSet is initialised with a name, e.g. 'filename' or
+    'disassembler symbol'.  The StyleParameterSet creates the prefix
+    commands in the 'set style' and 'show style' name space, and then adds
+    the 'foreground', 'background', and optionally, the 'intensity'
+    commands.
+
+    If you want a whole new style group, similar to 'disassembler',
+    then you need to add this yourself first, then StyleParameterSet
+    can be used to create styles within the new prefix group.
+
+    The 'value' attribute on this object can be used to get and set a
+    gdb.Style object which controls all aspects of this style.
+
+    For readability, the alias 'style' is the same as 'value'.
+    """
+
+    def __init__(self, name, add_intensity=True, doc=None):
+        # The STYLE_NAME is something like 'filename' is 'set style
+        # filename ...', and PARAM_NAME is one of 'foreground',
+        # 'background', or 'intensity'.  The DESC_TEXT is the long
+        # form used in help text, like 'foreground color' or 'display
+        # intensity'.  The DEFAULT_VALUE is used to set the SELF.value
+        # attribute.  And PARAM_TYPE is a gdb.PARAM_* constant.  The
+        # ARGS is used for gdb.PARAM_ENUM, which ARGS should be the
+        # enum value list.
+        class style_parameter(Parameter):
+            def __init__(
+                self,
+                style_name,
+                parent_obj,
+                param_name,
+                desc_text,
+                default_value,
+                param_type,
+                *args
+            ):
+                # Setup documentation must be done before calling
+                # parent's __init__ method, as the __init__ reads (and
+                # copies) these values.
+                self.show_doc = "Show the " + desc_text + " for this property."
+                self.set_doc = "Set the " + desc_text + " for this property."
+                self.__doc__ = ""
+
+                # Call the parent's __init__ method to actually create
+                # the parameter.
+                super().__init__(
+                    "style " + style_name + " " + param_name,
+                    COMMAND_NONE,
+                    param_type,
+                    *args
+                )
+
+                # Store information we need in other methods.
+                self._style_name = style_name
+                self._desc_text = desc_text
+                self._parent = parent_obj
+
+                # Finally, setup the default value.
+                self.value = default_value
+
+            # Return the 'show style <style-name> <attribute>' string,
+            # which has styling applied.
+            def get_show_string(self, value):
+                s = self._parent.style
+                return (
+                    "The "
+                    + s.apply('"' + self._style_name + '" style')
+                    + " "
+                    + self._desc_text
+                    + " is: "
+                    + value
+                )
+
+        class style_foreground_parameter(style_parameter):
+            def __init__(self, name, parent):
+                super().__init__(
+                    name,
+                    parent,
+                    "foreground",
+                    "foreground color",
+                    Color(),
+                    PARAM_COLOR,
+                )
+
+        class style_background_parameter(style_parameter):
+            def __init__(self, name, parent):
+                super().__init__(
+                    name,
+                    parent,
+                    "background",
+                    "background color",
+                    Color(),
+                    PARAM_COLOR,
+                )
+
+        class style_intensity_parameter(style_parameter):
+            def __init__(self, name, parent):
+                super().__init__(
+                    name,
+                    parent,
+                    "intensity",
+                    "display intensity",
+                    "normal",
+                    PARAM_ENUM,
+                    ["normal", "bold", "dim"],
+                )
+
+        if doc is None:
+            doc = (
+                "The "
+                + name
+                + " display styling.\nConfigure "
+                + name
+                + " colors and display intensity."
+            )
+
+        ParameterPrefix("style " + name, COMMAND_NONE, doc)
+        self._foreground = style_foreground_parameter(name, self)
+        self._background = style_background_parameter(name, self)
+        if add_intensity:
+            self._intensity = style_intensity_parameter(name, self)
+        self._name = name
+        self._style = None
+
+    @property
+    def value(self):
+        """Return the gdb.Style object for this parameter set."""
+        if self._style is None:
+            self._style = Style(self._name)
+        return self._style
+
+    @property
+    def style(self):
+        """Return the gdb.Style object for this parameter set.
+
+        This is an alias for self.value."""
+        return self.value
+
+    @value.setter
+    def value(self, new_value):
+        """Set this parameter set to NEW_VALUE, a gdb.Style object.
+
+        The attributes of NEW_VALUE are used to update the current settings
+        of this parameter set.  If this parameter set was created without
+        an intensity setting, then the intensity of NEW_VALUE is ignored."""
+        if not isinstance(new_value, Style):
+            raise TypeError("value must be gdb.Style, not %s" % type(new_value))
+        self._foreground.value = new_value.foreground
+        self._background.value = new_value.background
+        if hasattr(self, "_intensity"):
+            intensity_value = new_value.intensity
+            if intensity_value == INTENSITY_BOLD:
+                intensity_string = "bold"
+            elif intensity_value == INTENSITY_DIM:
+                intensity_string = "dim"
+            elif intensity_value == INTENSITY_NORMAL:
+                intensity_string = "normal"
+            else:
+                raise ValueError(
+                    "unknown intensity value %d from Style" % intensity_value
+                )
+
+            self._intensity.value = intensity_string
+
+    @style.setter
+    def style(self, new_value):
+        """Set this parameter set to NEW_VALUE, a gdb.Style object.
+
+        This is an alias for self.value."""
+        self.value = new_value
+
+    def apply(self, *args, **kwargs):
+        """Apply this style to the arguments.
+
+        Forwards all arguments to self.style.apply().  The arguments should be a string,
+        to which this style is applied.  This function returns the same string with
+        escape sequences added to apply this style.
+
+        If styling is globally disabled ('set style enabled off') then no escape sequences
+        will be added, the input string is returned."""
+        return self.style.apply(*args, **kwargs)
+
+    def __repr__(self):
+        """A string representation of SELF."""
+
+        def full_typename(obj):
+            module = type(obj).__module__
+            qualname = type(obj).__qualname__
+
+            if module is None or module == "builtins":
+                return qualname
+            else:
+                return module + "." + qualname
+
+        return "<" + full_typename(self) + " name='" + self._name + "'>"

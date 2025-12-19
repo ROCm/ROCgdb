@@ -1,7 +1,7 @@
 /* CLI utilities.
 
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -22,7 +22,6 @@
 #include "value.h"
 
 #include <algorithm>
-#include <ctype.h>
 
 /* See documentation in cli-utils.h.  */
 
@@ -48,7 +47,7 @@ get_ulongest (const char **pp, int trailer)
 	  /* Internal variable.  Make a copy of the name, so we can
 	     null-terminate it to pass to lookup_internalvar().  */
 	  const char *start = ++p;
-	  while (isalnum (*p) || *p == '_')
+	  while (c_isalnum (*p) || *p == '_')
 	    p++;
 	  std::string varname (start, p - start);
 	  if (!get_internalvar_integer (lookup_internalvar (varname.c_str ()),
@@ -69,7 +68,7 @@ get_ulongest (const char **pp, int trailer)
       p = end;
     }
 
-  if (!(isspace (*p) || *p == '\0' || *p == trailer))
+  if (!(c_isspace (*p) || *p == '\0' || *p == trailer))
     error (_("Trailing junk at: %s"), p);
   p = skip_spaces (p);
   *pp = p;
@@ -113,7 +112,7 @@ get_number_trailer (const char **pp, int trailer)
 	  const char *start = ++p;
 	  LONGEST longest_val;
 
-	  while (isalnum (*p) || *p == '_')
+	  while (c_isalnum (*p) || *p == '_')
 	    p++;
 	  varname = (char *) alloca (p - start + 1);
 	  strncpy (varname, start, p - start);
@@ -138,7 +137,7 @@ get_number_trailer (const char **pp, int trailer)
 	/* There is no number here.  (e.g. "cond a == b").  */
 	{
 	  /* Skip non-numeric token.  */
-	  while (*p && !isspace((int) *p))
+	  while (*p && !c_isspace((int) *p))
 	    ++p;
 	  /* Return zero, which caller must interpret as error.  */
 	  retval = 0;
@@ -146,10 +145,10 @@ get_number_trailer (const char **pp, int trailer)
       else
 	retval = atoi (p1);
     }
-  if (!(isspace (*p) || *p == '\0' || *p == trailer))
+  if (!(c_isspace (*p) || *p == '\0' || *p == trailer))
     {
       /* Trailing junk: return 0 and let caller print error msg.  */
-      while (!(isspace (*p) || *p == '\0' || *p == trailer))
+      while (!(c_isspace (*p) || *p == '\0' || *p == trailer))
 	++p;
       retval = 0;
     }
@@ -264,8 +263,8 @@ number_or_range_parser::get_number ()
 	 option rather than an incomplete range, so check for end of
 	 string as well.  */
       if (m_cur_tok[0] == '-'
-	  && !(isspace (m_cur_tok[-1])
-	       && (isalpha (m_cur_tok[1])
+	  && !(c_isspace (m_cur_tok[-1])
+	       && (c_isalpha (m_cur_tok[1])
 		   || m_cur_tok[1] == '-'
 		   || m_cur_tok[1] == '\0')))
 	{
@@ -295,7 +294,7 @@ number_or_range_parser::get_number ()
     }
   else
     {
-      if (isdigit (*(m_cur_tok + 1)))
+      if (c_isdigit (*(m_cur_tok + 1)))
 	error (_("negative value"));
       if (*(m_cur_tok + 1) == '$')
 	{
@@ -332,17 +331,17 @@ number_or_range_parser::finished () const
      integer, convenience var or negative convenience var.  */
   return (m_cur_tok == NULL || *m_cur_tok == '\0'
 	  || (!m_in_range
-	      && !(isdigit (*m_cur_tok) || *m_cur_tok == '$')
+	      && !(c_isdigit (*m_cur_tok) || *m_cur_tok == '$')
 	      && !(*m_cur_tok == '-'
-		   && (isdigit (m_cur_tok[1]) || m_cur_tok[1] == '$'))));
+		   && (c_isdigit (m_cur_tok[1]) || m_cur_tok[1] == '$'))));
 }
 
-/* Accept a number and a string-form list of numbers such as is 
+/* Accept a number and a string-form list of numbers such as is
    accepted by get_number_or_range.  Return TRUE if the number is
    in the list.
 
-   By definition, an empty list includes all numbers.  This is to 
-   be interpreted as typing a command such as "delete break" with 
+   By definition, an empty list includes all numbers.  This is to
+   be interpreted as typing a command such as "delete break" with
    no arguments.  */
 
 int
@@ -370,7 +369,7 @@ number_is_in_list (const char *list, int number)
 const char *
 remove_trailing_whitespace (const char *start, const char *s)
 {
-  while (s > start && isspace (*(s - 1)))
+  while (s > start && c_isspace (*(s - 1)))
     --s;
 
   return s;
@@ -420,7 +419,7 @@ int
 check_for_argument (const char **str, const char *arg, int arg_len)
 {
   if (strncmp (*str, arg, arg_len) == 0
-      && ((*str)[arg_len] == '\0' || isspace ((*str)[arg_len])))
+      && ((*str)[arg_len] == '\0' || c_isspace ((*str)[arg_len])))
     {
       *str += arg_len;
       *str = skip_spaces (*str);
@@ -459,7 +458,7 @@ make_ranges_from_sorted_vector (const std::vector<int> &numbers,
   for (auto it = start + 1; it != numbers.end(); it++)
     {
       if ((previous_value + 1) < *it)
-        {
+	{
 	  /* The current range ends.  */
 	  has_brackets = true;
 
@@ -476,9 +475,9 @@ make_ranges_from_sorted_vector (const std::vector<int> &numbers,
 	    }
 
 	  /* The current value is the beginning of a new range.  */
-          start = it;
-          result += " " + std::to_string (*start);
-        }
+	  start = it;
+	  result += " " + std::to_string (*start);
+	}
       previous_value = *it;
     }
 

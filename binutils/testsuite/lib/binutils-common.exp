@@ -1,4 +1,4 @@
-# Copyright (C) 1993-2024 Free Software Foundation, Inc.
+# Copyright (C) 1993-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -32,7 +32,6 @@ proc is_elf_format {} {
 #	 && ![istarget *-*-windiss*]
 
     if {    ![istarget *-*-chorus*]
-	 && ![istarget *-*-cloudabi*]
 	 && ![istarget *-*-eabi*]
 	 && ![istarget *-*-*elf*]
 	 && ![istarget *-*-*freebsd*]
@@ -44,7 +43,6 @@ proc is_elf_format {} {
    && ![istarget kvx-*-*]
 	 && ![istarget *-*-*linux*]
 	 && ![istarget *-*-lynxos*]
-	 && ![istarget *-*-nacl*]
 	 && ![istarget *-*-netbsd*]
 	 && ![istarget *-*-nto*]
 	 && ![istarget *-*-openbsd*]
@@ -238,7 +236,6 @@ proc match_target { target } {
 proc supports_gnu_osabi {} {
     if { [istarget *-*-gnu*]
 	 || [istarget *-*-linux*]
-	 || [istarget *-*-nacl*]
 	 || ( [istarget *-*-*bsd*] && ![istarget arm*-*-netbsd*] )
 	 || [istarget *-*-lynxos]
 	 || ( [istarget *-*-nto*] && ![istarget arm*-*-*] )
@@ -408,6 +405,25 @@ proc check_relro_support { } {
     return $relro_available_saved
 }
 
+proc check_memory_seal_support { } {
+    global memory_seal_available_saved
+    global ld
+
+    if {![info exists memory_seal_available_saved]} {
+	remote_file host delete nomemory_seal
+	set ld_output [remote_exec host $ld "-z nomemory-seal"]
+	if { [string first "not supported" $ld_output] >= 0
+	     || [string first "unrecognized option" $ld_output] >= 0
+	     || [string first "-z nomemory-seal ignored" $ld_output] >= 0
+	     || [string first "cannot find nomemory-seal" $ld_output] >= 0 } {
+	    set memory_seal_available_saved 0
+	} else {
+	    set memory_seal_available_saved 1
+	}
+    }
+    return $memory_seal_available_saved
+}
+
 # Check for support of the .noinit section, used for data that is not
 # initialized at load, or during the application's initialization sequence.
 proc supports_noinit_section {} {
@@ -459,6 +475,36 @@ proc supports_dt_relr {} {
 	return 1
     }
     return 0
+}
+
+# Whether a target assembler supports --gsframe.
+proc gas_sframe_check {} {
+    global check_as_sframe_result
+    global AS
+    global ASFLAGS
+    if [info exists check_as_sframe_result] {
+	return $check_as_sframe_result
+    }
+
+    set as_file "tmpdir/check_as_sframe.s"
+    set as_fh [open $as_file w 0666]
+    puts $as_fh "# Generated file. DO NOT EDIT"
+    puts $as_fh "\t.cfi_startproc"
+    puts $as_fh "\t.cfi_endproc"
+    close $as_fh
+    remote_download host $as_file
+    verbose -log "Checking SFrame support in AS:"
+
+    set status [remote_exec host "$AS $ASFLAGS --gsframe $as_file"]
+
+    if { [lindex $status 0] != 0 } then {
+	verbose -log "SFrame not supported in AS"
+	set check_as_sframe_result 0
+    } else {
+	verbose -log "SFrame supported in AS"
+	set check_as_sframe_result 1
+    }
+    return $check_as_sframe_result
 }
 
 # get_relative_path FROM TO
@@ -709,6 +755,7 @@ proc prune_warnings_extra { text } {
 
     # Ignore LTO warnings triggered by configuring with --enable-pgo-build=lto.
     regsub -all "(^|\n)(\[^\n\]*lto-wrapper: warning: using serial compilation of \[0-9\]+ LTRANS jobs\[^\n\]*\n?)+" $text "\\1" text
+    regsub -all "(^|\n)(\[^\n\]*lto-wrapper: note: \[^\n\]*\n?)+" $text "\\1" text
 
     return $text
 }
@@ -1128,17 +1175,17 @@ proc run_dump_test { name {extra_options {}} } {
 	[big_or_little_endian] opts(ld)
 
     if { $opts(name) == "" } {
-	set testname "$subdir/$name"
+	set base_testname "$subdir/$name"
     } else {
-	set testname $opts(name)
+	set base_testname $opts(name)
     }
 
     set err_warn 0
     foreach opt { warning error warning_output error_output } {
 	if { $opts($opt) != "" } {
 	    if { $err_warn } {
-		perror "$testname: bad mix of warning and error test directives"
-		unresolved $testname
+		perror "$base_testname: bad mix of warning and error test directives"
+		unresolved $base_testname
 		return
 	    }
 	    set err_warn 1
@@ -1177,19 +1224,19 @@ proc run_dump_test { name {extra_options {}} } {
 	    }
 	}
 	if { $targmatch == 0 } {
-	    unsupported $testname
+	    unsupported $base_testname
 	    return
 	}
     }
     foreach targ $opts(alltargets) {
 	if ![match_target $targ] {
-	    unsupported $testname
+	    unsupported $base_testname
 	    return
 	}
     }
     foreach targ $opts(notarget) {
 	if [match_target $targ] {
-	    unsupported $testname
+	    unsupported $base_testname
 	    return
 	}
     }
@@ -1207,7 +1254,7 @@ proc run_dump_test { name {extra_options {}} } {
 		size		{ set dumpprogram size }
 		default		{
 		    perror "unrecognized DUMPPROG option $opts(DUMPPROG) in $file.d"
-		    unresolved $testname
+		    unresolved $base_testname
 		    return
 		}
 	    }
@@ -1217,7 +1264,7 @@ proc run_dump_test { name {extra_options {}} } {
 		if {$opts($p) != ""} {
 		    if {$dumpprogram != ""} {
 			perror "ambiguous dump program in $file.d"
-			unresolved $testname
+			unresolved $base_testname
 			return
 		    } else {
 			set dumpprogram $p
@@ -1227,7 +1274,7 @@ proc run_dump_test { name {extra_options {}} } {
 	}
 	if { $dumpprogram == "" && $opts(map) == "" && !$err_warn } {
 	    perror "dump program unspecified in $file.d"
-	    unresolved $testname
+	    unresolved $base_testname
 	    return
 	}
     }
@@ -1266,7 +1313,7 @@ proc run_dump_test { name {extra_options {}} } {
 	    if { $cmdret != 0} {
 		send_log "compilation of $cfile failed, exit status $cmdret with <$comp_output>"
 		# Should this be 'unresolved', or is that too silent?
-		fail $testname
+		fail $base_testname
 		return 0
 	    }
 	}
@@ -1309,6 +1356,11 @@ proc run_dump_test { name {extra_options {}} } {
     }
 
     foreach as_flags $as_final_flags {
+	if { [llength $as_final_flags] > 1 } {
+	    set testname [concat $base_testname $as_flags]
+	} else {
+	    set testname $base_testname
+	}
 	# Assemble each file.
 	set objfiles {}
 	for { set i 0 } { $i < [llength $sourcefiles] } { incr i } {
@@ -1400,6 +1452,9 @@ proc run_dump_test { name {extra_options {}} } {
 	    set ld "$LD"
 	    if [check_relro_support] {
 		set ld_extra_opt "-z norelro"
+	    }
+	    if [check_memory_seal_support] {
+		append ld_extra_opt " -z nomemory-seal"
 	    }
 
 	    # Add -L$srcdir/$subdir so that the linker command can use
@@ -1545,12 +1600,16 @@ proc run_dump_test { name {extra_options {}} } {
 		verbose -log "$exitstat with: <$comp_output>, no expected output"
 	    }
 
-	    if { (($want_out(source) == "") == ($comp_output == "")) \
-		     && (($cmdret == 0) == ($want_out(terminal) == 0)) \
-		     && ((($want_out(source) == "regex") \
-			      && [regexp -- $want_out(regex) $comp_output]) \
-			     || (($want_out(source) == "file") \
-				     && (![regexp_diff "tmpdir/ld.messages" "$srcdir/$subdir/$want_out(file)"]))) } {
+	    set ok 0
+	    if { ($cmdret == 0) == ($want_out(terminal) == 0) } {
+		switch $want_out(source) {
+		    regex { set ok [regexp -- $want_out(regex) $comp_output] }
+		    file  { set ok [expr ![regexp_diff tmpdir/ld.messages \
+					   $srcdir/$subdir/$want_out(file)]] }
+		    ""    { set ok [string equal $comp_output ""] }
+		}
+	    }
+	    if { $ok } {
 		# We have the expected output.
 		if { $want_out(terminal) || $dumpprogram == "" } {
 		    pass $testname
@@ -1756,4 +1815,30 @@ proc get_standard_section_names {} {
 	return { {\$CODE\$} {\$DATA\$} {\$BSS\$} }
     }
     return
+}
+
+set llvm_plug_opt ""
+if { [isnative] } then {
+    if ![info exists CLANG_FOR_TARGET] then {
+	catch "exec clang -v" got
+	if [regexp "clang version" $got] then {
+	    set CLANG_FOR_TARGET clang
+	}
+    }
+}
+if [info exists CLANG_FOR_TARGET] then {
+    set llvm_plug_so [string trim [exec $CLANG_FOR_TARGET -print-file-name=LLVMgold.so]]
+    if { $llvm_plug_so ne "LLVMgold.so" } then {
+	set llvm_plug_opt "--plugin $llvm_plug_so"
+    }
+    if { $llvm_plug_opt eq "" && [isnative] } then {
+	# If it is still blank, try llvm-config --libdir.  Clang
+	# searches CLANG_INSTALL_LIBDIR_BASENAME which corresponds
+	# to this.
+	catch "exec llvm-config --libdir" got
+	if {[file isdirectory $got] \
+	    && [file isfile $got/LLVMgold.so]} then {
+	    set llvm_plug_opt "--plugin $got/LLVMgold.so"
+	}
+    }
 }

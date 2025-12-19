@@ -1,5 +1,5 @@
 # Expect script for AARCH64 ELF tests related to GNU properties.
-# Copyright (C) 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 2009-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -42,6 +42,21 @@ set aarch64elflinktests {
    "-shared" ""
    "-I$srcdir/$subdir -defsym __property_bti__=1"
    {bti-plt-so.s} {} "libbti-plt-so.so"}
+
+  {"Build gcs-so for GCS tests"
+   "-shared" ""
+   "-I$srcdir/$subdir -defsym __property_gcs__=1"
+   {gcs-so.s} {} "libgcs-so.so"}
+
+  {"Build nogcs-so for GCS tests"
+   "-shared" ""
+   "-I$srcdir/$subdir"
+   {gcs-so.s} {} "libnogcs-so.so"}
+
+  {"Build gcs-so2 for GCS tests"
+   "-shared" ""
+   "-I$srcdir/$subdir -defsym __property_gcs__=1"
+   {gcs-so2.s} {} "libgcs-so2.so"}
 }
 
 if [check_shared_lib_support] {

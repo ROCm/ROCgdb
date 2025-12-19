@@ -64,7 +64,7 @@ function print_version() {
 while getopts hv-: OPT; do
     if [ "$OPT" = "-" ]; then
 	OPT="${OPTARG%%=*}"
-	OPTARG="${OPTARG#'$OPT'}"
+	OPTARG="${OPTARG#"$OPT"}"
 	OPTARG="${OPTARG#=}"
     fi
 
@@ -132,6 +132,10 @@ EOF
 	  )
 
 # Run GDB and remove some unwanted noise.
+<<<<<<< HEAD
+=======
+# shellcheck disable=SC2086
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 "$GDB" --quiet -nx $GDBARGS <<EOF |
 set width 0
 set height 0

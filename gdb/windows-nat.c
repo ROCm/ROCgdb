@@ -1,6 +1,6 @@
 /* Target-vector operations for controlling windows child processes, for GDB.
 
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions, A Red Hat Company.
 
@@ -56,7 +56,6 @@
 #include "cli/cli-style.h"
 #include <unistd.h>
 #include "exec.h"
-#include "solist.h"
 #include "solib.h"
 #include "xml-support.h"
 #include "inttypes.h"
@@ -433,7 +432,12 @@ wait_for_single (HANDLE handle, DWORD howlong)
 {
   while (true)
     {
-      DWORD r = WaitForSingleObject (handle, howlong);
+      /* Using an INFINITE argument to WaitForSingleObject may cause a system
+	 deadlock.  Avoid it by waiting for a bit in a loop instead.  */
+      DWORD milliseconds = howlong == INFINITE ? 100 : howlong;
+      DWORD r = WaitForSingleObject (handle, milliseconds);
+      if (howlong == INFINITE && r == WAIT_TIMEOUT)
+	continue;
       if (r == WAIT_OBJECT_0)
 	return;
       if (r == WAIT_FAILED)
@@ -1789,7 +1793,6 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
   inf = current_inferior ();
   if (!inf->target_is_pushed (this))
     inf->push_target (this);
-  disable_breakpoints_in_shlibs (current_program_space);
   windows_clear_solib ();
   clear_proceed_status (0);
   init_wait_for_inferior ();
@@ -2423,7 +2426,7 @@ redir_set_redirection (const char *s, int *inp, int *out, int *err)
   /* cmd.exe recognizes "&N" only immediately after the redirection symbol.  */
   if (*s != '&')
     {
-      while (isspace (*s))  /* skip whitespace before file name */
+      while (c_isspace (*s))  /* skip whitespace before file name */
 	s++;
       *d++ = ' ';	    /* separate file name with a single space */
     }
@@ -2450,7 +2453,7 @@ redir_set_redirection (const char *s, int *inp, int *out, int *err)
 	    s++;
 	  *d++ = *s++;
 	}
-      else if (isspace (*s) && !quote)
+      else if (c_isspace (*s) && !quote)
 	break;
       else
 	*d++ = *s++;
@@ -2486,7 +2489,7 @@ redirect_inferior_handles (const char *cmd_orig, char *cmd,
   int quote = 0;
   bool retval = false;
 
-  while (isspace (*s))
+  while (c_isspace (*s))
     *d++ = *s++;
 
   while (*s)
@@ -3090,9 +3093,7 @@ windows_nat_target::thread_name (struct thread_info *thr)
 }
 
 
-void _initialize_windows_nat ();
-void
-_initialize_windows_nat ()
+INIT_GDB_FILE (windows_nat)
 {
   x86_dr_low.set_control = cygwin_set_dr7;
   x86_dr_low.set_addr = cygwin_set_dr;
@@ -3266,9 +3267,7 @@ windows_nat_target::thread_alive (ptid_t ptid)
   return WaitForSingleObject (th->h, 0) != WAIT_OBJECT_0;
 }
 
-void _initialize_check_for_gdb_ini ();
-void
-_initialize_check_for_gdb_ini ()
+INIT_GDB_FILE (check_for_gdb_ini)
 {
   char *homedir;
   if (inhibit_gdbinit)

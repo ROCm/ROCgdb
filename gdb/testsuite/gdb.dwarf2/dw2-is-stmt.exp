@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,16 +42,16 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	compile_unit {
-	    {language @DW_LANG_C}
-	    {name dw2-is-stmt.c}
-	    {low_pc 0 addr}
-	    {stmt_list ${lines_label} DW_FORM_sec_offset}
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name dw2-is-stmt.c
+	    DW_AT_low_pc 0 addr
+	    DW_AT_stmt_list ${lines_label} DW_FORM_sec_offset
 	} {
 	    subprogram {
-		{external 1 flag}
-		{name main}
-		{low_pc $main_start addr}
-		{high_pc "$main_start + $main_len" addr}
+		DW_AT_external 1 flag
+		DW_AT_name main
+		DW_AT_low_pc $main_start addr
+		DW_AT_high_pc "$main_start + $main_len" addr
 	    } {}
 	}
     }
@@ -99,7 +99,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} \
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -116,7 +116,7 @@ gdb_test "step" "/\\* main end \\*/" \
 
 # Restart the test.  This time, stop at a location we know is marked
 # as a statement.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 runto_main
 
 gdb_breakpoint "*line_label_3"
@@ -129,7 +129,7 @@ gdb_test "step" "/\\* main end \\*/" \
 
 # Restart the test, this time, step through line by line, ensure we
 # only stop at the places where is-stmt is true.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 runto_main
 
 # Get the values of the labels where we expect to stop.
@@ -161,7 +161,7 @@ with_test_prefix "step to line_label_5" {
 
 # Now restart the test, and place a breakpoint by line number.  GDB
 # should select the location that is marked as is-stmt.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 runto_main
 set linum [gdb_get_line_number "main, set var to 0"]
 gdb_breakpoint "$srcfile:$linum"
@@ -171,7 +171,7 @@ gdb_assert { $ll3 == $pc } "check initial \$pc"
 
 # Restart the test again, this time we will test stepping by
 # instruction.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 runto_main
 
 # We will be at line_label_1 at this point - we already tested this

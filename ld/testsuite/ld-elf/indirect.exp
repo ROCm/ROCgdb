@@ -1,5 +1,5 @@
 # Expect script for various indirect symbol tests.
-#   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2012-2025 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ if { ![check_compiler_available] } {
 }
 
 # Some bare-metal targets don't support shared libs or PIC.
-if { ![run_host_cmd_yesno $CC_FOR_TARGET "-shared -fPIC $srcdir/$subdir/dummy.c -o tmpdir/t.so"] } {
+if { ![run_host_noleak $CC_FOR_TARGET "-shared -fPIC $srcdir/$subdir/dummy.c -o tmpdir/t.so"] } {
     return
 }
 
@@ -189,14 +189,21 @@ set run_tests [list \
      {check-ptr-eq.c} "pr18720d" "pr18720.out"] \
     [list "Run with libpr19553b.so" \
      "-Wl,--no-as-needed tmpdir/libpr19553b.so tmpdir/libpr19553d.so -Wl,-rpath-link,." "" \
-     {pr19553a.c} "pr19553b" "pr19553b.out"] \
+     {pr19553a.c} "pr19553b" "pr19553b.out"]
+]
+
+# This test relies on versioned symbols, which Solaris ld.so.1 doesn't support.
+if { ![istarget *-*-solaris2*] } {
+    lappend run_tests \
     [list "Run with libpr19553c.so" \
      "-Wl,--no-as-needed tmpdir/libpr19553c.so tmpdir/libpr19553b.so tmpdir/libpr19553d.so" "" \
-     {pr19553a.c} "pr19553c" "pr19553c.out"] \
+     {pr19553a.c} "pr19553c" "pr19553c.out"]
+}
+
+lappend run_tests \
     [list "Run with libpr19553d.so" \
      "-Wl,--no-as-needed tmpdir/libpr19553d.so tmpdir/libpr19553b.so -Wl,-rpath-link,." "" \
-     {pr19553a.c} "pr19553d" "pr19553d.out"] \
-]
+     {pr19553a.c} "pr19553d" "pr19553d.out"]
 
 run_ld_link_exec_tests $run_tests
 
@@ -226,7 +233,7 @@ foreach t [list indirect5a indirect5b indirect6a indirect6b] {
     }
 }
 
-if { ![run_host_cmd_yesno $CC_FOR_TARGET "-fPIC -pie $srcdir/$subdir/main.c -o tmpdir/pie"] } {
+if { ![run_host_noleak $CC_FOR_TARGET "-fPIC -pie $srcdir/$subdir/main.c -o tmpdir/pie"] } {
     return
 }
 

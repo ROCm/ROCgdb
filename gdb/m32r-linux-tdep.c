@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux m32r.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -36,6 +36,7 @@
 
 #include "m32r-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "gdbarch.h"
 
 
@@ -226,13 +227,12 @@ static struct m32r_frame_cache *
 m32r_linux_sigtramp_frame_cache (const frame_info_ptr &this_frame,
 				 void **this_cache)
 {
-  struct m32r_frame_cache *cache;
   CORE_ADDR sigcontext_addr, addr;
   int regnum;
 
   if ((*this_cache) != NULL)
     return (struct m32r_frame_cache *) (*this_cache);
-  cache = FRAME_OBSTACK_ZALLOC (struct m32r_frame_cache);
+  auto *cache = frame_obstack_zalloc<m32r_frame_cache> ();
   (*this_cache) = cache;
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -301,15 +301,16 @@ m32r_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind m32r_linux_sigtramp_frame_unwind = {
+static const struct frame_unwind_legacy m32r_linux_sigtramp_frame_unwind (
   "m32r linux sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   m32r_linux_sigtramp_frame_this_id,
   m32r_linux_sigtramp_frame_prev_register,
   NULL,
   m32r_linux_sigtramp_frame_sniffer
-};
+);
 
 /* Mapping between the registers in `struct pt_regs'
    format and GDB's register array layout.  */
@@ -460,8 +461,7 @@ m32r_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   /* Core file support.  */
   set_gdbarch_iterate_over_regset_sections
@@ -472,9 +472,7 @@ m32r_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					     svr4_fetch_objfile_link_map);
 }
 
-void _initialize_m32r_linux_tdep ();
-void
-_initialize_m32r_linux_tdep ()
+INIT_GDB_FILE (m32r_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_m32r, 0, GDB_OSABI_LINUX,
 			  m32r_linux_init_abi);

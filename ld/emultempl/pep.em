@@ -9,18 +9,22 @@ fi
 case ${target} in
   *-*-cygwin*)
     move_default_addr_high=1
-    cygwin_behavior=1
+    mingw_behavior=0
+    ;;
+  *-*-mingw*)
+    move_default_addr_high=0
+    mingw_behavior=1
     ;;
   *)
-    move_default_addr_high=0;
-    cygwin_behavior=0;
+    move_default_addr_high=0
+    mingw_behavior=0
     ;;
 esac
 
 rm -f e${EMULATION_NAME}.c
 (echo;echo;echo;echo;echo)>e${EMULATION_NAME}.c # there, now line numbers match ;-)
 fragment <<EOF
-/* Copyright (C) 2006-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2006-2025 Free Software Foundation, Inc.
    Written by Kai Tietz, OneVision Software GmbH&CoKg.
 
    This file is part of the GNU Binutils.
@@ -126,10 +130,11 @@ fragment <<EOF
 #define DLL_SUPPORT
 #endif
 
-#define DEFAULT_DLL_CHARACTERISTICS	(${cygwin_behavior} ? 0 : \
-					   IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE \
-					 | IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA \
-  					 | IMAGE_DLL_CHARACTERISTICS_NX_COMPAT)
+#define DEFAULT_DLL_CHARACTERISTICS	(${mingw_behavior} \
+					 ? IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE \
+					   | IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA \
+					   | IMAGE_DLL_CHARACTERISTICS_NX_COMPAT \
+					 : 0)
 
 #if defined(TARGET_IS_i386pep) || defined(COFF_WITH_peAArch64) || ! defined(DLL_SUPPORT)
 #define	PE_DEF_SUBSYSTEM		IMAGE_SUBSYSTEM_WINDOWS_CUI
@@ -181,6 +186,7 @@ static int support_old_code = 0;
 static lang_assignment_statement_type *image_base_statement = 0;
 static unsigned short pe_dll_characteristics = DEFAULT_DLL_CHARACTERISTICS;
 static bool insert_timestamp = true;
+static bool orphan_init_done;
 static const char *emit_build_id;
 #ifdef PDB_H
 static int pdb;
@@ -240,6 +246,8 @@ gld${EMULATION_NAME}_before_parse (void)
   config.has_shared = 1;
   link_info.pei386_auto_import = 1;
   link_info.pei386_runtime_pseudo_reloc = 2; /* Use by default version 2.  */
+#else
+  pep_dll_enable_reloc_section = 0;
 #endif
 }
 
@@ -624,7 +632,7 @@ set_pep_subsystem (void)
 
       if (v[i].name == NULL)
 	{
-	  einfo (_("%F%P: invalid subsystem type %s\n"), optarg);
+	  fatal (_("%P: invalid subsystem type %s\n"), optarg);
 	  return;
 	}
 
@@ -645,7 +653,7 @@ set_pep_value (char *name)
   set_pep_name (name,  (bfd_vma) strtoull (optarg, &end, 0));
 
   if (end == optarg)
-    einfo (_("%F%P: invalid hex number for PE parameter '%s'\n"), optarg);
+    fatal (_("%P: invalid hex number for PE parameter '%s'\n"), optarg);
 
   optarg = end;
 }
@@ -662,7 +670,7 @@ set_pep_stack_heap (char *resname, char *comname)
       set_pep_value (comname);
     }
   else if (*optarg)
-    einfo (_("%F%P: strange hex info for PE parameter '%s'\n"), optarg);
+    fatal (_("%P: strange hex info for PE parameter '%s'\n"), optarg);
 }
 
 #define DEFAULT_BUILD_ID_STYLE	"md5"
@@ -679,7 +687,7 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_BASE_FILE:
       link_info.base_file = fopen (optarg, FOPEN_WB);
       if (link_info.base_file == NULL)
-	einfo (_("%F%P: cannot open base file %s\n"), optarg);
+	fatal (_("%P: cannot open base file %s\n"), optarg);
       break;
 
       /* PE options.  */
@@ -1232,7 +1240,7 @@ make_runtime_ref (void)
     = bfd_wrapped_link_hash_lookup (link_info.output_bfd, &link_info,
 				    rr, true, false, true);
   if (!h)
-    einfo (_("%F%P: bfd_link_hash_lookup failed: %E\n"));
+    fatal (_("%P: bfd_link_hash_lookup failed: %E\n"));
   else
     {
       if (h->type == bfd_link_hash_new)
@@ -1532,7 +1540,7 @@ gld${EMULATION_NAME}_after_open (void)
   if (bfd_get_flavour (link_info.output_bfd) != bfd_target_coff_flavour
       || coff_data (link_info.output_bfd) == NULL
       || !obj_pe (link_info.output_bfd))
-    einfo (_("%F%P: cannot perform PE operations on non PE output file '%pB'\n"),
+    fatal (_("%P: cannot perform PE operations on non PE output file '%pB'\n"),
 	   link_info.output_bfd);
 
   pe_data (link_info.output_bfd)->pe_opthdr = pep;
@@ -1596,6 +1604,9 @@ gld${EMULATION_NAME}_after_open (void)
   else
     pep_exe_build_sections (link_info.output_bfd, &link_info);
 #endif
+#else /* !DLL_SUPPORT */
+  if (!bfd_link_relocatable (&link_info))
+    pep_exe_build_sections (link_info.output_bfd, &link_info);
 #endif /* DLL_SUPPORT */
 
   {
@@ -1644,7 +1655,7 @@ gld${EMULATION_NAME}_after_open (void)
 
 		    if (!bfd_generic_link_read_symbols (is->the_bfd))
 		      {
-			einfo (_("%F%P: %pB: could not read symbols: %E\n"),
+			fatal (_("%P: %pB: could not read symbols: %E\n"),
 			       is->the_bfd);
 			return;
 		      }
@@ -1848,7 +1859,7 @@ gld${EMULATION_NAME}_unrecognized_file (lang_input_statement_type *entry ATTRIBU
 
 	      h = bfd_link_hash_lookup (link_info.hash, buf, true, true, true);
 	      if (h == (struct bfd_link_hash_entry *) NULL)
-		einfo (_("%F%P: bfd_link_hash_lookup failed: %E\n"));
+		fatal (_("%P: bfd_link_hash_lookup failed: %E\n"));
 	      if (h->type == bfd_link_hash_new)
 		{
 		  h->type = bfd_link_hash_undefined;
@@ -1915,6 +1926,10 @@ gld${EMULATION_NAME}_recognized_file (lang_input_statement_type *entry ATTRIBUTE
 static void
 gld${EMULATION_NAME}_finish (void)
 {
+  /* Support the object-only output.  */
+  if (config.emit_gnu_object_only)
+    orphan_init_done = false;
+
   is_underscoring ();
   finish_default ();
 
@@ -1934,6 +1949,9 @@ gld${EMULATION_NAME}_finish (void)
 
   if (pep_out_def_filename)
     pep_dll_generate_def_file (pep_out_def_filename);
+#else /* !DLL_SUPPORT */
+  if (!bfd_link_relocatable (&link_info))
+    pep_exe_fill_sections (link_info.output_bfd, &link_info);
 #endif /* DLL_SUPPORT */
 
   /* I don't know where .idata gets set as code, but it shouldn't be.  */
@@ -2027,7 +2045,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 
   if (os == NULL)
     {
-      static struct orphan_save hold[] =
+      static struct orphan_save orig_hold[] =
 	{
 	  { ".text",
 	    SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_CODE,
@@ -2045,6 +2063,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 	    SEC_ALLOC,
 	    0, 0, 0, 0 }
 	};
+      static struct orphan_save hold[ARRAY_SIZE (orig_hold)];
       enum orphan_save_index
 	{
 	  orphan_text = 0,
@@ -2053,7 +2072,6 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 	  orphan_data,
 	  orphan_bss
 	};
-      static int orphan_init_done = 0;
       struct orphan_save *place;
       lang_output_section_statement_type *after;
       etree_type *address;
@@ -2062,15 +2080,20 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 
       if (!orphan_init_done)
 	{
-	  struct orphan_save *ho;
-	  for (ho = hold; ho < hold + sizeof (hold) / sizeof (hold[0]); ++ho)
-	    if (ho->name != NULL)
-	      {
-		ho->os = lang_output_section_find (ho->name);
-		if (ho->os != NULL && ho->os->flags == 0)
-		  ho->os->flags = ho->flags;
-	      }
-	  orphan_init_done = 1;
+	  struct orphan_save *ho, *horig;
+	  for (ho = hold, horig = orig_hold;
+	       ho < hold + ARRAY_SIZE (hold);
+	       ++ho, ++horig)
+	    {
+	      *ho = *horig;
+	      if (ho->name != NULL)
+		{
+		  ho->os = lang_output_section_find (ho->name);
+		  if (ho->os != NULL && ho->os->flags == 0)
+		    ho->os->flags = ho->flags;
+	        }
+	    }
+	  orphan_init_done = true;
 	}
 
       flags = s->flags;

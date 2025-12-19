@@ -1,4 +1,4 @@
-# Copyright 2019-2024 Free Software Foundation, Inc.
+# Copyright 2019-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ proc test_info_sources {args expect_seen_info_sources \
     }
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

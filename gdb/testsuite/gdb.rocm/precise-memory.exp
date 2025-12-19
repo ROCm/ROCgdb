@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Copyright 2022-2024 Free Software Foundation, Inc.
+=======
+# Copyright 2022-2025 Free Software Foundation, Inc.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 # Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
@@ -29,10 +33,11 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 }
 
 proc do_test { } {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     with_rocm_gpu_lock {
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return
 	}
 
@@ -74,7 +79,11 @@ proc do_test { } {
 	    return
 	}
 
+<<<<<<< HEAD
 	# Get to the begining of the GPU kernel without precise memory enabled.
+=======
+	# Get to the beginning of the GPU kernel without precise memory enabled.
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 	with_test_prefix "goto gpu code" {
 	    gdb_test_no_output "set amdgpu precise-memory off"
 	    gdb_breakpoint "kernel" allow-pending

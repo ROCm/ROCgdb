@@ -1,5 +1,5 @@
 /* User/system CPU time clocks that follow the std::chrono interface.
-   Copyright (C) 2016-2024 Free Software Foundation, Inc.
+   Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -64,13 +64,28 @@ enum class run_time_scope
    supported.  If not supported, then the combined user+kernel time
    is returned in USER and SYSTEM is set to zero.
 
+<<<<<<< HEAD
    SCOPE indicates whether to return the run time for the whole process or
    just for the calling thread.  */
+=======
+   SCOPE indicates whether to return the run time for the whole
+   process or just for the calling thread.  If the latter isn't
+   supported, then returns the run time for the whole process even if
+   run_time_scope::thread is requested.  */
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 void get_run_time (user_cpu_time_clock::time_point &user,
 		   system_cpu_time_clock::time_point &system,
 		   run_time_scope scope) noexcept;
 
+<<<<<<< HEAD
+=======
+/* Returns true if is it possible for get_run_time above to return the
+   run time for just the calling thread.  */
+
+bool get_run_time_thread_scope_available ();
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 /* Count the total amount of time spent executing in userspace+kernel
    mode.  */
 

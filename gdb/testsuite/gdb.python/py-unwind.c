@@ -1,6 +1,6 @@
 /* This test program is part of GDB, the GNU debugger.
 
-   Copyright 2015-2024 Free Software Foundation, Inc.
+   Copyright 2015-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,8 +33,8 @@ static void
 bad_layout(void **variable_ptr, void *fp)
 {
   fprintf (stderr, "First variable should be allocated one word below "
-           "the frame.  Got variable's address %p, frame at %p instead.\n",
-           variable_ptr, fp);
+	   "the frame.  Got variable's address %p, frame at %p instead.\n",
+	   variable_ptr, fp);
   abort();
 }
 

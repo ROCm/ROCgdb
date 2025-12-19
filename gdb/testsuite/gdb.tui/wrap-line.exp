@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,11 +37,11 @@ proc fill_line { width } {
 
     # Take into account that the prompt also takes space.
     set prefix [string length "(gdb) "]
-    set start [expr $prefix + 1]
+    set start [expr {$prefix + 1}]
 
     # Print chars.
     for { set i $start } { $i <= $width } { incr i } {
-	set c [expr $i % 10]
+	set c [expr {$i % 10}]
 	send_gdb $c
 	append res $c
     }
@@ -59,7 +59,7 @@ proc test_wrap { wrap_width tui } {
     set str [fill_line $wrap_width]
 
     # Remaining space on line.
-    set space [string repeat " " [expr $::cols - $wrap_width]]
+    set space [string repeat " " [expr {$::cols - $wrap_width}]]
 
     # Now print the first char we expect to wrap.
     send_gdb "W"
@@ -104,29 +104,35 @@ proc test_wrap_cli_tui { auto_detected_width } {
     set re1 "Number of characters gdb thinks are in a line is ($::decimal)\\."
     set re2 \
 	"Number of characters readline reports are in a line is ($::decimal)\\."
+    set re3 \
+	"Readline wrapping mode: (\[a-z\]+) \[\^\r\n]*"
     set cmd "maint info screen"
     set re \
 	[multi_line \
 	     "^$re1" \
 	     $re2 \
-	    ".*"]
+	     ".*" \
+	     $re3]
     gdb_test_multiple $cmd "" {
 	-re -wrap $re {
 	    set gdb_width $expect_out(1,string)
 	    set readline_width $expect_out(2,string)
+	    set wrapping_mode $expect_out(3,string)
 	    pass $gdb_test_name
 	}
     }
 
-    gdb_assert { $gdb_width == $::cols } "width"
+    if { $wrapping_mode == "readline" } {
+	gdb_assert { $gdb_width == $::cols } "width"
 
-    # TERM=ansi, so readline hides the last column.
-    gdb_assert { $gdb_width == [expr $readline_width + 1] }
+	# TERM=ansi, so readline hides the last column.
+	gdb_assert { $gdb_width == [expr $readline_width + 1] }
 
-    with_test_prefix cli {
-	set wrap_width $readline_width
+	with_test_prefix cli {
+	    set wrap_width $readline_width
 
-	test_wrap $wrap_width 0
+	    test_wrap $wrap_width 0
+	}
     }
 
     with_test_prefix tui {
@@ -159,7 +165,7 @@ with_test_prefix width-hard-coded {
 }
 
 with_test_prefix width-auto-detected {
-    Term::with_tuiterm {*}$dims {
+    Term::with_tuiterm $lines $cols {
 	save_vars { ::INTERNAL_GDBFLAGS } {
 	    # Avoid "set width 0" argument.
 	    set INTERNAL_GDBFLAGS \
@@ -172,7 +178,7 @@ with_test_prefix width-auto-detected {
 
 	set test "startup prompt"
 	gdb_test_multiple "" $test {
-	    -re "^$gdb_prompt $" {
+	    -re "^(\033\\\[6n)?$gdb_prompt $" {
 		pass "$test"
 	    }
 	}

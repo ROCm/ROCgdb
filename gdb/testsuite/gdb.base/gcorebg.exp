@@ -1,4 +1,4 @@
-# Copyright 2007-2024 Free Software Foundation, Inc.
+# Copyright 2007-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,17 +46,21 @@ proc test_body { detached } {
     global binfile
     global GCORE
     global corefile
-    global GDB_DATA_DIRECTORY
+    global GDB GDB_DATA_DIRECTORY
 
     # We can't use gdb_test_multiple here because GDB is not started.
+<<<<<<< HEAD
     set gcore_cmd $GCORE
+=======
+    set gcore_cmd "$GCORE -g $GDB"
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
     if {$GDB_DATA_DIRECTORY ne ""} {
 	    set gcore_cmd "$gcore_cmd -d '$GDB_DATA_DIRECTORY'"
     }
     set res [remote_spawn target "$binfile $detached \"$gcore_cmd\" $corefile"]
     if { ![gdb_assert { ![expr {$res < 0 || $res == ""}] } \
 	"spawned gcore"] } {
-            return
+	    return
 	}
 
     set saw_corefile_created false

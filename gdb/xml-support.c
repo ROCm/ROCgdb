@@ -1,6 +1,6 @@
 /* Helper routines for parsing XML using Expat.
 
-   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,7 +21,6 @@
 #include "xml-builtin.h"
 #include "xml-support.h"
 #include "gdbsupport/filestuff.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 #include <vector>
 #include <string>
 
@@ -430,10 +429,10 @@ gdb_xml_parser::end_element (const XML_Char *name)
 	  body = scope->body.c_str ();
 
 	  /* Strip leading and trailing whitespace.  */
-	  while (length > 0 && ISSPACE (body[length - 1]))
+	  while (length > 0 && c_isspace (body[length - 1]))
 	    length--;
 	  scope->body.erase (length);
-	  while (*body && ISSPACE (*body))
+	  while (*body && c_isspace (*body))
 	    body++;
 	}
 
@@ -999,10 +998,7 @@ xml_fetch_content_from_file (const char *filename, const char *dirname)
   return text;
 }
 
-void _initialize_xml_support ();
-void _initialize_xml_support ();
-void
-_initialize_xml_support ()
+INIT_GDB_FILE (xml_support)
 {
   add_setshow_boolean_cmd ("xml", class_maintenance, &debug_xml,
 			   _("Set XML parser debugging."),

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+dnl   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ gl_PROG_BISON([BISON],[3.0.4])
 
 AC_DISABLE_SHARED
 LT_INIT
+AC_C_BIGENDIAN
 
 GPROFNG_LIBADD="-L../../libiberty -liberty"
 if test "$enable_shared" = "yes"; then
@@ -45,6 +46,8 @@ AC_SUBST(GPROFNG_LIBADD)
 
 ACX_PROG_CC_WARNINGS_ARE_ERRORS([manual])
 ACX_PROG_CC_WARNING_OPTS([-Wall], [gprofng_cflags])
+# LTO is disabled until PR32092 is fixed
+ACX_PROG_CC_WARNING_OPTS([-fno-lto], [nolto_cflags])
 ACX_PROG_CC_WARNING_OPTS([-Wno-switch], [GPROFNG_NO_SWITCH_CFLAGS])
 gprofng_cppflags="-U_ASM"
 build_collector=
@@ -240,9 +243,14 @@ AC_SUBST(GPROFNG_CFLAGS, [${gprofng_cflags}])
 AC_SUBST(GPROFNG_NO_FORMAT_TRUNCATION_CFLAGS)
 AC_SUBST(GPROFNG_NO_SWITCH_CFLAGS)
 AC_SUBST(GPROFNG_CPPFLAGS, [${gprofng_cppflags}])
+AC_SUBST(NOLTO_CFLAGS, [${nolto_cflags}])
 
 AC_CHECK_DECLS([basename])
 AC_CHECK_FUNCS(clock_gettime strsignal)
+
+# For riscv builds inside incomplete environments such as during intermediate
+# steps of cross toolchain building, or with outdated Linux headers.
+AC_CHECK_HEADERS(asm/hwprobe.h)
 
 clock_gettime_link=
 # At least for glibc, clock_gettime is in librt.  But don't

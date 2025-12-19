@@ -1,5 +1,5 @@
 /* ldfile.h -
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -81,7 +81,7 @@ extern void ldfile_add_remap
   (const char *, const char *);
 extern bool ldfile_add_remap_file
   (const char *);
-extern void ldfile_remap_input_free
+extern void ldfile_free
   (void);
 extern const char * ldfile_possibly_remap_input
   (const char *);

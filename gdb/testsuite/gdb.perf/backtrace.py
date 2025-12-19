@@ -1,4 +1,4 @@
-# Copyright (C) 2013-2024 Free Software Foundation, Inc.
+# Copyright (C) 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from perftest import perftest
+
+import gdb
 
 
 class BackTrace(perftest.TestCaseWithBasicMeasurements):
@@ -43,8 +45,6 @@ class BackTrace(perftest.TestCaseWithBasicMeasurements):
             gdb.execute(line_size_command)
             gdb.execute(size_command)
 
-            func = lambda: self._do_test()
-
-            self.measure.measure(func, line_size)
+            self.measure.measure(self._do_test, line_size)
 
             line_size *= 2

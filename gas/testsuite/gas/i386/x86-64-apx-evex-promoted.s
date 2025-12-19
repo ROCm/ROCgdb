@@ -112,6 +112,10 @@ _start:
 	movdir64b	0x123(%r31,%rax,4),%r31
 	movdiri	%r25d,0x123(%r31,%rax,4)
 	movdiri	%r31,0x123(%r31,%rax,4)
+	movrs	0x123(%r31,%rax,4),%r16b
+	movrs	0x123(%r16,%rax,4),%r18w
+	movrs	0x123(%r31,%rax,4),%r25d
+	movrs	0x123(%r16,%rax,4),%r31
 	pdep	%r25d,%edx,%r10d
 	pdep	%r31,%r15,%r11
 	pdep	0x123(%r31,%rax,4),%r25d,%edx
@@ -130,6 +134,10 @@ _start:
 	shrx	%r31,0x123(%r31,%rax,4),%r15
 	sttilecfg	0x123(%r31,%rax,4)
 	tileloadd	0x123(%r31,%rax,4),%tmm6
+	tileloaddrs     0x10000000(%rbp, %r31, 8), %tmm6
+	tileloaddrs     (%r16), %tmm3
+	tileloaddrst1   0x10000000(%r31, %r14, 8), %tmm6
+	tileloaddrst1   (%r16), %tmm3
 	tileloaddt1	0x123(%r31,%rax,4),%tmm6
 	tilestored	%tmm6,0x123(%r31,%rax,4)
 	wrssd	%r25d,0x123(%r31,%rax,4)
@@ -245,6 +253,10 @@ _start:
 	movdir64b	r31,[r31+rax*4+0x123]
 	movdiri	DWORD PTR [r31+rax*4+0x123],r25d
 	movdiri	QWORD PTR [r31+rax*4+0x123],r31
+	movrs	r16b,BYTE PTR [r31+rax*4+0x123]
+	movrs	r18w,WORD PTR [r16+rax*4+0x123]
+	movrs	r25d,DWORD PTR [r31+rax*4+0x123]
+	movrs	r31,QWORD PTR [r16+rax*4+0x123]
 	pdep	r10d,edx,r25d
 	pdep	r11,r15,r31
 	pdep	edx,r25d,DWORD PTR [r31+rax*4+0x123]
@@ -263,6 +275,10 @@ _start:
 	shrx	r15,QWORD PTR [r31+rax*4+0x123],r31
 	sttilecfg	[r31+rax*4+0x123]
 	tileloadd	tmm6,[r31+rax*4+0x123]
+	tileloaddrs	tmm6, [rbp+r31*8+0x10000000]
+	tileloaddrs	tmm3, [r16]
+	tileloaddrst1	tmm6, [r31+r14*8+0x10000000]
+	tileloaddrst1	tmm3, [r16]
 	tileloaddt1	tmm6,[r31+rax*4+0x123]
 	tilestored	[r31+rax*4+0x123],tmm6
 	wrssd	DWORD PTR [r31+rax*4+0x123],r25d

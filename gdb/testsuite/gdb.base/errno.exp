@@ -1,4 +1,4 @@
-# Copyright 2024 Free Software Foundation, Inc.
+# Copyright 2024-2025 Free Software Foundation, Inc.
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -45,8 +45,10 @@
 standard_testfile
 
 proc do_tests {{do_xfail_cast 0} {do_xfail 0} {do_xfail_core_test 0}} {
-    clean_restart $::binfile
-    if ![runto_main] {
+    set filename [file tail $::binfile]
+
+    clean_restart $filename
+    if {![runto_main]} {
 	return
     }
 
@@ -144,12 +146,12 @@ proc do_tests {{do_xfail_cast 0} {do_xfail 0} {do_xfail_core_test 0}} {
 	}
     }
 
-    if $do_xfail {
+    if {$do_xfail} {
 	setup_xfail *-*-*
     }
     gdb_test "print errno" ".* = 42"
 
-    if $do_xfail_cast {
+    if {$do_xfail_cast} {
 	setup_xfail *-*-*
     }
     gdb_test "print (int) errno" ".* = 42"
@@ -172,17 +174,17 @@ proc do_tests {{do_xfail_cast 0} {do_xfail 0} {do_xfail_core_test 0}} {
     gdb_test "print errno" ".* = 36" "print masking errno"
 
     # Finish test early if no core file was made.
-    if !$core_supported {
+    if {!$core_supported} {
 	return
     }
 
-    clean_restart $::binfile
+    clean_restart $filename
 
     set core_loaded [gdb_core_cmd $corefile "load corefile"]
     if { $core_loaded == -1 } {
 	return
     }
-    if $do_xfail_core_test {
+    if {$do_xfail_core_test} {
 	setup_xfail *-*-*
     }
     gdb_test "print errno" ".* = 42" "check errno value from corefile"

@@ -3,7 +3,7 @@
 
 /* Boilerplate target methods for GDB
 
-   Copyright (C) 2013-2024 Free Software Foundation, Inc.
+   Copyright (C) 2013-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -57,7 +57,7 @@ struct dummy_target : public target_ops
   int remove_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
   bool stopped_by_watchpoint () override;
   bool have_steppable_watchpoint () override;
-  bool stopped_data_address (CORE_ADDR *arg0) override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
   bool watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
   int region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
   bool can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
@@ -94,6 +94,11 @@ struct dummy_target : public target_ops
   std::string dispatch_pos_str (thread_info *arg0) override;
   std::string thread_workgroup_pos_str (thread_info *arg0) override;
   std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t lane_workgroup_pos (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t workgroup_grid_pos (thread_info *arg0) override;
+  opt_vec3_u32_t workgroup_sizes (thread_info *arg0) override;
+  opt_vec3_u32_t grid_sizes (thread_info *arg0) override;
+  opt_size_t wave_size (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -178,7 +183,7 @@ struct dummy_target : public target_ops
   enum btrace_error read_btrace (struct btrace_data *arg0, struct btrace_target_info *arg1, enum btrace_read_type arg2) override;
   const struct btrace_config *btrace_conf (const struct btrace_target_info *arg0) override;
   enum record_method record_method (ptid_t arg0) override;
-  void stop_recording () override;
+  bool stop_recording () override;
   void info_record () override;
   void save_record (const char *arg0) override;
   bool supports_delete_record () override;
@@ -203,11 +208,12 @@ struct dummy_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  bool is_address_tagged (gdbarch *arg0, CORE_ADDR arg1) override;
+  x86_xsave_layout fetch_x86_xsave_layout () override;
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
-  bool is_address_tagged (gdbarch *arg0, CORE_ADDR arg1) override;
-  x86_xsave_layout fetch_x86_xsave_layout () override;
+  void displaced_step_restore_all_in_ptid (inferior *arg0, ptid_t arg1) override;
 };
 
 struct debug_target : public target_ops
@@ -243,7 +249,7 @@ struct debug_target : public target_ops
   int remove_mask_watchpoint (CORE_ADDR arg0, CORE_ADDR arg1, enum target_hw_bp_type arg2) override;
   bool stopped_by_watchpoint () override;
   bool have_steppable_watchpoint () override;
-  bool stopped_data_address (CORE_ADDR *arg0) override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
   bool watchpoint_addr_within_range (CORE_ADDR arg0, CORE_ADDR arg1, int arg2) override;
   int region_ok_for_hw_watchpoint (CORE_ADDR arg0, int arg1) override;
   bool can_accel_watchpoint_condition (CORE_ADDR arg0, int arg1, int arg2, struct expression *arg3) override;
@@ -280,6 +286,11 @@ struct debug_target : public target_ops
   std::string dispatch_pos_str (thread_info *arg0) override;
   std::string thread_workgroup_pos_str (thread_info *arg0) override;
   std::string lane_workgroup_pos_str (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t lane_workgroup_pos (thread_info *arg0, int arg1) override;
+  opt_vec3_u32_t workgroup_grid_pos (thread_info *arg0) override;
+  opt_vec3_u32_t workgroup_sizes (thread_info *arg0) override;
+  opt_vec3_u32_t grid_sizes (thread_info *arg0) override;
+  opt_size_t wave_size (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
   gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
@@ -364,7 +375,7 @@ struct debug_target : public target_ops
   enum btrace_error read_btrace (struct btrace_data *arg0, struct btrace_target_info *arg1, enum btrace_read_type arg2) override;
   const struct btrace_config *btrace_conf (const struct btrace_target_info *arg0) override;
   enum record_method record_method (ptid_t arg0) override;
-  void stop_recording () override;
+  bool stop_recording () override;
   void info_record () override;
   void save_record (const char *arg0) override;
   bool supports_delete_record () override;
@@ -389,11 +400,12 @@ struct debug_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  bool is_address_tagged (gdbarch *arg0, CORE_ADDR arg1) override;
+  x86_xsave_layout fetch_x86_xsave_layout () override;
   bool supports_displaced_step (thread_info *arg0) override;
   displaced_step_prepare_status displaced_step_prepare (thread_info *arg0, CORE_ADDR &arg1) override;
   displaced_step_finish_status displaced_step_finish (thread_info *arg0, const target_waitstatus &arg1) override;
-  bool is_address_tagged (gdbarch *arg0, CORE_ADDR arg1) override;
-  x86_xsave_layout fetch_x86_xsave_layout () override;
+  void displaced_step_restore_all_in_ptid (inferior *arg0, ptid_t arg1) override;
 };
 
 void
@@ -1051,28 +1063,27 @@ debug_target::have_steppable_watchpoint ()
   return result;
 }
 
-bool
-target_ops::stopped_data_address (CORE_ADDR *arg0)
+std::vector<CORE_ADDR>
+target_ops::stopped_data_addresses ()
 {
-  return this->beneath ()->stopped_data_address (arg0);
+  return this->beneath ()->stopped_data_addresses ();
 }
 
-bool
-dummy_target::stopped_data_address (CORE_ADDR *arg0)
+std::vector<CORE_ADDR>
+dummy_target::stopped_data_addresses ()
 {
-  return false;
+  return std::vector<CORE_ADDR> ();
 }
 
-bool
-debug_target::stopped_data_address (CORE_ADDR *arg0)
+std::vector<CORE_ADDR>
+debug_target::stopped_data_addresses ()
 {
-  target_debug_printf_nofunc ("-> %s->stopped_data_address (...)", this->beneath ()->shortname ());
-  bool result
-    = this->beneath ()->stopped_data_address (arg0);
-  target_debug_printf_nofunc ("<- %s->stopped_data_address (%s) = %s",
+  target_debug_printf_nofunc ("-> %s->stopped_data_addresses (...)", this->beneath ()->shortname ());
+  std::vector<CORE_ADDR> result
+    = this->beneath ()->stopped_data_addresses ();
+  target_debug_printf_nofunc ("<- %s->stopped_data_addresses () = %s",
 	      this->beneath ()->shortname (),
-	      target_debug_print_CORE_ADDR_p (arg0).c_str (),
-	      target_debug_print_bool (result).c_str ());
+	      target_debug_print_std_vector_CORE_ADDR (result).c_str ());
   return result;
 }
 
@@ -1929,6 +1940,132 @@ debug_target::lane_workgroup_pos_str (thread_info *arg0, int arg1)
 	      target_debug_print_thread_info_p (arg0).c_str (),
 	      target_debug_print_int (arg1).c_str (),
 	      target_debug_print_std_string (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  return this->beneath ()->lane_workgroup_pos (arg0, arg1);
+}
+
+opt_vec3_u32_t
+dummy_target::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::lane_workgroup_pos (thread_info *arg0, int arg1)
+{
+  target_debug_printf_nofunc ("-> %s->lane_workgroup_pos (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->lane_workgroup_pos (arg0, arg1);
+  target_debug_printf_nofunc ("<- %s->lane_workgroup_pos (%s, %s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_int (arg1).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::workgroup_grid_pos (thread_info *arg0)
+{
+  return this->beneath ()->workgroup_grid_pos (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::workgroup_grid_pos (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::workgroup_grid_pos (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->workgroup_grid_pos (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->workgroup_grid_pos (arg0);
+  target_debug_printf_nofunc ("<- %s->workgroup_grid_pos (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::workgroup_sizes (thread_info *arg0)
+{
+  return this->beneath ()->workgroup_sizes (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::workgroup_sizes (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::workgroup_sizes (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->workgroup_sizes (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->workgroup_sizes (arg0);
+  target_debug_printf_nofunc ("<- %s->workgroup_sizes (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_vec3_u32_t
+target_ops::grid_sizes (thread_info *arg0)
+{
+  return this->beneath ()->grid_sizes (arg0);
+}
+
+opt_vec3_u32_t
+dummy_target::grid_sizes (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_vec3_u32_t
+debug_target::grid_sizes (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->grid_sizes (...)", this->beneath ()->shortname ());
+  opt_vec3_u32_t result
+    = this->beneath ()->grid_sizes (arg0);
+  target_debug_printf_nofunc ("<- %s->grid_sizes (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_vec3_u32_t (result).c_str ());
+  return result;
+}
+
+opt_size_t
+target_ops::wave_size (thread_info *arg0)
+{
+  return this->beneath ()->wave_size (arg0);
+}
+
+opt_size_t
+dummy_target::wave_size (thread_info *arg0)
+{
+  return std::nullopt;
+}
+
+opt_size_t
+debug_target::wave_size (thread_info *arg0)
+{
+  target_debug_printf_nofunc ("-> %s->wave_size (...)", this->beneath ()->shortname ());
+  opt_size_t result
+    = this->beneath ()->wave_size (arg0);
+  target_debug_printf_nofunc ("<- %s->wave_size (%s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_thread_info_p (arg0).c_str (),
+	      target_debug_print_opt_size_t (result).c_str ());
   return result;
 }
 
@@ -3952,24 +4089,28 @@ debug_target::record_method (ptid_t arg0)
   return result;
 }
 
-void
+bool
 target_ops::stop_recording ()
 {
-  this->beneath ()->stop_recording ();
+  return this->beneath ()->stop_recording ();
 }
 
-void
+bool
 dummy_target::stop_recording ()
 {
+  return false;
 }
 
-void
+bool
 debug_target::stop_recording ()
 {
   target_debug_printf_nofunc ("-> %s->stop_recording (...)", this->beneath ()->shortname ());
-  this->beneath ()->stop_recording ();
-  target_debug_printf_nofunc ("<- %s->stop_recording ()",
-	      this->beneath ()->shortname ());
+  bool result
+    = this->beneath ()->stop_recording ();
+  target_debug_printf_nofunc ("<- %s->stop_recording () = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_bool (result).c_str ());
+  return result;
 }
 
 void
@@ -4529,6 +4670,56 @@ debug_target::store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector
 }
 
 bool
+target_ops::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+{
+  return this->beneath ()->is_address_tagged (arg0, arg1);
+}
+
+bool
+dummy_target::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+{
+  tcomplain ();
+}
+
+bool
+debug_target::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+{
+  target_debug_printf_nofunc ("-> %s->is_address_tagged (...)", this->beneath ()->shortname ());
+  bool result
+    = this->beneath ()->is_address_tagged (arg0, arg1);
+  target_debug_printf_nofunc ("<- %s->is_address_tagged (%s, %s) = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_gdbarch_p (arg0).c_str (),
+	      target_debug_print_CORE_ADDR (arg1).c_str (),
+	      target_debug_print_bool (result).c_str ());
+  return result;
+}
+
+x86_xsave_layout
+target_ops::fetch_x86_xsave_layout ()
+{
+  return this->beneath ()->fetch_x86_xsave_layout ();
+}
+
+x86_xsave_layout
+dummy_target::fetch_x86_xsave_layout ()
+{
+  return x86_xsave_layout ();
+}
+
+x86_xsave_layout
+debug_target::fetch_x86_xsave_layout ()
+{
+  target_debug_printf_nofunc ("-> %s->fetch_x86_xsave_layout (...)", this->beneath ()->shortname ());
+  x86_xsave_layout result
+    = this->beneath ()->fetch_x86_xsave_layout ();
+  target_debug_printf_nofunc ("<- %s->fetch_x86_xsave_layout () = %s",
+	      this->beneath ()->shortname (),
+	      target_debug_print_x86_xsave_layout (result).c_str ());
+  return result;
+}
+
+bool
 target_ops::supports_displaced_step (thread_info *arg0)
 {
   return this->beneath ()->supports_displaced_step (arg0);
@@ -4605,52 +4796,25 @@ debug_target::displaced_step_finish (thread_info *arg0, const target_waitstatus 
   return result;
 }
 
-bool
-target_ops::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+void
+target_ops::displaced_step_restore_all_in_ptid (inferior *arg0, ptid_t arg1)
 {
-  return this->beneath ()->is_address_tagged (arg0, arg1);
+  this->beneath ()->displaced_step_restore_all_in_ptid (arg0, arg1);
 }
 
-bool
-dummy_target::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+void
+dummy_target::displaced_step_restore_all_in_ptid (inferior *arg0, ptid_t arg1)
 {
-  tcomplain ();
+  default_displaced_step_restore_all_in_ptid (this, arg0, arg1);
 }
 
-bool
-debug_target::is_address_tagged (gdbarch *arg0, CORE_ADDR arg1)
+void
+debug_target::displaced_step_restore_all_in_ptid (inferior *arg0, ptid_t arg1)
 {
-  target_debug_printf_nofunc ("-> %s->is_address_tagged (...)", this->beneath ()->shortname ());
-  bool result
-    = this->beneath ()->is_address_tagged (arg0, arg1);
-  target_debug_printf_nofunc ("<- %s->is_address_tagged (%s, %s) = %s",
+  target_debug_printf_nofunc ("-> %s->displaced_step_restore_all_in_ptid (...)", this->beneath ()->shortname ());
+  this->beneath ()->displaced_step_restore_all_in_ptid (arg0, arg1);
+  target_debug_printf_nofunc ("<- %s->displaced_step_restore_all_in_ptid (%s, %s)",
 	      this->beneath ()->shortname (),
-	      target_debug_print_gdbarch_p (arg0).c_str (),
-	      target_debug_print_CORE_ADDR (arg1).c_str (),
-	      target_debug_print_bool (result).c_str ());
-  return result;
-}
-
-x86_xsave_layout
-target_ops::fetch_x86_xsave_layout ()
-{
-  return this->beneath ()->fetch_x86_xsave_layout ();
-}
-
-x86_xsave_layout
-dummy_target::fetch_x86_xsave_layout ()
-{
-  return x86_xsave_layout ();
-}
-
-x86_xsave_layout
-debug_target::fetch_x86_xsave_layout ()
-{
-  target_debug_printf_nofunc ("-> %s->fetch_x86_xsave_layout (...)", this->beneath ()->shortname ());
-  x86_xsave_layout result
-    = this->beneath ()->fetch_x86_xsave_layout ();
-  target_debug_printf_nofunc ("<- %s->fetch_x86_xsave_layout () = %s",
-	      this->beneath ()->shortname (),
-	      target_debug_print_x86_xsave_layout (result).c_str ());
-  return result;
+	      target_debug_print_inferior_p (arg0).c_str (),
+	      target_debug_print_ptid_t (arg1).c_str ());
 }

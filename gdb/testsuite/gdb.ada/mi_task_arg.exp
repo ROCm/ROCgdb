@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,13 +20,13 @@ require allow_ada_tests
 standard_ada_testfile task_switch
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnata ]] != "" } {
-  return -1
+  return
 }
 
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 
@@ -34,7 +34,7 @@ if {[mi_clean_restart $binfile]} {
 mi_gdb_test "-gdb-set debug-file-directory \"\"" ".*"
 
 if {![mi_runto "task_switch.break_me"]} {
-   return 0
+   return
 }
 
 # Verify that "-stack-list-arguments" does not cause the debugger to

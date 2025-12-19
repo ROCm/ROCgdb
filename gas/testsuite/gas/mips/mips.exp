@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2024 Free Software Foundation, Inc.
+# Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -124,11 +124,15 @@ proc mips_arch_init {} {
 # the entry specified by EXTENDS.  (The new architecture is considered
 # to extend the capabilities provided by that architecture.)
 #
-# If DEFAULT_FOR_TARGETS is specified, it is a list of targets for which
-# this architecture is the default architecture.  If "istarget" returns
-# true for any of the targets in the list, a "default" entry will be
-# added to the architecture array which indicates that ARCH is the default
-# architecture.
+# If DEFAULT_FOR_TARGETS is specified, it is a list of targets to match
+# against for the purpose of setting the default architecture.  Entries
+# are examined in turn with any preceding "!" stripped until either all
+# have been processed or "istarget" returns true for a match.  In the
+# case of a match a "default" entry will be added to the architecture
+# array which indicates that ARCH is the default architecture unless
+# the match was for a target preceded by "!".  This lets an early match
+# against a more specific entry preceded by "!" prevent from matching a
+# more general entry placed later in the list.
 proc mips_arch_create {arch gprsize extends props as_flags objdump_flags
 		       {default_for_targets {}}} {
     global mips_arches
@@ -154,6 +158,10 @@ proc mips_arch_create {arch gprsize extends props as_flags objdump_flags
 
     # Set as default if appropriate.
     foreach target $default_for_targets {
+	if { [string match {!*} $target]
+	     && [istarget [string range $target 1 end]] } {
+	    break
+	}
 	if { [istarget $target] } {
 	    if { [info exists mips_arches(default)] } {
 		error "mips_arch_create: default arch already exists"
@@ -473,7 +481,8 @@ mips_arch_create mips32r5 32	mips32r3 { fpisa3 fpisa4 fpisa5 ror } \
 mips_arch_create mips32r6 32	mips32r5 { fpisa3 fpisa4 fpisa5 ror } \
 			{ -march=mips32r6 -mtune=mips32r6 --defsym r6=} \
 			{ -mmips:isa32r6 } \
-			{ mipsisa32r6-*-* mipsisa32r6el-*-* mips*-img-* }
+			{ mipsisa32r6-*-* mipsisa32r6el-*-*
+			  !mips64*-img-* mips*-img-* }
 mips_arch_create mips64	64	mips5	{ mips32 } \
 			{ -march=mips64 -mtune=mips64 } { -mmips:isa64 } \
 			{ mipsisa64-*-* mipsisa64el-*-* }
@@ -492,7 +501,7 @@ mips_arch_create mips64r5 64	mips64r3 { mips32r5 ror } \
 mips_arch_create mips64r6 64	mips64r5 { mips32r6 ror } \
 			{ -march=mips64r6 -mtune=mips64r6 --defsym r6=} \
 			{ -mmips:isa64r6 } \
-			{ mipsisa64r6-*-* mipsisa64r6el-*-* }
+			{ mipsisa64r6-*-* mipsisa64r6el-*-* mips64*-img-* }
 mips_arch_create mips16-32 32	{}	{} \
 			{ -march=mips1 -mips16 } { -mmips:3000 }
 mips_arch_create mips16-64 64	mips16-32	{} \
@@ -564,6 +573,12 @@ if { [istarget mips*-*-vxworks*] } {
 	"MIPS invalid PIC option in VxWorks PIC"
     run_list_test "option-pic-vxworks-2" "-mvxworks-pic" \
 	"MIPS invalid switch to SVR4 PIC from VxWorks PIC"
+
+    run_dump_test "vxworks-mips-hilo"
+    run_dump_test "vxworks-mips16-hilo"
+    run_dump_test "vxworks-mips16e2-hilo"
+    run_dump_test "vxworks-micromips-hilo"
+    run_dump_test "vxworks-pcrel-hilo"
 } elseif { [istarget mips*-*-*] } {
     set addr32 [expr [istarget mipstx39*-*-*] || [istarget mips-*-linux*] || [istarget mipsel-*-linux*] \
 		     || [istarget mipsisa32*-*-linux*]]
@@ -810,6 +825,11 @@ if { [istarget mips*-*-vxworks*] } {
     # the interlocking in the configured default cpu.
     run_dump_test "lb-xgot"
     run_dump_test "lb-xgot-ilocks"
+    run_dump_test "mips-hilo"
+    if $has_newabi {
+	run_dump_test "mips-hilo-n32"
+	run_dump_test "mips-hilo-n64"
+    }
     run_dump_test_arches "ld"		[mips_arch_list_matching mips1]
     run_dump_test_arches "ld-forward" 	[mips_arch_list_matching mips1]
     run_dump_test_arches "sd"		[mips_arch_list_matching mips1]
@@ -1037,6 +1057,8 @@ if { [istarget mips*-*-vxworks*] } {
 	run_dump_test "mips16e2-hilo-n32"
     }
     run_dump_test "mips16-hilo-match"
+    run_dump_test "mips16-tls-hilo-match"
+    run_dump_test "mips16-tls-hilo-addend"
     run_dump_test "mips16-reloc-error"
     run_dump_test "mips16e2-reloc-error"
     run_dump_test "mips16-reg-error"
@@ -1321,6 +1343,25 @@ if { [istarget mips*-*-vxworks*] } {
 	run_dump_test "n32-consec"
     }
 
+    # Tests assembling named registers based on ABI setting.
+    run_dump_test "gpr-asm-names-32"
+    run_dump_test "gpr-asm-names-o64"
+    if $has_newabi {
+	run_dump_test "gpr-asm-names-n32"
+	run_dump_test "gpr-asm-names-64"
+    }
+    run_dump_test "gpr-asm-names-eabi32"
+    run_dump_test "gpr-asm-names-eabi64"
+
+    run_dump_test "fpr-asm-names-32"
+    run_dump_test "fpr-asm-names-o64"
+    if $has_newabi {
+	run_dump_test "fpr-asm-names-n32"
+	run_dump_test "fpr-asm-names-64"
+    }
+    run_dump_test "fpr-asm-names-eabi32"
+    run_dump_test "fpr-asm-names-eabi64"
+
     # tests of objdump's ability to disassemble the move mnemonic
     run_dump_test_arches "move"	[mips_arch_list_matching mips64 !micromips]
     run_dump_test_arches "micromips32-move" [mips_arch_list_matching micromips]
@@ -1329,13 +1370,19 @@ if { [istarget mips*-*-vxworks*] } {
     # register names.
     run_dump_test "gpr-names-numeric"
     run_dump_test "gpr-names-32"
+    run_dump_test "gpr-names-o64"
     run_dump_test "gpr-names-n32"
     run_dump_test "gpr-names-64"
+    run_dump_test "gpr-names-eabi32"
+    run_dump_test "gpr-names-eabi64"
 
     run_dump_test "fpr-names-numeric"
     run_dump_test "fpr-names-32"
+    run_dump_test "fpr-names-o64"
     run_dump_test "fpr-names-n32"
     run_dump_test "fpr-names-64"
+    run_dump_test "fpr-names-eabi32"
+    run_dump_test "fpr-names-eabi64"
 
     run_dump_test "cp0-names-numeric"
     run_dump_test "cp0-names-r3000"
@@ -1523,6 +1570,8 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "mips16-sprel-swap"
     run_dump_test "mips16-sdrasp"
     run_dump_test "mips16-insn-length-noargs"
+    run_dump_test_arches "mips16-insn-length-bad" \
+					[mips_arch_list_matching mips16-32]
 
     run_dump_test "mips16-branch-unextended-1"
     run_dump_test "mips16-branch-unextended-2"
@@ -1584,6 +1633,9 @@ if { [istarget mips*-*-vxworks*] } {
     if $has_newabi { run_dump_test "cfi-n64-1" }
 
     run_dump_test "pr12915"
+
+    run_dump_test_arches "pr19977"	[mips_arch_list_all]
+
     run_dump_test "reginfo-1a"
     run_dump_test "reginfo-1b"
     run_dump_test "reginfo-2"
@@ -1618,6 +1670,14 @@ if { [istarget mips*-*-vxworks*] } {
     }
     run_dump_test "micromips-b16"
     run_list_test "micromips-ill"
+    run_dump_test "micromips-hilo"
+    if $has_newabi {
+	run_dump_test "micromips-hilo-n32"
+	run_dump_test "micromips-hilo-n64"
+    }
+    run_dump_test "micromips-hilo-match"
+    run_dump_test "micromips-tls-hilo-match"
+    run_dump_test "micromips-tls-hilo-addend"
 
     run_dump_test_arches "mcu"		[mips_arch_list_matching mips32r2 \
 					    !octeon]
@@ -1695,6 +1755,13 @@ if { [istarget mips*-*-vxworks*] } {
     if $has_newabi {
 	run_dump_test "pcrel-4-n32"
 	run_dump_test "pcrel-4-64"
+    }
+    run_dump_test "pcrel-hilo-match"
+    run_dump_test "pcrel-hilo-addend"
+    run_dump_test "pcrel-hilo"
+    if $has_newabi {
+	run_dump_test "pcrel-hilo-n32"
+	run_dump_test "pcrel-hilo-64"
     }
 
     run_dump_test "pcrel-reloc-1"

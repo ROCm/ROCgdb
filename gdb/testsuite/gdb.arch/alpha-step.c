@@ -1,4 +1,4 @@
-/* Copyright 2005-2024 Free Software Foundation, Inc.
+/* Copyright 2005-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -112,5 +112,3 @@ asm ("       .text\n"
      "$ne_1:\n"
      "       ret $31,($26),1\n"
      "       .end ne\n");
-
-

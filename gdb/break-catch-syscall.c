@@ -1,6 +1,6 @@
 /* Everything about syscall catchpoints, for GDB.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,9 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
 #include "breakpoint.h"
-#include "cli/cli-cmds.h"
 #include "inferior.h"
 #include "cli/cli-utils.h"
 #include "annotate.h"
@@ -370,7 +368,7 @@ catch_syscall_split_args (const char *arg)
       /* Skip whitespace.  */
       arg = skip_spaces (arg);
 
-      for (i = 0; i < 127 && arg[i] && !isspace (arg[i]); ++i)
+      for (i = 0; i < 127 && arg[i] && !c_isspace (arg[i]); ++i)
 	cur_name[i] = arg[i];
       cur_name[i] = '\0';
       arg += i;
@@ -415,7 +413,7 @@ catch_syscall_split_args (const char *arg)
 /* Implement the "catch syscall" command.  */
 
 static void
-catch_syscall_command_1 (const char *arg, int from_tty, 
+catch_syscall_command_1 (const char *arg, int from_tty,
 			 struct cmd_list_element *command)
 {
   int tempflag;
@@ -423,7 +421,7 @@ catch_syscall_command_1 (const char *arg, int from_tty,
   struct syscall s;
   struct gdbarch *gdbarch = get_current_arch ();
 
-  /* Checking if the feature if supported.  */
+  /* Checking if the feature is supported.  */
   if (gdbarch_get_syscall_number_p (gdbarch) == 0)
     error (_("The feature 'catch syscall' is not supported on \
 this architecture yet."));
@@ -570,9 +568,7 @@ clear_syscall_counts (struct inferior *inf)
   inf_data->syscalls_counts.clear ();
 }
 
-void _initialize_break_catch_syscall ();
-void
-_initialize_break_catch_syscall ()
+INIT_GDB_FILE (break_catch_syscall)
 {
   gdb::observers::inferior_exit.attach (clear_syscall_counts,
 					"break-catch-syscall");

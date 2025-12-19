@@ -1,4 +1,4 @@
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ standard_testfile
 
 set testcase "nested-subp2"
 
-if ![support_nested_function_tests] {
+if {![support_nested_function_tests]} {
     untested "compiler does not support nested functions"
     return -1
 }
@@ -49,14 +49,14 @@ if { [gdb_compile "${srcdir}/${subdir}/${testcase}.c" \
 # Run until the variables we are interested in are visible.
 
 clean_restart "${testcase}"
-if ![runto_main] {
+if {![runto_main]} {
     return
 }
 
 set bp_location [gdb_get_line_number "STOP" "${testcase}.c"]
 gdb_test "break ${testcase}.c:${bp_location}" \
-         "Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: .*" \
-         "breakpoint to the STOP marker"
+	 "Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: .*" \
+	 "breakpoint to the STOP marker"
 
 with_test_prefix "stop at first iteration" {
     gdb_test "continue" \

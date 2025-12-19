@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -29,5 +29,3 @@ set bp_location [gdb_get_line_number "STOP" ${testdir}/foo.adb]
 runto "foo.adb:$bp_location"
 
 gdb_test "print my_blob.bees(1)" "= \\(access boolean\\) 0x0"
-
-

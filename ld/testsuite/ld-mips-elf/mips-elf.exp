@@ -1,5 +1,5 @@
 # Expect script for MIPS ELF linker tests
-#   Copyright (C) 2002-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2002-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -45,6 +45,22 @@ if {[istarget "mips*-*-vxworks"]} {
     run_ld_link_tests $mipsvxtests
     run_dump_test "vxworks1-static"
     run_dump_test "vxworks-forced-local-1"
+
+    run_dump_test "mips-hilo"
+    run_dump_test "mips-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+    run_dump_test "mips16-hilo"
+    run_dump_test "mips16-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+    run_dump_test "mips16e2-hilo"
+    run_dump_test "mips16e2-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+    run_dump_test "micromips-hilo"
+    run_dump_test "micromips-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+    run_dump_test "pcrel-hilo"
+    run_dump_test "pcrel-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
     return
 }
 
@@ -814,8 +830,68 @@ run_dump_test_n32 "jalbal" noarch
 
 run_dump_test "mode-change-error-1"
 
-run_dump_test_o32 "mips16-hilo"
-run_dump_test_n32 "mips16-hilo-n32"
+run_dump_test_o32 "mips16-hilo" noarch
+run_dump_test_n32 "mips16-hilo" [list noarch [list name (n32)]]
+run_dump_test_o32 "mips16-hilo-srec" \
+	[list noarch \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n32 "mips16-hilo-srec" \
+	[list noarch \
+	      [list name (n32)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "mips16e2-hilo" noarch
+run_dump_test_n32 "mips16e2-hilo" [list noarch [list name (n32)]]
+run_dump_test_o32 "mips16e2-hilo-srec" \
+	[list noarch \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n32 "mips16e2-hilo-srec" \
+	[list noarch \
+	      [list name (n32)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "mips-hilo"
+run_dump_test_n32 "mips-hilo" [list [list name (n32)]]
+run_dump_test_n64 "mips-hilo-n64"
+run_dump_test_o32 "mips-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n32 "mips-hilo-srec" \
+	[list [list name (n32)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n64 "mips-hilo-srec-n64" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "micromips-hilo" noarch
+run_dump_test_n32 "micromips-hilo" [list noarch [list name (n32)]]
+run_dump_test_n64 "micromips-hilo-n64" noarch
+run_dump_test_o32 "micromips-hilo-srec" \
+	[list noarch \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n32 "micromips-hilo-srec" \
+	[list noarch \
+	      [list name (n32)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n64 "micromips-hilo-srec-n64" \
+	[list noarch \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "pcrel-hilo"
+run_dump_test_n32 "pcrel-hilo" [list [list name (n32)]]
+run_dump_test_n64 "pcrel-hilo" [list [list name (n64)]]
+run_dump_test_o32 "pcrel-hilo-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n32 "pcrel-hilo-srec" \
+	[list [list name (n32)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_n64 "pcrel-hilo-srec" \
+	[list [list name (n64)] \
+	      [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+
+run_dump_test_o32 "pr19977"
+run_dump_test_n32 "pr19977" [list [list name (n32)]]
+run_dump_test_o32 "pr19977-mips16" noarch
+run_dump_test_n32 "pr19977-mips16" [list noarch [list name (n32)]]
+run_dump_test_o32 "pr19977-micromips" noarch
+run_dump_test_n32 "pr19977-micromips" [list noarch [list name (n32)]]
+run_dump_test_o32 "pr19977-r"
+run_dump_test_o32 "pr19977-r-mips16" noarch
+run_dump_test_o32 "pr19977-r-micromips" noarch
 
 if { $linux_gnu } {
     run_dump_test_n32 "textrel-1"

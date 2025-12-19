@@ -1,6 +1,6 @@
 /* Scheme interface to symbol tables.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -243,7 +243,7 @@ stscm_scm_from_symtab (struct symtab *symtab)
   st_smob = (symtab_smob *) SCM_SMOB_DATA (st_scm);
   st_smob->symtab = symtab;
   gdbscm_fill_eqable_gsmob_ptr_slot (slot, &st_smob->base);
- 
+
   return st_scm;
 }
 
@@ -592,7 +592,7 @@ gdbscm_find_pc_line (SCM pc_scm)
     {
       CORE_ADDR pc = (CORE_ADDR) pc_ull;
 
-      sal = find_pc_line (pc, 0);
+      sal = find_sal_for_pc (pc, 0);
     }
   catch (const gdb_exception &except)
     {

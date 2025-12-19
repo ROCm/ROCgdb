@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ clean_restart $testfile.x
 gdb_test_no_output "set language c++"
 
 if { ![readnow] } {
-    # Check that the the CU (Compilation Unit) is unexpanded.
+    # Check that the CU (Compilation Unit) is unexpanded.
     gdb_test_no_output "maintenance info symtabs"
 }
 

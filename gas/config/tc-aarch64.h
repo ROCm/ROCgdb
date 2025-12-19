@@ -1,5 +1,5 @@
 /* tc-aarch64.h -- Header file for tc-aarch64.c.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -90,13 +90,21 @@ enum pointer_auth_key {
 
 /* The extra fields required by AArch64 in fde_entry and cie_entry.  Currently
    only used to store the key used to sign the frame's return address.  */
-#define tc_fde_entry_extras enum pointer_auth_key pauth_key;
-#define tc_cie_entry_extras enum pointer_auth_key pauth_key;
+#define tc_fde_entry_extras enum pointer_auth_key pauth_key; \
+			    bool memtag_frame_p;
+#define tc_cie_entry_extras enum pointer_auth_key pauth_key; \
+			    bool memtag_frame_p;
 
 /* The extra initialisation steps needed by AArch64 in alloc_fde_entry.
    Currently only used to initialise the key used to sign the return
    address.  */
-#define tc_fde_entry_init_extra(fde) fde->pauth_key = AARCH64_PAUTH_KEY_A;
+#define tc_fde_entry_init_extra(fde)					\
+  do									\
+    {									\
+      fde->pauth_key = AARCH64_PAUTH_KEY_A;				\
+      fde->memtag_frame_p = false;					\
+    }									\
+  while (0)
 
 /* Extra checks required by AArch64 when outputting the current cie_entry.
    Currently only used to output a 'B' if the return address is signed with the
@@ -106,18 +114,29 @@ enum pointer_auth_key {
       { \
 	if (cie->pauth_key == AARCH64_PAUTH_KEY_B) \
 	  out_one ('B'); \
+	if (cie->memtag_frame_p) \
+	  out_one ('G'); \
       } \
     while (0)
 
 /* Extra equivalence checks required by AArch64 when selecting the correct cie
-   for some fde.  Currently only used to check for quivalence between keys used
-   to sign ther return address.  */
-#define tc_cie_fde_equivalent_extra(cie, fde) (cie->pauth_key == fde->pauth_key)
+   for some fde.  Currently used to check for equivalence between - keys used
+   to sign the return address, and if stack locations have MTE tagging
+   enabled.  */
+#define tc_cie_fde_equivalent_extra(cie, fde) \
+  ((cie->pauth_key == fde->pauth_key) \
+   && (cie->memtag_frame_p == fde->memtag_frame_p))
 
 /* The extra initialisation steps needed by AArch64 in select_cie_for_fde.
    Currently only used to initialise the key used to sign the return
    address.  */
-#define tc_cie_entry_init_extra(cie, fde) cie->pauth_key = fde->pauth_key;
+#define tc_cie_entry_init_extra(cie, fde)				\
+  do									\
+    {									\
+      cie->pauth_key = fde->pauth_key;					\
+      cie->memtag_frame_p = fde->memtag_frame_p;			\
+    }									\
+  while (0)
 
 #define TC_FIX_TYPE struct aarch64_fix
 #define TC_INIT_FIX_DATA(FIX) { (FIX)->tc_fix_data.inst = NULL;	\
@@ -133,9 +152,17 @@ void aarch64_copy_symbol_attributes (symbolS *, symbolS *);
 #endif
 
 #ifdef OBJ_ELF
-void aarch64_elf_copy_symbol_attributes (symbolS *, symbolS *);
+/* Don't copy st_other.
+   This is needed so AArch64 specific st_other values can be independently
+   specified for an IFUNC resolver (that is called by the dynamic linker)
+   and the symbol it resolves (aliased to the resolver).  In particular,
+   if a function symbol has special st_other value set via directives,
+   then attaching an IFUNC resolver to that symbol should not override
+   the st_other setting.  Requiring the directive on the IFUNC resolver
+   symbol would be unexpected and problematic in C code, where the two
+   symbols appear as two independent function declarations.  */
 #define OBJ_COPY_SYMBOL_ATTRIBUTES(DEST, SRC) \
-  aarch64_elf_copy_symbol_attributes (DEST, SRC)
+  elf_copy_symbol_size (DEST, SRC)
 #endif
 
 #define TC_START_LABEL(STR, NUL_CHAR, NEXT_CHAR)			\
@@ -162,10 +189,6 @@ void aarch64_elf_copy_symbol_attributes (symbolS *, symbolS *);
 
 #define TC_CONS_FIX_NEW(f,w,s,e,r) cons_fix_new_aarch64 ((f), (w), (s), (e))
 
-/* Max space for a rs_align_code fragment is 3 unaligned bytes
-   (fr_fix) plus 4 bytes to contain the repeating NOP (fr_var).  */
-#define MAX_MEM_FOR_RS_ALIGN_CODE 7
-
 /* For frags in code sections we need to record whether they contain
    code or data.  */
 struct aarch64_frag_type
@@ -182,7 +205,10 @@ struct aarch64_frag_type
 
 #define TC_FRAG_TYPE		struct aarch64_frag_type
 #define TC_FRAG_INIT(fragp, max_bytes) aarch64_init_frag (fragp, max_bytes)
-#define HANDLE_ALIGN(fragp)	aarch64_handle_align (fragp)
+#define HANDLE_ALIGN(sec, fragp) aarch64_handle_align (fragp)
+/* Max space for a rs_align_code fragment is 3 unaligned bytes
+   (fr_fix) plus 4 bytes to contain the repeating NOP (fr_var).  */
+#define MAX_MEM_FOR_RS_ALIGN_CODE(p2align, max) (3 + 4)
 
 #define md_do_align(N, FILL, LEN, MAX, LABEL)					\
   if (FILL == NULL && (N) != 0 && ! need_pass_2 && subseg_text_p (now_seg))	\
@@ -309,7 +335,7 @@ extern bool aarch64_sframe_ra_tracking_p (void);
 extern offsetT aarch64_sframe_cfa_ra_offset (void);
 #define sframe_cfa_ra_offset aarch64_sframe_cfa_ra_offset
 
-/* The abi/arch indentifier for SFrame.  */
+/* The abi/arch identifier for SFrame.  */
 unsigned char aarch64_sframe_get_abi_arch (void);
 #define sframe_get_abi_arch aarch64_sframe_get_abi_arch
 

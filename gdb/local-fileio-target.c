@@ -1,7 +1,7 @@
 /* Helper to give local IO capabilities to a target.
 
    Copyright (C) 2023-2024 Free Software Foundation, Inc.
-   Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -118,8 +118,8 @@ local_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 /* See local-fileio-target.h.  */
 
 int
-local_fileio_stat (inferior *inf, const char *filename, struct stat *sb,
-		   fileio_error *target_errno)
+local_fileio_lstat (inferior *inf, const char *filename, struct stat *sb,
+		    fileio_error *target_errno)
 {
   int ret;
 

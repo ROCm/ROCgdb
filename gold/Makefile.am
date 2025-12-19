@@ -1,6 +1,6 @@
 ## Process this file with automake to generate Makefile.in
 #
-#  Copyright (C) 2006-2024 Free Software Foundation, Inc.
+#  Copyright (C) 2006-2025 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -89,7 +89,6 @@ CCFILES = \
 	layout.cc \
 	mapfile.cc \
 	merge.cc \
-	nacl.cc \
 	object.cc \
 	options.cc \
 	output.cc \
@@ -138,7 +137,6 @@ HFILES = \
 	layout.h \
 	mapfile.h \
 	merge.h \
-	nacl.h \
 	object.h \
 	options.h \
 	output.h \

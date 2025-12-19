@@ -1,4 +1,4 @@
-/* Copyright 2015-2024 Free Software Foundation, Inc.
+/* Copyright 2015-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,19 +21,19 @@ namespace N1
     {
       namespace N4
       {
-        static int n4static = 400;
+	static int n4static = 400;
 
-        struct S4
-        {
-          static int s4static;
-          int s4int_;
-          S4 () : s4int_ (4) {};
-          ~S4 () { --s4static; }
+	struct S4
+	{
+	  static int s4static;
+	  int s4int_;
+	  S4 () : s4int_ (4) {};
+	  ~S4 () { --s4static; }
 
-         int get_var () { return s4int_; }
-         static int get_svar () { return s4static; }
-        };
-        int S4::s4static = 40;
+	 int get_var () { return s4int_; }
+	 static int get_svar () { return s4static; }
+	};
+	int S4::s4static = 40;
       }
     }
   }

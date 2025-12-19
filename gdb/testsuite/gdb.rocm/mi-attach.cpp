@@ -15,8 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+<<<<<<< HEAD
 #include <unistd.h>
 #include <hip/hip_runtime.h>
+=======
+#include <hip/hip_runtime.h>
+#include "gdb_watchdog.h"
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 __global__ void
 kern ()
@@ -30,9 +35,16 @@ main ()
 {
   /* This program will run outside of GDB, make sure that if anything goes
      wrong it eventually gets killed.  */
+<<<<<<< HEAD
   alarm (30);
+=======
+  gdb_watchdog (30);
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
   kern<<<1, 1>>> ();
   return hipDeviceSynchronize () != hipSuccess;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c

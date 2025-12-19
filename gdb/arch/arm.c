@@ -1,6 +1,6 @@
 /* Common target dependent code for GDB on ARM systems.
 
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -46,7 +46,7 @@ thumb_insn_size (unsigned short inst1)
 int
 condition_true (unsigned long cond, unsigned long status_reg)
 {
-  if (cond == INST_AL || cond == INST_NV)
+  if (condition_always_true (cond))
     return 1;
 
   switch (cond)
@@ -373,7 +373,7 @@ shifted_reg_val (reg_buffer_common *regcache, unsigned long inst,
 
 /* See arch/arm.h.  */
 
-target_desc *
+target_desc_up
 arm_create_target_description (arm_fp_type fp_type, bool tls)
 {
   target_desc_up tdesc = allocate_target_description ();
@@ -413,18 +413,18 @@ arm_create_target_description (arm_fp_type fp_type, bool tls)
   if (tls)
     regnum = create_feature_arm_arm_tls (tdesc.get (), regnum);
 
-  return tdesc.release ();
+  return tdesc;
 }
 
 /* See arch/arm.h.  */
 
-target_desc *
+target_desc_up
 arm_create_mprofile_target_description (arm_m_profile_type m_type)
 {
-  target_desc *tdesc = allocate_target_description ().release ();
+  target_desc_up tdesc = allocate_target_description ();
 
 #ifndef IN_PROCESS_AGENT
-  set_tdesc_architecture (tdesc, "arm");
+  set_tdesc_architecture (tdesc.get (), "arm");
 #endif
 
   long regnum = 0;
@@ -432,27 +432,27 @@ arm_create_mprofile_target_description (arm_m_profile_type m_type)
   switch (m_type)
     {
     case ARM_M_TYPE_M_PROFILE:
-      regnum = create_feature_arm_arm_m_profile (tdesc, regnum);
+      regnum = create_feature_arm_arm_m_profile (tdesc.get (), regnum);
       break;
 
     case ARM_M_TYPE_VFP_D16:
-      regnum = create_feature_arm_arm_m_profile (tdesc, regnum);
-      regnum = create_feature_arm_arm_vfpv2 (tdesc, regnum);
+      regnum = create_feature_arm_arm_m_profile (tdesc.get (), regnum);
+      regnum = create_feature_arm_arm_vfpv2 (tdesc.get (), regnum);
       break;
 
     case ARM_M_TYPE_WITH_FPA:
-      regnum = create_feature_arm_arm_m_profile_with_fpa (tdesc, regnum);
+      regnum = create_feature_arm_arm_m_profile_with_fpa (tdesc.get (), regnum);
       break;
 
     case ARM_M_TYPE_MVE:
-      regnum = create_feature_arm_arm_m_profile (tdesc, regnum);
-      regnum = create_feature_arm_arm_vfpv2 (tdesc, regnum);
-      regnum = create_feature_arm_arm_m_profile_mve (tdesc, regnum);
+      regnum = create_feature_arm_arm_m_profile (tdesc.get (), regnum);
+      regnum = create_feature_arm_arm_vfpv2 (tdesc.get (), regnum);
+      regnum = create_feature_arm_arm_m_profile_mve (tdesc.get (), regnum);
       break;
 
     case ARM_M_TYPE_SYSTEM:
-      regnum = create_feature_arm_arm_m_profile (tdesc, regnum);
-      regnum = create_feature_arm_arm_m_system (tdesc, regnum);
+      regnum = create_feature_arm_arm_m_profile (tdesc.get (), regnum);
+      regnum = create_feature_arm_arm_m_system (tdesc.get (), regnum);
       break;
 
     default:

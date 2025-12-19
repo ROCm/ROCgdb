@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,8 +58,8 @@ gdb_test "continue" \
 # Return true if INSN is a syscall instruction.
 
 proc is_syscall_insn { insn } {
-    if [istarget x86_64-*-* ] {
-	return { $insn == "syscall" }
+    if {[istarget x86_64-*-* ]} {
+	return [string equal $insn "syscall"]
     } else {
 	error "port me"
     }
@@ -76,7 +76,7 @@ gdb_test_multiple "disassemble" "" {
     -re "^(?:=>)?\\s+(${hex})\\s+<\\+${decimal}>:\\s+(\[^\r\n\]+)\r\n" {
 	set addr $expect_out(1,string)
 	set insn [string trim $expect_out(2,string)]
-	if [is_syscall_insn $insn] {
+	if {[is_syscall_insn $insn]} {
 	    verbose -log "Found a syscall at: $addr"
 	    lappend syscall_addrs $addr
 	}
@@ -106,7 +106,7 @@ proc test {non_stop displaced third_thread} {
 	    save_vars { GDBFLAGS } {
 		append GDBFLAGS " -ex \"set non-stop $non_stop\""
 		append GDBFLAGS " -ex \"set displaced $displaced\""
-		clean_restart $binfile
+		clean_restart $::testfile
 	    }
 
 	    runto_main

@@ -1,4 +1,4 @@
-# Copyright 2002-2024 Free Software Foundation, Inc.
+# Copyright 2002-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ proc check_mi_thread_command_set {} {
   mi_runto done_making_threads
 
   set thread_list [get_mi_thread_list "in check_mi_thread_command_set"]
-  
+
   mi_gdb_test "-thread-select" \
     {\^error,msg="-thread-select: USAGE: \[-l lanenum\] threadnum."} \
     "check_mi_thread_command_set: -thread-select"
@@ -63,11 +63,10 @@ if {[gdb_compile_pthreads "$srcdir/$subdir/$srcfile" $binfile executable $option
     return -1
 }
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 
 check_mi_thread_command_set
 
 mi_gdb_exit
-

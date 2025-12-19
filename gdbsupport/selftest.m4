@@ -1,4 +1,4 @@
-dnl Copyright (C) 2018-2024 Free Software Foundation, Inc.
+dnl Copyright (C) 2018-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -44,7 +44,7 @@ esac], [enable_unittests=$development])
 
 if $enable_unittests; then
   AC_DEFINE(GDB_SELF_TEST, 1,
-            [Define if self-testing features should be enabled])
+	    [Define if self-testing features should be enabled])
   $1
 fi
 ])

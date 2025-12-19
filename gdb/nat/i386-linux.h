@@ -1,6 +1,6 @@
 /* Native-dependent code for GNU/Linux i386.
 
-   Copyright (C) 2024 Free Software Foundation, Inc.
+   Copyright (C) 2024-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -33,5 +33,15 @@
    of one kernel at a time.  So it's okay - for this to be a global
    variable.  */
 extern tribool have_ptrace_getfpxregs;
+
+/* This constant defines the first GDT (Global Descriptor Table) entry
+   that the kernel allocates for holding TLS descriptors.  There are three
+   entries, starting at this index which can be accessed using the
+   PTRACE_GET_THREAD_AREA and PTRACE_SET_THREAD_AREA ptrace calls.  This
+   constant is only valid for true i386 kernels.  For amd64 kernels
+   running in 32-bit mode (i.e. executables compiled -m32) there is a
+   different constant, see nat/amd64-linux.h.  */
+
+static inline constexpr int i386_initial_tls_gdt = 6;
 
 #endif /* GDB_NAT_I386_LINUX_H */

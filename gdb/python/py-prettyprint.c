@@ -1,6 +1,6 @@
 /* Python pretty-printing
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -98,9 +98,9 @@ search_pp_list (PyObject *list, PyObject *value)
 static PyObject *
 find_pretty_printer_from_objfiles (PyObject *value)
 {
-  for (objfile *obj : current_program_space->objfiles ())
+  for (objfile &obj : current_program_space->objfiles ())
     {
-      gdbpy_ref<> objf = objfile_to_objfile_object (obj);
+      gdbpy_ref<> objf = objfile_to_objfile_object (&obj);
       if (objf == NULL)
 	{
 	  /* Ignore the error and continue.  */
@@ -412,7 +412,7 @@ print_children (PyObject *printer, const char *hint,
 	    print_stack_unless_memory_error (stream);
 	  /* Set a flag so we can know whether we printed all the
 	     available elements.  */
-	  else	
+	  else
 	    done_flag = 1;
 	  break;
 	}

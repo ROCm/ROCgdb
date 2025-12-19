@@ -10,12 +10,12 @@
 
 @copying
 @c man begin COPYRIGHT coremerge
-Copyright @copyright{} 2023-2024 Advanced Micro Devices, Inc.
+Copyright @copyright{} 2023-2025 Advanced Micro Devices, Inc.
 
 @c man end
 
 @c man begin COPYRIGHT
-Copyright @copyright{} 1991-2024 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2025 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -889,7 +889,7 @@ symbol is defined anywhere, the common symbols are treated as undefined
 references.
 @ifclear man
 For more details on common symbols, see the discussion of
---warn-common in @ref{Options,,Linker options,ld.info,The GNU linker}.
+--warn-common in @ref{Options,,Linker options,ld,The GNU linker}.
 @end ifclear
 The lower case @var{c} character is used when the symbol is in a
 special section for small commons.
@@ -1325,6 +1325,7 @@ objcopy [@option{-F} @var{bfdname}|@option{--target=}@var{bfdname}]
         [@option{--keep-global-symbols=}@var{filename}]
         [@option{--localize-symbols=}@var{filename}]
         [@option{--weaken-symbols=}@var{filename}]
+        [@option{--binary-symbol-prefix}@var{string}]
         [@option{--add-symbol} @var{name}=[@var{section}:]@var{value}[,@var{flags}]]
         [@option{--alt-machine-code=}@var{index}]
         [@option{--prefix-symbols=}@var{string}]
@@ -1372,7 +1373,7 @@ between any two formats may not work as expected.
 deletes them afterward.  @command{objcopy} uses @sc{bfd} to do all its
 translation work; it has access to all the formats described in @sc{bfd}
 and thus is able to recognize most formats without being told
-explicitly.  @xref{BFD,,BFD,ld.info,Using LD}.
+explicitly.  @xref{BFD,,BFD,ld,Using LD}.
 
 @command{objcopy} can be used to generate S-records by using an output
 target of @samp{srec} (e.g., use @samp{-O srec}).
@@ -1563,6 +1564,20 @@ given more than once.  Note - unique symbols are not converted.
 @item -W @var{symbolname}
 @itemx --weaken-symbol=@var{symbolname}
 Make symbol @var{symbolname} weak. This option may be given more than once.
+
+@item --binary-symbol-prefix=@var{string}
+When used with @option{--input-target=binary}, sets @var{string} as the
+base name for the symbols generated for the input file.  These symbols are:
+
+@example
+@var{string}_start
+@var{string}_end
+@var{string}_size
+@end example
+
+By default, the binary input handler derives the prefix symbol name from a
+mangled version of the input file name and _binary prefix.  This option
+allows specifying it explicitly.
 
 @item --globalize-symbol=@var{symbolname}
 Give symbol @var{symbolname} global scoping so that it is visible
@@ -2156,9 +2171,6 @@ Sets the section alignment field in the PE header - if one is present
 in the binary.  Sections in memory will always begin at addresses
 which are a multiple of this number.  Defaults to 0x1000.
 
-Note - this option will also set the alignment field in each section's
-flags.
-
 Note - if a section's LMA or VMA addresses are no longer aligned, and
 those addresses have not been set via the @option{--set-section-lma} or
 @option{--set-section-vma} options, and the file has been fully
@@ -2442,11 +2454,11 @@ with ctags tool.
 Display the assembler mnemonics for the machine instructions from the
 input file.  This option only disassembles those sections which are 
 expected to contain instructions.  If the optional @var{symbol}
-argument is given, then display the assembler mnemonics starting at
-@var{symbol}.  If @var{symbol} is a function name then disassembly
-will stop at the end of the function, otherwise it will stop when the
-next symbol is encountered.  If there are no matches for @var{symbol}
-then nothing will be displayed.
+argument is given (perhaps multiple times), then display the assembler
+mnemonics starting at (all the) @var{symbol}.  If @var{symbol} is a
+function name then disassembly will stop at the end of the function,
+otherwise it will stop when the next symbol is encountered.  If there
+are no matches for any @var{symbol} then nothing will be displayed.
 
 Note if the @option{--dwarf=follow-links} option is enabled
 then any symbol tables in linked debug info files will be read in and
@@ -2711,6 +2723,31 @@ If you disassemble without giving a CPU selection, a default will be
 chosen from information gleaned by BFD from the object files headers,
 but the result again may not be as you expect.
 
+For RISC-V, the following options are supported:
+
+@table @code
+@item max
+Disassemble without checking architecture string. This is a best effort mode, so
+for overlapping ISA extensions the first match (possibly incorrect in a given
+context) will be used to decode the instruction. It's useful, if the ELF file
+doesn't expose ISA string, preventing automatic ISA subset deduction, and the
+default fallback ISA string (@code{rv64gc}) doesn't cover all instructions in
+the binary.
+
+@item numeric
+Print numeric register names, rather than ABI names (e.g., print @code{x2}
+instead of @code{sp}).
+
+@item no-aliases
+Disassemble only into canonical instructions. For example, compressed
+instructions will be represented as such (@code{addi sp,sp,-128} will be
+@code{c.addi16sp sp,-128}).
+
+@item priv-spec=@var{SPEC}
+Print the CSR according to the chosen privilege spec version (e.g.,
+@code{1.10}, @code{1.11}, @code{1.12}, @code{1.13}).
+@end table
+
 For MIPS, this option controls the printing of instruction mnemonic
 names and register names in disassembled instructions.  Multiple
 selections from the following may be specified as a comma separated
@@ -2827,6 +2864,9 @@ libraries.  As for @option{-r}, if used with @option{-d} or
 @option{-D}, the relocations are printed interspersed with the
 disassembly.
 
+Note: @command{objdump} does not support displaying RELR type
+relocations.  These can be displayed by the @command{readelf} program.
+
 @item -s
 @itemx --full-contents
 @cindex sections, full contents
@@ -2896,7 +2936,7 @@ after it has previously been enabled then use
 @item --disassembler-color=off
 @itemx --disassembler-color=terminal
 @itemx --disassembler-color=on|color|colour
-@itemx --disassembler-color=extened|extended-color|extened-colour
+@itemx --disassembler-color=extended|extended-color|extended-colour
 Enables or disables the use of colored syntax highlighting in
 disassembly output.  The default behaviour is determined via a
 configure time option.  Note, not all architectures support colored
@@ -3551,6 +3591,7 @@ strip [@option{-F} @var{bfdname} |@option{--target=}@var{bfdname}]
       [@option{--keep-section-symbols}]
       [@option{--keep-file-symbols}]
       [@option{--only-keep-debug}]
+      [@option{--plugin} @var{name}]
       [@option{-v} |@option{--verbose}] [@option{-V}|@option{--version}]
       [@option{--help}] [@option{--info}]
       @var{objfile}@dots{}
@@ -3809,6 +3850,26 @@ information may be incomplete.  Besides the gnu_debuglink feature
 currently only supports the presence of one filename containing
 debugging information, not multiple filenames on a one-per-object-file
 basis.
+
+@item --plugin @var{name}
+@cindex plugins
+Load the plugin called @var{name} to add support for extra target
+types.  This option is only available if the toolchain has been built
+with plugin support enabled.
+
+If @option{--plugin} is not provided, but plugin support has been
+enabled then @command{strip} iterates over the files in
+@file{$@{libdir@}/bfd-plugins} in alphabetic order and the first
+plugin that claims the object in question is used.
+
+Please note that this plugin search directory is @emph{not} the one
+used by @command{ld}'s @option{-plugin} option.  In order to make
+@command{strip} use the  linker plugin it must be copied into the
+@file{$@{libdir@}/bfd-plugins} directory.  For GCC based compilations
+the linker plugin is called @file{liblto_plugin.so.0.0.0}.  For Clang
+based compilations it is called @file{LLVMgold.so}.  The GCC plugin
+is always backwards compatible with earlier versions, so it is
+sufficient to just copy the newest one.
 
 @item -V
 @itemx --version
@@ -5040,6 +5101,7 @@ readelf [@option{-a}|@option{--all}]
         [@option{--ctf-strings=}@var{section}]
         [@option{--sframe=}@var{section}]
         [@option{-I}|@option{--histogram}]
+        [@option{--got-contents}]
         [@option{-v}|@option{--version}]
         [@option{-W}|@option{--wide}]
         [@option{-T}|@option{--silent-truncation}]
@@ -5075,7 +5137,8 @@ given.
 Equivalent to specifying @option{--file-header},
 @option{--program-headers}, @option{--sections}, @option{--symbols},
 @option{--relocs}, @option{--dynamic}, @option{--notes},
-@option{--version-info}, @option{--arch-specific}, @option{--unwind},
+@option{--got-contents}, @option{--version-info},
+@option{--arch-specific}, @option{--unwind},
 @option{--section-groups} and @option{--histogram}.
 
 Note - this option does not enable @option{--use-dynamic} itself, so
@@ -5250,7 +5313,7 @@ Displays the contents of the file's dynamic section, if it has one.
 @item -V
 @itemx --version-info
 @cindex ELF version sections information
-Displays the contents of the version sections in the file, it they
+Displays the contents of the version sections in the file, if they
 exist.
 
 @item -A
@@ -5350,6 +5413,14 @@ string table are used.
 
 If either of @option{--ctf-symbols} or @option{--ctf-strings} is specified, the
 other must be specified as well.
+
+@item --got-contents
+@cindex ELF section information
+@cindex ELF reloc information
+Displays the contents of the file's Global Offset Table (GOT) sections,
+if it has any.  For MIPS, this option is similar to
+@option{--arch-specific}, but it only displays the GOT related contents
+and it is ignored when @option{--arch-specific} is used.
 
 @item -I
 @itemx --histogram

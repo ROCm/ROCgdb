@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,52 +51,52 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	compile_unit {
-	    {language @DW_LANG_Mips_Assembler}
+	    DW_AT_language @DW_LANG_Mips_Assembler
 	} {
 	    unspecified_type_label: unspecified_type {}
 
 	    DW_TAG_subprogram {
-		{name foo}
-		{low_pc $foo_start addr}
-		{high_pc $foo_end addr}
-		{type :$unspecified_type_label}
+		DW_AT_name foo
+		DW_AT_low_pc $foo_start addr
+		DW_AT_high_pc $foo_end addr
+		DW_AT_type :$unspecified_type_label
 	    }
 	}
     }
 
     cu {} {
 	compile_unit {
-	    {language @DW_LANG_Mips_Assembler}
-	    {producer "GNU AS 2.39.0"}
+	    DW_AT_language @DW_LANG_Mips_Assembler
+	    DW_AT_producer "GNU AS 2.39.0"
 	} {
 	    DW_TAG_subprogram {
-		{name bar}
-		{low_pc $bar_start addr}
-		{high_pc $bar_end addr}
+		DW_AT_name bar
+		DW_AT_low_pc $bar_start addr
+		DW_AT_high_pc $bar_end addr
 	    }
 	}
     }
 
     cu { version 2 } {
 	compile_unit {
-	    {language @DW_LANG_Mips_Assembler}
-	    {producer "GNU AS 2.40.0"}
+	    DW_AT_language @DW_LANG_Mips_Assembler
+	    DW_AT_producer "GNU AS 2.40.0"
 	} {
 	    DW_TAG_subprogram {
-		{name foo2}
-		{low_pc $foo2_start addr}
-		{high_pc $foo2_end addr}
+		DW_AT_name foo2
+		DW_AT_low_pc $foo2_start addr
+		DW_AT_high_pc $foo2_end addr
 	    }
 	}
     }
 }
 
-if [prepare_for_testing "failed to prepare" $testfile \
-	"${asm_file} ${srcfile} ${srcfile2}" {}] {
+if {[prepare_for_testing "failed to prepare" $testfile \
+	 "${asm_file} ${srcfile} ${srcfile2}" {}]} {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

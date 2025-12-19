@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-# Copyright (C) 2002-2024 Free Software Foundation, Inc.
+# Copyright (C) 2002-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -91,7 +91,7 @@ ppc_create_output_section_statements (void)
 			     bfd_get_arch (link_info.output_bfd),
 			     bfd_get_mach (link_info.output_bfd)))
     {
-      einfo (_("%F%P: can not create BFD: %E\n"));
+      fatal (_("%P: can not create BFD: %E\n"));
       return;
     }
 
@@ -101,7 +101,7 @@ ppc_create_output_section_statements (void)
   if (params.save_restore_funcs < 0)
     params.save_restore_funcs = !bfd_link_relocatable (&link_info);
   if (!ppc64_elf_init_stub_bfd (&link_info, &params))
-    einfo (_("%F%P: can not init BFD: %E\n"));
+    fatal (_("%P: can not init BFD: %E\n"));
 }
 
 /* Called after opening files but before mapping sections.  */
@@ -606,17 +606,18 @@ gld${EMULATION_NAME}_finish (void)
     einfo (_("%X%P: can not build stubs: %E\n"));
 
   fflush (stdout);
+  FILE * out = config.stats_file ? config.stats_file : stderr;
   for (line = msg; line != NULL; line = endline)
     {
       endline = strchr (line, '\n');
       if (endline != NULL)
 	*endline++ = '\0';
-      fprintf (stderr, "%s: %s\n", program_name, line);
+      fprintf (out, "%s: %s\n", program_name, line);
     }
-  fflush (stderr);
+  fflush (out);
   free (msg);
 
-  finish_default ();
+  ldelf_finish ();
 }
 
 
@@ -825,7 +826,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 	const char *end;
 	params.group_size = bfd_scan_vma (optarg, &end, 0);
 	if (*end)
-	  einfo (_("%F%P: invalid number `%s'\''\n"), optarg);
+	  fatal (_("%P: invalid number `%s'\''\n"), optarg);
       }
       break;
 
@@ -851,7 +852,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 	  char *end;
 	  long val = strtol (optarg, &end, 0);
 	  if (*end || (unsigned long) val + 8 > 16)
-	    einfo (_("%F%P: invalid --plt-align `%s'\''\n"), optarg);
+	    fatal (_("%P: invalid --plt-align `%s'\''\n"), optarg);
 	  params.plt_stub_align = val;
 	}
       else
@@ -880,7 +881,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 	  else if (strcasecmp (optarg, "no") == 0)
 	    params.power10_stubs = 0;
 	  else
-	    einfo (_("%F%P: invalid --power10-stubs argument `%s'\''\n"),
+	    fatal (_("%P: invalid --power10-stubs argument `%s'\''\n"),
 		   optarg);
 	}
       else

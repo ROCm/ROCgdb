@@ -1,4 +1,4 @@
-#Copyright 2010-2024 Free Software Foundation, Inc.
+#Copyright 2010-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,4 +40,3 @@ if {[test_compiler_info {gcc-[0-3]-*}]
     setup_xfail *-*-*
 }
 gdb_test "p b" "{<A<int, B>> = {<ATB<int>> = {data = 0}, static DEFAULT_INSTANCE = <optimized out>}, <No data fields>}"
-

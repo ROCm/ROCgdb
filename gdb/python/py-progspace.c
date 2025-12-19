@@ -1,6 +1,6 @@
 /* Python interface to program spaces.
 
-   Copyright (C) 2010-2024 Free Software Foundation, Inc.
+   Copyright (C) 2010-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -59,8 +59,7 @@ struct pspace_object
   PyObject *missing_file_handlers;
 };
 
-extern PyTypeObject pspace_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("pspace_object");
+extern PyTypeObject pspace_object_type;
 
 /* Clear the PSPACE pointer in a Pspace object and remove the reference.  */
 struct pspace_deleter
@@ -116,7 +115,7 @@ pspy_get_filename (PyObject *self, void *closure)
   Py_RETURN_NONE;
 }
 
-/* Implement the gdb.Progspace.symbol_file attribute.  Retun the
+/* Implement the gdb.Progspace.symbol_file attribute.  Return the
    gdb.Objfile corresponding to the currently loaded symbol-file, or None
    if no symbol-file is loaded.  If the Progspace is invalid then raise an
    exception.  */
@@ -136,7 +135,7 @@ pspy_get_symbol_file (PyObject *self, void *closure)
   Py_RETURN_NONE;
 }
 
-/* Implement the gdb.Progspace.executable_filename attribute.  Retun a
+/* Implement the gdb.Progspace.executable_filename attribute.  Return a
    string containing the name of the current executable, or None if no
    executable is currently set.  If the Progspace is invalid then raise an
    exception.  */
@@ -431,9 +430,9 @@ pspy_get_objfiles (PyObject *self_, PyObject *args)
 
   if (self->pspace != NULL)
     {
-      for (objfile *objf : self->pspace->objfiles ())
+      for (objfile &objf : self->pspace->objfiles ())
 	{
-	  gdbpy_ref<> item = objfile_to_objfile_object (objf);
+	  gdbpy_ref<> item = objfile_to_objfile_object (&objf);
 
 	  if (item == nullptr
 	      || PyList_Append (list.get (), item.get ()) == -1)
@@ -515,7 +514,7 @@ pspy_block_for_pc (PyObject *o, PyObject *args)
       scoped_restore_current_program_space saver;
 
       set_current_program_space (self->pspace);
-      cust = find_pc_compunit_symtab (pc);
+      cust = find_compunit_symtab_for_pc (pc);
 
       if (cust != NULL && cust->objfile () != NULL)
 	block = block_for_pc (pc);
@@ -559,7 +558,7 @@ pspy_find_pc_line (PyObject *o, PyObject *args)
 
       set_current_program_space (self->pspace);
 
-      sal = find_pc_line (pc, 0);
+      sal = find_sal_for_pc (pc, 0);
       result = symtab_and_line_to_sal_object (sal);
     }
   catch (const gdb_exception &except)
@@ -737,8 +736,8 @@ gdbpy_free_program_space_event (program_space *pspace)
   gdbpy_program_space_event (pspace, false);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_pspace (void)
+static int
+gdbpy_initialize_pspace ()
 {
   gdb::observers::executable_changed.attach (gdbpy_executable_changed,
 					     "py-progspace");

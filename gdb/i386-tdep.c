@@ -1,6 +1,6 @@
 /* Intel 386 target-dependent stuff.
 
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -60,12 +60,8 @@
 
 #include "stap-probe.h"
 #include "user-regs.h"
-#include "cli/cli-utils.h"
 #include "expression.h"
-#include "parser-defs.h"
-#include <ctype.h>
 #include <algorithm>
-#include <unordered_set>
 #include "producer.h"
 #include "infcall.h"
 #include "maint.h"
@@ -899,6 +895,22 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
       displaced_debug_printf ("relocated return addr at %s to %s",
 			      paddress (gdbarch, esp),
 			      paddress (gdbarch, retaddr));
+
+      /* If shadow stack is enabled, we need to correct the return address
+	 on the shadow stack too.  */
+      bool shadow_stack_enabled;
+      std::optional<CORE_ADDR> ssp
+	= gdbarch_get_shadow_stack_pointer (gdbarch, regs,
+					    shadow_stack_enabled);
+      if (shadow_stack_enabled)
+	{
+	  gdb_assert (ssp.has_value ());
+	  write_memory_unsigned_integer (*ssp, retaddr_len, byte_order,
+					 retaddr);
+	  displaced_debug_printf ("relocated shadow stack return addr at %s "
+				  "to %s", paddress (gdbarch, *ssp),
+				  paddress (gdbarch, retaddr));
+	}
     }
 }
 
@@ -1018,10 +1030,9 @@ struct i386_frame_cache
 static struct i386_frame_cache *
 i386_alloc_frame_cache (void)
 {
-  struct i386_frame_cache *cache;
   int i;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct i386_frame_cache);
+  auto *cache = frame_obstack_zalloc<i386_frame_cache> ();
 
   /* Base address.  */
   cache->base_p = 0;
@@ -1790,7 +1801,7 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       CORE_ADDR post_prologue_pc
 	= skip_prologue_using_sal (gdbarch, func_addr);
-      struct compunit_symtab *cust = find_pc_compunit_symtab (func_addr);
+      struct compunit_symtab *cust = find_compunit_symtab_for_pc (func_addr);
 
       /* LLVM backend (Clang/Flang) always emits a line note before the
 	 prologue and another one after.  We trust clang and newer Intel
@@ -2139,16 +2150,16 @@ i386_frame_prev_register (const frame_info_ptr &this_frame, void **this_cache,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind i386_frame_unwind =
-{
+static const struct frame_unwind_legacy i386_frame_unwind (
   "i386 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   i386_frame_unwind_stop_reason,
   i386_frame_this_id,
   i386_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Normal frames, but in a function epilogue.  */
 
@@ -2184,7 +2195,7 @@ i386_epilogue_frame_sniffer_1 (const struct frame_unwind *self,
     return 0;
 
   bool unwind_valid_p
-    = compunit_epilogue_unwind_valid (find_pc_compunit_symtab (pc));
+    = compunit_epilogue_unwind_valid (find_compunit_symtab_for_pc (pc));
   if (override_p)
     {
       if (unwind_valid_p)
@@ -2294,27 +2305,27 @@ i386_epilogue_frame_prev_register (const frame_info_ptr &this_frame,
   return i386_frame_prev_register (this_frame, this_cache, regnum);
 }
 
-static const struct frame_unwind i386_epilogue_override_frame_unwind =
-{
+static const struct frame_unwind_legacy i386_epilogue_override_frame_unwind (
   "i386 epilogue override",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   i386_epilogue_frame_unwind_stop_reason,
   i386_epilogue_frame_this_id,
   i386_epilogue_frame_prev_register,
   NULL,
   i386_epilogue_override_frame_sniffer
-};
+);
 
-static const struct frame_unwind i386_epilogue_frame_unwind =
-{
+static const struct frame_unwind_legacy i386_epilogue_frame_unwind (
   "i386 epilogue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   i386_epilogue_frame_unwind_stop_reason,
   i386_epilogue_frame_this_id,
   i386_epilogue_frame_prev_register,
   NULL,
   i386_epilogue_frame_sniffer
-};
+);
 
 
 /* Stack-based trampolines.  */
@@ -2322,7 +2333,7 @@ static const struct frame_unwind i386_epilogue_frame_unwind =
 /* These trampolines are used on cross x86 targets, when taking the
    address of a nested function.  When executing these trampolines,
    no stack frame is set up, so we are in a similar situation as in
-   epilogues and i386_epilogue_frame_this_id can be re-used.  */
+   epilogues and i386_epilogue_frame_this_id can be reused.  */
 
 /* Static chain passed in register.  */
 
@@ -2387,16 +2398,16 @@ i386_stack_tramp_frame_sniffer (const struct frame_unwind *self,
     return 0;
 }
 
-static const struct frame_unwind i386_stack_tramp_frame_unwind =
-{
+static const struct frame_unwind_legacy i386_stack_tramp_frame_unwind (
   "i386 stack tramp",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   i386_epilogue_frame_unwind_stop_reason,
   i386_epilogue_frame_this_id,
   i386_epilogue_frame_prev_register,
   NULL,
   i386_stack_tramp_frame_sniffer
-};
+);
 
 /* Generate a bytecode expression to get the value of the saved PC.  */
 
@@ -2536,16 +2547,16 @@ i386_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind i386_sigtramp_frame_unwind =
-{
+static const struct frame_unwind_legacy i386_sigtramp_frame_unwind (
   "i386 sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   i386_sigtramp_frame_unwind_stop_reason,
   i386_sigtramp_frame_this_id,
   i386_sigtramp_frame_prev_register,
   NULL,
   i386_sigtramp_frame_sniffer
-};
+);
 
 
 static CORE_ADDR
@@ -2680,7 +2691,6 @@ i386_thiscall_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   gdb_byte buf[4];
   int i;
   int write_pass;
-  int args_space = 0;
 
   /* Determine the total space required for arguments and struct
      return address in a first pass (allowing for 16-byte-aligned
@@ -2688,7 +2698,7 @@ i386_thiscall_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   for (write_pass = 0; write_pass < 2; write_pass++)
     {
-      int args_space_used = 0;
+      int args_space = 0;
 
       if (return_method == return_method_struct)
 	{
@@ -2697,38 +2707,30 @@ i386_thiscall_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      /* Push value address.  */
 	      store_unsigned_integer (buf, 4, byte_order, struct_addr);
 	      write_memory (sp, buf, 4);
-	      args_space_used += 4;
 	    }
-	  else
-	    args_space += 4;
+
+	  args_space += 4;
 	}
 
       for (i = thiscall ? 1 : 0; i < nargs; i++)
 	{
 	  int len = args[i]->enclosing_type ()->length ();
 
+	  if (i386_16_byte_align_p (args[i]->enclosing_type ()))
+	    args_space = align_up (args_space, 16);
+
 	  if (write_pass)
-	    {
-	      if (i386_16_byte_align_p (args[i]->enclosing_type ()))
-		args_space_used = align_up (args_space_used, 16);
+	    write_memory (sp + args_space,
+			  args[i]->contents_all ().data (), len);
 
-	      write_memory (sp + args_space_used,
-			    args[i]->contents_all ().data (), len);
-	      /* The System V ABI says that:
+	  /* The System V ABI says that:
 
-	      "An argument's size is increased, if necessary, to make it a
-	      multiple of [32-bit] words.  This may require tail padding,
-	      depending on the size of the argument."
+	     "An argument's size is increased, if necessary, to make it a
+	     multiple of [32-bit] words.  This may require tail padding,
+	     depending on the size of the argument."
 
-	      This makes sure the stack stays word-aligned.  */
-	      args_space_used += align_up (len, 4);
-	    }
-	  else
-	    {
-	      if (i386_16_byte_align_p (args[i]->enclosing_type ()))
-		args_space = align_up (args_space, 16);
-	      args_space += align_up (len, 4);
-	    }
+	     This makes sure the stack stays word-aligned.  */
+	  args_space += align_up (len, 4);
 	}
 
       if (!write_pass)
@@ -3881,9 +3883,9 @@ int
 i386_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == '$' /* Literal number.  */
-	  || (isdigit (*s) && s[1] == '(' && s[2] == '%') /* Displacement.  */
+	  || (c_isdigit (*s) && s[1] == '(' && s[2] == '%') /* Displacement.  */
 	  || (*s == '(' && s[1] == '%') /* Register indirection.  */
-	  || (*s == '%' && isalpha (s[1]))); /* Register access.  */
+	  || (*s == '%' && c_isalpha (s[1]))); /* Register access.  */
 }
 
 /* Helper function for i386_stap_parse_special_token.
@@ -3900,7 +3902,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 {
   const char *s = p->arg;
 
-  if (isdigit (*s) || *s == '-' || *s == '+')
+  if (c_isdigit (*s) || *s == '-' || *s == '+')
     {
       bool got_minus[3];
       int i;
@@ -3918,7 +3920,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[0] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[0] = strtol (s, &endp, 10);
@@ -3939,7 +3941,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[1] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[1] = strtol (s, &endp, 10);
@@ -3960,7 +3962,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
 	  got_minus[2] = true;
 	}
 
-      if (!isdigit ((unsigned char) *s))
+      if (!c_isdigit (*s))
 	return {};
 
       displacements[2] = strtol (s, &endp, 10);
@@ -3972,7 +3974,7 @@ i386_stap_parse_special_token_triplet (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       if (*s++ != ')')
@@ -4033,7 +4035,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
 {
   const char *s = p->arg;
 
-  if (isdigit (*s) || *s == '(' || *s == '-' || *s == '+')
+  if (c_isdigit (*s) || *s == '(' || *s == '-' || *s == '+')
     {
       bool offset_minus = false;
       long offset = 0;
@@ -4051,10 +4053,10 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
 	  offset_minus = true;
 	}
 
-      if (offset_minus && !isdigit (*s))
+      if (offset_minus && !c_isdigit (*s))
 	return {};
 
-      if (isdigit (*s))
+      if (c_isdigit (*s))
 	{
 	  char *endp;
 
@@ -4068,7 +4070,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       if (*s != ',' || s[1] != '%')
@@ -4084,7 +4086,7 @@ i386_stap_parse_special_token_three_arg_disp (struct gdbarch *gdbarch,
       s += 2;
       start = s;
 
-      while (isalnum (*s))
+      while (c_isalnum (*s))
 	++s;
 
       len_index = s - start;
@@ -4193,7 +4195,7 @@ static std::string
 i386_stap_adjust_register (struct gdbarch *gdbarch, struct stap_parse_info *p,
 			   const std::string &regname, int regnum)
 {
-  static const std::unordered_set<std::string> reg_assoc
+  static const gdb::unordered_set<std::string> reg_assoc
     = { "ax", "bx", "cx", "dx",
 	"si", "di", "bp", "sp" };
 
@@ -4800,7 +4802,7 @@ static int i386_record_floats (struct gdbarch *gdbarch,
 
 static int
 i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
-		 int opcode, struct gdbarch *gdbarch)
+		 struct gdbarch *gdbarch)
 {
   /* We need this to find YMM (and once AVX-512 is supported, ZMM) registers.
      We should always save the largest available register, since an
@@ -4814,8 +4816,51 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
   SCOPE_EXIT { inferior_thread ()->set_executing (true); };
   inferior_thread () -> set_executing (false);
 
+  uint8_t opcode;
+  if (record_read_memory (gdbarch, ir->addr, &opcode, 1))
+    return -1;
+  ir->addr++;
+
   switch (opcode)
     {
+    case 0x10:	/* VMOVS[S|D] XMM, mem.  */
+		/* VMOVUP[S|D] XMM, mem.  */
+    case 0x28:	/* VMOVAP[S|D] XMM, mem.  */
+      /* Moving from memory region or XMM registers into an XMM register.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				     ir->regmap[X86_RECORD_XMM0_REGNUM]
+				     + ir->reg + vex_r * 8);
+      break;
+    case 0x11:	/* VMOVS[S|D] mem, XMM.  */
+		/* VMOVUP[S|D] mem, XMM.  */
+    case 0x29:	/* VMOVAP[S|D] mem, XMM.  */
+      /* Moving from memory region into an XMM register.  */
+      /* This can also be used for XMM -> XMM in some scenarios.  */
+      i386_record_modrm (ir);
+      if (ir->mod == 3)
+	{
+	  /* In this case the destination register is encoded differently
+	     to any other AVX instruction I've seen so far.  In this one,
+	     VEX.B is the most important bit of the destination.  */
+	  record_full_arch_list_add_reg (ir->regcache,
+					 ir->regmap[X86_RECORD_XMM0_REGNUM]
+					 + ir->rm + ir->rex_b * 8);
+	}
+      else
+	{
+	  /* Opcode 0x29 is trivial, the size of memory written is defined by
+	     VEX.L.  Opcode 0x11 can refer to vmovs[s|d] or vmovup[s|d]; they
+	     are differentiated by the most significant bit of VEX.pp, and the
+	     latter works exactly like 0x29, but the former encodes the size
+	     on VEX.pp itself.  */
+	  if (opcode == 0x11 && (ir->pp & 2) != 0)
+	    ir->ot = ir->pp;
+	  else
+	    ir->ot = 4 + ir->l;
+	  i386_record_lea_modrm (ir);
+	}
+      break;
     case 0x6e:	/* VMOVD XMM, reg/mem  */
       /* This is moving from a regular register or memory region into an
 	 XMM register. */
@@ -4871,6 +4916,16 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	  return -1;
 	}
       break;
+    case 0xd0:    /* VADDSUBPD XMM1, XMM2, reg/mem */
+		  /* VADDSUBPS XMM1, XMM2, reg/mem */
+      i386_record_modrm (ir);
+      /* The most significant bit of the register offset
+	 is vex_r. */
+      record_full_arch_list_add_reg (ir->regcache,
+				     tdep->ymm0_regnum
+				     + ir->reg + vex_r * 8);
+      break;
+
     case 0xd6: /* VMOVQ reg/mem XMM  */
       i386_record_modrm (ir);
       /* This is the vmovq version that stores into a regular register
@@ -4935,6 +4990,27 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	}
       break;
 
+    case 0x19:	/* VBROADCASTSD and VEXTRACTF128.  */
+    case 0x39:	/* VEXTRACTI128.  */
+      i386_record_modrm (ir);
+      /* vextract instructions use ModRM.R/M and VEX.B to address the
+	 output register, while vbroadcast use ModRM.Reg and VEX.R.
+	 They are differentiated through map_select.  */
+      if (ir->map_select == 2)
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->reg
+				       + 8 * vex_r);
+      else
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->rm
+				       + 8 * ir->rex_b);
+      break;
+
+    case 0x18:	/* VBROADCASTSS and VINSERTI128.  */
+    case 0x20:	/* VPINSRB.  */
+    case 0x21:	/* VINSERTPS.  */
+    case 0x22:	/* VINSR[D|Q].  */
+    case 0x38:	/* VINSERTF128.  */
     case 0x60:	/* VPUNPCKLBW  */
     case 0x61:	/* VPUNPCKLWD  */
     case 0x62:	/* VPUNPCKLDQ  */
@@ -4943,12 +5019,68 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
     case 0x69:	/* VPUNPCKHWD  */
     case 0x6a:	/* VPUNPCKHDQ  */
     case 0x6d:	/* VPUNPCKHQDQ */
+    case 0xc4:	/* VPINSRW.  */
       {
 	i386_record_modrm (ir);
 	int reg_offset = ir->reg + vex_r * 8;
 	record_full_arch_list_add_reg (ir->regcache,
 				       tdep->ymm0_regnum + reg_offset);
       }
+      break;
+
+    case 0x14:	/* VPEXTRB and VUNPCKL[PS|PD].  */
+    case 0x15:	/* VPEXTRW (to memory) and VUNPCKH [PS|PD].  */
+    case 0x16:	/* VPEXTR[D|Q], VPERMPS, VMOVLHPS and VMOVHP[S|D] to reg.  */
+      {
+	i386_record_modrm (ir);
+	/* All vpextr instructions in this case use map_select == 3,
+	   while vpermps has map_select == 2 and the other instructions
+	   have map_select == 1.  The opcode 0xc5 is for vpextr, but also
+	   uses map_select == 1, but due to other inconsistencies with
+	   the other vpextr instructions, it is in a separate case to
+	   avoid making this even more of a mess.  */
+	if (ir->map_select == 3)
+	  {
+	    if (ir->mod == 3)
+	      {
+		/* ModRM.Mod being equal to 3 means this ModRM encodes
+		   a register.  */
+		record_full_arch_list_add_reg (ir->regcache,
+					  ir->regmap[X86_RECORD_REAX_REGNUM
+						     + ir->rm]);
+	      }
+	    else
+	      {
+		/* Even though the test only generated ModRM.Mod == 0,
+		   in theory all values != 3 are viable to encode a memory
+		   address, so all of them are passed along.  */
+		/* Size is mostly based on the opcode, except for
+		   double/quadword difference.  */
+		ir->ot = opcode - 0x14;
+		if (opcode == 0x16 && vex_w == 1)
+		  ir->ot ++;
+		/* I'm not sure if this is the original use, but in here
+		   rip_offset is used to indicate that the RIP pointer will
+		   be 1 byte away from where the instruction expects it to
+		   be, because the immediate will not have been read by the
+		   time the address changed is calculated.  */
+		ir->rip_offset = 1;
+		i386_record_lea_modrm (ir);
+	      }
+	  }
+	else
+	  {
+	    record_full_arch_list_add_reg (ir->regcache,
+					   tdep->ymm0_regnum + ir->reg
+					   + vex_r * 8);
+	  }
+	break;
+      }
+    case 0xc5:	/* VPEXTRW to register.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				ir->regmap[X86_RECORD_REAX_REGNUM
+					   + ir->reg]);
       break;
 
     case 0x74:	/* VPCMPEQB  */
@@ -4962,11 +5094,96 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
       }
       break;
 
+    case 0x71:	/* VPS[LL|RA|RL]W with constant shift.  */
+    case 0x72:	/* VPS[LL|RA|RL]D with constant shift.  */
+    case 0x73:	/* VPS[LL|RL][Q|DQ] with constant shift.  */
+      {
+	record_full_arch_list_add_reg (ir->regcache,
+				       tdep->ymm0_regnum + ir->vvvv);
+	break;
+      }
+
+    case 0x2c:	/* VCVTTSD2SI and VCVTTSS2SI.  */
+    case 0x2d:	/* VCVTSD2SI and VCVTSS2SI.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				     ir->regmap[X86_RECORD_REAX_REGNUM
+						+ ir->reg]);
+      break;
+
+    case 0x17:	/* VEXTRACTPS and VMOVHP[S|D] to memory.  */
+    case 0x13:	/* VMOVLPD to memory.  */
+      i386_record_modrm (ir);
+      if (ir->map_select == 1) /* This is the VMOV family.  */
+	{
+	  ir->ot = 3;
+	  i386_record_lea_modrm (ir);
+	}
+      else
+	record_full_arch_list_add_reg (ir->regcache,
+				       ir->regmap[X86_RECORD_REAX_REGNUM
+						  + ir->rm]);
+      break;
+
+    case 0x00:	/* VSHUFB and VPERMQ.  */
+    case 0x01:	/* VPERMPD.  */
+    case 0x02:	/* VPBLENDD.  */
+    case 0x04:	/* VPERMILPS with immediate.  */
+    case 0x05:	/* VPERMILPD with immediate.  */
+    case 0x06:	/* VMPERM2F128.  */
+    case 0x0c:	/* VPERMILPS with register and VBLENDPS.  */
+    case 0x0d:	/* VPERMILPD with register and VBLENDPD.  */
+    case 0x0e:	/* VPBLENDW.  */
+    case 0x12:	/* VMOVDDUP, VMOVHLPS and VMOVLPD to register.  */
+    case 0x1a:	/* VBROADCASTF128.  */
+    case 0x2a:	/* VCVTSI2SS.  */
+    case 0x2b:	/* VPACKUSDW.  */
+    case 0x36:	/* VPERMD.  */
+    case 0x40:	/* VPMULLD  */
+    case 0x46:	/* VPERM2I128.  */
+    case 0x4a:	/* VBLENDVPS.  */
+    case 0x4b:	/* VBLENDVPD.  */
+    case 0x4c:	/* VPBLENDVB.  */
+    case 0x57:	/* VXORP[S|D]  */
+    case 0x58:	/* VPBROADCASTD and VADD[P|S][S|D]  */
+    case 0x59:	/* VPBROADCASTQ and VMUL[P|S][S|D]  */
+    case 0x5a:	/* VCVTPS2PD, VCVTSD2SS, VCVTSS2SD and VCVTPD2PS.  */
+    case 0x5b:	/* VCVTDQ2PS, VCVTTPS2PD and VCVTPS2DQ.  */
+    case 0x5c:	/* VSUB[P|S][S|D]  */
+    case 0x5d:	/* VMIN[P|S][S|D]  */
+    case 0x5e:	/* VDIV[P|S][S|D]  */
+    case 0x5f:	/* VMAX[P|S][S|D]  */
+    case 0x63:	/* VPACKSSWB.  */
+    case 0X67:	/* VPACKUSWB.  */
+    case 0x6b:	/* VPACKSSDW.  */
+    case 0x70:	/* VPSHUF[B|D|HW|LW].  */
     case 0x78:	/* VPBROADCASTB  */
     case 0x79:	/* VPBROADCASTW  */
-    case 0x58:	/* VPBROADCASTD  */
-    case 0x59:	/* VPBROADCASTQ  */
+    case 0xc6:	/* VSHUFP[S|D].  */
+    case 0xd1:	/* VPSRLW, dynamic shift.  */
+    case 0xd2:	/* VPSRLD, dynamic shift.  */
+    case 0xd3:	/* VPSRLQ, dynamic shift.  */
+    case 0xd4:	/* VPADDQ  */
+    case 0xd5:	/* VPMULLW  */
+    case 0xdb:	/* VPAND  */
+    case 0xdf:	/* VPANDN  */
+    case 0xe1:	/* VPSRAW, dynamic shift.  */
+    case 0xe2:	/* VPSRAD, dynamic shift.  */
+    case 0xe4:	/* VPMULHUW  */
+    case 0xe5:	/* VPMULHW  */
+    case 0xe6:	/* VCVTDQ2PD, VCVTTPD2DQ and VCVTPD2DQ.  */
+    case 0xf1:	/* VPSLLW, dynamic shift.  */
+    case 0xf2:	/* VPSLLD, dynamic shift.  */
+    case 0xf3:	/* VPSLLQ, dynamic shift.  */
+    case 0xf4:	/* VPMULUDQ  */
+    case 0xf6:	/* VPSADBW.  */
+    case 0xfc:	/* VPADDB  */
+    case 0xfd:	/* VPADDW  */
+    case 0xfe:	/* VPADDD  */
       {
+	/* This set of instructions all share the same exact way to encode
+	   the destination register, so there's no reason to try and
+	   differentiate them.  */
 	i386_record_modrm (ir);
 	int reg_offset = ir->reg + vex_r * 8;
 	gdb_assert (tdep->num_ymm_regs > reg_offset);
@@ -4974,6 +5191,17 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 				       tdep->ymm0_regnum + reg_offset);
       }
       break;
+
+    case 0x2e: /* VUCOMIS[S|D].  */
+    case 0x2f: /* VCOMIS[S|D].  */
+      {
+	/* Despite what the manual implies, saying that the first register
+	   will be written to, actual testing shows that the only register
+	   changed is EFLAGS.  */
+	record_full_arch_list_add_reg (ir->regcache,
+				       ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
+	break;
+      }
 
     case 0x77:/* VZEROUPPER  */
       {
@@ -5067,8 +5295,11 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 		"addr = %s\n",
 		paddress (gdbarch, ir.addr));
 
-  /* prefixes */
-  while (1)
+  /* Process the prefixes.  This used to be an infinite loop, but since
+     a VEX prefix is always the last one before the opcode, according to
+     Intel's manual anyway, and some AVX opcodes may conflict with
+     prefixes, it's safe to leave the loop as soon as we see VEX.  */
+  while (!vex_prefix)
     {
       if (record_read_memory (gdbarch, ir.addr, &opcode8, 1))
 	return -1;
@@ -5208,7 +5439,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     {
       /* If we found the VEX prefix, i386 will either record or warn that
 	 the instruction isn't supported, so we can return the VEX result.  */
-      return i386_record_vex (&ir, rex_w, rex_r, opcode, gdbarch);
+      return i386_record_vex (&ir, rex_w, rex_r, gdbarch);
     }
  reswitch:
   switch (opcode)
@@ -8353,7 +8584,8 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
   const struct tdesc_feature *feature_core;
 
   const struct tdesc_feature *feature_sse, *feature_avx, *feature_avx512,
-			     *feature_pkeys, *feature_segments;
+			     *feature_pkeys, *feature_segments,
+			     *feature_pl3_ssp;
   int i, num_regs, valid_p;
 
   if (! tdesc_has_registers (tdesc))
@@ -8378,6 +8610,9 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 
   /* Try PKEYS  */
   feature_pkeys = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pkeys");
+
+  /* Try Shadow Stack.  */
+  feature_pl3_ssp = tdesc_find_feature (tdesc, "org.gnu.gdb.i386.pl3_ssp");
 
   valid_p = 1;
 
@@ -8492,6 +8727,15 @@ i386_validate_tdesc_p (i386_gdbarch_tdep *tdep,
 	valid_p &= tdesc_numbered_register (feature_pkeys, tdesc_data,
 					    I387_PKRU_REGNUM (tdep) + i,
 					    tdep->pkeys_register_names[i]);
+    }
+
+  if (feature_pl3_ssp != nullptr)
+    {
+      if (tdep->ssp_regnum < 0)
+	tdep->ssp_regnum = I386_PL3_SSP_REGNUM;
+
+      valid_p &= tdesc_numbered_register (feature_pl3_ssp, tdesc_data,
+					  tdep->ssp_regnum, "pl3_ssp");
     }
 
   return valid_p;
@@ -8750,40 +8994,11 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->num_core_regs = I386_NUM_GREGS + I387_NUM_REGS;
   tdep->register_names = i386_register_names;
 
-  /* No upper YMM registers.  */
-  tdep->ymmh_register_names = NULL;
-  tdep->ymm0h_regnum = -1;
-
-  /* No upper ZMM registers.  */
-  tdep->zmmh_register_names = NULL;
-  tdep->zmm0h_regnum = -1;
-
-  /* No high XMM registers.  */
-  tdep->xmm_avx512_register_names = NULL;
-  tdep->xmm16_regnum = -1;
-
-  /* No upper YMM16-31 registers.  */
-  tdep->ymm16h_register_names = NULL;
-  tdep->ymm16h_regnum = -1;
-
   tdep->num_byte_regs = 8;
   tdep->num_word_regs = 8;
   tdep->num_dword_regs = 0;
   tdep->num_mmx_regs = 8;
   tdep->num_ymm_regs = 0;
-
-  /* No AVX512 registers.  */
-  tdep->k0_regnum = -1;
-  tdep->num_zmm_regs = 0;
-  tdep->num_ymm_avx512_regs = 0;
-  tdep->num_xmm_avx512_regs = 0;
-
-  /* No PKEYS registers  */
-  tdep->pkru_regnum = -1;
-  tdep->num_pkeys_regs = 0;
-
-  /* No segment base registers.  */
-  tdep->fsbase_regnum = -1;
 
   tdesc_arch_data_up tdesc_data = tdesc_data_alloc ();
 
@@ -8899,30 +9114,30 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 
 
-/* Return the target description for a specified XSAVE feature mask.  */
+/* See i386-tdep.h.  */
 
-const struct target_desc *
-i386_target_description (uint64_t xcr0, bool segments)
+const target_desc *
+i386_target_description (uint64_t xstate_bv, bool segments)
 {
-  static target_desc *i386_tdescs \
-    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*segments*/] = {};
-  target_desc **tdesc;
+  static const_target_desc_up i386_tdescs \
+    [2/*SSE*/][2/*AVX*/][2/*AVX512*/][2/*PKRU*/][2/*CET_U*/] \
+    [2/*segments*/] = {};
 
-  tdesc = &i386_tdescs[(xcr0 & X86_XSTATE_SSE) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_AVX512) ? 1 : 0]
-    [(xcr0 & X86_XSTATE_PKRU) ? 1 : 0]
-    [segments ? 1 : 0];
+  const_target_desc_up &tdesc
+    = i386_tdescs[(xstate_bv & X86_XSTATE_SSE) ? 1 : 0]
+		 [(xstate_bv & X86_XSTATE_AVX) ? 1 : 0]
+		 [(xstate_bv & X86_XSTATE_AVX512) ? 1 : 0]
+		 [(xstate_bv & X86_XSTATE_PKRU) ? 1 : 0]
+		 [(xstate_bv & X86_XSTATE_CET_U) ? 1 : 0]
+		 [segments ? 1 : 0];
 
-  if (*tdesc == NULL)
-    *tdesc = i386_create_target_description (xcr0, false, segments);
+  if (tdesc == nullptr)
+    tdesc = i386_create_target_description (xstate_bv, false, segments);
 
-  return *tdesc;
+  return tdesc.get ();
 }
 
-void _initialize_i386_tdep ();
-void
-_initialize_i386_tdep ()
+INIT_GDB_FILE (i386_tdep)
 {
   gdbarch_register (bfd_arch_i386, i386_gdbarch_init);
 

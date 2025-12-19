@@ -1,5 +1,5 @@
-# Copyright 2004-2024 Free Software Foundation, Inc.
-# Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright 2004-2025 Free Software Foundation, Inc.
+# Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,19 +28,19 @@ proc gdb_find_gnatmake {} {
     set root "$tool_root_dir/gcc"
     set GM ""
 
-    if ![is_remote host] {
-        set file [lookfor_file $root gnatmake]
-        if { $file != "" } {
-            set GM "$file -I$root/ada/rts --GCC=$root/xgcc --GNATBIND=$root/gnatbind --GNATLINK=$root/gnatlink -cargs -B$root -largs --GCC=$root/xgcc -margs";
-        }   
+    if {![is_remote host]} {
+	set file [lookfor_file $root gnatmake]
+	if { $file != "" } {
+	    set GM "$file -I$root/ada/rts --GCC=$root/xgcc --GNATBIND=$root/gnatbind --GNATLINK=$root/gnatlink -cargs -B$root -largs --GCC=$root/xgcc -margs";
+	}
     }
 
     if {$GM == ""} {
-        set GM [transform gnatmake]
+	set GM [transform gnatmake]
     }
 
     return $GM
-}   
+}
 
 proc gdb_find_gdc {} {
     global tool_root_dir
@@ -139,7 +139,7 @@ proc gdb_find_hipcc {} {
 
 proc gdb_find_ldd {} {
     global LDD_FOR_TARGET
-    if [info exists LDD_FOR_TARGET] {
+    if {[info exists LDD_FOR_TARGET]} {
 	set ldd $LDD_FOR_TARGET
     } else {
 	set ldd "ldd"
@@ -149,7 +149,7 @@ proc gdb_find_ldd {} {
 
 proc gdb_find_objcopy {} {
     global OBJCOPY_FOR_TARGET
-    if [info exists OBJCOPY_FOR_TARGET] {
+    if {[info exists OBJCOPY_FOR_TARGET]} {
 	set objcopy $OBJCOPY_FOR_TARGET
     } else {
 	set objcopy [transform objcopy]
@@ -160,7 +160,7 @@ proc gdb_find_objcopy {} {
 # find target objdump
 proc gdb_find_objdump {} {
     global OBJDUMP_FOR_TARGET
-    if [info exists OBJDUMP_FOR_TARGET] {
+    if {[info exists OBJDUMP_FOR_TARGET]} {
 	set objdump $OBJDUMP_FOR_TARGET
     } else {
 	set objdump [transform objdump]
@@ -170,7 +170,7 @@ proc gdb_find_objdump {} {
 
 proc gdb_find_readelf {} {
     global READELF_FOR_TARGET
-    if [info exists READELF_FOR_TARGET] {
+    if {[info exists READELF_FOR_TARGET]} {
 	set readelf $READELF_FOR_TARGET
     } else {
 	set readelf [transform readelf]
@@ -180,7 +180,7 @@ proc gdb_find_readelf {} {
 
 proc gdb_find_eu-unstrip {} {
     global EU_UNSTRIP_FOR_TARGET
-    if [info exists EU_UNSTRIP_FOR_TARGET] {
+    if {[info exists EU_UNSTRIP_FOR_TARGET]} {
 	set eu_unstrip $EU_UNSTRIP_FOR_TARGET
     } else {
 	set eu_unstrip [transform eu-unstrip]
@@ -191,7 +191,7 @@ proc gdb_find_eu-unstrip {} {
 proc gdb_find_coremerge {} {
     global GDB
     global COREMERGE
-    if [info exists COREMERGE] {
+    if {[info exists COREMERGE]} {
 	return $COREMERGE
     }
 
@@ -205,7 +205,7 @@ proc gdb_find_coremerge {} {
     # next to it.  Try to account for the cases where both have been built
     # with --with-program-prefix, which is usual when building ROCgdb.
     set path_components [file split $GDB]
-    set gdbname [lindex $path_components [expr [llength $path_components] - 1]]
+    set gdbname [lindex $path_components [expr {[llength $path_components] - 1}]]
     set prefix [string trim $gdbname gdb]
     set coremerge [file join [file dirname $GDB] "${prefix}coremerge"]
     if { [file executable $coremerge] } {
@@ -512,7 +512,7 @@ proc gdb_default_target_compile_1 {source destfile type options} {
 	}
 	if {[isnative]} {
 	    # This is a lose.
-	    catch "glob -nocomplain $tool_root_dir/libstdc++/libstdc++.so* $tool_root_dir/libstdc++/libstdc++.sl" tmp
+	    catch {glob -nocomplain $tool_root_dir/libstdc++/libstdc++.so* $tool_root_dir/libstdc++/libstdc++.sl} tmp
 	    if { ${tmp} != "" } {
 		if {[regexp ".*solaris2.*" $target_triplet]} {
 		    # Solaris 2
@@ -777,19 +777,6 @@ if { [array size use_gdb_compile] != 0 } {
     rename gdb_default_target_compile default_target_compile
 } else {
     rename gdb_default_target_compile ""
-}
-
-
-# Provide 'lreverse' missing in Tcl before 7.5.
-
-if {[info procs lreverse] == ""} {
-    proc lreverse { arg } {
-	set retval {}
-	while { [llength $retval] < [llength $arg] } {
-	    lappend retval [lindex $arg end-[llength $retval]]
-	}
-	return $retval
-    }
 }
 
 # Various ccache versions provide incorrect debug info such as ignoring

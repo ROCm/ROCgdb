@@ -1,6 +1,6 @@
 /* Code dealing with dummy stack frames, for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -297,7 +297,7 @@ dummy_frame_sniffer (const struct frame_unwind *self,
      entry point, or some random address on the stack.  Trying to use
      that PC to apply standard frame ID unwind techniques is just
      asking for trouble.  */
-  
+
   /* Don't bother unless there is at least one dummy frame.  */
   if (dummy_frame_stack != NULL)
     {
@@ -315,9 +315,7 @@ dummy_frame_sniffer (const struct frame_unwind *self,
 	{
 	  if (dummy_frame_id_eq (&dummyframe->id, &dummy_id))
 	    {
-	      struct dummy_frame_cache *cache;
-
-	      cache = FRAME_OBSTACK_ZALLOC (struct dummy_frame_cache);
+	      auto *cache = frame_obstack_zalloc<dummy_frame_cache> ();
 	      cache->prev_regcache = get_infcall_suspend_state_regcache
 						   (dummyframe->caller_state);
 	      cache->this_id = this_id;
@@ -375,16 +373,16 @@ dummy_frame_this_id (const frame_info_ptr &this_frame,
   (*this_id) = cache->this_id;
 }
 
-const struct frame_unwind dummy_frame_unwind =
-{
+const struct frame_unwind_legacy dummy_frame_unwind (
   "dummy",
   DUMMY_FRAME,
+  FRAME_UNWIND_GDB,
   default_frame_unwind_stop_reason,
   dummy_frame_this_id,
   dummy_frame_prev_register,
   NULL,
-  dummy_frame_sniffer,
-};
+  dummy_frame_sniffer
+);
 
 /* See dummy-frame.h.  */
 
@@ -425,9 +423,7 @@ maintenance_print_dummy_frames (const char *args, int from_tty)
     }
 }
 
-void _initialize_dummy_frame ();
-void
-_initialize_dummy_frame ()
+INIT_GDB_FILE (dummy_frame)
 {
   add_cmd ("dummy-frames", class_maintenance, maintenance_print_dummy_frames,
 	   _("Print the contents of the internal dummy-frame stack."),

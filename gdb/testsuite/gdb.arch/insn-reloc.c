@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2015-2024 Free Software Foundation, Inc.
+   Copyright 2015-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -529,12 +529,12 @@ can_relocate_br (void)
   int ok = 0;
 
   asm goto ("  adr x0, %l0\n"
-            "set_point12:\n"
-            "  br x0\n"
-            :
-            :
-            : "x0"
-            : madejump);
+	    "set_point12:\n"
+	    "  br x0\n"
+	    :
+	    :
+	    : "x0"
+	    : madejump);
 
   fail ();
   return;

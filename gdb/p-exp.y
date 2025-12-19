@@ -1,5 +1,5 @@
 /* YACC parser for Pascal expressions, for GDB.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,7 +43,6 @@
    Probably also lots of other problems, less well defined PM.  */
 %{
 
-#include <ctype.h>
 #include "expression.h"
 #include "value.h"
 #include "parser-defs.h"
@@ -541,8 +540,8 @@ exp	:	DOLLAR_VARIABLE
 							intvar);
 			      current_type = val->type ();
 			    }
- 			}
- 	;
+			}
+	;
 
 exp	:	SIZEOF '(' type ')'	%prec UNARY
 			{
@@ -765,7 +764,7 @@ typebase  /* Implements (approximately): (type-qualifier)* type-specifier */
 			    = lookup_struct (copy_name ($2).c_str (),
 					     pstate->expression_context_block);
 			}
-	/* "const" and "volatile" are curently ignored.  A type qualifier
+	/* "const" and "volatile" are currently ignored.  A type qualifier
 	   after the type is handled in the ptype rule.  I think these could
 	   be too.  */
 	;
@@ -783,7 +782,7 @@ name_not_typename :	NAME
    the parser can't tell whether NAME_OR_INT is a name_not_typename (=variable,
    =exp) or just an exp.  If name_not_typename was ever used in an lvalue
    context where only a name could occur, this might be useful.
-  	|	NAME_OR_INT
+	|	NAME_OR_INT
  */
 	;
 
@@ -817,13 +816,13 @@ parse_number (struct parser_state *par_state,
     {
       /* Handle suffixes: 'f' for float, 'l' for long double.
 	 FIXME: This appears to be an extension -- do we want this?  */
-      if (len >= 1 && tolower (p[len - 1]) == 'f')
+      if (len >= 1 && c_tolower (p[len - 1]) == 'f')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_float;
 	  len--;
 	}
-      else if (len >= 1 && tolower (p[len - 1]) == 'l')
+      else if (len >= 1 && c_tolower (p[len - 1]) == 'l')
 	{
 	  putithere->typed_val_float.type
 	    = parse_type (par_state)->builtin_long_double;
@@ -1089,9 +1088,9 @@ yylex (void)
   if (explen > 2)
     for (const auto &token : tokentab3)
       if (strncasecmp (tokstart, token.oper, 3) == 0
-	  && (!isalpha (token.oper[0]) || explen == 3
-	      || (!isalpha (tokstart[3])
-		  && !isdigit (tokstart[3]) && tokstart[3] != '_')))
+	  && (!c_isalpha (token.oper[0]) || explen == 3
+	      || (!c_isalpha (tokstart[3])
+		  && !c_isdigit (tokstart[3]) && tokstart[3] != '_')))
 	{
 	  pstate->lexptr += 3;
 	  yylval.opcode = token.opcode;
@@ -1102,9 +1101,9 @@ yylex (void)
   if (explen > 1)
     for (const auto &token : tokentab2)
       if (strncasecmp (tokstart, token.oper, 2) == 0
-	  && (!isalpha (token.oper[0]) || explen == 2
-	      || (!isalpha (tokstart[2])
-		  && !isdigit (tokstart[2]) && tokstart[2] != '_')))
+	  && (!c_isalpha (token.oper[0]) || explen == 2
+	      || (!c_isalpha (tokstart[2])
+		  && !c_isdigit (tokstart[2]) && tokstart[2] != '_')))
 	{
 	  pstate->lexptr += 2;
 	  yylval.opcode = token.opcode;
@@ -1409,7 +1408,7 @@ yylex (void)
 	{
 	  yylval.lval = 1;
 	  free (uptokstart);
-  	  return TRUEKEYWORD;
+	  return TRUEKEYWORD;
 	}
       if (strcmp (uptokstart, "SELF") == 0)
 	{
@@ -1519,7 +1518,7 @@ yylex (void)
     /* Call lookup_symtab, not lookup_partial_symtab, in case there are
        no psymtabs (coff, xcoff, or some future change to blow away the
        psymtabs once once symbols are read).  */
-    if ((sym && sym->aclass () == LOC_BLOCK)
+    if ((sym && sym->loc_class () == LOC_BLOCK)
 	|| lookup_symtab (current_program_space, tmp.c_str ()))
       {
 	yylval.ssym.sym.symbol = sym;
@@ -1528,7 +1527,7 @@ yylex (void)
 	free (uptokstart);
 	return BLOCKNAME;
       }
-    if (sym && sym->aclass () == LOC_TYPEDEF)
+    if (sym && sym->loc_class () == LOC_TYPEDEF)
 	{
 #if 1
 	  /* Despite the following flaw, we need to keep this code enabled.
@@ -1560,15 +1559,13 @@ yylex (void)
 	  while (1)
 	    {
 	      /* Skip whitespace.  */
-	      while (*p == ' ' || *p == '\t' || *p == '\n')
-		++p;
+	      p = skip_spaces (p);
 	      if (*p == ':' && p[1] == ':')
 		{
 		  /* Skip the `::'.  */
 		  p += 2;
 		  /* Skip whitespace.  */
-		  while (*p == ' ' || *p == '\t' || *p == '\n')
-		    ++p;
+		  p = skip_spaces (p);
 		  namestart = p;
 		  while (*p == '_' || *p == '$' || (*p >= '0' && *p <= '9')
 			 || (*p >= 'a' && *p <= 'z')
@@ -1597,7 +1594,7 @@ yylex (void)
 					 SEARCH_VFT, NULL).symbol;
 		      if (cur_sym)
 			{
-			  if (cur_sym->aclass () == LOC_TYPEDEF)
+			  if (cur_sym->loc_class () == LOC_TYPEDEF)
 			    {
 			      best_sym = cur_sym;
 			      pstate->lexptr = p;
@@ -1638,7 +1635,7 @@ yylex (void)
 	&& ((tokstart[0] >= 'a' && tokstart[0] < 'a' + input_radix - 10)
 	    || (tokstart[0] >= 'A' && tokstart[0] < 'A' + input_radix - 10)))
       {
- 	YYSTYPE newlval;	/* Its value is ignored.  */
+	YYSTYPE newlval;	/* Its value is ignored.  */
 	hextype = parse_number (pstate, tokstart, namelen, 0, &newlval);
 	if (hextype == INT)
 	  {

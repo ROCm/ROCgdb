@@ -1,7 +1,7 @@
 /* GNU/Linux/AArch64 specific low level interface, for the remote server for
    GDB.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -39,6 +39,7 @@
 
 #include "gdb_proc_service.h"
 #include "arch/aarch64.h"
+#include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte-linux.h"
 #include "arch/aarch64-scalable-linux.h"
 #include "linux-aarch32-tdesc.h"
@@ -119,7 +120,7 @@ protected:
 
   bool low_stopped_by_watchpoint () override;
 
-  CORE_ADDR low_stopped_data_address () override;
+  std::vector<CORE_ADDR> low_stopped_data_addresses () override;
 
   bool low_siginfo_fixup (siginfo_t *native, gdb_byte *inf,
 			  int direction) override;
@@ -247,6 +248,26 @@ aarch64_store_fpregset (struct regcache *regcache, const void *buf)
   supply_register (regcache, AARCH64_FPCR_REGNUM, &regset->fpcr);
 }
 
+/* Fill BUF with the FPMR register set from the regcache.  */
+
+static void
+aarch64_fill_fpmr_regset (struct regcache *regcache, void *buf)
+{
+  uint64_t *fpmr = (uint64_t *) buf;
+  int fpmr_regnum = find_regno (regcache->tdesc, "fpmr");
+  collect_register (regcache, fpmr_regnum, fpmr);
+}
+
+/* Store the FPMR register set to regcache.  */
+
+static void
+aarch64_store_fpmr_regset (struct regcache *regcache, const void *buf)
+{
+  uint64_t *fpmr = (uint64_t *) buf;
+  int fpmr_regnum = find_regno (regcache->tdesc, "fpmr");
+  supply_register (regcache, fpmr_regnum, fpmr);
+}
+
 /* Store the pauth registers to regcache.  */
 
 static void
@@ -319,6 +340,42 @@ aarch64_store_tlsregset (struct regcache *regcache, const void *buf)
 
   if (regnum.has_value ())
     supply_register (regcache, *regnum, tls_buf + sizeof (uint64_t));
+}
+
+/* Fill BUF with the GCS registers from REGCACHE.  */
+
+static void
+aarch64_fill_gcsregset (regcache *regcache, void *buf)
+{
+  user_gcs *regset = (user_gcs *) buf;
+  int gcspr_regnum  = find_regno (regcache->tdesc, "gcspr");
+  int features_enabled_regnum  = find_regno (regcache->tdesc,
+					     "gcs_features_enabled");
+  int features_locked_regnum  = find_regno (regcache->tdesc,
+					    "gcs_features_locked");
+
+  collect_register (regcache, gcspr_regnum, &regset->gcspr_el0);
+  collect_register (regcache, features_enabled_regnum,
+		    &regset->features_enabled);
+  collect_register (regcache, features_locked_regnum, &regset->features_locked);
+}
+
+/* Store the GCS registers in BUF to REGCACHE.  */
+
+static void
+aarch64_store_gcsregset (regcache *regcache, const void *buf)
+{
+  const user_gcs *regset = (const user_gcs *) buf;
+  int gcspr_regnum  = find_regno (regcache->tdesc, "gcspr");
+  int features_enabled_regnum  = find_regno (regcache->tdesc,
+					     "gcs_features_enabled");
+  int features_locked_regnum  = find_regno (regcache->tdesc,
+					    "gcs_features_locked");
+
+  supply_register (regcache, gcspr_regnum, &regset->gcspr_el0);
+  supply_register (regcache, features_enabled_regnum,
+		   &regset->features_enabled);
+  supply_register (regcache, features_locked_regnum, &regset->features_locked);
 }
 
 bool
@@ -548,10 +605,10 @@ aarch64_remove_non_address_bits (CORE_ADDR pointer)
   return aarch64_remove_top_bits (pointer, mask);
 }
 
-/* Implementation of linux target ops method "low_stopped_data_address".  */
+/* Implementation of linux target ops method "low_stopped_data_addresses".  */
 
-CORE_ADDR
-aarch64_target::low_stopped_data_address ()
+std::vector<CORE_ADDR>
+aarch64_target::low_stopped_data_addresses ()
 {
   siginfo_t siginfo;
   struct aarch64_debug_reg_state *state;
@@ -559,12 +616,12 @@ aarch64_target::low_stopped_data_address ()
 
   /* Get the siginfo.  */
   if (ptrace (PTRACE_GETSIGINFO, pid, NULL, &siginfo) != 0)
-    return (CORE_ADDR) 0;
+    return {};
 
   /* Need to be a hardware breakpoint/watchpoint trap.  */
   if (siginfo.si_signo != SIGTRAP
       || (siginfo.si_code & 0xffff) != 0x0004 /* TRAP_HWBKPT */)
-    return (CORE_ADDR) 0;
+    return {};
 
   /* Make sure to ignore the top byte, otherwise we may not recognize a
      hardware watchpoint hit.  The stopped data addresses coming from the
@@ -574,11 +631,7 @@ aarch64_target::low_stopped_data_address ()
 
   /* Check if the address matches any watched address.  */
   state = aarch64_get_debug_reg_state (current_thread->id.pid ());
-  CORE_ADDR result;
-  if (aarch64_stopped_data_address (state, addr_trap, &result))
-    return result;
-
-  return (CORE_ADDR) 0;
+  return aarch64_stopped_data_addresses (state, addr_trap);
 }
 
 /* Implementation of linux target ops method "low_stopped_by_watchpoint".  */
@@ -586,7 +639,7 @@ aarch64_target::low_stopped_data_address ()
 bool
 aarch64_target::low_stopped_by_watchpoint ()
 {
-  return (low_stopped_data_address () != 0);
+  return !low_stopped_data_addresses ().empty ();
 }
 
 /* Fetch the thread-local storage pointer for libthread_db.  */
@@ -842,10 +895,18 @@ static struct regset_info aarch64_regsets[] =
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_TAGGED_ADDR_CTRL,
     0, OPTIONAL_REGS,
     aarch64_fill_mteregset, aarch64_store_mteregset },
+  /* Floating Point Mode Register (FPMR).  */
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_FPMR,
+    0, OPTIONAL_REGS,
+    aarch64_fill_fpmr_regset, aarch64_store_fpmr_regset },
   /* TLS register.  */
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_TLS,
     0, OPTIONAL_REGS,
     aarch64_fill_tlsregset, aarch64_store_tlsregset },
+  /* Guarded Control Stack registers.  */
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_ARM_GCS,
+    0, OPTIONAL_REGS,
+    aarch64_fill_gcsregset, aarch64_store_gcsregset },
   NULL_REGSET
 };
 
@@ -909,6 +970,14 @@ aarch64_adjust_register_sets (const struct aarch64_features &features)
 	  if (features.sme2)
 	    regset->size = AARCH64_SME2_ZT0_SIZE;
 	  break;
+	case NT_ARM_GCS:
+	  if (features.gcs_linux)
+	    regset->size = sizeof (user_gcs);
+	  break;
+	case NT_ARM_FPMR:
+	  if (features.fpmr)
+	    regset->size = sizeof (uint64_t);
+	  break;
 	default:
 	  gdb_assert_not_reached ("Unknown register set found.");
 	}
@@ -940,6 +1009,8 @@ aarch64_target::low_arch_setup ()
       /* A-profile MTE is 64-bit only.  */
       features.mte = linux_get_hwcap2 (pid, 8) & HWCAP2_MTE;
       features.tls = aarch64_tls_register_count (tid);
+      features.gcs = features.gcs_linux = linux_get_hwcap (pid, 8) & HWCAP_GCS;
+      features.fpmr = linux_get_hwcap2 (pid, 8) & HWCAP2_FPMR;
 
       /* Scalable Matrix Extension feature and size check.  */
       if (linux_get_hwcap2 (pid, 8) & HWCAP2_SME)

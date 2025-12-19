@@ -1,5 +1,5 @@
 /* Test program for non-stop debugging.
-   Copyright 1996-2024 Free Software Foundation, Inc.
+   Copyright 1996-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,7 +32,7 @@ worker (void *arg)
 {
   int id = *(int *)arg;
   int i = 0;
-  
+
   /* When gdb is running, it sets hidden breakpoints in the thread
      library.  The signals caused by these hidden breakpoints can
      cause system calls such as 'sleep' to return early.  Pay attention
@@ -77,4 +77,3 @@ main (int argc, char *argv[])
 
   return 0;
 }
-

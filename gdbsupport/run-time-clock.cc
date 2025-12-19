@@ -1,5 +1,5 @@
 /* User/system CPU time clocks that follow the std::chrono interface.
-   Copyright (C) 2016-2024 Free Software Foundation, Inc.
+   Copyright (C) 2016-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -37,15 +37,42 @@ timeval_to_microseconds (struct timeval *tv)
 }
 #endif
 
+/* See run-time-clock.h.  */
+
+bool
+get_run_time_thread_scope_available ()
+{
+#if defined HAVE_GETRUSAGE && defined RUSAGE_THREAD
+  return true;
+#else
+  return false;
+#endif
+}
+
 void
 get_run_time (user_cpu_time_clock::time_point &user,
 	      system_cpu_time_clock::time_point &system,
 	      run_time_scope scope) noexcept
 {
 #ifdef HAVE_GETRUSAGE
+<<<<<<< HEAD
   struct rusage rusage;
   int who;
 
+=======
+
+  /* If we can't provide thread scope run time usage, fallback to
+     process scope.  This will at least be right if GDB is built
+     without threading support in the first place (or is set to use
+     zero worker threads).  */
+# ifndef RUSAGE_THREAD
+#  define RUSAGE_THREAD RUSAGE_SELF
+# endif
+
+  struct rusage rusage;
+  int who;
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
   switch (scope)
     {
     case run_time_scope::thread:

@@ -1,4 +1,4 @@
-#as: -march=rv64i
+#as: -march=rv64i -defsym __64_bit__=1
 #name: Lx/Sx macro insns
 #objdump: -dwr
 

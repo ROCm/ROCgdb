@@ -1,4 +1,4 @@
-/* Copyright 1999-2024 Free Software Foundation, Inc.
+/* Copyright 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -65,16 +65,16 @@ typedef struct _struct_decl {
   struct {
     union {
       struct {
-        int d;
-        char e[10];
-        int *(*func) (void);
-        efoo foo;
+	int d;
+	char e[10];
+	int *(*func) (void);
+	efoo foo;
       } u1s1;
 
       long f;
       struct {
-        char array_ptr[2];
-        int (*func) (int, char *);
+	char array_ptr[2];
+	int (*func) (int, char *);
       } u1s2;
     } u2;
 
@@ -217,8 +217,8 @@ do_block_tests ()
       int foo2;
       foo2 = 123;
       {
-        int foo;
-        foo = 321;
+	int foo;
+	foo = 321;
       }
       foo2 = 0;
     }
@@ -344,7 +344,7 @@ do_special_tests (void)
   int array[21];
   int a;
 
-  a = 1;   
+  a = 1;
   u.integer = a;
   anonu.a = a;
   s.integer = a;
@@ -366,7 +366,7 @@ void do_frozen_tests ()
   } v1 = {1, {2, 3}};
 
   int v2 = 4;
-  /*: 
+  /*:
     with_test_prefix "create varobj V1 and V2" {
 	mi_create_varobj V1 v1 "create varobj for v1"
 	mi_create_varobj V2 v2 "create varobj for v2"
@@ -388,12 +388,12 @@ void do_frozen_tests ()
     }
   :*/
   v2 = 5;
-  /*: 
+  /*:
     mi_varobj_update * {V2} "update varobjs: V2 changed"
     set_frozen V2 1
   :*/
   v2 = 6;
-  /*: 
+  /*:
     mi_varobj_update * {} "update varobjs: nothing changed"
     mi_check_varobj_value V2 5 "check V2: 5"
     mi_varobj_update V2 {V2} "update V2 explicitly"
@@ -447,8 +447,8 @@ void do_frozen_tests ()
 	mi_check_varobj_value V1.nested.j 11 "check V1.nested.j: 11"
 	mi_check_varobj_value V1.nested.k 12 "check V1.nested.k: 12"
     }
-  :*/    
-  
+  :*/
+
   /*: END: frozen :*/
 }
 
@@ -460,7 +460,7 @@ void do_at_tests_callee ()
      and then try to reevaluate it in other frame without reparsing
      the expression, we will access local variables using DWARF
      location expression from the original frame, and are likely
-     to grab wrong symbol.  To reliably reproduce this bug, we need 
+     to grab wrong symbol.  To reliably reproduce this bug, we need
      to wrap our variable with a bunch of buffers, so that those
      buffers are accessed instead of the real one.  */
   int buffer1 = 10;
@@ -529,7 +529,7 @@ struct Data {
 /* Accessing a value of a bitfield whose type is a typed used to
    result in division by zero.  See:
 
-         http://sourceware.org/bugzilla/show_bug.cgi?id=10884
+	 http://sourceware.org/bugzilla/show_bug.cgi?id=10884
 
    This tests for this bug.  */
 
@@ -540,13 +540,13 @@ void do_bitfield_tests ()
   /*:
     mi_create_varobj V d "create varobj for Data"
     mi_list_varobj_children "V" {
-        {"V.alloc" "alloc" "0" "int"}
-        {"V.sharable" "sharable" "0" "uint_for_mi_testing"}
+	{"V.alloc" "alloc" "0" "int"}
+	{"V.sharable" "sharable" "0" "uint_for_mi_testing"}
     } "list children of Data"
     mi_check_varobj_value V.sharable 3 "access bitfield"
     :*/
   return;
-  /*: END: bitfield :*/  
+  /*: END: bitfield :*/
 }
 
 void
@@ -662,5 +662,3 @@ main (int argc, char *argv [])
   do_nested_struct_union_tests ();
   exit (0);
 }
-
-  

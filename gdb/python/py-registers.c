@@ -1,6 +1,6 @@
 /* Python interface to register, and register group information.
 
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,7 +22,7 @@
 #include "reggroups.h"
 #include "python-internal.h"
 #include "user-regs.h"
-#include <unordered_map>
+#include "gdbsupport/unordered_map.h"
 
 /* Per-gdbarch data type.  */
 typedef std::vector<gdbpy_ref<>> gdbpy_register_type;
@@ -46,8 +46,7 @@ struct register_descriptor_iterator_object {
   struct gdbarch *gdbarch;
 };
 
-extern PyTypeObject register_descriptor_iterator_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("register_descriptor_iterator_object");
+extern PyTypeObject register_descriptor_iterator_object_type;
 
 /* A register descriptor.  */
 struct register_descriptor_object {
@@ -60,8 +59,7 @@ struct register_descriptor_object {
   struct gdbarch *gdbarch;
 };
 
-extern PyTypeObject register_descriptor_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("register_descriptor_object");
+extern PyTypeObject register_descriptor_object_type;
 
 /* Structure for iterator over register groups.  */
 struct reggroup_iterator_object {
@@ -74,8 +72,7 @@ struct reggroup_iterator_object {
   struct gdbarch *gdbarch;
 };
 
-extern PyTypeObject reggroup_iterator_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("reggroup_iterator_object");
+extern PyTypeObject reggroup_iterator_object_type;
 
 /* A register group object.  */
 struct reggroup_object {
@@ -85,8 +82,7 @@ struct reggroup_object {
   const struct reggroup *reggroup;
 };
 
-extern PyTypeObject reggroup_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("reggroup_object");
+extern PyTypeObject reggroup_object_type;
 
 /* Return a gdb.RegisterGroup object wrapping REGGROUP.  The register
    group objects are cached, and the same Python object will always be
@@ -98,7 +94,7 @@ gdbpy_get_reggroup (const reggroup *reggroup)
   /* Map from GDB's internal reggroup objects to the Python representation.
      GDB's reggroups are global, and are never deleted, so using a map like
      this is safe.  */
-  static std::unordered_map<const struct reggroup *,gdbpy_ref<>>
+  static gdb::unordered_map<const struct reggroup *,gdbpy_ref<>>
     gdbpy_reggroup_object_map;
 
   /* If there is not already a suitable Python object in the map then
@@ -403,8 +399,7 @@ gdbpy_parse_register_id (struct gdbarch *gdbarch, PyObject *pyo_reg_id,
 	PyErr_SetString (PyExc_ValueError, "Bad register");
     }
   /* The register could be a gdb.RegisterDescriptor object.  */
-  else if (PyObject_IsInstance (pyo_reg_id,
-			   (PyObject *) &register_descriptor_object_type))
+  else if (PyObject_TypeCheck (pyo_reg_id, &register_descriptor_object_type))
     {
       register_descriptor_object *reg
 	= (register_descriptor_object *) pyo_reg_id;
@@ -426,7 +421,7 @@ gdbpy_parse_register_id (struct gdbarch *gdbarch, PyObject *pyo_reg_id,
 
 /* Initializes the new Python classes from this file in the gdb module.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
+static int
 gdbpy_initialize_registers ()
 {
   register_descriptor_object_type.tp_new = PyType_GenericNew;

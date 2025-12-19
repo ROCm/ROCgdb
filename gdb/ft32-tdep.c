@@ -1,6 +1,6 @@
 /* Target-dependent code for FT32.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -180,9 +180,9 @@ ft32_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
      is the address of __prolog_$rN.
      __prolog_$rN pushes registers from 13 through n inclusive.
      So for example CALL __prolog_$r15 is equivalent to:
-       PUSH $r13 
-       PUSH $r14 
-       PUSH $r15 
+       PUSH $r13
+       PUSH $r14
+       PUSH $r15
      Note that PROLOGS[0] through PROLOGS[12] are unused.  */
   CORE_ADDR prologs[32];
 
@@ -303,14 +303,14 @@ ft32_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	  /* Don't use line number debug info for assembly source files.  */
 	  if ((sym != NULL) && sym->language () != language_asm)
 	    {
-	      sal = find_pc_line (func_addr, 0);
+	      sal = find_sal_for_pc (func_addr, 0);
 	      if (sal.end && sal.end < func_end)
 		{
 		  /* Found a line number, use it as end of prologue.  */
 		  return sal.end;
 		}
 	    }
-	  /* No useable line symbol.  Use result of prologue parsing method.  */
+	  /* No usable line symbol.  Use result of prologue parsing method.  */
 	  return plg_end;
 	}
     }
@@ -437,10 +437,9 @@ ft32_return_value (struct gdbarch *gdbarch, struct value *function,
 static struct ft32_frame_cache *
 ft32_alloc_frame_cache (void)
 {
-  struct ft32_frame_cache *cache;
   int i;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct ft32_frame_cache);
+  auto *cache = frame_obstack_zalloc<ft32_frame_cache> ();
 
   for (i = 0; i < FT32_NUM_REGS; ++i)
     cache->saved_regs[i] = REG_UNAVAIL;
@@ -525,16 +524,16 @@ ft32_frame_prev_register (const frame_info_ptr &this_frame,
   return frame_unwind_got_register (this_frame, regnum, regnum);
 }
 
-static const struct frame_unwind ft32_frame_unwind =
-{
+static const struct frame_unwind_legacy ft32_frame_unwind (
   "ft32 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   ft32_frame_this_id,
   ft32_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Return the base address of this_frame.  */
 
@@ -621,9 +620,7 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 /* Register this machine's init routine.  */
 
-void _initialize_ft32_tdep ();
-void
-_initialize_ft32_tdep ()
+INIT_GDB_FILE (ft32_tdep)
 {
   gdbarch_register (bfd_arch_ft32, ft32_gdbarch_init);
 }

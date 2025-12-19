@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2024 Free Software Foundation, Inc.
+# Copyright (C) 2011-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ gdb_load ${binfile}
 # Verify gdb loaded the script.
 gdb_test "info auto-load guile-scripts" "Yes.*/${testfile}-gdb.scm.*"
 
-if ![gdb_guile_runto_main] {
+if {![gdb_guile_runto_main]} {
     return
 }
 

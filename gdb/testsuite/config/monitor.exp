@@ -1,5 +1,5 @@
 # Test Framework Driver for GDB driving a ROM monitor (via monitor.c).
-#   Copyright 1995-2024 Free Software Foundation, Inc.
+#   Copyright 1995-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ proc gdb_target_cmd { targetname serialport } {
 		verbose "Set target to $targetname"
 		return 0
 	    }
-	    -re "Connected to.*$gdb_prompt" { 
+	    -re "Connected to.*$gdb_prompt" {
 		verbose "Set target to $targetname"
 		return 0
 	    }
@@ -120,7 +120,7 @@ proc gdb_target_monitor { exec_file } {
 
 proc gdb_target_exec { } {
     gdb_test "target exec" "No executable file now." "" ".*Kill it.*y or n.*" "y"
-    
+
 }
 #
 # gdb_load -- load a file into the debugger.

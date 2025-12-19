@@ -1,7 +1,7 @@
 /* Print values for GNU debugger GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -44,7 +44,6 @@
 #include "disasm.h"
 #include "target-float.h"
 #include "observable.h"
-#include "solist.h"
 #include "parser-defs.h"
 #include "charset.h"
 #include "arch-utils.h"
@@ -56,8 +55,6 @@
 #include "source.h"
 #include "gdbsupport/byte-vector.h"
 #include <optional>
-#include "gdbsupport/gdb-safe-ctype.h"
-#include "gdbsupport/rsp-low.h"
 #include "inferior.h"
 
 /* Chain containing all defined memory-tag subcommands.  */
@@ -628,7 +625,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   CORE_ADDR name_location = 0;
   struct obj_section *section = NULL;
   const char *name_temp = "";
-  
+
   /* Let's say it is mapped (not unmapped).  */
   *unmapped = 0;
 
@@ -644,7 +641,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
 	}
     }
 
-  /* Try to find the address in both the symbol table and the minsyms. 
+  /* Try to find the address in both the symbol table and the minsyms.
      In most cases, we'll prefer to use the symbol instead of the
      minsym.  However, there are cases (see below) where we'll choose
      to use the minsym instead.  */
@@ -657,7 +654,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
      symbols anyway).  */
   bound_minimal_symbol msymbol
     = lookup_minimal_symbol_by_pc_section (addr, section);
-  symbol = find_pc_sect_function (addr, section);
+  symbol = find_symbol_for_pc_sect (addr, section);
 
   if (symbol)
     {
@@ -686,7 +683,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
   if (msymbol.minsym != NULL)
     {
       /* Use the minsym if no symbol is found.
-      
+
 	 Additionally, use the minsym instead of a (found) symbol if
 	 the following conditions all hold:
 	   1) The prefer_sym_over_minsym flag is false.
@@ -740,7 +737,7 @@ build_address_symbolic (struct gdbarch *gdbarch,
     {
       struct symtab_and_line sal;
 
-      sal = find_pc_sect_line (addr, section, 0);
+      sal = find_sal_for_pc_sect (addr, section, 0);
 
       if (sal.symtab)
 	{
@@ -774,10 +771,10 @@ pc_prefix (CORE_ADDR addr)
   if (has_stack_frames ())
     {
       frame_info_ptr frame;
-      CORE_ADDR pc;
+      std::optional<CORE_ADDR> pc;
 
       frame = get_selected_frame (NULL);
-      if (get_frame_pc_if_available (frame, &pc) && pc == addr)
+      if ((pc = get_frame_pc_if_available (frame)) && *pc == addr)
 	return "=> ";
     }
   return "   ";
@@ -838,7 +835,7 @@ find_instruction_backward (struct gdbarch *gdbarch, CORE_ADDR addr,
   do
     {
       pcs.clear ();
-      sal = find_pc_sect_line (loop_start, NULL, 1);
+      sal = find_sal_for_pc_sect (loop_start, NULL, 1);
       if (sal.line <= 0)
 	{
 	  /* We reach here when line info is not available.  In this case,
@@ -1312,7 +1309,9 @@ should_validate_memtags (gdbarch *gdbarch, struct value *value)
     return false;
 
   /* We do.  Check whether it includes any tags.  */
-  return target_is_address_tagged (gdbarch, value_as_address (value));
+  struct type *val_type = value->type ();
+  const gdb_byte *data = value->contents ().data ();
+  return target_is_address_tagged (gdbarch, unpack_pointer (val_type, data));
 }
 
 /* Helper for parsing arguments for print_command_1.  */
@@ -1342,7 +1341,9 @@ process_print_command_args (const char *args, value_print_options *print_opts,
 	 value, so invert it for parse_expression.  */
       parser_flags flags = 0;
       if (!voidprint)
-	flags = PARSER_VOID_CONTEXT;
+	flags |= PARSER_VOID_CONTEXT;
+      if (parser_debug)
+	flags |= PARSER_DEBUG;
       expression_up expr = parse_expression (exp, nullptr, flags);
       return expr->evaluate ();
     }
@@ -1511,28 +1512,28 @@ info_symbol_command (const char *arg, int from_tty)
     error_no_arg (_("address"));
 
   addr = parse_and_eval_address (arg);
-  for (objfile *objfile : current_program_space->objfiles ())
-    for (obj_section *osect : objfile->sections ())
+  for (objfile &objfile : current_program_space->objfiles ())
+    for (obj_section &osect : objfile.sections ())
       {
 	/* Only process each object file once, even if there's a separate
 	   debug file.  */
-	if (objfile->separate_debug_objfile_backlink)
+	if (objfile.separate_debug_objfile_backlink)
 	  continue;
 
-	sect_addr = overlay_mapped_address (addr, osect);
+	sect_addr = overlay_mapped_address (addr, &osect);
 
-	if (osect->contains (sect_addr)
+	if (osect.contains (sect_addr)
 	    && (msymbol
 		= lookup_minimal_symbol_by_pc_section (sect_addr,
-						       osect).minsym))
+						       &osect).minsym))
 	  {
 	    const char *obj_name, *mapped, *sec_name, *msym_name;
 	    const char *loc_string;
 
 	    matches = 1;
-	    offset = sect_addr - msymbol->value_address (objfile);
-	    mapped = section_is_mapped (osect) ? _("mapped") : _("unmapped");
-	    sec_name = osect->the_bfd_section->name;
+	    offset = sect_addr - msymbol->value_address (&objfile);
+	    mapped = section_is_mapped (&osect) ? _("mapped") : _("unmapped");
+	    sec_name = osect.the_bfd_section->name;
 	    msym_name = msymbol->print_name ();
 
 	    /* Don't print the offset if it is zero.
@@ -1546,12 +1547,12 @@ info_symbol_command (const char *arg, int from_tty)
 	    else
 	      loc_string = msym_name;
 
-	    gdb_assert (osect->objfile && objfile_name (osect->objfile));
-	    obj_name = objfile_name (osect->objfile);
+	    gdb_assert (osect.objfile && objfile_name (osect.objfile));
+	    obj_name = objfile_name (osect.objfile);
 
 	    if (current_program_space->multi_objfile_p ())
-	      if (pc_in_unmapped_range (addr, osect))
-		if (section_is_overlay (osect))
+	      if (pc_in_unmapped_range (addr, &osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in load address range of "
 				"%s overlay section %s of %s\n"),
 			      loc_string, mapped, sec_name, obj_name);
@@ -1560,15 +1561,15 @@ info_symbol_command (const char *arg, int from_tty)
 				"section %s of %s\n"),
 			      loc_string, sec_name, obj_name);
 	      else
-		if (section_is_overlay (osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in %s overlay section %s of %s\n"),
 			      loc_string, mapped, sec_name, obj_name);
 		else
 		  gdb_printf (_("%s in section %s of %s\n"),
 			      loc_string, sec_name, obj_name);
 	    else
-	      if (pc_in_unmapped_range (addr, osect))
-		if (section_is_overlay (osect))
+	      if (pc_in_unmapped_range (addr, &osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in load address range of %s overlay "
 				"section %s\n"),
 			      loc_string, mapped, sec_name);
@@ -1577,7 +1578,7 @@ info_symbol_command (const char *arg, int from_tty)
 		    (_("%s in load address range of section %s\n"),
 		     loc_string, sec_name);
 	      else
-		if (section_is_overlay (osect))
+		if (section_is_overlay (&osect))
 		  gdb_printf (_("%s in %s overlay section %s\n"),
 			      loc_string, mapped, sec_name);
 		else
@@ -1673,7 +1674,7 @@ info_address_command (const char *exp, int from_tty)
       return;
     }
 
-  switch (sym->aclass ())
+  switch (sym->loc_class ())
     {
     case LOC_CONST:
     case LOC_CONST_BYTES:
@@ -2059,7 +2060,7 @@ undisplay_command (const char *args, int from_tty)
   dont_repeat ();
 }
 
-/* Display a single auto-display.  
+/* Display a single auto-display.
    Do nothing if the display cannot be printed in the current context,
    or if the display is disabled.  */
 
@@ -2352,24 +2353,13 @@ clear_dangling_display_expressions (struct objfile *objfile)
 }
 
 
-/* Print the value in stack frame FRAME of a variable specified by a
-   struct symbol.  NAME is the name to print; if NULL then VAR's print
-   name will be used.  STREAM is the ui_file on which to print the
-   value.  INDENT specifies the number of indent levels to print
-   before printing the variable name.  */
+/* See value.h.  */
 
 void
-print_variable_and_value (const char *name, struct symbol *var,
-			  const frame_info_ptr &frame,
-			  struct ui_file *stream, int indent)
+print_variable_value (symbol *var, const frame_info_ptr &frame,
+		      ui_file *stream, int indent,
+		      const language_defn *language)
 {
-
-  if (!name)
-    name = var->print_name ();
-
-  gdb_printf (stream, "%*s%ps = ", 2 * indent, "",
-	      styled_string (variable_name_style.style (), name));
-
   try
     {
       struct value *val;
@@ -2382,14 +2372,30 @@ print_variable_and_value (const char *name, struct symbol *var,
       val = read_var_value (var, NULL, frame);
       get_user_print_options (&opts);
       opts.deref_ref = true;
-      common_val_print_checked (val, stream, indent, &opts, current_language);
+      common_val_print_checked (val, stream, indent, &opts, language);
     }
   catch (const gdb_exception_error &except)
     {
       fprintf_styled (stream, metadata_style.style (),
-		      "<error reading variable %s (%s)>", name,
+		      "<error reading variable: %s>",
 		      except.what ());
     }
+}
+
+/* See value.h.  */
+
+void
+print_variable_and_value (const char *name, symbol *var,
+			  const frame_info_ptr &frame,
+			  ui_file *stream, int indent)
+{
+  if (name == nullptr)
+    name = var->print_name ();
+
+  gdb_printf (stream, "%*s%ps = ", 2 * indent, "",
+	      styled_string (variable_name_style.style (), name));
+
+  print_variable_value (var, frame, stream, indent, current_language);
 
   gdb_printf (stream, "\n");
 }
@@ -2422,7 +2428,7 @@ printf_c_string (struct ui_file *stream, const char *format,
     }
   else
     {
-      CORE_ADDR tem = value_as_address (value);;
+      CORE_ADDR tem = value_as_address (value);
 
       if (tem == 0)
 	{
@@ -2717,7 +2723,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 
   if (*s++ != '"')
     error (_("Bad format string, non-terminated '\"'."));
-  
+
   s = skip_spaces (s);
 
   if (*s != ',' && *s != 0)
@@ -2730,7 +2736,6 @@ ui_printf (const char *arg, struct ui_file *stream)
   {
     int nargs_wanted;
     int i;
-    const char *current_substring;
 
     nargs_wanted = 0;
     for (auto &&piece : fpieces)
@@ -2759,7 +2764,8 @@ ui_printf (const char *arg, struct ui_file *stream)
     i = 0;
     for (auto &&piece : fpieces)
       {
-	current_substring = piece.string;
+	const char *current_substring = fpieces.piece_str (piece);
+
 	switch (piece.argclass)
 	  {
 	  case string_arg:
@@ -2913,7 +2919,7 @@ static void
 printf_command (const char *arg, int from_tty)
 {
   ui_printf (arg, gdb_stdout);
-  gdb_stdout->reset_style ();
+  gdb_stdout->emit_style_escape (ui_file_style ());
   gdb_stdout->wrap_here (0);
   gdb_stdout->flush ();
 }
@@ -2948,14 +2954,6 @@ show_memory_tagging_unsupported (void)
 {
   error (_("Memory tagging not supported or disabled by the current"
 	   " architecture."));
-}
-
-/* Implement the "memory-tag" prefix command.  */
-
-static void
-memory_tag_command (const char *arg, int from_tty)
-{
-  help_list (memory_tag_list, "memory-tag ", all_commands, gdb_stdout);
 }
 
 /* Helper for print-logical-tag and print-allocation-tag.  */
@@ -3219,9 +3217,7 @@ memory_tag_check_command (const char *args, int from_tty)
     }
 }
 
-void _initialize_printcmd ();
-void
-_initialize_printcmd ()
+INIT_GDB_FILE (printcmd)
 {
   struct cmd_list_element *c;
 
@@ -3269,7 +3265,7 @@ Do \"info display\" to see current list of code numbers."),
 	   &cmdlist);
   add_info_alias ("disp", c, 1);
 
-  c = add_com ("display", class_vars, display_command, _("\
+  c = add_com ("display", class_vars | class_essential, display_command, _("\
 Print value of expression EXP each time the program stops.\n\
 Usage: display[/FMT] EXP\n\
 /FMT may be used before EXP as in the \"print\" command.\n\
@@ -3384,7 +3380,8 @@ but no count or size letter (see \"x\" command)."),
 					      print_opts);
 
   cmd_list_element *print_cmd
-    = add_com ("print", class_vars, print_command, print_help.c_str ());
+    = add_com ("print", class_vars | class_essential, print_command,
+	       print_help.c_str ());
   set_cmd_completer_handle_brkchars (print_cmd, print_command_completer);
   add_com_alias ("p", print_cmd, class_vars, 1);
   add_com_alias ("inspect", print_cmd, class_vars, 1);
@@ -3416,7 +3413,7 @@ Convert the arguments to a string as \"printf\" would, but then\n\
 treat this string as a command line, and evaluate it."));
 
   /* Memory tagging commands.  */
-  add_prefix_cmd ("memory-tag", class_vars, memory_tag_command, _("\
+  add_basic_prefix_cmd ("memory-tag", class_vars, _("\
 Generic command for printing and manipulating memory tag properties."),
 		  &memory_tag_list, 0, &cmdlist);
   add_cmd ("print-logical-tag", class_vars,

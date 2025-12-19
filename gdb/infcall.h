@@ -1,6 +1,6 @@
 /* Perform an inferior function call, for GDB, the GNU debugger.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,7 +32,7 @@ struct type;
    type, and *RETVAL_TYPE to the target function's return type.
    Calls error() if the function is not valid for calling.  */
 
-extern CORE_ADDR find_function_addr (struct value *function, 
+extern CORE_ADDR find_function_addr (struct value *function,
 				     struct type **retval_type,
 				     struct type **function_type = NULL);
 

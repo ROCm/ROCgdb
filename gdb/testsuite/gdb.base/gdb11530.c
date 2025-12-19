@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2010-2024 Free Software Foundation, Inc.
+   Copyright 2010-2025 Free Software Foundation, Inc.
 
    Contributed by Pierre Muller.
 
@@ -23,7 +23,7 @@ struct a
   {
     union
       {
-        int i;
+	int i;
       };
   } a;
 
@@ -32,4 +32,3 @@ main (void)
 {
   return sizeof (a.i);
 }
-

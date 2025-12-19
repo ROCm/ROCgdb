@@ -1,4 +1,4 @@
-# Copyright (C) 2004-2024 Free Software Foundation, Inc.
+# Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,26 +44,26 @@ proc get_dummy_frame_number { } {
     return ""
 }
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 if { ![runto_main] } {
     return 0
 }
 
 gdb_test "break all_threads_running" \
-         "Breakpoint 2 at .*: file .*${srcfile}, line .*" \
-         "breakpoint on all_threads_running"
+	 "Breakpoint 2 at .*: file .*${srcfile}, line .*" \
+	 "breakpoint on all_threads_running"
 
 gdb_test "break hand_call" \
-         "Breakpoint 3 at .*: file .*${srcfile}, line .*" \
-         "breakpoint on hand_call"
+	 "Breakpoint 3 at .*: file .*${srcfile}, line .*" \
+	 "breakpoint on hand_call"
 
 # Run the program and make sure GDB reports that we stopped after
 # hitting breakpoint 2 in all_threads_running().
 
 gdb_test "continue" \
-         ".*Breakpoint 2, all_threads_running ().*" \
-         "run to all_threads_running"
+	 ".*Breakpoint 2, all_threads_running ().*" \
+	 "run to all_threads_running"
 
 # Before we start making hand function calls, turn on scheduler locking.
 
@@ -74,7 +74,7 @@ gdb_test "show scheduler-locking" ".* locking scheduler .* is \"on\"." "show sch
 # stop without returning.
 
 # Add one for the main thread.
-set total_nr_threads [expr $NR_THREADS + 1]
+set total_nr_threads [expr {$NR_THREADS + 1}]
 
 # Thread numbering in gdb is origin-1, so begin numbering at 1.
 for { set i 1 } { $i <= $total_nr_threads } { incr i } {

@@ -1,4 +1,4 @@
-# Copyright 2007-2024 Free Software Foundation, Inc.
+# Copyright 2007-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,15 +38,15 @@ if { [gdb_breakpoint ${srcfile}:${bp_location2}] } {
 }
 
 gdb_test "cont" \
-         "Breakpoint .*:${bp_location1}.*" \
-         "Going to first breakpoint"
+	 "Breakpoint .*:${bp_location1}.*" \
+	 "Going to first breakpoint"
 gdb_test "print st" \
 	 ".* = ''.*" \
 	 "empty string check"
 
 # This test also fails for gpc because the program
 # stops after the string has been written
-# while it should stop before writing it 
+# while it should stop before writing it
 if { $pascal_compiler_is_gpc } {
     setup_xfail *-*-*
 }

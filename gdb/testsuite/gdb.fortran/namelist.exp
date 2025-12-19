@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,16 +38,16 @@ gdb_continue_to_breakpoint "Display namelist"
 
 # DW_TAG_namelist is supported starting gcc 4.9.
 set supported [expr \
-		   [test_compiler_info {gfortran-*} f90] \
-		   && [gcc_major_version {gfortran-*} f90] >= 4.9]
+		   {[test_compiler_info {gfortran-*} f90]
+		       && [gcc_major_version {gfortran-*} f90] >= 4.9}]
 if { $supported } {
     gdb_test "ptype nml" \
-        "type = Type nml\r\n *$int :: a\r\n *$int :: b\r\n *End Type nml"
+	"type = Type nml\r\n *$int :: a\r\n *$int :: b\r\n *End Type nml"
     gdb_test "print nml" \
-        "\\$\[0-9\]+ = \\( a = 10, b = 20 \\)"
+	"\\$\[0-9\]+ = \\( a = 10, b = 20 \\)"
 } else {
     gdb_test "ptype nml" \
-        "No symbol \"nml\" in current context\\."
+	"No symbol \"nml\" in current context\\."
     gdb_test "print nml" \
-        "No symbol \"nml\" in current context\\."
+	"No symbol \"nml\" in current context\\."
 }

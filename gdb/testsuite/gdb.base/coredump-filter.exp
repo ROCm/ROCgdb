@@ -1,4 +1,4 @@
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ proc do_save_core { filter_flag core dump_excluded } {
 
     # Enable dumping of excluded mappings (i.e. VM_DONTDUMP).
     if { $dump_excluded == 1 } {
-        gdb_test_no_output "set dump-excluded-mappings on"
+	gdb_test_no_output "set dump-excluded-mappings on"
     }
 
     # Generate a corefile.
@@ -47,7 +47,7 @@ proc do_save_core { filter_flag core dump_excluded } {
 
     # Restore original status.
     if { $dump_excluded == 1 } {
-        gdb_test_no_output "set dump-excluded-mappings off"
+	gdb_test_no_output "set dump-excluded-mappings off"
     }
 }
 
@@ -62,13 +62,13 @@ proc do_load_and_test_core { core var working_var working_value dump_excluded } 
 
     # Access the memory the addresses point to.
     if { $dump_excluded == 0 } {
-        gdb_test "print/x *(char *) $coredump_var_addr($var)" "\(\\\$$decimal = <error: \)?Cannot access memory at address $hex\(>\)?" \
+	gdb_test "print/x *(char *) $coredump_var_addr($var)" "\(\\\$$decimal = <error: \)?Cannot access memory at address $hex\(>\)?" \
 	    "printing $var when core is loaded (should not work)"
-        gdb_test "print/x *(char *) $coredump_var_addr($working_var)" " = $working_value.*" \
+	gdb_test "print/x *(char *) $coredump_var_addr($working_var)" " = $working_value.*" \
 	    "print/x *$working_var ( = $working_value)"
     } else {
-        # Check if VM_DONTDUMP mappings are present in the core file.
-        gdb_test "print/x *(char *) $coredump_var_addr($var)" " = $working_value.*" \
+	# Check if VM_DONTDUMP mappings are present in the core file.
+	gdb_test "print/x *(char *) $coredump_var_addr($var)" " = $working_value.*" \
 	    "print/x *$var ( = $working_value)"
     }
 }
@@ -223,7 +223,7 @@ foreach item $all_anon_corefiles {
 # Generate corefiles for the "anon" case.
 foreach item $all_anon_corefiles {
     with_test_prefix "saving corefile for [lindex $item 0]" {
-	do_save_core [lindex $item 1] [subst [lindex $item 2]] [lindex $item 6]
+	do_save_core [lindex $item 1] [subst_vars [lindex $item 2]] [lindex $item 6]
     }
 }
 
@@ -235,12 +235,12 @@ clean_restart $testfile
 
 foreach item $all_anon_corefiles {
     with_test_prefix "loading and testing corefile for [lindex $item 0]" {
-	do_load_and_test_core [subst [lindex $item 2]] [lindex $item 3] \
+	do_load_and_test_core [subst_vars [lindex $item 2]] [lindex $item 3] \
 	    [lindex $item 4] [lindex $item 5] [lindex $item 6]
     }
 
     with_test_prefix "disassembling function main for [lindex $item 0]" {
-	test_disasm [subst [lindex $item 2]] $main_addr 0
+	test_disasm [subst_vars [lindex $item 2]] $main_addr 0
     }
 }
 

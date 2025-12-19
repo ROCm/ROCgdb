@@ -1,5 +1,5 @@
 /* BFD back-end for s-record objects.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Written by Steve Chamberlain of Cygnus Support <sac@cygnus.com>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1082,7 +1082,7 @@ srec_write_symbols (bfd *abfd)
       if (bfd_write ("$$ ", 3, abfd) != 3
 	  || bfd_write (bfd_get_filename (abfd), len, abfd) != len
 	  || bfd_write ("\r\n", 2, abfd) != 2)
-	return false;
+	goto fail;
 
       for (i = 0; i < count; i++)
 	{
@@ -1099,7 +1099,7 @@ srec_write_symbols (bfd *abfd)
 	      len = strlen (s->name);
 	      if (bfd_write ("  ", 2, abfd) != 2
 		  || bfd_write (s->name, len, abfd) != len)
-		return false;
+		goto fail;
 
 	      sprintf (buf, " $%" PRIx64 "\r\n",
 		       (uint64_t) (s->value
@@ -1107,14 +1107,17 @@ srec_write_symbols (bfd *abfd)
 				   + s->section->output_offset));
 	      len = strlen (buf);
 	      if (bfd_write (buf, len, abfd) != len)
-		return false;
+		goto fail;
 	    }
 	}
       if (bfd_write ("$$ \r\n", 5, abfd) != 5)
-	return false;
+	goto fail;
     }
 
   return true;
+
+ fail:
+  return false;
 }
 
 static bool
@@ -1259,7 +1262,6 @@ srec_print_symbol (bfd *abfd,
 #define srec_bfd_relax_section			  bfd_generic_relax_section
 #define srec_bfd_gc_sections			  bfd_generic_gc_sections
 #define srec_bfd_lookup_section_flags		  bfd_generic_lookup_section_flags
-#define srec_bfd_merge_sections			  bfd_generic_merge_sections
 #define srec_bfd_is_group_section		  bfd_generic_is_group_section
 #define srec_bfd_group_name			  bfd_generic_group_name
 #define srec_bfd_discard_group			  bfd_generic_discard_group
@@ -1281,16 +1283,15 @@ const bfd_target srec_vec =
   bfd_target_srec_flavour,
   BFD_ENDIAN_UNKNOWN,		/* Target byte order.  */
   BFD_ENDIAN_UNKNOWN,		/* Target headers byte order.  */
-  (HAS_RELOC | EXEC_P |		/* Object flags.  */
-   HAS_LINENO | HAS_DEBUG |
-   HAS_SYMS | HAS_LOCALS | WP_TEXT | D_PAGED),
+  EXEC_P,			/* Object flags.  */
   (SEC_CODE | SEC_DATA | SEC_ROM | SEC_HAS_CONTENTS
-   | SEC_ALLOC | SEC_LOAD | SEC_RELOC),	/* Section flags.  */
+   | SEC_ALLOC | SEC_LOAD),	/* Section flags.  */
   0,				/* Leading underscore.  */
   ' ',				/* AR_pad_char.  */
   16,				/* AR_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,
   bfd_getb32, bfd_getb_signed_32, bfd_putb32,
   bfd_getb16, bfd_getb_signed_16, bfd_putb16,	/* Data.  */
@@ -1307,13 +1308,13 @@ const bfd_target srec_vec =
   {
     _bfd_bool_bfd_false_error,
     srec_mkobject,
-    _bfd_generic_mkarchive,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
   {				/* bfd_write_contents.  */
     _bfd_bool_bfd_false_error,
     srec_write_object_contents,
-    _bfd_write_archive_contents,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
 
@@ -1338,16 +1339,15 @@ const bfd_target symbolsrec_vec =
   bfd_target_srec_flavour,
   BFD_ENDIAN_UNKNOWN,		/* Target byte order.  */
   BFD_ENDIAN_UNKNOWN,		/* Target headers byte order.  */
-  (HAS_RELOC | EXEC_P |		/* Object flags.  */
-   HAS_LINENO | HAS_DEBUG |
-   HAS_SYMS | HAS_LOCALS | WP_TEXT | D_PAGED),
+  EXEC_P | HAS_SYMS,		/* Object flags.  */
   (SEC_CODE | SEC_DATA | SEC_ROM | SEC_HAS_CONTENTS
-   | SEC_ALLOC | SEC_LOAD | SEC_RELOC),	/* Section flags.  */
+   | SEC_ALLOC | SEC_LOAD),	/* Section flags.  */
   0,				/* Leading underscore.  */
   ' ',				/* AR_pad_char.  */
   16,				/* AR_max_namelen.  */
   0,				/* match priority.  */
   TARGET_KEEP_UNUSED_SECTION_SYMBOLS, /* keep unused section symbols.  */
+  TARGET_MERGE_SECTIONS,
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,
   bfd_getb32, bfd_getb_signed_32, bfd_putb32,
   bfd_getb16, bfd_getb_signed_16, bfd_putb16,	/* Data.  */
@@ -1364,13 +1364,13 @@ const bfd_target symbolsrec_vec =
   {
     _bfd_bool_bfd_false_error,
     srec_mkobject,
-    _bfd_generic_mkarchive,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
   {				/* bfd_write_contents.  */
     _bfd_bool_bfd_false_error,
     symbolsrec_write_object_contents,
-    _bfd_write_archive_contents,
+    _bfd_bool_bfd_false_error,
     _bfd_bool_bfd_false_error,
   },
 

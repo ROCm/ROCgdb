@@ -42,11 +42,16 @@ proc target_has_xfail {} {
     # gfx number.
     set target_family [string range $target 0 end-2]
     verbose -log "Target family: $target_family"
+<<<<<<< HEAD
     return [expr [lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1]
+=======
+    return [expr {[lsearch -exact {gfx10 gfx11 gfx12} $target_family] != -1}]
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 }
 
 proc do_test {precise_memory has_xfail} {
-    clean_restart $::binfile
+    clean_restart
+    gdb_load $::binfile
 
     with_rocm_gpu_lock {
 	if {![runto [gdb_get_line_number "Break here."] allow-pending]} {
@@ -81,7 +86,12 @@ set has_xfail [target_has_xfail]
 
 # First check if we support precise-memory.
 set supports_precise_memory 0
+<<<<<<< HEAD
 clean_restart $::binfile
+=======
+clean_restart
+gdb_load $::binfile
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 with_rocm_gpu_lock {
     if {![runto_main]} {
 	return

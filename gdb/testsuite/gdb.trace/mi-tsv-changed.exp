@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ proc test_create_delete_modify_tsv { } {
 	global srcdir subdir
 	global mi_gdb_prompt
 
-	if [mi_gdb_start] {
+	if {[mi_gdb_start]} {
 	    return
 	}
 	mi_gdb_load ${binfile}
@@ -67,17 +67,17 @@ proc test_create_delete_modify_tsv { } {
 	# Test target supports tracepoints or not.
 	clean_restart $testfile
 
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return -1
 	}
 
-	if ![gdb_target_supports_trace] {
+	if {![gdb_target_supports_trace]} {
 	    unsupported "current target does not support trace"
 	    return -1
 	}
 	gdb_exit
 
-	if {[mi_clean_restart $binfile]} {
+	if {[mi_clean_restart $::testfile]} {
 	    return
 	}
 
@@ -145,7 +145,7 @@ proc test_upload_tsv { } {
 	    return 0
 	}
 
-	clean_restart $testfile
+	clean_restart $::testfile
 	if {![runto_main]} {
 	    return 0
 	}
@@ -175,8 +175,7 @@ proc test_upload_tsv { } {
 	    }
 	}
 
-	global binfile
-	if {[mi_clean_restart $binfile]} {
+	if {[mi_clean_restart $::testfile]} {
 	    return
 	}
 
@@ -202,12 +201,12 @@ proc test_upload_tsv { } {
 	    }
 	}
 
-	if $tsv1_created {
+	if {$tsv1_created} {
 	    pass "tsv1 created"
 	} else {
 	    fail "tsv1 created"
 	}
-	if $tsv2_created {
+	if {$tsv2_created} {
 	    pass "tsv2 created"
 	} else {
 	    fail "tsv2 created"
@@ -223,11 +222,11 @@ proc test_upload_tsv { } {
 
 clean_restart $testfile
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
-if ![gdb_target_supports_trace] {
+if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
     return -1
 }

@@ -1,7 +1,7 @@
 /* Location scope support.
 
    Copyright (C) 2023-2024 Free Software Foundation, Inc.
-   Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef LOCATION_SCOPE_H
-#define LOCATION_SCOPE_H
+#ifndef GDB_LOCATION_SCOPE_H
+#define GDB_LOCATION_SCOPE_H
 
 /* The scope of a location.  */
 enum location_scopes : unsigned
@@ -48,5 +48,4 @@ static inline bool scope_matches (location_scope scope, location_scope which)
   return ((scope & which) == which);
 }
 
-#endif /* LOCATION_SCOPE_H */
-
+#endif /* GDB_LOCATION_SCOPE_H */

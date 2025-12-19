@@ -1,4 +1,4 @@
-#   Copyright 1988-2024 Free Software Foundation, Inc.
+#   Copyright 1988-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,12 +21,9 @@
 
 standard_testfile .c
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
+    return
 }
-
-clean_restart ${binfile}
 
 #
 # set it up at a breakpoint so we can play with the variable values
@@ -44,11 +41,11 @@ proc test_expr { args } {
     if { [llength $args] % 2 } {
 	warning "an even # of arguments should be passed to test_expr"
     }
-    set last_ent [expr [llength $args] - 1]
+    set last_ent [expr {[llength $args] - 1}]
     set testname [lindex $args $last_ent]
     gdb_test [lindex $args 0] ".*" "$testname, setup"
-    for {set x 1} {$x < $last_ent} {set x [expr $x + 2]} {
-	gdb_test [lindex $args $x] [lindex $args [expr $x + 1]] "$testname, [lindex $args $x]"
+    for {set x 1} {$x < $last_ent} {set x [expr {$x + 2}]} {
+	gdb_test [lindex $args $x] [lindex $args [expr {$x + 1}]] "$testname, [lindex $args $x]"
     }
 }
 #
@@ -223,10 +220,10 @@ gdb_test_multiple "print sizeof (long long) > sizeof (long)" \
 	pass "sizeof (long long) > sizeof (long) (false)"
     }
 }
-if [expr ! $ok] { setup_xfail "*-*-*" }
+if {!$ok} { setup_xfail "*-*-*" }
 gdb_test "print (void*) ((long long) (unsigned long) -1 + 1)" \
 	"warning: value truncated.*" "truncate (void*) 0x00000000ffffffff + 1"
-if [expr ! $ok] { setup_xfail "*-*-*" }
+if {!$ok} { setup_xfail "*-*-*" }
 gdb_test "print (void*) (~((long long)(unsigned long) -1) - 1)" \
 	"warning: value truncated.*" "truncate (void*) 0xffffffff00000000 - 1"
 
@@ -284,3 +281,24 @@ gdb_test "print v_short + " \
 # Test for a syntax error in the middle of an expression.
 gdb_test "print v_short =}{= 3" \
     "A syntax error in expression, near `\\}\\{= 3'\\."
+
+set hs {[^\r\n]}
+set re_debug [string cat $hs* {[Ss]hift} $hs*]
+
+gdb_test_no_output "set debug parse 1"
+set saw_start 0
+set saw_val 0
+gdb_test_multiple "print 23" "print with debugging" -lbl {
+    -re "\r\n${re_debug}(?=\r\n)" {
+	set saw_start 1
+	exp_continue
+    }
+    -re "\r\n.$decimal = 23(?=\r\n)" {
+	set saw_val 1
+	exp_continue
+    }
+
+    -re -wrap "" {
+	gdb_assert {$saw_start && $saw_val} $gdb_test_name
+    }
+}

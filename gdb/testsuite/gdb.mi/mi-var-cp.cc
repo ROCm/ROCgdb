@@ -1,4 +1,4 @@
-/* Copyright 2006-2024 Free Software Foundation, Inc.
+/* Copyright 2006-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,25 +25,25 @@ void reference_update_tests ()
   x = 567;
   /*: mi_varobj_update RX {RX} "update RX, 2"
       mi_check_varobj_value RX 567 "check RX: expect 567"
-      :*/  
+      :*/
   x = 567;
   /*: mi_varobj_update RX {} "update RX, 3"
       mi_delete_varobj RX "delete RX"
     :*/
   /* Dummy assignment to keep 'x' in scope.  */
-  x = 444;    
+  x = 444;
 
   /*: END: reference_update :*/
 }
 
 struct S { int i; int j; };
 struct S2 : S {};
-        
+
 int base_in_reference_test (S2& s2)
 {
   /*: BEGIN: base_in_reference :*/
   int x = s2.i + s2.j;
-  /*: 
+  /*:
     mi_create_varobj "S2" "s2" "create varobj for s2"
     mi_list_varobj_children "S2" {
        {"S2.S" "S" "1" "S"}
@@ -59,12 +59,12 @@ int base_in_reference_test (S2& s2)
     mi_check_varobj_value "S2.S.public.i" "67" "check S2.S.public.i"
     mi_check_varobj_value "S2.S.public.j" "89" "check S2.S.public.j"
     mi_delete_varobj S2 "delete S2"
-    
+
   :*/
   /*: END: base_in_reference :*/
   return x;
 }
-        
+
 void base_in_reference_test_main ()
 {
   S2 s;
@@ -75,12 +75,12 @@ void base_in_reference_test_main ()
 
 int reference_to_pointer ()
 {
-  /*: BEGIN: reference_to_pointer :*/  
+  /*: BEGIN: reference_to_pointer :*/
   S s, *ptr_s, *& rptr_s = ptr_s;
   s.i = 67;
   s.j = 89;
   ptr_s = &s;
-  /*: 
+  /*:
     mi_create_varobj RPTR rptr_s "create varobj for rptr_s"
 
     mi_list_varobj_children RPTR {{RPTR.public public 2}}	\
@@ -146,7 +146,7 @@ int path_expression ()
   /*: mi_create_varobj IP ip "create varobj for ip"
       mi_list_varobj_children IP {{IP.\\*ip \\*ip 0 int}} "list children of IP"
       mi_gdb_test "-var-info-path-expression IP.*ip" \
-          "\\^done,path_expr=\"\\*\\(ip\\)\"" \
+	  "\\^done,path_expr=\"\\*\\(ip\\)\"" \
 	  "-var-info-path-expression IP.*ip"
     :*/
   Derived d;
@@ -157,26 +157,26 @@ int path_expression ()
        {DP.Base2 Base2 1 Base2}                         \
        {DP.public public 1}} "list children of DP"
       mi_gdb_test "-var-info-path-expression DP.Base1" \
-          "\\^done,path_expr=\"\\(\\*\\(class Base1\\*\\) dp\\)\"" \
-	  "-var-info-path-expression DP.Base1"       
+	  "\\^done,path_expr=\"\\(\\*\\(class Base1\\*\\) dp\\)\"" \
+	  "-var-info-path-expression DP.Base1"
       mi_list_varobj_children DP.public {               \
-        {DP.public.i i 0 int}                           \
+	{DP.public.i i 0 int}                           \
       } "list children of DP.public"
       mi_gdb_test "-var-info-path-expression DP.public.i" \
-          "\\^done,path_expr=\"\\(\\(dp\\)->i\\)\"" \
+	  "\\^done,path_expr=\"\\(\\(dp\\)->i\\)\"" \
 	  "-var-info-path-expression DP.public.i"
       mi_list_varobj_children DP.Base1 {                 \
-        {DP.Base1.public public 1}                             \
+	{DP.Base1.public public 1}                             \
       } "list children of DP.Base1"
       mi_list_varobj_children DP.Base1.public {               \
-        {DP.Base1.public.i i 0 int}                           \
+	{DP.Base1.public.i i 0 int}                           \
       } "list children of DP.Base1.public"
       mi_gdb_test "-var-info-path-expression DP.Base1.public.i" \
-          "\\^done,path_expr=\"\\(\\(\\(\\*\\(class Base1\\*\\) dp\\)\\).i\\)\"" \
+	  "\\^done,path_expr=\"\\(\\(\\(\\*\\(class Base1\\*\\) dp\\)\\).i\\)\"" \
 	  "-var-info-path-expression DP.Base1.public.i"
 
       mi_gdb_test "-var-info-path-expression DP.public" \
-          "\\^done,path_expr=\"\"" \
+	  "\\^done,path_expr=\"\"" \
 	  "-var-info-path-expression DP.public"
 
       mi_create_varobj D d "create varobj for d"
@@ -185,19 +185,19 @@ int path_expression ()
        {D.Base2 Base2 1 Base2}                         \
        {D.public public 1}} "list children of D"
       mi_gdb_test "-var-info-path-expression D.Base1" \
-          "\\^done,path_expr=\"\\(\\(class Base1\\) d\\)\"" \
+	  "\\^done,path_expr=\"\\(\\(class Base1\\) d\\)\"" \
 	  "-var-info-path-expression D.Base1"
   :*/
   int array[4] = {1,2,3};
   array[3] = 10;
   /*: mi_create_varobj A array "create varobj for array"
       mi_list_varobj_children A { \
-          {A.0 0 0 int}
-          {A.1 1 0 int}
-          {A.2 2 0 int}
-          {A.3 3 0 int}} "list children of A"
+	  {A.0 0 0 int}
+	  {A.1 1 0 int}
+	  {A.2 2 0 int}
+	  {A.3 3 0 int}} "list children of A"
       mi_gdb_test "-var-info-path-expression A.2" \
-          "\\^done,path_expr=\"\\(array\\)\\\[2\\\]\"" \
+	  "\\^done,path_expr=\"\\(array\\)\\\[2\\\]\"" \
 	  "-var-info-path-expression A.2"
     :*/
 
@@ -219,15 +219,15 @@ public:
     struct { /* index: 1 */
       int e;
       struct { /* index: 0 */
-        int f;
-        union { /* index: 0 */
-          int g;
-          char h;
-        };
+	int f;
+	union { /* index: 0 */
+	  int g;
+	  char h;
+	};
       };
       union { /* index: 0 */
-        int i;
-        char j;
+	int i;
+	char j;
       };
     };
   };

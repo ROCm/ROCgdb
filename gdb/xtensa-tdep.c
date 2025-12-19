@@ -1,6 +1,6 @@
 /* Target-dependent code for the Xtensa port of GDB, the GNU debugger.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -155,7 +155,7 @@ areg_number (struct gdbarch *gdbarch, int ar_regnum, unsigned int wb)
   return (areg > 15) ? -1 : areg;
 }
 
-/* Read Xtensa register directly from the hardware.  */ 
+/* Read Xtensa register directly from the hardware.  */
 static unsigned long
 xtensa_read_register (int regnum)
 {
@@ -166,7 +166,7 @@ xtensa_read_register (int regnum)
   return (unsigned long) value;
 }
 
-/* Write Xtensa register directly to the hardware.  */ 
+/* Write Xtensa register directly to the hardware.  */
 static void
 xtensa_write_register (int regnum, ULONGEST value)
 {
@@ -564,7 +564,7 @@ xtensa_pseudo_register_read (struct gdbarch *gdbarch,
 
   /* We have to find out how to deal with privileged registers.
      Let's treat them as pseudo-registers, but we cannot read/write them.  */
-     
+
   else if (tdep->call_abi == CallAbiCall0Only
 	   || regnum < tdep->a0_base)
     {
@@ -740,7 +740,7 @@ xtensa_add_reggroups (struct gdbarch *gdbarch)
     reggroup_add (gdbarch, xtensa_cp[i]);
 }
 
-static int 
+static int
 xtensa_coprocessor_register_group (const struct reggroup *group)
 {
   int i;
@@ -919,7 +919,7 @@ typedef struct xtensa_windowed_frame_cache
    A-register where the current content of the reg came from (in terms
    of an original reg and a constant).  Negative values of c0_rt[n].fp_reg
    mean that the original content of the register was saved to the stack.
-   c0_rt[n].fr.ofs is NOT the offset from the frame base because we don't 
+   c0_rt[n].fr.ofs is NOT the offset from the frame base because we don't
    know where SP will end up until the entire prologue has been analyzed.  */
 
 #define C0_CONST   -1	/* fr_reg value if register contains a constant.  */
@@ -948,11 +948,11 @@ typedef struct xtensa_call0_frame_cache
 				      pointer. It's an AND mask. Zero,
 				      if alignment was not adjusted.  */
   int c0_old_sp;		   /* In case of dynamic adjustment, it is
-				      a register holding unaligned sp. 
+				      a register holding unaligned sp.
 				      C0_INEXP, when undefined.  */
   int c0_sp_ofs;		   /* If "c0_old_sp" was spilled it's a
 				      stack offset. C0_NOSTK otherwise.  */
-					   
+
   xtensa_c0reg_t c0_rt[C0_NREGS];  /* Register tracking information.  */
 } xtensa_call0_frame_cache_t;
 
@@ -975,12 +975,11 @@ typedef struct xtensa_frame_cache
 static struct xtensa_frame_cache *
 xtensa_alloc_frame_cache (int windowed)
 {
-  xtensa_frame_cache_t *cache;
   int i;
 
   DEBUGTRACE ("xtensa_alloc_frame_cache ()\n");
 
-  cache = FRAME_OBSTACK_ZALLOC (xtensa_frame_cache_t);
+  auto *cache = frame_obstack_zalloc<xtensa_frame_cache_t> ();
 
   cache->base = 0;
   cache->pc = 0;
@@ -1031,7 +1030,7 @@ xtensa_unwind_pc (struct gdbarch *gdbarch, const frame_info_ptr &next_frame)
   gdb_byte buf[8];
   CORE_ADDR pc;
 
-  DEBUGTRACE ("xtensa_unwind_pc (next_frame = %s)\n", 
+  DEBUGTRACE ("xtensa_unwind_pc (next_frame = %s)\n",
 		host_address_to_string (next_frame.get ()));
 
   frame_unwind_register (next_frame, gdbarch_pc_regnum (gdbarch), buf);
@@ -1145,16 +1144,16 @@ xtensa_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR current_pc)
       islots = xtensa_format_num_slots (isa, ifmt);
       if (islots == XTENSA_UNDEFINED)
 	RETURN_FP;
-      
+
       for (is = 0; is < islots; ++is)
 	{
 	  if (xtensa_format_get_slot (isa, ifmt, is, ins, slot))
 	    RETURN_FP;
-	  
+
 	  opc = xtensa_opcode_decode (isa, ifmt, is, slot);
-	  if (opc == XTENSA_UNDEFINED) 
+	  if (opc == XTENSA_UNDEFINED)
 	    RETURN_FP;
-	  
+
 	  opcname = xtensa_opcode_name (isa, opc);
 
 	  if (strcasecmp (opcname, "mov.n") == 0
@@ -1165,14 +1164,14 @@ xtensa_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR current_pc)
 	      /* Possible candidate for setting frame pointer
 		 from A1.  This is what we are looking for.  */
 
-	      if (xtensa_operand_get_field (isa, opc, 1, ifmt, 
+	      if (xtensa_operand_get_field (isa, opc, 1, ifmt,
 					    is, slot, &register_operand) != 0)
 		RETURN_FP;
 	      if (xtensa_operand_decode (isa, opc, 1, &register_operand) != 0)
 		RETURN_FP;
 	      if (register_operand == 1)  /* Mov{.n} FP A1.  */
 		{
-		  if (xtensa_operand_get_field (isa, opc, 0, ifmt, is, slot, 
+		  if (xtensa_operand_get_field (isa, opc, 0, ifmt, is, slot,
 						&register_operand) != 0)
 		    RETURN_FP;
 		  if (xtensa_operand_decode (isa, opc, 0,
@@ -1187,7 +1186,7 @@ xtensa_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR current_pc)
 
 	  if (
 	      /* We have problems decoding the memory.  */
-	      opcname == NULL 
+	      opcname == NULL
 	      || strcasecmp (opcname, "ill") == 0
 	      || strcasecmp (opcname, "ill.n") == 0
 	      /* Hit planted breakpoint.  */
@@ -1210,7 +1209,7 @@ done:
   return fp_regnum;
 }
 
-/* The key values to identify the frame using "cache" are 
+/* The key values to identify the frame using "cache" are
 
 	cache->base    = SP (or best guess about FP) of this frame;
 	cache->pc      = entry-PC (entry point of the frame function);
@@ -1255,7 +1254,7 @@ xtensa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
       xtensa_gdbarch_tdep *tdep = gdbarch_tdep<xtensa_gdbarch_tdep> (gdbarch);
 
       /* Get WINDOWBASE, WINDOWSTART, and PS registers.  */
-      wb = get_frame_register_unsigned (this_frame, 
+      wb = get_frame_register_unsigned (this_frame,
 					tdep->wb_regnum);
       ws = get_frame_register_unsigned (this_frame,
 					tdep->ws_regnum);
@@ -1266,7 +1265,7 @@ xtensa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	  int callinc = CALLINC (ps);
 	  ra = get_frame_register_unsigned
 	    (this_frame, tdep->a0_base + callinc * 4);
-	  
+
 	  /* ENTRY hasn't been executed yet, therefore callsize is still 0.  */
 	  cache->wd.callsize = 0;
 	  cache->wd.wb = wb;
@@ -1310,7 +1309,7 @@ xtensa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 	  /* Set A0...A3.  */
 	  sp = get_frame_register_unsigned
 	    (this_frame, tdep->a0_base + 1) - 16;
-	  
+
 	  for (i = 0; i < 4; i++, sp += 4)
 	    {
 	      cache->wd.aregs[i] = sp;
@@ -1365,7 +1364,7 @@ xtensa_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     }
   else	/* Call0 framework.  */
     {
-      call0_frame_cache (this_frame, cache, pc);  
+      call0_frame_cache (this_frame, cache, pc);
       fp_regnum = cache->c0.fp_regnum;
     }
 
@@ -1496,17 +1495,16 @@ xtensa_frame_prev_register (const frame_info_ptr &this_frame,
 }
 
 
-static const struct frame_unwind
-xtensa_unwind =
-{
+static const struct frame_unwind_legacy xtensa_unwind (
   "xtensa prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   xtensa_frame_this_id,
   xtensa_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 xtensa_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
@@ -1601,7 +1599,7 @@ xtensa_store_return_value (struct type *type,
   xtensa_gdbarch_tdep *tdep = gdbarch_tdep<xtensa_gdbarch_tdep> (gdbarch);
   if (tdep->call_abi != CallAbiCall0Only)
     {
-      regcache_raw_read_unsigned 
+      regcache_raw_read_unsigned
 	(regcache, tdep->wb_regnum, &wb);
       regcache_raw_read_unsigned (regcache, gdbarch_pc_regnum (gdbarch), &pc);
       callsize = extract_call_winsize (gdbarch, pc);
@@ -1768,7 +1766,7 @@ xtensa_push_dummy_call (struct gdbarch *gdbarch,
 	      arg_type = builtin_type (gdbarch)->builtin_long;
 	      arg = value_cast (arg_type, arg);
 	    }
-	  /* Aligment is equal to the type length for the basic types.  */
+	  /* Alignment is equal to the type length for the basic types.  */
 	  info->align = arg_type->length ();
 	  break;
 
@@ -1979,7 +1977,7 @@ xtensa_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 
 /* Call0 ABI support routines.  */
 
-/* Return true, if PC points to "ret" or "ret.n".  */ 
+/* Return true, if PC points to "ret" or "ret.n".  */
 
 static int
 call0_ret (CORE_ADDR start_pc, CORE_ADDR finish_pc)
@@ -2022,18 +2020,18 @@ call0_ret (CORE_ADDR start_pc, CORE_ADDR finish_pc)
       islots = xtensa_format_num_slots (isa, ifmt);
       if (islots == XTENSA_UNDEFINED)
 	RETURN_RET;
-      
+
       for (is = 0; is < islots; ++is)
 	{
 	  if (xtensa_format_get_slot (isa, ifmt, is, ins, slot))
 	    RETURN_RET;
-	  
+
 	  opc = xtensa_opcode_decode (isa, ifmt, is, slot);
-	  if (opc == XTENSA_UNDEFINED) 
+	  if (opc == XTENSA_UNDEFINED)
 	    RETURN_RET;
-	  
+
 	  opcname = xtensa_opcode_name (isa, opc);
-	  
+
 	  if ((strcasecmp (opcname, "ret.n") == 0)
 	      || (strcasecmp (opcname, "ret") == 0))
 	    {
@@ -2050,7 +2048,7 @@ call0_ret (CORE_ADDR start_pc, CORE_ADDR finish_pc)
 
 /* Call0 opcode class.  Opcodes are preclassified according to what they
    mean for Call0 prologue analysis, and their number of significant operands.
-   The purpose of this is to simplify prologue analysis by separating 
+   The purpose of this is to simplify prologue analysis by separating
    instruction decoding (libisa) from the semantics of prologue analysis.  */
 
 enum xtensa_insn_kind
@@ -2082,7 +2080,7 @@ static int
 rwx_special_register (const char *opcname)
 {
   char ch = *opcname++;
-  
+
   if ((ch != 'r') && (ch != 'w') && (ch != 'x'))
     return 0;
   if (*opcname++ != 's')
@@ -2109,7 +2107,7 @@ call0_classify_opcode (xtensa_isa isa, xtensa_opcode opc)
 
   opcname = xtensa_opcode_name (isa, opc);
 
-  if (opcname == NULL 
+  if (opcname == NULL
       || strcasecmp (opcname, "ill") == 0
       || strcasecmp (opcname, "ill.n") == 0)
     opclass = c0opc_illegal;
@@ -2131,12 +2129,12 @@ call0_classify_opcode (xtensa_isa isa, xtensa_opcode opc)
     opclass = c0opc_flow;
 
   /* Also, classify specific opcodes that need to be tracked.  */
-  else if (strcasecmp (opcname, "add") == 0 
+  else if (strcasecmp (opcname, "add") == 0
 	   || strcasecmp (opcname, "add.n") == 0)
     opclass = c0opc_add;
   else if (strcasecmp (opcname, "and") == 0)
     opclass = c0opc_and;
-  else if (strcasecmp (opcname, "addi") == 0 
+  else if (strcasecmp (opcname, "addi") == 0
 	   || strcasecmp (opcname, "addi.n") == 0
 	   || strcasecmp (opcname, "addmi") == 0)
     opclass = c0opc_addi;
@@ -2145,12 +2143,12 @@ call0_classify_opcode (xtensa_isa isa, xtensa_opcode opc)
   else if (strcasecmp (opcname, "mov.n") == 0
 	   || strcasecmp (opcname, "or") == 0) /* Could be 'mov' asm macro.  */
     opclass = c0opc_mov;
-  else if (strcasecmp (opcname, "movi") == 0 
+  else if (strcasecmp (opcname, "movi") == 0
 	   || strcasecmp (opcname, "movi.n") == 0)
     opclass = c0opc_movi;
   else if (strcasecmp (opcname, "l32r") == 0)
     opclass = c0opc_l32r;
-  else if (strcasecmp (opcname, "s32i") == 0 
+  else if (strcasecmp (opcname, "s32i") == 0
 	   || strcasecmp (opcname, "s32i.n") == 0)
     opclass = c0opc_s32i;
   else if (strcasecmp (opcname, "l32e") == 0)
@@ -2189,7 +2187,7 @@ call0_track_op (struct gdbarch *gdbarch, xtensa_c0reg_t dst[], xtensa_c0reg_t sr
       break;
     case c0opc_add:
       /* 3 operands: dst, src1, src2.  */
-      gdb_assert (nods == 3); 
+      gdb_assert (nods == 3);
       if      (src[odv[1]].fr_reg == C0_CONST)
 	{
 	  dst[odv[0]].fr_reg = src[odv[2]].fr_reg;
@@ -2324,7 +2322,7 @@ call0_track_op (struct gdbarch *gdbarch, xtensa_c0reg_t dst[], xtensa_c0reg_t sr
    is guaranteed valid only at the point in the function indicated by the PC.
    May be used to skip the prologue or identify the ABI, w/o tracking.
 
-   Returns:   Address of first instruction after prologue, or PC (whichever 
+   Returns:   Address of first instruction after prologue, or PC (whichever
 	      is first), or 0, if decoding failed (in libisa).
    Input args:
       start   Start address of function/prologue.
@@ -2363,7 +2361,7 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
 
   struct symtab_and_line prologue_sal;
 
-  DEBUGTRACE ("call0_analyze_prologue (start = 0x%08x, pc = 0x%08x, ...)\n", 
+  DEBUGTRACE ("call0_analyze_prologue (start = 0x%08x, pc = 0x%08x, ...)\n",
 	      (int)start, (int)pc);
 
   /* Try to limit the scan to the end of the function if a non-zero pc
@@ -2379,7 +2377,7 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
   end_pc = 0;
 
   /* Find out, if we have an information about the prologue from DWARF.  */
-  prologue_sal = find_pc_line (start, 0);
+  prologue_sal = find_sal_for_pc (start, 0);
   if (prologue_sal.line != 0) /* Found debug info.  */
     body_pc = prologue_sal.end;
 
@@ -2437,7 +2435,7 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
 	  goto done;
 	}
 
-      /* Analyze a bundle or a single instruction, using a snapshot of 
+      /* Analyze a bundle or a single instruction, using a snapshot of
 	 the register tracking info as input for the entire bundle so that
 	 register changes do not take effect within this bundle.  */
 
@@ -2453,9 +2451,9 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
 	    goto done;
 
 	  opc = xtensa_opcode_decode (isa, ifmt, is, slot);
-	  DEBUGVERB ("[call0_analyze_prologue] instr addr = 0x%08x, opc = %d\n", 
+	  DEBUGVERB ("[call0_analyze_prologue] instr addr = 0x%08x, opc = %d\n",
 		     (unsigned)ia, opc);
-	  if (opc == XTENSA_UNDEFINED) 
+	  if (opc == XTENSA_UNDEFINED)
 	    opclass = c0opc_illegal;
 	  else
 	    opclass = call0_classify_opcode (isa, opc);
@@ -2497,7 +2495,7 @@ call0_analyze_prologue (struct gdbarch *gdbarch,
 
 	  for (j = 0; j < nods && j < C0_MAXOPDS; ++j)
 	    {
-	      fail = xtensa_operand_get_field (isa, opc, j, ifmt, 
+	      fail = xtensa_operand_get_field (isa, opc, j, ifmt,
 					       is, slot, &odv[j]);
 	      if (fail)
 		goto done;
@@ -2553,7 +2551,7 @@ call0_frame_cache (const frame_info_ptr &this_frame,
   CORE_ADDR sp, fp, ra;
   int fp_regnum = C0_SP, c0_hasfp = 0, c0_frmsz = 0, prev_sp = 0, to_stk;
   xtensa_gdbarch_tdep *tdep = gdbarch_tdep<xtensa_gdbarch_tdep> (gdbarch);
- 
+
   sp = get_frame_register_unsigned
     (this_frame, tdep->a0_base + 1);
   fp = sp; /* Assume FP == SP until proven otherwise.  */
@@ -2572,7 +2570,7 @@ call0_frame_cache (const frame_info_ptr &this_frame,
 	  goto finish_frame_analysis;
 	}
     }
-  
+
   /* Get the frame information and FP (if used) at the current PC.
      If PC is in the prologue, the prologue analysis is more reliable
      than DWARF info.  We don't not know for sure, if PC is in the prologue,
@@ -2629,7 +2627,7 @@ call0_frame_cache (const frame_info_ptr &this_frame,
   else
     prev_sp = fp + c0_frmsz;
 
-  /* Frame size from debug info or prologue tracking does not account for 
+  /* Frame size from debug info or prologue tracking does not account for
      alloca() and other dynamic allocations.  Adjust frame size by FP - SP.  */
   if (c0_hasfp)
     {
@@ -2644,7 +2642,7 @@ call0_frame_cache (const frame_info_ptr &this_frame,
 
   to_stk = cache->c0.c0_rt[C0_RA].to_stk;
   if (to_stk != C0_NOSTK)
-    ra = (CORE_ADDR) 
+    ra = (CORE_ADDR)
       read_memory_integer (sp + c0_frmsz + cache->c0.c0_rt[C0_RA].to_stk,
 			   4, byte_order);
 
@@ -2682,7 +2680,7 @@ call0_frame_cache (const frame_info_ptr &this_frame,
 	}
       else ra = 0;
     }
-  
+
  finish_frame_analysis:
   cache->pc = start_pc;
   cache->ra = ra;
@@ -2773,8 +2771,8 @@ execute_code (struct gdbarch *gdbarch, CORE_ADDR current_pc, CORE_ADDR wb)
 
   uint32_t at, as, offset;
 
-  /* WindowUnderflow12 = true, when inside _WindowUnderflow12.  */ 
-  int WindowUnderflow12 = (current_pc & 0x1ff) >= 0x140; 
+  /* WindowUnderflow12 = true, when inside _WindowUnderflow12.  */
+  int WindowUnderflow12 = (current_pc & 0x1ff) >= 0x140;
 
   isa = xtensa_default_isa;
   gdb_assert (XTENSA_ISA_BSZ >= xtensa_isa_maxlength (isa));
@@ -2812,7 +2810,7 @@ execute_code (struct gdbarch *gdbarch, CORE_ADDR current_pc, CORE_ADDR wb)
 	  if (xtensa_format_get_slot (isa, ifmt, is, ins, slot))
 	    return xtNoExceptionHandler;
 	  opc = xtensa_opcode_decode (isa, ifmt, is, slot);
-	  if (opc == XTENSA_UNDEFINED) 
+	  if (opc == XTENSA_UNDEFINED)
 	    return xtNoExceptionHandler;
 	  switch (call0_classify_opcode (isa, opc))
 	    {
@@ -2954,19 +2952,19 @@ Unable to decode Xtensa Window Interrupt Handler's code."));
 
    Return the pc of the first instruction after prologue.  GDB calls this to
    find the address of the first line of the function or (if there is no line
-   number information) to skip the prologue for planting breakpoints on 
-   function entries.  Use debug info (if present) or prologue analysis to skip 
-   the prologue to achieve reliable debugging behavior.  For windowed ABI, 
-   only the 'entry' instruction is skipped.  It is not strictly necessary to 
+   number information) to skip the prologue for planting breakpoints on
+   function entries.  Use debug info (if present) or prologue analysis to skip
+   the prologue to achieve reliable debugging behavior.  For windowed ABI,
+   only the 'entry' instruction is skipped.  It is not strictly necessary to
    skip the prologue (Call0) or 'entry' (Windowed) because xt-gdb knows how to
-   backtrace at any point in the prologue, however certain potential hazards 
-   are avoided and a more "normal" debugging experience is ensured by 
+   backtrace at any point in the prologue, however certain potential hazards
+   are avoided and a more "normal" debugging experience is ensured by
    skipping the prologue (can be disabled by defining DONT_SKIP_PROLOG).
    For example, if we don't skip the prologue:
    - Some args may not yet have been saved to the stack where the debug
      info expects to find them (true anyway when only 'entry' is skipped);
-   - Software breakpoints ('break' instrs) may not have been unplanted 
-     when the prologue analysis is done on initializing the frame cache, 
+   - Software breakpoints ('break' instrs) may not have been unplanted
+     when the prologue analysis is done on initializing the frame cache,
      and breaks in the prologue will throw off the analysis.
 
    If we have debug info ( line-number info, in particular ) we simply skip
@@ -3001,7 +2999,7 @@ xtensa_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
  /* Try to find first body line from debug info.  */
 
-  prologue_sal = find_pc_line (start_pc, 0);
+  prologue_sal = find_sal_for_pc (start_pc, 0);
   if (prologue_sal.line != 0) /* Found debug info.  */
     {
       /* In Call0,  it is possible to have a function with only one instruction
@@ -3239,8 +3237,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, xtensa_iterate_over_regset_sections);
 
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, svr4_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_svr4_ilp32_solib_ops);
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
@@ -3254,9 +3251,7 @@ xtensa_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
   error (_("xtensa_dump_tdep(): not implemented"));
 }
 
-void _initialize_xtensa_tdep ();
-void
-_initialize_xtensa_tdep ()
+INIT_GDB_FILE (xtensa_tdep)
 {
   gdbarch_register (bfd_arch_xtensa, xtensa_gdbarch_init, xtensa_dump_tdep);
   xtensa_init_reggroups ();

@@ -637,8 +637,6 @@ REPORT_BUGS_TO
 PKGVERSION
 WERROR_CFLAGS
 WARN_CFLAGS
-ustinc
-ustlibs
 CCDEPMODE
 CONFIG_SRC_SUBDIR
 CATOBJEXT
@@ -775,9 +773,6 @@ with_libiconv_prefix
 with_libiconv_type
 with_libintl_prefix
 with_libintl_type
-with_ust
-with_ust_include
-with_ust_lib
 enable_werror
 enable_build_warnings
 enable_gdb_build_warnings
@@ -1451,11 +1446,6 @@ Optional Packages:
   --with-libintl-prefix[=DIR]  search for libintl in DIR/include and DIR/lib
   --without-libintl-prefix     don't search for libintl in includedir and libdir
   --with-libintl-type=TYPE     type of library to search for (auto/static/shared)
-  --with-ust=PATH       Specify prefix directory for the installed UST package
-                          Equivalent to --with-ust-include=PATH/include
-                          plus --with-ust-lib=PATH/lib
-  --with-ust-include=PATH Specify directory for installed UST include files
-  --with-ust-lib=PATH   Specify the directory for the installed UST library
   --with-pkgversion=PKG   Use PKG in the version string in place of "GDB"
   --with-bugurl=URL       Direct users to URL to report a bug
   --with-libthread-db=PATH
@@ -5262,10 +5252,10 @@ namespace cxx11
       auto c = [=](){ return a + b; }();
       auto d = [&](){ return c; }();
       auto e = [a, &b](int x) mutable {
-        const auto identity = [](int y){ return y; };
-        for (auto i = 0; i < a; ++i)
-          a += b--;
-        return x + identity(a + b);
+	const auto identity = [](int y){ return y; };
+	for (auto i = 0; i < a; ++i)
+	  a += b--;
+	return x + identity(a + b);
       }(0);
       return a + b + c + d + e;
     }
@@ -5279,7 +5269,7 @@ namespace cxx11
       using unary_t = decltype(unary);
       const auto higher1st = [](nullary_t f){ return f(); };
       const auto higher2nd = [unary](nullary_t f1){
-        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+	return [unary, f1](unary_t f2){ return f2(unary(f1())); };
       };
       return higher1st(nullary) + higher2nd(nullary)(unary);
     }
@@ -5366,11 +5356,11 @@ namespace cxx14
     test()
     {
       const auto lambda = [](auto&&... args){
-        const auto istiny = [](auto x){
-          return (sizeof(x) == 1UL) ? 1 : 0;
-        };
-        const int aretiny[] = { istiny(args)... };
-        return aretiny[0];
+	const auto istiny = [](auto x){
+	  return (sizeof(x) == 1UL) ? 1 : 0;
+	};
+	const int aretiny[] = { istiny(args)... };
+	return aretiny[0];
       };
       return lambda(1, 1L, 1.0f, '1');
     }
@@ -5394,7 +5384,7 @@ namespace cxx14
     {
       auto length = 0UL;
       for (auto p = s; *p; ++p)
-        ++length;
+	++length;
       return length;
     }
 
@@ -5551,10 +5541,10 @@ namespace cxx17
       switch (f1())
       {
       case 17:
-        f1();
-        [[fallthrough]];
+	f1();
+	[[fallthrough]];
       case 42:
-        f1();
+	f1();
       }
       return f1();
     }
@@ -5572,14 +5562,14 @@ namespace cxx17
     struct base2
     {
       base2() {
-        b3 = 42;
+	b3 = 42;
       }
       int b3;
     };
 
     struct derived : base1, base2
     {
-        int d;
+	int d;
     };
 
     derived d1 {{1, 2}, {}, 4};  // full initialization
@@ -5596,18 +5586,18 @@ namespace cxx17
 
       int& operator* ()
       {
-        return i;
+	return i;
       }
 
       const int& operator* () const
       {
-        return i;
+	return i;
       }
 
       iter& operator++()
       {
-        ++i;
-        return *this;
+	++i;
+	return *this;
       }
     };
 
@@ -5630,12 +5620,12 @@ namespace cxx17
     {
       iter begin() const
       {
-        return {0};
+	return {0};
       }
 
       sentinel end() const
       {
-        return {5};
+	return {5};
       }
     };
 
@@ -5645,7 +5635,7 @@ namespace cxx17
 
       for (auto i : r)
       {
-        [[maybe_unused]] auto v = i;
+	[[maybe_unused]] auto v = i;
       }
     }
 
@@ -5659,10 +5649,10 @@ namespace cxx17
       int i;
       int foo()
       {
-        return [*this]()
-        {
-          return i;
-        }();
+	return [*this]()
+	{
+	  return i;
+	}();
       }
     };
 
@@ -5686,11 +5676,11 @@ namespace cxx17
     {
       if constexpr(cond)
       {
-        return 13;
+	return 13;
       }
       else
       {
-        return 42;
+	return 42;
       }
     }
 
@@ -5708,16 +5698,16 @@ namespace cxx17
     {
       if (auto i = f(); i > 0)
       {
-        return 3;
+	return 3;
       }
 
       switch (auto i = f(); i + 4)
       {
       case 17:
-        return 2;
+	return 2;
 
       default:
-        return 1;
+	return 1;
       }
     }
 
@@ -5730,8 +5720,8 @@ namespace cxx17
     struct pair
     {
       pair (T1 p1, T2 p2)
-        : m1 {p1},
-          m2 {p2}
+	: m1 {p1},
+	  m2 {p2}
       {}
 
       T1 m1;
@@ -5864,8 +5854,8 @@ if eval \${$cachevar+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_save_CXX="$CXX"
-         CXX="$CXX $switch"
-         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	 CXX="$CXX $switch"
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 
@@ -6079,10 +6069,10 @@ namespace cxx11
       auto c = [=](){ return a + b; }();
       auto d = [&](){ return c; }();
       auto e = [a, &b](int x) mutable {
-        const auto identity = [](int y){ return y; };
-        for (auto i = 0; i < a; ++i)
-          a += b--;
-        return x + identity(a + b);
+	const auto identity = [](int y){ return y; };
+	for (auto i = 0; i < a; ++i)
+	  a += b--;
+	return x + identity(a + b);
       }(0);
       return a + b + c + d + e;
     }
@@ -6096,7 +6086,7 @@ namespace cxx11
       using unary_t = decltype(unary);
       const auto higher1st = [](nullary_t f){ return f(); };
       const auto higher2nd = [unary](nullary_t f1){
-        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+	return [unary, f1](unary_t f2){ return f2(unary(f1())); };
       };
       return higher1st(nullary) + higher2nd(nullary)(unary);
     }
@@ -6183,11 +6173,11 @@ namespace cxx14
     test()
     {
       const auto lambda = [](auto&&... args){
-        const auto istiny = [](auto x){
-          return (sizeof(x) == 1UL) ? 1 : 0;
-        };
-        const int aretiny[] = { istiny(args)... };
-        return aretiny[0];
+	const auto istiny = [](auto x){
+	  return (sizeof(x) == 1UL) ? 1 : 0;
+	};
+	const int aretiny[] = { istiny(args)... };
+	return aretiny[0];
       };
       return lambda(1, 1L, 1.0f, '1');
     }
@@ -6211,7 +6201,7 @@ namespace cxx14
     {
       auto length = 0UL;
       for (auto p = s; *p; ++p)
-        ++length;
+	++length;
       return length;
     }
 
@@ -6368,10 +6358,10 @@ namespace cxx17
       switch (f1())
       {
       case 17:
-        f1();
-        [[fallthrough]];
+	f1();
+	[[fallthrough]];
       case 42:
-        f1();
+	f1();
       }
       return f1();
     }
@@ -6389,14 +6379,14 @@ namespace cxx17
     struct base2
     {
       base2() {
-        b3 = 42;
+	b3 = 42;
       }
       int b3;
     };
 
     struct derived : base1, base2
     {
-        int d;
+	int d;
     };
 
     derived d1 {{1, 2}, {}, 4};  // full initialization
@@ -6413,18 +6403,18 @@ namespace cxx17
 
       int& operator* ()
       {
-        return i;
+	return i;
       }
 
       const int& operator* () const
       {
-        return i;
+	return i;
       }
 
       iter& operator++()
       {
-        ++i;
-        return *this;
+	++i;
+	return *this;
       }
     };
 
@@ -6447,12 +6437,12 @@ namespace cxx17
     {
       iter begin() const
       {
-        return {0};
+	return {0};
       }
 
       sentinel end() const
       {
-        return {5};
+	return {5};
       }
     };
 
@@ -6462,7 +6452,7 @@ namespace cxx17
 
       for (auto i : r)
       {
-        [[maybe_unused]] auto v = i;
+	[[maybe_unused]] auto v = i;
       }
     }
 
@@ -6476,10 +6466,10 @@ namespace cxx17
       int i;
       int foo()
       {
-        return [*this]()
-        {
-          return i;
-        }();
+	return [*this]()
+	{
+	  return i;
+	}();
       }
     };
 
@@ -6503,11 +6493,11 @@ namespace cxx17
     {
       if constexpr(cond)
       {
-        return 13;
+	return 13;
       }
       else
       {
-        return 42;
+	return 42;
       }
     }
 
@@ -6525,16 +6515,16 @@ namespace cxx17
     {
       if (auto i = f(); i > 0)
       {
-        return 3;
+	return 3;
       }
 
       switch (auto i = f(); i + 4)
       {
       case 17:
-        return 2;
+	return 2;
 
       default:
-        return 1;
+	return 1;
       }
     }
 
@@ -6547,8 +6537,8 @@ namespace cxx17
     struct pair
     {
       pair (T1 p1, T2 p2)
-        : m1 {p1},
-          m2 {p2}
+	: m1 {p1},
+	  m2 {p2}
       {}
 
       T1 m1;
@@ -6664,19 +6654,19 @@ else
   eval $cachevar=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-         CXX="$ac_save_CXX"
+	 CXX="$ac_save_CXX"
 fi
 eval ac_res=\$$cachevar
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
       if eval test x\$$cachevar = xyes; then
-        CXX_DIALECT="$switch"
-        CXX="$CXX $switch"
-        if test -n "$CXXCPP" ; then
-          CXXCPP="$CXXCPP $switch"
-        fi
-        ac_success=yes
-        break
+	CXX_DIALECT="$switch"
+	CXX="$CXX $switch"
+	if test -n "$CXXCPP" ; then
+	  CXXCPP="$CXXCPP $switch"
+	fi
+	ac_success=yes
+	break
       fi
     done
   fi
@@ -6684,20 +6674,20 @@ $as_echo "$ac_res" >&6; }
     if test x$ac_success = xno; then
                     for alternative in ${ax_cxx_compile_alternatives}; do
       for switch in -std=c++${alternative} +std=c++${alternative} "-h std=c++${alternative}" MSVC; do
-        if test x"$switch" = xMSVC; then
-                                        switch=-std:c++${alternative}
-          cachevar=`$as_echo "ax_cv_cxx_compile_cxx17_${switch}_MSVC" | $as_tr_sh`
-        else
-          cachevar=`$as_echo "ax_cv_cxx_compile_cxx17_$switch" | $as_tr_sh`
-        fi
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++17 features with $switch" >&5
+	if test x"$switch" = xMSVC; then
+	  	  	  	  switch=-std:c++${alternative}
+	  cachevar=`$as_echo "ax_cv_cxx_compile_cxx17_${switch}_MSVC" | $as_tr_sh`
+	else
+	  cachevar=`$as_echo "ax_cv_cxx_compile_cxx17_$switch" | $as_tr_sh`
+	fi
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++17 features with $switch" >&5
 $as_echo_n "checking whether $CXX supports C++17 features with $switch... " >&6; }
 if eval \${$cachevar+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_save_CXX="$CXX"
-           CXX="$CXX $switch"
-           cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	   CXX="$CXX $switch"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 
@@ -6911,10 +6901,10 @@ namespace cxx11
       auto c = [=](){ return a + b; }();
       auto d = [&](){ return c; }();
       auto e = [a, &b](int x) mutable {
-        const auto identity = [](int y){ return y; };
-        for (auto i = 0; i < a; ++i)
-          a += b--;
-        return x + identity(a + b);
+	const auto identity = [](int y){ return y; };
+	for (auto i = 0; i < a; ++i)
+	  a += b--;
+	return x + identity(a + b);
       }(0);
       return a + b + c + d + e;
     }
@@ -6928,7 +6918,7 @@ namespace cxx11
       using unary_t = decltype(unary);
       const auto higher1st = [](nullary_t f){ return f(); };
       const auto higher2nd = [unary](nullary_t f1){
-        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+	return [unary, f1](unary_t f2){ return f2(unary(f1())); };
       };
       return higher1st(nullary) + higher2nd(nullary)(unary);
     }
@@ -7015,11 +7005,11 @@ namespace cxx14
     test()
     {
       const auto lambda = [](auto&&... args){
-        const auto istiny = [](auto x){
-          return (sizeof(x) == 1UL) ? 1 : 0;
-        };
-        const int aretiny[] = { istiny(args)... };
-        return aretiny[0];
+	const auto istiny = [](auto x){
+	  return (sizeof(x) == 1UL) ? 1 : 0;
+	};
+	const int aretiny[] = { istiny(args)... };
+	return aretiny[0];
       };
       return lambda(1, 1L, 1.0f, '1');
     }
@@ -7043,7 +7033,7 @@ namespace cxx14
     {
       auto length = 0UL;
       for (auto p = s; *p; ++p)
-        ++length;
+	++length;
       return length;
     }
 
@@ -7200,10 +7190,10 @@ namespace cxx17
       switch (f1())
       {
       case 17:
-        f1();
-        [[fallthrough]];
+	f1();
+	[[fallthrough]];
       case 42:
-        f1();
+	f1();
       }
       return f1();
     }
@@ -7221,14 +7211,14 @@ namespace cxx17
     struct base2
     {
       base2() {
-        b3 = 42;
+	b3 = 42;
       }
       int b3;
     };
 
     struct derived : base1, base2
     {
-        int d;
+	int d;
     };
 
     derived d1 {{1, 2}, {}, 4};  // full initialization
@@ -7245,18 +7235,18 @@ namespace cxx17
 
       int& operator* ()
       {
-        return i;
+	return i;
       }
 
       const int& operator* () const
       {
-        return i;
+	return i;
       }
 
       iter& operator++()
       {
-        ++i;
-        return *this;
+	++i;
+	return *this;
       }
     };
 
@@ -7279,12 +7269,12 @@ namespace cxx17
     {
       iter begin() const
       {
-        return {0};
+	return {0};
       }
 
       sentinel end() const
       {
-        return {5};
+	return {5};
       }
     };
 
@@ -7294,7 +7284,7 @@ namespace cxx17
 
       for (auto i : r)
       {
-        [[maybe_unused]] auto v = i;
+	[[maybe_unused]] auto v = i;
       }
     }
 
@@ -7308,10 +7298,10 @@ namespace cxx17
       int i;
       int foo()
       {
-        return [*this]()
-        {
-          return i;
-        }();
+	return [*this]()
+	{
+	  return i;
+	}();
       }
     };
 
@@ -7335,11 +7325,11 @@ namespace cxx17
     {
       if constexpr(cond)
       {
-        return 13;
+	return 13;
       }
       else
       {
-        return 42;
+	return 42;
       }
     }
 
@@ -7357,16 +7347,16 @@ namespace cxx17
     {
       if (auto i = f(); i > 0)
       {
-        return 3;
+	return 3;
       }
 
       switch (auto i = f(); i + 4)
       {
       case 17:
-        return 2;
+	return 2;
 
       default:
-        return 1;
+	return 1;
       }
     }
 
@@ -7379,8 +7369,8 @@ namespace cxx17
     struct pair
     {
       pair (T1 p1, T2 p2)
-        : m1 {p1},
-          m2 {p2}
+	: m1 {p1},
+	  m2 {p2}
       {}
 
       T1 m1;
@@ -7496,23 +7486,23 @@ else
   eval $cachevar=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-           CXX="$ac_save_CXX"
+	   CXX="$ac_save_CXX"
 fi
 eval ac_res=\$$cachevar
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
-        if eval test x\$$cachevar = xyes; then
-          CXX_DIALECT="$switch"
-          CXX="$CXX $switch"
-          if test -n "$CXXCPP" ; then
-            CXXCPP="$CXXCPP $switch"
-          fi
-          ac_success=yes
-          break
-        fi
+	if eval test x\$$cachevar = xyes; then
+	  CXX_DIALECT="$switch"
+	  CXX="$CXX $switch"
+	  if test -n "$CXXCPP" ; then
+	    CXXCPP="$CXXCPP $switch"
+	  fi
+	  ac_success=yes
+	  break
+	fi
       done
       if test x$ac_success = xyes; then
-        break
+	break
       fi
     done
   fi
@@ -7539,119 +7529,6 @@ $as_echo "#define HAVE_CXX17 1" >>confdefs.h
   fi
 
 
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ANSI C header files" >&5
-$as_echo_n "checking for ANSI C header files... " >&6; }
-if ${ac_cv_header_stdc+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <float.h>
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_header_stdc=yes
-else
-  ac_cv_header_stdc=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
-if test $ac_cv_header_stdc = yes; then
-  # SunOS 4.x string.h does not declare mem*, contrary to ANSI.
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <string.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "memchr" >/dev/null 2>&1; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f conftest*
-
-fi
-
-if test $ac_cv_header_stdc = yes; then
-  # ISC 2.0.2 stdlib.h does not declare free, contrary to ANSI.
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdlib.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "free" >/dev/null 2>&1; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f conftest*
-
-fi
-
-if test $ac_cv_header_stdc = yes; then
-  # /bin/cc in Irix-4.0.5 gets non-ANSI ctype macros unless using -ansi.
-  if test "$cross_compiling" = yes; then :
-  :
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <ctype.h>
-#include <stdlib.h>
-#if ((' ' & 0x0FF) == 0x020)
-# define ISLOWER(c) ('a' <= (c) && (c) <= 'z')
-# define TOUPPER(c) (ISLOWER(c) ? 'A' + ((c) - 'a') : (c))
-#else
-# define ISLOWER(c) \
-		   (('a' <= (c) && (c) <= 'i') \
-		     || ('j' <= (c) && (c) <= 'r') \
-		     || ('s' <= (c) && (c) <= 'z'))
-# define TOUPPER(c) (ISLOWER(c) ? ((c) | 0x40) : (c))
-#endif
-
-#define XOR(e, f) (((e) && !(f)) || (!(e) && (f)))
-int
-main ()
-{
-  int i;
-  for (i = 0; i < 256; i++)
-    if (XOR (islower (i), ISLOWER (i))
-	|| toupper (i) != TOUPPER (i))
-      return 2;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_header_stdc" >&5
-$as_echo "$ac_cv_header_stdc" >&6; }
-if test $ac_cv_header_stdc = yes; then
-
-$as_echo "#define STDC_HEADERS 1" >>confdefs.h
-
-fi
 
 
 ac_fn_c_check_type "$LINENO" "size_t" "ac_cv_type_size_t" "$ac_includes_default"
@@ -7929,118 +7806,6 @@ fi
 
   # Set the 'development' global.
   . $srcdir/../bfd/development.sh
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ANSI C header files" >&5
-$as_echo_n "checking for ANSI C header files... " >&6; }
-if ${ac_cv_header_stdc+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <float.h>
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_header_stdc=yes
-else
-  ac_cv_header_stdc=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
-if test $ac_cv_header_stdc = yes; then
-  # SunOS 4.x string.h does not declare mem*, contrary to ANSI.
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <string.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "memchr" >/dev/null 2>&1; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f conftest*
-
-fi
-
-if test $ac_cv_header_stdc = yes; then
-  # ISC 2.0.2 stdlib.h does not declare free, contrary to ANSI.
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdlib.h>
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "free" >/dev/null 2>&1; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f conftest*
-
-fi
-
-if test $ac_cv_header_stdc = yes; then
-  # /bin/cc in Irix-4.0.5 gets non-ANSI ctype macros unless using -ansi.
-  if test "$cross_compiling" = yes; then :
-  :
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <ctype.h>
-#include <stdlib.h>
-#if ((' ' & 0x0FF) == 0x020)
-# define ISLOWER(c) ('a' <= (c) && (c) <= 'z')
-# define TOUPPER(c) (ISLOWER(c) ? 'A' + ((c) - 'a') : (c))
-#else
-# define ISLOWER(c) \
-		   (('a' <= (c) && (c) <= 'i') \
-		     || ('j' <= (c) && (c) <= 'r') \
-		     || ('s' <= (c) && (c) <= 'z'))
-# define TOUPPER(c) (ISLOWER(c) ? ((c) | 0x40) : (c))
-#endif
-
-#define XOR(e, f) (((e) && !(f)) || (!(e) && (f)))
-int
-main ()
-{
-  int i;
-  for (i = 0; i < 256; i++)
-    if (XOR (islower (i), ISLOWER (i))
-	|| toupper (i) != TOUPPER (i))
-      return 2;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-
-else
-  ac_cv_header_stdc=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_header_stdc" >&5
-$as_echo "$ac_cv_header_stdc" >&6; }
-if test $ac_cv_header_stdc = yes; then
-
-$as_echo "#define STDC_HEADERS 1" >>confdefs.h
-
-fi
 
   # The Ultrix 4.2 mips builtin alloca declared by alloca.h only works
 # for constant arguments.  Useless!
@@ -9668,8 +9433,8 @@ int
 main ()
 {
 sigjmp_buf env;
-           while (! sigsetjmp (env, 1))
-             siglongjmp (env, 1);
+	   while (! sigsetjmp (env, 1))
+	     siglongjmp (env, 1);
 
   ;
   return 0;
@@ -13601,90 +13366,6 @@ _ACEOF
 fi
 
 
-# Check for UST
-ustlibs=""
-ustinc=""
-
-
-# Check whether --with-ust was given.
-if test "${with_ust+set}" = set; then :
-  withval=$with_ust;
-fi
-
-
-# Check whether --with-ust_include was given.
-if test "${with_ust_include+set}" = set; then :
-  withval=$with_ust_include;
-fi
-
-
-# Check whether --with-ust_lib was given.
-if test "${with_ust_lib+set}" = set; then :
-  withval=$with_ust_lib;
-fi
-
-
-case $with_ust in
-  no)
-    ustlibs=
-    ustinc=
-    ;;
-  "" | yes)
-    ustlibs=" -lust "
-    ustinc=""
-    ;;
-  *)
-    ustlibs="-L$with_ust/lib -lust"
-    ustinc="-I$with_ust/include "
-    ;;
-esac
-if test "x$with_ust_include" != x; then
-  ustinc="-I$with_ust_include "
-fi
-if test "x$with_ust_lib" != x; then
-  ustlibs="-L$with_ust_lib -lust"
-fi
-
-if test "x$with_ust" != "xno"; then
-  saved_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS $ustinc"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ust" >&5
-$as_echo_n "checking for ust... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define CONFIG_UST_GDB_INTEGRATION
-#include <ust/ust.h>
-
-int
-main ()
-{
-
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; };
-
-$as_echo "#define HAVE_UST 1" >>confdefs.h
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-     ustlibs= ; ustinc=
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CFLAGS="$saved_CFLAGS"
-fi
-
-# Flags needed for UST
-
-
-
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking the compiler type" >&5
@@ -13701,9 +13382,9 @@ int
 main ()
 {
 
-                          #if !defined __GNUC__ || defined __clang__
-                          #error not gcc
-                          #endif
+			  #if !defined __GNUC__ || defined __clang__
+			  #error not gcc
+			  #endif
 
   ;
   return 0;
@@ -13723,9 +13404,9 @@ int
 main ()
 {
 
-                          #ifndef __clang__
-                          #error not clang
-                          #endif
+			  #ifndef __clang__
+			  #error not clang
+			  #endif
 
   ;
   return 0;
@@ -13765,22 +13446,36 @@ if test "${ERROR_ON_WARNING}" = yes ; then
 fi
 
 # The options we'll try to enable.
-build_warnings="-Wall -Wpointer-arith \
--Wno-unused -Wunused-value -Wunused-variable -Wunused-function \
--Wno-switch -Wno-char-subscripts \
--Wempty-body -Wunused-but-set-parameter -Wunused-but-set-variable \
--Wno-sign-compare -Wno-error=maybe-uninitialized \
--Wno-mismatched-tags \
--Wno-error=deprecated-register \
--Wsuggest-override \
--Wimplicit-fallthrough=5 \
--Wduplicated-cond \
--Wshadow=local \
+build_warnings=" \
+-Wall \
 -Wdeprecated-copy \
 -Wdeprecated-copy-dtor \
--Wredundant-move \
+-Wduplicated-cond \
+-Wempty-body \
+-Wimplicit-fallthrough=5 \
 -Wmissing-declarations \
+-Wno-char-subscripts \
+-Wno-error=deprecated-register \
+-Wno-mismatched-tags \
+-Wno-sign-compare -Wno-error=maybe-uninitialized \
+-Wno-switch \
+-Wno-unused \
+-Wpointer-arith \
+-Wredundant-move \
+-Wshadow=local \
 -Wstrict-null-sentinel \
+-Wsuggest-override \
+-Wunused-but-set-parameter \
+-Wunused-but-set-variable \
+-Wunused-const-variable=1 \
+-Wunused-function \
+-Wunused-label \
+-Wunused-lambda-capture \
+-Wunused-local-typedefs \
+-Wunused-member-function \
+-Wunused-private-field \
+-Wunused-value \
+-Wunused-variable \
 -Wvla \
 "
 
@@ -13814,9 +13509,9 @@ if test "${enable_build_warnings+set}" = set; then :
   yes)	;;
   no)	build_warnings="-w";;
   ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
+	build_warnings="${build_warnings} ${t}";;
   *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
+	build_warnings="${t} ${build_warnings}";;
   *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
 esac
 if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
@@ -13829,9 +13524,9 @@ if test "${enable_gdb_build_warnings+set}" = set; then :
   yes)	;;
   no)	build_warnings="-w";;
   ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
+	build_warnings="${build_warnings} ${t}";;
   *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
+	build_warnings="${t} ${build_warnings}";;
   *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
 esac
 if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
@@ -13861,7 +13556,7 @@ $as_echo_n "checking compiler warning flags... " >&6; }
 	case $w in
 	-Wno-*)
 		wtest=`echo $w | sed 's/-Wno-/-W/g'` ;;
-        -Wformat-nonliteral)
+	-Wformat-nonliteral)
 		# gcc requires -Wformat before -Wformat-nonliteral
 		# will work, so stick them together.
 		w="-Wformat $w"
@@ -14177,7 +13872,7 @@ case "${target}" in
     # Starting with NDK version 9, <elf.h> actually includes definitions
     # of Elf32_auxv_t and Elf64_auxv_t. But sadly, <elf.h> includes
     # <sys/exec_elf.h> which defines some of the ELF types incorrectly,
-    # leading to conflicts with the defintions from <linux/elf.h>.
+    # leading to conflicts with the definitions from <linux/elf.h>.
     # This makes it impossible for us to include both <elf.h> and
     # <linux/elf.h>, which means that, in practice, we do not have
     # access to Elf32_auxv_t and Elf64_auxv_t on this platform.
@@ -14276,8 +13971,8 @@ if ${gdb_cv_i386_is_x86_64+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   save_CPPFLAGS="$CPPFLAGS"
-                    CPPFLAGS="$CPPFLAGS $CFLAGS"
-                    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+		    CPPFLAGS="$CPPFLAGS $CFLAGS"
+		    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 #if __x86_64__
@@ -14293,7 +13988,7 @@ else
 fi
 rm -f conftest*
 
-                    CPPFLAGS="$save_CPPFLAGS"
+		    CPPFLAGS="$save_CPPFLAGS"
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_i386_is_x86_64" >&5
 $as_echo "$gdb_cv_i386_is_x86_64" >&6; }
@@ -14336,8 +14031,8 @@ if ${gdb_cv_m68k_is_coldfire+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   save_CPPFLAGS="$CPPFLAGS"
-                    CPPFLAGS="$CPPFLAGS $CFLAGS"
-                    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+		    CPPFLAGS="$CPPFLAGS $CFLAGS"
+		    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 #ifdef __mcoldfire__
@@ -14353,7 +14048,7 @@ else
 fi
 rm -f conftest*
 
-                    CPPFLAGS="$save_CPPFLAGS"
+		    CPPFLAGS="$save_CPPFLAGS"
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_m68k_is_coldfire" >&5
 $as_echo "$gdb_cv_m68k_is_coldfire" >&6; }

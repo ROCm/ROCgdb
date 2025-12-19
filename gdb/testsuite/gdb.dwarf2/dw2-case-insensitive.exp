@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ require dwarf2_support
 
 standard_testfile .c -debug.S
 
-if [is_ilp32_target] {
+if {[is_ilp32_target]} {
     set ptrbits 32
 } else {
     set ptrbits 64

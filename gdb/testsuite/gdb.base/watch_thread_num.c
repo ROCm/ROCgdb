@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2002-2024 Free Software Foundation, Inc.
+   Copyright 2002-2025 Free Software Foundation, Inc.
 
    Copyright 1992, 1993, 1994, 1995, 1999, 2002, 2003, 2007, 2008, 2009
    Free Software Foundation, Inc.
@@ -51,9 +51,9 @@ int main () {
 
     for (i = 0; i < NUM; i++)
       {
-        res = pthread_create (&threads[i],
-                             NULL,
-                             thread_function,
+	res = pthread_create (&threads[i],
+			     NULL,
+			     thread_function,
 			     (void *) i);
       }
 
@@ -96,4 +96,3 @@ void *thread_function (void *arg) {
 
     pthread_exit (NULL);
 }
-

@@ -1,6 +1,6 @@
 /* Test program for stack trace through noreturn function.
 
-   Copyright 2003-2024 Free Software Foundation, Inc.
+   Copyright 2003-2025 Free Software Foundation, Inc.
 
    This file is part of the gdb testsuite.
 
@@ -16,7 +16,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
    This file was written by Michael Elizabeth Chastain (mec@shout.net).  */
 
 #include <stdlib.h>

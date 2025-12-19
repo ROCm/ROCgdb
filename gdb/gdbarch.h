@@ -1,7 +1,7 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -33,6 +33,7 @@
 #include "registry.h"
 #include "gdbtypes.h"
 #include "expression.h"
+#include "solib.h"
 
 struct floatformat;
 struct ui_file;
@@ -76,12 +77,6 @@ struct gdbarch_tdep_base
 };
 
 using gdbarch_tdep_up = std::unique_ptr<gdbarch_tdep_base>;
-
-/* Callback type for the 'iterate_over_objfiles_in_search_order'
-   gdbarch  method.  */
-
-using iterate_over_objfiles_in_search_order_cb_ftype
-  = gdb::function_view<bool(objfile *)>;
 
 /* Callback type for regset section iterators.  The callback usually
    invokes the REGSET's supply or collect method, to which it must
@@ -216,7 +211,7 @@ gdbarch_tdep (struct gdbarch *gdbarch)
    information obtained from INFO.ABFD or the global defaults.
 
    The ARCHES parameter is a linked list (sorted most recently used)
-   of all the previously created architures for this architecture
+   of all the previously created architectures for this architecture
    family.  The (possibly NULL) ARCHES->gdbarch can used to access
    values from the previously selected architecture for this
    architecture family.

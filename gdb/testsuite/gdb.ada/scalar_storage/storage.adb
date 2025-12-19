@@ -1,4 +1,4 @@
---  Copyright 2019-2024 Free Software Foundation, Inc.
+--  Copyright 2019-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ procedure Storage is
       Another_Value : Another_Range;
       Color : Colors;
    end record;
-   
+
    for Rec use record
       Value at 0 range 0..6;
       Another_Value at 0 range 7..10;

@@ -1,6 +1,6 @@
 /* Target-dependent code for the IA-64 for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -26,9 +26,9 @@
 #include "solib-svr4.h"
 #include "symtab.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "regset.h"
 
-#include <ctype.h>
 
 /* The sigtramp code is in a non-readable (executable-only) region
    of memory called the ``gate page''.  The addresses in question
@@ -127,9 +127,9 @@ ia64_linux_write_pc (struct regcache *regcache, CORE_ADDR pc)
 static int
 ia64_linux_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
-  return ((isdigit (*s) && s[1] == '[' && s[2] == 'r') /* Displacement.  */
+  return ((c_isdigit (*s) && s[1] == '[' && s[2] == 'r') /* Displacement.  */
 	  || *s == 'r' /* Register value.  */
-	  || isdigit (*s));  /* Literal number.  */
+	  || c_isdigit (*s));  /* Literal number.  */
 }
 
 /* Core file support. */
@@ -235,8 +235,7 @@ ia64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
 
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_lp64_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_lp64_svr4_solib_ops);
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,
@@ -257,9 +256,7 @@ ia64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 				      ia64_linux_stap_is_single_operand);
 }
 
-void _initialize_ia64_linux_tdep ();
-void
-_initialize_ia64_linux_tdep ()
+INIT_GDB_FILE (ia64_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_ia64, 0, GDB_OSABI_LINUX,
 			  ia64_linux_init_abi);

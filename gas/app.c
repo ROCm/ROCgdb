@@ -1,5 +1,5 @@
 /* This is the Assembler Pre-Processor
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -258,10 +258,6 @@ do_scrub_begin (int m68k_mri ATTRIBUTE_UNUSED)
 #endif
 #ifdef DOUBLEBAR_PARALLEL
   lex['|'] = LEX_IS_DOUBLEBAR_1ST;
-#endif
-#ifdef TC_D30V
-  /* Must do this is we want VLIW instruction with "->" or "<-".  */
-  lex['-'] = LEX_IS_SYMBOL_COMPONENT;
 #endif
 
 #ifdef H_TICK_HEX
@@ -577,7 +573,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen,
 
       if (check_multibyte)
 	(void) scan_for_multibyte_characters ((const unsigned char *) from,
-					      (const unsigned char* ) fromend,
+					      (const unsigned char *) fromend,
 					      true /* Generate warnings.  */);
     }
 
@@ -1218,7 +1214,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen,
 	      else
 		ch = process_escape (ch);
 	    }
-	  sprintf (out_buf, "%d", (int) (unsigned char) ch);
+	  sprintf (out_buf, "%d", ch & 0xff);
 
 	  /* None of these 'x constants for us.  We want 'x'.  */
 	  if ((ch = GET ()) != '\'')

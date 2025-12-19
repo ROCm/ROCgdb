@@ -1,5 +1,5 @@
 /* A range adapter that wraps begin / end iterators.
-   Copyright (C) 2021-2024 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,13 +30,11 @@ struct iterator_range
   /* Create an iterator_range using BEGIN as the begin iterator.
 
      Assume that the end iterator can be default-constructed.  */
-  template <typename... Args>
-  iterator_range (Args &&...args)
-    : m_begin (std::forward<Args> (args)...)
+  explicit iterator_range (IteratorType begin)
+    : iterator_range (std::move (begin), IteratorType {})
   {}
 
   /* Create an iterator range using explicit BEGIN and END iterators.  */
-  template <typename... Args>
   iterator_range (IteratorType begin, IteratorType end)
     : m_begin (std::move (begin)), m_end (std::move (end))
   {}

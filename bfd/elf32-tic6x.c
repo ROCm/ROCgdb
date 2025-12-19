@@ -1,5 +1,5 @@
 /* 32-bit ELF support for TI C6X
-   Copyright (C) 2010-2024 Free Software Foundation, Inc.
+   Copyright (C) 2010-2025 Free Software Foundation, Inc.
    Contributed by Joseph Myers <joseph@codesourcery.com>
 		  Bernd Schmidt  <bernds@codesourcery.com>
 
@@ -1422,8 +1422,8 @@ static const tic6x_reloc_map elf32_tic6x_reloc_map[] =
     { BFD_RELOC_C6000_SBR_GOT_H16_W, R_C6000_SBR_GOT_H16_W },
     { BFD_RELOC_C6000_DSBT_INDEX, R_C6000_DSBT_INDEX },
     { BFD_RELOC_C6000_PREL31, R_C6000_PREL31 },
-    { BFD_RELOC_C6000_COPY, R_C6000_COPY },
-    { BFD_RELOC_C6000_JUMP_SLOT, R_C6000_JUMP_SLOT },
+    { BFD_RELOC_COPY, R_C6000_COPY },
+    { BFD_RELOC_JMP_SLOT, R_C6000_JUMP_SLOT },
     { BFD_RELOC_C6000_EHTYPE, R_C6000_EHTYPE },
     { BFD_RELOC_C6000_PCR_H16, R_C6000_PCR_H16 },
     { BFD_RELOC_C6000_PCR_L16, R_C6000_PCR_L16 },
@@ -1594,10 +1594,7 @@ elf32_tic6x_final_link (bfd *abfd, struct bfd_link_info *info)
 	}
     }
   /* Invoke the regular ELF backend linker to do all the work.  */
-  if (!bfd_elf_final_link (abfd, info))
-    return false;
-
-  return true;
+  return _bfd_elf_final_link (abfd, info);
 }
 
 /* Called to pass PARAMS to the backend.  We store them in the hash table
@@ -2220,7 +2217,8 @@ elf32_tic6x_relocate_section (bfd *output_bfd,
 
       if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
+					 rel, 1, relend, R_C6000_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	{
@@ -2693,7 +2691,7 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if ((bfd_link_pic (info) || elf32_tic6x_using_dsbt (abfd))
       && ! htab->elf.dynamic_sections_created)
     {
-      if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
+      if (! bfd_elf_link_create_dynamic_sections (abfd, info))
 	return false;
     }
 
@@ -3170,11 +3168,12 @@ elf32_tic6x_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       /* Set the contents of the .interp section to the interpreter.  */
       if (bfd_link_executable (info) && !info->nointerp)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = htab->elf.interp;
 	  if (s == NULL)
 	    abort ();
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
+	  s->alloced = 1;
 	}
     }
 
@@ -3319,6 +3318,7 @@ elf32_tic6x_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       s->contents = bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
+      s->alloced = 1;
     }
 
   if (htab->elf.dynamic_sections_created)
@@ -3362,7 +3362,8 @@ elf32_tic6x_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
 
 static bool
 elf32_tic6x_finish_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				     struct bfd_link_info *info)
+				     struct bfd_link_info *info,
+				     bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   struct elf32_tic6x_link_hash_table *htab;
   bfd *dynobj;
@@ -3460,7 +3461,7 @@ elf32_tic6x_plt_sym_val (bfd_vma i, const asection *plt,
 }
 
 static int
-elf32_tic6x_obj_attrs_arg_type (int tag)
+elf32_tic6x_obj_attrs_arg_type (obj_attr_tag_t tag)
 {
   if (tag == Tag_ABI_compatibility)
     return ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_STR_VAL;
@@ -3790,7 +3791,7 @@ elf32_tic6x_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   if (!_bfd_generic_verify_endian_match (ibfd, info))
     return false;
 
-  if (! is_tic6x_elf (ibfd) || ! is_tic6x_elf (info->output_bfd))
+  if (! is_tic6x_elf (ibfd))
     return true;
 
   if (!elf32_tic6x_merge_attributes (ibfd, info))

@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # Contributed by Red Hat, originally written by Keith Seitz.
 #
@@ -36,7 +36,7 @@ foreach sym $min_syms {
     set tst "setting breakpoint at '$sym'"
     if {[gdb_breakpoint "'$sym'"]} {
 	pass $tst
-    }    
+    }
 }
 
 

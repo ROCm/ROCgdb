@@ -1,6 +1,6 @@
 /* Floating point routines for GDB, the GNU debugger.
 
-   Copyright (C) 2017-2024 Free Software Foundation, Inc.
+   Copyright (C) 2017-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -2491,4 +2491,3 @@ target_float_compare (const gdb_byte *x, const struct type *type_x,
   const target_float_ops *ops = get_target_float_ops (type_x, type_y);
   return ops->compare (x, type_x, y, type_y);
 }
-

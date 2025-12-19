@@ -1,5 +1,5 @@
 /* Create threads from multiple threads in parallel.
-   Copyright 2007-2024 Free Software Foundation, Inc.
+   Copyright 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -63,7 +63,7 @@ create_function (void *arg)
   return NULL;
 }
 
-int 
+int
 main (int argc, char **argv)
 {
   pthread_attr_t attr;

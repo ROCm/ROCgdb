@@ -1,6 +1,6 @@
 /* Program and address space management, for GDB, the GNU debugger.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,12 +21,14 @@
 #ifndef GDB_PROGSPACE_H
 #define GDB_PROGSPACE_H
 
+#include "solib.h"
 #include "target.h"
 #include "gdb_bfd.h"
+#include "quick-symbol.h"
 #include "registry.h"
-#include "solist.h"
 #include "gdbsupport/safe-iterator.h"
 #include "gdbsupport/intrusive_list.h"
+#include "gdbsupport/owning_intrusive_list.h"
 #include "gdbsupport/refcounted-object.h"
 #include "gdbsupport/gdb_ref_ptr.h"
 #include <vector>
@@ -183,17 +185,18 @@ struct program_space
      a program space.  */
   ~program_space ();
 
-  using objfiles_iterator
-    = reference_to_pointer_iterator<intrusive_list<objfile>::iterator>;
+  using objfiles_iterator = intrusive_list<objfile>::iterator;
   using objfiles_range = iterator_range<objfiles_iterator>;
 
   /* Return an iterable object that can be used to iterate over all
      objfiles.  The basic use is in a foreach, like:
 
-     for (objfile *objf : pspace->objfiles ()) { ... }  */
+     for (objfile &objf : pspace->objfiles ()) { ... }  */
   objfiles_range objfiles ()
   {
-    return objfiles_range (objfiles_iterator (m_objfiles_list.begin ()));
+    objfiles_iterator begin (m_objfiles_list.begin ());
+
+    return objfiles_range (std::move (begin));
   }
 
   using objfiles_safe_range = basic_safe_range<objfiles_range>;
@@ -201,15 +204,32 @@ struct program_space
   /* An iterable object that can be used to iterate over all objfiles.
      The basic use is in a foreach, like:
 
-     for (objfile *objf : pspace->objfiles_safe ()) { ... }
+     for (objfile &objf : pspace->objfiles_safe ()) { ... }
 
      This variant uses a basic_safe_iterator so that objfiles can be
      deleted during iteration.  */
   objfiles_safe_range objfiles_safe ()
   {
-    return objfiles_safe_range
-      (objfiles_range (objfiles_iterator (m_objfiles_list.begin ())));
+    return objfiles_safe_range (this->objfiles ());
   }
+
+  /* Iterate over all objfiles of the program space in the order that makes the
+     most sense to make global symbol searches.
+
+     CB is a callback function passed an objfile to be searched.  The iteration stops
+     if this function returns true.
+
+     If not nullptr, CURRENT_OBJFILE corresponds to the objfile being
+     inspected when the symbol search was requested.  */
+  void iterate_over_objfiles_in_search_order
+    (iterate_over_objfiles_in_search_order_cb_ftype cb,
+     objfile *current_objfile);
+
+  /* Wrapper around the quick_symbol_functions map_symbol_filenames
+     "method".  Map function FUN over every file, in every objfile in
+     this program space.  See
+     quick_symbol_functions.map_symbol_filenames for details.  */
+  void map_symbol_filenames (symbol_filename_listener fun, bool need_fullname);
 
   /* Add OBJFILE to the list of objfiles, putting it just before
      BEFORE.  If BEFORE is nullptr, it will go at the end of the
@@ -231,9 +251,30 @@ struct program_space
      is outside all objfiles in this progspace.  */
   struct objfile *objfile_for_address (CORE_ADDR address);
 
-  /* Return the list of  all the solibs in this program space.  */
+  /* Set this program space's solib provider.
+
+     The solib provider must be unset prior to calling this method.  */
+  void set_solib_ops (solib_ops_up ops)
+  {
+    gdb_assert (m_solib_ops == nullptr);
+    m_solib_ops = std::move (ops);
+  };
+
+  /* Unset and free this program space's solib provider.  */
+  void unset_solib_ops ()
+  { m_solib_ops = nullptr; }
+
+  /* Unset and return this program space's solib provider.  */
+  solib_ops_up release_solib_ops ()
+  { return std::move (m_solib_ops); }
+
+  /* Get this program space's solib provider.  */
+  const struct solib_ops *solib_ops () const
+  { return m_solib_ops.get (); }
+
+  /* Return the list of all the solibs in this program space.  */
   owning_intrusive_list<solib> &solibs ()
-  { return so_list; }
+  { return m_solib_list; }
 
   /* Similar to `bfd_get_filename (exec_bfd ())` but in original form given
      by user, without symbolic links and pathname resolved.  It is not nullptr
@@ -257,9 +298,6 @@ struct program_space
   {
     ebfd = std::move (abfd);
   }
-
-  bfd *core_bfd () const
-  { return cbfd.get ();  }
 
   /* Reset saved solib data at the start of an solib event.  This lets
      us properly collect the data when calling solib_add, so it can then
@@ -305,9 +343,6 @@ struct program_space
   /* The last-modified time, from when the exec was brought in.  */
   long ebfd_mtime = 0;
 
-  /* Binary file diddling handle for the core file.  */
-  gdb_bfd_ref_ptr cbfd;
-
   /* The address space attached to this program space.  More than one
      program space may be bound to the same address space.  In the
      traditional unix-like debugging scenario, this will usually
@@ -337,10 +372,6 @@ struct program_space
      (e.g. the argument to the "symbol-file" or "file" command).  */
   struct objfile *symfile_object_file = NULL;
 
-  /* List of shared objects mapped into this space.  Managed by
-     solib.c.  */
-  owning_intrusive_list<solib> so_list;
-
   /* Number of calls to solib_add.  */
   unsigned int solib_add_generation = 0;
 
@@ -358,6 +389,13 @@ struct program_space
 private:
   /* All known objfiles are kept in a linked list.  */
   owning_intrusive_list<objfile> m_objfiles_list;
+
+  /* solib_ops implementation used to provide solibs in this program space.  */
+  solib_ops_up m_solib_ops;
+
+  /* List of shared objects mapped into this space.  Managed by
+     solib.c.  */
+  owning_intrusive_list<solib> m_solib_list;
 
   /* The set of target sections matching the sections mapped into
      this program space.  Managed by both exec_ops and solib.c.  */

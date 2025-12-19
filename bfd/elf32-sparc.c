@@ -1,5 +1,5 @@
 /* SPARC-specific support for 32-bit ELF
-   Copyright (C) 1993-2024 Free Software Foundation, Inc.
+   Copyright (C) 1993-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -75,8 +75,7 @@ elf32_sparc_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
   /* FIXME: This should not be static.  */
   static unsigned long previous_ibfd_e_flags = (unsigned long) -1;
 
-  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
-      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour)
     return true;
 
   error = false;
@@ -281,7 +280,10 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 #undef	TARGET_BIG_NAME
 #define	TARGET_BIG_NAME				"elf32-sparc-sol2"
 
-#undef elf32_bed
+#undef  ELF_TARGET_OS
+#define ELF_TARGET_OS				is_solaris
+
+#undef  elf32_bed
 #define elf32_bed				elf32_sparc_sol2_bed
 
 /* The 32-bit static TLS arena size is rounded to the nearest 8-byte

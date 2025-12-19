@@ -1,5 +1,5 @@
 /*
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@
     }
 
   Then it was compiled with:
-	
+
 	gcc -fvar-tracking{,-assignments} -gdwarf-3
 	-fno-inline{,-functions,-small-functions,-functions-called-once}
 	-O2

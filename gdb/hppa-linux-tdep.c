@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux running on PA-RISC, for GDB.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,6 +32,7 @@
 #include "regcache.h"
 #include "hppa-tdep.h"
 #include "linux-tdep.h"
+#include "solib-svr4-linux.h"
 #include "elf/common.h"
 
 /* Map DWARF DBX register numbers to GDB register numbers.  */
@@ -112,15 +113,15 @@ insns_match_pattern (struct gdbarch *gdbarch, CORE_ADDR pc,
 /* Signal frames.  */
 
 /* (This is derived from MD_FALLBACK_FRAME_STATE_FOR in gcc.)
- 
+
    Unfortunately, because of various bugs and changes to the kernel,
    we have several cases to deal with.
 
-   In 2.4, the signal trampoline is 4 bytes, and pc should point directly at 
+   In 2.4, the signal trampoline is 4 bytes, and pc should point directly at
    the beginning of the trampoline and struct rt_sigframe.
 
    In <= 2.6.5-rc2-pa3, the signal trampoline is 9 bytes, and pc points at
-   the 4th word in the trampoline structure.  This is wrong, it should point 
+   the 4th word in the trampoline structure.  This is wrong, it should point
    at the 5th word.  This is fixed in 2.6.5-rc2-pa4.
 
    To detect these cases, we first take pc, align it to 64-bytes
@@ -149,7 +150,7 @@ hppa_linux_sigtramp_find_sigcontext (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   /* rt_sigreturn trampoline:
      3419000x ldi 0, %r25 or ldi 1, %r25   (x = 0 or 2)
-     3414015a ldi __NR_rt_sigreturn, %r20 
+     3414015a ldi __NR_rt_sigreturn, %r20
      e4008200 be,l 0x100(%sr2, %r0), %sr0, %r31
      08000240 nop  */
 
@@ -167,7 +168,7 @@ hppa_linux_sigtramp_find_sigcontext (struct gdbarch *gdbarch, CORE_ADDR pc)
     {
       if (insns_match_pattern (gdbarch, pc, hppa_sigtramp, dummy))
 	{
-	  /* sigaltstack case: we have no way of knowing which offset to 
+	  /* sigaltstack case: we have no way of knowing which offset to
 	     use in this case; default to new kernel handling.  If this is
 	     wrong the unwinding will fail.  */
 	  attempt = 2;
@@ -179,7 +180,7 @@ hppa_linux_sigtramp_find_sigcontext (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   /* sp + sfoffs[try] points to a struct rt_sigframe, which contains
      a struct siginfo and a struct ucontext.  struct ucontext contains
-     a struct sigcontext.  Return an offset to this sigcontext here.  Too 
+     a struct sigcontext.  Return an offset to this sigcontext here.  Too
      bad we cannot include system specific headers :-(.
      sizeof(struct siginfo) == 128
      offsetof(struct ucontext, uc_mcontext) == 24.  */
@@ -197,14 +198,13 @@ hppa_linux_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
 					void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  struct hppa_linux_sigtramp_unwind_cache *info;
   CORE_ADDR pc, scptr;
   int i;
 
   if (*this_cache)
     return (struct hppa_linux_sigtramp_unwind_cache *) *this_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct hppa_linux_sigtramp_unwind_cache);
+  auto *info = frame_obstack_zalloc<hppa_linux_sigtramp_unwind_cache> ();
   *this_cache = info;
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -212,10 +212,10 @@ hppa_linux_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
   scptr = hppa_linux_sigtramp_find_sigcontext (gdbarch, pc);
 
   /* structure of struct sigcontext:
-   
+
      struct sigcontext {
 	unsigned long sc_flags;
-	unsigned long sc_gr[32]; 
+	unsigned long sc_gr[32];
 	unsigned long long sc_fr[32];
 	unsigned long sc_iasq[2];
 	unsigned long sc_iaoq[2];
@@ -308,20 +308,21 @@ hppa_linux_sigtramp_frame_sniffer (const struct frame_unwind *self,
   return 0;
 }
 
-static const struct frame_unwind hppa_linux_sigtramp_frame_unwind = {
+static const struct frame_unwind_legacy hppa_linux_sigtramp_frame_unwind (
   "hppa linux sigtramp",
   SIGTRAMP_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   hppa_linux_sigtramp_frame_this_id,
   hppa_linux_sigtramp_frame_prev_register,
   NULL,
   hppa_linux_sigtramp_frame_sniffer
-};
+);
 
 /* Attempt to find (and return) the global pointer for the given
    function.
 
-   This is a rather nasty bit of code searchs for the .dynamic section
+   This rather nasty bit of code searches for the .dynamic section
    in the objfile corresponding to the pc of the function we're trying
    to call.  Once it finds the addresses at which the .dynamic section
    lives in the child process, it scans the Elf32_Dyn entries for a
@@ -335,7 +336,7 @@ hppa_linux_find_global_pointer (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct obj_section *faddr_sect;
   CORE_ADDR faddr;
-  
+
   faddr = value_as_address (function);
 
   /* Is this a plabel? If so, dereference it to get the gp value.  */
@@ -351,8 +352,8 @@ hppa_linux_find_global_pointer (struct gdbarch *gdbarch,
 	return extract_unsigned_integer (buf, sizeof (buf), byte_order);
     }
 
-  /* If the address is in the plt section, then the real function hasn't 
-     yet been fixed up by the linker so we cannot determine the gp of 
+  /* If the address is in the plt section, then the real function hasn't
+     yet been fixed up by the linker so we cannot determine the gp of
      that function.  */
   if (in_plt_section (faddr))
     return 0;
@@ -360,14 +361,14 @@ hppa_linux_find_global_pointer (struct gdbarch *gdbarch,
   faddr_sect = find_pc_section (faddr);
   if (faddr_sect != NULL)
     {
-      for (obj_section *osect : faddr_sect->objfile->sections ())
+      for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (strcmp (osect->the_bfd_section->name, ".dynamic") == 0)
+	  if (strcmp (osect.the_bfd_section->name, ".dynamic") == 0)
 	    {
 	      CORE_ADDR addr, endaddr;
 
-	      addr = osect->addr ();
-	      endaddr = osect->endaddr ();
+	      addr = osect.addr ();
+	      endaddr = osect.endaddr ();
 
 	      while (addr < endaddr)
 		{
@@ -498,8 +499,7 @@ hppa_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   frame_unwind_append_unwinder (gdbarch, &hppa_linux_sigtramp_frame_unwind);
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
-  set_solib_svr4_fetch_link_map_offsets
-    (gdbarch, linux_ilp32_fetch_link_map_offsets);
+  set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);
 
   tdep->in_solib_call_trampoline = hppa_in_solib_call_trampoline;
   set_gdbarch_skip_trampoline_code (gdbarch, hppa_skip_trampoline_code);
@@ -523,9 +523,7 @@ hppa_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					     svr4_fetch_objfile_link_map);
 }
 
-void _initialize_hppa_linux_tdep ();
-void
-_initialize_hppa_linux_tdep ()
+INIT_GDB_FILE (hppa_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_hppa, 0, GDB_OSABI_LINUX,
 			  hppa_linux_init_abi);

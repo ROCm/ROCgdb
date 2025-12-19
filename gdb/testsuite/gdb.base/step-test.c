@@ -43,7 +43,7 @@ int main () {
    /* Test "stepi" */
    a[5] = a[3] - a[4];
    callee(); /* STEPI */
-   
+
    /* Test "nexti" */
    callee(); /* NEXTI */
 
@@ -58,4 +58,3 @@ int main () {
 
    exit (0);
 }
-

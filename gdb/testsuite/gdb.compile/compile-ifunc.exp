@@ -1,4 +1,4 @@
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +17,14 @@ load_lib compile-support.exp
 
 require allow_ifunc_tests
 
+require allow_compile_tests
+
 standard_testfile
 
 require is_c_compiler_gcc
 
 set flags ""
-if [test_compiler_info gcc*] {
+if {[test_compiler_info gcc*]} {
     set flags additional_flags=-Wno-attribute-alias
 }
 
@@ -33,7 +35,7 @@ with_test_prefix "nodebug" {
 	return -1
     }
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
 
@@ -63,7 +65,7 @@ with_test_prefix "debug" {
 	return -1
     }
 
-    if ![runto_main] {
+    if {![runto_main]} {
 	return -1
     }
     # gnu_ifunc (10): error: too many arguments to function 'gnu_ifunc'

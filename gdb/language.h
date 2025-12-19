@@ -1,6 +1,6 @@
 /* Source-language-related definitions for GDB.
 
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -36,7 +36,6 @@ struct value_print_options;
 struct type_print_options;
 struct lang_varobj_ops;
 struct parser_state;
-class compile_instance;
 struct completion_match_for_lcd;
 class innermost_block_tracker;
 
@@ -60,7 +59,7 @@ range_check;
 extern enum array_ordering
   {
     array_row_major, array_column_major
-  } 
+  }
 array_ordering;
 
 
@@ -146,6 +145,16 @@ struct language_arch_info
      LANG is the language for which type is being looked up.  */
   struct symbol *lookup_primitive_type_as_symbol (const char *name,
 						  enum language lang);
+
+  /* Add a built-in symbol.  */
+  void add_builtin_symbol (struct symbol *symbol)
+  {
+    m_builtin_symbols.push_back (symbol);
+  }
+
+  /* Lookup NAME in M_BUILTIN_SYMBOLS vector.  */
+  symbol *lookup_builtin_symbol (const char *name);
+
 private:
 
   /* A structure storing a type and a corresponding symbol.  The type is
@@ -203,6 +212,9 @@ private:
      which can be fetched by the symbol lookup machinery, should they be
      needed.  */
   std::vector<type_and_symbol> primitive_types_and_symbols;
+
+  /* Vector of symbols known to the language.  */
+  std::vector<symbol *> m_builtin_symbols;
 
   /* Type of elements of strings.  */
   struct type *m_string_char_type = nullptr;
@@ -389,37 +401,6 @@ struct language_defn
 
   symbol_name_matcher_ftype *get_symbol_name_matcher
 	(const lookup_name_info &lookup_name) const;
-
-  /* If this language allows compilation from the gdb command line,
-     then this method will return an instance of struct gcc_context
-     appropriate to the language.  If compilation for this language is
-     generally supported, but something goes wrong then an exception
-     is thrown.  If compilation is not supported for this language
-     then this method returns NULL.  */
-
-  virtual std::unique_ptr<compile_instance> get_compile_instance () const;
-
-  /* This method must be overridden if 'get_compile_instance' is
-     overridden.
-
-     This takes the user-supplied text and returns a new bit of code
-     to compile.
-
-     INST is the compiler instance being used.
-     INPUT is the user's input text.
-     GDBARCH is the architecture to use.
-     EXPR_BLOCK is the block in which the expression is being
-     parsed.
-     EXPR_PC is the PC at which the expression is being parsed.  */
-
-  virtual std::string compute_program (compile_instance *inst,
-				       const char *input,
-				       struct gdbarch *gdbarch,
-				       const struct block *expr_block,
-				       CORE_ADDR expr_pc) const
-  {
-    gdb_assert_not_reached ("language_defn::compute_program");
-  }
 
   /* Hash the given symbol search name.  */
   virtual unsigned int search_name_hash (const char *name) const;
@@ -735,7 +716,7 @@ extern const char lang_frame_mismatch_warn[];
 
 extern bool warn_frame_lang_mismatch;
 
-/* language_mode == 
+/* language_mode ==
    language_mode_auto:   current_language automatically set upon selection
    of scope (e.g. stack frame)
    language_mode_manual: current_language set only by user.  */
@@ -787,8 +768,15 @@ struct symbol *
 					    struct gdbarch *gdbarch,
 					    const char *name);
 
+/* Wrapper around language_lookup_builtin_symbol to return the
+   corresponding symbol.  */
+
+struct symbol *language_lookup_builtin_symbol (const struct language_defn *l,
+					       struct gdbarch *gdbarch,
+					       const char *name);
+
 
-/* These macros define the behavior of the expression 
+/* These macros define the behavior of the expression
    evaluator.  */
 
 /* Should we range check values against the domain of their type?  */
@@ -797,7 +785,7 @@ struct symbol *
 /* "cast" really means conversion.  */
 /* FIXME -- should be a setting in language_defn.  */
 #define CAST_IS_CONVERSION(LANG) ((LANG)->la_language == language_c  || \
-				  (LANG)->la_language == language_cplus || \
+				  is_cplus_dialect ((LANG)->la_language) || \
 				  (LANG)->la_language == language_objc)
 
 /* Print out the current language settings: language, range and
@@ -868,6 +856,8 @@ public:
   /* Set the current language as well.  */
   explicit scoped_restore_current_language (enum language lang);
 
+  DISABLE_COPY_AND_ASSIGN (scoped_restore_current_language);
+
   ~scoped_restore_current_language ();
 
   scoped_restore_current_language (scoped_restore_current_language &&other)
@@ -876,11 +866,6 @@ public:
     m_fun = other.m_fun;
     other.dont_restore ();
   }
-
-  scoped_restore_current_language (const scoped_restore_current_language &)
-      = delete;
-  scoped_restore_current_language &operator=
-      (const scoped_restore_current_language &) = delete;
 
   /* Cancel restoring on scope exit.  */
   void dont_restore ()

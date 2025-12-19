@@ -1,6 +1,6 @@
 /* Branch trace support for GDB, the GNU debugger.
 
-   Copyright (C) 2013-2024 Free Software Foundation, Inc.
+   Copyright (C) 2013-2025 Free Software Foundation, Inc.
 
    Contributed by Intel Corp. <markus.t.metzger@intel.com>
 
@@ -39,7 +39,6 @@
 #include "record-btrace.h"
 
 #include <inttypes.h>
-#include <ctype.h>
 #include <algorithm>
 #include <string>
 
@@ -558,7 +557,7 @@ ftrace_update_function (struct btrace_thread_info *btinfo,
      only a minimal symbol.  */
   if (pc.has_value ())
     {
-      fun = find_pc_function (*pc);
+      fun = find_symbol_for_pc (*pc);
       bound_minimal_symbol bmfun = lookup_minimal_symbol_by_pc (*pc);
       mfun = bmfun.minsym;
 
@@ -1394,7 +1393,7 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 	      continue;
 
 	    if (!ptw_string.has_value ())
-	      *ptw_string = hex_string (event.variant.ptwrite.payload);
+	      ptw_string = hex_string (event.variant.ptwrite.payload);
 
 	    handle_pt_aux_insn (btinfo, *ptw_string, pc);
 
@@ -1531,23 +1530,23 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 
 	    if (event.variant.vmexit.has_vmxr != 0)
 	      {
-		std::string seperator = aux_string.back () == ':' ? "" : ",";
-		aux_string += seperator + std::string (" vmxr = ")
+		std::string separator = aux_string.back () == ':' ? "" : ",";
+		aux_string += separator + std::string (" vmxr = ")
 			      + hex_string (event.variant.vmexit.vmxr);
 	      }
 
 	    if (event.variant.vmexit.has_vmxq != 0)
 	      {
-		std::string seperator = aux_string.back () == ':' ? "" : ",";
-		aux_string += seperator + std::string (" vmxq = ")
+		std::string separator = aux_string.back () == ':' ? "" : ",";
+		aux_string += separator + std::string (" vmxq = ")
 			      + hex_string (event.variant.vmexit.vmxq);
 	      }
 
 	    if (event.ip_suppressed == 0)
 	      {
 		pc = event.variant.vmexit.ip;
-		std::string seperator = aux_string.back () == ':' ? "" : ",";
-		aux_string += seperator + std::string (" ip = ")
+		std::string separator = aux_string.back () == ':' ? "" : ",";
+		aux_string += separator + std::string (" ip = ")
 			      + hex_string (*pc);
 	      }
 
@@ -2136,7 +2135,7 @@ btrace_stitch_bts (struct btrace_data_bts *btrace, struct thread_info *tp)
 /* Adjust the block trace in order to stitch old and new trace together.
    BTRACE is the new delta trace between the last and the current stop.
    TP is the traced thread.
-   May modifx BTRACE as well as the existing trace in TP.
+   May modify BTRACE as well as the existing trace in TP.
    Return 0 on success, -1 otherwise.  */
 
 static int
@@ -2366,8 +2365,8 @@ btrace_free_objfile (struct objfile *objfile)
 {
   DEBUG ("free objfile");
 
-  for (thread_info *tp : all_non_exited_threads ())
-    btrace_clear (tp);
+  for (thread_info &tp : all_non_exited_threads ())
+    btrace_clear (&tp);
 }
 
 /* See btrace.h.  */
@@ -3258,7 +3257,7 @@ get_uint (const char **arg)
   begin = *arg;
   pos = skip_spaces (begin);
 
-  if (!isdigit (*pos))
+  if (!c_isdigit (*pos))
     error (_("Expected positive number, got: %s."), pos);
 
   number = strtoul (pos, &end, 10);
@@ -3277,7 +3276,7 @@ get_context_size (const char **arg)
 {
   const char *pos = skip_spaces (*arg);
 
-  if (!isdigit (*pos))
+  if (!c_isdigit (*pos))
     error (_("Expected positive number, got: %s."), pos);
 
   char *end;
@@ -3501,9 +3500,7 @@ show_maint_btrace_pt_skip_pad  (struct ui_file *file, int from_tty,
 
 /* Initialize btrace maintenance commands.  */
 
-void _initialize_btrace ();
-void
-_initialize_btrace ()
+INIT_GDB_FILE (btrace)
 {
   add_cmd ("btrace", class_maintenance, maint_info_btrace_cmd,
 	   _("Info about branch tracing data."), &maintenanceinfolist);

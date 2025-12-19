@@ -175,6 +175,8 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+30159073[ 	]+csrw[ 	]+misa,a1
 [ 	]+[0-9a-f]+:[ 	]+30202573[ 	]+csrr[ 	]+a0,medeleg
 [ 	]+[0-9a-f]+:[ 	]+30259073[ 	]+csrw[ 	]+medeleg,a1
+[ 	]+[0-9a-f]+:[ 	]+31202573[ 	]+csrr[ 	]+a0,0x312
+[ 	]+[0-9a-f]+:[ 	]+31259073[ 	]+csrw[ 	]+0x312,a1
 [ 	]+[0-9a-f]+:[ 	]+30302573[ 	]+csrr[ 	]+a0,mideleg
 [ 	]+[0-9a-f]+:[ 	]+30359073[ 	]+csrw[ 	]+mideleg,a1
 [ 	]+[0-9a-f]+:[ 	]+30402573[ 	]+csrr[ 	]+a0,mie
@@ -555,6 +557,8 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+60059073[ 	]+csrw[ 	]+hstatus,a1
 [ 	]+[0-9a-f]+:[ 	]+60202573[ 	]+csrr[ 	]+a0,hedeleg
 [ 	]+[0-9a-f]+:[ 	]+60259073[ 	]+csrw[ 	]+hedeleg,a1
+[ 	]+[0-9a-f]+:[ 	]+61202573[ 	]+csrr[ 	]+a0,0x612
+[ 	]+[0-9a-f]+:[ 	]+61259073[ 	]+csrw[ 	]+0x612,a1
 [ 	]+[0-9a-f]+:[ 	]+60302573[ 	]+csrr[ 	]+a0,hideleg
 [ 	]+[0-9a-f]+:[ 	]+60359073[ 	]+csrw[ 	]+hideleg,a1
 [ 	]+[0-9a-f]+:[ 	]+60402573[ 	]+csrr[ 	]+a0,hie
@@ -735,6 +739,10 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+21459073[ 	]+csrw[ 	]+vsieh,a1
 [ 	]+[0-9a-f]+:[ 	]+25402573[ 	]+csrr[ 	]+a0,vsiph
 [ 	]+[0-9a-f]+:[ 	]+25459073[ 	]+csrw[ 	]+vsiph,a1
+[ 	]+[0-9a-f]+:[ 	]+12002573[ 	]+csrr[ 	]+a0,scountinhibit
+[ 	]+[0-9a-f]+:[ 	]+12059073[ 	]+csrw[ 	]+scountinhibit,a1
+[ 	]+[0-9a-f]+:[ 	]+01102573[ 	]+csrr[ 	]+a0,ssp
+[ 	]+[0-9a-f]+:[ 	]+01159073[ 	]+csrw[ 	]+ssp,a1
 [ 	]+[0-9a-f]+:[ 	]+15002573[ 	]+csrr[ 	]+a0,siselect
 [ 	]+[0-9a-f]+:[ 	]+15059073[ 	]+csrw[ 	]+siselect,a1
 [ 	]+[0-9a-f]+:[ 	]+15102573[ 	]+csrr[ 	]+a0,sireg
@@ -831,6 +839,16 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+24d59073[ 	]+csrw[ 	]+vstimecmp,a1
 [ 	]+[0-9a-f]+:[ 	]+25d02573[ 	]+csrr[ 	]+a0,vstimecmph
 [ 	]+[0-9a-f]+:[ 	]+25d59073[ 	]+csrw[ 	]+vstimecmph,a1
+[ 	]+[0-9a-f]+:[ 	]+14e02573[ 	]+csrr[ 	]+a0,sctrctl
+[ 	]+[0-9a-f]+:[ 	]+14e59073[ 	]+csrw[ 	]+sctrctl,a1
+[ 	]+[0-9a-f]+:[ 	]+14f02573[ 	]+csrr[ 	]+a0,sctrstatus
+[ 	]+[0-9a-f]+:[ 	]+14f59073[ 	]+csrw[ 	]+sctrstatus,a1
+[ 	]+[0-9a-f]+:[ 	]+15f02573[ 	]+csrr[ 	]+a0,sctrdepth
+[ 	]+[0-9a-f]+:[ 	]+15f59073[ 	]+csrw[ 	]+sctrdepth,a1
+[ 	]+[0-9a-f]+:[ 	]+24e02573[ 	]+csrr[ 	]+a0,vsctrctl
+[ 	]+[0-9a-f]+:[ 	]+24e59073[ 	]+csrw[ 	]+vsctrctl,a1
+[ 	]+[0-9a-f]+:[ 	]+34e02573[ 	]+csrr[ 	]+a0,mctrctl
+[ 	]+[0-9a-f]+:[ 	]+34e59073[ 	]+csrw[ 	]+mctrctl,a1
 [ 	]+[0-9a-f]+:[ 	]+00002573[ 	]+csrr[ 	]+a0,0x0
 [ 	]+[0-9a-f]+:[ 	]+00059073[ 	]+csrw[ 	]+0x0,a1
 [ 	]+[0-9a-f]+:[ 	]+00402573[ 	]+csrr[ 	]+a0,0x4
@@ -921,3 +939,5 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+c2259073[ 	]+csrw[ 	]+vlenb,a1
 [ 	]+[0-9a-f]+:[ 	]+01702573[ 	]+csrr[ 	]+a0,jvt
 [ 	]+[0-9a-f]+:[ 	]+01759073[ 	]+csrw[ 	]+jvt,a1
+[ 	]+[0-9a-f]+:[ 	]+18102573[ 	]+csrr[ 	]+a0,srmcfg
+[ 	]+[0-9a-f]+:[ 	]+18159073[ 	]+csrw[ 	]+srmcfg,a1

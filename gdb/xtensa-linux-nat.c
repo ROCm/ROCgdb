@@ -1,6 +1,6 @@
 /* Xtensa GNU/Linux native support.
 
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -190,7 +190,7 @@ fill_fpregset (const struct regcache *regcache,
   return;
 }
 
-void 
+void
 supply_fpregset (struct regcache *regcache,
 		 const gdb_fpregset_t *fpregsetp)
 {
@@ -205,17 +205,17 @@ fetch_gregs (struct regcache *regcache, int regnum)
 {
   int tid = regcache->ptid ().lwp ();
   gdb_gregset_t regs;
-  
+
   if (ptrace (PTRACE_GETREGS, tid, 0, (long) &regs) < 0)
     {
       perror_with_name (_("Couldn't get registers"));
       return;
     }
- 
+
   supply_gregset_reg (regcache, &regs, regnum);
 }
 
-/* Store greg-register(s) in GDB's register 
+/* Store greg-register(s) in GDB's register
    array into the process/thread specified by TID.  */
 
 static void
@@ -327,9 +327,7 @@ ps_get_thread_area (struct ps_prochandle *ph,
   return PS_OK;
 }
 
-void _initialize_xtensa_linux_nat ();
-void
-_initialize_xtensa_linux_nat ()
+INIT_GDB_FILE (xtensa_linux_nat)
 {
   const xtensa_regtable_t *ptr;
 

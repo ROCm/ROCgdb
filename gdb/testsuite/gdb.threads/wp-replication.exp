@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2009-2024 Free Software Foundation, Inc.
+# Copyright 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executab
     return -1
 }
 
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 # Force hardware watchpoints to be used.
 gdb_test_no_output "set can-use-hw-watchpoints 1" ""
@@ -126,7 +126,7 @@ gdb_test_no_output "set var test_ready=1" \
       "set var test_ready=1"
 
 # Set the number of expected watchpoint triggers.
-set TRIGGERS [expr "$NR_THREADS * $hwatch_count * $NR_TRIGGERS_PER_THREAD"]
+set TRIGGERS [expr {$NR_THREADS * $hwatch_count * $NR_TRIGGERS_PER_THREAD}]
 
 # Move the threads and hit the watchpoints TRIGGERS times.
 for { set i 1 } { $i <= $TRIGGERS } { incr i } {

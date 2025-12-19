@@ -1,5 +1,5 @@
 # Expect script for --package-note tests.
-#   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+#   Copyright (C) 2022-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -27,7 +27,6 @@ if ![is_elf_format] {
 
 if { !([istarget *-*-linux*]
        || [istarget arm*-*-uclinuxfdpiceabi]
-       || [istarget *-*-nacl*]
        || [istarget *-*-gnu*]) } then {
     return
 }

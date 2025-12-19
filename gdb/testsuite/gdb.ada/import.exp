@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Free Software Foundation, Inc.
+# Copyright 2023-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ require allow_ada_tests
 # declarations only") is required.  The commit makes sure that file-scope
 # function and variable declarations are emitted in dwarf.  This allows the
 # description of imported entries, making them available to the debugger.
-require {expr [gcc_major_version] >= 8}
+require {gnat_version_compare >= 8}
 
 standard_ada_testfile prog
 
@@ -36,7 +36,7 @@ if {[gdb_compile "${csrcfile}" "${cobject}" object debug] != ""} {
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable \
 	 [list debug additional_flags=-largs \
 	      additional_flags=${cobject} additional_flags=-margs]] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -53,6 +53,9 @@ gdb_test "print pkg.imported_var_ada" " = 42"
 
 gdb_test "print pkg.exported_var_ada" " = 99"
 gdb_test "print exported_var_ada" " = 99"
+
+gdb_breakpoint "local_imported_func" message
+gdb_test "print copy" " = 42"
 
 # This passes with gcc 10 but fails with gcc 9.  With gcc 9, we have:
 #   <1><1659>: Abbrev Number: 4 (DW_TAG_subprogram)
@@ -76,19 +79,16 @@ gdb_test "print exported_var_ada" " = 99"
 # The fact that things start to work when adding the DW_AT_declaration is
 # consistent with what is described in commit ff9baa5f1c5, so xfail this
 # (without pinpointing it to a specific gcc PR or commit).
-if { [gcc_major_version] < 10 } {
-    setup_xfail *-*-*
+foreach func {"pkg.imported_func_ada" "imported_func"} {
+    clean_restart $testfile
+    if { [gnat_version_compare < 10] } {
+	setup_xfail *-*-*
+    }
+    gdb_breakpoint $func message
 }
-gdb_breakpoint "pkg.imported_func_ada" message
-gdb_breakpoint "imported_func" message
-if { [gcc_major_version] < 10 } {
-    setup_xfail *-*-*
+
+foreach func {"imported_func_ada" "pkg.exported_func_ada" \
+		  "exported_func_ada" "exported_func"} {
+    clean_restart $testfile
+    gdb_breakpoint $func message
 }
-gdb_breakpoint "imported_func_ada" message
-
-gdb_breakpoint "local_imported_func" message
-gdb_breakpoint "pkg.exported_func_ada" message
-gdb_breakpoint "exported_func_ada" message
-gdb_breakpoint "exported_func" message
-
-gdb_test "print copy" " = 42"

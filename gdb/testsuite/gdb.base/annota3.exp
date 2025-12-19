@@ -1,4 +1,4 @@
-# Copyright 2003-2024 Free Software Foundation, Inc.
+# Copyright 2003-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -78,14 +78,14 @@ gdb_test_multiple "if 1" "start if construct" {
 
 gdb_test_multiple "end" "end if construct" {
     -re "^end\r\n\r\n\032\032post-commands\r\n$gdb_prompt$" {
- 	pass "end if construct"
+	pass "end if construct"
     }
 }
 
 #
 # info break:
 #
-send_gdb "info break\n" 
+send_gdb "info break\n"
 gdb_expect_list "breakpoint info" "$gdb_prompt$" [concat {
     "\r\n\032\032post-prompt\r\n"
     "Num     Type           Disp Enb Address    +What\r\n" } [list \
@@ -114,7 +114,7 @@ gdb_expect_list "run until main breakpoint" "$gdb_prompt$" [concat {
 # We don't care about the annotated output for this operation, it is the same as
 # the one produced by run above
 #
-send_gdb "next\n" 
+send_gdb "next\n"
 gdb_expect_list "go after array init line" "$gdb_prompt$" {
     "\r\n\032\032post-prompt\r\n"
     "\r\n\032\032starting\r\n"
@@ -183,10 +183,10 @@ gdb_expect_list "backtrace from shlibrary" "$gdb_prompt$" {
 
 
 #
-# test printing a frame with some arguments: 
+# test printing a frame with some arguments:
 #
 
-if [target_info exists gdb,nosignals] {
+if {[target_info exists gdb,nosignals]} {
     unsupported "send SIGUSR1"
     unsupported "backtrace @ signal handler"
 } else {
@@ -264,8 +264,8 @@ if {![is_remote host]} {
 send_gdb "run\n"
 gdb_expect {
   -re "pre-query.*already.*\\(y or n\\).*query\r\n" {
-         send_gdb "y\n"
-         gdb_expect {
+	 send_gdb "y\n"
+	 gdb_expect {
 	     -re ".*post-query.*$gdb_prompt$" \
 		     { pass "re-run" }
 	     -re ".*$gdb_prompt$"  { fail "re-run" }
@@ -345,7 +345,7 @@ gdb_test_multiple "info inferior 1" "$test" {
 
 # Send a signal that is not handled
 
-if [target_info exists gdb,nosignals] {
+if {[target_info exists gdb,nosignals]} {
     unsupported "signal sent"
 } else {
     send_gdb "signal SIGTRAP\n"

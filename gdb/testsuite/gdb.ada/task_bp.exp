@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return -1
+  return
 }
 
 # Insert a breakpoint at LOC, and run the program expecting us to
@@ -47,7 +47,7 @@ proc test_bp { loc msg } {
 }
 
 set all_linespecs { "pck.dummy_task" "dummy_task"
-                    "pck.adb:pck.dummy_task" "pck.adb:dummy_task"}
+		    "pck.adb:pck.dummy_task" "pck.adb:dummy_task"}
 
 # First, test the linespecs when the associated symtab hasn't been
 # expanded yet.

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ main:
 	# gdb.arch/amd64-optimout-repeat.c:29
 	.loc 1 29 0
 	xorl	%eax, %eax
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE0:

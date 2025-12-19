@@ -1,5 +1,5 @@
-# Copyright 1992-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright 1992-2025 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ if { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile} executable {debug}] 
 
 proc_with_prefix test_setshow_annotate {} {
     # Start with a fresh gdb
-    clean_restart $::binfile
+    clean_restart $::testfile
 
     if {![runto_main]} {
 	return
@@ -79,7 +79,7 @@ proc_with_prefix test_setshow_annotate {} {
 }
 
 proc_with_prefix test_setshow_args {} {
-    clean_restart $::binfile
+    clean_restart $::testfile
 
     if {![runto_main]} {
 	return
@@ -410,7 +410,7 @@ proc_with_prefix test_setshow_print_characters {} {
 proc_with_prefix test_setshow_prompt {} {
     clean_restart
 
-    if [board_info target exists gdb_prompt] {
+    if {[board_info target exists gdb_prompt]} {
 	return
     }
 
@@ -519,7 +519,7 @@ proc_with_prefix test_argument_preceded_by_space {} {
 # $_gdb_setting_str convenience functions.
 
 proc_with_prefix test_per_inferior_settings {} {
-    clean_restart $::binfile
+    clean_restart $::testfile
 
     # The $_gdb_setting/$_gdb_setting_str tests require running inferiors,
     # because they allocate memory in the inferiors for the produced values.
@@ -560,7 +560,7 @@ proc_with_prefix test_per_inferior_settings {} {
 	gdb_test "show inferior-tty" "Terminal for future runs of program being debugged is \"/inf${inf}-tty\"."
 	gdb_test "show cwd" "Current working directory that will be used when starting the inferior is \"/inf${inf}-cwd\"."
 	gdb_test "show args" "Argument list to give program being debugged when it is started is \"/inf${inf}-args\"."
-	gdb_test "show remote exec-file" "The remote pathname for \"run\" is \"/inf${inf}-ref\"."
+	gdb_test "show remote exec-file" "The remote exec-file is \"/inf${inf}-ref\"."
 	gdb_test "show tdesc filename" "The target description will be read from \"/inf${inf}-tf\"."
 
 	if { $run } {

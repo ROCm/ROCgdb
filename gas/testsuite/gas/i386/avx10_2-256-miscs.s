@@ -4,7 +4,7 @@
 	.arch .avx10.2/256
 	.text
 _start:
-	.irp m, pbf16, pd, ph, ps
+	.irp m, bf16, pd, ph, ps
 	vminmax\m	$123, %xmm4, %xmm5, %xmm6
 	vminmax\m	$123, %ymm4, %ymm5, %ymm6
 	vminmax\m	$123, 0x10000000(%esp, %esi, 8), %ymm5, %ymm6{%k7}
@@ -13,21 +13,18 @@ _start:
 	vminmax\m	$123, 2032(%ecx), %xmm5, %xmm6
 	.endr
 
-	vminmaxpbf16	$123, (%ecx){1to16}, %ymm5, %ymm6
-	vminmaxpbf16	$123, -256(%edx){1to16}, %ymm5, %ymm6{%k7}{z}
-	vminmaxpbf16	$123, (%ecx){1to8}, %xmm5, %xmm6
-	vminmaxpbf16	$123, -256(%edx){1to8}, %xmm5, %xmm6{%k7}{z}
-	vminmaxpd	$123, {sae}, %ymm4, %ymm5, %ymm6
+	vminmaxbf16	$123, (%ecx){1to16}, %ymm5, %ymm6
+	vminmaxbf16	$123, -256(%edx){1to16}, %ymm5, %ymm6{%k7}{z}
+	vminmaxbf16	$123, (%ecx){1to8}, %xmm5, %xmm6
+	vminmaxbf16	$123, -256(%edx){1to8}, %xmm5, %xmm6{%k7}{z}
 	vminmaxpd	$123, (%ecx){1to4}, %ymm5, %ymm6
 	vminmaxpd	$123, -1024(%edx){1to4}, %ymm5, %ymm6{%k7}{z}
 	vminmaxpd	$123, (%ecx){1to2}, %xmm5, %xmm6
 	vminmaxpd	$123, -1024(%edx){1to2}, %xmm5, %xmm6{%k7}{z}
-	vminmaxph	$123, {sae}, %ymm4, %ymm5, %ymm6
 	vminmaxph	$123, (%ecx){1to16}, %ymm5, %ymm6
 	vminmaxph	$123, -256(%edx){1to16}, %ymm5, %ymm6{%k7}{z}
 	vminmaxph	$123, (%ecx){1to8}, %xmm5, %xmm6
 	vminmaxph	$123, -256(%edx){1to8}, %xmm5, %xmm6{%k7}{z}
-	vminmaxps	$123, {sae}, %ymm4, %ymm5, %ymm6
 	vminmaxps	$123, (%ecx){1to8}, %ymm5, %ymm6
 	vminmaxps	$123, -512(%edx){1to8}, %ymm5, %ymm6{%k7}{z}
 	vminmaxps	$123, (%ecx){1to4}, %xmm5, %xmm6
@@ -70,7 +67,7 @@ _start:
 
 _intel:
 	.intel_syntax noprefix
-	.irp m, pbf16, pd, ph, ps
+	.irp m, bf16, pd, ph, ps
 	vminmax\m	xmm6, xmm5, xmm4, 123
 	vminmax\m	ymm6, ymm5, ymm4, 123
 	vminmax\m	ymm6{k7}, ymm5, [esp+esi*8+0x10000000], 123
@@ -79,21 +76,18 @@ _intel:
 	vminmax\m	xmm6, xmm5, XMMWORD PTR [ecx+2032], 123
 	.endr
 
-	vminmaxpbf16	ymm6, ymm5, [ecx]{1to16}, 123
-	vminmaxpbf16	ymm6{k7}{z}, ymm5, WORD PTR [edx-256]{1to16}, 123
-	vminmaxpbf16	xmm6, xmm5, [ecx]{1to8}, 123
-	vminmaxpbf16	xmm6{k7}{z}, xmm5, WORD PTR [edx-256]{1to8}, 123
-	vminmaxpd	ymm6, ymm5, ymm4, {sae}, 123
+	vminmaxbf16	ymm6, ymm5, [ecx]{1to16}, 123
+	vminmaxbf16	ymm6{k7}{z}, ymm5, WORD PTR [edx-256]{1to16}, 123
+	vminmaxbf16	xmm6, xmm5, [ecx]{1to8}, 123
+	vminmaxbf16	xmm6{k7}{z}, xmm5, WORD PTR [edx-256]{1to8}, 123
 	vminmaxpd	ymm6, ymm5, QWORD PTR [ecx]{1to4}, 123
 	vminmaxpd	ymm6{k7}{z}, ymm5, [edx-1024]{1to4}, 123
 	vminmaxpd	xmm6, xmm5, QWORD PTR [ecx]{1to2}, 123
 	vminmaxpd	xmm6{k7}{z}, xmm5, [edx-1024]{1to2}, 123
-	vminmaxph	ymm6, ymm5, ymm4, {sae}, 123
 	vminmaxph	ymm6, ymm5, [ecx]{1to16}, 123
 	vminmaxph	ymm6{k7}{z}, ymm5, WORD PTR [edx-256]{1to16}, 123
 	vminmaxph	xmm6, xmm5, WORD PTR [ecx]{1to8}, 123
 	vminmaxph	xmm6{k7}{z}, xmm5, [edx-256]{1to8}, 123
-	vminmaxps	ymm6, ymm5, ymm4, {sae}, 123
 	vminmaxps	ymm6, ymm5, DWORD PTR [ecx]{1to8}, 123
 	vminmaxps	ymm6{k7}{z}, ymm5, [edx-512]{1to8}, 123
 	vminmaxps	xmm6, xmm5, [ecx]{1to4}, 123

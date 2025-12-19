@@ -1,4 +1,4 @@
-# Copyright 2009-2024 Free Software Foundation, Inc.
+# Copyright 2009-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ set end_sse4_test         [gdb_get_line_number " end sse4_test "]
 
 runto_main
 
-if [supports_process_record] {
+if {[supports_process_record]} {
     # Activate process record/replay
     gdb_test_no_output "record" "turn on process record"
 }
@@ -666,7 +666,7 @@ gdb_test_multiple "continue" $test {
     }
     -re " Illegal instruction.*\r\n$gdb_prompt $" {
 	untested i386-sse4-reverse
-        return -1
+	return -1
     }
 }
 

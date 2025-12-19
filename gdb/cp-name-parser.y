@@ -1,6 +1,6 @@
 /* YACC parser for C++ names, for GDB.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    Parts of the lexer are based on c-exp.y from GDB.
 
@@ -39,7 +39,6 @@
 
 
 #include <unistd.h>
-#include "gdbsupport/gdb-safe-ctype.h"
 #include "demangle.h"
 #include "cp-support.h"
 #include "c-support.h"
@@ -75,19 +74,35 @@
 
 struct cpname_state
 {
+  cpname_state (const char *input, demangle_parse_info *info)
+    : lexptr (input),
+      prev_lexptr (input),
+      demangle_info (info)
+  { }
+
+  /* Un-push a character into the lexer.  This can only un-push the
+     previous character in the input string.  */
+  void unpush (char c)
+  {
+    gdb_assert (lexptr[-1] == c);
+    --lexptr;
+  }
+
   /* LEXPTR is the current pointer into our lex buffer.  PREV_LEXPTR
      is the start of the last token lexed, only used for diagnostics.
      ERROR_LEXPTR is the first place an error occurred.  GLOBAL_ERRMSG
      is the first error message encountered.  */
 
-  const char *lexptr, *prev_lexptr, *error_lexptr, *global_errmsg;
+  const char *lexptr, *prev_lexptr;
+  const char *error_lexptr = nullptr;
+  const char *global_errmsg = nullptr;
 
   demangle_parse_info *demangle_info;
 
   /* The parse tree created by the parser is stored here after a
      successful parse.  */
 
-  struct demangle_component *global_result;
+  struct demangle_component *global_result = nullptr;
 
   struct demangle_component *d_grab ();
 
@@ -358,6 +373,22 @@ function
 		|	colon_ext_only function_arglist start_opt
 			{ $$ = state->fill_comp (DEMANGLE_COMPONENT_TYPED_NAME, $1, $2.comp);
 			  if ($3) $$ = state->fill_comp (DEMANGLE_COMPONENT_LOCAL_NAME, $$, $3); }
+		|	colon_ext_only
+			{
+			  /* This production is a hack to handle
+			     something like "name::operator new[]" --
+			     without arguments, this ordinarily would
+			     not parse, but canonicalizing it is
+			     important.  So we infer the "()" and then
+			     remove it when converting back to string.
+			     Note that this works because this
+			     production is terminal.  */
+			  demangle_component *comp
+			    = state->fill_comp (DEMANGLE_COMPONENT_FUNCTION_TYPE,
+						nullptr, nullptr);
+			  $$ = state->fill_comp (DEMANGLE_COMPONENT_TYPED_NAME, $1, comp);
+			  state->demangle_info->added_parens = true;
+			}
 
 		|	conversion_op_name start_opt
 			{ $$ = $1.comp;
@@ -507,6 +538,11 @@ conversion_op_name
 unqualified_name:	oper
 		|	oper '<' template_params '>'
 			{ $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
+		|	oper '<' template_params RSH
+			{
+			  $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp);
+			  state->unpush ('>');
+			}
 		|	'~' NAME
 			{ $$ = state->make_dtor (gnu_v3_complete_object_dtor, $2); }
 		;
@@ -572,6 +608,11 @@ nested_name	:	NAME COLONCOLON
 /* DEMANGLE_COMPONENT_TEMPLATE_ARGLIST */
 templ	:	NAME '<' template_params '>'
 			{ $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp); }
+		| NAME '<' template_params RSH
+			{
+			  $$ = state->fill_comp (DEMANGLE_COMPONENT_TEMPLATE, $1, $3.comp);
+			  state->unpush ('>');
+			}
 		;
 
 template_params	:	template_arg
@@ -905,7 +946,7 @@ declarator_1	:	ptr_operator declarator_1
 		|	direct_declarator_1
 
 			/* Function local variable or type.  The typespec to
-			   our left is the type of the containing function. 
+			   our left is the type of the containing function.
 			   This should be OK, because function local types
 			   can not be templates, so the return types of their
 			   members will not be mangled.  If they are hopefully
@@ -1122,7 +1163,7 @@ exp	:	exp '?' exp ':' exp	%prec '?'
 						 state->fill_comp (DEMANGLE_COMPONENT_TRINARY_ARG2, $3, $5)));
 		}
 	;
-			  
+
 exp	:	INT
 	;
 
@@ -1139,7 +1180,7 @@ exp	:	SIZEOF '(' type ')'	%prec UNARY
 	;
 
 /* C++.  */
-exp     :       TRUEKEYWORD    
+exp     :       TRUEKEYWORD
 		{ struct demangle_component *i;
 		  i = state->make_name ("1", 1);
 		  $$ = state->fill_comp (DEMANGLE_COMPONENT_LITERAL,
@@ -1148,7 +1189,7 @@ exp     :       TRUEKEYWORD
 		}
 	;
 
-exp     :       FALSEKEYWORD   
+exp     :       FALSEKEYWORD
 		{ struct demangle_component *i;
 		  i = state->make_name ("0", 1);
 		  $$ = state->fill_comp (DEMANGLE_COMPONENT_LITERAL,
@@ -1320,19 +1361,19 @@ cpname_state::parse_number (const char *p, int len, int parsed_float,
 
       /* See if it has `f' or `l' suffix (float or long double).  */
 
-      c = TOLOWER (p[len - 1]);
+      c = c_tolower (p[len - 1]);
 
       if (c == 'f')
-      	{
-      	  len--;
-      	  type = make_builtin_type ("float");
-      	}
+	{
+	  len--;
+	  type = make_builtin_type ("float");
+	}
       else if (c == 'l')
 	{
 	  len--;
 	  type = make_builtin_type ("long double");
 	}
-      else if (ISDIGIT (c) || c == '.')
+      else if (c_isdigit (c) || c == '.')
 	type = make_builtin_type ("double");
       else
 	return ERROR;
@@ -1397,10 +1438,10 @@ cpname_state::parse_number (const char *p, int len, int parsed_float,
   for (int off = 0; off < len; ++off)
     {
       int dig;
-      if (ISDIGIT (p[off]))
+      if (c_isdigit (p[off]))
 	dig = p[off] - '0';
       else
-	dig = TOLOWER (p[off]) - 'a' + 10;
+	dig = c_tolower (p[off]) - 'a' + 10;
       if (dig >= base)
 	return ERROR;
       value *= base;
@@ -1548,7 +1589,7 @@ cp_parse_escape (const char **string_ptr)
       state->lexptr += 2;					\
       lvalp->opname = string;				\
       return token;					\
-    }      
+    }
 
 #define HANDLE_TOKEN3(string, token)			\
   if (state->lexptr[1] == string[1] && state->lexptr[2] == string[2])	\
@@ -1556,7 +1597,7 @@ cp_parse_escape (const char **string_ptr)
       state->lexptr += 3;					\
       lvalp->opname = string;				\
       return token;					\
-    }      
+    }
 
 /* Read one token, getting characters through LEXPTR.  */
 
@@ -1727,7 +1768,7 @@ yylex (YYSTYPE *lvalp, cpname_state *state)
 	      }
 	    /* We will take any letters or digits.  parse_number will
 	       complain if past the radix, or if L or U are not final.  */
-	    else if (! ISALNUM (*p))
+	    else if (! c_isalnum (*p))
 	      break;
 	    if (no_tick.has_value ())
 	      no_tick->push_back (*p);
@@ -2018,15 +2059,14 @@ struct std::unique_ptr<demangle_parse_info>
 cp_demangled_name_to_comp (const char *demangled_name,
 			   std::string *errmsg)
 {
-  cpname_state state;
-
-  state.prev_lexptr = state.lexptr = demangled_name;
-  state.error_lexptr = NULL;
-  state.global_errmsg = NULL;
-
   auto result = std::make_unique<demangle_parse_info> ();
-  state.demangle_info = result.get ();
+  cpname_state state (demangled_name, result.get ());
 
+  /* Note that we can't set yydebug here, as is done in the other
+     parsers.  Bison implements yydebug as a global, even with a pure
+     parser, and this parser is run from worker threads.  So, changing
+     yydebug causes TSan reports.  If you need to debug this parser,
+     debug gdb and set the global from the outer gdb.  */
   if (yyparse (&state))
     {
       if (state.global_errmsg && errmsg)
@@ -2083,13 +2123,20 @@ canonicalize_tests ()
   should_be_the_same ("something<void ()>", "something<void (void)>");
 
   should_parse ("void whatever::operator<=><int, int>");
+
+  should_be_the_same ("Foozle<int>::fogey<Empty<int> > (Empty<int>)",
+		      "Foozle<int>::fogey<Empty<int>> (Empty<int>)");
+
+  should_be_the_same ("something :: operator new [ ]",
+		      "something::operator new[]");
+  should_be_the_same ("something :: operator   new",
+		      "something::operator new");
+  should_be_the_same ("operator()", "operator ()");
 }
 
 #endif
 
-void _initialize_cp_name_parser ();
-void
-_initialize_cp_name_parser ()
+INIT_GDB_FILE (cp_name_parser)
 {
 #if GDB_SELF_TEST
   selftests::register_test ("canonicalize", canonicalize_tests);

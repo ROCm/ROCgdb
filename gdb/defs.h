@@ -1,6 +1,6 @@
 /* Basic, host-specific, and target-specific definitions for GDB.
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -75,7 +75,7 @@
 /* The O_BINARY flag is defined in fcntl.h on some non-Posix platforms.
    It is used as an access modifier in calls to open(), where it acts
    similarly to the "b" character in fopen()'s MODE argument.  On Posix
-   platforms it should be a no-op, so it is defined as 0 here.  This 
+   platforms it should be a no-op, so it is defined as 0 here.  This
    ensures that the symbol may be used freely elsewhere in gdb.  */
 
 #ifndef O_BINARY
@@ -117,6 +117,7 @@ enum language
     language_objc,		/* Objective-C */
     language_rust,		/* Rust */
     language_cplus,		/* C++ */
+    language_hip,		/* HIP (Heterogeneous Interface for Portability) */
     language_d,			/* D */
     language_go,		/* Go */
     language_fortran,		/* Fortran */
@@ -136,6 +137,23 @@ static_assert (nr_languages <= (1 << LANGUAGE_BITS));
 
 /* The number of bytes needed to represent all languages.  */
 #define LANGUAGE_BYTES ((LANGUAGE_BITS + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT)
+
+/* Check if LANG is the C++ language or one of its dialects.  */
+
+static inline bool
+is_cplus_dialect (enum language lang)
+{
+  return lang == language_cplus || lang == language_hip;
+}
+
+/* If LANG is one of C++ dialects, return "language_cplus".
+   Else, return the LANG itself.  */
+
+static inline enum language
+strip_cplus_dialect (enum language lang)
+{
+  return is_cplus_dialect (lang) ? language_cplus : lang;
+}
 
 /* * A generic, not quite boolean, enumeration.  This is used for
    set/show commands in which the options are on/off/automatic.  */
@@ -191,8 +209,6 @@ extern std::string relocate_gdb_directory (const char *initial, bool relocatable
 
 /* From top.c */
 
-typedef void initialize_file_ftype (void);
-
 extern char *gdb_readline_wrapper (const char *);
 
 extern const char *command_line_input (std::string &cmd_line_buffer,
@@ -228,8 +244,8 @@ extern const char *pc_prefix (CORE_ADDR);
    DATA is passed without changes from a caller.  */
 
 typedef int (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
-					 int read, int write, int exec,
-					 int modified, bool memory_tagged,
+					 bool read, bool write, bool exec,
+					 bool modified, bool memory_tagged,
 					 void *data);
 
 /* * Possible lvalue types.  Like enum language, this should be in
@@ -346,9 +362,9 @@ extern void (*deprecated_post_add_symbol_hook) (void);
 extern void (*selected_frame_level_changed_hook) (int);
 extern int (*deprecated_ui_loop_hook) (int signo);
 extern void (*deprecated_show_load_progress) (const char *section,
-					      unsigned long section_sent, 
-					      unsigned long section_size, 
-					      unsigned long total_sent, 
+					      unsigned long section_sent,
+					      unsigned long section_size,
+					      unsigned long total_sent,
 					      unsigned long total_size);
 extern void (*deprecated_print_frame_info_listing_hook) (struct symtab * s,
 							 int line,
@@ -442,5 +458,11 @@ struct arch_addr_space
 };
 
 #include "utils.h"
+
+/* File initialization macro.  This is found by make-init-c and used
+   to construct the gdb initialization function.  */
+#define INIT_GDB_FILE(NAME) \
+  extern void _initialize_ ## NAME (); \
+  void _initialize_ ## NAME ()
 
 #endif /* GDB_DEFS_H */

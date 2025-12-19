@@ -1,5 +1,5 @@
 {
- Copyright 2010-2024 Free Software Foundation, Inc.
+ Copyright 2010-2025 Free Software Foundation, Inc.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -37,4 +37,3 @@ begin
   Writeln('integer array, index 5 is ',integer_array[5]);
   Writeln('char array, index 5 is ',char_array[5]);
 end.
-

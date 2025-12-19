@@ -1,5 +1,5 @@
 /* Internal interfaces for the Win32 specific target code for gdbserver.
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,6 +20,7 @@
 #define GDBSERVER_WIN32_LOW_H
 
 #include <windows.h>
+#include "gdbsupport/tdesc.h"
 #include "nat/windows-nat.h"
 #include "gdbsupport/osabi.h"
 
@@ -27,9 +28,9 @@ struct target_desc;
 
 /* The inferior's target description.  This is a global because the
    Windows ports support neither bi-arch nor multi-process.  */
-extern const struct target_desc *win32_tdesc;
+extern const_target_desc_up win32_tdesc;
 #ifdef __x86_64__
-extern const struct target_desc *wow64_win32_tdesc;
+extern const_target_desc_up wow64_win32_tdesc;
 #endif
 
 #ifdef __CYGWIN__
@@ -101,7 +102,7 @@ class win32_process_target : public process_stratum_target
 public:
 
   int create_inferior (const char *program,
-		       const std::vector<char *> &program_args) override;
+		       const std::string &program_args) override;
 
   int attach (unsigned long pid) override;
 
@@ -144,7 +145,7 @@ public:
 
   bool stopped_by_watchpoint () override;
 
-  CORE_ADDR stopped_data_address () override;
+  std::vector<CORE_ADDR> stopped_data_addresses () override;
 
   bool supports_qxfer_siginfo () override;
 

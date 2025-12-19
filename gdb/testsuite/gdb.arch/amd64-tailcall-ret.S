@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2012-2024 Free Software Foundation, Inc.
+   Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ g:
 	# gdb.arch/amd64-tailcall-ret.c:23
 	.loc 1 23 0
 	movl	$2, v(%rip)
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE0:
@@ -82,7 +82,7 @@ main:
 	# gdb.arch/amd64-tailcall-ret.c:39
 	.loc 1 39 0
 	xorl	%eax, %eax
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE2:

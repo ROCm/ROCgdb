@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 Free Software Foundation, Inc.
+# Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 # these before it searches the index (there is work-in-progress to fix this),
 # this test helps measure the issue.
 
-from perftest import measure, perftest, utils
+from perftest import perftest, utils
 
 
 class GmonsterPtypeString(perftest.TestCaseWithBasicMeasurements):
@@ -40,7 +40,10 @@ class GmonsterPtypeString(perftest.TestCaseWithBasicMeasurements):
             iteration = 5
             while iteration > 0:
                 utils.safe_execute("mt flush symbol-cache")
-                func1 = lambda: utils.safe_execute("ptype hello")
-                func = lambda: utils.run_n_times(2, func1)
-                self.measure.measure(func, run)
+                self.measure.measure(
+                    lambda: utils.run_n_times(
+                        2, lambda: utils.safe_execute("ptype hello")
+                    ),
+                    run,
+                )
                 iteration -= 1

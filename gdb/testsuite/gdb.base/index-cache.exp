@@ -1,4 +1,4 @@
-#   Copyright 2018-2024 Free Software Foundation, Inc.
+#   Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,8 +29,8 @@ if { [build_executable "failed to prepare" $testfile [list $srcfile $srcfile2] \
 #  - the binary already has an index section
 #  - we use the -readnow switch
 set has_index_section [exec_has_index_section $binfile]
-set uses_readnow [expr [string first "-readnow" $GDBFLAGS] != -1]
-set expecting_index_cache_use [expr !$has_index_section && !$uses_readnow]
+set uses_readnow [expr {[string first "-readnow" $GDBFLAGS] != -1}]
+set expecting_index_cache_use [expr {!$has_index_section && !$uses_readnow}]
 
 # List the files in DIR on the host (where GDB-under-test runs).
 # Return a list of two elements:
@@ -117,12 +117,12 @@ proc_with_prefix test_basic_stuff { } {
 	"index-cache is now enabled"
 
     with_test_prefix "deprecated commands" {
-        gdb_test "set index-cache off" ".*is deprecated.*" "disable index cache"
+	gdb_test "set index-cache off" ".*is deprecated.*" "disable index cache"
 	gdb_test \
 	    "show index-cache enabled" \
 	    "The index cache is off." \
 	    "index-cache is now disabled"
-        gdb_test "set index-cache on" ".*is deprecated.*" "enable index cache"
+	gdb_test "set index-cache on" ".*is deprecated.*" "enable index cache"
 	gdb_test \
 	    "show index-cache enabled" \
 	    "The index cache is on." \

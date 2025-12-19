@@ -1,5 +1,5 @@
 /* CTF archive files.
-   Copyright (C) 2019-2024 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
 
    This file is part of libctf.
 
@@ -395,7 +395,7 @@ const ctf_preamble_t *
 ctf_arc_bufpreamble (const ctf_sect_t *ctfsect)
 {
   if (ctfsect->cts_data != NULL
-      && ctfsect->cts_size > sizeof (uint64_t)
+      && ctfsect->cts_size >= sizeof (struct ctf_archive)
       && (le64toh ((*(uint64_t *) ctfsect->cts_data)) == CTFA_MAGIC))
     {
       struct ctf_archive *arc = (struct ctf_archive *) ctfsect->cts_data;
@@ -418,7 +418,7 @@ ctf_arc_bufopen (const ctf_sect_t *ctfsect, const ctf_sect_t *symsect,
   ctf_dict_t *fp = NULL;
 
   if (ctfsect->cts_data != NULL
-      && ctfsect->cts_size > sizeof (uint64_t)
+      && ctfsect->cts_size >= sizeof (struct ctf_archive)
       && (le64toh ((*(uint64_t *) ctfsect->cts_data)) == CTFA_MAGIC))
     {
       /* The archive is mmappable, so this operation is trivial.
@@ -485,6 +485,10 @@ ctf_arc_open_internal (const char *filename, int *errp)
      is private.)  */
   arc->ctfa_magic = s.st_size;
   close (fd);
+
+  if (errp)
+    *errp = 0;
+
   return arc;
 
 err_unmap:
@@ -588,6 +592,9 @@ ctf_dict_open_sections (const ctf_archive_t *arc,
 			const char *name,
 			int *errp)
 {
+  if (errp)
+    *errp = 0;
+
   if (arc->ctfi_is_archive)
     {
       ctf_dict_t *ret;
@@ -761,7 +768,7 @@ ctf_arc_import_parent (const ctf_archive_t *arc, ctf_dict_t *fp, int *errp)
 {
   if ((fp->ctf_flags & LCTF_CHILD) && fp->ctf_parname && !fp->ctf_parent)
     {
-      int err;
+      int err = 0;
       ctf_dict_t *parent = ctf_dict_open_cached ((ctf_archive_t *) arc,
 						 fp->ctf_parname, &err);
       if (errp)

@@ -1,5 +1,5 @@
 /* S390 native-dependent code for GDB, the GNU debugger.
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    Contributed by D.J. Barrow (djbarrow@de.ibm.com,barrow_dj@yahoo.com)
    for IBM Deutschland Entwicklung GmbH, IBM Corporation.
@@ -1029,7 +1029,7 @@ s390_linux_nat_target::read_description ()
 	      have_regset_tdb ? tdesc_s390x_te_linux64 :
 	      have_regset_system_call ? tdesc_s390x_linux64v2 :
 	      have_regset_last_break ? tdesc_s390x_linux64v1 :
-	      tdesc_s390x_linux64);
+	      tdesc_s390x_linux64).get ();
 
     if (hwcap & HWCAP_S390_HIGH_GPRS)
       return (have_regset_gs ? tdesc_s390_gs_linux64 :
@@ -1039,7 +1039,7 @@ s390_linux_nat_target::read_description ()
 	      have_regset_tdb ? tdesc_s390_te_linux64 :
 	      have_regset_system_call ? tdesc_s390_linux64v2 :
 	      have_regset_last_break ? tdesc_s390_linux64v1 :
-	      tdesc_s390_linux64);
+	      tdesc_s390_linux64).get ();
   }
 #endif
 
@@ -1048,12 +1048,10 @@ s390_linux_nat_target::read_description ()
      mode, report s390 architecture with 32-bit GPRs.  */
   return (have_regset_system_call? tdesc_s390_linux32v2 :
 	  have_regset_last_break? tdesc_s390_linux32v1 :
-	  tdesc_s390_linux32);
+	  tdesc_s390_linux32).get ();
 }
 
-void _initialize_s390_nat ();
-void
-_initialize_s390_nat ()
+INIT_GDB_FILE (s390_nat)
 {
   /* Register the target.  */
   linux_target = &the_s390_linux_nat_target;

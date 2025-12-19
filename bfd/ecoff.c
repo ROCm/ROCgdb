@@ -1,5 +1,5 @@
 /* Generic ECOFF (Extended-COFF) routines.
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
    Original version by Per Bothner.
    Full support added by Ian Lance Taylor, ian@cygnus.com.
 
@@ -661,18 +661,6 @@ _bfd_ecoff_slurp_symbolic_info (bfd *abfd,
 /* ECOFF symbol table routines.  The ECOFF symbol table is described
    in gcc/mips-tfile.c.  */
 
-/* ECOFF uses two common sections.  One is the usual one, and the
-   other is for small objects.  All the small objects are kept
-   together, and then referenced via the gp pointer, which yields
-   faster assembler code.  This is what we use for the small common
-   section.  */
-static asection ecoff_scom_section;
-static const asymbol ecoff_scom_symbol =
-  GLOBAL_SYM_INIT (SCOMMON, &ecoff_scom_section);
-static asection ecoff_scom_section =
-  BFD_FAKE_SECTION (ecoff_scom_section, &ecoff_scom_symbol,
-		    SCOMMON, 0, SEC_IS_COMMON | SEC_SMALL_DATA);
-
 /* Create an empty symbol.  */
 
 asymbol *
@@ -813,7 +801,7 @@ ecoff_set_symbol_info (bfd *abfd,
 	}
       /* Fall through.  */
     case scSCommon:
-      asym->section = &ecoff_scom_section;
+      asym->section = &_bfd_ecoff_scom_section;
       asym->flags = 0;
       break;
     case scVarRegister:
@@ -1847,8 +1835,6 @@ _bfd_ecoff_find_nearest_line (bfd *abfd,
 bool
 _bfd_ecoff_bfd_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
 {
-  struct ecoff_debug_info *iinfo = &ecoff_data (ibfd)->debug_info;
-  struct ecoff_debug_info *oinfo = &ecoff_data (obfd)->debug_info;
   int i;
   asymbol **sym_ptr_ptr;
   size_t c;
@@ -1856,8 +1842,7 @@ _bfd_ecoff_bfd_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
 
   /* We only want to copy information over if both BFD's use ECOFF
      format.  */
-  if (bfd_get_flavour (ibfd) != bfd_target_ecoff_flavour
-      || bfd_get_flavour (obfd) != bfd_target_ecoff_flavour)
+  if (bfd_get_flavour (ibfd) != bfd_target_ecoff_flavour)
     return true;
 
   /* Copy the GP value and the register masks.  */
@@ -1868,6 +1853,8 @@ _bfd_ecoff_bfd_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
     ecoff_data (obfd)->cprmask[i] = ecoff_data (ibfd)->cprmask[i];
 
   /* Copy the version stamp.  */
+  struct ecoff_debug_info *iinfo = &ecoff_data (ibfd)->debug_info;
+  struct ecoff_debug_info *oinfo = &ecoff_data (obfd)->debug_info;
   oinfo->symbolic_header.vstamp = iinfo->symbolic_header.vstamp;
 
   /* If there are no symbols, don't copy any debugging information.  */
@@ -2351,7 +2338,18 @@ ecoff_get_extr (asymbol *sym, EXTR *esym)
       esym->ifd = ifdNil;
       /* FIXME: we can do better than this for st and sc.  */
       esym->asym.st = stGlobal;
-      esym->asym.sc = scAbs;
+      if (bfd_is_und_section (sym->section))
+	esym->asym.sc = scUndefined;
+      else if (bfd_is_com_section (sym->section))
+	esym->asym.sc = scCommon;
+      else if (bfd_is_abs_section (sym->section))
+	esym->asym.sc = scAbs;
+      else if ((sym->section->flags & SEC_HAS_CONTENTS) == 0)
+	esym->asym.sc = scBss;
+      else if ((sym->section->flags & SEC_CODE) != 0)
+	esym->asym.sc = scText;
+      else
+	esym->asym.sc = scData;
       esym->asym.reserved = 0;
       esym->asym.index = indexNil;
       return true;
@@ -2529,7 +2527,7 @@ _bfd_ecoff_write_object_contents (bfd *abfd)
       section.s_flags = ecoff_sec_to_styp_flags (current->name,
 						 current->flags);
 
-      if (bfd_coff_swap_scnhdr_out (abfd, (void *) &section, buff) == 0
+      if (bfd_coff_swap_scnhdr_out (abfd, (void *) &section, buff, current) == 0
 	  || bfd_write (buff, scnhsz, abfd) != scnhsz)
 	goto error_return;
 
@@ -3144,9 +3142,9 @@ _bfd_ecoff_write_armap (bfd *abfd,
      complain that the index is out of date.  Actually, the Ultrix
      linker just checks the archive name; the GNU linker may check the
      date.  */
-  stat (bfd_get_filename (abfd), &statbuf);
-  _bfd_ar_spacepad (hdr.ar_date, sizeof (hdr.ar_date), "%ld",
-		    (long) (statbuf.st_mtime + 60));
+  if (stat (bfd_get_filename (abfd), &statbuf) == 0)
+    _bfd_ar_spacepad (hdr.ar_date, sizeof (hdr.ar_date), "%ld",
+		      (long) (statbuf.st_mtime + ARMAP_TIME_OFFSET));
 
   /* The DECstation uses zeroes for the uid, gid and mode of the
      armap.  */
@@ -3186,7 +3184,7 @@ _bfd_ecoff_write_armap (bfd *abfd,
 
       /* Advance firstreal to the file position of this archive
 	 element.  */
-      if (map[i].u.abfd != last_elt)
+      if (map[i].abfd != last_elt)
 	{
 	  do
 	    {
@@ -3194,7 +3192,7 @@ _bfd_ecoff_write_armap (bfd *abfd,
 	      firstreal += firstreal % 2;
 	      current = current->archive_next;
 	    }
-	  while (current != map[i].u.abfd);
+	  while (current != map[i].abfd);
 	}
 
       last_elt = current;
@@ -3441,7 +3439,7 @@ ecoff_link_add_externals (bfd *abfd,
 	    }
 	  /* Fall through.  */
 	case scSCommon:
-	  section = &ecoff_scom_section;
+	  section = &_bfd_ecoff_scom_section;
 	  break;
 	case scSUndefined:
 	  section = bfd_und_section_ptr;

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2022-2024 Free Software Foundation, Inc.
+# Copyright (C) 2022-2025 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -323,6 +323,11 @@ regen ()
 	aarch64-linux.xml.in)
 	    # No syscall.tbl.
 	    gen_from_kernel_headers "$f" arm64
+	    return
+	    ;;
+	riscv-linux.xml.in)
+	    # No syscall.tbl.
+	    gen_from_kernel_headers "$f" riscv
 	    return
 	    ;;
 	arm-linux.xml.in)

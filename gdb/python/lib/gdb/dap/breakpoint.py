@@ -1,4 +1,4 @@
-# Copyright 2022-2024 Free Software Foundation, Inc.
+# Copyright 2022-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+from collections import defaultdict
 from contextlib import contextmanager
 
 # These are deprecated in 3.9, but required in older versions.
@@ -51,7 +52,6 @@ def suppress_new_breakpoint_event():
 
 @in_gdb_thread
 def _bp_modified(event):
-    global _suppress_bp
     if not _suppress_bp:
         send_event(
             "breakpoint",
@@ -64,7 +64,6 @@ def _bp_modified(event):
 
 @in_gdb_thread
 def _bp_created(event):
-    global _suppress_bp
     if not _suppress_bp:
         send_event(
             "breakpoint",
@@ -77,7 +76,6 @@ def _bp_created(event):
 
 @in_gdb_thread
 def _bp_deleted(event):
-    global _suppress_bp
     if not _suppress_bp:
         send_event(
             "breakpoint",
@@ -95,10 +93,10 @@ gdb.events.breakpoint_deleted.connect(_bp_deleted)
 
 # Map from the breakpoint "kind" (like "function") to a second map, of
 # breakpoints of that type.  The second map uses the breakpoint spec
-# as a key, and the gdb.Breakpoint itself as a value.  This is used to
-# implement the clearing behavior specified by the protocol, while
-# allowing for reuse when a breakpoint can be kept.
-breakpoint_map = {}
+# as a key, and a list of gdb.Breakpoint objects as a value.  This is
+# used to implement the clearing behavior specified by the protocol,
+# while allowing for reuse when a breakpoint can be kept.
+_breakpoint_map = {}
 
 
 @in_gdb_thread
@@ -150,14 +148,13 @@ def _remove_entries(table, *names):
 # specifications and a callback function to do the work of creating
 # the breakpoint.
 @in_gdb_thread
-def _set_breakpoints_callback(kind, specs, creator):
-    global breakpoint_map
+def _set_breakpoints(kind, specs, creator):
     # Try to reuse existing breakpoints if possible.
-    if kind in breakpoint_map:
-        saved_map = breakpoint_map[kind]
+    if kind in _breakpoint_map:
+        saved_map = _breakpoint_map[kind]
     else:
         saved_map = {}
-    breakpoint_map[kind] = {}
+    _breakpoint_map[kind] = defaultdict(list)
     result = []
     with suppress_new_breakpoint_event():
         for spec in specs:
@@ -174,8 +171,8 @@ def _set_breakpoints_callback(kind, specs, creator):
             # report these as an "unverified" breakpoint.
             bp = None
             try:
-                if keyspec in saved_map:
-                    bp = saved_map.pop(keyspec)
+                if keyspec in saved_map and len(saved_map[keyspec]) > 0:
+                    bp = saved_map[keyspec].pop()
                 else:
                     bp = creator(**spec)
 
@@ -188,7 +185,7 @@ def _set_breakpoints_callback(kind, specs, creator):
                     )
 
                 # Reaching this spot means success.
-                breakpoint_map[kind][keyspec] = bp
+                _breakpoint_map[kind][keyspec].append(bp)
                 result.append(_breakpoint_descriptor(bp))
             # Exceptions other than gdb.error are possible here.
             except Exception as e:
@@ -209,8 +206,9 @@ def _set_breakpoints_callback(kind, specs, creator):
                 )
 
         # Delete any breakpoints that were not reused.
-        for entry in saved_map.values():
-            entry.delete()
+        for sub_map in saved_map.values():
+            for entry in sub_map:
+                entry.delete()
     return result
 
 
@@ -218,11 +216,11 @@ class _PrintBreakpoint(gdb.Breakpoint):
     def __init__(self, logMessage, **args):
         super().__init__(**args)
         # Split the message up for easier processing.
-        self.message = re.split("{(.*?)}", logMessage)
+        self._message = re.split("{(.*?)}", logMessage)
 
     def stop(self):
         output = ""
-        for idx, item in enumerate(self.message):
+        for idx, item in enumerate(self._message):
             if idx % 2 == 0:
                 # Even indices are plain text.
                 output += item
@@ -256,13 +254,6 @@ def _set_one_breakpoint(*, logMessage=None, **args):
         return _PrintBreakpoint(logMessage, **args)
     else:
         return gdb.Breakpoint(**args)
-
-
-# Helper function to set ordinary breakpoints according to a list of
-# specifications.
-@in_gdb_thread
-def _set_breakpoints(kind, specs):
-    return _set_breakpoints_callback(kind, specs, _set_one_breakpoint)
 
 
 # A helper function that rewrites a SourceBreakpoint into the internal
@@ -306,7 +297,7 @@ def set_breakpoint(*, source, breakpoints: Sequence = (), **args):
         # Be sure to include the path in the key, so that we only
         # clear out breakpoints coming from this same source.
         key = "source:" + source["path"]
-        result = _set_breakpoints(key, specs)
+        result = _set_breakpoints(key, specs, _set_one_breakpoint)
     return {
         "breakpoints": result,
     }
@@ -330,12 +321,12 @@ def _rewrite_fn_breakpoint(
     }
 
 
-@request("setFunctionBreakpoints")
+@request("setFunctionBreakpoints", expect_stopped=False)
 @capability("supportsFunctionBreakpoints")
 def set_fn_breakpoint(*, breakpoints: Sequence, **args):
     specs = [_rewrite_fn_breakpoint(**bp) for bp in breakpoints]
     return {
-        "breakpoints": _set_breakpoints("function", specs),
+        "breakpoints": _set_breakpoints("function", specs, _set_one_breakpoint),
     }
 
 
@@ -363,24 +354,26 @@ def _rewrite_insn_breakpoint(
     }
 
 
-@request("setInstructionBreakpoints")
+@request("setInstructionBreakpoints", expect_stopped=False)
 @capability("supportsInstructionBreakpoints")
 def set_insn_breakpoints(
     *, breakpoints: Sequence, offset: Optional[int] = None, **args
 ):
     specs = [_rewrite_insn_breakpoint(**bp) for bp in breakpoints]
     return {
-        "breakpoints": _set_breakpoints("instruction", specs),
+        "breakpoints": _set_breakpoints("instruction", specs, _set_one_breakpoint),
     }
 
 
 @in_gdb_thread
 def _catch_exception(filterId, **args):
     if filterId in ("assert", "exception", "throw", "rethrow", "catch"):
-        cmd = "-catch-" + filterId
+        cmd = ["-catch-" + filterId]
     else:
         raise DAPException("Invalid exception filterID: " + str(filterId))
-    result = exec_mi_and_log(cmd)
+    if "exception" in args and args["exception"] is not None:
+        cmd += ["-e", args["exception"]]
+    result = exec_mi_and_log(*cmd)
     # While the Ada catchpoints emit a "bkptno" field here, the C++
     # ones do not.  So, instead we look at the "number" field.
     num = result["bkpt"]["number"]
@@ -390,11 +383,6 @@ def _catch_exception(filterId, **args):
             return bp
     # Not a DAPException because this is definitely unexpected.
     raise Exception("Could not find catchpoint after creating")
-
-
-@in_gdb_thread
-def _set_exception_catchpoints(filter_options):
-    return _set_breakpoints_callback("exception", filter_options, _catch_exception)
 
 
 # A helper function that rewrites an ExceptionFilterOptions into the
@@ -408,13 +396,20 @@ def _rewrite_exception_breakpoint(
     # Note that exception breakpoints do not support a hit count.
     **args,
 ):
+    if filterId == "exception":
+        # Treat Ada exceptions specially -- in particular the
+        # condition is just an exception name, not an expression.
+        return {
+            "filterId": filterId,
+            "exception": condition,
+        }
     return {
         "filterId": filterId,
         "condition": condition,
     }
 
 
-@request("setExceptionBreakpoints")
+@request("setExceptionBreakpoints", expect_stopped=False)
 @capability("supportsExceptionFilterOptions")
 @capability(
     "exceptionBreakpointFilters",
@@ -453,6 +448,4 @@ def set_exception_breakpoints(
     options = [{"filterId": filter} for filter in filters]
     options.extend(filterOptions)
     options = [_rewrite_exception_breakpoint(**bp) for bp in options]
-    return {
-        "breakpoints": _set_exception_catchpoints(options),
-    }
+    return {"breakpoints": _set_breakpoints("exception", options, _catch_exception)}

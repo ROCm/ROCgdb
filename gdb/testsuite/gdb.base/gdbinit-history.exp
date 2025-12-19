@@ -1,4 +1,4 @@
-# Copyright 2015-2024 Free Software Foundation, Inc.
+# Copyright 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -118,7 +118,7 @@ proc test_no_truncation_of_unlimited_history_file { } {
 		gdb_start
 		gdb_test "server show commands" "    .  print 1.*"
 	    }
-        }
+	}
     }
 }
 
@@ -141,7 +141,7 @@ proc check_history { hist } {
     if { [llength $hist_lines] == 1 } {
 	set pattern [lindex $hist_lines 0]
     } else {
-	set pattern [eval multi_line $hist_lines]
+	set pattern [multi_line {*}$hist_lines]
     }
 
     # Check the history.

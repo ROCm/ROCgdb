@@ -1,4 +1,4 @@
-# Copyright 2014-2024 Free Software Foundation, Inc.
+# Copyright 2014-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,5 +53,5 @@ gdb_gcore_cmd "$corefile" "save a corefile"
 # Do not run "info threads" before "gcore" as it could workaround the bug
 # by discarding non-current exited threads.
 gdb_test "info threads" \
-         {The current thread <Thread ID 1> has terminated\.  See `help thread'\.} \
+	 {The current thread <Thread ID 1> has terminated\.  See `help thread'\.} \
 	 "exited thread is current due to non-stop"

@@ -1,5 +1,5 @@
 # Expect script for various AARCH64 ELF tests.
-# Copyright (C) 2009-2024 Free Software Foundation, Inc.
+# Copyright (C) 2009-2025 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -375,6 +375,10 @@ run_dump_test_lp64 "pie-bind-locally"
 run_dump_test_lp64 "variant_pcs-r"
 run_dump_test_lp64 "variant_pcs-shared"
 run_dump_test_lp64 "variant_pcs-now"
+
+run_dump_test_lp64 "mte-tagged-frame"
+run_dump_test_lp64 "dt-memtag-mode"
+run_dump_test_lp64 "dt-memtag-stack"
 
 set aarch64elflinktests {
   {"ld-aarch64/so with global symbol" "-shared" "" "" {copy-reloc-so.s}

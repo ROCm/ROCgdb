@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2020-2024 Free Software Foundation, Inc.
+   Copyright 2020-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,16 +46,16 @@ tree_insert (node *root, int val)
   if (val < root->id)
     {
       if (root->left)
-        tree_insert (root->left, val);
+	tree_insert (root->left, val);
       else
-        root->left = make_node(val);
+	root->left = make_node(val);
     }
   else if (val > root->id)
     {
       if (root->right)
-        tree_insert (root->right, val);
+	tree_insert (root->right, val);
       else
-        root->right = make_node(val);
+	root->right = make_node(val);
     }
 }
 
@@ -69,16 +69,16 @@ inorder (node *root)
       node *curr = todo.back();
       todo.pop_back(); /* break-here */
       if (curr->visited)
-        std::cout << curr->id << " ";
+	std::cout << curr->id << " ";
       else
-        {
-          curr->visited = true;
-          if (curr->right)
-            todo.push_back (curr->right);
-          todo.push_back (curr);
-          if (curr->left)
-            todo.push_back (curr->left);
-        }
+	{
+	  curr->visited = true;
+	  if (curr->right)
+	    todo.push_back (curr->right);
+	  todo.push_back (curr);
+	  if (curr->left)
+	    todo.push_back (curr->left);
+	}
     }
 }
 

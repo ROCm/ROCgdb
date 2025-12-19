@@ -1,7 +1,7 @@
 /* C language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -26,18 +26,17 @@
 #include "language.h"
 #include "varobj.h"
 #include "c-lang.h"
-#include "c-support.h"
 #include "valprint.h"
-#include "macroscope.h"
 #include "charset.h"
 #include "demangle.h"
 #include "cp-abi.h"
 #include "cp-support.h"
 #include "gdbsupport/gdb_obstack.h"
-#include <ctype.h>
 #include "gdbcore.h"
 #include "gdbarch.h"
 #include "c-exp.h"
+#include "inferior.h"
+#include "target.h"
 #include "arch-utils.h"
 
 /* Given a C string type, STR_TYPE, return the corresponding target
@@ -314,7 +313,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 	  if (extract_unsigned_integer (contents + i * width,
 					width, byte_order) == 0)
 	    break;
-  
+
       /* I is now either a user-defined length, the number of non-null
 	 characters, or FETCHLIMIT.  */
       *length = i * width;
@@ -369,7 +368,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 	&& extract_unsigned_integer (buffer->get () + *length - width,
 				     width, byte_order) == 0)
       *length -= width;
-  
+
   /* The read_string function will return the number of bytes read.
      If length returned from read_string was > 0, return the number of
      characters read by dividing the number of bytes by width.  */
@@ -410,7 +409,7 @@ convert_ucn (const char *p, const char *limit, const char *dest_charset,
   gdb_byte data[4];
   int i;
 
-  for (i = 0; i < length && p < limit && ISXDIGIT (*p); ++i, ++p)
+  for (i = 0; i < length && p < limit && c_isxdigit (*p); ++i, ++p)
     result = (result << 4) + fromhex (*p);
 
   for (i = 3; i >= 0; --i)
@@ -452,7 +451,7 @@ convert_octal (struct type *type, const char *p,
   unsigned long value = 0;
 
   for (i = 0;
-       i < 3 && p < limit && ISDIGIT (*p) && *p != '8' && *p != '9';
+       i < 3 && p < limit && c_isdigit (*p) && *p != '8' && *p != '9';
        ++i)
     {
       value = 8 * value + fromhex (*p);
@@ -475,7 +474,7 @@ convert_hex (struct type *type, const char *p,
 {
   unsigned long value = 0;
 
-  while (p < limit && ISXDIGIT (*p))
+  while (p < limit && c_isxdigit (*p))
     {
       value = 16 * value + fromhex (*p);
       ++p;
@@ -485,13 +484,6 @@ convert_hex (struct type *type, const char *p,
 
   return p;
 }
-
-#define ADVANCE					\
-  do {						\
-    ++p;					\
-    if (p == limit)				\
-      error (_("Malformed escape sequence"));	\
-  } while (0)
 
 /* Convert an escape sequence to a target format.  TYPE is the target
    character type to use, and DEST_CHARSET is the name of the target
@@ -504,19 +496,30 @@ static const char *
 convert_escape (struct type *type, const char *dest_charset,
 		const char *p, const char *limit, struct obstack *output)
 {
+  auto advance = [&] ()
+    {
+      ++p;
+      if (p == limit)
+	error (_("Malformed escape sequence"));
+    };
+
   /* Skip the backslash.  */
-  ADVANCE;
+  advance ();
 
   switch (*p)
     {
     case '\\':
-      obstack_1grow (output, '\\');
+      /* Convert the backslash itself.  This is probably overkill but
+	 it doesn't hurt to do the full conversion.  */
+      convert_between_encodings (host_charset (), dest_charset,
+				 (const gdb_byte *) p, 1, 1,
+				 output, translit_none);
       ++p;
       break;
 
     case 'x':
-      ADVANCE;
-      if (!ISXDIGIT (*p))
+      advance ();
+      if (!c_isxdigit (*p))
 	error (_("\\x used with no following hex digits."));
       p = convert_hex (type, p, limit, output);
       break;
@@ -537,8 +540,8 @@ convert_escape (struct type *type, const char *dest_charset,
       {
 	int length = *p == 'u' ? 4 : 8;
 
-	ADVANCE;
-	if (!ISXDIGIT (*p))
+	advance ();
+	if (!c_isxdigit (*p))
 	  error (_("\\u used with no following hex digits"));
 	p = convert_ucn (p, limit, dest_charset, output, length);
       }
@@ -839,22 +842,6 @@ public:
   }
 
   /* See language.h.  */
-  std::unique_ptr<compile_instance> get_compile_instance () const override
-  {
-    return c_get_compile_context ();
-  }
-
-  /* See language.h.  */
-  std::string compute_program (compile_instance *inst,
-			       const char *input,
-			       struct gdbarch *gdbarch,
-			       const struct block *expr_block,
-			       CORE_ADDR expr_pc) const override
-  {
-    return c_compute_program (inst, input, gdbarch, expr_block, expr_pc);
-  }
-
-  /* See language.h.  */
 
   bool can_print_type_offsets () const override
   {
@@ -975,22 +962,6 @@ public:
   }
 
   /* See language.h.  */
-  std::unique_ptr<compile_instance> get_compile_instance () const override
-  {
-    return cplus_get_compile_context ();
-  }
-
-  /* See language.h.  */
-  std::string compute_program (compile_instance *inst,
-			       const char *input,
-			       struct gdbarch *gdbarch,
-			       const struct block *expr_block,
-			       CORE_ADDR expr_pc) const override
-  {
-    return cplus_compute_program (inst, input, gdbarch, expr_block, expr_pc);
-  }
-
-  /* See language.h.  */
   unsigned int search_name_hash (const char *name) const override
   {
     return cp_search_name_hash (name);
@@ -1080,6 +1051,10 @@ public:
   { return &cplus_varobj_ops; }
 
 protected:
+
+  cplus_language (enum language dialect)
+    : language_defn (dialect)
+  { gdb_assert (is_cplus_dialect (dialect)); }
 
   /* See language.h.  */
 
@@ -1219,3 +1194,244 @@ public:
 
 /* The single instance of the minimal language class.  */
 static minimal_language minimal_language_defn;
+
+/* Work-group position of the work-item assigned to the current lane.  */
+static constexpr char hip_builtin_thread_idx[] = "threadIdx";
+/* Grid position of the current work-group.  */
+static constexpr char hip_builtin_block_idx[] = "blockIdx";
+/* Sizes of the current work-group in the three dimensions.  */
+static constexpr char hip_builtin_block_dim[] = "blockDim";
+/* Sizes of the current grid in the three dimensions.  */
+static constexpr char hip_builtin_grid_dim[] = "gridDim";
+/* Platform's wave size that the current thread is running on.  */
+static constexpr char hip_builtin_warp_size[] = "warpSize";
+
+/* A TYPE_CODE_STRUCT with three 32-bit unsigned members: x, y, z.  */
+
+static type *
+hip_vec_type (gdbarch *gdbarch)
+{
+  type *vec_type = arch_composite_type (gdbarch, "__gdb_hip_builtin_vec",
+					TYPE_CODE_STRUCT);
+  type *uint32_type = builtin_type (gdbarch)->builtin_uint32;
+
+  append_composite_type_field (vec_type, "x", uint32_type);
+  append_composite_type_field (vec_type, "y", uint32_type);
+  append_composite_type_field (vec_type, "z", uint32_type);
+
+  return vec_type;
+}
+
+/* Instantiate a VEC_TYPE vector that is created by hip_vec_type ().
+   The instantiation would be like:
+
+   .x = NUMS[0]
+   .y = NUMS[1]
+   .z = NUMS[2]
+*/
+
+static value *
+hip_vec_make_value (gdbarch *gdbarch, type *vec_type, const vec3_u32_t &nums)
+{
+  gdb_byte bytes[12];
+  const bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  store_unsigned_integer (bytes + 0, 4, byte_order, nums[0]);
+  store_unsigned_integer (bytes + 4, 4, byte_order, nums[1]);
+  store_unsigned_integer (bytes + 8, 4, byte_order, nums[2]);
+
+  return value_from_contents (vec_type, bytes);
+}
+
+/* Return the value of a built-in SYMBOL ("threadIdx", "blockDim", etc.),
+   regardless of the frame context.  */
+
+static value *
+hip_read_variable (symbol *symbol, const frame_info_ptr &ignore)
+{
+  if (inferior_ptid == null_ptid)
+    return value::allocate (builtin_type (symbol->arch ())->builtin_void);
+
+  auto vec3_to_value = [&symbol] (const opt_vec3_u32_t &v)
+  {
+    if (v.has_value ())
+      return hip_vec_make_value (symbol->arch (), symbol->type (), v.value ());
+    else
+      return value::allocate_unavailable (symbol->type ());
+  };
+
+  auto size_to_value = [&symbol] (opt_size_t s)
+  {
+    if (s.has_value ())
+      return value_from_ulongest
+	(builtin_type (symbol->arch ())->builtin_unsigned_int, s.value ());
+    else
+      return value::allocate_unavailable (symbol->type ());
+  };
+
+  if (strcmp (symbol->natural_name (), hip_builtin_thread_idx) == 0)
+    {
+      return vec3_to_value
+	(target_lane_workgroup_pos (inferior_thread (),
+				    inferior_thread ()->current_simd_lane ()));
+    }
+  else if (strcmp (symbol->natural_name (), hip_builtin_block_idx) == 0)
+    return vec3_to_value (target_workgroup_grid_pos (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_block_dim) == 0)
+    return vec3_to_value (target_workgroup_sizes (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_grid_dim) == 0)
+    return vec3_to_value (target_grid_sizes (inferior_thread ()));
+  else if (strcmp (symbol->natural_name (), hip_builtin_warp_size) == 0)
+    return size_to_value (target_wave_size (inferior_thread ()));
+
+  return nullptr;
+}
+
+/* Describe location for HIP's built-in symbols.  */
+
+static void
+hip_describe_location (symbol *symbol, CORE_ADDR addr, ui_file *stream)
+{
+  gdb_printf (stream, "HIP built-in symbol '%s'", symbol->print_name ());
+}
+
+/* Implement the tracepoint_var_ref method from symbol_computed_ops.  */
+
+static void
+hip_tracepoint_var_ref (symbol *symbol, agent_expr *ax, axs_value *value)
+{
+  error (_("not implemented: trace of HIP built-in symbol"));
+}
+
+/* Implement the generate_c_location method from symbol_computed_ops.  */
+
+static void
+hip_generate_c_location (symbol *symbol, string_file *stream,
+			 gdbarch *gdbarch, std::vector<bool> &registers_used,
+			 CORE_ADDR pc, const char *result_name)
+{
+  error (_("not implemented: compile translation of HIP built-in symbol"));
+}
+
+/* The set of location functions to evaluate HIP built-in symbols.  */
+const struct symbol_computed_ops hip_computed_ops_funcs = {
+  hip_read_variable,
+  nullptr, /* read_variable_at_entry */
+  hip_describe_location,
+  0, /* location_has_loclist */
+  hip_tracepoint_var_ref,
+  hip_generate_c_location,
+};
+
+/* The implementation index for the symbols with "LOC_COMPUTED" type.  */
+static int hip_lang_builtin_symbols_registered_index;
+
+/* A class for the HIP (Heterogeneous Interface for Portability) language.
+   HIP is an extension of C++ and is intended for parallel programming
+   on different platforms.  */
+
+class hip_language : public cplus_language
+{
+public:
+  hip_language ()
+    : cplus_language (language_hip)
+  { /* Nothing.  */ }
+
+  /* See language.h.  */
+
+  const char *name () const override
+  { return "hip"; }
+
+  /* See language.h.  */
+
+  const char *natural_name () const override
+  { return "HIP"; }
+
+  /* See language.h.  */
+
+  void language_arch_info (gdbarch *gdbarch,
+			   struct language_arch_info *lai) const override
+  {
+    cplus_language::language_arch_info (gdbarch, lai);
+    type *vec_type = hip_vec_type (gdbarch);
+
+    /* Create a built-in symbol from NAME and add it to the language_arch_info.
+       The NAME string must have a lifetime at least as long as the lifetime
+       of the created symbol.  */
+    auto add_builtin_symbol = [&] (const char *name)
+    {
+      symbol *sym = new (gdbarch_obstack (gdbarch)) struct symbol ();
+      sym->m_name = name;
+      sym->set_language (current_language->la_language, nullptr);
+      sym->owner.arch = gdbarch;
+      sym->set_is_objfile_owned (0);
+      sym->set_section_index (0);
+      sym->set_type (vec_type);
+      sym->set_domain (VAR_DOMAIN);
+      sym->set_loc_class_index (hip_lang_builtin_symbols_registered_index);
+
+      lai->add_builtin_symbol (sym);
+    };
+
+    /* Add the built-in symbols for the HIP language.  Later, these symbols
+       will be picked up during a non-local symbol lookup.  */
+    add_builtin_symbol (hip_builtin_thread_idx);
+    add_builtin_symbol (hip_builtin_block_idx);
+    add_builtin_symbol (hip_builtin_block_dim);
+    add_builtin_symbol (hip_builtin_grid_dim);
+    add_builtin_symbol (hip_builtin_warp_size);
+  }
+
+  /* See language.h.  */
+
+  block_symbol lookup_symbol_nonlocal
+    (const char *name, const struct block *block,
+     const domain_search_flags domain) const override
+  {
+    /* Give the built-in symbols higher precedence over the globals.  */
+    if (domain & SEARCH_VAR_DOMAIN)
+      {
+	symbol *sym
+	  = language_lookup_builtin_symbol (this, get_current_arch (), name);
+
+	if (sym != nullptr)
+	  return block_symbol {sym, nullptr};
+      }
+
+    return cplus_language::lookup_symbol_nonlocal (name, block, domain);
+  }
+
+  void collect_symbol_completion_matches
+    (completion_tracker &tracker,
+     complete_symbol_mode mode,
+     symbol_name_match_type name_match_type,
+     const char *text,
+     const char *word,
+     enum type_code code) const override
+  {
+    lookup_name_info lookup_name (text, name_match_type, true);
+    auto add_builtin_completion = [&] (const char *builtin_name)
+    {
+      completion_list_add_name
+	(tracker, language_hip, builtin_name, lookup_name, text, word);
+    };
+
+    add_builtin_completion (hip_builtin_thread_idx);
+    add_builtin_completion (hip_builtin_block_idx);
+    add_builtin_completion (hip_builtin_block_dim);
+    add_builtin_completion (hip_builtin_grid_dim);
+    add_builtin_completion (hip_builtin_warp_size);
+
+    return cplus_language::collect_symbol_completion_matches
+      (tracker, mode, name_match_type, text, word, code);
+  }
+};
+
+/* The single instance of the HIP language class.  */
+static hip_language hip_language_defn;
+
+INIT_GDB_FILE (c_lang)
+{
+  hip_lang_builtin_symbols_registered_index
+    = register_symbol_computed_impl (LOC_COMPUTED, &hip_computed_ops_funcs);
+}

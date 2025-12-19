@@ -1,6 +1,6 @@
 /* Native-dependent code for FreeBSD.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -121,6 +121,10 @@ public:
   bool supports_multi_process () override;
 
   bool supports_disable_randomization () override;
+
+  /* FreeBSD ptrace targets are shareable.  */
+  bool is_shareable () override final
+  { return true; }
 
   /* Methods meant to be overridden by arch-specific target
      classes.  */

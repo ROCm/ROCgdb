@@ -1,6 +1,6 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -218,16 +218,13 @@ extern const char *ada_decode_symbol (const struct general_symbol_info *);
    simply wrapped in <...>.  If WRAP is false, then the empty string
    will be returned.
 
-   When OPERATORS is false, operator names will not be decoded.  By
-   default, they are decoded, e.g., 'Oadd' will be transformed to
-   '"+"'.
-
-   When WIDE is false, wide characters will be left as-is.  By
-   default, they converted from their hex encoding to the host
-   charset.  */
+   TRANSLATE has two effects.  When true (the default), operator names
+   and wide characters will be decoded.  E.g., 'Oadd' will be
+   transformed to '"+"', and wide characters converted from their hex
+   encoding to the host charset.  When false, these will be left
+   alone.  */
 extern std::string ada_decode (const char *name, bool wrap = true,
-			       bool operators = true,
-			       bool wide = true);
+			       bool translate = true);
 
 extern std::vector<struct block_symbol> ada_lookup_symbol_list
      (const char *, const struct block *, domain_search_flags);
@@ -325,9 +322,14 @@ extern std::string ada_encode (const char *, bool fold = true);
 
 extern const char *ada_enum_name (const char *);
 
-extern int ada_is_modular_type (struct type *);
+/* True iff TYPE is an Ada modular type.  */
 
-extern ULONGEST ada_modulus (struct type *);
+extern bool ada_is_modular_type (struct type *);
+
+/* Return the upper bound of a modular type.  If the upper bound is
+   non-constant, returns an empty optional.  */
+
+extern std::optional<ULONGEST> ada_modular_bound (struct type *);
 
 extern struct value *ada_value_ind (struct value *);
 

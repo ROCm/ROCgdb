@@ -1,7 +1,7 @@
 #! /usr/bin/perl -w
 
-#   Copyright (C) 1999-2024 Free Software Foundation, Inc.
-#   Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+#   Copyright (C) 1999-2025 Free Software Foundation, Inc.
+#   Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GCC.
 

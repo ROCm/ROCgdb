@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,11 +27,11 @@ standard_testfile .c
 # Compile binary
 # and start with a fresh gdb
 
-if { [prepare_for_testing "failed to prepare" ${binfile} ${srcfile}] } {
+if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
      return -1
 }
 
-# Test that the the inferior sees EXPECTED env vars starting with
+# Test that the inferior sees EXPECTED env vars starting with
 # "TEST_GDB".
 proc test_num_test_vars {expected message} {
     set num [get_integer_valueof "j" -1 "$message, get num vars"]
@@ -75,7 +75,7 @@ proc find_env {varname} {
 	}
 
 	if {[string match "$varname=*" $var]} {
-	    set from [expr [string first "=" $var] + 1]
+	    set from [expr {[string first "=" $var] + 1}]
 	    set to [string length $var]
 	    return [string range $var $from $to]
 	}
@@ -88,13 +88,11 @@ proc find_env {varname} {
 # starting with TEST_GDB.
 
 proc_with_prefix test_set_unset_env {} {
-    global binfile
-
-    clean_restart $binfile
+    clean_restart $::testfile
 
     # First test with no TEST_GDB_VAR.
     with_test_prefix "test1" {
-	if ![run_and_count_vars] {
+	if {![run_and_count_vars]} {
 	    return
 	}
 	test_num_test_vars 0 "no TEST_GDB vars"
@@ -105,7 +103,7 @@ proc_with_prefix test_set_unset_env {} {
 	gdb_test_no_output "set env TEST_GDB_VAR1 test1" \
 	    "set TEST_GDB_VAR1"
 
-	if ![run_and_count_vars] {
+	if {![run_and_count_vars]} {
 	    return
 	}
 	test_num_test_vars 1 "one TEST_GDB var"
@@ -116,7 +114,7 @@ proc_with_prefix test_set_unset_env {} {
 	gdb_test_no_output "set env TEST_GDB_VAR2 test2" \
 	    "set TEST_GDB_VAR2"
 
-	if ![run_and_count_vars] {
+	if {![run_and_count_vars]} {
 	    return
 	}
 
@@ -129,7 +127,7 @@ proc_with_prefix test_set_unset_env {} {
 	gdb_test_no_output "unset env TEST_GDB_VAR1" \
 	    "unset TEST_GDB_VAR1"
 
-	if ![run_and_count_vars] {
+	if {![run_and_count_vars]} {
 	    return
 	}
 
@@ -138,26 +136,25 @@ proc_with_prefix test_set_unset_env {} {
 }
 
 proc_with_prefix test_inherit_env_var {} {
-    global binfile
     global bp_line
     global env
 
     # This test assumes that the build's environ (where dejagnu runs)
     # is the same as the host's (where gdb runs) environ.
-    if [is_remote host] {
+    if {[is_remote host]} {
 	return
     }
 
     save_vars {env(TEST_GDB_GLOBAL)} {
 	set env(TEST_GDB_GLOBAL) "Global environment value"
 
-	clean_restart $binfile
+	clean_restart $::testfile
 
 	gdb_breakpoint $bp_line
 
 	# First test with only inherited TEST_GDB_GLOBAL.
 	with_test_prefix "test1" {
-	    if ![run_and_count_vars] {
+	    if {![run_and_count_vars]} {
 		return
 	    }
 
@@ -177,7 +174,7 @@ proc_with_prefix test_inherit_env_var {} {
 	    gdb_test_no_output "unset env TEST_GDB_GLOBAL" \
 		"unset TEST_GDB_GLOBAL"
 
-	    if ![run_and_count_vars] {
+	    if {![run_and_count_vars]} {
 		return
 	    }
 

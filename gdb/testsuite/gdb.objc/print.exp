@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2010-2024 Free Software Foundation, Inc.
+# Copyright 2010-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -59,9 +59,13 @@ proc test_float_rejected {} {
 
 clean_restart
 
-if [set_lang_objc] {
+if { [set_lang_objc] } {
     test_float_accepted
     test_float_rejected
+
+    gdb_test {print @"hi"} \
+	"evaluation of this expression requires the target program to be active" \
+	"simple nsstring"
 } else {
     warning "Objective-c print tests suppressed"
 }

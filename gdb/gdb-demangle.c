@@ -1,6 +1,6 @@
 /* Basic C++ demangling support for GDB.
 
-   Copyright (C) 1991-2024 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    Written by Fred Fish at Cygnus Support.
 
@@ -115,7 +115,7 @@ set_demangling_command (const char *ignore,
      If we match, update the current demangling style enum.  */
 
   for (dem = libiberty_demanglers, i = 0;
-       dem->demangling_style != unknown_demangling; 
+       dem->demangling_style != unknown_demangling;
        dem++)
     {
       if (strcmp (current_demangling_style_string,
@@ -208,21 +208,19 @@ demangle_command (const char *args, int from_tty)
     error (_("Can't demangle \"%s\""), name);
 }
 
-void _initialize_gdb_demangle ();
-void
-_initialize_gdb_demangle ()
+INIT_GDB_FILE (gdb_demangle)
 {
   int i, ndems;
 
   /* Fill the demangling_style_names[] array, and set the default
      demangling style chosen at compilation time.  */
   for (ndems = 0;
-       libiberty_demanglers[ndems].demangling_style != unknown_demangling; 
+       libiberty_demanglers[ndems].demangling_style != unknown_demangling;
        ndems++)
     ;
   demangling_style_names = XCNEWVEC (const char *, ndems + 1);
   for (i = 0;
-       libiberty_demanglers[i].demangling_style != unknown_demangling; 
+       libiberty_demanglers[i].demangling_style != unknown_demangling;
        i++)
     {
       demangling_style_names[i]

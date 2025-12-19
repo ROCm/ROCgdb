@@ -1,6 +1,6 @@
 /* Pascal language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,7 +30,6 @@
 #include "p-lang.h"
 #include "valprint.h"
 #include "value.h"
-#include <ctype.h>
 #include "c-lang.h"
 #include "gdbarch.h"
 #include "cli/cli-style.h"

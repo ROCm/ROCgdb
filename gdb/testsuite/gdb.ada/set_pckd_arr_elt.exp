@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
     lappend flags debug
 
     if {[gdb_compile_ada "${srcfile}" "${binfile}-${scenario}" executable $flags] != ""} {
-	return -1
+	return
     }
 
     clean_restart ${testfile}-${scenario}
@@ -42,11 +42,11 @@ foreach_gnat_encoding scenario flags {all minimal} {
     gdb_breakpoint "update_small"
 
     gdb_test "continue" \
-        "Breakpoint .*, pck\\.update_small \\(s=9\\) at .*pck.adb:.*" \
-        "continue to update_small"
+	"Breakpoint .*, pck\\.update_small \\(s=9\\) at .*pck.adb:.*" \
+	"continue to update_small"
 
     # And again for the second call.
     gdb_test "continue" \
-        "Breakpoint .*, pck\\.update_small \\(s=15\\) at .*pck.adb:.*" \
-        "continue to update_small for va.t"
+	"Breakpoint .*, pck\\.update_small \\(s=15\\) at .*pck.adb:.*" \
+	"continue to update_small for va.t"
 }

@@ -1,7 +1,7 @@
 /* GDB CLI commands.
 
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -20,7 +20,6 @@
 
 #include "arch-utils.h"
 #include "exceptions.h"
-#include "readline/tilde.h"
 #include "completer.h"
 #include "target.h"
 #include "gdbsupport/gdb_wait.h"
@@ -52,6 +51,7 @@
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
 #include "cli/cli-utils.h"
+#include "terminal.h"
 
 #include "extension.h"
 #include "gdbsupport/pathstuff.h"
@@ -216,7 +216,7 @@ error_no_arg (const char *why)
 static void
 info_command (const char *arg, int from_tty)
 {
-  help_list (infolist, "info ", all_commands, gdb_stdout);
+  help_list (infolist, "info", all_commands, gdb_stdout);
 }
 
 /* See cli/cli-cmds.h.  */
@@ -301,8 +301,8 @@ with_command_completer_1 (const char *set_cmd_prefix,
      command as if it was a "set" command.  */
   if (delim == text
       || delim == nullptr
-      || !isspace (delim[-1])
-      || !(isspace (delim[2]) || delim[2] == '\0'))
+      || !c_isspace (delim[-1])
+      || !(c_isspace (delim[2]) || delim[2] == '\0'))
     {
       std::string new_text = std::string (set_cmd_prefix) + text;
       tracker.advance_custom_word_point_by (-(int) strlen (set_cmd_prefix));
@@ -520,7 +520,7 @@ cd_command (const char *dir, int from_tty)
   dont_repeat ();
 
   gdb::unique_xmalloc_ptr<char> dir_holder
-    (tilde_expand (dir != NULL ? dir : "~"));
+    = gdb_rl_tilde_expand (dir != NULL ? dir : "~");
   dir = dir_holder.get ();
 
   if (chdir (dir) < 0)
@@ -638,7 +638,8 @@ find_and_open_script (const char *script_file, int search_path)
   openp_flags search_flags = OPF_TRY_CWD_FIRST | OPF_RETURN_REALPATH;
   std::optional<open_script> opened;
 
-  gdb::unique_xmalloc_ptr<char> file (tilde_expand (script_file));
+  gdb::unique_xmalloc_ptr<char> file
+    = gdb_rl_tilde_expand (script_file);
 
   if (search_path)
     search_flags |= OPF_SEARCH_IN_PATH;
@@ -785,14 +786,14 @@ source_command (const char *args, int from_tty)
 	  if (args[0] != '-')
 	    break;
 
-	  if (args[1] == 'v' && isspace (args[2]))
+	  if (args[1] == 'v' && c_isspace (args[2]))
 	    {
 	      source_verbose = 1;
 
 	      /* Skip passed -v.  */
 	      args = &args[3];
 	    }
-	  else if (args[1] == 's' && isspace (args[2]))
+	  else if (args[1] == 's' && c_isspace (args[2]))
 	    {
 	      search_path = 1;
 
@@ -834,7 +835,7 @@ echo_command (const char *text, int from_tty)
 	  gdb_printf ("%c", c);
       }
 
-  gdb_stdout->reset_style ();
+  gdb_stdout->emit_style_escape (ui_file_style ());
 
   /* Force this output to appear now.  */
   gdb_flush (gdb_stdout);
@@ -950,7 +951,25 @@ shell_escape (const char *arg, int from_tty)
 static void
 shell_command (const char *arg, int from_tty)
 {
+  scoped_restore_tty_state save_restore_gdb_ttystate;
+  restore_initial_gdb_ttystate ();
+
   shell_escape (arg, from_tty);
+}
+
+/* Completion for the shell command.  Currently, this just uses filename
+   completion, but we could, potentially, complete command names from $PATH
+   for the first word, which would make this even more shell like.  */
+
+static void
+shell_command_completer (struct cmd_list_element *ignore,
+			 completion_tracker &tracker,
+			 const char *text, const char * /* word */)
+{
+  tracker.set_use_custom_word_point (true);
+  const char *word
+    = advance_to_filename_maybe_quoted_complete_word_point (tracker, text);
+  filename_maybe_quoted_completer (ignore, tracker, text, word);
 }
 
 static void
@@ -1021,7 +1040,7 @@ edit_command (const char *arg, int from_tty)
 		   paddress (get_current_arch (), sal.pc));
 
 	  gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-	  sym = find_pc_function (sal.pc);
+	  sym = find_symbol_for_pc (sal.pc);
 	  if (sym)
 	    gdb_printf ("%ps is in %ps (%ps:%ps).\n",
 			styled_string (address_style.style (),
@@ -1166,7 +1185,7 @@ pipe_command_completer (struct cmd_list_element *ignore,
     delimiter = opts.delimiter.c_str ();
 
   /* Check if we're past option values already.  */
-  if (text > org_text && !isspace (text[-1]))
+  if (text > org_text && !c_isspace (text[-1]))
     return;
 
   const char *delim = strstr (text, delimiter);
@@ -1179,8 +1198,32 @@ pipe_command_completer (struct cmd_list_element *ignore,
       return;
     }
 
-  /* We're past the delimiter.  What follows is a shell command, which
-     we don't know how to complete.  */
+  /* We're past the delimiter now, or at least, DELIM points to the
+     delimiter string.  Update TEXT to point to the start of whatever
+     appears after the delimiter.  */
+  text = skip_spaces (delim + strlen (delimiter));
+
+  /* We really are past the delimiter now, so offer completions.  This is
+     like GDB's "shell" command, currently we only offer filename
+     completion, but in the future this could be improved by offering
+     completion of command names from $PATH.
+
+     What we don't do here is offer completions for the empty string.  It
+     is assumed that the first word after the delimiter is going to be a
+     command name from $PATH, not a filename, so if the user has typed
+     nothing (yet) and tries to complete, there's no point offering a list
+     of files from the current directory.
+
+     Once the user has started to type something though, then we do start
+     offering filename completions.  */
+  if (*text == '\0')
+    return;
+
+  tracker.set_use_custom_word_point (true);
+  tracker.advance_custom_word_point_by (text - org_text);
+  const char *word
+    = advance_to_filename_maybe_quoted_complete_word_point (tracker, text);
+  filename_maybe_quoted_completer (ignore, tracker, text, word);
 }
 
 /* Helper for the list_command function.  Prints the lines around (and
@@ -1208,14 +1251,6 @@ list_around_line (const char *arg, symtab_and_line cursal)
 static void
 list_command (const char *arg, int from_tty)
 {
-  struct symbol *sym;
-  const char *arg1;
-  int no_end = 1;
-  int dummy_end = 0;
-  int dummy_beg = 0;
-  int linenum_beg = 0;
-  const char *p;
-
   /* Pull in the current default source line if necessary.  */
   if (arg == NULL || ((arg[0] == '+' || arg[0] == '-' || arg[0] == '.') && arg[1] == '\0'))
     {
@@ -1270,7 +1305,7 @@ list_command (const char *arg, int from_tty)
 		 selected frame, and finding the line associated to it.  */
 	      frame_info_ptr frame = get_selected_frame (nullptr);
 	      CORE_ADDR curr_pc = get_frame_pc (frame);
-	      cursal = find_pc_line (curr_pc, 0);
+	      cursal = find_sal_for_pc (curr_pc, 0);
 
 	      if (cursal.symtab == nullptr)
 		error
@@ -1321,12 +1356,50 @@ list_command (const char *arg, int from_tty)
 
   std::vector<symtab_and_line> sals;
   symtab_and_line sal, sal_end;
+  bool dummy_beg = false;
+  bool linenum_beg = false;
 
-  arg1 = arg;
+  const char *arg1 = skip_spaces (arg);
   if (*arg1 == ',')
-    dummy_beg = 1;
+    dummy_beg = true;
   else
     {
+      /* Are we looking at a number?  */
+      char *end_ptr;
+      long int lineno = strtol (arg1, &end_ptr, 10);
+
+      /* If END_PTR is different to ARG1 then strtol parsed something, but
+	 strtol will accept numbers with a '+' or '-' prefix, which we
+	 don't want to handle here, hence the c_isdigit check.  */
+      if (end_ptr != arg1 && c_isdigit (*arg1))
+	{
+	  /* Some digits were found.  */
+	  end_ptr = skip_spaces (end_ptr);
+
+	  /* Check for valid line format or for an invalid line number.  */
+	  if (*end_ptr != '\0' && *end_ptr != ',')
+	    error (_("Junk at end of line specification: %s"), end_ptr);
+
+	  if (*end_ptr == '\0')
+	    {
+	      /* Ensure LINENO isn't going to overflow when we convert it
+		 to an integer below.  */
+	      if (lineno >= INT_MAX || lineno <= INT_MIN)
+		error (_("Line number %.*s out of range"),
+		       (int) (end_ptr - arg1), arg1);
+
+	      /* We only have a line number.  */
+	      set_default_source_symtab_and_line ();
+	      symtab_and_line cursal
+		= get_current_source_symtab_and_line (current_program_space);
+	      cursal.line = static_cast<int> (lineno);
+	      list_around_line (nullptr, cursal);
+	      return;
+	    }
+
+	  linenum_beg = true;
+	}
+
       location_spec_up locspec
 	= string_to_location_spec (&arg1, current_language);
 
@@ -1350,21 +1423,17 @@ list_command (const char *arg, int from_tty)
       sal = sals[0];
     }
 
-  /* Record whether the BEG arg is all digits.  */
-
-  for (p = arg; p != arg1 && *p >= '0' && *p <= '9'; p++);
-  linenum_beg = (p == arg1);
-
   /* Save the range of the first argument, in case we need to let the
      user know it was ambiguous.  */
   const char *beg = arg;
   size_t beg_len = arg1 - beg;
+  bool dummy_end = false;
+  bool no_end = true;
 
-  while (*arg1 == ' ' || *arg1 == '\t')
-    arg1++;
+  arg1 = skip_spaces (arg1);
   if (*arg1 == ',')
     {
-      no_end = 0;
+      no_end = false;
       if (sals.size () > 1)
 	{
 	  ambiguous_line_spec (sals,
@@ -1373,10 +1442,9 @@ list_command (const char *arg, int from_tty)
 	  return;
 	}
       arg1++;
-      while (*arg1 == ' ' || *arg1 == '\t')
-	arg1++;
-      if (*arg1 == 0)
-	dummy_end = 1;
+      arg1 = skip_spaces (arg1);
+      if (*arg1 == '\0')
+	dummy_end = true;
       else
 	{
 	  /* Save the last argument, in case we need to let the user
@@ -1386,7 +1454,7 @@ list_command (const char *arg, int from_tty)
 	  location_spec_up locspec
 	    = string_to_location_spec (&arg1, current_language);
 
-	  if (*arg1)
+	  if (*arg1 != '\0')
 	    error (_("Junk at end of line specification."));
 
 	  std::vector<symtab_and_line> sals_end
@@ -1410,7 +1478,7 @@ list_command (const char *arg, int from_tty)
 	}
     }
 
-  if (*arg1)
+  if (*arg1 != '\0')
     error (_("Junk at end of line specification."));
 
   if (!no_end && !dummy_beg && !dummy_end
@@ -1422,34 +1490,40 @@ list_command (const char *arg, int from_tty)
   /* If line was specified by address,
      first print exactly which line, and which file.
 
-     In this case, sal.symtab == 0 means address is outside of all
+     In this case, sal.symtab == NULL means address is outside of all
      known source files, not that user failed to give a filename.  */
   if (*arg == '*')
     {
-      struct gdbarch *gdbarch;
-
-      if (sal.symtab == 0)
+      if (sal.symtab == nullptr)
 	error (_("No source file for address %s."),
 	       paddress (get_current_arch (), sal.pc));
 
-      gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
-      sym = find_pc_function (sal.pc);
-      if (sym)
-	gdb_printf ("%s is in %s (%s:%d).\n",
-		    paddress (gdbarch, sal.pc),
+      struct gdbarch *gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
+      struct symbol *sym = find_symbol_for_pc (sal.pc);
+      if (sym != nullptr)
+	gdb_printf ("%ps is in %s (%ps:%ps).\n",
+		    styled_string (address_style.style (),
+				   paddress (gdbarch, sal.pc)),
 		    sym->print_name (),
-		    symtab_to_filename_for_display (sal.symtab), sal.line);
+		    styled_string (file_name_style.style (),
+				   symtab_to_filename_for_display (sal.symtab)),
+		    styled_string (line_number_style.style (),
+				   pulongest (sal.line)));
       else
-	gdb_printf ("%s is at %s:%d.\n",
-		    paddress (gdbarch, sal.pc),
-		    symtab_to_filename_for_display (sal.symtab), sal.line);
+	gdb_printf ("%ps is at %ps:%ps.\n",
+		    styled_string (address_style.style (),
+				   paddress (gdbarch, sal.pc)),
+		    styled_string (file_name_style.style (),
+				   symtab_to_filename_for_display (sal.symtab)),
+		    styled_string (line_number_style.style (),
+				   pulongest (sal.line)));
     }
 
   /* If line was not specified by just a line number, and it does not
      imply a symtab, it must be an undebuggable symbol which means no
      source code.  */
 
-  if (!linenum_beg && sal.symtab == 0)
+  if (!dummy_beg && !linenum_beg && sal.symtab == nullptr)
     error (_("No line number known for %s."), arg);
 
   /* If this command is repeated with RET,
@@ -1458,7 +1532,7 @@ list_command (const char *arg, int from_tty)
   if (from_tty)
     set_repeat_arguments ("");
 
-  if (dummy_beg && sal_end.symtab == 0)
+  if (dummy_beg && sal_end.symtab == nullptr)
     error (_("No default source file yet.  Do \"help list\"."));
   if (dummy_beg)
     {
@@ -1466,19 +1540,15 @@ list_command (const char *arg, int from_tty)
 				source_lines_range::BACKWARD);
       print_source_lines (sal_end.symtab, range, 0);
     }
-  else if (sal.symtab == 0)
+  else if (sal.symtab == nullptr)
     error (_("No default source file yet.  Do \"help list\"."));
   else if (no_end)
     {
-      for (int i = 0; i < sals.size (); i++)
+      for (const symtab_and_line &s : sals)
 	{
-	  sal = sals[i];
-	  int first_line = sal.line - get_lines_to_list () / 2;
-	  if (first_line < 1)
-	    first_line = 1;
 	  if (sals.size () > 1)
-	    print_sal_location (sal);
-	  print_source_lines (sal.symtab, source_lines_range (first_line), 0);
+	    print_sal_location (s);
+	  list_around_line (nullptr, s);
 	}
     }
   else if (dummy_end)
@@ -1628,7 +1698,7 @@ disassemble_command (const char *arg, int from_tty)
       if (*p == '\0')
 	error (_("Missing modifier."));
 
-      while (*p && ! isspace (*p))
+      while (*p && ! c_isspace (*p))
 	{
 	  switch (*p++)
 	    {
@@ -1905,8 +1975,8 @@ alias_command_completer (struct cmd_list_element *ignore,
      typing COMMAND DEFAULT-ARGS...  */
   if (delim != text
       && delim != nullptr
-      && isspace (delim[-1])
-      && (isspace (delim[1]) || delim[1] == '\0'))
+      && c_isspace (delim[-1])
+      && (c_isspace (delim[1]) || delim[1] == '\0'))
     {
       std::string new_text = std::string (delim + 1);
 
@@ -2141,8 +2211,17 @@ print_sal_location (const symtab_and_line &sal)
   const char *sym_name = NULL;
   if (sal.symbol != NULL)
     sym_name = sal.symbol->print_name ();
-  gdb_printf (_("file: \"%s\", line number: %ps, symbol: \"%s\"\n"),
-	      symtab_to_filename_for_display (sal.symtab),
+  else if (CORE_ADDR line_pc;
+	   find_pc_for_line (sal.symtab, sal.line, &line_pc))
+    {
+      struct symbol *sym = find_symbol_for_pc (line_pc);
+      if (sym != nullptr)
+	sym_name = sym->print_name ();
+    }
+
+  gdb_printf (_("file: \"%ps\", line number: %ps, symbol: \"%s\"\n"),
+	      styled_string (file_name_style.style (),
+			     symtab_to_filename_for_display (sal.symtab)),
 	      styled_string (line_number_style.style (),
 			     pulongest (sal.line)),
 	      sym_name != NULL ? sym_name : "???");
@@ -2195,7 +2274,7 @@ cmp_symtabs (const symtab_and_line &sala, const symtab_and_line &salb)
 	return r;
     }
 
-  r = filename_cmp (sala.symtab->filename, salb.symtab->filename);
+  r = filename_cmp (sala.symtab->filename (), salb.symtab->filename ());
   if (r)
     return r;
 
@@ -2408,6 +2487,11 @@ value_from_setting (const setting &var, struct gdbarch *gdbarch)
 
 	return current_language->value_string (gdbarch, value, len);
       }
+    case var_color:
+      {
+	std::string s = var.get<ui_file_style::color> ().to_string ();
+	return current_language->value_string (gdbarch, s.c_str (), s.size ());
+      }
     default:
       gdb_assert_not_reached ("bad var_type");
     }
@@ -2455,6 +2539,7 @@ str_value_from_setting (const setting &var, struct gdbarch *gdbarch)
     case var_pinteger:
     case var_boolean:
     case var_auto_boolean:
+    case var_color:
       {
 	std::string cmd_val = get_setshow_command_value_string (var);
 
@@ -2582,15 +2667,27 @@ shell_internal_fn (struct gdbarch *gdbarch,
     return value::allocate_optimized_out (int_type);
 }
 
-void _initialize_cli_cmds ();
-void
-_initialize_cli_cmds ()
+INIT_GDB_FILE (cli_cmds)
 {
   struct cmd_list_element *c;
 
   /* Define the classes of commands.
      They will appear in the help list in alphabetical order.  */
 
+  add_cmd ("essential", class_essential, _("\
+GDB essential commands.\n\
+Welcome to GDB!  This help text aims to provide a quickstart explanation\n\
+that will allow you to start using GDB.  Feel free to use \"help <cmd>\"\n\
+to get further explanations for any command <cmd>, and check the online\n\
+documentation for in-depth explanations.\n\
+Here are some common GDB behaviors that you can expect, which are\n\
+not tied to any specific command but rather GDB functionality itself:\n\
+\n\
+EXPR is any arbitrary expression valid for the current programming language.\n\
+Pressing <return> with an empty prompt executes the last command again.\n\
+You can use <tab> to complete commands and symbols.  Pressing it twice lists\n\
+all possible completions if more than one is available."),
+	   &cmdlist);
   add_cmd ("internals", class_maintenance, _("\
 Maintenance commands.\n\
 Some gdb commands are provided just for use by gdb maintainers.\n\
@@ -2658,7 +2755,7 @@ Show mode for script filename extension recognition."), _("\
 off  == no filename extension recognition (all sourced files are GDB scripts)\n\
 soft == evaluate script according to filename extension, fallback to GDB script\n\
 strict == evaluate script according to filename extension,\n\
-          error if not supported"
+	  error if not supported"
   ),
 			NULL,
 			show_script_ext_mode,
@@ -2807,7 +2904,7 @@ the previous command number shown."),
     = add_com ("shell", class_support, shell_command, _("\
 Execute the rest of the line as a shell command.\n\
 With no arguments, run an inferior shell."));
-  set_cmd_completer (shell_cmd, deprecated_filename_completer);
+  set_cmd_completer_handle_brkchars (shell_cmd, shell_command_completer);
 
   add_com_alias ("!", shell_cmd, class_support, 0);
 
@@ -2843,7 +2940,7 @@ and send its output to SHELL_COMMAND."));
   add_com_alias ("|", pipe_cmd, class_support, 0);
 
   cmd_list_element *list_cmd
-    = add_com ("list", class_files, list_command, _("\
+    = add_com ("list", class_files | class_essential, list_command, _("\
 List specified function or line.\n\
 With no argument, lists ten more lines after or around previous listing.\n\
 \"list +\" lists the ten lines following a previous ten-line listing.\n\
@@ -2865,6 +2962,7 @@ This can be changed using \"set listsize\", and the current value\n\
 can be shown using \"show listsize\"."));
 
   add_com_alias ("l", list_cmd, class_files, 1);
+  set_cmd_completer(list_cmd, location_completer);
 
   c = add_com ("disassemble", class_vars, disassemble_command, _("\
 Disassemble a specified section of memory.\n\
@@ -2903,7 +3001,7 @@ Show definitions of non-python/scheme user defined commands.\n\
 Argument is the name of the user defined command.\n\
 With no argument, show definitions of all user defined commands."), &showlist);
   set_cmd_completer (c, show_user_completer);
-  add_com ("apropos", class_support, apropos_command, _("\
+  add_com ("apropos", class_support | class_essential, apropos_command, _("\
 Search for commands matching a REGEXP.\n\
 Usage: apropos [-v] REGEXP\n\
 Flag -v indicates to produce a verbose output, showing full documentation\n\

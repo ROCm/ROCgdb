@@ -1,6 +1,6 @@
 /* Python interface to objfiles.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -53,8 +53,7 @@ struct objfile_object
   PyObject *xmethods;
 };
 
-extern PyTypeObject objfile_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("objfile_object");
+extern PyTypeObject objfile_object_type;
 
 /* Clear the OBJFILE pointer in an Objfile object and remove the
    reference.  */
@@ -556,7 +555,7 @@ objfpy_build_id_ok (const char *string)
     return 0;
   for (i = 0; i < n; ++i)
     {
-      if (!isxdigit (string[i]))
+      if (!c_isxdigit (string[i]))
 	return 0;
     }
   return 1;
@@ -619,9 +618,8 @@ gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 
   struct objfile *objfile = nullptr;
   if (by_build_id)
-    gdbarch_iterate_over_objfiles_in_search_order
-      (current_inferior ()->arch (),
-       [&objfile, name] (struct objfile *obj)
+    current_program_space->iterate_over_objfiles_in_search_order
+      ([&objfile, name] (struct objfile *obj)
 	 {
 	   /* Don't return separate debug files.  */
 	   if (obj->separate_debug_objfile_backlink != nullptr)
@@ -642,9 +640,8 @@ gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 	   return 1;
 	 }, gdbpy_current_objfile);
   else
-    gdbarch_iterate_over_objfiles_in_search_order
-      (current_inferior ()->arch (),
-       [&objfile, name] (struct objfile *obj)
+    current_program_space->iterate_over_objfiles_in_search_order
+      ([&objfile, name] (struct objfile *obj)
 	 {
 	   /* Don't return separate debug files.  */
 	   if (obj->separate_debug_objfile_backlink != nullptr)
@@ -706,8 +703,8 @@ objfile_to_objfile_object (struct objfile *objfile)
   return gdbpy_ref<>::new_reference (result);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_objfile (void)
+static int
+gdbpy_initialize_objfile ()
 {
   return gdbpy_type_ready (&objfile_object_type);
 }

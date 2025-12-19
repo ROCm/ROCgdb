@@ -1,4 +1,4 @@
-# Copyright 2006-2024 Free Software Foundation, Inc.
+# Copyright 2006-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ if {[gdb_compile $srcdir/$subdir/$srcfile $binfile executable {debug c++}] != ""
   return -1
 }
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 
@@ -58,32 +58,32 @@ set tree {
   Anonymous a {
     {} public {
       anonymous struct {
-        {} public {
-          int b {}
-        }
+	{} public {
+	  int b {}
+	}
       }
       anonymous struct {
-        {} public {
-          int c {}
-        }
+	{} public {
+	  int c {}
+	}
       }
       anonymous struct {
-        {} public {
-          int d {}
-          anonymous struct {
-            {} public {
-              int e {}
-              anonymous struct {
-                {} public {
-                  int f {}
-                  anonymous union {
-                    {} public {
-                      int g {}
-                      char h {}
-                    }
-                  }
-                }
-              }
+	{} public {
+	  int d {}
+	  anonymous struct {
+	    {} public {
+	      int e {}
+	      anonymous struct {
+		{} public {
+		  int f {}
+		  anonymous union {
+		    {} public {
+		      int g {}
+		      char h {}
+		    }
+		  }
+		}
+	      }
 	      anonymous union {
 		{} public {
 		  int i {}

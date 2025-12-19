@@ -1,5 +1,5 @@
 /* macro.c - macro support for gas
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    Written by Steve and Judy Chamberlain of Cygnus Support,
       sac@cygnus.com
@@ -29,39 +29,13 @@
 /* The routines in this file handle macro definition and expansion.
    They are called by gas.  */
 
-#define ISWHITE(x) ((x) == ' ' || (x) == '\t')
-
-#define ISSEP(x) \
- ((x) == ' ' || (x) == '\t' || (x) == ',' || (x) == '"' || (x) == ';' \
-  || (x) == ')' || (x) == '(' \
-  || ((flag_macro_alternate || flag_mri) && ((x) == '<' || (x) == '>')))
-
-#define ISBASE(x) \
-  ((x) == 'b' || (x) == 'B' \
-   || (x) == 'q' || (x) == 'Q' \
-   || (x) == 'h' || (x) == 'H' \
-   || (x) == 'd' || (x) == 'D')
-
 /* The macro hash table.  */
 
-/* Macro nesting depth.  Similar to macro_nest defined in sb.c, but this
-   counter is specific to macros, whereas macro_nest also counts repeated
-   string blocks.  */
-static unsigned int macro_nesting_depth;
+htab_t macro_hash;
 
-/* Maximum nesting depth.  Ideally the same as the value of max_macro_nest
-   as defined in as.c (ie 100).  But there is one test in the assembler
-   testsuite (bfin/allinsn16.s) that nests macros to a depth of 8192.  So
-   we have a ridiculously large number here.  */
-#define MAX_MACRO_DEPTH 8193
+/* Whether any macros have been defined.  */
 
-static htab_t macro_hash[MAX_MACRO_DEPTH];
-
-/* Whether any macros have been defined.
-   FIXME:  This could be a counter that is incremented
-   with .macro and decremented with .purgem.  */
-
-static bool macros_defined = false;
+int macro_defined;
 
 /* Whether we should strip '@' characters.  */
 
@@ -72,18 +46,6 @@ static bool macros_defined = false;
 static unsigned int macro_number;
 
 static void free_macro (macro_entry *);
-
-bool
-add_macro (macro_entry * macro, bool replace)
-{
-  if (str_hash_insert (macro_hash [macro_nesting_depth],
-		       macro->name, macro, replace) == NULL)
-    {
-      macros_defined = true;
-      return true;
-    }
-  return false;
-}
 
 static void
 macro_del_f (void *ent)
@@ -97,23 +59,15 @@ macro_del_f (void *ent)
 void
 macro_init (void)
 {
-  int i;
-
-  for (i = 0; i < MAX_MACRO_DEPTH; i++)
-    macro_hash[i] = htab_create_alloc (16, hash_string_tuple, eq_string_tuple,
-				       macro_del_f, notes_calloc, NULL);
-  macros_defined = false;
+  macro_hash = htab_create_alloc (16, hash_string_tuple, eq_string_tuple,
+				  macro_del_f, notes_calloc, NULL);
+  macro_defined = 0;
 }
 
 void
 macro_end (void)
 {
-  int i;
-
-  for (i = MAX_MACRO_DEPTH; i--;)
-    htab_delete (macro_hash[i]);
-
-  macros_defined = false;
+  htab_delete (macro_hash);
 }
 
 /* Read input lines till we get to a TO string.
@@ -147,11 +101,13 @@ buffer_and_nest (const char *from, const char *to, sb *ptr,
     unsigned int line;
     char *linefile;
 
-    as_where_top (&line);
-    if (!flag_m68k_mri)
-      linefile = xasprintf ("\t.linefile %u .", line + 1);
+    const char *prefix = flag_m68k_mri ? "" : ".";
+    const char *file = as_where_top (&line);
+
+    if (file)
+      linefile = xasprintf ("\t%slinefile %u \"%s\"", prefix, line + 1, file);
     else
-      linefile = xasprintf ("\tlinefile %u .", line + 1);
+      linefile = xasprintf ("\t%slinefile %u .", prefix, line + 1);
     sb_add_string (ptr, linefile);
     xfree (linefile);
   }
@@ -172,8 +128,7 @@ buffer_and_nest (const char *from, const char *to, sb *ptr,
       if (! LABELS_WITHOUT_COLONS)
 	{
 	  /* Skip leading whitespace.  */
-	  while (i < ptr->len && ISWHITE (ptr->ptr[i]))
-	    i++;
+	  i = sb_skip_white (i, ptr);
 	}
 
       for (;;)
@@ -187,8 +142,7 @@ buffer_and_nest (const char *from, const char *to, sb *ptr,
 	  if (i < ptr->len && is_name_ender (ptr->ptr[i]))
 	    i++;
 	  /* Skip whitespace.  */
-	  while (i < ptr->len && ISWHITE (ptr->ptr[i]))
-	    i++;
+	  i = sb_skip_white (i, ptr);
 	  /* Check for the colon.  */
 	  if (i >= ptr->len || ptr->ptr[i] != ':')
 	    {
@@ -207,8 +161,7 @@ buffer_and_nest (const char *from, const char *to, sb *ptr,
 	}
 
       /* Skip trailing whitespace.  */
-      while (i < ptr->len && ISWHITE (ptr->ptr[i]))
-	i++;
+      i = sb_skip_white (i, ptr);
 
       if (i < ptr->len && (ptr->ptr[i] == '.'
 			   || NO_PSEUDO_DOT
@@ -328,24 +281,25 @@ getstring (size_t idx, sb *in, sb *acc)
 	{
 	  int nest = 0;
 	  idx++;
-	  while (idx < in->len
-		 && (in->ptr[idx] != '>' || nest))
+	  while (idx < in->len)
 	    {
-	      if (in->ptr[idx] == '!')
+	      if (in->ptr[idx] == '!' && idx + 1 < in->len)
+		idx++;
+	      else if (in->ptr[idx] == '>')
 		{
-		  idx++;
-		  sb_add_char (acc, in->ptr[idx++]);
+		  if (nest == 0)
+		    {
+		      idx++;
+		      break;
+		    }
+		  nest--;
 		}
-	      else
-		{
-		  if (in->ptr[idx] == '>')
-		    nest--;
-		  if (in->ptr[idx] == '<')
-		    nest++;
-		  sb_add_char (acc, in->ptr[idx++]);
-		}
+	      else if (in->ptr[idx] == '<')
+		nest++;
+
+	      sb_add_char (acc, in->ptr[idx]);
+	      idx++;
 	    }
-	  idx++;
 	}
       else if (in->ptr[idx] == '"' || in->ptr[idx] == '\'')
 	{
@@ -353,7 +307,6 @@ getstring (size_t idx, sb *in, sb *acc)
 	  int escaped = 0;
 
 	  idx++;
-
 	  while (idx < in->len)
 	    {
 	      if (in->ptr[idx - 1] == '\\')
@@ -361,32 +314,19 @@ getstring (size_t idx, sb *in, sb *acc)
 	      else
 		escaped = 0;
 
-	      if (flag_macro_alternate && in->ptr[idx] == '!')
+	      if (flag_macro_alternate
+		  && in->ptr[idx] == '!' && idx + 1 < in->len)
 		{
-		  idx ++;
-
-		  sb_add_char (acc, in->ptr[idx]);
-
-		  idx ++;
+		  idx++;
 		}
-	      else if (escaped && in->ptr[idx] == tchar)
+	      else if (!escaped && in->ptr[idx] == tchar)
 		{
-		  sb_add_char (acc, tchar);
-		  idx ++;
+		  idx++;
+		  if (idx >= in->len || in->ptr[idx] != tchar)
+		    break;
 		}
-	      else
-		{
-		  if (in->ptr[idx] == tchar)
-		    {
-		      idx ++;
-
-		      if (idx >= in->len || in->ptr[idx] != tchar)
-			break;
-		    }
-
-		  sb_add_char (acc, in->ptr[idx]);
-		  idx ++;
-		}
+	      sb_add_char (acc, in->ptr[idx]);
+	      idx++;
 	    }
 	}
     }
@@ -396,7 +336,6 @@ getstring (size_t idx, sb *in, sb *acc)
 
 /* Fetch string from the input stream,
    rules:
-    'Bxyx<whitespace>  	-> return 'Bxyza
     %<expr>		-> return string of decimal value of <expr>
     "string"		-> return string
     (string)		-> return (string-including-whitespaces)
@@ -410,12 +349,7 @@ get_any_string (size_t idx, sb *in, sb *out)
 
   if (idx < in->len)
     {
-      if (in->len > idx + 2 && in->ptr[idx + 1] == '\'' && ISBASE (in->ptr[idx]))
-	{
-	  while (idx < in->len && !ISSEP (in->ptr[idx]))
-	    sb_add_char (out, in->ptr[idx++]);
-	}
-      else if (in->ptr[idx] == '%' && flag_macro_alternate)
+      if (in->ptr[idx] == '%' && flag_macro_alternate)
 	{
 	  /* Turn the following expression into a string.  */
 	  expressionS ex;
@@ -457,9 +391,7 @@ get_any_string (size_t idx, sb *in, sb *out)
 
 	  *in_br = '\0';
 	  while (idx < in->len
-		 && (*in_br
-		     || (in->ptr[idx] != ' '
-			 && in->ptr[idx] != '\t'))
+		 && (*in_br || !is_whitespace (in->ptr[idx]))
 		 && in->ptr[idx] != ','
 		 && (in->ptr[idx] != '<'
 		     || (! flag_macro_alternate && ! flag_mri)))
@@ -688,13 +620,6 @@ free_macro (macro_entry *macro)
   free (macro);
 }
 
-static macro_entry * last_recorded_macro = NULL;
-void
-macro_record_invocation (macro_entry * macro)
-{
-  last_recorded_macro = macro;
-}
-
 /* Define a new macro.  */
 
 macro_entry *
@@ -758,19 +683,15 @@ define_macro (sb *in, sb *label, size_t (*get_line) (sb *))
   /* And stick it in the macro hash table.  */
   for (idx = 0; idx < name.len; idx++)
     name.ptr[idx] = TOLOWER (name.ptr[idx]);
-
-  if (macro_nesting_depth > 0)
-    macro->parent = last_recorded_macro;
-  else
-    macro->parent = NULL;
-
   if (!error)
     {
-      if (! add_macro (macro, false))
+      if (str_hash_insert (macro_hash, macro->name, macro, 0) != NULL)
 	error = _("Macro `%s' was already defined");
     }
 
-  if (error != NULL)
+  if (!error)
+    macro_defined = 1;
+  else
     {
       as_bad_where (macro->file, macro->line, error, macro->name);
       free_macro (macro);
@@ -794,25 +715,11 @@ get_apost_token (size_t idx, sb *in, sb *name, int kind)
   return idx;
 }
 
-static const char *
-macro_expand_body (sb *, sb *, formal_entry *, struct htab *,
-		   const macro_entry *, unsigned int);
-
-/* Find the actual value for a formal parameter starting at START inside IN.
-    Appends the value of parameter onto OUT.
-   The hash table of formal parameters is provided by FORMAL_HASH.
-   The character that indicated the presense of a formal parameter is passed
-    in KIND.
-   If COPYIFNOTTHERE is true and the parameter is not found in the hash table
-    then it is appended as plain text onto OUT.
-   The macro containing the formal parameters is passed in MACRO.
-    This can be empty.
-   Returns the offset inside IN after advanceing past the parameter.
-   Also stores the parameter's name into T.  */
+/* Substitute the actual value for a formal parameter.  */
 
 static size_t
 sub_actual (size_t start, sb *in, sb *t, struct htab *formal_hash,
-	    int kind, sb *out, int copyifnotthere, const macro_entry * macro)
+	    int kind, sb *out, int copyifnotthere)
 {
   size_t src;
   formal_entry *ptr;
@@ -826,12 +733,16 @@ sub_actual (size_t start, sb *in, sb *t, struct htab *formal_hash,
     ptr = NULL;
   else
     ptr = str_hash_find (formal_hash, sb_terminate (t));
-  
   if (ptr)
     {
-      sb * add = ptr->actual.len ? &ptr->actual : &ptr->def;
-
-      sb_add_sb (out, add);
+      if (ptr->actual.len)
+	{
+	  sb_add_sb (out, &ptr->actual);
+	}
+      else
+	{
+	  sb_add_sb (out, &ptr->def);
+	}
     }
   else if (kind == '&')
     {
@@ -845,55 +756,6 @@ sub_actual (size_t start, sb *in, sb *t, struct htab *formal_hash,
     {
       sb_add_sb (out, t);
     }
-  else if (!macro_strip_at
-	   && macro_nesting_depth > 0
-	   && macro != NULL
-	   && macro->parent != NULL)
-    {
-      const macro_entry * orig_macro = macro;
-      bool success = false;
-
-      /* We have failed to find T, but we are inside nested macros.  So check
-	 the parent macros so see if they have a FORMAL that matches T.  */
-      while (macro->parent != NULL)
-	{
-	  macro = macro->parent;
-
-	  ptr = str_hash_find (macro->formal_hash, t->ptr);
-	  if (ptr == NULL)
-	    continue;
-
-	  sb * add = ptr->actual.len ? &ptr->actual : &ptr->def;
-
-	  /* The parent's FORMALs might contain parameters that need further
-	     substitution.  See gas/testsuite/gas/arm/macro-vld1.s for an
-	     example of this.  */
-	  if (memchr (add->ptr, '\\', add->len))
-	    {
-	      sb newadd;
-
-	      sb_new (&newadd);
-	      /* FIXME: Should we do something if the call to
-		 macro_expand_body returns an error message ?  */
-	      (void) macro_expand_body (add, &newadd, NULL, NULL,
-					orig_macro, orig_macro->count);
-	      sb_add_sb (out, &newadd);
-	    }
-	  else
-	    {
-	      sb_add_sb (out, add);
-	    }
-	  success = true;
-	  break;
-	}
-      if (! success)
-	{
-	  /* We reached the outermost macro and failed to find T, so
-	     just copy the entire parameter as is.  */
-	  sb_add_char (out, '\\');
-	  sb_add_sb (out, t);
-	}
-    }
   else
     {
       sb_add_char (out, '\\');
@@ -902,12 +764,7 @@ sub_actual (size_t start, sb *in, sb *t, struct htab *formal_hash,
   return src;
 }
 
-/* Expands the body of a macro / block of text IN, copying it into OUT.
-   Parameters for substitution are found in FORMALS and FORMAL_HASH or
-   MACRO.
-   The number of times that this macro / block of text have already been
-   copied into the output is held in INSTANCE.
-   Returns NULL upon success or an error message otherwise.  */
+/* Expand the body of a macro.  */
 
 static const char *
 macro_expand_body (sb *in, sb *out, formal_entry *formals,
@@ -919,38 +776,18 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
   int inquote = 0, macro_line = 0;
   formal_entry *loclist = NULL;
   const char *err = NULL;
-  int nesting = 0;
 
-  if (formals == NULL && macro != NULL)
-    formals = macro->formals;
-
-  if (formal_hash == NULL && macro != NULL)
-    formal_hash = macro->formal_hash;
-  
   sb_new (&t);
 
   while (src < in->len && !err)
     {
-      if (in->ptr[src] == '.')
-	{
-	  /* Check to see if we have encountered ".macro" or ".endm" */
-	  if (in->len > src + 5
-	      && strncmp (in->ptr + src, ".macro", 6) == 0)
-	    ++ nesting;
-
-	  else if (in->len > src + 4
-		   && strncmp (in->ptr + src, ".endm", 5) == 0)
-	    -- nesting;
-	}
-
       if (in->ptr[src] == '&')
 	{
 	  sb_reset (&t);
 	  if (flag_mri)
 	    {
 	      if (src + 1 < in->len && in->ptr[src + 1] == '&')
-		src = sub_actual (src + 2, in, &t, formal_hash,
-				  '\'', out, 1, macro);
+		src = sub_actual (src + 2, in, &t, formal_hash, '\'', out, 1);
 	      else
 		sb_add_char (out, in->ptr[src++]);
 	    }
@@ -958,8 +795,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	    {
 	      /* Permit macro parameter substitution delineated with
 		 an '&' prefix and optional '&' suffix.  */
-	      src = sub_actual (src + 1, in, &t, formal_hash,
-				'&', out, 0, macro);
+	      src = sub_actual (src + 1, in, &t, formal_hash, '&', out, 0);
 	    }
 	}
       else if (in->ptr[src] == '\\')
@@ -980,12 +816,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	      else
 		as_bad_where (macro->file, macro->line + macro_line, _("missing `)'"));
 	    }
-	  else if (src < in->len
-		   && in->ptr[src] == '@'
-		   /* PR 32391: Do not perform the substition inside nested
-		      macros.  Instead wait until they are re-evaluated and
-		      perform the substition then.  */
-		   && ! nesting)
+	  else if (src < in->len && in->ptr[src] == '@')
 	    {
 	      /* Sub in the total macro invocation number.  */
 
@@ -994,12 +825,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	      sprintf (buffer, "%u", macro_number);
 	      sb_add_string (out, buffer);
 	    }
-	  else if (src < in->len
-		   && in->ptr[src] == '+'
-		   /* PR 32391: Do not perform the substition inside nested
-		      macros.  Instead wait until they are re-evaluated and
-		      perform the substition then.  */
-		   && ! nesting)
+	  else if (src < in->len && in->ptr[src] == '+')
 	    {
 	      /* Sub in the current macro invocation number.  */
 
@@ -1043,18 +869,7 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	  else
 	    {
 	      sb_reset (&t);
-
-	      if (nesting)
-		{
-		  src = get_apost_token (src, in, &t, '\'');
-		  sb_add_char (out, '\\');
-		  sb_add_sb (out, &t);
-		}
-	      else
-		{
-		  src = sub_actual (src, in, &t, formal_hash,
-				    '\'', out, 0, macro);
-		}
+	      src = sub_actual (src, in, &t, formal_hash, '\'', out, 0);
 	    }
 	}
       else if ((flag_macro_alternate || flag_mri)
@@ -1066,14 +881,14 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 	  if (! macro
 	      || src + 5 >= in->len
 	      || strncasecmp (in->ptr + src, "LOCAL", 5) != 0
-	      || ! ISWHITE (in->ptr[src + 5])
+	      || ! is_whitespace (in->ptr[src + 5])
 	      /* PR 11507: Skip keyword LOCAL if it is found inside a quoted string.  */
 	      || inquote)
 	    {
 	      sb_reset (&t);
 	      src = sub_actual (src, in, &t, formal_hash,
 				(macro_strip_at && inquote) ? '@' : '\'',
-				out, 1, macro);
+				out, 1);
 	    }
 	  else
 	    {
@@ -1185,7 +1000,6 @@ macro_expand_body (sb *in, sb *out, formal_entry *formals,
 
   if (!err && (out->len == 0 || out->ptr[out->len - 1] != '\n'))
     sb_add_char (out, '\n');
-
   return err;
 }
 
@@ -1220,9 +1034,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	  /* The Microtec assembler ignores this if followed by a white space.
 	     (Macro invocation with empty extension) */
 	  idx++;
-	  if (    idx < in->len
-		  && in->ptr[idx] != ' '
-		  && in->ptr[idx] != '\t')
+	  if (idx < in->len && !is_whitespace (in->ptr[idx]))
 	    {
 	      formal_entry *n = new_formal ();
 
@@ -1240,30 +1052,17 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
   idx = sb_skip_white (idx, in);
   while (idx < in->len)
     {
+      /* Look and see if it's a positional or keyword arg.  */
       size_t scan;
 
-      /* Look and see if it's a positional or keyword arg.  */
-      scan = idx;
-      while (scan < in->len
-	     && !ISSEP (in->ptr[scan])
-	     && !(flag_mri && in->ptr[scan] == '\'')
-	     && (!flag_macro_alternate && in->ptr[scan] != '='))
-	scan++;
-      if (scan < in->len && !flag_macro_alternate && in->ptr[scan] == '=')
+      sb_reset (&t);
+      scan = !flag_macro_alternate ? get_token (idx, in, &t) : idx;
+
+      if (scan > idx && scan < in->len && in->ptr[scan] == '=')
 	{
 	  is_keyword = 1;
 
 	  /* It's OK to go from positional to keyword.  */
-
-	  /* This is a keyword arg, fetch the formal name and
-	     then the actual stuff.  */
-	  sb_reset (&t);
-	  idx = get_token (idx, in, &t);
-	  if (idx >= in->len || in->ptr[idx] != '=')
-	    {
-	      err = _("confusion in formal parameters");
-	      break;
-	    }
 
 	  /* Lookup the formal in the macro's list.  */
 	  ptr = str_hash_find (m->formal_hash, sb_terminate (&t));
@@ -1273,7 +1072,8 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 		      t.ptr,
 		      m->name);
 	      sb_reset (&t);
-	      idx = get_any_string (idx + 1, in, &t);
+	      /* Skip what would be the actual stuff.  */
+	      idx = get_any_string (scan + 1, in, &t);
 	    }
 	  else
 	    {
@@ -1285,7 +1085,8 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 			   m->name);
 		  sb_reset (&ptr->actual);
 		}
-	      idx = get_any_string (idx + 1, in, &ptr->actual);
+	      /* Fetch the actual stuff.  */
+	      idx = get_any_string (scan + 1, in, &ptr->actual);
 	      if (ptr->actual.len > 0)
 		++narg;
 	    }
@@ -1343,7 +1144,7 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	{
 	  if (idx < in->len && in->ptr[idx] == ',')
 	    ++idx;
-	  if (idx < in->len && ISWHITE (in->ptr[idx]))
+	  if (idx < in->len && is_whitespace (in->ptr[idx]))
 	    break;
 	}
     }
@@ -1370,7 +1171,8 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 	    }
 	}
 
-      err = macro_expand_body (&m->sub, out, NULL, NULL, m, m->count);
+      err = macro_expand_body (&m->sub, out, m->formals, m->formal_hash, m,
+			       m->count);
     }
 
   /* Discard any unnamed formal arguments.  */
@@ -1403,22 +1205,20 @@ macro_expand (size_t idx, sb *in, macro_entry *m, sb *out)
 }
 
 /* Check for a macro.  If one is found, put the expansion into
-   *EXPAND.  Return TRUE if a macro is found, FALSE otherwise.  */
+   *EXPAND.  Return 1 if a macro is found, 0 otherwise.  */
 
-bool
+int
 check_macro (const char *line, sb *expand,
 	     const char **error, macro_entry **info)
 {
   const char *s;
   char *copy, *cls;
+  macro_entry *macro;
   sb line_sb;
-
-  if (! macros_defined)
-    return false;
 
   if (! is_name_beginner (*line)
       && (! flag_mri || *line != '.'))
-    return false;
+    return 0;
 
   s = line + 1;
   while (is_part_of_name (*s))
@@ -1430,17 +1230,11 @@ check_macro (const char *line, sb *expand,
   for (cls = copy; *cls != '\0'; cls ++)
     *cls = TOLOWER (*cls);
 
-  macro_entry *macro = NULL;
-  for (int i = macro_nesting_depth; i >= 0; i--)
-    {
-      macro = str_hash_find (macro_hash[i], copy);
-      if (macro != NULL)
-	break;
-    }
+  macro = str_hash_find (macro_hash, copy);
   free (copy);
 
   if (macro == NULL)
-    return false;
+    return 0;
 
   /* Wrap the line up in an sb.  */
   sb_new (&line_sb);
@@ -1456,7 +1250,7 @@ check_macro (const char *line, sb *expand,
   if (info)
     *info = macro;
 
-  return true;
+  return 1;
 }
 
 /* Delete a macro.  */
@@ -1474,20 +1268,11 @@ delete_macro (const char *name)
     copy[i] = TOLOWER (name[i]);
   copy[i] = '\0';
 
-  int j;
-  for (j = macro_nesting_depth; j >= 0; j--)
-    {
-      macro = str_hash_find (macro_hash [j], copy);
-      if (macro != NULL)
-	{
-	  str_hash_delete (macro_hash[j], copy);
-	  break;
-	}
-    }
-
-  if (j < 0)
+  macro = str_hash_find (macro_hash, copy);
+  if (macro != NULL)
+    str_hash_delete (macro_hash, copy);
+  else
     as_warn (_("Attempt to purge non-existing macro `%s'"), copy);
-
   free (copy);
 }
 
@@ -1588,26 +1373,4 @@ expand_irp (int irpc, size_t idx, sb *in, sb *out, size_t (*get_line) (sb *))
   sb_kill (&sub);
 
   return err;
-}
-
-void
-increment_macro_nesting_depth (void)
-{
- if (macro_nesting_depth >= (MAX_MACRO_DEPTH - 1))
-    as_fatal (_("macros nested too deeply"));
-  else
-    ++macro_nesting_depth;
-}
-
-void
-decrement_macro_nesting_depth (void)
-{
-  if (macro_nesting_depth == 0)
-    as_fatal (_("too much macro un-nesting"));
-  else
-    {
-      /* FIXME: Potential memory leak here.  */
-      htab_empty (macro_hash [macro_nesting_depth]);
-      --macro_nesting_depth;
-    }
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -18,7 +18,7 @@
    Foundation, 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
-#if defined(__i386__) || defined(__x86_64)
+#if defined(__i386__) || defined(__x86_64__)
 #include <cpuid.h>  /* GCC-provided */
 #elif defined(__aarch64__)
 #if !defined(ATTRIBUTE_UNUSED)
@@ -48,7 +48,9 @@ __get_cpuid (unsigned int op ATTRIBUTE_UNUSED, unsigned int *eax,
 #include <sched.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#ifdef HAVE_ASM_HWPROBE_H
 #include <asm/hwprobe.h>
+#endif
 #endif
 
 /*
@@ -91,7 +93,7 @@ typedef struct
 } cpuid_info_t;
 
 
-#if defined(__i386__) || defined(__x86_64)
+#if defined(__i386__) || defined(__x86_64__)
 static uint_t
 cpuid_vendorstr_to_vendorcode (char *vendorstr)
 {
@@ -151,7 +153,7 @@ get_cpuid_info ()
   Tprintf (DBG_LT0, "cpuid.c:%d read_cpuid_id() MIDR_EL1==0x%016x cpi_vendor=%d cpi_model=%d\n",
 	   __LINE__, (unsigned int) reg, cpi->cpi_vendor, cpi->cpi_model);
 
-#elif defined(__i386__) || defined(__x86_64)
+#elif defined(__i386__) || defined(__x86_64__)
   cpuid_regs_t regs;
   my_cpuid (0, &regs);
   cpi->cpi_maxeax = regs.eax;
@@ -188,7 +190,7 @@ get_cpuid_info ()
       break;
     }
 #elif defined(__riscv)
-  #ifndef __riscv_hwprobe
+  #if !defined(__riscv_hwprobe) || !defined(HAVE_ASM_HWPROBE_H)
 	  cpi->cpi_vendor = 0;
 	  cpi->cpi_family = 0;
 	  cpi->cpi_model = 0;
@@ -208,7 +210,7 @@ get_cpuid_info ()
 	cpi->cpi_vendor = res.value;
 	cpi->cpi_family = 0;
 	cpi->cpi_model = 0;
-	#endif
+  #endif
 #endif
   return cpi;
 }

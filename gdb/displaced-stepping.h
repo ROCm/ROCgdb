@@ -1,7 +1,7 @@
 /* Displaced stepping related things.
 
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
-   Copyright (C) 2019-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -25,6 +25,8 @@
 #include "gdbsupport/byte-vector.h"
 
 struct gdbarch;
+struct inferior;
+struct target_ops;
 struct thread_info;
 struct target_ops;
 
@@ -51,6 +53,7 @@ enum displaced_step_prepare_status
 };
 
 /* Return a string representation of STATUS.  */
+
 static inline const char *
 displaced_step_prepare_status_str (displaced_step_prepare_status status)
 {
@@ -58,11 +61,14 @@ displaced_step_prepare_status_str (displaced_step_prepare_status status)
   {
   case DISPLACED_STEP_PREPARE_STATUS_OK:
     return "OK";
+
   case DISPLACED_STEP_PREPARE_STATUS_CANT:
     return "CANT";
+
   case DISPLACED_STEP_PREPARE_STATUS_UNAVAILABLE:
     return "UNAVAILABLE";
   }
+
   gdb_assert_not_reached ("invalid displaced_step_prepare_status value");
 }
 
@@ -78,6 +84,7 @@ enum displaced_step_finish_status
 };
 
 /* Return a string representation of STATUS.  */
+
 static inline const char *
 displaced_step_finish_status_str (displaced_step_finish_status status)
 {
@@ -85,9 +92,11 @@ displaced_step_finish_status_str (displaced_step_finish_status status)
   {
   case DISPLACED_STEP_FINISH_STATUS_OK:
     return "OK";
+
   case DISPLACED_STEP_FINISH_STATUS_NOT_EXECUTED:
     return "NOT_EXECUTED";
   }
+
   gdb_assert_not_reached ("invalid displaced_step_finish_status value");
 }
 
@@ -239,14 +248,35 @@ private:
   std::vector<displaced_step_buffer> m_buffers;
 };
 
+<<<<<<< HEAD
+=======
+/* Default implementation of target_ops::supports_displaced_step.
+
+   Forwards the call to the architecture of THREAD.  */
+
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 bool default_supports_displaced_step (target_ops *target, thread_info *thread);
 
-displaced_step_prepare_status
-  default_displaced_step_prepare (target_ops *target, thread_info *thread,
-				  CORE_ADDR &displaced_pc);
+/* Default implementation of target_ops::displaced_step_prepare.
 
-displaced_step_finish_status
-  default_displaced_step_finish (target_ops *target, thread_info *thread,
-				 const target_waitstatus &status);
+   Forwards the call to the architecture of THREAD.  */
+
+displaced_step_prepare_status default_displaced_step_prepare
+  (target_ops *target, thread_info *thread, CORE_ADDR &displaced_pc);
+
+/* Default implementation of target_ops::displaced_step_finish.
+
+   Forwards the call to the architecture of THREAD.  */
+
+displaced_step_finish_status default_displaced_step_finish
+  (target_ops *target, thread_info *thread, const target_waitstatus &status);
+
+/* Default implementation of target_ops::displaced_step_restore_all_in_ptid.
+
+   Forwards the call to the architecture of PARENT_INF.  */
+
+void default_displaced_step_restore_all_in_ptid (target_ops *target,
+						 inferior *parent_inf,
+						 ptid_t child_ptid);
 
 #endif /* GDB_DISPLACED_STEPPING_H */

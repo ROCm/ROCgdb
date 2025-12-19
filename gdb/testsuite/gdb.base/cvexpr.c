@@ -1,4 +1,4 @@
-/* Copyright (C) 2001-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2001-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -217,7 +217,7 @@ t_union3 v_union3;
 
 /**** Enumerations *******/
 
-enum 
+enum
 /* Work around the bug for compilers which don't put out the right stabs.  */
 #if __GNUC__ < 2 && !defined (_AIX)
 primary1_tag

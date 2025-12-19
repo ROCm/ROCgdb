@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 
-# Copyright 2017-2024 Free Software Foundation, Inc.
+# Copyright 2017-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ if { [prepare_for_testing "failed to prepare" $testfile $srcfile $options] } {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return 0
 }
 
@@ -85,7 +85,7 @@ proc prologue_test {funcname {savedregs ""} {fp_offset ""} } {
     }
     if { $fp_offset != "" } {
 	set sp [get_integer_valueof \$sp -1 "get value of sp in $funcname"]
-	set fp_val [expr $sp + $fp_offset]
+	set fp_val [expr {$sp + $fp_offset}]
 	set fp_real_val \
 	    [get_integer_valueof \$fp 0 "get value of fp in $funcname"]
 	if { $fp_real_val != $fp_val } {
@@ -200,4 +200,3 @@ gdb_test "info frame 0" ".*Saved registers:$regs" \
 set regs [saved_regs_to_str {fp blink} alloca_inner]
 gdb_test "info frame 1" ".*Saved registers:$regs" \
     "saved registers in alloca_outer"
-

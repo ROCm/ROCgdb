@@ -1,6 +1,6 @@
 /* Support for debug methods in Python.
 
-   Copyright (C) 2013-2024 Free Software Foundation, Inc.
+   Copyright (C) 2013-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -141,9 +141,9 @@ gdbpy_get_matching_xmethod_workers
   /* Gather debug method matchers registered with the object files.
      This could be done differently by iterating over each objfile's matcher
      list individually, but there's no data yet to show it's needed.  */
-  for (objfile *objfile : current_program_space->objfiles ())
+  for (objfile &objfile : current_program_space->objfiles ())
     {
-      gdbpy_ref<> py_objfile = objfile_to_objfile_object (objfile);
+      gdbpy_ref<> py_objfile = objfile_to_objfile_object (&objfile);
 
       if (py_objfile == NULL)
 	{
@@ -598,8 +598,8 @@ python_xmethod_worker::python_xmethod_worker (PyObject *py_worker,
   Py_INCREF (this_type);
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_xmethods (void)
+static int
+gdbpy_initialize_xmethods ()
 {
   py_match_method_name = PyUnicode_FromString (match_method_name);
   if (py_match_method_name == NULL)

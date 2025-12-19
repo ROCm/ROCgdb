@@ -1,6 +1,6 @@
 /* Functions specific to running GDB native on HPPA running GNU/Linux.
 
-   Copyright (C) 2004-2024 Free Software Foundation, Inc.
+   Copyright (C) 2004-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -238,7 +238,7 @@ fetch_register (struct regcache *regcache, int regno)
   errno = 0;
   val = ptrace (PTRACE_PEEKUSER, tid, hppa_linux_register_addr (regno, 0), 0);
   if (errno != 0)
-    error (_("Couldn't read register %s (#%d): %s."), 
+    error (_("Couldn't read register %s (#%d): %s."),
 	   gdbarch_register_name (gdbarch, regno),
 	   regno, safe_strerror (errno));
 
@@ -282,7 +282,7 @@ hppa_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
 	   regno++)
 	fetch_register (regcache, regno);
     }
-  else 
+  else
     {
       fetch_register (regcache, regno);
     }
@@ -383,9 +383,7 @@ fill_fpregset (const struct regcache *regcache,
    }
 }
 
-void _initialize_hppa_linux_nat ();
-void
-_initialize_hppa_linux_nat ()
+INIT_GDB_FILE (hppa_linux_nat)
 {
   /* Register the target.  */
   linux_target = &the_hppa_linux_nat_target;

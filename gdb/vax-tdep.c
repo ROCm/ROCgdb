@@ -1,6 +1,6 @@
 /* Target-dependent code for the VAX.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -305,7 +305,6 @@ struct vax_frame_cache
 static struct vax_frame_cache *
 vax_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
-  struct vax_frame_cache *cache;
   CORE_ADDR addr;
   ULONGEST mask;
   int regnum;
@@ -314,7 +313,7 @@ vax_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     return (struct vax_frame_cache *) *this_cache;
 
   /* Allocate a new cache.  */
-  cache = FRAME_OBSTACK_ZALLOC (struct vax_frame_cache);
+  auto *cache = frame_obstack_zalloc<struct vax_frame_cache> ();
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   /* The frame pointer is used as the base for the frame.  */
@@ -386,16 +385,16 @@ vax_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_prev_register (this_frame, cache->saved_regs, regnum);
 }
 
-static const struct frame_unwind vax_frame_unwind =
-{
+static const struct frame_unwind_legacy vax_frame_unwind (
   "vax prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   vax_frame_this_id,
   vax_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 
 static CORE_ADDR
@@ -438,7 +437,7 @@ vax_frame_num_args (const frame_info_ptr &frame)
 
 
 
-/* Initialize the current architecture based on INFO.  If possible, re-use an
+/* Initialize the current architecture based on INFO.  If possible, reuse an
    architecture from ARCHES, which is a list of architectures already created
    during this debugging session.
 
@@ -506,9 +505,7 @@ vax_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return (gdbarch);
 }
 
-void _initialize_vax_tdep ();
-void
-_initialize_vax_tdep ()
+INIT_GDB_FILE (vax_tdep)
 {
   gdbarch_register (bfd_arch_vax, vax_gdbarch_init, NULL);
 }

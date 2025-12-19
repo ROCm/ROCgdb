@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2011-2024 Free Software Foundation, Inc.
+   Copyright 2011-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ foo:
 	movl	vv(%rip), %edx
 	addl	$1, %edx
 	movl	%edx, vv(%rip)
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	# clztest.c:14
 .LM5:
 	ret
@@ -79,7 +79,7 @@ bar:
 	movl	vv(%rip), %edx
 	addl	$1, %edx
 	movl	%edx, vv(%rip)
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	# clztest.c:24
 .LM10:
 	ret
@@ -119,7 +119,7 @@ _start:
 	popq	%rbx
 .LCFI1:
 .LVL10:
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 .LFE2:
 	.size	_start, .-_start

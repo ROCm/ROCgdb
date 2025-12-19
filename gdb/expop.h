@@ -1,6 +1,6 @@
 /* Definitions for expressions in GDB
 
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -45,10 +45,6 @@ extern void gen_expr_unop (struct expression *exp,
 			   expr::operation *lhs,
 			   struct agent_expr *ax, struct axs_value *value);
 
-extern struct value *eval_op_scope (struct type *expect_type,
-				    struct expression *exp,
-				    enum noside noside,
-				    struct type *type, const char *string);
 extern struct value *eval_op_var_msym_value (struct type *expect_type,
 					     struct expression *exp,
 					     enum noside noside,
@@ -312,6 +308,25 @@ dump_for_expression (struct ui_file *stream, int depth,
     op->dump (stream, depth);
 }
 
+/* If evaluating with noside == EVAL_AVOID_SIDE_EFFECTS, we are essentially
+   interested in the type of ARG.  However, if ARG is of reference type,
+   this would give us a memory value that would cause a failure if GDB
+   attempts to access the contents.  Convert to the target type to avoid
+   such problems.  */
+
+static value *
+convert_reference_to_target_type (value *arg, enum noside noside)
+{
+  struct type *type = check_typedef (arg->type ());
+  if (noside == EVAL_AVOID_SIDE_EFFECTS && TYPE_IS_REFERENCE (type))
+    {
+      struct type *target_type = check_typedef (type->target_type ());
+      return value::zero (target_type, not_lval);
+    }
+
+  return arg;
+}
+
 extern void dump_for_expression (struct ui_file *stream, int depth,
 				 enum exp_opcode op);
 extern void dump_for_expression (struct ui_file *stream, int depth,
@@ -480,11 +495,11 @@ check_constant (const gdb_mpz &cst)
 static inline bool
 check_constant (struct symbol *sym)
 {
-  enum address_class sc = sym->aclass ();
-  return (sc == LOC_BLOCK
-	  || sc == LOC_CONST
-	  || sc == LOC_CONST_BYTES
-	  || sc == LOC_LABEL);
+  location_class lc = sym->loc_class ();
+  return (lc == LOC_BLOCK
+	  || lc == LOC_CONST
+	  || lc == LOC_CONST_BYTES
+	  || lc == LOC_LABEL);
 }
 
 static inline bool
@@ -600,13 +615,14 @@ public:
 		   struct expression *exp,
 		   enum noside noside) override
   {
-    return eval_op_scope (expect_type, exp, noside,
-			  std::get<0> (m_storage),
-			  std::get<1> (m_storage).c_str ());
+    return evaluate_internal (expect_type, exp, noside, false);
   }
 
   value *evaluate_for_address (struct expression *exp,
-			       enum noside noside) override;
+			       enum noside noside) override
+  {
+    return evaluate_internal (nullptr, exp, noside, true);
+  }
 
   value *evaluate_funcall (struct type *expect_type,
 			   struct expression *exp,
@@ -623,6 +639,11 @@ protected:
 		       struct axs_value *value,
 		       struct type *cast_type)
     override;
+
+private:
+
+  value *evaluate_internal (struct type *expect_type, struct expression *exp,
+			    enum noside noside, bool want_address);
 };
 
 /* Compute the value of a variable.  */
@@ -951,7 +972,7 @@ public:
     struct value *val
       = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
 
-    if (value_logical_not (val))
+    if (noside != EVAL_AVOID_SIDE_EFFECTS && value_logical_not (val))
       return std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
     return std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
   }
@@ -1185,6 +1206,10 @@ public:
       = std::get<0> (m_storage)->evaluate_with_coercion (exp, noside);
     value *rhs
       = std::get<1> (m_storage)->evaluate_with_coercion (exp, noside);
+
+    lhs = convert_reference_to_target_type (lhs, noside);
+    rhs = convert_reference_to_target_type (rhs, noside);
+
     return eval_op_add (expect_type, exp, noside, lhs, rhs);
   }
 
@@ -1221,6 +1246,10 @@ public:
       = std::get<0> (m_storage)->evaluate_with_coercion (exp, noside);
     value *rhs
       = std::get<1> (m_storage)->evaluate_with_coercion (exp, noside);
+
+    lhs = convert_reference_to_target_type (lhs, noside);
+    rhs = convert_reference_to_target_type (rhs, noside);
+
     return eval_op_sub (expect_type, exp, noside, lhs, rhs);
   }
 
@@ -1263,6 +1292,10 @@ public:
       = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
     value *rhs
       = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
+
+    lhs = convert_reference_to_target_type (lhs, noside);
+    rhs = convert_reference_to_target_type (rhs, noside);
+
     return FUNC (expect_type, exp, noside, OP, lhs, rhs);
   }
 
@@ -1338,6 +1371,10 @@ public:
     value *rhs
       = std::get<1> (this->m_storage)->evaluate (lhs->type (), exp,
 						 noside);
+
+    lhs = convert_reference_to_target_type (lhs, noside);
+    rhs = convert_reference_to_target_type (rhs, noside);
+
     return FUNC (expect_type, exp, noside, OP, lhs, rhs);
   }
 };
@@ -1432,6 +1469,7 @@ public:
 		   enum noside noside) override
   {
     value *val = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
+    val = convert_reference_to_target_type (val, noside);
     return FUNC (expect_type, exp, noside, OP, val);
   }
 

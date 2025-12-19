@@ -1,6 +1,6 @@
 /* Public API to SFrame.
 
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
 
    This file is part of libsframe.
 
@@ -103,10 +103,10 @@ sframe_calc_fre_type (size_t func_size);
 
 /* The SFrame Decoder.  */
 
-/* Decode the specified SFrame buffer CF_BUF of size CF_SIZE and return the
+/* Decode the specified SFrame buffer SF_BUF of size SF_SIZE and return the
    new SFrame decoder context.  Sets ERRP for the caller if any error.  */
 extern sframe_decoder_ctx *
-sframe_decode (const char *cf_buf, size_t cf_size, int *errp);
+sframe_decode (const char *sf_buf, size_t sf_size, int *errp);
 
 /* Free the decoder context.  */
 extern void
@@ -124,6 +124,22 @@ sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx);
 extern uint8_t
 sframe_decoder_get_version (sframe_decoder_ctx *dctx);
 
+/* Get the section flags from the SFrame decoder context DCTX.  */
+extern uint8_t
+sframe_decoder_get_flags (sframe_decoder_ctx *dctx);
+
+/* Get the offset of the sfde_func_start_address field (from the start of the
+   on-disk layout of the SFrame section) of the FDE at FUNC_IDX in the decoder
+   context DCTX.
+
+   If FUNC_IDX is more than the number of SFrame FDEs in the section, sets
+   error code in ERRP, but returns the (hypothetical) offset.  This is useful
+   for the linker when arranging input FDEs into the output section to be
+   emitted.  */
+uint32_t
+sframe_decoder_get_offsetof_fde_start_addr (sframe_decoder_ctx *dctx,
+					    uint32_t func_idx, int *errp);
+
 /* Return the number of function descriptor entries in the SFrame decoder
    DCTX.  */
 extern uint32_t
@@ -136,14 +152,6 @@ sframe_decoder_get_fixed_fp_offset (sframe_decoder_ctx *dctx);
 /* Get the fixed RA offset from the decoder context DCTX.  */
 extern int8_t
 sframe_decoder_get_fixed_ra_offset (sframe_decoder_ctx *dctx);
-
-/* Find the function descriptor entry which contains the specified address.
-
-   Note: This function is deprecated and will be removed from future release
-   X+2 of the library.  */
-extern void *
-sframe_get_funcdesc_with_addr (sframe_decoder_ctx *dctx, int32_t addr,
-			       int *errp);
 
 /* Find the SFrame Frame Row Entry which contains the PC.  Returns
    SFRAME_ERR if failure.  */
@@ -198,12 +206,20 @@ extern int32_t
 sframe_fre_get_cfa_offset (sframe_decoder_ctx *dtcx,
 			   sframe_frame_row_entry *fre, int *errp);
 
-/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.  */
+/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.
+
+   For s390x the offset may be an encoded register number, indicated by
+   LSB set to one, which is only valid in the topmost frame.  */
 extern int32_t
 sframe_fre_get_fp_offset (sframe_decoder_ctx *dctx,
 			  sframe_frame_row_entry *fre, int *errp);
 
-/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.  */
+/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.
+
+   For s390x an RA offset value of SFRAME_FRE_RA_OFFSET_INVALID indicates
+   that the RA is not saved, which is only valid in the topmost frame.
+   For s390x the offset may be an encoded register number, indicated by
+   LSB set to one, which is only valid in the topmost frame.  */
 extern int32_t
 sframe_fre_get_ra_offset (sframe_decoder_ctx *dctx,
 			  sframe_frame_row_entry *fre, int *errp);
@@ -214,6 +230,12 @@ extern bool
 sframe_fre_get_ra_mangled_p (sframe_decoder_ctx *dctx,
 			     sframe_frame_row_entry *fre, int *errp);
 
+/* Get whether the RA is undefined (i.e. outermost frame).  */
+
+bool
+sframe_fre_get_ra_undefined_p (const sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
+			       const sframe_frame_row_entry *fre, int *errp);
+
 /* The SFrame Encoder.  */
 
 /* Create an encoder context with the given SFrame format version VER, FLAGS
@@ -222,57 +244,75 @@ extern sframe_encoder_ctx *
 sframe_encode (uint8_t ver, uint8_t flags, uint8_t abi_arch,
 	       int8_t fixed_fp_offset, int8_t fixed_ra_offset, int *errp);
 
-/* Free the encoder context.  */
+/* Free the encoder context ECTXP.  */
 extern void
-sframe_encoder_free (sframe_encoder_ctx **encoder);
+sframe_encoder_free (sframe_encoder_ctx **ectxp);
 
-/* Get the size of the SFrame header from the encoder ctx ENCODER.  */
+/* Get the size of the SFrame header from the encoder context ECTX.  */
 extern unsigned int
-sframe_encoder_get_hdr_size (sframe_encoder_ctx *encoder);
+sframe_encoder_get_hdr_size (sframe_encoder_ctx *ectx);
 
-/* Get the abi/arch info from the SFrame encoder context CTX.  */
+/* Get the SFrame abi/arch info from the encoder context ECTX.  */
 extern uint8_t
-sframe_encoder_get_abi_arch (sframe_encoder_ctx *encoder);
+sframe_encoder_get_abi_arch (sframe_encoder_ctx *ectx);
 
-/* Get the format version from the SFrame encoder context ENCODER.  */
+/* Get the SFrame format version from the encoder context ECTX.  */
 extern uint8_t
-sframe_encoder_get_version (sframe_encoder_ctx *encoder);
+sframe_encoder_get_version (sframe_encoder_ctx *ectx);
 
-/* Return the number of function descriptor entries in the SFrame encoder
-   ENCODER.  */
+/* Get the SFrame flags from the encoder context ECTX.  */
+extern uint8_t
+sframe_encoder_get_flags (sframe_encoder_ctx *ectx);
+
+/* Get the offset of the sfde_func_start_address field (from the start of the
+   on-disk layout of the SFrame section) of the FDE at FUNC_IDX in the encoder
+   context ECTX.
+
+   If FUNC_IDX is more than the number of SFrame FDEs in the section, sets
+   error code in ERRP, but returns the (hypothetical) offset.  This is useful
+   for the linker when arranging input FDEs into the output section to be
+   emitted.  */
+uint32_t
+sframe_encoder_get_offsetof_fde_start_addr (sframe_encoder_ctx *ectx,
+					    uint32_t func_idx, int *errp);
+
+/* Return the number of SFrame function descriptor entries in the encoder
+   context ECTX.  */
 extern uint32_t
-sframe_encoder_get_num_fidx (sframe_encoder_ctx *encoder);
+sframe_encoder_get_num_fidx (sframe_encoder_ctx *ectx);
 
-/* Add an FRE to function at FUNC_IDX'th function descriptor index entry in
-   the encoder context.  */
+/* Add an SFrame FRE to function at FUNC_IDX'th function descriptor entry in
+   the encoder context ECTX.  */
 extern int
-sframe_encoder_add_fre (sframe_encoder_ctx *encoder,
+sframe_encoder_add_fre (sframe_encoder_ctx *ectx,
 			unsigned int func_idx,
 			sframe_frame_row_entry *frep);
 
-/* Add a new function descriptor entry with START_ADDR, FUNC_SIZE and NUM_FRES
-   to the encoder.  */
+/* Add a new SFrame function descriptor entry with START_ADDR, FUNC_SIZE and
+   FUNC_INFO to the encoder context ECTX.  */
 extern int
-sframe_encoder_add_funcdesc (sframe_encoder_ctx *encoder,
+sframe_encoder_add_funcdesc (sframe_encoder_ctx *ectx,
 			     int32_t start_addr,
 			     uint32_t func_size,
 			     unsigned char func_info,
 			     uint32_t num_fres);
 
-/* Add a new function descriptor entry with START_ADDR, FUNC_SIZE, FUNC_INFO
-   and REP_BLOCK_SIZE to the encoder.  */
+/* Add a new SFrame function descriptor entry with START_ADDR, FUNC_SIZE,
+   FUNC_INFO and REP_BLOCK_SIZE to the encoder context ECTX.  This API is valid
+   only for SFrame format version 2.  */
 extern int
-sframe_encoder_add_funcdesc_v2 (sframe_encoder_ctx *encoder,
+sframe_encoder_add_funcdesc_v2 (sframe_encoder_ctx *ectx,
 				int32_t start_addr,
 				uint32_t func_size,
 				unsigned char func_info,
 				uint8_t rep_block_size,
 				uint32_t num_fres);
 
-/* Serialize the contents of the encoder and return the buffer.  ENCODED_SIZE
-   is updated to the size of the buffer.  Sets ERRP if failure.  */
+/* Serialize the contents of the encoder context ECTX and return the buffer.
+   ENCODED_SIZE is updated to the size of the buffer.
+   Sets ERRP if failure.  */
 extern char  *
-sframe_encoder_write (sframe_encoder_ctx *encoder,
+sframe_encoder_write (sframe_encoder_ctx *ectx,
 		      size_t *encoded_size, int *errp);
 
 #ifdef	__cplusplus

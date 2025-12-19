@@ -1,7 +1,7 @@
 /* DWARF 2 Expression Evaluator.
 
-   Copyright (C) 2001-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2001-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Daniel Berlin <dan@dberlin.org>.
 
@@ -25,6 +25,7 @@
 
 #include "leb128.h"
 #include "dwarf2/call-site.h"
+#include "dwarf2.h"
 
 struct dwarf2_per_objfile;
 
@@ -40,7 +41,7 @@ struct dwarf2_per_objfile;
    addresses with the passed in buffer.  */
 value *dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
 			dwarf2_per_objfile *per_objfile,
-			dwarf2_per_cu_data *per_cu,
+			dwarf2_per_cu *per_cu,
 			const frame_info_ptr &frame, int addr_size,
 			std::vector<value *> *init_values,
 			const struct property_addr_info *addr_info,

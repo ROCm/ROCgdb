@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@ require allow_ada_tests
 
 standard_ada_testfile p
 
-set old_gcc [gnat_version_compare <= 7]
+set old_gcc [gnat_version_compare < 8]
 
 proc gdb_test_with_xfail { cmd re re_xfail msg } {
     global scenario old_gcc
-    set have_xfail [expr $old_gcc && [string equal "$scenario" "minimal"]]
+    set have_xfail [expr {$old_gcc && [string equal "$scenario" "minimal"]}]
 
     gdb_test_multiple $cmd $msg {
 	-re -wrap $re  {
@@ -44,7 +44,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
     lappend flags debug
 
     if {[gdb_compile_ada "${srcfile}" "${binfile}-${scenario}" executable $flags] != ""} {
-	return -1
+	return
     }
 
     clean_restart ${testfile}-${scenario}

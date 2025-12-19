@@ -1,6 +1,6 @@
 /* Low-level I/O routines for BFDs.
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
 
    Written by Cygnus Support.
 
@@ -293,7 +293,7 @@ DESCRIPTION
 .  int (*bstat) (struct bfd *abfd, struct stat *sb);
 .  {* Mmap a part of the files. ADDR, LEN, PROT, FLAGS and OFFSET are the usual
 .     mmap parameter, except that LEN and OFFSET do not need to be page
-.     aligned.  Returns (void *)-1 on failure, mmapped address on success.
+.     aligned.  Returns MAP_FAILED on failure, mmapped address on success.
 .     Also write in MAP_ADDR the address of the page aligned buffer and in
 .     MAP_LEN the size mapped (a page multiple).  Use unmap with MAP_ADDR and
 .     MAP_LEN to unmap.  *}
@@ -328,6 +328,7 @@ bfd_read (void *ptr, bfd_size_type size, bfd *abfd)
   ufile_ptr offset = 0;
 
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     {
       offset += abfd->origin;
@@ -339,6 +340,7 @@ bfd_read (void *ptr, bfd_size_type size, bfd *abfd)
      this element.  */
   if (element_bfd->arelt_data != NULL
       && element_bfd->my_archive != NULL
+      && element_bfd->my_archive->iovec == element_bfd->iovec
       && !bfd_is_thin_archive (element_bfd->my_archive))
     {
       bfd_size_type maxbytes = arelt_size (element_bfd);
@@ -392,6 +394,7 @@ bfd_write (const void *ptr, bfd_size_type size, bfd *abfd)
   file_ptr nwrote;
 
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     abfd = abfd->my_archive;
 
@@ -440,6 +443,7 @@ bfd_tell (bfd *abfd)
   file_ptr ptr;
 
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     {
       offset += abfd->origin;
@@ -470,6 +474,7 @@ int
 bfd_flush (bfd *abfd)
 {
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     abfd = abfd->my_archive;
 
@@ -497,6 +502,7 @@ bfd_stat (bfd *abfd, struct stat *statbuf)
   int result;
 
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     abfd = abfd->my_archive;
 
@@ -531,6 +537,7 @@ bfd_seek (bfd *abfd, file_ptr position, int direction)
   ufile_ptr offset = 0;
 
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     {
       offset += abfd->origin;
@@ -725,6 +732,7 @@ DESCRIPTION
 	Return mmap()ed region of the file, if possible and implemented.
 	LEN and OFFSET do not need to be page aligned.  The page aligned
 	address and length are written to MAP_ADDR and MAP_LEN.
+	Returns MAP_FAILED on failure.
 
 */
 
@@ -734,6 +742,7 @@ bfd_mmap (bfd *abfd, void *addr, size_t len,
 	  void **map_addr, size_t *map_len)
 {
   while (abfd->my_archive != NULL
+	 && abfd->my_archive->iovec == abfd->iovec
 	 && !bfd_is_thin_archive (abfd->my_archive))
     {
       offset += abfd->origin;
@@ -898,7 +907,7 @@ memory_bmmap (bfd *abfd ATTRIBUTE_UNUSED, void *addr ATTRIBUTE_UNUSED,
 	      void **map_addr ATTRIBUTE_UNUSED,
 	      size_t *map_len ATTRIBUTE_UNUSED)
 {
-  return (void *)-1;
+  return MAP_FAILED;
 }
 
 const struct bfd_iovec _bfd_memory_iovec =

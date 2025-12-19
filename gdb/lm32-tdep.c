@@ -1,7 +1,7 @@
 /* Target-dependent code for Lattice Mico32 processor, for GDB.
    Contributed by Jon Beniston <jon@beniston.com>
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -121,7 +121,7 @@ lm32_analyze_prologue (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned long instruction;
 
-  /* Keep reading though instructions, until we come across an instruction 
+  /* Keep reading though instructions, until we come across an instruction
      that isn't likely to be part of the prologue.  */
   info->size = 0;
   for (; pc < limit; pc += 4)
@@ -134,7 +134,7 @@ lm32_analyze_prologue (struct gdbarch *gdbarch,
 	  && (LM32_REG0 (instruction) == SIM_LM32_SP_REGNUM))
 	{
 	  /* Any stack displaced store is likely part of the prologue.
-	     Record that the register is being saved, and the offset 
+	     Record that the register is being saved, and the offset
 	     into the stack.  */
 	  info->saved_regs[LM32_REG1 (instruction)].set_addr (LM32_IMM16 (instruction));
 	}
@@ -155,7 +155,7 @@ lm32_analyze_prologue (struct gdbarch *gdbarch,
 		    && (LM32_REG1 (instruction) == SIM_LM32_FP_REGNUM)
 		    && (LM32_REG0 (instruction) == SIM_LM32_R0_REGNUM)))
 	{
-	  /* Likely to be in the prologue for functions that require 
+	  /* Likely to be in the prologue for functions that require
 	     a frame pointer.  */
 	}
       else
@@ -169,7 +169,7 @@ lm32_analyze_prologue (struct gdbarch *gdbarch,
   return pc;
 }
 
-/* Return PC of first non prologue instruction, for the function at the 
+/* Return PC of first non prologue instruction, for the function at the
    specified address.  */
 
 static CORE_ADDR
@@ -210,7 +210,7 @@ constexpr gdb_byte lm32_break_insn[4] = { OP_RAISE << 2, 0, 0, 2 };
 typedef BP_MANIPULATION (lm32_break_insn) lm32_breakpoint;
 
 
-/* Setup registers and stack for faking a call to a function in the 
+/* Setup registers and stack for faking a call to a function in the
    inferior.  */
 
 static CORE_ADDR
@@ -268,7 +268,7 @@ lm32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       val = extract_unsigned_integer (contents, arg_type->length (),
 				      byte_order);
 
-      /* First num_arg_regs parameters are passed by registers, 
+      /* First num_arg_regs parameters are passed by registers,
 	 and the rest are passed on the stack.  */
       if (i < num_arg_regs)
 	regcache_cooked_write_unsigned (regcache, first_arg_reg + i, val);
@@ -384,13 +384,12 @@ lm32_frame_cache (const frame_info_ptr &this_frame, void **this_prologue_cache)
   CORE_ADDR current_pc;
   ULONGEST prev_sp;
   ULONGEST this_base;
-  struct lm32_frame_cache *info;
   int i;
 
   if ((*this_prologue_cache))
     return (struct lm32_frame_cache *) (*this_prologue_cache);
 
-  info = FRAME_OBSTACK_ZALLOC (struct lm32_frame_cache);
+  auto *info = frame_obstack_zalloc<struct lm32_frame_cache> ();
   (*this_prologue_cache) = info;
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
@@ -447,15 +446,16 @@ lm32_frame_prev_register (const frame_info_ptr &this_frame,
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
-static const struct frame_unwind lm32_frame_unwind = {
+static const struct frame_unwind_legacy lm32_frame_unwind (
   "lm32 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   lm32_frame_this_id,
   lm32_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
 lm32_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
@@ -535,9 +535,7 @@ lm32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_lm32_tdep ();
-void
-_initialize_lm32_tdep ()
+INIT_GDB_FILE (lm32_tdep)
 {
   gdbarch_register (bfd_arch_lm32, lm32_gdbarch_init);
 }

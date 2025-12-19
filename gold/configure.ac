@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-dnl   Copyright (C) 2006-2024 Free Software Foundation, Inc.
+dnl   Copyright (C) 2006-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is free software; you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([no-dist parallel-tests])
 AM_SILENT_RULES([yes])
 
-AM_CONFIG_HEADER(config.h:config.in)
+AC_CONFIG_HEADERS([config.h:config.in])
 
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -314,7 +314,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 
 ZW_GNU_GETTEXT_SISTER_DIR
-AM_PO_SUBDIRS
 
 AC_C_BIGENDIAN
 
@@ -738,4 +737,5 @@ AM_LC_MESSAGES
 
 AM_MAINTAINER_MODE
 
-AC_OUTPUT(Makefile testsuite/Makefile po/Makefile.in:po/Make-in)
+AC_CONFIG_FILES([Makefile testsuite/Makefile po/Makefile.in:po/Make-in])
+AC_OUTPUT

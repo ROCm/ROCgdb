@@ -1,5 +1,6 @@
 	.text
 	drps
+	eret
 
 	//
 	// HINTS
@@ -11,6 +12,8 @@
 	wfi
 	sev
 	sevl
+	dgh
+	csdb
 	clearbhb
 
 	.macro	all_hints from=0, to=127

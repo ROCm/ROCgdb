@@ -1,4 +1,4 @@
-#   Copyright 2013-2024 Free Software Foundation, Inc.
+#   Copyright 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ with_test_prefix "without symbols" {
 	"y"
 
     gdb_test "info break" \
-        "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
+	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
 \[0-9\]+\[\t \]+dprintf.*keep y.*PENDING.*pendfunc1.*" \
 	"single pending dprintf info"
 
@@ -60,7 +60,7 @@ with_test_prefix "without symbols" {
     gdb_test "" ".*x=3.*x=4.*x=3.*" "run to resolved dprintf"
 }
 
-clean_restart ${binfile}
+clean_restart $testfile
 gdb_load_shlib $lib_sl
 
 #

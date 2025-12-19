@@ -1,6 +1,6 @@
 /* Frame unwinder for ia64 frames with libunwind frame information.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    Contributed by Jeff Johnston.
 
@@ -50,7 +50,7 @@ struct libunwind_descr
 int libunwind_frame_sniffer (const struct frame_unwind *self,
 			     const frame_info_ptr &this_frame,
 			     void **this_cache);
-			  
+
 int libunwind_sigtramp_frame_sniffer (const struct frame_unwind *self,
 				      const frame_info_ptr &this_frame,
 				      void **this_cache);

@@ -1,4 +1,4 @@
-/* Copyright 1999-2024 Free Software Foundation, Inc.
+/* Copyright 1999-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -65,16 +65,16 @@ typedef struct _struct_decl {
   struct {
     union {
       struct {
-        int d;
-        char e[10];
-        int *(*func) (void);
-        efoo foo;
+	int d;
+	char e[10];
+	int *(*func) (void);
+	efoo foo;
       } u1s1;
 
       long f;
       struct {
-        char array_ptr[2];
-        int (*func) (int, char *);
+	char array_ptr[2];
+	int (*func) (int, char *);
       } u1s2;
     } u2;
 
@@ -194,8 +194,8 @@ do_block_tests ()
       int foo2;
       foo2 = 123;
       {
-        int foo;
-        foo = 321;
+	int foo;
+	foo = 321;
       }
       foo2 = 0;
     }
@@ -251,7 +251,7 @@ do_children_tests (void)
   struct_declarations.long_array[11] = 5678;
 
   /* Struct/pointer/array tests */
-  a0[0] = '0';  
+  a0[0] = '0';
   a1 = a0;
   a2 = &a1;
   a3 = &a2;
@@ -322,7 +322,7 @@ do_special_tests (void)
   int array[21];
   int a;
 
-  a = 1;   
+  a = 1;
   incr_a(2);
 }
 
@@ -341,12 +341,12 @@ do_child_deletion (void)
     mi_create_varobj S s "create varobj for s"
     mi_list_varobj_children S {{S.a a 0 int} {S.b b 0 int}}	\
        "list children of S"
-    mi_delete_varobj S.a "delete S.a"    
+    mi_delete_varobj S.a "delete S.a"
     mi_delete_varobj S.b "delete S.b"
     mi_delete_varobj S "delete S"
     :*/
   return 99;
-  /*: END: child_deletion :*/  
+  /*: END: child_deletion :*/
 }
 
 int
@@ -359,5 +359,3 @@ main (int argc, char *argv [])
   do_child_deletion ();
   exit (0);
 }
-
-  

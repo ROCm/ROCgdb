@@ -1,5 +1,5 @@
 /* ginsn.h - GAS instruction representation.
-   Copyright (C) 2023 Free Software Foundation, Inc.
+   Copyright (C) 2023-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -179,9 +179,8 @@ ginsnS *
 label_ginsn_map_find (const symbolS *label)
 {
   const char *name = S_GET_NAME (label);
-  ginsnS *ginsn
-    = (ginsnS *) str_hash_find (frchain_now->frch_ginsn_data->label_ginsn_map,
-				name);
+  ginsnS *ginsn = str_hash_find (frchain_now->frch_ginsn_data->label_ginsn_map,
+				 name);
   return ginsn;
 }
 

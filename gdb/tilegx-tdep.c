@@ -1,6 +1,6 @@
 /* Target-dependent code for the Tilera TILE-Gx processor.
 
-   Copyright (C) 2012-2024 Free Software Foundation, Inc.
+   Copyright (C) 2012-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -456,9 +456,9 @@ tilegx_analyze_prologue (struct gdbarch* gdbarch,
 		    = (unsigned) reverse_frame[operands[1]].value;
 
 		  cache->saved_regs[saved_register].set_addr (saved_address);
-		} 
+		}
 	      else if (cache
-		       && (operands[0] == TILEGX_SP_REGNUM) 
+		       && (operands[0] == TILEGX_SP_REGNUM)
 		       && (operands[1] == TILEGX_LR_REGNUM))
 		lr_saved_on_stack_p = 1;
 	      break;
@@ -836,13 +836,12 @@ static struct tilegx_frame_cache *
 tilegx_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  struct tilegx_frame_cache *cache;
   CORE_ADDR current_pc;
 
   if (*this_cache)
     return (struct tilegx_frame_cache *) *this_cache;
 
-  cache = FRAME_OBSTACK_ZALLOC (struct tilegx_frame_cache);
+  auto *cache = frame_obstack_zalloc<struct tilegx_frame_cache> ();
   *this_cache = cache;
   cache->saved_regs = trad_frame_alloc_saved_regs (this_frame);
   cache->base = 0;
@@ -900,16 +899,17 @@ tilegx_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
   return cache->base;
 }
 
-static const struct frame_unwind tilegx_frame_unwind = {
+static const struct frame_unwind_legacy tilegx_frame_unwind (
   "tilegx prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   tilegx_frame_this_id,
   tilegx_frame_prev_register,
   NULL,                        /* const struct frame_data *unwind_data  */
   default_frame_sniffer,       /* frame_sniffer_ftype *sniffer  */
   NULL                         /* frame_prev_pc_ftype *prev_pc  */
-};
+);
 
 static const struct frame_base tilegx_frame_base = {
   &tilegx_frame_unwind,
@@ -1020,9 +1020,7 @@ tilegx_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   return gdbarch;
 }
 
-void _initialize_tilegx_tdep ();
-void
-_initialize_tilegx_tdep ()
+INIT_GDB_FILE (tilegx_tdep)
 {
   gdbarch_register (bfd_arch_tilegx, tilegx_gdbarch_init);
 }

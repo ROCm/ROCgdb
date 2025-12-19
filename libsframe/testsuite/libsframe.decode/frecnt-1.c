@@ -1,6 +1,6 @@
 /* frecnt-1.c -- Test for decoder in libsframe.
 
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,17 +15,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "config.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-
-#include "sframe-api.h"
-
-/* DejaGnu should not use gnulib's vsnprintf replacement here.  */
-#undef vsnprintf
-#include <dejagnu.h>
+#include "sframe-test.h"
 
 /*
  * SFrame info from the following source (1 fde 4 fres):
@@ -46,16 +36,7 @@ main (void)
   struct stat st;
   char *sf_buf;
   size_t sf_size;
-
-#define TEST(name, cond)                                                      \
-  do                                                                          \
-    {                                                                         \
-      if (cond)                                                               \
-	pass (name);                                                          \
-      else                                                                    \
-	fail (name);                                                          \
-    }                                                                         \
-    while (0)
+  uint8_t rep_block_size;
 
   /* Test Setup.  */
   fp = fopen (DATA, "r");
@@ -77,17 +58,18 @@ main (void)
   /* Execute tests.  */
   sf_size = fread (sf_buf, 1, st.st_size, fp);
   fclose (fp);
-  TEST ("frecnt-1: Read data", sf_size != 0);
+  TEST (sf_size != 0, "frecnt-1: Read data");
 
   dctx = sframe_decode (sf_buf, sf_size, &err);
-  TEST ("frecnt-1: Decoder setup", dctx != NULL);
+  TEST (dctx != NULL, "frecnt-1: Decoder setup");
 
   unsigned int fde_cnt = sframe_decoder_get_num_fidx (dctx);
-  TEST ("frecnt-1: Decoder FDE count", fde_cnt == 1);
+  TEST (fde_cnt == 1, "frecnt-1: Decoder FDE count");
 
-  err = sframe_decoder_get_funcdesc (dctx, 0, &nfres, &fsize, &fstart, &finfo);
-  TEST ("frecnt-1: Decoder get FDE", err == 0);
-  TEST ("frecnt-1: Decoder FRE count", nfres == 4);
+  err = sframe_decoder_get_funcdesc_v2 (dctx, 0, &nfres, &fsize, &fstart,
+					&finfo, &rep_block_size);
+  TEST (err == 0, "frecnt-1: Decoder get FDE");
+  TEST (nfres == 4, "frecnt-1: Decoder FRE count");
 
   free (sf_buf);
   sf_buf = NULL;

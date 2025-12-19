@@ -1,5 +1,5 @@
 # Copyright (C) 2021-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -1325,7 +1325,7 @@ set cc_flags "-DKERNEL_SO_PATH=\"${shlibfile_path}\"\
 set options [list debug hip additional_flags=$cc_flags]
 
 if { [build_executable "failed to prepare"  ${testfile} ${srcfile} \
-        ${options}] } {
+	${options}] } {
     untested "HIP application failed to compile"
     return -1
 }
@@ -1341,7 +1341,8 @@ if  { [gdb_compile_ocl_kernel "$asmfile_dwarf ${srcdir}/${subdir}/${asmfile_kern
     return -1
 }
 
-clean_restart $binfile
+clean_restart
+gdb_load $binfile
 
 # Don't skip over code regions where the current lane is inactive.
 gdb_test_no_output "maint set lane-divergence-support off"
@@ -1351,7 +1352,7 @@ gdb_test_no_output "maint set lane-divergence-support off"
 gdb_test \
     "set exec-wrapper env 'LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${rocm_path}/lib'"
 
-if ![runto_main] {
+if {![runto_main]} {
     fail "can't run to main"
     return -1
 }

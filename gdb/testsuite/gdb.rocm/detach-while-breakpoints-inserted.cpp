@@ -1,4 +1,4 @@
-/* Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -16,9 +16,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
+<<<<<<< HEAD
 #include <unistd.h>
+=======
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 #include <stdio.h>
 #include <stdlib.h>
+#include "gdb_watchdog.h"
 
 __device__ static void
 add_one (int *out)
@@ -39,7 +43,7 @@ int
 main ()
 {
   /* Make sure we don't run forever.  */
-  alarm (30);
+  gdb_watchdog (30);
 
   int *result_ptr, result;
   hipError_t error = hipMalloc (&result_ptr, sizeof (int));

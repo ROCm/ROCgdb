@@ -1,6 +1,6 @@
 /* Test resolving of an opaque type from the loaded shared library.
 
-   Copyright 2007-2024 Free Software Foundation, Inc.
+   Copyright 2007-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -18,37 +18,37 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 struct struct_libtype_opaque
-{ 
+{
   int libfield_opaque;
 };
 struct struct_libtype_opaque struct_libtype_opaque_use;
 
 struct struct_libtype_empty
-{ 
+{
   int libfield_empty;
 };
 struct struct_libtype_empty struct_libtype_empty_use;
 
 struct struct_libtype_filled
-{ 
+{
   int libfield_filled;
 };
 struct struct_libtype_filled struct_libtype_filled_use;
 
 union union_libtype_opaque
-{ 
+{
   int libfield_opaque;
 };
 union union_libtype_opaque union_libtype_opaque_use;
 
 union union_libtype_empty
-{ 
+{
   int libfield_empty;
 };
 union union_libtype_empty union_libtype_empty_use;
 
 union union_libtype_filled
-{ 
+{
   int libfield_filled;
 };
 union union_libtype_filled union_libtype_filled_use;

@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2024 Free Software Foundation, Inc.
+# Copyright (C) 2015-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 # Efficient handling of this case is important, and not just for typos.
 # Sometimes the debug info for the needed object isn't present.
 
-from perftest import measure, perftest, utils
+from perftest import perftest, utils
 
 
 class NullLookup(perftest.TestCaseWithBasicMeasurements):
@@ -39,6 +39,7 @@ class NullLookup(perftest.TestCaseWithBasicMeasurements):
             iteration = 5
             while iteration > 0:
                 utils.safe_execute("mt flush symbol-cache")
-                func = lambda: utils.safe_execute("p symbol_not_found")
-                self.measure.measure(func, run)
+                self.measure.measure(
+                    lambda: utils.safe_execute("p symbol_not_found"), run
+                )
                 iteration -= 1

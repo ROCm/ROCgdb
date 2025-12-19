@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2013-2024 Free Software Foundation, Inc.
+   Copyright 2013-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,9 +23,9 @@
 
    __attribute__((noinline)) int
    init (int *b)
-   { 
-     return 0; 
-   } 
+   {
+     return 0;
+   }
 
    int
    main (int argc, char *argv[])
@@ -51,7 +51,7 @@ init:
 	# testsuite/gdb.dwarf2/fission-loclists-pie.c:24
 	.loc 1 24 0
 	movl	$0, %eax
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE0:
@@ -78,7 +78,7 @@ main:
 	.loc 1 30 0
 	addq	$8, %rsp
 	.cfi_def_cfa_offset 8
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE1:

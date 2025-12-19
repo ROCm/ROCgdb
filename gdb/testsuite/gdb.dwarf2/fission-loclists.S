@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2013-2024 Free Software Foundation, Inc.
+   Copyright 2013-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ foo:
 	.loc 1 3 0
 	movl	(%rdi), %eax
 	movl	%eax, v(%rip)
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE0:
@@ -85,7 +85,7 @@ main:
 	xorl	%eax, %eax
 	addq	$8, %rsp
 	.cfi_def_cfa_offset 8
-# SUCC: EXIT [100.0%] 
+# SUCC: EXIT [100.0%]
 	ret
 	.cfi_endproc
 .LFE1:

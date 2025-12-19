@@ -1,4 +1,4 @@
-# Copyright 2012-2024 Free Software Foundation, Inc.
+# Copyright 2012-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -103,9 +103,11 @@ proc jit_test_reread {standalone change_addr} {
 
     with_test_prefix "initial run" {
 	if {$standalone} {
-	    clean_restart $binfile
+	    clean_restart
+	    gdb_load $binfile
 	} else {
-	    clean_restart $binfile_dl
+	    clean_restart
+	    gdb_load $binfile_dl
 	}
 
 	runto_main
@@ -124,7 +126,7 @@ proc jit_test_reread {standalone change_addr} {
 	# second, gdb might not reload the executable automatically.
 	sleep 1
 
-	if ${change_addr} {
+	if {${change_addr}} {
 	    set options "additional_flags=-DSPACER"
 	    if {$standalone} {
 		gdb_rename_execfile $binfile ${binfile}x
@@ -153,7 +155,7 @@ proc jit_test_reread {standalone change_addr} {
 	    "maint info breakpoints shows jit breakpoint"
     }
 
-    if ${change_addr} {
+    if {${change_addr}} {
 	gdb_assert {$addr_before != $addr_after} "address changed"
     } else {
 	gdb_assert {$addr_before == $addr_after} "address didn't change"
@@ -161,7 +163,7 @@ proc jit_test_reread {standalone change_addr} {
 }
 
 foreach standalone {1 0} {
-    with_test_prefix [expr ($standalone)?"standalone":"shared"] {
+    with_test_prefix [expr {($standalone)?"standalone":"shared"}] {
 	with_test_prefix "change addr" {
 	    jit_test_reread $standalone 1
 	}
@@ -175,7 +177,8 @@ foreach standalone {1 0} {
 # see JIT breakpoints defined for both.
 
 with_test_prefix "two JITers" {
-    clean_restart $binfile_dl2
+    clean_restart
+    gdb_load $binfile_dl2
 
     if {![runto_main]} {
 	return -1

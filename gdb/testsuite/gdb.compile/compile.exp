@@ -1,4 +1,4 @@
-# Copyright 2014-2024 Free Software Foundation, Inc.
+# Copyright 2014-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 
 load_lib compile-support.exp
 
+require allow_compile_tests
+
 standard_testfile .c compile-shlib.c compile-constvar.S compile-nodebug.c
 
 require is_c_compiler_gcc
@@ -30,7 +32,8 @@ if { $srcfile3 != "" } {
     lappend srcfilesoptions $srcfile3 ${options}
 }
 lappend srcfilesoptions $srcfile4 "nodebug"
-if { [eval build_executable_from_specs ${testfile}.exp $testfile {$options} ${srcfilesoptions}] } {
+if { [build_executable_from_specs $testfile.exp $testfile $options \
+	  {*}$srcfilesoptions] } {
     return -1
 }
 
@@ -51,7 +54,7 @@ gdb_test "compile file -r ${srcdir}/${subdir}/${testfile}-mod.c" \
     "The program must be running for the compile command to work.*" \
     "test compile file command without running inferior"
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -376,8 +379,9 @@ if { $srcfile3 != "" } {
 
 require allow_shlib_tests
 
-set libbin [standard_output_file ${testfile}-shlib.so]
-set binfile [standard_output_file ${testfile}-shlib]
+set testfile $testfile-shlib
+set libbin [standard_output_file $testfile.so]
+set binfile [standard_output_file $testfile]
 
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile2} $libbin {debug}] != ""
      || [gdb_compile ${srcdir}/${subdir}/${srcfile} $binfile executable \
@@ -385,10 +389,10 @@ if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile2} $libbin {debug}] != ""
     return -1
 }
 
-clean_restart $binfile
+clean_restart $testfile
 gdb_load_shlib $libbin
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

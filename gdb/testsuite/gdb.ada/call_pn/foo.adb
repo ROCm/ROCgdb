@@ -1,4 +1,4 @@
---  Copyright 2010-2024 Free Software Foundation, Inc.
+--  Copyright 2010-2025 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -20,4 +20,3 @@ procedure Foo is
 begin
    New_Node := Pn (1234);  -- STOP
 end Foo;
-

@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Free Software Foundation, Inc.
+# Copyright 1999-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
      return -1
 }
 
-if {[mi_clean_restart $binfile]} {
+if {[mi_clean_restart $::testfile]} {
     return
 }
 
@@ -53,22 +53,22 @@ proc test_until {} {
     setup_kfail gdb/2104 "*-*-*"
     set line [gdb_get_line_number "after-loop"]
     mi_execute_to "exec-until" "end-stepping-range" "foo" "" ".*until.c" $line "" \
-        "until after while loop"
+	"until after while loop"
 
     set line [gdb_get_line_number "until-here"]
     mi_execute_to "exec-until $line" "location-reached" "foo" "" ".*until.c" $line ""\
-        "until line number"
+	"until line number"
 
     set line [gdb_get_line_number "until-there"]
     mi_execute_to "exec-until until.c:$line" "location-reached" "foo" "" ".*until.c" $line ""\
-        "until line number:file"
+	"until line number:file"
 
     # This is supposed to NOT stop at the return statement, but right
     # after foo is over.
     set line [gdb_get_line_number "at-return"]
     mi_execute_to "exec-until until.c:$line" "location-reached" "main" ""\
-	".*until.c" "([expr $line-2]|[expr $line-1])" ""\
-        "until after current function"
+	".*until.c" "([expr {$line-2}]|[expr {$line-1}])" ""\
+	"until after current function"
 }
 
 test_running_to_foo

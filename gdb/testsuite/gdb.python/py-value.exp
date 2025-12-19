@@ -1,4 +1,4 @@
-# Copyright (C) 2008-2024 Free Software Foundation, Inc.
+# Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -297,9 +297,9 @@ proc test_value_in_inferior {} {
   gdb_test "print argc" " = $argc_value" "sanity check argc"
   gdb_test "python print (argc_lazy.is_lazy)" "\r\nTrue" \
       "python print (argc_lazy.is_lazy) the second time"
-  gdb_test_no_output "set argc=[expr $argc_value + 1]" "change argc"
+  gdb_test_no_output "set argc=[expr {$argc_value + 1}]" "change argc"
   gdb_test "python print (argc_notlazy)" "\r\n$argc_value"
-  gdb_test "python print (argc_lazy)" "\r\n[expr $argc_value + 1]"
+  gdb_test "python print (argc_lazy)" "\r\n[expr {$argc_value + 1}]"
   gdb_test "python print (argc_lazy.is_lazy)" "False"
 
   # Test string fetches,  both partial and whole.
@@ -431,7 +431,8 @@ proc test_value_after_death {} {
 
 proc test_subscript_regression {exefile lang} {
  # Start with a fresh gdb.
- clean_restart ${exefile}
+  clean_restart
+  gdb_load $exefile
 
  if {![runto_main]} {
      return
@@ -457,6 +458,8 @@ proc test_subscript_regression {exefile lang} {
 	 "Derived \[*\]"
      gdb_test "python print (gdb.parse_and_eval('base_ref').dynamic_type)" \
 	 "Derived \[&\]"
+     gdb_test "python print (gdb.parse_and_eval('pod').dynamic_type)" \
+	 "str"
      # A static type case.
      gdb_test "python print (gdb.parse_and_eval('5').dynamic_type)" \
 	 "int"
@@ -541,13 +544,13 @@ proc test_float_conversion {} {
 proc prepare_type_and_buffer {} {
   gdb_py_test_silent_cmd "python tp=gdb.lookup_type('int')" "look up int type" 0
   gdb_py_test_silent_cmd "python size_a=gdb.parse_and_eval('sizeof(a)')" \
-                         "find size of a" 0
+			 "find size of a" 0
   gdb_py_test_silent_cmd "python size_a0=gdb.parse_and_eval('sizeof(a\[0\])')" \
-                         "find size of element of a" 0
+			 "find size of element of a" 0
   gdb_py_test_silent_cmd "python addr=gdb.parse_and_eval('&a')" \
-                         "find address of a" 0
+			 "find address of a" 0
   gdb_py_test_silent_cmd "python b=gdb.selected_inferior().read_memory(addr,size_a)" \
-                         "read buffer from memory" 0
+			 "read buffer from memory" 0
 }
 
 proc test_value_from_buffer {} {
@@ -567,23 +570,23 @@ proc test_value_from_buffer {} {
 
   prepare_type_and_buffer
   gdb_test "python v=gdb.Value(b,tp); print(v)" "1" \
-            "construct value from buffer"
+	    "construct value from buffer"
   gdb_test_no_output { python compare_value_bytes_to_mem(v, addr, size_a0) }
   gdb_test "python v=gdb.Value(b\[size_a0:\],tp); print(v)" "2" \
-            "convert 2nd elem of buffer to value"
+	    "convert 2nd elem of buffer to value"
   gdb_test_no_output \
       { python compare_value_bytes_to_mem(v, (int(addr) + size_a0), size_a0) }
   gdb_test "python v=gdb.Value(b\[2*size_a0:\],tp); print(v)" "3" \
-           "convert 3rd elem of buffer to value"
+	   "convert 3rd elem of buffer to value"
   gdb_test_no_output \
       { python compare_value_bytes_to_mem(v, (int(addr) + (2 * size_a0)), size_a0) }
   gdb_test "python v=gdb.Value(b\[2*size_a0+1:\],tp); print(v)" \
-           "ValueError.*: Size of type is larger than that of buffer object\..*" \
+	   "ValueError.*: Size of type is larger than that of buffer object\..*" \
 	   "attempt to convert smaller buffer than size of type"
   gdb_py_test_silent_cmd "python atp=tp.array(2) ; print(atp)" \
-                         "make array type" 0
+			 "make array type" 0
   gdb_py_test_silent_cmd "python va=gdb.Value(b,atp)" \
-                         "construct array value from buffer" 0
+			 "construct array value from buffer" 0
   gdb_test_no_output \
       { python compare_value_bytes_to_mem(va, addr, size_a0 * 3) }
   gdb_test "python print(va)" "\\{1, 2, 3\\}" "print array value"
@@ -591,16 +594,16 @@ proc test_value_from_buffer {} {
   gdb_test "python print(va\[1\])" "2" "print second array element"
   gdb_test "python print(va\[2\])" "3" "print third array element"
   gdb_test "python print(va\[3\])" "gdb\.error.*: no such vector element.*" \
-           "print out of bounds array element"
+	   "print out of bounds array element"
   gdb_py_test_silent_cmd "python atpbig=tp.array(3)" "make bigger array type" 0
   gdb_test "python vabig=gdb.Value(b,atpbig)" \
-           "ValueError.*: Size of type is larger than that of buffer object\..*" \
-	   "attempt to construct large value with small buffer" 
+	   "ValueError.*: Size of type is larger than that of buffer object\..*" \
+	   "attempt to construct large value with small buffer"
   gdb_test "python v=gdb.Value(2048,tp)" \
-           "TypeError.*: Object must support the python buffer protocol\..*" \
-           "attempt to construct value from buffer with non-buffer object"
+	   "TypeError.*: Object must support the python buffer protocol\..*" \
+	   "attempt to construct value from buffer with non-buffer object"
   gdb_test "python v=gdb.Value(b,'int'); print(v)" \
-           "TypeError.*: type argument must be a gdb\.Type\..*" \
+	   "TypeError.*: type argument must be a gdb\.Type\..*" \
 	   "attempt to construct value with string as type"
 }
 
@@ -680,6 +683,7 @@ proc_with_prefix test_value_bytes { } {
       "python" "" \
       "def check_value_bytes(var_name):" "" \
       "   val = gdb.parse_and_eval(var_name)" "" \
+      "   assert not val.is_unavailable" "" \
       "   addr = val.address" "" \
       "   len = val.type.sizeof" "" \
       "   mem = gdb.selected_inferior().read_memory(addr, len)" "" \
@@ -762,13 +766,45 @@ proc test_assign {} {
 	"cannot assign to integer"
 }
 
+# Test Value.is_unavailable
+proc test_unavailable {} {
+    set elem_size [get_valueof "/d" "sizeof(long_array\[0\])" "UNKNOWN" \
+		       "get size of long_array element"]
+    set max [expr {$elem_size * 10}]
+
+    with_set "print elements" 5 {
+	with_max_value_size $max {
+	    gdb_test "p long_array"
+
+	    gdb_test_no_output "set print elements 15"
+
+	    gdb_test_no_output "python v = gdb.history(0)"
+
+	    gdb_test "python print(v.is_unavailable)" "^True" \
+		"overall object shows as unavailable"
+	    for { set i 0 } { $i < 10 } { incr i } {
+		gdb_test "python print(v\[$i\].is_unavailable)" "^False" \
+		    "array element $i is available"
+		gdb_test "python print(v\[$i\])" "^$i" \
+		    "array element $i has correct value"
+	    }
+	    for { set i 10 } { $i < 15 } { incr i } {
+		gdb_test "python print(v\[$i\].is_unavailable)" "^True" \
+		    "array element $i is unavailable"
+		gdb_test "python print(v\[$i\])" "^<unavailable>" \
+		    "array element $i shows as unavailable"
+	    }
+	}
+    }
+}
+
 # Build C version of executable.  C++ is built later.
 if { [build_inferior "${binfile}" "c"] < 0 } {
     return -1
 }
 
 # Start with a fresh gdb.
-clean_restart ${binfile}
+clean_restart ${::testfile}
 
 test_history_count
 test_value_creation
@@ -788,6 +824,7 @@ if {![runto_main]} {
     return 0
 }
 
+test_unavailable
 test_value_in_inferior
 test_value_from_buffer
 test_value_sub_classes
@@ -797,7 +834,7 @@ test_assign
 test_value_bytes
 test_value_after_death
 
-# Test either C or C++ values. 
+# Test either C or C++ values.
 
 test_subscript_regression "${binfile}" "c"
 
@@ -808,4 +845,16 @@ if {[allow_cplus_tests]} {
     with_test_prefix "c++" {
 	test_subscript_regression "${binfile}-cxx" "c++"
     }
+}
+
+if {[allow_rust_tests]} {
+    gdb_test "set lang rust"
+
+    set cst 0x80000000000000000000000000000000
+    gdb_test "python print(int(gdb.parse_and_eval('${cst}u128')))" \
+	"170141183460469231731687303715884105728" \
+	"convert 128 bit unsigned constant to python int"
+    gdb_test "python print(int(gdb.parse_and_eval('${cst}i128')))" \
+	"-170141183460469231731687303715884105728" \
+	"convert 128 bit signed constant to python int"
 }

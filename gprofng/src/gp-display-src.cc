@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -172,7 +172,8 @@ er_src::usage ()
     "See also:\n"
     "\n"
     "gprofng(1), gprofng-archive(1), gprofng-collect-app(1), "
-    "gprofng-display-html(1), gprofng-display-text(1)\n"));
+    "gprofng-display-html(1), gprofng-display-text(1)\n"
+    "\nReport bugs to <https://sourceware.org/bugzilla/>\n"));
 /*
   printf (GTXT ("Usage: %s [OPTION] a.out/.so/.o/.class\n\n"), whoami);
   printf (GTXT ("    -func                     List all the functions from the given object\n"

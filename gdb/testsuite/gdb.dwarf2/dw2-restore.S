@@ -1,5 +1,5 @@
 /*
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ foo:	.cfi_startproc
 
 	.cfi_remember_state
 	jmp 2f
-	
+
 1:	mov %rbp,%rsp
 	.cfi_restore %rbp
 	pop %rbp

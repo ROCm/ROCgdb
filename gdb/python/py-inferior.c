@@ -1,6 +1,6 @@
 /* Python interface to inferiors.
 
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -30,10 +30,10 @@
 #include "py-event.h"
 #include "py-stopevent.h"
 #include "progspace-and-thread.h"
-#include <unordered_map>
+#include "gdbsupport/unordered_map.h"
 
 using thread_map_t
-  = std::unordered_map<thread_info *, gdbpy_ref<thread_object>>;
+  = gdb::unordered_map<thread_info *, gdbpy_ref<thread_object>>;
 
 struct inferior_object
 {
@@ -51,8 +51,7 @@ struct inferior_object
   PyObject *dict;
 };
 
-extern PyTypeObject inferior_object_type
-    CPYCHECKER_TYPE_OBJECT_FOR_TYPEDEF ("inferior_object");
+extern PyTypeObject inferior_object_type;
 
 /* Deleter to clean up when an inferior is removed.  */
 struct infpy_deleter
@@ -929,7 +928,7 @@ infpy_set_args (PyObject *self, PyObject *value, void *closure)
       for (const auto &arg : args)
 	argvec.push_back (arg.get ());
       gdb::array_view<char * const> view (argvec.data (), argvec.size ());
-      inf->inferior->set_args (view);
+      inf->inferior->set_args (view, true);
     }
   else
     {
@@ -973,6 +972,22 @@ infpy_get_main_name (PyObject *self, void *closure)
   return host_string_to_python_string (name).release ();
 }
 
+/* Implement the Inferior.corefile getter.  Returns a gdb.Corefile
+   object, or None.  */
+
+static PyObject *
+infpy_get_core_file (PyObject *self, void *closure)
+{
+  inferior_object *inf = (inferior_object *) self;
+
+  INFPY_REQUIRE_VALID (inf);
+
+  inferior *inferior = inf->inferior;
+  gdb_assert (inferior != nullptr);
+
+  return gdbpy_core_file_from_inferior (inferior).release ();
+}
+
 static void
 infpy_dealloc (PyObject *obj)
 {
@@ -1006,8 +1021,8 @@ gdbpy_selected_inferior (PyObject *self, PyObject *args)
 	  inferior_to_inferior_object (current_inferior ()).release ());
 }
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_inferior (void)
+static int
+gdbpy_initialize_inferior ()
 {
   if (gdbpy_type_ready (&inferior_object_type) < 0)
     return -1;
@@ -1062,6 +1077,8 @@ static gdb_PyGetSetDef inferior_object_getset[] =
   { "progspace", infpy_get_progspace, NULL, "Program space of this inferior" },
   { "main_name", infpy_get_main_name, nullptr,
     "Name of 'main' function, if known.", nullptr },
+  { "corefile", infpy_get_core_file, nullptr,
+    "The corefile loaded in to this inferior, or None.", nullptr },
   { NULL }
 };
 

@@ -1,6 +1,6 @@
 /* TUI display source/assembly window.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -26,7 +26,6 @@
 #include "value.h"
 #include "source.h"
 #include "objfiles.h"
-#include "gdbsupport/gdb-safe-ctype.h"
 
 #include "tui/tui.h"
 #include "tui/tui-data.h"
@@ -37,6 +36,7 @@
 #include "tui/tui-source.h"
 #include "tui/tui-disasm.h"
 #include "tui/tui-location.h"
+#include "tui/tui-wingeneral.h"
 #include "gdb_curses.h"
 
 /* Function to display the "main" routine.  */
@@ -52,10 +52,10 @@ tui_display_main ()
       tui_get_begin_asm_address (&gdbarch, &addr);
       if (addr != (CORE_ADDR) 0)
 	{
-	  struct symtab *s;
+	  tui_batch_rendering defer;
 
 	  tui_update_source_windows_with_addr (gdbarch, addr);
-	  s = find_pc_line_symtab (addr);
+	  struct symtab *s = find_symtab_for_pc (addr);
 	  tui_location.set_location (s);
 	}
     }
@@ -108,7 +108,7 @@ tui_copy_source_line (const char **ptr, int *length)
 	}
       else if (c == '\t')
 	process_tab ();
-      else if (ISCNTRL (c))
+      else if (c_iscntrl (c))
 	{
 	  result.push_back ('^');
 	  result.push_back (c + 0100);
@@ -182,9 +182,9 @@ tui_source_window_base::update_source_window_with_addr (struct gdbarch *gdbarch,
 {
   struct symtab_and_line sal {};
   if (addr != 0)
-    sal = find_pc_line (addr, 0);
+    sal = find_sal_for_pc (addr, 0);
 
-  update_source_window (gdbarch, sal);
+  maybe_update (gdbarch, sal);
 }
 
 /* Function to ensure that the source and/or disassembly windows
@@ -194,7 +194,7 @@ tui_update_source_windows_with_addr (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   struct symtab_and_line sal {};
   if (addr != 0)
-    sal = find_pc_line (addr, 0);
+    sal = find_sal_for_pc (addr, 0);
 
   for (struct tui_source_window_base *win_info : tui_source_windows ())
     win_info->update_source_window (gdbarch, sal);
@@ -208,7 +208,7 @@ tui_update_source_windows_with_line (struct symtab_and_line sal)
   struct gdbarch *gdbarch = nullptr;
   if (sal.symtab != nullptr)
     {
-      find_line_pc (sal.symtab, sal.line, &sal.pc);
+      find_pc_for_line (sal.symtab, sal.line, &sal.pc);
       gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
     }
 
@@ -316,6 +316,10 @@ tui_source_window_base::refresh_window ()
 
   if (m_content.empty ())
     return;
+<<<<<<< HEAD
+=======
+  gdb_assert (m_pad != nullptr);
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
   int pad_width = getmaxx (m_pad.get ());
   int left_margin = this->left_margin ();
@@ -339,8 +343,8 @@ tui_source_window_base::refresh_window ()
      should only occur during the initial startup.  In this case the first
      condition in the following asserts will not be true, but the nullptr
      check will.  */
-  gdb_assert (pad_width > 0 || m_pad.get () == nullptr);
-  gdb_assert (pad_x + view_width <= pad_width || m_pad.get () == nullptr);
+  gdb_assert (pad_width > 0);
+  gdb_assert (pad_x + view_width <= pad_width);
 
   int sminrow = y + box_width ();
   int smincol = x + box_width () + left_margin;
@@ -454,25 +458,17 @@ tui_source_window_base::rerender ()
     }
   else if (deprecated_safe_get_selected_frame () != NULL)
     {
-      symtab_and_line cursal
-	= get_current_source_symtab_and_line (current_program_space);
       frame_info_ptr frame = deprecated_safe_get_selected_frame ();
-      struct gdbarch *gdbarch = get_frame_arch (frame);
+      symtab_and_line sal = find_frame_sal (frame);
 
-      struct symtab *s = find_pc_line_symtab (get_frame_pc (frame));
-      if (this != tui_src_win ())
-	find_line_pc (s, cursal.line, &cursal.pc);
+      /* find_frame_sal does not always set SAL.PC, but we want to ensure
+	 that it is available in the SAL before updating the window.  */
+      std::optional<CORE_ADDR> tmp_pc = get_frame_pc_if_available (frame);
+      if (tmp_pc.has_value ())
+	sal.pc = *tmp_pc;
 
-      /* This centering code is copied from tui_source_window::maybe_update.
-	 It would be nice to do centering more often, and do it in just one
-	 location.  But since this is a regression fix, handle this
-	 conservatively for now.  */
-      int start_line = (cursal.line - ((height - box_size ()) / 2)) + 1;
-      if (start_line <= 0)
-	start_line = 1;
-      cursal.line = start_line;
-
-      update_source_window (gdbarch, cursal);
+      maybe_update (get_frame_arch (frame), sal);
+      update_exec_info (false);
     }
   else
     {
@@ -500,7 +496,7 @@ tui_source_window_base::refill ()
 	{
 	  frame_info_ptr fi = deprecated_safe_get_selected_frame ();
 	  if (fi != nullptr)
-	    sal = find_pc_line (get_frame_pc (fi), 0);
+	    sal = find_sal_for_pc (get_frame_pc (fi), 0);
 	}
     }
 
@@ -606,6 +602,8 @@ tui_source_window_base::set_is_exec_point_at (struct tui_line_or_address l)
 void
 tui_update_all_breakpoint_info (struct breakpoint *being_deleted)
 {
+  tui_batch_rendering defer;
+
   for (tui_source_window_base *win : tui_source_windows ())
     {
       if (win->update_breakpoint_info (being_deleted, false))

@@ -1,4 +1,4 @@
-/* Copyright 2011-2024 Free Software Foundation, Inc.
+/* Copyright 2011-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -33,4 +33,3 @@ main (void)
   break_me (); /* Finally, try a breakpoint with commands.  */
   return 0; /* Return line. */
 }
-

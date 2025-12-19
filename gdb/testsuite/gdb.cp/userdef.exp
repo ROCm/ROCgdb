@@ -1,5 +1,5 @@
 # Tests of overloaded operators resolution.
-# Copyright 1998-2024 Free Software Foundation, Inc.
+# Copyright 1998-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ if {![runto_main]} {
 }
 
 gdb_test "break marker1" \
-    "Breakpoint .*${srcfile}.*" 
+    "Breakpoint .*${srcfile}.*"
 
 gdb_test "cont" \
     "Break.* marker1(\\(\\)|) \\(\\) at .*:$decimal.*" \
@@ -49,16 +49,16 @@ gdb_test "print one + two" "\\\$\[0-9\]* = {x = 6, y = 8}"
 # that the rest of the tests can run undisturbed.
 gdb_test_multiple "frame" "re-selected 'main' frame after inferior call" {
     -re "#0  marker1.*$gdb_prompt $" {
-        setup_kfail "gdb/1155" s390-*-linux-gnu
-        fail "re-selected 'main' frame after inferior call"
-        gdb_test "finish" ".*main.*at .*userdef.cc:.*// marker1-returns-here.*" \
-                "finish call to marker1"
+	setup_kfail "gdb/1155" s390-*-linux-gnu
+	fail "re-selected 'main' frame after inferior call"
+	gdb_test "finish" ".*main.*at .*userdef.cc:.*// marker1-returns-here.*" \
+		"finish call to marker1"
     }
     -re "#1  ($hex in )?main.*$gdb_prompt $" {
-        pass "re-selected 'main' frame after inferior call"
+	pass "re-selected 'main' frame after inferior call"
     }
 }
-        
+
 gdb_test "print one - two" "\\\$\[0-9\]* = {x = -2, y = -2}"
 
 gdb_test "print one * two" "\\\$\[0-9\]* = {x = 8, y = 15}"

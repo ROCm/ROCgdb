@@ -1,4 +1,4 @@
-# Copyright 2018-2024 Free Software Foundation, Inc.
+# Copyright 2018-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ proc_with_prefix do_floating_varobj_test {} {
     global hex
     global expect_out
 
-    if {[mi_clean_restart $binfile]} {
+    if {[mi_clean_restart $::testfile]} {
 	fail "couldn't start gdb"
 	return
     }
@@ -80,7 +80,7 @@ proc_with_prefix do_floating_varobj_test {} {
 	# Run to a breakpoint in each callee function in succession.
 	# Note that we can't use mi_runto because we need the
 	# breakpoint to be persistent, so we can use its address.
-	set bpnum [expr $i + 1]
+	set bpnum [expr {$i + 1}]
 	mi_create_breakpoint \
 	    "basics.c:callee$i" \
 	    "insert breakpoint at basics.c:callee$i" \
@@ -101,7 +101,7 @@ proc_with_prefix do_floating_varobj_test {} {
 	if {$bpaddr == ""} { return }
 
 	# Check that the addresses are the same.
-	gdb_assert [expr $bpaddr == $pcval] "\$pc equals address of breakpoint in callee$i"
+	gdb_assert [expr {$bpaddr == $pcval}] "\$pc equals address of breakpoint in callee$i"
     }
 }
 
@@ -113,7 +113,7 @@ proc_with_prefix do_fixed_varobj_test {} {
     global srcfile binfile
     global hex
 
-    if {[mi_clean_restart $binfile] != 0} {
+    if {[mi_clean_restart $::testfile] != 0} {
 	fail "couldn't start gdb"
 	return
     }

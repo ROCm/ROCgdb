@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2024 Free Software Foundation, Inc.
+# Copyright (C) 2016-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
 }
 
 clean_restart "${testfile}"
-if ![runto_main] {
+if {![runto_main]} {
     return
 }
 
@@ -46,9 +46,9 @@ gdb_test "break foo"
 set test "continuing to foo"
 gdb_test_multiple "continue" "$test" {
     -re "MyBP\.stop was invoked\!.*$gdb_prompt $" {
-        fail "$test"
+	fail "$test"
     }
     -re "Continuing.*Breakpoint 2, foo.*$gdb_prompt $" {
-        pass "$test"
+	pass "$test"
     }
 }

@@ -1,5 +1,5 @@
 /* AArch64-specific backend routines.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -51,6 +51,9 @@ typedef enum
   MARKING_ERROR	= 2,  /* Emit error when the input objects are missing GNU
 			 feature property markings, and the output has the
 			 markings.  */
+  MARKING_UNSET = 3,  /* The only purpose of this value is to simulate an
+			 optional to detect when the value was not initialized
+			 from the command line.  */
 } aarch64_feature_marking_report;
 
 /* To indicate whether GNU_PROPERTY_AARCH64_FEATURE_1_GCS bit is
@@ -64,7 +67,7 @@ typedef enum
 } aarch64_gcs_type;
 
 /* A structure to encompass all information about software protections coming
-   from BTI or PAC related command line options.  */
+   from BTI, PAC and GCS related command line options.  */
 struct aarch64_protection_opts
 {
   /* PLT type to use depending on the selected software proctections.  */
@@ -78,6 +81,9 @@ struct aarch64_protection_opts
 
   /* Report level for GCS issues.  */
   aarch64_feature_marking_report gcs_report;
+
+  /* Report level for GCS issues with dynamic inputs.  */
+  aarch64_feature_marking_report gcs_report_dynamic;
 };
 typedef struct aarch64_protection_opts aarch64_protection_opts;
 
@@ -104,8 +110,11 @@ struct elf_aarch64_obj_tdata
   /* Number of reported BTI issues.  */
   int n_bti_issues;
 
-  /* Number of reported GCS issues.  */
+  /* Number of reported GCS issues for non-dynamic objects.  */
   int n_gcs_issues;
+
+  /* Number of reported GCS issues for dynamic objects.  */
+  int n_gcs_dynamic_issues;
 };
 
 #define elf_aarch64_tdata(bfd)				\
@@ -120,13 +129,38 @@ typedef enum
   ERRAT_ADRP  = (1 << 2),  /* Erratum workarounds using ADRP are allowed.  */
 } erratum_84319_opts;
 
+/* An enum to define the various modes of MTE operation.
+   At this time, except AARCH64_MEMTAG_MODE_NONE, the enumerator constants are
+   the same as specified in the Memtag ABI Extension to ELF for the Arm 64-bit
+   Architecture (AArch64) document (the intent being that this keeps the
+   emission of the associated dynamic tag simple).*/
+typedef enum
+{
+  AARCH64_MEMTAG_MODE_SYNC    = 0,
+  AARCH64_MEMTAG_MODE_ASYNC   = 1,
+  AARCH64_MEMTAG_MODE_NONE    = 2,
+} aarch64_memtag_mode_type;
+
+/* A structure to encompass all information about memtag feature related
+   command line options.  */
+struct aarch64_memtag_opts
+{
+  /* Mode of MTE operation.  */
+  aarch64_memtag_mode_type memtag_mode;
+
+  /* Whether stack accesses use MTE insns.  */
+  unsigned int memtag_stack;
+};
+
+typedef struct aarch64_memtag_opts aarch64_memtag_opts;
+
 extern void bfd_elf64_aarch64_set_options
   (bfd *, struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
-   const aarch64_protection_opts *);
+   const aarch64_protection_opts *, const aarch64_memtag_opts *);
 
 extern void bfd_elf32_aarch64_set_options
   (bfd *, struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
-   const aarch64_protection_opts *);
+   const aarch64_protection_opts *, const aarch64_memtag_opts *);
 
 /* AArch64 stub generation support for ELF64.  Called from the linker.  */
 extern int elf64_aarch64_setup_section_lists
@@ -153,14 +187,14 @@ extern bool elf32_aarch64_build_stubs
 
 /* AArch64 relative relocation packing support for ELF64.  */
 extern bool elf64_aarch64_size_relative_relocs
-  (struct bfd_link_info *, bool *);
+  (struct bfd_link_info *, bool *) ATTRIBUTE_HIDDEN;
 extern bool elf64_aarch64_finish_relative_relocs
-  (struct bfd_link_info *);
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 /* AArch64 relative relocation packing support for ELF32.  */
 extern bool elf32_aarch64_size_relative_relocs
-  (struct bfd_link_info *, bool *);
+  (struct bfd_link_info *, bool *) ATTRIBUTE_HIDDEN;
 extern bool elf32_aarch64_finish_relative_relocs
-  (struct bfd_link_info *);
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 /* Take the PAGE component of an address or offset.  */
 #define PG(x)	     ((x) & ~ (bfd_vma) 0xfff)
@@ -171,56 +205,63 @@ extern bool elf32_aarch64_finish_relative_relocs
 #define AARCH64_ADRP_OP_MASK	0x9F000000
 
 extern bfd_signed_vma
-_bfd_aarch64_sign_extend (bfd_vma, int);
+_bfd_aarch64_sign_extend (bfd_vma, int) ATTRIBUTE_HIDDEN;
 
 extern uint32_t
-_bfd_aarch64_decode_adrp_imm (uint32_t);
+_bfd_aarch64_decode_adrp_imm (uint32_t) ATTRIBUTE_HIDDEN;
 
 extern uint32_t
-_bfd_aarch64_reencode_adr_imm (uint32_t, uint32_t);
+_bfd_aarch64_reencode_adr_imm (uint32_t, uint32_t) ATTRIBUTE_HIDDEN;
 
 extern bfd_reloc_status_type
 _bfd_aarch64_elf_put_addend (bfd *, bfd_byte *, bfd_reloc_code_real_type,
-			     reloc_howto_type *, bfd_signed_vma);
+			     reloc_howto_type *, bfd_signed_vma)
+			    ATTRIBUTE_HIDDEN;
 
 extern bfd_vma
 _bfd_aarch64_elf_resolve_relocation (bfd *, bfd_reloc_code_real_type, bfd_vma,
-				     bfd_vma, bfd_vma, bool);
+				     bfd_vma, bfd_vma, bool) ATTRIBUTE_HIDDEN;
 
 extern bool
-_bfd_aarch64_elf_grok_prstatus (bfd *, Elf_Internal_Note *);
+_bfd_aarch64_elf_grok_prstatus (bfd *, Elf_Internal_Note *) ATTRIBUTE_HIDDEN;
 
 extern bool
-_bfd_aarch64_elf_grok_psinfo (bfd *, Elf_Internal_Note *);
+_bfd_aarch64_elf_grok_psinfo (bfd *, Elf_Internal_Note *) ATTRIBUTE_HIDDEN;
 
 extern char *
-_bfd_aarch64_elf_write_core_note (bfd *, char *, int *, int, ...);
+_bfd_aarch64_elf_write_core_note (bfd *, char *, int *, int, ...)
+  ATTRIBUTE_HIDDEN;
 
 #define elf_backend_grok_prstatus	_bfd_aarch64_elf_grok_prstatus
 #define elf_backend_grok_psinfo		_bfd_aarch64_elf_grok_psinfo
 #define elf_backend_write_core_note	_bfd_aarch64_elf_write_core_note
 
 extern bfd *
-_bfd_aarch64_elf_link_setup_gnu_properties (struct bfd_link_info *);
+_bfd_aarch64_elf_link_setup_gnu_properties (struct bfd_link_info *)
+  ATTRIBUTE_HIDDEN;
 
 extern enum elf_property_kind
 _bfd_aarch64_elf_parse_gnu_properties (bfd *, unsigned int,
-				       bfd_byte *, unsigned int);
+				       bfd_byte *, unsigned int)
+  ATTRIBUTE_HIDDEN;
 
 extern bool
 _bfd_aarch64_elf_merge_gnu_properties (struct bfd_link_info *, bfd *,
 				       elf_property *, elf_property *,
-				       uint32_t);
+				       uint32_t) ATTRIBUTE_HIDDEN;
 
 extern void
-_bfd_aarch64_elf_check_bti_report (struct bfd_link_info *, bfd *);
+_bfd_aarch64_elf_check_bti_report (const struct bfd_link_info *, const bfd *)
+  ATTRIBUTE_HIDDEN;
 
 extern void
-_bfd_aarch64_elf_check_gcs_report (struct bfd_link_info *, bfd *);
+_bfd_aarch64_elf_check_gcs_report (const struct bfd_link_info *, const bfd *)
+  ATTRIBUTE_HIDDEN;
 
 extern void
 _bfd_aarch64_elf_link_fixup_gnu_properties (struct bfd_link_info *,
-					    elf_property_list **);
+					    elf_property_list **)
+  ATTRIBUTE_HIDDEN;
 
 #define elf_backend_parse_gnu_properties	\
   _bfd_aarch64_elf_parse_gnu_properties

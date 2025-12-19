@@ -37,28 +37,48 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
+minimum_pre_commit_version: 3.2.0
+default_install_hook_types: [pre-commit, post-commit]
+default_stages: [pre-commit]
 repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
+    rev: 25.11.0
     hooks:
       - id: black
         types_or: [file]
-        files: 'gdb/.*\.py(\.in)?$'
+        files: '^gdb/.*\.py(\.in)?$'
   - repo:  https://github.com/pycqa/flake8
-    rev: 7.1.1
+    rev: 7.3.0
     hooks:
     - id: flake8
       types_or: [file]
-      # Note this one is only run on gdb/python, not (for now) the
-      # test suite.
-      files: 'gdb/python/.*\.py(\.in)?$'
+      # Run this for (in glob notation):
+      #
+      #  - gdb/gdb-gdb.py.in
+      #  - gdb/*.py
+      #  - gdb/python/**/*.py
+      #  - gdb/testsuite/*.py
+      #
+      files: '^gdb/.*\.py(\.in)?$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 7.0.0
     hooks:
     - id: isort
       types_or: [file]
-      files: 'gdb/.*\.py(\.in)?$'
+      files: '^gdb/.*\.py(\.in)?$'
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+    - id: codespell
+      files: '^(gdbsupport|gdbserver|gdb/(dwarf2|tui|target|data-directory|po|system-gdbinit|mi|syscalls|arch|regformats|compile|python|guile|config|unittests|cli|testsuite/gdb.(ctf|dap|debuginfod|gdb|go|guile|mi|modula2|objc|opencl|opt|pascal|perf|replay|reverse|rocm|server|stabs|testsuite|tui|xml)))/'
+      args: [--config, gdb/contrib/setup.cfg]
+    - id: codespell
+      name: codespell-log
+      entry: gdb/contrib/codespell-log.sh
+      args: [--config, gdb/contrib/setup.cfg]
+      always_run: true
+      stages: [post-commit]
   - repo: local
     hooks:
     - id: check-include-guards
@@ -68,3 +88,31 @@ repos:
       # All gdb header files, but not headers in the test suite.
       files: '^(gdb(support|server)?)/.*\.h$'
       exclude: '.*/testsuite/.*'
+    - id: check-gnu-style
+      name: check-gnu-style
+      language: script
+      entry: gdb/contrib/check-gnu-style-pre-commit.sh
+      files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
+      exclude: '.*/testsuite/.*'
+      verbose: true
+      stages: [pre-commit]
+    - id: check-whitespace
+      name: check-whitespace
+      language: script
+      entry: gdb/contrib/check-whitespace-pre-commit.py
+      files: '^(gdb(support|server)?)/.*$'
+      pass_filenames: true
+      stages: [pre-commit]
+    - id: pre-commit-setup
+      name: pre-commit-setup
+      language: script
+      entry: gdb/contrib/pre-commit-setup.py
+      always_run: true
+      require_serial: true
+  - repo: https://github.com/nmoroze/tclint
+    rev: v0.6.2
+    hooks:
+    - id: tclint
+      args: [--config, gdb/tclint.toml, --commands, gdb/testsuite/tclint-plugin.py]
+      types_or: [file]
+      files: '^gdb/testsuite/.*\.(exp|tcl)$'

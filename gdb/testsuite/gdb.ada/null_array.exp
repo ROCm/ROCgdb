@@ -1,4 +1,4 @@
-# Copyright 2008-2024 Free Software Foundation, Inc.
+# Copyright 2008-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -30,13 +30,13 @@ runto "foo.adb:$bp_location"
 
 if {[gnat_version_compare <= {4 4}]} {
     # Ada array bounds are missing in older GCCs.
-    setup_xfail *-*-* 
+    setup_xfail *-*-*
 }
 gdb_test "print my_table" \
-         "= \\(\\)"
+	 "= \\(\\)"
 
 gdb_test "ptype my_table" \
-         "type = array \\(10 \\.\\. 1\\) of integer"
+	 "type = array \\(10 \\.\\. 1\\) of integer"
 
 gdb_test "print my_matrix" \
-         "= \\(m => \\((\"\", ){9}\"\"\\)\\)"
+	 "= \\(m => \\((\"\", ){9}\"\"\\)\\)"

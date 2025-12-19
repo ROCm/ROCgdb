@@ -1,4 +1,4 @@
-# Copyright 1992-2024 Free Software Foundation, Inc.
+# Copyright 1992-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -401,7 +401,7 @@ proc test_lookup_operator_functions {} {
     info_func "operator>>=("	"void foo::operator>>=($dm_type_foo_ref);"
     info_func "operator|=("	"void foo::operator|=($dm_type_foo_ref);"
     info_func "operator$dm_operator_comma\("	\
-    				"void foo::operator$dm_operator_comma\($dm_type_foo_ref);"
+				"void foo::operator$dm_operator_comma\($dm_type_foo_ref);"
     info_func "operator/("	"void foo::operator/($dm_type_foo_ref);"
     info_func "operator+("	"void foo::operator+($dm_type_foo_ref);"
     info_func "operator<<("	"void foo::operator<<($dm_type_foo_ref);"
@@ -424,7 +424,7 @@ proc test_lookup_operator_functions {} {
 
     # operator[] needs double backslashes, so that a single backslash
     # will be sent to GDB, preventing the square brackets from being
-    # evaluated as a regular expression. 
+    # evaluated as a regular expression.
     info_func "operator\\\[\\\](" "void foo::operator\[\]($dm_type_foo_ref);"
 
     # These are gnarly because they might end with 'static'.
@@ -493,7 +493,7 @@ proc test_paddr_operator_functions {} {
     gdb_test "print &foo::operator new" \
 	" = .* $hex <foo::operator new\\(.*\\)(| static)>"
     gdb_test "print &foo::operator new\[\]" \
-	" = .* $hex <foo::operator new\\\[\\\]\\(.*\\)(| static)>"    
+	" = .* $hex <foo::operator new\\\[\\\]\\(.*\\)(| static)>"
 
     print_addr "foo::operator delete($dm_type_void_star)"
     print_addr "foo::operator delete\[\]($dm_type_void_star)"
@@ -579,7 +579,8 @@ proc do_tests {} {
 
     gdb_test_no_output "set width 0"
 
-    runto_main
+    # Don't run to main, to avoid loading and expanding debug info for
+    # libstdc++.
 
     gdb_test_no_output "set language c++"
     probe_demangler

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 1998-2024 Free Software Foundation, Inc.
+   Copyright 1998-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ void subr3()
   unsigned char c;
   int i;
   float f;
-  
+
   c = 'b';
   i = 3;
   f = 6.5;

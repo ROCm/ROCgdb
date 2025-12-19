@@ -1,7 +1,6 @@
 /* Multi-process control for GDB, the GNU debugger.
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
-   Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -20,6 +19,7 @@
 
 #include "exec.h"
 #include "inferior.h"
+#include "gdbsupport/common-inferior.h"
 #include "target.h"
 #include "command.h"
 #include "completer.h"
@@ -104,8 +104,8 @@ inferior::unpush_target (struct target_ops *t)
     {
       process_stratum_target *proc_target = as_process_stratum_target (t);
 
-      for (thread_info *thread : this->non_exited_threads ())
-	proc_target->maybe_remove_resumed_with_pending_wait_status (thread);
+      for (thread_info &thread : this->non_exited_threads ())
+	proc_target->maybe_remove_resumed_with_pending_wait_status (&thread);
     }
 
   return m_target_stack.unpush (t);
@@ -168,9 +168,10 @@ inferior::tty ()
 /* See inferior.h.  */
 
 void
-inferior::set_args (gdb::array_view<char * const> args)
+inferior::set_args (gdb::array_view<char * const> args,
+		    bool escape_shell_char)
 {
-  set_args (construct_inferior_arguments (args));
+  set_args (construct_inferior_arguments (args, escape_shell_char));
 }
 
 void
@@ -457,7 +458,7 @@ number_of_live_inferiors (process_stratum_target *proc_target)
 
   for (inferior *inf : all_non_exited_inferiors (proc_target))
     if (inf->has_execution ())
-      for (thread_info *tp ATTRIBUTE_UNUSED : inf->non_exited_threads ())
+      for (thread_info &tp ATTRIBUTE_UNUSED : inf->non_exited_threads ())
 	{
 	  /* Found a live thread in this inferior, go to the next
 	     inferior.  */
@@ -632,6 +633,13 @@ print_inferior (struct ui_out *uiout, const char *requested_inferiors)
 	{
 	  uiout->text (_("\n\tis vfork parent of inferior "));
 	  uiout->field_signed ("vfork-child", inf->vfork_child->num);
+	}
+      if (get_inferior_core_bfd (inf) != nullptr)
+	{
+	  uiout->text (_("\n\tcore file "));
+	  uiout->field_string ("core-file",
+			       bfd_get_filename (get_inferior_core_bfd (inf)),
+			       file_name_style.style ());
 	}
 
       uiout->text ("\n");
@@ -831,7 +839,7 @@ remove_inferior_command (const char *args, int from_tty)
 	  warning (_("Can not remove current inferior %d."), num);
 	  continue;
 	}
-    
+
       if (inf->pid != 0)
 	{
 	  warning (_("Can not remove active inferior %d."), num);
@@ -878,6 +886,19 @@ switch_to_inferior_and_push_target (inferior *new_inf,
   /* Switch over temporarily, while reading executable and
      symbols.  */
   switch_to_inferior_no_thread (new_inf);
+
+  /* If the user didn't specify '-no-connection', and the ORG_INF has a
+     process stratum target, but that target cannot be shared, or cannot
+     start a new inferior, then don't try to share the target.  */
+  if (!no_connection && proc_target != nullptr
+      && (!proc_target->is_shareable ()
+	  || !proc_target->can_create_inferior ()))
+    {
+      warning (_("can't share connection %d (%s) between inferiors"),
+	       proc_target->connection_number,
+	       make_target_connection_string (proc_target).c_str ());
+      proc_target = nullptr;
+    }
 
   /* Reuse the target for new inferior.  */
   if (!no_connection && proc_target != NULL)

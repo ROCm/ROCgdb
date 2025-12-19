@@ -1,4 +1,4 @@
-/* Copyright 2012-2024 Free Software Foundation, Inc.
+/* Copyright 2012-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@ void use_rtti_for_ref_test ()
 	Derived d;
 	Base& ref = d;
 	const Base& constRef = d;
-  /*: 
+  /*:
 	set testname use_rtti_for_ref
 	set_print_object off $testname
 	check_new_derived_without_rtti ref {Base \&} $testname
@@ -80,7 +80,7 @@ void use_rtti_for_ptr_child_test ()
 {
   /*: BEGIN: use_rtti_for_ptr_child :*/
 	Derived d;
-	struct S {	
+	struct S {
 		Base* ptr;
 		const Base* constPtr;
 		Base* const ptrConst;
@@ -91,7 +91,7 @@ void use_rtti_for_ptr_child_test ()
 			ptrConst ( v ),
 			constPtrConst ( v ) {}
 	} s ( &d );
-  /*: 
+  /*:
 	set testname use_rtti_for_ptr_child
 
 	set_print_object off $testname
@@ -139,14 +139,14 @@ void use_rtti_for_ref_child_test ()
 {
   /*: BEGIN: use_rtti_for_ref_child :*/
 	Derived d;
-	struct S {	
+	struct S {
 		Base& ref;
 		const Base& constRef;
 		S ( Base& v ) :
 			ref ( v ),
 			constRef ( v ) {}
 	} s ( d );
-  /*: 
+  /*:
 	set testname use_rtti_for_ref_child
 
 	set_print_object off $testname
@@ -248,7 +248,7 @@ void type_update_when_use_rtti_test ()
 			ptr ( v ) {}
 	} s ( ptr );
 	Derived d;
-  /*: 
+  /*:
 	set testname type_update_when_use_rtti
 
 	set_print_object on $testname
@@ -304,7 +304,7 @@ void skip_type_update_when_not_use_rtti_test ()
 			ptr ( v ) {}
 	} s ( ptr );
 	Derived d;
-  /*: 
+  /*:
 	set testname skip_type_update_when_not_use_rtti
 
 	with_test_prefix "ptr is nullptr" {
@@ -326,8 +326,8 @@ void skip_type_update_when_not_use_rtti_test ()
 
 	ptr = &d;
 	s.ptr = &d;
-  /*: 
-        with_test_prefix "ptr points at d" {
+  /*:
+	with_test_prefix "ptr points at d" {
 	  mi_varobj_update PTR {PTR PTR.public.A} \
 		"update ptr to derived type in $testname"
 	  check_derived_without_rtti PTR ptr $testname
@@ -341,7 +341,7 @@ void skip_type_update_when_not_use_rtti_test ()
 	ptr = 0;
 	s.ptr = 0;
   /*:
-        with_test_prefix "ptr is nullptr again" {
+	with_test_prefix "ptr is nullptr again" {
 	  mi_varobj_update PTR {PTR  PTR.public.A} \
 		"update ptr back to base type in $testname"
 	  mi_delete_varobj PTR "delete varobj for ptr in $testname"

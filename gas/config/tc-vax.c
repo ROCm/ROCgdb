@@ -1,5 +1,5 @@
 /* tc-vax.c - vax-specific -
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -278,7 +278,7 @@ md_apply_fix (fixS *fixP, valueT *valueP, segT seg ATTRIBUTE_UNUSED)
 {
   valueT value = * valueP;
 
-  if (fixP->fx_subsy != (symbolS *) NULL)
+  if (fixP->fx_subsy != NULL)
     as_bad_subtract (fixP);
 
   if (fixP->fx_addsy == NULL)
@@ -332,8 +332,7 @@ bignum_copy (LITTLENUM_TYPE *in,
       LITTLENUM_TYPE *p;	/* -> most significant (non-zero) input
 				      littlenum.  */
 
-      memcpy ((void *) out, (void *) in,
-	      (unsigned int) out_length << LITTLENUM_SHIFT);
+      memcpy (out, in, (unsigned int) out_length << LITTLENUM_SHIFT);
       for (p = in + in_length - 1; p >= in; --p)
 	{
 	  if (*p)
@@ -346,11 +345,10 @@ bignum_copy (LITTLENUM_TYPE *in,
     }
   else
     {
-      memcpy ((char *) out, (char *) in,
-	      (unsigned int) in_length << LITTLENUM_SHIFT);
+      memcpy (out, in, (unsigned int) in_length << LITTLENUM_SHIFT);
 
       if (out_length > in_length)
-	memset ((char *) (out + in_length), '\0',
+	memset (out + in_length, 0,
 		(unsigned int) (out_length - in_length) << LITTLENUM_SHIFT);
 
       significant_littlenums_dropped = 0;
@@ -1278,13 +1276,13 @@ vip_op (char *optext, struct vop *vopP)
 
   p = optext;
 
-  if (*p == ' ')		/* Expect all whitespace reduced to ' '.  */
+  if (is_whitespace (*p))
     p++;			/* skip over whitespace */
 
   if ((at = INDIRECTP (*p)) != 0)
     {				/* 1 if *p=='@'(or '*' for Un*x) */
       p++;			/* at is determined */
-      if (*p == ' ')		/* Expect all whitespace reduced to ' '.  */
+      if (is_whitespace (*p))
 	p++;			/* skip over whitespace */
     }
 
@@ -1302,7 +1300,7 @@ vip_op (char *optext, struct vop *vopP)
       len = ' ';		/* Len is determined.  */
   }
 
-  if (*p == ' ')		/* Expect all whitespace reduced to ' '.  */
+  if (is_whitespace (*p))
     p++;
 
   if ((hash = IMMEDIATEP (*p)) != 0)	/* 1 if *p=='#' ('$' for Un*x) */
@@ -1318,7 +1316,7 @@ vip_op (char *optext, struct vop *vopP)
     ;
   q--;				/* Now q points at last char of text.  */
 
-  if (*q == ' ' && q >= p)	/* Expect all whitespace reduced to ' '.  */
+  if (is_whitespace (*q) && q >= p)
     q--;
 
   /* Reverse over whitespace, but don't.  */
@@ -1368,7 +1366,7 @@ vip_op (char *optext, struct vop *vopP)
      Otherwise ndx == -1 if there was no "[...]".
      Otherwise, ndx is index register number, and q points before "[...]".  */
 
-  if (*q == ' ' && q >= p)	/* Expect all whitespace reduced to ' '.  */
+  if (is_whitespace (*q) && q >= p)
     q--;
   /* Reverse over whitespace, but don't.  */
   /* Run back over *p.  */
@@ -1454,7 +1452,7 @@ vip_op (char *optext, struct vop *vopP)
 	     We remember to save q, in case we didn't want "Rn" anyway.  */
 	  if (!paren)
 	    {
-	      if (*q == ' ' && q >= p)	/* Expect all whitespace reduced to ' '.  */
+	      if (is_whitespace (*q) && q >= p)
 		q--;
 	      /* Reverse over whitespace, but don't.  */
 	      /* Run back over *p.  */
@@ -1860,11 +1858,11 @@ vip (struct vit *vitP,		/* We build an exploded instruction here.  */
   /* Op-code of this instruction.  */
   vax_opcodeT oc;
 
-  if (*instring == ' ')
+  if (is_whitespace (*instring))
     ++instring;
 
   /* MUST end in end-of-string or exactly 1 space.  */
-  for (p = instring; *p && *p != ' '; p++)
+  for (p = instring; *p && !is_whitespace (*p); p++)
     ;
 
   /* Scanned up to end of operation-code.  */
@@ -1882,7 +1880,7 @@ vip (struct vit *vitP,		/* We build an exploded instruction here.  */
       /* Here with instring pointing to what better be an op-name, and p
          pointing to character just past that.
          We trust instring points to an op-name, with no whitespace.  */
-      vwP = (struct vot_wot *) str_hash_find (op_hash, instring);
+      vwP = str_hash_find (op_hash, instring);
       /* Restore char after op-code.  */
       *p = c;
       if (vwP == 0)
@@ -1939,7 +1937,7 @@ vip (struct vit *vitP,		/* We build an exploded instruction here.  */
 	    }
 	  if (!*alloperr)
 	    {
-	      if (*instring == ' ')
+	      if (is_whitespace (*instring))
 		instring++;
 	      if (*instring)
 		alloperr = _("Too many operands");
@@ -2345,8 +2343,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 #undef F
 #undef MAP
 
-  reloc = XNEW (arelent);
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 #ifndef OBJ_ELF
@@ -3293,7 +3291,7 @@ vax_cons (expressionS *exp, int size)
 	      char *end = ++input_line_pointer;
 	      int npar = 0;
 
-	      while (! is_end_of_line[(c = *end)])
+	      while (! is_end_of_stmt (c = *end))
 		{
 		  if (c == '(')
 	  	    npar++;
@@ -3324,7 +3322,7 @@ vax_cons (expressionS *exp, int size)
 		      input_line_pointer++;
 		      SKIP_WHITESPACE ();
 		      c = *input_line_pointer;
-		      if (! is_end_of_line[c] && c != ',')
+		      if (! is_end_of_stmt (c) && c != ',')
 			as_bad (_("Illegal operands: garbage after %%r_%s%d()"),
 			        vax_cons_special_reloc, size * 8);
 		    }
@@ -3356,7 +3354,7 @@ vax_cons_fix_new (fragS *frag, int where, unsigned int nbytes, expressionS *exp,
 	 : nbytes == 2 ? BFD_RELOC_16
 	 : BFD_RELOC_32);
 
-  fix_new_exp (frag, where, (int) nbytes, exp, 0, r);
+  fix_new_exp (frag, where, nbytes, exp, 0, r);
 }
 
 const char *

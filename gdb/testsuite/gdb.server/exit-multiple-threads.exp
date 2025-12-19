@@ -1,6 +1,6 @@
 # This testcase is part of GDB, the GNU debugger.
 #
-# Copyright 2020-2024 Free Software Foundation, Inc.
+# Copyright 2020-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,7 +45,8 @@ proc prepare_for_test { executable target_executable disable_multi_process } {
 	    set GDBFLAGS "$GDBFLAGS -ex \"set sysroot\""
 	}
 
-	clean_restart ${executable}
+	clean_restart
+	gdb_load $executable
     }
 
     # Make sure we're disconnected, in case we're testing with an
@@ -69,7 +70,7 @@ proc prepare_for_test { executable target_executable disable_multi_process } {
     set gdbserver_protocol [lindex $res 0]
     set gdbserver_gdbport [lindex $res 1]
     set res [gdb_target_cmd $gdbserver_protocol $gdbserver_gdbport]
-    if ![gdb_assert {$res == 0} "connect"] {
+    if { ![gdb_assert {$res == 0} "connect"] } {
 	return
     }
 
@@ -137,8 +138,8 @@ foreach_with_prefix test { exit signal } {
     set func "run_${test}_test"
 
     set executable "$binfile-${test}"
-    if [build_executable "failed to prepare" $executable $srcfile \
-	    [list debug pthreads additional_flags=-D${def}]] {
+    if {[build_executable "failed to prepare" $executable $srcfile \
+	     [list debug pthreads additional_flags=-D${def}]]} {
 	return -1
     }
 

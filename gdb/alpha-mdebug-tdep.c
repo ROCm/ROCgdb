@@ -1,5 +1,5 @@
 /* Target-dependent mdebug code for the ALPHA architecture.
-   Copyright (C) 1993-2024 Free Software Foundation, Inc.
+   Copyright (C) 1993-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -187,7 +187,6 @@ static struct alpha_mdebug_unwind_cache *
 alpha_mdebug_frame_unwind_cache (const frame_info_ptr &this_frame,
 				 void **this_prologue_cache)
 {
-  struct alpha_mdebug_unwind_cache *info;
   struct mdebug_extra_func_info *proc_desc;
   ULONGEST vfp;
   CORE_ADDR pc, reg_position;
@@ -197,7 +196,7 @@ alpha_mdebug_frame_unwind_cache (const frame_info_ptr &this_frame,
   if (*this_prologue_cache)
     return (struct alpha_mdebug_unwind_cache *) *this_prologue_cache;
 
-  info = FRAME_OBSTACK_ZALLOC (struct alpha_mdebug_unwind_cache);
+  auto *info = frame_obstack_zalloc<alpha_mdebug_unwind_cache> ();
   *this_prologue_cache = info;
   pc = get_frame_address_in_block (this_frame);
 
@@ -285,7 +284,7 @@ alpha_mdebug_frame_prev_register (const frame_info_ptr &this_frame,
      the correct place.  */
   if (regnum == ALPHA_PC_REGNUM)
     regnum = PROC_PC_REG (info->proc_desc);
-  
+
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
@@ -330,16 +329,16 @@ alpha_mdebug_frame_sniffer (const struct frame_unwind *self,
   return 1;
 }
 
-static const struct frame_unwind alpha_mdebug_frame_unwind =
-{
+static const struct frame_unwind_legacy alpha_mdebug_frame_unwind (
   "alpha mdebug",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   alpha_mdebug_frame_this_id,
   alpha_mdebug_frame_prev_register,
   NULL,
   alpha_mdebug_frame_sniffer
-};
+);
 
 static CORE_ADDR
 alpha_mdebug_frame_base_address (const frame_info_ptr &this_frame,

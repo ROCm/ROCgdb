@@ -16,7 +16,11 @@
 
    In releases, the date is not included in either version strings or
    sonames.  */
+<<<<<<< HEAD
 #define BFD_VERSION_DATE 20250420
+=======
+#define BFD_VERSION_DATE 20251218
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 #define BFD_VERSION @bfd_version@
 #define BFD_VERSION_STRING  @bfd_version_package@ @bfd_version_string@
 #define REPORT_BUGS_TO @report_bugs_to@

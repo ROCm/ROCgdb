@@ -1,4 +1,4 @@
-# Copyright 2013-2024 Free Software Foundation, Inc.
+# Copyright 2013-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,11 +61,11 @@ proc gdb_range_stepping_enabled { } {
     set command "set range-stepping on"
     set message "probe range-stepping support"
     gdb_test_multiple $command $message {
-        -re "Range stepping is not supported.*\r\n$gdb_prompt $" {
+	-re "Range stepping is not supported.*\r\n$gdb_prompt $" {
 	    pass $message
 	    return 0
 	}
-        -re "^$command\r\n$gdb_prompt $" {
+	-re "^$command\r\n$gdb_prompt $" {
 	    pass $message
 	    return 1
 	}

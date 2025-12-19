@@ -1,6 +1,6 @@
 /* Everything about exec catchpoints, for GDB.
 
-   Copyright (C) 1986-2024 Free Software Foundation, Inc.
+   Copyright (C) 1986-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -164,7 +164,7 @@ ep_parse_optional_if_clause (const char **arg)
 {
   const char *cond_string;
 
-  if (((*arg)[0] != 'i') || ((*arg)[1] != 'f') || !isspace ((*arg)[2]))
+  if (((*arg)[0] != 'i') || ((*arg)[1] != 'f') || !c_isspace ((*arg)[2]))
     return NULL;
 
   /* Skip the "if" keyword.  */
@@ -204,7 +204,7 @@ catch_exec_command_1 (const char *arg, int from_tty,
      First, check if there's an if clause.  */
   cond_string = ep_parse_optional_if_clause (&arg);
 
-  if ((*arg != '\0') && !isspace (*arg))
+  if ((*arg != '\0') && !c_isspace (*arg))
     error (_("Junk at end of arguments."));
 
   std::unique_ptr<exec_catchpoint> c
@@ -213,9 +213,7 @@ catch_exec_command_1 (const char *arg, int from_tty,
   install_breakpoint (0, std::move (c), 1);
 }
 
-void _initialize_break_catch_exec ();
-void
-_initialize_break_catch_exec ()
+INIT_GDB_FILE (break_catch_exec)
 {
   add_catch_command ("exec", _("Catch calls to exec."),
 		     catch_exec_command_1,

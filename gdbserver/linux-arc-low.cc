@@ -1,6 +1,6 @@
 /* Target dependent code for the remote server for GNU/Linux ARC.
 
-   Copyright 2020-2024 Free Software Foundation, Inc.
+   Copyright 2020-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -103,7 +103,7 @@ arc_target::low_set_pc (regcache *regcache, CORE_ADDR pc)
   linux_set_pc_32bit (regcache, pc);
 }
 
-static const struct target_desc *
+static const_target_desc_up
 arc_linux_read_description (void)
 {
 #ifdef __ARC700__
@@ -116,13 +116,13 @@ arc_linux_read_description (void)
   static const char *expedite_regs[] = { "sp", "status32", nullptr };
   init_target_desc (tdesc.get (), expedite_regs, GDB_OSABI_LINUX);
 
-  return tdesc.release ();
+  return tdesc;
 }
 
 void
 arc_target::low_arch_setup ()
 {
-  current_process ()->tdesc = arc_linux_read_description ();
+  current_process ()->tdesc = arc_linux_read_description ().release ();
 }
 
 bool
@@ -218,7 +218,7 @@ arc_fill_gregset (struct regcache *regcache, void *buf)
   collect_register_by_name (regcache, "pc", &(regbuf->scratch.ret));
 
   /* Currently ARC Linux ptrace doesn't allow writes to status32 because
-     some of its bits are kernel mode-only and shoudn't be writable from
+     some of its bits are kernel mode-only and shouldn't be writable from
      user-space.  Writing status32 from debugger could be useful, though,
      so ability to write non-privileged bits will be added to kernel
      sooner or later.  */

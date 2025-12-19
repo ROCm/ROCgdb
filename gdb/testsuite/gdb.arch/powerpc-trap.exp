@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ while {$keep_going} {
 
 	    incr count
 	    if {$count < $expected_traps} {
-	    	set keep_going 1
+		set keep_going 1
 	    }
 	}
     }

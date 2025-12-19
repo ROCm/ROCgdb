@@ -1,7 +1,7 @@
-/* Work with executable files, for GDB. 
+/* Work with executable files, for GDB.
 
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -40,12 +40,10 @@
 #include "build-id.h"
 
 #include <fcntl.h>
-#include "readline/tilde.h"
 #include "gdbcore.h"
 
-#include <ctype.h>
 #include <sys/stat.h>
-#include "solist.h"
+#include "solib.h"
 #include <algorithm>
 #include "gdbsupport/pathstuff.h"
 #include "cli/cli-style.h"
@@ -217,28 +215,32 @@ validate_exec_file (int from_tty)
   if (exec_file_mismatch_mode == exec_file_mismatch_off)
     return;
 
+  /* If there's no current executable, then there's nothing to
+     validate against, so we're done.  */
   const char *current_exec_file = current_program_space->exec_filename ();
-  struct inferior *inf = current_inferior ();
-  /* Try to determine a filename from the process itself.  */
-  const char *pid_exec_file = target_pid_to_exec_file (inf->pid);
-  bool build_id_mismatch = false;
-
-  /* If we cannot validate the exec file, return.  */
-  if (current_exec_file == NULL || pid_exec_file == NULL)
+  if (current_exec_file == nullptr)
     return;
 
-  /* Try validating via build-id, if available.  This is the most
-     reliable check.  */
+  /* Try to determine a filename from the process itself.  If we
+     cannot get an executable from the process, then no validation is
+     possible.  */
+  const char *pid_exec_file
+    = target_pid_to_exec_file (current_inferior ()->pid);
+  if (pid_exec_file == nullptr)
+    return;
 
-  /* In case current_exec_file was changed, reopen_exec_file ensures
-     an up to date build_id (will do nothing if the file timestamp
-     did not change).  If exec file changed, reopen_exec_file has
-     allocated another file name, so get_exec_file again.  */
+  /* In case current_exec_file was changed, reopen_exec_file ensures an up
+     to date build_id (will do nothing if the file timestamp did not
+     change).  If exec file changed, reopen_exec_file has allocated another
+     file name, so get_exec_file again.  */
   reopen_exec_file ();
   current_exec_file = current_program_space->exec_filename ();
 
+  /* Try validating via build-id, if available.  This is the most reliable
+     check.  */
   const bfd_build_id *exec_file_build_id
     = build_id_bfd_get (current_program_space->exec_bfd ());
+  bool build_id_mismatch = false;
   if (exec_file_build_id != nullptr)
     {
       /* Prepend the target prefix, to force gdb_bfd_open to open the
@@ -333,6 +335,14 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
 
   gdb::unique_xmalloc_ptr<char> exec_file_host
     = exec_file_find (exec_file_target, NULL);
+  if (exec_file_host == nullptr)
+    {
+      warning (_("No executable has been specified, and target executable "
+		 "%ps could not be found.  Try using the \"%ps\" command."),
+	       styled_string (file_name_style.style (), exec_file_target),
+	       styled_string (command_style.style (), "file"));
+      return;
+    }
 
   if (defer_bp_reset)
     add_flags |= SYMFILE_DEFER_BP_RESET;
@@ -521,7 +531,7 @@ Use the \"file\" or \"exec-file\" command."));
    Note that we have to explicitly ignore additional args, since we can
    be called from file_command(), which also calls symbol_file_command()
    which can take multiple args.
-   
+
    If ARGS is NULL, we just want to close the exec file.  */
 
 static void
@@ -546,7 +556,8 @@ exec_file_command (const char *args, int from_tty)
       if (*argv == NULL)
 	error (_("No executable file name was specified"));
 
-      gdb::unique_xmalloc_ptr<char> filename (tilde_expand (*argv));
+      gdb::unique_xmalloc_ptr<char> filename
+	= gdb_rl_tilde_expand (*argv);
       exec_file_attach (filename.get (), from_tty);
     }
   else
@@ -640,13 +651,13 @@ program_space::add_target_sections (struct objfile *objfile)
   gdb_assert (objfile != nullptr);
 
   /* Compute the number of sections to add.  */
-  for (obj_section *osect : objfile->sections ())
+  for (obj_section &osect : objfile->sections ())
     {
-      if (bfd_section_size (osect->the_bfd_section) == 0)
+      if (bfd_section_size (osect.the_bfd_section) == 0)
 	continue;
 
-      m_target_sections.emplace_back (osect->addr (), osect->endaddr (),
-				      osect->the_bfd_section, objfile);
+      m_target_sections.emplace_back (osect.addr (), osect.endaddr (),
+				      osect.the_bfd_section, objfile);
     }
 }
 
@@ -951,8 +962,8 @@ print_section_info (const std::vector<target_section> *t, bfd *abfd)
 		 styled_string (file_name_style.style (),
 				bfd_get_filename (abfd)));
 
-      entry_point = gdbarch_addr_bits_remove (gdbarch, 
-					      bfd_get_start_address (abfd) 
+      entry_point = gdbarch_addr_bits_remove (gdbarch,
+					      bfd_get_start_address (abfd)
 						+ displacement);
       gdb_printf (_("\tEntry point: %s\n"),
 		  paddress (gdbarch, entry_point));
@@ -1002,7 +1013,7 @@ set_section_command (const char *args, int from_tty)
     error (_("Must specify section name and its virtual address"));
 
   /* Parse out section name.  */
-  for (secname = args; !isspace (*args); args++);
+  for (secname = args; !c_isspace (*args); args++);
   unsigned seclen = args - secname;
 
   /* Parse out new virtual address.  */
@@ -1052,9 +1063,7 @@ exec_target::has_memory ()
   return !current_program_space->target_sections ().empty ();
 }
 
-void _initialize_exec ();
-void
-_initialize_exec ()
+INIT_GDB_FILE (exec)
 {
   struct cmd_list_element *c;
 

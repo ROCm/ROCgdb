@@ -1,7 +1,7 @@
 /* Fortran language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1993-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Motorola.  Adapted from the C parser by Farooq Butt
    (fmbutt@engage.sps.mot.com).
@@ -404,7 +404,7 @@ fortran_associated (struct gdbarch *gdbarch, const language_defn *lang,
   /* All Fortran pointers should have the associated property, this is
      how we know the pointer is pointing at something or not.  */
   struct type *pointer_type = check_typedef (pointer->type ());
-  if (TYPE_ASSOCIATED_PROP (pointer_type) == nullptr
+  if (pointer_type->dyn_prop (DYN_PROP_ASSOCIATED) == nullptr
       && pointer_type->code () != TYPE_CODE_PTR)
     error (_("ASSOCIATED can only be applied to pointers"));
 
@@ -431,7 +431,7 @@ fortran_associated (struct gdbarch *gdbarch, const language_defn *lang,
 	 This is probably true for most targets, but might not be true for
 	 everyone.  */
       if (pointer_type->code () == TYPE_CODE_PTR
-	  && TYPE_ASSOCIATED_PROP (pointer_type) == nullptr)
+	  && pointer_type->dyn_prop (DYN_PROP_ASSOCIATED) == nullptr)
 	is_associated = (pointer_addr != 0);
       else
 	is_associated = !type_not_associated (pointer_type);
@@ -469,7 +469,7 @@ fortran_associated (struct gdbarch *gdbarch, const language_defn *lang,
      most targets, but might not be true for everyone.  */
   if (target->lval () != lval_memory
       || type_not_associated (pointer_type)
-      || (TYPE_ASSOCIATED_PROP (pointer_type) == nullptr
+      || (pointer_type->dyn_prop (DYN_PROP_ASSOCIATED) == nullptr
 	  && pointer_type->code () == TYPE_CODE_PTR
 	  && pointer_addr == 0))
     return value_from_longest (result_type, 0);
@@ -1836,9 +1836,7 @@ builtin_f_type (struct gdbarch *gdbarch)
 static struct cmd_list_element *set_fortran_list;
 static struct cmd_list_element *show_fortran_list;
 
-void _initialize_f_language ();
-void
-_initialize_f_language ()
+INIT_GDB_FILE (f_language)
 {
   add_setshow_prefix_cmd
     ("fortran", no_class,

@@ -1,5 +1,5 @@
 /* MI Command Set - disassemble commands.
-   Copyright (C) 2000-2024 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions (a Red Hat company).
 
    This file is part of GDB.
@@ -19,7 +19,6 @@
 
 #include "arch-utils.h"
 #include "progspace.h"
-#include "target.h"
 #include "value.h"
 #include "mi-cmds.h"
 #include "mi-getopt.h"
@@ -39,7 +38,7 @@
    disassemble the function that contains that line.
    HOW_MANY: Number of disassembly lines to display. With source, it
    is the number of disassembly lines only, not counting the source
-   lines.  
+   lines.
 
    always required:
 
@@ -249,7 +248,7 @@ mi_cmd_disassemble (const char *command, const char *const *argv, int argc)
       s = lookup_symtab (current_program_space, file_string);
       if (s == NULL)
 	error (_("-data-disassemble: Invalid filename."));
-      if (!find_line_pc (s, line_num, &start))
+      if (!find_pc_for_line (s, line_num, &start))
 	error (_("-data-disassemble: Invalid line number"));
       if (find_pc_partial_function (start, NULL, &low, &high) == 0)
 	error (_("-data-disassemble: "

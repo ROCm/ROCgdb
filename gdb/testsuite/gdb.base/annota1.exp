@@ -1,5 +1,5 @@
-# Copyright 1999-2024 Free Software Foundation, Inc.
-# Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright 1999-2025 Free Software Foundation, Inc.
+# Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@ set old_gdb_prompt $gdb_prompt
 set gdb_prompt "\r\n\032\032pre-prompt\r\n$gdb_prompt \r\n\032\032prompt\r\n"
 
 #
-# Escape all the characters in the path that need it. For instance 
+# Escape all the characters in the path that need it. For instance
 # the directory name could contain '+'.
 #
 set escapedsrcfile [string_to_regexp ${srcdir}/${subdir}/${srcfile}]
@@ -245,7 +245,7 @@ gdb_test_multiple "break handle_USR1" "break handle_USR1" {
 }
 
 #
-# break at printf. When we are stopped at printf, we can test 
+# break at printf. When we are stopped at printf, we can test
 #
 gdb_test_multiple "break printf" "break printf" {
     -re  "\r\n\032\032post-prompt\r\nBreakpoint.*at $hex.*\032\032breakpoints-invalid\r\n.*$gdb_prompt$" {
@@ -337,14 +337,14 @@ gdb_test_multiple "backtrace" "backtrace from shlibrary" {
 
 
 #
-# test printing a frame with some arguments: 
+# test printing a frame with some arguments:
 # annotate-arg-begin
 # annotate-arg-name-end
 # annotate-arg-value
 # annotate-arg-end
 #
 
-if [target_info exists gdb,nosignals] {
+if {[target_info exists gdb,nosignals]} {
     unsupported "send SIGUSR1"
     unsupported "backtrace @ signal handler"
 } else {
@@ -435,8 +435,8 @@ set y_or_n [string_to_regexp "(y or n)"]
 send_gdb "run\n"
 gdb_expect {
   -re "pre-query.*already.*$y_or_n.*query\r\n" {
-         send_gdb "y\n"
-         gdb_expect {
+	 send_gdb "y\n"
+	 gdb_expect {
 	     -re ".*post-query.*$gdb_prompt$" \
 		     { pass "re-run" }
 	     -re ".*$gdb_prompt$"  { fail "re-run" }
@@ -508,10 +508,10 @@ gdb_test_multiple "info inferior 1" "get inferior pid" {
 # annotate-signal-name-end
 # annotate-signal-string
 # annotate-signal-string-end
-# FIXME: annotate-signal not tested (requires that the inferior be 
+# FIXME: annotate-signal not tested (requires that the inferior be
 #                        stopped by a "random" signal)
 
-if [target_info exists gdb,nosignals] {
+if {[target_info exists gdb,nosignals]} {
     unsupported "signal sent"
 } else {
     gdb_test_multiple "signal SIGTRAP" "signal sent" {
@@ -529,12 +529,13 @@ proc thread_test {} {
     global gdb_prompt old_gdb_prompt
     global decimal
     set srcfile watch_thread_num.c
-    set binfile [standard_output_file ${testfile}-watch_thread_num]
+    set filename ${testfile}-watch_thread_num
+    set binfile [standard_output_file $filename]
     set gdb_prompt $old_gdb_prompt
 
-    if { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug nowarnings}] == "" } {
+    if { [prepare_for_testing "prepare" $filename $srcfile \
+	      {debug nowarnings pthreads}] == 0 } {
 
-	clean_restart $binfile
 	if {![runto_main]} {
 	    return
 	}

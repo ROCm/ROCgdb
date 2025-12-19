@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2009-2024 Free Software Foundation, Inc.
+   Copyright 2009-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -122,8 +122,8 @@ thread_function (void *arg)
 	{
 	  /* For debugging.  */
 	  printf ("Thread %ld changing watch_thread[%d] data"
-	          " from %d -> %d\n", thread_number, j,
-	          watched_data[j], watched_data[j] + 1);
+		  " from %d -> %d\n", thread_number, j,
+		  watched_data[j], watched_data[j] + 1);
 	  /* Increment the watched data field.  */
 	  watched_data[j]++;
 	}

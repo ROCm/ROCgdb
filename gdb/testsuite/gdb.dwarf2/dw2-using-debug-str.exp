@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Free Software Foundation, Inc.
+# Copyright 2021-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,51 +34,51 @@ Dwarf::assemble $asm_file {
 
     cu {} {
 	compile_unit {
-            {language @DW_LANG_C}
-            {name ${srcfile}}
-        } {
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name ${srcfile}
+	} {
 	    declare_labels int4_type struct_type
 
 	    int4_type: DW_TAG_base_type {
-		{DW_AT_byte_size 4 DW_FORM_sdata}
-		{DW_AT_encoding  @DW_ATE_signed}
-		{DW_AT_name      integer}
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding	@DW_ATE_signed
+		DW_AT_name	integer
 	    }
 
 	    struct_type: DW_TAG_structure_type {
-		{DW_AT_name "foo_t" DW_FORM_strp}
-		{DW_AT_byte_size 12 DW_FORM_sdata}
+		DW_AT_name "foo_t" DW_FORM_strp
+		DW_AT_byte_size 12 DW_FORM_sdata
 	    } {
 		member {
-		    {name "aa" DW_FORM_strp}
-		    {type :$int4_type}
-		    {data_member_location 0 data1}
+		    DW_AT_name "aa" DW_FORM_strp
+		    DW_AT_type :$int4_type
+		    DW_AT_data_member_location 0 data1
 		}
 		member {
-		    {name "bb" DW_FORM_strp}
-		    {type :$int4_type}
-		    {data_member_location 4 data1}
+		    DW_AT_name "bb" DW_FORM_strp
+		    DW_AT_type :$int4_type
+		    DW_AT_data_member_location 4 data1
 		}
 		member {
-		    {name "cc" DW_FORM_strp}
-		    {type :$int4_type}
-		    {data_member_location 8 data1}
+		    DW_AT_name "cc" DW_FORM_strp
+		    DW_AT_type :$int4_type
+		    DW_AT_data_member_location 8 data1
 		}
 	    }
 
 	    DW_TAG_variable {
-		{DW_AT_name global_var DW_FORM_strp}
-		{DW_AT_type :$struct_type}
-		{DW_AT_location {
+		DW_AT_name global_var DW_FORM_strp
+		DW_AT_type :$struct_type
+		DW_AT_location {
 		    DW_OP_addr [gdb_target_symbol global_var]
-		} SPECIAL_expr}
-		{external 1 flag}
+		} SPECIAL_expr
+		DW_AT_external 1 flag
 	    }
 
 	    subprogram {
-		{external 1 flag}
-		{name main DW_FORM_strp}
-		{MACRO_AT_range {main}}
+		DW_AT_external 1 flag
+		DW_AT_name main DW_FORM_strp
+		MACRO_AT_range {main}
 	    }
 	}
     }
@@ -89,7 +89,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} \
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 
@@ -97,6 +97,18 @@ if ![runto_main] {
 # fictional, it only exists in the DWARF, but it contains lots of nice
 # field names, all of which are stored in the .debug_str section.
 gdb_test "p global_var" " = \\{aa = 0, bb = 0, cc = 0\\}"
+
+# If we have a .gdb_index already, this test isn't going to work,
+# because the .gdb_index reader doesn't check for .debug_str.
+if {[get_index_type $testfile] == "gdb"} {
+    untested ".gdb_index does not handle this case"
+    return
+}
+
+# objcopy, even with --dump-section, will try to open the executable
+# for writing.  To avoid "text file busy", exit gdb here, stopping the
+# inferior as a side effect.
+gdb_exit
 
 set host_binfile [gdb_remote_download host $binfile]
 
@@ -137,24 +149,24 @@ set dwarf_error "DWARF Error: DW_FORM_strp used without required section"
 # behavior).
 set pattern1 \
     [multi_line \
-         $line1 \
-         $dwarf_error \
-        "\\(No debugging symbols \[^\r\n\]+\\)"]
+	 $line1 \
+	 $dwarf_error \
+	"\\(No debugging symbols \[^\r\n\]+\\)"]
 
 # This pattern is hit when GDB does use -readnow (e.g. running with
 # --target_board=readnow).
 set pattern2 \
     [multi_line \
-        $line1 \
-        "Expanding full symbols from \[^\r\n\]+" \
-        $dwarf_error]
+	$line1 \
+	"Expanding full symbols from \[^\r\n\]+" \
+	$dwarf_error]
 
 # This pattern is hit when gcc adds an index (e.g. running with
 # --target_board=cc-with-gdb-index).
 set pattern3 \
     [multi_line \
-        $line1 \
-        $dwarf_error]
+	$line1 \
+	$dwarf_error]
 
 # Load the executable, we expect an error from the DWARF parser.
 gdb_test "file $binfile_no_debug_str" "($pattern1|$pattern2|$pattern3)" \

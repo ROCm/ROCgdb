@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2010-2024 Free Software Foundation, Inc.
+   Copyright 2010-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -81,6 +81,6 @@ main ()
 
   init_flt (&flt, 42, 43);
   init_ss (&ss, 1, 2);
-  
+
   return 0;      /* break to inspect */
 }

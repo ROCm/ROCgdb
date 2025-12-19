@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2010-2024 Free Software Foundation, Inc.
+   Copyright 2010-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -122,11 +122,11 @@ trace_speed_test (void)
   for (i = 0; i < iters; ++i)
     {
       globfoo2 *= 45;
-      globfoo2 += globfoo + globfoo3; 
-      globfoo2 *= globfoo + globfoo3; 
-      globfoo2 -= globarr[4] + globfoo3; 
-      globfoo2 *= globfoo + globfoo3; 
-      globfoo2 += globfoo + globfoo3; 
+      globfoo2 += globfoo + globfoo3;
+      globfoo2 *= globfoo + globfoo3;
+      globfoo2 -= globarr[4] + globfoo3;
+      globfoo2 *= globfoo + globfoo3;
+      globfoo2 += globfoo + globfoo3;
     }
   now3 = myclock ();
   total1 = now3 - now2;
@@ -137,10 +137,10 @@ trace_speed_test (void)
     {
       globfoo2 *= 45;
       globfoo2 += globfoo + globfoo3;  /* set tracepoint here */
-      globfoo2 *= globfoo + globfoo3; 
-      globfoo2 -= globarr[4] + globfoo3; 
-      globfoo2 *= globfoo + globfoo3; 
-      globfoo2 += globfoo + globfoo3; 
+      globfoo2 *= globfoo + globfoo3;
+      globfoo2 -= globarr[4] + globfoo3;
+      globfoo2 *= globfoo + globfoo3;
+      globfoo2 += globfoo + globfoo3;
     }
   now5 = myclock ();
   total2 = now5 - now4;

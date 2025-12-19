@@ -1,5 +1,5 @@
 /* Agent expression code for remote server.
-   Copyright (C) 2009-2024 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -817,7 +817,6 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 {
   const char *f = format;
   int i;
-  const char *current_substring;
   int nargs_wanted;
 
   ax_debug ("Printf of \"%s\" with %d args", format, nargs);
@@ -835,7 +834,8 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
   i = 0;
   for (auto &&piece : fpieces)
     {
-      current_substring = piece.string;
+      const char *current_substring = fpieces.piece_str (piece);
+
       ax_debug ("current substring is '%s', class is %d",
 		current_substring, piece.argclass);
       switch (piece.argclass)

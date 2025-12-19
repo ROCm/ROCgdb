@@ -1,6 +1,6 @@
 /* General GDB/Guile code.
 
-   Copyright (C) 2014-2024 Free Software Foundation, Inc.
+   Copyright (C) 2014-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -594,6 +594,7 @@ initialize_gdb_module (void *data)
   gdbscm_initialize_auto_load ();
   gdbscm_initialize_blocks ();
   gdbscm_initialize_breakpoints ();
+  gdbscm_initialize_colors ();
   gdbscm_initialize_commands ();
   gdbscm_initialize_disasm ();
   gdbscm_initialize_frames ();
@@ -632,9 +633,7 @@ call_initialize_gdb_module (void *data)
      performed within the desired module.  */
   scm_c_define_module (gdbscm_module_name, initialize_gdb_module, NULL);
 
-#if HAVE_GUILE_MANUAL_FINALIZATION
   scm_run_finalizers ();
-#endif
 
   return NULL;
 }
@@ -650,12 +649,10 @@ gdbscm_initialize (const struct extension_language_defn *extlang)
      Python side to define module "gdb" which imports "_gdb".  There is
      evidently no similar convention in Guile so we skip this.  */
 
-#if HAVE_GUILE_MANUAL_FINALIZATION
   /* Our SMOB free functions are not thread-safe, as GDB itself is not
      intended to be thread-safe.  Disable automatic finalization so that
      finalizers aren't run in other threads.  */
   scm_set_automatic_finalization_enabled (0);
-#endif
 
   /* Before we initialize Guile, block signals needed by gdb (especially
      SIGCHLD).  This is done so that all threads created during Guile
@@ -826,9 +823,7 @@ message == an error message without a stack will be printed."),
 			&set_guile_list, &show_guile_list);
 }
 
-void _initialize_guile ();
-void
-_initialize_guile ()
+INIT_GDB_FILE (guile)
 {
   install_gdb_commands ();
 }

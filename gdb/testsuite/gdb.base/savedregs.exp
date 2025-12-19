@@ -1,4 +1,4 @@
-# Copyright 2004-2024 Free Software Foundation, Inc.
+# Copyright 2004-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,13 +29,9 @@ require {!target_info exists gdb,nosignals}
 
 standard_testfile .c
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-    untested "failed to compile"
-    return -1
+if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
+    return
 }
-
-# get things started
-clean_restart ${binfile}
 
 # Advance to main
 if {![runto_main]} {
@@ -95,7 +91,7 @@ proc process_saved_regs { current inner outer } {
 	}
 	incr level
     }
-    
+
     # Now iterate through the list of OUTER frames checking that the
     # "info frame" output from each still matches what was captured
     # during an early query.  To avoid cascading failures, checking is
@@ -108,7 +104,7 @@ proc process_saved_regs { current inner outer } {
     foreach func $outer {
 	set test [concat "Check $func info frame; stack contains" \
 		      $current $inner $outer]
-	if $ok {
+	if {$ok} {
 	    set ok 0
 	    set pat [string_to_regexp "$saved_regs($func)"]
 	    gdb_test_multiple "info frame $level" "$test" {

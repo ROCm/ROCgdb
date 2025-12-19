@@ -1,4 +1,4 @@
-# Copyright 2016-2024 Free Software Foundation, Inc.
+# Copyright 2016-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@
 
 standard_testfile
 
+require allow_fork_tests
+
 # Build two programs -- one for fork, and another for vfork.
 set testfile_fork "${testfile}-fork"
 set testfile_vfork "${testfile}-vfork"
@@ -57,7 +59,7 @@ proc do_test {fork_kind exit_kind} {
     with_test_prefix "$fork_kind" {
 	clean_restart $testfile
 
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return -1
 	}
 

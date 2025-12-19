@@ -1,4 +1,4 @@
-# Copyright 2011-2024 Free Software Foundation, Inc.
+# Copyright 2011-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ set csrcfile [file rootname $srcfile].c
 set csrcfile ${testfile}.c
 set opts {}
 
-if [info exists COMPILE] {
+if {[info exists COMPILE]} {
     # make check RUNTESTFLAGS='gdb.arch/amd64-prologue-xmm.exp COMPILE=1'
     set srcfile ${csrcfile}
     lappend opts debug optimize=-O0
@@ -28,11 +28,11 @@ if [info exists COMPILE] {
     require is_x86_64_m64_target
 }
 
-if {[prepare_for_testing "failed to prepare" ${binfile} $srcfile $opts]} {
+if {[prepare_for_testing "failed to prepare" ${testfile} $srcfile $opts]} {
     return -1
 }
 
-if ![runto_main] {
+if {![runto_main]} {
     return -1
 }
 

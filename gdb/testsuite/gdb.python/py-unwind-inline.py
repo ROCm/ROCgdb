@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024 Free Software Foundation, Inc.
+# Copyright (C) 2020-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,8 +58,8 @@ class dummy_unwinder(Unwinder):
         to see if the unwinder should claim it, which is never does."""
         try:
             for r in self.get_regs(pending_frame):
-                v = pending_frame.read_register(r).cast(self.void_ptr_t)
-        except:
+                pending_frame.read_register(r).cast(self.void_ptr_t)
+        except Exception:
             print("Dummy unwinder, exception")
             raise
 

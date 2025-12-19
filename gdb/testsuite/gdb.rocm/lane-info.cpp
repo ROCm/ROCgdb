@@ -1,5 +1,5 @@
 /* Copyright 2021-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -17,9 +17,15 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
+<<<<<<< HEAD
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+=======
+#include <stdio.h>
+#include <stdlib.h>
+#include "gdb_watchdog.h"
+>>>>>>> 04e0a5a0bb887a3ed8ba4e116f0383893a39442c
 
 #define CHECK(cmd)                                                           \
   {                                                                          \
@@ -67,7 +73,7 @@ kernel ()
 int
 main ()
 {
-  alarm (30);
+  gdb_watchdog (30);
 
  /* If the wavefront size is 64 lanes, then this results in 2 waves, 1
      with 64 lanes used, and 1 with 5 lanes used.  If the wavefront

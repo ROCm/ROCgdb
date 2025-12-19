@@ -1,4 +1,4 @@
-# Copyright 2007-2024 Free Software Foundation, Inc.
+# Copyright 2007-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ gdb_test "continue" \
 
 delete_breakpoints
 gdb_test "kill" "" "kill" \
-         {Kill the program being debugged\? \(y or n\) } "y"
+	 {Kill the program being debugged\? \(y or n\) } "y"
 
 gdb_test "break $srcfile:$bp_location" \
     "Breakpoint.*at.*: $srcfile:$bp_location. \\(2 locations\\).*" \
@@ -61,7 +61,7 @@ gdb_test "break $srcfile:$bp_location" \
 
 gdb_test_no_output {condition $bpnum i==1} \
     "separate condition: set condition"
-    
+
 gdb_run_cmd
 gdb_test "" "Breakpoint $bkptno_num_re,.*foo<int> \\(i=1\\).*" "separate condition: run to breakpoint"
 

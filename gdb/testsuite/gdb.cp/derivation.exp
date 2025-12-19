@@ -1,4 +1,4 @@
-# Copyright 1998-2024 Free Software Foundation, Inc.
+# Copyright 1998-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 # This file is part of the gdb testsuite
 
 # tests for inheritance, with several derivations types combinations
-# (private, public, protected) 
+# (private, public, protected)
 # classes have simple members and member functions.
 
 set ws "\[\r\n\t \]+"
@@ -208,13 +208,13 @@ gdb_test "print g_instance.afoo()" "\\$\[0-9\]+ = 1" "print value of g_instance.
 
 gdb_test_multiple "frame" "re-selected 'main' frame after inferior call" {
     -re "#0  marker1.*$gdb_prompt $" {
-        setup_kfail "gdb/1155" s390-*-linux-gnu
-        fail "re-selected 'main' frame after inferior call"
-        gdb_test "finish" ".*main.*at .*derivation.cc:.*// marker1-returns-here.*" \
-            "finish call to marker1"
+	setup_kfail "gdb/1155" s390-*-linux-gnu
+	fail "re-selected 'main' frame after inferior call"
+	gdb_test "finish" ".*main.*at .*derivation.cc:.*// marker1-returns-here.*" \
+	    "finish call to marker1"
     }
     -re "#1  ($hex in )?main.*$gdb_prompt $" {
-        pass "re-selected 'main' frame after inferior call"
+	pass "re-selected 'main' frame after inferior call"
     }
 }
 

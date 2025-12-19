@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2024 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2025 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -36,22 +36,36 @@ if test "${ERROR_ON_WARNING}" = yes ; then
 fi
 
 # The options we'll try to enable.
-build_warnings="-Wall -Wpointer-arith \
--Wno-unused -Wunused-value -Wunused-variable -Wunused-function \
--Wno-switch -Wno-char-subscripts \
--Wempty-body -Wunused-but-set-parameter -Wunused-but-set-variable \
--Wno-sign-compare -Wno-error=maybe-uninitialized \
--Wno-mismatched-tags \
--Wno-error=deprecated-register \
--Wsuggest-override \
--Wimplicit-fallthrough=5 \
--Wduplicated-cond \
--Wshadow=local \
+build_warnings=" \
+-Wall \
 -Wdeprecated-copy \
 -Wdeprecated-copy-dtor \
--Wredundant-move \
+-Wduplicated-cond \
+-Wempty-body \
+-Wimplicit-fallthrough=5 \
 -Wmissing-declarations \
+-Wno-char-subscripts \
+-Wno-error=deprecated-register \
+-Wno-mismatched-tags \
+-Wno-sign-compare -Wno-error=maybe-uninitialized \
+-Wno-switch \
+-Wno-unused \
+-Wpointer-arith \
+-Wredundant-move \
+-Wshadow=local \
 -Wstrict-null-sentinel \
+-Wsuggest-override \
+-Wunused-but-set-parameter \
+-Wunused-but-set-variable \
+-Wunused-const-variable=1 \
+-Wunused-function \
+-Wunused-label \
+-Wunused-lambda-capture \
+-Wunused-local-typedefs \
+-Wunused-member-function \
+-Wunused-private-field \
+-Wunused-value \
+-Wunused-variable \
 -Wvla \
 "
 
@@ -85,9 +99,9 @@ AS_HELP_STRING([--enable-build-warnings], [enable build-time compiler warnings i
   yes)	;;
   no)	build_warnings="-w";;
   ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
+	build_warnings="${build_warnings} ${t}";;
   *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
+	build_warnings="${t} ${build_warnings}";;
   *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
 esac
 if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
@@ -99,9 +113,9 @@ AS_HELP_STRING([--enable-gdb-build-warnings], [enable GDB specific build-time co
   yes)	;;
   no)	build_warnings="-w";;
   ,*)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${build_warnings} ${t}";;
+	build_warnings="${build_warnings} ${t}";;
   *,)   t=`echo "${enableval}" | sed -e "s/,/ /g"`
-        build_warnings="${t} ${build_warnings}";;
+	build_warnings="${t} ${build_warnings}";;
   *)    build_warnings=`echo "${enableval}" | sed -e "s/,/ /g"`;;
 esac
 if test x"$silent" != x"yes" && test x"$build_warnings" != x""; then
@@ -124,7 +138,7 @@ then
 	case $w in
 	-Wno-*)
 		wtest=`echo $w | sed 's/-Wno-/-W/g'` ;;
-        -Wformat-nonliteral)
+	-Wformat-nonliteral)
 		# gcc requires -Wformat before -Wformat-nonliteral
 		# will work, so stick them together.
 		w="-Wformat $w"

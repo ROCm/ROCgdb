@@ -1,6 +1,6 @@
 /* DWARF 2 low-level section code
 
-   Copyright (C) 1994-2024 Free Software Foundation, Inc.
+   Copyright (C) 1994-2025 Free Software Foundation, Inc.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract
@@ -30,7 +30,7 @@
 /* A descriptor for dwarf sections.
 
    S.ASECTION, SIZE are typically initialized when the objfile is first
-   scanned.  BUFFER, READIN are filled in later when the section is read.
+   scanned.  BUFFER, READ_IN are filled in later when the section is read.
    If the section contained compressed data then SIZE is updated to record
    the uncompressed size of the section.
 
@@ -42,6 +42,8 @@
    If this is a virtual dwp-v2 section, S.CONTAINING_SECTION is a backlink to
    the real section this "virtual" section is contained in, and BUFFER,SIZE
    describe the virtual section.  */
+
+#include "dwarf2/types.h"
 
 struct dwarf2_section_info
 {
@@ -81,19 +83,6 @@ struct dwarf2_section_info
      If the section is compressed, uncompress it before returning.  */
   void read (struct objfile *objfile);
 
-  /* A helper function that returns the size of a section in a safe way.
-     If you are positive that the section has been read before using the
-     size, then it is safe to refer to the dwarf2_section_info object's
-     "size" field directly.  In other cases, you must call this
-     function, because for compressed sections the size field is not set
-     correctly until the section has been read.  */
-  bfd_size_type get_size (struct objfile *objfile)
-  {
-    if (!readin)
-      read (objfile);
-    return size;
-  }
-
   /* Issue a complaint that something was outside the bounds of this
      buffer.  */
   void overflow_complaint () const;
@@ -111,7 +100,7 @@ struct dwarf2_section_info
        section.  */
     struct dwarf2_section_info *containing_section;
   } s;
-  /* Pointer to section data, only valid if readin.  */
+  /* Pointer to section data, only valid if read_in.  */
   const gdb_byte *buffer;
   /* The size of the section, real or virtual.  */
   bfd_size_type size;
@@ -119,10 +108,20 @@ struct dwarf2_section_info
      Only valid if is_virtual.  */
   bfd_size_type virtual_offset;
   /* True if we have tried to read this section.  */
-  bool readin;
+  bool read_in;
   /* True if this is a virtual section, False otherwise.
      This specifies which of s.section and s.containing_section to use.  */
   bool is_virtual;
+};
+
+using dwarf2_section_info_up = std::unique_ptr<dwarf2_section_info>;
+
+/* A pair-like structure to represent an offset into a section.  */
+
+struct section_and_offset
+{
+  const dwarf2_section_info *section;
+  sect_offset offset;
 };
 
 #endif /* GDB_DWARF2_SECTION_H */

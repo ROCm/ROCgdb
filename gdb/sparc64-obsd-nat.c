@@ -1,6 +1,6 @@
 /* Native-dependent code for OpenBSD/sparc64.
 
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -91,7 +91,7 @@ sparc64obsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
   /* If the program counter is zero, this is probably a core dump, and
      we can get %pc from the stack.  */
   if (pcb->pcb_pc == 0)
-      read_memory(pcb->pcb_sp + BIAS - 176 + (11 * 8), 
+      read_memory(pcb->pcb_sp + BIAS - 176 + (11 * 8),
 		  (gdb_byte *)&pcb->pcb_pc, sizeof pcb->pcb_pc);
 
   regcache->raw_supply (SPARC_SP_REGNUM, &pcb->pcb_sp);
@@ -108,9 +108,7 @@ sparc64obsd_supply_pcb (struct regcache *regcache, struct pcb *pcb)
 /* Add some extra features to the generic SPARC target.  */
 static sparc_target<obsd_nat_target> the_sparc64_obsd_nat_target;
 
-void _initialize_sparc64obsd_nat ();
-void
-_initialize_sparc64obsd_nat ()
+INIT_GDB_FILE (sparc64obsd_nat)
 {
   sparc_supply_gregset = sparc64_supply_gregset;
   sparc_collect_gregset = sparc64_collect_gregset;

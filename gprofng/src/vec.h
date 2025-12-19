@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -110,6 +110,13 @@ public:
   get (long index)
   {
     return data[index];
+  }
+
+  void
+  truncate (long ncount)
+  {
+    if (count > ncount && ncount >= 0)
+      count = ncount;
   }
 
   // Return the first index in "this" that equals "item".

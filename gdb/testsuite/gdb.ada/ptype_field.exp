@@ -1,4 +1,4 @@
-# Copyright 2008-2024 Free Software Foundation, Inc.
+# Copyright 2008-2025 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnat05 ]] != "" } {
-  return -1
+  return
 }
 
 clean_restart ${testfile}
@@ -29,19 +29,19 @@ set bp_location [gdb_get_line_number "STOP" ${testdir}/foo.adb]
 runto "foo.adb:$bp_location"
 
 gdb_test "ptype circle" \
-         [multi_line "type = record" \
-                     "    pos: pck\\.position;" \
-                     "    radius: integer;" \
-                     "end record" ]
+	 [multi_line "type = record" \
+		     "    pos: pck\\.position;" \
+		     "    radius: integer;" \
+		     "end record" ]
 
 gdb_test "ptype circle.pos" \
-         [multi_line "type = record" \
-                     "    x: integer;" \
-                     "    y: integer;" \
-                     "end record" ]
+	 [multi_line "type = record" \
+		     "    x: integer;" \
+		     "    y: integer;" \
+		     "end record" ]
 
 gdb_test "ptype circle.pos.x" \
-         "type = <\[0-9\]+-byte integer>"
+	 "type = <\[0-9\]+-byte integer>"
 
 gdb_test "complete print my_circ" "print my_circle"
 gdb_test "complete print my_circle.r" "print my_circle\\.radius"

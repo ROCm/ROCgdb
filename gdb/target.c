@@ -1,7 +1,7 @@
 /* Select target systems and architectures at runtime for GDB.
 
-   Copyright (C) 1990-2024 Free Software Foundation, Inc.
-   Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 1990-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Cygnus Support.
 
@@ -51,7 +51,7 @@
 #include "gdbsupport/byte-vector.h"
 #include "gdbsupport/search.h"
 #include "terminal.h"
-#include <unordered_map>
+#include "gdbsupport/unordered_map.h"
 #include "target-connection.h"
 #include "valprint.h"
 #include "cli/cli-decode.h"
@@ -73,7 +73,7 @@ static int default_verify_memory (struct target_ops *self,
    TARGET_NAME" command that when invoked calls the factory registered
    here.  The target_info object is associated with the command via
    the command's context.  */
-static std::unordered_map<const target_info *, target_open_ftype *>
+static gdb::unordered_map<const target_info *, target_open_ftype *>
   target_factories;
 
 /* The singleton debug target.  */
@@ -1187,6 +1187,14 @@ target_stack::push (target_ops *t)
   if (m_stack[stratum].get () != nullptr)
     unpush (m_stack[stratum].get ());
 
+  /* If this target can't be shared, then check that the target doesn't
+     already appear on some other target stack.  */
+  if (!t->is_shareable ())
+    for (inferior *inf : all_inferiors ())
+      if (inf->target_is_pushed (t))
+	internal_error (_("Attempt to push unshareable target: %s."),
+			t->shortname ());
+
   /* Now add the new one.  */
   m_stack[stratum] = std::move (ref);
 
@@ -1251,11 +1259,21 @@ generic_tls_error (void)
 	       _("Cannot find thread-local variables on this target"));
 }
 
-/* Using the objfile specified in OBJFILE, find the address for the
-   current thread's thread-local storage with offset OFFSET.  */
+/* See target.h.  */
+
 CORE_ADDR
-target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset)
+target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
+			      const char *name)
 {
+  if (!target_has_registers ())
+    {
+      if (name == nullptr)
+	error (_("Cannot translate TLS address without registers"));
+      else
+	error (_("Cannot find address of TLS symbol `%s' without registers"),
+	       name);
+    }
+
   volatile CORE_ADDR addr = 0;
   struct target_ops *target = current_inferior ()->top_target ();
   gdbarch *gdbarch = current_inferior ()->arch ();
@@ -1272,7 +1290,7 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset)
       try
 	{
 	  CORE_ADDR lm_addr;
-	  
+
 	  /* Fetch the load module address for this objfile.  */
 	  lm_addr = gdbarch_fetch_tls_load_module_address (gdbarch,
 							   objfile);
@@ -2455,6 +2473,7 @@ target_pre_inferior ()
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
       no_shared_libraries (current_program_space);
+      current_program_space->unset_solib_ops ();
 
       invalidate_target_mem_regions ();
 
@@ -2626,6 +2645,36 @@ std::string
 target_lane_workgroup_pos_str (thread_info *thr, int lane)
 {
   return current_inferior ()->top_target ()->lane_workgroup_pos_str (thr, lane);
+}
+
+opt_vec3_u32_t
+target_lane_workgroup_pos (thread_info *thr, int lane)
+{
+  return current_inferior ()->top_target ()->lane_workgroup_pos (thr, lane);
+}
+
+opt_vec3_u32_t
+target_workgroup_grid_pos (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->workgroup_grid_pos (thr);
+}
+
+opt_vec3_u32_t
+target_workgroup_sizes (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->workgroup_sizes (thr);
+}
+
+opt_vec3_u32_t
+target_grid_sizes (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->grid_sizes (thr);
+}
+
+opt_size_t
+target_wave_size (thread_info *thr)
+{
+  return current_inferior ()->top_target ()->wave_size (thr);
 }
 
 const char *
@@ -2966,12 +3015,10 @@ target_ops::info_proc (const char *args, enum info_proc_what what)
 int
 target_info_proc (const char *args, enum info_proc_what what)
 {
-  struct target_ops *t;
-
   /* If we're already connected to something that can get us OS
      related data, use it.  Otherwise, try using the native
      target.  */
-  t = find_target_at (process_stratum);
+  target_ops *t = current_inferior ()->target_at (process_stratum);
   if (t == NULL)
     t = find_default_run_target (NULL);
 
@@ -3017,12 +3064,10 @@ target_supports_multi_process (void)
 std::optional<gdb::char_vector>
 target_get_osdata (const char *type)
 {
-  struct target_ops *t;
-
   /* If we're already connected to something that can get us OS
      related data, use it.  Otherwise, try using the native
      target.  */
-  t = find_target_at (process_stratum);
+  target_ops *t = current_inferior ()->target_at (process_stratum);
   if (t == NULL)
     t = find_default_run_target ("get OS data");
 
@@ -3095,11 +3140,9 @@ target_can_run ()
 static struct target_ops *
 default_fileio_target (void)
 {
-  struct target_ops *t;
-
   /* If we're already connected to something that can perform
      file I/O, use it. Otherwise, try using the native target.  */
-  t = find_target_at (process_stratum);
+  target_ops *t = current_inferior ()->target_at (process_stratum);
   if (t != NULL)
     return t;
   return find_default_run_target ("file I/O");
@@ -3229,8 +3272,8 @@ target_ops::fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 }
 
 int
-target_ops::fileio_stat (struct inferior *inf, const char *filename,
-			 struct stat *sb, fileio_error *target_errno)
+target_ops::fileio_lstat (struct inferior *inf, const char *filename,
+			  struct stat *sb, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3356,17 +3399,17 @@ target_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
 /* See target.h.  */
 
 int
-target_fileio_stat (struct inferior *inf, const char *filename,
-		    struct stat *sb, fileio_error *target_errno)
+target_fileio_lstat (struct inferior *inf, const char *filename,
+		     struct stat *sb, fileio_error *target_errno)
 {
   for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
-      int ret = t->fileio_stat (inf, filename, sb, target_errno);
+      int ret = t->fileio_lstat (inf, filename, sb, target_errno);
 
       if (ret == -1 && *target_errno == FILEIO_ENOSYS)
 	continue;
 
-      target_debug_printf_nofunc ("target_fileio_stat (%s) = %d (%d)",
+      target_debug_printf_nofunc ("target_fileio_lstat (%s) = %d (%d)",
 				  filename, ret,
 				  ret != -1 ? 0 : *target_errno);
       return ret;
@@ -3552,7 +3595,7 @@ target_fileio_read_alloc (struct inferior *inf, const char *filename,
 
 /* See target.h.  */
 
-gdb::unique_xmalloc_ptr<char> 
+gdb::unique_xmalloc_ptr<char>
 target_fileio_read_stralloc (struct inferior *inf, const char *filename)
 {
   gdb_byte *buffer;
@@ -3612,16 +3655,6 @@ target_stack::find_beneath (const target_ops *t) const
 
   return NULL;
 }
-
-/* See target.h.  */
-
-struct target_ops *
-find_target_at (enum strata stratum)
-{
-  return current_inferior ()->target_at (stratum);
-}
-
-
 
 /* See target.h  */
 
@@ -3852,11 +3885,11 @@ target_pass_ctrlc (void)
       if (proc_target == NULL)
 	continue;
 
-      for (thread_info *thr : inf->non_exited_threads ())
+      for (thread_info &thr : inf->non_exited_threads ())
 	{
 	  /* A thread can be THREAD_STOPPED and executing, while
 	     running an infcall.  */
-	  if (thr->state == THREAD_RUNNING || thr->executing ())
+	  if (thr.state == THREAD_RUNNING || thr.executing ())
 	    {
 	      /* We can get here quite deep in target layers.  Avoid
 		 switching thread context or anything that would
@@ -4567,10 +4600,7 @@ set_write_memory_registers_permission (const char *args, int from_tty,
   update_observer_mode ();
 }
 
-void _initialize_target ();
-
-void
-_initialize_target ()
+INIT_GDB_FILE (target)
 {
   the_debug_target = new debug_target ();
 

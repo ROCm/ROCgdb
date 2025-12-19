@@ -1,6 +1,6 @@
 /* Python interface to stack frames
 
-   Copyright (C) 2008-2024 Free Software Foundation, Inc.
+   Copyright (C) 2008-2025 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -757,8 +757,8 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
 
 /* Sets up the Frame API in the gdb module.  */
 
-static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
-gdbpy_initialize_frames (void)
+static int
+gdbpy_initialize_frames ()
 {
   frame_object_type.tp_new = PyType_GenericNew;
   if (gdbpy_type_ready (&frame_object_type) < 0)
