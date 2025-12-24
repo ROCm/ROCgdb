@@ -439,7 +439,15 @@ proc hip_device_is_less_than { version } {
 # Helper function for rocm_core_find.
 
 proc rocm_core_find_1 {coredir binfile arg output_file} {
-    set destcore [core_find_1 $coredir $binfile $arg $output_file]
+    # If we don't set the pattern here, on ROCm 7.3+ runtimes,
+    # we will end up with "core.<pid>.gpu".  The "core_find {}"
+    # procedure in "lib/gdb.exp" does not like that.  It expects
+    # only one hit for the glob pattern "core.*".  Without this
+    # pattern, there will be 2 hits: core.<pid> and core.<pid>.gpu
+    save_vars { ::env(HSA_COREDUMP_PATTERN) } {
+	set ::env(HSA_COREDUMP_PATTERN) "gpucore.%p"
+	set destcore [core_find_1 $coredir $binfile $arg $output_file]
+    }
     set gpucore "$binfile.gpucore"
 
     # Search for a GPU core dump, if any.
