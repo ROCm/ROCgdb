@@ -6027,9 +6027,12 @@ riscv_elf_is_target_special_symbol (bfd *abfd, asymbol *sym)
 
 static int
 riscv_elf_additional_program_headers (bfd *abfd,
-				      struct bfd_link_info *info ATTRIBUTE_UNUSED)
+				      struct bfd_link_info *info)
 {
   int ret = 0;
+
+  if (info == NULL)
+    return 0;
 
   /* See if we need a PT_RISCV_ATTRIBUTES segment.  */
   if (bfd_get_section_by_name (abfd, RISCV_ATTRIBUTES_SECTION_NAME))
@@ -6040,11 +6043,14 @@ riscv_elf_additional_program_headers (bfd *abfd,
 
 static bool
 riscv_elf_modify_segment_map (bfd *abfd,
-			      struct bfd_link_info *info ATTRIBUTE_UNUSED)
+			      struct bfd_link_info *info)
 {
   asection *s;
   struct elf_segment_map *m, **pm;
   size_t amt;
+
+  if (info == NULL)
+    return true;
 
   /* If there is a .riscv.attributes section, we need a PT_RISCV_ATTRIBUTES
      segment.  */
