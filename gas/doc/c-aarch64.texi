@@ -219,6 +219,12 @@ automatically cause those extensions to be disabled.
  @tab Enable Armv8.2 16-bit floating-point multiplication variant support.
 @item @code{fp16} @tab @code{fp}
  @tab Enable Armv8.2 16-bit floating-point support.
+@item @code{f16f32dot} @tab @code{simd}
+ @tab Enable Armv9.7 f16f32dot instructions.
+@item @code{f16f32mm} @tab @code{simd}, @code{fp16}
+ @tab Enable Armv9.7 f16f32mm instructions.
+@item @code{f16mm} @tab @code{simd}, @code{fp16}
+ @tab Enable support f16mm instructions.
 @item @code{fprcvt} @tab @code{fp}
  @tab Enable Armv9.6 fprcvt instructions.
 @item @code{frintts} @tab @code{fp}
@@ -321,6 +327,8 @@ automatically cause those extensions to be disabled.
  @tab Enable SME2.1.
 @item @code{sme2p2} @tab @code{sme2p1}
  @tab Enable SME2.2.
+@item @code{sme2p3} @tab @code{sme2p2}
+ @tab Enable SME2.3.
 @item @code{ssbs} @tab
  @tab Enable Speculative Store Bypassing Safe state read and write.
 @item @code{ssve-aes} @tab @code{sme2}, @code{sve-aes}
@@ -345,6 +353,8 @@ automatically cause those extensions to be disabled.
  @tab Enable the SVE2 BITPERM Extension.
 @item @code{sve-b16b16} @tab
 @tab Enable the SVE B16B16 extension.  These instructions also require either @code{+sve2} or @code{+sme2}.
+@item @code{sve-b16mm} @tab @code{sve}
+ @tab Enable the SVE B16MM Extension.
 @item @code{sve-bfscale} @tab
 @tab Enable the SVE BFSCALE extension. These instructions also require either @code{+sve2} or @code{+sme2}.
 @item @code{sve-f16f32mm} @tab @code{sve}
@@ -363,6 +373,8 @@ automatically cause those extensions to be disabled.
  @tab Enable SVE2.1.
 @item @code{sve2p2} @tab @code{sve2p1}
  @tab Enable SVE2.2.
+@item @code{sve2p3} @tab @code{sve2p2}
+ @tab Enable SVE2.3.
 @item @code{the} @tab
  @tab Enable the Translation Hardening Extension.
 @item @code{tme} @tab
