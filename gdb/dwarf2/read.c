@@ -1,7 +1,7 @@
 /* DWARF 2 debugging format support for GDB.
 
    Copyright (C) 1994-2026 Free Software Foundation, Inc.
-   Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2019-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
    Inc.  with support from Florida State University (under contract

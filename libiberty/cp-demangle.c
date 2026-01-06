@@ -1,6 +1,6 @@
 /* Demangler for g++ V3 ABI.
    Copyright (C) 2003-2026 Free Software Foundation, Inc.
-   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
    Written by Ian Lance Taylor <ian@wasabisystems.com>.
 
    This file is part of the libiberty library, which is part of GCC.

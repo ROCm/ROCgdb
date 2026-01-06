@@ -10,7 +10,7 @@
 
 @copying
 @c man begin COPYRIGHT coremerge
-Copyright @copyright{} 2023-2025 Advanced Micro Devices, Inc.
+Copyright @copyright{} 2023-2026 Advanced Micro Devices, Inc.
 
 @c man end
 

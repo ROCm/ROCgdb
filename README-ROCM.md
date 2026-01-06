@@ -164,4 +164,4 @@ Canonical Ltd.  Other product names used in this publication are for
 identification purposes only and may be trademarks of their respective
 companies.
 
-Copyright (c) 2019-2025 Advanced Micro Devices, Inc.  All rights reserved.
+Copyright (c) 2019-2026 Advanced Micro Devices, Inc.  All rights reserved.

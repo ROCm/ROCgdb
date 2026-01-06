@@ -1,7 +1,7 @@
 /* File-I/O functions for GDB, the GNU debugger.
 
    Copyright (C) 2003-2026 Free Software Foundation, Inc.
-   Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 

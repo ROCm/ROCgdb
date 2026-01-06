@@ -1,7 +1,7 @@
 /* Fortran language support routines for GDB, the GNU debugger.
 
    Copyright (C) 1993-2026 Free Software Foundation, Inc.
-   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2020-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    Contributed by Motorola.  Adapted from the C parser by Farooq Butt
    (fmbutt@engage.sps.mot.com).

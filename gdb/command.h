@@ -1,7 +1,7 @@
 /* Header file for command creation.
 
    Copyright (C) 1986-2026 Free Software Foundation, Inc.
-   Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

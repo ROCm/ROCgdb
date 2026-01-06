@@ -1,5 +1,5 @@
-/* Copyright (C) 2020-2024 Free Software Foundation, Inc.
-   Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 2020-2026 Free Software Foundation, Inc.
+   Copyright (C) 2020-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 

@@ -1,5 +1,5 @@
-/* Copyright 2021-2024 Free Software Foundation, Inc.
-   Copyright (C) 2015-2025 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright 2021-2026 Free Software Foundation, Inc.
+   Copyright (C) 2015-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This test program is part of GDB, the GNU debugger.
 
