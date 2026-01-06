@@ -1,6 +1,6 @@
 /* tc-aarch64.c -- Assemble for the AArch64 ISA
 
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -558,6 +558,7 @@ static htab_t aarch64_sys_regs_ic_hsh;
 static htab_t aarch64_sys_regs_dc_hsh;
 static htab_t aarch64_sys_regs_at_hsh;
 static htab_t aarch64_sys_regs_tlbi_hsh;
+static htab_t aarch64_sys_regs_plbi_hsh;
 static htab_t aarch64_sys_regs_sr_hsh;
 static htab_t aarch64_reg_hsh;
 static htab_t aarch64_barrier_opt_hsh;
@@ -6437,6 +6438,11 @@ process_omitted_operand (enum aarch64_opnd type, const aarch64_opcode *opcode,
       operand->hint_option = aarch64_hint_options + default_value;
       break;
 
+    case AARCH64_OPND_NOT_BALANCED_10:
+    case AARCH64_OPND_NOT_BALANCED_17:
+      operand->imm.value = default_value;
+      break;
+
     default:
       break;
     }
@@ -8095,6 +8101,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, false);
 	  goto sys_reg_ins;
 
+	case AARCH64_OPND_SYSREG_PLBI:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_plbi_hsh, false);
+	  goto sys_reg_ins;
+
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  inst.base.operands[i].sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
@@ -8183,6 +8194,30 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  val = (val >> 2) - 4;
 	  info->barrier = aarch64_barrier_dsb_nxs_options + val;
 	  break;
+
+	case AARCH64_OPND_NOT_BALANCED_10:
+	case AARCH64_OPND_NOT_BALANCED_17:
+	  {
+	    char *p = str;
+	    while (ISALPHA (*str))
+	      str++;
+
+	    if ((strncasecmp (p, "nb", 2) == 0) && (str == p + 2))
+	      info->imm.value = 1;
+	    /* Optional argument is absent in the first operand position, fail
+	       without updating backtrack_pos so that the default operand value
+	       is applied.  */
+	    else if (i == 0 && p == str)
+	      goto failure;
+	    else
+	      {
+		/* Turn off backtrack as this optional operand is present.  */
+		backtrack_pos = 0;
+		set_default_error ();
+		goto failure;
+	      }
+	    break;
+	  }
 
 	case AARCH64_OPND_PRFOP:
 	  val = parse_pldop (&str);
@@ -10441,6 +10476,7 @@ md_begin (void)
   aarch64_sys_regs_dc_hsh = str_htab_create ();
   aarch64_sys_regs_at_hsh = str_htab_create ();
   aarch64_sys_regs_tlbi_hsh = str_htab_create ();
+  aarch64_sys_regs_plbi_hsh = str_htab_create ();
   aarch64_sys_regs_sr_hsh = str_htab_create ();
   aarch64_reg_hsh = str_htab_create ();
   aarch64_barrier_opt_hsh = str_htab_create ();
@@ -10481,6 +10517,11 @@ md_begin (void)
     sysreg_hash_insert (aarch64_sys_regs_tlbi_hsh,
 			aarch64_sys_regs_tlbi[i].name,
 			aarch64_sys_regs_tlbi + i);
+
+  for (i = 0; aarch64_sys_regs_plbi[i].name != NULL; i++)
+    sysreg_hash_insert (aarch64_sys_regs_plbi_hsh,
+			aarch64_sys_regs_plbi[i].name,
+			aarch64_sys_regs_plbi + i);
 
   for (i = 0; aarch64_sys_regs_sr[i].name != NULL; i++)
     sysreg_hash_insert (aarch64_sys_regs_sr_hsh,
@@ -10829,6 +10870,8 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sb",		AARCH64_FEATURE (SB), AARCH64_NO_FEATURES},
   {"predres",		AARCH64_FEATURE (PREDRES), AARCH64_NO_FEATURES},
   {"predres2",		AARCH64_FEATURE (PREDRES2), AARCH64_FEATURE (PREDRES)},
+  {"poe2",		AARCH64_FEATURE (POE2), AARCH64_NO_FEATURES},
+  {"tev",		AARCH64_FEATURE (TEV), AARCH64_NO_FEATURES},
   {"aes",		AARCH64_FEATURE (AES), AARCH64_FEATURE (SIMD)},
   {"sm4",		AARCH64_FEATURE (SM4), AARCH64_FEATURE (SIMD)},
   {"sha3",		AARCH64_FEATURE (SHA3), AARCH64_FEATURE (SHA2)},

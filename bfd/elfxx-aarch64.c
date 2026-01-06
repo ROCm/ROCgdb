@@ -1,5 +1,5 @@
 /* AArch64-specific support for ELF.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -705,9 +705,9 @@ typedef struct
 } bfd_search_result_t;
 
 static inline bool
-bfd_is_non_dynamic_elf_object (bfd *abfd, const struct elf_backend_data *out_be)
+bfd_is_non_dynamic_elf_object (bfd *abfd, elf_backend_data *out_be)
 {
-  const struct elf_backend_data *in_be = get_elf_backend_data (abfd);
+  elf_backend_data *in_be = get_elf_backend_data (abfd);
 
   return bfd_get_flavour (abfd) == bfd_target_elf_flavour
     && bfd_count_sections (abfd) != 0
@@ -722,7 +722,7 @@ bfd_is_non_dynamic_elf_object (bfd *abfd, const struct elf_backend_data *out_be)
 static bfd_search_result_t
 bfd_linear_search_one_with_gnu_property (struct bfd_link_info *info)
 {
-  const struct elf_backend_data *be = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *be = get_elf_backend_data (info->output_bfd);
 
   bfd_search_result_t res = {
     .pbfd = NULL,
@@ -853,7 +853,7 @@ _bfd_aarch64_elf_check_gnu_properties_linked_dynamic_objects (
   struct bfd_link_info * info,
   const uint32_t outprop)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   const int elf_machine_code = bed->elf_machine_code;
   const unsigned int elfclass = bed->s->elfclass;
 

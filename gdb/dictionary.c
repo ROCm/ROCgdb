@@ -1,6 +1,6 @@
 /* Routines for name->symbol lookups in GDB.
 
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
 
    Contributed by David Carlton <carlton@bactrian.org> and by Kealia,
    Inc.
@@ -919,19 +919,12 @@ struct multidictionary
 /* A helper function to collate symbols on the pending list by language.  */
 
 static gdb::unordered_map<enum language, std::vector<symbol *>>
-collate_pending_symbols_by_language (const struct pending *symbol_list)
+collate_pending_symbols_by_language (const std::vector<symbol *> &symbol_list)
 {
   gdb::unordered_map<enum language, std::vector<symbol *>> nsyms;
 
-  for (const pending *list_counter = symbol_list;
-       list_counter != nullptr; list_counter = list_counter->next)
-    {
-      for (int i = list_counter->nsyms - 1; i >= 0; --i)
-	{
-	  enum language language = list_counter->symbol[i]->language ();
-	  nsyms[language].push_back (list_counter->symbol[i]);
-	}
-    }
+  for (auto it = symbol_list.rbegin (); it != symbol_list.rend (); ++it)
+    nsyms[(*it)->language ()].push_back (*it);
 
   return nsyms;
 }
@@ -940,7 +933,7 @@ collate_pending_symbols_by_language (const struct pending *symbol_list)
 
 struct multidictionary *
 mdict_create_hashed (struct obstack *obstack,
-		     const struct pending *symbol_list)
+		     const std::vector<symbol *> &symbol_list)
 {
   struct multidictionary *retval
     = XOBNEW (obstack, struct multidictionary);
@@ -982,7 +975,7 @@ mdict_create_hashed_expandable (enum language language)
 
 struct multidictionary *
 mdict_create_linear (struct obstack *obstack,
-		     const struct pending *symbol_list)
+		     const std::vector<symbol *> &symbol_list)
 {
   struct multidictionary *retval
     = XOBNEW (obstack, struct multidictionary);
@@ -1120,7 +1113,7 @@ mdict_add_symbol (struct multidictionary *mdict, struct symbol *sym)
 
 void
 mdict_add_pending (struct multidictionary *mdict,
-		   const struct pending *symbol_list)
+		   const std::vector<symbol *> &symbol_list)
 {
   gdb::unordered_map<enum language, std::vector<symbol *>> nsyms
     = collate_pending_symbols_by_language (symbol_list);

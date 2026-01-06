@@ -1,5 +1,5 @@
 /* Read coff symbol tables and convert to internal format, for GDB.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
    Contributed by David D. Johnson, Brown University (ddj@cs.brown.edu).
 
    This file is part of GDB.
@@ -745,7 +745,7 @@ coff_symtab_read (minimal_symbol_reader &reader,
 		  struct objfile *objfile)
 {
   struct gdbarch *gdbarch = objfile->arch ();
-  struct context_stack *newobj = nullptr;
+  context_stack *ctx = nullptr;
   struct coff_symbol coff_symbol;
   struct coff_symbol *cs = &coff_symbol;
   static struct internal_syment main_sym;
@@ -1029,11 +1029,10 @@ coff_symtab_read (minimal_symbol_reader &reader,
 		 context_stack_depth is zero, and complain if not.  */
 
 	      depth = 0;
-	      newobj = push_context (depth, fcn_start_addr);
+	      ctx = &push_context (depth, fcn_start_addr);
 	      fcn_cs_saved.c_name = getsymname (&fcn_sym_saved);
-	      newobj->name =
-		process_coff_symbol (&fcn_cs_saved,
-				     &fcn_aux_saved, objfile);
+	      ctx->name
+		= process_coff_symbol (&fcn_cs_saved, &fcn_aux_saved, objfile);
 	    }
 	  else if (strcmp (cs->c_name, ".ef") == 0)
 	    {
@@ -1055,7 +1054,7 @@ coff_symtab_read (minimal_symbol_reader &reader,
 
 	      struct context_stack cstk = pop_context ();
 	      /* Stack must be empty now.  */
-	      if (!outermost_context_p () || newobj == NULL)
+	      if (!outermost_context_p () || ctx == nullptr)
 		{
 		  complaint (_("Unmatched .ef symbol(s) ignored "
 			       "starting at symnum %d"),
@@ -1123,7 +1122,7 @@ coff_symtab_read (minimal_symbol_reader &reader,
 			     symnum);
 		  break;
 		}
-	      if (*get_local_symbols () && !outermost_context_p ())
+	      if (!get_local_symbols ().empty () && !outermost_context_p ())
 		{
 		  tmpaddr = cs->c_value + objfile->text_section_offset ();
 		  /* Make a block for the local symbols within.  */
@@ -1131,7 +1130,7 @@ coff_symtab_read (minimal_symbol_reader &reader,
 				cstk.start_addr, tmpaddr);
 		}
 	      /* Now pop locals of block just finished.  */
-	      *get_local_symbols () = cstk.locals;
+	      get_local_symbols () = std::move (cstk.locals);
 	    }
 	  break;
 
@@ -2023,24 +2022,21 @@ coff_read_enum_type (int index, int length, int lastsym,
   struct type *type;
   int nsyms = 0;
   int done = 0;
-  struct pending **symlist;
+  std::vector<symbol *> *symlist;
   struct coff_symbol member_sym;
   struct coff_symbol *ms = &member_sym;
   struct internal_syment sub_sym;
   union internal_auxent sub_aux;
-  struct pending *osyms, *syms;
-  int o_nsyms;
-  int n;
   char *name;
   int unsigned_enum = 1;
 
   type = coff_alloc_type (index);
   if (within_function)
-    symlist = get_local_symbols ();
+    symlist = &get_local_symbols ();
   else
-    symlist = get_file_symbols ();
-  osyms = *symlist;
-  o_nsyms = osyms ? osyms->nsyms : 0;
+    symlist = &get_file_symbols ();
+
+  size_t o_nsyms = symlist->size ();
 
   while (!done && symnum < lastsym && symnum < nlist_nsyms_global)
     {
@@ -2058,7 +2054,7 @@ coff_read_enum_type (int index, int length, int lastsym,
 	  sym->set_loc_class_index (LOC_CONST);
 	  sym->set_domain (VAR_DOMAIN);
 	  sym->set_value_longest (ms->c_value);
-	  add_symbol_to_list (sym, symlist);
+	  add_symbol_to_list (sym, *symlist);
 	  nsyms++;
 	  break;
 
@@ -2082,31 +2078,22 @@ coff_read_enum_type (int index, int length, int lastsym,
 
   /* Find the symbols for the values and put them into the type.
      The symbols can be found in the symlist that we put them on
-     to cause them to be defined.  osyms contains the old value
-     of that symlist; everything up to there was defined by us.  */
+     to cause them to be defined.  o_nsyms is the original size of
+     that symlist; everything from there to the end was defined by us.  */
   /* Note that we preserve the order of the enum constants, so
      that in something like "enum {FOO, LAST_THING=FOO}" we print
      FOO, not LAST_THING.  */
 
-  for (syms = *symlist, n = 0; syms; syms = syms->next)
+  for (size_t i = o_nsyms, n = 0; i < symlist->size (); i++, n++)
     {
-      int j = 0;
+      symbol *xsym = (*symlist)[i];
 
-      if (syms == osyms)
-	j = o_nsyms;
-      for (; j < syms->nsyms; j++, n++)
-	{
-	  struct symbol *xsym = syms->symbol[j];
-
-	  xsym->set_type (type);
-	  type->field (n).set_name (xsym->linkage_name ());
-	  type->field (n).set_loc_enumval (xsym->value_longest ());
-	  if (xsym->value_longest () < 0)
-	    unsigned_enum = 0;
-	  type->field (n).set_bitsize (0);
-	}
-      if (syms == osyms)
-	break;
+      xsym->set_type (type);
+      type->field (n).set_name (xsym->linkage_name ());
+      type->field (n).set_loc_enumval (xsym->value_longest ());
+      if (xsym->value_longest () < 0)
+	unsigned_enum = 0;
+      type->field (n).set_bitsize (0);
     }
 
   if (unsigned_enum)

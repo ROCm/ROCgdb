@@ -1,5 +1,5 @@
 /* Intel 80386/80486-specific support for 32-bit ELF
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -2091,7 +2091,7 @@ static bfd_vma
 elf_i386_tpoff (struct bfd_link_info *info, bfd_vma address)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   bfd_vma static_tls_size;
 
   /* If tls_sec is NULL, we should have signalled an error already.  */
@@ -4095,7 +4095,7 @@ elf_i386_reloc_type_class (const struct bfd_link_info *info,
 			   const Elf_Internal_Rela *rela)
 {
   bfd *abfd = info->output_bfd;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
   if (htab->dynsym != NULL
@@ -4564,6 +4564,7 @@ elf_i386_add_glibc_version_dependency
 #define ELF_TARGET_ID			I386_ELF_DATA
 #define ELF_MACHINE_CODE		EM_386
 #define ELF_MAXPAGESIZE			0x1000
+#define	ELF_OSABI			ELFOSABI_GNU
 
 #define elf_backend_can_gc_sections	1
 #define elf_backend_can_refcount	1
@@ -4617,6 +4618,8 @@ elf_i386_add_glibc_version_dependency
 #define	TARGET_LITTLE_NAME		"elf32-i386-freebsd"
 #undef	ELF_OSABI
 #define	ELF_OSABI			ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT			1
 
 /* The kernel recognizes executables as valid only if they carry a
    "FreeBSD" label in the ELF header.  So we put this label on all
@@ -4662,9 +4665,9 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
 #undef	ELF_TARGET_OS
 #define	ELF_TARGET_OS			is_solaris
 
-/* Restore default: we cannot use ELFOSABI_SOLARIS, otherwise ELFOSABI_NONE
-   objects won't be recognized.  */
 #undef ELF_OSABI
+#define ELF_OSABI			ELFOSABI_SOLARIS
+#undef ELF_OSABI_EXACT
 
 #undef	elf32_bed
 #define	elf32_bed			elf32_i386_sol2_bed
@@ -4680,9 +4683,6 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
    File, p.63.  */
 #undef  elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	1
-
-#undef  elf_backend_strtab_flags
-#define elf_backend_strtab_flags	SHF_STRINGS
 
 #include "elf32-target.h"
 
@@ -4711,6 +4711,8 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 
 #undef	ELF_TARGET_OS
 #undef	ELF_OSABI
+#define	ELF_OSABI			ELFOSABI_GNU
+#undef	ELF_OSABI_EXACT
 
 #undef  elf32_bed
 #define elf32_bed			elf32_iamcu_bed
@@ -4722,8 +4724,6 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 
 #undef	elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	0
-
-#undef  elf_backend_strtab_flags
 
 #include "elf32-target.h"
 
@@ -4740,7 +4740,6 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 #define TARGET_LITTLE_SYM		i386_elf32_vxworks_vec
 #undef	TARGET_LITTLE_NAME
 #define TARGET_LITTLE_NAME		"elf32-i386-vxworks"
-#undef	ELF_OSABI
 #undef	ELF_MAXPAGESIZE
 #define ELF_MAXPAGESIZE			0x1000
 #undef	elf_backend_plt_alignment
@@ -4748,6 +4747,8 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 
 #undef	ELF_TARGET_OS
 #define ELF_TARGET_OS		is_vxworks
+#undef	ELF_OSABI
+#undef	ELF_OSABI_EXACT
 
 #undef elf_backend_relocs_compatible
 #undef elf_backend_add_symbol_hook

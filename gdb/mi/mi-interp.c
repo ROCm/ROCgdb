@@ -1,6 +1,6 @@
 /* MI Interpreter Definitions and Commands for GDB, the GNU debugger.
 
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
    Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.

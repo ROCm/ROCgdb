@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 #
-#   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+#   Copyright (C) 2019-2026 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -366,7 +366,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/../compile $(top_srcdir)/../config.guess \
 	$(top_srcdir)/../config.sub $(top_srcdir)/../depcomp \
 	$(top_srcdir)/../install-sh $(top_srcdir)/../ltmain.sh \
-	$(top_srcdir)/../missing $(top_srcdir)/../mkinstalldirs
+	$(top_srcdir)/../missing $(top_srcdir)/../mkinstalldirs README
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -508,7 +508,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #
-#   Copyright (C) 2022-2025 Free Software Foundation, Inc.
+#   Copyright (C) 2022-2026 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

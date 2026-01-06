@@ -1,5 +1,5 @@
 /* SPARC-specific support for 64-bit ELF
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -251,7 +251,7 @@ elf64_sparc_canonicalize_reloc (bfd *abfd, sec_ptr section,
 {
   arelent *tblptr;
   unsigned int i;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
 
   if (! bed->s->slurp_reloc_table (abfd, section, symbols, false))
     return -1;
@@ -803,7 +803,7 @@ elf64_sparc_reloc_type_class (const struct bfd_link_info *info,
 			      const Elf_Internal_Rela *rela)
 {
   bfd *abfd = info->output_bfd;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct _bfd_sparc_elf_link_hash_table *htab
     = _bfd_sparc_elf_hash_table (info);
   BFD_ASSERT (htab != NULL);
@@ -888,6 +888,7 @@ static const struct elf_size_info elf64_sparc_size_info =
 #define TARGET_BIG_NAME	"elf64-sparc"
 #define ELF_ARCH	bfd_arch_sparc
 #define ELF_TARGET_ID	SPARC_ELF_DATA
+#define ELF_OSABI	ELFOSABI_GNU
 #define ELF_MAXPAGESIZE 0x100000
 #define ELF_COMMONPAGESIZE 0x2000
 
@@ -994,6 +995,8 @@ static const struct elf_size_info elf64_sparc_size_info =
 #define TARGET_BIG_NAME "elf64-sparc-freebsd"
 #undef	ELF_OSABI
 #define	ELF_OSABI ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT 1
 
 #undef  elf64_bed
 #define elf64_bed				elf64_sparc_fbsd_bed
@@ -1009,10 +1012,9 @@ static const struct elf_size_info elf64_sparc_size_info =
 
 #undef  ELF_TARGET_OS
 #define ELF_TARGET_OS				is_solaris
-
-/* Restore default: we cannot use ELFOSABI_SOLARIS, otherwise ELFOSABI_NONE
-   objects won't be recognized.  */
 #undef	ELF_OSABI
+#define	ELF_OSABI				ELFOSABI_SOLARIS
+#undef	ELF_OSABI_EXACT
 
 #undef  elf64_bed
 #define elf64_bed				elf64_sparc_sol2_bed
@@ -1021,9 +1023,6 @@ static const struct elf_size_info elf64_sparc_size_info =
    boundary.  */
 #undef  elf_backend_static_tls_alignment
 #define elf_backend_static_tls_alignment	16
-
-#undef  elf_backend_strtab_flags
-#define elf_backend_strtab_flags       SHF_STRINGS
 
 static bool
 elf64_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,
@@ -1041,5 +1040,4 @@ elf64_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSE
 
 #include "elf64-target.h"
 
-#undef  elf_backend_strtab_flags
 #undef  elf_backend_copy_special_section_fields

@@ -1,5 +1,5 @@
 /* ELF emulation code for targets using elf.em.
-   Copyright (C) 1991-2025 Free Software Foundation, Inc.
+   Copyright (C) 1991-2026 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -1388,9 +1388,7 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
 	}
       if (elfbfd)
 	{
-	  const struct elf_backend_data *bed;
-
-	  bed = get_elf_backend_data (elfbfd);
+	  elf_backend_data *bed = get_elf_backend_data (elfbfd);
 	  s = bfd_make_section_with_flags (elfbfd, ".eh_frame_hdr",
 					   bed->dynamic_sec_flags
 					   | SEC_READONLY);
@@ -1436,7 +1434,7 @@ id_note_section_size (bfd *abfd ATTRIBUTE_UNUSED)
 static bool
 write_build_id (bfd *abfd)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_obj_tdata *t = elf_tdata (abfd);
   const char *style;
   asection *asec;

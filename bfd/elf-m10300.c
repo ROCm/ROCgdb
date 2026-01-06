@@ -1,5 +1,5 @@
 /* Matsushita 10300 specific support for 32-bit ELF
-   Copyright (C) 1996-2025 Free Software Foundation, Inc.
+   Copyright (C) 1996-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -689,7 +689,7 @@ _bfd_mn10300_elf_create_got_section (bfd * abfd,
   flagword   pltflags;
   asection * s;
   struct elf_link_hash_entry * h;
-  const struct elf_backend_data * bed = get_elf_backend_data (abfd);
+  elf_backend_data * bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab;
   int ptralign;
 
@@ -4788,7 +4788,7 @@ _bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 {
   flagword   flags;
   asection * s;
-  const struct elf_backend_data * bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
   int ptralign = 0;
 

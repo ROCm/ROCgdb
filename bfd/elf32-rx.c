@@ -1,5 +1,5 @@
 /* Renesas RX specific support for 32-bit ELF.
-   Copyright (C) 2008-2025 Free Software Foundation, Inc.
+   Copyright (C) 2008-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -3693,7 +3693,7 @@ rx_final_link (bfd * abfd, struct bfd_link_info * info)
 static bool
 elf32_rx_modify_headers (bfd *abfd, struct bfd_link_info *info)
 {
-  const struct elf_backend_data * bed;
+  elf_backend_data *bed;
   struct elf_obj_tdata * tdata;
   Elf_Internal_Phdr * phdr;
   unsigned int count;

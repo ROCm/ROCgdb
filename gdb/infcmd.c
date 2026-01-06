@@ -1,6 +1,6 @@
 /* Memory-access and commands for "inferior" process, for GDB.
 
-   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 1986-2026 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
@@ -1619,8 +1619,8 @@ print_return_value_1 (struct ui_out *uiout, struct return_value_info *rv)
     {
       /* Print it.  */
       uiout->text ("Value returned is ");
-      uiout->field_fmt ("gdb-result-var", "$%d",
-			 rv->value_history_index);
+      uiout->field_fmt ("gdb-result-var", variable_name_style.style (),
+			"$%d", rv->value_history_index);
       uiout->text (" = ");
 
       if (finish_print)

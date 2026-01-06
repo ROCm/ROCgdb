@@ -1,5 +1,5 @@
 /* X86-64 specific support for ELF
-   Copyright (C) 2000-2025 Free Software Foundation, Inc.
+   Copyright (C) 2000-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka <jh@suse.cz>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -479,7 +479,7 @@ static char *
 elf_x86_64_write_core_note (bfd *abfd, char *buf, int *bufsiz,
 			    int note_type, ...)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   va_list ap;
   const char *fname, *psargs;
   long pid;
@@ -3148,7 +3148,7 @@ static bfd_vma
 elf_x86_64_tpoff (struct bfd_link_info *info, bfd_vma address)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   bfd_vma static_tls_size;
 
   /* If tls_segment is NULL, we should have signalled an error already.  */
@@ -5171,7 +5171,7 @@ elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
       Elf_Internal_Rela rela;
       bfd_byte *loc;
       asection *plt, *gotplt, *relplt, *resolved_plt;
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed;
       bfd_vma plt_got_pcrel_offset;
 
       /* When building a static executable, use .iplt, .igot.plt and
@@ -5607,7 +5607,7 @@ elf_x86_64_reloc_type_class (const struct bfd_link_info *info,
 			     const Elf_Internal_Rela *rela)
 {
   bfd *abfd = info->output_bfd;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_x86_link_hash_table *htab
     = elf_x86_hash_table (info, X86_64_ELF_DATA);
 
@@ -6217,7 +6217,7 @@ static bfd *
 elf_x86_64_link_setup_gnu_properties (struct bfd_link_info *info)
 {
   struct elf_x86_init_table init_table;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_x86_link_hash_table *htab;
 
   if ((int) R_X86_64_standard >= (int) R_X86_64_converted_reloc_bit
@@ -6340,6 +6340,7 @@ elf_x86_64_special_sections[]=
 #define ELF_ARCH			    bfd_arch_i386
 #define ELF_TARGET_ID			    X86_64_ELF_DATA
 #define ELF_MACHINE_CODE		    EM_X86_64
+#define	ELF_OSABI			    ELFOSABI_GNU
 #define ELF_MAXPAGESIZE			    0x1000
 #define ELF_COMMONPAGESIZE		    ELF_MAXPAGESIZE
 
@@ -6426,6 +6427,8 @@ elf_x86_64_special_sections[]=
 
 #undef	ELF_OSABI
 #define	ELF_OSABI			    ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT			    1
 
 #undef	elf64_bed
 #define elf64_bed elf64_x86_64_fbsd_bed
@@ -6445,9 +6448,9 @@ elf_x86_64_special_sections[]=
 #undef	ELF_TARGET_OS
 #define	ELF_TARGET_OS			    is_solaris
 
-/* Restore default: we cannot use ELFOSABI_SOLARIS, otherwise ELFOSABI_NONE
-   objects won't be recognized.  */
 #undef ELF_OSABI
+#define ELF_OSABI			    ELFOSABI_SOLARIS
+#undef ELF_OSABI_EXACT
 
 #undef  elf64_bed
 #define elf64_bed			    elf64_x86_64_sol2_bed
@@ -6464,17 +6467,14 @@ elf_x86_64_special_sections[]=
 #undef  elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	    1
 
-#undef  elf_backend_strtab_flags
-#define elf_backend_strtab_flags	SHF_STRINGS
-
 #include "elf64-target.h"
 
 /* Restore defaults.  */
 #undef	ELF_OSABI
+#undef	ELF_OSABI_EXACT
 #undef	elf_backend_static_tls_alignment
 #undef	elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	0
-#undef  elf_backend_strtab_flags
 
 /* 32bit x86-64 support.  */
 
@@ -6493,6 +6493,8 @@ elf_x86_64_special_sections[]=
 
 #undef	ELF_TARGET_OS
 #undef	ELF_OSABI
+#define	ELF_OSABI			    ELFOSABI_GNU
+#undef	ELF_OSABI_EXACT
 
 #define bfd_elf32_bfd_copy_private_section_data \
   elf_x86_64_copy_private_section_data

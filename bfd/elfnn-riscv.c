@@ -1,5 +1,5 @@
 /* RISC-V-specific support for NN-bit ELF.
-   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2011-2026 Free Software Foundation, Inc.
 
    Contributed by Andrew Waterman (andrew@sifive.com).
    Based on TILE-Gx and MIPS targets.
@@ -291,7 +291,7 @@ riscv_info_to_howto_rela (bfd *abfd,
 static void
 riscv_elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *loc;
 
   bed = get_elf_backend_data (abfd);
@@ -728,7 +728,7 @@ riscv_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
   flagword flags;
   asection *s, *s_got;
   struct elf_link_hash_entry *h;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
   /* This function may be called more than once.  */
@@ -2635,8 +2635,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
 			   relocs into .rela.iplt, since it may cause the
 			   overwrite problems.  This is same as what we did
 			   in the riscv_elf_finish_dynamic_symbol.  */
-			const struct elf_backend_data *bed =
-				get_elf_backend_data (output_bfd);
+			elf_backend_data *bed
+			  = get_elf_backend_data (output_bfd);
 			bfd_vma iplt_idx = htab->last_iplt_index--;
 			bfd_byte *loc = htab->elf.irelplt->contents
 					+ iplt_idx * sizeof (ElfNN_External_Rela);
@@ -3448,7 +3448,7 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 				 Elf_Internal_Sym *sym)
 {
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
   if (h->plt.offset != (bfd_vma) -1)
     {
@@ -3723,7 +3723,7 @@ riscv_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 		  bfd *dynobj, asection *sdyn)
 {
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
   size_t dynsize = bed->s->sizeof_dyn;
   bfd_byte *dyncon, *dynconend;
 
@@ -3878,7 +3878,7 @@ riscv_reloc_type_class (const struct bfd_link_info *info,
       /* Check relocation against STT_GNU_IFUNC symbol if there are
 	 dynamic symbols.  */
       bfd *abfd = info->output_bfd;
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+      elf_backend_data *bed = get_elf_backend_data (abfd);
       unsigned long r_symndx = ELFNN_R_SYM (rela->r_info);
       if (r_symndx != STN_UNDEF)
 	{

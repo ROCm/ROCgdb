@@ -1,6 +1,6 @@
 /* Visium-specific support for 32-bit ELF.
 
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -852,6 +852,7 @@ visium_elf_print_private_bfd_data (bfd *abfd, void *ptr)
 #define ELF_ARCH		bfd_arch_visium
 #define ELF_MACHINE_CODE	EM_VISIUM
 #define ELF_OSABI		ELFOSABI_STANDALONE
+#define	ELF_OSABI_EXACT		1
 #define ELF_MAXPAGESIZE		1
 
 #define TARGET_BIG_SYM		visium_elf32_vec

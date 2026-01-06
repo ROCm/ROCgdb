@@ -1,4 +1,4 @@
-# Copyright 2025 Free Software Foundation, Inc.
+# Copyright 2025-2026 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,3 +34,7 @@ runto "prog.adb:$bp_location"
 # was displayed, gdb would say "mod 0".
 gdb_test "ptype mod1_type" "type = mod 4294967296"
 gdb_test "ptype mod2_type" "type = mod 18446744073709551616"
+
+gdb_test "print mod1_type'Modulus" " = 4294967296"
+gdb_test "print mod2_type'Modulus" " = 18446744073709551616"
+gdb_test "print mod3_type'Modulus" " = 4"

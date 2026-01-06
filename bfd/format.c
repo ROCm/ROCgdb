@@ -1,5 +1,5 @@
 /* Generic BFD support for file formats.
-   Copyright (C) 1990-2025 Free Software Foundation, Inc.
+   Copyright (C) 1990-2026 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -47,6 +47,7 @@ SUBSECTION
 #include "bfd.h"
 #include "libbfd.h"
 #include "plugin.h"
+#include "elf-bfd.h"
 
 /* IMPORT from targets.c.  */
 extern const size_t _bfd_target_vector_entries;
@@ -626,8 +627,6 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
       cleanup = BFD_SEND_FMT (abfd, _bfd_check_format, (abfd));
       if (cleanup)
 	{
-	  int match_priority = abfd->xvec->match_priority;
-
 	  if (abfd->format != bfd_archive
 	      || (bfd_has_map (abfd)
 		  && bfd_get_error () != bfd_error_wrong_object_format))
@@ -641,6 +640,18 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	      matching_vector[match_count] = abfd->xvec;
 	      match_count++;
 
+	      int match_priority = abfd->xvec->match_priority;
+	      if (match_priority == 1
+		  && bfd_get_flavour (abfd) == bfd_target_elf_flavour)
+		{
+		  /* If the object e_ident matches the hint elf_osabi,
+		     bump priority up.  */
+		  Elf_Internal_Ehdr *i_ehdrp = elf_elfheader (abfd);
+		  elf_backend_data *bed = get_elf_backend_data (abfd);
+		  if (bed->elf_osabi != ELFOSABI_NONE
+		      && i_ehdrp->e_ident[EI_OSABI] == bed->elf_osabi)
+		    match_priority = 0;
+		}
 	      if (match_priority < best_match)
 		{
 		  best_match = match_priority;

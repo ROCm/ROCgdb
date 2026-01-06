@@ -36,6 +36,8 @@
 
 * Support for stabs debug information has been removed.
 
+* Support for mdebug debug information has been removed.
+
 * Support for the binary file format dbx has been removed.
 
 * When connected to an extended-remote target GDB can now
@@ -89,6 +91,11 @@ New command class for help
   The new command class "essential" has been added, which is a set of
   commands that we, as developers, believe would be close to a minimal
   set of commands for a new user of GDB.
+
+* Debugger Adapter Protocol changes
+
+  ** Unhandled Ada exceptions can now be caught using the "unhandled"
+     exception filter.
 
 * Changed remote packets
 

@@ -1,5 +1,5 @@
 /* x86 specific support for ELF
-   Copyright (C) 2017-2025 Free Software Foundation, Inc.
+   Copyright (C) 2017-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -53,7 +53,7 @@ _bfd_x86_elf_set_tls_module_base (struct bfd_link_info *info)
 {
   struct elf_x86_link_hash_table *htab;
   struct bfd_link_hash_entry *base;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   if (!bfd_link_executable (info))
     return;
@@ -95,7 +95,7 @@ elf_x86_allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
   struct elf_dyn_relocs *p;
   unsigned int plt_entry_size;
   bool resolved_to_zero;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   if (h->root.type == bfd_link_hash_indirect)
     return true;
@@ -730,7 +730,7 @@ _bfd_x86_elf_link_hash_table_create (bfd *abfd)
       return NULL;
     }
 
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   if (bed->target_id == X86_64_ELF_DATA)
     {
       ret->is_reloc_section = elf_x86_64_is_reloc_section;
@@ -872,7 +872,7 @@ _bfd_x86_elf_link_check_relocs (bfd *abfd, struct bfd_link_info *info)
     {
       /* Check for __tls_get_addr reference.  */
       struct elf_x86_link_hash_table *htab;
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+      elf_backend_data *bed = get_elf_backend_data (abfd);
       htab = elf_x86_hash_table (info, bed->target_id);
       if (htab)
 	{
@@ -939,7 +939,7 @@ _bfd_x86_elf_check_relocs (bfd *abfd,
   const Elf_Internal_Rela *rel;
   const Elf_Internal_Rela *rel_end;
   asection *sreloc;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bool is_x86_64;
 
   if (bfd_link_relocatable (info))
@@ -1081,7 +1081,7 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
   Elf_Internal_Rela *irel, *irelend;
   Elf_Internal_Sym *isymbuf = NULL;
   struct elf_link_hash_entry **sym_hashes;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_x86_link_hash_table *htab;
   bfd_vma *local_got_offsets;
   bool is_x86_64;
@@ -1834,7 +1834,7 @@ _bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
 				unsigned int plt_sec_type)
 {
   struct elf_x86_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   unsigned int plt0_entry_size;
   unsigned char func_info;
@@ -1982,7 +1982,7 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
 			       unsigned int plt_sec_type)
 {
   struct elf_x86_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   sframe_encoder_ctx *ectx;
   size_t sec_size;
   asection *sec;
@@ -2033,7 +2033,7 @@ _bfd_elf_x86_size_relative_relocs (struct bfd_link_info *info,
 				   bool *need_layout)
 {
   struct elf_x86_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bool is_x86_64;
   bfd_size_type i, count, unaligned_count;
   asection *sec, *srel;
@@ -2135,7 +2135,7 @@ bool
 _bfd_elf_x86_finish_relative_relocs (struct bfd_link_info *info)
 {
   struct elf_x86_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   Elf_Internal_Rela outrel;
   bool is_x86_64;
   bfd_size_type count;
@@ -2202,7 +2202,7 @@ _bfd_elf_x86_valid_reloc_p (asection *input_section,
   if (bfd_link_pic (info)
       && (h == NULL || SYMBOL_REFERENCES_LOCAL (info, h)))
     {
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed;
       unsigned int r_type;
       Elf_Internal_Rela irel;
 
@@ -2288,8 +2288,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
   asection *s;
   bool relocs;
   bfd *ibfd;
-  const struct elf_backend_data *bed
-    = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
   htab = elf_x86_hash_table (info, bed->target_id);
   if (htab == NULL)
@@ -2770,7 +2769,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 				      bfd_byte *buf)
 {
   struct elf_x86_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd *dynobj;
   asection *sdyn;
   bfd_byte *dyncon, *dynconend;
@@ -3107,8 +3106,7 @@ _bfd_x86_elf_early_size_sections (bfd *output_bfd,
 	{
 	  struct elf_x86_link_hash_table *htab;
 	  struct bfd_link_hash_entry *bh = NULL;
-	  const struct elf_backend_data *bed
-	    = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
 	  htab = elf_x86_hash_table (info, bed->target_id);
 	  if (htab == NULL)
@@ -3306,7 +3304,7 @@ _bfd_x86_elf_link_report_tls_transition_error
    enum elf_x86_tls_error_type tls_error)
 {
   const char *name;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_x86_link_hash_table *htab
     = elf_x86_hash_table (info, bed->target_id);
 
@@ -3427,8 +3425,7 @@ _bfd_x86_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   asection *s, *srel;
   struct elf_x86_link_hash_entry *eh;
   struct elf_dyn_relocs *p;
-  const struct elf_backend_data *bed
-    = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
   eh = (struct elf_x86_link_hash_entry *) h;
 
@@ -3793,7 +3790,7 @@ _bfd_x86_elf_get_synthetic_symtab (bfd *abfd,
   long dynrelcount;
   arelent **dynrelbuf, *p;
   char *names;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_vma (*get_plt_got_vma) (struct elf_x86_plt *, bfd_vma, bfd_vma,
 			      bfd_vma);
   bool (*valid_plt_reloc_p) (unsigned int);
@@ -4040,7 +4037,7 @@ _bfd_x86_elf_merge_gnu_properties (struct bfd_link_info *info,
 {
   unsigned int number, features;
   bool updated = false;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_x86_link_hash_table *htab;
   unsigned int pr_type = aprop != NULL ? aprop->pr_type : bprop->pr_type;
 
@@ -4278,7 +4275,7 @@ _bfd_x86_elf_link_setup_gnu_properties
   bfd *pbfd;
   bfd *ebfd = NULL;
   elf_property *prop;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   unsigned int class_align = ABI_64_P (info->output_bfd) ? 3 : 2;
   unsigned int got_align;
 
@@ -4986,8 +4983,7 @@ void
 bfd_elf_linker_x86_set_options (struct bfd_link_info *info,
 				struct elf_linker_x86_params *params)
 {
-  const struct elf_backend_data *bed
-    = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   struct elf_x86_link_hash_table *htab
     = elf_x86_hash_table (info, bed->target_id);
   if (htab != NULL)

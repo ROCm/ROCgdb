@@ -1,6 +1,6 @@
 /* Target-dependent code for OpenBSD/alpha.
 
-   Copyright (C) 2006-2025 Free Software Foundation, Inc.
+   Copyright (C) 2006-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -100,9 +100,6 @@ alphaobsd_init_abi(struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Hook into the DWARF CFI frame unwinder.  */
   alpha_dwarf2_init_abi (info, gdbarch);
-
-  /* Hook into the MDEBUG frame unwinder.  */
-  alpha_mdebug_init_abi (info, gdbarch);
 
   /* OpenBSD/alpha 3.0 and earlier does not provide single step
      support via ptrace(2); use software single-stepping for now.  */

@@ -1,6 +1,6 @@
 /* Handle JIT code generation in the inferior for GDB, the GNU Debugger.
 
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -570,7 +570,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       struct type *block_type = builtin_type (objfile->arch ())->builtin_void;
 
       new_block->set_multidict
-	(mdict_create_linear (&objfile->objfile_obstack, NULL));
+	(mdict_create_linear (&objfile->objfile_obstack, {}));
       /* The address range.  */
       new_block->set_start (gdb_block_iter.begin);
       new_block->set_end (gdb_block_iter.end);
@@ -610,7 +610,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 	new_block = new (&objfile->objfile_obstack) block;
 
       new_block->set_multidict
-	(mdict_create_linear (&objfile->objfile_obstack, NULL));
+	(mdict_create_linear (&objfile->objfile_obstack, {}));
       new_block->set_superblock (block_iter);
       block_iter = new_block;
 

@@ -1,5 +1,5 @@
 /* ELF object file format
-   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 1992-2026 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -582,7 +582,6 @@ change_section (const char *name,
   asection *old_sec;
   segT sec;
   flagword flags;
-  const struct elf_backend_data *bed;
   const struct bfd_elf_special_section *ssect;
 
   if (match_p == NULL)
@@ -628,7 +627,7 @@ change_section (const char *name,
 	group_section_insert (match_p, sec, &group_idx);
     }
 
-  bed = get_elf_backend_data (stdoutput);
+  elf_backend_data *bed = get_elf_backend_data (stdoutput);
   ssect = (*bed->get_sec_type_attr) (stdoutput, sec);
 
   if (ssect != NULL)
@@ -1274,15 +1273,13 @@ obj_elf_section (int push)
 	      return;
 	    }
 
-	  const struct elf_backend_data *bed = get_elf_backend_data (stdoutput);
+	  elf_backend_data *bed = get_elf_backend_data (stdoutput);
+	  bool maybe_gnu = (bed->elf_osabi == ELFOSABI_NONE
+			    || bed->elf_osabi == ELFOSABI_GNU
+			    || bed->elf_osabi == ELFOSABI_FREEBSD);
 	  attr = obj_elf_parse_section_letters (beg, strlen (beg), push,
 						&is_clone, &inherit,
-						bed->elf_osabi == ELFOSABI_NONE
-						|| (bed->elf_osabi
-						    == ELFOSABI_GNU)
-						|| (bed->elf_osabi
-						    == ELFOSABI_FREEBSD)
-						? &gnu_attr : NULL,
+						maybe_gnu ? &gnu_attr : NULL,
 						&has_entsize);
 
 	  if (inherit > 0)
@@ -2344,9 +2341,7 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
 	   || strcmp (type_name, "10") == 0
 	   || strcmp (type_name, "STT_GNU_IFUNC") == 0)
     {
-      const struct elf_backend_data *bed;
-
-      bed = get_elf_backend_data (stdoutput);
+      elf_backend_data *bed = get_elf_backend_data (stdoutput);
       if (bed->elf_osabi != ELFOSABI_NONE
 	  && bed->elf_osabi != ELFOSABI_GNU
 	  && bed->elf_osabi != ELFOSABI_FREEBSD)
@@ -2361,9 +2356,7 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
     }
   else if (strcmp (type_name, "gnu_unique_object") == 0)
     {
-      const struct elf_backend_data *bed;
-
-      bed = get_elf_backend_data (stdoutput);
+      elf_backend_data *bed = get_elf_backend_data (stdoutput);
       if (bed->elf_osabi != ELFOSABI_NONE
 	  && bed->elf_osabi != ELFOSABI_GNU)
 	as_bad (_("symbol type \"%s\" is supported only by GNU targets"),

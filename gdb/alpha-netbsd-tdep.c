@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/alpha.
 
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
 
@@ -253,9 +253,6 @@ alphanbsd_init_abi (struct gdbarch_info info,
 
   /* Hook into the DWARF CFI frame unwinder.  */
   alpha_dwarf2_init_abi (info, gdbarch);
-
-  /* Hook into the MDEBUG frame unwinder.  */
-  alpha_mdebug_init_abi (info, gdbarch);
 
   nbsd_init_abi (info, gdbarch);
 

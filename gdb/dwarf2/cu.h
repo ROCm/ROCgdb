@@ -1,6 +1,6 @@
 /* DWARF CU data structure
 
-   Copyright (C) 2021-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -296,7 +296,7 @@ public:
      first local scope, and all other local scopes as nested local
      scopes, and worked fine.  Check to see if we really need to
      distinguish these in buildsym.c.  */
-  struct pending **list_in_scope = nullptr;
+  std::vector<symbol *> *list_in_scope = nullptr;
 
   /* Storage for things with the same lifetime as this read-in
      compilation unit. */

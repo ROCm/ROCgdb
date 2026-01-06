@@ -1,5 +1,5 @@
 /* IA-64 support for 64-bit ELF
-   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 1998-2026 Free Software Foundation, Inc.
    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -5108,6 +5108,8 @@ ignore_errors (const char *fmt ATTRIBUTE_UNUSED, ...)
 #undef ELF_COMMONPAGESIZE
 #undef ELF_OSABI
 #define ELF_OSABI			ELFOSABI_HPUX
+#undef ELF_OSABI_EXACT
+#define ELF_OSABI_EXACT			1
 
 #undef  elfNN_bed
 #define elfNN_bed elfNN_ia64_hpux_bed

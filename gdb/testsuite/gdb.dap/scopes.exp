@@ -1,4 +1,4 @@
-# Copyright 2023-2025 Free Software Foundation, Inc.
+# Copyright 2023-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -133,12 +133,15 @@ set refs [lindex [dap_check_request_and_response "fetch contents of dei" \
 set deivals [dict get $refs body variables]
 gdb_assert {[llength $deivals] == 2} "dei has two members"
 
-# Request more children than exist.  See PR dap/33228.
-set seq [dap_send_request variables \
-	     [format {o variablesReference [i %d] count [i 100]} $dei_ref]]
-lassign [dap_read_response variables $seq] response ignore
-gdb_assert {[dict get $response success] == "false"} \
-    "variables with invalid count"
+# Request more children than exist.  See PR dap/33228 and
+# https://github.com/microsoft/debug-adapter-protocol/issues/571.
+set refs [lindex [dap_check_request_and_response "fetch too many variables" \
+		      "variables" \
+		      [format {o variablesReference [i %d] count [i 100]} \
+			   $dei_ref]] \
+	      0]
+set deivals [dict get $refs body variables]
+gdb_assert {[llength $deivals] == 2} "still just two members"
 
 set num [dict get $reg_scope variablesReference]
 lassign [dap_check_request_and_response "fetch all registers" \

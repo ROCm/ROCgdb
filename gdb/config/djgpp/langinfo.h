@@ -1,5 +1,5 @@
 /* langinfo.h file for DJGPP.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Written by Eli Zaretskii.
 
    This file is part of GDB.

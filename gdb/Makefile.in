@@ -1,4 +1,4 @@
-# Copyright (C) 1989-2025 Free Software Foundation, Inc.
+# Copyright (C) 1989-2026 Free Software Foundation, Inc.
 # Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
@@ -738,7 +738,6 @@ ALL_64_TARGET_OBS = \
 	aarch64-tdep.o \
 	alpha-bsd-tdep.o \
 	alpha-linux-tdep.o \
-	alpha-mdebug-tdep.o \
 	alpha-netbsd-tdep.o \
 	alpha-obsd-tdep.o \
 	alpha-tdep.o \
@@ -921,7 +920,6 @@ ALL_TARGET_OBS = \
 coff_SRCS = coffread.c coff-pe-read.c
 elf_SRCS = elfread.c stap-probe.c dtrace-probe.c
 macho_SRCS = machoread.c
-mips_SRCS = mipsread.c
 xcoff_SRCS = xcoffread.c
 FORMAT_SRCS = @FORMAT_SRCS@
 FORMAT_OBS = $(patsubst %.c,%.o,$(FORMAT_SRCS))
@@ -1528,7 +1526,6 @@ HFILES_NO_SRCDIR = \
 	macrotab.h \
 	main.h \
 	maint.h \
-	mdebugread.h \
 	memattr.h \
 	memory-map.h \
 	memrange.h \
@@ -1798,7 +1795,6 @@ ALLDEPFILES = \
 	alpha-bsd-tdep.c \
 	alpha-linux-nat.c \
 	alpha-linux-tdep.c \
-	alpha-mdebug-tdep.c \
 	alpha-netbsd-tdep.c \
 	alpha-obsd-tdep.c \
 	alpha-tdep.c \

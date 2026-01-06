@@ -1,5 +1,5 @@
 /* BFD back-end data structures for ELF files.
-   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 1992-2026 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -586,9 +586,10 @@ enum elf_target_id
   TIC6X_ELF_DATA,
   TILEGX_ELF_DATA,
   TILEPRO_ELF_DATA,
+  VAX_ELF_DATA,
+  WEBASSEMBLY_ELF_DATA,
   X86_64_ELF_DATA,
   XTENSA_ELF_DATA,
-  VAX_ELF_DATA,
   GENERIC_ELF_DATA
 };
 
@@ -1007,35 +1008,39 @@ typedef uint32_t obj_attr_tag_t;
 struct elf_backend_data
 {
   /* The architecture for this backend.  */
-  enum bfd_architecture arch;
+  ENUM_BITFIELD (bfd_architecture) arch : 8;
+
+  /* EI_OSABI.  */
+  unsigned elf_osabi : 8;
+
+  /* The ELF machine code (EM_xxxx) for this backend.  */
+  unsigned elf_machine_code : 16;
 
   /* An identifier used to distinguish different target specific
      extensions to elf_obj_tdata and elf_link_hash_table structures.  */
-  enum elf_target_id target_id;
+  ENUM_BITFIELD (elf_target_id) target_id : 8;
 
   /* Target OS.  */
-  enum elf_target_os target_os;
+  ENUM_BITFIELD (elf_target_os) target_os : 2;
 
-  /* The ELF machine code (EM_xxxx) for this backend.  */
-  int elf_machine_code;
-
-  /* EI_OSABI.  */
-  int elf_osabi;
+  /* True if object files must have exactly matching osabi.  False if
+     other osabi values are allowed.  */
+  unsigned osabi_exact : 1;
 
   /* The maximum page size for this backend.  */
-  bfd_vma maxpagesize;
+  unsigned maxpagesize;
 
   /* The minimum page size for this backend.  An input object will not be
      considered page aligned unless its sections are correctly aligned for
      pages at least this large.  May be smaller than maxpagesize.  */
-  bfd_vma minpagesize;
+  unsigned minpagesize;
 
   /* The common page size for this backend.  */
-  bfd_vma commonpagesize;
+  unsigned commonpagesize;
 
   /* The p_align value for this backend.  If it is set, p_align of
       PT_LOAD alignment will be to p_align by default.  */
-  bfd_vma p_align;
+  unsigned p_align;
 
   /* The BFD flags applied to sections created for dynamic linking.  */
   flagword dynamic_sec_flags;
@@ -1514,9 +1519,6 @@ struct elf_backend_data
   bool (*elf_backend_can_make_lsda_relative_eh_frame)
      (bfd *, struct bfd_link_info *, asection *);
 
-  /* Tell linker to support multiple eh_frame sections.  */
-  bool elf_backend_can_make_multiple_eh_frame;
-
   /* This function returns an encoding after computing the encoded
      value (and storing it in ENCODED) for the given OFFSET into OSEC,
      to be stored in at LOC_OFFSET into the LOC_SEC input section.
@@ -1712,9 +1714,6 @@ struct elf_backend_data
   /* Alignment for the PT_GNU_STACK segment.  */
   unsigned stack_align;
 
-  /* Flag bits to assign to a section of type SHT_STRTAB.  */
-  unsigned long elf_strtab_flags;
-
   /* This is TRUE if the linker should act like collect and gather
      global constructors and destructors by name.  This is TRUE for
      MIPS ELF because the Irix 5 tools can not handle the .init
@@ -1813,6 +1812,10 @@ struct elf_backend_data
      and _bfd_elf_munmap_section_contents.  */
   unsigned use_mmap : 1;
 };
+
+#ifndef __cplusplus
+typedef const struct elf_backend_data elf_backend_data;
+#endif
 
 /* Information about reloc sections associated with a bfd_elf_section_data
    structure.  */

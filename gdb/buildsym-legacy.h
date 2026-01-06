@@ -1,5 +1,5 @@
 /* Build symbol tables in GDB's internal format - legacy APIs
-   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 1986-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -82,9 +82,9 @@ extern const char *pop_subfile ();
 
 extern struct compunit_symtab *end_compunit_symtab (CORE_ADDR end_addr);
 
-extern struct context_stack *push_context (int desc, CORE_ADDR valu);
+extern context_stack &push_context (int desc, CORE_ADDR valu);
 
-extern struct context_stack pop_context ();
+extern context_stack pop_context ();
 
 extern void record_line (struct subfile *subfile, int line,
 			 unrelocated_addr pc);
@@ -136,15 +136,15 @@ extern struct subfile *get_current_subfile ();
 
 /* Return the local symbol list.  */
 
-extern struct pending **get_local_symbols ();
+extern std::vector<symbol *> &get_local_symbols ();
 
 /* Return the file symbol list.  */
 
-extern struct pending **get_file_symbols ();
+extern std::vector<symbol *> &get_file_symbols ();
 
 /* Return the global symbol list.  */
 
-extern struct pending **get_global_symbols ();
+extern std::vector<symbol *> &get_global_symbols ();
 
 /* Return the current buildsym_compunit.  */
 

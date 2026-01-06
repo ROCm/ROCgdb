@@ -1,4 +1,4 @@
-#   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+#   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -296,17 +296,13 @@ if [is_elf_format] {
     # PR 22967
     # Test nm --ifunc-chars on a indirect symbols.
     
-    # The following targets are known to not support ifuncs.
-    setup_xfail "alpha*-*-*"
-    setup_xfail "arm*-elf" "arm*-*-nto*" "arm*-*-netbsd*"
-    setup_xfail "*-*-hpux*"
-    setup_xfail "mips*-*-*" "tx39*-*-*"
-    setup_xfail "msp430*-*-*"
-    setup_xfail "kvx*-*-*"
-    setup_xfail "visium*-*-*"
-
     set testname "nm --ifunc-chars"
-    if {![binutils_assemble $srcdir/$subdir/ifunc.s tmpdir/ifunc.o]} then {
+    if { ![supports_gnu_osabi] \
+	 || [istarget "alpha*-*-*"] \
+	 || [istarget "kvx-*-*"] \
+	 || [istarget "mips*-*-*"] } {
+	unsupported $testname
+    } elseif { ![binutils_assemble $srcdir/$subdir/ifunc.s tmpdir/ifunc.o] } {
 	fail "$testname (assembly)"
     } else {
 	if [is_remote host] {

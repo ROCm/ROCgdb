@@ -1,6 +1,6 @@
 /* DWARF CU data structure
 
-   Copyright (C) 2021-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -94,7 +94,7 @@ dwarf2_cu::start_compunit_symtab (const char *name, const char *comp_dir,
 						   lang (),
 						   low_pc);
 
-  list_in_scope = get_builder ()->get_file_symbols ();
+  list_in_scope = &get_builder ()->get_file_symbols ();
 
   /* DWARF versions are restricted to [2, 5], thanks to the check in
      read_comp_unit_head.  */

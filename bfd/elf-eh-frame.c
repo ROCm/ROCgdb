@@ -1,5 +1,5 @@
 /* .eh_frame section optimization.
-   Copyright (C) 2001-2025 Free Software Foundation, Inc.
+   Copyright (C) 2001-2026 Free Software Foundation, Inc.
    Written by Jakub Jelinek <jakub@redhat.com>.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1871,7 +1871,7 @@ bool
 _bfd_elf_write_section_eh_frame_entry (bfd *abfd, struct bfd_link_info *info,
 				       asection *sec, bfd_byte *contents)
 {
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte cantunwind[8];
   bfd_vma addr;
   bfd_vma last_addr;
@@ -2417,7 +2417,7 @@ write_compact_eh_frame_hdr (bfd *abfd, struct bfd_link_info *info)
   struct elf_link_hash_table *htab;
   struct eh_frame_hdr_info *hdr_info;
   asection *sec;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_vma count;
   bfd_byte contents[8];
   unsigned int i;

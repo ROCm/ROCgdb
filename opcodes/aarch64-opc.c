@@ -1,5 +1,5 @@
 /* aarch64-opc.c -- AArch64 opcode support.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -5088,6 +5088,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SYSREG_IC:
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
+    case AARCH64_OPND_SYSREG_PLBI:
     case AARCH64_OPND_SYSREG_SR:
       snprintf (buf, size, "%s", style_reg (styler, opnd->sysins_op->name));
       break;
@@ -5160,6 +5161,12 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_BARRIER_GCSB:
       snprintf (buf, size, "%s", style_sub_mnem (styler, "dsync"));
+      break;
+
+    case AARCH64_OPND_NOT_BALANCED_10:
+    case AARCH64_OPND_NOT_BALANCED_17:
+      if (opnd->imm.value)
+	snprintf (buf, size, "%s", style_sub_mnem (styler, "nb"));
       break;
 
     case AARCH64_OPND_BTI_TARGET:
@@ -5454,6 +5461,43 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
 #undef TLBI_XS_OP
 
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
+};
+
+const aarch64_sys_ins_reg aarch64_sys_regs_plbi[] =
+{
+    #define PLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS, AARCH64_FEATURE (POE2) }, \
+    { OP "nxs", CODE | CPENS (0, 0, C8, 0), FLAGS, AARCH64_FEATURES (2, POE2, XS) },
+
+    PLBI_XS_OP ( "alle1",	CPENS (4, C10, C7, 4), 	0 )
+    PLBI_XS_OP ( "alle1is",	CPENS (4, C10, C3, 4), 	0 )
+    PLBI_XS_OP ( "alle1os",	CPENS (4, C10, C1, 4), 	0 )
+    PLBI_XS_OP ( "alle2",	CPENS (4, C10, C7, 0), 	0 )
+    PLBI_XS_OP ( "alle2is",	CPENS (4, C10, C3, 0), 	0 )
+    PLBI_XS_OP ( "alle2os",	CPENS (4, C10, C1, 0), 	0 )
+    PLBI_XS_OP ( "alle3",	CPENS (6, C10, C7, 0), 	0 )
+    PLBI_XS_OP ( "alle3is",	CPENS (6, C10, C3, 0), 	0 )
+    PLBI_XS_OP ( "alle3os",	CPENS (6, C10, C1, 0), 	0 )
+    PLBI_XS_OP ( "aside1",	CPENS (0, C10, C7, 2), 	F_HASXT )
+    PLBI_XS_OP ( "aside1is",	CPENS (0, C10, C3, 2), 	F_HASXT )
+    PLBI_XS_OP ( "aside1os",	CPENS (0, C10, C1, 2), 	F_HASXT )
+    PLBI_XS_OP ( "permae1",	CPENS (0, C10, C7, 3), 	F_HASXT )
+    PLBI_XS_OP ( "permae1is",	CPENS (0, C10, C3, 3), 	F_HASXT )
+    PLBI_XS_OP ( "permae1os",	CPENS (0, C10, C1, 3), 	F_HASXT )
+    PLBI_XS_OP ( "perme1",	CPENS (0, C10, C7, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme1is",	CPENS (0, C10, C3, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme1os",	CPENS (0, C10, C1, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme2",	CPENS (4, C10, C7, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme2is",	CPENS (4, C10, C3, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme2os",	CPENS (4, C10, C1, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme3",	CPENS (6, C10, C7, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme3is",	CPENS (6, C10, C3, 1), 	F_HASXT )
+    PLBI_XS_OP ( "perme3os",	CPENS (6, C10, C1, 1), 	F_HASXT )
+    PLBI_XS_OP ( "vmalle1",	CPENS (0, C10, C7, 0), 	0 )
+    PLBI_XS_OP ( "vmalle1is",	CPENS (0, C10, C3, 0), 	0 )
+    PLBI_XS_OP ( "vmalle1os",	CPENS (0, C10, C1, 0), 	0 )
+
+    { 0,	CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
 const aarch64_sys_ins_reg aarch64_sys_ins_gic[] =

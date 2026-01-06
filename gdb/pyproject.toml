@@ -6,3 +6,35 @@ typeCheckingMode = "strict"
 
 [tool.isort]
 profile = "black"
+
+[tool.tclint]
+exclude = [
+# TODO:
+"testsuite/boards",
+"testsuite/config",
+# IGNORE (document reason in trailing comment):
+"testsuite/lib/ton.tcl", # Imported.
+]
+
+# A maximum line length of 80 is current policy, but it hasn't been too
+# strictly enforced.  It's the most frequent and least harmful violation.
+# Ignore this for now.
+ignore = ["line-length"]
+
+extensions = ["exp", "tcl"]
+
+[tool.tclint.style]
+# Used by tclfmt.
+indent = "mixed,4,8"
+
+# Used by both tclint and tclfmt.  Current policy is 80.
+line-length = 80
+
+# Used by tclfmt.
+max-blank-lines = 1
+
+# Used by tclfmt.  False conflicts with emacs tcl mode.
+indent-namespace-eval = true
+
+# Used by tclfmt.
+spaces-in-braces = false

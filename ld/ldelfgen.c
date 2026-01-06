@@ -1,5 +1,5 @@
 /* Emulation code used by all ELF targets.
-   Copyright (C) 1991-2025 Free Software Foundation, Inc.
+   Copyright (C) 1991-2026 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -333,8 +333,7 @@ ldelf_map_segments (bool need_layout)
     {
       /* If we don't have user supplied phdrs, strip zero-sized dynamic
 	 sections and regenerate program headers.  */
-      const struct elf_backend_data *bed
-	= get_elf_backend_data (link_info.output_bfd);
+      elf_backend_data *bed = get_elf_backend_data (link_info.output_bfd);
       if (bed->elf_backend_strip_zero_sized_dynamic_sections
 	  && !bed->elf_backend_strip_zero_sized_dynamic_sections (&link_info))
 	fatal (_("%P: failed to strip zero-sized dynamic sections\n"));

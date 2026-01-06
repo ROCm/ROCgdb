@@ -1,6 +1,6 @@
 /* AArch64 assembler/disassembler support.
 
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GNU Binutils.
@@ -279,6 +279,10 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_F16MM,
   /* SVE B16MM instructions.  */
   AARCH64_FEATURE_SVE_B16MM,
+  /* POE2 instructions.  */
+  AARCH64_FEATURE_POE2,
+  /* TEV instructions.  */
+  AARCH64_FEATURE_TEV,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -691,6 +695,8 @@ enum aarch64_opnd
   AARCH64_OPND_UNDEFINED,/* imm16 operand in undefined instruction. */
   AARCH64_OPND_CCMP_IMM,/* Immediate in conditional compare instructions.  */
   AARCH64_OPND_SIMM5,	/* 5-bit signed immediate in the imm5 field.  */
+  AARCH64_OPND_NOT_BALANCED_10, /* an optional not balanced indicator (NB).  */
+  AARCH64_OPND_NOT_BALANCED_17, /* an optional not balanced indicator (NB).  */
   AARCH64_OPND_NZCV,	/* Flag bit specifier giving an alternative value for
 			   each condition flag.  */
 
@@ -742,6 +748,7 @@ enum aarch64_opnd
   AARCH64_OPND_SYSREG_IC,	/* System register <ic_op> operand.  */
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
   AARCH64_OPND_SYSREG_TLBIP,	/* System register <tlbip_op> operand.  */
+  AARCH64_OPND_SYSREG_PLBI,	/* System register <plbi_op> operand.  */
   AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_DSB_NXS,	/* Barrier operand for DSB nXS variant.  */
@@ -1666,6 +1673,7 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_ic [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
+extern const aarch64_sys_ins_reg aarch64_sys_regs_plbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gic [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gicr [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gsb [];

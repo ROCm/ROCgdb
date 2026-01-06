@@ -1,5 +1,5 @@
 /* YACC parser for Ada expressions, for GDB.
-   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 1986-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -951,7 +951,16 @@ primary :	primary TICK_ACCESS
 			    = ada_modular_bound (type_arg);
 			  if (!bound.has_value ())
 			    error (_("'modulus applied to type with non-constant bound"));
-			  write_int (pstate, *bound, type_arg->target_type ());
+			  gdb_mpz modulus = gdb_mpz (*bound) + 1;
+			  /* Pick something that's almost certainly
+			     large enough.  */
+			  struct type *r_type
+			    = language_lookup_primitive_type (pstate->language (),
+							      pstate->gdbarch (),
+							      "unsigned_long_long_long_integer");
+			  pstate->push_new<long_const_operation> (r_type,
+								  modulus);
+			  ada_wrap<ada_wrapped_operation> ();
 			}
 	;
 

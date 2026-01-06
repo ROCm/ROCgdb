@@ -1,5 +1,5 @@
 /* Meta support for 32-bit ELF
-   Copyright (C) 2013-2025 Free Software Foundation, Inc.
+   Copyright (C) 2013-2026 Free Software Foundation, Inc.
    Contributed by Imagination Technologies Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -1977,7 +1977,7 @@ elf_metag_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   struct elf_metag_link_hash_table *htab;
   struct elf_link_hash_entry *eh;
   struct bfd_link_hash_entry *bh;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
 
   /* Don't try to create the .plt and .got twice.  */
   htab = metag_link_hash_table (info);

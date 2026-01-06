@@ -1,5 +1,5 @@
 /* Compressed section support (intended for debug sections).
-   Copyright (C) 2008-2025 Free Software Foundation, Inc.
+   Copyright (C) 2008-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -158,7 +158,7 @@ bfd_update_compression_header (bfd *abfd, bfd_byte *contents,
     case bfd_target_elf_flavour:
       if ((abfd->flags & BFD_COMPRESS_GABI) != 0)
 	{
-	  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+	  elf_backend_data *bed = get_elf_backend_data (abfd);
 	  struct bfd_elf_section_data * esd = elf_section_data (sec);
 	  enum compression_type ch_type = (abfd->flags & BFD_COMPRESS_ZSTD
 					   ? ch_compress_zstd
@@ -225,7 +225,7 @@ bfd_check_compression_header (bfd *abfd, bfd_byte *contents,
       && (elf_section_flags (sec) & SHF_COMPRESSED) != 0)
     {
       Elf_Internal_Chdr chdr;
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+      elf_backend_data *bed = get_elf_backend_data (abfd);
       if (bed->s->elfclass == ELFCLASS32)
 	{
 	  Elf32_External_Chdr *echdr = (Elf32_External_Chdr *) contents;

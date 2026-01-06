@@ -1,5 +1,5 @@
 /* Common target dependent code for GDB on Alpha systems.
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -109,7 +109,6 @@ extern std::vector<CORE_ADDR> alpha_software_single_step
   (struct regcache *regcache);
 extern CORE_ADDR alpha_after_prologue (CORE_ADDR pc);
 
-extern void alpha_mdebug_init_abi (struct gdbarch_info, struct gdbarch *);
 extern void alpha_dwarf2_init_abi (struct gdbarch_info, struct gdbarch *);
 
 extern void alpha_supply_int_regs (struct regcache *, int, const void *,

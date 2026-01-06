@@ -1,5 +1,5 @@
 /* MIPS-specific support for ELF
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    Most of the information added by Ian Lance Taylor, Cygnus Support,
    <ian@cygnus.com>.
@@ -1743,7 +1743,7 @@ section_allows_mips16_refs_p (asection *section)
    function, or 0 if we can't decide which function that is.  */
 
 static unsigned long
-mips16_stub_symndx (const struct elf_backend_data *bed,
+mips16_stub_symndx (elf_backend_data *bed,
 		    asection *sec ATTRIBUTE_UNUSED,
 		    const Elf_Internal_Rela *relocs,
 		    const Elf_Internal_Rela *relend)
@@ -3979,9 +3979,8 @@ count_section_dynsyms (bfd *output_bfd, struct bfd_link_info *info)
   if (bfd_link_pic (info))
     {
       asection *p;
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
-      bed = get_elf_backend_data (output_bfd);
       for (p = output_bfd->sections; p ; p = p->next)
 	if ((p->flags & SEC_EXCLUDE) == 0
 	    && (p->flags & SEC_ALLOC) != 0
@@ -8263,7 +8262,7 @@ mips_elf_rel_relocation_p (bfd *abfd, asection *sec,
 			   const Elf_Internal_Rela *rel)
 {
   Elf_Internal_Shdr *rel_hdr;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   /* To determine which flavor of relocation this is, we depend on the
      fact that the INPUT_SECTION's REL_HDR is read before RELA_HDR.  */
@@ -8501,7 +8500,7 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
   const Elf_Internal_Rela *rel;
   const Elf_Internal_Rela *rel_end;
   asection *sreloc;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct mips_elf_link_hash_table *htab;
   bfd_byte *contents;
   bfd_vma addend;
@@ -10469,7 +10468,7 @@ mips_reloc_against_discarded_section (bfd *output_bfd,
 				      reloc_howto_type *howto,
 				      bfd_byte *contents)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
   int count = bed->s->int_rels_per_ext_rel;
   unsigned int r_type;
   int i;
@@ -14862,7 +14861,7 @@ _bfd_mips_elf_final_link (bfd *abfd, struct bfd_link_info *info)
   Elf32_RegInfo reginfo;
   struct ecoff_debug_info debug;
   struct mips_htab_traverse_info hti;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   const struct ecoff_debug_swap *swap = bed->elf_backend_ecoff_debug_swap;
   HDRR *symhdr = &debug.symbolic_header;
   void *mdebug_handle = NULL;
@@ -16601,7 +16600,7 @@ _bfd_mips_elf_get_synthetic_symtab (bfd *abfd,
   static const char mipssuffix[] = "@plt";
 
   bool (*slurp_relocs) (bfd *, asection *, asymbol **, bool);
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   bool micromips_p = MICROMIPS_P (abfd);
   Elf_Internal_Shdr *hdr;
   bfd_byte *plt_data;

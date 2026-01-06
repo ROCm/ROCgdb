@@ -1,5 +1,5 @@
 /* aarch64-dis.c -- AArch64 disassembler.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -1435,6 +1435,7 @@ aarch64_ext_sysins_op (const aarch64_operand *self ATTRIBUTE_UNUSED,
     case AARCH64_OPND_SYSREG_IC: sysins_ops = aarch64_sys_regs_ic; break;
     case AARCH64_OPND_SYSREG_TLBI: sysins_ops = aarch64_sys_regs_tlbi; break;
     case AARCH64_OPND_SYSREG_TLBIP: sysins_ops = aarch64_sys_regs_tlbi; break;
+    case AARCH64_OPND_SYSREG_PLBI: sysins_ops = aarch64_sys_regs_plbi; break;
     case AARCH64_OPND_SYSREG_SR:
 	sysins_ops = aarch64_sys_regs_sr;
 	 /* Let's remove op2 for rctx.  Refer to comments in the definition of

@@ -1,5 +1,5 @@
 /* Xtensa-specific support for 32-bit ELF.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1794,7 +1794,7 @@ elf_xtensa_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
     {
       struct elf_link_hash_entry *tlsbase = &htab->tlsbase->elf;
       struct bfd_link_hash_entry *bh = &tlsbase->root;
-      const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+      elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
       tlsbase->type = STT_TLS;
       if (!(_bfd_generic_link_add_one_symbol

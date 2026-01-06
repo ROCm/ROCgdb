@@ -1,5 +1,5 @@
 /* 32-bit ELF support for S+core.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by
    Brain.lin (brain.lin@sunplusct.com)
    Mei Ligang (ligang@sunnorth.com.cn)
@@ -2249,7 +2249,7 @@ s7_bfd_score_elf_relocate_section (bfd *output_bfd,
       if (bfd_link_pic (info))
 	{
 	  asection * p;
-	  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
 	  for (p = output_bfd->sections; p ; p = p->next)
 	    if ((p->flags & SEC_EXCLUDE) == 0

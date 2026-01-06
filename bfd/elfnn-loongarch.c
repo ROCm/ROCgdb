@@ -1,5 +1,5 @@
 /* LoongArch-specific support for NN-bit ELF.
-   Copyright (C) 2021-2025 Free Software Foundation, Inc.
+   Copyright (C) 2021-2026 Free Software Foundation, Inc.
    Contributed by Loongson Ltd.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -614,7 +614,7 @@ loongarch_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
   char *name;
   asection *s, *s_got;
   struct elf_link_hash_entry *h;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
   /* This function may be called more than once.  */
@@ -1866,7 +1866,7 @@ local_allocate_ifunc_dyn_relocs (struct bfd_link_info *info,
   asection *plt, *gotplt, *relplt;
   struct elf_dyn_relocs *p;
   unsigned int sizeof_reloc;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_link_hash_table *htab;
   /* If AVOID_PLT is TRUE, don't use PLT if possible.  */
   bool use_plt = !avoid_plt || h->plt.refcount > 0;
@@ -2896,7 +2896,7 @@ static void
 loongarch_elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
   BFD_ASSERT (s && s->contents);
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *loc;
 
   bed = get_elf_backend_data (abfd);
@@ -6462,7 +6462,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 				     Elf_Internal_Sym *sym)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
   if (h->plt.offset != MINUS_ONE)
     {
@@ -6658,7 +6658,7 @@ loongarch_finish_dyn (bfd *output_bfd, struct bfd_link_info *info, bfd *dynobj,
 		      asection *sdyn)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (output_bfd);
   size_t dynsize = bed->s->sizeof_dyn, skipped_size = 0;
   bfd_byte *dyncon, *dynconend;
 
@@ -6848,7 +6848,7 @@ loongarch_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
       /* Check relocation against STT_GNU_IFUNC symbol if there are
 	 dynamic symbols.  */
       bfd *abfd = info->output_bfd;
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+      elf_backend_data *bed = get_elf_backend_data (abfd);
       unsigned long r_symndx = ELFNN_R_SYM (rela->r_info);
       if (r_symndx != STN_UNDEF)
 	{

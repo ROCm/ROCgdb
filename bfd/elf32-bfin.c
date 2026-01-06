@@ -1,5 +1,5 @@
 /* ADI Blackfin BFD support for 32-bit ELF.
-   Copyright (C) 2005-2025 Free Software Foundation, Inc.
+   Copyright (C) 2005-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -3188,7 +3188,7 @@ _bfin_create_got_section (bfd *abfd, struct bfd_link_info *info)
   flagword flags, pltflags;
   asection *s;
   struct elf_link_hash_entry *h;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   int ptralign;
 
   /* This function may be called more than once.  */
@@ -3315,7 +3315,7 @@ elf32_bfinfdpic_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
      elflink.c:_bfd_elf_create_dynamic_sections().  */
   flagword flags;
   asection *s;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
 
   flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED);

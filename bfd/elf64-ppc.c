@@ -1,5 +1,5 @@
 /* PowerPC64-specific support for 64-bit ELF.
-   Copyright (C) 1999-2025 Free Software Foundation, Inc.
+   Copyright (C) 1999-2026 Free Software Foundation, Inc.
    Written by Linus Nordberg, Swox AB <info@swox.com>,
    based on elf32-ppc.c by Ian Lance Taylor.
    Largely rewritten by Alan Modra.
@@ -18451,6 +18451,8 @@ ppc64_elf_free_cached_info (bfd *abfd)
 
 #undef  ELF_OSABI
 #define	ELF_OSABI       ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT 1
 
 #undef  elf64_bed
 #define elf64_bed	elf64_powerpc_fbsd_bed

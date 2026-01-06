@@ -1,5 +1,5 @@
 /* Simulator for BPF.
-   Copyright (C) 2020-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
    Contributed by Oracle Inc.
 

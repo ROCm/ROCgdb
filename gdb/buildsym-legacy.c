@@ -1,5 +1,5 @@
 /* Legacy support routines for building symbol tables in GDB's internal format.
-   Copyright (C) 1986-2025 Free Software Foundation, Inc.
+   Copyright (C) 1986-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -96,7 +96,7 @@ get_current_subfile ()
 
 /* See buildsym.h.  */
 
-struct pending **
+std::vector<symbol *> &
 get_local_symbols ()
 {
   gdb_assert (buildsym_compunit != nullptr);
@@ -105,7 +105,7 @@ get_local_symbols ()
 
 /* See buildsym.h.  */
 
-struct pending **
+std::vector<symbol *> &
 get_file_symbols ()
 {
   gdb_assert (buildsym_compunit != nullptr);
@@ -114,7 +114,7 @@ get_file_symbols ()
 
 /* See buildsym.h.  */
 
-struct pending **
+std::vector<symbol *> &
 get_global_symbols ()
 {
   gdb_assert (buildsym_compunit != nullptr);
@@ -170,14 +170,14 @@ end_compunit_symtab (CORE_ADDR end_addr)
   return result;
 }
 
-struct context_stack *
+context_stack &
 push_context (int desc, CORE_ADDR valu)
 {
   gdb_assert (buildsym_compunit != nullptr);
   return buildsym_compunit->push_context (desc, valu);
 }
 
-struct context_stack
+context_stack
 pop_context ()
 {
   gdb_assert (buildsym_compunit != nullptr);

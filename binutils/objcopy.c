@@ -1,5 +1,5 @@
 /* objcopy.c -- copy object file from input to output, optionally massaging it.
-   Copyright (C) 1991-2025 Free Software Foundation, Inc.
+   Copyright (C) 1991-2026 Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -2816,7 +2816,7 @@ copy_object (bfd *ibfd, bfd *obfd, const bfd_arch_info_type *input_arch)
       && bfd_get_flavour (ibfd) != bfd_target_elf_flavour
       && bfd_get_flavour (obfd) == bfd_target_elf_flavour)
     {
-      const struct elf_backend_data *bed = get_elf_backend_data (obfd);
+      elf_backend_data *bed = get_elf_backend_data (obfd);
       iarch = bed->arch;
       imach = 0;
     }

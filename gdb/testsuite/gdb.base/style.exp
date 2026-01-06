@@ -1,4 +1,4 @@
-# Copyright 2018-2025 Free Software Foundation, Inc.
+# Copyright 2018-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -1033,6 +1033,20 @@ proc test_pagination_continue_styling { } {
     }
 }
 
+# Test the styling of "finish".
+proc test_finish_styling {} {
+    with_ansi_styling_terminal {
+	clean_restart $::testfile
+    }
+
+    gdb_test "break some_called_function" "Breakpoint $::decimal at .*"
+    if {![runto some_called_function]} {
+	return
+    }
+
+    gdb_test "finish" "Value returned is [style \\\$$::decimal variable] = 0"
+}
+
 # Check to see if the Python styling of disassembler output is
 # expected or not, this styling requires Python support in GDB, and
 # the Python pygments module to be available.
@@ -1078,3 +1092,4 @@ test_enable_styling_warning
 test_pagination_cmd_after_quit_styling
 test_pagination_prompt_styling
 test_pagination_continue_styling
+test_finish_styling

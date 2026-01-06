@@ -1,4 +1,4 @@
---  Copyright 2025 Free Software Foundation, Inc.
+--  Copyright 2025-2026 Free Software Foundation, Inc.
 --
 --  This program is free software; you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 procedure Prog is
    type Mod1_Type_Base is mod 2 ** 32;
    type Mod2_Type_Base is mod 2 ** 64;
+   type Mod3_Type is mod 4;
 
    --  We use subtypes here because GCC emits the above modular types
    --  as base types with the expected size, which gdb then displays
@@ -26,6 +27,7 @@ procedure Prog is
 
    X : Mod1_Type := 23;
    Y : Mod2_Type := 91;
+   Z : Mod3_Type := 2;
 
 begin
    null;  -- STOP

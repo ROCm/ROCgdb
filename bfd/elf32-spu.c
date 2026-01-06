@@ -1,6 +1,6 @@
 /* SPU specific support for 32-bit ELF
 
-   Copyright (C) 2006-2025 Free Software Foundation, Inc.
+   Copyright (C) 2006-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -5353,7 +5353,7 @@ spu_elf_modify_headers (bfd *abfd, struct bfd_link_info *info)
 {
   if (info != NULL)
     {
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed;
       struct elf_obj_tdata *tdata;
       Elf_Internal_Phdr *phdr, *last;
       struct spu_link_hash_table *htab;

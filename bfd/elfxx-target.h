@@ -1,5 +1,5 @@
 /* Target definitions for NN-bit ELF
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -141,9 +141,6 @@
 #endif
 #ifndef elf_backend_stack_align
 #define elf_backend_stack_align 16
-#endif
-#ifndef elf_backend_strtab_flags
-#define elf_backend_strtab_flags 0
 #endif
 #ifndef elf_backend_use_mmap
 #define elf_backend_use_mmap false
@@ -369,6 +366,10 @@
 
 #ifndef ELF_OSABI
 #define ELF_OSABI ELFOSABI_NONE
+#endif
+
+#ifndef ELF_OSABI_EXACT
+#define ELF_OSABI_EXACT 0
 #endif
 
 #ifndef ELF_MAXPAGESIZE
@@ -655,9 +656,6 @@
 #ifndef elf_backend_can_make_lsda_relative_eh_frame
 #define elf_backend_can_make_lsda_relative_eh_frame	_bfd_elf_can_make_relative
 #endif
-#ifndef elf_backend_can_make_multiple_eh_frame
-#define elf_backend_can_make_multiple_eh_frame 0
-#endif
 #ifndef elf_backend_encode_eh_address
 #define elf_backend_encode_eh_address		_bfd_elf_encode_eh_address
 #endif
@@ -805,23 +803,26 @@
  
 #ifndef elf_match_priority
 #define elf_match_priority \
-  (ELF_ARCH == bfd_arch_unknown ? 2 : ELF_OSABI == ELFOSABI_NONE ? 1 : 0)
+  (ELF_ARCH == bfd_arch_unknown ? 2 \
+   : ELF_OSABI == ELFOSABI_NONE || !ELF_OSABI_EXACT ? 1 \
+   : 0)
 #endif
 
 extern const struct elf_size_info _bfd_elfNN_size_info ATTRIBUTE_HIDDEN;
 
 static const struct elf_backend_data elfNN_bed =
 {
-  ELF_ARCH,			/* arch */
-  ELF_TARGET_ID,		/* target_id */
-  ELF_TARGET_OS,		/* target_os */
-  ELF_MACHINE_CODE,		/* elf_machine_code */
-  ELF_OSABI,			/* elf_osabi  */
-  ELF_MAXPAGESIZE,		/* maxpagesize */
-  ELF_MINPAGESIZE,		/* minpagesize */
-  ELF_COMMONPAGESIZE,		/* commonpagesize */
-  ELF_P_ALIGN,			/* p_align */
-  ELF_DYNAMIC_SEC_FLAGS,	/* dynamic_sec_flags */
+  ELF_ARCH,
+  ELF_OSABI,
+  ELF_MACHINE_CODE,
+  ELF_TARGET_ID,
+  ELF_TARGET_OS,
+  ELF_OSABI_EXACT,
+  ELF_MAXPAGESIZE,
+  ELF_MINPAGESIZE,
+  ELF_COMMONPAGESIZE,
+  ELF_P_ALIGN,
+  ELF_DYNAMIC_SEC_FLAGS,
   elf_backend_arch_data,
   elf_info_to_howto,
   elf_info_to_howto_rel,
@@ -895,7 +896,6 @@ static const struct elf_backend_data elfNN_bed =
   elf_backend_eh_frame_address_size,
   elf_backend_can_make_relative_eh_frame,
   elf_backend_can_make_lsda_relative_eh_frame,
-  elf_backend_can_make_multiple_eh_frame,
   elf_backend_encode_eh_address,
   elf_backend_write_section,
   elf_backend_add_glibc_version_dependency,
@@ -942,7 +942,6 @@ static const struct elf_backend_data elfNN_bed =
   elf_backend_write_secondary_reloc_section,
   elf_backend_static_tls_alignment,
   elf_backend_stack_align,
-  elf_backend_strtab_flags,
   elf_backend_collect,
   elf_backend_type_change_ok,
   elf_backend_may_use_rel_p,

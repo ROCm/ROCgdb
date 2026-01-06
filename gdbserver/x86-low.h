@@ -1,6 +1,6 @@
 /* Low level support for x86 (i386 and x86-64).
 
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 

@@ -1,4 +1,4 @@
-# Copyright 2022-2025 Free Software Foundation, Inc.
+# Copyright 2022-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ import inspect
 import json
 import threading
 from contextlib import contextmanager
+from typing import Optional
 
 import gdb
 
@@ -618,11 +619,26 @@ def terminate(**args):
     exec_and_log("kill")
 
 
+@in_gdb_thread
+def _disconnect_or_kill(terminate: Optional[bool]):
+    inf = gdb.selected_inferior()
+    if inf.connection is None:
+        # Nothing to do here.
+        return
+    if terminate is None:
+        # The default depends on whether the inferior was attached or
+        # launched.
+        terminate = not inf.was_attached
+    if terminate:
+        exec_and_log("kill")
+    elif inf.was_attached:
+        exec_and_log("detach")
+
+
 @request("disconnect", on_dap_thread=True, expect_stopped=False)
 @capability("supportTerminateDebuggee")
-def disconnect(*, terminateDebuggee: bool = False, **args):
-    if terminateDebuggee:
-        send_gdb_with_response(lambda: exec_and_log("kill"))
+def disconnect(*, terminateDebuggee: Optional[bool] = None, **args):
+    send_gdb_with_response(lambda: _disconnect_or_kill(terminateDebuggee))
     _server.shutdown()
 
 

@@ -1,5 +1,5 @@
 /* dw2gencfi.c - Support for generating Dwarf2 CFI information.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Michal Ludvig <mludvig@suse.cz>
 
    This file is part of GAS, the GNU Assembler.
@@ -1006,6 +1006,7 @@ dot_cfi_escape (int ignored ATTRIBUTE_UNUSED)
 	  /* We're still at the opening parenthesis.  Leave it to expression()
 	     to parse it and find the matching closing one.  */
 	  expression (&e->exp);
+	  e->reloc = TC_PARSE_CONS_RETURN_NONE;
 	}
       else
 	{

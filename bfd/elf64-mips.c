@@ -1,5 +1,5 @@
 /* MIPS-specific support for 64-bit ELF
-   Copyright (C) 1996-2025 Free Software Foundation, Inc.
+   Copyright (C) 1996-2026 Free Software Foundation, Inc.
    Ian Lance Taylor, Cygnus Support
    Linker support added by Mark Mitchell, CodeSourcery, LLC.
    <mark@codesourcery.com>
@@ -4868,6 +4868,8 @@ static const struct elf_size_info mips_elf64_size_info =
 
 #undef	ELF_OSABI
 #define	ELF_OSABI			ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT			1
 
 #undef	elf64_bed
 #define elf64_bed				elf64_fbsd_tradbed

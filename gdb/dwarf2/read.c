@@ -1,6 +1,6 @@
 /* DWARF 2 debugging format support for GDB.
 
-   Copyright (C) 1994-2025 Free Software Foundation, Inc.
+   Copyright (C) 1994-2026 Free Software Foundation, Inc.
    Copyright (C) 2019-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
@@ -4335,41 +4335,31 @@ static void
 fixup_go_packaging (struct dwarf2_cu *cu)
 {
   gdb::unique_xmalloc_ptr<char> package_name;
-  struct pending *list;
-  int i;
 
-  for (list = *cu->get_builder ()->get_global_symbols ();
-       list != NULL;
-       list = list->next)
-    {
-      for (i = 0; i < list->nsyms; ++i)
-	{
-	  struct symbol *sym = list->symbol[i];
+  for (symbol *sym : cu->get_builder ()->get_global_symbols ())
+    if (sym->language () == language_go && sym->loc_class () == LOC_BLOCK)
+      {
+	gdb::unique_xmalloc_ptr<char> this_package_name
+	  = go_symbol_package_name (sym);
 
-	  if (sym->language () == language_go
-	      && sym->loc_class () == LOC_BLOCK)
-	    {
-	      gdb::unique_xmalloc_ptr<char> this_package_name
-		= go_symbol_package_name (sym);
+	if (this_package_name == nullptr)
+	  continue;
 
-	      if (this_package_name == NULL)
-		continue;
-	      if (package_name == NULL)
-		package_name = std::move (this_package_name);
-	      else
-		{
-		  struct objfile *objfile = cu->per_objfile->objfile;
-		  if (strcmp (package_name.get (), this_package_name.get ()) != 0)
-		    complaint (_("Symtab %s has objects from two different Go packages: %s and %s"),
-			       (sym->symtab () != NULL
-				? symtab_to_filename_for_display
-				(sym->symtab ())
-				: objfile_name (objfile)),
-			       this_package_name.get (), package_name.get ());
-		}
-	    }
-	}
-    }
+	if (package_name == nullptr)
+	  package_name = std::move (this_package_name);
+	else
+	  {
+	    objfile *objfile = cu->per_objfile->objfile;
+
+	    if (strcmp (package_name.get (), this_package_name.get ()) != 0)
+	      complaint (_("Symtab %s has objects from two different Go "
+			   "packages: %s and %s"),
+			 (sym->symtab () != NULL
+			  ? symtab_to_filename_for_display (sym->symtab ())
+			  : objfile_name (objfile)),
+			 this_package_name.get (), package_name.get ());
+	  }
+      }
 
   if (package_name != NULL)
     {
@@ -6258,7 +6248,7 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
 			    cust->dirname (),
 			    cust->language (),
 			    0, cust);
-	  list_in_scope = get_builder ()->get_file_symbols ();
+	  list_in_scope = &get_builder ()->get_file_symbols ();
 	}
       return;
     }
@@ -6312,7 +6302,7 @@ dwarf2_cu::setup_type_unit_groups (struct die_info *die)
 			cust->dirname (),
 			cust->language (),
 			0, cust);
-      list_in_scope = get_builder ()->get_file_symbols ();
+      list_in_scope = &get_builder ()->get_file_symbols ();
 
       auto &file_names = line_header->file_names ();
       for (i = 0; i < file_names.size (); ++i)
@@ -8278,7 +8268,8 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 
   /* We're inheriting ORIGIN's children into the scope we'd put DIE's
      symbols in.  */
-  struct pending **origin_previous_list_in_scope = origin_cu->list_in_scope;
+  std::vector<symbol *> *origin_previous_list_in_scope
+    = origin_cu->list_in_scope;
   origin_cu->list_in_scope = cu->list_in_scope;
 
   if (die->tag != origin_die->tag
@@ -8513,7 +8504,6 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
   struct gdbarch *gdbarch = objfile->arch ();
-  struct context_stack *newobj;
   CORE_ADDR lowpc;
   CORE_ADDR highpc;
   struct attribute *attr, *call_line, *call_file;
@@ -8604,31 +8594,31 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   gdb_assert (cu->get_builder () != nullptr);
-  newobj = cu->get_builder ()->push_context (0, lowpc);
-  newobj->name = new_symbol (die, read_type_die (die, cu), cu, templ_func);
+  context_stack &ctx = cu->get_builder ()->push_context (0, lowpc);
+  ctx.name = new_symbol (die, read_type_die (die, cu), cu, templ_func);
 
   if (dwarf2_func_is_main_p (die, cu))
-    set_objfile_main_name (objfile, newobj->name->linkage_name (),
+    set_objfile_main_name (objfile, ctx.name->linkage_name (),
 			   cu->lang ());
 
   /* If there is a location expression for DW_AT_frame_base, record
      it.  */
   attr = dwarf2_attr (die, DW_AT_frame_base, cu);
   if (attr != nullptr)
-    dwarf2_symbol_mark_computed (attr, newobj->name, cu, 1);
+    dwarf2_symbol_mark_computed (attr, ctx.name, cu, 1);
 
   /* If there is a location for the static link, record it.  */
-  newobj->static_link = NULL;
+  ctx.static_link = NULL;
   attr = dwarf2_attr (die, DW_AT_static_link, cu);
   if (attr != nullptr)
     {
-      newobj->static_link
+      ctx.static_link
 	= XOBNEW (&objfile->objfile_obstack, struct dynamic_prop);
-      attr_to_dynamic_prop (attr, die, cu, newobj->static_link,
+      attr_to_dynamic_prop (attr, die, cu, ctx.static_link,
 			    cu->addr_type ());
     }
 
-  cu->list_in_scope = cu->get_builder ()->get_local_symbols ();
+  cu->list_in_scope = &cu->get_builder ()->get_local_symbols ();
 
   for (die_info *child_die : die->children ())
     {
@@ -8711,13 +8701,13 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
      a function declares a class that has methods).  This means that
      when we finish processing a function scope, we may need to go
      back to building a containing block's symbol lists.  */
-  *cu->get_builder ()->get_local_symbols () = cstk.locals;
+  cu->get_builder ()->get_local_symbols () = std::move (cstk.locals);
   cu->get_builder ()->set_local_using_directives (cstk.local_using_directives);
 
   /* If we've finished processing a top-level function, subsequent
      symbols go in the file symbol list.  */
   if (cu->get_builder ()->outermost_context_p ())
-    cu->list_in_scope = cu->get_builder ()->get_file_symbols ();
+    cu->list_in_scope = &cu->get_builder ()->get_file_symbols ();
 }
 
 /* Process all the DIES contained within a lexical block scope.  Start
@@ -8767,7 +8757,7 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
   inherit_abstract_dies (die, cu);
   struct context_stack cstk = cu->get_builder ()->pop_context ();
 
-  if (*cu->get_builder ()->get_local_symbols () != NULL
+  if (!cu->get_builder ()->get_local_symbols ().empty ()
       || (*cu->get_builder ()->get_local_using_directives ()) != NULL)
     {
       struct block *block
@@ -8786,7 +8776,7 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
 	 to do.  */
       dwarf2_record_block_ranges (die, block, cu);
     }
-  *cu->get_builder ()->get_local_symbols () = cstk.locals;
+  cu->get_builder ()->get_local_symbols () = std::move (cstk.locals);
   cu->get_builder ()->set_local_using_directives (cstk.local_using_directives);
 }
 
@@ -16110,7 +16100,7 @@ var_decode_location (struct attribute *attr, struct symbol *sym,
 static void
 add_ada_export_symbol (struct symbol *orig, const char *new_name,
 		       const char *orig_name, struct dwarf2_cu *cu,
-		       struct pending **list_to_add)
+		       std::vector<symbol *> &list_to_add)
 {
   struct symbol *copy
     = new (&cu->per_objfile->objfile->objfile_obstack) symbol (*orig);
@@ -16164,7 +16154,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
   const char *name;
   struct attribute *attr = NULL;
   struct attribute *attr2 = NULL;
-  struct pending **list_to_add = NULL;
+  std::vector<symbol *> *list_to_add = nullptr;
 
   int inlined_func = (die->tag == DW_TAG_inlined_subroutine);
 
@@ -16290,7 +16280,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	     belongs to.  */
 	  attr2 = dwarf2_attr (die->parent, DW_AT_external, cu);
 	  if (attr2 != nullptr && attr2->as_boolean ())
-	    list_to_add = cu->get_builder ()->get_global_symbols ();
+	    list_to_add = &cu->get_builder ()->get_global_symbols ();
 	  else
 	    list_to_add = cu->list_in_scope;
 	  break;
@@ -16310,7 +16300,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		 to be able to access them globally.  For instance, we want
 		 to be able to break on a nested subprogram without having
 		 to specify the context.  */
-	      list_to_add = cu->get_builder ()->get_global_symbols ();
+	      list_to_add = &cu->get_builder ()->get_global_symbols ();
 	    }
 	  else
 	    {
@@ -16335,7 +16325,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		     name, then create a second symbol that refers
 		     back to it.  */
 		  add_ada_export_symbol (sym, linkagename, physname, cu,
-					 list_to_add);
+					 *list_to_add);
 		}
 	    }
 	  break;
@@ -16382,7 +16372,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      if (!suppress_add)
 		{
 		  if (attr2 != nullptr && attr2->as_boolean ())
-		    list_to_add = cu->get_builder ()->get_global_symbols ();
+		    list_to_add = &cu->get_builder ()->get_global_symbols ();
 		  else
 		    list_to_add = cu->list_in_scope;
 		}
@@ -16431,8 +16421,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		     but it may be block-scoped.  */
 		  list_to_add
 		    = ((cu->list_in_scope
-			== cu->get_builder ()->get_file_symbols ())
-		       ? cu->get_builder ()->get_global_symbols ()
+			== &cu->get_builder ()->get_file_symbols ())
+		       ? &cu->get_builder ()->get_global_symbols ()
 		       : cu->list_in_scope);
 		}
 	      else
@@ -16445,7 +16435,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		     be seen here, because it will not have a location
 		     and so will be handled below.  */
 		  add_ada_export_symbol (sym, physname, linkagename, cu,
-					 list_to_add);
+					 *list_to_add);
 		}
 	    }
 	  else
@@ -16476,8 +16466,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		  sym->set_linkage_name (physname);
 		  list_to_add
 		    = ((cu->list_in_scope
-			== cu->get_builder ()->get_file_symbols ())
-		       ? cu->get_builder ()->get_global_symbols ()
+			== &cu->get_builder ()->get_file_symbols ())
+		       ? &cu->get_builder ()->get_global_symbols ()
 		       : cu->list_in_scope);
 		  SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
 		  sym->set_loc_class_index (ada_imported_index);
@@ -16489,8 +16479,8 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 		     may be block-scoped.  */
 		  list_to_add
 		    = ((cu->list_in_scope
-			== cu->get_builder ()->get_file_symbols ())
-		       ? cu->get_builder ()->get_global_symbols ()
+			== &cu->get_builder ()->get_file_symbols ())
+		       ? &cu->get_builder ()->get_global_symbols ()
 		       : cu->list_in_scope);
 
 		  sym->set_loc_class_index (LOC_UNRESOLVED);
@@ -16576,9 +16566,9 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	    {
 	      buildsym_compunit *builder = cu->get_builder ();
 	      list_to_add
-		= (cu->list_in_scope == builder->get_file_symbols ()
-		   && is_cplus_dialect (cu->lang ())
-		   ? builder->get_global_symbols ()
+		= ((cu->list_in_scope == &builder->get_file_symbols ()
+		    && is_cplus_dialect (cu->lang ()))
+		   ? &builder->get_global_symbols ()
 		   : cu->list_in_scope);
 
 	      /* The semantics of C++ state that "struct foo {
@@ -16621,21 +16611,21 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	     DW_TAG_class_type, etc. block.  */
 
 	  list_to_add
-	    = (cu->list_in_scope == cu->get_builder ()->get_file_symbols ()
+	    = (cu->list_in_scope == &cu->get_builder ()->get_file_symbols ()
 	       && is_cplus_dialect (cu->lang ())
-	       ? cu->get_builder ()->get_global_symbols ()
+	       ? &cu->get_builder ()->get_global_symbols ()
 	       : cu->list_in_scope);
 	  break;
 	case DW_TAG_imported_declaration:
 	case DW_TAG_namespace:
 	  sym->set_domain (TYPE_DOMAIN);
 	  sym->set_loc_class_index (LOC_TYPEDEF);
-	  list_to_add = cu->get_builder ()->get_global_symbols ();
+	  list_to_add = &cu->get_builder ()->get_global_symbols ();
 	  break;
 	case DW_TAG_module:
 	  sym->set_loc_class_index (LOC_TYPEDEF);
 	  sym->set_domain (MODULE_DOMAIN);
-	  list_to_add = cu->get_builder ()->get_global_symbols ();
+	  list_to_add = &cu->get_builder ()->get_global_symbols ();
 	  break;
 	case DW_TAG_common_block:
 	  sym->set_loc_class_index (LOC_COMMON_BLOCK);
@@ -16665,7 +16655,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	}
 
       if (list_to_add != NULL)
-	add_symbol_to_list (sym, list_to_add);
+	add_symbol_to_list (sym, *list_to_add);
 
       /* For the benefit of old versions of GCC, check for anonymous
 	 namespaces based on the demangled name.  */

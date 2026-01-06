@@ -1,6 +1,6 @@
 ;;; gdb-code-style.el --- code style checker for GDB contributors
 
-;; Copyright (C) 2012-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2026 Free Software Foundation, Inc.
 
 ;; Author: Yao Qi <yao@codesourcery.com>
 ;; Created: 17 April 2012

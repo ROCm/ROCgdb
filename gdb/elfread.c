@@ -1,6 +1,6 @@
 /* Read ELF (Executable and Linking Format) object files for GDB.
 
-   Copyright (C) 1991-2025 Free Software Foundation, Inc.
+   Copyright (C) 1991-2026 Free Software Foundation, Inc.
    Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Fred Fish at Cygnus Support.
@@ -41,7 +41,6 @@
 #include "gdb_bfd.h"
 #include "location.h"
 #include "auxv.h"
-#include "mdebugread.h"
 #include "ctfread.h"
 #include <string_view>
 #include "dwarf2/public.h"
@@ -1260,15 +1259,8 @@ elf_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
      an included file XCOFF info is useless.  */
 
   if (ei.mdebugsect)
-    {
-      const struct ecoff_debug_swap *swap;
+    warning ("mdebug debug information is not supported.");
 
-      /* .mdebug section, presumably holding ECOFF debugging
-	 information.  */
-      swap = get_elf_backend_data (abfd)->elf_backend_ecoff_debug_swap;
-      if (swap)
-	elfmdebug_build_psymtabs (objfile, swap, ei.mdebugsect);
-    }
   if (ei.stabsect)
     warning ("stabs debug information is not supported.");
 

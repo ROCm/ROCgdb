@@ -1,5 +1,5 @@
 /* 32-bit ELF support for ARM
-   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 1998-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -3787,16 +3787,11 @@ create_got_section (bfd *dynobj, struct bfd_link_info *info)
 static bool
 create_ifunc_sections (struct bfd_link_info *info)
 {
-  struct elf32_arm_link_hash_table *htab;
-  const struct elf_backend_data *bed;
-  bfd *dynobj;
+  struct elf32_arm_link_hash_table *htab = elf32_arm_hash_table (info);
+  bfd *dynobj = htab->root.dynobj;
+  elf_backend_data *bed = get_elf_backend_data (dynobj);
   asection *s;
-  flagword flags;
-
-  htab = elf32_arm_hash_table (info);
-  dynobj = htab->root.dynobj;
-  bed = get_elf_backend_data (dynobj);
-  flags = bed->dynamic_sec_flags;
+  flagword flags = bed->dynamic_sec_flags;
 
   if (htab->root.iplt == NULL)
     {
@@ -5915,7 +5910,7 @@ cmse_scan (bfd *input_bfd, struct elf32_arm_link_hash_table *htab,
 	   obj_attribute *out_attr, struct elf_link_hash_entry **sym_hashes,
 	   int *cmse_stub_created)
 {
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed = get_elf_backend_data (input_bfd);
   Elf_Internal_Shdr *symtab_hdr;
   unsigned i, j, sym_count, ext_start;
   Elf_Internal_Sym *cmse_sym, *local_syms;
@@ -5927,7 +5922,6 @@ cmse_scan (bfd *input_bfd, struct elf32_arm_link_hash_table *htab,
   struct elf32_arm_stub_hash_entry *stub_entry;
   bool is_v8m, new_stub, cmse_invalid, ret = true;
 
-  bed = get_elf_backend_data (input_bfd);
   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
   sym_count = symtab_hdr->sh_size / bed->s->sizeof_sym;
   ext_start = symtab_hdr->sh_info;
@@ -15707,7 +15701,7 @@ elf32_arm_update_relocs (asection *o,
 {
   void (*swap_in) (bfd *, const bfd_byte *, Elf_Internal_Rela *);
   void (*swap_out) (bfd *, const Elf_Internal_Rela *, bfd_byte *);
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   _arm_elf_section_data *eado;
   struct bfd_link_order *p;
   bfd_byte *erela_head, *erela;
@@ -15879,7 +15873,7 @@ elf32_arm_gc_mark_extra_sections (struct bfd_link_info *info,
   obj_attribute *out_attr;
   Elf_Internal_Shdr *symtab_hdr;
   unsigned i, sym_count, ext_start;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_link_hash_entry **sym_hashes;
   struct elf32_arm_link_hash_entry *cmse_hash;
   bool again, is_v8m, first_bfd_browse = true;
@@ -17090,8 +17084,7 @@ elf32_arm_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       if (tlsbase)
 	{
 	  struct bfd_link_hash_entry *bh = NULL;
-	  const struct elf_backend_data *bed
-	    = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
 	  if (!(_bfd_generic_link_add_one_symbol
 		(info, output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
@@ -17604,7 +17597,7 @@ elf32_arm_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
       /* Check relocation against STT_GNU_IFUNC symbol if there are
 	 dynamic symbols.  */
       bfd *abfd = info->output_bfd;
-      const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+      elf_backend_data *bed = get_elf_backend_data (abfd);
       unsigned long r_symndx = ELF32_R_SYM (rela->r_info);
       if (r_symndx != STN_UNDEF)
 	{
@@ -20284,6 +20277,8 @@ elf32_arm_backend_symbol_processing (bfd *abfd, asymbol *sym)
 #define elf_match_priority		128
 #undef ELF_OSABI
 #define ELF_OSABI		ELFOSABI_ARM_FDPIC
+#undef ELF_OSABI_EXACT
+#define ELF_OSABI_EXACT		1
 
 /* Like elf32_arm_link_hash_table_create -- but overrides
    appropriately for FDPIC.  */
@@ -20342,6 +20337,7 @@ elf32_arm_fdpic_omit_section_dynsym (bfd *output_bfd ATTRIBUTE_UNUSED,
 
 #undef elf_match_priority
 #undef ELF_OSABI
+#undef ELF_OSABI_EXACT
 #undef elf_backend_omit_section_dynsym
 
 /* VxWorks Targets.  */

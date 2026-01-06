@@ -1,5 +1,5 @@
 /* 32-bit ELF support for TI C6X
-   Copyright (C) 2010-2025 Free Software Foundation, Inc.
+   Copyright (C) 2010-2026 Free Software Foundation, Inc.
    Contributed by Joseph Myers <joseph@codesourcery.com>
 		  Bernd Schmidt  <bernds@codesourcery.com>
 
@@ -1721,7 +1721,7 @@ elf32_tic6x_finish_dynamic_symbol (bfd * output_bfd,
       Elf_Internal_Rela rela;
       bfd_byte *loc;
       asection *plt, *gotplt, *relplt;
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed;
 
       bed = get_elf_backend_data (output_bfd);
 
@@ -2101,7 +2101,7 @@ elf32_tic6x_rel_relocation_p (bfd *abfd, asection *sec,
 			      const Elf_Internal_Rela *rel)
 {
   Elf_Internal_Shdr *rel_hdr;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   /* To determine which flavor of relocation this is, we depend on the
      fact that the INPUT_SECTION's REL_HDR is read before RELA_HDR.  */
@@ -4285,6 +4285,8 @@ elf32_tic6x_write_section (bfd *output_bfd,
 #define	TARGET_BIG_NAME			"elf32-tic6x-linux-be"
 #undef ELF_OSABI
 #define	ELF_OSABI			ELFOSABI_C6000_LINUX
+#undef ELF_OSABI_EXACT
+#define ELF_OSABI_EXACT			1
 
 #include "elf32-target.h"
 
@@ -4301,5 +4303,7 @@ elf32_tic6x_write_section (bfd *output_bfd,
 #define	TARGET_BIG_NAME			"elf32-tic6x-elf-be"
 #undef ELF_OSABI
 #define	ELF_OSABI			ELFOSABI_C6000_ELFABI
+#undef ELF_OSABI_EXACT
+#define ELF_OSABI_EXACT			1
 
 #include "elf32-target.h"

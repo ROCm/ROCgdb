@@ -1,6 +1,6 @@
 /* GDB Notifications to Observers.
 
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.

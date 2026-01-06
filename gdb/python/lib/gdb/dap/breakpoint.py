@@ -1,4 +1,4 @@
-# Copyright 2022-2025 Free Software Foundation, Inc.
+# Copyright 2022-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -367,7 +367,9 @@ def set_insn_breakpoints(
 
 @in_gdb_thread
 def _catch_exception(filterId, **args):
-    if filterId in ("assert", "exception", "throw", "rethrow", "catch"):
+    if filterId == "unhandled":
+        cmd = ["-catch-exception", "-u"]
+    elif filterId in ("assert", "exception", "throw", "rethrow", "catch"):
         cmd = ["-catch-" + filterId]
     else:
         raise DAPException("Invalid exception filterID: " + str(filterId))
@@ -422,6 +424,11 @@ def _rewrite_exception_breakpoint(
         {
             "filter": "exception",
             "label": "Ada exceptions",
+            "supportsCondition": True,
+        },
+        {
+            "filter": "unhandled",
+            "label": "Ada exceptions without a handler",
             "supportsCondition": True,
         },
         {

@@ -38,7 +38,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 
 minimum_pre_commit_version: 3.2.0
-default_install_hook_types: [pre-commit, post-commit]
+default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
 repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
@@ -78,7 +78,8 @@ repos:
       entry: gdb/contrib/codespell-log.sh
       args: [--config, gdb/contrib/setup.cfg]
       always_run: true
-      stages: [post-commit]
+      verbose: true
+      stages: [commit-msg]
   - repo: local
     hooks:
     - id: check-include-guards
@@ -90,7 +91,8 @@ repos:
       exclude: '.*/testsuite/.*'
     - id: check-gnu-style
       name: check-gnu-style
-      language: script
+      language: python
+      additional_dependencies: ['termcolor', 'unidiff']
       entry: gdb/contrib/check-gnu-style-pre-commit.sh
       files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
       exclude: '.*/testsuite/.*'
@@ -105,14 +107,15 @@ repos:
       stages: [pre-commit]
     - id: pre-commit-setup
       name: pre-commit-setup
-      language: script
+      language: python
       entry: gdb/contrib/pre-commit-setup.py
+      additional_dependencies: ["pyyaml"]
       always_run: true
       require_serial: true
   - repo: https://github.com/nmoroze/tclint
-    rev: v0.6.2
+    rev: v0.7.0
     hooks:
     - id: tclint
-      args: [--config, gdb/tclint.toml, --commands, gdb/testsuite/tclint-plugin.py]
+      args: [--commands, gdb/testsuite/tclint-plugin.py]
       types_or: [file]
       files: '^gdb/testsuite/.*\.(exp|tcl)$'

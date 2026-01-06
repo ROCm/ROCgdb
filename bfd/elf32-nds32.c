@@ -1,5 +1,5 @@
 /* NDS32-specific support for 32-bit ELF.
-   Copyright (C) 2012-2025 Free Software Foundation, Inc.
+   Copyright (C) 2012-2026 Free Software Foundation, Inc.
    Contributed by Andes Technology Corporation.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -3794,7 +3794,7 @@ nds32_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   struct elf_nds32_link_hash_table *htab;
   flagword flags, pltflags;
   register asection *s;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   int ptralign = 2;		/* 32-bit  */
   const char *secname;
   char *relname;

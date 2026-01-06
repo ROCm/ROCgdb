@@ -1,7 +1,7 @@
 /* -*- c -*-
    Declarations and definitions of codes relating to the DWARF2 and
    DWARF3 symbolic debugging information formats.
-   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 1992-2026 Free Software Foundation, Inc.
    Copyright (C) 2020-2025 Advanced Micro Devices, Inc. All rights reserved.
 
    Written by Gary Funck (gary@intrepid.com) The Ada Joint Program

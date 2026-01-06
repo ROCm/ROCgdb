@@ -1,5 +1,5 @@
 /* SPARC-specific support for 32-bit ELF
-   Copyright (C) 1993-2025 Free Software Foundation, Inc.
+   Copyright (C) 1993-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -175,7 +175,7 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 			      const Elf_Internal_Rela *rela)
 {
   bfd *abfd = info->output_bfd;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct _bfd_sparc_elf_link_hash_table *htab
     = _bfd_sparc_elf_hash_table (info);
   BFD_ASSERT (htab != NULL);
@@ -221,6 +221,7 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 #define ELF_TARGET_ID	SPARC_ELF_DATA
 #define ELF_MACHINE_CODE EM_SPARC
 #define ELF_MACHINE_ALT1 EM_SPARC32PLUS
+#define ELF_OSABI	ELFOSABI_GNU
 #define ELF_MAXPAGESIZE 0x10000
 #define ELF_COMMONPAGESIZE 0x2000
 
@@ -282,6 +283,9 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 
 #undef  ELF_TARGET_OS
 #define ELF_TARGET_OS				is_solaris
+#undef	ELF_OSABI
+#define	ELF_OSABI				ELFOSABI_SOLARIS
+#undef	ELF_OSABI_EXACT
 
 #undef  elf32_bed
 #define elf32_bed				elf32_sparc_sol2_bed
@@ -290,9 +294,6 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
    boundary.  */
 #undef	elf_backend_static_tls_alignment
 #define elf_backend_static_tls_alignment	8
-
-#undef	elf_backend_strtab_flags
-#define elf_backend_strtab_flags	SHF_STRINGS
 
 static bool
 elf32_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,
@@ -330,6 +331,8 @@ elf32_sparc_vxworks_final_write_processing (bfd *abfd)
 
 #undef	ELF_TARGET_OS
 #define	ELF_TARGET_OS	is_vxworks
+#undef	ELF_OSABI
+#undef	ELF_OSABI_EXACT
 
 #undef  elf_backend_want_got_plt
 #define elf_backend_want_got_plt		1
@@ -352,7 +355,6 @@ elf32_sparc_vxworks_final_write_processing (bfd *abfd)
 #define elf_backend_final_write_processing \
   elf32_sparc_vxworks_final_write_processing
 #undef  elf_backend_static_tls_alignment
-#undef  elf_backend_strtab_flags
 #undef  elf_backend_copy_special_section_fields
 
 #undef  elf32_bed

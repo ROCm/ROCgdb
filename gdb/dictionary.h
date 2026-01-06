@@ -1,6 +1,6 @@
 /* Routines for name->symbol lookups in GDB.
 
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
 
    Contributed by David Carlton <carlton@bactrian.org> and by Kealia,
    Inc.
@@ -34,7 +34,6 @@ struct multidictionary;
 
 struct symbol;
 struct obstack;
-struct pending;
 struct language_defn;
 
 /* The creation functions for various implementations of
@@ -46,7 +45,7 @@ struct language_defn;
 
 extern struct multidictionary *
   mdict_create_hashed (struct obstack *obstack,
-		       const struct pending *symbol_list);
+		       const std::vector<struct symbol *> &symbol_list);
 
 /* Create a multi-language dictionary of symbols, implemented
    via a hashtable that grows as necessary.  The initial dictionary of
@@ -64,7 +63,7 @@ extern struct multidictionary *
 
 extern struct multidictionary *
   mdict_create_linear (struct obstack *obstack,
-		       const struct pending *symbol_list);
+		       const std::vector<struct symbol *> &symbol_list);
 
 /* Create a multi-language dictionary of symbols, implemented
    via an array that grows as necessary.  The multidictionary initially
@@ -91,7 +90,7 @@ extern void mdict_add_symbol (struct multidictionary *mdict,
 /* Utility to add a list of symbols to a multidictionary.  */
 
 extern void mdict_add_pending (struct multidictionary *mdict,
-			       const struct pending *symbol_list);
+			       const std::vector<struct symbol *> &symbol_list);
 
 /* A type containing data that is used when iterating over all symbols
    in a dictionary.  Don't ever look at its innards; this type would

@@ -1,5 +1,5 @@
 /* TILE-Gx-specific support for ELF.
-   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2011-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1065,7 +1065,7 @@ static const tilegx_create_func reloc_to_create_func[] =
 static void
 tilegx_elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *loc;
 
   bed = get_elf_backend_data (abfd);
@@ -1413,7 +1413,7 @@ tilegx_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
   flagword flags;
   asection *s, *s_got;
   struct elf_link_hash_entry *h;
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
   /* This function may be called more than once.  */
@@ -3786,7 +3786,7 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
       Elf_Internal_Rela rela;
       bfd_byte *loc;
       bfd_vma r_offset;
-      const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+      elf_backend_data *bed = get_elf_backend_data (output_bfd);
 
 
       int rela_index;
@@ -3918,7 +3918,7 @@ tilegx_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 		   asection *splt ATTRIBUTE_UNUSED)
 {
   struct tilegx_elf_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *dyncon, *dynconend;
   size_t dynsize;
 

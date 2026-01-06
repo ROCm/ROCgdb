@@ -1,5 +1,5 @@
 /* IA-64 support for OpenVMS
-   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 1998-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -1263,7 +1263,7 @@ elf64_ia64_create_dynamic_sections (bfd *abfd,
   struct elf64_ia64_link_hash_table *ia64_info;
   asection *s;
   flagword flags;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
 
   ia64_info = elf64_ia64_hash_table (info);
   if (ia64_info == NULL)
@@ -2772,7 +2772,7 @@ elf64_ia64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       asection *dynsec;
       asection *dynstrsec;
       Elf_Internal_Dyn dyn;
-      const struct elf_backend_data *bed;
+      elf_backend_data *bed;
       unsigned int shl_num = 0;
       bfd_vma fixups_off = 0;
       bfd_vma strdyn_off;
@@ -4747,7 +4747,7 @@ elf64_vms_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
   Elf_Internal_Sym *isymbuf = NULL;
   Elf_Internal_Sym *isym;
   Elf_Internal_Sym *isymend;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct elf_link_hash_table *htab;
   bfd_size_type amt;
 
@@ -5568,6 +5568,8 @@ static const struct elf_size_info elf64_ia64_vms_size_info = {
 
 #undef  ELF_OSABI
 #define ELF_OSABI			ELFOSABI_OPENVMS
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT			1
 
 #undef  ELF_MAXPAGESIZE
 #define ELF_MAXPAGESIZE			0x10000	/* 64KB */

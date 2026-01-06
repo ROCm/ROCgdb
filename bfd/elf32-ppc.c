@@ -1,5 +1,5 @@
 /* PowerPC-specific support for 32-bit ELF
-   Copyright (C) 1994-2025 Free Software Foundation, Inc.
+   Copyright (C) 1994-2026 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -10433,6 +10433,8 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
 
 #undef  ELF_OSABI
 #define ELF_OSABI	ELFOSABI_FREEBSD
+#undef	ELF_OSABI_EXACT
+#define	ELF_OSABI_EXACT	1
 
 #undef  elf32_bed
 #define elf32_bed	elf32_powerpc_fbsd_bed
@@ -10450,6 +10452,7 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
 #define TARGET_BIG_NAME		"elf32-powerpc-vxworks"
 
 #undef  ELF_OSABI
+#undef	ELF_OSABI_EXACT
 
 #undef ELF_TARGET_OS
 #define ELF_TARGET_OS		is_vxworks

@@ -1,6 +1,6 @@
 /* Common target dependent code for GNU/Linux on PPC systems.
 
-   Copyright (C) 2018-2025 Free Software Foundation, Inc.
+   Copyright (C) 2018-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 

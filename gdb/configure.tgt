@@ -157,17 +157,17 @@ aarch64*-*-linux*)
 
 alpha*-*-linux*)
 	# Target: Little-endian Alpha running Linux
-	gdb_target_obs="alpha-mdebug-tdep.o alpha-linux-tdep.o \
+	gdb_target_obs="alpha-linux-tdep.o \
 			linux-tdep.o solib-svr4.o solib-svr4-linux.o"
 	;;
 alpha*-*-netbsd* | alpha*-*-knetbsd*-gnu)
 	# Target: NetBSD/alpha
-	gdb_target_obs="alpha-mdebug-tdep.o alpha-bsd-tdep.o \
+	gdb_target_obs="alpha-bsd-tdep.o \
 			alpha-netbsd-tdep.o"
 	;;
 alpha*-*-openbsd*)
 	# Target: OpenBSD/alpha
-	gdb_target_obs="alpha-mdebug-tdep.o alpha-bsd-tdep.o \
+	gdb_target_obs="alpha-bsd-tdep.o \
 			alpha-netbsd-tdep.o alpha-obsd-tdep.o netbsd-tdep.o"
 	;;
 

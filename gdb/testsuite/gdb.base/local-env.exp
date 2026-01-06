@@ -1,4 +1,4 @@
-# Copyright 1997-2025 Free Software Foundation, Inc.
+# Copyright 1997-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,7 +48,12 @@ gdb_test_multiple "show environment" "show environment works" -lbl {
     }
 }
 
-gdb_assert {$saw_env == 1} "show environment displayed variable"
+set test "show environment displayed variable"
+if {[is_remote host]} {
+    unsupported $test
+} else {
+    gdb_assert {$saw_env == 1} $test
+}
 
 # Verify that we can unset a specific environment variable.
 gdb_test_no_output "unset local-environment EDITOR" \

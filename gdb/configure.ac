@@ -1,5 +1,5 @@
 dnl Autoconf configure script for GDB, the GNU debugger.
-dnl Copyright (C) 1995-2025 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2026 Free Software Foundation, Inc.
 dnl
 dnl This file is part of GDB.
 dnl
@@ -194,27 +194,13 @@ esac])
 AC_ARG_ENABLE(binary_file_formats,
 	      AS_HELP_STRING([--enable-binary-file-formats=FORMATS],
 			     [enable support for selected file formats (default 'all')
-			      available formats: coff, elf, macho, mips, xcoff, all]),
+			      available formats: coff, elf, macho, xcoff, all]),
 [case "${enableval}" in
  yes | "") AC_MSG_ERROR(enable-binary-file-formats option must specify file formats or 'all')
 	    ;;
   no)       enable_binary_file_formats= ;;
   *)        enable_binary_file_formats=$enableval ;;
 esac], [enable_binary_file_formats=all])
-
-# Check whether to support mdebug/ecoff debug information.
-AC_ARG_ENABLE(gdb-mdebug-support,
-AS_HELP_STRING([--enable-gdb-mdebug-support],
-	       [Enable support for the mdebug debuginfo format (default 'yes')]),
-[GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-mdebug-support])],
-[enable_gdb_mdebug_support=yes])
-
-if test "x${enable_gdb_mdebug_support}" != "xno"; then
-    CONFIG_SRCS="$CONFIG_SRCS mdebugread.c"
-    CONFIG_OBS="$CONFIG_OBS mdebugread.o"
-    AC_DEFINE(MDEBUG_FORMAT_AVAILABLE, 1,
-	      [defined if mdebug format was requested.])
-fi
 
 # Check whether to support dwarf debug information
 AC_ARG_ENABLE(gdb-dwarf-support,
@@ -1985,7 +1971,7 @@ WIN32LIBS="$WIN32LIBS $WIN32APILIBS"
 # Object files to be used when building with support for all file formats.
 # This should not have elf or macho, as support for those formats depends
 # on BFD enabling them as well.
-all_binary_file_srcs="\$(mips_SRCS) \$(coff_SRCS) \$(xcoff_SRCS)"
+all_binary_file_srcs="\$(coff_SRCS) \$(xcoff_SRCS)"
 
 bfd_supports_elf=no
 # Add ELF support to GDB, but only if BFD includes ELF support.

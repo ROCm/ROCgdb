@@ -1,5 +1,5 @@
 /* SPARC-specific support for ELF
-   Copyright (C) 2005-2025 Free Software Foundation, Inc.
+   Copyright (C) 2005-2026 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -750,7 +750,7 @@ sparc_put_word_64 (bfd *abfd, bfd_vma val, void *ptr)
 static void
 sparc_elf_append_rela (bfd *abfd, asection *s, Elf_Internal_Rela *rel)
 {
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *loc;
 
   bed = get_elf_backend_data (abfd);
@@ -1242,7 +1242,7 @@ _bfd_sparc_elf_create_dynamic_sections (bfd *dynobj,
 static bool
 create_ifunc_sections (bfd *abfd, struct bfd_link_info *info)
 {
-  const struct elf_backend_data *bed = get_elf_backend_data (abfd);
+  elf_backend_data *bed = get_elf_backend_data (abfd);
   struct elf_link_hash_table *htab = elf_hash_table (info);
   flagword flags, pltflags;
   asection *s;
@@ -2711,7 +2711,7 @@ static bfd_vma
 tpoff (struct bfd_link_info *info, bfd_vma address)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
-  const struct elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   bfd_vma static_tls_size;
 
   /* If tls_sec is NULL, we should have signalled an error already.  */
@@ -4223,7 +4223,7 @@ _bfd_sparc_elf_finish_dynamic_symbol (bfd *output_bfd,
 				      Elf_Internal_Sym *sym)
 {
   struct _bfd_sparc_elf_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   struct _bfd_sparc_elf_link_hash_entry  *eh;
   bool resolved_to_zero;
 
@@ -4484,7 +4484,7 @@ sparc_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 		  asection *splt ATTRIBUTE_UNUSED)
 {
   struct _bfd_sparc_elf_link_hash_table *htab;
-  const struct elf_backend_data *bed;
+  elf_backend_data *bed;
   bfd_byte *dyncon, *dynconend;
   size_t dynsize;
   int stt_regidx = -1;

@@ -1,4 +1,4 @@
-@c Copyright (C) 2009-2025 Free Software Foundation, Inc.
+@c Copyright (C) 2009-2026 Free Software Foundation, Inc.
 @c Contributed by ARM Ltd.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
@@ -275,6 +275,8 @@ automatically cause those extensions to be disabled.
  @tab Enable additional prediction restriction instructions.
 @item @code{profile} @tab
  @tab Enable statistical profiling extensions.
+@item @code{poe2} @tab
+ @tab Enable Permission overlays extension 2.
 @item @code{ras} @tab
  @tab Enable the Reliability, Availability and Serviceability extension.
 @item @code{rasv2} @tab @code{ras}
@@ -379,6 +381,8 @@ automatically cause those extensions to be disabled.
  @tab Enable the Translation Hardening Extension.
 @item @code{tme} @tab
  @tab Enable the Transactional Memory Extension.
+@item @code{tev} @tab
+ @tab TIndex Exception-like Vector Extension.
 @item @code{wfxt} @tab
  @tab Enable @code{wfet} and @code{wfit} instructions.
 @item @code{xs} @tab

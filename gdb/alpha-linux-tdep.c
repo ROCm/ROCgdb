@@ -1,5 +1,5 @@
 /* Target-dependent code for GNU/Linux on Alpha.
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -358,9 +358,6 @@ alpha_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Hook into the DWARF CFI frame unwinder.  */
   alpha_dwarf2_init_abi (info, gdbarch);
-
-  /* Hook into the MDEBUG frame unwinder.  */
-  alpha_mdebug_init_abi (info, gdbarch);
 
   alpha_gdbarch_tdep *tdep = gdbarch_tdep<alpha_gdbarch_tdep> (gdbarch);
   tdep->dynamic_sigtramp_offset = alpha_linux_sigtramp_offset;

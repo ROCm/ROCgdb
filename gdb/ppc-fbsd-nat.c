@@ -1,6 +1,6 @@
 /* Native-dependent code for PowerPC's running FreeBSD, for GDB.
 
-   Copyright (C) 2013-2025 Free Software Foundation, Inc.
+   Copyright (C) 2013-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 

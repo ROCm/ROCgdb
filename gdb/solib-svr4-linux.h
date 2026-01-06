@@ -1,6 +1,6 @@
 /* Target-dependent code for GNU/Linux using SVR4-style libraries.
 
-   Copyright (C) 2025 Free Software Foundation, Inc.
+   Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 

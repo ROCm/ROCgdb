@@ -1,5 +1,5 @@
 /* Linker command language support.
-   Copyright (C) 1991-2025 Free Software Foundation, Inc.
+   Copyright (C) 1991-2026 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -7175,11 +7175,10 @@ undef_start_stop (struct bfd_link_hash_entry *h)
       h->u.undef.abfd = NULL;
       if (is_elf_hash_table (link_info.hash))
 	{
-	  const struct elf_backend_data *bed;
+	  elf_backend_data *bed = get_elf_backend_data (link_info.output_bfd);
 	  struct elf_link_hash_entry *eh = (struct elf_link_hash_entry *) h;
 	  unsigned int was_forced = eh->forced_local;
 
-	  bed = get_elf_backend_data (link_info.output_bfd);
 	  (*bed->elf_backend_hide_symbol) (&link_info, eh, true);
 	  if (!eh->ref_regular_nonweak)
 	    h->type = bfd_link_hash_undefweak;
@@ -7284,8 +7283,7 @@ lang_symbol_tweaks (void)
 	      || h->root.type == bfd_link_hash_undefweak
 	      || h->root.type == bfd_link_hash_common))
 	{
-	  const struct elf_backend_data *bed;
-	  bed = get_elf_backend_data (link_info.output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (link_info.output_bfd);
 	  (*bed->elf_backend_hide_symbol) (&link_info, h, true);
 	  if (ELF_ST_VISIBILITY (h->other) != STV_INTERNAL)
 	    h->other = (h->other & ~ELF_ST_VISIBILITY (-1)) | STV_HIDDEN;
