@@ -56,12 +56,15 @@ extract_unsigned_integer (const gdb_byte *addr, int len,
 extern CORE_ADDR extract_typed_address (const gdb_byte *buf,
 					struct type *type);
 
-/* All 'store' functions accept a host-format integer and store a
-   target-format integer at ADDR which is LEN bytes long.  */
+/* Take host-format integer VAL and store it as target-format integer at
+   DST.  */
 
 template<typename T, typename = RequireLongest<T>>
 extern void store_integer (gdb::array_view<gdb_byte> dst,
 			   bfd_endian byte_order, T val);
+
+/* Take host-format integer VAL and store it as target-format integer at
+   ADDR which is LEN bytes long.  */
 
 template<typename T>
 static inline void
@@ -70,12 +73,18 @@ store_integer (gdb_byte *addr, int len, bfd_endian byte_order, T val)
   return store_integer (gdb::make_array_view (addr, len), byte_order, val);
 }
 
+/* Take host-format signed integer VAL and store it as target-format
+   signed integer at DST.  */
+
 static inline void
 store_signed_integer (gdb::array_view<gdb_byte> dst, bfd_endian byte_order,
 		      LONGEST val)
 {
   return store_integer (dst, byte_order, val);
 }
+
+/* Take host-format signed integer VAL and store it as target-format
+   signed integer at ADDR which is LEN bytes long.  */
 
 static inline void
 store_signed_integer (gdb_byte *addr, int len, bfd_endian byte_order,
@@ -85,12 +94,18 @@ store_signed_integer (gdb_byte *addr, int len, bfd_endian byte_order,
 			       val);
 }
 
+/* Take host-format unsigned integer VAL and store it as target-format
+   unsigned integer at DST.  */
+
 static inline void
 store_unsigned_integer (gdb::array_view<gdb_byte> dst, bfd_endian byte_order,
 			ULONGEST val)
 {
   return store_integer (dst, byte_order, val);
 }
+
+/* Take host-format unsigned integer VAL and store it as target-format
+   unsigned integer at ADDR which is LEN bytes long.  */
 
 static inline void
 store_unsigned_integer (gdb_byte *addr, int len, bfd_endian byte_order,

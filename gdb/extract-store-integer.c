@@ -129,8 +129,8 @@ extract_typed_address (const gdb_byte *buf, struct type *type)
   return gdbarch_pointer_to_address (type->arch (), type, buf);
 }
 
-/* All 'store' functions accept a host-format integer and store a
-   target-format integer at ADDR which is LEN bytes long.  */
+/* See extract-store-integer.h.  */
+
 template<typename T, typename>
 void
 store_integer (gdb::array_view<gdb_byte> dst, enum bfd_endian byte_order,
