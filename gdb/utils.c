@@ -189,7 +189,9 @@ vwarning (const char *string, va_list args)
 void
 verror (const char *string, va_list args)
 {
-  throw_verror (GENERIC_ERROR, string, args);
+  string_file text (true);
+  text.vprintf (string, args);
+  throw gdb_exception_error (GENERIC_ERROR, text.release ());
 }
 
 /* Emit a message and abort.  */

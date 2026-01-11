@@ -504,3 +504,4 @@ tab_expansion_file::write (const char *buf, long length_buf)
    because these classes aren't instantiated in very many ways.  */
 template class escape_buffering_file<stdio_file>;
 template class no_terminal_escape_file<stdio_file>;
+template class no_terminal_escape_file<wrapped_file<ui_file *>>;

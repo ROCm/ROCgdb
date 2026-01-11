@@ -130,6 +130,13 @@ struct gdb_exception
   {
   }
 
+  gdb_exception (enum return_reason r, enum errors e, std::string &&str)
+    : reason (r),
+      error (e),
+      message (std::make_shared<std::string> (std::move (str)))
+  {
+  }
+
   gdb_exception (enum return_reason r, enum errors e,
 		 const char *fmt, va_list ap)
     ATTRIBUTE_PRINTF (4, 0)
@@ -274,6 +281,11 @@ struct gdb_exception_error : public gdb_exception
   gdb_exception_error (enum errors e, const char *fmt, va_list ap)
     ATTRIBUTE_PRINTF (3, 0)
     : gdb_exception (RETURN_ERROR, e, fmt, ap)
+  {
+  }
+
+  gdb_exception_error (enum errors e, std::string &&str)
+    : gdb_exception (RETURN_ERROR, e, std::move (str))
   {
   }
 
