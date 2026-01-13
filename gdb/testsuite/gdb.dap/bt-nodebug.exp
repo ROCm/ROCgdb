@@ -45,8 +45,8 @@ dap_check_response "launch response" launch $launch_id
 dap_wait_for_event_and_check "inferior started" thread "body reason" started
 
 lassign [dap_wait_for_event_and_check "stopped at function breakpoint" stopped \
-	    "body reason" breakpoint \
-	    "body hitBreakpointIds" $fn_bpno] unused objs
+	     "body reason" breakpoint \
+	     "body hitBreakpointIds" $fn_bpno] unused objs
 
 # The bug was that this request would fail.
 set obj [dap_check_request_and_response "backtrace" \
@@ -60,8 +60,8 @@ gdb_assert {[dict get [lindex $frames 1] name] == "no_debug_info"} \
 
 # Breakpoint can be set without source file information
 set obj [dap_check_request_and_response "set breakpoint on no_debug_info" \
-	    setFunctionBreakpoints \
-	    {o breakpoints [a [o name [s no_debug_info]]]}]
+	     setFunctionBreakpoints \
+	     {o breakpoints [a [o name [s no_debug_info]]]}]
 set breakpoints [dict get [lindex $obj 0] body breakpoints]
 gdb_assert {[dict exists [lindex $breakpoints 0] instructionReference]} \
     "breakpoint has instructionReference"

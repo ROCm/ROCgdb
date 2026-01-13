@@ -95,8 +95,8 @@ dap_wait_for_event_and_check "inferior started" thread "body reason" started
 # While waiting for the stopped event, we might receive breakpoint changed
 # events indicating some breakpoint addresses were relocated.
 lassign [dap_wait_for_event_and_check "stopped at function breakpoint" stopped \
-	    "body reason" breakpoint \
-	    "body hitBreakpointIds" $fn_bpno] unused objs
+	     "body reason" breakpoint \
+	     "body hitBreakpointIds" $fn_bpno] unused objs
 foreach obj $objs {
     if { [dict get $obj "type"] != "event" } {
 	continue
