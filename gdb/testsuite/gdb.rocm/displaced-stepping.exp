@@ -76,7 +76,7 @@ with_rocm_gpu_lock {
 
     with_test_prefix "getpc" {
 	gdb_test "x/i \$pc" \
-		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_getpc_b64\[ \t\]+s\\\[4:5\\\]"
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_get_?pc_(i|b)64\[ \t\]+s\\\[4:5\\\]"
 
 	set_regs { "s4" "s5" } 0 "clear s4,s5"
 	# sample output: 0x00007ffff609140c  36  asm(" .globl GETPC    \n\t"
@@ -90,7 +90,7 @@ with_rocm_gpu_lock {
 
     with_test_prefix "swappc" {
 	gdb_test "x/i \$pc" \
-		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_swappc_b64\[ \t\]+s\\\[4:5\\\], s\\\[6:7\\\]"
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_swap_?pc_(i|b)64\[ \t\]+s\\\[4:5\\\], s\\\[6:7\\\]"
 
 	# sample output: Thread 7 ... hit Breakpoint 5, ... in kernel
 	gdb_test "stepi" "Thread $::decimal.*hit Breakpoint $::decimal.*in kernel.*" \
@@ -102,7 +102,7 @@ with_rocm_gpu_lock {
 
     with_test_prefix "call" {
 	gdb_test "x/i \$pc" \
-		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_call_b64\[ \t\]+s\\\[4:5\\\], 1"
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_call_(i|b)64\[ \t\]+s\\\[4:5\\\], 1"
 
 	gdb_test "stepi" "$::hex\\s+$::decimal\\s+asm\\\(\\\".*" "simulate"
 
@@ -114,7 +114,7 @@ with_rocm_gpu_lock {
 
     with_test_prefix "setpc" {
 	gdb_test "x/i \$pc" \
-		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_setpc_b64\[ \t\]+s\\\[6:7\\\]"
+		"=> $::hex <\[^\r\n\]*>:\[ \t\]+s_set_?pc_(i|b)64\[ \t\]+s\\\[6:7\\\]"
 
 	gdb_test "stepi" "Thread $::decimal.*hit Breakpoint $::decimal.*in kernel.*" \
 	    "simulate"
