@@ -235,7 +235,7 @@ handle_redirections (int from_tty)
       return;
     }
 
-  stdio_file_up log = std::make_unique<no_terminal_escape_file> ();
+  stdio_file_up log = std::make_unique<no_terminal_escape_file<stdio_file>> ();
   if (!log->open (logging_filename.c_str (), logging_overwrite ? "w" : "a"))
     perror_with_name (_("set logging"));
 

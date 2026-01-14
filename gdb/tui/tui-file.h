@@ -23,7 +23,7 @@
 
 /* A STDIO-like output stream for the TUI.  */
 
-class tui_file : public escape_buffering_file
+class tui_file : public escape_buffering_file<stdio_file>
 {
 public:
   tui_file (FILE *stream, bool buffered)
