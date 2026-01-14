@@ -396,6 +396,11 @@ class wrapped_file : public ui_file
 {
 public:
 
+  explicit wrapped_file (T stream)
+    : m_stream (std::move (stream))
+  {
+  }
+
   bool isatty () override
   { return m_stream->isatty (); }
 
@@ -420,6 +425,9 @@ public:
   void puts_unfiltered (const char *str) override
   { m_stream->puts_unfiltered (str); }
 
+  void write (const char *buf, long length_buf) override
+  { return m_stream->write (buf, length_buf); }
+
   void write_async_safe (const char *buf, long length_buf) override
   { return m_stream->write_async_safe (buf, length_buf); }
 
@@ -429,11 +437,6 @@ public:
   }
 
 protected:
-
-  explicit wrapped_file (T stream)
-    : m_stream (std::move (stream))
-  {
-  }
 
   /* The underlying stream.  */
   T m_stream;

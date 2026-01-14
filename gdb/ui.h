@@ -173,11 +173,6 @@ struct ui
     passthrough_file () : wrapped_file<ui_file_ptr<F>> ({})
     {
     }
-
-    void write (const char *buf, long len) override
-    {
-      this->m_stream->write (buf, len);
-    }
   };
 
   /* The fields below that start with "m_" are "private".  They're
