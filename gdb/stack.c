@@ -1920,7 +1920,8 @@ public:
       error (_("Missing function name argument"));
     frame_info_ptr fid = find_frame_for_function (arg);
     if (fid == NULL)
-      error (_("No frame for function \"%s\"."), arg);
+      error (_("No frame for function \"%ps\"."),
+	     styled_string (function_name_style.style (), arg));
     FPTR (fid, false);
   }
 
