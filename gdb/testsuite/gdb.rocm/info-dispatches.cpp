@@ -32,6 +32,23 @@
     }									  \
   while (0)
 
+/* Make sure kernels running on STREAM are dispatched.  */
+
+#define flush_dispatch(STREAM) \
+  flush_dispatch_1 (STREAM, __FILE__, __LINE__)
+
+static void
+flush_dispatch_1 (hipStream_t stream, const char *file, int line)
+{
+  hipError_t error = hipStreamQuery (stream);
+  if (error != hipSuccess && error != hipErrorNotReady)
+    {
+      fprintf (stderr, "error: '%s'(%d) at %s:%d\n",
+	       hipGetErrorString (error), error, file, line);
+      exit (EXIT_FAILURE);
+    }
+}
+
 /* Two single-wave kernels to test `info dispatches` with
    multiple dispatches.  */
 
@@ -61,6 +78,13 @@ main (int argc, char* argv[])
 			stream1>>> ();
   single_wave_kernel2<<<numBlocks, numThreadsPerBlock, sharedMemBytes,
 			stream2>>> ();
+
+  /* Make sure both kernels are dispatched on Windows, otherwise they
+     may only be launched by the hipStreamSynchronize calls below, and
+     the first call would hang as kernel1 would be stopped at a
+     breakpoint.  */
+  flush_dispatch (stream1);
+  flush_dispatch (stream2);
 
   CHECK (hipStreamSynchronize (stream1));
   CHECK (hipStreamSynchronize (stream2));
