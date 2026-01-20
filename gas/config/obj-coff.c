@@ -1493,7 +1493,7 @@ coff_adjust_section_syms (bfd *abfd ATTRIBUTE_UNUSED,
 
   secsym = section_symbol (sec);
   /* This is an estimate; we'll plug in the real value using
-     SET_SECTION_RELOCS later */
+     FINALIZE_SECTION_RELOCS later */
 #ifdef OBJ_XCOFF
   if (S_GET_STORAGE_CLASS (secsym) == C_DWARF)
     SA_SET_SECT_NRELOC (secsym, nrelocs);
@@ -1512,6 +1512,27 @@ void
 coff_frob_file_after_relocs (void)
 {
   bfd_map_over_sections (stdoutput, coff_adjust_section_syms, NULL);
+}
+
+/* Set relocations for the section and then store the number of relocations
+   in its aux entry.  */
+
+bool
+obj_coff_finalize_section_relocs (asection *sec, arelent **relocs,
+				  unsigned int n)
+{
+  symbolS *sect_sym;
+
+  if (!bfd_finalize_section_relocs (stdoutput, sec, n ? relocs : NULL, n))
+    return false;
+  sect_sym = section_symbol (sec);
+#ifdef OBJ_XCOFF
+  if (S_GET_STORAGE_CLASS (sect_sym) == C_DWARF)
+    SA_SET_SECT_NRELOC (sect_sym, n);
+  else
+#endif
+    SA_SET_SCN_NRELOC (sect_sym, n);
+  return true;
 }
 
 /* Implement the .section pseudo op:

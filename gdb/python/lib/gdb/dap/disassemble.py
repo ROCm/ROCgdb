@@ -38,10 +38,10 @@ class _BlockTracker:
                 return
             self._blocks.add(block)
             if block.function is not None:
-                self._labels[block.start] = block.function.name
+                self._labels[block.start] = block.function.print_name
             for sym in block:
                 if sym.addr_class == gdb.SYMBOL_LOC_LABEL:
-                    self._labels[int(sym.value())] = sym.name
+                    self._labels[int(sym.value())] = sym.print_name
             block = block.superblock
 
     # Add PC to this tracker.  Update RESULT as appropriate with

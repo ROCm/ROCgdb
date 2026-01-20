@@ -1,0 +1,104 @@
+# Copyright 2025 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib "ada.exp"
+load_lib dap-support.exp
+
+require allow_dap_tests
+require allow_ada_tests
+
+# Enable basic use of UTF-8.  LC_ALL gets reset for each testfile.
+setenv LC_ALL C.UTF-8
+
+standard_ada_testfile prog
+
+if {[gdb_compile_ada "${srcfile}" "${binfile}" executable \
+	 {debug additional_flags=-gnatW8}] != ""} {
+    return
+}
+
+if {[dap_initialize] == ""} {
+    return
+}
+
+set launch_id [dap_launch $testfile ada_source_charset UTF-8]
+
+set line [gdb_get_line_number "BREAK"]
+set obj [dap_check_request_and_response "set breakpoint by line number" \
+	     setBreakpoints \
+	     [format {o source [o path [%s]] breakpoints [a [o line [i %d]]]} \
+		  [list s $srcfile] $line]]
+set line_bpno [dap_get_breakpoint_number $obj]
+
+dap_check_request_and_response "configurationDone" configurationDone
+
+dap_check_response "launch response" launch $launch_id
+
+dap_wait_for_event_and_check "inferior started" thread "body reason" started
+
+dap_wait_for_event_and_check "stopped at line breakpoint" stopped \
+    "body reason" breakpoint \
+    "body hitBreakpointIds" $line_bpno
+
+set bt [lindex [dap_check_request_and_response "backtrace" stackTrace \
+		    {o threadId [i 1]}] \
+	    0]
+set frame_id [dict get [lindex [dict get $bt body stackFrames] 0] id]
+
+set scopes [dap_check_request_and_response "get scopes" scopes \
+		[format {o frameId [i %d]} $frame_id]]
+set scopes [dict get [lindex $scopes 0] body scopes]
+
+# This is what the implementation does, so we can assume it, but check
+# just in case something changes.
+lassign $scopes locals regs _ignore
+gdb_assert {[dict get $locals name] == "Locals"} "local scope"
+gdb_assert {[dict get $regs name] == "Registers"} "register scope"
+
+set num_vars [dict get $locals namedVariables]
+gdb_assert {$num_vars == 2} "correct number of locals"
+
+set num [dict get $locals variablesReference]
+set refs [lindex [dap_check_request_and_response "fetch variables" \
+		      "variables" \
+		      [format {o variablesReference [i %d] count [i %d]} \
+			   $num $num_vars]] \
+	      0]
+
+foreach var [dict get $refs body variables] {
+    set name [dict get $var name]
+
+    # It doesn't matter what case is used for the variable name (GNAT
+    # upcases these Greek letters whereas it downcases Latin), and it
+    # doesn't matter if Python chooses to emit the character itself or
+    # a Unicode escape.  Therefore allow all of these.
+    switch -nocase -- $name {
+	"\\u03a0" -
+	"\\u03a6" -
+	"\\u03c0" -
+	"\\u03c6" -
+	"Π" -
+	"π" -
+	"Φ" -
+	"φ" {
+	    # Ok.
+	}
+	default {
+	    fail "unknown variable $name"
+	}
+    }
+}
+
+dap_shutdown

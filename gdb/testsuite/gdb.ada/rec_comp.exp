@@ -20,14 +20,14 @@ require allow_ada_tests
 standard_ada_testfile bar_o203_012
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "STOP" ${testdir}/bar_o203_012.adb]
 if {![runto "bar_o203_012.adb:$bp_location"]} {
-  return
+    return
 }
 
 # Accept "bar_o203_012." prefix for older versions of GNAT.

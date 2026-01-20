@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -36,17 +36,17 @@ set menu [multi_line "Multiple matches for integervar" \
 
 set test_name "multiple matches for symbol integervar"
 gdb_test_multiple "print integervar" "$test_name" \
-{
-      -re "$menu" {
-	  pass "$test_name"
-      }
+    {
+	-re "$menu" {
+	    pass "$test_name"
+	}
 
-      default {
-	  fail "$test_name"
-      }
-}
+	default {
+	    fail "$test_name"
+	}
+    }
 
 # Select the first choice from the multiple-choice menu above.
 gdb_test "1" \
-	 "= 48" \
-	 "select first choice from multiple-choice menu"
+    "= 48" \
+    "select first choice from multiple-choice menu"

@@ -1377,35 +1377,63 @@ static void
 box_one_message (ui_file *stream, std::string message, int width)
 {
   const char *wall = emojis_ok () ? bd_heavy_vertical : "|";
+
+  /* We know that the box we are displaying the text in is at least as
+     long as the documentation URL.
+
+     Additionally, we know that on non-URL lines, any styling occurs in the
+     first part of the line, before we might need to line wrap.  We take
+     advantage of this to simplify this function slightly.
+
+     First, count the total number of escape characters on this line.  */
+  int n_escape_chars = 0;
+  const char *escape = message.c_str ();
+  while ((escape = strchr (escape, '\033')) != nullptr)
+    {
+      int tmp;
+      if (skip_ansi_escape (escape, &tmp))
+	n_escape_chars += tmp;
+      else
+	gdb_assert_not_reached ("unknown escape sequence");
+      escape += tmp;
+    }
+
+  /* ESCAPE points to the first character after the last escape sequence in
+     MESSAGE.  The number of non-escape sequence characters up to this
+     point should always be less than width.  If this fails then we need to
+     wrap the escape sequence block, and this function isn't written with
+     that in mind.  */
+  gdb_assert ((escape - message.c_str () - n_escape_chars) < width);
+
   while (!message.empty ())
     {
       std::string line;
-      int n_escape_chars = 0;
-      const char *escape = message.c_str ();
-      while ((escape = strchr (escape, '\033')) != nullptr)
-	{
-	  int tmp;
-	  if (skip_ansi_escape (escape, &tmp))
-	    n_escape_chars += tmp;
-	  else
-	    break;
-	  escape += tmp;
-	}
       if ((message.length () - n_escape_chars) > width)
 	{
-	  line = message.substr (0, message.rfind (" ", width));
-	  message = message.substr (line.length ());
+	  /* Place the left hand part of MESSAGE into LINE.  Take account
+	     of any escape characters in MESSAGE.  */
+	  line = message.substr (0, message.rfind (' ',
+						   width + n_escape_chars));
+
+	  /* The '+ 1' here skips the space that rfind just found.  */
+	  message = message.substr (line.length () + 1);
 	}
       else
-	{
-	  line = message;
-	  message = "";
-	}
+	line = std::move (message);
 
+      /* Pad LINE with spaces so that the right border is in the correct
+	 place.  */
       if ((line.length () - n_escape_chars) < width)
 	line.append (width - line.length () + n_escape_chars, ' ');
 
       gdb_printf (stream, "%s %s %s\n", wall, line.c_str (), wall);
+
+      /* As we know all escape characters fall in the first part of the
+	 line (before any wrapping), then after printing the first part of
+	 the line (which might be all of the line), we know there are no
+	 remaining escape characters.  If there were then the assert above
+	 this loop would have triggered.  */
+      n_escape_chars = 0;
     }
 }
 

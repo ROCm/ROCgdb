@@ -21,14 +21,14 @@ standard_ada_testfile main
 
 set flags [list debug additional_flags=-gnata]
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable $flags] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/main.adb]
 if {![runto "main.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test "print pck.value" " = 64 '@'"

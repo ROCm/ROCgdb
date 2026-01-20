@@ -1304,9 +1304,9 @@ get_unit_lists (const dwarf2_per_bfd &per_bfd)
   std::vector<const signatured_type *> type_units;
 
   for (const auto &unit : per_bfd.all_units)
-    if (unit->is_debug_types ())
-      type_units.emplace_back (static_cast<const signatured_type *>
-			       (unit.get ()));
+    if (const signatured_type *sig_type = unit->as_signatured_type ();
+	sig_type != nullptr)
+      type_units.emplace_back (sig_type);
     else
       comp_units.emplace_back (unit.get ());
 

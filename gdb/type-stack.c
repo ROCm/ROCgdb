@@ -146,11 +146,11 @@ type_stack::follow_types (struct type *follow_type)
 	if (make_const)
 	  follow_type = make_cv_type (make_const,
 				      TYPE_VOLATILE (follow_type),
-				      follow_type, 0);
+				      follow_type);
 	if (make_volatile)
 	  follow_type = make_cv_type (TYPE_CONST (follow_type),
 				      make_volatile,
-				      follow_type, 0);
+				      follow_type);
 	if (make_addr_space)
 	  follow_type = make_type_with_address_space (follow_type,
 						      make_addr_space);

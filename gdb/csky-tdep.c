@@ -2828,7 +2828,6 @@ csky_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_write_pc (gdbarch, csky_write_pc);
   csky_add_reggroups (gdbarch);
   set_gdbarch_register_reggroup_p (gdbarch, csky_register_reggroup_p);
-  set_gdbarch_stab_reg_to_regnum (gdbarch, csky_dwarf_reg_to_regnum);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, csky_dwarf_reg_to_regnum);
   dwarf2_frame_set_init_reg (gdbarch, csky_dwarf2_frame_init_reg);
 

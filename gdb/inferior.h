@@ -539,7 +539,7 @@ public:
   void set_args (std::string args)
   {
     m_args = std::move (args);
-  };
+  }
 
   /* Set the argument string from some strings in ARGS.  When
      ESCAPE_SHELL_CHAR is true all special shell characters in ARGS are

@@ -34,6 +34,7 @@ typedef struct sframe_func_desc_entry_int
   uint32_t func_start_fre_off;
   uint32_t func_num_fres;
   uint8_t func_info;
+  uint8_t func_info2;
   uint8_t func_rep_size;
 } sframe_func_desc_entry_int;
 
@@ -139,27 +140,51 @@ sframe_fde_tbl_alloc (sf_fde_tbl **fde_tbl, unsigned int num_fdes)
 
 static int
 sframe_fde_tbl_init (sf_fde_tbl *fde_tbl, const char *fde_buf,
-		     size_t *fidx_size, unsigned int num_fdes, uint8_t ver)
+		     const char *fre_buf, size_t *fidx_size,
+		     unsigned int num_fdes, uint8_t ver)
 {
-  sframe_func_desc_entry_v2 *fdep = NULL;
-
-  if (ver == SFRAME_VERSION_2 && SFRAME_VERSION == SFRAME_VERSION_2)
+  if (ver == SFRAME_VERSION_3 && SFRAME_VERSION == SFRAME_VERSION_3)
     {
-      *fidx_size = num_fdes * sizeof (sframe_func_desc_entry_int);
+      *fidx_size = num_fdes * sizeof (sframe_func_desc_idx_v3);
       for (unsigned int i = 0; i < num_fdes; i++)
 	{
-	  fdep = (sframe_func_desc_entry_v2 *)fde_buf + i;
-	  fde_tbl->entry[i].func_start_pc_offset = fdep->sfde_func_start_address;
-	  fde_tbl->entry[i].func_size = fdep->sfde_func_size;
-	  fde_tbl->entry[i].func_start_fre_off = fdep->sfde_func_start_fre_off;
-	  fde_tbl->entry[i].func_num_fres = fdep->sfde_func_num_fres;
-	  fde_tbl->entry[i].func_info = fdep->sfde_func_info;
-	  fde_tbl->entry[i].func_rep_size = fdep->sfde_func_rep_size;
+	  const sframe_func_desc_idx_v3 *fdep
+	    = (sframe_func_desc_idx_v3 *)fde_buf + i;
+	  fde_tbl->entry[i].func_start_pc_offset = fdep->sfdi_func_start_offset;
+	  fde_tbl->entry[i].func_size = fdep->sfdi_func_size;
+	  fde_tbl->entry[i].func_start_fre_off = fdep->sfdi_func_start_fre_off;
+	  /* V3 organizes the following data closer to the SFrame FREs for the
+	     function.  Access them via the sfde_func_start_fre_off.  */
+	  const sframe_func_desc_attr_v3 *fattr
+	    = (sframe_func_desc_attr_v3 *)(fre_buf
+					   + fdep->sfdi_func_start_fre_off);
+	  fde_tbl->entry[i].func_num_fres = fattr->sfda_func_num_fres;
+	  fde_tbl->entry[i].func_info = fattr->sfda_func_info;
+	  fde_tbl->entry[i].func_info2 = fattr->sfda_func_info2;
+	  fde_tbl->entry[i].func_rep_size = fattr->sfda_func_rep_size;
 	}
       fde_tbl->count = num_fdes;
     }
   /* If ver is not the latest, read buffer manually and upgrade from
      sframe_func_desc_entry_v2 to populate the sf_fde_tbl entries.  */
+  else if (ver == SFRAME_VERSION_2 && SFRAME_VERSION == SFRAME_VERSION_3)
+    {
+      *fidx_size = num_fdes * sizeof (sframe_func_desc_entry_v2);
+      for (unsigned int i = 0; i < num_fdes; i++)
+	{
+	  const sframe_func_desc_entry_v2 *fdep
+	    = (sframe_func_desc_entry_v2 *)fde_buf + i;
+	  fde_tbl->entry[i].func_start_pc_offset
+	    = fdep->sfde_func_start_address;
+	  fde_tbl->entry[i].func_size = fdep->sfde_func_size;
+	  fde_tbl->entry[i].func_start_fre_off = fdep->sfde_func_start_fre_off;
+	  fde_tbl->entry[i].func_num_fres = fdep->sfde_func_num_fres;
+	  fde_tbl->entry[i].func_info = fdep->sfde_func_info;
+	  fde_tbl->entry[i].func_info2 = 0;
+	  fde_tbl->entry[i].func_rep_size = fdep->sfde_func_rep_size;
+	}
+      fde_tbl->count = num_fdes;
+    }
   else
     {
       /* Not possible ATM.  */
@@ -289,10 +314,19 @@ flip_header (char *buf, uint8_t ver ATTRIBUTE_UNUSED)
    should not be used.  */
 
 static int
-flip_fde (char *buf, size_t buf_size, uint8_t ver, size_t *fde_size)
+flip_fde_desc (char *buf, size_t buf_size, uint8_t ver)
 {
+  if (ver == SFRAME_VERSION_3)
+    {
+      if (buf_size < sizeof (sframe_func_desc_idx_v3))
+	return SFRAME_ERR;
 
-  if (ver == SFRAME_VERSION_2)
+      sframe_func_desc_idx_v3 *fdep = (sframe_func_desc_idx_v3 *) buf;
+      swap_thing (fdep->sfdi_func_start_offset);
+      swap_thing (fdep->sfdi_func_size);
+      swap_thing (fdep->sfdi_func_start_fre_off);
+    }
+  else if (ver == SFRAME_VERSION_2)
     {
       if (buf_size < sizeof (sframe_func_desc_entry_v2))
 	return SFRAME_ERR;
@@ -302,15 +336,25 @@ flip_fde (char *buf, size_t buf_size, uint8_t ver, size_t *fde_size)
       swap_thing (fdep->sfde_func_size);
       swap_thing (fdep->sfde_func_start_fre_off);
       swap_thing (fdep->sfde_func_num_fres);
-
-      *fde_size = sizeof (sframe_func_desc_entry_v2);
     }
   else
-    return SFRAME_ERR; /* No other versions are possible ATM.  */
+    return SFRAME_ERR;
 
   return 0;
 }
 
+static int
+flip_fde_attr_v3 (char *buf, size_t buf_size)
+{
+  if (buf_size < sizeof (sframe_func_desc_attr_v3))
+    return SFRAME_ERR;
+
+  /* sfda_func_num_fres is the first member of sframe_func_desc_attr_v3.  */
+  struct { uint16_t x; } ATTRIBUTE_PACKED *p = (void*)buf;
+  swap_thing (p->x);
+
+  return 0;
+}
 /* Check if SFrame header has valid data.  */
 
 static bool
@@ -319,8 +363,18 @@ sframe_header_sanity_check_p (const sframe_header *hp)
   /* Check preamble is valid.  */
   if (hp->sfh_preamble.sfp_magic != SFRAME_MAGIC
       || (hp->sfh_preamble.sfp_version != SFRAME_VERSION_1
-	  && hp->sfh_preamble.sfp_version != SFRAME_VERSION_2)
-      || (hp->sfh_preamble.sfp_flags & ~SFRAME_V2_F_ALL_FLAGS))
+	  && hp->sfh_preamble.sfp_version != SFRAME_VERSION_2
+	  && hp->sfh_preamble.sfp_version != SFRAME_VERSION_3))
+    return false;
+
+  /* Check flags (version-aware).
+     Do not validate V3 headers against V2 flag definitions, as V3 may
+     introduce new flags.  */
+  uint8_t valid_flags = SFRAME_V2_F_ALL_FLAGS;
+  if (hp->sfh_preamble.sfp_version == SFRAME_VERSION_3)
+    /* Replace with SFRAME_V3_F_ALL_FLAGS.  */
+    valid_flags = SFRAME_V3_F_ALL_FLAGS;
+  if (hp->sfh_preamble.sfp_flags & ~valid_flags)
     return false;
 
   /* Check offsets are valid.  */
@@ -453,11 +507,26 @@ sframe_fre_entry_size (sframe_frame_row_entry *frep, uint32_t fre_type)
 	  + sframe_fre_offset_bytes_size (fre_info));
 }
 
+/* Get total size in bytes in the SFrame FRE at FRE_BUF location, given the
+   type of FRE as FRE_TYPE.  */
+
+static size_t
+sframe_buf_fre_entry_size (const char *fre_buf, uint32_t fre_type)
+{
+  if (fre_buf == NULL)
+    return 0;
+
+  size_t addr_size = sframe_fre_start_addr_size (fre_type);
+  uint8_t fre_info = *(uint8_t *)(fre_buf + addr_size);
+
+  return (addr_size + sizeof (fre_info)
+	  + sframe_fre_offset_bytes_size (fre_info));
+}
 /* Get the function descriptor entry at index FUNC_IDX in the decoder
    context CTX.  */
 
 static sframe_func_desc_entry_int *
-sframe_decoder_get_funcdesc_at_index (sframe_decoder_ctx *ctx,
+sframe_decoder_get_funcdesc_at_index (const sframe_decoder_ctx *ctx,
 				      uint32_t func_idx)
 {
   sframe_func_desc_entry_int *fdep;
@@ -482,8 +551,8 @@ sframe_decoder_get_funcdesc_at_index (sframe_decoder_ctx *ctx,
 
    If FUNC_IDX is not a valid index in the given decoder object, returns 0.  */
 
-static int32_t
-sframe_decoder_get_secrel_func_start_addr (sframe_decoder_ctx *dctx,
+static int64_t
+sframe_decoder_get_secrel_func_start_addr (const sframe_decoder_ctx *dctx,
 					   uint32_t func_idx)
 {
   int err = 0;
@@ -494,7 +563,7 @@ sframe_decoder_get_secrel_func_start_addr (sframe_decoder_ctx *dctx,
     return 0;
 
   const sframe_func_desc_entry_int *fdep = &dctx->sfd_funcdesc->entry[func_idx];
-  int32_t func_start_pc_offset = fdep->func_start_pc_offset;
+  int64_t func_start_pc_offset = fdep->func_start_pc_offset;
 
   return func_start_pc_offset + offsetof_fde_in_sec;
 }
@@ -504,12 +573,12 @@ sframe_decoder_get_secrel_func_start_addr (sframe_decoder_ctx *dctx,
    information for the PC.  */
 
 static bool
-sframe_fre_check_range_p (sframe_decoder_ctx *dctx, uint32_t func_idx,
+sframe_fre_check_range_p (const sframe_decoder_ctx *dctx, uint32_t func_idx,
 			  uint32_t start_ip_offset, uint32_t end_ip_offset,
-			  int32_t pc)
+			  int64_t pc)
 {
   sframe_func_desc_entry_int *fdep;
-  int32_t func_start_pc_offset;
+  int64_t func_start_pc_offset;
   uint8_t rep_block_size;
   uint32_t pc_type;
   uint32_t pc_offset;
@@ -519,7 +588,7 @@ sframe_fre_check_range_p (sframe_decoder_ctx *dctx, uint32_t func_idx,
   func_start_pc_offset = sframe_decoder_get_secrel_func_start_addr (dctx,
 								    func_idx);
   pc_type = sframe_get_fde_pc_type (fdep);
-  mask_p = (pc_type == SFRAME_FDE_TYPE_PCMASK);
+  mask_p = (pc_type == SFRAME_V3_FDE_PCTYPE_MASK);
   rep_block_size = fdep->func_rep_size;
 
   if (func_start_pc_offset > pc)
@@ -535,35 +604,60 @@ sframe_fre_check_range_p (sframe_decoder_ctx *dctx, uint32_t func_idx,
   return (start_ip_offset <= pc_offset) && (end_ip_offset >= pc_offset);
 }
 
-/* Read the on-disk SFrame FDE of SFrame version VER from location BUF of size
-   in bytes equal to BUF_SIZE.
+/* Read the on-disk SFrame FDE from location BUF of size in bytes equal to
+   BUF_SIZE.
 
    Return SFRAME_ERR if any error.  If error code is returned, the read values
    should not be used.  */
 
 static int
-sframe_decode_fde (const char *buf, size_t buf_size, uint8_t ver,
-		   uint32_t *num_fres, uint32_t *fre_type,
-		   uint32_t *fre_offset, size_t *fde_size)
+sframe_decode_fde_desc_v2 (const char *buf, size_t buf_size,
+			   uint32_t *num_fres, uint32_t *fre_type,
+			   uint32_t *fre_offset)
 {
-  if (ver == SFRAME_VERSION_2)
-    {
-      if (buf_size < sizeof (sframe_func_desc_entry_v2))
-	return SFRAME_ERR;
-
-      sframe_func_desc_entry_v2 *fdep = (sframe_func_desc_entry_v2 *) buf;
-      *num_fres = fdep->sfde_func_num_fres;
-      *fre_type = SFRAME_V1_FUNC_FRE_TYPE (fdep->sfde_func_info);
-      *fre_offset = fdep->sfde_func_start_fre_off;
-
-      *fde_size = sizeof (sframe_func_desc_entry_v2);
-    }
-  else
+  if (buf_size < sizeof (sframe_func_desc_entry_v2))
     return SFRAME_ERR;
+
+  sframe_func_desc_entry_v2 *fdep = (sframe_func_desc_entry_v2 *) buf;
+  *num_fres = fdep->sfde_func_num_fres;
+  *fre_type = SFRAME_V2_FUNC_FRE_TYPE (fdep->sfde_func_info);
+  *fre_offset = fdep->sfde_func_start_fre_off;
 
   return 0;
 }
 
+/* Read the on-disk SFrame FDE from location BUF of size in bytes equal to
+   BUF_SIZE.
+
+   Return SFRAME_ERR if any error.  If error code is returned, the read values
+   should not be used.  */
+
+static int
+sframe_decode_fde_idx_v3 (const char *buf, size_t buf_size,
+			  uint32_t *fre_offset)
+{
+  if (buf_size < sizeof (sframe_func_desc_idx_v3))
+    return SFRAME_ERR;
+
+  sframe_func_desc_idx_v3 *fdep = (sframe_func_desc_idx_v3 *) buf;
+  *fre_offset = fdep->sfdi_func_start_fre_off;
+
+  return 0;
+}
+
+static int
+sframe_decode_fde_attr_v3 (const char *buf, size_t buf_size,
+			   uint16_t *num_fres)
+{
+  if (buf_size < sizeof (sframe_func_desc_attr_v3))
+    return SFRAME_ERR;
+
+  /* sfda_func_num_fres is the first member of sframe_func_desc_attr_v3.  */
+  const struct { uint16_t x; } ATTRIBUTE_PACKED *p = (void *)buf;
+  *num_fres = p->x;
+
+  return 0;
+}
 static int
 flip_fre (char *fp, uint32_t fre_type, size_t *fre_size)
 {
@@ -609,63 +703,59 @@ flip_fre (char *fp, uint32_t fre_type, size_t *fre_size)
    If an error code is returned, the buffer should not be used.  */
 
 static int
-flip_sframe (char *frame_buf, size_t buf_size, uint32_t to_foreign)
+flip_sframe_fdes_with_fres_v2 (char *frame_buf, size_t buf_size,
+			       uint32_t to_foreign)
 {
-  unsigned int i, j, prev_frep_index;
-  const sframe_header *ihp;
-  uint8_t ver;
-  char *fdes;
-  char *fres;
-  const char *buf_end;
   char *fp = NULL;
-  unsigned int num_fdes = 0;
   uint32_t num_fres = 0;
   uint32_t fre_type = 0;
   uint32_t fre_offset = 0;
-  size_t esz = 0, fsz = 0;
-  size_t hdrsz = 0;
+  size_t esz = 0;
   int err = 0;
   /* For error checking.  */
   size_t fde_bytes_flipped = 0;
   size_t fre_bytes_flipped = 0;
 
   /* Header must be in host endianness at this time.  */
-  ihp = (sframe_header *)frame_buf;
+  const sframe_header *ihp = (sframe_header *)frame_buf;
 
   if (!sframe_header_sanity_check_p (ihp))
     return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
 
   /* The contents of the SFrame header are safe to read.  Get the number of
      FDEs and the first FDE in the buffer.  */
-  hdrsz = sframe_get_hdr_size (ihp);
-  num_fdes = ihp->sfh_num_fdes;
-  ver = ihp->sfh_preamble.sfp_version;
-  fdes = frame_buf + hdrsz + ihp->sfh_fdeoff;
-  fres = frame_buf + hdrsz + ihp->sfh_freoff;
-  buf_end = frame_buf + buf_size;
+  size_t hdrsz = sframe_get_hdr_size (ihp);
+  uint32_t num_fdes = ihp->sfh_num_fdes;
+  uint8_t ver = ihp->sfh_preamble.sfp_version;
+  char *fdes = frame_buf + hdrsz + ihp->sfh_fdeoff;
+  char *fres = frame_buf + hdrsz + ihp->sfh_freoff;
+  const char *buf_end = frame_buf + buf_size;
 
-  j = 0;
-  prev_frep_index = 0;
+  unsigned int i = 0, j = 0;
+  unsigned int prev_frep_index = 0;
+  size_t fsz = sizeof (sframe_func_desc_entry_v2);
   for (i = 0; i < num_fdes; fdes += fsz, i++)
     {
       if (fdes >= buf_end)
 	goto bad;
 
-      if (to_foreign && sframe_decode_fde (fdes, buf_end - fdes, ver,
-					   &num_fres, &fre_type, &fre_offset,
-					   &fsz))
+      /* Handle FDE.  */
+      if (to_foreign && sframe_decode_fde_desc_v2 (fdes, buf_end - fdes,
+						   &num_fres, &fre_type,
+						   &fre_offset))
 	goto bad;
 
-      if (flip_fde (fdes, buf_end - fdes, ver, &fsz))
+      if (flip_fde_desc (fdes, buf_end - fdes, ver))
+	goto bad;
+
+      if (!to_foreign && sframe_decode_fde_desc_v2 (fdes, buf_end - fdes,
+						    &num_fres, &fre_type,
+						    &fre_offset))
 	goto bad;
 
       fde_bytes_flipped += fsz;
 
-      if (!to_foreign && sframe_decode_fde (fdes, buf_end - fdes, ver,
-					    &num_fres, &fre_type, &fre_offset,
-					    &fsz))
-	goto bad;
-
+      /* Handle FREs.  */
       fp = fres + fre_offset;
       for (; j < prev_frep_index + num_fres; j++)
 	{
@@ -694,10 +784,147 @@ flip_sframe (char *frame_buf, size_t buf_size, uint32_t to_foreign)
     if (*fp != '\0')
       goto bad;
 
-  /* Success.  */
+  /* Done.  */
   return 0;
 bad:
   return SFRAME_ERR;
+}
+
+/* Endian flip the contents of FRAME_BUF of size BUF_SIZE.
+   The SFrame header in the FRAME_BUF must be endian flipped prior to
+   calling flip_sframe_fdes_with_fres_v3.
+
+   Endian flipping at decode time vs encode time have different needs.  At
+   encode time, the frame_buf is in host endianness, and hence, values should
+   be read up before the buffer is changed to foreign endianness.  This change
+   of behaviour is specified via TO_FOREIGN arg.
+
+   If an error code is returned, the buffer should not be used.  */
+
+static int
+flip_sframe_fdes_with_fres_v3 (char *frame_buf, size_t buf_size,
+			       uint32_t to_foreign)
+{
+  char *fp = NULL;
+  uint16_t num_fres = 0;
+  uint32_t fre_type = 0;
+  uint32_t fre_offset = 0;
+  size_t esz = 0;
+  int err = 0;
+  /* For error checking.  */
+  size_t fde_bytes_flipped = 0;
+  size_t fre_bytes_flipped = 0;
+
+  /* Header must be in host endianness at this time.  */
+  const sframe_header *ihp = (sframe_header *)frame_buf;
+
+  if (!sframe_header_sanity_check_p (ihp))
+    return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
+
+  /* The contents of the SFrame header are safe to read.  Get the number of
+     FDEs and the first FDE in the buffer.  */
+  size_t hdrsz = sframe_get_hdr_size (ihp);
+  uint32_t num_fdes = ihp->sfh_num_fdes;
+  uint8_t ver = ihp->sfh_preamble.sfp_version;
+  char *fdes = frame_buf + hdrsz + ihp->sfh_fdeoff;
+  char *fres = frame_buf + hdrsz + ihp->sfh_freoff;
+  const char *buf_end = frame_buf + buf_size;
+
+  unsigned int i = 0, j = 0;
+  unsigned int prev_frep_index = 0;
+  size_t fsz = sizeof (sframe_func_desc_idx_v3);
+  for (i = 0; i < num_fdes; fdes += fsz, i++)
+    {
+      if (fdes >= buf_end)
+	goto bad;
+
+      /* Handle FDE.  */
+      if (to_foreign && sframe_decode_fde_idx_v3 (fdes, buf_end - fdes,
+						  &fre_offset))
+	goto bad;
+
+      if (flip_fde_desc (fdes, buf_end - fdes, ver))
+	goto bad;
+
+      if (!to_foreign && sframe_decode_fde_idx_v3 (fdes, buf_end - fdes,
+						   &fre_offset))
+	goto bad;
+
+      fde_bytes_flipped += fsz;
+
+      /* Handle FDE attr (only in V3).  */
+      fp = fres + fre_offset;
+      if (to_foreign && sframe_decode_fde_attr_v3 (fp, buf_end - fp,
+						   &num_fres))
+	goto bad;
+
+      if (flip_fde_attr_v3 (fp, buf_end - fp))
+	goto bad;
+
+      fre_bytes_flipped += sizeof (sframe_func_desc_attr_v3);
+
+      if (!to_foreign && sframe_decode_fde_attr_v3 (fp, buf_end - fp,
+						    &num_fres))
+	goto bad;
+
+      /* Handle FREs.  */
+      fp += sizeof (sframe_func_desc_attr_v3);
+      for (; j < prev_frep_index + num_fres; j++)
+	{
+	  if (flip_fre (fp, fre_type, &esz))
+	    goto bad;
+	  fre_bytes_flipped += esz;
+
+	  if (esz == 0 || esz > buf_size)
+	    goto bad;
+	  fp += esz;
+	}
+      prev_frep_index = j;
+    }
+
+  /* All FDEs must have been endian flipped by now.  */
+  if (i != num_fdes || fde_bytes_flipped > ihp->sfh_freoff - ihp->sfh_fdeoff)
+    goto bad;
+
+  /* All FREs must have been endian flipped by now.  */
+  if (j != ihp->sfh_num_fres || fre_bytes_flipped > ihp->sfh_fre_len)
+    goto bad;
+
+  /* Optional trailing section padding.  */
+  size_t frame_size = hdrsz + ihp->sfh_freoff + fre_bytes_flipped;
+  for (fp = frame_buf + frame_size; fp < frame_buf + buf_size; fp++)
+    if (*fp != '\0')
+      goto bad;
+
+  /* Done.  */
+  return 0;
+bad:
+  return SFRAME_ERR;
+}
+
+static int
+flip_sframe (char *frame_buf, size_t buf_size, uint32_t to_foreign)
+{
+  int err = 0;
+
+  /* Header must be in host endianness at this time.  */
+  const sframe_header *ihp = (sframe_header *)frame_buf;
+  if (!sframe_header_sanity_check_p (ihp))
+    return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
+  uint8_t ver = ihp->sfh_preamble.sfp_version;
+
+  if (ver == SFRAME_VERSION_3)
+    err = flip_sframe_fdes_with_fres_v3 (frame_buf, buf_size, to_foreign);
+  else if (ver == SFRAME_VERSION_2)
+    err = flip_sframe_fdes_with_fres_v2 (frame_buf, buf_size, to_foreign);
+  else
+    return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
+
+  if (err)
+    return sframe_set_errno (&err, SFRAME_ERR_BUF_INVAL);
+
+  /* Success.  */
+  return 0;
 }
 
 /* Expands the memory allocated for the SFrame Frame Row Entry (FRE) table
@@ -756,10 +983,10 @@ bad:
 
 /* Get SFrame header from the given decoder context DCTX.  */
 
-static sframe_header *
-sframe_decoder_get_header (sframe_decoder_ctx *dctx)
+static const sframe_header *
+sframe_decoder_get_header (const sframe_decoder_ctx *dctx)
 {
-  sframe_header *hp = NULL;
+  const sframe_header *hp = NULL;
   if (dctx != NULL)
     hp = &dctx->sfd_header;
   return hp;
@@ -783,7 +1010,7 @@ fde_func (const void *p1, const void *p2)
 /* Get IDX'th offset from FRE.  Set errp as applicable.  */
 
 static int32_t
-sframe_get_fre_offset (sframe_frame_row_entry *fre, int idx, int *errp)
+sframe_get_fre_offset (const sframe_frame_row_entry *fre, int idx, int *errp)
 {
   uint8_t offset_cnt, offset_size;
 
@@ -813,6 +1040,42 @@ sframe_get_fre_offset (sframe_frame_row_entry *fre, int idx, int *errp)
     {
       int32_t *ip = (int32_t *)fre->fre_offsets;
       return ip[idx];
+    }
+}
+
+/* Get IDX'th offset as unsigned data from FRE.  Set errp as applicable.  */
+
+uint32_t
+sframe_get_fre_udata (const sframe_frame_row_entry *fre, int idx, int *errp)
+{
+  uint8_t offset_cnt, offset_size;
+
+  if (fre == NULL || !sframe_fre_sanity_check_p (fre))
+    return sframe_set_errno (errp, SFRAME_ERR_FRE_INVAL);
+
+  offset_cnt = sframe_fre_get_offset_count (fre->fre_info);
+  offset_size = sframe_fre_get_offset_size (fre->fre_info);
+
+  if (offset_cnt < idx + 1)
+    return sframe_set_errno (errp, SFRAME_ERR_FREOFFSET_NOPRESENT);
+
+  if (errp)
+    *errp = 0; /* Offset Valid.  */
+
+  if (offset_size == SFRAME_FRE_OFFSET_1B)
+    {
+      uint8_t *offsets = (uint8_t *)fre->fre_offsets;
+      return offsets[idx];
+    }
+  else if (offset_size == SFRAME_FRE_OFFSET_2B)
+    {
+      uint16_t *offsets = (uint16_t *)fre->fre_offsets;
+      return offsets[idx];
+    }
+  else
+    {
+      uint32_t *offsets = (uint32_t *)fre->fre_offsets;
+      return offsets[idx];
     }
 }
 
@@ -859,8 +1122,8 @@ sframe_fde_create_func_info (uint32_t fre_type,
   sframe_assert (fre_type == SFRAME_FRE_TYPE_ADDR1
 		   || fre_type == SFRAME_FRE_TYPE_ADDR2
 		   || fre_type == SFRAME_FRE_TYPE_ADDR4);
-  sframe_assert (fde_type == SFRAME_FDE_TYPE_PCINC
-		    || fde_type == SFRAME_FDE_TYPE_PCMASK);
+  sframe_assert (fde_type == SFRAME_V3_FDE_PCTYPE_INC
+		 || fde_type == SFRAME_V3_FDE_PCTYPE_MASK);
   func_info = SFRAME_V2_FUNC_INFO (fde_type, fre_type);
   return func_info;
 }
@@ -886,7 +1149,7 @@ sframe_calc_fre_type (size_t func_size)
 /* Get the base reg id from the FRE info.  Set errp if failure.  */
 
 uint8_t
-sframe_fre_get_base_reg_id (sframe_frame_row_entry *fre, int *errp)
+sframe_fre_get_base_reg_id (const sframe_frame_row_entry *fre, int *errp)
 {
   if (fre == NULL)
     return sframe_set_errno (errp, SFRAME_ERR_FRE_INVAL);
@@ -898,14 +1161,19 @@ sframe_fre_get_base_reg_id (sframe_frame_row_entry *fre, int *errp)
 /* Get the CFA offset from the FRE.  If the offset is invalid, sets errp.  */
 
 int32_t
-sframe_fre_get_cfa_offset (sframe_decoder_ctx *dctx,
-			   sframe_frame_row_entry *fre, int *errp)
+sframe_fre_get_cfa_offset (const sframe_decoder_ctx *dctx,
+			   const sframe_frame_row_entry *fre,
+			   uint32_t fde_type,
+			   int *errp)
 {
   int err;
-  int32_t offset = sframe_get_fre_offset (fre, SFRAME_FRE_CFA_OFFSET_IDX, &err);
+  bool flex_p = (fde_type == SFRAME_FDE_TYPE_FLEX);
+  uint32_t idx = flex_p ? 1 : 0;
+  int32_t offset = sframe_get_fre_offset (fre, idx, &err);
 
   /* For s390x undo adjustment of CFA offset (to enable 8-bit offsets).  */
-  if (!err && sframe_decoder_get_abi_arch (dctx) == SFRAME_ABI_S390X_ENDIAN_BIG)
+  if (!err
+      && sframe_decoder_get_abi_arch (dctx) == SFRAME_ABI_S390X_ENDIAN_BIG)
     offset = SFRAME_V2_S390X_CFA_OFFSET_DECODE (offset);
 
   if (errp)
@@ -913,68 +1181,102 @@ sframe_fre_get_cfa_offset (sframe_decoder_ctx *dctx,
   return offset;
 }
 
-/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.
-
-   For s390x the offset may be an encoded register number, indicated by
-   LSB set to one, which is only valid in the topmost frame.  */
+/* Get the FP offset from the FRE.  If the offset is invalid, sets errp.  */
 
 int32_t
-sframe_fre_get_fp_offset (sframe_decoder_ctx *dctx,
-			  sframe_frame_row_entry *fre, int *errp)
+sframe_fre_get_fp_offset (const sframe_decoder_ctx *dctx,
+			  const sframe_frame_row_entry *fre,
+			  uint32_t fde_type,
+			  int *errp)
 {
-  uint32_t fp_offset_idx = 0;
-  int8_t fp_offset = sframe_decoder_get_fixed_fp_offset (dctx);
-  /* If the FP offset is not being tracked, return the fixed FP offset
-     from the SFrame header.  */
-  if (fp_offset != SFRAME_CFA_FIXED_FP_INVALID
+  int fp_err = 0;
+  int8_t fixed_fp_offset = sframe_decoder_get_fixed_fp_offset (dctx);
+  bool flex_p = (fde_type == SFRAME_FDE_TYPE_FLEX);
+
+  /* Initialize fp_offset_idx for default FDEs.  In some ABIs, the stack offset
+     to recover RA (using the CFA) from is fixed (like AMD64).  In such cases,
+     the stack offset to recover FP will appear at the second index.  */
+  uint32_t fp_offset_idx = ((sframe_decoder_get_fixed_ra_offset (dctx)
+			     != SFRAME_CFA_FIXED_RA_INVALID)
+			    ? SFRAME_FRE_RA_OFFSET_IDX
+			    : SFRAME_FRE_FP_OFFSET_IDX);
+  if (flex_p)
+    {
+      uint32_t flex_ra_reg_data
+	= sframe_get_fre_udata (fre, SFRAME_FRE_RA_OFFSET_IDX * 2, errp);
+      /* In presence of RA padding SFRAME_FRE_RA_OFFSET_INVALID (instead of RA
+	 offsets), adjust the expected index of the FP offset.  */
+      if (errp && *errp == 0
+	  && flex_ra_reg_data == SFRAME_FRE_RA_OFFSET_INVALID)
+	fp_offset_idx = SFRAME_FRE_FP_OFFSET_IDX * 2;
+      else
+	fp_offset_idx = SFRAME_FRE_FP_OFFSET_IDX * 2 + 1;
+    }
+
+  /* NB: This errp must be retained if returning fp_offset.  */
+  int32_t fp_offset = sframe_get_fre_offset (fre, fp_offset_idx, &fp_err);
+
+  /* If the FP offset is not being tracked, return the fixed FP offset from the
+     SFrame header:
+       - For default FDEs (!flex_p)
+       - For flex FDEs, if there were no FP offsets found.  */
+  if ((!flex_p || (flex_p && fp_err))
+      && fixed_fp_offset != SFRAME_CFA_FIXED_FP_INVALID
       && !sframe_get_fre_ra_undefined_p (fre->fre_info))
     {
       if (errp)
 	*errp = 0;
-      return fp_offset;
+      return fixed_fp_offset;
     }
 
-  /* In some ABIs, the stack offset to recover RA (using the CFA) from is
-     fixed (like AMD64).  In such cases, the stack offset to recover FP will
-     appear at the second index.  */
-  fp_offset_idx = ((sframe_decoder_get_fixed_ra_offset (dctx)
-		    != SFRAME_CFA_FIXED_RA_INVALID)
-		   ? SFRAME_FRE_RA_OFFSET_IDX
-		   : SFRAME_FRE_FP_OFFSET_IDX);
-  return sframe_get_fre_offset (fre, fp_offset_idx, errp);
+  if (errp)
+    *errp = fp_err;
+  return fp_offset;
 }
 
-/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.
-
-   For s390x an RA offset value of SFRAME_FRE_RA_OFFSET_INVALID indicates
-   that the RA is not saved, which is only valid in the topmost frame.
-   For s390x the offset may be an encoded register number, indicated by
-   LSB set to one, which is only valid in the topmost frame.  */
+/* Get the RA offset from the FRE.  If the offset is invalid, sets errp.  */
 
 int32_t
-sframe_fre_get_ra_offset (sframe_decoder_ctx *dctx,
-			  sframe_frame_row_entry *fre, int *errp)
+sframe_fre_get_ra_offset (const sframe_decoder_ctx *dctx,
+			  const sframe_frame_row_entry *fre,
+			  uint32_t fde_type,
+			  int *errp)
 {
-  int8_t ra_offset = sframe_decoder_get_fixed_ra_offset (dctx);
-  /* If the RA offset was not being tracked, return the fixed RA offset
-     from the SFrame header.  */
-  if (ra_offset != SFRAME_CFA_FIXED_RA_INVALID
+  int ra_err = 0;
+  int8_t fixed_ra_offset = sframe_decoder_get_fixed_ra_offset (dctx);
+  bool flex_p = (fde_type == SFRAME_FDE_TYPE_FLEX);
+
+  uint32_t ra_offset_idx = (flex_p
+			    ? SFRAME_FRE_RA_OFFSET_IDX * 2 + 1
+			    : SFRAME_FRE_RA_OFFSET_IDX);
+  /* NB: This errp must be retained if returning ra_offset.  */
+  int32_t ra_offset = sframe_get_fre_offset (fre, ra_offset_idx, &ra_err);
+
+  /* For ABIs where RA offset is not being tracked, return the fixed RA offset
+     specified in the the SFrame header, when:
+       - for default FDEs (!flex_p)
+       - for flex FDEs, if RA offset is solely padding or not present.  */
+  if ((!flex_p || (flex_p && ra_err))
+      && fixed_ra_offset != SFRAME_CFA_FIXED_RA_INVALID
       && !sframe_get_fre_ra_undefined_p (fre->fre_info))
     {
       if (errp)
 	*errp = 0;
-      return ra_offset;
+      return fixed_ra_offset;
     }
 
-  /* Otherwise, get the RA offset from the FRE.  */
-  return sframe_get_fre_offset (fre, SFRAME_FRE_RA_OFFSET_IDX, errp);
+  /* Otherwise, return the RA offset from the FRE.  The corresponding errp was
+     set earlier.  */
+  if (errp)
+    *errp = ra_err;
+  return ra_offset;
 }
 
 /* Get whether the RA is mangled.  */
 
 bool
-sframe_fre_get_ra_mangled_p (sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
-			     sframe_frame_row_entry *fre, int *errp)
+sframe_fre_get_ra_mangled_p (const sframe_decoder_ctx *dctx ATTRIBUTE_UNUSED,
+			     const sframe_frame_row_entry *fre, int *errp)
 {
   if (fre == NULL || !sframe_fre_sanity_check_p (fre))
     return sframe_set_errno (errp, SFRAME_ERR_FRE_INVAL);
@@ -1185,6 +1487,7 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
 
   /* SFrame FDEs are at an offset of sfh_fdeoff from SFrame header end.  */
   if (sframe_fde_tbl_init (dctx->sfd_funcdesc, frame_buf + dhp->sfh_fdeoff,
+			   frame_buf + dhp->sfh_freoff,
 			   &fidx_size, dhp->sfh_num_fdes, sfp->sfp_version))
     {
       sframe_ret_set_errno (errp, SFRAME_ERR_BUF_INVAL);
@@ -1221,7 +1524,7 @@ decode_fail_free:
 /* Get the size of the SFrame header from the decoder context CTX.  */
 
 unsigned int
-sframe_decoder_get_hdr_size (sframe_decoder_ctx *ctx)
+sframe_decoder_get_hdr_size (const sframe_decoder_ctx *ctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (ctx);
   return sframe_get_hdr_size (dhp);
@@ -1230,7 +1533,7 @@ sframe_decoder_get_hdr_size (sframe_decoder_ctx *ctx)
 /* Get the SFrame's abi/arch info given the decoder context DCTX.  */
 
 uint8_t
-sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx)
+sframe_decoder_get_abi_arch (const sframe_decoder_ctx *dctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (dctx);
   return dhp->sfh_abi_arch;
@@ -1239,7 +1542,7 @@ sframe_decoder_get_abi_arch (sframe_decoder_ctx *dctx)
 /* Get the format version from the SFrame decoder context DCTX.  */
 
 uint8_t
-sframe_decoder_get_version (sframe_decoder_ctx *dctx)
+sframe_decoder_get_version (const sframe_decoder_ctx *dctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (dctx);
   return dhp->sfh_preamble.sfp_version;
@@ -1248,7 +1551,7 @@ sframe_decoder_get_version (sframe_decoder_ctx *dctx)
 /* Get the section flags from the SFrame decoder context DCTX.  */
 
 uint8_t
-sframe_decoder_get_flags (sframe_decoder_ctx *dctx)
+sframe_decoder_get_flags (const sframe_decoder_ctx *dctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (dctx);
   return dhp->sfh_preamble.sfp_flags;
@@ -1256,7 +1559,7 @@ sframe_decoder_get_flags (sframe_decoder_ctx *dctx)
 
 /* Get the SFrame's fixed FP offset given the decoder context CTX.  */
 int8_t
-sframe_decoder_get_fixed_fp_offset (sframe_decoder_ctx *ctx)
+sframe_decoder_get_fixed_fp_offset (const sframe_decoder_ctx *ctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (ctx);
   return dhp->sfh_cfa_fixed_fp_offset;
@@ -1264,7 +1567,7 @@ sframe_decoder_get_fixed_fp_offset (sframe_decoder_ctx *ctx)
 
 /* Get the SFrame's fixed RA offset given the decoder context CTX.  */
 int8_t
-sframe_decoder_get_fixed_ra_offset (sframe_decoder_ctx *ctx)
+sframe_decoder_get_fixed_ra_offset (const sframe_decoder_ctx *ctx)
 {
   const sframe_header *dhp = sframe_decoder_get_header (ctx);
   return dhp->sfh_cfa_fixed_ra_offset;
@@ -1280,7 +1583,7 @@ sframe_decoder_get_fixed_ra_offset (sframe_decoder_ctx *ctx)
    emitted.  */
 
 uint32_t
-sframe_decoder_get_offsetof_fde_start_addr (sframe_decoder_ctx *dctx,
+sframe_decoder_get_offsetof_fde_start_addr (const sframe_decoder_ctx *dctx,
 					    uint32_t func_idx, int *errp)
 {
   if (func_idx >= sframe_decoder_get_num_fidx (dctx))
@@ -1288,17 +1591,27 @@ sframe_decoder_get_offsetof_fde_start_addr (sframe_decoder_ctx *dctx,
   else if (errp)
     *errp = 0;
 
-  return (sframe_decoder_get_hdr_size (dctx)
-	  + func_idx * sizeof (sframe_func_desc_entry_v2)
-	  + offsetof (sframe_func_desc_entry_v2, sfde_func_start_address));
+  if (sframe_decoder_get_version (dctx) == SFRAME_VERSION_3)
+    return (sframe_decoder_get_hdr_size (dctx)
+	    + func_idx * sizeof (sframe_func_desc_idx_v3)
+	    + offsetof (sframe_func_desc_idx_v3, sfdi_func_start_offset));
+  else if (sframe_decoder_get_version (dctx) == SFRAME_VERSION_2)
+    return (sframe_decoder_get_hdr_size (dctx)
+	    + func_idx * sizeof (sframe_func_desc_entry_v2)
+	    + offsetof (sframe_func_desc_entry_v2, sfde_func_start_address));
+  else
+    sframe_ret_set_errno (errp, SFRAME_ERR_INVAL);
+
+  return 0;
 }
 
 /* Find the function descriptor entry starting which contains the specified
    address ADDR.  */
 
 static sframe_func_desc_entry_int *
-sframe_get_funcdesc_with_addr_internal (sframe_decoder_ctx *ctx, int32_t addr,
-					int *errp, uint32_t *func_idx)
+sframe_get_funcdesc_with_addr_internal (const sframe_decoder_ctx *ctx,
+					int64_t addr, int *errp,
+					uint32_t *func_idx)
 {
   sframe_func_desc_entry_int *fdp;
   int low, high;
@@ -1373,14 +1686,14 @@ sframe_fre_get_end_ip_offset (sframe_func_desc_entry_int *fdep, unsigned int i,
    SFRAME_ERR if failure.  */
 
 int
-sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
+sframe_find_fre (const sframe_decoder_ctx *ctx, int64_t pc,
 		 sframe_frame_row_entry *frep)
 {
   sframe_frame_row_entry cur_fre;
   sframe_func_desc_entry_int *fdep;
   uint32_t func_idx;
   uint32_t fre_type, i;
-  int32_t func_start_pc_offset;
+  int64_t func_start_pc_offset;
   uint32_t start_ip_offset, end_ip_offset;
   const char *fres;
   size_t size = 0;
@@ -1389,6 +1702,7 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
   if ((ctx == NULL) || (frep == NULL))
     return sframe_set_errno (&err, SFRAME_ERR_INVAL);
 
+  uint8_t ver = sframe_decoder_get_version (ctx);
   /* Find the FDE which contains the PC, then scan its fre entries.  */
   fdep = sframe_get_funcdesc_with_addr_internal (ctx, pc, &err, &func_idx);
   if (fdep == NULL || ctx->sfd_fres == NULL)
@@ -1397,6 +1711,8 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
   fre_type = sframe_get_fre_type (fdep);
 
   fres = ctx->sfd_fres + fdep->func_start_fre_off;
+  if (ver == SFRAME_VERSION_3)
+    fres += sizeof (sframe_func_desc_attr_v3);
   func_start_pc_offset = sframe_decoder_get_secrel_func_start_addr (ctx,
 								    func_idx);
 
@@ -1429,7 +1745,7 @@ sframe_find_fre (sframe_decoder_ctx *ctx, int32_t pc,
    DCTX.  */
 
 uint32_t
-sframe_decoder_get_num_fidx (sframe_decoder_ctx *ctx)
+sframe_decoder_get_num_fidx (const sframe_decoder_ctx *ctx)
 {
   uint32_t num_fdes = 0;
   const sframe_header *dhp = sframe_decoder_get_header (ctx);
@@ -1438,42 +1754,8 @@ sframe_decoder_get_num_fidx (sframe_decoder_ctx *ctx)
   return num_fdes;
 }
 
-/* Get the data (NUM_FRES, FUNC_START_ADDRESS) from the function
-   descriptor entry at index I'th in the decoder CTX.  If failed,
-   return error code.  */
-/* FIXME - consolidate the args and return a
-   sframe_func_desc_index_elem rather?  */
-
 int
-sframe_decoder_get_funcdesc (sframe_decoder_ctx *ctx,
-			     unsigned int i,
-			     uint32_t *num_fres,
-			     uint32_t *func_size,
-			     int32_t *func_start_address,
-			     unsigned char *func_info)
-{
-  sframe_func_desc_entry_int *fdp;
-  int err = 0;
-
-  if (ctx == NULL || func_start_address == NULL || num_fres == NULL
-      || func_size == NULL)
-    return sframe_set_errno (&err, SFRAME_ERR_INVAL);
-
-  fdp = sframe_decoder_get_funcdesc_at_index (ctx, i);
-
-  if (fdp == NULL)
-    return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
-
-  *num_fres = fdp->func_num_fres;
-  *func_start_address = fdp->func_start_pc_offset;
-  *func_size = fdp->func_size;
-  *func_info = fdp->func_info;
-
-  return 0;
-}
-
-int
-sframe_decoder_get_funcdesc_v2 (sframe_decoder_ctx *dctx,
+sframe_decoder_get_funcdesc_v2 (const sframe_decoder_ctx *dctx,
 				unsigned int i,
 				uint32_t *num_fres,
 				uint32_t *func_size,
@@ -1502,12 +1784,52 @@ sframe_decoder_get_funcdesc_v2 (sframe_decoder_ctx *dctx,
 
   return 0;
 }
+
+/* Get the data (NUM_FRES, FUNC_SIZE, START_PC_OFFSET, FUNC_INFO,
+   REP_BLOCK_SIZE) from the SFrame function descriptor entry at the I'th index
+   in the decoder object DCTX.  Return SFRAME_ERR on failure.  */
+
+int
+sframe_decoder_get_funcdesc_v3 (const sframe_decoder_ctx *dctx,
+				unsigned int i,
+				uint32_t *num_fres,
+				uint32_t *func_size,
+				int64_t *start_pc_offset,
+				unsigned char *func_info,
+				unsigned char *func_info2,
+				uint8_t *rep_block_size)
+{
+  int err = 0;
+  if (dctx == NULL || sframe_decoder_get_version (dctx) != SFRAME_VERSION_3)
+    return sframe_set_errno (&err, SFRAME_ERR_INVAL);
+
+  sframe_func_desc_entry_int *fdp
+    = sframe_decoder_get_funcdesc_at_index (dctx, i);
+  if (fdp == NULL)
+    return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
+
+  if (num_fres)
+    *num_fres = fdp->func_num_fres;
+  if (start_pc_offset)
+    *start_pc_offset = fdp->func_start_pc_offset;
+  if (func_size)
+    *func_size = fdp->func_size;
+  if (func_info)
+    *func_info = fdp->func_info;
+  if (func_info2)
+    *func_info2 = fdp->func_info2;
+  if (rep_block_size)
+    *rep_block_size = fdp->func_rep_size;
+
+  return 0;
+}
+
 /* Get the FRE_IDX'th FRE of the function at FUNC_IDX'th function
    descriptor entry in the SFrame decoder CTX.  Returns error code as
    applicable.  */
 
 int
-sframe_decoder_get_fre (sframe_decoder_ctx *ctx,
+sframe_decoder_get_fre (const sframe_decoder_ctx *ctx,
 			unsigned int func_idx,
 			unsigned int fre_idx,
 			sframe_frame_row_entry *fre)
@@ -1523,15 +1845,19 @@ sframe_decoder_get_fre (sframe_decoder_ctx *ctx,
   if (ctx == NULL || fre == NULL)
     return sframe_set_errno (&err, SFRAME_ERR_INVAL);
 
+  uint8_t ver = sframe_decoder_get_version (ctx);
+
   /* Get function descriptor entry at index func_idx.  */
   fdep = sframe_decoder_get_funcdesc_at_index (ctx, func_idx);
-
   if (fdep == NULL)
     return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
 
   fre_type = sframe_get_fre_type (fdep);
   /* Now scan the FRE entries.  */
   fres = ctx->sfd_fres + fdep->func_start_fre_off;
+  if (ver == SFRAME_VERSION_3)
+    fres += sizeof (sframe_func_desc_attr_v3);
+
   for (i = 0; i < fdep->func_num_fres; i++)
    {
      /* Decode the FRE at the current position.  Return it if valid.  */
@@ -1557,6 +1883,53 @@ sframe_decoder_get_fre (sframe_decoder_ctx *ctx,
    }
 
   return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
+}
+
+/* Get the SFrame FRE data of the function at FUNC_IDX'th function index entry
+   in the SFrame decoder DCTX.  The reference to the buffer is returned in
+   FRES_BUF with FRES_BUF_SIZE indicating the size of the buffer.  The number
+   of FREs in the buffer are NUM_FRES.  In SFrame V3, this buffer also contains
+   the FDE attr data before the actual SFrame FREs.  Returns SFRAME_ERR in case
+   of error.  */
+
+int
+sframe_decoder_get_fres_buf (const sframe_decoder_ctx *dctx,
+			     const uint32_t func_idx,
+			     char **fres_buf,
+			     size_t *fres_buf_size,
+			     uint32_t *num_fres)
+{
+  sframe_func_desc_entry_int *fdep;
+  uint32_t i = 0;
+  uint32_t fre_type;
+  size_t esz;
+  int err = 0;
+
+  if (dctx == NULL || fres_buf == NULL)
+    return sframe_set_errno (&err, SFRAME_ERR_INVAL);
+
+  /* Get function descriptor entry at index func_idx.  */
+  fdep = sframe_decoder_get_funcdesc_at_index (dctx, func_idx);
+  *num_fres = fdep->func_num_fres;
+
+  if (fdep == NULL)
+    return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
+
+  fre_type = sframe_get_fre_type (fdep);
+  /* Update the pointer to (and total size of) the FRE entries.  */
+  *fres_buf = dctx->sfd_fres + fdep->func_start_fre_off;
+  const char *tmp_buf = *fres_buf + sizeof (sframe_func_desc_attr_v3);
+  *fres_buf_size = sizeof (sframe_func_desc_attr_v3);
+  while (i < *num_fres)
+    {
+      /* Avoid cost of full decoding at this time.  */
+      esz = sframe_buf_fre_entry_size (tmp_buf, fre_type);
+      tmp_buf += esz;
+      *fres_buf_size += esz;
+      i++;
+    }
+
+  return 0;
 }
 
 
@@ -1727,8 +2100,8 @@ sframe_encoder_get_offsetof_fde_start_addr (sframe_encoder_ctx *ectx,
     *errp = 0;
 
   return (sframe_encoder_get_hdr_size (ectx)
-	  + func_idx * sizeof (sframe_func_desc_entry_v2)
-	  + offsetof (sframe_func_desc_entry_v2, sfde_func_start_address));
+	  + func_idx * sizeof (sframe_func_desc_idx_v3)
+	  + offsetof (sframe_func_desc_idx_v3, sfdi_func_start_offset));
 }
 
 /* Add an SFrame FRE to function at FUNC_IDX'th function descriptor entry in
@@ -1793,11 +2166,102 @@ sframe_encoder_add_fre (sframe_encoder_ctx *ectx,
   ectx->sfe_fres = fre_tbl;
   ectx->sfe_fre_nbytes += esz;
 
+  if (!fdep->func_num_fres)
+    ectx->sfe_fre_nbytes += sizeof (sframe_func_desc_attr_v3);
+
   ehp = sframe_encoder_get_header (ectx);
   ehp->sfh_num_fres = fre_tbl->count;
 
   /* Update the value of the number of FREs for the function.  */
   fdep->func_num_fres++;
+
+  return 0;
+
+bad:
+  if (fre_tbl != NULL)
+    free (fre_tbl);
+  ectx->sfe_fres = NULL;
+  ectx->sfe_fre_nbytes = 0;
+  return -1;
+}
+
+/* Add SFrame FRE data given in the buffer FRES_BUF of size FRES_BUF_SIZE (for
+   function at index FUNC_IDX) to the encoder context ECTX.  The number of FREs
+   in the buffer are NUM_FRES.  Returns SFRAME_ERR if failure.  */
+
+int
+sframe_encoder_add_fres_buf (sframe_encoder_ctx *ectx,
+			     unsigned int func_idx,
+			     uint32_t num_fres,
+			     const char *fres_buf,
+			     size_t fres_buf_size)
+{
+  sframe_frame_row_entry *ectx_frep;
+  size_t esz = 0;
+
+  int err = 0;
+  if (ectx == NULL || ((fres_buf == NULL) != (fres_buf_size == 0)))
+    return sframe_set_errno (&err, SFRAME_ERR_INVAL);
+
+  /* Use func_idx to gather the function descriptor entry.  */
+  sframe_func_desc_entry_int *fdep
+    = sframe_encoder_get_funcdesc_at_index (ectx, func_idx);
+  if (fdep == NULL)
+    return sframe_set_errno (&err, SFRAME_ERR_FDE_NOTFOUND);
+
+  sf_fre_tbl *fre_tbl = ectx->sfe_fres;
+  if (fre_tbl == NULL || fre_tbl->count + num_fres >= fre_tbl->alloced)
+    {
+      sf_fre_tbl *tmp = sframe_grow_fre_tbl (fre_tbl, num_fres, &err);
+      if (err)
+	{
+	  sframe_set_errno (&err, SFRAME_ERR_NOMEM);
+	  goto bad;		/* OOM.  */
+	}
+      fre_tbl = tmp;
+    }
+
+  /* Update the SFrame func attr values.  */
+  fdep->func_num_fres = num_fres;
+  const char *fres = fres_buf + sizeof (uint16_t);
+  fdep->func_info = *(uint8_t *)fres;
+  fres += sizeof (uint8_t);
+  fdep->func_info2 = *(uint8_t *)fres;
+  fres += sizeof (uint8_t);
+  fdep->func_rep_size = *(uint8_t *)fres;
+  fres += sizeof (uint8_t);
+
+  uint32_t fre_type = sframe_get_fre_type (fdep);
+  uint32_t remaining = num_fres;
+  size_t buf_size = sizeof (sframe_func_desc_attr_v3);
+  while (remaining)
+    {
+      ectx_frep = &fre_tbl->entry[fre_tbl->count];
+      /* Copy the SFrame FRE data over to the encoder object's fre_tbl.  */
+      sframe_decode_fre (fres, ectx_frep, fre_type, &esz);
+
+      if (!sframe_fre_sanity_check_p (ectx_frep))
+	return sframe_set_errno (&err, SFRAME_ERR_FRE_INVAL);
+
+      /* Although a stricter sanity check on fre_start_addr like:
+	   if (fdep->func_size)
+	     sframe_assert (frep->fre_start_addr < fdep->func_size);
+	 is more suitable, some code has been seen to not abide by it.  See PR
+	 libsframe/33131.  */
+      sframe_assert (ectx_frep->fre_start_addr <= fdep->func_size);
+
+      fre_tbl->count++;
+      fres += esz;
+      buf_size += esz;
+      remaining--;
+    }
+
+  sframe_assert (fres_buf_size == buf_size);
+  ectx->sfe_fres = fre_tbl;
+  ectx->sfe_fre_nbytes += buf_size;
+
+  sframe_header *ehp = sframe_encoder_get_header (ectx);
+  ehp->sfh_num_fres = fre_tbl->count;
 
   return 0;
 
@@ -1815,7 +2279,7 @@ bad:
 
 static int
 sframe_encoder_add_funcdesc_internal (sframe_encoder_ctx *ectx,
-				      int32_t start_addr,
+				      int64_t start_addr,
 				      uint32_t func_size)
 {
   sframe_header *ehp;
@@ -1886,7 +2350,7 @@ bad:
    FUNC_SIZE to the encoder context ECTX.  */
 
 int
-sframe_encoder_add_funcdesc (sframe_encoder_ctx *ectx, int32_t start_pc_offset,
+sframe_encoder_add_funcdesc (sframe_encoder_ctx *ectx, int64_t start_pc_offset,
 			     uint32_t func_size)
 {
   int err = 0;
@@ -1922,6 +2386,39 @@ sframe_encoder_add_funcdesc_v2 (sframe_encoder_ctx *ectx,
 
   sf_fde_tbl *fd_info = ectx->sfe_funcdesc;
   fd_info->entry[fd_info->count-1].func_info = func_info;
+  fd_info->entry[fd_info->count-1].func_rep_size = rep_block_size;
+
+  return 0;
+}
+
+/* Add a new SFrame function descriptor entry with START_PC_OFFSET, FUNC_SIZE,
+   FUNC_INFO, FUNC_INFO2 and REP_BLOCK_SIZE to the encoder context ECTX.
+   Return error code on failure.  */
+
+int
+sframe_encoder_add_funcdesc_v3 (sframe_encoder_ctx *ectx,
+				int64_t start_pc_offset,
+				uint32_t func_size,
+				unsigned char func_info,
+				unsigned char func_info2,
+				uint8_t rep_block_size,
+				uint32_t num_fres ATTRIBUTE_UNUSED)
+{
+  int err = 0;
+  if (ectx == NULL || sframe_encoder_get_version (ectx) != SFRAME_VERSION_3)
+    {
+      sframe_set_errno (&err, SFRAME_ERR_INVAL);
+      return err;
+    }
+
+  err = sframe_encoder_add_funcdesc_internal (ectx, start_pc_offset,
+					      func_size);
+  if (err)
+    return err;
+
+  sf_fde_tbl *fd_info = ectx->sfe_funcdesc;
+  fd_info->entry[fd_info->count-1].func_info = func_info;
+  fd_info->entry[fd_info->count-1].func_info2 = func_info2;
   fd_info->entry[fd_info->count-1].func_rep_size = rep_block_size;
 
   return 0;
@@ -2039,26 +2536,46 @@ sframe_encoder_write_fre (char *contents, sframe_frame_row_entry *frep,
   return 0;
 }
 
+/* Write an SFrame FDE Index element for SFrame V3 into the provided buffer at
+   CONTENTS.  Update FDE_WRITE_SIZE with the number of bytes written to the
+   buffer.  Return 0 on success, SFRAME_ERR otherwise.  */
+
 static int
-sframe_encoder_write_fde (const sframe_header *sfhp ATTRIBUTE_UNUSED,
-			  char *contents, sframe_func_desc_entry_int *fde,
-			  size_t *fde_write_size)
+sframe_encoder_write_fde_idx (const sframe_header *sfhp ATTRIBUTE_UNUSED,
+			      char *contents,
+			      const sframe_func_desc_entry_int *fde,
+			      size_t *fde_write_size)
 {
-  sframe_func_desc_entry_v2 *fdep = (sframe_func_desc_entry_v2 *)contents;
+  sframe_func_desc_idx_v3 *fdep = (sframe_func_desc_idx_v3 *)contents;
 
-  fdep->sfde_func_start_address = (int32_t)fde->func_start_pc_offset;
-  fdep->sfde_func_size = fde->func_size;
-  fdep->sfde_func_start_fre_off = fde->func_start_fre_off;
-  fdep->sfde_func_num_fres = fde->func_num_fres;
-  fdep->sfde_func_info = fde->func_info;
-  fdep->sfde_func_rep_size = fde->func_rep_size;
-  fdep->sfde_func_padding2 = 0;
+  fdep->sfdi_func_start_offset = fde->func_start_pc_offset;
+  fdep->sfdi_func_size = fde->func_size;
+  fdep->sfdi_func_start_fre_off = fde->func_start_fre_off;
 
-  *fde_write_size = sizeof (sframe_func_desc_entry_v2);
+  *fde_write_size = sizeof (sframe_func_desc_idx_v3);
 
   return 0;
 }
 
+/* Write the SFrame FDE Attribute element for SFrame V3 into the provided
+   buffer at CONTENTS.  Return 0 on success, SFRAME_ERR otherwise.  */
+
+static int
+sframe_encoder_write_fde_attr (char *contents,
+			       const sframe_func_desc_entry_int *fde)
+{
+  sframe_func_desc_attr_v3 *fattr = (sframe_func_desc_attr_v3 *)contents;
+
+  /* Access to num_fres may be unaligned.  */
+  uint16_t num_fres = (uint16_t)fde->func_num_fres;
+  memcpy (fattr, &num_fres, sizeof (uint16_t));
+
+  fattr->sfda_func_info = fde->func_info;
+  fattr->sfda_func_info2 = fde->func_info2;
+  fattr->sfda_func_rep_size = fde->func_rep_size;
+
+  return 0;
+}
 /* Serialize the core contents of the SFrame section and write out to the
    output buffer held in the encoder context ECTX.  Sort the SFrame FDEs on
    start PC if SORT_FDE_P is true.  Return SFRAME_ERR if failure.  */
@@ -2086,7 +2603,7 @@ sframe_encoder_write_sframe (sframe_encoder_ctx *ectx, bool sort_fde_p)
   contents = ectx->sfe_data;
   buf_size = ectx->sfe_data_size;
   num_fdes = sframe_encoder_get_num_fidx (ectx);
-  all_fdes_size = num_fdes * sizeof (sframe_func_desc_entry_v2);
+  all_fdes_size = num_fdes * sizeof (sframe_func_desc_idx_v3);
   ehp = sframe_encoder_get_header (ectx);
   hdr_size = sframe_get_hdr_size (ehp);
 
@@ -2120,12 +2637,12 @@ sframe_encoder_write_sframe (sframe_encoder_ctx *ectx, bool sort_fde_p)
       fre_type = sframe_get_fre_type (fdep);
       num_fres = fdep->func_num_fres;
 
-      /* For FDEs without any FREs, set sfde_func_start_fre_off to zero.  */
-      if (num_fres == 0)
-	fdep->func_start_fre_off = 0;
-
       if (num_fres > 0 && fr_info == NULL)
 	return sframe_set_errno (&err, SFRAME_ERR_FRE_INVAL);
+
+      sframe_encoder_write_fde_attr (contents, fdep);
+      contents += sizeof (sframe_func_desc_attr_v3);
+      fre_size += sizeof (sframe_func_desc_attr_v3);
 
       for (j = 0; j < num_fres; j++)
 	{
@@ -2163,8 +2680,8 @@ sframe_encoder_write_sframe (sframe_encoder_ctx *ectx, bool sort_fde_p)
   /* Write out the FDE table sorted on funtion start address.  */
   for (i = 0; i < num_fdes; i++)
     {
-      sframe_encoder_write_fde (ehp, contents, &fd_info->entry[i],
-				&fde_write_size);
+      sframe_encoder_write_fde_idx (ehp, contents, &fd_info->entry[i],
+				    &fde_write_size);
       contents += fde_write_size;
     }
 
@@ -2193,7 +2710,7 @@ sframe_encoder_write (sframe_encoder_ctx *ectx, size_t *encoded_size,
 
   ehp = sframe_encoder_get_header (ectx);
   hdrsize = sframe_get_hdr_size (ehp);
-  fsz = sframe_encoder_get_num_fidx (ectx) * sizeof (sframe_func_desc_entry_v2);
+  fsz = sframe_encoder_get_num_fidx (ectx) * sizeof (sframe_func_desc_idx_v3);
   fresz = ectx->sfe_fre_nbytes;
 
   /* Encoder writes out data in the latest SFrame format version.  */

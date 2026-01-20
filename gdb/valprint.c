@@ -464,7 +464,8 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
   if (options->symbol_print)
     print_address_demangle (options, gdbarch, address, stream, demangle);
   else if (options->addressprint)
-    gdb_puts (paddress (gdbarch, address), stream);
+    fputs_styled (paddress (gdbarch, address), address_style.style (),
+		  stream);
 }
 
 /* generic_val_print helper for TYPE_CODE_ARRAY.  */
@@ -605,7 +606,8 @@ print_ref_address (struct type *type, const gdb_byte *address_buffer,
 	= extract_typed_address (address_buffer + embedded_offset, type);
 
       gdb_printf (stream, "@");
-      gdb_puts (paspace_and_addr (gdbarch, address).c_str (), stream);
+      fputs_styled (paspace_and_addr (gdbarch, address).c_str (),
+		    address_style.style (), stream);
     }
   /* Else: we have a non-addressable value, such as a DW_AT_const_value.  */
 }
@@ -1983,7 +1985,8 @@ print_function_pointer_address (const struct value_print_options *options,
   if (options->addressprint && func_addr != address)
     {
       gdb_puts ("@", stream);
-      gdb_puts (paddress (gdbarch, address), stream);
+      fputs_styled (paddress (gdbarch, address), address_style.style (),
+		    stream);
       gdb_puts (": ", stream);
     }
   print_address_demangle (options, gdbarch, func_addr, stream, demangle);

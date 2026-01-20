@@ -55,7 +55,7 @@ with_test_prefix "starting threads" {
 
 with_test_prefix "stopping threads" {
     gdb_test "call (void) stop_thread()" \
-	"\\\[Thread \[^\r\n\]+ exited\\\]" \
+	"\\\[Thread \[^\r\n\]+ \\\(id $decimal\\\) exited\\\]" \
 	"stop a thread, return value discarded"
     check_thread_count -1
 

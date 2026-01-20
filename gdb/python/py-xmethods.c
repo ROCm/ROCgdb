@@ -393,8 +393,7 @@ python_xmethod_worker::do_get_arg_types (std::vector<type *> *arg_types)
      be a 'const' value.  Hence, create a 'const' variant of the 'this' pointer
      type.  */
   obj_type = type_object_to_type (m_this_type);
-  (*arg_types)[0] = make_cv_type (1, 0, lookup_pointer_type (obj_type),
-				  NULL);
+  (*arg_types)[0] = make_cv_type (1, 0, lookup_pointer_type (obj_type));
 
   return EXT_LANG_RC_OK;
 }

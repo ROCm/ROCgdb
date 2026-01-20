@@ -908,6 +908,10 @@ proc test_printf {} {
     # PR cli/14977.
     gdb_test "printf \"%s\\n\", 0" "\\(null\\)"
 
+    # Test %z (size_t) and %t (ptrdiff_t) length modifiers.
+    gdb_test "printf \"%zu\\n\", test_size" "1234"
+    gdb_test "printf \"%td\\n\", test_ptrdiff" "-5678"
+
     with_max_value_size 20 {
 	gdb_test {printf "%s", teststring3} \
 	    "^printed string requires 45 bytes, which is more than max-value-size"

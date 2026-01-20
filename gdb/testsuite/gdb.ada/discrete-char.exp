@@ -29,7 +29,7 @@ clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "STOP" ${testdir}/main.adb]
 if {![runto "main.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test_no_output "set print array-indexes on"

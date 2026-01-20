@@ -685,7 +685,13 @@ write_coff_file (const char *filename, const char *target,
       return false;
     }
 
-  bfd_set_reloc (abfd, sec, cwi.relocs, cwi.reloc_count);
+  if (!bfd_finalize_section_relocs (abfd, sec, cwi.relocs, cwi.reloc_count))
+    {
+      bfd_nonfatal ("bfd_finalize_section_relocs");
+      bfd_close_all_done (abfd);
+      free (cwi.relocs);
+      return false;
+    }
 
   offset = 0;
   for (d = cwi.dirs.d; d != NULL; d = d->next)

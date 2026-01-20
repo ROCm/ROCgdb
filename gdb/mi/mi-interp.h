@@ -33,7 +33,7 @@ public:
     : interp (name)
   {}
 
-  void init (bool top_level) override;
+  void do_init (bool top_level) override;
   void resume () override;
   void suspend () override;
   void exec (const char *command_str) override;

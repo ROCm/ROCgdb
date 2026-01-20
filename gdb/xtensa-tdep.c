@@ -3184,8 +3184,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_pc_regnum (gdbarch, tdep->pc_regnum);
   set_gdbarch_ps_regnum (gdbarch, tdep->ps_regnum);
 
-  /* Renumber registers for known formats (stabs and dwarf2).  */
-  set_gdbarch_stab_reg_to_regnum (gdbarch, xtensa_reg_to_regnum);
+  /* Renumber registers for known formats (dwarf2).  */
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, xtensa_reg_to_regnum);
 
   /* We provide our own function to get register information.  */

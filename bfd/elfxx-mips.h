@@ -103,6 +103,8 @@ extern bool _bfd_mips_elf_ignore_discarded_relocs
   (asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_is_target_special_symbol
   (bfd *abfd, asymbol *sym) ATTRIBUTE_HIDDEN;
+extern bool _bfd_mips_elf_finalize_section_relocs
+  (bfd *, asection *, arelent **, unsigned int) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_find_nearest_line
   (bfd *, asymbol **, asection *, bfd_vma,
    const char **, const char **, unsigned int *, unsigned int *)

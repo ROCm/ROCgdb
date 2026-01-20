@@ -199,7 +199,8 @@ print_unpacked_pointer (struct type *type,
 
   if (options->addressprint && options->format != 's')
     {
-      gdb_puts (paddress (gdbarch, address), stream);
+      fputs_styled (paddress (gdbarch, address), address_style.style (),
+		    stream);
       want_space = 1;
     }
 
@@ -232,7 +233,7 @@ print_variable_at_address (struct type *type,
   struct type *elttype = check_typedef (type->target_type ());
 
   gdb_printf (stream, "[");
-  gdb_puts (paddress (gdbarch, addr), stream);
+  fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
   gdb_printf (stream, "] : ");
 
   if (elttype->code () != TYPE_CODE_UNDEF)

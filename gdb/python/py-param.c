@@ -501,7 +501,7 @@ get_doc_string (PyObject *object, enum doc_string_type doc_type,
       || (doc_type != doc_string_description && *result == '\0'))
     {
       if (doc_type == doc_string_description)
-	result.reset (xstrdup (_("This command is not documented.")));
+	result = make_unique_xstrdup (_("This command is not documented."));
       else
 	{
 	  if (doc_type == doc_string_show)

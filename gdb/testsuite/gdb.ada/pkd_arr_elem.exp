@@ -55,16 +55,16 @@ gdb_test_multiple "" "Runto to $bp_location" {
 # of the components.  Accept both known orders.
 set test "print test"
 gdb_test_multiple "$test" $test {
-  -re "= \\(size => 100, length => 1, str => \\(33 'A', nul <repeats 99 times>\\)\\).*$gdb_prompt $" {
-    pass $test
+    -re "= \\(size => 100, length => 1, str => \\(33 'A', nul <repeats 99 times>\\)\\).*$gdb_prompt $" {
+	pass $test
     }
-  -re "= \\(size => 100, str => \\(33 'A', nul <repeats 99 times>\\), length => 1\\).*$gdb_prompt $" {
-    pass $test
+    -re "= \\(size => 100, str => \\(33 'A', nul <repeats 99 times>\\), length => 1\\).*$gdb_prompt $" {
+	pass $test
     }
 }
 
 gdb_test "print test.str" \
-	 "= \\(33 'A', nul <repeats 99 times>\\)"
+    "= \\(33 'A', nul <repeats 99 times>\\)"
 
 gdb_test "print test.str(1)" \
-	 "= 33 'A'"
+    "= 33 'A'"

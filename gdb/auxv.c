@@ -497,6 +497,8 @@ default_print_auxv_entry (struct gdbarch *gdbarch, struct ui_file *file,
 	   AUXV_FORMAT_STR);
       TAG (AT_RANDOM, _("Address of 16 random bytes"), AUXV_FORMAT_HEX);
       TAG (AT_HWCAP2, _("Extension of AT_HWCAP"), AUXV_FORMAT_HEX);
+      TAG (AT_HWCAP3, _("Extension of AT_HWCAP"), AUXV_FORMAT_HEX);
+      TAG (AT_HWCAP4, _("Extension of AT_HWCAP"), AUXV_FORMAT_HEX);
       TAG (AT_RSEQ_FEATURE_SIZE, _("rseq supported feature size"),
 	   AUXV_FORMAT_DEC);
       TAG (AT_RSEQ_ALIGN, _("rseq allocation alignment"),

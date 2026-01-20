@@ -1042,9 +1042,9 @@ ctf_read_tsv (struct uploaded_tsv **uploaded_tsvs)
 							   #FIELD));	\
 									\
       if (strlen (p) > 0)						\
-	(VAR)->FIELD.reset (xstrdup (p));				\
+	(VAR)->FIELD = make_unique_xstrdup (p);				\
       else								\
-	(VAR)->FIELD = NULL;						\
+	(VAR)->FIELD = nullptr;						\
     }									\
   while (0)
 

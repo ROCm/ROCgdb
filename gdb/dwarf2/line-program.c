@@ -46,13 +46,13 @@ class lnp_state_machine
 public:
   /* Initialize a machine state for the start of a line number
      program.  */
-  lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch, line_header *lh);
+  lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch);
 
   file_entry *current_file ()
   {
     /* lh->file_names is 0-based, but the file name numbers in the
        statement program are 1-based.  */
-    return m_line_header->file_name_at (m_file);
+    return m_cu->line_header->file_name_at (m_file);
   }
 
   /* Record the line in the state machine.  END_SEQUENCE is true if
@@ -161,9 +161,6 @@ private:
 
   gdbarch *m_gdbarch;
 
-  /* The line number header.  */
-  line_header *m_line_header;
-
   /* These are part of the standard DWARF line number state machine,
      and initialized according to the DWARF spec.  */
 
@@ -206,29 +203,29 @@ void
 lnp_state_machine::handle_advance_pc (CORE_ADDR adjust)
 {
   CORE_ADDR addr_adj = (((m_op_index + adjust)
-			 / m_line_header->maximum_ops_per_instruction)
-			* m_line_header->minimum_instruction_length);
+			 / m_cu->line_header->maximum_ops_per_instruction)
+			* m_cu->line_header->minimum_instruction_length);
   addr_adj = gdbarch_adjust_dwarf2_line (m_gdbarch, addr_adj, true);
   m_address = (unrelocated_addr) ((CORE_ADDR) m_address + addr_adj);
   m_op_index = ((m_op_index + adjust)
-		% m_line_header->maximum_ops_per_instruction);
+		% m_cu->line_header->maximum_ops_per_instruction);
 }
 
 void
 lnp_state_machine::handle_special_opcode (unsigned char op_code)
 {
-  unsigned char adj_opcode = op_code - m_line_header->opcode_base;
-  unsigned char adj_opcode_d = adj_opcode / m_line_header->line_range;
-  unsigned char adj_opcode_r = adj_opcode % m_line_header->line_range;
+  unsigned char adj_opcode = op_code - m_cu->line_header->opcode_base;
+  unsigned char adj_opcode_d = adj_opcode / m_cu->line_header->line_range;
+  unsigned char adj_opcode_r = adj_opcode % m_cu->line_header->line_range;
   CORE_ADDR addr_adj = (((m_op_index + adj_opcode_d)
-			 / m_line_header->maximum_ops_per_instruction)
-			* m_line_header->minimum_instruction_length);
+			 / m_cu->line_header->maximum_ops_per_instruction)
+			* m_cu->line_header->minimum_instruction_length);
   addr_adj = gdbarch_adjust_dwarf2_line (m_gdbarch, addr_adj, true);
   m_address = (unrelocated_addr) ((CORE_ADDR) m_address + addr_adj);
   m_op_index = ((m_op_index + adj_opcode_d)
-		% m_line_header->maximum_ops_per_instruction);
+		% m_cu->line_header->maximum_ops_per_instruction);
 
-  int line_delta = m_line_header->line_base + adj_opcode_r;
+  int line_delta = m_cu->line_header->line_base + adj_opcode_r;
   advance_line (line_delta);
   record_line (false);
   m_discriminator = 0;
@@ -247,7 +244,7 @@ lnp_state_machine::handle_set_file (file_name_index file)
   else
     {
       m_line_has_non_zero_discriminator = m_discriminator != 0;
-      dwarf2_start_subfile (m_cu, *fe, *m_line_header);
+      m_cu->start_subfile (*fe);
     }
 }
 
@@ -255,17 +252,17 @@ void
 lnp_state_machine::handle_const_add_pc ()
 {
   CORE_ADDR adjust
-    = (255 - m_line_header->opcode_base) / m_line_header->line_range;
+    = (255 - m_cu->line_header->opcode_base) / m_cu->line_header->line_range;
 
   CORE_ADDR addr_adj
     = (((m_op_index + adjust)
-	/ m_line_header->maximum_ops_per_instruction)
-       * m_line_header->minimum_instruction_length);
+	/ m_cu->line_header->maximum_ops_per_instruction)
+       * m_cu->line_header->minimum_instruction_length);
 
   addr_adj = gdbarch_adjust_dwarf2_line (m_gdbarch, addr_adj, true);
   m_address = (unrelocated_addr) ((CORE_ADDR) m_address + addr_adj);
   m_op_index = ((m_op_index + adjust)
-		% m_line_header->maximum_ops_per_instruction);
+		% m_cu->line_header->maximum_ops_per_instruction);
 }
 
 /* Return true if we should add LINE to the line number table.
@@ -432,19 +429,18 @@ lnp_state_machine::record_line (bool end_sequence)
   m_stmt_at_address |= (m_flags & LEF_IS_STMT) != 0;
 }
 
-lnp_state_machine::lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch,
-				      line_header *lh)
+lnp_state_machine::lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch)
   : m_cu (cu),
     m_builder (cu->get_builder ()),
     m_gdbarch (arch),
-    m_line_header (lh),
     /* Call `gdbarch_adjust_dwarf2_line' on the initial 0 address as
        if there was a line entry for it so that the backend has a
        chance to adjust it and also record it in case it needs it.
        This is currently used by MIPS code,
        cf. `mips_adjust_dwarf2_line'.  */
     m_address ((unrelocated_addr) gdbarch_adjust_dwarf2_line (arch, 0, 0)),
-    m_flags (lh->default_is_stmt ? LEF_IS_STMT : (linetable_entry_flags) 0),
+    m_flags (m_cu->line_header->default_is_stmt
+	     ? LEF_IS_STMT : (linetable_entry_flags) 0),
     m_last_address (m_address)
 {
 }
@@ -481,12 +477,12 @@ lnp_state_machine::check_line_address (struct dwarf2_cu *cu,
 }
 
 /* Subroutine of dwarf_decode_lines to simplify it.
-   Process the line number information in LH.  */
+   Process the line number information in CU::line_header.  */
 
 static void
-dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
-		      unrelocated_addr lowpc)
+dwarf_decode_lines_1 (struct dwarf2_cu *cu, unrelocated_addr lowpc)
 {
+  struct line_header *lh = cu->line_header;
   const gdb_byte *line_ptr, *extended_end;
   const gdb_byte *line_end;
   unsigned int bytes_read, extended_len;
@@ -503,7 +499,7 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
     {
       /* The DWARF line number program state machine.  Reset the state
 	 machine at the start of each sequence.  */
-      lnp_state_machine state_machine (cu, gdbarch, lh);
+      lnp_state_machine state_machine (cu, gdbarch);
       bool end_sequence = false;
 
       /* Start a subfile for the current file of the state
@@ -511,7 +507,7 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
       const file_entry *fe = state_machine.current_file ();
 
       if (fe != NULL)
-	dwarf2_start_subfile (cu, *fe, *lh);
+	cu->start_subfile (*fe);
 
       /* Decode the table.  */
       while (line_ptr < line_end && !end_sequence)
@@ -694,27 +690,25 @@ dwarf_decode_lines_1 (struct line_header *lh, struct dwarf2_cu *cu,
 /* See dwarf2/line-program.h.  */
 
 void
-dwarf_decode_lines (struct line_header *lh, struct dwarf2_cu *cu,
-		    unrelocated_addr lowpc, bool decode_mapping)
+dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc,
+		    bool decode_mapping)
 {
   if (decode_mapping)
-    dwarf_decode_lines_1 (lh, cu, lowpc);
+    dwarf_decode_lines_1 (cu, lowpc);
 
-  /* Make sure a symtab is created for every file, even files
-     which contain only variables (i.e. no code with associated
-     line numbers).  */
-  buildsym_compunit *builder = cu->get_builder ();
-  struct compunit_symtab *cust = builder->get_compunit_symtab ();
+  /* For non DWZ CUs, make sure a symtab is created for every file, even
+     files which contain only variables (i.e. no code with associated line
+     numbers).
 
-  for (auto &fe : lh->file_names ())
-    {
-      dwarf2_start_subfile (cu, fe, *lh);
-      subfile *sf = builder->get_current_subfile ();
-
-      if (sf->symtab == nullptr)
-	sf->symtab = allocate_symtab (cust, sf->name.c_str (),
-				      sf->name_for_id.c_str ());
-
-      fe.symtab = sf->symtab;
-    }
+     For DWZ CUs the line table can contain references to files that are
+     not part of the original CU.  In fact, if multiple object files were
+     used to create the DWZ file (as is normal), then the DWZ CU's line
+     table can contain references to files that are in objfiles that are
+     not part of the current inferior.  For DWZ we rely on lazy symtab
+     creation.  In the end we should still end up with a symtab for every
+     file as the original CU (the non-DWZ CU) will still contain a line
+     table, and that line table will mention every file, so when that is
+     processed we'll create symtabs as needed.  */
+  if (!cu->per_cu->is_dwz ())
+    cu->create_subfiles_and_symtabs ();
 }

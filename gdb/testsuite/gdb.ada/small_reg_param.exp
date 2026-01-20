@@ -20,13 +20,13 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug optimize=-O1]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 if {![runto_main]} {
-  return
+    return
 }
 
 gdb_breakpoint "call_me"

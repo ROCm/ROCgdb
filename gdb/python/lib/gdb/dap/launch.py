@@ -80,12 +80,15 @@ def launch(
     env: Optional[Mapping[str, str]] = None,
     stopAtBeginningOfMainSubprogram: bool = False,
     stopOnEntry: bool = False,
+    adaSourceCharset: Optional[str] = None,
     **extra,
 ):
     # Launch setup is handled here.  This is done synchronously so
     # that errors can be reported in a natural way.
     @in_gdb_thread
     def _setup_launch():
+        if adaSourceCharset is not None:
+            exec_and_log("set ada source-charset " + adaSourceCharset)
         if cwd is not None:
             exec_and_log("cd " + cwd)
         if program is not None:
@@ -132,11 +135,14 @@ def attach(
     program: Optional[str] = None,
     pid: Optional[int] = None,
     target: Optional[str] = None,
+    adaSourceCharset: Optional[str] = None,
     **args,
 ):
     # The actual attach is handled by this function.
     @in_gdb_thread
     def _do_attach():
+        if adaSourceCharset is not None:
+            exec_and_log("set ada source-charset " + adaSourceCharset)
         if program is not None:
             file_command(program)
         if pid is not None:

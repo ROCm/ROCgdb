@@ -83,4 +83,31 @@ _start:
 	ccmclean
 	ccmrl
 	mtlpl 4, 2
+	mtummcrae 1
+	mtummcr2e 2
+	mtmmcr2e 3
+	mtmmcrae 4
+	mtmmcr1e 5
+	mtmmcr3e 6
+	mtupmc7 7
+	mtupmc8 8
+	mtpmc7 9
+	mtpmc8 10
+	mfummcrae 11
+	mfmmcrae 12
+	mfummcr1e 13
+	mfmmcr1e 14
+	mfummcr2e 15
+	mfmmcr2e 16
+	mfummcr3e 17
+	mfmmcr3e 18
+	mfupmc7 19
+	mfpmc7 20
+	mfupmc8 21
+	mfpmc8 22
+	tlbiep 2, 4, 3, 1, 1
+	tlbiep 2, 3
+	tlbieio 7, 6, 2
+	tlbsyncio 9
+	ptesyncio 5
 

@@ -64,7 +64,7 @@ def symbol_value(sym, frame):
     # be needed, but this is a way to set the current language
     # properly so that language-dependent APIs will work.
     inf_frame.select()
-    name = str(sym.symbol())
+    name = sym.symbol().print_name
     val = sym.value()
     if val is None:
         # No synthetic value, so must read the symbol value

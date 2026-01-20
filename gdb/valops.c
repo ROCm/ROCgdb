@@ -3917,7 +3917,7 @@ value_rtti_indirect_type (struct value *v, int *full,
       /* Copy qualifiers to the referenced object.  */
       target_type = target->type ();
       real_type = make_cv_type (TYPE_CONST (target_type),
-				TYPE_VOLATILE (target_type), real_type, NULL);
+				TYPE_VOLATILE (target_type), real_type);
       if (TYPE_IS_REFERENCE (type))
 	real_type = lookup_reference_type (real_type, type->code ());
       else if (type->code () == TYPE_CODE_PTR)
@@ -3927,7 +3927,7 @@ value_rtti_indirect_type (struct value *v, int *full,
 
       /* Copy qualifiers to the pointer/reference.  */
       real_type = make_cv_type (TYPE_CONST (type), TYPE_VOLATILE (type),
-				real_type, NULL);
+				real_type);
     }
 
   return real_type;

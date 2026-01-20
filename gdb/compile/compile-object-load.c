@@ -328,12 +328,12 @@ private:
   bfd *link_next;
 };
 
-/* Relocate and store into inferior memory each section SECT of ABFD.  */
+/* Relocate and store into inferior memory section SECT.  */
 
 static void
-copy_sections (bfd *abfd, asection *sect, void *data)
+copy_section (bfd *abfd, asection *sect,
+	      gdb::array_view<asymbol *> symbol_table)
 {
-  asymbol **symbol_table = (asymbol **) data;
   bfd_byte *sect_data_got;
   struct bfd_link_info link_info;
   struct bfd_link_order link_order;
@@ -372,8 +372,8 @@ copy_sections (bfd *abfd, asection *sect, void *data)
 
   sect_data_got = bfd_get_relocated_section_contents (abfd, &link_info,
 						      &link_order,
-						      sect_data.get (),
-						      FALSE, symbol_table);
+						      sect_data.get (), FALSE,
+						      symbol_table.data ());
 
   if (sect_data_got == NULL)
     error (_("Cannot map compiled module \"%s\" section \"%s\": %s"),
@@ -782,7 +782,8 @@ compile_object_load (const compile_file_names &file_names,
   if (missing_symbols)
     error (_("%ld symbols were missing, cannot continue."), missing_symbols);
 
-  bfd_map_over_sections (abfd.get (), copy_sections, symbol_table.data ());
+  for (asection *sect : gdb_bfd_sections (abfd.get ()))
+    copy_section (abfd.get (), sect, symbol_table);
 
   regs_type = get_regs_type (func_sym, objfile);
   if (regs_type == NULL)

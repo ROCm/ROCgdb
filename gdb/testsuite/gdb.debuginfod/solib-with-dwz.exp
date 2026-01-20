@@ -1,0 +1,378 @@
+# Copyright 2025, 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+# This test covers a bug where GDB would try to list source lines from an
+# invalid symtab, and as a result would print a message saying that the
+# source file doesn't exist.
+#
+# Three shared libraries are compiled and their debug information is split
+# into separate .debug files.  Common debug is then extracted using the
+# 'dwz' tool.
+#
+# There are a few critical things required for the bug to manifest:
+#
+# 1. 'foo.c' must be mentioned in the dwz extracted common debug.  To
+#    achieve this two versions of libfoo are compiled with a small
+#    difference.
+#
+# 2. 'foo.c' must NOT be used by libbar.  This is why two copies of libfoo
+#    are created alongside libbar.
+#
+# 3. There must be a DWARF construct in libbar which causes the line table
+#    of the 'dwz' extracted DWARF to be read within the context of parsing
+#    libbar.  In this case we have the 'add_some_int' inlined function that
+#    is used in libbar and libfoo, as such the DW_TAG_subprogram is placed
+#    into the 'dwz' extracted DWARF, but there is a
+#    DW_TAG_inlined_subroutine in the DWARF for both libfoo and libbar.  The
+#    DW_AT_abstract_origin for the inlined subroutine points to the 'dwz'
+#    extracted DWARF file.
+#
+# What happens then is that when GDB interprets the DW_TAG_inlined_subroutine,
+# it goes off to find the DW_AT_abstract_origin, which is in the 'dwz'
+# extracted DWARF.
+#
+# While processing the DW_AT_abstract_origin GDB parses the line table from
+# the 'dwz' extracted DWARF, and creates symtabs (if not exist already).
+#
+# As the 'dwz' extracted DWARF mentions 'foo.c' in its line table, then GDB
+# ends up creating a symtab in libbar, for 'foo.c'.
+#
+# This used to be a problem as GDB could end up trying to use this symtab
+# when listing source code.  This isn't normally an issue as the symtab for
+# 'foo.c' within libbar, though misplaced, is identical to the symtab for
+# 'foo.c' that exists within libfoo.  As such, when GDB computes the source
+# path for either, the same full source path is computed, GDB will then read
+# the same file on disk.
+#
+# However, if debuginfod is involved, then the source lookup has an extra
+# check.  To fetch the source from debuginfod GDB must supply the source
+# filename AND the build-id for the original objfile, in our problematic
+# case this ends up being the build-id for libbar.
+#
+# As 'foo.c' is not a source file that is part of libbar, debuginfod refuses
+# to send this source file back, and claims the file doesn't exist.  GDB
+# would then say that the source file couldn't be found.
+#
+# However, changes in GDB means that this problem no longer exists.  When
+# looking for a source file by name, symtabs that are created for a
+# DW_TAG_partial_unit are ignored, at least in the places we care about.  As
+# a result, GDB now ignores the symtab for 'foo.c' that is created within
+# libbar.
+#
+# There is one remaining issue though, which this test does expose.  While
+# searching the symtabs, GDB will still trigger an attempt to download the
+# source code for 'foo.c' within libbar, even if, later on, GDB decides that
+# the symtab should be ignore on account of it being a DW_TAG_partial_unit.
+# This source code download is unfortunate as to the user it appears like a
+# second (unnecessary) download of the file.  There's an XFAIL in this test
+# related to this issue.
+
+load_lib debuginfod-support.exp
+
+require allow_debuginfod_tests
+require allow_shlib_tests
+require {istarget "*-linux*"}
+require {!is_remote host}
+require {dwz_version_at_least 0.13}
+
+standard_testfile -main.c -bar.c -foo.c -foo.h -common.h
+
+set libbar_filename [standard_output_file "libbar.so"]
+set libfoo_filename [standard_output_file "libfoo.so"]
+set libfoo_2_filename [standard_output_file "libfoo-2.so"]
+
+# Compile libbar.so.
+if {[build_executable "build libbar.so" $libbar_filename \
+	 $srcfile2 { debug shlib build-id }] == -1} {
+    return
+}
+
+# If we are running with a board that splits the debug information out and
+# adds a .gnu_debuglink, then this test isn't going to work.  We want to be
+# in control of splitting out the debug information, and we definitely don't
+# want a .gnu_debuglink otherwise debuginfod isn't going to be needed.
+if {[section_get $libbar_filename ".gnu_debuglink"] ne ""} {
+    unsupported "debug information has already been split out"
+    return
+}
+
+# Compile libfoo.so.
+if {[build_executable "build libfoo.so" $libfoo_filename \
+	 $srcfile3 { debug shlib build-id }] == -1} {
+    return
+}
+
+# Compile libfoo-2.so.
+if {[build_executable "build libfoo-2.so" $libfoo_2_filename \
+	 $srcfile3 { debug shlib build-id additional_flags=-DFOO2}] == -1} {
+    return
+}
+
+# Build the executable.
+if { [build_executable "build executable" ${binfile} ${srcfile} \
+	  [list debug shlib=${libbar_filename} shlib=${libfoo_filename} shlib_load]] == -1 } {
+    return
+}
+
+# For each library file, move the debug information into a .debug
+# file.  Don't add the gnu-debuglink from the library to the debug
+# file yet as the generated CRC depends on the debug information in
+# the .debug file, and in the next step we will change that debug
+# information using the DWZ tool.
+foreach filename [list $libbar_filename $libfoo_filename $libfoo_2_filename] {
+    if {[gdb_gnu_strip_debug $filename no-debuglink]} {
+	unsupported "produce separate debug info for [file tail $filename]"
+	return
+    }
+}
+
+# Move the .debug files into the debug/ directory.
+set debug_dir [standard_output_file "debug"]
+remote_exec build "mkdir \"$debug_dir\""
+remote_exec build "mv \"${libbar_filename}.debug\" \"${debug_dir}/\""
+remote_exec build "mv \"${libfoo_filename}.debug\" \"${debug_dir}/\""
+remote_exec build "mv \"${libfoo_2_filename}.debug\" \"${debug_dir}/\""
+
+# Run DWZ tool on the separate debug files.  This moves shared debug
+# information into a 'common.dwz' file.  First move into DEBUG_DIR
+# then run DWZ using relative filenames, this means that the link
+# placed into the *.debug files will be relative, and GDB will not be
+# able to find the common.dwz file itself; as a result it will have to
+# download the file via debuginfod.
+with_cwd $debug_dir {
+    set status \
+	[remote_exec build "dwz -m ./common.dwz \
+				   ./libbar.so.debug \
+				   ./libfoo.so.debug \
+				   ./libfoo-2.so.debug"]
+    if {[lindex $status 0] != 0} {
+	unsupported "unable to run dwz tool"
+	return
+    }
+}
+
+# Some earlier versions of dwz would fail to process the .debug files,
+# producing some error output, but still exit with code 0.  A
+# successful execution of dwz should produce no output.
+if {[lindex $status 1] ne ""} {
+    unsupported "unexpected output from dwz tool"
+    return
+}
+
+# Check the debuginfod client cache directory CACHE, look in the directory
+# corresponding to libbar.so, and check to see if the *-foo.c source file,
+# global SRCFILE3, was downloaded.  Return true if the file was downloaded,
+# otherwise, return false.
+proc check_cache_for_foo { cache } {
+    set build_id [get_build_id $::libbar_filename]
+    set cache_dir $cache/$build_id
+    set files [glob -nocomplain -tails -directory $cache_dir \*$::srcfile3]
+    if { [llength $files] > 0 } {
+	return true
+    }
+    return false
+}
+
+# Use DB and DEBUG_DIR to start debuginfod, then start GDB.  Configure GDB
+# so that it cannot find the test source code; we'll download this from
+# debuginfod.  Load the test executable and run until it crashes.  Move up
+# the stack until we're in libfoo.so, specifically, in the file
+# solib-with-dwz-foo.c, then use 'list', this displays source lines around
+# the current location, and sets the default symtab within GDB.  The source
+# will have been downloaded from debuginfod.
+#
+# Now use 'list LINENO', this should display LINENO within the default
+# symtab.
+proc run_test { cache db debug_dir use_filename } {
+    set url [start_debuginfod $db $debug_dir]
+    if { $url == "" } {
+	unresolved "start debuginfod server"
+	return
+    }
+
+    # Point the client to the server.
+    setenv DEBUGINFOD_URLS $url
+
+    clean_restart
+
+    # Set the substitute-path, this prevents GDB from reading the
+    # source code directly from the file system.
+    gdb_test_no_output "set substitute-path $::srcdir /dev/null" \
+	"set substitute-path"
+
+    # And remove SRCDIR from the source directory path, this prevents
+    # GDB from reading the source files relative to this location.
+    gdb_test "with confirm off -- dir" \
+	"^Source directories searched: \\\$cdir:\\\$cwd" \
+	"reset source directory path"
+
+    # Turn on support for debuginfod.
+    gdb_test_no_output "set debuginfod enabled on" \
+	"enabled debuginfod for initial test"
+
+    # Now GDB is configured, load the executable.
+    gdb_load $::binfile
+
+    if { ![runto_main] } {
+	return
+    }
+
+    # This test relies on reading address zero triggering a SIGSEGV.
+    # If address zero is readable then give up now.
+    if { [is_address_zero_readable] } {
+	unsupported "address zero in readable"
+	return
+    }
+
+    set crash_line_num [gdb_get_line_number "Crash here" $::srcfile2]
+
+    gdb_test "continue" \
+	"\r\n$crash_line_num\\s+[string_to_regexp {*ptr = 0;	/* Crash here.  */}]"
+
+    set call_line_num [gdb_get_line_number "Call line" $::srcfile3]
+
+    gdb_test "up" \
+	"\r\n$call_line_num\\s+[string_to_regexp {cb ();	/* Call line.  */}]"
+
+    gdb_test "list" \
+	"\r\n$call_line_num\\s+[string_to_regexp {cb ();	/* Call line.  */}]\r\n.*" \
+	"list default location in $::srcfile3"
+
+    set list_line_num [gdb_get_line_number "Second line to list" $::srcfile3]
+
+    # Try 'list LINENO' or 'list FILE:LINENO'.  GDB will perform a search
+    # for the current symtab or the symtab matching FILE, and could end up
+    # finding the wrong symtab, resulting in a file not found message
+    # instead of the source code being printed.
+
+    if { $use_filename } {
+	set filename_prefix "${::srcfile3}:"
+    } else {
+	set filename_prefix ""
+    }
+
+    set saw_missing_source_warning false
+    set saw_source_download false
+    set saw_expected_source_line false
+    gdb_test_multiple "list $filename_prefix$list_line_num" "list by line number in $::srcfile3" {
+	-re "^list $filename_prefix$list_line_num\r\n" {
+	    exp_continue
+	}
+	-re "^Downloading source file \[^\r\n\]+\r\n" {
+	    set saw_source_download true
+	    exp_continue
+	}
+	-re "^warning:\\s+$::decimal\\s+\[^\r\n\]+: No such file or directory\r\n" {
+	    set saw_missing_source_warning true
+	    exp_continue
+	}
+	-re "^$list_line_num\\s+[string_to_regexp {XXX: Second line to list.}]\r\n" {
+	    set saw_expected_source_line true
+	    exp_continue
+	}
+	-re "^$::gdb_prompt $" {
+	    # If the source download reply from debuginfod is very quick,
+	    # then debuginfod might not even print a line indicating that
+	    # anything was downloaded.  If we get here an still think that
+	    # the source wasn't downloaded, then check the cache, just to
+	    # confirm.
+	    if { !$saw_source_download } {
+		set saw_source_download [check_cache_for_foo $cache]
+	    }
+
+	    gdb_assert { !$saw_source_download } \
+		"$gdb_test_name, no source download"
+
+	    gdb_assert { $saw_expected_source_line \
+			     && !$saw_missing_source_warning } \
+		"$gdb_test_name, saw source line"
+	}
+	-re "^\[^\r\n\]*\r\n" {
+	    exp_continue
+	}
+    }
+
+    # Use 'maint info symtabs' to list all symtabs and find the
+    # symtabs that are associated with libbar.so (actually with the
+    # separate debug file for libbar.so).
+    #
+    # Then check that *-foo.c and *-foo.h don't appear in this list.
+    #
+    # But check that *-bar.c and *-common.h do appear in the list.
+    set build_id [get_build_id $::libbar_filename]
+    set symtabs [list]
+    set collect_symtabs false
+
+    gdb_test_multiple "maint info symtabs" "" {
+	-re "^maint info symtabs\r\n" {
+	    exp_continue
+	}
+	-re "^\{ objfile (\[^\r\n\]+) \\(\\(struct objfile \\*\\) $::hex\\)\r\n" {
+	    set objfile_name $expect_out(1,string)
+	    if { [string first $build_id $objfile_name] != -1 } {
+		set collect_symtabs true
+	    } else {
+		set collect_symtabs false
+	    }
+	    exp_continue
+	}
+	-re "^\\s+\{ symtab <unknown> \[^\r\n\]+\r\n" {
+	    # Ignore '<unknown>' nameless symtabs.
+	    exp_continue
+	}
+	-re "^\\s+\{ symtab (\[^\r\n\]+) \\(\\(struct symtab \\*\\) $::hex\\)\r\n" {
+	    if { $collect_symtabs } {
+		set symtab_name $expect_out(1,string)
+		lappend symtabs [file tail $symtab_name]
+	    }
+	    exp_continue
+	}
+	-re "^$::gdb_prompt $" {
+	    pass $gdb_test_name
+	}
+	-re "^\[^\r\n\]+\r\n" {
+	    exp_continue
+	}
+    }
+
+    foreach filename [list $::srcfile3 $::srcfile4] {
+	gdb_assert { [lsearch -exact $symtabs $filename] == -1 } \
+	    "$filename is not in the symtab list"
+    }
+
+    foreach filename [list $::srcfile2 $::srcfile5] {
+	gdb_assert { [lsearch -exact $symtabs $filename] != -1 } \
+	    "$filename is in the symtab list"
+    }
+}
+
+# Create CACHE and DB directories ready for debuginfod to use.
+prepare_for_debuginfod cache db
+
+with_debuginfod_env $cache {
+    foreach_with_prefix use_filename { true false } {
+
+	# Cleanup state the will be created in run_test.  Do this before the
+	# call to make debugging the test easier; the state remains after
+	# calling run_test.
+	unset -nocomplain env(DEBUGINFOD_URLS)
+	file delete -force $cache
+	file delete -force $db
+
+	# Now run the test.
+	run_test $cache $db $debug_dir $use_filename
+	stop_debuginfod
+    }
+}

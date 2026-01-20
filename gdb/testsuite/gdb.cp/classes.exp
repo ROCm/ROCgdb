@@ -510,16 +510,37 @@ proc test_enums {} {
 
     # ptype on the enum member
 
+    set re1 [multi_line \
+	"type = enum ClassWithEnum::PrivEnum (: unsigned (int|short|char) )?{" \
+	"    ?(ClassWithEnum::)?red = 0," \
+	"    (ClassWithEnum::)?green = 1," \
+	"    (ClassWithEnum::)?blue = 2," \
+	"    (ClassWithEnum::)?yellow = 42" \
+	"?}$nl$gdb_prompt $"]
+    set re2 [multi_line \
+	"type = enum PrivEnum {" \
+	"    ?(ClassWithEnum::)?red = 0," \
+	"    (ClassWithEnum::)?green = 1," \
+	"    (ClassWithEnum::)?blue = 2," \
+	"    (ClassWithEnum::)?yellow = 42" \
+	"?}$nl$gdb_prompt $"]
+    set re3 [multi_line \
+	"type = enum {" \
+	"    ?red = 0," \
+	"    green = 1," \
+	"    blue = 2," \
+	"    yellow = 42" \
+	"?}$nl$gdb_prompt $"]
     gdb_test_multiple "ptype obj_with_enum.priv_enum" "ptype obj_with_enum.priv_enum" {
-	-re "type = enum ClassWithEnum::PrivEnum (: unsigned (int|short|char) )?\{ ?(ClassWithEnum::)?red, (ClassWithEnum::)?green, (ClassWithEnum::)?blue, (ClassWithEnum::)?yellow = 42 ?\}$nl$gdb_prompt $" {
+	-re $re1 {
 	    pass "ptype obj_with_enum.priv_enum"
 	}
-	-re "type = enum PrivEnum \{ ?(ClassWithEnum::)?red, (ClassWithEnum::)?green, (ClassWithEnum::)?blue, (ClassWithEnum::)?yellow = 42 ?\}$nl$gdb_prompt $" {
+	-re $re2 {
 	    # gcc 2.95.3 -gdwarf-2
 	    # gcc 3.3.2 -gdwarf-2
 	    pass "ptype obj_with_enum.priv_enum"
 	}
-	-re "type = enum \{ ?red, green, blue, yellow = 42 ?\}$nl$gdb_prompt $" {
+	-re $re3 {
 	    # This case case is a little dubious, but it's not clear what
 	    # ought to be required of a ptype on a private enum...
 	    # -sts 19990324

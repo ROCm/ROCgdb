@@ -597,8 +597,11 @@ const struct aarch64_name_value_pair aarch64_barrier_dsb_nxs_options[4] =
 
 const struct aarch64_name_value_pair aarch64_hint_options[] =
 {
-  /* BTI.  This is also the F_DEFAULT entry for AARCH64_OPND_BTI_TARGET.  */
+  /* BTI.  This is also the F_DEFAULT entry for AARCH64_OPND_BTI_TARGET.
+     BTI R and SHUH must be the first and second entries respectively
+     so that F_DEFAULT refers to the correct table entries.  */
   { "r",	HINT_OPD_R },		/* BTI R.  */
+  { "",		HINT_OPD_NPHINT},	/* SHUH. */
   { "csync",	HINT_OPD_CSYNC },	/* PSB CSYNC.  */
   { "dsync",	HINT_OPD_DSYNC },	/* GCSB DSYNC.  */
   { "c",	HINT_OPD_C },		/* BTI C.  */
@@ -606,6 +609,7 @@ const struct aarch64_name_value_pair aarch64_hint_options[] =
   { "jc",	HINT_OPD_JC },		/* BTI JC.  */
   { "keep",	HINT_OPD_KEEP },	/* STSHH KEEP  */
   { "strm",	HINT_OPD_STRM },	/* STSHH STRM  */
+  { "ph",	HINT_OPD_PHINT },	/* SHUH PH.  */
   { NULL,	HINT_OPD_NULL },
 };
 
@@ -5089,6 +5093,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
     case AARCH64_OPND_SYSREG_PLBI:
+    case AARCH64_OPND_SYSREG_MLBI:
     case AARCH64_OPND_SYSREG_SR:
       snprintf (buf, size, "%s", style_reg (styler, opnd->sysins_op->name));
       break;
@@ -5176,6 +5181,12 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_STSHH_POLICY:
       snprintf (buf, size, "%s", style_sub_mnem (styler, opnd->hint_option->name));
+      break;
+
+    case AARCH64_OPND_SHUH_PHINT:
+      if (*(opnd->hint_option->name))
+	snprintf (buf, size, "%s",
+		  style_sub_mnem (styler, opnd->hint_option->name));
       break;
 
     case AARCH64_OPND_MOPS_ADDR_Rd:
@@ -5301,6 +5312,8 @@ const aarch64_sys_ins_reg aarch64_sys_regs_dc[] =
     { "zva",	    CPENS (3, C7, C4, 1),  F_HASXT, AARCH64_NO_FEATURES },
     { "gva",	    CPENS (3, C7, C4, 3),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "gzva",	    CPENS (3, C7, C4, 4),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
+    { "zgbva",	    CPENS (3, C7, C4, 5),  F_HASXT, AARCH64_FEATURE (MTETC) },
+    { "gbva",	    CPENS (3, C7, C4, 7),  F_HASXT, AARCH64_FEATURE (MTETC) },
     { "ivac",       CPENS (0, C7, C6, 1),  F_HASXT, AARCH64_NO_FEATURES },
     { "igvac",      CPENS (0, C7, C6, 3),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
     { "igsw",       CPENS (0, C7, C6, 4),  F_HASXT, AARCH64_FEATURE (MEMTAG) },
@@ -5498,6 +5511,15 @@ const aarch64_sys_ins_reg aarch64_sys_regs_plbi[] =
     PLBI_XS_OP ( "vmalle1os",	CPENS (0, C10, C1, 0), 	0 )
 
     { 0,	CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
+};
+
+const aarch64_sys_ins_reg aarch64_sys_regs_mlbi[] =
+{
+    { "alle1",    CPENS (4, C7, C0, 4), 0, AARCH64_FEATURE (MPAMv2)},
+    { "vmalle1",  CPENS (4, C7, C0, 5), 0, AARCH64_FEATURE (MPAMv2)},
+    { "vpide1",   CPENS (4, C7, C0, 6), F_HASXT, AARCH64_FEATURE (MPAMv2)},
+    { "vpmge1",   CPENS (4, C7, C0, 7), F_HASXT, AARCH64_FEATURE (MPAMv2)},
+    { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
 const aarch64_sys_ins_reg aarch64_sys_ins_gic[] =

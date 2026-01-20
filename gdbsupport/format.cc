@@ -111,6 +111,7 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	int seen_big_l = 0, seen_h = 0, seen_big_h = 0;
 	int seen_big_d = 0, seen_double_big_d = 0;
 	int seen_size_t = 0;
+	int seen_ptrdiff_t = 0;
 	int bad = 0;
 	int n_int_args = 0;
 	bool seen_i64 = false;
@@ -224,6 +225,11 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	    seen_size_t = 1;
 	    f++;
 	    break;
+	  case 't':
+	    /* For ptrdiff_t.  */
+	    seen_ptrdiff_t = 1;
+	    f++;
+	    break;
 	  case 'I':
 	    /* Support the Windows '%I64' extension, because an
 	       earlier call to format_pieces might have converted %lld
@@ -257,6 +263,8 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 	  case 'i':
 	    if (seen_size_t)
 	      this_argclass = size_t_arg;
+	    else if (seen_ptrdiff_t)
+	      this_argclass = ptrdiff_t_arg;
 	    else if (lcount == 0)
 	      this_argclass = int_arg;
 	    else if (lcount == 1)
@@ -334,7 +342,8 @@ format_pieces::format_pieces (const char **arg, bool gdb_extensions,
 
 	    if (lcount > 1 || seen_h || seen_big_h || seen_big_h
 		|| seen_big_d || seen_double_big_d || seen_size_t
-		|| seen_prec || seen_zero || seen_space || seen_plus)
+		|| seen_ptrdiff_t || seen_prec || seen_zero || seen_space
+		|| seen_plus)
 	      bad = 1;
 
 	    this_argclass = value_arg;

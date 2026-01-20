@@ -283,6 +283,10 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_POE2,
   /* TEV instructions.  */
   AARCH64_FEATURE_TEV,
+  /* MPAMv2.  */
+  AARCH64_FEATURE_MPAMv2,
+  /* MTETC.  */
+  AARCH64_FEATURE_MTETC,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -749,6 +753,7 @@ enum aarch64_opnd
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
   AARCH64_OPND_SYSREG_TLBIP,	/* System register <tlbip_op> operand.  */
   AARCH64_OPND_SYSREG_PLBI,	/* System register <plbi_op> operand.  */
+  AARCH64_OPND_SYSREG_MLBI,	/* System register <mlbi_op> operand.  */
   AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_DSB_NXS,	/* Barrier operand for DSB nXS variant.  */
@@ -759,6 +764,7 @@ enum aarch64_opnd
   AARCH64_OPND_BARRIER_GCSB,	/* Barrier operand for GCSB.  */
   AARCH64_OPND_BTI_TARGET,	/* BTI {<target>}.  */
   AARCH64_OPND_STSHH_POLICY,	/* STSHH {<policy>}.  */
+  AARCH64_OPND_SHUH_PHINT,	/* SHUH Priority Hint.  */
   AARCH64_OPND_BRBOP,		/* BRB operation IALL or INJ in bit 5.  */
   AARCH64_OPND_Rt_IN_SYS_ALIASES,	/* Defaulted and omitted Rt used in SYS aliases such as brb.  */
   AARCH64_OPND_LSE128_Rt,	/* LSE128 <Xt1>.  */
@@ -1674,6 +1680,7 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_plbi [];
+extern const aarch64_sys_ins_reg aarch64_sys_regs_mlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gic [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gicr [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gsb [];
@@ -1890,6 +1897,8 @@ struct aarch64_inst
 #define HINT_OPD_JC	0x26
 #define HINT_OPD_KEEP	0x30
 #define HINT_OPD_STRM	0x31
+#define HINT_OPD_NPHINT	0x32
+#define HINT_OPD_PHINT	0x33
 #define HINT_OPD_NULL	0x00
 
 

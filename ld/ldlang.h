@@ -361,13 +361,6 @@ typedef struct input_section_userdata_struct
   unsigned long map_symbol_def_count;
 } input_section_userdata_type;
 
-static inline bool
-bfd_input_just_syms (const bfd *abfd)
-{
-  lang_input_statement_type *is = bfd_usrdata (abfd);
-  return is != NULL && is->flags.just_syms;
-}
-
 typedef struct lang_wild_statement_struct lang_wild_statement_type;
 
 typedef void (*callback_t) (lang_wild_statement_type *, struct wildcard_list *,
@@ -643,8 +636,6 @@ extern void ldlang_add_require_defined
   (const char *const);
 extern void lang_add_output_format
   (const char *, const char *, const char *, int);
-extern void lang_list_init
-  (lang_statement_list_type *);
 extern void push_stat_ptr
   (lang_statement_list_type *);
 extern void pop_stat_ptr
@@ -656,8 +647,6 @@ extern void lang_add_string
 extern void lang_add_reloc
   (bfd_reloc_code_real_type, reloc_howto_type *, asection *, const char *,
    union etree_union *);
-extern void lang_for_each_statement
-  (void (*) (lang_statement_union_type *));
 extern void lang_for_each_statement_worker
   (void (*) (lang_statement_union_type *), lang_statement_union_type *);
 extern void *stat_alloc
@@ -793,6 +782,35 @@ typedef struct cmdline_list
 extern void cmdline_emit_object_only_section (void);
 extern void cmdline_check_object_only_section (bfd *, bool);
 extern void cmdline_remove_object_only_files (void);
+
+static inline bool
+bfd_input_just_syms (const bfd *abfd)
+{
+  lang_input_statement_type *is = bfd_usrdata (abfd);
+  return is != NULL && is->flags.just_syms;
+}
+
+static inline void
+lang_for_each_statement (void (*func) (lang_statement_union_type *))
+{
+  lang_for_each_statement_worker (func, statement_list.head);
+}
+
+static inline void
+lang_list_init (lang_statement_list_type *list)
+{
+  list->head = NULL;
+  list->tail = &list->head;
+}
+
+static inline void
+lang_statement_append (lang_statement_list_type *list,
+		       void *element,
+		       void *field)
+{
+  *(list->tail) = element;
+  list->tail = field;
+}
 
 /* Get the output section statement from section userdata.  */
 

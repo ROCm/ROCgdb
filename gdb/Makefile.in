@@ -1072,7 +1072,6 @@ COMMON_SFILES = \
 	bt-utils.c \
 	btrace.c \
 	build-id.c \
-	buildsym-legacy.c \
 	buildsym.c \
 	c-lang.c \
 	c-typeprint.c \
@@ -1105,6 +1104,7 @@ COMMON_SFILES = \
 	event-top.c \
 	exceptions.c \
 	exec.c \
+	expanded-symbol.c \
 	expprint.c \
 	extension.c \
 	f-lang.c \
@@ -1350,7 +1350,6 @@ HFILES_NO_SRCDIR = \
 	bt-utils.h \
 	build-id.h \
 	buildsym.h \
-	buildsym-legacy.h \
 	c-exp.h \
 	cgen-remap.h \
 	charset.h \
@@ -1442,6 +1441,7 @@ HFILES_NO_SRCDIR = \
 	event-top.h \
 	exceptions.h \
 	exec.h \
+	expanded-symbol.h \
 	expop.h \
 	expression.h \
 	extension.h \
@@ -1453,6 +1453,7 @@ HFILES_NO_SRCDIR = \
 	f-exp.h \
 	filename-seen-cache.h \
 	filesystem.h \
+	finish-thread-state.h \
 	f-lang.h \
 	frame-base.h \
 	frame.h \
@@ -1470,10 +1471,6 @@ HFILES_NO_SRCDIR = \
 	gdb-demangle.h \
 	gdb_expat.h \
 	gdb_proc_service.h \
-	gdb_vfork.h \
-	gdb_wchar.h \
-	gdbarch.h \
-	gdbcore.h \
 	gdbthread.h \
 	gdbtypes.h \
 	gdb_vfork.h \
@@ -1554,6 +1551,7 @@ HFILES_NO_SRCDIR = \
 	nat/aarch64-mte-linux-ptrace.h \
 	nat/aarch64-scalable-linux-ptrace.h \
 	nat/aarch64-scalable-linux-sigcontext.h \
+	nat/amd64-linux.h \
 	nat/amd64-linux-siginfo.h \
 	nat/fork-inferior.h \
 	nat/gdb_ptrace.h \

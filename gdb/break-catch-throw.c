@@ -481,7 +481,7 @@ compute_exception (struct gdbarch *argc, struct internalvar *var, void *ignore)
      the std::type_info for the exception.  Now we find the type from
      the type_info and cast the result.  */
   obj_type = cplus_type_from_type_info (arg1);
-  return value_ind (value_cast (make_pointer_type (obj_type, NULL), arg0));
+  return value_ind (value_cast (make_pointer_type (obj_type), arg0));
 }
 
 /* Implementation of the '$_exception' variable.  */

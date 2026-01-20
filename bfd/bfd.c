@@ -2199,19 +2199,21 @@ bfd_canonicalize_reloc (bfd *abfd,
 
 /*
 FUNCTION
-	bfd_set_reloc
+	bfd_finalize_section_relocs
 
 SYNOPSIS
-	void bfd_set_reloc
+	bool bfd_finalize_section_relocs
 	  (bfd *abfd, asection *sec, arelent **rel, unsigned int count);
 
 DESCRIPTION
-	Set the relocation pointer and count within
-	section @var{sec} to the values @var{rel} and @var{count}.
-	The argument @var{abfd} is ignored.
+	Set the relocation pointer and count within section @var{sec}
+	to the values @var{rel} and @var{count}, and take any other
+	actions required at the conclusion of section relocation
+	processing.
 
-.#define bfd_set_reloc(abfd, asect, location, count) \
-.	BFD_SEND (abfd, _bfd_set_reloc, (abfd, asect, location, count))
+.#define bfd_finalize_section_relocs(abfd, asect, location, count) \
+.	BFD_SEND (abfd, _bfd_finalize_section_relocs, \
+.		  (abfd, asect, location, count))
 */
 
 /*

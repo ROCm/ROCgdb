@@ -3592,16 +3592,8 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
   set_gdbarch_fp0_regnum (gdbarch, AMD64_ST0_REGNUM); /* %st(0) */
 
   /* The "default" register numbering scheme for AMD64 is referred to
-     as the "DWARF Register Number Mapping" in the System V psABI.
-     The preferred debugging format for all known AMD64 targets is
-     actually DWARF2, and GCC doesn't seem to support DWARF (that is
-     DWARF-1), but we provide the same mapping just in case.  This
-     mapping is also used for stabs, which GCC does support.  */
-  set_gdbarch_stab_reg_to_regnum (gdbarch, amd64_dwarf_reg_to_regnum);
+     as the "DWARF Register Number Mapping" in the System V psABI.  */
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, amd64_dwarf_reg_to_regnum);
-
-  /* We don't override SDB_REG_RO_REGNUM, since COFF doesn't seem to
-     be in use on any of the supported AMD64 targets.  */
 
   /* Call dummy code.  */
   set_gdbarch_push_dummy_call (gdbarch, amd64_push_dummy_call);

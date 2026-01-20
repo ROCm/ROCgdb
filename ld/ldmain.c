@@ -53,6 +53,10 @@
 #include <sys/resource.h>
 #endif
 
+#if defined (HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
+#include <malloc.h>
+#endif
+
 #ifndef TARGET_SYSTEM_ROOT
 #define TARGET_SYSTEM_ROOT ""
 #endif
@@ -289,6 +293,11 @@ struct ld_phase_data
   struct rusage   begin;
   struct rusage   use;
 #endif
+
+#if defined (HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
+  size_t          begin_blks;
+  size_t          used_blks;
+#endif
 };
 
 static struct ld_phase_data phase_data [NUM_PHASES] =
@@ -300,7 +309,14 @@ static struct ld_phase_data phase_data [NUM_PHASES] =
   [PHASE_PLUGINS] = { .name = "plugins" },
   [PHASE_PROCESS] = { .name = "processing files" },
   [PHASE_WRITE]   = { .name = "write" },
+  [PHASE_DEBUG]   = { .name = "debug" }
 };
+
+void
+ld_set_phase_name (ld_phase phase, const char * name)
+{
+  phase_data[phase].name = name ? name : "<unnamed>";
+}
 
 void
 ld_start_phase (ld_phase phase)
@@ -345,6 +361,14 @@ ld_start_phase (ld_phase phase)
   
   memcpy (& pd->begin, & usage, sizeof usage);
 #endif
+
+#if defined (HAVE_MALLINFO2)
+  struct mallinfo2 mi2 = mallinfo2 ();
+  pd->begin_blks = mi2.uordblks;
+#elif defined (HAVE_MALLINFO)
+  struct mallinfo mi = mallinfo ();
+  pd->begin_blks = mi.uordblks;
+#endif
 }
 
 void
@@ -354,10 +378,14 @@ ld_stop_phase (ld_phase phase)
 
   if (!pd->started)
     {
-      /* We set the broken flag to indicate that the data
-	 recorded for this phase is inconsistent.  */
-      pd->broken = true;
-      return;
+      /* It does not matter if the debug phase has not been started.  */
+      if (phase != PHASE_DEBUG)
+	{
+	  /* We set the broken flag to indicate that the data
+	     recorded for this phase is inconsistent.  */
+	  pd->broken = true;
+	  return;
+	}
     }
 
   pd->duration += get_run_time () - pd->start;
@@ -421,6 +449,33 @@ ld_stop_phase (ld_phase phase)
 	pd->use.ru_maxrss += usage.ru_maxrss - pd->begin.ru_maxrss;
     }
 #endif
+
+#if defined (HAVE_MALLINFO2)
+  /* FIXME: How do we know if mallinfo2() has failed ?  */
+  struct mallinfo2 mi2 = mallinfo2 ();
+  pd->used_blks += mi2.uordblks - pd->begin_blks;
+#elif defined (HAVE_MALLINFO)
+  struct mallinfo mi = mallinfo ();
+  pd->used_blks += mi.uordblks - pd->begin_blks;
+#endif
+
+  if (phase == PHASE_DEBUG)
+    {
+      /* FIXME: Should we report other resources as well ?  */
+      /* FIXME: Can we integrate this code with report_phases() ?  */
+
+      fprintf (stderr, "stats: %s: cpu time: %ld ", pd->name, pd->duration);
+#if defined (HAVE_GETRUSAGE)
+      fprintf (stderr, "rss: %ld ", pd->use.ru_maxrss);
+#endif
+#if defined (HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
+      fprintf (stderr, "memory: %ld", (long) pd->used_blks);
+#endif
+      fprintf (stderr, "\n");
+
+      /* Reset the counters to zero.  */
+      memset (((char *) pd) + sizeof (pd->name), 0, (sizeof (* pd)) - sizeof (pd->name));
+    }
 }
 
 static void
@@ -473,9 +528,12 @@ report_phases (FILE * file, time_t * start, char ** argv)
 #if defined (HAVE_GETRUSAGE)  
     /* Note: keep these columns in sync with the
        information recorded in ld_stop_phase().  */
-    COLUMNS_FIELD ("memory", "(KiB)")
+    COLUMNS_FIELD ("rss", "(KiB)")
     COLUMNS_FIELD ("user time", "(seconds)")
     COLUMNS_FIELD ("system time", "(seconds)")
+#endif
+#if defined (HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
+    COLUMNS_FIELD ("memory", "(KiB)")
 #endif
   };
 
@@ -485,7 +543,12 @@ report_phases (FILE * file, time_t * start, char ** argv)
 
   size_t maxwidth = 1;
   for (i = 0; i < NUM_PHASES; i++)
-    maxwidth = max (maxwidth, strlen (phase_data[i].name));
+    {
+      struct ld_phase_data * pd = phase_data + i;
+
+      if (pd->name != NULL)
+	maxwidth = max (maxwidth, strlen (pd->name));
+    }
 
   fprintf (file, "%s", STATS_PREFIX);
 
@@ -543,6 +606,9 @@ report_phases (FILE * file, time_t * start, char ** argv)
       /* This should not be needed...  */      
       const char * name = pd->name ? pd->name : "<unnamed>";
 
+      if (i == PHASE_DEBUG)
+	continue;
+
       if (pd->broken)
 	{
 	  fprintf (file, "%s %s: %s",
@@ -552,7 +618,7 @@ report_phases (FILE * file, time_t * start, char ** argv)
 
       fprintf (file, "%s", STATS_PREFIX);
 
-      /* Care must be taken to keep the lines below in sync with
+      /* Care must be taken to keep the numbers below in sync with
 	 entries in the columns_info array.
 	 FIXME: There ought to be a better way to do this...  */
       COLUMN_ENTRY (name, "s", 0);
@@ -561,6 +627,9 @@ report_phases (FILE * file, time_t * start, char ** argv)
       COLUMN_ENTRY (pd->use.ru_maxrss, "ld", 2);
       COLUMN_ENTRY ((int64_t) pd->use.ru_utime.tv_sec, PRId64, 3);
       COLUMN_ENTRY ((int64_t) pd->use.ru_stime.tv_sec, PRId64, 4);
+#endif
+#if defined (HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
+      COLUMN_ENTRY ((int64_t) pd->used_blks / 1024, PRId64, 5);
 #endif
       fprintf (file, "\n");
     }

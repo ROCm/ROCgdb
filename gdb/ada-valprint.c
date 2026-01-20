@@ -790,7 +790,8 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
 	  gdb_printf (stream, "(");
 	  type_print (type, "", stream, -1);
 	  gdb_printf (stream, ") ");
-	  gdb_puts (paddress (gdbarch, addr), stream);
+	  fputs_styled (paddress (gdbarch, addr), address_style.style (),
+			stream);
 	}
       else
 	{

@@ -177,21 +177,21 @@ struct uploaded_tp
   int orig_size = 0;
 
   /* String that is the encoded form of the tracepoint's condition.  */
-  gdb::unique_xmalloc_ptr<char[]> cond;
+  gdb::unique_xmalloc_ptr<char> cond;
 
   /* Vectors of strings that are the encoded forms of a tracepoint's
      actions.  */
-  std::vector<gdb::unique_xmalloc_ptr<char[]>> actions;
-  std::vector<gdb::unique_xmalloc_ptr<char[]>> step_actions;
+  std::vector<gdb::unique_xmalloc_ptr<char>> actions;
+  std::vector<gdb::unique_xmalloc_ptr<char>> step_actions;
 
   /* The original string defining the location of the tracepoint.  */
-  gdb::unique_xmalloc_ptr<char[]> at_string;
+  gdb::unique_xmalloc_ptr<char> at_string;
 
   /* The original string defining the tracepoint's condition.  */
-  gdb::unique_xmalloc_ptr<char[]> cond_string;
+  gdb::unique_xmalloc_ptr<char> cond_string;
 
   /* List of original strings defining the tracepoint's actions.  */
-  std::vector<gdb::unique_xmalloc_ptr<char[]>> cmd_strings;
+  std::vector<gdb::unique_xmalloc_ptr<char>> cmd_strings;
 
   /* The tracepoint's current hit count.  */
   int hit_count = 0;

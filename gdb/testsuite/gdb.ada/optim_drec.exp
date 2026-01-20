@@ -20,14 +20,14 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 if {![runto "foo"]} {
-  return
+    return
 }
 
 gdb_test "print z" \
-	 "= (\\(a => .*, b => .*, c => .*\\)|<optimized out>)"
+    "= (\\(a => .*, b => .*, c => .*\\)|<optimized out>)"

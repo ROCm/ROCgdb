@@ -62,7 +62,7 @@ lassign $scopes scope _ignore
 gdb_assert {[dict get $scope name] == "Locals"} "scope is locals"
 gdb_assert {[dict get $scope source name] == "prog.adb"} "scope has source"
 
-gdb_assert {[dict get $scope namedVariables] == 2} "two vars in scope"
+gdb_assert {[dict get $scope namedVariables] == 5} "five vars in scope"
 
 set num [dict get $scope variablesReference]
 set refs [lindex [dap_check_request_and_response "fetch variables" \
@@ -79,6 +79,10 @@ foreach var [dict get $refs body variables] {
 	    gdb_assert {[dict get $var value] == "three"} "check value of value"
 	}
 	"my_string" {
+	}
+	"one" -
+	"two" {
+	    # Local enumerators appear in the scope.
 	}
 	default {
 	    fail "unknown variable $name"

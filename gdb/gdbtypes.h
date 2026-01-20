@@ -2432,11 +2432,18 @@ extern struct type *lookup_reference_type (struct type *, enum type_code);
 extern struct type *lookup_lvalue_reference_type (struct type *);
 extern struct type *lookup_rvalue_reference_type (struct type *);
 
+/* Lookup a C++ `reference' to a type TYPE.  REFCODE denotes the kind of
+   reference type to lookup (lvalue or rvalue reference).  */
 
-extern struct type *make_reference_type (struct type *, struct type **,
-					 enum type_code);
+extern type *make_reference_type (type *type, type_code refcode);
 
-extern struct type *make_cv_type (int, int, struct type *, struct type **);
+/* Make a "c-v" variant of a type -- a type that is identical to the
+   one supplied except that it may have const or volatile attributes
+   CNST is a flag for setting the const attribute
+   VOLTL is a flag for setting the volatile attribute
+   TYPE is the base type whose variant we are creating.  */
+
+extern type *make_cv_type (int cnst, int voltl, type *type);
 
 extern struct type *make_restrict_type (struct type *);
 
@@ -2455,7 +2462,11 @@ extern const char *address_space_type_instance_flags_to_name
 extern struct type *make_type_with_address_space
   (struct type *type, type_instance_flags space_identifier);
 
-extern struct type *lookup_memberptr_type (struct type *, struct type *);
+/* Implement direct support for MEMBER_TYPE in GNU C++.
+   TO_TYPE is the type of the member.  DOMAIN is the type of the aggregate that
+   the member belongs to.  */
+
+extern type *lookup_memberptr_type (type *to_type, type *domain);
 
 extern struct type *lookup_methodptr_type (struct type *);
 
@@ -2463,9 +2474,6 @@ extern void smash_to_method_type (struct type *type, struct type *self_type,
 				  struct type *to_type,
 				  gdb::array_view<struct field> args,
 				  int varargs);
-
-extern void smash_to_memberptr_type (struct type *, struct type *,
-				     struct type *);
 
 extern void smash_to_methodptr_type (struct type *, struct type *);
 
@@ -2511,27 +2519,25 @@ extern struct_elt lookup_struct_elt (struct type *, const char *, int);
 
 extern struct type *lookup_struct_elt_type (struct type *, const char *, int);
 
-extern struct type *make_pointer_type (struct type *, struct type **);
+/* Lookup a pointer to a type TYPE.  */
+
+extern type *make_pointer_type (type *type);
 
 extern struct type *lookup_pointer_type (struct type *);
 
-extern struct type *make_function_type (struct type *, struct type **);
+/* Create a new function type with return type RETURN_TYPE and unspecified
+   number and types of parameters.
 
-/* Given a return type and argument types, create new function type.
-   If the final type in PARAM_TYPES is NULL, create a varargs function.
-   New type is allocated using ALLOC.  */
-extern struct type *create_function_type (type_allocator &alloc,
-					  struct type *return_type,
-					  int nparams,
-					  struct type **param_types);
+   The new function type has the same owner as RETURN_TYPE.  */
 
-/* Like create_function_type, but allocate the new function type at
-   the same obstack as RETURN_TYPE and with unspecified number of
-   parameters and their types.  */
 extern struct type *lookup_function_type (struct type *return_type);
 
-/* Like create_function_type, but allocate the new function type at
-   the same obstack as RETURN_TYPE.  */
+/* Create a new function type with return type RETURN_TYPE and NPARAMS parameter
+   of types PARAM_TYPES.  If the final type in PARAM_TYPES is nullptr, create a
+   varargs function.
+
+   The new function type has the same owner as RETURN_TYPE.  */
+
 extern struct type *lookup_function_type_with_arguments
 					(struct type *return_type,
 					 int nparams,

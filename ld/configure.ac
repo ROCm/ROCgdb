@@ -447,7 +447,7 @@ AC_SUBST(NATIVE_LIB_DIRS)
 AC_CHECK_HEADERS(fcntl.h elf-hints.h limits.h inttypes.h stdint.h \
 		 sys/file.h sys/mman.h sys/param.h sys/stat.h sys/time.h \
 		 sys/types.h unistd.h)
-AC_CHECK_FUNCS(close getrusage glob lseek mkstemp open realpath waitpid)
+AC_CHECK_FUNCS(close getrusage glob lseek mkstemp open realpath waitpid mallinfo mallinfo2)
 
 BFD_BINARY_FOPEN
 
@@ -506,6 +506,7 @@ TDIRS=
 elf_list_options=false
 elf_shlib_list_options=false
 elf_plt_unwind_list_options=false
+elf_sframe_list_options=false
 for targ_alias in `echo $target_alias $enable_targets | sed 's/,/ /g'`
 do
   if test "$targ_alias" = "all"; then
@@ -513,6 +514,7 @@ do
     elf_list_options=true
     elf_shlib_list_options=true
     elf_plt_unwind_list_options=true
+    elf_sframe_list_options=true
   else
     # Canonicalize the secondary target names.
     result=`$ac_config_sub $targ_alias 2>/dev/null`
@@ -567,6 +569,9 @@ tdir_$i=$result"
 	    fi
 	    if test x${PLT_UNWIND} = xyes; then
 	      elf_plt_unwind_list_options=true
+	    fi
+	    if test x${SFRAME_INFO} = xyes; then
+	      elf_sframe_list_options=true
 	    fi
 	  fi
 	  ;;
@@ -730,6 +735,7 @@ AC_DEFINE_UNQUOTED([DEFAULT_EMIT_GNU_HASH],
 AC_SUBST(elf_list_options)
 AC_SUBST(elf_shlib_list_options)
 AC_SUBST(elf_plt_unwind_list_options)
+AC_SUBST(elf_sframe_list_options)
 AC_SUBST(EMUL)
 
 AC_SUBST(TDIRS)

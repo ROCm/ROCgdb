@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnat05 ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -29,9 +29,9 @@ set test "ptype pck.data_flag"
 gdb_test_multiple "$test" $test {
     -re "type = \\(one, two, three\\).*$gdb_prompt $" {
 	pass $test
-	}
+    }
     -re "type = \\(\\).*$gdb_prompt $" {
 	# This is a known compiler problem with Stabs.
 	xfail $test
-	}
+    }
 }

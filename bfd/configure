@@ -15829,7 +15829,7 @@ selarchs="$f"
 tb=
 
 elf="elf.lo elflink.lo elf-attrs.lo elf-strtab.lo elf-eh-frame.lo
-     elf-sframe.lo dwarf1.lo dwarf2.lo"
+     elf-properties.lo elf-sframe.lo dwarf1.lo dwarf2.lo"
 coffgen="coffgen.lo dwarf2.lo"
 coff="cofflink.lo $coffgen"
 ecoff="ecofflink.lo $coffgen"
@@ -16176,6 +16176,7 @@ if test x${all_targets} = xtrue ; then
     esac
   done
   assocvecs=$f
+  TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF"
 else	# all_targets is true
   # Only set these if they will be nonempty, for the clever echo.
   havevecs=
@@ -16186,6 +16187,12 @@ else	# all_targets is true
     selvecs=`echo $selvecs | sed -e 's/^/\&/' -e 's/ \(.\)/,\&\1/g'`
   test -n "$selarchs" &&
     selarchs=`echo $selarchs | sed -e 's/^/\&/' -e 's/ \(.\)/,\&\1/g'`
+
+  for i in $bfd_backends ; do
+    case "$i" in
+    elf.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF" ;;
+    esac
+  done
 fi	# all_targets is true
 
 # 64-bit archives need a 64-bit bfd_vma.

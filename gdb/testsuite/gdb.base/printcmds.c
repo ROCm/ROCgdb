@@ -2,6 +2,8 @@
    It is explicitly unsigned to avoid differences due to native characters
    being either signed or unsigned. */
 #include <stdlib.h>
+#include <stddef.h>
+
 unsigned char ctable1[256] = {
   0000, 0001, 0002, 0003, 0004, 0005, 0006, 0007,
   0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017,
@@ -76,6 +78,10 @@ typedef char *charptr;
 charptr teststring2 = "more contents";
 
 const char *teststring3 = "this is a longer test string that we can use";
+
+/* For testing printf with %z (size_t) and %t (ptrdiff_t) length modifiers.  */
+size_t test_size = 1234;
+ptrdiff_t test_ptrdiff = -5678;
 
 /* Test printing of a struct containing character arrays. */
 

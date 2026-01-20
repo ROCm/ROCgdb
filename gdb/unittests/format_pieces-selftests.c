@@ -105,40 +105,44 @@ test_gdb_formats ()
 static void
 test_format_int_sizes ()
 {
-  check ("Hello\\t %hu%lu%llu%zu", /* ARI: %ll */
+  check ("Hello\\t %hu%lu%llu%zu%tu", /* ARI: %ll */
     {
       {"Hello\t ", literal_piece, 0},
       {"%hu", int_arg, 0},
       {"%lu", long_arg, 0},
       {"%" LL "u", long_long_arg, 0},
       {"%zu", size_t_arg, 0},
+      {"%tu", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %hx%lx%llx%zx", /* ARI: %ll */
+  check ("Hello\\t %hx%lx%llx%zx%tx", /* ARI: %ll */
     {
       {"Hello\t ", literal_piece, 0},
       {"%hx", int_arg, 0},
       {"%lx", long_arg, 0},
       {"%" LL "x", long_long_arg, 0},
       {"%zx", size_t_arg, 0},
+      {"%tx", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %ho%lo%llo%zo", /* ARI: %ll */
+  check ("Hello\\t %ho%lo%llo%zo%to", /* ARI: %ll */
     {
       {"Hello\t ", literal_piece, 0},
       {"%ho", int_arg, 0},
       {"%lo", long_arg, 0},
       {"%" LL "o", long_long_arg, 0},
       {"%zo", size_t_arg, 0},
+      {"%to", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %hd%ld%lld%zd", /* ARI: %ll */
+  check ("Hello\\t %hd%ld%lld%zd%td", /* ARI: %ll */
     {
       {"Hello\t ", literal_piece, 0},
       {"%hd", int_arg, 0},
       {"%ld", long_arg, 0},
       {"%" LL "d", long_long_arg, 0},
       {"%zd", size_t_arg, 0},
+      {"%td", ptrdiff_t_arg, 0},
     });
 }
 

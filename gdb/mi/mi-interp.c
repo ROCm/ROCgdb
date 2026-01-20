@@ -80,7 +80,7 @@ mi_interp::on_command_error ()
 }
 
 void
-mi_interp::init (bool top_level)
+mi_interp::do_init (bool top_level)
 {
   mi_interp *mi = this;
 

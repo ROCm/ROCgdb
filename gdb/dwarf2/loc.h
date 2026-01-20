@@ -274,7 +274,7 @@ extern int dwarf_reg_to_regnum_or_error (struct gdbarch *arch,
 /* Helper function which throws an error if a synthetic pointer is
    invalid.  */
 
-extern void invalid_synthetic_pointer ();
+[[noreturn]] extern void invalid_synthetic_pointer ();
 
 /* Fetch the value pointed to by a synthetic pointer.  */
 

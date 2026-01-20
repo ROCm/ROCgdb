@@ -709,18 +709,6 @@ static const struct sym_probe_fns debug_sym_probe_fns =
 /* Debugging version of struct sym_fns.  */
 
 static void
-debug_sym_new_init (struct objfile *objfile)
-{
-  const struct debug_sym_fns_data *debug_data
-    = symfile_debug_objfile_data_key.get (objfile);
-
-  gdb_printf (gdb_stdlog, "sf->sym_new_init (%s)\n",
-	      objfile_debug_name (objfile));
-
-  debug_data->real_sf->sym_new_init (objfile);
-}
-
-static void
 debug_sym_init (struct objfile *objfile)
 {
   const struct debug_sym_fns_data *debug_data
@@ -745,18 +733,6 @@ debug_sym_read (struct objfile *objfile, symfile_add_flags symfile_flags)
 }
 
 static void
-debug_sym_finish (struct objfile *objfile)
-{
-  const struct debug_sym_fns_data *debug_data
-    = symfile_debug_objfile_data_key.get (objfile);
-
-  gdb_printf (gdb_stdlog, "sf->sym_finish (%s)\n",
-	      objfile_debug_name (objfile));
-
-  debug_data->real_sf->sym_finish (objfile);
-}
-
-static void
 debug_sym_offsets (struct objfile *objfile,
 		   const section_addr_info &info)
 {
@@ -777,18 +753,6 @@ debug_sym_segments (bfd *abfd)
      Fortunately it is only used in one place where we (re-)lookup the
      sym_fns table to use.  Thus we will never be called.  */
   gdb_assert_not_reached ("debug_sym_segments called");
-}
-
-static void
-debug_sym_read_linetable (struct objfile *objfile)
-{
-  const struct debug_sym_fns_data *debug_data
-    = symfile_debug_objfile_data_key.get (objfile);
-
-  gdb_printf (gdb_stdlog, "sf->sym_read_linetable (%s)\n",
-	      objfile_debug_name (objfile));
-
-  debug_data->real_sf->sym_read_linetable (objfile);
 }
 
 static bfd_byte *
@@ -833,14 +797,10 @@ install_symfile_debug_logging (struct objfile *objfile)
       (to)->debug_sf.name = func;		\
   } while (0)
 
-  COPY_SF_PTR (real_sf, debug_data, sym_new_init, debug_sym_new_init);
   COPY_SF_PTR (real_sf, debug_data, sym_init, debug_sym_init);
   COPY_SF_PTR (real_sf, debug_data, sym_read, debug_sym_read);
-  COPY_SF_PTR (real_sf, debug_data, sym_finish, debug_sym_finish);
   COPY_SF_PTR (real_sf, debug_data, sym_offsets, debug_sym_offsets);
   COPY_SF_PTR (real_sf, debug_data, sym_segments, debug_sym_segments);
-  COPY_SF_PTR (real_sf, debug_data, sym_read_linetable,
-	       debug_sym_read_linetable);
   COPY_SF_PTR (real_sf, debug_data, sym_relocate, debug_sym_relocate);
   if (real_sf->sym_probe_fns)
     debug_data->debug_sf.sym_probe_fns = &debug_sym_probe_fns;

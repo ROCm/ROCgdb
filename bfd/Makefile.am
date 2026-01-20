@@ -76,7 +76,7 @@ BFD_H = bfd.h
 # debugger).
 BFD32_LIBS = \
 	archive.lo archures.lo bfd.lo bfdio.lo cache.lo \
-	coff-bfd.lo compress.lo corefile.lo elf-properties.lo format.lo \
+	coff-bfd.lo compress.lo corefile.lo format.lo \
 	hash.lo libbfd.lo linker.lo merge.lo opncls.lo reloc.lo \
 	section.lo simple.lo stab-syms.lo stabs.lo syms.lo targets.lo \
 	binary.lo ihex.lo srec.lo tekhex.lo verilog.lo
@@ -85,7 +85,7 @@ BFD64_LIBS = archive64.lo
 
 BFD32_LIBS_CFILES = \
 	archive.c archures.c bfd.c bfdio.c cache.c coff-bfd.c \
-	compress.c corefile.c elf-properties.c format.c hash.c \
+	compress.c corefile.c format.c hash.c \
 	libbfd.c linker.c merge.c opncls.c reloc.c \
 	section.c simple.c stab-syms.c stabs.c syms.c targets.c \
 	binary.c ihex.c srec.c tekhex.c verilog.c
@@ -289,6 +289,7 @@ BFD32_BACKENDS = \
 	elf-ifunc.lo \
 	elf-m10200.lo \
 	elf-m10300.lo \
+	elf-properties.lo \
 	elf-sframe.lo \
 	elf-strtab.lo \
 	elf-vxworks.lo \
@@ -422,6 +423,7 @@ BFD32_BACKENDS_CFILES = \
 	elf-ifunc.c \
 	elf-m10200.c \
 	elf-m10300.c \
+	elf-properties.c \
 	elf-sframe.c \
 	elf-strtab.c \
 	elf-vxworks.c \

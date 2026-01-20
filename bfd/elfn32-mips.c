@@ -4184,6 +4184,8 @@ static const struct ecoff_debug_swap mips_elf32_ecoff_debug_swap = {
 #define elf_backend_mips_rtype_to_howto	mips_elf_n32_rtype_to_howto
 #define bfd_elf32_bfd_is_target_special_symbol \
 					_bfd_mips_elf_is_target_special_symbol
+#define bfd_elf32_finalize_section_relocs \
+					_bfd_mips_elf_finalize_section_relocs
 #define bfd_elf32_find_nearest_line	_bfd_mips_elf_find_nearest_line
 #define bfd_elf32_find_nearest_line_with_alt \
 				_bfd_mips_elf_find_nearest_line_with_alt

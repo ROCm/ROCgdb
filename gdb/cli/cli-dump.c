@@ -62,7 +62,7 @@ scan_filename (const char **cmd, const char *defname)
     {
       if (defname == NULL)
 	error (_("Missing filename."));
-      filename.reset (xstrdup (defname));
+      filename = make_unique_xstrdup (defname);
     }
   else
     {

@@ -76,6 +76,7 @@
 #include "extension.h"
 #include "disasm.h"
 #include "interps.h"
+#include "finish-thread-state.h"
 
 /* Prototypes for local functions */
 

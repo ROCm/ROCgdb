@@ -5174,6 +5174,99 @@ optimize_encoding (void)
       i.seg[0] = NULL;
     }
 
+  if (((i.tm.opcode_space == SPACE_0F
+        && (i.tm.base_opcode | 1) == 0xbf
+        && (i.types[0].bitfield.byte
+	    ? i.types[1].bitfield.word
+	    : i.types[1].bitfield.dword))
+       || (i.tm.opcode_space == SPACE_BASE
+	   && i.tm.base_opcode == 0x63
+	   && i.types[1].bitfield.qword))
+      && i.reg_operands == 2
+      && i.op[0].regs->reg_type.bitfield.instance == Accum
+      && i.op[1].regs->reg_type.bitfield.instance == Accum
+      && (cpu_arch_tune != PROCESSOR_K6 || optimize_for_space))
+    {
+      /* Optimize: -O:
+	   movsb     %al, %ax    -> cbw
+	   movsw     %ax, %eax   -> cwde
+	   movsl     %eax, %rax  -> cdqe
+       */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.base_opcode = 0x98;
+      i.tm.opcode_modifier.modrm = 0;
+      /* Leave the destination register in place for process_suffix() to take
+	 care of operand sizing.  This will end up as short_form encoding,
+	 with the register number being 0 (i.e. not altering the opcode).  */
+      i.reg_operands = 1;
+      i.op[0].regs = i.op[1].regs;
+      i.tm.operand_types[1].bitfield.class = ClassNone;
+      return;
+    }
+
+  if (optimize_for_space
+      && i.tm.opcode_space == SPACE_0F
+      && (i.tm.base_opcode | 1) == 0xb7
+      && i.reg_operands == 2
+      && !i.op[0].regs->reg_flags
+      && !i.op[1].regs->reg_flags
+      && (i.types[0].bitfield.byte
+	  ? i.types[1].bitfield.word
+	    && i.op[0].regs->reg_num < 4
+	    && i.op[1].regs->reg_num == i.op[0].regs->reg_num
+	    && (!i.suffix || i.suffix == WORD_MNEM_SUFFIX)
+	  : i.types[1].bitfield.dword
+	    && flag_code == CODE_16BIT
+	    && i.op[0].regs->reg_type.bitfield.baseindex
+	    && i.op[0].regs->reg_num != EBP_REG_NUM))
+    {
+      /* Optimize: -Os:
+	   movzb     %r8, %r16    -> mov $0, %r8h
+
+	   %r8 being one of %al, %cl, %dl, or %bl, with %r16 being the
+	   matching 16-bit reg.
+       */
+
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.opcode_modifier.w = 0;
+      i.reg_operands = 1;
+      if (i.types[0].bitfield.byte)
+	{
+	  i.tm.base_opcode = 0xb0;
+	  i.tm.opcode_modifier.modrm = 0;
+	  copy_operand (1, 0);
+	  i.op[1].regs += 4;
+
+	  im_expressions[0].X_op = O_constant;
+	  im_expressions[0].X_add_number = 0;
+	  i.op[0].imms = &im_expressions[0];
+ 	  operand_type_set (&i.types[0], 0);
+	  i.types[0].bitfield.imm8 = 1;
+	  i.tm.operand_types[0] = i.types[0];
+	  i.tm.operand_types[0].bitfield.class = ClassNone;
+	  i.imm_operands = 1;
+
+	  i.suffix = 0;
+	  return;
+	}
+
+      /* In 16-bit mode, optimize: -Os:
+	   movzw     %r16, %r32   -> lea (%r16), %r32
+
+	   %r16 being one of %bx, %si, or %di.
+       */
+      i.tm.base_opcode = 0x8d;
+
+      i.base_reg = i.op[0].regs;
+      operand_type_set (&i.types[0], 0);
+      i.types[0].bitfield.baseindex = 1;
+      i.tm.operand_types[0] = i.types[0];
+      i.op[0].disps = NULL;
+      i.flags[0] = Operand_Mem;
+      i.mem_operands = 1;
+      return;
+    }
+
   if (optimize_for_space
       && (i.tm.mnem_off == MN_test
           || (i.tm.base_opcode == 0xf6
@@ -12077,6 +12170,13 @@ x86_sframe_ra_tracking_p (void)
      from the CFA (provided via x86_sframe_cfa_ra_offset ()).
      Do not track explicitly via an SFrame Frame Row Entry.  */
   return false;
+}
+
+/* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
+bool
+x86_support_flex_fde_p (void)
+{
+  return true;
 }
 
 /* The fixed offset from CFA for SFrame to recover the return address.

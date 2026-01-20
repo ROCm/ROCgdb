@@ -90,20 +90,29 @@ gdbpy_initialize_gdb_readline ()
      GDB's readline should be implemented to replace Python's readline
      and prevent conflicts.  For now, this file implements a
      sys.meta_path finder that simply fails to import the readline
-     module.  */
+     module.
+
+     Notes: Python includes three default importers.  As mentioned in the
+     documentation [1]:
+     - The first one knows how to locate built-in modules.
+     - The second one knows how to locate frozen modules.
+     - A third default finder searches an import path for modules.
+     [1]: https://docs.python.org/3/reference/import.html#finders-and-loaders
+
+     The third default finder is the one that will load readline, so the custom
+     finder to disable the import of readline in GDB has to be placed before
+     this third default finder.  */
   if (PyRun_SimpleString ("\
 import sys\n\
+from importlib.abc import MetaPathFinder\n\
 \n\
-class GdbRemoveReadlineFinder:\n\
-  def find_module(self, fullname, path=None):\n\
-    if fullname == 'readline' and path is None:\n\
-      return self\n\
-    return None\n\
+class GdbRemoveReadlineFinder(MetaPathFinder):\n\
 \n\
-  def load_module(self, fullname):\n\
-    raise ImportError('readline module disabled under GDB')\n\
+  def find_spec(self, fullname, path=None, target=None):\n\
+    if fullname == \"readline\":\n\
+      raise ImportError(\"readline module disabled under GDB\")\n\
 \n\
-sys.meta_path.append(GdbRemoveReadlineFinder())\n\
+sys.meta_path.insert(2, GdbRemoveReadlineFinder())\n\
 ") == 0)
     PyOS_ReadlineFunctionPointer = gdbpy_readline_wrapper;
 

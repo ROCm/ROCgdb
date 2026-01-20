@@ -102,7 +102,7 @@ extract_sym (PyObject *obj, gdb::unique_xmalloc_ptr<char> *name,
 
       /* Duplicate the symbol name, so the caller has consistency
 	 in garbage collection.  */
-      name->reset (xstrdup ((*sym)->print_name ()));
+      *name = make_unique_xstrdup ((*sym)->print_name ());
 
       /* If a symbol is specified attempt to determine the language
 	 from the symbol.  If mode is not "auto", then the language

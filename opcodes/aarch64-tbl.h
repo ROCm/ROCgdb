@@ -3102,6 +3102,8 @@ static const aarch64_feature_set aarch64_feature_POE2 =
   AARCH64_FEATURE (POE2);
 static const aarch64_feature_set aarch64_feature_tev =
   AARCH64_FEATURE (TEV);
+static const aarch64_feature_set aarch64_feature_mpamv2 =
+  AARCH64_FEATURE (MPAMv2);
 
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
@@ -3238,6 +3240,7 @@ static const aarch64_feature_set aarch64_feature_tev =
 #define SVE_B16MM	&aarch64_feature_sve_b16mm
 #define POE2		&aarch64_feature_POE2
 #define TEV		&aarch64_feature_tev
+#define MPAMV2		&aarch64_feature_mpamv2
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
@@ -3433,6 +3436,8 @@ static const aarch64_feature_set aarch64_feature_tev =
 #define MOPS_GO_INSN(NAME, OPCODE, MASK, CLASS, OPS, QUALS, FLAGS, CONSTRAINTS, VERIFIER) \
   { NAME, OPCODE, MASK, CLASS, 0, MOPS_GO, OPS, QUALS, FLAGS, \
     CONSTRAINTS, 0, VERIFIER }
+#define MPAMV2_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, MPAMV2, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
 #define HBC_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, HBC, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define CSSC_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
@@ -5098,6 +5103,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   /* System.  */
   CHK_INSN ("chkfeat", 0xd503251f, 0xffffffff, OP1 (X16), QL_I1X, 0),
   CORE_INSN ("stshh", 0xd503261f, 0xffffffdf, ic_system, 0, OP1 (STSHH_POLICY), {}, F_ALIAS),
+  CORE_INSN ("stcph", 0xd503269f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
+  CORE_INSN ("shuh", 0xd503265f, 0xffffffdf, ic_system, 0, OP1 (SHUH_PHINT), {}, F_ALIAS | F_OPD0_OPT | F_DEFAULT (0x1)),
   CORE_INSN ("msr", 0xd500401f, 0xfff8f01f, ic_system, 0, OP2 (PSTATEFIELD, UIMM4), {}, F_SYS_WRITE),
   CORE_INSN ("hint",0xd503201f, 0xfffff01f, ic_system, 0, OP1 (UIMM7), {}, F_HAS_ALIAS),
   CORE_INSN ("nop", 0xd503201f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
@@ -5126,6 +5133,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("pssbb", 0xd503349f, 0xffffffff, ic_system, 0, OP0 (), {}, F_ALIAS),
   CORE_INSN ("dmb", 0xd50330bf, 0xfffff0ff, ic_system, 0, OP1 (BARRIER), {}, 0),
   CORE_INSN ("isb", 0xd50330df, 0xfffff0ff, ic_system, 0, OP1 (BARRIER_ISB), {}, F_OPD0_OPT | F_DEFAULT (0xF)),
+  MPAMV2_INSN ("mlbi", 0xd5080000, 0xfff80000, ic_system, OP2 (SYSREG_MLBI, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
   SB_INSN ("sb", 0xd50330ff, 0xffffffff, ic_system, OP0 (), {}, 0),
   GCS_INSN ("gcspushx", 0xd508779f, 0xffffffff, OP0 (), {}, 0),
   GCS_INSN ("gcspopx", 0xd50877df, 0xffffffff, OP0 (), {}, 0),
@@ -8141,6 +8149,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "a 128-bit TBL invalidation operation specifier")			\
     Y(SYSTEM, sysins_op, "SYSREG_PLBI", 0, F(),				\
       "a PLB invalidation operation specifier")				\
+    Y(SYSTEM, sysins_op, "SYSREG_MLBI", 0, F(),				\
+      "a MLB invalidation operation specifier")				\
     Y(SYSTEM, sysins_op, "SYSREG_SR", 0, F(),				\
       "a Speculation Restriction option name (RCTX)")			\
     Y(SYSTEM, barrier, "BARRIER", 0, F(),				\
@@ -8162,6 +8172,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "BTI targets r/j/c/jc")						\
     Y(SYSTEM, hint, "STSHH_POLICY", 0, F(),				\
       "an STSHH policy (keep/strm)")					\
+    Y(SYSTEM, hint, "SHUH_PHINT", 0, F(),				\
+      "an optional priority hint (ph)")						\
     Y(SYSTEM, imm, "BRBOP", 0, F(FLD_brbop),				\
       "Branch Record Buffer operation operand")				\
     Y(INT_REG, regno, "Rt_IN_SYS_ALIASES", 0, F(FLD_Rt),		\

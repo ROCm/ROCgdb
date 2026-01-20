@@ -37,6 +37,7 @@
 #include "gdbsupport/gdb_unlinker.h"
 #include "gdbsupport/byte-vector.h"
 #include "gdbsupport/scope-exit.h"
+#include "gdb/finish-thread-state.h"
 
 /* To generate sparse cores, we look at the data to write in chunks of
    this size when considering whether to skip the write.  Only if we

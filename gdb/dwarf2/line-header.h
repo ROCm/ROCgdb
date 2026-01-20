@@ -23,6 +23,7 @@
 #include "dwarf2/types.h"
 
 struct dwarf2_per_objfile;
+struct dwarf2_cu;
 
 /* dir_index is 1-based in DWARF 4 and before, and is 0-based in DWARF 5 and
    later.  */
@@ -65,8 +66,18 @@ struct file_entry
 
   unsigned int length {};
 
+  /* Get the symtab for this file_entry.  If no symtab has yet been created
+     or set (see set_symtab) for this file_entry then a new one will be
+     created.  */
+  struct symtab *symtab (struct dwarf2_cu &cu);
+
+  /* Set the symtab for this file_entry.  */
+  void set_symtab (struct symtab *s)
+  { m_symtab = s; }
+
+private:
   /* The associated symbol table, if any.  */
-  struct symtab *symtab {};
+  struct symtab *m_symtab {};
 };
 
 /* The line number information for a compilation unit (found in the

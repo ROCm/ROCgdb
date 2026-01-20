@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile p
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -34,4 +34,4 @@ runto "p.adb:$bp_location"
 # the size of d1.
 
 gdb_test "print d1'size = d2'size" \
-	 "= true"
+    "= true"

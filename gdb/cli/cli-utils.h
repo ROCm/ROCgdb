@@ -53,8 +53,8 @@ extern ULONGEST get_ulongest (const char **pp, int trailer = '\0');
 /* Throws an error telling the user that ARGS starts with an option
    unrecognized by COMMAND.  */
 
-extern void report_unrecognized_option_error (const char *command,
-					      const char *args);
+[[noreturn]] extern void report_unrecognized_option_error (const char *command,
+							   const char *args);
 
 
 /* Builds the help string for a command documented by PREFIX,

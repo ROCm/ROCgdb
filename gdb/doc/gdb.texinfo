@@ -43432,8 +43432,26 @@ Generally, @value{GDBN} implements the Debugger Adapter Protocol as
 written.  However, in some cases, extensions are either needed or even
 expected.
 
-@value{GDBN} defines some parameters that can be passed to the
-@code{launch} request:
+In the protocol, the parameters to the @code{launch} and @code{attach}
+requests are defined by the adapter.  @value{GDBN} defines a couple
+parameters common to both:
+
+@table @code
+@item adaSourceCharset
+If provided, this is a string that is used to set the Ada source
+character set.  @xref{Ada Source Character Set}.
+
+@item program
+If provided, this is a string that specifies the program to use.  This
+corresponds to the @code{file} command.  @xref{Files}.
+
+With the @code{attach} request, in some cases, @value{GDBN} can
+automatically determine which program is running.  However, for many
+remote targets, this is not the case, and so this should be supplied.
+@end table
+
+@value{GDBN} defines some additional parameters that can be passed to
+the @code{launch} request:
 
 @table @code
 @item args
@@ -43470,21 +43488,14 @@ will set a temporary breakpoint at the program's first instruction, using
 the same approach as the @code{starti} command.  @xref{Starting}.
 @end table
 
-@value{GDBN} defines some parameters that can be passed to the
-@code{attach} request.  Either @code{pid} or @code{target} must be
+@value{GDBN} defines some additional parameters that can be passed to
+the @code{attach} request.  Either @code{pid} or @code{target} must be
 specified, but if both are specified then @code{target} will be
 ignored.
 
 @table @code
 @item pid
 The process ID to which @value{GDBN} should attach.  @xref{Attach}.
-
-@item program
-If provided, this is a string that specifies the program to use.  This
-corresponds to the @code{file} command.  @xref{Files}.  In some cases,
-@value{GDBN} can automatically determine which program is running.
-However, for many remote targets, this is not the case, and so this
-should be supplied.
 
 @item target
 The target to which @value{GDBN} should connect.  This is a string and

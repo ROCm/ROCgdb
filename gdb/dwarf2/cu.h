@@ -26,6 +26,7 @@
 #include "language.h"
 #include "gdbsupport/unordered_set.h"
 #include "dwarf2/die.h"
+#include "line-header.h"
 
 /* Type used for delaying computation of method physnames.
    See comments for compute_delayed_physnames.  */
@@ -71,6 +72,12 @@ struct dwarf2_cu
   struct compunit_symtab *start_compunit_symtab (const char *name,
 						 const char *comp_dir,
 						 CORE_ADDR low_pc);
+
+  /* Create a subfile and symtab for every entry in the line_header.  */
+  void create_subfiles_and_symtabs ();
+
+  /* Start a subfile for FE within this CU.  */
+  void start_subfile (const file_entry &fe);
 
   /* Reset the builder.  */
   void reset_builder () { m_builder.reset (); }

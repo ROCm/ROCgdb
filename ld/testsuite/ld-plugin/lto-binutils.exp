@@ -254,23 +254,6 @@ run_lto_binutils_test [list \
     ] \
 ]
 
-run_lto_binutils_test [list \
-    [list \
-	"strip" \
-	"-R .gnu.*lto_* -N __gnu_lto_v1" \
-	"strip-1a.o" \
-	"strip-1a-s-all.o" \
-	{{nm -n strip-1a-s-all.nd}} \
-    ] \
-    [list \
-	"strip" \
-	"-R .gnu.*lto_* -N __gnu_lto_v1" \
-	"libstrip-1a.a" \
-	"libstrip-1a-s-all.a" \
-	{{nm -n strip-1a-s-all.nd}} \
-    ] \
-]
-
 run_cc_link_tests [list \
     [list \
 	"Build strip-1a (strip-1a.o)" \
@@ -449,7 +432,7 @@ proc run_pr33246_test { llvm fat } {
 	    fail "$testname (strip $obj)"
 	    return
 	}
-    } else {
+    } elseif { "$llvm" == "-llvm" } {
 	set cmd "cmp $obj ${obj}.strip"
 	send_log "$cmd\n"
 	verbose "$cmd" 1
@@ -508,7 +491,7 @@ proc run_pr33246_test { llvm fat } {
 	    fail "$testname (strip $archive)"
 	    return
 	}
-    } else {
+    } elseif { "$llvm" == "-llvm" } {
 	set cmd "cmp $archive ${archive}.strip"
 	send_log "$cmd\n"
 	verbose "$cmd" 1

@@ -1000,7 +1000,7 @@ struct lval_funcs
 /* Throw an error complaining that the value has been optimized
    out.  */
 
-extern void error_value_optimized_out (void);
+[[noreturn]] extern void error_value_optimized_out ();
 
 /* Pointer to internal variable.  */
 #define VALUE_INTERNALVAR(val) (*((val)->deprecated_internalvar_hack ()))

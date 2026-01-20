@@ -1412,7 +1412,7 @@ static const struct ecoff_backend_data mips_ecoff_backend_data =
 #define _bfd_ecoff_bfd_define_common_symbol bfd_generic_define_common_symbol
 #define _bfd_ecoff_bfd_link_hide_symbol _bfd_generic_link_hide_symbol
 #define _bfd_ecoff_bfd_define_start_stop bfd_generic_define_start_stop
-#define _bfd_ecoff_set_reloc _bfd_generic_set_reloc
+#define _bfd_ecoff_finalize_section_relocs _bfd_generic_finalize_section_relocs
 
 extern const bfd_target mips_ecoff_be_vec;
 

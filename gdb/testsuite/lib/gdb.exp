@@ -6155,9 +6155,9 @@ proc escape_for_host { str } {
 proc quote_for_host { args } {
     set str [join $args]
     if { [is_remote host] } {
-	set str [join [list {\"} $str {\"}] ""]
+	set str [join [list {\"} [regsub -all {"} $str {\\\"}] {\"}] ""]
     } else {
-	set str [join [list {"} $str {"}] ""]
+	set str [join [list {"} [regsub -all {"} $str {\"}] {"}] ""]
     }
     return $str
 }
@@ -10793,24 +10793,6 @@ proc have_index { objfile } {
     }
 }
 
-# Return 1 if partial symbols are available.  Otherwise, return 0.
-
-proc psymtabs_p {  } {
-    global gdb_prompt
-
-    set cmd "maint info psymtab"
-    gdb_test_multiple $cmd "" {
-	-re "$cmd\r\n$gdb_prompt $" {
-	    return 0
-	}
-	-re -wrap "" {
-	    return 1
-	}
-    }
-
-    return 0
-}
-
 # Verify that partial symtab expansion for $filename has state $readin.
 
 proc verify_psymtab_expanded { filename readin } {
@@ -12018,6 +12000,40 @@ gdb_caching_proc have_startup_shell {} {
     gdb_exit
 
     return $supported
+}
+
+# Return the version number of the 'dwz' tool as a list.  If the 'dwz'
+# tool is not found, or the version cannot be established, an empty
+# list is returned.
+#
+# The 'dwz' version is currently of the form 0.12, 0.13, 0.14, etc.
+# So the returned list will have two elements, e.g. { 0 12 }.
+
+proc dwz_version { } {
+    set dwz_program "dwz"
+    set res [catch {exec $dwz_program --version} output]
+
+    # Don't check the exit value of 'dwz' process as 'dwz' doesn't
+    # exit immediately after displaying the version number, and for
+    # some reason, version 0.13 always seems to exit with a code of 1.
+    # The version number is still displayed though.
+
+    set lines [split $output \n]
+    set line [lindex $lines 0]
+    set res [regexp {dwz version[ \t]+([0-9]+)[.]([0-9]+)[^ \t]*$} \
+		 $line dummy dwz_major dwz_minor]
+    if { $res != 1 } {
+	return [list]
+    }
+
+    return [list $dwz_major $dwz_minor]
+}
+
+# Return true if the version of the 'dwz' tool is at least VER.  The
+# VER should have the same form as a 'dwz' version number, e.g. 0.12,
+# 0.13, 0.14, etc.
+proc dwz_version_at_least { ver } {
+    return [version_compare [split $ver .] <= [dwz_version]]
 }
 
 # Always load compatibility stuff.

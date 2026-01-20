@@ -276,7 +276,7 @@ extern void aarch64_after_parse_args (void);
 #define md_after_parse_args() aarch64_after_parse_args ()
 
 # define EXTERN_FORCE_RELOC 			1
-# define tc_fix_adjustable(FIX) 		1
+# define tc_fix_adjustable(FIX) 		aarch64_fix_adjustable (FIX)
 
 /* Values passed to md_apply_fix don't include the symbol value.  */
 # define MD_APPLY_SYM_VALUE(FIX) 		0
@@ -339,6 +339,10 @@ extern offsetT aarch64_sframe_cfa_ra_offset (void);
 unsigned char aarch64_sframe_get_abi_arch (void);
 #define sframe_get_abi_arch aarch64_sframe_get_abi_arch
 
+/* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
+extern bool aarch64_support_flex_fde_p (void);
+#define sframe_support_flex_fde_p aarch64_support_flex_fde_p
+
 #endif /* OBJ_ELF  */
 
 #define MD_PCREL_FROM_SECTION(F,S) md_pcrel_from_section(F,S)
@@ -360,6 +364,7 @@ extern void aarch64_init_frag (struct frag *, int);
 extern void aarch64_handle_align (struct frag *);
 extern int tc_aarch64_regname_to_dw2regnum (char *regname);
 extern void tc_aarch64_frame_initial_instructions (void);
+extern bool aarch64_fix_adjustable (struct fix *);
 
 #ifdef TE_PE
 

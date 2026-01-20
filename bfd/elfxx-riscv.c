@@ -884,6 +884,9 @@ static const reloc_howto_type howto_table_internal[] =
   /* R_RISCV_DELETE.  */
   EMPTY_HOWTO (0),
 
+  /* R_RISCV_DELETE_AND_RELAX.  */
+  EMPTY_HOWTO (0),
+
   /* High 6 bits of 18-bit absolute address.  */
   HOWTO (R_RISCV_RVC_LUI,		/* type */
 	 0,				/* rightshift */

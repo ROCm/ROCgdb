@@ -244,6 +244,16 @@ proc jit_reader_test {} {
 		    "<gdb.Objfile filename=<< JIT compiled code at $hex >>>" \
 		    "python gdb.Progspace.objfile_for_address"
 	    }
+
+	    # Check that jitted symbol completion works
+	    gdb_test "complete break jit_func" \
+		[multi_line "break jit_function_add" \
+		    "break jit_function_stack_mangle" ] \
+
+	    # Check that breakpoint can be set on jitted function
+	    gdb_test "break jit_function_add" \
+		"Breakpoint 1 at 0x\[0-9a-f\]+"
+	    gdb_test_no_output "del 1"
 	}
     }
 

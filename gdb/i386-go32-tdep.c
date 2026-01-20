@@ -36,13 +36,6 @@ i386_go32_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   if (!tdesc_has_registers (info.target_desc))
     tdep->tdesc = i386_target_description (X86_XSTATE_X87_MASK, false);
 
-  /* Native compiler is GCC, which uses the SVR4 register numbering
-     even in COFF and STABS.  See the comment in i386_gdbarch_init,
-     before the calls to set_gdbarch_stab_reg_to_regnum and
-     set_gdbarch_sdb_reg_to_regnum.  */
-  set_gdbarch_stab_reg_to_regnum (gdbarch, i386_svr4_reg_to_regnum);
-  set_gdbarch_sdb_reg_to_regnum (gdbarch, i386_svr4_reg_to_regnum);
-
   set_gdbarch_has_dos_based_file_system (gdbarch, 1);
 
   set_gdbarch_wchar_bit (gdbarch, 16);

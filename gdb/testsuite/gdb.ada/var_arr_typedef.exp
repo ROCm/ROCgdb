@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile var_arr_typedef
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -37,10 +37,10 @@ set vb "\\($rb, $rb, $ra, $ra\\)"
 set a "\\($va, $va, $vb, $vb\\)"
 
 gdb_test "print va" \
-	 " = $va"
+    " = $va"
 
 gdb_test "print vb" \
-	 " = $vb"
+    " = $vb"
 
 gdb_test "print a" \
-	 " = $a"
+    " = $a"

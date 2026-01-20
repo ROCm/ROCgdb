@@ -17,6 +17,7 @@ Section Headers:
   \[..\] \.lit4 +PROGBITS .*
   \[..\] \.sbss +NOBITS .*
   \[..\] \.bss +NOBITS .*
+  \[..\] \.gnu\.attributes +GNU_ATTRIBUTES .*
   \[..\] \.pdr +PROGBITS .*
   \[..\] \.gcc_compiled_long32 +PROGBITS .*
   \[..\] \.gcc_compiled_long64 +PROGBITS .*
@@ -28,7 +29,6 @@ Section Headers:
   \[..\] \.mdebug\.abiO64 +PROGBITS .*
   \[..\] \.mdebug\.eabi32 +PROGBITS .*
   \[..\] \.mdebug\.eabi64 +PROGBITS .*
-  \[..\] \.gnu\.attributes +GNU_ATTRIBUTES .*
   \[..\] \.symtab +SYMTAB .*
   \[..\] \.strtab +STRTAB .*
   \[..\] \.shstrtab +STRTAB .*

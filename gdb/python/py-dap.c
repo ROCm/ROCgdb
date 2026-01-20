@@ -34,7 +34,7 @@ public:
 
   ~dap_interp () override = default;
 
-  void init (bool top_level) override;
+  void do_init (bool top_level) override;
 
   void suspend () override
   {
@@ -92,7 +92,7 @@ call_dap_fn (const char *fn_name)
 }
 
 void
-dap_interp::init (bool top_level)
+dap_interp::do_init (bool top_level)
 {
 #if CXX_STD_THREAD
   call_dap_fn ("run");

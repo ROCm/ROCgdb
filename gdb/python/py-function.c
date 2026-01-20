@@ -125,7 +125,7 @@ fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
 	}
     }
   if (! docstring)
-    docstring.reset (xstrdup (_("This function is not documented.")));
+    docstring = make_unique_xstrdup (_("This function is not documented."));
 
   add_internal_function (make_unique_xstrdup (name), std::move (docstring),
 			 fnpy_call, self_ref.release ());

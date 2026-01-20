@@ -453,7 +453,7 @@ extern long _bfd_norelocs_get_reloc_upper_bound
   (bfd *, asection *) ATTRIBUTE_HIDDEN;
 extern long _bfd_norelocs_canonicalize_reloc
   (bfd *, asection *, arelent **, asymbol **) ATTRIBUTE_HIDDEN;
-extern void _bfd_norelocs_set_reloc
+extern bool _bfd_norelocs_finalize_section_relocs
   (bfd *, asection *, arelent **, unsigned int) ATTRIBUTE_HIDDEN;
 extern reloc_howto_type *_bfd_norelocs_bfd_reloc_type_lookup
   (bfd *, bfd_reloc_code_real_type) ATTRIBUTE_HIDDEN;
@@ -3530,7 +3530,7 @@ bfd_byte *bfd_generic_get_relocated_section_contents
     bool relocatable,
     asymbol **symbols) ATTRIBUTE_HIDDEN;
 
-void _bfd_generic_set_reloc
+bool _bfd_generic_finalize_section_relocs
    (bfd *abfd,
     sec_ptr section,
     arelent **relptr,

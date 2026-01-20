@@ -24,7 +24,7 @@ if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
 # For riscv64-linux, we need to run to main, or the_array.p_array will still
 # be nullptr.
 if {![runto "main"]} {
-  return
+    return
 }
 
 # The test case is written in C, because it was easy to make the

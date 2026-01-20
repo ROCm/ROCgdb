@@ -1327,8 +1327,10 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
 	     effect.  Instead we create a .note.GNU-stack section in much the
 	     same way as the assembler does with its --[no]execstack option.  */
 	  flagword flags = SEC_READONLY | (link_info.execstack ? SEC_CODE : 0);
-	  (void) bfd_make_section_with_flags (link_info.input_bfds,
-					      ".note.GNU-stack", flags);
+	  s = bfd_make_section_with_flags (link_info.input_bfds,
+					   ".note.GNU-stack", flags);
+	  if (s)
+	    elf_section_type (s) = SHT_NOTE;
 	}
       return;
     }

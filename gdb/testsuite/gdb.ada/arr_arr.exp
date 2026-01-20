@@ -20,14 +20,14 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/foo.adb]
 if {![runto "foo.adb:$bp_location"]} {
-  return
+    return
 }
 
 # Accept "foo." prefix for older versions of GNAT.

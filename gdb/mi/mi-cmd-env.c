@@ -47,7 +47,7 @@ env_execute_cli_command (const char *cmd, const char *args)
       if (args != NULL)
 	run = xstrprintf ("%s %s", cmd, args);
       else
-	run.reset (xstrdup (cmd));
+	run = make_unique_xstrdup (cmd);
       execute_command ( /*ui */ run.get (), 0 /*from_tty */ );
     }
 }

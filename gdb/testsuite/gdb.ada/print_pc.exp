@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile dummy start
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -29,4 +29,4 @@ set bp_location [gdb_get_line_number "START" ${testdir}/dummy.adb]
 runto "dummy.adb:$bp_location"
 
 gdb_test "p /x \$pc" \
-	 "= 0x\[0-9a-zA-Z\]+"
+    "= 0x\[0-9a-zA-Z\]+"

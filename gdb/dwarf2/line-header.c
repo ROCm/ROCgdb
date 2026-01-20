@@ -351,13 +351,20 @@ dwarf_decode_line_header (sect_offset sect_off, bool is_dwz,
   line_ptr += 1;
   lh->opcode_base = read_1_byte (abfd, line_ptr);
   line_ptr += 1;
-  lh->standard_opcode_lengths.reset (new unsigned char[lh->opcode_base]);
-
-  lh->standard_opcode_lengths[0] = 1;  /* This should never be used anyway.  */
-  for (i = 1; i < lh->opcode_base; ++i)
+  if (lh->opcode_base > 0)
     {
-      lh->standard_opcode_lengths[i] = read_1_byte (abfd, line_ptr);
-      line_ptr += 1;
+      lh->standard_opcode_lengths.reset (new unsigned char[lh->opcode_base]);
+
+      /* The first element should never be used, because there's no standard
+	 opcode encoded as 0.  Give it some defined value.  */
+      lh->standard_opcode_lengths[0] = 1;
+
+      /* Read the standard_opcode_lengths array.  */
+      for (i = 1; i < lh->opcode_base; ++i)
+	{
+	  lh->standard_opcode_lengths[i] = read_1_byte (abfd, line_ptr);
+	  line_ptr += 1;
+	}
     }
 
   if (lh->version >= 5)
@@ -420,4 +427,27 @@ dwarf_decode_line_header (sect_offset sect_off, bool is_dwz,
 	     " not match actual length"));
 
   return lh;
+}
+
+/* See dwarf2/line-header.h.  */
+
+struct symtab *
+file_entry::symtab (dwarf2_cu &cu)
+{
+  if (m_symtab == nullptr)
+    {
+      buildsym_compunit *builder = cu.get_builder ();
+      compunit_symtab *cust = builder->get_compunit_symtab ();
+
+      cu.start_subfile (*this);
+
+      subfile *sf = builder->get_current_subfile ();
+      if (sf->symtab == nullptr)
+	sf->symtab = allocate_symtab (cust, sf->name.c_str (),
+				      sf->name_for_id.c_str ());
+
+      m_symtab = sf->symtab;
+    }
+
+  return m_symtab;
 }

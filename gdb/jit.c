@@ -42,6 +42,7 @@
 #include "gdb_bfd.h"
 #include "completer.h"
 #include <forward_list>
+#include "expanded-symbol.h"
 
 static std::string jit_reader_dir;
 
@@ -563,6 +564,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
      object for each.  Simultaneously, keep setting the real_block
      fields.  */
   int block_idx = FIRST_LOCAL_BLOCK;
+  std::vector<symbol *> global_symbols;
   for (gdb_block &gdb_block_iter : stab->blocks)
     {
       struct block *new_block = new (&objfile->objfile_obstack) block;
@@ -584,6 +586,7 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
 
       block_name->m_name = obstack_strdup (&objfile->objfile_obstack,
 					   gdb_block_iter.name.get ());
+      global_symbols.push_back (block_name);
 
       new_block->set_function (block_name);
 
@@ -605,12 +608,18 @@ finalize_symtab (struct gdb_symtab *stab, struct objfile *objfile)
       struct block *new_block;
 
       if (i == GLOBAL_BLOCK)
-	new_block = new (&objfile->objfile_obstack) global_block;
+	{
+	  new_block = new (&objfile->objfile_obstack) global_block;
+	  new_block->set_multidict
+	    (mdict_create_linear (&objfile->objfile_obstack, global_symbols));
+	}
       else
-	new_block = new (&objfile->objfile_obstack) block;
+	{
+	  new_block = new (&objfile->objfile_obstack) block;
+	  new_block->set_multidict
+	    (mdict_create_linear (&objfile->objfile_obstack, {}));
+	}
 
-      new_block->set_multidict
-	(mdict_create_linear (&objfile->objfile_obstack, {}));
       new_block->set_superblock (block_iter);
       block_iter = new_block;
 
@@ -664,6 +673,7 @@ jit_object_close_impl (struct gdb_symbol_callbacks *cb,
   objfile->section_offsets.push_back (0);
   objfile->sect_index_text = 0;
   objfile->per_bfd->gdbarch = priv_data->gdbarch;
+  objfile->qf.emplace_front (new expanded_symbols_functions);
 
   for (gdb_symtab &symtab : obj->symtabs)
     finalize_symtab (&symtab, objfile);

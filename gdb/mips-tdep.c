@@ -7896,33 +7896,14 @@ mips_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
   return pc != requested_pc ? pc : 0;
 }
 
-/* Convert a dbx stab register number (from `r' declaration) to a GDB
-   [1 * gdbarch_num_regs .. 2 * gdbarch_num_regs) REGNUM.  */
+/* Convert a DWARF register number to a GDB
+
+     [1 * gdbarch_num_regs .. 2 * gdbarch_num_regs)
+
+   REGNUM.  */
 
 static int
-mips_stab_reg_to_regnum (struct gdbarch *gdbarch, int num)
-{
-  int regnum;
-  if (num >= 0 && num < 32)
-    regnum = num;
-  else if (num >= 38 && num < 70)
-    regnum = num + mips_regnum (gdbarch)->fp0 - 38;
-  else if (num == 70)
-    regnum = mips_regnum (gdbarch)->hi;
-  else if (num == 71)
-    regnum = mips_regnum (gdbarch)->lo;
-  else if (mips_regnum (gdbarch)->dspacc != -1 && num >= 72 && num < 78)
-    regnum = num + mips_regnum (gdbarch)->dspacc - 72;
-  else
-    return -1;
-  return gdbarch_num_regs (gdbarch) + regnum;
-}
-
-/* Convert a dwarf, dwarf2, or ecoff register number to a GDB [1 *
-   gdbarch_num_regs .. 2 * gdbarch_num_regs) REGNUM.  */
-
-static int
-mips_dwarf_dwarf2_ecoff_reg_to_regnum (struct gdbarch *gdbarch, int num)
+mips_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int num)
 {
   int regnum;
   if (num >= 0 && num < 32)
@@ -7980,46 +7961,51 @@ mips_virtual_frame_pointer (struct gdbarch *gdbarch,
   *offset = 0;
 }
 
-static void
-mips_find_abi_section (bfd *abfd, asection *sect, void *obj)
+static enum mips_abi
+mips_find_abi_from_sections (bfd *abfd)
 {
-  enum mips_abi *abip = (enum mips_abi *) obj;
-  const char *name = bfd_section_name (sect);
+  for (asection *sect : gdb_bfd_sections (abfd))
+    {
+      const char *name = bfd_section_name (sect);
 
-  if (*abip != MIPS_ABI_UNKNOWN)
-    return;
+      if (!startswith (name, ".mdebug."))
+	continue;
 
-  if (!startswith (name, ".mdebug."))
-    return;
+      if (strcmp (name, ".mdebug.abi32") == 0)
+	return MIPS_ABI_O32;
+      else if (strcmp (name, ".mdebug.abiN32") == 0)
+	return MIPS_ABI_N32;
+      else if (strcmp (name, ".mdebug.abi64") == 0)
+	return MIPS_ABI_N64;
+      else if (strcmp (name, ".mdebug.abiO64") == 0)
+	return MIPS_ABI_O64;
+      else if (strcmp (name, ".mdebug.eabi32") == 0)
+	return MIPS_ABI_EABI32;
+      else if (strcmp (name, ".mdebug.eabi64") == 0)
+	return MIPS_ABI_EABI64;
+      else
+	warning (_("unsupported ABI %s."), name + 8);
+    }
 
-  if (strcmp (name, ".mdebug.abi32") == 0)
-    *abip = MIPS_ABI_O32;
-  else if (strcmp (name, ".mdebug.abiN32") == 0)
-    *abip = MIPS_ABI_N32;
-  else if (strcmp (name, ".mdebug.abi64") == 0)
-    *abip = MIPS_ABI_N64;
-  else if (strcmp (name, ".mdebug.abiO64") == 0)
-    *abip = MIPS_ABI_O64;
-  else if (strcmp (name, ".mdebug.eabi32") == 0)
-    *abip = MIPS_ABI_EABI32;
-  else if (strcmp (name, ".mdebug.eabi64") == 0)
-    *abip = MIPS_ABI_EABI64;
-  else
-    warning (_("unsupported ABI %s."), name + 8);
+  return MIPS_ABI_UNKNOWN;
 }
 
-static void
-mips_find_long_section (bfd *abfd, asection *sect, void *obj)
+static int
+mips_find_long_bit_from_sections (bfd *abfd)
 {
-  int *lbp = (int *) obj;
-  const char *name = bfd_section_name (sect);
+  for (asection *sect : gdb_bfd_sections (abfd))
+    {
+      const char *name = bfd_section_name (sect);
 
-  if (startswith (name, ".gcc_compiled_long32"))
-    *lbp = 32;
-  else if (startswith (name, ".gcc_compiled_long64"))
-    *lbp = 64;
-  else if (startswith (name, ".gcc_compiled_long"))
-    warning (_("unrecognized .gcc_compiled_longXX"));
+      if (startswith (name, ".gcc_compiled_long32"))
+	return 32;
+      else if (startswith (name, ".gcc_compiled_long64"))
+	return 64;
+      else if (startswith (name, ".gcc_compiled_long"))
+	warning (_("unrecognized section %s."), name);
+    }
+
+  return 0;
 }
 
 static enum mips_abi
@@ -8130,7 +8116,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* GCC creates a pseudo-section whose name describes the ABI.  */
   if (found_abi == MIPS_ABI_UNKNOWN && info.abfd != NULL)
-    bfd_map_over_sections (info.abfd, mips_find_abi_section, &found_abi);
+    found_abi = mips_find_abi_from_sections (info.abfd);
 
   /* If we have no useful BFD information, use the ABI from the last
      MIPS architecture (if there is one).  */
@@ -8634,10 +8620,9 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (info.abfd != NULL)
     {
-      int long_bit = 0;
+      int long_bit = mips_find_long_bit_from_sections (info.abfd);
 
-      bfd_map_over_sections (info.abfd, mips_find_long_section, &long_bit);
-      if (long_bit)
+      if (long_bit != 0)
 	{
 	  set_gdbarch_long_bit (gdbarch, long_bit);
 	  switch (mips_abi)
@@ -8691,11 +8676,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, mips_dummy_id);
 
   /* Map debug register numbers onto internal register numbers.  */
-  set_gdbarch_stab_reg_to_regnum (gdbarch, mips_stab_reg_to_regnum);
-  set_gdbarch_ecoff_reg_to_regnum (gdbarch,
-				   mips_dwarf_dwarf2_ecoff_reg_to_regnum);
-  set_gdbarch_dwarf2_reg_to_regnum (gdbarch,
-				    mips_dwarf_dwarf2_ecoff_reg_to_regnum);
+  set_gdbarch_dwarf2_reg_to_regnum (gdbarch, mips_dwarf_reg_to_regnum);
   set_gdbarch_register_sim_regno (gdbarch, mips_register_sim_regno);
 
   /* MIPS version of CALL_DUMMY.  */

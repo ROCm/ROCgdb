@@ -174,7 +174,7 @@ solib_find_1 (const char *in_pathname, int *fd, bool is_solib)
   */
 
   if (!IS_TARGET_ABSOLUTE_PATH (fskind, in_pathname) || sysroot == NULL)
-    temp_pathname.reset (xstrdup (in_pathname));
+    temp_pathname = make_unique_xstrdup (in_pathname);
   else
     {
       bool need_dir_separator;
@@ -357,7 +357,7 @@ exec_file_find (const char *in_pathname, int *fd)
 	 filename.  Not much more we can do...)  */
 
       if (!source_full_path_of (in_pathname, &result))
-	result.reset (xstrdup (in_pathname));
+	result = make_unique_xstrdup (in_pathname);
       if (fd != NULL)
 	*fd = -1;
     }

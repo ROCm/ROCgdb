@@ -58,6 +58,8 @@
 #include "source.h"
 #include "cli/cli-style.h"
 #include "cli/cli-decode.h"
+#include "gdbsupport/selftest.h"
+#include "finish-thread-state.h"
 
 /* Local functions: */
 
@@ -134,6 +136,8 @@ args_complete_p (const std::string &args)
   while (*input != '\0')
     {
       input = skip_spaces (input);
+      if (*input == '\0')
+	break;
 
       if (squote)
 	{
@@ -151,7 +155,8 @@ args_complete_p (const std::string &args)
 	     and we don't skip the entire '\\' then we'll only skip the
 	     first '\', in which case we might see the second '\' as a '\"'
 	     sequence, which would be wrong.  */
-	  if (*input == '\\' && strchr ("\"\\", *(input + 1)) != nullptr)
+	  if (*input == '\\' && *(input + 1) != '\0'
+	      && strchr ("\"\\", *(input + 1)) != nullptr)
 	    ++input;
 	  /* Otherwise, just look for the closing double quote.  */
 	  else if (*input == '"')
@@ -165,7 +170,8 @@ args_complete_p (const std::string &args)
 	     a quoted argument.  The '\\' we need to skip so we don't just
 	     skip the first '\' and then incorrectly consider the second
 	     '\' are part of a '\"' or '\'' sequence.  */
-	  if (*input == '\\' && strchr ("\"\\'", *(input + 1)) != nullptr)
+	  if (*input == '\\' && *(input + 1) != '\0'
+	      && strchr ("\"\\'", *(input + 1)) != nullptr)
 	    ++input;
 	  /* Otherwise, check for the start of a single or double quoted
 	     argument.  Single quotes have no special meaning on Windows
@@ -183,8 +189,31 @@ args_complete_p (const std::string &args)
       ++input;
     }
 
+  /* Check that the whole string was read, and that we haven't read past
+     '\0'.  */
+  gdb_assert (input == args.data () + args.size ());
   return (!dquote && !squote);
 }
+
+#if GDB_SELF_TEST
+namespace selftests {
+
+static void
+infcmd_args_complete_p_tests ()
+{
+  /* The " " and "\"\\" cases are regression tests for PR33754.  */
+  std::vector<std::string> complete_strings = { " " };
+  std::vector<std::string> incomplete_strings = { "\"\\" };
+
+  for (auto &s : complete_strings)
+    SELF_CHECK (args_complete_p (s));
+
+  for (auto &s : incomplete_strings)
+    SELF_CHECK (!args_complete_p (s));
+}
+
+} /* namespace selftests */
+#endif /* GDB_SELF_TEST */
 
 /* Build a complete inferior argument string (all arguments to pass to the
    inferior) and return it.  ARGS is the initial part of the inferior
@@ -376,36 +405,35 @@ post_create_inferior (int from_tty, bool set_pspace_solib_ops)
       (gdbarch_make_solib_ops (current_inferior ()->arch (),
 			       current_program_space));
 
-  if (current_program_space->exec_bfd ())
-    {
-      const unsigned solib_add_generation
-	= current_program_space->solib_add_generation;
+  {
+    const unsigned solib_add_generation
+      = current_program_space->solib_add_generation;
 
-      scoped_restore restore_in_initial_library_scan
-	= make_scoped_restore (&current_inferior ()->in_initial_library_scan,
-			       true);
+    scoped_restore restore_in_initial_library_scan
+      = make_scoped_restore (&current_inferior ()->in_initial_library_scan,
+			     true);
 
-      /* Create the hooks to handle shared library load and unload
-	 events.  */
-      solib_create_inferior_hook (from_tty);
+    /* Create the hooks to handle shared library load and unload
+       events.  */
+    solib_create_inferior_hook (from_tty);
 
-      if (current_program_space->solib_add_generation == solib_add_generation)
-	{
-	  /* The platform-specific hook should load initial shared libraries,
-	     but didn't.  FROM_TTY will be incorrectly 0 but such solib
-	     targets should be fixed anyway.  Call it only after the solib
-	     target has been initialized by solib_create_inferior_hook.  */
+    if (current_program_space->solib_add_generation == solib_add_generation)
+      {
+	/* The platform-specific hook should load initial shared libraries,
+	   but didn't.  FROM_TTY will be incorrectly 0 but such solib
+	   targets should be fixed anyway.  Call it only after the solib
+	   target has been initialized by solib_create_inferior_hook.  */
 
-	  if (info_verbose)
-	    warning (_("platform-specific solib_create_inferior_hook did "
-		       "not load initial shared libraries."));
+	if (info_verbose)
+	  warning (_("platform-specific solib_create_inferior_hook did "
+		     "not load initial shared libraries."));
 
-	  /* If the solist is global across processes, there's no need to
-	     refetch it here.  */
-	  if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
-	    solib_add (nullptr, 0, auto_solib_add);
-	}
-    }
+	/* If the solist is global across processes, there's no need to
+	   refetch it here.  */
+	if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
+	  solib_add (nullptr, 0, auto_solib_add);
+      }
+  }
 
   /* If the user sets watchpoints before execution having started,
      then she gets software watchpoints, because GDB can't know which
@@ -1228,10 +1256,11 @@ jump_command (const char *arg, int from_tty)
 					  find_pc_mapped_section (sal.pc));
   if (fn != nullptr && sfn != fn)
     {
-      if (!query (_("Line %ps is not in `%s'.  Jump anyway? "),
+      if (!query (_("Line %ps is not in `%ps'.  Jump anyway? "),
 		  styled_string (line_number_style.style (),
 				 pulongest (sal.line)),
-		  fn->print_name ()))
+		  styled_string (function_name_style.style (),
+				 fn->print_name ())))
 	{
 	  error (_("Not confirmed."));
 	  /* NOTREACHED */
@@ -1260,7 +1289,8 @@ jump_command (const char *arg, int from_tty)
   if (from_tty)
     {
       gdb_printf (_("Continuing at "));
-      gdb_puts (paddress (gdbarch, addr));
+      fputs_styled (paddress (gdbarch, addr), address_style.style (),
+		    gdb_stdout);
       gdb_printf (".\n");
     }
 
@@ -3637,4 +3667,9 @@ Show whether `finish' prints the return value."), nullptr,
 			   nullptr,
 			   show_print_finish,
 			   &setprintlist, &showprintlist);
+
+#if GDB_SELF_TEST
+  selftests::register_test ("infcmd-args-complete-p",
+			    selftests::infcmd_args_complete_p_tests);
+#endif
 }

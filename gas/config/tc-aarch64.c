@@ -559,6 +559,7 @@ static htab_t aarch64_sys_regs_dc_hsh;
 static htab_t aarch64_sys_regs_at_hsh;
 static htab_t aarch64_sys_regs_tlbi_hsh;
 static htab_t aarch64_sys_regs_plbi_hsh;
+static htab_t aarch64_sys_regs_mlbi_hsh;
 static htab_t aarch64_sys_regs_sr_hsh;
 static htab_t aarch64_reg_hsh;
 static htab_t aarch64_barrier_opt_hsh;
@@ -4618,7 +4619,9 @@ parse_hint_opt (const char *name, char **str,
 	  && (o->value != HINT_OPD_C && o->value != HINT_OPD_J
 	      && o->value != HINT_OPD_JC && o->value != HINT_OPD_R))
       || ((strcmp ("stshh", name) == 0)
-	  && (o->value != HINT_OPD_KEEP && o->value != HINT_OPD_STRM)))
+	  && (o->value != HINT_OPD_KEEP && o->value != HINT_OPD_STRM))
+      || ((strcmp ("shuh", name) == 0)
+	  && (o->value != HINT_OPD_PHINT)))
       return false;
 
   *str = q;
@@ -6435,6 +6438,7 @@ process_omitted_operand (enum aarch64_opnd type, const aarch64_opcode *opcode,
       break;
 
     case AARCH64_OPND_BTI_TARGET:
+    case AARCH64_OPND_SHUH_PHINT:
       operand->hint_option = aarch64_hint_options + default_value;
       break;
 
@@ -8106,6 +8110,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_plbi_hsh, false);
 	  goto sys_reg_ins;
 
+	case AARCH64_OPND_SYSREG_MLBI:
+	  inst.base.operands[i].sysins_op =
+	    parse_sys_ins_reg (&str, aarch64_sys_regs_mlbi_hsh, false);
+	  goto sys_reg_ins;
+
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  inst.base.operands[i].sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
@@ -8308,6 +8317,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_BTI_TARGET:
+	case AARCH64_OPND_SHUH_PHINT:
 	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
 	    goto failure;
 	  break;
@@ -9280,6 +9290,14 @@ bool
 aarch64_sframe_ra_tracking_p (void)
 {
   return true;
+}
+
+/* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
+
+bool
+aarch64_support_flex_fde_p (void)
+{
+  return false;
 }
 
 /* The fixed offset from CFA for SFrame to recover the return address.
@@ -10259,6 +10277,24 @@ cons_fix_new_aarch64 (fragS * frag, int where, int size, expressionS * exp)
   fix_new_exp (frag, where, size, exp, pcrel, type);
 }
 
+/* Implement tc_fix_adjustable().
+   On aarch64 a jump or call to a function symbol must not be relaxed to
+   some other type of symbol: the linker uses this information to determine
+   when it is safe to insert far-branch veneers.  */
+
+bool
+aarch64_fix_adjustable (fixS *fixp)
+{
+  if (fixp->fx_addsy == NULL)
+    return true;
+
+  /* Preserve relocations against function symbols.  */
+  if (symbol_get_bfdsym (fixp->fx_addsy)->flags & BSF_FUNCTION)
+    return false;
+
+  return true;
+}
+
 /* Implement md_after_parse_args.  This is the earliest time we need to decide
    ABI.  If no -mabi specified, the ABI will be decided by target triplet.  */
 
@@ -10477,6 +10513,7 @@ md_begin (void)
   aarch64_sys_regs_at_hsh = str_htab_create ();
   aarch64_sys_regs_tlbi_hsh = str_htab_create ();
   aarch64_sys_regs_plbi_hsh = str_htab_create ();
+  aarch64_sys_regs_mlbi_hsh = str_htab_create ();
   aarch64_sys_regs_sr_hsh = str_htab_create ();
   aarch64_reg_hsh = str_htab_create ();
   aarch64_barrier_opt_hsh = str_htab_create ();
@@ -10522,6 +10559,11 @@ md_begin (void)
     sysreg_hash_insert (aarch64_sys_regs_plbi_hsh,
 			aarch64_sys_regs_plbi[i].name,
 			aarch64_sys_regs_plbi + i);
+
+  for (i = 0; aarch64_sys_regs_mlbi[i].name != NULL; i++)
+    sysreg_hash_insert (aarch64_sys_regs_mlbi_hsh,
+			aarch64_sys_regs_mlbi[i].name,
+			aarch64_sys_regs_mlbi + i);
 
   for (i = 0; aarch64_sys_regs_sr[i].name != NULL; i++)
     sysreg_hash_insert (aarch64_sys_regs_sr_hsh,
@@ -10968,6 +11010,8 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"f16f32mm",		AARCH64_FEATURE (F16F32MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"f16mm",		AARCH64_FEATURE (F16MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"sve-b16mm",		AARCH64_FEATURE (SVE_B16MM), AARCH64_FEATURE (SVE)},
+  {"mpamv2",		AARCH64_FEATURE (MPAMv2), AARCH64_NO_FEATURES},
+  {"mtetc",		AARCH64_FEATURE (MTETC), AARCH64_FEATURE (MEMTAG)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

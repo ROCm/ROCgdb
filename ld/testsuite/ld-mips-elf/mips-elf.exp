@@ -893,6 +893,19 @@ run_dump_test_o32 "pr19977-r"
 run_dump_test_o32 "pr19977-r-mips16" noarch
 run_dump_test_o32 "pr19977-r-micromips" noarch
 
+run_dump_test_o32 "mips-hi16-orphan-addend"
+run_dump_test_o32 "mips-hi16-orphan-addend-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "mips16-hi16-orphan-addend"
+run_dump_test_o32 "mips16-hi16-orphan-addend-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "micromips-hi16-orphan-addend"
+run_dump_test_o32 "micromips-hi16-orphan-addend-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+run_dump_test_o32 "pcrel-hi16-orphan-addend"
+run_dump_test_o32 "pcrel-hi16-orphan-addend-srec" \
+	[list [list objdump [expr { [istarget *el-*-*] ? "-EL" : "-EB" }]]]
+
 if { $linux_gnu } {
     run_dump_test_n32 "textrel-1"
     run_dump_test "got-page-1"

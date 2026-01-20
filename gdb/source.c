@@ -1180,7 +1180,7 @@ find_source_or_rewrite (const char *filename, const char *dirname)
 	 should report the pathname where GDB tried to find the file.  */
 
       if (dirname == nullptr || IS_ABSOLUTE_PATH (filename))
-	fullname.reset (xstrdup (filename));
+	fullname = make_unique_xstrdup (filename);
       else
 	fullname.reset (concat (dirname, SLASH_STRING,
 				filename, (char *) nullptr));
@@ -1222,7 +1222,7 @@ symtab_to_fullname (struct symtab *s)
 
 	  if (s->compunit ()->dirname () == nullptr
 	      || IS_ABSOLUTE_PATH (s->filename ()))
-	    fullname.reset (xstrdup (s->filename ()));
+	    fullname = make_unique_xstrdup (s->filename ());
 	  else
 	    fullname.reset (concat (s->compunit ()->dirname (), SLASH_STRING,
 				    s->filename (), (char *) NULL));

@@ -7310,7 +7310,6 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_fp0_regnum (gdbarch, S390_F0_REGNUM);
   set_gdbarch_guess_tracepoint_registers (gdbarch,
 					  s390_guess_tracepoint_registers);
-  set_gdbarch_stab_reg_to_regnum (gdbarch, s390_dwarf_reg_to_regnum);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, s390_dwarf_reg_to_regnum);
   set_gdbarch_value_from_register (gdbarch, s390_value_from_register);
   set_gdbarch_dwarf2_reg_piece_offset (gdbarch, s390_dwarf2_reg_piece_offset);

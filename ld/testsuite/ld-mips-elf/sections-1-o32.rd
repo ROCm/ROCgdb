@@ -17,7 +17,6 @@ Section Headers:
   \[..\] \.lit4 +PROGBITS .*
   \[..\] \.sbss +NOBITS .*
   \[..\] \.bss +NOBITS .*
-  \[..\] \.pdr +PROGBITS .*
   \[..\] \.gnu\.attributes +GNU_ATTRIBUTES .*
   \[..\] \.gptab\.sdata +MIPS_GPTAB .*
   \[..\] \.gptab\.sbss +MIPS_GPTAB .*
@@ -29,6 +28,7 @@ Section Headers:
   \[..\] \.mdebug\.eabi64 +PROGBITS .*
   \[..\] \.gcc_compiled_long32 +PROGBITS .*
   \[..\] \.gcc_compiled_long64 +PROGBITS .*
+  \[..\] \.pdr +PROGBITS .*
   \[..\] \.symtab +SYMTAB .*
   \[..\] \.strtab +STRTAB .*
   \[..\] \.shstrtab +STRTAB .*

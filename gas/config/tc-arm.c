@@ -16032,7 +16032,7 @@ do_mve_vmlas (void)
 {
   enum neon_shape rs = neon_select_shape (NS_QQR, NS_NULL);
   struct neon_type_el et
-    = neon_check_type (3, rs, N_EQK, N_EQK, N_SU_MVE | N_KEY);
+    = neon_check_type (3, rs, N_EQK, N_EQK, N_SU_MVE | N_I_MVE | N_KEY);
 
   if (inst.operands[2].reg == REG_PC)
     as_tsktsk (MVE_BAD_PC);
@@ -16044,7 +16044,7 @@ do_mve_vmlas (void)
   else
     inst.pred_insn_type = MVE_OUTSIDE_PRED_INSN;
 
-  inst.instruction |= (et.type == NT_unsigned) << 28;
+  inst.instruction |= (et.type == NT_untyped) << 28;
   inst.instruction |= HI1 (inst.operands[0].reg) << 22;
   inst.instruction |= neon_logbits (et.size) << 20;
   inst.instruction |= LOW4 (inst.operands[1].reg) << 16;

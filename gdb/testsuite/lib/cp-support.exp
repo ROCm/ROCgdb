@@ -582,20 +582,41 @@ proc cp_test_ptype_class { in_exp in_testname in_key in_tag in_class_table
 
 	    switch $nested_key {
 		enum {
-		    set expected_result \
-			"enum $nested_name (: (unsigned )?int )?\{"
-		    foreach c $nested_children {
-			append expected_result "$c, "
-		    }
-		    set expected_result \
-			[string trimright $expected_result { ,}]
-		    append expected_result "\};"
+		    set expected_result "enum $nested_name : unsigned int \{"
 		    cp_ptype_class_verbose \
 			"Expecting enum result: $expected_result"
-		    if {![regexp -- $expected_result $actual_line]} {
+		    if {![string equal $expected_result $actual_line]} {
 			set txt "$in_testname // wrong nested type enum"
 			append txt " definition: $actual_line"
 			fail $txt
+			queue delete $line_queue
+			return false
+		    }
+		    # This will be followed by lines for each value of the
+		    # enum.
+		    cp_ptype_class_verbose "matched enum value"
+		    foreach m $nested_children {
+			set actual_line \
+			    [cp_support_internal::next_line $line_queue]
+			cp_ptype_class_verbose "Expecting enum value: $m"
+			# Remove the trailing comma from the actual line to
+			# simplify comparison.
+			set trimmed_actual_line \
+			    [string trimright $actual_line " ,"]
+			if {![string equal $m $trimmed_actual_line]} {
+			    set txt "$in_testname // unexpected enum value: "
+			    append txt $m
+			    fail $txt
+			    queue delete $line_queue
+			    return false
+			}
+			cp_ptype_class_verbose "matched enum value \"$m\""
+		    }
+
+		    # Nested enum values always end with a trailing curly brace.
+		    set actual_line [cp_support_internal::next_line $line_queue]
+		    if {![string equal $actual_line "\};"]} {
+			fail "$in_testname // missing closing curly brace"
 			queue delete $line_queue
 			return false
 		    }

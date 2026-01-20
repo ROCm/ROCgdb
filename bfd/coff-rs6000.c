@@ -4506,7 +4506,7 @@ coff_find_nearest_line_with_alt
 /* For reloc entry points.  */
 #define _bfd_xcoff_get_reloc_upper_bound coff_get_reloc_upper_bound
 #define _bfd_xcoff_canonicalize_reloc coff_canonicalize_reloc
-#define _bfd_xcoff_set_reloc _bfd_generic_set_reloc
+#define _bfd_xcoff_finalize_section_relocs _bfd_generic_finalize_section_relocs
 #define _bfd_xcoff_bfd_reloc_type_lookup _bfd_xcoff_reloc_type_lookup
 #define _bfd_xcoff_bfd_reloc_name_lookup _bfd_xcoff_reloc_name_lookup
 

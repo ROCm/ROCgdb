@@ -25,6 +25,15 @@ Disassembly of section .text:
  +[a-f0-9]+:	85 f6                	test   %esi,%esi
  +[a-f0-9]+:	87 0a                	xchg   %ecx,\(%edx\)
  +[a-f0-9]+:	87 11                	xchg   %edx,\(%ecx\)
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	66 0f b6 c0          	movzbw %al,%ax
+ +[a-f0-9]+:	66 0f b6 c9          	movzbw %cl,%cx
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	66 0f b6 d2          	movzbw %dl,%dx
  +[a-f0-9]+:	00 d2                	add    %dl,%dl
  +[a-f0-9]+:	00 d2                	add    %dl,%dl
  +[a-f0-9]+:	66 01 d2             	add    %dx,%dx

@@ -478,16 +478,6 @@ objfile::~objfile ()
   breakpoint_free_objfile (this);
   btrace_free_objfile (this);
 
-  /* First do any symbol file specific actions required when we are
-     finished with a particular symbol file.  Note that if the objfile
-     is using reusable symbol information (via mmalloc) then each of
-     these routines is responsible for doing the correct thing, either
-     freeing things which are valid only during this particular gdb
-     execution, or leaving them to be reused during the next one.  */
-
-  if (sf != NULL)
-    (*sf->sym_finish) (this);
-
   /* Before the symbol table code was redone to make it easier to
      selectively load and remove information particular to a specific
      linkage unit, gdb used to do these things whenever the monolithic
@@ -503,9 +493,11 @@ objfile::~objfile ()
      and if so, call clear_current_source_symtab_and_line.  */
   clear_current_source_symtab_and_line (this);
 
-  /* Likewise, but for the last displayed symtab.  */
-  symtab *s = get_last_displayed_symtab ();
-  if (s != nullptr && s->compunit ()->objfile () == this)
+  /* Check if last_displayed_symtab_info belongs to this objfile,
+     and if so, call clear_last_displayed_sal.  */
+  if (symtab *last_displayed_symtab = get_last_displayed_symtab ();
+      last_displayed_symtab != nullptr
+      && last_displayed_symtab->compunit ()->objfile () == this)
     clear_last_displayed_sal ();
 
   /* Rebuild section map next time we need it.  */

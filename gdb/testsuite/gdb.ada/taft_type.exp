@@ -20,15 +20,15 @@ require allow_ada_tests
 standard_ada_testfile p
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/p.adb]
 if {![runto "p.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test "print w.e.all" \
-	 "= \\(month => 8, year => 1974\\)"
+    "= \\(month => 8, year => 1974\\)"

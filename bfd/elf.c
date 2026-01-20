@@ -4334,7 +4334,8 @@ assign_section_numbers (bfd *abfd, struct bfd_link_info *link_info)
 		  return false;
 		}
 	      s = s->output_section;
-	      d->this_hdr.sh_link = elf_section_data (s)->this_idx;
+	      d->this_hdr.sh_link
+		= _bfd_elf_section_from_bfd_section (abfd, s);
 	    }
 	}
 

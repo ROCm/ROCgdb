@@ -54,8 +54,14 @@ public:
   explicit interp (const char *name);
   virtual ~interp () = 0;
 
-  virtual void init (bool top_level)
-  {}
+  void init (bool top_level)
+  {
+    if (!m_inited)
+      {
+	do_init (top_level);
+	m_inited = true;
+      }
+  }
 
   virtual void resume () = 0;
   virtual void suspend () = 0;
@@ -200,12 +206,16 @@ public:
 				  const bfd_byte *data) {}
 
 private:
+  /* Called to perform any needed initialization.  */
+  virtual void do_init (bool top_level)
+  {
+  }
+
   /* The memory for this is static, it comes from literal strings (e.g. "cli").  */
   const char *m_name;
 
-public:
   /* Has the init method been run?  */
-  bool inited = false;
+  bool m_inited = false;
 };
 
 /* Look up the interpreter for NAME, creating one if none exists yet.

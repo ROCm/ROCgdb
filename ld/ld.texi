@@ -2769,21 +2769,25 @@ linker's command line.  Note: if both the environment variable and the
 takes precedence.
 
 The extended information reported includes the cpu time used and, if
-the @var{getrusage()} system library call is available then memory use
-is recorded as well.  This information is reported for individual
-parts of the linking process which are referred to as @emph{phases}.
-In addition the information is also reported for a special phase
-called @emph{ALL} which covers the entire linking process.  Note that
+the @var{getrusage()} system library call is available then maximum
+set size and the user and system run times as well.  In addition if
+the @var{mallinfo} or @var{mallinfo2} system library calls are
+available then the total memory usage is reported,
+
+The information is displayed for individual parts of the linking
+process which are referred to as @emph{phases}.  Note that
 individual phases can contain or overlap with each other so it should
 not be assumed that the overall resources used by the linker is the
 sum of the resources used by the individual phases.
 
-In addition when extended information is being reported the linker
-version, command line arguments and linker start time are also
-included.  This makes it easier to handle the situation where multiple
-links are being invoked by a build system and to indentify exactly
-which arguments were responsible for producing the statistics that are
-reported.
+In addition the information is also reported for a special phase
+called @emph{ALL} which covers the entire linking process.  
+
+When extended information is being reported the linker version,
+command line arguments and linker start time are also included.  This
+makes it easier to handle the situation where multiple links are being
+invoked by a build system and to indentify exactly which arguments
+were responsible for producing the statistics that are reported.
 
 The extended output looks something like this:
 
@@ -2792,15 +2796,15 @@ Stats: linker version: (GNU Binutils) 2.44.50.20250401
 Stats: linker started: Wed Apr  2 09:36:41 2025
 Stats: args: ld -z norelro -z nomemory-seal -z no-separate-code -o a.out [...]
 
-Stats: phase               cpu time    memory      user time    system time    
-Stats: name                (microsec)   (KiB)      (seconds)      (seconds)    
-Stats: ALL                   390082    217740              0              0    
-Stats: ctf processing            12         0              0              0    
-Stats: string merge            1324         0              0              0    
-Stats: parsing                  349       288              0              0    
-Stats: plugins                    1         0              0              0    
-Stats: processing files      259616    214524              0              0    
-Stats: write                 116493         0              0              0    
+Stats: phase               cpu time       rss      user time    system time     memory
+Stats: name                (microsec)   (KiB)      (seconds)      (seconds)      (KiB)
+Stats: ALL                   390082    217740              0              0   25219440
+Stats: ctf processing            12         0              0              0          0
+Stats: string merge            1324         0              0              0     406544
+Stats: parsing                  349       288              0              0     119792
+Stats: plugins                    1         0              0              0          0
+Stats: processing files      259616    214524              0              0   31569120
+Stats: write                 116493         0              0              0      48096
 @end smallexample
 
 @kindex --no-stats
@@ -3247,9 +3251,13 @@ section and ELF @code{PT_GNU_EH_FRAME} segment header.
 @item --no-ld-generated-unwind-info
 Request creation of @code{.eh_frame} unwind info for linker
 generated code sections like PLT.  This option is on by default
-if linker generated unwind info is supported.  This option also
-controls the generation of @code{.sframe} stack trace info for linker
-generated code sections like PLT.
+if linker generated unwind info is supported.
+
+@kindex --discard-sframe
+@item --discard-sframe
+Discard @code{.sframe} stack trace info from the output.  This option also
+prohibits the creation of SFrame stack trace data for linker generated code
+sections like PLT.  This option is off by default.
 
 @kindex --enable-new-dtags
 @kindex --disable-new-dtags

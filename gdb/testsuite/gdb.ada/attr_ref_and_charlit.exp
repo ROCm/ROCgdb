@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile "foo"
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -39,7 +39,7 @@ with_test_prefix "run" {
 }
 
 gdb_test "continue" \
-	 ".*Breakpoint \[0-9\]+, foo\\.p \\(s=.*\\) at .*foo.adb:\[0-9\]+.*"
+    ".*Breakpoint \[0-9\]+, foo\\.p \\(s=.*\\) at .*foo.adb:\[0-9\]+.*"
 
 with_test_prefix "cont" {
     gdb_test "print s'first" " = 4"

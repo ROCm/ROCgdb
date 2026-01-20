@@ -283,24 +283,6 @@ extern void set_gdbarch_ps_regnum (struct gdbarch *gdbarch, int ps_regnum);
 extern int gdbarch_fp0_regnum (struct gdbarch *gdbarch);
 extern void set_gdbarch_fp0_regnum (struct gdbarch *gdbarch, int fp0_regnum);
 
-/* Convert stab register number (from `r' declaration) to a gdb REGNUM. */
-
-typedef int (gdbarch_stab_reg_to_regnum_ftype) (struct gdbarch *gdbarch, int stab_regnr);
-extern int gdbarch_stab_reg_to_regnum (struct gdbarch *gdbarch, int stab_regnr);
-extern void set_gdbarch_stab_reg_to_regnum (struct gdbarch *gdbarch, gdbarch_stab_reg_to_regnum_ftype *stab_reg_to_regnum);
-
-/* Provide a default mapping from a ecoff register number to a gdb REGNUM. */
-
-typedef int (gdbarch_ecoff_reg_to_regnum_ftype) (struct gdbarch *gdbarch, int ecoff_regnr);
-extern int gdbarch_ecoff_reg_to_regnum (struct gdbarch *gdbarch, int ecoff_regnr);
-extern void set_gdbarch_ecoff_reg_to_regnum (struct gdbarch *gdbarch, gdbarch_ecoff_reg_to_regnum_ftype *ecoff_reg_to_regnum);
-
-/* Convert from an sdb register number to an internal gdb register number. */
-
-typedef int (gdbarch_sdb_reg_to_regnum_ftype) (struct gdbarch *gdbarch, int sdb_regnr);
-extern int gdbarch_sdb_reg_to_regnum (struct gdbarch *gdbarch, int sdb_regnr);
-extern void set_gdbarch_sdb_reg_to_regnum (struct gdbarch *gdbarch, gdbarch_sdb_reg_to_regnum_ftype *sdb_reg_to_regnum);
-
 /* Provide a default mapping from a DWARF2 register number to a gdb REGNUM.
    Return -1 for bad REGNUM.  Note: Several targets get this wrong. */
 

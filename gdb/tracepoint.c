@@ -3414,7 +3414,7 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
   p++;  /* skip a colon */
   if (piece == 'T')
     {
-      gdb::unique_xmalloc_ptr<char[]> cond;
+      gdb::unique_xmalloc_ptr<char> cond;
 
       enabled = (*p++ == 'E');
       p++;  /* skip a colon */
@@ -3442,9 +3442,7 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
 	      p++;
 	      p = unpack_varlen_hex (p, &xlen);
 	      p++;  /* skip a comma */
-	      cond.reset ((char *) xmalloc (2 * xlen + 1));
-	      strncpy (&cond[0], p, 2 * xlen);
-	      cond[2 * xlen] = '\0';
+	      cond = make_unique_xstrndup (p, 2 * xlen);
 	      p += 2 * xlen;
 	    }
 	  else
@@ -3486,9 +3484,9 @@ parse_tracepoint_definition (const char *line, struct uploaded_tp **utpp)
       buf[end] = '\0';
 
       if (startswith (srctype, "at:"))
-	utp->at_string.reset (xstrdup (buf));
+	utp->at_string = make_unique_xstrdup (buf);
       else if (startswith (srctype, "cond:"))
-	utp->cond_string.reset (xstrdup (buf));
+	utp->cond_string = make_unique_xstrdup (buf);
       else if (startswith (srctype, "cmd:"))
 	utp->cmd_strings.emplace_back (xstrdup (buf));
     }

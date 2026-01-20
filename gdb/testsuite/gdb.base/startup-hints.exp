@@ -26,79 +26,162 @@ if { [build_executable "build" $testfile $srcfile] != 0 } {
     return
 }
 
+# Take a list of PARTS and combine them into a single string, which is then
+# returned.
+#
+# Each part in PARTS is itself a list with two elements, the first is the
+# name of a style (see TCL proc 'style'), and the second is a literal piece
+# of text to which the style should be applied.
+#
+# When STYLED is true then the style name from each part is used to add
+# escape sequences to the result string.  When STYLED is false no style
+# escapes are added.
+#
+# When REGEXP is true then the literal text for each part is converted to a
+# regexp (i.e. escape characters are added as needed) within the returned
+# string.
+proc parts_to_string { styled regexp parts } {
+    set str ""
+
+    foreach p $parts {
+	if { $styled } {
+	    set style [lindex $p 0]
+	} else {
+	    set style none
+	}
+
+	set text [lindex $p 1]
+	if { $regexp } {
+	    set text [string_to_regexp $text]
+	}
+
+	append str [style $text $style]
+    }
+
+    return $str
+}
+
 # Return a single regexp string for the startup hint text when the
 # terminal width is WIDTH.  For narrow terminals GDB will just print
 # the hint text.  For wider terminals GDB places the hint into a box.
-proc build_hint_re { width } {
+#
+# When WITH_STYLE is true then the output is expected to be styled, and
+# escape sequences will be added to the result to take this into account.
+proc build_hint_re { width with_style } {
     # GDB imposes a maximum width of 80.
     if { $width > 80 || $width == 0 } {
 	set width 80
     }
 
+    # Build a list of lines in MSG.  Each line is stored as a list of parts.
+    # Each part is a two item list, the first item is a style name (see the
+    # TCL 'style' proc), and the second item is some text.  Thus a single
+    # line looks like:
+    #
+    # { { STYLE TEXT } { STYLE TEXT } { STYLE TEXT } }
+    #
+    # The final value of MSG will be a list of these lines.
+    #
+    # We do things this way because we need to do two different things with
+    # the contents of MSG, first, we need to calculate the total length of
+    # each line, as seen in GDB's output.  For this we need to get the sum
+    # of the lengths of each TEXT part.  With this length we can then
+    # calculate the ammount of padding needed for a given terminal width.
+    #
+    # The second use of MSG is to build the regexp that is used to actually
+    # match GDB's output.  For this we use STYLE to add escape sequences to
+    # the output, and each TEXT is converted to a regexp, which might add
+    # escape sequences.
+    #
+    # The first 3 lines in MSG are never line wrapped.  The documentation
+    # URL is used by GDB as the minimum required width for adding a box
+    # around the hint.
+    set msg {
+	{{none {Find the GDB manual online at:}}}
+	{{file {http://www.gnu.org/software/gdb/documentation/}} {none {.}}}
+	{{none {For help, type "}} {command {help}} {none {".}}}}
+
+    # The final line is longer than the documentation URL, and so it will be
+    # line wrapped based on the terminal width.  The documentation URL
+    # defines a minimum width at which a box will be drawn as 51 characters,
+    # as such the number of places the final line can be wrapped is small
+    # enough that we just define each possibility.
+    #
+    # For terminals less than 51 characters no box is added, and GDB just
+    # relies on the terminal to wrap the output for us, so in this case we
+    # don't need to manually split the line here.
+    if { $width > 66 || $width < 51 } {
+	lappend msg \
+	    {{none {Type "}}
+	     {command {apropos <word>}}
+	     {none {" to search for commands related to <word>.}}}
+    } elseif { $width > 58 } {
+	lappend msg \
+	    {{none {Type "}}
+	     {command {apropos <word>}}
+	     {none {" to search for commands related to}}} \
+	    {{none {<word>.}}}
+    } elseif { $width > 55 } {
+	lappend msg \
+	    {{none {Type "}}
+	     {command {apropos <word>}}
+	     {none {" to search for commands related}}}	 \
+	    {{none {to <word>.}}}
+    } elseif { $width > 47 } {
+	lappend msg \
+	    {{none {Type "}}
+	     {command {apropos <word>}}
+	     {none {" to search for commands}}} \
+	    {{none {related to <word>.}}}
+    }
+
     if { $width > 50 } {
-
-	# These lines are shorter than 50 characters, and so are never
-	# wrapped.
-	set msg {
-	    {Find the GDB manual online at:}
-	    {http://www.gnu.org/software/gdb/documentation/.}
-	    {For help, type "help".}
-	}
-
-	# The final line is wrapped based on the terminal width.
-	if { $width > 66 } {
-	    lappend msg {Type "apropos <word>" to search for commands related to <word>.}
-	} elseif { $width > 58 } {
-	    lappend msg {Type "apropos <word>" to search for commands related to} {<word>.}
-	} elseif { $width > 55 } {
-	    lappend msg {Type "apropos <word>" to search for commands related} {to <word>.}
-	} elseif { $width > 47 } {
-	    lappend msg {Type "apropos <word>" to search for commands} { related to <word>.}
-	}
-
-	# Place the lines into a box, padding with whitespace so that
-	# the sides are correctly aligned.
-	set top_bottom "+[string repeat "-" [expr {$width - 2}]]+"
+	# For terminal widths greater than 50, place the hint text into a
+	# box, padding with whitespace so that the sides are correctly
+	# aligned.
+	#
+	# We convert each line in MSG to a string twice.  The first time no
+	# styling is applied, nor do we convert the parts of the line into a
+	# regexp, this allows the actual length of the line (as seen in
+	# GDB's output) to be calculated, and from this we calculate the
+	# padding required.
+	#
+	# After that we create the line from MSG a second time, only this
+	# time, styling is added when WITH_STYLE is true, and each part of
+	# the line is converted to a regexp, which might add escape
+	# characters.
+	set top_bottom [string_to_regexp "+[string repeat "-" [expr {$width - 2}]]+"]
 	set lines [list $top_bottom]
+	set side [string_to_regexp "|"]
 	foreach m $msg {
-	    set space_count [expr {$width - 4 - [string length $m]}]
+	    set plain [parts_to_string false false $m]
+	    set space_count [expr {$width - 4 - [string length $plain]}]
 	    set spaces [string repeat " " $space_count]
-	    lappend lines "| $m$spaces |"
+	    set maybe_styled [parts_to_string $with_style true $m]
+	    lappend lines "$side $maybe_styled$spaces $side"
 	}
 	lappend lines $top_bottom
     } else {
-	# We tell GDB that the terminal width is WIDTH, but in reality
-	# the actual terminal width is unlimited.  As such, GDB drops
-	# the box around the hint, but doesn't inject any additional
-	# newlines (it assumes the terminal will break the lines for
-	# us).  This is why, despite the narrow terminal, we expect
-	# each line without any line breaks.
-	set lines {{Find the GDB manual online at:} \
-		       {http://www.gnu.org/software/gdb/documentation/.} \
-		       {For help, type "help".} \
-		       {Type "apropos <word>" to search for commands related to <word>.}}
+	# For narrow terminals no box is added.  Just convert each line in
+	# MSG to a regexp, adding style escape sequences when WITH_STYLE is
+	# true.
+	set lines {}
+	foreach m $msg {
+	    lappend lines [parts_to_string $with_style true $m]
+	}
     }
 
     # Add blank line before and after current lines.
     set lines [linsert $lines 0 ""]
     lappend lines ""
 
-    # Convert every line to a regexp.  Also log the expected output
-    # for debugging.
-    set lines_re {}
-    verbose -log -- "Expected message format:"
-    foreach l $lines {
-	verbose -log -- "$l"
-	lappend lines_re [string_to_regexp $l]
-    }
-
     # Join the regexp together.
-    return [multi_line {*}$lines_re]
+    return [multi_line {*}$lines]
 }
 
 # Tell GDB to start with a terminal width of WIDTH, then start GDB.
 # Check that the hint text is formatted correctly.
-proc_with_prefix test_for_hint_with_width { width load_exec } {
+proc_with_prefix test_for_hint_with_width { width load_exec with_style } {
     global GDBFLAGS
 
     save_vars { GDBFLAGS } {
@@ -107,13 +190,26 @@ proc_with_prefix test_for_hint_with_width { width load_exec } {
 	    append GDBFLAGS " \"$::binfile\""
 	}
 	gdb_exit
-	gdb_spawn
+
+	if { $with_style } {
+	    with_ansi_styling_terminal {
+		gdb_spawn
+	    }
+	} else {
+	    gdb_spawn
+	}
     }
 
-    set hint_re [build_hint_re $width]
+    set hint_re [build_hint_re $width $with_style]
 
     if { $load_exec } {
-	append hint_re "\r\nReading symbols from [string_to_regexp $::binfile]\\.\\.\\."
+	if { $with_style } {
+	    set style file
+	} else {
+	    set style none
+	}
+
+	append hint_re "\r\nReading symbols from [style [string_to_regexp $::binfile] $style]\\.\\.\\."
     }
 
     gdb_test "" $hint_re \
@@ -123,22 +219,24 @@ proc_with_prefix test_for_hint_with_width { width load_exec } {
 save_vars { INTERNAL_GDBFLAGS } {
     set INTERNAL_GDBFLAGS [string map {"-q" ""} $INTERNAL_GDBFLAGS]
 
-    foreach_with_prefix load_exec { false true } {
+    foreach_with_prefix with_style { false true } {
+	foreach_with_prefix load_exec { false true } {
 
-	# Width 0 actually means unlimited.  The other small sizes
-	# check that GDB doesn't trigger undefined behaviour by trying
-	# to create strings with a negative length.
-	for { set width 0 } { $width <= 5 } { incr width } {
-	    test_for_hint_with_width $width $load_exec
+	    # Width 0 actually means unlimited.  The other small sizes
+	    # check that GDB doesn't trigger undefined behaviour by trying
+	    # to create strings with a negative length.
+	    for { set width 0 } { $width <= 5 } { incr width } {
+		test_for_hint_with_width $width $load_exec $with_style
+	    }
+
+	    # These widths cover the point where we transition from using
+	    # an unboxed hint to a boxed hint.
+	    for { set width 45 } { $width <= 60 } { incr width } {
+		test_for_hint_with_width $width $load_exec $with_style
+	    }
+
+	    # Very large widths are treated like a width of 80.
+	    test_for_hint_with_width 100 $load_exec $with_style
 	}
-
-	# These widths cover the point where we transition from using
-	# an unboxed hint to a boxed hint.
-	for { set width 45 } { $width <= 55 } { incr width } {
-	    test_for_hint_with_width $width $load_exec
-	}
-
-	# Very large widths are treated like a width of 80.
-	test_for_hint_with_width 100 $load_exec
     }
 }

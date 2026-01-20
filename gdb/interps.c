@@ -132,11 +132,7 @@ interp_set (struct interp *interp, bool top_level)
     interpreter_p = interp->name ();
 
   /* Run the init proc.  */
-  if (!interp->inited)
-    {
-      interp->init (top_level);
-      interp->inited = true;
-    }
+  interp->init (top_level);
 
   /* Do this only after the interpreter is initialized.  */
   current_uiout = interp->interp_ui_out ();

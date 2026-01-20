@@ -7677,12 +7677,11 @@ micromips_add_label (void)
   S_SET_OTHER (s, ELF_ST_SET_MICROMIPS (S_GET_OTHER (s)));
 }
 
-/* If assembling microMIPS code, then return the microMIPS reloc
-   corresponding to the requested one if any.  Otherwise return
-   the reloc unchanged.  */
+/* Return the microMIPS relocation corresponding to RELOC if there is any
+   and MICROMIPS_P is true.  Otherwise return RELOC unchanged.  */
 
 static bfd_reloc_code_real_type
-micromips_map_reloc (bfd_reloc_code_real_type reloc)
+micromips_map_reloc (bfd_reloc_code_real_type reloc, bool micromips_p)
 {
   static const bfd_reloc_code_real_type relocs[][2] =
     {
@@ -7718,7 +7717,7 @@ micromips_map_reloc (bfd_reloc_code_real_type reloc)
   bfd_reloc_code_real_type r;
   size_t i;
 
-  if (!mips_opts.micromips)
+  if (!micromips_p)
     return reloc;
   for (i = 0; i < ARRAY_SIZE (relocs); i++)
     {
@@ -8199,7 +8198,8 @@ append_insn (struct mips_cl_insn *ip, expressionS *address_expr,
       /* Perform any necessary conversion to microMIPS relocations
 	 and find out how many relocations there actually are.  */
       for (i = 0; i < 3 && reloc_type[i] != BFD_RELOC_UNUSED; i++)
-	final_type[i] = micromips_map_reloc (reloc_type[i]);
+	final_type[i] = micromips_map_reloc (reloc_type[i],
+					     mips_opts.micromips);
 
       /* In a compound relocation, it is the final (outermost)
 	 operator that determines the relocated field.  */
@@ -14955,6 +14955,24 @@ parse_relocation (char **str, bfd_reloc_code_real_type *reloc)
   return false;
 }
 
+/* Return a relocation operator corresponding to RELOC.  */
+
+static const char *
+mips_op_for_relocation (bfd_reloc_code_real_type reloc)
+
+{
+  size_t i;
+
+  for (i = 0; i < ARRAY_SIZE (mips_percent_op); i++)
+    if (reloc == micromips_map_reloc (mips_percent_op[i].reloc,
+				      micromips_reloc_p (reloc)))
+      return mips_percent_op[i].str;
+  for (i = 0; i < ARRAY_SIZE (mips16_percent_op); i++)
+    if (reloc == mips16_percent_op[i].reloc)
+      return mips16_percent_op[i].str;
+
+  abort ();
+}
 
 /* Parse string STR as a 16-bit relocatable operand.  Store the
    expression in *EP and the relocations in the array starting
@@ -15816,11 +15834,7 @@ mips_frob_file (void)
 	 fixup_has_matching_lo_p() will return true.  For PC-relative
 	 relocations the distance between the offsets is retained
 	 according to expectations in `fixup_has_matching_lo_p',
-	 `_bfd_mips_elf_lo16_reloc' and `mips_elf_add_lo16_rel_addend'.
-
-	 We don't warn about unmatched high-part relocations since some
-	 versions of gcc have been known to emit dead "lui ...%hi(...)"
-	 instructions.  */
+	 `_bfd_mips_elf_lo16_reloc' and `mips_elf_add_lo16_rel_addend'.  */
       if (lo_pos != NULL)
 	{
 	  if (l->fixp->fx_r_type != BFD_RELOC_HI16_S_PCREL)
@@ -15832,6 +15846,11 @@ mips_frob_file (void)
 	      *lo_pos = l->fixp;
 	    }
 	}
+      else
+	as_warn_where
+	  (l->fixp->fx_file, l->fixp->fx_line,
+	   _("can't find matching low-part relocation for %s operator"),
+	   mips_op_for_relocation (l->fixp->fx_r_type));
     }
 }
 

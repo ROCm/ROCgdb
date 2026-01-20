@@ -20,18 +20,18 @@ require allow_ada_tests
 standard_ada_testfile foo_n612_026
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "STOP" ${testdir}/foo_n612_026.adb]
 if {![runto "foo_n612_026.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test "print r" \
-	 " = \\(n => 10, a => \\(10, 20, 30, 40, 50, 60, 70, 80, 90, 100\\)\\)"
+    " = \\(n => 10, a => \\(10, 20, 30, 40, 50, 60, 70, 80, 90, 100\\)\\)"
 
 gdb_test "print r.a" \
-	 " = \\(10, 20, 30, 40, 50, 60, 70, 80, 90, 100\\)"
+    " = \\(10, 20, 30, 40, 50, 60, 70, 80, 90, 100\\)"

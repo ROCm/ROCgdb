@@ -35,7 +35,8 @@ extern int have_core_file_p (void);
 
 /* Report a memory error with error().  */
 
-extern void memory_error (enum target_xfer_status status, CORE_ADDR memaddr);
+[[noreturn]] extern void memory_error (enum target_xfer_status status,
+				       CORE_ADDR memaddr);
 
 /* The string 'memory_error' would use as exception message.  */
 

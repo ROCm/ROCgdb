@@ -23,7 +23,7 @@ require allow_ada_tests
 standard_ada_testfile parse
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -35,4 +35,4 @@ runto "parse.adb:$bp_location"
 
 # Check that printing uninitialized variables does not crash the debugger.
 gdb_test "info locals" \
-	 ".*"
+    ".*"

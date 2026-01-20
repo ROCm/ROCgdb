@@ -42,7 +42,7 @@ clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/storage.adb]
 if {![runto "storage.adb:$bp_location"]} {
-  return
+    return
 }
 
 set re "value => 126, another_value => 12, color => green"

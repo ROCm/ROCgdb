@@ -21,17 +21,17 @@ require ada_shared_link
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-bargs additional_flags=-shared additional_flags=-margs]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set loc [gdb_get_line_number "Integer" ${testdir}/foo.adb]
 gdb_test "info line foo.adb:$loc" \
-	 "Line $decimal of \".*foo\\.adb\" starts at address $hex <_ada_foo\\+$decimal> and ends at $hex <_ada_foo\\+$decimal>\\." \
-	 "info line on variable declaration"
+    "Line $decimal of \".*foo\\.adb\" starts at address $hex <_ada_foo\\+$decimal> and ends at $hex <_ada_foo\\+$decimal>\\." \
+    "info line on variable declaration"
 
 set loc [gdb_get_line_number "Do_Nothing" ${testdir}/foo.adb]
 gdb_test "info line foo.adb:$loc" \
-	 "Line $decimal of \".*foo\\.adb\" starts at address $hex <_ada_foo\\+$decimal> and ends at $hex <_ada_foo\\+$decimal>\\." \
-	 "info line on Do_Nothing call"
+    "Line $decimal of \".*foo\\.adb\" starts at address $hex <_ada_foo\\+$decimal> and ends at $hex <_ada_foo\\+$decimal>\\." \
+    "info line on Do_Nothing call"

@@ -31,10 +31,16 @@ if [string equal $COMPAT_DEJAGNU "no"] {
 
 catch "exec ln -s $srcdir/libsframe.decode/DATA1 ." status
 catch "exec ln -s $srcdir/libsframe.decode/DATA2 ." status
+catch "exec ln -s $srcdir/libsframe.decode/DATA-V2 ." status
 catch "exec ln -s $srcdir/libsframe.decode/DATA-BE ." status
+catch "exec ln -s $srcdir/libsframe.decode/DATA-BE-V3 ." status
 
 if { [host_execute "testsuite/libsframe.decode/be-flipping"] ne "" } {
     fail "be-flipping"
+}
+
+if { [host_execute "testsuite/libsframe.decode/be-flipping-v3"] ne "" } {
+    fail "be-flipping-v3"
 }
 
 if { [host_execute "testsuite/libsframe.decode/frecnt-1"] ne "" } {
@@ -45,6 +51,12 @@ if { [host_execute "testsuite/libsframe.decode/frecnt-2"] ne "" } {
     fail "frecnt-2"
 }
 
+if { [host_execute "testsuite/libsframe.decode/frecnt-v2"] ne "" } {
+    fail "frecnt-v2"
+}
+
 catch "exec rm DATA1" status
 catch "exec rm DATA2" status
+catch "exec rm DATA-V2" status
 catch "exec rm DATA-BE" status
+catch "exec rm DATA-BE-V3" status

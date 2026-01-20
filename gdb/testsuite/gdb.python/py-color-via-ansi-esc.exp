@@ -1,0 +1,70 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This file is part of the GDB testsuite.  It tests styled output from
+# Python via raw ANSI escape sequences.
+
+load_lib gdb-python.exp
+
+require allow_python_tests
+require {!is_remote host}
+
+# Start with a fresh GDB, but enable color support.
+with_ansi_styling_terminal {
+    clean_restart
+}
+
+# Create two variables in the parent scope called ${NAME} and
+# ${NAME}_re.  The variable ${NAME} will be the string for the ANSI
+# escape sequence containing VALUE, and ${NAME}_re will be the regular
+# expression to match that same sequence.
+proc setup_ansi { name value } {
+    upvar 1 $name var
+    upvar 1 ${name}_re var_re
+
+    set var "\\033\[${value}m"
+    set var_re "\033\\\[${value}m"
+}
+
+# Different colors.
+setup_ansi red 31
+setup_ansi green 32
+setup_ansi blue 34
+
+# Different intensities.
+setup_ansi normal 22
+setup_ansi bold 1
+setup_ansi dim 2
+
+# Italic.
+setup_ansi italic 3
+setup_ansi no_italic 23
+
+# Underline.
+setup_ansi underline 4
+setup_ansi no_underline 24
+
+# Restore all settings to default.
+setup_ansi default 0
+
+gdb_test_no_output "python flag=\"OUTPUT=\""
+
+gdb_test "python print('%s${blue}blue ${bold}blue+bold ${green}green+bold ${normal}green ${red}red${default}' % (flag))" \
+    "OUTPUT=${blue_re}blue ${bold_re}blue\\+bold ${green_re}green\\+bold ${normal_re}green ${red_re}red${default_re}" \
+    "foreground colors and bold"
+
+gdb_test "python print('%snormal ${italic}italic ${underline}italic+underline ${no_underline}italic ${no_italic}normal' % (flag))" \
+    "OUTPUT=normal ${italic_re}italic ${underline_re}italic\\+underline ${no_underline_re}italic ${no_italic_re}normal" \
+    "italic and underline"

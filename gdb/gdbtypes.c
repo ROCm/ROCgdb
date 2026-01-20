@@ -360,13 +360,10 @@ smash_type (struct type *type)
   /* For now, leave the pointer/reference types alone.  */
 }
 
-/* Lookup a pointer to a type TYPE.  TYPEPTR, if nonzero, points
-   to a pointer to memory where the pointer type should be stored.
-   If *TYPEPTR is zero, update it to point to the pointer type we return.
-   We allocate new memory if needed.  */
+/* See gdbtypes.h.  */
 
-struct type *
-make_pointer_type (struct type *type, struct type **typeptr)
+type *
+make_pointer_type (type *type)
 {
   struct type *ntype;	/* New type */
   struct type *chain;
@@ -374,31 +371,9 @@ make_pointer_type (struct type *type, struct type **typeptr)
   ntype = TYPE_POINTER_TYPE (type);
 
   if (ntype)
-    {
-      if (typeptr == 0)
-	return ntype;		/* Don't care about alloc,
-				   and have new type.  */
-      else if (*typeptr == 0)
-	{
-	  *typeptr = ntype;	/* Tracking alloc, and have new type.  */
-	  return ntype;
-	}
-    }
+    return ntype;
 
-  if (typeptr == 0 || *typeptr == 0)	/* We'll need to allocate one.  */
-    {
-      ntype = type_allocator (type).new_type ();
-      if (typeptr)
-	*typeptr = ntype;
-    }
-  else			/* We have storage, but need to reset it.  */
-    {
-      ntype = *typeptr;
-      chain = TYPE_CHAIN (ntype);
-      smash_type (ntype);
-      TYPE_CHAIN (ntype) = chain;
-    }
-
+  ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
   TYPE_POINTER_TYPE (type) = ntype;
 
@@ -429,18 +404,13 @@ make_pointer_type (struct type *type, struct type **typeptr)
 struct type *
 lookup_pointer_type (struct type *type)
 {
-  return make_pointer_type (type, (struct type **) 0);
+  return make_pointer_type (type);
 }
 
-/* Lookup a C++ `reference' to a type TYPE.  TYPEPTR, if nonzero,
-   points to a pointer to memory where the reference type should be
-   stored.  If *TYPEPTR is zero, update it to point to the reference
-   type we return.  We allocate new memory if needed. REFCODE denotes
-   the kind of reference type to lookup (lvalue or rvalue reference).  */
+/* See gdbtypes.h.  */
 
-struct type *
-make_reference_type (struct type *type, struct type **typeptr,
-		      enum type_code refcode)
+type *
+make_reference_type (type *type, type_code refcode)
 {
   struct type *ntype;	/* New type */
   struct type **reftype;
@@ -452,31 +422,9 @@ make_reference_type (struct type *type, struct type **typeptr,
 	   : TYPE_RVALUE_REFERENCE_TYPE (type));
 
   if (ntype)
-    {
-      if (typeptr == 0)
-	return ntype;		/* Don't care about alloc,
-				   and have new type.  */
-      else if (*typeptr == 0)
-	{
-	  *typeptr = ntype;	/* Tracking alloc, and have new type.  */
-	  return ntype;
-	}
-    }
+    return ntype;
 
-  if (typeptr == 0 || *typeptr == 0)	/* We'll need to allocate one.  */
-    {
-      ntype = type_allocator (type).new_type ();
-      if (typeptr)
-	*typeptr = ntype;
-    }
-  else			/* We have storage, but need to reset it.  */
-    {
-      ntype = *typeptr;
-      chain = TYPE_CHAIN (ntype);
-      smash_type (ntype);
-      TYPE_CHAIN (ntype) = chain;
-    }
-
+  ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
   reftype = (refcode == TYPE_CODE_REF ? &TYPE_REFERENCE_TYPE (type)
 	     : &TYPE_RVALUE_REFERENCE_TYPE (type));
@@ -509,7 +457,7 @@ make_reference_type (struct type *type, struct type **typeptr,
 struct type *
 lookup_reference_type (struct type *type, enum type_code refcode)
 {
-  return make_reference_type (type, (struct type **) 0, refcode);
+  return make_reference_type (type, refcode);
 }
 
 /* Lookup the lvalue reference type for the type TYPE.  */
@@ -528,50 +476,20 @@ lookup_rvalue_reference_type (struct type *type)
   return lookup_reference_type (type, TYPE_CODE_RVALUE_REF);
 }
 
-/* Lookup a function type that returns type TYPE.  TYPEPTR, if
-   nonzero, points to a pointer to memory where the function type
-   should be stored.  If *TYPEPTR is zero, update it to point to the
-   function type we return.  We allocate new memory if needed.  */
+/* Given a return type and argument types, create new function type.
+   If the final type in PARAM_TYPES is NULL, create a varargs function.
+   New type is allocated using ALLOC.  */
 
-struct type *
-make_function_type (struct type *type, struct type **typeptr)
+static type *
+create_function_type (type *return_type, int nparams, type **param_types)
 {
-  struct type *ntype;	/* New type */
+  type *fn = type_allocator (return_type).new_type ();
 
-  if (typeptr == 0 || *typeptr == 0)	/* We'll need to allocate one.  */
-    {
-      ntype = type_allocator (type).new_type ();
-      if (typeptr)
-	*typeptr = ntype;
-    }
-  else			/* We have storage, but need to reset it.  */
-    {
-      ntype = *typeptr;
-      smash_type (ntype);
-    }
+  fn->set_target_type (return_type);
+  fn->set_length (1);
+  fn->set_code (TYPE_CODE_FUNC);
 
-  ntype->set_target_type (type);
-
-  ntype->set_length (1);
-  ntype->set_code (TYPE_CODE_FUNC);
-
-  INIT_FUNC_SPECIFIC (ntype);
-
-  return ntype;
-}
-
-/* See gdbtypes.h.  */
-
-struct type *
-create_function_type (type_allocator &alloc,
-		     struct type *return_type,
-		     int nparams,
-		     struct type **param_types)
-{
-  struct type *fn = alloc.new_type ();
-  int i;
-
-  make_function_type (return_type, &fn);
+  INIT_FUNC_SPECIFIC (fn);
 
   if (nparams > 0)
     {
@@ -593,7 +511,7 @@ create_function_type (type_allocator &alloc,
     }
 
   fn->alloc_fields (nparams);
-  for (i = 0; i < nparams; ++i)
+  for (int i = 0; i < nparams; ++i)
     fn->field (i).set_type (param_types[i]);
 
   return fn;
@@ -604,8 +522,7 @@ create_function_type (type_allocator &alloc,
 struct type *
 lookup_function_type (struct type *return_type)
 {
-  type_allocator alloc (return_type);
-  return create_function_type (alloc, return_type, 0, nullptr);
+  return create_function_type (return_type, 0, nullptr);
 }
 
 /* See gdbtypes.h.  */
@@ -615,8 +532,7 @@ lookup_function_type_with_arguments (struct type *return_type,
 				     int nparams,
 				     struct type **param_types)
 {
-  type_allocator alloc (return_type);
-  return create_function_type (alloc, return_type, nparams, param_types);
+  return create_function_type (return_type, nparams, param_types);
 }
 
 /* Identify address space identifier by name -- return a
@@ -736,25 +652,11 @@ make_type_with_address_space (struct type *type,
   return make_qualified_type (type, new_flags, NULL);
 }
 
-/* Make a "c-v" variant of a type -- a type that is identical to the
-   one supplied except that it may have const or volatile attributes
-   CNST is a flag for setting the const attribute
-   VOLTL is a flag for setting the volatile attribute
-   TYPE is the base type whose variant we are creating.
+/* See gdbtypes.h.  */
 
-   If TYPEPTR and *TYPEPTR are non-zero, then *TYPEPTR points to
-   storage to hold the new qualified type; *TYPEPTR and TYPE must be
-   in the same objfile.  Otherwise, allocate fresh memory for the new
-   type wherever TYPE lives.  If TYPEPTR is non-zero, set it to the
-   new type we construct.  */
-
-struct type *
-make_cv_type (int cnst, int voltl,
-	      struct type *type,
-	      struct type **typeptr)
+type *
+make_cv_type (int cnst, int voltl, type *type)
 {
-  struct type *ntype;	/* New type */
-
   type_instance_flags new_flags = (type->instance_flags ()
 				   & ~(TYPE_INSTANCE_FLAG_CONST
 				       | TYPE_INSTANCE_FLAG_VOLATILE));
@@ -765,30 +667,7 @@ make_cv_type (int cnst, int voltl,
   if (voltl)
     new_flags |= TYPE_INSTANCE_FLAG_VOLATILE;
 
-  if (typeptr && *typeptr != NULL)
-    {
-      /* TYPE and *TYPEPTR must be in the same objfile.  We can't have
-	 a C-V variant chain that threads across objfiles: if one
-	 objfile gets freed, then the other has a broken C-V chain.
-
-	 This code used to try to copy over the main type from TYPE to
-	 *TYPEPTR if they were in different objfiles, but that's
-	 wrong, too: TYPE may have a field list or member function
-	 lists, which refer to types of their own, etc. etc.  The
-	 whole shebang would need to be copied over recursively; you
-	 can't have inter-objfile pointers.  The only thing to do is
-	 to leave stub types as stub types, and look them up afresh by
-	 name each time you encounter them.  */
-      gdb_assert ((*typeptr)->objfile_owner () == type->objfile_owner ());
-    }
-
-  ntype = make_qualified_type (type, new_flags,
-			       typeptr ? *typeptr : NULL);
-
-  if (typeptr != NULL)
-    *typeptr = ntype;
-
-  return ntype;
+  return make_qualified_type (type, new_flags, nullptr);
 }
 
 /* Make a 'restrict'-qualified version of TYPE.  */
@@ -872,18 +751,21 @@ replace_type (struct type *ntype, struct type *type)
   gdb_assert (ntype->instance_flags () == type->instance_flags ());
 }
 
-/* Implement direct support for MEMBER_TYPE in GNU C++.
-   May need to construct such a type if this is the first use.
-   The TYPE is the type of the member.  The DOMAIN is the type
-   of the aggregate that the member belongs to.  */
+/* See gdbtypes.h.  */
 
-struct type *
-lookup_memberptr_type (struct type *type, struct type *domain)
+type *
+lookup_memberptr_type (type *to_type, type *domain)
 {
-  struct type *mtype;
+  type *mtype = type_allocator (to_type).new_type ();
 
-  mtype = type_allocator (type).new_type ();
-  smash_to_memberptr_type (mtype, domain, type);
+  mtype->set_code (TYPE_CODE_MEMBERPTR);
+  mtype->set_target_type (to_type);
+  set_type_self_type (mtype, domain);
+
+  /* Assume that a data member pointer is the same size as a normal
+     pointer.  */
+  mtype->set_length (gdbarch_ptr_bit (to_type->arch ()) / TARGET_CHAR_BIT);
+
   return mtype;
 }
 
@@ -1562,30 +1444,6 @@ set_type_self_type (struct type *type, struct type *self_type)
     default:
       gdb_assert_not_reached ("bad type");
     }
-}
-
-/* Smash TYPE to be a type of pointers to members of SELF_TYPE with type
-   TO_TYPE.  A member pointer is a weird thing -- it amounts to a
-   typed offset into a struct, e.g. "an int at offset 8".  A MEMBER
-   TYPE doesn't include the offset (that's the value of the MEMBER
-   itself), but does include the structure type into which it points
-   (for some reason).
-
-   When "smashing" the type, we preserve the objfile that the old type
-   pointed to, since we aren't changing where the type is actually
-   allocated.  */
-
-void
-smash_to_memberptr_type (struct type *type, struct type *self_type,
-			 struct type *to_type)
-{
-  smash_type (type);
-  type->set_code (TYPE_CODE_MEMBERPTR);
-  type->set_target_type (to_type);
-  set_type_self_type (type, self_type);
-  /* Assume that a data member pointer is the same size as a normal
-     pointer.  */
-  type->set_length (gdbarch_ptr_bit (to_type->arch ()) / TARGET_CHAR_BIT);
 }
 
 /* Smash TYPE to be a type of pointer to methods type TO_TYPE.

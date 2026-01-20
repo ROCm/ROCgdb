@@ -3771,9 +3771,6 @@ copy_archive (bfd *ibfd, bfd *obfd, const char *output_target,
 	  goto cleanup_and_exit;
 	}
 
-      /* Copy slim LTO IR file as unknown object.  */
-      if (this_element->lto_type == lto_slim_ir_object)
-	ok_object = false;
       if (ok_object)
 	{
 	  ok = copy_object (this_element, output_element, input_arch);
@@ -4067,9 +4064,6 @@ copy_file (const char *input_filename, const char *output_filename, int ofd,
  	  return;
  	}
 
-      /* Copy slim LTO IR file as unknown file.  */
-      if (ibfd->lto_type == lto_slim_ir_object)
-	ok_object = false;
       if (ok_object
 	  ? !copy_object (ibfd, obfd, input_arch)
 	  : !copy_unknown_file (ibfd, obfd,
@@ -4555,7 +4549,10 @@ copy_relocations_in_section (bfd *ibfd, sec_ptr isection, bfd *obfd)
     }
 
   if (relsize == 0)
-    bfd_set_reloc (obfd, osection, NULL, 0);
+    {
+      if (!bfd_finalize_section_relocs (obfd, osection, NULL, 0))
+	return false;
+    }
   else
     {
       if (isection->orelocation != NULL)
@@ -4596,7 +4593,10 @@ copy_relocations_in_section (bfd *ibfd, sec_ptr isection, bfd *obfd)
 	  *w_relpp = 0;
 	}
 
-      bfd_set_reloc (obfd, osection, relcount == 0 ? NULL : relpp, relcount);
+      if (!bfd_finalize_section_relocs (obfd, osection,
+					relcount == 0 ? NULL : relpp,
+					relcount))
+	return false;
     }
   return true;
 }
@@ -5096,6 +5096,7 @@ strip_main (int argc, char *argv[])
 
       if (tmpname == NULL)
 	{
+	  bfd_set_error (bfd_error_system_call);
 	  bfd_nonfatal_message (argv[i], NULL, NULL,
 				_("could not create temporary file to hold stripped copy"));
 	  status = 1;

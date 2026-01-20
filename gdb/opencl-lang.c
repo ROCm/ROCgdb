@@ -293,7 +293,7 @@ create_value (struct gdbarch *gdbarch, struct value *val, enum noside noside,
       if (dst_type == NULL)
 	dst_type = init_vector_type (elm_type, n);
 
-      make_cv_type (TYPE_CONST (type), TYPE_VOLATILE (type), dst_type, NULL);
+      make_cv_type (TYPE_CONST (type), TYPE_VOLATILE (type), dst_type);
 
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	ret = value::allocate (dst_type);

@@ -147,7 +147,7 @@ if { ![istarget "m32r-*-*"] } then {
     puts $ofd "#..."
     puts $ofd " 340..: 0+\[ \]+0\[ \]+SECTION\[ \]+LOCAL\[ \]+DEFAULT\[ \]+68... .*"
     puts $ofd "#..."
-    puts $ofd " 340..: 0+(2|4|8)\[ \]+0\[ \]+NOTYPE\[ \]+LOCAL\[ \]+DEFAULT\[ \]+\[2-7\] bar_1$"
+    puts $ofd " 340..: 0+(2|4|8)\[ \]+0\[ \]+NOTYPE\[ \]+LOCAL\[ \]+DEFAULT\[ \]+\[2-8\] bar_1$"
     puts $ofd "#..."
     puts $ofd ".* bar_34000$"
     puts $ofd "#..."

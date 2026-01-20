@@ -232,18 +232,22 @@ compare_unwind_entries (const void *arg1, const void *arg2)
     return 0;
 }
 
-static void
-record_text_segment_lowaddr (bfd *abfd, asection *section, void *data)
+static CORE_ADDR
+record_text_segment_lowaddr (bfd *abfd)
 {
-  if ((section->flags & (SEC_ALLOC | SEC_LOAD | SEC_READONLY))
-       == (SEC_ALLOC | SEC_LOAD | SEC_READONLY))
-    {
-      bfd_vma value = section->vma - section->filepos;
-      CORE_ADDR *low_text_segment_address = (CORE_ADDR *)data;
+  CORE_ADDR lowaddr = -1;
 
-      if (value < *low_text_segment_address)
-	  *low_text_segment_address = value;
-    }
+  for (asection *section : gdb_bfd_sections (abfd))
+    if ((section->flags & (SEC_ALLOC | SEC_LOAD | SEC_READONLY))
+	== (SEC_ALLOC | SEC_LOAD | SEC_READONLY))
+      {
+	bfd_vma value = section->vma - section->filepos;
+
+	if (value < lowaddr)
+	  lowaddr = value;
+      }
+
+  return lowaddr;
 }
 
 static void
@@ -261,7 +265,6 @@ internalize_unwinds (struct objfile *objfile, struct unwind_table_entry *table,
       unsigned long tmp;
       unsigned i;
       char *buf = (char *) alloca (size);
-      CORE_ADDR low_text_segment_address;
 
       /* For ELF targets, then unwinds are supposed to
 	 be segment relative offsets instead of absolute addresses.
@@ -270,19 +273,9 @@ internalize_unwinds (struct objfile *objfile, struct unwind_table_entry *table,
 	 unwinds are already relative to the text_offset that will be
 	 passed in.  */
       if (tdep->is_elf && text_offset == 0)
-	{
-	  low_text_segment_address = -1;
-
-	  bfd_map_over_sections (objfile->obfd.get (),
-				 record_text_segment_lowaddr,
-				 &low_text_segment_address);
-
-	  text_offset = low_text_segment_address;
-	}
+	text_offset = record_text_segment_lowaddr (objfile->obfd.get ());
       else if (tdep->solib_get_text_base)
-	{
-	  text_offset = tdep->solib_get_text_base (objfile);
-	}
+	text_offset = tdep->solib_get_text_base (objfile);
 
       bfd_get_section_contents (objfile->obfd.get (), section, buf, 0, size);
 

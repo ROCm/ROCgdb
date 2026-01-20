@@ -1103,11 +1103,9 @@ struct cpms_data
 };
 
 static void
-core_process_module_section (bfd *abfd, asection *sect, void *obj)
+core_process_module_section (bfd *abfd, asection *sect, cpms_data &data)
 {
-  struct cpms_data *data = (struct cpms_data *) obj;
-  enum bfd_endian byte_order = gdbarch_byte_order (data->gdbarch);
-
+  bfd_endian byte_order = gdbarch_byte_order (data.gdbarch);
   unsigned int data_type;
   char *module_name;
   size_t module_name_size;
@@ -1154,10 +1152,10 @@ core_process_module_section (bfd *abfd, asection *sect, void *obj)
   module_name = (char *) buf.data () + module_name_offset;
 
   /* The first module is the .exe itself.  */
-  if (data->module_count != 0)
+  if (data.module_count != 0)
     windows_xfer_shared_library (module_name, base_addr,
-				 NULL, data->gdbarch, data->xml);
-  data->module_count++;
+				 NULL, data.gdbarch, data.xml);
+  data.module_count++;
 }
 
 ULONGEST
@@ -1166,7 +1164,10 @@ windows_core_xfer_shared_libraries (struct gdbarch *gdbarch,
 				    ULONGEST offset, ULONGEST len)
 {
   cpms_data data { gdbarch, "<library-list>\n", 0 };
-  bfd_map_over_sections (&cbfd, core_process_module_section, &data);
+
+  for (asection *sect : gdb_bfd_sections (&cbfd))
+    core_process_module_section (&cbfd, sect, data);
+
   data.xml += "</library-list>\n";
 
   ULONGEST len_avail = data.xml.length ();

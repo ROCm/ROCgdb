@@ -73,8 +73,17 @@ proc start_scalars_test { type } {
 	    set foo_t "$expect_out(1,string)"
 	    pass "$test (${foo_t})"
 	}
+	-re "type = enum .*\\{\r\n.*\r\n\\}\r\n$gdb_prompt $" {
+	    set foo_t "$expect_out(1,string)"
+	    pass "$test (${foo_t})"
+	}
     }
-    gdb_test "ptype/r foo" "type = ${foo_t}" "ptype foo; ${testfile} $expect_out(1,string)"
+    gdb_test_multiple "ptype/r foo" "ptype foo; ${testfile}" {
+	-re "type = .*$gdb_prompt $" {
+	    set foo_t "$expect_out(1,string)"
+	    pass "ptype foo; ${testfile} (${foo_t})"
+	}
+    }
 }
 
 

@@ -109,4 +109,31 @@ Disassembly of section \.text:
 .*:	(4c 06 00 7c|7c 00 06 4c) 	ccmclean
 .*:	(cc 06 00 7c|7c 00 06 cc) 	ccmrl
 .*:	(26 22 40 7c|7c 40 22 26) 	mtlpl   r4,r2
+.*:	(a6 bb 23 7c|7c 23 bb a6) 	mtummcrae r1
+.*:	(a6 bb 45 7c|7c 45 bb a6) 	mtummcr2e r2
+.*:	(a6 bb 65 7c|7c 65 bb a6) 	mtummcr2e r3
+.*:	(a6 bb 93 7c|7c 93 bb a6) 	mtmmcrae r4
+.*:	(a6 bb b4 7c|7c b4 bb a6) 	mtmmcr1e r5
+.*:	(a6 bb d6 7c|7c d6 bb a6) 	mtmmcr3e r6
+.*:	(a6 c3 e9 7c|7c e9 c3 a6) 	mtupmc7 r7
+.*:	(a6 c3 0a 7d|7d 0a c3 a6) 	mtupmc8 r8
+.*:	(a6 c3 39 7d|7d 39 c3 a6) 	mtpmc7  r9
+.*:	(a6 c3 5a 7d|7d 5a c3 a6) 	mtpmc8  r10
+.*:	(a6 ba 63 7d|7d 63 ba a6) 	mfummcrae r11
+.*:	(a6 ba 83 7d|7d 83 ba a6) 	mfummcrae r12
+.*:	(a6 ba a4 7d|7d a4 ba a6) 	mfummcr1e r13
+.*:	(a6 ba c4 7d|7d c4 ba a6) 	mfummcr1e r14
+.*:	(a6 ba e5 7d|7d e5 ba a6) 	mfummcr2e r15
+.*:	(a6 ba 05 7e|7e 05 ba a6) 	mfummcr2e r16
+.*:	(a6 ba 26 7e|7e 26 ba a6) 	mfummcr3e r17
+.*:	(a6 ba 46 7e|7e 46 ba a6) 	mfummcr3e r18
+.*:	(a6 c2 69 7e|7e 69 c2 a6) 	mfupmc7 r19
+.*:	(a6 c2 89 7e|7e 89 c2 a6) 	mfupmc7 r20
+.*:	(a6 c2 aa 7e|7e aa c2 a6) 	mfupmc8 r21
+.*:	(a6 c2 ca 7e|7e ca c2 a6) 	mfupmc8 r22
+.*:	(64 10 8f 7c|7c 8f 10 64) 	tlbiep  r2,r4,3,1,1
+.*:	(64 10 60 7c|7c 60 10 64) 	tlbiep  r2,r3
+.*:	(24 38 c8 7c|7c c8 38 24) 	tlbieio r7,r6,2
+.*:	(68 04 20 7d|7d 20 04 68) 	tlbsyncio r9
+.*:	(a8 04 a0 7c|7c a0 04 a8) 	ptesyncio r5
 #pass

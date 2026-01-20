@@ -576,7 +576,7 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      be defined.  */
   type_allocator alloc (gdbarch);
   void_type = alloc.new_type (TYPE_CODE_VOID, TARGET_CHAR_BIT, "void");
-  func_void_type = make_function_type (void_type, NULL);
+  func_void_type = lookup_function_type (void_type);
   tdep->pc_type = init_pointer_type (alloc, 4 * TARGET_CHAR_BIT, NULL,
 				     func_void_type);
   tdep->pc_type->set_instance_flags (tdep->pc_type->instance_flags ()

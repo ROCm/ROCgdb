@@ -2536,7 +2536,7 @@ static const struct mopcode32 mve_opcodes[] =
   {ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE),
    MVE_VMLAS,
    0xee011e40, 0xef811f70,
-   "vmlas%v.%u%20-21s\t%13-15,22Q, %17-19,7Q, %0-3r"},
+   "vmlas%v.i%20-21s\t%13-15,22Q, %17-19,7Q, %0-3r"},
 
   /* Vector VRMLSLDAVH.  Note must appear before VMLSDAV due to instruction
      opcode aliasing.  */

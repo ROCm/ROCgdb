@@ -9465,9 +9465,9 @@ create_breakpoint (struct gdbarch *gdbarch,
   else
     {
       if (cond_string != nullptr)
-	cond_string_copy.reset (xstrdup (cond_string));
+	cond_string_copy = make_unique_xstrdup (cond_string);
       if (extra_string != nullptr)
-	extra_string_copy.reset (xstrdup (extra_string));
+	extra_string_copy = make_unique_xstrdup (extra_string);
     }
 
   /* Clear these.  Updated values are now held in the *_copy locals.  */

@@ -20,7 +20,7 @@ require allow_ada_tests gnat_runtime_has_debug_info
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-bargs additional_flags=-static additional_flags=-margs ]] != "" } {
-  return
+    return
 }
 
 # A global variable used to simplify the maintenance of some of
@@ -38,8 +38,8 @@ if {[mi_clean_restart $::testfile]} {
 # catchpoint that uses both conditions and exception name.
 
 mi_gdb_test "-catch-exception -c \"i = 2\" -e constraint_error" \
-	    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"`constraint_error' Ada exception\",.*,cond=\"i = 2\",.*}" \
-	    "catch C_E if i = 2"
+    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"`constraint_error' Ada exception\",.*,cond=\"i = 2\",.*}" \
+    "catch C_E if i = 2"
 
 # It is important that we start the program's execution after having
 # inserted the exception catchpoint above.  We want to verify that

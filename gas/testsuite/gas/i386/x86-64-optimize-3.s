@@ -39,6 +39,22 @@ _start:
 	or	%edi, %edi
 	or	%r8, %r8
 
+	movsb	%al, %ax
+	movsbw	%al, %ax
+
+	movsw	%ax, %eax
+	movswl	%ax, %eax
+
+	movsl	%eax, %rax
+	movslq	%eax, %rax
+	movsxd	%eax, %rax
+
+	.intel_syntax noprefix
+	movsx	ax, al
+	movsx	eax, ax
+	movsx	rax, eax
+	.att_syntax prefix
+
 	vandnpd	%zmm1, %zmm1, %zmm5
 
 	vmovdqa32	%xmm1, %xmm2

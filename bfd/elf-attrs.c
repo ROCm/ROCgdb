@@ -235,8 +235,8 @@ bfd_elf_set_obj_attr_contents (bfd *abfd, bfd_byte *buffer, bfd_vma size)
 }
 
 /* Allocate/find an object attribute.  */
-static obj_attribute *
-elf_new_obj_attr (bfd *abfd, obj_attr_vendor_t vendor, obj_attr_tag_t tag)
+obj_attribute *
+bfd_elf_new_obj_attr (bfd *abfd, obj_attr_vendor_t vendor, obj_attr_tag_t tag)
 {
   obj_attribute *attr;
   obj_attribute_list *list;
@@ -311,7 +311,7 @@ bfd_elf_add_obj_attr_int (bfd *abfd,
 {
   obj_attribute *attr;
 
-  attr = elf_new_obj_attr (abfd, vendor, tag);
+  attr = bfd_elf_new_obj_attr (abfd, vendor, tag);
   if (attr != NULL)
     {
       attr->type = bfd_elf_obj_attrs_arg_type (abfd, vendor, tag);
@@ -354,7 +354,7 @@ elf_add_obj_attr_string (bfd *abfd, obj_attr_vendor_t vendor, obj_attr_tag_t tag
 {
   obj_attribute *attr;
 
-  attr = elf_new_obj_attr (abfd, vendor, tag);
+  attr = bfd_elf_new_obj_attr (abfd, vendor, tag);
   if (attr != NULL)
     {
       attr->type = bfd_elf_obj_attrs_arg_type (abfd, vendor, tag);
@@ -385,7 +385,7 @@ elf_add_obj_attr_int_string (bfd *abfd,
 {
   obj_attribute *attr;
 
-  attr = elf_new_obj_attr (abfd, vendor, tag);
+  attr = bfd_elf_new_obj_attr (abfd, vendor, tag);
   if (attr != NULL)
     {
       attr->type = bfd_elf_obj_attrs_arg_type (abfd, vendor, tag);

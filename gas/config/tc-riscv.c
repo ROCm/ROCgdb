@@ -5848,7 +5848,7 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       if (!start_assemble)
 	riscv_set_arch (attr[Tag_RISCV_arch].s);
       else
-	as_fatal (_("architecture elf attributes must set before "
+	as_fatal (_("architecture elf attributes must be set before "
 		    "any instructions"));
 
       if (old_xlen != xlen)
@@ -5866,7 +5866,7 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
     case Tag_RISCV_priv_spec_minor:
     case Tag_RISCV_priv_spec_revision:
       if (start_assemble)
-       as_fatal (_("privileged elf attributes must set before "
+       as_fatal (_("privileged elf attributes must be set before "
 		   "any instructions"));
       break;
 

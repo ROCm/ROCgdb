@@ -4797,6 +4797,8 @@ static const struct elf_size_info mips_elf64_size_info =
    ABI.  */
 #define bfd_elf64_bfd_is_target_special_symbol \
 					_bfd_mips_elf_is_target_special_symbol
+#define bfd_elf64_finalize_section_relocs \
+					_bfd_mips_elf_finalize_section_relocs
 #define bfd_elf64_find_nearest_line	_bfd_mips_elf_find_nearest_line
 #define bfd_elf64_find_nearest_line_with_alt \
 				_bfd_mips_elf_find_nearest_line_with_alt

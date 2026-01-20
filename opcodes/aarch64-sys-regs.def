@@ -676,6 +676,8 @@
   SYSREG ("hafgrtr_el2",	CPENC (3,4,3,1,6),	0,		AARCH64_FEATURE (V8_5A)) /* AMUv1 && FGT */
   SYSREG ("hcr_el2",		CPENC (3,4,1,1,0),	0,		AARCH64_NO_FEATURES)
   SYSREG ("hcrx_el2",		CPENC (3,4,1,2,2),	0,		AARCH64_FEATURE (V8_6A)) /* HCX */
+  SYSREG ("hcrmask_el2",	CPENC (3,4,1,5,6),	0,		AARCH64_FEATURE (V9_6A)) /* SRMASK2 */
+  SYSREG ("hcrxmask_el2",	CPENC (3,4,1,5,7),	0,		AARCH64_FEATURE (V9_6A)) /* SRMASK2 */
   SYSREG ("hdbssbr_el2",	CPENC (3,4,2,3,2),	0,		AARCH64_FEATURE (V9_4A)) /* HDBSS */
   SYSREG ("hdbssprod_el2",	CPENC (3,4,2,3,3),	0,		AARCH64_FEATURE (V9_4A)) /* HDBSS */
   SYSREG ("hdfgrtr_el2",	CPENC (3,4,3,1,4),	0,		AARCH64_FEATURE (V8_5A)) /* FGT */
@@ -920,9 +922,16 @@
   SYSREG ("mpambwcap_el2",	CPENC (3,4,10,5,6),	0,		AARCH64_FEATURE (V9_3A)) /* MPAM_PE_BW_CTRL */
   SYSREG ("mpambwidr_el1",	CPENC (3,0,10,4,5),	F_REG_READ,	AARCH64_FEATURE (V9_3A)) /* MPAM_PE_BW_CTRL */
   SYSREG ("mpambwsm_el1",	CPENC (3,0,10,5,7),	0,		AARCH64_FEATURES (2, SME, V9_3A)) /* SME && MPAM_PE_BW_CTRL */
+  SYSREG ("mpamctl_el1",	CPENC (3,0,10,5,2),	0,		AARCH64_FEATURE (MPAMv2))
+  SYSREG ("mpamctl_el12",	CPENC (3,5,10,5,2),	0,		AARCH64_FEATURE (MPAMv2))
+  SYSREG ("mpamctl_el2",	CPENC (3,4,10,5,2),	0,		AARCH64_FEATURE (MPAMv2))
+  SYSREG ("mpamctl_el3",	CPENC (3,6,10,5,2),	0,		AARCH64_FEATURE (MPAMv2))
   SYSREG ("mpamhcr_el2",	CPENC (3,4,10,4,0),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamidr_el1",	CPENC (3,0,10,4,4),	F_REG_READ,	AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamsm_el1",		CPENC (3,0,10,5,3),	0,		AARCH64_FEATURES (2, SME, V8_2A)) /* SME && MPAM */
+  SYSREG ("mpamvidcr_el2",	CPENC (3,4,10,7,0),	0,		AARCH64_FEATURE (MPAMv2))
+  SYSREG ("mpamvidsr_el2",	CPENC (3,4,10,7,1),	0,		AARCH64_FEATURE (MPAMv2))
+  SYSREG ("mpamvidsr_el3",	CPENC (3,6,10,7,1),	0,		AARCH64_FEATURE (MPAMv2))
   SYSREG ("mpamvpm0_el2",	CPENC (3,4,10,6,0),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamvpm1_el2",	CPENC (3,4,10,6,1),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamvpm2_el2",	CPENC (3,4,10,6,2),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
@@ -938,6 +947,10 @@
   SYSREG ("mvfr0_el1",		CPENC (3,0,0,3,0),	F_REG_READ,	AARCH64_NO_FEATURES)
   SYSREG ("mvfr1_el1",		CPENC (3,0,0,3,1),	F_REG_READ,	AARCH64_NO_FEATURES)
   SYSREG ("mvfr2_el1",		CPENC (3,0,0,3,2),	F_REG_READ,	AARCH64_NO_FEATURES)
+  SYSREG ("nvhcr_el2",		CPENC (3,4,1,5,0),	0,		AARCH64_FEATURE (V9_3A)) /* NV3 */
+  SYSREG ("nvhcrx_el2",		CPENC (3,4,1,5,1),	0,		AARCH64_FEATURE (V9_6A)) /* NV3 && SRMASK2 */
+  SYSREG ("nvhcrmask_el2",	CPENC (3,4,1,5,4),	0,		AARCH64_FEATURE (V9_6A)) /* NV3 && SRMASK2 */
+  SYSREG ("nvhcrxmask_el2",	CPENC (3,4,1,5,5),	0,		AARCH64_FEATURE (V9_6A)) /* NV3 && SRMASK2 */
   SYSREG ("nzcv",		CPENC (3,3,4,2,0),	0,		AARCH64_NO_FEATURES)
   SYSREG ("osdlr_el1",		CPENC (2,0,1,3,4),	0,		AARCH64_NO_FEATURES)
   SYSREG ("osdtrrx_el1",	CPENC (2,0,0,0,2),	0,		AARCH64_NO_FEATURES)
@@ -1184,6 +1197,7 @@
   SYSREG ("s2pir_el2",		CPENC (3,4,10,2,5),	0,		AARCH64_FEATURE (V8_8A)) /* S2PIE */
   SYSREG ("s2por_el1",		CPENC (3,0,10,2,5),	0,		AARCH64_FEATURE (V8_8A)) /* S2POE */
   SYSREG ("scr_el3",		CPENC (3,6,1,1,0),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("scr2_el3",		CPENC (3,6,1,2,2),	0,		AARCH64_FEATURE (V9_3A)) /* SCR2 */
   SYSREG ("sctlr_el1",		CPENC (3,0,1,0,0),	0,		AARCH64_NO_FEATURES)
   SYSREG ("sctlr_el12",		CPENC (3,5,1,0,0),	0,		AARCH64_NO_FEATURES)
   SYSREG ("sctlr_el2",		CPENC (3,4,1,0,0),	0,		AARCH64_NO_FEATURES)
@@ -1356,6 +1370,22 @@
   SYSREG ("tpidr_el2",		CPENC (3,4,13,0,2),	0,		AARCH64_NO_FEATURES)
   SYSREG ("tpidr_el3",		CPENC (3,6,13,0,2),	0,		AARCH64_NO_FEATURES)
   SYSREG ("tpidrro_el0",	CPENC (3,3,13,0,3),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax0_el0",		CPENC (3,3,2,2,5),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax0_el1",		CPENC (3,0,2,2,5),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax0_el12",	CPENC (3,5,2,2,5),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax0_el2",		CPENC (3,4,2,2,5),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax1_el0",		CPENC (3,3,2,2,7),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax1_el1",		CPENC (3,0,2,2,7),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax1_el12",	CPENC (3,5,2,2,7),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmax1_el2",		CPENC (3,4,2,2,7),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin0_el0",		CPENC (3,3,2,2,4),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin0_el1",		CPENC (3,0,2,2,4),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin0_el12",	CPENC (3,5,2,2,4),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin0_el2",		CPENC (3,4,2,2,4),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin1_el0",		CPENC (3,3,2,2,6),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin1_el1",		CPENC (3,0,2,2,6),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin1_el12",	CPENC (3,5,2,2,6),	0,		AARCH64_NO_FEATURES)
+  SYSREG ("tpmin1_el2",		CPENC (3,4,2,2,6),	0,		AARCH64_NO_FEATURES)
   SYSREG ("trbbaser_el1",	CPENC (3,0,9,11,2),	0,		AARCH64_FEATURE (V9A)) /* TRBE */
   SYSREG ("trbidr_el1",		CPENC (3,0,9,11,7),	F_REG_READ,	AARCH64_FEATURE (V9A)) /* TRBE */
   SYSREG ("trblimitr_el1",	CPENC (3,0,9,11,0),	0,		AARCH64_FEATURE (V9A)) /* TRBE */

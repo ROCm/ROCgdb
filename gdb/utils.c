@@ -1705,8 +1705,11 @@ pager_file::puts (const char *linebuffer)
 	      /* We don't consider escape sequences as characters, so we
 		 don't increment chars_printed here.  */
 
+	      /* This style sequence might not set every style attribute,
+		 so start with the currently applied style, and update
+		 that.  */
 	      size_t style_len;
-	      ui_file_style style;
+	      ui_file_style style = m_applied_style;
 	      if (style.parse (linebuffer, &style_len)
 		  && style_len <= skip_bytes)
 		{

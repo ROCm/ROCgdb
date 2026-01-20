@@ -20,11 +20,9 @@
 #include "read-gdb-index.h"
 
 #include "cli/cli-cmds.h"
-#include "cli/cli-style.h"
 #include "complaints.h"
 #include "dwarf2/index-common.h"
 #include "dwz.h"
-#include "event-top.h"
 #include "gdb/gdb-index.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
 #include "cooked-index.h"
@@ -32,8 +30,6 @@
 #include "extract-store-integer.h"
 #include "cp-support.h"
 #include "symtab.h"
-#include "gdbsupport/selftest.h"
-#include "tag.h"
 
 /* When true, do not reject deprecated .gdb_index sections.  */
 static bool use_deprecated_index_sections = false;

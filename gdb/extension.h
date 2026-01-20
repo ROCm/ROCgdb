@@ -247,7 +247,7 @@ extern int ext_lang_present_p (const struct extension_language_defn *);
 
 extern int ext_lang_initialized_p (const struct extension_language_defn *);
 
-extern void throw_ext_lang_unsupported
+[[noreturn]] extern void throw_ext_lang_unsupported
   (const struct extension_language_defn *);
 
 /* Accessors for "public" attributes of the extension language definition.  */

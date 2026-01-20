@@ -8362,10 +8362,10 @@ bfd_generic_get_relocated_section_contents (bfd *abfd,
 
 /*
 INTERNAL_FUNCTION
-	_bfd_generic_set_reloc
+	_bfd_generic_finalize_section_relocs
 
 SYNOPSIS
-	void _bfd_generic_set_reloc
+	bool _bfd_generic_finalize_section_relocs
 	  (bfd *abfd,
 	   sec_ptr section,
 	   arelent **relptr,
@@ -8375,11 +8375,11 @@ DESCRIPTION
 	Installs a new set of internal relocations in SECTION.
 */
 
-void
-_bfd_generic_set_reloc (bfd *abfd ATTRIBUTE_UNUSED,
-			sec_ptr section,
-			arelent **relptr,
-			unsigned int count)
+bool
+_bfd_generic_finalize_section_relocs (bfd *abfd ATTRIBUTE_UNUSED,
+				      sec_ptr section,
+				      arelent **relptr,
+				      unsigned int count)
 {
   section->orelocation = relptr;
   section->reloc_count = count;
@@ -8387,6 +8387,7 @@ _bfd_generic_set_reloc (bfd *abfd ATTRIBUTE_UNUSED,
     section->flags |= SEC_RELOC;
   else
     section->flags &= ~SEC_RELOC;
+  return true;
 }
 
 /*

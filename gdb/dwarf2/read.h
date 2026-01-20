@@ -229,9 +229,9 @@ public:
 private:
   /* Sizes for an address, an offset, and a section offset.  These fields are
      set by cutu_reader when the unit is read.  */
-  std::uint8_t m_addr_size = 0;
-  std::uint8_t m_offset_size = 0;
-  std::uint8_t m_ref_addr_size = 0;
+  std::atomic<std::uint8_t> m_addr_size = 0;
+  std::atomic<std::uint8_t> m_offset_size = 0;
+  std::atomic<std::uint8_t> m_ref_addr_size = 0;
 
 public:
   /* Our index in the unshared "symtabs" vector.  */
@@ -284,6 +284,10 @@ public:
   bool is_debug_types () const
   { return m_is_debug_types; }
 
+  /* If this dwarf2_per_cu is a signatured_type, return "this" cast to
+     signatured_type.  Otherwise, return nullptr.  */
+  signatured_type *as_signatured_type ();
+
   dwarf2_per_bfd *per_bfd () const
   { return m_per_bfd; }
 
@@ -307,7 +311,10 @@ public:
   /* Set the address size given in the compilation unit header for
      this CU.  */
   void set_addr_size (std::uint8_t addr_size)
-  { m_addr_size = addr_size; }
+  {
+    std::uint8_t old = m_addr_size.exchange (addr_size);
+    gdb_assert (old == 0 || old == addr_size);
+  }
 
   /* Return the offset size given in the compilation unit header for
      this CU.  */
@@ -320,7 +327,10 @@ public:
   /* Set the offset size given in the compilation unit header for
      this CU.  */
   void set_offset_size (std::uint8_t offset_size)
-  { m_offset_size = offset_size; }
+  {
+    std::uint8_t old = m_offset_size.exchange (offset_size);
+    gdb_assert (old == 0 || old == offset_size);
+  }
 
   /* Return the DW_FORM_ref_addr size given in the compilation unit
      header for this CU.  */
@@ -330,10 +340,13 @@ public:
     return m_ref_addr_size;
   }
 
-  /* Return the DW_FORM_ref_addr size given in the compilation unit
+  /* Set the DW_FORM_ref_addr size given in the compilation unit
      header for this CU.  */
   void set_ref_addr_size (std::uint8_t ref_addr_size)
-  { m_ref_addr_size = ref_addr_size; }
+  {
+    std::uint8_t old = m_ref_addr_size.exchange (ref_addr_size);
+    gdb_assert (old == 0 || old == ref_addr_size);
+  }
 
   /* Return length of this CU.  */
   unsigned int length () const
@@ -458,6 +471,17 @@ struct signatured_type : public dwarf2_per_cu
 };
 
 using signatured_type_up = std::unique_ptr<signatured_type>;
+
+/* See dwarf2_per_cu declaration.  */
+
+inline signatured_type *
+dwarf2_per_cu::as_signatured_type ()
+{
+  if (m_is_debug_types)
+    return static_cast<signatured_type *> (this);
+
+  return nullptr;
+}
 
 /* Hash a signatured_type object based on its signature.  */
 
@@ -1409,31 +1433,6 @@ extern const dwarf2_section_info &get_section_for_ref
 
 extern struct dwarf2_section_info *get_debug_line_section
   (struct dwarf2_cu *cu);
-
-/* Start a subfile for DWARF.  FILENAME is the name of the file and
-   DIRNAME the name of the source directory which contains FILENAME
-   or NULL if not known.
-   This routine tries to keep line numbers from identical absolute and
-   relative file names in a common subfile.
-
-   Using the `list' example from the GDB testsuite, which resides in
-   /srcdir and compiling it with Irix6.2 cc in /compdir using a filename
-   of /srcdir/list0.c yields the following debugging information for list0.c:
-
-   DW_AT_name:          /srcdir/list0.c
-   DW_AT_comp_dir:      /compdir
-   files.files[0].name: list0.h
-   files.files[0].dir:  /srcdir
-   files.files[1].name: list0.c
-   files.files[1].dir:  /srcdir
-
-   The line number information for list0.c has to end up in a single
-   subfile, so that `break /srcdir/list0.c:1' works as expected.
-   start_subfile will ensure that this happens provided that we pass the
-   concatenation of files.files[1].dir and files.files[1].name as the
-   subfile's name.  */
-extern void dwarf2_start_subfile (dwarf2_cu *cu, const file_entry &fe,
-				  const line_header &lh);
 
 /* A helper function that decides if a given symbol is an Ada Pragma
    Import or Pragma Export.  */

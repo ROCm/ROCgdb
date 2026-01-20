@@ -52,6 +52,9 @@
 #include "interps.h"
 #include "record-full.h"
 
+/* Print notices when new threads are attached and detached.  */
+static bool print_thread_events = true;
+
 /* See gdbthread.h.  */
 
 bool debug_threads = false;
@@ -283,12 +286,14 @@ notify_thread_exited (thread_info *t, std::optional<ULONGEST> exit_code,
   if (!silent && print_thread_events)
     {
       if (exit_code.has_value ())
-	gdb_printf (_("[%s exited with code %s]\n"),
+	gdb_printf (_("[%s (id %s) exited with code %s]\n"),
 		    target_pid_to_str (t->ptid).c_str (),
+		    print_thread_id (t),
 		    pulongest (*exit_code));
       else
-	gdb_printf (_("[%s exited]\n"),
-		    target_pid_to_str (t->ptid).c_str ());
+	gdb_printf (_("[%s (id %s) exited]\n"),
+		    target_pid_to_str (t->ptid).c_str (),
+		    print_thread_id (t));
     }
 
   interps_notify_thread_exited (t, exit_code, silent);
@@ -409,7 +414,8 @@ add_thread_with_info (process_stratum_target *targ, ptid_t ptid,
   result->priv = std::move (priv);
 
   if (print_thread_events)
-    gdb_printf (_("[New %s]\n"), target_pid_to_str (ptid).c_str ());
+    gdb_printf (_("[New %s (id %s)]\n"), target_pid_to_str (ptid).c_str (),
+		print_thread_id (result));
 
   annotate_new_thread ();
   return result;
@@ -2769,8 +2775,6 @@ thread_find_command (const char *arg, int from_tty)
     gdb_printf (_("No threads match '%s'\n"), arg);
 }
 
-/* Print notices when new threads are attached and detached.  */
-bool print_thread_events = true;
 static void
 show_print_thread_events (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)

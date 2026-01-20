@@ -895,7 +895,7 @@ gdbscm_type_const (SCM self)
   gdbscm_gdb_exception exc {};
   try
     {
-      type = make_cv_type (1, 0, type, NULL);
+      type = make_cv_type (1, 0, type);
     }
   catch (const gdb_exception &except)
     {
@@ -919,7 +919,7 @@ gdbscm_type_volatile (SCM self)
   gdbscm_gdb_exception exc {};
   try
     {
-      type = make_cv_type (0, 1, type, NULL);
+      type = make_cv_type (0, 1, type);
     }
   catch (const gdb_exception &except)
     {
@@ -943,7 +943,7 @@ gdbscm_type_unqualified (SCM self)
   gdbscm_gdb_exception exc {};
   try
     {
-      type = make_cv_type (0, 0, type, NULL);
+      type = make_cv_type (0, 0, type);
     }
   catch (const gdb_exception &except)
     {

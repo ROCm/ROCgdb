@@ -22,7 +22,7 @@ require gnat_runtime_has_debug_info
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnat05 ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -31,10 +31,10 @@ set bp_location [gdb_get_line_number "STOP" ${testdir}/foo.adb]
 runto "foo.adb:$bp_location"
 
 gdb_test "print r" \
-	 "= \\(x => 1, y => 2, w => 3, h => 4\\)"
+    "= \\(x => 1, y => 2, w => 3, h => 4\\)"
 
 gdb_test "print s" \
-	 "= \\(x => 1, y => 2, w => 3, h => 4\\)"
+    "= \\(x => 1, y => 2, w => 3, h => 4\\)"
 
 set r_re "r = \[^\r\n\]*"
 set s_re "s = \[^\r\n\]*"

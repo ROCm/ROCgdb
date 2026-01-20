@@ -117,12 +117,6 @@ struct sym_probe_fns
 
 struct sym_fns
 {
-  /* Initializes anything that is global to the entire symbol table.
-     It is called during symbol_file_add, when we begin debugging an
-     entirely new program.  */
-
-  void (*sym_new_init) (struct objfile *);
-
   /* Reads any initial information from a symbol file, and initializes
      the struct sym_fns SF in preparation for sym_read().  It is
      called every time we read a symbol file for any reason.  */
@@ -135,13 +129,6 @@ struct sym_fns
      symbol_file_add & co.  */
 
   void (*sym_read) (struct objfile *, symfile_add_flags);
-
-  /* Called when we are finished with an objfile.  Should do all
-     cleanup that is specific to the object file format for the
-     particular objfile.  */
-
-  void (*sym_finish) (struct objfile *);
-
 
   /* This function produces a file-dependent section_offsets
      structure, allocated in the objfile's storage.
@@ -156,12 +143,6 @@ struct sym_fns
      which may be relocated independently.  */
 
   symfile_segment_data_up (*sym_segments) (bfd *abfd);
-
-  /* This function should read the linetable from the objfile when
-     the line table cannot be read while processing the debugging
-     information.  */
-
-  void (*sym_read_linetable) (struct objfile *);
 
   /* Relocate the contents of a debug section SECTP.  The
      contents are stored in BUF if it is non-NULL, or returned in a

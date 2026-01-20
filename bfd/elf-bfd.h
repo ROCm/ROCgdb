@@ -3122,6 +3122,8 @@ extern bfd *_bfd_elf64_bfd_from_remote_memory
 
 extern bfd_vma bfd_elf_obj_attr_size (bfd *);
 extern void bfd_elf_set_obj_attr_contents (bfd *, bfd_byte *, bfd_vma);
+extern obj_attribute *
+bfd_elf_new_obj_attr (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
 extern int bfd_elf_get_obj_attr_int (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
 extern obj_attribute *bfd_elf_add_obj_attr_int
   (bfd *, obj_attr_vendor_t, obj_attr_tag_t, unsigned int);

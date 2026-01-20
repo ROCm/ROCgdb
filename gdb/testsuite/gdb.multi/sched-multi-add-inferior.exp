@@ -66,6 +66,10 @@ proc run_test { target_type_1 target_type_2 } {
 	return 0
     }
 
+    # Block thread 2.1 from exiting function1, making sure that the breakpoint
+    # on the call to function2 won't trigger until we unblock the thread.
+    gdb_test "thread apply 2.1 set wait_for_gdb = 1" ".*"
+
     if {![add_inferior 3 $target_type_2 $::binfile]} {
 	return 0
     }

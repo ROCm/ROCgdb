@@ -130,42 +130,6 @@ if { [prepare_for_testing "failed to prepare" ${testfile} \
 
 gdb_test_no_output "set language c++"
 
-set psymtabs_p [psymtabs_p]
-
-# Verify that the partial symtab for CU "<artificial>" does
-# not contain the static partial symbol int, which is defined in the
-# CU "imported_unit.c".  Test-case for PR25646.
-set test "no static partial symbols in importing unit"
-if { $psymtabs_p } {
-    gdb_test "main print psymbols" \
-	[multi_line \
-	 "  Depends on 0 other partial symtabs\." \
-	     "  Global partial symbols:" \
-	     "    `main', function, $hex" \
-	     "" \
-	     ".*"] \
-	$test
-} else {
-    unsupported $test
-}
-
-# Verify that there's only one partial symtab for imported_unit.c.  Test-case
-# for PR25700.
-set test "no duplicate psymtab for imported_unit.c"
-if { $psymtabs_p } {
-    set line "Partial symtab for source file imported_unit.c"
-    gdb_test_multiple "maint print psymbols" $test {
-	-re -wrap "$line.*$line.*" {
-	    fail $gdb_test_name
-	}
-	-re -wrap "$line.*" {
-	    pass $gdb_test_name
-	}
-    }
-} else {
-    unsupported $test
-}
-
 gdb_test "l imported_unit.c:1" \
     "warning: 1\timported_unit.c: No such file or directory"
 

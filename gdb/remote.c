@@ -84,6 +84,7 @@
 #include "cli/cli-style.h"
 #include "gdbsupport/remote-args.h"
 #include "gdbsupport/gdb_argv_vec.h"
+#include "finish-thread-state.h"
 
 /* The remote target.  */
 

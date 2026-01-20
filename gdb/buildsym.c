@@ -16,10 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "buildsym-legacy.h"
-#include "bfd.h"
+#include "buildsym.h"
 #include "gdbsupport/gdb_obstack.h"
-#include "gdbsupport/pathstuff.h"
 #include "symtab.h"
 #include "symfile.h"
 #include "objfiles.h"
@@ -28,7 +26,6 @@
 #include "expression.h"
 #include "filenames.h"
 #include "macrotab.h"
-#include "demangle.h"
 #include "block.h"
 #include "cp-support.h"
 #include "dictionary.h"
@@ -50,7 +47,6 @@ buildsym_compunit::buildsym_compunit (struct objfile *objfile_,
 				      enum language language_,
 				      CORE_ADDR last_addr)
   : m_objfile (objfile_),
-    m_last_source_file (name == nullptr ? nullptr : xstrdup (name)),
     m_comp_dir (comp_dir_ == nullptr ? "" : comp_dir_),
     m_owned_compunit_symtab (std::make_unique<compunit_symtab> (m_objfile, name)),
     m_compunit_symtab (m_owned_compunit_symtab.get ()),
@@ -482,53 +478,6 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
   m_subfiles = subfile.release ();
 }
 
-/* For stabs readers, the first N_SO symbol is assumed to be the
-   source file name, and the subfile struct is initialized using that
-   assumption.  If another N_SO symbol is later seen, immediately
-   following the first one, then the first one is assumed to be the
-   directory name and the second one is really the source file name.
-
-   So we have to patch up the subfile struct by moving the old name
-   value to dirname and remembering the new name.  Some sanity
-   checking is performed to ensure that the state of the subfile
-   struct is reasonable and that the old name we are assuming to be a
-   directory name actually is (by checking for a trailing '/').  */
-
-void
-buildsym_compunit::patch_subfile_names (struct subfile *subfile,
-					const char *name)
-{
-  if (subfile != NULL
-      && m_comp_dir.empty ()
-      && !subfile->name.empty ()
-      && IS_DIR_SEPARATOR (subfile->name.back ()))
-    {
-      m_comp_dir = std::move (subfile->name);
-      subfile->name = name;
-      subfile->name_for_id = name;
-      set_last_source_file (name);
-
-      /* Default the source language to whatever can be deduced from
-	 the filename.  If nothing can be deduced (such as for a C/C++
-	 include file with a ".h" extension), then inherit whatever
-	 language the previous subfile had.  This kludgery is
-	 necessary because there is no standard way in some object
-	 formats to record the source language.  Also, when symtabs
-	 are allocated we try to deduce a language then as well, but
-	 it is too late for us to use that information while reading
-	 symbols, since symtabs aren't allocated until after all the
-	 symbols have been processed for a given source file.  */
-
-      subfile->language
-	= deduce_language_from_filename (subfile->name.c_str ());
-      if (subfile->language == language_unknown
-	  && subfile->next != NULL)
-	{
-	  subfile->language = subfile->next->language;
-	}
-    }
-}
-
 /* Handle the N_BINCL and N_EINCL symbol types that act like N_SOL for
    switching source files (different subfiles, as we call them) within
    one object file, but using a stack rather than in an arbitrary
@@ -798,11 +747,6 @@ buildsym_compunit::end_compunit_symtab_from_static_block
 			 m_last_source_start_addr, end_addr,
 			 true, expandable);
   blockvector_up blockvector = make_blockvector ();
-
-  /* Read the line table if it has to be read separately.
-     This is only used by xcoffread.c.  */
-  if (m_objfile->sf->sym_read_linetable != NULL)
-    m_objfile->sf->sym_read_linetable (m_objfile);
 
   /* Handle the case where the debug info specifies a different path
      for the main source file.  It can cause us to lose track of its

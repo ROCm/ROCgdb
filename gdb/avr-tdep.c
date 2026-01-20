@@ -1477,7 +1477,7 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      be defined.  */
   type_allocator alloc (gdbarch);
   tdep->void_type = alloc.new_type (TYPE_CODE_VOID, TARGET_CHAR_BIT, "void");
-  tdep->func_void_type = make_function_type (tdep->void_type, NULL);
+  tdep->func_void_type = lookup_function_type (tdep->void_type);
   tdep->pc_type = init_pointer_type (alloc, 4 * TARGET_CHAR_BIT, NULL,
 				     tdep->func_void_type);
 

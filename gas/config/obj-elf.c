@@ -2827,7 +2827,10 @@ elf_frob_file_before_adjust (void)
 	      char *p = strchr (sy_obj->versioned_name->name,
 				ELF_VER_CHR);
 
-	      if (sy_obj->rename)
+	      /* NB: Malformed versioned symbols may not have @@@.  */
+	      if (sy_obj->rename
+		  && p[1] == ELF_VER_CHR
+		  && p[2] == ELF_VER_CHR)
 		{
 		  /* The @@@ syntax is a special case. If the symbol is
 		     not defined, 2 `@'s will be removed from the

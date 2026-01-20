@@ -207,49 +207,47 @@ private:
 
 struct collect_info
 {
+  collect_info (linespec_state *state,
+		const std::vector<symtab *> &file_symtabs,
+		std::vector<block_symbol> *symbols,
+		std::vector<bound_minimal_symbol> *minimal_symbols,
+		bool force_record_all = false)
+    : state (state),
+      /* In list mode, add all matching symbols, regardless of class.
+	 This allows the user to type "list a_global_variable".  */
+      record_all (force_record_all || state->list_mode),
+      file_symtabs (file_symtabs),
+      symbols (symbols),
+      minimal_symbols (minimal_symbols)
+  {
+  }
+
   /* The linespec object in use.  */
   struct linespec_state *state;
 
-  /* A list of symtabs to which to restrict matches.  */
-  const std::vector<symtab *> *file_symtabs;
+  /* True if all symbols should be recorded.  */
+  bool record_all;
 
-  /* The result being accumulated.  */
-  struct
-  {
-    std::vector<block_symbol> *symbols;
-    std::vector<bound_minimal_symbol> *minimal_symbols;
-  } result;
+  /* A list of symtabs to which to restrict matches.  */
+  const std::vector<symtab *> &file_symtabs;
+
+  /* The results being accumulated.  */
+  std::vector<block_symbol> *symbols;
+  std::vector<bound_minimal_symbol> *minimal_symbols;
 
   /* Possibly add a symbol to the results.  */
-  virtual bool add_symbol (block_symbol *bsym);
+  bool add_symbol (block_symbol *bsym);
 };
 
 bool
 collect_info::add_symbol (block_symbol *bsym)
 {
-  /* In list mode, add all matching symbols, regardless of class.
-     This allows the user to type "list a_global_variable".  */
-  if (bsym->symbol->loc_class () == LOC_BLOCK || this->state->list_mode)
-    this->result.symbols->push_back (*bsym);
+  if (record_all || bsym->symbol->loc_class () == LOC_BLOCK)
+    this->symbols->push_back (*bsym);
 
   /* Continue iterating.  */
   return true;
 }
-
-/* Custom collect_info for symbol_searcher.  */
-
-struct symbol_searcher_collect_info
-  : collect_info
-{
-  bool add_symbol (block_symbol *bsym) override
-  {
-    /* Add everything.  */
-    this->result.symbols->push_back (*bsym);
-
-    /* Continue iterating.  */
-    return true;
-  }
-};
 
 /* Token types  */
 
@@ -3269,20 +3267,15 @@ linespec_expression_to_pc (const char **exp_ptr)
 static std::vector<symtab_and_line>
 decode_objc (struct linespec_state *self, linespec *ls, const char *arg)
 {
-  struct collect_info info;
-  std::vector<const char *> symbol_names;
-  const char *new_argptr;
-
-  info.state = self;
   std::vector<symtab *> symtabs;
   symtabs.push_back (nullptr);
 
-  info.file_symtabs = &symtabs;
-
   std::vector<block_symbol> symbols;
-  info.result.symbols = &symbols;
   std::vector<bound_minimal_symbol> minimal_symbols;
-  info.result.minimal_symbols = &minimal_symbols;
+
+  collect_info info (self, symtabs, &symbols, &minimal_symbols);
+  std::vector<const char *> symbol_names;
+  const char *new_argptr;
 
   new_argptr = find_imps (arg, &symbol_names);
   if (symbol_names.empty ())
@@ -3536,17 +3529,12 @@ find_method (struct linespec_state *self,
   size_t last_result_len;
   std::vector<struct type *> superclass_vec;
   std::vector<const char *> result_names;
-  struct collect_info info;
+  collect_info info (self, file_symtabs, symbols, minsyms);
 
   /* Sort symbols so that symbols with the same program space are next
      to each other.  */
   std::sort (sym_classes->begin (), sym_classes->end (),
 	     compare_symbols);
-
-  info.state = self;
-  info.file_symtabs = &file_symtabs;
-  info.result.symbols = symbols;
-  info.result.minimal_symbols = minsyms;
 
   /* Iterate over all the types, looking for the names of existing
      methods matching METHOD_NAME.  If we cannot find a direct method in a
@@ -3680,20 +3668,17 @@ symbol_searcher::find_all_symbols (const std::string &name,
 				   std::vector<symtab *> *search_symtabs,
 				   struct program_space *search_pspace)
 {
-  symbol_searcher_collect_info info;
   linespec_state state (language, current_program_space);
 
-  info.state = &state;
-
-  info.result.symbols = &m_symbols;
-  info.result.minimal_symbols = &m_minimal_symbols;
   std::vector<symtab *> all_symtabs;
   if (search_symtabs == nullptr)
     {
       all_symtabs.push_back (nullptr);
       search_symtabs = &all_symtabs;
     }
-  info.file_symtabs = search_symtabs;
+
+  collect_info info (&state, *search_symtabs, &m_symbols,
+		     &m_minimal_symbols, true);
 
   add_matching_symbols_to_info (name.c_str (), symbol_name_match_type::WILD,
 				domain_search_flags, &info, search_pspace);
@@ -3710,13 +3695,8 @@ find_function_symbols (struct linespec_state *state,
 		       std::vector<block_symbol> *symbols,
 		       std::vector<bound_minimal_symbol> *minsyms)
 {
-  struct collect_info info;
+  collect_info info (state, file_symtabs, symbols, minsyms);
   std::vector<const char *> symbol_names;
-
-  info.state = state;
-  info.result.symbols = symbols;
-  info.result.minimal_symbols = minsyms;
-  info.file_symtabs = &file_symtabs;
 
   /* Try NAME as an Objective-C selector.  */
   find_imps (name, &symbol_names);
@@ -4250,7 +4230,7 @@ search_minsyms_for_name (struct collect_info *info,
 	}
 
       if (!skip)
-	info->result.minimal_symbols->push_back (item);
+	info->minimal_symbols->push_back (item);
     }
 }
 
@@ -4272,7 +4252,7 @@ add_matching_symbols_to_info (const char *name,
       return info->add_symbol (bsym);
     };
 
-  for (const auto &elt : *info->file_symtabs)
+  for (const auto &elt : info->file_symtabs)
     {
       if (elt == nullptr)
 	{
@@ -4284,7 +4264,7 @@ add_matching_symbols_to_info (const char *name,
 	}
       else if (pspace == NULL || pspace == elt->compunit ()->objfile ()->pspace ())
 	{
-	  int prev_len = info->result.symbols->size ();
+	  int prev_len = info->symbols->size ();
 
 	  /* Program spaces that are executing startup should have
 	     been filtered out earlier.  */
@@ -4297,7 +4277,7 @@ add_matching_symbols_to_info (const char *name,
 	     is in assembler, we might actually be looking for a label for
 	     which we don't have debug info.  Check for a minimal symbol in
 	     this case.  */
-	  if (prev_len == info->result.symbols->size ()
+	  if (prev_len == info->symbols->size ()
 	      && elt->language () == language_asm)
 	    search_minsyms_for_name (info, lookup_name, pspace, elt);
 	}

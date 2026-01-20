@@ -512,7 +512,7 @@ read_frame_local (struct symbol *sym, const frame_info_ptr &frame,
     }
   catch (const gdb_exception_error &except)
     {
-      argp->error.reset (xstrdup (except.what ()));
+      argp->error = make_unique_xstrdup (except.what ());
     }
 }
 
@@ -683,7 +683,10 @@ read_frame_arg (const frame_print_options &fp_opts,
 
   argp->sym = sym;
   argp->val = val;
-  argp->error.reset (val_error ? xstrdup (val_error) : NULL);
+  if (val_error == nullptr)
+    argp->error = nullptr;
+  else
+    argp->error = make_unique_xstrdup (val_error);
   if (!val && !val_error)
     argp->entry_kind = print_entry_values_only;
   else if ((fp_opts.print_entry_values == print_entry_values_compact
@@ -698,7 +701,10 @@ read_frame_arg (const frame_print_options &fp_opts,
 
   entryargp->sym = sym;
   entryargp->val = entryval;
-  entryargp->error.reset (entryval_error ? xstrdup (entryval_error) : NULL);
+  if (entryval_error == nullptr)
+    entryargp->error = nullptr;
+  else
+    entryargp->error = make_unique_xstrdup (entryval_error);
   if (!entryval && !entryval_error)
     entryargp->entry_kind = print_entry_values_no;
   else
@@ -1295,7 +1301,7 @@ find_frame_funname (const frame_info_ptr &frame, enum language *funlang,
       /* If we didn't hit the C++ case above, set *funname
 	 here.  */
       if (funname == NULL)
-	funname.reset (xstrdup (print_name));
+	funname = make_unique_xstrdup (print_name);
     }
   else
     {
@@ -1307,7 +1313,7 @@ find_frame_funname (const frame_info_ptr &frame, enum language *funlang,
       bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (pc);
       if (msymbol.minsym != NULL)
 	{
-	  funname.reset (xstrdup (msymbol.minsym->print_name ()));
+	  funname = make_unique_xstrdup (msymbol.minsym->print_name ());
 	  *funlang = msymbol.minsym->language ();
 	}
     }
@@ -1473,41 +1479,36 @@ frame_selection_by_function_completer (struct cmd_list_element *ignore,
 static void
 info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 {
-  struct symbol *func;
-  struct symtab *s;
-  frame_info_ptr calling_frame_info;
-  int numregs;
-  const char *funname = 0;
-  enum language funlang = language_unknown;
-  const char *pc_regname;
-  struct gdbarch *gdbarch;
-  std::optional<CORE_ADDR> frame_pc;
-  /* Initialize it to avoid "may be used uninitialized" warning.  */
-  CORE_ADDR caller_pc = 0;
-  int caller_pc_p = 0;
-
-  gdbarch = get_frame_arch (fi);
+  struct gdbarch *gdbarch = get_frame_arch (fi);
 
   /* Name of the value returned by get_frame_pc().  Per comments, "pc"
      is not a good name.  */
+  const char *pc_regname;
   if (gdbarch_pc_regnum (gdbarch) >= 0)
-    /* OK, this is weird.  The gdbarch_pc_regnum hardware register's value can
-       easily not match that of the internal value returned by
-       get_frame_pc().  */
-    pc_regname = gdbarch_register_name (gdbarch, gdbarch_pc_regnum (gdbarch));
+    {
+      /* OK, this is weird.  The gdbarch_pc_regnum hardware register's
+	 value can easily not match that of the internal value returned by
+	 get_frame_pc().  */
+      pc_regname = gdbarch_register_name (gdbarch, gdbarch_pc_regnum (gdbarch));
+      gdb_assert (pc_regname != nullptr);
+    }
   else
-    /* But then, this is weird to.  Even without gdbarch_pc_regnum, an
-       architectures will often have a hardware register called "pc",
-       and that register's value, again, can easily not match
-       get_frame_pc().  */
-    pc_regname = "pc";
+    {
+      /* But then, this is weird to.  Even without gdbarch_pc_regnum, an
+	 architectures will often have a hardware register called "pc",
+	 and that register's value, again, can easily not match
+	 get_frame_pc().  */
+      pc_regname = "pc";
+    }
 
-  frame_pc = get_frame_pc_if_available (fi);
-  func = get_frame_function (fi);
+  const char *funname = nullptr;
+  enum language funlang = language_unknown;
+  std::optional<CORE_ADDR> frame_pc = get_frame_pc_if_available (fi);
+  struct symbol *func = get_frame_function (fi);
   symtab_and_line sal = find_frame_sal (fi);
-  s = sal.symtab;
+  struct symtab *s = sal.symtab;
   gdb::unique_xmalloc_ptr<char> func_only;
-  if (func)
+  if (func != nullptr)
     {
       funname = func->print_name ();
       funlang = func->language ();
@@ -1520,20 +1521,20 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	     display parameters.  So remove the parameters.  */
 	  func_only = cp_remove_params (funname);
 
-	  if (func_only)
+	  if (func_only != nullptr)
 	    funname = func_only.get ();
 	}
     }
   else if (frame_pc.has_value ())
     {
       bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (*frame_pc);
-      if (msymbol.minsym != NULL)
+      if (msymbol.minsym != nullptr)
 	{
 	  funname = msymbol.minsym->print_name ();
 	  funlang = msymbol.minsym->language ();
 	}
     }
-  calling_frame_info = get_prev_frame (fi);
+  frame_info_ptr calling_frame_info = get_prev_frame (fi);
 
   if (selected_frame_p && frame_relative_level (fi) >= 0)
     {
@@ -1542,41 +1543,43 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     }
   else
     {
-      gdb_printf (_("Stack frame at "));
+      gdb_puts (_("Stack frame at "));
     }
-  gdb_puts (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str ());
-  gdb_printf (":\n");
+  fputs_styled (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str (),
+		address_style.style (), gdb_stdout);
+  gdb_puts (":\n");
   gdb_printf (" %s = ", pc_regname);
   if (frame_pc.has_value ())
-    gdb_puts (paddress (gdbarch, get_frame_pc (fi)));
+    fputs_styled (paddress (gdbarch, get_frame_pc (fi)),
+		  address_style.style (), gdb_stdout);
   else
     fputs_styled ("<unavailable>", metadata_style.style (), gdb_stdout);
 
   gdb_stdout->wrap_here (3);
-  if (funname)
+  if (funname != nullptr)
     {
-      gdb_printf (" in ");
-      gdb_puts (funname);
+      gdb_puts (" in ");
+      fputs_styled (funname, function_name_style.style (), gdb_stdout);
     }
   gdb_stdout->wrap_here (3);
-  if (sal.symtab)
+  if (sal.symtab != nullptr)
     gdb_printf
-      (" (%ps:%d)",
+      (" (%ps:%ps)",
        styled_string (file_name_style.style (),
 		      symtab_to_filename_for_display (sal.symtab)),
-       sal.line);
+       styled_string (line_number_style.style (), pulongest (sal.line)));
   gdb_puts ("; ");
   gdb_stdout->wrap_here (4);
   gdb_printf ("saved %s = ", pc_regname);
 
+  std::optional<CORE_ADDR> caller_pc;
   if (!frame_id_p (frame_unwind_caller_id (fi)))
     val_print_not_saved (gdb_stdout);
   else
     {
       try
 	{
-	  caller_pc = frame_unwind_caller_pc (fi);
-	  caller_pc_p = 1;
+	  caller_pc.emplace (frame_unwind_caller_pc (fi));
 	}
       catch (const gdb_exception_error &ex)
 	{
@@ -1597,11 +1600,12 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	}
     }
 
-  if (caller_pc_p)
-    gdb_puts (paddress (gdbarch, caller_pc));
-  gdb_printf ("\n");
+  if (caller_pc.has_value ())
+    fputs_styled (paddress (gdbarch, caller_pc.value ()),
+		  address_style.style (), gdb_stdout);
+  gdb_puts ("\n");
 
-  if (calling_frame_info == NULL)
+  if (calling_frame_info == nullptr)
     {
       enum unwind_stop_reason reason;
 
@@ -1617,23 +1621,27 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 		frame_relative_level (get_prev_frame (fi)));
   else
     {
-      gdb_printf (" called by frame at ");
-      gdb_puts (paspace_and_addr
-		  (gdbarch, get_frame_base (calling_frame_info)).c_str ());
+      gdb_puts (" called by frame at ");
+      fputs_styled
+	(paspace_and_addr (gdbarch,
+			   get_frame_base (calling_frame_info)).c_str (),
+	 address_style.style (), gdb_stdout);
     }
-  if (get_next_frame (fi) && calling_frame_info)
+  if (get_next_frame (fi) != nullptr && calling_frame_info != nullptr)
     gdb_puts (",");
   gdb_stdout->wrap_here (3);
-  if (get_next_frame (fi))
+  if (get_next_frame (fi) != nullptr)
     {
-      gdb_printf (" caller of frame at ");
-      gdb_puts (paspace_and_addr
-		  (gdbarch, get_frame_base (get_next_frame (fi))).c_str ());
+      gdb_puts (" caller of frame at ");
+      fputs_styled
+	(paspace_and_addr (gdbarch,
+			   get_frame_base (get_next_frame (fi))).c_str (),
+	 address_style.style (), gdb_stdout);
     }
-  if (get_next_frame (fi) || calling_frame_info)
+  if (get_next_frame (fi) != nullptr || calling_frame_info != nullptr)
     gdb_puts ("\n");
 
-  if (s)
+  if (s != nullptr)
     gdb_printf (" source language %s.\n",
 		language_str (s->language ()));
 
@@ -1644,12 +1652,14 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     int numargs;
 
     if (arg_list == 0)
-      gdb_printf (" Arglist at unknown address.\n");
+      gdb_puts (" Arglist at unknown address.\n");
     else
       {
-	gdb_printf (" Arglist at ");
-	gdb_puts (paspace_and_addr (gdbarch, arg_list).c_str ());
-	gdb_printf (",");
+	gdb_puts (" Arglist at ");
+	fputs_styled (paspace_and_addr (gdbarch, arg_list).c_str (),
+		      address_style.style (),
+		      gdb_stdout);
+	gdb_puts (",");
 
 	if (!gdbarch_frame_num_args_p (gdbarch))
 	  {
@@ -1678,21 +1688,21 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     CORE_ADDR arg_list = get_frame_locals_address (fi);
 
     if (arg_list == 0)
-      gdb_printf (" Locals at unknown address,");
+      gdb_puts (" Locals at unknown address,");
     else
       {
-	gdb_printf (" Locals at ");
-	gdb_puts (paspace_and_addr (gdbarch, arg_list).c_str ());
-	gdb_printf (",");
+	gdb_puts (" Locals at ");
+	fputs_styled (paspace_and_addr (gdbarch, arg_list).c_str (),
+		      address_style.style (),
+		      gdb_stdout);
+	gdb_puts (",");
       }
   }
 
   /* Print as much information as possible on the location of all the
      registers.  */
   {
-    int count;
-    int i;
-    int need_nl = 1;
+    bool need_nl = true;
     int sp_regnum = gdbarch_sp_regnum (gdbarch);
 
     /* The sp is special; what's displayed isn't the save address, but
@@ -1703,7 +1713,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     if (sp_regnum >= 0)
       {
 	struct value *value = frame_unwind_register_value (fi, sp_regnum);
-	gdb_assert (value != NULL);
+	gdb_assert (value != nullptr);
 
 	if (!value->optimized_out () && value->entirely_available ())
 	  {
@@ -1716,30 +1726,32 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 		sp = extract_unsigned_integer
 		  (value->contents_all ().data (), sp_size, byte_order);
 
-		gdb_printf (" Previous frame's sp is ");
-		gdb_puts (paddress (gdbarch, sp));
-		gdb_printf ("\n");
+		gdb_puts (" Previous frame's sp is ");
+		fputs_styled (paddress (gdbarch, sp), address_style.style (),
+			      gdb_stdout);
+		gdb_puts ("\n");
 	      }
 	    else if (value->lval () == lval_memory)
 	      {
-		gdb_printf (" Previous frame's sp at ");
-		gdb_puts (paspace_and_addr
-			    (gdbarch, value->address ()).c_str ());
-		gdb_printf ("\n");
+		gdb_puts (" Previous frame's sp at ");
+		fputs_styled (paspace_and_addr (gdbarch,
+						value->address ()).c_str (),
+			      address_style.style (), gdb_stdout);
+		gdb_puts ("\n");
 	      }
 	    else if (value->lval () == lval_register)
 	      gdb_printf (" Previous frame's sp in %s\n",
 			  gdbarch_register_name (gdbarch, value->regnum ()));
 
 	    release_value (value);
-	    need_nl = 0;
+	    need_nl = false;
 	  }
 	/* else keep quiet.  */
       }
 
-    count = 0;
-    numregs = gdbarch_num_cooked_regs (gdbarch);
-    for (i = 0; i < numregs; i++)
+    int count = 0;
+    int numregs = gdbarch_num_cooked_regs (gdbarch);
+    for (int i = 0; i < numregs; i++)
       if (i != sp_regnum
 	  && gdbarch_register_reggroup_p (gdbarch, i, all_reggroup))
 	{
@@ -1764,11 +1776,12 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	      gdb_stdout->wrap_here (1);
 	      gdb_printf (" %s at ",
 			  gdbarch_register_name (gdbarch, i));
-	      gdb_puts (paspace_and_addr (gdbarch, addr).c_str ());
+	      fputs_styled (paspace_and_addr (gdbarch, addr).c_str (),
+			    address_style.style (), gdb_stdout);
 	      count++;
 	    }
 	}
-    if (count || need_nl)
+    if (count > 0 || need_nl)
       gdb_puts ("\n");
   }
 }

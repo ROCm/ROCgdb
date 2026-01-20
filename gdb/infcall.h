@@ -69,6 +69,7 @@ extern struct value *
    function to be included in the error message; may be NULL, in which
    case the error message doesn't include a function name.  */
 
-extern void error_call_unknown_return_type (const char *func_name);
+[[noreturn]] extern void error_call_unknown_return_type
+     (const char *func_name);
 
 #endif /* GDB_INFCALL_H */

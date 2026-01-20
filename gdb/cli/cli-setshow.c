@@ -68,7 +68,6 @@ parse_auto_binary_operation (const char *arg)
 	return AUTO_BOOLEAN_AUTO;
     }
   error (_("\"on\", \"off\" or \"auto\" expected."));
-  return AUTO_BOOLEAN_AUTO; /* Pacify GCC.  */
 }
 
 /* See cli-setshow.h.  */

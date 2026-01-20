@@ -680,7 +680,8 @@ rust_language::value_print_inner
 
 	    if (opts.addressprint)
 	      {
-		gdb_puts (paddress (arch, addr), stream);
+		fputs_styled (paddress (arch, addr), address_style.style (),
+			      stream);
 		gdb_puts (" ", stream);
 	      }
 
@@ -1749,7 +1750,7 @@ rust_language::language_arch_info (struct gdbarch *gdbarch,
   add (init_float_type (alloc, 64, "f64", floatformats_ieee_double));
   add (init_integer_type (alloc, 0, 1, "()"));
 
-  struct type *tem = make_cv_type (1, 0, u8_type, NULL);
+  struct type *tem = make_cv_type (1, 0, u8_type);
   add (rust_slice_type ("&str", tem, usize_type));
 
   lai->set_bool_type (bool_type);

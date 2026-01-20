@@ -633,9 +633,8 @@ command_line_append_input_line (std::string &cmd_line_buffer, const char *rl)
     }
   else
     {
-      /* Copy whole line including terminating null, and we're
-	 done.  */
-      cmd_line_buffer.append (rl, len + 1);
+      /* Copy whole line, and we're done.  */
+      cmd_line_buffer.append (rl);
       return true;
     }
 }

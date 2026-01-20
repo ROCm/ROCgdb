@@ -3341,48 +3341,6 @@ rs6000_gen_return_address (struct gdbarch *gdbarch,
 }
 
 
-/* Convert a DBX STABS register number to a GDB register number.  */
-static int
-rs6000_stab_reg_to_regnum (struct gdbarch *gdbarch, int num)
-{
-  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
-
-  if (0 <= num && num <= 31)
-    return tdep->ppc_gp0_regnum + num;
-  else if (32 <= num && num <= 63)
-    /* FIXME: jimb/2004-05-05: What should we do when the debug info
-       specifies registers the architecture doesn't have?  Our
-       callers don't check the value we return.  */
-    return tdep->ppc_fp0_regnum + (num - 32);
-  else if (77 <= num && num <= 108)
-    return tdep->ppc_vr0_regnum + (num - 77);
-  else if (1200 <= num && num < 1200 + 32)
-    return tdep->ppc_ev0_upper_regnum + (num - 1200);
-  else
-    switch (num)
-      {
-      case 64:
-	return tdep->ppc_mq_regnum;
-      case 65:
-	return tdep->ppc_lr_regnum;
-      case 66:
-	return tdep->ppc_ctr_regnum;
-      case 76:
-	return tdep->ppc_xer_regnum;
-      case 109:
-	return tdep->ppc_vrsave_regnum;
-      case 110:
-	return tdep->ppc_vrsave_regnum - 1; /* vscr */
-      case 111:
-	return tdep->ppc_acc_regnum;
-      case 112:
-	return tdep->ppc_spefscr_regnum;
-      default:
-	return num;
-      }
-}
-
-
 /* Convert a Dwarf 2 register number to a GDB register number.  */
 static int
 rs6000_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int num)
@@ -8416,7 +8374,6 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_value_to_register (gdbarch, rs6000_value_to_register);
   set_gdbarch_value_from_register (gdbarch, rs6000_value_from_register);
 
-  set_gdbarch_stab_reg_to_regnum (gdbarch, rs6000_stab_reg_to_regnum);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, rs6000_dwarf2_reg_to_regnum);
 
   if (wordsize == 4)

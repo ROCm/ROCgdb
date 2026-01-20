@@ -179,7 +179,8 @@ pascal_language::value_print_inner (struct value *val,
 
       if (options->addressprint && options->format != 's')
 	{
-	  gdb_puts (paddress (gdbarch, addr), stream);
+	  fputs_styled (paddress (gdbarch, addr), address_style.style (),
+			stream);
 	  want_space = 1;
 	}
 

@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo_oc22_002
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -29,4 +29,4 @@ set bp_location [gdb_get_line_number "STOP" ${testdir}/foo_oc22_002.adb]
 runto "foo_oc22_002.adb:$bp_location"
 
 gdb_test "print a1(1)@3" \
-	 " = \\(3, 5, 8\\)"
+    " = \\(3, 5, 8\\)"

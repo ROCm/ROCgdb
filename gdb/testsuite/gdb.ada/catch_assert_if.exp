@@ -20,7 +20,7 @@ require allow_ada_tests gnat_runtime_has_debug_info
 standard_ada_testfile bla
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug additional_flags=-gnata ]] != "" } {
-   return
+    return
 }
 
 clean_restart ${testfile}
@@ -35,12 +35,12 @@ set sp "\[ \t\]*"
 #  - continue, the program exits.
 
 if {![runto_main]} {
-   return
+    return
 }
 
 gdb_test "catch assert if Global_Var = 2" \
-	 "Catchpoint $decimal: failed Ada assertions" \
-	 "insert catchpoint on failed assertions with condition"
+    "Catchpoint $decimal: failed Ada assertions" \
+    "insert catchpoint on failed assertions with condition"
 
 # Check that condition is stored and properly displayed.
 
@@ -50,11 +50,11 @@ gdb_test "info breakpoint" $exp_bp "Check catch assertions with condition"
 set bp_location [gdb_get_line_number "STOP" ${testdir}/bla.adb]
 
 set catchpoint_msg \
-  "Catchpoint $decimal, failed assertion at $hex in bla \\\(\\\).*at .*bla.adb:$bp_location"
+    "Catchpoint $decimal, failed assertion at $hex in bla \\\(\\\).*at .*bla.adb:$bp_location"
 gdb_test "continue" \
-	 "Continuing\\.$eol$eol$catchpoint_msg$eol.*STOP" \
-	 "continuing to expected failed assertion"
+    "Continuing\\.$eol$eol$catchpoint_msg$eol.*STOP" \
+    "continuing to expected failed assertion"
 
 gdb_test "continue" \
-	 "Continuing\\..*$inferior_exited_re.*" \
-	 "continuing to program completion"
+    "Continuing\\..*$inferior_exited_re.*" \
+    "continuing to program completion"

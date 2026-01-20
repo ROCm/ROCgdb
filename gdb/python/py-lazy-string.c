@@ -294,7 +294,10 @@ gdbpy_extract_lazy_string (PyObject *string, CORE_ADDR *addr,
   *addr = lazy->address;
   *str_elt_type = stpy_lazy_string_elt_type (lazy);
   *length = lazy->length;
-  encoding->reset (lazy->encoding ? xstrdup (lazy->encoding) : NULL);
+  if (lazy->encoding == nullptr)
+    *encoding = nullptr;
+  else
+    *encoding = make_unique_xstrdup (lazy->encoding);
 }
 
 /* __str__ for LazyString.  */

@@ -259,8 +259,12 @@ automatically cause those extensions to be disabled.
  @tab Enable the Lookup Table (LUT) extension.
 @item @code{memtag} @tab
  @tab Enable Armv8.5-A Memory Tagging Extensions.
+@item @code{mtetc} @tab @code{memtag}
+ @tab Enable Data cache tag block operations.
 @item @code{mops} @tab
  @tab Enable Armv8.8-A memcpy and memset acceleration instructions
+@item @code{mpamv2} @tab
+ @tab Enable MPAMv2 system registers.
 @item @code{occmo} @tab
  @tab Enable Outer Cacheable Cache Maintenance Operations.
 @item @code{pan} @tab

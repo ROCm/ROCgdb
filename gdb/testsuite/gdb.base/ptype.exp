@@ -34,13 +34,27 @@ set gcc_compiled [is_c_compiler_gcc]
 # with stabs compilers which fail to use a nameless stab (such as
 # pre-2.4.5 versions of gcc and most non-gcc compilers).
 
+
+set re1 [multi_line \
+    "type = enum primary1_tag {" \
+    "    red1 = 0," \
+    "    green1 = 1," \
+    "    blue1 = 2" \
+    "}.*$gdb_prompt $"]
+set re2 [multi_line \
+    "type = enum {" \
+    "    red1 = 0," \
+    "    green1 = 1," \
+    "    blue1 = 2" \
+    "}.*$gdb_prompt $"]
+
 gdb_test_multiple "ptype red1" "ptype unnamed enumeration member" {
-    -re "type = enum primary1_tag \{red1, green1, blue1\}.*$gdb_prompt $" {
+    -re $re1 {
 	# The workaround is in effect.  As this is a compiler, not GDB,
 	# bug, we'll make it a PASS but perhaps it should be an XFAIL.
 	pass "ptype unnamed enumeration member (worked around)"
     }
-    -re "type = enum \{red1, green1, blue1\}.*$gdb_prompt $" {
+    -re $re2 {
 	pass "ptype unnamed enumeration member"
     }
 }
@@ -51,7 +65,16 @@ gdb_test_multiple "ptype red1" "ptype unnamed enumeration member" {
 # Here and elsewhere, we accept
 # "long", "long int", or "int" for long variables (whatis.exp already
 # has an XFAIL for "int" (Sun cc bug), so no need to fail it here).
-gdb_test "ptype struct t_struct" "type = struct t_struct \{.*\[\r\n\]    (unsigned |)char v_char_member;.*\[\r\n\]    (short|short int) v_short_member;.*\[\r\n\]    int v_int_member;.*\[\r\n\]    (long|long int|int) v_long_member;.*\[\r\n\]    float v_float_member;.*\[\r\n\]    double v_double_member;.*\[\r\n\]\}.*" "ptype structure"
+gdb_test "ptype struct t_struct" \
+    [multi_line \
+	"type = struct t_struct {" \
+	"    (unsigned |)char v_char_member;" \
+	"    (short|short int) v_short_member;" \
+	"    int v_int_member;" \
+	"    (long|long int|int) v_long_member;" \
+	"    float v_float_member;" \
+	"    double v_double_member;" \
+	"}"] "ptype structure"
 
 
 # Test the equivalence between '.' and '->' for struct member references.
@@ -73,30 +96,68 @@ if {[gdb_test "ptype v_t_struct_p->v_float_member" "type = float"] < 0} {
 # IBM's xlc puts out bogus stabs--the stuff field is type 42,
 # which isn't defined.
 
-gdb_test "ptype struct link" "type = struct link \{\[\r\n\]+\[ \t\]+struct link \\*next;\[\r\n\]+\[ \t\]+struct link \\*\\(\\*linkfunc\\)\\((struct link \\*, int|void|)\\);\[\r\n\]+\[ \t\]+struct t_struct stuff.1..2..3.;\[\r\n\]+\}.*" "ptype linked list structure"
+gdb_test "ptype struct link" \
+    [multi_line \
+	"type = struct link {" \
+	"    struct link \\*next;" \
+	"    struct link \\*\\(\\*linkfunc\\)\\((struct link \\*, int|void|)\\);" \
+	"    struct t_struct stuff.1..2..3.;" \
+	"}"] "ptype linked list structure"
 
 #
 # test ptype command with unions
 #
-gdb_test "ptype union t_union" "type = union t_union \{.*\[\r\n\]    (unsigned |)char v_char_member;.*\[\r\n\]    (short|short int) v_short_member;.*\[\r\n\]    int v_int_member;.*\[\r\n\]    (long|long int|int) v_long_member;.*\[\r\n\]    float v_float_member;.*\[\r\n\]    double v_double_member;.*\[\r\n\]\}.*" "ptype union"
+gdb_test "ptype union t_union" \
+    [multi_line \
+	"type = union t_union {" \
+	"    (unsigned |)char v_char_member;" \
+	"    (short|short int) v_short_member;" \
+	"    int v_int_member;" \
+	"    (long|long int|int) v_long_member;" \
+	"    float v_float_member;" \
+	"    double v_double_member;" \
+	"}"] "ptype union"
 
 # IBM's xlc puts out bogus stabs--the stuff field is type 42,
 # which isn't defined.
-gdb_test "ptype union tu_link" "type = union tu_link \{\[\r\n\]+\[ \t\]+struct link \\*next;\[\r\n\]+\[ \t\]+struct link \\*\\(\\*linkfunc\\)\\((struct link \\*, int|void|)\\);\[\r\n\]+\[ \t\]+struct t_struct stuff.1..2..3.;\[\r\n\]+\}.*" "ptype linked list union"
+gdb_test "ptype union tu_link" \
+    [multi_line \
+	"type = union tu_link {" \
+	"    struct link \\*next;" \
+	"    struct link \\*\\(\\*linkfunc\\)\\((struct link \\*, int|void|)\\);" \
+	"    struct t_struct stuff.1..2..3.;" \
+	"}"] "ptype linked list union"
 
 #
 # test ptype command with enums
 #
 
-gdb_test "ptype primary" "type = enum .red, green, blue.*" "ptype unnamed enumeration"
+gdb_test "ptype primary" \
+    [multi_line \
+	"type = enum {" \
+	"    red = 0," \
+	"    green = 1," \
+	"    blue = 2" \
+	"}"] "ptype unnamed enumeration"
 
-gdb_test "ptype enum colors" "type = enum colors \{yellow, purple, pink\}.*" "ptype named enumeration"
+gdb_test "ptype enum colors" \
+    [multi_line \
+	"type = enum colors {" \
+	"    yellow = 0," \
+	"    purple = 1," \
+	"    pink = 2" \
+	"}"] "ptype named enumeration"
 
 
 #
 # test ptype command with enums as typedef
 #
-gdb_test "ptype boolean" "type = enum (boolean |)\{FALSE, TRUE\}.*" "ptype unnamed typedef'd enumeration"
+gdb_test "ptype boolean" \
+    [multi_line \
+	"type = enum (boolean |){" \
+	"    FALSE = 0," \
+	"    TRUE = 1" \
+	"}"] "ptype unnamed typedef'd enumeration"
 
 # And check that whatis shows the name, not "enum {...}".
 # This probably fails for all DWARF 1 cases, so assume so for now. -fnf
@@ -127,19 +188,44 @@ gdb_test "ptype t_union3" "type = union (t_union3 |)\{.*
  *double v_double_member;.*
  *int v_int_member;.*\}" "printing typedef'd union"
 
-gdb_test "ptype enum bvals" "type = enum bvals \{my_false, my_true\}.*" "ptype named typedef'd enumf'd enum"
+gdb_test "ptype enum bvals" \
+    [multi_line \
+	"type = enum bvals {" \
+	"    my_false = 0," \
+	"    my_true = 1" \
+	"}"] "ptype named typedef'd enumf'd enum"
 
 #
 # test ptype command with out-of-order enum values
 #
-gdb_test "ptype enum misordered" "type = enum misordered \{two = 2, one = 1, zero = 0, three = 3\}.*" "ptype misordered enumeration"
+gdb_test "ptype enum misordered" \
+    [multi_line \
+	"type = enum misordered {" \
+	"    two = 2," \
+	"    one = 1," \
+	"    zero = 0," \
+	"    three = 3" \
+	"}"] "ptype misordered enumeration"
 
 #
 # test ptype command with a named enum's value
 #
-gdb_test "ptype three" "type = enum misordered \{two = 2, one = 1, zero = 0, three = 3\}.*" "ptype named enumeration member"
+gdb_test "ptype three" \
+    [multi_line \
+	"type = enum misordered {" \
+	"    two = 2," \
+	"    one = 1," \
+	"    zero = 0," \
+	"    three = 3" \
+	"}"] "ptype named enumeration member"
 
-gdb_test "ptype red" "type = enum \{red, green, blue\}.*" "ptype unnamed enumeration member #2"
+gdb_test "ptype red" \
+    [multi_line \
+	"type = enum {" \
+	"    red = 0," \
+	"    green = 1," \
+	"    blue = 2" \
+	"}"] "ptype unnamed enumeration member #2"
 
 #
 # test ptype command with basic C types
@@ -472,32 +558,69 @@ gdb_test "ptype pv_char_array" "type = (|unsigned )char \\(\\*\\)\\\[0?\\\]"
 #
 # test ptype command with nested structure and union
 #
-gdb_test "ptype struct outer_struct" "type = struct outer_struct \{.*\[\r\n\]+\
-.*int outer_int;.*\[\r\n\]+\
-.*(struct|) inner_struct inner_struct_instance;.*\[\r\n\]+\
-.*(union|) inner_union inner_union_instance;.*\[\r\n\]+\
-.*(long|long int|int) outer_long;.*\[\r\n\]\}.*" "ptype outer structure"
+gdb_test "ptype struct outer_struct" \
+    [multi_line \
+	"type = struct outer_struct {" \
+	"    int outer_int;" \
+	"    (struct|) inner_struct inner_struct_instance;" \
+	"    (union|) inner_union inner_union_instance;" \
+	"    (long|long int|int) outer_long;" \
+	"}"] "ptype outer structure"
 
-gdb_test "ptype struct inner_struct" "type = struct inner_struct \{.*\[\r\n\]    int inner_int;.*\[\r\n\]    (long|long int|int) inner_long;.*\[\r\n\]\}.*" "ptype inner structure"
+gdb_test "ptype struct inner_struct" \
+    [multi_line \
+	"type = struct inner_struct {" \
+	"    int inner_int;" \
+	"    (long|long int|int) inner_long;" \
+	"}"] "ptype inner structure"
 
-gdb_test "ptype union inner_union" "type = union inner_union \{.*\[\r\n\]    int inner_union_int;.*\[\r\n\]    (long|long int|int) inner_union_long;.*\[\r\n\]\}.*" "ptype inner union"
+gdb_test "ptype union inner_union" \
+    [multi_line \
+	"type = union inner_union {" \
+	"    int inner_union_int;" \
+	"    (long|long int|int) inner_union_long;" \
+	"}"] "ptype inner union"
 
-gdb_test "ptype nested_su" "type = struct outer_struct \{.*\[\r\n\]    int outer_int;.*\[\r\n\]    (struct |)inner_struct inner_struct_instance;.*\[\r\n\]    (union |)inner_union inner_union_instance;.*\[\r\n\]    (long|long int|int) outer_long;.*\[\r\n\]\}.*" "ptype nested structure"
+gdb_test "ptype nested_su" \
+    [multi_line \
+	"type = struct outer_struct {" \
+	"    int outer_int;" \
+	"    (struct |)inner_struct inner_struct_instance;" \
+	"    (union |)inner_union inner_union_instance;" \
+	"    (long|long int|int) outer_long;" \
+	"}"] "ptype nested structure"
 
 gdb_test "ptype nested_su.outer_int" "type = int.*" "ptype outer int"
 
-gdb_test "ptype nested_su.inner_struct_instance" "type = struct inner_struct \{.*\[\r\n\]    int inner_int;.*\[\r\n\]    (long|long int|int) inner_long;.*\[\r\n\]\}.*" "ptype nested structure #2"
+gdb_test "ptype nested_su.inner_struct_instance" \
+    [multi_line \
+	"type = struct inner_struct {" \
+	"    int inner_int;" \
+	"    (long|long int|int) inner_long;" \
+	"}"] "ptype nested structure #2"
 
 gdb_test "ptype nested_su.inner_struct_instance.inner_int" "type = int.*" "ptype inner int"
 
-gdb_test "ptype nested_su.inner_union_instance" "type = union inner_union \{.*\[\r\n\]    int inner_union_int;.*\[\r\n\]    (long|long int|int) inner_union_long;.*\[\r\n\]\}.*" "ptype nested union"
+gdb_test "ptype nested_su.inner_union_instance" \
+    [multi_line \
+	"type = union inner_union {" \
+	"    int inner_union_int;" \
+	"    (long|long int|int) inner_union_long;" \
+	"}"] "ptype nested union"
 
 # Print the type description of variable the_highest, and verify that
 # the type description for the fields whose type is anonymous are
 # correctly printed (at nesting level 1 and 2).
 
 gdb_test "ptype the_highest" \
-	 "type = struct highest \{.*\[\r\n\] *int a;.*\[\r\n\] *struct \{.*\[\r\n\] *int b;.*\[\r\n\] *struct \{\.\.\.\} anonymous_level_2;.*\[\r\n\] *\} anonymous_level_1;.*\[\r\n\]}.*"
+    [multi_line \
+	"type = struct highest {" \
+	"    int a;" \
+	"    struct {" \
+	"        int b;" \
+	"        struct \{\.\.\.\} anonymous_level_2;" \
+	"    \} anonymous_level_1;" \
+	"}"]
 
 # Print the type description for one of the fields of variable the_highest.
 # The purpose is to verify that the type of a field that was printed above
@@ -505,8 +628,13 @@ gdb_test "ptype the_highest" \
 # nesting level is now one level less).
 
 gdb_test "ptype the_highest.anonymous_level_1" \
-	 "type = struct \{.*\[\r\n\] *int b;.*\[\r\n\] *struct \{.*\[\r\n\] *int c;.*\[\r\n\] *\} anonymous_level_2;.*\[\r\n\]}.*" \
-	 "ptype the_highest.anonymous_level_1"
+    [multi_line \
+	"type = struct {" \
+	"    int b;" \
+	"    struct {" \
+	"        int c;" \
+	"    \} anonymous_level_2;" \
+	"}"] "ptype the_highest.anonymous_level_1"
 
 get_debug_format
 

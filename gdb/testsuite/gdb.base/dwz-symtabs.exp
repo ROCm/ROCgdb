@@ -1,0 +1,188 @@
+# Copyright 2025 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+# This test is very similar to gdb.debuginfod/solib-with-dwz.exp,
+# except this one doesn't depend on debuginfod, and doesn't split the
+# debug information out of the shared libraries before running the dwz
+# tool.
+#
+# Three shared libraries are created, and the dwz tool is used to
+# extract common debug information from these into a common.dwz file.
+#
+# The libraries libbar, libfoo, an libfoo-2.  The foo.c and foo.h
+# source files are shared between libfoo and libfoo-2, but are not
+# used to create libbar.
+#
+# There is another header, common.h, which is shared between all of
+# the libraries.
+#
+# The test starts the inferior, and runs until the symtabs of libbar
+# have been expanded, and then checks to make sure that there is no
+# symtab for foo.c or foo.h associated with libbar.  Remember, these
+# source files are not used to build libbar.
+#
+# At one point, a bug in GDB would mean that symtabs for these files
+# were created and associated with libbar, this is because these files
+# are mentioned in the common.dwz file.
+
+require allow_shlib_tests
+require {istarget "*-linux*"}
+require {!is_remote host}
+require {dwz_version_at_least 0.13}
+
+standard_testfile -main.c -bar.c -foo.c -foo.h -common.h
+
+set libbar_filename [standard_output_file "libbar.so"]
+set libfoo_filename [standard_output_file "libfoo.so"]
+set libfoo_2_filename [standard_output_file "libfoo-2.so"]
+
+# Compile libbar.so.
+if {[build_executable "build libbar.so" $libbar_filename \
+	 $srcfile2 { debug shlib build-id }] == -1} {
+    return
+}
+
+# If we are running with a board that splits the debug information out and
+# adds a .gnu_debuglink, then this test isn't going to work.  We want to be
+# in control of splitting out the debug information, and we definitely don't
+# want a .gnu_debuglink otherwise debuginfod isn't going to be needed.
+if {[section_get $libbar_filename ".gnu_debuglink"] ne ""} {
+    unsupported "debug information has already been split out"
+    return
+}
+
+# Compile libfoo.so.
+if {[build_executable "build libfoo.so" $libfoo_filename \
+	 $srcfile3 { debug shlib build-id }] == -1} {
+    return
+}
+
+# Compile libfoo-2.so.
+if {[build_executable "build libfoo-2.so" $libfoo_2_filename \
+	 $srcfile3 { debug shlib build-id additional_flags=-DFOO2}] == -1} {
+    return
+}
+
+# Build the executable.
+if { [build_executable "build executable" ${binfile} ${srcfile} \
+	  [list debug shlib=${libbar_filename} shlib=${libfoo_filename} shlib_load]] == -1 } {
+    return
+}
+
+gdb_download_shlib $libbar_filename
+gdb_download_shlib $libfoo_filename
+gdb_download_shlib $libfoo_2_filename
+
+# Run DWZ tool on the library files.  This moves shared debug
+# information into a 'common.dwz' file.
+set dwz_file [standard_output_file "common.dwz"]
+set status \
+    [remote_exec build "dwz -m $dwz_file \
+			       $libbar_filename \
+			       $libfoo_filename \
+			       $libfoo_2_filename"]
+if {[lindex $status 0] != 0} {
+    unsupported "unable to run dwz tool"
+    return
+}
+
+# Some earlier versions of dwz would fail to process the .debug files,
+# producing some error output, but still exit with code 0.  A
+# successful execution of dwz should produce no output.
+if {[lindex $status 1] ne ""} {
+    unsupported "unexpected output from dwz tool"
+    return
+}
+
+clean_restart $testfile
+
+if { ![runto_main] } {
+    return
+}
+
+# This test relies on reading address zero triggering a SIGSEGV.
+# If address zero is readable then give up now.
+if { [is_address_zero_readable] } {
+    unsupported "address zero in readable"
+    return
+}
+
+set crash_line_num [gdb_get_line_number "Crash here" $::srcfile2]
+gdb_test "continue" \
+    "\r\n$crash_line_num\\s+[string_to_regexp {*ptr = 0;	/* Crash here.  */}]"
+
+set call_line_num [gdb_get_line_number "Call line" $::srcfile3]
+gdb_test "up" \
+    "\r\n$call_line_num\\s+[string_to_regexp {cb ();	/* Call line.  */}]"
+
+gdb_test "list" \
+    "\r\n$call_line_num\\s+[string_to_regexp {cb ();	/* Call line.  */}]\r\n.*" \
+    "list default location in $::srcfile3"
+
+set list_line_num [gdb_get_line_number "Second line to list" $::srcfile3]
+gdb_test "list $list_line_num" "$list_line_num\\s+XXX: Second line to list\\.\r\n.*" \
+    "list additional lines in $::srcfile3"
+
+# Use 'maint info symtabs' to list all symtabs and find the
+# symtabs that are associated with libbar.so.
+#
+# Then check that *-foo.c and *-foo.h don't appear in this list.
+#
+# But check that *-bar.c and *-common.h do appear in the list.
+set build_id [get_build_id $::libbar_filename]
+set symtabs [list]
+set collect_symtabs false
+
+gdb_test_multiple "maint info symtabs" "" {
+    -re "^maint info symtabs\r\n" {
+	exp_continue
+    }
+    -re "^\{ objfile (\[^\r\n\]+) \\(\\(struct objfile \\*\\) $::hex\\)\r\n" {
+	set objfile_name $expect_out(1,string)
+	if { [file tail $objfile_name] eq [file tail $libbar_filename] } {
+	    set collect_symtabs true
+	} else {
+	    set collect_symtabs false
+	}
+	exp_continue
+    }
+    -re "^\\s+\{ symtab <unknown> \[^\r\n\]+\r\n" {
+	# Ignore '<unknown>' nameless symtabs.
+	exp_continue
+    }
+    -re "^\\s+\{ symtab (\[^\r\n\]+) \\(\\(struct symtab \\*\\) $::hex\\)\r\n" {
+	if { $collect_symtabs } {
+	    set symtab_name $expect_out(1,string)
+	    lappend symtabs [file tail $symtab_name]
+	}
+	exp_continue
+    }
+    -re "^$::gdb_prompt $" {
+	pass $gdb_test_name
+    }
+    -re "^\[^\r\n\]+\r\n" {
+	exp_continue
+    }
+}
+
+foreach filename [list $::srcfile3 $::srcfile4] {
+    gdb_assert { [lsearch -exact $symtabs $filename] == -1 } \
+	"$filename is not in the symtab list"
+}
+
+foreach filename [list $::srcfile2 $::srcfile5] {
+    gdb_assert { [lsearch -exact $symtabs $filename] != -1 } \
+	"$filename is in the symtab list"
+}

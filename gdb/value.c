@@ -1647,8 +1647,8 @@ make_cv_value (int cnst, int voltl, struct value *v)
   struct type *m_enclosing_type = v->enclosing_type ();
   struct value *cv_val = v->copy ();
 
-  cv_val->deprecated_set_type (make_cv_type (cnst, voltl, val_type, NULL));
-  cv_val->set_enclosing_type (make_cv_type (cnst, voltl, m_enclosing_type, NULL));
+  cv_val->deprecated_set_type (make_cv_type (cnst, voltl, val_type));
+  cv_val->set_enclosing_type (make_cv_type (cnst, voltl, m_enclosing_type));
 
   return cv_val;
 }

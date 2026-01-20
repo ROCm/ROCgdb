@@ -154,9 +154,9 @@ proc make_enum {result_var id parent_list indent_lvl log} {
     upvar $result_var result
 
     set s "[qual_name E$id $parent_list]"
-    set a "[qual_name A$id $parent_list]"
-    set b "[qual_name B$id $parent_list]"
-    set c "[qual_name C$id $parent_list]"
+    set a "[qual_name A$id $parent_list] = 0"
+    set b "[qual_name B$id $parent_list] = 1"
+    set c "[qual_name C$id $parent_list] = 2"
     lappend result [list "type" "public" "enum" $s [list $a $b $c]]
 
     if {$log} {

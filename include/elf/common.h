@@ -1457,6 +1457,8 @@
 #define AT_HWCAP2	26		/* Extension of AT_HWCAP.  */
 #define AT_RSEQ_FEATURE_SIZE	27	/* rseq supported feature size */
 #define AT_RSEQ_ALIGN	28		/* rseq allocation alignment */
+#define AT_HWCAP3	29		/* Extension of AT_HWCAP.  */
+#define AT_HWCAP4	30		/* Extension of AT_HWCAP.  */
 #define AT_EXECFN	31		/* Filename of executable.  */
 /* Pointer to the global system page used for system calls and other
    nice things.  */

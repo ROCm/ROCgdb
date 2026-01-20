@@ -108,6 +108,6 @@ extern void try_open_exec_file (const char *exec_file_host,
 
 /* Report a "No executable file specified" error.  */
 
-extern void no_executable_specified_error ();
+[[noreturn]] extern void no_executable_specified_error ();
 
 #endif /* GDB_EXEC_H */

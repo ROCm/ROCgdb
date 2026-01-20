@@ -61,7 +61,7 @@ oav1_attr_info_free (recorded_attribute_info_t *node)
 }
 
 void
-oav1_attr_info_init ()
+oav1_attr_info_init (void)
 {
   /* Note: this "constructor" was added for symmetry with oav1_attr_info_exit.
      recorded_attributes is a static variable which is automatically initialized
@@ -71,7 +71,7 @@ oav1_attr_info_init ()
 }
 
 void
-oav1_attr_info_exit ()
+oav1_attr_info_exit (void)
 {
   oav1_attr_info_free (recorded_attributes);
 }

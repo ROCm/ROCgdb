@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 load_lib mi-support.exp
@@ -29,7 +29,7 @@ set MIFLAGS "-i=mi"
 mi_clean_restart $::testfile
 
 if {[mi_runto_main] < 0} {
-   return
+    return
 }
 
 set bp_location [gdb_get_line_number "STOP" ${testdir}/foo.adb]

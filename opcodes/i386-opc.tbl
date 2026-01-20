@@ -220,21 +220,21 @@ movbe, 0x60, Movbe&APX_F, D|Modrm|CheckOperandSize|No_bSuf|No_sSuf|EVexMap4, { R
 bswap, 0xfc8, i486, No_bSuf|No_wSuf|No_sSuf, { Reg32|Reg64 }
 
 // Move with sign extend.
-movsb, 0xfbe, i386, Modrm|No_bSuf|No_sSuf, { Reg8|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
-movsw, 0xfbf, i386, Modrm|No_bSuf|No_wSuf|No_sSuf, { Reg16|Unspecified|BaseIndex, Reg32|Reg64 }
-movsl, 0x63, x64, Modrm|No_bSuf|No_wSuf|No_lSuf|No_sSuf, { Reg32|Unspecified|BaseIndex, Reg64 }
-movsx, 0xfbe, i386, W|Modrm|No_lSuf|No_sSuf|No_qSuf, { Reg8|Reg16|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
-movsx, 0x63, x64, Modrm|No_bSuf|No_wSuf|No_sSuf|No_qSuf, { Reg32|Unspecified|BaseIndex, Reg32|Reg64 }
-movsxd, 0x63, x64, Modrm|NoSuf, { Reg32|Unspecified|BaseIndex, Reg32|Reg64 }
+movsb, 0xfbe, i386, Modrm|No_bSuf|No_sSuf|Optimize, { Reg8|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
+movsw, 0xfbf, i386, Modrm|No_bSuf|No_wSuf|No_sSuf|Optimize, { Reg16|Unspecified|BaseIndex, Reg32|Reg64 }
+movsl, 0x63, x64, Modrm|No_bSuf|No_wSuf|No_lSuf|No_sSuf|Optimize, { Reg32|Unspecified|BaseIndex, Reg64 }
+movsx, 0xfbe, i386, W|Modrm|No_lSuf|No_sSuf|No_qSuf|Optimize, { Reg8|Reg16|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
+movsx, 0x63, x64, Modrm|No_bSuf|No_wSuf|No_sSuf|No_qSuf|Optimize, { Reg32|Unspecified|BaseIndex, Reg32|Reg64 }
+movsxd, 0x63, x64, Modrm|NoSuf|Optimize, { Reg32|Unspecified|BaseIndex, Reg32|Reg64 }
 movsxd, 0x63, x64, Amd64|Modrm|NoSuf, { Reg32|Unspecified|BaseIndex, Reg16 }
 movsxd, 0x63, x64, Intel64|Modrm|NoSuf, { Reg16|Unspecified|BaseIndex, Reg16 }
 
 // Move with zero extend.
-movzb, 0xfb6, i386, Modrm|No_bSuf|No_sSuf, { Reg8|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
-movzw, 0xfb7, i386, Modrm|No_bSuf|No_wSuf|No_sSuf, { Reg16|Unspecified|BaseIndex, Reg32|Reg64 }
+movzb, 0xfb6, i386, Modrm|No_bSuf|No_sSuf|Optimize, { Reg8|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
+movzw, 0xfb7, i386, Modrm|No_bSuf|No_wSuf|No_sSuf|Optimize, { Reg16|Unspecified|BaseIndex, Reg32|Reg64 }
 // The 64-bit variant is not particularly useful since the zero extend
 // 32->64 is implicit, but we can encode them.
-movzx, 0xfb6, i386, W|Modrm|No_lSuf|No_sSuf|No_qSuf, { Reg8|Reg16|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
+movzx, 0xfb6, i386, W|Modrm|No_lSuf|No_sSuf|No_qSuf|Optimize, { Reg8|Reg16|Unspecified|BaseIndex, Reg16|Reg32|Reg64 }
 
 // Push instructions.
 push, 0x50, No64, ImplicitStackOp|No_bSuf|No_sSuf|No_qSuf, { Reg16|Reg32 }

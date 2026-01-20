@@ -20,24 +20,24 @@ require allow_ada_tests
 standard_ada_testfile foo_na07_019
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/foo_na07_019.adb]
 if {![runto "foo_na07_019.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test "print something'address + 0" \
-	 "\\(system\\.address\\) $hex <pck\\.something>"
+    "\\(system\\.address\\) $hex <pck\\.something>"
 
 gdb_test "print 0 + something'address" \
-	 "\\(system\\.address\\) $hex <pck\\.something>"
+    "\\(system\\.address\\) $hex <pck\\.something>"
 
 gdb_test "print something'address - 0" \
-	 "\\(system\\.address\\) $hex <pck\\.something>"
+    "\\(system\\.address\\) $hex <pck\\.something>"
 
 gdb_test "print 0 - something'address" \
-	 "\\(system\\.address\\) $hex.*"
+    "\\(system\\.address\\) $hex.*"

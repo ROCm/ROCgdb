@@ -53,11 +53,19 @@ gdb_test "print arg2" " = 4"
 # Xfail for missing DW_AT_type in DW_TAG_enumeration_type, gcc PR debug/16063.
 set have_xfail [expr {[test_compiler_info gcc-*] && [gcc_major_version] < 5}]
 
+set enum1 [multi_line "" \
+    "type = enum enum1 : unsigned int {" \
+    "    <no enum values>" \
+    "}"]
+set enum1_no_type [multi_line "" \
+    "type = enum enum1 {" \
+    "    <no enum values>" \
+    "}"]
 gdb_test_multiple "ptype arg1" "" {
-    -re -wrap "type = enum enum1 : unsigned int \\{\\}" {
+    -re -wrap $enum1 {
 	pass $gdb_test_name
     }
-    -re -wrap "type = enum enum1 \\{\\}" {
+    -re -wrap $enum1_no_type {
 	if { $have_xfail } {
 	    setup_xfail *-*-* gcc/16063
 	}
@@ -65,11 +73,19 @@ gdb_test_multiple "ptype arg1" "" {
     }
 }
 
+set enum2 [multi_line "" \
+    "type = enum class enum2 : unsigned char {" \
+    "    <no enum values>" \
+    "}"]
+set enum2_no_type [multi_line "" \
+    "type = enum class enum2 {" \
+    "    <no enum values>" \
+    "}"]
 gdb_test_multiple "ptype arg2" "" {
-    -re -wrap "type = enum class enum2 : unsigned char \\{\\}" {
+    -re -wrap $enum2 {
 	pass $gdb_test_name
     }
-    -re -wrap "type = enum class enum2 \\{\\}" {
+    -re -wrap $enum2_no_type {
 	if { $have_xfail } {
 	    setup_xfail *-*-* gcc/16063
 	}

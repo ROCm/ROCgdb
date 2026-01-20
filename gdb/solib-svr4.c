@@ -2527,8 +2527,6 @@ svr4_solib_ops::enable_break (svr4_info *info, int from_tty) const
      mean r_brk has already been relocated.  Assume the dynamic linker
      is the object containing r_brk.  */
 
-  solib_add (NULL, from_tty, auto_solib_add);
-
   CORE_ADDR sym_addr = 0;
   CORE_ADDR default_debug_base = this->default_debug_base (info);
 
@@ -3340,6 +3338,11 @@ svr4_solib_ops::create_inferior_hook (int from_tty) const
 
   /* Relocate the main executable if necessary.  */
   svr4_relocate_main_executable ();
+
+  /* Read the initial library list at this point.  Even if the target
+     is not being executed (e.g. loading a core file), we can load the
+     symbols from our sos.  */
+  solib_add (nullptr, from_tty, auto_solib_add);
 
   /* No point setting a breakpoint in the dynamic linker if we can't
      hit it (e.g., a core file, or a trace file).  */

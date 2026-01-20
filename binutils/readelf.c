@@ -1010,6 +1010,50 @@ is_ia64_vms (Filedata * filedata)
     && filedata->file_header.e_ident[EI_OSABI] == ELFOSABI_OPENVMS;
 }
 
+/* Return true if NDX is a special defined section index.  */
+
+static bool
+special_defined_section_index (Filedata *filedata, size_t ndx)
+{
+  if (ndx == SHN_ABS || ndx == SHN_COMMON)
+    return true;
+
+  if (filedata != NULL)
+    switch (filedata->file_header.e_machine)
+      {
+      case EM_MIPS:
+	if (ndx == SHN_MIPS_SCOMMON)
+	  return true;
+	break;
+
+      case EM_TI_C6000:
+	if (ndx == SHN_TIC6X_SCOMMON)
+	  return true;
+	break;
+
+      case EM_X86_64:
+      case EM_L1OM:
+      case EM_K1OM:
+	if (ndx == SHN_X86_64_LCOMMON)
+	  return true;
+	break;
+
+      case EM_IA_64:
+	if (filedata->file_header.e_ident[EI_OSABI] == ELFOSABI_HPUX
+	    && ndx == SHN_IA_64_ANSI_COMMON)
+	  return true;
+
+	if (is_ia64_vms (filedata) && ndx == SHN_IA_64_VMS_SYMVEC)
+	  return true;
+	break;
+
+      default:
+	break;
+      }
+
+  return false;
+}
+
 static const char *
 printable_section_name_from_index (Filedata *  filedata,
 				   size_t      ndx,
@@ -7859,7 +7903,10 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
       internal->sh_entsize   = BYTE_GET (shdrs[i].sh_entsize);
-      if (!probe && internal->sh_link > num)
+      if (!probe
+	  && internal->sh_link >= num
+	  && !special_defined_section_index (filedata,
+					     internal->sh_link))
 	warn (_("Section %u has an out of range sh_link value of %u\n"), i, internal->sh_link);
       if (!probe && internal->sh_flags & SHF_INFO_LINK && internal->sh_info > num)
 	warn (_("Section %u has an out of range sh_info value of %u\n"), i, internal->sh_info);
@@ -7931,7 +7978,10 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_offset    = BYTE_GET (shdrs[i].sh_offset);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
-      if (!probe && internal->sh_link > num)
+      if (!probe
+	  && internal->sh_link >= num
+	  && !special_defined_section_index (filedata,
+					     internal->sh_link))
 	warn (_("Section %u has an out of range sh_link value of %u\n"), i, internal->sh_link);
       if (!probe && internal->sh_flags & SHF_INFO_LINK && internal->sh_info > num)
 	warn (_("Section %u has an out of range sh_info value of %u\n"), i, internal->sh_info);
@@ -9030,6 +9080,9 @@ process_section_headers (Filedata * filedata)
       printf (do_wide ? " %-15s " : " %-15.15s ",
 	      get_section_type_name (filedata, section->sh_type));
 
+      bool special_defined_section
+	= special_defined_section_index (filedata, section->sh_link);
+
       if (is_32bit_elf)
 	{
 	  const char * link_too_big = NULL;
@@ -9046,7 +9099,8 @@ process_section_headers (Filedata * filedata)
 	  else
 	    printf (" %3s ", get_elf_section_flags (filedata, section->sh_flags));
 
-	  if (section->sh_link >= filedata->file_header.e_shnum)
+	  if (!special_defined_section
+	      && section->sh_link >= filedata->file_header.e_shnum)
 	    {
 	      link_too_big = "";
 	      /* The sh_link value is out of range.  Normally this indicates
@@ -9072,20 +9126,27 @@ process_section_headers (Filedata * filedata)
 		}
 	    }
 
+	  if (special_defined_section)
+	    printf ("%2s ",
+		    printable_section_name_from_index (filedata,
+						       section->sh_link,
+						       NULL));
+
 	  if (do_section_details)
 	    {
-	      if (link_too_big != NULL && * link_too_big)
-		printf ("<%s> ", link_too_big);
-	      else
-		printf ("%2u ", section->sh_link);
-	      printf ("%3u %2lu\n", section->sh_info,
-		      (unsigned long) section->sh_addralign);
+	      if (!special_defined_section)
+		{
+		  if (link_too_big != NULL && * link_too_big)
+		    printf ("<%s> ", link_too_big);
+		  else
+		    printf ("%2u ", section->sh_link);
+		}
 	    }
-	  else
-	    printf ("%2u %3u %2lu\n",
-		    section->sh_link,
-		    section->sh_info,
-		    (unsigned long) section->sh_addralign);
+	  else if (!special_defined_section)
+	    printf ("%2u ", section->sh_link);
+
+	  printf ("%3u %2lu\n", section->sh_info,
+		  (unsigned long) section->sh_addralign);
 
 	  if (link_too_big && ! * link_too_big)
 	    warn (_("section %u: sh_link value of %u is larger than the number of sections\n"),
@@ -9122,9 +9183,17 @@ process_section_headers (Filedata * filedata)
 	  if (do_section_details)
 	    fputs ("  ", stdout);
 	  else
-	    printf (" %3s ", get_elf_section_flags (filedata, section->sh_flags));
+	    printf (" %3s ", get_elf_section_flags (filedata,
+						    section->sh_flags));
 
-	  printf ("%2u %3u ", section->sh_link, section->sh_info);
+	  if (special_defined_section)
+	    printf ("%2s ",
+		    printable_section_name_from_index (filedata,
+						       section->sh_link,
+						       NULL));
+	  else
+	    printf ("%2u ", section->sh_link);
+	  printf ("%3u ", section->sh_info);
 
 	  if ((unsigned long) section->sh_addralign == section->sh_addralign)
 	    printf ("%2lu\n", (unsigned long) section->sh_addralign);
@@ -9145,7 +9214,13 @@ process_section_headers (Filedata * filedata)
 	      printf ("  ");
 	      print_vma (section->sh_offset, LONG_HEX);
 	    }
-	  printf ("  %u\n       ", section->sh_link);
+	  if (special_defined_section)
+	    printf ("  %s\n       ",
+		    printable_section_name_from_index (filedata,
+						       section->sh_link,
+						       NULL));
+	  else
+	    printf ("  %u\n       ", section->sh_link);
 	  print_vma (section->sh_size, LONG_HEX);
 	  putchar (' ');
 	  print_vma (section->sh_entsize, LONG_HEX);
@@ -9172,8 +9247,15 @@ process_section_headers (Filedata * filedata)
 
 	  printf (" %3s ", get_elf_section_flags (filedata, section->sh_flags));
 
-	  printf ("     %2u   %3u     %lu\n",
-		  section->sh_link,
+	  if (special_defined_section)
+	    printf ("     %2s",
+		    printable_section_name_from_index (filedata,
+						       section->sh_link,
+						       NULL));
+	  else
+	    printf ("     %2u",
+		    section->sh_link);
+	  printf ("   %3u     %lu\n",
 		  section->sh_info,
 		  (unsigned long) section->sh_addralign);
 	}
@@ -16026,7 +16108,8 @@ is_32bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
     case EM_TI_PRU:
       return reloc_type == 11; /* R_PRU_BFD_RELOC_32.  */
     case EM_RISCV:
-      return reloc_type == 1; /* R_RISCV_32.  */
+      return (reloc_type == 1 /* R_RISCV_32.  */
+	      || reloc_type == 56); /* R_RISCV_SET32.  */
     case EM_RL78:
       return reloc_type == 1; /* R_RL78_DIR32.  */
     case EM_RX:

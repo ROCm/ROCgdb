@@ -26,6 +26,7 @@
 #include "bfd.h"
 #include "libbfd.h"
 #include "aout/ar.h"
+#include "libiberty.h"
 #if defined (_WIN32)
 #include <windows.h>
 #include <locale.h>

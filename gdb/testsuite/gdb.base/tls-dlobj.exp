@@ -57,7 +57,7 @@ proc gdb_test_with_xfail { cmd re cond} {
 
 proc do_tests {force_internal_tls} {
     clean_restart $::testfile
-    if {![runto_main]} {
+    if {![runto main temporary]} {
 	return
     }
 
@@ -65,7 +65,7 @@ proc do_tests {force_internal_tls} {
 	gdb_test_no_output "maint set force-internal-tls-address-lookup on"
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-1"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-1"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-1"
 
     with_test_prefix "before assignments" {
@@ -100,7 +100,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-2"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-2"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-2"
 
     with_test_prefix "at main-breakpoint-2" {
@@ -117,7 +117,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-3"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-3"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-3"
 
     # At this point lib2 and lib3 have been unloaded.  Also, TLS vars
@@ -137,7 +137,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-4"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-4"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-4"
 
     # lib3 has been loaded again; lib2 is the only one not loaded.
@@ -157,7 +157,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-5"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-5"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-5"
 
     # lib2 and lib3 are loaded; lib1 and lib4 are not.
@@ -177,7 +177,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-6"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-6"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-6"
 
     # lib1, lib3 and lib4 are loaded; lib2 is not loaded.
@@ -197,7 +197,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-7"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-7"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-7"
 
     # lib2 and lib3 are loaded; lib1 and lib4 are not.
@@ -217,7 +217,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-8"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-8"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-8"
 
     # lib1, lib2, lib3, and lib4 are all loaded.
@@ -236,7 +236,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-9"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-9"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-9"
 
     # lib2 is loaded; lib1, lib3, and lib4 are not.
@@ -255,7 +255,7 @@ proc do_tests {force_internal_tls} {
 	}
     }
 
-    gdb_breakpoint [gdb_get_line_number "main-breakpoint-10"]
+    gdb_breakpoint [gdb_get_line_number "main-breakpoint-10"] temporary
     gdb_continue_to_breakpoint "main-breakpoint-10"
 
     # lib3 and lib4 are loaded; lib1 and lib2 are not.

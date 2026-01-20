@@ -338,7 +338,6 @@ static const struct pd_reg pre_defined_registers[] =
   { "ctr", 9, PPC_OPERAND_SPR },
   { "dar", 19, PPC_OPERAND_SPR },
   { "dec", 22, PPC_OPERAND_SPR },
-  { "dsisr", 18, PPC_OPERAND_SPR },
 
   /* Dense Math Registers.  */
   { "dm0", 0, PPC_OPERAND_DMR },
@@ -349,6 +348,8 @@ static const struct pd_reg pre_defined_registers[] =
   { "dm5", 5, PPC_OPERAND_DMR },
   { "dm6", 6, PPC_OPERAND_DMR },
   { "dm7", 7, PPC_OPERAND_DMR },
+
+  { "dsisr", 18, PPC_OPERAND_SPR },
 
   /* Floating point registers */
   { "f.0", 0, PPC_OPERAND_FPR },

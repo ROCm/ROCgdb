@@ -444,8 +444,8 @@ MY_bfd_final_link (bfd *abfd, struct bfd_link_info *info)
 #ifndef MY_canonicalize_reloc
 #define MY_canonicalize_reloc NAME (aout, canonicalize_reloc)
 #endif
-#ifndef MY_set_reloc
-#define MY_set_reloc _bfd_generic_set_reloc
+#ifndef MY_finalize_section_relocs
+#define MY_finalize_section_relocs _bfd_generic_finalize_section_relocs
 #endif
 #ifndef MY_make_empty_symbol
 #define MY_make_empty_symbol NAME (aout, make_empty_symbol)

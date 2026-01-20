@@ -6,6 +6,8 @@
 * Support for .gdb_index sections with version less than 7 has been
   removed.
 
+* Support for DWP (DWARF Package File) version 1 has been removed.
+
 * Support for Guile 2.0 has been removed.  Guile 2.2 is now the minimal
   supported Guile version.
 
@@ -52,6 +54,7 @@
   version number has not increased as a consequence of this change.
   This fixes an issue where GDB could fail to find a type when relying
   on the index.  Any existing indexes should be regenerated.
+
 * Support for Floating Point Mode Register (FPMR) in AArch64.
 
 * New targets
@@ -96,6 +99,11 @@ New command class for help
 
   ** Unhandled Ada exceptions can now be caught using the "unhandled"
      exception filter.
+
+  ** The launch and attach requests now accept the adaSourceCharset
+     parameter.
+
+  ** Constants are now returned in scopes.
 
 * Changed remote packets
 

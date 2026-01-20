@@ -1595,7 +1595,7 @@ _bfd_s390_elf_create_sframe_plt (struct bfd_link_info *info)
   num_pltn_fres = htab->sframe_plt->pltn_num_fres;
   num_pltn_entries = (dpltsec->size - plt0_entry_size) / plt_entry_size;
 
-  *ectx = sframe_encode (SFRAME_VERSION_2,
+  *ectx = sframe_encode (SFRAME_VERSION_3,
 			 SFRAME_F_FDE_FUNC_START_PCREL,
 			 SFRAME_ABI_S390X_ENDIAN_BIG,
 			 SFRAME_CFA_FIXED_FP_INVALID,
@@ -1604,7 +1604,7 @@ _bfd_s390_elf_create_sframe_plt (struct bfd_link_info *info)
 
   /* FRE type is dependent on the size of the function.  */
   fre_type = sframe_calc_fre_type (dpltsec->size);
-  func_info = sframe_fde_create_func_info (fre_type, SFRAME_FDE_TYPE_PCINC);
+  func_info = sframe_fde_create_func_info (fre_type, SFRAME_V3_FDE_PCTYPE_INC);
 
   /* Add SFrame FDE and the associated FREs for PLT0 if PLT0 has been
      generated.  */
@@ -1612,10 +1612,11 @@ _bfd_s390_elf_create_sframe_plt (struct bfd_link_info *info)
     {
       /* Add SFrame FDE for PLT0, the function start address is updated later
 	 at _bfd_elf_merge_section_sframe time.  */
-      sframe_encoder_add_funcdesc_v2 (*ectx,
+      sframe_encoder_add_funcdesc_v3 (*ectx,
 				      0, /* func start addr.  */
 				      plt0_entry_size,
 				      func_info,
+				      0, /* func_info2.  */
 				      0, /* Rep block size.  */
 				      0 /* Num FREs.  */);
       sframe_frame_row_entry plt0_fre;
@@ -1630,26 +1631,27 @@ _bfd_s390_elf_create_sframe_plt (struct bfd_link_info *info)
   if (num_pltn_entries)
     {
       /* PLTn entries use an SFrame FDE of type
-	 SFRAME_FDE_TYPE_PCMASK to exploit the repetitive
+	 SFRAME_V3_FDE_PCTYPE_MASK to exploit the repetitive
 	 pattern of the instructions in these entries.  Using this SFrame FDE
 	 type helps in keeping the SFrame stack trace info for PLTn entries
 	 compact.  */
-      func_info	= sframe_fde_create_func_info (fre_type,
-					       SFRAME_FDE_TYPE_PCMASK);
+      func_info = sframe_fde_create_func_info (fre_type,
+					       SFRAME_V3_FDE_PCTYPE_MASK);
       /* Add the SFrame FDE for all PCs starting at the first PLTn entry (hence,
 	 function start address = plt0_entry_size.  As usual, this will be
 	 updated later at _bfd_elf_merge_section_sframe, by when the
 	 sections are relocated.  */
-      sframe_encoder_add_funcdesc_v2 (*ectx,
+      sframe_encoder_add_funcdesc_v3 (*ectx,
 				      plt0_entry_size, /* func start addr.  */
 				      dpltsec->size - plt0_entry_size,
 				      func_info,
+				      0, /* func_info2.  */
 				      plt_entry_size,
 				      0 /* Num FREs.  */);
 
       sframe_frame_row_entry pltn_fre;
       /* Now add the FREs for PLTn.  Simply adding the FREs suffices due
-	 to the usage of SFRAME_FDE_TYPE_PCMASK above.  */
+	 to the usage of SFRAME_V3_FDE_PCTYPE_MASK above.  */
       for (unsigned int j = 0; j < num_pltn_fres; j++)
 	{
 	  unsigned int func_idx = plt0_entry_size ? 1 : 0;
@@ -4030,7 +4032,7 @@ elf_s390_finish_dynamic_sections (bfd *output_bfd,
 	  bfd_vma sframe_start = htab->plt_sframe->output_section->vma
 				   + htab->plt_sframe->output_offset
 				   + PLT_SFRAME_FDE_START_OFFSET;
-	  bfd_put_signed_32 (dynobj, plt_start - sframe_start,
+	  bfd_put_signed_64 (dynobj, plt_start - sframe_start,
 			     htab->plt_sframe->contents
 			     + PLT_SFRAME_FDE_START_OFFSET);
 	}
@@ -4307,7 +4309,7 @@ elf_s390_create_dynamic_sections (bfd *dynobj,
         }
 
       /* Create .sframe section for .plt section.  */
-      if (!info->no_ld_generated_unwind_info)
+      if (!info->discard_sframe)
 	{
 	  flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY
 			    | SEC_HAS_CONTENTS | SEC_IN_MEMORY

@@ -1252,7 +1252,6 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_num_regs (gdbarch, 13);
       set_gdbarch_num_pseudo_regs (gdbarch, 1);
       set_gdbarch_dwarf2_reg_to_regnum (gdbarch, h8300_dbg_reg_to_regnum);
-      set_gdbarch_stab_reg_to_regnum (gdbarch, h8300_dbg_reg_to_regnum);
       set_gdbarch_register_name (gdbarch, h8300_register_name);
       set_gdbarch_ptr_bit (gdbarch, 2 * TARGET_CHAR_BIT);
       set_gdbarch_addr_bit (gdbarch, 2 * TARGET_CHAR_BIT);
@@ -1263,7 +1262,6 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_num_regs (gdbarch, 13);
       set_gdbarch_num_pseudo_regs (gdbarch, 1);
       set_gdbarch_dwarf2_reg_to_regnum (gdbarch, h8300_dbg_reg_to_regnum);
-      set_gdbarch_stab_reg_to_regnum (gdbarch, h8300_dbg_reg_to_regnum);
       set_gdbarch_register_name (gdbarch, h8300h_register_name);
       if (info.bfd_arch_info->mach != bfd_mach_h8300hn)
 	{
@@ -1282,7 +1280,6 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_num_regs (gdbarch, 16);
       set_gdbarch_num_pseudo_regs (gdbarch, 2);
       set_gdbarch_dwarf2_reg_to_regnum (gdbarch, h8300s_dbg_reg_to_regnum);
-      set_gdbarch_stab_reg_to_regnum (gdbarch, h8300s_dbg_reg_to_regnum);
       set_gdbarch_register_name (gdbarch, h8300s_register_name);
       if (info.bfd_arch_info->mach != bfd_mach_h8300sn)
 	{
@@ -1301,7 +1298,6 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_num_regs (gdbarch, 18);
       set_gdbarch_num_pseudo_regs (gdbarch, 2);
       set_gdbarch_dwarf2_reg_to_regnum (gdbarch, h8300s_dbg_reg_to_regnum);
-      set_gdbarch_stab_reg_to_regnum (gdbarch, h8300s_dbg_reg_to_regnum);
       set_gdbarch_register_name (gdbarch, h8300sx_register_name);
       if (info.bfd_arch_info->mach != bfd_mach_h8300sxn)
 	{

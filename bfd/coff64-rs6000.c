@@ -2665,7 +2665,7 @@ const bfd_target rs6000_xcoff64_vec =
     /* Reloc */
     coff_get_reloc_upper_bound,
     coff_canonicalize_reloc,
-    _bfd_generic_set_reloc,
+    _bfd_generic_finalize_section_relocs,
     xcoff64_reloc_type_lookup,
     xcoff64_reloc_name_lookup,
 
@@ -2935,7 +2935,7 @@ const bfd_target rs6000_xcoff64_aix_vec =
     /* Reloc */
     coff_get_reloc_upper_bound,
     coff_canonicalize_reloc,
-    _bfd_generic_set_reloc,
+    _bfd_generic_finalize_section_relocs,
     xcoff64_reloc_type_lookup,
     xcoff64_reloc_name_lookup,
 

@@ -93,7 +93,6 @@
 #include "command.h"
 #include "cli/cli-cmds.h"
 #include "floatformat.h"
-#include "buildsym-legacy.h"
 #include "i387-tdep.h"
 #include "i386-tdep.h"
 #include "nat/x86-cpuid.h"

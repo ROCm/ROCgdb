@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -31,9 +31,9 @@ clean_restart ${testfile}
 # The actual value printed is of no interest in this testcase.
 
 gdb_test "print short_integer'first" \
-	 "= -\[0-9\]+" \
-	 "print short-integer'first"
+    "= -\[0-9\]+" \
+    "print short-integer'first"
 
 gdb_test "print short_integer'last" \
-	 "= \[0-9\]+" \
-	 "print short-integer'last"
+    "= \[0-9\]+" \
+    "print short-integer'last"

@@ -20,24 +20,24 @@ require allow_ada_tests
 standard_ada_testfile bar
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "START" ${testdir}/bar.adb]
 if {![runto "bar.adb:$bp_location"]} {
-  return
+    return
 }
 
 gdb_test "print itable'first" \
-	 "= 2"
+    "= 2"
 
 gdb_test "print itable'last" \
-	 "= 5"
+    "= 5"
 
 gdb_test "print table'first" \
-	 "= zero"
+    "= zero"
 
 gdb_test "print table'last" \
-	 "= two"
+    "= two"

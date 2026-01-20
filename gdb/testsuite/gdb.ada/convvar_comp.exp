@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile pb16_063
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -28,7 +28,7 @@ clean_restart ${testfile}
 set bp_location [gdb_get_line_number "BREAK" "$testdir/pck.adb"]
 
 if {![runto pck.adb:$bp_location]} {
-  return
+    return
 }
 
 set val ""

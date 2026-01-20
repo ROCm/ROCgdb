@@ -64,7 +64,7 @@ extern void set_force_quit_flag ();
 
 /* Control C eventually causes this to be called, at a convenient time.  */
 
-extern void quit ();
+[[noreturn]] extern void quit ();
 
 /* Helper for the QUIT macro.  */
 

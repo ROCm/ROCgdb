@@ -385,6 +385,30 @@ struct s390_sigtramp_unwind_cache {
   trad_frame_saved_reg *saved_regs;
 };
 
+/* Return true if the frame pc of THIS_FRAME points to either
+   __kernel_rt_sigreturn or __kernel_sigreturn.  Return the corresponding
+   syscall number in SYSCALL_NR.  */
+
+static bool
+s390_sigtramp_p (const frame_info_ptr &this_frame, int *syscall_nr_ptr)
+{
+  CORE_ADDR pc = get_frame_pc (this_frame);
+  bfd_byte sigreturn[2];
+
+  if (target_read_memory (pc, sigreturn, 2))
+    return false;
+
+  if (sigreturn[0] != op_svc)
+    return false;
+
+  int syscall_nr = sigreturn[1];
+  if (syscall_nr_ptr != nullptr)
+    *syscall_nr_ptr = syscall_nr;
+
+  return (syscall_nr == 119 /* sigreturn */
+	  || syscall_nr == 173 /* rt_sigreturn */);
+}
+
 /* Unwind THIS_FRAME and return the corresponding unwind cache for
    s390_sigtramp_frame_unwind.  */
 
@@ -397,7 +421,7 @@ s390_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
   int word_size = gdbarch_ptr_bit (gdbarch) / 8;
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST this_sp, prev_sp;
-  CORE_ADDR next_ra, next_cfa, sigreg_ptr, sigreg_high_off;
+  CORE_ADDR next_cfa, sigreg_ptr, sigreg_high_off;
   int i;
 
   if (*this_prologue_cache)
@@ -408,14 +432,17 @@ s390_sigtramp_frame_unwind_cache (const frame_info_ptr &this_frame,
   info->saved_regs = trad_frame_alloc_saved_regs (this_frame);
 
   this_sp = get_frame_register_unsigned (this_frame, S390_SP_REGNUM);
-  next_ra = get_frame_pc (this_frame);
   next_cfa = this_sp + 16*word_size + 32;
+
+  int syscall_nr;
+  bool res = s390_sigtramp_p (this_frame, &syscall_nr);
+  gdb_assert (res);
 
   /* New-style RT frame:
 	retcode + alignment (8 bytes)
 	siginfo (128 bytes)
 	ucontext (contains sigregs at offset 5 words).  */
-  if (next_ra == next_cfa)
+  if (syscall_nr == 173 /* rt_sigreturn */)
     {
       sigreg_ptr = next_cfa + 8 + 128 + align_up (5*word_size, 8);
       /* sigregs are followed by uc_sigmask (8 bytes), then by the
@@ -525,20 +552,7 @@ s390_sigtramp_frame_sniffer (const struct frame_unwind *self,
 			     const frame_info_ptr &this_frame,
 			     void **this_prologue_cache)
 {
-  CORE_ADDR pc = get_frame_pc (this_frame);
-  bfd_byte sigreturn[2];
-
-  if (target_read_memory (pc, sigreturn, 2))
-    return 0;
-
-  if (sigreturn[0] != op_svc)
-    return 0;
-
-  if (sigreturn[1] != 119 /* sigreturn */
-      && sigreturn[1] != 173 /* rt_sigreturn */)
-    return 0;
-
-  return 1;
+  return s390_sigtramp_p (this_frame, nullptr) ? 1 : 0;
 }
 
 /* S390 sigtramp frame unwinder.  */
@@ -1187,7 +1201,7 @@ s390_linux_init_abi_any (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_get_syscall_number (gdbarch, s390_linux_get_syscall_number);
 
   /* Frame handling.  */
-  frame_unwind_append_unwinder (gdbarch, &s390_sigtramp_frame_unwind);
+  frame_unwind_prepend_unwinder (gdbarch, &s390_sigtramp_frame_unwind);
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
 
   /* Enable TLS support.  */

@@ -908,6 +908,14 @@ ax_printf (CORE_ADDR fn, CORE_ADDR chan, const char *format,
 	    break;
 	  }
 
+	case ptrdiff_t_arg:
+	  {
+	    ptrdiff_t val = args[i];
+
+	    printf (current_substring, val);
+	    break;
+	  }
+
 	case literal_piece:
 	  /* Print a portion of the format string that has no
 	     directives.  Note that this will not include any

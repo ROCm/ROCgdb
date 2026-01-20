@@ -28,8 +28,8 @@
 char *
 get_print_cell (void)
 {
-  static char buf[NUMCELLS][PRINT_CELL_SIZE];
-  static int cell = 0;
+  static thread_local char buf[NUMCELLS][PRINT_CELL_SIZE];
+  static thread_local int cell = 0;
 
   if (++cell >= NUMCELLS)
     cell = 0;

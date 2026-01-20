@@ -154,8 +154,6 @@ extern int yquery (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
 extern void begin_line (void);
 
-extern void wrap_here (int);
-
 extern void reinitialize_more_filter (void);
 
 /* Return the number of characters in a line.  Will never be zero, but can
@@ -354,7 +352,7 @@ extern void warn_cant_dump_core (const char *reason);
 /* Dump core trying to increase the core soft limit to hard limit
    first.  */
 
-extern void dump_core (void);
+[[noreturn]] extern void dump_core ();
 
 /* Copy NBITS bits from SOURCE to DEST starting at the given bit
    offsets.  Use the bit order as specified by BITS_BIG_ENDIAN.

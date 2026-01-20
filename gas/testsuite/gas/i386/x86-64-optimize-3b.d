@@ -81,6 +81,16 @@ Disassembly of section .text:
  +[a-f0-9]+:	66 85 f6             	test   %si,%si
  +[a-f0-9]+:	09 ff                	or     %edi,%edi
  +[a-f0-9]+:	4d 85 c0             	test   %r8,%r8
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	48 98                	cltq
+ +[a-f0-9]+:	48 98                	cltq
+ +[a-f0-9]+:	48 98                	cltq
+ +[a-f0-9]+:	66 98                	cbtw
+ +[a-f0-9]+:	98                   	cwtl
+ +[a-f0-9]+:	48 98                	cltq
  +[a-f0-9]+:	c5 f1 55 e9          	vandnpd %xmm1,%xmm1,%xmm5
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2

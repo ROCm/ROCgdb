@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile foo
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
-  return
+    return
 }
 
 clean_restart ${testfile}
@@ -31,10 +31,10 @@ runto "foo.adb:$bp_location"
 # Hijack a bit this testcase, to verify that name decoding works
 # when doing symbolic address printing.
 gdb_test "print watch'address" \
-	 " = \\(system\\.address\\) $hex <pck\\.watch>"
+    " = \\(system\\.address\\) $hex <pck\\.watch>"
 
 gdb_test "print *long_integer(watch'address)" \
-	 " = 4874"
+    " = 4874"
 
 gdb_test "print long_integer(watch'address).all" \
-	 " = 4874"
+    " = 4874"

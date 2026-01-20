@@ -651,6 +651,8 @@ if [gas_32_check] then {
     run_dump_test "optimize-6b"
     run_list_test "optimize-7" "-I${srcdir}/$subdir -march=+noavx2 -al"
     run_list_test "optimize-8" "-Os"
+    run_dump_test "optimize16-O2"
+    run_dump_test "optimize16-Os"
     run_dump_test "noopt"
     run_dump_test "lea-optimize"
     run_dump_test "lea16-optimize"
@@ -739,11 +741,14 @@ if [gas_32_check] then {
 	run_dump_test "intel-cmps16"
 	run_list_test "inval-equ-1" "-al"
 	run_list_test "inval-equ-2" "-al"
-	run_dump_test "ifunc"
-	run_list_test "ifunc-2"
-	run_dump_test "ifunc-3"
 	run_dump_test "localpic"
 	run_dump_test "debug1"
+
+	if {[supports_gnu_osabi]} then {
+	    run_dump_test "ifunc"
+	    run_list_test "ifunc-2"
+	    run_dump_test "ifunc-3"
+	}
 
 	run_dump_test "dwarf2-line-1"
 	run_dump_test "dwarf2-line-2"

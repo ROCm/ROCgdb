@@ -543,6 +543,8 @@ aarch64_find_real_opcode (const aarch64_opcode *opcode)
     case A64_OPID_d503241f_bti_BTI_TARGET:
     case A64_OPID_d503229f_csdb:
     case A64_OPID_d503201f_nop:
+    case A64_OPID_d503265f_shuh_SHUH_PHINT:
+    case A64_OPID_d503269f_stcph:
     case A64_OPID_d503261f_stshh_STSHH_POLICY:
     case A64_OPID_d503201f_hint_UIMM7:
       value = A64_OPID_d503201f_hint_UIMM7;
@@ -570,6 +572,7 @@ aarch64_find_real_opcode (const aarch64_opcode *opcode)
     case A64_OPID_d5080000_ic_SYSREG_IC_Rt_SYS:
     case A64_OPID_d5080000_dc_SYSREG_DC_Rt:
     case A64_OPID_d5080000_at_SYSREG_AT_Rt:
+    case A64_OPID_d5080000_mlbi_SYSREG_MLBI_Rt_SYS:
     case A64_OPID_d5080000_sys_UIMM3_OP1_CRn_CRm_UIMM3_OP2_Rt:
       value = A64_OPID_d5080000_sys_UIMM3_OP1_CRn_CRm_UIMM3_OP2_Rt;
       break;
@@ -1021,6 +1024,7 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
     case AARCH64_OPND_SYSREG_PLBI:
+    case AARCH64_OPND_SYSREG_MLBI:
     case AARCH64_OPND_SYSREG_SR:
     case AARCH64_OPND_GIC:
     case AARCH64_OPND_GICR:
@@ -1035,6 +1039,7 @@ aarch64_insert_operand (const aarch64_operand *self,
       return aarch64_ins_prfop (self, info, code, inst, errors);
     case AARCH64_OPND_BTI_TARGET:
     case AARCH64_OPND_STSHH_POLICY:
+    case AARCH64_OPND_SHUH_PHINT:
       return aarch64_ins_hint (self, info, code, inst, errors);
     case AARCH64_OPND_SVE_ADDR_RI_S4x16:
     case AARCH64_OPND_SVE_ADDR_RI_S4x32:

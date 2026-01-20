@@ -2849,6 +2849,16 @@ ui_printf (const char *arg, struct ui_file *stream)
 	      DIAGNOSTIC_POP
 	      break;
 	    }
+	  case ptrdiff_t_arg:
+	    {
+	      ptrdiff_t val = value_as_long (val_args[i]);
+
+	      DIAGNOSTIC_PUSH
+	      DIAGNOSTIC_IGNORE_FORMAT_NONLITERAL
+		gdb_printf (stream, current_substring, val);
+	      DIAGNOSTIC_POP
+	      break;
+	    }
 	  /* Handles floating-point values.  */
 	  case double_arg:
 	  case long_double_arg:

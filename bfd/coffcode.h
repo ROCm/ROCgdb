@@ -5431,8 +5431,8 @@ coff_canonicalize_reloc (bfd * abfd,
   return section->reloc_count;
 }
 
-#ifndef coff_set_reloc
-#define coff_set_reloc _bfd_generic_set_reloc
+#ifndef coff_finalize_section_relocs
+#define coff_finalize_section_relocs _bfd_generic_finalize_section_relocs
 #endif
 
 #ifndef coff_reloc16_estimate

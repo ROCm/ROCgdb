@@ -2257,11 +2257,6 @@ ppc_linux_init_abi (struct gdbarch_info info,
   /* Linux DWARF register mapping is different from the other OSes.  */
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch,
 				    rs6000_linux_dwarf2_reg_to_regnum);
-  /* Note on Linux the mapping for the DWARF registers and the stab registers
-     use the same numbers.  Install rs6000_linux_dwarf2_reg_to_regnum for the
-     stab register mappings as well.  */
-  set_gdbarch_stab_reg_to_regnum (gdbarch,
-				    rs6000_linux_dwarf2_reg_to_regnum);
   dwarf2_frame_set_adjust_regnum (gdbarch, rs6000_linux_adjust_frame_regnum);
 
   if (tdep->wordsize == 4)

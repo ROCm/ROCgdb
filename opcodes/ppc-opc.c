@@ -4628,6 +4628,12 @@ const unsigned int num_powerpc_operands = ARRAY_SIZE (powerpc_operands);
    field.  */
 #define XWC_MASK (XRC (0x3f, 0x3ff, 1) | (7 << 23) | RA_MASK | RB_MASK)
 
+/* The mask of TLB invalidate Entry with 20th bit specified.  */
+#define XTLBIE_MASK (X_MASK | (1<<20))
+
+/* The mask of TLB invalidate Entry for I/O device.  */
+#define XTLBIEIO_MASK (XTLBIE_MASK | (3<<16))
+
 /* An X form wait instruction with everything filled in except the WC
    and PL fields.  */
 #define XWCPL_MASK (XRC (0x3f, 0x3ff, 1) | (7 << 23) | (3 << 18) | RB_MASK)
@@ -7238,6 +7244,7 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"iseleq",	XISEL(31,15,2),	X_MASK,	     PPCISEL,	EXT,		{RT, RA0, RB}},
 {"isel",	XISEL(31,15,0), XISEL_MASK, PPCISEL|TITAN, 0,		{RT, RA0, RB, BC}},
 
+{"tlbieio",	X(31,18), 	XTLBIEIO_MASK, FUTURE,	0,		{RB, RS, RIC}},
 {"tlbilxlpid",	XTO(31,18,0),	XTO_MASK, E500MC|PPCA2,	0,		{0}},
 {"tlbilxpid",	XTO(31,18,1),	XTO_MASK, E500MC|PPCA2,	0,		{0}},
 {"tlbilxva",	XTO(31,18,3),	XTO_MASK, E500MC|PPCA2,	0,		{RA0, RB}},
@@ -7296,6 +7303,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"lxvrhx",	X(31,45),	XX1_MASK,    POWER10,	0,		{XT6, RA0, RB}},
 
 {"mviwsplt",	X(31,46),	X_MASK,	     E6500,	0,		{VD, RA, RB}},
+
+{"tlbiep",	X(31,50),	XTLBIE_MASK, FUTURE,	TITAN,		{RB, RS, RIC, PRS, X_R}},
 
 {"lvewx",	X(31,71),	X_MASK,	     PPCVEC,	0,		{VD, RA0, RB}},
 
@@ -7923,6 +7932,14 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"mfsier3",	XSPR(31,339,737), XSPR_MASK, POWER10,	EXT, 		{RT}},
 {"mfummcr3",	XSPR(31,339,738), XSPR_MASK, POWER10,	EXT, 		{RT}},
 {"mfmmcr3",	XSPR(31,339,738), XSPR_MASK, POWER10,	EXT, 		{RT}},
+{"mfummcrae",	XSPR(31,339,739), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfmmcrae",	XSPR(31,339,739), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfummcr1e",	XSPR(31,339,740), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfmmcr1e",	XSPR(31,339,740), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfummcr2e",	XSPR(31,339,741), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfmmcr2e",	XSPR(31,339,741), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfummcr3e",	XSPR(31,339,742), XSPR_MASK, FUTURE,	EXT, 		{RT}},
+{"mfmmcr3e",	XSPR(31,339,742), XSPR_MASK, FUTURE,	EXT, 		{RT}},
 {"mfusier",	XSPR(31,339,768), XSPR_MASK, POWER10,	EXT, 		{RT}},
 {"mfsier",	XSPR(31,339,768), XSPR_MASK, POWER10,	EXT, 		{RT}},
 {"mfummcr2",	XSPR(31,339,769), XSPR_MASK, POWER9,	EXT, 		{RT}},
@@ -7941,6 +7958,10 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"mfpmc5",	XSPR(31,339,775), XSPR_MASK, POWER7,	EXT,		{RT}},
 {"mfupmc6",	XSPR(31,339,776), XSPR_MASK, POWER9,	EXT,		{RT}},
 {"mfpmc6",	XSPR(31,339,776), XSPR_MASK, POWER7,	EXT,		{RT}},
+{"mfupmc7",	XSPR(31,339,777), XSPR_MASK, FUTURE,	EXT,		{RT}},
+{"mfpmc7",	XSPR(31,339,777), XSPR_MASK, FUTURE,	EXT,		{RT}},
+{"mfupmc8",	XSPR(31,339,778), XSPR_MASK, FUTURE,	EXT,		{RT}},
+{"mfpmc8",	XSPR(31,339,778), XSPR_MASK, FUTURE,	EXT,		{RT}},
 {"mfummcr0",	XSPR(31,339,779), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mfmmcr0",	XSPR(31,339,779), XSPR_MASK, POWER7,	EXT,		{RS}},
 {"mfusiar",	XSPR(31,339,780), XSPR_MASK, POWER9,	EXT,		{RS}},
@@ -8384,9 +8405,15 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"mtmcsrr0",	XSPR(31,467,570), XSPR_MASK, PPCRFMCI,	EXT,		{RS}},
 {"mtmcsrr1",	XSPR(31,467,571), XSPR_MASK, PPCRFMCI,	EXT,		{RS}},
 {"mtmcsr",	XSPR(31,467,572), XSPR_MASK, PPCRFMCI,	EXT,		{RS}},
+{"mtummcrae",	XSPR(31,467,739), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtummcr2e",	XSPR(31,467,741), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtmmcr2e",	XSPR(31,467,741), XSPR_MASK, FUTURE,	EXT,		{RS}},
 {"mtsier2",	XSPR(31,467,752), XSPR_MASK, POWER10,	EXT,		{RS}},
 {"mtsier3",	XSPR(31,467,753), XSPR_MASK, POWER10,	EXT,		{RS}},
 {"mtmmcr3",	XSPR(31,467,754), XSPR_MASK, POWER10,	EXT,		{RS}},
+{"mtmmcrae",	XSPR(31,467,755), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtmmcr1e",	XSPR(31,467,756), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtmmcr3e",	XSPR(31,467,758), XSPR_MASK, FUTURE,	EXT,		{RS}},
 {"mtummcr2",	XSPR(31,467,769), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mtmmcr2",	XSPR(31,467,769), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mtummcra",	XSPR(31,467,770), XSPR_MASK, POWER9,	EXT,		{RS}},
@@ -8396,6 +8423,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"mtupmc4",	XSPR(31,467,774), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mtupmc5",	XSPR(31,467,775), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mtupmc6",	XSPR(31,467,776), XSPR_MASK, POWER9,	EXT,		{RS}},
+{"mtupmc7",	XSPR(31,467,777), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtupmc8",	XSPR(31,467,778), XSPR_MASK, FUTURE,	EXT,		{RS}},
 {"mtummcr0",	XSPR(31,467,779), XSPR_MASK, POWER9,	EXT,		{RS}},
 {"mtsier",	XSPR(31,467,784), XSPR_MASK, POWER10,	EXT,		{RS}},
 {"mtmmcra",	XSPR(31,467,786), XSPR_MASK, POWER7,	EXT,		{RS}},
@@ -8405,6 +8434,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"mtpmc4",	XSPR(31,467,790), XSPR_MASK, POWER7,	EXT,		{RS}},
 {"mtpmc5",	XSPR(31,467,791), XSPR_MASK, POWER7,	EXT,		{RS}},
 {"mtpmc6",	XSPR(31,467,792), XSPR_MASK, POWER7,	EXT,		{RS}},
+{"mtpmc7",	XSPR(31,467,793), XSPR_MASK, FUTURE,	EXT,		{RS}},
+{"mtpmc8",	XSPR(31,467,794), XSPR_MASK, FUTURE,	EXT,		{RS}},
 {"mtmmcr0",	XSPR(31,467,795), XSPR_MASK, POWER7,	EXT,		{RS}},
 {"mtsiar",	XSPR(31,467,796), XSPR_MASK, POWER10,	EXT,		{RS}},
 {"mtsdar",	XSPR(31,467,797), XSPR_MASK, POWER10,	EXT,		{RS}},
@@ -8605,6 +8636,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 
 {"lxvrll",	X(31,557),	XX1_MASK,    PPCVSXF,	0,		{XT6, RA0, RB}},
 
+{"tlbsyncio",	X(31,564),	XRARB_MASK,  FUTURE,	0,		{RS}},
+
 {"tlbsync",	X(31,566),	0xffffffff,  PPC,	0,		{0}},
 
 {"lfsux",	X(31,567),	X_MASK,	     COM,	PPCEFS,		{FRT, RAS, RB}},
@@ -8629,6 +8662,8 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"lxvprl",	X(31,589),	XX1_MASK,    PPCVSXF,	0,		{XTP, RA0, RB}},
 
 {"mfsr",	X(31,595), XRB_MASK|(1<<20), COM,	NON32,		{RT, SR}},
+
+{"ptesyncio",	X(31,596),	XRARB_MASK,  FUTURE,	0,		{RS}},
 
 {"lswi",	X(31,597),	X_MASK,	     PPCCOM,	E500|E500MC,	{RT, RAX, NBI}},
 {"lsi",		X(31,597),	X_MASK,	     PWRCOM,	0,		{RT, RA0, NB}},
