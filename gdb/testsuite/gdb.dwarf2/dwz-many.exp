@@ -1,0 +1,81 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile .c -dw.S -2.c
+
+# Create the DWARF.
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    for {set i 0} {$i < 100} {incr i} {
+	cu {} {
+	    partial_unit {} {
+		base_type {
+		    DW_AT_name int
+		    DW_AT_byte_size 4 sdata
+		    DW_AT_encoding @DW_ATE_signed
+		}
+	    }
+	}
+    }
+}
+
+if {[prepare_for_testing_full "failed to prepare" \
+	 [list \
+	      $testfile {debug} \
+	      $srcfile {nodebug} \
+	      $asm_file {nodebug} \
+	      $srcfile3 {debug}]]} {
+    return -1
+}
+
+set linenr [gdb_get_line_number "return 0" $srcfile3]
+
+for {set i 0} {$i < 100} {incr i} {
+    with_test_prefix $i {
+	gdb_test "info line $srcfile3:$linenr"
+    }
+}
+
+set re \
+    [multi_line \
+	 "  Number of read units: ($decimal)" \
+	 "  Number of unread units: ($decimal)" \
+	 "  Number of read top-level DIEs: ($decimal)" \
+	 ".*"]
+
+gdb_test_multiple "maint print statistics" "" {
+    -re -wrap $re {
+	set read_cu $expect_out(1,string)
+	set unread_cu $expect_out(2,string)
+	set top_level_die $expect_out(3,string)
+    }
+}
+
+# Regression test for PR symtab/33777.  Without the fix we have:
+#   Number of read units: 1
+#   Number of unread units: 108
+#   Number of read top-level DIEs: 10118
+# and with the fix we have:
+#   Number of read units: 1
+#   Number of unread units: 108
+#   Number of read top-level DIEs: 218
+# so $top_level_die == 2 * ( $read_cu + $unread_cu ).  However, for some
+# target boards $top_level_die is slightly larger, so we use a factor 3.
+gdb_assert { $top_level_die <= 3 * ( $read_cu + $unread_cu ) }

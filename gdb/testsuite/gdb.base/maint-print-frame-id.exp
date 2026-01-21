@@ -62,3 +62,10 @@ for { set i 0 } { $i < 4 } { incr i } {
     gdb_test "up" ".*" \
 	"move up from frame $i"
 }
+
+# Check that asking for the frame-id of a non-existent frame fails.
+foreach level { -1 5 } {
+    gdb_test "maint print frame-id ${level}" \
+	"^No frame at level ${level}\\." \
+	"no frame at $level"
+}

@@ -555,10 +555,8 @@ write_stabs_in_sections_debugging_info (bfd *abfd, void *dhandle,
   free (info.type_cache.function_types);
   free (info.type_cache.reference_types);
   free (info.type_cache.struct_types);
-  if (info.typedef_hash.table.memory)
-    bfd_hash_table_free (&info.typedef_hash.table);
-  if (info.strhash.table.memory)
-    bfd_hash_table_free (&info.strhash.table);
+  bfd_hash_table_free (&info.typedef_hash.table);
+  bfd_hash_table_free (&info.strhash.table);
   return ret;
 }
 

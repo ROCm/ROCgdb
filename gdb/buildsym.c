@@ -91,20 +91,6 @@ buildsym_compunit::get_macro_table ()
   return m_pending_macros;
 }
 
-/* Maintain the lists of symbols and blocks.  */
-
-/* Add a symbol to one of the lists of symbols.  */
-
-void
-add_symbol_to_list (symbol *symbol, std::vector<struct symbol *> &list)
-{
-  /* If this is an alias for another symbol, don't add it.  */
-  if (symbol->linkage_name () && symbol->linkage_name ()[0] == '#')
-    return;
-
-  list.push_back (symbol);
-}
-
 /* Record BLOCK on the list of all blocks in the file.  Put it after
    OPBLOCK, or at the beginning if opblock is NULL.  This puts the
    block in the list after all its subblocks.  */
@@ -373,7 +359,9 @@ buildsym_compunit::make_blockvector ()
   for (next = m_pending_blocks; next; next = next->next)
     blockvector->set_block (--i, next->block);
 
-  free_pending_blocks ();
+  /* Finished with the pending blocks now.  */
+  m_pending_block_obstack.clear ();
+  m_pending_blocks = nullptr;
 
   /* If we needed an address map for this symtab, record it in the
      blockvector.  */
@@ -478,27 +466,6 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
   m_subfiles = subfile.release ();
 }
 
-/* Handle the N_BINCL and N_EINCL symbol types that act like N_SOL for
-   switching source files (different subfiles, as we call them) within
-   one object file, but using a stack rather than in an arbitrary
-   order.  */
-
-void
-buildsym_compunit::push_subfile ()
-{
-  gdb_assert (m_current_subfile != NULL);
-  gdb_assert (!m_current_subfile->name.empty ());
-  m_subfile_stack.push_back (m_current_subfile->name.c_str ());
-}
-
-const char *
-buildsym_compunit::pop_subfile ()
-{
-  gdb_assert (!m_subfile_stack.empty ());
-  const char *name = m_subfile_stack.back ();
-  m_subfile_stack.pop_back ();
-  return name;
-}
 
 /* Add a linetable entry for line number LINE and address PC to the
    line vector for SUBFILE.  */
@@ -829,7 +796,8 @@ buildsym_compunit::end_compunit_symtab_from_static_block
 
   blockvector->global_block ()->set_compunit (cu);
 
-  cu->set_macro_table (release_macros ());
+  cu->set_macro_table (m_pending_macros);
+  m_pending_macros = nullptr;
 
   /* Default any symbols without a specified symtab to the primary symtab.  */
   {

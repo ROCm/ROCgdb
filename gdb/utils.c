@@ -1583,50 +1583,6 @@ pager_file::wrap_here (int indent)
     }
 }
 
-/* Print input string to gdb_stdout arranging strings in columns of n
-   chars.  String can be right or left justified in the column.  Never
-   prints trailing spaces.  String should never be longer than width.
-   FIXME: this could be useful for the EXAMINE command, which
-   currently doesn't tabulate very well.  */
-
-void
-puts_tabular (char *string, int width, int right)
-{
-  int spaces = 0;
-  int stringlen;
-  char *spacebuf;
-
-  gdb_assert (chars_per_line > 0);
-  if (chars_per_line == UINT_MAX)
-    {
-      gdb_puts (string);
-      gdb_puts ("\n");
-      return;
-    }
-
-  if (((chars_printed - 1) / width + 2) * width >= chars_per_line)
-    gdb_puts ("\n");
-
-  if (width >= chars_per_line)
-    width = chars_per_line - 1;
-
-  stringlen = strlen (string);
-
-  if (chars_printed > 0)
-    spaces = width - (chars_printed - 1) % width - 1;
-  if (right)
-    spaces += width - stringlen;
-
-  spacebuf = (char *) alloca (spaces + 1);
-  spacebuf[spaces] = '\0';
-  while (spaces--)
-    spacebuf[spaces] = ' ';
-
-  gdb_puts (spacebuf);
-  gdb_puts (string);
-}
-
-
 /* Ensure that whatever gets printed next, using the filtered output
    commands, starts at the beginning of the line.  I.e. if there is
    any pending output for the current line, flush it and start a new

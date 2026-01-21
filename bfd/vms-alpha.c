@@ -1598,18 +1598,24 @@ dst_retrieve_location (bfd *abfd, bfd_vma *loc)
   return false;
 }
 
-/* Write multiple bytes to section image.  */
-
-static bool
-image_write (bfd *abfd, unsigned char *ptr, unsigned int size)
+static asection *
+image_write_section (bfd *abfd)
 {
   asection *sec = PRIV (image_section);
 
-  if ((sec->flags & SEC_IN_MEMORY) != 0
-      && sec->contents == NULL)
-    /* Not yet allocated.  Just increment size.  */
-    ;
-  else
+  if ((sec->flags & SEC_IN_MEMORY) != 0 && sec->contents == NULL)
+    return NULL;
+  return sec;
+}
+
+/* Write multiple bytes to section image.  */
+
+static bool
+image_write (bfd *abfd, unsigned char *ptr, size_t size)
+{
+  asection *sec = image_write_section (abfd);
+
+  if (sec)
     {
       size_t off = PRIV (image_offset);
       /* Check bounds.  */
@@ -2081,7 +2087,7 @@ _bfd_vms_slurp_etir (bfd *abfd, struct bfd_link_info *info)
 	     da	data.  */
 	case ETIR__C_STO_IMMR:
 	  {
-	    unsigned int size;
+	    size_t size;
 
 	    if (cmd_length < 4)
 	      goto corrupt_etir;
@@ -2095,6 +2101,12 @@ _bfd_vms_slurp_etir (bfd *abfd, struct bfd_link_info *info)
 	    if (size == 0)
 	      break;
 	    op1 &= 0xffffffff;
+	    if (!image_write_section (abfd))
+	      {
+		/* We are just sizing.  Optimise a little.  */
+		size *= op1;
+		op1 = 1;
+	      }
 	    while (op1-- > 0)
 	      if (!image_write (abfd, ptr + 4, size))
 		return false;

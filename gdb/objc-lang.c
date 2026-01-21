@@ -540,6 +540,43 @@ compare_selectors (const void *a, const void *b)
   return specialcmp (aname+1, bname+1);
 }
 
+/* Print input string to gdb_stdout arranging strings in columns of n
+   chars.  String is left justified in the column.  Never prints
+   trailing spaces.  String should never be longer than width.
+   Updates CHARS_PRINTED.  */
+
+static void
+puts_tabular (const char *string, int width, unsigned &chars_printed)
+{
+  int spaces = 0;
+  unsigned chars_per_line = get_chars_per_line ();
+
+  gdb_assert (chars_per_line > 0);
+  if (chars_per_line == UINT_MAX)
+    {
+      gdb_puts (string);
+      gdb_puts ("\n");
+      /* 'chars_printed' is irrelevant here.  */
+      return;
+    }
+
+  if (((chars_printed - 1) / width + 2) * width >= chars_per_line)
+    {
+      gdb_puts ("\n");
+      chars_printed = 0;
+    }
+
+  if (width >= chars_per_line)
+    width = chars_per_line - 1;
+
+  if (chars_printed > 0)
+    spaces = width - (chars_printed - 1) % width - 1;
+
+  gdb_puts (n_spaces (spaces));
+  gdb_puts (string);
+  chars_printed += width;
+}
+
 /*
  * Function: selectors_info (regexp, from_tty)
  *
@@ -659,6 +696,7 @@ info_selectors_command (const char *regexp, int from_tty)
 	     compare_selectors);
       /* Prevent compare on first iteration.  */
       asel[0] = 0;
+      unsigned chars_printed = 0;
       for (ix = 0; ix < matches; ix++)	/* Now do the output.  */
 	{
 	  char *p = asel;
@@ -674,9 +712,10 @@ info_selectors_command (const char *regexp, int from_tty)
 	    *p++ = *name++;
 	  *p++ = '\0';
 	  /* Print in columns.  */
-	  puts_tabular(asel, maxlen + 1, 0);
+	  puts_tabular (asel, maxlen + 1, chars_printed);
 	}
-      begin_line();
+      if (chars_printed > 0)
+	gdb_puts ("\n");
     }
   else
     gdb_printf (_("No selectors matching \"%s\"\n"),
@@ -793,6 +832,7 @@ info_classes_command (const char *regexp, int from_tty)
 	     compare_classes);
       /* Prevent compare on first iteration.  */
       aclass[0] = 0;
+      unsigned chars_printed = 0;
       for (ix = 0; ix < matches; ix++)	/* Now do the output.  */
 	{
 	  char *p = aclass;
@@ -808,9 +848,10 @@ info_classes_command (const char *regexp, int from_tty)
 	    *p++ = *name++;
 	  *p++ = '\0';
 	  /* Print in columns.  */
-	  puts_tabular(aclass, maxlen + 1, 0);
+	  puts_tabular (aclass, maxlen + 1, chars_printed);
 	}
-      begin_line();
+      if (chars_printed > 0)
+	gdb_puts ("\n");
     }
   else
     gdb_printf (_("No classes matching \"%s\"\n"), regexp ? regexp : "*");

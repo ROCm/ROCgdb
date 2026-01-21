@@ -691,6 +691,9 @@ public:
      are doing.  */
   struct tu_stats tu_stats;
 
+  /* Statistic indicating how many times a toplevel DIE was read.  */
+  std::atomic<int> nr_toplevel_dies_read = 0;
+
   /* Set of dwo_file objects.  */
   dwo_file_up_set dwo_files;
 

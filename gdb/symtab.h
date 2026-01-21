@@ -562,10 +562,6 @@ struct general_symbol_info
     /* A common block.  Used with LOC_COMMON_BLOCK.  */
 
     const struct common_block *common_block;
-
-    /* For opaque typedef struct chain.  */
-
-    struct symbol *chain;
   }
   m_value;
 
@@ -1406,16 +1402,6 @@ struct symbol : public general_symbol_info, public allocate_on_obstack<symbol>
   void set_value_block (const block *block)
   {
     m_value.block = block;
-  }
-
-  symbol *value_chain () const
-  {
-    return m_value.chain;
-  }
-
-  void set_value_chain (symbol *sym)
-  {
-    m_value.chain = sym;
   }
 
   /* Return true if this symbol was marked as artificial.  */

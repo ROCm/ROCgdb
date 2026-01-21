@@ -1958,6 +1958,8 @@ dwarf2_base_index_functions::print_stats (struct objfile *objfile,
     }
   gdb_printf (_("  Number of read units: %d\n"), total - count);
   gdb_printf (_("  Number of unread units: %d\n"), count);
+  gdb_printf (_("  Number of read top-level DIEs: %d\n"),
+	      per_objfile->per_bfd->nr_toplevel_dies_read.load ());
 }
 
 void
@@ -6975,8 +6977,12 @@ lookup_dwo_unit_in_dwp (dwarf2_per_bfd *per_bfd,
 			struct dwp_file *dwp_file, const char *comp_dir,
 			ULONGEST signature, int is_debug_types)
 {
-  const struct dwp_hash_table *dwp_htab =
-    is_debug_types ? dwp_file->tus : dwp_file->cus;
+  const dwp_hash_table *dwp_htab
+    = is_debug_types ? dwp_file->tus : dwp_file->cus;
+
+  if (dwp_htab == nullptr)
+    return nullptr;
+
   bfd *dbfd = dwp_file->dbfd.get ();
   uint32_t mask = dwp_htab->nr_slots - 1;
   uint32_t hash = signature & mask;
@@ -7530,25 +7536,19 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 
   dwp_file *dwp_file = per_objfile->per_bfd->dwp_file.get ();
 
-  if (dwp_file != NULL)
+  if (dwp_file != nullptr)
     {
-      const struct dwp_hash_table *dwp_htab =
-	is_debug_types ? dwp_file->tus : dwp_file->cus;
+      dwo_unit *dwo_cutu
+	= lookup_dwo_unit_in_dwp (per_bfd, dwp_file, comp_dir, signature,
+				  is_debug_types);
 
-      if (dwp_htab != NULL)
+      if (dwo_cutu != nullptr)
 	{
-	  struct dwo_unit *dwo_cutu =
-	    lookup_dwo_unit_in_dwp (per_bfd, dwp_file, comp_dir, signature,
-				    is_debug_types);
+	  dwarf_read_debug_printf ("Virtual DWO %s %s found: @%s",
+				   kind, hex_string (signature),
+				   host_address_to_string (dwo_cutu));
 
-	  if (dwo_cutu != NULL)
-	    {
-	      dwarf_read_debug_printf ("Virtual DWO %s %s found: @%s",
-				       kind, hex_string (signature),
-				       host_address_to_string (dwo_cutu));
-
-	      return dwo_cutu;
-	    }
+	  return dwo_cutu;
 	}
     }
   else
@@ -7568,30 +7568,19 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 	    dwo_file = add_dwo_file (per_bfd, std::move (new_dwo_file));
 	}
 
-      if (dwo_file != NULL)
+      if (dwo_file != nullptr)
 	{
-	  struct dwo_unit *dwo_cutu = NULL;
+	  dwo_unit_set &dwo_units
+	    = is_debug_types ? dwo_file->tus : dwo_file->cus;
 
-	  if (is_debug_types && !dwo_file->tus.empty ())
+	  if (auto dwo_unit_it = dwo_units.find (signature);
+	      dwo_unit_it != dwo_units.end ())
 	    {
-	      if (auto it = dwo_file->tus.find (signature);
-		  it != dwo_file->tus.end ())
-		dwo_cutu = it->get ();
-	    }
-	  else if (!is_debug_types && !dwo_file->cus.empty ())
-	    {
-	      if (auto it = dwo_file->cus.find (signature);
-		  it != dwo_file->cus.end ())
-		dwo_cutu = it->get ();
-	    }
-
-	  if (dwo_cutu != NULL)
-	    {
-	      dwarf_read_debug_printf ("DWO %s %s(%s) found: @%s",
-				       kind, dwo_name, hex_string (signature),
-				       host_address_to_string (dwo_cutu));
-
-	      return dwo_cutu;
+	      dwarf_read_debug_printf
+		("DWO %s %s(%s) found: @%s", kind, dwo_name,
+		 hex_string (signature),
+		 host_address_to_string (dwo_unit_it->get ()));
+	      return dwo_unit_it->get ();
 	    }
 	}
     }
@@ -14076,6 +14065,7 @@ cutu_reader::read_full_die (int num_extra_attrs, bool allow_reprocess)
 die_info *
 cutu_reader::read_toplevel_die (gdb::array_view<attribute *> extra_attrs)
 {
+  m_new_cu.get ()->per_objfile->per_bfd->nr_toplevel_dies_read++;
   const gdb_byte *begin_info_ptr = m_info_ptr;
   die_info *die = this->read_full_die (extra_attrs.size (), false);
 

@@ -720,41 +720,57 @@ public:
 	    if (parent != nullptr && (parent->flags & IS_SYNTHESIZED) != 0)
 	      parent = nullptr;
 
-	    int &idx = m_indexkey_to_idx[index_key (entry->tag,
-						    kind,
-						    entry->flags,
-						    entry->lang,
-						    parent != nullptr)];
-	    if (idx == 0)
+	    int &abbrev = m_indexkey_to_abbrev[index_key (entry->tag,
+							  kind,
+							  entry->flags,
+							  entry->lang,
+							  parent != nullptr)];
+	    if (abbrev == 0)
 	      {
-		idx = next_abbrev++;
-		m_abbrev_table.append_unsigned_leb128 (idx);
+		abbrev = next_abbrev++;
+
+		/* Abbrev number and tag.  */
+		m_abbrev_table.append_unsigned_leb128 (abbrev);
 		m_abbrev_table.append_unsigned_leb128 (entry->tag);
+
+		/* Unit index.  */
 		m_abbrev_table.append_unsigned_leb128
 		  (kind == unit_kind::cu
 		   ? DW_IDX_compile_unit
 		   : DW_IDX_type_unit);
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+
+		/* DIE offset.  */
 		m_abbrev_table.append_unsigned_leb128 (DW_IDX_die_offset);
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_ref_addr);
+
+		/* Language.  */
 		m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_language);
 		m_abbrev_table.append_unsigned_leb128 (DW_FORM_udata);
+
+		/* Internal linkage flag.  */
 		if (!tag_is_type (entry->tag)
 		    && (entry->flags & IS_STATIC) != 0)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_internal);
 		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
 		  }
+
+		/* Main subprogram flag.  */
 		if ((entry->flags & IS_MAIN) != 0)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_main);
 		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
 		  }
+
+		/* Linkage name flag.  */
 		if ((entry->flags & IS_LINKAGE) != 0)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_GNU_linkage_name);
 		    m_abbrev_table.append_unsigned_leb128 (DW_FORM_flag_present);
 		  }
+
+		/* Parent offset.  */
 		if (parent != nullptr)
 		  {
 		    m_abbrev_table.append_unsigned_leb128 (DW_IDX_parent);
@@ -773,19 +789,23 @@ public:
 		 .second);
 	    gdb_assert (offset_inserted);
 
-	    /* Write the entry to the pool.  */
-	    m_entry_pool.append_unsigned_leb128 (idx);
+	    /* Write the entry to the pool, starting with the abbrev number.  */
+	    m_entry_pool.append_unsigned_leb128 (abbrev);
 
+	    /* Unit index.  */
 	    const auto it = m_cu_index_htab.find (entry->per_cu);
 	    gdb_assert (it != m_cu_index_htab.cend ());
 	    m_entry_pool.append_unsigned_leb128 (it->second);
 
+	    /* DIE offset.  */
 	    m_entry_pool.append_uint (dwarf5_offset_size (),
 				      m_dwarf5_byte_order,
 				      to_underlying (entry->die_offset));
 
+	    /* Language.  */
 	    m_entry_pool.append_unsigned_leb128 (entry->per_cu->dw_lang ());
 
+	    /* Parent offset.  */
 	    if (parent != nullptr)
 	      {
 		m_offsets_to_patch.emplace_back (m_entry_pool.size (), parent);
@@ -1087,8 +1107,8 @@ private:
   debug_str_lookup m_debugstrlookup;
 
   /* Map each used .debug_names abbreviation tag parameter to its
-     index value.  */
-  gdb::unordered_map<index_key, int, index_key_hasher> m_indexkey_to_idx;
+     abbrev value.  */
+  gdb::unordered_map<index_key, int, index_key_hasher> m_indexkey_to_abbrev;
 
   /* .debug_names abbreviation table.  */
   data_buf m_abbrev_table;
@@ -1294,21 +1314,30 @@ write_shortcuts_table (cooked_index *table, data_buf &shortcuts,
   shortcuts.append_offset (main_name_offset);
 }
 
+/* Lists of units, split by kind.  Each list is sorted by section offset.  */
+
+struct unit_lists
+{
+  /* Compilation units.  */
+  std::vector<const dwarf2_per_cu *> comp;
+
+  /* Type units.  */
+  std::vector<const signatured_type *> type;
+};
+
 /* Get sorted (by section offset) lists of comp units and type units.  */
 
-static std::pair<std::vector<const dwarf2_per_cu *>,
-		 std::vector<const signatured_type *>>
+static unit_lists
 get_unit_lists (const dwarf2_per_bfd &per_bfd)
 {
-  std::vector<const dwarf2_per_cu *> comp_units;
-  std::vector<const signatured_type *> type_units;
+  unit_lists lists;
 
   for (const auto &unit : per_bfd.all_units)
     if (const signatured_type *sig_type = unit->as_signatured_type ();
 	sig_type != nullptr)
-      type_units.emplace_back (sig_type);
+      lists.type.emplace_back (sig_type);
     else
-      comp_units.emplace_back (unit.get ());
+      lists.comp.emplace_back (unit.get ());
 
   auto by_sect_off = [] (const dwarf2_per_cu *lhs, const dwarf2_per_cu *rhs)
 		       { return lhs->sect_off () < rhs->sect_off (); };
@@ -1322,10 +1351,10 @@ get_unit_lists (const dwarf2_per_bfd &per_bfd)
 
      However, it helps make sure that GDB produce a stable and predictable
      output, which is nice.  */
-  std::sort (comp_units.begin (), comp_units.end (), by_sect_off);
-  std::sort (type_units.begin (), type_units.end (), by_sect_off);
+  std::sort (lists.comp.begin (), lists.comp.end (), by_sect_off);
+  std::sort (lists.type.begin (), lists.type.end (), by_sect_off);
 
-  return {std::move (comp_units), std::move (type_units)};
+  return lists;
 }
 
 /* Write contents of a .gdb_index section for OBJFILE into OUT_FILE.
@@ -1345,14 +1374,14 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   cu_index_map cu_index_htab;
   cu_index_htab.reserve (per_bfd->all_units.size ());
 
-  auto [comp_units, type_units] = get_unit_lists (*per_bfd);
+  unit_lists units = get_unit_lists (*per_bfd);
   int counter = 0;
 
   /* Write comp units.  */
   data_buf objfile_cu_list;
   data_buf dwz_cu_list;
 
-  for (const dwarf2_per_cu *per_cu : comp_units)
+  for (const dwarf2_per_cu *per_cu : units.comp)
     {
       const auto insertpair = cu_index_htab.emplace (per_cu, counter);
       gdb_assert (insertpair.second);
@@ -1370,7 +1399,7 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   /* Write type units.  */
   data_buf types_cu_list;
 
-  for (const signatured_type *sig_type : type_units)
+  for (const signatured_type *sig_type : units.type)
     {
       const auto insertpair = cu_index_htab.emplace (sig_type, counter);
       gdb_assert (insertpair.second);
@@ -1429,12 +1458,12 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   const enum bfd_endian dwarf5_byte_order
     = bfd_big_endian (per_bfd->obfd) ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE;
 
-  auto [comp_units, type_units] = get_unit_lists (*per_bfd);
+  unit_lists units = get_unit_lists (*per_bfd);
   debug_names nametable (per_bfd, dwarf5_is_dwarf64, dwarf5_byte_order);
   data_buf comp_unit_list;
   int comp_unit_counter = 0;
 
-  for (const auto per_cu : comp_units)
+  for (const auto per_cu : units.comp)
     {
       nametable.add_cu (per_cu, comp_unit_counter);
       comp_unit_list.append_uint (nametable.dwarf5_offset_size (),
@@ -1446,7 +1475,7 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   data_buf type_unit_list;
   int type_unit_counter = 0;
 
-  for (const auto per_cu : type_units)
+  for (const auto per_cu : units.type)
     {
       nametable.add_cu (per_cu, type_unit_counter);
       type_unit_list.append_uint (nametable.dwarf5_offset_size (),

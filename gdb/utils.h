@@ -209,8 +209,6 @@ extern void gdb_putc (int c);
 
 extern void gdb_puts (const char *);
 
-extern void puts_tabular (char *string, int width, int right);
-
 /* Generic printf-like operations.  As an extension over plain
    printf, these support some GDB-specific format specifiers.
    Particularly useful here are the styling formatters: '%p[', '%p]'

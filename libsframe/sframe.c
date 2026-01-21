@@ -647,15 +647,14 @@ sframe_decode_fde_idx_v3 (const char *buf, size_t buf_size,
 
 static int
 sframe_decode_fde_attr_v3 (const char *buf, size_t buf_size,
-			   uint16_t *num_fres)
+			   uint16_t *num_fres, uint32_t *fre_type)
 {
   if (buf_size < sizeof (sframe_func_desc_attr_v3))
     return SFRAME_ERR;
 
-  /* sfda_func_num_fres is the first member of sframe_func_desc_attr_v3.  */
-  const struct { uint16_t x; } ATTRIBUTE_PACKED *p = (void *)buf;
-  *num_fres = p->x;
-
+  const sframe_func_desc_attr_v3 *fdap = (sframe_func_desc_attr_v3 *) buf;
+  *num_fres = fdap->sfda_func_num_fres;
+  *fre_type = SFRAME_V3_FDE_FRE_TYPE (fdap->sfda_func_info);
   return 0;
 }
 static int
@@ -855,7 +854,7 @@ flip_sframe_fdes_with_fres_v3 (char *frame_buf, size_t buf_size,
       /* Handle FDE attr (only in V3).  */
       fp = fres + fre_offset;
       if (to_foreign && sframe_decode_fde_attr_v3 (fp, buf_end - fp,
-						   &num_fres))
+						   &num_fres, &fre_type))
 	goto bad;
 
       if (flip_fde_attr_v3 (fp, buf_end - fp))
@@ -864,7 +863,7 @@ flip_sframe_fdes_with_fres_v3 (char *frame_buf, size_t buf_size,
       fre_bytes_flipped += sizeof (sframe_func_desc_attr_v3);
 
       if (!to_foreign && sframe_decode_fde_attr_v3 (fp, buf_end - fp,
-						    &num_fres))
+						    &num_fres, &fre_type))
 	goto bad;
 
       /* Handle FREs.  */

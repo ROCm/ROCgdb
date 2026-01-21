@@ -2875,16 +2875,28 @@ tc_s390_regname_to_dw2regnum (char *regname)
 {
   int regnum = -1;
 
-  if (regname[0] != 'c' && regname[0] != 'a')
+  if (regname[0] != 'c')
     {
       regnum = reg_name_search (regname);
-      if (regname[0] == 'f' && regnum != -1)
-        regnum += 16;
+      if ((regname[0] == 'f' || regname[0] == 'v') && regnum != -1)
+	{
+	  /* Convert from floating-point register number (0..15) and
+	   * vector register number (0..31) to DWARF register number
+	   * (15..31, 68..83):  Right rotate the least significant
+	   * three bits.  For floating-point registers add 16.  For
+	   * vector registers 0..15 add 16 and for 16..31 add 86.  */
+	  int dw2_regnum;
+	  dw2_regnum = (regnum & 0b110) >> 1;
+	  dw2_regnum |= (regnum & 0b1) << 2;
+	  dw2_regnum |= (regnum & 0b1000);
+	  dw2_regnum += (regnum < 16) ? 16 : 68;
+	  regnum = dw2_regnum;
+	}
+      else if (regname[0] == 'a' && regnum != -1)
+	{
+	  regnum += 48;
+	}
     }
-  else if (strcmp (regname, "ap") == 0)
-    regnum = 32;
-  else if (strcmp (regname, "cc") == 0)
-    regnum = 33;
   return regnum;
 }
 

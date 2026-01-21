@@ -893,6 +893,8 @@ output_sframe_func_desc_attr (const struct sframe_func_entry *sframe_fde)
     finfo2 = SFRAME_V3_SET_FDE_TYPE (finfo2, SFRAME_FDE_TYPE_FLEX);
   out_one (finfo2);
 
+  /* Currently, GAS only emits SFrame FDE with PC Type
+     SFRAME_V3_FDE_PCTYPE_INC.  Emit repetitive block size of 0.  */
   out_one (0);
 }
 
@@ -1490,15 +1492,11 @@ sframe_xlate_do_val_offset (const struct sframe_xlate_ctx *xlate_ctx ATTRIBUTE_U
 /* Translate DW_CFA_register into SFrame context.
 
    This opcode indicates: Previous value of register1 is register2.  This is
-   not representable in SFrame stack trace format.  Detect the use of registers
+   not representable using FDE type SFRAME_FDE_TYPE_DEFAULT.  Hence, if
+   flexible FDE is not enabled for the ABI/arch, detect the use of registers
    interesting to SFrame (FP, RA for this opcode), and skip FDE generation
-   while warning the user.
-
-   Two exceptions apply though:
-     - for S390X, the stack offsets are used to carry register number in
-       default FDE types.  So invoke S390X specific handling.
-     - for AMD64, the flexible topmost frame encoding
-       SFRAME_FDE_TYPE_FLEX can be used for FP, RA registers.
+   while warning the user.  Same applies for SP, except that it needs special
+   handling for s390.
 
    Return SFRAME_XLATE_OK if success.  */
 

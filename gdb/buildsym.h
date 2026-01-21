@@ -165,21 +165,6 @@ struct buildsym_compunit
 
   struct macro_table *get_macro_table ();
 
-  struct macro_table *release_macros ()
-  {
-    struct macro_table *result = m_pending_macros;
-    m_pending_macros = nullptr;
-    return result;
-  }
-
-  /* This function is called to discard any pending blocks.  */
-
-  void free_pending_blocks ()
-  {
-    m_pending_block_obstack.clear ();
-    m_pending_blocks = nullptr;
-  }
-
   struct block *finish_block (struct symbol *symbol,
 			      struct pending_block *old_blocks,
 			      const struct dynamic_prop *static_link,
@@ -197,17 +182,6 @@ struct buildsym_compunit
      start_subfile referring to the same file (it is used for looking up
      existing subfiles).  It can be equal to NAME if NAME follows that rule.  */
   void start_subfile (const char *name, const char *name_for_id);
-
-  /* Same as above, but passes NAME for NAME_FOR_ID.  */
-
-  void start_subfile (const char *name)
-  {
-    return start_subfile (name, name);
-  }
-
-  void push_subfile ();
-
-  const char *pop_subfile ();
 
   void record_line (struct subfile *subfile, int line, unrelocated_addr pc,
 		    linetable_entry_flags flags);
@@ -397,7 +371,10 @@ private:
 
 using buildsym_compunit_up = std::unique_ptr<buildsym_compunit>;
 
-extern void add_symbol_to_list (symbol *symbol,
-				std::vector<struct symbol *> &list);
+static inline
+void add_symbol_to_list (symbol *symbol, std::vector<struct symbol *> &list)
+{
+  list.push_back (symbol);
+}
 
 #endif /* GDB_BUILDSYM_H */

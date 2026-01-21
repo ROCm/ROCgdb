@@ -3438,6 +3438,8 @@ maintenance_print_frame_id (const char *args, int from_tty)
     {
       int level = value_as_long (parse_and_eval (args));
       frame = find_relative_frame (get_current_frame (), &level);
+      if (level != 0)
+	error (_("No frame at level %s."), args);
     }
 
   /* Print the frame-id.  */
