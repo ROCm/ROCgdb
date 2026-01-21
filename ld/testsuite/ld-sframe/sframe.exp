@@ -23,43 +23,107 @@
 # Sframe section contains R_*_NONE relocations intermingled with other
 # relas in the output relocatable object.
 #
+proc check_dump { binfile dumpfile } {
+    global srcdir
+    global READELF
+    global subdir
+    global env
+
+    set binary $READELF
+    set progopts "-j .rela.sframe"
+
+    set cmd "$binary $progopts $binfile > dump.out"
+    send_log "$cmd\n"
+    catch "exec $cmd" comp_output
+
+    set comp_output [prune_warnings $comp_output]
+    if ![string match "" $comp_output] then {
+	send_log "$comp_output\n"
+	return 1
+    }
+
+    if { [regexp_diff "dump.out" "$srcdir/$subdir/$dumpfile"] } then {
+	verbose -log "output is [file_contents "dump.out"]" 2
+	return 1
+    }
+    return 0
+}
+
 proc check_pr33401 { } {
     global CXX_FOR_TARGET
     global ld
     global srcdir
     global subdir
+    global as
+    global LDFLAGS
+    global env
 
-    # Check to see if C++ compiler work
-    if { [which $CXX_FOR_TARGET] == 0 } {
-	unsupported "PR ld/33401"
-	return 0
-    }
+    set objfiles {}
+    set testname "PR ld/33401"
+    set failed 0
+    set linkfile "tmpdir/pr33401.o"
+    set src_files [list "StateClient.cpp" "StatePlaying.cpp"]
 
-    # 1. First step: Create a relocatable object (pr33401.o) from sources.
-    #     Some R_*_NONE are expected for this input.
-    set test_list {
-	{ "PR ld/33401 (Step 1: Create relocatable object and check R_*_NONE)"
-	    "-r"
-	    "-g -O2 -finline -w -Wa,--gsframe"
-	    {StateClient.cpp StatePlaying.cpp}
-	    {{readelf "-r -W" pr33401.rd}}
-	    "pr33401.o"
-	    "c++" }
-    }
-
-    # Run the test
-    if { [run_cc_link_tests $test_list] == 0 } {
-	verbose -log "No R_*_NONE in .rela.sframe"
+    # Check to see if the C and C++ compilers work
+    if { ![check_compiler_available] || [which $CXX_FOR_TARGET] == 0 } {
+	unsupported $testname
 	return
     }
+
+    # 1. First step: Create a relocatable object (pr33401.o) from
+    #    sources.  Some R_*_NONE are expected for this input.  We
+    #    cannot use run_cc_link_tests procedure as we need to control
+    #    every aspect of the compilation, assembling and linking
+    #    process.
+    foreach src_file $src_files {
+	set fileroot "[file rootname [file tail $src_file]]"
+	set objfile "tmpdir/$fileroot.o"
+
+	if { [file extension $src_file] == ".cpp" } {
+	    set as_file "tmpdir/$fileroot.s"
+	    set cmd "$CXX_FOR_TARGET -S -g -O2 -w"
+	    if ![ld_compile $cmd $srcdir/$subdir/$src_file $as_file] {
+		set failed 1
+		break
+	    }
+	} else {
+	    set as_file "$srcdir/$subdir/$src_file"
+	}
+	if { ![ld_assemble $as "--gsframe $as_file" $objfile] } {
+	    set failed 1
+	    break
+	}
+	lappend objfiles $objfile
+    }
+
+    # Catch previous action errors.
+    if { $failed } {
+	verbose -log "Error during compiling/assembling one of the input files."
+	unresolved $testname
+	return
+    }
+
+    # Do the first linking. If this fails, we cannot resolve the test.
+    if { ![ld_link $ld $linkfile "-L$srcdir/$subdir -r $objfiles"] } {
+	verbose -log "Error during linking assembled objects."
+	unresolved $testname
+	return
+    }
+
+    # Check the output of the first ld invocation
+    if { [check_dump $linkfile pr33401.rd] } {
+	verbose -log "No R_*_NONE in .rela.sframe"
+	untested $testname
+	return
+    }
+
+    # Clear error and warning counts.
+    reset_vars
 
     # 2. Final step: Run ld -r again on the output of step 1.
     #	 The assertion failure in PR 33401 occurred when processing input BFDs
     #	 containing R_*_NONE relocations in the .sframe section.
-    set testname "PR ld/33401 (Step 2: Final link)"
-
-    # Attempt to link the object created in step 1
-    if { ![ld_link $ld /dev/null "-L$srcdir/$subdir -r tmpdir/pr33401.o"] } {
+    if { ![ld_link $ld /dev/null "-L$srcdir/$subdir -r $linkfile"] } {
 	fail $testname
     } else {
 	pass $testname
@@ -95,7 +159,7 @@ if { [check_compiler_available] } {
     run_cc_link_tests [list \
 	[list \
 	    "Build pr32789-1a.o pr32789-1b.o" \
-	    "-r" \
+	    "-r -nostdlib" \
 	    "-Wa,--gsframe" \
 	    { pr32789-1a.c pr32789-1b.c } \
 	    {{readelf --sframe pr32789-1.sd}

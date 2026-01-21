@@ -3,13 +3,13 @@
 
 .*: +file format .*
 
-Contents of the .eh_frame section:
+Contents of the \.eh_frame section:
 
 #...
 
 # General register (GR) names r0..r15
-00000018 0000000000000028 0000001c FDE cie=00000000 pc=0000000000000000..0000000000000004
-  DW_CFA_advance_loc: 2 to 0000000000000002
+0+1[48] 0+28 0+1[8c] FDE cie=0+ pc=0+\.\.0+4
+  DW_CFA_advance_loc: 2 to 0+2
   DW_CFA_register: r0 in r1
   DW_CFA_register: r2 in r3
   DW_CFA_register: r4 in r5
@@ -22,8 +22,8 @@ Contents of the .eh_frame section:
   DW_CFA_nop
 
 # Floating-point register (FPR) names f0..f15
-00000044 0000000000000028 00000048 FDE cie=00000000 pc=0000000000000004..0000000000000008
-  DW_CFA_advance_loc: 2 to 0000000000000006
+0+4[04] 0+28 0+4[48] FDE cie=0+ pc=0+4\.\.0+8
+  DW_CFA_advance_loc: 2 to 0+6
   DW_CFA_register: r16 \(f0\) in r20 \(f1\)
   DW_CFA_register: r17 \(f2\) in r21 \(f3\)
   DW_CFA_register: r18 \(f4\) in r22 \(f5\)
@@ -36,8 +36,8 @@ Contents of the .eh_frame section:
   DW_CFA_nop
 
 # Vector register (VR) names v0..v31
-00000070 0000000000000040 00000074 FDE cie=00000000 pc=0000000000000008..000000000000000c
-  DW_CFA_advance_loc: 2 to 000000000000000a
+0+(6c|70) 0+40 0+7[04] FDE cie=0+ pc=0+8\.\.0+c
+  DW_CFA_advance_loc: 2 to 0+a
   DW_CFA_register: r16 \(f0\) in r20 \(f1\)
   DW_CFA_register: r17 \(f2\) in r21 \(f3\)
   DW_CFA_register: r18 \(f4\) in r22 \(f5\)
@@ -58,8 +58,8 @@ Contents of the .eh_frame section:
   DW_CFA_nop
 
 # Access register (AR) names a0..a15
-000000b4 0000000000000028 000000b8 FDE cie=00000000 pc=000000000000000c..0000000000000010
-  DW_CFA_advance_loc: 2 to 000000000000000e
+0+b[04] 0+28 0+b[48] FDE cie=0+ pc=0+c\.\.0+10
+  DW_CFA_advance_loc: 2 to 0+e
   DW_CFA_register: r48 \(a0\) in r49 \(a1\)
   DW_CFA_register: r50 \(a2\) in r51 \(a3\)
   DW_CFA_register: r52 \(a4\) in r53 \(a5\)

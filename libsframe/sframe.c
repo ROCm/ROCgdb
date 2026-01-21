@@ -402,21 +402,21 @@ flip_fre_start_address (void *addr, uint32_t fre_type)
 }
 
 static void
-flip_fre_stack_offsets (char *offsets, uint8_t offset_size, uint8_t offset_cnt)
+flip_fre_stack_offsets (void *offsets, uint8_t offset_size, uint8_t offset_cnt)
 {
   int j;
 
   if (offset_size == SFRAME_FRE_OFFSET_2B)
     {
-      uint16_t *ust = (uint16_t *)offsets;
-      for (j = offset_cnt; j > 0; ust++, j--)
-	swap_thing (*ust);
+      struct { uint16_t x; } ATTRIBUTE_PACKED *p = offsets;
+      for (j = offset_cnt; j > 0; p++, j--)
+	swap_thing (p->x);
     }
   else if (offset_size == SFRAME_FRE_OFFSET_4B)
     {
-      uint32_t *uit = (uint32_t *)offsets;
-      for (j = offset_cnt; j > 0; uit++, j--)
-	swap_thing (*uit);
+      struct { uint32_t x; } ATTRIBUTE_PACKED *p = offsets;
+      for (j = offset_cnt; j > 0; p++, j--)
+	swap_thing (p->x);
     }
 }
 

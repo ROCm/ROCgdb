@@ -393,14 +393,13 @@ run_ld_link_tests [list \
 ]
 
 # Targets that use _bfd_generic_link_add_symbols won't pass pr21703 tests
-# Nor will hppa64 with dot-symbols.
 run_ld_link_tests [list \
     [list "PR ld/21703 shared" \
 	"$LFLAGS -shared --allow-multiple-definition --version-script pr21703.ver\
 	 tmpdir/pr21703-3.o tmpdir/pr21703-4.o" "" "$AFLAGS_PIC" \
 	{pr21703-3.s pr21703-4.s} {{readelf {--dyn-syms} pr21703-shared.sd}} \
 	"pr21703.so" ] \
-] \[is_generic\] hppa64-*-*
+] \[is_generic\]
 
 # This target requires extra GAS options when building non-PIC code
 # for linking with shared libraries.
