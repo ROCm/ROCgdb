@@ -1724,6 +1724,10 @@ undo_terminal_modifications_before_exit (void)
 #endif
   gdb_disable_readline ();
 
+#ifdef __MINGW32__
+  mingw_deinitialize_console ();
+#endif
+
   current_ui = saved_top_level;
 }
 
