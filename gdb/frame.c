@@ -699,6 +699,23 @@ get_stack_frame_id (const frame_info_ptr &next_frame)
   return get_frame_id (skip_artificial_frames (next_frame));
 }
 
+/* Helper for the various frame_unwind_caller_* functions.  Unwind
+   INITIAL_NEXT_FRAME at least one frame, but skip any artificial frames,
+   that is inline or tailcall frames.
+
+   Return the Nth previous frame (as required to find a non-artificial
+   frame), or NULL if no previous frame could be found.  */
+
+static frame_info_ptr
+frame_unwind_caller_frame (const frame_info_ptr &initial_next_frame)
+{
+  frame_info_ptr this_frame = get_prev_frame_always (initial_next_frame);
+  if (this_frame == nullptr)
+    return nullptr;
+
+  return skip_artificial_frames (this_frame);
+}
+
 struct frame_id
 frame_unwind_caller_id (const frame_info_ptr &initial_next_frame)
 {
@@ -707,15 +724,11 @@ frame_unwind_caller_id (const frame_info_ptr &initial_next_frame)
      unintentionally returning a null_frame_id (e.g., when a caller
      requests the frame ID of "main()"s caller.  */
 
-  frame_info_ptr next_frame = skip_artificial_frames (initial_next_frame);
-  if (next_frame == NULL)
+  frame_info_ptr this_frame = frame_unwind_caller_frame (initial_next_frame);
+  if (this_frame == nullptr)
     return null_frame_id;
 
-  frame_info_ptr this_frame = get_prev_frame_always (next_frame);
-  if (this_frame)
-    return get_frame_id (skip_artificial_frames (this_frame));
-  else
-    return null_frame_id;
+  return get_frame_id (this_frame);
 }
 
 const struct frame_id null_frame_id = { 0 }; /* All zeros.  */
@@ -1074,14 +1087,14 @@ frame_unwind_pc (const frame_info_ptr &this_frame)
 CORE_ADDR
 frame_unwind_caller_pc (const frame_info_ptr &initial_this_frame)
 {
-  frame_info_ptr this_frame = skip_artificial_frames (initial_this_frame);
+  frame_info_ptr this_frame = frame_unwind_caller_frame (initial_this_frame);
 
   /* We must have a non-artificial frame.  The caller is supposed to check
      the result of frame_unwind_caller_id (), which returns NULL_FRAME_ID
      in this case.  */
   gdb_assert (this_frame != nullptr);
 
-  return frame_unwind_pc (this_frame);
+  return get_frame_pc (this_frame);
 }
 
 bool
@@ -3135,14 +3148,14 @@ frame_unwind_arch (const frame_info_ptr &next_frame)
 struct gdbarch *
 frame_unwind_caller_arch (const frame_info_ptr &initial_next_frame)
 {
-  frame_info_ptr next_frame = skip_artificial_frames (initial_next_frame);
+  frame_info_ptr next_frame = frame_unwind_caller_frame (initial_next_frame);
 
   /* We must have a non-artificial frame.  The caller is supposed to check
      the result of frame_unwind_caller_id (), which returns NULL_FRAME_ID
      in this case.  */
   gdb_assert (next_frame != nullptr);
 
-  return frame_unwind_arch (next_frame);
+  return get_frame_arch (next_frame);
 }
 
 /* Gets the language of FRAME.  */

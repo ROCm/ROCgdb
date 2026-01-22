@@ -1,0 +1,108 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Run until we have a tail call frame in the stack.  The stack looks like this:
+#
+# main -> tailcall_function -> normal_function
+#
+# We stop on normal_function, and then use 'up' to go to the
+# tailcall_function frame.  We then use 'until NN' where 'NN' is a
+# line that should not be reached until after the inferior has
+# returned to main.
+#
+# However, when the inferior returns to main, GDB should stop the
+# inferior as the 'until' has gone out of scope.
+#
+# At one point this was not happening as GDB would place the out of
+# scope 'until' guard breakpoint in the wrong place.
+#
+# This test relies on the source file compiling with a tail call in
+# place.
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug optimize=-O2}]} {
+    return
+}
+
+# Run until there is a tail call frame in the backtrace.  Then use the
+# 'until' command with a line that will not be reached until after the
+# current stack has unwound back to main.  We expect the until's out
+# of scope breakpoint to be hit first.
+#
+# When USE_PARENT_FRAME_P is true we move up to the tail call frame
+# and issue the 'until' command while that frame is selected.
+#
+# When USE_PARENT_FRAME_P is false we issue the 'until' command while
+# normal_function is selected, this function is called from the tail
+# call function.
+#
+# In both cases, we expect the out of scope breakpoint to be placed
+# back in main, which is where the inferior should be stopped.
+proc run_test { use_parent_frame_p } {
+    clean_restart $::testfile
+
+    if {![runto normal_function]} {
+	return
+    }
+
+    # Check the stack looks correct.
+    gdb_test "bt" \
+	[multi_line \
+	     "#0\\s+normal_function\[^\r\n\]+" \
+	     "#1\\s+(?:$::hex in )?tailcall_function\[^\r\n\]+" \
+	     "#2\\s+(?:$::hex in )?main\[^\r\n\]+"] \
+	"check call stack"
+
+    # Move up to tailcall_function if needed.
+    if { $use_parent_frame_p } {
+	gdb_test "up" ".* in tailcall_function .*" \
+	    "move up to tailcall_function"
+    }
+
+    # Where we ask the 'until' to run to.
+    set until_lineno [gdb_get_line_number "Run until here."]
+
+    # Where we actually expect the inferior to stop.
+    set stop_lineno [gdb_get_line_number "Should stop here."]
+
+    # Issue the 'until' command and check that the inferior stops in main
+    # when the until guard breakpoint notices we have left the
+    # tailcall_function.
+    set saw_stop_location false
+    set saw_stop_source false
+    gdb_test_multiple "until $until_lineno" "run until worker_func" {
+	-re "^until $until_lineno\r\n" {
+	    exp_continue
+	}
+	-re "^$::gdb_prompt $" {
+	    gdb_assert { $saw_stop_location && $saw_stop_source } \
+		$gdb_test_name
+	}
+	-re "^main \\(\\) at \[^\r\n\]+/$::srcfile:$stop_lineno\r\n" {
+	    set saw_stop_location true
+	    exp_continue
+	}
+	-re "^$stop_lineno\\s+\[^\r\n\]+\r\n" {
+	    set saw_stop_source true
+	    exp_continue
+	}
+    }
+}
+
+foreach_with_prefix use_parent_frame { true false } {
+    run_test $use_parent_frame
+}
