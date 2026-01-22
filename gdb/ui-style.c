@@ -594,11 +594,7 @@ colorsupport ()
     {
       std::vector<color_space> result = {color_space::MONOCHROME};
 
-      /* ncurses versions prior to 6.1 (and other curses
-	 implementations) declare the tgetnum argument to be
-	 'char *', so we need the const_cast, since C++ will not
-	 implicitly convert.  */
-      int colors = tgetnum (const_cast<char*> ("Co"));
+      int colors = gdb_get_ncolors ();
 #ifdef __MINGW32__
       /* MS-Windows terminal generally doesn't have "Co" in its
 	 terminfo, but always supports at least 8 colors.  */
@@ -613,8 +609,10 @@ colorsupport ()
 	result.push_back (color_space::XTERM_256COLOR);
 
       const char *colorterm = getenv ("COLORTERM");
-      if (colorterm != nullptr && (!strcmp (colorterm, "truecolor")
-	  || !strcmp (colorterm, "24bit")))
+      if (colors >= 16777216
+	  || (colorterm != nullptr
+	      && (!strcmp (colorterm, "truecolor")
+		  || !strcmp (colorterm, "24bit"))))
 	result.push_back (color_space::RGB_24BIT);
 
       return result;
