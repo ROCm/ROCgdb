@@ -19,6 +19,7 @@
 
 #include "charset.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbsupport/gdb_wait.h"
 #include "charset-list.h"
@@ -1009,11 +1010,28 @@ INIT_GDB_FILE (charset)
   {
     /* "CP" + x<=5 digits + paranoia.  */
     static char w32_host_default_charset[16];
+    unsigned codepage = mingw_get_codeset ();
 
-    snprintf (w32_host_default_charset, sizeof w32_host_default_charset,
-	      "CP%d", GetACP());
+    /* The rest of the code expects a literal "UTF-8" and doesn't know
+       anything about codepage 65001.  */
+    if (codepage == 65001)
+      {
+	strcpy (w32_host_default_charset, "UTF-8");
+	/* This is needed to force Windows CRT output functions treat
+	   output as simple stream of bytes, instead of trying to
+	   interpret it as encoded non-ASCII text, which will fail if
+	   the system locale's codeset is NOT UTF-8.  */
+	setlocale (LC_CTYPE, "C");
+      }
+    else
+      snprintf (w32_host_default_charset, sizeof w32_host_default_charset,
+		"CP%u", codepage);
     auto_host_charset_name = w32_host_default_charset;
     auto_target_charset_name = auto_host_charset_name;
+
+    /* Windows Terminal supports Emoji when using UTF-8 output.  */
+    if (strcmp (w32_host_default_charset, "UTF-8") != 0)
+      no_emojis ();
   }
 #endif
 #endif
