@@ -1464,8 +1464,8 @@ print_gdb_hints (struct ui_file *stream)
   gdb_printf (&styled_msg[2], _("For help, type \"%ps\"."),
 	      styled_string (command_style.style (), "help"));
   gdb_printf (&styled_msg[3],
-	      _("Type \"%ps\" to search for commands related to <word>."),
-	      styled_string (command_style.style (), "apropos <word>"));
+	      _("Type \"%ps\" to search for commands related to \"word\"."),
+	      styled_string (command_style.style (), "apropos word"));
 
   /* If there isn't enough space to display the longest URL in a boxed
      style, then don't use the box, the terminal will break the output

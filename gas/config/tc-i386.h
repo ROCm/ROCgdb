@@ -479,8 +479,7 @@ extern unsigned char x86_sframe_get_abi_arch (void);
 #define sframe_get_abi_arch x86_sframe_get_abi_arch
 
 /* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
-extern bool x86_support_flex_fde_p (void);
-#define sframe_support_flex_fde_p x86_support_flex_fde_p
+#define sframe_support_flex_fde_p() true
 
 #endif
 

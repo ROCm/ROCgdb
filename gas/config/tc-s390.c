@@ -2917,14 +2917,6 @@ s390_sframe_ra_tracking_p (void)
   return true;
 }
 
-/* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
-
-bool
-s390_support_flex_fde_p (void)
-{
-  return true;
-}
-
 /* Specify the fixed offset to recover RA from CFA.
    (useful only when RA tracking is not needed).  */
 

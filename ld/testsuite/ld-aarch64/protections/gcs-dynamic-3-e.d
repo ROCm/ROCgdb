@@ -1,11 +1,9 @@
-#name: '-z gcs=always -z gcs-report' with mixed inputs emits GCS feature and warnings [shared]
+#name: Linux distributions's main use case: no GCS options and GCS-unmarked shared libraries report nothing.
 #source: gcs.s
 #source: gcs2.s
-#source: nogcs.s
 #alltargets: [check_shared_lib_support] *linux*
-#as: -march=armv9.4-a+gcs -defsym __property_gcs__=1
-#ld: -shared -z gcs=always -z gcs-report
-#warning: \A[^\n]*nogcs\.o: warning: GCS is required by -z gcs[^\n]*$
+#as: -march=armv9.4-a+gcs  -defsym __property_gcs__=1
+#ld: -L./tmpdir -lnogcs-so -lbti-plt-so -lgcs-so2
 #readelf: -n
 
 Displaying notes found in: .note.gnu.property

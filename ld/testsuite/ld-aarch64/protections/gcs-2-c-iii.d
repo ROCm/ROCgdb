@@ -1,4 +1,4 @@
-#name: Specifying only '-z gcs=never -z gcs-report=warning' with mixed inputs emits no error/warning, and no GCS feature [shared]
+#name: '-z gcs=never -z gcs-report=warning' with mixed inputs emits no warnings [shared]
 #source: gcs.s
 #source: gcs2.s
 #source: nogcs.s

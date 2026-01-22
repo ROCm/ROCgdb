@@ -1,4 +1,4 @@
-#name: '-z gcs=always -z gcs-report=error' and shared libraries without GCS feature reports warnings.
+#name: '-z gcs=always' with GCS-unmarked shared libraries reports warnings.
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*

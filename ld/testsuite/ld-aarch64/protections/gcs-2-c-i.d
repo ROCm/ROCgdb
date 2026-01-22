@@ -1,4 +1,4 @@
-#name: Specifying only '-z gcs=never' and GCS-marked inputs emits no GCS feature [shared]
+#name: '-z gcs=never' with GCS-marked inputs emits no GCS feature [shared]
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*

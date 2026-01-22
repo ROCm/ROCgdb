@@ -374,6 +374,18 @@ static pe_details_type pe_detail_list[] =
     false,
     autofilter_symbollist_generic
   },
+  {
+    "pei-aarch64-little",
+    "pe-bigobj-aarch64-little",
+    2,  /* IMAGE_REL_ARM64_ADDR32NB */
+    8,  /* IMAGE_REL_ARM64_SECREL */
+    11, /* IMAGE_REL_ARM64_SECREL_LOW12L */
+    13, /* IMAGE_REL_ARM64_SECTION */
+    PE_ARCH_aarch64,
+    bfd_arch_aarch64,
+    false,
+    autofilter_symbollist_generic
+  },
   { NULL, NULL, 0, 0, 0, 0, 0, 0, false, NULL }
 };
 

@@ -1,4 +1,4 @@
-#name: Specifying only '-z gcs=implicit' and GCS-marked inputs emits GCS feature [shared]
+#name: '-z gcs=implicit' with GCS-marked inputs emits GCS feature [shared]
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*

@@ -685,6 +685,7 @@ extern const bfd_target aarch64_elf64_le_vec;
 extern const bfd_target aarch64_mach_o_vec;
 extern const bfd_target aarch64_pei_le_vec;
 extern const bfd_target aarch64_pe_le_vec;
+extern const bfd_target aarch64_pe_bigobj_le_vec;
 extern const bfd_target alpha_ecoff_le_vec;
 extern const bfd_target alpha_elf64_vec;
 extern const bfd_target alpha_elf64_fbsd_vec;
@@ -992,6 +993,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&aarch64_elf64_le_vec,
 	&aarch64_mach_o_vec,
 	&aarch64_pe_le_vec,
+	&aarch64_pe_bigobj_le_vec,
 	&aarch64_pei_le_vec,
 #endif
 

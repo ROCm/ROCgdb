@@ -1,9 +1,9 @@
-#name: '-z gcs=implicit -z gcs-report=warning' and shared libraries without GCS feature reports warnings.
+#name: '-z gcs=implicit -z gcs-report-dynamic=warning' with GCS-unmarked shared libraries reports warnings.
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*
 #as: -march=armv9.4-a+gcs  -defsym __property_gcs__=1
-#ld: -z gcs=implicit -z gcs-report=warning -L./tmpdir -lnogcs-so -lbti-plt-so -lgcs-so2
+#ld: -z gcs=implicit -z gcs-report-dynamic=warning -L./tmpdir -lnogcs-so -lbti-plt-so -lgcs-so2
 #warning: \A[^\n]*libnogcs-so\.so: warning: GCS is required by -z gcs[^\n]*\n
 #warning:   [^\n]*libbti-plt-so\.so: warning: GCS is required by -z gcs[^\n]*
 #readelf: -n

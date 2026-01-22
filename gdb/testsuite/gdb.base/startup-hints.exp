@@ -113,26 +113,26 @@ proc build_hint_re { width with_style } {
     if { $width > 66 || $width < 51 } {
 	lappend msg \
 	    {{none {Type "}}
-	     {command {apropos <word>}}
-	     {none {" to search for commands related to <word>.}}}
-    } elseif { $width > 58 } {
+	     {command {apropos word}}
+	     {none "\" to search for commands related to \"word\"."}}
+    } elseif { $width > 56 } {
 	lappend msg \
 	    {{none {Type "}}
-	     {command {apropos <word>}}
+	     {command {apropos word}}
 	     {none {" to search for commands related to}}} \
-	    {{none {<word>.}}}
-    } elseif { $width > 55 } {
+	    {{none {"word".}}}
+    } elseif { $width > 53 } {
 	lappend msg \
 	    {{none {Type "}}
-	     {command {apropos <word>}}
+	     {command {apropos word}}
 	     {none {" to search for commands related}}}	 \
-	    {{none {to <word>.}}}
-    } elseif { $width > 47 } {
+	    {{none {to "word".}}}
+    } else {
 	lappend msg \
 	    {{none {Type "}}
-	     {command {apropos <word>}}
+	     {command {apropos word}}
 	     {none {" to search for commands}}} \
-	    {{none {related to <word>.}}}
+	    {{none {related to "word".}}}
     }
 
     if { $width > 50 } {

@@ -1,4 +1,4 @@
-#name: '-z gcs=always -z gcs-report=error -z gcs-report-dynamic=error' and shared library with GCS feature reports no error.
+#name: '-z gcs=always -z gcs-report=error -z gcs-report-dynamic=error' with GCS-marked shared library reports nothing.
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*

@@ -127,6 +127,11 @@ extension options as the @option{-mcpu} option.  Unlike
 @option{-mcpu}, extensions are not always enabled by default.
 @xref{AArch64 Extensions}.
 
+@cindex @samp{-mbig-obj} option, AArch64
+@item -mbig-obj
+On PE/COFF target this option forces the use of big object file
+format, which allows more than 32768 sections.
+
 @cindex @code{-mverbose-error} command-line option, AArch64
 @item -mverbose-error
 This option enables verbose error messages for AArch64 gas.  This option

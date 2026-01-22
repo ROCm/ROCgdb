@@ -179,10 +179,13 @@ print_insn_mcore (bfd_vma memaddr,
 	case OBRc:
 	case SI:
 	case SIa:
-	case OMa:
 	case OMb:
 	case OMc:
 	  (*print_func) (stream, "\t%s, %d", name, (inst >> 4) & 0x1F);
+	  break;
+
+	case OMa:
+	  (*print_func) (stream, "\t%s, %d", name, 32);
 	  break;
 
 	case I7:

@@ -1,4 +1,4 @@
-#name: Specifying only '-z gcs=always' with GCS marked inputs emits GCS feature without warnings for inputs with GCS feature [shared]
+#name: '-z gcs=always' with GCS-marked inputs emits GCS feature and no warnings [shared]
 #source: gcs.s
 #source: gcs2.s
 #alltargets: [check_shared_lib_support] *linux*

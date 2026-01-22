@@ -841,7 +841,12 @@ dtrace_static_probe_ops::get_probes
      information.  */
   for (sect = abfd->sections; sect != NULL; sect = sect->next)
     {
-      if (elf_section_data (sect)->this_hdr.sh_type == SHT_SUNW_dof)
+      /* Both SHT_SUNW_dof and SHT_GNU_SFRAME are defined as 0x6ffffff4.
+	 So for .sframe sections with sh_type == SHT_GNU_SFRAME, it also holds
+	 that sh_type == SHT_SUNW_dof.  Therefore, in addition to the sh_type
+	 check, we need to check for sections named .sframe.  */
+      if (elf_section_data (sect)->this_hdr.sh_type == SHT_SUNW_dof
+	  && strcmp (bfd_section_name (sect), ".sframe") != 0)
 	{
 	  bfd_byte *dof;
 

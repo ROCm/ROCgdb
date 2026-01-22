@@ -340,8 +340,7 @@ unsigned char aarch64_sframe_get_abi_arch (void);
 #define sframe_get_abi_arch aarch64_sframe_get_abi_arch
 
 /* Whether SFrame FDE of type SFRAME_FDE_TYPE_FLEX be generated.  */
-extern bool aarch64_support_flex_fde_p (void);
-#define sframe_support_flex_fde_p aarch64_support_flex_fde_p
+#define sframe_support_flex_fde_p() false
 
 #endif /* OBJ_ELF  */
 

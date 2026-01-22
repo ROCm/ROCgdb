@@ -5040,40 +5040,77 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   elf_aarch64_tdata (output_bfd)->no_enum_size_warning = no_enum_warn;
   elf_aarch64_tdata (output_bfd)->no_wchar_size_warning = no_wchar_warn;
 
-  /* Note: gnu_property_aarch64_feature_1_and was initialized to 0 by
-     bfd_zalloc().  */
+  uint32_t gnu_property_aarch64_feature_1_and = 0;
+  aarch64_feature_marking_report gcs_report;
+  aarch64_feature_marking_report gcs_report_dynamic;
+
   if (sw_protections->plt_type & PLT_BTI)
-    elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
-      |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    gnu_property_aarch64_feature_1_and |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
   switch (sw_protections->gcs_type)
     {
     case GCS_ALWAYS:
-      elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
-	|= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      gnu_property_aarch64_feature_1_and |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+      /* The default diagnostic level with '-z gcs=always' is 'warning'.  */
+      if (sw_protections->gcs_report == MARKING_UNSET)
+	gcs_report = MARKING_WARN;
+      else
+	gcs_report = sw_protections->gcs_report;
+
+      /* The default diagnostic level with '-z gcs=always' is 'warning'.  */
+      if (sw_protections->gcs_report_dynamic == MARKING_UNSET)
+	gcs_report_dynamic = MARKING_WARN;
+      else
+	gcs_report_dynamic = sw_protections->gcs_report_dynamic;
       break;
+
     case GCS_NEVER:
-      elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
-	&= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      gnu_property_aarch64_feature_1_and &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+      /* Markings are ignored, so no diagnostic messages can be emitted.  */
+      gcs_report = MARKING_NONE;
+      gcs_report_dynamic = MARKING_NONE;
       break;
+
     case GCS_IMPLICIT:
       /* GCS feature on the output bfd will be deduced from input objects.  */
+
+      /* No warnings should be emitted on input static objects with
+	 '-z gcs=implicit'.  */
+      gcs_report = MARKING_NONE;
+
+      /* Binary Linux distributions do not rebuild all packages from scratch
+	 when rolling out a new feature or creating a new release; only modified
+	 packages get rebuilt.  In the context of GCS deployment, this meant
+	 that some packages were rebuilt with GCS enabled while their
+	 dependencies were not yet GCS-compatible, resulting in warnings because
+	 originally the report level for dynamic objects was set to warning.
+	 These warnings caused build failures for packages that treat linker
+	 warnings as errors.  Those errors slowed down the GCS deployment, and
+	 Linux distribution maintainers requested that no GCS option provided
+	 should be equivalent to '-z gcs=implicit -z gcs-report-dynamic=none'.
+	 */
+      if (sw_protections->gcs_report_dynamic == MARKING_UNSET)
+	gcs_report_dynamic = MARKING_NONE;
+      else
+	gcs_report_dynamic = sw_protections->gcs_report_dynamic;
       break;
+
+    default:
+      /* Unknown GCS type.  */
+      abort ();
     }
 
+  elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
+    = gnu_property_aarch64_feature_1_and;
+
   elf_aarch64_tdata (output_bfd)->sw_protections = *sw_protections;
-  /* Inherit the value from '-z gcs-report' if the option '-z gcs-report-dynamic'
-     was not set on the command line.  However, the inheritance mechanism is
-     capped to avoid inheriting the error level from -g gcs-report as the user
-     might want to continue to build a module without rebuilding all the shared
-     libraries.  If a user also wants to error GCS issues in the shared
-     libraries, '-z gcs-report-dynamic=error' will have to be specified
-     explicitly.  */
-  if (sw_protections->gcs_report_dynamic == MARKING_UNSET)
-    elf_aarch64_tdata (output_bfd)->sw_protections.gcs_report_dynamic
-      = (sw_protections->gcs_report == MARKING_ERROR)
-      ? MARKING_WARN
-      : sw_protections->gcs_report;
+  /* Adjusting GCS diagnostic levels.  */
+  elf_aarch64_tdata (output_bfd)->sw_protections.gcs_report
+    = gcs_report;
+  elf_aarch64_tdata (output_bfd)->sw_protections.gcs_report_dynamic
+    = gcs_report_dynamic;
 
   elf_aarch64_tdata (output_bfd)->n_bti_issues = 0;
   elf_aarch64_tdata (output_bfd)->n_gcs_issues = 0;

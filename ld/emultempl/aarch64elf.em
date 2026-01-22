@@ -38,7 +38,7 @@ static aarch64_protection_opts sw_protections = {
   .plt_type = PLT_NORMAL,
   .bti_report = MARKING_WARN,
   .gcs_type = GCS_IMPLICIT,
-  .gcs_report = MARKING_WARN,
+  .gcs_report = MARKING_UNSET,
   .gcs_report_dynamic = MARKING_UNSET,
 };
 
@@ -417,7 +417,7 @@ aarch64_parse_gcs_report_dynamic_option (const char *_optarg)
   #define GCS_REPORT_DYNAMIC_LEN  COMPILE_TIME_STRLEN (GCS_REPORT_DYNAMIC)
 
   return aarch64_parse_feature_report_option (_optarg, GCS_REPORT_DYNAMIC,
-    GCS_REPORT_DYNAMIC_LEN, false, &sw_protections.gcs_report_dynamic);
+    GCS_REPORT_DYNAMIC_LEN, true, &sw_protections.gcs_report_dynamic);
 
   #undef GCS_REPORT_DYNAMIC
   #undef GCS_REPORT_DYNAMIC_LEN

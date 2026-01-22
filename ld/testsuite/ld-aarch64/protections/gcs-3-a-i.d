@@ -1,4 +1,4 @@
-#name: Specifying only '-z gcs=always -z gcs-report=error' with mixed inputs emits errors [shared]
+#name: '-z gcs=always -z gcs-report=error' with mixed inputs emits errors [shared]
 #source: gcs.s
 #source: gcs2.s
 #source: nogcs.s

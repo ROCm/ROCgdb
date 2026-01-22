@@ -115,7 +115,7 @@ scan (const struct bfd_arch_info *info, const char *string)
 }
 
 /* Figure out if llp64 is default */
-#if DEFAULT_VECTOR == aarch64_pe_le_vec
+#if DEFAULT_VECTOR == aarch64_pe_le_vec || DEFAULT_VECTOR == aarch64_pe_bigobj_le_vec
 #define LLP64_DEFAULT true
 #define AARCH64_DEFAULT false
 #else

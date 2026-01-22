@@ -256,7 +256,7 @@ case "${targ}" in
     ;;
   aarch64-*-pe* | aarch64-*-mingw*)
     targ_defvec=aarch64_pe_le_vec
-    targ_selvecs="aarch64_pe_le_vec aarch64_pei_le_vec aarch64_elf64_le_vec aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec pdb_vec"
+    targ_selvecs="aarch64_pe_le_vec aarch64_pei_le_vec aarch64_pe_bigobj_le_vec aarch64_elf64_le_vec aarch64_elf64_be_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_le_vec arm_elf32_be_vec pdb_vec"
     want64=true
     targ_underscore=no
     ;;

@@ -3140,7 +3140,7 @@ static const struct bfd_elf_special_section special_sections_l[] =
 static const struct bfd_elf_special_section special_sections_n[] =
 {
   { STRING_COMMA_LEN (".noinit"),	 -2, SHT_NOBITS,   SHF_ALLOC + SHF_WRITE },
-  { STRING_COMMA_LEN (".note.GNU-stack"), 0, SHT_PROGBITS, 0 },
+  { STRING_COMMA_LEN (".note.GNU-stack"), 0, SHT_NOTE,     0 },
   { STRING_COMMA_LEN (".note"),		 -1, SHT_NOTE,	   0 },
   { NULL,		     0,		  0, 0,		   0 }
 };

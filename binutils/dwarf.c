@@ -279,7 +279,7 @@ null_name (const char *p)
    No bytes will be read at address END or beyond.  */
 
 uint64_t
-read_leb128 (unsigned char *data,
+read_leb128 (const unsigned char *data,
 	     const unsigned char *const end,
 	     bool sign,
 	     unsigned int *length_return,
