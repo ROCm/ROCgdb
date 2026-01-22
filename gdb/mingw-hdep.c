@@ -24,10 +24,10 @@
 #include "gdbsupport/event-loop.h"
 #include "gdbsupport/gdb_select.h"
 #include "inferior.h"
-#include "cli/cli-style.h"
 #include "command.h"
 #include "cli/cli-cmds.h"
 #include "terminal.h"
+#include "charset.h"
 
 #include <windows.h>
 #include <signal.h>
@@ -258,9 +258,6 @@ windows_initialize_console ()
     }
   else if (hstdout != INVALID_HANDLE_VALUE)
     mingw_use_console_color_apis = -1; /* valid, but not a console device */
-
-  if (mingw_use_console_color_apis > 0)
-    no_emojis ();
 }
 
 void
@@ -438,6 +435,27 @@ gdb_console_fputs (const char *linebuf, FILE *fstream)
 
   last_style = style;
   return 1;
+}
+
+unsigned int
+mingw_get_codeset ()
+{
+  unsigned int default_codepage = GetACP ();
+  unsigned int output_codepage = GetConsoleOutputCP ();
+
+  /* Multibyte writes will not work correctly if written one byte at a
+     time, which is what gdb_console_fputs above does.  So if they set
+     the console's output to use UTF-8, only use that if we have
+     successfully set up the terminal for Virtual Terminal Sequences,
+     and are using 'fputs' directly.  */
+  if (output_codepage == 0	/* GetConsoleOutputCP failed */
+      || (output_codepage == 65001
+	  && output_codepage != default_codepage
+	  && !(mingw_use_console_color_apis < 0
+	       && hstdout != INVALID_HANDLE_VALUE
+	       && orig_console_mode != 0)))
+    return default_codepage;
+  return output_codepage;
 }
 
 /* See inferior.h.  */
