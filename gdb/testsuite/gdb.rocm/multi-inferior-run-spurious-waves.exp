@@ -71,7 +71,9 @@ proc do_test { } {
 
 	set res [gdb_test "continue" "Thread $::decimal .* hit Breakpoint $::decimal.*" \
 		    "continue to kernel"]
-	close -i $hog_spawn_id
+	# Do a blocking wait to make sure the hog process really goes
+	# away before we proceed.
+	kill_wait_spawned_process $hog_spawn_id -block
 	if { $res != 0 } {
 	    return
 	}

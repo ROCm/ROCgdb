@@ -84,7 +84,9 @@ proc do_test {} {
 	    verbose -log "Inferior 1 has $initial_count waves"
 	}
 
-	close -i $hog_spawn_id
+	# Do a blocking wait to make sure the hog process really goes
+	# away before we proceed.
+	kill_wait_spawned_process $hog_spawn_id -block
 	verbose -log "killed hog"
 	if { $res != 0 } {
 	    return
