@@ -20,6 +20,7 @@ import gdb
 class MyFinishBreakpoint(gdb.FinishBreakpoint):
     def stop(self):
         print("Stopped at MyFinishBreakpoint")
+        print("Return value is {}".format(self.return_value))
         return True
 
 

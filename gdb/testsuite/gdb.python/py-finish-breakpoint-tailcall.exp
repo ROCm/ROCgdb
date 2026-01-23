@@ -66,9 +66,14 @@ proc run_test {} {
     set saw_stopped_message false
     set saw_breakpoint_line false
     set saw_source_line false
+    set saw_return_value false
     gdb_test_multiple "continue" "" {
 	-re "^Stopped at MyFinishBreakpoint\r\n" {
 	    set saw_stopped_message true
+	    exp_continue
+	}
+	-re "^Return value is 43\r\n" {
+	    set saw_return_value true
 	    exp_continue
 	}
 	-re "^Breakpoint $::decimal, main \\(\\) at \[^\r\n\]+/$::srcfile:$lineno\r\n" {
@@ -82,7 +87,8 @@ proc run_test {} {
 	-re "^$::gdb_prompt $" {
 	    gdb_assert { $saw_stopped_message \
 			     && $saw_breakpoint_line \
-			     && $saw_source_line } $gdb_test_name
+			     && $saw_source_line \
+			     && $saw_return_value } $gdb_test_name
 	}
 	-re "^\[^\r\n\]*\r\n" {
 	    exp_continue

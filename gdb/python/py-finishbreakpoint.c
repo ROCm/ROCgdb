@@ -174,7 +174,6 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   struct frame_id frame_id;
   PyObject *internal = NULL;
   int internal_bp = 0;
-  std::optional<CORE_ADDR> pc;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|OO", keywords,
 					&frame_obj, &internal))
@@ -248,9 +247,10 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   try
     {
-      if ((pc = get_frame_pc_if_available (frame)))
+      CORE_ADDR pc;
+      if (get_frame_address_in_block_if_available (frame, &pc))
 	{
-	  struct symbol *function = find_symbol_for_pc (*pc);
+	  struct symbol *function = find_symbol_for_pc (pc);
 	  if (function != nullptr)
 	    {
 	      struct type *ret_type =
