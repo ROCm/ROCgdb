@@ -40,9 +40,17 @@ if {[build_executable "failed to build" $testfile $srcfile \
 # For remote host testing.
 set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
 
-# Run to 'normal_function' and then try to create a FinishBreakpoint
-# in the parent frame.
-proc run_test {} {
+# Run to 'normal_function' and then try to create a FinishBreakpoint.
+#
+# When USE_PARENT_FRAME_P is true we use the parent frame, which is
+# for tailcall_function, to create the FinishBreakpoint.
+#
+# When USE_PARENT_FRAME_P is false we use the frame of normal_function
+# to create the FinishBreakpoint.
+#
+# In both cases the finish breakpoint should be placed back in main,
+# which is where the inferior should stop when resumed.
+proc run_test { use_parent_frame_p } {
     clean_restart $::testfile
 
     if {![runto normal_function]} {
@@ -59,7 +67,16 @@ proc run_test {} {
     gdb_test "source $::pyfile" "Python script imported" "import python scripts"
 
     set lineno [gdb_get_line_number "Temporary breakpoint here."]
-    gdb_test "python MyFinishBreakpoint(gdb.selected_frame().older())" \
+
+    if { $use_parent_frame_p } {
+	gdb_test_no_output "python frame=gdb.selected_frame().older()" \
+	    "store a reference to the parent frame"
+    } else {
+	gdb_test_no_output "python frame=gdb.selected_frame()" \
+	    "store a reference to the current frame"
+    }
+
+    gdb_test "python MyFinishBreakpoint(frame)" \
 	"Temporary breakpoint $::decimal at $::hex: file \[^\r\n\]+/$::srcfile, line $lineno\\." \
 	"create finish breakpoint"
 
@@ -96,4 +113,6 @@ proc run_test {} {
     }
 }
 
-run_test
+foreach_with_prefix parent_frame { true false } {
+    run_test $parent_frame
+}

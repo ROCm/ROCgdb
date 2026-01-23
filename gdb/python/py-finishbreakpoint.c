@@ -201,6 +201,9 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       else
 	{
 	  prev_frame = get_prev_frame (frame);
+	  if (prev_frame != nullptr)
+	    prev_frame = skip_tailcall_frames (prev_frame);
+
 	  if (prev_frame == nullptr)
 	    {
 	      PyErr_SetString (PyExc_ValueError,
