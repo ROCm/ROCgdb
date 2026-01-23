@@ -7282,6 +7282,9 @@ and deleted when the execution will run out of the breakpoint scope (i.e.@:
 Finish breakpoints are thread specific and must be create with the right
 thread selected.
 
+It is not possible to create a @code{gdb.FinishBreakpoint} for an
+inline frame (@pxref{Inline Functions}).
+
 @defun FinishBreakpoint.__init__ (@r{[}frame@r{]} @r{[}, internal@r{]})
 Create a finish breakpoint at the return address of the @code{gdb.Frame}
 object @var{frame}.  If @var{frame} is not provided, this defaults to the

@@ -192,10 +192,16 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	  PyErr_SetString (PyExc_ValueError,
 			   _("Invalid ID for the `frame' object."));
 	}
+      else if (get_frame_type (frame) == INLINE_FRAME)
+	{
+	  PyErr_SetString
+	    (PyExc_ValueError,
+	     _("Unable to create FinishBreakpoint for inline frame."));
+	}
       else
 	{
 	  prev_frame = get_prev_frame (frame);
-	  if (prev_frame == 0)
+	  if (prev_frame == nullptr)
 	    {
 	      PyErr_SetString (PyExc_ValueError,
 			       _("\"FinishBreakpoint\" not "

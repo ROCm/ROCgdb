@@ -1,0 +1,147 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that attempting to create a FinishBreakpoint within an inline
+# function will fail.
+#
+# For inline functions the 'finish' command steps forward until we are
+# outside the inline function.
+#
+# For FinishBreakpoints though we need to pick an address an place a
+# breakpoint there.  Currently GDB doesn't know where to place such a
+# breakpoint for an inline function, so our solution is to prevent
+# creation of FinishBreakpoints for inline frames.
+
+load_lib gdb-python.exp
+
+require allow_python_tests
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Source the Python script.
+set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+gdb_test "source $pyfile" "Python script imported" "import python scripts"
+
+# Breakpoint locations needed for this test.
+gdb_breakpoint foo
+gdb_breakpoint bar
+gdb_breakpoint baz
+set final_lineno [gdb_get_line_number "Final breakpoint."]
+gdb_breakpoint $final_lineno
+
+# Depending on how the code is compiled, and exactly where the finish
+# breakpoint is placed, the breakpoint could potentially be reported
+# on either of these lines.
+set lineno_1 [gdb_get_line_number "Finish location."]
+set lineno_2 [expr {$lineno_1 + 1}]
+set lineno_re "(?:$lineno_1|$lineno_2)"
+
+# Run to 'foo', which is an inline function called from a normal
+# function, and try to create a MyFinishBreakpoint.  This should fail.
+gdb_continue_to_breakpoint "breakpoint in foo"
+gdb_test "python MyFinishBreakpoint(gdb.selected_frame())" \
+    "Error occurred in Python: Unable to create FinishBreakpoint for inline frame\\." \
+    "try to create FinishBreakpoint for inline frame, caller is a normal frame"
+
+# Continue to 'bar', which is an inline function called from another
+# inline function, and try to create a MyFinishBreakpoint.  This
+# should fail.
+gdb_continue_to_breakpoint "breakpoint in bar"
+gdb_test "python MyFinishBreakpoint(gdb.selected_frame())" \
+    "Error occurred in Python: Unable to create FinishBreakpoint for inline frame\\." \
+    "try to create FinishBreakpoint for inline frame, caller is an inline frame"
+
+# Continue to 'baz', which is a normal function called from an inline
+# function, and create a MyFinishBreakpoint, which we expect to succeed.
+gdb_continue_to_breakpoint "breakpoint in baz"
+gdb_test "python MyFinishBreakpoint(gdb.selected_frame())" \
+    "Temporary breakpoint $decimal at $hex: file \[^\r\n\]+/$srcfile, line $lineno_re\\." \
+    "create FinishBreakpoint normal function, caller is an inline frame"
+
+# Continue and make sure we hit the MyFinishBreakpoint.
+set saw_finish_breakpoint false
+set saw_return_value false
+set saw_breakpoint_location false
+set saw_source_line false
+gdb_test_multiple "continue" "continue to finish breakpoint" {
+    -re "^Stopped at MyFinishBreakpoint\r\n" {
+	set saw_finish_breakpoint true
+	exp_continue
+    }
+    -re "^Return value is 51\r\n" {
+	set saw_return_value true
+	exp_continue
+    }
+    -re "^Breakpoint $decimal, ($hex in )?bar \\(arg=$decimal\\) at \[^\r\n\]+/$srcfile:$lineno_re\r\n" {
+	set saw_breakpoint_location true
+	exp_continue
+    }
+    -re "^$lineno_re\\s+\[^\r\n\]+\r\n" {
+	set saw_source_line true
+	exp_continue
+    }
+    -re "^$gdb_prompt $" {
+	gdb_assert {$saw_finish_breakpoint \
+			&& $saw_return_value \
+			&& $saw_breakpoint_location \
+			&& $saw_source_line } $gdb_test_name
+    }
+    -re "^\[^\r\n\]*\r\n" {
+	exp_continue
+    }
+}
+
+# Continue to the final breakpoint location.  We don't expect to see
+# any of the MyFinishBreakpoint output here.  If we do then we've hit
+# an unexpected FinishBreakpoint.
+set saw_finish_breakpoint false
+set saw_return_value false
+set saw_breakpoint_location false
+set saw_source_line false
+gdb_test_multiple "continue" "continue to final breakpoint" {
+    -re "^Stopped at MyFinishBreakpoint\r\n" {
+	set saw_finish_breakpoint true
+	exp_continue
+    }
+    -re "^Return value is 51\r\n" {
+	set saw_return_value true
+	exp_continue
+    }
+    -re "^Breakpoint $decimal, main \\(\\) at \[^\r\n\]+/$srcfile:$final_lineno\r\n" {
+	set saw_breakpoint_location true
+	exp_continue
+    }
+    -re "^$final_lineno\\s+\[^\r\n\]+\r\n" {
+	set saw_source_line true
+	exp_continue
+    }
+    -re "^$gdb_prompt $" {
+	gdb_assert {!$saw_finish_breakpoint \
+			&& !$saw_return_value \
+			&& $saw_breakpoint_location \
+			&& $saw_source_line } $gdb_test_name
+    }
+    -re "^\[^\r\n\]*\r\n" {
+	exp_continue
+    }
+}
