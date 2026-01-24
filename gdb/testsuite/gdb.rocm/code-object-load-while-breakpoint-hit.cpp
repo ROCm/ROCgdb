@@ -39,21 +39,12 @@ kernel ()
 
 #include <hip/hip_runtime.h>
 
+#include "rocm-test-utils.h"
+
 constexpr unsigned int NUM_ITEMS_PER_BLOCK = 256;
 constexpr unsigned int NUM_BLOCKS = 128;
 constexpr unsigned int NUM_ITEMS = NUM_ITEMS_PER_BLOCK * NUM_BLOCKS;
 constexpr unsigned int NUM_LOAD_UNLOADS = 5;
-
-#define CHECK(cmd)                                                            \
-  {                                                                           \
-    hipError_t error = cmd;                                                   \
-    if (error != hipSuccess)                                                  \
-      {                                                                       \
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                        \
-		 hipGetErrorString (error), error, __FILE__, __LINE__);       \
-	exit (EXIT_FAILURE);                                                  \
-      }                                                                       \
-  }
 
 int
 main (int argc, const char **argv)
