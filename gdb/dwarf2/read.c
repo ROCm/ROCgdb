@@ -4804,15 +4804,6 @@ process_imported_unit_die (die_info *die, dwarf2_cu *source_cu)
       dwarf2_per_cu *per_cu
 	= dwarf2_find_containing_unit ({ &section, sect_off }, per_objfile);
 
-      /* We're importing a C++ compilation unit with tag DW_TAG_compile_unit
-	 into another compilation unit, at root level.  Regard this as a hint,
-	 and ignore it.  This is a best effort, it only works if unit_type and
-	 lang are already set.  */
-      if (die->parent && die->parent->parent == NULL
-	  && per_cu->unit_type (false) == DW_UT_compile
-	  && per_cu->lang (false) == language_cplus)
-	return;
-
       /* Load its DIEs and add it to the queue.  */
       if (dwarf2_cu *dst_cu = ensure_loaded_comp_unit (per_cu, per_objfile,
 						       false,
