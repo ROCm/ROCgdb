@@ -171,17 +171,12 @@ objfile::forget_cached_source_info ()
    the specified compunit symtab is also searched.  */
 
 static bool
-iterate_over_one_compunit_symtab (const char *name,
+iterate_over_one_compunit_symtab (const char *base_name,
+				  const char *name,
 				  const char *real_path,
 				  compunit_symtab *cust,
 				  gdb::function_view<bool (symtab *)> callback)
 {
-  const char *base_name = lbasename (name);
-
-  /* Skip included compunits.  */
-  if (cust->user != nullptr)
-    return false;
-
   for (symtab *s : cust->filetabs ())
     {
       if (compare_filenames_for_search (s->filename (), name))
@@ -224,6 +219,11 @@ iterate_over_one_compunit_symtab (const char *name,
 	}
     }
 
+  for (compunit_symtab *iter : cust->includes)
+    if (iterate_over_one_compunit_symtab (base_name, name, real_path,
+					  iter, callback))
+      return true;
+
   return false;
 }
 
@@ -257,10 +257,15 @@ objfile::map_symtabs_matching_filename
 
   auto listener = [&] (compunit_symtab *symtab)
   {
+    /* Skip included compunits, as they are searched by
+       iterate_over_one_compunit_symtab.  */
+    if (symtab->user != nullptr)
+      return true;
+
     /* CALLBACK returns false to keep going and true to continue, so
        we have to invert the result here, for search.  */
-    return !iterate_over_one_compunit_symtab (name, real_path, symtab,
-					      callback);
+    return !iterate_over_one_compunit_symtab (name_basename, name, real_path,
+					      symtab, callback);
   };
 
   for (const auto &iter : qf)
