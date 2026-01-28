@@ -402,7 +402,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   const char *name;
   static const char *keywords[] = { "name", "block", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *block_obj = NULL, *bool_obj;
+  PyObject *block_obj = NULL;
   const struct block *block = NULL;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
@@ -450,10 +450,13 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
     }
   else
     sym_obj = gdbpy_ref<>::new_reference (Py_None);
-  PyTuple_SET_ITEM (ret_tuple.get (), 0, sym_obj.release ());
 
-  bool_obj = PyBool_FromLong (is_a_field_of_this.type != NULL);
-  PyTuple_SET_ITEM (ret_tuple.get (), 1, bool_obj);
+  if (PyTuple_SetItem (ret_tuple.get (), 0, sym_obj.release ()) < 0)
+    return nullptr;
+
+  gdbpy_ref<> bool_obj (PyBool_FromLong (is_a_field_of_this.type != NULL));
+  if (PyTuple_SetItem (ret_tuple.get (), 1, bool_obj.release ()) < 0)
+    return nullptr;
 
   return ret_tuple.release ();
 }

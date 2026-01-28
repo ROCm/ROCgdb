@@ -1043,8 +1043,9 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
   else
     unparsed = gdbpy_ref<>::new_reference (Py_None);
 
-  PyTuple_SetItem (return_result.get (), 0, unparsed.release ());
-  PyTuple_SetItem (return_result.get (), 1, result.release ());
+  if (PyTuple_SetItem (return_result.get (), 0, unparsed.release ()) < 0
+      || PyTuple_SetItem (return_result.get (), 1, result.release ()) < 0)
+    return nullptr;
 
   return return_result.release ();
 }

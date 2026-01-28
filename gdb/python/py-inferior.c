@@ -382,7 +382,6 @@ infpy_threads (PyObject *self, PyObject *args)
 {
   int i = 0;
   inferior_object *inf_obj = (inferior_object *) self;
-  PyObject *tuple;
 
   INFPY_REQUIRE_VALID (inf_obj);
 
@@ -395,19 +394,18 @@ infpy_threads (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  tuple = PyTuple_New (inf_obj->threads->size ());
-  if (!tuple)
-    return NULL;
+  gdbpy_ref<> tuple (PyTuple_New (inf_obj->threads->size ()));
+  if (tuple == nullptr)
+    return nullptr;
 
   for (const thread_map_t::value_type &entry : *inf_obj->threads)
     {
-      PyObject *thr = (PyObject *) entry.second.get ();
-      Py_INCREF (thr);
-      PyTuple_SET_ITEM (tuple, i, thr);
-      i = i + 1;
+      auto thr = gdbpy_ref<>::new_reference ((PyObject *) entry.second.get ());
+      if (PyTuple_SetItem (tuple.get (), i++, thr.release ()) < 0)
+	return nullptr;
     }
 
-  return tuple;
+  return tuple.release ();
 }
 
 static PyObject *

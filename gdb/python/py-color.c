@@ -119,14 +119,15 @@ get_attr (PyObject *obj, PyObject *attr_name)
 	    return nullptr;
 	}
 
-      PyObject *comp = PyTuple_New (3);
+      gdbpy_ref<> comp (PyTuple_New (3));
       if (comp == nullptr)
 	return nullptr;
 
       for (int i = 0; i < 3; ++i)
-	PyTuple_SET_ITEM (comp, i, rgb_objects[i].release ());
+	if (PyTuple_SetItem (comp.get (), i, rgb_objects[i].release ()) < 0)
+	  return nullptr;
 
-      return comp;
+      return comp.release ();
     }
 
   return PyObject_GenericGetAttr (obj, attr_name);
