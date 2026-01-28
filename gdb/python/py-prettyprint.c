@@ -318,8 +318,9 @@ print_string_repr (PyObject *printer, const char *hint,
 	      long length;
 	      struct type *type;
 
-	      output = PyBytes_AS_STRING (string.get ());
-	      length = PyBytes_GET_SIZE (string.get ());
+	      output = PyBytes_AsString (string.get ());
+	      gdb_assert (output != nullptr);
+	      length = PyBytes_Size (string.get ());
 	      type = builtin_type (gdbarch)->builtin_char;
 
 	      if (hint && !strcmp (hint, "string"))
