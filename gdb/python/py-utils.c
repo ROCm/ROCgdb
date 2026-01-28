@@ -362,7 +362,7 @@ gdb_py_generic_getattro (PyObject *self, PyObject *attr)
      Therefore, we must explicitly raise an AttributeError in this case.  */
   PyErr_Format (PyExc_AttributeError,
 		"'%s' object has no attribute '%s'",
-		Py_TYPE (self)->tp_name,
+		gdbpy_py_obj_tp_name (self),
 		PyUnicode_AsUTF8AndSize (attr, nullptr));
   return nullptr;
 }
@@ -700,5 +700,5 @@ gdbpy_fix_doc_string_indentation (gdb::unique_xmalloc_ptr<char> doc)
 PyObject *
 gdb_py_invalid_object_repr (PyObject *self)
 {
-  return PyUnicode_FromFormat ("<%s (invalid)>", Py_TYPE (self)->tp_name);
+  return PyUnicode_FromFormat ("<%s (invalid)>", gdbpy_py_obj_tp_name (self));
 }

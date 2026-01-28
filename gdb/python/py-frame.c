@@ -95,7 +95,7 @@ frapy_repr (PyObject *self)
 
   const frame_id &fid = frame_obj->frame_id;
   return PyUnicode_FromFormat ("<%s level=%d frame-id=%s>",
-			       Py_TYPE (self)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       frame_relative_level (f_info),
 			       fid.to_string ().c_str ());
 }
@@ -544,7 +544,7 @@ frapy_read_var (PyObject *self, PyObject *args, PyObject *kw)
     {
       PyErr_Format (PyExc_TypeError,
 		    _("argument 1 must be gdb.Symbol or str, not %s"),
-		    Py_TYPE (sym_obj)->tp_name);
+		    gdbpy_py_obj_tp_name (sym_obj));
       return NULL;
     }
 

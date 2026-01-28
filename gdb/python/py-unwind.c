@@ -247,7 +247,7 @@ unwind_infopy_repr (PyObject *self)
 
   if (frame == nullptr)
     return PyUnicode_FromFormat ("<%s for an invalid frame>",
-				 Py_TYPE (self)->tp_name);
+				 gdbpy_py_obj_tp_name (self));
 
   std::string saved_reg_names;
   struct gdbarch *gdbarch = pending_frame->gdbarch;
@@ -262,7 +262,7 @@ unwind_infopy_repr (PyObject *self)
     }
 
   return PyUnicode_FromFormat ("<%s frame #%d, saved_regs=(%s)>",
-			       Py_TYPE (self)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       frame_relative_level (frame),
 			       saved_reg_names.c_str ());
 }
@@ -456,7 +456,7 @@ pending_framepy_repr (PyObject *self)
     }
 
   return PyUnicode_FromFormat ("<%s level=%d, sp=%s, pc=%s>",
-			       Py_TYPE (self)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       frame_relative_level (frame),
 			       sp_str,
 			       pc_str);
@@ -924,7 +924,7 @@ frame_unwind_python::sniff (const frame_info_ptr &this_frame,
   gdb_assert (pyo_unwind_info != nullptr);
   if (!PyObject_TypeCheck (pyo_unwind_info, &unwind_info_object_type))
     error (_("an Unwinder should return gdb.UnwindInfo, not %s."),
-	   Py_TYPE (pyo_unwind_info)->tp_name);
+	   gdbpy_py_obj_tp_name (pyo_unwind_info));
 
   {
     unwind_info_object *unwind_info =

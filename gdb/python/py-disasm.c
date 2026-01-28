@@ -304,7 +304,7 @@ disasmpy_info_repr (PyObject *self)
   const char *arch_name
     = (gdbarch_bfd_arch_info (obj->gdbarch))->printable_name;
   return PyUnicode_FromFormat ("<%s address=%s architecture=%s>",
-			       Py_TYPE (obj)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       core_addr_to_string_nz (obj->address),
 			       arch_name);
 }
@@ -995,7 +995,7 @@ disasmpy_result_init (PyObject *self, PyObject *args, PyObject *kwargs)
     {
       PyErr_Format (PyExc_ValueError,
 		    _("Cannot use 'string' and 'parts' when creating %s."),
-		    Py_TYPE (self)->tp_name);
+		    gdbpy_py_obj_tp_name (self));
       return -1;
     }
 
@@ -1079,7 +1079,7 @@ disasmpy_result_repr (PyObject *self)
   gdb_assert (obj->parts != nullptr);
 
   return PyUnicode_FromFormat ("<%s length=%d string=\"%U\">",
-			       Py_TYPE (obj)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       obj->length,
 			       disasmpy_result_str (self));
 }
@@ -1294,7 +1294,7 @@ gdbpy_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
       PyErr_Format
 	(PyExc_TypeError,
 	 _("Result from Disassembler must be gdb.DisassemblerResult, not %s."),
-	 Py_TYPE (result.get ())->tp_name);
+	 gdbpy_py_obj_tp_name (result.get ()));
       gdbpy_print_stack ();
       return std::optional<int> (-1);
     }
@@ -1381,8 +1381,9 @@ disasmpy_dealloc_result (PyObject *self)
 static int
 disasmpy_part_init (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-  PyErr_SetString (PyExc_RuntimeError,
-		   _("Cannot create instances of DisassemblerPart."));
+  PyErr_Format (PyExc_RuntimeError,
+		_("Cannot create instances of %s."),
+		gdbpy_py_obj_tp_name (self));
   return -1;
 }
 
@@ -1419,7 +1420,7 @@ disasmpy_text_part_repr (PyObject *self)
   gdb_assert (obj->string != nullptr);
 
   return PyUnicode_FromFormat ("<%s string='%s', style='%s'>",
-			       Py_TYPE (obj)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       obj->string->c_str (),
 			       get_style_name (obj->style));
 }
@@ -1462,7 +1463,7 @@ disasmpy_addr_part_repr (PyObject *self)
   disasm_addr_part_object *obj = (disasm_addr_part_object *) self;
 
   return PyUnicode_FromFormat ("<%s address='%s'>",
-			       Py_TYPE (obj)->tp_name,
+			       gdbpy_py_obj_tp_name (self),
 			       core_addr_to_string_nz (obj->address));
 }
 

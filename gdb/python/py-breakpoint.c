@@ -1065,9 +1065,11 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 bppy_repr (PyObject *self)
 {
+  const char *tp_name = gdbpy_py_obj_tp_name (self);
+
   const auto bp = (struct gdbpy_breakpoint_object*) self;
   if (bp->bp == nullptr)
-    return PyUnicode_FromFormat ("<%s (invalid)>", Py_TYPE (self)->tp_name);
+    return PyUnicode_FromFormat ("<%s (invalid)>", tp_name);
 
   std::string str = " ";
   if (bp->bp->thread != -1)
@@ -1079,7 +1081,7 @@ bppy_repr (PyObject *self)
   str.pop_back ();
 
   return PyUnicode_FromFormat ("<%s%s number=%d hits=%d%s>",
-			       Py_TYPE (self)->tp_name,
+			       tp_name,
 			       (bp->bp->enable_state == bp_enabled
 				? "" : " disabled"), bp->bp->number,
 			       bp->bp->hit_count, str.c_str ());
@@ -1771,7 +1773,8 @@ bplocpy_repr (PyObject *py_self)
       str += fn_name;
     }
 
-  return PyUnicode_FromFormat ("<%s %s>", Py_TYPE (self)->tp_name,
+  return PyUnicode_FromFormat ("<%s %s>",
+			       gdbpy_py_obj_tp_name (py_self),
 			       str.c_str ());
 }
 

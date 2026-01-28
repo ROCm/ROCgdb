@@ -422,6 +422,7 @@ SUBDIR_PYTHON_SRCS = \
 	python/py-micmd.c \
 	python/py-newobjfileevent.c \
 	python/py-objfile.c \
+	python/py-obj-type.c \
 	python/py-param.c \
 	python/py-prettyprint.c \
 	python/py-progspace.c \

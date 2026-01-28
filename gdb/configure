@@ -28765,8 +28765,8 @@ fi
 
 
 if test "$enable_py_limited_api" = yes; then
-  # The minimal Python limited API version is currently set to 3.11 for the
-  # support of PyBuffer_FillInfo and PyBuffer_Release.
+  # The minimal Python limited API version is currently set to 3.14 for the
+  # support of Py_TYPE().
   # The choice of the minimal version for the Python limited API won't be
   # frozen until the end of the migration.
   old_CFLAGS="$CFLAGS"
@@ -28781,8 +28781,8 @@ if test "$enable_py_limited_api" = yes; then
 #ifndef PY_VERSION_HEX
 #error "PY_VERSION_HEX is not defined"
 #endif
-#if PY_VERSION_HEX < 0x030b0000
-#error "Python limited API support requires at least Python version 3.11"
+#if PY_VERSION_HEX < 0x030e0000
+#error "Python limited API support requires at least Python version 3.14"
 #endif
 
 int
@@ -28795,12 +28795,12 @@ main ()
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
 
-$as_echo "#define Py_LIMITED_API 0x030b0000" >>confdefs.h
+$as_echo "#define Py_LIMITED_API 0x030e0000" >>confdefs.h
 
 
 else
 
-      as_fn_error $? "Python limited API support requires at least Python version 3.11" "$LINENO" 5
+      as_fn_error $? "Python limited API support requires at least Python version 3.14" "$LINENO" 5
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext

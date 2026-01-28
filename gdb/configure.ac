@@ -1078,8 +1078,8 @@ AC_ARG_ENABLE([py-limited-api],
 	      [enable_py_limited_api=no])
 
 if test "$enable_py_limited_api" = yes; then
-  # The minimal Python limited API version is currently set to 3.11 for the
-  # support of PyBuffer_FillInfo and PyBuffer_Release.
+  # The minimal Python limited API version is currently set to 3.14 for the
+  # support of Py_TYPE().
   # The choice of the minimal version for the Python limited API won't be
   # frozen until the end of the migration.
   old_CFLAGS="$CFLAGS"
@@ -1093,14 +1093,14 @@ if test "$enable_py_limited_api" = yes; then
 #ifndef PY_VERSION_HEX
 #error "PY_VERSION_HEX is not defined"
 #endif
-#if PY_VERSION_HEX < 0x030b0000
-#error "Python limited API support requires at least Python version 3.11"
+#if PY_VERSION_HEX < 0x030e0000
+#error "Python limited API support requires at least Python version 3.14"
 #endif
     ]],[[]])],
-    [AC_DEFINE(Py_LIMITED_API, 0x030b0000,
+    [AC_DEFINE(Py_LIMITED_API, 0x030e0000,
       [Define if GDB should be built against the Python limited C API.])
     ],[
-      AC_MSG_ERROR([Python limited API support requires at least Python version 3.11])
+      AC_MSG_ERROR([Python limited API support requires at least Python version 3.14])
     ])
   CFLAGS="$old_CFLAGS"
   CPPFLAGS="$old_CPPFLAGS"
