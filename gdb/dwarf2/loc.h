@@ -1,7 +1,6 @@
 /* DWARF 2 location expression support for GDB.
 
    Copyright (C) 2003-2026 Free Software Foundation, Inc.
-   Copyright (C) 2020-2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -67,7 +66,7 @@ value *compute_var_value (const char *name);
    Function always returns non-NULL, it throws NO_ENTRY_VALUE_ERROR
    otherwise.  */
 
-struct call_site_parameter *dwarf_expr_reg_to_entry_parameter
+call_site_parameter *dwarf_expr_reg_to_entry_parameter
   (const frame_info_ptr &frame, call_site_parameter_kind kind,
    call_site_parameter_u kind_u, dwarf2_per_cu **per_cu_return,
    dwarf2_per_objfile **per_objfile_return);
@@ -278,7 +277,7 @@ extern int dwarf_reg_to_regnum_or_error (struct gdbarch *arch,
 
 /* Fetch the value pointed to by a synthetic pointer.  */
 
-extern value *indirect_synthetic_pointer
+extern struct value *indirect_synthetic_pointer
   (sect_offset die, LONGEST byte_offset, dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile, const frame_info_ptr &frame,
    struct type *type, bool resolve_abstract_p = false);
