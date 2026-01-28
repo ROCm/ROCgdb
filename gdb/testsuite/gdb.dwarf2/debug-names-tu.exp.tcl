@@ -47,6 +47,7 @@ Dwarf::assemble {
 		DW_AT_name _start
 		DW_AT_low_pc $_start_start DW_FORM_addr
 		DW_AT_high_pc $_start_end DW_FORM_addr
+		DW_AT_external 1 DW_FORM_flag
 	    }
 	}
     }
