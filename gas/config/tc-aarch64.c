@@ -879,7 +879,7 @@ vectype_to_qualifier (const struct vector_type_el *vectype)
 
  vectype_conversion_fail:
   first_error (_("bad vector arrangement type"));
-  return AARCH64_OPND_QLF_NIL;
+  return AARCH64_OPND_QLF_ERR;
 }
 
 /* Register parsing.  */
@@ -4703,7 +4703,7 @@ parse_reg_with_qual (char **str, aarch64_reg_type reg_type,
   else
     {
       *qualifier = vectype_to_qualifier (&vectype);
-      if (*qualifier == AARCH64_OPND_QLF_NIL)
+      if (*qualifier == AARCH64_OPND_QLF_ERR)
 	return NULL;
     }
 
@@ -6974,7 +6974,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  else
 	    {
 	      info->qualifier = vectype_to_qualifier (&vectype);
-	      if (info->qualifier == AARCH64_OPND_QLF_NIL)
+	      if (info->qualifier == AARCH64_OPND_QLF_ERR)
 		goto failure;
 	    }
 	  break;
@@ -7067,7 +7067,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	      if (vectype.type == NT_invtype)
 		goto failure;
 	      info->qualifier = vectype_to_qualifier (&vectype);
-	      if (info->qualifier == AARCH64_OPND_QLF_NIL)
+	      if (info->qualifier == AARCH64_OPND_QLF_ERR)
 		goto failure;
 	    }
 
@@ -7197,7 +7197,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		}
 	    }
 	  info->qualifier = vectype_to_qualifier (&vectype);
-	  if (info->qualifier == AARCH64_OPND_QLF_NIL)
+	  if (info->qualifier == AARCH64_OPND_QLF_ERR)
 	    goto failure;
 	  break;
 
@@ -8354,7 +8354,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  if (vectype.type == NT_invtype)
 	    info->qualifier = AARCH64_OPND_QLF_NIL;
 	  else
-	    info->qualifier = vectype_to_qualifier (&vectype);
+	    {
+	      info->qualifier = vectype_to_qualifier (&vectype);
+	      if (info->qualifier == AARCH64_OPND_QLF_ERR)
+		goto failure;
+	    }
 	  break;
 
 	case AARCH64_OPND_BARRIER_GCSB:

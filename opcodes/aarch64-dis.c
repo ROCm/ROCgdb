@@ -2512,7 +2512,7 @@ aarch64_ext_plain_shrimm (const aarch64_operand *self, aarch64_opnd_info *info,
    constrained field(s).  Given the VALUE of such a field or fields, the
    qualifiers CANDIDATES and the MASK (indicating which bits are valid for
    operand encoding), the function returns the matching qualifier or
-   AARCH64_OPND_QLF_NIL if nothing matches.
+   AARCH64_OPND_QLF_ERR if nothing matches.
 
    N.B. CANDIDATES is a group of possible qualifiers that are valid for
    one operand; it has a maximum of AARCH64_MAX_QLF_SEQ_NUM qualifiers and
@@ -2535,7 +2535,7 @@ get_qualifier_from_partial_encoding (aarch64_insn value,
       if ((standard_value & mask) == (value & mask))
 	return candidates[i];
     }
-  return AARCH64_OPND_QLF_NIL;
+  return AARCH64_OPND_QLF_ERR;
 }
 
 /* Given a list of qualifier sequences, return all possible valid qualifiers
@@ -2562,7 +2562,6 @@ static int
 decode_sizeq (aarch64_inst *inst)
 {
   int idx;
-  enum aarch64_opnd_qualifier qualifier;
   aarch64_insn code;
   aarch64_insn value, mask;
   enum aarch64_field_kind fld_sz;
@@ -2613,9 +2612,10 @@ decode_sizeq (aarch64_inst *inst)
     }
 #endif /* DEBUG_AARCH64 */
 
-  qualifier = get_qualifier_from_partial_encoding (value, candidates, mask);
+  enum aarch64_opnd_qualifier qualifier
+    = get_qualifier_from_partial_encoding (value, candidates, mask);
 
-  if (qualifier == AARCH64_OPND_QLF_NIL)
+  if (qualifier == AARCH64_OPND_QLF_ERR)
     return 0;
 
   inst->operands[idx].qualifier = qualifier;
