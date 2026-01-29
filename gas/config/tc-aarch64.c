@@ -6621,10 +6621,6 @@ process_movw_reloc_info (void)
 static inline bfd_reloc_code_real_type
 ldst_lo12_determine_real_reloc_type (void)
 {
-  unsigned logsz, max_logsz;
-  enum aarch64_opnd_qualifier opd0_qlf = inst.base.operands[0].qualifier;
-  enum aarch64_opnd_qualifier opd1_qlf = inst.base.operands[1].qualifier;
-
   const bfd_reloc_code_real_type reloc_ldst_lo12[5][5] = {
     {
       BFD_RELOC_AARCH64_LDST8_LO12,
@@ -6673,13 +6669,22 @@ ldst_lo12_determine_real_reloc_type (void)
 		  == BFD_RELOC_AARCH64_TLSLE_LDST_TPREL_LO12_NC));
   gas_assert (inst.base.opcode->operands[1] == AARCH64_OPND_ADDR_UIMM12);
 
-  if (opd1_qlf == AARCH64_OPND_QLF_NIL)
-    opd1_qlf =
-      aarch64_get_expected_qualifier (inst.base.opcode->qualifiers_list,
-				      1, opd0_qlf, 0);
-  gas_assert (opd1_qlf != AARCH64_OPND_QLF_NIL);
+  enum aarch64_opnd_qualifier opd0_qlf = inst.base.operands[0].qualifier;
+  enum aarch64_opnd_qualifier opd1_qlf = AARCH64_OPND_QLF_NIL;
+  const aarch64_opnd_qualifier_seq_t *qseq_list
+    = inst.base.opcode->qualifiers_list;
+  for (int i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
+    if (qseq_list[i][0] == opd0_qlf)
+      {
+	opd1_qlf = qseq_list[i][1];
+	break;
+      }
 
-  logsz = get_log2 (aarch64_get_qualifier_esize (opd1_qlf));
+  unsigned logsz = 0;
+  unsigned max_logsz;
+
+  if (opd1_qlf >= AARCH64_OPND_QLF_S_B && opd1_qlf <= AARCH64_OPND_QLF_S_Q)
+      logsz = opd1_qlf - AARCH64_OPND_QLF_S_B;
 
   if (inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12
       || inst.reloc.type == BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12_NC

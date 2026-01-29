@@ -2097,10 +2097,6 @@ aarch64_print_operand (char *, size_t, bfd_vma, const aarch64_opcode *,
 extern int
 aarch64_operand_index (const enum aarch64_opnd *, enum aarch64_opnd);
 
-extern aarch64_opnd_qualifier_t
-aarch64_get_expected_qualifier (const aarch64_opnd_qualifier_seq_t *, int,
-				const aarch64_opnd_qualifier_t, int);
-
 extern bool
 aarch64_is_destructive_by_operands (const aarch64_opcode *);
 
