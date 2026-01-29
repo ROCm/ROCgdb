@@ -793,6 +793,9 @@ static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
   {0, 0, 0, "msl", 0},
 
   {0, 0, 0, "retrieving", 0},
+
+  /* This shouldn't ever be used.  */
+  {0, 0, 0, "ERR", OQK_NIL},
 };
 
 static inline bool
