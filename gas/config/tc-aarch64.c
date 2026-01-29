@@ -921,10 +921,7 @@ parse_reg (char **ccp)
   return reg;
 }
 
-/* Return the operand qualifier associated with all uses of REG, or
-   AARCH64_OPND_QLF_NIL if none.  AARCH64_OPND_QLF_NIL means either
-   that qualifiers don't apply to REG or that qualifiers are added
-   using suffixes.  */
+/* Return the operand qualifier associated with all uses of REG.  */
 
 static aarch64_opnd_qualifier_t
 inherent_reg_qualifier (const reg_entry *reg)
@@ -949,7 +946,7 @@ inherent_reg_qualifier (const reg_entry *reg)
       return AARCH64_OPND_QLF_S_B + (reg->type - REG_TYPE_FP_B);
 
     default:
-      return AARCH64_OPND_QLF_NIL;
+      gas_assert (0);
     }
 }
 
