@@ -1013,6 +1013,11 @@ enum aarch64_opnd_qualifier
   /* Indicating no further qualification on an operand.  */
   AARCH64_OPND_QLF_NIL,
 
+  /* Indicating that the qualifier on an operand is not yet known.  This could
+     arise during either disassembly or assembly, when a qualifier is
+     determined by referring to another operand's qualifier.  */
+  AARCH64_OPND_QLF_UNKNOWN,
+
   /* Qualifying an operand which is a general purpose (integer) register;
      indicating the operand data size or a specific register.  */
   AARCH64_OPND_QLF_W,	/* Wn, WZR or WSP.  */

@@ -493,7 +493,7 @@ static inline void
 reset_operand_qualifier (aarch64_inst *inst, int idx)
 {
   assert (idx >=0 && idx < aarch64_num_of_operands (inst->opcode));
-  inst->operands[idx].qualifier = AARCH64_OPND_QLF_NIL;
+  inst->operands[idx].qualifier = AARCH64_OPND_QLF_UNKNOWN;
 }
 
 /* Inline functions operating on instruction bit-field(s).  */

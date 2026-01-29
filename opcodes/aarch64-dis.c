@@ -270,21 +270,21 @@ get_sreg_qualifier_from_value (aarch64_insn value)
 /* Given the instruction in *INST which is probably half way through the
    decoding and our caller wants to know the expected qualifier for operand
    I.  Return such a qualifier if we can establish it; otherwise return
-   AARCH64_OPND_QLF_NIL.  */
+   AARCH64_OPND_QLF_UNKNOWN.  */
 
 static aarch64_opnd_qualifier_t
 get_expected_qualifier (const aarch64_inst *inst, int i)
 {
   aarch64_opnd_qualifier_seq_t qualifiers;
   /* Should not be called if the qualifier is known.  */
-  if (inst->operands[i].qualifier == AARCH64_OPND_QLF_NIL)
+  if (inst->operands[i].qualifier == AARCH64_OPND_QLF_UNKNOWN)
     {
       int invalid_count;
       if (aarch64_find_best_match (inst, inst->opcode->qualifiers_list,
 				   i, qualifiers, &invalid_count))
 	return qualifiers[i];
       else
-	return AARCH64_OPND_QLF_NIL;
+	return AARCH64_OPND_QLF_UNKNOWN;
     }
   else
     return AARCH64_OPND_QLF_ERR;
@@ -1567,7 +1567,7 @@ aarch64_ext_reg_extended (const aarch64_operand *self ATTRIBUTE_UNUSED,
   info->shifter.operator_present = 1;
 
   /* Assume inst->operands[0].qualifier has been resolved.  */
-  assert (inst->operands[0].qualifier != AARCH64_OPND_QLF_NIL);
+  assert (inst->operands[0].qualifier != AARCH64_OPND_QLF_UNKNOWN);
   info->qualifier = AARCH64_OPND_QLF_W;
   if (inst->operands[0].qualifier == AARCH64_OPND_QLF_X
       && (info->shifter.kind == AARCH64_MOD_UXTX
@@ -3740,13 +3740,14 @@ aarch64_opcode_decode (const aarch64_opcode *opcode, const aarch64_insn code,
   inst->opcode = opcode;
   inst->value = code;
 
-  /* Assign operand codes and indexes.  */
+  /* Assign operand codes and indexes, and set qualifiers to UNKNOWN.  */
   for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
     {
       if (opcode->operands[i] == AARCH64_OPND_NIL)
 	break;
       inst->operands[i].type = opcode->operands[i];
       inst->operands[i].idx = i;
+      inst->operands[i].qualifier = AARCH64_OPND_QLF_UNKNOWN;
     }
 
   /* Call the opcode decoder indicated by flags.  */

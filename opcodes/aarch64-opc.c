@@ -738,6 +738,7 @@ struct operand_qualifier_data
 static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 {
   {0, 0, 0, "NIL", OQK_NIL},
+  {0, 0, 0, "UNKNOWN", OQK_NIL},
 
   /* Operand variant qualifiers.
      First 3 fields:
@@ -987,29 +988,15 @@ aarch64_find_best_match (const aarch64_inst *inst,
 #endif
 
       /* The first entry should be taken literally, even if it's an empty
-	 qualifier sequence.  (This matters for strict testing.)  In other
-	 positions an empty sequence acts as a terminator.  */
+	 qualifier sequence.  In other positions an empty sequence acts as a
+	 terminator.  */
       if (i > 0 && empty_qualifier_sequence_p (qualifiers))
 	break;
 
       for (j = 0; j < num_opnds && j <= stop_at; ++j, ++qualifiers)
-	{
-	  if (inst->operands[j].qualifier == AARCH64_OPND_QLF_NIL
-	      && !(inst->opcode->flags & F_STRICT))
-	    {
-	      /* Either the operand does not have qualifier, or the qualifier
-		 for the operand needs to be deduced from the qualifier
-		 sequence.
-		 In the latter case, any constraint checking related with
-		 the obtained qualifier should be done later in
-		 operand_general_constraint_met_p.  */
-	      continue;
-	    }
-	  else if (*qualifiers != inst->operands[j].qualifier)
-	    invalid += 1;
-	  else
-	    continue;	/* Equal qualifiers are certainly matched.  */
-	}
+	if (inst->operands[j].qualifier != *qualifiers
+	     && inst->operands[j].qualifier != AARCH64_OPND_QLF_UNKNOWN)
+	  invalid += 1;
 
       if (min_invalid > invalid)
 	min_invalid = invalid;
@@ -1035,7 +1022,7 @@ aarch64_find_best_match (const aarch64_inst *inst,
       for (j = 0; j <= stop_at; ++j, ++qualifiers)
 	ret[j] = *qualifiers;
       for (; j < AARCH64_MAX_OPND_NUM; ++j)
-	ret[j] = AARCH64_OPND_QLF_NIL;
+	ret[j] = AARCH64_OPND_QLF_UNKNOWN;
 
       DEBUG_TRACE ("SUCCESS");
       return 1;
