@@ -173,7 +173,6 @@
 #define QL_LDST_AT		\
 {				\
   QLF2(X, imm_tag),		\
-  QLF2(SP, imm_tag),		\
 }
 
 /* e.g. RBIT <Wd>, <Wn>.  */
@@ -189,15 +188,6 @@
   QLF2(W,W),			\
   QLF2(X,W),			\
   QLF2(X,X),			\
-}
-
-/* e.g. MOV <Wd|WSP>, <Wn|WSP>, at least one SP.  */
-#define QL_I2SP			\
-{				\
-  QLF2(WSP,W),			\
-  QLF2(W,WSP),			\
-  QLF2(SP,X),			\
-  QLF2(X,SP),			\
 }
 
 /* e.g. REV <Wd>, <Wn>.  */
@@ -3700,7 +3690,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("cmp",  0x6b20001f, 0x7fe0001f, addsub_ext, 0, OP2 (Rn_SP, Rm_EXT),        QL_I2_EXT, F_SUBCLASS_OTHER | F_ALIAS | F_SF),
   /* Add/subtract (immediate).  */
   CORE_INSN ("add",  0x11000000, 0x7f000000, addsub_imm, OP_ADD, OP3 (Rd_SP, Rn_SP, AIMM), QL_R2NIL, F_ARITH_ADD | F_HAS_ALIAS | F_SF),
-  CORE_INSN ("mov",  0x11000000, 0x7ffffc00, addsub_imm, 0, OP2 (Rd_SP, Rn_SP),       QL_I2SP, F_ARITH_MOV | F_ALIAS | F_SF),
+  CORE_INSN ("mov",  0x11000000, 0x7ffffc00, addsub_imm, 0, OP2 (Rd_SP, Rn_SP),       QL_I2SAME, F_ARITH_MOV | F_ALIAS | F_SF | F_REQUIRES_SP),
   CORE_INSN ("adds", 0x31000000, 0x7f000000, addsub_imm, 0, OP3 (Rd, Rn_SP, AIMM),    QL_R2NIL, F_ARITH_ADD | F_HAS_ALIAS | F_SF),
   CORE_INSN ("cmn",  0x3100001f, 0x7f00001f, addsub_imm, 0, OP2 (Rn_SP, AIMM),        QL_R1NIL, F_SUBCLASS_OTHER | F_ALIAS | F_SF),
   CORE_INSN ("sub",  0x51000000, 0x7f000000, addsub_imm, 0, OP3 (Rd_SP, Rn_SP, AIMM), QL_R2NIL, F_ARITH_SUB | F_SF),

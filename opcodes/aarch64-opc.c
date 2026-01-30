@@ -713,41 +713,6 @@ aarch64_zero_register_p (const aarch64_opnd_info *operand)
 	  && operand->reg.regno == 31);
 }
 
-/* Return true if the operand *OPERAND that has the operand code
-   OPERAND->TYPE and been qualified by OPERAND->QUALIFIER can be also
-   qualified by the qualifier TARGET.  */
-
-static inline bool
-operand_also_qualified_p (const struct aarch64_opnd_info *operand,
-			  aarch64_opnd_qualifier_t target)
-{
-  switch (operand->qualifier)
-    {
-    case AARCH64_OPND_QLF_W:
-      if (target == AARCH64_OPND_QLF_WSP && aarch64_stack_pointer_p (operand))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_X:
-      if (target == AARCH64_OPND_QLF_SP && aarch64_stack_pointer_p (operand))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_WSP:
-      if (target == AARCH64_OPND_QLF_W
-	  && operand_maybe_stack_pointer (aarch64_operands + operand->type))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_SP:
-      if (target == AARCH64_OPND_QLF_X
-	  && operand_maybe_stack_pointer (aarch64_operands + operand->type))
-	return true;
-      break;
-    default:
-      break;
-    }
-
-  return false;
-}
-
 /* Given qualifier sequence list QSEQ_LIST and the known qualifier KNOWN_QLF
    for operand KNOWN_IDX, return the expected qualifier for operand IDX.
 
@@ -829,8 +794,6 @@ static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 
   {4, 1, 0x0, "w", OQK_OPD_VARIANT},
   {8, 1, 0x1, "x", OQK_OPD_VARIANT},
-  {4, 1, 0x0, "wsp", OQK_OPD_VARIANT},
-  {8, 1, 0x1, "sp", OQK_OPD_VARIANT},
 
   {1, 1, 0x0, "b", OQK_OPD_VARIANT},
   {2, 1, 0x1, "h", OQK_OPD_VARIANT},
@@ -1089,15 +1052,7 @@ aarch64_find_best_match (const aarch64_inst *inst,
 	      continue;
 	    }
 	  else if (*qualifiers != inst->operands[j].qualifier)
-	    {
-	      /* Unless the target qualifier can also qualify the operand
-		 (which has already had a non-nil qualifier), non-equal
-		 qualifiers are generally un-matched.  */
-	      if (operand_also_qualified_p (inst->operands + j, *qualifiers))
-		continue;
-	      else
-		invalid += 1;
-	    }
+	    invalid += 1;
 	  else
 	    continue;	/* Equal qualifiers are certainly matched.  */
 	}
@@ -1865,20 +1820,6 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 		  return false;
 		}
 	   }
-	}
-      switch (qualifier)
-	{
-	case AARCH64_OPND_QLF_WSP:
-	case AARCH64_OPND_QLF_SP:
-	  if (!aarch64_stack_pointer_p (opnd))
-	    {
-	      set_other_error (mismatch_detail, idx,
-		       _("stack pointer register expected"));
-	      return false;
-	    }
-	  break;
-	default:
-	  break;
 	}
       break;
 
@@ -3624,6 +3565,29 @@ aarch64_match_operands_constraint (aarch64_inst *inst,
 	}
     }
 
+  /* Check constraints involving multiple operands.  */
+  if (inst->opcode->flags & F_REQUIRES_SP)
+    {
+      bool sp_found = false;
+      for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
+	{
+	  enum aarch64_opnd type = inst->opcode->operands[i];
+	  if (type == AARCH64_OPND_NIL)
+	    break;
+	  if (aarch64_stack_pointer_p (&(inst->operands[i])))
+	    {
+	      sp_found = true;
+	      break;
+	    }
+	}
+      if (!sp_found)
+	{
+	  set_other_error (mismatch_detail, -1,
+			   _("expected at least one stack pointer operand"));
+	  return false;
+	}
+    }
+
   DEBUG_TRACE ("PASS");
 
   return true;
@@ -4204,9 +4168,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Rn_SP:
     case AARCH64_OPND_Rm_SP:
       assert (opnd->qualifier == AARCH64_OPND_QLF_W
-	      || opnd->qualifier == AARCH64_OPND_QLF_WSP
-	      || opnd->qualifier == AARCH64_OPND_QLF_X
-	      || opnd->qualifier == AARCH64_OPND_QLF_SP);
+	      || opnd->qualifier == AARCH64_OPND_QLF_X);
       snprintf (buf, size, "%s",
 		style_reg (styler, get_int_reg_name (opnd->reg.regno,
 						     opnd->qualifier, 1)));

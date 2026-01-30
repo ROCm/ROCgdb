@@ -1017,8 +1017,6 @@ enum aarch64_opnd_qualifier
      indicating the operand data size or a specific register.  */
   AARCH64_OPND_QLF_W,	/* Wn, WZR or WSP.  */
   AARCH64_OPND_QLF_X,	/* Xn, XZR or XSP.  */
-  AARCH64_OPND_QLF_WSP,	/* WSP.  */
-  AARCH64_OPND_QLF_SP,	/* SP.  */
 
   /* Qualifying an operand which is a floating-point register, a SIMD
      vector element or a SIMD vector element list; indicating operand data
@@ -1489,7 +1487,10 @@ extern const aarch64_opcode aarch64_opcode_table[];
    to be optional, then we also implicitly specify (N+1)th operand to also be
    optional.  */
 #define F_OPD_PAIR_OPT (1ULL << 32)
-
+/* This instruction requires one of its operands to be a stack pointer.  This
+   is used for alias instructions that would otherwise overlap a different
+   instruction.  */
+#define F_REQUIRES_SP (1ULL << 44)
 /* For the instruction with size[22:23] field.  */
 #define F_OPD_SIZE (1ULL << 34)
 /* RCPC3 instruction has the field of 'size'.  */
@@ -1537,7 +1538,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44, and 33 is also unused.  */
+/* Next bit is 44.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
