@@ -4418,13 +4418,13 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   /* Conditional select.  */
   CORE_INSN ("csel", 0x1a800000, 0x7fe00c00, condsel, 0, OP4 (Rd, Rn, Rm, COND), QL_CSEL, F_SF),
   CORE_INSN ("csinc", 0x1a800400, 0x7fe00c00, condsel, 0, OP4 (Rd, Rn, Rm, COND), QL_CSEL, F_HAS_ALIAS | F_SF),
-  CORE_INSN ("cinc", 0x1a800400, 0x7fe00c00, condsel, OP_CINC, OP3 (Rd, Rn, COND1), QL_CSEL, F_ALIAS | F_SF | F_CONV),
+  CORE_INSN ("cinc", 0x1a800400, 0x7fe00c00, condsel, OP_CINC, OP3 (Rd, Rn, COND1), QL_R2NIL, F_ALIAS | F_SF | F_CONV),
   CORE_INSN ("cset", 0x1a9f07e0, 0x7fff0fe0, condsel, OP_CSET, OP2 (Rd, COND1), QL_DST_R, F_ALIAS | F_P1 | F_SF | F_CONV),
   CORE_INSN ("csinv", 0x5a800000, 0x7fe00c00, condsel, 0, OP4 (Rd, Rn, Rm, COND), QL_CSEL, F_HAS_ALIAS | F_SF),
-  CORE_INSN ("cinv", 0x5a800000, 0x7fe00c00, condsel, OP_CINV, OP3 (Rd, Rn, COND1), QL_CSEL, F_ALIAS | F_SF | F_CONV),
+  CORE_INSN ("cinv", 0x5a800000, 0x7fe00c00, condsel, OP_CINV, OP3 (Rd, Rn, COND1), QL_R2NIL, F_ALIAS | F_SF | F_CONV),
   CORE_INSN ("csetm", 0x5a9f03e0, 0x7fff0fe0, condsel, OP_CSETM, OP2 (Rd, COND1), QL_DST_R, F_ALIAS | F_P1 | F_SF | F_CONV),
   CORE_INSN ("csneg", 0x5a800400, 0x7fe00c00, condsel, 0, OP4 (Rd, Rn, Rm, COND), QL_CSEL, F_HAS_ALIAS | F_SF),
-  CORE_INSN ("cneg", 0x5a800400, 0x7fe00c00, condsel, OP_CNEG, OP3 (Rd, Rn, COND1), QL_CSEL, F_ALIAS | F_SF | F_CONV),
+  CORE_INSN ("cneg", 0x5a800400, 0x7fe00c00, condsel, OP_CNEG, OP3 (Rd, Rn, COND1), QL_R2NIL, F_ALIAS | F_SF | F_CONV),
   /* Crypto AES.  */
   AES_INSN ("aese",     0x4e284800, 0xfffffc00, cryptoaes, OP2 (Vd, Vn), QL_V2SAME16B, 0),
   AES_INSN ("aesd",     0x4e285800, 0xfffffc00, cryptoaes, OP2 (Vd, Vn), QL_V2SAME16B, 0),
