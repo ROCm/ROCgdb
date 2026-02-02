@@ -111,12 +111,11 @@ cooked_indexer::ensure_cu_exists (cutu_reader *reader,
   cutu_reader *result = m_index_storage->get_reader (per_cu);
   if (result == nullptr)
     {
-      const abbrev_table_cache &abbrev_table_cache
+      abbrev_table_cache &abbrev_table_cache
 	= m_index_storage->get_abbrev_table_cache ();
       auto new_reader
-	= std::make_unique<cutu_reader> (*per_cu, *per_objfile, nullptr,
-					 nullptr, false, language_minimal,
-					 &abbrev_table_cache);
+	= std::make_unique<cutu_reader> (*per_cu, *per_objfile, nullptr, false,
+					 m_language, abbrev_table_cache);
 
       if (new_reader->is_dummy ())
 	return nullptr;

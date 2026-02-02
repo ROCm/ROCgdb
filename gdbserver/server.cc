@@ -1714,7 +1714,7 @@ handle_general_monitor_debug (const char *mon)
 /* Handle monitor commands not handled by target-specific handlers.  */
 
 static void
-handle_monitor_command (char *mon, char *own_buf)
+handle_monitor_command (const char *mon, char *own_buf)
 {
   if (startswith (mon, "set debug "))
     {

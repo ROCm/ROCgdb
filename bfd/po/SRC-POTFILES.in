@@ -132,6 +132,7 @@ ecoff.c
 ecofflink.c
 ecoffswap.h
 elf-attrs.c
+elf-attrs.h
 elf-bfd.h
 elf-eh-frame.c
 elf-hppa.h

@@ -170,6 +170,15 @@ if { [check_compiler_available] } {
     ]
 }
 
+set sframe_link_tests {
+    { "pr32769"
+	"--gc-sections -e foo" "" "--gsframe-3" {pr32769.s}
+	{{readelf --sframe pr32769.rd}}
+	"pr32769.x" }
+}
+
+run_ld_link_tests $sframe_link_tests
+
 if {[info exists old_lc_all]} {
     set env(LC_ALL) $old_lc_all
 } else {

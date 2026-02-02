@@ -629,6 +629,8 @@ bfd_elf_link_record_dynamic_symbol (struct bfd_link_info *info,
 	}
 
       h->dynindx = elf_hash_table (info)->dynsymcount;
+      if (h->forced_local)
+	elf_hash_table (info)->has_local_dynsyms = true;
       ++elf_hash_table (info)->dynsymcount;
 
       dynstr = elf_hash_table (info)->dynstr;
@@ -14151,7 +14153,7 @@ _bfd_elf_gc_mark (struct bfd_link_info *info,
 		  elf_gc_mark_hook_fn gc_mark_hook)
 {
   bool ret;
-  asection *group_sec, *eh_frame;
+  asection *group_sec, *eh_frame, *sframe;
 
   sec->gc_mark = 1;
 
@@ -14164,9 +14166,12 @@ _bfd_elf_gc_mark (struct bfd_link_info *info,
   /* Look through the section relocs.  */
   ret = true;
   eh_frame = elf_eh_frame_section (sec->owner);
+  sframe = elf_sframe_section (sec->owner);
+
   if ((sec->flags & SEC_RELOC) != 0
       && sec->reloc_count > 0
-      && sec != eh_frame)
+      && sec != eh_frame
+      && sec != sframe)
     {
       struct elf_reloc_cookie cookie;
 
@@ -14700,6 +14705,21 @@ bfd_elf_gc_sections (bfd *abfd, struct bfd_link_info *info)
 	  if (sec->sec_info
 	      && (sec->flags & SEC_LINKER_CREATED) == 0)
 	    elf_eh_frame_section (sub) = sec;
+	  fini_reloc_cookie_for_section (&cookie, sec);
+	  sec = bfd_get_next_section_by_name (NULL, sec);
+	}
+
+      /* Handle .sframe section.  */
+      sec = bfd_get_section_by_name (sub, ".sframe");
+      while (sec && init_reloc_cookie_for_section (&cookie, info, sec,
+						   false))
+	{
+	  _bfd_elf_parse_sframe (sub, info, sec, &cookie);
+
+	  if (sec->sec_info
+	      && (sec->flags & SEC_LINKER_CREATED) == 0)
+	    elf_sframe_section (sub) = sec;
+
 	  fini_reloc_cookie_for_section (&cookie, sec);
 	  sec = bfd_get_next_section_by_name (NULL, sec);
 	}

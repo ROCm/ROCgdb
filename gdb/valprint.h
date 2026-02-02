@@ -258,7 +258,7 @@ extern void generic_value_print (struct value *val, struct ui_file *stream,
 				 const struct generic_val_print_decorations *d);
 
 extern void generic_emit_char (int c, struct type *type, struct ui_file *stream,
-			       int quoter, const char *encoding);
+			       const char *encoding);
 
 extern void generic_printstr (struct ui_file *stream, struct type *type,
 			      const gdb_byte *string, unsigned int length,

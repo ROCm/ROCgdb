@@ -91,18 +91,18 @@ main (void)
   /* Expected RA reg r16.  */
   reg_data = sframe_get_fre_udata (&fre, SFRAME_FRE_RA_OFFSET_IDX * 2,
 				   &err_reg_data);
-  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_OFFSET_REG_P (reg_data) == 0x1),
+  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P (reg_data) == 0x1),
 	"be-flipping-v3: Whether RA reg_p is true");
-  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM (reg_data) == 16),
+  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM (reg_data) == 16),
 	"be-flipping-v3: Get RA reg of third FRE");
 
   /* Expected FP reg r17.  */
   err_reg_data = 0;
   reg_data = sframe_get_fre_udata (&fre, SFRAME_FRE_FP_OFFSET_IDX * 2,
 				   &err_reg_data);
-  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_OFFSET_REG_P (reg_data) == 0x1),
+  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P (reg_data) == 0x1),
 	"be-flipping-v3: Whether FP reg_p is true");
-  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM (reg_data) == 17),
+  TEST ((err_reg_data == 0 && SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM (reg_data) == 17),
 	"be-flipping-v3: Get FP reg of third FRE");
 
   free (sf_buf);

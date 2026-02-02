@@ -31,10 +31,8 @@
 
 /* The Python object that represents a connection.  */
 
-struct connection_object
+struct connection_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The process target that represents this connection.   When a
      connection_object is created this field will always point at a valid
      target.  Later, if GDB stops using this target (the target is popped

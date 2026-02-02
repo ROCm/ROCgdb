@@ -102,7 +102,7 @@ gdbpy_initialize_gdb_readline ()
      The third default finder is the one that will load readline, so the custom
      finder to disable the import of readline in GDB has to be placed before
      this third default finder.  */
-  if (PyRun_SimpleString ("\
+  const char *code = "\
 import sys\n\
 from importlib.abc import MetaPathFinder\n\
 \n\
@@ -113,7 +113,8 @@ class GdbRemoveReadlineFinder(MetaPathFinder):\n\
       raise ImportError(\"readline module disabled under GDB\")\n\
 \n\
 sys.meta_path.insert(2, GdbRemoveReadlineFinder())\n\
-") == 0)
+";
+  if (eval_python_command (code, Py_file_input) == 0)
     PyOS_ReadlineFunctionPointer = gdbpy_readline_wrapper;
 
   return 0;

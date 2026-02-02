@@ -51,6 +51,9 @@ extern const char * color_space_name (color_space c);
 /* Cast C to RESULT and return true if it's value is valid; false otherwise.  */
 extern bool color_space_safe_cast (color_space *result, long c);
 
+/* Get the number of colors supported by the terminal where GDB is running.  */
+extern int gdb_get_ncolors ();
+
 /* Styles that can be applied to a ui_file.  */
 struct ui_file_style
 {

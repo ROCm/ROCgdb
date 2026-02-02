@@ -6003,7 +6003,7 @@ linux_process_target::handle_new_gdb_connection ()
 }
 
 int
-linux_process_target::handle_monitor_command (char *mon)
+linux_process_target::handle_monitor_command (const char *mon)
 {
 #ifdef USE_THREAD_DB
   return thread_db_handle_monitor_command (mon);

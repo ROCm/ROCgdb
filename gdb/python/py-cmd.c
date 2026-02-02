@@ -50,10 +50,8 @@ static const struct cmdpy_completer completers[] =
 
 /* A gdb command.  For the time being only ordinary commands (not
    set/show commands) are allowed.  */
-struct cmdpy_object
+struct cmdpy_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The corresponding gdb command object, or NULL if the command is
      no longer installed.  */
   struct cmd_list_element *command;

@@ -648,7 +648,7 @@ extern void lang_add_reloc
   (bfd_reloc_code_real_type, reloc_howto_type *, asection *, const char *,
    union etree_union *);
 extern void lang_for_each_statement_worker
-  (void (*) (lang_statement_union_type *), lang_statement_union_type *);
+  (void (*) (lang_statement_union_type *), lang_statement_union_type *, bool);
 extern void *stat_alloc
   (size_t);
 extern void stat_free
@@ -793,7 +793,7 @@ bfd_input_just_syms (const bfd *abfd)
 static inline void
 lang_for_each_statement (void (*func) (lang_statement_union_type *))
 {
-  lang_for_each_statement_worker (func, statement_list.head);
+  lang_for_each_statement_worker (func, statement_list.head, true);
 }
 
 static inline void

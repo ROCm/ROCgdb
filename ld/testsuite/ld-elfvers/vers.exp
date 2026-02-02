@@ -1092,7 +1092,9 @@ proc base_symbol_test { ldflags } {
 	] \
     ]
 
-    if [isnative] {
+    # Binding different implementations of the same symbol to different
+    # versions is a GNU extension.
+    if { [isnative] && [supports_gnu_osabi] } {
 	set test_name "Run pr33577a with tmpdir/libpr33577-versioned.so ($ldflags)"
 	set cmd tmpdir/pr33577a
 	send_log "$cmd\n"
@@ -1104,6 +1106,9 @@ proc base_symbol_test { ldflags } {
 	    fail "$test_name"
 	}
 
+    }
+
+    if [isnative] {
 	set test_name "Run pr33577b with tmpdir/libpr33577-versioned.so ($ldflags)"
 	set cmd tmpdir/pr33577b
 	send_log "$cmd\n"
@@ -1118,8 +1123,12 @@ proc base_symbol_test { ldflags } {
 }
 
 base_symbol_test "-Wl,--as-needed,--hash-style=sysv"
-base_symbol_test "-Wl,--as-needed,--hash-style=gnu"
 base_symbol_test "-Wl,--as-needed,--hash-style=both"
 base_symbol_test "-Wl,--no-as-needed,--hash-style=sysv"
-base_symbol_test "-Wl,--no-as-needed,--hash-style=gnu"
 base_symbol_test "-Wl,--no-as-needed,--hash-style=both"
+
+# Only run tests using .gnu.hash when GNU extensions are supported
+if [supports_gnu_osabi] {
+    base_symbol_test "-Wl,--as-needed,--hash-style=gnu"
+    base_symbol_test "-Wl,--no-as-needed,--hash-style=gnu"
+}

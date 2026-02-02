@@ -117,6 +117,9 @@ static const pseudo_typeS elf_pseudo_table[] =
   /* A GNU extension for object attributes.  */
 #ifdef TC_OBJ_ATTR
   {"gnu_attribute", obj_elf_gnu_attribute, 0},
+#if TC_OBJ_ATTR_v2
+  {"gnu_subsection", obj_elf_gnu_subsection, 0},
+#endif /* TC_OBJ_ATTR_v2 */
 #endif /* TC_OBJ_ATTR */
 
   /* These are used for dwarf2.  */
@@ -3001,7 +3004,14 @@ elf_begin (void)
   memset (&groups, 0, sizeof (groups));
 
 #ifdef TC_OBJ_ATTR
+  /* Set the object attribute version for the output object to the default
+     value supported by the backend.  */
+  elf_obj_attr_version (stdoutput)
+    = get_elf_backend_data (stdoutput)->default_obj_attr_version;
+
+#if TC_OBJ_ATTR_v1
   oav1_attr_info_init ();
+#endif /* TC_OBJ_ATTR_v1 */
 #endif /* TC_OBJ_ATTR */
 }
 
@@ -3020,9 +3030,9 @@ elf_end (void)
       free (groups.head);
     }
 
-#ifdef TC_OBJ_ATTR
+#if TC_OBJ_ATTR_v1
   oav1_attr_info_exit ();
-#endif /* TC_OBJ_ATTR */
+#endif /* TC_OBJ_ATTR_v1 */
 }
 
 #ifdef USE_EMULATIONS

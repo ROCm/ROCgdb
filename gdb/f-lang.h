@@ -25,6 +25,7 @@
 
 #include "language.h"
 #include "valprint.h"
+#include "char-print.h"
 
 struct type_print_options;
 struct parser_state;
@@ -158,21 +159,10 @@ public:
 
   /* See language.h.  */
 
-  void emitchar (int ch, struct type *chtype,
-		 struct ui_file *stream, int quoter) const override
-  {
-    const char *encoding = get_encoding (chtype);
-    generic_emit_char (ch, chtype, stream, quoter, encoding);
-  }
-
-  /* See language.h.  */
-
   void printchar (int ch, struct type *chtype,
 		  struct ui_file *stream) const override
   {
-    gdb_puts ("'", stream);
-    emitchar (ch, chtype, stream, '\'');
-    gdb_puts ("'", stream);
+    wchar_printer (chtype, '\'').print (ch, stream);
   }
 
   /* See language.h.  */
@@ -182,16 +172,11 @@ public:
 		 const char *encoding, int force_ellipses,
 		 const struct value_print_options *options) const override
   {
-    const char *type_encoding = get_encoding (elttype);
-
     if (elttype->length () == 4)
       gdb_puts ("4_", stream);
 
-    if (!encoding || !*encoding)
-      encoding = type_encoding;
-
-    generic_printstr (stream, elttype, string, length, encoding,
-		      force_ellipses, '\'', 0, options);
+    wchar_printer printer (elttype, '\'', encoding);
+    printer.print (stream, string, length, force_ellipses, 0, options);
   }
 
   /* See language.h.  */
@@ -247,11 +232,6 @@ protected:
 	(const lookup_name_info &lookup_name) const override;
 
 private:
-  /* Return the encoding that should be used for the character type
-     TYPE.  */
-
-  static const char *get_encoding (struct type *type);
-
   /* Print any asterisks or open-parentheses needed before the variable
      name (to describe its type).
 

@@ -159,8 +159,8 @@ sframe_fre_get_cfa_offset (const struct sframe_row_entry * fre)
 }
 
 /* All stack offsets in SFrame stack trace format must be representable as a
-   1-byte (SFRAME_FRE_OFFSET_1B), 2-byte (SFRAME_FRE_OFFSET_2B) or 4-byte
-   (SFRAME_FRE_OFFSET_4B) value.
+   1-byte (SFRAME_FRE_DATAWORD_1B), 2-byte (SFRAME_FRE_DATAWORD_2B) or 4-byte
+   (SFRAME_FRE_DATAWORD_4B) value.
 
    At the moment, sanity check on CFA offset (only) is performed to address PR
    gas/33277.  Arguably, such updates to ra_offset or fp_offset will only
@@ -240,37 +240,38 @@ get_udata_size_in_bytes (unsigned int value)
 
   return size;
 }
-#define SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_1B  0 /* SFRAME_FRE_OFFSET_1B.  */
-#define SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_2B  1 /* SFRAME_FRE_OFFSET_2B.  */
-#define SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_4B  2 /* SFRAME_FRE_OFFSET_4B.  */
-#define SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_8B  3 /* Not supported in SFrame.  */
-#define SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_MAX SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_8B
+#define SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_1B  0 /* SFRAME_FRE_DATAWORD_1B.  */
+#define SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_2B  1 /* SFRAME_FRE_DATAWORD_2B.  */
+#define SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_4B  2 /* SFRAME_FRE_DATAWORD_4B.  */
+#define SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_8B  3 /* Not supported in SFrame.  */
+#define SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_MAX \
+  SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_8B
 
-/* Helper struct for mapping offset size to output functions.  */
+/* Helper struct for mapping FRE data word size to output functions.  */
 
-struct sframe_fre_offset_func_map
+struct sframe_fre_dataword_func_map
 {
-  unsigned int offset_size;
+  unsigned int dataword_size;
   void (*out_func)(int);
 };
 
-/* Given an OFFSET_SIZE, return the size in bytes needed to represent it.  */
+/* Given an DATAWORD_SIZE, return the size in bytes needed to represent it.  */
 
 static unsigned int
-sframe_fre_offset_func_map_index (unsigned int offset_size)
+sframe_fre_dataword_func_map_index (unsigned int dataword_size)
 {
-  unsigned int idx = SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_MAX;
+  unsigned int idx = SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_MAX;
 
-  switch (offset_size)
+  switch (dataword_size)
     {
-      case SFRAME_FRE_OFFSET_1B:
-	idx = SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_1B;
+      case SFRAME_FRE_DATAWORD_1B:
+	idx = SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_1B;
 	break;
-      case SFRAME_FRE_OFFSET_2B:
-	idx = SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_2B;
+      case SFRAME_FRE_DATAWORD_2B:
+	idx = SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_2B;
 	break;
-      case SFRAME_FRE_OFFSET_4B:
-	idx = SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_4B;
+      case SFRAME_FRE_DATAWORD_4B:
+	idx = SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_4B;
 	break;
       default:
 	/* Not supported in SFrame.  */
@@ -280,15 +281,15 @@ sframe_fre_offset_func_map_index (unsigned int offset_size)
   return idx;
 }
 
-/* Mapping from offset size to the output function to emit the value.  */
+/* Mapping from data word size to the output function to emit the value.  */
 
 static const
-struct sframe_fre_offset_func_map
-fre_offset_func_map[SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_MAX+1] =
+struct sframe_fre_dataword_func_map
+dataword_func_map[SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_MAX+1] =
 {
-  { SFRAME_FRE_OFFSET_1B, out_one },
-  { SFRAME_FRE_OFFSET_2B, out_two },
-  { SFRAME_FRE_OFFSET_4B, out_four },
+  { SFRAME_FRE_DATAWORD_1B, out_one },
+  { SFRAME_FRE_DATAWORD_2B, out_two },
+  { SFRAME_FRE_DATAWORD_4B, out_four },
   { -1, NULL } /* Not Supported in SFrame.  */
 };
 
@@ -299,11 +300,11 @@ static struct sframe_version_ops sframe_ver_ops;
 /* SFrame (SFRAME_VERSION_1) set FRE info.  */
 
 static unsigned char
-sframe_v1_set_fre_info (unsigned int cfa_base_reg, unsigned int num_offsets,
-			unsigned int offset_size, bool mangled_ra_p)
+sframe_v1_set_fre_info (unsigned int cfa_base_reg, unsigned int dataword_count,
+			unsigned int dataword_size, bool mangled_ra_p)
 {
   unsigned char fre_info;
-  fre_info = SFRAME_V1_FRE_INFO (cfa_base_reg, num_offsets, offset_size);
+  fre_info = SFRAME_V1_FRE_INFO (cfa_base_reg, dataword_count, dataword_size);
   fre_info = SFRAME_V1_FRE_INFO_UPDATE_MANGLED_RA_P (mangled_ra_p, fre_info);
   return fre_info;
 }
@@ -340,11 +341,11 @@ sframe_set_version (enum gen_sframe_version flag_ver)
 /* SFrame set FRE info.  */
 
 static unsigned char
-sframe_set_fre_info (unsigned int cfa_base_reg, unsigned int num_offsets,
-		     unsigned int offset_size, bool mangled_ra_p)
+sframe_set_fre_info (unsigned int cfa_base_reg, unsigned int dataword_count,
+		     unsigned int dataword_size, bool mangled_ra_p)
 {
-  return sframe_ver_ops.set_fre_info (cfa_base_reg, num_offsets,
-				      offset_size, mangled_ra_p);
+  return sframe_ver_ops.set_fre_info (cfa_base_reg, dataword_count,
+				      dataword_size, mangled_ra_p);
 }
 
 /* SFrame set func info. */
@@ -385,57 +386,56 @@ get_fre_base_reg_id (const struct sframe_row_entry *sframe_fre)
   return fre_base_reg;
 }
 
-/* Get number of offsets necessary for the SFrame Frame Row Entry.  */
+/* Get number of data words necessary for the SFrame Frame Row Entry.  */
 
 static unsigned int
-get_fre_num_offsets (const struct sframe_row_entry *sframe_fre,
-		     bool flex_p)
+get_fre_dataword_count (const struct sframe_row_entry *sframe_fre, bool flex_p)
 {
   /* For SFRAME_FDE_TYPE_FLEX FDE type, each entity (CFA, FP, RA) may carry up
-     to two offsets.  */
+     to two data words.  */
   unsigned int count = flex_p ? 2 : 1;
 
-  /* CFA offset (or offsets when flex_p) must always be present.  */
-  unsigned int fre_num_offsets = count;
+  /* CFA data word (or data words when flex_p) must always be present.  */
+  unsigned int fre_dataword_count = count;
 
-  /* For flexible frames encoding, there will be two offsets for RA (if RA is
-     being tracked).  1 padding offset otherwise.  */
+  /* For flexible FDE type, there will be two data words for RA (if RA
+     has a recovery rule applicable).  1 padding data word otherwise.  */
   if (flex_p)
     {
      if (sframe_fre->ra_loc != SFRAME_FRE_ELEM_LOC_NONE)
-       fre_num_offsets += count;
+       fre_dataword_count += count;
      else if (sframe_fre->fp_loc != SFRAME_FRE_ELEM_LOC_NONE)
-       fre_num_offsets += 1;
+       fre_dataword_count += 1;
     }
   else if (sframe_ra_tracking_p ()
 	   && (sframe_fre->ra_loc != SFRAME_FRE_ELEM_LOC_NONE
-	       /* For s390x account padding RA offset, if FP without RA
+	       /* For s390x account padding RA data word, if FP without RA
 		  saved.  */
 	       || (sframe_get_abi_arch () == SFRAME_ABI_S390X_ENDIAN_BIG
 		   && sframe_fre->fp_loc != SFRAME_FRE_ELEM_LOC_NONE)))
-    fre_num_offsets++;
+    fre_dataword_count++;
 
   if (sframe_fre->fp_loc != SFRAME_FRE_ELEM_LOC_NONE)
-    fre_num_offsets += count;
+    fre_dataword_count += count;
 
-  return fre_num_offsets;
+  return fre_dataword_count;
 }
 
-/* Get the minimum necessary offset size (in bytes) for this
+/* Get the minimum necessary data word size (in bytes) for this
    SFrame frame row entry.  */
 
 static unsigned int
-sframe_get_fre_offset_size (const struct sframe_row_entry *sframe_fre,
+sframe_get_fre_dataword_size (const struct sframe_row_entry *sframe_fre,
 			    bool flex_p)
 {
-  unsigned int max_offset_size = 0;
+  unsigned int max_dataword_size = 0;
   unsigned int cfa_offset_size = 0;
   unsigned int fp_offset_size = 0;
   unsigned int ra_offset_size = 0;
 
-  unsigned int fre_offset_size = 0;
+  unsigned int fre_dataword_size = 0;
 
-  /* What size of offsets appear in this frame row entry.  */
+  /* What size of data words appear in this frame row entry.  */
   cfa_offset_size = get_offset_size_in_bytes (sframe_fre->cfa_offset);
   if (sframe_fre->fp_loc == SFRAME_FRE_ELEM_LOC_STACK)
     fp_offset_size = get_offset_size_in_bytes (sframe_fre->fp_offset);
@@ -450,65 +450,64 @@ sframe_get_fre_offset_size (const struct sframe_row_entry *sframe_fre,
     }
 
   /* Get the maximum size needed to represent the offsets.  */
-  max_offset_size = cfa_offset_size;
-  if (fp_offset_size > max_offset_size)
-    max_offset_size = fp_offset_size;
-  if (ra_offset_size > max_offset_size)
-    max_offset_size = ra_offset_size;
+  max_dataword_size = cfa_offset_size;
+  if (fp_offset_size > max_dataword_size)
+    max_dataword_size = fp_offset_size;
+  if (ra_offset_size > max_dataword_size)
+    max_dataword_size = ra_offset_size;
 
   /* If flex FDE, account for reg data too.  */
   if (flex_p)
     {
       bool reg_p = (sframe_fre->cfa_base_reg != SFRAME_FRE_REG_INVALID);
       unsigned int data
-	= SFRAME_V3_FLEX_FDE_REG_ENCODE (sframe_fre->cfa_base_reg,
-					 sframe_fre->cfa_deref_p, reg_p);
-      unsigned int data_size = get_udata_size_in_bytes (data);
-      if (data_size > max_offset_size)
-	max_offset_size = data_size;
+	= SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (sframe_fre->cfa_base_reg,
+					      sframe_fre->cfa_deref_p, reg_p);
+      unsigned int cfa_control_word_size = get_udata_size_in_bytes (data);
+      if (cfa_control_word_size > max_dataword_size)
+	max_dataword_size = cfa_control_word_size;
 
       if (sframe_fre->ra_loc == SFRAME_FRE_ELEM_LOC_REG)
 	{
-	  data = SFRAME_V3_FLEX_FDE_REG_ENCODE (sframe_fre->ra_reg,
-						sframe_fre->ra_deref_p,
-						1 /* reg_p.  */);
-	  data_size = get_udata_size_in_bytes (data);
-	  if (data_size > max_offset_size)
-	    max_offset_size = data_size;
+	  data = SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (sframe_fre->ra_reg,
+						     sframe_fre->ra_deref_p,
+						     1 /* reg_p.  */);
+	  unsigned ra_control_word_size = get_udata_size_in_bytes (data);
+	  if (ra_control_word_size > max_dataword_size)
+	    max_dataword_size = ra_control_word_size;
 	}
 
       if (sframe_fre->fp_loc == SFRAME_FRE_ELEM_LOC_REG)
 	{
-	  data = SFRAME_V3_FLEX_FDE_REG_ENCODE (sframe_fre->fp_reg,
-						sframe_fre->fp_deref_p,
-						1 /* reg_p.  */);
-	  data_size = get_udata_size_in_bytes (data);
-	  if (data_size > max_offset_size)
-	    max_offset_size = data_size;
+	  data = SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (sframe_fre->fp_reg,
+						     sframe_fre->fp_deref_p,
+						     1 /* reg_p.  */);
+	  unsigned fp_control_word_size = get_udata_size_in_bytes (data);
+	  if (fp_control_word_size > max_dataword_size)
+	    max_dataword_size = fp_control_word_size;
 	}
     }
 
-  gas_assert (max_offset_size);
+  gas_assert (max_dataword_size);
 
-  switch (max_offset_size)
+  switch (max_dataword_size)
     {
     case 1:
-      fre_offset_size = SFRAME_FRE_OFFSET_1B;
+      fre_dataword_size = SFRAME_FRE_DATAWORD_1B;
       break;
     case 2:
-      fre_offset_size = SFRAME_FRE_OFFSET_2B;
+      fre_dataword_size = SFRAME_FRE_DATAWORD_2B;
       break;
     case 4:
-      fre_offset_size = SFRAME_FRE_OFFSET_4B;
+      fre_dataword_size = SFRAME_FRE_DATAWORD_4B;
       break;
     default:
-      /* Offset of size 8 bytes is not supported in SFrame format
-	 version 1.  */
-      as_fatal (_("SFrame unsupported offset value\n"));
+      /* FRE data words of size 8 bytes is not supported in SFrame.  */
+      as_fatal (_("SFrame unsupported FRE data word size\n"));
       break;
     }
 
-  return fre_offset_size;
+  return fre_dataword_size;
 }
 
 /* Create a composite expression CEXP (for SFrame FRE start address) such that:
@@ -642,101 +641,101 @@ sframe_fde_free (struct sframe_func_entry *sframe_fde)
   XDELETE (sframe_fde);
 }
 
-/* Output the varlen data (SFrame FRE stack offsets) for SFrame FRE object
+/* Output the varlen data (SFrame FRE data words) for SFrame FRE object
    SFRAME_FRE of the SFrame FDE object SFRAME_FDE.  Each emitted entry is of
-   size FRE_OFFSET_SIZE.  Write out the offsets in order - CFA, RA, FP.  */
+   size FRE_DATAWORD_SIZE.  Write out the data words in order - CFA, RA, FP.  */
 
 static unsigned int
-output_sframe_row_entry_offsets (const struct sframe_func_entry *sframe_fde,
-				 const struct sframe_row_entry *sframe_fre,
-				 unsigned int fre_offset_size)
+output_sframe_row_entry_datawords (const struct sframe_func_entry *sframe_fde,
+				   const struct sframe_row_entry *sframe_fre,
+				   unsigned int fre_dataword_size)
 {
-  unsigned int fre_write_offsets = 0;
+  unsigned int fre_write_datawords = 0;
 
-  unsigned int idx = sframe_fre_offset_func_map_index (fre_offset_size);
-  gas_assert (idx < SFRAME_FRE_OFFSET_FUNC_MAP_INDEX_MAX);
+  unsigned int idx = sframe_fre_dataword_func_map_index (fre_dataword_size);
+  gas_assert (idx < SFRAME_FRE_DATAWORD_FUNC_MAP_INDEX_MAX);
 
   if (sframe_fde->fde_flex_p)
     {
       /* SFrame FDE of type SFRAME_FDE_TYPE_FLEX.  */
-      /* Output CFA related FRE offsets.  */
+      /* Output CFA related FRE data words.  */
       uint32_t reg = sframe_fre->cfa_base_reg;
+      bool deref_p = sframe_fre->cfa_deref_p;
       uint32_t reg_data
-	= SFRAME_V3_FLEX_FDE_REG_ENCODE (reg, sframe_fre->cfa_deref_p,
-					 1 /* reg_p.  */);
+	= SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (reg, deref_p, 1 /* reg_p.  */);
       offsetT offset_data = sframe_fre->cfa_offset;
-      fre_offset_func_map[idx].out_func (reg_data);
-      fre_offset_func_map[idx].out_func (offset_data);
-      fre_write_offsets += 2;
+      dataword_func_map[idx].out_func (reg_data);
+      dataword_func_map[idx].out_func (offset_data);
+      fre_write_datawords += 2;
 
       bool reg_p = false;
       if (sframe_fre->ra_loc != SFRAME_FRE_ELEM_LOC_NONE)
 	{
-	  /* Output RA related FRE offsets.  */
+	  /* Output RA related FRE data words.  */
 	  reg_p = sframe_fre->ra_loc == SFRAME_FRE_ELEM_LOC_REG;
 	  reg = reg_p ? sframe_fre->ra_reg : 0;
-	  reg_data = SFRAME_V3_FLEX_FDE_REG_ENCODE (reg,
-						    sframe_fre->ra_deref_p,
-						    reg_p);
+	  deref_p = sframe_fre->ra_deref_p;
+	  reg_data = SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (reg, deref_p, reg_p);
+
 	  offset_data = sframe_fre->ra_offset;
-	  fre_offset_func_map[idx].out_func (reg_data);
-	  fre_offset_func_map[idx].out_func (offset_data);
-	  fre_write_offsets += 2;
+	  dataword_func_map[idx].out_func (reg_data);
+	  dataword_func_map[idx].out_func (offset_data);
+	  fre_write_datawords += 2;
 	}
       else if (sframe_fre->fp_loc != SFRAME_FRE_ELEM_LOC_NONE)
 	{
 	  /* If RA is not in REG/STACK, emit RA padding if there are more
-	     offsets to follow.  Note that, emitting
+	     data words to follow.  Note that, emitting
 	     SFRAME_FRE_RA_OFFSET_INVALID is equivalent to emitting
-	     SFRAME_V3_FLEX_FDE_REG_ENCODE (0, 0, 0).  */
-	  fre_offset_func_map[idx].out_func (SFRAME_FRE_RA_OFFSET_INVALID);
-	  fre_write_offsets += 1;
+	     SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (0, 0, 0).  */
+	  dataword_func_map[idx].out_func (SFRAME_FRE_RA_OFFSET_INVALID);
+	  fre_write_datawords += 1;
 	}
 
       if (sframe_fre->fp_loc != SFRAME_FRE_ELEM_LOC_NONE)
 	{
-	  /* Output FP related FRE offsets.  */
+	  /* Output FP related FRE data words.  */
 	  reg_p = sframe_fre->fp_loc == SFRAME_FRE_ELEM_LOC_REG;
 	  reg = reg_p ? sframe_fre->fp_reg : 0;
-	  reg_data = SFRAME_V3_FLEX_FDE_REG_ENCODE (reg,
-						    sframe_fre->fp_deref_p,
-						    reg_p);
+	  deref_p = sframe_fre->fp_deref_p;
+	  reg_data = SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE (reg, deref_p, reg_p);
+
 	  offset_data = sframe_fre->fp_offset;
-	  fre_offset_func_map[idx].out_func (reg_data);
-	  fre_offset_func_map[idx].out_func (offset_data);
-	  fre_write_offsets += 2;
+	  dataword_func_map[idx].out_func (reg_data);
+	  dataword_func_map[idx].out_func (offset_data);
+	  fre_write_datawords += 2;
 	}
     }
   else
     {
       /* SFrame FDE of type SFRAME_FDE_TYPE_DEFAULT.  */
-      /* Output CFA related FRE offsets.  */
-      fre_offset_func_map[idx].out_func (sframe_fre->cfa_offset);
-      fre_write_offsets++;
+      /* Output CFA related FRE data words.  */
+      dataword_func_map[idx].out_func (sframe_fre->cfa_offset);
+      fre_write_datawords++;
 
       if (sframe_ra_tracking_p ())
 	{
 	  if (sframe_fre->ra_loc == SFRAME_FRE_ELEM_LOC_STACK)
 	    {
-	      fre_offset_func_map[idx].out_func (sframe_fre->ra_offset);
-	      fre_write_offsets++;
+	      dataword_func_map[idx].out_func (sframe_fre->ra_offset);
+	      fre_write_datawords++;
 	    }
 	  /* For s390x write padding RA offset, if FP without RA saved.  */
 	  else if (sframe_get_abi_arch () == SFRAME_ABI_S390X_ENDIAN_BIG
 		   && sframe_fre->fp_loc == SFRAME_FRE_ELEM_LOC_STACK)
 	    {
-	      fre_offset_func_map[idx].out_func (SFRAME_FRE_RA_OFFSET_INVALID);
-	      fre_write_offsets++;
+	      dataword_func_map[idx].out_func (SFRAME_FRE_RA_OFFSET_INVALID);
+	      fre_write_datawords++;
 	    }
 	}
       if (sframe_fre->fp_loc == SFRAME_FRE_ELEM_LOC_STACK)
 	{
-	  fre_offset_func_map[idx].out_func (sframe_fre->fp_offset);
-	  fre_write_offsets++;
+	  dataword_func_map[idx].out_func (sframe_fre->fp_offset);
+	  fre_write_datawords++;
 	}
     }
 
-  return fre_write_offsets;
+  return fre_write_datawords;
 }
 
 static void
@@ -744,16 +743,17 @@ output_sframe_row_entry (const struct sframe_func_entry *sframe_fde,
 			 const struct sframe_row_entry *sframe_fre)
 {
   unsigned char fre_info;
-  unsigned int fre_num_offsets;
-  unsigned int fre_offset_size;
+  unsigned int fre_dataword_count;
+  unsigned int fre_dataword_size;
   unsigned int fre_base_reg;
   bool fre_mangled_ra_p;
   expressionS exp;
   unsigned int fre_addr_size;
 
-  unsigned int fre_write_offsets = 0;
+  unsigned int fre_write_datawords = 0;
   symbolS *fde_start_addr = get_dw_fde_start_addrS (sframe_fde->dw_fde);
   symbolS *fde_end_addr = get_dw_fde_end_addrS (sframe_fde->dw_fde);
+  bool flex_p = sframe_fde->fde_flex_p;
 
   fre_addr_size = 4; /* 4 bytes by default.   FIXME tie it to fre_type? */
 
@@ -777,44 +777,43 @@ output_sframe_row_entry (const struct sframe_func_entry *sframe_fde,
       emit_expr (&exp, fre_addr_size);
     }
 
-  /* Create the fre_info using the CFA base register, number of offsets and max
-     size of offset in this frame row entry.  Represent RA undefined as FRE
-     without any offsets and all FRE info word fields zeroed.  */
+  /* Create the fre_info using the CFA base register, number of data words and
+     max size of a data word in this FRE.  Represent RA undefined as FRE
+     without any data words and all FRE info word fields zeroed.  */
   if (sframe_fre->ra_undefined_p)
     {
       fre_base_reg = 0;
-      fre_num_offsets = 0;
-      fre_offset_size = 0;
+      fre_dataword_count = 0;
+      fre_dataword_size = 0;
       fre_mangled_ra_p = 0;
     }
   else
     {
       fre_base_reg = get_fre_base_reg_id (sframe_fre);
-      fre_num_offsets = get_fre_num_offsets (sframe_fre,
-					     sframe_fde->fde_flex_p);
-      fre_offset_size = sframe_get_fre_offset_size (sframe_fre,
-						    sframe_fde->fde_flex_p);
+      fre_dataword_count = get_fre_dataword_count (sframe_fre, flex_p);
+      fre_dataword_size = sframe_get_fre_dataword_size (sframe_fre, flex_p);
       fre_mangled_ra_p = sframe_fre->mangled_ra_p;
     }
 
   /* Unused for flex FDE.  Set to zero.  */
-  if (sframe_fde->fde_flex_p)
+  if (flex_p)
     fre_base_reg = 0;
 
-  fre_info = sframe_set_fre_info (fre_base_reg, fre_num_offsets,
-				  fre_offset_size, fre_mangled_ra_p);
+  fre_info = sframe_set_fre_info (fre_base_reg, fre_dataword_count,
+				  fre_dataword_size, fre_mangled_ra_p);
   out_one (fre_info);
 
-  /* Represent RA undefined as FRE without any offsets.  */
+  /* Represent RA undefined as FRE without any data words.  */
   if (sframe_fre->ra_undefined_p)
     return;
 
-  fre_write_offsets = output_sframe_row_entry_offsets (sframe_fde, sframe_fre,
-						       fre_offset_size);
+  fre_write_datawords = output_sframe_row_entry_datawords (sframe_fde,
+							   sframe_fre,
+							   fre_dataword_size);
 
-  /* Check if the expected number offsets have been written out
+  /* Check if the expected number data words have been written out
      in this FRE.  */
-  gas_assert (fre_write_offsets == fre_num_offsets);
+  gas_assert (fre_write_datawords == fre_dataword_count);
 }
 
 static void
@@ -1693,13 +1692,14 @@ sframe_xlate_do_gnu_window_save (struct sframe_xlate_ctx *xlate_ctx,
   return SFRAME_XLATE_ERR_NOTREPRESENTED;  /* Not represented.  */
 }
 
-/* Translate a DWARF sleb128 offset in the CFI escape data E to an offsetT.  */
+/* Translate a DWARF sleb128 offset in the CFI escape data E to an offsetT.
+   Update the value in OFFSET if success (and return SFRAME_XLATE_OK).
+   Return SFRAME_XLATE_ERR_INVAL if error.  */
 
-static offsetT
-sframe_xlate_escape_sleb128_to_offsetT (const struct cfi_escape_data *e)
+static int
+sframe_xlate_escape_sleb128_to_offsetT (const struct cfi_escape_data *e,
+					offsetT *offset)
 {
-  offsetT offset;
-
   gas_assert (e->type == CFI_ESC_byte || e->type == CFI_ESC_sleb128);
   /* Read the offset.  */
   if (e->type == CFI_ESC_byte)
@@ -1713,14 +1713,17 @@ sframe_xlate_escape_sleb128_to_offsetT (const struct cfi_escape_data *e)
       const unsigned char *buf_end = buf_start + 1;
       int64_t value = 0;
       size_t read = read_sleb128_to_int64 (buf_start, buf_end, &value);
-      gas_assert (read);
-      offset = (offsetT) value;
+      /* In case of bogus input (highest bit erroneously set, e.g., 0x80),
+	 gracefully exit.  */
+      if (!read)
+	return SFRAME_XLATE_ERR_INVAL;
+      *offset = (offsetT) value;
     }
   else
     /* offset must be CFI_ESC_sleb128.  */
-    offset = e->exp.X_add_number;
+    *offset = e->exp.X_add_number;
 
-  return offset;
+  return SFRAME_XLATE_OK;
 }
 
 /* Handle DW_CFA_def_cfa_expression in .cfi_escape.
@@ -1742,7 +1745,7 @@ sframe_xlate_do_escape_cfa_expr (struct sframe_xlate_ctx *xlate_ctx,
   const struct cfi_escape_data *e_offset = NULL;
   int err = SFRAME_XLATE_OK;
   unsigned int opcode1, opcode2;
-  offsetT offset;
+  offsetT offset = 0;
   unsigned int reg = SFRAME_FRE_REG_INVALID;
   unsigned int i = 0;
   bool x86_cfa_deref_p = false;
@@ -1781,6 +1784,10 @@ sframe_xlate_do_escape_cfa_expr (struct sframe_xlate_ctx *xlate_ctx,
     goto warn_and_exit;
 #undef CFI_ESC_NUM_EXP
 
+  err = sframe_xlate_escape_sleb128_to_offsetT (e_offset, &offset);
+  if (err == SFRAME_XLATE_ERR_INVAL)
+    goto warn_and_exit;
+
   opcode1 = items[1];
   opcode2 = items[3];
   /* DW_OP_breg6 is rbp.  FIXME - this stub can be enhanced to handle more
@@ -1792,8 +1799,6 @@ sframe_xlate_do_escape_cfa_expr (struct sframe_xlate_ctx *xlate_ctx,
       x86_cfa_deref_p = true;
       reg = SFRAME_CFA_FP_REG;
     }
-
-  offset = sframe_xlate_escape_sleb128_to_offsetT (e_offset);
 
   struct sframe_row_entry *cur_fre = xlate_ctx->cur_fre;
   gas_assert (cur_fre);
@@ -1839,7 +1844,7 @@ sframe_xlate_do_escape_expr (struct sframe_xlate_ctx *xlate_ctx,
   const struct cfi_escape_data *e = cfi_insn->u.esc;
   const struct cfi_escape_data *e_offset = NULL;
   int err = SFRAME_XLATE_OK;
-  offsetT offset;
+  offsetT offset = 0;
   unsigned int i = 0;
 
   /* Check roughly for an expression
@@ -1876,6 +1881,10 @@ sframe_xlate_do_escape_expr (struct sframe_xlate_ctx *xlate_ctx,
     goto warn_and_exit;
 #undef CFI_ESC_NUM_EXP
 
+  err = sframe_xlate_escape_sleb128_to_offsetT (e_offset, &offset);
+  if (err == SFRAME_XLATE_ERR_INVAL)
+    goto warn_and_exit;
+
   /* reg operand to DW_CFA_expression is ULEB128.  For the purpose at hand,
      however, the register value will be less than 128 (CFI_ESC_NUM_EXP set
      to 4).  See an extended comment in sframe_xlate_do_escape_expr for why
@@ -1893,8 +1902,6 @@ sframe_xlate_do_escape_expr (struct sframe_xlate_ctx *xlate_ctx,
       x86_fp_deref_p = true;
       fp_base_reg = SFRAME_CFA_FP_REG;
     }
-
-  offset = sframe_xlate_escape_sleb128_to_offsetT (e_offset);
 
   struct sframe_row_entry *cur_fre = xlate_ctx->cur_fre;
   gas_assert (cur_fre);
@@ -2156,10 +2163,10 @@ sframe_xlate_do_cfi_escape (struct sframe_xlate_ctx *xlate_ctx,
    and the unwind is complete.
 
    In SFrame, represent the use of the RA register with DW_CFA_undefined as
-   SFrame FRE without any offsets.  Stack tracers can use this as indication
-   that an outermost frame has been reached and the stack trace is complete.
-   The use of other registers of interest with  DW_CFA_undefined cannot be
-   represented in SFrame.  Therefore skip generating an SFrame FDE.
+   SFrame FRE without any trailing FRE data words.  Stack tracers can use this
+   as indication that an outermost frame has been reached and the stack trace
+   is complete.  The use of other registers of interest with  DW_CFA_undefined
+   cannot be represented in SFrame.  Therefore skip generating an SFrame FDE.
 
    Return SFRAME_XLATE_OK if success.  */
 
@@ -2177,7 +2184,7 @@ sframe_xlate_do_cfi_undefined (const struct sframe_xlate_ctx *xlate_ctx ATTRIBUT
   else if (cfi_insn->u.r == SFRAME_CFA_RA_REG)
     {
       /* Represent RA undefined (i.e. outermost frame) as FRE without any
-	 offsets.  */
+	 data words.  */
       struct sframe_row_entry *cur_fre = xlate_ctx->cur_fre;
 
       gas_assert (cur_fre);

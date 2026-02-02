@@ -342,12 +342,15 @@ typedef struct sframe_func_desc_attr_v3
 #define SFRAME_V3_FDE_UPDATE_SIGNAL_P(signal_p, info)  \
   ((((signal_p) & 0x1) << 7) | ((info) & 0x7f))
 
-#define SFRAME_V3_FLEX_FDE_REG_ENCODE(reg, deref_p, reg_p)  \
+#define SFRAME_V3_FLEX_FDE_CTRLWORD_ENCODE(reg, deref_p, reg_p) \
   ((((reg) << 0x3) | (0 << 0x2) | (((deref_p) & 0x1) << 0x1) | ((reg_p) & 0x1)))
 
-#define SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM(data)       ((data) >> 3)
-#define SFRAME_V3_FLEX_FDE_OFFSET_REG_DEREF_P(data)   (((data) >> 1) & 0x1)
-#define SFRAME_V3_FLEX_FDE_OFFSET_REG_P(data)         ((data) & 0x1)
+#define SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM(data)    ((data) >> 3)
+#define SFRAME_V3_FLEX_FDE_CTRLWORD_DEREF_P(data)   (((data) >> 1) & 0x1)
+#define SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P(data)     ((data) & 0x1)
+
+#define SFRAME_V3_FRE_RA_UNDEFINED_P(fre_info) \
+  (SFRAME_V2_FRE_RA_UNDEFINED_P (fre_info))
 
 /* Size of stack frame offsets in an SFrame Frame Row Entry.  A single
    SFrame FRE has all offsets of the same size.  Offset size may vary
@@ -355,6 +358,14 @@ typedef struct sframe_func_desc_attr_v3
 #define SFRAME_FRE_OFFSET_1B	  0
 #define SFRAME_FRE_OFFSET_2B	  1
 #define SFRAME_FRE_OFFSET_4B	  2
+
+/* In SFrame V3, with the addition of flexible FDE, usage of term "offsets"
+   (for the varlen data trailing the SFrame FRE) is inappropriate.  Use the
+   terminology of "data word" instead.  A single SFrame FRE has all data words
+   of the same size.  Size of data words may vary across frame row entries.  */
+#define SFRAME_FRE_DATAWORD_1B	    SFRAME_FRE_OFFSET_1B
+#define SFRAME_FRE_DATAWORD_2B	    SFRAME_FRE_OFFSET_2B
+#define SFRAME_FRE_DATAWORD_4B	    SFRAME_FRE_OFFSET_4B
 
 /* An SFrame Frame Row Entry can be SP or FP based.  */
 #define SFRAME_BASE_REG_FP	0
@@ -378,14 +389,15 @@ typedef struct sframe_fre_info
 {
   /* Information about
      - 1 bit: base reg for CFA
-     - 4 bits: Number of offsets (N).  A value of upto 3 is allowed to track
-     all three of CFA, FP and RA (fixed implicit order).
-     - 2 bits: information about size of the offsets (S) in bytes.
-     Valid values are SFRAME_FRE_OFFSET_1B, SFRAME_FRE_OFFSET_2B,
-     SFRAME_FRE_OFFSET_4B
+     - 4 bits: Number of data words (N).  Typically for default FDE type, a
+     value of upto 3 suffices to track all three of CFA, FP and RA (fixed
+     implicit order).
+     - 2 bits: information about size of the data words (S) in bytes.
+     Valid values are SFRAME_FRE_DATAWORD_1B, SFRAME_FRE_DATAWORD_2B,
+     SFRAME_FRE_DATAWORD_4B.
      - 1 bit: Mangled RA state bit (aarch64 only).
      ----------------------------------------------------------------------------------
-     | Mangled-RA (aarch64) |  Size of offsets   |   Number of offsets    |   base_reg |
+     | Mangled-RA (aarch64) | Size of Data Words |  Number of Data Words  |   base_reg |
      | Unused (amd64, s390x)|                    |                        |            |
      ----------------------------------------------------------------------------------
      8                     7                    5                        1            0
@@ -410,6 +422,17 @@ typedef struct sframe_fre_info
 #define SFRAME_V1_FRE_OFFSET_SIZE(data)		  (((data) >> 5) & 0x3)
 #define SFRAME_V1_FRE_MANGLED_RA_P(data)	  (((data) >> 7) & 0x1)
 #define SFRAME_V2_FRE_RA_UNDEFINED_P(data)	  (SFRAME_V1_FRE_OFFSET_COUNT (data) == 0)
+
+/* In SFrame V3, with the introduction of flexible FDE type
+   SFRAME_FDE_TYPE_FLEX, the variable-length data following SFrame FRE header
+   may contain unsigned Control Data Words or signed Offset Data Words.  These
+   are referred to as 'Data Words'.  Note that the usage of the term 'Word'
+   here is colloquial, the size of a data word is determined by applicable
+   bits.  */
+#define SFRAME_V3_FRE_DATAWORD_COUNT(data)	\
+  SFRAME_V1_FRE_OFFSET_COUNT (data)
+#define SFRAME_V3_FRE_DATAWORD_SIZE(data) \
+  SFRAME_V1_FRE_OFFSET_SIZE (data)
 
 /* SFrame Frame Row Entry definitions.
 

@@ -434,8 +434,8 @@ changequote([,])dnl
 
     # Does the target support Object Attributes ?
     case ${cpu_type} in
-      arc* | arm* | csky | loongarch | m68k | mips* | msp430 | ppc* \
-      | riscv* | s390* | sparc* | tic6x)
+      aarch64* | arc* | arm* | csky | loongarch | m68k | mips* | msp430 \
+      | ppc* | riscv* | s390* | sparc* | tic6x)
 	for f in config/obj-elf-attr.o; do
 	  case " $extra_objects " in
 	    *" $f "*) ;;

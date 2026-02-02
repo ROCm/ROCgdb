@@ -55,10 +55,8 @@ struct mi_command_py;
 
 /* Representation of a Python gdb.MICommand object.  */
 
-struct micmdpy_object
+struct micmdpy_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The object representing this command in the MI command table.  This
      pointer can be nullptr if the command is not currently installed into
      the MI command table (see gdb.MICommand.installed property).  */

@@ -154,7 +154,7 @@ static reloc_howto_type elf_howto_table[] =
   HOWTO(R_390_TLS_IEENT, 1, 4, 32, true, 0, complain_overflow_bitfield,
 	bfd_elf_generic_reloc, "R_390_TLS_IEENT", false, 0, MINUS_ONE, true),
   EMPTY_HOWTO (R_390_TLS_LE32),	/* Empty entry for R_390_TLS_LE32.  */
-  HOWTO(R_390_TLS_LE64,	 0, 4, 32, false, 0, complain_overflow_bitfield,
+  HOWTO(R_390_TLS_LE64,	 0, 8, 64, false, 0, complain_overflow_bitfield,
 	bfd_elf_generic_reloc, "R_390_TLS_LE64", false, 0, MINUS_ONE, false),
   EMPTY_HOWTO (R_390_TLS_LDO32),	/* Empty entry for R_390_TLS_LDO32.  */
   HOWTO(R_390_TLS_LDO64, 0, 8, 64, false, 0, complain_overflow_bitfield,
@@ -4308,8 +4308,15 @@ elf_s390_create_dynamic_sections (bfd *dynobj,
             }
         }
 
-      /* Create .sframe section for .plt section.  */
-      if (!info->discard_sframe)
+      /* Create .sframe section for .plt section.
+	 Do not make SFrame sections for dynobj unconditionally.  If there
+	 are no SFrame sections for any input files, skip creating the linker
+	 created SFrame sections too.  Since SFrame sections are marked KEEP,
+	 prohibiting these linker-created SFrame sections when unnecessary,
+	 helps avoid creating of empty SFrame sections in the output.  */
+      bool gen_plt_sframe_p = (_bfd_elf_sframe_present_input_bfds (info)
+			       && !info->discard_sframe);
+      if (gen_plt_sframe_p)
 	{
 	  flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY
 			    | SEC_HAS_CONTENTS | SEC_IN_MEMORY

@@ -44,10 +44,8 @@ class tui_py_window;
 
 /* A PyObject representing a TUI window.  */
 
-struct gdbpy_tui_window
+struct gdbpy_tui_window: public PyObject
 {
-  PyObject_HEAD
-
   /* The TUI window, or nullptr if the window has been deleted.  */
   tui_py_window *window;
 

@@ -415,8 +415,8 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_thread);
 
 static gdb_PyGetSetDef thread_object_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict, nullptr,
-    "The __dict__ for this thread.", &thread_object_type },
+  { "__dict__", gdb_py_generic_dict_getter, nullptr,
+    "The __dict__ for this thread.", nullptr },
   { "name", thpy_get_name, thpy_set_name,
     "The name of the thread, as set by the user or the OS.", NULL },
   { "details", thpy_get_details, NULL,
@@ -479,8 +479,8 @@ PyTypeObject thread_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  0,				  /*tp_getattro*/
-  0,				  /*tp_setattro*/
+  gdb_py_generic_getattro,	  /*tp_getattro*/
+  gdb_py_generic_setattro,	  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB thread object",		  /* tp_doc */
@@ -497,7 +497,7 @@ PyTypeObject thread_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  offsetof (thread_object, dict), /* tp_dictoffset */
+  0,				  /* tp_dictoffset */
   0,				  /* tp_init */
   0				  /* tp_alloc */
 };

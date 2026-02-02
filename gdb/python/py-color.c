@@ -37,10 +37,8 @@ static struct {
 };
 
 /* A color.  */
-struct colorpy_object
+struct colorpy_object : public PyObject
 {
-  PyObject_HEAD
-
   /* Underlying value.  */
   ui_file_style::color color;
 };

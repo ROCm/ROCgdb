@@ -33,6 +33,7 @@
 #include "c-lang.h"
 #include "gdbarch.h"
 #include "cli/cli-style.h"
+#include "char-print.h"
 
 /* All GPC versions until now (2007-09-27) also define a symbol called
    '_p_initialize'.  Check for the presence of this symbol first.  */
@@ -144,32 +145,20 @@ pascal_is_string_type (struct type *type,int *length_pos, int *length_size,
   return 0;
 }
 
-/* See p-lang.h.  */
-
-void
-pascal_language::print_one_char (int c, struct ui_file *stream,
-				 int *in_quotes) const
+class pascal_wchar_printer : public wchar_printer
 {
-  if (c == '\'' || ((unsigned int) c <= 0xff && (PRINT_LITERAL_FORM (c))))
-    {
-      if (!(*in_quotes))
-	gdb_puts ("'", stream);
-      *in_quotes = 1;
-      if (c == '\'')
-	{
-	  gdb_puts ("''", stream);
-	}
-      else
-	gdb_printf (stream, "%c", c);
-    }
-  else
-    {
-      if (*in_quotes)
-	gdb_puts ("'", stream);
-      *in_quotes = 0;
-      gdb_printf (stream, "#%d", (unsigned int) c);
-    }
-}
+public:
+
+  using wchar_printer::wchar_printer;
+
+  void print_char (gdb_wchar_t w) override
+  {
+    if (w == LCST ('\''))
+      m_file.write (LCST ("''"));
+    else
+      wchar_printer::print_char (w);
+  }
+};
 
 /* See language.h.  */
 
@@ -177,11 +166,7 @@ void
 pascal_language::printchar (int c, struct type *type,
 			    struct ui_file *stream) const
 {
-  int in_quotes = 0;
-
-  print_one_char (c, stream, &in_quotes);
-  if (in_quotes)
-    gdb_puts ("'", stream);
+  pascal_wchar_printer (type, '\'').print (c, stream);
 }
 
 
@@ -229,95 +214,8 @@ pascal_language::printstr (struct ui_file *stream, struct type *elttype,
 			   const char *encoding, int force_ellipses,
 			   const struct value_print_options *options) const
 {
-  enum bfd_endian byte_order = type_byte_order (elttype);
-  unsigned int i;
-  unsigned int things_printed = 0;
-  int in_quotes = 0;
-  int need_comma = 0;
-  int width;
-
-  /* Preserve ELTTYPE's original type, just set its LENGTH.  */
-  check_typedef (elttype);
-  width = elttype->length ();
-
-  /* If the string was not truncated due to `set print elements', and
-     the last byte of it is a null, we don't print that, in traditional C
-     style.  */
-  if ((!force_ellipses) && length > 0
-      && extract_unsigned_integer (string + (length - 1) * width, width,
-				   byte_order) == 0)
-    length--;
-
-  if (length == 0)
-    {
-      gdb_puts ("''", stream);
-      return;
-    }
-
-  unsigned int print_max_chars = get_print_max_chars (options);
-  for (i = 0; i < length && things_printed < print_max_chars; ++i)
-    {
-      /* Position of the character we are examining
-	 to see whether it is repeated.  */
-      unsigned int rep1;
-      /* Number of repetitions we have detected so far.  */
-      unsigned int reps;
-      unsigned long int current_char;
-
-      QUIT;
-
-      if (need_comma)
-	{
-	  gdb_puts (", ", stream);
-	  need_comma = 0;
-	}
-
-      current_char = extract_unsigned_integer (string + i * width, width,
-					       byte_order);
-
-      rep1 = i + 1;
-      reps = 1;
-      while (rep1 < length
-	     && extract_unsigned_integer (string + rep1 * width, width,
-					  byte_order) == current_char)
-	{
-	  ++rep1;
-	  ++reps;
-	}
-
-      if (reps > options->repeat_count_threshold)
-	{
-	  if (in_quotes)
-	    {
-	      gdb_puts ("', ", stream);
-	      in_quotes = 0;
-	    }
-	  printchar (current_char, elttype, stream);
-	  gdb_printf (stream, " %p[<repeats %u times>%p]",
-		      metadata_style.style ().ptr (),
-		      reps, nullptr);
-	  i = rep1 - 1;
-	  things_printed += options->repeat_count_threshold;
-	  need_comma = 1;
-	}
-      else
-	{
-	  if ((!in_quotes) && (PRINT_LITERAL_FORM (current_char)))
-	    {
-	      gdb_puts ("'", stream);
-	      in_quotes = 1;
-	    }
-	  print_one_char (current_char, stream, &in_quotes);
-	  ++things_printed;
-	}
-    }
-
-  /* Terminate the quotes if necessary.  */
-  if (in_quotes)
-    gdb_puts ("'", stream);
-
-  if (force_ellipses || i < length)
-    gdb_puts ("...", stream);
+  pascal_wchar_printer printer (elttype, '\'', encoding);
+  printer.print (stream, string, length, force_ellipses, 0, options);
 }
 
 /* Single instance of the Pascal language class.  */

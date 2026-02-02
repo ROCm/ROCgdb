@@ -30,6 +30,11 @@ if ![is_elf_format] {
     return
 }
 
+# ver_def fails because of __text_seg and __data_seg in .gnu.version.
+if [istarget "hppa*64*-*-*"] {
+    return
+}
+
 # This target requires a non-default emulation for successful shared
 # library/executable builds.
 set LFLAGS ""

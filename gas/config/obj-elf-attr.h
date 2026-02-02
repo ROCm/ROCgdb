@@ -23,14 +23,36 @@
 
 #include "as.h"
 
+#ifndef TC_OBJ_ATTR_v1
+#define TC_OBJ_ATTR_v1 0
+#endif
+#ifndef TC_OBJ_ATTR_v2
+#define TC_OBJ_ATTR_v2 0
+#endif
+
+#if (TC_OBJ_ATTR_v1 || TC_OBJ_ATTR_v2)
+#define TC_OBJ_ATTR 1
+#endif
+
 #ifdef TC_OBJ_ATTR
 
+#if (TC_OBJ_ATTR_v1)
 extern void oav1_attr_info_init (void);
 extern void oav1_attr_info_exit (void);
 extern bool oav1_attr_seen (obj_attr_vendor_t, obj_attr_tag_t);
-extern obj_attr_tag_t obj_attr_v1_process_attribute (obj_attr_vendor_t);
+#endif /* TC_OBJ_ATTR_v1 */
+
+/* Object attributes parsers.  */
+
+extern obj_attr_tag_t obj_attr_process_attribute (obj_attr_vendor_t);
+#if (TC_OBJ_ATTR_v2)
+extern void obj_attr_process_subsection (void);
+#endif /* (TC_OBJ_ATTR_v2) */
 
 extern void obj_elf_gnu_attribute (int);
+#if (TC_OBJ_ATTR_v2)
+extern void obj_elf_gnu_subsection (int);
+#endif /* TC_OBJ_ATTR_v2 */
 
 #endif /* TC_OBJ_ATTR */
 

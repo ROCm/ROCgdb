@@ -1501,40 +1501,13 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
       pc_regname = "pc";
     }
 
-  const char *funname = nullptr;
-  enum language funlang = language_unknown;
-  std::optional<CORE_ADDR> frame_pc = get_frame_pc_if_available (fi);
-  struct symbol *func = get_frame_function (fi);
-  symtab_and_line sal = find_frame_sal (fi);
-  struct symtab *s = sal.symtab;
-  gdb::unique_xmalloc_ptr<char> func_only;
-  if (func != nullptr)
-    {
-      funname = func->print_name ();
-      funlang = func->language ();
-      if (is_cplus_dialect (funlang))
-	{
-	  /* It seems appropriate to use print_name() here,
-	     to display the demangled name that we already have
-	     stored in the symbol table, but we stored a version
-	     with DMGL_PARAMS turned on, and here we don't want to
-	     display parameters.  So remove the parameters.  */
-	  func_only = cp_remove_params (funname);
-
-	  if (func_only != nullptr)
-	    funname = func_only.get ();
-	}
-    }
-  else if (frame_pc.has_value ())
-    {
-      bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (*frame_pc);
-      if (msymbol.minsym != nullptr)
-	{
-	  funname = msymbol.minsym->print_name ();
-	  funlang = msymbol.minsym->language ();
-	}
-    }
-  frame_info_ptr calling_frame_info = get_prev_frame (fi);
+  /* FUNC and FUNLANG are always initialized by the call to
+     find_frame_funname, even if it is just to NULL and language_unknown
+     respectively.  */
+  struct symbol *func;
+  enum language funlang;
+  gdb::unique_xmalloc_ptr<char> funname
+    = find_frame_funname (fi, &funlang, &func);
 
   if (selected_frame_p && frame_relative_level (fi) >= 0)
     {
@@ -1548,6 +1521,9 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
   fputs_styled (paspace_and_addr (gdbarch, get_frame_base (fi)).c_str (),
 		address_style.style (), gdb_stdout);
   gdb_puts (":\n");
+
+  symtab_and_line sal = find_frame_sal (fi);
+  std::optional<CORE_ADDR> frame_pc = get_frame_pc_if_available (fi);
   gdb_printf (" %s = ", pc_regname);
   if (frame_pc.has_value ())
     fputs_styled (paddress (gdbarch, get_frame_pc (fi)),
@@ -1556,10 +1532,10 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
     fputs_styled ("<unavailable>", metadata_style.style (), gdb_stdout);
 
   gdb_stdout->wrap_here (3);
-  if (funname != nullptr)
+  if (funname.get () != nullptr)
     {
       gdb_puts (" in ");
-      fputs_styled (funname, function_name_style.style (), gdb_stdout);
+      fputs_styled (funname.get (), function_name_style.style (), gdb_stdout);
     }
   gdb_stdout->wrap_here (3);
   if (sal.symtab != nullptr)
@@ -1605,6 +1581,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 		  address_style.style (), gdb_stdout);
   gdb_puts ("\n");
 
+  frame_info_ptr calling_frame_info = get_prev_frame (fi);
   if (calling_frame_info == nullptr)
     {
       enum unwind_stop_reason reason;
@@ -1641,7 +1618,7 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
   if (get_next_frame (fi) != nullptr || calling_frame_info != nullptr)
     gdb_puts ("\n");
 
-  if (s != nullptr)
+  if (struct symtab *s = sal.symtab; s != nullptr)
     gdb_printf (" source language %s.\n",
 		language_str (s->language ()));
 

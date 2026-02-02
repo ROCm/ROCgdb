@@ -2410,6 +2410,20 @@ s_tlsdescldr (int ignored ATTRIBUTE_UNUSED)
 
   demand_empty_rest_of_line ();
 }
+
+/* Parse a .aeabi_subsection directive.  */
+static void
+s_aarch64_aeabi_subsection (int ignored ATTRIBUTE_UNUSED)
+{
+  obj_attr_process_subsection ();
+}
+
+/* Parse a .aeabi_attribute directive.  */
+static void
+s_aarch64_aeabi_attribute (int ignored ATTRIBUTE_UNUSED)
+{
+  obj_attr_process_attribute (OBJ_ATTR_PROC);
+}
 #endif	/* OBJ_ELF */
 
 #ifdef TE_PE
@@ -2491,6 +2505,8 @@ const pseudo_typeS md_pseudo_table[] = {
   {"tlsdesccall", s_tlsdesccall, 0},
   {"tlsdescldr", s_tlsdescldr, 0},
   {"variant_pcs", s_variant_pcs, 0},
+  {"aeabi_subsection", s_aarch64_aeabi_subsection, 0},
+  {"aeabi_attribute", s_aarch64_aeabi_attribute, 0},
 #endif
 #if defined(OBJ_ELF) || defined(OBJ_COFF)
   {"word", s_aarch64_cons, 4},
@@ -5059,6 +5075,7 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   char *p, *q;
   char buf[AARCH64_MAX_SYSREG_NAME_LEN];
   const aarch64_sys_ins_reg *o;
+  aarch64_feature_set set;
 
   p = buf;
   for (q = *str; ISALNUM (*q) || *q == '_'; q++)
@@ -5076,7 +5093,19 @@ parse_sys_ins_reg (char **str, htab_t sys_ins_regs, bool sysreg128_p)
   if (!o || (sysreg128_p && !aarch64_sys_reg_128bit_p (o->flags)))
     return NULL;
 
-  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o->name, &o->features))
+  set = o->features;
+  if (*q == '\0' && aarch64_sys_ins_reg_tlbid_xt (o))
+    {
+      aarch64_feature_set feat = AARCH64_FEATURE (TLBID);
+      AARCH64_CLEAR_FEATURES (set, set, feat);
+    }
+  if (!sysreg128_p && aarch64_sys_ins_reg_has_xt (o))
+    {
+      aarch64_feature_set feat = AARCH64_FEATURES (2, D128_TLBID, D128);
+      AARCH64_CLEAR_FEATURES (set, set, feat);
+    }
+
+  if (!aarch64_sys_ins_reg_supported_p (cpu_variant, o->name, &set))
     as_bad (_("selected processor does not support system register "
 	      "name '%s'"), buf);
   if (aarch64_sys_reg_deprecated_p (o->flags))
@@ -9284,14 +9313,6 @@ aarch64_support_sframe_p (void)
   return (aarch64_abi == AARCH64_ABI_LP64);
 }
 
-/* Whether SFrame return address tracking is needed.  */
-
-bool
-aarch64_sframe_ra_tracking_p (void)
-{
-  return true;
-}
-
 /* The fixed offset from CFA for SFrame to recover the return address.
    (useful only when SFrame RA tracking is not needed).  */
 
@@ -10868,6 +10889,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"armv9.4-a",	AARCH64_ARCH_FEATURES (V9_4A)},
   {"armv9.5-a", AARCH64_ARCH_FEATURES (V9_5A)},
   {"armv9.6-a", AARCH64_ARCH_FEATURES (V9_6A)},
+  {"armv9.7-a", AARCH64_ARCH_FEATURES (V9_7A)},
   {NULL, AARCH64_NO_FEATURES}
 };
 
@@ -11006,13 +11028,14 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"mops-go",		AARCH64_FEATURE (MOPS_GO),
 			AARCH64_FEATURES (2, MOPS, MEMTAG)},
   {"sve2p3",		AARCH64_FEATURE (SVE2p3), AARCH64_FEATURE (SVE2p2)},
-  {"sme2p3",		AARCH64_FEATURE (SME2p3), AARCH64_FEATURES (2, SME2p2, SME_LUTv2)},
-  {"f16f32dot",		AARCH64_FEATURE (F16F32DOT), AARCH64_FEATURE (SIMD)},
+  {"sme2p3",		AARCH64_FEATURE (SME2p3), AARCH64_FEATURE (SME2p2)},
+  {"f16f32dot",		AARCH64_FEATURE (F16F32DOT), AARCH64_FEATURES (2, SIMD, F16)},
   {"f16f32mm",		AARCH64_FEATURE (F16F32MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"f16mm",		AARCH64_FEATURE (F16MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"sve-b16mm",		AARCH64_FEATURE (SVE_B16MM), AARCH64_FEATURE (SVE)},
   {"mpamv2",		AARCH64_FEATURE (MPAMv2), AARCH64_NO_FEATURES},
   {"mtetc",		AARCH64_FEATURE (MTETC), AARCH64_FEATURE (MEMTAG)},
+  {"tlbid",		AARCH64_FEATURE (TLBID), AARCH64_NO_FEATURES},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 
@@ -11048,6 +11071,8 @@ static const struct aarch64_virtual_dependency_table aarch64_dependencies[] = {
   {AARCH64_FEATURE (SME2p2), AARCH64_FEATURES (2, SVE_SME2p2, SVE2p2_SME2p2)},
   {AARCH64_FEATURE (SVE2p3), AARCH64_FEATURE (SVE2p3_SME2p3)},
   {AARCH64_FEATURE (SME2p3), AARCH64_FEATURE (SVE2p3_SME2p3)},
+  {AARCH64_FEATURE (D128), AARCH64_FEATURE (D128_TLBID)},
+  {AARCH64_FEATURE (TLBID), AARCH64_FEATURE (D128_TLBID)},
 };
 
 static aarch64_feature_set

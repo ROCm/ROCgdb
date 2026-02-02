@@ -77,6 +77,10 @@ case ${gdb_host} in
     cygwin*)
 	NATDEPFILES='x86-nat.o nat/x86-dregs.o windows-nat.o nat/windows-nat.o'
 	;;
+    mingw64a)
+	NATDEPFILES='aarch64-nat.o aarch64-windows-nat.o windows-nat.o \
+	nat/windows-nat.o nat/aarch64-hw-point.o'
+	;;
     mingw*)
 	NATDEPFILES='x86-nat.o nat/x86-dregs.o windows-nat.o nat/windows-nat.o'
 	;;
@@ -128,7 +132,8 @@ case ${gdb_host} in
 	    i386)
 		# Native config information for GDB on i386
 		# systems running Cygwin.
-		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o"
+		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o \
+		x86-windows-nat.o"
 		;;
 	esac
 	;;
@@ -137,7 +142,8 @@ case ${gdb_host} in
 	    i386)
 		# Native config information for GDB on amd64
 		# systems running Cygwin.
-		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o amd64-windows-nat.o"
+		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o \
+		amd64-windows-nat.o x86-windows-nat.o"
 		;;
 	esac
 	;;
@@ -361,14 +367,16 @@ case ${gdb_host} in
     mingw)
 	case ${gdb_host_cpu} in
 	    i386)
-		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o"
+		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o \
+		x86-windows-nat.o"
 		;;
 	esac
 	;;
     mingw64)
 	case ${gdb_host_cpu} in
 	    i386)
-		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o amd64-windows-nat.o"
+		NATDEPFILES="${NATDEPFILES} i386-windows-nat.o \
+		amd64-windows-nat.o x86-windows-nat.o"
 		;;
 	esac
 	;;

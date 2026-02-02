@@ -199,7 +199,7 @@ print_insn_mcore (bfd_vma memaddr,
 
 	case BR:
 	  {
-	    uint32_t val = ((inst & 0x3FF) ^ 0x400) - 0x400;
+	    uint32_t val = ((inst & 0x7FF) ^ 0x400) - 0x400;
 
 	    val = memaddr + 2 + (val << 1);
 	    (*print_func) (stream, "\t0x%x", val);

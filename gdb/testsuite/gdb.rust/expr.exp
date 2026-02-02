@@ -122,8 +122,8 @@ gdb_test "print \[0;1\]" " = \\\[0\\\]"
 gdb_test "print b\"hi rust\"" " = b\"hi rust\""
 # This isn't rusty syntax yet, but that's another bug -- this is just
 # testing that byte escapes work properly.
-gdb_test "print b\"\\xddhi bob\"" " = b\"\\\\335hi bob\""
-gdb_test "print b\"has\\0nul\"" " = b\"has\\\\000nul\""
+gdb_test "print b\"\\xddhi bob\"" " = b\"\\\\xddhi bob\""
+gdb_test "print b\"has\\0nul\"" " = b\"has\\\\0nul\""
 
 gdb_test "print br##\"hi\"##" " = b\"hi\""
 gdb_test "print br##\"hi" "Unexpected EOF in string"

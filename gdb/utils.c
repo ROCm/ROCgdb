@@ -1597,6 +1597,83 @@ begin_line (void)
     }
 }
 
+/* See pager.h.  */
+
+void
+pager_file::check_for_overfull_line (const unsigned int lines_allowed)
+{
+  if (chars_printed >= chars_per_line)
+    {
+      unsigned int save_chars = chars_printed;
+
+      /* If we change the style, below, we'll want to reset it
+	 before continuing to print.  If there is no wrap
+	 column, then we'll only reset the style if the pager
+	 prompt is given; and to avoid emitting style
+	 sequences in the middle of a run of text, we track
+	 this as well.  */
+      ui_file_style save_style = m_applied_style;
+      bool did_paginate = false;
+
+      chars_printed = 0;
+      lines_printed++;
+      if (m_wrap_column)
+	{
+	  /* We are about to insert a newline at an historic
+	     location in the WRAP_BUFFER.  Before we do we want to
+	     restore the default style.  To know if we actually
+	     need to insert an escape sequence we must restore the
+	     current applied style to how it was at the WRAP_COLUMN
+	     location.  */
+	  m_applied_style = m_wrap_style;
+	  this->set_stream_style (ui_file_style ());
+
+	  /* If we aren't actually wrapping, don't output
+	     newline -- if chars_per_line is right, we
+	     probably just overflowed anyway; if it's wrong,
+	     let us keep going.  */
+	  m_stream->puts ("\n");
+	}
+      else
+	this->flush_wrap_buffer ();
+
+      /* Possible new page.  Note that
+	 PAGINATION_DISABLED_FOR_COMMAND might be set during
+	 this loop, so we must continue to check it here.  */
+      if (pagination_enabled
+	  && !pagination_disabled_for_command
+	  && lines_printed >= lines_allowed)
+	{
+	  prompt_for_continue ();
+	  did_paginate = true;
+	}
+
+      /* Now output indentation and wrapped string.  */
+      if (m_wrap_column)
+	{
+	  m_stream->puts (n_spaces (m_wrap_indent));
+
+	  /* Having finished inserting the wrapping we should
+	     restore the style as it was at the WRAP_COLUMN.  */
+	  this->set_stream_style (m_wrap_style);
+
+	  /* The WRAP_BUFFER will still contain content, and that
+	     content might set some alternative style.  Restore
+	     APPLIED_STYLE as it was before we started wrapping,
+	     this reflects the current style for the last character
+	     in WRAP_BUFFER.  */
+	  m_applied_style = save_style;
+
+	  /* Note that this can set chars_printed > chars_per_line
+	     if we are printing a long string.  */
+	  chars_printed = m_wrap_indent + (save_chars - m_wrap_column);
+	  m_wrap_column = 0;	/* And disable fancy wrap */
+	}
+      else if (did_paginate)
+	this->emit_style_escape (save_style);
+    }
+}
+
 void
 pager_file::puts (const char *linebuffer)
 {
@@ -1643,23 +1720,33 @@ pager_file::puts (const char *linebuffer)
 
       while (*linebuffer != '\0' && *linebuffer != '\n')
 	{
-	  int skip_bytes;
-
 	  /* Print a single line.  */
 	  if (*linebuffer == '\t')
 	    {
+	      /* This does adjust CHARS_PRINTED, but doesn't count as
+		 printable content, so check_for_overfull_line is not
+		 called.
+
+		 If a tab is printed at the end of an already full line,
+		 then the tab does not wrap onto the next line.  We could
+		 cap CHARS_PRINTED to CHARS_PER_LINE, but we don't gain
+		 anything from doing that.  */
+
 	      m_wrap_buffer.push_back ('\t');
+
 	      /* Shifting right by 3 produces the number of tab stops
 		 we have already passed, and then adding one and
 		 shifting left 3 advances to the next tab stop.  */
 	      chars_printed = ((chars_printed >> 3) + 1) << 3;
 	      linebuffer++;
 	    }
-	  else if (*linebuffer == '\033'
+	  else if (int skip_bytes;
+		   *linebuffer == '\033'
 		   && skip_ansi_escape (linebuffer, &skip_bytes))
 	    {
 	      /* We don't consider escape sequences as characters, so we
-		 don't increment chars_printed here.  */
+		 don't increment chars_printed here, and we don't need to
+		 call check_for_overfull_line.  */
 
 	      /* This style sequence might not set every style attribute,
 		 so start with the currently applied style, and update
@@ -1683,86 +1770,42 @@ pager_file::puts (const char *linebuffer)
 	    }
 	  else if (*linebuffer == '\r')
 	    {
+	      /* This restarts the current line, it doesn't start a new
+		 line, calling check_for_overfull_line is not needed as,
+		 regardless of the current line state, the line will be
+		 considered empty once this block has finished.  */
 	      m_wrap_buffer.push_back (*linebuffer);
 	      chars_printed = 0;
 	      linebuffer++;
 	    }
 	  else
 	    {
-	      m_wrap_buffer.push_back (*linebuffer);
+	      /* We are about to add some printable content to
+		 M_WRAP_BUFFER.  Check to see if the current line is full,
+		 and if we should start a new line.  This might trigger
+		 pagination.  */
+	      this->check_for_overfull_line (lines_allowed);
+
+	      /* Check if we are at the start of a multi-byte character.
+		 mbrlen returns the number of bytes the character occupies.
+		 If it returns -1 (invalid) or 0 (null), we fall back to
+		 treating this as a single byte character.  */
+	      mbstate_t mb;
+	      memset (&mb, 0, sizeof mb);
+	      int len = mbrlen (linebuffer, MB_CUR_MAX, &mb);
+	      if (len < 1)
+		len = 1;
+
+	      /* Append to the output stream as many bytes from LINEBUFFER
+		 as this character uses.  This should be fine so long as we
+		 trust mbrlen.  */
+	      m_wrap_buffer.append (linebuffer, len);
+	      linebuffer += len;
+
+	      /* For now assume that every multi-byte character that GDB
+		 prints is only one character wide.  If this ever changes
+		 then we need to consider something like wcwidth here.  */
 	      chars_printed++;
-	      linebuffer++;
-	    }
-
-	  if (chars_printed >= chars_per_line)
-	    {
-	      unsigned int save_chars = chars_printed;
-
-	      /* If we change the style, below, we'll want to reset it
-		 before continuing to print.  If there is no wrap
-		 column, then we'll only reset the style if the pager
-		 prompt is given; and to avoid emitting style
-		 sequences in the middle of a run of text, we track
-		 this as well.  */
-	      ui_file_style save_style = m_applied_style;
-	      bool did_paginate = false;
-
-	      chars_printed = 0;
-	      lines_printed++;
-	      if (m_wrap_column)
-		{
-		  /* We are about to insert a newline at an historic
-		     location in the WRAP_BUFFER.  Before we do we want to
-		     restore the default style.  To know if we actually
-		     need to insert an escape sequence we must restore the
-		     current applied style to how it was at the WRAP_COLUMN
-		     location.  */
-		  m_applied_style = m_wrap_style;
-		  this->set_stream_style (ui_file_style ());
-
-		  /* If we aren't actually wrapping, don't output
-		     newline -- if chars_per_line is right, we
-		     probably just overflowed anyway; if it's wrong,
-		     let us keep going.  */
-		  m_stream->puts ("\n");
-		}
-	      else
-		this->flush_wrap_buffer ();
-
-	      /* Possible new page.  Note that
-		 PAGINATION_DISABLED_FOR_COMMAND might be set during
-		 this loop, so we must continue to check it here.  */
-	      if (pagination_enabled
-		  && !pagination_disabled_for_command
-		  && lines_printed >= lines_allowed)
-		{
-		  prompt_for_continue ();
-		  did_paginate = true;
-		}
-
-	      /* Now output indentation and wrapped string.  */
-	      if (m_wrap_column)
-		{
-		  m_stream->puts (n_spaces (m_wrap_indent));
-
-		  /* Having finished inserting the wrapping we should
-		     restore the style as it was at the WRAP_COLUMN.  */
-		  this->set_stream_style (m_wrap_style);
-
-		  /* The WRAP_BUFFER will still contain content, and that
-		     content might set some alternative style.  Restore
-		     APPLIED_STYLE as it was before we started wrapping,
-		     this reflects the current style for the last character
-		     in WRAP_BUFFER.  */
-		  m_applied_style = save_style;
-
-		  /* Note that this can set chars_printed > chars_per_line
-		     if we are printing a long string.  */
-		  chars_printed = m_wrap_indent + (save_chars - m_wrap_column);
-		  m_wrap_column = 0;	/* And disable fancy wrap */
-		}
-	      else if (did_paginate)
-		this->emit_style_escape (save_style);
 	    }
 	}
 
@@ -1819,6 +1862,27 @@ test_pager ()
   pager.puts ("bbbbbbbbbbbb\n");
 
   SELF_CHECK (strfile->string () == "aaaaaaaaaaaa\n  bbbbbbbbbbbb\n");
+
+  strfile->clear ();
+  pager.puts ("aaaaaaaaaaaaaaa");
+  pager.wrap_here (2);
+  pager.puts ("bbbbb\n");
+
+  SELF_CHECK (strfile->string () == "aaaaaaaaaaaaaaa\n  bbbbb\n");
+
+  strfile->clear ();
+  pager.puts ("aaaaaaaaaaaaaaa");
+  pager.wrap_here (10);
+  pager.puts ("bbbbb");
+  pager.wrap_here (10);
+  pager.puts ("ccccc");
+  pager.wrap_here (10);
+  pager.puts ("ddddd\n");
+
+  SELF_CHECK (strfile->string () == ("aaaaaaaaaaaaaaa\n"
+				     "          bbbbb\n"
+				     "          ccccc\n"
+				     "          ddddd\n"));
 }
 
 #endif /* GDB_SELF_TEST */

@@ -4826,8 +4826,17 @@ _bfd_x86_elf_link_setup_gnu_properties
 	    }
 	}
 
-      /* .sframe sections are emitted for AMD64 ABI only.  */
-      if (ABI_64_P (info->output_bfd) && !info->discard_sframe)
+      /* Create .sframe section for .plt section.  SFrame sections are
+	 supported for AMD64 ABI only.  Further, do not make SFrame sections
+	 for dynobj unconditionally.  If there are no SFrame sections for any
+	 input files, skip creating the linker created SFrame sections too.
+	 Since SFrame sections are marked KEEP, prohibiting these
+	 linker-created SFrame sections, when unnecessary, helps avoid creation
+	 of empty SFrame sections in the output.  */
+      bool gen_plt_sframe_p = (_bfd_elf_sframe_present_input_bfds (info)
+			       && !info->discard_sframe
+			       && ABI_64_P (info->output_bfd));
+      if (gen_plt_sframe_p)
 	{
 	  flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY
 			    | SEC_HAS_CONTENTS | SEC_IN_MEMORY

@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.46:
+
 * Add support for AMD Zen6 processor.
 
 * Emit an SFrame FRE with zero offsets to convey an undefined return address
@@ -23,6 +25,16 @@
 * New command line option --gsframe-3 causes GAS to emit SFrame section in
   version 3.  SFrame version 3 is emitted by default with the existing option
   --gsframe.
+
+* Add support for the remaining Armv9.6 instructions, enabled by the
+  extensions '+sme-mop4', '+sme-tmop', '+ssve-bitperm' and '+ssve-fexpa'.
+
+* Add support for Armv9.7 extensions, enabled by the option `-march=armv9.7-a'
+  and extensions '+f16f32dot', '+f16f32mm', '+f16mm', '+gcie', '+lscp',
+  '+mpamv2', '+mtetc', '+sme2p3', '+sve-b16mm', '+sve2p3' and '+tlbid'.
+
+* Add support for Arm future technologies POE2 and vMTE, enabled by the
+  extensions '+poe2', '+tev' and '+mops-go'.
 
 Changes in 2.45:
 

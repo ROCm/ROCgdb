@@ -12162,16 +12162,6 @@ x86_support_sframe_p (void)
   return (x86_elf_abi == X86_64_ABI);
 }
 
-/* Whether SFrame return address tracking is needed.  */
-bool
-x86_sframe_ra_tracking_p (void)
-{
-  /* In AMD64, return address is always stored on the stack at a fixed offset
-     from the CFA (provided via x86_sframe_cfa_ra_offset ()).
-     Do not track explicitly via an SFrame Frame Row Entry.  */
-  return false;
-}
-
 /* The fixed offset from CFA for SFrame to recover the return address.
    (useful only when SFrame RA tracking is not needed).  */
 offsetT

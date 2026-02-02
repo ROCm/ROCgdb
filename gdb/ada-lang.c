@@ -65,6 +65,7 @@
 #include "ada-exp.h"
 #include "charset.h"
 #include "ax-gdb.h"
+#include "char-print.h"
 
 static struct type *desc_base_type (struct type *);
 
@@ -13483,6 +13484,56 @@ ada_get_symbol_name_matcher (const lookup_name_info &lookup_name)
     }
 }
 
+class ada_wchar_printer : public wchar_printer
+{
+public:
+
+  using wchar_printer::wchar_printer;
+
+protected:
+
+  bool printable (gdb_wchar_t w) const override
+  {
+    return gdb_iswprint (w);
+  }
+
+  void print_char (gdb_wchar_t w) override;
+  void print_escape (const gdb_byte *orig, int orig_len) override;
+};
+
+void
+ada_wchar_printer::print_char (gdb_wchar_t w)
+{
+  if (w == gdb_btowc (m_quoter) && m_quoter == '"')
+    m_file.write (LCST ("\"\""));
+  else
+    m_file.write (w);
+}
+
+void
+ada_wchar_printer::print_escape (const gdb_byte *orig, int orig_len)
+{
+  int i;
+
+  for (i = 0; i + m_width <= orig_len; i += m_width)
+    {
+      ULONGEST value = extract_unsigned_integer (&orig[i], m_width,
+						 m_byte_order);
+      /* Follow GNAT's lead here and only use 6 digits for
+	 wide_wide_character.  */
+      gdb_printf (&m_file, "[\"%0*lx\"]",
+		  std::min (6, m_width * 2),
+		  (unsigned long) value);
+    }
+
+  /* If we somehow have extra bytes, print them now.  */
+  while (i < orig_len)
+    {
+      gdb_printf (&m_file, "[\"%02x\"]", orig[i] & 0xff);
+      ++i;
+    }
+}
+
 /* Class representing the Ada language.  */
 
 class ada_language : public language_defn
@@ -13896,18 +13947,10 @@ public:
 
   /* See language.h.  */
 
-  void emitchar (int ch, struct type *chtype,
-		 struct ui_file *stream, int quoter) const override
-  {
-    ada_emit_char (ch, chtype, stream, quoter, 1);
-  }
-
-  /* See language.h.  */
-
   void printchar (int ch, struct type *chtype,
 		  struct ui_file *stream) const override
   {
-    ada_printchar (ch, chtype, stream);
+    ada_wchar_printer (chtype, '\'').print (ch, stream);
   }
 
   /* See language.h.  */
@@ -13924,8 +13967,10 @@ public:
       generic_printstr (stream, elttype, string, length, encoding,
 			force_ellipses, '"', 0, options);
     else
-      ada_printstr (stream, elttype, string, length, encoding,
-		    force_ellipses, options);
+      {
+	ada_wchar_printer printer (elttype, '"', encoding);
+	printer.print (stream, string, length, force_ellipses, 0, options);
+      }
   }
 
   /* See language.h.  */

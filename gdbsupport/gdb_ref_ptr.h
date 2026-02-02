@@ -51,20 +51,20 @@ class ref_ptr
  public:
 
   /* Create a new NULL instance.  */
-  ref_ptr ()
+  ref_ptr () noexcept
     : m_obj (NULL)
   {
   }
 
   /* Create a new NULL instance.  Note that this is not explicit.  */
-  ref_ptr (const std::nullptr_t)
+  ref_ptr (const std::nullptr_t) noexcept
     : m_obj (NULL)
   {
   }
 
   /* Create a new instance.  OBJ is a reference, management of which
      is now transferred to this class.  */
-  explicit ref_ptr (T *obj)
+  explicit ref_ptr (T *obj) noexcept
     : m_obj (obj)
   {
   }
@@ -127,7 +127,7 @@ class ref_ptr
 
   /* Return this instance's referent without changing the state of
      this class.  */
-  T *get () const
+  T *get () const noexcept
   {
     return m_obj;
   }
@@ -135,7 +135,7 @@ class ref_ptr
   /* Return this instance's referent, and stop managing this
      reference.  The caller is now responsible for the ownership of
      the reference.  */
-  ATTRIBUTE_UNUSED_RESULT T *release ()
+  ATTRIBUTE_UNUSED_RESULT T *release () noexcept
   {
     T *result = m_obj;
 
@@ -144,7 +144,7 @@ class ref_ptr
   }
 
   /* Let users refer to members of the underlying pointer.  */
-  T *operator-> () const
+  T *operator-> () const noexcept
   {
     return m_obj;
   }

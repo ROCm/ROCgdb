@@ -330,7 +330,12 @@ aarch64_ext_regrt_sysins (const aarch64_operand *self, aarch64_opnd_info *info,
   /* This will make the constraint checking happy and more importantly will
      help the disassembler determine whether this operand is optional or
      not.  */
-  info->present = aarch64_sys_ins_reg_has_xt (inst->operands[0].sysins_op);
+
+  if (aarch64_sys_ins_reg_tlbid_xt (inst->operands[0].sysins_op)
+      && info->reg.regno != 31)
+    info->present = true;
+  else
+    info->present = aarch64_sys_ins_reg_has_xt (inst->operands[0].sysins_op);
 
   return true;
 }
@@ -1521,7 +1526,7 @@ aarch64_ext_hint (const aarch64_operand *self ATTRIBUTE_UNUSED,
 
   for (i = 0; aarch64_hint_options[i].name != NULL; i++)
     {
-      if (hint_number == HINT_VAL (aarch64_hint_options[i].value))
+      if (hint_number == aarch64_hint_options[i].value)
 	{
 	  info->hint_option = &(aarch64_hint_options[i]);
 	  return true;

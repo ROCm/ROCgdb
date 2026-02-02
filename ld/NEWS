@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.46:
+
 * Add --gnu-tls-tag/--no-gnu-tls-tag options to i386 ELF linker to add
   the GLIBC_ABI_GNU_TLS version dependency in output if input object
   files call ___tls_get_addr.  Also added --enable-gnu-tls-tag configure

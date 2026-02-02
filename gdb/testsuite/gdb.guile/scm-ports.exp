@@ -113,20 +113,27 @@ proc test_mem_port_rw { buffered } {
 	"define old-value"
     gdb_test_no_output "guile (define new-value (logxor old-value 1))" \
 	"define new-value"
+
+    # Sanity check before the write.
+    gdb_test "guile (print (value=? (parse-and-eval \"*(char*) \$sp\") byte-at-sp))" \
+	"= #t" \
+	"test byte at sp, before write"
+
+    # Write new byte at *SP.
     gdb_test "guile (print (put-bytevector rw-mem-port (make-bytevector 1 new-value)))" \
 	"= #<unspecified>"
+
+    # Force flush, necessary if the port is buffered.
     if {$buffered} {
-	# Value shouldn't be in memory yet.
-	gdb_test "guile (print (value=? (parse-and-eval \"*(char*) \$sp\") byte-at-sp))" \
-	    "= #t" \
-	    "test byte at sp, before flush"
 	gdb_test_no_output "guile (force-output rw-mem-port)" \
 	    "flush port"
     }
+
     # Value should be in memory now.
     gdb_test "guile (print (value=? (parse-and-eval \"*(char*) \$sp\") byte-at-sp))" \
 	"= #f" \
-	"test byte at sp, after flush"
+	"test byte at sp, after write"
+
     # Restore the value for cleanliness sake, and to verify close-port
     # flushes the buffer.
     gdb_test "guile (print (seek rw-mem-port (value->integer sp-reg) SEEK_SET))" \

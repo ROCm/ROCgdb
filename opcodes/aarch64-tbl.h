@@ -2964,6 +2964,8 @@ static const aarch64_feature_set aarch64_feature_ite =
   AARCH64_FEATURE (ITE);
 static const aarch64_feature_set aarch64_feature_d128 =
   AARCH64_FEATURE (D128);
+static const aarch64_feature_set aarch64_feature_d128_tlbid =
+  AARCH64_FEATURE (D128_TLBID);
 static const aarch64_feature_set aarch64_feature_the =
   AARCH64_FEATURE (THE);
 static const aarch64_feature_set aarch64_feature_d128_the =
@@ -3171,6 +3173,7 @@ static const aarch64_feature_set aarch64_feature_mpamv2 =
 #define GCS	  &aarch64_feature_gcs
 #define ITE	  &aarch64_feature_ite
 #define D128	  &aarch64_feature_d128
+#define D128_TLBID  &aarch64_feature_d128_tlbid
 #define THE	  &aarch64_feature_the
 #define D128_THE  &aarch64_feature_d128_the
 #define B16B16_SVE2  &aarch64_feature_sve_b16b16_sve2
@@ -3448,6 +3451,8 @@ static const aarch64_feature_set aarch64_feature_mpamv2 =
   { NAME, OPCODE, MASK, gcs, 0, GCS, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define D128_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, ic_system, 0, D128, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
+#define D128_TLBID_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, ic_system, 0, D128_TLBID, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
 #define THE_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, the, 0, THE, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define D128_THE_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
@@ -5152,7 +5157,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("dc",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_DC, Rt), QL_SRC_X, F_ALIAS),
   CORE_INSN ("ic",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_IC, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
   CORE_INSN ("tlbi",0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_TLBI, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
-  D128_INSN ("tlbip",0xd5480000, 0xfff80000, OP3 (SYSREG_TLBIP, Rt_SYS, PAIRREG_OR_XZR), QL_SRC_X2, F_ALIAS| F_OPD1_OPT | F_OPD_PAIR_OPT | F_DEFAULT (0x1f)),
+  D128_TLBID_INSN ("tlbip",0xd5480000, 0xfff80000, OP3 (SYSREG_TLBIP, Rt_SYS, PAIRREG_OR_XZR), QL_SRC_X2, F_ALIAS| F_OPD1_OPT | F_OPD_PAIR_OPT | F_DEFAULT (0x1f)),
   WFXT_INSN ("wfet", 0xd5031000, 0xffffffe0, ic_system, OP1 (Rd), QL_I1X, F_HAS_ALIAS),
   WFXT_INSN ("wfit", 0xd5031020, 0xffffffe0, ic_system, OP1 (Rd), QL_I1X, F_HAS_ALIAS),
   PREDRES_INSN ("cfp", 0xd50b7380, 0xffffffe0, ic_system, OP2 (SYSREG_SR, Rt), QL_SRC_X, F_ALIAS),

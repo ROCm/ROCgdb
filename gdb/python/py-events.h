@@ -27,10 +27,8 @@
 /* Stores a list of objects to be notified when the event for which this
    registry tracks occurs.  */
 
-struct eventregistry_object
+struct eventregistry_object : public PyObject
 {
-  PyObject_HEAD
-
   PyObject *callbacks;
 };
 

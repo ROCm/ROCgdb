@@ -46,8 +46,6 @@ cooked_index_worker_result::get_reader (dwarf2_per_cu *per_cu)
 cutu_reader *
 cooked_index_worker_result::preserve (cutu_reader_up reader)
 {
-  m_abbrev_table_cache.add (reader->release_abbrev_table ());
-
   auto [it, inserted] = m_reader_hash.insert (std::move (reader));
   gdb_assert (inserted);
 

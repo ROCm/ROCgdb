@@ -40,7 +40,6 @@ extern struct cmd_list_element *show_dwarf_cmdlist;
 
 struct tu_stats
 {
-  int nr_uniq_abbrev_tables = 0;
   int nr_symtabs = 0;
   int nr_symtab_sharers = 0;
   int nr_stmt_less_type_units = 0;
@@ -1016,17 +1015,17 @@ public:
 
   cutu_reader (dwarf2_per_cu &this_cu,
 	       dwarf2_per_objfile &per_objfile,
-	       const struct abbrev_table *abbrev_table,
 	       dwarf2_cu *existing_cu,
 	       bool skip_partial,
-	       enum language pretend_language,
-	       const abbrev_table_cache *abbrev_cache = nullptr);
+	       std::optional<language> pretend_language,
+	       abbrev_table_cache &abbrev_cache);
 
   cutu_reader (dwarf2_per_cu &this_cu,
 	       dwarf2_per_objfile &per_objfile,
-	       enum language pretend_language,
+	       std::optional<language> pretend_language,
 	       struct dwarf2_cu &parent_cu,
-	       struct dwo_file &dwo_file);
+	       struct dwo_file &dwo_file,
+	       abbrev_table_cache &abbrev_table_cache);
 
   DISABLE_COPY_AND_ASSIGN (cutu_reader);
 
@@ -1054,13 +1053,6 @@ public:
   /* Release the CU created by this cutu_reader.  */
   dwarf2_cu_up release_cu ();
 
-  /* Release the abbrev table, transferring ownership to the
-     caller.  */
-  abbrev_table_up release_abbrev_table ()
-  {
-    return std::move (m_abbrev_table_holder);
-  }
-
   /* Read all DIES of the debug info section in memory.  */
   void read_all_dies ();
 
@@ -1085,19 +1077,21 @@ private:
 
   void init_cu_die_reader (dwarf2_cu *cu, dwarf2_section_info *section,
 			   struct dwo_file *dwo_file,
-			   const struct abbrev_table *abbrev_table);
+			   const abbrev_table &abbrev_table);
 
   void init_tu_and_read_dwo_dies (dwarf2_per_cu *this_cu,
 				  dwarf2_per_objfile *per_objfile,
 				  dwarf2_cu *existing_cu,
-				  enum language pretend_language);
+				  std::optional<language> pretend_language,
+				  abbrev_table_cache &abbrev_table_cache);
 
   void read_cutu_die_from_dwo (dwarf2_cu *cu, dwo_unit *dwo_unit,
 			       die_info *stub_comp_unit_die,
-			       const char *stub_comp_dir);
+			       const char *stub_comp_dir,
+			       abbrev_table_cache &abbrev_table_cache);
 
   void prepare_one_comp_unit (struct dwarf2_cu *cu,
-			      enum language pretend_language);
+			      std::optional<language> pretend_language);
 
   /* Helpers to build the in-memory DIE tree.  */
 
@@ -1171,12 +1165,6 @@ private:
   bool m_dummy_p = false;
 
   dwarf2_cu_up m_new_cu;
-
-  /* The ordinary abbreviation table.  */
-  abbrev_table_up m_abbrev_table_holder;
-
-  /* The DWO abbreviation table.  */
-  abbrev_table_up m_dwo_abbrev_table;
 };
 
 /* Converts DWARF language names to GDB language names.  */

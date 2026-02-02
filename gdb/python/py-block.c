@@ -23,8 +23,8 @@
 #include "python-internal.h"
 #include "objfiles.h"
 
-struct block_object {
-  PyObject_HEAD
+struct block_object : public PyObject
+{
   /* The GDB block structure that represents a frame's code block.  */
   const struct block *block;
   /* The backing object file.  There is no direct relationship in GDB
@@ -33,8 +33,8 @@ struct block_object {
   struct objfile *objfile;
 };
 
-struct block_syms_iterator_object {
-  PyObject_HEAD
+struct block_syms_iterator_object : public PyObject
+{
   /* The block.  */
   const struct block *block;
   /* The iterator for that block.  */

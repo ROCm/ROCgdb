@@ -26,19 +26,13 @@
 
 /* A gdb.Corefile object.  */
 
-struct corefile_object
+struct corefile_object : public gdbpy_dict_wrapper
 {
-  PyObject_HEAD
-
   /* The inferior this core file is attached to.  This will be set to NULL
      when the inferior is deleted, or if a different core file is loaded
      for the inferior.  When this is NULL the gdb.Corefile object is
      considered invalid.*/
   struct inferior *inferior;
-
-  /* Dictionary holding user-added attributes.  This is the __dict__
-     attribute of the object.  This is an owning reference.  */
-  PyObject *dict;
 
   /* A Tuple of gdb.CorefileMappedFile objects.  This tuple is only created
      the first time the user calls gdb.Corefile.mapped_files(), the result
@@ -51,10 +45,8 @@ extern PyTypeObject corefile_object_type;
 
 /* A gdb.CorefileMapped object.  */
 
-struct corefile_mapped_file_object
+struct corefile_mapped_file_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The name of a file that was mapped when the core file was created.
      This is a 'str' object.  */
   PyObject *filename;
@@ -76,10 +68,8 @@ extern PyTypeObject corefile_mapped_file_object_type;
 
 /* A gdb.CorefileMappedFileRegion object.  */
 
-struct corefile_mapped_file_region_object
+struct corefile_mapped_file_region_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The start and end addresses for this mapping, these are addresses
      within the inferior's address space.  */
   CORE_ADDR start;
@@ -511,8 +501,8 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_corefile);
 
 static gdb_PyGetSetDef corefile_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict, nullptr,
-    "The __dict__ for the gdb.Corefile.", &corefile_object_type },
+  { "__dict__", gdb_py_generic_dict_getter, nullptr,
+    "The __dict__ for the gdb.Corefile.", nullptr },
   { "filename", cfpy_get_filename, nullptr,
     "The filename of a valid Corefile object.", nullptr },
   { nullptr }
@@ -548,8 +538,8 @@ PyTypeObject corefile_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  0,				  /*tp_getattro*/
-  0,				  /*tp_setattro*/
+  gdb_py_generic_getattro,	  /*tp_getattro*/
+  gdb_py_generic_setattro,	  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB corefile object",	  /* tp_doc */
@@ -566,7 +556,7 @@ PyTypeObject corefile_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  offsetof (corefile_object, dict), /* tp_dictoffset */
+  0,				  /* tp_dictoffset */
   0,				  /* tp_init */
   0,				  /* tp_alloc */
   0,				  /* tp_new */

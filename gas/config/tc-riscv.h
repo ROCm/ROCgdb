@@ -187,7 +187,7 @@ extern void riscv_adjust_symtab (void);
 #define OBJ_COPY_SYMBOL_ATTRIBUTES(DEST, SRC)  \
   elf_copy_symbol_size (DEST, SRC)
 
-/* The target supports Object Attributes.  */
-#define TC_OBJ_ATTR 1
+/* The target supports Object Attributes v1.  */
+#define TC_OBJ_ATTR_v1 1
 
 #endif /* TC_RISCV */

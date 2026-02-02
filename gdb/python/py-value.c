@@ -54,8 +54,8 @@
 #define builtin_type_pybool \
   language_bool_type (current_language, gdbpy_enter::get_gdbarch ())
 
-struct value_object {
-  PyObject_HEAD
+struct value_object : public PyObject
+{
   struct value_object *next;
   struct value_object *prev;
   struct value *value;
@@ -2000,7 +2000,7 @@ value_object_to_value (PyObject *self)
 {
   value_object *real;
 
-  if (! PyObject_TypeCheck (self, &value_object_type))
+  if (!gdbpy_is_value_object (self))
     return NULL;
   real = (value_object *) self;
   return real->value;
@@ -2073,7 +2073,7 @@ convert_value_from_python (PyObject *obj)
 	      = current_language->value_string (gdbpy_enter::get_gdbarch (),
 						s.get (), strlen (s.get ()));
 	}
-      else if (PyObject_TypeCheck (obj, &value_object_type))
+      else if (gdbpy_is_value_object (obj))
 	value = ((value_object *) obj)->value->copy ();
       else if (gdbpy_is_lazy_string (obj))
 	{

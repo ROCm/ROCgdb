@@ -2314,9 +2314,6 @@ extern void reread_symbols (int from_tty);
 extern struct type *lookup_transparent_type
     (const char *name, domain_search_flags flags = SEARCH_STRUCT_DOMAIN);
 
-extern struct type *basic_lookup_transparent_type
-     (const char *name, domain_search_flags flags = SEARCH_STRUCT_DOMAIN);
-
 /* Macro for name of symbol to indicate a file compiled with gcc.  */
 #ifndef GCC_COMPILED_FLAG_SYMBOL
 #define GCC_COMPILED_FLAG_SYMBOL "gcc_compiled."

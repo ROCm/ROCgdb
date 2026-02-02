@@ -23,9 +23,8 @@
 #include "valprint.h"
 #include "language.h"
 
-struct lazy_string_object {
-  PyObject_HEAD
-
+struct lazy_string_object : public PyObject
+{
   /*  Holds the address of the lazy string.  */
   CORE_ADDR address;
 

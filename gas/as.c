@@ -1266,15 +1266,15 @@ perform_an_assembly_pass (int argc, char ** argv)
   if (strstr (BFD_VERSION_STRING, "." XSTRING (BFD_VERSION_DATE)) != NULL)
     predefine_symbol ("date", BFD_VERSION_DATE);
 
+#ifdef obj_begin
+  obj_begin ();
+#endif
+
   /* This may add symbol table entries, which requires having an open BFD,
      and sections already created.  */
   md_begin ();
-
 #ifdef USING_CGEN
   gas_cgen_begin ();
-#endif
-#ifdef obj_begin
-  obj_begin ();
 #endif
 
   /* Skip argv[0].  */

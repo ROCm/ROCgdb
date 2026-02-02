@@ -32,7 +32,7 @@ struct tui_location_tracker
      and false otherwise.  */
   bool set_location (struct gdbarch *gdbarch,
 		     const struct symtab_and_line &sal,
-		     const char *procname);
+		     std::string procname);
 
   /* Update the current location with the with the provided argument.
      Return true if any of the fields actually changed, otherwise false.  */

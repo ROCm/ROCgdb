@@ -57,9 +57,20 @@
 
 * Support for Floating Point Mode Register (FPMR) in AArch64.
 
+* When running on the Windows Terminal console, GDB now supports
+  true-color 24-bit colors.
+
+* When running on the Windows Terminal console whose output codepage
+  is 65001, GDB now supports emoji styling and display of UTF-8
+  encoded text in general.  The host charset in that case will be
+  automatically set to UTF-8.  (Users can use the Windows 'chcp'
+  command to change the output codepage of the console.)
+
 * New targets
 
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
+
+AArch64 MinGW                   aarch64-*-mingw*
 
 * New commands
 

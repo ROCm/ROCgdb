@@ -129,7 +129,7 @@ def do_enable_unwinder1(unwinders, name_re, flag):
 
 def do_enable_unwinder(arg, flag):
     """Enable/disable unwinder(s)."""
-    (locus_re, name_re) = parse_unwinder_command_args(arg)
+    locus_re, name_re = parse_unwinder_command_args(arg)
     total = 0
     if locus_re.match("global"):
         total += do_enable_unwinder1(gdb.frame_unwinders, name_re, flag)

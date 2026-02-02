@@ -153,7 +153,7 @@ class BaseReference(ABC):
             if idx >= len(self._children):
                 break
             if self._children[idx] is None:
-                (name, value) = self.fetch_one_child(idx)
+                name, value = self.fetch_one_child(idx)
                 name = self._compute_name(name)
                 var = VariableReference(name, value)
                 self._children[idx] = var
@@ -268,9 +268,9 @@ class VariableReference(BaseReference):
         if isinstance(self._printer, gdb.ValuePrinter) and hasattr(
             self._printer, "child"
         ):
-            (name, val) = self._printer.child(idx)
+            name, val = self._printer.child(idx)
         else:
-            (name, val) = self.cache_children()[idx]
+            name, val = self.cache_children()[idx]
         # A pretty-printer can return something other than a
         # gdb.Value, but it must be convertible.
         if not isinstance(val, gdb.Value):

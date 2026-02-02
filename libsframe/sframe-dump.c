@@ -385,11 +385,11 @@ dump_sframe_func_fres_flex (const sframe_decoder_ctx *sfd_ctx,
       int32_t cfa_offset = sframe_fre_get_cfa_offset (sfd_ctx, &fre, fde_type,
 						      &err_cfa_offset);
       sframe_assert (!err_cfa_reg && !err_cfa_offset);
-      bool cfa_reg_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_P (cfa_reg_data);
+      bool cfa_reg_p = SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P (cfa_reg_data);
       if (cfa_reg_p)
 	{
-	  cfa_reg = SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM (cfa_reg_data);
-	  cfa_deref_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_DEREF_P (cfa_reg_data);
+	  cfa_reg = SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM (cfa_reg_data);
+	  cfa_deref_p = SFRAME_V3_FLEX_FDE_CTRLWORD_DEREF_P (cfa_reg_data);
 	}
 
       int err_ra_reg = 0;
@@ -399,11 +399,11 @@ dump_sframe_func_fres_flex (const sframe_decoder_ctx *sfd_ctx,
 				&err_ra_reg);
       int32_t ra_offset = sframe_fre_get_ra_offset (sfd_ctx, &fre, fde_type,
 						    &err_ra_offset);
-      bool ra_reg_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_P (ra_reg_data);
+      bool ra_reg_p = SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P (ra_reg_data);
       if (ra_reg_p)
 	{
-	  ra_reg = SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM (ra_reg_data);
-	  ra_deref_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_DEREF_P (ra_reg_data);
+	  ra_reg = SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM (ra_reg_data);
+	  ra_deref_p = SFRAME_V3_FLEX_FDE_CTRLWORD_DEREF_P (ra_reg_data);
 	}
 
       int err_fp_reg = 0;
@@ -416,11 +416,11 @@ dump_sframe_func_fres_flex (const sframe_decoder_ctx *sfd_ctx,
       uint32_t fp_reg_data = sframe_get_fre_udata (&fre, fp_idx, &err_fp_reg);
       int32_t fp_offset = sframe_fre_get_fp_offset (sfd_ctx, &fre, fde_type,
 						    &err_fp_offset);
-      bool fp_reg_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_P (fp_reg_data);
+      bool fp_reg_p = SFRAME_V3_FLEX_FDE_CTRLWORD_REG_P (fp_reg_data);
       if (fp_reg_p)
 	{
-	  fp_reg = SFRAME_V3_FLEX_FDE_OFFSET_REG_NUM (fp_reg_data);
-	  fp_deref_p = SFRAME_V3_FLEX_FDE_OFFSET_REG_DEREF_P (fp_reg_data);
+	  fp_reg = SFRAME_V3_FLEX_FDE_CTRLWORD_REGNUM (fp_reg_data);
+	  fp_deref_p = SFRAME_V3_FLEX_FDE_CTRLWORD_DEREF_P (fp_reg_data);
 	}
 
       /* Dump CFA info.  */

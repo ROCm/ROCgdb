@@ -164,4 +164,8 @@ char host_letter_to_control_character (char c);
 
 const char *host_utf32 ();
 
+#ifdef __MINGW32__
+  unsigned int mingw_get_codeset ();
+#endif
+
 #endif /* GDB_CHARSET_H */

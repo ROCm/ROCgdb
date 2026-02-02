@@ -72,6 +72,9 @@ gdb_continue_to_breakpoint "stop at test breakpoint"
 gdb_test_no_output "source ${pyfile}"\
     "import python scripts"
 
+# Print the captured frame IDs.
+gdb_test "python print_frame_ids()"
+
 # Test with and without filters.
 foreach bt_cmd { "bt" "bt -no-filters" } {
     with_test_prefix "$bt_cmd" {

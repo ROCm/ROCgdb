@@ -39,8 +39,7 @@ if {![runto ${srcfile}:$line]} {
 
 gdb_test "print 𝕯" " = 98" "print D"
 gdb_test "print \"𝕯\"" " = \"𝕯\"" "print D in string"
-# This output is maybe not ideal, but it also isn't incorrect.
-gdb_test "print '𝕯'" " = 120175 '\\\\u\\\{01d56f\\\}'" \
+gdb_test "print '𝕯'" " = 120175 '𝕯'" \
     "print D as char"
 gdb_test "print cç" " = 97" "print cc"
 

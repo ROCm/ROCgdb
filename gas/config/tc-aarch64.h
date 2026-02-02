@@ -327,8 +327,7 @@ extern unsigned int aarch64_sframe_cfa_ra_reg;
 #define SFRAME_CFA_RA_REG aarch64_sframe_cfa_ra_reg
 
 /* Whether SFrame return address tracking is needed.  */
-extern bool aarch64_sframe_ra_tracking_p (void);
-#define sframe_ra_tracking_p aarch64_sframe_ra_tracking_p
+#define sframe_ra_tracking_p() true
 
 /* The fixed offset from CFA for SFrame to recover the return address.
    (useful only when SFrame RA tracking is not needed).  */
@@ -373,5 +372,10 @@ extern bool aarch64_fix_adjustable (struct fix *);
 void tc_pe_dwarf2_emit_offset (symbolS *, unsigned int);
 
 #endif /* TE_PE */
+
+#ifdef OBJ_ELF
+/* The target supports Object Attributes v2.  */
+#define TC_OBJ_ATTR_v2 1
+#endif /* OBJ_ELF */
 
 #endif /* TC_AARCH64 */

@@ -55,10 +55,8 @@ PyTypeObject recpy_aux_type = {
 };
 
 /* Python RecordGap object.  */
-struct recpy_gap_object
+struct recpy_gap_object : public PyObject
 {
-  PyObject_HEAD
-
   /* Reason code.  */
   int reason_code;
 

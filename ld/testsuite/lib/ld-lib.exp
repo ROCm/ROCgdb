@@ -65,6 +65,17 @@ proc default_ld_version { ld } {
     }
 }
 
+# Check if ld supports emul.
+#
+proc ld_supports_emul { emul } {
+    global ld
+
+    set ld_output [remote_exec host $ld "-V"]
+    set ld_output [lindex $ld_output 1]
+
+    return [regexp "$emul\[\n\r\]" $ld_output]
+}
+
 proc run_host_cmd { prog command } {
     global link_output
     global gcc_B_opt

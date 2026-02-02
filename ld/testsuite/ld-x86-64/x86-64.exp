@@ -588,8 +588,14 @@ run_dump_test "tls-le-pic-3-x32"
 if { ![skip_sframe_tests] } {
     run_dump_test "sframe-simple-1"
     run_dump_test "sframe-link-1"
+    # Test --discard-sframe
     run_dump_test "sframe-command-line-1"
+    # Test --no-ld-generated-unwind-info
+    run_dump_test "sframe-command-line-2"
     run_dump_test "sframe-reloc-1"
+    run_dump_test "sframe-gc-sections-1"
+    run_dump_test "sframe-gc-sections-2a"
+    run_dump_test "sframe-gc-sections-2b"
     run_dump_test "sframe-plt-1"
     run_dump_test "sframe-ibt-plt-1"
     run_dump_test "sframe-pltgot-1"
@@ -649,6 +655,36 @@ if ![ld_assemble $as "--32 $srcdir/$subdir/foo.s" tmpdir/foo32.o] {
 if ![ld_assemble $as "--64 $srcdir/$subdir/foo.s" tmpdir/foo64.o] {
     fail "Build LP64 foo.o"
     return
+}
+
+run_ld_link_tests [list \
+    [list \
+	"Build sframe.o" \
+	"" \
+	"" \
+	"--64 --gsframe" \
+	{sframe.s} \
+    ] \
+]
+
+set cmd "$objcopy -O elf32-x86-64 tmpdir/sframe.o tmpdir/sframe-x32.o"
+send_log "$cmd\n"
+set got [remote_exec host "$cmd"]
+if { [lindex $got 0] != 0 || ![string match "" [lindex $got 1]] } then {
+    send_log "$got\n"
+    fail "Convert x86-64 sframe.o to x32"
+} else {
+    run_ld_link_tests [list \
+	[list \
+	    "X32 DSO from x86-64 sframe.o" \
+	    "-shared --hash-style=both --no-rosegment -z separate-code -melf32_x86_64" \
+	    "tmpdir/sframe-x32.o" \
+	    "--x32 -mx86-used-note=yes" \
+	    {dummy.s} \
+	    {{readelf --sframe sframe.rd}} \
+	    "sframe-x32" \
+	] \
+    ]
 }
 
 run_dump_test "compressed1"

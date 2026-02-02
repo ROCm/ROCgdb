@@ -8,10 +8,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2025-07-13 08:52+0100\n"
+"POT-Creation-Date: 2026-01-28 09:57+1030\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -38,134 +39,134 @@ msgstr ""
 msgid "Invalid/unrecognized reloc reloc %d."
 msgstr ""
 
-#: aarch64.cc:511 arm.cc:7391 mips.cc:6723
+#: aarch64.cc:510 arm.cc:7390 mips.cc:6722
 #, c-format
 msgid "undefined or discarded local symbol %u from  object %s in GOT"
 msgstr ""
 
-#: aarch64.cc:532 arm.cc:7413 mips.cc:6742
+#: aarch64.cc:531 arm.cc:7412 mips.cc:6741
 #, c-format
 msgid "undefined or discarded symbol %s in GOT"
 msgstr ""
 
-#: aarch64.cc:1932 arm.cc:6543 object.cc:901
+#: aarch64.cc:1931 arm.cc:6542 object.cc:901
 #, c-format
 msgid "invalid symbol table name index: %u"
 msgstr ""
 
-#: aarch64.cc:1940 arm.cc:6551 object.cc:907
+#: aarch64.cc:1939 arm.cc:6550 object.cc:907
 #, c-format
 msgid "symbol table name section has wrong type: %u"
 msgstr ""
 
-#: aarch64.cc:3833 arm.cc:10905 mips.cc:9646 powerpc.cc:2935 target.cc:94
+#: aarch64.cc:3832 arm.cc:10904 mips.cc:9645 powerpc.cc:2935 target.cc:94
 #, c-format
 msgid "%s: unsupported ELF file type %d"
 msgstr ""
 
-#: aarch64.cc:4015 arm.cc:12181
+#: aarch64.cc:4014 arm.cc:12180
 #, c-format
 msgid "cannot handle branch to local %u in a merged section %s"
 msgstr ""
 
-#: aarch64.cc:4380 arm.cc:7593 i386.cc:193 s390.cc:216 sparc.cc:1366
-#: tilegx.cc:182 x86_64.cc:314
+#: aarch64.cc:4379 arm.cc:7592 i386.cc:192 s390.cc:216 sparc.cc:1366
+#: tilegx.cc:182 x86_64.cc:313
 msgid "** PLT"
 msgstr ""
 
-#: aarch64.cc:5555
+#: aarch64.cc:5554
 #, c-format
 msgid ""
 "Stub is too far away, try a smaller value for '--stub-group-size'. The "
 "current value is 0x%lx."
 msgstr ""
 
-#: aarch64.cc:6017 arm.cc:8477 i386.cc:1772 mips.cc:12507 powerpc.cc:7848
+#: aarch64.cc:6016 arm.cc:8476 i386.cc:1771 mips.cc:12506 powerpc.cc:7848
 #: s390.cc:2185 s390.cc:2633 sparc.cc:2134 tilegx.cc:3137 tilegx.cc:3589
-#: x86_64.cc:3034 x86_64.cc:3506
+#: x86_64.cc:3033 x86_64.cc:3505
 #, c-format
 msgid "%s: unsupported reloc %u against local symbol"
 msgstr ""
 
-#: aarch64.cc:6058 powerpc.cc:7953 s390.cc:2259 sparc.cc:2230
+#: aarch64.cc:6057 powerpc.cc:7953 s390.cc:2259 sparc.cc:2230
 msgid "requires unsupported dynamic reloc; recompile with -fPIC"
 msgstr ""
 
-#: aarch64.cc:6080
+#: aarch64.cc:6079
 #, c-format
 msgid "%s: unsupported TLS reloc %s for IFUNC symbol"
 msgstr ""
 
-#: aarch64.cc:6124 aarch64.cc:6188 aarch64.cc:6498
+#: aarch64.cc:6123 aarch64.cc:6187 aarch64.cc:6497
 #, c-format
 msgid "%s: unsupported reloc %u in pos independent link."
 msgstr ""
 
-#: aarch64.cc:6289
+#: aarch64.cc:6288
 #, c-format
 msgid "%s: unsupported TLSLE reloc %u in shared code."
 msgstr ""
 
-#: aarch64.cc:6374 arm.cc:8885 i386.cc:2127 mips.cc:12520 powerpc.cc:8788
+#: aarch64.cc:6373 arm.cc:8884 i386.cc:2126 mips.cc:12519 powerpc.cc:8788
 #: s390.cc:3064 s390.cc:3081 sparc.cc:2572 tilegx.cc:3605 tilegx.cc:4144
-#: x86_64.cc:3522 x86_64.cc:4050
+#: x86_64.cc:3521 x86_64.cc:4049
 #, c-format
 msgid "%s: unsupported reloc %u against global symbol %s"
 msgstr ""
 
-#: aarch64.cc:6724
+#: aarch64.cc:6723
 #, c-format
 msgid "%s: unsupported TLSLE reloc type %u in shared objects."
 msgstr ""
 
-#: aarch64.cc:6769
+#: aarch64.cc:6768
 #, c-format
 msgid "%s: unsupported reloc type in global scan"
 msgstr ""
 
-#: aarch64.cc:6909 powerpc.cc:9925 s390.cc:4014 sparc.cc:3164 tilegx.cc:4211
-#: x86_64.cc:4115
+#: aarch64.cc:6908 powerpc.cc:9925 s390.cc:4014 sparc.cc:3164 tilegx.cc:4211
+#: x86_64.cc:4114
 #, c-format
 msgid "%s: unsupported REL reloc section"
 msgstr ""
 
-#: aarch64.cc:7072 arm.cc:9615
+#: aarch64.cc:7071 arm.cc:9614
 #, c-format
 msgid "cannot relocate %s in object file"
 msgstr ""
 
-#: aarch64.cc:7345 i386.cc:2987 i386.cc:3753 mips.cc:10114 powerpc.cc:12282
-#: s390.cc:3465 sparc.cc:3695 tilegx.cc:4726 x86_64.cc:4609
+#: aarch64.cc:7344 i386.cc:2986 i386.cc:3752 mips.cc:10113 powerpc.cc:12282
+#: s390.cc:3465 sparc.cc:3695 tilegx.cc:4726 x86_64.cc:4608
 #, c-format
 msgid "unexpected reloc %u in object file"
 msgstr ""
 
-#: aarch64.cc:7351
+#: aarch64.cc:7350
 #, c-format
 msgid "unsupported reloc %s"
 msgstr ""
 
-#: aarch64.cc:7363 arm.cc:10095 arm.cc:10713
+#: aarch64.cc:7362 arm.cc:10094 arm.cc:10712
 #, c-format
 msgid "relocation overflow in %s"
 msgstr ""
 
-#: aarch64.cc:7371 arm.cc:10103 arm.cc:10718
+#: aarch64.cc:7370 arm.cc:10102 arm.cc:10717
 #, c-format
 msgid "unexpected opcode while processing relocation %s"
 msgstr ""
 
-#: aarch64.cc:7467
+#: aarch64.cc:7466
 #, c-format
 msgid "unsupported gd_to_ie relaxation on %u"
 msgstr ""
 
-#: aarch64.cc:7639
+#: aarch64.cc:7638
 #, c-format
 msgid "%s: unsupported reloc %u in non-static TLSLE mode."
 msgstr ""
 
-#: aarch64.cc:7724
+#: aarch64.cc:7723
 #, c-format
 msgid "%s: unsupported TLS reloc %u."
 msgstr ""
@@ -178,35 +179,35 @@ msgstr ""
 #. However the gd_to_le relaxation decision has been made early
 #. in the scan stage, where we did not allocate a GOT entry for
 #. this symbol. Therefore we have to exit and report an error now.
-#: aarch64.cc:7781 aarch64.cc:7881
+#: aarch64.cc:7780 aarch64.cc:7880
 #, c-format
 msgid ""
 "unexpected reloc insn sequence while relaxing tls gd to le for reloc %u."
 msgstr ""
 
-#: aarch64.cc:7956
+#: aarch64.cc:7955
 #, c-format
 msgid "TLS variable referred by reloc %u is too far from TP."
 msgstr ""
 
-#: aarch64.cc:8026
+#: aarch64.cc:8025
 #, c-format
 msgid ""
 "TLS variable referred by reloc %u is too far from TP. We Can't do gd_to_le "
 "relaxation.\n"
 msgstr ""
 
-#: aarch64.cc:8050
+#: aarch64.cc:8049
 #, c-format
 msgid "unsupported tlsdesc gd_to_le optimization on reloc %u"
 msgstr ""
 
-#: aarch64.cc:8122
+#: aarch64.cc:8121
 #, c-format
 msgid "Don't support tlsdesc gd_to_ie optimization on reloc %u"
 msgstr ""
 
-#: aarch64.cc:8478
+#: aarch64.cc:8477
 #, c-format
 msgid "Erratum 835769 found and fixed at \"%s\", section %d, offset 0x%08x."
 msgstr ""
@@ -304,229 +305,229 @@ msgstr ""
 msgid "obsolete reloc "
 msgstr ""
 
-#: arm.cc:1077
+#: arm.cc:1076
 msgid "** ARM cantunwind"
 msgstr ""
 
-#: arm.cc:2554
+#: arm.cc:2553
 msgid "Cannot use both --target1-abs and --target1-rel."
 msgstr ""
 
-#: arm.cc:4148
+#: arm.cc:4147
 #, c-format
 msgid "%s: Thumb BLX instruction targets thumb function '%s'."
 msgstr ""
 
-#: arm.cc:4294
+#: arm.cc:4293
 msgid "conditional branch to PLT in THUMB-2 not supported yet."
 msgstr ""
 
-#: arm.cc:5432
+#: arm.cc:5431
 msgid "PREL31 overflow in EXIDX_CANTUNWIND entry"
 msgstr ""
 
 #. Something is wrong with this section.  Better not touch it.
-#: arm.cc:5678
+#: arm.cc:5677
 #, c-format
 msgid "uneven .ARM.exidx section size in %s section %u"
 msgstr ""
 
-#: arm.cc:6004
+#: arm.cc:6003
 msgid "Found non-EXIDX input sections in EXIDX output section"
 msgstr ""
 
-#: arm.cc:6058 arm.cc:6062
+#: arm.cc:6057 arm.cc:6061
 #, c-format
 msgid ""
 "unwinding may not work because EXIDX input section %u of %s is not in EXIDX "
 "output section"
 msgstr ""
 
-#: arm.cc:6875
+#: arm.cc:6874
 #, c-format
 msgid "EXIDX section %s(%u) links to invalid section %u in %s"
 msgstr ""
 
-#: arm.cc:6884
+#: arm.cc:6883
 #, c-format
 msgid "EXIDX sections %s(%u) and %s(%u) both link to text section%s(%u) in %s"
 msgstr ""
 
-#: arm.cc:6898
+#: arm.cc:6897
 #, c-format
 msgid "EXIDX section %s(%u) links to non-allocated section %s(%u)  in %s"
 msgstr ""
 
 #. I would like to make this an error but currently ld just ignores
 #. this.
-#: arm.cc:6908
+#: arm.cc:6907
 #, c-format
 msgid "EXIDX section %s(%u) links to non-executable section %s(%u) in %s"
 msgstr ""
 
-#: arm.cc:6992
+#: arm.cc:6991
 #, c-format
 msgid "SHF_LINK_ORDER not set in EXIDX section %s of %s"
 msgstr ""
 
-#: arm.cc:7025
+#: arm.cc:7024
 #, c-format
 msgid "relocation section %u has invalid info %u"
 msgstr ""
 
-#: arm.cc:7031
+#: arm.cc:7030
 #, c-format
 msgid "section %u has multiple relocation sections %u and %u"
 msgstr ""
 
-#: arm.cc:7983
+#: arm.cc:7982
 msgid "PLT offset too large, try linking with --long-plt"
 msgstr ""
 
-#: arm.cc:8522
+#: arm.cc:8521
 #, c-format
 msgid "requires unsupported dynamic reloc %s; recompile with -fPIC"
 msgstr ""
 
-#: arm.cc:8547 i386.cc:1786 s390.cc:2276 sparc.cc:2247 tilegx.cc:3223
-#: x86_64.cc:3140
+#: arm.cc:8546 i386.cc:1785 s390.cc:2276 sparc.cc:2247 tilegx.cc:3223
+#: x86_64.cc:3139
 #, c-format
 msgid "%s: unsupported TLS reloc %u for IFUNC symbol"
 msgstr ""
 
-#: arm.cc:8643 i386.cc:1862 powerpc.cc:8257 s390.cc:2369 x86_64.cc:3240
+#: arm.cc:8642 i386.cc:1861 powerpc.cc:8257 s390.cc:2369 x86_64.cc:3239
 #, c-format
 msgid "section symbol %u has bad shndx %u"
 msgstr ""
 
 #. These are relocations which should only be seen by the
 #. dynamic linker, and should never be seen here.
-#: arm.cc:8752 arm.cc:9233 i386.cc:1950 i386.cc:2436 mips.cc:11296
-#: s390.cc:2468 s390.cc:2902 sparc.cc:2553 sparc.cc:3033 tilegx.cc:3584
-#: tilegx.cc:4139 x86_64.cc:3365 x86_64.cc:3907
+#: arm.cc:8751 arm.cc:9232 i386.cc:1949 i386.cc:2435 mips.cc:11295 s390.cc:2468
+#: s390.cc:2902 sparc.cc:2553 sparc.cc:3033 tilegx.cc:3584 tilegx.cc:4139
+#: x86_64.cc:3364 x86_64.cc:3906
 #, c-format
 msgid "%s: unexpected reloc %u in object file"
 msgstr ""
 
-#: arm.cc:8784 i386.cc:1984 mips.cc:10745 s390.cc:2512 sparc.cc:2452
-#: tilegx.cc:3488 x86_64.cc:3407
+#: arm.cc:8783 i386.cc:1983 mips.cc:10744 s390.cc:2512 sparc.cc:2452
+#: tilegx.cc:3488 x86_64.cc:3406
 #, c-format
 msgid "local symbol %u has bad shndx %u"
 msgstr ""
 
-#: arm.cc:9389 i386.cc:2644
+#: arm.cc:9388 i386.cc:2643
 #, c-format
 msgid "%s: unsupported RELA reloc section"
 msgstr ""
 
-#: arm.cc:9479
+#: arm.cc:9478
 msgid ""
 "unable to provide V4BX reloc interworking fix up; the target profile does "
 "not support BX instruction"
 msgstr ""
 
-#: arm.cc:10247 i386.cc:3019 i386.cc:3101 i386.cc:3166 i386.cc:3202
-#: i386.cc:3274 mips.cc:12342 powerpc.cc:12396 s390.cc:3471 s390.cc:3542
+#: arm.cc:10246 i386.cc:3018 i386.cc:3100 i386.cc:3165 i386.cc:3201
+#: i386.cc:3273 mips.cc:12341 powerpc.cc:12396 s390.cc:3471 s390.cc:3542
 #: s390.cc:3579 s390.cc:3601 s390.cc:3626 sparc.cc:3701 sparc.cc:3892
-#: sparc.cc:3953 sparc.cc:4060 tilegx.cc:4732 x86_64.cc:4633 x86_64.cc:4761
-#: x86_64.cc:4836 x86_64.cc:4870
+#: sparc.cc:3953 sparc.cc:4060 tilegx.cc:4732 x86_64.cc:4632 x86_64.cc:4760
+#: x86_64.cc:4835 x86_64.cc:4869
 #, c-format
 msgid "unsupported reloc %u"
 msgstr ""
 
-#: arm.cc:10328
+#: arm.cc:10327
 #, c-format
 msgid "%s: unexpected %s in object file"
 msgstr ""
 
-#: arm.cc:10698
+#: arm.cc:10697
 #, c-format
 msgid "cannot handle %s in a relocatable link"
 msgstr ""
 
-#: arm.cc:10800
+#: arm.cc:10799
 #, c-format
 msgid "Source object %s has EABI version %d but output has EABI version %d."
 msgstr ""
 
-#: arm.cc:11121
+#: arm.cc:11120
 #, c-format
 msgid "%s: unknown CPU architecture"
 msgstr ""
 
-#: arm.cc:11158
+#: arm.cc:11157
 #, c-format
 msgid "%s: conflicting CPU architectures %d/%d"
 msgstr ""
 
-#: arm.cc:11297 arm.cc:11683
+#: arm.cc:11296 arm.cc:11682
 #, c-format
 msgid "%s has both the current and legacy Tag_MPextension_use attributes"
 msgstr ""
 
-#: arm.cc:11333
+#: arm.cc:11332
 #, c-format
 msgid "%s uses VFP register arguments, output does not"
 msgstr ""
 
-#: arm.cc:11479
+#: arm.cc:11478
 #, c-format
 msgid "conflicting architecture profiles %c/%c"
 msgstr ""
 
 #. It's sometimes ok to mix different configs, so this is only
 #. a warning.
-#: arm.cc:11537
+#: arm.cc:11536
 #, c-format
 msgid "%s: conflicting platform configuration"
 msgstr ""
 
-#: arm.cc:11546
+#: arm.cc:11545
 #, c-format
 msgid "%s: conflicting use of R9"
 msgstr ""
 
-#: arm.cc:11559
+#: arm.cc:11558
 #, c-format
 msgid "%s: SB relative addressing conflicts with use of R9"
 msgstr ""
 
-#: arm.cc:11574
+#: arm.cc:11573
 #, c-format
 msgid ""
 "%s uses %u-byte wchar_t yet the output is to use %u-byte wchar_t; use of "
 "wchar_t values across objects may fail"
 msgstr ""
 
-#: arm.cc:11600
+#: arm.cc:11599
 #, c-format
 msgid ""
 "%s uses %s enums yet the output is to use %s enums; use of enum values "
 "across objects may fail"
 msgstr ""
 
-#: arm.cc:11616
+#: arm.cc:11615
 #, c-format
 msgid "%s uses iWMMXt register arguments, output does not"
 msgstr ""
 
-#: arm.cc:11637
+#: arm.cc:11636
 #, c-format
 msgid "fp16 format mismatch between %s and output"
 msgstr ""
 
-#: arm.cc:11729 arm.cc:11822
+#: arm.cc:11728 arm.cc:11821
 #, c-format
 msgid "%s: unknown mandatory EABI object attribute %d"
 msgstr ""
 
-#: arm.cc:11733 arm.cc:11827
+#: arm.cc:11732 arm.cc:11826
 #, c-format
 msgid "%s: unknown EABI object attribute %d"
 msgstr ""
 
 #. We cannot handle this now.
-#: arm.cc:12422
+#: arm.cc:12421
 #, c-format
 msgid "multiple SHT_ARM_EXIDX sections %s and %s in a non-relocatable link"
 msgstr ""
@@ -1075,56 +1076,56 @@ msgid "cannot mix split-stack '%s' and non-split-stack '%s' when using -r"
 msgstr ""
 
 #. FIXME: This needs to specify the location somehow.
-#: i386.cc:639 i386.cc:2800 sparc.cc:324 sparc.cc:3296 x86_64.cc:962
-#: x86_64.cc:4309
+#: i386.cc:638 i386.cc:2799 sparc.cc:324 sparc.cc:3296 x86_64.cc:961
+#: x86_64.cc:4308
 msgid "missing expected TLS relocation"
 msgstr ""
 
-#: i386.cc:2404
+#: i386.cc:2403
 #, c-format
 msgid ""
 "%s: relocation R_386_GOTOFF against undefined symbol %s cannot be used when "
 "making a shared object"
 msgstr ""
 
-#: i386.cc:2408
+#: i386.cc:2407
 #, c-format
 msgid ""
 "%s: relocation R_386_GOTOFF against external symbol %s cannot be used when "
 "making a shared object"
 msgstr ""
 
-#: i386.cc:2412
+#: i386.cc:2411
 #, c-format
 msgid ""
 "%s: relocation R_386_GOTOFF against preemptible symbol %s cannot be used "
 "when making a shared object"
 msgstr ""
 
-#: i386.cc:2904
+#: i386.cc:2903
 #, c-format
 msgid ""
 "unexpected reloc %u against global symbol %s without base register in object "
 "file when generating a position-independent output file"
 msgstr ""
 
-#: i386.cc:2908
+#: i386.cc:2907
 #, c-format
 msgid ""
 "unexpected reloc %u against local symbol without base register in object "
 "file when generating a position-independent output file"
 msgstr ""
 
-#: i386.cc:3174
+#: i386.cc:3173
 msgid "both SUN and GNU model TLS relocations"
 msgstr ""
 
-#: i386.cc:3767 mips.cc:10118
+#: i386.cc:3766 mips.cc:10117
 #, c-format
 msgid "unsupported reloc %u in object file"
 msgstr ""
 
-#: i386.cc:4036 powerpc.cc:9879 s390.cc:4886 x86_64.cc:5782
+#: i386.cc:4035 powerpc.cc:9879 s390.cc:4886 x86_64.cc:5781
 #, c-format
 msgid "failed to match split-stack sequence at section %u offset %0zx"
 msgstr ""
@@ -1448,195 +1449,190 @@ msgstr ""
 msgid "** merge strings"
 msgstr ""
 
-#: mips.cc:2391
+#: mips.cc:2390
 msgid ".LA25.stubs"
 msgstr ""
 
-#: mips.cc:2554
+#: mips.cc:2553
 msgid ".plt"
 msgstr ""
 
-#: mips.cc:2750
+#: mips.cc:2749
 msgid ".MIPS.stubs"
 msgstr ""
 
-#: mips.cc:2814
+#: mips.cc:2813
 msgid ".reginfo"
 msgstr ""
 
-#: mips.cc:2874
+#: mips.cc:2873
 msgid ".MIPS.abiflags"
 msgstr ""
 
-#: mips.cc:4634
+#: mips.cc:4633
 msgid "JALX to a non-word-aligned address"
 msgstr ""
 
-#: mips.cc:4688
+#: mips.cc:4687
 msgid ""
 "Unsupported jump between ISA modes; consider recompiling with interlinking "
 "enabled."
 msgstr ""
 
-#: mips.cc:5481 mips.cc:5524
+#: mips.cc:5480 mips.cc:5523
 msgid ""
 "small-data section too large; lower small-data size limit (see option -G)"
 msgstr ""
 
-#: mips.cc:6945
+#: mips.cc:6944
 #, c-format
 msgid "%s: .MIPS.abiflags section has unsupported version %u"
 msgstr ""
 
-#: mips.cc:7008
+#: mips.cc:7007
 #, c-format
 msgid "%s: Warning: bad `%s' option size %u smaller than its header"
 msgstr ""
 
-#: mips.cc:7088
+#: mips.cc:7087
 #, c-format
 msgid "no relocation found in mips16 stub section '%s'"
 msgstr ""
 
-#: mips.cc:7590 mips.cc:7753
+#: mips.cc:7589 mips.cc:7752
 #, c-format
 msgid ".got.plt offset of %ld from .plt beyond the range of ADDIUPC"
 msgstr ""
 
-#: mips.cc:8301
+#: mips.cc:8300
 #, c-format
 msgid ""
 "Warning: bad `%s' option size %u smaller than its header in output section"
 msgstr ""
 
-#: mips.cc:9141
+#: mips.cc:9140
 #, c-format
 msgid "%s: Unknown architecture %s"
 msgstr ""
 
-#: mips.cc:9242
+#: mips.cc:9241
 #, c-format
 msgid "%s: Inconsistent ISA between e_flags and .MIPS.abiflags"
 msgstr ""
 
-#: mips.cc:9246
+#: mips.cc:9245
 #, c-format
 msgid "%s: Inconsistent FP ABI between .gnu.attributes and .MIPS.abiflags"
 msgstr ""
 
-#: mips.cc:9249
+#: mips.cc:9248
 #, c-format
 msgid "%s: Inconsistent ASEs between e_flags and .MIPS.abiflags"
 msgstr ""
 
-#: mips.cc:9255
+#: mips.cc:9254
 #, c-format
 msgid "%s: Inconsistent ISA extensions between e_flags and .MIPS.abiflags"
 msgstr ""
 
-#: mips.cc:9258
+#: mips.cc:9257
 #, c-format
 msgid "%s: Unexpected flag in the flags2 field of .MIPS.abiflags (0x%x)"
 msgstr ""
 
-#: mips.cc:9280
+#: mips.cc:9279
 msgid "-mips32r2 -mfp64 (12 callee-saved)"
 msgstr ""
 
-#: mips.cc:9321
+#: mips.cc:9320
 #, c-format
 msgid "%s: FP ABI %s is incompatible with %s"
 msgstr ""
 
-#: mips.cc:9456
+#: mips.cc:9455
 #, c-format
 msgid "%s: linking abicalls files with non-abicalls files"
 msgstr ""
 
-#: mips.cc:9469
+#: mips.cc:9468
 #, c-format
 msgid "%s: linking 32-bit code with 64-bit code"
 msgstr ""
 
 #. The ISAs aren't compatible.
-#: mips.cc:9495 mips.cc:9547 mips.cc:9561
+#: mips.cc:9494 mips.cc:9546 mips.cc:9560
 #, c-format
 msgid "%s: linking %s module with previous %s modules"
 msgstr ""
 
-#: mips.cc:9511
+#: mips.cc:9510
 #, c-format
 msgid "%s: ABI mismatch: linking %s module with previous %s modules"
 msgstr ""
 
-#: mips.cc:9533
+#: mips.cc:9532
 #, c-format
 msgid "%s: ASE mismatch: linking %s module with previous %s modules"
 msgstr ""
 
-#: mips.cc:9574
+#: mips.cc:9573
 #, c-format
 msgid "%s: uses different e_flags (0x%x) fields than previous modules (0x%x)"
 msgstr ""
 
-#: mips.cc:9982
+#: mips.cc:9981
 #, c-format
 msgid "Unknown dynamic tag 0x%x"
 msgstr ""
 
-#: mips.cc:10423 mips.cc:12368
+#: mips.cc:10422 mips.cc:12367
 #, c-format
 msgid "relocation overflow: %u against local symbol %u in %s"
 msgstr ""
 
-#: mips.cc:10429 mips.cc:12384
+#: mips.cc:10428 mips.cc:12383
 msgid "unexpected opcode while processing relocation"
 msgstr ""
 
-#: mips.cc:10577
+#: mips.cc:10576
 #, c-format
 msgid "CALL16 reloc at 0x%lx not against global symbol "
 msgstr ""
 
-#: mips.cc:10829 mips.cc:11334
+#: mips.cc:10828 mips.cc:11333
 #, c-format
 msgid ""
 "%s: relocation %u against `%s' can not be used when making a shared object; "
 "recompile with -fPIC"
 msgstr ""
 
-#: mips.cc:11145
+#: mips.cc:11144
 #, c-format
 msgid "non-dynamic relocations refer to dynamic symbol %s"
 msgstr ""
 
-#: mips.cc:11622
+#: mips.cc:11621
 msgid ""
 "relocations against _gp_disp are permitted only with R_MIPS_HI16 and "
 "R_MIPS_LO16 relocations."
 msgstr ""
 
-#: mips.cc:11757
+#: mips.cc:11756
 msgid "MIPS16 and microMIPS functions cannot call each other"
 msgstr ""
 
-#: mips.cc:12373
+#: mips.cc:12372
 #, c-format
 msgid "relocation overflow: %u against '%s' defined in %s"
 msgstr ""
 
-#: mips.cc:12379
+#: mips.cc:12378
 #, c-format
 msgid "relocation overflow: %u against '%s'"
 msgstr ""
 
-#: mips.cc:12388
+#: mips.cc:12387
 msgid "unaligned PC-relative relocation"
-msgstr ""
-
-#: nacl.cc:43 object.cc:174 object.cc:3480 output.cc:5192
-#, c-format
-msgid "%s: %s"
 msgstr ""
 
 #: object.cc:101
@@ -1651,6 +1647,11 @@ msgstr ""
 #: object.cc:152
 #, c-format
 msgid "extended index for symbol %u out of range: %u"
+msgstr ""
+
+#: object.cc:174 object.cc:3480 output.cc:5192
+#, c-format
+msgid "%s: %s"
 msgstr ""
 
 #: object.cc:207
@@ -3808,7 +3809,7 @@ msgstr ""
 msgid "R_390_PC32DBL target misaligned at %llx"
 msgstr ""
 
-#: s390.cc:1099 tilegx.cc:2088 x86_64.cc:1699
+#: s390.cc:1099 tilegx.cc:2088 x86_64.cc:1698
 msgid "out of patch space (PLT); relink with --incremental-full"
 msgstr ""
 
@@ -3816,7 +3817,7 @@ msgstr ""
 msgid "relocation overflow"
 msgstr ""
 
-#: s390.cc:3677 s390.cc:3733 x86_64.cc:4960
+#: s390.cc:3677 s390.cc:3733 x86_64.cc:4959
 #, c-format
 msgid "unsupported reloc type %u"
 msgstr ""
@@ -4180,39 +4181,39 @@ msgstr ""
 msgid "bad symbol name offset %u at %zu"
 msgstr ""
 
-#: symtab.cc:1665
+#: symtab.cc:1656
 #, c-format
 msgid "versym for symbol %zu out of range: %u"
 msgstr ""
 
-#: symtab.cc:1673
+#: symtab.cc:1664
 #, c-format
 msgid "versym for symbol %zu has no name: %u"
 msgstr ""
 
-#: symtab.cc:2696
+#: symtab.cc:2687
 #, c-format
 msgid ""
-"discarding version information for %s@%s, defined in unused shared library %"
-"s (linked with --as-needed)"
+"discarding version information for %s@%s, defined in unused shared library "
+"%s (linked with --as-needed)"
 msgstr ""
 
-#: symtab.cc:3058 symtab.cc:3204
+#: symtab.cc:3049 symtab.cc:3195
 #, c-format
 msgid "%s: unsupported symbol section 0x%x"
 msgstr ""
 
-#: symtab.cc:3536
+#: symtab.cc:3527
 #, c-format
 msgid "%s: symbol table entries: %zu; buckets: %zu\n"
 msgstr ""
 
-#: symtab.cc:3539
+#: symtab.cc:3530
 #, c-format
 msgid "%s: symbol table entries: %zu\n"
 msgstr ""
 
-#: symtab.cc:3696
+#: symtab.cc:3687
 #, c-format
 msgid ""
 "while linking %s: symbol '%s' defined in multiple places (possible ODR "
@@ -4223,7 +4224,7 @@ msgstr ""
 #. which may not be the location we expect to intersect
 #. with another definition.  We could print the whole
 #. set of locations, but that seems too verbose.
-#: symtab.cc:3703 symtab.cc:3706
+#: symtab.cc:3694 symtab.cc:3697
 #, c-format
 msgid "  %s from %s\n"
 msgstr ""
@@ -4279,7 +4280,7 @@ msgstr ""
 msgid "linker does not include stack split support required by %s"
 msgstr ""
 
-#: tilegx.cc:2738 x86_64.cc:2716
+#: tilegx.cc:2738 x86_64.cc:2715
 msgid "TLS_DESC not yet supported for incremental linking"
 msgstr ""
 
@@ -4287,7 +4288,7 @@ msgstr ""
 msgid "TLS_DESC not yet supported for TILEGX"
 msgstr ""
 
-#: tilegx.cc:3202 x86_64.cc:3118
+#: tilegx.cc:3202 x86_64.cc:3117
 #, c-format
 msgid "requires unsupported dynamic reloc %u; recompile with -fPIC"
 msgstr ""
@@ -4303,7 +4304,7 @@ msgstr ""
 #. This output is intended to follow the GNU standards.
 #: version.cc:65
 #, c-format
-msgid "Copyright (C) 2025 Free Software Foundation, Inc.\n"
+msgid "Copyright (C) 2026 Free Software Foundation, Inc.\n"
 msgstr ""
 
 #: version.cc:66
@@ -4320,51 +4321,51 @@ msgstr ""
 msgid "%s failed: %s"
 msgstr ""
 
-#: x86_64.cc:1502
+#: x86_64.cc:1501
 #, c-format
 msgid ""
 "%s: corrupt .note.gnu.property section (pr_datasz for property %d is not 4)"
 msgstr ""
 
-#: x86_64.cc:1510
+#: x86_64.cc:1509
 #, c-format
 msgid "%s: unknown program property type 0x%x in .note.gnu.property section"
 msgstr ""
 
-#: x86_64.cc:1932
+#: x86_64.cc:1931
 #, c-format
 msgid "PC-relative offset overflow in PLT entry %d"
 msgstr ""
 
-#: x86_64.cc:2142
+#: x86_64.cc:2141
 #, c-format
 msgid "PC-relative offset overflow in APLT entry %d"
 msgstr ""
 
-#: x86_64.cc:3086
+#: x86_64.cc:3085
 msgid ""
 "requires dynamic R_X86_64_32 reloc which may overflow at runtime; recompile "
 "with -fPIC"
 msgstr ""
 
-#: x86_64.cc:3103
+#: x86_64.cc:3102
 #, c-format
 msgid ""
 "requires dynamic %s reloc against '%s' which may overflow at runtime; "
 "recompile with -fPIC"
 msgstr ""
 
-#: x86_64.cc:4644
+#: x86_64.cc:4643
 #, c-format
 msgid "relocation overflow: reference to local symbol %u in %s"
 msgstr ""
 
-#: x86_64.cc:4651
+#: x86_64.cc:4650
 #, c-format
 msgid "relocation overflow: reference to '%s' defined in %s"
 msgstr ""
 
-#: x86_64.cc:4659
+#: x86_64.cc:4658
 #, c-format
 msgid "relocation overflow: reference to '%s'"
 msgstr ""

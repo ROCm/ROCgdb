@@ -1454,16 +1454,17 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
 {
   struct elf64_hppa_link_hash_entry *hh = hppa_elf_hash_entry (eh);
   struct elf64_hppa_allocate_data *x = (struct elf64_hppa_allocate_data *)data;
+  struct bfd_link_info *info = (struct bfd_link_info *) x->info;
   struct elf64_hppa_link_hash_table *hppa_info;
   struct elf64_hppa_dyn_reloc_entry *rent;
   bool dynamic_symbol, shared;
 
-  hppa_info = hppa_link_hash_table (x->info);
+  hppa_info = hppa_link_hash_table (info);
   if (hppa_info == NULL)
     return false;
 
-  dynamic_symbol = elf64_hppa_dynamic_symbol_p (eh, x->info);
-  shared = bfd_link_pic (x->info);
+  dynamic_symbol = elf64_hppa_dynamic_symbol_p (eh, info);
+  shared = bfd_link_pic (info);
 
   /* Take care of the GOT and PLT relocations.  */
 
@@ -1498,17 +1499,17 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
   /* Discard relocs on undefined syms with non-default visibility.  */
   else if ((eh->root.type == bfd_link_hash_undefined
 	    && ELF_ST_VISIBILITY (eh->other) != STV_DEFAULT)
-	   || UNDEFWEAK_NO_DYNAMIC_RELOC (x->info, eh))
+	   || UNDEFWEAK_NO_DYNAMIC_RELOC (info, eh))
     hh->reloc_entries = NULL;
 
   if (hh->reloc_entries == NULL)
     return true;
 
-  if (bfd_link_pic (x->info))
+  if (bfd_link_pic (info))
     {
       /* Discard space for relocs that have become local due to
 	 symbol visibility changes.  */
-      if (!ensure_undef_dynamic (x->info, eh))
+      if (!ensure_undef_dynamic (info, eh))
 	return false;
     }
 
@@ -1516,13 +1517,14 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
 
   for (rent = hh->reloc_entries; rent; rent = rent->next)
     {
+      asection *sec = rent->sec;
+
       switch (rent->type)
 	{
 	case R_PARISC_FPTR64:
 	  /* Allocate one if we are building a shared library, or
 	     we don't want an OPD entry.  Ignore text relocations.  */
-	  if ((hh->want_opd && !shared)
-	      || (rent->sec->flags & SEC_READONLY))
+	  if ((hh->want_opd && !shared) || (sec->flags & SEC_READONLY))
 	    continue;
 	  break;
 	case R_PARISC_DIR64:
@@ -1533,7 +1535,7 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
 	  abort();
 	}
 
-      if (discarded_section (rent->sec)
+      if (discarded_section (sec)
 	  || discarded_section (hppa_info->other_rel_sec))
 	continue;
 
@@ -1547,6 +1549,23 @@ allocate_dynrel_entries (struct elf_link_hash_entry *eh, void *data)
 	  else if (discarded_section (eh->root.u.def.section))
 	    continue;
         }
+
+      if ((sec->flags & SEC_READONLY) != 0
+	  && (info->flags & DF_TEXTREL) == 0)
+	{
+	  info->flags |= DF_TEXTREL;
+	  /* xgettext:c-format */
+	  info->callbacks->minfo (_("%pB: dynamic relocation against `%pT'"
+				    " in read-only section `%pA'\n"),
+				  sec->owner, eh->root.root.string, sec);
+
+	  if (bfd_link_textrel_check (info))
+	    /* xgettext:c-format */
+	    info->callbacks->einfo (_("%P: %pB: warning: relocation "
+				      "against `%s' in read-only section "
+				      "`%pA'\n"),
+				    sec->owner, eh->root.root.string, sec);
+	}
 
       hppa_info->other_rel_sec->size += sizeof (Elf64_External_Rela);
     }
@@ -2020,6 +2039,14 @@ elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       if (output_bfd->xvec == & hppa_elf64_vec)
 	{
 	  if (!add_dynamic_entry (DT_FLAGS, (info)->flags))
+	    return false;
+	}
+
+      /* If we have a dynamic relocation against a readonly section,
+	 we need a DT_TEXTREL entry.  */
+      if (relocs && (info->flags & DF_TEXTREL) != 0)
+	{
+	  if (!add_dynamic_entry (DT_TEXTREL, 0))
 	    return false;
 	}
     }
@@ -4398,12 +4425,6 @@ elf64_hppa_relocate_section (bfd *output_bfd,
 		   input_section, rel->r_offset, false);
 	    }
 	}
-
-      /* Ensure symbol isn't undefined.  */
-      BFD_ASSERT (r_symndx != STN_UNDEF);
-
-      /* Ensure input section hasn't been discarded.  */
-      BFD_ASSERT (!discarded_section (input_section));
 
       if (sym_sec != NULL && discarded_section (sym_sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,

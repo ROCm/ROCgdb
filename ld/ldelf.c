@@ -1291,6 +1291,7 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
 	}
     }
 
+  get_elf_backend_data (link_info.output_bfd)->setup_object_attributes (&link_info);
   get_elf_backend_data (link_info.output_bfd)->setup_gnu_properties (&link_info);
 
   /* Do not allow executable files to be used as inputs to the link.  */

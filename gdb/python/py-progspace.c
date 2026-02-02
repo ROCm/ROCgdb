@@ -29,16 +29,10 @@
 #include "observable.h"
 #include "inferior.h"
 
-struct pspace_object
+struct pspace_object : public gdbpy_dict_wrapper
 {
-  PyObject_HEAD
-
   /* The corresponding pspace.  */
   struct program_space *pspace;
-
-  /* Dictionary holding user-added attributes.
-     This is the __dict__ attribute of the object.  */
-  PyObject *dict;
 
   /* The pretty-printer list of functions.  */
   PyObject *printers;
@@ -758,8 +752,8 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_pspace);
 
 static gdb_PyGetSetDef pspace_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict, NULL,
-    "The __dict__ for this progspace.", &pspace_object_type },
+  { "__dict__", gdb_py_generic_dict_getter, NULL,
+    "The __dict__ for this progspace.", NULL },
   { "filename", pspy_get_filename, NULL,
     "The filename of the progspace's main symbol file, or None.", nullptr },
   { "symbol_file", pspy_get_symbol_file, nullptr,
@@ -821,8 +815,8 @@ PyTypeObject pspace_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  0,				  /*tp_getattro*/
-  0,				  /*tp_setattro*/
+  gdb_py_generic_getattro,	  /*tp_getattro*/
+  gdb_py_generic_setattro,	  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB progspace object",	  /* tp_doc */
@@ -839,7 +833,7 @@ PyTypeObject pspace_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  offsetof (pspace_object, dict), /* tp_dictoffset */
+  0,				  /* tp_dictoffset */
   0,				  /* tp_init */
   0,				  /* tp_alloc */
   0,				  /* tp_new */

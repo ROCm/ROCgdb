@@ -30977,8 +30977,9 @@ Show the current state of styling.
 Enable or disable the use of emoji.  On most hosts, the default is
 @samp{auto}, meaning that emoji will only be used if the host
 character set is @samp{UTF-8}; however, on Windows the default is
-@samp{off} when using the console.  Note that disabling styling as a
-whole will also prevent emoji display.
+@samp{off} when using the console, unless the console's output
+codepage is 65001, the Windows UTF-8 codepage.  Note that disabling
+styling as a whole will also prevent emoji display.
 
 Currently, emoji are printed whenever @value{GDBN} reports an error or
 a warning.

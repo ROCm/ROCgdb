@@ -22,8 +22,8 @@
 #include "disasm.h"
 #include "python-internal.h"
 
-struct arch_object {
-  PyObject_HEAD
+struct arch_object : public PyObject
+{
   struct gdbarch *gdbarch;
 };
 

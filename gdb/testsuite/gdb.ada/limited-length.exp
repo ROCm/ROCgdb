@@ -33,38 +33,29 @@ if {![runto "foo.adb:$bp_location"]} {
 }
 
 with_test_prefix "with standard max-value size" {
-    gdb_test "print Large_1d_Array" \
-	" = \\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
+    set re \
+	[string_to_regexp \
+	     "(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
 	       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
 	       25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,\
 	       37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,\
 	       49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,\
-	       61, 62, 63, 64\\)"
-    gdb_test -nonl "output Large_1d_Array" \
-	"\\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
-	    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
-	    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,\
-	    37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,\
-	    49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,\
-	    61, 62, 63, 64\\)"
-    gdb_test "print Large_3d_Array" \
-	" = \\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-		  \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	       \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-		  \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	       \\(\\(33, 34, 35, 36\\), \\(37, 38, 39, 40\\),\
-		  \\(41, 42, 43, 44\\), \\(45, 46, 47, 48\\)\\),\
-	       \\(\\(49, 50, 51, 52\\), \\(53, 54, 55, 56\\),\
-		  \\(57, 58, 59, 60\\), \\(61, 62, 63, 64\\)\\)\\)"
-    gdb_test -nonl "output Large_3d_Array" \
-	"\\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-	       \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	    \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-	       \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	    \\(\\(33, 34, 35, 36\\), \\(37, 38, 39, 40\\),\
-	       \\(41, 42, 43, 44\\), \\(45, 46, 47, 48\\)\\),\
-	    \\(\\(49, 50, 51, 52\\), \\(53, 54, 55, 56\\),\
-	       \\(57, 58, 59, 60\\), \\(61, 62, 63, 64\\)\\)\\)"
+	       61, 62, 63, 64)"]
+    gdb_test "print Large_1d_Array" " = $re"
+    gdb_test -nonl "output Large_1d_Array" $re
+
+    set re \
+	[string_to_regexp \
+	     "(((1, 2, 3, 4), (5, 6, 7, 8),\
+		(9, 10, 11, 12), (13, 14, 15, 16)),\
+	       ((17, 18, 19, 20), (21, 22, 23, 24),\
+		(25, 26, 27, 28), (29, 30, 31, 32)),\
+	       ((33, 34, 35, 36), (37, 38, 39, 40),\
+		(41, 42, 43, 44), (45, 46, 47, 48)),\
+	       ((49, 50, 51, 52), (53, 54, 55, 56),\
+		(57, 58, 59, 60), (61, 62, 63, 64)))"]
+    gdb_test "print Large_3d_Array" " = $re"
+    gdb_test -nonl "output Large_3d_Array" $re
 }
 
 # Set the max-value-size so we can only print 33 elements.
@@ -86,82 +77,61 @@ with_test_prefix "with reduced max-value size" {
 
 with_test_prefix "with reduced print -elements flag" {
     gdb_test "print -elements 2 -- Large_1d_Array" \
-	" = \\(1, 2\\.\\.\\.\\)"
+	[string_to_regexp " = (1, 2...)"]
     gdb_test "print -elements 2 -- Large_3d_Array" \
-	" = \\(\\(\\(1, 2\\.\\.\\.\\), \\(5, 6\\.\\.\\.\\)\\.\\.\\.\\),\
-	       \\(\\(17, 18\\.\\.\\.\\),\
-		  \\(21, 22\\.\\.\\.\\)\\.\\.\\.\\)\\.\\.\\.\\)"
+	[string_to_regexp \
+	     " = (((1, 2...), (5, 6...)...), ((17, 18...), (21, 22...)...)...)"]
 }
 
 gdb_test_no_output "set print elements 2"
 
 with_test_prefix "with reduced print elements" {
-    gdb_test "print Large_1d_Array" \
-	" = \\(1, 2\\.\\.\\.\\)"
-    gdb_test -nonl "output Large_1d_Array" \
-	"\\(1, 2\\.\\.\\.\\)"
-
-    gdb_test "print \$" \
-	" = \\(1, 2\\.\\.\\.\\)" \
+    set re [string_to_regexp "(1, 2...)"]
+    gdb_test "print Large_1d_Array" " = $re"
+    gdb_test -nonl "output Large_1d_Array" $re
+    gdb_test {print $} " = $re" \
 	"print Large_1d_Array from history"
-    gdb_test -nonl "output \$\$" \
-	"\\(1, 2\\.\\.\\.\\)" \
+    gdb_test -nonl {output $$} $re \
 	"output Large_1d_Array from history"
 
-    gdb_test "print Large_3d_Array" \
-	" = \\(\\(\\(1, 2\\.\\.\\.\\), \\(5, 6\\.\\.\\.\\)\\.\\.\\.\\),\
-	       \\(\\(17, 18\\.\\.\\.\\),\
-		  \\(21, 22\\.\\.\\.\\)\\.\\.\\.\\)\\.\\.\\.\\)"
-    gdb_test -nonl "output Large_3d_Array" \
-	"\\(\\(\\(1, 2\\.\\.\\.\\), \\(5, 6\\.\\.\\.\\)\\.\\.\\.\\),\
-	    \\(\\(17, 18\\.\\.\\.\\),\
-	       \\(21, 22\\.\\.\\.\\)\\.\\.\\.\\)\\.\\.\\.\\)"
-
-    gdb_test "print \$" \
-	" = \\(\\(\\(1, 2\\.\\.\\.\\), \\(5, 6\\.\\.\\.\\)\\.\\.\\.\\),\
-	       \\(\\(17, 18\\.\\.\\.\\),\
-		  \\(21, 22\\.\\.\\.\\)\\.\\.\\.\\)\\.\\.\\.\\)" \
+    set re \
+	[string_to_regexp \
+	     "(((1, 2...), (5, 6...)...), ((17, 18...), (21, 22...)...)...)"]
+    gdb_test "print Large_3d_Array" " = $re"
+    gdb_test -nonl "output Large_3d_Array" $re
+    gdb_test {print $} " = $re" \
 	"print Large_3d_Array from history"
-    gdb_test -nonl "output \$\$" \
-	"\\(\\(\\(1, 2\\.\\.\\.\\), \\(5, 6\\.\\.\\.\\)\\.\\.\\.\\),\
-	    \\(\\(17, 18\\.\\.\\.\\),\
-	       \\(21, 22\\.\\.\\.\\)\\.\\.\\.\\)\\.\\.\\.\\)" \
+    gdb_test -nonl {output $$} $re \
 	"output Large_3d_Array from history"
 }
 
 gdb_test_no_output "set print elements $elements"
 
 with_test_prefix "with print elements matching max-value size" {
-    gdb_test "print \$\$2" \
-	" = \\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
+    set re \
+	[string_to_regexp \
+	     "(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
 	       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
-	       25, 26, 27, 28, 29, 30, 31, 32, 33\\.\\.\\.\\)" \
+	       25, 26, 27, 28, 29, 30, 31, 32, 33...)"]
+    gdb_test {print $$2} " = $re" \
 	"print Large_1d_Array from history"
-    gdb_test -nonl "output \$\$3" \
-	"\\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
-	    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
-	    25, 26, 27, 28, 29, 30, 31, 32, 33\\.\\.\\.\\)" \
+    gdb_test -nonl {output $$3} $re \
 	"output Large_1d_Array from history"
 
-    gdb_test "print \$\$2" \
-	" = \\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-		  \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	       \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-		  \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	       \\(\\(33(?:, <unavailable>)\{3\}\\)(?:,\
-		  \\(<unavailable>(?:, <unavailable>)\{3\}\\))\{3\}\\),\
-	       \\(\\(<unavailable>(?:, <unavailable>)\{3\}\\)(?:,\
-		  \\(<unavailable>(?:, <unavailable>)\{3\}\\))\{3\}\\)\\)" \
+    set u "<unavailable>"
+    set re \
+	[string_to_regexp \
+	     "(((1, 2, 3, 4), (5, 6, 7, 8),\
+		(9, 10, 11, 12), (13, 14, 15, 16)),\
+	       ((17, 18, 19, 20), (21, 22, 23, 24),\
+		(25, 26, 27, 28), (29, 30, 31, 32)),\
+	       ((33, $u, $u, $u), ($u, $u, $u, $u),\
+		($u, $u, $u, $u), ($u, $u, $u, $u)),\
+	       (($u, $u, $u, $u), ($u, $u, $u, $u),\
+		($u, $u, $u, $u), ($u, $u, $u, $u)))"]
+    gdb_test {print $$2} " = $re" \
 	"print Large_3d_Array from history"
-    gdb_test -nonl "output \$\$3" \
-	"\\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-	       \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	    \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-	       \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	    \\(\\(33(?:, <unavailable>)\{3\}\\)(?:,\
-	       \\(<unavailable>(?:, <unavailable>)\{3\}\\))\{3\}\\),\
-	    \\(\\(<unavailable>(?:, <unavailable>)\{3\}\\)(?:,\
-	       \\(<unavailable>(?:, <unavailable>)\{3\}\\))\{3\}\\)\\)" \
+    gdb_test -nonl {output $$3} $re \
 	"output Large_3d_Array from history"
 }
 
@@ -170,92 +140,84 @@ gdb_test_no_output "set print elements unlimited"
 gdb_test_no_output "set print repeats 2"
 
 with_test_prefix "with unlimited print elements" {
-    gdb_test "print \$\$" \
-	" = \\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
+    set re \
+	[string_to_regexp \
+	     "(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
 	       13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
 	       25, 26, 27, 28, 29, 30, 31, 32, 33,\
-	       <unavailable> <repeats 31 times>\\)" \
+	       <unavailable> <repeats 31 times>)"]
+    gdb_test {print $$} " = $re" \
 	"print Large_1d_Array from history"
-    gdb_test -nonl "output \$\$2" \
-	"\\(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,\
-	    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,\
-	    25, 26, 27, 28, 29, 30, 31, 32, 33,\
-	    <unavailable> <repeats 31 times>\\)" \
+    gdb_test -nonl {output $$2} $re \
 	"output Large_1d_Array from history"
 
-    gdb_test "print \$\$" \
-	" = \\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-		  \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	       \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-		  \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	       \\(\\(33, <unavailable> <repeats 3 times>\\),\
-		  \\(<unavailable> <repeats 4 times>\\) <repeats 3 times>\\),\
-	       \\(\\(<unavailable> <repeats 4 times>\\)\
-		  <repeats 4 times>\\)\\)" \
+    set re \
+	[string_to_regexp \
+	     "(((1, 2, 3, 4), (5, 6, 7, 8),\
+		(9, 10, 11, 12), (13, 14, 15, 16)),\
+	       ((17, 18, 19, 20), (21, 22, 23, 24),\
+		(25, 26, 27, 28), (29, 30, 31, 32)),\
+	       ((33, <unavailable> <repeats 3 times>),\
+		(<unavailable> <repeats 4 times>) <repeats 3 times>),\
+	       ((<unavailable> <repeats 4 times>) <repeats 4 times>))"]
+    gdb_test {print $$} " = $re" \
 	"print Large_3d_Array from history"
-    gdb_test -nonl "output \$\$2" \
-	"\\(\\(\\(1, 2, 3, 4\\), \\(5, 6, 7, 8\\),\
-	       \\(9, 10, 11, 12\\), \\(13, 14, 15, 16\\)\\),\
-	    \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-	       \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\),\
-	    \\(\\(33, <unavailable> <repeats 3 times>\\),\
-	       \\(<unavailable> <repeats 4 times>\\) <repeats 3 times>\\),\
-	    \\(\\(<unavailable> <repeats 4 times>\\) <repeats 4 times>\\)\\)" \
+    gdb_test -nonl {output $$2} $re \
 	"output Large_3d_Array from history"
 
-    gdb_test "print \$\[2\]" \
-	" = \\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-	       \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\)" \
+    set re \
+	[string_to_regexp \
+	     "((17, 18, 19, 20), (21, 22, 23, 24),\
+	       (25, 26, 27, 28), (29, 30, 31, 32))"]
+    gdb_test {print $[2]} " = $re" \
 	"print available Large_3d_Array row from history"
-    gdb_test -nonl "output \$\$\[2\]" \
-	"\\(\\(17, 18, 19, 20\\), \\(21, 22, 23, 24\\),\
-	    \\(25, 26, 27, 28\\), \\(29, 30, 31, 32\\)\\)" \
+    gdb_test -nonl {output $$[2]} $re \
 	"output available Large_3d_Array row from history"
 
-    gdb_test "print \$\$\[3\]" \
-	" = \\(\\(33, <unavailable> <repeats 3 times>\\),\
-	       \\(<unavailable> <repeats 4 times>\\) <repeats 3 times>\\)" \
+    set re \
+	[string_to_regexp \
+	     "((33, <unavailable> <repeats 3 times>),\
+	       (<unavailable> <repeats 4 times>) <repeats 3 times>)"]
+    gdb_test {print $$[3]} " = $re" \
 	"print partially available Large_3d_Array row from history"
-    gdb_test -nonl "output \$\$2\[3\]" \
-	"\\(\\(33, <unavailable> <repeats 3 times>\\),\
-	    \\(<unavailable> <repeats 4 times>\\) <repeats 3 times>\\)" \
+    gdb_test -nonl {output $$2[3]} $re \
 	"output partially available Large_3d_Array row from history"
 
     # These go straigth to the inferior.
-    gdb_test "print \$\$2(3)" \
-	" = \\(\\(33, 34, 35, 36\\), \\(37, 38, 39, 40\\),\
-	       \\(41, 42, 43, 44\\), \\(45, 46, 47, 48\\)\\)" \
+    set re \
+	[string_to_regexp \
+	     "((33, 34, 35, 36), (37, 38, 39, 40),\
+	       (41, 42, 43, 44), (45, 46, 47, 48))"]
+    gdb_test {print $$2(3)} " = $re" \
 	"print partially available Large_3d_Array row bypassing history"
-    gdb_test -nonl "output \$\$3(3)" \
-	"\\(\\(33, 34, 35, 36\\), \\(37, 38, 39, 40\\),\
-	    \\(41, 42, 43, 44\\), \\(45, 46, 47, 48\\)\\)" \
+    gdb_test -nonl {output $$3(3)} $re \
 	"output partially available Large_3d_Array row bypassing history"
 
-    gdb_test "print \$\$3\[4\]" \
+    gdb_test {print $$3[4]} \
 	" = <unavailable>" \
 	"print unavailable Large_3d_Array row from history"
-    gdb_test -nonl "output \$\$4\[4\]" \
+    gdb_test -nonl {output $$4[4]} \
 	"<unavailable>" \
 	"output unavailable Large_3d_Array row from history"
 
-    gdb_test "print \$\$4\[3\]\[1\]\[1\]" \
+    gdb_test {print $$4[3][1][1]} \
 	" = 33" \
 	"print available Large_3d_Array element from history"
-    gdb_test -nonl "output \$\$5\[3\]\[1\]\[1\]" \
+    gdb_test -nonl {output $$5[3][1][1]} \
 	"33" \
 	"output available Large_3d_Array element from history"
 
-    gdb_test "print \$\$5\[3\]\[1\]\[2\]" \
+    gdb_test {print $$5[3][1][2]} \
 	" = <unavailable>" \
 	"print unavailable Large_3d_Array element from history"
-    gdb_test -nonl "output \$\$6\[3\]\[1\]\[2\]" \
+    gdb_test -nonl {output $$6[3][1][2]} \
 	"<unavailable>" \
 	"output unavailable Large_3d_Array element from history"
 
-    gdb_test "print \$\$6\[3\]\[1\]\[1\] + \$\$6\[3\]\[1\]\[2\]" \
+    gdb_test {print $$6[3][1][1] + $$6[3][1][2]} \
 	"value is not available" \
 	"print expression referring unavailable element from history"
-    gdb_test "output \$\$6\[3\]\[1\]\[1\] + \$\$6\[3\]\[1\]\[2\]" \
+    gdb_test {output $$6[3][1][1] + $$6[3][1][2]} \
 	"value is not available" \
 	"output expression referring unavailable element from history"
 }

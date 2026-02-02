@@ -271,7 +271,7 @@ struct arc_relax_type
 extern void arc_md_end (void);
 #define md_end arc_md_end
 
-/* The target supports Object Attributes.  */
-#define TC_OBJ_ATTR 1
+/* The target supports Object Attributes v1.  */
+#define TC_OBJ_ATTR_v1 1
 
 #endif /* TC_ARC */

@@ -27,12 +27,10 @@ if { ![istarget "x86_64-*-*"] } {
     return
 }
 
-# Tests here need -melf_x86_64 support.
-set status [catch "exec $LD -V -melf_x86_64" got]
-if { $status == 0 } {
+if [ld_supports_emul "elf_x86_64"] {
     run_ld_link_tests [list \
 	[list \
-	   "Build libgot-1-x64.so" \
+	    "Build libgot-1-x64.so" \
 	    "-shared -melf_x86_64 --no-ld-generated-unwind-info \
 	     -z noseparate-code -z max-page-size=0x200000 \
 	     --hash-style=sysv -z nomark-plt $NO_DT_RELR_LDFLAGS \
@@ -40,18 +38,13 @@ if { $status == 0 } {
 	    "" \
 	    "--64 -mx86-used-note=no --generate-missing-build-notes=no" \
 	    {got-1.s} \
-	    {{readelf -rW libgot-1a.rd} \
-	     {readelf -aW libgot-1b.rd} \
-	     {readelf --got-contents libgot-1c.rd} \
-	     {readelf {--got-contents -W} libgot-1d.rd}} \
+	    {{readelf {-rW --got-contents} libgot-1.rd}} \
 	    "libgot-1-x64.so" \
 	] \
     ]
 }
 
-# Tests here need -melf32_x86_64 support.
-set status [catch "exec $LD -V -melf32_x86_64" got]
-if { $status == 0 } {
+if [ld_supports_emul "elf32_x86_64"] {
     run_ld_link_tests [list \
 	[list \
 	    "Build libgot-1-x32.so" \
@@ -62,10 +55,7 @@ if { $status == 0 } {
 	    "" \
 	    "--x32 -mx86-used-note=no --generate-missing-build-notes=no" \
 	    {got-1.s} \
-	    {{readelf -rW libgot-1a-x32.rd} \
-	     {readelf -aW libgot-1b-x32.rd} \
-	     {readelf --got-contents libgot-1c-x32.rd} \
-	     {readelf {--got-contents -W} libgot-1d-x32.rd}} \
+	    {{readelf {-rW --got-contents} libgot-1-x32.rd}} \
 	    "libgot-1-x32.so" \
 	] \
     ]

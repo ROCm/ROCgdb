@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.46:
+
 * SFrame stack trace format now represents an undefined return address as
   an SFrame FRE without any offsets.  libsframe provides a new API to test
   for RA undefined, which is used when dumping SFrame information (e.g. using

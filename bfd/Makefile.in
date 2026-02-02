@@ -1173,7 +1173,7 @@ SOURCE_HFILES = \
 	elf32-metag.h elf32-nds32.h elf32-ppc.h \
 	elf32-rx.h elf32-score.h elf32-sh-relocs.h elf32-spu.h \
 	elf32-tic6x.h elf32-tilegx.h elf32-tilepro.h elf32-v850.h \
-	elf64-hppa.h elf64-ppc.h elf64-tilegx.h \
+	elf64-hppa.h elf64-ppc.h elf64-tilegx.h elf-attrs.h \
 	elf-bfd.h elfcode.h elfcore.h elf-hppa.h elf-linker-x86.h \
 	elf-linux-core.h elf-s390.h elf-vxworks.h \
 	elfxx-aarch64.h elfxx-ia64.h elfxx-mips.h elfxx-riscv.h \

@@ -1782,6 +1782,8 @@ run_dump_test_o32 "global-local-symtab-final-o32"
 run_dump_test_n32 "global-local-symtab-final-n32"
 run_dump_test_n64 "global-local-symtab-final-n64"
 
+run_dump_test "pr33793"
+
 # Section ordering tests.
 foreach { abi } $abis {
     set ps2 [expr \

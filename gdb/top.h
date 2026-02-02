@@ -137,4 +137,8 @@ extern bool check_quiet_mode ();
 
 extern void unbuffer_stream (FILE *stream);
 
+#ifdef __MINGW32__
+extern void mingw_deinitialize_console ();
+#endif
+
 #endif /* GDB_TOP_H */

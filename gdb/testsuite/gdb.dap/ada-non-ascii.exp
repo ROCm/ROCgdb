@@ -68,7 +68,12 @@ gdb_assert {[dict get $locals name] == "Locals"} "local scope"
 gdb_assert {[dict get $regs name] == "Registers"} "register scope"
 
 set num_vars [dict get $locals namedVariables]
-gdb_assert {$num_vars == 2} "correct number of locals"
+
+if { [gnat_version_compare < 10] } {
+    gdb_assert {$num_vars <= 2} "correct number of locals"
+} else {
+    gdb_assert {$num_vars == 2} "correct number of locals"
+}
 
 set num [dict get $locals variablesReference]
 set refs [lindex [dap_check_request_and_response "fetch variables" \

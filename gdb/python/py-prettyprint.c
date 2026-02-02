@@ -783,10 +783,8 @@ gdbpy_get_print_options (value_print_options *opts)
 
 /* A ValuePrinter is just a "tag", so it has no state other than that
    required by Python.  */
-struct printer_object
-{
-  PyObject_HEAD
-};
+struct printer_object : public PyObject
+{};
 
 /* The ValuePrinter type object.  */
 PyTypeObject printer_object_type =

@@ -19,8 +19,8 @@
 
 #include "python-internal.h"
 
-struct linetable_entry_object {
-  PyObject_HEAD
+struct linetable_entry_object : public PyObject
+{
   /* The line table source line.  */
   int line;
   /* The pc associated with the source line.  */
@@ -29,8 +29,8 @@ struct linetable_entry_object {
 
 extern PyTypeObject linetable_entry_object_type;
 
-struct linetable_object {
-  PyObject_HEAD
+struct linetable_object : public PyObject
+{
   /* The symtab python object.  We store the Python object here as the
      underlying symtab can become invalid, and we have to run validity
      checks on it.  */
@@ -39,8 +39,8 @@ struct linetable_object {
 
 extern PyTypeObject linetable_object_type;
 
-struct ltpy_iterator_object {
-  PyObject_HEAD
+struct ltpy_iterator_object : public PyObject
+{
   /* The current entry in the line table for the iterator  */
   int current_index;
   /* Pointer back to the original source line table object.  Needed to

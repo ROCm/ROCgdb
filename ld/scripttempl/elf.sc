@@ -719,7 +719,7 @@ cat <<EOF
   ${OTHER_READONLY_SECTIONS}
   .eh_frame_hdr ${RELOCATING-0} : { *(.eh_frame_hdr)${RELOCATING+ *(.eh_frame_entry .eh_frame_entry.*)} }
   .eh_frame     ${RELOCATING-0} : ONLY_IF_RO { KEEP (*(.eh_frame))${RELOCATING+ *(.eh_frame.*)} }
-  .sframe       ${RELOCATING-0} : ONLY_IF_RO { *(.sframe)${RELOCATING+ *(.sframe.*)} }
+  .sframe       ${RELOCATING-0} : ONLY_IF_RO { KEEP (*(.sframe))${RELOCATING+ *(.sframe.*)} }
   .gcc_except_table ${RELOCATING-0} : ONLY_IF_RO { *(.gcc_except_table${RELOCATING+ .gcc_except_table.*}) }
   .gnu_extab ${RELOCATING-0} : ONLY_IF_RO { *(.gnu_extab*) }
 
@@ -794,7 +794,7 @@ emit_data()
 cat <<EOF
   /* Exception handling.  */
   .eh_frame     ${RELOCATING-0} : ONLY_IF_RW { KEEP (*(.eh_frame))${RELOCATING+ *(.eh_frame.*)} }
-  .sframe       ${RELOCATING-0} : ONLY_IF_RW { *(.sframe)${RELOCATING+ *(.sframe.*)} }
+  .sframe       ${RELOCATING-0} : ONLY_IF_RW { KEEP (*(.sframe))${RELOCATING+ *(.sframe.*)} }
   .gnu_extab    ${RELOCATING-0} : ONLY_IF_RW { *(.gnu_extab) }
   .gcc_except_table ${RELOCATING-0} : ONLY_IF_RW { *(.gcc_except_table${RELOCATING+ .gcc_except_table.*}) }
   .exception_ranges ${RELOCATING-0} : ONLY_IF_RW { *(.exception_ranges${RELOCATING+*}) }

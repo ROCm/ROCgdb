@@ -60,6 +60,7 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_V9_4A,
   AARCH64_FEATURE_V9_5A,
   AARCH64_FEATURE_V9_6A,
+  AARCH64_FEATURE_V9_7A,
 
   /* Armv8-A processors only - this is unset for Armv8-R.  */
   AARCH64_FEATURE_V8A,
@@ -287,6 +288,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_MPAMv2,
   /* MTETC.  */
   AARCH64_FEATURE_MTETC,
+  /* TLBI Domains.  */
+  AARCH64_FEATURE_TLBID,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -316,6 +319,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SVE2p2_SME2p2,
   /* +sve2p3 or +sme2p3 */
   AARCH64_FEATURE_SVE2p3_SME2p3,
+  /* +d128 or +tlbid */
+  AARCH64_FEATURE_D128_TLBID,
   AARCH64_NUM_FEATURES
 };
 
@@ -437,6 +442,10 @@ static_assert ((AA64_REPLICATE (REP_PLUS, AA64_REPVAL,
 					 | AARCH64_FEATBIT (X, CMPBR)	\
 					 | AARCH64_FEATBIT (X, LSUI)	\
 					 | AARCH64_FEATBIT (X, OCCMO))
+#define AARCH64_ARCH_V9_7A_FEATURES(X)	(AARCH64_FEATBIT (X, V9_7A)	\
+					 | AARCH64_FEATBIT (X, F16F32DOT) \
+					 | AARCH64_FEATBIT (X, SVE2p2)	\
+					 | AARCH64_FEATBIT (X, SVE2p3))
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8A(X)	(AARCH64_FEATBIT (X, V8) \
@@ -478,6 +487,8 @@ static_assert ((AA64_REPLICATE (REP_PLUS, AA64_REPVAL,
 				 | AARCH64_ARCH_V9_5A_FEATURES (X))
 #define AARCH64_ARCH_V9_6A(X)	(AARCH64_ARCH_V9_5A (X) \
 				 | AARCH64_ARCH_V9_6A_FEATURES (X))
+#define AARCH64_ARCH_V9_7A(X)	(AARCH64_ARCH_V9_6A (X) \
+				 | AARCH64_ARCH_V9_7A_FEATURES (X))
 
 #define AARCH64_ARCH_NONE(X)	0
 
@@ -1670,6 +1681,7 @@ typedef struct
 } aarch64_sys_ins_reg;
 
 extern bool aarch64_sys_ins_reg_has_xt (const aarch64_sys_ins_reg *);
+extern bool aarch64_sys_ins_reg_tlbid_xt (const aarch64_sys_ins_reg *);
 extern bool
 aarch64_sys_ins_reg_supported_p (const aarch64_feature_set,
 				 const char *reg_name,

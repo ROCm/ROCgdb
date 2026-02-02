@@ -2629,7 +2629,6 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  case R_X86_64_DTPOFF64:
 	  case R_X86_64_TPOFF64:
-	  case R_X86_64_PC64:
 	  case R_X86_64_GOTOFF64:
 	  case R_X86_64_GOT64:
 	  case R_X86_64_GOTPCREL64:

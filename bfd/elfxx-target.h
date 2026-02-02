@@ -549,7 +549,34 @@
 #define elf_backend_obj_attrs_arg_type		NULL
 #endif
 #ifndef elf_backend_obj_attrs_section_type
-#define elf_backend_obj_attrs_section_type		SHT_GNU_ATTRIBUTES
+#define elf_backend_obj_attrs_section_type	SHT_GNU_ATTRIBUTES
+#endif
+#ifndef elf_backend_default_obj_attr_version
+#define elf_backend_default_obj_attr_version	OBJ_ATTR_V1
+#endif
+#ifndef elf_backend_obj_attrs_version_dec
+#define elf_backend_obj_attrs_version_dec	_bfd_obj_attrs_version_dec
+#endif
+#ifndef elf_backend_obj_attrs_version_enc
+#define elf_backend_obj_attrs_version_enc	_bfd_obj_attrs_version_enc
+#endif
+#ifndef elf_backend_obj_attr_v2_known_subsections
+#define elf_backend_obj_attr_v2_known_subsections	NULL
+#endif
+#ifndef elf_backend_obj_attr_v2_known_subsections_size
+#define elf_backend_obj_attr_v2_known_subsections_size	0
+#endif
+#ifndef elf_backend_translate_gnu_props_to_obj_attrs
+#define elf_backend_translate_gnu_props_to_obj_attrs	NULL
+#endif
+#ifndef elf_backend_translate_obj_attrs_to_gnu_props
+#define elf_backend_translate_obj_attrs_to_gnu_props	NULL
+#endif
+#ifndef elf_backend_obj_attr_v2_default_value
+#define elf_backend_obj_attr_v2_default_value	NULL
+#endif
+#ifndef elf_backend_obj_attr_v2_merge
+#define elf_backend_obj_attr_v2_merge	NULL
 #endif
 #ifndef elf_backend_obj_attrs_order
 #define elf_backend_obj_attrs_order		NULL
@@ -562,6 +589,9 @@
 #endif
 #ifndef elf_backend_merge_gnu_properties
 #define elf_backend_merge_gnu_properties	NULL
+#endif
+#ifndef elf_backend_setup_object_attributes
+#define elf_backend_setup_object_attributes	_bfd_elf_link_setup_object_attributes
 #endif
 #ifndef elf_backend_setup_gnu_properties
 #define elf_backend_setup_gnu_properties	_bfd_elf_link_setup_gnu_properties
@@ -800,7 +830,7 @@
 #ifndef elf_backend_symbol_section_index
 #define elf_backend_symbol_section_index NULL
 #endif
- 
+
 #ifndef elf_match_priority
 #define elf_match_priority \
   (ELF_ARCH == bfd_arch_unknown ? 2 \
@@ -928,10 +958,20 @@ static const struct elf_backend_data elfNN_bed =
   elf_backend_obj_attrs_section,
   elf_backend_obj_attrs_arg_type,
   elf_backend_obj_attrs_section_type,
+  elf_backend_default_obj_attr_version,
+  elf_backend_obj_attrs_version_dec,
+  elf_backend_obj_attrs_version_enc,
+  elf_backend_obj_attr_v2_known_subsections,
+  elf_backend_obj_attr_v2_known_subsections_size,
+  elf_backend_translate_gnu_props_to_obj_attrs,
+  elf_backend_translate_obj_attrs_to_gnu_props,
+  elf_backend_obj_attr_v2_default_value,
+  elf_backend_obj_attr_v2_merge,
   elf_backend_obj_attrs_order,
   elf_backend_obj_attrs_handle_unknown,
   elf_backend_parse_gnu_properties,
   elf_backend_merge_gnu_properties,
+  elf_backend_setup_object_attributes,
   elf_backend_setup_gnu_properties,
   elf_backend_fixup_gnu_properties,
   elf_backend_compact_eh_encoding,

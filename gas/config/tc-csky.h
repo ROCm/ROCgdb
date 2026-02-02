@@ -106,7 +106,7 @@ extern long csky_relax_frag (segT, fragS *, long);
 const char * elf32_csky_target_format (void);
 #endif
 
-/* The target supports Object Attributes.  */
-#define TC_OBJ_ATTR 1
+/* The target supports Object Attributes v1.  */
+#define TC_OBJ_ATTR_v1 1
 
 #endif /* TC_CSKY */

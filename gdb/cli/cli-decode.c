@@ -27,18 +27,10 @@
 
 /* Prototypes for local functions.  */
 
-static void undef_cmd_error (const char *, const char *);
-
 static cmd_list_element::aliases_list_type delete_cmd
   (const char *name, cmd_list_element **list, cmd_list_element **prehook,
    cmd_list_element **prehookee, cmd_list_element **posthook,
    cmd_list_element **posthookee);
-
-static struct cmd_list_element *find_cmd (const char *command,
-					  int len,
-					  struct cmd_list_element *clist,
-					  int ignore_help_classes,
-					  int *nfound);
 
 static void help_cmd_list (struct cmd_list_element *list,
 			   command_classes theclass,
@@ -2174,7 +2166,7 @@ help_cmd_list (struct cmd_list_element *list, command_classes theclass,
    found in nfound.  */
 
 static struct cmd_list_element *
-find_cmd (const char *command, int len, struct cmd_list_element *clist,
+find_cmd (std::string_view command, struct cmd_list_element *clist,
 	  int ignore_help_classes, int *nfound)
 {
   struct cmd_list_element *found, *c;
@@ -2182,12 +2174,12 @@ find_cmd (const char *command, int len, struct cmd_list_element *clist,
   found = NULL;
   *nfound = 0;
   for (c = clist; c; c = c->next)
-    if (!strncmp (command, c->name, len)
+    if (startswith (c->name, command)
 	&& (!ignore_help_classes || !c->is_command_class_help ()))
       {
 	found = c;
 	(*nfound)++;
-	if (c->name[len] == '\0')
+	if (c->name[command.size ()] == '\0')
 	  {
 	    *nfound = 1;
 	    break;
@@ -2264,7 +2256,6 @@ lookup_cmd_1 (const char **text, struct cmd_list_element *clist,
 	      struct cmd_list_element **result_list, std::string *default_args,
 	      int ignore_help_classes, bool lookup_for_completion_p)
 {
-  char *command;
   int len, nfound;
   struct cmd_list_element *found, *c;
   bool found_alias = false;
@@ -2279,18 +2270,12 @@ lookup_cmd_1 (const char **text, struct cmd_list_element *clist,
   if (len == 0)
     return 0;
 
-  /* *text and p now bracket the first command word to lookup (and
-     it's length is len).  We copy this into a local temporary.  */
-
-
-  command = (char *) alloca (len + 1);
-  memcpy (command, *text, len);
-  command[len] = '\0';
-
-  /* Look it up.  */
+  /* *TEXT is the first command word to lookup (and its length is
+     LEN).  Look it up.  */
   found = 0;
   nfound = 0;
-  found = find_cmd (command, len, clist, ignore_help_classes, &nfound);
+  found = find_cmd (std::string_view (*text, len),
+		    clist, ignore_help_classes, &nfound);
 
   /* If nothing matches, we have a simple failure.  */
   if (nfound == 0)
@@ -2382,11 +2367,11 @@ lookup_cmd_1 (const char **text, struct cmd_list_element *clist,
 /* All this hair to move the space to the front of cmdtype */
 
 static void
-undef_cmd_error (const char *cmdtype, const char *q)
+undef_cmd_error (const char *cmdtype, std::string_view q)
 {
-  error (_("Undefined %scommand: \"%s\".  Try \"help%s%.*s\"."),
+  error (_("Undefined %scommand: \"%.*s\".  Try \"help%s%.*s\"."),
 	 cmdtype,
-	 q,
+	 (int) q.size (), q.data (),
 	 *cmdtype ? " " : "",
 	 (int) strlen (cmdtype) - 1,
 	 cmdtype);
@@ -2432,13 +2417,8 @@ lookup_cmd (const char **line, struct cmd_list_element *list,
     {
       if (!allow_unknown)
 	{
-	  char *q;
 	  int len = find_command_name_length (*line);
-
-	  q = (char *) alloca (len + 1);
-	  strncpy (q, *line, len);
-	  q[len] = '\0';
-	  undef_cmd_error (cmdtype, q);
+	  undef_cmd_error (cmdtype, std::string_view (*line, len));
 	}
       else
 	return 0;
@@ -2504,7 +2484,7 @@ lookup_cmd (const char **line, struct cmd_list_element *list,
       *line = skip_spaces (*line);
 
       if (c->is_prefix () && **line && !c->allow_unknown)
-	undef_cmd_error (c->prefixname ().c_str (), *line);
+	undef_cmd_error (c->prefixname ().c_str (), std::string_view (*line));
 
       /* Seems to be what he wants.  Return it.  */
       return c;
@@ -2671,12 +2651,12 @@ lookup_cmd_composition_1 (const char *text,
 	return 0;
 
       /* TEXT is the start of the first command word to lookup (and
-	 it's length is LEN).  We copy this into a local temporary.  */
-      std::string command (text, len);
+	 its length is LEN).  */
+      std::string_view command (text, len);
 
       /* Look it up.  */
       int nfound = 0;
-      *cmd = find_cmd (command.c_str (), len, cur_list, 1, &nfound);
+      *cmd = find_cmd (command, cur_list, 1, &nfound);
 
       /* We only handle the case where a single command was found.  */
       if (nfound > 1)

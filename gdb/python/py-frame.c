@@ -28,8 +28,8 @@
 #include "symfile.h"
 #include "objfiles.h"
 
-struct frame_object {
-  PyObject_HEAD
+struct frame_object : public PyObject
+{
   struct frame_id frame_id;
   struct gdbarch *gdbarch;
 

@@ -682,21 +682,17 @@ cp_find_class_member (struct type **self_p, int *fieldno,
 }
 
 void
-cp_print_class_member (const gdb_byte *valaddr, struct type *type,
-		       struct ui_file *stream, const char *prefix)
+cp_print_class_memberptr (struct value *val, struct ui_file *stream)
 {
+  struct type *type = check_typedef (val->type ());
   enum bfd_endian byte_order = type_byte_order (type);
 
-  /* VAL is a byte offset into the structure type SELF_TYPE.
-     Find the name of the field for that offset and
-     print it.  */
   struct type *self_type = TYPE_SELF_TYPE (type);
-  LONGEST val;
   int fieldno;
 
-  val = extract_signed_integer (valaddr,
-				type->length (),
-				byte_order);
+  const gdb_byte *valaddr = val->contents_for_printing ().data ();
+  LONGEST pos = extract_signed_integer (valaddr, type->length (),
+					byte_order);
 
   /* Pointers to data members are usually byte offsets into an object.
      Because a data member can have offset zero, and a NULL pointer to
@@ -708,19 +704,19 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
      value.  GDB only supports that last form; to add support for
      another form, make this into a cp-abi hook.  */
 
-  if (val == -1)
+  if (pos == -1)
     {
       gdb_printf (stream, "NULL");
       return;
     }
 
-  cp_find_class_member (&self_type, &fieldno, val << 3);
+  cp_find_class_member (&self_type, &fieldno, 8 * pos);
 
   if (self_type != NULL)
     {
       const char *name;
 
-      gdb_puts (prefix, stream);
+      gdb_puts ("&", stream);
       name = self_type->name ();
       if (name)
 	gdb_puts (name, stream);
@@ -731,7 +727,7 @@ cp_print_class_member (const gdb_byte *valaddr, struct type *type,
 		    variable_name_style.style (), stream);
     }
   else
-    gdb_printf (stream, "%ld", (long) val);
+    gdb_printf (stream, "%s", plongest (pos));
 }
 
 #if GDB_SELF_TEST

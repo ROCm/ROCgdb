@@ -204,13 +204,12 @@ tui_status_window::make_status_line () const
   return string_val;
 }
 
-/* Get a printable name for the function at the address.  The symbol
-   name is demangled if demangling is turned on.  Returns a pointer to
-   a static area holding the result.  */
-static char*
+/* Get a printable name for the function representing frame FI.  The symbol
+   name is demangled if demangling is turned on.  Returns a std::string
+   containing the function name, which could be empty.  */
+static std::string
 tui_get_function_from_frame (const frame_info_ptr &fi)
 {
-  static char name[256];
   string_file stream;
 
   print_address_symbolic (get_frame_arch (fi), get_frame_pc (fi),
@@ -219,20 +218,20 @@ tui_get_function_from_frame (const frame_info_ptr &fi)
   /* Use simple heuristics to isolate the function name.  The symbol
      can be demangled and we can have function parameters.  Remove
      them because the status line is too short to display them.  */
-  const char *d = stream.c_str ();
-  if (*d == '<')
-    d++;
-  strncpy (name, d, sizeof (name) - 1);
-  name[sizeof (name) - 1] = 0;
+  std::string name = stream.release ();
+  if (!name.empty () && name.front () == '<')
+    name = name.erase (0, 1);
 
-  char *p = strchr (name, '(');
-  if (!p)
-    p = strchr (name, '>');
-  if (p)
-    *p = 0;
-  p = strchr (name, '+');
-  if (p)
-    *p = 0;
+  size_t pos = name.find ('(');
+  if (pos == std::string::npos)
+    pos = name.find ('>');
+  if (pos != std::string::npos)
+    name.erase (pos);
+
+  pos = name.find ('+');
+  if (pos != std::string::npos)
+    name.erase (pos);
+
   return name;
 }
 
@@ -270,7 +269,7 @@ tui_show_frame_info (const frame_info_ptr &fi)
     {
       symtab_and_line sal = find_frame_sal (fi);
 
-      const char *func_name;
+      std::string func_name;
       std::optional<CORE_ADDR> tmp_pc = get_frame_pc_if_available (fi);
       /* find_frame_sal does not always set PC, but we want to ensure
 	 that it is available in the SAL.  */
@@ -284,7 +283,7 @@ tui_show_frame_info (const frame_info_ptr &fi)
 
       struct gdbarch *gdbarch = get_frame_arch (fi);
       status_changed_p
-	= tui_location.set_location (gdbarch, sal, func_name);
+	= tui_location.set_location (gdbarch, sal, std::move (func_name));
 
       /* If the status information has not changed, then frame information has
 	 not changed.  If frame information has not changed, then the windows'

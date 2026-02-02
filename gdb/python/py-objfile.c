@@ -26,16 +26,10 @@
 #include "python.h"
 #include "inferior.h"
 
-struct objfile_object
+struct objfile_object : public gdbpy_dict_wrapper
 {
-  PyObject_HEAD
-
   /* The corresponding objfile.  */
   struct objfile *objfile;
-
-  /* Dictionary holding user-added attributes.
-     This is the __dict__ attribute of the object.  */
-  PyObject *dict;
 
   /* The pretty-printer list of functions.  */
   PyObject *printers;
@@ -739,8 +733,8 @@ Look up a static-linkage global symbol in this objfile and return it." },
 
 static gdb_PyGetSetDef objfile_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict, NULL,
-    "The __dict__ for this objfile.", &objfile_object_type },
+  { "__dict__", gdb_py_generic_dict_getter, NULL,
+    "The __dict__ for this objfile.", NULL },
   { "filename", objfpy_get_filename, NULL,
     "The objfile's filename, or None.", NULL },
   { "username", objfpy_get_username, NULL,
@@ -785,8 +779,8 @@ PyTypeObject objfile_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  0,				  /*tp_getattro*/
-  0,				  /*tp_setattro*/
+  gdb_py_generic_getattro,	  /*tp_getattro*/
+  gdb_py_generic_setattro,	  /*tp_setattro*/
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB objfile object",		  /* tp_doc */
@@ -803,7 +797,7 @@ PyTypeObject objfile_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  offsetof (objfile_object, dict), /* tp_dictoffset */
+  0,				  /* tp_dictoffset */
   0,				  /* tp_init */
   0,				  /* tp_alloc */
   objfpy_new,			  /* tp_new */

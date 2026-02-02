@@ -708,7 +708,7 @@ copy_usage (FILE *stream, int exit_status)
                                    <commit>\n\
      --subsystem <name>[:<version>]\n\
                                    Set PE subsystem to <name> [& <version>]\n\
-     --compress-debug-sections[={none|zlib|zlib-gnu|zlib-gabi" ZSTD_OPT "}]\n\
+     --compress-debug-sections[={none|zlib|zlib-gnu|zlib-gabi%s}]\n\
                                    Compress DWARF debug sections\n\
      --decompress-debug-sections   Decompress DWARF debug sections using zlib\n\
      --elf-stt-common=[yes|no]     Generate ELF common symbols with STT_COMMON\n\
@@ -721,7 +721,7 @@ copy_usage (FILE *stream, int exit_status)
   -V --version                     Display this program's version number\n\
   -h --help                        Display this output\n\
      --info                        List object formats & architectures supported\n\
-"));
+"), ZSTD_OPT);
   list_supported_targets (program_name, stream);
   if (REPORT_BUGS_TO[0] && exit_status == 0)
     fprintf (stream, _("Report bugs to %s\n"), REPORT_BUGS_TO);
@@ -1346,8 +1346,39 @@ is_mergeable_note_section (bfd * abfd, asection * sec)
 /* See if a non-group section is being removed.  */
 
 static bool
-is_strip_section_1 (bfd *abfd ATTRIBUTE_UNUSED, asection *sec)
+is_strip_section_1 (bfd *abfd, asection *sec)
 {
+  if (strip_symbols == STRIP_ALL
+      && bfd_get_flavour (abfd) == bfd_target_elf_flavour
+      && elf_elfheader (abfd)->e_ident[EI_OSABI] == ELFOSABI_SOLARIS)
+    {
+      struct bfd_elf_section_data *e = elf_section_data (sec);
+      Elf_Internal_Shdr **sections = elf_elfsections (abfd);
+      switch (e->this_hdr.sh_type)
+	{
+	case SHT_SUNW_symsort:
+	case SHT_SUNW_symnsort:
+	  /* On Solaris, non-SHF_ALLOC SHT_SUNW_symsort and
+	     SHT_SUNW_symnsort sections are linked with a non-SHF_ALLOC
+	     SHT_SYMTAB section.  Since strip removes non-SHF_ALLOC
+	     SHT_SYMTAB section with STRIP_ALL, also remove non-SHF_ALLOC
+	     SHT_SUNW_symsort and SHT_SUNW_symnsort sections.  */
+	  if ((e->this_hdr.sh_flags & SHF_ALLOC) == 0
+	      && sections != NULL
+	      && e->this_hdr.sh_link < elf_numsections (abfd))
+	    {
+	      Elf_Internal_Shdr *l = sections[e->this_hdr.sh_link];
+	      if (l->sh_type == SHT_SYMTAB
+		  && (l->sh_flags & SHF_ALLOC) == 0)
+		return true;
+	    }
+	  break;
+
+	default:
+	  break;
+	}
+    }
+
   if (find_section_list (bfd_section_name (sec), false, SECTION_CONTEXT_KEEP)
       != NULL)
     return false;

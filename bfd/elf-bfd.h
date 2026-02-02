@@ -24,9 +24,11 @@
 
 #include <stdlib.h>
 
+#include "doubly-linked-list.h"
 #include "elf/common.h"
 #include "elf/external.h"
 #include "elf/internal.h"
+#include "elf-attrs.h"
 #include "bfdlink.h"
 
 #ifndef ENABLE_CHECKING
@@ -1003,8 +1005,6 @@ struct elf_find_verdep_info
 
 struct bfd_elf_section_reloc_data;
 
-typedef uint32_t obj_attr_tag_t;
-
 struct elf_backend_data
 {
   /* The architecture for this backend.  */
@@ -1651,12 +1651,44 @@ struct elf_backend_data
   /* The section name to use for a processor-standard attributes section.  */
   const char *obj_attrs_section;
 
-  /* Return 1, 2 or 3 to indicate what type of arguments a
-     processor-specific tag takes.  */
+  /* Return 1, 2 or 3 to indicate what type of arguments a tag takes.  */
   int (*obj_attrs_arg_type) (obj_attr_tag_t);
 
   /* The section type to use for an attributes section.  */
   unsigned int obj_attrs_section_type;
+
+  /* The preferred version of object attributes for the output object.  */
+  obj_attr_version_t default_obj_attr_version;
+
+  /* Decode the object attributes version from the version number encoded in
+     the input object.  */
+  obj_attr_version_t (*obj_attrs_version_dec) (uint8_t);
+
+  /* Encode the object attributes version into the output object.  */
+  uint8_t (*obj_attrs_version_enc) (obj_attr_version_t);
+
+  /* The known subsections and attributes (v2 only).  */
+  const known_subsection_v2_t *obj_attr_v2_known_subsections;
+
+  /* The size of the array of known subsections.  */
+  const size_t obj_attr_v2_known_subsections_size;
+
+  /* Translate GNU properties that have object attributes v2 equivalents.  */
+  void (*translate_gnu_props_to_obj_attrs) (const bfd *,
+    const elf_property_list *);
+
+  /* Translate object attributes v2 that have GNU properties equivalents.  */
+  void (*translate_obj_attrs_to_gnu_props) (bfd *,
+    const obj_attr_subsection_v2_t *);
+
+  /* Get default value for an attribute.  */
+  bool (*obj_attr_v2_default_value) (const struct bfd_link_info *,
+    const obj_attr_info_t *, const obj_attr_subsection_v2_t *, obj_attr_v2_t *);
+
+  /* Merge a object attribute v2.  */
+  obj_attr_v2_merge_result_t (*obj_attr_v2_tag_merge)
+    (const struct bfd_link_info *, const bfd *, const obj_attr_subsection_v2_t *,
+     const obj_attr_v2_t *, const obj_attr_v2_t *, const obj_attr_v2_t *);
 
   /* This function determines the order in which any attributes are
      written.  It must be defined for input in the range
@@ -1678,6 +1710,9 @@ struct elf_backend_data
   /* Merge GNU properties.  Return TRUE if property is updated.  */
   bool (*merge_gnu_properties) (struct bfd_link_info *, bfd *, bfd *,
 				       elf_property *, elf_property *);
+
+  /* Set up object attributes.  */
+  bfd *(*setup_object_attributes) (struct bfd_link_info *);
 
   /* Set up GNU properties.  */
   bfd *(*setup_gnu_properties) (struct bfd_link_info *);
@@ -2177,6 +2212,9 @@ struct elf_obj_tdata
   /* A pointer to the .eh_frame section.  */
   asection *eh_frame_section;
 
+  /* A pointer to the .sframe section.  */
+  asection *sframe_section;
+
   /* Symbol buffer.  */
   void *symbuf;
 
@@ -2184,8 +2222,18 @@ struct elf_obj_tdata
      after all input GNU properties are merged for output.  */
   elf_property_list *properties;
 
+  /* The version of object attributes for this object.
+     For an input object, the format version used to store the data.
+     For an output object, the targeted format version.  */
+  obj_attr_version_t obj_attr_version;
+
   obj_attribute known_obj_attributes[2][NUM_KNOWN_OBJ_ATTRIBUTES];
   obj_attribute_list *other_obj_attributes[2];
+
+  /* Object attributes v2: A subsection can only hold attributes with the
+     same data type (uleb128, NTBS, etc), so each type requires a separate
+     subsection.  */
+  obj_attr_subsection_list_t obj_attr_subsections;
 
   /* Linked-list containing information about every Systemtap section
      found in the object file.  Each section corresponds to one entry
@@ -2258,6 +2306,8 @@ struct elf_obj_tdata
 #define elf_dynverref(bfd)	(elf_tdata(bfd) -> dynverref_section)
 #define elf_eh_frame_section(bfd) \
 				(elf_tdata(bfd) -> eh_frame_section)
+#define elf_sframe_section(bfd) \
+				(elf_tdata(bfd) -> sframe_section)
 #define elf_section_syms(bfd)	(elf_tdata(bfd) -> o->section_syms)
 #define elf_num_section_syms(bfd) (elf_tdata(bfd) -> o->num_section_syms)
 #define core_prpsinfo(bfd)	(elf_tdata(bfd) -> prpsinfo)
@@ -2275,12 +2325,14 @@ struct elf_obj_tdata
 #define elf_bad_symtab(bfd)	(elf_tdata(bfd) -> bad_symtab)
 #define elf_flags_init(bfd)	(elf_tdata(bfd) -> o->flags_init)
 #define elf_use_dt_symtab_p(bfd) (elf_tdata(bfd) -> dt_symtab_count != 0)
+#define elf_obj_attr_version(bfd) (elf_tdata (bfd) -> obj_attr_version)
 #define elf_known_obj_attributes(bfd) (elf_tdata (bfd) -> known_obj_attributes)
 #define elf_other_obj_attributes(bfd) (elf_tdata (bfd) -> other_obj_attributes)
 #define elf_known_obj_attributes_proc(bfd) \
   (elf_known_obj_attributes (bfd) [OBJ_ATTR_PROC])
 #define elf_other_obj_attributes_proc(bfd) \
   (elf_other_obj_attributes (bfd) [OBJ_ATTR_PROC])
+#define elf_obj_attr_subsections(bfd) (elf_tdata (bfd) -> obj_attr_subsections)
 #define elf_properties(bfd) (elf_tdata (bfd) -> properties)
 #define elf_has_no_copy_on_protected(bfd) \
   (elf_tdata(bfd) -> has_no_copy_on_protected)
@@ -2580,6 +2632,8 @@ extern bool _bfd_elf_maybe_strip_eh_frame_hdr
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_elf_sframe_present
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+extern bool _bfd_elf_sframe_present_input_bfds
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_parse_sframe
   (bfd *, struct bfd_link_info *, asection *, struct elf_reloc_cookie *)
@@ -3120,6 +3174,10 @@ extern bfd *_bfd_elf64_bfd_from_remote_memory
    int (*target_read_memory) (bfd_vma, bfd_byte *, bfd_size_type))
   ATTRIBUTE_HIDDEN;
 
+extern obj_attr_version_t _bfd_obj_attrs_version_dec (uint8_t)
+  ATTRIBUTE_HIDDEN;
+extern uint8_t _bfd_obj_attrs_version_enc (obj_attr_version_t)
+  ATTRIBUTE_HIDDEN;
 extern bfd_vma bfd_elf_obj_attr_size (bfd *);
 extern void bfd_elf_set_obj_attr_contents (bfd *, bfd_byte *, bfd_vma);
 extern obj_attribute *
@@ -3149,6 +3207,8 @@ extern int bfd_elf_obj_attrs_arg_type
   (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
 extern void _bfd_elf_parse_attributes
   (bfd *, Elf_Internal_Shdr *) ATTRIBUTE_HIDDEN;
+extern bfd *_bfd_elf_link_setup_object_attributes
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_object_attributes
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_unknown_attribute_low
@@ -3159,6 +3219,45 @@ extern Elf_Internal_Shdr *_bfd_elf_single_rel_hdr
   (asection *sec);
 extern bool _bfd_elf_read_notes
   (bfd *, file_ptr, bfd_size_type, size_t) ATTRIBUTE_HIDDEN;
+
+extern obj_attr_v2_t *bfd_elf_obj_attr_v2_init (obj_attr_tag_t,
+  union obj_attr_value_v2);
+extern void _bfd_elf_obj_attr_v2_free (obj_attr_v2_t *, obj_attr_encoding_v2_t)
+  ATTRIBUTE_HIDDEN;
+extern obj_attr_v2_t *_bfd_elf_obj_attr_v2_copy (const obj_attr_v2_t *,
+  obj_attr_encoding_v2_t) ATTRIBUTE_HIDDEN;
+extern int _bfd_elf_obj_attr_v2_cmp (const obj_attr_v2_t *,
+  const obj_attr_v2_t *) ATTRIBUTE_HIDDEN;
+extern obj_attr_v2_t *bfd_obj_attr_v2_find_by_tag
+  (const obj_attr_subsection_v2_t *, obj_attr_tag_t, bool);
+extern void bfd_obj_attr_subsection_v2_append
+  (obj_attr_subsection_v2_t *, obj_attr_v2_t *);
+LINKED_LIST_MUTATIVE_OPS_PROTOTYPE (obj_attr_subsection_v2_t,
+				    obj_attr_v2_t, ATTRIBUTE_HIDDEN);
+LINKED_LIST_MERGE_SORT_PROTOTYPE_ (obj_attr_v2_t, ATTRIBUTE_HIDDEN);
+LINKED_LIST_MERGE_SORT_PROTOTYPE (obj_attr_subsection_v2_t,
+				  obj_attr_v2_t, ATTRIBUTE_HIDDEN);
+extern obj_attr_subsection_v2_t *bfd_elf_obj_attr_subsection_v2_init
+  (const char *, obj_attr_subsection_scope_v2_t, bool, obj_attr_encoding_v2_t);
+extern void _bfd_elf_obj_attr_subsection_v2_free (obj_attr_subsection_v2_t *)
+  ATTRIBUTE_HIDDEN;
+extern int _bfd_elf_obj_attr_subsection_v2_cmp
+  (const obj_attr_subsection_v2_t *, const obj_attr_subsection_v2_t *)
+  ATTRIBUTE_HIDDEN;
+extern obj_attr_subsection_v2_t *bfd_obj_attr_subsection_v2_find_by_name
+  (obj_attr_subsection_v2_t *, const char *, bool);
+extern obj_attr_subsection_scope_v2_t bfd_elf_obj_attr_subsection_v2_scope
+  (const bfd *, const char *);
+extern void bfd_obj_attr_subsection_v2_list_append
+  (obj_attr_subsection_list_t *, obj_attr_subsection_v2_t *);
+extern obj_attr_subsection_v2_t *bfd_obj_attr_subsection_v2_list_remove
+  (obj_attr_subsection_list_t *, obj_attr_subsection_v2_t *);
+LINKED_LIST_MUTATIVE_OPS_PROTOTYPE (obj_attr_subsection_list_t,
+				    obj_attr_subsection_v2_t,
+				    ATTRIBUTE_HIDDEN);
+LINKED_LIST_MERGE_SORT_PROTOTYPE_ (obj_attr_subsection_v2_t, ATTRIBUTE_HIDDEN);
+LINKED_LIST_MERGE_SORT_PROTOTYPE (obj_attr_subsection_list_t,
+				  obj_attr_subsection_v2_t, ATTRIBUTE_HIDDEN);
 
 extern bool _bfd_elf_parse_gnu_properties
   (bfd *, Elf_Internal_Note *) ATTRIBUTE_HIDDEN;

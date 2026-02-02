@@ -241,6 +241,7 @@ set re \
 	 ")?(  Total memory used for psymbol cache: $decimal" \
 	 ")?(  Number of read units: $decimal" \
 	 "  Number of unread units: $decimal" \
+	 "  Number of read top-level DIEs: $decimal" \
 	 ")?  Total memory used for objfile obstack: $decimal" \
 	 "  Total memory used for BFD obstack: $decimal" \
 	 "  Total memory used for string cache: $decimal" \

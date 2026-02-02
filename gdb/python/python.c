@@ -299,9 +299,9 @@ gdbpy_check_quit_flag (const struct extension_language_defn *extlang)
    NULL means that this is evaluating a string, not the contents of a
    file.  */
 
-static int
+int
 eval_python_command (const char *command, int start_symbol,
-		     const char *filename = nullptr)
+		     const char *filename)
 {
   PyObject *m, *d;
 
@@ -340,13 +340,12 @@ eval_python_command (const char *command, int start_symbol,
 	}
     }
 
-  /* Use this API because it is in Python 3.2.  */
-  gdbpy_ref<> code (Py_CompileStringExFlags (command,
-					     filename == nullptr
-					     ? "<string>"
-					     : filename,
-					     start_symbol,
-					     nullptr, -1));
+  /* Use this API because it is available with the Python limited API.  */
+  gdbpy_ref<> code (Py_CompileString (command,
+				      filename == nullptr
+				      ? "<string>"
+				      : filename,
+				      start_symbol));
 
   int result = -1;
   if (code != nullptr)
@@ -2591,14 +2590,8 @@ do_start_initialization ()
 {
   /* Define all internal modules.  These are all imported (and thus
      created) during initialization.  */
-  struct _inittab mods[] =
-  {
-    { "_gdb", init__gdb_module },
-    { "_gdbevents", gdbpy_events_mod_func },
-    { nullptr, nullptr }
-  };
-
-  if (PyImport_ExtendInittab (mods) < 0)
+  if (PyImport_AppendInittab ("_gdb", init__gdb_module) < 0
+      || PyImport_AppendInittab ("_gdbevents", gdbpy_events_mod_func) < 0)
     return false;
 
   if (!py_initialize ())

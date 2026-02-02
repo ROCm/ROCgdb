@@ -452,7 +452,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
   const bfd_target *fail_targ;
   int match_count, best_count, best_match;
   int ar_match_index;
-  unsigned int initial_section_id = _bfd_section_id;
+  unsigned int initial_section_id;
   struct bfd_preserve preserve, preserve_match;
   bfd_cleanup cleanup = NULL;
   struct per_xvec_messages messages = { abfd, PER_XVEC_NO_TARGET, NULL, NULL };
@@ -492,6 +492,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
       free (matching_vector);
       return false;
     }
+  initial_section_id = _bfd_section_id;
 
   /* Presume the answer is yes.  */
   abfd->format = format;

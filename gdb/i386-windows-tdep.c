@@ -95,12 +95,6 @@ i386_windows_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
   return i386_pe_skip_trampoline_code (frame, pc, NULL);
 }
 
-static const char *
-i386_windows_auto_wide_charset (void)
-{
-  return "UTF-16";
-}
-
 /* Implement the "push_dummy_call" gdbarch method.  */
 
 static CORE_ADDR
@@ -154,8 +148,6 @@ i386_windows_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_xfer_shared_libraries
     (gdbarch, windows_core_xfer_shared_libraries);
   set_gdbarch_core_pid_to_str (gdbarch, windows_core_pid_to_str);
-
-  set_gdbarch_auto_wide_charset (gdbarch, i386_windows_auto_wide_charset);
 }
 
 /* gdbarch initialization for Windows on i386.  */

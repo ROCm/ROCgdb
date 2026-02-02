@@ -2623,22 +2623,14 @@ symbol::matches (domain_search_flags flags) const
   return search_flags_matches (flags, m_domain);
 }
 
-/* See symtab.h.  */
-
-struct type *
-lookup_transparent_type (const char *name, domain_search_flags flags)
-{
-  return current_language->lookup_transparent_type (name, flags);
-}
-
-/* A helper for basic_lookup_transparent_type that interfaces with the
+/* A helper for lookup_transparent_type that interfaces with the
    "quick" symbol table functions.  */
 
 static struct type *
-basic_lookup_transparent_type_quick (struct objfile *objfile,
-				     enum block_enum block_index,
-				     domain_search_flags flags,
-				     const lookup_name_info &name)
+lookup_transparent_type_quick (struct objfile *objfile,
+			       enum block_enum block_index,
+			       domain_search_flags flags,
+			       const lookup_name_info &name)
 {
   struct compunit_symtab *cust;
   const struct blockvector *bv;
@@ -2659,14 +2651,10 @@ basic_lookup_transparent_type_quick (struct objfile *objfile,
   return sym->type ();
 }
 
-/* The standard implementation of lookup_transparent_type.  This code
-   was modeled on lookup_symbol -- the parts not relevant to looking
-   up types were just left out.  In particular it's assumed here that
-   types are available in STRUCT_DOMAIN and only in file-static or
-   global blocks.  */
+/* See symtab.h.  */
 
 struct type *
-basic_lookup_transparent_type (const char *name, domain_search_flags flags)
+lookup_transparent_type (const char *name, domain_search_flags flags)
 {
   struct type *t;
 
@@ -2675,8 +2663,8 @@ basic_lookup_transparent_type (const char *name, domain_search_flags flags)
   /* Search all the global symbols.  */
   for (objfile &objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_quick (&objfile, GLOBAL_BLOCK,
-					       flags, lookup_name);
+      t = lookup_transparent_type_quick (&objfile, GLOBAL_BLOCK,
+					 flags, lookup_name);
       if (t)
 	return t;
     }
@@ -2685,8 +2673,8 @@ basic_lookup_transparent_type (const char *name, domain_search_flags flags)
      but more useful than an error.  */
   for (objfile &objfile : current_program_space->objfiles ())
     {
-      t = basic_lookup_transparent_type_quick (&objfile, STATIC_BLOCK,
-					       flags, lookup_name);
+      t = lookup_transparent_type_quick (&objfile, STATIC_BLOCK,
+					 flags, lookup_name);
       if (t)
 	return t;
     }

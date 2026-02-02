@@ -54,11 +54,22 @@ proc check_show_args { packet } {
 # 'off' and reflects whether the qExecAndArgs packet is turned on or
 # off.  FILENAME is what we expect to see included in the output, and
 # is converted to a regexp by this function.
-proc check_remote_exec_file { packet filename } {
+#
+# The AUTO_FILENAME should only be set when PACKET is on and FILENAME
+# is the empty string.  If AUTO_FILENAME is set, then this is the
+# filename that GDB is using for the remote executable based on the
+# current executable's filename.  For example, if the sysroot is empty
+# then GDB can use the current executable as the remote executable.
+proc check_remote_exec_file { packet filename { auto_filename "" } } {
     if { $filename eq "" } {
 	if { $packet } {
-	    set remote_exec_re \
-		"The remote exec-file is unset, the remote has no default executable set\\."
+	    if { $auto_filename ne "" } {
+		set remote_exec_re \
+		    "The remote exec-file is unset, using automatic value \"[string_to_regexp $auto_filename]\"\\."
+	    } else {
+		set remote_exec_re \
+		    "The remote exec-file is unset, the remote has no default executable set\\."
+	    }
 	} else {
 	    set remote_exec_re \
 		"The remote exec-file is unset, the default remote executable will be used\\."
@@ -260,8 +271,34 @@ proc_with_prefix test_remote_exec_warning {} {
 # filename when starting gdbserver.
 #
 # Connect to the remote server, and check 'show remote exec-file'.
-proc_with_prefix test_server_with_no_exec { packet set_remote_exec } {
+proc_with_prefix test_server_with_no_exec { packet set_remote_exec clear_sysroot } {
+    # For remote hosts GDB copies the executable to the host, changing
+    # its filename.  We can figure out the new exec filename, but it's
+    # additional work, so just don't bother.  We only need to bail out
+    # though in the precise case that the executable filename will be
+    # used in the output.
+    if {!$set_remote_exec && $clear_sysroot && [is_remote host]} {
+	return
+    }
+
     clean_restart
+
+    set sysroot "*UNKNOWN*"
+    gdb_test_multiple "show sysroot" "" {
+	-re -wrap "^The current system root is \"(\[^\r\n\]*)\"\\." {
+	    set sysroot $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+    if { $sysroot ne "target:" && $sysroot ne "" } {
+	return
+    }
+
+    if { $clear_sysroot } {
+	gdb_test_no_output "set sysroot"
+    } else {
+	gdb_test_no_output "set sysroot target:"
+    }
 
     gdb_test "disconnect" ".*"
 
@@ -277,13 +314,18 @@ proc_with_prefix test_server_with_no_exec { packet set_remote_exec } {
 	gdb_test_no_output "set remote exec-file $target_exec" \
 	    "set remote exec-file"
 	set expected_filename $target_exec
+	set auto_filename ""
+    } elseif { $clear_sysroot } {
+	set expected_filename ""
+	set auto_filename $::binfile
     } else {
 	set expected_filename ""
+	set auto_filename ""
     }
 
     gdbserver_start_extended
 
-    check_remote_exec_file $packet $expected_filename
+    check_remote_exec_file $packet $expected_filename $auto_filename
 }
 
 # This override prevents the remote exec-file from being set when
@@ -298,7 +340,10 @@ with_override extended_gdbserver_load_last_file do_nothing {
 	    test_exec_and_arg_fetch $packet
 
 	    foreach_with_prefix set_remote_exec { true false } {
-		test_server_with_no_exec $packet $set_remote_exec
+		foreach_with_prefix clear_sysroot { true false } {
+		    test_server_with_no_exec $packet $set_remote_exec \
+			$clear_sysroot
+		}
 	    }
 	}
 

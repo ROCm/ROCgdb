@@ -20,6 +20,8 @@
 #include "gdbsupport/event-loop.h"
 #include "gdbsupport/gdb_select.h"
 #include "inferior.h"
+#include "ui-style.h"
+#include "gdb_curses.h"
 #include <signal.h>
 
 /* Wrapper for select.  Nothing special needed on POSIX platforms.  */
@@ -37,6 +39,18 @@ int
 gdb_console_fputs (const char *buf, FILE *f)
 {
   return 0;
+}
+
+/* Host-dependent method to get the number of colors supported by the
+   terminal where GDB is run.  Posix platforms simply call 'tgetnum'.  */
+int
+gdb_get_ncolors ()
+{
+  /* ncurses versions prior to 6.1 (and other curses
+     implementations) declare the tgetnum argument to be
+     'char *', so we need the const_cast, since C++ will not
+     implicitly convert.  */
+  return tgetnum (const_cast<char*> ("Co"));
 }
 
 /* See inferior.h.  */

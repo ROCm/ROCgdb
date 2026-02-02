@@ -1854,18 +1854,21 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	{
 	  assert (idx == 1 && (aarch64_get_operand_class (opnds[0].type)
 			       == AARCH64_OPND_CLASS_SYSTEM));
-	  if (opnds[1].present
-	      && !aarch64_sys_ins_reg_has_xt (opnds[0].sysins_op))
+	  if (!(opnds[1].present && aarch64_sys_ins_reg_tlbid_xt (opnds[0].sysins_op)))
 	    {
-	      set_other_error (mismatch_detail, idx, _("extraneous register"));
-	      return false;
-	    }
-	  if (!opnds[1].present
-	      && aarch64_sys_ins_reg_has_xt (opnds[0].sysins_op))
-	    {
-	      set_other_error (mismatch_detail, idx, _("missing register"));
-	      return false;
-	    }
+	      if (opnds[1].present
+		  && !aarch64_sys_ins_reg_has_xt (opnds[0].sysins_op))
+		{
+		  set_other_error (mismatch_detail, idx, _("extraneous register"));
+		  return false;
+		}
+	      if (!opnds[1].present
+		  && aarch64_sys_ins_reg_has_xt (opnds[0].sysins_op))
+		{
+		  set_other_error (mismatch_detail, idx, _("missing register"));
+		  return false;
+		}
+	   }
 	}
       switch (qualifier)
 	{
@@ -5382,95 +5385,133 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
     { "paall",      CPENS (6, C8, C7, 4), 0, AARCH64_NO_FEATURES },
 
 #define TLBI_XS_OP(OP, CODE, FLAGS) \
-    { OP, CODE, FLAGS, AARCH64_NO_FEATURES }, \
-    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS) },
+    { OP, CODE, FLAGS,  AARCH64_FEATURE (TLBID)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, TLBID)},
 
-    TLBI_XS_OP ( "vmalle1",   CPENS (0, C8, C7, 0), 0)
-    TLBI_XS_OP ( "vae1",      CPENS (0, C8, C7, 1), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "aside1",    CPENS (0, C8, C7, 2), F_HASXT )
-    TLBI_XS_OP ( "vaae1",     CPENS (0, C8, C7, 3), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "vmalle1is", CPENS (0, C8, C3, 0), 0)
+    TLBI_XS_OP ( "vmalle1is", CPENS (0, C8, C3, 0), F_TLBID_XT)
+    TLBI_XS_OP ( "vmalls12e1is",CPENS(4,C8, C3, 6), F_TLBID_XT)
+    TLBI_XS_OP ( "alle2is",   CPENS (4, C8, C3, 0), F_TLBID_XT)
+    TLBI_XS_OP ( "alle1is",   CPENS (4, C8, C3, 4), F_TLBID_XT)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURE (D128_TLBID)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, D128_TLBID)},
+
     TLBI_XS_OP ( "vae1is",    CPENS (0, C8, C3, 1), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "aside1is",  CPENS (0, C8, C3, 2), F_HASXT )
     TLBI_XS_OP ( "vaae1is",   CPENS (0, C8, C3, 3), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "ipas2e1is", CPENS (4, C8, C0, 1), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "ipas2le1is",CPENS (4, C8, C0, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vale1is",   CPENS (0, C8, C3, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vaale1is",  CPENS (0, C8, C3, 7), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vae2is",    CPENS (4, C8, C3, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vale2is",   CPENS (4, C8, C3, 5), F_HASXT | F_REG_128)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_NO_FEATURES}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS)},
+
+    TLBI_XS_OP ( "vmalle1",   CPENS (0, C8, C7, 0), 0)
+    TLBI_XS_OP ( "vmalls12e1",CPENS (4, C8, C7, 6), 0)
+    TLBI_XS_OP ( "alle2",     CPENS (4, C8, C7, 0), 0)
+    TLBI_XS_OP ( "alle1",     CPENS (4, C8, C7, 4), 0)
+    TLBI_XS_OP ( "alle3",     CPENS (6, C8, C7, 0), 0)
+    TLBI_XS_OP ( "alle3is",   CPENS (6, C8, C3, 0), 0)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURE (D128)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, D128)},
+
+    TLBI_XS_OP ( "vae1",      CPENS (0, C8, C7, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "aside1",    CPENS (0, C8, C7, 2), F_HASXT)
+    TLBI_XS_OP ( "vaae1",     CPENS (0, C8, C7, 3), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "aside1is",  CPENS (0, C8, C3, 2), F_HASXT)
     TLBI_XS_OP ( "ipas2e1",   CPENS (4, C8, C4, 1), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "ipas2le1",  CPENS (4, C8, C4, 5), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vae2",      CPENS (4, C8, C7, 1), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "vae2is",    CPENS (4, C8, C3, 1), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "vmalls12e1",CPENS (4, C8, C7, 6), 0)
-    TLBI_XS_OP ( "vmalls12e1is",CPENS(4,C8, C3, 6), 0)
     TLBI_XS_OP ( "vae3",      CPENS (6, C8, C7, 1), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vae3is",    CPENS (6, C8, C3, 1), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "alle2",     CPENS (4, C8, C7, 0), 0)
-    TLBI_XS_OP ( "alle2is",   CPENS (4, C8, C3, 0), 0)
-    TLBI_XS_OP ( "alle1",     CPENS (4, C8, C7, 4), 0)
-    TLBI_XS_OP ( "alle1is",   CPENS (4, C8, C3, 4), 0)
-    TLBI_XS_OP ( "alle3",     CPENS (6, C8, C7, 0), 0)
-    TLBI_XS_OP ( "alle3is",   CPENS (6, C8, C3, 0), 0)
-    TLBI_XS_OP ( "vale1is",   CPENS (0, C8, C3, 5), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "vale2is",   CPENS (4, C8, C3, 5), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vale3is",   CPENS (6, C8, C3, 5), F_HASXT | F_REG_128)
-    TLBI_XS_OP ( "vaale1is",  CPENS (0, C8, C3, 7), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vale1",     CPENS (0, C8, C7, 5), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vale2",     CPENS (4, C8, C7, 5), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vale3",     CPENS (6, C8, C7, 5), F_HASXT | F_REG_128)
     TLBI_XS_OP ( "vaale1",    CPENS (0, C8, C7, 7), F_HASXT | F_REG_128)
-
 #undef TLBI_XS_OP
-#define TLBI_XS_OP(OP, CODE, FLAGS) \
-    { OP, CODE, FLAGS, AARCH64_FEATURE (V8_4A) }, \
-    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS) },
 
-    TLBI_XS_OP ( "vmalle1os",    CPENS (0, C8, C1, 0), 0 )
-    TLBI_XS_OP ( "vae1os",       CPENS (0, C8, C1, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "aside1os",     CPENS (0, C8, C1, 2), F_HASXT )
-    TLBI_XS_OP ( "vaae1os",      CPENS (0, C8, C1, 3), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "vale1os",      CPENS (0, C8, C1, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "vaale1os",     CPENS (0, C8, C1, 7), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ipas2e1os",    CPENS (4, C8, C4, 0), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ipas2le1os",   CPENS (4, C8, C4, 4), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "vae2os",       CPENS (4, C8, C1, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "vale2os",      CPENS (4, C8, C1, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "vmalls12e1os", CPENS (4, C8, C1, 6), 0 )
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURES (2, V8_4A, TLBID)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, TLBID)},
+
+    TLBI_XS_OP ( "vmalle1os",    CPENS (0, C8, C1, 0), F_TLBID_XT)
+    TLBI_XS_OP ( "vmalls12e1os", CPENS (4, C8, C1, 6), F_TLBID_XT)
+    TLBI_XS_OP ( "alle2os",      CPENS (4, C8, C1, 0), F_TLBID_XT)
+    TLBI_XS_OP ( "alle1os",      CPENS (4, C8, C1, 4), F_TLBID_XT)
+    TLBI_XS_OP ( "vmallws2e1is", CPENS (4, C8, C2, 2), F_TLBID_XT)
+    TLBI_XS_OP ( "vmallws2e1os", CPENS (4, C8, C5, 2), F_TLBID_XT)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURES (2, V8_4A, D128_TLBID)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, D128_TLBID)},
+
+    TLBI_XS_OP ( "vae1os",       CPENS (0, C8, C1, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vaae1os",      CPENS (0, C8, C1, 3), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vale1os",      CPENS (0, C8, C1, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vaale1os",     CPENS (0, C8, C1, 7), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ipas2e1os",    CPENS (4, C8, C4, 0), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ipas2le1os",   CPENS (4, C8, C4, 4), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vae2os",       CPENS (4, C8, C1, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "vale2os",      CPENS (4, C8, C1, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvae1is",    CPENS (0, C8, C2, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvaae1is",   CPENS (0, C8, C2, 3), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvale1is",   CPENS (0, C8, C2, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvaale1is",  CPENS (0, C8, C2, 7), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvae1os",    CPENS (0, C8, C5, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvaae1os",   CPENS (0, C8, C5, 3), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvale1os",   CPENS (0, C8, C5, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvaale1os",  CPENS (0, C8, C5, 7), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ripas2e1is", CPENS (4, C8, C0, 2), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ripas2le1is",CPENS (4, C8, C0, 6), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ripas2e1os", CPENS (4, C8, C4, 3), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "ripas2le1os",CPENS (4, C8, C4, 7), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvae2is",    CPENS (4, C8, C2, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvale2is",   CPENS (4, C8, C2, 5), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvae2os",    CPENS (4, C8, C5, 1), F_HASXT | F_REG_128)
+    TLBI_XS_OP ( "rvale2os",   CPENS (4, C8, C5, 5), F_HASXT | F_REG_128)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURE (V8_4A)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURE (XS)},
+
+    TLBI_XS_OP ( "alle3os",      CPENS (6, C8, C1, 0), 0)
+    TLBI_XS_OP ( "vmallws2e1",	CPENS (4, C8, C6, 3), 0)
+#undef TLBI_XS_OP
+
+#define TLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS,  AARCH64_FEATURES (2, V8_4A, D128)}, \
+    { OP "nxs", CODE | CPENS (0, C9, 0, 0), FLAGS, AARCH64_FEATURES (2, XS, D128)},
+
+    TLBI_XS_OP ( "aside1os",     CPENS (0, C8, C1, 2), F_HASXT)
     TLBI_XS_OP ( "vae3os",       CPENS (6, C8, C1, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "vale3os",      CPENS (6, C8, C1, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "alle2os",      CPENS (4, C8, C1, 0), 0 )
-    TLBI_XS_OP ( "alle1os",      CPENS (4, C8, C1, 4), 0 )
-    TLBI_XS_OP ( "alle3os",      CPENS (6, C8, C1, 0), 0 )
 
     TLBI_XS_OP ( "rvae1",      CPENS (0, C8, C6, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvaae1",     CPENS (0, C8, C6, 3), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvale1",     CPENS (0, C8, C6, 5), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvaale1",    CPENS (0, C8, C6, 7), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvae1is",    CPENS (0, C8, C2, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvaae1is",   CPENS (0, C8, C2, 3), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvale1is",   CPENS (0, C8, C2, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvaale1is",  CPENS (0, C8, C2, 7), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvae1os",    CPENS (0, C8, C5, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvaae1os",   CPENS (0, C8, C5, 3), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvale1os",   CPENS (0, C8, C5, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvaale1os",  CPENS (0, C8, C5, 7), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ripas2e1is", CPENS (4, C8, C0, 2), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ripas2le1is",CPENS (4, C8, C0, 6), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "ripas2e1",   CPENS (4, C8, C4, 2), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "ripas2le1",  CPENS (4, C8, C4, 6), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ripas2e1os", CPENS (4, C8, C4, 3), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "ripas2le1os",CPENS (4, C8, C4, 7), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvae2",      CPENS (4, C8, C6, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvale2",     CPENS (4, C8, C6, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvae2is",    CPENS (4, C8, C2, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvale2is",   CPENS (4, C8, C2, 5), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvae2os",    CPENS (4, C8, C5, 1), F_HASXT | F_REG_128 )
-    TLBI_XS_OP ( "rvale2os",   CPENS (4, C8, C5, 5), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvae3",      CPENS (6, C8, C6, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvale3",     CPENS (6, C8, C6, 5), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvae3is",    CPENS (6, C8, C2, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvale3is",   CPENS (6, C8, C2, 5), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvae3os",    CPENS (6, C8, C5, 1), F_HASXT | F_REG_128 )
     TLBI_XS_OP ( "rvale3os",   CPENS (6, C8, C5, 5), F_HASXT | F_REG_128 )
-
 #undef TLBI_XS_OP
 
     { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
@@ -5478,37 +5519,46 @@ const aarch64_sys_ins_reg aarch64_sys_regs_tlbi[] =
 
 const aarch64_sys_ins_reg aarch64_sys_regs_plbi[] =
 {
-    #define PLBI_XS_OP(OP, CODE, FLAGS) \
+#define PLBI_XS_OP(OP, CODE, FLAGS) \
+    { OP, CODE, FLAGS, AARCH64_FEATURES (2, TLBID, POE2) }, \
+    { OP "nxs", CODE | CPENS (0, 0, C8, 0), FLAGS, AARCH64_FEATURES (3, TLBID, XS, POE2) },
+
+    PLBI_XS_OP ( "alle1is",	CPENS (4, C10, C3, 4),	F_TLBID_XT)
+    PLBI_XS_OP ( "alle1os",	CPENS (4, C10, C1, 4),	F_TLBID_XT)
+    PLBI_XS_OP ( "alle2is",	CPENS (4, C10, C3, 0),	F_TLBID_XT)
+    PLBI_XS_OP ( "alle2os",	CPENS (4, C10, C1, 0),	F_TLBID_XT)
+    PLBI_XS_OP ( "vmalle1is",	CPENS (0, C10, C3, 0),	F_TLBID_XT)
+    PLBI_XS_OP ( "vmalle1os",	CPENS (0, C10, C1, 0),	F_TLBID_XT)
+
+#undef PLBI_XS_OP
+
+#define PLBI_XS_OP(OP, CODE, FLAGS) \
     { OP, CODE, FLAGS, AARCH64_FEATURE (POE2) }, \
     { OP "nxs", CODE | CPENS (0, 0, C8, 0), FLAGS, AARCH64_FEATURES (2, POE2, XS) },
 
-    PLBI_XS_OP ( "alle1",	CPENS (4, C10, C7, 4), 	0 )
-    PLBI_XS_OP ( "alle1is",	CPENS (4, C10, C3, 4), 	0 )
-    PLBI_XS_OP ( "alle1os",	CPENS (4, C10, C1, 4), 	0 )
-    PLBI_XS_OP ( "alle2",	CPENS (4, C10, C7, 0), 	0 )
-    PLBI_XS_OP ( "alle2is",	CPENS (4, C10, C3, 0), 	0 )
-    PLBI_XS_OP ( "alle2os",	CPENS (4, C10, C1, 0), 	0 )
-    PLBI_XS_OP ( "alle3",	CPENS (6, C10, C7, 0), 	0 )
-    PLBI_XS_OP ( "alle3is",	CPENS (6, C10, C3, 0), 	0 )
-    PLBI_XS_OP ( "alle3os",	CPENS (6, C10, C1, 0), 	0 )
-    PLBI_XS_OP ( "aside1",	CPENS (0, C10, C7, 2), 	F_HASXT )
-    PLBI_XS_OP ( "aside1is",	CPENS (0, C10, C3, 2), 	F_HASXT )
-    PLBI_XS_OP ( "aside1os",	CPENS (0, C10, C1, 2), 	F_HASXT )
-    PLBI_XS_OP ( "permae1",	CPENS (0, C10, C7, 3), 	F_HASXT )
-    PLBI_XS_OP ( "permae1is",	CPENS (0, C10, C3, 3), 	F_HASXT )
-    PLBI_XS_OP ( "permae1os",	CPENS (0, C10, C1, 3), 	F_HASXT )
-    PLBI_XS_OP ( "perme1",	CPENS (0, C10, C7, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme1is",	CPENS (0, C10, C3, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme1os",	CPENS (0, C10, C1, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme2",	CPENS (4, C10, C7, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme2is",	CPENS (4, C10, C3, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme2os",	CPENS (4, C10, C1, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme3",	CPENS (6, C10, C7, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme3is",	CPENS (6, C10, C3, 1), 	F_HASXT )
-    PLBI_XS_OP ( "perme3os",	CPENS (6, C10, C1, 1), 	F_HASXT )
-    PLBI_XS_OP ( "vmalle1",	CPENS (0, C10, C7, 0), 	0 )
-    PLBI_XS_OP ( "vmalle1is",	CPENS (0, C10, C3, 0), 	0 )
-    PLBI_XS_OP ( "vmalle1os",	CPENS (0, C10, C1, 0), 	0 )
+    PLBI_XS_OP ( "alle1",	CPENS (4, C10, C7, 4),	0 )
+    PLBI_XS_OP ( "alle2",	CPENS (4, C10, C7, 0),	0 )
+    PLBI_XS_OP ( "alle3",	CPENS (6, C10, C7, 0),	0 )
+    PLBI_XS_OP ( "alle3is",	CPENS (6, C10, C3, 0),	0 )
+    PLBI_XS_OP ( "alle3os",	CPENS (6, C10, C1, 0),	0 )
+    PLBI_XS_OP ( "aside1",	CPENS (0, C10, C7, 2),	F_HASXT )
+    PLBI_XS_OP ( "aside1is",	CPENS (0, C10, C3, 2),	F_HASXT )
+    PLBI_XS_OP ( "aside1os",	CPENS (0, C10, C1, 2),	F_HASXT )
+    PLBI_XS_OP ( "permae1",	CPENS (0, C10, C7, 3),	F_HASXT )
+    PLBI_XS_OP ( "permae1is",	CPENS (0, C10, C3, 3),	F_HASXT )
+    PLBI_XS_OP ( "permae1os",	CPENS (0, C10, C1, 3),	F_HASXT )
+    PLBI_XS_OP ( "perme1",	CPENS (0, C10, C7, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme1is",	CPENS (0, C10, C3, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme1os",	CPENS (0, C10, C1, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme2",	CPENS (4, C10, C7, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme2is",	CPENS (4, C10, C3, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme2os",	CPENS (4, C10, C1, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme3",	CPENS (6, C10, C7, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme3is",	CPENS (6, C10, C3, 1),	F_HASXT )
+    PLBI_XS_OP ( "perme3os",	CPENS (6, C10, C1, 1),	F_HASXT )
+    PLBI_XS_OP ( "vmalle1",	CPENS (0, C10, C7, 0),	0 )
+
+#undef PLBI_XS_OP
 
     { 0,	CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
@@ -5580,6 +5630,12 @@ bool
 aarch64_sys_ins_reg_has_xt (const aarch64_sys_ins_reg *sys_ins_reg)
 {
   return (sys_ins_reg->flags & F_HASXT) != 0;
+}
+
+bool
+aarch64_sys_ins_reg_tlbid_xt (const aarch64_sys_ins_reg *sys_ins_reg)
+{
+  return (sys_ins_reg->flags & F_TLBID_XT) != 0;
 }
 
 extern bool

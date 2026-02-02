@@ -156,18 +156,8 @@ public:
 
   /* See language.h.  */
 
-  void emitchar (int ch, struct type *chtype,
-		 struct ui_file *stream, int quoter) const override;
-
-  /* See language.h.  */
-
   void printchar (int ch, struct type *chtype,
-		  struct ui_file *stream) const override
-  {
-    gdb_puts ("'", stream);
-    emitchar (ch, chtype, stream, '\'');
-    gdb_puts ("'", stream);
-  }
+		  struct ui_file *stream) const override;
 
   /* See language.h.  */
 

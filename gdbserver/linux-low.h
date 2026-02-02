@@ -245,7 +245,7 @@ public:
 
   void handle_new_gdb_connection () override;
 
-  int handle_monitor_command (char *mon) override;
+  int handle_monitor_command (const char *mon) override;
 
   int core_of_thread (ptid_t ptid) override;
 
@@ -947,7 +947,7 @@ CORE_ADDR linux_get_pc_64bit (struct regcache *regcache);
 int thread_db_init (void);
 void thread_db_detach (struct process_info *);
 void thread_db_mourn (struct process_info *);
-int thread_db_handle_monitor_command (char *);
+int thread_db_handle_monitor_command (const char *);
 int thread_db_get_tls_address (thread_info *thread, CORE_ADDR offset,
 			       CORE_ADDR load_module, CORE_ADDR *address);
 int thread_db_look_up_one_symbol (const char *name, CORE_ADDR *addrp);

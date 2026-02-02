@@ -74,33 +74,6 @@ static value *fortran_prepare_argument (struct expression *exp,
 					int arg_num, bool is_internal_call_p,
 					struct type *func_type, enum noside noside);
 
-/* Return the encoding that should be used for the character type
-   TYPE.  */
-
-const char *
-f_language::get_encoding (struct type *type)
-{
-  const char *encoding;
-
-  switch (type->length ())
-    {
-    case 1:
-      encoding = target_charset (type->arch ());
-      break;
-    case 4:
-      if (type_byte_order (type) == BFD_ENDIAN_BIG)
-	encoding = "UTF-32BE";
-      else
-	encoding = "UTF-32LE";
-      break;
-
-    default:
-      error (_("unrecognized character type"));
-    }
-
-  return encoding;
-}
-
 /* See language.h.  */
 
 struct value *

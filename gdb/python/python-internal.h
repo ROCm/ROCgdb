@@ -107,6 +107,15 @@ typedef unsigned long gdb_py_ulongest;
 
 #endif /* HAVE_LONG_LONG */
 
+#if PY_VERSION_HEX < 0x030a0000
+static inline PyObject *
+Py_NewRef (PyObject *obj)
+{
+  Py_INCREF (obj);
+  return obj;
+}
+#endif
+
 /* A template variable holding the format character (as for
    Py_BuildValue) for a given type.  */
 template<typename T>
@@ -341,10 +350,8 @@ extern PyTypeObject thread_object_type;
 
 extern bool gdbpy_breakpoint_init_breakpoint_type ();
 
-struct gdbpy_breakpoint_object
+struct gdbpy_breakpoint_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The breakpoint number according to gdb.  */
   int number;
 
@@ -384,22 +391,27 @@ struct gdbpy_breakpoint_object
 extern gdbpy_breakpoint_object *bppy_pending_object;
 
 
-struct thread_object
+struct thread_object : public gdbpy_dict_wrapper
 {
-  PyObject_HEAD
-
   /* The thread we represent.  */
   struct thread_info *thread;
 
   /* The Inferior object to which this thread belongs.  */
   PyObject *inf_obj;
-
-  /* Dictionary holding user-added attributes.  This is the __dict__
-     attribute of the object.  */
-  PyObject *dict;
 };
 
-struct inferior_object;
+using thread_map_t
+  = gdb::unordered_map<thread_info *, gdbpy_ref<thread_object>>;
+
+struct inferior_object : public gdbpy_dict_wrapper
+{
+  /* The inferior we represent.  */
+  struct inferior *inferior;
+
+  /* thread_object instances under this inferior.  This owns a
+     reference to each object it contains.  */
+  thread_map_t *threads;
+};
 
 extern struct cmd_list_element *set_python_list;
 extern struct cmd_list_element *show_python_list;
@@ -989,7 +1001,9 @@ gdbpy_ref<> gdb_py_object_from_longest (LONGEST l);
 gdbpy_ref<> gdb_py_object_from_ulongest (ULONGEST l);
 int gdb_py_int_as_long (PyObject *, long *);
 
-PyObject *gdb_py_generic_dict (PyObject *self, void *closure);
+PyObject *gdb_py_generic_dict_getter (PyObject *self, void *closure);
+PyObject *gdb_py_generic_getattro (PyObject *self, PyObject *attr);
+int gdb_py_generic_setattro (PyObject *self, PyObject *attr, PyObject *value);
 
 int gdb_pymodule_addobject (PyObject *mod, const char *name,
 			    PyObject *object);
@@ -1157,6 +1171,9 @@ public:
   using obj_type = typename Storage::obj_type;
   using val_type = typename Storage::val_type;
 
+  static_assert(std::is_base_of<PyObject, obj_type>::value,
+		"obj_type must be a subclass of PyObject");
+
   /* Register Python object OBJ as being "owned" by OWNER.  When OWNER is
      about to be freed, OBJ will be invalidated.  */
   template <typename O>
@@ -1180,7 +1197,7 @@ public:
   obj_type *lookup (O *owner, val_type *val) const
   {
     obj_type *obj = get_storage (owner)->lookup (val);
-    Py_XINCREF (obj);
+    Py_XINCREF (static_cast<PyObject *> (obj));
     return obj;
   }
 
@@ -1318,5 +1335,8 @@ public:
 protected:
   gdb::unordered_map<val_type *, obj_type *> m_objects;
 };
+
+extern int eval_python_command (const char *command, int start_symbol,
+				const char *filename = nullptr);
 
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */

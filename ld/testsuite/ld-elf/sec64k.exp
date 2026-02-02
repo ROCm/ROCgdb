@@ -41,6 +41,11 @@ if {[istarget "ft32-*-*"]
     return
 }
 
+# Test creates too many sections on hppa64.
+if [istarget "hppa*64*-*-*"] {
+    return
+}
+
 # Test >64k sections, with and without -r.  First, create the assembly
 # files.  Have a relocation to another section and one within the local
 # section.

@@ -98,6 +98,7 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
   {
     int i;
     long l;
+    long long ll;
     void *p;
     bfd_vma v;
     struct {
@@ -110,6 +111,7 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	Bad,
 	Int,
 	Long,
+	LongLong,
 	Ptr,
 	Vma,
 	RelAddr
@@ -181,11 +183,19 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	      break;
 
 	    case 'l':
-	      if (*scan == 'd' || *scan == 'u' || *scan == 'x')
-		{
-		  ++scan;
-		  arg_type = Long;
-		}
+	      {
+		bool ll_type = false;
+		if (*scan == 'l')
+		  {
+		    ll_type = true;
+		    ++scan;
+		  }
+		if (*scan == 'd' || *scan == 'u' || *scan == 'x')
+		  {
+		    ++scan;
+		    arg_type = (ll_type ? LongLong : Long);
+		  }
+	      }
 	      break;
 
 	    default:
@@ -210,6 +220,9 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	  break;
 	case Long:
 	  args[arg_no].l = va_arg (ap, long);
+	  break;
+	case LongLong:
+	  args[arg_no].ll = va_arg (ap, long long);
 	  break;
 	case Ptr:
 	  args[arg_no].p = va_arg (ap, void *);
@@ -566,16 +579,28 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 	      ++arg_count;
 	      break;
 
-	    case 'l': /* (Unsigned) long integer, like printf().  */
-	      if (*fmt == 'd' || *fmt == 'u' || *fmt == 'x')
-		{
-		  cfmt = make_cfmt (fmt - 1 - mods, mods + 2);
-		  fprintf (fp, cfmt, args[arg_no].l);
-		  free (cfmt);
-		  ++arg_count;
-		  ++fmt;
-		  break;
-		}
+	    case 'l': /* (Unsigned) (long) long integer, like printf().  */
+	      {
+		bool ll_type = false;
+		if (*fmt == 'l')
+		  {
+		    fmt++;
+		    ll_type = true;
+		  }
+		if (*fmt == 'd' || *fmt == 'u' || *fmt == 'x')
+		  {
+		    unsigned int mods_len = (ll_type ? 2 : 1);
+		    cfmt = make_cfmt (fmt - mods_len - mods, mods + mods_len + 1);
+		    if (ll_type)
+		      fprintf (fp, cfmt, args[arg_no].ll);
+		    else
+		      fprintf (fp, cfmt, args[arg_no].l);
+		    free (cfmt);
+		    ++arg_count;
+		    ++fmt;
+		    break;
+		  }
+	      }
 	      /* Fallthru */
 
 	    default:

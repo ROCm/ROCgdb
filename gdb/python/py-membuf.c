@@ -19,9 +19,8 @@
 
 #include "python-internal.h"
 
-struct membuf_object {
-  PyObject_HEAD
-
+struct membuf_object : public PyObject
+{
   /* Pointer to the raw data, and array of gdb_bytes.  */
   void *buffer;
 

@@ -58,6 +58,7 @@
 #define BFD64
 
 #include "bfd.h"
+#include "elf-attrs.h"
 #include "bucomm.h"
 #include "elfcomm.h"
 #include "demanguse.h"
@@ -14773,18 +14774,6 @@ print_symbol_size (uint64_t vma, int base)
     }
 }
 
-/* The AArch64, ARM and RISC-V architectures define mapping
-   symbols (eg $d, $x, $t) which sometime should be ignored.  */
-
-static bool
-is_mapping_symbol (const char * name)
-{
-  return name[0] == '$'
-    && name [1] != 0
-    /* FIXME: Check that name[1] is lower case ASCII ?  */
-    && name [2] == 0;
-}
-
 /* Print information on a single symbol.  */
 
 static void
@@ -14919,11 +14908,9 @@ print_symbol (Filedata *           filedata,
     warn (_("local symbol %" PRIu64 " found at index >= %s's sh_info value of %u\n"),
 	  symbol_index, printable_section_name (filedata, section), section->sh_info);
 
-  /* Local symbols (in objec files) whose value is larger than their section's
-     size are suspicious especially if that section is mergeable - and hence
-     might change offsets of the contents inside the section.   Note - for
-     some reason we can get mapping symbols that do not relate to their
-     section's contents - so we ignore those type of symbol as well.  */
+  /* Local symbols in ET_REL whose value is larger than their
+     section's size are suspicious if that section is mergeable - and
+     hence might change offsets of the contents inside the section.  */
   if (ELF_ST_BIND (psym->st_info) == STB_LOCAL
       && filedata->file_header.e_type == ET_REL
       && ! is_special
@@ -14931,8 +14918,7 @@ print_symbol (Filedata *           filedata,
       && psym->st_shndx < filedata->file_header.e_shnum
       && filedata->section_headers != NULL
       && (filedata->section_headers[psym->st_shndx].sh_flags & SHF_MERGE)
-      && psym->st_value > filedata->section_headers[psym->st_shndx].sh_size
-      && ! is_mapping_symbol (strtab + psym->st_name))
+      && psym->st_value > filedata->section_headers[psym->st_shndx].sh_size)
     warn (_("local symbol %s has a value (%#" PRIx64 ") which is larger than mergeable section %s's size (%#" PRIx64 ")\n"),
 	  strtab + psym->st_name,
 	  psym->st_value,
@@ -20002,8 +19988,351 @@ process_attributes (Filedata * filedata,
 	}
     }
 
-free_data:
+ free_data:
   free (contents);
+
+  return res;
+}
+
+typedef obj_attr_tag_info_t oav2_known_tag_t;
+
+typedef struct
+{
+  const char *subsec_name;
+  const oav2_known_tag_t *known_tags;
+  size_t len;
+} oav2_known_subsection_t;
+
+static const oav2_known_tag_t known_tags_aeabi_feature_and_bits[] =
+{
+  {"Tag_Feature_BTI", Tag_Feature_BTI},
+  {"Tag_Feature_PAC", Tag_Feature_PAC},
+  {"Tag_Feature_GCS", Tag_Feature_GCS},
+};
+
+static const oav2_known_tag_t known_tags_aeabi_pauthabi[] =
+{
+  {"Tag_PAuth_Platform", Tag_PAuth_Platform},
+  {"Tag_PAuth_Schema",   Tag_PAuth_Schema},
+};
+static const oav2_known_subsection_t known_subsections[] =
+{
+  {
+    .subsec_name = "aeabi_feature_and_bits",
+    .known_tags = known_tags_aeabi_feature_and_bits,
+    .len = ARRAY_SIZE (known_tags_aeabi_feature_and_bits),
+  },
+  {
+    .subsec_name = "aeabi_pauthabi",
+    .known_tags = known_tags_aeabi_pauthabi,
+    .len = ARRAY_SIZE (known_tags_aeabi_pauthabi),
+  },
+};
+
+static const oav2_known_subsection_t *
+oav2_identify_subsection (const char *name)
+{
+  for (unsigned i = 0; i < ARRAY_SIZE (known_subsections); ++i)
+    if (strcmp (name, known_subsections[i].subsec_name) == 0)
+      return &known_subsections[i];
+  return NULL;
+}
+
+static const oav2_known_tag_t *
+oav2_identify_tag (const oav2_known_subsection_t *subsec, obj_attr_tag_t tag)
+{
+  for (unsigned i = 0; i < subsec->len; ++i)
+    {
+      const oav2_known_tag_t *known_tag = &subsec->known_tags[i];
+      if (known_tag->value == tag)
+	return known_tag;
+    }
+  return NULL;
+}
+
+static const unsigned char *
+oav2_display_attr_value (const unsigned char *cursor,
+			 const unsigned char *const end,
+			 obj_attr_encoding_v2_t value_encoding)
+{
+  switch (value_encoding)
+    {
+    case OA_ENC_NTBS:
+      cursor = display_tag_value (-1, cursor, end);
+      break;
+    case OA_ENC_ULEB128:
+      cursor = display_tag_value (0, cursor, end);
+      break;
+    case OA_ENC_UNSET:
+      abort ();
+    }
+  return cursor;
+}
+
+/* Print out the raw attribute value.  It should be feasible to support custom
+   formatters here for known tags that explain the interpretation of specific
+   values.  */
+static const unsigned char *
+display_aarch64_attribute (const unsigned char *cursor,
+			   const unsigned char *const end,
+			   const oav2_known_tag_t *tag_info,
+			   obj_attr_encoding_v2_t value_encoding)
+{
+  printf ("    %s:	", tag_info->name);
+  return oav2_display_attr_value (cursor, end, value_encoding);
+}
+
+typedef const unsigned char *(*display_arch_attr_t)
+  (const unsigned char *,
+   const unsigned char *const,
+   const oav2_known_tag_t *,
+   obj_attr_encoding_v2_t);
+
+static const unsigned char *
+display_attr_v2 (const unsigned char *cursor,
+		 const unsigned char *const end,
+		 const oav2_known_subsection_t *subsec_info,
+		 obj_attr_encoding_v2_t value_encoding,
+		 display_arch_attr_t display_arch_attr)
+{
+  obj_attr_tag_t tag;
+  READ_ULEB (tag, cursor, end);
+
+  const oav2_known_tag_t *tag_info = NULL;
+  if (subsec_info != NULL)
+    tag_info = oav2_identify_tag (subsec_info, tag);
+
+  if (tag_info != NULL)
+    return display_arch_attr (cursor, end, tag_info, value_encoding);
+
+  printf ("    Tag_unknown_%"PRIu64":	", tag);
+  return oav2_display_attr_value (cursor, end, value_encoding);
+}
+
+#define READ_SUBSEC_PROPERTY(var, read_len, start, end)				\
+do										\
+  {										\
+    if (start >= end)								\
+      error									\
+	(_("end of data encountered whilst reading property of subsection\n"));	\
+    var = byte_get (start, read_len);						\
+    start += read_len;								\
+  }										\
+while (0)
+
+typedef struct {
+  bool err;
+  uint64_t read;
+} BufferReadOp_t;
+
+static BufferReadOp_t
+elf_parse_attrs_subsection_v2 (const unsigned char *cursor,
+			       const uint64_t max_read,
+			       const char *public_name,
+			       display_arch_attr_t display_arch_attr)
+{
+  BufferReadOp_t op = { .err = false, .read = 0 };
+
+  const uint32_t F_SUBSECTION_LEN = sizeof (uint32_t);
+  const uint32_t F_SUBSECTION_COMPREHENSION = sizeof(uint8_t);
+  const uint32_t F_SUBSECTION_ENCODING = sizeof(uint8_t);
+  /* The minimum subsection length is 7: 4 bytes for the length itself, and 1
+     byte for an empty NUL-terminated string, 1 byte for the comprehension,
+     1 byte for the encoding, and no vendor-data.  */
+  const uint32_t F_MIN_SUBSECTION_DATA_LEN
+    = F_SUBSECTION_LEN + 1 /* for '\0' */
+      + F_SUBSECTION_COMPREHENSION + F_SUBSECTION_ENCODING;
+
+  /* Handle cases where the attributes data is not strictly valid (e.g. due to
+     fuzzing).  */
+  if (max_read < F_MIN_SUBSECTION_DATA_LEN)
+    {
+      error (_("Object attributes section ends prematurely\n"));
+      return op;
+    }
+
+  unsigned int subsection_len = byte_get (cursor, F_SUBSECTION_LEN);
+  cursor += F_SUBSECTION_LEN;
+  op.read += F_SUBSECTION_LEN;
+  if (subsection_len > max_read)
+    {
+      error (_("Bad subsection length: too big (%u > max=%"PRIu64")\n"),
+	     subsection_len, max_read);
+      /* Error, but still try to display the content until meeting a more
+	 serious error.  */
+      subsection_len = max_read;
+      op.err = true;
+    }
+  else if (subsection_len < F_MIN_SUBSECTION_DATA_LEN)
+    {
+      error (_("Bad subsection length: too small (%u < min=%"PRIu32")\n"),
+	     subsection_len, F_MIN_SUBSECTION_DATA_LEN);
+      /* Error, but still try to display the content until meeting a more
+	 serious error.  */
+      subsection_len = max_read;
+      op.err = true;
+    }
+
+  const size_t MAX_SUBSECTION_NAME_LEN
+    = subsection_len - F_SUBSECTION_LEN
+      - F_SUBSECTION_COMPREHENSION - F_SUBSECTION_ENCODING;
+  size_t subsection_name_len
+    = strnlen ((char *) cursor, MAX_SUBSECTION_NAME_LEN);
+  if (subsection_name_len >= MAX_SUBSECTION_NAME_LEN)
+    {
+      error (_("Subsection name seems corrupted (missing '\\0')\n"));
+      op.err = true;
+      return op;
+    }
+  /* Note: if the length of the subsection name is 0 (i.e. the string is '\0'),
+     it is still considered a valid name for dumping, and an empty string will
+     be displayed.
+     However, in practice, such a name would be unexploitable by the linker
+     during the merge, thus the subsection would be dropped.  */
+  subsection_name_len += 1;
+
+  /* Note: at this stage,
+     1. the length of the subsection name is validated, as the presence of '\0'
+	at the end of the string, so no risk of buffer overrun.
+     2. the data for comprehension and encoding can also safely be read.  */
+  const unsigned char *const end = cursor + subsection_len - F_SUBSECTION_LEN;
+  while (cursor < end)
+    {
+      const char *subsec_name = (const char *) cursor;
+      printf (_(" - Name:	  %s\n"), subsec_name);
+      /* The code below needs to be kept in sync with the code of
+	 bfd_elf_obj_attr_subsection_v2_scope() in bfd/elf-attrs.c.  */
+      size_t public_name_len = strlen (public_name);
+      bool public_subsection
+	= ((strncmp (subsec_name, public_name, public_name_len) == 0
+	    && subsec_name[public_name_len] == '_')
+	   || (strncmp (subsec_name, "gnu_", 4) == 0
+	       && strncmp (subsec_name + 4, "testing_", 8) != 0));
+      cursor += subsection_name_len;
+      op.read += subsection_name_len;
+
+      printf (_("   Scope:	  %s\n"),
+	      public_subsection ? "public" : "private");
+      printf (_("   Length:	  %u\n"), subsection_len);
+
+      uint8_t optional;
+      READ_SUBSEC_PROPERTY (optional, sizeof (optional), cursor, end);
+      op.read += sizeof (optional);
+
+      if (optional > 1)
+	{
+	  error (_("Optional value seems corrupted, got %d but only"
+		   " 0 (false) or 1 (true) are valid values\n"),
+		 optional);
+	  op.err = true;
+	  op.read = subsection_len;
+	  return op;
+	}
+
+      printf (_("   Comprehension: %s\n"), optional ? "optional" : "required");
+
+      uint8_t value_encoding_raw;
+      READ_SUBSEC_PROPERTY (value_encoding_raw, sizeof (value_encoding_raw),
+			    cursor, end);
+      op.read += sizeof (value_encoding_raw);
+
+      enum obj_attr_encoding_v2 value_encoding
+	= obj_attr_encoding_v2_from_u8 (value_encoding_raw);
+
+      if (value_encoding > OA_ENC_MAX)
+	{
+	  error (_("Attribute type seems corrupted, got %d but only 0 (ULEB128)"
+		   " or 1 (NTBS) are valid types\n"),
+		 value_encoding_raw);
+	  op.err = true;
+	  op.read = subsection_len;
+	  return op;
+	}
+
+      switch (value_encoding)
+	{
+	case OA_ENC_ULEB128:
+	  printf (_("   Encoding:	  ULEB128\n"));
+	  break;
+	case OA_ENC_NTBS:
+	  printf (_("   Encoding:	  NTBS\n"));
+	  break;
+	default:
+	  abort ();
+	}
+
+      const oav2_known_subsection_t *subsec_info
+	= oav2_identify_subsection (subsec_name);
+      printf (_("   Values:\n"));
+      while (cursor < end)
+	{
+	  const unsigned char *cursor_new
+	    = display_attr_v2 (cursor, end, subsec_info, value_encoding,
+			       display_arch_attr);
+	  op.read += (cursor_new - cursor);
+	  cursor = cursor_new;
+	}
+      putchar ('\n');
+    }
+
+  if (cursor != end)
+    abort ();
+
+  return op;
+}
+
+static bool
+process_attributes_v2 (Filedata *filedata,
+		       const char *public_name,
+		       uint32_t section_type,
+		       display_arch_attr_t display_arch_attr)
+{
+  /* Find the section header so that we get the size.  */
+  Elf_Internal_Shdr *sec_hdr = find_section_by_type (filedata, section_type);
+  if (sec_hdr == NULL)
+    /* No section, exit without error.  */
+    return true;
+
+  unsigned char *const data = (unsigned char *)
+    get_data (NULL, filedata, sec_hdr->sh_offset, 1, sec_hdr->sh_size,
+	      _("object attributes"));
+  if (data == NULL)
+    return false;
+
+  unsigned char *cursor = data;
+  bool res = true;
+
+  /* The first character is the version of the attributes.
+     Currently only version 1, (aka 'A') is recognised here.  */
+  if (*cursor != 'A')
+    {
+      error (_("Unknown attributes version '%c'(0x%02x) - expecting 'A'\n"),
+	     ISPRINT (*cursor) ? *cursor : '?', *cursor);
+      res = false;
+      goto free_data;
+    }
+
+  ++cursor;
+
+  printf (_("Subsections:\n"));
+  BufferReadOp_t op;
+  for (uint64_t remaining = sec_hdr->sh_size - 1; // already read 'A'
+       remaining > 1;
+       remaining -= op.read, cursor += op.read)
+    {
+      op = elf_parse_attrs_subsection_v2 (cursor, remaining, public_name,
+					  display_arch_attr);
+      if (op.err)
+	{
+	  error (_("Cannot parse subsection at offset %"PRIx64"\n"),
+	    sec_hdr->sh_size - remaining);
+	  res = false;
+	  goto free_data;
+	}
+    }
+
+ free_data:
+  free (data);
 
   return res;
 }
@@ -21271,12 +21600,12 @@ process_got_section_contents (Filedata * filedata)
 	  }
 
 	entries = section->sh_size / entsz;
-	if (entries == 1)
-	  printf (_("\nGlobal Offset Table '%s' contains 1 entry:\n"),
-		  name);
-	else
-	  printf (_("\nGlobal Offset Table '%s' contains %" PRIu64
-		    " entries:\n"), name, entries);
+	printf (ngettext ("\nGlobal Offset Table '%s' contains %" PRIu64
+			  " entry:\n",
+			  "\nGlobal Offset Table '%s' contains %" PRIu64
+			  " entries:\n",
+			  entries),
+		name, entries);
 
 	uint64_t g;
 
@@ -23160,7 +23489,9 @@ get_symbol_for_build_attribute (Filedata *filedata,
 
 	/* The AArch64, ARM and RISC-V architectures define mapping symbols
 	   (eg $d, $x, $t) which we want to ignore.  */
-	if (is_mapping_symbol (ba_cache.strtab + sym->st_name))
+	if (ba_cache.strtab[sym->st_name] == '$'
+	    && ba_cache.strtab[sym->st_name + 1] != 0
+	    && ba_cache.strtab[sym->st_name + 2] == 0)
 	  continue;
 
 	if (is_open_attr)
@@ -24374,6 +24705,10 @@ process_arch_specific (Filedata * filedata)
       return process_attributes (filedata, "aeabi", SHT_ARM_ATTRIBUTES,
 				 display_arm_attribute,
 				 display_generic_attribute);
+
+    case EM_AARCH64:
+      return process_attributes_v2 (filedata, "aeabi", SHT_AARCH64_ATTRIBUTES,
+				    display_aarch64_attribute);
 
     case EM_MIPS:
     case EM_MIPS_RS3_LE:

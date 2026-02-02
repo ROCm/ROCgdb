@@ -1,0 +1,137 @@
+# Copyright 2025 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Friendlier regexp facility.
+
+# Map from quotemeta names to regular expressions.  Internal to this
+# module.
+array set _quotemeta {}
+
+# This is a friendlier regexp facility.  It takes an input "quotemeta"
+# string and returns a regular expression.  The intent is to use
+# quotemeta expressions wherever a complicated regexp might otherwise
+# be needed.
+#
+# Any ordinary text in a quotemeta expression simply matches itself.
+# Such text is properly regexp-quoted in the return value.  So, the
+# quotemeta expression "xyz." matches exactly the text "xyz." -- the
+# "." here is just a "."  and not a special regexp character, and the
+# resulting regular expression will reflect this.
+#
+# Special matches are introduced by the "@" character.  There are
+# various forms of this:
+#
+# 1. "@NAME", where NAME was previously registered by
+#    define_quotemeta.  This simply expands to whatever regexp was
+#    provided at registration time.  For example, the predefined @HEX
+#    matches a hex constant starting with 0x.
+#
+# 2. "@...".  This expands to ".*" and is a just a handy catch-all.
+#
+# 3. "@@".  This matches a single "@".
+#
+# 4. "@/xyz/".  This matches the regular expression "xyz".  Note that
+#    in this case, "xyz" may not contain a "/".
+#
+# 5. "@{...}", "@{{...}}", etc.  This is "raw string" style, where any
+#    number of leading braces can be used, and then the substitution
+#    must end with the corresponding number of closing braces.  The
+#    contents are then recognized as in cases 1..4.  For example,
+#    @{NAME} and @NAME are the same.  The {} notation is handy when
+#    you want to match a "/" in a regexp, and {{..}} is handy if you
+#    want to match a "}" in a regexp.  @{...} is also useful when you
+#    want to make the boundary between a match and non-whitespace text
+#    more clear, like "@HEXname" versus "@{HEX}name".
+#
+# Finally, a space in a quotemeta string always matches any amount of
+# whitespace (at least one).  So, "@HEX hi" will match "0x23 hi" but
+# also "0x23   hi".  This is handy when dissecting gdb table output.
+proc quotemeta {str} {
+    set result ""
+
+    # Perform the quotemeta substitutions.  This is done in a somewhat
+    # odd way so that "@" can be supported inside a regular
+    # expression.  I.e., "@/...@.../" is valid.  This lets users avoid
+    # excess quoting.
+    while true {
+	regexp -- "^(\[^@\]*)(@(.*))?$" $str ignore prefix full_at at_text
+	append result [string_to_regexp $prefix]
+	if {$full_at == ""} {
+	    # No more substitutions, we're done.
+	    break
+	}
+
+	if {[regexp -- "^\{+" $at_text braces]} {
+	    set closer [string repeat "\}" [string length $braces]]
+	    # We want a non-greedy match here in case the input looks
+	    # like @{X}...stuff...@{Y}.
+	    if {![regexp -- "^${braces}(.*?)${closer}(.*)$" $at_text ignore \
+		      at_text remainder]} {
+		error "invalid quotemeta with @$braces..."
+	    }
+	} else {
+	    # Match the usual forms.
+	    if {![regexp -- "^(\\.\\.\\.|\[A-Z\]\[A-Z_\]*|@|/\[^/\]*/)(.*)$" \
+		      $at_text ignore at_text remainder]} {
+		error "invalid quotemeta expression"
+	    }
+	}
+
+	# Now AT_TEXT is the quotemeta substitution.
+	if {$at_text == "..."} {
+	    append result ".*"
+	} elseif {$at_text == "@"} {
+	    append result "@"
+	} elseif {[regexp -- "^/(.*)/$" $at_text ignore rx]} {
+	    # Note that here we don't use [^/] in the regexp, because
+	    # we want to support @{/blah/blah/}, where the regexp has
+	    # an embedded "/".
+	    append result $rx
+	} else {
+	    append result $::_quotemeta($at_text)
+	}
+
+	set str $remainder
+    }
+
+    # Now replace any whitespace with a regular expression that will
+    # match any amount of whitespace.  This is done after constructing
+    # the regular expression so we don't regexp-quote the \s+.
+    return [regsub -all -- "\\s+" $result "\\\\s+"]
+}
+
+# Define a new quotemeta substitution.
+#
+# NAME is the name that is used in the quotemeta string.  While the
+# implementation doesn't really care, for now we force this to be an
+# upper-case identifier, that is, starts with a capital letter and
+# only contains capital letters and underscores.
+#
+# RX is the regular expression that is used to implement the matching
+# for this name.
+proc define_quotemeta {name rx} {
+    if {![regexp -- "^\[A-Z\]\[A-Z_\]*$" $name]} {
+	error "bad quotemeta name"
+    }
+
+    set ::_quotemeta($name) $rx
+}
+
+# Some pre-defined quotemeta operators, available everywhere.
+
+# Match a hex number.
+define_quotemeta HEX $hex
+# Match a decimal number.
+define_quotemeta DECIMAL $decimal

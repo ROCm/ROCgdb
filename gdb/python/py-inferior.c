@@ -32,25 +32,6 @@
 #include "progspace-and-thread.h"
 #include "gdbsupport/unordered_map.h"
 
-using thread_map_t
-  = gdb::unordered_map<thread_info *, gdbpy_ref<thread_object>>;
-
-struct inferior_object
-{
-  PyObject_HEAD
-
-  /* The inferior we represent.  */
-  struct inferior *inferior;
-
-  /* thread_object instances under this inferior.  This owns a
-     reference to each object it contains.  */
-  thread_map_t *threads;
-
-  /* Dictionary holding user-added attributes.
-     This is the __dict__ attribute of the object.  */
-  PyObject *dict;
-};
-
 extern PyTypeObject inferior_object_type;
 
 /* Deleter to clean up when an inferior is removed.  */
@@ -1061,8 +1042,8 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_inferior);
 
 static gdb_PyGetSetDef inferior_object_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict, nullptr,
-    "The __dict__ for this inferior.", &inferior_object_type },
+  { "__dict__", gdb_py_generic_dict_getter, nullptr,
+    "The __dict__ for this inferior.", nullptr },
   { "arguments", infpy_get_args, infpy_set_args,
     "Arguments to this program.", nullptr },
   { "num", infpy_get_num, NULL, "ID of inferior, as assigned by GDB.", NULL },
@@ -1144,8 +1125,8 @@ PyTypeObject inferior_object_type =
   0,				  /* tp_hash  */
   0,				  /* tp_call */
   0,				  /* tp_str */
-  0,				  /* tp_getattro */
-  0,				  /* tp_setattro */
+  gdb_py_generic_getattro,	  /* tp_getattro */
+  gdb_py_generic_setattro,	  /* tp_setattro */
   0,				  /* tp_as_buffer */
   Py_TPFLAGS_DEFAULT,		  /* tp_flags */
   "GDB inferior object",	  /* tp_doc */
@@ -1162,7 +1143,7 @@ PyTypeObject inferior_object_type =
   0,				  /* tp_dict */
   0,				  /* tp_descr_get */
   0,				  /* tp_descr_set */
-  offsetof (inferior_object, dict), /* tp_dictoffset */
+  0,				  /* tp_dictoffset */
   0,				  /* tp_init */
   0				  /* tp_alloc */
 };

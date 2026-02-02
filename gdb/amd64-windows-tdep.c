@@ -1271,14 +1271,6 @@ amd64_windows_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
   return destination;
 }
 
-/* Implement the "auto_wide_charset" gdbarch method.  */
-
-static const char *
-amd64_windows_auto_wide_charset (void)
-{
-  return "UTF-16";
-}
-
 /* Common parts for gdbarch initialization for Windows and Cygwin on AMD64.  */
 
 static void
@@ -1320,8 +1312,6 @@ amd64_windows_init_abi_common (gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_xfer_shared_libraries
     (gdbarch, windows_core_xfer_shared_libraries);
   set_gdbarch_core_pid_to_str (gdbarch, windows_core_pid_to_str);
-
-  set_gdbarch_auto_wide_charset (gdbarch, amd64_windows_auto_wide_charset);
 }
 
 /* gdbarch initialization for Windows on AMD64.  */
@@ -1331,9 +1321,6 @@ amd64_windows_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   amd64_windows_init_abi_common (info, gdbarch);
   windows_init_abi (info, gdbarch);
-
-  /* On Windows, "long"s are only 32bit.  */
-  set_gdbarch_long_bit (gdbarch, 32);
 }
 
 /* Sigwrapper unwinder instruction patterns for AMD64.  */

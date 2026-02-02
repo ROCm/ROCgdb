@@ -161,9 +161,6 @@ extern struct block_symbol
 			   const struct block *block,
 			   const domain_search_flags domain);
 
-struct type *cp_lookup_transparent_type (const char *name,
-					 domain_search_flags flags);
-
 /* See description in cp-namespace.c.  */
 
 struct type *cp_find_type_baseclass_by_name (struct type *parent_type,

@@ -66,10 +66,8 @@ show_pyuw_debug (struct ui_file *file, int from_tty,
       }							     \
   } while (0)
 
-struct pending_frame_object
+struct pending_frame_object : public PyObject
 {
-  PyObject_HEAD
-
   /* Frame we are unwinding.  */
   frame_info_ptr frame_info;
 
@@ -94,10 +92,8 @@ struct saved_reg
 /* The data we keep for the PyUnwindInfo: pending_frame, saved registers
    and frame ID.  */
 
-struct unwind_info_object
+struct unwind_info_object : public PyObject
 {
-  PyObject_HEAD
-
   /* gdb.PendingFrame for the frame we are unwinding.  */
   PyObject *pending_frame;
 

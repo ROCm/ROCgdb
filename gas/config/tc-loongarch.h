@@ -149,7 +149,7 @@ struct reloc_info
 #define md_finish loongarch_md_finish
 extern void loongarch_md_finish (void);
 
-/* The target supports Object Attributes.  */
-#define TC_OBJ_ATTR 1
+/* The target supports Object Attributes v1.  */
+#define TC_OBJ_ATTR_v1 1
 
 #endif

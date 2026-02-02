@@ -5040,17 +5040,36 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   elf_aarch64_tdata (output_bfd)->no_enum_size_warning = no_enum_warn;
   elf_aarch64_tdata (output_bfd)->no_wchar_size_warning = no_wchar_warn;
 
+  /* The global list of object attributes used to save requested features from
+     the command-line options.  */
+  obj_attr_subsection_v2_t *attrs_subsection
+    = bfd_elf_obj_attr_subsection_v2_init (xstrdup ("aeabi_feature_and_bits"),
+					    OA_SUBSEC_PUBLIC, true,
+					    OA_ENC_ULEB128);
+
   uint32_t gnu_property_aarch64_feature_1_and = 0;
   aarch64_feature_marking_report gcs_report;
   aarch64_feature_marking_report gcs_report_dynamic;
 
   if (sw_protections->plt_type & PLT_BTI)
-    gnu_property_aarch64_feature_1_and |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    {
+      gnu_property_aarch64_feature_1_and |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+      _bfd_aarch64_oav2_record (attrs_subsection, Tag_Feature_BTI, true);
+    }
+
+  /* Note: Contrarilly to PLT_BTI, (sw_protections->plt_type & PLT_PAC) == true
+     does not mean that Tag_Feature_PAC should also be set to true.  The PAC
+     object attribute is only there to mirror the existing GNU properties.
+     Adding a property for PAC was in retrospect a mistake as it does not carry
+     valuable information.  The only use it does have is informational: if the
+     property is set on the output ELF object, then someone went to the trouble
+     of enabling it on all the input objects.  */
 
   switch (sw_protections->gcs_type)
     {
     case GCS_ALWAYS:
       gnu_property_aarch64_feature_1_and |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      _bfd_aarch64_oav2_record (attrs_subsection, Tag_Feature_GCS, true);
 
       /* The default diagnostic level with '-z gcs=always' is 'warning'.  */
       if (sw_protections->gcs_report == MARKING_UNSET)
@@ -5067,6 +5086,7 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
 
     case GCS_NEVER:
       gnu_property_aarch64_feature_1_and &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+      _bfd_aarch64_oav2_record (attrs_subsection, Tag_Feature_GCS, false);
 
       /* Markings are ignored, so no diagnostic messages can be emitted.  */
       gcs_report = MARKING_NONE;
@@ -5101,6 +5121,10 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
       /* Unknown GCS type.  */
       abort ();
     }
+
+  if (attrs_subsection->size > 0)
+    LINKED_LIST_APPEND (obj_attr_subsection_v2_t)
+      (&elf_obj_attr_subsections (output_bfd), attrs_subsection);
 
   elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
     = gnu_property_aarch64_feature_1_and;
@@ -10462,7 +10486,8 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
   return true;
 }
 
-/* Check if BTI enabled PLTs are needed.  Returns the type needed.  */
+/* Check if BTI-enabled (and/or PAC-enabled) PLTs are needed.
+   Returns the type needed.  */
 static aarch64_plt_type
 get_plt_type (bfd *abfd)
 {
@@ -10582,6 +10607,42 @@ elfNN_aarch64_backend_symbol_processing (bfd *abfd, asymbol *sym)
     sym->flags |= BSF_KEEP;
 }
 
+/* Implement elf_backend_setup_object_attributes for AArch64.  */
+static bfd *
+elfNN_aarch64_link_setup_object_attributes (struct bfd_link_info *info)
+{
+  bfd *pbfd = _bfd_aarch64_elf_link_setup_object_attributes (info);
+
+  struct elf_aarch64_obj_tdata *tdata = elf_aarch64_tdata (info->output_bfd);
+
+  /* When BTI is forced on the command line, information flows from plt_type to
+     the frozen object attributes (a.k.a FROZEN), so plt_type has already been
+     set and FROZEN doesn't have any effect on plt_type.
+     Whereas if BTI is inferred from the input bfds, information flows from
+     output object attributes to plt_type.  If the property GNU_PROPERTY_AARCH64
+     _FEATURE_1_BTI has been set on all the input bfds, then BTI is set on the
+     output bfd and plt_type is updated accordingly.
+
+     Important note: this is not true for GNU_PROPERTY_AARCH64_FEATURE_1_PAC.
+     See more explanation in bfd_elfNN_aarch64_set_options.  */
+  const obj_attr_subsection_v2_t *aeabi_feature_and_bits_subsec
+    = bfd_obj_attr_subsection_v2_find_by_name
+      (elf_obj_attr_subsections (info->output_bfd).first,
+       "aeabi_feature_and_bits", true);
+  if (aeabi_feature_and_bits_subsec != NULL)
+    {
+      const obj_attr_v2_t *attr_bti
+	= bfd_obj_attr_v2_find_by_tag (aeabi_feature_and_bits_subsec,
+					Tag_Feature_BTI, true);
+      if (attr_bti && attr_bti->val.uint == 1)
+	tdata->sw_protections.plt_type |= PLT_BTI;
+    }
+
+  setup_plt_values (info, tdata->sw_protections.plt_type);
+
+  return pbfd;
+}
+
 /* Implement elf_backend_setup_gnu_properties for AArch64.  It serves as a
    wrapper function for _bfd_aarch64_elf_link_setup_gnu_properties to account
    for the effect of GNU properties of the output_bfd.  */
@@ -10597,7 +10658,7 @@ elfNN_aarch64_link_setup_gnu_properties (struct bfd_link_info *info)
      outprop to plt_type.  If the property GNU_PROPERTY_AARCH64_FEATURE_1_BTI
      has been set on all the input bfds, then BTI is set on the output bfd and
      plt_type is updated accordingly.  */
-  struct elf_aarch64_obj_tdata * tdata = elf_aarch64_tdata (info->output_bfd);
+  struct elf_aarch64_obj_tdata *tdata = elf_aarch64_tdata (info->output_bfd);
   uint32_t outprop = tdata->gnu_property_aarch64_feature_1_and;
   if (outprop & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
     tdata->sw_protections.plt_type |= PLT_BTI;
@@ -10799,8 +10860,23 @@ static const struct elf_size_info elfNN_aarch64_size_info =
 #define elf_backend_symbol_processing		\
   elfNN_aarch64_backend_symbol_processing
 
+#define elf_backend_setup_object_attributes	\
+  elfNN_aarch64_link_setup_object_attributes
+
 #define elf_backend_setup_gnu_properties	\
   elfNN_aarch64_link_setup_gnu_properties
+
+#define elf_backend_translate_gnu_props_to_obj_attrs \
+  _bfd_aarch64_translate_gnu_props_to_obj_attrs
+
+#define elf_backend_translate_obj_attrs_to_gnu_props \
+  _bfd_aarch64_translate_obj_attrs_to_gnu_props
+
+#define elf_backend_obj_attr_v2_default_value	\
+  _bfd_aarch64_oav2_default_value
+
+#define elf_backend_obj_attr_v2_merge	\
+  _bfd_aarch64_oav2_attr_merge
 
 #define elf_backend_merge_gnu_properties	\
   elfNN_aarch64_merge_gnu_properties
@@ -10827,7 +10903,31 @@ static const struct elf_size_info elfNN_aarch64_size_info =
 #define elf_backend_extern_protected_data 0
 #define elf_backend_hash_symbol elf_aarch64_hash_symbol
 
+/* In OAv2, the presence of a vendor prefix means that the contents (syntax) can
+   be fully parsed, even if the interpretation of each tag is unknown.*/
+#undef	elf_backend_obj_attrs_vendor
+#define elf_backend_obj_attrs_vendor		"aeabi"
 #undef	elf_backend_obj_attrs_section
 #define elf_backend_obj_attrs_section		SEC_AARCH64_ATTRIBUTES
+/* In OAv2, the type of an attribute is specified by the subsection that
+   contains it.  */
+#define elf_backend_obj_attrs_arg_type		NULL
+#undef	elf_backend_obj_attrs_section_type
+#define elf_backend_obj_attrs_section_type	SHT_AARCH64_ATTRIBUTES
+#undef	elf_backend_default_obj_attr_version
+#define elf_backend_default_obj_attr_version	OBJ_ATTR_V2
+#undef	elf_backend_obj_attrs_version_dec
+#define elf_backend_obj_attrs_version_dec \
+  _bfd_aarch64_obj_attrs_version_dec
+#undef	elf_backend_obj_attrs_version_enc
+#define elf_backend_obj_attrs_version_enc \
+  _bfd_aarch64_obj_attrs_version_enc
+/* Object attributes v2 specific values.  */
+#undef	elf_backend_obj_attr_v2_known_subsections
+#define elf_backend_obj_attr_v2_known_subsections \
+  aarch64_obj_attr_v2_known_subsections
+#undef	elf_backend_obj_attr_v2_known_subsections_size
+#define elf_backend_obj_attr_v2_known_subsections_size \
+  ARRAY_SIZE(aarch64_obj_attr_v2_known_subsections)
 
 #include "elfNN-target.h"

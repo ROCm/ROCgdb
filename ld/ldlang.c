@@ -846,7 +846,7 @@ struct prefixtree
 
 /* We always have a root node in the prefix tree.  It corresponds to the
    empty prefix.  E.g. a glob like "*" would sit in this root.  */
-static struct prefixtree the_root, *ptroot = &the_root;
+static struct prefixtree ptroot;
 
 /* Given a prefix tree in *TREE, corresponding to prefix P, find or
    INSERT the tree node corresponding to prefix P+C.  */
@@ -897,7 +897,7 @@ insert_prefix_tree (lang_wild_statement_type *stmt)
     {
       /* If we have no section_list (no wildcards in the wild STMT),
 	 then every section name will match, so add this to the root.  */
-      pt_add_stmt (ptroot, stmt);
+      pt_add_stmt (&ptroot, stmt);
       return;
     }
 
@@ -905,7 +905,7 @@ insert_prefix_tree (lang_wild_statement_type *stmt)
     {
       const char *name = sec->spec.name ? sec->spec.name : "*";
       char c;
-      t = ptroot;
+      t = &ptroot;
       for (; (c = *name); name++)
 	{
 	  if (c == '*' || c == '[' || c == '?')
@@ -949,7 +949,7 @@ debug_prefix_tree_rec (struct prefixtree *t, int indent)
 static void
 debug_prefix_tree (void)
 {
-  debug_prefix_tree_rec (ptroot, 2);
+  debug_prefix_tree_rec (&ptroot, 2);
 }
 
 /* Like strcspn() but start to look from the end to beginning of
@@ -1012,7 +1012,7 @@ resolve_wild_sections (lang_input_statement_type *file)
     {
       const char *sname = bfd_section_name (s);
       char c = 1;
-      struct prefixtree *t = ptroot;
+      struct prefixtree *t = &ptroot;
       //printf (" YYY consider %s of %s\n", sname, file->the_bfd->filename);
       do
 	{
@@ -1039,6 +1039,7 @@ resolve_wild_sections (lang_input_statement_type *file)
 static void
 resolve_wilds (void)
 {
+  obstack_init (&matching_obstack);
   LANG_FOR_EACH_INPUT_STATEMENT (f)
     {
       //printf("XXX   %s\n", f->filename);
@@ -1085,11 +1086,12 @@ walk_wild (lang_wild_statement_type *s, callback_t callback, void *data)
 
 /* lang_for_each_statement walks the parse tree and calls the provided
    function for each node, except those inside output section statements
-   with constraint set to -1.  */
+   with constraint set to -1 if CONSTRAINED is true.  */
 
 void
 lang_for_each_statement_worker (void (*func) (lang_statement_union_type *),
-				lang_statement_union_type *s)
+				lang_statement_union_type *s,
+				bool constrained)
 {
   for (; s != NULL; s = s->header.next)
     {
@@ -1098,20 +1100,23 @@ lang_for_each_statement_worker (void (*func) (lang_statement_union_type *),
       switch (s->header.type)
 	{
 	case lang_constructors_statement_enum:
-	  lang_for_each_statement_worker (func, constructor_list.head);
+	  lang_for_each_statement_worker (func, constructor_list.head,
+					  constrained);
 	  break;
 	case lang_output_section_statement_enum:
-	  if (s->output_section_statement.constraint != -1)
+	  if (!constrained || s->output_section_statement.constraint != -1)
 	    lang_for_each_statement_worker
-	      (func, s->output_section_statement.children.head);
+	      (func, s->output_section_statement.children.head, constrained);
 	  break;
 	case lang_wild_statement_enum:
 	  lang_for_each_statement_worker (func,
-					  s->wild_statement.children.head);
+					  s->wild_statement.children.head,
+					  constrained);
 	  break;
 	case lang_group_statement_enum:
 	  lang_for_each_statement_worker (func,
-					  s->group_statement.children.head);
+					  s->group_statement.children.head,
+					  constrained);
 	  break;
 	case lang_data_statement_enum:
 	case lang_reloc_statement_enum:
@@ -1391,7 +1396,6 @@ lang_init (bool object_only)
     {
       obstack_begin (&stat_obstack, 1000);
       obstack_init (&pt_obstack);
-      obstack_init (&matching_obstack);
     }
 
   stat_ptr = &statement_list;
@@ -8316,9 +8320,8 @@ reset_one_wild (lang_statement_union_type *statement)
 static void
 reset_resolved_wilds (void)
 {
-  lang_for_each_statement (reset_one_wild);
+  lang_for_each_statement_worker (reset_one_wild, statement_list.head, false);
   obstack_free (&matching_obstack, NULL);
-  obstack_init (&matching_obstack);
 }
 
 /* For each output section statement, splice any entries on the

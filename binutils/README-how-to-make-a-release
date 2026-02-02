@@ -48,17 +48,14 @@ Approx time to complete from here: 2 hours ...
      the NEWS files in gas, ld, and binutils.  No need to update NEWS
      in the gold directory - it has its own release numbering.
 
-     Likewise for the ChangeLog files in: bfd, binutils, cpu,
-     elfcpp, gas, gold, gprof, include, ld, libctf, opcodes and toplevel.
-
      Add a note of the name of the new branch to binutils/BRANCHES.
 
      Commit these changes.
 
   4. Create the release branch using:
 
-	git branch binutils-2_46-branch
-        git push origin binutils-2_46-branch
+	git branch binutils-2_47-branch
+        git push origin binutils-2_47-branch
 
      If you get a message like:
      
@@ -68,7 +65,7 @@ Approx time to complete from here: 2 hours ...
 
   5. Make sure that the branch is there.  IE check out the branch sources:
   
-        git clone ssh://sourceware.org/git/binutils-gdb.git -b binutils-2_46-branch 2.46
+        git clone ssh://sourceware.org/git/binutils-gdb.git -b binutils-2_4y-branch 2.47
 
      If you get a message about being in a "detached head" state, something
      has gone wrong...
@@ -90,8 +87,8 @@ Approx time to complete from here: 2 hours ...
      ask Joel Brobecker <brobecker AT adacore DOT com>.
 
   7. Rename the current HEAD version entry in Bugzilla, and create a
-     new one.  E.g. rename "2.46 (HEAD)" to 2.46, and create
-     "2.47 (HEAD)":
+     new one.  E.g. rename "2.47 (HEAD)" to 2.47, and create
+     "2.48 (HEAD)":
      
         https://sourceware.org/bugzilla/editversions.cgi?product=binutils
 
@@ -99,26 +96,25 @@ Approx time to complete from here: 2 hours ...
      of the next release and the BRANCH to indicate that it is almost
      ready for the release.
 
-     So if the release is going to be 2.46 then the version number on
-     the BRANCH should be set to 2.45.90 - ie almost, but not quite 2.46,
-     and the version number on the MAINLINE should be set to 2.46.50 -
-     ie half way to 2.47 release.
+     So if the release is going to be 2.47 then the version number on
+     the BRANCH should be set to 2.46.90 - ie almost, but not quite 2.47,
+     and the version number on the MAINLINE should be set to 2.47.50 -
+     ie half way to 2.48 release.
 
      So the BRANCH bfd/version.m4 has:
      
-       m4_define([BFD_VERSION], [2.45.90])
+       m4_define([BFD_VERSION], [2.46.90])
        
      and the MAINLINE has:
 
-       m4_define([BFD_VERSION], [2.46.50])
+       m4_define([BFD_VERSION], [2.47.50])
 
      Regenerate various files on both branch and HEAD by configuring
      with "--enable-maintainer-mode --enable-gold --enable-shared" and then building
      with "make -j1 all-binutils all-gas all-gold all-gprof all-gprofng all-ld"
 
-     Add ChangeLog entries for the updated files.  Commit the changes.
-     Make sure that this includes the .pot files as well as the
-     configure and makefiles.
+     Commit and Push the changes.  Make sure that this includes the .pot files
+     as well as the configure and makefiles.
 
   9. Create an initial pre-release:
 
@@ -158,8 +154,13 @@ Approx time to complete from here: 2 hours ...
 
      d. Upload the pre-release snapshot to the sourceware FTP site:
 
-          scp binutils-2.45.90.tar.xz sourceware.org:/var/ftp/pub/binutils/snapshots
-          ssh sourceware.org sha256sum ~ftp/pub/binutils/snapshots/binutils-2.45.90.tar.xz
+     For EVEN numbered releases:
+          scp binutils-with-gold-2.[N].90.tar.xz sourceware.org:/var/ftp/pub/binutils/snapshots
+	  ssh sourceware.org sha256sum ~ftp/pub/binutils/snapshots/binutils-with-gold-2.[N].90.tar.xz
+	  
+     For ODD numbered releases:
+          scp binutils-2.[N].90.tar.xz sourceware.org:/var/ftp/pub/binutils/snapshots
+          ssh sourceware.org sha256sum ~ftp/pub/binutils/snapshots/binutils-2.[N].90.tar.xz
 
         Paranoia: Compare the checksum with the local version.
 
@@ -174,13 +175,13 @@ Approx time to complete from here: 2 hours ...
 ------------------------------------------------------------------------
 Dear Translation Project
 
-  The 2.45 release branch has been created for the GNU Binutils project.
+  The 2.47 release branch has been created for the GNU Binutils project.
 
   A snapshot of the branch sources can be found here:
 
-    https://sourceware.org/pub/binutils/snapshots/binutils-2.45.90.tar.xz
+    https://sourceware.org/pub/binutils/snapshots/binutils-[with-gold-]2.46.90.tar.xz
 
-  We hope to make the official release of the sources on the <DATE>
+  We hope to make the official release of the sources on the [DATE]
   although that could change if there are important bugs that need to
   be fixed before the release.
 ------------------------------------------------------------------------

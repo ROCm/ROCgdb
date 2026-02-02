@@ -833,7 +833,7 @@ thread_db_mourn (struct process_info *proc)
    For any other command, return 0.  */
 
 int
-thread_db_handle_monitor_command (char *mon)
+thread_db_handle_monitor_command (const char *mon)
 {
   const char *cmd = "set libthread-db-search-path";
   size_t cmd_len = strlen (cmd);

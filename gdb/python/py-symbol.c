@@ -25,8 +25,8 @@
 #include "objfiles.h"
 #include "symfile.h"
 
-struct symbol_object {
-  PyObject_HEAD
+struct symbol_object : public PyObject
+{
   /* The GDB symbol structure this object is wrapping.  */
   struct symbol *symbol;
 };

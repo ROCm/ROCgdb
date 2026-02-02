@@ -550,7 +550,7 @@ process_stratum_target::handle_new_gdb_connection ()
 }
 
 int
-process_stratum_target::handle_monitor_command (char *mon)
+process_stratum_target::handle_monitor_command (const char *mon)
 {
   return 0;
 }

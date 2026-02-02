@@ -1,0 +1,46 @@
+# Copyright 2025 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the quotemeta facility.
+
+proc check_quotemeta {name input expected} {
+    gdb_assert {[quotemeta $input] == $expected} $name
+}
+
+proc quotemeta_fail {name input} {
+    gdb_assert {[catch {quotemeta $input}]} $name
+}
+
+check_quotemeta hex "@HEX" "$hex"
+check_quotemeta brace-hex "@{HEX}" "$hex"
+
+check_quotemeta decimal "@DECIMAL" "$decimal"
+check_quotemeta multi-brace "@{{{DECIMAL}}}" "$decimal"
+
+check_quotemeta regexp "@/hello/" hello
+check_quotemeta regexp-2 "@/hello/@/.*/" "hello.*"
+check_quotemeta quoting ".*" "\\.\\*"
+
+check_quotemeta dots @... .*
+check_quotemeta at @@ @
+
+check_quotemeta slash-regexp "@{{/.*/.*/}}" ".*/.*"
+
+check_quotemeta spaces "hello world" "hello\\s+world"
+
+check_quotemeta shy-brace "@{{DECIMAL}}@{{DECIMAL}}" "$decimal$decimal"
+
+quotemeta_fail mismatch-brace "@{{{DECIMAL}}"
+quotemeta_fail no-such-subst @NOTHING

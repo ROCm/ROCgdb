@@ -343,7 +343,7 @@ class NoOpArrayPrinter(gdb.ValuePrinter):
 
     def __init__(self, ty, value):
         self.__value = value
-        (low, high) = ty.range()
+        low, high = ty.range()
         # In Ada, an array can have an index type that is a
         # non-contiguous enum.  In this case the indexing must be done
         # by using the indices into the enum type, not the underlying

@@ -194,8 +194,14 @@ automatically cause those extensions to be disabled.
  @tab Enable the 128-bit Page Descriptor Extension.  This implies @code{lse128}.
 @item @code{dotprod} @tab @code{simd}
  @tab Enable the Dot Product extension.
+@item @code{f16f32dot} @tab @code{simd}, @code{fp16}
+ @tab Enable Armv9.7 f16f32dot instructions.
+@item @code{f16f32mm} @tab @code{simd}, @code{fp16}
+ @tab Enable Armv9.7 f16f32mm instructions.
+@item @code{f16mm} @tab @code{simd}, @code{fp16}
+ @tab Enable f16mm instructions.
 @item @code{f32mm} @tab @code{sve}
- @tab Enable the F32 Matrix Multiply extension
+ @tab Enable the F32 Matrix Multiply extension.
 @item @code{f64mm} @tab @code{sve}
  @tab Enable the F64 Matrix Multiply extension.
 @item @code{f8f16mm} @tab @code{simd} @code{fp8}
@@ -224,12 +230,6 @@ automatically cause those extensions to be disabled.
  @tab Enable Armv8.2 16-bit floating-point multiplication variant support.
 @item @code{fp16} @tab @code{fp}
  @tab Enable Armv8.2 16-bit floating-point support.
-@item @code{f16f32dot} @tab @code{simd}
- @tab Enable Armv9.7 f16f32dot instructions.
-@item @code{f16f32mm} @tab @code{simd}, @code{fp16}
- @tab Enable Armv9.7 f16f32mm instructions.
-@item @code{f16mm} @tab @code{simd}, @code{fp16}
- @tab Enable support f16mm instructions.
 @item @code{fprcvt} @tab @code{fp}
  @tab Enable Armv9.6 fprcvt instructions.
 @item @code{frintts} @tab @code{fp}
@@ -239,7 +239,7 @@ automatically cause those extensions to be disabled.
 @item @code{gcs} @tab
  @tab Enable the Guarded Control Stack Extension.
 @item @code{hbc} @tab
- @tab Enable Armv8.8-A hinted conditional branch instructions
+ @tab Enable Armv8.8-A hinted conditional branch instructions.
 @item @code{i8mm} @tab @code{simd}
  @tab Enable the Int8 Matrix Multiply extension.
 @item @code{ite} @tab
@@ -264,18 +264,22 @@ automatically cause those extensions to be disabled.
  @tab Enable the Lookup Table (LUT) extension.
 @item @code{memtag} @tab
  @tab Enable Armv8.5-A Memory Tagging Extensions.
-@item @code{mtetc} @tab @code{memtag}
- @tab Enable Data cache tag block operations.
 @item @code{mops} @tab
- @tab Enable Armv8.8-A memcpy and memset acceleration instructions
+ @tab Enable Armv8.8-A memcpy and memset acceleration instructions.
+@item @code{mops-go} @tab @code{mops}, @code{memtag}
+ @tab Enable tag only variants of MOPS instructions.
 @item @code{mpamv2} @tab
  @tab Enable MPAMv2 system registers.
+@item @code{mtetc} @tab @code{memtag}
+ @tab Enable Data cache tag block operations.
 @item @code{occmo} @tab
  @tab Enable Outer Cacheable Cache Maintenance Operations.
 @item @code{pan} @tab
  @tab Enable Privileged Access Never support.
 @item @code{pauth} @tab
  @tab Enable Pointer Authentication.
+@item @code{poe2} @tab
+ @tab Enable Permission overlays extension 2.
 @item @code{pops} @tab
  @tab Enable Point of Physical Storage.
 @item @code{predres} @tab
@@ -284,8 +288,6 @@ automatically cause those extensions to be disabled.
  @tab Enable additional prediction restriction instructions.
 @item @code{profile} @tab
  @tab Enable statistical profiling extensions.
-@item @code{poe2} @tab
- @tab Enable Permission overlays extension 2.
 @item @code{ras} @tab
  @tab Enable the Reliability, Availability and Serviceability extension.
 @item @code{rasv2} @tab @code{ras}
@@ -360,14 +362,14 @@ automatically cause those extensions to be disabled.
  @tab Enable the SVE2 AES and PMULL Extensions.
 @item @code{sve-aes2} @tab
 @tab Enable the SVE-AES2 extension.
-@item @code{sve-bitperm} @tab
- @tab Enable the SVE2 BITPERM Extension.
 @item @code{sve-b16b16} @tab
 @tab Enable the SVE B16B16 extension.  These instructions also require either @code{+sve2} or @code{+sme2}.
 @item @code{sve-b16mm} @tab @code{sve}
  @tab Enable the SVE B16MM Extension.
 @item @code{sve-bfscale} @tab
 @tab Enable the SVE BFSCALE extension. These instructions also require either @code{+sve2} or @code{+sme2}.
+@item @code{sve-bitperm} @tab
+ @tab Enable the SVE2 BITPERM Extension.
 @item @code{sve-f16f32mm} @tab @code{sve}
 @tab Enable the SVE_F16F32MM extension.
 @item @code{sve2} @tab @code{sve}
@@ -386,12 +388,14 @@ automatically cause those extensions to be disabled.
  @tab Enable SVE2.2.
 @item @code{sve2p3} @tab @code{sve2p2}
  @tab Enable SVE2.3.
-@item @code{the} @tab
- @tab Enable the Translation Hardening Extension.
-@item @code{tme} @tab
- @tab Enable the Transactional Memory Extension.
 @item @code{tev} @tab
  @tab TIndex Exception-like Vector Extension.
+@item @code{the} @tab
+ @tab Enable the Translation Hardening Extension.
+@item @code{tlbid} @tab
+ @tab Enable the TLBI Domains Extension.
+@item @code{tme} @tab
+ @tab Enable the Transactional Memory Extension.
 @item @code{wfxt} @tab
  @tab Enable @code{wfet} and @code{wfit} instructions.
 @item @code{xs} @tab
@@ -416,7 +420,8 @@ automatically cause those extensions to be disabled.
 @item @code{armv9.3-a} @tab @code{armv9.2-a}, @code{armv8.8-a}
 @item @code{armv9.4-a} @tab @code{armv9.3-a}, @code{armv8.9-a}
 @item @code{armv9.5-a} @tab @code{armv9.4-a}, @code{cpa}, @code{lut}, @code{faminmax}
-@item @code{armv9.6-a} @tab @code{armv9.5-a}, @code{cmpbr}, @code{fprcvt}, @code{lsui}, @code{occmo}, @code{sve2p2}
+@item @code{armv9.6-a} @tab @code{armv9.5-a}, @code{cmpbr}, @code{lsui}, @code{occmo}
+@item @code{armv9.7-a} @tab @code{armv9.6-a}, @code{sve2p2}, @code{sve2p3}, @code{f16f32dot}
 @item @code{armv8-r} @tab @code{armv8.4-a+nolor}
 @end multitable
 
@@ -519,6 +524,39 @@ The AArch64 architecture uses @sc{ieee} floating-point numbers.
 @table @code
 
 @c AAAAAAAAAAAAAAAAAAAAAAAAA
+
+@cindex @code{.aeabi_subsection} directive, AArch64
+@item .aeabi_subsection @var{name}, @var{comprehension}, @var{encoding}
+Create or switch the current object attributes subsection to @var{name}.  Valid
+values for @var{name} are following the pattern @code{[a-zA-Z0-9_]+}.
+
+The subsection property @var{comprehension} determines how a program processing
+the attributes handles attributes that it does not recognize (perhaps because
+the object file was generated by a different version of the toolchain).  A
+subsection that is marked @code{optional} can be skipped if it is not
+understood.  A subsection marked @code{required} implies that information
+conveyed by the attribute is required for correct processing of the object file;
+a fatal diagnostic must be generated if a tool does not recognize either the tag
+or the value associated with it.
+
+@var{encoding} specifies the expected encoding of the attributes recorded in the
+subsection.  Currently supported values are @code{ULEB128}/@code{uleb128} and
+@code{NTBS}/@code{ntbs} (null-terminated byte string).
+
+On the first declaration of a subsection, both @var{comprehension} and
+@var{encoding} are mandatory parameters. However, on subsequent declarations,
+none of the parameters is required. If they are still specified, their values
+will be matched against the ones from the first declaration. Any mismatch will
+be reported as an error.
+
+@cindex @code{.aeabi_attribute} @var{tag}, @var{value}
+@item .aeabi_attribute @var{tag}, @var{value}
+Create an attribute with the pair @var{tag}, @var{value} in the current
+subsection.  @var{tag} can either be an integer value, or a known named key.
+@var{value} can either be an integer or a string.
+
+The complete list of subsections and tags supported on AArch64 is documented
+in @cite{Build Attributes for the Arm 64-bit Architecture (AArch64)}.
 
 @cindex @code{.arch} directive, AArch64
 @item .arch @var{name}

@@ -288,7 +288,7 @@ public:
 
   /* The target-specific routine to process monitor command.
      Returns 1 if handled, or 0 to perform default processing.  */
-  virtual int handle_monitor_command (char *mon);
+  virtual int handle_monitor_command (const char *mon);
 
   /* Returns the core given a thread, or -1 if not known.  */
   virtual int core_of_thread (ptid_t ptid);

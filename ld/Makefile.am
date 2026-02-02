@@ -658,13 +658,18 @@ ld_new_LDADD = $(EMULATION_OFILES) $(EMUL_EXTRA_OFILES) $(BFDLIB) $(LIBCTF) \
 # Dependency tracking for the generated emulation files.
 EXTRA_ld_new_SOURCES += $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES)
 
+# The standard rule plus set up a symlink when --enable-shared for "make check"
+ld-new$(EXEEXT): $(ld_new_OBJECTS) $(ld_new_DEPENDENCIES) $(EXTRA_ld_new_DEPENDENCIES)
+	@rm -f ld-new$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(ld_new_OBJECTS) $(ld_new_LDADD) $(LIBS)
+	$(AM_V_at)cd .libs; test ! -e ld-new || test -e ldscripts || $(LN_S) ../ldscripts .
+
 # This is the real libbfd.a and libctf.a created by libtool.
 TESTBFDLIB = @TESTBFDLIB@
 TESTCTFLIB = @TESTCTFLIB@
 TESTSFRAMELIB = @TESTSFRAMELIB@
 
 check-DEJAGNU: site.exp
-	(cd .libs; test -e ldscripts || test ! -e ld-new || $(LN_S) ../ldscripts .)
 	srcroot=`cd $(srcdir) && pwd`; export srcroot; \
 	r=`pwd`; export r; \
 	LC_ALL=C; export LC_ALL; \

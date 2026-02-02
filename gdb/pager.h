@@ -65,6 +65,19 @@ private:
 
   void prompt_for_continue ();
 
+  /* Check if enough characters have been printed such that the current
+     output line is full.  If this is the case then reset the characters
+     printed count to zero, and increment the lines printed count.  Call
+     prompt_for_continue if the screen is now full.
+
+     This should only be called at the point where we want to add new
+     printable output to the output stream, this defers triggering
+     pagination until we really need the additional screen space.
+
+     LINES_ALLOWED is the number of lines that can be printed before the
+     pager needs to activate.  */
+  void check_for_overfull_line (const unsigned int lines_allowed);
+
   /* Flush the wrap buffer to STREAM, if necessary.  */
   void flush_wrap_buffer ();
 

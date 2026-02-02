@@ -465,9 +465,11 @@ extern const unsigned int x86_sframe_cfa_fp_reg;
 extern const unsigned int x86_sframe_cfa_ra_reg;
 #define SFRAME_CFA_RA_REG x86_sframe_cfa_ra_reg
 
-/* Whether SFrame return address tracking is needed.  */
-extern bool x86_sframe_ra_tracking_p (void);
-#define sframe_ra_tracking_p x86_sframe_ra_tracking_p
+/* Whether SFrame return address tracking is needed.
+   In AMD64, return address is always stored on the stack at a fixed offset
+   from the CFA (provided via x86_sframe_cfa_ra_offset ()).  Do not track
+   explicitly via the data words in the SFrame Frame Row Entry.  */
+#define sframe_ra_tracking_p() false
 
 /* The fixed offset from CFA for SFrame to recover the return address.
    (useful only when SFrame RA tracking is not needed).  */

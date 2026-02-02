@@ -162,6 +162,7 @@ load_lib cache.exp
 load_lib gdb-utils.exp
 load_lib memory.exp
 load_lib check-test-names.exp
+load_lib quotemeta.exp
 
 # The path to the GDB binary to test.
 global GDB
@@ -10031,8 +10032,23 @@ proc core_find_1 {coredir binfile arg output_file} {
     # could have many core files lying around, and it may be difficult to
     # tell which one is ours, so let's run the program in a subdirectory.
     set found 0
+
+    set coredump_filter_cmd true
+    if {[istarget "*-linux*-*"]} {
+	# Bit 4, corresponding to "Dump ELF headers".  We need those to get
+	# the Build-ID of the exec from the core file.
+	set elf_headers_bit 0x10
+
+	set res 0x[exec cat /proc/self/coredump_filter]
+	if {($res & $elf_headers_bit) == 0} {
+	    set res [expr {$res | $elf_headers_bit}]
+	    set res 0x[format %x $res]
+	    set coredump_filter_cmd "echo $res > /proc/self/coredump_filter"
+	}
+    }
+
     # tclint-disable command-args
-    catch "system \"(cd ${coredir}; ulimit -c unlimited; ${binfile} ${arg}; true) >${output_file} 2>&1\""
+    catch "system \"(cd ${coredir}; ulimit -c unlimited; $coredump_filter_cmd; ${binfile} ${arg}; true) >${output_file} 2>&1\""
     #      remote_exec host "${binfile}"
     set binfile_basename [file tail $binfile]
     foreach i [list \

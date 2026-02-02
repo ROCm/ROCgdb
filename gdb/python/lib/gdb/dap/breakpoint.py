@@ -119,7 +119,7 @@ def _breakpoint_descriptor(bp):
         # https://github.com/microsoft/debug-adapter-protocol/issues/13
         loc = bp.locations[0]
         if loc.source:
-            (filename, line) = loc.source
+            filename, line = loc.source
             if loc.fullname is not None:
                 filename = loc.fullname
 
@@ -161,7 +161,7 @@ def _set_breakpoints(kind, specs, creator):
             # It makes sense to reuse a breakpoint even if the condition
             # or ignore count differs, so remove these entries from the
             # spec first.
-            (condition, hit_condition) = _remove_entries(
+            condition, hit_condition = _remove_entries(
                 spec, "condition", "hitCondition"
             )
             keyspec = frozenset(spec.items())

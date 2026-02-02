@@ -359,14 +359,6 @@ struct language_defn
   virtual void language_arch_info (struct gdbarch *,
 				   struct language_arch_info *) const = 0;
 
-  /* Find the definition of the type with the given name.  */
-
-  virtual struct type *lookup_transparent_type (const char *name,
-						domain_search_flags flags) const
-  {
-    return basic_lookup_transparent_type (name, flags);
-  }
-
   /* Find all symbols in the current program space matching NAME in
      DOMAIN, according to this language's rules.
 
@@ -536,12 +528,6 @@ struct language_defn
   /* Parser function.  */
 
   virtual int parser (struct parser_state *ps) const;
-
-  /* Print the character CH (of type CHTYPE) on STREAM as part of the
-     contents of a literal string whose delimiter is QUOTER.  */
-
-  virtual void emitchar (int ch, struct type *chtype,
-			 struct ui_file *stream, int quoter) const;
 
   virtual void printchar (int ch, struct type *chtype,
 			  struct ui_file * stream) const;

@@ -45,10 +45,15 @@ set white "(?:\033\\\[37${other_attr}m)"
 
 set any_color "(?:${black}|${red}|${green}|${yellow}|${blue}|${magenta}|${cyan}|${white})"
 
-# Run the command 'TYPE-fill MODE' which fills the screen with output and
-# triggers the pagination prompt.  Check that styling is applied correctly
-# to the output.
-proc test_pagination { type mode } {
+# Run CMD which produces some styled output via a custom Python
+# command.  The styled output will trigger pagination, ensure that the
+# pagination prompt is not styled.
+#
+# When RESET_AFTER_PRINT is true we expect the Python output to reset
+# back to the default style after each block of output, and when it is
+# false, Python will only restore the default style once before
+# returning to the GDB prompt.
+proc test_pagination { cmd reset_after_print } {
 
     # Start with a fresh GDB, but enable color support.
     with_ansi_styling_terminal {
@@ -60,30 +65,33 @@ proc test_pagination { type mode } {
     gdb_test_no_output "set width 80"
     gdb_test_no_output "set height 15"
 
+    if { $reset_after_print } {
+	set prompt_prefix ""
+	set output_suffix "\033\\\[m"
+    } else {
+	set prompt_prefix "\033\\\[m\r\n"
+	set output_suffix ""
+    }
+
     set saw_bad_color_handling false
-    set expected_restore_color ""
+    set expected_color ""
     set last_color ""
-    gdb_test_multiple "$type-fill $mode" "" {
-	-re "^$type-fill $mode\r\n" {
+    gdb_test_multiple "$cmd" "" {
+	-re "^[string_to_regexp $cmd]\r\n" {
 	    exp_continue
 	}
 
-	-re "^(${::any_color})(${::any_color})$::str" {
-	    # After a continuation prompt GDB will restore the previous
-	    # color, and then we immediately switch to a new color.
-	    set restored_color $expect_out(1,string)
-	    if { $restored_color ne $expected_restore_color } {
+	-re "^(${::any_color})$::str${output_suffix}" {
+	    set color $expect_out(1,string)
+
+	    # When EXPECTED_COLOR is not the empty string, then this
+	    # is the color that was in place prior to the pagination
+	    # prompt, check that this same color was restored before
+	    # printing the next output.
+	    if { $expected_color ne "" && $color ne $expected_color } {
 		set saw_bad_color_handling true
 	    }
-	    set last_color $expect_out(2,string)
-	    exp_continue
-	}
-
-	-re "^(${::any_color})$::str" {
-	    # This pattern matches printing STR in all cases that are not
-	    # immediately after a pagination prompt.  In this case there is
-	    # a single escape sequence to set the color.
-	    set last_color $expect_out(1,string)
+	    set expected_color ""
 	    exp_continue
 	}
 
@@ -95,25 +103,13 @@ proc test_pagination { type mode } {
 	    exp_continue
 	}
 
-	-re "^\033\\\[m$::pagination_prompt$" {
-	    # After a pagination prompt we expect GDB to restore the last
-	    # color.
-	    set expected_restore_color $last_color
-
-	    # Send '\n' to view more output.
-	    send_gdb "\n"
-	    exp_continue
-	}
-
-	-re "^$::pagination_prompt$" {
-	    # After a pagination prompt we expect GDB to restore the last
-	    # color.
-	    set expected_restore_color $last_color
-
-	    # If we didn't see a color reset sequence before the pagination
-	    # prompt, then the prompt will have been printed in the wrong
-	    # color, this is a GDB bug.
-	    set saw_bad_color_handling true
+	-re "^(${::any_color})\033\\\[m$::pagination_prompt$" {
+	    # After a pagination prompt we expect GDB to restore the
+	    # last color that was in use, so record it now.  The
+	    # regexp above is also checking that styling is disabled
+	    # before the pagination prompt is displayed, that is a
+	    # critical part of this test.
+	    set expected_color $expect_out(1,string)
 
 	    # Send '\n' to view more output.
 	    send_gdb "\n"
@@ -125,70 +121,112 @@ proc test_pagination { type mode } {
 	    exp_continue
 	}
 
-	-re "^\033\\\[m\r\n$::gdb_prompt $" {
+	-re "^${prompt_prefix}$::gdb_prompt $" {
 	    gdb_assert { !$saw_bad_color_handling } $gdb_test_name
 	}
     }
 }
 
-# Run the command 'style-fill-v2' which fills the screen with output and
-# triggers the pagination prompt.  Check that styling is applied correctly
-# to the output.  This v2 command is exercising passing a style to
-# gdb.write() rather than passing the escape sequence for the style.
-proc test_pagination_v2 { } {
-    set saw_bad_color_handling false
-    set expected_restore_color ""
-    set last_color ""
-    gdb_test_multiple "style-fill-v2" "" {
-	-re "^style-fill-v2\r\n" {
+# Use a custom command to emit blocks of empty lines.  Check when the
+# pagination prompt is triggered.
+proc_with_prefix test_blank_line_pagination {} {
+    clean_restart
+
+    gdb_test_no_output "source $::pyfile" "source the script"
+
+    gdb_test_no_output "set width 80"
+    gdb_test_no_output "set height 15"
+
+    foreach i { 13 14 } {
+	gdb_test "empty-lines $i" \
+	    [multi_line {*}[lrepeat $i ""]] \
+	    "$i blank lines doesn't trigger pagination"
+    }
+
+    set count 0
+    gdb_test_multiple "empty-lines 15" "15 blank lines triggers pagination" {
+	-re "^empty-lines 15\r\n" {
 	    exp_continue
 	}
-
-	-re "^(${::any_color}\033\\\[m)(${::any_color})$::str\033\\\[m" {
-	    # After a continuation prompt GDB will restore the previous
-	    # color, and then we immediately switch to a new color.
-	    set restored_color $expect_out(1,string)
-	    if { $restored_color ne $expected_restore_color } {
-		set saw_bad_color_handling true
-	    }
-	    set last_color $expect_out(2,string)
-	    exp_continue
-	}
-
-	-re "^(${::any_color})$::str\033\\\[m" {
-	    # This pattern matches printing STR in all cases that are not
-	    # immediately after a pagination prompt.  In this case there is
-	    # a single escape sequence to set the color.
-	    set last_color $expect_out(1,string)
-	    exp_continue
-	}
-
-	-re "^$::pagination_prompt$" {
-	    # After a pagination prompt we expect GDB to restore the last
-	    # color, but this will then be disabled due to a styled
-	    # gdb.write emitting a return to default style escape sequence.
-	    set expected_restore_color "$last_color\033\[m"
-
-	    # Send '\n' to view more output.
-	    send_gdb "\n"
-	    exp_continue
-	}
-
 	-re "^\r\n" {
-	    # The matches the newline sent to the continuation prompt.
+	    incr count
 	    exp_continue
 	}
-
+	-re "^$::pagination_prompt$" {
+	    gdb_assert { $count == 14 } \
+		"saw 14 lines before pagination"
+	    set count 0
+	    send_gdb "c\n"
+	    exp_continue
+	}
+	-re "^c\r\n" {
+	    exp_continue
+	}
 	-re "^$::gdb_prompt $" {
-	    gdb_assert { !$saw_bad_color_handling } $gdb_test_name
+	    gdb_assert { $count == 1 } $gdb_test_name
+	}
+    }
+}
+
+# Use a custom command to emit blocks of very full lines.  The lines
+# consist of a full screen width of one character followed by a full
+# screen width of tab characters, followed by a '\r', then another
+# screen width full of a different printable character.
+#
+# Due to the '\r' each of these very full lines should only occupy a
+# single screen line.  We run the test with different numbers of lines
+# being printed, and check when (if at all) the pager triggers.
+proc_with_prefix test_full_line_pagination {} {
+    clean_restart
+
+    gdb_test_no_output "source $::pyfile" "source the script"
+
+    gdb_test_no_output "set width 80"
+    gdb_test_no_output "set height 15"
+
+    set line_re "\\.{80}\t{80}\r\\+{80}"
+
+    foreach i { 13 14 } {
+	gdb_test "full-lines 80 $i" \
+	    [multi_line {*}[lrepeat $i $line_re]] \
+	    "$i full lines didn't trigger pagination"
+    }
+
+    set count 0
+    gdb_test_multiple "full-lines 80 15" "15 full lines triggers pagination" {
+	-re "^full-lines 80 15\r\n" {
+	    exp_continue
+	}
+	-re "^$line_re\r\n" {
+	    incr count
+	    exp_continue
+	}
+	-re "^$::pagination_prompt$" {
+	    gdb_assert { $count == 14 } \
+		"saw 14 lines before pagination"
+	    set count 0
+	    send_gdb "c\n"
+	    exp_continue
+	}
+	-re "^c\r\n" {
+	    exp_continue
+	}
+	-re "^$::gdb_prompt $" {
+	    gdb_assert { $count == 1 } $gdb_test_name
 	}
     }
 }
 
 foreach_with_prefix type { color style } {
     foreach_with_prefix mode { write print } {
-	test_pagination $type $mode
+	set cmd "$type-fill $mode"
+	test_pagination $cmd false
     }
 }
 
-test_pagination_v2
+with_test_prefix "style-fill-v2" {
+    test_pagination "style-fill-v2" true
+}
+
+test_blank_line_pagination
+test_full_line_pagination

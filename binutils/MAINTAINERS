@@ -260,13 +260,6 @@ question of whether LLM generated output eventually makes it into the
 patch.  If it does, then the patch is unacceptable.  (Unless it can
 be considered legally insignificant).
 
-When submitting a non-legally-significant LLM generated change, it is
-still necessary to clearly indicate the use of the LLM.  The
-identification should take the form of a line starting with the
-"Generated-By: " prefix which identifies the LLM used.  For example:
-
-  Generated-By: GNU-LLM version 1.0
-
 In addition all patch submissions must involve a human.  Fully
 automated patch submission, whether by a bot, a script, or some other
 means is not acceptable.  This is because only humans can sign a
@@ -288,10 +281,16 @@ as the latter could be misunderstood.  See [3] for more details.
 Nevertheless the policy applies to any kind of machine generated
 contribution where the copyright status is unclear.
 
-The reason for requiring trivial LLM generated patches to be labelled
-is to set a precedent.  In the future, if non-trivial patches become
-acceptable, the standard of labelling LLM submissions should already
-be in place.
+When submitting a non-legally-significant LLM generated change, it is
+encouraged to clearly indicate the use of the LLM. The identification
+could take the form of a line starting with the Generated-By: prefix
+which identifies the LLM used. For example:   
+
+  Generated-By: GNU-LLM version 1.0
+
+The reason for asking for this is to set a precedent.  So in the
+future, if non-trivial LLM generated patches do become acceptable,
+the process of labeling them will already be a standard action.
 
 [1]: https://en.wikipedia.org/wiki/Large_language_model
 [2]: https://www.gnu.org/prep/maintain/maintain.html#Legally-Significant

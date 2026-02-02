@@ -107,6 +107,9 @@ struct elf_aarch64_obj_tdata
   /* Software protections options.  */
   struct aarch64_protection_opts sw_protections;
 
+  /* The merge of object attributes already occured.  */
+  bool oa_merge_done;
+
   /* Number of reported BTI issues.  */
   int n_bti_issues;
 
@@ -235,6 +238,43 @@ _bfd_aarch64_elf_write_core_note (bfd *, char *, int *, int, ...)
 #define elf_backend_grok_prstatus	_bfd_aarch64_elf_grok_prstatus
 #define elf_backend_grok_psinfo		_bfd_aarch64_elf_grok_psinfo
 #define elf_backend_write_core_note	_bfd_aarch64_elf_write_core_note
+
+extern obj_attr_version_t
+_bfd_aarch64_obj_attrs_version_dec (uint8_t) ATTRIBUTE_HIDDEN;
+
+extern uint8_t
+_bfd_aarch64_obj_attrs_version_enc (obj_attr_version_t) ATTRIBUTE_HIDDEN;
+
+extern const known_subsection_v2_t aarch64_obj_attr_v2_known_subsections[2]
+  ATTRIBUTE_HIDDEN;
+
+extern bfd *
+_bfd_aarch64_elf_link_setup_object_attributes (struct bfd_link_info *)
+  ATTRIBUTE_HIDDEN;
+
+extern void
+_bfd_aarch64_oav2_record (obj_attr_subsection_v2_t *, Tag_Feature_Set, uint32_t)
+  ATTRIBUTE_HIDDEN;
+
+extern void
+_bfd_aarch64_translate_gnu_props_to_obj_attrs
+  (const bfd *, const elf_property_list *) ATTRIBUTE_HIDDEN;
+
+extern void
+_bfd_aarch64_translate_obj_attrs_to_gnu_props
+  (bfd *, const obj_attr_subsection_v2_t *) ATTRIBUTE_HIDDEN;
+
+extern bool
+_bfd_aarch64_oav2_default_value (const struct bfd_link_info *,
+				 const obj_attr_info_t *,
+				 const obj_attr_subsection_v2_t *,
+				 obj_attr_v2_t *) ATTRIBUTE_HIDDEN;
+
+extern obj_attr_v2_merge_result_t
+_bfd_aarch64_oav2_attr_merge (const struct bfd_link_info *, const bfd *,
+			      const obj_attr_subsection_v2_t *,
+			      const obj_attr_v2_t *, const obj_attr_v2_t *,
+			      const obj_attr_v2_t *) ATTRIBUTE_HIDDEN;
 
 extern bfd *
 _bfd_aarch64_elf_link_setup_gnu_properties (struct bfd_link_info *)

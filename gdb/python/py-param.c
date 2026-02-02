@@ -124,10 +124,8 @@ union parmpy_variable
 };
 
 /* A GDB parameter.  */
-struct parmpy_object
+struct parmpy_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The type of the parameter.  */
   enum var_types type;
 

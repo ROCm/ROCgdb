@@ -216,10 +216,50 @@ proc_with_prefix test_for_hint_with_width { width load_exec with_style } {
 	"check for hint with width $width"
 }
 
+proc_with_prefix test_for_hint_pagination { with_style } {
+    global GDBFLAGS INTERNAL_GDBFLAGS gdb_prompt
+
+    save_vars { GDBFLAGS ::env(LC_ALL) } {
+	# Enable use of UTF-8 so the hint box can be displayed correctly.
+	setenv LC_ALL C.UTF-8
+
+	# Set the terminal size to width 80, height 24.
+	append GDBFLAGS " -eiex \"set width 80\" -eiex \"set height 24\""
+
+	gdb_exit
+
+	if { $with_style } {
+	    with_ansi_styling_terminal {
+		gdb_spawn
+	    }
+	} else {
+	    gdb_spawn
+	}
+
+	# GDB is now starting up.  We want to ensure that we see the GDB
+	# prompt without first seeing a pagination prompt.
+	set saw_pagination_prompt false
+	gdb_test_multiple "" "check for no pagination" {
+	    -re "Type <RET>" {
+		set saw_pagination_prompt true
+		# Send 'c' to allow GDB to continue startup.
+		send_gdb "c\n"
+		exp_continue
+	    }
+	    -re "$gdb_prompt $" {
+		gdb_assert { ! $saw_pagination_prompt } $gdb_test_name
+	    }
+	}
+    }
+}
+
 save_vars { INTERNAL_GDBFLAGS } {
     set INTERNAL_GDBFLAGS [string map {"-q" ""} $INTERNAL_GDBFLAGS]
 
     foreach_with_prefix with_style { false true } {
+
+	test_for_hint_pagination $with_style
+
 	foreach_with_prefix load_exec { false true } {
 
 	    # Width 0 actually means unlimited.  The other small sizes

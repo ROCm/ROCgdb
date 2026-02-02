@@ -688,7 +688,7 @@ static bool tic6x_attributes_set_explicitly[NUM_KNOWN_OBJ_ATTRIBUTES];
 static void
 s_tic6x_c6xabi_attribute (int ignored ATTRIBUTE_UNUSED)
 {
-  obj_attr_tag_t tag = obj_attr_v1_process_attribute (OBJ_ATTR_PROC);
+  obj_attr_tag_t tag = obj_attr_process_attribute (OBJ_ATTR_PROC);
 
   if (tag < NUM_KNOWN_OBJ_ATTRIBUTES)
     tic6x_attributes_set_explicitly[tag] = true;

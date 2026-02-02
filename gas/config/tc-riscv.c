@@ -5835,7 +5835,7 @@ riscv_convert_symbolic_attribute (const char *name)
 static void
 s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
 {
-  obj_attr_tag_t tag = obj_attr_v1_process_attribute (OBJ_ATTR_PROC);
+  obj_attr_tag_t tag = obj_attr_process_attribute (OBJ_ATTR_PROC);
   unsigned old_xlen;
   obj_attribute *attr;
 

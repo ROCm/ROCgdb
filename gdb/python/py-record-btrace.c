@@ -29,9 +29,8 @@
 
 /* Python object for btrace record lists.  */
 
-struct btpy_list_object {
-  PyObject_HEAD
-
+struct btpy_list_object : public PyObject
+{
   /* The thread this list belongs to.  */
   thread_info *thread;
 

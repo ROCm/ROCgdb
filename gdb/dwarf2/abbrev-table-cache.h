@@ -34,26 +34,18 @@ public:
   abbrev_table_cache &operator= (abbrev_table_cache &&) = default;
 
   /* Find an abbrev table coming from the abbrev section SECTION at
-     offset OFFSET.  Return the table, or nullptr if it has not yet
-     been registered.  */
-  const abbrev_table *find (dwarf2_section_info *section,
-			    sect_offset offset) const
+     offset OFFSET.  Read it in if necessary.  */
+  const abbrev_table &get (dwarf2_section_info *section, sect_offset offset)
   {
     abbrev_table_search_key key {section, offset};
 
     if (auto iter = m_tables.find (key);
 	iter != m_tables.end ())
-      return iter->get ();
+      return **iter;
 
-    return nullptr;
+    auto table = abbrev_table::read (section, offset);
+    return **m_tables.insert (std::move (table)).first;
   }
-
-  /* Add TABLE to this cache.  Ownership of TABLE is transferred to
-     the cache.  Note that a table at a given section+offset may only
-     be registered once -- a violation of this will cause an assert.
-     To avoid this, call the 'find' method first, to see if the table
-     has already been read.  */
-  void add (abbrev_table_up table);
 
 private:
   /* Key used to search for an existing abbrev table in M_TABLES.  */

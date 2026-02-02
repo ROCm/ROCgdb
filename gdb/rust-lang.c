@@ -38,6 +38,8 @@
 #include "cli/cli-style.h"
 #include "parser-defs.h"
 #include "rust-exp.h"
+#include "char-print.h"
+#include "extract-store-integer.h"
 
 /* See rust-lang.h.  */
 
@@ -390,6 +392,69 @@ rust_array_like_element_type (struct type *type)
 
 
 
+/* A wchar_printer specialized for Rust syntax.  */
+class rust_wchar_printer : public wchar_printer
+{
+  using wchar_printer::wchar_printer;
+
+  bool printable (gdb_wchar_t w) const override;
+  void print_char (gdb_wchar_t w) override;
+  void print_escape (const gdb_byte *orig, int orig_len) override;
+};
+
+bool
+rust_wchar_printer::printable (gdb_wchar_t w) const
+{
+  return (gdb_iswprint (w)
+	  || w == LCST ('\n') || w == LCST ('\r')
+	  || w == LCST ('\t') || w == LCST ('\0'));
+}
+
+void
+rust_wchar_printer::print_char (gdb_wchar_t w)
+{
+  if (w == LCST ('\\'))
+    m_file.write (LCST ("\\\\"));
+  else if (w == gdb_btowc (m_quoter))
+    {
+      m_file.write (LCST ('\\'));
+      m_file.write (w);
+    }
+  else if (w == LCST ('\n'))
+    m_file.write (LCST ("\\n"));
+  else if (w == LCST ('\r'))
+    m_file.write (LCST ("\\r"));
+  else if (w == LCST ('\t'))
+    m_file.write (LCST ("\\t"));
+  else if (w == LCST ('\0'))
+    m_file.write (LCST ("\\0"));
+  else
+    m_file.write (w);
+}
+
+void
+rust_wchar_printer::print_escape (const gdb_byte *orig, int orig_len)
+{
+  int i;
+
+  for (i = 0; i + m_width <= orig_len; i += m_width)
+    {
+      ULONGEST value = extract_unsigned_integer (&orig[i], m_width,
+						 m_byte_order);
+      if (value <= 255)
+	gdb_printf (&m_file, "\\x%02x", (int) value);
+      else
+	gdb_printf (&m_file, "\\u{%06lx}", (unsigned long) value);
+    }
+
+  /* If we somehow have extra bytes, print them now.  */
+  while (i < orig_len)
+    {
+      gdb_printf (&m_file, "\\x%02x", orig[i] & 0xff);
+      ++i;
+    }
+}
+
 /* See language.h.  */
 
 void
@@ -417,9 +482,8 @@ rust_language::printstr (struct ui_file *stream, struct type *type,
 	}
     }
 
-  /* This is not ideal as it doesn't use our character printer.  */
-  generic_printstr (stream, type, string, length, encoding, force_ellipses,
-		    '"', 0, options);
+  rust_wchar_printer printer (type, '"', encoding);
+  printer.print (stream, string, length, force_ellipses, 0, options);
 }
 
 
@@ -1772,28 +1836,15 @@ rust_language::print_type (struct type *type, const char *varstring,
 /* See language.h.  */
 
 void
-rust_language::emitchar (int ch, struct type *chtype,
-			 struct ui_file *stream, int quoter) const
+rust_language::printchar (int ch, struct type *chtype,
+			  struct ui_file *stream) const
 {
   if (!rust_chartype_p (chtype))
-    generic_emit_char (ch, chtype, stream, quoter,
-		       target_charset (chtype->arch ()));
-  else if (ch == '\\' || ch == quoter)
-    gdb_printf (stream, "\\%c", ch);
-  else if (ch == '\n')
-    gdb_puts ("\\n", stream);
-  else if (ch == '\r')
-    gdb_puts ("\\r", stream);
-  else if (ch == '\t')
-    gdb_puts ("\\t", stream);
-  else if (ch == '\0')
-    gdb_puts ("\\0", stream);
-  else if (ch >= 32 && ch <= 127 && c_isprint (ch))
-    gdb_putc (ch, stream);
-  else if (ch <= 255)
-    gdb_printf (stream, "\\x%02x", ch);
+    generic_emit_char (ch, chtype, stream, target_charset (chtype->arch ()));
   else
-    gdb_printf (stream, "\\u{%06x}", ch);
+    {
+      rust_wchar_printer (chtype, '\'').print (ch, stream);
+    }
 }
 
 /* See language.h.  */

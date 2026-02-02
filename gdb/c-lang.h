@@ -103,8 +103,7 @@ extern void c_type_print_base (struct type *, struct ui_file *,
 
 /* These are in cp-valprint.c */
 
-extern void cp_print_class_member (const gdb_byte *, struct type *,
-				   struct ui_file *, const char *);
+extern void cp_print_class_memberptr (struct value *, struct ui_file *);
 
 extern void cp_print_value_fields (struct value *,
 				   struct ui_file *, int,

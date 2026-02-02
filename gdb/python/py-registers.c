@@ -32,9 +32,8 @@ static const registry<gdbarch>::key<gdbpy_register_type>
      gdbpy_register_object_data;
 
 /* Structure for iterator over register descriptors.  */
-struct register_descriptor_iterator_object {
-  PyObject_HEAD
-
+struct register_descriptor_iterator_object : public PyObject
+{
   /* The register group that the user is iterating over.  This will never
      be NULL.  */
   const struct reggroup *reggroup;
@@ -49,9 +48,8 @@ struct register_descriptor_iterator_object {
 extern PyTypeObject register_descriptor_iterator_object_type;
 
 /* A register descriptor.  */
-struct register_descriptor_object {
-  PyObject_HEAD
-
+struct register_descriptor_object : public PyObject
+{
   /* The register this is a descriptor for.  */
   int regnum;
 
@@ -62,9 +60,8 @@ struct register_descriptor_object {
 extern PyTypeObject register_descriptor_object_type;
 
 /* Structure for iterator over register groups.  */
-struct reggroup_iterator_object {
-  PyObject_HEAD
-
+struct reggroup_iterator_object : public PyObject
+{
   /* The index into GROUPS for the next group to return.  */
   std::vector<const reggroup *>::size_type index;
 
@@ -75,9 +72,8 @@ struct reggroup_iterator_object {
 extern PyTypeObject reggroup_iterator_object_type;
 
 /* A register group object.  */
-struct reggroup_object {
-  PyObject_HEAD
-
+struct reggroup_object : public PyObject
+{
   /* The register group being described.  */
   const struct reggroup *reggroup;
 };

@@ -109,18 +109,6 @@ public:
 
   /* See language.h.  */
 
-  void emitchar (int ch, struct type *chtype,
-		 struct ui_file *stream, int quoter) const override
-  {
-    int in_quotes = 0;
-
-    print_one_char (ch, stream, &in_quotes);
-    if (in_quotes)
-      gdb_puts ("'", stream);
-  }
-
-  /* See language.h.  */
-
   void printchar (int ch, struct type *chtype,
 		  struct ui_file *stream) const override;
 
@@ -158,11 +146,6 @@ public:
   { return case_sensitive_off; }
 
 private:
-
-  /* Print the character C on STREAM as part of the contents of a literal
-     string.  IN_QUOTES is reset to 0 if a char is written with #4 notation.  */
-
-  void print_one_char (int c, struct ui_file *stream, int *in_quotes) const;
 
   /* Print the name of the type (or the ultimate pointer target,
      function value or array element), or the description of a

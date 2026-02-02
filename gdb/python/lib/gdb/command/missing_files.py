@@ -176,7 +176,7 @@ def do_enable_handler1(handlers, name_re, flag, handler_type):
 def do_enable_handler(arg, flag, handler_type):
     """Enable or disable missing file handlers."""
 
-    (locus_re, name_re) = parse_missing_file_command_args(arg)
+    locus_re, name_re = parse_missing_file_command_args(arg)
     total = 0
     if locus_re.match("global"):
         total += do_enable_handler1(

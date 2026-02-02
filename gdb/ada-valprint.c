@@ -254,35 +254,6 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
     }
 }
 
-/* Print the character C on STREAM as part of the contents of a literal
-   string whose delimiter is QUOTER.  TYPE_LEN is the length in bytes
-   of the character.  */
-
-void
-ada_emit_char (int c, struct type *type, struct ui_file *stream,
-	       int quoter, int type_len)
-{
-  /* If this character fits in the normal ASCII range, and is
-     a printable character, then print the character as if it was
-     an ASCII character, even if this is a wide character.
-     The UCHAR_MAX check is necessary because the c_isascii function
-     requires that its argument have a value of an unsigned char,
-     or EOF (EOF is obviously not printable).  */
-  if (c <= UCHAR_MAX && c_isascii (c) && c_isprint (c))
-    {
-      if (c == quoter && c == '"')
-	gdb_printf (stream, "\"\"");
-      else
-	gdb_printf (stream, "%c", c);
-    }
-  else
-    {
-      /* Follow GNAT's lead here and only use 6 digits for
-	 wide_wide_character.  */
-      gdb_printf (stream, "[\"%0*x\"]", std::min (6, type_len * 2), c);
-    }
-}
-
 /* Character #I of STRING, given that TYPE_LEN is the size in bytes
    of a character.  */
 
@@ -358,14 +329,6 @@ ada_print_floating (const gdb_byte *valaddr, struct type *type,
     gdb_printf (stream, "%s", &s[skip_count]);
 }
 
-void
-ada_printchar (int c, struct type *type, struct ui_file *stream)
-{
-  gdb_puts ("'", stream);
-  ada_emit_char (c, type, stream, '\'', type->length ());
-  gdb_puts ("'", stream);
-}
-
 /* [From print_type_scalar in typeprint.c].   Print VAL on STREAM in a
    form appropriate for TYPE, if non-NULL.  If TYPE is NULL, print VAL
    like a default signed integer.  */
@@ -432,104 +395,6 @@ ada_print_scalar (struct type *type, LONGEST val, struct ui_file *stream)
     default:
       error (_("Invalid type code in symbol table."));
     }
-}
-
-/* Print the character string STRING, printing at most LENGTH characters.
-   Printing stops early if the number hits print_max; repeat counts
-   are printed as appropriate.  Print ellipses at the end if we
-   had to stop before printing LENGTH characters, or if FORCE_ELLIPSES.
-   TYPE_LEN is the length (1 or 2) of the character type.  */
-
-static void
-printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
-	  unsigned int length, int force_ellipses, int type_len,
-	  const struct value_print_options *options)
-{
-  enum bfd_endian byte_order = type_byte_order (elttype);
-  unsigned int i;
-  unsigned int things_printed = 0;
-  int in_quotes = 0;
-  int need_comma = 0;
-
-  if (length == 0)
-    {
-      gdb_puts ("\"\"", stream);
-      return;
-    }
-
-  unsigned int print_max_chars = get_print_max_chars (options);
-  for (i = 0; i < length && things_printed < print_max_chars; i += 1)
-    {
-      /* Position of the character we are examining
-	 to see whether it is repeated.  */
-      unsigned int rep1;
-      /* Number of repetitions we have detected so far.  */
-      unsigned int reps;
-
-      QUIT;
-
-      if (need_comma)
-	{
-	  gdb_puts (", ", stream);
-	  need_comma = 0;
-	}
-
-      rep1 = i + 1;
-      reps = 1;
-      while (rep1 < length
-	     && char_at (string, rep1, type_len, byte_order)
-		== char_at (string, i, type_len, byte_order))
-	{
-	  rep1 += 1;
-	  reps += 1;
-	}
-
-      if (reps > options->repeat_count_threshold)
-	{
-	  if (in_quotes)
-	    {
-	      gdb_puts ("\", ", stream);
-	      in_quotes = 0;
-	    }
-	  gdb_puts ("'", stream);
-	  ada_emit_char (char_at (string, i, type_len, byte_order),
-			 elttype, stream, '\'', type_len);
-	  gdb_puts ("'", stream);
-	  gdb_printf (stream, _(" %p[<repeats %u times>%p]"),
-		      metadata_style.style ().ptr (), reps, nullptr);
-	  i = rep1 - 1;
-	  things_printed += options->repeat_count_threshold;
-	  need_comma = 1;
-	}
-      else
-	{
-	  if (!in_quotes)
-	    {
-	      gdb_puts ("\"", stream);
-	      in_quotes = 1;
-	    }
-	  ada_emit_char (char_at (string, i, type_len, byte_order),
-			 elttype, stream, '"', type_len);
-	  things_printed += 1;
-	}
-    }
-
-  /* Terminate the quotes if necessary.  */
-  if (in_quotes)
-    gdb_puts ("\"", stream);
-
-  if (force_ellipses || i < length)
-    gdb_puts ("...", stream);
-}
-
-void
-ada_printstr (struct ui_file *stream, struct type *type,
-	      const gdb_byte *string, unsigned int length,
-	      const char *encoding, int force_ellipses,
-	      const struct value_print_options *options)
-{
-  printstr (stream, type, string, length, force_ellipses, type->length (),
-	    options);
 }
 
 static int
@@ -706,8 +571,8 @@ ada_val_print_string (struct type *type, const gdb_byte *valaddr,
       len = temp_len;
     }
 
-  printstr (stream, elttype, valaddr + offset_aligned, len, 0,
-	    eltlen, options);
+  current_language->printstr (stream, elttype, valaddr + offset_aligned,
+			      len, nullptr, 0, options);
 }
 
 /* Implement Ada value_print'ing for the case where TYPE is a
@@ -802,7 +667,7 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
 
 	      gdb_puts (" ", stream);
 	      c = unpack_long (type, valaddr);
-	      ada_printchar (c, type, stream);
+	      current_language->printchar (c, type, stream);
 	    }
 	}
       return;

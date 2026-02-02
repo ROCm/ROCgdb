@@ -77,6 +77,30 @@ class StyleTester2(gdb.Command):
         gdb.write("\n")
 
 
+class EmptyLines(gdb.Command):
+    def __init__(self):
+        super().__init__("empty-lines", gdb.COMMAND_USER)
+
+    def invoke(self, args, from_tty):
+        count = int(args)
+        for i in range(0, count):
+            print("")
+
+
+class FullLines(gdb.Command):
+    def __init__(self):
+        super().__init__("full-lines", gdb.COMMAND_USER)
+
+    def invoke(self, args, from_tty):
+        argv = gdb.string_to_argv(args)
+        width = int(argv[0])
+        height = int(argv[1])
+        for i in range(0, height):
+            print(("." * width) + ("\t" * width) + "\r" + ("+" * width))
+
+
 ColorTester()
 StyleTester()
 StyleTester2()
+EmptyLines()
+FullLines()

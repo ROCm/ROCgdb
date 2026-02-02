@@ -309,23 +309,91 @@ gdb_py_int_as_long (PyObject *obj, long *result)
 
 
 
-/* Generic implementation of the __dict__ attribute for objects that
-   have a dictionary.  The CLOSURE argument should be the type object.
-   This only handles positive values for tp_dictoffset.  */
+/* Generic implementation of the getter for the __dict__ attribute for objects
+   having a dictionary.  The CLOSURE argument is unused.  */
 
 PyObject *
-gdb_py_generic_dict (PyObject *self, void *closure)
+gdb_py_generic_dict_getter (PyObject *self,
+			    void *closure ATTRIBUTE_UNUSED)
 {
-  PyObject *result;
-  PyTypeObject *type_obj = (PyTypeObject *) closure;
-  char *raw_ptr;
-
-  raw_ptr = (char *) self + type_obj->tp_dictoffset;
-  result = * (PyObject **) raw_ptr;
-
-  Py_INCREF (result);
-  return result;
+  PyObject **py_dict_ptr = gdbpy_dict_wrapper::compute_addr (self);
+  PyObject *py_dict = *py_dict_ptr;
+  if (py_dict == nullptr)
+    {
+      PyErr_SetString (PyExc_AttributeError,
+		       "This object has no __dict__");
+      return nullptr;
+    }
+  return Py_NewRef (py_dict);
 }
+
+/* Generic attribute getter function similar to PyObject_GenericGetAttr () but
+   that should be used when the object has a dictionary __dict__.  */
+PyObject *
+gdb_py_generic_getattro (PyObject *self, PyObject *attr)
+{
+  PyObject *value = PyObject_GenericGetAttr (self, attr);
+  if (value != nullptr)
+    return value;
+
+  if (! PyErr_ExceptionMatches (PyExc_AttributeError))
+    return nullptr;
+
+  gdbpy_ref<> dict (gdb_py_generic_dict_getter (self, nullptr));
+  if (dict == nullptr)
+    return nullptr;
+
+  /* Clear previous AttributeError set by PyObject_GenericGetAttr when it
+     did not find the attribute, and try to get the attribute from __dict__.  */
+  PyErr_Clear();
+
+  value = PyDict_GetItemWithError (dict.get (), attr);
+  if (value != nullptr)
+    return Py_NewRef (value);
+
+  /* If PyDict_GetItemWithError() returns NULL because an error occurred, it
+     sets an exception.  Propagate it by returning NULL.  */
+  if (PyErr_Occurred () != nullptr)
+    return nullptr;
+
+  /* If the key is not found, PyDict_GetItemWithError() returns NULL without
+     setting an exception.  Failing to set one here would later result in:
+       <class 'SystemError'>: error return without exception set
+     Therefore, we must explicitly raise an AttributeError in this case.  */
+  PyErr_Format (PyExc_AttributeError,
+		"'%s' object has no attribute '%s'",
+		Py_TYPE (self)->tp_name,
+		PyUnicode_AsUTF8AndSize (attr, nullptr));
+  return nullptr;
+}
+
+/* Generic attribute setter function similar to PyObject_GenericSetAttr () but
+   that should be used when the object has a dictionary __dict__.  */
+int
+gdb_py_generic_setattro (PyObject *self, PyObject *attr, PyObject *value)
+{
+  if (PyObject_GenericSetAttr (self, attr, value) == 0)
+    return 0;
+
+  if (! PyErr_ExceptionMatches (PyExc_AttributeError))
+    return -1;
+
+  gdbpy_ref<> dict (gdb_py_generic_dict_getter (self, nullptr));
+  if (dict == nullptr)
+    return -1;
+
+  /* Clear previous AttributeError set by PyObject_GenericGetAttr() when it
+     did not find the attribute, and try to set the attribute into __dict__.  */
+  PyErr_Clear();
+
+  /* Set the new value.
+     Note: the old value is managed by PyDict_SetItem(), so no need to get
+     a borrowed reference on it and decrement its reference counter before
+     setting a new value.  */
+  return PyDict_SetItem (dict.get (), attr, value);
+}
+
+
 
 /* Like PyModule_AddObject, but does not steal a reference to
    OBJECT.  */

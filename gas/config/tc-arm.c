@@ -4972,7 +4972,7 @@ s_arm_unwind_raw (int ignored ATTRIBUTE_UNUSED)
 static void
 s_arm_eabi_attribute (int ignored ATTRIBUTE_UNUSED)
 {
-  obj_attr_tag_t tag = obj_attr_v1_process_attribute (OBJ_ATTR_PROC);
+  obj_attr_tag_t tag = obj_attr_process_attribute (OBJ_ATTR_PROC);
 
   if (tag < NUM_KNOWN_OBJ_ATTRIBUTES)
     attributes_set_explicitly[tag] = 1;

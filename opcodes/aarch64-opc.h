@@ -364,6 +364,9 @@ verify_constraints (const struct aarch64_inst *, const aarch64_insn, bfd_vma,
 #undef F_REG_128
 #define F_REG_128	(1 << 7) /* System register implementable as 128-bit wide.  */
 
+#undef F_TLBID_XT
+#define F_TLBID_XT	(1 << 8)  /* System instruction register <Xt> as optional operand.  */
+
 
 /* PSTATE field name for the MSR instruction this is encoded in "op1:op2:CRm".
    Part of CRm can be used to encode <pstatefield>. E.g. CRm[3:1] for SME.
@@ -391,11 +394,6 @@ verify_constraints (const struct aarch64_inst *, const aarch64_insn, bfd_vma,
 /* Bits [15, 18] contain the maximum value for an immediate MSR.  */
 #define F_REG_MAX_VALUE(X) ((X) << 15)
 #define F_GET_REG_MAX_VALUE(X) (((X) >> 15) & 0x0f)
-
-/* Encode 7-bit HINT #imm in the lower 8 bits.  Use higher bits for flags.  */
-#define HINT_ENCODE(flag, val) ((flag << 8) | val)
-#define HINT_FLAG(val) (val >> 8)
-#define HINT_VAL(val) (val & 0xff)
 
 static inline bool
 operand_has_inserter (const aarch64_operand *operand)

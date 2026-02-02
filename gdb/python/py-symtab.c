@@ -24,8 +24,8 @@
 #include "objfiles.h"
 #include "block.h"
 
-struct symtab_object {
-  PyObject_HEAD
+struct symtab_object : public PyObject
+{
   /* The GDB Symbol table structure.  */
   struct symtab *symtab;
 };
@@ -47,8 +47,8 @@ static const gdbpy_registry<gdbpy_memoizing_registry_storage<symtab_object,
       }							 \
   } while (0)
 
-struct sal_object {
-  PyObject_HEAD
+struct sal_object : public PyObject
+{
   /* The GDB Symbol table and line structure.  */
   struct symtab_and_line *sal;
   /* A Symtab and line object is associated with an objfile, so keep

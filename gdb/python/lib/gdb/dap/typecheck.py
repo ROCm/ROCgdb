@@ -31,7 +31,7 @@ def _check_instance(value, typevar):
         if not isinstance(value, collections.abc.Mapping):
             return False
         assert len(arg_types) == 2
-        (keytype, valuetype) = arg_types
+        keytype, valuetype = arg_types
         return all(
             _check_instance(k, keytype) and _check_instance(v, valuetype)
             for k, v in value.items()

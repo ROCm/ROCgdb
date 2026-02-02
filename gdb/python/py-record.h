@@ -25,10 +25,8 @@
 #include "record.h"
 
 /* Python Record object.  */
-struct recpy_record_object
+struct recpy_record_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The thread this object refers to.  */
   thread_info *thread;
 
@@ -39,10 +37,8 @@ struct recpy_record_object
 /* Python recorded element object.  This is generic enough to represent
    recorded instructions as well as recorded function call segments, hence the
    generic name.  */
-struct recpy_element_object
+struct recpy_element_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The thread this object refers to.  */
   thread_info *thread;
 

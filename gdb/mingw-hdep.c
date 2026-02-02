@@ -18,14 +18,16 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "main.h"
+#include "top.h"
 #include "serial.h"
+#include "gdb_curses.h"
 #include "gdbsupport/event-loop.h"
 #include "gdbsupport/gdb_select.h"
 #include "inferior.h"
-#include "cli/cli-style.h"
 #include "command.h"
 #include "cli/cli-cmds.h"
 #include "terminal.h"
+#include "charset.h"
 
 #include <windows.h>
 #include <signal.h>
@@ -209,14 +211,23 @@ rgb_to_16colors (const ui_file_style::color &color)
   return retval;
 }
 
-/* Zero if not yet initialized, 1 if stdout is a console device, else -1.  */
-static int mingw_console_initialized;
+/* Zero if not yet initialized, 1 if using legacy console APIs (as
+   opposed to stdio writes to the console), else -1.  */
+static int mingw_use_console_color_apis;
 
 /* Handle to stdout . */
 static HANDLE hstdout = INVALID_HANDLE_VALUE;
 
 /* Text attribute to use for normal text (the "none" pseudo-color).  */
 static SHORT norm_attr;
+
+/* Original console output mode as found at startup.  */
+static DWORD orig_console_mode;
+
+/* Console output mode flags we need for processing Virtual Terminal
+   Sequences, including colors and bold/dim attributes.  */
+static DWORD virt_mode_flags
+  = (ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
 /* Initialize settings related to the console.  */
 
@@ -231,14 +242,57 @@ windows_initialize_console ()
       && GetConsoleMode (hstdout, &cmode) != 0
       && GetConsoleScreenBufferInfo (hstdout, &csbi))
     {
+      if (!orig_console_mode)
+	orig_console_mode = cmode;
       norm_attr = csbi.wAttributes;
-      mingw_console_initialized = 1;
+      /* Default to Virtual Terminal Sequences for colors etc.  */
+      mingw_use_console_color_apis = -1;
+      /* Windows Terminal already sets these flags by default, but the
+	 legacy ConHost doesn't.  */
+      if ((cmode & virt_mode_flags) != virt_mode_flags)
+	{
+	  cmode |= virt_mode_flags;
+	  if (!SetConsoleMode (hstdout, cmode))
+	    mingw_use_console_color_apis = 1; /* use older console APIs */
+	}
     }
   else if (hstdout != INVALID_HANDLE_VALUE)
-    mingw_console_initialized = -1; /* valid, but not a console device */
+    mingw_use_console_color_apis = -1; /* valid, but not a console device */
+}
 
-  if (mingw_console_initialized > 0)
-    no_emojis ();
+void
+mingw_deinitialize_console ()
+{
+  if (mingw_use_console_color_apis != 0
+      && hstdout != INVALID_HANDLE_VALUE
+      && orig_console_mode != 0)
+    SetConsoleMode (hstdout, orig_console_mode);
+}
+
+/* Replacement for a direct tgetnum ("Co") call to get the number of
+   colors supported by the terminal where GDB is running.  */
+int
+gdb_get_ncolors ()
+{
+  /* ncurses versions prior to 6.1 (and other curses
+     implementations) declare the tgetnum argument to be
+     'char *', so we need the const_cast, since C++ will not
+     implicitly convert.  */
+  int nc = tgetnum (const_cast<char*> ("Co"));
+  /* MS-Windows terminal generally doesn't have "Co" in its terminfo,
+     but always supports at least 8 colors.  */
+  if (nc <= 0)
+    {
+      nc = 8;
+      /* If we are using Virtual Terminal Sequences, we can support
+	 true-color 24-bit colors.  */
+      if (mingw_use_console_color_apis < 0
+	  && hstdout != INVALID_HANDLE_VALUE
+	  && orig_console_mode != 0)
+	nc = 16777216;
+    }
+
+  return nc;
 }
 
 /* The most recently applied style.  */
@@ -252,7 +306,7 @@ gdb_console_fputs (const char *linebuf, FILE *fstream)
 {
   /* If our stdout is not a console device, let the default 'fputs'
      handle the task. */
-  if (mingw_console_initialized <= 0)
+  if (mingw_use_console_color_apis <= 0)
     return 0;
 
   /* Mapping between 8 ANSI colors and Windows console attributes.  */
@@ -381,6 +435,27 @@ gdb_console_fputs (const char *linebuf, FILE *fstream)
 
   last_style = style;
   return 1;
+}
+
+unsigned int
+mingw_get_codeset ()
+{
+  unsigned int default_codepage = GetACP ();
+  unsigned int output_codepage = GetConsoleOutputCP ();
+
+  /* Multibyte writes will not work correctly if written one byte at a
+     time, which is what gdb_console_fputs above does.  So if they set
+     the console's output to use UTF-8, only use that if we have
+     successfully set up the terminal for Virtual Terminal Sequences,
+     and are using 'fputs' directly.  */
+  if (output_codepage == 0	/* GetConsoleOutputCP failed */
+      || (output_codepage == 65001
+	  && output_codepage != default_codepage
+	  && !(mingw_use_console_color_apis < 0
+	       && hstdout != INVALID_HANDLE_VALUE
+	       && orig_console_mode != 0)))
+    return default_codepage;
+  return output_codepage;
 }
 
 /* See inferior.h.  */

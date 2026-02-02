@@ -692,7 +692,7 @@ quot (const char *string)
 
   for (src = string, dest = buf; *src; src++, dest++)
     {
-      if (*src == '(' || *src == ')' || *src == ' ')
+      if (*src == '(' || *src == ')' || *src == ' ' || *src == '<' || *src == '>')
 	*dest++ = '\\';
       *dest = *src;
     }

@@ -1329,6 +1329,7 @@ if [is_elf_format] {
 	run_dump_test "note-6-32"
     }
     run_dump_test "note-5"
+    run_dump_test "object-attr-v2"
 }
 
 run_dump_test "copy-2"

@@ -23,10 +23,10 @@
 #include "source.h"
 #include "expanded-symbol.h"
 
-/* See readnow-symbols.h.  */
+/* See expanded-symbol.h.  */
 
-struct symtab *
-expanded_symbols_functions::find_last_source_symtab (struct objfile *objfile)
+symtab *
+expanded_symbols_functions::find_last_source_symtab (objfile *objfile)
 {
   if (objfile->compunit_symtabs.empty ())
     return nullptr;
@@ -34,28 +34,29 @@ expanded_symbols_functions::find_last_source_symtab (struct objfile *objfile)
     return objfile->compunit_symtabs.back ().primary_filetab ();
 }
 
-/* See readnow-symbols.h.  */
+/* See expanded-symbol.h.  */
 
 enum language
-expanded_symbols_functions::lookup_global_symbol_language (
-  struct objfile *objfile, const char *name, domain_search_flags domain,
-  bool *symbol_found_p)
+expanded_symbols_functions::lookup_global_symbol_language
+     (objfile *objfile, const char *name, domain_search_flags domain,
+      bool *symbol_found_p)
 {
   *symbol_found_p = false;
   return language_unknown;
 }
 
-/* See readnow-symbols.h.  */
+/* See expanded-symbol.h.  */
 
 bool
-expanded_symbols_functions::search (struct objfile *objfile,
-			   search_symtabs_file_matcher file_matcher,
-			   const lookup_name_info *lookup_name,
-			   search_symtabs_symbol_matcher symbol_matcher,
-			   search_symtabs_expansion_listener listener,
-			   block_search_flags search_flags,
-			   domain_search_flags domain,
-			   search_symtabs_lang_matcher lang_matcher)
+expanded_symbols_functions::search
+     (objfile *objfile,
+      search_symtabs_file_matcher file_matcher,
+      const lookup_name_info *lookup_name,
+      search_symtabs_symbol_matcher symbol_matcher,
+      search_symtabs_expansion_listener listener,
+      block_search_flags search_flags,
+      domain_search_flags domain,
+      search_symtabs_lang_matcher lang_matcher)
 {
   /* This invariant is documented in quick-functions.h.  */
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
@@ -97,15 +98,15 @@ expanded_symbols_functions::search (struct objfile *objfile,
   return true;
 }
 
-/* See readnow-symbols.h.  */
+/* See expanded-symbol.h.  */
 
-struct symbol *
-expanded_symbols_functions::find_symbol_by_address (struct objfile *objfile,
-					   CORE_ADDR address)
+symbol *
+expanded_symbols_functions::find_symbol_by_address (objfile *objfile,
+						    CORE_ADDR address)
 {
   for (compunit_symtab &symtab : objfile->compunits ())
     {
-      struct symbol *sym = symtab.symbol_at_address (address);
+      symbol *sym = symtab.symbol_at_address (address);
       if (sym != nullptr)
 	return sym;
     }

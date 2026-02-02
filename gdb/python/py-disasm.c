@@ -28,10 +28,8 @@
 /* Implement gdb.disassembler.DisassembleInfo type.  An object of this type
    represents a single disassembler request from GDB.  */
 
-struct disasm_info_object
+struct disasm_info_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The architecture in which we are disassembling.  */
   struct gdbarch *gdbarch;
 
@@ -59,10 +57,8 @@ extern PyTypeObject disasm_info_object_type;
    that is an address that should be printed using a call to GDB's
    internal print_address function.  */
 
-struct disasm_addr_part_object
+struct disasm_addr_part_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The address to be formatted.  */
   bfd_vma address;
 
@@ -79,10 +75,8 @@ extern PyTypeObject disasm_addr_part_object_type;
    this type represents a small part of a disassembled instruction; a part
    that is a piece of test along with an associated style.  */
 
-struct disasm_text_part_object
+struct disasm_text_part_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The string that is this part.  */
   std::string *string;
 
@@ -99,10 +93,8 @@ extern PyTypeObject disasm_part_object_type;
    the disassembled instruction (in bytes), and the string representing the
    disassembled instruction.  */
 
-struct disasm_result_object
+struct disasm_result_object : public PyObject
 {
-  PyObject_HEAD
-
   /* The length of the disassembled instruction in bytes.  */
   int length;
 

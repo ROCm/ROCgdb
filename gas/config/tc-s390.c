@@ -2909,14 +2909,6 @@ s390_support_sframe_p (void)
   return (s390_arch_size == 64);
 }
 
-/* Specify if RA tracking is needed.  */
-
-bool
-s390_sframe_ra_tracking_p (void)
-{
-  return true;
-}
-
 /* Specify the fixed offset to recover RA from CFA.
    (useful only when RA tracking is not needed).  */
 

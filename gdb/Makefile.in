@@ -736,6 +736,7 @@ ALL_64_TARGET_OBS = \
 	aarch64-newlib-tdep.o \
 	aarch64-ravenscar-thread.o \
 	aarch64-tdep.o \
+	aarch64-windows-tdep.o \
 	alpha-bsd-tdep.o \
 	alpha-linux-tdep.o \
 	alpha-netbsd-tdep.o \
@@ -1077,6 +1078,7 @@ COMMON_SFILES = \
 	c-typeprint.c \
 	c-valprint.c \
 	c-varobj.c \
+	char-print.c \
 	charset.c \
 	cli-out.c \
 	complaints.c \
@@ -1788,6 +1790,8 @@ ALLDEPFILES = \
 	aarch64-newlib-tdep.c \
 	aarch64-ravenscar-thread.c \
 	aarch64-tdep.c \
+	aarch64-windows-nat.c \
+	aarch64-windows-tdep.c \
 	aix-thread.c \
 	alpha-bsd-nat.c \
 	alpha-bsd-tdep.c \
@@ -1989,6 +1993,7 @@ ALLDEPFILES = \
 	x86-gnu-nat.c \
 	x86-nat.c \
 	x86-tdep.c \
+	x86-windows-nat.c \
 	xstormy16-tdep.c \
 	xtensa-config.c \
 	xtensa-linux-nat.c \
@@ -2005,7 +2010,6 @@ TAGFILES_WITH_SRCDIR = $(HFILES_WITH_SRCDIR)
 # Files that are used to support certain debuginfo formats
 DWARF2_SRCS = \
 	dwarf2/abbrev.c \
-	dwarf2/abbrev-table-cache.c \
 	dwarf2/ada-imported.c \
 	dwarf2/aranges.c \
 	dwarf2/attribute.c \

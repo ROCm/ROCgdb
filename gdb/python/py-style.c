@@ -36,10 +36,8 @@ static struct {
 };
 
 /* A style.  */
-struct style_object
+struct style_object : public PyObject
 {
-  PyObject_HEAD
-
   /* Underlying style, only valid when STYLE_NAME is NULL.  */
   ui_file_style style;
 

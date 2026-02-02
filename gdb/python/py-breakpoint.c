@@ -37,10 +37,8 @@
 
 extern PyTypeObject breakpoint_location_object_type;
 
-struct gdbpy_breakpoint_location_object
+struct gdbpy_breakpoint_location_object : public PyObject
 {
-  PyObject_HEAD
-
   /* An owning reference to the gdb breakpoint location object.  */
   bp_location *bp_loc;
 

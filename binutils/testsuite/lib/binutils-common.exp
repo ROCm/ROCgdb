@@ -40,7 +40,7 @@ proc is_elf_format {} {
 	 && ![istarget *-*-irix5*]
 	 && ![istarget *-*-irix6*]
 	 && ![istarget *-*-kaos*]
-   && ![istarget kvx-*-*]
+	 && ![istarget kvx-*-*]
 	 && ![istarget *-*-*linux*]
 	 && ![istarget *-*-lynxos*]
 	 && ![istarget *-*-netbsd*]
@@ -505,6 +505,41 @@ proc gas_sframe_check {} {
 	set check_as_sframe_result 1
     }
     return $check_as_sframe_result
+}
+
+# Whether a target supports Object Attributes v1
+proc supports_oa_v1 {} {
+    if { ![is_elf_format]
+	 && ![istarget *-*-vxworks*] && ![istarget *-*-windiss*] } {
+	return 0
+    }
+    if { [istarget arc-*-*]
+	 || [istarget arm*-*-*]
+	 || [istarget csky*-*-*]
+	 || [istarget loongarch*-*-*]
+	 || [istarget m68*-*-*]
+	 || [istarget mips*-*-*]
+	 || [istarget msp*-*-*]
+	 || [istarget powerpc*-*-*]
+	 || [istarget riscv*-*-*]
+	 || [istarget s390*-*-*]
+	 || [istarget sparc*-*-*]
+	 || [istarget tic6x*-*-*] } {
+	return 1
+    }
+    return 0
+}
+
+# Whether a target supports Object Attributes v2
+proc supports_oa_v2 {} {
+    if { ![is_elf_format]
+	 && ![istarget *-*-vxworks*] && ![istarget *-*-windiss*] } {
+	return 0
+    }
+    if { [istarget aarch64*-*-*] } {
+	return 1
+    }
+    return 0
 }
 
 # get_relative_path FROM TO

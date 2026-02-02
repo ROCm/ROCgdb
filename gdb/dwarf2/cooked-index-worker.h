@@ -50,6 +50,10 @@ public:
     = default;
 
   /* Return the current abbrev table_cache.  */
+  abbrev_table_cache &get_abbrev_table_cache ()
+  { return m_abbrev_table_cache; }
+
+  /* Return the current abbrev table_cache.  */
   const abbrev_table_cache &get_abbrev_table_cache () const
   { return m_abbrev_table_cache; }
 
