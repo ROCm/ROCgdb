@@ -30,40 +30,68 @@
 #include "gdbtypes.h"
 #include "inferior.h"
 #include "language.h"
+#include "observable.h"
 #include "producer.h"
 #include "reggroups.h"
 #include "extract-store-integer.h"
+#include <optional>
 
+struct amdgpu_per_inferior
+{
+  amdgpu_per_inferior ()
+    : significant_bits {}
+  {}
 
-/* Bit mask of the address space information in the core address.
-   This uses bits 56, 57, 58, 59, 62 and 63.  This pattern is meant to avoid
-   conflicts with common AMDGPU configurations on both Linux and Windows.
+  std::optional<amd_dbgapi_segment_address_t> significant_bits = {};
+};
 
-   On Windows, bits 60 and 61 are used to mark the base of the local and
-   private apertures in generic.  On Linux, bits 48 and 49 are used for that
-   purpose:
-	      +-------------------------+------------------------+
-	      |  Local aperture range   | Private aperture range |
-    +---------+-------------------------+------------------------+
-    | Windows |  0x2000'0000'0000'0000  | 0x1000'0000'0000'0000  |
-    |         |  0x2000'0000'ffff'ffff  | 0x1000'0000'ffff'ffff  |
-    +---------+-------------------------+------------------------+
-    | Linux   |  0x0001'0000'0000'0000  | 0x0002'0000'0000'0000  |
-    |         |  0x0001'0000'ffff'ffff  | 0x0002'0000'ffff'ffff  |
-    +---------+-------------------------+------------------------+  */
-constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK = 0xcf00000000000000;
+static const registry<inferior>::key<amdgpu_per_inferior> amdgpu_per_inf;
 
-/* There are 6 bits available to encode address spaces, making possible
-   values range from 0 to 63.  */
-constexpr arch_addr_space_id AMDGPU_MAX_ASPACE_ID = 63;
+static void
+amdgpu_observer_inferior_appeared (inferior *inf)
+{
+  /* Invalidate the cached data by clearing it.  */
+  amdgpu_per_inf.clear(inf);
+}
 
-constexpr size_t AMDGPU_ADDRESS_SPACE_1_BIT_OFFSET = 56;
-constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK_1 = 0xf00000000000000;
-constexpr size_t AMDGPU_ADDRESS_SPACE_2_BIT_OFFSET = 58;
-constexpr CORE_ADDR AMDGPU_ADDRESS_SPACE_MASK_2 = 0xc000000000000000;
+static amdgpu_per_inferior &
+get_amdgpu_per_inferior (inferior *inf)
+{
+  amdgpu_per_inferior *data;
 
-static_assert (AMDGPU_ADDRESS_SPACE_MASK
-	       == (AMDGPU_ADDRESS_SPACE_MASK_1 | AMDGPU_ADDRESS_SPACE_MASK_2));
+  data = amdgpu_per_inf.get (inf);
+  if (data == nullptr)
+    data = amdgpu_per_inf.emplace (inf);
+
+  return *data;
+}
+
+/* Return a bit-mask showing which bits of a segment address are significant
+   for at least one address space in at least one agent.  Any bits outside
+   this mask can be modified by GDB and cleared before sending the address to
+   dbgapi without affecting the address value.  */
+
+static amd_dbgapi_segment_address_t
+amdgpu_get_segment_address_significant_bits (inferior *inf)
+{
+  amdgpu_per_inferior &per_inf = get_amdgpu_per_inferior (inf);
+
+  if (!per_inf.significant_bits.has_value ())
+    {
+      amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+
+      amd_dbgapi_segment_address_t sb;
+      if (amd_dbgapi_process_get_info
+	  (process_id, AMD_DBGAPI_PROCESS_INFO_SIGNIFICANT_ADDRESS_BITS,
+	   sizeof (sb), &sb)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_process_get_info failed"));
+
+      per_inf.significant_bits = sb;
+    }
+
+  return *per_inf.significant_bits;
+}
 
 /* Return true if INFO is of an AMDGPU architecture.  */
 
@@ -1460,20 +1488,37 @@ static CORE_ADDR
 amdgpu_segment_address_to_core_address (arch_addr_space_id address_space_id,
 					CORE_ADDR address)
 {
-  gdb_assert (address_space_id <= AMDGPU_MAX_ASPACE_ID);
-  return ((address & ~AMDGPU_ADDRESS_SPACE_MASK)
+  const amd_dbgapi_segment_address_t significant_bits
+    = amdgpu_get_segment_address_significant_bits (current_inferior ());
 
-	  /* ret[59:56] := aspace[3:0]  */
-	 | (((CORE_ADDR) address_space_id
-	     & (AMDGPU_ADDRESS_SPACE_MASK_1
-		>> AMDGPU_ADDRESS_SPACE_1_BIT_OFFSET))
-	    << AMDGPU_ADDRESS_SPACE_1_BIT_OFFSET)
+  /* The address must not have bits set outside of the significant bits.  */
+  gdb_assert ((significant_bits & address) == address);
 
-	  /* ret[63:62] := aspace[5:4]  */
-	 | (((CORE_ADDR) address_space_id
-	     & (AMDGPU_ADDRESS_SPACE_MASK_2
-		>> AMDGPU_ADDRESS_SPACE_2_BIT_OFFSET))
-	    << AMDGPU_ADDRESS_SPACE_2_BIT_OFFSET));
+  const amd_dbgapi_segment_address_t aspace_id_mask = ~significant_bits;
+
+  uint64_t id = address_space_id;
+  uint64_t mask = aspace_id_mask;
+  while (id != 0)
+    {
+      /* Isolate the lowest set bit in the mask.  */
+      uint64_t lowbit = mask & ~(mask - 1);
+
+      if (id & 1)
+	address |= lowbit;
+
+      mask ^= lowbit; /* Clear bit from mask.  */
+      id >>= 1;	      /* Move on to the next bit in ID.  */
+
+      /* As long as there's ID bits, there should be some MASK bits too.  */
+      gdb_assert (!(mask == 0 && id != 0));
+    }
+
+  /* If all the bits are set, then this could collide with the
+     sign extension of the address.  */
+  if ((address & aspace_id_mask) == aspace_id_mask)
+    error (_("Address-space ID overflow"));
+
+  return address;
 }
 
 /* Convert an integer to an address of a given segment address.  */
@@ -1482,7 +1527,6 @@ amdgpu_integer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf,
 			   arch_addr_space_id address_space_id)
 {
-  gdb_assert (address_space_id <= AMDGPU_MAX_ASPACE_ID);
   return amdgpu_segment_address_to_core_address (address_space_id,
 						 unpack_long (type, buf));
 }
@@ -1492,11 +1536,36 @@ amdgpu_integer_to_address (struct gdbarch *gdbarch,
 arch_addr_space_id
 amdgpu_address_space_id_from_core_address (CORE_ADDR addr)
 {
-  /* ret = 0b0, addr[63:62], addr[59:56]  */
-  return (((addr & AMDGPU_ADDRESS_SPACE_MASK_1)
-	   >> AMDGPU_ADDRESS_SPACE_1_BIT_OFFSET)
-	  | ((addr & AMDGPU_ADDRESS_SPACE_MASK_2)
-	     >> (AMDGPU_ADDRESS_SPACE_2_BIT_OFFSET)));
+  const amd_dbgapi_segment_address_t significant_bits
+    = amdgpu_get_segment_address_significant_bits (current_inferior ());
+  const amd_dbgapi_segment_address_t aspace_id_mask = ~significant_bits;
+
+  /* Shortcut for aspace 0 (global).  */
+  if ((addr & aspace_id_mask) == 0)
+    return 0;
+
+  /* The all 1s address space is not valid, so 0.  */
+  if ((addr & aspace_id_mask) == aspace_id_mask)
+    return 0;
+
+  arch_addr_space_id aspace_id = 0;
+  uint64_t mask = aspace_id_mask;
+  uint64_t set_bit = 1;    /* A set bit in the lowest position.  */
+  while (mask != 0)
+    {
+      /* Isolate the lowest set bit in the mask.  */
+      uint64_t lowbit = mask & ~(mask - 1);
+
+      if (addr & lowbit)
+	aspace_id |= set_bit;
+
+      /* Move on to the next bit position.  */
+      set_bit <<= 1;
+      /* Clear bit from mask.  */
+      mask ^= lowbit;
+    }
+
+  return aspace_id;
 }
 
 /* See amdgpu-tdep.h.  */
@@ -1504,7 +1573,16 @@ amdgpu_address_space_id_from_core_address (CORE_ADDR addr)
 CORE_ADDR
 amdgpu_segment_address_from_core_address (CORE_ADDR addr)
 {
-  return addr & ~AMDGPU_ADDRESS_SPACE_MASK;
+  const amd_dbgapi_segment_address_t significant_bits
+    = amdgpu_get_segment_address_significant_bits (current_inferior ());
+  const amd_dbgapi_segment_address_t aspace_id_mask = ~significant_bits;
+
+  /* The all-1s address-space is not valid, this must be the original
+     address.  */
+  if ((addr & aspace_id_mask) == aspace_id_mask)
+    return addr;
+
+  return addr & significant_bits;
 }
 
 /* Address class to address space mapping.
@@ -2335,53 +2413,16 @@ amdgpu_register_type_parse_test ()
   }
 }
 
-static void
-amdgpu_aspace_encoding_test ()
-{
-  std::vector<CORE_ADDR> addresses {
-    0x1000'0000'0000'0000, /* private_base on Windows.  */
-    0x1000'0000'ffff'ffff, /* Maximum address in the private aperture on
-			      Windows.  */
-    0x2000'0000'0000'0000, /* local_base on Windows.  */
-    0x2000'0000'ffff'ffff, /* Maximum address in the local aperture on
-			      Windows.  */
-    0x0001'0000'0000'0000, /* local_base on Linux.  */
-    0x0001'0000'ffff'ffff, /* Maximum address in the private aperture on
-			      Linux.  */
-    0x0002'0000'0000'0000, /* private_base on Linux.  */
-    0x0002'0000'ffff'ffff, /* Maximum address int the local aperture on
-			      Linux.  */
-    0x0000'7fff'ffff'ffff, /* Maximum userspace address on Windows.  */
-    0x00ff'ffff'ffff'ffff  /* Maximum userspace address on Linux when using 5
-			      level page tables.  */
-  };
-
-  for (CORE_ADDR aspace = 0; aspace < AMDGPU_MAX_ASPACE_ID; aspace++)
-    {
-      for (auto addr: addresses)
-	{
-	  /* The selected ADDRESS_SPACE_MASK must not collide with any
-	     possible address.  */
-	  gdb_assert (addr == (addr & ~AMDGPU_ADDRESS_SPACE_MASK));
-
-	  auto enc = amdgpu_segment_address_to_core_address (aspace, addr);
-	  gdb_assert (aspace
-		      == amdgpu_address_space_id_from_core_address (enc));
-	  gdb_assert (addr == amdgpu_segment_address_from_core_address (enc));
-	}
-    }
-}
-
 #endif
 
 INIT_GDB_FILE (amdgpu_tdep)
 {
   gdbarch_register (bfd_arch_amdgcn, amdgpu_gdbarch_init, NULL,
 		    amdgpu_supports_arch_info);
+  gdb::observers::inferior_appeared.attach (amdgpu_observer_inferior_appeared,
+					    "amdgpu_tdep");
 #if defined GDB_SELF_TEST
   selftests::register_test ("amdgpu-register-type-parse-flags-fields",
 			    amdgpu_register_type_parse_test);
-  selftests::register_test ("amdgpu-aspace-encoding-test",
-			    amdgpu_aspace_encoding_test);
 #endif
 }

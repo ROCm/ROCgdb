@@ -177,9 +177,9 @@ proc_with_prefix test_mi_data_read_memory {} {
 	     "nr-bytes=\"1\"," \
 	     "total-bytes=\"1\"," \
 	     "next-row=\"private_lane#0x0000000000000001\"," \
-	     "prev-row=\"0x00ffffffffffffff\"," \
+	     "prev-row=\"${::hex}\"," \
 	     "next-page=\"private_lane#0x0000000000000001\"," \
-	     "prev-page=\"0x00ffffffffffffff\"," \
+	     "prev-page=\"${::hex}\"," \
 	     "memory=\\\[\\\{addr=\"private_lane#0x0000000000000000\",data=\\\[\"$hex\"\\\]\\\}\\\]"]
 }
 
