@@ -60,7 +60,7 @@ gdb_test "continue" "Stopped due to shared library event.*" "continue to load"
 set msg "save \$pc after load"
 set saved_pc ""
 gdb_test_multiple "print/x \$pc" $msg {
-    -re "\\\$$decimal = (\[^\r\n\]*)\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = (\[^\r\n\]*)\r\n$gdb_prompt $" {
 	set saved_pc $expect_out(1,string)
 	pass $msg
     }
@@ -74,7 +74,7 @@ if { [gdb_reconnect] == 0 } {
     return 0
 }
 
-gdb_test "print/x \$pc" "\\\$$decimal = $saved_pc" "check \$pc after load"
+gdb_test "print/x \$pc" "${::valnum_re} = $saved_pc" "check \$pc after load"
 
 
 gdb_test "continue" "Stopped due to shared library event.*" "continue to unload"
@@ -82,7 +82,7 @@ gdb_test "continue" "Stopped due to shared library event.*" "continue to unload"
 set msg "save \$pc after unload"
 set saved_pc ""
 gdb_test_multiple "print/x \$pc" $msg {
-    -re "\\\$$decimal = (\[^\r\n\]*)\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = (\[^\r\n\]*)\r\n$gdb_prompt $" {
 	set saved_pc $expect_out(1,string)
 	pass $msg
     }
@@ -96,4 +96,4 @@ if { [gdb_reconnect] == 0 } {
     return 0
 }
 
-gdb_test "print/x \$pc" "\\\$$decimal = $saved_pc" "check \$pc after unload"
+gdb_test "print/x \$pc" "${::valnum_re} = $saved_pc" "check \$pc after unload"

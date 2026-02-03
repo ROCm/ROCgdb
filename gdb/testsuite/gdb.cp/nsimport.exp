@@ -31,6 +31,6 @@ if {![runto_main]} {
     return
 }
 
-gdb_test "print x" "\\$\[0-9\].* = 11"
-gdb_test "print xx" "\\$\[0-9\].* = 22"
-gdb_test "print xxx" "\\$\[0-9\].* = 33"
+gdb_test "print x" "${::valnum_re} = 11"
+gdb_test "print xx" "${::valnum_re} = 22"
+gdb_test "print xxx" "${::valnum_re} = 33"

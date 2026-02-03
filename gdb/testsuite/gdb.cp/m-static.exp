@@ -56,16 +56,16 @@ gdb_continue_to_breakpoint "end of constructors"
 # One.
 
 # simple object, static const bool
-gdb_test "print test1.test" "\\$\[0-9\]* = true" "simple object, static const bool"
+gdb_test "print test1.test" "${::valnum_re} = true" "simple object, static const bool"
 
 # simple object, static const int
-gdb_test "print test1.key1" "\\$\[0-9\]* = 5" "simple object, static const int"
+gdb_test "print test1.key1" "${::valnum_re} = 5" "simple object, static const int"
 
 # simple object, static long
-gdb_test "print test1.key2" "\\$\[0-9\]* = 77" "simple object, static long"
+gdb_test "print test1.key2" "${::valnum_re} = 77" "simple object, static long"
 
 # simple object, static enum
-gdb_test "print test1.value" "\\$\[0-9\]* = oriental" "simple object, static enum"
+gdb_test "print test1.value" "${::valnum_re} = oriental" "simple object, static enum"
 
 if { [is_aarch32_target] } {
     gdb_test "print test5.single_constructor" \
@@ -130,42 +130,42 @@ if { [is_aarch32_target] } {
 # Two.
 
 # derived template object, base static const bool
-gdb_test "print test2.test" "\\$\[0-9\]* = true" "derived template object, base static const bool"
+gdb_test "print test2.test" "${::valnum_re} = true" "derived template object, base static const bool"
 
 # derived template object, base static const int
-gdb_test "print test2.key1" "\\$\[0-9\]* = 5" "derived template object, base static const int"
+gdb_test "print test2.key1" "${::valnum_re} = 5" "derived template object, base static const int"
 
 # derived template object, base static long
-gdb_test "print test2.key2" "\\$\[0-9\]* = 77" "derived template object, base static long"
+gdb_test "print test2.key2" "${::valnum_re} = 77" "derived template object, base static long"
 
 # derived template object, base static enum
-gdb_test "print test2.value" "\\$\[0-9\].* = oriental" "derived template object, base static enum"
+gdb_test "print test2.value" "${::valnum_re} = oriental" "derived template object, base static enum"
 
 # derived template object, static enum
-gdb_test "print test2.value_derived" "\\$\[0-9\].* = etruscan" "derived template object, static enum"
+gdb_test "print test2.value_derived" "${::valnum_re} = etruscan" "derived template object, static enum"
 
 # Three.
 
 # template object, static derived template data member's base static const bool
-gdb_test "print test3.data.test" "\\$\[0-9\].* = true" "template object, static const bool"
+gdb_test "print test3.data.test" "${::valnum_re} = true" "template object, static const bool"
 
 # template object, static derived template data member's base static const int
-gdb_test "print test3.data.key1" "\\$\[0-9\].* = 5" "template object, static const int"
+gdb_test "print test3.data.key1" "${::valnum_re} = 5" "template object, static const int"
 
 # template object, static derived template data member's base static long
-gdb_test "print test3.data.key2" "\\$\[0-9\].* = 77" "template object, static long"
+gdb_test "print test3.data.key2" "${::valnum_re} = 77" "template object, static long"
 
 # template object, static derived template data member's base static enum
-gdb_test "print test3.data.value" "\\$\[0-9\].* = oriental" "template object, static enum"
+gdb_test "print test3.data.value" "${::valnum_re} = oriental" "template object, static enum"
 
 #  template object, static derived template data member's static enum
-gdb_test "print test3.data.value_derived" "\\$\[0-9\].* = etruscan" "template object, static derived enum"
+gdb_test "print test3.data.value_derived" "${::valnum_re} = etruscan" "template object, static derived enum"
 
 # 2002-08-16
 # Four.
 
 # static const int initialized in another file.
-gdb_test "print test4.elsewhere" "\\$\[0-9\].* = 221" "static const int initialized elsewhere"
+gdb_test "print test4.elsewhere" "${::valnum_re} = 221" "static const int initialized elsewhere"
 
 # static const int that nobody initializes.  From PR gdb/635.
 if {[test_compiler_info {gcc-[0-3]-*}]
@@ -184,9 +184,9 @@ gdb_test "print test4" "static nowhere = <optimized out>.*" "static const int in
 
 # static const initialized in the class definition, PR gdb/11702.
 if { $non_dwarf } { setup_xfail *-*-* }
-gdb_test "print test4.everywhere" "\\$\[0-9\].* = 317" "static const int initialized in class definition"
+gdb_test "print test4.everywhere" "${::valnum_re} = 317" "static const int initialized in class definition"
 if { $non_dwarf } { setup_xfail *-*-* }
-gdb_test "print test4.somewhere" "\\$\[0-9\].* = 3.14\[0-9\]*" "static const float initialized in class definition"
+gdb_test "print test4.somewhere" "${::valnum_re} = 3.14\[0-9\]*" "static const float initialized in class definition"
 
 # Also make sure static const members can be found via "info var".
 if { $non_dwarf } { setup_xfail *-*-* }

@@ -265,10 +265,10 @@ proc use_collected_data { data_source } {
 	    "11.3: test \$trace_line"
 
 	gdb_test_multiple "print \$trace_file" "11.4: test \$trace_file" {
-	    -re "\\$\[0-9\]+ = \"$srcfile\"\[\r\n\]+$gdb_prompt $" {
+	    -re "${::valnum_re} = \"$srcfile\"\[\r\n\]+$gdb_prompt $" {
 		pass "11.4: test \$trace_file"
 	    }
-	    -re "\\$\[0-9\]+ = \"$srcdir/$subdir/$srcfile\"\[\r\n\]+$gdb_prompt $" {
+	    -re "${::valnum_re} = \"$srcdir/$subdir/$srcfile\"\[\r\n\]+$gdb_prompt $" {
 		pass "11.4: test \$trace_file"
 	    }
 	}

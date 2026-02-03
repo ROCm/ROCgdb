@@ -68,7 +68,7 @@ gdb_test_multiple "p foo3_1 (0, 0)" $t {
     fail "$t (conversion failed)"
   }
 
-  -re "\\$\[0-9\]+ = 31$nl$gdb_prompt $" {
+  -re "${::valnum_re} = 31$nl$gdb_prompt $" {
     pass $t
   }
 }

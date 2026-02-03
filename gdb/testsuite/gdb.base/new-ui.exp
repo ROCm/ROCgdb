@@ -28,7 +28,7 @@ proc ensure_no_output {message} {
 
     # Run a command and use an anchor to make sure no output appears
     # before the command's expected output.
-    gdb_test "print 999" "^\\\$$decimal = 999" $message
+    gdb_test "print 999" "^${::valnum_re} = 999" $message
 }
 
 # Run a few execution-related commands on CON1, and ensure the proper

@@ -49,7 +49,7 @@ gdb_test "continue" \
 # Go back up, make sure the return value is 0.
 
 gdb_test "finish" \
-    "Run till exit from #0 +incr \\(i=-1\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is \\$$decimal = 0" \
+    "Run till exit from #0 +incr \\(i=-1\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is ${::valnum_re} = 0" \
     "go back to main from incr, first time"
 
 
@@ -72,7 +72,7 @@ gdb_test "finish" \
 
 gdb_test_no_output "up-silently" "move up to decr"
 gdb_test "finish" \
-    "Run till exit from #1 +($hex in )?decr \\(i=0\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is \\$$decimal = -1" \
+    "Run till exit from #1 +($hex in )?decr \\(i=0\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is ${::valnum_re} = -1" \
     "go back to main from decr"
 
 
@@ -87,7 +87,7 @@ gdb_test "continue" \
 # Go back up again, make sure the return value is 0.
 
 gdb_test "finish" \
-    "Run till exit from #0 +incr \\(i=-1\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is \\$$decimal = 0" \
+    "Run till exit from #0 +incr \\(i=-1\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+($hex in )?main \\(\\)\[ \r\n\]+at .*${srcfile}:$decimal\[\r\n\]+.*Value returned is ${::valnum_re} = 0" \
     "go back to main from incr, second time"
 
 

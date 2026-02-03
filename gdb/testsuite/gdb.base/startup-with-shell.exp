@@ -81,7 +81,7 @@ proc run_test { args on_re off_re testname { problematic_on false } } {
 		setup_xfail "*-*-*" gdb/28392
 	    }
 
-	    gdb_test "print argv\[1\]" "\\\$$::decimal = $::hex $re" $testname
+	    gdb_test "print argv\[1\]" "${::valnum_re} = $::hex $re" $testname
 	}
     }
 }

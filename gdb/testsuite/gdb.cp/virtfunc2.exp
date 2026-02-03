@@ -37,12 +37,12 @@ if {![runto_main]} {
 gdb_breakpoint [gdb_get_line_number "marker 1"]
 gdb_continue_to_breakpoint "marker 1"
 
-gdb_test "print o.do_print()"  "\\$\[0-9\]+ = 123456"
-gdb_test "print o.do_print3()"  "\\$\[0-9\]+ = 111111"
+gdb_test "print o.do_print()"  "${::valnum_re} = 123456"
+gdb_test "print o.do_print3()"  "${::valnum_re} = 111111"
 
-gdb_test "print o2.do_print()"  "\\$\[0-9\]+ = 123456"
-gdb_test "print o2.do_print2()"  "\\$\[0-9\]+ = 654321"
-gdb_test "print o2.do_print3()"  "\\$\[0-9\]+ = 111111"
+gdb_test "print o2.do_print()"  "${::valnum_re} = 123456"
+gdb_test "print o2.do_print2()"  "${::valnum_re} = 654321"
+gdb_test "print o2.do_print3()"  "${::valnum_re} = 111111"
 
 gdb_test "print o" " = {<interface> = {.*_vptr.interface = $hex <vtable for Obj.*>}, <No data fields>}"
 

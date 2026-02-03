@@ -17012,14 +17012,9 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
   if (cu == nullptr)
     cu = load_cu (per_cu, per_objfile, false);
 
-  if (cu == nullptr)
-    {
-      /* We shouldn't get here for a dummy CU, but don't crash on the user.
-	 Instead just throw an error, not much else we can do.  */
-      error (_(DWARF_ERROR_PREFIX
-	       "Dummy CU at %s referenced [in module %s]"),
-	     sect_offset_str (sect_off), objfile_name (objfile));
-    }
+  /* We know this can't be a dummy CU, since we're executing something from
+     it.  */
+  gdb_assert (cu != nullptr);
 
   die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
   if (die == nullptr)
@@ -17152,14 +17147,9 @@ dwarf2_fetch_constant_bytes (sect_offset sect_off,
   if (cu == nullptr)
     cu = load_cu (per_cu, per_objfile, false);
 
-  if (cu == nullptr)
-    {
-      /* We shouldn't get here for a dummy CU, but don't crash on the user.
-	 Instead just throw an error, not much else we can do.  */
-      error (_(DWARF_ERROR_PREFIX
-	       "Dummy CU at %s referenced [in module %s]"),
-	     sect_offset_str (sect_off), objfile_name (objfile));
-    }
+  /* We know this can't be a dummy CU, since we're executing something from
+     it.  */
+  gdb_assert (cu != nullptr);
 
   die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
   if (!die)
@@ -17255,8 +17245,9 @@ dwarf2_fetch_die_type_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
   if (cu == nullptr)
     cu = load_cu (per_cu, per_objfile, false);
 
-  if (cu == nullptr)
-    return nullptr;
+  /* We know this can't be a dummy CU, since we're executing something from
+     it.  */
+  gdb_assert (cu != nullptr);
 
   die_info *die = follow_die_offset ({ &cu->section (), sect_off }, &cu);
   if (!die)

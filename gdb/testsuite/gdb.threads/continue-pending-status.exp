@@ -39,7 +39,7 @@ proc get_current_thread {} {
     set thread ""
     set msg "get thread number"
     gdb_test_multiple "print /x \$_thread" $msg {
-	-re "\\$\[0-9\]* = (0x\[0-9a-zA-Z\]+).*$gdb_prompt $" {
+	-re "${::valnum_re} = (0x\[0-9a-zA-Z\]+).*$gdb_prompt $" {
 	    set thread $expect_out(1,string)
 	    pass "$msg"
 	}

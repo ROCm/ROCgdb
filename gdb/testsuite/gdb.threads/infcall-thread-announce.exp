@@ -36,7 +36,7 @@ proc check_thread_count { adjustment } {
     incr ::thr_count $adjustment
 
     gdb_test "p \$_inferior_thread_count" \
-	"^\\\$$::decimal = $::thr_count"
+	"^${::valnum_re} = $::thr_count"
 }
 
 with_test_prefix "starting threads" {
@@ -47,7 +47,7 @@ with_test_prefix "starting threads" {
 
     foreach_with_prefix call_type { print call } {
 	gdb_test "$call_type start_thread()" \
-	    "\\\[New Thread \[^\r\n\]+\\\]\r\n\\\$$decimal = 1" \
+	    "\\\[New Thread \[^\r\n\]+\\\]\r\n${::valnum_re} = 1" \
 	    "start another new thread"
 	check_thread_count +1
     }
@@ -61,7 +61,7 @@ with_test_prefix "stopping threads" {
 
     foreach_with_prefix call_type { print call } {
 	gdb_test "$call_type stop_thread()" \
-	    "\\\[Thread \[^\r\n\]+ exited\\\]\r\n\\\$$decimal = 1" \
+	    "\\\[Thread \[^\r\n\]+ exited\\\]\r\n${::valnum_re} = 1" \
 	    "stop another thread"
 	check_thread_count -1
     }

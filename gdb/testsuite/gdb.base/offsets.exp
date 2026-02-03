@@ -24,7 +24,7 @@ if { [prepare_for_testing "failed to prepare for testing large offsets" \
 
 set test "print &big_struct test"
 gdb_test_multiple "print &big_struct" "$test" {
-    -re "\\$\[0-9\]* = .* (0x\[0-9a-fA-F\]*) .*\[\r\n\]*$gdb_prompt $" {
+    -re "${::valnum_re} = .* (0x\[0-9a-fA-F\]*) .*\[\r\n\]*$gdb_prompt $" {
 	set addr1 $expect_out(1,string)
 	pass "$test ($addr1)"
     }
@@ -32,7 +32,7 @@ gdb_test_multiple "print &big_struct" "$test" {
 
 set test "print &big_struct.second test"
 gdb_test_multiple "print &big_struct.second" "$test" {
-    -re "\\$\[0-9\]* = .* (0x\[0-9a-fA-F\]*) .*\[\r\n\]*$gdb_prompt $" {
+    -re "${::valnum_re} = .* (0x\[0-9a-fA-F\]*) .*\[\r\n\]*$gdb_prompt $" {
 	set addr2 $expect_out(1,string)
 
 	if {[expr {$addr2 - $addr1}] == [expr {0x10000000 + 16}]} {

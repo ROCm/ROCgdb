@@ -40,7 +40,7 @@ proc_with_prefix test_tilde_expansion { } {
     set home ""
     set test "print home var"
     gdb_test_multiple "print home" $test {
-	-re "\\\$$decimal = $hex \"\(.+\)\"\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = $hex \"\(.+\)\"\r\n$gdb_prompt $" {
 	    set home $expect_out(1,string)
 	    pass $test
 	}
@@ -54,7 +54,7 @@ proc_with_prefix test_tilde_expansion { } {
     set curdir ""
     set test "print dir var"
     gdb_test_multiple "print dir" $test {
-	-re "\\\$$decimal = \"\(.+\)\"\(, .*repeats.*\)?\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = \"\(.+\)\"\(, .*repeats.*\)?\r\n$gdb_prompt $" {
 	    set curdir $expect_out(1,string)
 	    pass $test
 	}
@@ -107,7 +107,7 @@ proc_with_prefix test_cd_into_dir { } {
     gdb_breakpoint [gdb_get_line_number "break-here"]
     gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-    gdb_test "print dir" "\\\$$decimal = \"$tmpdir\", .*" \
+    gdb_test "print dir" "${::valnum_re} = \"$tmpdir\", .*" \
 	"inferior cwd is correctly set"
 
     set gdb_cwd_after_run ""
@@ -164,7 +164,7 @@ proc_with_prefix test_cwd_reset { } {
     gdb_breakpoint [gdb_get_line_number "break-here"]
     gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-    gdb_test "print dir" "\\\$$decimal = \"$tmpdir\", .*" \
+    gdb_test "print dir" "${::valnum_re} = \"$tmpdir\", .*" \
 	"inferior cwd is correctly set"
 
     # Reset the inferior's cwd.
@@ -178,7 +178,7 @@ proc_with_prefix test_cwd_reset { } {
 	gdb_breakpoint [gdb_get_line_number "break-here"]
 	gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-	gdb_test "print dir" "\\\$$decimal = \"$gdb_cwd\", .*" \
+	gdb_test "print dir" "${::valnum_re} = \"$gdb_cwd\", .*" \
 	    "inferior cwd got reset correctly"
     }
 }

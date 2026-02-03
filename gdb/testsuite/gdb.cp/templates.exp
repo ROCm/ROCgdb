@@ -279,12 +279,12 @@ gdb_breakpoint [gdb_get_line_number "Final breakpoint"]
 gdb_continue_to_breakpoint "Final breakpoint"
 
 gdb_test "print fint" \
-   "\\$\[0-9\]* = \\{x = 0, t = 0\\}"
+   "${::valnum_re} = \\{x = 0, t = 0\\}"
 
 # Prevent symbol on address 0x0 being printed.
 gdb_test_no_output "set print symbol off"
 gdb_test "print fvpchar" \
-    "\\$\[0-9\]* = \\{x = 0, t = 0x0\\}"
+    "${::valnum_re} = \\{x = 0, t = 0x0\\}"
 
 # Template Foo<T>
 
@@ -356,7 +356,7 @@ gdb_test_multiple "ptype/r fvpchar" "ptype fvpchar" {
 # varying the spacing, because of PR gdb/7138.
 
 gdb_test_multiple "print Foo<volatile char *>::foo" "print Foo<volatile char *>::foo" {
-    -re "\\$\[0-9\]* = \\{.*char \\*\\((class |)Foo<(volatile char|char volatile) ?\\*> \\*(| const), int, .*char \\*\\)\\} $hex <Foo<.*char.*\\*>::foo\\(int, .*char.*\\*\\)>\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\{.*char \\*\\((class |)Foo<(volatile char|char volatile) ?\\*> \\*(| const), int, .*char \\*\\)\\} $hex <Foo<.*char.*\\*>::foo\\(int, .*char.*\\*\\)>\r\n$gdb_prompt $" {
 	pass "print Foo<volatile char *>::foo"
     }
     -re "No symbol \"Foo<volatile char \\*>\" in current context.\r\n$gdb_prompt $" {
@@ -366,7 +366,7 @@ gdb_test_multiple "print Foo<volatile char *>::foo" "print Foo<volatile char *>:
 }
 
 gdb_test_multiple "print Foo<volatile char*>::foo" "print Foo<volatile char*>::foo" {
-    -re "\\$\[0-9\]* = \\{.*char \\*\\((class |)Foo<(volatile char|char volatile) ?\\*> \\*(| const), int, .*char \\*\\)\\} $hex <Foo<.*char.*\\*>::foo\\(int, .*char.*\\*\\)>\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\{.*char \\*\\((class |)Foo<(volatile char|char volatile) ?\\*> \\*(| const), int, .*char \\*\\)\\} $hex <Foo<.*char.*\\*>::foo\\(int, .*char.*\\*\\)>\r\n$gdb_prompt $" {
 	pass "print Foo<volatile char*>::foo"
     }
     -re "No symbol \"Foo<volatile char\\*>\" in current context.\r\n$gdb_prompt $" {
@@ -601,7 +601,7 @@ gdb_test_multiple "ptype/r Garply<Garply<char> >" "ptype Garply<Garply<char> >" 
 # print out a function from a nested template name
 
 gdb_test "print Garply<Garply<char> >::garply" \
-    "\\$\[0-9\]* = \\{(class |)Garply<char> \\((class |)Garply<Garply<char> > \\*(| const), int, (class |)Garply<char>\\)\\} $hex <Garply<Garply<char>\[ \t\]*>::garply\\(int, (class |)Garply<char>\\)>"
+    "${::valnum_re} = \\{(class |)Garply<char> \\((class |)Garply<Garply<char> > \\*(| const), int, (class |)Garply<char>\\)\\} $hex <Garply<Garply<char>\[ \t\]*>::garply\\(int, (class |)Garply<char>\\)>"
 
 # djb - 06-03-2000
 # Now should work fine

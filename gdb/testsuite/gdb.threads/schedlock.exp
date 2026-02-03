@@ -47,7 +47,7 @@ proc get_args { description } {
 
     set test "listed args, $description"
     gdb_test_multiple "print args" $test {
-	-re "\\\$\[0-9\]+ = {$pattern}.*$gdb_prompt $" {
+	-re "${::valnum_re} = {$pattern}.*$gdb_prompt $" {
 	    pass $test
 
 	    set result ""

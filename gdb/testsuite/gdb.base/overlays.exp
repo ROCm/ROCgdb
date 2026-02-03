@@ -66,7 +66,7 @@ proc get_func_address { func func_sym msg } {
     set func_addr 0
     send_gdb "print $func\n"
     gdb_expect {
-	-re "\\$\[0-9\]+ = $fptrcast (${hexx}) <$func_sym>.*$gdb_prompt $" {
+	-re "${::valnum_re} = $fptrcast (${hexx}) <$func_sym>.*$gdb_prompt $" {
 	    set func_addr $expect_out(1,string)
 	    pass "get $msg"
 	}

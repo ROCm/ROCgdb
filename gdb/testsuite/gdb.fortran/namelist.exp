@@ -44,7 +44,7 @@ if { $supported } {
     gdb_test "ptype nml" \
 	"type = Type nml\r\n *$int :: a\r\n *$int :: b\r\n *End Type nml"
     gdb_test "print nml" \
-	"\\$\[0-9\]+ = \\( a = 10, b = 20 \\)"
+	"${::valnum_re} = \\( a = 10, b = 20 \\)"
 } else {
     gdb_test "ptype nml" \
 	"No symbol \"nml\" in current context\\."

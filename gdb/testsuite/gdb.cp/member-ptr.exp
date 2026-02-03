@@ -19,7 +19,7 @@
 # Written by Satish Pai <pai@apollo.hp.com> 1997-08-19
 # Rewritten by Michael Chastain <mec.gnu@mindspring.com> 2004-01-11
 
-set vhn "\\$\[0-9\]+"
+set vhn "${::valnum_re}"
 
 require allow_cplus_tests
 

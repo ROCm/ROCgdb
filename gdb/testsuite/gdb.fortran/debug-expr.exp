@@ -36,12 +36,12 @@ gdb_breakpoint [gdb_get_line_number "Break Here"]
 gdb_continue_to_breakpoint "Break Here"
 
 gdb_test_no_output "set debug expression 1"
-gdb_test_debug_expr "print obj%three(1)%two(1)%one(1)%i" "\\\$$decimal = 1"
+gdb_test_debug_expr "print obj%three(1)%two(1)%one(1)%i" "${::valnum_re} = 1"
 gdb_test_debug_expr "print .TRUE."  [multi_line \
 					 "Operation: OP_BOOL" \
 					 " Constant: .*1" \
-					 "\\\$$decimal = \.TRUE\."]
+					 "${::valnum_re} = \.TRUE\."]
 gdb_test_debug_expr "print .FALSE."  [multi_line \
 					 "Operation: OP_BOOL" \
 					 " Constant: .*0" \
-					  "\\\$$decimal = \.FALSE\."]
+					  "${::valnum_re} = \.FALSE\."]

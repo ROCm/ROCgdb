@@ -59,10 +59,10 @@ gdb_test_multiple "print *e1" "print *e1" {
 	# gdb 6.0
 	kfail "gdb/488" "print *e1"
     }
-    -re "\\$\[0-9\]* = {<n1::Base1> = .*}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = {<n1::Base1> = .*}\r\n$gdb_prompt $" {
 	pass "print *e1"
     }
-    -re "\\$\[0-9\]* = {<Base1> = .*}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = {<Base1> = .*}\r\n$gdb_prompt $" {
 	# NOTE: carlton/2003-05-16: If code is compiled by GCC2, we
 	# don't print the warning (for no particular reason), but we
 	# still call the class via the wrong name; PR gdb/57 is our
@@ -89,13 +89,13 @@ gdb_test_multiple "print *e2" "print *e2" {
 	# gdb 6.0
 	kfail "gdb/488" "print *e2"
     }
-    -re "\\$\[0-9\]* = <incomplete type>\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = <incomplete type>\r\n$gdb_prompt $" {
 	kfail "gdb/1511" "print *e2"
     }
-    -re "\\$\[0-9\]* = {<n2::Base2> = .*}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = {<n2::Base2> = .*}\r\n$gdb_prompt $" {
 	pass "print *e2"
     }
-    -re "\\$\[0-9\]* = {<Base2> = .*}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = {<Base2> = .*}\r\n$gdb_prompt $" {
 	kfail "gdb/57" "print *e2"
     }
 }
@@ -106,11 +106,11 @@ gdb_test_multiple "print *e2" "print *e2" {
 gdb_breakpoint [gdb_get_line_number "func-constructs-done" "$srcfile"]
 gdb_continue_to_breakpoint "end of constructors in func"
 
-gdb_test "print *obj" "\\$\[0-9\]* = {<n2::Base2> = .*}"
+gdb_test "print *obj" "${::valnum_re} = {<n2::Base2> = .*}"
 
 gdb_breakpoint [gdb_get_line_number "func3-constructs-done" "$srcfile"]
 gdb_continue_to_breakpoint "end of constructors in func3"
 
-gdb_test "print *obj3" "\\$\[0-9\]* = {<n2::C2> = .*}"
+gdb_test "print *obj3" "${::valnum_re} = {<n2::C2> = .*}"
 
 gdb_exit

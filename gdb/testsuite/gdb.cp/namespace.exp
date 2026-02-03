@@ -65,14 +65,14 @@ gdb_test "up" ".*main.*" "up from marker1"
 # shouldn't work with quotes, I'm only including one version.
 
 gdb_test "print 'AAA::c'" \
-    "\\$\[0-9\]* = 0 '\\\\(0|000)'"
+    "${::valnum_re} = 0 '\\\\(0|000)'"
 
 gdb_test "print AAA::c" \
-    "\\$\[0-9\]* = 0 '\\\\(0|000)'"
+    "${::valnum_re} = 0 '\\\\(0|000)'"
 
 # An object declared using "using".
 
-gdb_test "print ina" "\\$\[0-9\]+ = {xx = 33}"
+gdb_test "print ina" "${::valnum_re} = {xx = 33}"
 
 gdb_test_multiple "ptype ina" "ptype ina" {
     -re "type = class (AAA::|)inA \{\r\n\[ \]*public:\r\n\[ \]*int xx;\r\n\[ \]*\r\n\[ \]*.*int fum\\(int\\);\r\n\}\r\n$gdb_prompt $" {
@@ -98,10 +98,10 @@ gdb_test_multiple "info func xyzq" "info func xyzq" {
 # Call a function in a namespace
 
 gdb_test "print 'AAA::xyzq'('x')" \
-    "\\$\[0-9\]* = 97 'a'"
+    "${::valnum_re} = 97 'a'"
 
 gdb_test "print AAA::xyzq('x')" \
-    "\\$\[0-9\]* = 97 'a'"
+    "${::valnum_re} = 97 'a'"
 
 # Break on a function in a namespace
 
@@ -116,10 +116,10 @@ gdb_test "break -qualified ::ensureOtherRefs" \
 # Call a function in a nested namespace
 
 gdb_test "print 'BBB::CCC::xyzq'('x')" \
-    "\\$\[0-9\]* = 122 'z'"
+    "${::valnum_re} = 122 'z'"
 
 gdb_test "print BBB::CCC::xyzq('x')" \
-    "\\$\[0-9\]* = 122 'z'"
+    "${::valnum_re} = 122 'z'"
 
 # Break on a function in a nested namespace
 
@@ -134,10 +134,10 @@ gdb_test "break ::BBB::CCC::xyzq" \
 # Print address of a function in a class in a namespace
 
 gdb_test "print 'BBB::Class::xyzq'" \
-    "\\$\[0-9\]* = \{char \\((BBB::|)Class \\*( const|), (char|int)\\)\} $hex <BBB::Class::xyzq\\(char\\)>"
+    "${::valnum_re} = \{char \\((BBB::|)Class \\*( const|), (char|int)\\)\} $hex <BBB::Class::xyzq\\(char\\)>"
 
 gdb_test "print BBB::Class::xyzq" \
-    "\\$\[0-9\]* = \{char \\((BBB::|)Class \\*( const|), (char|int)\\)\} $hex <BBB::Class::xyzq\\(char\\)>"
+    "${::valnum_re} = \{char \\((BBB::|)Class \\*( const|), (char|int)\\)\} $hex <BBB::Class::xyzq\\(char\\)>"
 
 # Break on a function in a class in a namespace
 
@@ -150,8 +150,8 @@ gdb_test "whatis C::cOtherFileType" "type = short"
 gdb_test "whatis ::C::cOtherFileType" "type = short"
 gdb_test "whatis C::cOtherFileVar" "type = const C::cOtherFileType"
 gdb_test "whatis ::C::cOtherFileVar" "type = const C::cOtherFileType"
-gdb_test "print C::cOtherFileVar" "\\$\[0-9\].* = 319"
-gdb_test "print ::C::cOtherFileVar" "\\$\[0-9\].* = 319"
+gdb_test "print C::cOtherFileVar" "${::valnum_re} = 319"
+gdb_test "print ::C::cOtherFileVar" "${::valnum_re} = 319"
 
 if {$xfail_class_types} { setup_xfail *-*-* }
 gdb_test "whatis C::OtherFileClass::cOtherFileClassType" "type = short"
@@ -169,7 +169,7 @@ gdb_test_multiple $test $test {
 
 	gdb_test $test2 " = 318"
     }
-    -re "\\$\[0-9\].* = 318\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 318\r\n$gdb_prompt $" {
 	# Do not permit to XFAIL on recent GCCs.
 	if {$xfail_class_types} {
 	    setup_xfail *-*-*
@@ -194,15 +194,15 @@ if {![runto "C::D::marker2"]} {
     return
 }
 
-gdb_test "print c" "\\$\[0-9\].* = 1"
+gdb_test "print c" "${::valnum_re} = 1"
 gdb_test "print cc" "No symbol \"cc\" in current context."
-gdb_test "print 'C::cc'" "\\$\[0-9\].* = 2"
-gdb_test "print C::cc" "\\$\[0-9\].* = 2"
-gdb_test "print cd" "\\$\[0-9\].* = 3"
+gdb_test "print 'C::cc'" "${::valnum_re} = 2"
+gdb_test "print C::cc" "${::valnum_re} = 2"
+gdb_test "print cd" "${::valnum_re} = 3"
 gdb_test "print C::D::cd" "No type \"D\" within class or namespace \"C::C\"."
-gdb_test "print 'E::cde'" "\\$\[0-9\].* = 5"
-gdb_test "print E::cde" "\\$\[0-9\].* = 5"
-gdb_test "print shadow" "\\$\[0-9\].* = 13"
+gdb_test "print 'E::cde'" "${::valnum_re} = 5"
+gdb_test "print E::cde" "${::valnum_re} = 5"
+gdb_test "print shadow" "${::valnum_re} = 13"
 gdb_test "print E::ce" "No symbol \"ce\" in namespace \"C::D::E\"."
 gdb_test "ptype C" "type = namespace C::C"
 gdb_test "ptype E" "type = namespace C::D::E"
@@ -219,7 +219,7 @@ gdb_test "ptype C::NestedClass" "No symbol \"NestedClass\" in namespace \"C::C\"
 
 # Tests involving multiple files
 
-gdb_test "print cOtherFile" "\\$\[0-9\].* = 316"
+gdb_test "print cOtherFile" "${::valnum_re} = 316"
 gdb_test "ptype OtherFileClass" "type = (class C::OtherFileClass \{\r\n  public:|struct C::OtherFileClass \{)\r\n    int z;\r\n.*\}"
 gdb_test "ptype ::C::OtherFileClass" "type = class C::OtherFileClass \{\r\n  public:\r\n    int z;\r\n.*\}"
 gdb_test "ptype C::OtherFileClass" "No symbol \"OtherFileClass\" in namespace \"C::C\"."
@@ -233,19 +233,19 @@ gdb_test "ptype ::C::OtherFileClass" $expect "ptype ::C::OtherFileClass typedefs
 
 # Some anonymous namespace tests.
 
-gdb_test "print cX" "\\$\[0-9\].* = 6"
-gdb_test "print 'F::cXf'" "\\$\[0-9\].* = 7"
-gdb_test "print F::cXf" "\\$\[0-9\].* = 7"
-gdb_test "print F::cXfX" "\\$\[0-9\].* = 8"
-gdb_test "print X" "\\$\[0-9\].* = 9"
-gdb_test "print 'G::Xg'" "\\$\[0-9\].* = 10"
-gdb_test "print G::Xg" "\\$\[0-9\].* = 10"
-gdb_test "print G::XgX" "\\$\[0-9\].* = 11"
+gdb_test "print cX" "${::valnum_re} = 6"
+gdb_test "print 'F::cXf'" "${::valnum_re} = 7"
+gdb_test "print F::cXf" "${::valnum_re} = 7"
+gdb_test "print F::cXfX" "${::valnum_re} = 8"
+gdb_test "print X" "${::valnum_re} = 9"
+gdb_test "print 'G::Xg'" "${::valnum_re} = 10"
+gdb_test "print G::Xg" "${::valnum_re} = 10"
+gdb_test "print G::XgX" "${::valnum_re} = 11"
 gdb_test "print cXOtherFile" "No symbol \"cXOtherFile\" in current context."
 gdb_test "print XOtherFile" "No symbol \"XOtherFile\" in current context."
 
 # Enum tests.
-gdb_test "print AAA::ALPHA" "\\$\[0-9\].* = AAA::ALPHA"
+gdb_test "print AAA::ALPHA" "${::valnum_re} = AAA::ALPHA"
 
 # Regression tests for PR 9496.
 gdb_test "whatis ::C::CClass::NestedClass" "type = C::CClass::NestedClass"

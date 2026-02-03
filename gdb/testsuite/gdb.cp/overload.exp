@@ -87,7 +87,7 @@ set re_methods	"${re_methods}${ws}int overloadargs\\(int, int, int, int, int, in
 set re_methods	"${re_methods}${ws}int overloadargs\\(int, int, int, int, int, int, int, int, int, int, int\\);"
 set re_synth	"foo & operator=\\(foo const ?&\\);"
 
-gdb_test "print foo_instance1" "\\$\[0-9\]+ = \{ifoo = 111, ccpfoo = 0x0\}"
+gdb_test "print foo_instance1" "${::valnum_re} = \{ifoo = 111, ccpfoo = 0x0\}"
 
 set lines [gdb_get_lines "ptype foo_instance1"]
 set test "ptype foo_instance1 output"
@@ -127,10 +127,10 @@ if { [regexp "^type = $re_class${ws}$XX_fields${ws}$re_synth${ws}$re_dtor${ws}$r
 # Print variables and method calls.
 # This is a walk in the park.
 
-gdb_test "print foo_instance2" "\\$\[0-9\]+ = \{ifoo = 222, ccpfoo = $hex \"A\"\}"
-gdb_test "print foo_instance3" "\\$\[0-9\]+ = \{ifoo = 222, ccpfoo = $hex \"A\"\}"
+gdb_test "print foo_instance2" "${::valnum_re} = \{ifoo = 222, ccpfoo = $hex \"A\"\}"
+gdb_test "print foo_instance3" "${::valnum_re} = \{ifoo = 222, ccpfoo = $hex \"A\"\}"
 
-gdb_test "print foo_instance1.overloadargs(1)" "\\$\[0-9\]+ = 1" \
+gdb_test "print foo_instance1.overloadargs(1)" "${::valnum_re} = 1" \
     "print call overloaded func 1 arg"
 
 # Regression test for overloading with function pointer type.
@@ -155,99 +155,99 @@ gdb_test_multiple "frame" "re-selected 'main' frame after inferior call" {
 }
 
 gdb_test "print foo_instance1.overloadargs(1, 2)" \
-    "\\$\[0-9\]+ = 2" \
+    "${::valnum_re} = 2" \
     "print call overloaded func 2 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3)" \
-    "\\$\[0-9\]+ = 3" \
+    "${::valnum_re} = 3" \
     "print call overloaded func 3 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4)" \
-    "\\$\[0-9\]+ = 4" \
+    "${::valnum_re} = 4" \
     "print call overloaded func 4 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5)" \
-    "\\$\[0-9\]+ = 5" \
+    "${::valnum_re} = 5" \
     "print call overloaded func 5 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6)" \
-    "\\$\[0-9\]+ = 6" \
+    "${::valnum_re} = 6" \
     "print call overloaded func 6 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6, 7)" \
-    "\\$\[0-9\]+ = 7" \
+    "${::valnum_re} = 7" \
     "print call overloaded func 7 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6, 7, 8)" \
-    "\\$\[0-9\]+ = 8" \
+    "${::valnum_re} = 8" \
     "print call overloaded func 8 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6, 7, 8, 9)" \
-    "\\$\[0-9\]+ = 9" \
+    "${::valnum_re} = 9" \
     "print call overloaded func 9 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)" \
-    "\\$\[0-9\]+ = 10" \
+    "${::valnum_re} = 10" \
     "print call overloaded func 10 args"
 
 gdb_test "print foo_instance1.overloadargs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)" \
-    "\\$\[0-9\]+ = 11" \
+    "${::valnum_re} = 11" \
     "print call overloaded func 11 args"
 
 gdb_test "print foo_instance1.overload1arg()" \
-    "\\$\[0-9\]+ = 1" \
+    "${::valnum_re} = 1" \
     "print call overloaded func void arg"
 
 gdb_test "print foo_instance1.overload1arg((char)arg2)" \
-    "\\$\[0-9\]+ = 2" \
+    "${::valnum_re} = 2" \
     "print call overloaded func char arg"
 
 gdb_test "print foo_instance1.overload1arg((signed char)arg3)" \
-    "\\$\[0-9\]+ = 3" \
+    "${::valnum_re} = 3" \
     "print call overloaded func signed char arg"
 
 gdb_test "print foo_instance1.overload1arg((unsigned char)arg4)" \
-    "\\$\[0-9\]+ = 4" \
+    "${::valnum_re} = 4" \
     "print call overloaded func unsigned char arg"
 
 gdb_test "print foo_instance1.overload1arg((short)arg5)" \
-    "\\$\[0-9\]+ = 5" \
+    "${::valnum_re} = 5" \
     "print call overloaded func short arg"
 
 gdb_test "print foo_instance1.overload1arg((unsigned short)arg6)" \
-    "\\$\[0-9\]+ = 6" \
+    "${::valnum_re} = 6" \
     "print call overloaded func unsigned short arg"
 
 gdb_test "print foo_instance1.overload1arg((int)arg7)" \
-    "\\$\[0-9\]+ = 7" \
+    "${::valnum_re} = 7" \
     "print call overloaded func int arg"
 
 gdb_test "print foo_instance1.overload1arg((unsigned int)arg8)" \
-    "\\$\[0-9\]+ = 8" \
+    "${::valnum_re} = 8" \
     "print call overloaded func unsigned int arg"
 
 gdb_test "print foo_instance1.overload1arg((long)arg9)" \
-    "\\$\[0-9\]+ = 9" \
+    "${::valnum_re} = 9" \
     "print call overloaded func long arg"
 
 gdb_test "print foo_instance1.overload1arg((unsigned long)arg10)" \
-    "\\$\[0-9\]+ = 10" \
+    "${::valnum_re} = 10" \
     "print call overloaded func unsigned long arg"
 
 gdb_test "print foo_instance1.overload1arg((float)arg11)" \
-    "\\$\[0-9\]+ = 11" \
+    "${::valnum_re} = 11" \
     "print call overloaded func float arg"
 
 gdb_test "print foo_instance1.overload1arg((double)arg12)" \
-    "\\$\[0-9\]+ = 12" \
+    "${::valnum_re} = 12" \
     "print call overloaded func double arg"
 
 gdb_test "print foo_instance1.overload1arg(&arg13)" \
-    "\\$\[0-9\]+ = 13" \
+    "${::valnum_re} = 13" \
     "print call overloaded func int\\* arg"
 
 gdb_test "print foo_instance1.overload1arg(&arg14)" \
-    "\\$\[0-9\]+ = 14" \
+    "${::valnum_re} = 14" \
     "print call overloaded func char\\* arg"
 
 gdb_test "print bar(a)" "= 11"
@@ -366,7 +366,7 @@ gdb_test "print overloadNamespace(dummyInstance)" ".\[0-9\]* = 2" "print overloa
 # One last mysterious test.
 # I wonder what this is for?
 
-gdb_test "print intToChar(1)" "\\$\[0-9\]+ = 297"
+gdb_test "print intToChar(1)" "${::valnum_re} = 297"
 
 # Test expression evaluation with overloaded methods
 gdb_test "print foo::overload1arg" \
@@ -376,11 +376,11 @@ gdb_test "print foo::overload1arg(char***)" \
     "no member function matches that type instantiation"
 
 gdb_test "print foo::overload1arg(void)" \
-    "\\$$decimal = {int \\(foo \\*( const|)\\)} $hex <foo::overload1arg\\(\\)>"
+    "${::valnum_re} = {int \\(foo \\*( const|)\\)} $hex <foo::overload1arg\\(\\)>"
 
 foreach t [list char "signed char" "unsigned char" "short" \
 	       "unsigned short" int "unsigned int" long "unsigned long" \
 	       float double] {
     gdb_test "print foo::overload1arg($t)" \
-	"\\$$decimal = {int \\(foo \\*( const|), $t\\)} $hex <foo::overload1arg\\($t\\)>"
+	"${::valnum_re} = {int \\(foo \\*( const|), $t\\)} $hex <foo::overload1arg\\($t\\)>"
 }

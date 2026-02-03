@@ -62,7 +62,7 @@ proc do_load_and_test_core { core var working_var working_value dump_excluded } 
 
     # Access the memory the addresses point to.
     if { $dump_excluded == 0 } {
-	gdb_test "print/x *(char *) $coredump_var_addr($var)" "\(\\\$$decimal = <error: \)?Cannot access memory at address $hex\(>\)?" \
+	gdb_test "print/x *(char *) $coredump_var_addr($var)" "\(${::valnum_re} = <error: \)?Cannot access memory at address $hex\(>\)?" \
 	    "printing $var when core is loaded (should not work)"
 	gdb_test "print/x *(char *) $coredump_var_addr($working_var)" " = $working_value.*" \
 	    "print/x *$working_var ( = $working_value)"

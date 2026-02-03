@@ -95,7 +95,7 @@ proc gdb_collect_probe_arg { msg probe val_arg0 } {
     run_trace_experiment $msg $probe
 
     gdb_test "print \$_probe_arg0" \
-	    "\\$\[0-9\]+ = $val_arg0" \
+	    "${::valnum_re} = $val_arg0" \
 	    "collect $msg: collected probe arg0"
 }
 

@@ -50,49 +50,49 @@ if { ![runto_main] } {
 set endian [get_endianness]
 
 # Test printing of character vector types
-gdb_test "print c4" "\\\$$decimal = \\{1, 2, 3, 4\\}"
-gdb_test "print c4\[2\]" "\\\$$decimal = 3"
+gdb_test "print c4" "${::valnum_re} = \\{1, 2, 3, 4\\}"
+gdb_test "print c4\[2\]" "${::valnum_re} = 3"
 
 # Test operators on integer vector types
-gdb_test "print i4a" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print i4b" "\\\$$decimal = \\{1, 2, 8, 4\\}"
+gdb_test "print i4a" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print i4b" "${::valnum_re} = \\{1, 2, 8, 4\\}"
 # Arithmetic operators
-gdb_test "print i4a + i4b" "\\\$$decimal = \\{3, 6, 16, 20\\}"
-gdb_test "print i4a - i4b" "\\\$$decimal = \\{1, 2, 0, 12\\}"
-gdb_test "print i4a * i4b" "\\\$$decimal = \\{2, 8, 64, 64\\}"
-gdb_test "print i4a / i4b" "\\\$$decimal = \\{2, 2, 1, 4\\}"
-gdb_test "print i4a % i4b" "\\\$$decimal = \\{0, 0, 0, 0\\}"
-gdb_test "print i4a++" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print ++i4a" "\\\$$decimal = \\{4, 6, 10, 18\\}"
-gdb_test "print i4a--" "\\\$$decimal = \\{4, 6, 10, 18\\}"
-gdb_test "print --i4a" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print +i4a" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print -i4a" "\\\$$decimal = \\{-2, -4, -8, -16\\}"
+gdb_test "print i4a + i4b" "${::valnum_re} = \\{3, 6, 16, 20\\}"
+gdb_test "print i4a - i4b" "${::valnum_re} = \\{1, 2, 0, 12\\}"
+gdb_test "print i4a * i4b" "${::valnum_re} = \\{2, 8, 64, 64\\}"
+gdb_test "print i4a / i4b" "${::valnum_re} = \\{2, 2, 1, 4\\}"
+gdb_test "print i4a % i4b" "${::valnum_re} = \\{0, 0, 0, 0\\}"
+gdb_test "print i4a++" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print ++i4a" "${::valnum_re} = \\{4, 6, 10, 18\\}"
+gdb_test "print i4a--" "${::valnum_re} = \\{4, 6, 10, 18\\}"
+gdb_test "print --i4a" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print +i4a" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print -i4a" "${::valnum_re} = \\{-2, -4, -8, -16\\}"
 
 # Bitwise operators
-gdb_test "print i4a & i4b" "\\\$$decimal = \\{0, 0, 8, 0\\}"
-gdb_test "print i4a | i4b" "\\\$$decimal = \\{3, 6, 8, 20\\}"
-gdb_test "print i4a ^ i4b" "\\\$$decimal = \\{3, 6, 0, 20\\}"
-gdb_test "print ~i4a" "\\\$$decimal = \\{-3, -5, -9, -17\\}"
+gdb_test "print i4a & i4b" "${::valnum_re} = \\{0, 0, 8, 0\\}"
+gdb_test "print i4a | i4b" "${::valnum_re} = \\{3, 6, 8, 20\\}"
+gdb_test "print i4a ^ i4b" "${::valnum_re} = \\{3, 6, 0, 20\\}"
+gdb_test "print ~i4a" "${::valnum_re} = \\{-3, -5, -9, -17\\}"
 # Shift operators
-gdb_test "print i4a << i4b" "\\\$$decimal = \\{4, 16, 2048, 256\\}"
-gdb_test "print i4a >> i4b" "\\\$$decimal = \\{1, 1, 0, 1\\}"
+gdb_test "print i4a << i4b" "${::valnum_re} = \\{4, 16, 2048, 256\\}"
+gdb_test "print i4a >> i4b" "${::valnum_re} = \\{1, 1, 0, 1\\}"
 
 # Test operators on floating point vector types
-gdb_test "print f4a" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print f4b" "\\\$$decimal = \\{1, 2, 8, 4\\}"
+gdb_test "print f4a" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print f4b" "${::valnum_re} = \\{1, 2, 8, 4\\}"
 # Arithmetic operators
-gdb_test "print f4a + f4b" "\\\$$decimal = \\{3, 6, 16, 20\\}"
-gdb_test "print f4a - f4b" "\\\$$decimal = \\{1, 2, 0, 12\\}"
-gdb_test "print f4a * f4b" "\\\$$decimal = \\{2, 8, 64, 64\\}"
-gdb_test "print f4a / f4b" "\\\$$decimal = \\{2, 2, 1, 4\\}"
-gdb_test "print +f4a" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print -f4a" "\\\$$decimal = \\{-2, -4, -8, -16\\}"
+gdb_test "print f4a + f4b" "${::valnum_re} = \\{3, 6, 16, 20\\}"
+gdb_test "print f4a - f4b" "${::valnum_re} = \\{1, 2, 0, 12\\}"
+gdb_test "print f4a * f4b" "${::valnum_re} = \\{2, 8, 64, 64\\}"
+gdb_test "print f4a / f4b" "${::valnum_re} = \\{2, 2, 1, 4\\}"
+gdb_test "print +f4a" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print -f4a" "${::valnum_re} = \\{-2, -4, -8, -16\\}"
 
 # When casting to vector the input type must have the same length as
 # the total length of the vector.
-gdb_test "print (char4) 0x01010101" "\\\$$decimal = \\{1, 1, 1, 1\\}"
-gdb_test "print (int2) lla" "\\\$$decimal = \\{1, 1\\}"
+gdb_test "print (char4) 0x01010101" "${::valnum_re} = \\{1, 1, 1, 1\\}"
+gdb_test "print (int2) lla" "${::valnum_re} = \\{1, 1\\}"
 
 # Check that "whatis" doesn't peel off the destination type's typedef
 # by mistake, in expressions that involve a cast to typedef type.
@@ -106,9 +106,9 @@ gdb_test "ptype (int2) lla" \
     "type = int __attribute__ \\(\\(vector_size\\(2\\)\\)\\)"
 
 if {![string compare $endian big]} {
-    gdb_test "print (char4) ia" "\\\$$decimal = \\{0, 0, 0, 2\\}"
+    gdb_test "print (char4) ia" "${::valnum_re} = \\{0, 0, 0, 2\\}"
 } else {
-    gdb_test "print (char4) ia" "\\\$$decimal = \\{2, 0, 0, 0\\}"
+    gdb_test "print (char4) ia" "${::valnum_re} = \\{2, 0, 0, 0\\}"
 }
 
 gdb_test "print (int2) 1" "can only cast scalar to vector of same size"
@@ -129,31 +129,31 @@ gdb_test "print i4a + lla" "conversion of scalar to vector involves truncation"
 gdb_test "print lla + c4" "conversion of scalar to vector involves truncation"
 gdb_test "print lla + i4a" "conversion of scalar to vector involves truncation"
 
-gdb_test "print c4 + ib" "\\\$$decimal = \\{2, 3, 4, 5\\}"
-gdb_test "print i4a + ib" "\\\$$decimal = \\{3, 5, 9, 17\\}"
-gdb_test "print i4a + 1" "\\\$$decimal = \\{3, 5, 9, 17\\}"
-gdb_test "print 1 + i4a" "\\\$$decimal = \\{3, 5, 9, 17\\}"
-gdb_test "print fa - f4b" "\\\$$decimal = \\{1, 0, -6, -2\\}"
-gdb_test "print 2 - f4b" "\\\$$decimal = \\{1, 0, -6, -2\\}"
-gdb_test "print f4a * fb" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print f4a * 1" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print ia / i4b" "\\\$$decimal = \\{2, 1, 0, 0\\}"
-gdb_test "print 2 / i4b" "\\\$$decimal = \\{2, 1, 0, 0\\}"
-gdb_test "print i4a % ib" "\\\$$decimal = \\{0, 0, 0, 0\\}"
-gdb_test "print i4a % 1" "\\\$$decimal = \\{0, 0, 0, 0\\}"
-gdb_test "print ia & i4b" "\\\$$decimal = \\{0, 2, 0, 0\\}"
-gdb_test "print 2 & i4b" "\\\$$decimal = \\{0, 2, 0, 0\\}"
-gdb_test "print i4a | ib" "\\\$$decimal = \\{3, 5, 9, 17\\}"
-gdb_test "print i4a | 1" "\\\$$decimal = \\{3, 5, 9, 17\\}"
-gdb_test "print ia ^ i4b" "\\\$$decimal = \\{3, 0, 10, 6\\}"
-gdb_test "print 2 ^ i4b" "\\\$$decimal = \\{3, 0, 10, 6\\}"
-gdb_test "print i4a << ib" "\\\$$decimal = \\{4, 8, 16, 32\\}"
-gdb_test "print i4a << 1" "\\\$$decimal = \\{4, 8, 16, 32\\}"
-gdb_test "print i4a >> ib" "\\\$$decimal = \\{1, 2, 4, 8\\}"
-gdb_test "print i4a >> 1" "\\\$$decimal = \\{1, 2, 4, 8\\}"
+gdb_test "print c4 + ib" "${::valnum_re} = \\{2, 3, 4, 5\\}"
+gdb_test "print i4a + ib" "${::valnum_re} = \\{3, 5, 9, 17\\}"
+gdb_test "print i4a + 1" "${::valnum_re} = \\{3, 5, 9, 17\\}"
+gdb_test "print 1 + i4a" "${::valnum_re} = \\{3, 5, 9, 17\\}"
+gdb_test "print fa - f4b" "${::valnum_re} = \\{1, 0, -6, -2\\}"
+gdb_test "print 2 - f4b" "${::valnum_re} = \\{1, 0, -6, -2\\}"
+gdb_test "print f4a * fb" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print f4a * 1" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print ia / i4b" "${::valnum_re} = \\{2, 1, 0, 0\\}"
+gdb_test "print 2 / i4b" "${::valnum_re} = \\{2, 1, 0, 0\\}"
+gdb_test "print i4a % ib" "${::valnum_re} = \\{0, 0, 0, 0\\}"
+gdb_test "print i4a % 1" "${::valnum_re} = \\{0, 0, 0, 0\\}"
+gdb_test "print ia & i4b" "${::valnum_re} = \\{0, 2, 0, 0\\}"
+gdb_test "print 2 & i4b" "${::valnum_re} = \\{0, 2, 0, 0\\}"
+gdb_test "print i4a | ib" "${::valnum_re} = \\{3, 5, 9, 17\\}"
+gdb_test "print i4a | 1" "${::valnum_re} = \\{3, 5, 9, 17\\}"
+gdb_test "print ia ^ i4b" "${::valnum_re} = \\{3, 0, 10, 6\\}"
+gdb_test "print 2 ^ i4b" "${::valnum_re} = \\{3, 0, 10, 6\\}"
+gdb_test "print i4a << ib" "${::valnum_re} = \\{4, 8, 16, 32\\}"
+gdb_test "print i4a << 1" "${::valnum_re} = \\{4, 8, 16, 32\\}"
+gdb_test "print i4a >> ib" "${::valnum_re} = \\{1, 2, 4, 8\\}"
+gdb_test "print i4a >> 1" "${::valnum_re} = \\{1, 2, 4, 8\\}"
 
-gdb_test "print i4a = \{2, 4, 8, 16\}" "\\\$$decimal = \\{2, 4, 8, 16\\}"
-gdb_test "print i4a <<= ib" "\\\$$decimal = \\{4, 8, 16, 32\\}"
+gdb_test "print i4a = \{2, 4, 8, 16\}" "${::valnum_re} = \\{2, 4, 8, 16\\}"
+gdb_test "print i4a <<= ib" "${::valnum_re} = \\{4, 8, 16, 32\\}"
 
 # Test some error scenarios
 gdb_test "print i4a + d2" "Cannot perform operation on vectors with different types"

@@ -67,7 +67,7 @@ proc test_eliminated_var { var } {
 	-re "No symbol \"${var}\" in current context\\.\[\r\n\]+${gdb_prompt} $" {
 	    pass "test eliminated var ${var}"
 	}
-	-re "\\\$\[0-9\]+ = \\(.*\\) (0|$hex)( <${var}>)?\[\r\n\]+${gdb_prompt} $" {
+	-re "${::valnum_re} = \\(.*\\) (0|$hex)( <${var}>)?\[\r\n\]+${gdb_prompt} $" {
 	    fail "test eliminated var ${var}"
 	}
     }

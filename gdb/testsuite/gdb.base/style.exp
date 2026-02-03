@@ -213,7 +213,7 @@ proc run_style_tests { } {
 	set sfield [limited_style string_field variable]
 	set efield [limited_style e_field variable]
 	set evalue [limited_style VALUE_TWO variable]
-	set lhs [limited_style "\\\$$decimal" variable]
+	set lhs [limited_style "${::valnum_re}" variable]
 	gdb_test "print struct_value" \
 	    "$lhs = \{$ifield = 23,.*$sfield = .*,.*$efield = $evalue.*"
 
@@ -1044,7 +1044,7 @@ proc test_finish_styling {} {
 	return
     }
 
-    gdb_test "finish" "Value returned is [style \\\$$::decimal variable] = 0"
+    gdb_test "finish" "Value returned is [style ${::valnum_re} variable] = 0"
 }
 
 # Check to see if the Python styling of disassembler output is

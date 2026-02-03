@@ -29,7 +29,7 @@ if { [prepare_for_testing "failed to prepare" $testfile \
 
 set val ""
 gdb_test_multiple "print aaa" "" {
-    -re -wrap "^(?:\\$$decimal = )?(.*)" {
+    -re -wrap "^(?:${::valnum_re} = )?(.*)" {
 	set val $expect_out(1,string)
     }
 }

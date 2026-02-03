@@ -30,7 +30,7 @@ proc get_func_address { func } {
 
     set rfunc [string_to_regexp $func]
     gdb_test_multiple "print ${func}" "get address of ${func}" {
-	-re "\\\$\[0-9\]+ = \\{.*\\} (($hex) <${rfunc}.*>)\[\r\n\]+${gdb_prompt} $" {
+	-re "${::valnum_re} = \\{.*\\} (($hex) <${rfunc}.*>)\[\r\n\]+${gdb_prompt} $" {
 	    # $1 = {int ()} 0x24 <function_bar>
 	    # But if the function is at zero, the name may be omitted.
 	    pass "get address of ${func}"

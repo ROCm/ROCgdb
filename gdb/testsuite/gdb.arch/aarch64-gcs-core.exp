@@ -52,7 +52,7 @@ proc check_core_file {core_filename saved_gcspr} {
     }
 
     # Check the value of GCSPR in the core file.
-    gdb_test "print/x \$gcspr" "\\$\[0-9\]+ = $saved_gcspr" \
+    gdb_test "print/x \$gcspr" "${::valnum_re} = $saved_gcspr" \
 	"gcspr contents from core file"
 }
 

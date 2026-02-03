@@ -17,18 +17,50 @@ load_lib dwarf.exp
 # This test can only be run on targets which support DWARF-2 and use gas.
 require dwarf2_support
 
-standard_testfile .c -debug.S
+standard_testfile .c -dw.S
 
 if {[is_ilp32_target]} {
-    set ptrbits 32
+    set addr_size 4
 } else {
-    set ptrbits 64
+    set addr_size 8
+}
+
+# Make some DWARF for the test.
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    global addr_size
+    declare_labels foo
+
+    get_func_info FUNC_lang
+    cu {
+	version 2
+	addr_size $addr_size
+    } {
+	DW_TAG_compile_unit {
+	    DW_AT_name file1.txt DW_FORM_string
+	    DW_AT_producer {GNU C 3.3.3} DW_FORM_string
+	    DW_AT_language @DW_LANG_Fortran90
+	} {
+	    DW_TAG_subprogram {
+		DW_AT_external 1 DW_FORM_flag
+		DW_AT_name FUNC_lang DW_FORM_string
+		DW_AT_low_pc $FUNC_lang_start DW_FORM_addr
+		DW_AT_high_pc $FUNC_lang_end DW_FORM_addr
+		DW_AT_prototyped 1 DW_FORM_flag
+		DW_AT_type :$foo
+	    }
+	    foo: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_data1
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_name foo DW_FORM_string
+	    }
+	}
+    }
 }
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
-	  [list $srcfile $srcfile2] \
-	  [list nodebug additional_flags=-DPTRBITS=$ptrbits]] } {
-    return -1
+	  [list $srcfile $asm_file] {nodebug}] } {
+    return
 }
 
 gdb_test "show case-sensitive" {Case sensitivity in name search is "auto; currently on"\.}

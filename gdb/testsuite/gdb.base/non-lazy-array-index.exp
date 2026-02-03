@@ -62,7 +62,7 @@ gdb_test_multiple "p \$.array\[1\]" "" {
     -re "^\[^\$\]\[^\r\n\]+\r\n" {
 	exp_continue
     }
-    -re "^\\\$${decimal} = 2\r\n$gdb_prompt " {
+    -re "^${::valnum_re} = 2\r\n$gdb_prompt " {
 	if { $saw_memory_access } {
 	    if { $saw_auxv_parse } {
 		# The expression parser may look up global symbols, which

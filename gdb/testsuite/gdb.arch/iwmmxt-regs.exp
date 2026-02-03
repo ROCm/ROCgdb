@@ -55,20 +55,20 @@ for {set i 0} {$i < 4} {incr i 1} {
 gdb_test "next" ".*write_regs.*" "next over read_regs"
 
 for {set i 0} {$i < 16} {incr i 1} {
-    gdb_test "p \$wR$i.u64 == ((${i}LL << 32) | ${i})" "\\\$$decimal = 1" "test reg wR$i"
+    gdb_test "p \$wR$i.u64 == ((${i}LL << 32) | ${i})" "${::valnum_re} = 1" "test reg wR$i"
 }
 # Don't test wCSSF.
-gdb_test "p \$wCASF" "\\\$$decimal = 200" "test reg wCASF"
+gdb_test "p \$wCASF" "${::valnum_re} = 200" "test reg wCASF"
 for {set i 0} {$i < 4} {incr i 1} {
-    gdb_test "p \$wCGR$i == 100 + $i" "\\\$$decimal = 1" "test reg wCGR$i"
+    gdb_test "p \$wCGR$i == 100 + $i" "${::valnum_re} = 1" "test reg wCGR$i"
 }
 
 # Also verify the copies read by the target.
 for {set i 0} {$i < 16} {incr i 1} {
-    gdb_test "p regs\[$i\] == ((${i}LL << 32) | ${i})" "\\\$$decimal = 1" "test stored wR$i"
+    gdb_test "p regs\[$i\] == ((${i}LL << 32) | ${i})" "${::valnum_re} = 1" "test stored wR$i"
 }
 # Don't test wcssf.
-gdb_test "p control_regs\[1\]" "\\\$$decimal = 200" "test stored wCASF"
+gdb_test "p control_regs\[1\]" "${::valnum_re} = 200" "test stored wCASF"
 for {set i 0} {$i < 4} {incr i 1} {
-    gdb_test "p control_regs\[$i + 2\] == 100 + $i" "\\\$$decimal = 1" "test stored wCGR$i"
+    gdb_test "p control_regs\[$i + 2\] == 100 + $i" "${::valnum_re} = 1" "test stored wCGR$i"
 }

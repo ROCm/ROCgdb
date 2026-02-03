@@ -45,8 +45,8 @@ gdb_continue_to_breakpoint "find position where blank needs to be inserted"
 
 # Call some string methods.
 
-gdb_test "print s.length()"		"\\$\[0-9\]+ = 42"
-gdb_test "print s\[0\]"			"\\$\[0-9\]+ =.* 'I'"
-gdb_test "print s\[s.length()-1\]"	"\\$\[0-9\]+ =.* 'g'"
+gdb_test "print s.length()"		"${::valnum_re} = 42"
+gdb_test "print s\[0\]"			"${::valnum_re} =.* 'I'"
+gdb_test "print s\[s.length()-1\]"	"${::valnum_re} =.* 'g'"
 gdb_test "print (const char *) s" \
-    "\\$\[0-9\]+ = $hex \"I am a short stringand now a longer string\""
+    "${::valnum_re} = $hex \"I am a short stringand now a longer string\""

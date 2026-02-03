@@ -190,7 +190,7 @@ gdb_test_lines "maint info breakpoints" "" ".*" \
 # Set the do_spin variable in the inferior.  This will cause it to drop out
 # of its spin loop and hit the next breakpoint.  Remember, at this point the
 # inferior is still executing.
-gdb_test "print do_spin = 0" "\\\$$decimal = 0"
+gdb_test "print do_spin = 0" "${::valnum_re} = 0"
 
 # Collect the notification that the inferior has stopped.
 gdb_test_multiple "" "wait for stop" {

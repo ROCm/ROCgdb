@@ -49,7 +49,7 @@ gdb_test_no_output "set remote exec-file $target_exec" "set remote exec-file"
 gdb_breakpoint marker
 gdb_test "run" "Breakpoint.* marker .*" "run to marker"
 
-gdb_test "print d" "\\$${decimal} = ${hex} \"1\".*"
+gdb_test "print d" "${::valnum_re} = ${hex} \"1\".*"
 
 # Restart the process.
 with_test_prefix "restart" {
@@ -71,7 +71,7 @@ with_test_prefix "restart" {
 	}
     }
 
-    gdb_test "print d" "\\$${decimal} = ${hex} \"1\".*"
+    gdb_test "print d" "${::valnum_re} = ${hex} \"1\".*"
 }
 
 gdb_test "kill" "" "kill" "Kill the program being debugged. .y or n. " "y"

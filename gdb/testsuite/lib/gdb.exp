@@ -340,7 +340,7 @@ set tdlabel_re "(process|Thread|LWP)"
 
 # A regular expression that matches a value history number.
 # E.g., $1, $2, etc.
-set valnum_re "\\\$$decimal"
+set valnum_re [subst_vars {\$$decimal}]
 
 # A regular expression that matches a breakpoint hit with a breakpoint
 # having several code locations.
@@ -3505,7 +3505,7 @@ proc with_gdb_cwd { dir body } {
 	    exp_continue
 	}
 
-	-re "^\\\$$::decimal = 123\r\n" {
+	-re "^${::valnum_re} = 123\r\n" {
 	    set saw_result true
 	    exp_continue
 	}
@@ -9665,7 +9665,7 @@ proc get_valueof { fmt exp default {test ""} } {
 
     set val ${default}
     gdb_test_multiple "print${fmt} ${exp}" "$test" {
-	-re -wrap "^\\$\[0-9\]* = (\[^\r\n\]*)" {
+	-re -wrap "^${::valnum_re} = (\[^\r\n\]*)" {
 	    set val $expect_out(1,string)
 	    pass "$test"
 	}
@@ -9714,7 +9714,7 @@ proc get_integer_valueof { exp default {test ""} } {
 
     set val ${default}
     gdb_test_multiple "print /d ${exp}" "$test" {
-	-re -wrap "^\\$\[0-9\]* = (\[-\]*\[0-9\]*).*" {
+	-re -wrap "^${::valnum_re} = (\[-\]*\[0-9\]*).*" {
 	    set val $expect_out(1,string)
 	    pass "$test"
 	}
@@ -9739,7 +9739,7 @@ proc get_hexadecimal_valueof { exp default {test ""} } {
 
     set val ${default}
     gdb_test_multiple "print /x ${exp}" $test {
-	-re "\\$\[0-9\]* = (0x\[0-9a-zA-Z\]+).*$gdb_prompt $" {
+	-re "${::valnum_re} = (0x\[0-9a-zA-Z\]+).*$gdb_prompt $" {
 	    set val $expect_out(1,string)
 	    pass "$test"
 	}
@@ -9783,7 +9783,7 @@ proc get_var_address { var } {
     # $6 = (int (*)()) 0x24 <function_bar>
 
     gdb_test_multiple "print &${var}" "get address of ${var}" {
-	-re "\\\$\[0-9\]+ = \\(.*\\) (0|$hex)( <${var}>)?\[\r\n\]+${gdb_prompt} $"
+	-re "${::valnum_re} = \\(.*\\) (0|$hex)( <${var}>)?\[\r\n\]+${gdb_prompt} $"
 	{
 	    pass "get address of ${var}"
 	    if { $expect_out(1,string) == "0" } {

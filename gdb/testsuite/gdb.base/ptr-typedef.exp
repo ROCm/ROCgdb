@@ -23,5 +23,5 @@ if {![runto marker1]} {
     untested "couldn't run to marker1"
 }
 
-gdb_test "print foo_ptr" "\\\$$decimal = \\\(struct foo \\\*\\\) $hex"
-gdb_test "print foz_ptr" "\\\$$decimal = \\\(foz\\\) $hex"
+gdb_test "print foo_ptr" "${::valnum_re} = \\\(struct foo \\\*\\\) $hex"
+gdb_test "print foz_ptr" "${::valnum_re} = \\\(foz\\\) $hex"

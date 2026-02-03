@@ -22,7 +22,7 @@ puts $fd "print 2"
 close $fd
 
 # The expected output from the script...
-set script_output "\\$\[0-9\]+ = 1\[\r\n\]+\\$\[0-9\]+ = 2.*"
+set script_output "${::valnum_re} = 1\[\r\n\]+${::valnum_re} = 2.*"
 
 # Start a fresh GDB.  We don't need an executable for this test, so
 # nothing else to do in terms of testcase setup.

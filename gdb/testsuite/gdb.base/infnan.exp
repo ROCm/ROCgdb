@@ -23,5 +23,5 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
 
 runto_main
 
-gdb_test "print a" "\\\$$decimal = inf"
-gdb_test "print b" "\\\$$decimal = nan\\(0x.*\\)"
+gdb_test "print a" "${::valnum_re} = inf"
+gdb_test "print b" "${::valnum_re} = nan\\(0x.*\\)"

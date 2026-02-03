@@ -45,7 +45,7 @@ proc get_vector_hexadecimal_valueof { exp default {test ""} } {
 		set test "get vector_hexadecimal valueof \"${exp}\""
 	}
 	gdb_test_multiple "print $${exp}.uint128" $test {
-		-re -wrap "\\$\[0-9\]* = (0x\[0-9a-zA-Z\]+).*" {
+		-re -wrap "${::valnum_re} = (0x\[0-9a-zA-Z\]+).*" {
 			set val $expect_out(1,string)
 				pass "$test"
 		}

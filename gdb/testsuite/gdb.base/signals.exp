@@ -88,7 +88,7 @@ if {[runto_main]} {
 
     # ...call the function
 
-    gdb_test "p func1 ()" "^\\\$$decimal = void" \
+    gdb_test "p func1 ()" "^${::valnum_re} = void" \
 	"p func1 () #1"
 
     # ...veryfiy that the cout was updated

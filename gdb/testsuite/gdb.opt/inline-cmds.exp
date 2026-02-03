@@ -107,7 +107,7 @@ gdb_test_multiple "list" $msg {
 	# func1_step above).
 	set x_val -1
 	gdb_test_multiple "print x" "" {
-	    -re "\\\$$decimal = (\[0-9\]*)\r\n$gdb_prompt $" {
+	    -re "${::valnum_re} = (\[0-9\]*)\r\n$gdb_prompt $" {
 		set x_val $expect_out(1,string)
 	    }
 	    -re "$gdb_prompt $" { }

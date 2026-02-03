@@ -60,7 +60,7 @@ proc tls_core_test {supported corefile} {
 	if {![string match $host_triplet $target_triplet]} {
 	    setup_kfail "threads/22381" "*-*-*"
 	}
-	gdb_test "p/x foo" "\\$\[0-9]+ = 0xdeadbeef" $test
+	gdb_test "p/x foo" "${::valnum_re} = 0xdeadbeef" $test
     } else {
 	unsupported $test
     }

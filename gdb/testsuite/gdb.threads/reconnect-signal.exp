@@ -46,7 +46,7 @@ gdb_test "info threads" "\\* 2 .*" "thread 2 is selected"
 set msg "save \$pc after signal"
 set saved_pc ""
 gdb_test_multiple "print/x \$pc" $msg {
-    -re "\\\$$decimal = (\[^\r\n\]*)\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = (\[^\r\n\]*)\r\n$gdb_prompt $" {
 	set saved_pc $expect_out(1,string)
 	pass $msg
     }
@@ -74,7 +74,7 @@ if { [lindex $res 0] == 0 } {
 gdb_test "info threads" "\\* 2 .*" "thread 2 is selected on reconnect"
 
 # Check that the program is still alive, and stopped in the same spot.
-gdb_test "print/x \$pc" "\\\$$decimal = $saved_pc" "check \$pc after signal"
+gdb_test "print/x \$pc" "${::valnum_re} = $saved_pc" "check \$pc after signal"
 
 # Check that we didn't lose the signal.
 gdb_test "info program" "stopped with signal SIGUSR1,.*"

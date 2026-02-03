@@ -181,17 +181,17 @@ proc test_virtual_calls {} {
 	return 0
     }
 
-    gdb_test "print pAe->f()"   "\\$\[0-9\]+ = 20"
-    gdb_test "print pAa->f()"   "\\$\[0-9\]+ = 1"
-    gdb_test "print pDe->vg()"  "\\$\[0-9\]+ = 202"
-    gdb_test "print pADe->vg()" "\\$\[0-9\]+ = 202"
-    gdb_test "print pDd->vg()"  "\\$\[0-9\]+ = 101"
-    gdb_test "print pEe->vvb()" "\\$\[0-9\]+ = 411"
-    gdb_test "print pVB->vvb()" "\\$\[0-9\]+ = 407"
-    gdb_test "print pBe->vvb()" "\\$\[0-9\]+ = 411"
-    gdb_test "print pDe->vvb()" "\\$\[0-9\]+ = 411"
-    gdb_test "print pEe->vd()"  "\\$\[0-9\]+ = 282"
-    gdb_test "print pEe->fvb()" "\\$\[0-9\]+ = 311"
+    gdb_test "print pAe->f()"   "${::valnum_re} = 20"
+    gdb_test "print pAa->f()"   "${::valnum_re} = 1"
+    gdb_test "print pDe->vg()"  "${::valnum_re} = 202"
+    gdb_test "print pADe->vg()" "${::valnum_re} = 202"
+    gdb_test "print pDd->vg()"  "${::valnum_re} = 101"
+    gdb_test "print pEe->vvb()" "${::valnum_re} = 411"
+    gdb_test "print pVB->vvb()" "${::valnum_re} = 407"
+    gdb_test "print pBe->vvb()" "${::valnum_re} = 411"
+    gdb_test "print pDe->vvb()" "${::valnum_re} = 411"
+    gdb_test "print pEe->vd()"  "${::valnum_re} = 282"
+    gdb_test "print pEe->fvb()" "${::valnum_re} = 311"
 
     # more recent results:
     # wrong value "202"
@@ -204,10 +204,10 @@ proc test_virtual_calls {} {
     # -- chastain 2003-12-31
 
     gdb_test_multiple "print pEe->D::vg()" "print pEe->D::vg()" {
-	-re "\\$\[0-9]+ = 102$nl$gdb_prompt $" {
+	-re "${::valnum_re} = 102$nl$gdb_prompt $" {
 	    pass "print pEe->D::vg()"
 	}
-	-re "\\$\[0-9]+ = 202$nl$gdb_prompt $" {
+	-re "${::valnum_re} = 202$nl$gdb_prompt $" {
 	    # To get this result, we have called pEe->*(&D::vg) ().
 	    # That's how GDB interprets this, but it's wrong; in fact
 	    # the explicit D:: means to bypass virtual function lookup,

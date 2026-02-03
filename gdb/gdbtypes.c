@@ -1805,8 +1805,7 @@ void
 set_type_vptr_fieldno (struct type *type, int fieldno)
 {
   type = check_typedef (type);
-  gdb_assert (type->code () == TYPE_CODE_STRUCT
-	      || type->code () == TYPE_CODE_UNION);
+  gdb_assert (type->code () == TYPE_CODE_STRUCT);
   if (!HAVE_CPLUS_STRUCT (type))
     ALLOCATE_CPLUS_STRUCT_TYPE (type);
   TYPE_RAW_CPLUS_SPECIFIC (type)->vptr_fieldno = fieldno;
@@ -1831,8 +1830,8 @@ void
 set_type_vptr_basetype (struct type *type, struct type *basetype)
 {
   type = check_typedef (type);
-  gdb_assert (type->code () == TYPE_CODE_STRUCT
-	      || type->code () == TYPE_CODE_UNION);
+  gdb_assert (type->code () == TYPE_CODE_STRUCT);
+  gdb_assert (check_typedef (basetype)->code () == TYPE_CODE_STRUCT);
   if (!HAVE_CPLUS_STRUCT (type))
     ALLOCATE_CPLUS_STRUCT_TYPE (type);
   TYPE_RAW_CPLUS_SPECIFIC (type)->vptr_basetype = basetype;
@@ -3320,7 +3319,7 @@ allocate_cplus_struct_type (struct type *type)
   TYPE_RAW_CPLUS_SPECIFIC (type) = (struct cplus_struct_type *)
     TYPE_ZALLOC (type, sizeof (struct cplus_struct_type));
   *(TYPE_RAW_CPLUS_SPECIFIC (type)) = cplus_struct_default;
-  set_type_vptr_fieldno (type, -1);
+  TYPE_RAW_CPLUS_SPECIFIC (type)->vptr_fieldno = -1;
 }
 
 const struct gnat_aux_type gnat_aux_default =

@@ -362,9 +362,6 @@ proc_with_prefix user_defined_command_test {} {
 	"" \
 	"enter commands"
 
-    global decimal
-    set valnum_re "\\\$$decimal"
-
     gdb_test \
 	{mycommand $foo} \
 	[multi_line \

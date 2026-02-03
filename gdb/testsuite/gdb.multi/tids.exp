@@ -43,7 +43,7 @@ proc thread_apply {tid_list exp_tid_list {message ""}} {
     foreach tid $expected {
 	append r "\[\r\n\]+"
 	append r "Thread $tid $any:\r\n"
-	append r "\\$$decimal = 1234"
+	append r "${::valnum_re} = 1234"
     }
 
     set cmd "thread apply $tid_list"

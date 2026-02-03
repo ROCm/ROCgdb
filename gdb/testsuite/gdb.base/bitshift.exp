@@ -34,7 +34,7 @@ proc test_shift {lang cmd result_re {warning_or_error ""}} {
 	    }
 	} else {
 	    gdb_test_multiple $cmd "" {
-		-re -wrap "^\\$$::decimal$result_re" {
+		-re -wrap "^${::valnum_re}$result_re" {
 		    pass $gdb_test_name
 		}
 	    }
@@ -47,7 +47,7 @@ proc test_shift {lang cmd result_re {warning_or_error ""}} {
 	}
 
 	gdb_test_multiple $cmd "" {
-	    -re -wrap "^$warning_re\\$$::decimal$result_re" {
+	    -re -wrap "^$warning_re${::valnum_re}$result_re" {
 		pass $gdb_test_name
 	    }
 	}

@@ -51,7 +51,7 @@ proc check_getenv { var_name var_value { test_msg "" } { empty_var_p 0 } } {
 	set var_value_match "$hex \"$var_value\""
     }
 
-    gdb_test "print my_getenv (\"$var_name\")" "\\\$$decimal = $var_value_match" \
+    gdb_test "print my_getenv (\"$var_name\")" "${::valnum_re} = $var_value_match" \
 	$test_msg
 }
 
@@ -210,11 +210,11 @@ proc test_unset { } {
     set test_msg "check if unset works"
     set found_home 0
     gdb_test_multiple "print my_getenv (\"HOME\")" $test_msg {
-	-re "\\\$$decimal = $hex \".*\"\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = $hex \".*\"\r\n$gdb_prompt $" {
 	    pass $test_msg
 	    set found_home 1
 	}
-	-re "\\\$$decimal = 0x0\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = 0x0\r\n$gdb_prompt $" {
 	    untested $test_msg
 	}
     }

@@ -94,7 +94,7 @@ proc finish_no_print {} {
     }
     gdb_test_no_output "set print finish off"
     gdb_test "finish" \
-	"Value returned is \\\$$decimal = <not displayed>"
+	"Value returned is ${::valnum_re} = <not displayed>"
     gdb_test "print \$" " = 1" \
 	"Ensure return value was properly saved"
 }

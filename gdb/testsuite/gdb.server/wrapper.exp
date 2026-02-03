@@ -57,4 +57,4 @@ gdb_breakpoint marker
 gdb_test "continue" "Breakpoint.* marker .*" "continue to marker"
 # Test env var TEST is correctly passed to the program through
 # --wrapper.
-gdb_test "print d" "\\$${decimal} = ${hex} \"1\".*"
+gdb_test "print d" "${::valnum_re} = ${hex} \"1\".*"

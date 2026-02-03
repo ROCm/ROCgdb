@@ -48,17 +48,17 @@ with_test_prefix "simple command" {
 	    gdb_test $cmd \
 		[multi_line \
 		     "#0${ws}setup_done ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#1${ws}${any} f1 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#2${ws}${any} f2 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#3${ws}${any} f3 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#4${ws}${any} f4 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#5${ws}${any} main ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		    ] \
 		"run a simple command on all frames"
 	}
@@ -73,11 +73,11 @@ with_test_prefix "innermost 3" {
 	    gdb_test $cmd \
 		[multi_line \
 		     "#0${ws}setup_done ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#1${ws}${any} f1 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#2${ws}${any} f2 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		    ] \
 		"run a simple command on the 3 innermost frames"
 	}
@@ -91,11 +91,11 @@ with_test_prefix "outermost 3" {
 	    gdb_test $cmd \
 		[multi_line \
 		     "#3${ws}${any} f3 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#4${ws}${any} f4 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#5${ws}${any} main ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		    ] \
 		"run a simple command on the 3 outermost frames"
 	}
@@ -131,7 +131,7 @@ with_test_prefix "cont !silent flags" {
 		     "#2${ws}${any} f2 ${any}" \
 		     "No symbol \\\"f3arg\\\" in current context." \
 		     "#3${ws}${any} f3 ${any}" \
-		     "\\\$\[0-9]+ = 3${any}" \
+		     "${::valnum_re} = 3${any}" \
 		     "#4${ws}${any} f4 ${any}" \
 		     "No symbol \\\"f3arg\\\" in current context." \
 		     "#5${ws}${any} main ${any}" \
@@ -150,7 +150,7 @@ with_test_prefix "!cont silent flags" {
 	    gdb_test $cmd \
 		[multi_line \
 		     "#3${ws}${any} f3 ${any}" \
-		     "\\\$\[0-9]+ = 3${any}" \
+		     "${::valnum_re} = 3${any}" \
 		    ] \
 		"run a command failing in all frames except #3, -s to silently continue"
 	}
@@ -165,9 +165,9 @@ with_test_prefix "!quiet flag" {
 	    gdb_test $cmd \
 		[multi_line \
 		     "#0${ws}setup_done ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		     "#1${ws}${any} f1 ${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		    ] \
 		"run a command, printing location"
 	}
@@ -180,8 +180,8 @@ with_test_prefix "quiet flag" {
 	    set cmd "frame apply $frame_apply_args p /x 20"
 	    gdb_test $cmd \
 		[multi_line \
-		     "\\\$\[0-9]+ = 0x14${any}" \
-		     "\\\$\[0-9]+ = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
+		     "${::valnum_re} = 0x14${any}" \
 		    ] \
 		"run a command with -q quiet flag, printing only command results"
 	}
@@ -194,7 +194,7 @@ with_test_prefix "quiet silent flags" {
 	"level 0-5 -q -s -q"} {
 	    set cmd "frame apply $frame_apply_args p f3arg"
 	    gdb_test $cmd \
-		"\\\$\[0-9]+ = 3${any}" \
+		"${::valnum_re} = 3${any}" \
 		"run a command failing in all frames except #3, -s to silently continue, quiet"
 	}
 }

@@ -40,7 +40,7 @@ proc get_address { var } {
     global gdb_prompt
 
     gdb_test_multiple "print $var'access" "address of $var" {
-	-re "\\$\[0-9\]+ = \\(.*\\) (0x\[0-9a-f\]+).*$gdb_prompt $" {
+	-re "${::valnum_re} = \\(.*\\) (0x\[0-9a-f\]+).*$gdb_prompt $" {
 	    return $expect_out(1,string)
 	}
     }
@@ -52,13 +52,13 @@ proc test_p_x { var val addr } {
 
     set test "print/x $var"
     gdb_test_multiple "$test" $test {
-	-re "\\$\[0-9\]+ = [string_to_regexp $val].*$gdb_prompt $" {
+	-re "${::valnum_re} = [string_to_regexp $val].*$gdb_prompt $" {
 	    pass $test
 	}
-	-re "\\$\[0-9\]+ = $addr.*$gdb_prompt $" {
+	-re "${::valnum_re} = $addr.*$gdb_prompt $" {
 	    fail "$test (prints just address)"
 	}
-	-re "\\$\[0-9\]+ = 0x\[a-f0-9\]+.*$gdb_prompt $" {
+	-re "${::valnum_re} = 0x\[a-f0-9\]+.*$gdb_prompt $" {
 	    fail "$test (prints unexpected address)"
 	}
     }
@@ -72,10 +72,10 @@ proc test_p_x_addr { var addr } {
 	foreach space {"" "  "} {
 	    set test "print/x $var'$space$attr"
 	    gdb_test_multiple $test $test {
-		-re "\\$\[0-9\]+ = $addr.*$gdb_prompt $" {
+		-re "${::valnum_re} = $addr.*$gdb_prompt $" {
 		    pass $test
 		}
-		-re "\\$\[0-9\]+ = 0x\[a-f0-9+\]+.*$gdb_prompt $" {
+		-re "${::valnum_re} = 0x\[a-f0-9+\]+.*$gdb_prompt $" {
 		    fail "$test (prints unexpected address)"
 		}
 	    }
@@ -91,7 +91,7 @@ proc test_p_x_addr { var addr } {
 
 proc test_p_op1_equals_op2 {op1 op2} {
     set test "print $op1 = $op2"
-    gdb_test $test "\\$\[0-9\]+ = true"
+    gdb_test $test "${::valnum_re} = true"
 }
 
 clean_restart ${testfile}

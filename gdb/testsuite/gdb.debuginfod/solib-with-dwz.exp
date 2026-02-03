@@ -221,6 +221,7 @@ proc run_test { cache db debug_dir use_filename } {
     # Turn on support for debuginfod.
     gdb_test_no_output "set debuginfod enabled on" \
 	"enabled debuginfod for initial test"
+    gdb_test_no_output "set progress-bars enabled off"
 
     # Now GDB is configured, load the executable.
     gdb_load $::binfile

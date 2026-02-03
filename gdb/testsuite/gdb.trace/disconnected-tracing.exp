@@ -127,18 +127,18 @@ proc disconnected_tfind {  } {
 	gdb_test_no_output "tstop"
 
 	gdb_test "tfind" "Found trace frame 0, tracepoint .*" "tfind frame 0"
-	gdb_test "p \$trace_frame" ".*\\\$${decimal} = 0.*" \
+	gdb_test "p \$trace_frame" ".*${::valnum_re} = 0.*" \
 	    "p \$trace_frame before disconnected"
-	gdb_test "p \$tracepoint" ".*\\\$${decimal} = 2.*" \
+	gdb_test "p \$tracepoint" ".*${::valnum_re} = 2.*" \
 	    "p \$tracepoint before disconnected"
 
 	gdb_test "disconnect" "Ending remote debugging\\." "first disconnect"
 
-	gdb_test "p \$trace_frame" ".*\\\$${decimal} = -1.*"
-	gdb_test "p \$tracepoint" ".*\\\$${decimal} = -1.*"
-	gdb_test "p \$trace_line" ".*\\\$${decimal} = -1.*"
-	gdb_test "p \$trace_file" ".*\\\$${decimal} = void.*"
-	gdb_test "p \$trace_func" ".*\\\$${decimal} = void.*"
+	gdb_test "p \$trace_frame" ".*${::valnum_re} = -1.*"
+	gdb_test "p \$tracepoint" ".*${::valnum_re} = -1.*"
+	gdb_test "p \$trace_line" ".*${::valnum_re} = -1.*"
+	gdb_test "p \$trace_file" ".*${::valnum_re} = void.*"
+	gdb_test "p \$trace_func" ".*${::valnum_re} = void.*"
     }
 }
 

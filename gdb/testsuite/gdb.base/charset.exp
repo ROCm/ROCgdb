@@ -368,7 +368,7 @@ foreach target_charset $charset_subset {
     # gdb_test that requires us to use gdb_expect here.
     send_gdb "print $L'\\0'\n"
     gdb_expect {
-	-re "\\\$${decimal} = 0 $L'\\\\000'\[\r\n\]+$gdb_prompt $" {
+	-re "${::valnum_re} = 0 $L'\\\\000'\[\r\n\]+$gdb_prompt $" {
 	    pass "print the null character in ${target_charset}"
 	}
 	-re "$gdb_prompt $" {

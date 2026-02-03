@@ -15,30 +15,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Target-specific way of forcing an instruction label.  */
-#ifdef __mips__
-#define START_INSNS asm (".insn");
-#else
-#define START_INSNS
-#endif
-
-/* Use DW_LANG_Fortran90 for case insensitive DWARF.  */
-asm (".globl cu_text_start");
-asm ("cu_text_start:");
-START_INSNS
-
-asm (".globl FUNC_lang_start");
-asm (".p2align 4");
-asm ("FUNC_lang_start:");
-START_INSNS
-
 void
 FUNC_lang (void)
 {
+  asm ("FUNC_lang_label: .globl FUNC_lang_label");
 }
-
-asm (".globl FUNC_lang_end");
-asm ("FUNC_lang_end:");
 
 /* Symbol is present only in ELF .symtab.  */
 
@@ -54,6 +35,3 @@ main (void)
   FUNC_symtab ();
   return 0;
 }
-
-asm (".globl cu_text_end");
-asm ("cu_text_end:");

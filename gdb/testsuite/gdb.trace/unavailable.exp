@@ -34,10 +34,10 @@ proc test_register { reg } {
     global hex
 
     gdb_test_multiple "print /x $reg" "collected $reg" {
-	-re "\\$\[0-9\]+ = \[x0\]+\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = \[x0\]+\r\n$gdb_prompt $" {
 	    fail "collected $reg (zero)"
 	}
-	-re "\\$\[0-9\]+ = $hex\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = $hex\r\n$gdb_prompt $" {
 	    pass "collected $reg"
 	}
 	-re "\[Ee\]rror.*$gdb_prompt $" {
@@ -514,7 +514,7 @@ proc gdb_collect_globals_test_1 { } {
 	"global reference shows address but not value"
 
     gdb_test "print *&g_ref" \
-	"\\$\[0-9\]+ = <unavailable>" \
+	"${::valnum_re} = <unavailable>" \
 	"referenced integer was not collected (taking address of reference)"
 
     gdb_test "print *g_structref_p" " = <unavailable>"
@@ -536,7 +536,7 @@ proc gdb_collect_globals_test_1 { } {
 
     # Incomplete strings print as an array.
     gdb_test "print g_string_partial" \
-	"\\$\[0-9\]+ = \{<unavailable>, 101 'e', 108 'l', <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>\}" \
+	"${::valnum_re} = \{<unavailable>, 101 'e', 108 'l', <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>, <unavailable>\}" \
 	"printing partially collected string"
 
     # It is important for this test that the last examined value is

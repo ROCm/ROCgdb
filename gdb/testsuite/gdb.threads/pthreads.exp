@@ -305,11 +305,11 @@ proc check_qcs {} {
 			 "" \
 			 "Thread $::thread2_id ${any}" \
 			 "#${number}${ws}${any} in thread2 ${any}" \
-			 "\\\$\[0-9]+ = ${number}${any}" \
+			 "${::valnum_re} = ${number}${any}" \
 			 "" \
 			 "Thread $::thread1_id ${any}" \
 			 "#${number}${ws}${any} in thread1 ${any}" \
-			 "\\\$\[0-9]+ = ${number}${any}" \
+			 "${::valnum_re} = ${number}${any}" \
 			] \
 		    "run a failing command except in one frame of thread 2,3, -s to silently continue"
 	    }
@@ -319,16 +319,16 @@ proc check_qcs {} {
     gdb_test "thread apply all -s -q frame apply all -s p i" \
 	[multi_line \
 	     "#${number}${ws}${any} in thread2 ${any}" \
-	     "\\\$\[0-9]+ = ${number}${any}" \
+	     "${::valnum_re} = ${number}${any}" \
 	     "#${number}${ws}${any} in thread1 ${any}" \
-	     "\\\$\[0-9]+ = ${number}${any}" \
+	     "${::valnum_re} = ${number}${any}" \
 	    ] \
 	"run a failing command except in one frame of thread 2,3, -s to silently continue.  Do not show thread information"
 
     gdb_test "thread apply all -s -q frame apply all -s -q p i" \
 	[multi_line \
-	     "\\\$\[0-9]+ = ${number}${any}" \
-	     "\\\$\[0-9]+ = ${number}${any}" \
+	     "${::valnum_re} = ${number}${any}" \
+	     "${::valnum_re} = ${number}${any}" \
 	    ] \
 	"run a failing command except in one frame of thread 2,3, -s to silently continue.  Do not show thread and frame info"
 

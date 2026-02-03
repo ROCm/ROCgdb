@@ -31,7 +31,7 @@ gdb_test "source $script_file" \
 gdb_run_cmd
 
 gdb_test_multiple "" "commands executed twice" {
-    -re "\\$${decimal} = 100123\r\n\\$${decimal} = 100123\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 100123\r\n${::valnum_re} = 100123\r\n$gdb_prompt $" {
 	pass $gdb_test_name
     }
 }

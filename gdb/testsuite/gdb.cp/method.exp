@@ -57,13 +57,13 @@ gdb_test "continue" \
 # Check ability to access this-relative stuff.
 
 gdb_test "print x" \
-   "\\$\[0-9\]* = 20" \
+   "${::valnum_re} = 20" \
    "print x in A::foo"
 
 # Check access to this pointer
 
 gdb_test "print this" \
-   "\\$\[0-9\]* = \\((class |)A *\\* *(const|)\\) $hex" \
+   "${::valnum_re} = \\((class |)A *\\* *(const|)\\) $hex" \
    "print this in A::foo"
 
 # Now do everything over again for A::bar, because sometimes processing one method
@@ -79,7 +79,7 @@ gdb_test "continue" \
 # Check ability to access this-relative stuff.
 
 gdb_test "print x" \
-  "\\$\[0-9\]* = 33" \
+  "${::valnum_re} = 33" \
   "print x in A::bar"
 
 # Check access to this pointer
@@ -87,17 +87,17 @@ gdb_test "print x" \
 get_debug_format
 
 gdb_test_multiple "print this" "print this in A::bar" {
-    -re "\\$\[0-9\]* = \\(const (class |)A *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\(const (class |)A *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
 	pass "print this in A::bar"
     }
-    -re "\\$\[0-9\]* = \\((class |)A *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\((class |)A *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
 	# gcc versions up to 3.0.4 with -gstabs+ do not emit "const"
 	# indicators, so the output is "A *".  It should be "const A
 	# *" or "const A * const".
 	setup_xfail_format "stabs"
 	fail "print this in A::bar (missing const)"
     }
-    -re "\\$\[0-9\]* = \\(const (class |)\{\\.\\.\\.\} *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\(const (class |)\{\\.\\.\\.\} *\\* *(const|)\\) $hex\r\n$gdb_prompt $" {
 	# gcc versions gcc-3_1-branch%20020404 and HEAD%20020404 with -gstabs+
 	# produce good stabs, but gdb prints "const class {...} *" const.
 	# This is PR gdb/277.
@@ -120,19 +120,19 @@ gdb_test "continue" \
 # Check ability to access this-relative stuff.
 
 gdb_test "print data_" \
-  "\\$\[0-9\]* = 33" \
+  "${::valnum_re} = 33" \
   "print data_ in funk::getFunky"
 
 # Check access to this pointer
 
 gdb_test "print this" \
-  "\\$\[0-9\]* = \\((class |)funk *\\* *(const|)\\) $hex" \
+  "${::valnum_re} = \\((class |)funk *\\* *(const|)\\) $hex" \
   "print this in funk::getFunky"
 
 # Check access to local variable
 
 gdb_test "print res" \
-  "\\$\[0-9\]* = -30" \
+  "${::valnum_re} = -30" \
    "print res in funk::getFunky"
 
 # Check ptype of class -- should show const/volatile methods

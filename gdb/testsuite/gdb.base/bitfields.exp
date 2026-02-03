@@ -193,12 +193,12 @@ proc bitfield_internalvar {} {
     gdb_test_no_output "set \$myvar.f = 1"
 
     # Here comes the true testing.
-    gdb_test "print \$myvar.a" "\\$\[0-9\]\+ = 0"
-    gdb_test "print \$myvar.inner.b" "\\$\[0-9\]\+ = 1"
-    gdb_test "print \$myvar.inner.deep.c" "\\$\[0-9\]\+ = 0"
-    gdb_test "print \$myvar.inner.deep.d" "\\$\[0-9\]\+ = -1"
-    gdb_test "print \$myvar.inner.e" "\\$\[0-9\]\+ = -1"
-    gdb_test "print \$myvar.f" "\\$\[0-9\]\+ = -1"
+    gdb_test "print \$myvar.a" "${::valnum_re} = 0"
+    gdb_test "print \$myvar.inner.b" "${::valnum_re} = 1"
+    gdb_test "print \$myvar.inner.deep.c" "${::valnum_re} = 0"
+    gdb_test "print \$myvar.inner.deep.d" "${::valnum_re} = -1"
+    gdb_test "print \$myvar.inner.e" "${::valnum_re} = -1"
+    gdb_test "print \$myvar.f" "${::valnum_re} = -1"
 }
 
 gdb_test_no_output "set print sevenbit-strings"

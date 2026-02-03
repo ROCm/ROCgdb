@@ -49,14 +49,14 @@ with_test_prefix "\$_shell convenience function" {
     gdb_test "p \$_shell(\"false\")" " = 1"
 
     # Test command with arguments.
-    gdb_test "p \$_shell(\"echo foo\")" "foo\r\n\\$${decimal} = 0"
+    gdb_test "p \$_shell(\"echo foo\")" "foo\r\n${::valnum_re} = 0"
 
     # Check the type of the result.
     gdb_test "ptype \$_shell(\"true\")" "type = int"
 
     # Test passing a non-literal string as command name.
     gdb_test "p \$cmd = \"echo bar\"" " = \"echo bar\""
-    gdb_test "p \$_shell(\$cmd)" "bar\r\n\\$${decimal} = 0"
+    gdb_test "p \$_shell(\$cmd)" "bar\r\n${::valnum_re} = 0"
 
     # Test executing a non-existing command.  The result is
     # shell-dependent, but most (all?) POSIX-like shells return 127 in

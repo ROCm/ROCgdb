@@ -159,7 +159,7 @@ proc capture_value { expression args } {
 	set test "capture $expression"
     }
     gdb_test_multiple "print ${expression}" "$test" {
-	-re "\\$\[0-9\]+ = (\[^\r\n\]+).*$gdb_prompt $" {
+	-re "${::valnum_re} = (\[^\r\n\]+).*$gdb_prompt $" {
 	    set output_string "$expect_out(1,string)"
 	    pass "$test"
 	}
@@ -184,7 +184,7 @@ proc capture_pointer_with_type { pointer } {
     set test "capture type of pointer $pointer"
     set output_string ""
     gdb_test_multiple "p ${pointer}" $test {
-	-re "\\$\[0-9\]+ = .*$gdb_prompt $" {
+	-re "${::valnum_re} = .*$gdb_prompt $" {
 	    # Expected output of "p ${pointer}" is like "$7 = (int (*)[32]) 0x804a0e0",
 	    # and we want to extract "(int (*)[32]) 0x804a0e0" from it via
 	    # following regexp.

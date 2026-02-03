@@ -491,7 +491,7 @@ proc test_enums {} {
     # 2008-08-21 we can output the qualifiers for DWARF-2.
 
     gdb_test "print obj_with_enum" \
-	"\\$\[0-9\]+ = \{priv_enum = (ClassWithEnum::)?red, x = 0\}" \
+	"${::valnum_re} = \{priv_enum = (ClassWithEnum::)?red, x = 0\}" \
 	"print obj_with_enum (1)"
 
     # advance one line
@@ -501,12 +501,12 @@ proc test_enums {} {
     # print the object again
 
     gdb_test "print obj_with_enum" \
-	"\\$\[0-9\]+ = \{priv_enum = (ClassWithEnum::)?green, x = 0\}" \
+	"${::valnum_re} = \{priv_enum = (ClassWithEnum::)?green, x = 0\}" \
 	"print obj_with_enum, 2"
 
     # print the enum member
 
-    gdb_test "print obj_with_enum.priv_enum" "\\$\[0-9\]+ = (ClassWithEnum::)?green"
+    gdb_test "print obj_with_enum.priv_enum" "${::valnum_re} = (ClassWithEnum::)?green"
 
     # ptype on the enum member
 
@@ -585,7 +585,7 @@ proc test_enums {} {
     # See PR gdb/1588.
 
     gdb_test_multiple "print (ClassWithEnum::PrivEnum) 42" "print (ClassWithEnum::PrivEnum) 42" {
-	-re "\\$\[0-9\]+ = (ClassWithEnum::)?yellow$nl$gdb_prompt $" {
+	-re "${::valnum_re} = (ClassWithEnum::)?yellow$nl$gdb_prompt $" {
 	    pass "print (ClassWithEnum::PrivEnum) 42"
 	}
 	-re "A (parse|syntax) error in expression, near `42'.$nl$gdb_prompt $" {
@@ -596,7 +596,7 @@ proc test_enums {} {
     }
 
     gdb_test_multiple "print ('ClassWithEnum::PrivEnum') 42" "print ('ClassWithEnum::PrivEnum') 42" {
-	-re "\\$\[0-9\]+ = (ClassWithEnum::)?yellow$nl$gdb_prompt $" {
+	-re "${::valnum_re} = (ClassWithEnum::)?yellow$nl$gdb_prompt $" {
 	    # gcc 3.3.2 -gstabs+
 	    # gcc HEAD 2003-12-28 21:08:30 UTC -gstabs+
 	    pass "print ('ClassWithEnum::PrivEnum') 42"
@@ -615,9 +615,9 @@ proc test_enums {} {
 
 proc test_pointers_to_class_members {} {
     gdb_test "print Bar::z" "Cannot reference non-static field \"z\""
-    gdb_test "print &Foo::x" "\\$\[0-9\]+ = &Foo::x"
-    gdb_test "print (int)&Foo::x" "\\$\[0-9\]+ = 0"
-    gdb_test "print (int)&Bar::y == 2*sizeof(int)" "\\$\[0-9\]+ = true"
+    gdb_test "print &Foo::x" "${::valnum_re} = &Foo::x"
+    gdb_test "print (int)&Foo::x" "${::valnum_re} = 0"
+    gdb_test "print (int)&Bar::y == 2*sizeof(int)" "${::valnum_re} = true"
 
     gdb_test "ptype Bar::z" "type = int"
     gdb_test "ptype &Bar::z" "type = int Bar::\\*"
@@ -630,12 +630,12 @@ proc test_pointers_to_class_members {} {
 proc test_static_members {} {
     global hex
 
-    gdb_test "print Foo::st" "\\$\[0-9\]+ = 100"
+    gdb_test "print Foo::st" "${::valnum_re} = 100"
     gdb_test_no_output "set foo.st = 200" ""
-    gdb_test "print bar.st" "\\$\[0-9\]+ = 200"
-    gdb_test "print &foo.st" "\\$\[0-9\]+ = \\(int ?\\*\\) $hex <Foo::st>"
-    gdb_test "print &Bar::st" "\\$\[0-9\]+ = \\(int ?\\*\\) $hex <Foo::st>"
-    gdb_test "print *\$" "\\$\[0-9\]+ = 200"
+    gdb_test "print bar.st" "${::valnum_re} = 200"
+    gdb_test "print &foo.st" "${::valnum_re} = \\(int ?\\*\\) $hex <Foo::st>"
+    gdb_test "print &Bar::st" "${::valnum_re} = \\(int ?\\*\\) $hex <Foo::st>"
+    gdb_test "print *\$" "${::valnum_re} = 200"
 
     gdb_test_no_output "set print static-members off"
     gdb_test "print csi" \

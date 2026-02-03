@@ -41,7 +41,7 @@ with_test_prefix "multi insns" {
     set pc_before_stepping ""
     set test "pc before stepping"
     gdb_test_multiple "print/x \$pc" $test {
-	-re "\\\$$decimal = (\[^\r\n\]*)\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = (\[^\r\n\]*)\r\n$gdb_prompt $" {
 	    set pc_before_stepping $expect_out(1,string)
 	    pass $test
 	}
@@ -67,7 +67,7 @@ with_test_prefix "multi insns" {
     set pc_after_stepping ""
     set msg "pc after stepping"
     gdb_test_multiple "print/x \$pc" $msg {
-	-re "\\\$$decimal = (\[^\r\n\]*)\r\n$gdb_prompt $" {
+	-re "${::valnum_re} = (\[^\r\n\]*)\r\n$gdb_prompt $" {
 	    set pc_after_stepping $expect_out(1,string)
 	    pass $msg
 	}

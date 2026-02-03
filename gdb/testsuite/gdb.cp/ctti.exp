@@ -37,12 +37,12 @@ if {![runto_main]} {
 gdb_breakpoint [gdb_get_line_number "marker add1"]
 gdb_continue_to_breakpoint "marker add1"
 
-gdb_test "print c" "\\$\[0-9\]+ = 194 .*"
-gdb_test "print f" "\\$\[0-9\]+ = 9"
-gdb_test "print i" "\\$\[0-9\]+ = 4"
+gdb_test "print c" "${::valnum_re} = 194 .*"
+gdb_test "print f" "${::valnum_re} = 9"
+gdb_test "print i" "${::valnum_re} = 4"
 
 gdb_test_multiple "print add<int>(2,2)" "print add<int>(2,2)" {
-    -re "\\$\[0-9\]+ = 4\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\r\n$gdb_prompt $" {
 	pass "print add<int>(2,2)"
     }
     -re "No symbol \"add<int>\" in current context.\r\n$gdb_prompt $" {
@@ -52,7 +52,7 @@ gdb_test_multiple "print add<int>(2,2)" "print add<int>(2,2)" {
 
 # Note: 2.25 and 4.5 are exactly representable in IEEE-ish formats
 gdb_test_multiple "print add<float>(2.25,2.25)" "print add<float>(2.25,2.25)" {
-    -re "\\$\[0-9\]+ = 4\\.5\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\\.5\r\n$gdb_prompt $" {
 	pass "print add<float>(2.25,2.25)"
     }
     -re "No symbol \"add<float>\" in current context.\r\n$gdb_prompt $" {
@@ -61,7 +61,7 @@ gdb_test_multiple "print add<float>(2.25,2.25)" "print add<float>(2.25,2.25)" {
 }
 
 gdb_test_multiple "print add<unsigned char>('A','A')" "print add<unsigned char>('A','A')" {
-    -re "\\$\[0-9\]+ = 130 .*\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 130 .*\r\n$gdb_prompt $" {
 	pass "print add<unsigned char>('A','A')"
     }
     -re "No symbol \"add<unsigned char>\" in current context.\r\n$gdb_prompt $" {
@@ -70,7 +70,7 @@ gdb_test_multiple "print add<unsigned char>('A','A')" "print add<unsigned char>(
 }
 
 gdb_test_multiple "print add2<int>(2,2)" "print add2<int>(2,2)" {
-    -re "\\$\[0-9\]+ = 4\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\r\n$gdb_prompt $" {
 	pass "print add2<int>(2,2)"
     }
     -re "No symbol \"add2<int>\" in current context.\r\n$gdb_prompt $" {
@@ -79,7 +79,7 @@ gdb_test_multiple "print add2<int>(2,2)" "print add2<int>(2,2)" {
 }
 
 gdb_test_multiple "print add2<float>(2.25,2.25)" "print add2<float>(2.25,2.25)" {
-    -re "\\$\[0-9\]+ = 4\\.5\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\\.5\r\n$gdb_prompt $" {
 	pass "print add2<float>(2.25,2.25)"
     }
     -re "No symbol \"add2<float>\" in current context.\r\n$gdb_prompt $" {
@@ -88,7 +88,7 @@ gdb_test_multiple "print add2<float>(2.25,2.25)" "print add2<float>(2.25,2.25)" 
 }
 
 gdb_test_multiple "print add2<unsigned char>('A','A')" "print add2<unsigned char>('A','A')" {
-    -re "\\$\[0-9]+ = 130 .*$gdb_prompt $" {
+    -re "${::valnum_re} = 130 .*$gdb_prompt $" {
 	pass "print add2<unsigned char>('A','A')"
     }
     -re "No symbol \"add2<unsigned char>\" in current context.\r\n$gdb_prompt $" {
@@ -97,7 +97,7 @@ gdb_test_multiple "print add2<unsigned char>('A','A')" "print add2<unsigned char
 }
 
 gdb_test_multiple "print add3<int>(2,2)" "print add3<int>(2,2)" {
-    -re "\\$\[0-9\]+ = 4\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\r\n$gdb_prompt $" {
 	pass "print add3<int>(2,2)"
     }
     -re "No symbol \"add3<int>\" in current context.\r\n$gdb_prompt $" {
@@ -106,7 +106,7 @@ gdb_test_multiple "print add3<int>(2,2)" "print add3<int>(2,2)" {
 }
 
 gdb_test_multiple "print add3<float>(2.25,2.25)" "print add3<float>(2.25,2.25)" {
-    -re "\\$\[0-9\]+ = 4\\.5\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\\.5\r\n$gdb_prompt $" {
 	pass "print add3<float>(2.25,2.25)"
     }
     -re "No symbol \"add3<float>\" in current context.\r\n$gdb_prompt $" {
@@ -115,7 +115,7 @@ gdb_test_multiple "print add3<float>(2.25,2.25)" "print add3<float>(2.25,2.25)" 
 }
 
 gdb_test_multiple "print add3<unsigned char>('A','A')" "print add3<unsigned char>('A','A')" {
-    -re "\\$\[0-9]+ = 130 .*$gdb_prompt $" {
+    -re "${::valnum_re} = 130 .*$gdb_prompt $" {
 	pass "print add3<unsigned char>('A','A')"
     }
     -re "No symbol \"add3<unsigned char>\" in current context.\r\n$gdb_prompt $" {
@@ -124,7 +124,7 @@ gdb_test_multiple "print add3<unsigned char>('A','A')" "print add3<unsigned char
 }
 
 gdb_test_multiple "print add4<int>(2,2)" "print add4<int>(2,2)" {
-    -re "\\$\[0-9\]+ = 4\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\r\n$gdb_prompt $" {
 	pass "print add4<int>(2,2)"
     }
     -re "No symbol \"add4<int>\" in current context.\r\n$gdb_prompt $" {
@@ -133,7 +133,7 @@ gdb_test_multiple "print add4<int>(2,2)" "print add4<int>(2,2)" {
 }
 
 gdb_test_multiple "print add4<float>(2.25,2.25)" "print add4<float>(2.25,2.25)" {
-    -re "\\$\[0-9\]+ = 4\\.5\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = 4\\.5\r\n$gdb_prompt $" {
 	pass "print add4<float>(2.25,2.25)"
     }
     -re "No symbol \"add4<float>\" in current context.\r\n$gdb_prompt $" {
@@ -142,7 +142,7 @@ gdb_test_multiple "print add4<float>(2.25,2.25)" "print add4<float>(2.25,2.25)" 
 }
 
 gdb_test_multiple "print add4<unsigned char>('A','A')" "print add4<unsigned char>('A','A')" {
-    -re "\\$\[0-9]+ = 130 .*$gdb_prompt $" {
+    -re "${::valnum_re} = 130 .*$gdb_prompt $" {
 	pass "print add4<unsigned char>('A','A')"
     }
     -re "No symbol \"add4<unsigned char>\" in current context.\r\n$gdb_prompt $" {

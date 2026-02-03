@@ -292,7 +292,7 @@ with_test_prefix "print command" {
     gdb_test "p/x ${tagged_ptr_symbol}" \
 	[multi_line \
 	    "Logical tag \\(${ltag}\\) does not match the allocation tag \\(0x${atag_hexnz}\\)\." \
-	    "\\\$\[0-9\]+ = ${untagged_ptr}"] \
+	    "${::valnum_re} = ${untagged_ptr}"] \
 	    "show tag mismatch"
 }
 

@@ -18348,7 +18348,7 @@ the size of each of the two @code{Real}'s it is composed of.  A
 @code{Complex*4} would thus consist of two @code{Real*4}s and occupy 8 bytes
 of memory.
 
-For every type there is also a default kind associated with it, e.g.@
+For every type there is also a default kind associated with it, e.g.@:
 @code{Integer} in @value{GDBN} will internally be an @code{Integer*4} (see the
 table below for default types).  The default types are the same as in @sc{gnu}
 compilers but note, that the @sc{gnu} default types can actually be changed by

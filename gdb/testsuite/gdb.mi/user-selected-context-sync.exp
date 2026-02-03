@@ -485,7 +485,7 @@ proc ensure_no_output { test } {
     if { $gdb_spawn_id == $gdb_main_spawn_id } {
 	# CLI
 	gdb_test "print 666" \
-		 "^\\\$$decimal = 666" \
+		 "^${::valnum_re} = 666" \
 		 "$test, ensure no output CLI"
     } elseif { $gdb_spawn_id == $mi_spawn_id } {
 	# MI

@@ -41,10 +41,10 @@ gdb_test_debug_expr "print /x {char\[4\]} array" \
 
 # This caused gdb to output garbage and possibly segfault
 gdb_test_debug_expr "print \"hello\"" \
-    ".*OP_STRING\[^\r\n\]*.*: ordinary string.*\[\r\n\]\\$$decimal = \"hello\"" \
+    ".*OP_STRING\[^\r\n\]*.*: ordinary string.*\[\r\n\]${::valnum_re} = \"hello\"" \
     "string evaluation with debug expr"
 
 # An expression using a function call.
 gdb_test_debug_expr "print call_me ( &val )" \
-    ".*OP_FUNCALL\[^\r\n\]*.*UNOP_ADDR.*\[\r\n\]\\$$decimal = 0.*" \
+    ".*OP_FUNCALL\[^\r\n\]*.*UNOP_ADDR.*\[\r\n\]${::valnum_re} = 0.*" \
     "function call expression"

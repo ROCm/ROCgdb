@@ -60,7 +60,7 @@ gdb_test "cont" \
     "continuing to Create_Small"
 
 gdb_test "finish" \
-    "Value returned is \\\$\[0-9\]+ = \\(1, 1\\)" \
+    "Value returned is ${::valnum_re} = \\(1, 1\\)" \
     "value printed by finish of Create_Small"
 
 # Now continue until reaching the second breakpoint inside Create_Large,
@@ -79,7 +79,7 @@ if {![istarget "hppa*64*-*-*"]} {
 }
 
 gdb_test "finish" \
-    "Value returned is \\\$\[0-9\]+ = \\(2, 2, 2, 2\\)" \
+    "Value returned is ${::valnum_re} = \\(2, 2, 2, 2\\)" \
     "value printed by finish of Create_Large"
 
 # Now continue until reaching the third breakpoint, and then do another
@@ -90,5 +90,5 @@ gdb_test "cont" \
     "continuing to Create_Small_Float_Vector"
 
 gdb_test "finish" \
-    "Value returned is \\\$\[0-9\]+ = \\(4.25, 4.25\\)" \
+    "Value returned is ${::valnum_re} = \\(4.25, 4.25\\)" \
     "value printed by finish of Create_Small_Float_Vector"

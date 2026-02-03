@@ -64,7 +64,7 @@ proc test_with_menu {command result} {
 	    # The number we just sent, ignore.
 	    exp_continue
 	}
-	-re "\\\$\[0-9\]+ = (\[^\r\n\]+)\r\n" {
+	-re "${::valnum_re} = (\[^\r\n\]+)\r\n" {
 	    if {[regexp $result $expect_out(1,string)]} {
 		pass $command
 	    } else {

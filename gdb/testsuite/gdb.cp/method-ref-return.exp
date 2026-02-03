@@ -33,7 +33,7 @@ gdb_continue_to_breakpoint "after reference assignment"
 
 # Test that we can call the method through reference and get the expected result.
 gdb_test_multiple "print b.get_foo()" "print method call returning reference" {
-    -re "\\$\[0-9\]+ = \\(const foo &\\) @$hex: \\{m_a = 42\\}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\(const foo &\\) @$hex: \\{m_a = 42\\}\r\n$gdb_prompt $" {
 	pass $gdb_test_name
     }
     -re "Could not validate memory tag: Value can't be converted to integer\\." {
@@ -43,17 +43,17 @@ gdb_test_multiple "print b.get_foo()" "print method call returning reference" {
 
 # Test accessing the member through the reference.
 gdb_test "print b.get_foo ().m_a" \
-    "\\$\[0-9\]+ = 42" \
+    "${::valnum_re} = 42" \
     "print member access through reference"
 
 # Test calling method on the referenced object.
 gdb_test "print b.get_foo ().get_a()" \
-    "\\$\[0-9\]+ = 42" \
+    "${::valnum_re} = 42" \
     "print method call on referenced object"
 
 # Test that the stored reference works correctly.
 gdb_test_multiple "print ref" "print stored reference" {
-    -re "\\$\[0-9\]+ = \\(const foo &\\) @$hex: \\{m_a = 42\\}\r\n$gdb_prompt $" {
+    -re "${::valnum_re} = \\(const foo &\\) @$hex: \\{m_a = 42\\}\r\n$gdb_prompt $" {
 	pass $gdb_test_name
     }
     -re "Could not validate memory tag: Value can't be converted to integer\\." {
@@ -62,9 +62,9 @@ gdb_test_multiple "print ref" "print stored reference" {
 }
 
 gdb_test "print ref.m_a" \
-    "\\$\[0-9\]+ = 42" \
+    "${::valnum_re} = 42" \
     "print member through stored reference"
 
 gdb_test "print ref.get_a()" \
-    "\\$\[0-9\]+ = 42" \
+    "${::valnum_re} = 42" \
     "print method call through stored reference"

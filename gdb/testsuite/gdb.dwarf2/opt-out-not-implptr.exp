@@ -91,12 +91,7 @@ if {[build_executable ${testfile}.exp ${testfile} \
     return -1
 }
 
-# We need --readnow because otherwise we never read in the CU we
-# created above.
-save_vars { GDBFLAGS } {
-    append set GDBFLAGS " -readnow"
-    clean_restart ${testfile}
-}
+clean_restart ${testfile}
 
 if {![runto_main]} {
     return -1
