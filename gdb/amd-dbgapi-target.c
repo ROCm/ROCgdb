@@ -1179,7 +1179,8 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
      below us) to do the memory operation, but dbgapi knows nothing about the
      child and would try to update the parent's memory.  */
   if ((!ptid_is_gpu (inferior_ptid) && object != TARGET_OBJECT_MEMORY)
-      || inferior_ptid.pid () != current_inferior ()->pid)
+      || inferior_ptid.pid () != current_inferior ()->pid
+      || (ptid_is_gpu (inferior_ptid) && object == TARGET_OBJECT_LIBRARIES))
     return beneath ()->xfer_partial (object, annex, readbuf, writebuf,
 				     offset, requested_len, xfered_len);
 
