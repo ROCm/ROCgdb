@@ -128,7 +128,7 @@ get_aarch64_opcode (const opcode_node *opcode_node)
   return &index2table (opcode_node->index)[real_index (opcode_node->index)];
 }
 
-static bool iclass_has_subclasses_p[last_iclass];
+static bool iclass_has_subclasses_p[last_iclass + 1];
 
 static void
 read_table (const struct aarch64_opcode* table)

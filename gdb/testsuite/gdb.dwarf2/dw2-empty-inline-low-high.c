@@ -1,8 +1,6 @@
-/* DWARF 2 debugging format support for GDB.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 1994-2026 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2024-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,14 +15,25 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_DWARF2_LINE_PROGRAM_H
-#define GDB_DWARF2_LINE_PROGRAM_H
+volatile int global_var = 0;
 
-/* Decode the Line Number Program (LNP) for the line_header structure in
-   CU.
+int
+main (void)
+{		/* main decl line */
+  asm ("main_label: .globl main_label");
+  ++global_var;
 
-   LOWPC is the lowest address in CU (or 0 if not known).  */
+  asm ("main_0: .globl main_0");
+  ++global_var;
 
-extern void dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc);
+  asm ("main_1: .globl main_1");
+  ++global_var;		/* foo call line */
 
-#endif /* GDB_DWARF2_LINE_PROGRAM_H */
+  asm ("main_2: .globl main_2");
+  ++global_var;
+
+  asm ("main_3: .globl main_3");
+  ++global_var;
+
+  return 0;
+}

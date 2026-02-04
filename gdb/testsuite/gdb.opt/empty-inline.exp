@@ -1,0 +1,145 @@
+# Copyright 2024-2025 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Create a test file with an inline function for which gcc (at least)
+# will, on some architectures, create a function with a zero byte
+# range.  The inline function is something pretty trivial, e.g. a
+# function that just returns a constant integer.  On x86-64 gcc will
+# make the integer an operand of an instruction within the caller.  As
+# a result the inline function doesn't even get a full instruction
+# (it's just one operand) and gcc generates DWARF that gives the
+# inline function a zero byte range.
+#
+# The problem with this is that we can no longer step into the inline
+# function.
+#
+# GDB will expand the range of inline functions to be at least a
+# single byte, this allows the user to step into inline functions.
+
+standard_testfile
+
+require {expr ![test_compiler_info gcc* c++] \
+	     || [supports_statement_frontiers] }
+
+set options {debug nowarnings optimize=-O2}
+lappend_include_file options $srcdir/lib/attributes.h
+if {[supports_statement_frontiers]} {
+    lappend options additional_flags=-gstatement-frontiers
+}
+
+# Some line numbers we need.
+set lineno_main_1 [gdb_get_line_number "First line of main"]
+set lineno_main_2 [gdb_get_line_number "Second line of main"]
+set lineno_main_3 [gdb_get_line_number "Third line of main"]
+set lineno_test0_1 [gdb_get_line_number "First line of test0"]
+set lineno_test0_2 [gdb_get_line_number "Second line of test0"]
+set lineno_test1_2 [gdb_get_line_number "Second line of test1"]
+
+# Return a regexp to match a file with basename BASE.  On remote hosts
+# the source is copied over and then compiled without an absolute
+# filename, so the returned regexp is just for BASE.  On local hosts,
+# the source is compiled with an absolute filename, so the returned
+# regexp will match some non-end-of-line content, then BASE.
+proc remote_file_re { base } {
+    set base_re [string_to_regexp $base]
+
+    if {![is_remote host]} {
+	set base_re "\[^\r\n\]+/$base_re"
+    }
+
+    return $base_re
+}
+
+# Step into some very small functions that could (at some optimisation
+# levels) be inlined.  Check the backtrace at various points to
+# confirm that GDB thinks it is in the right place.
+#
+# OPT_LEVEL should be a string 'O0', 'O1', etc, and is passed to the
+# compiler in the build flags.
+proc run_test { opt_level } {
+
+    set opts $::options
+    lappend opts "additional_flags=-${opt_level}"
+
+    if { [prepare_for_testing "failed to prepare" "$::testfile-$opt_level" \
+	      $::srcfile $opts] } {
+	return
+    }
+
+    if { ![runto_main] } {
+	return
+    }
+
+    gdb_test "frame 0" \
+	[multi_line \
+	     "#0\\s+main \\(\\) at [remote_file_re $::srcfile]:$::lineno_main_1" \
+	     "$::lineno_main_1\\s+\[^\r\n\]+"] \
+	"frame 0 while in main"
+
+    gdb_test_multiple "step" "step into test0" {
+	-re -wrap ".*test0.*$::srcfile:$::lineno_test0_1.*" {
+	    gdb_test "step" "^$::lineno_test0_2\\s+\[^\r\n\]+" $gdb_test_name
+	}
+	-re -wrap ".*test0.*$::srcfile:$::lineno_test0_2.*" {
+	    pass $gdb_test_name
+	}
+    }
+
+    gdb_test "frame 1" \
+	[multi_line \
+	     "#1\\s+main \\(\\) at [remote_file_re $::srcfile]:$::lineno_main_1" \
+	     "$::lineno_main_1\\s+\[^\r\n\]+"] \
+	"inspect frame 1, main"
+
+    # Step into test1() function.
+    gdb_test "step" \
+	[multi_line \
+	     "test1 \\(\[^)\]+\\) at [remote_file_re $::srcfile]:$::lineno_test1_2" \
+	     "$::lineno_test1_2\\s+\[^\r\n\]+"] \
+	"step into test1"
+
+    # Check frame #1 looks right.  Bug gdb/25987 would report frame #1 as
+    # being the correct function, but would report the line for a nearby
+    # inlined function.
+    gdb_test "frame 1" \
+	[multi_line \
+	     "#1\\s+\[^\r\n\]*main \\(\\) at [remote_file_re $::srcfile]:$::lineno_main_1" \
+	     "$::lineno_main_1\\s+\[^\r\n\]+"] \
+	"inspect frame 1 again, still main"
+
+    # Step from the last line of test1 back into main.
+    gdb_test "step" \
+	[multi_line \
+	     "main \\(\\) at [remote_file_re $::srcfile]:$::lineno_main_2" \
+	     "$::lineno_main_2\\s+\[^\r\n\]+"] \
+	"step back to main"
+
+    # Use next to step to the last line of main.  This skips over the inline
+    # call to test0, and the non-inline call to test1.
+    gdb_test "next" \
+	"$::lineno_main_3\\s+return 0;\\s+\[^\r\n\]+" \
+	"step over test0+1"
+
+    # Sanity check that we are in main like we expect.
+    gdb_test "frame 0" \
+	[multi_line \
+	     "#0\\s+main \\(\\) at [remote_file_re $::srcfile]:$::lineno_main_3" \
+	     "$::lineno_main_3\\s+return 0;\\s+\[^\r\n\]+"] \
+	"confirm expected frame in main"
+}
+
+foreach_with_prefix opt_level { Og O0 O1 O2 } {
+    run_test ${opt_level}
+}

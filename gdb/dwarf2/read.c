@@ -5844,29 +5844,26 @@ find_file_and_directory (struct die_info *die, struct dwarf2_cu *cu)
   return *cu->per_cu->fnd;
 }
 
-/* Handle DW_AT_stmt_list for a compilation unit.
-   DIE is the DW_TAG_compile_unit die for CU.
-   COMP_DIR is the compilation directory.  LOWPC is passed to
-   dwarf_decode_lines.  See dwarf_decode_lines comments about it.  */
+/* Handle DW_AT_stmt_list for a compilation unit. DIE is the
+   DW_TAG_compile_unit die for CU.  FND is used to access the compilation
+   directory.  This function will decode the line table header and create
+   symtab objects for the files referenced in the line table.  The line
+   table itself though is not processed by this function.  If there is no
+   line table, or there's a problem decoding the header, then CU will not
+   be updated.  */
 
 static void
-handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
-			const file_and_directory &fnd, unrelocated_addr lowpc,
-			bool have_code) /* ARI: editCase function */
+decode_line_header_for_cu (struct die_info *die, struct dwarf2_cu *cu,
+			   const file_and_directory &fnd)
 {
-  dwarf2_per_objfile *per_objfile = cu->per_objfile;
-  struct attribute *attr;
-  hashval_t line_header_local_hash;
-  void **slot;
-  int decode_mapping;
-
   gdb_assert (!cu->per_cu->is_debug_types ());
 
-  attr = dwarf2_attr (die, DW_AT_stmt_list, cu);
+  struct attribute *attr = dwarf2_attr (die, DW_AT_stmt_list, cu);
   if (attr == NULL || !attr->form_is_unsigned ())
     return;
 
   sect_offset line_offset = (sect_offset) attr->as_unsigned ();
+  dwarf2_per_objfile *per_objfile = cu->per_objfile;
 
   /* The line header hash table is only created if needed (it exists to
      prevent redundant reading of the line table for partial_units).
@@ -5884,8 +5881,9 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
 				   xcalloc, xfree));
     }
 
+  void **slot;
   line_header line_header_local (line_offset, cu->per_cu->is_dwz ());
-  line_header_local_hash = line_header_hash (&line_header_local);
+  hashval_t line_header_local_hash = line_header_hash (&line_header_local);
   if (per_objfile->line_header_hash != NULL)
     {
       slot = htab_find_slot_with_hash (per_objfile->line_header_hash.get (),
@@ -5938,12 +5936,22 @@ handle_DW_AT_stmt_list (struct die_info *die, struct dwarf2_cu *cu,
 	 then this is what we want as well.  */
       gdb_assert (die->tag != DW_TAG_partial_unit);
     }
-  decode_mapping = (die->tag != DW_TAG_partial_unit);
-  /* The have_code check is here because, if LOWPC and HIGHPC are both 0x0,
-     then there won't be any interesting code in the CU, but a check later on
-     (in lnp_state_machine::check_line_address) will fail to properly exclude
-     an entry that was removed via --gc-sections.  */
-  dwarf_decode_lines (cu, lowpc, decode_mapping && have_code);
+
+  /* For non DWZ CUs, make sure a symtab is created for every file, even
+     files which contain only variables (i.e. no code with associated line
+     numbers).
+
+     For DWZ CUs the line table can contain references to files that are
+     not part of the original CU.  In fact, if multiple object files were
+     used to create the DWZ file (as is normal), then the DWZ CU's line
+     table can contain references to files that are in objfiles that are
+     not part of the current inferior.  For DWZ we rely on lazy symtab
+     creation.  In the end we should still end up with a symtab for every
+     file as the original CU (the non-DWZ CU) will still contain a line
+     table, and that line table will mention every file, so when that is
+     processed we'll create symtabs as needed.  */
+  if (!cu->per_cu->is_dwz ())
+    cu->create_subfiles_and_symtabs ();
 }
 
 /* Process DW_TAG_compile_unit or DW_TAG_partial_unit.  */
@@ -5995,16 +6003,28 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
   scoped_restore restore_sym_cu
     = make_scoped_restore (&per_objfile->sym_cu, cu);
 
-  /* Decode line number information if present.  We do this before
-     processing child DIEs, so that the line header table is available
-     for DW_AT_decl_file.  */
-  handle_DW_AT_stmt_list (die, cu, fnd, unrel_low, unrel_low != unrel_high);
+  /* Decode the line header if present.  We do this before processing child
+     DIEs, so that information is available for DW_AT_decl_file.  We defer
+     parsing the actual line table until after processing the child DIEs,
+     this allows us to fix up some of the inline function blocks as the
+     line table is read.  */
+  decode_line_header_for_cu (die, cu, fnd);
 
   /* Process all dies in compilation unit.  */
   for (die_info *child_die : die->children ())
     process_die (child_die, cu);
 
   per_objfile->sym_cu = nullptr;
+
+  /* If we actually have code, then read the line table now.  */
+  if (unrel_low != unrel_high
+      && die->tag != DW_TAG_partial_unit
+      && cu->line_header != nullptr)
+    dwarf_decode_lines (cu, unrel_low);
+
+  /* We no longer need to track the inline block end addresses.  Release
+     memory associated with this.  */
+  cu->inline_block_ends.clear ();
 
   /* Decode macro information, if present.  Dwarf 2 macro information
      refers to information in the line number info statement program
@@ -8467,6 +8487,16 @@ read_variable (struct die_info *die, struct dwarf2_cu *cu)
     }
 }
 
+/* Return true if an empty range associated with an entry of type TAG in
+   CU should be "fixed", that is, converted to a single byte, non-empty
+   range.  */
+
+static bool
+dwarf_fixup_empty_range (struct dwarf2_cu *cu, dwarf_tag tag)
+{
+  return tag == DW_TAG_inlined_subroutine && cu->producer_is_gcc ();
+}
+
 /* Call CALLBACK from DW_AT_ranges attribute value OFFSET
    reading .debug_rnglists.
    Callback's type should be:
@@ -8629,7 +8659,12 @@ dwarf2_rnglists_process (unsigned offset, struct dwarf2_cu *cu,
 
       /* Empty range entries have no effect.  */
       if (range_beginning == range_end)
-	continue;
+	{
+	  if (dwarf_fixup_empty_range (cu, tag))
+	    range_end = (unrelocated_addr) ((CORE_ADDR) range_end + 1);
+	  else
+	    continue;
+	}
 
       /* Only DW_RLE_offset_pair needs the base address added.  */
       if (rlet == DW_RLE_offset_pair)
@@ -8751,7 +8786,12 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 
       /* Empty range entries have no effect.  */
       if (range_beginning == range_end)
-	continue;
+	{
+	  if (dwarf_fixup_empty_range (cu, tag))
+	    range_end = (unrelocated_addr) ((CORE_ADDR) range_end + 1);
+	  else
+	    continue;
+	}
 
       range_beginning = (unrelocated_addr) ((CORE_ADDR) range_beginning
 					    + (CORE_ADDR) *base);
@@ -8969,9 +9009,24 @@ dwarf2_get_pc_bounds (struct die_info *die, unrelocated_addr *lowpc,
   if (ret == PC_BOUNDS_NOT_PRESENT || ret == PC_BOUNDS_INVALID)
     return ret;
 
-  /* partial_die_info::read has also the strict LOW < HIGH requirement.  */
+  /* These LOW and HIGH values will be used to create a block.  A block's
+     high address is the first address after the block's address range, so
+     if 'high <= low' then the block has no code associated with it.  */
   if (high <= low)
-    return PC_BOUNDS_INVALID;
+    {
+      /* In some cases though, when the blocks LOW / HIGH were defined with
+	 the DW_AT_low_pc and DW_AT_high_pc, we see some compilers create
+	 an empty block when we can provide a better debug experience by
+	 having a non-empty block.  We do this by "fixing" the block to be
+	 a single byte in length.  See dwarf_fixup_empty_range for when
+	 this fixup is performed.  */
+      if (high == low
+	  && ret == PC_BOUNDS_HIGH_LOW
+	  && dwarf_fixup_empty_range (cu, die->tag))
+	high = (unrelocated_addr) (((ULONGEST) low) + 1);
+      else
+	return PC_BOUNDS_INVALID;
+    }
 
   /* When using the GNU linker, .gnu.linkonce. sections are used to
      eliminate duplicate copies of functions and vtables and such.
@@ -9210,6 +9265,18 @@ dwarf2_record_block_entry_pc (struct die_info *die, struct block *block,
     }
 }
 
+/* If BLOCK is an inline function, then record UNREL_HIGH as its end
+   address.  */
+
+static void
+dwarf2_maybe_record_inline_function (struct dwarf2_cu *cu, struct block *block,
+				     unrelocated_addr unrel_high)
+{
+  /* If this is the end of an inline block, then record its end address.  */
+  if (block->inlined_p () && block->function () != nullptr)
+    cu->inline_block_ends.insert ({unrel_high, block});
+}
+
 /* Record the address ranges for BLOCK, offset by BASEADDR, as given
    in DIE.  Also set the entry PC for BLOCK.  */
 
@@ -9252,8 +9319,33 @@ dwarf2_record_block_ranges (struct die_info *die, struct block *block,
 
 	  CORE_ADDR low = per_objfile->relocate (unrel_low);
 	  CORE_ADDR high = per_objfile->relocate (unrel_high);
+
 	  fixup_low_high_pc (cu, die, &low, &high);
-	  cu->get_builder ()->record_block_range (block, low, high - 1);
+
+	  /* Blocks where 'high < low' should be rejected earlier in the
+	     process, e.g. see dwarf2_get_pc_bounds.  */
+	  gdb_assert (high >= low);
+
+	  /* The value of HIGH is the first address past the end, but
+	     GDB stores ranges with the high value as last inclusive
+	     address, so in most cases we need to decrement HIGH here.
+
+	     Blocks where 'high == low' represent an empty block (i.e. a
+	     block with no associated code).
+
+	     When 'high == low' and dwarf_fixup_empty_range returns true we
+	     "fix" the empty range into a single byte range, which we can
+	     do by leaving HIGH untouched.  Otherwise we decrement HIGH,
+	     which might result in 'high < low'.  */
+	  if (high > low || !dwarf_fixup_empty_range (cu, die->tag))
+	    high -= 1;
+
+	  /* If the above decrement resulted in 'high < low' then this
+	     represents an empty range.  There's little point storing this
+	     in GDB's internal structures, it's just more to search
+	     through, and it will never match any address.  */
+	  if (high >= low)
+	    dwarf2_maybe_record_inline_function (cu, block, unrel_high);
 	}
 
       attr = dwarf2_attr (die, DW_AT_ranges, cu);
@@ -9283,8 +9375,7 @@ dwarf2_record_block_ranges (struct die_info *die, struct block *block,
 	  {
 	    CORE_ADDR abs_start = per_objfile->relocate (start);
 	    CORE_ADDR abs_end = per_objfile->relocate (end);
-	    cu->get_builder ()->record_block_range (block, abs_start,
-						    abs_end - 1);
+	    dwarf2_maybe_record_inline_function (cu, block, end);
 	    blockvec.emplace_back (abs_start, abs_end);
 	  });
 
@@ -15507,7 +15598,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	      if (file_cu->line_header == nullptr)
 		{
 		  file_and_directory fnd (nullptr, nullptr);
-		  handle_DW_AT_stmt_list (file_cu->dies, file_cu, fnd, {}, false);
+		  decode_line_header_for_cu (file_cu->dies, file_cu, fnd);
 		}
 
 	      if (file_cu->line_header != nullptr)

@@ -1427,6 +1427,37 @@ lang_finish (void)
   ldfile_free ();
 }
 
+/* Called by ld_cleanup() at linker exit.  Frees any remaining memory used by
+   ldlang.c in order to pacify memory leak checkers.  */
+
+void
+lang_cleanup (void)
+{
+  lang_input_statement_type *search;
+
+  /* FIXME: Walking the file_chain list closes most of the open bfds but not
+     all of them.  We should find and close the others as well.
+
+     Note: the bfds closed here can also be found on the input_file_chain and
+     link_info.input_bfd lists.  A bfd can only be closed once however, so we
+     must not walk those other lists.  */
+
+  for (search = (void *) file_chain.head;
+       search != NULL;
+       search = search->next_real_file)
+    {
+      if (search->the_bfd == NULL)
+	continue;
+      
+      bfd_close_all_done (search->the_bfd);
+      search->the_bfd = NULL;
+    }
+
+  stat_free (NULL);
+
+  obstack_free (&pt_obstack, NULL);
+}
+
 /*----------------------------------------------------------------------
   A region is an area of memory declared with the
   MEMORY {  name:org=exp, len=exp ... }

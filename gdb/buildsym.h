@@ -170,9 +170,6 @@ struct buildsym_compunit
 			      const struct dynamic_prop *static_link,
 			      CORE_ADDR start, CORE_ADDR end);
 
-  void record_block_range (struct block *block,
-			   CORE_ADDR start, CORE_ADDR end_inclusive);
-
   /* Start recording information about source code that comes from a source
      file.  This sets the current subfile, creating it if necessary.
 
@@ -338,17 +335,6 @@ private:
   std::vector<struct context_stack> m_context_stack;
 
   struct subfile *m_current_subfile = nullptr;
-
-  /* The mutable address map for the compilation unit whose symbols
-     we're currently reading.  The symtabs' shared blockvector will
-     point to a fixed copy of this.  */
-  struct addrmap_mutable m_pending_addrmap;
-
-  /* True if we recorded any ranges in the addrmap that are different
-     from those in the blockvector already.  We set this to false when
-     we start processing a symfile, and if it's still false at the
-     end, then we just toss the addrmap.  */
-  bool m_pending_addrmap_interesting = false;
 
   /* An obstack used for allocating pending blocks.  */
   auto_obstack m_pending_block_obstack;

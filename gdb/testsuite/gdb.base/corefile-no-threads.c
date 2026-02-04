@@ -1,8 +1,4 @@
-/* DWARF 2 debugging format support for GDB.
-
-   Copyright (C) 1994-2026 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+/* Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,14 +13,20 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_DWARF2_LINE_PROGRAM_H
-#define GDB_DWARF2_LINE_PROGRAM_H
+#include <stdlib.h>
 
-/* Decode the Line Number Program (LNP) for the line_header structure in
-   CU.
+static int crashfunc_global = 4321;
 
-   LOWPC is the lowest address in CU (or 0 if not known).  */
+static int
+crashfunc (void)
+{
+  abort ();
+  return crashfunc_global;
+}
 
-extern void dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc);
-
-#endif /* GDB_DWARF2_LINE_PROGRAM_H */
+int
+main (void)
+{
+  int ret = crashfunc ();
+  return ret;
+}

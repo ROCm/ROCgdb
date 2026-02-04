@@ -1,0 +1,574 @@
+# Copyright 2025 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# When compiling optimised code, GCC will sometimes truncate the address
+# range of an inline function, usually by a single instruction.
+#
+# It is possible to detect when this has happened by looking at the line
+# table, GCC will create two non-statement line table entries associated
+# with the call-line of the inline function, but the end address of the
+# inline function will be set to be the address of the first of these line
+# table entries.
+#
+# The problem here is that block end addresses are not inclusive, which
+# means the block ends before either of these line table entries.
+#
+# What we find is that we get a better debug experience if we extend the
+# inline function to actually end at the second line table entry, that is
+# the first line table entry becomes part of the inline function, while the
+# second entry remains outside the inline function.
+#
+# This test tries to create this situation using the DWARF assembler, and
+# then checks that GDB correctly extends the inline function to include the
+# first line table entry.
+
+load_lib dwarf.exp
+
+require dwarf2_support
+
+standard_testfile .c
+
+# Lines numbers we reference in the generated DWARF.
+set main_decl_line [gdb_get_line_number "main decl line"]
+set main_line_1 [gdb_get_line_number "main:1"]
+set main_line_4 [gdb_get_line_number "main:4"]
+set foo_call_line [gdb_get_line_number "foo call line"]
+set foo_line_1 [gdb_get_line_number "foo:1"]
+
+get_func_info main
+
+# Create DWARF for the test.  In this case, inline function 'foo' is created
+# with a contiguous address range that needs extending.
+
+proc build_dwarf_for_contiguous_block { asm_file } {
+    Dwarf::assemble $asm_file {
+	declare_labels lines_table inline_func
+
+	cu { } {
+	    DW_TAG_compile_unit {
+		DW_AT_producer "GNU C 14.1.0"
+		DW_AT_language @DW_LANG_C
+		DW_AT_name $::srcfile
+		DW_AT_comp_dir /tmp
+		DW_AT_low_pc 0 addr
+		DW_AT_stmt_list $lines_table DW_FORM_sec_offset
+	    } {
+		inline_func: subprogram {
+		    DW_AT_name foo
+		    DW_AT_inline @DW_INL_declared_inlined
+		}
+		subprogram {
+		    DW_AT_name main
+		    DW_AT_decl_file 1 data1
+		    DW_AT_decl_line $::main_decl_line data1
+		    DW_AT_decl_column 1 data1
+		    DW_AT_low_pc $::main_start addr
+		    DW_AT_high_pc $::main_len data4
+		    DW_AT_external 1 flag
+		} {
+		    inlined_subroutine {
+			DW_AT_abstract_origin %$inline_func
+			DW_AT_call_file 1 data1
+			DW_AT_call_line $::foo_call_line data1
+			DW_AT_low_pc main_1 addr
+			DW_AT_high_pc main_3 addr
+		    }
+		}
+	    }
+	}
+
+	lines {version 2 default_is_stmt 1} lines_table {
+	    include_dir "$::srcdir/$::subdir"
+	    file_name "$::srcfile" 1
+
+	    program {
+		DW_LNE_set_address main
+		line $::main_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_0
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_1
+		line $::foo_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_2
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		line $::foo_call_line
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_4
+		DW_LNS_copy
+
+		DW_LNE_set_address main_5
+		DW_LNS_advance_line 1
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_6
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_7
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_8
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address "$::main_start + $::main_len"
+		DW_LNE_end_sequence
+	    }
+	}
+    }
+}
+
+# Assuming GDB is stopped at the entry $pc for 'foo', use 'maint info
+# blocks' to check the block for 'foo' is correct.  This function checks
+# 'foo' created by 'build_dwarf_for_contiguous_block'.
+
+proc check_contiguous_block {} {
+    set foo_start [get_hexadecimal_valueof "&main_1" "*UNKNOWN*" \
+		       "get address of foo start"]
+    set foo_end [get_hexadecimal_valueof "&main_4" "*UNKNOWN*" \
+		     "get address of foo end"]
+
+    gdb_test "maintenance info blocks" \
+	[multi_line \
+	     "\\\[\\(block \\*\\) $::hex\\\] $foo_start\\.\\.$foo_end" \
+	     "  entry pc: $foo_start" \
+	     "  inline function: foo" \
+	     "  symbol count: $::decimal" \
+	     "  is contiguous"] \
+	"block for foo has expected content"
+}
+
+# Create DWARF for the test.  In this case, inline function 'foo' is created
+# with two ranges, and it is the first range that needs extending.
+
+proc build_dwarf_for_first_block_range { asm_file dwarf_version } {
+    Dwarf::assemble $asm_file {
+	upvar dwarf_version dwarf_version
+	declare_labels lines_table inline_func ranges_label
+
+	cu { version $dwarf_version } {
+	    DW_TAG_compile_unit {
+		DW_AT_producer "GNU C 14.1.0"
+		DW_AT_language @DW_LANG_C
+		DW_AT_name $::srcfile
+		DW_AT_comp_dir /tmp
+		DW_AT_low_pc 0 addr
+		DW_AT_stmt_list $lines_table DW_FORM_sec_offset
+	    } {
+		inline_func: subprogram {
+		    DW_AT_name foo
+		    DW_AT_inline @DW_INL_declared_inlined
+		}
+		subprogram {
+		    DW_AT_name main
+		    DW_AT_decl_file 1 data1
+		    DW_AT_decl_line $::main_decl_line data1
+		    DW_AT_decl_column 1 data1
+		    DW_AT_low_pc $::main_start addr
+		    DW_AT_high_pc $::main_len data4
+		    DW_AT_external 1 flag
+		} {
+		    inlined_subroutine {
+			DW_AT_abstract_origin %$inline_func
+			DW_AT_call_file 1 data1
+			DW_AT_call_line $::foo_call_line data1
+			DW_AT_ranges $ranges_label DW_FORM_sec_offset
+		    }
+		}
+	    }
+	}
+
+	lines {version 2 default_is_stmt 1} lines_table {
+	    include_dir "$::srcdir/$::subdir"
+	    file_name "$::srcfile" 1
+
+	    program {
+		DW_LNE_set_address main
+		line $::main_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_0
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_1
+		line $::foo_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_2
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		line $::foo_call_line
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_4
+		DW_LNS_copy
+
+		DW_LNE_set_address main_5
+		DW_LNS_advance_line 1
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_6
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_7
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_8
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address "$::main_start + $::main_len"
+		DW_LNE_end_sequence
+	    }
+	}
+
+	if { $dwarf_version == 5 } {
+	    rnglists {} {
+		table {} {
+		    ranges_label: list_ {
+			start_end main_1 main_3
+			start_end main_7 main_8
+		    }
+		}
+	    }
+	} else {
+	    ranges { } {
+		ranges_label: sequence {
+		    range main_1 main_3
+		    range main_7 main_8
+		}
+	    }
+	}
+    }
+}
+
+# Wrapper around 'build_dwarf_for_first_block_range', creates DWARF 4 range
+# information.
+
+proc build_dwarf_for_first_block_range_4 { asm_file } {
+    build_dwarf_for_first_block_range $asm_file 4
+}
+
+# Wrapper around 'build_dwarf_for_first_block_range', creates DWARF 5 range
+# information.
+
+proc build_dwarf_for_first_block_range_5 { asm_file } {
+    build_dwarf_for_first_block_range $asm_file 5
+}
+
+# Assuming GDB is stopped at the entry $pc for 'foo', use 'maint info
+# blocks' to check the block for 'foo' is correct.  This function checks
+# 'foo' created by 'build_dwarf_for_first_block_range'.
+
+proc check_for_block_ranges_1 {} {
+
+    set foo_start [get_hexadecimal_valueof "&main_1" "*UNKNOWN*" \
+		       "get address of foo start"]
+    set foo_end [get_hexadecimal_valueof "&main_8" "*UNKNOWN*" \
+		     "get address of foo end"]
+
+    set main_4 [get_hexadecimal_valueof "&main_4" "*UNKNOWN*" \
+		     "get address of main_4 label"]
+    set main_7 [get_hexadecimal_valueof "&main_7" "*UNKNOWN*" \
+		     "get address of main_7 label"]
+
+    gdb_test "maintenance info blocks" \
+	[multi_line \
+	     "\\\[\\(block \\*\\) $::hex\\\] $foo_start\\.\\.$foo_end" \
+	     "  entry pc: $foo_start" \
+	     "  inline function: foo" \
+	     "  symbol count: $::decimal" \
+	     "  address ranges:" \
+	     "    $foo_start\\.\\.$main_4" \
+	     "    $main_7\\.\\.$foo_end"] \
+	"block for foo has expected content"
+}
+
+# Create DWARF for the test.  In this case, inline function 'foo' is created
+# with two ranges, and it is the second range that needs extending.
+
+proc build_dwarf_for_last_block_range { asm_file dwarf_version } {
+    Dwarf::assemble $asm_file {
+	upvar dwarf_version dwarf_version
+	declare_labels lines_table inline_func ranges_label
+
+	cu { version $dwarf_version } {
+	    DW_TAG_compile_unit {
+		DW_AT_producer "GNU C 14.1.0"
+		DW_AT_language @DW_LANG_C
+		DW_AT_name $::srcfile
+		DW_AT_comp_dir /tmp
+		DW_AT_low_pc 0 addr
+		DW_AT_stmt_list $lines_table DW_FORM_sec_offset
+	    } {
+		inline_func: subprogram {
+		    DW_AT_name foo
+		    DW_AT_inline @DW_INL_declared_inlined
+		}
+		subprogram {
+		    DW_AT_name main
+		    DW_AT_decl_file 1 data1
+		    DW_AT_decl_line $::main_decl_line data1
+		    DW_AT_decl_column 1 data1
+		    DW_AT_low_pc $::main_start addr
+		    DW_AT_high_pc $::main_len data4
+		    DW_AT_external 1 flag
+		} {
+		    inlined_subroutine {
+			DW_AT_abstract_origin %$inline_func
+			DW_AT_call_file 1 data1
+			DW_AT_call_line $::foo_call_line data1
+			DW_AT_ranges $ranges_label DW_FORM_sec_offset
+			DW_AT_entry_pc main_1 addr
+		    }
+		}
+	    }
+	}
+
+	lines {version 2 default_is_stmt 1} lines_table {
+	    include_dir "$::srcdir/$::subdir"
+	    file_name "$::srcfile" 1
+
+	    program {
+		DW_LNE_set_address main
+		line $::main_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_0
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_1
+		line $::foo_line_1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_2
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_3
+		line $::foo_call_line
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_4
+		DW_LNS_copy
+
+		DW_LNE_set_address main_5
+		DW_LNS_advance_line 1
+		DW_LNS_negate_stmt
+		DW_LNS_copy
+
+		DW_LNE_set_address main_6
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_7
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address main_8
+		DW_LNS_advance_line 1
+		DW_LNS_copy
+
+		DW_LNE_set_address "$::main_start + $::main_len"
+		DW_LNE_end_sequence
+	    }
+	}
+
+	if { $dwarf_version == 5 } {
+	    rnglists {} {
+		table {} {
+		    ranges_label: list_ {
+			start_end main_7 main_8
+			start_end main_1 main_3
+		    }
+		}
+	    }
+	} else {
+	    ranges { } {
+		ranges_label: sequence {
+		    range main_7 main_8
+		    range main_1 main_3
+		}
+	    }
+	}
+    }
+}
+
+# Wrapper around 'build_dwarf_for_last_block_range', creates DWARF 4 range
+# information.
+
+proc build_dwarf_for_last_block_range_4 { asm_file } {
+    build_dwarf_for_last_block_range $asm_file 4
+}
+
+# Wrapper around 'build_dwarf_for_last_block_range', creates DWARF 5 range
+# information.
+
+proc build_dwarf_for_last_block_range_5 { asm_file } {
+    build_dwarf_for_last_block_range $asm_file 5
+}
+
+# Assuming GDB is stopped at the entry $pc for 'foo', use 'maint info
+# blocks' to check the block for 'foo' is correct.  This function checks
+# 'foo' created by 'build_dwarf_for_last_block_range'.
+
+proc check_for_block_ranges_2 {} {
+
+    set foo_start [get_hexadecimal_valueof "&main_1" "*UNKNOWN*" \
+		       "get address of foo start"]
+    set foo_end [get_hexadecimal_valueof "&main_8" "*UNKNOWN*" \
+		     "get address of foo end"]
+
+    set main_4 [get_hexadecimal_valueof "&main_4" "*UNKNOWN*" \
+		     "get address of main_4 label"]
+    set main_7 [get_hexadecimal_valueof "&main_7" "*UNKNOWN*" \
+		     "get address of main_7 label"]
+
+    gdb_test "maintenance info blocks" \
+	[multi_line \
+	     "\\\[\\(block \\*\\) $::hex\\\] $foo_start\\.\\.$foo_end" \
+	     "  entry pc: $foo_start" \
+	     "  inline function: foo" \
+	     "  symbol count: $::decimal" \
+	     "  address ranges:" \
+	     "    $main_7\\.\\.$foo_end" \
+	     "    $foo_start\\.\\.$main_4"] \
+	"block for foo has expected content"
+}
+
+# Buidl ASM_FILE, along with the global SRCFILE into an executable called
+# TESTFILE.  Place a breakpoint in 'foo', run to the breakpoint, and use
+# BLOCK_CHECK_FUNC to ensure the block for 'foo' is correct.
+#
+# Then step through 'foo' and back into 'main'.
+
+proc run_test { asm_file testfile block_check_func } {
+    if {[prepare_for_testing "failed to prepare" $testfile \
+	     [list $::srcfile $asm_file] {nodebug}]} {
+	return
+    }
+
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint foo
+    gdb_test "continue" \
+	[multi_line \
+	     "Breakpoint $::decimal, foo \\(\\) \[^\r\n\]+:$::foo_line_1" \
+	     "$::foo_line_1\\s+/\\* foo:1 \\*/"] \
+	"continue to b/p in foo"
+
+    # Check that the block for `foo` has been extended.
+    $block_check_func
+
+    gdb_test "frame 1" \
+	[multi_line \
+	     "#1  main \\(\\) at \[^\r\n\]+/$::srcfile:$::foo_call_line" \
+	     "$::foo_call_line\\s+\[^\r\n\]+/\\* foo call line \\*/"] \
+	"frame 1 is for main"
+
+    gdb_test "step" \
+	"^[expr {$::foo_line_1 + 1}]\\s+/\\* foo:2 \\*/" \
+	"step to second line of foo"
+
+    gdb_test "step" \
+	"^[expr {$::foo_line_1 + 2}]\\s+/\\* foo:3 \\*/" \
+	"step to third line of foo"
+
+    gdb_test "step" \
+	[multi_line \
+	     "^main \\(\\) at \[^\r\n\]+:$::main_line_4" \
+	     "$::main_line_4\\s+/\\* main:4 \\*/"] \
+	"set back to main"
+
+    gdb_test "step" \
+	"^[expr {$::main_line_4 + 1}]\\s+/\\* main:5 \\*/" \
+	"step again in main"
+}
+
+# Test specifications, items are:
+# 1. Prefix string used to describe the test.
+# 2. Proc to call that builds the DWARF.
+# 3. Proc to call that runs 'maint info blocks' when stopped at the entry
+#    $pc for 'foo' (the inline function), and checks that the block details
+#    for 'foo' are correct.
+set test_list \
+    [list \
+	 [list "block with ranges, extend first range, dwarf 4" \
+	      build_dwarf_for_first_block_range_4 \
+	      check_for_block_ranges_1] \
+	 [list "block with ranges, extend first range, dwarf 5" \
+	      build_dwarf_for_first_block_range_5 \
+	      check_for_block_ranges_1] \
+	 [list "block with ranges, extend last range, dwarf 4" \
+	      build_dwarf_for_last_block_range_4 \
+	      check_for_block_ranges_2] \
+	 [list "block with ranges, extend last range, dwarf 5" \
+	      build_dwarf_for_last_block_range_4 \
+	      check_for_block_ranges_2] \
+	 [list "contiguous block" \
+	      build_dwarf_for_contiguous_block \
+	      check_contiguous_block] \
+	]
+
+# Run all the tests.
+set suffix 0
+foreach test_spec $test_list {
+    incr suffix
+
+    set prefix [lindex $test_spec 0]
+    set build_dwarf_func [lindex $test_spec 1]
+    set check_block_func [lindex $test_spec 2]
+
+    with_test_prefix $prefix {
+	set asm_file [standard_output_file ${testfile}-${suffix}.S]
+	$build_dwarf_func $asm_file
+	run_test $asm_file ${testfile}-${suffix} $check_block_func
+    }
+}

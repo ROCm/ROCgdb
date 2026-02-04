@@ -3047,11 +3047,13 @@ check_typedef (struct type *type)
      whether a full definition exists somewhere else.  This is for
      systems where a type definition with no fields is issued for such
      types, instead of identifying them as stub types in the first
-     place.  */
-
-  if (TYPE_IS_OPAQUE (type)
-      && opaque_type_resolution
-      && !currently_reading_symtab)
+     place.  If opaque resolution is disabled, though, then the type
+     is simply passed through.  */
+  if (!type->is_stub () || !opaque_type_resolution || currently_reading_symtab)
+    {
+      /* Nothing.  */
+    }
+  else if (TYPE_IS_OPAQUE (type))
     {
       const char *name = type->name ();
       struct type *newtype;
@@ -3083,8 +3085,11 @@ check_typedef (struct type *type)
     }
   /* Otherwise, rely on the stub flag being set for opaque/stubbed
      types.  */
-  else if (type->is_stub () && !currently_reading_symtab)
+  else
     {
+      /* This is enforced above.  */
+      gdb_assert (type->is_stub ());
+
       const char *name = type->name ();
       struct symbol *sym;
 
@@ -3114,7 +3119,7 @@ check_typedef (struct type *type)
 	}
     }
 
-  if (type->target_is_stub ())
+  if (type->target_is_stub () && opaque_type_resolution)
     {
       struct type *target_type = check_typedef (type->target_type ());
 

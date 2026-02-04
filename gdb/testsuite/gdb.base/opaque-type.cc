@@ -1,6 +1,4 @@
-/* DWARF 2 debugging format support for GDB.
-
-   Copyright (C) 1994-2026 Free Software Foundation, Inc.
+/* Copyright 2026 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,14 +15,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_DWARF2_LINE_PROGRAM_H
-#define GDB_DWARF2_LINE_PROGRAM_H
+typedef struct osalEventMonitor osalEventMonitor;
 
-/* Decode the Line Number Program (LNP) for the line_header structure in
-   CU.
+osalEventMonitor *value;
 
-   LOWPC is the lowest address in CU (or 0 if not known).  */
-
-extern void dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc);
-
-#endif /* GDB_DWARF2_LINE_PROGRAM_H */
+int
+main ()
+{
+  return 0;
+}

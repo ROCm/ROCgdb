@@ -222,14 +222,11 @@ write_dependency_file (void)
 static void
 ld_cleanup (void)
 {
-  bfd *ibfd, *inext;
   if (link_info.output_bfd)
     bfd_close_all_done (link_info.output_bfd);
-  for (ibfd = link_info.input_bfds; ibfd; ibfd = inext)
-    {
-      inext = ibfd->link.next;
-      bfd_close_all_done (ibfd);
-    }
+
+  lang_cleanup ();
+
   /* Note - we do not call ld_plugin_start (PHASE_PLUGINS) here as this
      function is only called when the linker is exiting - ie after any
      stats may have been reported, and potentially in the middle of a

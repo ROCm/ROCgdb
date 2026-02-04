@@ -1,8 +1,6 @@
-/* DWARF 2 debugging format support for GDB.
+/* This testcase is part of GDB, the GNU debugger.
 
-   Copyright (C) 1994-2026 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+   Copyright 2024-2025 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,14 +15,26 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_DWARF2_LINE_PROGRAM_H
-#define GDB_DWARF2_LINE_PROGRAM_H
+#include "attributes.h"
 
-/* Decode the Line Number Program (LNP) for the line_header structure in
-   CU.
+static int
+test0 (void)
+{
+  asm (""); /* First line of test0.  */
+  return 1; /* Second line of test0.  */
+}
 
-   LOWPC is the lowest address in CU (or 0 if not known).  */
+int __attribute__((noinline)) ATTRIBUTE_NOCLONE
+test1 (int x)
+{
+  asm ("");
+  return x + 1; /* Second line of test1.  */
+}
 
-extern void dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc);
-
-#endif /* GDB_DWARF2_LINE_PROGRAM_H */
+int
+main (void)
+{
+  test1 (test0 ()); /* First line of main.  */
+  test1 (test0 ()); /* Second line of main.  */
+  return 0;         /* Third line of main.  */
+}

@@ -1396,10 +1396,7 @@ print_frame (struct ui_out *uiout,
 	  catch (const gdb_exception_error &e)
 	    {
 	    }
-
-	    /* FIXME: ARGS must be a list.  If one argument is a string it
-	       will have " that will not be properly escaped.  */
-	    }
+	}
 	QUIT;
       }
     uiout->text (")");

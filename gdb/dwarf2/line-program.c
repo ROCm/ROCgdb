@@ -25,6 +25,7 @@
 #include "complaints.h"
 #include "filenames.h"
 #include "gdbarch.h"
+#include "block.h"
 
 static void
 dwarf2_debug_line_missing_file_complaint ()
@@ -352,6 +353,79 @@ lnp_state_machine::finish_line ()
   record_line_1 (0, LEF_IS_STMT);
 }
 
+/* Look for an inline block that finishes at ORIGINAL_ADDRESS.  If a block
+   is found, then search up the block hierarchy looking for a suitable
+   inline block to extend, a suitable block will be called from LINE.  If a
+   block is found then update its end address to EXTENDED_ADDRESS.  */
+
+static void
+dwarf_find_and_extend_inline_block_range (dwarf2_cu *cu,
+					  unrelocated_addr original_address,
+					  unrelocated_addr extended_address,
+					  unsigned int line)
+{
+  /* Is there an inline block that ends at ORIGINAL_ADDRESS?  */
+  auto it = cu->inline_block_ends.find (original_address);
+  if (it == cu->inline_block_ends.end ())
+    return;
+
+  /* Walk back up the block structure until we find an inline block that is
+     the child of a non-inline block.  This is new inline block is our
+     candidate for extending.  */
+  struct block *block = nullptr;
+  for (const struct block *b = it->second;
+       b != nullptr;
+       b = b->superblock ())
+    {
+      if (b->function () != nullptr && b->inlined_p ())
+	{
+	  if (b->superblock () != nullptr
+	      && b->superblock ()->function () != nullptr
+	      && !b->superblock ()->inlined_p ())
+	    {
+	      block = const_cast<struct block *> (b);
+	      break;
+	    }
+	}
+    }
+
+  /* If we didn't find a block, or the block we found wasn't called from
+     the expected LINE, then we're done.  Maybe we should try harder to
+     look for the block that matches LINE, but this would require us to
+     possibly extended more blocks, adding more complexity.  Currently,
+     this works well enough for simple cases, we can possibly improve the
+     logic here later on.  */
+  if (block == nullptr || block->function ()->line () != line)
+    return;
+
+  /* Sanity check.  We should have an inline block, which should have a
+     valid super block.  */
+  gdb_assert (block->inlined_p ());
+  gdb_assert (block->superblock () != nullptr);
+
+  CORE_ADDR extended_end = cu->per_objfile->relocate (extended_address);
+
+  /* The proposed new end of BLOCK is outside of the ranges of BLOCK's
+     superblock.  If we tried to extend BLOCK then this would create an
+     invalid block structure; BLOCK would no longer be fully nested within
+     its superblock.  Don't do that.  */
+  if (extended_end > block->superblock ()->end ())
+    return;
+
+  CORE_ADDR original_end = cu->per_objfile->relocate (original_address);
+
+  /* Now find the range of BLOCK that ends at ORIGINAL_END, and extend it
+     out to EXTENDED_END.  */
+  for (blockrange &br : block->ranges ())
+    {
+      if (br.end () == original_end)
+	br.set_end (extended_end);
+    }
+
+  if (block->end () == original_end)
+    block->set_end (extended_end);
+}
+
 void
 lnp_state_machine::record_line (bool end_sequence)
 {
@@ -369,6 +443,13 @@ lnp_state_machine::record_line (bool end_sequence)
 		  m_discriminator,
 		  (end_sequence ? "\t(end sequence)" : ""));
     }
+
+  if (m_address != m_last_address
+      && m_stmt_at_address
+      && m_cu->producer_is_gcc ()
+      && (m_flags & LEF_IS_STMT) == 0)
+    dwarf_find_and_extend_inline_block_range (m_cu, m_last_address,
+					      m_address, m_line);
 
   file_entry *fe = current_file ();
 
@@ -476,11 +557,10 @@ lnp_state_machine::check_line_address (struct dwarf2_cu *cu,
     }
 }
 
-/* Subroutine of dwarf_decode_lines to simplify it.
-   Process the line number information in CU::line_header.  */
+/* See dwarf2/line-program.h.  */
 
-static void
-dwarf_decode_lines_1 (struct dwarf2_cu *cu, unrelocated_addr lowpc)
+void
+dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc)
 {
   struct line_header *lh = cu->line_header;
   const gdb_byte *line_ptr, *extended_end;
@@ -490,6 +570,8 @@ dwarf_decode_lines_1 (struct dwarf2_cu *cu, unrelocated_addr lowpc)
   struct objfile *objfile = cu->per_objfile->objfile;
   bfd *abfd = objfile->obfd.get ();
   struct gdbarch *gdbarch = objfile->arch ();
+
+  gdb_assert (lh != nullptr);
 
   line_ptr = lh->statement_program_start;
   line_end = lh->statement_program_end;
@@ -685,30 +767,4 @@ dwarf_decode_lines_1 (struct dwarf2_cu *cu, unrelocated_addr lowpc)
 	 in which case we still finish recording the last line).  */
       state_machine.record_line (true);
     }
-}
-
-/* See dwarf2/line-program.h.  */
-
-void
-dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc,
-		    bool decode_mapping)
-{
-  if (decode_mapping)
-    dwarf_decode_lines_1 (cu, lowpc);
-
-  /* For non DWZ CUs, make sure a symtab is created for every file, even
-     files which contain only variables (i.e. no code with associated line
-     numbers).
-
-     For DWZ CUs the line table can contain references to files that are
-     not part of the original CU.  In fact, if multiple object files were
-     used to create the DWZ file (as is normal), then the DWZ CU's line
-     table can contain references to files that are in objfiles that are
-     not part of the current inferior.  For DWZ we rely on lazy symtab
-     creation.  In the end we should still end up with a symtab for every
-     file as the original CU (the non-DWZ CU) will still contain a line
-     table, and that line table will mention every file, so when that is
-     processed we'll create symtabs as needed.  */
-  if (!cu->per_cu->is_dwz ())
-    cu->create_subfiles_and_symtabs ();
 }

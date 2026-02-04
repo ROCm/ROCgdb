@@ -546,6 +546,8 @@ extern void lang_init
   (bool);
 extern void lang_finish
   (void);
+extern void lang_cleanup
+  (void);
 extern lang_memory_region_type * lang_memory_region_lookup
   (const char * const, bool);
 extern void lang_memory_region_alias

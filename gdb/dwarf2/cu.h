@@ -281,6 +281,13 @@ struct dwarf2_cu
     return m_producer;
   }
 
+  /* The end addresses for some inline blocks.  For blocks with multiple
+     sub-ranges, this is the end address of every sub-range within the
+     block.  These are the inclusive end addresses, that is, these are the
+     last addresses inside the block's ranges.  Only the first block that
+     ends at any given address will be recorded.  */
+  gdb::unordered_map<unrelocated_addr, struct block *> inline_block_ends;
+
 private:
   const char *m_producer = nullptr;
 

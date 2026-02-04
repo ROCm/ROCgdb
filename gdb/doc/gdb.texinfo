@@ -20939,7 +20939,7 @@ declared as a pointer to a @code{struct}, @code{class}, or
 source file although the full declaration of @code{struct MyType} is in
 another source file.  The default is on.
 
-A change in the setting of this subcommand will not take effect until
+A change in the setting of this subcommand may not take effect until
 the next time symbols for a file are loaded.
 
 @item set opaque-type-resolution off
