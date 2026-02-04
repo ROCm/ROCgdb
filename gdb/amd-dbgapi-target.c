@@ -1308,7 +1308,7 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 {
   std::optional<scoped_restore_current_thread> maybe_restore_thread;
 
-  if (!ptid_is_gpu (inferior_ptid))
+  if (!ptid_is_gpu (inferior_ptid) || object == TARGET_OBJECT_AUXV)
     return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
 				     requested_len, xfered_len);
 
