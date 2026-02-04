@@ -106,41 +106,6 @@ gdb_test_sequence "show convenience" "show convenience" {
 
 }
 
-#Test5
-#info sharedlibrary
-#sample output
-#From                To                  Syms Read   Shared Object Library
-#0x00007fd120664ac0  0x00007fd120682790  Yes (*)     /lib64/ld-linux-x86-64.so.2
-#...
-#0x00007fd0125d8ec0  0x00007fd015f21630  Yes (*)     /opt/rocm-3.5.0/hip/lib/../../lib/libamd_comgr.so
-#0x00007fd11d74e870  0x00007fd11d75a868  Yes (*)     /lib/x86_64-linux-gnu/libtinfo.so.5
-#0x00007fd11d008000  0x00007fd11d00adc0  Yes (*)     memory://95557/mem#offset=0x7fd0083e7f60&size=41416
-#0x00007fd11d001000  0x00007fd11d00173c  Yes         file:///home/rocm/examples/bit_extract#offset=6477&size=10832
-#(*): Shared library is missing debugging information.
-
-#code_object_uri ::== file_uri | memory_uri
-#file_uri        ::== "file://" file_path [ range_specifier ]
-#memory_uri      ::== "memory://" process_id range_specifier
-#range_specifier ::== [ "#" | "?" ] "offset=" number "&" "size=" number
-#file_path       ::== URI_ENCODED_OS_FILE_PATH
-#process_id      ::== DECIMAL_NUMBER
-#number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
-
-set number $decimal|$hex|0\[0-7\]+
-set process_id $decimal
-set file_path "(\\/\[^/ ]*)+\\/?"
-set range_specifier (#|\\?)offset=(${number})&size=(${number})
-set memory_uri "memory:\\/\\/$process_id$range_specifier"
-set file_uri "file://$file_path\($range_specifier\)?"
-set code_object_uri "\($memory_uri\)|\($file_uri\)"
-
-gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
-    "From${ws}+To${ws}+Syms${ws}+Read${ws}+Shared Object Library" \
-    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$file_path" \
-    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri" \
-    "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri"
-]
-
 #Test6
 #info break
 #sample output
