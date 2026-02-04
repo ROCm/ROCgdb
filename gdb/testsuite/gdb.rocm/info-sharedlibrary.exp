@@ -56,7 +56,7 @@ proc test_info_shared {} {
 
     set number $decimal|$hex|0\[0-7\]+
     set process_id $decimal
-    set file_path "(\\/\[^/ ]*)+\\/?"
+    set file_path "(?:\\/(?:\[A-Za-z0-9_.~-\]|%\[0-9A-F\]{2})+)+\\/?"
     set range_specifier (#|\\?)offset=(${number})&size=(${number})
     set memory_uri "memory:\\/\\/$process_id$range_specifier"
     set file_uri "file://$file_path\($range_specifier\)?"
@@ -66,7 +66,7 @@ proc test_info_shared {} {
 
     gdb_test_sequence "info sharedlibrary" "info sharedlibrary" [list \
       "From${ws}+To${ws}+Syms${ws}+Read${ws}+Shared Object Library" \
-      "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$file_path" \
+      "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$fullname_syntax" \
       "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri" \
       "$hex${ws}+$hex${ws}+(Yes|No)${ws}(\\(\\*\\))?${ws}+$code_object_uri"
     ]
