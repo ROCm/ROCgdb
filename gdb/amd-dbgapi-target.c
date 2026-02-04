@@ -2270,7 +2270,8 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
   amd_dbgapi_debug_printf ("ptid = %s", ptid.to_string ().c_str ());
 
   ptid_t event_ptid = beneath ()->wait (ptid, ws, target_options);
-  if (event_ptid != minus_one_ptid)
+  if (ws->kind () != TARGET_WAITKIND_NO_RESUMED
+      && ws->kind () != TARGET_WAITKIND_IGNORE)
     {
       if (ws->kind () == TARGET_WAITKIND_EXITED
 	  || ws->kind () == TARGET_WAITKIND_SIGNALLED)
@@ -2282,9 +2283,6 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
        }
       return event_ptid;
     }
-
-  gdb_assert (ws->kind () == TARGET_WAITKIND_NO_RESUMED
-	      || ws->kind () == TARGET_WAITKIND_IGNORE);
 
   /* Flush the async handler first.  */
   if (target_is_async_p ())
