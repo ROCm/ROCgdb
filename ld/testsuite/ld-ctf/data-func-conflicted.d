@@ -21,6 +21,7 @@ Contents of CTF section \.ctf:
     String section:	.*
 #...
   Data objects:
+      \(Section is indexed\.\)
     bar -> 0x[0-9a-f]*: \(kind 6\) struct var_3 \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\)
     var_1 -> 0x[0-9a-f]*: \(kind 10\) foo_t \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*
     var_666 -> 0x[0-9a-f]*: \(kind 3\) foo_t \* \(size 0x[0-9a-f]*\) \(aligned at 0x[0-9a-f]*\) -> .*

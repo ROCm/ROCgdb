@@ -3064,7 +3064,7 @@ memory_tag_with_logical_tag_command (const char *args, int from_tty)
     show_memory_tagging_unsupported ();
 
   if (args == nullptr)
-    error_no_arg (_("<address> <tag>"));
+    error_no_arg (_("ADDRESS TAG"));
 
   gdb::byte_vector tags;
   struct value *val;
@@ -3144,7 +3144,7 @@ parse_set_allocation_tag_input (const char *args, struct value **val,
 }
 
 /* Implement the "memory-tag set-allocation-tag" command.
-   ARGS should be in the format <address> <length> <tags>.  */
+   ARGS should be in the format ADDRESS LENGTH TAGS.  */
 
 static void
 memory_tag_set_allocation_tag_command (const char *args, int from_tty)
@@ -3153,7 +3153,7 @@ memory_tag_set_allocation_tag_command (const char *args, int from_tty)
     show_memory_tagging_unsupported ();
 
   if (args == nullptr)
-    error_no_arg (_("<starting address> <length> <tag bytes>"));
+    error_no_arg (_("STARTING-ADDRESS LENGTH TAG-BYTES"));
 
   gdb::byte_vector tags;
   size_t length = 0;
@@ -3429,37 +3429,37 @@ Generic command for printing and manipulating memory tag properties."),
   add_cmd ("print-logical-tag", class_vars,
 	   memory_tag_print_logical_tag_command,
 	   ("Print the logical tag from POINTER.\n\
-Usage: memory-tag print-logical-tag <POINTER>.\n\
-<POINTER> is an expression that evaluates to a pointer.\n\
+Usage: memory-tag print-logical-tag POINTER.\n\
+POINTER is an expression that evaluates to a pointer.\n\
 Print the logical tag contained in POINTER.  The tag interpretation is\n\
 architecture-specific."),
 	   &memory_tag_list);
   add_cmd ("print-allocation-tag", class_vars,
 	   memory_tag_print_allocation_tag_command,
 	   _("Print the allocation tag for ADDRESS.\n\
-Usage: memory-tag print-allocation-tag <ADDRESS>.\n\
-<ADDRESS> is an expression that evaluates to a memory address.\n\
+Usage: memory-tag print-allocation-tag ADDRESS.\n\
+ADDRESS is an expression that evaluates to a memory address.\n\
 Print the allocation tag associated with the memory address ADDRESS.\n\
 The tag interpretation is architecture-specific."),
 	   &memory_tag_list);
   add_cmd ("with-logical-tag", class_vars, memory_tag_with_logical_tag_command,
 	   _("Print a POINTER with a specific logical TAG.\n\
-Usage: memory-tag with-logical-tag <POINTER> <TAG>\n\
-<POINTER> is an expression that evaluates to a pointer.\n\
-<TAG> is a sequence of hex bytes that is interpreted by the architecture\n\
+Usage: memory-tag with-logical-tag POINTER TAG\n\
+POINTER is an expression that evaluates to a pointer.\n\
+TAG is a sequence of hex bytes that is interpreted by the architecture\n\
 as a single memory tag."),
 	   &memory_tag_list);
   add_cmd ("set-allocation-tag", class_vars,
 	   memory_tag_set_allocation_tag_command,
 	   _("Set the allocation tag(s) for a memory range.\n\
-Usage: memory-tag set-allocation-tag <ADDRESS> <LENGTH> <TAG_BYTES>\n\
-<ADDRESS> is an expression that evaluates to a memory address\n\
-<LENGTH> is the number of bytes that is added to <ADDRESS> to calculate\n\
+Usage: memory-tag set-allocation-tag ADDRESS LENGTH TAG-BYTES\n\
+ADDRESS is an expression that evaluates to a memory address\n\
+LENGTH is the number of bytes that is added to ADDRESS to calculate\n\
 the memory range.\n\
-<TAG_BYTES> is a sequence of hex bytes that is interpreted by the\n\
+TAG-BYTES is a sequence of hex bytes that is interpreted by the\n\
 architecture as one or more memory tags.\n\
 Sets the tags of the memory range [ADDRESS, ADDRESS + LENGTH)\n\
-to TAG_BYTES.\n\
+to TAG-BYTES.\n\
 \n\
 If the number of tags is greater than or equal to the number of tag granules\n\
 in the [ADDRESS, ADDRESS + LENGTH) range, only the tags up to the\n\
@@ -3472,8 +3472,8 @@ that gets repeated until the number of tag granules in the memory range\n\
 	   &memory_tag_list);
   add_cmd ("check", class_vars, memory_tag_check_command,
 	   _("Validate a pointer's logical tag against the allocation tag.\n\
-Usage: memory-tag check <POINTER>\n\
-<POINTER> is an expression that evaluates to a pointer\n\
+Usage: memory-tag check POINTER\n\
+POINTER is an expression that evaluates to a pointer\n\
 Fetch the logical and allocation tags for POINTER and compare them\n\
 for equality.  If the tags do not match, print additional information about\n\
 the tag mismatch."),

@@ -4076,15 +4076,20 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 	  || nextstop_offset <= addr_offset)
 	nextstop_offset = stop_offset;
 
-      /* If a symbol is explicitly marked as being an object
-	 rather than a function, just dump the bytes without
-	 disassembling them.  */
+      /* To better handle embedded data in a code section, just dump
+	 the bytes without disassembling them if we hit an object
+	 symbol.  Exclude _PROCEDURE_LINKAGE_TABLE_ as some ABIs
+	 require it to be an object even though code is expected.
+	 Take no notice of symbols if the user has explicity asked for
+	 a non-code section to be disassembled.  */
       if (disassemble_all
+	  || (section->flags & SEC_CODE) == 0
 	  || sym == NULL
 	  || sym->section != section
 	  || bfd_asymbol_value (sym) > addr
 	  || (sym->flags & BSF_OBJECT) == 0
-	  || (sym->flags & BSF_FUNCTION) != 0)
+	  || (sym->flags & BSF_FUNCTION) != 0
+	  || strcmp (sym->name, "_PROCEDURE_LINKAGE_TABLE_") == 0)
 	insns = true;
       else
 	insns = false;

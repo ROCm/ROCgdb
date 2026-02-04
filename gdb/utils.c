@@ -1485,7 +1485,7 @@ pager_file::prompt_for_continue ()
     }
 
   /* Now we have to do this again, so that GDB will know that it doesn't
-     need to save the ---Type <return>--- line at the top of the screen.  */
+     need to save the ---Type <RET>--- line at the top of the screen.  */
   reinitialize_more_filter ();
   pagination_disabled_for_command = disable_pagination;
 

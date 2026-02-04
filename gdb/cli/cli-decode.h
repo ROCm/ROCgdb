@@ -171,7 +171,7 @@ struct cmd_list_element
 
   /* Nonzero says this is an abbreviation, and should not
      be mentioned in lists of commands.
-     This allows "br<tab>" to complete to "break", which it
+     This allows "br<TAB>" to complete to "break", which it
      otherwise wouldn't.  */
   unsigned int abbrev_flag : 1;
 

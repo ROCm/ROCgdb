@@ -839,11 +839,6 @@ proc mi_gdb_test { args } {
 	    }
 	    set result 1
 	}
-	 "<return>" {
-	    send_gdb "\n"
-	    perror "Window too small."
-	     fail "$message"
-	}
 	 eof {
 	     perror "Process no longer exists"
 	     if { $message != "" } {

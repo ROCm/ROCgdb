@@ -15,9 +15,11 @@ Disassembly of section \.text:
 Disassembly of section \.data:
 
 00060000 .*:
-   60000:	00068000 	.*
+   60000:	00068000 .*
 #...
 Disassembly of section \.got:
 
 00060010 <_GLOBAL_OFFSET_TABLE_>:
-   60010:	00000000 80000000 00068000  .*
+   60010:	00000000 .*
+   60014:	80000000 .*
+   60018:	00068000 .*

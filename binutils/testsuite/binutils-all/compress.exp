@@ -780,7 +780,6 @@ proc test_gnu_debuglink {} {
     set status [remote_exec build diff "${src1} ${src2}"]
     set exec_output [lindex $status 1]
     set exec_output [prune_warnings $exec_output]
-    setup_xfail "x86_64-*-solaris2*" "PR binutils/33243"
     if ![string match "" $exec_output] then {
 	send_log "$exec_output\n"
 	verbose "$exec_output" 1
