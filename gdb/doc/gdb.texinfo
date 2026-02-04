@@ -6964,6 +6964,44 @@ over when stepping.
 (@value{GDBP}) skip -gfile utils/*.c
 @end smallexample
 
+If @var{file-glob-pattern} is an absolute filename, for example, on
+Unix systems, if @var{file-glob-pattern} starts with @file{/}, then
+the glob will only match full filenames.
+
+@smallexample
+(@value{GDBP}) skip -gfile /include/*.h
+@end smallexample
+
+In this case @file{/include/foo.h} would match, but
+@file{/usr/include/foo.h} would not.  In contrast@:
+
+@smallexample
+(@value{GDBP}) skip -gfile include/*.h
+@end smallexample
+
+This would match both @file{/include/foo.h} and
+@file{/usr/include/foo.h} as the glob pattern is not an absolute
+filename.
+
+In addition to the standard @code{glob} special characters,
+@value{GDBN} supports @samp{**}.  The @samp{**} pattern, called
+@dfn{globstar}, can be used to match against 0 or more filename
+components.  For example, given the files @file{/include/a.h},
+@file{/include/xxx/b.h}, @file{/include/yyy/zzz/c.h}, then all of
+these could be skipped using@:
+
+@smallexample
+(@value{GDBP}) skip -gfile /include/**/*.h
+@end smallexample
+
+The @samp{**} pattern must appear on its own within the pattern, it
+cannot be combined with other characters, so @samp{include/**/*.h}
+will provide the globstar behaviour, but @samp{include/x**/*.h} will
+not as @samp{x**} combines the @samp{**} with the @samp{x} character.
+The @samp{x**} will be treated as @samp{x} followed by two @samp{*}
+characters, matching zero or more characters within that one directory
+component.
+
 @item -function @var{linespec}
 Functions named by @var{linespec} or the function containing the line
 named by @var{linespec} will be skipped over when stepping.

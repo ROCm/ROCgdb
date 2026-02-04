@@ -1,0 +1,199 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# More extensive testing of the glob matching facilities offered by
+# 'skip -gfile'.  This test sets up a directory tree of files and
+# checks that '*' and '**' matching works as expected.
+
+# Identify the source files in the source tree.
+standard_testfile .c -1.c -2.c -3.c -4.c
+
+# Create a directory tree into which some of the source files will be
+# copied.
+set root [standard_output_file "root"]
+file mkdir $root/aa/bb
+file mkdir $root/cc/bb
+file mkdir $root/dd/ee/ff
+
+# Each SPEC is the name of a srcfile* global variable, and a relative
+# filename within the directory tree we just created.  The
+# corresponding source file is copied from the source directory into
+# the new directory tree, and the global srcfile* variable is updated.
+# The initial srcfile is not copied over.
+foreach spec {{srcfile2 aa/bb} \
+	      {srcfile3 cc/bb} \
+	      {srcfile4 dd/ee} \
+	      {srcfile5 dd/ee/ff}} {
+    set var [lindex $spec 0]
+    set dir [lindex $spec 1]
+    set src [set $var]
+    file copy $srcdir/$subdir/$src $root/$dir/file.c
+    set $var $dir/file.c
+}
+
+# Find source line numbers in the initial srcfile.
+set lineno_f1 [gdb_get_line_number "func1 ();" $srcfile]
+set lineno_f2 [gdb_get_line_number "func2 ();" $srcfile]
+set lineno_f3 [gdb_get_line_number "func3 ();" $srcfile]
+set lineno_f4 [gdb_get_line_number "func4 ();" $srcfile]
+set lineno_end [gdb_get_line_number "End marker" $srcfile]
+
+# Compile all the source files into DESTFILE.  If RELATIVE_FILENAMES
+# is true then the compilation is done using relative filenames to the
+# source files.  Otherwise, absolute source file names are used.
+#
+# Return true if the compilation is successful, otherwise false.
+proc compile_test { destfile relative_filenames } {
+    # The file we will create.
+    set destfile [standard_output_file $destfile]
+
+    if { $relative_filenames } {
+	# The main source file is always accessed via an absolute
+	# filename.  But all the other source files are compiled via a
+	# relative filename.
+	set srclist [list $::srcdir/$::subdir/$::srcfile]
+	foreach var {srcfile2 srcfile3 srcfile4 srcfile5} {
+	    set val [set ::$var]
+	    lappend srclist ./$val
+	}
+
+	with_cwd  $::root {
+	    if { [gdb_compile $srclist $destfile binfile {debug}] != "" } {
+		return false
+	    }
+	}
+    } else {
+	# We create absolute paths for all source files.
+	set srclist [list $::srcdir/$::subdir/$::srcfile]
+	foreach var {srcfile2 srcfile3 srcfile4 srcfile5} {
+	    set val [set ::$var]
+	    lappend srclist $::root/$val
+	}
+
+	if { [build_executable "failed to build" $destfile $srclist] } {
+	    return false
+	}
+    }
+
+    return true
+}
+
+# Start GDB debugging TESTFILE.  Install a 'skip -gfile' for FILE_GLOB
+# then step past the 4 function calls within main.  The SKIP_FUNC*
+# arguments are true if the function should be skipped, or false if
+# the function should be entered.
+#
+# The RELATIVE_SRC_FILENAMES is true if we expect to see relative
+# source filenames in the output, or false if we expect to see
+# absolute filenames.
+proc run_test { file_glob skip_func1 skip_func2 skip_func3 skip_func4 \
+		relative_src_filenames testfile } {
+    clean_restart $testfile
+
+    if { ![runto_main] } {
+	return
+    }
+
+    gdb_test "skip -gfile $file_glob" \
+	"File\\(s\\) [string_to_regexp $file_glob] will be skipped when stepping\\." \
+	"setup skip pattern"
+
+    # Ensure we're in the right place ready to start testing.
+    gdb_test "step" \
+	"$::lineno_f1\\s+func1 \\(\\);\[^\r\n\]+" \
+	"step upto func1 call"
+
+    for { set i 1 } { $i < 5 } { incr i } {
+	set j [expr { $i + 1 }]
+
+	# Get the value of the appropriate SKIP_FUNC* argument.
+	set skip_func_p [set "skip_func$i"]
+
+	if { !$skip_func_p } {
+	    # Get the value of the appropriate SRCFILE* global.
+	    set src [set "::srcfile$j"]
+
+	    # How we expect the source filename to appear in the output.
+	    if { $relative_src_filenames } {
+		set file_re [string_to_regexp "./$src"]
+	    } else {
+		set file_re [string_to_regexp "$::root/$src"]
+	    }
+
+	    # Step the inferior, we expect to enter the function.
+	    gdb_test "step" \
+		[multi_line \
+		     "^func$i \\(\\) at $file_re:$::decimal" \
+		     "$::decimal\\s+\\+\\+global_var_$i;"] \
+		"step into func$i"
+
+	    # Now finish the function, returning to the caller.
+	    gdb_test "finish" ".*" \
+		"finish from func$i"
+	} else {
+	    # After skipping the function, on which line should we
+	    # stop, and what does the line look like.
+	    if { $j < 5 } {
+		set lineno [set "::lineno_f$j"]
+		set after_skip_re "func$j \\(\\);\[^\r\n\]+"
+	    } else {
+		set lineno $::lineno_end
+		set after_skip_re "\\+\\+global_var;\[^\r\n\]+"
+	    }
+
+	    # Step the inferior, we expect to skip the function.
+	    gdb_test "step" \
+		"$lineno\\s+$after_skip_re" \
+		"skip func$i"
+	}
+    }
+}
+
+    #                        Should Function Be Skipped?
+    #     Glob               func1  func2  func3  func4
+set test_specs [list \
+    [list xxx                false  false  false  false ] \
+    [list file.?             true   true   true   true  ] \
+    [list aa/bb*/file*.*c*   true   false  false  false ] \
+    [list *.c                true   true   true   true  ] \
+    [list bb/*.c             true   true   false  false ] \
+    [list ee/*.c             false  false  true   false ] \
+    [list ee/**/*.c          false  false  true   true  ] \
+    [list ee/ff/*.c          false  false  false  true  ] \
+    [list dd/**/**/*.c       false  false  true   true  ] \
+    [list **/**/**/*.c       true   true   true   true  ] \
+    [list $root/aa/bb/*.c    true   false  false  false ] \
+    [list $root/**/*.c       true   true   true   true  ] \
+    [list $root/**           true   true   true   true  ] \
+]
+
+foreach_with_prefix relative_compile_filenames { true false } {
+    if { $relative_compile_filenames } {
+	set filename $testfile-relative
+    } else {
+	set filename $testfile-absolute
+    }
+
+    compile_test $filename $relative_compile_filenames
+
+    foreach spec $test_specs {
+	set prefix [lindex $spec 0]
+	regsub "^[string_to_regexp $root]" $prefix "ROOT" prefix
+
+	with_test_prefix "spec=$prefix" {
+	    run_test {*}$spec $relative_compile_filenames $filename
+	}
+    }
+}

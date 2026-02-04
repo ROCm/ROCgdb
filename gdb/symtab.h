@@ -2782,9 +2782,6 @@ extern bool basenames_may_differ;
 bool compare_filenames_for_search (const char *filename,
 				   const char *search_name);
 
-bool compare_glob_filenames_for_search (const char *filename,
-					const char *search_name);
-
 /* Check in PSPACE for a symtab of a specific name; first in symtabs, then in
    psymtabs.  *If* there is no '/' in the name, a match after a '/' in the
    symtab filename will also work.
