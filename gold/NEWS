@@ -1,3 +1,19 @@
+Deprecation notice:
+
+* The gold linker has been deprecated [1].  Alternatives are GNU's ld, LLVM's
+  lld, and mold.
+* By extension, dwp has been deprecated.  An alternative is LLVM's llvm-dwp.
+  Elfutils has proposed an eu-dwp [2], but at release 0.194 it doesn't exist
+  yet.
+* Both these components will eventually be removed, unless volunteers (for
+  either one or both components) step forward and offer to continue
+  development and maintenance.
+
+[1] https://lists.gnu.org/archive/html/info-gnu/2025-02/msg00001.html
+[2] https://sourceware.org/bugzilla/show_bug.cgi?id=31360
+
+Changes since 1.16:
+
 * gold and dwp now support zstd compressed debug sections.
 
 * The new option --compress-debug-sections=zstd compresses debug sections with

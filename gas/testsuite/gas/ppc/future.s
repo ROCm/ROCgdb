@@ -110,4 +110,25 @@ _start:
 	tlbieio 7, 6, 2
 	tlbsyncio 9
 	ptesyncio 5
+	xxmulmul 34, 36, 38, 6
+	xxmulmulhiadd 37, 39, 9, 1, 0, 1
+	xxmulmulloadd 42, 44, 45, 0, 1
+	xxssumudm 4, 5, 6, 1
+	xxssumudmc 3, 4, 7, 0
+	xsaddadduqm 51, 52, 53
+	xsaddaddsuqm 0, 1, 2
+	xsaddsubuqm 61, 62, 63
+	xsaddsubsuqm 3, 4, 5
+	xsmerge2t1uqm 6, 8, 10
+	xsmerge2t2uqm 12, 14, 16
+	xsmerge2t3uqm 18, 19, 20
+	xsmerge3t1uqm 21, 23, 25
+	xsrebase2t1uqm 27, 29, 30
+	xsrebase2t2uqm 31, 32, 33
+	xsrebase2t3uqm 34, 35, 36
+	xsrebase2t4uqm 35, 36, 37
+	xsrebase3t1uqm 38, 39, 40
+	xsrebase3t2uqm 41, 42, 43
+	xsrebase3t3uqm 44, 45, 46
+	xxssumudmcext 35, 9, 11, 13, 1
 

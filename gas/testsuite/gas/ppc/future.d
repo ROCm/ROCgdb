@@ -136,4 +136,26 @@ Disassembly of section \.text:
 .*:	(24 38 c8 7c|7c c8 38 24) 	tlbieio r7,r6,2
 .*:	(68 04 20 7d|7d 20 04 68) 	tlbsyncio r9
 .*:	(a8 04 a0 7c|7c a0 04 a8) 	ptesyncio r5
+.*:	(0f 36 44 ec|ec 44 36 0f) 	xxmulmul vs34,vs36,vs38,6
+.*:	(4d 4d a7 ec|ec a7 4d 4d) 	xxmulmulhiadd vs37,vs39,vs9,1,0,1
+.*:	(8f 69 4c ed|ed 4c 69 8f) 	xxmulmulloadd vs42,vs44,vs45,0,1
+.*:	(c8 34 85 ec|ec 85 34 c8) 	xxssumudm vs4,vs5,vs6,1
+.*:	(c8 39 64 ec|ec 64 39 c8) 	xxssumudmc vs3,vs4,vs7,0
+.*:	(07 ab 74 ee|ee 74 ab 07) 	xsaddadduqm vs51,vs52,vs53
+.*:	(40 13 01 ec|ec 01 13 40) 	xsaddaddsuqm vs0,vs1,vs2
+.*:	(87 fb be ef|ef be fb 87) 	xsaddsubuqm vs61,vs62,vs63
+.*:	(00 2f 64 ec|ec 64 2f 00) 	xsaddsubsuqm vs3,vs4,vs5
+.*:	(40 57 c8 ec|ec c8 57 40) 	xsmerge2t1uqm vs6,vs8,vs10
+.*:	(80 87 8e ed|ed 8e 87 80) 	xsmerge2t2uqm vs12,vs14,vs16
+.*:	(c8 a2 53 ee|ee 53 a2 c8) 	xsmerge2t3uqm vs18,vs19,vs20
+.*:	(c8 cb b7 ee|ee b7 cb c8) 	xsmerge3t1uqm vs21,vs23,vs25
+.*:	(88 f4 7d ef|ef 7d f4 88) 	xsrebase2t1uqm vs27,vs29,vs30
+.*:	(8e 0d e0 ef|ef e0 0d 8e) 	xsrebase2t2uqm vs31,vs32,vs33
+.*:	(8f 26 43 ec|ec 43 26 8f) 	xsrebase2t3uqm vs34,vs35,vs36
+.*:	(cf 2e 64 ec|ec 64 2e cf) 	xsrebase2t4uqm vs35,vs36,vs37
+.*:	(8f 47 c7 ec|ec c7 47 8f) 	xsrebase3t1uqm vs38,vs39,vs40
+.*:	(cf 5f 2a ed|ed 2a 5f cf) 	xsrebase3t2uqm vs41,vs42,vs43
+.*:	(1f 76 8d ed|ed 8d 76 1f) 	xsrebase3t3uqm vs44,vs45,vs46
+.*:	(00 00 00 05|05 00 00 00) 	xxssumudmcext vs35,vs9,vs11,vs13,1
+.*:	(71 5b 69 88|88 69 5b 71) 
 #pass
