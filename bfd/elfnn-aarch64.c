@@ -4979,7 +4979,6 @@ setup_plt_values (struct bfd_link_info *link_info,
     {
       globals->plt0_entry = elfNN_aarch64_small_plt0_bti_entry;
 
-      /* Only in ET_EXEC we need PLTn with BTI.  */
       if (bfd_link_executable (link_info))
 	{
 	  globals->plt_entry_size = PLT_BTI_PAC_SMALL_ENTRY_SIZE;
@@ -4997,7 +4996,6 @@ setup_plt_values (struct bfd_link_info *link_info,
     {
       globals->plt0_entry = elfNN_aarch64_small_plt0_bti_entry;
 
-      /* Only in ET_EXEC we need PLTn with BTI.  */
       if (bfd_link_executable (link_info))
 	{
 	  globals->plt_entry_size = PLT_BTI_SMALL_ENTRY_SIZE;
@@ -9837,16 +9835,16 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 
 	  aarch64_plt_type plt_type
 	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
-	  if ((plt_type == PLT_BTI_PAC)
+	  if (plt_type == PLT_BTI_PAC
 	      && (!add_dynamic_entry (DT_AARCH64_BTI_PLT, 0)
 		  || !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0)))
 	    return false;
 
-	  else if ((plt_type == PLT_BTI)
+	  else if (plt_type == PLT_BTI
 		   && !add_dynamic_entry (DT_AARCH64_BTI_PLT, 0))
 	    return false;
 
-	  else if ((plt_type == PLT_PAC)
+	  else if (plt_type == PLT_PAC
 		   && !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0))
 	    return false;
 	}
@@ -10368,12 +10366,10 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	  const bfd_byte *entry = elfNN_aarch64_tlsdesc_small_plt_entry;
 	  htab->tlsdesc_plt_entry_size = PLT_TLSDESC_ENTRY_SIZE;
 
-	  aarch64_plt_type type
+	  aarch64_plt_type plt_type
 	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
-	  if (type == PLT_BTI || type == PLT_BTI_PAC)
-	    {
-	      entry = elfNN_aarch64_tlsdesc_small_plt_bti_entry;
-	    }
+	  if (plt_type & PLT_BTI)
+	    entry = elfNN_aarch64_tlsdesc_small_plt_bti_entry;
 
 	  memcpy (htab->root.splt->contents + htab->root.tlsdesc_plt,
 		  entry, htab->tlsdesc_plt_entry_size);
@@ -10401,7 +10397,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 
 	   /* First instruction in BTI enabled PLT stub is a BTI
 	      instruction so skip it.  */
-	    if (type & PLT_BTI)
+	    if (plt_type & PLT_BTI)
 	      {
 		plt_entry = plt_entry + 4;
 		adrp1_addr = adrp1_addr + 4;
@@ -10487,7 +10483,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 }
 
 /* Check if BTI-enabled (and/or PAC-enabled) PLTs are needed.
-   Returns the type needed.  */
+   Returns the type needed, and whether DF_1_PIE is set via tdata is_pie.  */
 static aarch64_plt_type
 get_plt_type (bfd *abfd)
 {
@@ -10506,13 +10502,12 @@ get_plt_type (bfd *abfd)
       Elf_Internal_Dyn dyn;
       bfd_elfNN_swap_dyn_in (abfd, extdyn, &dyn);
 
-      /* Let's check the processor specific dynamic array tags.  */
-      bfd_vma tag = dyn.d_tag;
-      if (tag < DT_LOPROC || tag > DT_HIPROC)
-	continue;
-
-      switch (tag)
+      switch (dyn.d_tag)
 	{
+	case DT_FLAGS_1:
+	  elf_tdata (abfd)->is_pie = (dyn.d_un.d_val & DF_1_PIE) != 0;
+	  break;
+
 	case DT_AARCH64_BTI_PLT:
 	  ret |= PLT_BTI;
 	  break;
@@ -10555,14 +10550,18 @@ elfNN_aarch64_plt_sym_val (bfd_vma i, const asection *plt,
     = elf_aarch64_tdata (plt->owner)->sw_protections.plt_type;
   if (plt_type == PLT_BTI_PAC)
     {
-      if (elf_elfheader (plt->owner)->e_type == ET_EXEC)
+      if (elf_elfheader (plt->owner)->e_type == ET_EXEC
+	  || (elf_elfheader (plt->owner)->e_type == ET_DYN
+	      && elf_tdata (plt->owner)->is_pie))
 	pltn_size = PLT_BTI_PAC_SMALL_ENTRY_SIZE;
       else
 	pltn_size = PLT_PAC_SMALL_ENTRY_SIZE;
     }
   else if (plt_type == PLT_BTI)
     {
-      if (elf_elfheader (plt->owner)->e_type == ET_EXEC)
+      if (elf_elfheader (plt->owner)->e_type == ET_EXEC
+	  || (elf_elfheader (plt->owner)->e_type == ET_DYN
+	      && elf_tdata (plt->owner)->is_pie))
 	pltn_size = PLT_BTI_SMALL_ENTRY_SIZE;
     }
   else if (plt_type == PLT_PAC)

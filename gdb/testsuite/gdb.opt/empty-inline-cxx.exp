@@ -15,8 +15,8 @@
 
 standard_testfile .cc
 
-require {expr ![test_compiler_info gcc* c++] \
-	     || [supports_statement_frontiers] }
+require {expr {![test_compiler_info gcc* c++] \
+		   || [supports_statement_frontiers]} }
 
 set options {c++ debug optimize=-Og}
 lappend_include_file options $srcdir/lib/attributes.h

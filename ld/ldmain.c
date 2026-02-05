@@ -218,6 +218,20 @@ write_dependency_file (void)
 
   fclose (out);
 }
+
+static void
+free_dependency_files (void)
+{
+  struct dependency_file *dep, *next;
+
+  for (dep = dependency_files; dep != NULL; dep = next)
+    {
+      next = dep->next;
+      free (dep->name);
+      free (dep);
+    }
+  dependency_files = dependency_files_tail = NULL;
+}
 
 static void
 ld_cleanup (void)
@@ -1007,6 +1021,7 @@ main (int argc, char **argv)
 
   if (config.dependency_file != NULL)
     write_dependency_file ();
+  free_dependency_files ();
 
   /* Even if we're producing relocatable output, some non-fatal errors should
      be reported in the exit status.  (What non-fatal errors, if any, do we

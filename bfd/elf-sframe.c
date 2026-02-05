@@ -467,8 +467,8 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
       != sframe_encoder_get_abi_arch (sfe_ctx))
     {
       _bfd_error_handler
-	(_("input SFrame sections with different abi prevent .sframe"
-	  " generation"));
+	(_("error in %pB (%pA); unexpected ABI in SFrame section"),
+	 sec->owner, sec);
       return false;
     }
 
@@ -478,8 +478,8 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
   if (dctx_version != SFRAME_VERSION_3 || dctx_version != ectx_version)
     {
       _bfd_error_handler
-	(_("input SFrame sections with different format versions prevent"
-	  " .sframe generation"));
+	(_("error in %pB (%pA); unexpected SFrame format version %" PRIu8),
+	 sec->owner, sec, dctx_version);
       return false;
     }
 
@@ -491,8 +491,8 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
       != SFRAME_V2_GNU_AS_LD_ENCODING_FLAGS)
     {
       _bfd_error_handler
-	(_("SFrame sections with unexpected data encoding prevent"
-	  " .sframe generation"));
+	(_("error in %pB (%pA); unexpected SFrame data encoding"),
+	 sec->owner, sec);
       return false;
     }
 

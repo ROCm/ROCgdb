@@ -30,10 +30,11 @@
 # If <name regex> is missing, or is the empty string, then any note
 # with the required type will be modified.
 
-import sys
-import struct
 import os
 import re
+import struct
+
+import gdb
 
 # Constants taken from the ELF spec.
 ELF_CLASS_32 = 0x1

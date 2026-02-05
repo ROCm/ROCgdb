@@ -127,7 +127,7 @@ wchar_printer::get_default_encoding (type *chtype)
   const char *encoding;
   if (chtype->length () == 1)
     encoding = target_charset (chtype->arch ());
-  else if (streq (chtype->name (), "wchar_t"))
+  else if (chtype->name () != nullptr && streq (chtype->name (), "wchar_t"))
     encoding = target_wide_charset (chtype->arch ());
   else if (chtype->length () == 2)
     {
