@@ -30,6 +30,30 @@ if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
     return
 }
 
+# The Windows runtime doesn't support passing exceptions yet.  We use
+# this variable to kfail the first timeout FAIL, and skip testing
+# passing exception again afterwards, to avoid wasting time with
+# multiple timeouts.
+set supports_passing_exceptions 1
+
+proc test_passing_exception {} {
+    set msg "pass exception to runtime"
+    if {$::supports_passing_exceptions} {
+	setup_kfail "*-*-mingw*" "AIRUNTIME=35"
+	gdb_test_multiple "continue" $msg {
+	    -re -wrap "HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" {
+		pass $gdb_test_name
+	    }
+	    timeout {
+		set ::supports_passing_exceptions 0
+		fail "$gdb_test_name (timeout)"
+	    }
+	}
+    } else {
+	unsupported $msg
+    }
+}
+
 proc do_test { exception_name precise_alu_exceptions_supported } {
     set location_where_excp_reported {}
     with_test_prefix "$exception_name, precise=off" {
@@ -95,8 +119,7 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 		}
 	    }
 
-	    gdb_test "continue" ".*HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" \
-		"exception sent to runtime"
+	    test_passing_exception
 	}
     }
 
@@ -125,8 +148,7 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 	    gdb_test "continue" "Thread $::decimal \[^\r\n]*received signal SIGFPE, Arithmetic exception\..*"
 	    gdb_test "x/i \$pc" "=> $::hex <[string_to_regexp $location_where_excp_reported]>:.*" "precise location"
 
-	    gdb_test "continue" ".*HSA_STATUS_ERROR_EXCEPTION.*received signal SIGABRT, Aborted.*" \
-		"exception sent to runtime"
+	    test_passing_exception
 	}
     }
 }

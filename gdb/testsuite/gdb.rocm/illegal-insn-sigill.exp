@@ -57,6 +57,7 @@ proc do_test { } {
 	# When resuming execution, the illegal instruction is delivered to the
 	# runtime which is expected to print an error message then abort the
 	# program.
+	setup_kfail "*-*-mingw*" "AIRUNTIME=35"
 	gdb_test "continue" \
 	    ".*HSA_STATUS_ERROR_ILLEGAL_INSTRUCTION.*received signal SIGABRT, Aborted..*"
     }
