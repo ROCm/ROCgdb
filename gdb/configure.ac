@@ -59,6 +59,18 @@ AX_CXX_COMPILE_STDCXX(17, , mandatory)
 
 GDB_AC_COMMON
 
+AC_LANG_PUSH(C++)
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM(
+    [#include <atomic>
+     struct Foo { long long a, b; };],
+    [Foo v { 0, 0 };
+    std::atomic<Foo> a = v;
+    a.compare_exchange_strong(v, v);])],
+   [], [LIBS="$LIBS -latomic"]
+)
+AC_LANG_POP(C++)
+
 # Dependency checking.
 ZW_CREATE_DEPDIR
 ZW_PROG_COMPILER_DEPENDENCIES([CC])
