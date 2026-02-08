@@ -326,6 +326,10 @@ Options:\n\
 	   DEFAULT_SFRAME ? "yes" : "no");
   fprintf (stream, _("\
   --gsframe-<N>           generate SFrame version <N> information. 3 == <N>\n"));
+  fprintf (stream, _("\
+  --reloc-section-sym=[all|internal|none]\n\
+                          adjust eligible relocations to use section symbols\n\
+                          (default: all)\n"));
 # if defined (TARGET_USE_SCFI) && defined (TARGET_USE_GINSN)
   fprintf (stream, _("\
   --scfi=experimental     Synthesize DWARF CFI for hand-written asm\n\
@@ -523,7 +527,8 @@ parse_args (int * pargc, char *** pargv)
       OPTION_SFRAME_3,
       OPTION_SCFI,
       OPTION_INFO,
-      OPTION_NOINFO
+      OPTION_NOINFO,
+      OPTION_RELOC_SECTION_SYM
     /* When you add options here, check that they do
        not collide with OPTION_MD_BASE.  See as.h.  */
     };
@@ -556,6 +561,7 @@ parse_args (int * pargc, char *** pargv)
     ,{"generate-missing-build-notes", required_argument, NULL, OPTION_ELF_BUILD_NOTES}
     ,{"gsframe", optional_argument, NULL, OPTION_SFRAME}
     ,{"gsframe-3", no_argument, NULL, OPTION_SFRAME_3}
+    ,{"reloc-section-sym", required_argument, NULL, OPTION_RELOC_SECTION_SYM}
 # if defined (TARGET_USE_SCFI) && defined (TARGET_USE_GINSN)
     ,{"scfi", required_argument, NULL, OPTION_SCFI}
 # endif
@@ -1041,6 +1047,18 @@ This program has absolutely no warranty.\n"));
 
 	case OPTION_SECTNAME_SUBST:
 	  flag_sectname_subst = 1;
+	  break;
+
+	case OPTION_RELOC_SECTION_SYM:
+	  if (strcasecmp (optarg, "all") == 0)
+	    flag_reloc_section_sym = reloc_section_sym_all;
+	  else if (strcasecmp (optarg, "internal") == 0)
+	    flag_reloc_section_sym = reloc_section_sym_internal;
+	  else if (strcasecmp (optarg, "none") == 0)
+	    flag_reloc_section_sym = reloc_section_sym_none;
+	  else
+	    as_fatal (_("Invalid --reloc-section-sym= option: `%s'"),
+		      optarg);
 	  break;
 
 	case OPTION_ELF_BUILD_NOTES:

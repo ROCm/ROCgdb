@@ -1,5 +1,9 @@
 -*- text -*-
 
+* New command line option --reloc-section-sym=[all|internal|none]
+  controls whether relocations referencing local binding symbols are adjusted
+  to use section symbols.
+
 * The aarch64 extensions TME and MPAMv2_VID have never been implemented in any
   products.  Arm has withdrawn them from the architecture.  The assembler will
   now warn if instructions or system registers from either extension are

@@ -405,6 +405,16 @@ enum multibyte_input_handling
 };
 COMMON enum multibyte_input_handling multibyte_handling;
 
+/* Controls whether relocations referencing local symbols are converted
+   to use section symbols.  */
+enum reloc_section_sym_type
+{
+  reloc_section_sym_all = 0,
+  reloc_section_sym_internal,
+  reloc_section_sym_none
+};
+COMMON enum reloc_section_sym_type flag_reloc_section_sym;
+
 /* TRUE if we should produce a listing.  */
 extern int listing;
 
