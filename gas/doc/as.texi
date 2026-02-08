@@ -904,7 +904,7 @@ Issue warnings when difference tables altered for long displacements.
 
 @item -L
 @itemx --keep-locals
-Keep (in the symbol table) local symbols.  These symbols start with
+Keep (in the symbol table) internal symbols.  These symbols start with
 system-specific local label prefixes, typically @samp{.L} for ELF systems
 or @samp{L} for traditional a.out systems.
 @ifclear man
@@ -2430,7 +2430,7 @@ gcc -c -g -O -Wa,-alh,-L file.c
 @noindent
 This passes two options to the assembler: @samp{-alh} (emit a listing to
 standard output with high-level and assembly source) and @samp{-L} (retain
-local symbols in the symbol table).
+internal symbols in the symbol table).
 
 Usually you do not need to use this @samp{-Wa} mechanism, since many compiler
 command-line options are automatically passed to the assembler by the compiler.
@@ -2454,7 +2454,7 @@ assembler.)
 * K::             -K for difference tables
 @end ifset
 
-* L::             -L to retain local symbols
+* L::             -L to retain internal symbols
 * listing::       --listing-XXX to configure listing output
 * M::		  -M or --mri to assemble in MRI compatibility mode
 * MD::            --MD for dependency tracking
@@ -2622,19 +2622,19 @@ is done.
 @end ifset
 
 @node L
-@section Include Local Symbols: @option{-L}
+@section Include Internal Symbols: @option{-L}
 
 @kindex -L
-@cindex local symbols, retaining in output
+@cindex internal symbols, retaining in output
 Symbols beginning with system-specific local label prefixes, typically
 @samp{.L} for ELF systems or @samp{L} for traditional a.out systems, are
-called @dfn{local symbols}.  @xref{Symbol Names}.  Normally you do not see
+called @dfn{internal symbols}.  @xref{Symbol Names}.  Normally you do not see
 such symbols when debugging, because they are intended for the use of
 programs (like compilers) that compose assembler programs, not for your
 notice.  Normally both @command{@value{AS}} and @code{@value{LD}} discard
 such symbols, so you do not normally debug with them.
 
-This option tells @command{@value{AS}} to retain those local symbols
+This option tells @command{@value{AS}} to retain those internal symbols
 in the object file.  Usually if you do this you also tell the linker
 @code{@value{LD}} to preserve those symbols.
 
@@ -3987,7 +3987,7 @@ Case of letters is significant: @code{foo} is a different symbol name
 than @code{Foo}.
 
 Symbol names do not start with a digit.  An exception to this rule is made for
-Local Labels.  See below.
+Numeric Local Labels.  See below.
 
 Multibyte characters are supported, but note that the setting of the
 @option{multibyte-handling} option might prevent their use.
@@ -4005,44 +4005,46 @@ Each symbol has exactly one name.  Each name in an assembly language program
 refers to exactly one symbol.  You may use that symbol name any number of times
 in a program.
 
-@subheading Local Symbol Names
+@subheading Internal Symbol Names
 
-@cindex local symbol names
-@cindex symbol names, local
-A local symbol is any symbol beginning with certain local label prefixes.
+@cindex internal symbol names
+@cindex symbol names, internal
+An internal symbol is any symbol beginning with certain local label prefixes.
 By default, the local label prefix is @samp{.L} for ELF systems or
 @samp{L} for traditional a.out systems, but each target may have its own
 set of local label prefixes.
 @ifset HPPA
-On the HPPA local symbols begin with @samp{L$}.
+On the HPPA internal symbols begin with @samp{L$}.
 @end ifset
 
-Local symbols are defined and used within the assembler, but they are
+Internal symbols are defined and used within the assembler, but they are
 normally not saved in object files.  Thus, they are not visible when debugging.
-You may use the @samp{-L} option (@pxref{L, ,Include Local Symbols})
-to retain the local symbols in the object files.
+You may use the @samp{-L} option (@pxref{L, ,Include Internal Symbols})
+to retain the internal symbols in the object files.
 
-@subheading Local Labels
+@subheading Numeric Local Labels
 
-@cindex local labels
+@cindex numeric local labels
 @cindex temporary symbol names
 @cindex symbol names, temporary
-Local labels are different from local symbols.  Local labels help compilers and
-programmers use names temporarily.  They create symbols which are guaranteed to
-be unique over the entire scope of the input source code and which can be
-referred to by a simple notation.  To define a local label, write a label of
-the form @samp{@b{N}:} (where @b{N} represents any non-negative integer).
-To refer to the most recent previous definition of that label write
-@samp{@b{N}b}, using the same number as when you defined the label.  To refer
-to the next definition of a local label, write @samp{@b{N}f}.  The @samp{b}
-stands for ``backwards'' and the @samp{f} stands for ``forwards''.
+Numeric local labels are different from internal symbols.  Numeric local labels
+help compilers and programmers use names temporarily.  They create symbols
+which are guaranteed to be unique over the entire scope of the input source
+code and which can be referred to by a simple notation.  To define a numeric
+local label, write a label of the form @samp{@b{N}:} (where @b{N} represents
+any non-negative integer).  To refer to the most recent previous definition of
+that label write @samp{@b{N}b}, using the same number as when you defined the
+label.  To refer to the next definition of a numeric local label, write
+@samp{@b{N}f}.  The @samp{b} stands for ``backwards'' and the @samp{f} stands
+for ``forwards''.
 
 There is no restriction on how you can use these labels, and you can reuse them
-too.  So that it is possible to repeatedly define the same local label (using
-the same number @samp{@b{N}}), although you can only refer to the most recently
-defined local label of that number (for a backwards reference) or the next
-definition of a specific local label for a forward reference.  It is also worth
-noting that the first 10 local labels (@samp{@b{0:}}@dots{}@samp{@b{9:}}) are
+too.  So that it is possible to repeatedly define the same numeric local label
+(using the same number @samp{@b{N}}), although you can only refer to the most
+recently defined numeric local label of that number (for a backwards reference)
+or the next definition of a specific numeric local label for a forward
+reference.  It is also worth noting that the first 10 numeric local labels
+(@samp{@b{0:}}@dots{}@samp{@b{9:}}) are
 implemented in a slightly more efficient manner than the others.
 
 Here is an example:
@@ -4063,7 +4065,7 @@ label_3:  branch label_4
 label_4:  branch label_3
 @end smallexample
 
-Local label names are only a notational device.  They are immediately
+Numeric local label names are only a notational device.  They are immediately
 transformed into more conventional symbol names before the assembler uses them.
 The symbol names are stored in the symbol table, appear in error messages, and
 are optionally emitted to the object file.  The names are constructed using
@@ -4071,7 +4073,7 @@ these parts:
 
 @table @code
 @item @emph{local label prefix}
-All local symbols begin with the system-specific local label prefix.
+All internal symbols begin with the system-specific local label prefix.
 Normally both @command{@value{AS}} and @code{@value{LD}} forget symbols
 that start with the local label prefix.  These labels are
 used for symbols you are never intended to see.  If you use the
@@ -4080,7 +4082,7 @@ object file. If you also instruct @code{@value{LD}} to retain these symbols,
 you may use them in debugging.
 
 @item @var{number}
-This is the number that was used in the local label definition.  So if the
+This is the number that was used in the numeric local label definition.  So if the
 label is written @samp{55:} then the number is @samp{55}.
 
 @item @kbd{C-B}
@@ -4098,20 +4100,21 @@ So for example, the first @code{1:} may be named @code{.L1@kbd{C-B}1}, and
 the 44th @code{3:} may be named @code{.L3@kbd{C-B}44}.
 
 @subheading Dollar Local Labels
-@cindex dollar local symbols
+@cindex dollar local labels
 
 On some targets @code{@value{AS}} also supports an even more local form of
-local labels called dollar labels.  These labels go out of scope (i.e., they
-become undefined) as soon as a non-local label is defined.  Thus they remain
-valid for only a small region of the input source code.  Normal local labels,
-by contrast, remain in scope for the entire file, or until they are redefined
-by another occurrence of the same local label.
+numeric local labels called dollar labels.  These labels go out of scope
+(i.e., they become undefined) as soon as a non-local label is defined.  Thus
+they remain valid for only a small region of the input source code.  Normal
+numeric local labels, by contrast, remain in scope for the entire file, or
+until they are redefined by another occurrence of the same numeric local label.
 
-Dollar labels are defined in exactly the same way as ordinary local labels,
-except that they have a dollar sign suffix to their numeric value, e.g.,
-@samp{@b{55$:}}.
+Dollar labels are defined in exactly the same way as ordinary numeric local
+labels, except that they have a dollar sign suffix to their numeric value,
+e.g., @samp{@b{55$:}}.
 
-They can also be distinguished from ordinary local labels by their transformed
+They can also be distinguished from ordinary numeric local labels by their
+transformed
 names which use ASCII character @samp{\001} (control-A) as the magic character
 to distinguish them from ordinary labels.  For example, the fifth definition of
 @samp{6$} may be named @samp{.L6@kbd{C-A}5}.
