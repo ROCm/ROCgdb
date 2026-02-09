@@ -951,18 +951,6 @@ default_program_breakpoint_here_p (struct gdbarch *gdbarch,
   return false;
 }
 
-void
-default_skip_permanent_breakpoint (struct regcache *regcache)
-{
-  struct gdbarch *gdbarch = regcache->arch ();
-  CORE_ADDR current_pc = regcache_read_pc (regcache);
-  int bp_len;
-
-  gdbarch_breakpoint_from_pc (gdbarch, &current_pc, &bp_len);
-  current_pc += bp_len;
-  regcache_write_pc (regcache, current_pc);
-}
-
 CORE_ADDR
 default_infcall_mmap (CORE_ADDR size, unsigned prot)
 {

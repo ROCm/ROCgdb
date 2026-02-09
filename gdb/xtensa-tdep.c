@@ -3194,8 +3194,6 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* To call functions from GDB using dummy frame.  */
   set_gdbarch_push_dummy_call (gdbarch, xtensa_push_dummy_call);
 
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
   set_gdbarch_return_value (gdbarch, xtensa_return_value);
 
   /* Advance PC across any prologue instructions to reach "real" code.  */

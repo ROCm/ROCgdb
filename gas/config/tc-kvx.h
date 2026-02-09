@@ -267,19 +267,6 @@ extern int kvx_force_reloc_sub_same (struct fix *, segT);
        && S_IS_DEFINED ((FIX)->fx_addsy)                                       \
        && ! S_IS_COMMON ((FIX)->fx_addsy)))
 
-/* Local symbols will be adjusted against the section symbol.  */
-#define tc_fix_adjustable(fixP) 1
-
-/* This arranges for gas/write.c to not apply a relocation if
-   tc_fix_adjustable says it is not adjustable.  The "! symbol_used_in_reloc_p"
-   test is there specifically to cover the case of non-global symbols in
-   linkonce sections.  It's the generally correct thing to do though;  If a
-   reloc is going to be emitted against a symbol then we don't want to adjust
-   the fixup by applying the reloc during assembly.  The reloc will be applied
-   by the linker during final link.  */
-#define TC_FIX_ADJUSTABLE(fixP) \
-  (! symbol_used_in_reloc_p ((fixP)->fx_addsy) && tc_fix_adjustable (fixP))
-
 /* Force this to avoid -g to fail because of dwarf2 expression .L0 - .L0 */
 extern int kvx_validate_sub_fix (struct fix *fix);
 #define TC_VALIDATE_FIX_SUB(FIX, SEG)                                          \

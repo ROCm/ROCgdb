@@ -2642,25 +2642,18 @@ print_vector_info (struct ui_file *file,
 		   const frame_info_ptr &frame, const char *args)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  bool printed_something = false;
 
-  if (gdbarch_print_vector_info_p (gdbarch))
-    gdbarch_print_vector_info (gdbarch, file, frame, args);
-  else
+  for (int regnum = 0; regnum < gdbarch_num_cooked_regs (gdbarch); regnum++)
     {
-      int regnum;
-      int printed_something = 0;
-
-      for (regnum = 0; regnum < gdbarch_num_cooked_regs (gdbarch); regnum++)
+      if (gdbarch_register_reggroup_p (gdbarch, regnum, vector_reggroup))
 	{
-	  if (gdbarch_register_reggroup_p (gdbarch, regnum, vector_reggroup))
-	    {
-	      printed_something = 1;
-	      gdbarch_print_registers_info (gdbarch, file, frame, regnum, 1);
-	    }
+	  printed_something = true;
+	  gdbarch_print_registers_info (gdbarch, file, frame, regnum, 1);
 	}
-      if (!printed_something)
-	gdb_printf (file, "No vector information\n");
     }
+  if (!printed_something)
+    gdb_printf (file, "No vector information\n");
 }
 
 static void

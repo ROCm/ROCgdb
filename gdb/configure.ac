@@ -568,6 +568,12 @@ esac
 # We might need to link with -lm; most simulators need it.
 AC_CHECK_LIB(m, main)
 
+# GDB uses std::atomic, which sometimes (depending on the arch, compiler, types,
+# etc) generates some calls into libatomic.  Always link with libatomic when
+# it exists, there shouldn't be any downsides in linking with it even if not
+# needed.
+AC_CHECK_LIB(atomic, main)
+
 # Some systems (e.g. Solaris) have `gethostbyname' in libnsl.
 AC_SEARCH_LIBS(gethostbyname, nsl)
 

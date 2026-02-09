@@ -1061,6 +1061,19 @@ oav2_subsections_mark_unknown (const bfd *abfd)
     }
 }
 
+/* Assign the merge result to REF.
+   The only reason to exist for this helper is when the manipulated value is a
+   string.  In this case, the value in REF must be freed before assigning.  */
+static void
+oav2_assign_value (obj_attr_encoding_v2_t encoding,
+		   obj_attr_v2_t *a_ref,
+		   union obj_attr_value_v2 res)
+{
+  if (encoding == OA_ENC_NTBS)
+    free ((void *) a_ref->val.string);
+  a_ref->val = res;
+}
+
 /* Initialize the given ATTR with its default value coming from the known tag
    registry.  */
 static void
@@ -1070,33 +1083,30 @@ oav2_attr_overwrite_with_default (const struct bfd_link_info *info,
 {
   const struct elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
+  union obj_attr_value_v2 default_value;
+  memset (&default_value, 0, sizeof (default_value));
+
   const obj_attr_info_t *attr_info
     = _bfd_obj_attr_v2_find_known_by_tag (bed, subsec->name, attr->tag);
   if (attr_info == NULL)
     {
       attr->status = obj_attr_v2_unknown;
-      if (subsec->encoding == OA_ENC_ULEB128)
-	attr->val.uint = 0;
-      else
-	attr->val.string = NULL;
+      oav2_assign_value (subsec->encoding, attr, default_value);
       return;
     }
 
   if (bed->obj_attr_v2_default_value != NULL
       && bed->obj_attr_v2_default_value (info, attr_info, subsec, attr))
-    {}
-  else if (subsec->encoding == OA_ENC_NTBS)
+    return;
+
+  if (subsec->encoding == OA_ENC_NTBS)
     {
-      if (attr->val.string != NULL)
-	{
-	  free ((void *) attr->val.string);
-	  attr->val.string = NULL;
-	}
       if (attr_info->default_value.string != NULL)
-	attr->val.string = xstrdup (attr_info->default_value.string);
+	default_value.string = xstrdup (attr_info->default_value.string);
     }
   else
-    attr->val.uint = attr_info->default_value.uint;
+    default_value.uint = attr_info->default_value.uint;
+  oav2_assign_value (subsec->encoding, attr, default_value);
 }
 
 /* Create a new attribute with the same key (=tag) as ATTR, and initialized with
@@ -1505,7 +1515,7 @@ handle_optional_subsection_merge (const struct bfd_link_info *info,
 			       frozen_is_abfd);
 	  _bfd_elf_obj_attr_v2_free (a_default, s_ref->encoding);
 	  if (res.merge)
-	    a_ref->val = res.val;
+	    oav2_assign_value (s_ref->encoding, a_ref, res.val);
 	  else if (res.reason == OAv2_MERGE_UNSUPPORTED)
 	    a_ref->status = obj_attr_v2_unknown;
 	  a_ref = a_ref->next;
@@ -1518,7 +1528,7 @@ handle_optional_subsection_merge (const struct bfd_link_info *info,
 			       frozen_is_abfd);
 	  if (res.merge || res.reason == OAv2_MERGE_SAME_VALUE_AS_REF)
 	    {
-	      a_default->val = res.val;
+	      oav2_assign_value (s_ref->encoding, a_default, res.val);
 	      LINKED_LIST_INSERT_BEFORE (obj_attr_v2_t)
 		(s_ref, a_default, a_ref);
 	    }
@@ -1532,7 +1542,7 @@ handle_optional_subsection_merge (const struct bfd_link_info *info,
 	    = oav2_attr_merge (info, abfd, s_ref, a_ref, a_abfd, a_frozen,
 			       frozen_is_abfd);
 	  if (res.merge)
-	    a_ref->val = res.val;
+	    oav2_assign_value (s_ref->encoding, a_ref, res.val);
 	  else if (res.reason == OAv2_MERGE_UNSUPPORTED)
 	    a_ref->status = obj_attr_v2_unknown;
 	  a_ref = a_ref->next;
@@ -1547,7 +1557,7 @@ handle_optional_subsection_merge (const struct bfd_link_info *info,
 	= oav2_attr_merge (info, abfd, s_ref, a_default, a_abfd, NULL, false);
       if (res.merge || res.reason == OAv2_MERGE_SAME_VALUE_AS_REF)
 	{
-	  a_default->val = res.val;
+	  oav2_assign_value (s_ref->encoding, a_default, res.val);
 	  LINKED_LIST_APPEND (obj_attr_v2_t) (s_ref, a_default);
 	}
       else
@@ -1566,7 +1576,7 @@ handle_optional_subsection_merge (const struct bfd_link_info *info,
 			   frozen_is_abfd);
       _bfd_elf_obj_attr_v2_free (a_default, s_ref->encoding);
       if (res.merge)
-	a_ref->val = res.val;
+	oav2_assign_value (s_ref->encoding, a_ref, res.val);
       else if (res.reason == OAv2_MERGE_UNSUPPORTED)
 	a_ref->status = obj_attr_v2_unknown;
     }
@@ -2194,10 +2204,11 @@ _bfd_elf_link_setup_object_attributes (struct bfd_link_info *info)
     return NULL;
   BFD_ASSERT (elf_obj_attr_subsections (res.pbfd).size > 0);
 
-
-  /* Shallow-copy the object attributes into output_bfd.  */
-  elf_obj_attr_subsections (info->output_bfd)
-    = elf_obj_attr_subsections (res.pbfd);
+  /* Swap the old object attributes stored in output_bfd (i.e. the frozen
+     config) with the final merge result.  */
+  LINKED_LIST_SWAP_LISTS (obj_attr_subsection_list_t)
+    (&elf_obj_attr_subsections (info->output_bfd),
+     &elf_obj_attr_subsections (res.pbfd));
 
   /* Note: the object attributes section in the output object is copied from
      the input object which was used for the merge (res.pbfd).  No need to
@@ -2951,6 +2962,16 @@ _bfd_elf_parse_attributes (bfd *abfd, Elf_Internal_Shdr * hdr)
 
  free_data:
   free (data);
+}
+
+/* Clean-up all the object attributes in a file.  */
+void
+_bfd_elf_cleanup_object_attributes (bfd *abfd)
+{
+  obj_attr_subsection_list_t *plist = &elf_obj_attr_subsections (abfd);
+  obj_attr_subsection_v2_t *subsec = plist->first;
+  while (subsec != NULL)
+    subsec = oav2_subsec_delete (plist, subsec);
 }
 
 /* Merge common object attributes from IBFD into OBFD.  Raise an error

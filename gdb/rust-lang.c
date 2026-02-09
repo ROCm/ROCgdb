@@ -260,7 +260,7 @@ rust_get_trait_object_pointer (struct value *value)
 	return NULL;
     }
 
-  CORE_ADDR vtable = value_as_address (value_field (value, vtable_field));
+  CORE_ADDR vtable = value_as_address (value->field (vtable_field));
   struct symbol *symbol = find_symbol_at_address (vtable);
   if (symbol == NULL || symbol->subclass != SYMBOL_RUST_VTABLE)
     return NULL;
@@ -268,7 +268,7 @@ rust_get_trait_object_pointer (struct value *value)
   struct rust_vtable_symbol *vtable_sym
     = static_cast<struct rust_vtable_symbol *> (symbol);
   struct type *pointer_type = lookup_pointer_type (vtable_sym->concrete_type);
-  return value_cast (pointer_type, value_field (value, 1 - vtable_field));
+  return value_cast (pointer_type, value->field (1 - vtable_field));
 }
 
 /* Find and possibly rewrite the unsized part of a slice-like type.
@@ -620,7 +620,7 @@ rust_language::val_print_struct
 	  gdb_puts (": ", stream);
 	}
 
-      common_val_print (value_field (val, i), stream, recurse + 1, &opts,
+      common_val_print (val->field (i), stream, recurse + 1, &opts,
 			this);
     }
 
@@ -700,7 +700,7 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
 		    styled_string (variable_name_style.style (),
 				   variant_type->field (j).name ()));
 
-      common_val_print (value_field (val, j), stream, recurse + 1, &opts,
+      common_val_print (val->field (j), stream, recurse + 1, &opts,
 			this);
     }
 
@@ -1326,7 +1326,7 @@ rust_compute_range (struct type *type, struct value *range,
   if (strcmp (type->field (0).name (), "start") == 0)
     {
       *kind = RANGE_HIGH_BOUND_DEFAULT;
-      *low = value_as_long (value_field (range, 0));
+      *low = value_as_long (range->field (0));
       ++i;
     }
   if (type->num_fields () > i
@@ -1334,7 +1334,7 @@ rust_compute_range (struct type *type, struct value *range,
     {
       *kind = (*kind == (RANGE_LOW_BOUND_DEFAULT | RANGE_HIGH_BOUND_DEFAULT)
 	       ? RANGE_LOW_BOUND_DEFAULT : RANGE_STANDARD);
-      *high = value_as_long (value_field (range, i));
+      *high = value_as_long (range->field (i));
 
       if (rust_inclusive_range_type_p (type))
 	++*high;
@@ -1478,8 +1478,8 @@ rust_subscript_operation::subscript (struct expression *exp,
 	  addr = value_as_long (addrval);
 	  tem = value_at_lazy (slice, addr);
 
-	  value_assign (value_field (tem, 0), value_addr (result));
-	  value_assign (value_field (tem, 1),
+	  value_assign (tem->field (0), value_addr (result));
+	  value_assign (tem->field (1),
 			value_from_longest (usize, high - low));
 
 	  result = value_at_lazy (slice, addr);

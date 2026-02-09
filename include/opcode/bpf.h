@@ -106,6 +106,7 @@ typedef uint64_t bpf_insn_word;
 #define BPF_CODE_JLE  ((uint64_t)0xb0 << 56)
 #define BPF_CODE_JSLT ((uint64_t)0xc0 << 56)
 #define BPF_CODE_JSLE ((uint64_t)0xd0 << 56)
+#define BPF_CODE_JCOND ((uint64_t)0xe0 << 56)
 
 #define BPF_MODE_IMM  ((uint64_t)0x00 << 56)
 #define BPF_MODE_ABS  ((uint64_t)0x20 << 56)
@@ -229,6 +230,9 @@ enum bpf_insn_id
   BPF_INSN_ACMP, BPF_INSN_AXCHG,
   /* Atomic compare-and-swap, atomic exchange (32-bit).  */
   BPF_INSN_ACMP32, BPF_INSN_AXCHG32,
+  /* Conditional pseudo-jump "may_goto".  A NOP until the BPF runtime
+     decides it isn't.  */
+  BPF_INSN_JCOND,
   /* GNU simulator specific instruction.  */
   BPF_INSN_BRKPT,
 };

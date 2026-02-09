@@ -376,7 +376,7 @@ gnuv3_rtti_type (struct value *value,
   /* Get the offset from VALUE to the top of the complete object.
      NOTE: this is the reverse of the meaning of *TOP_P.  */
   offset_to_top
-    = value_as_long (value_field (vtable, vtable_field_offset_to_top));
+    = value_as_long (vtable->field (vtable_field_offset_to_top));
 
   if (full_p)
     *full_p = (- offset_to_top == value->embedded_offset ()
@@ -402,7 +402,7 @@ gnuv3_get_virtual_fn (struct gdbarch *gdbarch, struct value *container,
   gdb_assert (vtable != NULL);
 
   /* Fetch the appropriate function pointer from the vtable.  */
-  vfn = value_subscript (value_field (vtable, vtable_field_virtual_functions),
+  vfn = value_subscript (vtable->field (vtable_field_virtual_functions),
 			 vtable_index);
 
   /* If this architecture uses function descriptors directly in the vtable,
@@ -515,7 +515,7 @@ gnuv3_baseclass_offset (struct type *type, int index,
 
   vtable = gnuv3_get_vtable (gdbarch, type, address + embedded_offset);
   gdb_assert (vtable != NULL);
-  vbase_array = value_field (vtable, vtable_field_vcall_and_vbase_offsets);
+  vbase_array = vtable->field (vtable_field_vcall_and_vbase_offsets);
   base_offset = value_as_long (value_subscript (vbase_array, cur_base_offset));
   return base_offset;
 }
@@ -544,7 +544,6 @@ gnuv3_find_method_in (struct type *domain, CORE_ADDR voffset,
 	  f = TYPE_FN_FIELDLIST1 (domain, i);
 	  len2 = TYPE_FN_FIELDLIST_LENGTH (domain, i);
 
-	  check_stub_method_group (domain, i);
 	  for (j = 0; j < len2; j++)
 	    if (TYPE_FN_FIELD_VOFFSET (f, j) == voffset)
 	      return TYPE_FN_FIELD_PHYSNAME (f, j);
@@ -865,7 +864,7 @@ compute_vtable_size (vtable_hash_t &offset_hash, struct value *value)
 
   /* Recurse into base classes.  */
   for (i = 0; i < TYPE_N_BASECLASSES (type); ++i)
-    compute_vtable_size (offset_hash, value_field (value, i));
+    compute_vtable_size (offset_hash, value->field (i));
 }
 
 /* Helper for gnuv3_print_vtable that prints a single vtable.  */
@@ -883,8 +882,7 @@ print_one_vtable (struct gdbarch *gdbarch, struct value *value,
   vtable = gnuv3_get_vtable (gdbarch, type,
 			     value->address ()
 			     + value->embedded_offset ());
-  vt_addr = value_field (vtable,
-			 vtable_field_virtual_functions)->address ();
+  vt_addr = vtable->field (vtable_field_virtual_functions)->address ();
 
   gdb_printf (_("vtable for '%s' @ %s (subobject @ %s):\n"),
 	      TYPE_SAFE_NAME (type),
@@ -901,8 +899,7 @@ print_one_vtable (struct gdbarch *gdbarch, struct value *value,
 
       gdb_printf ("[%d]: ", i);
 
-      vfn = value_subscript (value_field (vtable,
-					  vtable_field_virtual_functions),
+      vfn = value_subscript (vtable->field (vtable_field_virtual_functions),
 			     i);
 
       if (gdbarch_vtable_function_descriptors (gdbarch))
@@ -1119,7 +1116,7 @@ gnuv3_get_typeid (struct value *value)
       if (vtable == NULL)
 	error (_("cannot find typeinfo for object of type '%s'"),
 	       name);
-      typeinfo_value = value_field (vtable, vtable_field_type_info);
+      typeinfo_value = vtable->field (vtable_field_type_info);
       result = value_ind (value_cast (make_pointer_type (typeinfo_type),
 				      typeinfo_value));
     }

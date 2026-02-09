@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: bfd 2.44.90\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
 "POT-Creation-Date: 2025-07-13 08:44+0100\n"
-"PO-Revision-Date: 2025-08-23 00:14+0800\n"
+"PO-Revision-Date: 2025-12-31 21:03+0800\n"
 "Last-Translator: Sharuzzaman Ahmat Raslan <sharuzzaman@gmail.com>\n"
 "Language-Team: Malay <translation-team-ms@lists.sourceforge.net>\n"
 "Language: ms\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Bugs: Report translation errors to the Language-Team address.\n"
-"X-Generator: Poedit 3.7\n"
+"X-Generator: Poedit 3.8\n"
 
 #: aout-cris.c:196
 #, c-format
@@ -72,7 +72,7 @@ msgstr ""
 #: aoutx.h:4040 pdp11.c:3402
 #, fuzzy, c-format
 msgid "%pB: unsupported relocation type"
-msgstr "Jenis _MIME tidak disokong %s"
+msgstr "Jenis mime tidak disokong"
 
 #. Unknown relocation.
 #: aoutx.h:4360 coff-alpha.c:604 coff-mips.c:356 coff-rs6000.c:3037
@@ -160,7 +160,7 @@ msgstr "Nilai sasaran tak sah."
 #: bfd.c:796
 #, fuzzy
 msgid "file in wrong format"
-msgstr "Format fail:"
+msgstr "Format Fail:"
 
 #: bfd.c:797
 #, fuzzy
@@ -794,7 +794,7 @@ msgstr ""
 #: ecoff.c:1301
 #, fuzzy, c-format
 msgid "unknown basic type %d"
-msgstr "Jenis bus %d tidak diketahui"
+msgstr "Jenis anak panah %d tak diketahui\n"
 
 #: ecoff.c:1559
 #, fuzzy, c-format
@@ -1102,7 +1102,7 @@ msgstr ""
 #: elf-properties.c:693 elfxx-aarch64.c:765
 #, fuzzy
 msgid "%P: failed to create %s\n"
-msgstr "Gagal mencipta direktori \"%s\""
+msgstr "Gagal mencipta fail %s"
 
 #. Merge .note.gnu.property sections.
 #: elf-properties.c:798 elf-properties.c:800
@@ -1139,7 +1139,7 @@ msgstr ""
 #: elf.c:299
 #, fuzzy, c-format
 msgid "%pB: string table [%u] is corrupt"
-msgstr "Fail nampaknya rosak. Melangkau jadual. "
+msgstr "<panjang rentetan rosak: %#x>\n"
 
 #. PR 17512: file: f057ec89.
 #: elf.c:328
@@ -2108,7 +2108,7 @@ msgstr "Guna kodek bab ditemui dalam segmen."
 #: elf32-arm.c:15262
 #, fuzzy, c-format
 msgid " [mapping symbols precede others]"
-msgstr "Simbol"
+msgstr "tidak sebelumnya"
 
 #: elf32-arm.c:15269
 #, c-format
@@ -2189,7 +2189,7 @@ msgstr "end-of-file tak matang berlaku"
 #: elf32-arm.c:17448 elflink.c:13605 elflink.c:13652
 #, fuzzy, c-format
 msgid "could not find section %s"
-msgstr "Gagal mencipta sesi sftp: %s"
+msgstr "Tidak dapat cari \"%s\""
 
 #: elf32-arm.c:18406
 #, c-format
@@ -2323,7 +2323,7 @@ msgstr ""
 #: elf32-bfin.c:2801 elf32-bfin.c:2922
 #, fuzzy
 msgid "cannot emit fixups in read-only section"
-msgstr "Peristiwa tidak boleh disunting, kerana kalendar terpilih adalah baca sahaja"
+msgstr "Memo tidak boleh disunting, kerana senarai memo terpilih adalah baca sahaja"
 
 #: elf32-bfin.c:2831 elf32-bfin.c:2959 elf32-lm32.c:1006 elf32-sh.c:4386
 msgid "cannot emit dynamic relocations in read-only section"
@@ -2724,7 +2724,7 @@ msgstr ""
 #: elf32-hppa.c:4167
 #, fuzzy, c-format
 msgid "%pB(%pA+%#<PRIx64>): cannot handle %s for %s"
-msgstr "Caja tidak dapat mengendali lokasi \"%s\"."
+msgstr "Nemo tidak dapat kendalikan lokasi \"%s\"."
 
 #: elf32-hppa.c:4471
 msgid ".got section not immediately after .plt section"
@@ -2777,7 +2777,7 @@ msgstr ""
 #: elf32-i386.c:2707 elf64-x86-64.c:3726
 #, fuzzy
 msgid "hidden symbol"
-msgstr "Tersembunyi"
+msgstr "Sembunyi"
 
 #: elf32-i386.c:2710 elf64-x86-64.c:3729
 #, fuzzy
@@ -3007,10 +3007,7 @@ msgstr "%1 PB"
 #: elf32-mep.c:675
 #, fuzzy, c-format
 msgid "private flags = 0x%lx"
-msgstr ""
-"\n"
-"Terdapat direktori nyahpepijat dalam %s pada 0x%lx\n"
-"\n"
+msgstr "Tiada PID ditemui untuk tetingkap 0x%lx."
 
 #: elf32-metag.c:1856
 #, c-format
@@ -3224,7 +3221,7 @@ msgstr ""
 #: elf32-or1k.c:2199
 #, fuzzy, c-format
 msgid "%pB: bad relocation section name `%s'"
-msgstr "uid/nama pengguna buruk - %s"
+msgstr "Nama petimel teruk untuk tapisan: %s"
 
 #: elf32-or1k.c:3313
 #, c-format
@@ -3355,7 +3352,7 @@ msgstr ""
 #: elf32-ppc.c:7492
 #, fuzzy
 msgid "%H: fixup branch overflow\n"
-msgstr "Rekod melimpah"
+msgstr "tindanan melimpah"
 
 #: elf32-ppc.c:7532 elf32-ppc.c:7570
 #, c-format
@@ -3570,7 +3567,7 @@ msgstr ""
 #: elf32-score.c:2737
 #, fuzzy
 msgid "address not word aligned"
-msgstr "_Biar Dijajar"
+msgstr "_Biarkan Dijajarkan"
 
 #: elf32-score.c:2818 elf32-score7.c:2625
 #, c-format
@@ -3877,7 +3874,7 @@ msgstr ""
 #: elf32-spu.c:4692
 #, fuzzy
 msgid "%P: auto overlay error: %E\n"
-msgstr "%-e %b %Y %l:%M %p"
+msgstr "Ralat auto-melancar: "
 
 #: elf32-spu.c:4712
 msgid "Stack size for call graph root nodes.\n"
@@ -3905,7 +3902,7 @@ msgstr "Gabung %s ke dalam cabang %s"
 #: elf32-spu.c:4814
 #, fuzzy
 msgid "fatal error while creating .fixup"
-msgstr "Ralat ketika mencipta pautan ke %s."
+msgstr "Ralat ketika mencipta direktori %s."
 
 #: elf32-spu.c:5050
 #, c-format
@@ -4109,8 +4106,8 @@ msgstr ""
 #, fuzzy, c-format
 msgid "CACHE use: "
 msgstr ""
-"Tiada fail indeks tema dalam \"%s\".\n"
-"Jika anda pasti mahu mencipta satu cache ikon di sini, guna -ignore-theme-index.\n"
+"Tiada fail indeks tema dalam '%s'.\n"
+"Jika anda mahu mencipta cache ikon di sini, guna --ignore-theme-index.\n"
 
 #: elf32-v850.c:2660
 #, fuzzy, c-format
@@ -4610,7 +4607,7 @@ msgstr ""
 #: elf64-ppc.c:5535
 #, fuzzy, c-format
 msgid " [abiv%ld]"
-msgstr "%ld:%02ld"
+msgstr "Volum %ld%%"
 
 #: elf64-ppc.c:6845
 msgid "%P: copy reloc against `%pT' requires lazy plt linking; avoid setting LD_BIND_NOW=1 or upgrade gcc\n"
@@ -4702,7 +4699,7 @@ msgstr ""
 #: elf64-ppc.c:12381
 #, fuzzy, c-format
 msgid "can't build branch stub `%s'"
-msgstr "Gabung %s ke dalam cabang %s"
+msgstr "%(module)s telah kehilangan takrifan cabang untuk %(branch)s"
 
 #: elf64-ppc.c:13412
 #, c-format
@@ -4787,9 +4784,7 @@ msgstr "%s pt"
 #: elf64-ppc.c:18067
 #, fuzzy, c-format
 msgid "%H: %s against `%pT': error %d\n"
-msgstr ""
-"\n"
-"%02d h %02d j %02d min pada: %s"
+msgstr "%d/%m/%Y %H:%M:%S"
 
 #: elf64-s390.c:2752
 #, c-format
@@ -4834,7 +4829,7 @@ msgstr ""
 #: elf64-x86-64.c:1690
 #, fuzzy
 msgid "hidden symbol "
-msgstr "Tersembunyi"
+msgstr "Sembunyi"
 
 #: elf64-x86-64.c:1693
 #, fuzzy
@@ -4927,7 +4922,7 @@ msgstr ""
 #: elf64-x86-64.c:4197
 #, fuzzy
 msgid "%P: corrupt input: %pB\n"
-msgstr "%pB: gagal menggabung .rsrc: bahagian .rsrc rosak"
+msgstr "PB"
 
 #: elf64-x86-64.c:5066
 #, c-format
@@ -5899,7 +5894,7 @@ msgstr "%s\t\tSambungan tidak diketahui %s (%s):\n"
 #: elfxx-riscv.c:3059 elfxx-riscv.c:3343
 #, fuzzy
 msgid "internal: unreachable INSN_CLASS_*"
-msgstr "KELAS"
+msgstr "Kelas"
 
 #: elfxx-riscv.c:3093
 msgid "zicfiss' and `zcmop"
@@ -6000,12 +5995,12 @@ msgstr ""
 #: elfxx-riscv.c:3246
 #, fuzzy
 msgid "v' or `zve64x' or `zve32x"
-msgstr "Ctrl+V"
+msgstr "%+.3f V"
 
 #: elfxx-riscv.c:3248
 #, fuzzy
 msgid "v' or `zve64d' or `zve64f' or `zve32f"
-msgstr "Ctrl+V"
+msgstr "%+.3f V"
 
 #: elfxx-riscv.c:3250
 msgid "zvbb"
@@ -6050,7 +6045,7 @@ msgstr ""
 #: elfxx-riscv.c:3276
 #, fuzzy
 msgid "zcb' and `zmmul', or `zcb' and `m"
-msgstr "Mod:"
+msgstr "Meter (m)"
 
 #: elfxx-riscv.c:3284
 msgid "smctr' or `ssctr"
@@ -6077,7 +6072,7 @@ msgstr ""
 #: elfxx-tilegx.c:4128
 #, fuzzy, c-format
 msgid "%pB: cannot link together %s and %s objects"
-msgstr "%s: Tak dapat memaut keras ke %s"
+msgstr "aksara literal tidak boleh digunakan bersama-sama dengan %s"
 
 #: elfxx-x86.c:534 elfxx-x86.c:3586
 #, c-format
@@ -6185,7 +6180,7 @@ msgstr "(Kod mekanisma GSSAPI tidak diketahui: %x)"
 #, fuzzy
 #| msgid "%pB: failed to read debug data section"
 msgid "%P: failed to create %sn"
-msgstr "Gagal mencipta kursor."
+msgstr "Gagal mencipta fail %s"
 
 #: elfxx-x86.c:4352
 #, fuzzy
@@ -6237,7 +6232,7 @@ msgstr "Dapat %1 kulit muka dari %2 (%3 gagal)"
 #: elfxx-x86.c:4678
 #, fuzzy
 msgid "%P: failed to create ifunc sections\n"
-msgstr "Gagal mencipta direktori \"%s\""
+msgstr "Gagal mencipta ungkapan nalar"
 
 #: elfxx-x86.c:4717
 #, fuzzy
@@ -6478,18 +6473,12 @@ msgstr "Tiada jenis fail"
 #: mach-o.c:716
 #, fuzzy, c-format
 msgid "   ncmds:      %#lx\n"
-msgstr ""
-"\n"
-"Terdapat direktori nyahpepijat dalam %s pada 0x%lx\n"
-"\n"
+msgstr "<offset rentetan rosak: %#lx>\n"
 
 #: mach-o.c:717
 #, fuzzy, c-format
 msgid "   sizeocmds:  %#lx\n"
-msgstr ""
-"\n"
-"Terdapat direktori nyahpepijat dalam %s pada 0x%lx\n"
-"\n"
+msgstr "<offset rentetan rosak: %#lx>\n"
 
 #: mach-o.c:718
 #, fuzzy, c-format
@@ -6577,7 +6566,7 @@ msgstr ""
 #: mach-o.c:5068
 #, fuzzy, c-format
 msgid "%pB: unknown load command %#x"
-msgstr "Arahan tak diketahui '%1'"
+msgstr "arahan tidak diketahui: '%1$s'"
 
 #: mach-o.c:5266
 #, c-format
@@ -6798,7 +6787,7 @@ msgstr ""
 msgid ""
 "\n"
 "Dump of %s\n"
-msgstr "Longgok Ingatan..."
+msgstr "Dekoder Humban"
 
 #: peicode.h:823
 #, fuzzy, c-format
@@ -6899,7 +6888,7 @@ msgstr "offset fail zip kepada masukan rosak"
 #: ppcboot.c:395
 #, fuzzy, c-format
 msgid "Length              = 0x%.8lx (%ld)\n"
-msgstr "Memadam fail %ld drpd %ld"
+msgstr "panjang"
 
 #: ppcboot.c:399
 #, fuzzy, c-format
@@ -6952,7 +6941,7 @@ msgstr "Pralihat sudah ketinggalan zaman"
 #: rs6000-core.c:471
 #, fuzzy, c-format
 msgid "%pB: warning core file truncated"
-msgstr "Abai dan tinggalkan fail core"
+msgstr "PNM: Fail seperti dipotong."
 
 #: som.c:3002
 #, c-format
@@ -7085,7 +7074,7 @@ msgstr "Nilai magik buruk dalam profile_section_t"
 #: vms-alpha.c:2003
 #, fuzzy, c-format
 msgid "unsupported STA cmd %s"
-msgstr "Tema tidak disokong '%s'."
+msgstr "Pengubahsuai papan kekunci '%s' tidak disokong"
 
 #. Insert field.
 #. Unsigned shift.
@@ -7132,7 +7121,7 @@ msgstr "Gagal menentukan saiz lightmap. Saiz lightmap maksimum terlalu kecil?"
 #: vms-alpha.c:2674
 #, fuzzy
 msgid "object module not error-free !"
-msgstr "Ralat: Laluan objek tidak dinyatakan\n"
+msgstr "Ralat mencipta objek fail"
 
 #: vms-alpha.c:4006
 #, c-format
@@ -7199,12 +7188,14 @@ msgstr "Direktori-direktori untuk diindeks secara bukan-rekursif"
 #: vms-alpha.c:5578
 #, fuzzy, c-format
 msgid "unknown symbol in command %s"
-msgstr "arahan tidak diketahui: '%1$s'"
+msgstr ""
+"Perintah %s tidak diketahui\n"
+"\n"
 
 #: vms-alpha.c:5996
 #, fuzzy, c-format
 msgid "reloc (%d) is *UNKNOWN*"
-msgstr "Mod piksel tidak diketahui: %d\n"
+msgstr "Cara mematikan tidak diketahui %d"
 
 #: vms-alpha.c:6113
 #, fuzzy, c-format
@@ -7264,7 +7255,7 @@ msgstr "versi modul tidak sepadan dalam `%s'"
 #: vms-alpha.c:6174
 #, fuzzy, c-format
 msgid "   Error: The compile date is truncated\n"
-msgstr "Kompil ke…"
+msgstr "Susun"
 
 #: vms-alpha.c:6176
 #, fuzzy, c-format
@@ -7279,7 +7270,7 @@ msgstr "Bahasa Melayu"
 #: vms-alpha.c:6182
 #, fuzzy, c-format
 msgid "   language name: %.*s\n"
-msgstr "Bahasa: %s"
+msgstr "Bahasa"
 
 #: vms-alpha.c:6186
 #, fuzzy, c-format
@@ -7352,7 +7343,7 @@ msgstr "%u pemindahan selesai"
 #: vms-alpha.c:6231
 #, fuzzy, c-format
 msgid "   transfer address   : 0x%08x\n"
-msgstr "Pindah"
+msgstr "Ralat DDE %08x tidak diketahui"
 
 #: vms-alpha.c:6240
 #, fuzzy
@@ -7467,7 +7458,7 @@ msgstr "program tidak dibenarkan dalam seksyen ini"
 #: vms-alpha.c:6329 vms-alpha.c:6349
 #, fuzzy, c-format
 msgid "   alignment  : 2**%u\n"
-msgstr "J&ajaran"
+msgstr "Jajaran:"
 
 #: vms-alpha.c:6330 vms-alpha.c:6350
 #, fuzzy, c-format
@@ -7502,7 +7493,7 @@ msgstr "Ofset kawasan imej"
 #: vms-alpha.c:6357
 #, fuzzy, c-format
 msgid "   symvec offset : 0x%08x\n"
-msgstr "ofset"
+msgstr "Ralat DDE %08x tidak diketahui"
 
 #: vms-alpha.c:6360
 #, fuzzy, c-format
@@ -7522,7 +7513,7 @@ msgstr "(0x%04x, '%s'): "
 #: vms-alpha.c:6380
 #, fuzzy, c-format
 msgid "   psect offset: 0x%08x\n"
-msgstr "ofset"
+msgstr "Ralat DDE %08x tidak diketahui"
 
 #: vms-alpha.c:6384
 #, fuzzy, c-format
@@ -7582,7 +7573,7 @@ msgstr "Nama Objek"
 #: vms-alpha.c:6441
 #, fuzzy, c-format
 msgid "   binary ident  : 0x%08x\n"
-msgstr "binari"
+msgstr "Binari"
 
 #: vms-alpha.c:6445
 #, fuzzy, c-format
@@ -7672,7 +7663,7 @@ msgstr "Tidak boleh bertembung dengan nama pemalar global yang telah wujud."
 #: vms-alpha.c:6592
 #, fuzzy, c-format
 msgid "  %s (len=%u):\n"
-msgstr "Len Tower"
+msgstr "Menyimpan imej “%s” (%u/%u)"
 
 #: vms-alpha.c:6615
 #, fuzzy, c-format
@@ -7832,7 +7823,7 @@ msgstr "logikal not"
 #: vms-alpha.c:6748
 #, fuzzy, c-format
 msgid "OPR_EOR (logical exclusive or)\n"
-msgstr "Boolean Exclusive OR"
+msgstr "logikal not"
 
 #: vms-alpha.c:6751
 #, fuzzy, c-format
@@ -7992,7 +7983,7 @@ msgstr ""
 #: vms-alpha.c:6879
 #, fuzzy, c-format
 msgid "CTL_DFLOC (define location)\n"
-msgstr "Lokasi:"
+msgstr "_Lokasi"
 
 #: vms-alpha.c:6882
 #, fuzzy, c-format
@@ -8218,7 +8209,7 @@ msgstr "Tatasusunan"
 #: vms-alpha.c:7450
 #, fuzzy, c-format
 msgid "array descriptor:\n"
-msgstr "Penerang salin"
+msgstr " Penghurai kumpulan di "
 
 #: vms-alpha.c:7461
 #, fuzzy, c-format
@@ -8248,7 +8239,7 @@ msgstr ""
 #: vms-alpha.c:7524
 #, fuzzy, c-format
 msgid "cannot read DST symbol\n"
-msgstr "Tak dalat membaca CD: %s"
+msgstr "Tidak dapat baca fail vendor.list"
 
 #: vms-alpha.c:7568
 #, fuzzy, c-format
@@ -8352,7 +8343,7 @@ msgstr ""
 #: vms-alpha.c:7742
 #, fuzzy, c-format
 msgid "enumbeg, len: %u, name: %.*s\n"
-msgstr "gagal mendapatkan nama untuk platform %u (%s)"
+msgstr "nama: [nilai: %08lx pjg %d]: "
 
 #: vms-alpha.c:7748
 #, fuzzy, c-format
@@ -8563,7 +8554,7 @@ msgstr "CLI"
 #: vms-alpha.c:8109
 #, fuzzy, c-format
 msgid ", subtype: %u (%s)\n"
-msgstr "Gagal untuk menambah sub jenis '%s': %s\n"
+msgstr "Subjenis"
 
 #: vms-alpha.c:8116
 #, c-format
@@ -8573,12 +8564,12 @@ msgstr ""
 #: vms-alpha.c:8120
 #, fuzzy, c-format
 msgid " fixup info rva: "
-msgstr "Jenis               Saiz     Rva      Offset\n"
+msgstr "Penghantar RVA"
 
 #: vms-alpha.c:8122
 #, fuzzy, c-format
 msgid ", symbol vector rva: "
-msgstr "Grafik Vektor"
+msgstr "Jenis               Saiz     Rva      Offset\n"
 
 #: vms-alpha.c:8125
 #, fuzzy, c-format
@@ -8620,7 +8611,7 @@ msgstr "Alias"
 #: vms-alpha.c:8191
 #, fuzzy, c-format
 msgid "system version array information:\n"
-msgstr "sistem, maklumat, terperinci, grafik, bunyi, kernel, versi"
+msgstr "Maklumat versi"
 
 #: vms-alpha.c:8195
 #, fuzzy, c-format
@@ -8903,7 +8894,7 @@ msgstr ""
 #: vms-alpha.c:8523
 #, fuzzy, c-format
 msgid "cannot read DMT psect\n"
-msgstr "Tak dalat membaca CD: %s"
+msgstr "Tidak dapat baca fail vendor.list"
 
 #: vms-alpha.c:8527
 #, c-format
@@ -8983,7 +8974,7 @@ msgstr ""
 #: vms-alpha.c:8622
 #, fuzzy, c-format
 msgid "  base_va : 0x%08x\n"
-msgstr "Penyahkod video VA-API"
+msgstr "Ralat DDE %08x tidak diketahui"
 
 #: vms-alpha.c:8624
 #, c-format
@@ -9182,7 +9173,7 @@ msgstr ""
 #: xcofflink.c:7343
 #, fuzzy, c-format
 msgid "Unable to link input file: %s"
-msgstr "menutup fail input %s"
+msgstr "Ralat %s: tiada fail input."
 
 #: xtensa-dynconfig.c:60
 #, fuzzy
@@ -9208,7 +9199,7 @@ msgstr "Gagal memulakan perkhidmatan Penjejak: %s. Pemalam dilumpuhkan."
 #: elfnn-aarch64.c:2889 elfnn-riscv.c:5940
 #, fuzzy, c-format
 msgid "unknown attribute for symbol `%s': 0x%02x"
-msgstr "Vendor GPU anda tidak diketahui: %s (0x%X)"
+msgstr "Atribut %s tidak diketahui pada unsur <%s>"
 
 #: elfnn-aarch64.c:5486
 #, c-format
@@ -9438,7 +9429,7 @@ msgstr ""
 #: elfnn-riscv.c:2353
 #, fuzzy, c-format
 msgid "%pcrel_lo overflow with an addend"
-msgstr "Rekod melimpah"
+msgstr "Tambah _Lokasi...:"
 
 #: elfnn-riscv.c:2843
 #, c-format
@@ -9580,7 +9571,7 @@ msgstr ""
 #: peXXigen.c:933
 #, fuzzy, c-format
 msgid "%pB:%.8s: RVA truncated"
-msgstr "DIPANGKAS"
+msgstr "Penghantar RVA"
 
 #: peXXigen.c:1066
 #, c-format
@@ -9594,12 +9585,12 @@ msgstr ""
 #: peXXigen.c:1233
 #, fuzzy
 msgid "Import Directory [parts of .idata]"
-msgstr "bahagian"
+msgstr "Import direktori"
 
 #: peXXigen.c:1234
 #, fuzzy
 msgid "Resource Directory [.rsrc]"
-msgstr "gagal menggabung .rsrc: versi direktori berbeza"
+msgstr "gagal menggabung .rsrc: direktori sepadan dengan daun"
 
 #: peXXigen.c:1235
 #, fuzzy
@@ -9621,7 +9612,7 @@ msgstr "_Pangkalan Direktori:"
 msgid "Debug Directory"
 msgstr ""
 "\n"
-"Terdapat direktori nyahpijat dalam %s, tetapi bahagian itu tidak mempunyai kandungan\n"
+"Terdapat direktori nyahpijat, tetapi seksyen yang mengandunginya tidak dapat dijumpai\n"
 
 #: peXXigen.c:1239
 #, fuzzy
@@ -9668,11 +9659,13 @@ msgid "Reserved"
 msgstr "Simpanan"
 
 #: peXXigen.c:1312
-#, c-format
+#, fuzzy, c-format
 msgid ""
 "\n"
 "There is an import table, but the section containing it could not be found\n"
 msgstr ""
+"\n"
+"Terdapat direktori nyahpijat, tetapi seksyen yang mengandunginya tidak dapat dijumpai\n"
 
 #: peXXigen.c:1318
 #, fuzzy, c-format
@@ -9719,23 +9712,27 @@ msgid "\tvma:     Ordinal  Hint  Member-Name  Bound-To\n"
 msgstr ""
 
 #: peXXigen.c:1424
-#, c-format
+#, fuzzy, c-format
 msgid ""
 "\n"
 "There is a first thunk, but the section containing it could not be found\n"
 msgstr ""
+"\n"
+"Terdapat direktori nyahpijat, tetapi seksyen yang mengandunginya tidak dapat dijumpai\n"
 
 #: peXXigen.c:1474 peXXigen.c:1519
 #, fuzzy, c-format
 msgid "\t<corrupt: 0x%08lx>"
-msgstr "Eksponen: 0x"
+msgstr ", Nilai: %#08lx\n"
 
 #: peXXigen.c:1613
-#, c-format
+#, fuzzy, c-format
 msgid ""
 "\n"
 "There is an export table, but the section containing it could not be found\n"
 msgstr ""
+"\n"
+"Terdapat direktori nyahpijat, tetapi seksyen yang mengandunginya tidak dapat dijumpai\n"
 
 #: peXXigen.c:1626
 #, c-format
@@ -9801,32 +9798,32 @@ msgstr "Nombor dalam:\n"
 #: peXXigen.c:1702
 #, fuzzy, c-format
 msgid "\tExport Address Table \t\t%08lx\n"
-msgstr "Eksport"
+msgstr ", Nilai: %#08lx\n"
 
 #: peXXigen.c:1706
 #, fuzzy, c-format
 msgid "\t[Name Pointer/Ordinal] Table\t%08lx\n"
-msgstr "Nama jadual adalah kosong!"
+msgstr "\tJadual Penunjuk Nama \t\t\t"
 
 #: peXXigen.c:1709
 #, fuzzy, c-format
 msgid "Table Addresses\n"
-msgstr "Alamat:"
+msgstr "_Alamat"
 
 #: peXXigen.c:1712
-#, fuzzy, c-format
+#, c-format
 msgid "\tExport Address Table \t\t"
-msgstr "Eksport"
+msgstr "\tJadual Alamat Eksport \t\t"
 
 #: peXXigen.c:1717
-#, fuzzy, c-format
+#, c-format
 msgid "\tName Pointer Table \t\t"
-msgstr "Nama jadual adalah kosong!"
+msgstr "\tJadual Penunjuk Nama \t\t\t"
 
 #: peXXigen.c:1722
-#, fuzzy, c-format
+#, c-format
 msgid "\tOrdinal Table \t\t\t"
-msgstr "ordinal"
+msgstr "\tJadual Ordinal \t\t\t"
 
 #: peXXigen.c:1736
 #, c-format
@@ -9841,14 +9838,12 @@ msgid "\tInvalid Export Address Table rva (0x%lx) or entry count (0x%lx)\n"
 msgstr ""
 
 #: peXXigen.c:1765
-#, fuzzy
 msgid "Forwarder RVA"
-msgstr "Jenis               Saiz     Rva      Offset\n"
+msgstr "Penghantar RVA"
 
 #: peXXigen.c:1777
-#, fuzzy
 msgid "Export RVA"
-msgstr "Jenis               Saiz     Rva      Offset\n"
+msgstr "Eksport RVA"
 
 #: peXXigen.c:1784
 #, c-format
@@ -9929,24 +9924,24 @@ msgid "\treloc %4d offset %4x [%4lx] %s"
 msgstr ""
 
 #: peXXigen.c:2281
-#, fuzzy, c-format
+#, c-format
 msgid "%03x %*.s Entry: "
-msgstr " Sumber bermula pada offset: %#03x\n"
+msgstr "%03x %*.s Masukan: "
 
 #: peXXigen.c:2305
-#, fuzzy, c-format
+#, c-format
 msgid "name: [val: %08lx len %d]: "
-msgstr "Ralat membaca dari klien, len = %d\n"
+msgstr "nama: [nilai: %08lx pjg %d]: "
 
 #: peXXigen.c:2325
-#, fuzzy, c-format
+#, c-format
 msgid "<corrupt string length: %#x>\n"
-msgstr "-X <rentetan>"
+msgstr "<panjang rentetan rosak: %#x>\n"
 
 #: peXXigen.c:2335
-#, fuzzy, c-format
+#, c-format
 msgid "<corrupt string offset: %#lx>\n"
-msgstr "ofset"
+msgstr "<offset rentetan rosak: %#lx>\n"
 
 #: peXXigen.c:2340
 #, c-format
@@ -9954,9 +9949,9 @@ msgid "ID: %#08lx"
 msgstr "ID: %#08lx"
 
 #: peXXigen.c:2343
-#, fuzzy, c-format
+#, c-format
 msgid ", Value: %#08lx\n"
-msgstr "nilai"
+msgstr ", Nilai: %#08lx\n"
 
 #: peXXigen.c:2365
 #, c-format
@@ -9986,9 +9981,9 @@ msgid ""
 msgstr ""
 
 #: peXXigen.c:2533
-#, fuzzy, c-format
+#, c-format
 msgid " String table starts at offset: %#03x\n"
-msgstr " Sumber bermula pada offset: %#03x\n"
+msgstr " Jadual rentetan bermula pada offset: %#03x\n"
 
 #: peXXigen.c:2536
 #, c-format
@@ -9996,13 +9991,13 @@ msgid " Resources start at offset: %#03x\n"
 msgstr " Sumber bermula pada offset: %#03x\n"
 
 #: peXXigen.c:2593
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "There is a debug directory, but the section containing it could not be found\n"
 msgstr ""
 "\n"
-"Terdapat direktori nyahpijat dalam %s, tetapi bahagian itu tidak mempunyai kandungan\n"
+"Terdapat direktori nyahpijat, tetapi seksyen yang mengandunginya tidak dapat dijumpai\n"
 
 #: peXXigen.c:2599
 #, c-format
@@ -10080,21 +10075,19 @@ msgstr "%pB: gagal membaca bahagian data nyahpepijat"
 #: peXXigen.c:3907
 #, c-format
 msgid ".rsrc merge failure: duplicate string resource: %d"
-msgstr ""
+msgstr "gagal menggabung .rsrc: sumber rentetan berulang: %d"
 
 #: peXXigen.c:4042
 msgid ".rsrc merge failure: multiple non-default manifests"
 msgstr ""
 
 #: peXXigen.c:4060
-#, fuzzy
 msgid ".rsrc merge failure: a directory matches a leaf"
-msgstr "gagal menggabung .rsrc: versi direktori berbeza"
+msgstr "gagal menggabung .rsrc: direktori sepadan dengan daun"
 
 #: peXXigen.c:4102
-#, fuzzy
 msgid ".rsrc merge failure: duplicate leaf"
-msgstr "%pB: gagal menggabung .rsrc: saiz .rsrc tidak dijangka"
+msgstr "gagal menggabung .rsrc: daun pendua"
 
 #: peXXigen.c:4107
 #, c-format

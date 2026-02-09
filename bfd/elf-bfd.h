@@ -3207,6 +3207,8 @@ extern int bfd_elf_obj_attrs_arg_type
   (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
 extern void _bfd_elf_parse_attributes
   (bfd *, Elf_Internal_Shdr *) ATTRIBUTE_HIDDEN;
+extern void _bfd_elf_cleanup_object_attributes
+  (bfd *) ATTRIBUTE_HIDDEN;
 extern bfd *_bfd_elf_link_setup_object_attributes
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_object_attributes

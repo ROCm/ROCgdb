@@ -1,0 +1,307 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Basic watchpoint tests for AMD GPU targets.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc continue_to_watchpoint_hit { old_value new_value test } {
+    gdb_test "continue" \
+	[multi_line \
+	    "hit Hardware watchpoint $::decimal:.*" \
+	    "" \
+	    "Old value = $old_value" \
+	    "New value = $new_value" \
+	    ".*"] \
+	$test
+}
+
+# Test inserting a watchpoint on a host variable before the runtime loads, and
+# hitting hit after the runtime loads.
+
+proc_with_prefix test_host_watchpoint_before_runtime_load {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break before runtime load"]]} {
+	    return
+	}
+
+	gdb_test "watch host_global" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on host_global"
+
+	continue_to_watchpoint_hit 5 17 "continue to watchpoint hit"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test inserting a watchpoint on a host variable after the runtime loads and
+# hitting hit.
+
+proc_with_prefix test_host_watchpoint_after_runtime_load {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	gdb_test "watch host_global" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on host_global"
+
+	continue_to_watchpoint_hit 5 17 "continue to watchpoint hit"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test inserting a watchpoint before the kernel is launched, then hitting
+# it when the kernel runs.
+
+proc_with_prefix test_watchpoint_before_kernel {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	gdb_test "watch *((int *) global_ptr1)" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on *ptr1"
+
+	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+	continue_to_watchpoint_hit 10 30 "continue to watchpoint hit 2"
+	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 3"
+	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 4"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test inserting a watchpoint while stopped inside the kernel.
+
+proc_with_prefix test_watchpoint_inside_kernel {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	gdb_breakpoint "kernel" allow-pending temporary
+	gdb_test "continue" \
+	    "hit Temporary breakpoint.*, kernel .*" \
+	    "continue to kernel"
+
+	gdb_test "watch *((int *) global_ptr2)" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on *ptr2 from inside kernel"
+
+	continue_to_watchpoint_hit 0 100 "continue to watchpoint hit 1"
+	continue_to_watchpoint_hit 100 300 "continue to watchpoint hit 2"
+	continue_to_watchpoint_hit 300 400 "continue to watchpoint hit 3"
+	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 4"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test removing a watchpoint while stopped inside the kernel, then
+# continuing to the end.
+
+proc_with_prefix test_remove_watchpoint_inside_kernel {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	gdb_test "watch *((int *) global_ptr1)" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint"
+
+	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit"
+	gdb_test "with confirm off -- delete" "" "delete all breakpoints"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test watchpoints on different memory locations.
+
+proc_with_prefix test_multiple_watchpoints {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	gdb_test "watch *((int *) global_ptr1)" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on *ptr1"
+
+	gdb_test "watch *((int *) global_ptr2)" \
+	    "Hardware watchpoint $::decimal: .*" \
+	    "set watchpoint on *ptr2"
+
+	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+	continue_to_watchpoint_hit 0 100 "continue to watchpoint hit 2"
+	continue_to_watchpoint_hit 10 30 "continue to watchpoint hit 3"
+	continue_to_watchpoint_hit 100 300 "continue to watchpoint hit 4"
+	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 5"
+	continue_to_watchpoint_hit 300 400 "continue to watchpoint hit 6"
+	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 7"
+	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 8"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test disabling and enabling watchpoints.
+
+proc_with_prefix test_disable_enable_watchpoint {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	set wp1_num -1
+	set wp2_num -2
+
+	gdb_test_multiple "watch *((int *) global_ptr1)" "set watchpoint on *ptr1" {
+	    -re -wrap "Hardware watchpoint ($::decimal): .*" {
+		set wp1_num $expect_out(1,string)
+		pass $gdb_test_name
+	    }
+	}
+
+	gdb_test_multiple "watch *((int *) global_ptr2)" "set watchpoint on *ptr2" {
+	    -re -wrap "Hardware watchpoint ($::decimal): .*" {
+		set wp2_num $expect_out(1,string)
+		pass $gdb_test_name
+	    }
+	}
+
+	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+
+	gdb_test_no_output "disable $wp1_num" "disable watchpoint"
+
+	continue_to_watchpoint_hit 0 100 "continue to watchpoint hit 2"
+	continue_to_watchpoint_hit 100 300 "continue to watchpoint hit 3"
+
+	gdb_test_no_output "enable $wp1_num" "enable wp1"
+	gdb_test_no_output "disable $wp2_num" "disable wp2"
+
+	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 4"
+	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 5"
+
+	gdb_test_no_output "enable $wp2_num" "enable wp2"
+
+	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 6"
+
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Test that read and access watchpoints are rejected when GPU debugging is
+# active.  The amd-dbgapi target only supports write watchpoints.  WP_CMD
+# must either be "rwatch" or "awatch".
+
+proc_with_prefix test_non_write_watchpoint_rejected { wp_cmd } {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break after malloc"]]} {
+	    return
+	}
+
+	gdb_test "$wp_cmd host_global" \
+	    "Hardware .*watchpoint $::decimal: .*" \
+	    "set watchpoint"
+
+	gdb_test "continue" \
+	    "Could not insert hardware watchpoint $::decimal.*Command aborted\\." \
+	    "watchpoint rejected on resume"
+    }
+}
+
+# Test setting a read/access watchpoint before the GPU runtime loads.  The
+# watchpoint is set successfully on the CPU, but when the runtime loads,
+# we expect some behavior (error or warning) since the GPU only supports
+# write watchpoints.  WP_CMD must either be "rwatch" or "awatch".
+
+proc_with_prefix test_non_write_watchpoint_before_runtime_load { wp_cmd } {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto [gdb_get_line_number "Break before runtime load"]]} {
+	    return
+	}
+
+	gdb_test "$wp_cmd host_global" \
+	    "Hardware .*watchpoint $::decimal: .*" \
+	    "set watchpoint"
+
+	gdb_test "continue" "hit Hardware (read|access \\(read/write\\)) watchpoint.*Value = 5\r\n.*" \
+	    "continue after setting watchpoint"
+
+	gdb_test "continue" \
+	    "Could not insert hardware watchpoint $::decimal.*Command aborted\\." \
+	    "watchpoint rejected on resume"
+    }
+}
+
+test_host_watchpoint_before_runtime_load
+test_host_watchpoint_after_runtime_load
+test_watchpoint_before_kernel
+test_watchpoint_inside_kernel
+test_remove_watchpoint_inside_kernel
+test_multiple_watchpoints
+test_disable_enable_watchpoint
+
+foreach_with_prefix wp_cmd { "rwatch" "awatch" } {
+    test_non_write_watchpoint_rejected $wp_cmd
+    test_non_write_watchpoint_before_runtime_load $wp_cmd
+}

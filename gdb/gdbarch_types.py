@@ -51,6 +51,7 @@ class Component:
         param_checks: Optional[List[str]] = None,
         result_checks: Optional[List[str]] = None,
         implement: bool = True,
+        unused: bool = False,
     ):
         self.name = name
         self.type = type
@@ -64,6 +65,7 @@ class Component:
         self.param_checks = param_checks
         self.result_checks = result_checks
         self.implement = implement
+        self.unused = unused
 
         components.append(self)
 
@@ -99,6 +101,7 @@ class Value(Component):
         postdefault: Optional[str] = None,
         invalid: Union[bool, str] = True,
         printer: Optional[str] = None,
+        unused: bool = False,
     ):
         super().__init__(
             comment=comment,
@@ -109,6 +112,7 @@ class Value(Component):
             postdefault=postdefault,
             invalid=invalid,
             printer=printer,
+            unused=unused,
         )
 
 
@@ -130,6 +134,7 @@ class Function(Component):
         param_checks: Optional[List[str]] = None,
         result_checks: Optional[List[str]] = None,
         implement: bool = True,
+        unused: bool = False,
     ):
         super().__init__(
             comment=comment,
@@ -144,6 +149,7 @@ class Function(Component):
             param_checks=param_checks,
             result_checks=result_checks,
             implement=implement,
+            unused=unused,
         )
 
     def ftype(self):

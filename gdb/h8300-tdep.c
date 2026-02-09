@@ -1359,8 +1359,6 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_bit (gdbarch, 4 * TARGET_CHAR_BIT);
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_single);
 
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
   /* Hook in the DWARF CFI frame unwinder.  */
   dwarf2_append_unwinders (gdbarch);
   frame_unwind_append_unwinder (gdbarch, &h8300_frame_unwind);

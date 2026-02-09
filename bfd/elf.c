@@ -10208,6 +10208,7 @@ _bfd_elf_free_cached_info (bfd *abfd)
       _bfd_dwarf2_cleanup_debug_info (abfd, &tdata->dwarf2_find_line_info);
       _bfd_dwarf1_cleanup_debug_info (abfd, &tdata->dwarf1_find_line_info);
       _bfd_stab_cleanup (abfd, &tdata->line_info);
+      _bfd_elf_cleanup_object_attributes (abfd);
       for (asection *sec = abfd->sections; sec != NULL; sec = sec->next)
 	{
 	  _bfd_elf_munmap_section_contents (sec, sec->contents);

@@ -215,6 +215,7 @@ gdb_iconv (iconv_t utf_flag, ICONV_CONST char **inbuf, size_t *inbytesleft,
 
 /* The global lists of character sets and translations.  */
 
+static const char *default_auto_charset ();
 
 #ifndef GDB_DEFAULT_TARGET_CHARSET
 #define GDB_DEFAULT_TARGET_CHARSET "ISO-8859-1"
@@ -248,7 +249,7 @@ show_target_charset_name (struct ui_file *file, int from_tty,
     gdb_printf (file,
 		_("The target character set is \"auto; "
 		  "currently %s\".\n"),
-		gdbarch_auto_charset (get_current_arch ()));
+		default_auto_charset ());
   else
     gdb_printf (file, _("The target character set is \"%s\".\n"),
 		value);
@@ -424,7 +425,7 @@ const char *
 target_charset (struct gdbarch *gdbarch)
 {
   if (!strcmp (target_charset_name, "auto"))
-    return gdbarch_auto_charset (gdbarch);
+    return default_auto_charset ();
   return target_charset_name;
 }
 
@@ -947,8 +948,8 @@ find_charset_names (void)
 /* The "auto" target charset used by default_auto_charset.  */
 static const char *auto_target_charset_name = GDB_DEFAULT_TARGET_CHARSET;
 
-const char *
-default_auto_charset (void)
+static const char *
+default_auto_charset ()
 {
   return auto_target_charset_name;
 }

@@ -2504,8 +2504,8 @@ proc default_gdb_exit {} {
 # but ran into a mess because of the many re-implementations of
 # gdb_load in config/*.exp.
 #
-# TODO: gdb.base/sepdebug.exp and gdb.stabs/weird.exp might be able to use
-# this if they can get more information set.
+# TODO: gdb.base/sepdebug.exp might be able to use this if it can get more
+# information set.
 
 proc gdb_file_cmd { arg {kill_flag 1} } {
     global gdb_prompt

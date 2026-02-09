@@ -34,8 +34,6 @@ gold.exp
 	Add -fuse-ld=gold.
 gold-gdb-index.exp
 	Add -fuse-ld=gold -Wl,--gdb-index -ggnu-pubnames
-stabs.exp
-	Add -gstabs+.
 
 # Test -gsplit-dwarf.
 fission.exp

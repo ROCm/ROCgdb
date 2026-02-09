@@ -23,6 +23,7 @@
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
+#include "breakpoint.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-decode.h"
 #include "cli/cli-style.h"
@@ -50,6 +51,8 @@
 #include <dlfcn.h>
 #include <map>
 #include <sstream>
+
+#include <map>
 
 /* When true, print debug messages relating to the amd-dbgapi target.  */
 
@@ -253,8 +256,18 @@ struct amd_dbgapi_inferior_info
 		     struct breakpoint *>
     breakpoint_map;
 
-  std::map<CORE_ADDR, std::pair<CORE_ADDR, amd_dbgapi_watchpoint_id_t>>
-    watchpoint_map;
+  /* Data associated to an inserted watchpoint.  */
+  struct watchpoint_info
+  {
+    /* End address of the watched region.  */
+    CORE_ADDR end_addr;
+
+    /* ID returned by amd-dbgapi.  */
+    amd_dbgapi_watchpoint_id_t id;
+  };
+
+  /* Ordered map of inserted watchpoints.  The key is the start address.  */
+  std::map<CORE_ADDR, watchpoint_info> watchpoint_map;
 
   /* List of pending events the amd-dbgapi target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
@@ -347,10 +360,10 @@ struct amd_dbgapi_target final : public target_ops
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
 
-  int insert_watchpoint (CORE_ADDR addr, int len, enum target_hw_bp_type type,
-			 struct expression *cond) override;
-  int remove_watchpoint (CORE_ADDR addr, int len, enum target_hw_bp_type type,
-			 struct expression *cond) override;
+  int insert_watchpoint (CORE_ADDR addr, int len, target_hw_bp_type type,
+			 expression *cond) override;
+  int remove_watchpoint (CORE_ADDR addr, int len, target_hw_bp_type type,
+			 expression *cond) override;
   bool stopped_by_watchpoint () override;
   std::vector<CORE_ADDR> stopped_data_addresses () override;
 
@@ -1348,12 +1361,14 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
   return TARGET_XFER_OK;
 }
 
+/* Ask amd-dbgapi to insert a watchpoint in [ADDR, ADDR + len).
+
+   Return 0 on success, 1 on failure.  */
+
 static int
 insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
 {
   amd_dbgapi_watchpoint_id_t watch_id;
-  amd_dbgapi_global_address_t adjusted_address;
-  amd_dbgapi_size_t adjusted_size;
 
   if (amd_dbgapi_set_watchpoint (info->process_id, addr, len,
 				 AMD_DBGAPI_WATCHPOINT_KIND_STORE_AND_RMW,
@@ -1364,9 +1379,12 @@ insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
   auto cleanup = make_scope_exit ([&] ()
     { amd_dbgapi_remove_watchpoint (watch_id); });
 
-  /* FIXME: A reduced range watchpoint may have been inserted, which would
-     require additional watchpoints to be inserted to cover the requested
-     range.  */
+  /* A reduced range watchpoint may have been inserted, which would require
+     additional watchpoints to be inserted to cover the requested range.
+
+     For now, verify that the inserted watchpoint covers the requested range
+     and error out if not.  */
+  amd_dbgapi_global_address_t adjusted_address;
 
   if (amd_dbgapi_watchpoint_get_info (watch_id,
 				      AMD_DBGAPI_WATCHPOINT_INFO_ADDRESS,
@@ -1376,6 +1394,8 @@ insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
       || adjusted_address > addr)
     return 1;
 
+  amd_dbgapi_size_t adjusted_size;
+
   if (amd_dbgapi_watchpoint_get_info (watch_id,
 				      AMD_DBGAPI_WATCHPOINT_INFO_SIZE,
 				      sizeof (adjusted_size), &adjusted_size)
@@ -1383,14 +1403,18 @@ insert_one_watchpoint (amd_dbgapi_inferior_info *info, CORE_ADDR addr, int len)
       || (adjusted_address + adjusted_size) < (addr + len))
     return 1;
 
-  if (!info->watchpoint_map
-	 .emplace (addr, std::make_pair (addr + len, watch_id))
-	 .second)
+  using wp_info_t = amd_dbgapi_inferior_info::watchpoint_info;
+
+  if (!(info->watchpoint_map.emplace (addr, wp_info_t {addr + len, watch_id})
+	.second))
     return 1;
 
   cleanup.release ();
   return 0;
 }
+
+/* Insert watchpoints for all existing watchpoint locations associated to
+   the program space of INFO.  */
 
 static void
 insert_initial_watchpoints (amd_dbgapi_inferior_info *info)
@@ -1399,71 +1423,101 @@ insert_initial_watchpoints (amd_dbgapi_inferior_info *info)
 
   for (bp_location *loc : all_bp_locations ())
     {
-      if (loc->loc_type == bp_loc_hardware_watchpoint
-	  && loc->pspace == info->inf->pspace)
-	{
-	  if (insert_one_watchpoint (info, loc->address, loc->length) != 0)
-	    warning (_("Failed to insert existing watchpoint after loading "
-		       "runtime."));
-	}
-    };
+      /* Filter out other program spaces.  */
+      if (loc->pspace != info->inf->pspace)
+	continue;
+
+      /* Filter out non-hardware watchpoints.  */
+      if (loc->loc_type != bp_loc_hardware_watchpoint)
+	continue;
+
+      /* Filter out non-write watchpoints (access/read watchpoints might have
+	 been created before the runtime got loaded).  */
+      if (loc->owner->type != bp_hardware_watchpoint)
+	continue;
+
+      if (insert_one_watchpoint (info, loc->address, loc->length) != 0)
+	warning (_("Failed to insert existing watchpoint after loading "
+		   "runtime."));
+    }
 }
 
 int
 amd_dbgapi_target::insert_watchpoint (CORE_ADDR addr, int len,
-				    enum target_hw_bp_type type,
-				    struct expression *cond)
+				      target_hw_bp_type type, expression *cond)
 {
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
-  if (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS
-      && type != hw_write)
-    /* We only allow write watchpoints when GPU debugging is active.  */
-    return 1;
+  /* The amd-dbgapi target is not pushed when the runtime is not active.  */
+  gdb_assert (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
 
-  int ret = beneath ()->insert_watchpoint (addr, len, type, cond);
-  if (ret || info.runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
+  if (type != hw_write)
+    {
+      /* We only allow write watchpoints when GPU debugging is active.  */
+      return 1;
+    }
+
+  if (int ret = beneath ()->insert_watchpoint (addr, len, type, cond);
+      ret != 0)
     return ret;
 
-  ret = insert_one_watchpoint (&info, addr, len);
-  if (ret != 0)
+  if (int ret = insert_one_watchpoint (&info, addr, len);
+      ret != 0)
     {
       /* We failed to insert the GPU watchpoint, so remove the CPU watchpoint
 	 before returning an error.  */
       beneath ()->remove_watchpoint (addr, len, type, cond);
+      return ret;
     }
 
-  return ret;
+  return 0;
 }
 
 int
 amd_dbgapi_target::remove_watchpoint (CORE_ADDR addr, int len,
-				    enum target_hw_bp_type type,
-				    struct expression *cond)
+				      target_hw_bp_type type,
+				      expression *cond)
 {
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
+  /* The amd-dbgapi target is not pushed when the runtime is not active.  */
+  gdb_assert (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
+
+  /* Try to remove the amd-dbgapi watchpoint even if the removal fails for the
+     target beneath.  */
   int ret = beneath ()->remove_watchpoint (addr, len, type, cond);
-  if (info.runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
+
+  /* We don't allow non-write watchpoints (see the insert_watchpoints method)
+     when the runtime is enabled (i.e. when the amd-dbgapi target is pushed).
+     But there is a loophole: non-write watchpoints can still be created by the
+     user before the runtime is enabled and the amd-dbgapi target is pushed.
+     In that case, there won't be an amd-dbgapi watchpoint to remove, so just
+     return.  */
+  if (type != hw_write)
     return ret;
 
-  /* Find the watch_id for the addr..addr+len range.  */
+  /* Find the watchpoint id for the [addr, addr + len) range.  */
   auto it = info.watchpoint_map.upper_bound (addr);
   if (it == info.watchpoint_map.begin ())
     return 1;
 
   std::advance (it, -1);
-  if (addr < it->first || (addr + len) > it->second.first)
-    return 1;
 
-  gdb_assert (type == hw_write);
+  /* Not a reference, so that we can reference wp_info after erasing *it.  */
+  const auto [start_addr, wp_info] = *it;
 
-  amd_dbgapi_watchpoint_id_t watch_id = it->second.second;
+  /* Since upper_bound finds the first element greater than ADDR, the previous
+     element has to be less than or equal to ADDR.  */
+  gdb_assert (start_addr <= addr);
+
+  /* In insert_one_watchpoint, we ensured that the inserted watchpoint fully
+     covered the requested range.  It should be the same here.  */
+  gdb_assert (addr + len <= wp_info.end_addr);
+
   info.watchpoint_map.erase (it);
-  if (amd_dbgapi_remove_watchpoint (watch_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  if (amd_dbgapi_remove_watchpoint (wp_info.id) != AMD_DBGAPI_STATUS_SUCCESS)
     return 1;
 
   return ret;
@@ -1482,7 +1536,10 @@ amd_dbgapi_target::stopped_by_watchpoint ()
       != AMD_DBGAPI_STATUS_SUCCESS)
     return false;
 
-  free (watchpoints.watchpoint_ids);
+  /* Ensure watchpoints.watchpoint_ids is freed on exit.  */
+  gdb::unique_xmalloc_ptr<amd_dbgapi_watchpoint_id_t>
+    watchpoint_ids_holder (watchpoints.watchpoint_ids);
+
   return watchpoints.count != 0;
 }
 
@@ -1502,9 +1559,9 @@ amd_dbgapi_target::stopped_data_addresses ()
       != AMD_DBGAPI_STATUS_SUCCESS)
     return {};
 
-  /* Ensure watchpoints.watchpoints_ids is freed on exit.  */
+  /* Ensure watchpoints.watchpoint_ids is freed on exit.  */
   gdb::unique_xmalloc_ptr<amd_dbgapi_watchpoint_id_t>
-    watchpoint_holder (watchpoints.watchpoint_ids);
+    watchpoint_ids_holder (watchpoints.watchpoint_ids);
 
   std::vector<CORE_ADDR> watch_addr_hit;
   for (amd_dbgapi_watchpoint_id_t watch_id
@@ -1512,15 +1569,13 @@ amd_dbgapi_target::stopped_data_addresses ()
     {
       auto it = std::find_if (info.watchpoint_map.begin (),
 			      info.watchpoint_map.end (),
-			      [watch_id] (auto &watch_info)
-				{
-				  return watch_info.second.second == watch_id;
-				});
+			      [watch_id] (auto &wp)
+				{ return wp.second.id == watch_id; });
 
-      /* We should not receive hits for watchpoints we have not inserted.  */
       if (it != info.watchpoint_map.end ())
 	watch_addr_hit.push_back (it->first);
     }
+
   return watch_addr_hit;
 }
 
@@ -1853,6 +1908,7 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 	case AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS:
 	  gdb_assert (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
 	  info.runtime_state = runtime_state;
+
 	  amd_dbgapi_debug_printf ("pushing amd-dbgapi target");
 	  info.inf->push_target (&the_amd_dbgapi_target);
 
@@ -3306,29 +3362,29 @@ location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
     }
 }
 
+/* Observer callback for normal_stop.  Warn the user if a hardware watchpoint
+   was hit but precise memory is not enabled.  */
+
 static void
 amd_dbgapi_target_normal_stop (bpstat *bs_list, int print_frame)
 {
-  if (bs_list == nullptr || !print_frame)
+  if (bs_list == nullptr
+      || !print_frame
+      || !ptid_is_gpu (inferior_thread ()->ptid))
     return;
 
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
 
-  if (info.process_id == AMD_DBGAPI_PROCESS_NONE)
-    return;
-
-  if (info.precise_memory.enabled)
-    return;
-
-  if (!ptid_is_gpu (inferior_thread ()->ptid))
+  if (info.process_id == AMD_DBGAPI_PROCESS_NONE
+      || info.precise_memory.enabled)
     return;
 
   bool found_hardware_watchpoint = false;
 
   for (bpstat *bs = bs_list; bs != nullptr; bs = bs->next)
     if (bs->breakpoint_at != nullptr
-	&& is_hardware_watchpoint(bs->breakpoint_at))
+	&& is_hardware_watchpoint (bs->breakpoint_at))
       {
 	found_hardware_watchpoint = true;
 	break;

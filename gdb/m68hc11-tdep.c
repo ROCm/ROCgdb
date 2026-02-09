@@ -1521,8 +1521,6 @@ m68hc11_gdbarch_init (struct gdbarch_info info,
   set_gdbarch_elf_make_msymbol_special (gdbarch,
 					m68hc11_elf_make_msymbol_special);
 
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
   return gdbarch;
 }
 

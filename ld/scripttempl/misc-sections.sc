@@ -31,3 +31,7 @@ cat <<EOF
   .gnu.build.attributes : { *(.gnu.build.attributes${RELOCATING+ .gnu.build.attributes.*}) }
 
 EOF
+
+test -z "${CONSTRUCTING}" && cat <<EOF
+  .note.GNU-stack : { *(.note.GNU-stack) }
+EOF

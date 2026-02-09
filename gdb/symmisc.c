@@ -362,21 +362,13 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
       struct compunit_symtab *cust = symtab->compunit ();
 
       if (cust->user != nullptr)
-	{
-	  const char *addr
-	    = host_address_to_string (cust->user->primary_filetab ());
-	  gdb_printf (outfile, _("Compunit user: %s\n"), addr);
-	}
-      if (cust->includes != nullptr)
-	for (int i = 0; ; ++i)
-	  {
-	    struct compunit_symtab *include = cust->includes[i];
-	    if (include == nullptr)
-	      break;
-	    const char *addr
-	      = host_address_to_string (include->primary_filetab ());
-	    gdb_printf (outfile, _("Compunit include: %s\n"), addr);
-	  }
+	gdb_printf (outfile, _("Compunit user: %s\n"),
+		    host_address_to_string (cust->user->primary_filetab ()));
+
+
+      for (compunit_symtab *include : cust->includes)
+	gdb_printf (outfile, _("Compunit include: %s\n"),
+		    host_address_to_string (include->primary_filetab ()));
     }
 }
 
@@ -816,21 +808,15 @@ maintenance_info_symtabs (const char *regexp, int from_tty)
 				    cust.user != nullptr
 				    ? host_address_to_string (cust.user)
 				    : "(null)");
-			if (cust.includes != nullptr)
+			if (!cust.includes.empty ())
 			  {
 			    gdb_printf (_("    ( includes\n"));
-			    for (int i = 0; ; ++i)
-			      {
-				struct compunit_symtab *include
-				  = cust.includes[i];
-				if (include == nullptr)
-				  break;
-				const char *addr
-				  = host_address_to_string (include);
-				gdb_printf ("      (%s %s)\n",
-					    "(struct compunit_symtab *)",
-					    addr);
-			      }
+
+			    for (compunit_symtab *include : cust.includes)
+			      gdb_printf ("      (%s %s)\n",
+					  "(struct compunit_symtab *)",
+					  host_address_to_string (include));
+
 			    gdb_printf ("    )\n");
 			  }
 			printed_compunit_symtab_start = 1;

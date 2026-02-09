@@ -52,32 +52,32 @@ wchar_printer::print_char (gdb_wchar_t w)
 
   switch (w)
     {
-      case LCST ('\a'):
-	m_file.write (LCST ("\\a"));
-	break;
-      case LCST ('\b'):
-	m_file.write (LCST ("\\b"));
-	break;
-      case LCST ('\f'):
-	m_file.write (LCST ("\\f"));
-	break;
-      case LCST ('\n'):
-	m_file.write (LCST ("\\n"));
-	break;
-      case LCST ('\r'):
-	m_file.write (LCST ("\\r"));
-	break;
-      case LCST ('\t'):
-	m_file.write (LCST ("\\t"));
-	break;
-      case LCST ('\v'):
-	m_file.write (LCST ("\\v"));
-	break;
-      default:
-	if (w == gdb_btowc (m_quoter) || w == LCST ('\\'))
-	  m_file.write (LCST ("\\"));
-	m_file.write (w);
-	break;
+    case LCST ('\a'):
+      m_file.write (LCST ("\\a"));
+      break;
+    case LCST ('\b'):
+      m_file.write (LCST ("\\b"));
+      break;
+    case LCST ('\f'):
+      m_file.write (LCST ("\\f"));
+      break;
+    case LCST ('\n'):
+      m_file.write (LCST ("\\n"));
+      break;
+    case LCST ('\r'):
+      m_file.write (LCST ("\\r"));
+      break;
+    case LCST ('\t'):
+      m_file.write (LCST ("\\t"));
+      break;
+    case LCST ('\v'):
+      m_file.write (LCST ("\\v"));
+      break;
+    default:
+      if (w == gdb_btowc (m_quoter) || w == LCST ('\\'))
+	m_file.write (LCST ("\\"));
+      m_file.write (w);
+      break;
     }
 }
 

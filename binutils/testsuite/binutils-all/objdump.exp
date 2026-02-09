@@ -959,6 +959,80 @@ proc test_objdump_S { } {
 
 test_objdump_S
 
+# Test objdump --map-global-vars on file containing dwarf-2 encoding information.
+
+proc test_objdump_map_global_vars { } {
+    global srcdir
+    global subdir
+    global OBJDUMP
+    global OBJDUMPFLAGS
+    global exe
+
+    set test "objdump --map-global-vars"
+
+    if { [target_compile $srcdir/$subdir/objdump-map-global-vars.c tmpdir/objdump-map-global-vars${exe} executable debug] != "" } {
+	unsupported "$test (build)"
+	return
+    }
+
+    if [is_remote host] {
+	set testfile [remote_download host tmpdir/objdump-map-global-vars${exe}]
+	set patternfile [remote_download host tmpdir/objdump.map-global-vars]
+    } else {
+	set testfile tmpdir/objdump-map-global-vars${exe}
+	set patternfile $srcdir/$subdir/objdump.map-global-vars
+    }
+
+    set got [remote_exec host "$OBJDUMP $OBJDUMPFLAGS --dwarf=info $testfile"]
+    if { [regexp -line {^ *Version: *([0-9]+)} $got -> dwarf_version] } then {
+	if {$dwarf_version < 2} then {
+	    unsupported "$test (DWARF2 at least is required)"
+	    return
+	}
+    }
+
+    set got [remote_exec host "$OBJDUMP $OBJDUMPFLAGS --map-global-vars $testfile" "" "/dev/null" "tmpdir/objdump.out"]
+    if { [lindex $got 0] != 0 || ![string match "" [lindex $got 1]] } then {
+	fail "$test (reason: unexpected output)"
+	send_log $got
+	send_log "\n"
+    }
+
+    # Read and split patterns by double newline using regsub and split
+    set pattern_file [open $patternfile r]
+    set pattern_data [read $pattern_file]
+    close $pattern_file
+
+    set marked_pattern_blocks [regsub -all {\n\n} $pattern_data ";"]
+    set pattern_blocks [split $marked_pattern_blocks ";"]
+
+    # Read and split output into blocks by double newline using regsub and split
+    set output_file [open "tmpdir/objdump.out" r]
+    set output_data [read $output_file]
+    close $output_file
+
+    set marked_output_blocks [regsub -all {\n\n} $output_data ";"]
+    set output_blocks [split $marked_output_blocks ";"]
+
+    # Match each output block against all patterns, order independent
+    foreach oblock $output_blocks {
+	if {$oblock eq ""} { continue }
+	set matched 0
+	foreach pblock $pattern_blocks {
+	    if {[regexp $pblock $oblock]} {
+		set matched 1
+	    }
+	}
+	if {!$matched} {
+	    fail "$test: did not find a match for: $oblock"
+	    return
+	}
+    }
+    pass "objdump --map-global-vars"
+}
+
+test_objdump_map_global_vars
+
 # Test objdump --private
 proc test_objdump_P {} {
     global srcdir

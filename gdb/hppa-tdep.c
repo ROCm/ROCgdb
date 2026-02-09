@@ -3079,7 +3079,6 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sp_regnum (gdbarch, HPPA_SP_REGNUM);
   set_gdbarch_fp0_regnum (gdbarch, HPPA_FP0_REGNUM);
   set_gdbarch_addr_bits_remove (gdbarch, hppa_addr_bits_remove);
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
   set_gdbarch_read_pc (gdbarch, hppa_read_pc);
   set_gdbarch_write_pc (gdbarch, hppa_write_pc);
 

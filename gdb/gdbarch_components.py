@@ -49,6 +49,10 @@
 # *'.  This is used for dumping.  The string must live long enough to
 # be passed to printf.
 #
+# * "unused" - a boolean.  If true, the hook is known to be unused, we
+# but agreed to keep it around nevertheless.  check-gdbarch.py uses
+# this.  This should be used sparingly, if at all.
+#
 # Value, Function, and Method share some more parameters.  Some of
 # these work in conjunction in a somewhat complicated way, so they are
 # described in a separate sub-section below.
@@ -196,6 +200,8 @@ useful).
     name="bfloat16_bit",
     predefault="2*TARGET_CHAR_BIT",
     invalid=False,
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(
@@ -211,6 +217,8 @@ Value(
     name="half_bit",
     predefault="2*TARGET_CHAR_BIT",
     invalid=False,
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(
@@ -454,7 +462,7 @@ Implementations should be migrated to implement pseudo_register_write instead.
         ("int", "cookednum"),
         ("const gdb_byte *", "buf"),
     ],
-    predicate=True,
+    invalid=False,
 )
 
 Value(
@@ -722,17 +730,6 @@ Method(
 )
 
 Method(
-    type="void",
-    name="print_vector_info",
-    params=[
-        ("struct ui_file *", "file"),
-        ("const frame_info_ptr &", "frame"),
-        ("const char *", "args"),
-    ],
-    predicate=True,
-)
-
-Method(
     comment="""
 MAP a GDB RAW register number onto a simulator register number.  See
 also include/...-sim.h.
@@ -771,12 +768,6 @@ FRAME corresponds to the longjmp frame.
     name="get_longjmp_target",
     params=[("const frame_info_ptr &", "frame"), ("CORE_ADDR *", "pc")],
     predicate=True,
-)
-
-Value(
-    type="int",
-    name="believe_pcc_promotion",
-    invalid=False,
 )
 
 Method(
@@ -1748,7 +1739,7 @@ Fetch the pointer to the ith function argument.
         ("int", "argi"),
         ("struct type *", "type"),
     ],
-    predicate=True,
+    invalid=False,
 )
 
 Method(
@@ -1807,7 +1798,7 @@ Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be du
     type="asection *",
     name="create_memtag_section",
     params=[("bfd *", "obfd"), ("CORE_ADDR", "address"), ("size_t", "size")],
-    predicate=True,
+    invalid=False,
 )
 
 Method(
@@ -1817,7 +1808,7 @@ Given a memory tag section OSEC, fill OSEC's contents with the appropriate tag d
     type="bool",
     name="fill_memtag_section",
     params=[("asection *", "osec")],
-    predicate=True,
+    invalid=False,
 )
 
 Method(
@@ -1952,17 +1943,6 @@ significant bit of the pfn for pointers to virtual member functions.
     invalid=False,
 )
 
-Function(
-    comment="""
-Advance PC to next instruction in order to skip a permanent breakpoint.
-""",
-    type="void",
-    name="skip_permanent_breakpoint",
-    params=[("struct regcache *", "regcache")],
-    predefault="default_skip_permanent_breakpoint",
-    invalid=False,
-)
-
 Value(
     comment="""
 The maximum length of an instruction on this architecture in bytes.
@@ -2002,7 +1982,7 @@ that case.
     type="displaced_step_copy_insn_closure_up",
     name="displaced_step_copy_insn",
     params=[("CORE_ADDR", "from"), ("CORE_ADDR", "to"), ("struct regcache *", "regs")],
-    predicate=True,
+    invalid=False,
 )
 
 Method(
@@ -2144,8 +2124,7 @@ offset adjusted; etc.
     type="void",
     name="relocate_instruction",
     params=[("CORE_ADDR *", "to"), ("CORE_ADDR", "from")],
-    predicate=True,
-    predefault="NULL",
+    invalid=False,
 )
 
 Function(
@@ -2163,16 +2142,6 @@ Method(
     name="core_read_description",
     params=[("struct target_ops *", "target"), ("bfd *", "abfd")],
     predicate=True,
-)
-
-Value(
-    comment="""
-Set if the address in N_SO or N_FUN stabs may be zero.
-""",
-    type="int",
-    name="sofun_address_maybe_missing",
-    predefault="0",
-    invalid=False,
 )
 
 Method(
@@ -2310,6 +2279,8 @@ on the architecture's assembly.
     name="stap_integer_suffixes",
     invalid=False,
     printer="pstring_list (gdbarch->stap_integer_suffixes)",
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(
@@ -2337,6 +2308,8 @@ the architecture's assembly.
     name="stap_register_suffixes",
     invalid=False,
     printer="pstring_list (gdbarch->stap_register_suffixes)",
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(
@@ -2390,6 +2363,8 @@ register would be represented as `r10' internally.
     name="stap_gdb_register_prefix",
     invalid=False,
     printer="pstring (gdbarch->stap_gdb_register_prefix)",
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(
@@ -2400,6 +2375,8 @@ Suffix used to name a register using GDB's nomenclature.
     name="stap_gdb_register_suffix",
     invalid=False,
     printer="pstring (gdbarch->stap_gdb_register_suffix)",
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Method(
@@ -2597,17 +2574,6 @@ On entry, regcache has all registers marked as unavailable.
 
 Function(
     comment="""
-Return the "auto" target charset.
-""",
-    type="const char *",
-    name="auto_charset",
-    params=[],
-    predefault="default_auto_charset",
-    invalid=False,
-)
-
-Function(
-    comment="""
 Return the "auto" target wide charset.
 """,
     type="const char *",
@@ -2615,21 +2581,6 @@ Return the "auto" target wide charset.
     params=[],
     predefault="default_auto_wide_charset",
     invalid=False,
-)
-
-Value(
-    comment="""
-If non-empty, this is a file extension that will be opened in place
-of the file extension reported by the shared library list.
-
-This is most useful for toolchains that use a post-linker tool,
-where the names of the files run on the target differ in extension
-compared to the names of the files GDB should load for debug info.
-""",
-    type="const char *",
-    name="solib_symbols_extension",
-    invalid=False,
-    printer="pstring (gdbarch->solib_symbols_extension)",
 )
 
 Value(
@@ -2854,6 +2805,8 @@ each address in memory.
     params=[],
     predefault="default_addressable_memory_unit_size",
     invalid=False,
+    # Currently unused but we wanted to keep this hook around.
+    unused=True,
 )
 
 Value(

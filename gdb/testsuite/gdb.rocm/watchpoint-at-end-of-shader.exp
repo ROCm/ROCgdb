@@ -30,14 +30,17 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 # not enabled.  This proc finds out if the current target is expected to have
 # a fail or not.
 proc target_has_xfail {} {
-    # Check for targets where this test will fail without precise memory
+    # Check for targets where this test will fail without precise memory.
     set targets [find_amdgpu_devices]
     if { [llength $targets] == 0} {
-	return 1
+	# Can't determine GPU type, don't set up xfail.  The test will probably
+	# not run correctly anyway.
+	return 0
     }
 
     # The test will run on GPU-0, so it should be the first of the list.
     set target [lindex $targets 0]
+
     # Extract the target family by removing the last 2 chars from the target
     # gfx number.
     set target_family [string range $target 0 end-2]
@@ -106,5 +109,6 @@ foreach_with_prefix precise_memory {on off} {
 	unsupported "target does not support precise memory"
 	continue
     }
+
     do_test $precise_memory $has_xfail
 }

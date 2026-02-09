@@ -696,8 +696,7 @@ Architecture-specific tests that are (usually) cross-platform.
 gdb.<subsystem>
 
 Tests that exercise a specific GDB subsystem in more depth.  For
-instance, gdb.disasm exercises various disassemblers, while
-gdb.stabs tests pathways through the stabs symbol reader.
+instance, gdb.disasm exercises various disassemblers.
 
 gdb.perf
 

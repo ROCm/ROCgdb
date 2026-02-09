@@ -1627,10 +1627,6 @@ i386_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->i386_sysenter_record = i386_linux_intx80_sysenter_syscall_record;
   tdep->i386_syscall_record = i386_linux_intx80_sysenter_syscall_record;
 
-  /* N_FUN symbols in shared libraries have 0 for their values and need
-     to be relocated.  */
-  set_gdbarch_sofun_address_maybe_missing (gdbarch, 1);
-
   /* GNU/Linux uses SVR4-style shared libraries.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
   set_solib_svr4_ops (gdbarch, make_linux_ilp32_svr4_solib_ops);

@@ -638,6 +638,14 @@ public:
   struct value *primitive_field (LONGEST offset, int fieldno,
 				 struct type *arg_type);
 
+  /* Given that this value is of a struct or union type, extract and
+     return the value of one of its (non-static) fields.  FIELDNO says
+     which field.  */
+  value *field (int fieldno)
+  {
+    return primitive_field (0, fieldno, type ());
+  }
+
   /* Create a new value by extracting it from this value.  TYPE is the
      type of the new value.  BIT_OFFSET and BIT_LENGTH describe the
      offset and field width of the value to extract from this value --
@@ -1372,8 +1380,6 @@ extern int find_overload_match (gdb::array_view<value *> args,
 				struct value **valp, struct symbol **symp,
 				int *staticp, const int no_adl,
 				enum noside noside);
-
-extern struct value *value_field (struct value *arg1, int fieldno);
 
 extern struct type *value_rtti_indirect_type (struct value *, int *, LONGEST *,
 					      int *);

@@ -412,8 +412,8 @@ print_variant_part (struct value *value, int field_num,
   if (which < 0)
     return 0;
 
-  struct value *variant_field = value_field (value, field_num);
-  struct value *active_component = value_field (variant_field, which);
+  struct value *variant_field = value->field (field_num);
+  struct value *active_component = variant_field->field (which);
   return print_field_values (active_component, outer_value, stream, recurse,
 			     options, comma_needed, language);
 }
@@ -521,7 +521,7 @@ print_field_values (struct value *value, struct value *outer_value,
 
 	  opts.deref_ref = false;
 
-	  struct value *v = value_field (value, i);
+	  struct value *v = value->field (i);
 	  common_val_print (v, stream, recurse + 1, &opts, language);
 	}
       annotate_field_end ();

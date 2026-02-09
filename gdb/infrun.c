@@ -2813,10 +2813,11 @@ resume_1 (enum gdb_signal sig)
 	  /* There's no signal to pass, we can go ahead and skip the
 	     permanent breakpoint manually.  */
 	  infrun_debug_printf ("skipping permanent breakpoint");
-	  gdbarch_skip_permanent_breakpoint (gdbarch, regcache);
-	  /* Update pc to reflect the new address from which we will
-	     execute instructions.  */
 	  pc = regcache_read_pc (regcache);
+	  int bp_len;
+	  gdbarch_breakpoint_from_pc (gdbarch, &pc, &bp_len);
+	  pc += bp_len;
+	  regcache_write_pc (regcache, pc);
 
 	  if (step)
 	    {

@@ -1105,7 +1105,6 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 
 	  for (j = 0; j < len2; j++)
 	    {
-	      const char *mangled_name;
 	      gdb::unique_xmalloc_ptr<char> mangled_name_holder;
 	      const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
 	      int is_full_physname_constructor =
@@ -1151,14 +1150,8 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 
 		  gdb_puts (" ", stream);
 		}
-	      if (TYPE_FN_FIELD_STUB (f, j))
-		{
-		  /* Build something we can demangle.  */
-		  mangled_name_holder.reset (gdb_mangle_name (type, i, j));
-		  mangled_name = mangled_name_holder.get ();
-		}
-	      else
-		mangled_name = TYPE_FN_FIELD_PHYSNAME (f, j);
+
+	      const char *mangled_name = TYPE_FN_FIELD_PHYSNAME (f, j);
 
 	      gdb::unique_xmalloc_ptr<char> demangled_name
 		= gdb_demangle (mangled_name,
@@ -1170,22 +1163,15 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 		     arguments, the demangling will fail.
 		     Let's try to reconstruct the function
 		     signature from the symbol information.  */
-		  if (!TYPE_FN_FIELD_STUB (f, j))
-		    {
-		      int staticp = TYPE_FN_FIELD_STATIC_P (f, j);
-		      struct type *mtype = TYPE_FN_FIELD_TYPE (f, j);
+		  int staticp = TYPE_FN_FIELD_STATIC_P (f, j);
+		  struct type *mtype = TYPE_FN_FIELD_TYPE (f, j);
 
-		      cp_type_print_method_args (mtype,
-						 "",
-						 method_name,
-						 staticp,
-						 stream, language,
-						 &local_flags);
-		    }
-		  else
-		    fprintf_styled (stream, metadata_style.style (),
-				    _("<badly mangled name '%s'>"),
-				    mangled_name);
+		  cp_type_print_method_args (mtype,
+					     "",
+					     method_name,
+					     staticp,
+					     stream, language,
+					     &local_flags);
 		}
 	      else
 		{

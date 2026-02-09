@@ -2002,14 +2002,13 @@ struct compunit_symtab : intrusive_list_node<compunit_symtab>
      the given compilation unit, but it currently is.  */
   struct macro_table *m_macro_table = nullptr;
 
-  /* If non-NULL, then this points to a NULL-terminated vector of
-     included compunits.  When searching the static or global
+  /* Vector of included compunit symtabs.  When searching the static or global
      block of this compunit, the corresponding block of all
      included compunits will also be searched.  Note that this
      list must be flattened -- the symbol reader is responsible for
      ensuring that this vector contains the transitive closure of all
      included compunits.  */
-  struct compunit_symtab **includes = nullptr;
+  std::vector<compunit_symtab *> includes;
 
   /* If this is an included compunit, this points to one includer
      of the table.  This user is considered the canonical compunit

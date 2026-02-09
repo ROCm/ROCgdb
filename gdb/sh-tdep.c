@@ -2265,8 +2265,6 @@ sh_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_return_in_first_hidden_param_p (gdbarch,
 					      sh_return_in_first_hidden_param_p);
 
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
   set_gdbarch_frame_align (gdbarch, sh_frame_align);
   frame_base_set_default (gdbarch, &sh_frame_base);
 

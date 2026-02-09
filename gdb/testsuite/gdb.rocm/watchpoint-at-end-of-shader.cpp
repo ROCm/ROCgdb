@@ -16,7 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
-#include <cstdlib>
+
+#include "rocm-test-utils.h"
 
 __global__ void
 set_val (int *p, int v)
@@ -28,19 +29,16 @@ int
 main ()
 {
   int *v;
-  if (hipMalloc (&v, sizeof (*v)) != hipSuccess)
-    exit (EXIT_FAILURE);
+  CHECK (hipMalloc (&v, sizeof (*v)));
 
   /* First dispatch to initialize the memory.  */
   set_val<<<1, 1>>> (v, 64);
-  if (hipDeviceSynchronize () != hipSuccess)
-    exit (EXIT_FAILURE);
+  CHECK (hipDeviceSynchronize ());
 
   /* Break here.  */
   set_val<<<1, 1>>> (v, 8);
 
-  if (hipDeviceSynchronize () != hipSuccess)
-    exit (EXIT_FAILURE);
+  CHECK (hipDeviceSynchronize ());
 
-  exit (EXIT_SUCCESS);
+  return 0;
 }

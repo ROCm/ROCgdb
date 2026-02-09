@@ -5123,6 +5123,8 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   if (attrs_subsection->size > 0)
     LINKED_LIST_APPEND (obj_attr_subsection_v2_t)
       (&elf_obj_attr_subsections (output_bfd), attrs_subsection);
+  else
+    _bfd_elf_obj_attr_subsection_v2_free (attrs_subsection);
 
   elf_aarch64_tdata (output_bfd)->gnu_property_aarch64_feature_1_and
     = gnu_property_aarch64_feature_1_and;

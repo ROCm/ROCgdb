@@ -375,33 +375,6 @@ exec_file_find (const char *in_pathname, int *fd)
 gdb::unique_xmalloc_ptr<char>
 solib_find (const char *in_pathname, int *fd)
 {
-  const char *solib_symbols_extension
-    = gdbarch_solib_symbols_extension (current_inferior ()->arch ());
-
-  /* If solib_symbols_extension is set, replace the file's
-     extension.  */
-  if (solib_symbols_extension != NULL)
-    {
-      const char *p = in_pathname + strlen (in_pathname);
-
-      while (p > in_pathname && *p != '.')
-	p--;
-
-      if (*p == '.')
-	{
-	  char *new_pathname;
-
-	  new_pathname
-	    = (char *) alloca (p - in_pathname + 1
-			       + strlen (solib_symbols_extension) + 1);
-	  memcpy (new_pathname, in_pathname, p - in_pathname + 1);
-	  strcpy (new_pathname + (p - in_pathname) + 1,
-		  solib_symbols_extension);
-
-	  in_pathname = new_pathname;
-	}
-    }
-
   return solib_find_1 (in_pathname, fd, true);
 }
 

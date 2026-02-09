@@ -55,12 +55,11 @@ get_func_info main
 
 # Compile the source file and load the executable into GDB so we can
 # extract some addresses needed for creating the DWARF.
+#
+# Use `nopie` to ensure that addresses are the same across runs, in case ASLR
+# can't be disabled.
 if { [prepare_for_testing "failed to prepare" ${testfile} \
-	  [list ${srcfile}]] } {
-    return -1
-}
-
-if {![runto_main]} {
+	  [list ${srcfile}] {debug nopie}] } {
     return -1
 }
 
@@ -187,7 +186,7 @@ proc run_test { dwarf_version empty_loc entry_pc_type } {
     write_asm_file $asm_file $dwarf_version $ranges $entry_pc_label
 
     if {[prepare_for_testing "failed to prepare" $this_testfile \
-	     [list $::srcfile $asm_file] {nodebug}]} {
+	     [list $::srcfile $asm_file] {nodebug nopie}]} {
 	return
     }
 

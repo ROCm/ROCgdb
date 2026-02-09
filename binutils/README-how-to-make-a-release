@@ -260,7 +260,8 @@ mainline and the branch.  Note however, you can do this in bulk:
     done
     cd ..
   done
-
+  cd ..
+  
 Then just git-add the new files and commit the updated translations.
 
 ==============================================================================
@@ -284,7 +285,7 @@ How to create the release.
 
   21. a. Update the release number in bfd/version.m4 on the release
          branch to a whole new minor version number, without a point
-         value.  Eg "2.45.90" becomes "2.46".  NB/ Not: "2.46.00"
+         value.  Eg "2.46.90" becomes "2.47".  NB/ Not: "2.47.00"
 
       b. Change bfd/development.sh to set all values to "false".
 
@@ -371,20 +372,25 @@ How to create the release.
 	mkdir delme
 	cd delme
 	tar xvf <path-to-sources>/binutils-2.*.tar.lz
-	chmod -R -w binutils-2.*
+	chmod -R -w binutils-*
 	mkdir build
 	cd build
-	../binutils-2.*/configure --quiet --enable-gold --prefix=`pwd`/install --enable-plugins --enable-shared
-	
-	make -j1 all-gas all-ld all-binutils all-gprof all-gprofng
-	make check-gas check-binutils check-ld 
-        make install-gas install-ld install-binutils install-gprofng
 
-     If this is an EVEN numbered release:
+        For an EVEN numbered release:
+	
+	  ../binutils-*/configure --quiet --enable-gold --prefix=`pwd`/install --enable-plugins --enable-shared
+	
+	  make -j1 all-gas all-ld all-binutils all-gprof all-gprofng all-gold
+	  make check-gas check-binutils check-ld check-gold
+          make install-gas install-ld install-binutils install-gprofng install-gold
+
+       For an ODD numbered release:
      
-	make -j1 all-gold
-	make check-gold
-        make install-gold
+	  ../binutils-*/configure --quiet --prefix=`pwd`/install --enable-plugins --enable-shared
+	
+	  make -j1 all-gas all-ld all-binutils all-gprof all-gprofng
+	  make check-gas check-binutils check-ld
+          make install-gas install-ld install-binutils install-gprofng
 
       Needed for step 29...
       
@@ -398,18 +404,19 @@ How to create the release.
 	
 	Enter a tag message such as: "Official GNU Binutils 2.4x release"
 
-	    git tag -a <TAG>         -u <Your Key>
+	    git tag -a <TAG> -u <Your Key> -m "Your message"
+	    
 	  eg:
-	    git tag -a binutils-2_46 -u DD9E3C4F      <=== Be careful to get the tag right
+	    git tag -a binutils-2_47 -u DD9E3C4F      <=== Be careful to get the tag right
 	  or:
-	    git tag -a binutils-2_46 -u DD9E3C4F -m "Official GNU Binutils 2.46 release"
+	    git tag -a binutils-2_47 -u DD9E3C4F -m "Official GNU Binutils 2.46 release"
 
         NB/ If you do sign the binaries make sure to use a key
 	that has been published with the FSF.
 
         Then push the release:
-	
-	    git push origin binutils-2_46
+
+	    git push origin binutils-2_47
 
         If you get an error message along the lines of:
 	  "Invalid revision range ..."
@@ -417,7 +424,7 @@ How to create the release.
 
   27.  Upload the tarballs to ftp.gnu.org.
 
-          gnupload --to ftp.gnu.org:binutils binutils-2.46.tar.*
+          gnupload --to ftp.gnu.org:binutils binutils*47*.tar.*
 
         Be prepared to provide the password for the key, if you
 	signed the binaries.
@@ -437,8 +444,8 @@ How to create the release.
 
        sftp sourceware.org
          cd /sourceware/ftp/pub/binutils/releases
- 	 put binutils-2.4*.tar.*
- 	 chmod 644 binutils-2.4*.tar.*
+ 	 put binutils*47*.tar.*
+ 	 chmod 644 binutils*47*.tar.*
 	 quit
 
   29. Update web pages.  For sourceware.org:
@@ -487,8 +494,8 @@ How to create the release.
 	 cp <build-dir>/ld/ld.pdf    .		    [NB/ Path not like others]
 
 	    [NB/ The gprofng documentation does not have a node-per-page selection]
-	 cp <build-dir>/gprofng/gprof.html   .
-	 cp <build-dir>/gprofng/gprof.pdf    .
+	 cp <build-dir>/gprofng/doc/gprofng.html   .
+	 cp <build-dir>/gprofng/doc/gprofng.pdf    .
 	 
 	 cp <build-dir>/libctf/doc/ctf-spec.html   .
 	 cp <build-dir>/libctf/doc/ctf-spec.pdf    .
@@ -500,7 +507,7 @@ How to create the release.
 
          cd ..     [Should now be in be in binutils-htdocs/ ]
 	 rm docs
-	 ln -s docs-2.46 docs
+	 ln -s docs-2.47 docs
 	 
       Edit index.html file to change the links to point to the new
       release, mention any new features, update dates and so on.
@@ -511,16 +518,16 @@ How to create the release.
 
       Add the new directories and files, commit and push the changes:
 
-        get add docs-2.46
+        git add docs-2.47
         git add .
-        git commit -m"Update documenation for the 2.46 release"
+        git commit -m"Update documenation for the 2.47 release"
 	git push
 
 
   29.1 For the www.gnu.org site you have to email webmasters@gnu.org
       and ask them to copy the change(s):
 ---------------------------------------
-Hi FSF Webmasters,
+Hi GNU Webmasters,
 
   Please could the GNU Binutils webpage at:
 

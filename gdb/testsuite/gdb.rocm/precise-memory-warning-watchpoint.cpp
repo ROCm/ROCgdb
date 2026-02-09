@@ -1,6 +1,6 @@
-/* Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2021-2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,35 +16,30 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#define CHECK(cmd)                                                           \
-  {                                                                          \
-    hipError_t error = cmd;                                                  \
-    if (error != hipSuccess)                                                 \
-      {                                                                      \
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
-		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
-	exit (EXIT_FAILURE);                                                 \
-      }                                                                      \
-  }
-
-__device__ int global = 0;
+#include "rocm-test-utils.h"
 
 __global__ void
-kernel ()
+kernel (int *ptr)
 {
-  printf("device global: %p\n", &global);
   for (int i = 0; i < 1000; ++i)
-    global++;
+    {
+      (*ptr)++;
+    }
 }
+
+int *global_ptr;
 
 int
 main (int argc, char* argv[])
 {
-  printf("host global: %p\n", &global);
-  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
+  CHECK (hipMalloc (&global_ptr, sizeof (int)));
+  CHECK (hipMemset (global_ptr, 0, sizeof (int)));
+
+  /* Break here.  */
+  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0, global_ptr);
   CHECK (hipDeviceSynchronize ());
+
+  CHECK (hipFree (global_ptr));
   return 0;
 }

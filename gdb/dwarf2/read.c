@@ -2112,28 +2112,23 @@ dw_search_file_matcher
 /* A helper for dw2_find_pc_sect_compunit_symtab which finds the most specific
    symtab.  */
 
-static struct compunit_symtab *
-recursively_find_pc_sect_compunit_symtab (struct compunit_symtab *cust,
-					  CORE_ADDR pc)
+static compunit_symtab *
+find_pc_sect_compunit_symtab_includes (compunit_symtab *cust, CORE_ADDR pc)
 {
-  int i;
+  auto is_the_one = [pc] (compunit_symtab *one_cust)
+    {
+      return (one_cust->blockvector () != nullptr
+	      && one_cust->blockvector ()->contains (pc));
+    };
 
-  if (cust->blockvector () != nullptr && cust->blockvector ()->contains (pc))
+  if (is_the_one (cust))
     return cust;
 
-  if (cust->includes == NULL)
-    return NULL;
+  for (compunit_symtab *include : cust->includes)
+    if (is_the_one (include))
+      return include;
 
-  for (i = 0; cust->includes[i]; ++i)
-    {
-      struct compunit_symtab *s = cust->includes[i];
-
-      s = recursively_find_pc_sect_compunit_symtab (s, pc);
-      if (s != NULL)
-	return s;
-    }
-
-  return NULL;
+  return nullptr;
 }
 
 struct compunit_symtab *
@@ -2144,8 +2139,6 @@ dwarf2_base_index_functions::find_pc_sect_compunit_symtab
       struct obj_section *section,
       int warn_if_readin)
 {
-  struct compunit_symtab *result;
-
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
 
@@ -2162,7 +2155,7 @@ dwarf2_base_index_functions::find_pc_sect_compunit_symtab
     warning (_("(Internal error: pc %s in read in CU, but not in symtab.)"),
 	     paddress (objfile->arch (), pc));
 
-  result = recursively_find_pc_sect_compunit_symtab
+  compunit_symtab *result = find_pc_sect_compunit_symtab_includes
     (dw2_instantiate_symtab (data, per_objfile, false), pc);
 
   if (warn_if_readin && result == nullptr)
@@ -4636,8 +4629,8 @@ recursively_compute_inclusions
 				    cust);
 }
 
-/* Compute the compunit_symtab 'includes' fields for the compunit_symtab of
-   PER_CU.  */
+/* Compute compunit_symtab::includes for the compunit_symtab of PER_CU.  This
+   is the transitive closure of all the included compunit_symtabs.  */
 
 static void
 compute_compunit_symtab_includes (dwarf2_per_cu *per_cu,
@@ -4647,8 +4640,6 @@ compute_compunit_symtab_includes (dwarf2_per_cu *per_cu,
 
   if (!per_cu->imported_symtabs.empty ())
     {
-      int len;
-      std::vector<compunit_symtab *> result_symtabs;
       compunit_symtab *cust = per_objfile->get_symtab (per_cu);
 
       /* If we don't have a symtab, we can just skip this case.  */
@@ -4659,18 +4650,9 @@ compute_compunit_symtab_includes (dwarf2_per_cu *per_cu,
       gdb::unordered_set<compunit_symtab *> all_type_symtabs;
 
       for (dwarf2_per_cu *ptr : per_cu->imported_symtabs)
-	recursively_compute_inclusions (&result_symtabs, all_children,
+	recursively_compute_inclusions (&cust->includes, all_children,
 					all_type_symtabs, ptr,
 					per_objfile, cust);
-
-      /* Now we have a transitive closure of all the included symtabs.  */
-      len = result_symtabs.size ();
-      cust->includes
-	= XOBNEWVEC (&per_objfile->objfile->objfile_obstack,
-		     struct compunit_symtab *, len + 1);
-      memcpy (cust->includes, result_symtabs.data (),
-	      len * sizeof (compunit_symtab *));
-      cust->includes[len] = NULL;
     }
 }
 

@@ -1,4 +1,3 @@
-	.cfi_sections .sframe
 	.cfi_startproc
 	.long 8
 	.cfi_def_cfa_offset 16

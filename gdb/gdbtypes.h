@@ -1624,15 +1624,9 @@ struct fn_fieldlist
 
 struct fn_field
 {
-  /* * If is_stub is clear, this is the mangled name which we can look
-     up to find the address of the method (FIXME: it would be cleaner
-     to have a pointer to the struct symbol here instead).
-
-     If is_stub is set, this is the portion of the mangled name which
-     specifies the arguments.  For example, "ii", if there are two int
-     arguments, or "" if there are no arguments.  See gdb_mangle_name
-     for the conversion from this format to the one used if is_stub is
-     clear.  */
+  /* * This is the mangled name which we can look up to find the
+     address of the method (FIXME: it would be cleaner to have a
+     pointer to the struct symbol here instead).   */
 
   const char *physname;
 
@@ -1654,11 +1648,6 @@ struct fn_field
   unsigned int is_const:1;
   unsigned int is_volatile:1;
   unsigned int is_artificial:1;
-
-  /* * A stub method only has some fields valid (but they are enough
-     to reconstruct the rest of the fields).  */
-
-  unsigned int is_stub:1;
 
   /* * True if this function is a constructor, false otherwise.  */
 
@@ -2005,7 +1994,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define TYPE_FN_FIELD_PROTECTED(thisfn, n) \
   ((thisfn)[n].accessibility == accessibility::PROTECTED)
 #define TYPE_FN_FIELD_ARTIFICIAL(thisfn, n) ((thisfn)[n].is_artificial)
-#define TYPE_FN_FIELD_STUB(thisfn, n) ((thisfn)[n].is_stub)
 #define TYPE_FN_FIELD_CONSTRUCTOR(thisfn, n) ((thisfn)[n].is_constructor)
 #define TYPE_FN_FIELD_FCONTEXT(thisfn, n) ((thisfn)[n].fcontext)
 #define TYPE_FN_FIELD_VOFFSET(thisfn, n) ((thisfn)[n].voffset-2)
@@ -2692,8 +2680,6 @@ extern void apply_bit_offset_to_field (struct field &field,
 				       LONGEST explicit_byte_size);
 
 extern struct type *check_typedef (struct type *);
-
-extern void check_stub_method_group (struct type *, int);
 
 extern char *gdb_mangle_name (struct type *, int, int);
 

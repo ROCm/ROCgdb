@@ -814,7 +814,6 @@ bfin_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_name (gdbarch, bfin_register_name);
   set_gdbarch_register_type (gdbarch, bfin_register_type);
   set_gdbarch_push_dummy_call (gdbarch, bfin_push_dummy_call);
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
   set_gdbarch_return_value (gdbarch, bfin_return_value);
   set_gdbarch_skip_prologue (gdbarch, bfin_skip_prologue);
   set_gdbarch_inner_than (gdbarch, core_addr_lessthan);

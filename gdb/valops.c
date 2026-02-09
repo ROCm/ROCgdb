@@ -2247,7 +2247,6 @@ search_struct_method (const char *name, struct value **arg1p,
 	  struct fn_field *f = TYPE_FN_FIELDLIST1 (type, i);
 
 	  name_matched = 1;
-	  check_stub_method_group (type, i);
 	  if (j > 0 && !args.has_value ())
 	    error (_("cannot resolve overloaded method "
 		     "`%s': no arguments supplied"), name);
@@ -2547,9 +2546,6 @@ find_method_list (struct value **argp, const char *method,
 
 	      *basetype = type;
 	      *boffset = offset;
-
-	      /* Resolve any stub methods.  */
-	      check_stub_method_group (type, i);
 
 	      break;
 	    }
@@ -3686,8 +3682,6 @@ value_struct_elt_for_reference (struct type *domain, int offset,
 	  int j;
 	  int len = TYPE_FN_FIELDLIST_LENGTH (t, i);
 	  struct fn_field *f = TYPE_FN_FIELDLIST1 (t, i);
-
-	  check_stub_method_group (t, i);
 
 	  if (intype)
 	    {

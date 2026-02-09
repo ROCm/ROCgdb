@@ -71,6 +71,259 @@ typedef struct
 }
 DWARF2_Internal_ARange;
 
+/* Forward declaration.  */
+typedef struct generic_type generic_type;
+typedef struct base_type base_type;
+typedef struct type_def type_def;
+typedef struct enum_constant enum_constant;
+typedef struct enum_type enum_type;
+typedef struct subrange_type subrange_type;
+typedef struct tab_type tab_type;
+typedef struct member_type member_type;
+typedef struct member_parent member_parent;
+typedef struct type_ptr type_ptr;
+typedef struct type_ref type_ref;
+typedef struct variable_type variable_type;
+
+/* Structure used to optimize insertion of element in linked list.  */
+struct base_type_l { base_type *head; base_type *tail; };
+struct type_def_l  { type_def *head; type_def *tail;   };
+struct enum_type_l { enum_type* head; enum_type* tail; };
+struct tab_type_l  { tab_type *head; tab_type *tail;   };
+struct type_ptr_l  { type_ptr *head; type_ptr *tail;   };
+struct type_ref_l  { type_ref *head; type_ref *tail;   };
+struct member_parent_l { member_parent *head; member_parent *tail; };
+struct variable_type_l { variable_type *head; variable_type *tail;  };
+
+enum field_type
+{
+  NO_TYPE,
+  BASE_TYPE,
+  TYPE_DEF,
+  ENUM_TYPE,
+  TAB_TYPE,
+  MEMBER_PARENT,
+  MEMBER_TYPE,
+  TYPE_PTR,
+  TYPE_REF,
+  VARIABLE_TYPE
+};
+
+enum size_type
+{
+  UNSIGNED_S,
+  SIGNED_S
+};
+
+/* Structure used to abstract all structure below.  */
+struct generic_type
+{
+  union
+    {
+      base_type     *base_type;
+      type_def      *type_def;
+      enum_type     *enum_type;
+      tab_type      *tab_type;
+      member_parent *member_parent;
+      member_type   *member_type;
+      type_ptr      *type_ptr;
+      type_ref      *type_ref;
+      variable_type *variable_type;
+    } die_type;
+  enum field_type field_type;
+};
+
+/* Structure used to hold DW_TAG_base_type.  */
+struct base_type
+{
+  uint64_t die_offset;
+  union
+    {
+      uint64_t usize;
+      int64_t  ssize;
+    } size;
+  const char *name;
+  struct base_type *next;
+  enum field_type field_type;
+  enum size_type size_type;
+};
+
+/* Structure used to hold DW_TAG_typedef.  */
+struct type_def
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  const char *name;
+  struct type_def *next;
+  enum field_type field_type;
+};
+
+/* Structure used to hold DW_TAG_enumerator.  */
+struct enum_constant
+{
+  uint64_t die_offset;
+  uint64_t value;
+  const char *name;
+  struct enum_constant *next;
+};
+
+/* Structure used to hold DW_TAG_enumeration.  */
+struct enum_type
+{
+  uint64_t die_offset;
+  union
+    {
+      uint64_t usize;
+      int64_t  ssize;
+    } size;
+  const char *name;
+  struct enum_constant *enum_const_head;
+  struct enum_constant *enum_const_tail;
+  struct enum_type *next;
+  enum field_type field_type;
+  enum size_type size_type;
+};
+
+/* Structure used to hold DW_TAG_subrange_type.  */
+struct subrange_type
+{
+  uint64_t die_offset;
+  union
+    {
+      uint64_t usize;
+      int64_t  ssize;
+    } size;
+  struct subrange_type *next;
+  enum size_type size_type;
+};
+
+/* Structure used to hold DW_TAG_array_type.  */
+struct tab_type
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  subrange_type *subrange_head;
+  subrange_type *subrange_tail;
+  struct tab_type *next;
+  enum field_type field_type;
+};
+
+/* Structure used to hold DW_TAG_member.  */
+struct member_type
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  int64_t member_offset;
+  const char *name;
+  struct member_type *next;
+  enum field_type field_type;
+};
+
+/* Structure used to hold either DW_TAG_structure_type or DW_TAG_union_type.  */
+struct member_parent
+{
+  uint64_t die_offset;
+  union
+    {
+      uint64_t usize;
+      int64_t  ssize;
+    } size;
+  const char *name;
+  member_type *member_head;
+  member_type *member_tail;
+  struct member_parent *next;
+  enum size_type size_type;
+  enum field_type field_type;
+  enum
+    {
+      UNION_TYPE,
+      STRUCT_TYPE
+    } type;
+  /* This field is set to true if the current DIE has DW_AT_declaration.  When
+     this attribute is present the stucture/union is either incomplete,
+     non-defining or in a separate entity.  */
+  bool is_declaration;
+  /* This field exists to avoid linking indefinitively nested structure.  It is
+     set to true when the underlying type is known (linked).  */
+  bool linked;
+  /* This field exists to avoid displaying indefinitvely nested structure.  It
+     is set to true when informations from member_parent are displayed.  */
+  bool displayed;
+};
+
+/* Structure used to hold DW_TAG_pointer_type.  */
+struct type_ptr
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  union
+    {
+      uint64_t usize;
+      int64_t  ssize;
+    } size;
+  struct type_ptr *next;
+  enum field_type field_type;
+  enum size_type size_type;
+};
+
+/* Structure used to hold either DW_TAG_const_type or DW_TAG_volatile_type.  */
+struct type_ref
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  struct type_ref *next;
+  enum
+    {
+      CONST_TYPE,
+      VOLATILE_TYPE
+    } type;
+  enum field_type field_type;
+};
+
+/* Structure used to hold either DW_TAG_variable_type.  */
+struct variable_type
+{
+  generic_type ptr_type;
+  uint64_t die_offset;
+  /* This field holds the offset of the underlying DIE type in the DWARF info
+     section.  */
+  uint64_t ptr_die_offset;
+  /* This field holds the value in DW_AT_location when the operaion is
+     DW_OP_addr.  It represents the location within the virtual address space of
+     the program.  */
+  uint64_t location_addr;
+  /* This field holds the total size of the variable.  */
+  uint64_t total_size;
+  const char *name;
+  struct variable_type *next;
+  enum field_type field_type;
+  /* This field is set to true if DW_AT_location is present with DW_OP_addr
+     operand.  */
+  bool has_location_addr;
+  /* This field is set to true if DW_AT_specification is present.  It represents
+     an incomplete, non-defining, or separate declaration corresponding to a
+     declaration.  */
+  bool is_specification;
+  /* This field is set to true if DW_AT_abstract_origin is present.  It
+     represents an inlined instances of inline subprograms.  */
+  bool is_abstract_origin;
+};
+
 /* N.B. The order here must match the order in debug_displays.  */
 
 enum dwarf_section_display_enum
@@ -124,6 +377,7 @@ enum dwarf_section_display_enum
   debug_sup,
   separate_debug_str,
   note_gnu_build_id,
+  debug_variable_info,
   max
 };
 
@@ -250,8 +504,10 @@ extern void free_debug_section (enum dwarf_section_display_enum);
 extern bool load_separate_debug_files (void *, const char *);
 extern void close_debug_file (void *);
 extern void *open_debug_file (const char *);
+extern void resolve_and_display_variable_info (void);
 
 extern void free_debug_memory (void);
+extern void free_mapping_info_struct (void);
 
 extern int dwarf_select_sections_by_names (const char *);
 extern int dwarf_select_sections_by_letters (const char *);

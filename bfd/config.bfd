@@ -48,10 +48,6 @@ targ_underscore=no
 
 # Catch obsolete configurations.
 case $targ in
- *-*-solaris2.1[01]*)
-    # Only Solaris 10+ is not obsolete.
-    ;;
- *-*-solaris* | \
  null)
     if test "x$enable_obsolete" != xyes; then
       echo "*** Configuration $targ is obsolete." >&2
@@ -81,6 +77,10 @@ case $targ in
  mips*-*-irix5* | mips*-*-irix6*)
     # Not obsolete
     ;;
+ *-*-solaris2.1[01]*)
+    # Solaris 10+ is not obsolete.
+    ;;
+ *-*-solaris* | \
  *-*-beos* | \
  *-*-cloudabi* | \
  *-*-ieee* | \

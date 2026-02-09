@@ -82,9 +82,9 @@ Appendices
 @section Overview
 @cindex Overview
 
-The SFrame stack trace information is provided in a loaded section, known as
-the @code{.sframe} section.  When available, the @code{.sframe} section appears
-in segment of type @code{PT_GNU_SFRAME}.  An ELF SFrame section will have the type
+The SFrame stack trace information is provided in a loaded section, named
+@code{.sframe}.  When available, the @code{.sframe} section appears in segment
+of type @code{PT_GNU_SFRAME}.  An ELF SFrame section will have the type
 @code{SHT_GNU_SFRAME}.
 
 The SFrame format is currently supported only for select ABIs, namely, AMD64,
@@ -1255,19 +1255,19 @@ Examples:
 @itemize @bullet
 @item
 CFA = *(RBP - 8): (Typical DRAP pattern on AMD64)
-@* Offset 1: @code{(RBP << 3) | (1 << 1) | 1} (Reg RBP, deref_p=True, reg_p=True)
-@* Offset 2: @code{-8}
+@* Data Word 1: @code{(RBP << 3) | (1 << 1) | 1} (Reg RBP, deref_p=True, reg_p=True)
+@* Data Word 2: @code{-8}
 
 @item
 FP = *(RBP + 0):
-@* Offset 1: @code{(RBP << 3) | (1 << 1) | 1} (Reg RBP, deref_p=True, reg_p=True)
-@* Offset 2: @code{0}
+@* Data Word 1: @code{(RBP << 3) | (1 << 1) | 1} (Reg RBP, deref_p=True, reg_p=True)
+@* Data Word 2: @code{0}
 
 @item
 RA = *(CFA - 8): (Standard RA recovery on AMD64)
-@* Offset 1: @code{(0 << 3 | (1 << 1) | 0)} (reg_p=False, implies Base=CFA,
+@* Data Word 1: @code{(0 << 3 | (1 << 1) | 0)} (reg_p=False, implies Base=CFA,
 deref_p=True by implication of standard stack save)
-@* Offset 2: @code{-8}
+@* Data Word 2: @code{-8}
 @end itemize
 
 If the FDE type is @code{SFRAME_FDE_TYPE_FLEX}, the FRE bytes are interpreted

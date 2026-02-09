@@ -413,6 +413,10 @@ const struct bpf_opcode bpf_opcodes[] =
   {BPF_INSN_AADD32, "xaddw%W[ %dr %o16 ] , %sr", "* ( u32 * ) ( %dr %o16 ) += %sr",
    BPF_V1, BPF_CODE|BPF_IMM32, BPF_CLASS_STX|BPF_SIZE_W|BPF_MODE_ATOMIC|BPF_IMM32_AADD},
 
+  /* The "conditional pseudo-jump" instruction, a.k.a. "may_goto".  */
+  {BPF_INSN_JCOND, "jcond%W%d16", "may_goto%w%d16",
+   BPF_V4, BPF_CODE|BPF_IMM32, BPF_CLASS_JMP|BPF_CODE_JCOND|BPF_SRC_K},
+
   /* the brkpt instruction is used by the BPF simulator and it doesn't
      really belong to the BPF instruction set.  */
   {BPF_INSN_BRKPT, "brkpt", "brkpt",

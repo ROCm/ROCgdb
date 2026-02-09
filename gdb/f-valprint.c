@@ -559,7 +559,7 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
 		  field = value_of_variable (sym.symbol, sym.block);
 		}
 	      else
-		field = value_field (val, index);
+		field = val->field (index);
 
 	      if (printed_field > 0)
 		gdb_puts (", ", stream);

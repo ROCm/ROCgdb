@@ -102,11 +102,6 @@ sol2_core_pid_to_str (struct gdbarch *gdbarch, ptid_t ptid)
 void
 sol2_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
-  /* The Sun compilers (Sun ONE Studio, Forte Developer, Sun WorkShop, SunPRO)
-     compiler puts out 0 instead of the address in N_SO stabs.  Starting with
-     SunPRO 3.0, the compiler does this for N_FUN stabs too.  */
-  set_gdbarch_sofun_address_maybe_missing (gdbarch, 1);
-
   /* Solaris uses SVR4-style shared libraries.  */
   set_gdbarch_skip_solib_resolver (gdbarch, sol2_skip_solib_resolver);
 

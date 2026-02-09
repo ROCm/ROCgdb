@@ -1,5 +1,8 @@
 -*- text -*-
 
+* Add --map-global-vars option to objdump which displays the location and type
+  of global variables in object files.
+
 Changes in 2.46:
 
 * SFrame stack trace format now represents an undefined return address as

@@ -8394,10 +8394,6 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_program_breakpoint_here_p (gdbarch,
 					 rs6000_program_breakpoint_here_p);
 
-  /* The value of symbols of type N_SO and N_FUN maybe null when
-     it shouldn't be.  */
-  set_gdbarch_sofun_address_maybe_missing (gdbarch, 1);
-
   /* Handles single stepping of atomic sequences.  */
   set_gdbarch_get_next_pcs (gdbarch, ppc_deal_with_atomic_sequence);
 
@@ -8438,22 +8434,9 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   info.tdesc_data = tdesc_data.get ();
   gdbarch_init_osabi (info, gdbarch);
 
-  switch (info.osabi)
-    {
-    case GDB_OSABI_LINUX:
-    case GDB_OSABI_NETBSD:
-    case GDB_OSABI_UNKNOWN:
-      frame_unwind_append_unwinder (gdbarch, &rs6000_epilogue_frame_unwind);
-      frame_unwind_append_unwinder (gdbarch, &rs6000_frame_unwind);
-      frame_base_append_sniffer (gdbarch, rs6000_frame_base_sniffer);
-      break;
-    default:
-      set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
-      frame_unwind_append_unwinder (gdbarch, &rs6000_epilogue_frame_unwind);
-      frame_unwind_append_unwinder (gdbarch, &rs6000_frame_unwind);
-      frame_base_append_sniffer (gdbarch, rs6000_frame_base_sniffer);
-    }
+  frame_unwind_append_unwinder (gdbarch, &rs6000_epilogue_frame_unwind);
+  frame_unwind_append_unwinder (gdbarch, &rs6000_frame_unwind);
+  frame_base_append_sniffer (gdbarch, rs6000_frame_base_sniffer);
 
   set_tdesc_pseudo_register_type (gdbarch, rs6000_pseudo_register_type);
   set_tdesc_pseudo_register_reggroup_p (gdbarch,

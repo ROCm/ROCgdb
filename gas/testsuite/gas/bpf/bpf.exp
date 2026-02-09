@@ -47,6 +47,9 @@ if {[istarget bpf*-*-*]} {
     run_dump_test jump-relax-ja
     run_dump_test jump-relax-jump
 
+    run_dump_test jcond
+    run_dump_test jcond-pseudoc
+
     # Big-endian BPF tests
     run_dump_test call-be
     run_dump_test exit-be
@@ -69,6 +72,9 @@ if {[istarget bpf*-*-*]} {
 
     run_dump_test jump-relax-ja-be
     run_dump_test jump-relax-jump-be
+
+    run_dump_test jcond-be
+    run_dump_test jcond-be-pseudoc
 
     # Overflow tests
     run_dump_test offset16-overflow

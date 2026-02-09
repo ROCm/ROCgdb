@@ -220,8 +220,6 @@ extern void set_gdbarch_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_
 
    Implementations should be migrated to implement pseudo_register_write instead. */
 
-extern bool gdbarch_deprecated_pseudo_register_write_p (struct gdbarch *gdbarch);
-
 typedef void (gdbarch_deprecated_pseudo_register_write_ftype) (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
 extern void gdbarch_deprecated_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache, int cookednum, const gdb_byte *buf);
 extern void set_gdbarch_deprecated_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_deprecated_pseudo_register_write_ftype *deprecated_pseudo_register_write);
@@ -377,12 +375,6 @@ typedef void (gdbarch_print_float_info_ftype) (struct gdbarch *gdbarch, struct u
 extern void gdbarch_print_float_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, const char *args);
 extern void set_gdbarch_print_float_info (struct gdbarch *gdbarch, gdbarch_print_float_info_ftype *print_float_info);
 
-extern bool gdbarch_print_vector_info_p (struct gdbarch *gdbarch);
-
-typedef void (gdbarch_print_vector_info_ftype) (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, const char *args);
-extern void gdbarch_print_vector_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, const char *args);
-extern void set_gdbarch_print_vector_info (struct gdbarch *gdbarch, gdbarch_print_vector_info_ftype *print_vector_info);
-
 /* MAP a GDB RAW register number onto a simulator register number.  See
    also include/...-sim.h. */
 
@@ -408,9 +400,6 @@ extern bool gdbarch_get_longjmp_target_p (struct gdbarch *gdbarch);
 typedef int (gdbarch_get_longjmp_target_ftype) (const frame_info_ptr &frame, CORE_ADDR *pc);
 extern int gdbarch_get_longjmp_target (struct gdbarch *gdbarch, const frame_info_ptr &frame, CORE_ADDR *pc);
 extern void set_gdbarch_get_longjmp_target (struct gdbarch *gdbarch, gdbarch_get_longjmp_target_ftype *get_longjmp_target);
-
-extern int gdbarch_believe_pcc_promotion (struct gdbarch *gdbarch);
-extern void set_gdbarch_believe_pcc_promotion (struct gdbarch *gdbarch, int believe_pcc_promotion);
 
 typedef int (gdbarch_convert_register_p_ftype) (struct gdbarch *gdbarch, int regnum, struct type *type);
 extern int gdbarch_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type);
@@ -1021,8 +1010,6 @@ extern void set_gdbarch_register_reggroup_p (struct gdbarch *gdbarch, gdbarch_re
 
 /* Fetch the pointer to the ith function argument. */
 
-extern bool gdbarch_fetch_pointer_argument_p (struct gdbarch *gdbarch);
-
 typedef CORE_ADDR (gdbarch_fetch_pointer_argument_ftype) (const frame_info_ptr &frame, int argi, struct type *type);
 extern CORE_ADDR gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, const frame_info_ptr &frame, int argi, struct type *type);
 extern void set_gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, gdbarch_fetch_pointer_argument_ftype *fetch_pointer_argument);
@@ -1066,15 +1053,11 @@ extern void set_gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, gdbar
 
 /* Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be dumped to a core file */
 
-extern bool gdbarch_create_memtag_section_p (struct gdbarch *gdbarch);
-
 typedef asection * (gdbarch_create_memtag_section_ftype) (struct gdbarch *gdbarch, bfd *obfd, CORE_ADDR address, size_t size);
 extern asection * gdbarch_create_memtag_section (struct gdbarch *gdbarch, bfd *obfd, CORE_ADDR address, size_t size);
 extern void set_gdbarch_create_memtag_section (struct gdbarch *gdbarch, gdbarch_create_memtag_section_ftype *create_memtag_section);
 
 /* Given a memory tag section OSEC, fill OSEC's contents with the appropriate tag data */
-
-extern bool gdbarch_fill_memtag_section_p (struct gdbarch *gdbarch);
 
 typedef bool (gdbarch_fill_memtag_section_ftype) (struct gdbarch *gdbarch, asection *osec);
 extern bool gdbarch_fill_memtag_section (struct gdbarch *gdbarch, asection *osec);
@@ -1166,12 +1149,6 @@ extern void set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch, in
 extern int gdbarch_vbit_in_delta (struct gdbarch *gdbarch);
 extern void set_gdbarch_vbit_in_delta (struct gdbarch *gdbarch, int vbit_in_delta);
 
-/* Advance PC to next instruction in order to skip a permanent breakpoint. */
-
-typedef void (gdbarch_skip_permanent_breakpoint_ftype) (struct regcache *regcache);
-extern void gdbarch_skip_permanent_breakpoint (struct gdbarch *gdbarch, struct regcache *regcache);
-extern void set_gdbarch_skip_permanent_breakpoint (struct gdbarch *gdbarch, gdbarch_skip_permanent_breakpoint_ftype *skip_permanent_breakpoint);
-
 /* The maximum length of an instruction on this architecture in bytes. */
 
 extern bool gdbarch_max_insn_length_p (struct gdbarch *gdbarch);
@@ -1202,8 +1179,6 @@ extern void set_gdbarch_max_insn_length (struct gdbarch *gdbarch, ULONGEST max_i
    If the instruction cannot execute out of line, return NULL.  The
    core falls back to stepping past the instruction in-line instead in
    that case. */
-
-extern bool gdbarch_displaced_step_copy_insn_p (struct gdbarch *gdbarch);
 
 typedef displaced_step_copy_insn_closure_up (gdbarch_displaced_step_copy_insn_ftype) (struct gdbarch *gdbarch, CORE_ADDR from, CORE_ADDR to, struct regcache *regs);
 extern displaced_step_copy_insn_closure_up gdbarch_displaced_step_copy_insn (struct gdbarch *gdbarch, CORE_ADDR from, CORE_ADDR to, struct regcache *regs);
@@ -1307,8 +1282,6 @@ extern void set_gdbarch_displaced_step_buffer_length (struct gdbarch *gdbarch, U
    relative branches, and other PC-relative instructions need the
    offset adjusted; etc. */
 
-extern bool gdbarch_relocate_instruction_p (struct gdbarch *gdbarch);
-
 typedef void (gdbarch_relocate_instruction_ftype) (struct gdbarch *gdbarch, CORE_ADDR *to, CORE_ADDR from);
 extern void gdbarch_relocate_instruction (struct gdbarch *gdbarch, CORE_ADDR *to, CORE_ADDR from);
 extern void set_gdbarch_relocate_instruction (struct gdbarch *gdbarch, gdbarch_relocate_instruction_ftype *relocate_instruction);
@@ -1326,11 +1299,6 @@ extern bool gdbarch_core_read_description_p (struct gdbarch *gdbarch);
 typedef const struct target_desc * (gdbarch_core_read_description_ftype) (struct gdbarch *gdbarch, struct target_ops *target, bfd *abfd);
 extern const struct target_desc * gdbarch_core_read_description (struct gdbarch *gdbarch, struct target_ops *target, bfd *abfd);
 extern void set_gdbarch_core_read_description (struct gdbarch *gdbarch, gdbarch_core_read_description_ftype *core_read_description);
-
-/* Set if the address in N_SO or N_FUN stabs may be zero. */
-
-extern int gdbarch_sofun_address_maybe_missing (struct gdbarch *gdbarch);
-extern void set_gdbarch_sofun_address_maybe_missing (struct gdbarch *gdbarch, int sofun_address_maybe_missing);
 
 /* Parse the instruction at ADDR storing in the record execution log
    the registers REGCACHE and memory ranges that will be affected when
@@ -1645,27 +1613,11 @@ typedef void (gdbarch_guess_tracepoint_registers_ftype) (struct gdbarch *gdbarch
 extern void gdbarch_guess_tracepoint_registers (struct gdbarch *gdbarch, struct regcache *regcache, CORE_ADDR addr);
 extern void set_gdbarch_guess_tracepoint_registers (struct gdbarch *gdbarch, gdbarch_guess_tracepoint_registers_ftype *guess_tracepoint_registers);
 
-/* Return the "auto" target charset. */
-
-typedef const char * (gdbarch_auto_charset_ftype) ();
-extern const char * gdbarch_auto_charset (struct gdbarch *gdbarch);
-extern void set_gdbarch_auto_charset (struct gdbarch *gdbarch, gdbarch_auto_charset_ftype *auto_charset);
-
 /* Return the "auto" target wide charset. */
 
 typedef const char * (gdbarch_auto_wide_charset_ftype) ();
 extern const char * gdbarch_auto_wide_charset (struct gdbarch *gdbarch);
 extern void set_gdbarch_auto_wide_charset (struct gdbarch *gdbarch, gdbarch_auto_wide_charset_ftype *auto_wide_charset);
-
-/* If non-empty, this is a file extension that will be opened in place
-   of the file extension reported by the shared library list.
-
-   This is most useful for toolchains that use a post-linker tool,
-   where the names of the files run on the target differ in extension
-   compared to the names of the files GDB should load for debug info. */
-
-extern const char * gdbarch_solib_symbols_extension (struct gdbarch *gdbarch);
-extern void set_gdbarch_solib_symbols_extension (struct gdbarch *gdbarch, const char * solib_symbols_extension);
 
 /* If true, the target OS has DOS-based file system semantics.  That
    is, absolute paths include a drive name, and the backslash is

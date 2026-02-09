@@ -2339,6 +2339,7 @@ objdump [@option{-a}|@option{--archive-headers}]
         [@option{-WN}|@option{--dwarf=no-follow-links}]
         [@option{-wD}|@option{--dwarf=use-debuginfod}]
         [@option{-wE}|@option{--dwarf=do-not-use-debuginfod}]
+        [@option{--map-global-vars}]
         [@option{-L}|@option{--process-links}]
         [@option{--ctf=}@var{section}]
         [@option{--sframe=}@var{section}]
@@ -2584,6 +2585,12 @@ for specification with @option{-b} or @option{-m}.
 @cindex section information
 Display information for section @var{name}.  This option may be
 specified multiple times.
+
+@item --map-global-vars
+Display global variable information.  This option only works when the object
+file is compiled with the debug option.  More precisely, it relies on DWARF2
+debug information entries.  It is useful for tracking the location and type of
+all global variables in the given object file.
 
 @item -L
 @itemx --process-links

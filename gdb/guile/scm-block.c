@@ -535,16 +535,13 @@ bkscm_print_block_syms_progress_smob (SCM self, SCM port,
 	case GLOBAL_BLOCK:
 	case STATIC_BLOCK:
 	  {
-	    struct compunit_symtab *cust;
-
 	    gdbscm_printf (port, " %s",
 			   i_smob->iter.which == GLOBAL_BLOCK
 			   ? "global" : "static");
 	    if (i_smob->iter.idx != -1)
 	      gdbscm_printf (port, " @%d", i_smob->iter.idx);
-	    cust = (i_smob->iter.idx == -1
-		    ? i_smob->iter.d.compunit_symtab
-		    : i_smob->iter.d.compunit_symtab->includes[i_smob->iter.idx]);
+
+	    compunit_symtab *cust = i_smob->iter.compunit_symtab ();
 	    gdbscm_printf (port, " %s",
 			   symtab_to_filename_for_display
 			     (cust->primary_filetab ()));

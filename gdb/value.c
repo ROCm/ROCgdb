@@ -3192,16 +3192,6 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
   return v;
 }
 
-/* Given a value ARG1 of a struct or union type,
-   extract and return the value of one of its (non-static) fields.
-   FIELDNO says which field.  */
-
-struct value *
-value_field (struct value *arg1, int fieldno)
-{
-  return arg1->primitive_field (0, fieldno, arg1->type ());
-}
-
 /* Return a non-virtual function as a value.
    F is the list of member functions which contains the desired method.
    J is an index into F which provides the desired method.

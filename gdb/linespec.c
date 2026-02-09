@@ -1250,8 +1250,6 @@ find_methods (struct type *t, enum language t_lang, const char *name,
 		  const char *phys_name;
 
 		  f = TYPE_FN_FIELDLIST1 (t, method_counter);
-		  if (TYPE_FN_FIELD_STUB (f, field_counter))
-		    continue;
 		  phys_name = TYPE_FN_FIELD_PHYSNAME (f, field_counter);
 		  result_names->push_back (phys_name);
 		}

@@ -52,8 +52,29 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-#define DO_LOC     0x1
-#define DO_TYPES   0x2
+/* Flag values for the do_flags parameter passed
+   to the process_debug_info() function.  */
+#define DO_LOC         0x1
+#define DO_TYPES       0x2
+#define DO_GLOBAL_VARS 0x4
+
+#define PRINT_SPACE(n) do { \
+  int _i; \
+  for (_i = 0; _i < (n); ++_i) \
+    putchar (' '); \
+} while (0)
+
+#define PRINT_LBRACE(n) do { \
+  PRINT_SPACE (n); \
+  putchar ('{'); \
+  putchar ('\n'); \
+} while (0)
+
+#define PRINT_RBRACE(n) do { \
+  PRINT_SPACE (n); \
+  putchar ('}'); \
+  putchar ('\n'); \
+} while (0)
 
 static const char *regname (unsigned int regno, int row);
 static const char *regname_internal_by_table_only (unsigned int regno);
@@ -65,6 +86,18 @@ static int need_base_address;
 static unsigned int num_debug_info_entries = 0;
 static unsigned int alloc_num_debug_info_entries = 0;
 static debug_info *debug_information = NULL;
+
+static struct base_type_l base_type_list = {NULL, NULL};
+static struct type_def_l type_def_list = {NULL, NULL};
+static struct enum_type_l enum_type_list = {NULL, NULL};
+static struct tab_type_l tab_type_list = {NULL, NULL};
+static struct member_parent_l struct_type_list = {NULL, NULL};
+static struct member_parent_l union_type_list = {NULL, NULL};
+static struct type_ptr_l ptr_type_list = {NULL, NULL};
+static struct type_ref_l const_type_list = {NULL, NULL};
+static struct type_ref_l volatile_type_list = {NULL, NULL};
+static struct variable_type_l variable_type_list = {NULL, NULL};
+
 /* Special value for num_debug_info_entries to indicate
    that the .debug_info section could not be loaded/parsed.  */
 #define DEBUG_INFO_UNAVAILABLE  (unsigned int) -1
@@ -1162,6 +1195,150 @@ display_block (unsigned char *data,
     printf ("%" PRIx64 " ", byte_get (data++, 1));
 
   return data;
+}
+
+static int
+get_location_expression (int die_tag,
+			 unsigned long attribute,
+			 unsigned char * data,
+			 unsigned int pointer_size,
+			 unsigned int offset_size,
+			 int dwarf_version,
+			 uint64_t length,
+			 uint64_t die_offset,
+			 uint64_t cu_offset,
+			 struct dwarf_section * section)
+{
+  unsigned op;
+  uint64_t uvalue = 0;
+  int64_t svalue;
+  unsigned char *end = data + length;
+  int need_frame_base = 0;
+
+  while (data < end)
+    {
+      op = *data++;
+
+      switch (op)
+	{
+	case DW_OP_addr:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
+	  if (die_tag == DW_TAG_variable && attribute == DW_AT_location)
+	    {
+	      assert (variable_type_list.tail != NULL);
+	      if (!variable_type_list.tail->has_location_addr)
+		{
+		  variable_type_list.tail->location_addr = uvalue;
+		  variable_type_list.tail->has_location_addr = true;
+		}
+	    }
+	  break;
+	case DW_OP_const1u:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 1, end);
+	  break;
+	case DW_OP_const1s:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 1, end);
+	  break;
+	case DW_OP_const2u:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 2, end);
+	  break;
+	case DW_OP_const2s:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 2, end);
+	  break;
+	case DW_OP_const4u:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 4, end);
+	  break;
+	case DW_OP_const4s:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 4, end);
+	  break;
+	case DW_OP_const8u:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 8, end);
+	  break;
+	case DW_OP_const8s:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 8, end);
+	  break;
+	case DW_OP_bra:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 2, end);
+	  break;
+	case DW_OP_skip:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 2, end);
+	  break;
+
+	case DW_OP_deref_size:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 1, end);
+	  break;
+	case DW_OP_xderef_size:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 1, end);
+	  break;
+
+	case DW_OP_call2:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 2, end);
+	  break;
+	case DW_OP_call4:
+	  SAFE_SIGNED_BYTE_GET_AND_INC (svalue, data, 4, end);
+	  break;
+	case DW_OP_call_ref:
+	  if (dwarf_version == -1)
+	    /* No way to tell where the next op is, so just bail.  */
+	    return need_frame_base;
+	  else if (dwarf_version == 2)
+	    SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
+	  else
+	    SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
+	  break;
+	case DW_OP_implicit_value:
+	  READ_ULEB (uvalue, data, end);
+	  break;
+	case DW_OP_implicit_pointer:
+	case DW_OP_GNU_implicit_pointer:
+	  if (dwarf_version == -1)
+      return need_frame_base;
+	  else if (dwarf_version == 2)
+      SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
+	  else
+      SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
+	  break;
+	case DW_OP_entry_value:
+	case DW_OP_GNU_entry_value:
+	  READ_ULEB (uvalue, data, end);
+	  /* PR 17531: file: 0cc9cd00.  */
+	  if (uvalue > (size_t) (end - data))
+	    uvalue = end - data;
+	  if (get_location_expression
+	      (die_tag, attribute, data, pointer_size, offset_size,
+	       dwarf_version, uvalue, die_offset, cu_offset, section))
+	    need_frame_base = 1;
+	  data += uvalue;
+	  break;
+	case DW_OP_const_type:
+	case DW_OP_GNU_const_type:
+	  READ_ULEB (uvalue, data, end);
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 1, end);
+	  break;
+	case DW_OP_deref_type:
+	case DW_OP_GNU_deref_type:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 1, end);
+	  break;
+	case DW_OP_GNU_parameter_ref:
+	  SAFE_BYTE_GET_AND_INC (uvalue, data, 4, end);
+	  break;
+	case DW_OP_addrx:
+	  READ_ULEB (uvalue, data, end);
+	  break;
+	case DW_OP_GNU_variable_value:
+	  if (dwarf_version == -1)
+	    return need_frame_base;
+	  else if (dwarf_version == 2)
+	    SAFE_BYTE_GET_AND_INC (uvalue, data, pointer_size, end);
+	  else
+	    SAFE_BYTE_GET_AND_INC (uvalue, data, offset_size, end);
+	  break;
+
+	default:
+	  return need_frame_base;
+	}
+    }
+  return need_frame_base;
 }
 
 static int
@@ -2529,6 +2706,848 @@ display_lang (uint64_t uvalue)
     }
 }
 
+static void
+display_base_type (const base_type bt)
+{
+  printf ("type: %s", bt.name);
+  if (bt.size_type == UNSIGNED_S)
+    printf (", size: %#" PRIx64 "\n", bt.size.usize);
+  else if (bt.size_type == SIGNED_S)
+    printf (", size: %#" PRIx64 "\n", bt.size.ssize);
+}
+
+static base_type *
+get_or_create_base_type (uint64_t die_offset)
+{
+  if (base_type_list.tail == NULL
+      || base_type_list.tail->die_offset != die_offset)
+    {
+      base_type *ret = xmalloc (sizeof (*ret));
+      ret->die_offset = die_offset;
+      ret->name = NULL;
+      ret->next = NULL;
+      ret->field_type = BASE_TYPE;
+      ret->size_type = UNSIGNED_S;
+      ret->size.usize = 0;
+      if (base_type_list.head == NULL)
+	{
+	  base_type_list.head = ret;
+	  base_type_list.tail = ret;
+	}
+      else
+	{
+	  base_type_list.tail->next = ret;
+	  base_type_list.tail = ret;
+	}
+    }
+  return base_type_list.tail;
+}
+
+static void
+display_type_def (const type_def td)
+{
+  printf ("type: typedef %s\n", td.name);
+}
+
+static type_def*
+get_or_create_type_def (uint64_t die_offset)
+{
+  if (type_def_list.tail == NULL
+      || type_def_list.tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+      type_def *ret = xmalloc (sizeof (*ret));
+      ret->ptr_type = gt;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->name = NULL;
+      ret->next = NULL;
+      ret->field_type = TYPE_DEF;
+      if (type_def_list.head == NULL)
+	{
+	  type_def_list.head = ret;
+	  type_def_list.tail = ret;
+	}
+      else
+	{
+	  type_def_list.tail->next = ret;
+	  type_def_list.tail = ret;
+	}
+    }
+  return type_def_list.tail;
+}
+
+static void
+display_enum (enum_constant *ec, int nb_tab)
+{
+  enum_constant *head = ec;
+  while (head != NULL)
+    {
+      PRINT_SPACE (nb_tab);
+      printf ("value: %s = %" PRId64 "\n", head->name, head->value);
+      head = head->next;
+    }
+}
+
+static enum_constant *
+get_or_create_enum_constant (enum_type *et, uint64_t die_offset)
+{
+  assert (et != NULL);
+  if (et->enum_const_tail == NULL
+      || et->enum_const_tail->die_offset != die_offset)
+    {
+      enum_constant *enum_const = xmalloc (sizeof (*enum_const));
+      enum_const->die_offset = die_offset;
+      enum_const->value = 0;
+      enum_const->name = NULL;
+      enum_const->next = NULL;
+      if (et->enum_const_head == NULL)
+	{
+	  et->enum_const_head = enum_const;
+	  et->enum_const_tail = enum_const;
+	}
+      else
+	{
+	  et->enum_const_tail->next = enum_const;
+	  et->enum_const_tail = enum_const;
+	}
+    }
+  return et->enum_const_tail;
+}
+
+static void
+display_enum_type (const enum_type et, int nb_tab)
+{
+  if (et.name == NULL)
+    printf ("type: enum <anonymous>, size: %#" PRIx64 "\n", et.size.usize);
+  else
+    printf ("type: enum %s, size: %#" PRIx64 "\n", et.name, et.size.usize);
+  PRINT_LBRACE (nb_tab);
+  display_enum (et.enum_const_head, nb_tab + 1);
+  PRINT_RBRACE (nb_tab);
+}
+
+static enum_type *
+get_or_create_enum_type (uint64_t die_offset)
+{
+  if (enum_type_list.tail == NULL
+      || enum_type_list.tail->die_offset != die_offset)
+    {
+      enum_type *ret = xmalloc (sizeof (*ret));
+
+      ret->die_offset = die_offset;
+      ret->size.usize = 0;
+      ret->name = NULL;
+      ret->enum_const_head = NULL;
+      ret->enum_const_tail = NULL;
+      ret->next = NULL;
+      ret->field_type = ENUM_TYPE;
+      ret->size_type = UNSIGNED_S;
+      if (enum_type_list.head == NULL)
+	{
+	  enum_type_list.head = ret;
+	  enum_type_list.tail = ret;
+	}
+      else
+	{
+	  enum_type_list.tail->next = ret;
+	  enum_type_list.tail = ret;
+	}
+    }
+  return enum_type_list.tail;
+}
+
+static void
+display_subrange_type (subrange_type *st)
+{
+  subrange_type *head = st;
+
+  while (head != NULL)
+    {
+      if (head->size_type == UNSIGNED_S)
+	printf ("[%" PRIu64 "]", head->size.usize);
+      else if (head->size_type == SIGNED_S)
+	printf ("[%" PRId64 "]", head->size.ssize);
+      head = head->next;
+    }
+}
+
+static subrange_type *
+get_or_create_subrange_type (tab_type *tt, uint64_t die_offset)
+{
+  assert (tt != NULL);
+  if (tt->subrange_tail == NULL
+      || tt->subrange_tail->die_offset != die_offset)
+    {
+      subrange_type *ret = xmalloc (sizeof (*ret));
+
+      ret->die_offset = die_offset;
+      ret->size.usize = 0;
+      ret->next = NULL;
+      ret->size_type = UNSIGNED_S;
+      if (tt->subrange_head == NULL)
+	{
+	  tt->subrange_head = ret;
+	  tt->subrange_tail = ret;
+	}
+      else
+	{
+	  tt->subrange_tail->next = ret;
+	  tt->subrange_tail = ret;
+	}
+    }
+  return tt->subrange_tail;
+}
+
+static void
+display_tab_type (const tab_type tt)
+{
+  printf ("type: array");
+  display_subrange_type (tt.subrange_head);
+  printf ("\n");
+}
+
+static tab_type *
+get_or_create_tab_type (uint64_t die_offset)
+{
+  if (tab_type_list.tail == NULL
+      || tab_type_list.tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+      tab_type *ret = xmalloc (sizeof (*ret));
+      ret->ptr_type = gt;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->subrange_head = NULL;
+      ret->subrange_tail = NULL;
+      ret->next = NULL;
+      ret->field_type = TAB_TYPE;
+      if (tab_type_list.head == NULL)
+	{
+	  tab_type_list.head = ret;
+	  tab_type_list.tail = ret;
+	}
+      else
+	{
+	  tab_type_list.tail->next = ret;
+	  tab_type_list.tail = ret;
+	}
+    }
+  return tab_type_list.tail;
+}
+
+static void
+display_member_type (const member_type mt)
+{
+  if (mt.name == NULL)
+    printf ("member: (anonymous), offset: %#" PRIx64 "\n", mt.member_offset);
+  else
+    printf ("member: %s, offset: %#" PRIx64 "\n", mt.name, mt.member_offset);
+}
+
+static member_type *
+get_or_create_member_type (member_parent *parent, uint64_t die_offset)
+{
+  assert (parent != NULL);
+  if (parent->member_tail == NULL
+      || parent->member_tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+      member_type *ret = xmalloc (sizeof (*ret));
+      ret->ptr_type = gt;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->member_offset = 0;
+      ret->name = 0;
+      ret->next = NULL;
+      ret->field_type = MEMBER_TYPE;
+      if (parent->member_head == NULL)
+	{
+	  parent->member_head = ret;
+	  parent->member_tail = ret;
+	}
+      else
+	{
+	  parent->member_tail->next = ret;
+	  parent->member_tail = ret;
+	}
+    }
+  return parent->member_tail;
+}
+
+static bool
+display_member_parent (const member_parent mp)
+{
+  if (mp.displayed)
+    {
+      printf ("nested: struct %s\n", mp.name);
+      return true;
+    }
+  else if (mp.type == UNION_TYPE)
+    {
+      if (mp.name == NULL)
+	printf ("type: union <anonymous>");
+      else
+	printf ("type: union %s", mp.name);
+    }
+  else if (mp.type == STRUCT_TYPE)
+    {
+      if (mp.name == NULL)
+	printf ("type: struct <anonymous>");
+      else
+	printf ("type: struct %s", mp.name);
+    }
+
+  if (mp.is_declaration)
+    printf (", incomplete or non-defining declaration\n");
+  else if (mp.size_type == UNSIGNED_S)
+    printf (", size: %#" PRIx64 "\n", mp.size.usize);
+  else if (mp.size_type == SIGNED_S)
+    printf (", size: %#" PRIx64 "\n", mp.size.ssize);
+
+  return false;
+}
+
+static member_parent *
+get_or_create_member_parent (struct member_parent_l *mp_list,
+				     uint64_t die_offset)
+{
+  if (mp_list->tail == NULL
+      || mp_list->tail->die_offset != die_offset)
+    {
+      member_parent *ret = xmalloc (sizeof (*ret));
+      ret->die_offset = die_offset;
+      ret->size.usize = 0;
+      ret->name = NULL;
+      ret->member_head = NULL;
+      ret->member_tail = NULL;
+      ret->next = NULL;
+      ret->size_type = UNSIGNED_S;
+      ret->field_type = MEMBER_PARENT;
+      ret->type = UNION_TYPE;
+      ret->is_declaration = false;
+      ret->linked = false;
+      ret->displayed = false;
+      if (mp_list->head == NULL)
+	{
+	  mp_list->head = ret;
+	  mp_list->tail = ret;
+	}
+      else
+	{
+	  mp_list->tail->next = ret;
+	  mp_list->tail = ret;
+	}
+    }
+  return mp_list->tail;
+}
+
+static void
+display_type_ptr (const type_ptr tp)
+{
+  if (tp.size_type == UNSIGNED_S)
+    printf ("type: ptr, size: %#" PRIx64 "\n", tp.size.usize);
+  else if (tp.size_type == SIGNED_S)
+    printf ("type: ptr, size: %#" PRIx64 "\n", tp.size.ssize);
+}
+
+static type_ptr *
+get_or_create_type_ptr (uint64_t die_offset)
+{
+  if (ptr_type_list.tail == NULL
+      || ptr_type_list.tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+
+      type_ptr *ret = xmalloc (sizeof (*ret));
+      ret->ptr_type = gt;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->size.usize = 0;
+      ret->next = NULL;
+      ret->field_type = TYPE_PTR;
+      ret->size_type = UNSIGNED_S;
+      if (ptr_type_list.head == NULL)
+	{
+	  ptr_type_list.head = ret;
+	  ptr_type_list.tail = ret;
+	}
+      else
+	{
+	  ptr_type_list.tail->next = ret;
+	  ptr_type_list.tail = ret;
+	}
+    }
+  return ptr_type_list.tail;
+}
+
+static void
+display_type_ref (const type_ref tr)
+{
+  switch (tr.type)
+    {
+    case CONST_TYPE:
+      printf ("type: const\n");
+      break;
+    case VOLATILE_TYPE:
+      printf ("type: volatile\n");
+      break;
+    }
+}
+
+static type_ref *
+get_or_create_type_ref (struct type_ref_l *tr_list,
+			uint64_t die_offset)
+{
+  if (tr_list->tail == NULL
+      || tr_list->tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+      type_ref *ret = xmalloc (sizeof (*ret));
+
+      ret->ptr_type = gt;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->next = NULL;
+      /* Default to CONST_TYPE at initialization.  */
+      ret->type = CONST_TYPE;
+      ret->field_type = TYPE_REF;
+      if (tr_list->head == NULL)
+	{
+	  tr_list->head = ret;
+	  tr_list->tail = ret;
+	}
+      else
+	{
+	  tr_list->tail->next = ret;
+	  tr_list->tail = ret;
+	}
+    }
+  return tr_list->tail;
+}
+
+static void
+display_variable_type (generic_type gt,
+		       int nb_tab)
+{
+  switch (gt.field_type)
+    {
+    case NO_TYPE:
+      break;
+    case BASE_TYPE:
+      PRINT_SPACE (nb_tab);
+      display_base_type (*gt.die_type.base_type);
+      break;
+    case TYPE_DEF:
+      PRINT_SPACE (nb_tab);
+      display_type_def (*gt.die_type.type_def);
+      PRINT_LBRACE (nb_tab);
+      display_variable_type (gt.die_type.type_def->ptr_type, nb_tab + 1);
+      PRINT_RBRACE (nb_tab);
+      break;
+    case ENUM_TYPE:
+      PRINT_SPACE (nb_tab);
+      display_enum_type (*gt.die_type.enum_type, nb_tab);
+      break;
+    case TAB_TYPE:
+      PRINT_SPACE (nb_tab);
+      display_tab_type (*gt.die_type.tab_type);
+      display_variable_type (gt.die_type.tab_type->ptr_type, nb_tab + 1);
+      break;
+    case MEMBER_PARENT:
+      {
+	PRINT_SPACE (nb_tab);
+	if (display_member_parent (*gt.die_type.member_parent))
+	  break;
+	gt.die_type.member_parent->displayed = true;
+	if (gt.die_type.member_parent->member_head != NULL)
+	  {
+	    PRINT_LBRACE (nb_tab);
+	    generic_type generic_mt
+	      = { { .member_type = gt.die_type.member_parent->member_head },
+		  MEMBER_TYPE };
+	    display_variable_type (generic_mt, nb_tab + 1);
+	    PRINT_RBRACE (nb_tab);
+	  }
+      }
+      break;
+    case MEMBER_TYPE:
+      {
+	PRINT_SPACE (nb_tab + 1);
+	display_member_type (*gt.die_type.member_type);
+	display_variable_type (gt.die_type.member_type->ptr_type, nb_tab + 2);
+	if (gt.die_type.member_type->next != NULL)
+	  {
+	    generic_type generic_mt
+	      = { { .member_type = gt.die_type.member_type->next },
+		  MEMBER_TYPE };
+	    display_variable_type (generic_mt, nb_tab);
+	  }
+      }
+      break;
+    case TYPE_PTR:
+      PRINT_SPACE (nb_tab);
+      display_type_ptr (*gt.die_type.type_ptr);
+      display_variable_type (gt.die_type.type_ptr->ptr_type, nb_tab + 1);
+      break;
+    case TYPE_REF:
+      PRINT_SPACE (nb_tab);
+      display_type_ref (*gt.die_type.type_ref);
+      display_variable_type (gt.die_type.type_ref->ptr_type, nb_tab + 1);
+      break;
+    case VARIABLE_TYPE:
+      if (gt.die_type.variable_type->is_specification)
+	printf ("Incomplete, non-defining or separate declaration:\n");
+      else if (gt.die_type.variable_type->is_abstract_origin)
+	printf ("Inlined instance:\n");
+      else
+	{
+	  uint64_t origin = gt.die_type.variable_type->location_addr;
+	  uint64_t end = origin + gt.die_type.variable_type->total_size;
+	  printf ("%s @ 0x%08" PRIx64 " 0x%08"  PRIx64 "\n", gt.die_type.variable_type->name,
+		  origin, end);
+	}
+      display_variable_type (gt.die_type.variable_type->ptr_type, nb_tab + 1);
+      break;
+    }
+}
+
+static variable_type *
+get_or_create_variable_type (uint64_t die_offset)
+{
+  if (variable_type_list.tail == NULL
+    || variable_type_list.tail->die_offset != die_offset)
+    {
+      generic_type gt = { { .base_type = NULL }, NO_TYPE };
+      variable_type *ret = xmalloc (sizeof (*ret));
+      ret->field_type = VARIABLE_TYPE;
+      ret->die_offset = die_offset;
+      ret->ptr_die_offset = 0;
+      ret->location_addr = 0;
+      ret->total_size = 0;
+      ret->has_location_addr = false;
+      ret->is_specification = false;
+      ret->is_abstract_origin = false;
+      ret->name = NULL;
+      ret->ptr_type = gt;
+      ret->next = NULL;
+      if (variable_type_list.head == NULL)
+	{
+	  variable_type_list.head = ret;
+	  variable_type_list.tail = ret;
+	}
+      else
+	{
+	  variable_type_list.tail->next = ret;
+	  variable_type_list.tail = ret;
+	}
+    }
+  return variable_type_list.tail;
+}
+
+static void
+insert_element_in_list (enum dwarf_tag dw_tag,
+			enum dwarf_attribute dw_attr,
+			uint64_t die_offset,
+			const uint64_t *uvalue,
+			const int64_t *svalue,
+			const char *data,
+			bool is_union)
+{
+  switch (dw_tag)
+    {
+    case DW_TAG_base_type:
+      {
+	base_type *bt = get_or_create_base_type (die_offset);
+	if (dw_attr == DW_AT_byte_size)
+	  {
+	    assert (uvalue != NULL || svalue != NULL);
+	    if (uvalue != NULL)
+	      {
+		bt->size.usize = *uvalue;
+		bt->size_type = UNSIGNED_S;
+	      }
+	    else
+	      {
+		bt->size.ssize = *svalue;
+		bt->size_type = SIGNED_S;
+	      }
+	  }
+	else if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      bt->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      bt->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+      }
+      break;
+    case DW_TAG_typedef:
+      {
+	type_def *td = get_or_create_type_def (die_offset);
+	if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    td->ptr_die_offset = *uvalue;
+	  }
+	else if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      td->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      td->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+      }
+      break;
+    case DW_TAG_enumerator:
+      {
+	enum_constant *ec = get_or_create_enum_constant (enum_type_list.tail,
+							 die_offset);
+	if (dw_attr == DW_AT_name)
+	  {
+	    assert (data != NULL || uvalue != NULL);
+	    if (data != NULL)
+	      ec->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      ec->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+	else if (dw_attr == DW_AT_const_value)
+	  {
+	    assert (uvalue != NULL);
+	    ec->value = *uvalue;
+	  }
+      }
+      break;
+    case DW_TAG_enumeration_type:
+      {
+	enum_type *et = get_or_create_enum_type (die_offset);
+	if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      et->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      et->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+	else if (dw_attr == DW_AT_byte_size)
+	  {
+	    assert (uvalue != NULL || svalue != NULL);
+	    if (uvalue != NULL)
+	      {
+		et->size.usize = *uvalue;
+		et->size_type = UNSIGNED_S;
+	      }
+	    else
+	      {
+		et->size.ssize = *svalue;
+		et->size_type = SIGNED_S;
+	      }
+	  }
+      }
+      break;
+    case DW_TAG_subrange_type:
+      {
+	subrange_type *st = get_or_create_subrange_type (tab_type_list.tail,
+							 die_offset);
+	if (dw_attr == DW_AT_upper_bound || dw_attr == DW_AT_count)
+	  {
+	    assert (uvalue != NULL || svalue != NULL);
+	    if (dw_attr == DW_AT_upper_bound)
+	      {
+		if (uvalue != NULL)
+		  {
+		    st->size.usize = *uvalue + 1;
+		    st->size_type = UNSIGNED_S;
+		  }
+		else
+		  {
+		    st->size.ssize = *svalue + 1;
+		    st->size_type = SIGNED_S;
+		  }
+	      }
+	    else if (dw_attr == DW_AT_count)
+	      {
+		if (uvalue != NULL)
+		  {
+		    st->size.usize = *uvalue;
+		    st->size_type = UNSIGNED_S;
+		  }
+		else
+		  {
+		    st->size.ssize = *svalue;
+		    st->size_type = SIGNED_S;
+		  }
+	      }
+	}
+      }
+      break;
+    case DW_TAG_array_type:
+      {
+	tab_type *tt = get_or_create_tab_type (die_offset);
+	if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    tt->ptr_die_offset = *uvalue;
+	  }
+      }
+      break;
+    case DW_TAG_member:
+      {
+	member_type *mt = NULL;
+	if (is_union)
+	  mt = get_or_create_member_type (union_type_list.tail, die_offset);
+	else
+	  mt = get_or_create_member_type (struct_type_list.tail, die_offset);
+
+	if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      mt->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      mt->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+	else if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    mt->ptr_die_offset = *uvalue;
+	  }
+	else if (dw_attr == DW_AT_data_member_location)
+	  {
+	    assert (svalue != NULL || uvalue != NULL);
+	    if (svalue != NULL)
+	      mt->member_offset = *svalue;
+	    else if (uvalue != NULL)
+	      mt->member_offset = *uvalue;
+	  }
+      }
+      break;
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+      {
+	member_parent *mp = NULL;
+	if (dw_tag == DW_TAG_union_type)
+	  mp = get_or_create_member_parent (&union_type_list, die_offset);
+	else if (dw_tag == DW_TAG_structure_type)
+	  {
+	    mp = get_or_create_member_parent (&struct_type_list, die_offset);
+	    mp->type = STRUCT_TYPE;
+	  }
+	if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      mp->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      mp->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+	else if (dw_attr == DW_AT_byte_size)
+	  {
+	    assert (uvalue != NULL || svalue != NULL);
+	   if (uvalue != NULL)
+	      {
+		mp->size.usize = *uvalue;
+		mp->size_type = UNSIGNED_S;
+	      }
+	    else
+	      {
+		mp->size.ssize = *svalue;
+		mp->size_type = SIGNED_S;
+	      }
+	  }
+	else if (dw_attr == DW_AT_declaration)
+	  mp->is_declaration = true;
+      }
+      break;
+    case DW_TAG_pointer_type:
+      {
+	type_ptr* pt = get_or_create_type_ptr (die_offset);
+	if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    pt->ptr_die_offset = *uvalue;
+	  }
+	if (dw_attr == DW_AT_byte_size)
+	  {
+	    assert (uvalue != NULL || svalue != NULL);
+	    if (uvalue != NULL)
+	      {
+		pt->size.usize = *uvalue;
+		pt->size_type = UNSIGNED_S;
+	      }
+	    else
+	      {
+		pt->size.ssize = *svalue;
+		pt->size_type = SIGNED_S;
+	      }
+	  }
+      }
+      break;
+    case DW_TAG_const_type:
+    case DW_TAG_volatile_type:
+      {
+	type_ref *tr = NULL;
+	if (dw_tag == DW_TAG_const_type)
+	  {
+	    tr = get_or_create_type_ref (&const_type_list, die_offset);
+	    tr->type = CONST_TYPE;
+	  }
+	else if (dw_tag == DW_TAG_volatile_type)
+	  {
+	    tr = get_or_create_type_ref (&volatile_type_list, die_offset);
+	    tr->type = VOLATILE_TYPE;
+	  }
+	if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    tr->ptr_die_offset = *uvalue;
+	  }
+      }
+      break;
+    case DW_TAG_variable:
+      {
+	variable_type *vt = get_or_create_variable_type (die_offset);
+	if (dw_attr == DW_AT_name)
+	  {
+	    assert (uvalue != NULL || data != NULL);
+	    if (data != NULL)
+	      vt->name = (const char *) data;
+	    else if (uvalue != NULL)
+	      vt->name = (const char *) fetch_indirect_string (*uvalue);
+	  }
+	else if (dw_attr == DW_AT_type)
+	  {
+	    assert (uvalue != NULL);
+	    if (!vt->is_specification && !vt->is_abstract_origin)
+	      vt->ptr_die_offset = *uvalue;
+	  }
+	else if (dw_attr == DW_AT_specification)
+	  {
+	    assert (uvalue != NULL);
+	    if (!vt->is_abstract_origin)
+	      {
+		vt->ptr_die_offset = *uvalue;
+		vt->is_specification = true;
+	      }
+	  }
+	else if (dw_attr == DW_AT_abstract_origin)
+	  {
+	    assert (uvalue != NULL);
+	    if (!vt->is_specification)
+	      {
+		vt->ptr_die_offset = *uvalue;
+		vt->is_abstract_origin = true;
+	      }
+	  }
+      }
+      break;
+    default:
+      break;
+    }
+}
+
 static unsigned char *
 read_and_display_attr_value (unsigned long attribute,
 			     unsigned long form,
@@ -2545,7 +3564,11 @@ read_and_display_attr_value (unsigned long attribute,
 			     struct dwarf_section *section,
 			     struct cu_tu_set *this_set,
 			     char delimiter,
-			     int level)
+			     int level,
+			     bool do_var_map,
+			     int die_tag,
+			     unsigned long die_offset,
+			     bool is_union)
 {
   int64_t svalue;
   uint64_t uvalue = 0;
@@ -2671,7 +3694,9 @@ read_and_display_attr_value (unsigned long attribute,
 					  cu_offset, pointer_size,
 					  offset_size, dwarf_version,
 					  debug_info_p, do_loc,
-					  section, this_set, delimiter, level);
+					  section, this_set, delimiter, level,
+					  do_var_map, die_tag, die_offset,
+					  is_union);
 
     case DW_FORM_implicit_const:
       uvalue = implicit_const;
@@ -2686,6 +3711,9 @@ read_and_display_attr_value (unsigned long attribute,
     case DW_FORM_ref_addr:
       if (!do_loc)
 	printf ("%c<%#" PRIx64 ">", delimiter, uvalue);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       break;
 
     case DW_FORM_GNU_ref_alt:
@@ -2697,6 +3725,9 @@ read_and_display_attr_value (unsigned long attribute,
 	  else
 	    printf ("%c<alt %#" PRIx64 ">", delimiter, uvalue);
 	}
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       /* FIXME: Follow the reference...  */
       break;
 
@@ -2705,8 +3736,14 @@ read_and_display_attr_value (unsigned long attribute,
     case DW_FORM_ref4:
     case DW_FORM_ref_sup4:
     case DW_FORM_ref_udata:
-      if (!do_loc)
-	printf ("%c<%#" PRIx64 ">", delimiter, uvalue + cu_offset);
+      {
+	uint64_t utmp = uvalue + cu_offset;
+	if (!do_loc)
+	  printf ("%c<%#" PRIx64 ">", delimiter, utmp);
+	if (do_var_map)
+	  insert_element_in_list (die_tag, attribute, die_offset,
+				 &utmp, NULL, NULL, is_union);
+      }
       break;
 
     case DW_FORM_data4:
@@ -2714,6 +3751,9 @@ read_and_display_attr_value (unsigned long attribute,
     case DW_FORM_sec_offset:
       if (!do_loc)
 	printf ("%c%#" PRIx64, delimiter, uvalue);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       break;
 
     case DW_FORM_flag_present:
@@ -2723,27 +3763,40 @@ read_and_display_attr_value (unsigned long attribute,
     case DW_FORM_sdata:
       if (!do_loc)
 	printf ("%c%" PRId64, delimiter, uvalue);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       break;
 
     case DW_FORM_udata:
       if (!do_loc)
 	printf ("%c%" PRIu64, delimiter, uvalue);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       break;
 
     case DW_FORM_implicit_const:
       if (!do_loc)
 	printf ("%c%" PRId64, delimiter, implicit_const);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       NULL, &implicit_const, NULL, is_union);
       break;
 
     case DW_FORM_ref_sup8:
     case DW_FORM_ref8:
     case DW_FORM_data8:
-      if (!do_loc)
+      if (!do_loc || do_var_map)
 	{
 	  uint64_t utmp = uvalue;
 	  if (form == DW_FORM_ref8)
 	    utmp += cu_offset;
-	  printf ("%c%#" PRIx64, delimiter, utmp);
+	  if (do_var_map)
+	    insert_element_in_list (die_tag, attribute, die_offset,
+				   &utmp, NULL, NULL, is_union);
+	  else
+	    printf ("%c%#" PRIx64, delimiter, utmp);
 	}
       break;
 
@@ -2755,11 +3808,24 @@ read_and_display_attr_value (unsigned long attribute,
 	  else
 	    printf (" %#" PRIx64 "%016" PRIx64, uvalue_hi, uvalue);
 	}
+      if (do_var_map)
+	{
+	  if (uvalue_hi == 0)
+	    insert_element_in_list (die_tag, attribute, die_offset,
+				   &uvalue, NULL, NULL, is_union);
+	  else
+	    insert_element_in_list (die_tag, attribute, die_offset,
+				   &uvalue_hi, NULL, NULL, is_union);
+	}
       break;
 
     case DW_FORM_string:
       if (!do_loc)
 	printf ("%c%.*s", delimiter, (int) (end - data), data);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       NULL, NULL, (const char *) data,
+			       is_union);
       data += strnlen ((char *) data, end - data);
       if (data < end)
 	data++;
@@ -2813,6 +3879,10 @@ read_and_display_attr_value (unsigned long attribute,
 	    printf (_("%c(indirect string, offset: %#" PRIx64 "): %s"),
 		    delimiter, uvalue, fetch_indirect_string (uvalue));
 	}
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       NULL, NULL, (const char *)
+			       fetch_indirect_string (uvalue), is_union);
       break;
 
     case DW_FORM_line_strp:
@@ -2826,6 +3896,10 @@ read_and_display_attr_value (unsigned long attribute,
 	    printf (_("%c(indirect line string, offset: %#" PRIx64 "): %s"),
 		    delimiter, uvalue, fetch_indirect_line_string (uvalue));
 	}
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       NULL, NULL, (const char *)
+			       fetch_indirect_line_string (uvalue), is_union);
       break;
 
     case DW_FORM_GNU_str_index:
@@ -2849,6 +3923,9 @@ read_and_display_attr_value (unsigned long attribute,
 	  else
 	    printf (_("%c(indexed string: %#" PRIx64 "): %s"),
 		    delimiter, uvalue, strng);
+	  if (do_var_map)
+	    insert_element_in_list (die_tag, attribute, die_offset,
+				   NULL, NULL, strng, is_union);
 	}
       break;
 
@@ -2863,6 +3940,10 @@ read_and_display_attr_value (unsigned long attribute,
 	    printf (_("%c(alt indirect string, offset: %#" PRIx64 ") %s"),
 		    delimiter, uvalue, fetch_alt_indirect_string (uvalue));
 	}
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       NULL, NULL, fetch_alt_indirect_string (uvalue),
+			       is_union);
       break;
 
     case DW_FORM_indirect:
@@ -2873,6 +3954,9 @@ read_and_display_attr_value (unsigned long attribute,
       if (!do_loc)
 	printf ("%c%s: %#" PRIx64, delimiter, do_wide ? "" : "signature",
 		uvalue);
+      if (do_var_map)
+	insert_element_in_list (die_tag, attribute, die_offset,
+			       &uvalue, NULL, NULL, is_union);
       break;
 
     case DW_FORM_GNU_addr_index:
@@ -2949,14 +4033,25 @@ read_and_display_attr_value (unsigned long attribute,
 
 	  /* We have already displayed the form name.  */
 	  if (idx != (uint64_t) -1)
-	    printf (_("%c(index: %#" PRIx64 "): %#" PRIx64),
-		    delimiter, uvalue, idx);
+	    {
+	      printf (_("%c(index: %#" PRIx64 "): %#" PRIx64),
+		      delimiter, uvalue, idx);
+	      if (do_var_map)
+		insert_element_in_list (die_tag, attribute, die_offset,
+				       &uvalue, NULL, NULL, is_union);
+	    }
 	}
       break;
 
     case DW_FORM_strp_sup:
-      if (!do_loc)
-	printf ("%c<%#" PRIx64 ">", delimiter, uvalue + cu_offset);
+      {
+	uint64_t utmp = uvalue + cu_offset;
+	if (!do_loc)
+	  printf ("%c<%#" PRIx64 ">", delimiter, utmp);
+	if (do_var_map)
+	  insert_element_in_list (die_tag, attribute, die_offset,
+				 &utmp, NULL, NULL, is_union);
+      }
       break;
 
     default:
@@ -3232,6 +4327,72 @@ read_and_display_attr_value (unsigned long attribute,
 	      }
 	  break;
 
+	default:
+	  break;
+	}
+    }
+
+  if (do_var_map)
+    {
+      switch (attribute)
+	{
+	case DW_AT_frame_base:
+	case DW_AT_location:
+	case DW_AT_loclists_base:
+	case DW_AT_rnglists_base:
+	case DW_AT_str_offsets_base:
+	case DW_AT_string_length:
+	case DW_AT_return_addr:
+	case DW_AT_data_member_location:
+	case DW_AT_vtable_elem_location:
+	case DW_AT_segment:
+	case DW_AT_static_link:
+	case DW_AT_use_location:
+	case DW_AT_call_value:
+	case DW_AT_GNU_call_site_value:
+	case DW_AT_call_data_value:
+	case DW_AT_GNU_call_site_data_value:
+	case DW_AT_call_target:
+	case DW_AT_GNU_call_site_target:
+	case DW_AT_call_target_clobbered:
+	case DW_AT_GNU_call_site_target_clobbered:
+	case DW_AT_allocated:
+	case DW_AT_associated:
+	case DW_AT_data_location:
+	case DW_AT_stride:
+	case DW_AT_upper_bound:
+	case DW_AT_lower_bound:
+	case DW_AT_rank:
+	  if (block_start)
+	    get_location_expression (die_tag,
+	      attribute,
+	      block_start,
+	      pointer_size,
+	      offset_size,
+	      dwarf_version,
+	      die_offset,
+	      uvalue,
+	      cu_offset,
+	      section);
+	  break;
+	case DW_AT_data_bit_offset:
+	case DW_AT_byte_size:
+	case DW_AT_bit_size:
+	case DW_AT_string_length_byte_size:
+	case DW_AT_string_length_bit_size:
+	case DW_AT_bit_stride:
+	  if (form == DW_FORM_exprloc)
+	    get_location_expression (die_tag,
+	      attribute,
+	      block_start,
+	      pointer_size,
+	      offset_size,
+	      dwarf_version,
+	      die_offset,
+	      uvalue,
+	      cu_offset,
+	      section);
+	  break;
 	default:
 	  break;
 	}
@@ -3592,7 +4753,11 @@ read_and_display_attr (unsigned long attribute,
 		       int do_loc,
 		       struct dwarf_section *section,
 		       struct cu_tu_set *this_set,
-		       int level)
+		       int level,
+		       bool do_var_map,
+		       int die_tag,
+		       unsigned long die_offset,
+		       bool is_union)
 {
   if (!do_loc)
     printf ("   %-18s:", get_AT_name (attribute));
@@ -3600,7 +4765,9 @@ read_and_display_attr (unsigned long attribute,
 				      start, data, end,
 				      cu_offset, pointer_size, offset_size,
 				      dwarf_version, debug_info_p,
-				      do_loc, section, this_set, ' ', level);
+				      do_loc, section, this_set, ' ', level,
+				      do_var_map, die_tag, die_offset,
+				      is_union);
   if (!do_loc)
     printf ("\n");
   return data;
@@ -3855,6 +5022,8 @@ read_bases (abbrev_entry *   entry,
    dwo tags and we do not want to display anything to the user.
    If do_flags & DO_TYPES, we are processing a .debug_types section
    instead of a .debug_info section.
+   If do_var_map is TRUE, we are processing a .debug_types section without
+   displaying anything to the user yet.
    The information displayed is restricted by the values in
    DWARF_START_DIE and DWARF_CUTOFF_LEVEL.
    Returns TRUE upon success.  Otherwise an error or warning message
@@ -3936,7 +5105,7 @@ process_debug_info (struct dwarf_section * section,
       alloc_num_debug_info_entries = num_units;
     }
 
-  if (!(do_flags & DO_LOC))
+  if (!(do_flags & DO_LOC) || (do_flags & DO_GLOBAL_VARS))
     {
       load_debug_section_with_follow (str, file);
       load_debug_section_with_follow (line_str, file);
@@ -4057,6 +5226,7 @@ process_debug_info (struct dwarf_section * section,
       uint64_t abbrev_base;
       size_t abbrev_size;
       unsigned char *end_cu;
+      bool is_union;
 
       hdrptr = start;
       cu_offset = start - section_begin;
@@ -4222,6 +5392,7 @@ process_debug_info (struct dwarf_section * section,
       level = 0;
       last_level = level;
       saved_level = -1;
+      is_union = false;
       while (tags < start)
 	{
 	  unsigned long abbrev_number;
@@ -4343,6 +5514,12 @@ process_debug_info (struct dwarf_section * section,
 		/* Don't reset that for nested subprogram.  */
 		have_frame_base = 0;
 	      break;
+	    case DW_TAG_structure_type:
+	      is_union = false;
+	      break;
+	    case DW_TAG_union_type:
+	      is_union = true;
+	      break;
 	    }
 
 	  debug_info *debug_info_p = NULL;
@@ -4405,7 +5582,11 @@ process_debug_info (struct dwarf_section * section,
 					    !do_printing,
 					    section,
 					    this_set,
-					    level);
+					    level,
+					    do_flags & DO_GLOBAL_VARS,
+					    entry->tag,
+					    die_offset,
+					    is_union);
 	    }
 
 	  /* If a locview attribute appears before a location one,
@@ -4709,7 +5890,8 @@ display_formatted_table (unsigned char *data,
 						  0, 0, linfo->li_offset_size,
 						  linfo->li_version, NULL,
 			    ((content_type == DW_LNCT_path) != (namepass == 1)),
-						  section, NULL, '\t', -1);
+						  section, NULL, '\t', -1,
+						  false, 0, 0, false);
 	    }
 	}
 
@@ -5368,7 +6550,8 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 							  linfo.li_offset_size,
 							  linfo.li_version,
 							  NULL, 1, section,
-							  NULL, '\t', -1);
+							  NULL, '\t', -1,
+							  false, 0, 0, false);
 		    }
 		  if (data >= end)
 		    {
@@ -5466,7 +6649,8 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 							  linfo.li_offset_size,
 							  linfo.li_version,
 							  NULL, 1, section,
-							  NULL, '\t', -1);
+							  NULL, '\t', -1,
+							  false, 0, 0, false);
 		    }
 		  if (data >= end)
 		    {
@@ -6684,7 +7868,8 @@ display_debug_macro (struct dwarf_section *section,
 						       start, curr, end, 0, 0,
 						       offset_size, version,
 						       NULL, 0, section,
-						       NULL, ' ', -1);
+						       NULL, ' ', -1,
+						       false, 0, 0, false);
 		      if (n != nargs - 1)
 			printf (",");
 		    }
@@ -7778,6 +8963,13 @@ display_debug_str (struct dwarf_section *section,
   putchar ('\n');
 
   return 1;
+}
+
+static int
+display_variable_mapping_info (struct dwarf_section *section, void *file)
+{
+  return process_debug_info (section, file, section->abbrev_sec,
+			     DO_LOC | DO_GLOBAL_VARS);
 }
 
 static int
@@ -11093,7 +12285,8 @@ display_debug_names (struct dwarf_section *section, void *file)
 							  0, 0, offset_size,
 							  dwarf_version, NULL,
 							  (tagno < 0), section,
-							  NULL, '=', -1);
+							  NULL, '=', -1,
+							  false, 0, 0, false);
 		}
 	      ++tagno;
 	    }
@@ -12863,7 +14056,6 @@ static const debug_dump_long_opts debug_option_table[] =
   /* For compatibility with earlier versions of readelf.  */
   { 'r', "ranges", &do_debug_aranges, 1 },
   { 's', "str", &do_debug_str, 1 },
-  { '\0', "sframe-internal-only", &do_sframe, 1 },
   { 'T', "trace_aranges", &do_trace_aranges, 1 },
   { 't', "pubtypes", &do_debug_pubtypes, 1 },
   { 'U', "trace_info", &do_trace_info, 1 },
@@ -13047,7 +14239,495 @@ struct dwarf_section_display debug_displays[] =
      in the main file.	Hence we need to have two entries for .debug_str.  */
   { { ".debug_str",	    ".zdebug_str",	     "",	 NO_ABBREVS },	    display_debug_str,	    &do_debug_str,	false },
   { { ".note.gnu.build-id", "",                      "",	 NO_ABBREVS },	    display_debug_not_supported, NULL,		false },
+  { { ".debug_info",	    ".zdebug_info",	     ".dwinfo",	 ABBREV (abbrev)},  display_variable_mapping_info, &do_debug_info, true }
 };
 
 /* A static assertion.  */
 extern int debug_displays_assert[ARRAY_SIZE (debug_displays) == max ? 1 : -1];
+
+static generic_type
+do_link_variable_information (generic_type src_die,
+			      generic_type target_die)
+{
+  assert (src_die.field_type != NO_TYPE);
+
+  generic_type res = { { .base_type = NULL }, NO_TYPE };
+
+  switch (src_die.field_type)
+    {
+    case NO_TYPE:
+    case BASE_TYPE:
+    case ENUM_TYPE:
+    case MEMBER_PARENT:
+      break;
+    case MEMBER_TYPE:
+      src_die.die_type.member_type->ptr_type = target_die;
+      res = target_die;
+      break;
+    case TYPE_DEF:
+      src_die.die_type.type_def->ptr_type = target_die;
+      res = target_die;
+      break;
+    case TAB_TYPE:
+      src_die.die_type.tab_type->ptr_type = target_die;
+      res = target_die;
+      break;
+    case TYPE_PTR:
+      src_die.die_type.type_ptr->ptr_type = target_die;
+      res = target_die;
+      break;
+    case TYPE_REF:
+      src_die.die_type.type_ref->ptr_type = target_die;
+      res = target_die;
+      break;
+    case VARIABLE_TYPE:
+      src_die.die_type.variable_type->ptr_type = target_die;
+      /* If the variable_type of src_die has either DW_AT_specification or
+	 DW_AT_abstract_origin present then src_die's variable_type could
+	 have missing attributes such as DW_AT_name.  Hence move the attribute
+	 DW_AT_location held by src_die to target_die which have complete
+	 attributes.  */
+      if (src_die.die_type.variable_type->is_specification
+	  || src_die.die_type.variable_type->is_abstract_origin)
+	{
+	  assert (target_die.die_type.variable_type != NULL
+		  && target_die.field_type == VARIABLE_TYPE);
+	  target_die.die_type.variable_type->location_addr
+	    = src_die.die_type.variable_type->location_addr;
+	}
+      res = target_die;
+      break;
+    }
+
+  return res;
+}
+
+static bool
+link_variable_information (generic_type src_die,  uint64_t ptr_die_offset)
+{
+  assert (src_die.field_type != NO_TYPE
+	  && src_die.die_type.base_type != NULL);
+
+  base_type *i_base_type = base_type_list.head;
+  while (i_base_type != NULL)
+    {
+      if (i_base_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_bt = { { .base_type = i_base_type }, BASE_TYPE };
+	  do_link_variable_information (src_die, generic_bt);
+	  return true;
+	}
+      i_base_type = i_base_type->next;
+    }
+
+  type_def *i_type_def = type_def_list.head;
+  while (i_type_def != NULL)
+    {
+      if (i_type_def->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_td = { { .type_def = i_type_def }, TYPE_DEF };
+	  generic_td = do_link_variable_information (src_die, generic_td);
+	  return link_variable_information (generic_td,
+					    i_type_def->ptr_die_offset);
+	}
+      i_type_def = i_type_def->next;
+    }
+
+  enum_type *i_enum_type = enum_type_list.head;
+  while (i_enum_type != NULL)
+    {
+      if (i_enum_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_et = { { .enum_type = i_enum_type }, ENUM_TYPE };
+	  do_link_variable_information (src_die, generic_et);
+	  return true;
+	}
+      i_enum_type = i_enum_type->next;
+    }
+
+  tab_type *i_tab_type = tab_type_list.head;
+  while (i_tab_type != NULL)
+    {
+      if (i_tab_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_tt = { { .tab_type = i_tab_type }, TAB_TYPE };
+	  generic_tt = do_link_variable_information (src_die, generic_tt);
+	  return link_variable_information (generic_tt,
+					    i_tab_type->ptr_die_offset);
+	}
+      i_tab_type = i_tab_type->next;
+    }
+
+  member_parent *i_struct_type = struct_type_list.head;
+  while (i_struct_type != NULL)
+    {
+      if (i_struct_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_mp = { { .member_parent = i_struct_type },
+				      MEMBER_PARENT };
+	  do_link_variable_information (src_die, generic_mp);
+
+	  if (i_struct_type->linked)
+	    return true;
+
+	  i_struct_type->linked = true;
+	  member_type *i_member_type = i_struct_type->member_head;
+	  while (i_member_type != NULL)
+	    {
+	      generic_type generic_mt = { { .member_type = i_member_type },
+					  MEMBER_TYPE };
+	      link_variable_information (generic_mt,
+					 i_member_type->ptr_die_offset);
+	      i_member_type = i_member_type->next;
+	    }
+	  return true;
+	}
+      i_struct_type = i_struct_type->next;
+    }
+
+  member_parent *i_union_type = union_type_list.head;
+  while (i_union_type != NULL)
+    {
+      if (i_union_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_mp = { { .member_parent = i_union_type },
+				      MEMBER_PARENT };
+	  do_link_variable_information (src_die, generic_mp);
+
+	  if (i_union_type->linked)
+	    return true;
+
+	  i_union_type->linked = true;
+	  member_type *i_member_type = i_union_type->member_head;
+	  while (i_member_type != NULL)
+	    {
+	      generic_type generic_mt = { { .member_type = i_member_type },
+					  MEMBER_TYPE };
+	      link_variable_information (generic_mt,
+					 i_member_type->ptr_die_offset);
+	      i_member_type = i_member_type->next;
+	    }
+	  return true;
+	}
+      i_union_type = i_union_type->next;
+    }
+
+  type_ptr *i_ptr_type = ptr_type_list.head;
+  while (i_ptr_type != NULL)
+    {
+      if (i_ptr_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_pt = { { .type_ptr = i_ptr_type }, TYPE_PTR };
+	  generic_pt = do_link_variable_information (src_die, generic_pt);
+	  return link_variable_information (generic_pt,
+					    i_ptr_type->ptr_die_offset);
+	}
+      i_ptr_type = i_ptr_type->next;
+    }
+
+  type_ref *i_const_type = const_type_list.head;
+  while (i_const_type != NULL)
+    {
+      if (i_const_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_ref = { { .type_ref = i_const_type }, TYPE_REF };
+	  generic_ref = do_link_variable_information (src_die, generic_ref);
+	  return link_variable_information (generic_ref,
+					    i_const_type->ptr_die_offset);
+	}
+      i_const_type = i_const_type->next;
+    }
+
+  type_ref *i_volatile_type = volatile_type_list.head;
+  while (i_volatile_type != NULL)
+    {
+      if (i_volatile_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_ref = { { .type_ref = i_volatile_type },
+				       TYPE_REF };
+	  generic_ref = do_link_variable_information (src_die, generic_ref);
+	  return link_variable_information (generic_ref,
+					    i_volatile_type->ptr_die_offset);
+	}
+      i_volatile_type = i_volatile_type->next;
+    }
+
+  variable_type *i_variable_type = variable_type_list.head;
+  while (i_variable_type != NULL)
+    {
+      if (i_variable_type->die_offset == ptr_die_offset)
+	{
+	  generic_type generic_vt = { { .variable_type = i_variable_type },
+				      VARIABLE_TYPE };
+	  generic_vt = do_link_variable_information (src_die, generic_vt);
+	  return link_variable_information (generic_vt,
+					    i_variable_type->ptr_die_offset);
+	}
+      i_variable_type = i_variable_type->next;;
+    }
+
+  if (i_base_type == NULL && i_type_def == NULL
+      && i_enum_type == NULL && i_tab_type == NULL
+      && i_struct_type == NULL && i_union_type == NULL
+      && i_union_type == NULL && i_ptr_type == NULL
+      && i_const_type == NULL && i_volatile_type == NULL
+      && i_variable_type == NULL)
+    return false;
+
+  return true;
+}
+
+static uint64_t
+compute_variable_total_size (generic_type src_die)
+{
+  uint64_t size = 0;
+
+  switch (src_die.field_type)
+    {
+    case NO_TYPE:
+      break;
+    case BASE_TYPE:
+      if (src_die.die_type.base_type->size_type == UNSIGNED_S)
+	size = src_die.die_type.base_type->size.usize;
+      else if (src_die.die_type.base_type->size_type == SIGNED_S)
+	size = src_die.die_type.base_type->size.ssize;
+      return size;
+    case TYPE_DEF:
+      return compute_variable_total_size (src_die.die_type.type_def->ptr_type);
+    case ENUM_TYPE:
+      if (src_die.die_type.enum_type->size_type == UNSIGNED_S)
+	size = src_die.die_type.enum_type->size.usize;
+      else if (src_die.die_type.enum_type->size_type == SIGNED_S)
+	size = src_die.die_type.enum_type->size.ssize;
+      return size;
+    case TAB_TYPE:
+      {
+	size = (size == 0) ? 1 : size;
+	subrange_type *i_subrange = src_die.die_type.tab_type->subrange_head;
+	while (i_subrange != NULL)
+	  {
+	    if (i_subrange->size_type == UNSIGNED_S)
+	      size = i_subrange->size.usize * size;
+	    else if (i_subrange->size_type == SIGNED_S)
+	      size = i_subrange->size.ssize * size;
+	    i_subrange = i_subrange->next;
+	  }
+	return size
+	  * compute_variable_total_size (src_die.die_type.tab_type->ptr_type);
+      }
+    case MEMBER_TYPE:
+      return 0;
+    case MEMBER_PARENT:
+      if (src_die.die_type.member_parent->size_type == UNSIGNED_S)
+	size = src_die.die_type.member_parent->size.usize;
+      else if (src_die.die_type.member_parent->size_type == SIGNED_S)
+	size = src_die.die_type.member_parent->size.ssize;
+      return size;
+    case TYPE_PTR:
+      if (src_die.die_type.type_ptr->size_type == UNSIGNED_S)
+	size = src_die.die_type.type_ptr->size.usize;
+      else if (src_die.die_type.type_ptr->size_type == SIGNED_S)
+	size = src_die.die_type.type_ptr->size.ssize;
+      return size;
+    case TYPE_REF:
+      return compute_variable_total_size (src_die.die_type.type_ref->ptr_type);
+    case VARIABLE_TYPE:
+      return compute_variable_total_size (
+	src_die.die_type.variable_type->ptr_type);
+    }
+  return size;
+}
+
+static void
+reset_displayed_field (member_parent *mp_type)
+{
+  member_parent *i_mp = mp_type;
+  while (i_mp != NULL)
+    {
+      i_mp->displayed = false;
+      i_mp = i_mp->next;
+    }
+}
+
+void
+resolve_and_display_variable_info (void)
+{
+  variable_type *i_vt = variable_type_list.head;
+  while (i_vt != NULL)
+    {
+     generic_type generic_vt = { { .variable_type = i_vt }, VARIABLE_TYPE };
+      if (i_vt->has_location_addr
+	  && link_variable_information (generic_vt, i_vt->ptr_die_offset))
+	{
+	  uint64_t vt_size = compute_variable_total_size (generic_vt);
+	  /* When is_specification or is_abstract_origin is true.  The current
+	     variable_type i_vt only holds DW_AT_location value and could be
+	     missing DW_AT_name for example.  Hence the move the size value to
+	     the underlying DW_TAG_variable and display the underlying
+	     DW_TAG_variable.  */
+	  if (i_vt->is_specification || i_vt->is_abstract_origin)
+	    {
+	      assert (i_vt->ptr_type.field_type == VARIABLE_TYPE
+		      && i_vt->ptr_type.die_type.variable_type != NULL);
+	      i_vt->ptr_type.die_type.variable_type->total_size = vt_size;
+	    }
+	  else
+	    i_vt->total_size = vt_size;
+	  display_variable_type (generic_vt, 0);
+	  reset_displayed_field (struct_type_list.head);
+	  reset_displayed_field (union_type_list.head);
+	  printf ("\n");
+	}
+      i_vt = i_vt->next;
+    }
+}
+
+static void
+free_base_type (base_type *bt)
+{
+  base_type *head = bt;
+  while (head != NULL)
+    {
+      base_type *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_type_def (type_def *td)
+{
+  type_def *head = td;
+  while (head != NULL)
+    {
+      type_def *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_enum_constant (enum_constant *ec)
+{
+  enum_constant *head = ec;
+  while (head != NULL)
+    {
+      enum_constant *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_enum_type (enum_type *et)
+{
+  enum_type *head = et;
+  while (head != NULL)
+    {
+      enum_type *next = head->next;
+      free_enum_constant (head->enum_const_head);
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_subrange_type (subrange_type *st)
+{
+  subrange_type * head = st;
+  while (head != NULL)
+    {
+      subrange_type *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_tab_type (tab_type *tt)
+{
+  tab_type *head = tt;
+  while (head != NULL)
+    {
+      tab_type *next = head->next;
+      free_subrange_type (head->subrange_head);
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_member_type (member_type *mt)
+{
+  member_type *head = mt;
+  while (head != NULL)
+    {
+      member_type *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_member_parent (member_parent *mp)
+{
+  member_parent *head = mp;
+  while (head != NULL)
+    {
+      member_parent *next = head->next;
+      free_member_type (head->member_head);
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_type_ptr (type_ptr *tp)
+{
+  type_ptr *head = tp;
+  while (head != NULL)
+    {
+      type_ptr *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_type_ref (type_ref *tr)
+{
+  type_ref *head = tr;
+  while (head != NULL)
+    {
+      type_ref *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+static void
+free_variable_type (variable_type *vt)
+{
+  variable_type *head = vt;
+  while (head != NULL)
+    {
+      variable_type *next = head->next;
+      free (head);
+      head = next;
+    }
+}
+
+void
+free_mapping_info_struct (void)
+{
+  free_base_type (base_type_list.head);
+  free_type_def (type_def_list.head);
+  free_enum_type (enum_type_list.head);
+  free_tab_type (tab_type_list.head);
+  free_member_parent (struct_type_list.head);
+  free_member_parent (union_type_list.head);
+  free_type_ptr (ptr_type_list.head);
+  free_type_ref (const_type_list.head);
+  free_type_ref (volatile_type_list.head);
+  free_variable_type (variable_type_list.head);
+}

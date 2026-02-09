@@ -157,7 +157,7 @@ gnuv2_virtual_fn_field (struct value **arg1p, struct fn_field * f, int j,
     {
       /* Move the `this' pointer according to the virtual function table.  */
       arg1->set_offset (arg1->offset ()
-			+ value_as_long (value_field (entry, 0)));
+			+ value_as_long (entry->field (0)));
 
       if (!arg1->lazy ())
 	{
@@ -165,7 +165,7 @@ gnuv2_virtual_fn_field (struct value **arg1p, struct fn_field * f, int j,
 	  arg1->fetch_lazy ();
 	}
 
-      vfn = value_field (entry, 2);
+      vfn = entry->field (2);
     }
   else if (entry_type->code () == TYPE_CODE_PTR)
     vfn = entry;
@@ -231,10 +231,10 @@ gnuv2_value_rtti_type (struct value *v, int *full, LONGEST *top, int *using_enc)
   /* We can't use value_ind here, because it would want to use RTTI, and
      we'd waste a bunch of time figuring out we already know the type.
      Besides, we don't care about the type, just the actual pointer.  */
-  if (value_field (v, known_type_vptr_fieldno)->address () == 0)
+  if (v->field (known_type_vptr_fieldno)->address () == 0)
     return NULL;
 
-  vtbl = value_as_address (value_field (v, known_type_vptr_fieldno));
+  vtbl = value_as_address (v->field (known_type_vptr_fieldno));
 
   /* Try to find a symbol that is the vtable.  */
   bound_minimal_symbol minsym = lookup_minimal_symbol_by_pc (vtbl);

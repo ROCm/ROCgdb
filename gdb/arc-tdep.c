@@ -2308,8 +2308,6 @@ arc_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_cannot_fetch_register (gdbarch, arc_cannot_fetch_register);
   set_gdbarch_cannot_store_register (gdbarch, arc_cannot_store_register);
 
-  set_gdbarch_believe_pcc_promotion (gdbarch, 1);
-
   set_gdbarch_return_value (gdbarch, arc_return_value);
 
   set_gdbarch_skip_prologue (gdbarch, arc_skip_prologue);
