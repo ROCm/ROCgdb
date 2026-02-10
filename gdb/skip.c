@@ -601,9 +601,6 @@ skip_delete_command (const char *arg, int from_tty)
 bool
 skiplist_entry::do_skip_file_p (const symtab_and_line &function_sal) const
 {
-  skip_debug_printf ("checking if file %s matches non-glob %s",
-		     function_sal.symtab->filename (), m_file.c_str ());
-
   bool result;
 
   /* Check first sole SYMTAB->FILENAME.  It may not be a substring of
@@ -626,17 +623,12 @@ skiplist_entry::do_skip_file_p (const symtab_and_line &function_sal) const
       result = compare_filenames_for_search (fullname, m_file.c_str ());
     }
 
-  skip_debug_printf (result ? "yes" : "no");
-
   return result;
 }
 
 bool
 skiplist_entry::do_skip_gfile_p (const symtab_and_line &function_sal) const
 {
-  skip_debug_printf ("checking if file %s matches glob %s",
-		     function_sal.symtab->filename (), m_file.c_str ());
-
   bool result;
 
   /* Check first sole SYMTAB->FILENAME.  It may not be a substring of
@@ -663,8 +655,6 @@ skiplist_entry::do_skip_gfile_p (const symtab_and_line &function_sal) const
       result = compare_glob_filenames_for_search (fullname, m_file.c_str ());
     }
 
-  skip_debug_printf (result ? "yes" : "no");
-
   return result;
 }
 
@@ -677,10 +667,19 @@ skiplist_entry::skip_file_p (const symtab_and_line &function_sal) const
   if (function_sal.symtab == NULL)
     return false;
 
+  skip_debug_printf ("checking if file %s matches %sglob %s",
+		     function_sal.symtab->filename (),
+		     (m_file_is_glob ? "" : "non-"), m_file.c_str ());
+
+  bool result;
   if (m_file_is_glob)
-    return do_skip_gfile_p (function_sal);
+    result = do_skip_gfile_p (function_sal);
   else
-    return do_skip_file_p (function_sal);
+    result = do_skip_file_p (function_sal);
+
+  skip_debug_printf (result ? "yes" : "no");
+
+  return result;
 }
 
 bool
