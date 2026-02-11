@@ -68,6 +68,25 @@ GDB_AC_PTRACE
 AM_GDB_COMPILER_TYPE
 AM_GDB_WARNINGS
 
+# Check for `struct user_gcs`
+AC_CACHE_CHECK(
+  [for struct user_gcs],
+  [gdb_cv_struct_user_gcs],
+  [AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM(
+	[#include <sys/ptrace.h>
+	 #include <asm/ptrace.h>],
+	[struct user_gcs u;]
+      )],
+     [gdb_cv_struct_user_gcs=yes],
+     [gdb_cv_struct_user_gcs=no]
+  )]
+)
+if test "$gdb_cv_struct_user_gcs" = yes; then
+  AC_DEFINE(HAVE_STRUCT_USER_GCS, 1,
+	    [Define to 1 if your system has struct user_gcs.])
+fi
+
 # Set the 'development' global.
 . $srcdir/../bfd/development.sh
 

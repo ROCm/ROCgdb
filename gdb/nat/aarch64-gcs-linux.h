@@ -29,8 +29,7 @@
 #define HWCAP_GCS (1ULL << 32)
 #endif
 
-/* Make sure we only define these if the kernel header doesn't.  */
-#ifndef GCS_MAGIC
+#ifndef HAVE_STRUCT_USER_GCS
 
 /* GCS state (NT_ARM_GCS).  */
 
@@ -41,6 +40,6 @@ struct user_gcs
   uint64_t gcspr_el0;
 };
 
-#endif /* GCS_MAGIC */
+#endif /* HAVE_STRUCT_USER_GCS */
 
 #endif /* GDB_NAT_AARCH64_GCS_LINUX_H */
