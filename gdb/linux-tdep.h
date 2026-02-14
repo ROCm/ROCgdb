@@ -27,17 +27,6 @@
 struct inferior;
 struct regcache;
 
-#ifndef SEGV_CPERR
-#define SEGV_CPERR 10 /* Control protection error.  */
-#endif
-
-/* Flag which enables shadow stack in PR_SET_SHADOW_STACK_STATUS prctl.  */
-#ifndef PR_SHADOW_STACK_ENABLE
-#define PR_SHADOW_STACK_ENABLE (1UL << 0)
-#define PR_SHADOW_STACK_WRITE (1UL << 1)
-#define PR_SHADOW_STACK_PUSH (1UL << 2)
-#endif
-
 /* Return true if ADDRESS is within the boundaries of a page mapped with
    memory tagging protection.  */
 bool linux_address_in_memtag_page (CORE_ADDR address);

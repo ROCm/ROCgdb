@@ -1736,8 +1736,9 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 	  gcs_regmap, regcache_supply_regset, regcache_collect_regset
 	};
 
-      cb (".reg-aarch-gcs", sizeof (user_gcs), sizeof (user_gcs),
-	  &aarch64_linux_gcs_regset, "GCS registers", cb_data);
+      cb (".reg-aarch-gcs", AARCH64_LINUX_SIZEOF_GCS_REGSET,
+	  AARCH64_LINUX_SIZEOF_GCS_REGSET, &aarch64_linux_gcs_regset,
+	  "GCS registers", cb_data);
     }
 }
 
@@ -1763,7 +1764,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
      length.  */
   features.vq = aarch64_linux_core_read_vq_from_sections (gdbarch, abfd);
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
-  features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
+  features.gcs = features.gcs_linux = hwcap & AARCH64_HWCAP_GCS;
   features.mte = hwcap2 & AARCH64_HWCAP2_MTE;
   features.fpmr = hwcap2 & AARCH64_HWCAP2_FPMR;
 
@@ -2612,7 +2613,7 @@ aarch64_linux_get_shadow_stack_pointer (gdbarch *gdbarch, regcache *regcache,
   if (status != REG_VALID)
     error (_("Can't read $gcspr."));
 
-  shadow_stack_enabled = features_enabled & PR_SHADOW_STACK_ENABLE;
+  shadow_stack_enabled = features_enabled & AARCH64_PR_SHADOW_STACK_ENABLE;
   return gcspr;
 }
 
@@ -2700,7 +2701,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 
   if (si_code == AARCH64_SEGV_MTEAERR || si_code == AARCH64_SEGV_MTESERR)
     meaning = _("Memory tag violation");
-  else if (si_code == SEGV_CPERR && si_errno == 0)
+  else if (si_code == AARCH64_SEGV_CPERR && si_errno == 0)
     meaning = _("Guarded Control Stack error");
   else
     return;
@@ -2733,7 +2734,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	  uiout->field_string ("logical-tag", hex_string (ltag));
 	}
     }
-  else if (si_code != SEGV_CPERR)
+  else if (si_code != AARCH64_SEGV_CPERR)
     {
       uiout->text ("\n");
       uiout->text (_("Fault address unavailable"));

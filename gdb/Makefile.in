@@ -1547,6 +1547,7 @@ HFILES_NO_SRCDIR = \
 	moxie-tdep.h \
 	namespace.h \
 	nat/aarch64-fpmr-linux.h \
+	nat/aarch64-gcs-linux.h \
 	nat/aarch64-hw-point.h \
 	nat/aarch64-linux.h \
 	nat/aarch64-linux-hw-point.h \

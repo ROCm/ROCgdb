@@ -33,6 +33,7 @@
 #include "aarch32-tdep.h"
 #include "arch/arm.h"
 #include "nat/aarch64-fpmr-linux.h"
+#include "nat/aarch64-gcs-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
 #include "nat/aarch64-mte-linux-ptrace.h"
@@ -53,8 +54,6 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 #include "arch-utils.h"
-
-#include "arch/aarch64-gcs-linux.h"
 
 #include <string.h>
 

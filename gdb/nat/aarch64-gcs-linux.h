@@ -1,4 +1,4 @@
-/* Common Linux target-dependent definitions for AArch64 GCS
+/* Common native Linux definitions for AArch64 Guarded Control Stack.
 
    Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
@@ -17,20 +17,30 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_ARCH_AARCH64_GCS_LINUX_H
-#define GDB_ARCH_AARCH64_GCS_LINUX_H
+#ifndef GDB_NAT_AARCH64_GCS_LINUX_H
+#define GDB_NAT_AARCH64_GCS_LINUX_H
+
+#include <stdint.h>
+#include <asm/hwcap.h>
+#include <asm/ptrace.h>
 
 /* Feature check for Guarded Control Stack.  */
-#define AARCH64_HWCAP_GCS (1ULL << 32)
+#ifndef HWCAP_GCS
+#define HWCAP_GCS (1ULL << 32)
+#endif
 
-#define AARCH64_SEGV_CPERR 10 /* Control protection error.  */
+/* Make sure we only define these if the kernel header doesn't.  */
+#ifndef GCS_MAGIC
 
-/* Flag which enables shadow stack in PR_SET_SHADOW_STACK_STATUS prctl.  */
-#define AARCH64_PR_SHADOW_STACK_ENABLE (1UL << 0)
-#define AARCH64_PR_SHADOW_STACK_WRITE (1UL << 1)
-#define AARCH64_PR_SHADOW_STACK_PUSH (1UL << 2)
+/* GCS state (NT_ARM_GCS).  */
 
-/* The GCS regset consists of 3 64-bit registers.  */
-#define AARCH64_LINUX_SIZEOF_GCS_REGSET (3 * 8)
+struct user_gcs
+{
+  uint64_t features_enabled;
+  uint64_t features_locked;
+  uint64_t gcspr_el0;
+};
 
-#endif /* GDB_ARCH_AARCH64_GCS_LINUX_H */
+#endif /* GCS_MAGIC */
+
+#endif /* GDB_NAT_AARCH64_GCS_LINUX_H */
