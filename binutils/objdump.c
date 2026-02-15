@@ -1338,7 +1338,7 @@ objdump_print_symname (bfd *abfd, struct disassemble_info *inf,
   if (do_demangle && name[0] != '\0')
     {
       /* Demangle the name.  */
-      alloc = bfd_demangle (abfd, name, demangle_flags);
+      alloc = bfd_demangle_new (abfd, name, demangle_flags, msvc_demangle);
       if (alloc != NULL)
 	name = alloc;
     }
@@ -2304,8 +2304,9 @@ show_line (bfd *abfd, asection *section, bfd_vma addr_offset)
 	  if (do_demangle && functionname[0] != '\0')
 	    {
 	      /* Demangle the name.  */
-	      demangle_alloc = bfd_demangle (abfd, functionname,
-					     demangle_flags);
+	      demangle_alloc = bfd_demangle_new (abfd, functionname,
+					     demangle_flags,
+					     msvc_demangle);
 	    }
 
 	  /* Demangling adds trailing parens, so don't print those.  */
@@ -3975,8 +3976,9 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 	      if (do_demangle && name[0] != '\0')
 		{
 		  /* Demangle the name.  */
-		  alloc = bfd_demangle (abfd, name, demangle_flags);
-		  if (alloc != NULL)
+		  alloc = bfd_demangle_new (abfd, name, demangle_flags, 
+					    msvc_demangle);
+		  if (alloc != NULL) 
 		    name = alloc;
 		}
 
@@ -5325,7 +5327,8 @@ dump_symbols (bfd *abfd ATTRIBUTE_UNUSED, bool dynamic)
 	      /* If we want to demangle the name, we demangle it
 		 here, and temporarily clobber it while calling
 		 bfd_print_symbol.  FIXME: This is a gross hack.  */
-	      alloc = bfd_demangle (cur_bfd, name, demangle_flags);
+	      alloc = bfd_demangle_new (cur_bfd, name, demangle_flags,
+					msvc_demangle);
 	      if (alloc != NULL)
 		(*current)->name = alloc;
 	      bfd_print_symbol (cur_bfd, stdout, *current,
@@ -5918,7 +5921,8 @@ dump_bfd (bfd *abfd, bool is_mainfile)
       if (dhandle != NULL)
 	{
 	  if (!print_debugging_info (stdout, dhandle, abfd, syms,
-				     bfd_demangle,
+				     bfd_demangle_new,
+				     msvc_demangle,
 				     dump_debugging_tags != 0))
 	    {
 	      non_fatal (_("%s: printing debugging information failed"),
