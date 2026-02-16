@@ -790,15 +790,23 @@ link_hash_newfunc (struct bfd_hash_entry *entry,
   return entry;
 }
 
+static void
+elf_s390_link_hash_table_free (bfd *obfd)
+{
+  struct elf_s390_link_hash_table *htab
+    = (struct elf_s390_link_hash_table *) obfd->link.hash;
+  sframe_encoder_free (&htab->plt_cfe_ctx);
+  _bfd_elf_link_hash_table_free (obfd);
+}
+
 /* Create an s390 ELF linker hash table.  */
 
 static struct bfd_link_hash_table *
 elf_s390_link_hash_table_create (bfd *abfd)
 {
   struct elf_s390_link_hash_table *ret;
-  size_t amt = sizeof (struct elf_s390_link_hash_table);
 
-  ret = (struct elf_s390_link_hash_table *) bfd_zmalloc (amt);
+  ret = bfd_zmalloc (sizeof (*ret));
   if (ret == NULL)
     return NULL;
 
@@ -808,6 +816,7 @@ elf_s390_link_hash_table_create (bfd *abfd)
       free (ret);
       return NULL;
     }
+  ret->elf.root.hash_table_free = elf_s390_link_hash_table_free;
 
   return &ret->elf.root;
 }
@@ -1669,7 +1678,7 @@ static bool
 _bfd_s390_elf_write_sframe_plt (struct bfd_link_info *info)
 {
   struct elf_s390_link_hash_table *htab;
-  sframe_encoder_ctx *ectx;
+  sframe_encoder_ctx **ectx;
   size_t sec_size;
   asection *sec;
   bfd *dynobj;
@@ -1679,19 +1688,19 @@ _bfd_s390_elf_write_sframe_plt (struct bfd_link_info *info)
   htab = elf_s390_hash_table (info);
   dynobj = htab->elf.dynobj;
 
-  ectx = htab->plt_cfe_ctx;
+  ectx = &htab->plt_cfe_ctx;
   sec = htab->plt_sframe;
 
-  BFD_ASSERT (ectx);
+  BFD_ASSERT (*ectx);
 
-  void *contents = sframe_encoder_write (ectx, &sec_size, false, &err);
+  void *contents = sframe_encoder_write (*ectx, &sec_size, false, &err);
 
   sec->size = (bfd_size_type) sec_size;
   sec->contents = (unsigned char *) bfd_zalloc (dynobj, sec->size);
   sec->alloced = 1;
   memcpy (sec->contents, contents, sec_size);
 
-  sframe_encoder_free (&ectx);
+  sframe_encoder_free (ectx);
 
   return true;
 }

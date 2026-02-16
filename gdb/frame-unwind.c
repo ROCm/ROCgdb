@@ -74,12 +74,9 @@ static const registry<gdbarch>::key<std::vector<const frame_unwind *>>
 static std::vector<const frame_unwind *> &
 get_frame_unwind_table (struct gdbarch *gdbarch)
 {
-  std::vector<const frame_unwind *> *table = frame_unwind_data.get (gdbarch);
-  if (table == nullptr)
-    table = frame_unwind_data.emplace (gdbarch,
-				       standard_unwinders.begin (),
-				       standard_unwinders.end ());
-  return *table;
+  return frame_unwind_data.try_emplace (gdbarch,
+					standard_unwinders.begin (),
+					standard_unwinders.end ());
 }
 
 static const char *

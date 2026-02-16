@@ -49,7 +49,6 @@
 #include "gdbsupport/gdb_select.h"
 #include "gdbsupport/scoped_restore.h"
 #include "gdbsupport/search.h"
-#include "gdbsupport/gdb_argv_vec.h"
 #include "gdbsupport/remote-args.h"
 
 #include <getopt.h>
@@ -3442,7 +3441,7 @@ handle_v_run (char *own_buf)
 {
   client_state &cs = get_client_state ();
   char *p, *next_p;
-  gdb::argv_vec new_argv;
+  std::vector<gdb::unique_xmalloc_ptr<char>> new_argv;
   gdb::unique_xmalloc_ptr<char> new_program_name;
   int i;
 
@@ -3462,7 +3461,7 @@ handle_v_run (char *own_buf)
       else if (p == next_p)
 	{
 	  /* Empty argument.  */
-	  new_argv.push_back (xstrdup (""));
+	  new_argv.push_back (make_unique_xstrdup (""));
 	}
       else
 	{
@@ -3479,7 +3478,7 @@ handle_v_run (char *own_buf)
 	  if (i == 0)
 	    new_program_name = std::move (arg);
 	  else
-	    new_argv.push_back (arg.release ());
+	    new_argv.push_back (std::move (arg));
 	}
       if (*next_p == '\0')
 	break;
@@ -3500,18 +3499,18 @@ handle_v_run (char *own_buf)
 
   if (cs.single_inferior_argument)
     {
-      if (new_argv.get ().size () > 1)
+      if (new_argv.size () > 1)
 	{
 	  write_enn (own_buf);
 	  return;
 	}
-      else if (new_argv.get ().size () == 1)
-	program_args = std::string (new_argv.get ()[0]);
+      else if (new_argv.size () == 1)
+	program_args = std::string (new_argv[0].get ());
       else
 	program_args.clear ();
     }
   else
-    program_args = gdb::remote_args::join (new_argv.get ());
+    program_args = gdb::remote_args::join (new_argv);
 
   try
     {
@@ -4579,9 +4578,8 @@ captured_main (int argc, char *argv[])
 	error (_("No program to debug"));
 
       int n = argc - (next_arg - argv);
-      program_args
-	= construct_inferior_arguments ({&next_arg[1], &next_arg[n]},
-					escape_args);
+      gdb::array_view<char * const> args_view (&next_arg[1], &next_arg[n]);
+      program_args = construct_inferior_arguments (args_view, escape_args);
 
       /* Wait till we are at first instruction in program.  */
       target_create_inferior (program_path.get (), program_args);

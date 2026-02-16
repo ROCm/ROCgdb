@@ -23,8 +23,7 @@
 #include "valprint.h"
 #include "value.h"
 
-/* Return true if print_wchar can display W without resorting to a
-   numeric escape, false otherwise.  */
+/* See char-print.h.  */
 
 bool
 wchar_printer::printable (gdb_wchar_t w) const
@@ -41,6 +40,29 @@ wchar_printer::printable (gdb_wchar_t w) const
   if (!m_need_escape)
     return true;
   return !gdb_iswxdigit (w);
+}
+
+/* See char-print.h.  */
+
+bool
+wchar_printer::printable_and_convertible (gdb_wchar_t w) const
+{
+  if (!printable (w))
+    return false;
+
+  /* We think it is printable -- but is it really?  It must also be
+     convertible from the intermediate charset (normally wchar_t) to
+     the host charset, which is not always possible.  Note we don't
+     try to handle stateful encodings, this seems difficult and also
+     somewhat pointless.  And, if the host encoding is UTF-8, we
+     simply assume this is fine without checking any more.  */
+  if (m_host_utf8)
+    return true;
+
+  mbstate_t state;
+  memset (&state, 0, sizeof (state));
+  char ignore[MB_LEN_MAX];
+  return wcrtomb (ignore, w, &state) != (size_t) -1;
 }
 
 /* See char-print.h.  */
@@ -183,7 +205,7 @@ wchar_printer::print (int c, ui_file *stream)
 
 	  need_escape = false;
 	  for (i = 0; i < num_chars; ++i)
-	    if (!printable (chars[i]))
+	    if (!printable_and_convertible (chars[i]))
 	      {
 		need_escape = true;
 		break;
@@ -349,7 +371,7 @@ wchar_printer::print_converted_chars_to_obstack
 	    for (j = 0; j < repeat_count; ++j)
 	      {
 		if (elem->result == wchar_iterate_ok
-		    && printable (elem->chars[0]))
+		    && printable_and_convertible (elem->chars[0]))
 		  print_char (elem->chars[0]);
 		else
 		  print_escape (elem->buf, elem->buflen);
@@ -377,7 +399,7 @@ wchar_printer::print_converted_chars_to_obstack
 	    /* Output the character and repeat string.  */
 	    m_file.write (LCST ("'"));
 	    if (elem->result == wchar_iterate_ok
-		&& printable (elem->chars[0]))
+		&& printable_and_convertible (elem->chars[0]))
 	      print_char (elem->chars[0]);
 	    else
 	      print_escape (elem->buf, elem->buflen);

@@ -109,9 +109,10 @@ protected:
   void do_text (const char *string) override
   { }
 
-  void do_message (const ui_file_style &style,
+  void do_message (ui_file_style &current_style,
+		   const ui_file_style &style,
 		   const char *format, va_list args)
-    override ATTRIBUTE_PRINTF (3,0)
+    override ATTRIBUTE_PRINTF (4, 0)
   { }
 
   void do_wrap_hint (int indent) override

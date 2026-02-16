@@ -285,6 +285,68 @@ program_space::empty ()
   return find_inferior_for_program_space (this) == nullptr;
 }
 
+/* See progspace.h.  */
+
+std::optional<CORE_ADDR>
+program_space::entry_point_address_query () const
+{
+  objfile *objf = symfile_object_file;
+  if (objf == NULL || !objf->per_bfd->ei.entry_point_p)
+    return {};
+
+  int idx = objf->per_bfd->ei.the_bfd_section_index;
+  return objf->per_bfd->ei.entry_point + objf->section_offsets[idx];
+}
+
+/* See progspace.h.  */
+
+CORE_ADDR
+program_space::entry_point_address () const
+{
+  std::optional<CORE_ADDR> retval = entry_point_address_query ();
+
+  if (!retval.has_value ())
+    error (_("Entry point address is not known."));
+
+  return *retval;
+}
+
+/* See progspace.h.  */
+
+bool
+program_space::has_partial_symbols ()
+{
+  for (objfile &ofp : objfiles ())
+    if (ofp.has_partial_symbols ())
+      return true;
+
+  return false;
+}
+
+/* See progspace.h.  */
+
+bool
+program_space::has_full_symbols ()
+{
+  for (objfile &ofp : objfiles ())
+    if (ofp.has_full_symbols ())
+      return true;
+
+  return false;
+}
+
+/* See progspace.h.  */
+
+bool
+program_space::has_minimal_symbols ()
+{
+  for (objfile &ofp : objfiles ())
+    if (ofp.per_bfd->minimal_symbol_count > 0)
+      return true;
+
+  return false;
+}
+
 /* Prints the list of program spaces and their details on UIOUT.  If
    REQUESTED is not -1, it's the ID of the pspace that should be
    printed.  Otherwise, all spaces are printed.  */

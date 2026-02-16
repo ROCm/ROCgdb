@@ -60,6 +60,11 @@ struct dwarf2_cu
      variants.  */
   const dwarf2_section_info &section () const;
 
+  /* The section offset of the beginning of this unit in its section.
+
+     For a split DWARF unit, this is the offset in the .dwo section.  */
+  sect_offset section_offset () const;
+
   /* TU version of handle_DW_AT_stmt_list for read_type_unit_scope.
      Create the set of symtabs used by this TU, or if this TU is sharing
      symtabs with another TU and the symtabs have already been created

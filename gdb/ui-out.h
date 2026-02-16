@@ -287,6 +287,11 @@ class ui_out
      escapes.  */
   virtual bool can_emit_style_escape () const = 0;
 
+  /* Emit a style escape, if possible.  */
+  virtual void emit_style_escape (const ui_file_style &style)
+  {
+  }
+
   /* Return the ui_file currently used for output.  */
   virtual ui_file *current_stream () const = 0;
 
@@ -366,9 +371,17 @@ protected:
     ATTRIBUTE_PRINTF (7, 0) = 0;
   virtual void do_spaces (int numspaces) = 0;
   virtual void do_text (const char *string) = 0;
-  virtual void do_message (const ui_file_style &style,
+
+  /* A helper for vprintf and call_do_message.  Formats a string and
+     then prints it using STYLE.  This should take care to only change
+     the style when necessary (i.e., don't bother if the formatted
+     string is empty, or if the desired style is the same as
+     CURRENT_STYLE).  Updates current_style if the style was
+     changed.  */
+  virtual void do_message (ui_file_style &current_style,
+			   const ui_file_style &style,
 			   const char *format, va_list args)
-    ATTRIBUTE_PRINTF (3,0) = 0;
+    ATTRIBUTE_PRINTF (4, 0) = 0;
   virtual void do_wrap_hint (int indent) = 0;
   virtual void do_flush () = 0;
   virtual void do_redirect (struct ui_file *outstream) = 0;
@@ -385,7 +398,10 @@ protected:
   { return false; }
 
  private:
-  void call_do_message (const ui_file_style &style, const char *format,
+  /* A helper for vmessage that wraps a call to do_message.  This will
+     update CURRENT_STYLE when needed.  */
+  void call_do_message (ui_file_style &current_style,
+			const ui_file_style &style, const char *format,
 			...);
 
   ui_out_flags m_flags;
@@ -478,186 +494,6 @@ public:
 
 private:
   struct ui_out *m_uiout;
-};
-
-struct buffered_streams;
-
-/* Organizes writes to a collection of buffered output streams
-   so that when flushed, output is written to all streams in
-   chronological order.  */
-
-struct buffer_group
-{
-  buffer_group (ui_out *uiout);
-
-  /* Flush all buffered writes to the underlying output streams.  */
-  void flush () const;
-
-  /* Record contents of BUF and associate it with STREAM.  */
-  void write (const char *buf, long length_buf, ui_file *stream);
-
-  /* Record a wrap_here and associate it with STREAM.  */
-  void wrap_here (int indent, ui_file *stream);
-
-  /* Record a call to flush and associate it with STREAM.  */
-  void flush_here (ui_file *stream);
-
-private:
-
-  struct output_unit
-  {
-    output_unit (std::string msg, int wrap_hint = -1, bool flush = false)
-      : m_msg (msg), m_wrap_hint (wrap_hint), m_flush (flush)
-    {}
-
-    /* Write contents of this output_unit to the underlying stream.  */
-    void flush () const;
-
-    /* Underlying stream for which this output unit will be written to.  */
-    ui_file *m_stream;
-
-    /* String to be written to underlying buffer.  */
-    std::string m_msg;
-
-    /* Argument to wrap_here.  -1 indicates no wrap.  Used to call wrap_here
-       during buffer flush.  */
-    int m_wrap_hint;
-
-    /* Indicate that the underlying output stream's flush should be called.  */
-    bool m_flush;
-  };
-
-  /* Output_units to be written to buffered output streams.  */
-  std::vector<output_unit> m_buffered_output;
-
-  /* Buffered output streams.  */
-  std::unique_ptr<buffered_streams> m_buffered_streams;
-};
-
-/* If FILE is a buffering_file, return it's underlying stream.  */
-
-extern ui_file *get_unbuffered (ui_file *file);
-
-/* Buffer output to gdb_stdout and gdb_stderr for the duration of FUNC.  */
-
-template<typename F, typename... Arg>
-void
-do_with_buffered_output (F func, ui_out *uiout, Arg... args)
-{
-  buffer_group g (uiout);
-
-  try
-    {
-      func (uiout, std::forward<Arg> (args)...);
-    }
-  catch (gdb_exception &ex)
-    {
-      /* Ideally flush would be called in the destructor of buffer_group,
-	 however flushing might cause an exception to be thrown.  Catch it
-	 and ensure the first exception propagates.  */
-      try
-	{
-	  g.flush ();
-	}
-      catch (const gdb_exception &)
-	{
-	}
-
-      throw_exception (std::move (ex));
-    }
-
-  /* Try was successful.  Let any further exceptions propagate.  */
-  g.flush ();
-}
-
-/* Accumulate writes to an underlying ui_file.  Output to the
-   underlying file is deferred until required.  */
-
-struct buffering_file : public ui_file
-{
-  buffering_file (buffer_group *group, ui_file *stream)
-    : m_group (group),
-      m_stream (stream)
-  { /* Nothing.  */ }
-
-  /* Return the underlying output stream.  */
-  ui_file *stream () const
-  {
-    return m_stream;
-  }
-
-  /* Record the contents of BUF.  */
-  void write (const char *buf, long length_buf) override
-  {
-    m_group->write (buf, length_buf, m_stream);
-  }
-
-  /* Record a wrap_here call with argument INDENT.  */
-  void wrap_here (int indent) override
-  {
-    m_group->wrap_here (indent, m_stream);
-  }
-
-  /* Return true if the underlying stream is a tty.  */
-  bool isatty () override
-  {
-    return m_stream->isatty ();
-  }
-
-  /* Return true if ANSI escapes can be used on the underlying stream.  */
-  bool can_emit_style_escape () override
-  {
-    return m_stream->can_emit_style_escape ();
-  }
-
-  /* Flush the underlying output stream.  */
-  void flush () override
-  {
-    return m_group->flush_here (m_stream);
-  }
-
-private:
-
-  /* Coordinates buffering across multiple buffering_files.  */
-  buffer_group *m_group;
-
-  /* The underlying output stream.  */
-  ui_file *m_stream;
-};
-
-/* Attaches and detaches buffers for each of the gdb_std* streams.  */
-
-struct buffered_streams
-{
-  buffered_streams (buffer_group *group, ui_out *uiout);
-
-  ~buffered_streams ()
-  {
-    this->remove_buffers ();
-  }
-
-  /* Remove buffering_files from all underlying streams.  */
-  void remove_buffers ();
-
-private:
-
-  /* True if buffers are still attached to each underlying output stream.  */
-  bool m_buffers_in_place;
-
-  /* Buffers for each gdb_std* output stream.  */
-  buffering_file m_buffered_stdout;
-  buffering_file m_buffered_stderr;
-  buffering_file m_buffered_stdlog;
-  buffering_file m_buffered_stdtarg;
-
-  /* Buffer for current_uiout's output stream.  */
-  std::optional<buffering_file> m_buffered_current_uiout;
-
-  /* Additional ui_out being buffered.  */
-  ui_out *m_uiout;
-
-  /* Buffer for m_uiout's output stream.  */
-  std::optional<buffering_file> m_buffered_uiout;
 };
 
 #endif /* GDB_UI_OUT_H */

@@ -96,13 +96,7 @@ static const registry<inferior>::key<solib_aix_inferior_data>
 static struct solib_aix_inferior_data *
 get_solib_aix_inferior_data (struct inferior *inf)
 {
-  struct solib_aix_inferior_data *data;
-
-  data = solib_aix_inferior_data_handle.get (inf);
-  if (data == NULL)
-    data = solib_aix_inferior_data_handle.emplace (inf);
-
-  return data;
+  return &solib_aix_inferior_data_handle.try_emplace (inf);
 }
 
 #if !defined(HAVE_LIBEXPAT)

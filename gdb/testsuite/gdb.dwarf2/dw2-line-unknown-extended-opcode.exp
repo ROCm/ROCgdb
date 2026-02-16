@@ -1,0 +1,89 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+# The .c files use __attribute__.
+require is_c_compiler_gcc
+
+standard_testfile .c -dw.S
+
+set asm_file [standard_output_file $srcfile2]
+set f [open $asm_file "w"]
+Dwarf::assemble { file_id $f } {
+    declare_labels Llines
+    global srcdir subdir srcfile
+
+    get_func_info main
+
+    cu {} {
+	compile_unit {
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name dw2-line-unknown-extended-opcode.exp
+	    DW_AT_stmt_list $Llines DW_FORM_sec_offset
+	} {
+	    subprogram {
+		DW_AT_external 1 flag
+		MACRO_AT_func {main}
+	    }
+	}
+    }
+
+    lines {version 2 default_is_stmt 1} Llines {
+	include_dir "${srcdir}/${subdir}"
+	file_name "$srcfile" 1
+
+	program {
+	    global f
+
+	    DW_LNE_set_address $main_start
+	    line 26
+	    DW_LNS_copy
+
+	    # Emit non-standard (but not in the vendor-specific range) extended
+	    # opcode 0 with 15 dummy operand bytes which GDB should ignore.
+	    puts $f "        .byte     0"
+	    puts $f "        .uleb128  16"
+	    puts $f "        .byte     0"
+	    puts $f "        .fill     15, 1, 42"
+
+	    DW_LNE_set_address main_label
+	    line 28
+	    DW_LNS_copy
+
+	    DW_LNE_set_address main_label_2
+	    line 31
+	    DW_LNS_copy
+
+	    DW_LNE_set_address $main_end
+	    DW_LNE_end_sequence
+	}
+    }
+}
+close $f
+
+if { [prepare_for_testing "failed to prepare" ${testfile} \
+	  [list $srcfile $asm_file] {nodebug}] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_breakpoint "$srcfile:31"
+gdb_continue_to_breakpoint "return from main" "\[^\r\n\]*:31\r\n.*"

@@ -27,7 +27,6 @@
 #include "objfile-flags.h"
 #include "gdb_bfd.h"
 #include "target-section.h"
-#include "quick-symbol.h"
 
 /* Opaque declarations.  */
 struct target_section;

@@ -693,11 +693,12 @@ amd64_classify (struct type *type, enum amd64_reg_class theclass[2])
 
   /* Arguments of types (signed and unsigned) _Bool, char, short, int,
      long, long long, and pointers are in the INTEGER class.  Similarly,
-     range types, used by languages such as Ada, are also in the INTEGER
-     class.  */
+     range and fixed-point types, used by languages such as Ada, are
+     also in the INTEGER class.  This comes form the System V ABI
+     (section 3.2.3, Parameter Passing).  */
   if ((code == TYPE_CODE_INT || code == TYPE_CODE_ENUM
        || code == TYPE_CODE_BOOL || code == TYPE_CODE_RANGE
-       || code == TYPE_CODE_CHAR
+       || code == TYPE_CODE_CHAR || code == TYPE_CODE_FIXED_POINT
        || code == TYPE_CODE_PTR || TYPE_IS_REFERENCE (type))
       && (len == 1 || len == 2 || len == 4 || len == 8))
     theclass[0] = AMD64_INTEGER;

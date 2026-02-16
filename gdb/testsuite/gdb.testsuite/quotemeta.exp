@@ -1,4 +1,4 @@
-# Copyright 2025 Free Software Foundation, Inc.
+# Copyright 2025-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,36 @@
 # Test the quotemeta facility.
 
 proc check_quotemeta {name input expected} {
-    gdb_assert {[quotemeta $input] == $expected} $name
+    set me "check_quotemeta"
+    verbose -log "$me: input: $input"
+
+    set res [catch {set output [quotemeta $input]} msg]
+    if {$res == 0} {
+	verbose -log "$me: output: $output"
+    } else {
+	verbose -log "$me: catch_res: $res, catch_msg: $msg"
+    }
+
+    set ok [expr {$res == 0 && $output == $expected}]
+    if {!$ok} {
+	verbose -log "$me: expected: $expected"
+    }
+    gdb_assert {$ok} $name
 }
 
-proc quotemeta_fail {name input} {
-    gdb_assert {[catch {quotemeta $input}]} $name
+proc check_quotemeta_fail {name input} {
+    set me "check_quotemeta_fail"
+    verbose -log "$me: input: $input"
+
+    set res [catch {set output [quotemeta $input]} msg]
+    if {$res == 0} {
+	verbose -log "$me: output: $output"
+    } else {
+	verbose -log "$me: catch_res: $res, catch_msg: $msg"
+    }
+
+    set ok [expr {$res == 1}]
+    gdb_assert {$ok} $name
 }
 
 check_quotemeta hex "@HEX" "$hex"
@@ -31,16 +56,17 @@ check_quotemeta multi-brace "@{{{DECIMAL}}}" "$decimal"
 
 check_quotemeta regexp "@/hello/" hello
 check_quotemeta regexp-2 "@/hello/@/.*/" "hello.*"
-check_quotemeta quoting ".*" "\\.\\*"
+check_quotemeta quoting ".*" {\.\*}
 
 check_quotemeta dots @... .*
 check_quotemeta at @@ @
 
 check_quotemeta slash-regexp "@{{/.*/.*/}}" ".*/.*"
 
-check_quotemeta spaces "hello world" "hello\\s+world"
+check_quotemeta spaces "hello world" {hello\s+world}
 
 check_quotemeta shy-brace "@{{DECIMAL}}@{{DECIMAL}}" "$decimal$decimal"
 
-quotemeta_fail mismatch-brace "@{{{DECIMAL}}"
-quotemeta_fail no-such-subst @NOTHING
+check_quotemeta_fail mismatch-brace "@{{{DECIMAL}}"
+check_quotemeta_fail no-such-subst @NOTHING
+check_quotemeta_fail bad-name @bad-name

@@ -25,6 +25,7 @@
 #include "ui.h"
 #include "target.h"
 #include "guile-internal.h"
+#include "logging-file.h"
 #include <optional>
 
 #ifdef HAVE_POLL
@@ -323,20 +324,21 @@ ioscm_with_output_to_port_worker (SCM port, SCM thunk, enum oport oport,
 
   scoped_restore restore_async = make_scoped_restore (&current_ui->async, 0);
 
-  ui_file_up port_file (new ioscm_file_port (port));
+  ui_file_up port_file = std::make_unique<ioscm_file_port> (port);
 
   scoped_restore save_file = make_scoped_restore (oport == GDB_STDERR
-						  ? &gdb_stderr : &gdb_stdout);
+						  ? redirectable_stderr ()
+						  : redirectable_stdout ());
 
   {
     std::optional<ui_out_redirect_pop> redirect_popper;
     if (oport == GDB_STDERR)
-      gdb_stderr = port_file.get ();
+      *redirectable_stderr () = port_file.get ();
     else
       {
 	redirect_popper.emplace (current_uiout, port_file.get ());
 
-	gdb_stdout = port_file.get ();
+	*redirectable_stderr () = port_file.get ();
       }
 
     result = gdbscm_safe_call_0 (thunk, NULL);

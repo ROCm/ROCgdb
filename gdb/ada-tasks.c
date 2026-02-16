@@ -297,13 +297,7 @@ task_to_str (int taskno, const ada_task_info *task_info)
 static struct ada_tasks_pspace_data *
 get_ada_tasks_pspace_data (struct program_space *pspace)
 {
-  struct ada_tasks_pspace_data *data;
-
-  data = ada_tasks_pspace_data_handle.get (pspace);
-  if (data == NULL)
-    data = ada_tasks_pspace_data_handle.emplace (pspace);
-
-  return data;
+  return &ada_tasks_pspace_data_handle.try_emplace (pspace);
 }
 
 /* Return the ada-tasks module's data for the given inferior (INF).
@@ -321,13 +315,7 @@ get_ada_tasks_pspace_data (struct program_space *pspace)
 static struct ada_tasks_inferior_data *
 get_ada_tasks_inferior_data (struct inferior *inf)
 {
-  struct ada_tasks_inferior_data *data;
-
-  data = ada_tasks_inferior_data_handle.get (inf);
-  if (data == NULL)
-    data = ada_tasks_inferior_data_handle.emplace (inf);
-
-  return data;
+  return &ada_tasks_inferior_data_handle.try_emplace (inf);
 }
 
 /* Return the task number of the task whose thread is THREAD, or zero

@@ -542,7 +542,7 @@ remote_fileio_func_read (remote_target *remote, char *buf)
 		 limit this read to something smaller than that - by a
 		 safe margin, in case the limit depends on system
 		 resources or version.  */
-	      ret = gdb_stdtargin->read ((char *) buffer, 16383);
+	      ret = gdb_stdin->read ((char *) buffer, 16383);
 	      if (ret > 0 && (size_t)ret > length)
 		{
 		  remaining_buf = (char *) xmalloc (ret - length);

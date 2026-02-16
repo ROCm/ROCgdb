@@ -695,6 +695,9 @@ elf_x86_link_hash_table_free (bfd *obfd)
     htab_delete (htab->loc_hash_table);
   if (htab->loc_hash_memory)
     objalloc_free ((struct objalloc *) htab->loc_hash_memory);
+  sframe_encoder_free (&htab->plt_cfe_ctx);
+  sframe_encoder_free (&htab->plt_second_cfe_ctx);
+  sframe_encoder_free (&htab->plt_got_cfe_ctx);
   _bfd_elf_link_hash_table_free (obfd);
 }
 
@@ -1975,7 +1978,7 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
 {
   struct elf_x86_link_hash_table *htab;
   elf_backend_data *bed;
-  sframe_encoder_ctx *ectx;
+  sframe_encoder_ctx **ectx;
   size_t sec_size;
   asection *sec;
   bfd *dynobj;
@@ -1989,15 +1992,15 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
   switch (plt_sec_type)
     {
     case SFRAME_PLT:
-      ectx = htab->plt_cfe_ctx;
+      ectx = &htab->plt_cfe_ctx;
       sec = htab->plt_sframe;
       break;
     case SFRAME_PLT_SEC:
-      ectx = htab->plt_second_cfe_ctx;
+      ectx = &htab->plt_second_cfe_ctx;
       sec = htab->plt_second_sframe;
       break;
     case SFRAME_PLT_GOT:
-      ectx = htab->plt_got_cfe_ctx;
+      ectx = &htab->plt_got_cfe_ctx;
       sec = htab->plt_got_sframe;
       break;
     default:
@@ -2006,16 +2009,16 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
       break;
     }
 
-  BFD_ASSERT (ectx);
+  BFD_ASSERT (*ectx);
 
-  void *contents = sframe_encoder_write (ectx, &sec_size, false, &err);
+  void *contents = sframe_encoder_write (*ectx, &sec_size, false, &err);
 
   sec->size = (bfd_size_type) sec_size;
   sec->contents = (unsigned char *) bfd_zalloc (dynobj, sec->size);
   sec->alloced = 1;
   memcpy (sec->contents, contents, sec_size);
 
-  sframe_encoder_free (&ectx);
+  sframe_encoder_free (ectx);
 
   return true;
 }

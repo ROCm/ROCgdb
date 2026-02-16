@@ -282,7 +282,7 @@ _bfd_elf_parse_sframe (bfd *abfd,
 
   if (!sframe_decoder_init_func_bfdinfo (abfd, sec, sfd_info, cookie))
     {
-      sframe_decoder_free (&sfd_ctx);
+      sframe_decoder_free (&sfd_info->sfd_ctx);
       goto fail_no_free;
     }
 
@@ -601,7 +601,7 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
 
   sfd_info->sfd_state = SFRAME_SEC_MERGED;
   /* Free the SFrame decoder context.  */
-  sframe_decoder_free (&sfd_ctx);
+  sframe_decoder_free (&sfd_info->sfd_ctx);
 
   return true;
 }
@@ -730,7 +730,7 @@ _bfd_elf_write_section_sframe (bfd *abfd, struct bfd_link_info *info)
       hdr->sh_size = sec->size;
     }
 
-  sframe_encoder_free (&sfe_ctx);
+  sframe_encoder_free (&sfe_info->sfe_ctx);
 
   return retval;
 }

@@ -444,10 +444,7 @@ static const registry<gdbarch>::key<tdesc_arch_data> tdesc_data;
 static tdesc_arch_data *
 get_arch_data (struct gdbarch *gdbarch)
 {
-  tdesc_arch_data *result = tdesc_data.get (gdbarch);
-  if (result == nullptr)
-    result = tdesc_data.emplace (gdbarch);
-  return result;
+  return &tdesc_data.try_emplace (gdbarch);
 }
 
 /* Fetch the current target's description, and switch the current

@@ -10984,7 +10984,6 @@ display_debug_frames (struct dwarf_section *section,
 	}
       else
 	{
-	  unsigned char *look_for;
 	  unsigned long segment_selector;
 	  uint64_t cie_off;
 
@@ -10996,70 +10995,74 @@ display_debug_frames (struct dwarf_section *section,
 	      cie_off = start - 4 - section_start - cie_off;
 	    }
 
-	  look_for = section_start + cie_off;
-	  if (cie_off <= (size_t) (saved_start - section_start))
-	    {
-	      for (cie = chunks; cie ; cie = cie->next)
-		if (cie->chunk_start == look_for)
-		  break;
-	    }
-	  else if (cie_off >= section->size)
+	  if (cie_off >= section->size)
 	    cie = NULL;
 	  else
 	    {
-	      for (cie = forward_refs; cie ; cie = cie->next)
-		if (cie->chunk_start == look_for)
-		  break;
-	      if (!cie)
+	      unsigned char *look_for = section_start + cie_off;
+	      if (cie_off <= (size_t) (saved_start - section_start))
 		{
-		  unsigned int off_size;
-		  unsigned char *cie_scan;
-
-		  cie_scan = look_for;
-		  off_size = 4;
-		  SAFE_BYTE_GET_AND_INC (length, cie_scan, 4, end);
-		  if (length == 0xffffffff)
+		  for (cie = chunks; cie ; cie = cie->next)
+		    if (cie->chunk_start == look_for)
+		      break;
+		}
+	      else
+		{
+		  for (cie = forward_refs; cie ; cie = cie->next)
+		    if (cie->chunk_start == look_for)
+		      break;
+		  if (!cie)
 		    {
-		      SAFE_BYTE_GET_AND_INC (length, cie_scan, 8, end);
-		      off_size = 8;
-		    }
-		  if (length != 0 && length <= (size_t) (end - cie_scan))
-		    {
-		      uint64_t c_id;
-		      unsigned char *cie_end = cie_scan + length;
+		      unsigned int off_size;
+		      unsigned char *cie_scan;
 
-		      SAFE_BYTE_GET_AND_INC (c_id, cie_scan, off_size,
-					     cie_end);
-		      if (is_eh
-			  ? c_id == 0
-			  : ((off_size == 4 && c_id == DW_CIE_ID)
-			     || (off_size == 8 && c_id == DW64_CIE_ID)))
+		      cie_scan = look_for;
+		      off_size = 4;
+		      SAFE_BYTE_GET_AND_INC (length, cie_scan, 4, end);
+		      if (length == 0xffffffff)
 			{
-			  int version;
-			  unsigned int mreg;
+			  SAFE_BYTE_GET_AND_INC (length, cie_scan, 8, end);
+			  off_size = 8;
+			}
+		      if (length != 0 && length <= (size_t) (end - cie_scan))
+			{
+			  uint64_t c_id;
+			  unsigned char *cie_end = cie_scan + length;
 
-			  read_cie (cie_scan, cie_end, &cie, &version,
-				    &augmentation_data_len, &augmentation_data);
-			  /* PR 17512: file: 3450-2098-0.004.  */
-			  if (cie == NULL)
+			  SAFE_BYTE_GET_AND_INC (c_id, cie_scan, off_size,
+						 cie_end);
+			  if (is_eh
+			      ? c_id == 0
+			      : ((off_size == 4 && c_id == DW_CIE_ID)
+				 || (off_size == 8 && c_id == DW64_CIE_ID)))
 			    {
-			      warn (_("Failed to read CIE information\n"));
-			      break;
+			      int version;
+			      unsigned int mreg;
+
+			      read_cie (cie_scan, cie_end, &cie, &version,
+					&augmentation_data_len,
+					&augmentation_data);
+			      /* PR 17512: file: 3450-2098-0.004.  */
+			      if (cie == NULL)
+				{
+				  warn (_("Failed to read CIE information\n"));
+				  break;
+				}
+			      cie->next = forward_refs;
+			      forward_refs = cie;
+			      cie->chunk_start = look_for;
+			      mreg = max_regs > 0 ? max_regs - 1 : 0;
+			      if (mreg < cie->ra)
+				mreg = cie->ra;
+			      if (frame_need_space (cie, mreg) < 0)
+				{
+				  warn (_("Invalid max register\n"));
+				  break;
+				}
+			      if (cie->fde_encoding)
+				encoded_ptr_size
+				  = size_of_encoded_value (cie->fde_encoding);
 			    }
-			  cie->next = forward_refs;
-			  forward_refs = cie;
-			  cie->chunk_start = look_for;
-			  mreg = max_regs > 0 ? max_regs - 1 : 0;
-			  if (mreg < cie->ra)
-			    mreg = cie->ra;
-			  if (frame_need_space (cie, mreg) < 0)
-			    {
-			      warn (_("Invalid max register\n"));
-			      break;
-			    }
-			  if (cie->fde_encoding)
-			    encoded_ptr_size
-			      = size_of_encoded_value (cie->fde_encoding);
 			}
 		    }
 		}

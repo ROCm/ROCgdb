@@ -34,7 +34,6 @@ gdb_test_multiple "print pck.value := (Left => 3, Center => 7, Pck.Right => 2)" 
 	    pass $gdb_test_name
 	}
 	-wrap -re " = \\(3, 2, 2\\)" {
-	    setup_kfail "aggregate expression bug" *-*-*
 	    fail $gdb_test_name
 	}
     }

@@ -47,8 +47,8 @@ get_exec_wrapper ()
 void
 gdb_flush_out_err ()
 {
-  gdb_flush (main_ui->m_gdb_stdout);
-  gdb_flush (main_ui->m_gdb_stderr);
+  gdb_flush (main_ui->m_ui_stdout);
+  gdb_flush (main_ui->m_ui_stderr);
 }
 
 /* The ui structure that will be saved on 'prefork_hook' and

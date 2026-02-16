@@ -1047,6 +1047,25 @@ proc test_finish_styling {} {
     gdb_test "finish" "Value returned is [style ${::valnum_re} variable] = 0"
 }
 
+# Test some logging styling.
+proc test_logging_styling {} {
+    with_ansi_styling_terminal {
+	clean_restart
+    }
+
+    set filename [standard_output_file logging.txt]
+    gdb_test_no_output "set logging file $filename" \
+	"set logging file"
+    gdb_test "set logging enabled on" \
+	[multi_line \
+	     "Copying output to [style $filename file]\\." \
+	     "Copying debug output to [style $filename file]\\."] \
+	"logging filenames are styled"
+    gdb_test "set logging enabled off" \
+	"Done logging to [style $filename file]\\." \
+	"filename styled when logging disabled"
+}
+
 # Check to see if the Python styling of disassembler output is
 # expected or not, this styling requires Python support in GDB, and
 # the Python pygments module to be available.
@@ -1093,3 +1112,4 @@ test_pagination_cmd_after_quit_styling
 test_pagination_prompt_styling
 test_pagination_continue_styling
 test_finish_styling
+test_logging_styling

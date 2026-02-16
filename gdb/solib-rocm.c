@@ -69,7 +69,7 @@ private:
   };
 
   inferior *m_inferior;
-  gdb::unordered_map<std::string, refcnt_fd> m_cache;
+  gdb::unordered_string_map<refcnt_fd> m_cache;
 };
 
 int
@@ -115,7 +115,7 @@ rocm_solib_fd_cache::open (const std::string &filename,
 int
 rocm_solib_fd_cache::close (int fd, fileio_error *target_errno)
 {
-  using cache_val = gdb::unordered_map<std::string, refcnt_fd>::value_type;
+  using cache_val = gdb::unordered_string_map<refcnt_fd>::value_type;
   auto it
     = std::find_if (m_cache.begin (), m_cache.end (),
 		    [fd](const cache_val &s) { return s.second.fd == fd; });
@@ -246,12 +246,7 @@ private:
 static struct solib_info *
 get_solib_info (inferior *inf)
 {
-  solib_info *info = rocm_solib_data.get (inf);
-
-  if (info == nullptr)
-    info = rocm_solib_data.emplace (inf, inf);
-
-  return info;
+  return &rocm_solib_data.try_emplace (inf, inf);
 }
 
 /* Relocate section addresses.  */

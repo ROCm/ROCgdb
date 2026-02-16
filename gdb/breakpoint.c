@@ -3773,12 +3773,7 @@ msym_not_found_p (const struct minimal_symbol *msym)
 static struct breakpoint_objfile_data *
 get_breakpoint_objfile_data (struct objfile *objfile)
 {
-  struct breakpoint_objfile_data *bp_objfile_data;
-
-  bp_objfile_data = breakpoint_objfile_key.get (objfile);
-  if (bp_objfile_data == NULL)
-    bp_objfile_data = breakpoint_objfile_key.emplace (objfile);
-  return bp_objfile_data;
+  return &breakpoint_objfile_key.try_emplace (objfile);
 }
 
 static void

@@ -41,6 +41,7 @@ SECTION
 #include "libbfd.h"
 #define ARCH_SIZE 0
 #include "elf-bfd.h"
+#include "sframe-api.h"
 #include "libiberty.h"
 #include "safe-ctype.h"
 #include "elf-linux-core.h"
@@ -10223,6 +10224,11 @@ _bfd_elf_free_cached_info (bfd *abfd)
 	    {
 	      struct eh_frame_sec_info *sec_info = sec->sec_info;
 	      free (sec_info->cies);
+	    }
+	  if (sec->sec_info_type == SEC_INFO_TYPE_SFRAME)
+	    {
+	      struct sframe_dec_info *sfd_info = sec->sec_info;
+	      sframe_decoder_free (&sfd_info->sfd_ctx);
 	    }
 	}
       free (tdata->symtab_hdr.contents);

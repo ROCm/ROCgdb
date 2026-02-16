@@ -73,6 +73,10 @@ Dwarf::assemble {
 	name _start subprogram CU-1 0xEDDB6232
 	name struct_with_int_member structure_type tu_label 0x53A2AE86
     }
+
+    aranges {} cu_label {
+	arange {} $_start_start $_start_len
+    }
 }
 
 if {[build_executable ${testfile}.exp $testfile "${asm_file} ${srcfile}" \

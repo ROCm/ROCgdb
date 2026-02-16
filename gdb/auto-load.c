@@ -608,13 +608,7 @@ static const registry<program_space>::key<auto_load_pspace_info>
 static struct auto_load_pspace_info *
 get_auto_load_pspace_data (struct program_space *pspace)
 {
-  struct auto_load_pspace_info *info;
-
-  info = auto_load_pspace_data.get (pspace);
-  if (info == NULL)
-    info = auto_load_pspace_data.emplace (pspace);
-
-  return info;
+  return &auto_load_pspace_data.try_emplace (pspace);
 }
 
 /* Hash function for the loaded script hash.  */

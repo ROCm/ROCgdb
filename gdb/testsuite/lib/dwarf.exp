@@ -1592,6 +1592,14 @@ namespace eval Dwarf {
 	}
     }
 
+    proc _handle_DW_OP_call2 {offset} {
+	_op .2byte $offset
+    }
+
+    proc _handle_DW_OP_call4 {offset} {
+	_op .4byte $offset
+    }
+
     proc _handle_default_OP {} {
 	# Do nothing; if arguments are passed, Tcl will cause an
 	# error.

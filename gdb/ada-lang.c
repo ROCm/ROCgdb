@@ -308,13 +308,7 @@ static const registry<inferior>::key<ada_inferior_data> ada_inferior_data;
 static struct ada_inferior_data *
 get_ada_inferior_data (struct inferior *inf)
 {
-  struct ada_inferior_data *data;
-
-  data = ada_inferior_data.get (inf);
-  if (data == NULL)
-    data = ada_inferior_data.emplace (inf);
-
-  return data;
+  return &ada_inferior_data.try_emplace (inf);
 }
 
 /* Perform all necessary cleanups regarding our module's inferior data
@@ -398,11 +392,7 @@ static const registry<program_space>::key<cache_entry_set>
 static cache_entry_set &
 get_ada_pspace_data (struct program_space *pspace)
 {
-  cache_entry_set *data = ada_pspace_data_handle.get (pspace);
-  if (data == nullptr)
-    data = ada_pspace_data_handle.emplace (pspace);
-
-  return *data;
+  return ada_pspace_data_handle.try_emplace (pspace);
 }
 
 			/* Utilities */
@@ -9624,6 +9614,30 @@ ada_name_association::dump (ui_file *stream, int depth)
   m_val->dump (stream, depth + 1);
 }
 
+/* See ada-exp.h.  */
+
+const char *
+ada_name_association::find_name (operation_up &op) const
+{
+  ada_string_operation *strop
+    = dynamic_cast<ada_string_operation *> (m_val.get ());
+
+  if (strop != nullptr)
+    return strop->get_name ();
+
+  ada_var_value_operation *vvo
+    = dynamic_cast<ada_var_value_operation *> (m_val.get ());
+  if (vvo == nullptr)
+    return nullptr;
+  /* In this scenario, the user wrote (name => expr), but
+     write_name_assoc found some fully-qualified name and substituted
+     it.  This happens because, at parse time, the meaning of the
+     expression isn't known; but here we know that just the base name
+     was supplied and it refers to the name of a field.  */
+  const char *name = vvo->get_symbol ()->natural_name ();
+  return ada_unqualified_name (name);
+}
+
 void
 ada_name_association::assign (aggregate_assigner &assigner,
 			      operation_up &op)
@@ -9632,32 +9646,47 @@ ada_name_association::assign (aggregate_assigner &assigner,
 
   if (ada_is_direct_array_type (assigner.lhs->type ()))
     {
-      value *tem = m_val->evaluate (nullptr, assigner.exp, EVAL_NORMAL);
-      index = value_as_long (tem);
+      std::optional<LONGEST> enum_index;
+
+      /* If the array's index type has enumeration type, then simple
+	 names should be looked up as enumerators.  */
+      if (const char *name = find_name (op);
+	  name != nullptr)
+	{
+	  type *idx_type
+	    = ada_check_typedef (assigner.lhs->type ())->index_type ();
+	  idx_type = get_base_type (idx_type);
+	  if (idx_type->code () == TYPE_CODE_ENUM)
+	    {
+	      for (const auto &field : idx_type->fields ())
+		{
+		  const char *ename = ada_enum_name (field.name ());
+		  if (streq (name, ename))
+		    {
+		      enum_index = field.loc_enumval ();
+		      break;
+		    }
+		}
+
+	      /* If we didn't find the name, that is ok -- the user
+		 might have written (VAR => EXPR), naming some
+		 variable somewhere.  */
+	    }
+	}
+
+      if (enum_index.has_value ())
+	index = *enum_index;
+      else
+	{
+	  value *tem = m_val->evaluate (nullptr, assigner.exp, EVAL_NORMAL);
+	  index = value_as_long (tem);
+	}
     }
   else
     {
-      ada_string_operation *strop
-	= dynamic_cast<ada_string_operation *> (m_val.get ());
-
-      const char *name;
-      if (strop != nullptr)
-	name = strop->get_name ();
-      else
-	{
-	  ada_var_value_operation *vvo
-	    = dynamic_cast<ada_var_value_operation *> (m_val.get ());
-	  if (vvo == nullptr)
-	    error (_("Invalid record component association."));
-	  name = vvo->get_symbol ()->natural_name ();
-	  /* In this scenario, the user wrote (name => expr), but
-	     write_name_assoc found some fully-qualified name and
-	     substituted it.  This happens because, at parse time, the
-	     meaning of the expression isn't known; but here we know
-	     that just the base name was supplied and it refers to the
-	     name of a field.  */
-	  name = ada_unqualified_name (name);
-	}
+      const char *name = find_name (op);
+      if (name == nullptr)
+	error (_("Invalid record component association."));
 
       index = 0;
       if (! find_struct_field (name, assigner.lhs->type (), 0,

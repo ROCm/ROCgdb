@@ -1,4 +1,4 @@
-# Copyright 2024-2025 Free Software Foundation, Inc.
+# Copyright 2024-2026 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ proc run_test { opt_level } {
 	return
     }
 
-    gdb_test "bt" "#0\\s+main \\(\\) at [remote_file_re $::srcfile]:$::decimal" \
+    gdb_test "bt" "#0\\s+(?:$::hex in )?main \\(\\) at [remote_file_re $::srcfile]:$::decimal" \
 	"backtrace in main"
 
     # Break at the empty inline function ptr::get_myclass.

@@ -496,10 +496,7 @@ static const registry<gdbarch>::key<fbsd_gdbarch_data>
 static struct fbsd_gdbarch_data *
 get_fbsd_gdbarch_data (struct gdbarch *gdbarch)
 {
-  struct fbsd_gdbarch_data *result = fbsd_gdbarch_data_handle.get (gdbarch);
-  if (result == nullptr)
-    result = fbsd_gdbarch_data_handle.emplace (gdbarch);
-  return result;
+  return &fbsd_gdbarch_data_handle.try_emplace (gdbarch);
 }
 
 struct fbsd_pspace_data
@@ -524,13 +521,7 @@ static const registry<program_space>::key<fbsd_pspace_data>
 static struct fbsd_pspace_data *
 get_fbsd_pspace_data (struct program_space *pspace)
 {
-  struct fbsd_pspace_data *data;
-
-  data = fbsd_pspace_data_handle.get (pspace);
-  if (data == NULL)
-    data = fbsd_pspace_data_handle.emplace (pspace);
-
-  return data;
+  return &fbsd_pspace_data_handle.try_emplace (pspace);
 }
 
 /* This is how we want PTIDs from core files to be printed.  */

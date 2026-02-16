@@ -365,7 +365,7 @@ target_read_auxv ()
 
   if (info == nullptr)
     {
-      info = auxv_inferior_data.emplace (inf);
+      info = &auxv_inferior_data.emplace (inf);
       info->data = target_read_auxv_raw (inf->top_target ());
     }
 

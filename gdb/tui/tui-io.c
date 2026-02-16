@@ -45,6 +45,7 @@
 #include "gdbsupport/unordered_map.h"
 #include "pager.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
+#include "logging-file.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state related include files like <term.h> and
@@ -73,7 +74,7 @@ key_is_start_sequence (int ch)
    mode.
 
    In curses mode, the gdb outputs are made in a curses command
-   window.  For this, the gdb_stdout and gdb_stderr are redirected to
+   window.  For this, the redirectable stdout and stderr are set to
    the specific ui_file implemented by TUI.  The output is handled by
    tui_puts().  The input is also controlled by curses with
    tui_getc().  The readline library uses this function to get its
@@ -861,16 +862,16 @@ tui_setup_io (int mode)
       rl_already_prompted = 0;
 
       /* Keep track of previous gdb output.  */
-      tui_old_stdout = gdb_stdout;
-      tui_old_stderr = gdb_stderr;
-      tui_old_stdlog = gdb_stdlog;
+      tui_old_stdout = *redirectable_stdout ();
+      tui_old_stderr = *redirectable_stderr ();
+      tui_old_stdlog = *redirectable_stdlog ();
       tui_old_uiout = gdb::checked_static_cast<cli_ui_out *> (current_uiout);
 
       /* Reconfigure gdb output.  */
-      gdb_stdout = tui_stdout;
-      gdb_stderr = tui_stderr;
-      gdb_stdlog = tui_stdlog;
-      gdb_stdtarg = gdb_stderr;
+      *redirectable_stdout () = tui_stdout;
+      *redirectable_stderr () = tui_stderr;
+      *redirectable_stdlog () = tui_stdlog;
+      *redirectable_stdtarg () = tui_stderr;
       current_uiout = tui_out;
 
       /* Save tty for SIGCONT.  */
@@ -879,10 +880,10 @@ tui_setup_io (int mode)
   else
     {
       /* Restore gdb output.  */
-      gdb_stdout = tui_old_stdout;
-      gdb_stderr = tui_old_stderr;
-      gdb_stdlog = tui_old_stdlog;
-      gdb_stdtarg = gdb_stderr;
+      *redirectable_stdout () = tui_old_stdout;
+      *redirectable_stderr () = tui_old_stderr;
+      *redirectable_stdlog () = tui_old_stdlog;
+      *redirectable_stdtarg () = tui_old_stderr;
       current_uiout = tui_old_uiout;
 
       /* Restore readline.  */
@@ -933,13 +934,18 @@ tui_initialize_io (void)
 #endif
 
   /* Create tui output streams.  */
-  tui_stdout = new pager_file (new tui_file (stdout, true));
-  tui_stderr = new tui_file (stderr, false);
-  tui_stdlog = new timestamped_file (tui_stderr);
+  tui_stdout = new pager_file (std::make_unique<logging_file<ui_file_up>>
+			       (std::make_unique<tui_file> (stdout, true)));
+  ui_file *err_out = new tui_file (stderr, false);
+  /* Let tui_stderr own ERR_OUT.  */
+  tui_stderr = new logging_file<ui_file_up> (ui_file_up (err_out));
+  tui_stdlog = (new timestamped_file
+		(std::make_unique<logging_file<ui_file *>> (err_out, true)));
   tui_out = new cli_ui_out (tui_stdout, 0);
 
-  /* Create the default UI.  */
-  tui_old_uiout = new cli_ui_out (gdb_stdout);
+  /* Using redirectable_stdout here is a hack.  This should probably
+     be done when constructing the interpreter instead.  */
+  tui_old_uiout = new cli_ui_out (*redirectable_stdout ());
 
 #ifdef TUI_USE_PIPE_FOR_READLINE
   /* Temporary solution for readline writing to stdout: redirect

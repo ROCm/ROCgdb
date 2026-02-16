@@ -56,6 +56,10 @@ Dwarf::assemble {
 	name _start subprogram cu_label 0xEDDB6232
 	name int base_type cu_label 0xB888030
     }
+
+    aranges {} cu_label {
+	arange {} $_start_end $_start_len
+    }
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile "${asm_file} ${srcfile}" \

@@ -99,6 +99,7 @@
 #include "dwarf2/error.h"
 #include "gdbsupport/unordered_set.h"
 #include "extract-store-integer.h"
+#include "cli/cli-style.h"
 
 /* When == 1, print basic high level tracing messages.
    When > 1, be more verbose.
@@ -1215,7 +1216,8 @@ dwarf2_has_info (struct objfile *objfile,
 	  just_created = true;
 	}
 
-      per_objfile = dwarf2_objfile_data_key.emplace (objfile, objfile, per_bfd);
+      per_objfile
+	= &dwarf2_objfile_data_key.emplace (objfile, objfile, per_bfd);
     }
 
   /* Virtual sections are created from DWP files.  It's not clear those
@@ -1268,9 +1270,10 @@ dwarf2_per_bfd::locate_sections (asection *sectp,
     {
       bfd_size_type size = sectp->size;
       warning (_("Discarding section %s which has an invalid size (%s) "
-		 "[in module %s]"),
+		 "[in module %ps]"),
 	       bfd_section_name (sectp), phex_nz (size),
-	       this->filename ());
+	       styled_string (file_name_style.style (),
+			      this->filename ()));
     }
   else if (names.info.matches (sectp->name))
     {
@@ -6048,6 +6051,20 @@ dwarf2_cu::section () const
     return *this->per_cu->section ();
 }
 
+/* See cu.h.
+
+   This function is defined in this file (instead of cu.c) because it needs
+   to see the definition of struct dwo_unit.  */
+
+sect_offset
+dwarf2_cu::section_offset () const
+{
+  if (this->dwo_unit != nullptr)
+    return this->dwo_unit->sect_off;
+  else
+    return this->per_cu->sect_off ();
+}
+
 void
 dwarf2_cu::setup_type_unit_groups (struct die_info *die)
 {
@@ -7087,7 +7104,9 @@ cutu_reader::locate_dwo_sections (objfile *objfile, dwo_file &dwo_file)
 	      else
 		{
 		  warning (_("Multiple .debug_macro.dwo sections found in "
-			     "%s, ignoring them."), dwo_file.dbfd->filename);
+			     "%ps, ignoring them."),
+			   styled_string (file_name_style.style (),
+					  dwo_file.dbfd->filename));
 
 		  dwo_sections.macro = dwarf2_section_info {};
 		  complained_about_macro_already = true;
@@ -7470,9 +7489,11 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 				lbasename (dwp_file->name));
 
     warning (_("Could not find DWO %s %s(%s)%s referenced by %s at offset %s"
-	       " [in module %s]"),
+	       " [in module %ps]"),
 	     kind, dwo_name, hex_string (signature), dwp_text.c_str (), kind,
-	     sect_offset_str (cu->per_cu->sect_off ()), objfile_name (objfile));
+	     sect_offset_str (cu->per_cu->sect_off ()),
+	     styled_string (file_name_style.style (),
+			    objfile_name (objfile)));
   }
   return NULL;
 }
@@ -17175,7 +17196,19 @@ dwarf2_fetch_die_loc_cu_off (cu_offset offset_in_cu, dwarf2_per_cu *per_cu,
 			     dwarf2_per_objfile *per_objfile,
 			     gdb::function_view<CORE_ADDR ()> get_frame_pc)
 {
-  sect_offset sect_off = per_cu->sect_off () + to_underlying (offset_in_cu);
+  /* For split DWARF, the section offset of PER_CU is the offset of the
+     skeleton CU in the main file, but OFFSET_IN_CU is relative to the start
+     of the CU in the .dwo file.  We need to use the section offset of the unit
+     in the .dwo file in that case.  */
+  dwarf2_cu *cu = per_objfile->get_cu (per_cu);
+  if (cu == nullptr)
+    cu = load_cu (per_cu, per_objfile, false);
+
+  /* We know this can't be a dummy CU, since we're executing something from
+     it.  */
+  gdb_assert (cu != nullptr);
+
+  sect_offset sect_off = cu->section_offset () + to_underlying (offset_in_cu);
 
   return dwarf2_fetch_die_loc_sect_off (sect_off, per_cu, per_objfile,
 					get_frame_pc);

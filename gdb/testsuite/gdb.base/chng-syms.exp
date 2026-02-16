@@ -25,10 +25,6 @@ if { [prepare_for_testing "prepare" $testfile $srcfile \
     return
 }
 
-set oldtimeout $timeout
-set timeout 10
-verbose "Timeout is now 10 seconds" 2
-
 proc expect_to_stop_here { ident } {
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
@@ -78,6 +74,3 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
     }
 
 }
-
-set timeout $oldtimeout
-verbose "Timeout is now $timeout seconds" 2

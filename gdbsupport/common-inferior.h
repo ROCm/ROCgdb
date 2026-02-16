@@ -56,9 +56,14 @@ extern bool startup_with_shell;
    whitespace character between each element.  When ESCAPE_SHELL_CHAR is
    true then any special shell characters in elements of ARGV will be
    escaped.  When ESCAPE_SHELL_CHAR is false only the characters that GDB
-   sees as special (quotes and whitespace) are escaped.  */
+   sees as special (quotes and whitespace) are escaped.
+
+   This function is instantiated for T as 'gdb::unique_xmalloc_ptr<char>',
+   'char *', and 'std::string'.  */
+
+template<typename T>
 extern std::string
-construct_inferior_arguments (gdb::array_view<char * const> argv,
-			      bool escape_shell_char);
+construct_inferior_arguments
+	(gdb::array_view<T const> argv, bool escape_shell_char);
 
 #endif /* GDBSUPPORT_COMMON_INFERIOR_H */

@@ -40,10 +40,12 @@ static const char arch_smob_name[] = "gdb:arch";
 /* The tag Guile knows the arch smob by.  */
 static scm_t_bits arch_smob_tag;
 
-/* Use a 'void *' here because it isn't guaranteed that SCM is a
-   pointer.  */
-static const registry<gdbarch>::key<void, gdb::noop_deleter<void>>
-     arch_object_data;
+struct arch_object_data_type
+{
+  SCM arch_scm;
+};
+
+static const registry<gdbarch>::key<arch_object_data_type> arch_object_data;
 
 static int arscm_is_arch (SCM);
 
@@ -113,22 +115,20 @@ gdbscm_arch_p (SCM scm)
 SCM
 arscm_scm_from_arch (struct gdbarch *gdbarch)
 {
-  SCM arch_scm;
-  void *data = arch_object_data.get (gdbarch);
+  arch_object_data_type *data = arch_object_data.get (gdbarch);
   if (data == nullptr)
     {
-      arch_scm = arscm_make_arch_smob (gdbarch);
+      SCM arch_scm = arscm_make_arch_smob (gdbarch);
 
       /* This object lasts the duration of the GDB session, so there
 	 is no call to scm_gc_unprotect_object for it.  */
       scm_gc_protect_object (arch_scm);
 
-      arch_object_data.set (gdbarch, (void *) arch_scm);
+      data = &arch_object_data.emplace (gdbarch);
+      data->arch_scm = arch_scm;
     }
-  else
-    arch_scm = (SCM) data;
 
-  return arch_scm;
+  return data->arch_scm;
 }
 
 /* Return the <gdb:arch> smob in SELF.

@@ -672,8 +672,19 @@ dwarf_decode_lines (struct dwarf2_cu *cu, unrelocated_addr lowpc)
 		  }
 		  break;
 		default:
-		  complaint (_("mangled .debug_line section"));
-		  return;
+		  complaint (_("unrecognized line number program opcode %d"), op_code);
+		  /* Unknown extended opcode, ignore it.  */
+		  line_ptr = extended_end;
+		  break;
+		case 0:
+		  /* This is also an unknown opcode, but this one is used by
+		     the Zig compiler (perhaps others too?) specifically as a
+		     "padding" instruction.  Also, although it is technically
+		     available, future DWARF revisions are very unlikely to use
+		     opcode 0.  Therefore, it's better to elide the warning in
+		     this case, and ignore the instruction silently.  */
+		  line_ptr = extended_end;
+		  break;
 		}
 	      /* Make sure that we parsed the extended op correctly.  If e.g.
 		 we expected a different address size than the producer used,

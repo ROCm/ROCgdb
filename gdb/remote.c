@@ -83,7 +83,6 @@
 #include "gdbsupport/selftest.h"
 #include "cli/cli-style.h"
 #include "gdbsupport/remote-args.h"
-#include "gdbsupport/gdb_argv_vec.h"
 #include "finish-thread-state.h"
 
 /* The remote target.  */
@@ -1727,11 +1726,7 @@ static const registry<program_space>::key<remote_per_progspace>
 static remote_per_progspace &
 get_remote_progspace_info (program_space *pspace)
 {
-  remote_per_progspace *info = remote_pspace_data.get (pspace);
-  if (info == nullptr)
-    info = remote_pspace_data.emplace (pspace);
-  gdb_assert (info != nullptr);
-  return *info;
+  return remote_pspace_data.try_emplace (pspace);
 }
 
 /* The size to align memory write packets, when practical.  The protocol
@@ -12765,21 +12760,13 @@ test_remote_args_command (const char *args, int from_tty)
   for (const std::string &a : split_args)
     gdb_printf ("  (%s)\n", a.c_str ());
 
-  gdb::argv_vec tmp_split_args;
-  for (const std::string &a : split_args)
-    tmp_split_args.emplace_back (xstrdup (a.c_str ()));
-
-  std::string joined_args = gdb::remote_args::join (tmp_split_args.get ());
+  std::string joined_args = gdb::remote_args::join (split_args);
 
   gdb_printf ("Output (%s)\n", joined_args.c_str ());
 
   std::vector<std::string> resplit = gdb::remote_args::split (joined_args);
 
-  tmp_split_args.clear ();
-  for (const std::string &a : resplit)
-    tmp_split_args.emplace_back (xstrdup (a.c_str ()));
-
-  std::string rejoined = gdb::remote_args::join (tmp_split_args.get ());
+  std::string rejoined = gdb::remote_args::join (resplit);
 
   if (joined_args != rejoined || split_args != resplit)
     {
@@ -13098,11 +13085,7 @@ static const registry<gdbarch>::key<struct remote_g_packet_data>
 static struct remote_g_packet_data *
 get_g_packet_data (struct gdbarch *gdbarch)
 {
-  struct remote_g_packet_data *data
-    = remote_g_packet_data_handle.get (gdbarch);
-  if (data == nullptr)
-    data = remote_g_packet_data_handle.emplace (gdbarch);
-  return data;
+  return &remote_g_packet_data_handle.try_emplace (gdbarch);
 }
 
 void

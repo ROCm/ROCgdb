@@ -51,7 +51,10 @@ extern void interp_exec (struct interp *interp, const char *command);
 class interp : public intrusive_list_node<interp>
 {
 public:
-  explicit interp (const char *name);
+  /* Construct a new interpreter with the given name.  If MAKE_OUTPUTS
+     is true, also initialize the standard output streams to the
+     instances of the appropriate ui::passthrough_file type.  */
+  explicit interp (const char *name, bool make_outputs = true);
   virtual ~interp () = 0;
 
   void init (bool top_level)
@@ -73,12 +76,6 @@ public:
      for the console & mi outputs, or it might be a result
      formatter.  */
   virtual ui_out *interp_ui_out () = 0;
-
-  /* Provides a hook for interpreters to do any additional
-     setup/cleanup that they might need when logging is enabled or
-     disabled.  */
-  virtual void set_logging (ui_file_up logfile, bool logging_redirect,
-			    bool debug_redirect) = 0;
 
   /* Called before starting an event loop, to give the interpreter a
      chance to e.g., print a prompt.  */
@@ -205,6 +202,46 @@ public:
   virtual void on_memory_changed (CORE_ADDR addr, ssize_t len,
 				  const bfd_byte *data) {}
 
+  /* Accessors that return the various standard output files.  */
+  ui_file *get_stdout ()
+  {
+    return m_stdout.get ();
+  }
+
+  ui_file *get_stderr ()
+  {
+    return m_stderr.get ();
+  }
+
+  ui_file *get_stdlog ()
+  {
+    return m_stdlog.get ();
+  }
+
+  ui_file *get_stdtarg ()
+  {
+    return m_stdtarg.get ();
+  }
+
+protected:
+
+  /* The standard output streams.
+
+     Each interpreter can manage these streams as it likes.  The only
+     general rule is that the final ui_file in each pipeline  should
+     be a ui::ui_*_file of the appropriate type.
+
+     The overall approach here is that output starts with the
+     interpreter -- that is, "globals" like gdb_stdout just route to
+     these fields in the current interpreter.
+
+     After any processing by the interpreter, output is then sent to
+     the UI's channels.  The UI handles paging, logging, etc.  */
+  ui_file_up m_stdout;
+  ui_file_up m_stderr;
+  ui_file_up m_stdlog;
+  ui_file_up m_stdtarg;
+
 private:
   /* Called to perform any needed initialization.  */
   virtual void do_init (bool top_level)
@@ -257,21 +294,6 @@ private:
 };
 
 extern int current_interp_named_p (const char *name);
-
-/* Call this function to give the current interpreter an opportunity
-   to do any special handling of streams when logging is enabled or
-   disabled.  LOGFILE is the stream for the log file when logging is
-   starting and is NULL when logging is ending.  LOGGING_REDIRECT is
-   the value of the "set logging redirect" setting.  If true, the
-   interpreter should configure the output streams to send output only
-   to the logfile.  If false, the interpreter should configure the
-   output streams to send output to both the current output stream
-   (i.e., the terminal) and the log file.  DEBUG_REDIRECT is same as
-   LOGGING_REDIRECT, but for the value of "set logging debugredirect"
-   instead.  */
-extern void current_interp_set_logging (ui_file_up logfile,
-					bool logging_redirect,
-					bool debug_redirect);
 
 /* Returns the top-level interpreter.  */
 extern struct interp *top_level_interpreter (void);

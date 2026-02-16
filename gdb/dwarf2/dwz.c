@@ -31,6 +31,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "gdbsupport/scoped_fd.h"
 #include "run-on-main-thread.h"
+#include "cli/cli-style.h"
 
 const char *
 dwz_file::read_string (struct objfile *objfile, LONGEST str_offset)
@@ -379,8 +380,9 @@ dwz_file::read_dwz_file (dwarf2_per_objfile *per_objfile)
 	  dwz_bfd = gdb_bfd_open (alt_filename.get (), gnutarget);
 
 	  if (dwz_bfd == nullptr)
-	    warning (_("File \"%s\" from debuginfod cannot be opened as bfd"),
-		     alt_filename.get ());
+	    warning (_("File \"%ps\" from debuginfod cannot be opened as bfd"),
+		     styled_string (file_name_style.style (),
+				    alt_filename.get ()));
 	  else if (!verify_id (dwz_bfd.get (), buildid_len, buildid.get (),
 			       dwarf5))
 	    dwz_bfd.reset (nullptr);

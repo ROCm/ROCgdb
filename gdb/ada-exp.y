@@ -97,7 +97,7 @@ struct ada_parse_state
   std::vector<ada_assign_up> assignments;
 
   /* Track currently active iterated assignment names.  */
-  gdb::unordered_map<std::string, std::vector<ada_index_var_operation *>>
+  gdb::unordered_string_map<std::vector<ada_index_var_operation *>>
        iterated_associations;
 
   auto_obstack temp_space;
@@ -1870,8 +1870,8 @@ write_var_or_type (struct parser_state *par_state,
 	    }
 	}
 
-      if (!have_full_symbols (current_program_space)
-	  && !have_partial_symbols (current_program_space)
+      if (!current_program_space->has_full_symbols ()
+	  && !current_program_space->has_partial_symbols ()
 	  && block == NULL)
 	error (_("No symbol table is loaded.  Use the \"file\" command."));
       if (block == par_state->expression_context_block)

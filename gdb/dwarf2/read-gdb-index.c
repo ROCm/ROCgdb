@@ -30,6 +30,7 @@
 #include "extract-store-integer.h"
 #include "cp-support.h"
 #include "symtab.h"
+#include "cli/cli-style.h"
 
 /* When true, do not reject deprecated .gdb_index sections.  */
 static bool use_deprecated_index_sections = false;
@@ -428,8 +429,9 @@ read_gdb_index_from_buffer (const char *filename,
       static int warning_printed = 0;
       if (!warning_printed)
 	{
-	  warning (_("Skipping obsolete .gdb_index section in %s."),
-		   filename);
+	  warning (_("Skipping obsolete .gdb_index section in %ps."),
+		   styled_string (file_name_style.style (),
+				  filename));
 	  warning_printed = 1;
 	}
       return 0;
@@ -757,8 +759,9 @@ dwarf2_read_gdb_index
 				       &dwz_types_ignore,
 				       &dwz_types_elements_ignore))
 	{
-	  warning (_("could not read '.gdb_index' section from %s; skipping"),
-		   dwz->filename ());
+	  warning (_("could not read '.gdb_index' section from %ps; skipping"),
+		   styled_string (file_name_style.style (),
+				  dwz->filename ()));
 	  return false;
 	}
     }

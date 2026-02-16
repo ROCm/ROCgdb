@@ -27,9 +27,9 @@ class dap_interp final : public interp
 public:
 
   explicit dap_interp (const char *name)
-    : interp (name),
-      m_ui_out (new cli_ui_out (gdb_stdout))
+    : interp (name)
   {
+    m_ui_out = std::make_unique<cli_ui_out> (m_stdout.get ());
   }
 
   ~dap_interp () override = default;
@@ -45,12 +45,6 @@ public:
   }
 
   void exec (const char *command) override
-  {
-    /* Just ignore it.  */
-  }
-
-  void set_logging (ui_file_up logfile, bool logging_redirect,
-		    bool debug_redirect) override
   {
     /* Just ignore it.  */
   }

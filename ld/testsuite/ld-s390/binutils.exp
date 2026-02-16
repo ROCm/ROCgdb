@@ -37,10 +37,7 @@ run_ld_link_tests [list \
 	"" \
 	"-m64 --generate-missing-build-notes=no" \
 	{got-1.s} \
-	{{readelf -rW libgot_64-1a.rd} \
-	 {readelf -aW libgot_64-1b.rd} \
-	 {readelf --got-contents libgot_64-1c.rd} \
-	 {readelf {--got-contents -W} libgot_64-1d.rd}} \
+	{{readelf {-rW --got-contents} libgot_64-1.rd}} \
 	"libgot_64-1.so" \
     ] \
 ]

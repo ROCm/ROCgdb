@@ -105,25 +105,10 @@ void
 tui_interp::resume ()
 {
   struct ui *ui = current_ui;
-  struct ui_file *stream;
-
-  /* gdb_setup_readline will change gdb_stdout.  If the TUI was
-     previously writing to gdb_stdout, then set it to the new
-     gdb_stdout afterwards.  */
-
-  stream = tui_old_uiout->set_stream (gdb_stdout);
-  if (stream != gdb_stdout)
-    {
-      tui_old_uiout->set_stream (stream);
-      stream = NULL;
-    }
 
   gdb_setup_readline (1);
 
   ui->input_handler = tui_command_line_handler;
-
-  if (stream != NULL)
-    tui_old_uiout->set_stream (gdb_stdout);
 
   if (tui_start_enabled)
     tui_enable ();

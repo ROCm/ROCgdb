@@ -62,6 +62,7 @@ struct thread_info;
 #include "displaced-stepping.h"
 
 #include "gdbsupport/unordered_map.h"
+#include "gdbsupport/common-inferior.h"
 
 struct infcall_suspend_state;
 struct infcall_control_state;
@@ -545,7 +546,11 @@ public:
      ESCAPE_SHELL_CHAR is true all special shell characters in ARGS are
      escaped, When false only the characters that GDB sees as special will
      be escaped.  See construct_inferior_arguments for more details.  */
-  void set_args (gdb::array_view<char * const> args, bool escape_shell_char);
+  template<typename T>
+  void set_args (gdb::array_view<T const> args, bool escape_shell_char)
+  {
+    this->set_args (construct_inferior_arguments (args, escape_shell_char));
+  }
 
   /* Get the argument string to use when running this inferior.
 

@@ -20,12 +20,31 @@
 #include "cli/cli-cmds.h"
 #include "ui-out.h"
 #include "interps.h"
+#include "logging-file.h"
 #include "cli/cli-style.h"
 #include "cli/cli-decode.h"
 
 static std::string saved_filename;
 
+static void
+maybe_warn_already_logging ()
+{
+  if (!saved_filename.empty ())
+    warning (_("Currently logging to %ps.  Turn the logging off and on to "
+	       "make the new setting effective."),
+	     styled_string (file_name_style.style (),
+			    saved_filename.c_str ()));
+}
+
 static std::string logging_filename = "gdb.txt";
+
+static void
+set_logging_filename (const char *args,
+		      int from_tty, struct cmd_list_element *c)
+{
+  maybe_warn_already_logging ();
+}
+
 static void
 show_logging_filename (struct ui_file *file, int from_tty,
 		       struct cmd_list_element *c, const char *value)
@@ -35,14 +54,6 @@ show_logging_filename (struct ui_file *file, int from_tty,
 }
 
 static bool logging_overwrite;
-
-static void
-maybe_warn_already_logging ()
-{
-  if (!saved_filename.empty ())
-    warning (_("Currently logging to %s.  Turn the logging off and on to "
-	       "make the new setting effective."), saved_filename.c_str ());
-}
 
 static void
 set_logging_overwrite (const char *args,
@@ -60,6 +71,9 @@ show_logging_overwrite (struct ui_file *file, int from_tty,
   else
     gdb_printf (file, _("off: Logging appends to the log file.\n"));
 }
+
+/* The current log file, or nullptr if none.  */
+static ui_file_up log_file;
 
 /* Value as configured by the user.  */
 static bool logging_redirect;
@@ -96,16 +110,118 @@ show_logging_debug_redirect (struct ui_file *file, int from_tty,
        _("off: Debug output will go to both the screen and the log file.\n"));
 }
 
-/* If we've pushed output files, close them and pop them.  */
-static void
-pop_output_files (void)
-{
-  current_interp_set_logging (NULL, false, false);
+/* Values as used by the logging_file implementation.  These are
+   separate and only set when logging is enabled, because historically
+   gdb required you to disable and re-enable logging to change these
+   settings.  */
 
-  /* Stay consistent with handle_redirections.  */
-  if (!current_uiout->is_mi_like_p ())
-    current_uiout->redirect (NULL);
+static bool logging_redirect_for_file;
+static bool debug_redirect_for_file;
+
+/* See logging-file.h.  */
+
+template<typename T>
+bool
+logging_file<T>::ordinary_output () const
+{
+  if (log_file == nullptr)
+    return true;
+  if (logging_redirect_for_file)
+    return false;
+  if (debug_redirect_for_file)
+    return !m_for_stdlog;
+  return true;
 }
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::flush ()
+{
+  if (log_file != nullptr)
+    log_file->flush ();
+  /* Always flushing seems fine.  */
+  m_out->flush ();
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+bool
+logging_file<T>::can_page () const
+{
+  /* If all output is redirected, do not page.  */
+  if (!ordinary_output ())
+    return false;
+  /* In other cases, paging happens if the underlying stream can
+     page.  */
+  return m_out->can_page ();
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::write (const char *buf, long length_buf)
+{
+  if (log_file != nullptr)
+    log_file->write (buf, length_buf);
+  if (ordinary_output ())
+    m_out->write (buf, length_buf);
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::write_async_safe (const char *buf, long length_buf)
+{
+  if (log_file != nullptr)
+    log_file->write_async_safe (buf, length_buf);
+  if (ordinary_output ())
+    m_out->write_async_safe (buf, length_buf);
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::puts (const char *linebuffer)
+{
+  if (log_file != nullptr)
+    log_file->puts (linebuffer);
+  if (ordinary_output ())
+    m_out->puts (linebuffer);
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::emit_style_escape (const ui_file_style &style)
+{
+  if (log_file != nullptr)
+    log_file->emit_style_escape (style);
+  if (ordinary_output ())
+    m_out->emit_style_escape (style);
+}
+
+/* See logging-file.h.  */
+
+template<typename T>
+void
+logging_file<T>::puts_unfiltered (const char *str)
+{
+  if (log_file != nullptr)
+    log_file->puts_unfiltered (str);
+  if (ordinary_output ())
+    m_out->puts_unfiltered (str);
+}
+
+/* The available instantiations of logging_file.  */
+template class logging_file<ui_file *>;
+template class logging_file<ui_file_up>;
 
 /* This is a helper for the `set logging' command.  */
 static void
@@ -113,12 +229,13 @@ handle_redirections (int from_tty)
 {
   if (!saved_filename.empty ())
     {
-      gdb_printf ("Already logging to %s.\n",
-		  saved_filename.c_str ());
+      gdb_printf ("Already logging to %ps.\n",
+		  styled_string (file_name_style.style (),
+				 saved_filename.c_str ()));
       return;
     }
 
-  stdio_file_up log (new no_terminal_escape_file ());
+  stdio_file_up log = std::make_unique<no_terminal_escape_file> ();
   if (!log->open (logging_filename.c_str (), logging_overwrite ? "w" : "a"))
     perror_with_name (_("set logging"));
 
@@ -126,34 +243,28 @@ handle_redirections (int from_tty)
   if (from_tty)
     {
       if (!logging_redirect)
-	gdb_printf ("Copying output to %s.\n",
-		    logging_filename.c_str ());
+	gdb_printf ("Copying output to %ps.\n",
+		    styled_string (file_name_style.style (),
+				   logging_filename.c_str ()));
       else
-	gdb_printf ("Redirecting output to %s.\n",
-		    logging_filename.c_str ());
+	gdb_printf ("Redirecting output to %ps.\n",
+		    styled_string (file_name_style.style (),
+				   logging_filename.c_str ()));
 
       if (!debug_redirect)
-	gdb_printf ("Copying debug output to %s.\n",
-		    logging_filename.c_str ());
+	gdb_printf ("Copying debug output to %ps.\n",
+		    styled_string (file_name_style.style (),
+				   logging_filename.c_str ()));
       else
-	gdb_printf ("Redirecting debug output to %s.\n",
-		    logging_filename.c_str ());
+	gdb_printf ("Redirecting debug output to %ps.\n",
+		    styled_string (file_name_style.style (),
+				   logging_filename.c_str ()));
     }
 
   saved_filename = logging_filename;
-
-  /* Let the interpreter do anything it needs.  */
-  current_interp_set_logging (std::move (log), logging_redirect,
-			      debug_redirect);
-
-  /* Redirect the current ui-out object's output to the log.  Use
-     gdb_stdout, not log, since the interpreter may have created a tee
-     that wraps the log.  Don't do the redirect for MI, it confuses
-     MI's ui-out scheme.  Note that we may get here with MI as current
-     interpreter, but with the current ui_out as a CLI ui_out, with
-     '-interpreter-exec console "set logging on"'.  */
-  if (!current_uiout->is_mi_like_p ())
-    current_uiout->redirect (gdb_stdout);
+  logging_redirect_for_file = logging_redirect;
+  debug_redirect_for_file = debug_redirect;
+  log_file = std::move (log);
 }
 
 static void
@@ -173,10 +284,12 @@ set_logging_off (const char *args, int from_tty)
   if (saved_filename.empty ())
     return;
 
-  pop_output_files ();
+  log_file.reset ();
   if (from_tty)
-    gdb_printf ("Done logging to %s.\n",
-		saved_filename.c_str ());
+    gdb_printf ("Done logging to %ps.\n",
+		styled_string (file_name_style.style (),
+			       saved_filename.c_str ()));
+
   saved_filename.clear ();
 }
 
@@ -248,7 +361,7 @@ If debug redirect is on, debug will go only to the log file."),
 Set the current logfile."), _("\
 Show the current logfile."), _("\
 The logfile is used when directing GDB's output."),
-			    NULL,
+			    set_logging_filename,
 			    show_logging_filename,
 			    &set_logging_cmdlist, &show_logging_cmdlist);
 

@@ -463,7 +463,7 @@ read_unwind_info (struct objfile *objfile)
   /* Keep a pointer to the unwind information.  */
   obj_private = hppa_objfile_priv_data.get (objfile);
   if (obj_private == NULL)
-    obj_private = hppa_objfile_priv_data.emplace (objfile);
+    obj_private = &hppa_objfile_priv_data.emplace (objfile);
 
   obj_private->unwind_info = ui;
 }

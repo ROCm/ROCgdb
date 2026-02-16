@@ -1151,9 +1151,7 @@ static const registry<gdbarch>::key<jit_gdbarch_data_type> jit_gdbarch_data;
 static void
 jit_prepend_unwinder (struct gdbarch *gdbarch)
 {
-  struct jit_gdbarch_data_type *data = jit_gdbarch_data.get (gdbarch);
-  if (data == nullptr)
-    data = jit_gdbarch_data.emplace (gdbarch);
+  struct jit_gdbarch_data_type *data = &jit_gdbarch_data.try_emplace (gdbarch);
 
   if (!data->unwinder_registered)
     {

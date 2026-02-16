@@ -57,6 +57,7 @@
 #include "gdbsupport/pathstuff.h"
 #include "cli/cli-style.h"
 #include "pager.h"
+#include "logging-file.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -91,28 +92,96 @@ extern void initialize_all_files (void);
 #define DEFAULT_PROMPT	"(gdb) "
 #endif
 
-struct ui_file **
-current_ui_gdb_stdout_ptr ()
+/* See utils.h.  */
+
+struct ui_file *
+current_gdb_stdout ()
 {
-  return &current_ui->m_gdb_stdout;
+  /* In early startup, there's no interpreter, but we'd still like to
+     be able to print.  */
+  interp *curr = current_interpreter ();
+  if (curr == nullptr)
+    return current_ui->m_ui_stdout;
+  return curr->get_stdout ();
 }
 
-struct ui_file **
-current_ui_gdb_stdin_ptr ()
+/* See utils.h.  */
+
+struct ui_file *
+current_gdb_stdin ()
 {
-  return &current_ui->m_gdb_stdin;
+  return current_ui->m_gdb_stdin;
 }
 
-struct ui_file **
-current_ui_gdb_stderr_ptr ()
+/* See utils.h.  */
+
+struct ui_file *
+current_gdb_stderr ()
 {
-  return &current_ui->m_gdb_stderr;
+  /* In early startup, there's no interpreter, but we'd still like to
+     be able to print.  */
+  interp *curr = current_interpreter ();
+  if (curr == nullptr)
+    return current_ui->m_ui_stderr;
+  return curr->get_stderr ();
 }
 
-struct ui_file **
-current_ui_gdb_stdlog_ptr ()
+/* See utils.h.  */
+
+struct ui_file *
+current_gdb_stdlog ()
 {
-  return &current_ui->m_gdb_stdlog;
+  /* In early startup, there's no interpreter, but we'd still like to
+     be able to print.  */
+  interp *curr = current_interpreter ();
+  if (curr == nullptr)
+    return current_ui->m_ui_stdlog;
+  return curr->get_stdlog ();
+}
+
+/* See utils.h.  */
+
+struct ui_file *
+current_gdb_stdtarg ()
+{
+  /* In early startup, there's no interpreter, but we'd still like to
+     be able to print.  */
+  interp *curr = current_interpreter ();
+  if (curr == nullptr)
+    return current_ui->m_ui_stdtarg;
+  return curr->get_stdtarg ();
+}
+
+/* See utils.h.  */
+
+struct ui_file **
+redirectable_stdout ()
+{
+  return &current_ui->m_ui_stdout;
+}
+
+/* See utils.h.  */
+
+struct ui_file **
+redirectable_stderr ()
+{
+  return &current_ui->m_ui_stderr;
+}
+
+/* See utils.h.  */
+
+struct ui_file **
+redirectable_stdlog ()
+{
+  return &current_ui->m_ui_stdlog;
+}
+
+/* See utils.h.  */
+
+struct ui_file **
+redirectable_stdtarg ()
+{
+  return &current_ui->m_ui_stdtarg;
 }
 
 struct ui_out **
@@ -597,8 +666,6 @@ execute_command (const char *p, int from_tty)
 static void
 execute_fn_to_ui_file (struct ui_file *file, std::function<void(void)> fn)
 {
-  /* GDB_STDOUT should be better already restored during these
-     restoration callbacks.  */
   set_batch_flag_and_restore_page_info save_page_info;
 
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
@@ -606,13 +673,13 @@ execute_fn_to_ui_file (struct ui_file *file, std::function<void(void)> fn)
   ui_out_redirect_pop redirect_popper (current_uiout, file);
 
   scoped_restore save_stdout
-    = make_scoped_restore (&gdb_stdout, file);
+    = make_scoped_restore (redirectable_stdout (), file);
   scoped_restore save_stderr
-    = make_scoped_restore (&gdb_stderr, file);
+    = make_scoped_restore (redirectable_stderr (), file);
   scoped_restore save_stdlog
-    = make_scoped_restore (&gdb_stdlog, file);
+    = make_scoped_restore (redirectable_stdlog (), file);
   scoped_restore save_stdtarg
-    = make_scoped_restore (&gdb_stdtarg, file);
+    = make_scoped_restore (redirectable_stdtarg (), file);
 
   fn ();
 }

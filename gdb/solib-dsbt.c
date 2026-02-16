@@ -198,11 +198,7 @@ static const registry<program_space>::key<dsbt_info> solib_dsbt_pspace_data;
 static dsbt_info *
 get_dsbt_info (program_space *pspace)
 {
-  dsbt_info *info = solib_dsbt_pspace_data.get (pspace);
-  if (info != nullptr)
-    return info;
-
-  return solib_dsbt_pspace_data.emplace (pspace);
+  return &solib_dsbt_pspace_data.try_emplace (pspace);
 }
 
 

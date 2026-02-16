@@ -130,10 +130,43 @@ escape_gdb_characters (const char * arg)
   return escape_characters (arg, special);
 }
 
-/* See common-inferior.h.  */
+/* Template function that converts a T to a 'const char *'.  */
 
+template<typename T> const char * to_char_ptr (T &arg);
+
+/* A no-op implementation that takes a 'const char *'.  */
+
+template<>
+const char *
+to_char_ptr (char * const &arg)
+{
+  return arg;
+}
+
+/* An implementation that gets a 'const char *' from a
+   gdb::unique_xmalloc_ptr<char> object.  */
+
+template<>
+const char *
+to_char_ptr (const gdb::unique_xmalloc_ptr<char> &arg)
+{
+  return arg.get ();
+}
+
+/* An implementation that gets a 'const char *' from a std::string.  */
+
+template<>
+const char *
+to_char_ptr (const std::string &arg)
+{
+  return arg.c_str ();
+}
+
+/* See gdbsupport/common-inferior.h.  */
+
+template<typename T>
 std::string
-construct_inferior_arguments (gdb::array_view<char * const> argv,
+construct_inferior_arguments (gdb::array_view<T const> argv,
 			      bool escape_shell_char)
 {
   /* Select the desired escape function.  */
@@ -143,13 +176,35 @@ construct_inferior_arguments (gdb::array_view<char * const> argv,
 
   std::string result;
 
-  for (const char *a : argv)
+  for (const T &a : argv)
     {
       if (!result.empty ())
 	result += " ";
 
-      result += escape_func (a);
+      result += escape_func (to_char_ptr (a));
     }
 
   return result;
 }
+
+/* Instantiate for T = 'gdb::unique_xmalloc_ptr<char>'.  */
+
+template
+std::string
+construct_inferior_arguments
+  (gdb::array_view<gdb::unique_xmalloc_ptr<char> const> argv,
+   bool escape_shell_char);
+
+/* Instantiate for T = 'char *'.  */
+
+template
+std::string
+construct_inferior_arguments (gdb::array_view<char * const> argv,
+			      bool escape_shell_char);
+
+/* Instantiate for T = 'std::string'.  */
+
+template
+std::string
+construct_inferior_arguments (gdb::array_view<std::string const> argv,
+			      bool escape_shell_char);

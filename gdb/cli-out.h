@@ -35,6 +35,8 @@ public:
 
   bool can_emit_style_escape () const override;
 
+  void emit_style_escape (const ui_file_style &style) override;
+
   ui_file *current_stream () const override
   { return m_streams.back (); }
 
@@ -69,9 +71,10 @@ protected:
     override ATTRIBUTE_PRINTF (7, 0);
   virtual void do_spaces (int numspaces) override;
   virtual void do_text (const char *string) override;
-  virtual void do_message (const ui_file_style &style,
+  virtual void do_message (ui_file_style &current_style,
+			   const ui_file_style &style,
 			   const char *format, va_list args) override
-    ATTRIBUTE_PRINTF (3,0);
+    ATTRIBUTE_PRINTF (4, 0);
   virtual void do_wrap_hint (int indent) override;
   virtual void do_flush () override;
   virtual void do_redirect (struct ui_file *outstream) override;

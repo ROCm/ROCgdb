@@ -247,7 +247,7 @@ _("Inferior %d and inferior %d would have identical simulator state.\n"
 
   if (sim_data == NULL)
     {
-      sim_data = sim_inferior_data_key.emplace (inf, sim_desc);
+      sim_data = &sim_inferior_data_key.emplace (inf, sim_desc);
     }
   else if (sim_desc)
     {

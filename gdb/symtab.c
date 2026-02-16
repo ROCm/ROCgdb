@@ -630,6 +630,40 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 	      && STRIP_DRIVE_SPEC (filename) == &filename[len - search_len]));
 }
 
+/* Same as compare_filenames_for_search, but for glob-style patterns.
+   Heads up on the order of the arguments.  They match the order of
+   compare_filenames_for_search, but it's the opposite of the order of
+   arguments to gdb_filename_fnmatch.  */
+
+bool
+compare_glob_filenames_for_search (const char *filename,
+				   const char *search_name)
+{
+  /* We rely on the property of glob-style patterns with FNM_FILE_NAME that
+     all /s have to be explicitly specified.  */
+  int file_path_elements = count_path_elements (filename);
+  int search_path_elements = count_path_elements (search_name);
+
+  if (search_path_elements > file_path_elements)
+    return false;
+
+  if (IS_ABSOLUTE_PATH (search_name))
+    {
+      return (search_path_elements == file_path_elements
+	      && gdb_filename_fnmatch (search_name, filename,
+				       FNM_FILE_NAME | FNM_NOESCAPE) == 0);
+    }
+
+  {
+    const char *file_to_compare
+      = strip_leading_path_elements (filename,
+				     file_path_elements - search_path_elements);
+
+    return gdb_filename_fnmatch (search_name, file_to_compare,
+				 FNM_FILE_NAME | FNM_NOESCAPE) == 0;
+  }
+}
+
 /* See symtab.h.  */
 
 void
@@ -1319,7 +1353,7 @@ get_symbol_cache (struct program_space *pspace)
 
   if (cache == NULL)
     {
-      cache = symbol_cache_key.emplace (pspace);
+      cache = &symbol_cache_key.emplace (pspace);
       resize_symbol_cache (cache, symbol_cache_size);
     }
 
@@ -4540,8 +4574,8 @@ info_sources_worker (struct ui_out *uiout,
 static void
 info_sources_command (const char *args, int from_tty)
 {
-  if (!have_full_symbols (current_program_space)
-      && !have_partial_symbols (current_program_space))
+  if (!current_program_space->has_full_symbols ()
+      && !current_program_space->has_partial_symbols ())
     error (_("No symbol table is loaded.  Use the \"file\" command."));
 
   filename_partial_match_opts match_opts;
@@ -6225,8 +6259,8 @@ make_source_files_completion_list (const char *text)
   const char *base_name;
   struct add_partial_filename_data datum;
 
-  if (!have_full_symbols (current_program_space)
-      && !have_partial_symbols (current_program_space))
+  if (!current_program_space->has_full_symbols ()
+      && !current_program_space->has_partial_symbols ())
     return list;
 
   filename_seen_cache filenames_seen;
@@ -6281,20 +6315,13 @@ make_source_files_completion_list (const char *text)
 static main_info *
 get_main_info (program_space *pspace)
 {
-  main_info *info = main_progspace_key.get (pspace);
-
-  if (info == NULL)
-    {
-      /* It may seem strange to store the main name in the progspace
-	 and also in whatever objfile happens to see a main name in
-	 its debug info.  The reason for this is mainly historical:
-	 gdb returned "main" as the name even if no function named
-	 "main" was defined the program; and this approach lets us
-	 keep compatibility.  */
-      info = main_progspace_key.emplace (pspace);
-    }
-
-  return info;
+  /* It may seem strange to store the main name in the progspace
+     and also in whatever objfile happens to see a main name in
+     its debug info.  The reason for this is mainly historical:
+     gdb returned "main" as the name even if no function named
+     "main" was defined the program; and this approach lets us
+     keep compatibility.  */
+  return &main_progspace_key.try_emplace (pspace);
 }
 
 static void

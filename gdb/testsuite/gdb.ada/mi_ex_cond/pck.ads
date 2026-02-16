@@ -14,5 +14,5 @@
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 package Pck is
-   I : Integer := 1;
+   The_Test_Index : Integer := 1;
 end Pck;

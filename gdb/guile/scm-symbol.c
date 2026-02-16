@@ -136,7 +136,7 @@ syscm_get_symbol_map (struct symbol *symbol)
       struct syscm_gdbarch_data *data = syscm_gdbarch_data_key.get (gdbarch);
       if (data == nullptr)
 	{
-	  data = syscm_gdbarch_data_key.emplace (gdbarch);
+	  data = &syscm_gdbarch_data_key.emplace (gdbarch);
 	  data->htab
 	    = gdbscm_create_eqable_gsmob_ptr_map (syscm_hash_symbol_smob,
 						  syscm_eq_symbol_smob);

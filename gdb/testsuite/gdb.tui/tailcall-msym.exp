@@ -1,0 +1,158 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test checks GDB's ability to display the correct function name
+# in the TUI status bar when we have a tailcall function in a file
+# with no debug information.
+#
+# The setup of this test is a direct copy of gdb.base/tailcall-msym.exp,
+# only the last part where we actually activate the TUI is different.
+# Still, I wanted the test to live in gdb.tui/ as this really is testing
+# TUI specific code.
+
+tuiterm_env
+
+standard_testfile
+
+# Compile with debug info first so we can find the instruction boundaries.
+if { [prepare_for_testing "prepare with debug" ${testfile} ${srcfile}] } {
+    return
+}
+
+if {![runto callee]} {
+    return
+}
+
+# At this point the stack is main->caller->callee, and the inferior is
+# stopped in 'callee'.  Move up to the 'caller' function so we can
+# find all the addresses we need.
+gdb_test "up" ".*caller.*" "go up to caller"
+
+set func_start -1
+set func_end -1
+set return_addr -1
+
+# Get the start address of 'caller'.
+gdb_test_multiple "info address caller" "get caller start address" {
+    -re -wrap "Symbol \"caller\" is a function at address ($hex)\." {
+	set func_start $expect_out(1,string)
+	pass $gdb_test_name
+    }
+}
+
+# Get the return address within 'caller' (current PC in this frame).
+gdb_test_multiple "print/x \$pc" "get return address" {
+    -re -wrap " = ($hex)" {
+	set return_addr $expect_out(1,string)
+	pass $gdb_test_name
+    }
+}
+
+gdb_test_multiple "disassemble caller" "get caller end address" {
+    -re "^\\s+($hex) \[^\r\n\]+\r\n" {
+	set func_end $expect_out(1,string)
+	exp_continue
+    }
+    -re "^$gdb_prompt $" {
+	gdb_assert { $func_end != -1 } $gdb_test_name
+    }
+    -re "^\[^\r\n\]*\r\n" {
+	exp_continue
+    }
+}
+
+# Check both addresses were found.
+if { $func_start == -1 || $func_end == -1 || $return_addr == -1} {
+    fail "could not determine addresses"
+    return
+}
+
+# Calculate the reduced length we want the 'caller' function to be.
+# This will stop the function immediately after the call instruction,
+# as if the function was a tailcall.
+set fake_len [expr {$return_addr - $func_start}]
+
+# Calculate the length of the dummy function.  This is almost the
+# remainder of the original 'caller' function.  The FUNC_END is
+# actually the address of the last instruction in 'caller', so this
+# new length will be one instruction short, but finding the actual end
+# is more complex, and really isn't necessary.  This is good enough.
+set dummy_len [expr {$func_end - $return_addr}]
+
+# Recompile the source file into an assembly file.  We're going to
+# modify this assembly file later.
+set asm_file [standard_output_file ${testfile}.s]
+if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "$asm_file" assembly {}] != "" } {
+    untested "failed to compile to assembly"
+    return
+}
+
+# Create and modify some symbols within the assembler file.  There are
+# two things we want to do.  First, reduce the length of the function
+# 'caller' such that the call instruction (the one going to 'callee')
+# is the last instruction in the function, this appears to make
+# 'caller' a tail call function.  Second, create a new function called
+# 'dummy_func' immediately after 'caller', this means that if GDB gets
+# things wrong it will report 'dummy_func' in the backtrace rather
+# than 'caller'.
+set fd [open $asm_file a]
+puts $fd ""
+puts $fd "/* Artificial symbols added by testsuite.  */"
+
+# Create 'dummy_func'.  The length here is short to avoid overlapping
+# other functions.
+puts $fd ".global dummy_func"
+puts $fd ".type dummy_func, %function"
+puts $fd "dummy_func = caller + $fake_len"
+puts $fd ".size dummy_func, $dummy_len"
+
+# Emit a new size for function 'caller', the assembler seems happy
+# enough to just use this new length instead of the original length
+# the compiler emitted.
+#
+# If this is ever a problem then we'll need to parse through the
+# assembler file and remove the original .size directive.
+puts $fd ".size caller, $fake_len"
+close $fd
+
+# Rebuild the test executable from the modified assembler file.  Don't
+# include debug as we want GDB to use the msymbols.
+set real_testfile ${testfile}-updated
+if { [build_executable "build" $real_testfile $asm_file {nodebug}] } {
+    return
+}
+
+Term::clean_restart 24 80 $real_testfile
+
+if {![runto callee]} {
+    return
+}
+
+if {![Term::enter_tui]} {
+    unsupported "TUI not supported"
+    return
+}
+
+# Check the function name on display in the status bar.  The interesting
+# case here is 'caller', which is a tailcall function in an objfile with
+# no debug information.
+foreach func { callee caller main } {
+    Term::check_region_contents "status bar says $func" \
+	0 15 80 1 "In: $func"
+
+    if { $func ne "main" } {
+	Term::command "up"
+    }
+}

@@ -190,10 +190,7 @@ static const registry<gdbarch>::key<windows_gdbarch_data>
 static struct windows_gdbarch_data *
 get_windows_gdbarch_data (struct gdbarch *gdbarch)
 {
-  windows_gdbarch_data *result = windows_gdbarch_data_handle.get (gdbarch);
-  if (result == nullptr)
-    result = windows_gdbarch_data_handle.emplace (gdbarch);
-  return result;
+  return &windows_gdbarch_data_handle.try_emplace (gdbarch);
 }
 
 /* Define Thread Local Base pointer type.  */

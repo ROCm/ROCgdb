@@ -205,13 +205,7 @@ get_aix_thread_variables_data (struct inferior *inf)
   if (inf == NULL)
     return NULL;
 
-  struct aix_thread_variables* data;
-
-  data = aix_thread_variables_handle.get (inf);
-  if (data == NULL)
-    data = aix_thread_variables_handle.emplace (inf);
-
-  return data;
+  return &aix_thread_variables_handle.try_emplace (inf);
 }
 
 /* Helper to get data for ptid in a function.  */

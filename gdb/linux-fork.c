@@ -113,13 +113,7 @@ static const registry<inferior>::key<checkpoint_inferior_data>
 static struct checkpoint_inferior_data *
 get_checkpoint_inferior_data (struct inferior *inf)
 {
-  struct checkpoint_inferior_data *data;
-
-  data = checkpoint_inferior_data_key.get (inf);
-  if (data == nullptr)
-    data = checkpoint_inferior_data_key.emplace (inf);
-
-  return data;
+  return &checkpoint_inferior_data_key.try_emplace (inf);
 }
 
 /* Return a reference to the per-inferior fork list.  */

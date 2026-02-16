@@ -1,0 +1,132 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test has a similar objective as gdb.tui/tailcall-msym.exp;
+# check that the TUI status bar will display the correct function name
+# when dealing with a tailcall function.
+#
+# Where gdb.tui/tailcall-msym.exp creates a tailcall with no debug
+# information, this test uses the DWARF assembler to create a tailcall
+# function with DWARF information.
+
+load_lib dwarf.exp
+tuiterm_env
+
+# This test requires the DWARF assembler.
+require dwarf2_support
+
+standard_testfile .c .S
+
+get_func_info caller
+
+# Compile with debug info first so that GDB can find the exact
+# instruction offsets we need.
+if { [prepare_for_testing "failed to prepare" ${testfile}-dbg ${srcfile}] } {
+    return
+}
+
+if {![runto callee]} {
+    return
+}
+
+# Move up to the caller frame to see the call site.
+gdb_test "up" ".*caller.*" "go up to caller"
+
+# Find the return address within 'caller'.  This is just the $pc
+# value.
+set return_addr [get_hexadecimal_valueof "\$pc" "*UNKNOWN*" \
+		     "get \$pc within caller"]
+
+# Define the start and end of DUMMY_FUNC, which sits over the second
+# half of CALLER.
+set dummy_func_start $return_addr
+set dummy_func_end $caller_end
+
+# Update the end of CALLER so it finishes with the call instruction.
+set caller_end $return_addr
+
+# Now generate a DWARF file.  Both MAIN and CALLEE here have their
+# actual address ranges.  CALLER is truncated to end at the call
+# (making it look like a tail call function), and DUMMY_FUNC sits
+# immediately after CALLER.
+set asm_file [standard_output_file ${srcfile2}]
+Dwarf::assemble $asm_file {
+    get_func_info main
+    get_func_info callee
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C99
+	    DW_AT_name "tailcall.c"
+	    DW_AT_producer "GDB DWARF Assembler"
+	} {
+	    DW_TAG_subprogram {
+		DW_AT_name callee
+		DW_AT_low_pc $callee_start DW_FORM_addr
+		DW_AT_high_pc $callee_end DW_FORM_addr
+		DW_AT_external 1 DW_FORM_flag
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_name caller
+		DW_AT_low_pc $::caller_start DW_FORM_addr
+		DW_AT_high_pc $::caller_end DW_FORM_addr
+		DW_AT_external 1 DW_FORM_flag
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_name dummy_func
+		DW_AT_low_pc $::dummy_func_start DW_FORM_addr
+		DW_AT_high_pc $::dummy_func_end DW_FORM_addr
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_name main
+		DW_AT_low_pc $main_start DW_FORM_addr
+		DW_AT_high_pc $main_end DW_FORM_addr
+		DW_AT_external 1 DW_FORM_flag
+	    }
+	}
+    }
+}
+
+# Build the actual test executable.
+if { [build_executable ${testfile}.exp ${testfile} \
+	  [list ${srcfile} ${asm_file}] {nodebug}] } {
+    return
+}
+
+Term::clean_restart 24 80 $testfile
+
+if {![runto callee]} {
+    return
+}
+
+if {![Term::enter_tui]} {
+    unsupported "TUI not supported"
+    return
+}
+
+# Check the function name on display in the status bar.  The interesting
+# case here is 'caller', which is a tailcall function in an objfile with
+# no debug information.
+foreach func { callee caller main } {
+    Term::check_region_contents "status bar says $func" \
+	0 15 80 1 "In: $func"
+
+    if { $func ne "main" } {
+	Term::command "up"
+    }
+}

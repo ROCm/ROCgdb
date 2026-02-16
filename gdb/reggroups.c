@@ -112,10 +112,7 @@ static const registry<gdbarch>::key<reggroups> reggroups_data;
 static reggroups *
 get_reggroups (struct gdbarch *gdbarch)
 {
-  struct reggroups *groups = reggroups_data.get (gdbarch);
-  if (groups == nullptr)
-    groups = reggroups_data.emplace (gdbarch);
-  return groups;
+  return &reggroups_data.try_emplace (gdbarch);
 }
 
 /* See reggroups.h.  */

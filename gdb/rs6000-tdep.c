@@ -162,12 +162,7 @@ static const registry<inferior>::key<ppc_inferior_data> ppc_inferior_data_key;
 ppc_inferior_data *
 get_ppc_per_inferior (inferior *inf)
 {
-  ppc_inferior_data *per_inf = ppc_inferior_data_key.get (inf);
-
-  if (per_inf == nullptr)
-    per_inf = ppc_inferior_data_key.emplace (inf);
-
-  return per_inf;
+  return &ppc_inferior_data_key.try_emplace (inf);
 }
 
 /* To be used by skip_prologue.  */

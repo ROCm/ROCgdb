@@ -71,6 +71,15 @@ extern void ATTRIBUTE_PRINTF (3, 0) debug_prefixed_vprintf
     } \
   while (0)
 
+#define debug_prefixed_printf_cond_func(debug_enabled_cond, mod, func, fmt, \
+					...) \
+  do \
+    { \
+      if (debug_enabled_cond) \
+	debug_prefixed_printf (mod, func, fmt, ##__VA_ARGS__); \
+    } \
+  while (0)
+
 #define debug_prefixed_printf_cond_nofunc(debug_enabled_cond, mod, fmt, ...) \
   do \
     { \

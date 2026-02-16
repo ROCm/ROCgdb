@@ -262,9 +262,8 @@ do_show (const char *what, struct ui_file *file,
 	 const char *value)
 {
   cli_style_option *cso = (cli_style_option *) cmd->context ();
-  gdb_puts (_("The "), file);
-  fprintf_styled (file, cso->style (), _("\"%s\" style"), cso->name ());
-  gdb_printf (file, _(" %s is: %s\n"), what, value);
+  gdb_printf (file, _("The %p[\"%s\" style%p] %s is: %s\n"),
+	      cso->style ().ptr (), cso->name (), nullptr, what, value);
 }
 
 /* See cli-style.h.  */

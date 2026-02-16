@@ -1207,8 +1207,8 @@ variable:	name_not_typename
 				= lookup_minimal_symbol (current_program_space, arg.c_str ());
 			      if (msymbol.minsym == NULL)
 				{
-				  if (!have_full_symbols (current_program_space)
-				      && !have_partial_symbols (current_program_space))
+				  if (!current_program_space->has_full_symbols ()
+				      && !current_program_space->has_partial_symbols ())
 				    error (_("No symbol table is loaded.  Use the \"file\" command."));
 				  else
 				    error (_("No symbol \"%s\" in current context."),

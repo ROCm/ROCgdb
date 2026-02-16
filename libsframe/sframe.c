@@ -1407,7 +1407,6 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
   const sframe_header *dhp;
   sframe_decoder_ctx *dctx;
   char *frame_buf;
-  char *tempbuf = NULL;
 
   size_t fidx_size;
   uint32_t fre_bytes;
@@ -1442,7 +1441,7 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
   if (foreign_endian)
     {
       /* Allocate a new buffer and initialize it.  */
-      tempbuf = (char *) malloc (sf_size * sizeof (char));
+      char *tempbuf = malloc (sf_size * sizeof (char));
       if (tempbuf == NULL)
 	return sframe_ret_set_errno (errp, SFRAME_ERR_NOMEM);
       memcpy (tempbuf, sf_buf, sf_size);
@@ -1451,12 +1450,14 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
       if (flip_header (tempbuf, sfp->sfp_version))
 	{
 	  sframe_ret_set_errno (errp, SFRAME_ERR_BUF_INVAL);
+	  free (tempbuf);
 	  goto decode_fail_free;
 	}
       /* Flip the rest of the SFrame section data buffer.  */
       if (flip_sframe (tempbuf, sf_size, 0))
 	{
 	  sframe_ret_set_errno (errp, SFRAME_ERR_BUF_INVAL);
+	  free (tempbuf);
 	  goto decode_fail_free;
 	}
 
@@ -1517,8 +1518,6 @@ sframe_decode (const char *sf_buf, size_t sf_size, int *errp)
   return dctx;
 
 decode_fail_free:
-  if (foreign_endian && tempbuf != NULL)
-    free (tempbuf);
   sframe_decoder_free (&dctx);
   dctx = NULL;
   return dctx;
@@ -1991,7 +1990,10 @@ sframe_encode (uint8_t ver, uint8_t flags, uint8_t abi_arch,
      sframe_encoder_write_sframe assume flag SFRAME_F_FDE_FUNC_START_PCREL
      set.  */
   if (!(flags & SFRAME_F_FDE_FUNC_START_PCREL))
-   return sframe_ret_set_errno (errp, SFRAME_ERR_ECTX_INVAL);
+    {
+      free (ectx);
+      return sframe_ret_set_errno (errp, SFRAME_ERR_ECTX_INVAL);
+    }
 
   hp->sfh_abi_arch = abi_arch;
   hp->sfh_cfa_fixed_fp_offset = fixed_fp_offset;

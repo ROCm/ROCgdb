@@ -30,7 +30,7 @@ class mi_interp final : public interp
 {
 public:
   mi_interp (const char *name)
-    : interp (name)
+    : interp (name, false)
   {}
 
   void do_init (bool top_level) override;
@@ -38,8 +38,6 @@ public:
   void suspend () override;
   void exec (const char *command_str) override;
   ui_out *interp_ui_out () override;
-  void set_logging (ui_file_up logfile, bool logging_redirect,
-		    bool debug_redirect) override;
   void pre_command_loop () override;
 
   void on_signal_received (gdb_signal sig) override;
@@ -74,22 +72,10 @@ public:
   void on_memory_changed (CORE_ADDR addr, ssize_t len,
 			  const bfd_byte *data) override;
 
-  /* MI's output channels */
-  mi_console_file *out;
-  mi_console_file *err;
-  mi_console_file *log;
-  mi_console_file *targ;
   mi_console_file *event_channel;
 
   /* Raw console output.  */
-  struct ui_file *raw_stdout;
-
-  /* Save the original value of raw_stdout here when logging, and the
-     file which we need to delete, so we can restore correctly when
-     done.  */
-  struct ui_file *saved_raw_stdout;
-  ui_file_up logfile_holder;
-  ui_file_up stdout_holder;
+  ui_file *raw_stdout;
 
   /* MI's builder.  */
   struct ui_out *mi_uiout;

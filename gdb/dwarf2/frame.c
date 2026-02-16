@@ -34,6 +34,7 @@
 #include "record.h"
 #include "extract-store-integer.h"
 #include "producer.h"
+#include "cli/cli-style.h"
 
 #include "complaints.h"
 #include "dwarf2/frame.h"
@@ -651,10 +652,7 @@ static const registry<gdbarch>::key<dwarf2_frame_ops> dwarf2_frame_data;
 static dwarf2_frame_ops *
 get_frame_ops (struct gdbarch *gdbarch)
 {
-  dwarf2_frame_ops *result = dwarf2_frame_data.get (gdbarch);
-  if (result == nullptr)
-    result = dwarf2_frame_data.emplace (gdbarch);
-  return result;
+  return &dwarf2_frame_data.try_emplace (gdbarch);
 }
 
 /* Default architecture-specific register state initialization
@@ -2226,8 +2224,10 @@ dwarf2_build_frame_info (struct objfile *objfile)
 
 	  catch (const gdb_exception_error &e)
 	    {
-	      warning (_("skipping .eh_frame info of %s: %s"),
-		       objfile_name (objfile), e.what ());
+	      warning (_("skipping .eh_frame info of %ps: %s"),
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)),
+		       e.what ());
 
 	      fde_table.clear ();
 	      /* The cie_table is discarded below.  */
@@ -2255,8 +2255,10 @@ dwarf2_build_frame_info (struct objfile *objfile)
 	}
       catch (const gdb_exception_error &e)
 	{
-	  warning (_("skipping .debug_frame info of %s: %s"),
-		   objfile_name (objfile), e.what ());
+	  warning (_("skipping .debug_frame info of %ps: %s"),
+		   styled_string (file_name_style.style (),
+				  objfile_name (objfile)),
+		   e.what ());
 
 	  fde_table.resize (num_old_fde_entries);
 	}

@@ -1209,13 +1209,7 @@ private:
   template<typename O>
   Storage *get_storage (O *owner, const StorageKey<O> &key) const
   {
-    Storage *r = key.get (owner);
-    if (r == nullptr)
-      {
-	r = new Storage();
-	key.set (owner, r);
-      }
-    return r;
+    return &key.try_emplace (owner);
   }
 
   Storage *get_storage (struct objfile* objf) const

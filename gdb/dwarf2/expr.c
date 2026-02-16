@@ -290,9 +290,7 @@ write_to_memory (CORE_ADDR address, const gdb_byte *buffer,
 type *
 address_type (gdbarch *arch, int addr_size)
 {
-  dwarf_gdbarch_types *types = dwarf_arch_cookie.get (arch);
-  if (types == nullptr)
-    types = dwarf_arch_cookie.emplace (arch);
+  dwarf_gdbarch_types *types = &dwarf_arch_cookie.try_emplace (arch);
   int ndx;
 
   if (addr_size == 2)

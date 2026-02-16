@@ -51,6 +51,7 @@
 #include "stack.h"
 #include "interps.h"
 #include "record-full.h"
+#include "buffered-streams.h"
 
 /* Print notices when new threads are attached and detached.  */
 static bool print_thread_events = true;

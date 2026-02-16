@@ -81,6 +81,10 @@ Dwarf::assemble {
 	name struct_with_int_member structure_type tu_label 0x53A2AE86 \
 	    {DW_LANG_C}
     }
+
+    aranges {} cu_label {
+	arange {} $_start_start $_start_len
+    }
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile "${asm_file} ${srcfile}" \

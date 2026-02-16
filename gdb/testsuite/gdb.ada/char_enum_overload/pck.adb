@@ -15,12 +15,15 @@
 
 package body Pck is
    procedure Overloaded (Value : Global_Enum_Type) is
+      X : Global_Enum_Type := Value;
    begin
-      null;
+      Do_Nothing (X'Address);
    end Overloaded;
 
    function Overloaded (Value : Character) return Global_Enum_Type is
+      X : Character := Value;
    begin
+      Do_Nothing (X'Address);
       return 'Y';
    end Overloaded;
 

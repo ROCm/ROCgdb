@@ -367,10 +367,7 @@ static const registry<gdbarch>::key<nbsd_gdbarch_data>
 static struct nbsd_gdbarch_data *
 get_nbsd_gdbarch_data (struct gdbarch *gdbarch)
 {
-  struct nbsd_gdbarch_data *result = nbsd_gdbarch_data_handle.get (gdbarch);
-  if (result == nullptr)
-    result = nbsd_gdbarch_data_handle.emplace (gdbarch);
-  return result;
+  return &nbsd_gdbarch_data_handle.try_emplace (gdbarch);
 }
 
 /* Implement the "get_siginfo_type" gdbarch method.  */

@@ -141,10 +141,7 @@ static gdbpy_ref<>
 gdbpy_get_register_descriptor (struct gdbarch *gdbarch,
 			       int regnum)
 {
-  gdbpy_register_type *vecp = gdbpy_register_object_data.get (gdbarch);
-  if (vecp == nullptr)
-    vecp = gdbpy_register_object_data.emplace (gdbarch);
-  gdbpy_register_type &vec = *vecp;
+  gdbpy_register_type &vec = gdbpy_register_object_data.try_emplace (gdbarch);
 
   /* Ensure that we have enough entries in the vector.  */
   if (vec.size () <= regnum)

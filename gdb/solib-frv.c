@@ -689,7 +689,6 @@ static int
 enable_break (void)
 {
   asection *interp_sect;
-  CORE_ADDR entry_point;
 
   if (current_program_space->symfile_object_file == NULL)
     {
@@ -697,7 +696,9 @@ enable_break (void)
       return 0;
     }
 
-  if (!entry_point_address_query (current_program_space, &entry_point))
+  std::optional<CORE_ADDR> entry_point
+    = current_program_space->entry_point_address_query ();
+  if (!entry_point.has_value ())
     {
       solib_debug_printf ("Symbol file has no entry point.");
       return 0;
@@ -715,10 +716,10 @@ enable_break (void)
       return 0;
     }
 
-  create_solib_event_breakpoint (current_inferior ()->arch (), entry_point);
+  create_solib_event_breakpoint (current_inferior ()->arch (), *entry_point);
 
   solib_debug_printf ("solib event breakpoint placed at entry point: %s",
-		      hex_string_custom (entry_point, 8));
+		      hex_string_custom (*entry_point, 8));
   return 1;
 }
 

@@ -22,8 +22,10 @@
 #include "gdbsupport/intrusive_list.h"
 #include "gdbsupport/next-iterator.h"
 #include "gdbsupport/scoped_restore.h"
+#include "ui-file.h"
 
 struct interp;
+struct ui;
 
 /* Prompt state.  */
 
@@ -42,6 +44,17 @@ enum prompt_state
   /* We've displayed the prompt already, ready for input.  */
   PROMPTED,
 };
+
+/* The main UI.  This is the UI that is bound to stdin/stdout/stderr.
+   It always exists and is created automatically when GDB starts
+   up.  */
+extern struct ui *main_ui;
+
+/* The current UI.  */
+extern struct ui *current_ui;
+
+/* The list of all UIs.  */
+extern struct ui *ui_list;
 
 /* All about a user interface instance.  Each user interface has its
    own I/O files/streams, readline state, its own top level
@@ -141,20 +154,60 @@ struct ui
      execution.  */
   bool keep_prompt_blocked = false;
 
+  /* A "smart pointer" that references a particular member of the
+     current UI.  */
+  template<ui_file *ui::* F>
+  struct ui_file_ptr
+  {
+    ui_file *operator-> () const
+    {
+      return current_ui->*F;
+    }
+  };
+
+  /* A ui_file that simply forwards.  */
+  template<ui_file *ui::* F>
+  class passthrough_file : public wrapped_file<ui_file_ptr<F>>
+  {
+  public:
+    passthrough_file () : wrapped_file<ui_file_ptr<F>> ({})
+    {
+    }
+
+    void write (const char *buf, long len) override
+    {
+      this->m_stream->write (buf, len);
+    }
+  };
+
   /* The fields below that start with "m_" are "private".  They're
      meant to be accessed through wrapper macros that make them look
      like globals.  */
 
   /* The ui_file streams.  */
   /* Normal results */
-  struct ui_file *m_gdb_stdout;
+  struct ui_file *m_ui_stdout;
   /* Input stream */
   struct ui_file *m_gdb_stdin;
   /* Serious error notifications */
-  struct ui_file *m_gdb_stderr;
+  struct ui_file *m_ui_stderr;
   /* Log/debug/trace messages that should bypass normal stdout/stderr
      filtering.  */
-  struct ui_file *m_gdb_stdlog;
+  struct ui_file *m_ui_stdlog;
+  /* Target output.  */
+  struct ui_file *m_ui_stdtarg;
+
+  /* Types for directing output to the various UI-managed streams.  An
+     indirection solves all problems.  Here the problem being solved
+     is that an interpreter could be active with any UI; and that
+     redirections (like capturing command output to a string) is done
+     by manipulating the pointers in the current UI.  To this end, we
+     export some ui_file types that can be used to implement the
+     various kinds of redirections.  */
+  using ui_stdout_file = passthrough_file<&ui::m_ui_stdout>;
+  using ui_stderr_file = passthrough_file<&ui::m_ui_stderr>;
+  using ui_stdlog_file = passthrough_file<&ui::m_ui_stdlog>;
+  using ui_stdtarg_file = passthrough_file<&ui::m_ui_stdtarg>;
 
   /* The current ui_out.  */
   struct ui_out *m_current_uiout = nullptr;
@@ -168,17 +221,6 @@ struct ui
   /* Return true if this UI's input fd is a tty.  */
   bool input_interactive_p () const;
 };
-
-/* The main UI.  This is the UI that is bound to stdin/stdout/stderr.
-   It always exists and is created automatically when GDB starts
-   up.  */
-extern struct ui *main_ui;
-
-/* The current UI.  */
-extern struct ui *current_ui;
-
-/* The list of all UIs.  */
-extern struct ui *ui_list;
 
 /* State for SWITCH_THRU_ALL_UIS.  */
 class switch_thru_all_uis

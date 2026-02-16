@@ -393,8 +393,8 @@ tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
 
   if (tui_location.addr () == 0)
     {
-      if (have_full_symbols (current_program_space)
-	  || have_partial_symbols (current_program_space))
+      if (current_program_space->has_full_symbols ()
+	  || current_program_space->has_partial_symbols ())
 	{
 	  set_default_source_symtab_and_line ();
 	  symtab_and_line sal

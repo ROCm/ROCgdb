@@ -994,9 +994,7 @@ static const registry<gdbarch>::key<pyuw_gdbarch_data_type> pyuw_gdbarch_data;
 static void
 pyuw_on_new_gdbarch (gdbarch *newarch)
 {
-  struct pyuw_gdbarch_data_type *data = pyuw_gdbarch_data.get (newarch);
-  if (data == nullptr)
-    data= pyuw_gdbarch_data.emplace (newarch);
+  struct pyuw_gdbarch_data_type *data = &pyuw_gdbarch_data.try_emplace (newarch);
 
   if (!data->unwinder_registered)
     {

@@ -166,10 +166,48 @@ extern bool pagination_enabled;
 /* A flag indicating whether to timestamp debugging messages.  */
 extern bool debug_timestamp;
 
-extern struct ui_file **current_ui_gdb_stdout_ptr (void);
-extern struct ui_file **current_ui_gdb_stdin_ptr (void);
-extern struct ui_file **current_ui_gdb_stderr_ptr (void);
-extern struct ui_file **current_ui_gdb_stdlog_ptr (void);
+/* Return the current ui_file for a given output stream.
+
+   Output in gdb is somewhat complicated.  Responsibility for it is
+   split between the interpreter and the UI, and has to allow for
+   output manipulation (like MI quoting), paging, logging, timestamps,
+   etc.
+
+   The outermost ui_file comes from the current interpreter.  (That is
+   what these functions return.)
+
+   The interpreter supplies anything that it needs.  E.g., for the
+   CLI, this is nothing, but for MI, each stream applies its own
+   quoting rule to the output.
+
+   The interpreter's pipeline ends with a ui::passthrough_file,
+   causing output to then proceed via the UI's pipeline.
+
+   The UI provides whatever is needed by that UI.  For instance, the
+   pager is handled here.  Logging is also handled here, and the
+   stdlog file also has a timestamp filter on it.
+
+   The UI is also where redirection happens.  That is, when
+   temporarily redirecting output to a different stream (like a
+   string_file), the redirectable_* streams are used -- these just
+   return pointers to fields in the current UI.  This way,
+   interpreter-specific changes are still applied before output.
+
+   When redirecting, if logging is still desired (normally it is),
+   then it is the redirector's responsibility to put a logging file
+   into the pipeline.  */
+
+extern struct ui_file *current_gdb_stdout ();
+extern struct ui_file *current_gdb_stderr ();
+extern struct ui_file *current_gdb_stdlog ();
+extern struct ui_file *current_gdb_stdtarg ();
+
+extern struct ui_file **redirectable_stdout ();
+extern struct ui_file **redirectable_stderr ();
+extern struct ui_file **redirectable_stdlog ();
+extern struct ui_file **redirectable_stdtarg ();
+
+extern struct ui_file *current_gdb_stdin ();
 
 /* Flush STREAM.  */
 extern void gdb_flush (struct ui_file *stream);
@@ -177,21 +215,17 @@ extern void gdb_flush (struct ui_file *stream);
 /* The current top level's ui_file streams.  */
 
 /* Normal results */
-#define gdb_stdout (*current_ui_gdb_stdout_ptr ())
-/* Input stream */
-#define gdb_stdin (*current_ui_gdb_stdin_ptr ())
+#define gdb_stdout (current_gdb_stdout ())
+/* Input stream.  */
+#define gdb_stdin (current_gdb_stdin ())
 /* Serious error notifications.  This bypasses the pager, if one is in
    use.  */
-#define gdb_stderr (*current_ui_gdb_stderr_ptr ())
+#define gdb_stderr (current_gdb_stderr ())
 /* Log/debug/trace messages that bypasses the pager, if one is in
    use.  */
-#define gdb_stdlog (*current_ui_gdb_stdlog_ptr ())
-
-/* Truly global ui_file streams.  These are all defined in main.c.  */
-
-/* Target output that should bypass the pager, if one is in use.  */
-extern struct ui_file *gdb_stdtarg;
-extern struct ui_file *gdb_stdtargin;
+#define gdb_stdlog (current_gdb_stdlog ())
+/* Target output.  */
+#define gdb_stdtarg (current_gdb_stdtarg ())
 
 /* Set the screen dimensions to WIDTH and HEIGHT.  */
 

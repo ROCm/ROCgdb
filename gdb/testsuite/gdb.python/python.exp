@@ -120,6 +120,13 @@ gdb_test "python gdb.execute('echo 2\\necho 3\\\\n\\n')" "23" \
     "multi-line execute"
 gdb_test " " "23" "gdb.execute does not affect repeat history"
 
+gdb_test_no_output \
+    "python x = gdb.execute(\"interpreter-exec mi '-data-evaluate-expression 23'\", to_string=True)" \
+    "execute MI command from python"
+gdb_test "python print(x)" \
+    "\\^done,value=\"23\"\r\n" \
+    "output of MI command"
+
 # Test post_event.
 gdb_test_multiline "post event insertion" \
   "python" "" \
@@ -562,3 +569,22 @@ foreach type {Instruction LazyString Membuf Record RecordFunctionSegment \
     gdb_test "python print(type(gdb.$type))" "<class 'type'>" \
 	"gdb.$type is registered"
 }
+
+set logfile [host_standard_output_file gdb.txt]
+gdb_test_no_output "set logging file $logfile" \
+    "set logging file [file tail $logfile]"
+gdb_test_no_output "set logging redirect on" \
+    "enable logging redirect via python"
+gdb_test_no_output "python gdb.execute('set logging enabled on')" \
+    "enable logging via python"
+
+# Even with logging redirect on, this should capture the output.
+gdb_test_no_output "python x = gdb.execute('print 23', to_string=True)" \
+    "print from python with logging redirect"
+
+gdb_test "set logging enabled off" \
+    "Done logging to .*gdb.txt." \
+    "disable logging"
+
+gdb_test "python print(x)" " = 23.*" \
+    "python still captured output"

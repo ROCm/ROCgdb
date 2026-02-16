@@ -210,10 +210,7 @@ static const registry<gdbarch>::key<linux_gdbarch_data>
 static struct linux_gdbarch_data *
 get_linux_gdbarch_data (struct gdbarch *gdbarch)
 {
-  struct linux_gdbarch_data *result = linux_gdbarch_data_handle.get (gdbarch);
-  if (result == nullptr)
-    result = linux_gdbarch_data_handle.emplace (gdbarch);
-  return result;
+  return &linux_gdbarch_data_handle.try_emplace (gdbarch);
 }
 
 /* Linux-specific cached data.  This is used by GDB for caching
@@ -263,12 +260,7 @@ linux_inferior_execd (inferior *exec_inf, inferior *follow_inf)
 static struct linux_info *
 get_linux_inferior_data (inferior *inf)
 {
-  linux_info *info = linux_inferior_data.get (inf);
-
-  if (info == nullptr)
-    info = linux_inferior_data.emplace (inf);
-
-  return info;
+  return &linux_inferior_data.try_emplace (inf);
 }
 
 /* See linux-tdep.h.  */

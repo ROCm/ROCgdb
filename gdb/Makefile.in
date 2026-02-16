@@ -1072,6 +1072,7 @@ COMMON_SFILES = \
 	breakpoint.c \
 	bt-utils.c \
 	btrace.c \
+	buffered-streams.c \
 	build-id.c \
 	buildsym.c \
 	c-lang.c \
@@ -1350,6 +1351,7 @@ HFILES_NO_SRCDIR = \
 	bsd-uthread.h \
 	btrace.h \
 	bt-utils.h \
+	buffered-streams.h \
 	build-id.h \
 	buildsym.h \
 	c-exp.h \

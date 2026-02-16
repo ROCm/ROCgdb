@@ -806,6 +806,7 @@ proc runto { linespec args } {
 
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
+    set opt_ansi_re "(:?\033\\\[.*m)?"
     gdb_expect {
 	-re "(?:Break|Temporary break).* at .*:.*$decimal.*$gdb_prompt $" {
 	    if { $print_pass } {
@@ -813,7 +814,7 @@ proc runto { linespec args } {
 	    }
 	    return 1
 	}
-	-re "(?:Breakpoint|Temporary breakpoint) $bkptno_numopt_re, \[0-9xa-f\]* in .*$gdb_prompt $" {
+	-re "(?:Breakpoint|Temporary breakpoint) $bkptno_numopt_re, ${opt_ansi_re}\[0-9xa-f\]*${opt_ansi_re} in .*$gdb_prompt $" {
 	    if { $print_pass } {
 		pass $test_name
 	    }

@@ -21,6 +21,7 @@
 #include "dwarf2/aranges.h"
 #include "dwarf2/cooked-index.h"
 
+#include "cli/cli-style.h"
 #include "complaints.h"
 #include "cp-support.h"
 #include "dwz.h"
@@ -29,6 +30,7 @@
 #include "stringify.h"
 #include "extract-store-integer.h"
 #include "gdbsupport/thread-pool.h"
+#include "cli/cli-style.h"
 
 /* This is just like cooked_index_functions, but overrides a single
    method so the test suite can distinguish the .debug_names case from
@@ -229,10 +231,11 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 	default:
 	  /* A warning instead of a complaint, because this one is
 	     more like a bug in gdb.  */
-	  warning (_("Unsupported .debug_names form %s [in module %s].\n"
+	  warning (_("Unsupported .debug_names form %s [in module %ps].\n"
 		     "This normally should not happen, please file a bug report."),
 		   dwarf_form_name (attr.form),
-		   bfd_get_filename (abfd));
+		   styled_string (file_name_style.style (),
+				  bfd_get_filename (abfd)));
 	  return nullptr;
 	}
       switch (attr.dw_idx)
@@ -534,9 +537,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   if (bytes_read + length != section->size)
     {
       /* There may be multiple per-CU indices.  */
-      warning (_("Section .debug_names in %s length %s does not match "
+      warning (_("Section .debug_names in %ps length %s does not match "
 		 "section length %s, ignoring .debug_names."),
-	       filename, plongest (bytes_read + length),
+	       styled_string (file_name_style.style (),
+			      filename),
+	       plongest (bytes_read + length),
 	       pulongest (section->size));
       return false;
     }
@@ -546,9 +551,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   addr += 2;
   if (version != 5)
     {
-      warning (_("Section .debug_names in %s has unsupported version %d, "
+      warning (_("Section .debug_names in %ps has unsupported version %d, "
 		 "ignoring .debug_names."),
-	       filename, version);
+	       styled_string (file_name_style.style (),
+			      filename),
+	       version);
       return false;
     }
 
@@ -557,9 +564,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   addr += 2;
   if (padding != 0)
     {
-      warning (_("Section .debug_names in %s has unsupported padding %d, "
+      warning (_("Section .debug_names in %ps has unsupported padding %d, "
 		 "ignoring .debug_names."),
-	       filename, padding);
+	       styled_string (file_name_style.style (),
+			      filename),
+	       padding);
       return false;
     }
 
@@ -578,9 +587,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   addr += 4;
   if (foreign_tu_count != 0)
     {
-      warning (_("Section .debug_names in %s has unsupported %lu foreign TUs, "
+      warning (_("Section .debug_names in %ps has unsupported %lu foreign TUs, "
 		 "ignoring .debug_names."),
-	       filename, static_cast<unsigned long> (foreign_tu_count));
+	       styled_string (file_name_style.style (),
+			      filename),
+	       static_cast<unsigned long> (foreign_tu_count));
       return false;
     }
 
@@ -665,9 +676,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
 	= map.abbrev_map.emplace (index_num, mapped_debug_names_reader::index_val ());
       if (!insertpair.second)
 	{
-	  warning (_("Section .debug_names in %s has duplicate index %s, "
+	  warning (_("Section .debug_names in %ps has duplicate index %s, "
 		     "ignoring .debug_names."),
-		   filename, pulongest (index_num));
+		   styled_string (file_name_style.style (),
+				  filename),
+		   pulongest (index_num));
 	  return false;
 	}
       mapped_debug_names_reader::index_val &indexval = insertpair.first->second;
@@ -694,9 +707,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
     }
   if (addr != abbrev_table_start + abbrev_table_size)
     {
-      warning (_("Section .debug_names in %s has abbreviation_table "
+      warning (_("Section .debug_names in %ps has abbreviation_table "
 		 "of size %s vs. written as %u, ignoring .debug_names."),
-	       filename, plongest (addr - abbrev_table_start),
+	       styled_string (file_name_style.style (),
+			      filename),
+	       plongest (addr - abbrev_table_start),
 	       abbrev_table_size);
       return false;
     }
@@ -796,8 +811,9 @@ dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
 					  bfd_get_filename (dwz->dwz_bfd.get ()),
 					  &dwz->debug_names, dwz_map))
 	{
-	  warning (_("could not read '.debug_names' section from %s; skipping"),
-		   bfd_get_filename (dwz->dwz_bfd.get ()));
+	  warning (_("could not read '.debug_names' section from %ps; skipping"),
+		   styled_string (file_name_style.style (),
+				  bfd_get_filename (dwz->dwz_bfd.get ())));
 	  return false;
 	}
     }
@@ -833,9 +849,18 @@ dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
      into place later.  */
   cooked_index_worker_result first;
   deferred_warnings warnings;
-  read_addrmap_from_aranges (per_objfile, &per_bfd->debug_aranges,
-			     first.get_addrmap (), &warnings);
+  bool ok = read_addrmap_from_aranges (per_objfile, &per_bfd->debug_aranges,
+				       first.get_addrmap (), &warnings);
   warnings.emit ();
+  if (!ok)
+    {
+      /* read_addrmap_from_aranges must have emitted a warning in this
+	 case.  */
+      warning (_("... not using '.debug_names' for %ps"),
+	       styled_string (file_name_style.style (),
+			      objfile_name (objfile)));
+      return false;
+    }
 
   const auto n_workers
     = std::max<std::size_t> (gdb::thread_pool::g_thread_pool->thread_count (),

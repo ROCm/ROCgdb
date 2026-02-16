@@ -904,16 +904,6 @@ obj_section::set_offset (CORE_ADDR offset)
 
 /* Declarations for functions defined in objfiles.c */
 
-/* If there is a valid and known entry point in PSPACE, fill *ENTRY_P with it
-   and return non-zero.  */
-
-extern int entry_point_address_query (program_space *pspace,
-				      CORE_ADDR *entry_p);
-
-/* Get the entry point address in PSPACE.  Call error if it is not known.  */
-
-extern CORE_ADDR entry_point_address (program_space *pspace);
-
 extern void build_objfile_section_table (struct objfile *);
 
 extern void free_objfile_separate_debug (struct objfile *);
@@ -921,14 +911,6 @@ extern void free_objfile_separate_debug (struct objfile *);
 extern void objfile_relocate (struct objfile *,
 			      gdb::array_view<const CORE_ADDR>);
 extern void objfile_rebase (struct objfile *, CORE_ADDR);
-
-/* Return true if any objfile of PSPACE has partial symbols.  */
-
-extern bool have_partial_symbols (program_space *pspace);
-
-/* Return true if any objfile of PSPACE has full symbols.  */
-
-extern bool have_full_symbols (program_space *pspace);
 
 extern void objfile_set_sym_fns (struct objfile *objfile,
 				 const struct sym_fns *sf);
@@ -957,10 +939,6 @@ extern void objfile_purge_solibs (program_space *pspace);
 
 /* Functions for dealing with the minimal symbol table, really a misc
    address<->symbol mapping for things we don't have debug symbols for.  */
-
-/* Return true if any objfile of PSPACE has minimal symbols.  */
-
-extern bool have_minimal_symbols (program_space *pspace);
 
 extern struct obj_section *find_pc_section (CORE_ADDR pc);
 

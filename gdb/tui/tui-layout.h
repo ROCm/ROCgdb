@@ -367,7 +367,7 @@ typedef std::function<tui_win_info * (const char *name)> window_factory;
 
 /* The type for a data structure that maps a window name to that window's
    factory function.  */
-typedef gdb::unordered_map<std::string, window_factory> window_types_map;
+typedef gdb::unordered_string_map<window_factory> window_types_map;
 
 /* Register a new TUI window type.  NAME is the name of the window
    type.  FACTORY is a function that can be called to instantiate the

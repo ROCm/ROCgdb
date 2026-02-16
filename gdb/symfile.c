@@ -1040,8 +1040,8 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
 
   if (from_tty
       && (always_confirm
-	  || ((have_full_symbols (current_program_space)
-	       || have_partial_symbols (current_program_space))
+	  || ((current_program_space->has_full_symbols ()
+	       || current_program_space->has_partial_symbols ())
 	      && mainline))
       && !query (_("Load new symbol table from \"%s\"? "), name))
     error (_("Not confirmed."));
@@ -1189,8 +1189,8 @@ symbol_file_add_main_1 (const char *args, symfile_add_flags add_flags,
 void
 symbol_file_clear (int from_tty)
 {
-  if ((have_full_symbols (current_program_space)
-       || have_partial_symbols (current_program_space))
+  if ((current_program_space->has_full_symbols ()
+       || current_program_space->has_partial_symbols ())
       && from_tty
       && (current_program_space->symfile_object_file
 	  ? !query (_("Discard symbol table from `%s'? "),

@@ -64,7 +64,7 @@ tdesc_parse_xml (const char *document, xml_fetch_another fetcher)
    then we will create unnecessary duplicate gdbarches.  See
    gdbarch_list_lookup_by_info.  */
 
-static gdb::unordered_map<std::string, target_desc_up> xml_cache;
+static gdb::unordered_string_map<target_desc_up> xml_cache;
 
 /* Callback data for target description parsing.  */
 

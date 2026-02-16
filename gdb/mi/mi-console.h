@@ -30,9 +30,6 @@ public:
      string PREFIX and quoting it with QUOTE.  */
   mi_console_file (ui_file *raw, const char *prefix, char quote);
 
-  /* MI-specific API.  */
-  void set_raw (ui_file *raw);
-
   /* ui_file-specific methods.  */
 
   void flush () override;

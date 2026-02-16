@@ -351,7 +351,7 @@ cp_lookup_symbol_in_namespace (const char *the_namespace, const char *name,
 }
 
 /* Type used for collecting symbols.  Maps names to symbols.  */
-using symbol_map = gdb::unordered_map<std::string, block_symbol>;
+using symbol_map = gdb::unordered_string_map<block_symbol>;
 
 /* This version of the function is internal, use the wrapper unless
    the list of ambiguous symbols is needed.

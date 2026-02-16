@@ -332,6 +332,26 @@ struct program_space
     return m_target_sections;
   }
 
+  /* If there is a valid and known entry point in this program space,
+     return it.  Otherwise return an empty optional.  */
+  std::optional<CORE_ADDR> entry_point_address_query () const;
+
+  /* Get the entry point address in this program space.  Call error if
+     it is not known.  */
+  CORE_ADDR entry_point_address () const;
+
+  /* Return true if any objfile of this program space has partial
+     symbols.  */
+  bool has_partial_symbols ();
+
+  /* Return true if any objfile of this program space has full
+     symbols.  */
+  bool has_full_symbols ();
+
+  /* Return true if any objfile of this program space has minimal
+     symbols.  */
+  bool has_minimal_symbols ();
+
   /* Unique ID number.  */
   int num = 0;
 

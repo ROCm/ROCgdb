@@ -2718,12 +2718,12 @@ inside_main_func (const frame_info_ptr &this_frame)
 static bool
 inside_entry_func (const frame_info_ptr &this_frame)
 {
-  CORE_ADDR entry_point;
-
-  if (!entry_point_address_query (current_program_space, &entry_point))
+  std::optional<CORE_ADDR> entry_point
+    = current_program_space->entry_point_address_query ();
+  if (!entry_point.has_value ())
     return false;
 
-  return get_frame_func (this_frame) == entry_point;
+  return get_frame_func (this_frame) == *entry_point;
 }
 
 /* Return a structure containing various interesting information about

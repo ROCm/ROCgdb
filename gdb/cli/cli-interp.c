@@ -59,7 +59,7 @@ private:
 
 cli_interp::cli_interp (const char *name)
   : cli_interp_base (name),
-    m_cli_uiout (new cli_ui_out (gdb_stdout))
+    m_cli_uiout (new cli_ui_out (m_stdout.get ()))
 {
 }
 
@@ -183,27 +183,10 @@ void
 cli_interp::resume ()
 {
   struct ui *ui = current_ui;
-  struct ui_file *stream;
-
-  /*sync_execution = 1; */
-
-  /* gdb_setup_readline will change gdb_stdout.  If the CLI was
-     previously writing to gdb_stdout, then set it to the new
-     gdb_stdout afterwards.  */
-
-  stream = m_cli_uiout->set_stream (gdb_stdout);
-  if (stream != gdb_stdout)
-    {
-      m_cli_uiout->set_stream (stream);
-      stream = NULL;
-    }
 
   gdb_setup_readline (1);
 
   ui->input_handler = command_line_handler;
-
-  if (stream != NULL)
-    m_cli_uiout->set_stream (gdb_stdout);
 }
 
 void
@@ -250,57 +233,6 @@ ui_out *
 cli_interp::interp_ui_out ()
 {
   return m_cli_uiout.get ();
-}
-
-/* See cli-interp.h.  */
-
-void
-cli_interp_base::set_logging (ui_file_up logfile, bool logging_redirect,
-			      bool debug_redirect)
-{
-  if (logfile != nullptr)
-    {
-      gdb_assert (m_saved_output == nullptr);
-      m_saved_output = std::make_unique<saved_output_files> ();
-      m_saved_output->out = gdb_stdout;
-      m_saved_output->err = gdb_stderr;
-      m_saved_output->log = gdb_stdlog;
-      m_saved_output->targ = gdb_stdtarg;
-
-      ui_file *logfile_p = logfile.get ();
-      m_saved_output->logfile_holder = std::move (logfile);
-
-      /* The new stdout and stderr only depend on whether logging
-	 redirection is being done.  */
-      ui_file *new_stdout = logfile_p;
-      ui_file *new_stderr = logfile_p;
-      if (!logging_redirect)
-	{
-	  m_saved_output->stdout_holder.reset
-	    (new tee_file (gdb_stdout, logfile_p));
-	  new_stdout = m_saved_output->stdout_holder.get ();
-	  m_saved_output->stderr_holder.reset
-	    (new tee_file (gdb_stderr, logfile_p));
-	  new_stderr = m_saved_output->stderr_holder.get ();
-	}
-
-      m_saved_output->stdlog_holder.reset
-	(new timestamped_file (debug_redirect ? logfile_p : new_stderr));
-
-      gdb_stdout = new_stdout;
-      gdb_stdlog = m_saved_output->stdlog_holder.get ();
-      gdb_stderr = new_stderr;
-      gdb_stdtarg = new_stderr;
-    }
-  else
-    {
-      gdb_stdout = m_saved_output->out;
-      gdb_stderr = m_saved_output->err;
-      gdb_stdlog = m_saved_output->log;
-      gdb_stdtarg = m_saved_output->targ;
-
-      m_saved_output.reset (nullptr);
-    }
 }
 
 /* Factory for CLI interpreters.  */

@@ -82,13 +82,7 @@ static const registry<inferior>::key<catch_syscall_inferior_data>
 static struct catch_syscall_inferior_data *
 get_catch_syscall_inferior_data (struct inferior *inf)
 {
-  struct catch_syscall_inferior_data *inf_data;
-
-  inf_data = catch_syscall_inferior_data.get (inf);
-  if (inf_data == NULL)
-    inf_data = catch_syscall_inferior_data.emplace (inf);
-
-  return inf_data;
+  return &catch_syscall_inferior_data.try_emplace (inf);
 }
 
 /* Implement the "insert" method for syscall catchpoints.  */

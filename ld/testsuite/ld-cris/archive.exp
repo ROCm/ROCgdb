@@ -18,6 +18,20 @@
 # see <http://www.gnu.org/licenses/>.
 #
 
+# This covers archive handling with a non-default linker emulation
+# triggering the use of a non-default archive format.
+#
+# The CRIS target is the only one nowadays that supports aout and
+# non-aout formats both at a time, and the aout BFD backend is one
+# that used to crash when incorrectly chosen by the BFD linker to
+# handle ELF archive members despite the ELF emulation explicitly
+# requested.
+#
+# For completeness this test covers the opposite situation as well
+# (except for Linux targets, which don't support linker emulation
+# switching), although it used not to cause a crash, but hits PR
+# binutils/33485 instead.  Yeah, corner cases and bitrot...
+
 if [istarget cris-*-*aout*] {
     set asemul "--emulation=criself"
     set aremul "--target=elf32-us-cris"
@@ -69,6 +83,9 @@ run_ld_link_tests [list \
 	"abcx" \
     ] \
 ]
+# PR binutils/33485 hits with the aout archive format and with this
+# test that format is used with non-aout targets, hence the reverse
+# condition.  Cf. the note at the top.
 if { ![istarget cris-*-*aout*] } {
     setup_xfail "binutils/33485" "*-*-*"
 }

@@ -165,15 +165,6 @@ inferior::tty ()
   return m_terminal;
 }
 
-/* See inferior.h.  */
-
-void
-inferior::set_args (gdb::array_view<char * const> args,
-		    bool escape_shell_char)
-{
-  set_args (construct_inferior_arguments (args, escape_shell_char));
-}
-
 void
 inferior::set_arch (gdbarch *arch)
 {

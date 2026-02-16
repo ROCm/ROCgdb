@@ -126,7 +126,7 @@ private:
 
   /* A type that maps a string to a build-id.  */
   using string_to_build_id_map
-    = gdb::unordered_map<std::string, const bfd_build_id *>;
+    = gdb::unordered_string_map<const bfd_build_id *>;
 
   /* A type that maps a build-id to a string.  */
   using build_id_to_string_map
@@ -404,7 +404,7 @@ core_target::core_target (gdb_bfd_ref_ptr cbfd_ref)
 void
 core_target::build_file_mappings ()
 {
-  gdb::unordered_map<std::string, struct bfd *> bfd_map;
+  gdb::unordered_string_map<struct bfd *> bfd_map;
   gdb::unordered_set<std::string> unavailable_paths;
 
   /* All files mapped into the core file.  The key is the filename.  */
@@ -2149,7 +2149,7 @@ gdb_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd)
   };
 
   /* All files mapped into the core file.  The key is the filename.  */
-  gdb::unordered_map<std::string, map_entry> mapped_files;
+  gdb::unordered_string_map<map_entry> mapped_files;
 
   /* Get the build-id of the core file.  At least on Linux, this will be
      the build-id for the main executable.  If other targets add the

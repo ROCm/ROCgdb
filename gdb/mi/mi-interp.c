@@ -87,18 +87,18 @@ mi_interp::do_init (bool top_level)
   /* Store the current output channel, so that we can create a console
      channel that encapsulates and prefixes all gdb_output-type bits
      coming from the rest of the debugger.  */
-  mi->raw_stdout = gdb_stdout;
+  mi->raw_stdout = new ui::ui_stdout_file ();
 
   /* Create MI console channels, each with a different prefix so they
      can be distinguished.  */
-  mi->out = new mi_console_file (mi->raw_stdout, "~", '"');
-  mi->err = new mi_console_file (mi->raw_stdout, "&", '"');
-  mi->log = mi->err;
-  mi->targ = new mi_console_file (mi->raw_stdout, "@", '"');
+  m_stdout = std::make_unique<mi_console_file> (mi->raw_stdout, "~", '"');
+  m_stderr = std::make_unique<mi_console_file> (mi->raw_stdout, "&", '"');
+  m_stdlog = std::make_unique<mi_console_file> (mi->raw_stdout, "&", '"');
+  m_stdtarg = std::make_unique<mi_console_file> (mi->raw_stdout, "@", '"');
   mi->event_channel = new mi_console_file (mi->raw_stdout, "=", 0);
   mi->mi_uiout = mi_out_new (name ()).release ();
   gdb_assert (mi->mi_uiout != nullptr);
-  mi->cli_uiout = new cli_ui_out (mi->out);
+  mi->cli_uiout = new cli_ui_out (m_stdout.get ());
 
   if (top_level)
     {
@@ -118,22 +118,12 @@ mi_interp::do_init (bool top_level)
 void
 mi_interp::resume ()
 {
-  struct mi_interp *mi = this;
   struct ui *ui = current_ui;
 
-  /* As per hack note in mi_interpreter_init, swap in the output
-     channels... */
   gdb_setup_readline (0);
 
   ui->call_readline = gdb_readline_no_editing_callback;
   ui->input_handler = mi_execute_command_input_handler;
-
-  gdb_stdout = mi->out;
-  /* Route error and log output through the MI.  */
-  gdb_stderr = mi->err;
-  gdb_stdlog = mi->log;
-  /* Route target output through the MI.  */
-  gdb_stdtarg = mi->targ;
 
   deprecated_show_load_progress = mi_load_progress;
 }
@@ -903,48 +893,6 @@ ui_out *
 mi_interp::interp_ui_out ()
 {
   return this->mi_uiout;
-}
-
-/* Do MI-specific logging actions; save raw_stdout, and change all
-   the consoles to use the supplied ui-file(s).  */
-
-void
-mi_interp::set_logging (ui_file_up logfile, bool logging_redirect,
-			bool debug_redirect)
-{
-  struct mi_interp *mi = this;
-
-  if (logfile != NULL)
-    {
-      mi->saved_raw_stdout = mi->raw_stdout;
-
-      ui_file *logfile_p = logfile.get ();
-      mi->logfile_holder = std::move (logfile);
-
-      /* If something is not being redirected, then a tee containing both the
-	 logfile and stdout.  */
-      ui_file *tee = nullptr;
-      if (!logging_redirect || !debug_redirect)
-	{
-	  tee = new tee_file (mi->raw_stdout, logfile_p);
-	  mi->stdout_holder.reset (tee);
-	}
-
-      mi->raw_stdout = logging_redirect ? logfile_p : tee;
-    }
-  else
-    {
-      mi->logfile_holder.reset ();
-      mi->stdout_holder.reset ();
-      mi->raw_stdout = mi->saved_raw_stdout;
-      mi->saved_raw_stdout = nullptr;
-    }
-
-  mi->out->set_raw (mi->raw_stdout);
-  mi->err->set_raw (mi->raw_stdout);
-  mi->log->set_raw (mi->raw_stdout);
-  mi->targ->set_raw (mi->raw_stdout);
-  mi->event_channel->set_raw (mi->raw_stdout);
 }
 
 /* Factory for MI interpreters.  */

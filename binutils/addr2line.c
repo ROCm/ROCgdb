@@ -385,7 +385,7 @@ translate_addresses (bfd *abfd, asection *section)
 
               if (base_names && filename != NULL)
                 {
-                  char *h;
+                  const char *h;
 
                   h = strrchr (filename, '/');
                   if (h != NULL)

@@ -17,13 +17,13 @@ with Pck; use Pck;
 
 procedure Foo is
 begin
-   while I <= 3 loop
+   while The_Test_Index <= 3 loop
       begin
          raise Constraint_Error;
       exception
          when others =>
             null;
       end;
-      I := I + 1;
+      The_Test_Index := The_Test_Index + 1;
    end loop;
 end Foo;

@@ -900,6 +900,11 @@ public:
 
 private:
 
+  /* A helper function to find the plain name of the LHS.  If OP
+     represents a plain name, the unqualified name is returned as a
+     string.  Otherwise, nullptr is returned.  */
+  const char *find_name (operation_up &op) const;
+
   operation_up m_val;
 };
 

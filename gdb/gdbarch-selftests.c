@@ -133,7 +133,7 @@ register_name_test (struct gdbarch *gdbarch)
   scoped_mock_context<test_target_ops> mockctx (gdbarch);
 
   /* Track the number of times each register name appears.  */
-  gdb::unordered_map<std::string, int> name_counts;
+  gdb::unordered_string_map<int> name_counts;
 
   const int num_regs = gdbarch_num_cooked_regs (gdbarch);
   for (auto regnum = 0; regnum < num_regs; regnum++)

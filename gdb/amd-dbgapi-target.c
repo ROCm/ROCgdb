@@ -418,12 +418,7 @@ static const registry<inferior>::key<amd_dbgapi_inferior_info>
 static amd_dbgapi_inferior_info &
 get_amd_dbgapi_inferior_info (inferior *inferior)
 {
-  amd_dbgapi_inferior_info *info = amd_dbgapi_inferior_data.get (inferior);
-
-  if (info == nullptr)
-    info = amd_dbgapi_inferior_data.emplace (inferior, inferior);
-
-  return *info;
+  return amd_dbgapi_inferior_data.try_emplace (inferior, inferior);
 }
 
 /* The async event handler registered with the event loop, indicating that we

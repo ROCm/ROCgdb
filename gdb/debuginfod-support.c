@@ -26,6 +26,7 @@
 #include "cli/cli-style.h"
 #include "cli-out.h"
 #include "target.h"
+#include "buffered-streams.h"
 
 /* Set/show debuginfod commands.  */
 static cmd_list_element *set_debuginfod_prefix_list;

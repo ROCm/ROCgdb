@@ -212,7 +212,8 @@ tui_get_function_from_frame (const frame_info_ptr &fi)
 {
   string_file stream;
 
-  print_address_symbolic (get_frame_arch (fi), get_frame_pc (fi),
+  print_address_symbolic (get_frame_arch (fi),
+			  get_frame_address_in_block (fi),
 			  &stream, demangle, "");
 
   /* Use simple heuristics to isolate the function name.  The symbol

@@ -1,8 +1,9 @@
 -*- text -*-
 
 * Add --map-global-vars option to objdump which displays the location and type
-  of global variables in object files.
-
+  of global variables in object files. This feature was developed by Guillaume
+  Vacherias <guillaume.vacherias@foss.st.com>.
+ 
 Changes in 2.46:
 
 * SFrame stack trace format now represents an undefined return address as

@@ -24,6 +24,7 @@
 #include "libbfd.h"
 #define ARCH_SIZE 0
 #include "elf-bfd.h"
+#include "sframe-api.h"
 #include "safe-ctype.h"
 #include "libiberty.h"
 #include "objalloc.h"
@@ -8457,6 +8458,7 @@ _bfd_elf_link_hash_table_free (bfd *obfd)
     free (htab->eh_info.u.compact.entries);
   else
     free (htab->eh_info.u.dwarf.array);
+  sframe_encoder_free (&htab->sfe_info.sfe_ctx);
   _bfd_generic_link_hash_table_free (obfd);
 }
 

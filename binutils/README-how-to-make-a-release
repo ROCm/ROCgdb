@@ -346,6 +346,12 @@ How to create the release.
 	      -r `git log -1 --format=%cd --date=format:%F bfd/version.m4` \
 	      binutils_with_gold
 
+          (Then make a second set of tarballs without gold...)
+	  
+            ./src-release.sh -b -g -l -x -z \
+	      -r `git log -1 --format=%cd --date=format:%F bfd/version.m4` \
+	      binutils
+
        If this is an ODD numbered release:
 	 
             ./src-release.sh -b -g -l -x -z \

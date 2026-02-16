@@ -33,11 +33,3 @@ gdb::remote_args::split (const std::string &args)
 
   return results;
 }
-
-/* See remote-args.h.  */
-
-std::string
-gdb::remote_args::join (const std::vector<char *> &args)
-{
-  return construct_inferior_arguments (args, true);
-}

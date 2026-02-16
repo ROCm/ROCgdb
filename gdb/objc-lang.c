@@ -1085,7 +1085,7 @@ find_methods (char type, const char *theclass, const char *category,
 	}
 
       if (objc_csym == NULL)
-	objc_csym = objc_objfile_data.emplace (&objfile, objfile_csym);
+	objc_csym = &objc_objfile_data.emplace (&objfile, objfile_csym);
       else
 	/* Count of ObjC methods in this objfile should be constant.  */
 	gdb_assert (*objc_csym == objfile_csym);

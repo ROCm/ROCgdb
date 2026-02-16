@@ -55,7 +55,7 @@ public:
 
   void putc (int c);
 
-  void vprintf (const char *, va_list) ATTRIBUTE_PRINTF (2, 0);
+  virtual void vprintf (const char *, va_list) ATTRIBUTE_PRINTF (2, 0);
 
   /* Methods below are both public, and overridable by ui_file
      subclasses.  */
@@ -101,6 +101,14 @@ public:
   virtual int fd () const
   { return -1; }
 
+  /* Return true if this object supports paging, false otherwise.  */
+  virtual bool can_page () const
+  {
+    /* Almost no file supports paging, which is why this is the
+       default.  */
+    return false;
+  }
+
   /* Indicate that if the next sequence of characters overflows the
      line, a newline should be inserted here rather than when it hits
      the end.  If INDENT is non-zero, it is a number of spaces to be
@@ -130,11 +138,6 @@ public:
   {
     this->puts (str);
   }
-
-protected:
-
-  /* The currently applied style.  */
-  ui_file_style m_applied_style;
 
 private:
 
@@ -270,6 +273,11 @@ public:
   int fd () const override
   { return m_fd; }
 
+  bool can_page () const override
+  {
+    return m_file == stdout;
+  }
+
 private:
   /* Sets the internal stream to FILE, and saves the FILE's file
      descriptor in M_FD.  */
@@ -323,43 +331,6 @@ public:
      to stdio_file for the actual outputting.  */
   void write (const char *buf, long length_buf) override;
   void puts (const char *linebuffer) override;
-};
-
-/* A ui_file implementation that maps onto two ui-file objects.  */
-
-class tee_file : public ui_file
-{
-public:
-  /* Create a file which writes to both ONE and TWO.  Ownership of
-     both files is up to the user.  */
-  tee_file (ui_file *one, ui_file *two);
-  ~tee_file () override;
-
-  void write (const char *buf, long length_buf) override;
-  void write_async_safe (const char *buf, long length_buf) override;
-  void puts (const char *) override;
-
-  bool isatty () override;
-  bool term_out () override;
-  bool can_emit_style_escape () override;
-  void flush () override;
-
-  void emit_style_escape (const ui_file_style &style) override
-  {
-    m_one->emit_style_escape (style);
-    m_two->emit_style_escape (style);
-  }
-
-  void puts_unfiltered (const char *str) override
-  {
-    m_one->puts_unfiltered (str);
-    m_two->puts_unfiltered (str);
-  }
-
-private:
-  /* The two underlying ui_files.  */
-  ui_file *m_one;
-  ui_file *m_two;
 };
 
 /* A ui_file implementation that buffers terminal escape sequences.
@@ -416,8 +387,11 @@ protected:
   void do_write (const char *buf, long len) override;
 };
 
-/* A base class for ui_file types that wrap another ui_file.  */
+/* A base class for ui_file types that wrap another ui_file.  The
+   precise underlying ui_file type is a template parameter, so that
+   either owning or non-owning wrappers can be made.  */
 
+template<typename T>
 class wrapped_file : public ui_file
 {
 public:
@@ -449,28 +423,30 @@ public:
   void write_async_safe (const char *buf, long length_buf) override
   { return m_stream->write_async_safe (buf, length_buf); }
 
+  bool can_page () const override
+  {
+    return m_stream->can_page ();
+  }
+
 protected:
 
-  /* Note that this class does not assume ownership of the stream.
-     However, a subclass may choose to, by adding a 'delete' to its
-     destructor.  */
-  explicit wrapped_file (ui_file *stream)
-    : m_stream (stream)
+  explicit wrapped_file (T stream)
+    : m_stream (std::move (stream))
   {
   }
 
   /* The underlying stream.  */
-  ui_file *m_stream;
+  T m_stream;
 };
 
 /* A ui_file that optionally puts a timestamp at the start of each
    line of output.  */
 
-class timestamped_file : public wrapped_file
+class timestamped_file : public wrapped_file<ui_file_up>
 {
 public:
-  explicit timestamped_file (ui_file *stream)
-    : wrapped_file (stream)
+  explicit timestamped_file (ui_file_up stream)
+    : wrapped_file (std::move (stream))
   {
   }
 
@@ -490,7 +466,7 @@ private:
 
    Note that this only really handles ASCII output correctly.  */
 
-class tab_expansion_file : public wrapped_file
+class tab_expansion_file : public wrapped_file<ui_file *>
 {
 public:
 

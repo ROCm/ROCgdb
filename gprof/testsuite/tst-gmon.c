@@ -45,6 +45,7 @@ f3 (int count)
     }
 }
 
+__attribute__ ((section (".text.main"))) /* See glibc bug 28153.  */
 int
 main (void)
 {

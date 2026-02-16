@@ -1,0 +1,119 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test DW_OP_call2 and DW_OP_call4 in a .dwo file (split DWARF), to verify
+# that GDB correctly computes offsets when evaluating these operators.
+# See PR gdb/31772.
+#
+# The CU in the .dwo file is placed after a type unit, so that it is not at
+# offset 0.  This is important to test that GDB correctly adds the CU offset
+# within the section when computing the target of DW_OP_call2/call4.
+
+load_lib dwarf.exp
+
+require dwarf2_support
+
+standard_testfile .c -dw.S
+
+set asm_file [standard_output_file $srcfile2]
+
+Dwarf::assemble $asm_file {
+    # Skeleton CU in the main file.
+    cu {
+	version 5
+	dwo_id 0x1234
+    } {
+	compile_unit {
+	    DW_AT_dwo_name ${::gdb_test_file_name}-dw.dwo DW_FORM_strp
+	} {}
+    }
+
+    # Type unit in the .dwo file.  This is placed before the CU to ensure
+    # it is not at offset 0 in .debug_info.dwo.
+    tu {
+	fission 1
+	version 5
+    } 0xCAFE "the_type" {
+	type_unit {} {
+	    the_type: base_type {
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding  @DW_ATE_signed
+		DW_AT_name      dummy_type
+	    }
+	}
+    }
+
+    # Compilation unit in the .dwo file.
+    cu {
+	fission 1
+	version 5
+	dwo_id 0x1234
+	label cu_start
+    } {
+	compile_unit {} {
+	    declare_labels int_type dwarf_proc
+
+	    int_type: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding  @DW_ATE_signed
+		DW_AT_name      int
+	    }
+
+	    # DWARF procedure that multiplies the top of stack by 2.
+	    dwarf_proc: DW_TAG_dwarf_procedure {
+		DW_AT_location {
+		    DW_OP_lit2
+		    DW_OP_mul
+		} SPECIAL_expr
+	    }
+
+	    # Variable using DW_OP_call2 (2-byte CU-relative offset).
+	    # Pushes 5, calls the procedure (5 * 2 = 10).
+	    DW_TAG_variable {
+		DW_AT_name var_call2
+		DW_AT_type :$int_type
+		DW_AT_location {
+		    DW_OP_lit5
+		    DW_OP_call2 "$dwarf_proc - $cu_start"
+		    DW_OP_stack_value
+		} SPECIAL_expr
+	    }
+
+	    # Variable using DW_OP_call4 (4-byte CU-relative offset).
+	    # Pushes 6, calls the procedure (6 * 2 = 12).
+	    DW_TAG_variable {
+		DW_AT_name var_call4
+		DW_AT_type :$int_type
+		DW_AT_location {
+		    DW_OP_lit6
+		    DW_OP_call4 "$dwarf_proc - $cu_start"
+		    DW_OP_stack_value
+		} SPECIAL_expr
+	    }
+	}
+    }
+}
+
+set obj [standard_output_file "${testfile}-dw.o"]
+if {[build_executable_and_dwo_files "$testfile.exp" "${binfile}" {} \
+	 [list $asm_file {nodebug split-dwo} $obj] \
+	 [list $srcfile  {nodebug}]]} {
+    return
+}
+
+clean_restart ${testfile}
+
+gdb_test "print var_call2" " = 10" "DW_OP_call2"
+gdb_test "print var_call4" " = 12" "DW_OP_call4"

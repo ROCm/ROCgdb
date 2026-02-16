@@ -1350,8 +1350,8 @@ list_command (const char *arg, int from_tty)
      and clear NO_END; however, if one of the arguments is blank,
      set DUMMY_BEG or DUMMY_END to record that fact.  */
 
-  if (!have_full_symbols (current_program_space)
-      && !have_partial_symbols (current_program_space))
+  if (!current_program_space->has_full_symbols ()
+      && !current_program_space->has_partial_symbols ())
     error (_("No symbol table is loaded.  Use the \"file\" command."));
 
   std::vector<symtab_and_line> sals;

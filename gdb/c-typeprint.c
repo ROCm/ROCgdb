@@ -1105,7 +1105,6 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 
 	  for (j = 0; j < len2; j++)
 	    {
-	      gdb::unique_xmalloc_ptr<char> mangled_name_holder;
 	      const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
 	      int is_full_physname_constructor =
 		TYPE_FN_FIELD_CONSTRUCTOR (f, j)

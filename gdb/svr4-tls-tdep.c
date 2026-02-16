@@ -42,10 +42,7 @@ static const registry<gdbarch>::key<svr4_tls_gdbarch_data>
 static struct svr4_tls_gdbarch_data *
 get_svr4_tls_gdbarch_data (struct gdbarch *gdbarch)
 {
-  struct svr4_tls_gdbarch_data *result = svr4_tls_gdbarch_data_handle.get (gdbarch);
-  if (result == nullptr)
-    result = svr4_tls_gdbarch_data_handle.emplace (gdbarch);
-  return result;
+  return &svr4_tls_gdbarch_data_handle.try_emplace (gdbarch);
 }
 
 /* When true, force internal TLS address lookup instead of lookup via

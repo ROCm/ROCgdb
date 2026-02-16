@@ -27,7 +27,7 @@
 
 /* MI command table (built at run time). */
 
-static gdb::unordered_map<std::string, mi_command_up> mi_cmd_table;
+static gdb::unordered_string_map<mi_command_up> mi_cmd_table;
 
 /* MI command with a pure MI implementation.  */
 

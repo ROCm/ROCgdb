@@ -22,7 +22,6 @@
 #include "gdbsupport/buildargv.h"
 #include "gdbsupport/common-inferior.h"
 #include "gdbsupport/remote-args.h"
-#include "gdbsupport/gdb_argv_vec.h"
 
 namespace selftests {
 namespace remote_args_tests {
@@ -107,11 +106,8 @@ self_test ()
 	}
 
       /* Now join the arguments.  */
-      gdb::argv_vec split_args_c_str;
-      for (const std::string &s : split_args)
-	split_args_c_str.push_back (xstrdup (s.c_str ()));
       std::string joined_args
-	= gdb::remote_args::join (split_args_c_str.get ());
+	= gdb::remote_args::join (split_args);
 
       if (run_verbose ())
 	debug_printf ("Joined (%s), expected (%s)\n",

@@ -5574,7 +5574,7 @@ allocate_fixed_point_type_info (struct type *type)
       fixed_point_type_storage *storage
 	= fixed_point_objfile_key.get (type->objfile_owner ());
       if (storage == nullptr)
-	storage = fixed_point_objfile_key.emplace (type->objfile_owner ());
+	storage = &fixed_point_objfile_key.emplace (type->objfile_owner ());
       info = up.get ();
       storage->push_back (std::move (up));
     }

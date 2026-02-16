@@ -32,6 +32,40 @@ using unordered_map
       <Key, T, Hash, KeyEqual, std::allocator<std::pair<Key, T>>,
        ankerl::unordered_dense::bucket_type::standard>;
 
+/* An unordered_map with std::string keys that supports transparent
+   lookup from std::string_view, avoiding the construction of temporary
+   std::string objects during lookups.  std::string_view is implicitly
+   constructible from `const char *` and `std::string`, so it covers those
+   too.  */
+
+namespace detail
+{
+
+struct unordered_string_map_hash
+{
+  using is_transparent = void;
+  using is_avalanching = void;
+
+  std::uint64_t operator() (std::string_view sv) const noexcept
+  { return ankerl::unordered_dense::hash<std::string_view> () (sv); }
+};
+
+struct unordered_string_map_eq
+{
+  using is_transparent = void;
+
+  bool operator() (std::string_view lhs, std::string_view rhs) const noexcept
+  { return lhs == rhs; }
+};
+
+} /* namespace detail */
+
+template<typename T>
+using unordered_string_map
+  = gdb::unordered_map<std::string, T,
+		       detail::unordered_string_map_hash,
+		       detail::unordered_string_map_eq>;
+
 } /* namespace gdb */
 
 #endif /* GDBSUPPORT_UNORDERED_MAP_H */

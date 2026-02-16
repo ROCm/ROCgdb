@@ -2801,6 +2801,8 @@ oav2_parse_subsection (bfd *abfd,
        subsection_name.  Either the string has to be freed in case of errors,
        or its ownership must be transferred.  */
     int read = read_ntbs (abfd, cursor, subsection_name_end, &subsection_name);
+    if (read <= 0)
+      goto error;
     total_read += read;
     cursor += read;
   }
@@ -2848,23 +2850,20 @@ oav2_parse_subsection (bfd *abfd,
     (subsection_name, scope, comprehension_raw, value_encoding);
 
   /* A subsection can be empty, so 'cursor' can be equal to 'end' here.  */
-  bool err = false;
-  while (!err && cursor < end)
+  while (cursor < end)
     {
       obj_attr_v2_t *attr;
       ssize_t read = oav2_parse_attr (abfd, cursor, end, value_encoding, &attr);
+      if (read <= 0)
+	{
+	  _bfd_elf_obj_attr_subsection_v2_free (*subsec);
+	  *subsec = NULL;
+	  return -1;
+	}
       if (attr != NULL)
 	LINKED_LIST_APPEND (obj_attr_v2_t) (*subsec, attr);
       total_read += read;
-      err |= (read < 0);
       cursor += read;
-    }
-
-  if (err)
-    {
-      _bfd_elf_obj_attr_subsection_v2_free (*subsec);
-      *subsec = NULL;
-      return -1;
     }
 
   BFD_ASSERT (cursor == end);

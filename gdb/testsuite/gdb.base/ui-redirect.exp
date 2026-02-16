@@ -100,6 +100,9 @@ with_test_prefix "redirect while already logging" {
     "Copying output to /dev/null.*Copying debug output to /dev/null\\."
     gdb_test "set logging redirect on" \
     ".*warning: Currently logging .*Turn the logging off and on to make the new setting effective.*"
+    gdb_test "set logging file /dev/null" \
+	".*warning: Currently logging .*Turn the logging off and on to make the new setting effective.*" \
+	"warn when changing log filename"
     gdb_test "save breakpoints $cmds_file" "Saved to file '$cmds_file'\\." \
 	"save breakpoints cmds.txt"
     cmp_file_string "$cmds_file" "$cmds" "cmds.txt"

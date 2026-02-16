@@ -1241,7 +1241,7 @@ maintenance_info_bfds (const char *arg, int from_tty)
 
 struct bfd_inferior_data
 {
-  gdb::unordered_map<std::string, unsigned long> bfd_error_string_counts;
+  gdb::unordered_string_map<unsigned long> bfd_error_string_counts;
 };
 
 /* Per-inferior data key.  */
@@ -1254,13 +1254,7 @@ static const registry<inferior>::key<bfd_inferior_data> bfd_inferior_data_key;
 static struct bfd_inferior_data *
 get_bfd_inferior_data (struct inferior *inf)
 {
-  struct bfd_inferior_data *data;
-
-  data = bfd_inferior_data_key.get (inf);
-  if (data == nullptr)
-    data = bfd_inferior_data_key.emplace (inf);
-
-  return data;
+  return &bfd_inferior_data_key.try_emplace (inf);
 }
 
 /* Increment the BFD error count for STR and return the updated

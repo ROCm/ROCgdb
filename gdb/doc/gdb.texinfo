@@ -7035,9 +7035,7 @@ Functions in @var{file} will be skipped over when stepping.
 @itemx -gfi @var{file-glob-pattern}
 @cindex skipping over files via glob-style patterns
 Functions in files matching @var{file-glob-pattern} will be skipped
-over when stepping.  The directory separator character @file{/} is treated as a
-regular character, so it can be matched by wildcard characters @file{*} and
-@file{?}.
+over when stepping.
 
 @smallexample
 (@value{GDBP}) skip -gfi utils/*.c
@@ -32050,6 +32048,12 @@ default is off.
 @item show debug frame
 Displays the current state of displaying @value{GDBN} frame debugging
 info.
+
+@cindex GNU ifunc debug messages
+@item set debug gnu-ifunc
+Turn on or off debugging messages related to GNU ifunc resolution.
+@item show debug gnu-ifunc
+Show the current state of GNU ifunc resolution debugging messages.
 
 @item set debug gnu-nat
 @cindex @sc{gnu}/Hurd debug messages

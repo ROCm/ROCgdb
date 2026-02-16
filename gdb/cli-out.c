@@ -27,6 +27,7 @@
 #include "cli/cli-style.h"
 #include "ui.h"
 #include "cli/cli-cmds.h"
+#include "buffered-streams.h"
 
 /* These are the CLI output functions */
 
@@ -220,20 +221,24 @@ cli_ui_out::do_text (const char *string)
 }
 
 void
-cli_ui_out::do_message (const ui_file_style &style,
+cli_ui_out::do_message (ui_file_style &current_style,
+			const ui_file_style &style,
 			const char *format, va_list args)
 {
   if (m_suppress_output)
     return;
 
   std::string str = string_vprintf (format, args);
-  if (!str.empty ())
+  if (str.empty ())
+    return;
+
+  ui_file *stream = m_streams.back ();
+  if (current_style != style)
     {
-      ui_file *stream = m_streams.back ();
       stream->emit_style_escape (style);
-      stream->puts (str.c_str ());
-      stream->emit_style_escape (ui_file_style ());
+      current_style = style;
     }
+  stream->puts (str.c_str ());
 }
 
 void
@@ -486,6 +491,12 @@ bool
 cli_ui_out::can_emit_style_escape () const
 {
   return m_streams.back ()->can_emit_style_escape ();
+}
+
+void
+cli_ui_out::emit_style_escape (const ui_file_style &style)
+{
+  m_streams.back ()->emit_style_escape (style);
 }
 
 /* CLI interface to display tab-completion matches.  */

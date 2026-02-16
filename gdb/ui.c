@@ -27,6 +27,7 @@
 #include "pager.h"
 #include "main.h"
 #include "top.h"
+#include "logging-file.h"
 
 /* See top.h.  */
 
@@ -48,10 +49,16 @@ ui::ui (FILE *instream_, FILE *outstream_, FILE *errstream_)
     errstream (errstream_),
     input_fd (fileno (instream)),
     m_input_interactive_p (ISATTY (instream)),
-    m_gdb_stdout (new pager_file (new stdio_file (outstream))),
+    m_ui_stdout (new pager_file
+		 (std::make_unique<logging_file<ui_file_up>>
+		  (std::make_unique<stdio_file> (outstream)))),
     m_gdb_stdin (new stdio_file (instream)),
-    m_gdb_stderr (new stderr_file (errstream)),
-    m_gdb_stdlog (new timestamped_file (m_gdb_stderr))
+    m_ui_stderr (new logging_file<ui_file_up>
+		 (std::make_unique<stderr_file> (errstream))),
+    m_ui_stdlog (new timestamped_file
+		 (std::make_unique<logging_file<ui_file_up>>
+		  (std::make_unique<stderr_file> (errstream), true))),
+    m_ui_stdtarg (m_ui_stderr)
 {
   unbuffer_stream (instream_);
 
@@ -85,8 +92,8 @@ ui::~ui ()
     ui_list = next;
 
   delete m_gdb_stdin;
-  delete m_gdb_stdout;
-  delete m_gdb_stderr;
+  delete m_ui_stdout;
+  delete m_ui_stderr;
 }
 
 

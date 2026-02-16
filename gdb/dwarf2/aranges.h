@@ -26,7 +26,12 @@ class addrmap_mutable;
 
 /* Read the address map data from DWARF-5 .debug_aranges, and use it
    to populate given addrmap.  Returns true on success, false on
-   failure.  */
+   failure.  On failure, it is guaranteed that a warning will be
+   emitted to WARN.
+
+   Note that this will emit a warning and fail if the section is
+   empty.  If a caller can tolerate a missing .debug_aranges section,
+   it should check this explicitly before the call.  */
 
 extern bool read_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
 				       dwarf2_section_info *section,

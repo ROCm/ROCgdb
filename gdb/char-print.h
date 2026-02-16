@@ -81,6 +81,7 @@ public:
     : m_encoding (encoding == nullptr
 		  ? get_default_encoding (ch_type)
 		  : encoding),
+      m_host_utf8 (streq (host_charset (), "UTF-8")),
       m_byte_order (type_byte_order (ch_type)),
       m_file (&m_wchar_buf),
       m_quoter (quoter),
@@ -169,10 +170,17 @@ protected:
 
 private:
 
+  /* Check whether C is both printable (deferring to the 'printable'
+     method), and also whether it is convertible to the host character
+     set.  Returns true if both conditions hold, false otherwise.  */
+  bool printable_and_convertible (gdb_wchar_t c) const;
+
   /* Intermediate output is stored here.  */
   auto_obstack m_wchar_buf;
   /* The encoding.  */
   const char *m_encoding;
+  /* True if the host encoding is UTF-8.  */
+  bool m_host_utf8;
 
 protected:
 

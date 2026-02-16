@@ -2642,22 +2642,24 @@ tg_start_function (void *p, const char *name, bool global)
   if (dname != NULL)
     {
       char *sep;
+      char *mutable_name;
       sep = strstr (dname, "::");
       if (sep)
 	{
 	  info->stack->method = dname;
 	  dname = NULL;
 	  *sep = 0;
-	  name = sep + 2;
+	  mutable_name = sep + 2;
 	}
       else
 	{
 	  info->stack->method = xstrdup ("");
-	  name = dname;
+	  mutable_name = dname;
 	}
-      sep = strchr (name, '(');
+      sep = strchr (mutable_name, '(');
       if (sep)
 	*sep = 0;
+      name = mutable_name;
       /* Obscure functions as type_info function.  */
     }
 

@@ -126,10 +126,7 @@ static const char *find_dyn_list_name = STRINGIFY(UNW_OBJ(find_dyn_list));
 static struct libunwind_descr *
 libunwind_descr (struct gdbarch *gdbarch)
 {
-  struct libunwind_descr *result = libunwind_descr_handle.get (gdbarch);
-  if (result == nullptr)
-    result = libunwind_descr_handle.emplace (gdbarch);
-  return result;
+  return &libunwind_descr_handle.try_emplace (gdbarch);
 }
 
 void

@@ -97,7 +97,7 @@ private:
 
   /* The file offset cache.  The key is the full name of the source
      file.  */
-  gdb::unordered_map<std::string, std::vector<off_t>> m_offset_cache;
+  gdb::unordered_string_map<std::vector<off_t>> m_offset_cache;
 
   /* The list of files where styling failed.  */
   gdb::unordered_set<std::string> m_no_styling_files;

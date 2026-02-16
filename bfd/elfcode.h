@@ -919,6 +919,11 @@ elf_object_p (bfd *abfd)
   bfd_set_error (bfd_error_wrong_format);
 
  got_no_match:
+  if (abfd->sections != NULL)
+    /* Unlike most early section processing, the object attribute v2
+       code uses bfd_malloc rather than bfd_alloc.  Free memory
+       containing attributes.  */
+    _bfd_elf_cleanup_object_attributes (abfd);
   return NULL;
 }
 

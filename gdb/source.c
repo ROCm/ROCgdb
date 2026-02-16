@@ -223,11 +223,7 @@ get_lines_to_list (void)
 static current_source_location *
 get_source_location (program_space *pspace)
 {
-  current_source_location *loc
-    = current_source_key.get (pspace);
-  if (loc == nullptr)
-    loc = current_source_key.emplace (pspace);
-  return loc;
+  return &current_source_key.try_emplace (pspace);
 }
 
 /* See source.h.  */
@@ -258,8 +254,8 @@ get_current_source_symtab_and_line (program_space *pspace)
 void
 set_default_source_symtab_and_line (void)
 {
-  if (!have_full_symbols (current_program_space)
-      && !have_partial_symbols (current_program_space))
+  if (!current_program_space->has_full_symbols ()
+      && !current_program_space->has_partial_symbols ())
     error (_("No symbol table is loaded.  Use the \"file\" command."));
 
   /* Pull in a current source symtab if necessary.  */

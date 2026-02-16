@@ -51,7 +51,6 @@
 #include "arch/arm.h"
 #include "arch/arm-get-next-pcs.h"
 #include "arm-tdep.h"
-#include "sim/sim-arm.h"
 
 #include "elf-bfd.h"
 #include "coff/internal.h"
@@ -2571,7 +2570,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
     }
 
   /* Allocate exception table data structure.  */
-  data = arm_exidx_data_key.emplace (objfile->obfd.get ());
+  data = &arm_exidx_data_key.emplace (objfile->obfd.get ());
   data->section_maps.resize (objfile->obfd->section_count);
 
   /* Fill in exception table.  */
@@ -5196,37 +5195,6 @@ arm_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
     }
 
   return -1;
-}
-
-/* Map GDB internal REGNUM onto the Arm simulator register numbers.  */
-static int
-arm_register_sim_regno (struct gdbarch *gdbarch, int regnum)
-{
-  int reg = regnum;
-  gdb_assert (reg >= 0 && reg < gdbarch_num_regs (gdbarch));
-
-  if (regnum >= ARM_WR0_REGNUM && regnum <= ARM_WR15_REGNUM)
-    return regnum - ARM_WR0_REGNUM + SIM_ARM_IWMMXT_COP0R0_REGNUM;
-
-  if (regnum >= ARM_WC0_REGNUM && regnum <= ARM_WC7_REGNUM)
-    return regnum - ARM_WC0_REGNUM + SIM_ARM_IWMMXT_COP1R0_REGNUM;
-
-  if (regnum >= ARM_WCGR0_REGNUM && regnum <= ARM_WCGR7_REGNUM)
-    return regnum - ARM_WCGR0_REGNUM + SIM_ARM_IWMMXT_COP1R8_REGNUM;
-
-  if (reg < NUM_GREGS)
-    return SIM_ARM_R0_REGNUM + reg;
-  reg -= NUM_GREGS;
-
-  if (reg < NUM_FREGS)
-    return SIM_ARM_FP0_REGNUM + reg;
-  reg -= NUM_FREGS;
-
-  if (reg < NUM_SREGS)
-    return SIM_ARM_FPS_REGNUM + reg;
-  reg -= NUM_SREGS;
-
-  internal_error (_("Bad REGNUM %d"), regnum);
 }
 
 static const unsigned char op_lit0 = DW_OP_lit0;
@@ -9743,10 +9711,8 @@ arm_record_special_symbol (struct gdbarch *gdbarch, struct objfile *objfile,
   if (name[1] != 'a' && name[1] != 't' && name[1] != 'd')
     return;
 
-  data = arm_bfd_data_key.get (objfile->obfd.get ());
-  if (data == NULL)
-    data = arm_bfd_data_key.emplace (objfile->obfd.get (),
-				     objfile->obfd->section_count);
+  data = &arm_bfd_data_key.try_emplace (objfile->obfd.get (),
+					objfile->obfd->section_count);
   arm_mapping_symbol_vec &map
     = data->section_maps[bfd_asymbol_section (sym)->index];
 
@@ -10784,7 +10750,6 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Internal <-> external register number maps.  */
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, arm_dwarf_reg_to_regnum);
-  set_gdbarch_register_sim_regno (gdbarch, arm_register_sim_regno);
 
   set_gdbarch_register_name (gdbarch, arm_register_name);
 

@@ -93,13 +93,3 @@ mi_console_file::flush ()
 
   m_buffer.clear ();
 }
-
-/* Change the underlying stream of the console directly; this is
-   useful as a minimum-impact way to reflect external changes like
-   logging enable/disable.  */
-
-void
-mi_console_file::set_raw (ui_file *raw)
-{
-  m_raw = raw;
-}

@@ -1,4 +1,4 @@
-# Copyright 2025 Free Software Foundation, Inc.
+# Copyright 2025-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ proc quotemeta {str} {
     # expression.  I.e., "@/...@.../" is valid.  This lets users avoid
     # excess quoting.
     while true {
-	regexp -- "^(\[^@\]*)(@(.*))?$" $str ignore prefix full_at at_text
+	regexp -- {^([^@]*)(@(.*))?$} $str ignore prefix full_at at_text
 	append result [string_to_regexp $prefix]
 	if {$full_at == ""} {
 	    # No more substitutions, we're done.
@@ -83,9 +83,9 @@ proc quotemeta {str} {
 	    }
 	} else {
 	    # Match the usual forms.
-	    if {![regexp -- "^(\\.\\.\\.|\[A-Z\]\[A-Z_\]*|@|/\[^/\]*/)(.*)$" \
+	    if {![regexp -- {^(\.\.\.|[A-Z][A-Z_]*|@|/[^/]*/)(.*)$} \
 		      $at_text ignore at_text remainder]} {
-		error "invalid quotemeta expression"
+		error "invalid quotemeta expression @$at_text"
 	    }
 	}
 
@@ -100,6 +100,9 @@ proc quotemeta {str} {
 	    # an embedded "/".
 	    append result $rx
 	} else {
+	    if {![info exists ::_quotemeta($at_text)]} {
+		error "undefined quotemeta expression @$at_text"
+	    }
 	    append result $::_quotemeta($at_text)
 	}
 
@@ -109,7 +112,7 @@ proc quotemeta {str} {
     # Now replace any whitespace with a regular expression that will
     # match any amount of whitespace.  This is done after constructing
     # the regular expression so we don't regexp-quote the \s+.
-    return [regsub -all -- "\\s+" $result "\\\\s+"]
+    return [regsub -all -- {\s+} $result {\s+}]
 }
 
 # Define a new quotemeta substitution.
@@ -122,7 +125,7 @@ proc quotemeta {str} {
 # RX is the regular expression that is used to implement the matching
 # for this name.
 proc define_quotemeta {name rx} {
-    if {![regexp -- "^\[A-Z\]\[A-Z_\]*$" $name]} {
+    if {![regexp -- {^[A-Z][A-Z_]*$} $name]} {
 	error "bad quotemeta name"
     }
 

@@ -102,11 +102,7 @@ static const registry<program_space>::key<darwin_info>
 static darwin_info *
 get_darwin_info (program_space *pspace)
 {
-  darwin_info *info = solib_darwin_pspace_data.get (pspace);
-  if (info != nullptr)
-    return info;
-
-  return solib_darwin_pspace_data.emplace (pspace);
+  return &solib_darwin_pspace_data.try_emplace (pspace);
 }
 
 /* Return non-zero if the version in dyld_all_image is known.  */

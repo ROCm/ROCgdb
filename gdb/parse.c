@@ -148,8 +148,8 @@ parser_state::push_symbol (const char *name, block_symbol sym)
 	= lookup_minimal_symbol (current_program_space, name);
       if (msymbol.minsym != NULL)
 	push_new<expr::var_msym_value_operation> (msymbol);
-      else if (!have_full_symbols (current_program_space)
-	       && !have_partial_symbols (current_program_space))
+      else if (!current_program_space->has_full_symbols ()
+	       && !current_program_space->has_partial_symbols ())
 	error (_("No symbol table is loaded.  Use the \"file\" command."));
       else
 	error (_("No symbol \"%s\" in current context."), name);

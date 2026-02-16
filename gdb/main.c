@@ -60,6 +60,7 @@
 #include "cli-out.h"
 #include "bt-utils.h"
 #include "terminal.h"
+#include "logging-file.h"
 
 /* The selected interpreter.  */
 std::string interpreter_p;
@@ -78,10 +79,6 @@ static int gdb_datadir_provided = 0;
 /* If gdb was configured with --with-python=/path,
    the possibly relocated path to python's lib directory.  */
 std::string python_libdir;
-
-/* Target IO streams.  */
-struct ui_file *gdb_stdtargin;
-struct ui_file *gdb_stdtarg;
 
 /* True if --batch or --batch-silent was seen.  */
 int batch_flag = 0;
@@ -695,9 +692,6 @@ captured_main_1 (struct captured_main_args *context)
   gdb_internal_backtrace_init_str ();
   current_ui = main_ui;
 
-  gdb_stdtarg = gdb_stderr;
-  gdb_stdtargin = gdb_stdin;
-
   /* Put a CLI based uiout in place early.  If the early initialization
      files trigger any I/O then it isn't hard to reach parts of GDB that
      assume current_uiout is not nullptr.  Maybe we should just install the
@@ -969,7 +963,7 @@ captured_main_1 (struct captured_main_args *context)
 	    break;
 	  case 'B':
 	    batch_flag = batch_silent = 1;
-	    gdb_stdout = new null_file ();
+	    current_ui->m_ui_stdout = new null_file ();
 	    break;
 	  case 'D':
 	    if (optarg[0] == '\0')

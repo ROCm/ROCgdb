@@ -84,10 +84,7 @@ static const registry<gdbarch>::key<struct bsd_uthread_ops> bsd_uthread_data;
 static struct bsd_uthread_ops *
 get_bsd_uthread (struct gdbarch *gdbarch)
 {
-  struct bsd_uthread_ops *ops = bsd_uthread_data.get (gdbarch);
-  if (ops == nullptr)
-    ops = bsd_uthread_data.emplace (gdbarch);
-  return ops;
+  return &bsd_uthread_data.try_emplace (gdbarch);
 }
 
 /* Set the function that supplies registers from an inactive thread
