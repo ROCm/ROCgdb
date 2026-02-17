@@ -51,6 +51,7 @@
 #include "record-full.h"
 #include "linux-record.h"
 
+#include "arch/aarch64-fpmr-linux.h"
 #include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
@@ -1764,7 +1765,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
   features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
   features.mte = hwcap2 & HWCAP2_MTE;
-  features.fpmr = hwcap2 & HWCAP2_FPMR;
+  features.fpmr = hwcap2 & AARCH64_HWCAP2_FPMR;
 
   /* Handle the TLS section.  */
   asection *tls = bfd_get_section_by_name (abfd, ".reg-aarch-tls");

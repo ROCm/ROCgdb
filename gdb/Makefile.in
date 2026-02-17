@@ -1300,6 +1300,7 @@ HFILES_NO_SRCDIR = \
 	amdgpu-tdep.h \
 	annotate.h \
 	arch/aarch32.h \
+	arch/aarch64-fpmr-linux.h \
 	arch/aarch64-gcs-linux.h \
 	arch/aarch64.h \
 	arch/aarch64-insn.h \
@@ -1545,6 +1546,7 @@ HFILES_NO_SRCDIR = \
 	mn10300-tdep.h \
 	moxie-tdep.h \
 	namespace.h \
+	nat/aarch64-fpmr-linux.h \
 	nat/aarch64-hw-point.h \
 	nat/aarch64-linux.h \
 	nat/aarch64-linux-hw-point.h \

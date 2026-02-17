@@ -32,6 +32,7 @@
 #include "aarch32-linux-nat.h"
 #include "aarch32-tdep.h"
 #include "arch/arm.h"
+#include "nat/aarch64-fpmr-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
 #include "nat/aarch64-pauth-linux.h"

@@ -243,9 +243,4 @@ enum aarch64_regnum
 /* Size of the SME2 ZT0 register in bytes.  */
 #define AARCH64_SME2_ZT0_SIZE 64
 
-/* Feature check for Floating Point Mode Register.  */
-#ifndef HWCAP2_FPMR
-#define HWCAP2_FPMR (1ULL << 48)
-#endif /* HWCAP2_FPMR */
-
 #endif /* GDB_ARCH_AARCH64_H */
