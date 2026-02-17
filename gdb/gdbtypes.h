@@ -1072,6 +1072,11 @@ struct type
     return this->name () != nullptr ? this->name () : _("<error type>");
   }
 
+  /* Return true if this type is "opaque", i.e.  a struct or union with
+     no fields, no methods, and either a stub or with unsupported stub
+     information.  */
+  bool is_opaque () const;
+
   /* Note that if thistype is a TYPEDEF type, you have to call check_typedef.
      But check_typedef does set the TYPE_LENGTH of the TYPEDEF type,
      so you only have to call check_typedef once.  Since value::allocate
@@ -1297,7 +1302,7 @@ struct type
   }
 
   /* This debug target supports TYPE_STUB(t).  In the unsupported case
-     we have to rely on NFIELDS to be zero etc., see TYPE_IS_OPAQUE().
+     we have to rely on NFIELDS to be zero etc., see type::is_opaque.
      TYPE_STUB(t) with !TYPE_STUB_SUPPORTED(t) may exist if we only
      guessed the TYPE_STUB(t) value (see dwarfread.c).  */
 
@@ -2049,13 +2054,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
   (TYPE_NESTED_TYPES_FIELD (thistype, n).accessibility \
    == accessibility::PRIVATE)
 
-#define TYPE_IS_OPAQUE(thistype) \
-  ((((thistype)->code () == TYPE_CODE_STRUCT) \
-    || ((thistype)->code () == TYPE_CODE_UNION)) \
-   && ((thistype)->num_fields () == 0) \
-   && (!HAVE_CPLUS_STRUCT (thistype) \
-       || TYPE_NFN_FIELDS (thistype) == 0) \
-   && ((thistype)->is_stub () || !(thistype)->stub_is_supported ()))
 
 /* Given TYPE, return its floatformat.  */
 const struct floatformat *floatformat_from_type (const struct type *type);
