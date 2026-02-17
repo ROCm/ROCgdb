@@ -348,7 +348,7 @@ gnuv3_rtti_type (struct value *value,
       || !startswith (vtable_symbol_name, "vtable for "))
     {
       warning (_("can't find linker symbol for virtual table for `%s' value"),
-	       TYPE_SAFE_NAME (values_type));
+	       values_type->safe_name ());
       if (vtable_symbol_name)
 	warning (_("  found `%s' instead"), vtable_symbol_name);
       return NULL;
@@ -885,7 +885,7 @@ print_one_vtable (struct gdbarch *gdbarch, struct value *value,
   vt_addr = vtable->field (vtable_field_virtual_functions)->address ();
 
   gdb_printf (_("vtable for '%s' @ %s (subobject @ %s):\n"),
-	      TYPE_SAFE_NAME (type),
+	      type->safe_name (),
 	      paddress (gdbarch, vt_addr),
 	      paddress (gdbarch, (value->address ()
 				  + value->embedded_offset ())));

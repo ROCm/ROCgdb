@@ -1936,7 +1936,7 @@ struct_field_searcher::update_result (struct value *v, LONGEST boffset)
 		 found occupy the same space.  */
 	      && m_last_boffset != boffset)
 	    error (_("base class '%s' is ambiguous in type '%s'"),
-		   m_name, TYPE_SAFE_NAME (m_outermost_type));
+		   m_name, m_outermost_type->safe_name ());
 
 	  m_baseclass = v;
 	  m_last_boffset = boffset;
@@ -2160,15 +2160,15 @@ search_struct_field (const char *name, struct value *arg1,
 		}
 
 	      candidates += string_printf ("\n  '%s %s::%s' (%s)",
-					   TYPE_SAFE_NAME (field_type),
-					   TYPE_SAFE_NAME (struct_type),
+					   field_type->safe_name (),
+					   struct_type->safe_name (),
 					   name,
 					   path.c_str ());
 	    }
 
 	  error (_("Request for member '%s' is ambiguous in type '%s'."
 		   " Candidates are:%s"),
-		 name, TYPE_SAFE_NAME (type),
+		 name, type->safe_name (),
 		 candidates.c_str ());
 	}
     }

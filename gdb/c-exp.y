@@ -1119,7 +1119,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			  type = check_typedef (type);
 			  if (!type_aggregate_p (type))
 			    error (_("`%s' is not defined as an aggregate type."),
-				   TYPE_SAFE_NAME (type));
+				   type->safe_name ());
 
 			  pstate->push_new<scope_operation> (type,
 							     copy_name ($3));
@@ -1131,7 +1131,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			  type = check_typedef (type);
 			  if (!type_aggregate_p (type))
 			    error (_("`%s' is not defined as an aggregate type."),
-				   TYPE_SAFE_NAME (type));
+				   type->safe_name ());
 			  std::string name = "~" + std::string ($4.ptr,
 								$4.length);
 
@@ -1145,7 +1145,7 @@ qualified_name:	TYPENAME COLONCOLON name
 			  std::string copy = copy_name ($3);
 			  error (_("No type \"%s\" within class "
 				   "or namespace \"%s\"."),
-				 copy.c_str (), TYPE_SAFE_NAME ($1.type));
+				 copy.c_str (), $1.type->safe_name ());
 			}
 	;
 
@@ -3341,7 +3341,7 @@ handle_qualified_field_name (qualified_name_token token)
   type = check_typedef (type);
   if (!type_aggregate_p (type))
     error (_("`%s' is not defined as an aggregate type."),
-	   TYPE_SAFE_NAME (type));
+	   type->safe_name ());
   if (token.name[0] == '~')
     destructor_name_p (token.name, type);
   pstate->push_new<scope_operation> (type, token.name);
@@ -3574,7 +3574,7 @@ c_print_token (FILE *file, int type, YYSTYPE value)
     {
     case INT:
       parser_fprintf (file, "typed_val_int<%s, %s>",
-		      TYPE_SAFE_NAME (value.typed_val_int.type),
+		      value.typed_val_int.type->safe_name (),
 		      pulongest (value.typed_val_int.val));
       break;
 
@@ -3592,7 +3592,7 @@ c_print_token (FILE *file, int type, YYSTYPE value)
 
     case TYPENAME:
       parser_fprintf (file, "tsym<type=%s, name=%s>",
-		      TYPE_SAFE_NAME (value.tsym.type),
+		      value.tsym.type->safe_name (),
 		      copy_name (value.tsym.stoken).c_str ());
       break;
 
