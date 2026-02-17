@@ -54,6 +54,7 @@
 #include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
+#include "arch/aarch64-pauth-linux.h"
 #include "arch/aarch64-scalable-linux.h"
 
 #include "arch-utils.h"

@@ -34,6 +34,7 @@
 #include "arch/arm.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
+#include "nat/aarch64-pauth-linux.h"
 #include "nat/aarch64-scalable-linux-ptrace.h"
 
 #include "elf/external.h"
@@ -1012,7 +1013,7 @@ aarch64_linux_nat_target::read_description ()
      or the streaming vector length, depending on whether streaming mode is
      active or not.  */
   features.vq = aarch64_sve_get_vq (tid);
-  features.pauth = hwcap & AARCH64_HWCAP_PACA;
+  features.pauth = hwcap & HWCAP_PACA;
   features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
   features.mte = hwcap2 & HWCAP2_MTE;
   features.tls = aarch64_tls_register_count (tid);
