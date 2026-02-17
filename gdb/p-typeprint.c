@@ -689,7 +689,7 @@ pascal_language::type_print_base (struct type *type, struct ui_file *stream, int
       break;
 
     case TYPE_CODE_ERROR:
-      gdb_printf (stream, "%s", TYPE_ERROR_NAME (type));
+      gdb_printf (stream, "%s", type->error_name ());
       break;
 
       /* this probably does not work for enums.  */

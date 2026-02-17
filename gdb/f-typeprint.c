@@ -364,7 +364,7 @@ f_language::f_type_print_base (struct type *type, struct ui_file *stream,
       break;
 
     case TYPE_CODE_ERROR:
-      gdb_printf (stream, "%*s%s", level, "", TYPE_ERROR_NAME (type));
+      gdb_printf (stream, "%*s%s", level, "", type->error_name ());
       break;
 
     case TYPE_CODE_RANGE:

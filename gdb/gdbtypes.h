@@ -1065,6 +1065,13 @@ struct type
     return this->name () != nullptr ? this->name () : _("<unnamed type>");
   }
 
+  /* Return the name of this type, or "<error type>" if it has no
+     name.  */
+  const char *error_name () const
+  {
+    return this->name () != nullptr ? this->name () : _("<error type>");
+  }
+
   /* Note that if thistype is a TYPEDEF type, you have to call check_typedef.
      But check_typedef does set the TYPE_LENGTH of the TYPEDEF type,
      so you only have to call check_typedef once.  Since value::allocate
@@ -2049,12 +2056,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
    && (!HAVE_CPLUS_STRUCT (thistype) \
        || TYPE_NFN_FIELDS (thistype) == 0) \
    && ((thistype)->is_stub () || !(thistype)->stub_is_supported ()))
-
-/* * A helper macro that returns the name of an error type.  If the
-   type has a name, it is used; otherwise, a default is used.  */
-
-#define TYPE_ERROR_NAME(type) \
-  (type->name () ? type->name () : _("<error type>"))
 
 /* Given TYPE, return its floatformat.  */
 const struct floatformat *floatformat_from_type (const struct type *type);
