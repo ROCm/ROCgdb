@@ -10773,15 +10773,15 @@ md_begin (void)
   for (i = 0; aarch64_hint_options[i].name != NULL; i++)
     {
       const char* name = aarch64_hint_options[i].name;
-      const char* upper_name = get_upper_str(name);
-
+      /* Empty strings represent an absent optional operand, so won't be looked
+	 up in the hash table.  */
+      if (*name == '\0')
+	continue;
       checked_hash_insert (aarch64_hint_opt_hsh, name,
 			   aarch64_hint_options + i);
-
-      /* Also hash the name in the upper case if not the same.  */
-      if (strcmp (name, upper_name) != 0)
-	checked_hash_insert (aarch64_hint_opt_hsh, upper_name,
-			     aarch64_hint_options + i);
+      /* Also hash the name in the upper case.  */
+      checked_hash_insert (aarch64_hint_opt_hsh, get_upper_str (name),
+			   aarch64_hint_options + i);
     }
 
   for (i = 0; aarch64_sys_ins_gic[i].name != NULL; i++)
