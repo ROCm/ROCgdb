@@ -1595,7 +1595,7 @@ parse_simd_vector_with_bit_index (char **ccp, struct vector_type_el *typeinfo)
 /* Directives: register aliases.  */
 
 static reg_entry *
-insert_reg_alias (char *str, int number, aarch64_reg_type type)
+insert_reg_alias (const char *str, int number, aarch64_reg_type type)
 {
   reg_entry *new;
   const char *name;
@@ -10699,8 +10699,17 @@ md_begin (void)
 			aarch64_sys_regs_sr + i);
 
   for (i = 0; i < ARRAY_SIZE (reg_names); i++)
-    checked_hash_insert (aarch64_reg_hsh, reg_names[i].name,
-			 reg_names + i);
+    {
+      if (reg_names[i].builtin)
+	checked_hash_insert (aarch64_reg_hsh, reg_names[i].name,
+			     reg_names + i);
+      else
+	/* Aliases need to be safely removable, so create a copy of
+	   the reg_entry data.  */
+	insert_reg_alias (reg_names[i].name, reg_names[i].number,
+			  reg_names[i].type);
+    }
+
 
   for (i = 0; i < ARRAY_SIZE (nzcv_names); i++)
     checked_hash_insert (aarch64_nzcv_hsh, nzcv_names[i].template,
