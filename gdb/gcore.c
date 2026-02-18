@@ -38,6 +38,7 @@
 #include "gdbsupport/gdb_unlinker.h"
 #include "gdbsupport/byte-vector.h"
 #include "gdbsupport/scope-exit.h"
+#include "auxv.h"
 
 /* To generate sparse cores, we look at the data to write in chunks of
    this size when considering whether to skip the write.  Only if we
@@ -795,6 +796,11 @@ gcore_copy_callback (bfd *obfd, asection *osec)
   size = std::min (total_size, (bfd_size_type) MAX_COPY_BYTES);
   gdb::byte_vector memhunk (size);
 
+  bfd_size_type page_size = FALLBACK_PAGE_SIZE;
+  CORE_ADDR at_pagesz;
+  if (target_auxv_search (AT_PAGESZ, &at_pagesz) > 0)
+    page_size = (bfd_size_type) at_pagesz;
+
   while (total_size > 0)
     {
       if (size > total_size)
@@ -815,8 +821,7 @@ gcore_copy_callback (bfd *obfd, asection *osec)
 
 	  while (remaining > 0)
 	    {
-	      bfd_size_type chunk_size
-		= std::min (remaining, (bfd_size_type) FALLBACK_PAGE_SIZE);
+	      bfd_size_type chunk_size = std::min (remaining, page_size);
 
 	      if (target_read_memory (addr, p, chunk_size) != 0)
 		{
