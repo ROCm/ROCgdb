@@ -22,6 +22,7 @@
 #define GDB_AMDGPU_TDEP_H
 
 #include "gdbarch.h"
+#include "gdbsupport/unordered_map.h"
 
 #include <amd-dbgapi/amd-dbgapi.h>
 
@@ -61,7 +62,7 @@ struct amdgpu_gdbarch_tdep : gdbarch_tdep_base
   std::vector<amd_dbgapi_register_id_t> register_ids;
 
   /* A map of gdb regnums keyed by they equivalent register_id.  */
-  std::unordered_map<amd_dbgapi_register_id_t, int, register_id_hash,
+  gdb::unordered_map<amd_dbgapi_register_id_t, int, register_id_hash,
 		     register_id_equal_to>
     regnum_map;
   /* A map of register_class_ids keyed by their name.  */
