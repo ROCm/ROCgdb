@@ -4097,24 +4097,24 @@ ada_args_match (struct symbol *func, struct value **actuals, int n_actuals)
 }
 
 /* False iff function type FUNC_TYPE definitely does not produce a value
-   compatible with type CONTEXT_TYPE.  Conservatively returns 1 if
+   compatible with type CONTEXT_TYPE.  Conservatively returns true if
    FUNC_TYPE is not a valid function type with a non-null return type
    or an enumerated type.  A null CONTEXT_TYPE indicates any non-void type.  */
 
-static int
+static bool
 return_match (struct type *func_type, struct type *context_type)
 {
   struct type *return_type;
 
   if (func_type == NULL)
-    return 1;
+    return true;
 
   if (func_type->code () == TYPE_CODE_FUNC)
     return_type = get_base_type (func_type->target_type ());
   else
     return_type = get_base_type (func_type);
   if (return_type == NULL)
-    return 1;
+    return true;
 
   context_type = get_base_type (context_type);
 
