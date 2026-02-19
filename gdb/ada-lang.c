@@ -94,8 +94,6 @@ static struct type *desc_index_type (struct type *, int);
 
 static int desc_arity (struct type *);
 
-static int ada_args_match (struct symbol *, struct value **, int);
-
 static struct value *make_array_descriptor (struct type *, struct value *);
 
 static void ada_add_block_symbols (std::vector<struct block_symbol> &,
@@ -4062,12 +4060,12 @@ ada_type_match (struct type *ftype, struct type *atype)
     }
 }
 
-/* Return non-zero if the formals of FUNC "sufficiently match" the
+/* Return true if the formals of FUNC "sufficiently match" the
    vector of actual argument types ACTUALS of size N_ACTUALS.  FUNC
    may also be an enumeral, in which case it is treated as a 0-
    argument function.  */
 
-static int
+static bool
 ada_args_match (struct symbol *func, struct value **actuals, int n_actuals)
 {
   int i;
@@ -4077,25 +4075,25 @@ ada_args_match (struct symbol *func, struct value **actuals, int n_actuals)
       && func_type->code () == TYPE_CODE_ENUM)
     return (n_actuals == 0);
   else if (func_type == NULL || func_type->code () != TYPE_CODE_FUNC)
-    return 0;
+    return false;
 
   if (func_type->num_fields () != n_actuals)
-    return 0;
+    return false;
 
   for (i = 0; i < n_actuals; i += 1)
     {
       if (actuals[i] == NULL)
-	return 0;
+	return false;
       else
 	{
 	  struct type *ftype = ada_check_typedef (func_type->field (i).type ());
 	  struct type *atype = ada_check_typedef (actuals[i]->type ());
 
 	  if (!ada_type_match (ftype, atype))
-	    return 0;
+	    return false;
 	}
     }
-  return 1;
+  return true;
 }
 
 /* False iff function type FUNC_TYPE definitely does not produce a value
