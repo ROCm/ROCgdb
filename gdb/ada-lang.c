@@ -112,17 +112,9 @@ static void add_defn_to_vec (std::vector<struct block_symbol> &,
 			     struct symbol *,
 			     const struct block *);
 
-static int possible_user_operator_p (enum exp_opcode, struct value **);
+static bool possible_user_operator_p (enum exp_opcode, struct value **);
 
 static const char *ada_decoded_op_name (enum exp_opcode);
-
-static int numeric_type_p (struct type *);
-
-static int integer_type_p (struct type *);
-
-static int scalar_type_p (struct type *);
-
-static int discrete_type_p (struct type *);
 
 static struct type *ada_lookup_struct_elt_type (struct type *, const char *,
 						int, int);
@@ -4189,11 +4181,11 @@ ada_resolve_function (std::vector<struct block_symbol> &syms,
 /* True iff TYPE is numeric (i.e., an INT, RANGE (of numeric type),
    or FLOAT).  */
 
-static int
+static bool
 numeric_type_p (struct type *type)
 {
   if (type == NULL)
-    return 0;
+    return false;
   else
     {
       switch (type->code ())
@@ -4201,45 +4193,45 @@ numeric_type_p (struct type *type)
 	case TYPE_CODE_INT:
 	case TYPE_CODE_FLT:
 	case TYPE_CODE_FIXED_POINT:
-	  return 1;
+	  return true;
 	case TYPE_CODE_RANGE:
 	  return (type == type->target_type ()
 		  || numeric_type_p (type->target_type ()));
 	default:
-	  return 0;
+	  return false;
 	}
     }
 }
 
 /* True iff TYPE is integral (an INT or RANGE of INTs).  */
 
-static int
+static bool
 integer_type_p (struct type *type)
 {
   if (type == NULL)
-    return 0;
+    return false;
   else
     {
       switch (type->code ())
 	{
 	case TYPE_CODE_INT:
-	  return 1;
+	  return true;
 	case TYPE_CODE_RANGE:
 	  return (type == type->target_type ()
 		  || integer_type_p (type->target_type ()));
 	default:
-	  return 0;
+	  return false;
 	}
     }
 }
 
 /* True iff TYPE is scalar (INT, RANGE, FLOAT, ENUM).  */
 
-static int
+static bool
 scalar_type_p (struct type *type)
 {
   if (type == NULL)
-    return 0;
+    return false;
   else
     {
       switch (type->code ())
@@ -4249,9 +4241,9 @@ scalar_type_p (struct type *type)
 	case TYPE_CODE_ENUM:
 	case TYPE_CODE_FLT:
 	case TYPE_CODE_FIXED_POINT:
-	  return 1;
+	  return true;
 	default:
-	  return 0;
+	  return false;
 	}
     }
 }
@@ -4260,11 +4252,11 @@ scalar_type_p (struct type *type)
    This essentially means one of (INT, RANGE, ENUM) -- but note that
    "enum" includes character and boolean as well.  */
 
-static int
+static bool
 discrete_type_p (struct type *type)
 {
   if (type == NULL)
-    return 0;
+    return false;
   else
     {
       switch (type->code ())
@@ -4274,18 +4266,18 @@ discrete_type_p (struct type *type)
 	case TYPE_CODE_ENUM:
 	case TYPE_CODE_BOOL:
 	case TYPE_CODE_CHAR:
-	  return 1;
+	  return true;
 	default:
-	  return 0;
+	  return false;
 	}
     }
 }
 
-/* Returns non-zero if OP with operands in the vector ARGS could be
+/* Returns true if OP with operands in the vector ARGS could be
    a user-defined function.  Errs on the side of pre-defined operators
-   (i.e., result 0).  */
+   (i.e., result false).  */
 
-static int
+static bool
 possible_user_operator_p (enum exp_opcode op, struct value *args[])
 {
   struct type *type0 =
@@ -4294,12 +4286,12 @@ possible_user_operator_p (enum exp_opcode op, struct value *args[])
     (args[1] == NULL) ? NULL : ada_check_typedef (args[1]->type ());
 
   if (type0 == NULL)
-    return 0;
+    return false;
 
   switch (op)
     {
     default:
-      return 0;
+      return false;
 
     case BINOP_ADD:
     case BINOP_SUB:
