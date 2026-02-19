@@ -200,7 +200,7 @@ with_test_prefix "command abbreviations in define" {
   gdb_test "info break \$bpnum" \
     [multi_line \
       "Num     Type\[ \]+Disp Enb Address\[ \]+What.*" \
-      "\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*" \
+      "${::decimal}\[\t \]+breakpoint     keep y.* in main at .*" \
       "\[\t \]+echo.*"] \
     "info break shows echo command"
 }

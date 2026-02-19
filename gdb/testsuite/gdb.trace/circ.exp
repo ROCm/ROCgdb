@@ -41,7 +41,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug nowarning
 # 'tfind pc func' to find the corresponding trace frame afterwards,
 # and that looks for entry address.
 proc set_a_tracepoint { func } {
-    gdb_test "trace \*$func" "Tracepoint \[0-9\]+ at .*" \
+    gdb_test "trace \*$func" "Tracepoint ${::decimal} at .*" \
 	"set tracepoint at $func"
     gdb_trace_setactions "set actions for $func" "" "collect testload" "^$"
 }
@@ -68,7 +68,7 @@ proc run_trace_experiment { } {
     setup_tracepoints
     gdb_breakpoint "end" qualified
     gdb_test "tstart" "\[\r\n\]*" "start trace experiment"
-    gdb_test "continue" "Continuing.*Breakpoint \[0-9\]+, end.*" \
+    gdb_test "continue" "Continuing.*Breakpoint ${::decimal}, end.*" \
 	"run to end"
     gdb_test "tstop" "\[\r\n\]*" "stop trace experiment"
 }
@@ -191,7 +191,7 @@ with_test_prefix "frame size" {
 
     gdb_test "tstart" "\[\r\n\]*" "start trace"
 
-    gdb_test "continue" "Continuing.*Breakpoint \[0-9\]+, end.*" \
+    gdb_test "continue" "Continuing.*Breakpoint ${::decimal}, end.*" \
 	"run to end"
 
     gdb_test "tstop" "\[\r\n\]*" "stop trace"

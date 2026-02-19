@@ -82,11 +82,11 @@ proc fetch_auxv {test} {
 	    set bad 1
 	    exp_continue
 	}
-	-re "^\[0-9\]+\[ \t\]+(AT_\[^ \t\]+)\[^\r\n\]+\r\n" {
+	-re "^${::decimal}\[ \t\]+(AT_\[^ \t\]+)\[^\r\n\]+\r\n" {
 	    lappend auxv_lines $expect_out(0,string)
 	    exp_continue
 	}
-	-re "^\[0-9\]+\[ \t\]+\\?\\?\\?\[^\r\n\]+\r\n" {
+	-re "^${::decimal}\[ \t\]+\\?\\?\\?\[^\r\n\]+\r\n" {
 	    warning "Unrecognized tag value: $expect_out(0,string)"
 	    set bad 1
 	    lappend auxv_lines $expect_out(0,string)

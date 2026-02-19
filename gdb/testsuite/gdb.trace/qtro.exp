@@ -56,7 +56,7 @@ proc prepare_for_trace_disassembly { } {
 
     gdb_test_no_output "tstart"
 
-    gdb_test "continue" ".*Breakpoint \[0-9\]+, end .*" \
+    gdb_test "continue" ".*Breakpoint ${::decimal}, end .*" \
 	"advance through tracing"
 
     gdb_test "tstatus" ".*Collected 1 trace frame.*" \
@@ -117,7 +117,7 @@ foreach tfinfo { auto off } {
 
 	set test "trace disassembly"
 	gdb_test_multiple "disassemble subr" $test {
-	    -re "<(\.\[0-9\]+|)>:.*End of assembler dump.*$gdb_prompt $" {
+	    -re "<(\.${::decimal}|)>:.*End of assembler dump.*$gdb_prompt $" {
 		pass $test
 	    }
 	    -re "Cannot access memory.*$gdb_prompt $" {

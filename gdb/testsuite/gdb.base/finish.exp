@@ -65,7 +65,7 @@ proc finish_void { } {
 	-re ".*void_checkpoint.*$gdb_prompt $" {
 	    pass "finish from void_func"
 	}
-	-re "0x\[0-9a-fA-F\]+ in main.*call to void_func.*$gdb_prompt $" {
+	-re "${::hex} in main.*call to void_func.*$gdb_prompt $" {
 	    pass "finish from void_func"
 	}
     }

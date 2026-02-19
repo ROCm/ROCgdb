@@ -182,13 +182,13 @@ proc test_agent {} {
 	    set target_can_dprintf 0
 	    unsupported "$msg"
 	}
-	-re "Breakpoint \[0-9\]+, foo .*$gdb_prompt $" {
+	-re "Breakpoint ${::decimal}, foo .*$gdb_prompt $" {
 	    pass "$msg"
 	}
     }
 
     if {$target_can_dprintf} {
-	gdb_test "continue" "Breakpoint \[0-9\]+, foo .*" "2nd dprintf"
+	gdb_test "continue" "Breakpoint ${::decimal}, foo .*" "2nd dprintf"
 
 	gdb_test_sequence "info breakpoints" "dprintf info" {
 	    "\[\r\n\]Num     Type           Disp Enb Address +What"

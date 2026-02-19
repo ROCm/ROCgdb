@@ -51,7 +51,7 @@ if {![runto_main]} {
 set addr ""
 set test "main address first"
 gdb_test_multiple "p/x &main" $test {
-    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+    -re " = (${::hex})\r\n$gdb_prompt $" {
 	set addr $expect_out(1,string)
 	pass $test
     }

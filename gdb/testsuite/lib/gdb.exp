@@ -30,6 +30,18 @@ if {$tool == ""} {
     exit 2
 }
 
+# Add "convience abbreviation" for positive decimals, without leading zeros.
+set positive {(?:[1-9][0-9]*)}
+
+# Dejagnu defines decimal as one of the "convenience abbreviations".
+# Override it with one that uses parentheses, which flushes incorrect uses
+# like "\[Inferior $decimal\]".
+set decimal {(?:[0-9]+)}
+
+# Dejagnu defines hex as one of the "convenience abbreviations".
+# Override it with one that uses parentheses.
+set hex {(?:0x[0-9A-Fa-f]+)}
+
 # Execute BODY, if COND wrapped in proc WRAP.
 # Instead of writing the verbose and repetitive:
 #   if { $cond } {
@@ -330,9 +342,9 @@ if {![info exists env(EXEEXT)]} {
     set EXEEXT $env(EXEEXT)
 }
 
-set octal "\[0-7\]+"
+set octal {(?:[0-7]+)}
 
-set inferior_exited_re "(?:\\\[Inferior \[0-9\]+ \\(\[^\n\r\]*\\) exited)"
+set inferior_exited_re "(?:\\\[Inferior ${::decimal} \\(\[^\n\r\]*\\) exited)"
 
 # A regular expression that matches the first word of a thread
 # description after the thread number info 'info threads'
@@ -1386,7 +1398,7 @@ proc gdb_test_multiple { command message args } {
 	    fail "$message"
 	    set result 1
 	}
-	-re "$inferior_exited_re with code \[0-9\]+.*$prompt_regexp" {
+	-re "$inferior_exited_re with code ${::decimal}.*$prompt_regexp" {
 	    if {![string match "" $message]} {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -5917,7 +5929,7 @@ proc test_compiler_info { {compiler ""} {language "c"} } {
 proc is_c_compiler_gcc {} {
     set compiler_info [test_compiler_info]
     set gcc_compiled false
-    regexp "^gcc-(\[0-9\]+)-" "$compiler_info" matchall gcc_compiled
+    regexp "^gcc-(${::decimal})-" "$compiler_info" matchall gcc_compiled
     return $gcc_compiled
 }
 
@@ -9806,7 +9818,7 @@ proc get_current_frame_number {{test_name ""}} {
     }
     set frame_num -1
     gdb_test_multiple "frame" $test_name {
-	-re "#(\[0-9\]+) .*$gdb_prompt $" {
+	-re "#(${::decimal}) .*$gdb_prompt $" {
 	    set frame_num $expect_out(1,string)
 	}
     }
@@ -11892,7 +11904,7 @@ gdb_caching_proc root_user {} {
 	return 0
     }
 
-    regexp -all ".*uid=(\[0-9\]+).*" $output dummy uid
+    regexp -all ".*uid=(${::decimal}).*" $output dummy uid
 
     return [expr {$uid == 0}]
 }

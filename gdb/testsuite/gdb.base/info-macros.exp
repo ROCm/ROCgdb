@@ -28,9 +28,9 @@ if {![runto_main]} {
 
 # Test various error messages.
 gdb_test "info macro -- -all" \
-	 "The symbol `-all' has no definition .*\r\nat .*$srcfile:\[0-9\]+"
+	 "The symbol `-all' has no definition .*\r\nat .*$srcfile:${::decimal}"
 gdb_test "info macro  -- -all" \
-	 "The symbol `-all' has no definition .*\r\nat .*$srcfile:\[0-9\]+"
+	 "The symbol `-all' has no definition .*\r\nat .*$srcfile:${::decimal}"
 
 gdb_test "info macro -all --" \
 	 "You must follow.*with the name.*you want to see.*\[^\r\n\]*"

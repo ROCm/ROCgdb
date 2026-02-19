@@ -212,7 +212,7 @@ proc test_disabling_watchpoints {} {
     global decimal
     global hex
 
-    gdb_test "info watch" "\[0-9]+\[ \]*.*watchpoint.*ival3.*" "watchpoints found in watchpoint/breakpoint table"
+    gdb_test "info watch" "${::decimal}\[ \]*.*watchpoint.*ival3.*" "watchpoints found in watchpoint/breakpoint table"
 
     # Ensure that the watchpoint is disabled when we startup.
 
@@ -262,7 +262,7 @@ proc test_disabling_watchpoints {} {
 
     # Check watchpoint list, looking for the entry that confirms the
     # watchpoint is disabled.
-    gdb_test "info watchpoints" "\[0-9]+\[ \]*.*watchpoint\[ \]*keep\[ \]*n\[ \]*ival3\r\n.*" "watchpoint disabled in table"
+    gdb_test "info watchpoints" "${::decimal}\[ \]*.*watchpoint\[ \]*keep\[ \]*n\[ \]*ival3\r\n.*" "watchpoint disabled in table"
 
     # Continue until we hit the finishing marker function.
     # Make sure we hit no more watchpoints.
@@ -588,7 +588,7 @@ proc test_watchpoint_and_breakpoint {} {
 	gdb_test "watch x" \
 	    "^(?:Hardware w|W)atchpoint $::decimal: x"
 	gdb_test "next" \
-	    ".*atchpoint \[0-9\]+: x\r\n\r\nOld value = 0\r\nNew value = 1\r\n.*" \
+	    ".*atchpoint ${::decimal}: x\r\n\r\nOld value = 0\r\nNew value = 1\r\n.*" \
 	    "next after watch x"
 
 	gdb_test_no_output "delete \$bpnum" "delete watch x"
@@ -601,7 +601,7 @@ proc test_constant_watchpoint {} {
     "number with cast is constant"
     gdb_test "watch marker1" "Cannot watch constant value `marker1'." \
     "marker1 is constant"
-    gdb_test "watch count + 6" ".*atchpoint \[0-9\]+: count \\+ 6"
+    gdb_test "watch count + 6" ".*atchpoint ${::decimal}: count \\+ 6"
     gdb_test_no_output "delete \$bpnum" "delete watchpoint `count + 6'"
     gdb_test "watch 7 + count" \
 	"^(?:Hardware w|W)atchpoint $::decimal: 7 \\+ count"
@@ -759,7 +759,7 @@ proc test_inaccessible_watchpoint {} {
 	# Make sure we only allow memory access errors.
 	set msg "watchpoint refused to insert on nonexistent struct member"
 	gdb_test_multiple "watch struct1.nosuchmember" $msg {
-	    -re ".*atchpoint \[0-9\]+: struct1.nosuchmember.*$gdb_prompt $" {
+	    -re ".*atchpoint ${::decimal}: struct1.nosuchmember.*$gdb_prompt $" {
 		# PR breakpoints/9681
 		fail $msg
 	    }
@@ -773,10 +773,10 @@ proc test_inaccessible_watchpoint {} {
 	# iff this one is.
 	set watchpoint_msg "Watchpoint"
 	gdb_test_multiple "watch global_ptr" "watch global_ptr" {
-	    -re "Watchpoint \[0-9\]+: global_ptr\r\n.*$gdb_prompt $" {
+	    -re "Watchpoint ${::decimal}: global_ptr\r\n.*$gdb_prompt $" {
 		pass "watch global_ptr"
 	    }
-	    -re "Hardware watchpoint \[0-9\]+: global_ptr\r\n.*$gdb_prompt $" {
+	    -re "Hardware watchpoint ${::decimal}: global_ptr\r\n.*$gdb_prompt $" {
 		set watchpoint_msg "Hardware watchpoint"
 		pass "watch global_ptr"
 	    }
@@ -786,12 +786,12 @@ proc test_inaccessible_watchpoint {} {
 	# Make sure that we can watch a constant address, and correctly
 	# use a HW watchpoint if supported.
 	gdb_test "watch *(int *) 0" \
-	    "$watchpoint_msg \[0-9\]+: \\*\\(int \\*\\) 0"
+	    "$watchpoint_msg ${::decimal}: \\*\\(int \\*\\) 0"
 	delete_breakpoints
 
 	# The same, but using -location through an indirection.
 	gdb_test "watch -location *global_ptr" \
-	    "$watchpoint_msg \[0-9\]+: \-location \\*global_ptr"
+	    "$watchpoint_msg ${::decimal}: \-location \\*global_ptr"
 	delete_breakpoints
 
 	# This step requires two HW watchpoints.  Since some platforms only
@@ -800,28 +800,28 @@ proc test_inaccessible_watchpoint {} {
 	    set watchpoint_msg "(Watchpoint|Hardware watchpoint)"
 	}
 
-	gdb_test "watch *global_ptr" "$watchpoint_msg \[0-9\]+: \\\*global_ptr"
+	gdb_test "watch *global_ptr" "$watchpoint_msg ${::decimal}: \\\*global_ptr"
 	gdb_test "set \$global_ptr_breakpoint_number = \$bpnum" ""
 	gdb_test "next" ".*global_ptr = buf.*" "global_ptr next"
 	gdb_test_multiple "next" "next over ptr init" {
-	    -re ".*atchpoint \[0-9\]+: \\*global_ptr\r\n\r\nOld value = .*\r\nNew value = 3 .*\r\n.*$gdb_prompt $" {
+	    -re ".*atchpoint ${::decimal}: \\*global_ptr\r\n\r\nOld value = .*\r\nNew value = 3 .*\r\n.*$gdb_prompt $" {
 		# We can not test for <unknown> here because NULL may be readable.
 		# This test does rely on *NULL != 3.
 		pass "next over ptr init"
 	    }
 	}
 	gdb_test_multiple "next" "next over buffer set" {
-	    -re ".*atchpoint \[0-9\]+: \\*global_ptr\r\n\r\nOld value = 3 .*\r\nNew value = 7 .*\r\n.*$gdb_prompt $" {
+	    -re ".*atchpoint ${::decimal}: \\*global_ptr\r\n\r\nOld value = 3 .*\r\nNew value = 7 .*\r\n.*$gdb_prompt $" {
 		pass "next over buffer set"
 	    }
 	}
 	gdb_test "delete \$global_ptr_breakpoint_number" ""
-	gdb_test "watch **global_ptr_ptr" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr"
+	gdb_test "watch **global_ptr_ptr" ".*atchpoint ${::decimal}: \\*\\*global_ptr_ptr"
 	gdb_test "set \$global_ptr_ptr_breakpoint_number = \$bpnum" ""
 	gdb_test "next" ".*global_ptr_ptr = &global_ptr.*" "global_ptr_ptr next"
-	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = .*\r\nNew value = 7 .*" "next over global_ptr_ptr init"
-	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 7 .*\r\nNew value = 9 .*" "next over global_ptr_ptr buffer set"
-	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 9 .*\r\nNew value = 5 .*" "next over global_ptr_ptr pointer advance"
+	gdb_test "next" ".*atchpoint ${::decimal}: \\*\\*global_ptr_ptr\[\r\n\]+Old value = .*\r\nNew value = 7 .*" "next over global_ptr_ptr init"
+	gdb_test "next" ".*atchpoint ${::decimal}: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 7 .*\r\nNew value = 9 .*" "next over global_ptr_ptr buffer set"
+	gdb_test "next" ".*atchpoint ${::decimal}: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 9 .*\r\nNew value = 5 .*" "next over global_ptr_ptr pointer advance"
 	gdb_test_no_output "delete \$global_ptr_ptr_breakpoint_number"
     }
 }
@@ -887,7 +887,7 @@ proc test_watchpoint_in_big_blob {} {
     set ok 0
     set test "watch buf"
     gdb_test_multiple "watch buf" $test {
-	-re "Hardware watchpoint \[0-9\]+: buf.*You may have requested too many hardware breakpoints/watchpoints.*$gdb_prompt $" {
+	-re "Hardware watchpoint ${::decimal}: buf.*You may have requested too many hardware breakpoints/watchpoints.*$gdb_prompt $" {
 	    # This may happen with remote targets (where we don't do
 	    # resource accounting) that support hardware watchpoints,
 	    # when breakpoint always-inserted is on.  The watchpoint
@@ -897,7 +897,7 @@ proc test_watchpoint_in_big_blob {} {
 	    # been created, and is in the list, so it needs deleting.
 	    pass $test
 	}
-	-re ".*atchpoint \[0-9\]+: buf.*$gdb_prompt $" {
+	-re ".*atchpoint ${::decimal}: buf.*$gdb_prompt $" {
 	    pass $test
 	    set ok 1
 	}
@@ -906,7 +906,7 @@ proc test_watchpoint_in_big_blob {} {
     if { $ok } {
 	set test "watchpoint on buf hit"
 	gdb_test_multiple "cont" $test {
-	    -re "Continuing.*atchpoint \[0-9\]+: buf\r\n\r\nOld value = .*testte\".*$gdb_prompt $" {
+	    -re "Continuing.*atchpoint ${::decimal}: buf\r\n\r\nOld value = .*testte\".*$gdb_prompt $" {
 		pass $test
 	    }
 	    -re "Could not insert hardware breakpoints:.*You may have requested too many hardware breakpoints/watchpoints.*$gdb_prompt $" {

@@ -1258,6 +1258,18 @@ gdb_safe_append_history (void)
     }
 }
 
+/* Implementation of 'save history' command.  */
+
+static void
+save_history_command (const char *filename, int from_tty)
+{
+  if (filename == nullptr || *filename == '\0')
+    error (_("Argument required (file name in which to save)"));
+
+  gdb::unique_xmalloc_ptr<char> expanded_filename (tilde_expand (filename));
+  write_history (expanded_filename.get ());
+}
+
 /* Read one line from the command input stream `instream'.
 
    CMD_LINE_BUFFER is a buffer that the function may use to store the result, if
@@ -2412,6 +2424,13 @@ Without an argument, saving is enabled."),
 			   NULL,
 			   show_write_history_p,
 			   &sethistlist, &showhistlist);
+
+  cmd_list_element *c = add_cmd ("history", no_class, save_history_command,
+				 _("\
+Save current history as a script.\n\
+Usage: save history FILE"),
+	       &save_cmdlist);
+  set_cmd_completer (c, deprecated_filename_completer);
 
   add_setshow_zuinteger_unlimited_cmd ("size", no_class,
 				       &history_size_setshow_var, _("\

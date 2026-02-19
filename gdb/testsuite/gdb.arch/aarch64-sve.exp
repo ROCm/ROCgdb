@@ -47,7 +47,7 @@ proc get_register_value {register} {
     set ret ""
 
     gdb_test_multiple "print \$${register}" "" {
-	-re ". = \[0-9\]+\r\n$gdb_prompt $" {
+	-re ". = ${::decimal}\r\n$gdb_prompt $" {
 	    regexp {. = ([0-9]+)} $expect_out(buffer) matched ret
 	}
 	-re ".*$gdb_prompt $" {

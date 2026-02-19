@@ -20,6 +20,6 @@ namespace N1
   class C1
   {
    public:
-    static void __attribute__((always_inline)) baz () { volatile unsigned i; i++; }
+    static void __attribute__((always_inline)) baz () { volatile unsigned i; i = i + 1; }
   };
 }

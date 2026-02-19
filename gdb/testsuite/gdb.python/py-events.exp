@@ -92,7 +92,7 @@ gdb_test_multiple "thread" "get current thread" {
 }
 
 gdb_test_multiple "print do_nothing" "get address of do_nothing" {
-    -re "\[^\n\r\]*(0x\[0-9a-f\]+) \<do_nothing\>.*$gdb_prompt $" {
+    -re "\[^\n\r\]*(${::hex}) \<do_nothing\>.*$gdb_prompt $" {
 	set addr $expect_out(1,string)
 	pass "get address of do_nothing"
     }
@@ -175,7 +175,7 @@ gdb_test_multiple "break second" $test {
     -re "event type: memory-changed" {
 	fail $test
     }
-    -re "Breakpoint (\[0-9\]+) at .*\r\n$gdb_prompt $" {
+    -re "Breakpoint (${::decimal}) at .*\r\n$gdb_prompt $" {
 	set second_breakpoint $expect_out(1,string)
 	pass $test
     }

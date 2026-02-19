@@ -551,7 +551,7 @@ proc test-string {variant} {
     gdb_test_no_output "$set_cmd hello world"
     show_setting "$show_cmd" "hello world"
 
-    check_type "test-settings $variant" "type = char \\\[\[1-9\]\[0-9\]*\\\]"
+    check_type "test-settings $variant" "type = char \\\[$::positive\\\]"
 
     # A quoted string value.
     if {$variant == "string"} {

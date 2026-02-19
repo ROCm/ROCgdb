@@ -48,7 +48,7 @@ gdb_test "complete condition " "condition 1"
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*" \
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*" \
 "single pending breakpoint info, without symbols"
 
 with_test_prefix "first load" {
@@ -83,7 +83,7 @@ gdb_test_multiple "break pendfunc1" "set pending breakpoint" {
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*" \
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*" \
 "single pending breakpoint info"
 
 #
@@ -98,8 +98,8 @@ gdb_test "break -q main" \
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
 "pending plus real breakpoint info"
 
 
@@ -120,9 +120,9 @@ gdb_test_no_output "condition 1 k == 1"
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendfunc1.*
 \[\t \]+stop only if k == 1.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
 "pending plus condition"
 
 #
@@ -133,9 +133,9 @@ gdb_test_no_output "disable 1"
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
 \[\t \]+stop only if k == 1.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
 "pending disabled"
 
 #
@@ -146,10 +146,10 @@ gdb_test "commands 1\nprint k\nend" "" \
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
 \[\t \]+stop only if k == 1.*
 \[\t \]+print k.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline" \
 "pending disabled plus commands"
 
 #
@@ -166,11 +166,11 @@ gdb_test_multiple "break pendshr.c:$bp2_loc if x > 3" "set pending breakpoint 2"
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
 \[\t \]+stop only if k == 1.*
 \[\t \]+print k.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp2_loc.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp2_loc.*
 \\s+stop only if x > 3.*" \
 "multiple pending breakpoints"
 
@@ -192,13 +192,13 @@ gdb_test {ignore $bpnum 2} "Will ignore next 2 crossings of breakpoint .*" \
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
+${::decimal}\[\t \]+breakpoint     keep n.*PENDING.*pendfunc1.*
 \[\t \]+stop only if k == 1.*
 \[\t \]+print k.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp2_loc.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp2_loc.*
 \\s+stop only if x > 3.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp3_loc.*
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*pendshr.c:$bp3_loc.*
 \\s+ignore next 2 hits.*" \
 "multiple pending breakpoints 2"
 
@@ -267,8 +267,8 @@ rerun_to_main
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
-\[0-9\]+\[\t \]+breakpoint     keep y.*PENDING.*imaginary.*" \
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$mainline.*
+${::decimal}\[\t \]+breakpoint     keep y.*PENDING.*imaginary.*" \
 "verify pending breakpoint after restart"
 
 # Test GDB's parsing of pending breakpoint thread and condition.

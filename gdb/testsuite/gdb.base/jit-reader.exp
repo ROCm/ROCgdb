@@ -252,7 +252,7 @@ proc jit_reader_test {} {
 
 	    # Check that breakpoint can be set on jitted function
 	    gdb_test "break jit_function_add" \
-		"Breakpoint 1 at 0x\[0-9a-f\]+"
+		"Breakpoint 1 at ${::hex}"
 	    gdb_test_no_output "del 1"
 	}
     }

@@ -31,4 +31,4 @@ if { ![runto_main] } {
     return -1
 }
 
-gdb_test "next" "\[0-9\]+\\s+return 0;"
+gdb_test "next" "${::decimal}\\s+return 0;"

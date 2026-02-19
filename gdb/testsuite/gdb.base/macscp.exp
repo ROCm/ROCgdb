@@ -58,7 +58,7 @@ proc info_macro {macro} {
 
     # Line number zero is set for macros defined from the compiler command-line.
     # Such macros are not being tested by this function.
-    set nonzero {[1-9][0-9]*}
+    set nonzero $::positive
 
     send_gdb "info macro ${macro}\n"
 

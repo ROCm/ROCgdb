@@ -14694,6 +14694,7 @@ save_breakpoints (const char *filename, int from_tty,
       if (filter && !filter (&tp))
 	continue;
 
+      fp.puts ("with breakpoint pending on -- ");
       tp.print_recreate (&fp);
 
       /* Note, we can't rely on tp->number for anything, as we can't

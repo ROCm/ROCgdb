@@ -79,7 +79,7 @@ proc dtrace_test {} {
 	"enable probe test progress-counter"
 
     gdb_test "break -probe-dtrace test:progress-counter" \
-	".*Breakpoint \[0-9\]+ .*" "set breakpoint in test:progress-counter"
+	".*Breakpoint ${::decimal} .*" "set breakpoint in test:progress-counter"
     gdb_continue_to_breakpoint "test:progress-counter"
 
     # Test probe arguments.
@@ -93,7 +93,7 @@ proc dtrace_test {} {
 
     # Set a breakpoint with multiple probe locations.
     gdb_test "break -pdtrace test:two-locations" \
-	"Breakpoint \[0-9\]+ at $hex.*2 locations.*" \
+	"Breakpoint ${::decimal} at $hex.*2 locations.*" \
 	"set multi-location probe breakpoint (probe two-locations)"
 
     return 0

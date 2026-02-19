@@ -42,7 +42,7 @@ proc check_cli_display {x show_source} {
     # here, but we do check that the stop happened.
     set stop "\\*stopped,reason=.*\r\n$mi_gdb_prompt$"
     if {$show_source} {
-	set src "~\"\[0-9\]+\[^\"\]*\\\\n\"\r\n"
+	set src "~\"${::decimal}\[^\"\]*\\\\n\"\r\n"
     } else {
 	set src ""
     }

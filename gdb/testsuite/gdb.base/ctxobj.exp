@@ -62,7 +62,7 @@ if {![runto_main]} {
 
 set bp_location [gdb_get_line_number "STOP" "ctxobj-f.c"]
 gdb_test "break ctxobj-f.c:$bp_location" \
-	 "Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: .*" \
+	 "Breakpoint ${::decimal} at ${::hex}: .*" \
 	 "break in get_version functions"
 
 global expect_out

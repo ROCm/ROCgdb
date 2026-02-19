@@ -12889,7 +12889,9 @@ _bfd_mips_elf_modify_segment_map (bfd *abfd,
 	}
       /* On IRIX5, the PT_DYNAMIC segment includes the .dynamic,
 	 .dynstr, .dynsym, and .hash sections, and everything in
-	 between.  */
+	 between.  We avoid any sections though ahead of .dynamic,
+	 which needs to be first to be usable.  This can only ever
+	 happen with a non-standard linker script.  */
       for (pm = &elf_seg_map (abfd); *pm != NULL;
 	   pm = &(*pm)->next)
 	if ((*pm)->p_type == PT_DYNAMIC)
@@ -12906,18 +12908,19 @@ _bfd_mips_elf_modify_segment_map (bfd *abfd,
       if (SGI_COMPAT (abfd)
 	  && m != NULL
 	  && m->count == 1
-	  && strcmp (m->sections[0]->name, ".dynamic") == 0)
+	  && strcmp (m->sections[0]->name, ".dynamic") == 0
+	  && (m->sections[0]->flags & SEC_LOAD) != 0)
 	{
 	  static const char *sec_names[] =
 	  {
-	    ".dynamic", ".dynstr", ".dynsym", ".hash"
+	    ".dynstr", ".dynsym", ".hash"
 	  };
 	  bfd_vma low, high;
 	  unsigned int i, c;
 	  struct elf_segment_map *n;
 
-	  low = ~(bfd_vma) 0;
-	  high = 0;
+	  low = m->sections[0]->vma;
+	  high = low + m->sections[0]->size;
 	  for (i = 0; i < sizeof sec_names / sizeof sec_names[0]; i++)
 	    {
 	      s = bfd_get_section_by_name (abfd, sec_names[i]);
@@ -12926,7 +12929,7 @@ _bfd_mips_elf_modify_segment_map (bfd *abfd,
 		  bfd_size_type sz;
 
 		  if (low > s->vma)
-		    low = s->vma;
+		    continue;
 		  sz = s->size;
 		  if (high < s->vma + sz)
 		    high = s->vma + sz;

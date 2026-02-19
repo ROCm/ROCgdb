@@ -40,17 +40,17 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
 
 # Set a catch catchpoint
 
-gdb_test "catch catch" "Catchpoint \[0-9\]+ \\(catch\\)" \
+gdb_test "catch catch" "Catchpoint ${::decimal} \\(catch\\)" \
     "catch catch (before inferior run)"
 
 # Set a throw catchpoint
 
-gdb_test "catch throw" "Catchpoint \[0-9\]+ \\(throw\\)" \
+gdb_test "catch throw" "Catchpoint ${::decimal} \\(throw\\)" \
     "catch throw (before inferior run)"
 
 # Set a rethrow catchpoint
 
-gdb_test "catch rethrow" "Catchpoint \[0-9\]+ \\(rethrow\\)" \
+gdb_test "catch rethrow" "Catchpoint ${::decimal} \\(rethrow\\)" \
     "catch rethrow (before inferior run)"
 
 
@@ -98,12 +98,12 @@ gdb_test_multiple "info breakpoints" $name {
       }
 }
 
-gdb_test "break catcher" "Breakpoint \[0-9\]+ at.*"
+gdb_test "break catcher" "Breakpoint ${::decimal} at.*"
 
 # Get the first exception thrown
 
 gdb_test "continue"  \
-    "Continuing.${ws}Catchpoint \[0-9\]+ \\(exception thrown\\).*" \
+    "Continuing.${ws}Catchpoint ${::decimal} \\(exception thrown\\).*" \
     "continue to first throw"
 
 # Backtrace from the throw point.
@@ -111,7 +111,7 @@ gdb_test "continue"  \
 
 set name "backtrace after first throw"
 gdb_test_multiple "backtrace" $name {
-    -re ".*#\[0-9\]+.*\[\[:<:\]\]__cxa_throw\[\[:>:\]\].*#\[0-9\]+${ws}$hex (\\\[PAC\\\] )?in foo \\(i=20\\) at .*${srcfile}:\[0-9\]+\r\n#\[0-9\]+${ws}$hex in main \\(.*\\) at .*${srcfile}:\[0-9\]+\r\n$gdb_prompt $" {
+    -re ".*#${::decimal}.*\[\[:<:\]\]__cxa_throw\[\[:>:\]\].*#${::decimal}${ws}$hex (\\\[PAC\\\] )?in foo \\(i=20\\) at .*${srcfile}:${::decimal}\r\n#${::decimal}${ws}$hex in main \\(.*\\) at .*${srcfile}:${::decimal}\r\n$gdb_prompt $" {
 	# Either __cxxabiv1::__cxa_throw or __cxa_throw can be printed
 	# depending on debug info presence.
 	pass $name
@@ -121,7 +121,7 @@ gdb_test_multiple "backtrace" $name {
 # Continue to the catch.
 
 gdb_test "continue" \
-    "Continuing.${ws}Catchpoint \[0-9\]+ \\(exception caught\\).*" \
+    "Continuing.${ws}Catchpoint ${::decimal} \\(exception caught\\).*" \
     "continue to first catch"
 
 # Backtrace from the catch point.
@@ -129,7 +129,7 @@ gdb_test "continue" \
 
 set name "backtrace after first catch"
 gdb_test_multiple "backtrace" $name {
-    -re ".*#\[0-9\]+.*\[\[:<:\]\]__cxa_begin_catch\[\[:>:\]\].*#\[0-9\]+${ws}$hex (\\\[PAC\\\] )?in main \\(.*\\) at .*$srcfile:\[0-9\]+\r\n$gdb_prompt $" {
+    -re ".*#${::decimal}.*\[\[:<:\]\]__cxa_begin_catch\[\[:>:\]\].*#${::decimal}${ws}$hex (\\\[PAC\\\] )?in main \\(.*\\) at .*$srcfile:${::decimal}\r\n$gdb_prompt $" {
 	pass $name
     }
 }
@@ -140,7 +140,7 @@ gdb_test "continue" ".*catcher \\(x=13\\).*" "continue to catcher for the first 
 # Continue to second throw.
 
 gdb_test "continue" \
-    "Continuing.${ws}Catchpoint \[0-9\]+ \\(exception thrown\\).*" \
+    "Continuing.${ws}Catchpoint ${::decimal} \\(exception thrown\\).*" \
     "continue to second throw"
 
 # Backtrace from the throw point.
@@ -148,7 +148,7 @@ gdb_test "continue" \
 
 set name "backtrace after second throw"
 gdb_test_multiple "backtrace" $name {
-    -re ".*#\[0-9\]+.*\[\[:<:\]\]__cxa_throw\[\[:>:\]\].*#\[0-9\]+${ws}$hex (\\\[PAC\\\] )?in foo \\(i=20\\) at .*${srcfile}:\[0-9\]+\r\n#\[0-9\]+${ws}$hex in main \\(.*\\) at .*${srcfile}:\[0-9\]+\r\n$gdb_prompt $" {
+    -re ".*#${::decimal}.*\[\[:<:\]\]__cxa_throw\[\[:>:\]\].*#${::decimal}${ws}$hex (\\\[PAC\\\] )?in foo \\(i=20\\) at .*${srcfile}:${::decimal}\r\n#${::decimal}${ws}$hex in main \\(.*\\) at .*${srcfile}:${::decimal}\r\n$gdb_prompt $" {
 	pass $name
     }
 }
@@ -156,7 +156,7 @@ gdb_test_multiple "backtrace" $name {
 # Continue to second catch.
 
 gdb_test "continue" \
-    "Continuing.${ws}Catchpoint \[0-9\]+ \\(exception caught\\).*" \
+    "Continuing.${ws}Catchpoint ${::decimal} \\(exception caught\\).*" \
     "continue to second catch"
 
 # Backtrace from the catch point.
@@ -164,7 +164,7 @@ gdb_test "continue" \
 
 set name "backtrace after second catch"
 gdb_test_multiple "backtrace" $name {
-    -re ".*#\[0-9\]+.*\[\[:<:\]\]__cxa_begin_catch\[\[:>:\]\].*#\[0-9\]+${ws}$hex (\\\[PAC\\\] )?in main \\(.*\\) at .*$srcfile:\[0-9\]+\r\n$gdb_prompt $" {
+    -re ".*#${::decimal}.*\[\[:<:\]\]__cxa_begin_catch\[\[:>:\]\].*#${::decimal}${ws}$hex (\\\[PAC\\\] )?in main \\(.*\\) at .*$srcfile:${::decimal}\r\n$gdb_prompt $" {
 	pass $name
     }
 }
@@ -175,5 +175,5 @@ gdb_test "continue" ".*catcher \\(x=13\\).*" "continue to catcher for the second
 
 # Continue to the re-throw.
 
-gdb_test "continue" "Catchpoint \[0-9\]+.*exception rethrown.*" \
+gdb_test "continue" "Catchpoint ${::decimal}.*exception rethrown.*" \
     "continue to rethrow"

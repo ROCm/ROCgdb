@@ -57,7 +57,7 @@ gdb_test "thread apply 6 thread name threadname_6" \
 # Collect thread ids, if any.
 
 gdb_test_multiple "info threads" "collect thread id" {
-    -re ". (\[0-9\]+) \[^\r\n\]*\[Tt\]hread (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) \[^\r\n\]*\[Tt\]hread (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set thread$thr_num $expect_out(2,string)
 	exp_continue
@@ -74,7 +74,7 @@ if {[info exists thread6]} {
 # Collect process ids, if any.
 
 gdb_test_multiple "info threads" "collect thread id" {
-    -re ". (\[0-9\]+) \[^\r\n\]*\[Pp\]rocess (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) \[^\r\n\]*\[Pp\]rocess (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set process$thr_num $expect_out(2,string)
 	exp_continue
@@ -91,7 +91,7 @@ if {[info exists process6]} {
 # Collect lwp ids, if any.
 
 gdb_test_multiple "info threads" "collect thread id" {
-    -re ". (\[0-9\]+) \[^\r\n\]*LWP (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) \[^\r\n\]*LWP (\[0-9a-fA-Fx\]+)\[^\r\n\]* \"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set lwp$thr_num $expect_out(2,string)
 	exp_continue
@@ -191,7 +191,7 @@ for {set i 1} {$i <= 6} {incr i} {
     set see$i 0
 }
 gdb_test_multiple "thread find threadname_\[345\]" "test regular exp" {
-    -re "Thread (\[0-9\]+) has name \[^\r\n\]*" {
+    -re "Thread (${::decimal}) has name \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set see$thr_num 1
 	exp_continue
@@ -213,7 +213,7 @@ for {set i 1} {$i <= 6} {incr i} {
     set see$i 0
 }
 gdb_test_multiple "info threads 2 4 6" "info threads 2 4 6" {
-    -re ". (\[0-9\]+) \[^\r\n\]*\"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) \[^\r\n\]*\"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set see$thr_num 1
 	exp_continue
@@ -235,7 +235,7 @@ for {set i 1} {$i <= 6} {incr i} {
     set see$i 0
 }
 gdb_test_multiple "info threads 3-5" "info threads 3-5" {
-    -re ". (\[0-9\]+) \[^\r\n\]*\"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) \[^\r\n\]*\"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set see$thr_num 1
 	exp_continue
@@ -259,7 +259,7 @@ for {set i 1} {$i <= 6} {incr i} {
     set see$i 0
 }
 gdb_test_multiple "info threads 3-3" "info threads 3-3" {
-    -re ". (\[0-9\]+) .*\"threadname_\[0-9\]+\" \[^\r\n\]*" {
+    -re ". (${::decimal}) .*\"threadname_${::decimal}\" \[^\r\n\]*" {
 	set thr_num $expect_out(1,string)
 	set see$thr_num 1
 	exp_continue

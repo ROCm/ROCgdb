@@ -34,7 +34,8 @@ gdb_test \
     "End with.*" \
     "detach in commands"
 
-gdb_test "run" "\[Inferior $decimal \\(\[^\r\n\]*\\) detached\]" \
+gdb_test "run" \
+    [subst_vars {\[Inferior $decimal \([^\r\n]*\) detached\]}] \
     "run - detach"
 
 # Test kill in breakpoint commands.
@@ -47,5 +48,6 @@ gdb_test \
     "End with.*" \
     "kill in commands"
 
-gdb_test "run" "\[Inferior $decimal \\(\[^\r\n\]*\\) killed\]" \
+gdb_test "run" \
+    [subst_vars {\[Inferior $decimal \([^\r\n]*\) killed\]}] \
     "run - kill"

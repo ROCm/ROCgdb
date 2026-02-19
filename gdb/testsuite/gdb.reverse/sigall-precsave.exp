@@ -32,8 +32,8 @@ proc test_one_sig {nextsig} {
     set this_sig_supported $sig_supported
     gdb_test "handle SIG$thissig stop print" \
 	"SIG$thissig\[ \t\]*Yes\[ \t\]*Yes\[ \t\]*Yes.*"
-    gdb_test "b handle_$thissig" "Breakpoint \[0-9\]+ .*"
-    gdb_test "b gen_$nextsig" "Breakpoint \[0-9\]+ .*"
+    gdb_test "b handle_$thissig" "Breakpoint ${::decimal} .*"
+    gdb_test "b gen_$nextsig" "Breakpoint ${::decimal} .*"
 
     set need_another_continue 1
     set missed_handler 0
@@ -293,7 +293,7 @@ with_test_prefix "sig-test-1" {
 # we are not setting up for another test.
 gdb_test "handle SIGTERM stop print" \
     "SIGTERM\[ \t\]*Yes\[ \t\]*Yes\[ \t\]*Yes.*"
-gdb_test "b handle_TERM" "Breakpoint \[0-9\]+ .*"
+gdb_test "b handle_TERM" "Breakpoint ${::decimal} .*"
 gdb_test "continue" \
     "Continuing.*Program received signal SIGTERM.*" \
     "get signal TERM"

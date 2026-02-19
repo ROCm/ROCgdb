@@ -113,7 +113,7 @@ namespace eval GDBInfoSymbols {
 		set current_file $expect_out(1,string)
 		exp_continue
 	    }
-	    -re "^(\[0-9\]+):\[ \t\]+(\[^\r\n\]+)\r\n" {
+	    -re "^(${::decimal}):\[ \t\]+(\[^\r\n\]+)\r\n" {
 		set lineno $expect_out(1,string)
 		set text $expect_out(2,string)
 		if { $current_file == "" } {
@@ -364,7 +364,7 @@ namespace eval GDBInfoModuleSymbols {
 		set current_file $expect_out(1,string)
 		exp_continue
 	    }
-	    -re "^(\[0-9\]+):\[ \t\]+(\[^\r\n\]+)\r\n" {
+	    -re "^(${::decimal}):\[ \t\]+(\[^\r\n\]+)\r\n" {
 		set lineno $expect_out(1,string)
 		set text $expect_out(2,string)
 		if { $current_module == "" } {

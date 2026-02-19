@@ -65,7 +65,7 @@ set no_awk false
 set location_re ${srcfile}:${decimal}
 
 gdb_expect {
-    -i "$res" -re "#0 +(0x\[0-9a-f\]+ in )?main \(\).*$location_re.*\r\nGSTACK-END\r\n\$" {
+    -i "$res" -re "#0 +(${::hex} in )?main \(\).*$location_re.*\r\nGSTACK-END\r\n\$" {
 	set saw_backtrace true
 	pass $test
 	exp_continue

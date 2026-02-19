@@ -94,7 +94,7 @@ proc disconnected_tracing {  } {
 	gdb_test "tstatus"
 	gdb_test "info tracepoints" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in start at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in start at .*$srcfile:${::decimal}.
 \[\t \]+tracepoint already hit 1 time.
 \[\t \]+trace buffer usage ${decimal} bytes.
 \[\t \]+collect foo.*" \

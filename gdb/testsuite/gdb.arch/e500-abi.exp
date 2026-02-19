@@ -45,7 +45,7 @@ if {![runto_main]} {
     return 0
 }
 
-gdb_test "b marker" "Breakpoint 2 at.*file.*e500-abi.c, line \[0-9\]+." "break marker"
+gdb_test "b marker" "Breakpoint 2 at.*file.*e500-abi.c, line ${::decimal}." "break marker"
 gdb_test "continue" "Breakpoint 2.*marker.*e500-abi.c.*" "continue to marker"
 gdb_test "finish" "Run till exit from .0.*marker.*at.*e500-abi.c.*main \\(\\) at.*e500-abi.c.*res_vec = vec_func \\(a_vec,.*goes in r3.*" "back to main (1)"
 
@@ -59,12 +59,12 @@ append pattern1 " at.*e500-abi.c.*x = 2;"
 # Now let's call the function.  This function has > 8 args,
 # the last ones will go on the stack.
 gdb_test "p vec_func(a_vec,b_vec,c_vec,d_vec,e_vec,f_vec,g_vec,h_vec,i_vec,l_vec,m_vec)" \
-".\[0-9\]+ = .6, 63." "call inferior function with vectors (1) "
+".${::decimal} = .6, 63." "call inferior function with vectors (1) "
 
 # Let's call the function again with dummy arguments.  This is to clean
 # up the contents of the ev registers before the next call.
 gdb_test "p vec_func(a_vec_d,b_vec_d,c_vec_d,d_vec_d,e_vec_d,f_vec_d,g_vec_d,h_vec_d,i_vec_d,l_vec_d,m_vec_d)" \
-".\[0-9\]+ = .1, 1." "call inferior function with vectors (2) "
+".${::decimal} = .1, 1." "call inferior function with vectors (2) "
 
 # Let's step into the function, to see if the args are printed correctly.
 gdb_test "step" \

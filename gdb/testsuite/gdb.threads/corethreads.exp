@@ -42,14 +42,14 @@ gdb_test "pipe info files | grep \"$re\""  \
     "sanity check we see the core file"
 set test "print pthread_t of thread0"
 gdb_test_multiple "p/x thread0" $test {
-    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+    -re " = (${::hex})\r\n$gdb_prompt $" {
 	pass $test
 	set thread0 $expect_out(1,string)
     }
 }
 set test "print pthread_t of thread1"
 gdb_test_multiple "p/x thread1" $test {
-    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+    -re " = (${::hex})\r\n$gdb_prompt $" {
 	pass $test
 	set thread1 $expect_out(1,string)
     }

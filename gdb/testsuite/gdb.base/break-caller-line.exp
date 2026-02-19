@@ -25,7 +25,7 @@ if {![runto callee]} {
 
 set test "up"
 gdb_test_multiple $test $test {
-    -re "\r\n(\[0-9\]+)\[ \t\]+callee \\(\\);\r\n$gdb_prompt $" {
+    -re "\r\n(${::decimal})\[ \t\]+callee \\(\\);\r\n$gdb_prompt $" {
 	set notcurrent $expect_out(1,string)
 	pass $test
     }
@@ -33,7 +33,7 @@ gdb_test_multiple $test $test {
 
 set test {info line *$pc}
 gdb_test_multiple $test $test {
-    -re "\r\nLine (\[0-9\]+) of .*\r\n$gdb_prompt $" {
+    -re "\r\nLine (${::decimal}) of .*\r\n$gdb_prompt $" {
 	set current $expect_out(1,string)
 	pass $test
     }
@@ -46,10 +46,10 @@ if {$notcurrent == $current} {
 
 set test "break"
 gdb_test_multiple $test $test {
-    -re "\r\nBreakpoint \[0-9\]+ at .*, line $current\\.\r\n$gdb_prompt $" {
+    -re "\r\nBreakpoint ${::decimal} at .*, line $current\\.\r\n$gdb_prompt $" {
 	pass $test
     }
-    -re "\r\nBreakpoint \[0-9\]+ at .*, line $notcurrent\\.\r\n$gdb_prompt $" {
+    -re "\r\nBreakpoint ${::decimal} at .*, line $notcurrent\\.\r\n$gdb_prompt $" {
 	fail "$test (caller line)"
     }
 }

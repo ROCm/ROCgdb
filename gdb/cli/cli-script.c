@@ -1713,41 +1713,6 @@ script_from_file (FILE *stream, const char *file)
     }
 }
 
-/* Print the definition of user command C to STREAM.  Or, if C is a
-   prefix command, show the definitions of all user commands under C
-   (recursively).  PREFIX and NAME combined are the name of the
-   current command.  */
-void
-show_user_1 (struct cmd_list_element *c, const char *prefix, const char *name,
-	     struct ui_file *stream)
-{
-  if (cli_user_command_p (c))
-    {
-      struct command_line *cmdlines = c->user_commands.get ();
-
-      gdb_printf (stream, "User %scommand \"",
-		  c->is_prefix () ? "prefix" : "");
-      fprintf_styled (stream, command_style.style (), "%s%s",
-		      prefix, name);
-      gdb_printf (stream, "\":\n");
-      if (cmdlines)
-	{
-	  print_command_lines (current_uiout, cmdlines, 1);
-	  gdb_puts ("\n", stream);
-	}
-    }
-
-  if (c->is_prefix ())
-    {
-      const std::string prefixname = c->prefixname ();
-
-      for (c = *c->subcommands; c != NULL; c = c->next)
-	if (c->theclass == class_user || c->is_prefix ())
-	  show_user_1 (c, prefixname.c_str (), c->name, gdb_stdout);
-    }
-
-}
-
 INIT_GDB_FILE (cli_script)
 {
   struct cmd_list_element *c;

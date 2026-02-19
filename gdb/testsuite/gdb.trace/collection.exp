@@ -71,13 +71,13 @@ proc run_trace_experiment { test_func } {
 
     with_test_prefix "run trace experiment" {
 	gdb_test "continue" \
-	    ".*Breakpoint \[0-9\]+, begin .*" \
+	    ".*Breakpoint ${::decimal}, begin .*" \
 	    "advance to begin"
 
 	gdb_test_no_output "tstart" "start trace experiment"
 
 	gdb_test "continue" \
-	    "Continuing.*Breakpoint \[0-9\]+, end.*" \
+	    "Continuing.*Breakpoint ${::decimal}, end.*" \
 	    "run trace experiment"
 	gdb_test_no_output "tstop" \
 	    "stop trace experiment"
@@ -99,7 +99,7 @@ proc gdb_collect_args_test { myargs msg } {
 	prepare_for_trace_test
 
 	gdb_test "trace args_test_func" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -197,7 +197,7 @@ proc gdb_collect_argstruct_test { myargs msg } {
 	prepare_for_trace_test
 
 	gdb_test "trace argstruct_test_func" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -235,7 +235,7 @@ proc gdb_collect_argarray_test { myargs msg } {
 	prepare_for_trace_test
 
 	gdb_test "trace argarray_test_func" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -289,7 +289,7 @@ proc gdb_collect_locals_test { func mylocs msg } {
 	# Find the comment-identified line for setting this tracepoint.
 	set testline 0
 	gdb_test_multiple "list $func, +30" "find tracepoint line" {
-	    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    -re "\[\r\n\](${::decimal})\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
 		set testline $expect_out(1,string)
 		pass $gdb_test_name
 	    }
@@ -304,7 +304,7 @@ proc gdb_collect_locals_test { func mylocs msg } {
 	}
 
 	gdb_test "trace $testline" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -369,7 +369,7 @@ proc gdb_collect_registers_test { myregs } {
 
 	# We'll simply re-use the args_test_function for this test
 	gdb_test "trace args_test_func" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -397,7 +397,7 @@ proc gdb_collect_expression_test { func expr val msg } {
 	# Find the comment-identified line for setting this tracepoint.
 	set testline 0
 	gdb_test_multiple "list $func, +30" "find tracepoint line" {
-	    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    -re "\[\r\n\](${::decimal})\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
 		set testline $expect_out(1,string)
 		pass $gdb_test_name
 	    }
@@ -412,7 +412,7 @@ proc gdb_collect_expression_test { func expr val msg } {
 	}
 
 	gdb_test "trace $testline" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -440,7 +440,7 @@ proc gdb_collect_globals_test { } {
 	# Find the comment-identified line for setting this tracepoint.
 	set testline 0
 	gdb_test_multiple "list globals_test_func, +30" "find tracepoint line" {
-	    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    -re "\[\r\n\](${::decimal})\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
 		set testline $expect_out(1,string)
 		pass $gdb_test_name
 	    }
@@ -462,14 +462,14 @@ proc gdb_collect_globals_test { } {
 	set globalarr2_addr ""
 	set test "get address of globalarr2"
 	gdb_test_multiple "p /x &globalarr2" $test {
-	    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+	    -re " = (${::hex})\r\n$gdb_prompt $" {
 		set globalarr2_addr $expect_out(1,string)
 		pass $test
 	    }
 	}
 
 	gdb_test "trace $testline" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -553,7 +553,7 @@ proc gdb_collect_global_in_pieces_test { } {
 	# Find the comment-identified line for setting this tracepoint.
 	set testline 0
 	gdb_test_multiple "list globals_test_func, +30" "find tracepoint line" {
-	    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    -re "\[\r\n\](${::decimal})\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
 		set testline $expect_out(1,string)
 		pass $gdb_test_name
 	    }
@@ -564,7 +564,7 @@ proc gdb_collect_global_in_pieces_test { } {
 	}
 
 	gdb_test "trace $testline" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -595,7 +595,7 @@ proc gdb_collect_return_test { } {
 
 	# We'll simply re-use the args_test_function for this test.
 	gdb_test "trace args_test_func" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \
@@ -631,7 +631,7 @@ proc gdb_collect_strings_test { func mystr myrslt mylim msg } {
 	# Find the comment-identified line for setting this tracepoint.
 	set testline 0
 	gdb_test_multiple "list $func, +30" "find tracepoint line" {
-	    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
+	    -re "\[\r\n\](${::decimal})\[^\r\n\]+ Set_Tracepoint_Here .*$gdb_prompt" {
 		set testline $expect_out(1,string)
 		pass $gdb_test_name
 	    }
@@ -646,7 +646,7 @@ proc gdb_collect_strings_test { func mystr myrslt mylim msg } {
 	}
 
 	gdb_test "trace $testline" \
-	    "Tracepoint \[0-9\]+ at .*" \
+	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
 	gdb_trace_setactions "define actions" \
 	    "" \

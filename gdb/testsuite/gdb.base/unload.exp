@@ -81,7 +81,7 @@ gdb_test "" \
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What\r?
-1\[\t \]+breakpoint     keep y *0x\[0-9a-f\]+ *in shrfunc1 at .*
+1\[\t \]+breakpoint     keep y *${::hex} *in shrfunc1 at .*
 2\[\t \]+breakpoint     keep y *<PENDING> *shrfunc2.*" \
 "pending breakpoint info on first run at shrfunc1"
 
@@ -104,7 +104,7 @@ gdb_test "" \
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What\r?
-1\[\t \]+breakpoint     keep y *0x\[0-9a-f\]+ *in shrfunc1 at .*
+1\[\t \]+breakpoint     keep y *${::hex} *in shrfunc1 at .*
 2\[\t \]+breakpoint     keep y *<PENDING> *shrfunc2.*" \
 "pending breakpoint info on second run at shrfunc1"
 
@@ -123,8 +123,8 @@ gdb_test "continue" \
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What\r?
 1\[\t \]+breakpoint     keep y *<PENDING> *shrfunc1\r?
-\[\t \]+breakpoint already hit \[0-9\]+ (time|times)\r?
-2\[\t \]+breakpoint     keep y *0x\[0-9a-f\]+ *in shrfunc2 at .*" \
+\[\t \]+breakpoint already hit ${::decimal} (time|times)\r?
+2\[\t \]+breakpoint     keep y *${::hex} *in shrfunc2 at .*" \
 "pending breakpoint info on second run at shrfunc2"
 
 gdb_breakpoint "$testfile.c:[gdb_get_line_number "y-set-2" $testfile.c]"

@@ -1108,6 +1108,7 @@ case "${target}" in
     noconfigdirs="$noconfigdirs sim target-rda"
     ;;
   amdgcn*-*-*)
+    noconfigdirs="$noconfigdirs ld gas"
     ;;
   arm-*-darwin*)
     noconfigdirs="$noconfigdirs ld gas gdb gprof"

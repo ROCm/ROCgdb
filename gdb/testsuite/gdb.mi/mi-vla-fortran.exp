@@ -157,7 +157,7 @@ gdb_expect {
 	mi_list_array_varobj_children_with_index "pvla2_not_associated" "0" "1" \
 	    "$real" "get children of pvla2_not_associated"
     }
-    -re "580\\^error,msg=\"value contents too large \\(\[0-9\]+ bytes\\).*${mi_gdb_prompt}$" {
+    -re "580\\^error,msg=\"value contents too large \\(${::decimal} bytes\\).*${mi_gdb_prompt}$" {
 	# Undefined behavior in gfortran.
 	xfail $test
     }

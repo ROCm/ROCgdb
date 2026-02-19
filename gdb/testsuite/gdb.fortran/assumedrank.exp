@@ -76,7 +76,7 @@ while { $test_count < 500 } {
 	# which we can use to check the values we got above.
 	set test_array ""
 	gdb_test_multiple "up" "" {
-	    -re -wrap "\r\n\[0-9\]+\[ \t\]+call test_rank \\((\[^\r\n\]+)\\)" {
+	    -re -wrap "\r\n${::decimal}\[ \t\]+call test_rank \\((\[^\r\n\]+)\\)" {
 		set test_array $expect_out(1,string)
 	    }
 	}

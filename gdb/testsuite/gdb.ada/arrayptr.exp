@@ -64,7 +64,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
 	-re -wrap " = \\(10, 20, 30, 40, 50, 60, 62, 63, -23, 42\\)" {
 	    pass $gdb_test_name
 	}
-	-re -wrap " = \[0-9\]+" {
+	-re -wrap " = ${::decimal}" {
 	    if { $xfail_expected } {
 		xfail $gdb_test_name
 	    } else {

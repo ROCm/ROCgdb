@@ -104,7 +104,7 @@ gdb_test "break newWithArg:" \
 # Continue until breakpoint (test re-setting breakpoint)
 #
 gdb_test continue \
-    "Continuing\\..*Breakpoint \[0-9\]+, -.BasicClass takeArg:. \\(self=.*, _cmd=.*, arg=.*\\) at .*$srcfile:$decimal.*" \
+    "Continuing\\..*Breakpoint ${::decimal}, -.BasicClass takeArg:. \\(self=.*, _cmd=.*, arg=.*\\) at .*$srcfile:$decimal.*" \
     "continue until method breakpoint"
 
 #
@@ -128,11 +128,11 @@ gdb_test "print object" \
     " print an ivar of self"
 
 gdb_test "print self" \
-    "${::valnum_re} = \\(.*BasicClass \\*\\) 0x\[0-9a-f\]+" \
+    "${::valnum_re} = \\(.*BasicClass \\*\\) ${::hex}" \
     " print self"
 
 gdb_test "print \*self" \
-    "${::valnum_re} = \{{?isa = 0x\[0-9a-f\]+( <.*>)?}?, object = 0x0\}" \
+    "${::valnum_re} = \{{?isa = ${::hex}( <.*>)?}?, object = 0x0\}" \
     " print contents of self"
 
 #
@@ -147,14 +147,14 @@ gdb_test "break hiddenMethod" \
 # Continue until breakpoint (test re-setting category breakpoint)
 #
 gdb_test continue \
-    "Continuing\\..*Breakpoint \[0-9\]+, -.BasicClass\\(Private\\) hiddenMethod. \\(self=.*, _cmd=.*\\) at .*$srcfile:$decimal.*" \
+    "Continuing\\..*Breakpoint ${::decimal}, -.BasicClass\\(Private\\) hiddenMethod. \\(self=.*, _cmd=.*\\) at .*$srcfile:$decimal.*" \
     "continue until category method"
 
 #
 # Test calling Objective-C methods
 #
 gdb_test "print \[self printHi\]" \
-    "Hi.*${::valnum_re} = \\(.*objc_object \\*\\) 0x\[0-9a-f\]+" \
+    "Hi.*${::valnum_re} = \\(.*objc_object \\*\\) ${::hex}" \
     "call an Objective-C method with no arguments"
 
 gdb_test "print \[self printNumber: 42\]" \

@@ -29,7 +29,7 @@ if { [prepare_for_testing "failed to prepare" "${testfile}" \
 set break_at ""
 set test "info addr break_at"
 gdb_test_multiple $test $test {
-    -re "Symbol \"break_at\" is at (0x\[0-9a-f\]+) in .*\r\n$gdb_prompt $" {
+    -re "Symbol \"break_at\" is at (${::hex}) in .*\r\n$gdb_prompt $" {
 	set break_at $expect_out(1,string)
 	pass $test
     }
@@ -62,4 +62,4 @@ if {$index == "debug_names"} {
     setup_kfail "symtab/31132" *-*-*
 }
 
-gdb_test "bt" "#0  (0x\[0-9a-f\]+ in )?func \\(funcparam=<optimized out>\\)\r\n#1  main \\(mainparam=<optimized out>\\)\[^\r\n\]*"
+gdb_test "bt" "#0  (${::hex} in )?func \\(funcparam=<optimized out>\\)\r\n#1  main \\(mainparam=<optimized out>\\)\[^\r\n\]*"

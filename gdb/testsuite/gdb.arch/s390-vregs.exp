@@ -52,7 +52,7 @@ gdb_test_multiple "stepi" "check for vector support" {
 	unsupported "no vector support."
 	return
     }
-    -re "\[0-9\]+.*\r\n$gdb_prompt $" {
+    -re "${::decimal}.*\r\n$gdb_prompt $" {
 	pass "vector support available"
     }
     -re "$gdb_prompt $" {

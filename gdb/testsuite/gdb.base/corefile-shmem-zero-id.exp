@@ -208,7 +208,7 @@ gdb_test_multiple "info proc mappings" "" {
 	exp_continue
     }
 
-    -re "^$hex\\s+$hex\\s+$hex\\s+$hex\\s+/SYSV\[0-9\]+ \\(deleted\\)\\s*\r\n" {
+    -re "^$hex\\s+$hex\\s+$hex\\s+$hex\\s+/SYSV${::decimal} \\(deleted\\)\\s*\r\n" {
 	set saw_shmem_mapping true
 	exp_continue
     }

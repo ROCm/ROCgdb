@@ -137,7 +137,7 @@ gdb_test "python print ('result = %s' % (f0.type () == gdb.NORMAL_FRAME))" " = T
 gdb_test "python print ('result = %s' % (f0.unwind_stop_reason () == gdb.FRAME_UNWIND_NO_REASON))" \
     " = True" "test Frame.unwind_stop_reason"
 gdb_test "python print ('result = %s' % gdb.frame_stop_reason_string (gdb.FRAME_UNWIND_INNER_ID))" " = previous frame inner to this frame \\(corrupt stack\\?\\)" "test gdb.frame_stop_reason_string"
-gdb_test "python print ('result = %s' % f0.pc ())" " = \[0-9\]+" "test Frame.pc"
+gdb_test "python print ('result = %s' % f0.pc ())" " = ${::decimal}" "test Frame.pc"
 gdb_test "python print ('result = %s' % (f0.older () == f1))" " = True" "test Frame.older"
 gdb_test "python print ('result = %s' % (f1.newer () == f0))" " = True" "test Frame.newer"
 gdb_test "python print ('result = %s' % f0.read_var ('variable_which_surely_doesnt_exist'))" \

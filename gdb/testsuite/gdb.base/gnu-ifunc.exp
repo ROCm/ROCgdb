@@ -300,7 +300,7 @@ proc misc_tests {resolver_attr resolver_debug final_debug} {
     gdb_continue_to_breakpoint "nextcall gnu_ifunc"
 
     gdb_test "frame" \
-	"#0 +(0x\[0-9a-f\]+ in +)?${final} \\(.*" "nextcall gnu_ifunc skipped"
+	"#0 +(${::hex} in +)?${final} \\(.*" "nextcall gnu_ifunc skipped"
 
     # Check any commands not doing an inferior call access the address of the
     # STT_GNU_IFUNC resolver, not the target function.
@@ -311,7 +311,7 @@ proc misc_tests {resolver_attr resolver_debug final_debug} {
     }
 
     gdb_test "p gnu_ifunc" \
-	" = {<text gnu-indirect-function variable, no debug info>} 0x\[0-9a-f\]+ <${gnu_ifunc_resolver}>" \
+	" = {<text gnu-indirect-function variable, no debug info>} ${::hex} <${gnu_ifunc_resolver}>" \
 	"p gnu_ifunc executing"
     gdb_test "info sym gnu_ifunc" \
 	"${gnu_ifunc_resolver} in section .*" \
@@ -320,13 +320,13 @@ proc misc_tests {resolver_attr resolver_debug final_debug} {
     set test "info addr gnu_ifunc"
     if {!$resolver_attr && $resolver_debug} {
 	gdb_test_multiple $test $test {
-	    -re "Symbol \"gnu_ifunc\" is a function at address (0x\[0-9a-f\]+).*$gdb_prompt $" {
+	    -re "Symbol \"gnu_ifunc\" is a function at address (${::hex}).*$gdb_prompt $" {
 		pass $test
 	    }
 	}
     } else {
 	gdb_test_multiple $test $test {
-	    -re "Symbol \"gnu_ifunc\" is at (0x\[0-9a-f\]+) in .*$gdb_prompt $" {
+	    -re "Symbol \"gnu_ifunc\" is at (${::hex}) in .*$gdb_prompt $" {
 		pass $test
 	    }
 	}

@@ -55,15 +55,15 @@ gdb_test "next 2" ".*"
 with_test_prefix "Default" {
     # Test record instruction-history
     gdb_test "record instruction-history 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[0x42\\\]" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[0x43\\\].*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[0x42\\\]" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[0x43\\\].*" \
 	]
 
     gdb_test "record instruction-history /a 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+.*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+.*" \
 	]
 
     # Test function call history
@@ -138,10 +138,10 @@ with_test_prefix "Custom" {
 	"end" ""
 
     gdb_test "record instruction-history 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[payload: 66, ip: $hex\\\]" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:.*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[payload: 66, ip: $hex\\\]" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:.*" \
 	]
 }
 
@@ -154,10 +154,10 @@ with_test_prefix "None" {
 	"end" ""
 
     gdb_test "record instruction-history 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[0x42\\\]" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[0x43\\\].*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[0x42\\\]" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[0x43\\\].*" \
 	]
 }
 
@@ -171,10 +171,10 @@ with_test_prefix "Lambdas" {
 	"end" ""
 
     gdb_test "record instruction-history 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[68\\\]" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[69\\\].*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[68\\\]" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[69\\\].*" \
 	] "Lambdas: record instruction-history 1"
 }
 
@@ -193,9 +193,9 @@ with_test_prefix "Functors" {
 	"end" ""
 
     gdb_test "record instruction-history 1" [multi_line \
-	".*\[0-9\]+\t   $hex <ptwrite1\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[1, 66\\\]" \
-	".*\[0-9\]+\t   $hex <ptwrite2\\+\[0-9\]+>:\tptwrite %\[a-z\]+" \
-	"\[0-9\]+\t     \\\[2, 67\\\].*" \
+	".*${::decimal}\t   $hex <ptwrite1\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[1, 66\\\]" \
+	".*${::decimal}\t   $hex <ptwrite2\\+${::decimal}>:\tptwrite %\[a-z\]+" \
+	"${::decimal}\t     \\\[2, 67\\\].*" \
 	] "Functors: record instruction-history 1"
 }

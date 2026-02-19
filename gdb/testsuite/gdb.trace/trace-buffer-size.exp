@@ -84,7 +84,7 @@ gdb_test_no_output \
 # size really worked.
 gdb_breakpoint ${srcfile}:[gdb_get_line_number "breakpoint1"]
 gdb_test "trace test_function" \
-  "Tracepoint \[0-9\]+ at .*" \
+  "Tracepoint ${::decimal} at .*" \
   "set tracepoint at test_function"
 gdb_trace_setactions "Set action for trace point 1" "" \
   "collect var" "^$"
@@ -103,7 +103,7 @@ clean_restart ${testfile}
 runto_main
 gdb_breakpoint ${srcfile}:[gdb_get_line_number "breakpoint1"]
 gdb_test "trace test_function" \
-  "Tracepoint \[0-9\]+ at .*" \
+  "Tracepoint ${::decimal} at .*" \
   "set tracepoint at test_function again"
 gdb_trace_setactions "Set action for trace point 2" "" \
   "collect var" "^$"

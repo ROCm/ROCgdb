@@ -65,27 +65,27 @@ if { $gdb_recursion_test_baseline == -1 } {
 set return_me 0
 
 gdb_test_multiple "list $gdb_recursion_test_baseline, +12" "" {
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 1 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 1 " {
 	set testline1 $expect_out(1,string)
 	exp_continue
     }
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 2 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 2 " {
 	set testline2 $expect_out(1,string)
 	exp_continue
     }
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 3 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 3 " {
 	set testline3 $expect_out(1,string)
 	exp_continue
     }
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 4 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 4 " {
 	set testline4 $expect_out(1,string)
 	exp_continue
     }
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 5 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 5 " {
 	set testline5 $expect_out(1,string)
 	exp_continue
     }
-    -re "\[\r\n\](\[0-9\]+)\[^\r\n\]+gdbtestline 6 " {
+    -re "\[\r\n\](${::decimal})\[^\r\n\]+gdbtestline 6 " {
 	set testline6 $expect_out(1,string)
 	exp_continue
     }
@@ -284,7 +284,7 @@ proc use_collected_data { data_source } {
 	    -re ">  end\r\n" {
 		exp_continue
 	    }
-	    -re "^Found trace frame \[0-9\]+, tracepoint \[0-9\]+\r\n" {
+	    -re "^Found trace frame ${::decimal}, tracepoint ${::decimal}\r\n" {
 		exp_continue
 	    }
 	    -re "^\[^\r\n\]* line $testline1 .tracepoint .$tdp1\\)\r\n" {

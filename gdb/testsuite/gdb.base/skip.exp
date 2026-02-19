@@ -206,6 +206,9 @@ with_test_prefix "admin" {
 		    "4\\s+y\\s+n\\s+<none>\\s+n\\s+baz"] \
 	"info skip after enabling all"
 
+    gdb_test_no_output "save skip [standard_output_file skips]" \
+	"save skips to file"
+
     gdb_test "skip disable 4 2-3"
     gdb_test "info skip" \
 	[multi_line "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
@@ -336,3 +339,13 @@ with_test_prefix "skip delete completion" {
     test_gdb_complete_none "skip delete a1"
     test_gdb_complete_none "skip delete 2-33"
 }
+
+clean_restart
+gdb_test "source [standard_output_file skips]" "" \
+    "re-read saved skips"
+gdb_test "info skip" \
+    [multi_line "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
+	 "1\\s+y\\s+n\\s+<none>\\s+n\\s+main" \
+	 "2\\s+y\\s+n\\s+$srcfile1\\s+n\\s+<none>" \
+	 "3\\s+y\\s+n\\s+<none>\\s+n\\s+baz"] \
+    "info skip after re-reading"

@@ -98,7 +98,7 @@ delete_breakpoints
 
 # Prepare to create all the threads.
 gdb_test "break thread_started" \
-	 "Breakpoint \[0-9\]+ at .*: file .*${srcfile}, line .*" \
+	 "Breakpoint ${::decimal} at .*: file .*${srcfile}, line .*" \
 	 "breakpoint on thread_started"
 
 # Move all threads to where they're supposed to be for testing.
@@ -116,7 +116,7 @@ for { set i 0 } { $i < $NR_THREADS } { incr i } {
       verbose -log "Not setting watchpoint for watched_data\[$i\]\n"
     }
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, thread_started \\(\\) at .*$srcfile.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, thread_started \\(\\) at .*$srcfile.*" \
     "Thread $i hit breakpoint at thread_started"
 }
 
@@ -130,6 +130,7 @@ set TRIGGERS [expr {$NR_THREADS * $hwatch_count * $NR_TRIGGERS_PER_THREAD}]
 
 # Move the threads and hit the watchpoints TRIGGERS times.
 for { set i 1 } { $i <= $TRIGGERS } { incr i } {
-    gdb_test continue "Continuing\\..*Hardware watchpoint \[0-9\]+: watched_data\[\[0-9\]+\].*Old value = \[0-9\]+.*New value = \[0-9\]+.*thread_function \\(arg=$hex\\) at .*$srcfile.*" \
+    gdb_test continue \
+	"Continuing\\..*Hardware watchpoint ${::decimal}: watched_data\\\[${::decimal}\\\].*Old value = ${::decimal}.*New value = ${::decimal}.*thread_function \\(arg=$hex\\) at .*$srcfile.*" \
     "Continue to watchpoint trigger $i out of ${TRIGGERS} on watched_data"
 }

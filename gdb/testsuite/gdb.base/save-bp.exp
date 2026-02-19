@@ -72,12 +72,12 @@ delete_breakpoints
 gdb_test "source $bps" "" "source bps"
 
 # Now, verify that all breakpoints have been created correctly...
-set bp_row_start "\[0-9\]+ +breakpoint +keep +y +0x\[0-9a-f\]+ +in"
-set disabled_row_start "\[0-9\]+ +breakpoint +keep +n +0x\[0-9a-f\]+ +in"
-set dprintf_row_start "\[0-9\]+ +dprintf +keep +y +0x\[0-9a-f\]+ +in"
+set bp_row_start "${::decimal} +breakpoint +keep +y +${::hex} +in"
+set disabled_row_start "${::decimal} +breakpoint +keep +n +${::hex} +in"
+set dprintf_row_start "${::decimal} +dprintf +keep +y +${::hex} +in"
 gdb_test_sequence "info break" "info break" [list				\
   "\[\r\n\]+Num +Type +Disp +Enb +Address +What"				\
-  "\[\r\n\]+$bp_row_start break_me at \[^\r\n\]*$srcfile:\[0-9\]+"		\
+  "\[\r\n\]+$bp_row_start break_me at \[^\r\n\]*$srcfile:${::decimal}"		\
   "\[\r\n\]+$bp_row_start main at \[^\r\n\]*$srcfile:$loc_bp2"			\
   "\[\r\n\]+$bp_row_start main at \[^\r\n\]*$srcfile:$loc_bp3"			\
   "\[\r\n\]+\[ \t]+stop only in thread 1"					\
@@ -105,3 +105,35 @@ with_test_prefix "in bps file" {
     gdb_assert {[lsearch -regexp $lines "break ${srcfile}:${loc_bp3} thread 1\\.1"] != -1} \
 	"check for thread-specific breakpoint"
 }
+
+# Delete breakpoint 4 - the 'thread' qualifier can't be handled by the
+# next test, which doesn't have a symbol file.
+gdb_test_no_output "delete 4"
+
+if {[is_remote host]} {
+    set bps2 bps2
+} else {
+    set bps2 [standard_output_file bps2]
+}
+remote_file host delete "$bps2"
+gdb_test "save breakpoint $bps2" "" "save breakpoint bps2"
+
+clean_restart
+gdb_test "source $bps2" "" "source bps without symbol file"
+
+set pending "\[0-9\]+ +breakpoint +keep +y +<PENDING> +"
+set disabled_pending "\[0-9\]+ +breakpoint +keep +n +<PENDING> +"
+set dprintf_pending "\[0-9\]+ +dprintf +keep +y +<PENDING> +"
+gdb_test_sequence "info break" "info break without symbol file" \
+    [list							\
+	 "\[\r\n\]+Num +Type +Disp +Enb +Address +What"		\
+	 "\[\r\n\]+$pending break_me"				\
+	 "\[\r\n\]+$pending $srcfile:$loc_bp2"			\
+	 "\[\r\n\]+$pending $srcfile:$loc_bp4"			\
+	 "\[\r\n\]+\[ \t\]+stop only if i == 1( \\((host|target) evals\\))?" \
+	 "\[\r\n\]+$pending $srcfile:$loc_bp5"			\
+	 "\[\r\n\]+\[ \t\]+silent"				\
+	 "\[\r\n\]+$dprintf_pending $srcfile:$loc_bp5"		\
+	 "\[\r\n\]+\[ \t\]+printf"				\
+	 "\[\r\n\]+$disabled_pending $srcfile:$loc_bp8"		\
+	]

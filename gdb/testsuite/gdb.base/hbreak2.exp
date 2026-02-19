@@ -49,11 +49,11 @@ gdb_test_multiple "hbreak -q main" "hardware breakpoint support" {
 }
 gdb_run_cmd
 gdb_test_multiple "" "hardware breakpoint insertion" {
-    -re "Warning:\[\r\n\]+Cannot insert hardware breakpoint \[0-9\]+\.\[\r\n\]+Could not insert hardware breakpoints:\[\r\n\]+You may have requested too many hardware breakpoints/watchpoints\.\[\r\n\]+.*$gdb_prompt $" {
+    -re "Warning:\[\r\n\]+Cannot insert hardware breakpoint ${::decimal}\.\[\r\n\]+Could not insert hardware breakpoints:\[\r\n\]+You may have requested too many hardware breakpoints/watchpoints\.\[\r\n\]+.*$gdb_prompt $" {
 	unsupported "hardware breakpoint insertion"
 	return
     }
-    -re "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$srcfile:.*\[\r\n\]+.*\[\t \]+if .argc.* \{.*$gdb_prompt $" {
+    -re "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$srcfile:.*\[\r\n\]+.*\[\t \]+if .argc.* \{.*$gdb_prompt $" {
 	pass "hardware breakpoint insertion"
     }
 }
@@ -141,7 +141,7 @@ set bp_location8 [gdb_get_line_number "set breakpoint 8 here" $srcfile1]
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+hw breakpoint  keep y.* in multi_line_while_conditional at .*$srcfile:$bp_location4" \
+${::decimal}\[\t \]+hw breakpoint  keep y.* in multi_line_while_conditional at .*$srcfile:$bp_location4" \
     "hardware breakpoint info"
 delete_breakpoints
 
@@ -153,7 +153,7 @@ gdb_test "hbreak -q main" \
     "hardware breakpoint function, 2"
 gdb_run_cmd
 gdb_test "" \
-    "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*" \
+    "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*" \
     "run until function breakpoint"
 delete_breakpoints
 
@@ -164,7 +164,7 @@ gdb_test "hbreak $bp_location1" \
     "Hardware assisted breakpoint.*at.* file .*$srcfile, line $bp_location1\\." \
     "hardware breakpoint line number, 2"
 gdb_test "continue" \
-    "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
+    "Continuing\\..*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
     "run until breakpoint set at a line number"
 delete_breakpoints
 
@@ -176,7 +176,7 @@ gdb_test "hbreak $srcfile:factorial" \
     "hardware breakpoint function in file, 2"
 for {set i 6} {$i >= 1} {incr i -1} {
     gdb_test "continue" \
-	"Continuing\\..*Breakpoint \[0-9\]+, factorial \\(value=$i\\) at .*$srcfile:$bp_location7.*$bp_location7\[\t \]+.*if .value > 1. \{.*" \
+	"Continuing\\..*Breakpoint ${::decimal}, factorial \\(value=$i\\) at .*$srcfile:$bp_location7.*$bp_location7\[\t \]+.*if .value > 1. \{.*" \
 	"run until file:function($i) breakpoint"
 }
 delete_breakpoints
@@ -188,7 +188,7 @@ gdb_test "hbreak \"marker2\"" \
     "Hardware assisted breakpoint.*at.* file .*$srcfile1, line.*" \
     "hardware breakpoint quoted function, 2"
 gdb_test "continue" \
-    "Continuing\\..*Breakpoint \[0-9\]+, (0x\[0-9a-f\]+ in )?marker2 \\(a=43\\) at .*$srcfile1:$bp_location8.*" \
+    "Continuing\\..*Breakpoint ${::decimal}, (${::hex} in )?marker2 \\(a=43\\) at .*$srcfile1:$bp_location8.*" \
     "run until quoted breakpoint"
 delete_breakpoints
 #
@@ -198,7 +198,7 @@ gdb_test "hbreak $srcfile:$bp_location2" \
     "Hardware assisted breakpoint.*at.* file .*$srcfile, line $bp_location2\\." \
     "hardware breakpoint line number in file, 2"
 gdb_test "continue" \
-    "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location2.*$bp_location2\[\t \]+argc = \\(argc == 12345\\);.*" \
+    "Continuing\\..*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location2.*$bp_location2\[\t \]+argc = \\(argc == 12345\\);.*" \
     "run until file:linenum breakpoint"
 delete_breakpoints
 
@@ -212,7 +212,7 @@ gdb_test "hbreak +1" \
 # Check to see if breakpoint is hit when stepped onto.
 
 gdb_test "step" \
-    ".*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10.*$bp_location10\[\t \]+return argc;.*breakpoint 10 here.*" \
+    ".*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10.*$bp_location10\[\t \]+return argc;.*breakpoint 10 here.*" \
     "step onto hardware breakpoint"
 delete_breakpoints
 
@@ -224,7 +224,7 @@ gdb_test "hbreak $bp_location10a" \
     "setting hardware breakpoint at }"
 
 gdb_test "continue" \
-    ".*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10a.*$bp_location10a\[\t \]+}.*breakpoint 10a here.*" \
+    ".*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10a.*$bp_location10a\[\t \]+}.*breakpoint 10a here.*" \
     "continue to hardware breakpoint at }"
 
 #
@@ -281,7 +281,7 @@ gdb_test "thbreak $srcfile:$bp_location11" \
 #
 gdb_test "info break" \
     "Num     Type.*Disp Enb Address.*What.*\[\r\n\]
-\[0-9\]+\[\t \]+hw breakpoint  del.*y.*in main at .*$srcfile:$bp_location11.*" \
+${::decimal}\[\t \]+hw breakpoint  del.*y.*in main at .*$srcfile:$bp_location11.*" \
     "temporary hardware breakpoint info"
 
 
@@ -538,10 +538,10 @@ gdb_test "hbreak -q main" \
 #
 gdb_run_cmd
 gdb_test_multiple "" "run until hardware function breakpoint, optimized file" {
-    -re "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*$gdb_prompt $" {
+    -re "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*$gdb_prompt $" {
 	pass "run until hardware function breakpoint, optimized file"
     }
-    -re "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$gdb_prompt $" {
+    -re "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$gdb_prompt $" {
 	pass "run until hardware function breakpoint, optimized file (code motion)"
     }
 }

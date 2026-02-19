@@ -37,7 +37,7 @@ gdb_continue_to_breakpoint "prethreadcreationmarker"
 set after_new_thread_message "created new thread"
 foreach_with_prefix thread {5 4 3}  {
   gdb_test_multiple "continue" "${after_new_thread_message}" {
-    -re "\\\[New Thread ${hex} \\\(LWP \[0-9\]+\\\) \\\(id $decimal\\\)\\\].*${gdb_prompt}" {
+    -re "\\\[New Thread ${hex} \\\(LWP ${::decimal}\\\) \\\(id $decimal\\\)\\\].*${gdb_prompt}" {
       pass "${after_new_thread_message}"
     }
     -re -wrap "\\\[New Thread $decimal\\.$decimal\\\ \\\(id $decimal\\\)]\r\n.*" {

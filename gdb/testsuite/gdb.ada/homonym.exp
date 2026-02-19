@@ -30,15 +30,15 @@ clean_restart ${testfile}
 # environment.
 
 gdb_test "break Get_Value" \
-    "Breakpoint \[0-9\]+ at $hex: Get_Value. .2 locations." \
+    "Breakpoint ${::decimal} at $hex: Get_Value. .2 locations." \
     "set breakpoint at Get_Value"
 
 gdb_test "break homonym.adb:Get_Value" \
-    "Breakpoint \[0-9\]+ at $hex: homonym.adb:Get_Value. .2 locations." \
+    "Breakpoint ${::decimal} at $hex: homonym.adb:Get_Value. .2 locations." \
     "set breakpoint at homonym.adb:Get_Value"
 
 gdb_test "break <homonym__get_value>" \
-    ".*Breakpoint \[0-9\]+ at $hex: (file .*homonym\\.adb, line $decimal\\.|<homonym__get_value>\\. .2 locations.)" \
+    ".*Breakpoint ${::decimal} at $hex: (file .*homonym\\.adb, line $decimal\\.|<homonym__get_value>\\. .2 locations.)" \
     "set breakpoint at <homonym__get_value>"
 
 delete_breakpoints
@@ -76,11 +76,11 @@ gdb_test "print lcl" \
 
 set bp_location [gdb_get_line_number "BREAK_2" ${testdir}/homonym.adb]
 gdb_test "break homonym.adb:$bp_location" \
-    "Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: file .*homonym\\.adb, line \[0-9\]+\\." \
+    "Breakpoint ${::decimal} at ${::hex}: file .*homonym\\.adb, line ${::decimal}\\." \
     "break at BREAK_2"
 
 gdb_test "continue" \
-    ".*Breakpoint \[0-9\]+, homonym\\.get_value \\(\\) at .*homonym\\.adb:.*" \
+    ".*Breakpoint ${::decimal}, homonym\\.get_value \\(\\) at .*homonym\\.adb:.*" \
     "continue until BREAK_2"
 
 gdb_test "ptype local_type" \

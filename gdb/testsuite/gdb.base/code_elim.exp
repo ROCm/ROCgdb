@@ -52,7 +52,7 @@ proc not_null_var_address { var } {
     # address is returned by gdb.
 
     set address [get_var_address $var]
-    regexp "0x\[0-9a-fA-F\]+" $address address
+    regexp "${::hex}" $address address
     if { "$address" == "0x0" } {
 	fail "$var has null address"
     }

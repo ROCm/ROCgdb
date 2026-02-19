@@ -64,7 +64,7 @@ for { set r 0 } { $r < $nr_regs } { incr r } {
 	".. = \\{$r, $r.125, $r.25, $r.375, $r.5, $r.625, $r.75, $r.875\\}.*" \
 	"check float contents of %ymm$r"
     gdb_test "print \$ymm$r.v32_int8" \
-	".. = \\{(-?\[0-9\]+, ){31}-?\[0-9\]+\\}.*" \
+	".. = \\{(-?${::decimal}, ){31}-?${::decimal}\\}.*" \
 	"check int8 contents of %ymm$r"
 }
 

@@ -125,10 +125,10 @@ foreach {arg desc} {"" "standard signals" \
     set data [split $file_data "\n"]
     close $fd
 
-    if {$arg == ""} {
-	set pattern "catch signal"
-    } else {
-	set pattern "catch signal $arg"
+    set prefix  "with breakpoint pending on -- "
+    set pattern "${prefix}catch signal"
+    if {$arg != ""} {
+	append pattern " $arg"
     }
     gdb_assert {[expr [llength $data] == 3]} \
 	"Number of lines of save breakpoints for '$arg'"
@@ -136,7 +136,7 @@ foreach {arg desc} {"" "standard signals" \
     gdb_assert {[string match $pattern [lindex $data 0]]} \
 	"1st line of save breakpoints for '$arg'"
     # Check the second line.
-    gdb_assert {[string match "break main" [lindex $data 1]]} \
+    gdb_assert {[string match "${prefix}break main" [lindex $data 1]]} \
 	"2nd line of save breakpoints for '$arg'"
     # Check the trailing newline.
     gdb_assert {[string match "" [lindex $data 2]]} \

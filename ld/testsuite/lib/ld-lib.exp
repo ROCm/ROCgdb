@@ -849,27 +849,50 @@ proc run_ld_link_exec_tests { ldtests args } {
 	    }
 	}
 
-	if { $failed == 0 && [isnative] } {
-	    send_log "Running: $binfile > $binfile.out\n"
-	    verbose "Running: $binfile > $binfile.out"
-	    catch "exec $binfile > $binfile.out" exec_output
+	# For remote targets this relies on the LD test subdirectory
+	# being identity mapped between the test host and the test
+	# target, e.g. mounted over NFS.  This is due to shared module
+	# dependencies using a relative path, which implies the need
+	# for execution to start in the same directory, arranged via
+	# the `remotedir' setting, the link has been made in.
+	if { $failed == 0 && [check_execution_available] } {
+	    global board_info
 
-	    if ![string match "" $exec_output] then {
+	    set board [target_info name]
+	    if { [info exists board_info($board,remotedir)] } {
+		set remotedir board_info($board,remotedir)
+	    }
+	    set board_info($board,remotedir) [pwd]
+
+	    send_log "Running: $binfile\n"
+	    verbose "Running: $binfile"
+	    set result [remote_load target $binfile]
+	    set status [lindex $result 0]
+	    set exec_output [lindex $result 1]
+
+	    if { $status == "pass" } {
+		set_file_contents $binfile.out $exec_output
+		send_log [file_contents $binfile.out]
+		verbose [file_contents $binfile.out] 2
+		if [regexp_diff $binfile.out $srcdir/$subdir/$expfile] {
+		    set failed 1
+		}
+	    } else {
 		send_log "$exec_output\n"
 		verbose "$exec_output" 1
 		set failed 1
+	    }
+
+	    if { [info exists remotedir] } {
+		set board_info($board,remotedir) $remotedir
 	    } else {
-		send_log [file_contents $binfile.out]
-		verbose [file_contents $binfile.out] 2
-		if [regexp_diff "$binfile.out" "$srcdir/$subdir/$expfile"] {
-		    set failed 1
-		}
+		unset board_info($board,remotedir)
 	    }
 	}
 
 	if { $failed != 0 } {
 	    fail $testname
-	} elseif ![isnative] {
+	} elseif ![check_execution_available] {
 	    unsupported $testname
 	} else {
 	    set errcnt 0
@@ -1260,6 +1283,40 @@ proc check_sysroot_available { } {
     return $ld_sysroot_available_saved
 }
 
+# Return a path to a dummy target executable if we can build one
+# or an empty string otherwise.
+proc make_dummy_target_executable { } {
+    global CC_FOR_TARGET
+
+    if { [which $CC_FOR_TARGET] == 0 } {
+	return ""
+    }
+
+    set flags [get_board_flags]
+    set basename "tmpdir/compiler[pid]"
+    set src ${basename}.c
+    set output ${basename}.out
+    set f [open $src "w"]
+    puts $f "int main (void)"
+    puts $f "{"
+    puts $f "  return 0; "
+    puts $f "}"
+    close $f
+    if [is_remote host] {
+	set src [remote_download host $src]
+    }
+
+    set status [run_host_noleak "$CC_FOR_TARGET" "$flags $src -o $output"]
+    remote_file host delete $src
+    file delete $src
+    if { $status == 0 } {
+	remote_file host delete $output
+	return ""
+    }
+
+    return $output
+}
+
 # Return true if we can build a program with the compiler.
 # On some targets, CC might be defined, but libraries and startup
 # code might be missing or require special options that the ld test
@@ -1267,33 +1324,44 @@ proc check_sysroot_available { } {
 
 proc check_compiler_available { } {
     global compiler_available_saved
-    global CC_FOR_TARGET
 
     if {![info exists compiler_available_saved]} {
-	if { [which $CC_FOR_TARGET] == 0 } {
-	    set compiler_available_saved 0
+	set compiler_available_saved 0
+
+	set binfile [make_dummy_target_executable]
+	if { $binfile != "" } {
+	    remote_file host delete $binfile
+	    set compiler_available_saved 1
+	}
+    }
+    return $compiler_available_saved
+}
+
+# Return true if we can run a program built with the compiler.
+proc check_execution_available { } {
+    global execution_available_saved
+
+    if { ![info exists execution_available_saved] } {
+	set execution_available_saved 0
+
+	if { ![check_compiler_available] } {
 	    return 0
 	}
 
-	set flags [get_board_flags]
-	set basename "tmpdir/compiler[pid]"
-	set src ${basename}.c
-	set output ${basename}.out
-	set f [open $src "w"]
-	puts $f "int main (void)"
-	puts $f "{"
-	puts $f "  return 0; "
-	puts $f "}"
-	close $f
-	if [is_remote host] {
-	    set src [remote_download host $src]
+	set binfile [make_dummy_target_executable]
+	if { $binfile == "" } {
+	    return 0
 	}
-	set compiler_available_saved [run_host_noleak "$CC_FOR_TARGET" "$flags $src -o $output"]
-	remote_file host delete $src
-	remote_file host delete $output
-	file delete $src
+
+	set status [lindex [remote_load target $binfile] 0]
+	remote_file host delete $binfile
+	if { $status != "pass" } {
+	    return 0
+	}
+
+	set execution_available_saved 1
     }
-    return $compiler_available_saved
+    return $execution_available_saved
 }
 
 # Returns 1 if plugin is enabled in gcc.  Returns 0 otherwise.

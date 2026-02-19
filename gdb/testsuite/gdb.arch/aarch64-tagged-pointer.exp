@@ -70,7 +70,7 @@ foreach_with_prefix bptype {"hbreak" "break"} {
 	"breakpoint at *func_ptr"
     # Resume the program and expect it hits foo,
     gdb_test "continue" \
-	"Continuing\\..*Breakpoint \[0-9\]+, foo \\(\\) at .*" \
+	"Continuing\\..*Breakpoint ${::decimal}, foo \\(\\) at .*" \
 	"run until breakpoint set *func_ptr"
     gdb_test "up" "foo \\(\\).*" "caller is foo"
     delete_breakpoints
@@ -80,7 +80,7 @@ foreach_with_prefix bptype {"hbreak" "break"} {
     gdb_test "$bptype foo" "reakpoint $decimal at .*" \
 	"hardware breakpoint at foo"
     gdb_test "continue" \
-	"Continuing\\..*Breakpoint \[0-9\]+, foo \\(\\) at .*" \
+	"Continuing\\..*Breakpoint ${::decimal}, foo \\(\\) at .*" \
 	"run until breakpoint set foo"
     gdb_test "up" "\\(\*func_ptr\\) \\(\\).*" "caller is *func_ptr"
     delete_breakpoints
@@ -99,10 +99,10 @@ gdb_test "finish"
 foreach symbol {"sp1" "sp2" "p1" "p2"} {
     gdb_test "watch *${symbol}"
     gdb_test "continue" \
-	"Continuing\\..*Hardware watchpoint \[0-9\]+.*" \
+	"Continuing\\..*Hardware watchpoint ${::decimal}.*" \
 	"run until watchpoint on ${symbol}"
     gdb_test "continue" \
-	"Continuing\\..*Hardware watchpoint \[0-9\]+.*" \
+	"Continuing\\..*Hardware watchpoint ${::decimal}.*" \
 	"run until watchpoint on ${symbol}, 2nd hit"
     delete_breakpoints
 }

@@ -73,7 +73,7 @@ proc test {type symbol} {
 		return
 	    }
 
-	    gdb_test "watch var" "atchpoint \[0-9\]+: var" "set the watchpoint"
+	    gdb_test "watch var" "atchpoint ${::decimal}: var" "set the watchpoint"
 
 	    # It is never hit but it should not be left over in the fork()ed-off child.
 	    if {![allow_hw_breakpoint_tests]} {
@@ -87,18 +87,18 @@ proc test {type symbol} {
 
 	    with_timeout_factor $factor {
 		gdb_test "continue" \
-		    "reakpoint \[0-9\]+, marker.*" "hardware breakpoints work"
+		    "reakpoint ${::decimal}, marker.*" "hardware breakpoints work"
 		gdb_test "continue" \
-		    "atchpoint \[0-9\]+: var.*Old value = 0.*New value = 1.*forkoff *\\(1\\).*" "watchpoints work"
+		    "atchpoint ${::decimal}: var.*Old value = 0.*New value = 1.*forkoff *\\(1\\).*" "watchpoints work"
 		gdb_test "continue" \
-		    "reakpoint \[0-9\]+, marker.*" "breakpoint after the first fork"
+		    "reakpoint ${::decimal}, marker.*" "breakpoint after the first fork"
 		gdb_test "continue" \
-		    "atchpoint \[0-9\]+: var.*Old value = 1.*New value = 2.*forkoff *\\(2\\).*" "watchpoint after the first fork"
+		    "atchpoint ${::decimal}: var.*Old value = 1.*New value = 2.*forkoff *\\(2\\).*" "watchpoint after the first fork"
 		gdb_test "continue" \
-		    "reakpoint \[0-9\]+, marker.*" "breakpoint after the second fork"
+		    "reakpoint ${::decimal}, marker.*" "breakpoint after the second fork"
 		gdb_test "continue" \
-		    "atchpoint \[0-9\]+: var.*Old value = 2.*New value = 3.*mark_exit \\(\\);" "watchpoint after the second fork"
-		gdb_test "continue" "Continuing\\..*\r\n(Thread .* hit )?Breakpoint \[0-9\]+, mark_exit .*" "finish"
+		    "atchpoint ${::decimal}: var.*Old value = 2.*New value = 3.*mark_exit \\(\\);" "watchpoint after the second fork"
+		gdb_test "continue" "Continuing\\..*\r\n(Thread .* hit )?Breakpoint ${::decimal}, mark_exit .*" "finish"
 	    }
 	}
 
@@ -130,7 +130,7 @@ proc test {type symbol} {
 		return
 	    }
 
-	    gdb_test "watch var" "atchpoint \[0-9\]+: var" "set the watchpoint"
+	    gdb_test "watch var" "atchpoint ${::decimal}: var" "set the watchpoint"
 
 	    # It should not be left over in the fork()ed-off child.
 	    gdb_test "$hbreak marker" {reakpoint [0-9]+.*}
@@ -138,26 +138,26 @@ proc test {type symbol} {
 	    gdb_breakpoint "mark_exit"
 
 	    gdb_test "continue" \
-		"reakpoint \[0-9\]+, marker.*" "hardware breakpoints work"
+		"reakpoint ${::decimal}, marker.*" "hardware breakpoints work"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 0.*New value = 1.*validity-first.*" "singlethread watchpoints work"
+		"atchpoint ${::decimal}: var.*Old value = 0.*New value = 1.*validity-first.*" "singlethread watchpoints work"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 1.*New value = 2.*validity-thread-A.*" "multithreaded watchpoints work at A"
+		"atchpoint ${::decimal}: var.*Old value = 1.*New value = 2.*validity-thread-A.*" "multithreaded watchpoints work at A"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 2.*New value = 3.*validity-thread-B.*" "multithreaded watchpoints work at B"
+		"atchpoint ${::decimal}: var.*Old value = 2.*New value = 3.*validity-thread-B.*" "multithreaded watchpoints work at B"
 	    gdb_test "continue" \
-		"reakpoint \[0-9\]+, marker.*" "breakpoint (A) after the first fork"
+		"reakpoint ${::decimal}, marker.*" "breakpoint (A) after the first fork"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 3.*New value = 4.*after-fork1-A.*" "watchpoint A after the first fork"
+		"atchpoint ${::decimal}: var.*Old value = 3.*New value = 4.*after-fork1-A.*" "watchpoint A after the first fork"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 4.*New value = 5.*after-fork1-B.*" "watchpoint B after the first fork"
+		"atchpoint ${::decimal}: var.*Old value = 4.*New value = 5.*after-fork1-B.*" "watchpoint B after the first fork"
 	    gdb_test "continue" \
-		"reakpoint \[0-9\]+, marker.*" "breakpoint (A) after the second fork"
+		"reakpoint ${::decimal}, marker.*" "breakpoint (A) after the second fork"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 5.*New value = 6.*after-fork2-A.*" "watchpoint A after the second fork"
+		"atchpoint ${::decimal}: var.*Old value = 5.*New value = 6.*after-fork2-A.*" "watchpoint A after the second fork"
 	    gdb_test "continue" \
-		"atchpoint \[0-9\]+: var.*Old value = 6.*New value = 7.*after-fork2-B.*" "watchpoint B after the second fork"
-	    gdb_test "continue" "Continuing\\..*\r\nThread .* hit Breakpoint \[0-9\]+, mark_exit .*" "finish"
+		"atchpoint ${::decimal}: var.*Old value = 6.*New value = 7.*after-fork2-B.*" "watchpoint B after the second fork"
+	    gdb_test "continue" "Continuing\\..*\r\nThread .* hit Breakpoint ${::decimal}, mark_exit .*" "finish"
 	}
     }
 }

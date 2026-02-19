@@ -91,7 +91,7 @@ while { $test_count < 500 } {
 	set array_name ""
 	set xfail_data ""
 	gdb_test_multiple "up" "up" {
-	    -re "\r\n\[0-9\]+\[ \t\]+DO_TEST \\((\[^\r\n\]+)\\)\r\n$gdb_prompt $" {
+	    -re "\r\n${::decimal}\[ \t\]+DO_TEST \\((\[^\r\n\]+)\\)\r\n$gdb_prompt $" {
 		set array_name $expect_out(1,string)
 	    }
 	}
@@ -116,7 +116,7 @@ while { $test_count < 500 } {
 	# us the actual bounds of the array.  Thanks GDB.
 	set upper_dim ""
 	gdb_test_multiple "p lbound ($array_name, 0)" "" {
-	    -re "\r\nLBOUND dimension must be from 1 to (\[0-9\]+)\r\n$gdb_prompt $" {
+	    -re "\r\nLBOUND dimension must be from 1 to (${::decimal})\r\n$gdb_prompt $" {
 		set upper_dim $expect_out(1,string)
 	    }
 	}
@@ -127,7 +127,7 @@ while { $test_count < 500 } {
 	# Check that asking for the ubound dimension 0 gives the same
 	# dimension range as in the lbound case.
 	gdb_test_multiple "p ubound ($array_name, 0)" "" {
-	    -re "\r\nUBOUND dimension must be from 1 to (\[0-9\]+)\r\n$gdb_prompt $" {
+	    -re "\r\nUBOUND dimension must be from 1 to (${::decimal})\r\n$gdb_prompt $" {
 		gdb_assert {$upper_dim == $expect_out(1,string)} \
 		    "ubound limit matches lbound limit"
 	    }

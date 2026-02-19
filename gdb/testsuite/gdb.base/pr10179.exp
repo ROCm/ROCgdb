@@ -26,12 +26,12 @@ if {![runto_main]} {
     return -1
 }
 
-gdb_test "rbreak foo.*" "Breakpoint \[0-9\]+\[^\\n\]*\\nint foo\[12\]\[^\\n\]*\\nBreakpoint \[0-9\]+\[^\\n\]*\\nint foo\[12\].*"
+gdb_test "rbreak foo.*" "Breakpoint ${::decimal}\[^\\n\]*\\nint foo\[12\]\[^\\n\]*\\nBreakpoint ${::decimal}\[^\\n\]*\\nint foo\[12\].*"
 
 delete_breakpoints
 
-gdb_test "rbreak pr10179-a.c:foo.*" "Breakpoint \[0-9\]+\[^\\n\]*\\nint foo.*"
+gdb_test "rbreak pr10179-a.c:foo.*" "Breakpoint ${::decimal}\[^\\n\]*\\nint foo.*"
 
 delete_breakpoints
 
-gdb_test "rbreak pr10179-a.c : .*" "Breakpoint \[0-9\]+\[^\\n\]*\\nint bar1\[^\\n\]*\\nBreakpoint \[0-9\]+\[^\\n\]*\\nint foo1\[^\\n\]*\\nBreakpoint \[0-9\]+\[^\\n\]*\\nint main\[^\\n\]*.*"
+gdb_test "rbreak pr10179-a.c : .*" "Breakpoint ${::decimal}\[^\\n\]*\\nint bar1\[^\\n\]*\\nBreakpoint ${::decimal}\[^\\n\]*\\nint foo1\[^\\n\]*\\nBreakpoint ${::decimal}\[^\\n\]*\\nint main\[^\\n\]*.*"

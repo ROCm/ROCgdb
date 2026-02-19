@@ -36,11 +36,11 @@ gdb_test "print rename_subscript_param_b" \
 
 set bp_location [gdb_get_line_number "Do_Nothing" ${testdir}/pkg.adb]
 gdb_test "break pkg.adb:$bp_location" \
-    "Breakpoint \[0-9\]+ at.*: file .*pkg.adb, line \[0-9\]+." \
+    "Breakpoint ${::decimal} at.*: file .*pkg.adb, line ${::decimal}." \
     "insert second breakpoint in pkg.adb"
 
 gdb_test "cont" \
-    "Breakpoint \[0-9\]+, pkg.flip \\(.*" \
+    "Breakpoint ${::decimal}, pkg.flip \\(.*" \
     "Continuing to breakpoint on call to Do_Nothing"
 
 gdb_test "print rename_subscript_param_b" \

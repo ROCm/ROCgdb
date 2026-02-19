@@ -766,6 +766,12 @@ sparse_bfd_set_section_contents (bfd *obfd, asection *osec,
   return true;
 }
 
+/* Fallback page size to use when target_read_memory fails when attempting
+   to read MAX_COPY_BYTES in gcore_copy_callback.  4KB is the correct size
+   to use for x86 and most other architectures.  Some may have larger pages,
+   but this size will still work at the cost of more syscalls.  */
+#define FALLBACK_PAGE_SIZE 0x1000
+
 static void
 gcore_copy_callback (bfd *obfd, asection *osec)
 {
@@ -788,15 +794,45 @@ gcore_copy_callback (bfd *obfd, asection *osec)
       if (size > total_size)
 	size = total_size;
 
-      if (target_read_memory (bfd_section_vma (osec) + offset,
-			      memhunk.data (), size) != 0)
+      CORE_ADDR vma = bfd_section_vma (osec) + offset;
+
+      if (target_read_memory (vma, memhunk.data (), size) != 0)
 	{
-	  warning (_("Memory read failed for corefile "
-		     "section, %s bytes at %s."),
-		   plongest (size),
-		   paddress (current_inferior ()->arch (),
-			     bfd_section_vma (osec)));
-	  break;
+	  /* Large read failed.  This can happen when the memory region
+	     contains unreadable pages (such as guard pages embedded within
+	     a larger mapping).  Fall back to reading page by page, filling
+	     unreadable pages with zeros.  */
+	  gdb_byte *p = memhunk.data ();
+	  bfd_size_type remaining = size;
+	  CORE_ADDR addr = vma;
+	  bool at_least_one_page_read = false;
+
+	  while (remaining > 0)
+	    {
+	      bfd_size_type chunk_size
+		= std::min (remaining, (bfd_size_type) FALLBACK_PAGE_SIZE);
+
+	      if (target_read_memory (addr, p, chunk_size) != 0)
+		{
+		  /* Failed to read this page.  Fill with zeros.  This
+		     handles guard pages and other unreadable regions
+		     that may exist within a larger readable mapping.  */
+		  memset (p, 0, chunk_size);
+		}
+	      else
+		at_least_one_page_read = true;
+
+	      p += chunk_size;
+	      addr += chunk_size;
+	      remaining -= chunk_size;
+	    }
+	  /* Warn only if the entire region was unreadable - this
+	     indicates a real problem, not just embedded guard pages. */
+	  if (!at_least_one_page_read)
+	    warning (_("Memory read failed for corefile "
+		       "section, %s bytes at %s."),
+		     plongest (size),
+		     paddress (current_inferior ()->arch (), vma));
 	}
 
       if (!sparse_bfd_set_section_contents (obfd, osec, memhunk.data (),

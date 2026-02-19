@@ -145,6 +145,7 @@ gdb_test {p (short []) s1} " = ($re_little|$re_big)"
 # Test for correct output if the size of the original object is not a
 # multiple of the array's element size.
 gdb_test "p s3" " = {a = 0, b = 1}"
-gdb_test "p (int \[\]) s3" [multi_line \
-				"warning: array element type size does not divide object size in cast" \
-				"\\$\\d = \\{0\\}"]
+gdb_test {p (int []) s3} \
+    [multi_line \
+	 "warning: array element type size does not divide object size in cast" \
+	 [quotemeta "$@DECIMAL = {0}"]]

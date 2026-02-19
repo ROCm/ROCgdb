@@ -1379,14 +1379,14 @@ static bool
 add_archive_element (struct bfd_link_info *info,
 		     bfd *abfd,
 		     const char *name,
-		     bfd **subsbfd ATTRIBUTE_UNUSED)
+		     bfd **subsbfd)
 {
   lang_input_statement_type *input;
   lang_input_statement_type *parent;
   lang_input_statement_type orig_input;
 
-  input = (lang_input_statement_type *)
-      xcalloc (1, sizeof (lang_input_statement_type));
+  input = stat_alloc (sizeof (*input));
+  memset (input, 0, sizeof (*input));
   input->header.type = lang_input_statement_enum;
   input->filename = bfd_get_filename (abfd);
   input->local_sym_name = bfd_get_filename (abfd);
@@ -1431,7 +1431,6 @@ add_archive_element (struct bfd_link_info *info,
       /* We have already loaded this element, and are attempting to
 	 load it again.  This can happen when the archive map doesn't
 	 match actual symbols defined by the element.  */
-      free (input);
       bfd_set_error (bfd_error_malformed_archive);
       return false;
     }

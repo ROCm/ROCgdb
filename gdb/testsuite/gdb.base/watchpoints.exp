@@ -39,7 +39,7 @@ with_test_prefix "before inferior start" {
     # before starting the inferior the watchpoint created will not be a
     # hardware watchpoint.
     gdb_test_no_output "set can-use-hw-watchpoints 0" ""
-    gdb_test "watch ival1" "Watchpoint \[0-9\]+: ival1" \
+    gdb_test "watch ival1" "Watchpoint ${::decimal}: ival1" \
 	"create watchpoint"
 
     # The next tests are written to match the current state of gdb: access

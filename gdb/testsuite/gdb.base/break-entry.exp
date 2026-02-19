@@ -36,7 +36,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile {additional_f
 set test "info files"
 set entry ""
 gdb_test_multiple $test $test {
-    -re "\r\n\[\t \]*Entry point:\[\t \]*(0x\[0-9a-f\]+)\r\n.*$gdb_prompt $" {
+    -re "\r\n\[\t \]*Entry point:\[\t \]*(${::hex})\r\n.*$gdb_prompt $" {
 	set entry $expect_out(1,string)
 	pass $test
     }
@@ -49,7 +49,7 @@ if {$entry == ""} {
 if {[istarget powerpc64-*] && [is_lp64_target]} {
     set test "convert entry point"
     gdb_test_multiple "p *(void(*)(void) *) $entry" $test {
-	-re " =( \\(\[^0-9\]*\\))? (0x\[0-9a-f\]+)( <.*)?\r\n$gdb_prompt $" {
+	-re " =( \\(\[^0-9\]*\\))? (${::hex})( <.*)?\r\n$gdb_prompt $" {
 	    set entry $expect_out(2,string)
 	    pass $test
 	}

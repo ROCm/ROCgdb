@@ -217,20 +217,24 @@ gdb_test "bt 1" \
 gdb_test_no_output "set print frame-info source-and-location" \
     "frame-info source-and-location"
 gdb_test "bt no-filter 1" \
-    "#0.*end_func \\(\.\.\.\\) at .*py-framefilter.c.*\r\n.*\[1-9\]\[0-9\]*.*" \
+    [multi_line \
+	 "#0.*end_func \\(\.\.\.\\) at .*py-framefilter.c.*" \
+	 ".*$positive.*"] \
     "bt no-filter 1 source-and-location"
 gdb_test "bt 1" \
-    "#0.*cnuf_dneThe End \\(\.\.\.\\) at .*py-framefilter.c.*\r\n.*\[1-9\]\[0-9\]*.*" \
+    [multi_line \
+	 "#0.*cnuf_dneThe End \\(\.\.\.\\) at .*py-framefilter.c.*" \
+	 ".*$positive.*"] \
     "bt 1 source-and-location"
 
 # source-line
 gdb_test_no_output "set print frame-info source-line" \
     "frame-info source-line"
 gdb_test "bt no-filter 1" \
-    "\[1-9\]\[0-9\]*\[ \t\]*return; /\\* Backtrace end breakpoint \\*/.*" \
+    "$positive\[ \t\]*return; /\\* Backtrace end breakpoint \\*/.*" \
     "bt no-filter 1 source-line"
 gdb_test "bt 1" \
-    "\[1-9\]\[0-9\]*\[ \t\]*return; /\\* Backtrace end breakpoint \\*/.*" \
+    "$positive\[ \t\]*return; /\\* Backtrace end breakpoint \\*/.*" \
     "bt 1 source-line"
 
 # set print frame-info back to auto.

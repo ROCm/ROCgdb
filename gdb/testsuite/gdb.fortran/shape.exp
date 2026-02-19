@@ -61,7 +61,7 @@ while { $test_count < 500 } {
 	# as a test.
 	set command ""
 	gdb_test_multiple "up" "up" {
-	    -re -wrap "\r\n\[0-9\]+\[ \t\]+call test_shape \\((\[^\r\n\]+)\\)" {
+	    -re -wrap "\r\n${::decimal}\[ \t\]+call test_shape \\((\[^\r\n\]+)\\)" {
 		set command $expect_out(1,string)
 	    }
 	}

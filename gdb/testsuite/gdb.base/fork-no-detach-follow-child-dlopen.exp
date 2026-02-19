@@ -49,7 +49,7 @@ proc do_test {} {
     runto "add" qualified allow-pending
 
     # Since we have debug info in the shlib, we should have the file name available.
-    gdb_test "frame" "add \(.*\) at .*$::srcfile2:\[0-9\]+.*"
+    gdb_test "frame" "add \(.*\) at .*$::srcfile2:${::decimal}.*"
 
     # We must also be able to display the source for the current function.
     gdb_test "list" "return a \\+ b;.*"

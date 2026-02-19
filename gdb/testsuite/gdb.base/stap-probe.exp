@@ -182,7 +182,7 @@ proc stap_test {exec_name {args ""}} {
 
     # Set a breakpoint with multiple probe locations.
     gdb_test "break -pstap test:two" \
-	"Breakpoint \[0-9\]+ at $hex.*2 locations.*" \
+	"Breakpoint ${::decimal} at $hex.*2 locations.*" \
 	"set multi-location probe breakpoint (probe two)"
 
     # Reinit GDB, set a breakpoint on probe m4.
@@ -274,7 +274,7 @@ proc stap_test_no_debuginfo {exec_name {args ""}} {
     # In this scenario, we may expect more than 2 locations because of
     # the optimizations (inlining, loop unrolling, etc).
     gdb_test "break -pstap test:two" \
-	"Breakpoint .* at $hex.*\[0-9\]+ locations.*" \
+	"Breakpoint .* at $hex.*${::decimal} locations.*" \
 	"set multi-location probe breakpoint (probe two)"
 
     # Reinit GDB, set a breakpoint on probe m4.

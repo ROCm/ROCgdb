@@ -166,11 +166,11 @@ gdb_test "break lspec.cc:nosuchfunction" \
     "set breakpoint on non-existent function"
 
 gdb_test "break NameSpace::overload" \
-    "Breakpoint \[0-9\]+ at $hex: NameSpace::overload. \[(\]3 locations\[)\]" \
+    "Breakpoint ${::decimal} at $hex: NameSpace::overload. \[(\]3 locations\[)\]" \
     "set breakpoint at all instances of NameSpace::overload"
 
 gdb_test "break lspec.cc:NameSpace::overload" \
-    "Breakpoint \[0-9\]+ at $hex: file .*lspec.cc, line 7." \
+    "Breakpoint ${::decimal} at $hex: file .*lspec.cc, line 7." \
     "set breakpoint at lspec.cc instance of NameSpace::overload"
 
 gdb_test "break lspec.cc:NameSpace::overload(double)" \
@@ -178,26 +178,26 @@ gdb_test "break lspec.cc:NameSpace::overload(double)" \
     "set breakpoint at non-existent lspec.cc instance of NameSpace::overload"
 
 gdb_test "break NameSpace::overload()" \
-    "Breakpoint \[0-9\]+ at $hex: file .*lspec.cc, line 7." \
+    "Breakpoint ${::decimal} at $hex: file .*lspec.cc, line 7." \
     "set breakpoint at specific instance of NameSpace::overload"
 
 # This should manage to set a breakpoint even though body.h does not
 # include all of the function in question.
 set line [gdb_get_line_number "body breakpoint no code" body.h]
 gdb_test "break body.h:$line" \
-    "Breakpoint \[0-9\]+.*" \
+    "Breakpoint ${::decimal}.*" \
     "set breakpoint in body.h"
 
 # This should only have a single location -- in f1.
 set line [gdb_get_line_number "f1 breakpoint" lspec.h]
 gdb_test "break lspec.h:$line" \
-    "Breakpoint \[0-9\]+ at $hex: file .*lspec.h, line $line." \
+    "Breakpoint ${::decimal} at $hex: file .*lspec.h, line $line." \
     "set breakpoint in f1"
 
 # This should only have a single location -- in no_multi_locs.
 set line [gdb_get_line_number no_multi_locs]
 gdb_test "break $line" \
-    "Breakpoint \[0-9\]+ at $hex: file .*$srcfile, line $line." \
+    "Breakpoint ${::decimal} at $hex: file .*$srcfile, line $line." \
     "set breakpoint at no_multi_locs"
 
 #
@@ -217,5 +217,5 @@ gdb_test "file $binfile" \
     "set the new inferior file for linespec tests"
 
 gdb_test "break -q main" \
-    "Breakpoint \[0-9\]+ at $hex: -qualified main. .2 locations." \
+    "Breakpoint ${::decimal} at $hex: -qualified main. .2 locations." \
     "set breakpoint at main in both inferiors"

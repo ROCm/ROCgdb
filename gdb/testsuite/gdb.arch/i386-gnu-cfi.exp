@@ -78,7 +78,7 @@ gdb_test "frame $gate_n" \
 	 "shift up to the modified frame"
 
 gdb_test_multiple "info frame" "existence of the CFI inserted register" {
-    -re "Stack level $gate_n, frame at (0x\[0-9a-f\]+):.*Saved registers:.* ecx at (0x\[0-9a-f\]+),.*" {
+    -re "Stack level $gate_n, frame at (${::hex}):.*Saved registers:.* ecx at (${::hex}),.*" {
 	pass "existence of the CFI inserted register"
 	if {[string compare $expect_out(1,string) $expect_out(2,string)]} {
 	    fail "value of the CFI inserted register"

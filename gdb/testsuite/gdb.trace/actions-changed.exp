@@ -42,7 +42,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=1\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=1\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 1 trace frame.*" \
@@ -59,7 +59,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=2\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=2\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 1 trace frame.*" \
@@ -79,7 +79,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=3\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=3\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 6 trace frames.*" \
@@ -96,7 +96,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=4\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=4\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 1 trace frame.*" \
@@ -128,7 +128,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=5\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=5\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 12 trace frames.*" \
@@ -147,7 +147,7 @@ proc test_actions_changed { } {
 
 	gdb_test_no_output "tstart"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, end \\(i=6\\) .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, end \\(i=6\\) .*" \
 	    "advance through tracing"
 
 	gdb_test "tstatus" ".*Collected 2 trace frame.*" \

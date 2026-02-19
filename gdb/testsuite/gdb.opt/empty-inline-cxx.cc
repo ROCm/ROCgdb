@@ -25,7 +25,7 @@ __attribute__((noinline)) ATTRIBUTE_NOCLONE void
 breakpt ()
 {
   /* Some filler work.  */
-  global++;
+  global = global + 1;
 }
 
 struct MyClass;

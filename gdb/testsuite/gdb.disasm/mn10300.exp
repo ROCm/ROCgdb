@@ -64,21 +64,21 @@ proc bcc_tests { } {
     send_gdb "x/15i bCC_tests\n"
     gdb_expect {
 	-re "
-.*beq	0x\[0-9a-f]+ <bCC_tests>.*
-.*bne	0x\[0-9a-f]+ <bCC_tests>.*
-.*bgt	0x\[0-9a-f]+ <bCC_tests>.*
-.*bge	0x\[0-9a-f]+ <bCC_tests>.*
-.*ble	0x\[0-9a-f]+ <bCC_tests>.*
-.*blt	0x\[0-9a-f]+ <bCC_tests>.*
-.*bhi	0x\[0-9a-f]+ <bCC_tests>.*
-.*bcc	0x\[0-9a-f]+ <bCC_tests>.*
-.*bls	0x\[0-9a-f]+ <bCC_tests>.*
-.*bcs	0x\[0-9a-f]+ <bCC_tests>.*
-.*bvc	0x\[0-9a-f]+ <bCC_tests>.*
-.*bvs	0x\[0-9a-f]+ <bCC_tests>.*
-.*bnc	0x\[0-9a-f]+ <bCC_tests>.*
-.*bns	0x\[0-9a-f]+ <bCC_tests>.*
-.*bra	0x\[0-9a-f]+ <bCC_tests>.*
+.*beq	${::hex} <bCC_tests>.*
+.*bne	${::hex} <bCC_tests>.*
+.*bgt	${::hex} <bCC_tests>.*
+.*bge	${::hex} <bCC_tests>.*
+.*ble	${::hex} <bCC_tests>.*
+.*blt	${::hex} <bCC_tests>.*
+.*bhi	${::hex} <bCC_tests>.*
+.*bcc	${::hex} <bCC_tests>.*
+.*bls	${::hex} <bCC_tests>.*
+.*bcs	${::hex} <bCC_tests>.*
+.*bvc	${::hex} <bCC_tests>.*
+.*bvs	${::hex} <bCC_tests>.*
+.*bnc	${::hex} <bCC_tests>.*
+.*bns	${::hex} <bCC_tests>.*
+.*bra	${::hex} <bCC_tests>.*
 .*$gdb_prompt $" { pass "bCC tests" }
 	-re "$gdb_prompt $" { fail "bCC tests" }
 	timeout { fail "(timeout) bCC tests" }
@@ -465,13 +465,13 @@ proc other_tests { } {
 .*inc	a2.*
 .*inc4	a3.*
 .*jmp	\\(a2\\).*
-.*jmp	0x\[0-9a-f]+ <main>.*
-.*jmp	0x\[0-9a-f]+ <start>.*
-.*call	0x\[0-9a-f]+ <main>,.a2,a3.,9.*
-.*call	0x\[0-9a-f]+ <start>,.a2,a3.,32.*
+.*jmp	${::hex} <main>.*
+.*jmp	${::hex} <start>.*
+.*call	${::hex} <main>,.a2,a3.,9.*
+.*call	${::hex} <start>,.a2,a3.,32.*
 .*calls	\\(a2\\).*
-.*calls	0x\[0-9a-f]+ <main>.*
-.*calls	0x\[0-9a-f]+ <start>.*
+.*calls	${::hex} <main>.*
+.*calls	${::hex} <start>.*
 .*ret	.a2,a3.,7.*
 .*retf	.a2,a3.,5.*
 .*rets.*

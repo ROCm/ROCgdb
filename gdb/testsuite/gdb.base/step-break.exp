@@ -31,7 +31,7 @@ gdb_test "break $bp_location" \
     "Breakpoint.*at.* file .*$srcfile, line $bp_location\\." \
     "breakpoint line number"
 
-gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, main \\(\\) at .*$srcfile:$bp_location.*set breakpoint here.*" \
+gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, main \\(\\) at .*$srcfile:$bp_location.*set breakpoint here.*" \
     "run until breakpoint set at a line number"
 
 gdb_test "next 2" ".*place2.*" "next 2, 1"

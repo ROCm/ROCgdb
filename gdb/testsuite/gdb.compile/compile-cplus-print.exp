@@ -52,7 +52,7 @@ gdb_test "compile print varint" " = 10"
 gdb_test "compile print vararray" " = \\{1, 2, 3, 4, 5\\}"
 
 setup_kfail compile/23586 *-*-*
-gdb_test "compile print main" " = \\{int \\(void\\)\\} 0x\[0-9a-f\]+"
+gdb_test "compile print main" " = \\{int \\(void\\)\\} ${::hex}"
 
 setup_kfail compile/23587 *-*-*
 set test "compile print *vararray@3"

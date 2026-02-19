@@ -46,22 +46,22 @@ if {$c_test_num <= 0 || $asm_test_num <= 0} {
 # 2.1 info tracepoints (all)
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
     "2.1: info tracepoints (all)"
 
 # 2.2 info tracepoint (specific)
 gdb_test "info tracepoint $c_test_num" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
     "2.2a: info tracepoint $c_test_num (gdb_c_test)"
 
 gdb_test "info tracepoint $asm_test_num" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
     "2.2b: info tracepoint $asm_test_num (gdb_asm_test)"
 
@@ -116,11 +116,11 @@ gdb_test "tstatus"
 gdb_test "info tracepoints" \
     [multi_line \
 	 "Num     Type\[ \]+Disp Enb Address\[ \]+What.*" \
-	 "\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+" \
+	 "${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}" \
 	 "\[\t \]+tracepoint already hit 1 time" \
 	 "\[\t \]+trace buffer usage ${decimal} bytes" \
 	 "\[\t \]+collect gdb_struct1_test" \
 	 "\tinstalled on target" \
-	 "\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+" \
+	 "${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}" \
 	 "\tinstalled on target"] \
     "2.6: info tracepoints (trace buffer usage)"

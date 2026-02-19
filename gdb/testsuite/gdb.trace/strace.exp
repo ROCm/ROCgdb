@@ -171,9 +171,9 @@ proc strace_probe_marker { } {
 	}
 
 	gdb_test "strace -m ust/bar" \
-	    "Static tracepoint \[0-9\]+ at ${hex}: file.*"
+	    "Static tracepoint ${::decimal} at ${hex}: file.*"
 	gdb_test "strace -m ust/bar2" \
-	    "Static tracepoint \[0-9\]+ at ${hex}: file.*"
+	    "Static tracepoint ${::decimal} at ${hex}: file.*"
 	# Two trace markers should be enabled.
 	gdb_test "info static-tracepoint-markers" \
 	    "ust/bar\[\t \]+y\[\t \]+$hex .*ust/bar2\[\t \]+y\[\t \]+$hex.*"
@@ -227,8 +227,8 @@ proc strace_trace_on_same_addr { type } {
 	    }
 	}
 
-	gdb_test "strace -m ust/bar" "Static tracepoint \[0-9\]+ at ${hex}: file.*"
-	gdb_test "strace -m ust/bar2" "Static tracepoint \[0-9\]+ at ${hex}: file.*"
+	gdb_test "strace -m ust/bar" "Static tracepoint ${::decimal} at ${hex}: file.*"
+	gdb_test "strace -m ust/bar2" "Static tracepoint ${::decimal} at ${hex}: file.*"
 	# Two trace markers should be enabled.
 	gdb_test "info static-tracepoint-markers" \
 	    "ust/bar\[\t \]+y\[\t \]+$hex .*ust/bar2\[\t \]+y\[\t \]+$hex.*" \
@@ -237,7 +237,7 @@ proc strace_trace_on_same_addr { type } {
 	# Set breakpoints or tracepoints.
 	set test "${type} on marker bar"
 	gdb_test_multiple "${type} *${marker_bar_addr}" $test {
-	    -re "\(Fast trace|Trace|Break\)point \[0-9\]+ at ${hex}: file.*\r\n$gdb_prompt $" {
+	    -re "\(Fast trace|Trace|Break\)point ${::decimal} at ${hex}: file.*\r\n$gdb_prompt $" {
 		pass $test
 	    }
 	    -re ".*\r\n$gdb_prompt $" {
@@ -252,7 +252,7 @@ proc strace_trace_on_same_addr { type } {
 	}
 	set test "${type} on marker bar2"
 	gdb_test_multiple "${type} *${marker_bar2_addr}" $test {
-	    -re "\(Fast trace|Trace|Break\)point \[0-9\]+ at ${hex}: file.*" {
+	    -re "\(Fast trace|Trace|Break\)point ${::decimal} at ${hex}: file.*" {
 		pass $test
 	    }
 	    -re ".*\r\n$gdb_prompt $" {
@@ -330,7 +330,7 @@ proc strace_trace_on_diff_addr { } {
 	    }
 	}
 
-	gdb_test "strace -m ust/bar" "Static tracepoint \[0-9\]+ at ${hex}: file.*"
+	gdb_test "strace -m ust/bar" "Static tracepoint ${::decimal} at ${hex}: file.*"
 
 	gdb_test "info static-tracepoint-markers" \
 	    "ust/bar\[\t \]+y\[\t \]+$hex .*ust/bar2\[\t \]+n\[\t \]+$hex.*" \
@@ -339,7 +339,7 @@ proc strace_trace_on_diff_addr { } {
 
 	# Set common tracepoint.
 	gdb_test "trace *${marker_bar2_addr}" \
-	    "Tracepoint \[0-9\]+ at ${hex}: file.*"
+	    "Tracepoint ${::decimal} at ${hex}: file.*"
 
 	gdb_breakpoint "end" qualified
 

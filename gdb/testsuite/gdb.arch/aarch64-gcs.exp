@@ -43,12 +43,12 @@ gdb_test_no_output "set \$gcspr_in_main = \$gcspr" \
 gdb_test_no_output "set unwindonsignal on"
 gdb_test "print called_from_gdb (41)" ". = 42" "call inferior function"
 
-gdb_test "break handler" "Breakpoint \[0-9\]+ .*aarch64-gcs.c, line \[0-9\]+\\."
+gdb_test "break handler" "Breakpoint ${::decimal} .*aarch64-gcs.c, line ${::decimal}\\."
 gdb_test "handle SIGUSR1 nostop" \
     ".*\r\nSIGUSR1\\s+No\\s+Yes\\s+Yes\\s+User defined signal 1" \
     "let the inferior receive SIGUSR1 uninterrupted"
 gdb_test "continue" \
-    ".*\r\nBreakpoint \[0-9\]+, handler \\(sig=10\\) at .*aarch64-gcs.c.*handler_gcspr = get_gcspr \\(\\);" \
+    ".*\r\nBreakpoint ${::decimal}, handler \\(sig=10\\) at .*aarch64-gcs.c.*handler_gcspr = get_gcspr \\(\\);" \
     "continue to signal handler"
 
 gdb_test_no_output "set \$gcspr_in_handler = \$gcspr" \

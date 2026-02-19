@@ -41,7 +41,7 @@ gdb_test "ptype circle.pos" \
 	 "end record" ]
 
 gdb_test "ptype circle.pos.x" \
-    "type = <\[0-9\]+-byte integer>"
+    "type = <${::decimal}-byte integer>"
 
 gdb_test "complete print my_circ" "print my_circle"
 gdb_test "complete print my_circle.r" "print my_circle\\.radius"

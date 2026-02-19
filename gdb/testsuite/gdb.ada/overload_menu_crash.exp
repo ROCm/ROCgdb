@@ -32,8 +32,8 @@ runto "main.adb:$bp_location"
 
 set menu [multi_line "Multiple matches for regtest" \
 	      "\\\[0\\\] cancel" \
-	      "\\\[1\\\] pck.regtest .* return boolean at .*pck.adb:\[0-9\]+" \
-	      "\\\[2\\\] pck.inner.regtest at .*pck.ads:\[0-9\]+" \
+	      "\\\[1\\\] pck.regtest .* return boolean at .*pck.adb:${::decimal}" \
+	      "\\\[2\\\] pck.inner.regtest at .*pck.ads:${::decimal}" \
 	      "> $"]
 gdb_test_multiple "whatis &regtest" "menu does not crash" {
     -re "$menu" {

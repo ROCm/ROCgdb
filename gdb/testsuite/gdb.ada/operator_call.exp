@@ -44,11 +44,11 @@ proc test_with_menu {command result} {
 	-re "Multiple matches for \[^\r\n\]*\r\n" {
 	    exp_continue
 	}
-	-re "^\\\[(\[0-9\]+)\\\] twovecs\\.*\[^\r\n\]*\r\n" {
+	-re "^\\\[(${::decimal})\\\] twovecs\\.*\[^\r\n\]*\r\n" {
 	    set num $expect_out(1,string)
 	    exp_continue
 	}
-	-re "^\\\[\[0-9\]+\\\] \[^\r\n\]*\r\n" {
+	-re "^\\\[${::decimal}\\\] \[^\r\n\]*\r\n" {
 	    # Any other match, we don't want.
 	    exp_continue
 	}
@@ -60,7 +60,7 @@ proc test_with_menu {command result} {
 	    send_gdb "$num\n"
 	    exp_continue
 	}
-	-re "^\[0-9\]+\r\n" {
+	-re "^${::decimal}\r\n" {
 	    # The number we just sent, ignore.
 	    exp_continue
 	}

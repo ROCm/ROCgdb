@@ -72,7 +72,7 @@ gdb_test "info trace" ".*tracepoint.*in write_basic_trace_file.*" \
     "info tracepoints on trace file"
 
 gdb_test "tfind 0" \
-    "Found trace frame 0, tracepoint \[0-9\]+.
+    "Found trace frame 0, tracepoint ${::decimal}.
 \#0  write_basic_trace_file ().*" \
     "tfind 0 on trace file"
 

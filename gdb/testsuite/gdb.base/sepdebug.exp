@@ -121,7 +121,7 @@ gdb_test "break $bp_location1" \
 # test duplicate breakpoint
 #
 gdb_test "break $bp_location1" \
-    "Note: breakpoint \[0-9\]+ also set at pc.*Breakpoint \[0-9\]+ at.* file .*$srcfile, line $bp_location1\\." \
+    "Note: breakpoint ${::decimal} also set at pc.*Breakpoint ${::decimal} at.* file .*$srcfile, line $bp_location1\\." \
     "breakpoint duplicate"
 
 set bp_location2 [gdb_get_line_number "set breakpoint 2 here"]
@@ -157,14 +157,14 @@ set bp_location8 [gdb_get_line_number "set breakpoint 8 here"]
 
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$main_line.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in marker2 at .*$srcfile:$bp_location8.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in factorial at .*$srcfile:$bp_location7.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location2.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in multi_line_if_conditional at .*$srcfile:$bp_location3.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in multi_line_while_conditional at .*$srcfile:$bp_location4" \
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$main_line.*
+${::decimal}\[\t \]+breakpoint     keep y.* in marker2 at .*$srcfile:$bp_location8.*
+${::decimal}\[\t \]+breakpoint     keep y.* in factorial at .*$srcfile:$bp_location7.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location2.*
+${::decimal}\[\t \]+breakpoint     keep y.* in multi_line_if_conditional at .*$srcfile:$bp_location3.*
+${::decimal}\[\t \]+breakpoint     keep y.* in multi_line_while_conditional at .*$srcfile:$bp_location4" \
     "breakpoint info"
 
 # FIXME: The rest of this test doesn't work with anything that can't
@@ -177,32 +177,32 @@ gdb_test "info break" \
 #
 gdb_run_cmd
 gdb_test "" \
-    "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*" \
+    "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*" \
     "run until function breakpoint"
 
 #
 # run until the breakpoint at a line number
 #
-gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
+gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
 			"run until breakpoint set at a line number"
 
 #
 # Run until the breakpoint set in a function in a file
 #
 for {set i 6} {$i >= 1} {incr i -1} {
-	gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, factorial \\(value=$i\\) at .*$srcfile:$bp_location7.*$bp_location7\[\t \]+.*if .value > 1. \{.*" \
+	gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, factorial \\(value=$i\\) at .*$srcfile:$bp_location7.*$bp_location7\[\t \]+.*if .value > 1. \{.*" \
 			"run until file:function($i) breakpoint"
 }
 
 #
 # Run until the breakpoint set at a quoted function
 #
-gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, (0x\[0-9a-f\]+ in )?marker2 \\(a=43\\) at .*$srcfile:$bp_location8.*" \
+gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, (${::hex} in )?marker2 \\(a=43\\) at .*$srcfile:$bp_location8.*" \
 		"run until quoted breakpoint"
 #
 # run until the file:function breakpoint at a line number in a file
 #
-gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location2.*$bp_location2\[\t \]+argc = \\(argc == 12345\\);.*" \
+gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location2.*$bp_location2\[\t \]+argc = \\(argc == 12345\\);.*" \
 		"run until file:linenum breakpoint"
 
 # Test break at offset +1
@@ -215,7 +215,7 @@ gdb_test "break +1" \
 # Check to see if breakpoint is hit when stepped onto
 
 gdb_test "step" \
-    ".*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10.*$bp_location10\[\t \]+return argc;.*breakpoint 10 here.*" \
+    ".*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location10.*$bp_location10\[\t \]+return argc;.*breakpoint 10 here.*" \
     "step onto breakpoint"
 
 #
@@ -263,12 +263,12 @@ gdb_test  "tbreak $srcfile:$bp_location11" "Temporary breakpoint.*at.* file .*$s
 # check to see what breakpoints are set (temporary this time)
 #
 gdb_test "info break" "Num     Type.*Disp Enb Address.*What.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$main_line.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in factorial at .*$srcfile:$bp_location7.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location1.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location6.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location2.*\[\r\n\]
-\[0-9\]+\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location11.*" \
+${::decimal}\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$main_line.*\[\r\n\]
+${::decimal}\[\t \]+breakpoint     del.*y.*in factorial at .*$srcfile:$bp_location7.*\[\r\n\]
+${::decimal}\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location1.*\[\r\n\]
+${::decimal}\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location6.*\[\r\n\]
+${::decimal}\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location2.*\[\r\n\]
+${::decimal}\[\t \]+breakpoint     del.*y.*in main at .*$srcfile:$bp_location11.*" \
     "Temporary breakpoint info"
 
 
@@ -282,13 +282,13 @@ if {![runto_main]} {
     return
 }
 
-gdb_test "catch fork" "Catchpoint \[0-9\]+ \\(fork\\)" \
+gdb_test "catch fork" "Catchpoint ${::decimal} \\(fork\\)" \
     "set catch fork, never expected to trigger"
 
-gdb_test "catch vfork" "Catchpoint \[0-9\]+ \\(vfork\\)" \
+gdb_test "catch vfork" "Catchpoint ${::decimal} \\(vfork\\)" \
     "set catch vfork, never expected to trigger"
 
-gdb_test "catch exec" "Catchpoint \[0-9\]+ \\(exec\\)" \
+gdb_test "catch exec" "Catchpoint ${::decimal} \\(exec\\)" \
     "set catch exec, never expected to trigger"
 
 # Verify that GDB responds gracefully when asked to set a breakpoint
@@ -595,10 +595,10 @@ proc test_different_dir {type test_different_dir xfail} {
 	}
 	set test "run until function breakpoint, optimized file"
 	gdb_test_multiple "" $test {
-	    -re "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*$gdb_prompt $" {
+	    -re "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$srcfile:$bp_location6.*$bp_location6\[\t \]+if .argc.* \{.*$gdb_prompt $" {
 		pass $test
 	    }
-	    -re "Breakpoint \[0-9\]+,.*main .*argc.*argv.* at .*$gdb_prompt $" {
+	    -re "Breakpoint ${::decimal},.*main .*argc.*argv.* at .*$gdb_prompt $" {
 		pass "$test (code motion)"
 	    }
 	}

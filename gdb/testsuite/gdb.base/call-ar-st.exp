@@ -98,8 +98,8 @@ gdb_test "tbreak $stop_line" \
 if {![gdb_skip_stdio_test "continue to tbreak2"]} {
     set gdb_re \
 	[multi_line \
-	     "main.*at.*:\[0-9\]+" \
-	     "\[0-9\]+.*print_double_array\\(double_array\\).*"]
+	     "main.*at.*:${::decimal}" \
+	     "${::decimal}.*print_double_array\\(double_array\\).*"]
     gdb_test_stdio "continue" $array_c_re $gdb_re "continue to tbreak2"
 } else {
     gdb_test "continue" ".*" ""
@@ -140,7 +140,7 @@ if {$allow_float_test && \
 	     "student id :\[\t \]+.*YELLOW" \
 	     "array_i :" \
 	    ] \
-	"main \\(\\) at .*call-ar-st.c:\[0-9\]+\[ \t\r\n\]+.*print_all_arrays\\(integer_array, char_array, float_array, double_array\\)..*" \
+	"main \\(\\) at .*call-ar-st.c:${::decimal}\[ \t\r\n\]+.*print_all_arrays\\(integer_array, char_array, float_array, double_array\\)..*" \
 	"continuing to tbreak3"
 
 } else {
@@ -370,7 +370,7 @@ if {$allow_float_test && \
 
 #call compute_with_small_structs(20)
 gdb_test "print compute_with_small_structs(20)" \
-    "\[0-9\]+ = void"
+    "${::decimal} = void"
 
 
 #call print_ten_doubles(123.456, 123.456, -0.12, -1.23, 343434.8, 89.098,

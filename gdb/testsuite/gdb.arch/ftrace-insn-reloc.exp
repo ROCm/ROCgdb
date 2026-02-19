@@ -101,7 +101,7 @@ for { set i 0 } { ${i} < ${n_testcases} } { incr i } {
     set testcase [read_testcase $i]
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, pass \(\).*" \
+	".*Breakpoint ${::decimal}, pass \(\).*" \
 	"relocated instruction at ${testcase}"
 }
 

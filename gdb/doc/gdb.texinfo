@@ -7145,6 +7145,12 @@ skips.
 Disable the specified skip(s).  If @var{range} is not specified, disable all
 skips.
 
+@kindex save skip
+@item save skip @var{filename}
+Save all skips to the file @var{filename}.  This command writes out
+the skips as a script that can be re-read into @value{GDBN} using the
+@code{source} command.
+
 @kindex set debug skip
 @item set debug skip @r{[}on|off@r{]}
 Set whether to print the debug output about skipping files and functions.
@@ -10396,8 +10402,17 @@ Print the starting and ending addresses of the compiled code for the
 source lines of the code locations that result from resolving
 @var{locspec}.  @xref{Location Specifications}, for the various forms
 of @var{locspec}.
-With no @var{locspec}, information about the current source line is
-printed.
+
+With no @var{locspec}, information is printed about either:
+@itemize @bullet
+@item
+the last line listed (@pxref{List})
+@item
+the line after the line shown by the previous @code{info line} command
+(@pxref{info-line-repeated-calls, ,info line@comma{} repeated calls})
+@item
+the current source line
+@end itemize
 @end table
 
 For example, we can use @code{info line} to discover the location of
@@ -10432,6 +10447,7 @@ convenience variable @code{$_} (@pxref{Convenience Vars, ,Convenience
 Variables}).
 
 @cindex info line, repeated calls
+@anchor{info-line-repeated-calls}
 After @code{info line}, using @code{info line} again without
 specifying a location will display information about the next source
 line.
@@ -30829,6 +30845,17 @@ removal of duplicate history entries is disabled.
 Only history entries added during the current session are considered for
 removal.  This option is set to 0 by default.
 
+@kindex save history
+@item save history @var{filename}
+Occasionally you may want to save your history to a file.  This
+command will do just that, saving the commands in your current session
+to the named file.  Note that you should normally edit the saved
+history before using @code{source} to reload it, as the @code{save
+history} command itself will be at the end of the file.
+
+Alternatively, you can use @code{server save history} to avoid this
+issue, as the @code{server} prefix prevents the command from being
+recorded (@pxref{Server Prefix}).
 @end table
 
 History expansion assigns special meaning to the character @kbd{!}.
@@ -32619,6 +32646,12 @@ The value of @code{max-user-call-depth} controls how many recursion
 levels are allowed in user-defined commands before @value{GDBN} suspects an
 infinite recursion and aborts the command.
 This does not apply to user-defined python commands.
+
+@kindex save user
+@item save user @var{filename}
+Save all user-defined commands to the file @var{filename}.  This
+command writes out the user-defined commands as a script that can be
+re-read into @value{GDBN} using the @code{source} command.
 @end table
 
 In addition to the above commands, user-defined commands frequently

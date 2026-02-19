@@ -52,6 +52,8 @@
 #include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 #include "terminal.h"
+#include "cli/cli-style.h"
+#include "cli-out.h"
 
 #include "extension.h"
 #include "gdbsupport/pathstuff.h"
@@ -1815,6 +1817,57 @@ make_command (const char *arg, int from_tty)
     }
 }
 
+/* Print the definition of user command C to STREAM.  Or, if C is a
+   prefix command, show the definitions of all user commands under C
+   (recursively).  PREFIX and NAME combined are the name of the
+   current command.  DEF is true if the output should be written as a
+   source-able script.  */
+static void
+show_user_1 (struct cmd_list_element *c, const char *prefix, const char *name,
+	     struct ui_file *stream, struct ui_out *uiout, bool def)
+{
+  if (cli_user_command_p (c))
+    {
+      struct command_line *cmdlines = c->user_commands.get ();
+
+      if (def)
+	gdb_printf (stream, "define%s %s%s\n",
+		    c->is_prefix () ? "-prefix" : "",
+		    prefix, name);
+      else
+	{
+	  gdb_printf (stream, "User %scommand \"",
+		      c->is_prefix () ? "prefix" : "");
+	  fprintf_styled (stream, title_style.style (), "%s%s",
+			  prefix, name);
+	  gdb_printf (stream, "\":\n");
+	}
+      if (cmdlines)
+	{
+	  print_command_lines (uiout, cmdlines, 1);
+	  if (!def)
+	    gdb_puts ("\n", stream);
+	}
+      if (def)
+	{
+	  gdb_puts ("end\n", stream);
+
+	  if (!c->is_prefix () && !streq (c->doc, "User-defined."))
+	    gdb_printf (stream, "document %s%s\n%s\nend\n",
+			prefix, name, c->doc);
+	}
+    }
+
+  if (c->is_prefix ())
+    {
+      const std::string prefixname = c->prefixname ();
+
+      for (c = *c->subcommands; c != NULL; c = c->next)
+	if (c->theclass == class_user || c->is_prefix ())
+	  show_user_1 (c, prefixname.c_str (), c->name, stream, uiout, def);
+    }
+}
+
 static void
 show_user (const char *args, int from_tty)
 {
@@ -1827,15 +1880,37 @@ show_user (const char *args, int from_tty)
       c = lookup_cmd (&comname, cmdlist, "", NULL, 0, 1);
       if (!cli_user_command_p (c))
 	error (_("Not a user command."));
-      show_user_1 (c, "", args, gdb_stdout);
+      show_user_1 (c, "", args, gdb_stdout, current_uiout, false);
     }
   else
     {
       for (c = cmdlist; c; c = c->next)
 	{
 	  if (cli_user_command_p (c) || c->is_prefix ())
-	    show_user_1 (c, "", c->name, gdb_stdout);
+	    show_user_1 (c, "", c->name, gdb_stdout, current_uiout, false);
 	}
+    }
+}
+
+/* The "save user" command.  */
+
+static void
+save_user_command (const char *filename, int from_tty)
+{
+  if (filename == nullptr || *filename == '\0')
+    error (_("Argument required (file name in which to save)"));
+
+  std::string expanded_filename = gdb_tilde_expand (filename);
+  stdio_file fp;
+  if (!fp.open (expanded_filename.c_str (), "w"))
+    error (_("Unable to open file '%s' for saving (%s)"),
+	   expanded_filename.c_str (), safe_strerror (errno));
+
+  cli_ui_out uiout (&fp);
+  for (struct cmd_list_element *c = cmdlist; c != nullptr; c = c->next)
+    {
+      if (cli_user_command_p (c) || c->is_prefix ())
+	show_user_1 (c, "", c->name, &fp, &uiout, true);
     }
 }
 
@@ -3006,6 +3081,13 @@ Search for commands matching a REGEXP.\n\
 Usage: apropos [-v] REGEXP\n\
 Flag -v indicates to produce a verbose output, showing full documentation\n\
 of the matching commands."));
+
+  c = add_cmd ("user", no_class, save_user_command, _("\
+Save current user-defined commands as a script.\n\
+Usage: save user FILE\n\
+Use the 'source' command in another debug session to restore them."),
+	       &save_cmdlist);
+  set_cmd_completer (c, deprecated_filename_completer);
 
   add_setshow_uinteger_cmd ("max-user-call-depth", no_class,
 			   &max_user_call_depth, _("\

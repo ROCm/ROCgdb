@@ -62,7 +62,7 @@ with_test_prefix "live" {
 }
 
 with_test_prefix "live target tfind" {
-    gdb_test "tfind 0" "Found trace frame 0, tracepoint \[0-9\]+.*" \
+    gdb_test "tfind 0" "Found trace frame 0, tracepoint ${::decimal}.*" \
 	"tfind 0"
     gdb_test "print testglob" " = 1"
     gdb_test "print testglob_not_collected" " = <unavailable>"
@@ -106,7 +106,7 @@ proc test_from_remote { target } {
 	    gdb_test "print constglob_not_collected" " = 100"
 	}
 	with_test_prefix "w/ setting traceframe" {
-	    gdb_test "tfind 0" "Found trace frame 0, tracepoint \[0-9\]+.*" \
+	    gdb_test "tfind 0" "Found trace frame 0, tracepoint ${::decimal}.*" \
 		"tfind 0"
 	    gdb_test "print testglob" " = 1"
 	    gdb_test "print testglob_not_collected" " = <unavailable>"
@@ -141,7 +141,7 @@ proc teset_from_exec { target } {
     }
 
     with_test_prefix "exec to ${target} w/ setting traceframe" {
-	gdb_test "tfind 0" "Found trace frame 0, tracepoint \[0-9\]+.*" \
+	gdb_test "tfind 0" "Found trace frame 0, tracepoint ${::decimal}.*" \
 	    "tfind 0"
 	gdb_test "print testglob" " = 1"
 	gdb_test "print testglob_not_collected" " = <unavailable>"

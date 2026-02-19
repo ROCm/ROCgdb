@@ -19,7 +19,7 @@
 # WORKER is set by the makefile and is
 # "{program_name}/{program_name}-{worker_nr}".
 
-regexp "^\(.+\)/\(.+\)-\(\[0-9\]+\)$" $WORKER entire_match PROGRAM_NAME pname2 WORKER_NR
+regexp "^\(.+\)/\(.+\)-\(${::decimal}\)$" $WORKER entire_match PROGRAM_NAME pname2 WORKER_NR
 
 if { ![info exists entire_match] || $entire_match != $WORKER } {
     error "Bad value for WORKER: $WORKER"

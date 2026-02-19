@@ -41,22 +41,22 @@ if {![runto_main]} {
 # the "finish" command.
 
 gdb_test "break create_small" \
-    "Breakpoint \[0-9\]+ at.*: file .*pck.adb, line \[0-9\]+." \
+    "Breakpoint ${::decimal} at.*: file .*pck.adb, line ${::decimal}." \
     "insert breakpoint in create_small"
 
 gdb_test "break create_large" \
-    "Breakpoint \[0-9\]+ at.*: file .*pck.adb, line \[0-9\]+." \
+    "Breakpoint ${::decimal} at.*: file .*pck.adb, line ${::decimal}." \
     "insert breakpoint in create_large"
 
 gdb_test "break create_small_float_vector" \
-    "Breakpoint \[0-9\]+ at.*: file .*pck.adb, line \[0-9\]+." \
+    "Breakpoint ${::decimal} at.*: file .*pck.adb, line ${::decimal}." \
     "insert breakpoint in create_small_float_vector"
 
 # Then continue until reaching the first breakpoint inside Create_Small,
 # and then do a "finish".
 
 gdb_test "cont" \
-    "Breakpoint \[0-9\]+, pck.create_small \\(\\).*" \
+    "Breakpoint ${::decimal}, pck.create_small \\(\\).*" \
     "continuing to Create_Small"
 
 gdb_test "finish" \
@@ -67,7 +67,7 @@ gdb_test "finish" \
 # and then do another "finish".
 
 gdb_test "cont" \
-    "Breakpoint \[0-9\]+, pck.create_large \\(\\).*" \
+    "Breakpoint ${::decimal}, pck.create_large \\(\\).*" \
     "continuing to Create_Large"
 
 # On hppa32, the value returned is too large to be returned via a register.
@@ -86,7 +86,7 @@ gdb_test "finish" \
 # "finish" again.
 
 gdb_test "cont" \
-    "Breakpoint \[0-9\]+, pck.create_small_float_vector \\(\\).*" \
+    "Breakpoint ${::decimal}, pck.create_small_float_vector \\(\\).*" \
     "continuing to Create_Small_Float_Vector"
 
 gdb_test "finish" \

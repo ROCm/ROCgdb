@@ -87,11 +87,11 @@ gdb_test "python print (inferiors)" \
 gdb_py_test_silent_cmd "python i0 = inferiors\[0\]" "get first inferior" 0
 
 gdb_test "python print ('result = %s' % (i0 == inferiors\[0\]))" " = True" "test equality comparison (true)"
-gdb_test "python print ('result = %s' % i0.num)" " = \[0-9\]+" "test Inferior.num"
-gdb_test "python print ('result = %s' % i0.connection_num)" " = \[0-9\]+" "test Inferior.connection_num"
+gdb_test "python print ('result = %s' % i0.num)" " = ${::decimal}" "test Inferior.num"
+gdb_test "python print ('result = %s' % i0.connection_num)" " = ${::decimal}" "test Inferior.connection_num"
 gdb_test "python print ('result = %s' % (i0.connection_num == i0.connection.num))" " = True" \
     "Inferior.connection_num equals Inferior.connection.num"
-gdb_test "python print ('result = %s' % i0.pid)" " = \[0-9\]+" "test Inferior.pid"
+gdb_test "python print ('result = %s' % i0.pid)" " = ${::decimal}" "test Inferior.pid"
 gdb_test "python print ('result = %s' % i0.was_attached)" " = False" "test Inferior.was_attached"
 gdb_test "python print (i0.threads ())" \
     "\\(<gdb.InferiorThread id=${decimal}\\.${decimal} target-id=\"\[^\r\n\]*\">,\\)" \

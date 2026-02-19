@@ -143,7 +143,7 @@ proc test_startup {} {
 
     # Extract the thread id number of main thread from "info threads" output.
     gdb_test_multiple "info threads" "get main thread id" {
-	-re "(\[0-9\]+)(${horiz}${tdlabel_re}${horiz}main.*)($gdb_prompt $)" {
+	-re "(${::decimal})(${horiz}${tdlabel_re}${horiz}main.*)($gdb_prompt $)" {
 	}
     }
 
@@ -158,7 +158,7 @@ proc test_startup {} {
 
     # Extract the thread id number of thread 1 from "info threads" output.
     gdb_test_multiple "info threads" "get thread 1 id" {
-	-re "(\[0-9\]+)(${horiz}${tdlabel_re}${horiz}thread1.*)($gdb_prompt $)" {
+	-re "(${::decimal})(${horiz}${tdlabel_re}${horiz}thread1.*)($gdb_prompt $)" {
 	}
     }
 
@@ -173,7 +173,7 @@ proc test_startup {} {
 
     # Extract the thread id number of thread 2 from "info threads" output.
     gdb_test_multiple "info threads" "get thread 2 id" {
-	-re "(\[0-9\]+)(${horiz}${tdlabel_re}${horiz}thread2.*)($gdb_prompt $)" {
+	-re "(${::decimal})(${horiz}${tdlabel_re}${horiz}thread2.*)($gdb_prompt $)" {
 	}
     }
 

@@ -43,7 +43,7 @@ clean_restart ${testfile}
 
 gdb_test "rbreak $realsrcfile2:func" \
     [multi_line \
-	 "Breakpoint 1 at 0x\[0-9a-f\]+: file [string_to_regexp ${subdir}/${srcfile2}], line \[0-9\]+\\." \
+	 "Breakpoint 1 at ${::hex}: file [string_to_regexp ${subdir}/${srcfile2}], line ${::decimal}\\." \
 	 "void func\\(void\\);" \
 	 "Successfully created breakpoint 1."] \
     "rbreak XXX/fullpath-expand-func.c:func"

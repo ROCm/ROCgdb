@@ -35,7 +35,7 @@ proc test_setup { count } {
     }
 
     gdb_test "step" \
-	"spacer \\(\\) at .*$srcfile:\[0-9\]+.*" \
+	"spacer \\(\\) at .*$srcfile:${::decimal}.*" \
 	"step to place breakpoints"
 
     return 1
@@ -49,7 +49,7 @@ with_test_prefix "del_1_stop_2" {
 
     gdb_test_no_output {delete $bp_num_1}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"delete #1, stop at #2"
 }
 
@@ -60,7 +60,7 @@ with_test_prefix "del_2_stop_1" {
 
     gdb_test_no_output {delete $bp_num_2}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"delete #2, stop at #1"
 }
 
@@ -75,7 +75,7 @@ with_test_prefix "dis_1_del_2_stop_3" {
 
     gdb_test_no_output {delete $bp_num_2}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #1, delete #2, stop at #3"
 }
 
@@ -90,7 +90,7 @@ with_test_prefix "dis_2_del_1_stop_3" {
 
     gdb_test_no_output {delete $bp_num_1}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #2, delete #1, stop at #3"
 }
 
@@ -105,7 +105,7 @@ with_test_prefix "dis_1_del_3_stop_1" {
 
     gdb_test_no_output {delete $bp_num_3}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #1, delete #3, stop at #2"
 }
 
@@ -120,7 +120,7 @@ with_test_prefix "dis_3_del_1_stop_2" {
 
     gdb_test_no_output {delete $bp_num_1}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #3, delete #1, stop at #2"
 }
 
@@ -135,7 +135,7 @@ with_test_prefix "dis_2_del_3_stop_1" {
 
     gdb_test_no_output {delete $bp_num_3}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #2, delete #3, stop at #1"
 }
 
@@ -150,6 +150,6 @@ with_test_prefix "dis_3_del_2_stop_1" {
 
     gdb_test_no_output {delete $bp_num_2}
 
-    gdb_test continue "Continuing\\..*Breakpoint \[0-9\]+, breakpt \\(\\) at .*$srcfile:\[0-9\]+.*" \
+    gdb_test continue "Continuing\\..*Breakpoint ${::decimal}, breakpt \\(\\) at .*$srcfile:${::decimal}.*" \
 	"disable #3, delete #2, stop at #1"
 }

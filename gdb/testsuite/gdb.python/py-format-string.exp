@@ -1031,7 +1031,7 @@ proc_with_prefix test_format {} {
   # Decimal.
   set opts "format='d'"
   with_test_prefix $opts {
-    set decimal_pointer_regexp "\[0-9\]+"
+    set decimal_pointer_regexp "${::decimal}"
     gdb_test "python print (gdb.Value (0x2a).format_string (${opts}))" \
       "42" \
       "0x2a with option ${opts}"
@@ -1085,7 +1085,7 @@ proc_with_prefix test_mixed {} {
 
   check_format_string "a_symbol_pointer" \
     "symbols=False, format='d'" \
-    "\[0-9\]+"
+    "${::decimal}"
 
   if { $current_lang == "c++" } {
     check_format_string "a_point_t_ref" \

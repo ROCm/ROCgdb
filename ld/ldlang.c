@@ -1232,7 +1232,7 @@ new_afile (const char *name,
 	}
       else
 	p->filename = name;
-      p->local_sym_name = concat ("-l", name, (const char *) NULL);
+      p->local_sym_name = stat_concat ("-l", name, (const char *) NULL);
       p->flags.maybe_archive = true;
       p->flags.real = true;
       p->flags.search_dirs = true;
@@ -1275,9 +1275,9 @@ lang_add_input_file (const char *name,
     {
       lang_input_statement_type *ret;
       char *sysrooted_name
-	= concat (ld_sysroot,
-		  name + (*name == '=' ? 1 : strlen ("$SYSROOT")),
-		  (const char *) NULL);
+	= stat_concat (ld_sysroot,
+		       name + (*name == '=' ? 1 : strlen ("$SYSROOT")),
+		       (const char *) NULL);
 
       /* We've now forcibly prepended the sysroot, making the input
 	 file independent of the context.  Therefore, temporarily

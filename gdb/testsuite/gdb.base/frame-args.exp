@@ -93,18 +93,24 @@ gdb_test "frame 1" \
 gdb_test_no_output "set print frame-info source-and-location" \
     "set print frame-info source-and-location"
 gdb_test "frame 1" \
-    "#1  call_me \\(\\.\\.\\.\\) at .*frame-args\\.c:.*\r\n\[1-9\]\[0-9\]*\[ \t\]*break_me \\(\\);" \
+    [multi_line \
+	 "#1  call_me \\(\\.\\.\\.\\) at .*frame-args\\.c:.*" \
+	 "$positive\[ \t\]*break_me \\(\\);"] \
     "frame 1 with print frame-info set to source-and-location and address off"
 
 # ... and "source-line".
 gdb_test_no_output "set print frame-info source-line" \
     "set print frame-info source-line"
 gdb_test "frame 1" \
-    "\[1-9\]\[0-9\]*\[ \t\]*break_me \\(\\);" \
+    "$positive\[ \t\]*break_me \\(\\);" \
     "frame 1 with print frame-info set to source-line and address off"
 
 
 # Verify overriding of the global setting by the backtrace -frame-info option.
 gdb_test "backtrace -frame-info source-and-location 2" \
-    ".*\r\n.*\r\n#1  call_me \\(\\.\\.\\.\\) at .*frame-args\\.c:.*\r\n\[1-9\]\[0-9\]*\[ \t\]*break_me \\(\\);.*" \
+    [multi_line \
+	 ".*" \
+	 ".*" \
+	 "#1  call_me \\(\\.\\.\\.\\) at .*frame-args\\.c:.*" \
+	 "$positive\[ \t\]*break_me \\(\\);.*"] \
     "backtrace -frame-info source-and-location 2 overriding print frame-info set to source-line"

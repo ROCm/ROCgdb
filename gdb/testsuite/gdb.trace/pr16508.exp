@@ -36,7 +36,7 @@ gdb_breakpoint "end"
 
 gdb_test_no_output "tstart"
 
-gdb_test "continue" ".*Breakpoint \[0-9\]+, end .*"
+gdb_test "continue" ".*Breakpoint ${::decimal}, end .*"
 
 set tracefile [standard_output_file ${testfile}]
 

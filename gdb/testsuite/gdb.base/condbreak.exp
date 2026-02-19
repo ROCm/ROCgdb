@@ -87,16 +87,16 @@ gdb_test "break marker4" \
 #
 gdb_test "info break" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location6.*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in marker1 at .*$srcfile2:$bp_location15.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location6.*
+${::decimal}\[\t \]+breakpoint     keep y.* in marker1 at .*$srcfile2:$bp_location15.*
 \[\t \]+stop only if \\(1==1\\).*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
+${::decimal}\[\t \]+breakpoint     keep y.* in main at .*$srcfile:$bp_location1.*
 \[\t \]+stop only if \\(1==1\\).*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in marker2 at .*$srcfile2:$bp_location8.*
+${::decimal}\[\t \]+breakpoint     keep y.* in marker2 at .*$srcfile2:$bp_location8.*
 \[\t \]+stop only if \\(a==43\\).*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in marker3 at .*$srcfile2:$bp_location17.*
+${::decimal}\[\t \]+breakpoint     keep y.* in marker3 at .*$srcfile2:$bp_location17.*
 \[\t \]+stop only if \\(multi_line_if_conditional\\(1,1,1\\)==0\\).*
-\[0-9\]+\[\t \]+breakpoint     keep y.* in marker4 at .*$srcfile2:$bp_location14.*" \
+${::decimal}\[\t \]+breakpoint     keep y.* in marker4 at .*$srcfile2:$bp_location14.*" \
     "breakpoint info"
 
 
@@ -110,7 +110,7 @@ rerun_to_main
 #
 # run until the breakpoint at a line number
 #
-gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
+gdb_test "continue" "Continuing\\..*Breakpoint ${::decimal}, main \\(argc=.*, argv=.*, envp=.*\\) at .*$srcfile:$bp_location1.*$bp_location1\[\t \]+printf.*factorial.*" \
 			"run until breakpoint set at a line number"
 
 #
@@ -154,10 +154,10 @@ gdb_test "continue" "Continuing\\..*Breakpoint \[0-9\]+, main \\(argc=.*, argv=.
 #
 # Until the Dwarf2 writer gets fixed, I'm going to XFAIL its behavior.
 gdb_test_multiple "continue" "run until breakpoint at marker1" {
-    -re  "Continuing\\..*Breakpoint \[0-9\]+, marker1 \\(\\) at .*$srcfile2:$bp_location15.*$bp_location15\[\t \]+.*$gdb_prompt $" {
+    -re  "Continuing\\..*Breakpoint ${::decimal}, marker1 \\(\\) at .*$srcfile2:$bp_location15.*$bp_location15\[\t \]+.*$gdb_prompt $" {
 	pass "run until breakpoint at marker1"
     }
-    -re  "Continuing\\..*Breakpoint \[0-9\]+, $hex in marker1 \\(\\) at .*$srcfile2:$bp_location15.*$bp_location15\[\t \]+.*$gdb_prompt $" {
+    -re  "Continuing\\..*Breakpoint ${::decimal}, $hex in marker1 \\(\\) at .*$srcfile2:$bp_location15.*$bp_location15\[\t \]+.*$gdb_prompt $" {
 	xfail "run until breakpoint at marker1"
     }
 }
@@ -166,10 +166,10 @@ gdb_test_multiple "continue" "run until breakpoint at marker1" {
 # Same issues here as above.
 setup_xfail hppa2.0w-*-* 11512CLLbs
 gdb_test_multiple "continue" "run until breakpoint at marker2" {
-    -re "Continuing\\..*Breakpoint \[0-9\]+, marker2 \\(a=43\\) at .*$srcfile2:$bp_location8.*$bp_location8\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, marker2 \\(a=43\\) at .*$srcfile2:$bp_location8.*$bp_location8\[\t \]+.*$gdb_prompt $" {
 	pass "run until breakpoint at marker2"
     }
-    -re "Continuing\\..*Breakpoint \[0-9\]+, $hex in marker2 \\(a=43\\) at .*$srcfile2:$bp_location8.*$bp_location8\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, $hex in marker2 \\(a=43\\) at .*$srcfile2:$bp_location8.*$bp_location8\[\t \]+.*$gdb_prompt $" {
 	xfail "run until breakpoint at marker2"
     }
 }
@@ -258,20 +258,20 @@ gdb_test "break *main if (1==1) -force-condition" \
 
 set test "run until breakpoint at marker3"
 gdb_test_multiple "continue" $test {
-    -re "Continuing\\..*Breakpoint \[0-9\]+, marker3 \\(a=$hex \"stack\", b=$hex \"trace\"\\) at .*$srcfile2:$bp_location17.*$bp_location17\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, marker3 \\(a=$hex \"stack\", b=$hex \"trace\"\\) at .*$srcfile2:$bp_location17.*$bp_location17\[\t \]+.*$gdb_prompt $" {
 	pass $test
     }
-    -re "Continuing\\..*Breakpoint \[0-9\]+, $hex in marker3 \\(a=$hex \"stack\", b=$hex \"trace\"\\) at .*$srcfile2:$bp_location17.*$bp_location17\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, $hex in marker3 \\(a=$hex \"stack\", b=$hex \"trace\"\\) at .*$srcfile2:$bp_location17.*$bp_location17\[\t \]+.*$gdb_prompt $" {
 	xfail $test
     }
 }
 
 set test "run until breakpoint at marker4"
 gdb_test_multiple "continue" $test {
-    -re "Continuing\\..*Breakpoint \[0-9\]+, marker4 \\(d=177601976\\) at .*$srcfile2:$bp_location14.*$bp_location14\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, marker4 \\(d=177601976\\) at .*$srcfile2:$bp_location14.*$bp_location14\[\t \]+.*$gdb_prompt $" {
 	pass $test
     }
-    -re "Continuing\\..*Breakpoint \[0-9\]+, $hex in marker4 \\(d=177601976\\) at .*$srcfile2:$bp_location14.*$bp_location14\[\t \]+.*$gdb_prompt $" {
+    -re "Continuing\\..*Breakpoint ${::decimal}, $hex in marker4 \\(d=177601976\\) at .*$srcfile2:$bp_location14.*$bp_location14\[\t \]+.*$gdb_prompt $" {
 	xfail $test
     }
 }

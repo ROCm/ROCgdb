@@ -49,7 +49,7 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
     # read memory value during a stop by unrelated event.  We are interested in not
     # losing the hardware watchpoint trigger.
 
-    gdb_test "rwatch thread1_rwatch" "Hardware read watchpoint \[0-9\]+: thread1_rwatch"
+    gdb_test "rwatch thread1_rwatch" "Hardware read watchpoint ${::decimal}: thread1_rwatch"
     set test "rwatch thread2_rwatch"
     gdb_test_multiple $test $test {
 	-re "Target does not support this type of hardware watchpoint\\.\r\n$gdb_prompt $" {
@@ -57,7 +57,7 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
 	    unsupported $test
 	    return
 	}
-	-re "Hardware read watchpoint \[0-9\]+: thread2_rwatch\r\n$gdb_prompt $" {
+	-re "Hardware read watchpoint ${::decimal}: thread2_rwatch\r\n$gdb_prompt $" {
 	    pass $test
 	}
     }
@@ -69,7 +69,7 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
     # same.  Such order cannot be guaranteed for GDB in general.
 
     gdb_test "continue" \
-	     "Hardware read watchpoint \[0-9\]+: thread\[12\]_rwatch\r\n\r\nValue = 0\r\n0x\[0-9a-f\]+ in thread\[12\]_func .*" \
+	     "Hardware read watchpoint ${::decimal}: thread\[12\]_rwatch\r\n\r\nValue = 0\r\n${::hex} in thread\[12\]_func .*" \
 	     "continue a"
 
     if {$reorder} {
@@ -77,12 +77,12 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
 	# with lower addresses will shift the former watchpoints to higher
 	# debug registers.
 
-	gdb_test "rwatch unused1_rwatch" "Hardware read watchpoint \[0-9\]+: unused1_rwatch"
-	gdb_test "rwatch unused2_rwatch" "Hardware read watchpoint \[0-9\]+: unused2_rwatch"
+	gdb_test "rwatch unused1_rwatch" "Hardware read watchpoint ${::decimal}: unused1_rwatch"
+	gdb_test "rwatch unused2_rwatch" "Hardware read watchpoint ${::decimal}: unused2_rwatch"
     }
 
     gdb_test "continue" \
-	     "Hardware read watchpoint \[0-9\]+: thread\[12\]_rwatch\r\n\r\nValue = 0\r\n0x\[0-9a-f\]+ in thread\[12\]_func .*" \
+	     "Hardware read watchpoint ${::decimal}: thread\[12\]_rwatch\r\n\r\nValue = 0\r\n${::hex} in thread\[12\]_func .*" \
 	     "continue b"
 
     # While the debug output itself is not checked in this testcase one bug was

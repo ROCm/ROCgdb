@@ -107,7 +107,7 @@ proc tracepoint_change_loc_1 { trace_type } {
 	# tracepoint has two locations after shlib change-loc-1 is loaded.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*4\.1.* in func4.*4\.2.* in func4.*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*4\.1.* in func4.*4\.2.* in func4.*" \
 	    "tracepoint with two locations"
 
 	set test "continue to marker 2"
@@ -135,7 +135,7 @@ proc tracepoint_change_loc_1 { trace_type } {
 	# loaded.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*4\.1.* in func4.*4\.2.* in func4.*4\.3.* in func4 .*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*4\.1.* in func4.*4\.2.* in func4.*4\.3.* in func4 .*" \
 	    "tracepoint with three locations"
 
 	gdb_test "continue" ".*Breakpoint.*marker.*at.*$srcfile.*" \
@@ -145,14 +145,14 @@ proc tracepoint_change_loc_1 { trace_type } {
 	# is pending.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
 (4\.\[1-3].* in func4.*\tinstalled on target.*){2}" \
 	    "tracepoint with two locations - installed (unload)"
 
 	setup_kfail gdb/32404 "*-*-*"
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
 4\.\[1-3].* \<PENDING\>\[\t \]+set_tracepoint.*" \
 	    "tracepoint with two locations - pending (unload)"
 
@@ -191,14 +191,14 @@ proc tracepoint_change_loc_2 { trace_type } {
 	# else is displayed.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*PENDING.*set_tracepoint\r\n\[\t \]+collect \\$$pcreg" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*PENDING.*set_tracepoint\r\n\[\t \]+collect \\$$pcreg" \
 	    "single pending tracepoint info (without symbols)"
 
 	gdb_load ${binfile}
 	# tracepoint has one location after executable is loaded.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*func4.*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*func4.*" \
 	    "tracepoint with one location"
 
 	set main_bp 0
@@ -217,7 +217,7 @@ proc tracepoint_change_loc_2 { trace_type } {
 	# tracepoint has two locations after shlib change-loc-1 is loaded.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*1\.1.* in func4.*1\.2.* in func4.*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*1\.1.* in func4.*1\.2.* in func4.*" \
 	    "tracepoint with two locations"
 
 	gdb_test "break marker" "Breakpoint.*at.* file .*$srcfile, line.*" \
@@ -251,7 +251,7 @@ proc tracepoint_change_loc_2 { trace_type } {
 	# tracepoint has three locations after shlib change-loc-2 is loaded.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*1\.1.* in func4.*1\.2.* in func4.*1\.3.* in func4 .*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*1\.1.* in func4.*1\.2.* in func4.*1\.3.* in func4 .*" \
 	    "tracepoint with three locations"
 
 	gdb_test "continue" ".*Breakpoint.*marker.*at.*$srcfile.*" \
@@ -260,14 +260,14 @@ proc tracepoint_change_loc_2 { trace_type } {
 	# shlib is unloaded, there are still three locations, but one is pending.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
 (1\.\[1-3].* in func4.*\tinstalled on target.*){2}" \
 	    "tracepoint with two locations - installed (unload)"
 
 	setup_kfail gdb/32404 "*-*-*"
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*\<MULTIPLE\>.*
 1\.\[1-3].* \<PENDING\>\[\t \]+set_tracepoint.*" \
 	    "tracepoint with two locations - pending (unload)"
 
@@ -330,7 +330,7 @@ proc tracepoint_install_in_trace_disabled { trace_type } {
 	# Make sure the tracepoint is _not_ installed on the target.
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*installed on target.*\<MULTIPLE\>.*4\.1.* in func4.*not installed on target.*4\.2.* in func4.*not installed on target.*" \
+${::decimal}\[\t \]+\(|fast \)tracepoint\[ \]+keep y.*installed on target.*\<MULTIPLE\>.*4\.1.* in func4.*not installed on target.*4\.2.* in func4.*not installed on target.*" \
 	    "tracepoint is not installed"
 
 	gdb_test "continue" ".*Breakpoint.*marker.*at.*$srcfile.*" \

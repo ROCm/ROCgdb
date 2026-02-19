@@ -46,14 +46,14 @@ gdb_test_multiple "break multipleDef" $name {
 	send_gdb "3\n"
 	exp_continue
     }
-    -re "Breakpoint \[0-9\]+ at 0x\[0-9a-f\]+: .*\r\n$gdb_prompt $" { pass $name }
+    -re "Breakpoint ${::decimal} at ${::hex}: .*\r\n$gdb_prompt $" { pass $name }
     -re ".*$gdb_prompt $"   { kfail "gdb/1236" $name }
 }
 
 set name "continue after break on multiply defined symbol"
 gdb_run_cmd
 gdb_test_multiple "" $name {
-    -re "Breakpoint \[0-9\]+, multipleDef \\\(\\\) at .*\r\n$gdb_prompt $" {
+    -re "Breakpoint ${::decimal}, multipleDef \\\(\\\) at .*\r\n$gdb_prompt $" {
 	pass $name
     }
     -re "\\\[0\\\] cancel\r\n\\\[1\\\] all\r\n\\\[2\\\] -.Decode multipleDef. at .*\r\n\\\[3\\\] multipleDef at .*\r\n> $" {

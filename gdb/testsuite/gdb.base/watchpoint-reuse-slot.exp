@@ -206,7 +206,7 @@ proc watch_command {cmd base offset width hw_wp_p} {
 
     if {$cmd == "hbreak"} {
 	set expr "*(buf.byte + $base + $offset)"
-	gdb_test "hbreak $expr" "Hardware assisted breakpoint \[0-9\]+ at $hex"
+	gdb_test "hbreak $expr" "Hardware assisted breakpoint ${::decimal} at $hex"
     } elseif {$cmd == "watch"} {
 	set expr "*(buf.byte + $base + $offset)@$width"
 
@@ -217,15 +217,15 @@ proc watch_command {cmd base offset width hw_wp_p} {
 	}
 
 	gdb_test "$cmd $expr" \
-	    "${wp_prefix} \[0-9\]+: [string_to_regexp $expr]"
+	    "${wp_prefix} ${::decimal}: [string_to_regexp $expr]"
     } elseif {$cmd == "awatch"} {
 	set expr "*(buf.byte + $base + $offset)@$width"
 	gdb_test "$cmd $expr" \
-	    "Hardware access \\(read/write\\) watchpoint \[0-9\]+: [string_to_regexp $expr]"
+	    "Hardware access \\(read/write\\) watchpoint ${::decimal}: [string_to_regexp $expr]"
     } elseif {$cmd == "rwatch"} {
 	set expr "*(buf.byte + $base + $offset)@$width"
 	gdb_test "$cmd $expr" \
-	    "Hardware read watchpoint \[0-9\]+: [string_to_regexp $expr]"
+	    "Hardware read watchpoint ${::decimal}: [string_to_regexp $expr]"
     }
 }
 

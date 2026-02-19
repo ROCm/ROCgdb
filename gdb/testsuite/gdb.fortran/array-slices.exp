@@ -149,10 +149,10 @@ proc run_test { repack } {
 	    array unset replacement_vars
 	    array set replacement_vars {}
 	    gdb_test_multiple "up" "up" {
-		-re "\r\n\[0-9\]+\[ \t\]+call ${func_name} \\((\[^\r\n\]+)\\)\r\n$gdb_prompt $" {
+		-re "\r\n${::decimal}\[ \t\]+call ${func_name} \\((\[^\r\n\]+)\\)\r\n$gdb_prompt $" {
 		    set array_slice_name $expect_out(1,string)
 		}
-		-re "\r\n\[0-9\]+\[ \t\]+call ${func_name} \\((\[^\r\n\]+)\\)\[ \t\]+! VARS=(\[^ \t\r\n\]+)\r\n$gdb_prompt $" {
+		-re "\r\n${::decimal}\[ \t\]+call ${func_name} \\((\[^\r\n\]+)\\)\[ \t\]+! VARS=(\[^ \t\r\n\]+)\r\n$gdb_prompt $" {
 		    set array_slice_name $expect_out(1,string)
 		    set unique_id $expect_out(2,string)
 		}

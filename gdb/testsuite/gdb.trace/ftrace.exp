@@ -61,7 +61,7 @@ if {![runto_main]} {
 proc run_trace_experiment {} {
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, begin .*" \
+	".*Breakpoint ${::decimal}, begin .*" \
 	"advance to trace begin"
 
     gdb_test_no_output "tstart" "start trace experiment"

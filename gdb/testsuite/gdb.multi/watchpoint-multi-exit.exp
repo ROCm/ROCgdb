@@ -40,7 +40,7 @@ proc do_test {dispose} {
 	return
     }
 
-    gdb_test "watch globalvar" "atchpoint \[0-9\]+: globalvar" \
+    gdb_test "watch globalvar" "atchpoint ${::decimal}: globalvar" \
 	"set watchpoint on inferior 2"
 
     # Dispose of the inferior.  This should get rid of this inferior's

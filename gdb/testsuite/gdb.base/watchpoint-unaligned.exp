@@ -54,7 +54,7 @@ foreach wpsize $sizes {
 		set test "$rwatch data.u.size$wpsize\[$wpoffset\]"
 		set wpnum ""
 		gdb_test_multiple $test $test {
-		    -re "$rwatch_exp (\[0-9\]+): .*\r\n$gdb_prompt $" {
+		    -re "$rwatch_exp (${::decimal}): .*\r\n$gdb_prompt $" {
 			set wpnum $expect_out(1,string)
 		    }
 		    -re "Expression cannot be implemented with read/access watchpoint.\r\n$gdb_prompt $" {
@@ -106,7 +106,7 @@ foreach_with_prefix wpcount {4 7} {
 	# Initialize the result incase the test fails.
 	set wpoffset_to_wpnum($wpoffset) 0
 	gdb_test_multiple $test $test {
-	    -re "$rwatch_exp (\[0-9\]+): .*\r\n$gdb_prompt $" {
+	    -re "$rwatch_exp (${::decimal}): .*\r\n$gdb_prompt $" {
 		set wpoffset_to_wpnum($wpoffset) $expect_out(1,string)
 	    }
 	    -re "There are not enough available hardware resources for this watchpoint.\r\n$gdb_prompt $" {

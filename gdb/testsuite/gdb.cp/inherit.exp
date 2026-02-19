@@ -431,7 +431,7 @@ proc test_print_anon_union {} {
 
     set name "print variable of type anonymous union"
     gdb_test_multiple "print g_anon_union" $name {
-	-re "$vhn = \{one = 1, \{a = 2, b = \[0-9\]+\}\}$nl$gdb_prompt $" {
+	-re "$vhn = \{one = 1, \{a = 2, b = ${::decimal}\}\}$nl$gdb_prompt $" {
 	    pass $name
 	}
     }

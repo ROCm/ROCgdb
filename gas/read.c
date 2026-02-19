@@ -3200,12 +3200,12 @@ do_repeat (size_t count, const char *start, const char *end,
 {
   sb one;
   sb many;
+  size_t total, limit;
+  unsigned int line;
+  const char *file = as_where_top (&line);
 
-  if (count > 0x7fffffff)
-    {
-      as_bad (_("excessive count %zu for %s - ignored"), count, start);
-      count = 0;
-    }
+  demand_empty_rest_of_line ();
+  --input_line_pointer;
 
   sb_new (&one);
   if (!buffer_and_nest (start, end, &one, get_non_macro_line_sb))
@@ -3216,6 +3216,14 @@ do_repeat (size_t count, const char *start, const char *end,
     }
 
   sb_terminate (&one);
+
+  limit = (size_t) LONG_MAX < 0xffffffff ? (size_t) LONG_MAX : 0xffffffff;
+  if (gas_mul_overflow (count, one.len, &total) || total > limit)
+    {
+      as_bad_where (file, line,
+		    _("excessive count %zu for %s - ignored"), count, start);
+      count = 1;
+    }
 
   if (expander != NULL && !*expander && strstr (one.ptr, "\\+") != NULL)
     {
@@ -3865,6 +3873,7 @@ s_float_space (int float_type)
   char temp[MAXIMUM_NUMBER_OF_CHARS_FOR_FLOAT];
   char *stop = NULL;
   char stopc = 0;
+  char *p;
 
 #ifdef md_cons_align
   md_cons_align (1);
@@ -3898,13 +3907,11 @@ s_float_space (int float_type)
       return;
     }
 
-  while (--count >= 0)
-    {
-      char *p;
-
-      p = frag_more (flen);
-      memcpy (p, temp, flen);
-    }
+  if (count == 1)
+    p = frag_more (flen);
+  else
+    p = frag_var (rs_fill, flen, flen, 0, NULL, count, NULL);
+  memcpy (p, temp, flen);
 
   demand_empty_rest_of_line ();
 
@@ -5165,12 +5172,11 @@ float_cons (/* Clobbers input_line-pointer, checks end-of-line.  */
 		count = count_exp.X_add_number;
 	    }
 #endif
-
-	  while (--count >= 0)
-	    {
-	      p = frag_more (length);
-	      memcpy (p, temp, length);
-	    }
+	  if (count == 1)
+	    p = frag_more (length);
+	  else
+	    p = frag_var (rs_fill, length, length, 0, NULL, count, NULL);
+	  memcpy (p, temp, length);
 	}
       SKIP_WHITESPACE ();
     }

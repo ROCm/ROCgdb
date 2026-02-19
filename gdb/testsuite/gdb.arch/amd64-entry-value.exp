@@ -53,7 +53,7 @@ gdb_continue_to_breakpoint "entry: breakhere"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +d *\\(i=31, i@entry=30, j=31\\.5, j@entry=30\\.5\\) \[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in main .*"] \
+	 "#1 +${::hex} in main .*"] \
     "entry: bt"
 gdb_test "p i" " = 31" "entry: p i"
 gdb_test "p i@entry" " = 30" "entry: p i@entry"
@@ -69,7 +69,7 @@ gdb_test_no_output "set variable i = 0" "entry_locexpr: set variable i = 0"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +locexpr *\\(i=0, i@entry=30\\) \[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in main .*"] \
+	 "#1 +${::hex} in main .*"] \
     "entry_locexpr: bt"
 
 
@@ -80,7 +80,7 @@ gdb_continue_to_breakpoint "entry_stack: stacktest"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +stacktest *\\(r1=r1@entry=1, r2=r2@entry=2, \[^\r\n\]+, s1=3, s1@entry=11, s2=4, s2@entry=12, \[^\r\n\]+, d9=3\\.5, d9@entry=11\\.5, da=4\\.5, da@entry=12\\.5\\) \[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in main .*"] \
+	 "#1 +${::hex} in main .*"] \
     "entry_stack: bt at entry"
 
 gdb_continue_to_breakpoint "entry_stack: breakhere_stacktest"
@@ -88,7 +88,7 @@ gdb_continue_to_breakpoint "entry_stack: breakhere_stacktest"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +stacktest *\\(r1=r1@entry=1, r2=r2@entry=2, \[^\r\n\]+, s1=3, s1@entry=11, s2=4, s2@entry=12, \[^\r\n\]+, d9=3\\.5, d9@entry=11\\.5, da=4\\.5, da@entry=12\\.5\\) \[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in main .*"] \
+	 "#1 +${::hex} in main .*"] \
     "entry_stack: bt"
 
 gdb_test "p s1" " = 3" "entry_stack: p s1"
@@ -185,20 +185,20 @@ gdb_test "frame" {\(inv=<optimized out>\).*} "entry_invalid: frame: default"
 gdb_continue_to_breakpoint "entry_reference: reference"
 
 # GCC PR debug/49980: Missing stackparam1@entry and stackparam2@entry.
-gdb_test "bt" "#0 +reference \\(regparam=regparam@entry=@0x\[0-9a-f\]+: 1, nodataparam=@0x\[0-9a-f\]+: 2, \[^\r\n\]+, stackparam1=@0x\[0-9a-f\]+: 11, stackparam2=@0x\[0-9a-f\]+: 12\\) \[^\r\n\]*\r\n#1 +0x\[0-9a-f\]+ in main \\(\\) \[^\r\n\]*" \
+gdb_test "bt" "#0 +reference \\(regparam=regparam@entry=@${::hex}: 1, nodataparam=@${::hex}: 2, \[^\r\n\]+, stackparam1=@${::hex}: 11, stackparam2=@${::hex}: 12\\) \[^\r\n\]*\r\n#1 +${::hex} in main \\(\\) \[^\r\n\]*" \
 	 "entry_reference: bt at entry"
 
 gdb_continue_to_breakpoint "entry_reference: breakhere_reference"
 
 # GCC PR debug/49980: Missing stackparam1@entry and stackparam2@entry.
-gdb_test "bt" "#0 +reference \\(regparam=@0x\[0-9a-f\]+: 21, regparam@entry=@0x\[0-9a-f\]+: 1, nodataparam=@0x\[0-9a-f\]+: 22, \[^\r\n\]+, stackparam1=@0x\[0-9a-f\]+: 31, stackparam2=@0x\[0-9a-f\]+: 32\\) \[^\r\n\]*\r\n#1 +0x\[0-9a-f\]+ in main \\(\\) \[^\r\n\]*" \
+gdb_test "bt" "#0 +reference \\(regparam=@${::hex}: 21, regparam@entry=@${::hex}: 1, nodataparam=@${::hex}: 22, \[^\r\n\]+, stackparam1=@${::hex}: 31, stackparam2=@${::hex}: 32\\) \[^\r\n\]*\r\n#1 +${::hex} in main \\(\\) \[^\r\n\]*" \
 	 "entry_reference: bt"
 gdb_test "ptype regparam" " = int &" "entry_reference: ptype regparam"
 
 set test "entry_reference: p regparam"
 set addr ""
 gdb_test_multiple "p regparam" $test {
-    -re " = \\(int &\\) @(0x\[0-9a-f\]+): 21\r\n$gdb_prompt $" {
+    -re " = \\(int &\\) @(${::hex}): 21\r\n$gdb_prompt $" {
 	set addr $expect_out(1,string)
 	pass $test
     }
@@ -208,7 +208,7 @@ gdb_test "ptype regparam@entry" " = int &" "entry_reference: ptype regparam@entr
 gdb_test "p regparam@entry" " = \\(int &\\) @$addr: 1" "entry_reference: p regparam@entry"
 gdb_test "p &regparam@entry" " = \\(int \\*\\) $addr" "entry_reference: p &regparam@entry"
 gdb_test "p regcopy" " = 1" "entry_reference: p regcopy"
-gdb_test "p nodataparam" " = \\(int &\\) @0x\[0-9a-f\]+: 22" "entry_reference: p nodataparam"
+gdb_test "p nodataparam" " = \\(int &\\) @${::hex}: 22" "entry_reference: p nodataparam"
 gdb_test "p nodataparam@entry" "Cannot resolve DW_AT_call_data_value" "entry_reference: p nodataparam@entry"
 
 
@@ -219,9 +219,9 @@ gdb_continue_to_breakpoint "tailcall: breakhere"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +d *\\(i=71, i@entry=70, j=73\\.5, j@entry=72\\.5\\) \[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in c \\(i=i@entry=7, j=j@entry=7\\.25\\) \[^\r\n\]*" \
-	 "#2 +0x\[0-9a-f\]+ in b \\(i=i@entry=5, j=j@entry=5\\.25\\) \[^\r\n\]*" \
-	 "#3 +0x\[0-9a-f\]+ in main \[^\r\n\]*"] \
+	 "#1 +${::hex} in c \\(i=i@entry=7, j=j@entry=7\\.25\\) \[^\r\n\]*" \
+	 "#2 +${::hex} in b \\(i=i@entry=5, j=j@entry=5\\.25\\) \[^\r\n\]*" \
+	 "#3 +${::hex} in main \[^\r\n\]*"] \
     "tailcall: bt"
 gdb_test "p i" " = 71" "tailcall: p i"
 gdb_test "p i@entry" " = 70" "tailcall: p i@entry"
@@ -265,12 +265,12 @@ gdb_continue_to_breakpoint "ambiguous: breakhere"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +d \\(i=<optimized out>, j=<optimized out>\\)\[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in amb_z \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#2 +0x\[0-9a-f\]+ in amb_y \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#3 +0x\[0-9a-f\]+ in amb_x \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#4 +0x\[0-9a-f\]+ in amb_b \\(i=i@entry=101\\)\[^\r\n\]*" \
-	 "#5 +0x\[0-9a-f\]+ in amb_a \\(i=i@entry=100\\)\[^\r\n\]*" \
-	 "#6 +0x\[0-9a-f\]+ in main \\(\\)\[^\r\n\]*"] \
+	 "#1 +${::hex} in amb_z \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#2 +${::hex} in amb_y \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#3 +${::hex} in amb_x \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#4 +${::hex} in amb_b \\(i=i@entry=101\\)\[^\r\n\]*" \
+	 "#5 +${::hex} in amb_a \\(i=i@entry=100\\)\[^\r\n\]*" \
+	 "#6 +${::hex} in main \\(\\)\[^\r\n\]*"] \
     "ambiguous: bt"
 
 
@@ -282,12 +282,12 @@ gdb_continue_to_breakpoint "self: breakhere"
 gdb_test "bt" \
     [multi_line \
 	 "^#0 +d \\(i=<optimized out>, j=<optimized out>\\)\[^\r\n\]*" \
-	 "#1 +0x\[0-9a-f\]+ in self \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#2 +0x\[0-9a-f\]+ in self2 \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#3 +0x\[0-9a-f\]+ in self \\(i=<optimized out>\\)\[^\r\n\]*" \
-	 "#4 +0x\[0-9a-f\]+ in main \\(\\)\[^\r\n\]*"] \
+	 "#1 +${::hex} in self \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#2 +${::hex} in self2 \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#3 +${::hex} in self \\(i=<optimized out>\\)\[^\r\n\]*" \
+	 "#4 +${::hex} in main \\(\\)\[^\r\n\]*"] \
     "self: bt"
 
 gdb_test_no_output "set debug entry-values 1"
-gdb_test "bt" "DW_OP_entry_value resolving has found function \"self\\(int\\)\" at 0x\[0-9a-f\]+ can call itself via tail calls\r\n.*" \
+gdb_test "bt" "DW_OP_entry_value resolving has found function \"self\\(int\\)\" at ${::hex} can call itself via tail calls\r\n.*" \
 	 "self: bt debug entry-values"

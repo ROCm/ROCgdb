@@ -151,7 +151,10 @@ proc insert_catch_syscall_with_arg { syscall } {
 
     # Trying to set the catchpoint
     set thistest "catch syscall with arguments, $syscall"
-    gdb_test "catch syscall $syscall" "Catchpoint $decimal \\(syscall \'?${syscall}\'?( \[${decimal}\])?\\)" $thistest
+    gdb_test "catch syscall $syscall" \
+	[subst_vars \
+	     {Catchpoint $decimal \(syscall '?$syscall'?( \[$decimal\])?\)}] \
+	$thistest
 
     check_info_bp_specific_syscall $syscall
 }

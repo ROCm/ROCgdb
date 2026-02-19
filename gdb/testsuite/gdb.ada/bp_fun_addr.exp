@@ -26,7 +26,7 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable {debug}] != ""} {
 clean_restart ${testfile}
 
 gdb_test "break *bp_fun_addr'address" \
-    "Breakpoint \[0-9\]+ at.*: file .*bp_fun_addr.adb, line \[0-9\]+."
+    "Breakpoint ${::decimal} at.*: file .*bp_fun_addr.adb, line ${::decimal}."
 
 gdb_run_cmd
 gdb_test "" \

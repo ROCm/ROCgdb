@@ -46,6 +46,6 @@ gdb_test_no_output "set cp-abi gnu-v3"
 # DWARF) symbol is available.  Therefore the function `f' must have DWARF which
 # confuses it a bit.
 
-gdb_test "p c.membername" " = {.*} 0x\[0-9a-f\]+ <f\\(\\)>"
+gdb_test "p c.membername" " = {.*} ${::hex} <f\\(\\)>"
 gdb_breakpoint "C::membername"
-gdb_test "p c.membername ()" "\r\nBreakpoint \[0-9\]+, .*"
+gdb_test "p c.membername ()" "\r\nBreakpoint ${::decimal}, .*"

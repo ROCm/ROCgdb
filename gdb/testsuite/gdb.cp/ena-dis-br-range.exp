@@ -52,7 +52,7 @@ proc make_info_breakpoint_reply_re {b1 b2 b21 b22 b23 b24} {
 }
 
 gdb_test "break foo::overload" \
-    "Breakpoint \[0-9\]+ at $hex: foo::overload. .4 locations." \
+    "Breakpoint ${::decimal} at $hex: foo::overload. .4 locations." \
     "set breakpoint at overload"
 
 gdb_test "info break" [make_info_breakpoint_reply_re y y y y y y] \

@@ -34,4 +34,4 @@ if {![runto g]} {
     return -1
 }
 
-gdb_test "bt" "\r\n#0 +g \\(x=x@entry=2\\) at \[^\r\n\]*\r\n#1 +0x\[0-9a-f\]+ in f \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#2 +0x\[0-9a-f\]+ in main .*"
+gdb_test "bt" "\r\n#0 +g \\(x=x@entry=2\\) at \[^\r\n\]*\r\n#1 +${::hex} in f \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#2 +${::hex} in main .*"

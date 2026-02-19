@@ -198,7 +198,7 @@ namespace eval $testfile {
 	gdb_test_multiple "" $tst {
 	    -re "break -function my_unique_function_name" {
 		send_gdb "\n"
-		gdb_test "" ".*Breakpoint \[0-9\]+.*" $tst
+		gdb_test "" ".*Breakpoint ${::decimal}.*" $tst
 		gdb_test_no_output "delete \$bpnum" "delete $tst breakpoint"
 	    }
 	}
@@ -210,7 +210,7 @@ namespace eval $testfile {
 		send_gdb "\t\t"
 		gdb_test_multiple "" $tst {
 		    -re "\\\x07\r\nmyfunction\[ \t\]+myfunction2\[ \t\]+myfunction3\[ \t\]+myfunction4\[ \t\]+\r\n$gdb_prompt " {
-			gdb_test "2" ".*Breakpoint \[0-9\]+.*" $tst
+			gdb_test "2" ".*Breakpoint ${::decimal}.*" $tst
 			gdb_test_no_output "delete \$bpnum" "delete $tst breakpoint"
 		    }
 		}
@@ -309,7 +309,7 @@ namespace eval $testfile {
 		send_gdb "\t\t"
 		gdb_test_multiple "" $tst {
 		    -re "\\\x07\r\nmyfunction3\[ \t\]+myfunction4\[ \t\]+\r\n$gdb_prompt " {
-			gdb_test "3" ".*Breakpoint \[0-9\]+.*" $tst
+			gdb_test "3" ".*Breakpoint ${::decimal}.*" $tst
 			gdb_test_no_output "delete \$bpnum" "delete $tst breakpoint"
 		    }
 		}
@@ -336,7 +336,7 @@ namespace eval $testfile {
 	gdb_test_multiple "" $tst {
 	    -re "break -func myfunction4 -source 3explicit.c " {
 		send_gdb "\n"
-		gdb_test "" "Breakpoint \[0-9\]+.*" $tst
+		gdb_test "" "Breakpoint ${::decimal}.*" $tst
 		gdb_test_no_output "delete \$bpnum" "delete $tst breakpoint"
 	    }
 	}

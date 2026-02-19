@@ -27,7 +27,7 @@ gdb_test "break $srcfile:stop_here" \
     "breakpoint function in file"
 
 gdb_run_cmd
-gdb_test "" "Breakpoint \[0-9\]+,.*stop_here.* at .*$srcfile:.*" "run until function breakpoint"
+gdb_test "" "Breakpoint ${::decimal},.*stop_here.* at .*$srcfile:.*" "run until function breakpoint"
 
 # We've now got the target program in a state where we can test "find".
 

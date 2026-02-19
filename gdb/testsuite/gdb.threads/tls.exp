@@ -132,7 +132,7 @@ proc check_thread_stack {number spin_threads spin_threads_level} {
     }
     send_gdb "where\n"
     gdb_expect {
-	-re ".*(\[0-9\]+)\[ \t\]+$hex (\\\[PAC\\\] )?in spin \\(vp=(0x\[0-9a-f\]+).*\r\n$gdb_prompt $" {
+	-re ".*(${::decimal})\[ \t\]+$hex (\\\[PAC\\\] )?in spin \\(vp=(${::hex}).*\r\n$gdb_prompt $" {
 	    if {[info exists tarr($number)]} {
 		fail "backtrace of thread number $number in spin"
 	    } else {
@@ -229,7 +229,7 @@ gdb_test "continue" ".*Breakpoint 3.*still alive.*" "continue to synch point"
 set no_of_threads 0
 send_gdb "info thread\n"
 gdb_expect {
-    -re "^info thread\[ \t\r\n\]+ *Id .*Frame\[ \t\r\n\]+.*(\[0-9\]+) *${tdlabel_re}\[^\r\n\]+\r\n$gdb_prompt $" {
+    -re "^info thread\[ \t\r\n\]+ *Id .*Frame\[ \t\r\n\]+.*(${::decimal}) *${tdlabel_re}\[^\r\n\]+\r\n$gdb_prompt $" {
 	   set no_of_threads $expect_out(1,string)
 	   pass "get number of threads"
 	}
@@ -307,15 +307,15 @@ gdb_test "info address me" ".*me.*is a (complex DWARF expression:|variable).*"
 
 # Test LOC_UNRESOLVED references resolving for `extern' TLS variables.
 
-gdb_test "p a_thread_local" " = \[0-9\]+"
+gdb_test "p a_thread_local" " = ${::decimal}"
 # Here it could crash with: Cannot access memory at address 0x0
-gdb_test "p file2_thread_local" " = \[0-9\]+"
+gdb_test "p file2_thread_local" " = ${::decimal}"
 # Depending on the current lookup scope we get LOC_UNRESOLVED or LOC_COMPUTED
 # both printing:
 # Symbol "file2_thread_local" is a thread-local variable at offset 8 in the thread-local storage for `.../gdb.threads/tls'.
 gdb_test "info address file2_thread_local" "Symbol \"file2_thread_local\" is a thread-local variable.*"
 # Here it could also crash with: Cannot access memory at address 0x0
-gdb_test "p a_thread_local" " = \[0-9\]+" "p a_thread_local second time"
+gdb_test "p a_thread_local" " = ${::decimal}" "p a_thread_local second time"
 gdb_test "info address a_thread_local" "Symbol \"a_thread_local\" is a thread-local variable.*"
 
 # Done!

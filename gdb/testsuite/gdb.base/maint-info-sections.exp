@@ -59,7 +59,7 @@ proc check_maint_info_target_sections_output {prefix} {
 		    exp_continue
 		}
 	    }
-	    -re "^ \\\[\[0-9\]+\\\]\\s+$hex->$hex at $hex: \[^*\r\]+\\yALLOC\\y\[^*\r\]*\r\n" {
+	    -re "^ \\\[${::decimal}\\\]\\s+$hex->$hex at $hex: \[^*\r\]+\\yALLOC\\y\[^*\r\]*\r\n" {
 		# A bfd section description line.
 		set seen_a_section true
 		if { $expecting_aux_info } {
@@ -99,7 +99,7 @@ gdb_test_multiple "maint info sections" "general output check" {
 	set seen_header true
 	exp_continue
     }
-    -re "^ \\\[\[0-9\]+\\\]\[\t \]+$hex->$hex at $hex: \[^*\r\]+\r\n" {
+    -re "^ \\\[${::decimal}\\\]\[\t \]+$hex->$hex at $hex: \[^*\r\]+\r\n" {
 	set seen_a_section true
 	exp_continue
     }
@@ -211,7 +211,7 @@ gdb_test_multiple "maint info sections -all-objects" "" {
 	set seen_header true
 	exp_continue
     }
-    -re "^ \\\[\[0-9\]+\\\]\[\t \]+$hex->$hex at $hex: \[^*\r\]+\r\n" {
+    -re "^ \\\[${::decimal}\\\]\[\t \]+$hex->$hex at $hex: \[^*\r\]+\r\n" {
 	set seen_a_section true
 	exp_continue
     }

@@ -65,38 +65,38 @@ if { $traced != 11 } {
 
 # test that we see the expected instructions
 gdb_test "record instruction-history 3,7" [multi_line \
-  "3\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "4\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tdec    %eax" \
-  "5\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tjmp    0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "6\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tcmp    \\\$0x0,%eax" \
-  "7\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
+  "3\t   ${::hex} <loop\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
+  "4\t   ${::hex} <loop\\+${::decimal}>:\tdec    %eax" \
+  "5\t   ${::hex} <loop\\+${::decimal}>:\tjmp    ${::hex} <loop\\+${::decimal}>" \
+  "6\t   ${::hex} <loop\\+${::decimal}>:\tcmp    \\\$0x0,%eax" \
+  "7\t   ${::hex} <loop\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
   ]
 
 gdb_test "record instruction-history /f 3,+5" [multi_line \
-  "3\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "4\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tdec    %eax" \
-  "5\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tjmp    0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "6\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tcmp    \\\$0x0,%eax" \
-  "7\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
+  "3\t   ${::hex} <\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
+  "4\t   ${::hex} <\\+${::decimal}>:\tdec    %eax" \
+  "5\t   ${::hex} <\\+${::decimal}>:\tjmp    ${::hex} <loop\\+${::decimal}>" \
+  "6\t   ${::hex} <\\+${::decimal}>:\tcmp    \\\$0x0,%eax" \
+  "7\t   ${::hex} <\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
   ]
 
 gdb_test "record instruction-history /p 7,-5" [multi_line \
-  "3\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "4\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tdec    %eax" \
-  "5\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tjmp    0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "6\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tcmp    \\\$0x0,%eax" \
-  "7\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
+  "3\t   ${::hex} <loop\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
+  "4\t   ${::hex} <loop\\+${::decimal}>:\tdec    %eax" \
+  "5\t   ${::hex} <loop\\+${::decimal}>:\tjmp    ${::hex} <loop\\+${::decimal}>" \
+  "6\t   ${::hex} <loop\\+${::decimal}>:\tcmp    \\\$0x0,%eax" \
+  "7\t   ${::hex} <loop\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
   ]
 
 gdb_test "record instruction-history /pf 3,7" [multi_line \
-  "3\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "4\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tdec    %eax" \
-  "5\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tjmp    0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
-  "6\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tcmp    \\\$0x0,%eax" \
-  "7\t   0x\[0-9a-f\]+ <\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>" \
+  "3\t   ${::hex} <\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
+  "4\t   ${::hex} <\\+${::decimal}>:\tdec    %eax" \
+  "5\t   ${::hex} <\\+${::decimal}>:\tjmp    ${::hex} <loop\\+${::decimal}>" \
+  "6\t   ${::hex} <\\+${::decimal}>:\tcmp    \\\$0x0,%eax" \
+  "7\t   ${::hex} <\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>" \
   ]
 
-gdb_test "record instruction-history 3,3" "3\t   0x\[0-9a-f\]+ <loop\\+\[0-9\]+>:\tje     0x\[0-9a-f\]+ <loop\\+\[0-9\]+>"
+gdb_test "record instruction-history 3,3" "3\t   ${::hex} <loop\\+${::decimal}>:\tje     ${::hex} <loop\\+${::decimal}>"
 
 # the following tests are checking the iterators
 # to avoid lots of regexps, we just check the number of lines that

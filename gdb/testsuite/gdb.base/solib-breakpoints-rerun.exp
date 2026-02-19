@@ -42,7 +42,7 @@ gdb_test "run" "Breakpoint $decimal, solib_main.*" "run with breakpoint"
 delete_breakpoints
 
 gdb_test "with confirm off -- run" \
-    "\[Inferior $decimal \\(\[^\r\n\]*\\) exited normally\]" \
+    [subst_vars {\[Inferior $decimal \([^\r\n]*\) exited normally\]}] \
     "run without breakpoint"
 
 set bp_location [gdb_get_line_number "result = solib_main"]

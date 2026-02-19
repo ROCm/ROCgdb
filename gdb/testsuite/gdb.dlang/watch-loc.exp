@@ -80,7 +80,7 @@ if {![runto "_Dmain"]} {
 
 # watch -l will rewrite the expression to "*(watch.tstruct *) 0x12345",
 # this should not cause syntax error in the cast expression.
-gdb_test "watch -l my_data" ".*atchpoint \[0-9\]+: -location my_data"
+gdb_test "watch -l my_data" ".*atchpoint ${::decimal}: -location my_data"
 
 # Same test as above, but done explicitly.
 gdb_test "print *(watch.tstruct *) &my_data" "{<No data fields>}"

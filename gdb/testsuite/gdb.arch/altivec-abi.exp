@@ -58,7 +58,7 @@ proc altivec_abi_tests { extra_flags force_abi } {
     gdb_test "set print frame-arguments all"
     gdb_test "set powerpc vector-abi $force_abi"
 
-    gdb_test "b marker" "Breakpoint 2 at.*file.*altivec-abi.c, line \[0-9\]+." "break marker"
+    gdb_test "b marker" "Breakpoint 2 at.*file.*altivec-abi.c, line ${::decimal}." "break marker"
     gdb_test "continue" "Breakpoint 2.*marker.*altivec-abi.c.*" "continue to marker"
     gdb_test "finish" "Run till exit from .0.*marker.*at.*altivec-abi.c.*main \\(\\) at.*altivec-abi.c.*result = vec_func \\(vshort,.*goes in v2.*" "back to main (1)"
 
@@ -73,13 +73,13 @@ proc altivec_abi_tests { extra_flags force_abi } {
     # the last one will go on the stack.
     set msg "call inferior function with vectors (1)"
     gdb_test "p vec_func(vshort,vushort,vint,vuint,vchar,vuchar,vfloat,x,y,a,b,c,intv_on_stack)" \
-	".\[0-9\]+ = .14, 36, 58, 80." "call inferior function with vectors (1)"
+	".${::decimal} = .14, 36, 58, 80." "call inferior function with vectors (1)"
 
 
     # Let's call the function again with dummy arguments.  This is to clean
     # up the contents of the vector registers before the next call.
     gdb_test "p vec_func(vshort_d,vushort_d,vint_d,vuint_d,vchar_d,vuchar_d,vfloat_d,x_d,y_d,a_d,b_d,c_d,intv_on_stack_d)" \
-	".\[0-9\]+ = .0, 0, 0, 0." "call inferior function with vectors (2)"
+	".${::decimal} = .0, 0, 0, 0." "call inferior function with vectors (2)"
 
     # Attempt to take address of the return value of vec_func.
     gdb_test "p &vec_func(vshort,vushort,vint,vuint,vchar,vuchar,vfloat,x,y,a,b,c,intv_on_stack)" \

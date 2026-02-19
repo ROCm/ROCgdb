@@ -100,19 +100,19 @@ for { set r 0 } { $r < $nr_regs } { incr r } {
 	".. = \\{$r, $r.125, $r.25, $r.375, $r.5, $r.625, $r.75, $r.875\\}.*" \
 	"check double contents of %zmm$r"
     gdb_test "print \$zmm$r.v32_int16" \
-	".. = \\{(-?\[0-9\]+, ){31}-?\[0-9\]+\\}.*" \
+	".. = \\{(-?${::decimal}, ){31}-?${::decimal}\\}.*" \
 	"check int16 contents of %zmm$r"
     gdb_test "print \$ymm$r.v4_double" \
 	".. = \\{$r, $r.125, $r.25, $r.375\\}.*" \
 	"check float contents of %ymm$r"
     gdb_test "print \$ymm$r.v16_int16" \
-	".. = \\{(-?\[0-9\]+, ){15}-?\[0-9\]+\\}.*" \
+	".. = \\{(-?${::decimal}, ){15}-?${::decimal}\\}.*" \
 	"check int16 contents of %ymm$r"
     gdb_test "print \$xmm$r.v2_double" \
 	".. = \\{$r, $r.125\\}.*" \
 	"check float contents of %xmm$r"
     gdb_test "print \$xmm$r.v8_int16" \
-	".. = \\{(-?\[0-9\]+, ){7}-?\[0-9\]+\\}.*" \
+	".. = \\{(-?${::decimal}, ){7}-?${::decimal}\\}.*" \
 	"check int16 contents of %xmm$r"
 }
 

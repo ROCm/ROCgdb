@@ -37,12 +37,12 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } 
 
 proc test_bp { loc msg } {
     gdb_test "break $loc" \
-	"Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: file .*pck.adb, line \[0-9\]+\\." \
+	"Breakpoint ${::decimal} at ${::hex}: file .*pck.adb, line ${::decimal}\\." \
 	"break $loc - $msg"
 
     gdb_run_cmd
     gdb_test "" \
-	"Breakpoint \[0-9\]+, pck\\.dummy_task (.*)" \
+	"Breakpoint ${::decimal}, pck\\.dummy_task (.*)" \
 	"run to $loc - $msg"
 }
 

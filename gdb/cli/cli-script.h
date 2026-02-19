@@ -131,11 +131,6 @@ extern counted_command_line read_command_lines_1
 
 extern void script_from_file (FILE *stream, const char *file);
 
-extern void show_user_1 (struct cmd_list_element *c,
-			 const char *prefix,
-			 const char *name,
-			 struct ui_file *stream);
-
 /* Execute the commands in CMDLINES.  */
 
 extern void execute_control_commands (struct command_line *cmdlines,

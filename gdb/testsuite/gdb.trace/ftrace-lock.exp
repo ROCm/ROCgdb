@@ -80,7 +80,7 @@ gdb_test_no_output "tstart"
 # timeout temporarily.
 with_timeout_factor $NUM_THREADS {
     # If the fail function is hit, then the testcase will fail.
-    gdb_test "continue" ".*Breakpoint \[0-9\]+, end \(\).*" \
+    gdb_test "continue" ".*Breakpoint ${::decimal}, end \(\).*" \
 	"do not hit the fail function"
 }
 

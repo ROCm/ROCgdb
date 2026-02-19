@@ -132,7 +132,7 @@ if { [gdb_protocol_is_remote] } {
     unsupported $test
 } else {
     gdb_expect {
-	-re ".*=thread-exited,id=\"2\",group-id=\"i\[0-9\]+\"\r\n$" {
+	-re ".*=thread-exited,id=\"2\",group-id=\"i${::decimal}\"\r\n$" {
 	    pass $test
 	}
 	timeout {

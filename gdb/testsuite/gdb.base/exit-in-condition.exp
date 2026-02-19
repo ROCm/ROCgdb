@@ -30,9 +30,11 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 gdb_test "break main if callexit()" "Breakpoint $decimal at .*"
 
 gdb_test "run" \
-    "\[Inferior $decimal \\(\[^\r\n\]*\\) exited normally\].*
-Error in testing condition for breakpoint $decimal:.*
-The program being debugged exited while in a function called from GDB\\..*
-Evaluation of the expression containing the function.*
-\\(callexit\\) will be abandoned\\..*
-No registers\\."
+    [multi_line \
+	 [subst_vars {\[Inferior $decimal \([^\r\n]*\) exited normally\]}] \
+	 "Error in testing condition for breakpoint $decimal:" \
+	 [string_to_regexp \
+	      "The program being debugged exited while in a function called from GDB."] \
+	 "Evaluation of the expression containing the function" \
+	 [string_to_regexp "(callexit) will be abandoned."] \
+	 [string_to_regexp "No registers."]]

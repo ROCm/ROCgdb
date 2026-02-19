@@ -31,7 +31,7 @@ if {![runto_main]} {
 
 # Some variables used to simplify the maintenance of some of
 # the regular expressions below.
-set any_nb "\[0-9\]+"
+set any_nb "${::decimal}"
 set any_addr "0x\[0-9a-zA-Z\]+"
 
 set bp_location [gdb_get_line_number "STOP" ${testdir}/foo.adb]

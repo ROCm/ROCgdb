@@ -32,7 +32,7 @@ set parentpid 0
 
 set test "attach"
 gdb_test_multiple "attach $testpid" $test {
-    -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*warning: process $testpid is already traced by process (\[0-9\]+)\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
+    -re "Attaching to program: \[^\r\n\]*, process $testpid\r\n.*warning: process $testpid is already traced by process (${::decimal})\r\n.*ptrace: Operation not permitted\\.\r\n$gdb_prompt $" {
 	set parentpid $expect_out(1,string)
 	pass $test
     }

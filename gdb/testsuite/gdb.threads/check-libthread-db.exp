@@ -73,12 +73,12 @@ with_test_prefix "user-initiated check" {
     gdb_continue_to_breakpoint break_here
 
     gdb_test_sequence "maint check libthread-db" \
-	"libpthread.so fully initialized" {
+	"libpthread.so fully initialized" [subst_vars {
 	    "\[\r\n\]+Running libthread_db integrity checks:"
-	    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => \[0-9\]+ => 0x\[1-9a-f\]\[0-9a-f\]+; errno = 23 ... OK"
-	    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => \[0-9\]+ => 0x\[1-9a-f\]\[0-9a-f\]+; errno = 42 ... OK"
+	    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => ${::decimal} => 0x\[1-9a-f\]\[0-9a-f\]+; errno = 23 ... OK"
+	    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => ${::decimal} => 0x\[1-9a-f\]\[0-9a-f\]+; errno = 42 ... OK"
 	    "\[\r\n\]+libthread_db integrity checks passed."
-	}
+	}]
 }
 
 with_test_prefix "automated load-time check" {
@@ -113,13 +113,13 @@ with_test_prefix "automated load-time check" {
 	    set testpid [spawn_id_get_pid $test_spawn_id]
 
 	    gdb_test_sequence "attach $testpid" \
-		"check debug libthread-db output" {
+		"check debug libthread-db output" [subst_vars {
 		    "\[\r\n\]+Running libthread_db integrity checks:"
-		    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => \[0-9\]+ => 0x\[1-9a-f\]\[0-9a-f\]+ ... OK"
-		    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => \[0-9\]+ => 0x\[1-9a-f\]\[0-9a-f\]+ ... OK"
+		    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => ${::decimal} => 0x\[1-9a-f\]\[0-9a-f\]+ ... OK"
+		    "\[\r\n\]+\[ \]+Got thread 0x\[1-9a-f\]\[0-9a-f\]+ => ${::decimal} => 0x\[1-9a-f\]\[0-9a-f\]+ ... OK"
 		    "\[\r\n\]+libthread_db integrity checks passed."
 		    "\[\r\n\]+[Thread debugging using libthread_db enabled]"
-		}
+		}]
 
 	    gdb_exit
 	    kill_wait_spawned_process $test_spawn_id

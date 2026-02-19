@@ -32,7 +32,7 @@ if {![runto_main]} {
 set endianness [get_endianness]
 
 gdb_test "break ${srcfile}:[gdb_get_line_number "return"]" \
-    "Breakpoint $decimal at 0x\[0-9a-fA-F\]+: file .*${srcfile}.*\\\." \
+    "Breakpoint $decimal at ${::hex}: file .*${srcfile}.*\\\." \
     "set the breakpoint after setting the fp registers"
 
 gdb_test "continue" \

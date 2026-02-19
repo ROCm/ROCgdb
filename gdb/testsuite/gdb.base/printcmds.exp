@@ -874,7 +874,7 @@ proc test_printf {} {
     # Test mixing args of different sizes.
     gdb_test "printf \"x=%d,y=%f,z=%d\\n\", 5, 6.0, 7" "x=5,y=6\.0+,z=7"
     gdb_test "printf \"%x %f, %c %x, %x, %f\\n\", 0xbad, -99.541, 'z',\
-0xfeedface, 0xdeadbeef, 5.0" "bad -99.54\[0-9\]+, z feedface, deadbeef, 5.0+"
+0xfeedface, 0xdeadbeef, 5.0" "bad -99.54${::decimal}, z feedface, deadbeef, 5.0+"
 
     # Regression test for C lexer bug.
     gdb_test "printf \"%c\\n\", \"x\"\[1,0\]" "x"
@@ -984,7 +984,7 @@ proc test_printf_with_strings {} {
 
     set listsize_value -1
     gdb_test_multiple "show listsize" "get listsize value" {
-	-re "Number of source lines gdb will list by default is (\[0-9\]+)\.\r\n$gdb_prompt $" {
+	-re "Number of source lines gdb will list by default is (${::decimal})\.\r\n$gdb_prompt $" {
 	    set listsize_value $expect_out(1,string)
 	}
     }

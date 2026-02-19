@@ -55,10 +55,10 @@ if {![runto_main]} {
 
 set bp_location [gdb_get_line_number "STOP" "${testcase}.c"]
 gdb_test "break ${testcase}.c:${bp_location}" \
-	 "Breakpoint \[0-9\]+ at 0x\[0-9a-fA-F\]+: .*" \
+	 "Breakpoint ${::decimal} at ${::hex}: .*" \
 	 "breakpoint to the STOP marker"
 gdb_test "continue" \
-	 "Breakpoint \[0-9\]+, child .*" \
+	 "Breakpoint ${::decimal}, child .*" \
 	 "continue to the STOP marker"
 
 

@@ -141,7 +141,7 @@ proc reach_1 {func command displacement} {
     set test_displacement "seen displacement message as $displacement"
     set debug_state_count 0
     gdb_test_multiple $command $test {
-	-re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
+	-re "Using PIE \\(Position Independent Executable\\) displacement (${::hex}) " {
 	    # Missing "$gdb_prompt $" is intentional.
 	    if {$expect_out(1,string) == "0x0"} {
 		set case "ZERO"
@@ -156,14 +156,14 @@ proc reach_1 {func command displacement} {
 	    }
 	    exp_continue
 	}
-	-re "Breakpoint \[0-9\]+, \\.?(__GI_)?$func \\(.*\\) at .*:\[0-9\]+\r\n.*$gdb_prompt $" {
+	-re "Breakpoint ${::decimal}, \\.?(__GI_)?$func \\(.*\\) at .*:${::decimal}\r\n.*$gdb_prompt $" {
 	    if {$func == $solib_bp} {
 		fail $test
 	    } else {
 		pass $test
 	    }
 	}
-	-re "Breakpoint \[0-9\]+, \[0-9xa-f\]+ in \\.?(__GI_)?$func \\(\\).*\r\n$gdb_prompt $" {
+	-re "Breakpoint ${::decimal}, \[0-9xa-f\]+ in \\.?(__GI_)?$func \\(\\).*\r\n$gdb_prompt $" {
 	    if {$func == $solib_bp} {
 		fail $test
 	    } else {
@@ -237,7 +237,7 @@ proc test_core {file displacement} {
 	set test "core loaded"
 	set test_displacement "seen displacement message as $displacement"
 	gdb_test_multiple "core-file $corefile" $test {
-	    -re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
+	    -re "Using PIE \\(Position Independent Executable\\) displacement (${::hex}) " {
 		# Missing "$gdb_prompt $" is intentional.
 		if {$expect_out(1,string) == "0x0"} {
 		    set case "ZERO"
@@ -262,7 +262,7 @@ proc test_core {file displacement} {
 	}
 	gdb_test_no_output "set verbose off"
 
-	gdb_test "bt" "#\[0-9\]+ +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#\[0-9\]+ +\[^\r\n\]*\\mmain\\M.*" "core main bt"
+	gdb_test "bt" "#${::decimal} +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#${::decimal} +\[^\r\n\]*\\mmain\\M.*" "core main bt"
     }
 }
 
@@ -289,7 +289,7 @@ proc test_attach_gdb {file pid displacement prefix} {
 	set test "attach final prompt"
 	set test_displacement "seen displacement message as $displacement"
 	gdb_test_multiple "" $test {
-	    -re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
+	    -re "Using PIE \\(Position Independent Executable\\) displacement (${::hex}) " {
 		# Missing "$gdb_prompt $" is intentional.
 		if {$expect_out(1,string) == "0x0"} {
 		    set case "ZERO"
@@ -313,7 +313,7 @@ proc test_attach_gdb {file pid displacement prefix} {
 	}
 	gdb_test_no_output "set verbose off"
 
-	gdb_test "bt" "#\[0-9\]+ +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#\[0-9\]+ +\[^\r\n\]*\\mmain\\M.*" "attach main bt"
+	gdb_test "bt" "#${::decimal} +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#${::decimal} +\[^\r\n\]*\\mmain\\M.*" "attach main bt"
 	gdb_exit
     }
 }
@@ -521,7 +521,7 @@ proc test_ld {file ifmain trynosym displacement} {
 	    }
 	    if {$entrynohex != ""} {
 		gdb_test "break *0x$entrynohex" "" "break at entry point"
-		gdb_test "continue" "\r\nBreakpoint \[0-9\]+, 0x0*$entrynohex in .*" "entry point reached"
+		gdb_test "continue" "\r\nBreakpoint ${::decimal}, 0x0*$entrynohex in .*" "entry point reached"
 	    }
 	} else {
 	    # There is no symbol to break at ld.so.  Moreover it can
@@ -530,7 +530,7 @@ proc test_ld {file ifmain trynosym displacement} {
 	    set test "ld.so exit"
 	    set test_displacement "seen displacement message as $displacement"
 	    gdb_test_multiple "run" $test {
-		-re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
+		-re "Using PIE \\(Position Independent Executable\\) displacement (${::hex}) " {
 		    # Missing "$gdb_prompt $" is intentional.
 		    if {$expect_out(1,string) == "0x0"} {
 			set case "ZERO"
@@ -545,7 +545,7 @@ proc test_ld {file ifmain trynosym displacement} {
 		    }
 		    exp_continue
 		}
-		-re "$inferior_exited_re (normally|with code \[0-9\]+).\r\n$gdb_prompt $" {
+		-re "$inferior_exited_re (normally|with code ${::decimal}).\r\n$gdb_prompt $" {
 		    # Do not check the binary filename as it may be truncated.
 		    pass $test
 		}

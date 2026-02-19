@@ -34,4 +34,4 @@ if {![runto noret]} {
     return -1
 }
 
-gdb_test "bt" "#0 +noret \\(x=1\\) at \[^\r\n\]*\r\n#1 +0x\[0-9a-f\]+ in mayret \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#2 +0x\[0-9a-f\]+ in tailcall \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#3 +0x\[0-9a-f\]+ in main \\(\\) at .*"
+gdb_test "bt" "#0 +noret \\(x=1\\) at \[^\r\n\]*\r\n#1 +${::hex} in mayret \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#2 +${::hex} in tailcall \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#3 +${::hex} in main \\(\\) at .*"

@@ -65,7 +65,7 @@ for {set i 10} {$i < 20} {incr i 1} {
     Term::wait_for_region_contents 0 0 80 8 \
 	[multi_line \
 	     "$gdb_prompt [string_to_regexp $cmd]\\s+" \
-	     "\\\$\\d+ = $i\\s+" \
+	     [subst_vars {$valnum_re = $i\s+}] \
 	     "$gdb_prompt "]
 }
 

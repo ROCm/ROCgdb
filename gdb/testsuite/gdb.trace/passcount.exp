@@ -55,11 +55,11 @@ if {$trcpt1 <= 0 || $trcpt2 <= 0 || $trcpt3 <= 0} {
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
 			"4.1a: set three tracepoints, passcounts all zero"
 
@@ -69,12 +69,12 @@ gdb_test "passcount 2 $trcpt1" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 2 .
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
 	"4.1c: verify 1st tracepoint's passcount set to two"
 
@@ -84,13 +84,13 @@ gdb_test "passcount 4 $trcpt2" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 2 .
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
 	"4.1c: verify 2nd tracepoint's passcount set to four"
 
@@ -102,11 +102,11 @@ gdb_test "passcount 6" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 2 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 6 .*" \
 	"4.2b: verify last (default) tp's passcount set to six"
 
@@ -121,11 +121,11 @@ gdb_test "passcount 7" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 2 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 7 .*" \
 	"4.4a: verify reset last (default) tp's passcount to seven"
 
@@ -135,11 +135,11 @@ gdb_test "passcount 5 $trcpt2" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 2 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 5 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 7 .*" \
 	"4.4c: verify reset second tracepoint's passcount to five"
 
@@ -151,11 +151,11 @@ gdb_test "passcount 3 all" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 3 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 3 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 3 .*"  \
 	"4.20a: verify all three passcounts to three"
 
@@ -165,11 +165,11 @@ gdb_test "passcount 4 all" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*"  \
 	"4.20b: reset all three passcounts to four"
 
@@ -184,12 +184,12 @@ gdb_test "passcount 0 $trcpt1" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .
 \[\t \]+not installed on target.
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .
 \[\t \]+not installed on target"  \
 	"4.6: verify passcount to zero"
@@ -202,11 +202,11 @@ gdb_test "passcount 32767 $trcpt1" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 32767 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_asm_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_recursion_test at .*$srcfile:${::decimal}.
 \[\t \]+pass count 4 .*"  \
 	"4.7: verify passcount to large number (32767)"
 

@@ -63,7 +63,7 @@ gdb_test_no_output "set breakpoint always-inserted on"
 # Hardware breakpoints are implemented using a mechanism that is not
 # dependent on being able to modify the target's memory, we should be
 # able to set them even in unmapped memory areas.
-gdb_test "hbreak *0" "Hardware assisted breakpoint \[0-9\]+ at 0x0"
+gdb_test "hbreak *0" "Hardware assisted breakpoint ${::decimal} at 0x0"
 
 gdb_test "info break" "hw breakpoint.*y.*0x0\+\[ \t\]\+" \
     "info break shows hw breakpoint"

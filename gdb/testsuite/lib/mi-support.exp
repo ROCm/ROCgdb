@@ -42,7 +42,7 @@ global mi_spawn_id
 
 set MIFLAGS "-i=mi"
 
-set thread_selected_re "=thread-selected,id=\"\[0-9\]+\"\r\n"
+set thread_selected_re "=thread-selected,id=\"${::decimal}\"\r\n"
 set gdbindex_warning_re "&\"warning: Skipping \[^\r\n\]+ \.gdb_index section in \[^\r\n\]+\"\r\n(?:&\"\\\\n\"\r\n)?"
 set library_loaded_re "=library-loaded\[^\n\]+\"\r\n(?:$gdbindex_warning_re)?"
 set breakpoint_re "=(?:breakpoint-created|breakpoint-deleted)\[^\n\]+\"\r\n"
@@ -815,7 +815,7 @@ proc mi_gdb_test { args } {
 	     fail "$message"
 	    set result 1
 	}
-	 -re "$inferior_exited_re with code \[0-9\]+.*$mi_gdb_prompt\[ \]*$" {
+	 -re "$inferior_exited_re with code ${::decimal}.*$mi_gdb_prompt\[ \]*$" {
 	    if {![string match "" $message]} {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -976,7 +976,7 @@ proc mi_run_cmd_full {use_mi_command args} {
 	send_gdb  "jump *$start\n"
 	warning "Using CLI jump command, expect run-to-main FAIL"
 	gdb_expect {
-	    -re "&\"jump \\*${start}\\\\n\"\[\r\n\]+~\"Continuing at 0x\[0-9A-Fa-f\]+\.\\\\n\"\[\r\n\]+\\^running\[\r\n\]+\\*running,thread-id=\"\[^\"\]+\"\[\r\n\]+${mi_gdb_prompt}" {}
+	    -re "&\"jump \\*${start}\\\\n\"\[\r\n\]+~\"Continuing at ${::hex}\.\\\\n\"\[\r\n\]+\\^running\[\r\n\]+\\*running,thread-id=\"\[^\"\]+\"\[\r\n\]+${mi_gdb_prompt}" {}
 	    timeout {
 		unresolved "unable to start target"
 		return -1
@@ -987,7 +987,7 @@ proc mi_run_cmd_full {use_mi_command args} {
 
     send_gdb "${run_prefix}run $args\n"
     gdb_expect {
-	-re "${run_match}\\^running\r\n(\\*running,thread-id=\"\[^\"\]+\"\r\n|=thread-created,id=\"1\",group-id=\"\[0-9\]+\"\r\n)*(${library_loaded_re})*(${thread_selected_re})?${mi_gdb_prompt}" {
+	-re "${run_match}\\^running\r\n(\\*running,thread-id=\"\[^\"\]+\"\r\n|=thread-created,id=\"1\",group-id=\"${::decimal}\"\r\n)*(${library_loaded_re})*(${thread_selected_re})?${mi_gdb_prompt}" {
 	}
 	-re "\\^error,msg=\"The target does not support running in non-stop mode.\"" {
 	    unsupported "non-stop mode not supported"
@@ -1103,7 +1103,7 @@ proc mi_runto_helper {func run_or_continue args} {
       mi_send_resuming_command "exec-continue" "$test"
   }
 
-  mi_expect_stop "breakpoint-hit" $func ".*" ".*" "\[0-9\]+" { "" "disp=\"del\"" } $test
+  mi_expect_stop "breakpoint-hit" $func ".*" ".*" "${::decimal}" { "" "disp=\"del\"" } $test
 }
 
 proc mi_runto {func args} {
@@ -1423,13 +1423,13 @@ proc mi_create_breakpoint_pending {location test args} {
 # Name cannot be "-".
 proc mi_create_varobj { name expression testname } {
     mi_gdb_test "-var-create $name * $expression" \
-	"\\^done,name=\"$name\",numchild=\"\[0-9\]+\",value=\".*\",type=.*,has_more=\"0\"" \
+	"\\^done,name=\"$name\",numchild=\"${::decimal}\",value=\".*\",type=.*,has_more=\"0\"" \
 	$testname
 }
 
 proc mi_create_floating_varobj { name expression testname } {
     mi_gdb_test "-var-create $name @ $expression" \
-	"\\^done,name=\"$name\",numchild=\"\(-1\|\[0-9\]+\)\",value=\".*\",type=.*" \
+	"\\^done,name=\"$name\",numchild=\"\(-1\|${::decimal}\)\",value=\".*\",type=.*" \
 	$testname
 }
 
@@ -1438,7 +1438,7 @@ proc mi_create_floating_varobj { name expression testname } {
 # of the varobj.
 proc mi_create_varobj_checked { name expression type testname } {
     mi_gdb_test "-var-create $name * $expression" \
-	"\\^done,name=\"$name\",numchild=\"\[0-9\]+\",value=\".*\",type=\"$type\".*" \
+	"\\^done,name=\"$name\",numchild=\"${::decimal}\",value=\".*\",type=\"$type\".*" \
 	$testname
 }
 
@@ -1582,15 +1582,15 @@ proc mi_child_regexp {children add_child} {
 	    set value [lindex $item 4]
 
 	    lappend children_exp\
-		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\",value=\"$value\",type=\"$type\"(,thread-id=\"\[0-9\]+\")?}"
+		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\",value=\"$value\",type=\"$type\"(,thread-id=\"${::decimal}\")?}"
 	} elseif {[llength $item] == 4} {
 	    set type [lindex $item 3]
 
 	    lappend children_exp\
-		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\",type=\"$type\"(,thread-id=\"\[0-9\]+\")?}"
+		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\",type=\"$type\"(,thread-id=\"${::decimal}\")?}"
 	} else {
 	    lappend children_exp\
-		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\"(,thread-id=\"\[0-9\]+\")?}"
+		"$pre{name=\"$name\",exp=\"$exp\",numchild=\"$numchild\"(,thread-id=\"${::decimal}\")?}"
 	}
     }
     return [join $children_exp ","]

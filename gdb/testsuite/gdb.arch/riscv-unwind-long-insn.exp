@@ -50,8 +50,8 @@ foreach_with_prefix {insn_size} {6 8} {
     # Now check that we have a sane backtrace.
     gdb_test "bt" \
 	[multi_line \
-	     "#0\[ \t\]*func \\\(\\\) at .*$srcfile2:\[0-9\]+" \
-	     "#1\[ \t\]*$hex in main \\\(\\\) at .*$srcfile:\[0-9\]+"] \
+	     "#0\[ \t\]*func \\\(\\\) at .*$srcfile2:${::decimal}" \
+	     "#1\[ \t\]*$hex in main \\\(\\\) at .*$srcfile:${::decimal}"] \
 	"Backtrace to the main frame"
 
     # Finally finish, and we should end up back in main.

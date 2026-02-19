@@ -124,19 +124,19 @@ proc test_controlled_execution_reverse {} {
 
     mi_execute_to "exec-step --reverse" \
 	"end-stepping-range" "callee4" "" \
-	"basics.c" "\[0-9\]+" "" \
+	"basics.c" "${::decimal}" "" \
 	"reverse step to callee4"
 
     # Test exec-reverse-[step|next]-instruction
 
     mi_execute_to "exec-step-instruction --reverse" \
 	"end-stepping-range" "callee4" "" \
-	"basics.c" "\[0-9\]+" "" \
+	"basics.c" "${::decimal}" "" \
 	"reverse-step-instruction at callee4"
 
     mi_execute_to "exec-next-instruction --reverse" \
 	"end-stepping-range" "callee4" "" \
-	"basics.c" "\[0-9\]+" "" \
+	"basics.c" "${::decimal}" "" \
 	"reverse-next-instruction at callee4"
 
     # Test exec-reverse-continue
@@ -149,7 +149,7 @@ proc test_controlled_execution_reverse {} {
     mi_execute_to "exec-continue --reverse" \
 	"breakpoint-hit" "callee3" \
 	"\{name=\"strarg\",value=\"$hex \\\\\"A string argument\.\\\\\"\"\}" \
-	"basics.c" "\[0-9\]+" \
+	"basics.c" "${::decimal}" \
 	{ "" "disp=\"del\""} \
 	"reverse-continue at callee3"
 

@@ -85,7 +85,7 @@ proc register_tests { } {
     set octal "\[0-7\]+"
     set binary "\[0-1\]+"
     set float \
-	"\\-?((\[0-9\]+(\\.\[0-9\]+)?(e\[-+\]\[0-9\]+)?)|(nan\\($hex\\)))"
+	"\\-?((${::decimal}(\\.${::decimal})?(e\[-+\]${::decimal})?)|(nan\\($hex\\)))"
 
     register_test 222 x $hex
     register_test 333 f $float

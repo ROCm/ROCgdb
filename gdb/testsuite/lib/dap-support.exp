@@ -151,7 +151,7 @@ proc _dap_read_json {} {
     set seen_timeout 0
     set seen_eof 0
     gdb_expect {
-	-re "^Content-Length: (\[0-9\]+)\r\n" {
+	-re "^Content-Length: (${::decimal})\r\n" {
 	    set length $expect_out(1,string)
 	    exp_continue
 	}

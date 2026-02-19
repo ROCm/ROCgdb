@@ -36,8 +36,8 @@ if {!$allow_hw_watchpoint_tests_p} {
     gdb_test_no_output "set can-use-hw-watchpoints 0" ""
 }
 
-gdb_test "watch var" "atchpoint \[0-9\]+: var"
-gdb_test "continue" "atchpoint \[0-9\]+: var.*Old value = 0.*New value = \[12\].*"
+gdb_test "watch var" "atchpoint ${::decimal}: var"
+gdb_test "continue" "atchpoint ${::decimal}: var.*Old value = 0.*New value = \[12\].*"
 gdb_test "print empty()" " = void"
 # We did segfault here.
 gdb_test "help help"

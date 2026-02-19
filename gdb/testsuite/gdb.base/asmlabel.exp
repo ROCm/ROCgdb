@@ -53,11 +53,11 @@ gdb_test "break $L2_bploc" \
     "breakpoint at L2"
 
 gdb_test "continue" \
-    "Continuing.*Breakpoint \[0-9\]+, main .* at .*$srcfile:$L1_bploc.*" \
+    "Continuing.*Breakpoint ${::decimal}, main .* at .*$srcfile:$L1_bploc.*" \
     "continue to L1"
 
 gdb_test "continue" \
-    "Continuing.*Breakpoint \[0-9\]+, main .* at .*$srcfile:$L2_bploc.*" \
+    "Continuing.*Breakpoint ${::decimal}, main .* at .*$srcfile:$L2_bploc.*" \
     "continue to L2"
 
 gdb_test "print v" "= 1" "check value of v at L2"

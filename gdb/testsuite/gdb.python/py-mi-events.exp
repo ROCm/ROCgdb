@@ -61,7 +61,7 @@ set lineno [gdb_get_line_number "i++;"]
 
 # set a breakpoint into the for loop
 mi_gdb_test "break ${srcfile}:$lineno" \
-    ".*Breakpoint $decimal at 0x\[0-9a-fA-F\]+: file .*${srcfile}.*\\\.*\\^done" \
+    ".*Breakpoint $decimal at ${::hex}: file .*${srcfile}.*\\\.*\\^done" \
     "set the breakpoint"
 
 
@@ -76,11 +76,11 @@ mi_execute_to "exec-continue" "breakpoint-hit" "main" "" ".*$srcfile" "$lineno" 
 # - the stop handler prints "info breakpoints" output in console format
 
 mi_gdb_test "python print (stop_handler_str)" \
-".*stop_handler.*Num.*Type.*Disp.*Enb.*Address.*$decimal.*breakpoint.*keep.*y.* 0x\[0-9a-fA-F\]+.*${srcfile}.*" \
+".*stop_handler.*Num.*Type.*Disp.*Enb.*Address.*$decimal.*breakpoint.*keep.*y.* ${::hex}.*${srcfile}.*" \
 "python stop handler ran"
 
 mi_gdb_test "python print (cont_handler_str)" \
-".*continue_handler.*Num.*Type.*Disp.*Enb.*Address.*$decimal.*breakpoint.*keep.*y.* 0x\[0-9a-fA-F\]+.*${srcfile}.*" \
+".*continue_handler.*Num.*Type.*Disp.*Enb.*Address.*$decimal.*breakpoint.*keep.*y.* ${::hex}.*${srcfile}.*" \
 "python continue handler ran"
 
 mi_gdb_exit

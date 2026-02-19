@@ -79,7 +79,7 @@ for { set r 0 } { $r < $nr_regs } { incr r } {
 	".. = \\{$r, $r.25, $r.5, $r.75\\}.*" \
 	"check float contents of %xmm$r"
     gdb_test "print \$xmm$r.v16_int8" \
-	".. = \\{(-?\[0-9\]+, ){15}-?\[0-9\]+\\}.*" \
+	".. = \\{(-?${::decimal}, ){15}-?${::decimal}\\}.*" \
 	"check int8 contents of %xmm$r"
 }
 

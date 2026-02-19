@@ -83,13 +83,13 @@ proc test_tracepoints { trace_command condition num_frames { kfail_proc 0 } } {
 	    "\(Fast t|T\)racepoint .*" \
 	    "set tracepoint"
 
-	gdb_test "continue" ".*Breakpoint \[0-9\]+, begin .*" \
+	gdb_test "continue" ".*Breakpoint ${::decimal}, begin .*" \
 	    "advance to trace begin"
 
 	gdb_test_no_output "tstart" "start trace experiment"
 
 	gdb_test_multiple "continue" "advance through tracing" {
-	    -re ".*Breakpoint \[0-9\]+, end .*$gdb_prompt $" {
+	    -re ".*Breakpoint ${::decimal}, end .*$gdb_prompt $" {
 		pass "advance through tracing"
 	    }
 	    -re "Program received signal SIGSEGV, Segmentation fault\\..*$gdb_prompt $" {

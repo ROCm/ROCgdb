@@ -104,5 +104,5 @@ if { $symbol_name == "" } {
 	"'${symbol_name}' has unknown return type; cast the call to its declared return type"
     gdb_test_stdio "call (integer) ${symbol_name} (&'abcdefg', 3)" \
 	" abc" \
-	"\\\$\\d+ = 0"
+	"$valnum_re = 0"
 }

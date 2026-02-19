@@ -22,7 +22,7 @@ standard_ada_testfile bar
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-set float "\\-?((\[0-9\]+(\\.\[0-9\]+)?(e\[-+\]\[0-9\]+)?)|(nan\\($hex\\)))"
+set float "\\-?((${::decimal}(\\.${::decimal})?(e\[-+\]${::decimal})?)|(nan\\($hex\\)))"
 
 foreach_gnat_encoding scenario flags {none all minimal} {
     lappend flags debug

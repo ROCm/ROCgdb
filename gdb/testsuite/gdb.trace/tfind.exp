@@ -338,7 +338,7 @@ gdb_tfind_test "8.36: tfind start" "start" "0"
 set timeout 60
 # look for disassembly of function label
 gdb_test "disassemble gdb_c_test" \
-    "<(\.\[0-9\]+|)>:.*End of assembler dump.*" \
+    "<(\.${::decimal}|)>:.*End of assembler dump.*" \
     "8.36: trace disassembly"
 
 gdb_test "tfind line 0" \

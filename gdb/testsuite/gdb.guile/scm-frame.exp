@@ -106,7 +106,7 @@ gdb_test "guile (print (unwind-stop-reason-string FRAME_UNWIND_INNER_ID))" \
     "previous frame inner to this frame \\(corrupt stack\\?\\)" \
     "test unwind-stop-reason-string"
 gdb_test "guile (print (format #f \"= ~A\" (frame-pc f0)))" \
-    "= \[0-9\]+" "test frame-pc"
+    "= ${::decimal}" "test frame-pc"
 gdb_test "guile (print (format #f \"= ~A\" (eq? (frame-older f0) f1)))" \
     "= #t" "test frame-older"
 gdb_test "guile (print (format #f \"= ~A\" (eq? (frame-newer f1) f0)))" \

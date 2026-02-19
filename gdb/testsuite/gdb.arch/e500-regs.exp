@@ -143,7 +143,7 @@ if {![runto_main]} {
 }
 
 gdb_test "break vector_fun" \
- "Breakpoint 2 at.*e500-regs.c, line \[0-9\]+\\." \
+ "Breakpoint 2 at.*e500-regs.c, line ${::decimal}\\." \
  "set breakpoint at vector_fun"
 
 # Actually it is nuch easier to see these results printed in hex.

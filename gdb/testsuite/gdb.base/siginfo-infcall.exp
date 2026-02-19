@@ -34,10 +34,10 @@ gdb_test "p callme ()" " = 42"
 
 set test "continue to the handler"
 gdb_test_multiple "continue" $test {
-    -re "Breakpoint \[0-9\]+,\[^\r\n\]* pass .*\r\n$gdb_prompt $" {
+    -re "Breakpoint ${::decimal},\[^\r\n\]* pass .*\r\n$gdb_prompt $" {
 	pass $test
     }
-    -re "Breakpoint \[0-9\]+,\[^\r\n\]* fail .*\r\n$gdb_prompt $" {
+    -re "Breakpoint ${::decimal},\[^\r\n\]* fail .*\r\n$gdb_prompt $" {
 	fail $test
     }
 }

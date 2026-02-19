@@ -81,6 +81,15 @@ unset local-environment
   environment.  The local environment is used by "shell", "pipe", and
   other commands that launch a subprocess other than an inferior.
 
+save history FILENAME
+  Save the command history to the given file.
+
+save skip FILENAME
+  Save all current "skip"s to the given file.
+
+save user FILENAME
+  Save all user-defined commands to the given file.
+
 maintenance test-remote-args ARGS
   Test splitting and joining of inferior arguments ARGS as they would
   be split and joined when being passed to a remote target.

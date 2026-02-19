@@ -35,7 +35,7 @@ gdb_test "info dcache" \
     [multi_line \
 	 "Dcache $decimal lines of $decimal bytes each." \
 	 "Contains data for (process $decimal|Thread \[^\r\n\]*)" \
-	 "Line 0: address $hex \[$decimal hits\].*" \
+	 [subst_vars {Line 0: address $hex \[$decimal hits\].*}] \
 	 "Cache state: $decimal active lines, $decimal hits" ] \
     "check dcache before flushing"
 
@@ -59,6 +59,6 @@ gdb_test "info dcache" \
     [multi_line \
 	 "Dcache $decimal lines of $decimal bytes each." \
 	 "Contains data for (process $decimal|Thread \[^\r\n\]*)" \
-	 "Line 0: address $hex \[$decimal hits\].*" \
+	 [subst_vars {Line 0: address $hex \[$decimal hits\].*}] \
 	 "Cache state: $decimal active lines, $decimal hits" ] \
     "check dcache before refilling"

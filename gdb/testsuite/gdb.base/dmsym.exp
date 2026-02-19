@@ -41,7 +41,7 @@ if {[gdb_compile \
 clean_restart ${testfile}
 
 # Some convenient regular expressions...
-set num "\[0-9\]+"
+set num "${::decimal}"
 set addr "0x\[0-9a-zA-Z\]+"
 
 # Verify that setting a breakpoint on `test_minsym' only results in

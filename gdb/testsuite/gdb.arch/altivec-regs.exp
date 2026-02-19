@@ -122,7 +122,7 @@ send_gdb "info vector\n"
 gdb_expect_list "info vector" ".*$gdb_prompt $" $pattern_list
 
 gdb_test "break vector_fun" \
- "Breakpoint $decimal at.*altivec-regs.c, line \[0-9\]+\\." \
+ "Breakpoint $decimal at.*altivec-regs.c, line ${::decimal}\\." \
  "set breakpoint at vector_fun"
 
 # Actually it is nuch easier to see these results printed in hex.

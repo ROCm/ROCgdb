@@ -57,12 +57,12 @@ delete_breakpoints
 
 set nl "\[\r\n\]+"
 
-gdb_test "watch myrec.x" ".*atchpoint \[0-9\]+: myrec\.x" "set watchpoint"
+gdb_test "watch myrec.x" ".*atchpoint ${::decimal}: myrec\.x" "set watchpoint"
 
 gdb_test "next" \
-    ".*${nl}.*atchpoint \[0-9\]+: myrec\.x${nl}Old value = 0${nl}New value = 5${nl}.*" \
+    ".*${nl}.*atchpoint ${::decimal}: myrec\.x${nl}Old value = 0${nl}New value = 5${nl}.*" \
     "watchpoint variable triggers at next"
 
 gdb_test "continue" \
-    ".*${nl}.*atchpoint \[0-9\]+: myrec\.x${nl}Old value = 5${nl}New value = 78${nl}.*" \
+    ".*${nl}.*atchpoint ${::decimal}: myrec\.x${nl}Old value = 5${nl}New value = 78${nl}.*" \
     "watchpoint variable triggers at continue"

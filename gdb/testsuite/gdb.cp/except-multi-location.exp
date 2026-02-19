@@ -61,9 +61,9 @@ proc test_multi_libstdcpp {static_bin static_lib} {
 	return 0
     }
 
-    gdb_test "catch catch" "Catchpoint \[0-9\]+ \\(catch\\)"
-    gdb_test "catch throw" "Catchpoint \[0-9\]+ \\(throw\\)"
-    gdb_test "catch rethrow" "Catchpoint \[0-9\]+ \\(rethrow\\)"
+    gdb_test "catch catch" "Catchpoint ${::decimal} \\(catch\\)"
+    gdb_test "catch throw" "Catchpoint ${::decimal} \\(throw\\)"
+    gdb_test "catch rethrow" "Catchpoint ${::decimal} \\(rethrow\\)"
 
     set ws "\[ \t\]*"
     gdb_test "info breakpoints" \

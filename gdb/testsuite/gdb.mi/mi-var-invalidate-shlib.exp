@@ -113,7 +113,7 @@ proc do_test { separate_debuginfo } {
 	mi_gdb_test "299-break-insert -f -t foo" \
 	    "&\"Function \\\\\"foo\\\\\" not defined.\\\\n\"\r\n299\\^done,[mi_make_breakpoint_pending -type breakpoint -disp del -pending foo]"
 	mi_send_resuming_command "exec-continue" "continue to foo"
-	mi_expect_stop "breakpoint-hit" foo ".*" ".*" "\[0-9\]+" { "" "disp=\"del\"" } "arrived at foo"
+	mi_expect_stop "breakpoint-hit" foo ".*" ".*" "${::decimal}" { "" "disp=\"del\"" } "arrived at foo"
 
 	# Floating varobj is still valid, and now in scope.
 	mi_gdb_test "-var-update floating_local" \

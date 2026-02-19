@@ -43,7 +43,7 @@ if {$trcpt1 <= 0} {
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+not installed on target" \
 	"5.12: set a tracepoint, stepcount is zero"
 
@@ -57,7 +57,7 @@ gdb_trace_setactions "5.12: set stepcount to $stepcount" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+while-stepping 12.*" \
 	"5.12: info trace shows \"while-stepping\""
 
@@ -88,7 +88,7 @@ gdb_trace_setactions "5.16: step without collecting anything" \
 
 gdb_test "info tracepoints" \
     "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 .*while-stepping $stepcount.*
 .*end.*" \
 	"5.16: confirm actions, step without collecting anything"
@@ -124,7 +124,7 @@ proc check_tracepoint { data_source } {
 
 	gdb_test "info tracepoints" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:\[0-9\]+.
+${::decimal}\[\t \]+tracepoint     keep y.* in gdb_c_test at .*$srcfile:${::decimal}.
 \[\t \]+while-stepping $stepcount.*
 \[\t \]+collect \\\$regs.*
 \[\t \]+collect \\\$locals.*

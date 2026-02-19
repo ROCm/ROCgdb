@@ -62,7 +62,7 @@ gdb_test "info breakpoints" "" "info breakpoints first"
 set addr1 ""
 set test "pie_execl_marker address first"
 gdb_test_multiple "p/x &pie_execl_marker" $test {
-    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+    -re " = (${::hex})\r\n$gdb_prompt $" {
 	set addr1 $expect_out(1,string)
 	pass $test
     }
@@ -88,7 +88,7 @@ gdb_test_multiple $test $test {
 	}
     }
     -i "$gdb_spawn_id"
-    -re "executing new program.*\r\nBreakpoint \[0-9\]+,\[^\r\n\]* pie_execl_marker .*\r\n$gdb_prompt $" {
+    -re "executing new program.*\r\nBreakpoint ${::decimal},\[^\r\n\]* pie_execl_marker .*\r\n$gdb_prompt $" {
 	# output from gdb
 	incr matches_found
 	if { $matches_found == 2 } {
@@ -104,7 +104,7 @@ gdb_test "info breakpoints" "" "info breakpoints second"
 set addr2 ""
 set test "pie_execl_marker address second"
 gdb_test_multiple "p/x &pie_execl_marker" $test {
-    -re " = (0x\[0-9a-f\]+)\r\n$gdb_prompt $" {
+    -re " = (${::hex})\r\n$gdb_prompt $" {
 	set addr2 $expect_out(1,string)
 	pass $test
     }

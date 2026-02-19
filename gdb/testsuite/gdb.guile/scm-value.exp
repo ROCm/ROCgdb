@@ -67,7 +67,7 @@ proc test_value_in_inferior {} {
     gdb_scm_test_silent_cmd "gu (define i (history-append! (make-value 42)))" \
 	"append 42"
 
-    gdb_test "gu i" "\[0-9\]+"
+    gdb_test "gu i" "${::decimal}"
     gdb_test "gu (history-ref i)" "#<gdb:value 42>"
     gdb_test "p \$" "= 42"
 

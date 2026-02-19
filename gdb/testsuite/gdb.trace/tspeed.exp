@@ -85,13 +85,13 @@ proc prepare_for_trace_test {} {
 proc run_trace_experiment {} {
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, main .*" \
+	".*Breakpoint ${::decimal}, main .*" \
 	"advance to trace begin"
 
     gdb_test_no_output "tstart" "start trace experiment"
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, main .*" \
+	".*Breakpoint ${::decimal}, main .*" \
 	"advance through tracing"
 
     gdb_test "tstatus" ".*Trace .*" "check on trace status"
@@ -108,7 +108,7 @@ proc_with_prefix gdb_slow_trace_speed_test { } {
     set testline [gdb_get_line_number "set tracepoint here"]
 
     gdb_test "trace $testline if (globfoo != 12 && globfoo2 == 45)" \
-	"Tracepoint \[0-9\]+ at .*" \
+	"Tracepoint ${::decimal} at .*" \
 	"set slow tracepoint"
 
     # Begin the test.
@@ -128,7 +128,7 @@ proc_with_prefix gdb_fast_trace_speed_test { } {
 
     gdb_test_multiple "ftrace $testline if (globfoo != 12 && globfoo2 == 45)" \
 	"set conditional fast tracepoint" {
-	    -re "Fast tracepoint \[0-9\]+ at .*\r\n$gdb_prompt $" {
+	    -re "Fast tracepoint ${::decimal} at .*\r\n$gdb_prompt $" {
 		pass "set conditional fast tracepoint, done"
 		set run_ftrace 1
 	    }

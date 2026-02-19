@@ -75,7 +75,7 @@ if {[runto_main]} {
 
     # ...setup an always false conditional breakpoint
 
-    gdb_test "break handler if 0" "Breakpoint \[0-9\]+ .*"
+    gdb_test "break handler if 0" "Breakpoint ${::decimal} .*"
     gdb_test_no_output "set \$handler_breakpoint_number = \$bpnum"
 
     # ...setup the signal

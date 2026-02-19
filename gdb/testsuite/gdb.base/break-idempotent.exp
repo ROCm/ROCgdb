@@ -96,7 +96,7 @@ proc set_breakpoint { break_command } {
 	    -re "Could not insert hardware watchpoint.*$gdb_prompt $" {
 		unsupported $test
 	    }
-	    -re "atchpoint \[0-9\]+: global\r\n$gdb_prompt $" {
+	    -re "atchpoint ${::decimal}: global\r\n$gdb_prompt $" {
 		pass $test
 	    }
 	}

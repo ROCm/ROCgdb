@@ -70,10 +70,10 @@ if {![runto_main]} {
 }
 
 gdb_test "catch exception some_kind_of_error" \
-    "Catchpoint \[0-9\]+: `some_kind_of_error' Ada exception"
+    "Catchpoint ${::decimal}: `some_kind_of_error' Ada exception"
 
 gdb_test "cont" \
-    "Catchpoint \[0-9\]+, .* at .*foo\\.adb:\[0-9\]+.*" \
+    "Catchpoint ${::decimal}, .* at .*foo\\.adb:${::decimal}.*" \
     "caught the exception"
 
 gdb_test "print \$_ada_exception = some_package.some_kind_of_error'Address" \

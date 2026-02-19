@@ -31,7 +31,7 @@ if {![runto stop_frame]} {
     return -1
 }
 
-gdb_test "bt" "#0  (0x\[0-9a-f\]+ in )?stop_frame \[^\r\n\]*\r\n#1  \[^\r\n\]*first_frame \[^\r\n\]*\r\n#2  \[^\r\n\]*main\[^\r\n\]*" \
+gdb_test "bt" "#0  (${::hex} in )?stop_frame \[^\r\n\]*\r\n#1  \[^\r\n\]*first_frame \[^\r\n\]*\r\n#2  \[^\r\n\]*main\[^\r\n\]*" \
     "backtrace from stop_frame"
 
 for {set f 0} {$f < 3} {incr f} {

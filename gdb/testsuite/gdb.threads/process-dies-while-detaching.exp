@@ -173,7 +173,8 @@ proc do_detach {multi_process cmd child_exit} {
 	gdb_test "detach" "Detaching from .*, process $decimal\r\n\\\[Inferior $decimal \\(.*\\) detached\\\]" \
 	    "detach child"
 
-	gdb_test "inferior 1" "\[Switching to inferior $decimal\].*" \
+	gdb_test "inferior 1" \
+	    [subst_vars {\[Switching to inferior $decimal .*}] \
 	    "switch to parent"
 
 	if {$cmd == "detach"} {

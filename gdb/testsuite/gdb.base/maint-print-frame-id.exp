@@ -33,7 +33,7 @@ proc get_frame_id { level } {
     set id "**unknown**"
 
     gdb_test_multiple "maint print frame-id ${level}" "" {
-	-wrap -re "^frame-id for frame #\[0-9\]+: (\[^\r\n\]+)" {
+	-wrap -re "^frame-id for frame #${::decimal}: (\[^\r\n\]+)" {
 	    set id $expect_out(1,string)
 	    pass $gdb_test_name
 	}

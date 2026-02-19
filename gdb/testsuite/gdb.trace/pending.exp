@@ -77,7 +77,7 @@ proc pending_tracepoint_resolved { trace_type } {
 
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point1.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point1.*" \
 	    "single pending tracepoint info (without symbols)"
 
 	gdb_load ${binfile}
@@ -91,7 +91,7 @@ proc pending_tracepoint_resolved { trace_type } {
 	# Run to main which should resolve a pending tracepoint
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc.*" \
 	    "single tracepoint info"
     }
 }
@@ -120,7 +120,7 @@ proc pending_tracepoint_works { trace_type } {
 
 	gdb_test "info trace" \
 	    "Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point1.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point1.*" \
 	    "single pending tracepoint info"
 
 	# Run to main which should resolve a pending tracepoint
@@ -192,7 +192,7 @@ proc pending_tracepoint_resolved_during_trace { trace_type } \
 
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point2.*" \
 	"single pending tracepoint on set_point2"
 
     gdb_test "break marker" "Breakpoint.*at.* file .*$srcfile, line.*" \
@@ -227,7 +227,7 @@ proc pending_tracepoint_resolved_during_trace { trace_type } \
     # tracepoint should be resolved.
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
 	"tracepoint is resolved"
 
     gdb_test "tfind start" "#0 .*" "tfind test frame 0"
@@ -272,7 +272,7 @@ proc pending_tracepoint_installed_during_trace { trace_type } \
 
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \t\]+keep y.*PENDING.*set_point2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \t\]+keep y.*PENDING.*set_point2.*" \
 	"single pending tracepoint on set_point2"
 
     set test "continue to marker 2"
@@ -299,7 +299,7 @@ proc pending_tracepoint_installed_during_trace { trace_type } \
     # tracepoint should be resolved.
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
 	"tracepoint is resolved"
 
     # powerpc64 shows "in .pendfunc2" here.
@@ -435,7 +435,7 @@ proc pending_tracepoint_with_action_resolved { trace_type } \
 
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*PENDING.*set_point2.*" \
 	"single pending tracepoint on set_point2"
 
     gdb_test "break marker" "Breakpoint.*at.* file .*$srcfile, line.*" \
@@ -471,7 +471,7 @@ proc pending_tracepoint_with_action_resolved { trace_type } \
     # tracepoint should be resolved.
     gdb_test "info trace" \
 	"Num     Type\[ \]+Disp Enb Address\[ \]+What.*
-\[0-9\]+\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
+${::decimal}\[\t \]+\(fast |\)tracepoint\[ \]+keep y.*pendfunc2.*" \
 	"tracepoint is resolved"
 
     gdb_test "tfind start" "#0 .*" "tfind test frame 0"

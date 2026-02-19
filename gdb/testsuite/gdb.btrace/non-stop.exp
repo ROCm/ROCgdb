@@ -190,7 +190,7 @@ with_test_prefix "continue" {
 	with_test_prefix "continue" {
 	    gdb_cont_to_no_history_forward 1 "continue" 1
 	    gdb_test "thread apply 1 info record" \
-		".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+		".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
 	    gdb_test "thread apply 2 info record" \
 		".*Replay in progress\.  At instruction 5\."
 	}
@@ -209,7 +209,7 @@ with_test_prefix "continue" {
 	    gdb_test "thread apply 1 info record" \
 		".*Replay in progress\.  At instruction 1\."
 	    gdb_test "thread apply 2 info record" \
-		".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+		".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
 	}
 	with_test_prefix "reverse-continue" {
 	    gdb_cont_to_no_history_backward 2 "reverse-continue" 1
@@ -230,7 +230,7 @@ with_test_prefix "no progress" {
 	gdb_cont_to_no_history_forward 1 "continue" 1
 	gdb_cont_to_no_history_forward 1 "step" 1
 	gdb_test "thread apply 1 info record" \
-	    ".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+	    ".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
 	gdb_test "thread apply 2 info record" \
 	    ".*Replay in progress\.  At instruction 1\."
     }
@@ -244,7 +244,7 @@ with_test_prefix "no progress" {
 	gdb_test "thread apply 1 info record" \
 	    ".*Replay in progress\.  At instruction 1\."
 	gdb_test "thread apply 2 info record" \
-	    ".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+	    ".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
     }
 
     with_test_prefix "all" {
@@ -252,9 +252,9 @@ with_test_prefix "no progress" {
 
 	gdb_cont_to_no_history_forward all "continue" 2
 	gdb_test "thread apply 1 info record" \
-	    ".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+	    ".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
 	gdb_test "thread apply 2 info record" \
-	    ".*Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*"
+	    ".*Recorded ${::decimal} instructions \[^\\\r\\\n\]*"
     }
 }
 

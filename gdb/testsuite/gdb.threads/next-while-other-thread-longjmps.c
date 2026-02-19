@@ -64,7 +64,7 @@ thread_try_catch (void *arg)
 	}
       catch (...)
 	{
-	  counter++;
+	  counter = counter + 1;
 	}
 
       usleep (1);

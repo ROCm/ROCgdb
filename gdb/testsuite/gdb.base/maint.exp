@@ -108,11 +108,11 @@ gdb_test_multiple $test $test {
 	set saw_headers 1
 	exp_continue
     }
-    -re "\[0-9\]+\[^\r\n\]+\[0-9\]+\[^\r\n\]+\[0-9\]+\[^\r\n\]+\[0-9\]+\[^\r\n\]+\r\n" {
+    -re "${::decimal}\[^\r\n\]+${::decimal}\[^\r\n\]+${::decimal}\[^\r\n\]+${::decimal}\[^\r\n\]+\r\n" {
 	set saw_registers 1
 	exp_continue
     }
-    -re "^\\*\[0-9\]+\[^\r\n\]+\r\n" {
+    -re "^\\*${::decimal}\[^\r\n\]+\r\n" {
 	exp_continue
     }
     -re "$gdb_prompt $" {
@@ -212,7 +212,7 @@ gdb_test_no_output "maint check symtabs"
 
 # Test per-command stats.
 gdb_test_no_output "maint set per-command on"
-set decimal "\[0-9\]+"
+set decimal "${::decimal}"
 set time_fmt "${decimal}-${decimal}-${decimal} ${decimal}:${decimal}:${decimal}\\.${decimal}"
 gdb_test "pwd" \
     "${time_fmt} - command started\r\n.*\r\n${time_fmt} - command finished\r\nCommand execution time: \[0-9.\]+ \\(cpu\\), \[0-9.\]+ \\(wall\\)\[\r\n\]+Space used: $decimal \\(\\+$decimal for this command\\)\[\r\n\]+#symtabs: $decimal \\(\\+$decimal\\), #compunits: $decimal \\(\\+$decimal\\), #blocks: $decimal \\(\\+$decimal\\)"

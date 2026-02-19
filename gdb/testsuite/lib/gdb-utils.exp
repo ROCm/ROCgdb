@@ -112,7 +112,7 @@ proc style {str style} {
 #
 proc gdb_get_bp_addr { num } {
     gdb_test_multiple "maint info break $num" "find address of specified bp $num" {
-	-re -wrap ".*(0x\[0-9a-f\]+).*" {
+	-re -wrap ".*(${::hex}).*" {
 	    return $expect_out(1,string)
 	}
     }

@@ -40,9 +40,9 @@ proc get_args { description } {
     global gdb_prompt
     global NUM
 
-    set pattern "(\[0-9\]+)"
+    set pattern "(${::decimal})"
     for {set i 1} {$i < $NUM} {incr i} {
-	append pattern ", (\[0-9\]+)"
+	append pattern ", (${::decimal})"
     }
 
     set test "listed args, $description"

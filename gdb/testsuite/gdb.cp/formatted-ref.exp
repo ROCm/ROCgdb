@@ -41,7 +41,7 @@ proc get_address { var } {
     global gdb_prompt
 
     gdb_test_multiple "print &$var" "find address of $var" {
-	-re "${::valnum_re} = \\(.*\\) (0x\[0-9a-f\]+).*$gdb_prompt $" {
+	-re "${::valnum_re} = \\(.*\\) (${::hex}).*$gdb_prompt $" {
 	    return $expect_out(1,string)
 	}
 	timeout {

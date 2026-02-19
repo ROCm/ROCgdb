@@ -44,13 +44,13 @@ proc run_trace_experiment {} {
 #    gdb_test_no_output "set debug remote 1" ""
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, begin .*" \
+	".*Breakpoint ${::decimal}, begin .*" \
 	"advance to trace begin"
 
     gdb_test_no_output "tstart my tracing note" "start trace experiment"
 
     gdb_test "continue" \
-	".*Breakpoint \[0-9\]+, end .*" \
+	".*Breakpoint ${::decimal}, end .*" \
 	"advance through tracing"
 
     # Now play with tstatus a bit.
@@ -108,10 +108,10 @@ proc run_trace_experiment {} {
 
     set test "info trace reports tracepoint hit count and traceframe usage"
     gdb_test_multiple "info trace" $test {
-	-re "actions\.c:\[0-9\]+\[\r\n\]+\[\t ]+tracepoint already hit 1 time\[\r\n\]+\[\t ]+trace buffer usage ${decimal} bytes\.\[\r\n\]+\[\t ]+collect parm.*\r\n$gdb_prompt $" {
+	-re "actions\.c:${::decimal}\[\r\n\]+\[\t ]+tracepoint already hit 1 time\[\r\n\]+\[\t ]+trace buffer usage ${decimal} bytes\.\[\r\n\]+\[\t ]+collect parm.*\r\n$gdb_prompt $" {
 	    pass $test
 	}
-	-re "actions\.c:\[0-9\]+\[\r\n\]+\[\t ]+collect parm.*\r\n$gdb_prompt $" {
+	-re "actions\.c:${::decimal}\[\r\n\]+\[\t ]+collect parm.*\r\n$gdb_prompt $" {
 	    unsupported $test
 	}
     }

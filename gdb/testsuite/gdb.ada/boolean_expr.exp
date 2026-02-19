@@ -19,7 +19,7 @@ require allow_ada_tests
 
 clean_restart
 
-set any_nb "\[0-9\]+"
+set any_nb "${::decimal}"
 set any_addr "0x\[0-9a-zA-Z\]+"
 
 # Force the language to Ada, as this will not happen automatically

@@ -28,9 +28,9 @@ if {![runto_main]} {
 set breakline [gdb_get_line_number "break-at-exit"]
 
 gdb_test "hbreak ${srcfile}:${breakline}" \
-	 "Hardware assisted breakpoint \[0-9\]+ at 0x\[0-9a-f\]+: file .*${srcfile}, line ${breakline}\\." \
+	 "Hardware assisted breakpoint ${::decimal} at ${::hex}: file .*${srcfile}, line ${breakline}\\." \
 	 "hbreak"
 
 gdb_test "continue" \
-	 "Continuing\\.\[ \r\n\]+Breakpoint \[0-9\]+, .*break-at-exit.*" \
+	 "Continuing\\.\[ \r\n\]+Breakpoint ${::decimal}, .*break-at-exit.*" \
 	 "continue to break-at-exit after hbreak"

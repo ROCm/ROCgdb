@@ -6305,6 +6305,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	  align = (bfd_size_type) 1 << bfd_section_alignment (sec);
 
 	  if ((p->p_type == PT_LOAD
+	       || p->p_type == PT_DYNAMIC
 	       || p->p_type == PT_TLS)
 	      && (this_hdr->sh_type != SHT_NOBITS
 		  || ((this_hdr->sh_flags & SHF_ALLOC) != 0

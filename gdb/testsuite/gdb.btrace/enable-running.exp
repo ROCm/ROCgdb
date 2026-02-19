@@ -79,7 +79,7 @@ proc check_tracing_enabled { thread } {
 	gdb_test "info record" [multi_line \
 	    "Active record target: record-btrace" \
 	    "Recording format: .*" \
-	    "Recorded \[0-9\]+ instructions \[^\\\r\\\n\]*" \
+	    "Recorded ${::decimal} instructions \[^\\\r\\\n\]*" \
 	]
 
 	# Continue the thread again.

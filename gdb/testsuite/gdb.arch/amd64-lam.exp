@@ -37,10 +37,10 @@ gdb_continue_to_breakpoint "Breakpoint here"
 foreach symbol {"pi" "pi_tagged"} {
     gdb_test "watch *${symbol}"
     gdb_test "continue" \
-	"Continuing\\..*Hardware watchpoint \[0-9\]+.*" \
+	"Continuing\\..*Hardware watchpoint ${::decimal}.*" \
 	"run until watchpoint on ${symbol}"
     gdb_test "continue" \
-	"Continuing\\..*Hardware watchpoint \[0-9\]+.*" \
+	"Continuing\\..*Hardware watchpoint ${::decimal}.*" \
 	"run until watchpoint on ${symbol}, 2nd hit"
     delete_breakpoints
 }

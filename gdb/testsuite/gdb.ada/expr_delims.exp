@@ -47,13 +47,13 @@ gdb_test "print thread" \
 gdb_test_no_output "delete 1"
 
 gdb_test "watch thread" \
-    ".*atchpoint \[0-9\]+: thread" \
+    ".*atchpoint ${::decimal}: thread" \
     "set plain watchpoint on variable 'thread'"
 
 # Make sure that 'if' when followed by an expression beginning
 # with 'i' works.
 gdb_test "watch thread if i = 2" \
-    ".*atchpoint \[0-9\]+: thread" \
+    ".*atchpoint ${::decimal}: thread" \
     "set conditional watchpoint."
 
 gdb_test "info break" \

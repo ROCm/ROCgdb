@@ -32,6 +32,6 @@ gdb_test "maint print c-tdesc" \
     "There is no target description to print\\."
 
 gdb_test "maint print c-tdesc $xml_file" "
-.*tdesc_create_reg \\(feature, \"bad_reg1\", \[0-9\]+, 1, NULL, 128, \"two_fielded\"\\);\r
-.*tdesc_create_reg \\(feature, \"bad_reg2\", \[0-9\]+, 1, NULL, 64, \"bitfield\"\\);\r
+.*tdesc_create_reg \\(feature, \"bad_reg1\", ${::decimal}, 1, NULL, 128, \"two_fielded\"\\);\r
+.*tdesc_create_reg \\(feature, \"bad_reg2\", ${::decimal}, 1, NULL, 64, \"bitfield\"\\);\r
 .*" "printing tdesc with a structure and a bitfield"

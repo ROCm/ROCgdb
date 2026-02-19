@@ -38,6 +38,8 @@
 #include <list>
 #include "cli/cli-style.h"
 #include "gdbsupport/buildargv.h"
+#include "safe-ctype.h"
+#include "readline/tilde.h"
 
 /* True if we want to print debug printouts related to file/function
    skipping. */
@@ -71,6 +73,9 @@ public:
   /* Setters.  */
   void enable () { m_enabled = true; };
   void disable () { m_enabled = false; };
+
+  /* Print a gdb command that can be used to recreate this skip.  */
+  void print_recreate (ui_file *stream) const;
 
 private:
   /* Key that grants access to the constructor.  */
@@ -157,6 +162,54 @@ skiplist_entry::add_entry (bool file_is_glob, std::string &&file,
 
   /* Incremented after push_back, in case push_back throws.  */
   skiplist_entries.back ().m_number = ++highest_skiplist_entry_num;
+}
+
+/* A helper function for print_recreate that prints a correctly-quoted
+   string to STREAM.  */
+
+static void
+print_quoted (ui_file *stream, const std::string &str)
+{
+  gdb_putc ('"', stream);
+  for (char c : str)
+    {
+      if (ISSPACE (c) || c == '\\' || c == '\'' || c == '"')
+	gdb_putc ('\\', stream);
+      gdb_putc (c, stream);
+    }
+  gdb_putc ('"', stream);
+}
+
+void
+skiplist_entry::print_recreate (ui_file *stream) const
+{
+  if (!m_file_is_glob && !m_file.empty ()
+      && !m_function_is_regexp && m_function.empty ())
+    gdb_printf (stream, "skip file %s\n", m_file.c_str ());
+  else if (!m_file_is_glob && m_file.empty ()
+      && !m_function_is_regexp && !m_function.empty ())
+    gdb_printf (stream, "skip function %s\n", m_function.c_str ());
+  else
+    {
+      gdb_printf (stream, "skip ");
+      if (!m_file.empty ())
+	{
+	  if (m_file_is_glob)
+	    gdb_printf (stream, "-gfile ");
+	  else
+	    gdb_printf (stream, "-file ");
+	  print_quoted (stream, m_file);
+	}
+      if (!m_function.empty ())
+	{
+	  if (m_function_is_regexp)
+	    gdb_printf (stream, "-rfunction ");
+	  else
+	    gdb_printf (stream, "-function ");
+	  print_quoted (stream, m_function);
+	}
+      gdb_printf (stream, "\n");
+    }
 }
 
 static void
@@ -656,6 +709,24 @@ complete_skip_number (cmd_list_element *cmd,
     }
 }
 
+/* Implementation of 'save skip' command.  */
+
+static void
+save_skip_command (const char *filename, int from_tty)
+{
+  if (filename == nullptr || *filename == '\0')
+    error (_("Argument required (file name in which to save)"));
+
+  gdb::unique_xmalloc_ptr<char> expanded_filename (tilde_expand (filename));
+  stdio_file fp;
+  if (!fp.open (expanded_filename.get (), "w"))
+    error (_("Unable to open file '%s' for saving (%s)"),
+	   expanded_filename.get (), safe_strerror (errno));
+
+  for (const auto &entry : skiplist_entries)
+    entry.print_recreate (&fp);
+}
+
 INIT_GDB_FILE (step_skip)
 {
   static struct cmd_list_element *skiplist = NULL;
@@ -734,4 +805,11 @@ Show whether the debug output about skipping files and functions is printed."),
 When non-zero, debug output about skipping files and functions is displayed."),
 			   NULL, NULL,
 			   &setdebuglist, &showdebuglist);
+
+  c = add_cmd ("skip", no_class, save_skip_command, _("\
+Save current skips as a script.\n\
+Usage: save skip FILE\n\
+Use the 'source' command in another debug session to restore them."),
+	       &save_cmdlist);
+  set_cmd_completer (c, deprecated_filename_completer);
 }

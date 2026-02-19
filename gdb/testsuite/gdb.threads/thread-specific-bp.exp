@@ -34,7 +34,7 @@ proc get_thread_id {func} {
     set thre -1
     set test "get $func thread id"
     gdb_test_multiple "info threads" $test {
-	-re "(\[0-9\]+)\[^\n\r\]*${tdlabel_re}\[^\n\r\]*$func.*$gdb_prompt $" {
+	-re "(${::decimal})\[^\n\r\]*${tdlabel_re}\[^\n\r\]*$func.*$gdb_prompt $" {
 	    # Get the thread's id.
 	    set thre $expect_out(1,string)
 	    pass $test

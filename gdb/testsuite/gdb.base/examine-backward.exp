@@ -31,7 +31,7 @@ proc get_first_mapped_address {} {
 
     set addr "0"
     gdb_test_multiple "info proc mappings" "info proc mappings" {
-	-re "objfile\[\r\n\t \]+(0x\[0-9a-fA-F\]+).*\[\r\n\]*$gdb_prompt $" {
+	-re "objfile\[\r\n\t \]+(${::hex}).*\[\r\n\]*$gdb_prompt $" {
 	    set addr $expect_out(1,string)
 	}
 	-re "$gdb_prompt $" {
@@ -85,7 +85,7 @@ with_test_prefix "address zero boundary" {
     global gdb_prompt
 
     set address_zero "0x0"
-    set byte "\t0x\[0-9a-f\]+"
+    set byte "\t${::hex}"
 
     set test "examine 3 bytes forward from ${address_zero}"
     gdb_test_multiple "x/3xb ${address_zero}" "$test" {
@@ -113,10 +113,10 @@ with_test_prefix "address zero boundary" {
 
     set test "examine 6 bytes backward"
     gdb_test_multiple "x/-6x" "$test" {
-	-re "0x\[0-9a-f\]+fd.*:${byte}${byte}${byte}${byte}${byte}${byte}.*\[\r\n\]*$gdb_prompt $" {
+	-re "${::hex}fd.*:${byte}${byte}${byte}${byte}${byte}${byte}.*\[\r\n\]*$gdb_prompt $" {
 	    pass $test
 	}
-	-re "0x\[0-9a-f\]+fd.*:\tCannot access memory at address 0x\[0-9a-f\]+fd.*\[\r\n\]*$gdb_prompt $" {
+	-re "${::hex}fd.*:\tCannot access memory at address ${::hex}fd.*\[\r\n\]*$gdb_prompt $" {
 	    # We may, or may not have managed to read from address 0x0
 	    # in the previous test, however, being able to read 0x0 is
 	    # no guarantee that we can read from the other end of the
@@ -131,10 +131,10 @@ with_test_prefix "address zero boundary" {
 
     set test "examine 3 bytes backward from ${address_zero}"
     gdb_test_multiple "x/-3x ${address_zero}" "$test" {
-	-re "0x\[0-9a-f\]+fd.*:${byte}${byte}${byte}.*\[\r\n\]*$gdb_prompt $" {
+	-re "${::hex}fd.*:${byte}${byte}${byte}.*\[\r\n\]*$gdb_prompt $" {
 	    pass $test
 	}
-	-re "0x\[0-9a-f\]+fd.*:\tCannot access memory at address 0x\[0-9a-f\]+fd.*\[\r\n\]*$gdb_prompt $" {
+	-re "${::hex}fd.*:\tCannot access memory at address ${::hex}fd.*\[\r\n\]*$gdb_prompt $" {
 	    # See previous test for why this is a pass.
 	    pass $test
 	}
@@ -347,9 +347,9 @@ with_test_prefix "backward disassemble general" {
     gdb_test_no_output "set print asm-demangle on"
     set main_re "main(\\(\\))?"
 
-    gdb_test "x/i main" "0x\[0-9a-fA-F\]+ <$main_re>:\t.*" \
+    gdb_test "x/i main" "${::hex} <$main_re>:\t.*" \
 	"move the current position to main, x/i"
-    gdb_test "x/-i" "0x\[0-9a-fA-F\]+ <$main_re>:\t.*" \
+    gdb_test "x/-i" "${::hex} <$main_re>:\t.*" \
 	"move the current position to main, x/-i"
     for {set i 0} {$i < [llength $length_to_examine]} {incr i} {
 	set len [lindex $length_to_examine $i]
