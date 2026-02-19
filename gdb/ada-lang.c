@@ -2311,14 +2311,13 @@ ada_is_gnat_encoded_packed_array_type  (struct type *type)
     && strstr (ada_type_name (type), "___XP") != NULL;
 }
 
-/* Non-zero iff TYPE represents a standard GNAT constrained
-   packed-array type.  */
+/* See ada-lang.h.  */
 
-int
+bool
 ada_is_constrained_packed_array_type (struct type *type)
 {
-  return ada_is_gnat_encoded_packed_array_type (type)
-    && !ada_is_array_descriptor_type (type);
+  return (ada_is_gnat_encoded_packed_array_type (type)
+	  && !ada_is_array_descriptor_type (type));
 }
 
 /* True iff TYPE represents an array descriptor for a unconstrained
@@ -8284,7 +8283,7 @@ to_fixed_array_type (struct type *type0, struct value *dval,
 {
   struct type *index_type_desc;
   struct type *result;
-  int constrained_packed_array_p;
+  bool constrained_packed_array_p;
   static const char *xa_suffix = "___XA";
 
   type0 = ada_check_typedef (type0);

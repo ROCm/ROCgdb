@@ -241,7 +241,9 @@ extern struct type *ada_parent_type (struct type *);
 
 extern int ada_is_ignored_field (struct type *, int);
 
-extern int ada_is_constrained_packed_array_type (struct type *);
+/* True iff TYPE represents a standard GNAT constrained
+   packed-array type.  */
+extern bool ada_is_constrained_packed_array_type (struct type *type);
 
 extern struct value *ada_value_primitive_packed_val (struct value *,
 						     const gdb_byte *,
