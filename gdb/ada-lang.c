@@ -155,7 +155,7 @@ static long decode_packed_array_bitsize (struct type *);
 
 static struct value *decode_constrained_packed_array (struct value *);
 
-static int ada_is_unconstrained_packed_array_type (struct type *);
+static bool ada_is_unconstrained_packed_array_type (struct type *);
 
 static struct value *value_subscript_packed (struct value *, int,
 					     struct value **);
@@ -2321,17 +2321,17 @@ ada_is_constrained_packed_array_type (struct type *type)
     && !ada_is_array_descriptor_type (type);
 }
 
-/* Non-zero iff TYPE represents an array descriptor for a
-   unconstrained packed-array type.  */
+/* True iff TYPE represents an array descriptor for a unconstrained
+   packed-array type.  */
 
-static int
+static bool
 ada_is_unconstrained_packed_array_type (struct type *type)
 {
   if (!ada_is_array_descriptor_type (type))
-    return 0;
+    return false;
 
   if (ada_is_gnat_encoded_packed_array_type (type))
-    return 1;
+    return true;
 
   /* If we saw GNAT encodings, then the above code is sufficient.
      However, with minimal encodings, we will just have a thick
@@ -2349,7 +2349,7 @@ ada_is_unconstrained_packed_array_type (struct type *type)
       return type->field (0).bitsize () > 0;
     }
 
-  return 0;
+  return false;
 }
 
 /* Return true if TYPE is a (Gnat-encoded) constrained packed array
