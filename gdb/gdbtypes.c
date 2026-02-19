@@ -4716,7 +4716,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
   if (overload_debug)
     {
       /* Debugging only.  */
-      gdb_printf (gdb_stderr,
+      gdb_printf (gdb_stdlog,
 		  "------ Arg is %s [%d], parm is %s [%d]\n",
 		  arg->name (), arg->code (),
 		  parm->name (), parm->code ());
