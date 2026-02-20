@@ -66,13 +66,31 @@ pru_find_opcode (unsigned long opcode)
 #define NUMREGNAMES (32 * 8)
 
 static void
-pru_print_insn_arg_reg (unsigned int r, unsigned int sel,
-			disassemble_info *info)
+pru_print_insn_arg_indreg (unsigned int r, unsigned int sel,
+			   unsigned int mode,
+			   disassemble_info *info)
 {
+  const char *fmtstr;
   unsigned int i = r * RSEL_NUM_ITEMS + sel;
   assert (i < (unsigned int)pru_num_regs);
   assert (i < NUMREGNAMES);
-  (*info->fprintf_func) (info->stream, "%s", pru_regs[i].name);
+
+  switch (mode)
+    {
+    case MVI_OP_MODE_DIRECT:		fmtstr = "%s"; break;
+    case MVI_OP_MODE_INDIRECT:		fmtstr = "*%s"; break;
+    case MVI_OP_MODE_INDIRECT_POSTINC:	fmtstr = "*%s++"; break;
+    case MVI_OP_MODE_INDIRECT_PREDEC:	fmtstr = "*--%s"; break;
+    default:				fmtstr = "<invalid>%s"; break;
+    }
+  (*info->fprintf_func) (info->stream, fmtstr, pru_regs[i].name);
+}
+
+static void
+pru_print_insn_arg_reg (unsigned int r, unsigned int sel,
+			disassemble_info *info)
+{
+  pru_print_insn_arg_indreg (r, sel, MVI_OP_MODE_DIRECT, info);
 }
 
 /* The function pru_print_insn_arg uses the character pointed
@@ -186,6 +204,18 @@ pru_print_insn_arg (const char *argptr,
 	  (*info->fprintf_func) (info->stream, "r0.b%ld", i);
 	}
       break;
+    case 'm':
+      pru_print_insn_arg_indreg (GET_INSN_FIELD (RD, opcode),
+				 GET_INSN_FIELD (RDSEL, opcode),
+				 GET_INSN_FIELD (MVI_RD_MODE, opcode),
+				 info);
+      break;
+    case 'M':
+      pru_print_insn_arg_indreg (GET_INSN_FIELD (RS1, opcode),
+				 GET_INSN_FIELD (RS1SEL, opcode),
+				 GET_INSN_FIELD (MVI_RS1_MODE, opcode),
+				 info);
+      break;
     case 'n':
       i = GET_INSN_FIELD (XFR_LENGTH, opcode);
       if (i < LSSBBO_BYTECOUNT_R0_BITS7_0)
@@ -198,6 +228,10 @@ pru_print_insn_arg (const char *argptr,
       break;
     case 'c':
       i = GET_INSN_FIELD (CB, opcode);
+      (*info->fprintf_func) (info->stream, "%ld", i);
+      break;
+    case 't':
+      i = GET_INSN_FIELD (TSKMGR_MODE, opcode);
       (*info->fprintf_func) (info->stream, "%ld", i);
       break;
     case 'w':

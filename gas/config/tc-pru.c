@@ -1254,6 +1254,92 @@ pru_assemble_arg_n (pru_insn_infoS *insn_info, const char *argstr)
 }
 
 static void
+pru_parse_mvi_operand (const char *argstr,
+		       struct pru_reg **blreg,
+		       unsigned int *mode)
+{
+  char *regstr;
+
+  *mode = MVI_OP_MODE_DIRECT;
+
+  if (*argstr == '*')
+    {
+      *mode = MVI_OP_MODE_INDIRECT;
+      argstr++;
+
+      if (argstr[0] == '-' && argstr[1] == '-')
+	{
+	  argstr += 2;
+	  *mode = MVI_OP_MODE_INDIRECT_PREDEC;
+	}
+    }
+  /* Decouple register string from the post increment operator.  */
+  regstr = strdup (argstr);
+  *strchrnul (regstr, '+') = '\0';
+  *blreg = pru_reg_lookup (regstr);
+  if (*blreg == NULL)
+    as_bad (_("unknown register %s"), regstr);
+  free (regstr);
+  regstr = NULL;
+  argstr += strlen ((*blreg)->name);
+
+  if (argstr[0] == '+' && argstr[1] == '+')
+    {
+      argstr += 2;
+      if (*mode == MVI_OP_MODE_DIRECT)
+	as_bad (_("missing indirect operator for post-increment operand"));
+      if (*mode == MVI_OP_MODE_INDIRECT_PREDEC)
+	as_bad (_("cannot both pre-decrement and post-increment an operand"));
+      *mode = MVI_OP_MODE_INDIRECT_POSTINC;
+    }
+  if (argstr[0] != '\0')
+      as_bad (_("unexpected statements at and of instruction"));
+
+  if (*mode != MVI_OP_MODE_DIRECT)
+    {
+      if ((*blreg)->index != 1)
+	as_bad (_("only R1 can be used for indirect addressing"));
+
+      if ((*blreg)->regsel != RSEL_7_0
+	  && (*blreg)->regsel != RSEL_15_8
+	  && (*blreg)->regsel != RSEL_23_16
+	  && (*blreg)->regsel != RSEL_31_24)
+	as_bad (_("only byte mode can be used for R1"));
+    }
+}
+
+static void
+pru_assemble_arg_M (pru_insn_infoS *insn_info, const char *argstr)
+{
+  unsigned int mode, rdmode;
+  struct pru_reg *blreg;
+
+  pru_parse_mvi_operand (argstr, &blreg, &mode);
+
+  SET_INSN_FIELD (MVI_RS1_MODE, insn_info->insn_code, mode);
+  SET_INSN_FIELD (RS1, insn_info->insn_code, blreg->index);
+  SET_INSN_FIELD (RS1SEL, insn_info->insn_code, blreg->regsel);
+
+  /* Assume source operand would be parsed after destination one.  */
+  rdmode = GET_INSN_FIELD (MVI_RD_MODE, insn_info->insn_code);
+  if (rdmode == MVI_OP_MODE_DIRECT && mode == MVI_OP_MODE_DIRECT)
+    as_bad (_("at least one MVI operand must be indirect"));
+}
+
+static void
+pru_assemble_arg_m (pru_insn_infoS *insn_info, const char *argstr)
+{
+  unsigned int mode;
+  struct pru_reg *blreg;
+
+  pru_parse_mvi_operand (argstr, &blreg, &mode);
+
+  SET_INSN_FIELD (MVI_RD_MODE, insn_info->insn_code, mode);
+  SET_INSN_FIELD (RD, insn_info->insn_code, blreg->index);
+  SET_INSN_FIELD (RDSEL, insn_info->insn_code, blreg->regsel);
+}
+
+static void
 pru_assemble_arg_c (pru_insn_infoS *insn_info, const char *argstr)
 {
   unsigned long cb = pru_assemble_noreloc_expression (argstr);
@@ -1262,6 +1348,17 @@ pru_assemble_arg_c (pru_insn_infoS *insn_info, const char *argstr)
     as_bad (_("invalid constant table offset %ld"), cb);
   else
     SET_INSN_FIELD (CB, insn_info->insn_code, cb);
+}
+
+static void
+pru_assemble_arg_t (pru_insn_infoS *insn_info, const char *argstr)
+{
+  unsigned long val = pru_assemble_noreloc_expression (argstr);
+
+  if (val != 0 && val != 1)
+    as_bad (_("invalid task manager mode %ld"), val);
+  else
+    SET_INSN_FIELD (TSKMGR_MODE, insn_info->insn_code, val);
 }
 
 static void
@@ -1354,7 +1451,10 @@ pru_consume_arg (char *argstr, const char *parsestr)
     case 'S':
     case 'l':
     case 'n':
+    case 'm':
+    case 'M':
     case 'R':
+    case 't':
     case 'w':
     case 'x':
       /* We can't have %pmem here.  */
@@ -1680,8 +1780,17 @@ md_assemble (char *op_str)
 	    case 'n':
 	      pru_assemble_arg_n (insn, *argtk++);
 	      continue;
+	    case 'm':
+	      pru_assemble_arg_m (insn, *argtk++);
+	      continue;
+	    case 'M':
+	      pru_assemble_arg_M (insn, *argtk++);
+	      continue;
 	    case 'c':
 	      pru_assemble_arg_c (insn, *argtk++);
+	      continue;
+	    case 't':
+	      pru_assemble_arg_t (insn, *argtk++);
 	      continue;
 	    case 'w':
 	      pru_assemble_arg_w (insn, *argtk++);

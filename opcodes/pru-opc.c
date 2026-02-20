@@ -125,8 +125,17 @@ const struct pru_opcode pru_opcodes[] =
    OP_MATCH_LMBD, OP_MASK_FMT2_OP | OP_MASK_SUBOP, 0, unsigned_immed8_overflow},
   { "halt", prui_halt, "",
    OP_MATCH_HALT, OP_MASK_FMT2_OP | OP_MASK_SUBOP, 0, no_overflow},
+  { "tsen", prui_tsen, "t",
+   OP_MATCH_TSEN, OP_MASK_FMT2_OP | OP_MASK_SUBOP, 0, no_overflow},
   { "slp", prui_slp, "w",
    OP_MATCH_SLP, OP_MASK_FMT2_OP | OP_MASK_SUBOP, 0, no_overflow},
+
+  { "mvib", prui_mvib, "m,M",
+   OP_MATCH_MVIB, OP_MASK_MVIX_OP, 0, no_overflow},
+  { "mviw", prui_mviw, "m,M",
+   OP_MATCH_MVIW, OP_MASK_MVIX_OP, 0, no_overflow},
+  { "mvid", prui_mvid, "m,M",
+   OP_MATCH_MVID, OP_MASK_MVIX_OP, 0, no_overflow},
 
   { "xin", prui_xin, "x,D,n",
    OP_MATCH_XIN, OP_MASK_XFR_OP, 0, unsigned_immed8_overflow},
