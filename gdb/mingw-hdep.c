@@ -192,11 +192,10 @@ gdb_select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 static int
 rgb_to_16colors (const ui_file_style::color &color)
 {
-  uint8_t rgb[3];
-  color.get_rgb (rgb);
+  rgb_color rgb = color.get_rgb ();
 
   int retval = 0;
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < rgb.size (); i++)
     {
       /* Subdivide 256 possible values of each RGB component into 3
 	 regions: no color, normal color, bright color.  256 / 3 = 85,

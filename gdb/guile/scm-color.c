@@ -339,11 +339,10 @@ gdbscm_color_components (SCM self)
   if (!color.is_direct ())
     gdbscm_misc_error (FUNC_NAME, SCM_ARG1, self, "color is not direct");
 
-  uint8_t rgb[3] = {};
-  color.get_rgb (rgb);
-  SCM red = scm_from_uint8 (rgb[0]);
-  SCM green = scm_from_uint8 (rgb[1]);
-  SCM blue = scm_from_uint8 (rgb[2]);
+  rgb_color rgb = color.get_rgb ();
+  SCM red = scm_from_uint8 (rgb.r ());
+  SCM green = scm_from_uint8 (rgb.g ());
+  SCM blue = scm_from_uint8 (rgb.b ());
   return scm_list_3 (red, green, blue);
 }
 

@@ -255,8 +255,7 @@ get_color (const ui_file_style::color &color, int *result)
 	  int next = color_map.size () + 8;
 	  if (next >= COLORS)
 	    return false;
-	  uint8_t rgb[3];
-	  color.get_rgb (rgb);
+	  rgb_color rgb = color.get_rgb ();
 	  /* We store RGB as 0..255, but curses wants 0..1000.  */
 	  if (init_color (next, rgb[0] * 1000 / 255, rgb[1] * 1000 / 255,
 			  rgb[2] * 1000 / 255) == ERR)
