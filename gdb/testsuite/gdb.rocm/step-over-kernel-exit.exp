@@ -90,13 +90,13 @@ proc do_test { step_over_mode schedlock } {
 	    [get_integer_valueof "\$_thread" 0 "get selected thread before"]
 
 	gdb_test "stepi" \
-	    "\r\n\[$wave_target_id_re exited\]\r\nCommand aborted, thread exited\\." \
+	    "\r\n\\\[$wave_target_id_re exited\\\]\r\nCommand aborted, thread exited\\." \
 	    "single-step s_endpgm"
 
 	# Check that the selected thread didn't change, and that GDB
 	# manages to print the exited wave's target ID properly.
 	gdb_test "thread" \
-	    "\r\n\[Current thread is $selected_thread_before \\($wave_target_id_re\\) \\(exited\\)\]" \
+	    "\r\n\\\[Current thread is $selected_thread_before \\($wave_target_id_re\\) \\(exited\\)\\\]" \
 	    "exited wave target id"
     }
 }
