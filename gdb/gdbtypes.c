@@ -5064,10 +5064,6 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_puts (" TYPE_FIXED_INSTANCE");
     }
-  if (type->stub_is_supported ())
-    {
-      gdb_puts (" TYPE_STUB_SUPPORTED");
-    }
   if (TYPE_NOTTEXT (type))
     {
       gdb_puts (" TYPE_NOTTEXT");
@@ -5640,7 +5636,7 @@ type::is_opaque () const
   if (HAVE_CPLUS_STRUCT (this) && TYPE_NFN_FIELDS (this) != 0)
     return false;
 
-  return this->is_stub () || !this->stub_is_supported ();
+  return this->is_stub ();
 }
 
 /* See gdbtypes.h.  */
