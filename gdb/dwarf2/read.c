@@ -7507,49 +7507,35 @@ cutu_reader::lookup_dwo_type_unit (dwarf2_cu *cu, const char *dwo_name,
   return lookup_dwo_cutu (cu, dwo_name, comp_dir, sig_type->signature, 1);
 }
 
-/* Traversal function for queue_and_load_all_dwo_tus.  */
-
-static int
-queue_and_load_dwo_tu (dwo_unit *dwo_unit, dwarf2_cu *cu)
-{
-  ULONGEST signature = dwo_unit->signature;
-  signatured_type *sig_type = lookup_dwo_signatured_type (cu, signature);
-
-  if (sig_type != NULL)
-    {
-      /* We pass NULL for DEPENDENT_CU because we don't yet know if there's
-	 a real dependency of PER_CU on SIG_TYPE.  That is detected later
-	 while processing PER_CU.  */
-      if (maybe_queue_comp_unit (NULL, sig_type, cu->per_objfile))
-	load_full_type_unit (sig_type, cu->per_objfile);
-      cu->per_cu->imported_symtabs.push_back (sig_type);
-    }
-
-  return 1;
-}
-
 /* Queue all TUs contained in the DWO of CU to be read in.
    The DWO may have the only definition of the type, though it may not be
-   referenced anywhere in PER_CU.  Thus we have to load *all* its TUs.
+   referenced anywhere in CU.  Thus we have to load *all* its TUs.
    http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
 
 static void
 queue_and_load_all_dwo_tus (dwarf2_cu *cu)
 {
-  struct dwo_unit *dwo_unit;
-  struct dwo_file *dwo_file;
 
   gdb_assert (cu != nullptr);
   gdb_assert (!cu->per_cu->is_debug_types ());
   gdb_assert (cu->per_objfile->per_bfd->dwp_file == nullptr);
+  gdb_assert (cu->dwo_unit != nullptr);
 
-  dwo_unit = cu->dwo_unit;
-  gdb_assert (dwo_unit != NULL);
+  for (const dwo_unit_up &unit : cu->dwo_unit->dwo_file->tus)
+    {
+      signatured_type *sig_type
+	= lookup_dwo_signatured_type (cu, unit->signature);
+      if (sig_type == nullptr)
+	continue;
 
-  dwo_file = dwo_unit->dwo_file;
+      /* We pass nullptr for DEPENDENT_CU because we don't yet know if there's
+	 a real dependency of CU->PER_CU on SIG_TYPE.  That is detected later
+	 while processing CU->PER_CU.  */
+      if (maybe_queue_comp_unit (nullptr, sig_type, cu->per_objfile))
+	load_full_type_unit (sig_type, cu->per_objfile);
 
-  for (const dwo_unit_up &unit : dwo_file->tus)
-    queue_and_load_dwo_tu (unit.get (), cu);
+      cu->per_cu->imported_symtabs.push_back (sig_type);
+    }
 }
 
 /* Read in various DIEs.  */
