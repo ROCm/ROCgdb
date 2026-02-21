@@ -3985,71 +3985,68 @@ process_queue (dwarf2_per_objfile *per_objfile)
     {
       dwarf2_queue_item &item = per_objfile->queue->front ();
       dwarf2_per_cu *per_cu = item.per_cu;
+      dwarf2_cu *cu = per_objfile->get_cu (per_cu);
 
-      if (!per_objfile->compunit_symtab_set_p (per_cu))
+      gdb_assert (!per_objfile->compunit_symtab_set_p (per_cu));
+
+      /* Skip dummy CUs.  */
+      if (cu != nullptr)
 	{
-	  dwarf2_cu *cu = per_objfile->get_cu (per_cu);
+	  namespace chr = std::chrono;
 
-	  /* Skip dummy CUs.  */
-	  if (cu != nullptr)
+	  unsigned int debug_print_threshold;
+	  char buf[100];
+	  std::optional<chr::time_point<chr::steady_clock>> start_time;
+
+	  if (signatured_type *sig_type = per_cu->as_signatured_type ();
+	      sig_type != nullptr)
 	    {
-	      namespace chr = std::chrono;
+	      sprintf (buf, "TU %s at offset %s",
+		       hex_string (sig_type->signature),
+		       sect_offset_str (per_cu->sect_off ()));
+	      /* There can be 100s of TUs.  Only print them in verbose mode.  */
+	      debug_print_threshold = 2;
+	    }
+	  else
+	    {
+	      sprintf (buf, "CU at offset %s",
+		       sect_offset_str (per_cu->sect_off ()));
+	      debug_print_threshold = 1;
+	    }
 
-	      unsigned int debug_print_threshold;
-	      char buf[100];
-	      std::optional<chr::time_point<chr::steady_clock>> start_time;
+	  if (dwarf_read_debug >= debug_print_threshold)
+	    {
+	      dwarf_read_debug_printf ("Expanding symtab of %s", buf);
+	      start_time = chr::steady_clock::now ();
+	    }
 
-	      if (signatured_type *sig_type = per_cu->as_signatured_type ();
-		  sig_type != nullptr)
-		{
-		  sprintf (buf, "TU %s at offset %s",
-			   hex_string (sig_type->signature),
-			   sect_offset_str (per_cu->sect_off ()));
-		  /* There can be 100s of TUs.
-		     Only print them in verbose mode.  */
-		  debug_print_threshold = 2;
-		}
-	      else
-		{
-		  sprintf (buf, "CU at offset %s",
-			   sect_offset_str (per_cu->sect_off ()));
-		  debug_print_threshold = 1;
-		}
+	  ++expanded_count;
 
-	      if (dwarf_read_debug >= debug_print_threshold)
-		{
-		  dwarf_read_debug_printf ("Expanding symtab of %s", buf);
-		  start_time = chr::steady_clock::now ();
-		}
+	  compunit_symtab *cust;
 
-	      ++expanded_count;
+	  if (per_cu->is_debug_types ())
+	    cust = process_full_type_unit (cu);
+	  else
+	    {
+	      cust = process_full_comp_unit (cu);
 
-	      compunit_symtab *cust;
+	      /* If a compunit_symtab was created, note the per_cu for
+		 inclusion processing later.  */
+	      if (cust != nullptr)
+		just_read_cus.emplace_back (cu->per_cu);
+	    }
 
-	      if (per_cu->is_debug_types ())
-		cust = process_full_type_unit (cu);
-	      else
-		{
-		  cust = process_full_comp_unit (cu);
+	  per_objfile->set_compunit_symtab (cu->per_cu, cust);
 
-		  /* If a compunit_symtab was created, note the per_cu for
-		     inclusion processing later.  */
-		  if (cust != nullptr)
-		    just_read_cus.emplace_back (cu->per_cu);
-		}
+	  if (dwarf_read_debug >= debug_print_threshold)
+	    {
+	      const auto end_time = chr::steady_clock::now ();
+	      const auto time_spent = end_time - *start_time;
+	      const auto ms
+		= chr::duration_cast<chr::milliseconds> (time_spent);
 
-	      per_objfile->set_compunit_symtab (cu->per_cu, cust);
-
-	      if (dwarf_read_debug >= debug_print_threshold)
-		{
-		  const auto end_time = chr::steady_clock::now ();
-		  const auto time_spent = end_time - *start_time;
-		  const auto ms
-		    = chr::duration_cast<chr::milliseconds> (time_spent);
-
-		  dwarf_read_debug_printf ("Done expanding %s, took %.3fs", buf,
-					   ms.count () / 1000.0);
-		}
+	      dwarf_read_debug_printf ("Done expanding %s, took %.3fs", buf,
+				       ms.count () / 1000.0);
 	    }
 	}
 
