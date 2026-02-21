@@ -922,9 +922,9 @@ static void load_full_comp_unit (dwarf2_per_cu *per_cu,
 				 bool skip_partial,
 				 std::optional<language> pretend_language);
 
-static void process_full_comp_unit (dwarf2_cu *cu);
+static compunit_symtab *process_full_comp_unit (dwarf2_cu *cu);
 
-static void process_full_type_unit (dwarf2_cu *cu);
+static compunit_symtab *process_full_type_unit (dwarf2_cu *cu);
 
 static struct type *get_die_type_at_offset (sect_offset,
 					    dwarf2_per_cu *per_cu,
@@ -4025,10 +4025,14 @@ process_queue (dwarf2_per_objfile *per_objfile)
 
 	      ++expanded_count;
 
+	      compunit_symtab *cust;
+
 	      if (per_cu->is_debug_types ())
-		process_full_type_unit (cu);
+		cust = process_full_type_unit (cu);
 	      else
-		process_full_comp_unit (cu);
+		cust = process_full_comp_unit (cu);
+
+	      per_objfile->set_compunit_symtab (cu->per_cu, cust);
 
 	      if (dwarf_read_debug >= debug_print_threshold)
 		{
@@ -4668,7 +4672,7 @@ process_cu_includes (dwarf2_per_objfile *per_objfile)
 /* Generate full symbol information for CU, whose DIEs have
    already been loaded into memory.  */
 
-static void
+static compunit_symtab *
 process_full_comp_unit (dwarf2_cu *cu)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -4769,19 +4773,19 @@ process_full_comp_unit (dwarf2_cu *cu)
       cust->set_call_site_htab (std::move (cu->call_site_htab));
     }
 
-  per_objfile->set_compunit_symtab (cu->per_cu, cust);
-
   /* Push it for inclusion processing later.  */
   per_objfile->per_bfd->just_read_cus.push_back (cu->per_cu);
 
   /* Not needed any more.  */
   cu->reset_builder ();
+
+  return cust;
 }
 
 /* Generate full symbol information for type unit CU, whose DIEs have
    already been loaded into memory.  */
 
-static void
+static compunit_symtab *
 process_full_type_unit (dwarf2_cu *cu)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -4837,10 +4841,10 @@ process_full_type_unit (dwarf2_cu *cu)
       cust = tug_unshare->compunit_symtab;
     }
 
-  per_objfile->set_compunit_symtab (cu->per_cu, cust);
-
   /* Not needed any more.  */
   cu->reset_builder ();
+
+  return cust;
 }
 
 /* See read.h.  */
