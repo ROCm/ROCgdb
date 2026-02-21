@@ -463,6 +463,7 @@ SELFTESTS_SRCS = \
 	unittests/common-utils-selftests.c \
 	unittests/copy_bitwise-selftests.c \
 	unittests/enum-flags-selftests.c \
+	unittests/enumerate-selftests.c \
 	unittests/environ-selftests.c \
 	unittests/filtered_iterator-selftests.c \
 	unittests/format_pieces-selftests.c \
