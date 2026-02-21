@@ -99,7 +99,7 @@ target_to_connection_object (process_stratum_target *target)
   gdb_assert (conn_obj != nullptr);
 
   /* Repackage the result as a PyObject reference.  */
-  return gdbpy_ref<> ((PyObject *) conn_obj.release ());
+  return conn_obj;
 }
 
 /* Return a list of gdb.TargetConnection objects, one for each currently

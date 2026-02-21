@@ -56,7 +56,7 @@ create_color_object (const ui_file_style::color &color)
     return nullptr;
 
   color_obj->color = color;
-  return gdbpy_ref<> ((PyObject *) color_obj.release ());
+  return color_obj;
 }
 
 /* See py-color.h.  */

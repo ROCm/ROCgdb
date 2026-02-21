@@ -103,8 +103,7 @@ gdbpy_get_reggroup (const reggroup *reggroup)
       if (group == NULL)
 	return NULL;
       group->reggroup = reggroup;
-      gdbpy_reggroup_object_map[reggroup]
-	= gdbpy_ref<> ((PyObject *) group.release ());
+      gdbpy_reggroup_object_map[reggroup] = std::move (group);
     }
 
   /* Fetch the Python object wrapping REGGROUP from the map, increasing
@@ -158,7 +157,7 @@ gdbpy_get_register_descriptor (struct gdbarch *gdbarch,
 	return NULL;
       reg->regnum = regnum;
       reg->gdbarch = gdbarch;
-      vec[regnum] = gdbpy_ref<> ((PyObject *) reg.release ());
+      vec[regnum] = std::move (reg);
     }
 
   /* Grab the register descriptor from the vector, the reference count is

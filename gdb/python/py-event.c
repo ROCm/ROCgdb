@@ -37,7 +37,7 @@ create_event_object (PyTypeObject *py_type)
   if (!event_obj->dict)
     return NULL;
 
-  return gdbpy_ref<> ((PyObject *) event_obj.release ());
+  return event_obj;
 }
 
 /* Add the attribute ATTR to the event object EVENT.  In
