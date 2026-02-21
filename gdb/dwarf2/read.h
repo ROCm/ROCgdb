@@ -951,7 +951,7 @@ struct dwarf2_per_objfile
   gdb::unordered_map<per_cu_and_offset, type *, per_cu_and_offset_hash>
     die_type_hash;
 
-  /* Table containing line_header indexed by offset and offset_in_dwz.  */
+  /* Table containing line_header indexed by (section, offset-in-section).  */
   htab_up line_header_hash;
 
   /* The CU containing the m_builder in scope.  */

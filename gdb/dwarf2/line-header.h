@@ -20,7 +20,7 @@
 #ifndef GDB_DWARF2_LINE_HEADER_H
 #define GDB_DWARF2_LINE_HEADER_H
 
-#include "dwarf2/types.h"
+#include "dwarf2/section.h"
 
 struct dwarf2_per_objfile;
 struct dwarf2_cu;
@@ -89,14 +89,13 @@ struct line_header
      unit in the context of which we are reading this line header, or nullptr
      if unknown or not applicable.  */
   explicit line_header (const char *comp_dir)
-    : offset_in_dwz {}, m_comp_dir (comp_dir)
+    : m_comp_dir (comp_dir)
   {}
 
   /* This constructor should only be used to create line_header instances to do
      hash table lookups.  */
-  line_header (sect_offset sect_off, bool offset_in_dwz)
-    : sect_off (sect_off),
-      offset_in_dwz (offset_in_dwz)
+  line_header (section_and_offset sect_and_offset)
+    : sect_and_offset (sect_and_offset)
   {}
 
   /* Add an entry to the include directory table.  */
@@ -157,11 +156,8 @@ struct line_header
   const std::vector<file_entry> &file_names () const
   { return m_file_names; }
 
-  /* Offset of line number information in .debug_line section.  */
-  sect_offset sect_off {};
-
-  /* OFFSET is for struct dwz_file associated with dwarf2_per_objfile.  */
-  unsigned offset_in_dwz : 1; /* Can't initialize bitfields in-class.  */
+  /* Section containing this line header, and its offset into that section.  */
+  section_and_offset sect_and_offset;
 
   unsigned short version {};
   unsigned char minimum_instruction_length {};
@@ -219,7 +215,7 @@ file_entry::include_dir (const line_header *lh) const
   return lh->include_dir_at (d_index);
 }
 
-/* Read the statement program header starting at SECT_OFF in SECTION.
+/* Read the statement program header starting at SECT_AND_OFFSET.
    Return line_header.  Returns nullptr if there is a problem reading
    the header, e.g., if it has a version we don't understand.
 
@@ -227,9 +223,8 @@ file_entry::include_dir (const line_header *lh) const
    the returned object point into the dwarf line section buffer,
    and must not be freed.  */
 
-extern line_header_up dwarf_decode_line_header
-  (sect_offset sect_off, bool is_dwz, dwarf2_per_objfile *per_objfile,
-   struct dwarf2_section_info *section, const struct unit_head *cu_header,
-   const char *comp_dir);
+extern line_header_up dwarf_decode_line_header (
+  section_and_offset sect_and_offset, dwarf2_per_objfile *per_objfile,
+  const struct unit_head *cu_header, const char *comp_dir);
 
 #endif /* GDB_DWARF2_LINE_HEADER_H */

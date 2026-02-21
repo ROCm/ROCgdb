@@ -1034,7 +1034,7 @@ dwarf2_per_objfile::relocate (unrelocated_addr addr)
 static hashval_t
 line_header_hash (const struct line_header *ofs)
 {
-  return to_underlying (ofs->sect_off) ^ ofs->offset_in_dwz;
+  return section_and_offset_hash () (ofs->sect_and_offset);
 }
 
 /* Hash function for htab_create_alloc_ex for line_header_hash.  */
@@ -1055,8 +1055,8 @@ line_header_eq_voidp (const void *item_lhs, const void *item_rhs)
   const struct line_header *ofs_lhs = (const struct line_header *) item_lhs;
   const struct line_header *ofs_rhs = (const struct line_header *) item_rhs;
 
-  return (ofs_lhs->sect_off == ofs_rhs->sect_off
-	  && ofs_lhs->offset_in_dwz == ofs_rhs->offset_in_dwz);
+  return section_and_offset_eq () (ofs_lhs->sect_and_offset,
+				   ofs_rhs->sect_and_offset);
 }
 
 /* See declaration.  */
@@ -5803,7 +5803,7 @@ decode_line_header_for_cu (struct die_info *die, struct dwarf2_cu *cu,
     }
 
   void **slot;
-  line_header line_header_local (line_offset, cu->per_cu->is_dwz ());
+  line_header line_header_local ({ get_debug_line_section (cu), line_offset });
   hashval_t line_header_local_hash = line_header_hash (&line_header_local);
   if (per_objfile->line_header_hash != NULL)
     {
@@ -15307,9 +15307,8 @@ dwarf_decode_line_header (sect_offset sect_off, struct dwarf2_cu *cu,
       return 0;
     }
 
-  return dwarf_decode_line_header (sect_off, cu->per_cu->is_dwz (),
-				   per_objfile, section, &cu->header,
-				   comp_dir);
+  return dwarf_decode_line_header ({ section, sect_off }, per_objfile,
+				   &cu->header, comp_dir);
 }
 
 static void
