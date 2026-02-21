@@ -1243,6 +1243,34 @@ extern void dwarf2_get_section_info (struct objfile *,
 				     asection **, const gdb_byte **,
 				     bfd_size_type *);
 
+/* This is used to track whether a CU has already been visited during
+   symbol expansion.  It is an auto-resizing bool vector.  */
+class auto_bool_vector
+{
+public:
+
+  auto_bool_vector () = default;
+
+  /* Return true if element I is set.  */
+  bool is_set (size_t i) const
+  {
+    if (i < m_vec.size ())
+      return m_vec[i];
+    return false;
+  }
+
+  /* Set a value in this vector, growing it automatically.  */
+  void set (size_t i, bool value)
+  {
+    if (m_vec.size () < i + 1)
+      m_vec.resize (i + 1);
+    m_vec[i] = value;
+  }
+
+private:
+  std::vector<bool> m_vec;
+};
+
 /* Interface for DWARF indexing methods.  */
 
 struct dwarf2_base_index_functions : public quick_symbol_functions
@@ -1281,34 +1309,15 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 
   void map_symbol_filenames (objfile *objfile, symbol_filename_listener fun,
 			     bool need_fullname) override;
-};
 
-/* This is used to track whether a CU has already been visited during
-   symbol expansion.  It is an auto-resizing bool vector.  */
-class auto_bool_vector
-{
-public:
-
-  auto_bool_vector () = default;
-
-  /* Return true if element I is set.  */
-  bool is_set (size_t i) const
-  {
-    if (i < m_vec.size ())
-      return m_vec[i];
-    return false;
-  }
-
-  /* Set a value in this vector, growing it automatically.  */
-  void set (size_t i, bool value)
-  {
-    if (m_vec.size () < i + 1)
-      m_vec.resize (i + 1);
-    m_vec[i] = value;
-  }
-
-private:
-  std::vector<bool> m_vec;
+protected:
+  /* If FILE_MATCHER is NULL and if CUS_TO_SKIP does not include the CU's index,
+     expand the CU and call LISTENER on it.  */
+  bool search_one (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
+		   auto_bool_vector &cus_to_skip,
+		   search_symtabs_file_matcher file_matcher,
+		   search_symtabs_expansion_listener listener,
+		   search_symtabs_lang_matcher lang_matcher);
 };
 
 /* Return pointer to string at .debug_str offset STR_OFFSET.  */

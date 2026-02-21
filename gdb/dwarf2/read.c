@@ -937,13 +937,6 @@ static void queue_comp_unit (dwarf2_per_cu *per_cu,
 
 static void process_queue (dwarf2_per_objfile *per_objfile);
 
-static bool dw2_search_one (dwarf2_per_cu *per_cu,
-			    dwarf2_per_objfile *per_objfile,
-			    auto_bool_vector &cus_to_skip,
-			    search_symtabs_file_matcher file_matcher,
-			    search_symtabs_expansion_listener listener,
-			    search_symtabs_lang_matcher lang_matcher);
-
 /* Class, the destructor of which frees all allocated queue entries.  This
    will only have work to do if an error was thrown while processing the
    dwarf.  If no error was thrown then the queue entries should have all
@@ -1518,8 +1511,8 @@ struct readnow_functions : public dwarf2_base_index_functions
 	    || per_cu->unit_type (false) == 0
 	    || per_objfile->get_compunit_symtab (per_cu.get ()) == nullptr)
 	  continue;
-	if (!dw2_search_one (per_cu.get (), per_objfile, cus_to_skip,
-			     file_matcher, listener, lang_matcher))
+	if (!search_one (per_cu.get (), per_objfile, cus_to_skip, file_matcher,
+			 listener, lang_matcher))
 	  return false;
       }
     return true;
@@ -1976,11 +1969,10 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
     }
 }
 
-/* If FILE_MATCHER is NULL and if CUS_TO_SKIP does not include the
-   CU's index, expand the CU and call LISTENER on it.  */
+/* See read.h.  */
 
-static bool
-dw2_search_one
+bool
+dwarf2_base_index_functions::search_one
   (dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile,
    auto_bool_vector &cus_to_skip,
@@ -14108,8 +14100,8 @@ cooked_index_functions::search
 	{
 	  QUIT;
 
-	  if (!dw2_search_one (per_cu, per_objfile, cus_to_skip, file_matcher,
-			       listener, lang_matcher))
+	  if (!search_one (per_cu, per_objfile, cus_to_skip, file_matcher,
+			   listener, lang_matcher))
 	    return false;
 	}
       return true;
@@ -14277,8 +14269,8 @@ cooked_index_functions::search
 	  else if (!symbol_matcher (full_name))
 	    continue;
 
-	  if (!dw2_search_one (entry->per_cu, per_objfile, cus_to_skip,
-			       file_matcher, listener, nullptr))
+	  if (!search_one (entry->per_cu, per_objfile, cus_to_skip,
+			   file_matcher, listener, nullptr))
 	    return false;
 	}
     }
