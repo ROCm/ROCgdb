@@ -44,6 +44,7 @@
 #include "rust-lang.h"
 #include "ada-lang.h"
 #include "extract-store-integer.h"
+#include "gdbsupport/enumerate.h"
 
 /* The value of an invalid conversion badness.  */
 #define INVALID_CONVERSION 100
@@ -4832,12 +4833,12 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
 static void
 print_args (gdb::array_view<struct field> args, int spaces)
 {
-  for (int i = 0; i < args.size (); i++)
+  for (auto [i, arg] : gdb::ranges::views::enumerate (args))
     {
       gdb_printf
-	("%*s[%d] name '%s'\n", spaces, "", i,
-	 args[i].name () != NULL ? args[i].name () : "<NULL>");
-      recursive_dump_type (args[i].type (), spaces + 2);
+	("%*s[%zu] name '%s'\n", spaces, "", i,
+	 arg.name () != nullptr ? arg.name () : "<NULL>");
+      recursive_dump_type (arg.type (), spaces + 2);
     }
 }
 
