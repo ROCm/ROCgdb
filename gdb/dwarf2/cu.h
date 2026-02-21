@@ -426,6 +426,9 @@ public:
   /* Mark used when releasing cached dies.  */
   bool m_mark : 1;
 
+  /* Flag indicating this compilation unit is queued for processing.  */
+  bool queued : 1;
+
   /* This CU references .debug_loc.  See the symtab->locations_valid field.
      This test is imperfect as there may exist optimized debug code not using
      any location list and still facing inlining issues if handled as

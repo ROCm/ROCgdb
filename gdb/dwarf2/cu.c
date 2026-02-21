@@ -31,6 +31,7 @@ dwarf2_cu::dwarf2_cu (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile)
   : per_cu (per_cu),
     per_objfile (per_objfile),
     m_mark (false),
+    queued (false),
     has_loclist (false),
     m_checked_producer (false),
     m_producer_is_gxx_lt_4_6 (false),

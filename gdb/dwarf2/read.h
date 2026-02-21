@@ -60,17 +60,16 @@ struct signatured_type;
    for.  */
 struct dwarf2_queue_item
 {
-  dwarf2_queue_item (dwarf2_per_cu *cu, dwarf2_per_objfile *per_objfile)
-    : per_cu (cu),
-      per_objfile (per_objfile)  {
-  }
+  dwarf2_queue_item (dwarf2_cu *cu)
+    : cu (cu)
+  {}
 
   ~dwarf2_queue_item ();
 
   DISABLE_COPY_AND_ASSIGN (dwarf2_queue_item);
 
-  dwarf2_per_cu *per_cu;
-  dwarf2_per_objfile *per_objfile;
+  dwarf2_cu *cu;
+
 };
 
 /* A struct that can be used as a hash key for tables based on DW_AT_stmt_list.
@@ -124,7 +123,6 @@ struct dwarf2_per_cu
       reading_dwo_directly (false),
       tu_read (false),
       lto_artificial (false),
-      queued (false),
       files_read (false),
       scanned (false),
       m_section (section),
@@ -195,10 +193,6 @@ public:
   /* If addresses have been read for this CU (usually from
      .debug_aranges), then this flag is set.  */
   packed<bool, 1> addresses_seen = false;
-
-  /* Flag indicating this compilation unit will be read in before
-     any of the current compilation units are processed.  */
-  packed<bool, 1> queued;
 
   /* True if we've tried to read the file table.  There will be no
      point in trying to read it again next time.  */
