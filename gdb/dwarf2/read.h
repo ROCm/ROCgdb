@@ -913,15 +913,17 @@ struct dwarf2_per_objfile
   const char *read_line_string (const gdb_byte *buf,
 				unsigned int offset_size);
 
-  /* Return true if the symtab corresponding to PER_CU has been set,
+  /* Return true if the compunit_symtab corresponding to PER_CU has been set,
      false otherwise.  */
-  bool symtab_set_p (const dwarf2_per_cu *per_cu) const;
+  bool compunit_symtab_set_p (const dwarf2_per_cu *per_cu) const;
 
-  /* Return the compunit_symtab associated to PER_CU, if it has been created.  */
-  compunit_symtab *get_symtab (const dwarf2_per_cu *per_cu) const;
+  /* Return the compunit_symtab associated to PER_CU, if it has been
+     created.  */
+  compunit_symtab *get_compunit_symtab (const dwarf2_per_cu *per_cu) const;
 
   /* Set the compunit_symtab associated to PER_CU.  */
-  void set_symtab (const dwarf2_per_cu *per_cu, compunit_symtab *symtab);
+  void set_compunit_symtab (const dwarf2_per_cu *per_cu,
+			    compunit_symtab *symtab);
 
   /* Get the type_unit_group_unshareable corresponding to TU_GROUP_KEY.  If one
      does not exist, create it.  */
@@ -991,7 +993,7 @@ private:
   /* Hold the corresponding compunit_symtab for each CU or TU.  This is indexed
      by dwarf2_per_cu::index.  A NULL value means that the CU/TU has not been
      expanded yet.  */
-  std::vector<compunit_symtab *> m_symtabs;
+  std::vector<compunit_symtab *> m_compunit_symtabs;
 
   /* Map from a type unit group key to the corresponding unshared
      structure.  */
