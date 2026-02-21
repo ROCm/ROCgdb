@@ -1029,36 +1029,6 @@ dwarf2_per_objfile::relocate (unrelocated_addr addr)
   return gdbarch_adjust_dwarf2_addr (objfile->arch (), tem);
 }
 
-/* Hash function for line_header_hash.  */
-
-static hashval_t
-line_header_hash (const struct line_header *ofs)
-{
-  return section_and_offset_hash () (ofs->sect_and_offset);
-}
-
-/* Hash function for htab_create_alloc_ex for line_header_hash.  */
-
-static hashval_t
-line_header_hash_voidp (const void *item)
-{
-  const struct line_header *ofs = (const struct line_header *) item;
-
-  return line_header_hash (ofs);
-}
-
-/* Equality function for line_header_hash.  */
-
-static int
-line_header_eq_voidp (const void *item_lhs, const void *item_rhs)
-{
-  const struct line_header *ofs_lhs = (const struct line_header *) item_lhs;
-  const struct line_header *ofs_rhs = (const struct line_header *) item_rhs;
-
-  return section_and_offset_eq () (ofs_lhs->sect_and_offset,
-				   ofs_rhs->sect_and_offset);
-}
-
 /* See declaration.  */
 
 dwarf2_per_bfd::dwarf2_per_bfd (bfd *obfd, const dwarf2_debug_sections *names,
@@ -5792,32 +5762,22 @@ decode_line_header_for_cu (struct die_info *die, struct dwarf2_cu *cu,
      compile_unit, then use the line header hash table if it's already
      created, but don't create one just yet.  */
 
-  if (per_objfile->line_header_hash == NULL
+  if (!per_objfile->line_headers.has_value ()
       && die->tag == DW_TAG_partial_unit)
-    {
-      per_objfile->line_header_hash
-	.reset (htab_create_alloc (127, line_header_hash_voidp,
-				   line_header_eq_voidp,
-				   htab_delete_entry<line_header>,
-				   xcalloc, xfree));
-    }
+    per_objfile->line_headers.emplace ();
 
-  void **slot;
-  line_header line_header_local ({ get_debug_line_section (cu), line_offset });
-  hashval_t line_header_local_hash = line_header_hash (&line_header_local);
-  if (per_objfile->line_header_hash != NULL)
-    {
-      slot = htab_find_slot_with_hash (per_objfile->line_header_hash.get (),
-				       &line_header_local,
-				       line_header_local_hash, NO_INSERT);
+  section_and_offset sao {get_debug_line_section (cu), line_offset};
 
-      /* For DW_TAG_compile_unit we need info like symtab::linetable which
-	 is not present in *SLOT (since if there is something in *SLOT then
-	 it will be for a partial_unit).  */
-      if (die->tag == DW_TAG_partial_unit && slot != NULL)
+  /* For DW_TAG_compile_unit we need info like symtab::linetable which is not
+     present in the LINE_HEADERS hash table (since if there is something in the
+     hash table, it will be for a partial_unit).  */
+  if (die->tag == DW_TAG_partial_unit
+      && per_objfile->line_headers.has_value ())
+    {
+      if (auto line_header_it = per_objfile->line_headers->find (sao);
+	  line_header_it != per_objfile->line_headers->end ())
 	{
-	  gdb_assert (*slot != NULL);
-	  cu->line_header = (struct line_header *) *slot;
+	  cu->line_header = line_header_it->second.get ();
 	  return;
 	}
     }
@@ -5832,29 +5792,32 @@ decode_line_header_for_cu (struct die_info *die, struct dwarf2_cu *cu,
   cu->line_header = lh.release ();
   cu->line_header_die_owner = die;
 
-  if (per_objfile->line_header_hash == NULL)
-    slot = NULL;
-  else
+  bool inserted = false;
+
+  if (per_objfile->line_headers.has_value ())
     {
-      slot = htab_find_slot_with_hash (per_objfile->line_header_hash.get (),
-				       &line_header_local,
-				       line_header_local_hash, INSERT);
-      gdb_assert (slot != NULL);
+      auto [_, inserted_]
+	= per_objfile->line_headers->try_emplace (sao, cu->line_header);
+      inserted = inserted_;
+
+      if (inserted)
+	{
+	  /* There was no existing entry for this key.  The new line_header
+	     will be owned by the line_headers hash table.  */
+	  cu->line_header_die_owner = nullptr;
+	}
     }
-  if (slot != NULL && *slot == NULL)
+
+  if (!inserted)
     {
-      /* This newly decoded line number information unit will be owned
-	 by line_header_hash hash table.  */
-      *slot = cu->line_header;
-      cu->line_header_die_owner = NULL;
-    }
-  else
-    {
-      /* We cannot free any current entry in (*slot) as that struct line_header
-	 may be already used by multiple CUs.  Create only temporary decoded
+      /* There is already an existing line table with this key, or we're not
+	 using the line_headers hash table.
+
+	 We cannot free an existing entry, as that struct line_header may
+	 be already used by multiple CUs.  Create only temporary decoded
 	 line_header for this CU - it may happen at most once for each line
-	 number information unit.  And if we're not using line_header_hash
-	 then this is what we want as well.  */
+	 number information unit.  And if we're not using the line_headers
+	 hash table then this is what we want as well.  */
       gdb_assert (die->tag != DW_TAG_partial_unit);
     }
 

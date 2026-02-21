@@ -92,12 +92,6 @@ struct line_header
     : m_comp_dir (comp_dir)
   {}
 
-  /* This constructor should only be used to create line_header instances to do
-     hash table lookups.  */
-  line_header (section_and_offset sect_and_offset)
-    : sect_and_offset (sect_and_offset)
-  {}
-
   /* Add an entry to the include directory table.  */
   void add_include_dir (const char *include_dir);
 
@@ -155,9 +149,6 @@ struct line_header
   /* A const overload of the same.  */
   const std::vector<file_entry> &file_names () const
   { return m_file_names; }
-
-  /* Section containing this line header, and its offset into that section.  */
-  section_and_offset sect_and_offset;
 
   unsigned short version {};
   unsigned char minimum_instruction_length {};

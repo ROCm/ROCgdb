@@ -952,7 +952,7 @@ struct dwarf2_per_objfile
     die_type_hash;
 
   /* Table containing line_header indexed by (section, offset-in-section).  */
-  htab_up line_header_hash;
+  std::optional<unordered_section_and_offset_map<line_header_up>> line_headers;
 
   /* The CU containing the m_builder in scope.  */
   dwarf2_cu *sym_cu = nullptr;
