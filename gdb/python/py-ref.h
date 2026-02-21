@@ -23,27 +23,23 @@
 #include "gdbsupport/gdb_ref_ptr.h"
 
 /* A policy class for gdb::ref_ptr for Python reference counting.  */
-template<typename T>
 struct gdbpy_ref_policy
 {
-  static_assert(std::is_base_of<PyObject, T>::value,
-		"T must be a subclass of PyObject");
-
-  static void incref (T *ptr)
+  static void incref (PyObject *ptr)
   {
-    Py_INCREF (static_cast<PyObject *> (ptr));
+    Py_INCREF (ptr);
   }
 
-  static void decref (T *ptr)
+  static void decref (PyObject *ptr)
   {
-    Py_DECREF (static_cast<PyObject *> (ptr));
+    Py_DECREF (ptr);
   }
 };
 
 /* A gdb::ref_ptr that has been specialized for Python objects or
    their "subclasses".  */
 template<typename T = PyObject> using gdbpy_ref
-  = gdb::ref_ptr<T, gdbpy_ref_policy<T>>;
+  = gdb::ref_ptr<T, gdbpy_ref_policy>;
 
 /* A wrapper class for Python extension objects that have a __dict__ attribute.
 
