@@ -890,9 +890,6 @@ static struct type *get_DW_AT_signature_type (struct die_info *,
 					      struct dwarf2_cu *);
 
 static void load_full_type_unit (signatured_type *sig_type,
-				 dwarf2_per_objfile *per_objfile);
-
-static void read_signatured_type (signatured_type *sig_type,
 				  dwarf2_per_objfile *per_objfile);
 
 static int attr_to_dynamic_prop (const struct attribute *attr,
@@ -17376,7 +17373,7 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
      to be loaded, we must check for ourselves.  */
   if (maybe_queue_comp_unit (*ref_cu, sig_type, per_objfile)
       || per_objfile->get_cu (sig_type) == nullptr)
-    read_signatured_type (sig_type, per_objfile);
+    load_full_type_unit (sig_type, per_objfile);
 
   sig_cu = per_objfile->get_cu (sig_type);
   gdb_assert (sig_cu != NULL);
@@ -17536,23 +17533,13 @@ get_DW_AT_signature_type (struct die_info *die, const struct attribute *attr,
     }
 }
 
-/* Load the DIEs associated with type unit SIG_TYPE into memory.  */
-
-static void
-load_full_type_unit (signatured_type *sig_type, dwarf2_per_objfile *per_objfile)
-{
-  gdb_assert (per_objfile->get_cu (sig_type) == nullptr);
-  read_signatured_type (sig_type, per_objfile);
-  gdb_assert (per_objfile->get_cu (sig_type) != nullptr);
-}
-
 /* Read in a signatured type and build its CU and DIEs.
    If the type is a stub for the real type in a DWO file,
    read in the real type from the DWO file as well.  */
 
 static void
-read_signatured_type (signatured_type *sig_type,
-		      dwarf2_per_objfile *per_objfile)
+load_full_type_unit (signatured_type *sig_type,
+		     dwarf2_per_objfile *per_objfile)
 {
   gdb_assert (sig_type->is_debug_types ());
   gdb_assert (per_objfile->get_cu (sig_type) == nullptr);
