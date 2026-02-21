@@ -1599,26 +1599,23 @@ dw2_do_instantiate_symtab (dwarf2_per_cu *per_cu,
        with the dwarf queue empty.  */
     dwarf2_queue_guard q_guard (per_objfile);
 
-    if (!per_objfile->compunit_symtab_set_p (per_cu))
-      {
-	queue_comp_unit (per_cu, per_objfile);
-	dwarf2_cu *cu = per_objfile->get_cu (per_cu);
+    queue_comp_unit (per_cu, per_objfile);
+    dwarf2_cu *cu = per_objfile->get_cu (per_cu);
 
-	if (cu == nullptr)
-	  cu = load_cu (per_cu, per_objfile, skip_partial);
+    if (cu == nullptr)
+      cu = load_cu (per_cu, per_objfile, skip_partial);
 
-	/* If we just loaded a CU from a DWO, and we're working with an index
-	   that may badly handle TUs, load all the TUs in that DWO as well.
-	   http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
-	if (!per_cu->is_debug_types ()
-	    && cu != NULL
-	    && cu->dwo_unit != NULL
-	    && per_objfile->per_bfd->index_table != NULL
-	    && !per_objfile->per_bfd->index_table->version_check ()
-	    /* DWP files aren't supported yet.  */
-	    && per_objfile->per_bfd->dwp_file == nullptr)
-	  queue_and_load_all_dwo_tus (cu);
-      }
+    /* If we just loaded a CU from a DWO, and we're working with an index
+       that may badly handle TUs, load all the TUs in that DWO as well.
+       http://sourceware.org/bugzilla/show_bug.cgi?id=15021  */
+    if (!per_cu->is_debug_types ()
+	&& cu != nullptr
+	&& cu->dwo_unit != nullptr
+	&& per_objfile->per_bfd->index_table != nullptr
+	&& !per_objfile->per_bfd->index_table->version_check ()
+	/* DWP files aren't supported yet.  */
+	&& per_objfile->per_bfd->dwp_file == nullptr)
+      queue_and_load_all_dwo_tus (cu);
 
     process_queue (per_objfile);
   }
