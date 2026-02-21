@@ -72,27 +72,6 @@ struct dwarf2_queue_item
 
 };
 
-/* A struct that can be used as a hash key for tables based on DW_AT_stmt_list.
-   This includes type_unit_group and quick_file_names.  */
-
-struct stmt_list_hash
-{
-  bool operator== (const stmt_list_hash &other) const noexcept;
-
-  /* The DWO unit this table is from or NULL if there is none.  */
-  struct dwo_unit *dwo_unit;
-
-  /* Offset in .debug_line or .debug_line.dwo.  */
-  sect_offset line_sect_off;
-};
-
-struct stmt_list_hash_hash
-{
-  using is_avalanching = void;
-
-  std::uint64_t operator() (const stmt_list_hash &key) const noexcept;
-};
-
 /* A deleter for dwarf2_per_cu that knows to downcast to signatured_type as
    appropriate.  This approach lets us avoid a virtual destructor, which saves
    a bit of space.  */
@@ -453,10 +432,10 @@ struct signatured_type : public dwarf2_per_cu
      Zero is otherwise not a valid section offset.  */
   sect_offset type_offset_in_section {};
 
-  /* Type units are grouped by their DW_AT_stmt_list entry so that they
-     can share them.  This is the key of the group this type unit is part
-     of.  */
-  std::optional<stmt_list_hash> type_unit_group_key;
+  /* Type units are grouped by their DW_AT_stmt_list entry (i.e. which line
+     table they use) so that they can share them.  This is the key of the group
+     this type unit is part of.  */
+  std::optional<section_and_offset> type_unit_group_key;
 
   /* Containing DWO unit.
      This field is valid iff per_cu.reading_dwo_directly.  */
@@ -715,8 +694,7 @@ public:
      sorted all the TUs into "type unit groups", grouped by their
      DW_AT_stmt_list value.  Therefore the only sharing done here is with a
      CU and its associated TU group if there is one.  */
-  gdb::unordered_map<stmt_list_hash, quick_file_names *, stmt_list_hash_hash>
-    quick_file_names_table;
+  unordered_section_and_offset_map<quick_file_names *> quick_file_names_table;
 
   /* If we loaded the index from an external file, this contains the
      resources associated to the open file, memory mapping, etc.  */
@@ -919,7 +897,7 @@ struct dwarf2_per_objfile
   /* Get the type_unit_group_unshareable corresponding to TU_GROUP_KEY.  If one
      does not exist, create it.  */
   type_unit_group_unshareable *get_type_unit_group_unshareable
-    (stmt_list_hash tu_group_key);
+    (section_and_offset tu_group_key);
 
   struct type *get_type_for_signatured_type (signatured_type *sig_type) const;
 
@@ -990,8 +968,7 @@ private:
 
   /* Map from a type unit group key to the corresponding unshared
      structure.  */
-  gdb::unordered_map<stmt_list_hash, type_unit_group_unshareable_up,
-		     stmt_list_hash_hash>
+  unordered_section_and_offset_map<type_unit_group_unshareable_up>
     m_type_units;
 
   /* Map from signatured types to the corresponding struct type.  */

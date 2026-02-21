@@ -27,6 +27,8 @@
 #ifndef GDB_DWARF2_SECTION_H
 #define GDB_DWARF2_SECTION_H
 
+#include "gdbsupport/unordered_map.h"
+
 /* A descriptor for dwarf sections.
 
    S.ASECTION, SIZE are typically initialized when the objfile is first
@@ -123,5 +125,34 @@ struct section_and_offset
   const dwarf2_section_info *section;
   sect_offset offset;
 };
+
+/* Hash function for section_and_offset.  */
+
+struct section_and_offset_hash
+{
+  template <typename T>
+  using hash = ankerl::unordered_dense::hash<T>;
+  using is_avalanching = void;
+
+  std::uint64_t operator() (const section_and_offset &sao) const noexcept
+  {
+    return (hash<const dwarf2_section_info *> () (sao.section)
+	    + hash<sect_offset> () (sao.offset));
+  }
+};
+
+/* Equality function for section_and_offset.  */
+
+struct section_and_offset_eq
+{
+  bool operator() (const section_and_offset &a,
+		   const section_and_offset &b) const noexcept
+  { return a.section == b.section && a.offset == b.offset; }
+};
+
+template<typename Value>
+using unordered_section_and_offset_map
+  = gdb::unordered_map<section_and_offset, Value,
+		       section_and_offset_hash, section_and_offset_eq>;
 
 #endif /* GDB_DWARF2_SECTION_H */

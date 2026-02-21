@@ -1526,36 +1526,6 @@ struct readnow_functions : public dwarf2_base_index_functions
   }
 };
 
-/* See read.h.  */
-
-std::uint64_t
-stmt_list_hash_hash::operator() (const stmt_list_hash &key) const noexcept
-{
-  std::uint64_t v = 0;
-
-  if (key.dwo_unit != nullptr)
-    v += ankerl::unordered_dense::hash<dwo_file *> () (key.dwo_unit->dwo_file);
-
-  v += (ankerl::unordered_dense::hash<std::uint64_t> ()
-	(to_underlying (key.line_sect_off)));
-  return v;
-}
-
-/* See read.h.  */
-
-bool
-stmt_list_hash::operator== (const stmt_list_hash &rhs) const noexcept
-{
-  if ((this->dwo_unit != nullptr) != (rhs.dwo_unit != nullptr))
-    return false;
-
-  if (this->dwo_unit != nullptr
-      && this->dwo_unit->dwo_file != rhs.dwo_unit->dwo_file)
-    return false;
-
-  return this->line_sect_off == rhs.line_sect_off;
-}
-
 /* Read in CU (dwarf2_cu object) for PER_CU in the context of PER_OBJFILE.  This
    function is unrelated to symtabs, symtab would have to be created afterwards.
    You should call age_cached_comp_units after processing the CU.
@@ -1763,7 +1733,7 @@ dw2_get_file_names_reader (dwarf2_cu *cu, die_info *comp_unit_die)
   line_header_up lh;
 
   file_and_directory &fnd = find_file_and_directory (comp_unit_die, cu);
-  std::optional<stmt_list_hash> stmt_list_hash_key;
+  std::optional<section_and_offset> stmt_list_key;
   attribute *attr = dwarf2_attr (comp_unit_die, DW_AT_stmt_list, cu);
 
   if (attr != nullptr && attr->form_is_unsigned ())
@@ -1772,9 +1742,9 @@ dw2_get_file_names_reader (dwarf2_cu *cu, die_info *comp_unit_die)
 
       /* We may have already read in this line header (TU line header sharing).
 	 If we have we're done.  */
-      stmt_list_hash_key = {cu->dwo_unit, line_offset};
+      stmt_list_key = {get_debug_line_section (cu), line_offset};
 
-      if (auto it = per_bfd->quick_file_names_table.find (*stmt_list_hash_key);
+      if (auto it = per_bfd->quick_file_names_table.find (*stmt_list_key);
 	  it != per_bfd->quick_file_names_table.end ())
 	{
 	  this_cu->file_names = it->second;
@@ -1793,8 +1763,8 @@ dw2_get_file_names_reader (dwarf2_cu *cu, die_info *comp_unit_die)
   auto *qfn = XOBNEW (&per_bfd->obstack, quick_file_names);
 
   /* There may not be a DW_AT_stmt_list.  */
-  if (stmt_list_hash_key.has_value ())
-    per_bfd->quick_file_names_table.emplace (*stmt_list_hash_key, qfn);
+  if (stmt_list_key.has_value ())
+    per_bfd->quick_file_names_table.emplace (*stmt_list_key, qfn);
 
   std::vector<const char *> include_names;
   if (lh != nullptr)
@@ -3178,7 +3148,7 @@ cutu_reader::cutu_reader (dwarf2_per_cu &this_cu,
 /* Get the type unit group key for type unit CU.  STMT_LIST is a DW_AT_stmt_list
    attribute.  */
 
-static stmt_list_hash
+static section_and_offset
 get_type_unit_group_key (struct dwarf2_cu *cu, const struct attribute *stmt_list)
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
@@ -3205,7 +3175,7 @@ get_type_unit_group_key (struct dwarf2_cu *cu, const struct attribute *stmt_list
       ++tu_stats->nr_stmt_less_type_units;
     }
 
-  return {cu->dwo_unit, static_cast<sect_offset> (line_offset)};
+  return {get_debug_line_section (cu), static_cast<sect_offset> (line_offset)};
 }
 
 /* A subclass of cooked_index_worker that handles scanning
@@ -4534,7 +4504,7 @@ rust_union_quirks (struct dwarf2_cu *cu)
 
 type_unit_group_unshareable *
 dwarf2_per_objfile::get_type_unit_group_unshareable
-  (stmt_list_hash tu_group_key)
+  (section_and_offset tu_group_key)
 {
   auto [it, inserted] = m_type_units.emplace (tu_group_key, nullptr);
 
