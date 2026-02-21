@@ -999,7 +999,9 @@ static void open_and_init_dwp_file (dwarf2_per_objfile *per_objfile);
 
 static void queue_and_load_all_dwo_tus (dwarf2_cu *cu);
 
-static void process_cu_includes (dwarf2_per_objfile *per_objfile);
+static void process_cu_includes
+  (dwarf2_per_objfile *per_objfile,
+   const std::vector<dwarf2_per_cu *> &just_read_cus);
 
 
 /* Various complaints about symbol reading that don't abort the process.  */
@@ -1640,7 +1642,6 @@ dw2_instantiate_symtab (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
       free_cached_comp_units freer (per_objfile);
       scoped_restore decrementer = increment_reading_symtab ();
       dw2_do_instantiate_symtab (per_cu, per_objfile, skip_partial);
-      process_cu_includes (per_objfile);
     }
 
   return per_objfile->get_compunit_symtab (per_cu);
@@ -3979,6 +3980,7 @@ process_queue (dwarf2_per_objfile *per_objfile)
      objfile_name (per_objfile->objfile));
 
   unsigned int expanded_count = 0;
+  std::vector<dwarf2_per_cu *> just_read_cus;
 
   /* The queue starts out with one item, but following a DIE reference
      may load a new CU, adding it to the end of the queue.  */
@@ -4030,7 +4032,14 @@ process_queue (dwarf2_per_objfile *per_objfile)
 	      if (per_cu->is_debug_types ())
 		cust = process_full_type_unit (cu);
 	      else
-		cust = process_full_comp_unit (cu);
+		{
+		  cust = process_full_comp_unit (cu);
+
+		  /* If a compunit_symtab was created, note the per_cu for
+		     inclusion processing later.  */
+		  if (cust != nullptr)
+		    just_read_cus.emplace_back (cu->per_cu);
+		}
 
 	      per_objfile->set_compunit_symtab (cu->per_cu, cust);
 
@@ -4051,6 +4060,7 @@ process_queue (dwarf2_per_objfile *per_objfile)
       per_objfile->queue->pop ();
     }
 
+  process_cu_includes (per_objfile, just_read_cus);
   dwarf_read_debug_printf ("Done expanding %u symtabs.", expanded_count);
 }
 
@@ -4639,10 +4649,7 @@ compute_compunit_symtab_includes (dwarf2_per_cu *per_cu,
   if (!per_cu->imported_symtabs.empty ())
     {
       compunit_symtab *cust = per_objfile->get_compunit_symtab (per_cu);
-
-      /* If we don't have a symtab, we can just skip this case.  */
-      if (cust == NULL)
-	return;
+      gdb_assert (cust != nullptr);
 
       gdb::unordered_set<dwarf2_per_cu *> all_children;
       gdb::unordered_set<compunit_symtab *> all_type_symtabs;
@@ -4658,15 +4665,11 @@ compute_compunit_symtab_includes (dwarf2_per_cu *per_cu,
    read.  */
 
 static void
-process_cu_includes (dwarf2_per_objfile *per_objfile)
+process_cu_includes (dwarf2_per_objfile *per_objfile,
+		     const std::vector<dwarf2_per_cu *> &just_read_cus)
 {
-  for (dwarf2_per_cu *iter : per_objfile->per_bfd->just_read_cus)
-    {
-      if (!iter->is_debug_types ())
-	compute_compunit_symtab_includes (iter, per_objfile);
-    }
-
-  per_objfile->per_bfd->just_read_cus.clear ();
+  for (dwarf2_per_cu *iter : just_read_cus)
+    compute_compunit_symtab_includes (iter, per_objfile);
 }
 
 /* Generate full symbol information for CU, whose DIEs have
@@ -4772,9 +4775,6 @@ process_full_comp_unit (dwarf2_cu *cu)
 
       cust->set_call_site_htab (std::move (cu->call_site_htab));
     }
-
-  /* Push it for inclusion processing later.  */
-  per_objfile->per_bfd->just_read_cus.push_back (cu->per_cu);
 
   /* Not needed any more.  */
   cu->reset_builder ();

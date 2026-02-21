@@ -724,9 +724,6 @@ public:
   gdb::unordered_map<stmt_list_hash, quick_file_names *, stmt_list_hash_hash>
     quick_file_names_table;
 
-  /* The CUs we recently read.  */
-  std::vector<dwarf2_per_cu *> just_read_cus;
-
   /* If we loaded the index from an external file, this contains the
      resources associated to the open file, memory mapping, etc.  */
   index_cache_resource_up index_cache_res;
