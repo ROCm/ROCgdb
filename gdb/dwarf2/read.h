@@ -935,8 +935,10 @@ struct dwarf2_per_objfile
   /* Get the dwarf2_cu matching PER_CU for this objfile.  */
   dwarf2_cu *get_cu (dwarf2_per_cu *per_cu);
 
-  /* Set the dwarf2_cu matching PER_CU for this objfile.  */
-  void set_cu (dwarf2_per_cu *per_cu, dwarf2_cu_up cu);
+  /* Set the dwarf2_cu matching PER_CU for this objfile.
+
+     Return a non-owning reference to the dwarf2_cu.  */
+  dwarf2_cu &set_cu (dwarf2_per_cu *per_cu, dwarf2_cu_up cu);
 
   /* Remove/free the dwarf2_cu matching PER_CU for this objfile.  */
   void remove_cu (dwarf2_per_cu *per_cu);

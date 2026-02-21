@@ -889,8 +889,8 @@ static struct type *get_DW_AT_signature_type (struct die_info *,
 					      const struct attribute *,
 					      struct dwarf2_cu *);
 
-static void load_full_type_unit (signatured_type *sig_type,
-				  dwarf2_per_objfile *per_objfile);
+static dwarf2_cu *load_full_type_unit (signatured_type *sig_type,
+				       dwarf2_per_objfile *per_objfile);
 
 static int attr_to_dynamic_prop (const struct attribute *attr,
 				 struct die_info *die, struct dwarf2_cu *cu,
@@ -914,10 +914,9 @@ static void dwarf2_symbol_mark_computed (const struct attribute *attr,
 static struct type *set_die_type (struct die_info *, struct type *,
 				  struct dwarf2_cu *, bool = false);
 
-static void load_full_comp_unit (dwarf2_per_cu *per_cu,
-				 dwarf2_per_objfile *per_objfile,
-				 bool skip_partial,
-				 std::optional<language> pretend_language);
+static dwarf2_cu *load_full_comp_unit
+  (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
+   bool skip_partial, std::optional<language> pretend_language);
 
 static compunit_symtab *process_full_comp_unit (dwarf2_cu *cu);
 
@@ -1569,13 +1568,14 @@ static dwarf2_cu *
 load_cu (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
 	 bool skip_partial)
 {
+  dwarf2_cu *cu;
+
   if (signatured_type *sig_type = per_cu->as_signatured_type ();
       sig_type != nullptr)
-    load_full_type_unit (sig_type, per_objfile);
+    cu = load_full_type_unit (sig_type, per_objfile);
   else
-    load_full_comp_unit (per_cu, per_objfile, skip_partial, std::nullopt);
+    cu = load_full_comp_unit (per_cu, per_objfile, skip_partial, std::nullopt);
 
-  dwarf2_cu *cu = per_objfile->get_cu (per_cu);
   if (cu == nullptr)
     return nullptr;  /* Dummy CU.  */
 
@@ -4055,9 +4055,12 @@ process_queue (dwarf2_per_objfile *per_objfile)
   dwarf_read_debug_printf ("Done expanding %u symtabs.", expanded_count);
 }
 
-/* Load the DIEs associated with PER_CU into memory.  */
+/* Load the DIEs associated with PER_CU into memory.
 
-static void
+   Return the new dwarf2_cu.  This function may return nullptr, if the unit is
+   dummy.  */
+
+static dwarf2_cu *
 load_full_comp_unit (dwarf2_per_cu *this_cu, dwarf2_per_objfile *per_objfile,
 		     bool skip_partial,
 		     std::optional<language> pretend_language)
@@ -4069,13 +4072,13 @@ load_full_comp_unit (dwarf2_per_cu *this_cu, dwarf2_per_objfile *per_objfile,
   cutu_reader reader (*this_cu, *per_objfile, nullptr, skip_partial,
 		      pretend_language, abbrev_table_cache);
   if (reader.is_dummy ())
-    return;
+    return nullptr;
 
   reader.read_all_dies ();
 
   /* Save this dwarf2_cu in the per_objfile.  The per_objfile owns it
      now.  */
-  per_objfile->set_cu (this_cu, reader.release_cu ());
+  return &per_objfile->set_cu (this_cu, reader.release_cu ());
 }
 
 /* Add a DIE to the delayed physname list.  */
@@ -17535,9 +17538,12 @@ get_DW_AT_signature_type (struct die_info *die, const struct attribute *attr,
 
 /* Read in a signatured type and build its CU and DIEs.
    If the type is a stub for the real type in a DWO file,
-   read in the real type from the DWO file as well.  */
+   read in the real type from the DWO file as well.
 
-static void
+   Return the new dwarf2_cu.  This function may return nullptr, if the unit is
+   dummy.  */
+
+static dwarf2_cu *
 load_full_type_unit (signatured_type *sig_type,
 		     dwarf2_per_objfile *per_objfile)
 {
@@ -17547,17 +17553,16 @@ load_full_type_unit (signatured_type *sig_type,
   abbrev_table_cache abbrev_table_cache;
   cutu_reader reader (*sig_type, *per_objfile, nullptr, false,
 		      std::nullopt, abbrev_table_cache);
-
-  if (!reader.is_dummy ())
-    {
-      reader.read_all_dies ();
-
-      /* Save this dwarf2_cu in the per_objfile.  The per_objfile owns it
-	 now.  */
-      per_objfile->set_cu (sig_type, reader.release_cu ());
-    }
-
   sig_type->tu_read = 1;
+
+  if (reader.is_dummy ())
+    return nullptr;
+
+  reader.read_all_dies ();
+
+  /* Save this dwarf2_cu in the per_objfile.  The per_objfile owns it
+     now.  */
+  return &per_objfile->set_cu (sig_type, reader.release_cu ());
 }
 
 /* See read.h.  */
@@ -18301,12 +18306,12 @@ dwarf2_per_objfile::get_cu (dwarf2_per_cu *per_cu)
 
 /* See read.h.  */
 
-void
+dwarf2_cu &
 dwarf2_per_objfile::set_cu (dwarf2_per_cu *per_cu, dwarf2_cu_up cu)
 {
-  gdb_assert (this->get_cu (per_cu) == nullptr);
-
-  m_dwarf2_cus[per_cu] = std::move (cu);
+  auto [it, inserted] = m_dwarf2_cus.try_emplace (per_cu, std::move (cu));
+  gdb_assert (inserted);
+  return *it->second;
 }
 
 /* See read.h.  */
