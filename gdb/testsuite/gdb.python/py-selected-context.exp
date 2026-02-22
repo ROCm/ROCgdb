@@ -1,0 +1,130 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check the Python gdb.selected_context event handling.
+
+require allow_python_tests
+
+load_lib gdb-python.exp
+
+standard_testfile
+
+if { [build_executable "build exec" $testfile $srcfile {debug pthreads}] } {
+    return
+}
+
+clean_restart
+
+# Source the Python script.
+set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+gdb_test "source ${pyfile}" "^DONE" "load python file"
+gdb_test "test-selected-context-event" \
+    "^GDB selected-context event registered\\."
+
+# Return a regexp for when the selected context event triggers, and
+# runs without error.
+proc event_regexp { inferior {thread "None"} {frame "None"}} {
+    return [multi_line \
+		"  Inferior: ${inferior}" \
+		"    Thread: [string_to_regexp $thread]" \
+		"     Frame: [string_to_regexp $frame]"]
+}
+
+# Use 'info inferiors' to check that INF is the currently selected
+# inferior.  INF should be an inferior number, e.g. '1', '2', etc.
+proc check_inferior { inf testname } {
+    gdb_test "info inferiors" \
+	"\r\n\\*\\s+[string_to_regexp $inf]\\s+\[^\r\n\]*(?=\r\n)" \
+	$testname
+}
+
+# Use 'info threads' to check that THR is the currently selected
+# thread.  THR should be the thread-id (e.g. '1.1', '2.1') as appears
+# in the 'info threads' output.
+proc check_thread { thr testname } {
+    gdb_test "info threads" \
+	"\r\n\\*\\s+[string_to_regexp $thr]\\s+\[^\r\n\]+(?=\r\n).*" \
+	$testname
+}
+
+# Create a second inferior.
+gdb_test "add-inferior" "Added inferior 2\[^\r\n\]*"
+
+# Switch between inferiors before either inferior is started.  The
+# event will include a valid gdb.Inferior, but the thread and frame
+# will both be None.
+gdb_test "inferior 2" [event_regexp 2] \
+    "switch to inferior 2, inferior is not started"
+gdb_test "inferior 1" [event_regexp 1] \
+    "switch to inferior 1, inferior is not started"
+
+# Arrange for the event handler to raise an error.  Switch inferior,
+# check the error is printed, then check that the inferior switch was
+# still successful.
+gdb_test_no_output "python event_throws_error = True"
+gdb_test "inferior 2" \
+    [multi_line \
+	 "\\\[Switching to inferior 2\[^\r\n\]*\\\]" \
+	 "\[^\r\n\]+: error from gdb_selected_context_handler"] \
+    "switch to inferior 2, event raises an error"
+check_inferior 2 "check inferior 2 was selected"
+
+# Switch back to inferior 1.
+gdb_test "inferior 1" ".*" \
+    "return to inferior 1"
+
+# Load the executable and start the inferior.
+gdb_load $binfile
+if {![runto_main]} {
+    return
+}
+
+# Setup breakpoints and continue until the first is reached.
+gdb_breakpoint [gdb_get_line_number "First breakpoint"]
+gdb_breakpoint [gdb_get_line_number "Second breakpoint"]
+gdb_continue_to_breakpoint "first bp"
+
+# Ensure the expected thread is currently selected.
+check_thread 1.2 "confirm expected thread selected"
+
+# Switch thread.  The event handler is still configured to raise an
+# error, but the thread switch should still happen.
+gdb_test "thread 1" \
+    [multi_line \
+	 "\\\[Switching to thread 1\\.1\[^\r\n\]*\\\]" \
+	 "#0\\s+\[^\r\n\]+" \
+	 "\[^\r\n\]+: error from gdb_selected_context_handler"] \
+    "switch thread, handler raises an error"
+check_thread 1.1 "thread switched despite handler error"
+
+# Switch frame, ensure event handler raises an error.
+gdb_test "up" \
+    "#1\\s+.*: error from gdb_selected_context_handler" \
+    "error from event handler when switching frames"
+
+# Disable handler errors.
+gdb_test_no_output "python event_throws_error = False"
+
+# Switch thread, ensure event handler triggers.
+gdb_test "thread 2" [event_regexp 1 1.2 #0] \
+    "switch to thread 2, event handler triggers"
+
+# Now switch frames, ensure the event handler triggers.
+gdb_test "up" [event_regexp 1 1.2 #1] \
+    "move up a frame, event handler triggers"
+gdb_test "down" [event_regexp 1 1.2 #0] \
+    "move down a frame, event handler triggers"
+gdb_test "frame 1" [event_regexp 1 1.2 #1] \
+    "select a frame, event handler triggers"

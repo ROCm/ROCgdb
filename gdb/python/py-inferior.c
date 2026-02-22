@@ -997,6 +997,58 @@ gdbpy_selected_inferior (PyObject *self, PyObject *args)
 	  inferior_to_inferior_object (current_inferior ()).release ());
 }
 
+/* Implement the selected_context event handler.  This is called when some
+   aspect of the inferior's context (inferior, thread, or frame) is
+   changed by the user.  If there are event listeners in place then create
+   an event object and notify the listeners.  */
+
+static void
+python_context_changed (user_selected_what selection)
+{
+  if (!gdb_python_initialized)
+    return;
+
+  gdbpy_enter enter_py (current_inferior ()->arch ());
+
+  if (evregpy_no_listeners_p (gdb_py_events.selected_context))
+    return;
+
+  gdbpy_ref<> inf_obj (gdbpy_selected_inferior (nullptr, nullptr));
+  if (inf_obj == nullptr)
+    {
+      gdbpy_print_stack ();
+      return;
+    }
+
+  gdbpy_ref<> thr_obj (gdbpy_selected_thread (nullptr, nullptr));
+  if (thr_obj == nullptr)
+    {
+      gdbpy_print_stack ();
+      return;
+    }
+
+  gdbpy_ref<> frame_obj;
+  if (has_stack_frames ())
+    frame_obj = gdbpy_ref<> (gdbpy_selected_frame (nullptr, nullptr));
+  else
+    frame_obj = gdbpy_ref<>::new_reference (Py_None);
+
+  if (frame_obj == nullptr)
+    {
+      gdbpy_print_stack ();
+      return;
+    }
+
+  gdbpy_ref<> event
+    = create_event_object (&selected_context_event_object_type);
+  if (event == nullptr
+      || evpy_add_attribute (event.get (), "inferior", inf_obj.get ()) < 0
+      || evpy_add_attribute (event.get (), "thread", thr_obj.get ()) < 0
+      || evpy_add_attribute (event.get (), "frame", frame_obj.get ()) < 0
+      || evpy_emit_event (event.get (), gdb_py_events.selected_context) < 0)
+    gdbpy_print_stack ();
+}
+
 static int
 gdbpy_initialize_inferior ()
 {
@@ -1027,6 +1079,8 @@ gdbpy_initialize_inferior ()
   gdb::observers::inferior_added.attach (python_new_inferior, "py-inferior");
   gdb::observers::inferior_removed.attach (python_inferior_deleted,
 					   "py-inferior");
+  gdb::observers::user_selected_context_changed.attach (python_context_changed,
+							"py-inferior");
 
   return 0;
 }

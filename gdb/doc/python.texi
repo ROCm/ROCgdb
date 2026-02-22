@@ -4059,6 +4059,41 @@ This has a single attribute:
 The exiting thread.
 @end defvar
 
+@item events.selected_context
+This is emitted when the user directly, or indirectly, causes the
+selected inferior context to change.  The context consists of the
+currently selected inferior, thread, and frame.  Examples commands
+that trigger this event are @kbd{inferior}, @kbd{thread}, and
+@kbd{frame}.
+
+The event is of type @code{gdb.SelectedContextEvent} and has the
+following attributes:
+
+@defvar SelectedContextEvent.inferior
+The currently selected inferior.  This is of type @code{gdb.Inferior}
+(@pxref{Inferiors In Python}).
+@end defvar
+
+@defvar SelectedContextEvent.thread
+The currently selected thread.  If not @code{None} then this is of
+type @code{gdb.InferiorThread} (@pxref{Threads In Python}).  If
+switching to an inferior that is not yet started, then the
+@code{thread} attribute will be @code{None}.
+@end defvar
+
+@defvar SelectedContextEvent.frame
+The currently selected frame.  If not @code{None} then this is of type
+@code{gdb.Frame} (@pxref{Frames In Python}).  If switching to an
+inferior that is not yet started, then the @code{frame} attribute will
+be @code{None}.
+@end defvar
+
+In some cases @value{GDBN} might emit the @code{selected_context}
+event even when the context has not changed.  The state within the
+event will always reflect the state of the current inferior.  These
+unnecessary events could be removed in future releases of
+@value{GDBN}.
+
 @item events.gdb_exiting
 This is emitted when @value{GDBN} exits.  This event is not emitted if
 @value{GDBN} exits as a result of an internal error, or after an

@@ -200,6 +200,13 @@ qExecAndArgs
      contains the gdb.Corefile object if a core file is loaded into
      the inferior, otherwise, this contains None.
 
+  ** New event registry gdb.events.selected_context that emits a
+     SelectedContextEvent event whenever the user changes the inferior
+     context.  The context consists of which inferior, thread, and
+     frame are currently selected.  The event object has 'inferior',
+     'thread' and 'frame' attributes containing gdb.Inferior,
+     gdb.InferiorThread, and gdb.Frame objects respectively.
+
 * Guile API
 
   ** Procedures 'memory-port-read-buffer-size',
