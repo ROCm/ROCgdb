@@ -6817,6 +6817,32 @@ Return the line table associated with the symbol table.
 @xref{Line Tables In Python}.
 @end defun
 
+@defun Symtab.source_lines (first = @code{1}, last = @code{0}, unstyled = @code{False})
+Read source lines from the file associated with this Symtab, this will
+be the filename pointed to by @code{Symtab.fullname}.  The source
+lines are returned as a tuple of strings, each string represents a
+single source line.
+
+The @var{first} and @var{last} arguments can be used to only return
+some lines from the file, @var{first} will be the first line returned,
+and @var{last} will be the last line returned, as such @var{first}
+must be less than, or equal to, @var{last}.
+
+The default for @var{first} is @code{1}, which is the first line of
+the file.  The default for @var{last} is @code{0}, which is a special
+value meaning the last line of the file.
+
+When @var{unstyled} is @code{True} then the strings returned will have
+no style information included.  When @var{unstyled} is @code{False},
+the default, then the returned strings will include style information
+if styling is enabled (@pxref{Output Styling}), and @value{GDBN} knows
+how to style the source file.  Styling information will take the form of
+ANSI terminal escape sequences embedded within the strings.
+
+If the source file cannot be read, for example, if the source file is
+missing, then this method returns @code{None}.
+@end defun
+
 @node Line Tables In Python
 @subsubsection Manipulating line tables using Python
 

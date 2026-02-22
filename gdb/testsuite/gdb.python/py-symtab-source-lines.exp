@@ -1,0 +1,176 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the gdb.Symtab.source_lines method.
+
+load_lib gdb-python.exp
+
+require allow_python_tests
+
+standard_testfile
+
+set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+
+if {[build_executable "failed to build" $testfile $srcfile]} {
+    return
+}
+
+# Start with a fresh GDB, but enable color support.
+with_ansi_styling_terminal {
+    clean_restart $testfile
+}
+
+if {![runto_main]} {
+    return
+}
+
+set lineno_a [gdb_get_line_number "Location A"]
+set lineno_b [gdb_get_line_number "Location B"]
+set lineno_c [gdb_get_line_number "Location C"]
+
+# Run CMD, either 'list' or a Python replacement for that command,
+# passing in ARGS.  Collect all of the command output and return it.
+# Requires that the command output not be empty (otherwise this will
+# emit a FAIL).
+proc list_lines { cmd args testname } {
+    if { $args ne "" } {
+	set args " $args"
+    }
+
+    set content ""
+    gdb_test_multiple "$cmd$args" $testname {
+	-re "$cmd$args\r\n" {
+	    exp_continue
+	}
+
+	-re "^$::gdb_prompt $" {
+	    gdb_assert { $content ne "" } $gdb_test_name
+	}
+
+	-re "(^\[^\r\n\]*\r\n)" {
+	    set content $content$expect_out(1,string)
+	    exp_continue
+	}
+    }
+
+    return $content
+}
+
+# Run 'list' and compare the output to the output of 'py-list' or
+# 'py-list-unstyled', which are commands implemented in this tests
+# Python script file.
+#
+# CLI_ARGS is a string passed to 'list', and PY_ARGS is a string
+# passed to the two 'py-list*' commands.  Passing the empty string to
+# the py-list* commands is a valid possibility, which is why the
+# default here is "NONE".  If PY_ARGS is the default value then
+# CLI_ARGS is used for both.
+proc compare_list_cmds { cli_args { py_args "NONE" } } {
+    if { $py_args eq "NONE" } {
+	set py_args $cli_args
+    }
+
+    with_test_prefix "styling on" {
+	set content_cli_styled [list_lines list $cli_args \
+				    "get lines from builtin list command"]
+
+	set content_py_styled [list_lines py-list $py_args \
+				   "get lines from python list command"]
+
+	gdb_assert { $content_cli_styled == $content_py_styled } \
+	    "cli and py commands gave same output"
+    }
+
+    gdb_test_no_output -nopass "set style enabled off"
+
+    with_test_prefix "styling off" {
+	set content_cli_unstyled [list_lines list $cli_args \
+				      "get lines from builtin list command"]
+
+	set content_py_unstyled [list_lines py-list $py_args \
+				     "get lines from python list command"]
+
+	gdb_assert { $content_cli_unstyled == $content_py_unstyled } \
+	    "cli and py commands gave same output"
+    }
+
+    gdb_test_no_output -nopass "set style enabled on"
+
+    with_test_prefix "force unstyled" {
+	set content_py_unstyled [list_lines py-list-unstyled $py_args \
+				     "get lines from python list command"]
+
+	gdb_assert { $content_cli_unstyled == $content_py_unstyled } \
+	    "cli and py commands gave same output"
+    }
+}
+
+gdb_test_no_output -nopass "source $pyfile"
+
+foreach {first last} [list $lineno_a $lineno_b \
+			   $lineno_a $lineno_c \
+			   1         $lineno_b \
+			   1         999] {
+
+    with_test_prefix "$first..$last" {
+	compare_list_cmds $first,$last
+    }
+}
+
+# This invokes the Python py-list command with no arguments.  This
+# then exercises the Symtab.source_lines method with no arguments
+# being passed.
+compare_list_cmds 1,999 ""
+
+# Now some error checking.
+foreach_with_prefix cmd { py-list py-list-unstyled } {
+    gdb_test "$cmd -1,5" \
+	"Error occurred in Python: Invalid value -1 for first line number, minimum value is 1\\."
+    gdb_test "$cmd 10,5" \
+	"Error occurred in Python: First line 10 is after the last line 5\\."
+    gdb_test "$cmd 999,10" \
+	"Error occurred in Python: Line number 999 out of range, file has $lineno_c lines\\."
+    gdb_test "$cmd 10,-10" \
+	"Error occurred in Python: Invalid value -10 for last line number\\."
+}
+
+# Now test the case where the source file is missing.  To achieve this
+# we first need to compile a new executable using a copy of the source
+# file.
+set srcfile2 [standard_output_file $testfile-copy.c]
+file copy ${srcdir}/${subdir}/${srcfile} $srcfile2
+
+set testfile2 ${testfile}-missing-src
+if {[build_executable "failed to build" $testfile2 $srcfile2]} {
+    return
+}
+
+file delete $srcfile2
+
+# Start with a fresh GDB, but enable color support.
+with_ansi_styling_terminal {
+    clean_restart $testfile2
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test_no_output -nopass "source $pyfile"
+
+foreach_with_prefix cmd { py-list py-list-unstyled } {
+    gdb_test "$cmd 5,10" \
+	"^Source file [string_to_regexp $srcfile2] not found\\."
+}

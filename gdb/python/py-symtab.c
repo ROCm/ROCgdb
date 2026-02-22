@@ -23,6 +23,8 @@
 #include "python-internal.h"
 #include "objfiles.h"
 #include "block.h"
+#include "source-cache.h"
+#include "cli/cli-style.h"
 
 struct symtab_object : public PyObject
 {
@@ -221,6 +223,113 @@ stpy_get_linetable (PyObject *self, PyObject *args)
   STPY_REQUIRE_VALID (self, symtab);
 
   return symtab_to_linetable_object (self).release ();
+}
+
+/* Implement gdb.Symtab.source_lines().  Return a tuple of strings, each
+   string representing a source line.  Return None if the source could not
+   be read (e.g. if the source file is missing).  */
+
+static PyObject *
+stpy_source_lines (PyObject *self, PyObject *args, PyObject *kw)
+{
+  struct symtab *symtab = nullptr;
+
+  STPY_REQUIRE_VALID (self, symtab);
+
+  static const char *keywords[] = { "first", "last", "unstyled", nullptr };
+  int first = 1, last = 0, unstyled_p = 0;
+
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "|iip", keywords,
+					&first, &last, &unstyled_p))
+    return nullptr;
+
+  gdb_assert (unstyled_p == 0 || unstyled_p == 1);
+
+  std::optional<int> last_lineno = last_symtab_line (symtab);
+  if (!last_lineno.has_value ())
+    Py_RETURN_NONE;
+
+
+  if (first < 1)
+    {
+      PyErr_Format (PyExc_ValueError,
+		    _("Invalid value %d for first line number, "
+		      "minimum value is 1."),
+		    first);
+      return nullptr;
+    }
+  else if (first > last_lineno.value ())
+    {
+      PyErr_Format (PyExc_ValueError,
+		    _("Line number %d out of range, file has %d lines."),
+		    first, last_lineno.value ());
+      return nullptr;
+    }
+
+  if (last < 0)
+    {
+      PyErr_Format (PyExc_ValueError,
+		    _("Invalid value %d for last line number."),
+		    last);
+      return nullptr;
+    }
+  else if (last == 0 || last > last_lineno.value ())
+    last = last_lineno.value ();
+
+  if (first > last)
+    {
+      PyErr_Format (PyExc_ValueError,
+		    _("First line %d is after the last line %d."),
+		    first, last);
+      return nullptr;
+    }
+
+  try
+    {
+      std::string lines;
+
+      {
+	bool required_styling = (unstyled_p ? false : source_styling);
+	scoped_restore restore_styling
+	  = make_scoped_restore (&source_styling, required_styling);
+
+	if (!g_source_cache.get_source_lines (symtab, first, last, &lines))
+	  Py_RETURN_NONE;
+      }
+
+      gdbpy_ref<> list (PyList_New (0));
+      if (list == nullptr)
+	return nullptr;
+
+      for (std::string::size_type pos = 0; pos != lines.size (); )
+	{
+	  std::string::size_type len;
+	  std::string::size_type new_pos = lines.find ('\n', pos);
+	  if (new_pos == std::string::npos)
+	    len = lines.size () - pos;
+	  else
+	    {
+	      new_pos++;
+	      len = new_pos - pos;
+	    }
+
+	  std::string_view view (lines.c_str () + pos, len);
+	  gdbpy_ref<> str = host_string_to_python_string (view);
+	  if (str == nullptr)
+	    return nullptr;
+
+	  if (PyList_Append (list.get (), str.get ()) == -1)
+	    return nullptr;
+
+	  pos = new_pos;
+	}
+
+      return PyList_AsTuple (list.get ());
+    }
+  catch (const gdb_exception &except)
+    {
+      return gdbpy_handle_gdb_exception (nullptr, except);
+    }
 }
 
 static PyObject *
@@ -467,6 +576,11 @@ Return the static block of the symbol table." },
     { "linetable", stpy_get_linetable, METH_NOARGS,
     "linetable () -> gdb.LineTable.\n\
 Return the LineTable associated with this symbol table" },
+    { "source_lines", (PyCFunction) stpy_source_lines,
+      METH_VARARGS | METH_KEYWORDS,
+      "source_lines(Int,Int,Bool)->None|[String].\n\
+Return a list of source lines, or None if source could not\n\
+be read." },
   {NULL}  /* Sentinel */
 };
 

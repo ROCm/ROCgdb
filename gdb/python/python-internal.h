@@ -939,7 +939,11 @@ gdb::unique_xmalloc_ptr<char> unicode_to_target_string (PyObject *unicode_str);
 gdb::unique_xmalloc_ptr<char> python_string_to_target_string (PyObject *obj);
 gdbpy_ref<> python_string_to_target_python_string (PyObject *obj);
 gdb::unique_xmalloc_ptr<char> python_string_to_host_string (PyObject *obj);
-gdbpy_ref<> host_string_to_python_string (const char *str);
+
+/* Convert a host string STR to a python string.  */
+
+extern gdbpy_ref<> host_string_to_python_string (std::string_view str);
+
 int gdbpy_is_string (PyObject *obj);
 gdb::unique_xmalloc_ptr<char> gdbpy_obj_to_string (PyObject *obj);
 

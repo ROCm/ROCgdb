@@ -147,13 +147,13 @@ python_string_to_host_string (PyObject *obj)
   return unicode_to_encoded_string (str.get (), host_charset ());
 }
 
-/* Convert a host string to a python string.  */
+/* See python/python-internal.h.  */
 
 gdbpy_ref<>
-host_string_to_python_string (const char *str)
+host_string_to_python_string (std::string_view str)
 {
-  return gdbpy_ref<> (PyUnicode_Decode (str, strlen (str), host_charset (),
-					NULL));
+  return gdbpy_ref<> (PyUnicode_Decode (str.data (), str.size (),
+					host_charset (), nullptr));
 }
 
 /* Return true if OBJ is a Python string or unicode object, false
