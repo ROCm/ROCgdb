@@ -1387,4 +1387,6 @@ py_notimplemented ()
 #undef Py_RETURN_FALSE
 #undef Py_RETURN_NOTIMPLEMENTED
 
+#include "py-wrappers.h"
+
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */
