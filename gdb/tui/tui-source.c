@@ -63,10 +63,12 @@ tui_source_window::set_contents (struct gdbarch *arch,
   int nlines = height - box_size ();
 
   std::string srclines;
-  const std::vector<off_t> *offsets;
   if (!g_source_cache.get_source_lines (s, line_no, line_no + nlines,
-					&srclines)
-      || !g_source_cache.get_line_charpos (s, &offsets))
+					&srclines))
+    return false;
+
+  std::optional<int> last_lineno = last_symtab_line (s);
+  if (!last_lineno.has_value ())
     return false;
 
   int cur_line_no, cur_line;
@@ -86,7 +88,7 @@ tui_source_window::set_contents (struct gdbarch *arch,
     {
       /* Solaris 11+gcc 5.5 has ambiguous overloads of log10, so we
 	 cast to double to get the right one.  */
-      int lines_in_file = offsets->size ();
+      int lines_in_file = last_lineno.value ();
       int max_line_nr = lines_in_file;
       int digits_needed = 1 + (int)log10 ((double) max_line_nr);
       int trailing_space = 1;
@@ -166,9 +168,8 @@ tui_source_window::do_scroll_vertical (int num_to_scroll)
       int line_no = m_start_line_or_addr.u.line_no + num_to_scroll;
       if (line_no <= 0)
 	line_no = 1;
-      const std::vector<off_t> *offsets;
-      if (g_source_cache.get_line_charpos (s, &offsets)
-	  && line_no > offsets->size ())
+      if (std::optional<int> last_lineno = last_symtab_line (s);
+	  last_lineno.has_value () && line_no > last_lineno.value ())
 	line_no = m_start_line_or_addr.u.line_no;
 
       cursal.line = line_no;

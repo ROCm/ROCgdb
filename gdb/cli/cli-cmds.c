@@ -1271,7 +1271,8 @@ list_command (const char *arg, int from_tty)
 	  set_default_source_symtab_and_line ();
 	  const symtab_and_line cursal
 	    = get_current_source_symtab_and_line (current_program_space);
-	  if (last_symtab_line (cursal.symtab) >= cursal.line)
+	  if (std::optional<int> lineno = last_symtab_line (cursal.symtab);
+	      lineno.has_value () && lineno.value () >= cursal.line)
 	    print_source_lines (cursal.symtab,
 				source_lines_range (cursal.line), 0);
 	  else
