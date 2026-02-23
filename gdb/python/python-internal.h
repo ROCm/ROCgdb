@@ -466,13 +466,14 @@ PyObject *gdbpy_convenience_variable (PyObject *self, PyObject *args);
 PyObject *gdbpy_set_convenience_variable (PyObject *self, PyObject *args);
 PyObject *gdbpy_breakpoints (PyObject *, PyObject *);
 PyObject *gdbpy_frame_stop_reason_string (PyObject *, PyObject *);
-PyObject *gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw);
-PyObject *gdbpy_lookup_global_symbol (PyObject *self, PyObject *args,
-				      PyObject *kw);
-PyObject *gdbpy_lookup_static_symbol (PyObject *self, PyObject *args,
-				      PyObject *kw);
-PyObject *gdbpy_lookup_static_symbols (PyObject *self, PyObject *args,
-					   PyObject *kw);
+gdbpy_ref<> gdbpy_lookup_symbol (gdbpy_borrowed_ref<> args,
+				 gdbpy_opt_borrowed_ref<> kw);
+gdbpy_ref<> gdbpy_lookup_global_symbol (gdbpy_borrowed_ref<> args,
+					gdbpy_opt_borrowed_ref<> kw);
+gdbpy_ref<> gdbpy_lookup_static_symbol (gdbpy_borrowed_ref<> args,
+					gdbpy_opt_borrowed_ref<> kw);
+gdbpy_ref<> gdbpy_lookup_static_symbols (gdbpy_borrowed_ref<> args,
+					 gdbpy_opt_borrowed_ref<> kw);
 PyObject *gdbpy_start_recording (PyObject *self, PyObject *args);
 PyObject *gdbpy_current_recording (PyObject *self, PyObject *args);
 PyObject *gdbpy_stop_recording (PyObject *self, PyObject *args);

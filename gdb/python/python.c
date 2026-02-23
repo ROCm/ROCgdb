@@ -3189,24 +3189,20 @@ Stop current recording." },
     METH_VARARGS | METH_KEYWORDS,
     "lookup_type (name [, block]) -> type\n\
 Return a Type corresponding to the given name." },
-  { "lookup_symbol", (PyCFunction) gdbpy_lookup_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+  varargs_function<gdbpy_lookup_symbol> ("lookup_symbol",
     "lookup_symbol (name [, block] [, domain]) -> (symbol, is_field_of_this)\n\
 Return a tuple with the symbol corresponding to the given name (or None) and\n\
 a boolean indicating if name is a field of the current implied argument\n\
-`this' (when the current language is object-oriented)." },
-  { "lookup_global_symbol", (PyCFunction) gdbpy_lookup_global_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+`this' (when the current language is object-oriented)."),
+  varargs_function<gdbpy_lookup_global_symbol> ("lookup_global_symbol",
     "lookup_global_symbol (name [, domain]) -> symbol\n\
-Return the symbol corresponding to the given name (or None)." },
-  { "lookup_static_symbol", (PyCFunction) gdbpy_lookup_static_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+Return the symbol corresponding to the given name (or None)."),
+  varargs_function<gdbpy_lookup_static_symbol> ("lookup_static_symbol",
     "lookup_static_symbol (name [, domain]) -> symbol\n\
-Return the static-linkage symbol corresponding to the given name (or None)." },
-  { "lookup_static_symbols", (PyCFunction) gdbpy_lookup_static_symbols,
-    METH_VARARGS | METH_KEYWORDS,
+Return the static-linkage symbol corresponding to the given name (or None)."),
+  varargs_function<gdbpy_lookup_static_symbols> ("lookup_static_symbols",
     "lookup_static_symbols (name [, domain]) -> symbol\n\
-Return a list of all static-linkage symbols corresponding to the given name." },
+Return a list of all static-linkage symbols corresponding to the given name."),
 
   { "lookup_objfile", (PyCFunction) gdbpy_lookup_objfile,
     METH_VARARGS | METH_KEYWORDS,
