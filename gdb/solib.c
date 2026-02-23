@@ -319,11 +319,10 @@ solib_find_1 (const char *in_pathname, int *fd, bool is_solib)
 }
 
 /* Return the full pathname of the main executable, or NULL if not
-   found.  If FD is non-NULL, *FD is set to either -1 or an open file
-   handle for the main executable.  */
+   found.  */
 
 gdb::unique_xmalloc_ptr<char>
-exec_file_find (const char *in_pathname, int *fd)
+exec_file_find (const char *in_pathname)
 {
   gdb::unique_xmalloc_ptr<char> result;
   const char *fskind = effective_target_file_system_kind ();
@@ -333,7 +332,7 @@ exec_file_find (const char *in_pathname, int *fd)
 
   if (!gdb_sysroot.empty () && IS_TARGET_ABSOLUTE_PATH (fskind, in_pathname))
     {
-      result = solib_find_1 (in_pathname, fd, false);
+      result = solib_find_1 (in_pathname, nullptr, false);
 
       if (result == NULL && fskind == file_system_kind_dos_based)
 	{
@@ -343,7 +342,7 @@ exec_file_find (const char *in_pathname, int *fd)
 	  strcpy (new_pathname, in_pathname);
 	  strcat (new_pathname, ".exe");
 
-	  result = solib_find_1 (new_pathname, fd, false);
+	  result = solib_find_1 (new_pathname, nullptr, false);
 	}
     }
   else
@@ -358,8 +357,6 @@ exec_file_find (const char *in_pathname, int *fd)
 
       if (!source_full_path_of (in_pathname, &result))
 	result = make_unique_xstrdup (in_pathname);
-      if (fd != NULL)
-	*fd = -1;
     }
 
   return result;

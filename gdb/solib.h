@@ -297,8 +297,7 @@ protected:
 using solib_ops_up = std::unique_ptr<solib_ops>;
 
 /* Find main executable binary file.  */
-extern gdb::unique_xmalloc_ptr<char> exec_file_find (const char *in_pathname,
-						     int *fd);
+extern gdb::unique_xmalloc_ptr<char> exec_file_find (const char *in_pathname);
 
 /* Find shared library binary file.  */
 extern gdb::unique_xmalloc_ptr<char> solib_find (const char *in_pathname,

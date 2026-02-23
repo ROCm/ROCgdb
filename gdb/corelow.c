@@ -421,7 +421,7 @@ core_target::build_file_mappings ()
 	 there is no sysroot, an equivalent (possibly more
 	 canonical) pathname will be provided.  */
       gdb::unique_xmalloc_ptr<char> expanded_fname
-	= exec_file_find (file_data.filename.c_str (), nullptr);
+	= exec_file_find (file_data.filename.c_str ());
 
       bool build_id_mismatch = false;
       if (expanded_fname != nullptr && file_data.build_id != nullptr)

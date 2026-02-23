@@ -1306,7 +1306,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
   breakpoint_init_inferior (current_inferior (), inf_execd);
 
   gdb::unique_xmalloc_ptr<char> exec_file_host
-    = exec_file_find (exec_file_target, nullptr);
+    = exec_file_find (exec_file_target);
 
   /* If we were unable to map the executable target pathname onto a host
      pathname, tell the user that.  Otherwise GDB's subsequent behavior
