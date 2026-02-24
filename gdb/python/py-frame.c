@@ -32,22 +32,125 @@ struct frame_object : public PyObject
 {
   struct frame_id frame_id;
   struct gdbarch *gdbarch;
+
+  /* Marks that the FRAME_ID member actually holds the ID of the frame next
+     to this, and not this frames' ID itself.  This is a hack to permit Python
+     frame objects which represent invalid frames (i.e., the last frame_info
+     in a corrupt stack).  The problem arises from the fact that this code
+     relies on FRAME_ID to uniquely identify a frame, which is not always true
+     for the last "frame" in a corrupt stack (it can have a null ID, or the same
+     ID as the  previous frame).  Whenever get_prev_frame returns NULL, we
+     record the frame_id of the next frame and set FRAME_ID_IS_NEXT to 1.  */
+  int frame_id_is_next;
+
+  /* Return the associated frame.  Throws an exception on error.  */
+  frame_info_ptr require_frame ()
+  {
+    frame_info_ptr frame = frame_object_to_frame_info (this);
+    /* FIXME: Python safety.  frame_object_to_frame_info should be
+       converted, but the callers aren't ready yet.  */
+    if (frame == nullptr)
+      gdbpy_err_format (PyExc_RuntimeError, _("Frame is invalid."));
+    return frame;
+  }
+
+  /* Called by the Python interpreter to obtain string representation
+     of the object.  */
+  gdbpy_ref<> str ()
+  {
+    return gdbpy_unicode_from_string (frame_id.to_string ());
+  }
+
+  /* Implement repr() for gdb.Frame.  */
+  gdbpy_ref<> repr ();
+
+  /* Implementation of gdb.Frame.is_valid (self) -> Boolean.  Returns
+     True if the frame corresponding to the frame_id of this object
+     still exists in the inferior.  */
+  bool is_valid ()
+  {
+    return frame_object_to_frame_info (this) != nullptr;
+  }
+
+  /* Implementation of gdb.Frame.name (self) -> String.
+     Returns the name of the function corresponding to this frame.  */
+  gdb::unique_xmalloc_ptr<char> name ();
+
+  /* Implementation of gdb.Frame.type (self) -> Integer.
+     Returns the frame type, namely one of the gdb.*_FRAME constants.  */
+  ULONGEST type ();
+
+  /* Implementation of gdb.Frame.architecture (self) -> gdb.Architecture.
+     Returns the frame's architecture as a gdb.Architecture object.  */
+  gdbpy_ref<> arch ();
+
+  /* Implementation of gdb.Frame.unwind_stop_reason (self) -> Integer.
+     Returns one of the gdb.FRAME_UNWIND_* constants.  */
+  int unwind_stop_reason ();
+
+  /* Implementation of gdb.Frame.pc (self) -> Long.
+     Returns the frame's resume address.  */
+  ULONGEST pc ();
+
+  /* Implementation of gdb.Frame.read_register (self, register) -> gdb.Value.
+     Returns the value of a register in this frame.  */
+  gdbpy_ref<> read_register (gdbpy_borrowed_ref<> args,
+			     gdbpy_opt_borrowed_ref<> kw);
+
+  /* Implementation of gdb.Frame.block (self) -> gdb.Block.
+     Returns the frame's code block.  */
+  gdbpy_ref<> block ();
+
+  /* Implementation of gdb.Frame.function (self) -> gdb.Symbol.
+     Returns the symbol for the function corresponding to this frame.  */
+  gdbpy_ref<> function ();
+
+  /* Implementation of gdb.Frame.older (self) -> gdb.Frame.
+     Returns the frame immediately older (outer) to this frame, or None if
+     there isn't one.  */
+  gdbpy_ref<> older ();
+
+  /* Implementation of gdb.Frame.newer (self) -> gdb.Frame.
+     Returns the frame immediately newer (inner) to this frame, or None if
+     there isn't one.  */
+  gdbpy_ref<> newer ();
+
+  /* Implementation of gdb.Frame.find_sal (self) -> gdb.Symtab_and_line.
+     Returns the frame's symtab and line.  */
+  gdbpy_ref<> find_sal ();
+
+  /* Implementation of gdb.Frame.read_var_value (self, variable,
+     [block]) -> gdb.Value.  If the optional block argument is provided
+     start the search from that block, otherwise search from the frame's
+     current block (determined by examining the resume address of the
+     frame).  The variable argument must be a string or an instance of a
+     gdb.Symbol.  The block argument must be an instance of gdb.Block.  Returns
+     NULL on error, with a python exception set.  */
+  gdbpy_ref<> read_var (gdbpy_borrowed_ref<> args,
+			gdbpy_opt_borrowed_ref<> kw);
+
+  /* Select this frame.  */
+  void select ();
+
+  /* The stack frame level for this frame.  */
+  int level ();
+
+  /* The language for this frame.  */
+  const char *language ();
+
+  /* The static link for this frame.  */
+  gdbpy_ref<> static_link ();
+
+  static PyTypeObject *corresponding_object_type;
 };
 
 static_assert (gdb::is_python_allocatable_v<frame_object>);
 
-/* Require a valid frame.  This must be called inside a TRY_CATCH, or
-   another context in which a gdb exception is allowed.  */
-#define FRAPY_REQUIRE_VALID(frame_obj, frame)		\
-    do {						\
-      frame = frame_object_to_frame_info (frame_obj);	\
-      if (frame == NULL)				\
-	error (_("Frame is invalid."));			\
-    } while (0)
-
 /* Returns the frame_info object corresponding to the given Python Frame
    object.  If the frame doesn't exist anymore (the frame id doesn't
    correspond to any frame in the inferior), returns NULL.  */
+/* FIXME: Python safety.  This function should be converted, but the
+   callers aren't ready yet.  */
 
 frame_info_ptr
 frame_object_to_frame_info (PyObject *obj)
@@ -62,291 +165,127 @@ frame_object_to_frame_info (PyObject *obj)
   return frame;
 }
 
-/* Called by the Python interpreter to obtain string representation
-   of the object.  */
-
-static PyObject *
-frapy_str (PyObject *self)
+gdbpy_ref<>
+frame_object::repr ()
 {
-  const frame_id &fid = ((frame_object *) self)->frame_id;
-  return PyUnicode_FromString (fid.to_string ().c_str ());
-}
-
-/* Implement repr() for gdb.Frame.  */
-
-static PyObject *
-frapy_repr (PyObject *self)
-{
-  frame_object *frame_obj = (frame_object *) self;
-  frame_info_ptr f_info = frame_find_by_id (frame_obj->frame_id);
+  frame_info_ptr f_info = frame_find_by_id (frame_id);
   if (f_info == nullptr)
-    return gdb_py_invalid_object_repr (self);
+    /* FIXME: Python safety.  gdb_py_invalid_object_repr should
+       throw on error. */
+    return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
 
-  const frame_id &fid = frame_obj->frame_id;
-  return PyUnicode_FromFormat ("<%s level=%d frame-id=%s>",
-			       gdbpy_py_obj_tp_name (self).c_str (),
-			       frame_relative_level (f_info),
-			       fid.to_string ().c_str ());
+  return gdbpy_unicode_from_format ("<%s level=%d frame-id=%s>",
+				    gdbpy_py_obj_tp_name (this).c_str (),
+				    frame_relative_level (f_info),
+				    frame_id.to_string ().c_str ());
 }
 
-/* Implementation of gdb.Frame.is_valid (self) -> Boolean.
-   Returns True if the frame corresponding to the frame_id of this
-   object still exists in the inferior.  */
-
-static PyObject *
-frapy_is_valid (PyObject *self, PyObject *args)
+gdb::unique_xmalloc_ptr<char>
+frame_object::name ()
 {
-  frame_info_ptr frame = NULL;
-
-  try
-    {
-      frame = frame_object_to_frame_info (self);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  if (frame == NULL)
-    return py_false ().release ();
-
-  return py_true ().release ();
-}
-
-/* Implementation of gdb.Frame.name (self) -> String.
-   Returns the name of the function corresponding to this frame.  */
-
-static PyObject *
-frapy_name (PyObject *self, PyObject *args)
-{
-  frame_info_ptr frame;
-  gdb::unique_xmalloc_ptr<char> name;
+  frame_info_ptr frame = require_frame ();
   enum language lang;
-  PyObject *result;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      name = find_frame_funname (frame, &lang, NULL);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  if (name)
-    {
-      result = PyUnicode_Decode (name.get (), strlen (name.get ()),
-				 host_charset (), NULL);
-    }
-  else
-    {
-      result = py_none ().release ();
-    }
-
-  return result;
+  return find_frame_funname (frame, &lang, nullptr);
 }
 
-/* Implementation of gdb.Frame.type (self) -> Integer.
-   Returns the frame type, namely one of the gdb.*_FRAME constants.  */
-
-static PyObject *
-frapy_type (PyObject *self, PyObject *args)
+ULONGEST
+frame_object::type ()
 {
-  frame_info_ptr frame;
-  enum frame_type type = NORMAL_FRAME;/* Initialize to appease gcc warning.  */
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      type = get_frame_type (frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return gdb_py_object_from_longest (type).release ();
+  frame_info_ptr frame = require_frame ();
+  return get_frame_type (frame);
 }
 
-/* Implementation of gdb.Frame.architecture (self) -> gdb.Architecture.
-   Returns the frame's architecture as a gdb.Architecture object.  */
-
-static PyObject *
-frapy_arch (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::arch ()
 {
-  frame_info_ptr frame = NULL;    /* Initialize to appease gcc warning.  */
-  frame_object *obj = (frame_object *) self;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return gdbarch_to_arch_object (obj->gdbarch).release ();
+  require_frame ();
+  return gdbarch_to_arch_object (gdbarch);
 }
 
-/* Implementation of gdb.Frame.unwind_stop_reason (self) -> Integer.
-   Returns one of the gdb.FRAME_UNWIND_* constants.  */
-
-static PyObject *
-frapy_unwind_stop_reason (PyObject *self, PyObject *args)
+int
+frame_object::unwind_stop_reason ()
 {
-  frame_info_ptr frame = NULL;    /* Initialize to appease gcc warning.  */
-  enum unwind_stop_reason stop_reason;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  stop_reason = get_frame_unwind_stop_reason (frame);
-
-  return gdb_py_object_from_longest (stop_reason).release ();
+  frame_info_ptr frame = require_frame ();
+  return get_frame_unwind_stop_reason (frame);
 }
 
-/* Implementation of gdb.Frame.pc (self) -> Long.
-   Returns the frame's resume address.  */
-
-static PyObject *
-frapy_pc (PyObject *self, PyObject *args)
+ULONGEST
+frame_object::pc ()
 {
-  CORE_ADDR pc = 0;	      /* Initialize to appease gcc warning.  */
-  frame_info_ptr frame;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      pc = get_frame_pc (frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return gdb_py_object_from_ulongest (pc).release ();
+  frame_info_ptr frame = require_frame ();
+  return get_frame_pc (frame);
 }
 
-/* Implementation of gdb.Frame.read_register (self, register) -> gdb.Value.
-   Returns the value of a register in this frame.  */
-
-static PyObject *
-frapy_read_register (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+frame_object::read_register (gdbpy_borrowed_ref<> args,
+			     gdbpy_opt_borrowed_ref<> kw)
 {
   PyObject *pyo_reg_id;
-  gdbpy_ref<> result;
 
   static const char *keywords[] = { "register", nullptr };
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O", keywords, &pyo_reg_id))
-    return nullptr;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "O", keywords, &pyo_reg_id);
 
-  try
+  scoped_value_mark free_values;
+  frame_info_ptr frame = require_frame ();
+
+  int regnum;
+  if (!gdbpy_parse_register_id (get_frame_arch (frame), pyo_reg_id, &regnum))
     {
-      scoped_value_mark free_values;
-      frame_info_ptr frame;
-      int regnum;
-
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      if (!gdbpy_parse_register_id (get_frame_arch (frame), pyo_reg_id,
-				    &regnum))
-	return nullptr;
-
-      gdb_assert (regnum >= 0);
-      value *val
-	= value_of_register (regnum, get_next_frame_sentinel_okay (frame));
-
-      if (val == NULL)
-	PyErr_SetString (PyExc_ValueError, _("Can't read register."));
-      else
-	result = value_to_value_object (val);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
+      /* FIXME: Python safety.  gdbpy_parse_register_id should throw
+	 on error.  */
+      throw gdb_python_exception ();
     }
 
-  return result.release ();
+  gdb_assert (regnum >= 0);
+  value *val
+    = value_of_register (regnum, get_next_frame_sentinel_okay (frame));
+
+  if (val == nullptr)
+    gdbpy_err_set_string (PyExc_ValueError, _("Can't read register."));
+
+  return value_to_value_object (val);
 }
 
-/* Implementation of gdb.Frame.block (self) -> gdb.Block.
-   Returns the frame's code block.  */
-
-static PyObject *
-frapy_block (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::block ()
 {
-  frame_info_ptr frame;
-  const struct block *block = NULL, *fn_block;
+  frame_info_ptr frame = require_frame ();
+  const struct block *block = get_frame_block (frame, nullptr);
 
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-      block = get_frame_block (frame, NULL);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
+  const struct block *fn_block;
   for (fn_block = block;
        fn_block != NULL && fn_block->function () == NULL;
        fn_block = fn_block->superblock ())
     ;
 
   if (block == NULL || fn_block == NULL || fn_block->function () == NULL)
-    {
-      PyErr_SetString (PyExc_RuntimeError,
-		       _("Cannot locate block for frame."));
-      return NULL;
-    }
+    gdbpy_err_set_string (PyExc_RuntimeError,
+			  _("Cannot locate block for frame."));
 
-  return block_to_block_object (block,
-				fn_block->function ()->objfile ()).release ();
+  return block_to_block_object (block, fn_block->function ()->objfile ());
 }
 
 
-/* Implementation of gdb.Frame.function (self) -> gdb.Symbol.
-   Returns the symbol for the function corresponding to this frame.  */
-
-static PyObject *
-frapy_function (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::function ()
 {
-  struct symbol *sym = NULL;
-  frame_info_ptr frame;
+  frame_info_ptr frame = require_frame ();
 
-  try
-    {
-      enum language funlang;
+  struct symbol *sym = nullptr;
+  enum language funlang;
+  gdb::unique_xmalloc_ptr<char> funname
+    = find_frame_funname (frame, &funlang, &sym);
 
-      FRAPY_REQUIRE_VALID (self, frame);
+  if (sym != nullptr)
+    return symbol_to_symbol_object (sym);
 
-      gdb::unique_xmalloc_ptr<char> funname
-	= find_frame_funname (frame, &funlang, &sym);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  if (sym)
-    return symbol_to_symbol_object (sym).release ();
-
-  return py_none ().release ();
+  return py_none ();
 }
 
 /* Convert a frame_info struct to a Python Frame object.
    Sets a Python exception and returns NULL on error.  */
+/* FIXME: Python safety.  This function should be converted, but the
+   callers aren't ready yet.  */
 
 gdbpy_ref<>
 frame_info_to_frame_object (const frame_info_ptr &frame)
@@ -369,106 +308,51 @@ frame_info_to_frame_object (const frame_info_ptr &frame)
   return frame_obj;
 }
 
-/* Implementation of gdb.Frame.older (self) -> gdb.Frame.
-   Returns the frame immediately older (outer) to this frame, or None if
-   there isn't one.  */
-
-static PyObject *
-frapy_older (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::older ()
 {
-  frame_info_ptr frame, prev = NULL;
+  frame_info_ptr frame = require_frame ();
+  frame_info_ptr prev = get_prev_frame (frame);
 
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      prev = get_prev_frame (frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  gdbpy_ref<> prev_obj;
   if (prev)
-    prev_obj = frame_info_to_frame_object (prev);
-  else
-    prev_obj = py_none ();
+    return frame_info_to_frame_object (prev);
 
-  return prev_obj.release ();
+  return py_none ();
 }
 
-/* Implementation of gdb.Frame.newer (self) -> gdb.Frame.
-   Returns the frame immediately newer (inner) to this frame, or None if
-   there isn't one.  */
-
-static PyObject *
-frapy_newer (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::newer ()
 {
-  frame_info_ptr frame, next = NULL;
+  frame_info_ptr frame = require_frame ();
+  frame_info_ptr next = get_next_frame (frame);
 
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      next = get_next_frame (frame);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  gdbpy_ref<> next_obj;
   if (next)
-    next_obj = frame_info_to_frame_object (next);
-  else
-    next_obj = py_none ();
+    return frame_info_to_frame_object (next);
 
-  return next_obj.release ();
+  return py_none ();
 }
 
-/* Implementation of gdb.Frame.find_sal (self) -> gdb.Symtab_and_line.
-   Returns the frame's symtab and line.  */
-
-static PyObject *
-frapy_find_sal (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::find_sal ()
 {
-  frame_info_ptr frame;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      symtab_and_line sal = find_frame_sal (frame);
-      return symtab_and_line_to_sal_object (sal).release ();
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  frame_info_ptr frame = require_frame ();
+  symtab_and_line sal = find_frame_sal (frame);
+  return symtab_and_line_to_sal_object (sal);
 }
 
-/* Implementation of gdb.Frame.read_var_value (self, variable,
-   [block]) -> gdb.Value.  If the optional block argument is provided
-   start the search from that block, otherwise search from the frame's
-   current block (determined by examining the resume address of the
-   frame).  The variable argument must be a string or an instance of a
-   gdb.Symbol.  The block argument must be an instance of gdb.Block.  Returns
-   NULL on error, with a python exception set.  */
-static PyObject *
-frapy_read_var (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+frame_object::read_var (gdbpy_borrowed_ref<> args,
+			gdbpy_opt_borrowed_ref<> kw)
 {
-  frame_info_ptr frame;
   PyObject *sym_obj, *block_obj = NULL;
-  struct symbol *var = NULL;	/* gcc-4.3.2 false warning.  */
-  const struct block *block = NULL;
 
   static const char *keywords[] = { "variable", "block", nullptr };
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O|O!", keywords,
-					&sym_obj, &block_object_type,
-					&block_obj))
-    return nullptr;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "O|O!", keywords,
+				      &sym_obj, &block_object_type,
+				      &block_obj);
 
+  const struct block *block = NULL;
+  struct symbol *var = NULL;	/* gcc-4.3.2 false warning.  */
   if (PyObject_TypeCheck (sym_obj, &symbol_object_type))
     var = symbol_object_to_symbol (sym_obj);
   else if (gdbpy_is_string (sym_obj))
@@ -476,8 +360,10 @@ frapy_read_var (PyObject *self, PyObject *args, PyObject *kw)
       gdb::unique_xmalloc_ptr<char>
 	var_name (python_string_to_target_string (sym_obj));
 
-      if (!var_name)
-	return NULL;
+      /* FIXME: Python safety.  python_string_to_target_string should
+	 throw on error.  */
+      if (var_name == nullptr)
+	throw gdb_python_exception ();
 
       if (block_obj != nullptr)
 	{
@@ -488,139 +374,65 @@ frapy_read_var (PyObject *self, PyObject *args, PyObject *kw)
 	  gdb_assert (block != nullptr);
 	}
 
-      try
-	{
-	  struct block_symbol lookup_sym;
-	  FRAPY_REQUIRE_VALID (self, frame);
+      frame_info_ptr frame = require_frame ();
 
-	  if (!block)
-	    block = get_frame_block (frame, NULL);
-	  lookup_sym = lookup_symbol (var_name.get (), block,
-				      SEARCH_VFT, nullptr);
-	  var = lookup_sym.symbol;
-	  block = lookup_sym.block;
-	}
-      catch (const gdb_exception &except)
-	{
-	  return gdbpy_handle_gdb_exception (nullptr, except);
-	}
+      if (!block)
+	block = get_frame_block (frame, NULL);
+      block_symbol lookup_sym = lookup_symbol (var_name.get (), block,
+					       SEARCH_VFT, nullptr);
+      var = lookup_sym.symbol;
+      block = lookup_sym.block;
 
-      if (!var)
-	{
-	  PyErr_Format (PyExc_ValueError,
-			_("Variable '%s' not found."), var_name.get ());
-
-	  return NULL;
-	}
+      if (var == nullptr)
+	gdbpy_err_format (PyExc_ValueError,
+			  _("Variable '%s' not found."), var_name.get ());
     }
   else
-    {
-      PyErr_Format (PyExc_TypeError,
-		    _("argument 1 must be gdb.Symbol or str, not %s"),
-		    gdbpy_py_obj_tp_name (sym_obj).c_str ());
-      return NULL;
-    }
+    gdbpy_err_format (PyExc_TypeError,
+		      _("argument 1 must be gdb.Symbol or str, not %s"),
+		      gdbpy_py_obj_tp_name (sym_obj).c_str ());
 
-  gdbpy_ref<> result;
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, frame);
-
-      scoped_value_mark free_values;
-      struct value *val = read_var_value (var, block, frame);
-      result = value_to_value_object (val);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return result.release ();
+  frame_info_ptr frame = require_frame ();
+  scoped_value_mark free_values;
+  struct value *val = read_var_value (var, block, frame);
+  return value_to_value_object (val);
 }
 
-/* Select this frame.  */
-
-static PyObject *
-frapy_select (PyObject *self, PyObject *args)
+void
+frame_object::select ()
 {
-  frame_info_ptr fi;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, fi);
-
-      select_frame (fi);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return py_none ().release ();
+  frame_info_ptr fi = require_frame ();
+  select_frame (fi);
 }
 
-/* The stack frame level for this frame.  */
-
-static PyObject *
-frapy_level (PyObject *self, PyObject *args)
+int
+frame_object::level ()
 {
-  frame_info_ptr fi;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, fi);
-
-      return gdb_py_object_from_longest (frame_relative_level (fi)).release ();
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  frame_info_ptr fi = require_frame ();
+  return frame_relative_level (fi);
 }
 
-/* The language for this frame.  */
-
-static PyObject *
-frapy_language (PyObject *self, PyObject *args)
+const char *
+frame_object::language ()
 {
-  try
-    {
-      frame_info_ptr fi;
-      FRAPY_REQUIRE_VALID (self, fi);
+  frame_info_ptr fi = require_frame ();
 
-      enum language lang = get_frame_language (fi);
-      const language_defn *lang_def = language_def (lang);
+  enum language lang = get_frame_language (fi);
+  const language_defn *lang_def = language_def (lang);
 
-      return host_string_to_python_string (lang_def->name ()).release ();
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  return lang_def->name ();
 }
 
-/* The static link for this frame.  */
-
-static PyObject *
-frapy_static_link (PyObject *self, PyObject *args)
+gdbpy_ref<>
+frame_object::static_link ()
 {
-  frame_info_ptr link;
-
-  try
-    {
-      FRAPY_REQUIRE_VALID (self, link);
-
-      link = frame_follow_static_link (link);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  frame_info_ptr link = require_frame ();
+  link = frame_follow_static_link (link);
 
   if (link == nullptr)
-    return py_none ().release ();
+    return py_none ();
 
-  return frame_info_to_frame_object (link).release ();
+  return frame_info_to_frame_object (link);
 }
 
 /* Implementation of gdb.newest_frame () -> gdb.Frame.
@@ -712,6 +524,8 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
   return py_false ().release ();
 }
 
+PyTypeObject *frame_object::corresponding_object_type = &frame_object_type;
+
 /* Sets up the Frame API in the gdb module.  */
 
 static int
@@ -750,54 +564,54 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_frames);
 
 
 static PyMethodDef frame_object_methods[] = {
-  { "is_valid", frapy_is_valid, METH_NOARGS,
+  noargs_method<frame_object, &frame_object::is_valid> ("is_valid",
     "is_valid () -> Boolean.\n\
-Return true if this frame is valid, false if not." },
-  { "name", frapy_name, METH_NOARGS,
+Return true if this frame is valid, false if not."),
+  noargs_method<frame_object, &frame_object::name> ("name",
     "name () -> String.\n\
-Return the function name of the frame, or None if it can't be determined." },
-  { "type", frapy_type, METH_NOARGS,
+Return the function name of the frame, or None if it can't be determined."),
+  noargs_method<frame_object, &frame_object::type> ("type",
     "type () -> Integer.\n\
-Return the type of the frame." },
-  { "architecture", frapy_arch, METH_NOARGS,
+Return the type of the frame."),
+  noargs_method<frame_object, &frame_object::arch> ("architecture",
     "architecture () -> gdb.Architecture.\n\
-Return the architecture of the frame." },
-  { "unwind_stop_reason", frapy_unwind_stop_reason, METH_NOARGS,
-    "unwind_stop_reason () -> Integer.\n\
-Return the reason why it's not possible to find frames older than this." },
-  { "pc", frapy_pc, METH_NOARGS,
+Return the architecture of the frame."),
+  noargs_method<frame_object, &frame_object::unwind_stop_reason>
+    ("unwind_stop_reason",
+     "unwind_stop_reason () -> Integer.\n\
+Return the reason why it's not possible to find frames older than this."),
+  noargs_method<frame_object, &frame_object::pc> ("pc",
     "pc () -> Long.\n\
-Return the frame's resume address." },
-  { "read_register", (PyCFunction) frapy_read_register,
-    METH_VARARGS | METH_KEYWORDS,
+Return the frame's resume address."),
+  varargs_method<frame_object, &frame_object::read_register> ("read_register",
     "read_register (register_name) -> gdb.Value\n\
-Return the value of the register in the frame." },
-  { "block", frapy_block, METH_NOARGS,
+Return the value of the register in the frame."),
+  noargs_method<frame_object, &frame_object::block> ("block",
     "block () -> gdb.Block.\n\
-Return the frame's code block." },
-  { "function", frapy_function, METH_NOARGS,
+Return the frame's code block."),
+  noargs_method<frame_object, &frame_object::function> ("function",
     "function () -> gdb.Symbol.\n\
-Returns the symbol for the function corresponding to this frame." },
-  { "older", frapy_older, METH_NOARGS,
+Returns the symbol for the function corresponding to this frame."),
+  noargs_method<frame_object, &frame_object::older> ("older",
     "older () -> gdb.Frame.\n\
-Return the frame that called this frame." },
-  { "newer", frapy_newer, METH_NOARGS,
+Return the frame that called this frame."),
+  noargs_method<frame_object, &frame_object::newer> ("newer",
     "newer () -> gdb.Frame.\n\
-Return the frame called by this frame." },
-  { "find_sal", frapy_find_sal, METH_NOARGS,
+Return the frame called by this frame."),
+  noargs_method<frame_object, &frame_object::find_sal> ("find_sal",
     "find_sal () -> gdb.Symtab_and_line.\n\
-Return the frame's symtab and line." },
-  { "read_var", (PyCFunction) frapy_read_var, METH_VARARGS | METH_KEYWORDS,
+Return the frame's symtab and line."),
+  varargs_method<frame_object, &frame_object::read_var> ("read_var",
     "read_var (variable) -> gdb.Value.\n\
-Return the value of the variable in this frame." },
-  { "select", frapy_select, METH_NOARGS,
-    "Select this frame as the user's current frame." },
-  { "level", frapy_level, METH_NOARGS,
-    "The stack level of this frame." },
-  { "language", frapy_language, METH_NOARGS,
-    "The language of this frame." },
-  { "static_link", frapy_static_link, METH_NOARGS,
-    "The static link of this frame, or None." },
+Return the value of the variable in this frame."),
+  noargs_method<frame_object, &frame_object::select> ("select",
+    "Select this frame as the user's current frame."),
+  noargs_method<frame_object, &frame_object::level> ("level",
+    "The stack level of this frame."),
+  noargs_method<frame_object, &frame_object::language> ("language",
+    "The language of this frame."),
+  noargs_method<frame_object, &frame_object::static_link> ("static_link",
+    "The static link of this frame, or None."),
   {NULL}  /* Sentinel */
 };
 
@@ -811,13 +625,13 @@ PyTypeObject frame_object_type = {
   0,				  /* tp_getattr */
   0,				  /* tp_setattr */
   0,				  /* tp_compare */
-  frapy_repr,			  /* tp_repr */
+  wrap_tp_callback<frame_object, &frame_object::repr>, /* tp_repr */
   0,				  /* tp_as_number */
   0,				  /* tp_as_sequence */
   0,				  /* tp_as_mapping */
   0,				  /* tp_hash  */
   0,				  /* tp_call */
-  frapy_str,			  /* tp_str */
+  wrap_tp_callback<frame_object, &frame_object::str>, /* tp_str */
   0,				  /* tp_getattro */
   0,				  /* tp_setattro */
   0,				  /* tp_as_buffer */
