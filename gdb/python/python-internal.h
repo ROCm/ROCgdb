@@ -592,11 +592,11 @@ PyObject *objfpy_get_xmethods (PyObject *, void *);
 PyObject *gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw);
 
 gdbpy_ref<> gdbarch_to_arch_object (struct gdbarch *gdbarch);
-PyObject *gdbpy_all_architecture_names (PyObject *self, PyObject *args);
+gdbpy_ref<> gdbpy_all_architecture_names ();
 
-PyObject *gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
-						  const char *group_name);
-PyObject *gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch);
+gdbpy_ref<> gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
+						    const char *group_name);
+gdbpy_ref<> gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch);
 
 gdbpy_ref<thread_object> create_thread_object (struct thread_info *tp);
 gdbpy_ref<> thread_to_thread_object (thread_info *thr);;

@@ -373,4 +373,15 @@ gdbpy_sequence_concat (gdbpy_borrowed_ref<> first, gdbpy_borrowed_ref<> second)
   return result;
 }
 
+/* A wrapper for get_addr_from_python that returns the address or
+   throws an exception.  */
+static inline CORE_ADDR
+gdbpy_get_address (gdbpy_borrowed_ref<> obj)
+{
+  CORE_ADDR result;
+  if (get_addr_from_python (obj, &result) < 0)
+    throw gdb_python_exception ();
+  return result;
+}
+
 #endif /* GDB_PYTHON_PY_WRAPPERS_H */

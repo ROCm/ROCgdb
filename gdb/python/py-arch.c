@@ -25,24 +25,62 @@
 struct arch_object : public PyObject
 {
   struct gdbarch *gdbarch;
+
+  /* Return the gdbarch associated with OBJ.  Throws an exception on
+     error.  */
+  struct gdbarch *require ()
+  {
+    if (gdbarch == nullptr)
+      gdbpy_err_set_string (PyExc_RuntimeError, _("Architecture is invalid."));
+    return gdbarch;
+  }
+
+  /* Implementation of gdb.Architecture.name (self) -> String.
+     Returns the name of the architecture as a string value.  */
+  const char *name ()
+  {
+    return gdbarch_bfd_arch_info (require ())->printable_name;
+  }
+
+  /* __repr__ implementation for gdb.Architecture.  */
+  gdbpy_ref<> repr ();
+
+  /* Implementation of gdb.void_type.  */
+  gdbpy_ref<> void_type ()
+  {
+    return type_to_type_object (builtin_type (require ())->builtin_void);
+  }
+
+  /* Implementation of gdb.Architecture.register_groups (self) -> Iterator.
+     Returns an iterator that will give up all valid register groups in the
+     architecture SELF.  */
+  gdbpy_ref<> register_groups ()
+  {
+    return gdbpy_new_reggroup_iterator (require ());
+  }
+
+  /* Implementation of
+     gdb.Architecture.disassemble (self, start_pc [, end_pc [,count]]) -> List.
+     Returns a list of instructions in a memory address range.  Each instruction
+     in the list is a Python dict object.  */
+  gdbpy_ref<> disassemble (gdbpy_borrowed_ref<> args,
+			   gdbpy_opt_borrowed_ref<> kw);
+
+  /* Implementation of gdb.integer_type.  */
+  gdbpy_ref<> integer_type (gdbpy_borrowed_ref<> args,
+			    gdbpy_opt_borrowed_ref<> kw);
+
+  /* Implementation of gdb.Architecture.registers (self, reggroup) ->
+     Iterator.  Returns an iterator over register descriptors for
+     registers in GROUP within the architecture SELF.  */
+  gdbpy_ref<> registers (gdbpy_borrowed_ref<> args,
+			 gdbpy_opt_borrowed_ref<> kw);
 };
 
 static_assert (gdb::is_python_allocatable_v<arch_object>);
 
 static const registry<gdbarch>::key<PyObject, gdb::noop_deleter<PyObject>>
      arch_object_data;
-
-/* Require a valid Architecture.  */
-#define ARCHPY_REQUIRE_VALID(arch_obj, arch)			\
-  do {								\
-    arch = arch_object_to_gdbarch (arch_obj);			\
-    if (arch == NULL)						\
-      {								\
-	PyErr_SetString (PyExc_RuntimeError,			\
-			 _("Architecture is invalid."));	\
-	return NULL;						\
-      }								\
-  } while (0)
 
 extern PyTypeObject arch_object_type;
 
@@ -102,80 +140,46 @@ gdbarch_to_arch_object (struct gdbarch *gdbarch)
   return gdbpy_ref<> (new_ref);
 }
 
-/* Implementation of gdb.Architecture.name (self) -> String.
-   Returns the name of the architecture as a string value.  */
-
-static PyObject *
-archpy_name (PyObject *self, PyObject *args)
-{
-  struct gdbarch *gdbarch = NULL;
-  const char *name;
-
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
-
-  name = (gdbarch_bfd_arch_info (gdbarch))->printable_name;
-  return PyUnicode_FromString (name);
-}
-
-/* Implementation of
-   gdb.Architecture.disassemble (self, start_pc [, end_pc [,count]]) -> List.
-   Returns a list of instructions in a memory address range.  Each instruction
-   in the list is a Python dict object.
-*/
-
-static PyObject *
-archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+arch_object::disassemble (gdbpy_borrowed_ref<> args,
+			  gdbpy_opt_borrowed_ref<> kw)
 {
   static const char *keywords[] = {
     "start_pc", "end_pc", "count", "styling", nullptr
   };
-  CORE_ADDR start = 0, end = 0;
   CORE_ADDR pc;
   long count = 0, i;
   PyObject *start_obj = nullptr, *end_obj = nullptr, *count_obj = nullptr;
-  struct gdbarch *gdbarch = NULL;
   int styling_p = 0;
 
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
+  struct gdbarch *gdbarch = require ();
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O|OOp",
-					keywords, &start_obj, &end_obj,
-					&count_obj, &styling_p))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "O|OOp",
+				      keywords, &start_obj, &end_obj,
+				      &count_obj, &styling_p);
 
-  if (get_addr_from_python (start_obj, &start) < 0)
-    return nullptr;
+  CORE_ADDR start = gdbpy_get_address (start_obj);
 
+  CORE_ADDR end = 0;
   if (end_obj != nullptr)
     {
-      if (get_addr_from_python (end_obj, &end) < 0)
-	return nullptr;
+      end = gdbpy_get_address (end_obj);
 
       if (end < start)
-	{
-	  PyErr_SetString (PyExc_ValueError,
-			   _("Argument 'end_pc' should be greater than or "
-			     "equal to the argument 'start_pc'."));
-
-	  return NULL;
-	}
+	gdbpy_err_set_string (PyExc_ValueError,
+			      _("Argument 'end_pc' should be greater than or "
+				"equal to the argument 'start_pc'."));
     }
   if (count_obj)
     {
-      count = PyLong_AsLong (count_obj);
-      if (PyErr_Occurred () || count < 0)
-	{
-	  PyErr_SetString (PyExc_TypeError,
-			   _("Argument 'count' should be an non-negative "
-			     "integer."));
-
-	  return NULL;
-	}
+      count = gdbpy_long_as_long (count_obj);
+      if (count < 0)
+	gdbpy_err_set_string (PyExc_TypeError,
+			      _("Argument 'count' should be an non-negative "
+				"integer."));
     }
 
-  gdbpy_ref<> result_list (PyList_New (0));
-  if (result_list == NULL)
-    return NULL;
+  gdbpy_ref<> result_list = gdbpy_list_new (0);
 
   for (pc = start, i = 0;
        /* All args are specified.  */
@@ -187,105 +191,72 @@ archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
        /* Both end_pc and count are not specified.  */
        || (end_obj == NULL && count_obj == NULL && pc == start);)
     {
-      int insn_len = 0;
-      gdbpy_ref<> insn_dict (PyDict_New ());
+      gdbpy_ref<> insn_dict = gdbpy_dict_new ();
 
-      if (insn_dict == NULL)
-	return NULL;
-      if (PyList_Append (result_list.get (), insn_dict.get ()))
-	return NULL;  /* PyList_Append Sets the exception.  */
+      gdbpy_list_append (result_list, insn_dict);
 
       string_file stb (styling_p);
+      int insn_len = gdb_print_insn (gdbarch, pc, &stb, NULL);
 
-      try
-	{
-	  insn_len = gdb_print_insn (gdbarch, pc, &stb, NULL);
-	}
-      catch (const gdb_exception &except)
-	{
-	  return gdbpy_handle_gdb_exception (nullptr, except);
-	}
-
+      /* FIXME: Python safety.  Eventually gdb_py_object_from_ulongest
+	 should throw.  */
       gdbpy_ref<> pc_obj = gdb_py_object_from_ulongest (pc);
       if (pc_obj == nullptr)
-	return nullptr;
+	throw gdb_python_exception ();
 
-      gdbpy_ref<> asm_obj
-	(PyUnicode_FromString (!stb.empty () ? stb.c_str () : "<unknown>"));
-      if (asm_obj == nullptr)
-	return nullptr;
+      gdbpy_ref<> asm_obj = gdbpy_unicode_from_string (!stb.empty ()
+						       ? stb.c_str ()
+						       : "<unknown>");
 
+      /* FIXME: Python safety.  Eventually gdb_py_object_from_longest
+	 should throw.  */
       gdbpy_ref<> len_obj = gdb_py_object_from_longest (insn_len);
       if (len_obj == nullptr)
-	return nullptr;
+	throw gdb_python_exception ();
 
-      if (PyDict_SetItemString (insn_dict.get (), "addr", pc_obj.get ())
-	  || PyDict_SetItemString (insn_dict.get (), "asm", asm_obj.get ())
-	  || PyDict_SetItemString (insn_dict.get (), "length", len_obj.get ()))
-	return NULL;
+      gdbpy_dict_set_item_string (insn_dict, "addr", pc_obj);
+      gdbpy_dict_set_item_string (insn_dict, "asm", asm_obj);
+      gdbpy_dict_set_item_string (insn_dict, "length", len_obj);
 
       pc += insn_len;
       i++;
     }
 
-  return result_list.release ();
+  return result_list;
 }
 
-/* Implementation of gdb.Architecture.registers (self, reggroup) -> Iterator.
-   Returns an iterator over register descriptors for registers in GROUP
-   within the architecture SELF.  */
-
-static PyObject *
-archpy_registers (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+arch_object::registers (gdbpy_borrowed_ref<> args,
+			gdbpy_opt_borrowed_ref<> kw)
 {
   static const char *keywords[] = { "reggroup", NULL };
-  struct gdbarch *gdbarch = NULL;
   const char *group_name = NULL;
 
   /* Parse method arguments.  */
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "|s", keywords,
-					&group_name))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "|s", keywords, &group_name);
 
   /* Extract the gdbarch from the self object.  */
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
+  struct gdbarch *gdbarch = require ();
 
   return gdbpy_new_register_descriptor_iterator (gdbarch, group_name);
 }
 
-/* Implementation of gdb.Architecture.register_groups (self) -> Iterator.
-   Returns an iterator that will give up all valid register groups in the
-   architecture SELF.  */
-
-static PyObject *
-archpy_register_groups (PyObject *self, PyObject *args)
-{
-  struct gdbarch *gdbarch = NULL;
-
-  /* Extract the gdbarch from the self object.  */
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
-  return gdbpy_new_reggroup_iterator (gdbarch);
-}
-
-/* Implementation of gdb.integer_type.  */
-static PyObject *
-archpy_integer_type (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+arch_object::integer_type (gdbpy_borrowed_ref<> args,
+			   gdbpy_opt_borrowed_ref<> kw)
 {
   static const char *keywords[] = { "size", "signed", NULL };
   int size;
   PyObject *is_signed_obj = Py_True;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "i|O!", keywords,
-					&size,
-					&PyBool_Type, &is_signed_obj))
-    return nullptr;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "i|O!", keywords, &size,
+				      &PyBool_Type, &is_signed_obj);
 
   /* Assume signed by default.  */
   gdb_assert (PyBool_Check (is_signed_obj));
   bool is_signed = is_signed_obj == Py_True;
 
-  struct gdbarch *gdbarch;
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
+  struct gdbarch *gdbarch = require ();
 
   const struct builtin_type *builtins = builtin_type (gdbarch);
   struct type *type = nullptr;
@@ -314,61 +285,41 @@ archpy_integer_type (PyObject *self, PyObject *args, PyObject *kw)
       break;
 
     default:
-      PyErr_SetString (PyExc_ValueError,
-		       _("no integer type of that size is available"));
-      return nullptr;
+      gdbpy_err_set_string (PyExc_ValueError,
+			    _("no integer type of that size is available"));
     }
 
-  return type_to_type_object (type).release ();
+  return type_to_type_object (type);
 }
 
-/* Implementation of gdb.void_type.  */
-static PyObject *
-archpy_void_type (PyObject *self, PyObject *args)
+gdbpy_ref<>
+arch_object::repr ()
 {
-  struct gdbarch *gdbarch;
-  ARCHPY_REQUIRE_VALID (self, gdbarch);
-
-  return type_to_type_object (builtin_type (gdbarch)->builtin_void).release ();
-}
-
-/* __repr__ implementation for gdb.Architecture.  */
-
-static PyObject *
-archpy_repr (PyObject *self)
-{
-  const auto gdbarch = arch_object_to_gdbarch (self);
   if (gdbarch == nullptr)
-    return gdb_py_invalid_object_repr (self);
+    /* FIXME: Python safety.  Eventually gdb_py_invalid_object_repr
+       should throw.  */
+    return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
 
   auto arch_info = gdbarch_bfd_arch_info (gdbarch);
-  return PyUnicode_FromFormat ("<%s arch_name=%s printable_name=%s>",
-			       gdbpy_py_obj_tp_name (self).c_str (),
-			       arch_info->arch_name,
-			       arch_info->printable_name);
+  return gdbpy_unicode_from_format ("<%s arch_name=%s printable_name=%s>",
+				    gdbpy_py_obj_tp_name (this).c_str (),
+				    arch_info->arch_name,
+				    arch_info->printable_name);
 }
 
 /* Implementation of gdb.architecture_names().  Return a list of all the
    BFD architecture names that GDB understands.  */
 
-PyObject *
-gdbpy_all_architecture_names (PyObject *self, PyObject *args)
+gdbpy_ref<>
+gdbpy_all_architecture_names ()
 {
-  gdbpy_ref<> list (PyList_New (0));
-  if (list == nullptr)
-    return nullptr;
+  gdbpy_ref<> list = gdbpy_list_new (0);
 
   std::vector<const char *> name_list = gdbarch_printable_names ();
   for (const char *name : name_list)
-    {
-      gdbpy_ref <> py_name (PyUnicode_FromString (name));
-      if (py_name == nullptr)
-	return nullptr;
-      if (PyList_Append (list.get (), py_name.get ()) < 0)
-	return nullptr;
-    }
+    gdbpy_list_append (list, gdbpy_unicode_from_string (name));
 
- return list.release ();
+ return list;
 }
 
 /* Initializes the Architecture class in the gdb module.  */
@@ -385,32 +336,27 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_arch);
 
 
 static PyMethodDef arch_object_methods [] = {
-  { "name", archpy_name, METH_NOARGS,
+  noargs_method<arch_object, &arch_object::name> ("name",
     "name () -> String.\n\
-Return the name of the architecture as a string value." },
-  { "disassemble", (PyCFunction) archpy_disassemble,
-    METH_VARARGS | METH_KEYWORDS,
+Return the name of the architecture as a string value."),
+  varargs_method<arch_object, &arch_object::disassemble> ("disassemble",
     "disassemble (start_pc [, end_pc [, count]]) -> List.\n\
 Return a list of at most COUNT disassembled instructions from START_PC to\n\
-END_PC." },
-  { "integer_type", (PyCFunction) archpy_integer_type,
-    METH_VARARGS | METH_KEYWORDS,
+END_PC."),
+  varargs_method<arch_object, &arch_object::integer_type> ("integer_type",
     "integer_type (size [, signed]) -> type\n\
 Return an integer Type corresponding to the given bitsize and signed-ness.\n\
-If not specified, the type defaults to signed." },
-  { "void_type", (PyCFunction) archpy_void_type,
-    METH_NOARGS,
+If not specified, the type defaults to signed."),
+  noargs_method<arch_object, &arch_object::void_type> ("void_type",
     "void_type () -> type\n\
-Return a void Type." },
-  { "registers", (PyCFunction) archpy_registers,
-    METH_VARARGS | METH_KEYWORDS,
+Return a void Type."),
+  varargs_method<arch_object, &arch_object::registers> ("registers",
     "registers ([ group-name ]) -> Iterator.\n\
 Return an iterator of register descriptors for the registers in register\n\
-group GROUP-NAME." },
-  { "register_groups", archpy_register_groups,
-    METH_NOARGS,
+group GROUP-NAME."),
+  noargs_method<arch_object, &arch_object::register_groups> ("register_groups",
     "register_groups () -> Iterator.\n\
-Return an iterator over all of the register groups in this architecture." },
+Return an iterator over all of the register groups in this architecture."),
   {NULL}  /* Sentinel */
 };
 
@@ -424,7 +370,7 @@ PyTypeObject arch_object_type = {
   0,                                  /* tp_getattr */
   0,                                  /* tp_setattr */
   0,                                  /* tp_compare */
-  archpy_repr,                        /* tp_repr */
+  wrap_tp_callback<arch_object, &arch_object::repr>, /* tp_repr */
   0,                                  /* tp_as_number */
   0,                                  /* tp_as_sequence */
   0,                                  /* tp_as_mapping */
