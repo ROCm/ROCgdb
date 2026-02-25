@@ -16,8 +16,7 @@ Full documentation for ROCgdb is available at
   - `gridDim`
   - `warpSize`
 
-- Support for the following architectures:
-  - `gfx1153`
+- Support for the `gfx1153` architecture.
 
 ## ROCgdb-16-2 for ROCm-7.0
 
