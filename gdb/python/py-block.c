@@ -346,7 +346,7 @@ block_to_block_object (const struct block *block, struct objfile *objfile)
   block_object *result = (block_object *) htab_find_with_hash (table, block,
 							       hash);
   if (result != nullptr)
-    return gdbpy_ref<>::new_reference ((PyObject *) result);
+    return gdbpy_ref<>::new_reference (result);
 
   result = PyObject_New (block_object, &block_object_type);
   if (result == nullptr)

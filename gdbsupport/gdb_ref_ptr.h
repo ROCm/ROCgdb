@@ -197,9 +197,12 @@ public:
   }
 
   /* Acquire a new reference and return a ref_ptr that owns it.  */
-  static ref_ptr<T, Policy> new_reference (T *obj)
+  template <class TObj>
+  static ref_ptr<T, Policy> new_reference (TObj *obj)
   {
     Policy::incref (obj);
+    if constexpr (std::is_base_of<T, TObj>::value)
+      return ref_ptr<T, Policy> (static_cast<T *> (obj));
     return ref_ptr<T, Policy> (obj);
   }
 

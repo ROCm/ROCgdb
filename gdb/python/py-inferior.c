@@ -400,7 +400,7 @@ infpy_threads (PyObject *self, PyObject *args)
 
   for (const thread_map_t::value_type &entry : *inf_obj->threads)
     {
-      auto thr = gdbpy_ref<>::new_reference ((PyObject *) entry.second.get ());
+      gdbpy_ref<> thr = entry.second;
       if (PyTuple_SetItem (tuple.get (), i++, thr.release ()) < 0)
 	return nullptr;
     }
