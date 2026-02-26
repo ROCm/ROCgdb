@@ -585,21 +585,24 @@ gdbpy_ref<>
 pspace_to_pspace_object (struct program_space *pspace)
 {
   PyObject *result = (PyObject *) pspy_pspace_data_key.get (pspace);
-  if (result == NULL)
-    {
-      gdbpy_ref<pspace_object> object
-	((pspace_object *) PyObject_New (pspace_object, &pspace_object_type));
-      if (object == NULL)
-	return NULL;
-      if (!pspy_initialize (object))
-	return NULL;
+  if (result != nullptr)
+    return gdbpy_ref<>::new_reference (result);
 
-      object->pspace = pspace;
-      pspy_pspace_data_key.set (pspace, object.get ());
-      result = (PyObject *) object.release ();
-    }
+  gdbpy_ref<pspace_object> object
+    (PyObject_New (pspace_object, &pspace_object_type));
+  if (object == nullptr)
+    return nullptr;
 
-  return gdbpy_ref<>::new_reference (result);
+  if (!pspy_initialize (object))
+    return nullptr;
+
+  object->pspace = pspace;
+
+  /* PyObject_New initializes the new object with a refcount of 1.  This counts
+     for the reference we are keeping in the pspace data.  */
+  pspy_pspace_data_key.set (pspace, object.get ());
+
+  return gdbpy_ref<>::new_reference (object.release ());
 }
 
 /* See python-internal.h.  */

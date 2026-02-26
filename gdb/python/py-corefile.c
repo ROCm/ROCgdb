@@ -119,33 +119,33 @@ gdbpy_core_file_from_inferior (inferior *inf)
     return gdbpy_ref<>::new_reference (Py_None);
 
   PyObject *result = (PyObject *) cfpy_inferior_corefile_data_key.get (inf);
-  if (result == nullptr)
-    {
-      gdbpy_ref<corefile_object> object
-	(PyObject_New (corefile_object, &corefile_object_type));
-      if (object == nullptr)
-	return nullptr;
+  if (result != nullptr)
+    return gdbpy_ref<>::new_reference (result);
 
-      /* Ensure the 'inferior' field is set to NULL.  If the PyDict_New
-	 call fails then the gdb.Corefile will be discarded and
-	 cfpy_dealloc will be called, which requires that the 'inferior' be
-	 set to NULL.  */
-      object->inferior = nullptr;
-      object->mapped_files = nullptr;
-      object->dict = PyDict_New ();
-      if (object->dict == nullptr)
-	return nullptr;
+  gdbpy_ref<corefile_object> object
+    (PyObject_New (corefile_object, &corefile_object_type));
+  if (object == nullptr)
+    return nullptr;
 
-      /* Now that the gdb.Corefile has been successfully initialised and we
-	 know that it is going to be passed back to the user, move it out
-	 of the invalid state by setting the 'inferior' field to a non NULL
-	 value.  */
-      object->inferior = inf;
-      cfpy_inferior_corefile_data_key.set (inf, object.get ());
-      result = (PyObject *) object.release ();
-    }
+  /* Ensure the 'inferior' field is set to NULL.  If the PyDict_New call fails
+     then the gdb.Corefile will be discarded and cfpy_dealloc will be called,
+     which requires that the 'inferior' be set to NULL.  */
+  object->inferior = nullptr;
+  object->mapped_files = nullptr;
+  object->dict = PyDict_New ();
+  if (object->dict == nullptr)
+    return nullptr;
 
-  return gdbpy_ref<>::new_reference (result);
+  /* Now that the gdb.Corefile has been successfully initialised and we know
+     that it is going to be passed back to the user, move it out of the invalid
+     state by setting the 'inferior' field to a non NULL value.  */
+  object->inferior = inf;
+
+  /* PyObject_New initializes the new object with a refcount of 1.  This counts
+     for the reference we are keeping in the inferior corefile data.  */
+  cfpy_inferior_corefile_data_key.set (inf, object.get ());
+
+  return gdbpy_ref<>::new_reference (object.release ());
 }
 
 /* Return true if OBJ is valid.  */

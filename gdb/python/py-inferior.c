@@ -213,29 +213,26 @@ python_free_objfile (struct objfile *objfile)
 gdbpy_ref<inferior_object>
 inferior_to_inferior_object (struct inferior *inferior)
 {
-  inferior_object *inf_obj;
+  inferior_object *result = infpy_inf_data_key.get (inferior);
+  if (result != nullptr)
+    return gdbpy_ref<inferior_object>::new_reference (result);
 
-  inf_obj = infpy_inf_data_key.get (inferior);
-  if (!inf_obj)
-    {
-      inf_obj = PyObject_New (inferior_object, &inferior_object_type);
-      if (!inf_obj)
-	return NULL;
+  gdbpy_ref<inferior_object> inf_obj
+    (PyObject_New (inferior_object, &inferior_object_type));
+  if (inf_obj == nullptr)
+    return nullptr;
 
-      inf_obj->inferior = inferior;
-      inf_obj->threads = new thread_map_t ();
-      inf_obj->dict = PyDict_New ();
-      if (inf_obj->dict == nullptr)
-	return nullptr;
+  inf_obj->inferior = inferior;
+  inf_obj->threads = new thread_map_t ();
+  inf_obj->dict = PyDict_New ();
+  if (inf_obj->dict == nullptr)
+    return nullptr;
 
-      /* PyObject_New initializes the new object with a refcount of 1.  This
-	 counts for the reference we are keeping in the inferior data.  */
-      infpy_inf_data_key.set (inferior, inf_obj);
-    }
+  /* PyObject_New initializes the new object with a refcount of 1.  This counts
+     for the reference we are keeping in the inferior data.  */
+  infpy_inf_data_key.set (inferior, inf_obj.get ());
 
-  /* We are returning a new reference.  */
-  gdb_assert (inf_obj != nullptr);
-  return gdbpy_ref<inferior_object>::new_reference (inf_obj);
+  return gdbpy_ref<inferior_object>::new_reference (inf_obj.release ());
 }
 
 /* Called when a new inferior is created.  Notifies any Python event
