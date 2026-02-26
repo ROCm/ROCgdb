@@ -1,2 +1,3 @@
 gdbsever->gdbserver
 tcllint->tclint
+recordered->recorded

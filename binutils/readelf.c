@@ -20124,14 +20124,14 @@ typedef struct {
   uint64_t read;
 } BufferReadOp_t;
 
-const uint32_t F_SUBSECTION_LEN = sizeof (uint32_t);
-const uint32_t F_SUBSECTION_COMPREHENSION = sizeof(uint8_t);
-const uint32_t F_SUBSECTION_ENCODING = sizeof(uint8_t);
 /* The minimum subsection length is 7: 4 bytes for the length itself, and 1
    byte for an empty NUL-terminated string, 1 byte for the comprehension,
    1 byte for the encoding, and no vendor-data.  */
-const uint32_t F_MIN_SUBSECTION_DATA_LEN = F_SUBSECTION_LEN + 1 /* for '\0' */
-  + F_SUBSECTION_COMPREHENSION + F_SUBSECTION_ENCODING;
+#define F_SUBSECTION_LEN 4
+#define F_SUBSECTION_COMPREHENSION 1
+#define F_SUBSECTION_ENCODING 1
+#define F_MIN_SUBSECTION_DATA_LEN \
+  (F_SUBSECTION_LEN + 1 + F_SUBSECTION_COMPREHENSION + F_SUBSECTION_ENCODING)
 
 static BufferReadOp_t
 elf_parse_attrs_subsection_v2 (const unsigned char *cursor,
@@ -20154,7 +20154,7 @@ elf_parse_attrs_subsection_v2 (const unsigned char *cursor,
     }
   else if (subsection_len < F_MIN_SUBSECTION_DATA_LEN)
     {
-      error (_("Bad subsection length: too small (%u < min=%"PRIu32")\n"),
+      error (_("Bad subsection length: too small (%u < min=%u)\n"),
 	     subsection_len, F_MIN_SUBSECTION_DATA_LEN);
       /* Error, but still try to display the content until meeting a more
 	 serious error.  */

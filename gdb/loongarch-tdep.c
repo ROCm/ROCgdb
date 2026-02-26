@@ -2237,12 +2237,64 @@ loongarch_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
 /* LoongArch record/replay enumerations and structures.  */
 
+/* The record infrastructure supports the following result values:
+   1. res  < 0: Process record: failed to record execution log.
+   2. res == 0: No failure.
+   3. res  > 0: Process record: inferior program stopped.
+
+   For loongarch we distinguish one additional value, so we use an enum with 4
+   values.  */
+
 enum loongarch_record_result
 {
-  LOONGARCH_RECORD_SUCCESS,
-  LOONGARCH_RECORD_UNSUPPORTED,
-  LOONGARCH_RECORD_UNKNOWN
+  /* Process record: failed to record execution log.  */
+  LOONGARCH_RECORD_FAILURE = -1,
+  /* No failure.  */
+  LOONGARCH_RECORD_SUCCESS = 0,
+  /* Process record does not support instruction $hex at address $hex.
+     Process record: failed to record execution log.  */
+  LOONGARCH_RECORD_UNSUPPORTED = 1,
+  /* Process record: inferior program stopped.  */
+  LOONGARCH_RECORD_UNKNOWN = 2
 };
+
+/* Convert from loongarch_record_result.  */
+
+static inline int
+from_loongarch_record_result (int val)
+{
+  if (val == LOONGARCH_RECORD_FAILURE)
+    return -1;
+
+  if (val == LOONGARCH_RECORD_SUCCESS)
+    return 0;
+
+  if (val == LOONGARCH_RECORD_UNSUPPORTED)
+    {
+      /* After printing the "does not support" message, this is handled the
+	 same as the LOONGARCH_RECORD_FAILURE case.  */
+      return -1;
+    }
+
+  if (val == LOONGARCH_RECORD_UNKNOWN)
+    return 1;
+
+  gdb_assert_not_reached ();
+}
+
+/* Convert to loongarch_record_result.  */
+
+static inline int
+to_loongarch_record_result (int val)
+{
+  if (val > 0)
+    return LOONGARCH_RECORD_UNKNOWN;
+
+  if (val < 0)
+    return LOONGARCH_RECORD_FAILURE;
+
+  return LOONGARCH_RECORD_SUCCESS;
+}
 
 struct loongarch_record_s
 {
@@ -2666,8 +2718,10 @@ loongarch_record_syscall_insn (loongarch_record_s *loongarch_record)
   regcache_raw_read_unsigned (loongarch_record->regcache, LOONGARCH_A7_REGNUM,
 			      &syscall_number);
 
-  return tdep->loongarch_syscall_record (loongarch_record->regcache,
-					 syscall_number);
+  int res = tdep->loongarch_syscall_record (loongarch_record->regcache,
+					    syscall_number);
+
+  return to_loongarch_record_result (res);
 }
 
 /* Decode insns type and invoke its record handler.  */
@@ -2722,15 +2776,14 @@ loongarch_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
   loongarch_record.insn = (uint32_t) loongarch_fetch_instruction (insn_addr);
   ret = loongarch_record_decode_insn_handler (&loongarch_record);
   if (ret == LOONGARCH_RECORD_UNSUPPORTED)
-    {
-      gdb_printf (gdb_stderr,
-		  _("Process record does not support instruction "
-		    "0x%0x at address %s.\n"),
-		  loongarch_record.insn,
-		  paddress (gdbarch, insn_addr));
-      return -1;
-    }
-  if (ret == LOONGARCH_RECORD_SUCCESS)
+    gdb_printf (gdb_stderr,
+		_("Process record does not support instruction "
+		  "0x%0x at address %s.\n"),
+		loongarch_record.insn,
+		paddress (gdbarch, insn_addr));
+  ret = from_loongarch_record_result (ret);
+
+  if (ret == 0)
     {
       /* Record PC registers.  */
       if (record_full_arch_list_add_reg (loongarch_record.regcache,

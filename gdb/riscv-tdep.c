@@ -5207,8 +5207,8 @@ class riscv_recorded_insn final
 	    && save_reg (decode_rd (ival)));
   }
 
-  /* Returns true if instruction is successfully recordered.  The length of
-     the instruction must be equal 4 bytes.  */
+  /* Returns true if instruction is successfully recorded.  The length of
+     the instruction must be equal to 4 bytes.  */
   bool
   record_insn_len4 (ULONGEST ival) noexcept
   {
@@ -5265,8 +5265,8 @@ class riscv_recorded_insn final
     return false;
   }
 
-  /* Returns true if instruction is successfully recordered.  The length of
-     the instruction must be equal 2 bytes.  */
+  /* Returns true if instruction is successfully recorded.  The length of
+     the instruction must be equal to 2 bytes.  */
   bool
   record_insn_len2 (ULONGEST ival) noexcept
   {
