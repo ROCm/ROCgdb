@@ -3263,6 +3263,14 @@ info_proc_cmd_cmdline (const char *args, int from_tty)
   info_proc_cmd_1 (args, IP_CMDLINE, from_tty);
 }
 
+/* Implement `info proc environ'.  */
+
+static void
+info_proc_cmd_environ (const char *args, int from_tty)
+{
+  info_proc_cmd_1 (args, IP_ENVIRON, from_tty);
+}
+
 /* Implement `info proc exe'.  */
 
 static void
@@ -3639,6 +3647,11 @@ List current working directory of the specified process."),
 
   add_cmd ("cmdline", class_info, info_proc_cmd_cmdline, _("\
 List command line arguments of the specified process."),
+	   &info_proc_cmdlist);
+
+  add_cmd ("environ", class_info, info_proc_cmd_environ, _("\
+List initial environment variables of the specified process.\n\
+See also 'show environment' command."),
 	   &info_proc_cmdlist);
 
   add_cmd ("exe", class_info, info_proc_cmd_exe, _("\

@@ -477,14 +477,12 @@ objfpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
       if (sym == nullptr)
 	Py_RETURN_NONE;
 
-      return symbol_to_symbol_object (sym);
+      return symbol_to_symbol_object (sym).release ();
     }
   catch (const gdb_exception &except)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  Py_RETURN_NONE;
 }
 
 /* Implementation of
@@ -512,14 +510,12 @@ objfpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
       if (sym == nullptr)
 	Py_RETURN_NONE;
 
-      return symbol_to_symbol_object (sym);
+      return symbol_to_symbol_object (sym).release ();
     }
   catch (const gdb_exception &except)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  Py_RETURN_NONE;
 }
 
 /* Implement repr() for gdb.Objfile.  */

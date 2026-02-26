@@ -1,0 +1,43 @@
+#...
+using ..ternal linker script:.*
+==================================================
+#...
+==================================================
+.*: mode .*
+attempt to open .*/ld/testsuite/ld-archive/ab\.t succeeded
+.*/ld/testsuite/ld-archive/ab\.t
+opened script file .*/ld/testsuite/ld-archive/ab\.t
+attempt to open .*/ld/testsuite/ld-archive/tmpdir/a\.o failed
+attempt to open tmpdir/a\.o succeeded
+attempt to open .*/ld/testsuite/ld-archive/tmpdir/b\.o failed
+attempt to open tmpdir/b\.o succeeded
+attempt to open .*/ld/testsuite/ld-archive/tmpdir/x\.o failed
+attempt to open tmpdir/x\.o succeeded
+<no file> \(.* generated\)
+attempt to open tmpdir/abc\.o succeeded
+<no file> \(.* generated\)
+Archive member included to satisfy reference by file \(symbol\)
+
+tmpdir/abc\.o +\(ff\)
+tmpdir/abc\.o
+<no file> \(.* generated\)
+tmpdir/a\.o +tmpdir/abc\.o \(aa\)
+tmpdir/a\.o
+tmpdir/b\.o +tmpdir/abc\.o \(bb\)
+tmpdir/b\.o
+<no file> \(.* generated\)
+!(:?\()?tmpdir/.*
+#...
+START GROUP
+LOAD .*/ld/testsuite/ld-archive/ab\.t
+START LIB
+LOAD tmpdir/a\.o
+LOAD tmpdir/b\.o
+LOAD tmpdir/x\.o
+END LIB
+START LIB
+LOAD tmpdir/abc\.o
+END LIB
+END GROUP
+!LOAD .*
+#pass

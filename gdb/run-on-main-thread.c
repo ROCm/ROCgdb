@@ -21,6 +21,8 @@
 #include "gdbsupport/cleanups.h"
 #include "gdbsupport/cxx-thread.h"
 #include "gdbsupport/event-loop.h"
+#include "infrun.h"
+#include "gdbsupport/scope-exit.h"
 
 /* The serial event used when posting runnables.  */
 
@@ -59,6 +61,10 @@ run_events (int error, gdb_client_data client_data)
        runnable.  */
     local = std::move (runnables);
   }
+
+  /* Schedule cleanup in case secondary prompts (for instance, the pagination
+     prompt) happened while running events.  */
+  SCOPE_EXIT { reinstall_readline_callback_handler_cleanup (); };
 
   for (auto &item : local)
     {

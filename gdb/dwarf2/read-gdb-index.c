@@ -323,6 +323,13 @@ mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
 	      main_name = nullptr;
 	    }
 
+	  if (this_lang == language_ada
+	      && symbol_kind == GDB_INDEX_SYMBOL_KIND_TYPE)
+	    result.add (per_cu->sect_off (), tag,
+			flags | IS_LINKAGE | IS_SYNTHESIZED, this_lang,
+			components.back ().data (),
+			nullptr, per_cu);
+
 	  /* Note that this assumes the final component ends in \0.  */
 	  cooked_index_entry *entry = result.add (per_cu->sect_off (), tag,
 						  flags, this_lang,

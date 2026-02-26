@@ -121,8 +121,8 @@ Contents of the .[z]?debug_aranges section:
   Length:                   28
   Version:                  2
   Offset into .[z]?debug_info:  (0x)?0
-  Pointer Size:             4
-  Segment Size:             0
+  Address size:             4
+  Segment size:             0
 
     Address    Length
     00000000 0000001b ?

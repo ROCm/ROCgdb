@@ -522,7 +522,7 @@ pspy_block_for_pc (PyObject *o, PyObject *args)
     Py_RETURN_NONE;
 
   if (block)
-    return block_to_block_object (block, cust->objfile ());
+    return block_to_block_object (block, cust->objfile ()).release ();
 
   Py_RETURN_NONE;
 }
@@ -534,7 +534,6 @@ static PyObject *
 pspy_find_pc_line (PyObject *o, PyObject *args)
 {
   CORE_ADDR pc;
-  PyObject *result = NULL; /* init for gcc -Wall */
   PyObject *pc_obj;
   pspace_object *self = (pspace_object *) o;
 
@@ -553,14 +552,12 @@ pspy_find_pc_line (PyObject *o, PyObject *args)
       set_current_program_space (self->pspace);
 
       sal = find_sal_for_pc (pc, 0);
-      result = symtab_and_line_to_sal_object (sal);
+      return symtab_and_line_to_sal_object (sal).release ();
     }
   catch (const gdb_exception &except)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  return result;
 }
 
 /* Implementation of is_valid (self) -> Boolean.

@@ -509,6 +509,8 @@ run_dump_test base64
 run_dump_test base64-bad
 
 run_dump_test string
+run_dump_test string2
+
 if [is_elf_format] {
     run_dump_test none
 }

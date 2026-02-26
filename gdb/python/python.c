@@ -1020,11 +1020,11 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
 	return NULL;
       for (size_t i = 0; i < sals.size (); ++i)
 	{
-	  PyObject *obj = symtab_and_line_to_sal_object (sals[i]);
-	  if (obj == NULL)
-	    return NULL;
+	  gdbpy_ref<> obj = symtab_and_line_to_sal_object (sals[i]);
+	  if (obj == nullptr)
+	    return nullptr;
 
-	  PyTuple_SetItem (result.get (), i, obj);
+	  PyTuple_SetItem (result.get (), i, obj.release ());
 	}
     }
   else
@@ -1073,7 +1073,7 @@ gdbpy_parse_and_eval (PyObject *self, PyObject *args, PyObject *kw)
 	flags |= PARSER_LEAVE_BLOCK_ALONE;
     }
 
-  PyObject *result = nullptr;
+  gdbpy_ref<> result;
   try
     {
       scoped_value_mark free_values;
@@ -1094,7 +1094,7 @@ gdbpy_parse_and_eval (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  return result;
+  return result.release ();
 }
 
 /* Implementation of gdb.invalidate_cached_frames.  */
@@ -1421,7 +1421,7 @@ gdbpy_colorize_disasm (const std::string &content, gdbarch *gdbarch)
       return {};
     }
 
-  gdbpy_ref<> gdbarch_arg (gdbarch_to_arch_object (gdbarch));
+  gdbpy_ref<> gdbarch_arg = gdbarch_to_arch_object (gdbarch);
   if (gdbarch_arg == nullptr)
     {
       gdbpy_print_stack ();
@@ -2105,7 +2105,7 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
 
   gdbpy_enter enter_py;
 
-  gdbpy_ref<> type_obj (type_to_type_object (type));
+  gdbpy_ref<> type_obj = type_to_type_object (type);
   if (type_obj == NULL)
     {
       gdbpy_print_stack ();

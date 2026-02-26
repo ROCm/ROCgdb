@@ -59,7 +59,7 @@ parse_fr (CGEN_CPU_DESC cd,
 {
   const char *errmsg;
   const char *old_strp;
-  char *afteroffset;
+  const char *afteroffset;
   enum cgen_parse_operand_result result_type;
   bfd_vma value;
   extern CGEN_KEYWORD ip2k_cgen_opval_register_names;

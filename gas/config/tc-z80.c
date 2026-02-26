@@ -3270,27 +3270,29 @@ assume (int arg ATTRIBUTE_UNUSED)
 {
   char *name;
   char c;
-  int n;
 
   input_line_pointer = (char*)skip_space (input_line_pointer);
   c = get_symbol_name (& name);
   if (strncasecmp (name, "ADL", 4) != 0)
     {
       ill_op ();
+      ignore_rest_of_line ();
       return;
     }
 
   restore_line_pointer (c);
   input_line_pointer = (char*)skip_space (input_line_pointer);
-  if (*input_line_pointer++ != '=')
+  if (*input_line_pointer != '=')
     {
       error (_("assignment expected"));
+      ignore_rest_of_line ();
       return;
     }
-  input_line_pointer = (char*)skip_space (input_line_pointer);
-  n = get_single_number ();
+  ++input_line_pointer;
 
-  set_cpu_mode (n);
+  set_cpu_mode (!!get_absolute_expression ());
+
+  demand_empty_rest_of_line ();
 }
 
 static const char *

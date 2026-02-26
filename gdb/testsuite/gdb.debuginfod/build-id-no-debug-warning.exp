@@ -82,7 +82,7 @@ set debug_file_re [string_to_regexp $build_id_debug_file]
 gdb_test "file ${build_id_debug_file}" \
     [multi_line \
 	 "Reading symbols from $debug_file_re\\.\\.\\." \
-	 "warning: \"$debug_file_re\": separate debug info file has no debug info" \
+	 "warning: \"$debug_file_re\": separate debug info file has no debug info(?:\r\nExpanding full symbols from \[^\r\n\]+)*" \
 	 "\\(No debugging symbols found in \[^\r\n\]+\\)"] \
     "load test file, expect a warning"
 
@@ -101,7 +101,7 @@ with_test_prefix "check styling" {
 	gdb_test "file ${build_id_debug_file}" \
 	    [multi_line \
 		 "Reading symbols from $debug_file_re\\.\\.\\." \
-		 "warning: \"$debug_file_re\": separate debug info file has no debug info" \
+		 "warning: \"$debug_file_re\": separate debug info file has no debug info(?:\r\nExpanding full symbols from \[^\r\n\]+)*" \
 		 "\\(No debugging symbols found in \[^\r\n\]+\\)"] \
 	    "load test file, expect a warning"
     }

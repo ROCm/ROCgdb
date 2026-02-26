@@ -473,9 +473,7 @@ gdb_test "maint info line-table ${srcfile}" \
 
 if { ! $readnow_p } {
     gdb_test_no_output "maint info line-table ${srcfile2}" \
-	[join \
-	     "maint info line-table with filename of symtab that is not" \
-	     " currently expanded"]
+	"maint info line-table with filename of symtab that is not currently expanded"
 }
 
 gdb_test_no_output "maint expand-symtabs"

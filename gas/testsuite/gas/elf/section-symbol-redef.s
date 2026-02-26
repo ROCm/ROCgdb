@@ -1,3 +1,4 @@
-  myseg=not_defined_here
-  .section myseg
-  .byte 42
+ x=u
+ .dc.a x
+ .section x
+ .dc.a x

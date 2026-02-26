@@ -73,7 +73,7 @@ sympy_get_type (PyObject *self, void *closure)
       return Py_None;
     }
 
-  return type_to_type_object (symbol->type ());
+  return type_to_type_object (symbol->type ()).release ();
 }
 
 static PyObject *
@@ -86,7 +86,7 @@ sympy_get_symtab (PyObject *self, void *closure)
   if (!symbol->is_objfile_owned ())
     Py_RETURN_NONE;
 
-  return symtab_to_symtab_object (symbol->symtab ());
+  return symtab_to_symtab_object (symbol->symtab ()).release ();
 }
 
 static PyObject *
@@ -282,7 +282,7 @@ sympy_value (PyObject *self, PyObject *args)
       return NULL;
     }
 
-  PyObject *result = nullptr;
+  gdbpy_ref<> result;
   try
     {
       if (frame_obj != NULL)
@@ -308,7 +308,7 @@ sympy_value (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  return result;
+  return result.release ();
 }
 
 /* Given a symbol, and a symbol_object that has previously been
@@ -336,25 +336,24 @@ set_symbol (symbol_object *obj, struct symbol *symbol)
 
 /* Create a new symbol object (gdb.Symbol) that encapsulates the struct
    symbol object from GDB.  */
-PyObject *
+gdbpy_ref<>
 symbol_to_symbol_object (struct symbol *sym)
 {
-  symbol_object *sym_obj;
-
   /* Look if there's already a gdb.Symbol object for given SYMBOL
      and if so, return it.  */
+  gdbpy_ref<> result;
   if (sym->is_objfile_owned ())
-    sym_obj = sympy_registry.lookup (sym->objfile (), sym);
+    result = sympy_registry.lookup (sym->objfile (), sym);
   else
-    sym_obj = sympy_registry.lookup (sym->arch (), sym);
-  if (sym_obj != nullptr)
-    return (PyObject*)sym_obj;
+    result = sympy_registry.lookup (sym->arch (), sym);
+  if (result != nullptr)
+    return result;
 
-  sym_obj = PyObject_New (symbol_object, &symbol_object_type);
+  symbol_object *sym_obj = PyObject_New (symbol_object, &symbol_object_type);
   if (sym_obj)
     set_symbol (sym_obj, sym);
 
-  return (PyObject *) sym_obj;
+  return gdbpy_ref<> (sym_obj);
 }
 
 /* Return the symbol that is wrapped by this symbol object.  */
@@ -409,7 +408,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   const char *name;
   static const char *keywords[] = { "name", "block", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *block_obj = NULL, *sym_obj, *bool_obj;
+  PyObject *block_obj = NULL, *bool_obj;
   const struct block *block = NULL;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
@@ -448,18 +447,16 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   if (ret_tuple == NULL)
     return NULL;
 
+  gdbpy_ref<> sym_obj;
   if (symbol)
     {
       sym_obj = symbol_to_symbol_object (symbol);
-      if (!sym_obj)
-	return NULL;
+      if (sym_obj == nullptr)
+	return nullptr;
     }
   else
-    {
-      sym_obj = Py_None;
-      Py_INCREF (Py_None);
-    }
-  PyTuple_SET_ITEM (ret_tuple.get (), 0, sym_obj);
+    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+  PyTuple_SET_ITEM (ret_tuple.get (), 0, sym_obj.release ());
 
   bool_obj = PyBool_FromLong (is_a_field_of_this.type != NULL);
   PyTuple_SET_ITEM (ret_tuple.get (), 1, bool_obj);
@@ -477,7 +474,6 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
   const char *name;
   static const char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *sym_obj;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
 					&domain))
@@ -493,19 +489,17 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
+  gdbpy_ref<> sym_obj;
   if (symbol)
     {
       sym_obj = symbol_to_symbol_object (symbol);
-      if (!sym_obj)
-	return NULL;
+      if (sym_obj == nullptr)
+	return nullptr;
     }
   else
-    {
-      sym_obj = Py_None;
-      Py_INCREF (Py_None);
-    }
+    sym_obj = gdbpy_ref<>::new_reference (Py_None);
 
-  return sym_obj;
+  return sym_obj.release ();
 }
 
 /* Implementation of
@@ -518,7 +512,6 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
   int domain = VAR_DOMAIN;
   static const char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *sym_obj;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
 					&domain))
@@ -561,19 +554,17 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
+  gdbpy_ref<> sym_obj;
   if (symbol)
     {
       sym_obj = symbol_to_symbol_object (symbol);
-      if (!sym_obj)
-	return NULL;
+      if (sym_obj == nullptr)
+	return nullptr;
     }
   else
-    {
-      sym_obj = Py_None;
-      Py_INCREF (Py_None);
-    }
+    sym_obj = gdbpy_ref<>::new_reference (Py_None);
 
-  return sym_obj;
+  return sym_obj.release ();
 }
 
 /* Implementation of
@@ -622,9 +613,10 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 
 		  if (symbol != nullptr)
 		    {
-		      PyObject *sym_obj = symbol_to_symbol_object (symbol);
+		      gdbpy_ref<> sym_obj = symbol_to_symbol_object (symbol);
 		      if (sym_obj == nullptr
-			  || PyList_Append (return_list.get (), sym_obj) == -1)
+			  || PyList_Append (return_list.get (),
+					    sym_obj.get ()) == -1)
 			return false;
 		    }
 		}

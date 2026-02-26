@@ -378,7 +378,10 @@ proc verbose_eval { expr { level 1 } } {
 # it will be used as the name of the test.
 
 proc run_list_test { name {opts {}} {testname {}} } {
-    global srcdir subdir
+    global srcdir subdir runtests
+    if ![runtest_file_p $runtests $name] then {
+	return
+    }
     if { [string length $testname] == 0 } then {
 	set testname "[file tail $subdir] $name"
     }

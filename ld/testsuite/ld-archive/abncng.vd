@@ -1,0 +1,28 @@
+#...
+using ..ternal linker script:.*
+==================================================
+#...
+==================================================
+.*: mode .*
+attempt to open tmpdir/abn\.a succeeded
+tmpdir/abn\.a
+attempt to open tmpdir/abcn\.a succeeded
+tmpdir/abcn\.a
+Archive member included to satisfy reference by file \(symbol\)
+
+tmpdir/abcn\.a\(abc\.o(:?bj)?\) +\(ff\)
+\(tmpdir/abcn\.a\)abc\.o(:?bj)?
+tmpdir/abn\.a
+tmpdir/abn\.a\(a\.o(:?bj)?\) +tmpdir/abcn\.a\(abc\.o(:?bj)?\) \(aa\)
+\(tmpdir/abn\.a\)a\.o(:?bj)?
+tmpdir/abn\.a\(b\.o(:?bj)?\) +tmpdir/abcn\.a\(abc\.o(:?bj)?\) \(bb\)
+\(tmpdir/abn\.a\)b\.o(:?bj)?
+tmpdir/abcn\.a
+!(:?\()?tmpdir/.*
+#...
+START GROUP
+LOAD tmpdir/abn\.a
+LOAD tmpdir/abcn\.a
+END GROUP
+!LOAD .*
+#pass

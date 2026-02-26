@@ -66,7 +66,7 @@ typedef struct
   uint64_t	 ar_length;
   unsigned short ar_version;
   uint64_t	 ar_info_offset;
-  unsigned char  ar_pointer_size;
+  unsigned char  ar_address_size;
   unsigned char  ar_segment_size;
 }
 DWARF2_Internal_ARange;

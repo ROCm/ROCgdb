@@ -3708,7 +3708,7 @@ elf_link_is_defined_archive_symbol (bfd * abfd, carsym * symdef)
   Elf_Internal_Sym *isymend;
   bool result;
 
-  abfd = _bfd_get_elt_at_filepos (abfd, symdef->file_offset, NULL);
+  abfd = _bfd_get_elt_from_symdef (abfd, symdef, NULL);
   if (abfd == NULL)
     return false;
 
@@ -6262,11 +6262,14 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 
   if (! bfd_has_map (abfd))
     {
+      bfd *first_one = bfd_openr_next_archived_file (abfd, NULL);
+
       /* An empty archive is a special case.  */
-      if (bfd_openr_next_archived_file (abfd, NULL) == NULL)
+      if (first_one == NULL)
 	return true;
-      bfd_set_error (bfd_error_no_armap);
-      return false;
+
+      if (!_bfd_make_armap (abfd, first_one))
+	return false;
     }
 
   /* Keep track of all symbols we know to be already defined, and all
@@ -6286,13 +6289,13 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 
   do
     {
-      file_ptr last;
+      ufile_ptr_or_bfd last;
       symindex i;
       carsym *symdef;
       carsym *symdefend;
 
       loop = false;
-      last = -1;
+      last = _bfd_elt_nil (abfd);
 
       symdef = symdefs;
       symdefend = symdef + c;
@@ -6305,7 +6308,7 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 
 	  if (included[i])
 	    continue;
-	  if (symdef->file_offset == last)
+	  if (_bfd_elt_eq (abfd, symdef->u, last))
 	    {
 	      included[i] = true;
 	      continue;
@@ -6390,8 +6393,7 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 	    }
 
 	  /* We need to include this archive member.  */
-	  element = _bfd_get_elt_at_filepos (abfd, symdef->file_offset,
-					     info);
+	  element = _bfd_get_elt_from_symdef (abfd, symdef, info);
 	  if (element == NULL)
 	    goto error_return;
 
@@ -6426,11 +6428,11 @@ elf_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 		break;
 	      --mark;
 	    }
-	  while (symdefs[mark].file_offset == symdef->file_offset);
+	  while (_bfd_elt_eq (abfd, symdefs[mark].u, symdef->u));
 
 	  /* We mark subsequent symbols from this object file as we go
 	     on through the loop.  */
-	  last = symdef->file_offset;
+	  last = symdef->u;
 	}
     }
   while (loop);

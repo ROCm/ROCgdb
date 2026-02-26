@@ -5674,6 +5674,24 @@ load_debug_info (void * file)
   return 0;
 }
 
+static bool
+address_size_ok (const char *sec_name, unsigned addr_size, unsigned seg_size)
+{
+  if (seg_size != 0)
+    {
+      warn (_("Unsupported segment selector size (%u) in %s section.\n"),
+	    seg_size, sec_name);
+      return false;
+    }
+  if (addr_size == 0 || addr_size > 8)
+    {
+      warn (_("Unsupported address size (%u) in %s section.\n"),
+	    addr_size, sec_name);
+      return false;
+    }
+  return true;
+}
+
 /* Read a DWARF .debug_line section header starting at DATA.
    Upon success returns an updated DATA pointer and the LINFO
    structure and the END_OF_SEQUENCE pointer will be filled in.
@@ -5745,13 +5763,9 @@ read_debug_line_header (struct dwarf_section * section,
       SAFE_BYTE_GET_AND_INC (linfo->li_address_size, hdrptr, 1, end);
 
       SAFE_BYTE_GET_AND_INC (linfo->li_segment_size, hdrptr, 1, end);
-      if (linfo->li_segment_size != 0)
-	{
-	  warn (_("The %s section contains "
-		  "unsupported segment selector size: %d.\n"),
-		section->name, linfo->li_segment_size);
-	  return NULL;
-	}
+      if (!address_size_ok (section->name, linfo->li_address_size,
+			    linfo->li_segment_size))
+	return NULL;
     }
 
   SAFE_BYTE_GET_AND_INC (linfo->li_prologue_length, hdrptr,
@@ -5886,12 +5900,13 @@ display_formatted_table (unsigned char *data,
 
 	      READ_ULEB (content_type, format, end);
 	      READ_ULEB (form, format, end);
+	      bool do_loc = (content_type == DW_LNCT_path) != (namepass == 1);
 	      data = read_and_display_attr_value (0, form, 0, start, data, end,
-						  0, 0, linfo->li_offset_size,
+						  0, linfo->li_address_size,
+						  linfo->li_offset_size,
 						  linfo->li_version, NULL,
-			    ((content_type == DW_LNCT_path) != (namepass == 1)),
-						  section, NULL, '\t', -1,
-						  false, 0, 0, false);
+						  do_loc, section, NULL, '\t',
+						  -1, false, 0, 0, false);
 	    }
 	}
 
@@ -6545,8 +6560,9 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 			    }
 			  break;
 			}
-		      data = read_and_display_attr_value (0, form, 0, start,
-							  data, end, 0, 0,
+		      data = read_and_display_attr_value (0, form, 0,
+							  start, data, end, 0,
+							  linfo.li_address_size,
 							  linfo.li_offset_size,
 							  linfo.li_version,
 							  NULL, 1, section,
@@ -6644,8 +6660,9 @@ display_debug_lines_decoded (struct dwarf_section *  section,
 			    }
 			  break;
 			}
-		      data = read_and_display_attr_value (0, form, 0, start,
-							  data, end, 0, 0,
+		      data = read_and_display_attr_value (0, form, 0,
+							  start, data, end, 0,
+							  linfo.li_address_size,
 							  linfo.li_offset_size,
 							  linfo.li_version,
 							  NULL, 1, section,
@@ -7865,7 +7882,8 @@ display_debug_macro (struct dwarf_section *section,
 		      SAFE_BYTE_GET_AND_INC (val, desc, 1, end);
 		      curr
 			= read_and_display_attr_value (0, val, 0,
-						       start, curr, end, 0, 0,
+						       start, curr, end, 0,
+						       offset_size,
 						       offset_size, version,
 						       NULL, 0, section,
 						       NULL, ' ', -1,
@@ -8570,13 +8588,8 @@ display_loclists_unit_header (struct dwarf_section *  section,
   if (length > section->size - header_offset)
     length = section->size - header_offset;
 
-  if (segment_selector_size != 0)
-    {
-      warn (_("The %s section contains an "
-	      "unsupported segment selector size: %d.\n"),
-	    section->name, segment_selector_size);
-      return (uint64_t) -1;
-    }
+  if (!address_size_ok (section->name, address_size, segment_selector_size))
+    return (uint64_t) -1;
 
   uint64_t max_off_count = length >> (is_64bit ? 3 : 2);
   if (*offset_count > max_off_count)
@@ -8656,15 +8669,9 @@ display_debug_loc (struct dwarf_section *section, void *file)
 	}
 
       SAFE_BYTE_GET_AND_INC (address_size, hdrptr, 1, end);
-
       SAFE_BYTE_GET_AND_INC (segment_selector_size, hdrptr, 1, end);
-      if (segment_selector_size != 0)
-	{
-	  warn (_("The %s section contains "
-		  "unsupported segment selector size: %d.\n"),
-		section->name, segment_selector_size);
-	  return 0;
-	}
+      if (!address_size_ok (section->name, address_size, segment_selector_size))
+	return 0;
 
       SAFE_BYTE_GET_AND_INC (offset_entry_count, hdrptr, 4, end);
 
@@ -9042,7 +9049,7 @@ display_debug_aranges (struct dwarf_section *section,
       uint64_t length;
       uint64_t address;
       uint64_t sec_off;
-      unsigned char address_size;
+      unsigned char tuple_size;
       unsigned int offset_size;
       unsigned char *end_ranges;
 
@@ -9078,7 +9085,7 @@ display_debug_aranges (struct dwarf_section *section,
 		" in %s section does not point to a CU header.\n"),
 	      arange.ar_info_offset, section->name);
 
-      SAFE_BYTE_GET_AND_INC (arange.ar_pointer_size, hdrptr, 1, end_ranges);
+      SAFE_BYTE_GET_AND_INC (arange.ar_address_size, hdrptr, 1, end_ranges);
       SAFE_BYTE_GET_AND_INC (arange.ar_segment_size, hdrptr, 1, end_ranges);
 
       if (arange.ar_version != 2 && arange.ar_version != 3)
@@ -9096,48 +9103,34 @@ display_debug_aranges (struct dwarf_section *section,
       printf (_("  Version:                  %d\n"), arange.ar_version);
       printf (_("  Offset into .debug_info:  %#" PRIx64 "\n"),
 	      arange.ar_info_offset);
-      printf (_("  Pointer Size:             %d\n"), arange.ar_pointer_size);
-      printf (_("  Segment Size:             %d\n"), arange.ar_segment_size);
+      printf (_("  Address size:             %d\n"), arange.ar_address_size);
+      printf (_("  Segment size:             %d\n"), arange.ar_segment_size);
 
-      address_size = arange.ar_pointer_size + arange.ar_segment_size;
+      if (!address_size_ok (section->name, arange.ar_address_size,
+			    arange.ar_segment_size))
+	break;
 
-      /* PR 17512: file: 001-108546-0.001:0.1.  */
-      if (address_size == 0 || address_size > 8)
-	{
-	  error (_("Invalid address size in %s section!\n"),
-		 section->name);
-	  break;
-	}
+      tuple_size = 2 * arange.ar_address_size + arange.ar_segment_size;
 
-      /* The DWARF spec does not require that the address size be a power
-	 of two, but we do.  This will have to change if we ever encounter
-	 an uneven architecture.  */
-      if ((address_size & (address_size - 1)) != 0)
-	{
-	  warn (_("Pointer size + Segment size is not a power of two.\n"));
-	  break;
-	}
-
-      if (address_size > 4)
+      if (tuple_size > 8)
 	printf (_("\n    Address            Length\n"));
       else
 	printf (_("\n    Address    Length\n"));
 
       addr_ranges = hdrptr;
 
-      /* Must pad to an alignment boundary that is twice the address size.  */
-      addr_ranges += (2 * address_size - 1
-		      - (hdrptr - start - 1) % (2 * address_size));
+      /* Pad to a multiple of the tuple size.  */
+      addr_ranges += tuple_size - 1 - (addr_ranges - start - 1) % tuple_size;
 
-      while (2 * address_size <= end_ranges - addr_ranges)
+      while (tuple_size <= end_ranges - addr_ranges)
 	{
-	  SAFE_BYTE_GET_AND_INC (address, addr_ranges, address_size,
+	  SAFE_BYTE_GET_AND_INC (address, addr_ranges, arange.ar_address_size,
 				 end_ranges);
-	  SAFE_BYTE_GET_AND_INC (length, addr_ranges, address_size,
+	  SAFE_BYTE_GET_AND_INC (length, addr_ranges, arange.ar_address_size,
 				 end_ranges);
 	  printf ("    ");
-	  print_hex (address, address_size);
-	  print_hex_ns (length, address_size);
+	  print_hex (address, arange.ar_address_size);
+	  print_hex_ns (length, arange.ar_address_size);
 	  putchar ('\n');
 	}
 
@@ -9215,6 +9208,7 @@ display_debug_addr (struct dwarf_section *section,
     {
       unsigned int idx;
       unsigned int address_size = debug_addr_info [i]->pointer_size;
+      unsigned int segment_selector_size = 0;
 
       printf (_("  For compilation unit at offset %#" PRIx64 ":\n"),
 	      debug_addr_info [i]->cu_offset);
@@ -9227,7 +9221,6 @@ display_debug_addr (struct dwarf_section *section,
 	  unsigned char *curr_header = header;
 	  uint64_t length;
 	  int version;
-	  int segment_selector_size;
 
 	  if (header_size != 8 && header_size != 16)
 	    {
@@ -9254,7 +9247,6 @@ display_debug_addr (struct dwarf_section *section,
 
 	  SAFE_BYTE_GET_AND_INC (address_size, curr_header, 1, entry);
 	  SAFE_BYTE_GET_AND_INC (segment_selector_size, curr_header, 1, entry);
-	  address_size += segment_selector_size;
 	}
       else
 	end = section->start + debug_addr_info [i + 1]->addr_base;
@@ -9262,12 +9254,8 @@ display_debug_addr (struct dwarf_section *section,
       header = end;
       idx = 0;
 
-      if (address_size < 1 || address_size > sizeof (uint64_t))
-	{
-	  warn (_("Corrupt %s section: address size (%x) is wrong\n"),
-		section->name, address_size);
-	  break;
-	}
+      if (!address_size_ok (section->name, address_size, segment_selector_size))
+	break;
 
       while ((size_t) (end - entry) >= address_size)
 	{
@@ -12284,8 +12272,10 @@ display_debug_names (struct dwarf_section *section, void *file)
 		  if (tagno >= 0)
 		    printf (" %s", get_IDX_name (xindex));
 		  entryptr = read_and_display_attr_value (0, form, 0,
-							  unit_start, entryptr, unit_end,
-							  0, 0, offset_size,
+							  unit_start, entryptr,
+							  unit_end, 0,
+							  offset_size,
+							  offset_size,
 							  dwarf_version, NULL,
 							  (tagno < 0), section,
 							  NULL, '=', -1,

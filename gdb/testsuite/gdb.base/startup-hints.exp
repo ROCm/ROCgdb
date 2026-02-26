@@ -210,6 +210,10 @@ proc_with_prefix test_for_hint_with_width { width load_exec with_style } {
 	}
 
 	append hint_re "\r\nReading symbols from [style [string_to_regexp $::binfile] $style]\\.\\.\\."
+
+	if { [readnow] } {
+	    append hint_re "\r\nExpanding full symbols from [style [string_to_regexp $::binfile] $style]\\.\\.\\."
+	}
     }
 
     gdb_test "" $hint_re \

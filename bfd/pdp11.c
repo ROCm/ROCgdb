@@ -1264,6 +1264,9 @@ NAME (aout, set_section_contents) (bfd *abfd,
 static bool
 aout_get_external_symbols (bfd *abfd)
 {
+  if (bfd_get_flavour (abfd) != bfd_target_aout_flavour)
+    return false;
+
   if (obj_aout_external_syms (abfd) == NULL)
     {
       bfd_size_type count;
@@ -1603,6 +1606,8 @@ NAME (aout, slurp_symbol_table) (bfd *abfd)
   struct external_nlist *old_external_syms;
   aout_symbol_type *cached;
   bfd_size_type cached_size;
+
+  BFD_ASSERT (bfd_get_flavour (abfd) == bfd_target_aout_flavour);
 
   /* If there's no work to be done, don't do any.  */
   if (obj_aout_symbols (abfd) != NULL)
@@ -2235,6 +2240,8 @@ NAME (aout, read_minisymbols) (bfd *abfd,
 			       void * *minisymsp,
 			       unsigned int *sizep)
 {
+  BFD_ASSERT (bfd_get_flavour (abfd) == bfd_target_aout_flavour);
+
   if (dynamic)
     /* We could handle the dynamic symbols here as well, but it's
        easier to hand them off.  */
@@ -2637,6 +2644,8 @@ NAME (aout, link_add_symbols) (bfd *abfd, struct bfd_link_info *info)
 static bool
 aout_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 {
+  BFD_ASSERT (bfd_get_flavour (abfd) == bfd_target_aout_flavour);
+
   if (! aout_get_external_symbols (abfd))
     return false;
   if (! aout_link_add_symbols (abfd, info))
@@ -2800,6 +2809,8 @@ aout_link_check_archive_element (bfd *abfd,
 {
   bfd *oldbfd;
   bool needed;
+
+  BFD_ASSERT (bfd_get_flavour (abfd) == bfd_target_aout_flavour);
 
   if (!aout_get_external_symbols (abfd))
     return false;
@@ -3698,6 +3709,7 @@ static bool
 aout_link_input_bfd (struct aout_final_link_info *flaginfo, bfd *input_bfd)
 {
   BFD_ASSERT (bfd_get_format (input_bfd) == bfd_object);
+  BFD_ASSERT (bfd_get_flavour (input_bfd) == bfd_target_aout_flavour);
 
   /* If this is a dynamic object, it may need special handling.  */
   if ((input_bfd->flags & DYNAMIC) != 0

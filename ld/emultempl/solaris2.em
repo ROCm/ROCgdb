@@ -41,103 +41,131 @@ fragment <<EOF
    Cf. Linker and Libraries Guide, Ch. 2, Link-Editor, Generating the Output
    File, p.63.  */
 
+#include "elf-solaris2.h"
+
+/* Set things up early so that global syms will be defined by PROVIDE
+   assignments in elf.sc.  The alternative to this is to modify elf.sc
+   for Solaris to not use PROVIDE for assignments to _etext, _edata,
+   and _end.  */
+static void
+elf_solaris2_after_open (void)
+{
+  if (is_elf_hash_table (link_info.hash)
+      && elf_hash_table (&link_info)->target_os == is_solaris
+      && !bfd_link_relocatable (&link_info))
+    {
+      const char *const *sym;
+
+      for (sym = elf_solaris2_global_syms; *sym != NULL; sym++)
+	{
+	  struct elf_link_hash_entry *h
+	    = elf_link_hash_lookup (elf_hash_table (&link_info), *sym,
+				    true, false, false);
+	  if (h)
+	    /* Otherwise elf_fix_symbol_flags sets ref_regular, which
+	       results in an abort when a script doesn't define the sym.  */
+	    h->non_elf = 0;
+	}
+    }
+  ${LDEMUL_AFTER_OPEN-gld${EMULATION_NAME}_after_open} ();
+}
+
 static void
 elf_solaris2_before_allocation (void)
 {
-  /* Global symbols required by the Solaris 2 ABI.  */
-  static const char *global_syms[] = {
-    "_DYNAMIC",
-    "_GLOBAL_OFFSET_TABLE_",
-    "_PROCEDURE_LINKAGE_TABLE_",
-    "_edata",
-    "_end",
-    "_etext",
-    NULL
-  };
-  /* Local symbols required by the Solaris 2 ABI.  Already emitted by
-     emulparams/solaris2.sh.  */
-  static const char *local_syms[] = {
-    "_START_",
-    "_END_",
-    NULL
-  };
-  const char **sym;
-
-  /* Do this for both executables and shared objects.  */
-  if (!bfd_link_relocatable (&link_info)
-      && is_elf_hash_table (link_info.hash))
+  if (is_elf_hash_table (link_info.hash)
+      && elf_hash_table (&link_info)->target_os == is_solaris)
     {
-      for (sym = global_syms; *sym != NULL; sym++)
+      /* Local symbols required by the Solaris 2 ABI.  Already emitted by
+	 emulparams/solaris2.sh.  */
+      static const char *const local_syms[] = {
+	"_START_",
+	"_END_",
+	NULL
+      };
+      const char *const *sym;
+
+      /* Do this for both executables and shared objects.  */
+      if (!bfd_link_relocatable (&link_info))
 	{
-	  struct elf_link_hash_entry *h;
+	  for (sym = elf_solaris2_global_syms; *sym != NULL; sym++)
+	    {
+	      struct elf_link_hash_entry *h;
 
-	  /* Lookup symbol.  */
-	  h = elf_link_hash_lookup (elf_hash_table (&link_info), *sym,
-				    false, false, false);
-	  if (h == NULL)
-	    continue;
+	      /* Lookup symbol.  */
+	      h = elf_link_hash_lookup (elf_hash_table (&link_info), *sym,
+					false, false, false);
+	      if (h == NULL
+		  || h->root.type == bfd_link_hash_new)
+		continue;
 
-	  /* Undo the hiding done by _bfd_elf_define_linkage_sym.  */
-	  h->forced_local = 0;
-	  h->other &= ~STV_HIDDEN;
+	      /* Undo the hiding done by _bfd_elf_define_linkage_sym.  */
+	      h->forced_local = 0;
+	      h->type = STT_OBJECT;
+	      if (ELF_ST_VISIBILITY (h->other) != STV_INTERNAL)
+		h->other = (h->other & ~ELF_ST_VISIBILITY (-1)) | STV_PROTECTED;
 
-	  /* Emit it into the .dynamic section, too.  */
-	  bfd_elf_link_record_dynamic_symbol (&link_info, h);
+	      /* Emit it into the .dynamic section, too.  */
+	      bfd_elf_link_record_dynamic_symbol (&link_info, h);
+	    }
+
+	  for (sym = local_syms; *sym != NULL; sym++)
+	    {
+	      struct elf_link_hash_entry *h;
+	      elf_backend_data *bed;
+
+	      /* Lookup symbol.  */
+	      h = elf_link_hash_lookup (elf_hash_table (&link_info), *sym,
+					false, false, false);
+	      if (h == NULL)
+		continue;
+
+	      /* Turn it local.  */
+	      bed = get_elf_backend_data (link_info.output_bfd);
+	      bed->elf_backend_hide_symbol (&link_info, h, true);
+
+	      /* Type should be STT_OBJECT, not STT_NOTYPE.  */
+	      h->type = STT_OBJECT;
+	    }
 	}
 
-      for (sym = local_syms; *sym != NULL; sym++)
+      /* Only do this if emitting a shared object and versioning is in place. */
+      if (bfd_link_dll (&link_info)
+	  && ((link_info.version_info != NULL
+	       && link_info.version_info->name[0] != '\0')
+	      || link_info.create_default_symver))
 	{
-	  struct elf_link_hash_entry *h;
+	  struct bfd_elf_version_expr *globals = NULL, *locals = NULL;
+	  struct bfd_elf_version_tree *basever;
+	  const char *soname;
 
-	  /* Lookup symbol.  */
-	  h = elf_link_hash_lookup (elf_hash_table (&link_info), *sym,
-				    false, false, false);
-	  if (h == NULL)
-	    continue;
+	  for (sym = elf_solaris2_global_syms; *sym != NULL; sym++)
+	    {
+	      /* Create a version pattern for this symbol.  Some of them start
+		 off as local, others as global, so try both.  */
+	      globals = lang_new_vers_pattern (globals, *sym, NULL, true);
 
-	  /* Turn it local.  */
-	  h->forced_local = 1;
-	  /* Type should be STT_OBJECT, not STT_NOTYPE.  */
-	  h->type = STT_OBJECT;
+	      /* Treat basever symbols as if from a linker script to
+		 appease --no-undefined-version.  */
+	      globals->script = 1;
+
+	      locals = lang_new_vers_pattern (locals, *sym, NULL, true);
+	    }
+
+	  /* New version node for those symbols.  */
+	  basever = lang_new_vers_node (globals, locals);
+
+	  /* The version name matches what bfd_elf_size_dynamic_sections uses
+	     for the base version.  */
+	  soname = bfd_elf_get_dt_soname (link_info.output_bfd);
+	  if (soname == NULL)
+	    soname = lbasename (bfd_get_filename (link_info.output_bfd));
+
+	  /* Register the node.  */
+	  lang_register_vers_node (soname, basever, NULL);
+	  /* Enforce base version.  The encoded vd_ndx is vernum + 1.  */
+	  basever->vernum = 0;
 	}
-    }
-
-  /* Only do this if emitting a shared object and versioning is in place. */
-  if (bfd_link_dll (&link_info)
-      && ((link_info.version_info != NULL
-	   && link_info.version_info->name[0] != '\0')
-	  || link_info.create_default_symver))
-    {
-      struct bfd_elf_version_expr *globals = NULL, *locals = NULL;
-      struct bfd_elf_version_tree *basever;
-      const char *soname;
-
-      for (sym = global_syms; *sym != NULL; sym++)
-	{
-	  /* Create a version pattern for this symbol.  Some of them start
-	     off as local, others as global, so try both.  */
-	  globals = lang_new_vers_pattern (globals, *sym, NULL, true);
-
-	  /* Treat basever symbols as if from a linker script to
-	     appease --no-undefined-version.  */
-	  globals->script = 1;
-
-	  locals = lang_new_vers_pattern (locals, *sym, NULL, true);
-	}
-
-      /* New version node for those symbols.  */
-      basever = lang_new_vers_node (globals, locals);
-
-      /* The version name matches what bfd_elf_size_dynamic_sections uses
-	 for the base version.  */
-      soname = bfd_elf_get_dt_soname (link_info.output_bfd);
-      if (soname == NULL)
-	soname = lbasename (bfd_get_filename (link_info.output_bfd));
-
-      /* Register the node.  */
-      lang_register_vers_node (soname, basever, NULL);
-      /* Enforce base version.  The encoded vd_ndx is vernum + 1.  */
-      basever->vernum = 0;
     }
 
   ${LDEMUL_BEFORE_ALLOCATION-gld${EMULATION_NAME}_before_allocation} ();
@@ -145,4 +173,5 @@ elf_solaris2_before_allocation (void)
 
 EOF
 
+LDEMUL_AFTER_OPEN=elf_solaris2_after_open
 LDEMUL_BEFORE_ALLOCATION=elf_solaris2_before_allocation

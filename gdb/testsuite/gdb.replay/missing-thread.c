@@ -22,23 +22,28 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t g_condvar = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_condvar = PTHREAD_COND_INITIALIZER;
+static bool g_ready = false;
 
-void *
+static void *
 worker_function (void *arg)
 {
   printf ("In worker, about to notify\n");
+
+  pthread_mutex_lock (&g_mutex);
+  g_ready = true;
+  pthread_mutex_unlock (&g_mutex);
   pthread_cond_signal (&g_condvar);
 
   while (true)
-    sleep(1);
+    sleep (1);
 
   return NULL;
 }
 
 int
-main()
+main ()
 {
   pthread_t my_thread;
 
@@ -46,7 +51,8 @@ main()
   assert (result == 0);
 
   pthread_mutex_lock (&g_mutex);
-  pthread_cond_wait (&g_condvar, &g_mutex);
+  while (!g_ready)
+    pthread_cond_wait (&g_condvar, &g_mutex);
 
   printf ("In main, have been woken.\n");
   pthread_mutex_unlock (&g_mutex);

@@ -343,6 +343,22 @@ proc run_style_tests { } {
 	gdb_test "maint translate-address" \
 	    "abcd:requires argument.*" \
 	    "error prefix"
+
+	# Check styling in the 'skip' related commands.
+	gdb_test "skip -file xxxx.c" \
+	    "File [limited_style xxxx\\.c file] will be skipped when stepping\\."
+	gdb_test "skip -gfile zz*.c" \
+	    "File\\(s\\) [limited_style zz\\*\\.c file] will be skipped when stepping\\."
+	gdb_test "skip -function xxxx" \
+	    "Function [limited_style xxxx function] will be skipped when stepping\\."
+	gdb_test "skip -rfunction zzz.*" \
+	    "Function\\(s\\) [limited_style zzz\\.\\* function] will be skipped when stepping\\."
+	gdb_test "skip function qqq" \
+	    "Function [limited_style qqq function] will be skipped when stepping\\."
+	gdb_test "skip file blah.c" \
+	    "File [limited_style blah\\.c file] will be skipped when stepping\\."
+	gdb_test "skip ttt" \
+	    "Function [limited_style ttt function] will be skipped when stepping\\."
     }
 }
 

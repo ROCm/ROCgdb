@@ -20,9 +20,15 @@ set ws "\[ \t\]+"
 
 standard_testfile break.c break1.c
 
-if {[prepare_for_testing "failed to prepare" $testfile \
-	 [list $srcfile $srcfile2] {debug nowarnings}]} {
-    return -1
+# Start GDB with an environment variable to test
+# "info proc environ" later.
+save_vars { env(GDB_INFO_PROC_ENVIRON_1) } {
+    set env(GDB_INFO_PROC_ENVIRON_1) "ONE"
+
+    if {[prepare_for_testing "failed to prepare" $testfile \
+	     [list $srcfile $srcfile2] {debug nowarnings}]} {
+	return -1
+    }
 }
 
 gdb_test "help info proc" "Show additional information about a process.*"
@@ -41,12 +47,17 @@ gdb_test_multiple "info proc" "info proc without a process" {
 # Set command line arguments to be verified later with "info proc
 # cmdline".  However, if we're using a stub, then "set args" would not
 # have any effect, so then just skip this.
+# Similar for "info proc environ".
 
 set cmdline ""
 if { ! [use_gdb_stub] } {
     set cmdline "-i foo bar -o baz 1234"
     gdb_test_no_output "set args $cmdline" "set args"
 }
+
+# Set another environment variable, this time using a GDB command,
+# to test "info proc environ".
+gdb_test "set environment GDB_INFO_PROC_ENVIRON_2 TWO"
 
 if {![runto_main]} {
     return -1
@@ -60,7 +71,13 @@ gdb_test "info proc mapping" \
 if {[istarget "*-*-linux*"]} {
     if { $cmdline != "" } {
 	gdb_test "info proc cmdline" "cmdline = '.* $cmdline'"
+
+	gdb_test "pipe info proc environ | grep GDB_INFO_PROC_ENVIRON_1" \
+	    "=ONE" "info proc environ: read env var 1"
+	gdb_test "pipe info proc environ | grep GDB_INFO_PROC_ENVIRON_2" \
+	    "=TWO" "info proc environ: read env var 2"
     }
+
     set gcorefile [standard_output_file $testfile.gcore]
     if {[gdb_gcore_cmd $gcorefile "save a core file"]} {
 	clean_restart $testfile

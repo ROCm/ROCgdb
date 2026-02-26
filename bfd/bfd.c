@@ -280,8 +280,14 @@ CODE_FRAGMENT
 .  {* Have archive map.  *}
 .  unsigned int has_armap : 1;
 .
+.  {* Accept a mapless archive for link.  *}
+.  unsigned int link_mapless : 1;
+.
 .  {* Set if this is a thin archive.  *}
 .  unsigned int is_thin_archive : 1;
+.
+.  {* Set if this is a collection of files pretending to be an archive.  *}
+.  unsigned int is_fake_archive : 1;
 .
 .  {* Set if this archive should not cache element positions.  *}
 .  unsigned int no_element_cache : 1;
@@ -323,12 +329,17 @@ CODE_FRAGMENT
 .     contained in an archive.  *}
 .  ufile_ptr origin;
 .
-.  {* The origin in the archive of the proxy entry.  This will
-.     normally be the same as origin, except for thin archives,
-.     when it will contain the current offset of the proxy in the
-.     thin archive rather than the offset of the bfd in its actual
-.     container.  *}
-.  ufile_ptr proxy_origin;
+.  {* A reference in the archive for the proxy entry as follows:
+.
+.     1. For regular archives this will be the same as origin.
+.
+.     2. For thin archives it will contain the current offset
+.	 of the proxy in the thin archive rather than the offset
+.	 of the bfd in its actual container.
+.
+.     3. For fake archives it will contain the next archive member's
+.	 BFD reference or a NULL pointer if this is the last member.  *}
+.  ufile_ptr_or_bfd proxy_handle;
 .
 .  {* A hash table for section names.  *}
 .  struct bfd_hash_table section_htab;
@@ -523,9 +534,21 @@ EXTERNAL
 .}
 .
 .static inline bool
+.bfd_link_mapless (const bfd *abfd)
+.{
+.  return abfd->link_mapless;
+.}
+.
+.static inline bool
 .bfd_is_thin_archive (const bfd *abfd)
 .{
 .  return abfd->is_thin_archive;
+.}
+.
+.static inline bool
+.bfd_is_fake_archive (const bfd *abfd)
+.{
+.  return abfd->is_fake_archive;
 .}
 .
 .static inline void *
@@ -543,9 +566,21 @@ EXTERNAL
 .}
 .
 .static inline void
+.bfd_set_link_mapless (bfd *abfd, bool val)
+.{
+.  abfd->link_mapless = val;
+.}
+.
+.static inline void
 .bfd_set_thin_archive (bfd *abfd, bool val)
 .{
 .  abfd->is_thin_archive = val;
+.}
+.
+.static inline void
+.bfd_set_fake_archive (bfd *abfd, bool val)
+.{
+.  abfd->is_fake_archive = val;
 .}
 .
 .static inline void
@@ -798,7 +833,7 @@ const char *const bfd_errmsgs[] =
   N_("invalid operation"),
   N_("memory exhausted"),
   N_("no symbols"),
-  N_("archive has no index; run ranlib to add one"),
+  N_("archive has no index; run ranlib to add one or use --link-mapless"),
   N_("no more archived files"),
   N_("malformed archive"),
   N_("DSO missing from command line"),

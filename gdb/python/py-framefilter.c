@@ -1088,7 +1088,7 @@ static PyObject *
 bootstrap_python_frame_filters (const frame_info_ptr &frame,
 				int frame_low, int frame_high)
 {
-  gdbpy_ref<> frame_obj (frame_info_to_frame_object (frame));
+  gdbpy_ref<> frame_obj = frame_info_to_frame_object (frame);
   if (frame_obj == NULL)
     return NULL;
 

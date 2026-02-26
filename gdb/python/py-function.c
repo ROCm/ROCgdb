@@ -45,7 +45,7 @@ convert_values_to_python (int argc, struct value **argv)
 
   for (i = 0; i < argc; ++i)
     {
-      gdbpy_ref<> elt (value_to_value_object (argv[i]));
+      gdbpy_ref<> elt = value_to_value_object (argv[i]);
       if (elt == NULL)
 	return NULL;
       PyTuple_SetItem (result.get (), i, elt.release ());

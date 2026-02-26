@@ -1872,7 +1872,7 @@ xcoff64_slurp_armap (bfd *abfd)
   for (i = 0, arsym = bfd_ardata (abfd)->symdefs, p = contents + 8;
        i < c;
        ++i, ++arsym, p += 8)
-    arsym->file_offset = H_GET_64 (abfd, p);
+    arsym->u.file_offset = H_GET_64 (abfd, p);
 
   /* After the file offsets come null terminated symbol names.  */
   cend = contents + sz;
@@ -1904,6 +1904,8 @@ xcoff64_archive_p (bfd *abfd)
   /* This is the new format.  */
   struct xcoff_ar_file_hdr_big hdr;
   size_t amt = SXCOFFARMAG;
+
+  BFD_ASSERT (!bfd_is_fake_archive (abfd));
 
   if (bfd_read (magic, amt, abfd) != amt)
     {
@@ -1937,9 +1939,8 @@ xcoff64_archive_p (bfd *abfd)
 
   bfd_ardata (abfd)->tdata = (void *) ((struct artdata *) bfd_ardata (abfd) + 1);
 
-  bfd_ardata (abfd)->first_file_filepos = bfd_scan_vma (hdr.firstmemoff,
-							(const char **) NULL,
-							10);
+  bfd_ardata (abfd)->first_file.file_offset
+    = bfd_scan_vma (hdr.firstmemoff, (const char **) NULL, 10);
 
   memcpy (&x_artdata (abfd)->u.bhdr, &hdr, SIZEOF_AR_FILE_HDR_BIG);
 

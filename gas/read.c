@@ -6106,8 +6106,14 @@ stringer (int bits_appendzero)
 	  break;
 	case '<':
 	  input_line_pointer++;
-	  c = get_single_number ();
-	  stringer_append_char (c, bitsize);
+	  offsetT n = get_single_number ();
+	  if (n != (unsigned char) n)
+	    {
+	      as_bad (_("<nn> out of range"));
+	      ignore_rest_of_line ();
+	      return;
+	    }
+	  stringer_append_char (n, bitsize);
 	  if (*input_line_pointer != '>')
 	    {
 	      as_bad (_("expected <nn>"));

@@ -289,6 +289,9 @@ enum info_proc_what
     /* * Display `info proc cmdline'.  */
     IP_CMDLINE,
 
+    /* * Display `info proc environ'.  */
+    IP_ENVIRON,
+
     /* * Display `info proc exe'.  */
     IP_EXE,
 

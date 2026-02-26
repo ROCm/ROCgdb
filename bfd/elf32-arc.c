@@ -556,7 +556,7 @@ arc_extract_features (const char *p)
 
   for (i = 0; i < ARRAY_SIZE (bfd_feature_list); i++)
     {
-      char *t = strstr (p, bfd_feature_list[i].attr);
+      const char *t = strstr (p, bfd_feature_list[i].attr);
       unsigned l = strlen (bfd_feature_list[i].attr);
       if ((t != NULL)
 	  && (t[l] == ','

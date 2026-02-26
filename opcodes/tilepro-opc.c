@@ -10119,7 +10119,7 @@ tilepro_spr_compare (const void *a_ptr, const void *b_ptr)
 const char *
 get_tilepro_spr_name (int num)
 {
-  void *result;
+  const void *result;
   struct tilepro_spr key;
 
   key.number = num;
@@ -10131,7 +10131,7 @@ get_tilepro_spr_name (int num)
     return NULL;
 
   {
-    struct tilepro_spr *result_ptr = (struct tilepro_spr *) result;
+    const struct tilepro_spr *result_ptr = (const struct tilepro_spr *) result;
 
     return result_ptr->name;
   }

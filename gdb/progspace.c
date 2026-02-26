@@ -36,18 +36,6 @@ std::vector<struct program_space *> program_spaces;
 /* Pointer to the current program space.  */
 struct program_space *current_program_space;
 
-/* The last address space number assigned.  */
-static int highest_address_space_num;
-
-
-
-/* Create a new address space object, and add it to the list.  */
-
-address_space::address_space ()
-  : m_num (++highest_address_space_num)
-{
-}
-
 /* Maybe create a new address space object, and add it to the list, or
    return a pointer to an existing address space, in case inferiors
    share an address space on this target system.  */
@@ -66,16 +54,6 @@ maybe_new_address_space ()
 
   return new_address_space ();
 }
-
-/* Start counting over from scratch.  */
-
-static void
-init_address_spaces (void)
-{
-  highest_address_space_num = 0;
-}
-
-
 
 /* Remove a program space from the program spaces list.  */
 
@@ -467,38 +445,36 @@ maintenance_info_program_spaces_command (const char *args, int from_tty)
   print_program_space (current_uiout, requested);
 }
 
-/* Update all program spaces matching to address spaces.  The user may
-   have created several program spaces, and loaded executables into
-   them before connecting to the target interface that will create the
-   inferiors.  All that happens before GDB has a chance to know if the
-   inferiors will share an address space or not.  Call this after
-   having connected to the target interface and having fetched the
-   target description, to fixup the program/address spaces mappings.
-
-   It is assumed that there are no bound inferiors yet, otherwise,
-   they'd be left with stale referenced to released aspaces.  */
+/* See progspace.h.  */
 
 void
-update_address_spaces (void)
+update_address_spaces (process_stratum_target *target,
+		       gdbarch *gdbarch)
 {
-  int shared_aspace
-    = gdbarch_has_shared_address_space (current_inferior ()->arch ());
+  gdb_assert (target != nullptr);
+  gdb_assert (gdbarch != nullptr);
 
-  init_address_spaces ();
+  int shared_aspace = gdbarch_has_shared_address_space (gdbarch);
+
+  /* Find the program spaces that are being used by inferiors of the
+     current target.  We shouldn't alter inferiors of other targets.  */
+  gdb::unordered_set<program_space *> pspaces_to_update;
+  for (inferior *inf : all_inferiors (target))
+    pspaces_to_update.insert (inf->pspace);
 
   if (shared_aspace)
     {
       address_space_ref_ptr aspace = new_address_space ();
 
-      for (struct program_space *pspace : program_spaces)
+      for (program_space *pspace : pspaces_to_update)
 	pspace->aspace = aspace;
     }
   else
-    for (struct program_space *pspace : program_spaces)
+    for (program_space *pspace : pspaces_to_update)
       pspace->aspace = new_address_space ();
 
-  for (inferior *inf : all_inferiors ())
-    if (gdbarch_has_global_solist (current_inferior ()->arch ()))
+  for (inferior *inf : all_inferiors (target))
+    if (gdbarch_has_global_solist (gdbarch))
       inf->aspace = maybe_new_address_space ();
     else
       inf->aspace = inf->pspace->aspace;

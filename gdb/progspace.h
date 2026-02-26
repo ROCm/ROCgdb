@@ -48,20 +48,11 @@ struct solib;
 struct address_space : public refcounted_object
 {
   /* Create a new address space object, and add it to the list.  */
-  address_space ();
+  address_space () = default;
   DISABLE_COPY_AND_ASSIGN (address_space);
-
-  /* Returns the integer address space id of this address space.  */
-  int num () const
-  {
-    return m_num;
-  }
 
   /* Per aspace data-pointers required by other GDB modules.  */
   registry<address_space> registry_fields;
-
-private:
-  int m_num;
 };
 
 using address_space_ref_ptr
@@ -472,14 +463,19 @@ private:
    share an address space.  */
 extern address_space_ref_ptr maybe_new_address_space ();
 
-/* Update all program spaces matching to address spaces.  The user may
-   have created several program spaces, and loaded executables into
-   them before connecting to the target interface that will create the
-   inferiors.  All that happens before GDB has a chance to know if the
-   inferiors will share an address space or not.  Call this after
-   having connected to the target interface and having fetched the
-   target description, to fixup the program/address spaces
+/* Update all program spaces matching to address spaces.  This is done
+   for the inferiors that have TARGET as their process stratum target
+   and using GDBARCH to determine if there is a shared address space
+   and if solibs are global.
+
+   The user may have created several program spaces, and loaded
+   executables into them before connecting to the target interface
+   that will create the inferiors.  All that happens before GDB has a
+   chance to know if the inferiors will share an address space or not.
+   Call this after having connected to the target interface and having
+   fetched the target description, to fixup the program/address spaces
    mappings.  */
-extern void update_address_spaces (void);
+extern void update_address_spaces (process_stratum_target *target,
+				   gdbarch *gdbarch);
 
 #endif /* GDB_PROGSPACE_H */

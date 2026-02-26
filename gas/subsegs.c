@@ -247,27 +247,23 @@ section_symbol (segT sec)
 #define EMIT_SECTION_SYMBOLS 1
 #endif
 
-  if (! EMIT_SECTION_SYMBOLS || symbol_table_frozen)
+  /* A reference to the section (ie. an undefined symbol)
+     should now become defined, but any other symbol that happens to
+     have the same name as the section should not be modified.  Make
+     sure an undefined_section symbol isn't equated to some other
+     undefined symbol.  */
+  s = symbol_find (sec->symbol->name);
+  if (s == NULL
+      || S_GET_SEGMENT (s) != undefined_section
+      || !symbol_constant_p (s))
     {
-      /* Here we know it won't be going into the symbol table.  */
-      s = symbol_create (sec->symbol->name, sec, &zero_address_frag, 0);
+      if (!EMIT_SECTION_SYMBOLS || symbol_table_frozen)
+	s = symbol_create (sec->symbol->name, sec, &zero_address_frag, 0);
+      else
+	s = symbol_new (sec->symbol->name, sec, &zero_address_frag, 0);
     }
   else
-    {
-      segT seg;
-      s = symbol_find (sec->symbol->name);
-      /* We have to make sure it is the right symbol when we
-	 have multiple sections with the same section name.  */
-      if (s == NULL
-	  || ((seg = S_GET_SEGMENT (s)) != sec
-	      && seg != undefined_section))
-	s = symbol_new (sec->symbol->name, sec, &zero_address_frag, 0);
-      else if (seg == undefined_section)
-	{
-	  S_SET_SEGMENT (s, sec);
-	  symbol_set_frag (s, &zero_address_frag);
-	}
-    }
+    S_SET_SEGMENT (s, sec);
 
   S_CLEAR_EXTERNAL (s);
 

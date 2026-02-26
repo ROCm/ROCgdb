@@ -77,7 +77,7 @@ get_symtab (PyObject *linetable)
 /* Helper function to create a line table object that wraps a
    gdb.Symtab object.  */
 
-PyObject *
+gdbpy_ref<>
 symtab_to_linetable_object (PyObject *symtab)
 {
   linetable_object *ltable;
@@ -88,7 +88,7 @@ symtab_to_linetable_object (PyObject *symtab)
       ltable->symtab = symtab;
       Py_INCREF (symtab);
     }
-  return (PyObject *) ltable;
+  return gdbpy_ref<> (ltable);
 }
 
 /* Internal helper function to build a line table object from a line

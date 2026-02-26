@@ -21,6 +21,7 @@
 #include "elfxx-x86.h"
 #include "elf-vxworks.h"
 #include "dwarf2.h"
+#include "elf-solaris2.h"
 #include "opcode/i386.h"
 
 /* 386 uses REL relocations instead of RELA.  */
@@ -4646,8 +4647,6 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
 #undef	elf32_bed
 #define	elf32_bed				elf32_i386_fbsd_bed
 
-#undef elf_backend_add_symbol_hook
-
 #include "elf32-target.h"
 
 #undef elf_backend_init_file_header
@@ -4683,6 +4682,9 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
    File, p.63.  */
 #undef  elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	1
+
+#undef	elf_backend_add_symbol_hook
+#define	elf_backend_add_symbol_hook	    elf_solaris2_add_symbol_hook
 
 #include "elf32-target.h"
 
@@ -4724,6 +4726,7 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 
 #undef	elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	0
+#undef	elf_backend_add_symbol_hook
 
 #include "elf32-target.h"
 

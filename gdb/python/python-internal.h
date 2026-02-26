@@ -495,15 +495,15 @@ gdb::unique_xmalloc_ptr<char> gdbpy_parse_command_name
 PyObject *gdbpy_register_tui_window (PyObject *self, PyObject *args,
 				     PyObject *kw);
 
-PyObject *symtab_and_line_to_sal_object (struct symtab_and_line sal);
-PyObject *symtab_to_symtab_object (struct symtab *symtab);
-PyObject *symbol_to_symbol_object (struct symbol *sym);
-PyObject *block_to_block_object (const struct block *block,
-				 struct objfile *objfile);
-PyObject *value_to_value_object (struct value *v);
-PyObject *type_to_type_object (struct type *);
-PyObject *frame_info_to_frame_object (const frame_info_ptr &frame);
-PyObject *symtab_to_linetable_object (PyObject *symtab);
+gdbpy_ref<> symtab_and_line_to_sal_object (struct symtab_and_line sal);
+gdbpy_ref<> symtab_to_symtab_object (struct symtab *symtab);
+gdbpy_ref<> symbol_to_symbol_object (struct symbol *sym);
+gdbpy_ref<> block_to_block_object (const struct block *block,
+				   struct objfile *objfile);
+gdbpy_ref<> value_to_value_object (struct value *v);
+gdbpy_ref<> type_to_type_object (struct type *);
+gdbpy_ref<> frame_info_to_frame_object (const frame_info_ptr &frame);
+gdbpy_ref<> symtab_to_linetable_object (PyObject *symtab);
 gdbpy_ref<> pspace_to_pspace_object (struct program_space *);
 PyObject *pspy_get_printers (PyObject *, void *);
 PyObject *pspy_get_frame_filters (PyObject *, void *);
@@ -517,7 +517,7 @@ PyObject *objfpy_get_frame_unwinders (PyObject *, void *);
 PyObject *objfpy_get_xmethods (PyObject *, void *);
 PyObject *gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw);
 
-PyObject *gdbarch_to_arch_object (struct gdbarch *gdbarch);
+gdbpy_ref<> gdbarch_to_arch_object (struct gdbarch *gdbarch);
 PyObject *gdbpy_all_architecture_names (PyObject *self, PyObject *args);
 
 PyObject *gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
@@ -1191,14 +1191,13 @@ public:
   }
 
   /* Lookup pre-existing Python object for given VAL.  Return such object
-     if found, otherwise return NULL.  This method always returns new
-     reference.  */
+     if found, otherwise return NULL.  */
   template <typename O>
-  obj_type *lookup (O *owner, val_type *val) const
+  gdbpy_ref<> lookup (O *owner, val_type *val) const
   {
     obj_type *obj = get_storage (owner)->lookup (val);
     Py_XINCREF (static_cast<PyObject *> (obj));
-    return obj;
+    return gdbpy_ref<> (obj);
   }
 
 private:

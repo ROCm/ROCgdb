@@ -31,6 +31,9 @@ typedef enum
   lang_input_file_is_symbols_only_enum,
   lang_input_file_is_marker_enum,
   lang_input_file_is_fake_enum,
+  lang_input_file_is_fake_archive_enum,
+  lang_input_file_is_search_member_enum,
+  lang_input_file_is_member_enum,
   lang_input_file_is_search_file_enum,
   lang_input_file_is_file_enum
 } lang_input_file_enum_type;
@@ -79,6 +82,7 @@ enum statement_enum
   lang_input_matcher_enum,
   lang_input_statement_enum,
   lang_insert_statement_enum,
+  lang_lib_statement_enum,
   lang_output_section_statement_enum,
   lang_output_statement_enum,
   lang_padding_statement_enum,
@@ -276,8 +280,17 @@ struct lang_input_statement_flags
   /* Whether to include the entire contents of an archive.  */
   unsigned int whole_archive : 1;
 
+  /* Whether to accept archives without a symbol map.  */
+  unsigned int link_mapless : 1;
+
+  /* Whether we're building an artificial archive.  */
+  unsigned int fake_archive : 1;
+
   /* Set when bfd opening is successful.  */
   unsigned int loaded : 1;
+
+  /* Set for member entries of an artificial archive.  */
+  unsigned int member : 1;
 
   unsigned int real : 1;
 
@@ -436,6 +449,12 @@ typedef struct
   bool is_before;
 } lang_insert_statement_type;
 
+typedef struct
+{
+  lang_statement_header_type header;
+  lang_statement_list_type children;
+} lang_lib_statement_type;
+
 typedef union lang_statement_union
 {
   lang_statement_header_type header;
@@ -448,6 +467,7 @@ typedef union lang_statement_union
   lang_input_matcher_type input_matcher;
   lang_input_statement_type input_statement;
   lang_insert_statement_type insert_statement;
+  lang_lib_statement_type lib_statement;
   lang_output_section_statement_type output_section_statement;
   lang_output_statement_type output_statement;
   lang_padding_statement_type padding_statement;
@@ -676,6 +696,10 @@ extern void lang_add_insert
 extern void lang_enter_group
   (void);
 extern void lang_leave_group
+  (void);
+extern void lang_enter_lib
+  (void);
+extern void lang_leave_lib
   (void);
 extern void lang_add_section
   (lang_statement_list_type *, asection *, struct wildcard_list *,

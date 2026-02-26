@@ -1395,6 +1395,7 @@ xtensa_strip_inconsistent_linkonce_sections (lang_statement_list_type *slist)
 	case lang_padding_statement_enum:
 	case lang_address_statement_enum:
 	case lang_fill_statement_enum:
+	case lang_lib_statement_enum:
 	  break;
 
 	default:

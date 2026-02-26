@@ -149,7 +149,7 @@ static void yyerror (const char *);
 %token SIZEOF ALIGNOF ADDR LOADADDR MAX_K MIN_K
 %token STARTUP HLL SYSLIB FLOAT NOFLOAT NOCROSSREFS NOCROSSREFS_TO
 %token ORIGIN FILL
-%token LENGTH CREATE_OBJECT_SYMBOLS INPUT GROUP OUTPUT CONSTRUCTORS
+%token LENGTH CREATE_OBJECT_SYMBOLS INPUT GROUP LIB OUTPUT CONSTRUCTORS
 %token ALIGNMOD AT SUBALIGN HIDDEN PROVIDE PROVIDE_HIDDEN AS_NEEDED
 %type <token> assign_op atype attributes_opt sect_constraint opt_align_with_input
 %type <name>  filename
@@ -342,6 +342,10 @@ ifile_p1:
 		  { lang_enter_group (); }
 		    '(' input_list ')'
 		  { lang_leave_group (); }
+	|	LIB
+		  { lang_enter_lib (); }
+		    '(' input_list ')'
+		  { lang_leave_lib (); }
 	|	MAP '(' filename ')'
 		{ lang_add_map($3); }
 	|	INCLUDE filename
@@ -374,14 +378,23 @@ input_list:
 
 input_list1:
 		NAME
-		{ lang_add_input_file($1,lang_input_file_is_search_file_enum,
-				 (char *)NULL); }
+		{ lang_add_input_file ($1,
+				       (input_flags.fake_archive
+					? lang_input_file_is_search_member_enum
+					: lang_input_file_is_search_file_enum),
+				       (char *) NULL); }
 	|	input_list1 ',' NAME
-		{ lang_add_input_file($3,lang_input_file_is_search_file_enum,
-				 (char *)NULL); }
+		{ lang_add_input_file ($3,
+				       (input_flags.fake_archive
+					? lang_input_file_is_search_member_enum
+					: lang_input_file_is_search_file_enum),
+				       (char *) NULL); }
 	|	input_list1 NAME
-		{ lang_add_input_file($2,lang_input_file_is_search_file_enum,
-				 (char *)NULL); }
+		{ lang_add_input_file ($2,
+				       (input_flags.fake_archive
+					? lang_input_file_is_search_member_enum
+					: lang_input_file_is_search_file_enum),
+				       (char *) NULL); }
 	|	LNAME
 		{ lang_add_input_file($1,lang_input_file_is_l_enum,
 				 (char *)NULL); }

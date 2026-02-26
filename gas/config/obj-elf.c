@@ -774,8 +774,6 @@ change_section (const char *name,
 
   if (old_sec == NULL)
     {
-      symbolS *secsym;
-
       if (type == SHT_NULL)
 	type = bfd_elf_get_default_section_type (flags);
       elf_section_type (sec) = type;
@@ -800,18 +798,7 @@ change_section (const char *name,
       elf_group_name (sec) = match_p->group_name;
 
       /* Add a symbol for this section to the symbol table.  */
-      secsym = symbol_find (name);
-      if (secsym != NULL)
-	{
-	  /* We could be repurposing an undefined symbol here: make sure we
-	     reset sy_value to look like other section symbols in order to avoid
-	     trying to incorrectly resolve this section symbol later on.  */
-	  static const expressionS exp = { .X_op = O_constant };
-	  symbol_set_value_expression (secsym, &exp);
-	  symbol_set_bfdsym (secsym, sec->symbol);
-	}
-      else
-	symbol_table_insert (section_symbol (sec));
+      symbol_table_insert (section_symbol (sec));
     }
   else
     {

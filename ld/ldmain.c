@@ -799,6 +799,8 @@ main (int argc, char **argv)
   link_info.start_stop_gc = false;
   link_info.start_stop_visibility = STV_PROTECTED;
 
+  input_flags.link_mapless = true;
+
   ldfile_add_arch ("");
   emulation = get_emulation (argc, argv);
   ldemul_choose_mode (emulation);

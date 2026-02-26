@@ -61,11 +61,12 @@ extern unsigned int _bfd_section_id ATTRIBUTE_HIDDEN;
 
 struct artdata
 {
-  ufile_ptr first_file_filepos;
+  ufile_ptr_or_bfd first_file;
   /* Speed up searching the armap */
   htab_t cache;
   carsym *symdefs;		/* The symdef entries.  */
   symindex symdef_count;	/* How many there are.  */
+  unsigned int symdef_use_bfd:1; /* Whether entries hold a BFD pointer.  */
   char *extended_names;		/* Clever intel extension.  */
   bfd_size_type extended_names_size; /* Size of extended names.  */
   /* When more compilers are standard C, this can be a time_t.  */
@@ -121,6 +122,8 @@ extern char *_bfd_append_relative_path
   (bfd *, char *) ATTRIBUTE_HIDDEN;
 extern bfd_cleanup bfd_generic_archive_p
   (bfd *) ATTRIBUTE_HIDDEN;
+extern bool _bfd_make_armap
+  (bfd *, bfd *) ATTRIBUTE_HIDDEN;
 extern bool bfd_slurp_armap
   (bfd *) ATTRIBUTE_HIDDEN;
 #define bfd_slurp_bsd_armap bfd_slurp_armap
@@ -153,12 +156,29 @@ extern bool _bfd_construct_extended_name_table
   (bfd *, bool, char **, bfd_size_type *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_write_archive_contents
   (bfd *) ATTRIBUTE_HIDDEN;
-extern bool _bfd_compute_and_write_armap
-  (bfd *, unsigned int) ATTRIBUTE_HIDDEN;
+extern bool _bfd_write_armap
+  (bfd *, unsigned int, struct orl *, unsigned int, int) ATTRIBUTE_HIDDEN;
+extern bool _bfd_compute_and_push_armap
+  (bfd *, unsigned int, bool,
+   bool (*) (bfd *, unsigned int, struct orl *, unsigned int, int))
+  ATTRIBUTE_HIDDEN;
 extern bfd *_bfd_get_elt_at_filepos
   (bfd *, file_ptr, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bfd *_bfd_generic_get_elt_at_index
   (bfd *, symindex) ATTRIBUTE_HIDDEN;
+
+/* Get a handle for the element of archive ARCH referred by archive symbol
+   definition SYMDEF and using linker information INFO.  */
+
+static inline bfd *
+_bfd_get_elt_from_symdef (bfd *arch, carsym *symdef,
+			  struct bfd_link_info *info)
+{
+  if (bfd_ardata (arch)->symdef_use_bfd)
+    return symdef->u.abfd;
+  else
+    return _bfd_get_elt_at_filepos (arch, symdef->u.file_offset, info);
+}
 
 extern bool _bfd_bool_bfd_false
   (bfd *) ATTRIBUTE_HIDDEN;

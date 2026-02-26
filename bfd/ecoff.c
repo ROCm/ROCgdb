@@ -2928,6 +2928,8 @@ _bfd_ecoff_slurp_armap (bfd *abfd)
   char *stringbase;
   bfd_size_type amt;
 
+  BFD_ASSERT (!bfd_is_fake_archive (abfd));
+
   /* Get the name of the first element.  */
   i = bfd_read (nextname, 16, abfd);
   if (i == 0)
@@ -3065,13 +3067,13 @@ _bfd_ecoff_slurp_armap (bfd *abfd)
       if (name_offset > stringsize)
 	goto error_malformed;
       symdef_ptr->name = stringbase + name_offset;
-      symdef_ptr->file_offset = file_offset;
+      symdef_ptr->u.file_offset = file_offset;
       ++symdef_ptr;
     }
 
-  ardata->first_file_filepos = bfd_tell (abfd);
+  ardata->first_file.file_offset = bfd_tell (abfd);
   /* Pad to an even boundary.  */
-  ardata->first_file_filepos += ardata->first_file_filepos % 2;
+  ardata->first_file.file_offset += ardata->first_file.file_offset % 2;
   abfd->has_armap = true;
   return true;
 
@@ -3606,11 +3608,14 @@ ecoff_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 
   if (! bfd_has_map (abfd))
     {
+      bfd *first_one = bfd_openr_next_archived_file (abfd, NULL);
+
       /* An empty archive is a special case.  */
-      if (bfd_openr_next_archived_file (abfd, NULL) == NULL)
+      if (first_one == NULL)
 	return true;
-      bfd_set_error (bfd_error_no_armap);
-      return false;
+
+      if (!_bfd_make_armap (abfd, first_one))
+	return false;
     }
 
   /* If we don't have any raw data for this archive, as can happen on

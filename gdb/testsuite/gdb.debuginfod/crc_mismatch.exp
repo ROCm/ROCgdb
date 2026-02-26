@@ -64,7 +64,7 @@ if {[build_executable crc_mismatch.exp crc_mismatch-2 crc_mismatch-2.c debug] !=
     gdb_test "file [standard_output_file crc_mismatch-2]" \
 	[multi_line \
 	     "Reading symbols from ${escapedobjdirsubdir}/crc_mismatch-2\\.\\.\\." \
-	     "warning: the debug information found in \"${escapedobjdirsubdir}/crc_mismatch-2\\.debug\" does not match \"${escapedobjdirsubdir}/crc_mismatch-2\" \\(CRC mismatch\\)\\." \
+	     "warning: the debug information found in \"${escapedobjdirsubdir}/crc_mismatch-2\\.debug\" does not match \"${escapedobjdirsubdir}/crc_mismatch-2\" \\(CRC mismatch\\)\\.(?:\r\nExpanding full symbols from \[^\r\n\]+)*" \
 	     "\\(No debugging symbols found in .*\\)"] \
 	"CRC mismatch is reported"
 
@@ -80,7 +80,7 @@ if {[build_executable crc_mismatch.exp crc_mismatch-2 crc_mismatch-2.c debug] !=
 	    gdb_test "file [standard_output_file crc_mismatch-2]" \
 		[multi_line \
 		     "Reading symbols from ${exe_file_re}\\.\\.\\." \
-		     "warning: the debug information found in \"${debug_file_re}\" does not match \"${exe_file_re}\" \\(CRC mismatch\\)\\." \
+		     "warning: the debug information found in \"${debug_file_re}\" does not match \"${exe_file_re}\" \\(CRC mismatch\\)\\.(?:\r\nExpanding full symbols from \[^\r\n\]+)*" \
 		     "\\(No debugging symbols found in \[^\r\n\]+\\)"] \
 		"CRC mismatch is reported"
 	}

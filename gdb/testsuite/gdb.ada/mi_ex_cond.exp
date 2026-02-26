@@ -19,26 +19,23 @@ require allow_ada_tests gnat_runtime_has_debug_info
 
 standard_ada_testfile foo
 
-if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } {
+if {[gdb_compile_ada $srcfile $binfile executable [list debug]] != ""} {
     return
 }
-
-# A global variable used to simplify the maintenance of some of
-# the regular expressions below.
-set any_nb "${::decimal}"
 
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-if {[mi_clean_restart $::testfile]} {
+if {[mi_clean_restart $testfile]} {
     return
 }
 
 # And finally, the meat of the testcase... Insert an Ada exception
 # catchpoint that uses both conditions and exception name.
 
-mi_gdb_test "-catch-exception -c \"the_test_index = 2\" -e constraint_error" \
-    "\\^done,bkptno=\"$decimal\",bkpt={.*disp=\"keep\",enabled=\"y\",what=\"`constraint_error' Ada exception\",(.*,)?cond=\"the_test_index = 2\",.*}" \
+mi_gdb_test {-catch-exception -c "the_test_index = 2" -e constraint_error} \
+    [quotemeta \
+	 {^done,bkptno="@DECIMAL",bkpt={@...disp="keep",enabled="y",what="`constraint_error' Ada exception",@/(.*,)?/cond="the_test_index = 2",@...}}] \
     "catch C_E if the_test_index = 2"
 
 # It is important that we start the program's execution after having
@@ -50,7 +47,8 @@ mi_gdb_test "-catch-exception -c \"the_test_index = 2\" -e constraint_error" \
 mi_run_cmd
 
 mi_expect_stop \
-    "\"breakpoint-hit\",disp=\"keep\",bkptno=\"$any_nb\",exception-name=\"CONSTRAINT_ERROR(\",exception-message=\"foo\\.adb:$decimal explicit raise)?\"" \
+    [subst_vars \
+	 {"breakpoint-hit",disp="keep",bkptno="$decimal",exception-name="CONSTRAINT_ERROR"(,exception-message="foo.adb:$decimal explicit raise")?}] \
     "foo" "" ".*" ".*" \
     ".*" \
     "run to exception catchpoint hit"
@@ -59,5 +57,6 @@ mi_expect_stop \
 # a clobbering of some of the exeption's info.
 
 mi_gdb_test "-break-list" \
-    "\\^done,.*,what=\"`constraint_error' Ada exception\",.*,cond=\"the_test_index = 2\",.*" \
+    [quotemeta \
+	 {^done,@...,what="`constraint_error' Ada exception",@...,cond="the_test_index = 2",@...}] \
     "-break-list"

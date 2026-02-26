@@ -20124,6 +20124,15 @@ typedef struct {
   uint64_t read;
 } BufferReadOp_t;
 
+const uint32_t F_SUBSECTION_LEN = sizeof (uint32_t);
+const uint32_t F_SUBSECTION_COMPREHENSION = sizeof(uint8_t);
+const uint32_t F_SUBSECTION_ENCODING = sizeof(uint8_t);
+/* The minimum subsection length is 7: 4 bytes for the length itself, and 1
+   byte for an empty NUL-terminated string, 1 byte for the comprehension,
+   1 byte for the encoding, and no vendor-data.  */
+const uint32_t F_MIN_SUBSECTION_DATA_LEN = F_SUBSECTION_LEN + 1 /* for '\0' */
+  + F_SUBSECTION_COMPREHENSION + F_SUBSECTION_ENCODING;
+
 static BufferReadOp_t
 elf_parse_attrs_subsection_v2 (const unsigned char *cursor,
 			       const uint64_t max_read,
@@ -20131,25 +20140,6 @@ elf_parse_attrs_subsection_v2 (const unsigned char *cursor,
 			       display_arch_attr_t display_arch_attr)
 {
   BufferReadOp_t op = { .err = false, .read = 0 };
-
-  const uint32_t F_SUBSECTION_LEN = sizeof (uint32_t);
-  const uint32_t F_SUBSECTION_COMPREHENSION = sizeof(uint8_t);
-  const uint32_t F_SUBSECTION_ENCODING = sizeof(uint8_t);
-  /* The minimum subsection length is 7: 4 bytes for the length itself, and 1
-     byte for an empty NUL-terminated string, 1 byte for the comprehension,
-     1 byte for the encoding, and no vendor-data.  */
-  const uint32_t F_MIN_SUBSECTION_DATA_LEN
-    = F_SUBSECTION_LEN + 1 /* for '\0' */
-      + F_SUBSECTION_COMPREHENSION + F_SUBSECTION_ENCODING;
-
-  /* Handle cases where the attributes data is not strictly valid (e.g. due to
-     fuzzing).  */
-  if (max_read < F_MIN_SUBSECTION_DATA_LEN)
-    {
-      error (_("Object attributes section ends prematurely\n"));
-      return op;
-    }
-
   unsigned int subsection_len = byte_get (cursor, F_SUBSECTION_LEN);
   cursor += F_SUBSECTION_LEN;
   op.read += F_SUBSECTION_LEN;
@@ -20315,8 +20305,9 @@ process_attributes_v2 (Filedata *filedata,
 
   printf (_("Subsections:\n"));
   BufferReadOp_t op;
-  for (uint64_t remaining = sec_hdr->sh_size - 1; // already read 'A'
-       remaining > 1;
+  uint64_t remaining;
+  for (remaining = sec_hdr->sh_size - 1; // already read 'A'
+       remaining >= F_MIN_SUBSECTION_DATA_LEN;
        remaining -= op.read, cursor += op.read)
     {
       op = elf_parse_attrs_subsection_v2 (cursor, remaining, public_name,
@@ -20328,6 +20319,12 @@ process_attributes_v2 (Filedata *filedata,
 	  res = false;
 	  goto free_data;
 	}
+    }
+
+  if (remaining != 0)
+    {
+      error (_("Object attributes section ends prematurely\n"));
+      res = false;
     }
 
  free_data:

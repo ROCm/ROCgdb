@@ -66,7 +66,7 @@ const struct ia64_templ_desc ia64_templ_desc[16] =
 static void
 get_opc_prefix (const char **ptr, char *dest)
 {
-  char *c = strchr (*ptr, '.');
+  const char *c = strchr (*ptr, '.');
   if (c != NULL)
     {
       memcpy (dest, *ptr, c - *ptr);

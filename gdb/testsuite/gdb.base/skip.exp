@@ -37,17 +37,22 @@ gdb_test "skip" "No default function now." "skip, no default function"
 
 # Test elided args.
 
-gdb_test "skip -fi" "Missing value for -fi option."
-gdb_test "skip -file" "Missing value for -file option."
-gdb_test "skip -fu" "Missing value for -fu option."
-gdb_test "skip -function" "Missing value for -function option."
-gdb_test "skip -rfu" "Missing value for -rfu option."
-gdb_test "skip -rfunction" "Missing value for -rfunction option."
+gdb_test "skip -fi" "-file requires an argument"
+gdb_test "skip -file" "-file requires an argument"
+gdb_test "skip -fu" "-function requires an argument"
+gdb_test "skip -function" "-function requires an argument"
+gdb_test "skip -rfu" "-rfunction requires an argument"
+gdb_test "skip -rfunction" "-rfunction requires an argument"
 
 # Test other invalid option combinations.
 
 gdb_test "skip -x" "Invalid skip option: -x"
-gdb_test "skip -rfu foo.* xyzzy" "Invalid argument: xyzzy"
+gdb_test "skip -q abc" "Invalid skip option: -q"
+gdb_test "skip -rfu foo.* xyzzy" "Junk after arguments: xyzzy"
+gdb_test "skip -function foo -rfunction foo*" \
+    "Cannot specify both -function and -rfunction\\."
+gdb_test "skip -file foo.c -gfile foo*.c" \
+    "Cannot specify both -file and -gfile\\."
 
 if {![runto_main]} {
     return
@@ -75,6 +80,9 @@ gdb_test "skip delete 999" "No skiplist entries found with number 999."
 gdb_test "skip enable a" "Arguments must be numbers or '\\$' variables."
 gdb_test "skip disable a" "Arguments must be numbers or '\\$' variables."
 gdb_test "skip delete a" "Arguments must be numbers or '\\$' variables."
+gdb_test "enable skip 999" "No skiplist entries found with number 999."
+gdb_test "disable skip 999" "No skiplist entries found with number 999."
+gdb_test "delete skip 999" "No skiplist entries found with number 999."
 
 # Ask for info on a skiplist entry which doesn't exist.
 
@@ -209,6 +217,22 @@ with_test_prefix "admin" {
     gdb_test_no_output "save skip [standard_output_file skips]" \
 	"save skips to file"
 
+    gdb_test "disable skip"
+    gdb_test "info skip" \
+	[multi_line "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
+		    "2\\s+n\\s+n\\s+<none>\\s+n\\s+main" \
+		    "3\\s+n\\s+n\\s+$srcfile1\\s+n\\s+<none>" \
+		    "4\\s+n\\s+n\\s+<none>\\s+n\\s+baz"] \
+	"info skip after 'disable skip'"
+
+    gdb_test "enable skip"
+    gdb_test "info skip" \
+	[multi_line "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
+		    "2\\s+y\\s+n\\s+<none>\\s+n\\s+main" \
+		    "3\\s+y\\s+n\\s+$srcfile1\\s+n\\s+<none>" \
+		    "4\\s+y\\s+n\\s+<none>\\s+n\\s+baz"] \
+	"info skip after 'enable skip'"
+
     gdb_test "skip disable 4 2-3"
     gdb_test "info skip" \
 	[multi_line "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
@@ -236,7 +260,7 @@ with_test_prefix "admin" {
 		    "4\\s+n\\s+n\\s+<none>\\s+n\\s+baz"] \
 	"info skip after deleting 2 3"
 
-    gdb_test "skip delete"
+    gdb_test "delete skip"
     gdb_test "info skip" "Not skipping any files or functions\." \
 	"info skip after deleting all"
 }
@@ -309,6 +333,17 @@ with_test_prefix "step using -fi + -fu" {
     gdb_test "step" ".*" "step 4"; # Skip over test_skip()
     gdb_test "step" "test_skip_file_and_function \\(\\) at.*" "step 5"; # Return from skip1_test_skip_file_and_function()
 }
+
+# Test that 'skip FUNCTION-NAME' is equivalent to 'skip function
+# FUNCTION-NAME'.
+
+gdb_test_no_output "delete skip"
+gdb_test "skip xxyyzz" "Function xxyyzz will be skipped when stepping\\."
+gdb_test "info skip" \
+    [multi_line \
+	 "Num\\s+Enb\\s+Glob\\s+File\\s+RE\\s+Function" \
+	 "10\\s+y\\s+n\\s+<none>\\s+n\\s+xxyyzz"] \
+    "info skip after 'skip xxyyzz'"
 
 with_test_prefix "skip delete completion" {
     clean_restart $::testfile

@@ -551,13 +551,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	      /* An archive with object files matching the archive
 		 target is OK.  Other archives should be further
 		 tested.  */
-	      || (bfd_has_map (abfd)
-		  && bfd_get_error () != bfd_error_wrong_object_format)
-	      /* Empty archives can match the current target.
-		 Attempting to read the armap will result in a file
-		 truncated error.  */
-	      || (!bfd_has_map (abfd)
-		  && bfd_get_error () == bfd_error_file_truncated))
+	      || bfd_get_error () != bfd_error_wrong_object_format)
 	    goto ok_ret;
 	}
       else
@@ -629,8 +623,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
       if (cleanup)
 	{
 	  if (abfd->format != bfd_archive
-	      || (bfd_has_map (abfd)
-		  && bfd_get_error () != bfd_error_wrong_object_format))
+	      || bfd_get_error () != bfd_error_wrong_object_format)
 	    {
 	      /* If this is the default target, accept it, even if
 		 other targets might match.  People who want those

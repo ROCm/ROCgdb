@@ -22,7 +22,7 @@ standard_testfile multi-target.c
 # Keep a list of (inferior ID, spawn ID).
 set server_spawn_ids [list]
 
-proc connect_target_extended_remote {binfile num} {
+proc connect_target_extended_remote {num} {
     set res [gdbserver_start "--multi" ""]
     global server_spawn_ids server_spawn_id
     lappend server_spawn_ids $num $server_spawn_id
@@ -49,7 +49,7 @@ proc add_inferior {num target binfile {gcorefile ""}} {
     }
 
     if {$target == "extended-remote"} {
-	if {[connect_target_extended_remote $binfile $num]} {
+	if {[connect_target_extended_remote $num]} {
 	    return 0
 	}
     }

@@ -13253,6 +13253,8 @@ ada_exceptions_list_1 (compiled_regex *preg)
      runtime units that have been compiled without debugging info.  */
 
   ada_add_standard_exceptions (preg, &result);
+  if (!result.empty ())
+    sort_remove_dups_ada_exceptions_list (&result, 0);
 
   /* Next, find all exceptions whose scope is local and accessible
      from the currently selected frame.  */

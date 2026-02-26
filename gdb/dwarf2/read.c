@@ -2304,7 +2304,11 @@ get_gdb_index_contents_from_cache (objfile *obj, dwarf2_per_bfd *dwarf2_per_bfd)
 {
   const bfd_build_id *build_id = build_id_bfd_get (obj->obfd.get ());
   if (build_id == nullptr)
-    return {};
+    {
+      dwarf_read_debug_printf ("Not using index-cache for %s due to missing build-id",
+			       objfile_name (obj));
+      return {};
+    }
 
   return global_index_cache.lookup_gdb_index (build_id,
 					      &dwarf2_per_bfd->index_cache_res);
@@ -2914,10 +2918,6 @@ cutu_reader::init_tu_and_read_dwo_dies (dwarf2_per_cu *this_cu,
 
 /* Initialize a CU (or TU) and read its DIEs.
    If the CU defers to a DWO file, read the DWO file as well.
-
-   ABBREV_TABLE, if non-NULL, is the abbreviation table to use.
-   Otherwise the table specified in the comp unit header is read in and used.
-   This is an optimization for when we already have the abbrev table.
 
    If EXISTING_CU is non-NULL, then use it.  Otherwise, a new CU is
    allocated.  */

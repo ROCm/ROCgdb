@@ -1,5 +1,8 @@
-#readelf: -x myseg
+#objdump: -r
 #xfail: bfin-*-* h8300-*
 
-Hex dump of section .*:
-  0x0+ 2a\s+\*
+#...
+0+ .* u
+#...
+0+ .* x
+#pass

@@ -1,0 +1,60 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# When a remote target is set up in a new inferior, the address space
+# of the other inferiors would be reset.  This is a regression test
+# for that scenario.
+
+require allow_multi_inferior_tests
+
+load_lib gdbserver-support.exp
+require allow_gdbserver_tests
+
+standard_testfile
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {debug pthreads}]} {
+    return -1
+}
+
+# Problematic scenario is seen in non-stop mode.
+save_vars {GDBFLAGS} {
+    append GDBFLAGS { -ex "set non-stop on"}
+    clean_restart $testfile
+}
+
+if {![runto "breakpoint_1"]} {
+    return -1
+}
+
+# Start an empty gdbserver in a new inferior.
+gdb_test "add-inferior -no-connection" "Added inferior 2"
+gdb_test "inferior 2" "Switching to inferior 2.*"
+
+set res [gdbserver_start "--multi" ""]
+set gdbserver_gdbport [lindex $res 1]
+if {[gdb_target_cmd "extended-remote" $gdbserver_gdbport]} {
+    return -1
+}
+
+# Go back to inferior 1.  Continuing should hit the next breakpoint.
+# Buggy GDB was hitting the first breakpoint.
+gdb_test "inferior 1" "Switching to inferior 1.*"
+gdb_breakpoint "breakpoint_2"
+gdb_test "continue" " breakpoint_2 \\(\\).*" "hit the next bp"
+
+# Clean up gdbserver.
+gdb_test "inferior 2" "Switching to inferior 2.*" "back to inferior 2"
+gdbserver_exit 0

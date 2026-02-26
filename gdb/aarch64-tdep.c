@@ -5125,12 +5125,64 @@ struct aarch64_mem_r
   uint64_t addr;   /* Memory address.  */
 };
 
+/* The record infrastructure supports the following result values:
+   1. res  < 0: Process record: failed to record execution log.
+   2. res == 0: No failure.
+   3. res  > 0: Process record: inferior program stopped.
+
+   For aarch64 we distinguish one additional value, so we use an enum with 4
+   values.  */
+
 enum aarch64_record_result
 {
-  AARCH64_RECORD_SUCCESS,
-  AARCH64_RECORD_UNSUPPORTED,
-  AARCH64_RECORD_UNKNOWN
+  /* Process record: failed to record execution log.  */
+  AARCH64_RECORD_FAILURE = -1,
+  /* No failure.  */
+  AARCH64_RECORD_SUCCESS = 0,
+  /* Process record does not support instruction $hex at address $hex.
+     Process record: failed to record execution log.  */
+  AARCH64_RECORD_UNSUPPORTED = 1,
+  /* Process record: inferior program stopped.  */
+  AARCH64_RECORD_UNKNOWN = 2
 };
+
+/* Convert from aarch64_record_result.  */
+
+static inline int
+from_aarch64_record_result (int val)
+{
+  if (val == AARCH64_RECORD_FAILURE)
+    return -1;
+
+  if (val == AARCH64_RECORD_SUCCESS)
+    return 0;
+
+  if (val == AARCH64_RECORD_UNSUPPORTED)
+    {
+      /* After printing the "does not support" message, this is handled the
+	 same as the AARCH64_RECORD_FAILURE case.  */
+      return -1;
+    }
+
+  if (val == AARCH64_RECORD_UNKNOWN)
+    return 1;
+
+  gdb_assert_not_reached ();
+}
+
+/* Convert to aarch64_record_result.  */
+
+static inline int
+to_aarch64_record_result (int val)
+{
+  if (val > 0)
+    return AARCH64_RECORD_UNKNOWN;
+
+  if (val < 0)
+    return AARCH64_RECORD_FAILURE;
+
+  return AARCH64_RECORD_SUCCESS;
+}
 
 struct aarch64_insn_decode_record
 {
@@ -5293,8 +5345,10 @@ aarch64_record_branch_except_sys (aarch64_insn_decode_record *aarch64_insn_r)
 
 	      regcache_raw_read_unsigned (aarch64_insn_r->regcache, 8,
 					  &svc_number);
-	      return tdep->aarch64_syscall_record (aarch64_insn_r->regcache,
-						   svc_number);
+	      int res
+		= tdep->aarch64_syscall_record (aarch64_insn_r->regcache,
+						svc_number);
+	      return to_aarch64_record_result (res);
 	    }
 	  else
 	    return AARCH64_RECORD_UNSUPPORTED;
@@ -6128,14 +6182,12 @@ aarch64_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
   ret = aarch64_record_decode_insn_handler (&aarch64_record);
   if (ret == AARCH64_RECORD_UNSUPPORTED)
-    {
-      gdb_printf (gdb_stderr,
-		  _("Process record does not support instruction "
-		    "0x%0x at address %s.\n"),
-		  aarch64_record.aarch64_insn,
-		  paddress (gdbarch, insn_addr));
-      ret = -1;
-    }
+    gdb_printf (gdb_stderr,
+		_("Process record does not support instruction "
+		  "0x%0x at address %s.\n"),
+		aarch64_record.aarch64_insn,
+		paddress (gdbarch, insn_addr));
+  ret = from_aarch64_record_result (ret);
 
   if (0 == ret)
     {

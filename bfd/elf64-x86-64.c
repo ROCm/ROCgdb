@@ -23,6 +23,7 @@
 #include "dwarf2.h"
 #include "libiberty.h"
 #include "sframe.h"
+#include "elf-solaris2.h"
 
 #include "opcode/i386.h"
 
@@ -6436,6 +6437,21 @@ elf_x86_64_special_sections[]=
 
 /* Solaris 2 support.  */
 
+static bool
+elf_x86_64_solaris2_add_symbol_hook (bfd *abfd,
+				     struct bfd_link_info *info,
+				     Elf_Internal_Sym *sym,
+				     const char **namep,
+				     flagword *flagsp,
+				     asection **secp,
+				     bfd_vma *valp)
+{
+  return (elf_x86_64_add_symbol_hook (abfd, info, sym, namep,
+				      flagsp, secp, valp)
+	  && elf_solaris2_add_symbol_hook (abfd, info, sym, namep,
+					   flagsp, secp, valp));
+}
+
 #undef  TARGET_LITTLE_SYM
 #define TARGET_LITTLE_SYM		    x86_64_elf64_sol2_vec
 #undef  TARGET_LITTLE_NAME
@@ -6466,6 +6482,9 @@ elf_x86_64_special_sections[]=
 #undef  elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	    1
 
+#undef	elf_backend_add_symbol_hook
+#define	elf_backend_add_symbol_hook	    elf_x86_64_solaris2_add_symbol_hook
+
 #include "elf64-target.h"
 
 /* Restore defaults.  */
@@ -6474,6 +6493,8 @@ elf_x86_64_special_sections[]=
 #undef	elf_backend_static_tls_alignment
 #undef	elf_backend_want_plt_sym
 #define elf_backend_want_plt_sym	0
+#undef	elf_backend_add_symbol_hook
+#define elf_backend_add_symbol_hook	elf_x86_64_add_symbol_hook
 
 /* 32bit x86-64 support.  */
 

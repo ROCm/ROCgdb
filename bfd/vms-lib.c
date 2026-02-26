@@ -170,7 +170,7 @@ vms_add_index (struct carsym_mem *cs, char *name,
       cs->idx = n;
       cs->realloced = true;
     }
-  cs->idx[cs->nbr].file_offset = (idx_vbn - 1) * VMS_BLOCK_SIZE + idx_off;
+  cs->idx[cs->nbr].u.file_offset = (idx_vbn - 1) * VMS_BLOCK_SIZE + idx_off;
   cs->idx[cs->nbr].name = name;
   cs->nbr++;
   return true;
@@ -1385,7 +1385,7 @@ _bfd_vms_lib_get_module (bfd *abfd, unsigned int modidx)
     return tdata->cache[modidx];
 
   /* Build it.  */
-  file_off = tdata->modules[modidx].file_offset;
+  file_off = tdata->modules[modidx].u.file_offset;
   if (tdata->type != LBR__C_TYP_IOBJ)
     {
       res = _bfd_create_empty_archive_element_shell (abfd);
@@ -1479,18 +1479,20 @@ bfd *
 _bfd_vms_lib_get_elt_at_index (bfd *abfd, symindex symidx)
 {
   struct lib_tdata *tdata = bfd_libdata (abfd);
-  file_ptr file_off;
+  ufile_ptr file_off;
   unsigned int modidx;
 
   /* Check symidx.  */
   if (symidx > tdata->artdata.symdef_count)
     return NULL;
-  file_off = tdata->artdata.symdefs[symidx].file_offset;
+  if (tdata->artdata.symdef_use_bfd)
+    return tdata->artdata.symdefs[symidx].u.abfd;
+  file_off = tdata->artdata.symdefs[symidx].u.file_offset;
 
   /* Linear-scan.  */
   for (modidx = 0; modidx < tdata->nbr_modules; modidx++)
     {
-      if (tdata->modules[modidx].file_offset == file_off)
+      if (tdata->modules[modidx].u.file_offset == file_off)
 	break;
     }
   if (modidx >= tdata->nbr_modules)
@@ -1550,10 +1552,12 @@ _bfd_vms_lib_openr_next_archived_file (bfd *archive,
   unsigned int idx;
   bfd *res;
 
+  BFD_ASSERT (!bfd_is_fake_archive (archive));
+
   if (!last_file)
     idx = 0;
   else
-    idx = last_file->proxy_origin + 1;
+    idx = last_file->proxy_handle.file_offset + 1;
 
   if (idx >= bfd_libdata (archive)->nbr_modules)
     {
@@ -1564,7 +1568,7 @@ _bfd_vms_lib_openr_next_archived_file (bfd *archive,
   res = _bfd_vms_lib_get_module (archive, idx);
   if (res == NULL)
     return res;
-  res->proxy_origin = idx;
+  res->proxy_handle.file_offset = idx;
   return res;
 }
 
@@ -1701,6 +1705,8 @@ vms_write_index (bfd *abfd,
   unsigned int kbn_sz = 0;   /* Number of bytes available in the kbn block.  */
   unsigned int kbn_vbn = 0;  /* VBN of the kbn block.  */
   unsigned char *kbn_blk = NULL; /* Contents of the kbn block.  */
+
+  BFD_ASSERT (abfd == NULL || !bfd_is_fake_archive (abfd));
 
   if (nbr == 0)
     {
@@ -1890,11 +1896,13 @@ vms_write_index (bfd *abfd,
 		  struct vms_rfa *rfa;
 
 		  rfa = (struct vms_rfa *)(rblk[j]->keys + blk[j].len);
-		  bfd_putl32 ((idx->abfd->proxy_origin / VMS_BLOCK_SIZE) + 1,
-			      rfa->vbn);
+		  bfd_putl32
+		    (((idx->abfd->proxy_handle.file_offset / VMS_BLOCK_SIZE)
+		      + 1),
+		     rfa->vbn);
 		  bfd_putl16
-		    ((idx->abfd->proxy_origin % VMS_BLOCK_SIZE)
-		     + (is_elfidx ? 0 : DATA__DATA),
+		    (((idx->abfd->proxy_handle.file_offset % VMS_BLOCK_SIZE)
+		      + (is_elfidx ? 0 : DATA__DATA)),
 		     rfa->offset);
 
 		  if (is_elfidx)
@@ -2142,6 +2150,8 @@ _bfd_vms_lib_write_archive_contents (bfd *arch)
   bool is_elfidx = tdata->kind == vms_lib_ia64;
   unsigned int max_keylen = is_elfidx ? MAX_EKEYLEN : MAX_KEYLEN;
 
+  BFD_ASSERT (!bfd_is_fake_archive (arch));
+
   /* Count the number of modules (and do a first sanity check).  */
   nbr_modules = 0;
   for (current = arch->archive_head;
@@ -2212,7 +2222,7 @@ _bfd_vms_lib_write_archive_contents (bfd *arch)
       unsigned int sz;
 
       current = modules[i].abfd;
-      current->proxy_origin = off;
+      current->proxy_handle.file_offset = off;
 
       if (is_elfidx)
 	sz = 0;

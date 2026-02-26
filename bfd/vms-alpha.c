@@ -9116,6 +9116,19 @@ alpha_vms_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
       return false;
     }
 
+  /* This can only ever happen for fake archives.  */
+  if (!bfd_has_map (abfd))
+    {
+      bfd *first_one = bfd_openr_next_archived_file (abfd, NULL);
+
+      /* An empty archive is a special case.  */
+      if (first_one == NULL)
+	return true;
+
+      if (!_bfd_make_armap (abfd, first_one))
+	return false;
+    }
+
   /* The archive_pass field in the archive itself is used to
      initialize PASS, since we may search the same archive multiple
      times.  */
@@ -9175,7 +9188,7 @@ alpha_vms_link_add_archive_symbols (bfd *abfd, struct bfd_link_info *info)
 	}
 
       orig_element = element;
-      if (bfd_is_thin_archive (abfd))
+      if (bfd_is_thin_archive (abfd) && !bfd_is_fake_archive (abfd))
 	{
 	  element = _bfd_vms_lib_get_imagelib_file (element);
 	  if (element == NULL || !bfd_check_format (element, bfd_object))

@@ -144,6 +144,7 @@ elf-m10300.c
 elf-properties.c
 elf-s390.h
 elf-sframe.c
+elf-solaris2.c
 elf-strtab.c
 elf-vxworks.c
 elf-vxworks.h

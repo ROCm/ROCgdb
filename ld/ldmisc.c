@@ -482,7 +482,14 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 			     bfd_get_filename (abfd->my_archive),
 			     bfd_get_filename (abfd));
 		  else
-		    fprintf (fp, "%s", bfd_get_filename (abfd));
+		    {
+		      const char *filename = bfd_get_filename (abfd);
+
+		      if (filename == NULL)
+			fprintf (fp, "<no file> (%s generated)", program_name);
+		      else
+			fprintf (fp, "%s", filename);
+		    }
 		}
 	      else if (*fmt == 'I')
 		{
@@ -498,6 +505,8 @@ vfinfo (FILE *fp, const char *fmt, va_list ap, bool is_warning)
 		    fprintf (fp, "(%s)%s",
 			     bfd_get_filename (i->the_bfd->my_archive),
 			     i->local_sym_name);
+		  else if (i->filename == NULL)
+		    fprintf (fp, "<no file> (%s generated)", program_name);
 		  else
 		    fprintf (fp, "%s", i->filename);
 		}

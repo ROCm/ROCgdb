@@ -110,7 +110,7 @@ parse_riscv_dis_option_without_args (const char *option,
 /* Parse RISC-V disassembler option (possibly with arguments).  */
 
 static void
-parse_riscv_dis_option (const char *option, struct disassemble_info *info)
+parse_riscv_dis_option (char *option, struct disassemble_info *info)
 {
   char *equal, *value;
 
@@ -1140,7 +1140,7 @@ riscv_update_map_state (int n,
 
       /* ISA mapping string may be numbered, suffixed with '.n'. Do not
 	 consider this as part of the ISA string.  */
-      char *suffix = strchr (name, '.');
+      const char *suffix = strchr (name, '.');
       if (suffix)
 	{
 	  int suffix_index = (int)(suffix - name);

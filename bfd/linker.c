@@ -939,11 +939,14 @@ _bfd_generic_link_add_archive_symbols
 
   if (! bfd_has_map (abfd))
     {
+      bfd *first_one = bfd_openr_next_archived_file (abfd, NULL);
+
       /* An empty archive is a special case.  */
-      if (bfd_openr_next_archived_file (abfd, NULL) == NULL)
+      if (first_one == NULL)
 	return true;
-      bfd_set_error (bfd_error_no_armap);
-      return false;
+
+      if (!_bfd_make_armap (abfd, first_one))
+	return false;
     }
 
   amt = bfd_ardata (abfd)->symdef_count;
@@ -960,7 +963,7 @@ _bfd_generic_link_add_archive_symbols
       carsym *arsym_end;
       carsym *arsym;
       unsigned int indx;
-      file_ptr last_ar_offset = -1;
+      ufile_ptr_or_bfd last = _bfd_elt_nil (abfd);
       bool needed = false;
       bfd *element = NULL;
 
@@ -974,7 +977,7 @@ _bfd_generic_link_add_archive_symbols
 
 	  if (included[indx])
 	    continue;
-	  if (needed && arsym->file_offset == last_ar_offset)
+	  if (needed && _bfd_elt_eq (abfd, arsym->u, last))
 	    {
 	      included[indx] = 1;
 	      continue;
@@ -1003,11 +1006,10 @@ _bfd_generic_link_add_archive_symbols
 	      continue;
 	    }
 
-	  if (last_ar_offset != arsym->file_offset)
+	  if (!_bfd_elt_eq (abfd, last, arsym->u))
 	    {
-	      last_ar_offset = arsym->file_offset;
-	      element = _bfd_get_elt_at_filepos (abfd, last_ar_offset,
-						 info);
+	      last = arsym->u;
+	      element = _bfd_get_elt_from_symdef (abfd, arsym, info);
 	      if (element == NULL
 		  || !bfd_check_format (element, bfd_object))
 		goto error_return;
@@ -1034,7 +1036,7 @@ _bfd_generic_link_add_archive_symbols
 		    break;
 		  --mark;
 		}
-	      while (arsyms[mark].file_offset == last_ar_offset);
+	      while (_bfd_elt_eq (abfd, arsyms[mark].u, last));
 
 	      if (undefs_tail != info->hash->undefs_tail)
 		loop = true;

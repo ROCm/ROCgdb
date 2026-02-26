@@ -122,7 +122,7 @@ bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj)
 
       if (ret)
 	{
-	  self_finishbp->return_value = value_to_value_object (ret);
+	  self_finishbp->return_value = value_to_value_object (ret).release ();
 	  if (!self_finishbp->return_value)
 	      gdbpy_print_stack ();
 	}
@@ -264,11 +264,11 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 		  /* Ignore Python errors at this stage.  */
 		  value *func_value = read_var_value (function, NULL, frame);
 		  self_bpfinish->function_value
-		    = value_to_value_object (func_value);
+		    = value_to_value_object (func_value).release ();
 		  PyErr_Clear ();
 
 		  self_bpfinish->func_symbol
-		    = symbol_to_symbol_object (function);
+		    = symbol_to_symbol_object (function).release ();
 		  PyErr_Clear ();
 		}
 	    }

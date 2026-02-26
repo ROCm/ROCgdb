@@ -89,8 +89,8 @@ Contents of the \.debug_aranges section:
   Length: .*
   Version: +2
   Offset into \.debug_info: .*
-  Pointer Size: +[248]
-  Segment Size: +0
+  Address size: +[248]
+  Segment size: +0
 
     Address +Length
     0+ [0-9a-f]+ ?

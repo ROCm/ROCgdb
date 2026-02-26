@@ -2597,10 +2597,64 @@ restore_line_pointer (char c)
   return c;
 }
 
-unsigned int
+offsetT
 get_single_number (void)
 {
   expressionS exp;
+
+  SKIP_WHITESPACE ();
+
+  switch (*input_line_pointer)
+    {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      break;
+
+#if defined (TC_M68K)
+    case '%':
+    case '@':
+      if (!flag_m68k_mri)
+	goto bad;
+      break;
+#elif defined (LITERAL_PREFIXPERCENT_BIN)
+    case '%':
+      break;
+#endif
+
+    case '$':
+#if !defined (DOLLAR_DOT) && !defined (TC_M68K)
+      if (!literal_prefix_dollar_hex || input_line_pointer[1] == 'L')
+	goto bad;
+#else
+      if (!DOLLAR_AMBIGU
+#ifndef DOLLAR_DOT
+	  || !flag_m68k_mri
+#endif
+	  || !hex_p (input_line_pointer[1]))
+	goto bad;
+#endif
+      break;
+
+    default:
+      goto bad;
+    }
+
   operand (&exp, expr_normal);
+
+  if (exp.X_op != O_constant)
+    {
+  bad:
+      as_bad (_("bad number"));
+      exp.X_add_number = 0;
+    }
+
   return exp.X_add_number;
 }

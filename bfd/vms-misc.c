@@ -499,7 +499,7 @@ char *
 vms_get_module_name (const char *filename, bool upcase)
 {
   char *fname, *fptr;
-  const char *fout;
+  const char *fout, *fslash;
 
   /* Strip VMS path.  */
   fout = strrchr (filename, ']');
@@ -511,9 +511,9 @@ vms_get_module_name (const char *filename, bool upcase)
     fout = filename;
 
   /* Strip UNIX path.  */
-  fptr = strrchr (fout, '/');
-  if (fptr != NULL)
-    fout = fptr + 1;
+  fslash = strrchr (fout, '/');
+  if (fslash != NULL)
+    fout = fslash + 1;
 
   fname = strdup (fout);
 

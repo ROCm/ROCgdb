@@ -298,10 +298,7 @@ input_scrub_include_sb (sb *from, char *position, enum expansion expansion)
   if (expansion != expanding_app)
     {
       if (macro_nest > max_macro_nest)
-	{
-	  as_bad (_("macros nested too deeply"));
-	  return;
-	}
+	as_fatal (_("macros nested too deeply"));
       ++macro_nest;
     }
 

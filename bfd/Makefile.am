@@ -291,6 +291,7 @@ BFD32_BACKENDS = \
 	elf-m10300.lo \
 	elf-properties.lo \
 	elf-sframe.lo \
+	elf-solaris2.lo \
 	elf-strtab.lo \
 	elf-vxworks.lo \
 	elf.lo \
@@ -425,6 +426,7 @@ BFD32_BACKENDS_CFILES = \
 	elf-m10300.c \
 	elf-properties.c \
 	elf-sframe.c \
+	elf-solaris2.c \
 	elf-strtab.c \
 	elf-vxworks.c \
 	elf.c \

@@ -8003,7 +8003,7 @@ tilegx_spr_compare (const void *a_ptr, const void *b_ptr)
 const char *
 get_tilegx_spr_name (int num)
 {
-  void *result;
+  const void *result;
   struct tilegx_spr key;
 
   key.number = num;

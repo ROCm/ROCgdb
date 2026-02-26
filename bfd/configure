@@ -15835,7 +15835,8 @@ coff="cofflink.lo $coffgen"
 ecoff="ecofflink.lo $coffgen"
 xcoff="xcofflink.lo $coffgen"
 
-elfxx_x86="elfxx-x86.lo elf-ifunc.lo elf-vxworks.lo"
+elfxx_x86="elfxx-x86.lo elf-ifunc.lo elf-solaris2.lo elf-vxworks.lo"
+elfxx_sparc="elfxx-sparc.lo elf-solaris2.lo elf-vxworks.lo $elf"
 for vec in $selvecs
 do
     target_size=32
@@ -16055,12 +16056,12 @@ do
     sh_elf32_vxworks_le_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
     sh_pe_le_vec)		 tb="$tb pe-sh.lo coff-sh.lo peigen.lo $coff" ;;
     sh_pei_le_vec)		 tb="$tb pei-sh.lo coff-sh.lo peigen.lo $coff" ;;
-    sparc_elf32_vec)		 tb="$tb elf32-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf32.lo $elf" ;;
-    sparc_elf32_sol2_vec)	 tb="$tb elf32-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf32.lo $elf" ;;
-    sparc_elf32_vxworks_vec)	 tb="$tb elf32-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf32.lo $elf" ;;
-    sparc_elf64_vec)		 tb="$tb elf64-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf64.lo $elf"; target_size=64 ;;
-    sparc_elf64_fbsd_vec)	 tb="$tb elf64-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf64.lo $elf"; target_size=64 ;;
-    sparc_elf64_sol2_vec)	 tb="$tb elf64-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf64.lo $elf"; target_size=64 ;;
+    sparc_elf32_vec)		 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc" ;;
+    sparc_elf32_sol2_vec)	 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc" ;;
+    sparc_elf32_vxworks_vec)	 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc" ;;
+    sparc_elf64_vec)		 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc"; target_size=64 ;;
+    sparc_elf64_fbsd_vec)	 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc"; target_size=64 ;;
+    sparc_elf64_sol2_vec)	 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc"; target_size=64 ;;
     spu_elf32_vec)		 tb="$tb elf32-spu.lo elf32.lo $elf" ;;
     sym_vec)			 tb="$tb xsym.lo" ;;
     tic30_coff_vec)		 tb="$tb coff-tic30.lo $coffgen" ;;

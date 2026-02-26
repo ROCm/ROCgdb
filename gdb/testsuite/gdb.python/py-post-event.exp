@@ -1,0 +1,36 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Regression test for PR24796.  Check that a pagination prompt while handling
+# a posted event doesn't crash GDB.
+
+foreach_with_prefix pagination { off on } {
+    clean_restart
+
+    gdb_test_no_output "set pagination $pagination"
+    gdb_test_no_output "set height 8"
+
+    gdb_test -no-prompt-anchor "source py-post-event.py"
+    if { $pagination == "on" } {
+	gdb_test_multiple "" "" {
+	    -re $pagination_prompt {
+		send_gdb "c\n"
+	    }
+	}
+    }
+
+    # Check that prompt is reactive.
+    gdb_test "print 1" " = 1"
+}

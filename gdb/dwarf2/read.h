@@ -614,15 +614,13 @@ struct dwarf2_per_bfd
   }
 
   /* A convenience function to allocate a dwarf2_per_cu.  The returned object
-     has its "index" field set properly.  The object is allocated on the
-     dwarf2_per_bfd obstack.  */
+     has its "index" field set properly.  */
   dwarf2_per_cu_up allocate_per_cu (dwarf2_section_info *section,
 				    sect_offset sect_off, unsigned int length,
 				    bool is_dwz);
 
   /* A convenience function to allocate a signatured_type.  The
-     returned object has its "index" field set properly.  The object
-     is allocated on the dwarf2_per_bfd obstack.  */
+     returned object has its "index" field set properly.  */
   signatured_type_up allocate_signatured_type (dwarf2_section_info *section,
 					       sect_offset sect_off,
 					       unsigned int length,

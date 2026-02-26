@@ -477,8 +477,10 @@ print_arelt_descr (FILE *file, bfd *abfd, bool verbose, bool offsets)
 
   if (offsets)
     {
-      if (bfd_is_thin_archive (abfd) && abfd->proxy_origin)
-        fprintf (file, " 0x%lx", (unsigned long) abfd->proxy_origin);
+      assert (!bfd_is_fake_archive (abfd));
+      if (bfd_is_thin_archive (abfd) && abfd->proxy_handle.file_offset)
+	fprintf (file, " 0x%lx",
+		 (unsigned long) abfd->proxy_handle.file_offset);
       else if (!bfd_is_thin_archive (abfd) && abfd->origin)
         fprintf (file, " 0x%lx", (unsigned long) abfd->origin);
     }

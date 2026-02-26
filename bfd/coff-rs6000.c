@@ -1411,7 +1411,7 @@ _bfd_xcoff_slurp_armap (bfd *abfd)
       for (i = 0, arsym = bfd_ardata (abfd)->symdefs, p = contents + 4;
 	   i < c;
 	   ++i, ++arsym, p += 4)
-	arsym->file_offset = H_GET_32 (abfd, p);
+	arsym->u.file_offset = H_GET_32 (abfd, p);
     }
   else
     {
@@ -1472,7 +1472,7 @@ _bfd_xcoff_slurp_armap (bfd *abfd)
       for (i = 0, arsym = bfd_ardata (abfd)->symdefs, p = contents + 8;
 	   i < c;
 	   ++i, ++arsym, p += 8)
-	arsym->file_offset = H_GET_64 (abfd, p);
+	arsym->u.file_offset = H_GET_64 (abfd, p);
     }
 
   /* After the file offsets come null terminated symbol names.  */
@@ -1502,6 +1502,8 @@ _bfd_xcoff_archive_p (bfd *abfd)
 {
   char magic[SXCOFFARMAG];
   size_t amt = SXCOFFARMAG;
+
+  BFD_ASSERT (!bfd_is_fake_archive (abfd));
 
   if (bfd_read (magic, amt, abfd) != amt)
     {
@@ -1542,7 +1544,7 @@ _bfd_xcoff_archive_p (bfd *abfd)
 	  goto error_ret;
 	}
 
-      GET_VALUE_IN_FIELD (bfd_ardata (abfd)->first_file_filepos,
+      GET_VALUE_IN_FIELD (bfd_ardata (abfd)->first_file.file_offset,
 			  hdr.firstmemoff, 10);
 
       memcpy (&x_artdata (abfd)->u.hdr, &hdr, SIZEOF_AR_FILE_HDR);
@@ -1564,9 +1566,8 @@ _bfd_xcoff_archive_p (bfd *abfd)
 	  goto error_ret;
 	}
 
-      bfd_ardata (abfd)->first_file_filepos = bfd_scan_vma (hdr.firstmemoff,
-							    (const char **) 0,
-							    10);
+      bfd_ardata (abfd)->first_file.file_offset
+	= bfd_scan_vma (hdr.firstmemoff, (const char **) 0, 10);
 
       memcpy (&x_artdata (abfd)->u.bhdr, &hdr, SIZEOF_AR_FILE_HDR_BIG);
     }
@@ -1763,6 +1764,8 @@ _bfd_xcoff_openr_next_archived_file (bfd *archive, bfd *last_file)
 {
   ufile_ptr filestart;
 
+  BFD_ASSERT (!bfd_is_fake_archive (archive));
+
   if (x_artdata (archive) == NULL)
     {
       bfd_set_error (bfd_error_invalid_operation);
@@ -1780,7 +1783,7 @@ _bfd_xcoff_openr_next_archived_file (bfd *archive, bfd *last_file)
 	  x_artdata (archive)->ranges.end = SIZEOF_AR_FILE_HDR;
 	  x_artdata (archive)->ranges.next = NULL;
 	  x_artdata (archive)->ar_hdr_size = SIZEOF_AR_HDR;
-	  filestart = bfd_ardata (archive)->first_file_filepos;
+	  filestart = bfd_ardata (archive)->first_file.file_offset;
 	}
       else
 	GET_VALUE_IN_FIELD (filestart, arch_xhdr (last_file)->nextoff, 10);
@@ -1803,7 +1806,7 @@ _bfd_xcoff_openr_next_archived_file (bfd *archive, bfd *last_file)
 	  x_artdata (archive)->ranges.end = SIZEOF_AR_FILE_HDR_BIG;
 	  x_artdata (archive)->ranges.next = NULL;
 	  x_artdata (archive)->ar_hdr_size = SIZEOF_AR_HDR_BIG;
-	  filestart = bfd_ardata (archive)->first_file_filepos;
+	  filestart = bfd_ardata (archive)->first_file.file_offset;
 	}
       else
 	GET_VALUE_IN_FIELD (filestart, arch_xhdr_big (last_file)->nextoff, 10);
@@ -1825,7 +1828,7 @@ _bfd_xcoff_openr_next_archived_file (bfd *archive, bfd *last_file)
      archive element cache until the next element is opened.  */
   if (last_file != NULL)
     {
-      ufile_ptr laststart = last_file->proxy_origin;
+      ufile_ptr laststart = last_file->proxy_handle.file_offset;
       laststart -= x_artdata (archive)->ar_hdr_size;
       laststart -= arch_eltdata (last_file)->extra_size;
       if (filestart == laststart)
@@ -2498,7 +2501,8 @@ xcoff_write_archive_contents_old (bfd *abfd)
       BFD_ASSERT (nextoff == bfd_tell (abfd));
       sprintf (fhdr->symoff, "%ld", (long) nextoff);
       bfd_ardata (abfd)->tdata = &xtdata;
-      bool ret = _bfd_compute_and_write_armap (abfd, 0);
+      bool ret = _bfd_compute_and_push_armap (abfd, 0, false,
+					      _bfd_write_armap);
       bfd_ardata (abfd)->tdata = NULL;
       if (!ret)
 	return false;
@@ -2766,7 +2770,8 @@ xcoff_write_archive_contents_big (bfd *abfd)
       PRINT20 (fhdr->symoff, nextoff);
 
       bfd_ardata (abfd)->tdata = &xtdata;
-      bool ret = _bfd_compute_and_write_armap (abfd, 0);
+      bool ret = _bfd_compute_and_push_armap (abfd, 0, false,
+					      _bfd_write_armap);
       bfd_ardata (abfd)->tdata = NULL;
       if (!ret)
 	return false;

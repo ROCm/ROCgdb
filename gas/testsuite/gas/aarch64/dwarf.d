@@ -21,8 +21,8 @@ Contents of the .debug_aranges section:
   Length:                   (44|28)
   Version:                  2
   Offset into .debug_info:  (0x)?0
-  Pointer Size:             (8|4)
-  Segment Size:             0
+  Address size:             (8|4)
+  Segment size:             0
 
     Address[ ]+Length
     0+ 0+8 ?

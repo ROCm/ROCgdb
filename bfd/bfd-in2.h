@@ -1273,12 +1273,19 @@ void bfd_symbol_info (asymbol *symbol, symbol_info *ret);
 		 (ibfd, isymbol, obfd, osymbol))
 
 /* Extracted from archive.c.  */
+/* Holds a file position or bfd* depending on context.  */
+typedef union ufile_ptr_or_bfd
+{
+  ufile_ptr file_offset;
+  bfd *abfd;
+}
+ufile_ptr_or_bfd;
+
 /* A canonical archive symbol.  */
-/* This is a type pun with struct symdef/struct ranlib on purpose!  */
 typedef struct carsym
 {
   const char *name;
-  file_ptr file_offset;        /* Look here to find the file.  */
+  ufile_ptr_or_bfd u;  /* bfd* or file position.  */
 }
 carsym;
 
@@ -2137,8 +2144,14 @@ struct bfd
   /* Have archive map.  */
   unsigned int has_armap : 1;
 
+  /* Accept a mapless archive for link.  */
+  unsigned int link_mapless : 1;
+
   /* Set if this is a thin archive.  */
   unsigned int is_thin_archive : 1;
+
+  /* Set if this is a collection of files pretending to be an archive.  */
+  unsigned int is_fake_archive : 1;
 
   /* Set if this archive should not cache element positions.  */
   unsigned int no_element_cache : 1;
@@ -2180,12 +2193,17 @@ struct bfd
      contained in an archive.  */
   ufile_ptr origin;
 
-  /* The origin in the archive of the proxy entry.  This will
-     normally be the same as origin, except for thin archives,
-     when it will contain the current offset of the proxy in the
-     thin archive rather than the offset of the bfd in its actual
-     container.  */
-  ufile_ptr proxy_origin;
+  /* A reference in the archive for the proxy entry as follows:
+
+     1. For regular archives this will be the same as origin.
+
+     2. For thin archives it will contain the current offset
+	of the proxy in the thin archive rather than the offset
+	of the bfd in its actual container.
+
+     3. For fake archives it will contain the next archive member's
+	BFD reference or a NULL pointer if this is the last member.  */
+  ufile_ptr_or_bfd proxy_handle;
 
   /* A hash table for section names.  */
   struct bfd_hash_table section_htab;
@@ -2378,9 +2396,21 @@ bfd_has_map (const bfd *abfd)
 }
 
 static inline bool
+bfd_link_mapless (const bfd *abfd)
+{
+  return abfd->link_mapless;
+}
+
+static inline bool
 bfd_is_thin_archive (const bfd *abfd)
 {
   return abfd->is_thin_archive;
+}
+
+static inline bool
+bfd_is_fake_archive (const bfd *abfd)
+{
+  return abfd->is_fake_archive;
 }
 
 static inline void *
@@ -2398,9 +2428,21 @@ bfd_set_cacheable (bfd * abfd, bool val)
 }
 
 static inline void
+bfd_set_link_mapless (bfd *abfd, bool val)
+{
+  abfd->link_mapless = val;
+}
+
+static inline void
 bfd_set_thin_archive (bfd *abfd, bool val)
 {
   abfd->is_thin_archive = val;
+}
+
+static inline void
+bfd_set_fake_archive (bfd *abfd, bool val)
+{
+  abfd->is_fake_archive = val;
 }
 
 static inline void
@@ -3020,6 +3062,8 @@ bfd *bfd_fdopenw (const char *filename, const char *target, int fd);
 
 bfd *bfd_openstreamr (const char * filename, const char * target,
     void * stream);
+
+bfd *bfd_openr_fake_archive (bfd *fbfd);
 
 bfd *bfd_openr_iovec (const char *filename, const char *target,
     void *(*open_func) (struct bfd *nbfd,

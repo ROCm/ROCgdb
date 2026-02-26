@@ -23,6 +23,7 @@
 #include "bfdlink.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
+#include "elf-solaris2.h"
 #include "elf/sparc.h"
 #include "opcode/sparc.h"
 #include "elfxx-sparc.h"
@@ -294,6 +295,9 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
    boundary.  */
 #undef	elf_backend_static_tls_alignment
 #define elf_backend_static_tls_alignment	8
+
+#undef	elf_backend_add_symbol_hook
+#define	elf_backend_add_symbol_hook		elf_solaris2_add_symbol_hook
 
 static bool
 elf32_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,

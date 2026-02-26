@@ -127,7 +127,7 @@ blpy_get_function (PyObject *self, void *closure)
 
   sym = block->function ();
   if (sym)
-    return symbol_to_symbol_object (sym);
+    return symbol_to_symbol_object (sym).release ();
 
   Py_RETURN_NONE;
 }
@@ -143,7 +143,7 @@ blpy_get_superblock (PyObject *self, void *closure)
 
   super_block = block->superblock ();
   if (super_block)
-    return block_to_block_object (super_block, self_obj->objfile);
+    return block_to_block_object (super_block, self_obj->objfile).release ();
 
   Py_RETURN_NONE;
 }
@@ -168,7 +168,7 @@ blpy_get_subblocks (PyObject *self, void *closure)
     {
       if (each->superblock () == block)
 	{
-	  gdbpy_ref<> item (block_to_block_object (each, cu->objfile ()));
+	  gdbpy_ref<> item = block_to_block_object (each, cu->objfile ());
 
 	  if (item.get () == nullptr
 	      || PyList_Append (list.get (), item.get ()) == -1)
@@ -192,9 +192,7 @@ blpy_get_global_block (PyObject *self, void *closure)
 
   global_block = block->global_block ();
 
-  return block_to_block_object (global_block,
-				self_obj->objfile);
-
+  return block_to_block_object (global_block, self_obj->objfile).release ();
 }
 
 /* Return the static block associated to this block.  Return None
@@ -214,7 +212,7 @@ blpy_get_static_block (PyObject *self, void *closure)
 
   static_block = block->static_block ();
 
-  return block_to_block_object (static_block, self_obj->objfile);
+  return block_to_block_object (static_block, self_obj->objfile).release ();
 }
 
 /* Implementation of gdb.Block.is_global (self) -> Boolean.
@@ -274,7 +272,7 @@ blpy_getitem (PyObject *self, PyObject *key)
   for (struct symbol *sym : block_iterator_range (block, &lookup_name))
     {
       /* Just stop at the first match */
-      return symbol_to_symbol_object (sym);
+      return symbol_to_symbol_object (sym).release ();
     }
 
   PyErr_SetObject (PyExc_KeyError, key);
@@ -333,7 +331,7 @@ blpy_dealloc (PyObject *obj)
 
 /* Create a new block object (gdb.Block) that encapsulates the struct
    block object from GDB.  */
-PyObject *
+gdbpy_ref<>
 block_to_block_object (const struct block *block, struct objfile *objfile)
 {
   htab_t table = blpy_objfile_data_key.get (objfile);
@@ -348,11 +346,7 @@ block_to_block_object (const struct block *block, struct objfile *objfile)
   block_object *result = (block_object *) htab_find_with_hash (table, block,
 							       hash);
   if (result != nullptr)
-    {
-      PyObject *py_result = (PyObject *) result;
-      Py_INCREF (py_result);
-      return py_result;
-    }
+    return gdbpy_ref<>::new_reference ((PyObject *) result);
 
   result = PyObject_New (block_object, &block_object_type);
   if (result == nullptr)
@@ -364,7 +358,7 @@ block_to_block_object (const struct block *block, struct objfile *objfile)
   void **slot = htab_find_slot_with_hash (table, block, hash, INSERT);
   *slot = result;
 
-  return (PyObject *) result;
+  return gdbpy_ref<> (result);
 }
 
 /* Return struct block reference that is wrapped by this object.  */
@@ -412,7 +406,7 @@ blpy_block_syms_iternext (PyObject *self)
       return NULL;
     }
 
-  return symbol_to_symbol_object (sym);
+  return symbol_to_symbol_object (sym).release ();
 }
 
 static void

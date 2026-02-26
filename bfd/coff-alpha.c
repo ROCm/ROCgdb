@@ -2202,8 +2202,10 @@ alpha_ecoff_openr_next_archived_file (bfd *archive, bfd *last_file)
 {
   ufile_ptr filestart;
 
+  BFD_ASSERT (!bfd_is_fake_archive (archive));
+
   if (last_file == NULL)
-    filestart = bfd_ardata (archive)->first_file_filepos;
+    filestart = bfd_ardata (archive)->first_file.file_offset;
   else
     {
       struct areltdata *t;
@@ -2219,9 +2221,9 @@ alpha_ecoff_openr_next_archived_file (bfd *archive, bfd *last_file)
       /* Pad to an even boundary...
 	 Note that last_file->origin can be odd in the case of
 	 BSD-4.4-style element with a long odd size.  */
-      filestart = last_file->proxy_origin + size;
+      filestart = last_file->proxy_handle.file_offset + size;
       filestart += filestart % 2;
-      if (filestart < last_file->proxy_origin)
+      if (filestart < last_file->proxy_handle.file_offset)
 	{
 	  /* Prevent looping.  See PR19256.  */
 	  bfd_set_error (bfd_error_malformed_archive);
@@ -2240,7 +2242,10 @@ alpha_ecoff_get_elt_at_index (bfd *abfd, symindex sym_index)
   carsym *entry;
 
   entry = bfd_ardata (abfd)->symdefs + sym_index;
-  return alpha_ecoff_get_elt_at_filepos (abfd, entry->file_offset, NULL);
+  if (bfd_ardata (abfd)->symdef_use_bfd)
+    return entry->u.abfd;
+  else
+    return alpha_ecoff_get_elt_at_filepos (abfd, entry->u.file_offset, NULL);
 }
 
 static void

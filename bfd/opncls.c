@@ -193,6 +193,7 @@ _bfd_free_cached_info (bfd *abfd)
   abfd->outsymbols = NULL;
   abfd->tdata.any = NULL;
   abfd->usrdata = NULL;
+  abfd->format = bfd_unknown;
 
   return true;
 }
@@ -487,6 +488,47 @@ bfd_openstreamr (const char *filename, const char *target, void *streamarg)
       _bfd_delete_bfd (nbfd);
       return NULL;
     }
+
+  return nbfd;
+}
+
+/*
+FUNCTION
+	bfd_openr_fake_archive
+
+SYNOPSIS
+	bfd *bfd_openr_fake_archive (bfd *fbfd);
+
+DESCRIPTION
+	Open a list of BFDs starting from @var{fbfd} as an artificial
+	archive.  Subsequent members of the archive are indicated by each
+	BFD's proxy_handle.abfd member, with the final one holding a NULL
+	pointer there.  The newly opened archive will necessarily also be
+	a thin archive as there will be member files only to refer to and
+	no containing archive file.
+*/
+
+bfd *
+bfd_openr_fake_archive (bfd *fbfd)
+{
+  bfd *abfd, *nbfd;
+
+  if (fbfd == NULL)
+    return NULL;
+
+  nbfd = _bfd_new_bfd ();
+  if (nbfd == NULL)
+    return NULL;
+
+  nbfd->xvec = fbfd->xvec;
+  bfd_set_format (nbfd, bfd_archive);
+  bfd_set_thin_archive (nbfd, true);
+  bfd_set_fake_archive (nbfd, true);
+  bfd_ardata (nbfd)->first_file.abfd = fbfd;
+  nbfd->direction = read_direction;
+
+  for (abfd = fbfd; abfd != NULL; abfd = abfd->proxy_handle.abfd)
+    abfd->my_archive = nbfd;
 
   return nbfd;
 }
@@ -1027,7 +1069,6 @@ bfd_make_readable (bfd *abfd)
   abfd->arch_info = &bfd_default_arch_struct;
 
   abfd->where = 0;
-  abfd->format = bfd_unknown;
   abfd->my_archive = NULL;
   abfd->origin = 0;
   abfd->opened_once = false;

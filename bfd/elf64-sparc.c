@@ -23,6 +23,7 @@
 #include "bfd.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
+#include "elf-solaris2.h"
 #include "elf/sparc.h"
 #include "opcode/sparc.h"
 #include "elfxx-sparc.h"
@@ -1006,6 +1007,21 @@ static const struct elf_size_info elf64_sparc_size_info =
 
 /* Solaris 2.  */
 
+static bool
+elf64_sparc_solaris2_add_symbol_hook (bfd *abfd,
+				      struct bfd_link_info *info,
+				      Elf_Internal_Sym *sym,
+				      const char **namep,
+				      flagword *flagsp,
+				      asection **secp,
+				      bfd_vma *valp)
+{
+  return (elf64_sparc_add_symbol_hook (abfd, info, sym, namep,
+				       flagsp, secp, valp)
+	  && elf_solaris2_add_symbol_hook (abfd, info, sym, namep,
+					   flagsp, secp, valp));
+}
+
 #undef	TARGET_BIG_SYM
 #define	TARGET_BIG_SYM				sparc_elf64_sol2_vec
 #undef	TARGET_BIG_NAME
@@ -1025,6 +1041,9 @@ static const struct elf_size_info elf64_sparc_size_info =
 #undef  elf_backend_static_tls_alignment
 #define elf_backend_static_tls_alignment	16
 
+#undef	elf_backend_add_symbol_hook
+#define	elf_backend_add_symbol_hook	elf64_sparc_solaris2_add_symbol_hook
+
 static bool
 elf64_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,
                                   bfd *obfd ATTRIBUTE_UNUSED,
@@ -1040,5 +1059,3 @@ elf64_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSE
 #define elf_backend_copy_special_section_fields elf64_sparc_copy_solaris_special_section_fields
 
 #include "elf64-target.h"
-
-#undef  elf_backend_copy_special_section_fields

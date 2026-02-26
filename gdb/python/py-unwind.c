@@ -480,7 +480,7 @@ pending_framepy_read_register (PyObject *self, PyObject *args, PyObject *kw)
   if (!gdbpy_parse_register_id (pending_frame->gdbarch, pyo_reg_id, &regnum))
     return nullptr;
 
-  PyObject *result = nullptr;
+  gdbpy_ref<> result;
   try
     {
       scoped_value_mark free_values;
@@ -504,7 +504,7 @@ pending_framepy_read_register (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  return result;
+  return result.release ();
 }
 
 /* Implement PendingFrame.is_valid().  Return True if this pending frame
@@ -599,8 +599,6 @@ pending_framepy_language (PyObject *self, PyObject *args)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  Py_RETURN_NONE;
 }
 
 /* Implement PendingFrame.find_sal().  Return the PendingFrame's symtab and
@@ -613,21 +611,17 @@ pending_framepy_find_sal (PyObject *self, PyObject *args)
 
   PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
 
-  PyObject *sal_obj = nullptr;
-
   try
     {
       frame_info_ptr frame = pending_frame->frame_info;
 
       symtab_and_line sal = find_frame_sal (frame);
-      sal_obj = symtab_and_line_to_sal_object (sal);
+      return symtab_and_line_to_sal_object (sal).release ();
     }
   catch (const gdb_exception &except)
     {
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
-
-  return sal_obj;
 }
 
 /* Implement PendingFrame.block().  Return a gdb.Block for the pending
@@ -666,7 +660,8 @@ pending_framepy_block (PyObject *self, PyObject *args)
       return nullptr;
     }
 
-  return block_to_block_object (block, fn_block->function ()->objfile ());
+  return block_to_block_object (block,
+				fn_block->function ()->objfile ()).release ();
 }
 
 /* Implement gdb.PendingFrame.function().  Return a gdb.Symbol
@@ -696,7 +691,7 @@ pending_framepy_function (PyObject *self, PyObject *args)
     }
 
   if (sym != nullptr)
-    return symbol_to_symbol_object (sym);
+    return symbol_to_symbol_object (sym).release ();
 
   Py_RETURN_NONE;
 }
@@ -765,7 +760,7 @@ pending_framepy_architecture (PyObject *self, PyObject *args)
 
   PENDING_FRAMEPY_REQUIRE_VALID (pending_frame);
 
-  return gdbarch_to_arch_object (pending_frame->gdbarch);
+  return gdbarch_to_arch_object (pending_frame->gdbarch).release ();
 }
 
 /* Implementation of PendingFrame.level (self) -> Integer.  */

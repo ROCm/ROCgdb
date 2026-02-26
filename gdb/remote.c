@@ -5614,7 +5614,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 
   /* Next, now that we know something about the target, update the
      address spaces in the program spaces.  */
-  update_address_spaces ();
+  update_address_spaces (this, current_inferior ()->arch ());
 
   /* On OSs where the list of libraries is global to all
      processes, we fetch them early.  */

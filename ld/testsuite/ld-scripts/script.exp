@@ -233,8 +233,12 @@ run_dump_test "pr20302"
 run_dump_test "output-section-types"
 run_dump_test "ld-version"
 run_dump_test "ld-version-2"
-run_dump_test "pr24576-1"
-run_dump_test "pr24576-2"
+# Windows hosts are likely to have filesystems where st_ino has no meaning,
+# breaking the test for accidental duplicate scripts.
+if { ![ishost *-mingw*] } {
+    run_dump_test "pr24576-1"
+    run_dump_test "pr24576-2"
+}
 run_dump_test "linker-script-not-found"
 
 run_dump_test "segment-start" {{name (default)}}

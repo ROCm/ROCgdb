@@ -80,6 +80,9 @@ struct ext_elf32_fdpic_loadmap {
   struct ext_elf32_fdpic_loadseg segs[1 /* nsegs, actually */];
 };
 
+using ext_elf32_fdpic_loadmap_up
+  = gdb::unique_xmalloc_ptr<ext_elf32_fdpic_loadmap>;
+
 /* Internal versions; the types are GDB types and the data in each
    of the fields is (or will be) decoded from the external struct
    for ease of consumption.  */
@@ -102,19 +105,18 @@ struct int_elf32_fdpic_loadmap {
   struct int_elf32_fdpic_loadseg segs[1 /* nsegs, actually */];
 };
 
-/* Given address LDMADDR, fetch and decode the loadmap at that address.
-   Return NULL if there is a problem reading the target memory or if
-   there doesn't appear to be a loadmap at the given address.  The
-   allocated space (representing the loadmap) returned by this
-   function may be freed via a single call to xfree().  */
+using int_elf32_fdpic_loadmap_up
+  = gdb::unique_xmalloc_ptr<int_elf32_fdpic_loadmap>;
 
-static struct int_elf32_fdpic_loadmap *
+/* Given address LDMADDR, fetch and decode the loadmap at that address.
+   Return nullptr if there is a problem reading the target memory or if
+   there doesn't appear to be a loadmap at the given address.  */
+
+static int_elf32_fdpic_loadmap_up
 fetch_loadmap (CORE_ADDR ldmaddr)
 {
   bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
   struct ext_elf32_fdpic_loadmap ext_ldmbuf_partial;
-  struct ext_elf32_fdpic_loadmap *ext_ldmbuf;
-  struct int_elf32_fdpic_loadmap *int_ldmbuf;
   int ext_ldmbuf_size, int_ldmbuf_size;
   int version, seg, nsegs;
 
@@ -147,18 +149,19 @@ fetch_loadmap (CORE_ADDR ldmaddr)
   /* Allocate space for the complete (external) loadmap.  */
   ext_ldmbuf_size = sizeof (struct ext_elf32_fdpic_loadmap)
 	       + (nsegs - 1) * sizeof (struct ext_elf32_fdpic_loadseg);
-  ext_ldmbuf = (struct ext_elf32_fdpic_loadmap *) xmalloc (ext_ldmbuf_size);
+  ext_elf32_fdpic_loadmap_up ext_ldmbuf
+    (XNEWVAR (ext_elf32_fdpic_loadmap, ext_ldmbuf_size));
 
   /* Copy over the portion of the loadmap that's already been read.  */
-  memcpy (ext_ldmbuf, &ext_ldmbuf_partial, sizeof ext_ldmbuf_partial);
+  memcpy (ext_ldmbuf.get (), &ext_ldmbuf_partial, sizeof ext_ldmbuf_partial);
 
   /* Read the rest of the loadmap from the target.  */
   if (target_read_memory (ldmaddr + sizeof ext_ldmbuf_partial,
-			  (gdb_byte *) ext_ldmbuf + sizeof ext_ldmbuf_partial,
+			  ((gdb_byte *) ext_ldmbuf.get ()
+			   + sizeof ext_ldmbuf_partial),
 			  ext_ldmbuf_size - sizeof ext_ldmbuf_partial))
     {
       /* Couldn't read rest of the loadmap.  */
-      xfree (ext_ldmbuf);
       return NULL;
     }
 
@@ -166,7 +169,8 @@ fetch_loadmap (CORE_ADDR ldmaddr)
      external loadsegs.  I.e, allocate the internal loadsegs.  */
   int_ldmbuf_size = sizeof (struct int_elf32_fdpic_loadmap)
 	       + (nsegs - 1) * sizeof (struct int_elf32_fdpic_loadseg);
-  int_ldmbuf = (struct int_elf32_fdpic_loadmap *) xmalloc (int_ldmbuf_size);
+  int_elf32_fdpic_loadmap_up int_ldmbuf
+    (XNEWVAR (int_elf32_fdpic_loadmap, int_ldmbuf_size));
 
   /* Place extracted information in internal structs.  */
   int_ldmbuf->version = version;
@@ -187,7 +191,6 @@ fetch_loadmap (CORE_ADDR ldmaddr)
 				    byte_order);
     }
 
-  xfree (ext_ldmbuf);
   return int_ldmbuf;
 }
 
@@ -219,22 +222,15 @@ struct ext_link_map
 
 struct lm_info_frv final : public lm_info
 {
-  lm_info_frv (int_elf32_fdpic_loadmap *map, CORE_ADDR got_value,
+  lm_info_frv (int_elf32_fdpic_loadmap_up map, CORE_ADDR got_value,
 	       CORE_ADDR lm_addr)
-    : map (map), got_value (got_value), lm_addr (lm_addr)
+    : map (std::move (map)),
+      got_value (got_value),
+      lm_addr (lm_addr)
   {}
 
-  DISABLE_COPY_AND_ASSIGN (lm_info_frv);
-
-  ~lm_info_frv ()
-  {
-    xfree (this->map);
-    xfree (this->dyn_syms);
-    xfree (this->dyn_relocs);
-  }
-
   /* The loadmap, digested into an easier to use form.  */
-  int_elf32_fdpic_loadmap *map;
+  int_elf32_fdpic_loadmap_up map;
   /* The GOT address for this link map entry.  */
   CORE_ADDR got_value;
   /* The link map address, needed for frv_fetch_objfile_link_map().  */
@@ -250,16 +246,18 @@ struct lm_info_frv final : public lm_info
      supplied to the first call.  Thus the caching of the dynamic
      symbols (dyn_syms) is critical for correct operation.  The
      caching of the dynamic relocations could be dispensed with.  */
-  asymbol **dyn_syms = NULL;
-  arelent **dyn_relocs = NULL;
+  gdb::unique_xmalloc_ptr<asymbol *> dyn_syms;
+  gdb::unique_xmalloc_ptr<arelent *> dyn_relocs;
   int dyn_reloc_count = 0;	/* Number of dynamic relocs.  */
 };
+
+using lm_info_frv_up = std::unique_ptr<lm_info_frv>;
 
 /* The load map, got value, etc. are not available from the chain
    of loaded shared objects.  ``main_executable_lm_info'' provides
    a way to get at this information so that it doesn't need to be
    frequently recomputed.  Initialized by frv_relocate_main_executable().  */
-static lm_info_frv *main_executable_lm_info;
+static lm_info_frv_up main_executable_lm_info;
 
 static void frv_relocate_main_executable (void);
 static CORE_ADDR main_got (void);
@@ -378,14 +376,13 @@ frv_solib_ops::current_sos () const
 	 this in the list of shared objects.  */
       if (got_addr != mgot)
 	{
-	  struct int_elf32_fdpic_loadmap *loadmap;
 	  CORE_ADDR addr;
 
 	  /* Fetch the load map address.  */
 	  addr = extract_unsigned_integer (lm_buf.l_addr.map,
 					   sizeof lm_buf.l_addr.map,
 					   byte_order);
-	  loadmap = fetch_loadmap (addr);
+	  int_elf32_fdpic_loadmap_up loadmap = fetch_loadmap (addr);
 	  if (loadmap == NULL)
 	    {
 	      warning (_("frv_current_sos: Unable to fetch load map.  "
@@ -405,11 +402,10 @@ frv_solib_ops::current_sos () const
 	  if (name_buf == nullptr)
 	    warning (_("Can't read pathname for link map entry."));
 
-	  sos.emplace_back (std::make_unique<lm_info_frv> (loadmap, got_addr,
-							   lm_addr),
+	  sos.emplace_back (std::make_unique<lm_info_frv> (std::move (loadmap),
+							   got_addr, lm_addr),
 			    name_buf != nullptr ? name_buf.get () : "",
-			    name_buf != nullptr ? name_buf.get () : "",
-			    *this);
+			    name_buf != nullptr ? name_buf.get () : "", *this);
 	}
       else
 	{
@@ -521,7 +517,6 @@ enable_break2 (void)
       int status;
       CORE_ADDR addr, interp_loadmap_addr;
       gdb_byte addr_buf[FRV_PTR_SIZE];
-      struct int_elf32_fdpic_loadmap *ldm;
 
       /* Read the contents of the .interp section into a local buffer;
 	 the contents specify the dynamic linker this program uses.  */
@@ -566,7 +561,7 @@ enable_break2 (void)
       solib_debug_printf ("interp_loadmap_addr = %s",
 			  hex_string_custom (interp_loadmap_addr, 8));
 
-      ldm = fetch_loadmap (interp_loadmap_addr);
+      int_elf32_fdpic_loadmap_up ldm = fetch_loadmap (interp_loadmap_addr);
       if (ldm == NULL)
 	{
 	  warning (_("Unable to load dynamic linker loadmap at address %s."),
@@ -582,7 +577,7 @@ enable_break2 (void)
 	{
 	  interp_text_sect_low = bfd_section_vma (interp_sect);
 	  interp_text_sect_low
-	    += displacement_from_map (ldm, interp_text_sect_low);
+	    += displacement_from_map (ldm.get (), interp_text_sect_low);
 	  interp_text_sect_high
 	    = interp_text_sect_low + bfd_section_size (interp_sect);
 	}
@@ -591,7 +586,7 @@ enable_break2 (void)
 	{
 	  interp_plt_sect_low = bfd_section_vma (interp_sect);
 	  interp_plt_sect_low
-	    += displacement_from_map (ldm, interp_plt_sect_low);
+	    += displacement_from_map (ldm.get (), interp_plt_sect_low);
 	  interp_plt_sect_high =
 	    interp_plt_sect_low + bfd_section_size (interp_sect);
 	}
@@ -614,7 +609,7 @@ enable_break2 (void)
       solib_debug_printf ("_dl_debug_addr (prior to relocation) = %s",
 			  hex_string_custom (addr, 8));
 
-      addr += displacement_from_map (ldm, addr);
+      addr += displacement_from_map (ldm.get (), addr);
 
       solib_debug_printf ("_dl_debug_addr (after relocation) = %s",
 			  hex_string_custom (addr, 8));
@@ -662,9 +657,6 @@ enable_break2 (void)
 	  return 0;
 	}
       addr = extract_unsigned_integer (addr_buf, sizeof addr_buf, byte_order);
-
-      /* We're done with the loadmap.  */
-      xfree (ldm);
 
       /* Remove all the solib event breakpoints.  Their addresses
 	 may have changed since the last time we ran the program.  */
@@ -728,7 +720,6 @@ frv_relocate_main_executable (void)
 {
   int status;
   CORE_ADDR exec_addr, interp_addr;
-  struct int_elf32_fdpic_loadmap *ldm;
   int changed;
 
   status = frv_fdpic_loadmap_addresses (current_inferior ()->arch (),
@@ -741,13 +732,14 @@ frv_relocate_main_executable (void)
     }
 
   /* Fetch the loadmap located at ``exec_addr''.  */
-  ldm = fetch_loadmap (exec_addr);
-  if (ldm == NULL)
+  int_elf32_fdpic_loadmap_up ldm_up = fetch_loadmap (exec_addr);
+  if (ldm_up == nullptr)
     error (_("Unable to load the executable's loadmap."));
 
-  delete main_executable_lm_info;
-  main_executable_lm_info = new lm_info_frv (ldm, 0, 0);
+  main_executable_lm_info
+    = std::make_unique<lm_info_frv> (std::move (ldm_up), 0, 0);
 
+  int_elf32_fdpic_loadmap *ldm = main_executable_lm_info->map.get ();
   objfile *objf = current_program_space->symfile_object_file;
   std::vector<CORE_ADDR> new_offsets (objf->section_offsets.size ());
   changed = 0;
@@ -816,9 +808,7 @@ frv_solib_ops::clear_solib (program_space *pspace) const
   lm_base_cache = 0;
   enable_break2_done = 0;
   main_lm_addr = 0;
-
-  delete main_executable_lm_info;
-  main_executable_lm_info = NULL;
+  main_executable_lm_info.reset ();
 }
 
 void
@@ -827,7 +817,7 @@ frv_solib_ops::relocate_section_addresses (solib &so,
 {
   int seg;
   auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
-  int_elf32_fdpic_loadmap *map = li->map;
+  int_elf32_fdpic_loadmap *map = li->map.get ();
 
   for (seg = 0; seg < map->nsegs; seg++)
     {
@@ -868,7 +858,7 @@ frv_fdpic_find_global_pointer (CORE_ADDR addr)
     {
       int seg;
       auto *li = gdb::checked_static_cast<lm_info_frv *> (so.lm_info.get ());
-      int_elf32_fdpic_loadmap *map = li->map;
+      int_elf32_fdpic_loadmap *map = li->map.get ();
 
       for (seg = 0; seg < map->nsegs; seg++)
 	{
@@ -915,7 +905,7 @@ frv_fdpic_find_canonical_descriptor (CORE_ADDR entry_point)
   objfile *objf = current_program_space->symfile_object_file;
   addr = find_canonical_descriptor_in_load_object
 	   (entry_point, got_value, name, objf->obfd.get (),
-	    main_executable_lm_info);
+	    main_executable_lm_info.get ());
 
   /* If descriptor not found via main executable, check each load object
      in list of shared objects.  */
@@ -973,10 +963,11 @@ find_canonical_descriptor_in_load_object
 	return 0;
 
       /* Allocate space for the dynamic symbol table.  */
-      lm->dyn_syms = (asymbol **) xmalloc (storage_needed);
+      lm->dyn_syms.reset (XNEWVAR (asymbol *, storage_needed));
 
       /* Fetch the dynamic symbol table.  */
-      number_of_symbols = bfd_canonicalize_dynamic_symtab (abfd, lm->dyn_syms);
+      number_of_symbols
+	= bfd_canonicalize_dynamic_symtab (abfd, lm->dyn_syms.get ());
 
       if (number_of_symbols == 0)
 	return 0;
@@ -995,17 +986,18 @@ find_canonical_descriptor_in_load_object
 	return 0;
 
       /* Allocate space for the relocs.  */
-      lm->dyn_relocs = (arelent **) xmalloc (storage_needed);
+      lm->dyn_relocs.reset (XNEWVAR (arelent *, storage_needed));
 
       /* Fetch the dynamic relocs.  */
       lm->dyn_reloc_count
-	= bfd_canonicalize_dynamic_reloc (abfd, lm->dyn_relocs, lm->dyn_syms);
+	= bfd_canonicalize_dynamic_reloc (abfd, lm->dyn_relocs.get (),
+					  lm->dyn_syms.get ());
     }
 
   /* Search the dynamic relocs.  */
   for (i = 0; i < lm->dyn_reloc_count; i++)
     {
-      rel = lm->dyn_relocs[i];
+      rel = lm->dyn_relocs.get ()[i];
 
       /* Relocs of interest are those which meet the following
 	 criteria:
@@ -1029,7 +1021,8 @@ find_canonical_descriptor_in_load_object
 	  gdb_byte buf [FRV_PTR_SIZE];
 
 	  /* Compute address of address of candidate descriptor.  */
-	  addr = rel->address + displacement_from_map (lm->map, rel->address);
+	  addr = (rel->address
+		  + displacement_from_map (lm->map.get (), rel->address));
 
 	  /* Fetch address of candidate descriptor.  */
 	  if (target_read_memory (addr, buf, sizeof buf) != 0)

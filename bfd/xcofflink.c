@@ -2612,6 +2612,11 @@ _bfd_xcoff_bfd_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 		 (abfd, info, xcoff_link_check_archive_element)))
 	    return false;
 	}
+      else if (!bfd_link_mapless (abfd))
+	{
+	  bfd_set_error (bfd_error_no_armap);
+	  return false;
+	}
 
       {
 	bfd *member;

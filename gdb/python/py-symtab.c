@@ -188,7 +188,8 @@ stpy_global_block (PyObject *self, PyObject *args)
   blockvector = symtab->compunit ()->blockvector ();
   const struct block *block = blockvector->global_block ();
 
-  return block_to_block_object (block, symtab->compunit ()->objfile ());
+  return block_to_block_object (block,
+				symtab->compunit ()->objfile ()).release ();
 }
 
 /* Return the STATIC_BLOCK of the underlying symtab.  */
@@ -204,7 +205,8 @@ stpy_static_block (PyObject *self, PyObject *args)
   blockvector = symtab->compunit ()->blockvector ();
   const struct block *block = blockvector->static_block ();
 
-  return block_to_block_object (block, symtab->compunit ()->objfile ());
+  return block_to_block_object (block,
+				symtab->compunit ()->objfile ()).release ();
 }
 
 /* Implementation of gdb.Symtab.linetable (self) -> gdb.LineTable.
@@ -218,7 +220,7 @@ stpy_get_linetable (PyObject *self, PyObject *args)
 
   STPY_REQUIRE_VALID (self, symtab);
 
-  return symtab_to_linetable_object (self);
+  return symtab_to_linetable_object (self).release ();
 }
 
 static PyObject *
@@ -299,7 +301,7 @@ salpy_get_symtab (PyObject *self, void *closure)
   if (sal->symtab == nullptr)
     Py_RETURN_NONE;
   else
-    return symtab_to_symtab_object (sal->symtab);
+    return symtab_to_symtab_object (sal->symtab).release ();
 }
 
 /* Implementation of gdb.Symtab_and_line.is_valid (self) -> Boolean.
@@ -366,7 +368,7 @@ set_symtab (symtab_object *obj, struct symtab *symtab)
 
 /* Create a new symbol table (gdb.Symtab) object that encapsulates the
    symtab structure from GDB.  */
-PyObject *
+gdbpy_ref<>
 symtab_to_symtab_object (struct symtab *symtab)
 {
   symtab_object *symtab_obj;
@@ -375,22 +377,22 @@ symtab_to_symtab_object (struct symtab *symtab)
      and if so, return it.  */
   if (symtab != nullptr)
     {
-      symtab_obj = stpy_registry.lookup (symtab->compunit ()->objfile (),
-					 symtab);
-      if (symtab_obj != nullptr)
-	return (PyObject*)symtab_obj;
+      gdbpy_ref<> result
+	= stpy_registry.lookup (symtab->compunit ()->objfile (), symtab);
+      if (result != nullptr)
+	return result;
     }
 
   symtab_obj = PyObject_New (symtab_object, &symtab_object_type);
   if (symtab_obj)
     set_symtab (symtab_obj, symtab);
 
-  return (PyObject *) symtab_obj;
+  return gdbpy_ref<> (symtab_obj);
 }
 
 /* Create a new symtab and line (gdb.Symtab_and_line) object
    that encapsulates the symtab_and_line structure from GDB.  */
-PyObject *
+gdbpy_ref<>
 symtab_and_line_to_sal_object (struct symtab_and_line sal)
 {
   sal_object *sal_obj;
@@ -399,7 +401,7 @@ symtab_and_line_to_sal_object (struct symtab_and_line sal)
   if (sal_obj != nullptr)
     set_sal (sal_obj, sal);
 
-  return (PyObject *) sal_obj;
+  return gdbpy_ref<> (sal_obj);
 }
 
 /* Return struct symtab_and_line reference that is wrapped by this

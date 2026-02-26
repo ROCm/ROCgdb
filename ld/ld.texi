@@ -1069,7 +1069,8 @@ restored with one corresponding @option{--pop-state} option.
 The option which are covered are: @option{-Bdynamic}, @option{-Bstatic},
 @option{-dn}, @option{-dy}, @option{-call_shared}, @option{-non_shared},
 @option{-static}, @option{-N}, @option{-n}, @option{--whole-archive},
-@option{--no-whole-archive}, @option{-r}, @option{-Ur},
+@option{--no-whole-archive}, @option{--link-mapless},
+@option{--no-link-mapless}, @option{-r}, @option{-Ur},
 @option{--copy-dt-needed-entries}, @option{--no-copy-dt-needed-entries},
 @option{--as-needed}, @option{--no-as-needed}, and @option{-a}.
 
@@ -1789,9 +1790,34 @@ would not be able to resolve that reference.  By grouping the archives,
 they will all be searched repeatedly until all possible references are
 resolved.
 
+This option is not allowed within a @option{--start-lib}/@option{--end-lib}
+option pair.
+
 Using this option has a significant performance cost.  It is best to use
 it only when there are unavoidable circular references between two or
 more archives.
+
+@kindex --start-lib
+@cindex artificial archives
+@item --start-lib @var{objects} --end-lib
+The @var{objects} should be a list of object files.
+
+The specified objects are treated as if they were members of an archive
+the name of which has been placed at the location of @option{--start-lib}
+on the command line.  All the usual linker archive handling properties
+and command line options apply to such an artificial archive.
+
+This option may be used multiple times, in which case each set of the
+objects specified will be treated as an individual archive.  Nesting this
+option is not allowed though.
+
+Options that affect archive processing are not allowed between
+@option{--start-lib} and @option{--end-lib} as it would make no sense
+to apply them midway through handling an archive.  These options include:
+@option{-(}/@option{--start-group}, @option{-)}/@option{--end-group},
+@option{--whole-archive}, and @option{--no-whole-archive}, as well as
+@option{--pop-state} where it would change the state of
+@option{--whole-archive} setting.
 
 @kindex --accept-unknown-input-arch
 @kindex --no-accept-unknown-input-arch
@@ -2371,7 +2397,14 @@ library during a library search.  This option silences the warning.
 @kindex --no-whole-archive
 @item --no-whole-archive
 Turn off the effect of the @option{--whole-archive} option for subsequent
-archive files.
+archive files.  Not allowed within a @option{--start-lib}/@option{--end-lib}
+option pair.
+
+@kindex --no-link-mapless
+@item --no-link-mapless
+Reject archives that lack an index aka symbol map for all the subsequent
+archives referred on the command line.  If such a file is encountered,
+a link error occurs.  This is the traditional behavior.
 
 @cindex output file after errors
 @kindex --noinhibit-exec
@@ -3180,11 +3213,20 @@ files.  This is normally used to turn an archive file into a shared
 library, forcing every object to be included in the resulting shared
 library.  This option may be used more than once.
 
+This option is not allowed within a @option{--start-lib}/@option{--end-lib}
+option pair.
+
 Two notes when using this option from gcc: First, gcc doesn't know
 about this option, so you have to use @option{-Wl,-whole-archive}.
 Second, don't forget to use @option{-Wl,-no-whole-archive} after your
 list of archives, because gcc will add its own list of archives to
 your link and you may not want this flag to affect those as well.
+
+@kindex --link-mapless
+@item --link-mapless
+Accept archives that lack an index aka symbol map for all the subsequent
+archives referred on the command line.  If missing, such an index is made
+internally on the fly at performance cost.  This is the default.
 
 @kindex --wrap=@var{symbol}
 @item --wrap=@var{symbol}
@@ -4501,6 +4543,14 @@ The @code{GROUP} command is like @code{INPUT}, except that the named
 files should all be archives, and they are searched repeatedly until no
 new undefined references are created.  See the description of @samp{-(}
 in @ref{Options,,Command-line Options}.
+
+@item LIB(@var{file}, @var{file}, @dots{})
+@itemx LIB(@var{file} @var{file} @dots{})
+@kindex LIB(@var{files})
+@cindex artificial archives in linker scripts
+The @code{LIB} command is like @code{INPUT}, except that the named files
+are treated as if they were members of an archive.  See the description
+of @samp{--start-lib} in @ref{Options,,Command-line Options}.
 
 @item AS_NEEDED(@var{file}, @var{file}, @dots{})
 @itemx AS_NEEDED(@var{file} @var{file} @dots{})

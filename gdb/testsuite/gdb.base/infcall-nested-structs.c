@@ -406,10 +406,12 @@ call_all ()
   return val;
 }
 
+int volatile v = 1;
+
 void __attribute__((noinline)) ATTRIBUTE_NOCLONE
 breakpt (void)
 {
-  /* Nothing.  */
+  v = v + 1;
 }
 
 int

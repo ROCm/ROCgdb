@@ -85,7 +85,7 @@ py_print_bpstat (bpstat *bs, enum gdb_signal stop_signal)
      there's no API to add generic Python objects to a py_ui_out.  */
   if (return_value != nullptr)
     {
-      gdbpy_ref<> val (value_to_value_object (return_value));
+      gdbpy_ref<> val = value_to_value_object (return_value);
       if (val == nullptr)
 	return nullptr;
       if (PyDict_SetItemString (dict.get (), "finish-value", val.get ()) < 0)

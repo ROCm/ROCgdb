@@ -699,7 +699,7 @@ disasmpy_info_architecture (PyObject *self, void *closure)
 {
   disasm_info_object *obj = (disasm_info_object *) self;
   DISASMPY_DISASM_INFO_REQUIRE_VALID (obj);
-  return gdbarch_to_arch_object (obj->gdbarch);
+  return gdbarch_to_arch_object (obj->gdbarch).release ();
 }
 
 /* Implement DisassembleInfo.progspace attribute.  Return the

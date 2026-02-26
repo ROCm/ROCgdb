@@ -82,6 +82,32 @@ run_ld_link_tests [list \
 	 {nm "" ../ld-archive/nx.nd}} \
 	"abcx" \
     ] \
+    [list "CRIS regular archive link (implicit emulation)" \
+	"-e ff" "tmpdir/ab.a --verbose --print-map" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{ld ../ld-archive/abc.vd} \
+	 {nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abci" \
+    ] \
+    [list "CRIS fake archive link (explicit emulation)" \
+	"$ldemul -e ff" "--start-lib tmpdir/a.o tmpdir/b.o tmpdir/x.o\
+			 --end-lib --verbose --print-map" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{ld ../ld-archive/abfc.vd} \
+	 {nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abfcx" \
+    ] \
+    [list "CRIS fake archive link (implicit emulation)" \
+	"-e ff" "--start-lib tmpdir/a.o tmpdir/b.o tmpdir/x.o --end-lib\
+		 --verbose --print-map" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{ld ../ld-archive/abfc.vd} \
+	 {nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abfci" \
+    ] \
 ]
 # PR binutils/33485 hits with the aout archive format and with this
 # test that format is used with non-aout targets, hence the reverse
@@ -97,5 +123,53 @@ run_ld_link_tests [list \
 	 {nm "" ../ld-archive/abc.nd} \
 	 {nm "" ../ld-archive/nx.nd}} \
 	"abtcx" \
+    ] \
+]
+# PR binutils/33485 hits with the aout archive format and with this
+# test that format is used with non-aout targets, hence the reverse
+# condition.  Cf. the note at the top.
+if { ![istarget cris-*-*aout*] } {
+    setup_xfail "binutils/33485" "*-*-*"
+}
+run_ld_link_tests [list \
+    [list "CRIS thin archive link (implicit emulation)" \
+	"-e ff" "tmpdir/abt.a --verbose --print-map" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{ld ../ld-archive/abtc.vd} \
+	 {nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abtci" \
+    ] \
+]
+
+# Single non-index archive tests.
+run_ld_link_tests [list \
+    [list "CRIS regular archive w/o index link (explicit emulation)" \
+	"$ldemul -e ff" "tmpdir/abn.a" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abncx" \
+    ] \
+    [list "CRIS regular archive w/o index link (implicit emulation)" \
+	"-e ff" "tmpdir/abn.a" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abnci" \
+    ] \
+    [list "CRIS thin archive w/o index link (explicit emulation)" \
+	"$ldemul -e ff" "tmpdir/abnt.a" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abntcx" \
+    ] \
+    [list "CRIS thin archive w/o index link (implicit emulation)" \
+	"-e ff" "tmpdir/abnt.a" \
+	"$asemul" {../ld-archive/abc.s} \
+	{{nm "" ../ld-archive/abc.nd} \
+	 {nm "" ../ld-archive/nx.nd}} \
+	"abntci" \
     ] \
 ]

@@ -431,6 +431,16 @@ private:
   bool m_prev_enable_commit_resumed;
 };
 
+/* Cleanup that reinstalls the readline callback handler, if the
+   target is running in the background.  If something triggered a secondary
+   prompt, like e.g., a pagination prompt, we'll have removed the callback
+   handler (see gdb_readline_wrapper_line).  Need to do this when going back
+   to the event loop, ready to process further input.  Note this has no
+   effect if the handler hasn't actually been removed, because calling
+   rl_callback_handler_install resets the line buffer, thus losing
+   input.  */
+extern void reinstall_readline_callback_handler_cleanup ();
+
 /* True if lane divergence debugging support is enabled.  Controlled
    with "maint set lane-divergence".  */
 extern bool maint_lane_divergence_support;
