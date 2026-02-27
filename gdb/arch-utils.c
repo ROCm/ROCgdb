@@ -849,12 +849,12 @@ get_current_arch (void)
     return current_inferior ()->arch ();
 }
 
-int
+bool
 default_has_shared_address_space (struct gdbarch *gdbarch)
 {
   /* Simply say no.  In most unix-like targets each inferior/process
      has its own address space.  */
-  return 0;
+  return false;
 }
 
 int

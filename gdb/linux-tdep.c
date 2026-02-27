@@ -422,8 +422,8 @@ linux_get_siginfo_type (struct gdbarch *gdbarch)
 /* Return true if the target is running on uClinux instead of normal
    Linux kernel.  */
 
-int
-linux_is_uclinux (void)
+bool
+linux_is_uclinux ()
 {
   CORE_ADDR dummy;
 
@@ -431,7 +431,7 @@ linux_is_uclinux (void)
 	  && target_auxv_search (AT_PAGESZ, &dummy) == 0);
 }
 
-static int
+static bool
 linux_has_shared_address_space (struct gdbarch *gdbarch)
 {
   return linux_is_uclinux ();

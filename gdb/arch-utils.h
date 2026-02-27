@@ -300,7 +300,7 @@ extern struct gdbarch *gdbarch_from_bfd (bfd *abfd);
    routines to determine the architecture to execute a command in.  */
 extern struct gdbarch *get_current_arch (void);
 
-extern int default_has_shared_address_space (struct gdbarch *);
+extern bool default_has_shared_address_space (struct gdbarch *);
 
 extern int default_fast_tracepoint_valid_at (struct gdbarch *gdbarch,
 					     CORE_ADDR addr, std::string *msg);

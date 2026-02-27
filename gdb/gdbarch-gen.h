@@ -1509,8 +1509,8 @@ extern void set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch, bool ha
 
 /* True if inferiors share an address space (e.g., uClinux). */
 
-typedef int (gdbarch_has_shared_address_space_ftype) (struct gdbarch *gdbarch);
-extern int gdbarch_has_shared_address_space (struct gdbarch *gdbarch);
+typedef bool (gdbarch_has_shared_address_space_ftype) (struct gdbarch *gdbarch);
+extern bool gdbarch_has_shared_address_space (struct gdbarch *gdbarch);
 extern void set_gdbarch_has_shared_address_space (struct gdbarch *gdbarch, gdbarch_has_shared_address_space_ftype *has_shared_address_space);
 
 /* True if a fast tracepoint can be set at an address. */

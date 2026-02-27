@@ -2394,7 +2394,7 @@ Method(
     comment="""
 True if inferiors share an address space (e.g., uClinux).
 """,
-    type="int",
+    type="bool",
     name="has_shared_address_space",
     params=[],
     predefault="default_has_shared_address_space",

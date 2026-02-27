@@ -100,7 +100,7 @@ extern void linux_displaced_step_restore_all_in_ptid (inferior *parent_inf,
 extern void linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
 			    int num_disp_step_buffers);
 
-extern int linux_is_uclinux (void);
+extern bool linux_is_uclinux ();
 
 /* Fetch the AT_HWCAP entry from auxv data AUXV.  Use TARGET and GDBARCH to
    parse auxv entries.

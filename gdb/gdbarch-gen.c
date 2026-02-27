@@ -4732,7 +4732,7 @@ set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch,
   gdbarch->has_global_breakpoints = has_global_breakpoints;
 }
 
-int
+bool
 gdbarch_has_shared_address_space (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
