@@ -7049,7 +7049,7 @@ s390_gnu_triplet_regexp (struct gdbarch *gdbarch)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 s390_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return ((c_isdigit (*s) && s[1] == '(' && s[2] == '%') /* Displacement

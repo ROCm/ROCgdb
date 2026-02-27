@@ -4537,7 +4537,7 @@ gdbarch_stap_is_single_operand_p (struct gdbarch *gdbarch)
   return gdbarch->stap_is_single_operand != NULL;
 }
 
-int
+bool
 gdbarch_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   gdb_assert (gdbarch != NULL);

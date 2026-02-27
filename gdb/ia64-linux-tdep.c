@@ -124,7 +124,7 @@ ia64_linux_write_pc (struct regcache *regcache, CORE_ADDR pc)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 ia64_linux_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return ((c_isdigit (*s) && s[1] == '[' && s[2] == 'r') /* Displacement.  */

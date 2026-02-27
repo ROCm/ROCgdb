@@ -2244,11 +2244,11 @@ Single operands can be:
 - Register displacement, e.g. `4(%eax)' on x86
 
 This function should check for these patterns on the string
-and return 1 if some were found, or zero otherwise.  Please try to match
+and return true if some were found, or false otherwise.  Please try to match
 as much info as you can from the string, i.e., if you have to match
 something like `(%', do not match just the `('.
 """,
-    type="int",
+    type="bool",
     name="stap_is_single_operand",
     params=[("const char *", "s")],
     predicate=True,

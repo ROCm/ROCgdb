@@ -481,8 +481,8 @@ extern int i386bsd_sc_reg_offset[];
 
 /* SystemTap related functions.  */
 
-extern int i386_stap_is_single_operand (struct gdbarch *gdbarch,
-					const char *s);
+extern bool i386_stap_is_single_operand (struct gdbarch *gdbarch,
+					 const char *s);
 
 extern expr::operation_up i386_stap_parse_special_token
      (struct gdbarch *gdbarch, struct stap_parse_info *p);

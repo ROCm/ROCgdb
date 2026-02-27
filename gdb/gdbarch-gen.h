@@ -1387,14 +1387,14 @@ extern void set_gdbarch_stap_gdb_register_suffix (struct gdbarch *gdbarch, const
    - Register displacement, e.g. `4(%eax)' on x86
 
    This function should check for these patterns on the string
-   and return 1 if some were found, or zero otherwise.  Please try to match
+   and return true if some were found, or false otherwise.  Please try to match
    as much info as you can from the string, i.e., if you have to match
    something like `(%', do not match just the `('. */
 
 extern bool gdbarch_stap_is_single_operand_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_stap_is_single_operand_ftype) (struct gdbarch *gdbarch, const char *s);
-extern int gdbarch_stap_is_single_operand (struct gdbarch *gdbarch, const char *s);
+typedef bool (gdbarch_stap_is_single_operand_ftype) (struct gdbarch *gdbarch, const char *s);
+extern bool gdbarch_stap_is_single_operand (struct gdbarch *gdbarch, const char *s);
 extern void set_gdbarch_stap_is_single_operand (struct gdbarch *gdbarch, gdbarch_stap_is_single_operand_ftype *stap_is_single_operand);
 
 /* Function used to handle a "special case" in the parser.

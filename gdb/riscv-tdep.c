@@ -4178,7 +4178,7 @@ riscv_print_insn (bfd_vma addr, struct disassemble_info *info)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 riscv_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (c_isdigit (*s) /* Literal number.  */

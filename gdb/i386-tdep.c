@@ -3835,7 +3835,7 @@ i386_svr4_sigcontext_addr (const frame_info_ptr &this_frame)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-int
+bool
 i386_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == '$' /* Literal number.  */
