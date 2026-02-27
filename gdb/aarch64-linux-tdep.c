@@ -1764,7 +1764,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
   features.vq = aarch64_linux_core_read_vq_from_sections (gdbarch, abfd);
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
   features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
-  features.mte = hwcap2 & HWCAP2_MTE;
+  features.mte = hwcap2 & AARCH64_HWCAP2_MTE;
   features.fpmr = hwcap2 & AARCH64_HWCAP2_FPMR;
 
   /* Handle the TLS section.  */
@@ -2698,7 +2698,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 
   const char *meaning;
 
-  if (si_code == SEGV_MTEAERR || si_code == SEGV_MTESERR)
+  if (si_code == AARCH64_SEGV_MTEAERR || si_code == AARCH64_SEGV_MTESERR)
     meaning = _("Memory tag violation");
   else if (si_code == SEGV_CPERR && si_errno == 0)
     meaning = _("Guarded Control Stack error");
@@ -2710,7 +2710,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
   uiout->field_string ("sigcode-meaning", meaning);
 
   /* For synchronous faults, show additional information.  */
-  if (si_code == SEGV_MTESERR)
+  if (si_code == AARCH64_SEGV_MTESERR)
     {
       uiout->text (_(" while accessing address "));
       uiout->field_core_addr ("fault-addr", gdbarch, fault_addr);

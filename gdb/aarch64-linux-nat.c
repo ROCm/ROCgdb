@@ -35,6 +35,7 @@
 #include "nat/aarch64-fpmr-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
+#include "nat/aarch64-mte-linux-ptrace.h"
 #include "nat/aarch64-pauth-linux.h"
 #include "nat/aarch64-scalable-linux-ptrace.h"
 
@@ -54,9 +55,6 @@
 #include "arch-utils.h"
 
 #include "arch/aarch64-gcs-linux.h"
-#include "arch/aarch64-mte-linux.h"
-
-#include "nat/aarch64-mte-linux-ptrace.h"
 #include "arch/aarch64-scalable-linux.h"
 
 #include <string.h>

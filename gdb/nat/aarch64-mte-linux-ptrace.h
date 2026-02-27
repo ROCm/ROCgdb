@@ -20,6 +20,14 @@
 #ifndef GDB_NAT_AARCH64_MTE_LINUX_PTRACE_H
 #define GDB_NAT_AARCH64_MTE_LINUX_PTRACE_H
 
+#include <asm/hwcap.h>
+#include <asm/ptrace.h>
+
+/* Feature check for Memory Tagging Extension.  */
+#ifndef HWCAP2_MTE
+#define HWCAP2_MTE  (1 << 18)
+#endif
+
 /* MTE allocation tag access */
 
 #ifndef PTRACE_PEEKMTETAGS
@@ -32,6 +40,15 @@
 
 /* Maximum number of tags to pass at once to the kernel.  */
 #define AARCH64_MTE_TAGS_MAX_SIZE 4096
+
+/* Memory tag types for AArch64.  */
+enum class aarch64_memtag_type
+{
+  /* MTE logical tag contained in pointers.  */
+  mte_logical = 0,
+  /* MTE allocation tag stored in memory tag granules.  */
+  mte_allocation
+};
 
 /* Read the allocation tags from memory range [ADDRESS, ADDRESS + LEN)
    into TAGS.

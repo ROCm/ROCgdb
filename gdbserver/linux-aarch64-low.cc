@@ -959,7 +959,7 @@ aarch64_adjust_register_sets (const struct aarch64_features &features)
 	  break;
 	case NT_ARM_TAGGED_ADDR_CTRL:
 	  if (features.mte)
-	    regset->size = AARCH64_LINUX_SIZEOF_MTE;
+	    regset->size = AARCH64_LINUX_SIZEOF_MTE_REGSET;
 	  break;
 	case NT_ARM_TLS:
 	  if (features.tls > 0)
