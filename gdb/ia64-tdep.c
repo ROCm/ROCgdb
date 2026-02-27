@@ -4005,7 +4005,7 @@ ia64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* The virtual table contains 16-byte descriptors, not pointers to
      descriptors.  */
-  set_gdbarch_vtable_function_descriptors (gdbarch, 1);
+  set_gdbarch_vtable_function_descriptors (gdbarch, true);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);

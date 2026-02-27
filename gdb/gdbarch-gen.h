@@ -1053,10 +1053,10 @@ extern void set_gdbarch_gcore_bfd_target (struct gdbarch *gdbarch, const char * 
 
 /* If the elements of C++ vtables are in-place function descriptors rather
    than normal function pointers (which may point to code or a descriptor),
-   set this to one. */
+   set this to true. */
 
-extern int gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch);
-extern void set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch, int vtable_function_descriptors);
+extern bool gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch);
+extern void set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch, bool vtable_function_descriptors);
 
 /* Set if the least significant bit of the delta is used instead of the least
    significant bit of the pfn for pointers to virtual member functions. */

@@ -182,7 +182,7 @@ struct gdbarch
   gdbarch_core_xfer_siginfo_ftype *core_xfer_siginfo = nullptr;
   gdbarch_core_read_x86_xsave_layout_ftype *core_read_x86_xsave_layout = nullptr;
   const char * gcore_bfd_target = 0;
-  int vtable_function_descriptors = 0;
+  bool vtable_function_descriptors = false;
   int vbit_in_delta = 0;
   ULONGEST max_insn_length = 0;
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn = nullptr;
@@ -3917,7 +3917,7 @@ set_gdbarch_gcore_bfd_target (struct gdbarch *gdbarch,
   gdbarch->gcore_bfd_target = gcore_bfd_target;
 }
 
-int
+bool
 gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3929,7 +3929,7 @@ gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch,
-					 int vtable_function_descriptors)
+					 bool vtable_function_descriptors)
 {
   gdbarch->vtable_function_descriptors = vtable_function_descriptors;
 }

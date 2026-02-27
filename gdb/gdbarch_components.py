@@ -1779,11 +1779,11 @@ Value(
     comment="""
 If the elements of C++ vtables are in-place function descriptors rather
 than normal function pointers (which may point to code or a descriptor),
-set this to one.
+set this to true.
 """,
-    type="int",
+    type="bool",
     name="vtable_function_descriptors",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 
