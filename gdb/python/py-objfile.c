@@ -198,36 +198,36 @@ objfpy_dealloc (PyObject *o)
 /* Initialize an objfile_object.
    The result is a boolean indicating success.  */
 
-static int
-objfpy_initialize (objfile_object *self)
+static bool
+objfpy_initialize (gdbpy_ref<objfile_object> &self)
 {
   self->objfile = NULL;
 
   self->dict = PyDict_New ();
   if (self->dict == NULL)
-    return 0;
+    return false;
 
   self->printers = PyList_New (0);
   if (self->printers == NULL)
-    return 0;
+    return false;
 
   self->frame_filters = PyDict_New ();
   if (self->frame_filters == NULL)
-    return 0;
+    return false;
 
   self->frame_unwinders = PyList_New (0);
   if (self->frame_unwinders == NULL)
-    return 0;
+    return false;
 
   self->type_printers = PyList_New (0);
   if (self->type_printers == NULL)
-    return 0;
+    return false;
 
   self->xmethods = PyList_New (0);
   if (self->xmethods == NULL)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 static PyObject *
@@ -235,11 +235,8 @@ objfpy_new (PyTypeObject *type, PyObject *args, PyObject *keywords)
 {
   gdbpy_ref<objfile_object> self ((objfile_object *) type->tp_alloc (type, 0));
 
-  if (self != NULL)
-    {
-      if (!objfpy_initialize (self.get ()))
-	return NULL;
-    }
+  if (self != nullptr && !objfpy_initialize (self))
+    return nullptr;
 
   return (PyObject *) self.release ();
 }
@@ -682,7 +679,7 @@ objfile_to_objfile_object (struct objfile *objfile)
 	((objfile_object *) PyObject_New (objfile_object, &objfile_object_type));
       if (object == NULL)
 	return NULL;
-      if (!objfpy_initialize (object.get ()))
+      if (!objfpy_initialize (object))
 	return NULL;
 
       object->objfile = objfile;
