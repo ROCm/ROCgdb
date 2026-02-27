@@ -232,7 +232,7 @@ trace_input_func (SIM_DESC sd, const char *name, enum op_types in1, enum op_type
 		}
 	      else if (filename)
 		{
-		  char *q = strrchr (filename, '/');
+		  const char *q = strrchr (filename, '/');
 		  sprintf (p, "%s ", (q) ? q+1 : filename);
 		  p += strlen (p);
 		}
