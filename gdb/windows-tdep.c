@@ -947,7 +947,7 @@ windows_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Canonical paths on this target look like
      `c:\Program Files\Foo App\mydll.dll', for example.  */
-  set_gdbarch_has_dos_based_file_system (gdbarch, 1);
+  set_gdbarch_has_dos_based_file_system (gdbarch, true);
 
   set_gdbarch_make_solib_ops (gdbarch, make_windows_solib_ops);
 

@@ -226,7 +226,7 @@ struct gdbarch
   gdbarch_fast_tracepoint_valid_at_ftype *fast_tracepoint_valid_at = default_fast_tracepoint_valid_at;
   gdbarch_guess_tracepoint_registers_ftype *guess_tracepoint_registers = default_guess_tracepoint_registers;
   gdbarch_auto_wide_charset_ftype *auto_wide_charset = default_auto_wide_charset;
-  int has_dos_based_file_system = 0;
+  bool has_dos_based_file_system = false;
   gdbarch_gen_return_address_ftype *gen_return_address = default_gen_return_address;
   gdbarch_info_proc_ftype *info_proc = nullptr;
   gdbarch_core_info_proc_ftype *core_info_proc = nullptr;
@@ -4800,7 +4800,7 @@ set_gdbarch_auto_wide_charset (struct gdbarch *gdbarch,
   gdbarch->auto_wide_charset = auto_wide_charset;
 }
 
-int
+bool
 gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -4812,7 +4812,7 @@ gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch,
-				       int has_dos_based_file_system)
+				       bool has_dos_based_file_system)
 {
   gdbarch->has_dos_based_file_system = has_dos_based_file_system;
 }

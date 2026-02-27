@@ -1538,8 +1538,8 @@ extern void set_gdbarch_auto_wide_charset (struct gdbarch *gdbarch, gdbarch_auto
    is, absolute paths include a drive name, and the backslash is
    considered a directory separator. */
 
-extern int gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch);
-extern void set_gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch, int has_dos_based_file_system);
+extern bool gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch);
+extern void set_gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch, bool has_dos_based_file_system);
 
 /* Generate bytecodes to collect the return address in a frame.
    Since the bytecodes run on the target, possibly with GDB not even

@@ -2443,9 +2443,9 @@ If true, the target OS has DOS-based file system semantics.  That
 is, absolute paths include a drive name, and the backslash is
 considered a directory separator.
 """,
-    type="int",
+    type="bool",
     name="has_dos_based_file_system",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 

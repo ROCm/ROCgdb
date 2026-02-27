@@ -36,7 +36,7 @@ i386_go32_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   if (!tdesc_has_registers (info.target_desc))
     tdep->tdesc = i386_target_description (X86_XSTATE_X87_MASK, false);
 
-  set_gdbarch_has_dos_based_file_system (gdbarch, 1);
+  set_gdbarch_has_dos_based_file_system (gdbarch, true);
 
   set_gdbarch_wchar_bit (gdbarch, 16);
   set_gdbarch_wchar_signed (gdbarch, false);
