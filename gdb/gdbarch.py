@@ -191,7 +191,7 @@ with open("gdbarch-gen.c", "w") as f:
     print("  /* fundamental */", file=f)
     print("  if (gdbarch->byte_order == BFD_ENDIAN_UNKNOWN)", file=f)
     print("""    log.puts ("\\n\\tbyte-order");""", file=f)
-    print("  if (gdbarch->bfd_arch_info == NULL)", file=f)
+    print("  if (gdbarch->bfd_arch_info == nullptr)", file=f)
     print("""    log.puts ("\\n\\tbfd_arch_info");""", file=f)
     print(
         "  /* Check those that need to be defined for the given multi-arch level.  */",
@@ -275,7 +275,7 @@ with open("gdbarch-gen.c", "w") as f:
             print("  gdb_printf (file,", file=f)
             print(f"""	      "gdbarch_dump: {c.name} = %s\\n",""", file=f)
             print(f"	      {printer});", file=f)
-    print("  if (gdbarch->dump_tdep != NULL)", file=f)
+    print("  if (gdbarch->dump_tdep != nullptr)", file=f)
     print("    gdbarch->dump_tdep (gdbarch, file);", file=f)
     print("}", file=f)
     print(file=f)
@@ -288,7 +288,7 @@ with open("gdbarch-gen.c", "w") as f:
             print("bool", file=f)
             print(f"gdbarch_{c.name}_p (struct gdbarch *gdbarch)", file=f)
             print("{", file=f)
-            print("  gdb_assert (gdbarch != NULL);", file=f)
+            print("  gdb_assert (gdbarch != nullptr);", file=f)
             print(f"  return {c.get_predicate()};", file=f)
             print("}", file=f)
         if isinstance(c, Function):
@@ -297,8 +297,8 @@ with open("gdbarch-gen.c", "w") as f:
                 print(f"{c.type}", file=f)
                 print(f"gdbarch_{c.name} ({c.set_list()})", file=f)
                 print("{", file=f)
-                print("  gdb_assert (gdbarch != NULL);", file=f)
-                print(f"  gdb_assert (gdbarch->{c.name} != NULL);", file=f)
+                print("  gdb_assert (gdbarch != nullptr);", file=f)
+                print(f"  gdb_assert (gdbarch->{c.name} != nullptr);", file=f)
                 if c.predicate and c.predefault:
                     # Allow a call to a function with a predicate.
                     print(
@@ -340,7 +340,7 @@ with open("gdbarch-gen.c", "w") as f:
             print(f"{c.type}", file=f)
             print(f"gdbarch_{c.name} (struct gdbarch *gdbarch)", file=f)
             print("{", file=f)
-            print("  gdb_assert (gdbarch != NULL);", file=f)
+            print("  gdb_assert (gdbarch != nullptr);", file=f)
             if isinstance(c.invalid, str):
                 print("  /* Check variable is valid.  */", file=f)
                 print(f"  gdb_assert (!({c.invalid}));", file=f)
@@ -374,7 +374,7 @@ with open("gdbarch-gen.c", "w") as f:
             print(f"{c.type}", file=f)
             print(f"gdbarch_{c.name} (struct gdbarch *gdbarch)", file=f)
             print("{", file=f)
-            print("  gdb_assert (gdbarch != NULL);", file=f)
+            print("  gdb_assert (gdbarch != nullptr);", file=f)
             print("  if (gdbarch_debug >= 2)", file=f)
             print(
                 f"""    gdb_printf (gdb_stdlog, "gdbarch_{c.name} called\\n");""",
