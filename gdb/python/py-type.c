@@ -1699,9 +1699,8 @@ PyTypeObject type_object_type =
 
 static gdb_PyGetSetDef field_object_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict_getter, NULL,
-    "The __dict__ for this field.", NULL },
-  { NULL }
+  gdbpy_dict_wrapper_cfg_dict_getter ("field"),
+  { nullptr }
 };
 
 PyTypeObject field_object_type =
@@ -1722,8 +1721,7 @@ PyTypeObject field_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  gdb_py_generic_getattro,	  /*tp_getattro*/
-  gdb_py_generic_setattro,	  /*tp_setattro*/
+  gdbpy_dict_wrapper_getsetattro,
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB field object",		  /* tp_doc */

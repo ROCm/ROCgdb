@@ -50,8 +50,7 @@ template<typename T = PyObject> using gdbpy_ref
    Access to the dict requires a custom getter defined via PyGetSetDef.
      gdb_PyGetSetDef my_object_getset[] =
      {
-       { "__dict__", gdb_py_generic_dict_getter, nullptr,
-	 "The __dict__ for this object.", nullptr },
+       gdbpy_dict_wrapper_cfg_dict_getter ("object"),
        ...
        { nullptr }
      };
@@ -77,6 +76,21 @@ struct gdbpy_dict_wrapper : public PyObject
     auto *wrapper = reinterpret_cast<gdbpy_dict_wrapper *> (self);
     return &wrapper->dict;
   }
+
+#define gdbpy_dict_wrapper_cfg_dict_getter(object_name)	\
+  {							\
+    "__dict__", /* name */				\
+    (getter) gdb_py_generic_dict_getter,		\
+    (setter) nullptr,					\
+    "The __dict__ for this " object_name ".", /* doc */	\
+    nullptr, /* closure */				\
+  }
+
+#define gdbpy_dict_wrapper_getsetattro	\
+  /*tp_getattro*/			\
+  gdb_py_generic_getattro,		\
+  /*tp_setattro*/			\
+  gdb_py_generic_setattro
 
   /* Allocate the dictionary pointed by 'dict'.
      Note: this method should be called once the object was allocated,
