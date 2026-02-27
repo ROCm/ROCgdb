@@ -1346,7 +1346,7 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				       h8300_breakpoint::bp_from_kind);
   set_gdbarch_push_dummy_call (gdbarch, h8300_push_dummy_call);
 
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
   set_gdbarch_int_bit (gdbarch, 2 * TARGET_CHAR_BIT);
   set_gdbarch_long_bit (gdbarch, 4 * TARGET_CHAR_BIT);
   set_gdbarch_long_long_bit (gdbarch, 8 * TARGET_CHAR_BIT);

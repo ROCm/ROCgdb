@@ -68,7 +68,7 @@ struct gdbarch
   int ptr_bit = 4*TARGET_CHAR_BIT;
   int addr_bit = 0;
   int dwarf2_addr_size = 0;
-  int char_signed = -1;
+  bool char_signed = true;
   gdbarch_read_pc_ftype *read_pc = nullptr;
   gdbarch_write_pc_ftype *write_pc = nullptr;
   gdbarch_virtual_frame_pointer_ftype *virtual_frame_pointer = legacy_virtual_frame_pointer;
@@ -316,8 +316,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if (gdbarch->dwarf2_addr_size == 0)
     gdbarch->dwarf2_addr_size = gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT;
   /* Skip verify of dwarf2_addr_size, invalid_p == 0.  */
-  if (gdbarch->char_signed == -1)
-    gdbarch->char_signed = 1;
   /* Skip verify of char_signed, invalid_p == 0.  */
   /* Skip verify of read_pc, has predicate.  */
   /* Skip verify of write_pc, has predicate.  */
@@ -1733,12 +1731,11 @@ set_gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch,
   gdbarch->dwarf2_addr_size = dwarf2_addr_size;
 }
 
-int
+bool
 gdbarch_char_signed (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  /* Check variable changed from its initial value.  */
-  gdb_assert (gdbarch->char_signed != -1);
+  /* Skip verify of char_signed, invalid_p == 0.  */
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_char_signed called\n");
   return gdbarch->char_signed;
@@ -1746,7 +1743,7 @@ gdbarch_char_signed (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_char_signed (struct gdbarch *gdbarch,
-			 int char_signed)
+			 bool char_signed)
 {
   gdbarch->char_signed = char_signed;
 }

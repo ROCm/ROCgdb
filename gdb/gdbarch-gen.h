@@ -160,10 +160,12 @@ extern void set_gdbarch_addr_bit (struct gdbarch *gdbarch, int addr_bit);
 extern int gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch);
 extern void set_gdbarch_dwarf2_addr_size (struct gdbarch *gdbarch, int dwarf2_addr_size);
 
-/* One if `char' acts like `signed char', zero if `unsigned char'. */
+/* True if `char' acts like `signed char', false if `unsigned char'.
 
-extern int gdbarch_char_signed (struct gdbarch *gdbarch);
-extern void set_gdbarch_char_signed (struct gdbarch *gdbarch, int char_signed);
+   The default value is true (signed). */
+
+extern bool gdbarch_char_signed (struct gdbarch *gdbarch);
+extern void set_gdbarch_char_signed (struct gdbarch *gdbarch, bool char_signed);
 
 extern bool gdbarch_read_pc_p (struct gdbarch *gdbarch);
 

@@ -1480,7 +1480,7 @@ m68hc11_gdbarch_init (struct gdbarch_info info,
   set_gdbarch_long_long_bit (gdbarch, 64);
 
   /* Characters are unsigned.  */
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
 
   /* Set register info.  */
   set_gdbarch_fp0_regnum (gdbarch, -1);

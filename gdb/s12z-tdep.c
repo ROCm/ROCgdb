@@ -630,7 +630,7 @@ s12z_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_long_bit (gdbarch, 32);
   set_gdbarch_ptr_bit (gdbarch, 24);
   set_gdbarch_addr_bit (gdbarch, 24);
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
 
   set_gdbarch_ps_regnum (gdbarch, REG_CCW);
   set_gdbarch_pc_regnum (gdbarch, REG_P);

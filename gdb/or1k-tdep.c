@@ -1175,7 +1175,6 @@ or1k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
   set_gdbarch_ptr_bit (gdbarch, binfo->bits_per_address);
   set_gdbarch_addr_bit (gdbarch, binfo->bits_per_address);
-  set_gdbarch_char_signed (gdbarch, 1);
 
   /* Information about the target architecture */
   set_gdbarch_return_value (gdbarch, or1k_return_value);

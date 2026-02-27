@@ -7271,7 +7271,7 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdesc_arch_data_up tdesc_data = tdesc_data_alloc ();
   info.tdesc_data = tdesc_data.get ();
 
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
 
   /* S/390 GNU/Linux uses either 64-bit or 128-bit long doubles.
      We can safely let them default to 128-bit, since the debug info

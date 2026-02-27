@@ -363,12 +363,13 @@ and if Dwarf versions < 4 need to be supported.
 
 Value(
     comment="""
-One if `char' acts like `signed char', zero if `unsigned char'.
+True if `char' acts like `signed char', false if `unsigned char'.
+
+The default value is true (signed).
 """,
-    type="int",
+    type="bool",
     name="char_signed",
-    predefault="-1",
-    postdefault="1",
+    predefault="true",
     invalid=False,
 )
 
