@@ -4899,7 +4899,7 @@ set_gdbarch_ravenscar_ops (struct gdbarch *gdbarch,
   gdbarch->ravenscar_ops = ravenscar_ops;
 }
 
-int
+bool
 gdbarch_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_assert (gdbarch != NULL);
@@ -4916,7 +4916,7 @@ set_gdbarch_insn_is_call (struct gdbarch *gdbarch,
   gdbarch->insn_is_call = insn_is_call;
 }
 
-int
+bool
 gdbarch_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_assert (gdbarch != NULL);
@@ -4933,7 +4933,7 @@ set_gdbarch_insn_is_ret (struct gdbarch *gdbarch,
   gdbarch->insn_is_ret = insn_is_ret;
 }
 
-int
+bool
 gdbarch_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_assert (gdbarch != NULL);

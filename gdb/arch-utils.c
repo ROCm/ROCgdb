@@ -903,19 +903,22 @@ default_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
   return !(language_pass_by_reference (type).trivially_copyable);
 }
 
-int default_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
-int default_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
-int default_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
 /*  See arch-utils.h.  */

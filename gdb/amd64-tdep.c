@@ -1148,9 +1148,9 @@ static const unsigned char twobyte_has_modrm[256] = {
   /*	   0 1 2 3 4 5 6 7 8 9 a b c d e f	  */
 };
 
-static int amd64_syscall_p (const struct amd64_insn *insn, int *lengthp);
+static bool amd64_syscall_p (const struct amd64_insn *insn, int *lengthp);
 
-static int
+static bool
 rex_prefix_p (gdb_byte pfx)
 {
   return REX_PREFIX_P (pfx);
@@ -1673,7 +1673,7 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
   return displaced_step_copy_insn_closure_up (dsc.release ());
 }
 
-static int
+static bool
 amd64_absolute_jmp_p (const struct amd64_insn *details)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
@@ -1682,35 +1682,35 @@ amd64_absolute_jmp_p (const struct amd64_insn *details)
     {
       /* jump near, absolute indirect (/4) */
       if ((insn[1] & 0x38) == 0x20)
-	return 1;
+	return true;
 
       /* jump far, absolute indirect (/5) */
       if ((insn[1] & 0x38) == 0x28)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if the instruction DETAILS is a jump, zero otherwise.  */
+/* Return true if the instruction DETAILS is a jump, false otherwise.  */
 
-static int
+static bool
 amd64_jmp_p (const struct amd64_insn *details)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
 
   /* jump short, relative.  */
   if (insn[0] == 0xeb)
-    return 1;
+    return true;
 
   /* jump near, relative.  */
   if (insn[0] == 0xe9)
-    return 1;
+    return true;
 
   return amd64_absolute_jmp_p (details);
 }
 
-static int
+static bool
 amd64_absolute_call_p (const struct amd64_insn *details)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
@@ -1719,17 +1719,17 @@ amd64_absolute_call_p (const struct amd64_insn *details)
     {
       /* Call near, absolute indirect (/2) */
       if ((insn[1] & 0x38) == 0x10)
-	return 1;
+	return true;
 
       /* Call far, absolute indirect (/3) */
       if ((insn[1] & 0x38) == 0x18)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-static int
+static bool
 amd64_ret_p (const struct amd64_insn *details)
 {
   /* NOTE: gcc can emit "repz ; ret".  */
@@ -1742,32 +1742,32 @@ amd64_ret_p (const struct amd64_insn *details)
     case 0xca: /* ret far, pop N bytes */
     case 0xcb: /* ret far */
     case 0xcf: /* iret */
-      return 1;
+      return true;
 
     default:
-      return 0;
+      return false;
     }
 }
 
-static int
+static bool
 amd64_call_p (const struct amd64_insn *details)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
 
   if (amd64_absolute_call_p (details))
-    return 1;
+    return true;
 
   /* call near, relative */
   if (insn[0] == 0xe8)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if INSN is a system call, and set *LENGTHP to its
-   length in bytes.  Otherwise, return zero.  */
+/* Return true if INSN is a system call, and set *LENGTHP to its
+   length in bytes.  Otherwise, return false.  */
 
-static int
+static bool
 amd64_syscall_p (const struct amd64_insn *details, int *lengthp)
 {
   const gdb_byte *insn = &details->raw_insn[details->opcode_offset];
@@ -1775,18 +1775,18 @@ amd64_syscall_p (const struct amd64_insn *details, int *lengthp)
   if (insn[0] == 0x0f && insn[1] == 0x05)
     {
       *lengthp = 2;
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Classify the instruction at ADDR using PRED.
    Throw an error if the memory can't be read.  */
 
-static int
+static bool
 amd64_classify_insn_at (struct gdbarch *gdbarch, CORE_ADDR addr,
-			int (*pred) (const struct amd64_insn *))
+			bool (*pred) (const struct amd64_insn *))
 {
   struct amd64_insn details;
 
@@ -1795,14 +1795,12 @@ amd64_classify_insn_at (struct gdbarch *gdbarch, CORE_ADDR addr,
   read_code (addr, buf.data (), buf.size ());
   amd64_get_insn_details (buf.data (), &details);
 
-  int classification = pred (&details);
-
-  return classification;
+  return pred (&details);
 }
 
 /* The gdbarch insn_is_call method.  */
 
-static int
+static bool
 amd64_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   return amd64_classify_insn_at (gdbarch, addr, amd64_call_p);
@@ -1810,7 +1808,7 @@ amd64_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_ret method.  */
 
-static int
+static bool
 amd64_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   return amd64_classify_insn_at (gdbarch, addr, amd64_ret_p);
@@ -1818,7 +1816,7 @@ amd64_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_jump method.  */
 
-static int
+static bool
 amd64_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   return amd64_classify_insn_at (gdbarch, addr, amd64_jmp_p);

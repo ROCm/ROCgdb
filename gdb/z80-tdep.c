@@ -1000,8 +1000,8 @@ z80_overlay_update (struct obj_section *osect)
       }
 }
 
-/* Return non-zero if the instruction at ADDR is a call; zero otherwise.  */
-static int
+/* Return true if the instruction at ADDR is a call; false otherwise.  */
+static bool
 z80_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
@@ -1015,13 +1015,13 @@ z80_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
       case insn_call_nn:
       case insn_call_cc_nn:
       case insn_rst_n:
-	return 1;
+	return true;
       }
-  return 0;
+  return false;
 }
 
-/* Return non-zero if the instruction at ADDR is a return; zero otherwise. */
-static int
+/* Return true if the instruction at ADDR is a return; false otherwise. */
+static bool
 z80_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
@@ -1034,13 +1034,13 @@ z80_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
       {
       case insn_ret:
       case insn_ret_cc:
-	return 1;
+	return true;
       }
-  return 0;
+  return false;
 }
 
-/* Return non-zero if the instruction at ADDR is a jump; zero otherwise.  */
-static int
+/* Return true if the instruction at ADDR is a jump; false otherwise.  */
+static bool
 z80_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[8];
@@ -1057,9 +1057,9 @@ z80_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
       case insn_jr_d:
       case insn_jr_cc_d:
       case insn_djnz_d:
-	return 1;
+	return true;
       }
-  return 0;
+  return false;
 }
 
 static const struct frame_unwind_legacy z80_frame_unwind (

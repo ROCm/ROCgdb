@@ -1574,22 +1574,22 @@ extern void set_gdbarch_core_info_proc (struct gdbarch *gdbarch, gdbarch_core_in
 extern struct ravenscar_arch_ops * gdbarch_ravenscar_ops (struct gdbarch *gdbarch);
 extern void set_gdbarch_ravenscar_ops (struct gdbarch *gdbarch, struct ravenscar_arch_ops * ravenscar_ops);
 
-/* Return non-zero if the instruction at ADDR is a call; zero otherwise. */
+/* Return true if the instruction at ADDR is a call; false otherwise. */
 
-typedef int (gdbarch_insn_is_call_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
-extern int gdbarch_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr);
+typedef bool (gdbarch_insn_is_call_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
+extern bool gdbarch_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr);
 extern void set_gdbarch_insn_is_call (struct gdbarch *gdbarch, gdbarch_insn_is_call_ftype *insn_is_call);
 
-/* Return non-zero if the instruction at ADDR is a return; zero otherwise. */
+/* Return true if the instruction at ADDR is a return; false otherwise. */
 
-typedef int (gdbarch_insn_is_ret_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
-extern int gdbarch_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr);
+typedef bool (gdbarch_insn_is_ret_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
+extern bool gdbarch_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr);
 extern void set_gdbarch_insn_is_ret (struct gdbarch *gdbarch, gdbarch_insn_is_ret_ftype *insn_is_ret);
 
-/* Return non-zero if the instruction at ADDR is a jump; zero otherwise. */
+/* Return true if the instruction at ADDR is a jump; false otherwise. */
 
-typedef int (gdbarch_insn_is_jump_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
-extern int gdbarch_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr);
+typedef bool (gdbarch_insn_is_jump_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
+extern bool gdbarch_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr);
 extern void set_gdbarch_insn_is_jump (struct gdbarch *gdbarch, gdbarch_insn_is_jump_ftype *insn_is_jump);
 
 /* Return true if there's a program/permanent breakpoint planted in

@@ -2507,9 +2507,9 @@ Ravenscar arch-dependent ops.
 
 Method(
     comment="""
-Return non-zero if the instruction at ADDR is a call; zero otherwise.
+Return true if the instruction at ADDR is a call; false otherwise.
 """,
-    type="int",
+    type="bool",
     name="insn_is_call",
     params=[("CORE_ADDR", "addr")],
     predefault="default_insn_is_call",
@@ -2518,9 +2518,9 @@ Return non-zero if the instruction at ADDR is a call; zero otherwise.
 
 Method(
     comment="""
-Return non-zero if the instruction at ADDR is a return; zero otherwise.
+Return true if the instruction at ADDR is a return; false otherwise.
 """,
-    type="int",
+    type="bool",
     name="insn_is_ret",
     params=[("CORE_ADDR", "addr")],
     predefault="default_insn_is_ret",
@@ -2529,9 +2529,9 @@ Return non-zero if the instruction at ADDR is a return; zero otherwise.
 
 Method(
     comment="""
-Return non-zero if the instruction at ADDR is a jump; zero otherwise.
+Return true if the instruction at ADDR is a jump; false otherwise.
 """,
-    type="int",
+    type="bool",
     name="insn_is_jump",
     params=[("CORE_ADDR", "addr")],
     predefault="default_insn_is_jump",

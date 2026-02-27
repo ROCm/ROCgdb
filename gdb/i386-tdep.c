@@ -556,65 +556,65 @@ i386_skip_prefixes (gdb_byte *insn, size_t max_len)
   return NULL;
 }
 
-static int
+static bool
 i386_absolute_jmp_p (const gdb_byte *insn)
 {
   /* jmp far (absolute address in operand).  */
   if (insn[0] == 0xea)
-    return 1;
+    return true;
 
   if (insn[0] == 0xff)
     {
       /* jump near, absolute indirect (/4).  */
       if ((insn[1] & 0x38) == 0x20)
-	return 1;
+	return true;
 
       /* jump far, absolute indirect (/5).  */
       if ((insn[1] & 0x38) == 0x28)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if INSN is a jump, zero otherwise.  */
+/* Return true if INSN is a jump, false otherwise.  */
 
-static int
+static bool
 i386_jmp_p (const gdb_byte *insn)
 {
   /* jump short, relative.  */
   if (insn[0] == 0xeb)
-    return 1;
+    return true;
 
   /* jump near, relative.  */
   if (insn[0] == 0xe9)
-    return 1;
+    return true;
 
   return i386_absolute_jmp_p (insn);
 }
 
-static int
+static bool
 i386_absolute_call_p (const gdb_byte *insn)
 {
   /* call far, absolute.  */
   if (insn[0] == 0x9a)
-    return 1;
+    return true;
 
   if (insn[0] == 0xff)
     {
       /* Call near, absolute indirect (/2).  */
       if ((insn[1] & 0x38) == 0x10)
-	return 1;
+	return true;
 
       /* Call far, absolute indirect (/3).  */
       if ((insn[1] & 0x38) == 0x18)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-static int
+static bool
 i386_ret_p (const gdb_byte *insn)
 {
   switch (insn[0])
@@ -624,30 +624,30 @@ i386_ret_p (const gdb_byte *insn)
     case 0xca: /* ret far, pop N bytes.  */
     case 0xcb: /* ret far */
     case 0xcf: /* iret */
-      return 1;
+      return true;
 
     default:
-      return 0;
+      return false;
     }
 }
 
-static int
+static bool
 i386_call_p (const gdb_byte *insn)
 {
   if (i386_absolute_call_p (insn))
-    return 1;
+    return true;
 
   /* call near, relative.  */
   if (insn[0] == 0xe8)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if INSN is a system call, and set *LENGTHP to its
-   length in bytes.  Otherwise, return zero.  */
+/* Return true if INSN is a system call, and set *LENGTHP to its
+   length in bytes.  Otherwise, return false.  */
 
-static int
+static bool
 i386_syscall_p (const gdb_byte *insn, int *lengthp)
 {
   /* Is it 'int $0x80'?  */
@@ -658,15 +658,15 @@ i386_syscall_p (const gdb_byte *insn, int *lengthp)
       || (insn[0] == 0x0f && insn[1] == 0x05))
     {
       *lengthp = 2;
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* The gdbarch insn_is_call method.  */
 
-static int
+static bool
 i386_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;
@@ -679,7 +679,7 @@ i386_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_ret method.  */
 
-static int
+static bool
 i386_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;
@@ -692,7 +692,7 @@ i386_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_jump method.  */
 
-static int
+static bool
 i386_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;

@@ -324,9 +324,9 @@ extern const char *default_auto_wide_charset (void);
 extern bool default_return_in_first_hidden_param_p (struct gdbarch *,
 						    struct type *);
 
-extern int default_insn_is_call (struct gdbarch *, CORE_ADDR);
-extern int default_insn_is_ret (struct gdbarch *, CORE_ADDR);
-extern int default_insn_is_jump (struct gdbarch *, CORE_ADDR);
+extern bool default_insn_is_call (struct gdbarch *, CORE_ADDR);
+extern bool default_insn_is_ret (struct gdbarch *, CORE_ADDR);
+extern bool default_insn_is_jump (struct gdbarch *, CORE_ADDR);
 
 /* Default implementation of gdbarch_program_breakpoint_here_p.  */
 extern bool default_program_breakpoint_here_p (struct gdbarch *gdbarch,
