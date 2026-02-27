@@ -115,7 +115,7 @@ with open("gdbarch-gen.h", "w") as f:
         else:
             assert isinstance(c, Function)
             print(
-                f"typedef {c.type}{maybe_space(c)}({c.ftype()}) ({c.param_list()});",
+                f"using {c.ftype()} = {c.type}{maybe_space(c)}({c.param_list()});",
                 file=f,
             )
             if c.implement:
