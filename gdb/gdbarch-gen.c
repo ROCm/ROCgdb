@@ -4633,7 +4633,7 @@ gdbarch_dtrace_probe_is_enabled_p (struct gdbarch *gdbarch)
   return gdbarch->dtrace_probe_is_enabled != NULL;
 }
 
-int
+bool
 gdbarch_dtrace_probe_is_enabled (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_assert (gdbarch != NULL);

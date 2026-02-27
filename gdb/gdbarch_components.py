@@ -2337,7 +2337,7 @@ Method(
 True if the given ADDR does not contain the instruction sequence
 corresponding to a disabled DTrace is-enabled probe.
 """,
-    type="int",
+    type="bool",
     name="dtrace_probe_is_enabled",
     params=[("CORE_ADDR", "addr")],
     predicate=True,

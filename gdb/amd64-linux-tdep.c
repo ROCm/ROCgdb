@@ -1741,7 +1741,7 @@ const gdb_byte amd64_dtrace_disable_probe_sequence[] = {
 /* Implementation of `gdbarch_dtrace_probe_is_enabled', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 amd64_dtrace_probe_is_enabled (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[5];

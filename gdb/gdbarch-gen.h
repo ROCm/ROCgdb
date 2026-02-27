@@ -1470,8 +1470,8 @@ extern void set_gdbarch_dtrace_parse_probe_argument (struct gdbarch *gdbarch, gd
 
 extern bool gdbarch_dtrace_probe_is_enabled_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_dtrace_probe_is_enabled_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
-extern int gdbarch_dtrace_probe_is_enabled (struct gdbarch *gdbarch, CORE_ADDR addr);
+typedef bool (gdbarch_dtrace_probe_is_enabled_ftype) (struct gdbarch *gdbarch, CORE_ADDR addr);
+extern bool gdbarch_dtrace_probe_is_enabled (struct gdbarch *gdbarch, CORE_ADDR addr);
 extern void set_gdbarch_dtrace_probe_is_enabled (struct gdbarch *gdbarch, gdbarch_dtrace_probe_is_enabled_ftype *dtrace_probe_is_enabled);
 
 /* Enable a DTrace is-enabled probe at ADDR. */
