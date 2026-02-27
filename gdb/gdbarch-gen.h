@@ -887,8 +887,8 @@ typedef CORE_ADDR (gdbarch_adjust_dwarf2_line_ftype) (CORE_ADDR addr, int rel);
 extern CORE_ADDR gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, CORE_ADDR addr, int rel);
 extern void set_gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, gdbarch_adjust_dwarf2_line_ftype *adjust_dwarf2_line);
 
-extern int gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch);
-extern void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, int cannot_step_breakpoint);
+extern bool gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch);
+extern void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, bool cannot_step_breakpoint);
 
 /* See comment in target.h about continuable, steppable and
    non-steppable watchpoints. */

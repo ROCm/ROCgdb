@@ -1791,7 +1791,7 @@ alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       alpha_breakpoint::bp_from_kind);
   set_gdbarch_decr_pc_after_break (gdbarch, ALPHA_INSN_SIZE);
-  set_gdbarch_cannot_step_breakpoint (gdbarch, 1);
+  set_gdbarch_cannot_step_breakpoint (gdbarch, true);
 
   /* Handles single stepping of atomic sequences.  */
   set_gdbarch_get_next_pcs (gdbarch, alpha_software_single_step);

@@ -1526,9 +1526,9 @@ stop PC.
 )
 
 Value(
-    type="int",
+    type="bool",
     name="cannot_step_breakpoint",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 

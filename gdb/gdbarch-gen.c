@@ -161,7 +161,7 @@ struct gdbarch
   gdbarch_make_symbol_special_ftype *make_symbol_special = default_make_symbol_special;
   gdbarch_adjust_dwarf2_addr_ftype *adjust_dwarf2_addr = default_adjust_dwarf2_addr;
   gdbarch_adjust_dwarf2_line_ftype *adjust_dwarf2_line = default_adjust_dwarf2_line;
-  int cannot_step_breakpoint = 0;
+  bool cannot_step_breakpoint = false;
   int have_nonsteppable_watchpoint = 0;
   gdbarch_address_class_type_flags_ftype *address_class_type_flags = nullptr;
   gdbarch_address_class_type_flags_to_name_ftype *address_class_type_flags_to_name = nullptr;
@@ -3461,7 +3461,7 @@ set_gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch,
   gdbarch->adjust_dwarf2_line = adjust_dwarf2_line;
 }
 
-int
+bool
 gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3473,7 +3473,7 @@ gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch,
-				    int cannot_step_breakpoint)
+				    bool cannot_step_breakpoint)
 {
   gdbarch->cannot_step_breakpoint = cannot_step_breakpoint;
 }

@@ -2326,7 +2326,7 @@ arc_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_print_insn (gdbarch, arc_delayed_print_insn);
 
-  set_gdbarch_cannot_step_breakpoint (gdbarch, 1);
+  set_gdbarch_cannot_step_breakpoint (gdbarch, true);
 
   /* "nonsteppable" watchpoint means that watchpoint triggers before
      instruction is committed, therefore it is required to remove watchpoint
