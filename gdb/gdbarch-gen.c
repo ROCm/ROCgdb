@@ -220,8 +220,8 @@ struct gdbarch
   gdbarch_dtrace_probe_is_enabled_ftype *dtrace_probe_is_enabled = nullptr;
   gdbarch_dtrace_enable_probe_ftype *dtrace_enable_probe = nullptr;
   gdbarch_dtrace_disable_probe_ftype *dtrace_disable_probe = nullptr;
-  int has_global_solist = 0;
-  int has_global_breakpoints = 0;
+  bool has_global_solist = false;
+  bool has_global_breakpoints = false;
   gdbarch_has_shared_address_space_ftype *has_shared_address_space = default_has_shared_address_space;
   gdbarch_fast_tracepoint_valid_at_ftype *fast_tracepoint_valid_at = default_fast_tracepoint_valid_at;
   gdbarch_guess_tracepoint_registers_ftype *guess_tracepoint_registers = default_guess_tracepoint_registers;
@@ -4698,7 +4698,7 @@ set_gdbarch_dtrace_disable_probe (struct gdbarch *gdbarch,
   gdbarch->dtrace_disable_probe = dtrace_disable_probe;
 }
 
-int
+bool
 gdbarch_has_global_solist (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -4710,12 +4710,12 @@ gdbarch_has_global_solist (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_has_global_solist (struct gdbarch *gdbarch,
-			       int has_global_solist)
+			       bool has_global_solist)
 {
   gdbarch->has_global_solist = has_global_solist;
 }
 
-int
+bool
 gdbarch_has_global_breakpoints (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -4727,7 +4727,7 @@ gdbarch_has_global_breakpoints (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch,
-				    int has_global_breakpoints)
+				    bool has_global_breakpoints)
 {
   gdbarch->has_global_breakpoints = has_global_breakpoints;
 }

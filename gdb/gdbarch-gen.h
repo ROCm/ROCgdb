@@ -1496,16 +1496,16 @@ extern void set_gdbarch_dtrace_disable_probe (struct gdbarch *gdbarch, gdbarch_d
    an address space, will see the same set of symbols at the same
    addresses. */
 
-extern int gdbarch_has_global_solist (struct gdbarch *gdbarch);
-extern void set_gdbarch_has_global_solist (struct gdbarch *gdbarch, int has_global_solist);
+extern bool gdbarch_has_global_solist (struct gdbarch *gdbarch);
+extern void set_gdbarch_has_global_solist (struct gdbarch *gdbarch, bool has_global_solist);
 
 /* On some targets, even though each inferior has its own private
    address space, the debug interface takes care of making breakpoints
    visible to all address spaces automatically.  For such cases,
    this property should be set to true. */
 
-extern int gdbarch_has_global_breakpoints (struct gdbarch *gdbarch);
-extern void set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch, int has_global_breakpoints);
+extern bool gdbarch_has_global_breakpoints (struct gdbarch *gdbarch);
+extern void set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch, bool has_global_breakpoints);
 
 /* True if inferiors share an address space (e.g., uClinux). */
 

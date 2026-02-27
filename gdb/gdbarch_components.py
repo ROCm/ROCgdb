@@ -2371,9 +2371,9 @@ This usually means that all processes, although may or may not share
 an address space, will see the same set of symbols at the same
 addresses.
 """,
-    type="int",
+    type="bool",
     name="has_global_solist",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 
@@ -2384,9 +2384,9 @@ address space, the debug interface takes care of making breakpoints
 visible to all address spaces automatically.  For such cases,
 this property should be set to true.
 """,
-    type="int",
+    type="bool",
     name="has_global_breakpoints",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 
