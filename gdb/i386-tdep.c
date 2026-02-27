@@ -2562,10 +2562,10 @@ i386_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 /* Figure out where the longjmp will land.  Slurp the args out of the
    stack.  We expect the first arg to be a pointer to the jmp_buf
    structure from which we extract the address that we will land at.
-   This address is copied into PC.  This routine returns non-zero on
+   This address is copied into PC.  This routine returns true on
    success.  */
 
-static int
+static bool
 i386_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_byte buf[4];
@@ -2578,19 +2578,19 @@ i386_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   /* If JB_PC_OFFSET is -1, we have no way to find out where the
      longjmp will land.  */
   if (jb_pc_offset == -1)
-    return 0;
+    return false;
 
   get_frame_register (frame, I386_ESP_REGNUM, buf);
   sp = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (sp + 4, buf, 4))
-    return 0;
+    return false;
 
   jb_addr = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (jb_addr + jb_pc_offset, buf, 4))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 4, byte_order);
-  return 1;
+  return true;
 }
 
 

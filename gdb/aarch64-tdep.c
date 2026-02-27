@@ -2842,7 +2842,7 @@ aarch64_return_value (struct gdbarch *gdbarch, struct value *func_value,
 
 /* Implement the "get_longjmp_target" gdbarch method.  */
 
-static int
+static bool
 aarch64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   CORE_ADDR jb_addr;
@@ -2855,10 +2855,10 @@ aarch64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
 			  X_REGISTER_SIZE))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, X_REGISTER_SIZE, byte_order);
-  return 1;
+  return true;
 }
 
 /* Implement the "gen_return_address" gdbarch method.  */

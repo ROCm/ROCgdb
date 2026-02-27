@@ -728,11 +728,11 @@ Method(
 Function(
     comment="""
 Determine the address where a longjmp will land and save this address
-in PC.  Return nonzero on success.
+in PC.  Return true on success.
 
 FRAME corresponds to the longjmp frame.
 """,
-    type="int",
+    type="bool",
     name="get_longjmp_target",
     params=[("const frame_info_ptr &", "frame"), ("CORE_ADDR *", "pc")],
     predicate=True,

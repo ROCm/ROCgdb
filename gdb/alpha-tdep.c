@@ -820,7 +820,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
    which we extract the PC (JB_PC) that we will land at.  The PC is copied
    into the "pc".  This routine returns true on success.  */
 
-static int
+static bool
 alpha_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -833,10 +833,10 @@ alpha_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + (tdep->jb_pc * tdep->jb_elt_size),
 			  raw_buffer, tdep->jb_elt_size))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (raw_buffer, tdep->jb_elt_size, byte_order);
-  return 1;
+  return true;
 }
 
 

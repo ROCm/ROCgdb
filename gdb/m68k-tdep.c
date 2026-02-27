@@ -1050,7 +1050,7 @@ m68k_dummy_id (struct gdbarch *gdbarch, const frame_info_ptr &this_frame)
    we extract the pc (JB_PC) that we will land at.  The pc is copied into PC.
    This routine returns true on success.  */
 
-static int
+static bool
 m68k_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_byte *buf;
@@ -1062,7 +1062,7 @@ m68k_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   if (tdep->jb_pc < 0)
     {
       internal_error (_("m68k_get_longjmp_target: not implemented"));
-      return 0;
+      return false;
     }
 
   buf = (gdb_byte *) alloca (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
@@ -1070,7 +1070,7 @@ m68k_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (sp + SP_ARG0,	/* Offset of first arg on stack.  */
 			  buf, gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT))
-    return 0;
+    return false;
 
   jb_addr = extract_unsigned_integer (buf, gdbarch_ptr_bit (gdbarch)
 					     / TARGET_CHAR_BIT, byte_order);
@@ -1078,11 +1078,11 @@ m68k_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
 			  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT),
 			  byte_order)
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, gdbarch_ptr_bit (gdbarch)
 					 / TARGET_CHAR_BIT, byte_order);
-  return 1;
+  return true;
 }
 
 

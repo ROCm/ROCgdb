@@ -375,14 +375,14 @@ extern bool gdbarch_cannot_store_register (struct gdbarch *gdbarch, int regnum);
 extern void set_gdbarch_cannot_store_register (struct gdbarch *gdbarch, gdbarch_cannot_store_register_ftype *cannot_store_register);
 
 /* Determine the address where a longjmp will land and save this address
-   in PC.  Return nonzero on success.
+   in PC.  Return true on success.
 
    FRAME corresponds to the longjmp frame. */
 
 extern bool gdbarch_get_longjmp_target_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_get_longjmp_target_ftype) (const frame_info_ptr &frame, CORE_ADDR *pc);
-extern int gdbarch_get_longjmp_target (struct gdbarch *gdbarch, const frame_info_ptr &frame, CORE_ADDR *pc);
+typedef bool (gdbarch_get_longjmp_target_ftype) (const frame_info_ptr &frame, CORE_ADDR *pc);
+extern bool gdbarch_get_longjmp_target (struct gdbarch *gdbarch, const frame_info_ptr &frame, CORE_ADDR *pc);
 extern void set_gdbarch_get_longjmp_target (struct gdbarch *gdbarch, gdbarch_get_longjmp_target_ftype *get_longjmp_target);
 
 typedef int (gdbarch_convert_register_p_ftype) (struct gdbarch *gdbarch, int regnum, struct type *type);

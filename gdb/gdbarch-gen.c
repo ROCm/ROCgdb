@@ -2340,7 +2340,7 @@ gdbarch_get_longjmp_target_p (struct gdbarch *gdbarch)
   return gdbarch->get_longjmp_target != NULL;
 }
 
-int
+bool
 gdbarch_get_longjmp_target (struct gdbarch *gdbarch, const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_assert (gdbarch != NULL);

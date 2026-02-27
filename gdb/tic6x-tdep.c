@@ -1099,7 +1099,7 @@ tic6x_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* This is the implementation of gdbarch method get_longjmp_target.  */
 
-static int
+static bool
 tic6x_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -1113,11 +1113,11 @@ tic6x_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   /* JMP_BUF contains 13 elements of type int, and return address is stored
      in the last slot.  */
   if (target_read_memory (jb_addr + 12 * 4, buf, 4))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 4, byte_order);
 
-  return 1;
+  return true;
 }
 
 /* This is the implementation of gdbarch method

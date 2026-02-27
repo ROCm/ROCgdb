@@ -3443,7 +3443,7 @@ const struct regset amd64_fpregset =
    address is copied into PC.  This routine returns non-zero on
    success.  */
 
-static int
+static bool
 amd64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_byte buf[8];
@@ -3456,17 +3456,17 @@ amd64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   /* If JB_PC_OFFSET is -1, we have no way to find out where the
      longjmp will land.	 */
   if (jb_pc_offset == -1)
-    return 0;
+    return false;
 
   get_frame_register (frame, AMD64_RDI_REGNUM, buf);
   jb_addr= extract_typed_address
 	    (buf, builtin_type (gdbarch)->builtin_data_ptr);
   if (target_read_memory (jb_addr + jb_pc_offset, buf, len))
-    return 0;
+    return false;
 
   *pc = extract_typed_address (buf, builtin_type (gdbarch)->builtin_func_ptr);
 
-  return 1;
+  return true;
 }
 
 static const int amd64_record_regmap[] =

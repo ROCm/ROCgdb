@@ -1823,7 +1823,7 @@ nds32_return_value (struct gdbarch *gdbarch, struct value *func_type,
 
 /* Implement the "get_longjmp_target" gdbarch method.  */
 
-static int
+static bool
 nds32_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_byte buf[4];
@@ -1834,10 +1834,10 @@ nds32_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   jb_addr = get_frame_register_unsigned (frame, NDS32_R0_REGNUM);
 
   if (target_read_memory (jb_addr + 11 * 4, buf, 4))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 4, byte_order);
-  return 1;
+  return true;
 }
 
 /* Validate the given TDESC, and fixed-number some registers in it.

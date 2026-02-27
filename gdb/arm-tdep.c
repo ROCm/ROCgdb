@@ -9300,7 +9300,7 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
 }
 
 
-static int
+static bool
 arm_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -9313,10 +9313,10 @@ arm_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
 			  ARM_INT_REGISTER_SIZE))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, ARM_INT_REGISTER_SIZE, byte_order);
-  return 1;
+  return true;
 }
 /* A call to cmse secure entry function "foo" at "a" is modified by
      GNU ld as "b".
