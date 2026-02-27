@@ -893,8 +893,8 @@ extern void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, bool ca
 /* See comment in target.h about continuable, steppable and
    non-steppable watchpoints. */
 
-extern int gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch);
-extern void set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch, int have_nonsteppable_watchpoint);
+extern bool gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch);
+extern void set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch, bool have_nonsteppable_watchpoint);
 
 extern bool gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch);
 

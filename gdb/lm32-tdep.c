@@ -524,7 +524,7 @@ lm32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Breakpoints.  */
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, lm32_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, lm32_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Calling functions in the inferior.  */
   set_gdbarch_push_dummy_call (gdbarch, lm32_push_dummy_call);

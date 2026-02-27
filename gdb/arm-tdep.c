@@ -10794,7 +10794,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     tdep->arm_abi = ARM_ABI_APCS;
 
   /* Watchpoints are not steppable.  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* We used to default to FPA for generic ARM, but almost nobody
      uses that now, and we now provide a way for the user to force

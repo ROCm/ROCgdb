@@ -3226,7 +3226,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   frame_unwind_append_unwinder (gdbarch, &xtensa_unwind);
   dwarf2_append_unwinders (gdbarch);
 
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   xtensa_add_reggroups (gdbarch);
   set_gdbarch_register_reggroup_p (gdbarch, xtensa_register_reggroup_p);

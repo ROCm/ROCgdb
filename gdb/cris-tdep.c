@@ -4009,7 +4009,7 @@ cris_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_cannot_fetch_register
 	(gdbarch, crisv32_cannot_fetch_register);
 
-      set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+      set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
       set_gdbarch_single_step_through_delay
 	(gdbarch, crisv32_single_step_through_delay);

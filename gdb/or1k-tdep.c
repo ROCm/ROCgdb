@@ -1182,7 +1182,7 @@ or1k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				       or1k_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       or1k_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Register architecture */
   set_gdbarch_num_regs (gdbarch, OR1K_NUM_REGS);

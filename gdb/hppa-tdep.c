@@ -3089,7 +3089,7 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      it by removing all eventpoints; stepping past the instruction
      that caused the trigger; reinserting eventpoints; and checking
      whether any watched location changed.  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Inferior function call methods.  */
   switch (tdep->bytes_per_address)

@@ -8725,7 +8725,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      being used as guards for target_stopped_by_watchpoint, why not have
      target_stopped_by_watchpoint return the type of watchpoint that the code
      is sitting on?  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   set_gdbarch_skip_trampoline_code (gdbarch, mips_skip_trampoline_code);
 

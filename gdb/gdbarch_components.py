@@ -1537,9 +1537,9 @@ Value(
 See comment in target.h about continuable, steppable and
 non-steppable watchpoints.
 """,
-    type="int",
+    type="bool",
     name="have_nonsteppable_watchpoint",
-    predefault="0",
+    predefault="false",
     invalid=False,
 )
 

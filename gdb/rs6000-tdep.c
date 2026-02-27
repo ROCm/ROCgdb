@@ -8342,7 +8342,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_gen_return_address (gdbarch, rs6000_gen_return_address);
 
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   set_gdbarch_num_regs (gdbarch, PPC_NUM_REGS);
 

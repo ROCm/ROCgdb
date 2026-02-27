@@ -2336,7 +2336,7 @@ arc_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      significant delay, like one or two instructions, depending on type of
      memory where write is performed (CCM or external) and next instruction
      after the memory write.  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 0);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, false);
 
   /* This doesn't include possible long-immediate value.  */
   set_gdbarch_max_insn_length (gdbarch, 4);
