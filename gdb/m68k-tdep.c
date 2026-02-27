@@ -184,17 +184,17 @@ m68k_register_name (struct gdbarch *gdbarch, int regnum)
     return m68k_register_names[regnum];
 }
 
-/* Return nonzero if a value of type TYPE stored in register REGNUM
+/* Return true if a value of type TYPE stored in register REGNUM
    needs any special handling.  */
 
-static int
+static bool
 m68k_convert_register_p (struct gdbarch *gdbarch,
 			 int regnum, struct type *type)
 {
   m68k_gdbarch_tdep *tdep = gdbarch_tdep<m68k_gdbarch_tdep> (gdbarch);
 
   if (!tdep->fpregs_present)
-    return 0;
+    return false;
   return (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FP0_REGNUM + 7
 	  /* We only support floating-point values.  */
 	  && type->code () == TYPE_CODE_FLT

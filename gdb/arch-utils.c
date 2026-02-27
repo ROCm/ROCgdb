@@ -317,11 +317,11 @@ default_floatformat_for_type (struct gdbarch *gdbarch,
   return format;
 }
 
-int
+bool
 generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			    struct type *type)
 {
-  return 0;
+  return false;
 }
 
 int

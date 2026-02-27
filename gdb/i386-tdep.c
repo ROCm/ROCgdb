@@ -3506,10 +3506,10 @@ i386_next_regnum (int regnum)
   return -1;
 }
 
-/* Return nonzero if a value of type TYPE stored in register REGNUM
+/* Return true if a value of type TYPE stored in register REGNUM
    needs any special handling.  */
 
-static int
+static bool
 i386_convert_register_p (struct gdbarch *gdbarch,
 			 int regnum, struct type *type)
 {
@@ -3531,7 +3531,7 @@ i386_convert_register_p (struct gdbarch *gdbarch,
 	}
 
       if (last_regnum != -1)
-	return 1;
+	return true;
     }
 
   return i387_convert_register_p (gdbarch, regnum, type);

@@ -2659,7 +2659,7 @@ rs6000_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 /* The register format for RS/6000 floating point registers is always
    double, we need a conversion if the memory format is float.  */
 
-static int
+static bool
 rs6000_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			   struct type *type)
 {

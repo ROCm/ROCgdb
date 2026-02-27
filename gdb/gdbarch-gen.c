@@ -2357,7 +2357,7 @@ set_gdbarch_get_longjmp_target (struct gdbarch *gdbarch,
   gdbarch->get_longjmp_target = get_longjmp_target;
 }
 
-int
+bool
 gdbarch_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type)
 {
   gdb_assert (gdbarch != NULL);

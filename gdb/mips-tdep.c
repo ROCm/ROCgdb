@@ -238,10 +238,10 @@ mips_fpa0_regnum (struct gdbarch *gdbarch)
   return mips_regnum (gdbarch)->fp0 + 12;
 }
 
-/* Return 1 if REGNUM refers to a floating-point general register, raw
-   or cooked.  Otherwise return 0.  */
+/* Return true if REGNUM refers to a floating-point general register, raw
+   or cooked.  Otherwise return false.  */
 
-static int
+static bool
 mips_float_register_p (struct gdbarch *gdbarch, int regnum)
 {
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
@@ -906,7 +906,7 @@ set_mips64_transfers_32bit_regs (const char *args, int from_tty,
    value that is being transferred to or from a pair of floating point
    registers each of which are (or are considered to be) only 4 bytes
    wide.  */
-static int
+static bool
 mips_convert_register_float_case_p (struct gdbarch *gdbarch, int regnum,
 				    struct type *type)
 {
@@ -919,7 +919,7 @@ mips_convert_register_float_case_p (struct gdbarch *gdbarch, int regnum,
 /* This predicate tests for the case of a value of less than 8
    bytes in width that is being transferred to or from an 8 byte
    general purpose register.  */
-static int
+static bool
 mips_convert_register_gpreg_case_p (struct gdbarch *gdbarch, int regnum,
 				    struct type *type)
 {
@@ -930,7 +930,7 @@ mips_convert_register_gpreg_case_p (struct gdbarch *gdbarch, int regnum,
 	  && type->length () < 8);
 }
 
-static int
+static bool
 mips_convert_register_p (struct gdbarch *gdbarch,
 			 int regnum, struct type *type)
 {

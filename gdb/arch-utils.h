@@ -259,8 +259,8 @@ extern bool default_code_of_frame_writable (struct gdbarch *gdbarch,
 					    const frame_info_ptr &frame);
 
 /* By default, registers are not convertible.  */
-extern int generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
-				       struct type *type);
+extern bool generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
+					struct type *type);
 
 extern int generic_instruction_nullified (struct gdbarch *gdbarch,
 					  struct regcache *regcache);

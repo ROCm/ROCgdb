@@ -739,7 +739,7 @@ FRAME corresponds to the longjmp frame.
 )
 
 Method(
-    type="int",
+    type="bool",
     name="convert_register_p",
     params=[("int", "regnum"), ("struct type *", "type")],
     predefault="generic_convert_register_p",

@@ -320,10 +320,10 @@ i387_print_float_info (struct gdbarch *gdbarch, struct ui_file *file,
 }
 
 
-/* Return nonzero if a value of type TYPE stored in register REGNUM
+/* Return true if a value of type TYPE stored in register REGNUM
    needs any special handling.  */
 
-int
+bool
 i387_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			 struct type *type)
 {
@@ -333,12 +333,12 @@ i387_convert_register_p (struct gdbarch *gdbarch, int regnum,
 	 accessing them in their hardware type or TYPE is not float.  */
       if (type == i387_ext_type (gdbarch)
 	  || type->code () != TYPE_CODE_FLT)
-	return 0;
+	return false;
       else
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and

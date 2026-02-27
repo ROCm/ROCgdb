@@ -205,7 +205,7 @@ alpha_sts (struct gdbarch *gdbarch, void *out, const void *in)
    bytes, as the representation of integers in floating point
    registers is different.  */
 
-static int
+static bool
 alpha_convert_register_p (struct gdbarch *gdbarch, int regno,
 			  struct type *type)
 {
