@@ -2206,7 +2206,7 @@ s390_get_return_buf_addr (struct type *val_type,
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 s390_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   int word_size = gdbarch_ptr_bit (gdbarch) / 8;
@@ -2238,21 +2238,21 @@ s390_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       && !target_read_memory (pc - 4, insn, 4)
       && is_rs (insn, op_lm, &r1, &r3, &d2, &b2)
       && r3 == S390_SP_REGNUM - S390_R0_REGNUM)
-    return 1;
+    return true;
 
   if (word_size == 4
       && !target_read_memory (pc - 6, insn, 6)
       && is_rsy (insn, op1_lmy, op2_lmy, &r1, &r3, &d2, &b2)
       && r3 == S390_SP_REGNUM - S390_R0_REGNUM)
-    return 1;
+    return true;
 
   if (word_size == 8
       && !target_read_memory (pc - 6, insn, 6)
       && is_rsy (insn, op1_lmg, op2_lmg, &r1, &r3, &d2, &b2)
       && r3 == S390_SP_REGNUM - S390_R0_REGNUM)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 /* Implement unwind_pc gdbarch method.  */

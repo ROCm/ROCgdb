@@ -171,7 +171,7 @@ static const char *const aarch64_gcs_linux_register_names[] = {
   "gcs_features_locked",
 };
 
-static int aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
+static bool aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
 
 /* AArch64 prologue cache structure.  */
 struct aarch64_prologue_cache
@@ -4157,25 +4157,25 @@ aarch64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 aarch64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_start, func_end;
   if (!find_pc_partial_function (pc, NULL, &func_start, &func_end))
-    return 0;
+    return false;
 
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
 
   ULONGEST insn_from_memory;
   if (!safe_read_memory_unsigned_integer (pc, 4, byte_order_for_code,
 					  &insn_from_memory))
-    return 0;
+    return false;
 
   uint32_t insn = insn_from_memory;
 
   aarch64_inst inst;
   if (aarch64_decode_insn (insn, &inst, 1, nullptr) != 0)
-    return 0;
+    return false;
 
   return streq (inst.opcode->name, "ret");
 }

@@ -1433,14 +1433,14 @@ Method(
 A target might have problems with watchpoints as soon as the stack
 frame of the current function has been destroyed.  This mostly happens
 as the first action in a function's epilogue.  stack_frame_destroyed_p()
-is defined to return a non-zero value if either the given addr is one
+is defined to return true if either the given addr is one
 instruction after the stack destroying instruction up to the trailing
 return instruction or if we can figure out that the stack frame has
 already been invalidated regardless of the value of addr.  Targets
 which don't suffer from that problem could just let this functionality
 untouched.
 """,
-    type="int",
+    type="bool",
     name="stack_frame_destroyed_p",
     params=[("CORE_ADDR", "addr")],
     predefault="generic_stack_frame_destroyed_p",

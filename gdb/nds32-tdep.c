@@ -1217,7 +1217,7 @@ nds32_analyze_epilogue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
 /* Implement the "stack_frame_destroyed_p" gdbarch method.  */
 
-static int
+static bool
 nds32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   nds32_gdbarch_tdep *tdep = gdbarch_tdep<nds32_gdbarch_tdep> (gdbarch);
@@ -1243,13 +1243,13 @@ nds32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR addr)
     }
 
   if (insn_type == INSN_NORMAL || insn_type == INSN_RESET_SP)
-    return 0;
+    return false;
 
   /* Search the required 'return' instruction within the following reasonable
      instructions.  */
   ret_found = nds32_analyze_epilogue (gdbarch, addr, NULL);
   if (ret_found == 0)
-    return 0;
+    return false;
 
   /* Scan backwards to make sure that the last instruction has adjusted
      stack.  Both a 16-bit and a 32-bit instruction will be tried.  This is
@@ -1263,7 +1263,7 @@ nds32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR addr)
 
       insn_type = nds32_analyze_epilogue_insn16 (insn >> 16, NULL);
       if (insn_type == INSN_RECOVER)
-	return 1;
+	return true;
     }
 
   insn = read_memory_unsigned_integer (addr - 4, 4, BFD_ENDIAN_BIG);
@@ -1277,10 +1277,10 @@ nds32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR addr)
 
       insn_type = nds32_analyze_epilogue_insn32 (abi_use_fpr, insn, NULL);
       if (insn_type == INSN_RECOVER || insn_type == INSN_RESET_SP)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the "sniffer" frame_unwind method.  */

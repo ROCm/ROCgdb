@@ -2132,17 +2132,17 @@ static const struct frame_unwind_legacy i386_frame_unwind (
    follow any instruction such as 'leave' or 'pop %ebp' that destroys
    the function's stack frame.  */
 
-static int
+static bool
 i386_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   gdb_byte insn;
   if (target_read_memory (pc, &insn, 1))
-    return 0;	/* Can't read memory at pc.  */
+    return false;	/* Can't read memory at pc.  */
 
   if (insn != 0xc3)	/* 'ret' instruction.  */
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 static int

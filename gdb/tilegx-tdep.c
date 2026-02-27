@@ -754,7 +754,7 @@ tilegx_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
 /* This is the implementation of gdbarch method stack_frame_destroyed_p.  */
 
-static int
+static bool
 tilegx_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -766,9 +766,9 @@ tilegx_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       /* FIXME: Find the actual epilogue.  */
       /* HACK: Just assume the final bundle is the "ret" instruction".  */
       if (pc > addr)
-	return 1;
+	return true;
     }
-  return 0;
+  return false;
 }
 
 /* This is the implementation of gdbarch method get_longjmp_target.  */

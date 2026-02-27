@@ -1080,7 +1080,7 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
 /* This is the implementation of gdbarch method stack_frame_destroyed_p.  */
 
-static int
+static bool
 tic6x_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   unsigned long inst = tic6x_fetch_instruction (gdbarch, pc);
@@ -1091,10 +1091,10 @@ tic6x_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 						 INST_S_BIT (inst),
 						 INST_X_BIT (inst));
       if (src2 == TIC6X_RA_REGNUM)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* This is the implementation of gdbarch method get_longjmp_target.  */

@@ -6730,7 +6730,7 @@ mips_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 /* Implement the stack_frame_destroyed_p gdbarch method (32-bit version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -6743,7 +6743,7 @@ mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       for (; pc < func_end; pc += MIPS_INSN32_SIZE)
 	{
@@ -6757,19 +6757,19 @@ mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      && high_word != 0x67bd	/* daddiu $sp,$sp,offset */
 	      && inst != 0x03e00008	/* jr $ra */
 	      && inst != 0x00000000)	/* nop */
-	    return 0;
+	    return false;
 	}
 
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method (microMIPS version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0;
@@ -6782,7 +6782,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   int loc;
 
   if (!find_pc_partial_function (pc, NULL, &func_addr, &func_end))
-    return 0;
+    return false;
 
   /* The microMIPS epilogue is max. 12 bytes long.  */
   addr = func_end - 12;
@@ -6790,7 +6790,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   if (addr < func_addr + 2)
     addr = func_addr + 2;
   if (pc < addr)
-    return 0;
+    return false;
 
   for (; pc < func_end; pc += loc)
     {
@@ -6816,10 +6816,10 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 			    /* (D)ADDIU $sp, imm */
 		  && offset >= 0)
 		break;
-	      return 0;
+	      return false;
 
 	    default:
-	      return 0;
+	      return false;
 	    }
 	  break;
 
@@ -6833,7 +6833,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      if (sreg == 0 && dreg == 0)
 				/* MOVE $zero, $zero aka NOP */
 		break;
-	      return 0;
+	      return false;
 
 	    case 0x11: /* POOL16C: bits 010001 */
 	      if (b5s5_op (insn) == 0x18
@@ -6843,7 +6843,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 		      && b0s5_reg (insn) == MIPS_RA_REGNUM))
 				/* JRC $ra */
 		break;
-	      return 0;
+	      return false;
 
 	    case 0x13: /* POOL16D: bits 010011 */
 	      offset = micromips_decode_imm9 (b1s9_imm (insn));
@@ -6851,21 +6851,21 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 				/* ADDIUSP: bits 010011 1 */
 		  && offset > 0)
 		break;
-	      return 0;
+	      return false;
 
 	    default:
-	      return 0;
+	      return false;
 	    }
 	}
     }
 
-  return 1;
+  return true;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method (16-bit version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -6878,7 +6878,7 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       for (; pc < func_end; pc += MIPS_INSN16_SIZE)
 	{
@@ -6894,13 +6894,13 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      && inst != 0xe820		/* jr $ra */
 	      && inst != 0xe8a0		/* jrc $ra */
 	      && inst != 0x6500)	/* nop */
-	    return 0;
+	    return false;
 	}
 
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method.
@@ -6908,7 +6908,7 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
    The epilogue is defined here as the area at the end of a function,
    after an instruction which destroys the function's stack frame.  */
 
-static int
+static bool
 mips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   if (mips_pc_is_mips16 (gdbarch, pc))

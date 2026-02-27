@@ -3352,7 +3352,7 @@ set_gdbarch_in_indirect_branch_thunk (struct gdbarch *gdbarch,
   gdbarch->in_indirect_branch_thunk = in_indirect_branch_thunk;
 }
 
-int
+bool
 gdbarch_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_assert (gdbarch != NULL);

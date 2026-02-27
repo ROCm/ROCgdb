@@ -558,7 +558,7 @@ find_unwind_entry (CORE_ADDR pc)
    We do not assume that the epilogue is at the end of a function as we can
    also have return sequences in the middle of a function.  */
 
-static int
+static bool
 hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -568,7 +568,7 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   status = target_read_memory (pc, buf, 4);
   if (status != 0)
-    return 0;
+    return false;
 
   inst = extract_unsigned_integer (buf, 4, byte_order);
 
@@ -576,19 +576,19 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
      We are destroying a stack frame if the offset is negative.  */
   if ((inst & 0xffffc000) == 0x37de0000
       && hppa_extract_14 (inst) < 0)
-    return 1;
+    return true;
 
   /* ldw,mb D(sp),X or ldd,mb D(sp),X */
   if (((inst & 0x0fc010e0) == 0x0fc010e0
        || (inst & 0x0fc010e0) == 0x0fc010e0)
       && hppa_extract_14 (inst) < 0)
-    return 1;
+    return true;
 
   /* bv %r0(%rp) or bv,n %r0(%rp) */
   if (inst == 0xe840c000 || inst == 0xe840c002)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 constexpr gdb_byte hppa_break_insn[] = {0x00, 0x01, 0x00, 0x04};

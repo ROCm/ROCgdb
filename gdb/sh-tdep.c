@@ -2033,7 +2033,7 @@ static const struct frame_unwind_legacy sh_stub_unwind (
    either on the `ret' instruction itself or after an instruction which
    destroys the function's stack frame.  */
 
-static int
+static bool
 sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -2050,14 +2050,14 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       /* First search forward until hitting an rts.  */
       while (addr < func_end
 	     && !IS_RTS (read_memory_unsigned_integer (addr, 2, byte_order)))
 	addr += 2;
       if (addr >= func_end)
-	return 0;
+	return false;
 
       /* At this point we should find a mov.l @r15+,r14 instruction,
 	 either before or after the rts.  If not, then the function has
@@ -2068,7 +2068,7 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	addr -= 2;
       else if (!IS_RESTORE_FP (read_memory_unsigned_integer (addr + 2, 2,
 							     byte_order)))
-	return 0;
+	return false;
 
       inst = read_memory_unsigned_integer (addr - 2, 2, byte_order);
 
@@ -2112,9 +2112,9 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	addr -= 4;
 
       if (pc >= addr)
-	return 1;
+	return true;
     }
-  return 0;
+  return false;
 }
 
 

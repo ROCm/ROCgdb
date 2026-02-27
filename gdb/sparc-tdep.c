@@ -550,7 +550,7 @@ sparc32_pseudo_register_write (struct gdbarch *gdbarch,
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-int
+bool
 sparc_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   /* This function must return true if we are one instruction after an

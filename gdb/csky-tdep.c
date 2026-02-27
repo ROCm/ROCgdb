@@ -1939,7 +1939,7 @@ csky_analyze_prologue (struct gdbarch *gdbarch,
 /* Detect whether PC is at a point where the stack frame has been
    destroyed.  */
 
-static int
+static bool
 csky_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   unsigned int insn;
@@ -1947,7 +1947,7 @@ csky_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   CORE_ADDR func_start, func_end;
 
   if (!find_pc_partial_function (pc, NULL, &func_start, &func_end))
-    return 0;
+    return false;
 
   bool fp_saved = false;
   int insn_len;
@@ -1967,7 +1967,7 @@ csky_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	    return pc >= addr;
 	}
     }
-  return 0;
+  return false;
 }
 
 /* Implement the skip_prologue gdbarch hook.  */

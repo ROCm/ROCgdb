@@ -3262,10 +3262,10 @@ arm_epilogue_frame_prev_register (const frame_info_ptr &this_frame,
   return arm_prologue_prev_register (this_frame, this_cache, regnum);
 }
 
-static int arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch,
-					  CORE_ADDR pc);
-static int thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch,
-					  CORE_ADDR pc);
+static bool arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch,
+					   CORE_ADDR pc);
+static bool thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch,
+					   CORE_ADDR pc);
 
 /* Implementation of function hook 'sniffer' in
    'struct frame_uwnind' for epilogue unwinder.  */
@@ -4126,18 +4126,19 @@ arm_dwarf2_prev_register (const frame_info_ptr &this_frame, void **this_cache,
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned int insn, insn2;
-  int found_return = 0, found_stack_adjust = 0;
+  int found_return = 0;
+  bool found_stack_adjust = false;
   CORE_ADDR func_start, func_end;
   CORE_ADDR scan_pc;
   gdb_byte buf[4];
 
   if (!find_pc_partial_function (pc, NULL, &func_start, &func_end))
-    return 0;
+    return false;
 
   /* The epilogue is a sequence of instructions along the following lines:
 
@@ -4204,7 +4205,7 @@ thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
     }
 
   if (!found_return)
-    return 0;
+    return false;
 
   /* Since any instruction in the epilogue sequence, with the possible
      exception of return itself, updates the stack pointer, we need to
@@ -4213,28 +4214,28 @@ thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
      too much about false positives.  */
 
   if (pc - 4 < func_start)
-    return 0;
+    return false;
   if (target_read_memory (pc - 4, buf, 4))
-    return 0;
+    return false;
 
   insn = extract_unsigned_integer (buf, 2, byte_order_for_code);
   insn2 = extract_unsigned_integer (buf + 2, 2, byte_order_for_code);
 
   if (thumb_instruction_restores_sp (insn2))
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if (insn == 0xe8bd)  /* ldm.w sp!, <registers> */
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if (insn == 0xf85d  /* ldr.w <Rt>, [sp], #4 */
 	   && (insn2 & 0x0fff) == 0x0b04)
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if ((insn & 0xffbf) == 0xecbd  /* vldm sp!, <list> */
 	   && (insn2 & 0x0e00) == 0x0a00)
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
 
   return found_stack_adjust;
 }
 
-static int
+static bool
 arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
@@ -4285,7 +4286,7 @@ arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 arm_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   if (arm_pc_is_thumb (gdbarch, pc))

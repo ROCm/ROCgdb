@@ -3197,7 +3197,7 @@ static const struct frame_base amd64_frame_base =
 
 /* Implement core of the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 amd64_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   gdb_byte insn;
@@ -3211,12 +3211,12 @@ amd64_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
     return pc > epilogue;
 
   if (target_read_memory (pc, &insn, 1))
-    return 0;   /* Can't read memory at pc.  */
+    return false;   /* Can't read memory at pc.  */
 
   if (insn != 0xc3)     /* 'ret' instruction.  */
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* Normal frames, but in a function epilogue.  */
@@ -3227,7 +3227,7 @@ amd64_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
    follow any instruction such as 'leave' or 'pop %ebp' that destroys
    the function's stack frame.  */
 
-static int
+static bool
 amd64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   struct compunit_symtab *cust = find_compunit_symtab_for_pc (pc);
@@ -3236,7 +3236,7 @@ amd64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       && producer_is_llvm (cust->producer ()))
     return amd64_stack_frame_destroyed_p_1 (gdbarch, pc);
 
-  return 0;
+  return false;
 }
 
 static int

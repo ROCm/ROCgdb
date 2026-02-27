@@ -252,8 +252,8 @@ extern bool generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
 						CORE_ADDR pc,
 						const char *name);
 
-extern int generic_stack_frame_destroyed_p (struct gdbarch *gdbarch,
-					    CORE_ADDR pc);
+extern bool generic_stack_frame_destroyed_p (struct gdbarch *gdbarch,
+					     CORE_ADDR pc);
 
 extern bool default_code_of_frame_writable (struct gdbarch *gdbarch,
 					    const frame_info_ptr &frame);
