@@ -334,7 +334,6 @@ addr_bit is the size of a target address as represented in gdb
 """,
     type="int",
     name="addr_bit",
-    predefault="0",
     postdefault="gdbarch_ptr_bit (gdbarch)",
     invalid=False,
 )
@@ -481,7 +480,6 @@ combinations of other registers, or they may be computed by GDB.
 """,
     type="int",
     name="num_pseudo_regs",
-    predefault="0",
     invalid=False,
 )
 
@@ -1025,7 +1023,6 @@ SIZE is set to the software breakpoint's length in memory.
     type="const gdb_byte *",
     name="sw_breakpoint_from_kind",
     params=[("int", "kind"), ("int *", "size")],
-    predefault="NULL",
     invalid=False,
 )
 
@@ -1528,7 +1525,6 @@ stop PC.
 Value(
     type="bool",
     name="cannot_step_breakpoint",
-    predefault="false",
     invalid=False,
 )
 
@@ -1539,7 +1535,6 @@ non-steppable watchpoints.
 """,
     type="bool",
     name="have_nonsteppable_watchpoint",
-    predefault="false",
     invalid=False,
 )
 
@@ -1783,7 +1778,6 @@ set this to true.
 """,
     type="bool",
     name="vtable_function_descriptors",
-    predefault="false",
     invalid=False,
 )
 
@@ -1803,7 +1797,6 @@ The maximum length of an instruction on this architecture in bytes.
 """,
     type="ULONGEST",
     name="max_insn_length",
-    predefault="0",
     predicate=True,
 )
 
@@ -1895,7 +1888,6 @@ see the comments in infrun.c.
         ("bool", "completed_p"),
     ],
     predicate=False,
-    predefault="NULL",
     invalid="(gdbarch->displaced_step_copy_insn == nullptr) != (gdbarch->displaced_step_fixup == nullptr)",
 )
 
@@ -1922,7 +1914,6 @@ checking if WS.kind is TARGET_WAITKIND_THREAD_EXITED.
     type="displaced_step_finish_status",
     name="displaced_step_finish",
     params=[("thread_info *", "thread"), ("const target_waitstatus &", "ws")],
-    predefault="NULL",
     invalid="(! gdbarch->displaced_step_finish) != (! gdbarch->displaced_step_prepare)",
 )
 
@@ -1956,7 +1947,6 @@ displaced-step instruction to multiple replacement instructions.
 """,
     type="ULONGEST",
     name="displaced_step_buffer_length",
-    predefault="0",
     postdefault="gdbarch->max_insn_length",
     invalid="gdbarch->displaced_step_buffer_length < gdbarch->max_insn_length",
 )
@@ -2373,7 +2363,6 @@ addresses.
 """,
     type="bool",
     name="has_global_solist",
-    predefault="false",
     invalid=False,
 )
 
@@ -2386,7 +2375,6 @@ this property should be set to true.
 """,
     type="bool",
     name="has_global_breakpoints",
-    predefault="false",
     invalid=False,
 )
 
@@ -2445,7 +2433,6 @@ considered a directory separator.
 """,
     type="bool",
     name="has_dos_based_file_system",
-    predefault="false",
     invalid=False,
 )
 
@@ -2500,7 +2487,6 @@ Ravenscar arch-dependent ops.
 """,
     type="struct ravenscar_arch_ops *",
     name="ravenscar_ops",
-    predefault="NULL",
     invalid=False,
     printer="host_address_to_string (gdbarch->ravenscar_ops)",
 )

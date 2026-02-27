@@ -120,7 +120,7 @@ struct gdbarch
   gdbarch_inner_than_ftype *inner_than = nullptr;
   gdbarch_breakpoint_from_pc_ftype *breakpoint_from_pc = default_breakpoint_from_pc;
   gdbarch_breakpoint_kind_from_pc_ftype *breakpoint_kind_from_pc = nullptr;
-  gdbarch_sw_breakpoint_from_kind_ftype *sw_breakpoint_from_kind = NULL;
+  gdbarch_sw_breakpoint_from_kind_ftype *sw_breakpoint_from_kind = nullptr;
   gdbarch_breakpoint_kind_from_current_state_ftype *breakpoint_kind_from_current_state = default_breakpoint_kind_from_current_state;
   gdbarch_adjust_breakpoint_address_ftype *adjust_breakpoint_address = nullptr;
   gdbarch_memory_insert_breakpoint_ftype *memory_insert_breakpoint = default_memory_insert_breakpoint;
@@ -187,9 +187,9 @@ struct gdbarch
   ULONGEST max_insn_length = 0;
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn = nullptr;
   gdbarch_displaced_step_hw_singlestep_ftype *displaced_step_hw_singlestep = default_displaced_step_hw_singlestep;
-  gdbarch_displaced_step_fixup_ftype *displaced_step_fixup = NULL;
+  gdbarch_displaced_step_fixup_ftype *displaced_step_fixup = nullptr;
   gdbarch_displaced_step_prepare_ftype *displaced_step_prepare = nullptr;
-  gdbarch_displaced_step_finish_ftype *displaced_step_finish = NULL;
+  gdbarch_displaced_step_finish_ftype *displaced_step_finish = nullptr;
   gdbarch_displaced_step_copy_insn_closure_by_addr_ftype *displaced_step_copy_insn_closure_by_addr = nullptr;
   gdbarch_displaced_step_restore_all_in_ptid_ftype *displaced_step_restore_all_in_ptid = nullptr;
   ULONGEST displaced_step_buffer_length = 0;
@@ -230,7 +230,7 @@ struct gdbarch
   gdbarch_gen_return_address_ftype *gen_return_address = default_gen_return_address;
   gdbarch_info_proc_ftype *info_proc = nullptr;
   gdbarch_core_info_proc_ftype *core_info_proc = nullptr;
-  struct ravenscar_arch_ops * ravenscar_ops = NULL;
+  struct ravenscar_arch_ops * ravenscar_ops = nullptr;
   gdbarch_insn_is_call_ftype *insn_is_call = default_insn_is_call;
   gdbarch_insn_is_ret_ftype *insn_is_ret = default_insn_is_ret;
   gdbarch_insn_is_jump_ftype *insn_is_jump = default_insn_is_jump;
