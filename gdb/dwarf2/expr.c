@@ -209,7 +209,7 @@ rw_pieced_value (value *v, value *from, bool check_optimized)
 	    gdbarch *arch = frame_unwind_arch (next_frame);
 	    int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, p->v.regno);
 	    ULONGEST reg_bits = 8 * register_size (arch, gdb_regnum);
-	    int optim, unavail;
+	    bool optim, unavail;
 
 	    if (p->offset + p->size < reg_bits)
 	      {

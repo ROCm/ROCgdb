@@ -690,7 +690,7 @@ const char *frame_stop_reason_string (const frame_info_ptr &);
    fetch/compute the value.  Instead just return the location of the
    value.  */
 extern void frame_register_unwind (const frame_info_ptr &frame, int regnum,
-				   int *optimizedp, int *unavailablep,
+				   bool *optimizedp, bool *unavailablep,
 				   enum lval_type *lvalp,
 				   CORE_ADDR *addrp, int *realnump,
 				   gdb::array_view<gdb_byte> value = {});
@@ -741,7 +741,7 @@ extern void put_frame_register (const frame_info_ptr &next_frame, int regnum,
 extern bool get_frame_register_bytes (const frame_info_ptr &next_frame,
 				      int regnum, CORE_ADDR offset,
 				      gdb::array_view<gdb_byte> buffer,
-				      int *optimizedp, int *unavailablep);
+				      bool *optimizedp, bool *unavailablep);
 
 /* Write bytes from BUFFER to one or multiple registers starting with REGNUM
    in NEXT_FRAME's previous frame, starting at OFFSET.  */

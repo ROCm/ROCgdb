@@ -2691,12 +2691,12 @@ ieee_128_float_regnum_adjust (struct gdbarch *gdbarch, struct type *type,
   return regnum;
 }
 
-static int
+static bool
 rs6000_register_to_value (const frame_info_ptr &frame,
 			  int regnum,
 			  struct type *type,
 			  gdb_byte *to,
-			  int *optimizedp, int *unavailablep)
+			  bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte from[PPC_MAX_REGISTER_SIZE];
@@ -2712,12 +2712,12 @@ rs6000_register_to_value (const frame_info_ptr &frame,
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
 				 unavailablep))
-    return 0;
+    return false;
 
   target_float_convert (from, builtin_type (gdbarch)->builtin_double,
 			to, type);
-  *optimizedp = *unavailablep = 0;
-  return 1;
+  *optimizedp = *unavailablep = false;
+  return true;
 }
 
 static void

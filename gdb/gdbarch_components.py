@@ -747,15 +747,15 @@ Method(
 )
 
 Function(
-    type="int",
+    type="bool",
     name="register_to_value",
     params=[
         ("const frame_info_ptr &", "frame"),
         ("int", "regnum"),
         ("struct type *", "type"),
         ("gdb_byte *", "buf"),
-        ("int *", "optimizedp"),
-        ("int *", "unavailablep"),
+        ("bool *", "optimizedp"),
+        ("bool *", "unavailablep"),
     ],
     invalid=False,
 )

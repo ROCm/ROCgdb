@@ -2374,8 +2374,8 @@ set_gdbarch_convert_register_p (struct gdbarch *gdbarch,
   gdbarch->convert_register_p = convert_register_p;
 }
 
-int
-gdbarch_register_to_value (struct gdbarch *gdbarch, const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, int *optimizedp, int *unavailablep)
+bool
+gdbarch_register_to_value (struct gdbarch *gdbarch, const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, bool *optimizedp, bool *unavailablep)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->register_to_value != NULL);

@@ -938,10 +938,10 @@ mips_convert_register_p (struct gdbarch *gdbarch,
 	  || mips_convert_register_gpreg_case_p (gdbarch, regnum, type));
 }
 
-static int
+static bool
 mips_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *type, gdb_byte *to,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
@@ -956,13 +956,13 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
 
       if (!get_frame_register_bytes (next_frame, regnum + 0, 0, second_half,
 				     optimizedp, unavailablep))
-	return 0;
+	return false;
 
       if (!get_frame_register_bytes (next_frame, regnum + 1, 0, first_half,
 				     optimizedp, unavailablep))
-	return 0;
-      *optimizedp = *unavailablep = 0;
-      return 1;
+	return false;
+      *optimizedp = *unavailablep = false;
+      return true;
     }
   else if (mips_convert_register_gpreg_case_p (gdbarch, regnum, type))
     {
@@ -972,10 +972,10 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
       offset = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG ? 8 - len : 0;
       if (!get_frame_register_bytes (next_frame, regnum, offset, { to, len },
 				     optimizedp, unavailablep))
-	return 0;
+	return false;
 
-      *optimizedp = *unavailablep = 0;
-      return 1;
+      *optimizedp = *unavailablep = false;
+      return true;
     }
   else
     {

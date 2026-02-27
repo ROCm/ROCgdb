@@ -1218,10 +1218,10 @@ ia64_convert_register_p (struct gdbarch *gdbarch, int regno, struct type *type)
 	  && type != ia64_ext_type (gdbarch));
 }
 
-static int
+static bool
 ia64_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *valtype, gdb_byte *out,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte in[IA64_FP_REGISTER_SIZE];
@@ -1231,11 +1231,11 @@ ia64_register_to_value (const frame_info_ptr &frame, int regnum,
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, in_view, optimizedp,
 				 unavailablep))
-    return 0;
+    return false;
 
   target_float_convert (in, ia64_ext_type (gdbarch), out, valtype);
-  *optimizedp = *unavailablep = 0;
-  return 1;
+  *optimizedp = *unavailablep = false;
+  return true;
 }
 
 static void

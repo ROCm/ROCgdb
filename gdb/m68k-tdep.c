@@ -204,10 +204,10 @@ m68k_convert_register_p (struct gdbarch *gdbarch,
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and
    return its contents in TO.  */
 
-static int
+static bool
 m68k_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *type, gdb_byte *to,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte from[M68K_MAX_REGISTER_SIZE];
@@ -221,11 +221,11 @@ m68k_register_to_value (const frame_info_ptr &frame, int regnum,
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
 				 unavailablep))
-    return 0;
+    return false;
 
   target_float_convert (from, fpreg_type, to, type);
-  *optimizedp = *unavailablep = 0;
-  return 1;
+  *optimizedp = *unavailablep = false;
+  return true;
 }
 
 /* Write the contents FROM of a value of type TYPE into register

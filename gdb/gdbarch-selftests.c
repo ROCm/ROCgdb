@@ -100,13 +100,14 @@ register_to_value_test (struct gdbarch *gdbarch)
 
 	      /* Allocate two bytes more for overflow check.  */
 	      std::vector<gdb_byte> buf (type->length () + 2, 0);
-	      int optim, unavail, ok;
+	      bool optim, unavail;
 
 	      /* Set the fingerprint in the last two bytes.  */
 	      buf [type->length ()]= 'w';
 	      buf [type->length () + 1]= 'l';
-	      ok = gdbarch_register_to_value (gdbarch, frame, regnum, type,
-					      buf.data (), &optim, &unavail);
+	      bool ok = gdbarch_register_to_value (gdbarch, frame, regnum,
+						   type, buf.data (), &optim,
+						   &unavail);
 
 	      SELF_CHECK (ok);
 	      SELF_CHECK (!optim);

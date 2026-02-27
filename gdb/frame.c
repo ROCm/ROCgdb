@@ -1219,7 +1219,7 @@ frame_pop (const frame_info_ptr &this_frame)
 
 void
 frame_register_unwind (const frame_info_ptr &next_frame, int regnum,
-		       int *optimizedp, int *unavailablep,
+		       bool *optimizedp, bool *unavailablep,
 		       enum lval_type *lvalp, CORE_ADDR *addrp,
 		       int *realnump,
 		       gdb::array_view<gdb_byte> buffer)
@@ -1266,8 +1266,8 @@ void
 frame_unwind_register (const frame_info_ptr &next_frame, int regnum,
 		       gdb::array_view<gdb_byte> buf)
 {
-  int optimized;
-  int unavailable;
+  bool optimized;
+  bool unavailable;
   CORE_ADDR addr;
   int realnum;
   enum lval_type lval;
@@ -1485,8 +1485,8 @@ put_frame_register (const frame_info_ptr &next_frame, int regnum,
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
   int realnum;
-  int optim;
-  int unavail;
+  bool optim;
+  bool unavail;
   enum lval_type lval;
   CORE_ADDR addr;
   int size = register_size (gdbarch, regnum);
@@ -1531,8 +1531,8 @@ bool
 deprecated_frame_register_read (const frame_info_ptr &frame, int regnum,
 				gdb::array_view<gdb_byte> myaddr)
 {
-  int optimized;
-  int unavailable;
+  bool optimized;
+  bool unavailable;
   enum lval_type lval;
   CORE_ADDR addr;
   int realnum;
@@ -1547,7 +1547,7 @@ deprecated_frame_register_read (const frame_info_ptr &frame, int regnum,
 bool
 get_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 			  CORE_ADDR offset, gdb::array_view<gdb_byte> buffer,
-			  int *optimizedp, int *unavailablep)
+			  bool *optimizedp, bool *unavailablep)
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
 
@@ -2195,7 +2195,7 @@ reinit_frame_cache (void)
 
 static void
 frame_register_unwind_location (const frame_info_ptr &initial_this_frame,
-				int regnum, int *optimizedp, lval_type *lvalp,
+				int regnum, bool *optimizedp, lval_type *lvalp,
 				CORE_ADDR *addrp, int *realnump)
 {
   gdb_assert (initial_this_frame == nullptr || initial_this_frame->level >= 0);
@@ -2203,7 +2203,7 @@ frame_register_unwind_location (const frame_info_ptr &initial_this_frame,
   frame_info_ptr this_frame = initial_this_frame;
   while (this_frame != NULL)
     {
-      int unavailable;
+      bool unavailable;
 
       frame_register_unwind (this_frame, regnum, optimizedp, &unavailable,
 			     lvalp, addrp, realnump);
@@ -2467,7 +2467,8 @@ get_prev_frame_always_1 (const frame_info_ptr &this_frame)
       && (get_frame_type (frame_info_ptr (this_frame->next)) == NORMAL_FRAME
 	  || get_frame_type (frame_info_ptr (this_frame->next)) == INLINE_FRAME))
     {
-      int optimized, realnum, nrealnum;
+      bool optimized;
+      int realnum, nrealnum;
       enum lval_type lval, nlval;
       CORE_ADDR addr, naddr;
 

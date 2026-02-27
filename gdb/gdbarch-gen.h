@@ -389,8 +389,8 @@ typedef bool (gdbarch_convert_register_p_ftype) (struct gdbarch *gdbarch, int re
 extern bool gdbarch_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type);
 extern void set_gdbarch_convert_register_p (struct gdbarch *gdbarch, gdbarch_convert_register_p_ftype *convert_register_p);
 
-typedef int (gdbarch_register_to_value_ftype) (const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, int *optimizedp, int *unavailablep);
-extern int gdbarch_register_to_value (struct gdbarch *gdbarch, const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, int *optimizedp, int *unavailablep);
+typedef bool (gdbarch_register_to_value_ftype) (const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, bool *optimizedp, bool *unavailablep);
+extern bool gdbarch_register_to_value (struct gdbarch *gdbarch, const frame_info_ptr &frame, int regnum, struct type *type, gdb_byte *buf, bool *optimizedp, bool *unavailablep);
 extern void set_gdbarch_register_to_value (struct gdbarch *gdbarch, gdbarch_register_to_value_ftype *register_to_value);
 
 typedef void (gdbarch_value_to_register_ftype) (const frame_info_ptr &frame, int regnum, struct type *type, const gdb_byte *buf);

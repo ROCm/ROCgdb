@@ -213,10 +213,10 @@ alpha_convert_register_p (struct gdbarch *gdbarch, int regno,
 	  && type->length () == 4);
 }
 
-static int
+static bool
 alpha_register_to_value (const frame_info_ptr &frame, int regnum,
 			 struct type *valtype, gdb_byte *out,
-			int *optimizedp, int *unavailablep)
+			 bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct value *value = get_frame_register_value (frame, regnum);
@@ -228,7 +228,7 @@ alpha_register_to_value (const frame_info_ptr &frame, int regnum,
   if (*optimizedp || *unavailablep)
     {
       release_value (value);
-      return 0;
+      return false;
     }
 
   /* Convert to VALTYPE.  */
@@ -237,7 +237,7 @@ alpha_register_to_value (const frame_info_ptr &frame, int regnum,
   alpha_sts (gdbarch, out, value->contents_all ().data ());
 
   release_value (value);
-  return 1;
+  return true;
 }
 
 static void

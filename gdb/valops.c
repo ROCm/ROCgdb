@@ -1207,7 +1207,7 @@ value_assign (struct value *toval, struct value *fromval)
 	    LONGEST offset = parent->offset () + toval->offset ();
 	    size_t changed_len;
 	    gdb_byte buffer[sizeof (LONGEST)];
-	    int optim, unavail;
+	    bool optim, unavail;
 
 	    changed_len = (toval->bitpos ()
 			   + toval->bitsize ()
