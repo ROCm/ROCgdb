@@ -1061,8 +1061,8 @@ extern void set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch, bo
 /* Set if the least significant bit of the delta is used instead of the least
    significant bit of the pfn for pointers to virtual member functions. */
 
-extern int gdbarch_vbit_in_delta (struct gdbarch *gdbarch);
-extern void set_gdbarch_vbit_in_delta (struct gdbarch *gdbarch, int vbit_in_delta);
+extern bool gdbarch_vbit_in_delta (struct gdbarch *gdbarch);
+extern void set_gdbarch_vbit_in_delta (struct gdbarch *gdbarch, bool vbit_in_delta);
 
 /* The maximum length of an instruction on this architecture in bytes. */
 

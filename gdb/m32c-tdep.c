@@ -2647,7 +2647,7 @@ m32c_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      In order to verify this, see the definition of
      TARGET_PTRMEMFUNC_VBIT_LOCATION in gcc/defaults.h along with the
      definition of FUNCTION_BOUNDARY in gcc/config/m32c/m32c.h.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   return gdbarch;
 }

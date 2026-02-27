@@ -10769,7 +10769,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					 arm_adjust_breakpoint_address);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);

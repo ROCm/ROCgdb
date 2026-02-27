@@ -183,7 +183,7 @@ struct gdbarch
   gdbarch_core_read_x86_xsave_layout_ftype *core_read_x86_xsave_layout = nullptr;
   const char * gcore_bfd_target = 0;
   bool vtable_function_descriptors = false;
-  int vbit_in_delta = 0;
+  bool vbit_in_delta = 0;
   ULONGEST max_insn_length = 0;
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn = nullptr;
   gdbarch_displaced_step_hw_singlestep_ftype *displaced_step_hw_singlestep = default_displaced_step_hw_singlestep;
@@ -3934,7 +3934,7 @@ set_gdbarch_vtable_function_descriptors (struct gdbarch *gdbarch,
   gdbarch->vtable_function_descriptors = vtable_function_descriptors;
 }
 
-int
+bool
 gdbarch_vbit_in_delta (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3946,7 +3946,7 @@ gdbarch_vbit_in_delta (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_vbit_in_delta (struct gdbarch *gdbarch,
-			   int vbit_in_delta)
+			   bool vbit_in_delta)
 {
   gdbarch->vbit_in_delta = vbit_in_delta;
 }

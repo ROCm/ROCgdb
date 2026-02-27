@@ -8740,7 +8740,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					 mips_single_step_through_delay);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   mips_register_g_packet_guesses (gdbarch);
 

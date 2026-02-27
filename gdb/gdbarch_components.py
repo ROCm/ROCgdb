@@ -1792,7 +1792,7 @@ Value(
 Set if the least significant bit of the delta is used instead of the least
 significant bit of the pfn for pointers to virtual member functions.
 """,
-    type="int",
+    type="bool",
     name="vbit_in_delta",
     invalid=False,
 )

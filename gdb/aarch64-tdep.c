@@ -4846,7 +4846,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_print_insn (gdbarch, aarch64_gdb_print_insn);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   info.target_desc = tdesc;

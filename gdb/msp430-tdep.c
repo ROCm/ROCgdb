@@ -988,9 +988,6 @@ msp430_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_in_solib_return_trampoline (gdbarch, msp430_in_return_stub);
   set_gdbarch_skip_trampoline_code (gdbarch, msp430_skip_trampoline_code);
 
-  /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 0);
-
   return gdbarch;
 }
 
