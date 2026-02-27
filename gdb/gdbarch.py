@@ -68,7 +68,7 @@ with open("gdbarch-gen.h", "w") as f:
     for c in filter(info, components):
         print(file=f)
         print(
-            f"""extern {c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);
+            f"""{c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);
 /* set_gdbarch_{c.name}() - not applicable - pre-initialized.  */""",
             file=f,
         )
@@ -100,16 +100,16 @@ with open("gdbarch-gen.h", "w") as f:
 
         if c.predicate:
             print(file=f)
-            print(f"extern bool gdbarch_{c.name}_p (struct gdbarch *gdbarch);", file=f)
+            print(f"bool gdbarch_{c.name}_p (struct gdbarch *gdbarch);", file=f)
 
         print(file=f)
         if isinstance(c, Value):
             print(
-                f"extern {c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);",
+                f"{c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);",
                 file=f,
             )
             print(
-                f"extern void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.type}{maybe_space(c)}{c.name});",
+                f"void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.type}{maybe_space(c)}{c.name});",
                 file=f,
             )
         else:
@@ -120,11 +120,11 @@ with open("gdbarch-gen.h", "w") as f:
             )
             if c.implement:
                 print(
-                    f"extern {c.type}{maybe_space(c)}gdbarch_{c.name} ({c.set_list()});",
+                    f"{c.type}{maybe_space(c)}gdbarch_{c.name} ({c.set_list()});",
                     file=f,
                 )
             print(
-                f"extern void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.ftype()} *{c.name});",
+                f"void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.ftype()} *{c.name});",
                 file=f,
             )
 
