@@ -10021,7 +10021,7 @@ arm_register_g_packet_guesses (struct gdbarch *gdbarch)
 
 /* Implement the code_of_frame_writable gdbarch method.  */
 
-static int
+static bool
 arm_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
@@ -10030,10 +10030,10 @@ arm_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame
     {
       /* M-profile exception frames return to some magic PCs, where
 	 isn't writable at all.  */
-      return 0;
+      return false;
     }
   else
-    return 1;
+    return true;
 }
 
 /* Implement gdbarch_gnu_triplet_regexp.  If the arch name is arm then allow it

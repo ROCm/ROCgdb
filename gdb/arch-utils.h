@@ -254,8 +254,8 @@ extern int generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
 extern int generic_stack_frame_destroyed_p (struct gdbarch *gdbarch,
 					    CORE_ADDR pc);
 
-extern int default_code_of_frame_writable (struct gdbarch *gdbarch,
-					   const frame_info_ptr &frame);
+extern bool default_code_of_frame_writable (struct gdbarch *gdbarch,
+					    const frame_info_ptr &frame);
 
 /* By default, registers are not convertible.  */
 extern int generic_convert_register_p (struct gdbarch *gdbarch, int regnum,

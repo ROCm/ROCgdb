@@ -2231,7 +2231,7 @@ set_gdbarch_push_dummy_code (struct gdbarch *gdbarch,
   gdbarch->push_dummy_code = push_dummy_code;
 }
 
-int
+bool
 gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame)
 {
   gdb_assert (gdbarch != NULL);

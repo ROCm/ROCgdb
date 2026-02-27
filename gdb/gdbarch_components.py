@@ -665,7 +665,7 @@ Method(
     comment="""
 Return true if the code of FRAME is writable.
 """,
-    type="int",
+    type="bool",
     name="code_of_frame_writable",
     params=[("const frame_info_ptr &", "frame")],
     predefault="default_code_of_frame_writable",

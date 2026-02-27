@@ -165,11 +165,11 @@ generic_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   return 0;
 }
 
-int
+bool
 default_code_of_frame_writable (struct gdbarch *gdbarch,
 				const frame_info_ptr &frame)
 {
-  return 1;
+  return true;
 }
 
 /* Helper functions for gdbarch_inner_than */

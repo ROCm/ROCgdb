@@ -347,8 +347,8 @@ extern void set_gdbarch_push_dummy_code (struct gdbarch *gdbarch, gdbarch_push_d
 
 /* Return true if the code of FRAME is writable. */
 
-typedef int (gdbarch_code_of_frame_writable_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);
-extern int gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame);
+typedef bool (gdbarch_code_of_frame_writable_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);
+extern bool gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame);
 extern void set_gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, gdbarch_code_of_frame_writable_ftype *code_of_frame_writable);
 
 typedef void (gdbarch_print_registers_info_ftype) (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, int all);

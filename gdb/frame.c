@@ -585,7 +585,7 @@ frame_info_ptr
 skip_unwritable_frames (const frame_info_ptr &initial_frame)
 {
   frame_info_ptr frame = initial_frame;
-  while (gdbarch_code_of_frame_writable (get_frame_arch (frame), frame) == 0)
+  while (!gdbarch_code_of_frame_writable (get_frame_arch (frame), frame))
     {
       frame = get_prev_frame (frame);
       if (frame == NULL)
