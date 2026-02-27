@@ -6656,7 +6656,7 @@ mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
     }
 }
 
-static int
+static bool
 mips_single_step_through_delay (struct gdbarch *gdbarch,
 				const frame_info_ptr &frame)
 {
@@ -6671,7 +6671,7 @@ mips_single_step_through_delay (struct gdbarch *gdbarch,
 	  && !micromips_insn_at_pc_has_delay_slot (gdbarch, pc, 0))
       || (mips_pc_is_mips16 (gdbarch, pc)
 	  && !mips16_insn_at_pc_has_delay_slot (gdbarch, pc, 0)))
-    return 0;
+    return false;
 
   isa = mips_pc_isa (gdbarch, pc);
   /* _has_delay_slot above will have validated the read.  */

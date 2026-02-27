@@ -1355,10 +1355,10 @@ past a conditional branch to self.
 
 Method(
     comment="""
-Return non-zero if the processor is executing a delay slot and a
+Return true if the processor is executing a delay slot and a
 further single-step is needed before the instruction finishes.
 """,
-    type="int",
+    type="bool",
     name="single_step_through_delay",
     params=[("const frame_info_ptr &", "frame")],
     predicate=True,

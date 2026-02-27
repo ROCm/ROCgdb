@@ -3233,7 +3233,7 @@ gdbarch_single_step_through_delay_p (struct gdbarch *gdbarch)
   return gdbarch->single_step_through_delay != NULL;
 }
 
-int
+bool
 gdbarch_single_step_through_delay (struct gdbarch *gdbarch, const frame_info_ptr &frame)
 {
   gdb_assert (gdbarch != NULL);

@@ -445,13 +445,13 @@ static const struct frame_unwind_legacy cris_sigtramp_frame_unwind (
   cris_sigtramp_frame_sniffer
 );
 
-static int
+static bool
 crisv32_single_step_through_delay (struct gdbarch *gdbarch,
 				   const frame_info_ptr &this_frame)
 {
   cris_gdbarch_tdep *tdep = gdbarch_tdep<cris_gdbarch_tdep> (gdbarch);
   ULONGEST erp;
-  int ret = 0;
+  bool ret = false;
 
   if (tdep->cris_mode == cris_mode_guru)
     erp = get_frame_register_unsigned (this_frame, NRP_REGNUM);
@@ -463,7 +463,7 @@ crisv32_single_step_through_delay (struct gdbarch *gdbarch,
       /* In delay slot - check if there's a breakpoint at the preceding
 	 instruction.  */
       if (breakpoint_here_p (get_frame_address_space (this_frame), erp & ~0x1))
-	ret = 1;
+	ret = true;
     }
   return ret;
 }

@@ -770,13 +770,13 @@ typedef std::vector<CORE_ADDR> (gdbarch_get_next_pcs_ftype) (struct regcache *re
 extern std::vector<CORE_ADDR> gdbarch_get_next_pcs (struct gdbarch *gdbarch, struct regcache *regcache);
 extern void set_gdbarch_get_next_pcs (struct gdbarch *gdbarch, gdbarch_get_next_pcs_ftype *get_next_pcs);
 
-/* Return non-zero if the processor is executing a delay slot and a
+/* Return true if the processor is executing a delay slot and a
    further single-step is needed before the instruction finishes. */
 
 extern bool gdbarch_single_step_through_delay_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_single_step_through_delay_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);
-extern int gdbarch_single_step_through_delay (struct gdbarch *gdbarch, const frame_info_ptr &frame);
+typedef bool (gdbarch_single_step_through_delay_ftype) (struct gdbarch *gdbarch, const frame_info_ptr &frame);
+extern bool gdbarch_single_step_through_delay (struct gdbarch *gdbarch, const frame_info_ptr &frame);
 extern void set_gdbarch_single_step_through_delay (struct gdbarch *gdbarch, gdbarch_single_step_through_delay_ftype *single_step_through_delay);
 
 /* FIXME: cagney/2003-08-28: Need to find a better way of selecting the

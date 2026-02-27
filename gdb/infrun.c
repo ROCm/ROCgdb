@@ -7090,7 +7090,7 @@ handle_signal_stop (struct execution_control_state *ecs)
 	 times before it's been fully executing.  E.g., architectures
 	 with a delay slot.  It needs to be stepped twice, once for
 	 the instruction and once for the delay slot.  */
-      int step_through_delay
+      bool step_through_delay
 	= gdbarch_single_step_through_delay (gdbarch, frame);
 
       if (step_through_delay)
