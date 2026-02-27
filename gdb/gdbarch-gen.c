@@ -1974,7 +1974,7 @@ gdbarch_ax_pseudo_register_push_stack_p (struct gdbarch *gdbarch)
   return gdbarch->ax_pseudo_register_push_stack != NULL;
 }
 
-int
+bool
 gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, struct agent_expr *ax, int reg)
 {
   gdb_assert (gdbarch != NULL);

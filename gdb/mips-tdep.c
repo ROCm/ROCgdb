@@ -841,7 +841,7 @@ mips_ax_pseudo_register_collect (struct gdbarch *gdbarch,
   ax_reg_mask (ax, rawnum);
 }
 
-static int
+static bool
 mips_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
 				    struct agent_expr *ax, int reg)
 {
@@ -870,7 +870,7 @@ mips_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
   else
     internal_error (_("bad register size"));
 
-  return 0;
+  return true;
 }
 
 /* Table to translate 3-bit register field to actual register number.  */

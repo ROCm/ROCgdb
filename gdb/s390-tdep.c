@@ -1536,7 +1536,7 @@ s390_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 
 /* The "ax_pseudo_register_push_stack" gdbarch method.  */
 
-static int
+static bool
 s390_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
 				    struct agent_expr *ax, int regnum)
 {
@@ -1571,13 +1571,13 @@ s390_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
   else if (regnum_is_vxr_full (tdep, regnum))
     {
       /* Too large to stuff on the stack.  */
-      return 1;
+      return false;
     }
   else
     {
       internal_error (_("invalid regnum"));
     }
-  return 0;
+  return true;
 }
 
 /* The "gen_return_address" gdbarch method.  Since this is supposed to be

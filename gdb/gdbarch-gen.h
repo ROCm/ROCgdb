@@ -246,12 +246,13 @@ extern void set_gdbarch_ax_pseudo_register_collect (struct gdbarch *gdbarch, gdb
 
 /* Assemble agent expression bytecode to push the value of pseudo-register
    REG on the interpreter stack.
-   Return -1 if something goes wrong, 0 otherwise. */
+   REG must be a valid register number.
+   Return false if something goes wrong, true otherwise. */
 
 extern bool gdbarch_ax_pseudo_register_push_stack_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_ax_pseudo_register_push_stack_ftype) (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
-extern int gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+typedef bool (gdbarch_ax_pseudo_register_push_stack_ftype) (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
+extern bool gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, struct agent_expr *ax, int reg);
 extern void set_gdbarch_ax_pseudo_register_push_stack (struct gdbarch *gdbarch, gdbarch_ax_pseudo_register_push_stack_ftype *ax_pseudo_register_push_stack);
 
 /* Some architectures can display additional information for specific

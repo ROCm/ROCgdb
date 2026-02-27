@@ -232,7 +232,8 @@ ax_reg (struct agent_expr *x, int reg)
 	error (_("'%s' is a pseudo-register; "
 		 "GDB cannot yet trace its contents."),
 	       user_reg_map_regnum_to_name (x->gdbarch, reg));
-      if (gdbarch_ax_pseudo_register_push_stack (x->gdbarch, x, reg))
+
+      if (!gdbarch_ax_pseudo_register_push_stack (x->gdbarch, x, reg))
 	error (_("Trace '%s' failed."),
 	       user_reg_map_regnum_to_name (x->gdbarch, reg));
     }

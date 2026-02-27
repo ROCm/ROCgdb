@@ -498,9 +498,10 @@ Method(
     comment="""
 Assemble agent expression bytecode to push the value of pseudo-register
 REG on the interpreter stack.
-Return -1 if something goes wrong, 0 otherwise.
+REG must be a valid register number.
+Return false if something goes wrong, true otherwise.
 """,
-    type="int",
+    type="bool",
     name="ax_pseudo_register_push_stack",
     params=[("struct agent_expr *", "ax"), ("int", "reg")],
     predicate=True,
