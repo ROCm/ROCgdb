@@ -8394,7 +8394,7 @@ static const int i386_record_regmap[] =
    of instruction to replace, and 0 if not, plus an explanatory
    string.  */
 
-static int
+static bool
 i386_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 			       std::string *msg)
 {
@@ -8432,13 +8432,13 @@ i386_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 	*msg = string_printf (_("; instruction is only %d bytes long, "
 				"need at least %d bytes for the jump"),
 			      len, jumplen);
-      return 0;
+      return false;
     }
   else
     {
       if (msg)
 	msg->clear ();
-      return 1;
+      return true;
     }
 }
 

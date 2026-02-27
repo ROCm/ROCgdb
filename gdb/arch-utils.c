@@ -857,7 +857,7 @@ default_has_shared_address_space (struct gdbarch *gdbarch)
   return false;
 }
 
-int
+bool
 default_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 				  std::string *msg)
 {
@@ -865,7 +865,7 @@ default_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
      tracepoints that doesn't need gdbarch, so always say yes.  */
   if (msg)
     msg->clear ();
-  return 1;
+  return true;
 }
 
 const gdb_byte *

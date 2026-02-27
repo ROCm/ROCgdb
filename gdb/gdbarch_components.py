@@ -2405,7 +2405,7 @@ Method(
     comment="""
 True if a fast tracepoint can be set at an address.
 """,
-    type="int",
+    type="bool",
     name="fast_tracepoint_valid_at",
     params=[("CORE_ADDR", "addr"), ("std::string *", "msg")],
     predefault="default_fast_tracepoint_valid_at",
