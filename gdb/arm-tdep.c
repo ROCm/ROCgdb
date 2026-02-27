@@ -10683,9 +10683,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* wchar_t is unsigned under the AAPCS.  */
   if (tdep->arm_abi == ARM_ABI_AAPCS)
-    set_gdbarch_wchar_signed (gdbarch, 0);
-  else
-    set_gdbarch_wchar_signed (gdbarch, 1);
+    set_gdbarch_wchar_signed (gdbarch, false);
 
   /* Compute type alignment.  */
   set_gdbarch_type_align (gdbarch, arm_type_align);

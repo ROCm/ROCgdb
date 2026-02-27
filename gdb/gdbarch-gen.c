@@ -63,7 +63,7 @@ struct gdbarch
   int long_double_bit = 8*TARGET_CHAR_BIT;
   const struct floatformat ** long_double_format = floatformats_ieee_double;
   int wchar_bit = 4*TARGET_CHAR_BIT;
-  int wchar_signed = -1;
+  bool wchar_signed = true;
   gdbarch_floatformat_for_type_ftype *floatformat_for_type = default_floatformat_for_type;
   int ptr_bit = 4*TARGET_CHAR_BIT;
   int addr_bit = 0;
@@ -307,8 +307,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of long_double_bit, invalid_p == 0.  */
   /* Skip verify of long_double_format, invalid_p == 0.  */
   /* Skip verify of wchar_bit, invalid_p == 0.  */
-  if (gdbarch->wchar_signed == -1)
-    gdbarch->wchar_signed = 1;
   /* Skip verify of wchar_signed, invalid_p == 0.  */
   /* Skip verify of floatformat_for_type, invalid_p == 0.  */
   /* Skip verify of ptr_bit, invalid_p == 0.  */
@@ -1648,12 +1646,11 @@ set_gdbarch_wchar_bit (struct gdbarch *gdbarch,
   gdbarch->wchar_bit = wchar_bit;
 }
 
-int
+bool
 gdbarch_wchar_signed (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  /* Check variable changed from its initial value.  */
-  gdb_assert (gdbarch->wchar_signed != -1);
+  /* Skip verify of wchar_signed, invalid_p == 0.  */
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_wchar_signed called\n");
   return gdbarch->wchar_signed;
@@ -1661,7 +1658,7 @@ gdbarch_wchar_signed (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_wchar_signed (struct gdbarch *gdbarch,
-			  int wchar_signed)
+			  bool wchar_signed)
 {
   gdbarch->wchar_signed = wchar_signed;
 }

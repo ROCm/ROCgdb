@@ -286,12 +286,13 @@ starting with C++11.
 
 Value(
     comment="""
-One if `wchar_t' is signed, zero if unsigned.
+True if `wchar_t' is signed, false if unsigned.
+
+The default value is true (signed).
 """,
-    type="int",
+    type="bool",
     name="wchar_signed",
-    predefault="-1",
-    postdefault="1",
+    predefault="true",
     invalid=False,
 )
 

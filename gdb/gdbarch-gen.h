@@ -109,10 +109,12 @@ extern void set_gdbarch_long_double_format (struct gdbarch *gdbarch, const struc
 extern int gdbarch_wchar_bit (struct gdbarch *gdbarch);
 extern void set_gdbarch_wchar_bit (struct gdbarch *gdbarch, int wchar_bit);
 
-/* One if `wchar_t' is signed, zero if unsigned. */
+/* True if `wchar_t' is signed, false if unsigned.
 
-extern int gdbarch_wchar_signed (struct gdbarch *gdbarch);
-extern void set_gdbarch_wchar_signed (struct gdbarch *gdbarch, int wchar_signed);
+   The default value is true (signed). */
+
+extern bool gdbarch_wchar_signed (struct gdbarch *gdbarch);
+extern void set_gdbarch_wchar_signed (struct gdbarch *gdbarch, bool wchar_signed);
 
 /* Returns the floating-point format to be used for values of length LENGTH.
    NAME, if non-NULL, is the type name, which may be used to distinguish

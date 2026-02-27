@@ -942,7 +942,7 @@ static void
 windows_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   set_gdbarch_wchar_bit (gdbarch, 16);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
   set_gdbarch_auto_wide_charset (gdbarch, windows_auto_wide_charset);
 
   /* Canonical paths on this target look like

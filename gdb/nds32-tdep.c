@@ -1993,7 +1993,7 @@ nds32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->elf_abi = elf_abi;
 
   set_gdbarch_wchar_bit (gdbarch, 16);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   if (fpu_freg == -1)
     num_regs = NDS32_NUM_REGS;

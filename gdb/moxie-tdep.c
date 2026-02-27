@@ -1060,7 +1060,7 @@ moxie_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     = gdbarch_alloc (&info, gdbarch_tdep_up (new moxie_gdbarch_tdep));
 
   set_gdbarch_wchar_bit (gdbarch, 32);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   set_gdbarch_num_regs (gdbarch, MOXIE_NUM_REGS);
   set_gdbarch_sp_regnum (gdbarch, MOXIE_SP_REGNUM);
