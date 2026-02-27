@@ -1049,7 +1049,7 @@ riscv_pseudo_register_write (struct gdbarch *gdbarch,
 /* Implement the cannot_store_register gdbarch method.  The zero register
    (x0) is read-only on RISC-V.  */
 
-static int
+static bool
 riscv_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return regnum == RISCV_ZERO_REGNUM;

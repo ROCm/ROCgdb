@@ -920,16 +920,16 @@ static const struct frame_base tilegx_frame_base = {
 
 /* We cannot read/write the "special" registers.  */
 
-static int
+static bool
 tilegx_cannot_reference_register (struct gdbarch *gdbarch, int regno)
 {
   if (regno >= 0 && regno < TILEGX_NUM_EASY_REGS)
-    return 0;
+    return false;
   else if (regno == TILEGX_PC_REGNUM
 	   || regno == TILEGX_FAULTNUM_REGNUM)
-    return 0;
+    return false;
   else
-    return 1;
+    return true;
 }
 
 static struct gdbarch *

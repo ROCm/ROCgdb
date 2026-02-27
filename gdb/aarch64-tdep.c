@@ -4142,13 +4142,13 @@ aarch64_features_from_target_desc (const struct target_desc *tdesc)
 
 /* Implement the "cannot_store_register" gdbarch method.  */
 
-static int
+static bool
 aarch64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
   if (!tdep->has_pauth ())
-    return 0;
+    return false;
 
   /* Pointer authentication registers are read-only.  */
   return (regnum >= tdep->pauth_reg_base

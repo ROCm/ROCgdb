@@ -246,10 +246,10 @@ default_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdb_byte op,
   return false;
 }
 
-int
+bool
 cannot_register_not (struct gdbarch *gdbarch, int regnum)
 {
-  return 0;
+  return false;
 }
 
 /* Legacy version of target_virtual_frame_pointer().  Assumes that

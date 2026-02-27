@@ -274,14 +274,14 @@ mipsnbsd_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   return 1;
 }
 
-static int
+static bool
 mipsnbsd_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == MIPS_ZERO_REGNUM
 	  || regno == mips_regnum (gdbarch)->fp_implementation_revision);
 }
 
-static int
+static bool
 mipsnbsd_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == MIPS_ZERO_REGNUM

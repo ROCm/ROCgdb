@@ -2617,10 +2617,10 @@ hppa64_register_type (struct gdbarch *gdbarch, int regnum)
      return builtin_type (gdbarch)->builtin_double;
 }
 
-/* Return non-zero if REGNUM is not a register available to the user
+/* Return true if REGNUM is not a register available to the user
    through ptrace/ttrace.  */
 
-static int
+static bool
 hppa32_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return (regnum == 0
@@ -2629,17 +2629,17 @@ hppa32_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 	  || (regnum > HPPA_IPSW_REGNUM && regnum < HPPA_FP4_REGNUM));
 }
 
-static int
+static bool
 hppa32_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   /* cr26 and cr27 are readable (but not writable) from userspace.  */
   if (regnum == HPPA_CR26_REGNUM || regnum == HPPA_CR27_REGNUM)
-    return 0;
+    return false;
   else
     return hppa32_cannot_store_register (gdbarch, regnum);
 }
 
-static int
+static bool
 hppa64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return (regnum == 0
@@ -2648,12 +2648,12 @@ hppa64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 	  || (regnum > HPPA_IPSW_REGNUM && regnum < HPPA64_FP4_REGNUM));
 }
 
-static int
+static bool
 hppa64_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   /* cr26 and cr27 are readable (but not writable) from userspace.  */
   if (regnum == HPPA_CR26_REGNUM || regnum == HPPA_CR27_REGNUM)
-    return 0;
+    return false;
   else
     return hppa64_cannot_store_register (gdbarch, regnum);
 }

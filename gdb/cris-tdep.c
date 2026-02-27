@@ -1464,20 +1464,20 @@ cris_register_size (struct gdbarch *gdbarch, int regno)
   return -1;
 }
 
-/* Nonzero if regno should not be fetched from the target.  This is the case
+/* True if regno should not be fetched from the target.  This is the case
    for unimplemented (size 0) and non-existent registers.  */
 
-static int
+static bool
 cris_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return ((regno < 0 || regno >= gdbarch_num_regs (gdbarch))
 	  || (cris_register_size (gdbarch, regno) == 0));
 }
 
-/* Nonzero if regno should not be written to the target, for various
+/* True if regno should not be written to the target, for various
    reasons.  */
 
-static int
+static bool
 cris_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* There are three kinds of registers we refuse to write to.
@@ -1489,36 +1489,36 @@ cris_cannot_store_register (struct gdbarch *gdbarch, int regno)
       || regno >= gdbarch_num_regs (gdbarch)
       || cris_register_size (gdbarch, regno) == 0)
     /* Not implemented.  */
-    return 1;
+    return true;
 
   else if  (regno == VR_REGNUM)
     /* Read-only.  */
-    return 1;
+    return true;
 
   else if  (regno == P0_REGNUM || regno == P4_REGNUM || regno == P8_REGNUM)
     /* Writing has no effect.  */
-    return 1;
+    return true;
 
   /* IBR, BAR, BRP and IRP are read-only in user mode.  Let the debug
      agent decide whether they are writable.  */
 
-  return 0;
+  return false;
 }
 
-/* Nonzero if regno should not be fetched from the target.  This is the case
+/* True if regno should not be fetched from the target.  This is the case
    for unimplemented (size 0) and non-existent registers.  */
 
-static int
+static bool
 crisv32_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return ((regno < 0 || regno >= gdbarch_num_regs (gdbarch))
 	  || (cris_register_size (gdbarch, regno) == 0));
 }
 
-/* Nonzero if regno should not be written to the target, for various
+/* True if regno should not be written to the target, for various
    reasons.  */
 
-static int
+static bool
 crisv32_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* There are three kinds of registers we refuse to write to.
@@ -1530,20 +1530,20 @@ crisv32_cannot_store_register (struct gdbarch *gdbarch, int regno)
       || regno >= gdbarch_num_regs (gdbarch)
       || cris_register_size (gdbarch, regno) == 0)
     /* Not implemented.  */
-    return 1;
+    return true;
 
   else if  (regno == VR_REGNUM)
     /* Read-only.  */
-    return 1;
+    return true;
 
   else if  (regno == BZ_REGNUM || regno == WZ_REGNUM || regno == DZ_REGNUM)
     /* Writing has no effect.  */
-    return 1;
+    return true;
 
   /* Many special registers are read-only in user mode.  Let the debug
      agent decide whether they are writable.  */
 
-  return 0;
+  return false;
 }
 
 /* Return the GDB type (defined in gdbtypes.c) for the "standard" data type

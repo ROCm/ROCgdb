@@ -710,7 +710,7 @@ also include/...-sim.h.
 )
 
 Method(
-    type="int",
+    type="bool",
     name="cannot_fetch_register",
     params=[("int", "regnum")],
     predefault="cannot_register_not",
@@ -718,7 +718,7 @@ Method(
 )
 
 Method(
-    type="int",
+    type="bool",
     name="cannot_store_register",
     params=[("int", "regnum")],
     predefault="cannot_register_not",

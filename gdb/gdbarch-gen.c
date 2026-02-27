@@ -2299,7 +2299,7 @@ set_gdbarch_register_sim_regno (struct gdbarch *gdbarch,
   gdbarch->register_sim_regno = register_sim_regno;
 }
 
-int
+bool
 gdbarch_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   gdb_assert (gdbarch != NULL);
@@ -2316,7 +2316,7 @@ set_gdbarch_cannot_fetch_register (struct gdbarch *gdbarch,
   gdbarch->cannot_fetch_register = cannot_fetch_register;
 }
 
-int
+bool
 gdbarch_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   gdb_assert (gdbarch != NULL);

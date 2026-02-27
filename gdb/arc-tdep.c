@@ -867,7 +867,7 @@ arc_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp, CORE_ADDR funaddr,
 
 /* Implement the "cannot_fetch_register" gdbarch method.  */
 
-static int
+static bool
 arc_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   /* Assume that register is readable if it is unknown.  LIMM and RESERVED are
@@ -887,7 +887,7 @@ arc_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 
 /* Implement the "cannot_store_register" gdbarch method.  */
 
-static int
+static bool
 arc_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   /* Assume that register is writable if it is unknown.  See comment in

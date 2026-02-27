@@ -99,13 +99,13 @@ static const char * const alpha_register_names[] =
 };
 static_assert (ALPHA_NUM_REGS == ARRAY_SIZE (alpha_register_names));
 
-static int
+static bool
 alpha_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
-  return (strlen (alpha_register_names[regno]) == 0);
+  return strlen (alpha_register_names[regno]) == 0;
 }
 
-static int
+static bool
 alpha_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == ALPHA_ZERO_REGNUM

@@ -103,9 +103,9 @@ lm32_register_type (struct gdbarch *gdbarch, int reg_nr)
   return builtin_type (gdbarch)->builtin_int32;
 }
 
-/* Return non-zero if a register can't be written.  */
+/* Return true if a register can't be written.  */
 
-static int
+static bool
 lm32_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == SIM_LM32_R0_REGNUM) || (regno == SIM_LM32_EID_REGNUM);
