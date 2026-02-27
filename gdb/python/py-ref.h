@@ -77,6 +77,15 @@ struct gdbpy_dict_wrapper : public PyObject
     auto *wrapper = reinterpret_cast<gdbpy_dict_wrapper *> (self);
     return &wrapper->dict;
   }
+
+  /* Allocate the dictionary pointed by 'dict'.
+     Note: this method should be called once the object was allocated,
+     when setting its attributes.  */
+  bool allocate_dict ()
+  {
+    dict = PyDict_New ();
+    return dict != nullptr;
+  }
 };
 
 #endif /* GDB_PYTHON_PY_REF_H */

@@ -132,8 +132,7 @@ gdbpy_core_file_from_inferior (inferior *inf)
      which requires that the 'inferior' be set to NULL.  */
   object->inferior = nullptr;
   object->mapped_files = nullptr;
-  object->dict = PyDict_New ();
-  if (object->dict == nullptr)
+  if (!object->allocate_dict ())
     return nullptr;
 
   /* Now that the gdb.Corefile has been successfully initialised and we know

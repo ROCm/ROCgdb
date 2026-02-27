@@ -41,16 +41,15 @@ create_thread_object (struct thread_info *tp)
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (tp->inf);
   if (inf_obj == NULL)
-    return NULL;
+    return nullptr;
 
   thread_obj.reset (PyObject_New (thread_object, &thread_object_type));
   if (thread_obj == NULL)
-    return NULL;
+    return nullptr;
 
   thread_obj->thread = tp;
   thread_obj->inf_obj = (PyObject *) inf_obj.release ();
-  thread_obj->dict = PyDict_New ();
-  if (thread_obj->dict == nullptr)
+  if (!thread_obj->allocate_dict ())
     return nullptr;
 
   return thread_obj;

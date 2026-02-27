@@ -224,8 +224,7 @@ inferior_to_inferior_object (struct inferior *inferior)
 
   inf_obj->inferior = inferior;
   inf_obj->threads = new thread_map_t ();
-  inf_obj->dict = PyDict_New ();
-  if (inf_obj->dict == nullptr)
+  if (!inf_obj->allocate_dict ())
     return nullptr;
 
   /* PyObject_New initializes the new object with a refcount of 1.  This counts

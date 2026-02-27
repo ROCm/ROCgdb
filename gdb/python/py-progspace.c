@@ -171,8 +171,7 @@ pspy_initialize (gdbpy_ref<pspace_object> &self)
 {
   self->pspace = NULL;
 
-  self->dict = PyDict_New ();
-  if (self->dict == NULL)
+  if (!self->allocate_dict ())
     return false;
 
   self->printers = PyList_New (0);

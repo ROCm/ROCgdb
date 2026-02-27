@@ -93,12 +93,9 @@ field_new (void)
   gdbpy_ref<field_object> result (PyObject_New (field_object,
 						&field_object_type));
 
-  if (result != NULL)
-    {
-      result->dict = PyDict_New ();
-      if (!result->dict)
-	return NULL;
-    }
+  if (result != nullptr && !result->allocate_dict ())
+    return nullptr;
+
   return (PyObject *) result.release ();
 }
 

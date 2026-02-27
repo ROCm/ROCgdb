@@ -201,11 +201,10 @@ objfpy_dealloc (PyObject *o)
 static bool
 objfpy_initialize (gdbpy_ref<objfile_object> &self)
 {
-  self->objfile = NULL;
-
-  self->dict = PyDict_New ();
-  if (self->dict == NULL)
+  if (!self->allocate_dict ())
     return false;
+
+  self->objfile = NULL;
 
   self->printers = PyList_New (0);
   if (self->printers == NULL)

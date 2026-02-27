@@ -31,11 +31,10 @@ create_event_object (PyTypeObject *py_type)
 {
   gdbpy_ref<event_object> event_obj (PyObject_New (event_object, py_type));
   if (event_obj == NULL)
-    return NULL;
+    return nullptr;
 
-  event_obj->dict = PyDict_New ();
-  if (!event_obj->dict)
-    return NULL;
+  if (!event_obj->allocate_dict ())
+    return nullptr;
 
   return event_obj;
 }
