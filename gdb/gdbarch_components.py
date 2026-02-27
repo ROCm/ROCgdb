@@ -953,7 +953,7 @@ by language and its ABI, such as C++.  Unfortunately, compiler may
 implement it to a target-dependent feature.  So that we need such hook here
 to be aware of this in GDB.
 """,
-    type="int",
+    type="bool",
     name="return_in_first_hidden_param_p",
     params=[("struct type *", "type")],
     predefault="default_return_in_first_hidden_param_p",

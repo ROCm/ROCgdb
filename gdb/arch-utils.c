@@ -893,7 +893,7 @@ default_gen_return_address (struct gdbarch *gdbarch,
   error (_("This architecture has no method to collect a return address."));
 }
 
-int
+bool
 default_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 					struct type *type)
 {

@@ -319,8 +319,8 @@ extern void default_gen_return_address (struct gdbarch *gdbarch,
 
 extern const char *default_auto_wide_charset (void);
 
-extern int default_return_in_first_hidden_param_p (struct gdbarch *,
-						   struct type *);
+extern bool default_return_in_first_hidden_param_p (struct gdbarch *,
+						    struct type *);
 
 extern int default_insn_is_call (struct gdbarch *, CORE_ADDR);
 extern int default_insn_is_ret (struct gdbarch *, CORE_ADDR);

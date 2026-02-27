@@ -1089,11 +1089,11 @@ m68k_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 /* This is the implementation of gdbarch method
    return_in_first_hidden_param_p.  */
 
-static int
+static bool
 m68k_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 				     struct type *type)
 {
-  return 0;
+  return false;
 }
 
 /* System V Release 4 (SVR4).  */

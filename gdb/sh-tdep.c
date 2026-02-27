@@ -2207,11 +2207,11 @@ sh_iterate_over_regset_sections (struct gdbarch *gdbarch,
 /* This is the implementation of gdbarch method
    return_in_first_hidden_param_p.  */
 
-static int
+static bool
 sh_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 				     struct type *type)
 {
-  return 0;
+  return false;
 }
 
 

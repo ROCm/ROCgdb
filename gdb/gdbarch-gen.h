@@ -499,8 +499,8 @@ extern void set_gdbarch_update_call_site_pc (struct gdbarch *gdbarch, gdbarch_up
    implement it to a target-dependent feature.  So that we need such hook here
    to be aware of this in GDB. */
 
-typedef int (gdbarch_return_in_first_hidden_param_p_ftype) (struct gdbarch *gdbarch, struct type *type);
-extern int gdbarch_return_in_first_hidden_param_p (struct gdbarch *gdbarch, struct type *type);
+typedef bool (gdbarch_return_in_first_hidden_param_p_ftype) (struct gdbarch *gdbarch, struct type *type);
+extern bool gdbarch_return_in_first_hidden_param_p (struct gdbarch *gdbarch, struct type *type);
 extern void set_gdbarch_return_in_first_hidden_param_p (struct gdbarch *gdbarch, gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p);
 
 typedef CORE_ADDR (gdbarch_skip_prologue_ftype) (struct gdbarch *gdbarch, CORE_ADDR ip);

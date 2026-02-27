@@ -2575,7 +2575,7 @@ set_gdbarch_update_call_site_pc (struct gdbarch *gdbarch,
   gdbarch->update_call_site_pc = update_call_site_pc;
 }
 
-int
+bool
 gdbarch_return_in_first_hidden_param_p (struct gdbarch *gdbarch, struct type *type)
 {
   gdb_assert (gdbarch != NULL);
