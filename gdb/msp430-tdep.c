@@ -796,7 +796,7 @@ static const char msp430_epilog_name_prefix[] = "__mspabi_func_epilog_";
 
 /* Implement the "in_return_stub" gdbarch method.  */
 
-static int
+static bool
 msp430_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc,
 		       const char *name)
 {

@@ -2289,11 +2289,11 @@ rs6000_frame_align (struct gdbarch *gdbarch, CORE_ADDR addr)
    gdbarch_skip_trampoline_code hooks in handle_inferior_event() to skip past
    @FIX code.  */
 
-static int
+static bool
 rs6000_in_solib_return_trampoline (struct gdbarch *gdbarch,
 				   CORE_ADDR pc, const char *name)
 {
-  return name && startswith (name, "@FIX");
+  return name != nullptr && startswith (name, "@FIX");
 }
 
 /* Skip code that the user doesn't want to see when stepping:

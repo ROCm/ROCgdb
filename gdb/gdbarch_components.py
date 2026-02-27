@@ -1410,7 +1410,7 @@ Method(
     comment="""
 Some systems also have trampoline code for returning from shared libs.
 """,
-    type="int",
+    type="bool",
     name="in_solib_return_trampoline",
     params=[("CORE_ADDR", "pc"), ("const char *", "name")],
     predefault="generic_in_solib_return_trampoline",

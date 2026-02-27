@@ -7763,7 +7763,7 @@ mips_skip_mips16_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
 /* Return non-zero if the PC is inside a return thunk (aka stub or trampoline).
    This implements the IN_SOLIB_RETURN_TRAMPOLINE macro.  */
 
-static int
+static bool
 mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
 {
   CORE_ADDR start_addr;
@@ -7771,7 +7771,7 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
 
   /* Find the starting address of the function containing the PC.  */
   if (find_pc_partial_function (pc, NULL, &start_addr, NULL) == 0)
-    return 0;
+    return false;
 
   /* If the PC is in __mips16_call_stub_{s,d}{f,c}_{0..10} but not at
      the start, i.e. after the JALR instruction, this is effectively
@@ -7782,14 +7782,14 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
       && mips_is_stub_mode (name + prefixlen)
       && name[prefixlen + 2] == '_'
       && mips_is_stub_suffix (name + prefixlen + 3, 1))
-    return 1;
+    return true;
 
   /* If the PC is in __call_stub_fp_* but not at the start, i.e. after
      the JAL or JALR instruction, this is effectively a return stub.  */
   prefixlen = strlen (mips_str_call_fp_stub);
   if (pc != start_addr
       && strncmp (name, mips_str_call_fp_stub, prefixlen) == 0)
-    return 1;
+    return true;
 
   /* Consume the .pic. prefix of any PIC stub, this function must return
      true when the PC is in a PIC stub of a __mips16_ret_{d,s}{f,c} stub
@@ -7804,9 +7804,9 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
   if (strncmp (name, mips_str_mips16_ret_stub, prefixlen) == 0
       && mips_is_stub_mode (name + prefixlen)
       && name[prefixlen + 2] == '\0')
-    return 1;
+    return true;
 
-  return 0;			/* Not a stub.  */
+  return false;			/* Not a stub.  */
 }
 
 /* If the current PC is the start of a non-PIC-to-PIC stub, return the

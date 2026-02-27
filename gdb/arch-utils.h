@@ -248,8 +248,9 @@ extern CORE_ADDR generic_skip_trampoline_code (const frame_info_ptr &frame,
 extern CORE_ADDR generic_skip_solib_resolver (struct gdbarch *gdbarch,
 					      CORE_ADDR pc);
 
-extern int generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
-					       CORE_ADDR pc, const char *name);
+extern bool generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
+						CORE_ADDR pc,
+						const char *name);
 
 extern int generic_stack_frame_destroyed_p (struct gdbarch *gdbarch,
 					    CORE_ADDR pc);
