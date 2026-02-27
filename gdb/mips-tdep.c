@@ -830,7 +830,7 @@ mips_pseudo_register_write (struct gdbarch *gdbarch,
     internal_error (_("bad register size"));
 }
 
-static int
+static void
 mips_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int reg)
 {
@@ -839,8 +839,6 @@ mips_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 	      && reg < 2 * gdbarch_num_regs (gdbarch));
 
   ax_reg_mask (ax, rawnum);
-
-  return 0;
 }
 
 static int

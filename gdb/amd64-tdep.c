@@ -424,7 +424,7 @@ amd64_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 
 /* Implement the 'ax_pseudo_register_collect' gdbarch method.  */
 
-static int
+static void
 amd64_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				  struct agent_expr *ax, int regnum)
 {
@@ -438,17 +438,15 @@ amd64_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 	ax_reg_mask (ax, gpnum - AMD64_NUM_LOWER_BYTE_REGS);
       else
 	ax_reg_mask (ax, gpnum);
-      return 0;
     }
   else if (i386_dword_regnum_p (gdbarch, regnum))
     {
       int gpnum = regnum - tdep->eax_regnum;
 
       ax_reg_mask (ax, gpnum);
-      return 0;
     }
   else
-    return i386_ax_pseudo_register_collect (gdbarch, ax, regnum);
+    i386_ax_pseudo_register_collect (gdbarch, ax, regnum);
 }
 
 

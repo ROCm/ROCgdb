@@ -384,9 +384,9 @@ extern void i386_pseudo_register_write (gdbarch *gdbarch,
 					const frame_info_ptr &next_frame, int regnum,
 					gdb::array_view<const gdb_byte> buf);
 
-extern int i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
-					    struct agent_expr *ax,
-					    int regnum);
+extern void i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
+					     struct agent_expr *ax,
+					     int regnum);
 
 /* Segment selectors.  */
 #define I386_SEL_RPL	0x0003  /* Requester's Privilege Level mask.  */

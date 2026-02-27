@@ -486,9 +486,9 @@ combinations of other registers, or they may be computed by GDB.
 Method(
     comment="""
 Assemble agent expression bytecode to collect pseudo-register REG.
-Return -1 if something goes wrong, 0 otherwise.
+REG must be a valid register number.
 """,
-    type="int",
+    type="void",
     name="ax_pseudo_register_collect",
     params=[("struct agent_expr *", "ax"), ("int", "reg")],
     predicate=True,

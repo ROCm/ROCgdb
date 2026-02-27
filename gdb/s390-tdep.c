@@ -1505,7 +1505,7 @@ s390_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
 /* The "ax_pseudo_register_collect" gdbarch method.  */
 
-static int
+static void
 s390_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int regnum)
 {
@@ -1531,10 +1531,7 @@ s390_ax_pseudo_register_collect (struct gdbarch *gdbarch,
       ax_reg_mask (ax, S390_V0_LOWER_REGNUM + regnum);
     }
   else
-    {
-      internal_error (_("invalid regnum"));
-    }
-  return 0;
+    gdb_assert_not_reached ("invalid regnum");
 }
 
 /* The "ax_pseudo_register_push_stack" gdbarch method.  */

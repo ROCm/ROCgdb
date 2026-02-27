@@ -1950,14 +1950,14 @@ gdbarch_ax_pseudo_register_collect_p (struct gdbarch *gdbarch)
   return gdbarch->ax_pseudo_register_collect != NULL;
 }
 
-int
+void
 gdbarch_ax_pseudo_register_collect (struct gdbarch *gdbarch, struct agent_expr *ax, int reg)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->ax_pseudo_register_collect != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_ax_pseudo_register_collect called\n");
-  return gdbarch->ax_pseudo_register_collect (gdbarch, ax, reg);
+  gdbarch->ax_pseudo_register_collect (gdbarch, ax, reg);
 }
 
 void

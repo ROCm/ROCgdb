@@ -3300,7 +3300,7 @@ efp_ax_pseudo_register_collect (struct gdbarch *gdbarch,
   ax_reg_mask (ax, vr0 + reg_index);
 }
 
-static int
+static void
 rs6000_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				   struct agent_expr *ax, int reg_nr)
 {
@@ -3331,10 +3331,9 @@ rs6000_ax_pseudo_register_collect (struct gdbarch *gdbarch,
       efp_ax_pseudo_register_collect (gdbarch, ax, reg_nr);
     }
   else
-    internal_error (_("rs6000_pseudo_register_collect: "
-		    "called on unexpected register '%s' (%d)"),
-		    gdbarch_register_name (gdbarch, reg_nr), reg_nr);
-  return 0;
+    gdb_assert_not_reached ("rs6000_pseudo_register_collect: "
+			    "called on unexpected register '%s' (%d)",
+			    gdbarch_register_name (gdbarch, reg_nr), reg_nr);
 }
 
 

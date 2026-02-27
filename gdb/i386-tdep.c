@@ -3415,7 +3415,7 @@ i386_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 
 /* Implement the 'ax_pseudo_register_collect' gdbarch method.  */
 
-int
+void
 i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int regnum)
 {
@@ -3430,7 +3430,6 @@ i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
       ax_reg_mask (ax, I387_FSTAT_REGNUM (tdep));
       for (i = 0; i < 8; i++)
 	ax_reg_mask (ax, I387_ST0_REGNUM (tdep) + i);
-      return 0;
     }
   else if (i386_zmm_regnum_p (gdbarch, regnum))
     {
@@ -3448,39 +3447,33 @@ i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 			   - num_lower_zmm_regs);
 	}
       ax_reg_mask (ax, tdep->zmm0h_regnum + regnum);
-      return 0;
     }
   else if (i386_ymm_regnum_p (gdbarch, regnum))
     {
       regnum -= tdep->ymm0_regnum;
       ax_reg_mask (ax, I387_XMM0_REGNUM (tdep) + regnum);
       ax_reg_mask (ax, tdep->ymm0h_regnum + regnum);
-      return 0;
     }
   else if (i386_ymm_avx512_regnum_p (gdbarch, regnum))
     {
       regnum -= tdep->ymm16_regnum;
       ax_reg_mask (ax, I387_XMM16_REGNUM (tdep) + regnum);
       ax_reg_mask (ax, tdep->ymm16h_regnum + regnum);
-      return 0;
     }
   else if (i386_word_regnum_p (gdbarch, regnum))
     {
       int gpnum = regnum - tdep->ax_regnum;
 
       ax_reg_mask (ax, gpnum);
-      return 0;
     }
   else if (i386_byte_regnum_p (gdbarch, regnum))
     {
       int gpnum = regnum - tdep->al_regnum;
 
       ax_reg_mask (ax, gpnum % 4);
-      return 0;
     }
   else
-    internal_error (_("invalid regnum"));
-  return 1;
+    gdb_assert_not_reached ("invalid regnum");
 }
 
 
