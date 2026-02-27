@@ -62,7 +62,7 @@ repos:
       files: '^gdb/.*\.py(\.in)?$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
+    rev: 8.0.0
     hooks:
     - id: isort
       types_or: [file]

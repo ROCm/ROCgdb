@@ -134,6 +134,7 @@ mn10300_use_struct_convention (struct type *type)
 {
   /* Structures bigger than a pair of words can't be returned in
      registers.  */
+  type = check_typedef (type);
   if (type->length () > 8)
     return 1;
 
@@ -158,9 +159,6 @@ mn10300_use_struct_convention (struct type *type)
 	 the only field of a struct or union.  */
     case TYPE_CODE_ARRAY:
       return 1;
-
-    case TYPE_CODE_TYPEDEF:
-      return mn10300_use_struct_convention (check_typedef (type));
 
     default:
       return 0;

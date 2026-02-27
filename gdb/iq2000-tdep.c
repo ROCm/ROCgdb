@@ -597,8 +597,7 @@ iq2000_pass_8bytetype_by_address (struct type *type)
   struct type *ftype;
 
   /* Skip typedefs.  */
-  while (type->code () == TYPE_CODE_TYPEDEF)
-    type = type->target_type ();
+  type = check_typedef (type);
   /* Non-struct and non-union types are always passed by value.  */
   if (type->code () != TYPE_CODE_STRUCT
       && type->code () != TYPE_CODE_UNION)
@@ -612,8 +611,7 @@ iq2000_pass_8bytetype_by_address (struct type *type)
   if (ftype->length () != 8)
     return 1;
   /* Skip typedefs of field type.  */
-  while (ftype->code () == TYPE_CODE_TYPEDEF)
-    ftype = ftype->target_type ();
+  ftype = check_typedef (ftype);
   /* If field is int or float, pass by value.  */
   if (ftype->code () == TYPE_CODE_FLT
       || ftype->code () == TYPE_CODE_INT)

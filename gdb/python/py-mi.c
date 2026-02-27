@@ -278,7 +278,7 @@ serialize_mi_result_1 (PyObject *result, const char *field_name)
 	gdbpy_handle_exception ();
       for (Py_ssize_t i = 0; i < len; ++i)
 	{
-	  gdbpy_ref<> item (PySequence_ITEM (result, i));
+	  gdbpy_ref<> item (PySequence_GetItem (result, i));
 	  if (item == nullptr)
 	    gdbpy_handle_exception ();
 	  serialize_mi_result_1 (item.get (), nullptr);

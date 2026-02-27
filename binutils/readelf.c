@@ -1976,7 +1976,8 @@ dump_relr_relocations (Filedata *          filedata,
     switch (filedata->file_header.e_machine)
       {
       default:
-	abort ();
+	rtype = "unknown relative";
+	break;
 
       case EM_386:
       case EM_IAMCU:
@@ -2888,7 +2889,7 @@ dump_relocations (Filedata *          filedata,
       if (do_got_section_contents)
 	{
 	  all_relocations[i].r_offset = offset;
-	  all_relocations[i].r_name = rtype;
+	  all_relocations[i].r_name = rtype ? rtype : "unknown";
 	  all_relocations[i].r_symbol = symbol_name;
 	  all_relocations[i].r_addend = rels[i].r_addend;
 	  all_relocations[i].r_type = rel_type;

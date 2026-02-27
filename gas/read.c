@@ -2047,11 +2047,11 @@ s_file (int ignore ATTRIBUTE_UNUSED)
 static bool
 get_linefile_number (int *flag)
 {
-  expressionS exp;
+  offsetT val;
 
   SKIP_WHITESPACE ();
 
-  if (*input_line_pointer < '0' || *input_line_pointer > '9')
+  if (is_end_of_stmt (*input_line_pointer))
     return false;
 
   /* Don't mistakenly interpret octal numbers as line numbers.  */
@@ -2062,16 +2062,17 @@ get_linefile_number (int *flag)
       return true;
     }
 
-  expression_and_evaluate (&exp);
-  if (exp.X_op != O_constant)
+  val = get_single_number ();
+  /* Zero was handled above; getting back zero indicates an error.  */
+  if (val == 0)
     return false;
 
 #if defined (BFD64) || LONG_MAX > INT_MAX
-  if (exp.X_add_number < INT_MIN || exp.X_add_number > INT_MAX)
+  if (val < INT_MIN || val > INT_MAX)
     return false;
 #endif
 
-  *flag = exp.X_add_number;
+  *flag = val;
 
   return true;
 }

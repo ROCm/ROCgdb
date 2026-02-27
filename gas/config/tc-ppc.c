@@ -821,11 +821,16 @@ md_operand (expressionS *expressionP)
   char *start;
   char c;
 
-  if (input_line_pointer[0] != '%' || !ISALPHA (input_line_pointer[1]))
+  if (input_line_pointer[0] != '%')
     return;
 
+  if (!ISALPHA (*++input_line_pointer))
+    {
+      expressionP->X_op = O_illegal;
+      return;
+    }
+
   start = input_line_pointer;
-  ++input_line_pointer;
 
   c = get_symbol_name (&name);
   reg = reg_name_search (pre_defined_registers,
@@ -839,7 +844,10 @@ md_operand (expressionS *expressionP)
       expressionP->X_md = reg->flags;
     }
   else
-    input_line_pointer = start;
+    {
+      expressionP->X_op = O_illegal;
+      input_line_pointer = start;
+    }
 }
 
 /* Whether to do the special parsing.  */
@@ -3443,10 +3451,18 @@ md_assemble (char *str)
       resolve_register (&ex);
 
       if (ex.X_op == O_illegal)
-	as_bad (_("illegal operand"));
-      else if (ex.X_op == O_absent)
-	as_bad (_("missing operand"));
-      else if (ex.X_op == O_register)
+	{
+	  as_bad (_("illegal operand"));
+	  break;
+	}
+
+      if (ex.X_op == O_absent)
+	{
+	  as_bad (_("missing operand"));
+	  break;
+	}
+
+      if (ex.X_op == O_register)
 	{
 	  if ((ex.X_md
 	       & ~operand->flags
@@ -3959,11 +3975,14 @@ md_assemble (char *str)
 	}
     }
 
-  while (is_whitespace (*str))
-    ++str;
+  if (*opindex_ptr == 0)
+    {
+      while (is_whitespace (*str))
+	++str;
 
-  if (*str != '\0')
-    as_bad (_("junk at end of line: `%s'"), str);
+      if (*str != '\0')
+	as_bad (_("junk at end of line: `%s'"), str);
+    }
 
 #ifdef OBJ_ELF
   /* Do we need/want an APUinfo section? */

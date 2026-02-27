@@ -896,7 +896,7 @@ infpy_set_args (PyObject *self, PyObject *value, void *closure)
 	return -1;
       for (Py_ssize_t i = 0; i < len; ++i)
 	{
-	  gdbpy_ref<> item (PySequence_ITEM (value, i));
+	  gdbpy_ref<> item (PySequence_GetItem (value, i));
 	  if (item == nullptr)
 	    return -1;
 	  gdb::unique_xmalloc_ptr<char> str
