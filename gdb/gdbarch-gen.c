@@ -3673,7 +3673,7 @@ gdbarch_find_memory_regions_p (struct gdbarch *gdbarch)
   return gdbarch->find_memory_regions != NULL;
 }
 
-int
+bool
 gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data)
 {
   gdb_assert (gdbarch != NULL);

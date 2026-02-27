@@ -415,7 +415,7 @@ target_thread_architecture (ptid_t ptid)
 
 /* See target.h.  */
 
-int
+bool
 target_find_memory_regions (find_memory_region_ftype func, void *data)
 {
   return current_inferior ()->top_target ()->find_memory_regions (func, data);
@@ -3685,12 +3685,11 @@ default_pid_to_str (struct target_ops *ops, ptid_t ptid)
 }
 
 /* Error-catcher for target_find_memory_regions.  */
-static int
+static bool
 dummy_find_memory_regions (struct target_ops *self,
 			   find_memory_region_ftype ignore1, void *ignore2)
 {
   error (_("Command not implemented for this target."));
-  return 0;
 }
 
 /* Error-catcher for target_make_corefile_notes.  */

@@ -1365,13 +1365,12 @@ linux_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd,
   return len;
 }
 
-typedef int linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
-					    ULONGEST offset,
-					    bool read, bool write,
-					    bool exec, bool modified,
-					    bool memory_tagged,
-					    const std::string &filename,
-					    void *data);
+typedef bool linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
+					     ULONGEST offset, bool read,
+					     bool write, bool exec,
+					     bool modified, bool memory_tagged,
+					     const std::string &filename,
+					     void *data);
 
 typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
 					 const smaps_data &map);
@@ -1578,7 +1577,7 @@ linux_address_in_memtag_page (CORE_ADDR address)
 
 /* List memory regions in the inferior for a corefile.  */
 
-static int
+static bool
 linux_find_memory_regions_full (struct gdbarch *gdbarch,
 				linux_dump_mapping_p_ftype *should_dump_mapping_p,
 				linux_find_memory_region_ftype *func,
@@ -1595,7 +1594,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
   /* We need to know the real target PID to access /proc.  */
   if (current_inferior ()->fake_pid_p)
-    return 1;
+    return false;
 
   pid = current_inferior ()->pid;
 
@@ -1628,7 +1627,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
       data = target_fileio_read_stralloc (NULL, maps_filename.c_str ());
 
       if (data == nullptr)
-	return 1;
+	return false;
     }
 
   /* Parse the contents of smaps into a vector.  */
@@ -1649,7 +1648,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	}
     }
 
-  return 0;
+  return true;
 }
 
 /* A structure for passing information through
@@ -1669,7 +1668,7 @@ struct linux_find_memory_regions_data
 /* A callback for linux_find_memory_regions that converts between the
    "full"-style callback and find_memory_region_ftype.  */
 
-static int
+static bool
 linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 				 ULONGEST offset,
 				 bool read, bool write, bool exec,
@@ -1686,7 +1685,7 @@ linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 /* A variant of linux_find_memory_regions_full that is suitable as the
    gdbarch find_memory_regions method.  */
 
-static int
+static bool
 linux_find_memory_regions (struct gdbarch *gdbarch,
 			   find_memory_region_ftype func, void *obfd)
 {
@@ -1726,12 +1725,11 @@ struct linux_make_mappings_data
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.  */
 
-static int
-linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
-			      ULONGEST offset,
+static bool
+linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size, ULONGEST offset,
 			      bool read, bool write, bool exec, bool modified,
-			      bool memory_tagged,
-			      const std::string &filename, void *data)
+			      bool memory_tagged, const std::string &filename,
+			      void *data)
 {
   struct linux_make_mappings_data *map_data
     = (struct linux_make_mappings_data *) data;
@@ -1750,7 +1748,7 @@ linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
 
   obstack_grow_str0 (map_data->filename_obstack, filename.c_str ());
 
-  return 0;
+  return true;
 }
 
 /* Write the file mapping data to the core file, if possible.  OBFD is

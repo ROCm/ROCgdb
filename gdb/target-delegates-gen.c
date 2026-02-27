@@ -109,7 +109,7 @@ struct dummy_target : public target_ops
   bool supports_set_thread_options (gdb_thread_options arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
-  int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
+  bool find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *arg0, int *arg1) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
   void goto_bookmark (const gdb_byte *arg0, int arg1) override;
@@ -290,7 +290,7 @@ struct debug_target : public target_ops
   bool supports_set_thread_options (gdb_thread_options arg0) override;
   bool supports_non_stop () override;
   bool always_non_stop_p () override;
-  int find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
+  bool find_memory_regions (find_memory_region_ftype arg0, void *arg1) override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *arg0, int *arg1) override;
   gdb_byte *get_bookmark (const char *arg0, int arg1) override;
   void goto_bookmark (const gdb_byte *arg0, int arg1) override;
@@ -2265,29 +2265,29 @@ debug_target::always_non_stop_p ()
   return result;
 }
 
-int
+bool
 target_ops::find_memory_regions (find_memory_region_ftype arg0, void *arg1)
 {
   return this->beneath ()->find_memory_regions (arg0, arg1);
 }
 
-int
+bool
 dummy_target::find_memory_regions (find_memory_region_ftype arg0, void *arg1)
 {
   return dummy_find_memory_regions (this, arg0, arg1);
 }
 
-int
+bool
 debug_target::find_memory_regions (find_memory_region_ftype arg0, void *arg1)
 {
   target_debug_printf_nofunc ("-> %s->find_memory_regions (...)", this->beneath ()->shortname ());
-  int result
+  bool result
     = this->beneath ()->find_memory_regions (arg0, arg1);
   target_debug_printf_nofunc ("<- %s->find_memory_regions (%s, %s) = %s",
 	      this->beneath ()->shortname (),
 	      target_debug_print_find_memory_region_ftype (arg0).c_str (),
 	      target_debug_print_void_p (arg1).c_str (),
-	      target_debug_print_int (result).c_str ());
+	      target_debug_print_bool (result).c_str ());
   return result;
 }
 

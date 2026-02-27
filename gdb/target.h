@@ -770,7 +770,7 @@ struct target_ops
     virtual bool always_non_stop_p ()
       TARGET_DEFAULT_RETURN (false);
     /* find_memory_regions support method for gcore */
-    virtual int find_memory_regions (find_memory_region_ftype func, void *data)
+    virtual bool find_memory_regions (find_memory_region_ftype func, void *data)
       TARGET_DEFAULT_FUNC (dummy_find_memory_regions);
     /* make_corefile_notes support method for gcore */
     virtual gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *)
@@ -2040,15 +2040,13 @@ extern const char *target_pid_to_exec_file (int pid);
 
 extern gdbarch *target_thread_architecture (ptid_t ptid);
 
-/*
- * Iterator function for target memory regions.
- * Calls a callback function once for each memory region 'mapped'
- * in the child process.  Defined as a simple macro rather than
- * as a function macro so that it can be tested for nullity.
- */
+/* Call FUNC once for each memory region 'mapped' in the child process.
 
-extern int target_find_memory_regions (find_memory_region_ftype func,
-				       void *data);
+   If FUNC ever returns false, stop iterating and return false.  Otherwise,
+   return true.  */
+
+extern bool target_find_memory_regions (find_memory_region_ftype func,
+					void *data);
 
 /*
  * Compose corefile .note section.

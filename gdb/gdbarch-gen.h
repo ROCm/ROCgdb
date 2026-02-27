@@ -962,8 +962,8 @@ extern void set_gdbarch_make_corefile_notes (struct gdbarch *gdbarch, gdbarch_ma
 
 extern bool gdbarch_find_memory_regions_p (struct gdbarch *gdbarch);
 
-typedef int (gdbarch_find_memory_regions_ftype) (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
-extern int gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+typedef bool (gdbarch_find_memory_regions_ftype) (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+extern bool gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
 extern void set_gdbarch_find_memory_regions (struct gdbarch *gdbarch, gdbarch_find_memory_regions_ftype *find_memory_regions);
 
 /* Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be dumped to a core file */

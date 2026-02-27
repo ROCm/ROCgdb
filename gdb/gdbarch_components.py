@@ -1639,7 +1639,7 @@ Method(
     comment="""
 Find core file memory regions
 """,
-    type="int",
+    type="bool",
     name="find_memory_regions",
     params=[("find_memory_region_ftype", "func"), ("void *", "data")],
     predicate=True,

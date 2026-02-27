@@ -145,7 +145,7 @@ fbsd_nat_target::pid_to_exec_file (int pid)
    calling FUNC for each memory region.  DATA is passed as the last
    argument to FUNC.  */
 
-int
+bool
 fbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
 				      void *data)
 {
@@ -190,7 +190,7 @@ fbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
 	    kve->kve_protection & KVME_PROT_WRITE,
 	    kve->kve_protection & KVME_PROT_EXEC, true, false, data);
     }
-  return 0;
+  return true;
 }
 
 /* Fetch the command line for a running process.  */
