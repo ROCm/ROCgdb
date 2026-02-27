@@ -956,7 +956,7 @@ tdesc_register_in_reggroup_p (struct gdbarch *gdbarch, int regno,
    group specified go to the default reggroup function and are handled
    by type.  */
 
-static int
+static bool
 tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regno,
 			   const struct reggroup *reggroup)
 {

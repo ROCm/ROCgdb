@@ -699,24 +699,21 @@ mips_register_name (struct gdbarch *gdbarch, int regno)
 
 /* Return the groups that a MIPS register can be categorised into.  */
 
-static int
+static bool
 mips_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *reggroup)
 {
-  int vector_p;
-  int float_p;
-  int raw_p;
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
   int pseudo = regnum / gdbarch_num_regs (gdbarch);
   if (reggroup == all_reggroup)
     return pseudo;
-  vector_p = register_type (gdbarch, regnum)->is_vector ();
-  float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
+  bool vector_p = register_type (gdbarch, regnum)->is_vector ();
+  bool float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
   /* FIXME: cagney/2003-04-13: Can't yet use gdbarch_num_regs
      (gdbarch), as not all architectures are multi-arch.  */
-  raw_p = rawnum < gdbarch_num_regs (gdbarch);
+  bool raw_p = rawnum < gdbarch_num_regs (gdbarch);
   if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
-    return 0;
+    return false;
   if (reggroup == float_reggroup)
     return float_p && pseudo;
   if (reggroup == vector_reggroup)
@@ -731,14 +728,14 @@ mips_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   /* Restore the same pseudo register.  */
   if (reggroup == restore_reggroup)
     return raw_p && pseudo;
-  return 0;
+  return false;
 }
 
 /* Return the groups that a MIPS register can be categorised into.
    This version is only used if we have a target description which
    describes real registers (and their groups).  */
 
-static int
+static bool
 mips_tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				const struct reggroup *reggroup)
 {
@@ -754,7 +751,7 @@ mips_tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
      strange; if we have 64 bits, we should save and restore all
      64 bits.  But this is hard and has little benefit.  */
   if (!pseudo)
-    return 0;
+    return false;
 
   ret = tdesc_register_in_reggroup_p (gdbarch, rawnum, reggroup);
   if (ret != -1)

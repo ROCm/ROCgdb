@@ -95,7 +95,7 @@ extern const reggroup *reggroup_find (struct gdbarch *gdbarch,
 				      const char *name);
 
 /* Is REGNUM a member of REGGROUP?  */
-extern int default_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-					const struct reggroup *reggroup);
+extern bool default_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
+					 const struct reggroup *reggroup);
 
 #endif /* GDB_REGGROUPS_H */

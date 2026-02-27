@@ -359,7 +359,7 @@ nds32_add_reggroups (struct gdbarch *gdbarch)
 
 /* Implement the "register_reggroup_p" gdbarch method.  */
 
-static int
+static bool
 nds32_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			   const struct reggroup *reggroup)
 {
@@ -368,7 +368,7 @@ nds32_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   int ret;
 
   if (reggroup == all_reggroup)
-    return 1;
+    return true;
 
   /* General reggroup contains only GPRs and PC.  */
   if (reggroup == general_reggroup)

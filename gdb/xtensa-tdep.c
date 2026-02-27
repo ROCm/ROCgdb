@@ -759,7 +759,7 @@ xtensa_coprocessor_register_group (const struct reggroup *group)
 #define SAVE_REST_VALID	(XTENSA_REGISTER_FLAGS_READABLE \
 			| XTENSA_REGISTER_FLAGS_WRITABLE)
 
-static int
+static bool
 xtensa_register_reggroup_p (struct gdbarch *gdbarch,
 			    int regnum,
 			    const struct reggroup *group)
@@ -773,15 +773,15 @@ xtensa_register_reggroup_p (struct gdbarch *gdbarch,
   if (group == save_reggroup)
     /* Every single register should be included into the list of registers
        to be watched for changes while using -data-list-changed-registers.  */
-    return 1;
+    return true;
 
   /* First, skip registers that are not visible to this target
      (unknown and unmapped registers when not using ISS).  */
 
   if (type == xtRegisterTypeUnmapped || type == xtRegisterTypeUnknown)
-    return 0;
+    return false;
   if (group == all_reggroup)
-    return 1;
+    return true;
   if (group == xtensa_ar_reggroup)
     return rg & xtRegisterGroupAddrReg;
   if (group == xtensa_user_reggroup)
@@ -801,7 +801,7 @@ xtensa_register_reggroup_p (struct gdbarch *gdbarch,
   if (cp_number >= 0)
     return rg & (xtRegisterGroupCP0 << cp_number);
   else
-    return 1;
+    return true;
 }
 
 

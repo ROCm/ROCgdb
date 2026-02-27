@@ -1358,7 +1358,7 @@ m68hc11_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, m68hc11_soft_reggroup);
 }
 
-static int
+static bool
 m68hc11_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			     const struct reggroup *group)
 {

@@ -1232,7 +1232,7 @@ regnum_is_gpr_full (s390_gdbarch_tdep *tdep, int regnum)
 /* Check whether REGNUM indicates a full vector register (v0-v15).
    These pseudo-registers are composed of f0-f15 and v0l-v15l.  */
 
-static int
+static bool
 regnum_is_vxr_full (s390_gdbarch_tdep *tdep, int regnum)
 {
   return (tdep->v0_full_regnum != -1
@@ -1477,7 +1477,7 @@ s390_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 
 /* Implement pseudo_register_reggroup_p tdesc method.  */
 
-static int
+static bool
 s390_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				 const struct reggroup *group)
 {
@@ -1498,7 +1498,7 @@ s390_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return regnum_is_vxr_full (tdep, regnum);
 
   if (group == general_reggroup && regnum_is_vxr_full (tdep, regnum))
-    return 0;
+    return false;
 
   return default_register_reggroup_p (gdbarch, regnum, group);
 }

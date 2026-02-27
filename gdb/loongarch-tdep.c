@@ -1970,35 +1970,35 @@ loongarch_find_default_target_description (const struct gdbarch_info info)
   return loongarch_lookup_target_description (features);
 }
 
-static int
+static bool
 loongarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			       const struct reggroup *group)
 {
   if (gdbarch_register_name (gdbarch, regnum) == NULL
       || *gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
 
-  int raw_p = regnum < gdbarch_num_regs (gdbarch);
+  bool raw_p = regnum < gdbarch_num_regs (gdbarch);
 
   if (group == save_reggroup || group == restore_reggroup)
     return raw_p;
 
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   if (0 <= regnum && regnum <= LOONGARCH_BADV_REGNUM)
     return group == general_reggroup;
 
   /* Only ORIG_A0, PC, BADV in general_reggroup */
   if (group == general_reggroup)
-    return 0;
+    return false;
 
   if (LOONGARCH_FIRST_FP_REGNUM <= regnum && regnum <= LOONGARCH_FCSR_REGNUM)
     return group == float_reggroup;
 
   /* Only $fx / $fccx / $fcsr in float_reggroup */
   if (group == float_reggroup)
-    return 0;
+    return false;
 
   if (LOONGARCH_FIRST_LSX_REGNUM <= regnum
      && regnum < LOONGARCH_FIRST_LASX_REGNUM + LOONGARCH_LINUX_NUM_LASXREGSET)
@@ -2006,7 +2006,7 @@ loongarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   /* Only $vrx / $xrx in vector_reggroup */
   if (group == vector_reggroup)
-    return 0;
+    return false;
 
   int ret = tdesc_register_in_reggroup_p (gdbarch, regnum, group);
   if (ret != -1)

@@ -817,7 +817,7 @@ amdgpu_register_type (struct gdbarch *gdbarch, int regnum)
   return tdep->register_types[regnum];
 }
 
-static int
+static bool
 amdgpu_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			    const reggroup *group)
 {

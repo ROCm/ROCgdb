@@ -9955,7 +9955,7 @@ arm_elf_osabi_sniffer (bfd *abfd)
   return osabi;
 }
 
-static int
+static bool
 arm_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			 const struct reggroup *group)
 {

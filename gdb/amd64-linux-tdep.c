@@ -292,7 +292,7 @@ static int amd64_linux_sc_reg_offset[] =
   -1				/* %gs */
 };
 
-static int
+static bool
 amd64_linux_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				 const struct reggroup *group)
 {

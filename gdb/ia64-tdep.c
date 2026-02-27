@@ -323,7 +323,7 @@ ia64_ext_type (struct gdbarch *gdbarch)
   return tdep->ia64_ext_type;
 }
 
-static int
+static bool
 ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -331,7 +331,7 @@ ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   int float_p;
   int raw_p;
   if (group == all_reggroup)
-    return 1;
+    return true;
   vector_p = register_type (gdbarch, regnum)->is_vector ();
   float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
   raw_p = regnum < NUM_IA64_RAW_REGS;
@@ -343,7 +343,7 @@ ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return (!vector_p && !float_p);
   if (group == save_reggroup || group == restore_reggroup)
     return raw_p;
-  return 0;
+  return false;
 }
 
 static const char *

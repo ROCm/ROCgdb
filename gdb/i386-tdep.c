@@ -4261,7 +4261,7 @@ i386_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, i386_mmx_reggroup);
 }
 
-int
+bool
 i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -4274,13 +4274,13 @@ i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   /* Don't include pseudo registers, except for MMX, in any register
      groups.  */
   if (i386_byte_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   if (i386_word_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   if (i386_dword_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   mmx_regnum_p = i386_mmx_regnum_p (gdbarch, regnum);
   if (group == i386_mmx_reggroup)
@@ -4327,7 +4327,7 @@ i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 	  || ymmh_regnum_p
 	  || ymmh_avx512_regnum_p
 	  || zmmh_regnum_p))
-    return 0;
+    return false;
 
   if (group == general_reggroup)
     return (!fp_regnum_p

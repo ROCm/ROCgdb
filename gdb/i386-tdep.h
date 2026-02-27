@@ -420,8 +420,8 @@ extern CORE_ADDR i386_thiscall_push_dummy_call (struct gdbarch *gdbarch,
 extern int i386_sigtramp_p (const frame_info_ptr &this_frame);
 
 /* Return non-zero if REGNUM is a member of the specified group.  */
-extern int i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-				     const struct reggroup *group);
+extern bool i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
+				      const struct reggroup *group);
 
 /* Supply register REGNUM from the general-purpose register set REGSET
    to register cache REGCACHE.  If REGNUM is -1, do this for all

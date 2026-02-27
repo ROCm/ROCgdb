@@ -3133,7 +3133,7 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 
 /* Implement the "pseudo_register_reggroup_p" tdesc_arch_data method.  */
 
-static int
+static bool
 aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				    const struct reggroup *group)
 {
@@ -3160,7 +3160,7 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return group == all_reggroup || group == vector_reggroup;
   /* RA_STATE is used for unwinding only.  Do not assign it to any groups.  */
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
-    return 0;
+    return false;
 
   return group == all_reggroup;
 }

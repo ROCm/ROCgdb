@@ -204,12 +204,12 @@ msp430_register_name (struct gdbarch *gdbarch, int regnr)
 
 /* Implement the "register_reggroup_p" gdbarch method.  */
 
-static int
+static bool
 msp430_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			    const struct reggroup *group)
 {
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   /* All other registers are saved and restored.  */
   if (group == save_reggroup || group == restore_reggroup)

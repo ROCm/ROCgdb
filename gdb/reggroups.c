@@ -139,23 +139,19 @@ gdbarch_reggroups (struct gdbarch *gdbarch)
 
 /* See reggroups.h.  */
 
-int
+bool
 default_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			     const struct reggroup *group)
 {
-  int vector_p;
-  int float_p;
-  int raw_p;
-
   if (*gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
   if (group == all_reggroup)
-    return 1;
-  vector_p = register_type (gdbarch, regnum)->is_vector ();
-  float_p = (register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT
-	     || (register_type (gdbarch, regnum)->code ()
-		 == TYPE_CODE_DECFLOAT));
-  raw_p = regnum < gdbarch_num_regs (gdbarch);
+    return true;
+  bool vector_p = register_type (gdbarch, regnum)->is_vector ();
+  bool float_p = (register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT
+		  || (register_type (gdbarch, regnum)->code ()
+		      == TYPE_CODE_DECFLOAT));
+  bool raw_p = regnum < gdbarch_num_regs (gdbarch);
   if (group == float_reggroup)
     return float_p;
   if (group == vector_reggroup)
@@ -164,7 +160,7 @@ default_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return (!vector_p && !float_p);
   if (group == save_reggroup || group == restore_reggroup)
     return raw_p;
-  return 0;
+  return false;
 }
 
 /* See reggroups.h.  */

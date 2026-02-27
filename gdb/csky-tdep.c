@@ -2363,17 +2363,17 @@ csky_add_reggroups (struct gdbarch *gdbarch)
 
 /* Return the groups that a CSKY register can be categorised into.  */
 
-static int
+static bool
 csky_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *reggroup)
 {
   int raw_p;
 
   if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
-    return 0;
+    return false;
 
   if (reggroup == all_reggroup)
-    return 1;
+    return true;
 
   raw_p = regnum < gdbarch_num_regs (gdbarch);
   if (reggroup == save_reggroup || reggroup == restore_reggroup)
@@ -2385,41 +2385,41 @@ csky_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
        || (regnum == CSKY_CR0_REGNUM)
        || (regnum == CSKY_EPSR_REGNUM))
       && (reggroup == general_reggroup))
-    return 1;
+    return true;
 
   if (((regnum == CSKY_PC_REGNUM)
        || ((regnum >= CSKY_CR0_REGNUM)
 	   && (regnum <= CSKY_CR0_REGNUM + 30)))
       && (reggroup == cr_reggroup))
-    return 2;
+    return true;
 
   if ((((regnum >= CSKY_VR0_REGNUM) && (regnum <= CSKY_VR0_REGNUM + 15))
        || ((regnum >= CSKY_FCR_REGNUM)
 	   && (regnum <= CSKY_FCR_REGNUM + 2)))
       && (reggroup == vr_reggroup))
-    return 3;
+    return true;
 
   if (((regnum >= CSKY_MMU_REGNUM) && (regnum <= CSKY_MMU_REGNUM + 8))
       && (reggroup == mmu_reggroup))
-    return 4;
+    return true;
 
   if (((regnum >= CSKY_PROFCR_REGNUM)
        && (regnum <= CSKY_PROFCR_REGNUM + 48))
       && (reggroup == prof_reggroup))
-    return 5;
+    return true;
 
   if ((((regnum >= CSKY_FR0_REGNUM) && (regnum <= CSKY_FR0_REGNUM + 15))
        || ((regnum >= CSKY_FCR_REGNUM) && (regnum <= CSKY_FCR_REGNUM + 2)))
       && (reggroup == fr_reggroup))
-    return 6;
+    return true;
 
   if (tdesc_has_registers (gdbarch_target_desc (gdbarch)))
     {
       if (tdesc_register_in_reggroup_p (gdbarch, regnum, reggroup) > 0)
-	return 7;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the dwarf2_reg_to_regnum gdbarch method.  */

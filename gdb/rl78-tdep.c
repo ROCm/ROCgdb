@@ -585,12 +585,12 @@ rl78_g10_register_name (struct gdbarch *gdbarch, int regnr)
 
 /* Implement the "register_reggroup_p" gdbarch method.  */
 
-static int
+static bool
 rl78_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   /* All other registers are saved and restored.  */
   if (group == save_reggroup || group == restore_reggroup)
@@ -601,9 +601,9 @@ rl78_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 	   && regnum != RL78_RAW_PC_REGNUM)
 	  || regnum == RL78_SP_REGNUM
 	  || regnum == RL78_PC_REGNUM)
-	return 1;
+	return true;
       else
-	return 0;
+	return false;
     }
 
   if ((RL78_BANK0_R0_REGNUM <= regnum && regnum <= RL78_BANK3_R7_REGNUM)

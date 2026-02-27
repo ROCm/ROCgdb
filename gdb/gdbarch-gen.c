@@ -3584,7 +3584,7 @@ set_gdbarch_address_class_name_to_type_flags (struct gdbarch *gdbarch,
   gdbarch->address_class_name_to_type_flags = address_class_name_to_type_flags;
 }
 
-int
+bool
 gdbarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum, const struct reggroup *reggroup)
 {
   gdb_assert (gdbarch != NULL);

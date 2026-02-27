@@ -1585,7 +1585,7 @@ Method(
     comment="""
 Is a register in a group
 """,
-    type="int",
+    type="bool",
     name="register_reggroup_p",
     params=[("int", "regnum"), ("const struct reggroup *", "reggroup")],
     predefault="default_register_reggroup_p",

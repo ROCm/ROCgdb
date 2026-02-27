@@ -114,28 +114,28 @@ alpha_cannot_store_register (struct gdbarch *gdbarch, int regno)
 
 /* Is REGNUM a member of REGGROUP?  */
 
-static int
+static bool
 alpha_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			   const struct reggroup *group)
 {
   /* Filter out any registers eliminated, but whose regnum is
      reserved for backward compatibility, e.g. the vfp.  */
   if (*gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
 
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   /* Zero should not be saved or restored.  Technically it is a general
      register (just as $f31 would be a float if we represented it), but
      there's no point displaying it during "info regs", so leave it out
      of all groups except for "all".  */
   if (regnum == ALPHA_ZERO_REGNUM)
-    return 0;
+    return false;
 
   /* All other registers are saved and restored.  */
   if (group == save_reggroup || group == restore_reggroup)
-    return 1;
+    return true;
 
   /* All other groups are non-overlapping.  */
 

@@ -65,7 +65,7 @@ struct lm32_frame_cache
 
 /* Return whether a given register is in a given group.  */
 
-static int
+static bool
 lm32_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {

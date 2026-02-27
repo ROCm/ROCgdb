@@ -1392,7 +1392,7 @@ riscv_is_unknown_csr (struct gdbarch *gdbarch, int regnum)
 /* Implement the register_reggroup_p gdbarch method.  Is REGNUM a member
    of REGGROUP?  */
 
-static int
+static bool
 riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
 			   const struct reggroup *reggroup)
 {
@@ -1401,7 +1401,7 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   /* Used by 'info registers' and 'info registers <groupname>'.  */
 
   if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
-    return 0;
+    return false;
 
   if (regnum > RISCV_LAST_REGNUM && regnum < gdbarch_num_regs (gdbarch))
     {
@@ -1418,9 +1418,9 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
 	{
 	  if (reggroup == restore_reggroup || reggroup == save_reggroup
 	       || reggroup == general_reggroup)
-	    return 0;
+	    return false;
 	  else if (reggroup == system_reggroup || reggroup == csr_reggroup)
-	    return 1;
+	    return true;
 	}
 
       /* This is some other unknown register from the target description.
@@ -1436,10 +1436,10 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   if (reggroup == all_reggroup)
     {
       if (regnum < RISCV_FIRST_CSR_REGNUM || regnum >= RISCV_PRIV_REGNUM)
-	return 1;
+	return true;
       if (riscv_is_regnum_a_named_csr (regnum))
-	return 1;
-      return 0;
+	return true;
+      return false;
     }
   else if (reggroup == float_reggroup)
     return (riscv_is_fp_regno_p (regnum)
@@ -1461,17 +1461,17 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   else if (reggroup == system_reggroup || reggroup == csr_reggroup)
     {
       if (regnum == RISCV_PRIV_REGNUM)
-	return 1;
+	return true;
       if (regnum < RISCV_FIRST_CSR_REGNUM || regnum > RISCV_LAST_CSR_REGNUM)
-	return 0;
+	return false;
       if (riscv_is_regnum_a_named_csr (regnum))
-	return 1;
-      return 0;
+	return true;
+      return false;
     }
   else if (reggroup == vector_reggroup)
     return (regnum >= RISCV_V0_REGNUM && regnum <= RISCV_V31_REGNUM);
   else
-    return 0;
+    return false;
 }
 
 /* Return the name for pseudo-register REGNUM for GDBARCH.  */
@@ -1502,10 +1502,10 @@ riscv_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
     gdb_assert_not_reached ("unknown pseudo register number %d", regnum);
 }
 
-/* Return true (non-zero) if pseudo-register REGNUM from GDBARCH is a
-   member of REGGROUP, otherwise return false (zero).  */
+/* Return true if pseudo-register REGNUM from GDBARCH is a
+   member of REGGROUP, otherwise return false.  */
 
-static int
+static bool
 riscv_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				  const struct reggroup *reggroup)
 {

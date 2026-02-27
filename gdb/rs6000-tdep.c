@@ -2644,14 +2644,14 @@ rs6000_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
    since the raw vrX registers will already show in these cases.  For
    other pseudo-registers we use the default membership function.  */
 
-static int
+static bool
 rs6000_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				   const struct reggroup *group)
 {
   ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (IS_V_ALIAS_PSEUDOREG (tdep, regnum))
-    return 0;
+    return false;
   else
     return default_register_reggroup_p (gdbarch, regnum, group);
 }
