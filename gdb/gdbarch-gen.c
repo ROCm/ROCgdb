@@ -38,11 +38,11 @@ struct gdbarch
   registry<gdbarch> registry_fields;
 
   /* basic architectural information.  */
-  const struct bfd_arch_info * bfd_arch_info;
+  const struct bfd_arch_info *bfd_arch_info;
   enum bfd_endian byte_order;
   enum bfd_endian byte_order_for_code;
   enum gdb_osabi osabi;
-  const struct target_desc * target_desc;
+  const struct target_desc *target_desc;
 
   /* target specific vector.  */
   gdbarch_tdep_up tdep;
@@ -53,15 +53,15 @@ struct gdbarch
   int long_bit = 4*TARGET_CHAR_BIT;
   int long_long_bit = 2*4*TARGET_CHAR_BIT;
   int bfloat16_bit = 2*TARGET_CHAR_BIT;
-  const struct floatformat ** bfloat16_format = floatformats_bfloat16;
+  const struct floatformat **bfloat16_format = floatformats_bfloat16;
   int half_bit = 2*TARGET_CHAR_BIT;
-  const struct floatformat ** half_format = floatformats_ieee_half;
+  const struct floatformat **half_format = floatformats_ieee_half;
   int float_bit = 4*TARGET_CHAR_BIT;
-  const struct floatformat ** float_format = floatformats_ieee_single;
+  const struct floatformat **float_format = floatformats_ieee_single;
   int double_bit = 8*TARGET_CHAR_BIT;
-  const struct floatformat ** double_format = floatformats_ieee_double;
+  const struct floatformat **double_format = floatformats_ieee_double;
   int long_double_bit = 8*TARGET_CHAR_BIT;
-  const struct floatformat ** long_double_format = floatformats_ieee_double;
+  const struct floatformat **long_double_format = floatformats_ieee_double;
   int wchar_bit = 4*TARGET_CHAR_BIT;
   bool wchar_signed = true;
   gdbarch_floatformat_for_type_ftype *floatformat_for_type = default_floatformat_for_type;
@@ -181,7 +181,7 @@ struct gdbarch
   gdbarch_core_thread_name_ftype *core_thread_name = nullptr;
   gdbarch_core_xfer_siginfo_ftype *core_xfer_siginfo = nullptr;
   gdbarch_core_read_x86_xsave_layout_ftype *core_read_x86_xsave_layout = nullptr;
-  const char * gcore_bfd_target = nullptr;
+  const char *gcore_bfd_target = nullptr;
   bool vtable_function_descriptors = false;
   bool vbit_in_delta = false;
   ULONGEST max_insn_length = 0;
@@ -203,16 +203,16 @@ struct gdbarch
   gdbarch_get_siginfo_type_ftype *get_siginfo_type = nullptr;
   gdbarch_record_special_symbol_ftype *record_special_symbol = nullptr;
   gdbarch_get_syscall_number_ftype *get_syscall_number = nullptr;
-  const char * xml_syscall_file = nullptr;
-  struct syscalls_info * syscalls_info = nullptr;
-  const char *const * stap_integer_prefixes = nullptr;
-  const char *const * stap_integer_suffixes = nullptr;
-  const char *const * stap_register_prefixes = nullptr;
-  const char *const * stap_register_suffixes = nullptr;
-  const char *const * stap_register_indirection_prefixes = nullptr;
-  const char *const * stap_register_indirection_suffixes = nullptr;
-  const char * stap_gdb_register_prefix = nullptr;
-  const char * stap_gdb_register_suffix = nullptr;
+  const char *xml_syscall_file = nullptr;
+  struct syscalls_info *syscalls_info = nullptr;
+  const char *const *stap_integer_prefixes = nullptr;
+  const char *const *stap_integer_suffixes = nullptr;
+  const char *const *stap_register_prefixes = nullptr;
+  const char *const *stap_register_suffixes = nullptr;
+  const char *const *stap_register_indirection_prefixes = nullptr;
+  const char *const *stap_register_indirection_suffixes = nullptr;
+  const char *stap_gdb_register_prefix = nullptr;
+  const char *stap_gdb_register_suffix = nullptr;
   gdbarch_stap_is_single_operand_ftype *stap_is_single_operand = nullptr;
   gdbarch_stap_parse_special_token_ftype *stap_parse_special_token = nullptr;
   gdbarch_stap_adjust_register_ftype *stap_adjust_register = nullptr;
@@ -230,7 +230,7 @@ struct gdbarch
   gdbarch_gen_return_address_ftype *gen_return_address = default_gen_return_address;
   gdbarch_info_proc_ftype *info_proc = nullptr;
   gdbarch_core_info_proc_ftype *core_info_proc = nullptr;
-  struct ravenscar_arch_ops * ravenscar_ops = nullptr;
+  struct ravenscar_arch_ops *ravenscar_ops = nullptr;
   gdbarch_insn_is_call_ftype *insn_is_call = default_insn_is_call;
   gdbarch_insn_is_ret_ftype *insn_is_ret = default_insn_is_ret;
   gdbarch_insn_is_jump_ftype *insn_is_jump = default_insn_is_jump;
@@ -243,9 +243,9 @@ struct gdbarch
   gdbarch_gcc_target_options_ftype *gcc_target_options = default_gcc_target_options;
   gdbarch_gnu_triplet_regexp_ftype *gnu_triplet_regexp = default_gnu_triplet_regexp;
   gdbarch_addressable_memory_unit_size_ftype *addressable_memory_unit_size = default_addressable_memory_unit_size;
-  const char * disassembler_options_implicit = nullptr;
-  std::string * disassembler_options = nullptr;
-  const disasm_options_and_args_t * valid_disassembler_options = nullptr;
+  const char *disassembler_options_implicit = nullptr;
+  std::string *disassembler_options = nullptr;
+  const disasm_options_and_args_t *valid_disassembler_options = nullptr;
   gdbarch_type_align_ftype *type_align = default_type_align;
   gdbarch_get_pc_address_flags_ftype *get_pc_address_flags = default_get_pc_address_flags;
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
@@ -1486,7 +1486,7 @@ gdbarch_bfloat16_format (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_bfloat16_format (struct gdbarch *gdbarch,
-			     const struct floatformat ** bfloat16_format)
+			     const struct floatformat **bfloat16_format)
 {
   gdbarch->bfloat16_format = bfloat16_format;
 }
@@ -1520,7 +1520,7 @@ gdbarch_half_format (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_half_format (struct gdbarch *gdbarch,
-			 const struct floatformat ** half_format)
+			 const struct floatformat **half_format)
 {
   gdbarch->half_format = half_format;
 }
@@ -1554,7 +1554,7 @@ gdbarch_float_format (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_float_format (struct gdbarch *gdbarch,
-			  const struct floatformat ** float_format)
+			  const struct floatformat **float_format)
 {
   gdbarch->float_format = float_format;
 }
@@ -1588,7 +1588,7 @@ gdbarch_double_format (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_double_format (struct gdbarch *gdbarch,
-			   const struct floatformat ** double_format)
+			   const struct floatformat **double_format)
 {
   gdbarch->double_format = double_format;
 }
@@ -1622,7 +1622,7 @@ gdbarch_long_double_format (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_long_double_format (struct gdbarch *gdbarch,
-				const struct floatformat ** long_double_format)
+				const struct floatformat **long_double_format)
 {
   gdbarch->long_double_format = long_double_format;
 }
@@ -3912,7 +3912,7 @@ gdbarch_gcore_bfd_target (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_gcore_bfd_target (struct gdbarch *gdbarch,
-			      const char * gcore_bfd_target)
+			      const char *gcore_bfd_target)
 {
   gdbarch->gcore_bfd_target = gcore_bfd_target;
 }
@@ -4372,7 +4372,7 @@ gdbarch_xml_syscall_file (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_xml_syscall_file (struct gdbarch *gdbarch,
-			      const char * xml_syscall_file)
+			      const char *xml_syscall_file)
 {
   gdbarch->xml_syscall_file = xml_syscall_file;
 }
@@ -4389,7 +4389,7 @@ gdbarch_syscalls_info (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_syscalls_info (struct gdbarch *gdbarch,
-			   struct syscalls_info * syscalls_info)
+			   struct syscalls_info *syscalls_info)
 {
   gdbarch->syscalls_info = syscalls_info;
 }
@@ -4406,7 +4406,7 @@ gdbarch_stap_integer_prefixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_integer_prefixes (struct gdbarch *gdbarch,
-				   const char *const * stap_integer_prefixes)
+				   const char *const *stap_integer_prefixes)
 {
   gdbarch->stap_integer_prefixes = stap_integer_prefixes;
 }
@@ -4423,7 +4423,7 @@ gdbarch_stap_integer_suffixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_integer_suffixes (struct gdbarch *gdbarch,
-				   const char *const * stap_integer_suffixes)
+				   const char *const *stap_integer_suffixes)
 {
   gdbarch->stap_integer_suffixes = stap_integer_suffixes;
 }
@@ -4440,7 +4440,7 @@ gdbarch_stap_register_prefixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_register_prefixes (struct gdbarch *gdbarch,
-				    const char *const * stap_register_prefixes)
+				    const char *const *stap_register_prefixes)
 {
   gdbarch->stap_register_prefixes = stap_register_prefixes;
 }
@@ -4457,7 +4457,7 @@ gdbarch_stap_register_suffixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_register_suffixes (struct gdbarch *gdbarch,
-				    const char *const * stap_register_suffixes)
+				    const char *const *stap_register_suffixes)
 {
   gdbarch->stap_register_suffixes = stap_register_suffixes;
 }
@@ -4474,7 +4474,7 @@ gdbarch_stap_register_indirection_prefixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_register_indirection_prefixes (struct gdbarch *gdbarch,
-						const char *const * stap_register_indirection_prefixes)
+						const char *const *stap_register_indirection_prefixes)
 {
   gdbarch->stap_register_indirection_prefixes = stap_register_indirection_prefixes;
 }
@@ -4491,7 +4491,7 @@ gdbarch_stap_register_indirection_suffixes (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_register_indirection_suffixes (struct gdbarch *gdbarch,
-						const char *const * stap_register_indirection_suffixes)
+						const char *const *stap_register_indirection_suffixes)
 {
   gdbarch->stap_register_indirection_suffixes = stap_register_indirection_suffixes;
 }
@@ -4508,7 +4508,7 @@ gdbarch_stap_gdb_register_prefix (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_gdb_register_prefix (struct gdbarch *gdbarch,
-				      const char * stap_gdb_register_prefix)
+				      const char *stap_gdb_register_prefix)
 {
   gdbarch->stap_gdb_register_prefix = stap_gdb_register_prefix;
 }
@@ -4525,7 +4525,7 @@ gdbarch_stap_gdb_register_suffix (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_stap_gdb_register_suffix (struct gdbarch *gdbarch,
-				      const char * stap_gdb_register_suffix)
+				      const char *stap_gdb_register_suffix)
 {
   gdbarch->stap_gdb_register_suffix = stap_gdb_register_suffix;
 }
@@ -4894,7 +4894,7 @@ gdbarch_ravenscar_ops (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_ravenscar_ops (struct gdbarch *gdbarch,
-			   struct ravenscar_arch_ops * ravenscar_ops)
+			   struct ravenscar_arch_ops *ravenscar_ops)
 {
   gdbarch->ravenscar_ops = ravenscar_ops;
 }
@@ -5122,7 +5122,7 @@ gdbarch_disassembler_options_implicit (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_disassembler_options_implicit (struct gdbarch *gdbarch,
-					   const char * disassembler_options_implicit)
+					   const char *disassembler_options_implicit)
 {
   gdbarch->disassembler_options_implicit = disassembler_options_implicit;
 }
@@ -5139,7 +5139,7 @@ gdbarch_disassembler_options (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_disassembler_options (struct gdbarch *gdbarch,
-				  std::string * disassembler_options)
+				  std::string *disassembler_options)
 {
   gdbarch->disassembler_options = disassembler_options;
 }
@@ -5156,7 +5156,7 @@ gdbarch_valid_disassembler_options (struct gdbarch *gdbarch)
 
 void
 set_gdbarch_valid_disassembler_options (struct gdbarch *gdbarch,
-					const disasm_options_and_args_t * valid_disassembler_options)
+					const disasm_options_and_args_t *valid_disassembler_options)
 {
   gdbarch->valid_disassembler_options = valid_disassembler_options;
 }

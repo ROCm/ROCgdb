@@ -33,6 +33,15 @@ def indentation(n_columns: int):
     return "\t" * (n_columns // 8) + " " * (n_columns % 8)
 
 
+def maybe_space(c: Component):
+    """Return a space if the type of C does not end with a pointer,
+    otherwise return an empty string."""
+    if c.type.endswith("*"):
+        return ""
+    else:
+        return " "
+
+
 copyright = gdbcopyright.copyright(
     "gdbarch.py", "Dynamic architecture support for GDB, the GNU debugger."
 )
@@ -59,7 +68,7 @@ with open("gdbarch-gen.h", "w") as f:
     for c in filter(info, components):
         print(file=f)
         print(
-            f"""extern {c.type} gdbarch_{c.name} (struct gdbarch *gdbarch);
+            f"""extern {c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);
 /* set_gdbarch_{c.name}() - not applicable - pre-initialized.  */""",
             file=f,
         )
@@ -96,22 +105,22 @@ with open("gdbarch-gen.h", "w") as f:
         print(file=f)
         if isinstance(c, Value):
             print(
-                f"extern {c.type} gdbarch_{c.name} (struct gdbarch *gdbarch);",
+                f"extern {c.type}{maybe_space(c)}gdbarch_{c.name} (struct gdbarch *gdbarch);",
                 file=f,
             )
             print(
-                f"extern void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.type} {c.name});",
+                f"extern void set_gdbarch_{c.name} (struct gdbarch *gdbarch, {c.type}{maybe_space(c)}{c.name});",
                 file=f,
             )
         else:
             assert isinstance(c, Function)
             print(
-                f"typedef {c.type} ({c.ftype()}) ({c.param_list()});",
+                f"typedef {c.type}{maybe_space(c)}({c.ftype()}) ({c.param_list()});",
                 file=f,
             )
             if c.implement:
                 print(
-                    f"extern {c.type} gdbarch_{c.name} ({c.set_list()});",
+                    f"extern {c.type}{maybe_space(c)}gdbarch_{c.name} ({c.set_list()});",
                     file=f,
                 )
             print(
@@ -140,7 +149,7 @@ with open("gdbarch-gen.c", "w") as f:
     print(file=f)
     print("  /* basic architectural information.  */", file=f)
     for c in filter(info, components):
-        print(f"  {c.type} {c.name};", file=f)
+        print(f"  {c.type}{maybe_space(c)}{c.name};", file=f)
     print(file=f)
     print("  /* target specific vector.  */", file=f)
     print("  gdbarch_tdep_up tdep;", file=f)
@@ -150,7 +159,7 @@ with open("gdbarch-gen.c", "w") as f:
         if isinstance(c, Function):
             print(f"  gdbarch_{c.name}_ftype *", file=f, end="")
         else:
-            print(f"  {c.type} ", file=f, end="")
+            print(f"  {c.type}{maybe_space(c)}", file=f, end="")
         print(f"{c.name} = {c.init_value()};", file=f)
     print("};", file=f)
     print(file=f)
@@ -364,7 +373,10 @@ with open("gdbarch-gen.c", "w") as f:
             setter_name = f"set_gdbarch_{c.name}"
             print(f"{setter_name} (struct gdbarch *gdbarch,", file=f)
             indent_columns = len(f"{setter_name} (")
-            print(f"{indentation(indent_columns)}{c.type} {c.name})", file=f)
+            print(
+                f"{indentation(indent_columns)}{c.type}{maybe_space(c)}{c.name})",
+                file=f,
+            )
             print("{", file=f)
             print(f"  gdbarch->{c.name} = {c.name};", file=f)
             print("}", file=f)
