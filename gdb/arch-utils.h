@@ -334,7 +334,8 @@ extern bool default_program_breakpoint_here_p (struct gdbarch *gdbarch,
 
 /* Do-nothing version of vsyscall_range.  Returns false.  */
 
-extern int default_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range);
+extern bool default_vsyscall_range (struct gdbarch *gdbarch,
+				    struct mem_range *range);
 
 /* Symbols for gdbarch_infcall_mmap; their Linux PROT_* system
    definitions would be dependent on compilation host.  */

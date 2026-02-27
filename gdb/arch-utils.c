@@ -340,10 +340,10 @@ default_remote_register_number (struct gdbarch *gdbarch,
 
 /* See arch-utils.h.  */
 
-int
+bool
 default_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
-  return 0;
+  return false;
 }
 
 

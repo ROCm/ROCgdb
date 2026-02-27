@@ -1622,8 +1622,8 @@ extern void set_gdbarch_print_auxv_entry (struct gdbarch *gdbarch, gdbarch_print
    range with zero length is returned.  Returns true if the vsyscall is
    found, false otherwise. */
 
-typedef int (gdbarch_vsyscall_range_ftype) (struct gdbarch *gdbarch, struct mem_range *range);
-extern int gdbarch_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range);
+typedef bool (gdbarch_vsyscall_range_ftype) (struct gdbarch *gdbarch, struct mem_range *range);
+extern bool gdbarch_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range);
 extern void set_gdbarch_vsyscall_range (struct gdbarch *gdbarch, gdbarch_vsyscall_range_ftype *vsyscall_range);
 
 /* Allocate SIZE bytes of PROT protected page aligned memory in inferior.

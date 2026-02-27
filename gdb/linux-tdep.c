@@ -2720,14 +2720,14 @@ linux_gdb_signal_to_target (struct gdbarch *gdbarch,
 /* Helper for linux_vsyscall_range that does the real work of finding
    the vsyscall's address range.  */
 
-static int
+static bool
 linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 {
   char filename[100];
   long pid;
 
   if (target_auxv_search (AT_SYSINFO_EHDR, &range->start) <= 0)
-    return 0;
+    return false;
 
   /* It doesn't make sense to access the host's /proc when debugging a
      core file.  Instead, look for the PT_LOAD segment that matches
@@ -2740,28 +2740,28 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
       bfd *cbfd = get_inferior_core_bfd (current_inferior ());
       phdrs_size = bfd_get_elf_phdr_upper_bound (cbfd);
       if (phdrs_size == -1)
-	return 0;
+	return false;
 
       gdb::unique_xmalloc_ptr<Elf_Internal_Phdr>
 	phdrs ((Elf_Internal_Phdr *) xmalloc (phdrs_size));
       num_phdrs = bfd_get_elf_phdrs (cbfd, phdrs.get ());
       if (num_phdrs == -1)
-	return 0;
+	return false;
 
       for (i = 0; i < num_phdrs; i++)
 	if (phdrs.get ()[i].p_type == PT_LOAD
 	    && phdrs.get ()[i].p_vaddr == range->start)
 	  {
 	    range->length = phdrs.get ()[i].p_memsz;
-	    return 1;
+	    return true;
 	  }
 
-      return 0;
+      return false;
     }
 
   /* We need to know the real target PID to access /proc.  */
   if (current_inferior ()->fake_pid_p)
-    return 0;
+    return false;
 
   pid = current_inferior ()->pid;
 
@@ -2795,20 +2795,20 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 		p++;
 	      endaddr = strtoulst (p, &p, 16);
 	      range->length = endaddr - addr;
-	      return 1;
+	      return true;
 	    }
 	}
     }
   else
     warning (_("unable to open /proc file '%s'"), filename);
 
-  return 0;
+  return false;
 }
 
 /* Implementation of the "vsyscall_range" gdbarch hook.  Handles
    caching, and defers the real work to linux_vsyscall_range_raw.  */
 
-static int
+static bool
 linux_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
   struct linux_info *info = get_linux_inferior_data (current_inferior ());
@@ -2822,10 +2822,10 @@ linux_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
     }
 
   if (info->vsyscall_range_p < 0)
-    return 0;
+    return false;
 
   *range = info->vsyscall_range;
-  return 1;
+  return true;
 }
 
 /* Symbols for linux_infcall_mmap's ARG_FLAGS; their Linux MAP_* system

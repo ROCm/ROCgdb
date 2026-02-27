@@ -2587,7 +2587,7 @@ write it to *RANGE.  If the vsyscall's length can't be determined, a
 range with zero length is returned.  Returns true if the vsyscall is
 found, false otherwise.
 """,
-    type="int",
+    type="bool",
     name="vsyscall_range",
     params=[("struct mem_range *", "range")],
     predefault="default_vsyscall_range",

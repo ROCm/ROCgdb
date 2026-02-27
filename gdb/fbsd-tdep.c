@@ -2474,7 +2474,7 @@ fbsd_corefile_parse_exec_context (struct gdbarch *gdbarch, bfd *cbfd)
 
 /* Return the address range of the vDSO for the current inferior.  */
 
-static int
+static bool
 fbsd_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
   struct fbsd_pspace_data *data = get_fbsd_pspace_data (current_program_space);
@@ -2488,10 +2488,10 @@ fbsd_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
     }
 
   if (data->vdso_range_p < 0)
-    return 0;
+    return false;
 
   *range = data->vdso_range;
-  return 1;
+  return true;
 }
 
 /* To be called from GDB_OSABI_FREEBSD handlers. */

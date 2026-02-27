@@ -5008,7 +5008,7 @@ set_gdbarch_print_auxv_entry (struct gdbarch *gdbarch,
   gdbarch->print_auxv_entry = print_auxv_entry;
 }
 
-int
+bool
 gdbarch_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
   gdb_assert (gdbarch != NULL);
