@@ -76,11 +76,7 @@ class Component:
 
     def get_predicate(self):
         "Return the expression used for validity checking."
-        if self.predefault:
-            predicate = f"gdbarch->{self.name} != {self.predefault}"
-        else:
-            predicate = f"gdbarch->{self.name} != NULL"
-        return predicate
+        return f"gdbarch->{self.name} != {self.init_value()}"
 
 
 class Info(Component):
@@ -114,6 +110,18 @@ class Value(Component):
             printer=printer,
             unused=unused,
         )
+
+    def init_value(self):
+        if self.predefault is not None:
+            return self.predefault
+
+        if self.type == "bool":
+            return "false"
+
+        if self.type.endswith("*"):
+            return "nullptr"
+
+        return "0"
 
 
 class Function(Component):
@@ -170,6 +178,12 @@ class Function(Component):
     def actuals(self):
         "Return the actual parameters to forward, as a string."
         return ", ".join([p[1] for p in self.params])
+
+    def init_value(self):
+        if self.predefault is not None:
+            return self.predefault
+
+        return "nullptr"
 
 
 class Method(Function):

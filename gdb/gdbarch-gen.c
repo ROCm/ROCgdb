@@ -181,9 +181,9 @@ struct gdbarch
   gdbarch_core_thread_name_ftype *core_thread_name = nullptr;
   gdbarch_core_xfer_siginfo_ftype *core_xfer_siginfo = nullptr;
   gdbarch_core_read_x86_xsave_layout_ftype *core_read_x86_xsave_layout = nullptr;
-  const char * gcore_bfd_target = 0;
+  const char * gcore_bfd_target = nullptr;
   bool vtable_function_descriptors = false;
-  bool vbit_in_delta = 0;
+  bool vbit_in_delta = false;
   ULONGEST max_insn_length = 0;
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn = nullptr;
   gdbarch_displaced_step_hw_singlestep_ftype *displaced_step_hw_singlestep = default_displaced_step_hw_singlestep;
@@ -203,16 +203,16 @@ struct gdbarch
   gdbarch_get_siginfo_type_ftype *get_siginfo_type = nullptr;
   gdbarch_record_special_symbol_ftype *record_special_symbol = nullptr;
   gdbarch_get_syscall_number_ftype *get_syscall_number = nullptr;
-  const char * xml_syscall_file = 0;
-  struct syscalls_info * syscalls_info = 0;
-  const char *const * stap_integer_prefixes = 0;
-  const char *const * stap_integer_suffixes = 0;
-  const char *const * stap_register_prefixes = 0;
-  const char *const * stap_register_suffixes = 0;
-  const char *const * stap_register_indirection_prefixes = 0;
-  const char *const * stap_register_indirection_suffixes = 0;
-  const char * stap_gdb_register_prefix = 0;
-  const char * stap_gdb_register_suffix = 0;
+  const char * xml_syscall_file = nullptr;
+  struct syscalls_info * syscalls_info = nullptr;
+  const char *const * stap_integer_prefixes = nullptr;
+  const char *const * stap_integer_suffixes = nullptr;
+  const char *const * stap_register_prefixes = nullptr;
+  const char *const * stap_register_suffixes = nullptr;
+  const char *const * stap_register_indirection_prefixes = nullptr;
+  const char *const * stap_register_indirection_suffixes = nullptr;
+  const char * stap_gdb_register_prefix = nullptr;
+  const char * stap_gdb_register_suffix = nullptr;
   gdbarch_stap_is_single_operand_ftype *stap_is_single_operand = nullptr;
   gdbarch_stap_parse_special_token_ftype *stap_parse_special_token = nullptr;
   gdbarch_stap_adjust_register_ftype *stap_adjust_register = nullptr;
@@ -243,9 +243,9 @@ struct gdbarch
   gdbarch_gcc_target_options_ftype *gcc_target_options = default_gcc_target_options;
   gdbarch_gnu_triplet_regexp_ftype *gnu_triplet_regexp = default_gnu_triplet_regexp;
   gdbarch_addressable_memory_unit_size_ftype *addressable_memory_unit_size = default_addressable_memory_unit_size;
-  const char * disassembler_options_implicit = 0;
-  std::string * disassembler_options = 0;
-  const disasm_options_and_args_t * valid_disassembler_options = 0;
+  const char * disassembler_options_implicit = nullptr;
+  std::string * disassembler_options = nullptr;
+  const disasm_options_and_args_t * valid_disassembler_options = nullptr;
   gdbarch_type_align_ftype *type_align = default_type_align;
   gdbarch_get_pc_address_flags_ftype *get_pc_address_flags = default_get_pc_address_flags;
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
@@ -335,9 +335,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of ps_regnum, invalid_p == 0.  */
   /* Skip verify of fp0_regnum, invalid_p == 0.  */
   /* Skip verify of dwarf2_reg_to_regnum, invalid_p == 0.  */
-  if (gdbarch->register_name == 0)
+  if (gdbarch->register_name == nullptr)
     log.puts ("\n\tregister_name");
-  if (gdbarch->register_type == 0)
+  if (gdbarch->register_type == nullptr)
     log.puts ("\n\tregister_type");
   /* Skip verify of dummy_id, invalid_p == 0.  */
   /* Skip verify of deprecated_fp_regnum, invalid_p == 0.  */
@@ -366,14 +366,14 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of dwarf2_omit_typedef_p, invalid_p == 0.  */
   /* Skip verify of update_call_site_pc, invalid_p == 0.  */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0.  */
-  if (gdbarch->skip_prologue == 0)
+  if (gdbarch->skip_prologue == nullptr)
     log.puts ("\n\tskip_prologue");
   /* Skip verify of skip_main_prologue, has predicate.  */
   /* Skip verify of skip_entrypoint, has predicate.  */
-  if (gdbarch->inner_than == 0)
+  if (gdbarch->inner_than == nullptr)
     log.puts ("\n\tinner_than");
   /* Skip verify of breakpoint_from_pc, invalid_p == 0.  */
-  if (gdbarch->breakpoint_kind_from_pc == 0)
+  if (gdbarch->breakpoint_kind_from_pc == nullptr)
     log.puts ("\n\tbreakpoint_kind_from_pc");
   /* Skip verify of sw_breakpoint_from_kind, invalid_p == 0.  */
   /* Skip verify of breakpoint_kind_from_current_state, invalid_p == 0.  */
@@ -1752,7 +1752,7 @@ bool
 gdbarch_read_pc_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->read_pc != NULL;
+  return gdbarch->read_pc != nullptr;
 }
 
 CORE_ADDR
@@ -1776,7 +1776,7 @@ bool
 gdbarch_write_pc_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->write_pc != NULL;
+  return gdbarch->write_pc != nullptr;
 }
 
 void
@@ -1817,7 +1817,7 @@ bool
 gdbarch_pseudo_register_read_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->pseudo_register_read != NULL;
+  return gdbarch->pseudo_register_read != nullptr;
 }
 
 enum register_status
@@ -1841,7 +1841,7 @@ bool
 gdbarch_pseudo_register_read_value_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->pseudo_register_read_value != NULL;
+  return gdbarch->pseudo_register_read_value != nullptr;
 }
 
 struct value *
@@ -1865,7 +1865,7 @@ bool
 gdbarch_pseudo_register_write_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->pseudo_register_write != NULL;
+  return gdbarch->pseudo_register_write != nullptr;
 }
 
 void
@@ -1941,7 +1941,7 @@ bool
 gdbarch_ax_pseudo_register_collect_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->ax_pseudo_register_collect != NULL;
+  return gdbarch->ax_pseudo_register_collect != nullptr;
 }
 
 void
@@ -1965,7 +1965,7 @@ bool
 gdbarch_ax_pseudo_register_push_stack_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->ax_pseudo_register_push_stack != NULL;
+  return gdbarch->ax_pseudo_register_push_stack != nullptr;
 }
 
 bool
@@ -1989,7 +1989,7 @@ bool
 gdbarch_report_signal_info_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->report_signal_info != NULL;
+  return gdbarch->report_signal_info != nullptr;
 }
 
 void
@@ -2170,7 +2170,7 @@ bool
 gdbarch_push_dummy_call_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->push_dummy_call != NULL;
+  return gdbarch->push_dummy_call != nullptr;
 }
 
 CORE_ADDR
@@ -2211,7 +2211,7 @@ bool
 gdbarch_push_dummy_code_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->push_dummy_code != NULL;
+  return gdbarch->push_dummy_code != nullptr;
 }
 
 CORE_ADDR
@@ -2337,7 +2337,7 @@ bool
 gdbarch_get_longjmp_target_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->get_longjmp_target != NULL;
+  return gdbarch->get_longjmp_target != nullptr;
 }
 
 bool
@@ -2480,7 +2480,7 @@ bool
 gdbarch_integer_to_address_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->integer_to_address != NULL;
+  return gdbarch->integer_to_address != nullptr;
 }
 
 CORE_ADDR
@@ -2613,7 +2613,7 @@ bool
 gdbarch_skip_main_prologue_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->skip_main_prologue != NULL;
+  return gdbarch->skip_main_prologue != nullptr;
 }
 
 CORE_ADDR
@@ -2637,7 +2637,7 @@ bool
 gdbarch_skip_entrypoint_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->skip_entrypoint != NULL;
+  return gdbarch->skip_entrypoint != nullptr;
 }
 
 CORE_ADDR
@@ -2746,7 +2746,7 @@ bool
 gdbarch_adjust_breakpoint_address_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->adjust_breakpoint_address != NULL;
+  return gdbarch->adjust_breakpoint_address != nullptr;
 }
 
 CORE_ADDR
@@ -2855,7 +2855,7 @@ bool
 gdbarch_fetch_tls_load_module_address_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->fetch_tls_load_module_address != NULL;
+  return gdbarch->fetch_tls_load_module_address != nullptr;
 }
 
 CORE_ADDR
@@ -2879,7 +2879,7 @@ bool
 gdbarch_get_thread_local_address_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->get_thread_local_address != NULL;
+  return gdbarch->get_thread_local_address != nullptr;
 }
 
 CORE_ADDR
@@ -2954,7 +2954,7 @@ bool
 gdbarch_frame_num_args_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->frame_num_args != NULL;
+  return gdbarch->frame_num_args != nullptr;
 }
 
 int
@@ -2978,7 +2978,7 @@ bool
 gdbarch_frame_align_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->frame_align != NULL;
+  return gdbarch->frame_align != nullptr;
 }
 
 CORE_ADDR
@@ -3206,7 +3206,7 @@ bool
 gdbarch_get_next_pcs_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->get_next_pcs != NULL;
+  return gdbarch->get_next_pcs != nullptr;
 }
 
 std::vector<CORE_ADDR>
@@ -3230,7 +3230,7 @@ bool
 gdbarch_single_step_through_delay_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->single_step_through_delay != NULL;
+  return gdbarch->single_step_through_delay != nullptr;
 }
 
 bool
@@ -3373,7 +3373,7 @@ bool
 gdbarch_elf_make_msymbol_special_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->elf_make_msymbol_special != NULL;
+  return gdbarch->elf_make_msymbol_special != nullptr;
 }
 
 void
@@ -3499,7 +3499,7 @@ bool
 gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->address_class_type_flags != NULL;
+  return gdbarch->address_class_type_flags != nullptr;
 }
 
 type_instance_flags
@@ -3523,7 +3523,7 @@ bool
 gdbarch_address_class_type_flags_to_name_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->address_class_type_flags_to_name != NULL;
+  return gdbarch->address_class_type_flags_to_name != nullptr;
 }
 
 const char *
@@ -3564,7 +3564,7 @@ bool
 gdbarch_address_class_name_to_type_flags_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->address_class_name_to_type_flags != NULL;
+  return gdbarch->address_class_name_to_type_flags != nullptr;
 }
 
 bool
@@ -3622,7 +3622,7 @@ bool
 gdbarch_iterate_over_regset_sections_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->iterate_over_regset_sections != NULL;
+  return gdbarch->iterate_over_regset_sections != nullptr;
 }
 
 void
@@ -3646,7 +3646,7 @@ bool
 gdbarch_make_corefile_notes_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->make_corefile_notes != NULL;
+  return gdbarch->make_corefile_notes != nullptr;
 }
 
 gdb::unique_xmalloc_ptr<char>
@@ -3670,7 +3670,7 @@ bool
 gdbarch_find_memory_regions_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->find_memory_regions != NULL;
+  return gdbarch->find_memory_regions != nullptr;
 }
 
 bool
@@ -3728,7 +3728,7 @@ bool
 gdbarch_decode_memtag_section_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->decode_memtag_section != NULL;
+  return gdbarch->decode_memtag_section != nullptr;
 }
 
 gdb::byte_vector
@@ -3752,7 +3752,7 @@ bool
 gdbarch_core_xfer_shared_libraries_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_xfer_shared_libraries != NULL;
+  return gdbarch->core_xfer_shared_libraries != nullptr;
 }
 
 ULONGEST
@@ -3776,7 +3776,7 @@ bool
 gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_xfer_shared_libraries_aix != NULL;
+  return gdbarch->core_xfer_shared_libraries_aix != nullptr;
 }
 
 ULONGEST
@@ -3800,7 +3800,7 @@ bool
 gdbarch_core_pid_to_str_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_pid_to_str != NULL;
+  return gdbarch->core_pid_to_str != nullptr;
 }
 
 std::string
@@ -3824,7 +3824,7 @@ bool
 gdbarch_core_thread_name_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_thread_name != NULL;
+  return gdbarch->core_thread_name != nullptr;
 }
 
 const char *
@@ -3848,7 +3848,7 @@ bool
 gdbarch_core_xfer_siginfo_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_xfer_siginfo != NULL;
+  return gdbarch->core_xfer_siginfo != nullptr;
 }
 
 LONGEST
@@ -3872,7 +3872,7 @@ bool
 gdbarch_core_read_x86_xsave_layout_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_read_x86_xsave_layout != NULL;
+  return gdbarch->core_read_x86_xsave_layout != nullptr;
 }
 
 bool
@@ -3896,7 +3896,7 @@ bool
 gdbarch_gcore_bfd_target_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->gcore_bfd_target != NULL;
+  return gdbarch->gcore_bfd_target != nullptr;
 }
 
 const char *
@@ -4031,7 +4031,7 @@ bool
 gdbarch_displaced_step_prepare_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->displaced_step_prepare != NULL;
+  return gdbarch->displaced_step_prepare != nullptr;
 }
 
 displaced_step_prepare_status
@@ -4072,7 +4072,7 @@ bool
 gdbarch_displaced_step_copy_insn_closure_by_addr_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->displaced_step_copy_insn_closure_by_addr != NULL;
+  return gdbarch->displaced_step_copy_insn_closure_by_addr != nullptr;
 }
 
 const displaced_step_copy_insn_closure *
@@ -4148,7 +4148,7 @@ bool
 gdbarch_overlay_update_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->overlay_update != NULL;
+  return gdbarch->overlay_update != nullptr;
 }
 
 void
@@ -4172,7 +4172,7 @@ bool
 gdbarch_core_read_description_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_read_description != NULL;
+  return gdbarch->core_read_description != nullptr;
 }
 
 const struct target_desc *
@@ -4196,7 +4196,7 @@ bool
 gdbarch_process_record_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->process_record != NULL;
+  return gdbarch->process_record != nullptr;
 }
 
 int
@@ -4220,7 +4220,7 @@ bool
 gdbarch_process_record_signal_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->process_record_signal != NULL;
+  return gdbarch->process_record_signal != nullptr;
 }
 
 int
@@ -4244,7 +4244,7 @@ bool
 gdbarch_gdb_signal_from_target_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->gdb_signal_from_target != NULL;
+  return gdbarch->gdb_signal_from_target != nullptr;
 }
 
 enum gdb_signal
@@ -4268,7 +4268,7 @@ bool
 gdbarch_gdb_signal_to_target_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->gdb_signal_to_target != NULL;
+  return gdbarch->gdb_signal_to_target != nullptr;
 }
 
 int
@@ -4292,7 +4292,7 @@ bool
 gdbarch_get_siginfo_type_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->get_siginfo_type != NULL;
+  return gdbarch->get_siginfo_type != nullptr;
 }
 
 struct type *
@@ -4316,7 +4316,7 @@ bool
 gdbarch_record_special_symbol_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->record_special_symbol != NULL;
+  return gdbarch->record_special_symbol != nullptr;
 }
 
 void
@@ -4340,7 +4340,7 @@ bool
 gdbarch_get_syscall_number_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->get_syscall_number != NULL;
+  return gdbarch->get_syscall_number != nullptr;
 }
 
 LONGEST
@@ -4534,7 +4534,7 @@ bool
 gdbarch_stap_is_single_operand_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->stap_is_single_operand != NULL;
+  return gdbarch->stap_is_single_operand != nullptr;
 }
 
 bool
@@ -4558,7 +4558,7 @@ bool
 gdbarch_stap_parse_special_token_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->stap_parse_special_token != NULL;
+  return gdbarch->stap_parse_special_token != nullptr;
 }
 
 expr::operation_up
@@ -4582,7 +4582,7 @@ bool
 gdbarch_stap_adjust_register_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->stap_adjust_register != NULL;
+  return gdbarch->stap_adjust_register != nullptr;
 }
 
 std::string
@@ -4606,7 +4606,7 @@ bool
 gdbarch_dtrace_parse_probe_argument_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->dtrace_parse_probe_argument != NULL;
+  return gdbarch->dtrace_parse_probe_argument != nullptr;
 }
 
 expr::operation_up
@@ -4630,7 +4630,7 @@ bool
 gdbarch_dtrace_probe_is_enabled_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->dtrace_probe_is_enabled != NULL;
+  return gdbarch->dtrace_probe_is_enabled != nullptr;
 }
 
 bool
@@ -4654,7 +4654,7 @@ bool
 gdbarch_dtrace_enable_probe_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->dtrace_enable_probe != NULL;
+  return gdbarch->dtrace_enable_probe != nullptr;
 }
 
 void
@@ -4678,7 +4678,7 @@ bool
 gdbarch_dtrace_disable_probe_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->dtrace_disable_probe != NULL;
+  return gdbarch->dtrace_disable_probe != nullptr;
 }
 
 void
@@ -4838,7 +4838,7 @@ bool
 gdbarch_info_proc_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->info_proc != NULL;
+  return gdbarch->info_proc != nullptr;
 }
 
 void
@@ -4862,7 +4862,7 @@ bool
 gdbarch_core_info_proc_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->core_info_proc != NULL;
+  return gdbarch->core_info_proc != nullptr;
 }
 
 void
@@ -4971,7 +4971,7 @@ bool
 gdbarch_auxv_parse_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->auxv_parse != NULL;
+  return gdbarch->auxv_parse != nullptr;
 }
 
 int
@@ -5250,7 +5250,7 @@ bool
 gdbarch_shadow_stack_push_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  return gdbarch->shadow_stack_push != NULL;
+  return gdbarch->shadow_stack_push != nullptr;
 }
 
 void

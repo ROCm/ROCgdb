@@ -151,14 +151,7 @@ with open("gdbarch-gen.c", "w") as f:
             print(f"  gdbarch_{c.name}_ftype *", file=f, end="")
         else:
             print(f"  {c.type} ", file=f, end="")
-        print(f"{c.name} = ", file=f, end="")
-        if c.predefault is not None:
-            print(f"{c.predefault};", file=f)
-        elif isinstance(c, Value):
-            print("0;", file=f)
-        else:
-            assert isinstance(c, Function)
-            print("nullptr;", file=f)
+        print(f"{c.name} = {c.init_value()};", file=f)
     print("};", file=f)
     print(file=f)
     #
@@ -209,8 +202,7 @@ with open("gdbarch-gen.c", "w") as f:
         # change field's value to the postdefault if its current value
         # is not different to the initial value of the field.
         if c.postdefault is not None:
-            init_value = c.predefault or "0"
-            print(f"  if (gdbarch->{c.name} == {init_value})", file=f)
+            print(f"  if (gdbarch->{c.name} == {c.init_value()})", file=f)
             print(f"    gdbarch->{c.name} = {c.postdefault};", file=f)
 
         # Now validate the value.
@@ -229,8 +221,7 @@ with open("gdbarch-gen.c", "w") as f:
                     f"component {c.name} has postdefault and invalid set to True"
                 )
             else:
-                init_value = c.predefault or "0"
-                print(f"  if (gdbarch->{c.name} == {init_value})", file=f)
+                print(f"  if (gdbarch->{c.name} == {c.init_value()})", file=f)
                 print(f"""    log.puts ("\\n\\t{c.name}");""", file=f)
         else:
             print(f"  /* Skip verify of {c.name}, invalid_p == 0.  */", file=f)
@@ -357,9 +348,8 @@ with open("gdbarch-gen.c", "w") as f:
                 print("  /* Check predicate was used.  */", file=f)
                 print(f"  gdb_assert (gdbarch_{c.name}_p (gdbarch));", file=f)
             elif c.invalid or c.postdefault is not None:
-                init_value = c.predefault or "0"
                 print("  /* Check variable changed from its initial value.  */", file=f)
-                print(f"  gdb_assert (gdbarch->{c.name} != {init_value});", file=f)
+                print(f"  gdb_assert (gdbarch->{c.name} != {c.init_value()});", file=f)
             else:
                 print(f"  /* Skip verify of {c.name}, invalid_p == 0.  */", file=f)
             print("  if (gdbarch_debug >= 2)", file=f)
