@@ -147,10 +147,15 @@ using ctf_dict_up = std::unique_ptr<ctf_dict_t, ctf_dict_closer>;
 
 struct ctf_per_objfile
 {
-  explicit ctf_per_objfile (ctf_archive_up archive, ctf_dict_up dict)
-    : archive (std::move (archive)),
+  ctf_per_objfile (struct objfile *objfile, ctf_archive_up archive,
+		   ctf_dict_up dict)
+    : objfile (objfile),
+      archive (std::move (archive)),
       parent_dict (std::move (dict))
   {}
+
+  /* Backlink to objfile.  */
+  struct objfile *objfile;
 
   /* Map from IDs to types.  */
   ctf_type_map type_map;
@@ -162,15 +167,14 @@ struct ctf_per_objfile
 
 static const registry<objfile>::key<ctf_per_objfile> ctf_per_objfile_key;
 
-/* A CTF context consists of a file pointer and an objfile pointer.  */
+/* Data passed around when creating symtabs.  */
 
 struct ctf_context
 {
+  ctf_per_objfile *per_objfile;
   ctf_dict_t *dict;
-  struct objfile *objfile;
   psymtab_storage *partial_symtabs;
   partial_symtab *pst;
-  ctf_archive_t *arc;
   struct buildsym_compunit *builder;
 };
 
@@ -224,9 +228,7 @@ struct ctf_field_info
 
 struct ctf_archive_iter_psymtab_data
 {
-  ctf_dict_t *parent_dict;
-  struct objfile *objfile;
-  ctf_archive_t *archive;
+  ctf_per_objfile *per_objfile;
   psymbol_functions *psf;
 };
 
@@ -287,7 +289,7 @@ get_tid_type (struct objfile *objfile, ctf_id_t tid)
 static struct type *
 fetch_tid_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  struct objfile *objfile = ccp->per_objfile->objfile;
   struct type *typ;
 
   typ = get_tid_type (objfile, tid);
@@ -404,9 +406,10 @@ ctf_add_member_cb (const char *name,
       t = read_type_record (ccp, tid);
       if (t == nullptr)
 	{
+	  objfile *objfile = ccp->per_objfile->objfile;
 	  complaint (_("ctf_add_member_cb: %s has NO type (%ld)"), name, tid);
-	  t = builtin_type (ccp->objfile)->builtin_error;
-	  set_tid_type (ccp->objfile, tid, t);
+	  t = builtin_type (objfile)->builtin_error;
+	  set_tid_type (objfile, tid, t);
 	}
     }
 
@@ -441,11 +444,12 @@ ctf_add_enum_member_cb (const char *name, int enum_value, void *arg)
 
   if (name != nullptr && *name != '\0')
     {
-      struct symbol *sym = new (&ccp->objfile->objfile_obstack) symbol;
-      OBJSTAT (ccp->objfile, n_syms++);
+      objfile *objfile = ccp->per_objfile->objfile;
+      struct symbol *sym = new (&objfile->objfile_obstack) symbol;
+      OBJSTAT (objfile, n_syms++);
 
-      sym->set_language (language_c, &ccp->objfile->objfile_obstack);
-      sym->compute_and_set_names (name, false, ccp->objfile->per_bfd);
+      sym->set_language (language_c, &objfile->objfile_obstack);
+      sym->compute_and_set_names (name, false, objfile->per_bfd);
       sym->set_loc_class_index (LOC_CONST);
       sym->set_domain (VAR_DOMAIN);
       sym->set_type (fip->ptype);
@@ -468,7 +472,7 @@ new_type_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
   const char *name = ctf_type_name_raw (dict, tid);
   if (name != nullptr && *name != '\0')
     {
-      struct objfile *objfile = ccp->objfile;
+      objfile *objfile = ccp->per_objfile->objfile;
       struct symbol *sym = new (&objfile->objfile_obstack) symbol;
       OBJSTAT (objfile, n_syms++);
 
@@ -500,7 +504,7 @@ new_type_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
 static struct type *
 read_base_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   ctf_encoding_t cet;
   struct type *type = nullptr;
@@ -594,7 +598,7 @@ process_base_type (struct ctf_context *ccp, ctf_id_t tid)
 static struct type *
 read_structure_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *type;
   uint32_t kind;
@@ -614,7 +618,7 @@ read_structure_type (struct ctf_context *ccp, ctf_id_t tid)
   type->set_length (ctf_type_size (dict, tid));
   set_type_align (type, ctf_type_align (dict, tid));
 
-  return set_tid_type (ccp->objfile, tid, type);
+  return set_tid_type (objfile, tid, type);
 }
 
 /* Given a tid of CTF_K_STRUCT or CTF_K_UNION, process all its members
@@ -652,7 +656,7 @@ process_structure_type (struct ctf_context *ccp, ctf_id_t tid)
 static struct type *
 read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *type, *rettype, *atype;
   ctf_funcinfo_t cfi;
@@ -705,7 +709,7 @@ read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
 static struct type *
 read_enum_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *type;
 
@@ -769,7 +773,7 @@ add_array_cv_type (struct ctf_context *ccp,
   voltl |= TYPE_VOLATILE (el_type);
   inner_array->set_target_type (make_cv_type (cnst, voltl, el_type));
 
-  return set_tid_type (ccp->objfile, tid, base_type);
+  return set_tid_type (ccp->per_objfile->objfile, tid, base_type);
 }
 
 /* Read all information from a TID of CTF_K_ARRAY.  */
@@ -777,7 +781,7 @@ add_array_cv_type (struct ctf_context *ccp,
 static struct type *
 read_array_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *element_type, *range_type, *idx_type;
   struct type *type;
@@ -820,7 +824,7 @@ read_array_type (struct ctf_context *ccp, ctf_id_t tid)
 static struct type *
 read_const_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   struct type *base_type, *cv_type;
 
   base_type = fetch_tid_type (ccp, btid);
@@ -843,7 +847,7 @@ read_const_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 static struct type *
 read_volatile_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *base_type, *cv_type;
 
@@ -870,7 +874,7 @@ read_volatile_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 static struct type *
 read_restrict_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   struct type *base_type, *cv_type;
 
   base_type = fetch_tid_type (ccp, btid);
@@ -894,7 +898,7 @@ static struct type *
 read_typedef_type (struct ctf_context *ccp, ctf_id_t tid,
 		   ctf_id_t btid, const char *name)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   struct type *this_type, *target_type;
 
   char *aname = obstack_strdup (&objfile->objfile_obstack, name);
@@ -917,7 +921,7 @@ read_typedef_type (struct ctf_context *ccp, ctf_id_t tid,
 static struct type *
 read_pointer_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   struct type *target_type, *type;
 
   target_type = fetch_tid_type (ccp, btid);
@@ -927,7 +931,7 @@ read_pointer_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
       if (target_type == nullptr)
 	{
 	  complaint (_("read_pointer_type: NULL target type (%ld)"), btid);
-	  target_type = builtin_type (ccp->objfile)->builtin_error;
+	  target_type = builtin_type (objfile)->builtin_error;
 	}
     }
 
@@ -942,7 +946,7 @@ read_pointer_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 static struct type *
 read_forward_type (struct ctf_context *ccp, ctf_id_t tid)
 {
-  struct objfile *objfile = ccp->objfile;
+  objfile *objfile = ccp->per_objfile->objfile;
   ctf_dict_t *dict = ccp->dict;
   struct type *type;
   uint32_t kind;
@@ -1040,7 +1044,7 @@ ctf_add_type_cb (ctf_id_t tid, void *arg)
   uint32_t kind;
 
   /* Check if tid's type has already been defined.  */
-  type = get_tid_type (ccp->objfile, tid);
+  type = get_tid_type (ccp->per_objfile->objfile, tid);
   if (type != nullptr)
     {
       ctf_debug_printf ("tid=%ld already defined, skipping", tid);
@@ -1112,8 +1116,9 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
   struct symbol *sym = nullptr;
   struct type *type;
   uint32_t kind;
+  objfile *objfile = ccp->per_objfile->objfile;
 
-  type = get_tid_type (ccp->objfile, id);
+  type = get_tid_type (objfile, id);
 
   kind = ctf_type_kind (ccp->dict, id);
 
@@ -1123,25 +1128,25 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
   if (type == nullptr)
     {
       complaint (_("ctf_add_var_cb: %s has NO type (%ld)"), name, id);
-      type = builtin_type (ccp->objfile)->builtin_error;
+      type = builtin_type (objfile)->builtin_error;
     }
-  sym = new (&ccp->objfile->objfile_obstack) symbol;
-  OBJSTAT (ccp->objfile, n_syms++);
+  sym = new (&objfile->objfile_obstack) symbol;
+  OBJSTAT (objfile, n_syms++);
   sym->set_type (type);
   sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
-  sym->compute_and_set_names (name, false, ccp->objfile->per_bfd);
+  sym->compute_and_set_names (name, false, objfile->per_bfd);
 
   if (kind == CTF_K_FUNCTION)
     {
       sym->set_domain (FUNCTION_DOMAIN);
       if (name != nullptr && strcmp (name, "main") == 0)
-	set_objfile_main_name (ccp->objfile, name, language_c);
+	set_objfile_main_name (objfile, name, language_c);
     }
   else
     sym->set_domain (VAR_DOMAIN);
 
   add_symbol_to_list (sym, ccp->builder->get_global_symbols ());
-  set_symbol_address (ccp->objfile, sym, name);
+  set_symbol_address (objfile, sym, name);
 
   return 0;
 }
@@ -1160,25 +1165,26 @@ add_stt_entries (struct ctf_context *ccp, int functions)
 
   while ((tid = ctf_symbol_next (ccp->dict, &i, &tname, functions)) != CTF_ERR)
     {
-      type = get_tid_type (ccp->objfile, tid);
+      objfile *objfile = ccp->per_objfile->objfile;
+      type = get_tid_type (objfile, tid);
       if (type == nullptr)
 	{
-	  ctf_debug_printf ("skipping '%s' tid=0x%lx (no type found)",
-			    tname, tid);
+	  ctf_debug_printf ("skipping '%s' tid=0x%lx (no type found)", tname,
+			    tid);
 	  continue;
 	}
 
       ctf_debug_printf ("adding %s '%s' tid=0x%lx",
 			functions ? "function" : "object", tname, tid);
 
-      sym = new (&ccp->objfile->objfile_obstack) symbol;
-      OBJSTAT (ccp->objfile, n_syms++);
+      sym = new (&objfile->objfile_obstack) symbol;
+      OBJSTAT (objfile, n_syms++);
       sym->set_type (type);
       sym->set_domain (functions ? FUNCTION_DOMAIN : VAR_DOMAIN);
       sym->set_loc_class_index (LOC_STATIC);
-      sym->compute_and_set_names (tname, false, ccp->objfile->per_bfd);
+      sym->compute_and_set_names (tname, false, objfile->per_bfd);
       add_symbol_to_list (sym, ccp->builder->get_global_symbols ());
-      set_symbol_address (ccp->objfile, sym, tname);
+      set_symbol_address (objfile, sym, tname);
     }
 }
 
@@ -1222,11 +1228,10 @@ ctf_psymtab_add_enums (struct ctf_context *ccp, ctf_id_t tid)
 
   while ((ename = ctf_enum_next (ccp->dict, tid, &i, &val)) != nullptr)
     {
-      ccp->pst->add_psymbol (ename, true,
-			     VAR_DOMAIN, LOC_CONST, -1,
-			     psymbol_placement::GLOBAL,
-			     unrelocated_addr (0),
-			     language_c, ccp->partial_symtabs, ccp->objfile);
+      ccp->pst->add_psymbol (ename, true, VAR_DOMAIN, LOC_CONST, -1,
+			     psymbol_placement::GLOBAL, unrelocated_addr (0),
+			     language_c, ccp->partial_symtabs,
+			     ccp->per_objfile->objfile);
     }
   if (ctf_errno (ccp->dict) != ECTF_NEXT_END)
     complaint (_("ctf_enum_next ctf_psymtab_add_enums failed - %s"),
@@ -1237,8 +1242,7 @@ ctf_psymtab_add_enums (struct ctf_context *ccp, ctf_id_t tid)
    by FUNCTIONS, to psymtab.  */
 
 static void
-ctf_psymtab_add_stt_entries (ctf_dict_t *dict, ctf_psymtab *pst,
-			     struct objfile *objfile, int functions)
+ctf_psymtab_add_stt_entries (ctf_dict_t *dict, ctf_psymtab *pst, int functions)
 {
   ctf_next_t *i = nullptr;
   ctf_id_t tid;
@@ -1259,30 +1263,27 @@ ctf_psymtab_add_stt_entries (ctf_dict_t *dict, ctf_psymtab *pst,
 			functions ? "function" : "object", tname, tid,
 			ctf_kind_str (kind));
 
-      pst->add_psymbol (tname, true,
-			tdomain, loc_class, -1,
-			psymbol_placement::GLOBAL,
-			unrelocated_addr (0),
-			language_c, pst->context.partial_symtabs, objfile);
+      pst->add_psymbol (tname, true, tdomain, loc_class, -1,
+			psymbol_placement::GLOBAL, unrelocated_addr (0),
+			language_c, pst->context.partial_symtabs,
+			pst->context.per_objfile->objfile);
     }
 }
 
 /* Add entries in data objects section to psymtab.  */
 
 static void
-ctf_psymtab_add_stt_obj (ctf_dict_t *dict, ctf_psymtab *pst,
-			 struct objfile *objfile)
+ctf_psymtab_add_stt_obj (ctf_dict_t *dict, ctf_psymtab *pst)
 {
-  ctf_psymtab_add_stt_entries (dict, pst, objfile, 0);
+  ctf_psymtab_add_stt_entries (dict, pst, 0);
 }
 
 /* Add entries in function info section to psymtab.  */
 
 static void
-ctf_psymtab_add_stt_func (ctf_dict_t *dict, ctf_psymtab *pst,
-			  struct objfile *objfile)
+ctf_psymtab_add_stt_func (ctf_dict_t *dict, ctf_psymtab *pst)
 {
-  ctf_psymtab_add_stt_entries (dict, pst, objfile, 1);
+  ctf_psymtab_add_stt_entries (dict, pst, 1);
 }
 
 /* Read in full symbols for PST, and anything it depends on.  */
@@ -1375,19 +1376,17 @@ ctf_psymtab::read_symtab (struct objfile *objfile)
 
 static ctf_psymtab *
 create_partial_symtab (const char *name,
-		       ctf_archive_t *arc,
 		       ctf_dict_t *dict,
 		       psymtab_storage *partial_symtabs,
-		       struct objfile *objfile)
+		       ctf_per_objfile *per_objfile)
 {
   ctf_psymtab *pst;
 
-  pst = new ctf_psymtab (name, partial_symtabs, objfile->per_bfd,
+  pst = new ctf_psymtab (name, partial_symtabs, per_objfile->objfile->per_bfd,
 			 unrelocated_addr (0));
 
-  pst->context.arc = arc;
+  pst->context.per_objfile = per_objfile;
   pst->context.dict = dict;
-  pst->context.objfile = objfile;
   pst->context.partial_symtabs = partial_symtabs;
   pst->context.pst = pst;
   pst->context.builder = nullptr;
@@ -1443,11 +1442,10 @@ ctf_psymtab_type_cb (ctf_id_t tid, void *arg)
   ctf_debug_printf ("adding type tid=0x%lx kind=%s name='%s'",
 		    tid, ctf_kind_str (kind), name);
 
-  ccp->pst->add_psymbol (name, false,
-			 domain, loc_class, section,
-			 psymbol_placement::GLOBAL,
-			 unrelocated_addr (0),
-			 language_c, ccp->partial_symtabs, ccp->objfile);
+  ccp->pst->add_psymbol (name, false, domain, loc_class, section,
+			 psymbol_placement::GLOBAL, unrelocated_addr (0),
+			 language_c, ccp->partial_symtabs,
+			 ccp->per_objfile->objfile);
 
   return 0;
 }
@@ -1465,13 +1463,10 @@ ctf_psymtab_var_cb (const char *name, ctf_id_t id, void *arg)
 		    name, id, ctf_kind_str (kind));
 
   ccp->pst->add_psymbol (name, true,
-			 kind == CTF_K_FUNCTION
-			 ? FUNCTION_DOMAIN
-			 : VAR_DOMAIN,
-			 LOC_STATIC, -1,
-			 psymbol_placement::GLOBAL,
-			 unrelocated_addr (0),
-			 language_c, ccp->partial_symtabs, ccp->objfile);
+			 kind == CTF_K_FUNCTION ? FUNCTION_DOMAIN : VAR_DOMAIN,
+			 LOC_STATIC, -1, psymbol_placement::GLOBAL,
+			 unrelocated_addr (0), language_c,
+			 ccp->partial_symtabs, ccp->per_objfile->objfile);
   return 0;
 }
 
@@ -1480,10 +1475,9 @@ ctf_psymtab_var_cb (const char *name, ctf_id_t id, void *arg)
 
 static void
 scan_partial_symbols (ctf_dict_t *dict, psymtab_storage *partial_symtabs,
-		      ctf_archive_iter_psymtab_data *iter_data,
-		      const char *fname)
+		      ctf_per_objfile *per_objfile, const char *fname)
 {
-  objfile *objfile = iter_data->objfile;
+  objfile *objfile = per_objfile->objfile;
   bool isparent = false;
 
   CTF_SCOPED_DEBUG_START_END ("fname='%s'", fname);
@@ -1495,8 +1489,8 @@ scan_partial_symbols (ctf_dict_t *dict, psymtab_storage *partial_symtabs,
       ctf_debug_printf ("is parent, using fname='%s'", fname);
     }
 
-  ctf_psymtab *pst = create_partial_symtab (fname, iter_data->archive, dict,
-					    partial_symtabs, objfile);
+  ctf_psymtab *pst = create_partial_symtab (fname, dict, partial_symtabs,
+					    per_objfile);
 
   struct ctf_context *ccx = &pst->context;
   if (isparent == false)
@@ -1513,8 +1507,8 @@ scan_partial_symbols (ctf_dict_t *dict, psymtab_storage *partial_symtabs,
   /* Scan CTF object and function sections which correspond to each
      STT_FUNC or STT_OBJECT entry in the symbol table,
      pick up what init_symtab has done.  */
-  ctf_psymtab_add_stt_obj (dict, pst, objfile);
-  ctf_psymtab_add_stt_func (dict, pst, objfile);
+  ctf_psymtab_add_stt_obj (dict, pst);
+  ctf_psymtab_add_stt_func (dict, pst);
 
   pst->end ();
 }
@@ -1525,9 +1519,10 @@ static int
 build_ctf_archive_member (ctf_dict_t *dict, const char *name, void *arg)
 {
   auto iter_data = static_cast<ctf_archive_iter_psymtab_data *> (arg);
+  ctf_per_objfile *per_objfile = iter_data->per_objfile;
 
   if (strcmp (name, ".ctf") != 0)
-    ctf_import (dict, iter_data->parent_dict);
+    ctf_import (dict, per_objfile->parent_dict.get ());
 
   if (info_verbose)
     {
@@ -1536,7 +1531,7 @@ build_ctf_archive_member (ctf_dict_t *dict, const char *name, void *arg)
     }
 
   psymtab_storage *pss = iter_data->psf->get_partial_symtabs ().get ();
-  scan_partial_symbols (dict, pss, iter_data, name);
+  scan_partial_symbols (dict, pss, per_objfile, name);
 
   return 0;
 }
@@ -1565,19 +1560,16 @@ elfctf_build_psymtabs (objfile *objfile)
 	   bfd_get_filename (abfd), ctf_errmsg (err));
 
   ctf_per_objfile &per_objfile
-    = ctf_per_objfile_key.emplace (objfile, std::move (archive),
+    = ctf_per_objfile_key.emplace (objfile, objfile, std::move (archive),
 				   std::move (dict));
-
-  ctf_archive_iter_psymtab_data iter_data;
-  iter_data.parent_dict = per_objfile.parent_dict.get ();
-  iter_data.objfile = objfile;
-  iter_data.archive = per_objfile.archive.get ();
-
   psymbol_functions *psf = new psymbol_functions ();
-  objfile->qf.emplace_front (psf);
-  iter_data.psf = psf;
 
-  if (ctf_archive_iter (iter_data.archive, build_ctf_archive_member, &iter_data)
+  objfile->qf.emplace_front (psf);
+
+  ctf_archive_iter_psymtab_data iter_data { &per_objfile, psf };
+
+  if (ctf_archive_iter (per_objfile.archive.get (), build_ctf_archive_member,
+			&iter_data)
       < 0)
     error (_("ctf_archive_iter failed in input file %s: - %s"),
 	   bfd_get_filename (abfd), ctf_errmsg (err));
