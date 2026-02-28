@@ -125,28 +125,40 @@ ctf_kind_str (uint32_t kind)
 
 using ctf_type_map = gdb::unordered_map<ctf_id_t, struct type *>;
 
+struct ctf_archive_closer
+{
+  void operator() (ctf_archive_t *arc) const noexcept
+  {
+    ctf_close (arc);
+  }
+};
+
+using ctf_archive_up = std::unique_ptr<ctf_archive_t, ctf_archive_closer>;
+
+struct ctf_dict_closer
+{
+  void operator() (ctf_dict_t *dict) const noexcept
+  {
+    ctf_dict_close (dict);
+  }
+};
+
+using ctf_dict_up = std::unique_ptr<ctf_dict_t, ctf_dict_closer>;
+
 struct ctf_dict_info
 {
-  explicit ctf_dict_info (ctf_dict_t *dict) : dict (dict) {}
-  ~ctf_dict_info ();
+  explicit ctf_dict_info (ctf_archive_up archive, ctf_dict_up dict)
+    : archive (std::move (archive)),
+      dict (std::move (dict))
+  {}
 
   /* Map from IDs to types.  */
   ctf_type_map type_map;
 
-  /* The dictionary.  */
-  ctf_dict_t *dict;
+  /* The archive and dictionary.  */
+  ctf_archive_up archive;
+  ctf_dict_up dict;
 };
-
-/* Cleanup function for the ctf_dict_key data.  */
-ctf_dict_info::~ctf_dict_info ()
-{
-  if (dict == nullptr)
-    return;
-
-  ctf_archive_t *arc = ctf_get_arc (dict);
-  ctf_dict_close (dict);
-  ctf_close (arc);
-}
 
 static const registry<objfile>::key<ctf_dict_info> ctf_dict_key;
 
@@ -1542,26 +1554,28 @@ elfctf_build_psymtabs (struct objfile *of)
   CTF_SCOPED_DEBUG_START_END ("building psymtabs for %s",
 			      bfd_get_filename (abfd));
 
-  ctf_archive_t *arc = ctf_bfdopen (abfd, &err);
+  ctf_archive_up arc (ctf_bfdopen (abfd, &err));
   if (arc == nullptr)
     error (_("ctf_bfdopen failed on %s - %s"),
 	   bfd_get_filename (abfd), ctf_errmsg (err));
 
-  ctf_dict_t *dict = ctf_dict_open (arc, NULL, &err);
+  ctf_dict_up dict (ctf_dict_open (arc.get (), NULL, &err));
   if (dict == nullptr)
     error (_("ctf_dict_open failed on %s - %s"),
 	   bfd_get_filename (abfd), ctf_errmsg (err));
-  ctf_dict_key.emplace (of, dict);
 
-  pcu.dict = dict;
+  ctf_dict_info &dict_info
+    = ctf_dict_key.emplace (of, std::move (arc), std::move (dict));
+
+  pcu.dict = dict_info.dict.get ();
   pcu.of = of;
-  pcu.arc = arc;
+  pcu.arc = dict_info.archive.get ();
 
   psymbol_functions *psf = new psymbol_functions ();
   of->qf.emplace_front (psf);
   pcu.psf = psf;
 
-  if (ctf_archive_iter (arc, build_ctf_archive_member, &pcu) < 0)
+  if (ctf_archive_iter (pcu.arc, build_ctf_archive_member, &pcu) < 0)
     error (_("ctf_archive_iter failed in input file %s: - %s"),
 	   bfd_get_filename (abfd), ctf_errmsg (err));
 }
