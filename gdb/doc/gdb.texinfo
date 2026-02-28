@@ -29292,6 +29292,13 @@ exported symbols.  The default is off.
 Displays the current state of displaying debugging messages related to
 reading of COFF/PE exported symbols.
 
+@cindex CTF debug messages
+@item set debug ctf [on | off]
+Turns on or off display of debugging messages related to reading CTF
+debug info.  The default is off.
+@item show debug ctf
+Displays the current state of CTF debug info reading messages.
+
 @item set debug dwarf-die
 @cindex DWARF DIEs
 Dump DWARF DIEs after they are read in.

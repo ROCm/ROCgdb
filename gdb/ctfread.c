@@ -80,11 +80,48 @@
 #include "block.h"
 #include "ctfread.h"
 #include "psymtab.h"
+#include "cli/cli-cmds.h"
+
+/* When true, print debug messages related to CTF reading.  */
+static bool debug_ctf = false;
+
+/* Print a "ctf" debug statement.  */
+
+#define ctf_debug_printf(fmt, ...) \
+  debug_prefixed_printf_cond (debug_ctf, "ctf", fmt, ##__VA_ARGS__)
+
+#define CTF_SCOPED_DEBUG_START_END(fmt, ...) \
+  scoped_debug_start_end (debug_ctf, "ctf", fmt, ##__VA_ARGS__)
 
 #if ENABLE_LIBCTF
 
 #include "ctf.h"
 #include "ctf-api.h"
+
+/* Return a string representation of a CTF type kind.  */
+
+static const char *
+ctf_kind_str (uint32_t kind)
+{
+  switch (kind)
+    {
+    case CTF_K_UNKNOWN: return "UNKNOWN";
+    case CTF_K_INTEGER: return "INTEGER";
+    case CTF_K_FLOAT: return "FLOAT";
+    case CTF_K_POINTER: return "POINTER";
+    case CTF_K_ARRAY: return "ARRAY";
+    case CTF_K_FUNCTION: return "FUNCTION";
+    case CTF_K_STRUCT: return "STRUCT";
+    case CTF_K_UNION: return "UNION";
+    case CTF_K_ENUM: return "ENUM";
+    case CTF_K_FORWARD: return "FORWARD";
+    case CTF_K_TYPEDEF: return "TYPEDEF";
+    case CTF_K_VOLATILE: return "VOLATILE";
+    case CTF_K_CONST: return "CONST";
+    case CTF_K_RESTRICT: return "RESTRICT";
+    default: return "???";
+    }
+}
 
 using ctf_type_map = gdb::unordered_map<ctf_id_t, struct type *>;
 
@@ -992,10 +1029,18 @@ ctf_add_type_cb (ctf_id_t tid, void *arg)
   /* Check if tid's type has already been defined.  */
   type = get_tid_type (ccp->of, tid);
   if (type != nullptr)
-    return 0;
+    {
+      ctf_debug_printf ("tid=%ld already defined, skipping", tid);
+      return 0;
+    }
 
   ctf_id_t btid = ctf_type_reference (ccp->dict, tid);
   kind = ctf_type_kind (ccp->dict, tid);
+
+  ctf_debug_printf ("processing tid=%ld kind=%s name='%s' btid=%ld",
+		    tid, ctf_kind_str (kind),
+		    ctf_type_name_raw (ccp->dict, tid) ? : "(null)", btid);
+
   switch (kind)
     {
       case CTF_K_STRUCT:
@@ -1059,6 +1104,9 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
 
   kind = ctf_type_kind (ccp->dict, id);
 
+  ctf_debug_printf ("adding variable name='%s' tid=%ld kind=%s",
+		    name, id, ctf_kind_str (kind));
+
   if (type == nullptr)
     {
       complaint (_("ctf_add_var_cb: %s has NO type (%ld)"), name, id);
@@ -1101,7 +1149,15 @@ add_stt_entries (struct ctf_context *ccp, int functions)
     {
       type = get_tid_type (ccp->of, tid);
       if (type == nullptr)
-	continue;
+	{
+	  ctf_debug_printf ("skipping '%s' tid=0x%lx (no type found)",
+			    tname, tid);
+	  continue;
+	}
+
+      ctf_debug_printf ("adding %s '%s' tid=0x%lx",
+			functions ? "function" : "object", tname, tid);
+
       sym = new (&ccp->of->objfile_obstack) symbol;
       OBJSTAT (ccp->of, n_syms++);
       sym->set_type (type);
@@ -1186,6 +1242,10 @@ ctf_psymtab_add_stt_entries (ctf_dict_t *dict, ctf_psymtab *pst,
       else
 	loc_class = LOC_STATIC;
 
+      ctf_debug_printf ("adding %s psym '%s' tid=0x%lx kind=%s",
+			functions ? "function" : "object", tname, tid,
+			ctf_kind_str (kind));
+
       pst->add_psymbol (tname, true,
 			tdomain, loc_class, -1,
 			psymbol_placement::GLOBAL,
@@ -1219,6 +1279,8 @@ ctf_psymtab::expand_psymtab (struct objfile *objfile)
 {
   struct ctf_context *ccp;
 
+  CTF_SCOPED_DEBUG_START_END ("expanding psymtab");
+
   gdb_assert (!readin);
 
   ccp = &context;
@@ -1247,6 +1309,8 @@ ctf_psymtab::expand_psymtab (struct objfile *objfile)
 void
 ctf_psymtab::read_symtab (struct objfile *objfile)
 {
+  CTF_SCOPED_DEBUG_START_END ("reading symtab for '%s'", filename);
+
   if (readin)
     warning (_("bug: psymtab for %s is already read in."), filename);
   else
@@ -1262,6 +1326,9 @@ ctf_psymtab::read_symtab (struct objfile *objfile)
       size_t tsize;
 
       offset = get_objfile_text_range (objfile, &tsize);
+
+      ctf_debug_printf ("starting buildsym for '%s', offset=%s, tsize=%zu",
+			filename, hex_string (offset), tsize);
 
       buildsym_compunit builder (objfile, this->filename, nullptr,
 				 language_c, offset);
@@ -1360,6 +1427,9 @@ ctf_psymtab_type_cb (ctf_id_t tid, void *arg)
   if (name == nullptr || *name == '\0')
     return 0;
 
+  ctf_debug_printf ("adding type tid=0x%lx kind=%s name='%s'",
+		    tid, ctf_kind_str (kind), name);
+
   ccp->pst->add_psymbol (name, false,
 			 domain, loc_class, section,
 			 psymbol_placement::GLOBAL,
@@ -1377,6 +1447,10 @@ ctf_psymtab_var_cb (const char *name, ctf_id_t id, void *arg)
   struct ctf_context *ccp = (struct ctf_context *) arg;
 
   uint32_t kind = ctf_type_kind (ccp->dict, id);
+
+  ctf_debug_printf ("adding variable name='%s' tid=0x%lx kind=%s",
+		    name, id, ctf_kind_str (kind));
+
   ccp->pst->add_psymbol (name, true,
 			 kind == CTF_K_FUNCTION
 			 ? FUNCTION_DOMAIN
@@ -1398,10 +1472,13 @@ scan_partial_symbols (ctf_dict_t *dict, psymtab_storage *partial_symtabs,
   struct objfile *of = tup->of;
   bool isparent = false;
 
+  CTF_SCOPED_DEBUG_START_END ("fname='%s'", fname);
+
   if (strcmp (fname, ".ctf") == 0)
     {
       fname = bfd_get_filename (of->obfd.get ());
       isparent = true;
+      ctf_debug_printf ("is parent, using fname='%s'", fname);
     }
 
   ctf_psymtab *pst = create_partial_symtab (fname, tup->arc, dict,
@@ -1462,6 +1539,9 @@ elfctf_build_psymtabs (struct objfile *of)
   bfd *abfd = of->obfd.get ();
   int err;
 
+  CTF_SCOPED_DEBUG_START_END ("building psymtabs for %s",
+			      bfd_get_filename (abfd));
+
   ctf_archive_t *arc = ctf_bfdopen (abfd, &err);
   if (arc == nullptr)
     error (_("ctf_bfdopen failed on %s - %s"),
@@ -1495,3 +1575,14 @@ elfctf_build_psymtabs (struct objfile *of)
 }
 
 #endif /* ENABLE_LIBCTF */
+
+INIT_GDB_FILE (_initialize_ctfread)
+{
+  add_setshow_boolean_cmd ("ctf", no_class, &debug_ctf,
+			   _("Set CTF reading debugging."),
+			   _("Show CTF reading debugging."),
+			   _("When true, print debug messages related to "
+			     "CTF reading."),
+			   nullptr, nullptr,
+			   &setdebuglist, &showdebuglist);
+}

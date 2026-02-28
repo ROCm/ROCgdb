@@ -98,6 +98,10 @@ set debug gnu-ifunc on|off
 show debug gnu-ifunc
   Turn on or off debug messages related to GNU ifunc resolution.
 
+set debug ctf on|off
+show debug ctf
+  Turn on or off debug messages about CTF reading.
+
 set progress-bars enabled on|off
 show progress-bars enabled
   Allows the progress bars, used when debuginfod is downloading
