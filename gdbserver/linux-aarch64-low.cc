@@ -43,7 +43,6 @@
 #include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte-linux.h"
 #include "arch/aarch64-pauth-linux.h"
-#include "arch/aarch64-scalable-linux.h"
 #include "linux-aarch32-tdesc.h"
 #include "linux-aarch64-tdesc.h"
 #include "nat/aarch64-fpmr-linux.h"

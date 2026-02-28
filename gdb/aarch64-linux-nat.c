@@ -55,7 +55,6 @@
 #include "arch-utils.h"
 
 #include "arch/aarch64-gcs-linux.h"
-#include "arch/aarch64-scalable-linux.h"
 
 #include <string.h>
 
