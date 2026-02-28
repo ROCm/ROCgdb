@@ -616,7 +616,14 @@ read_structure_type (struct ctf_context *ccp, ctf_id_t tid)
     type->set_code (TYPE_CODE_STRUCT);
 
   type->set_length (ctf_type_size (dict, tid));
-  set_type_align (type, ctf_type_align (dict, tid));
+
+  if (ssize_t align = ctf_type_align (dict, tid);
+      align >= 0)
+    set_type_align (type, align);
+  else
+    complaint (_("ctf_type_align read_structure_type failed - %s"),
+	       ctf_errmsg (ctf_errno (dict)));
+
 
   return set_tid_type (objfile, tid, type);
 }
@@ -673,7 +680,13 @@ read_func_kind_type (struct ctf_context *ccp, ctf_id_t tid)
     }
   rettype = fetch_tid_type (ccp, cfi.ctc_return);
   type->set_target_type (rettype);
-  set_type_align (type, ctf_type_align (dict, tid));
+
+  if (ssize_t align = ctf_type_align (dict, tid);
+      align >= 0)
+    set_type_align (type, align);
+  else
+    complaint (_("ctf_type_align read_func_kind_type failed - %s"),
+	       ctf_errmsg (ctf_errno (dict)));
 
   /* Set up function's arguments.  */
   argc = cfi.ctc_argc;
@@ -723,7 +736,13 @@ read_enum_type (struct ctf_context *ccp, ctf_id_t tid)
   type->set_length (ctf_type_size (dict, tid));
   /* Set the underlying type based on its ctf_type_size bits.  */
   type->set_target_type (objfile_int_type (objfile, type->length (), false));
-  set_type_align (type, ctf_type_align (dict, tid));
+
+  if (ssize_t align = ctf_type_align (dict, tid);
+      align >= 0)
+    set_type_align (type, align);
+  else
+    complaint (_("ctf_type_align read_enum_type failed - %s"),
+	       ctf_errmsg (ctf_errno (dict)));
 
   return set_tid_type (objfile, tid, type);
 }
@@ -814,7 +833,12 @@ read_array_type (struct ctf_context *ccp, ctf_id_t tid)
   else
     type->set_length (ctf_type_size (dict, tid));
 
-  set_type_align (type, ctf_type_align (dict, tid));
+  if (ssize_t align = ctf_type_align (dict, tid);
+      align >= 0)
+    set_type_align (type, align);
+  else
+    complaint (_("ctf_type_align read_array_type failed - %s"),
+	       ctf_errmsg (ctf_errno (dict)));
 
   return set_tid_type (objfile, tid, type);
 }
@@ -936,7 +960,13 @@ read_pointer_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
     }
 
   type = lookup_pointer_type (target_type);
-  set_type_align (type, ctf_type_align (ccp->dict, tid));
+
+  if (ssize_t align = ctf_type_align (ccp->dict, tid);
+      align >= 0)
+    set_type_align (type, align);
+  else
+    complaint (_("ctf_type_align read_pointer_type failed - %s"),
+	       ctf_errmsg (ctf_errno (ccp->dict)));
 
   return set_tid_type (objfile, tid, type);
 }
