@@ -20,6 +20,6 @@
 #ifndef GDB_CTFREAD_H
 #define GDB_CTFREAD_H
 
-extern void elfctf_build_psymtabs (struct objfile *objfile);
+extern void elfctf_build_symtabs (struct objfile *objfile);
 
 #endif /* GDB_CTFREAD_H */
