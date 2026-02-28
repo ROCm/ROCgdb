@@ -79,6 +79,7 @@
 #include "complaints.h"
 #include "block.h"
 #include "ctfread.h"
+#include "maint.h"
 #include "psymtab.h"
 #include "cli/cli-cmds.h"
 
@@ -1575,6 +1576,8 @@ elfctf_build_psymtabs (objfile *objfile)
 {
   bfd *abfd = objfile->obfd.get ();
   int err;
+
+  scoped_time_it time_it (__func__);
 
   CTF_SCOPED_DEBUG_START_END ("building psymtabs for %s",
 			      bfd_get_filename (abfd));
