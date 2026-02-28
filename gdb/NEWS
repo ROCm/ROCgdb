@@ -133,6 +133,14 @@ New command class for help
   commands that we, as developers, believe would be close to a minimal
   set of commands for a new user of GDB.
 
+* Removed commands
+
+maint check psymtabs
+maint info psymtabs
+maint print psymbols
+  These commands have been removed, as GDB no longer uses partial
+  symbol tables internally.
+
 * Debugger Adapter Protocol changes
 
   ** Unhandled Ada exceptions can now be caught using the "unhandled"

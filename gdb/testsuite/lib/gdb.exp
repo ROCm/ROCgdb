@@ -10582,28 +10582,6 @@ proc have_index { objfile } {
     }
 }
 
-# Verify that partial symtab expansion for $filename has state $readin.
-
-proc verify_psymtab_expanded { filename readin } {
-    global gdb_prompt
-
-    set cmd "maint info psymtab"
-    set test "$cmd: $filename: $readin"
-    set re [multi_line \
-		"  \{ psymtab \[^\r\n\]*$filename\[^\r\n\]*" \
-		"    readin $readin" \
-		".*"]
-
-    gdb_test_multiple $cmd $test {
-	-re "$cmd\r\n$gdb_prompt $" {
-	    unsupported $gdb_test_name
-	}
-	-re -wrap $re {
-	    pass $gdb_test_name
-	}
-    }
-}
-
 # Add a .gdb_index section to PROGRAM.
 # PROGRAM is assumed to be the output of standard_output_file.
 # Returns the 0 if there is a failure, otherwise 1.

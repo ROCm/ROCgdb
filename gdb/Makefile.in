@@ -1177,7 +1177,6 @@ COMMON_SFILES = \
 	progspace.c \
 	progspace-and-thread.c \
 	prologue-value.c \
-	psymtab.c \
 	record.c \
 	record-btrace.c \
 	record-full.c \
@@ -1612,7 +1611,6 @@ HFILES_NO_SRCDIR = \
 	progspace-and-thread.h \
 	progspace.h \
 	prologue-value.h \
-	psymtab.h \
 	python/py-color.h \
 	python/py-event.h \
 	python/py-events.h \

@@ -49,8 +49,6 @@ gdb_test "backtrace" \
 
 gdb_test_no_output "maint info symtabs" \
     "maint info symtabs no output for --readnever"
-gdb_test_no_output "maint info psymtabs" \
-    "maint info psymtabs no output for --readnever"
 
 # Test invalid combination of flags.
 save_vars { GDBFLAGS } {
@@ -84,5 +82,3 @@ gdb_test "symbol-file ${binfile}0.o -readnever" \
 
 gdb_test_no_output "maint info symtabs" \
     "maint info symtabs no output for symbol-file -readnever"
-gdb_test_no_output "maint info psymtabs" \
-    "maint info psymtabs no output for symbol-file -readnever"
