@@ -1450,7 +1450,7 @@ core_target::xfer_partial (enum target_object object, const char *annex,
 	   resolve the access from there.
 
 	   If that fails, but the access is within an unavailable region,
-	   then the access itself should fail.  */
+	   then report the bytes as unavailable.  */
 	for (const auto &mr : m_core_unavailable_mappings)
 	  {
 	    if (mr.contains (offset))
@@ -1466,7 +1466,8 @@ core_target::xfer_partial (enum target_object object, const char *annex,
 		if (xfer_status == TARGET_XFER_OK)
 		  return TARGET_XFER_OK;
 
-		return TARGET_XFER_E_IO;
+		*xfered_len = len;
+		return TARGET_XFER_UNAVAILABLE;
 	      }
 	  }
 
