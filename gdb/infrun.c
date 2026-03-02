@@ -8451,7 +8451,7 @@ restart_stepped_thread (process_stratum_target *resume_target,
 
   for (thread_info &tp : all_threads_safe ())
     {
-      if (tp.state == THREAD_EXITED)
+      if (tp.state != THREAD_RUNNING)
 	continue;
 
       if (tp.has_pending_waitstatus ())
@@ -8475,7 +8475,7 @@ restart_stepped_thread (process_stratum_target *resume_target,
 
   for (thread_info &tp : all_threads_safe ())
     {
-      if (tp.state == THREAD_EXITED)
+      if (tp.state != THREAD_RUNNING)
 	continue;
 
       if (tp.has_pending_waitstatus ())
@@ -9196,6 +9196,9 @@ static void
 end_stepping_range (struct execution_control_state *ecs)
 {
   ecs->event_thread->control.stop_step = 1;
+  ecs->event_thread->control.trap_expected = 0;
+  ecs->event_thread->control.step_range_start = 0;
+  ecs->event_thread->control.step_range_end = 0;
   stop_waiting (ecs);
 }
 
