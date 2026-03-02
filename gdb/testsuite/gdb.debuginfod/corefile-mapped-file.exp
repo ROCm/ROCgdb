@@ -140,7 +140,7 @@ proc read_ptr_value { } {
 	-re -wrap "^${::hex}(?:\\s+<\[^>\]+>)?:\\s+($::hex)" {
 	    set value $expect_out(1,string)
 	}
-	-re -wrap "^${::hex}(?:\\s+<\[^>\]+>)?:\\s+Cannot access memory at address ${::hex}" {
+	-re -wrap "^${::hex}(?:\\s+<\[^>\]+>)?:\\s+<unavailable>" {
 	    set value "unavailable"
 	}
     }
