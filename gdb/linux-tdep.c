@@ -1384,7 +1384,7 @@ typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
 
 static std::vector<struct smaps_data>
 parse_smaps_data (const char *data,
-		  const std::string maps_filename)
+		  const std::string &maps_filename)
 {
   char *line, *t;
 
@@ -1633,7 +1633,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
   /* Parse the contents of smaps into a vector.  */
   std::vector<struct smaps_data> smaps
-    = parse_smaps_data (data.get (), maps_filename.c_str ());
+    = parse_smaps_data (data.get (), maps_filename);
 
   for (const struct smaps_data &map : smaps)
     {
@@ -3100,7 +3100,7 @@ linux_address_in_shadow_stack_mem_range
     return false;
 
   const std::vector<smaps_data> smaps
-    = parse_smaps_data (data.get (), std::move (smaps_file));
+    = parse_smaps_data (data.get (), smaps_file);
 
   auto find_addr_mem_range = [&addr] (const smaps_data &map)
     {
