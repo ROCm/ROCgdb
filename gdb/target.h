@@ -374,11 +374,6 @@ extern ULONGEST get_target_memory_unsigned (struct target_ops *ops,
 
 struct thread_info;		/* fwd decl for parameter list below: */
 
-/* The type of the callback to the to_async method.  */
-
-typedef void async_callback_ftype (enum inferior_event_type event_type,
-				   void *context);
-
 /* Normally target debug printing is purely type-based.  However,
    sometimes it is necessary to override the debug printing on a
    per-argument basis.  This macro can be used, attribute-style, to
