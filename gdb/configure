@@ -26027,7 +26027,7 @@ if test "${with_bugurl+set}" = set; then :
 	   ;;
      esac
 else
-  BUGURL="https://www.gnu.org/software/gdb/bugs/"
+  BUGURL="https://github.com/ROCm/ROCgdb/issues"
 
 fi
 
