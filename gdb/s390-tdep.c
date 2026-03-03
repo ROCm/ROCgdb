@@ -3242,8 +3242,9 @@ ex:
       /* SVC - supervisor call */
       if (tdep->s390_syscall_record != NULL)
 	{
-	  if (tdep->s390_syscall_record (regcache, ibyte[1]))
-	    return -1;
+	  int res = tdep->s390_syscall_record (regcache, ibyte[1]);
+	  if (res != 0)
+	    return res;
 	}
       else
 	{

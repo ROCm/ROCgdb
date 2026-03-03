@@ -7187,8 +7187,9 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
       if (tdep->ppc_syscall_record != NULL)
 	{
-	  if (tdep->ppc_syscall_record (regcache) != 0)
-	    return -1;
+	  int res = tdep->ppc_syscall_record (regcache);
+	  if (res != 0)
+	    return res;
 	}
       else
 	{
