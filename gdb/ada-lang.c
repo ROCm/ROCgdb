@@ -515,19 +515,19 @@ ada_name_prefix_len (const char *name)
     }
 }
 
-/* Return non-zero if SUFFIX is a suffix of STR.
-   Return zero if STR is null.  */
+/* Return true if SUFFIX is a suffix of STR.
+   Return false if STR is null.  */
 
-static int
+static bool
 is_suffix (const char *str, const char *suffix)
 {
   int len1, len2;
 
-  if (str == NULL)
-    return 0;
+  if (str == nullptr)
+    return false;
   len1 = strlen (str);
   len2 = strlen (suffix);
-  return (len1 >= len2 && strcmp (str + len1 - len2, suffix) == 0);
+  return len1 >= len2 && strcmp (str + len1 - len2, suffix) == 0;
 }
 
 /* The contents of value VAL, treated as a value of type TYPE.  The
