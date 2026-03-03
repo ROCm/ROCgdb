@@ -4969,11 +4969,11 @@ ada_lookup_simple_minsym (const char *name, struct objfile *objfile)
 	       {
 		 result.minsym = msymbol;
 		 result.objfile = obj;
-		 return 1;
+		 return true;
 	       }
 	   }
 
-	 return 0;
+	 return false;
        }, objfile);
 
   return result;
