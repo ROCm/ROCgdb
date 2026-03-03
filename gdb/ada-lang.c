@@ -4739,12 +4739,12 @@ ada_clear_symbol_cache (program_space *pspace)
 }
 
 /* Search the symbol cache for an entry matching NAME and DOMAIN.
-   Return 1 if found, 0 otherwise.
+   Return true if found, false otherwise.
 
    If an entry was found and SYM is not NULL, set *SYM to the entry's
    SYM.  Same principle for BLOCK if not NULL.  */
 
-static int
+static bool
 lookup_cached_symbol (const char *name, domain_search_flags domain,
 		      struct symbol **sym, const struct block **block)
 {
@@ -4755,12 +4755,12 @@ lookup_cached_symbol (const char *name, domain_search_flags domain,
 
   auto iter = htab.find (search);
   if (iter == htab.end ())
-    return 0;
+    return false;
   if (sym != nullptr)
     *sym = iter->sym;
   if (block != nullptr)
     *block = iter->block;
-  return 1;
+  return true;
 }
 
 /* Assuming that (SYM, BLOCK) is the result of the lookup of NAME
