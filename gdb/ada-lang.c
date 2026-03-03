@@ -185,7 +185,7 @@ static struct type *ada_find_any_type (const char *name);
 static symbol_name_matcher_ftype *ada_get_symbol_name_matcher
   (const lookup_name_info &lookup_name);
 
-static int symbols_are_identical_enums
+static bool symbols_are_identical_enums
   (const std::vector<struct block_symbol> &syms);
 
 static bool ada_identical_enum_types_p (struct type *type1,
@@ -4982,7 +4982,7 @@ ada_lookup_simple_minsym (const char *name, struct objfile *objfile)
 /* True if TYPE is definitely an artificial type supplied to a symbol
    for which no debugging information was given in the symbol file.  */
 
-static int
+static bool
 is_nondebugging_type (struct type *type)
 {
   const char *name = ada_type_name (type);
@@ -5030,7 +5030,7 @@ ada_identical_enum_types_p (struct type *type1, struct type *type2)
   return true;
 }
 
-/* Return nonzero if all the symbols in SYMS are all enumeral symbols
+/* Return true if all the symbols in SYMS are all enumeral symbols
    that are deemed "identical" for practical purposes.  Sometimes,
    enumerals are not strictly identical, but their types are so similar
    that they can be considered identical.
@@ -5050,7 +5050,7 @@ ada_identical_enum_types_p (struct type *type1, struct type *type2)
    what choice he makes, the outcome would always be the same.
    So, for practical purposes, we consider them as the same.  */
 
-static int
+static bool
 symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
 {
   int i;
@@ -5065,12 +5065,12 @@ symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
   /* Quick check: All symbols should have an enum type.  */
   for (i = 0; i < syms.size (); i++)
     if (syms[i].symbol->type ()->code () != TYPE_CODE_ENUM)
-      return 0;
+      return false;
 
   /* Quick check: They should all have the same value.  */
   for (i = 1; i < syms.size (); i++)
     if (syms[i].symbol->value_longest () != syms[0].symbol->value_longest ())
-      return 0;
+      return false;
 
   /* All the sanity checks passed, so we might have a set of
      identical enumeration types.  Perform a more complete
@@ -5078,9 +5078,9 @@ symbols_are_identical_enums (const std::vector<struct block_symbol> &syms)
   for (i = 1; i < syms.size (); i++)
     if (!ada_identical_enum_types_p (syms[i].symbol->type (),
 				     syms[0].symbol->type ()))
-      return 0;
+      return false;
 
-  return 1;
+  return true;
 }
 
 /* Remove any non-debugging symbols in SYMS that definitely
@@ -5192,9 +5192,9 @@ xget_renaming_scope (struct type *renaming_type)
   return std::string (name, last);
 }
 
-/* Return nonzero if NAME corresponds to a package name.  */
+/* Return true if NAME corresponds to a package name.  */
 
-static int
+static bool
 is_package_name (const char *name)
 {
   /* Here, We take advantage of the fact that no symbols are generated
@@ -5206,7 +5206,7 @@ is_package_name (const char *name)
   /* If it is a function that has not been defined at library level,
      then we should be able to look it up in the symbols.  */
   if (standard_lookup (name, NULL, SEARCH_VFT) != NULL)
-    return 0;
+    return false;
 
   /* Library-level function names start with "_ada_".  See if function
      "_ada_" followed by NAME can be found.  */
@@ -5214,27 +5214,27 @@ is_package_name (const char *name)
   /* Do a quick check that NAME does not contain "__", since library-level
      functions names cannot contain "__" in them.  */
   if (strstr (name, "__") != NULL)
-    return 0;
+    return false;
 
   std::string fun_name = string_printf ("_ada_%s", name);
 
   return (standard_lookup (fun_name.c_str (), NULL, SEARCH_VFT) == NULL);
 }
 
-/* Return nonzero if SYM corresponds to a renaming entity that is
+/* Return true if SYM corresponds to a renaming entity that is
    not visible from FUNCTION_NAME.  */
 
-static int
+static bool
 old_renaming_is_invisible (const struct symbol *sym, const char *function_name)
 {
   if (sym->loc_class () != LOC_TYPEDEF)
-    return 0;
+    return false;
 
   std::string scope = xget_renaming_scope (sym->type ());
 
   /* If the rename has been defined in a package, then it is visible.  */
   if (is_package_name (scope.c_str ()))
-    return 0;
+    return false;
 
   /* Check that the rename is in the current function scope by checking
      that its name starts with SCOPE.  */
