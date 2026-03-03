@@ -179,8 +179,6 @@ static int ada_resolve_function (std::vector<struct block_symbol> &,
 				 struct value **, int, const char *,
 				 struct type *, bool);
 
-static int ada_is_direct_array_type (struct type *);
-
 static struct value *ada_index_struct_field (int, struct value *, int,
 					     struct type *);
 
@@ -2085,40 +2083,40 @@ desc_arity (struct type *type)
   return 0;
 }
 
-/* Non-zero iff TYPE is a simple array type (not a pointer to one) or
+/* True iff TYPE is a simple array type (not a pointer to one) or
    an array descriptor type (representing an unconstrained array
    type).  */
 
-static int
+static bool
 ada_is_direct_array_type (struct type *type)
 {
-  if (type == NULL)
-    return 0;
+  if (type == nullptr)
+    return false;
   type = ada_check_typedef (type);
   return (type->code () == TYPE_CODE_ARRAY
 	  || ada_is_array_descriptor_type (type));
 }
 
-/* Non-zero iff TYPE represents any kind of array in Ada, or a pointer
- * to one.  */
+/* True iff TYPE represents any kind of array in Ada, or a pointer to
+   one.  */
 
-static int
+static bool
 ada_is_array_type (struct type *type)
 {
-  while (type != NULL
+  while (type != nullptr
 	 && (type->code () == TYPE_CODE_PTR
 	     || type->code () == TYPE_CODE_REF))
     type = type->target_type ();
   return ada_is_direct_array_type (type);
 }
 
-/* Non-zero iff TYPE is a simple array type or pointer to one.  */
+/* True iff TYPE is a simple array type or pointer to one.  */
 
-int
+bool
 ada_is_simple_array_type (struct type *type)
 {
-  if (type == NULL)
-    return 0;
+  if (type == nullptr)
+    return false;
   type = ada_check_typedef (type);
   return (type->code () == TYPE_CODE_ARRAY
 	  || (type->code () == TYPE_CODE_PTR
@@ -2126,17 +2124,17 @@ ada_is_simple_array_type (struct type *type)
 		  == TYPE_CODE_ARRAY)));
 }
 
-/* Non-zero iff TYPE belongs to a GNAT array descriptor.  */
+/* True iff TYPE belongs to a GNAT array descriptor.  */
 
-int
+bool
 ada_is_array_descriptor_type (struct type *type)
 {
   struct type *data_type = desc_data_target_type (type);
 
-  if (type == NULL)
-    return 0;
+  if (type == nullptr)
+    return false;
   type = ada_check_typedef (type);
-  return (data_type != NULL
+  return (data_type != nullptr
 	  && data_type->code () == TYPE_CODE_ARRAY
 	  && desc_arity (desc_bounds_type (type)) > 0);
 }
@@ -2287,18 +2285,17 @@ ada_coerce_to_simple_array_type (struct type *type)
   return type;
 }
 
-/* Non-zero iff TYPE represents a standard GNAT packed-array type.  */
+/* True iff TYPE represents a standard GNAT packed-array type.  */
 
-static int
+static bool
 ada_is_gnat_encoded_packed_array_type  (struct type *type)
 {
-  if (type == NULL)
-    return 0;
+  if (type == nullptr)
+    return false;
   type = desc_base_type (type);
   type = ada_check_typedef (type);
-  return
-    ada_type_name (type) != NULL
-    && strstr (ada_type_name (type), "___XP") != NULL;
+  return (ada_type_name (type) != nullptr
+	  && strstr (ada_type_name (type), "___XP") != nullptr);
 }
 
 /* See ada-lang.h.  */

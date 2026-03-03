@@ -190,9 +190,9 @@ extern struct value *ada_coerce_to_simple_array_ptr (struct value *);
 
 struct value *ada_coerce_to_simple_array (struct value *);
 
-extern int ada_is_simple_array_type (struct type *);
+extern bool ada_is_simple_array_type (struct type *);
 
-extern int ada_is_array_descriptor_type (struct type *);
+extern bool ada_is_array_descriptor_type (struct type *);
 
 extern LONGEST ada_discrete_type_low_bound (struct type *);
 
