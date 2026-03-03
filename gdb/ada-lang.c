@@ -155,8 +155,6 @@ static struct value *coerce_unspec_val_to_type (struct value *,
 
 static bool equiv_types (struct type *, struct type *);
 
-static int advance_wild_match (const char **, const char *, char);
-
 static bool wild_match (const char *name, const char *patn);
 
 static struct value *ada_coerce_ref (struct value *);
@@ -5913,33 +5911,32 @@ is_name_suffix (const char *str)
   return false;
 }
 
-/* Return non-zero if the string starting at NAME and ending before
+/* Return true if the string starting at NAME and ending before
    NAME_END contains no capital letters.  */
 
-static int
+static bool
 is_valid_name_for_wild_match (const char *name0)
 {
   std::string decoded_name = ada_decode (name0);
-  int i;
 
   /* If the decoded name starts with an angle bracket, it means that
      NAME0 does not follow the GNAT encoding format.  It should then
      not be allowed as a possible wild match.  */
   if (decoded_name[0] == '<')
-    return 0;
+    return false;
 
-  for (i=0; decoded_name[i] != '\0'; i++)
+  for (int i = 0; decoded_name[i] != '\0'; i++)
     if (c_isalpha (decoded_name[i]) && !c_islower (decoded_name[i]))
-      return 0;
+      return false;
 
-  return 1;
+  return true;
 }
 
 /* Advance *NAMEP to next occurrence in the string NAME0 of the TARGET0
    character which could start a simple name.  Assumes that *NAMEP points
    somewhere inside the string beginning at NAME0.  */
 
-static int
+static bool
 advance_wild_match (const char **namep, const char *name0, char target0)
 {
   const char *name = *namep;
@@ -5974,16 +5971,16 @@ advance_wild_match (const char **namep, const char *name0, char target0)
 	      name += 4;
 	    }
 	  else
-	    return 0;
+	    return false;
 	}
       else if ((t0 >= 'a' && t0 <= 'z') || (t0 >= '0' && t0 <= '9'))
 	name += 1;
       else
-	return 0;
+	return false;
     }
 
   *namep = name;
-  return 1;
+  return true;
 }
 
 /* Return true iff NAME encodes a name of the form prefix.PATN.
