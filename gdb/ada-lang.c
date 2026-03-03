@@ -155,8 +155,6 @@ static struct value *coerce_unspec_val_to_type (struct value *,
 
 static bool equiv_types (struct type *, struct type *);
 
-static int is_name_suffix (const char *);
-
 static int advance_wild_match (const char **, const char *, char);
 
 static bool wild_match (const char *name, const char *patn);
@@ -5453,7 +5451,7 @@ match_data::operator() (struct block_symbol *bsym)
    targeted by renamings matching LOOKUP_NAME in BLOCK.  Add these
    symbols to RESULT.  Return whether we found such symbols.  */
 
-static int
+static bool
 ada_add_block_renamings (std::vector<struct block_symbol> &result,
 			 const struct block *block,
 			 const lookup_name_info &lookup_name,
@@ -5784,7 +5782,7 @@ ada_lookup_symbol (const char *name, const struct block *block0,
    match is performed.  This sequence is used to differentiate homonyms,
    is an optional part of a valid name suffix.  */
 
-static int
+static bool
 is_name_suffix (const char *str)
 {
   int k;
@@ -5808,7 +5806,7 @@ is_name_suffix (const char *str)
       while (c_isdigit (matching[0]))
 	matching += 1;
       if (matching[0] == '\0')
-	return 1;
+	return true;
     }
 
   /* ___[0-9]+ */
@@ -5819,13 +5817,13 @@ is_name_suffix (const char *str)
       while (c_isdigit (matching[0]))
 	matching += 1;
       if (matching[0] == '\0')
-	return 1;
+	return true;
     }
 
   /* "TKB" suffixes are used for subprograms implementing task bodies.  */
 
   if (strcmp (str, "TKB") == 0)
-    return 1;
+    return true;
 
 #if 0
   /* FIXME: brobecker/2005-09-23: Protected Object subprograms end
@@ -5841,7 +5839,7 @@ is_name_suffix (const char *str)
      the following check.  */
   /* Protected Object Subprograms */
   if (len == 1 && str [0] == 'N')
-    return 1;
+    return true;
 #endif
 
   /* _E[0-9]+[bs]$ */
@@ -5852,7 +5850,7 @@ is_name_suffix (const char *str)
 	matching += 1;
       if ((matching[0] == 'b' || matching[0] == 's')
 	  && matching [1] == '\0')
-	return 1;
+	return true;
     }
 
   /* ??? We should not modify STR directly, as we are doing below.  This
@@ -5866,53 +5864,53 @@ is_name_suffix (const char *str)
       while (str[0] != '_' && str[0] != '\0')
 	{
 	  if (str[0] != 'n' && str[0] != 'b')
-	    return 0;
+	    return false;
 	  str += 1;
 	}
     }
 
   if (str[0] == '\000')
-    return 1;
+    return true;
 
   if (str[0] == '_')
     {
       if (str[1] != '_' || str[2] == '\000')
-	return 0;
+	return false;
       if (str[2] == '_')
 	{
 	  if (strcmp (str + 3, "JM") == 0)
-	    return 1;
+	    return true;
 	  /* FIXME: brobecker/2004-09-30: GNAT will soon stop using
 	     the LJM suffix in favor of the JM one.  But we will
 	     still accept LJM as a valid suffix for a reasonable
 	     amount of time, just to allow ourselves to debug programs
 	     compiled using an older version of GNAT.  */
 	  if (strcmp (str + 3, "LJM") == 0)
-	    return 1;
+	    return true;
 	  if (str[3] != 'X')
-	    return 0;
+	    return false;
 	  if (str[4] == 'F' || str[4] == 'D' || str[4] == 'B'
 	      || str[4] == 'U' || str[4] == 'P')
-	    return 1;
+	    return true;
 	  if (str[4] == 'R' && str[5] != 'T')
-	    return 1;
-	  return 0;
+	    return true;
+	  return false;
 	}
       if (!c_isdigit (str[2]))
-	return 0;
+	return false;
       for (k = 3; str[k] != '\0'; k += 1)
 	if (!c_isdigit (str[k]) && str[k] != '_')
-	  return 0;
-      return 1;
+	  return false;
+      return true;
     }
   if (str[0] == '$' && c_isdigit (str[1]))
     {
       for (k = 2; str[k] != '\0'; k += 1)
 	if (!c_isdigit (str[k]) && str[k] != '_')
-	  return 0;
-      return 1;
+	  return false;
+      return true;
     }
-  return 0;
+  return false;
 }
 
 /* Return non-zero if the string starting at NAME and ending before
