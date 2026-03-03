@@ -33,7 +33,7 @@
 @set GDBP gdb
 @c 
 @c Name of GDB product.  Used in running text.
-@set GDBN @sc{rocgdb}
+@set GDBN ROCgdb
 @c
 @c Name of host.  Should not be used in generic configs, but generic
 @c value may catch some flubs.
