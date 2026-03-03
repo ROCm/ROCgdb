@@ -160,10 +160,16 @@ struct orl;
 
 /* Detect whether we are compiling with -fsanitize=address.  */
 #ifndef BFD_ASAN
-# if ((defined (__SANITIZE_ADDRESS__) && __SANITIZE_ADDRESS__)		\
-      || (defined __has_feature && __has_feature (address_sanitizer)))
+/* gcc.  */
+# if defined __SANITIZE_ADDRESS__
 #  define BFD_ASAN 1
-# else
+/* clang.  */
+# elif defined __has_feature
+#  if __has_feature(address_sanitizer)
+#   define BFD_ASAN 1
+#  endif
+# endif
+# ifndef BFD_ASAN
 #  define BFD_ASAN 0
 # endif
 #endif
