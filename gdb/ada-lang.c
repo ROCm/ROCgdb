@@ -106,7 +106,7 @@ static void ada_add_all_symbols (std::vector<struct block_symbol> &,
 				 const lookup_name_info &lookup_name,
 				 domain_search_flags, int, int *);
 
-static int is_nonfunction (const std::vector<struct block_symbol> &);
+static bool is_nonfunction (const std::vector<struct block_symbol> &);
 
 static void add_defn_to_vec (std::vector<struct block_symbol> &,
 			     struct symbol *,
@@ -153,9 +153,7 @@ static struct value *value_subscript_packed (struct value *, int,
 static struct value *coerce_unspec_val_to_type (struct value *,
 						struct type *);
 
-static int lesseq_defined_than (struct symbol *, struct symbol *);
-
-static int equiv_types (struct type *, struct type *);
+static bool equiv_types (struct type *, struct type *);
 
 static int is_name_suffix (const char *);
 
@@ -2654,15 +2652,15 @@ value_subscript_packed (struct value *arr, int arity, struct value **ind)
   return v;
 }
 
-/* Non-zero iff TYPE includes negative integer values.  */
+/* True iff TYPE includes negative integer values.  */
 
-static int
+static bool
 has_negatives (struct type *type)
 {
   switch (type->code ())
     {
     default:
-      return 0;
+      return false;
     case TYPE_CODE_INT:
       return !type->is_unsigned ();
     case TYPE_CODE_RANGE:
@@ -4827,57 +4825,57 @@ standard_lookup (const char *name, const struct block *block,
 }
 
 
-/* Non-zero iff there is at least one non-function/non-enumeral symbol
+/* True iff there is at least one non-function/non-enumeral symbol
    in the symbol fields of SYMS.  We treat enumerals as functions,
    since they contend in overloading in the same way.  */
-static int
+static bool
 is_nonfunction (const std::vector<struct block_symbol> &syms)
 {
   for (const block_symbol &sym : syms)
     if (sym.symbol->type ()->code () != TYPE_CODE_FUNC
 	&& (sym.symbol->type ()->code () != TYPE_CODE_ENUM
 	    || sym.symbol->loc_class () != LOC_CONST))
-      return 1;
+      return true;
 
-  return 0;
+  return false;
 }
 
-/* If true (non-zero), then TYPE0 and TYPE1 represent equivalent
-   struct types.  Otherwise, they may not.  */
+/* If true, then TYPE0 and TYPE1 represent equivalent struct types.
+   Otherwise, they may not.  */
 
-static int
+static bool
 equiv_types (struct type *type0, struct type *type1)
 {
   if (type0 == type1)
-    return 1;
+    return true;
   if (type0 == NULL || type1 == NULL
       || type0->code () != type1->code ())
-    return 0;
+    return false;
   if ((type0->code () == TYPE_CODE_STRUCT
        || type0->code () == TYPE_CODE_ENUM)
       && ada_type_name (type0) != NULL && ada_type_name (type1) != NULL
       && strcmp (ada_type_name (type0), ada_type_name (type1)) == 0)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 /* True iff SYM0 represents the same entity as SYM1, or one that is
    no more defined than that of SYM1.  */
 
-static int
+static bool
 lesseq_defined_than (struct symbol *sym0, struct symbol *sym1)
 {
   if (sym0 == sym1)
-    return 1;
+    return true;
   if (sym0->domain () != sym1->domain ()
       || sym0->loc_class () != sym1->loc_class ())
-    return 0;
+    return false;
 
   switch (sym0->loc_class ())
     {
     case LOC_UNDEF:
-      return 1;
+      return true;
     case LOC_TYPEDEF:
       {
 	struct type *type0 = sym0->type ();
@@ -4905,7 +4903,7 @@ lesseq_defined_than (struct symbol *sym0, struct symbol *sym1)
       }
 
     default:
-      return 0;
+      return false;
     }
 }
 
@@ -6203,33 +6201,33 @@ ada_lookup_name_info::matches
 
 				/* Field Access */
 
-/* Return non-zero if TYPE is a pointer to the GNAT dispatch table used
+/* Return true if TYPE is a pointer to the GNAT dispatch table used
    for tagged types.  */
 
-static int
+static bool
 ada_is_dispatch_table_ptr_type (struct type *type)
 {
   const char *name;
 
   if (type->code () != TYPE_CODE_PTR)
-    return 0;
+    return false;
 
   name = type->target_type ()->name ();
   if (name == NULL)
-    return 0;
+    return false;
 
   return (strcmp (name, "ada__tags__dispatch_table") == 0);
 }
 
-/* Return non-zero if TYPE is an interface tag.  */
+/* Return true if TYPE is an interface tag.  */
 
-static int
+static bool
 ada_is_interface_tag (struct type *type)
 {
   const char *name = type->name ();
 
-  if (name == NULL)
-    return 0;
+  if (name == nullptr)
+    return false;
 
   return (strcmp (name, "ada__tags__interface_tag") == 0);
 }
