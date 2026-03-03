@@ -20,7 +20,7 @@
 # Multiple inferiors are compiled, using a variety of types for the
 # two fields.
 
-require allow_hw_watchpoint_multi_tests
+require allow_hw_watchpoint_multi_tests allow_hw_watchpoint_access_tests
 
 standard_testfile
 
