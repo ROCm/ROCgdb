@@ -88,7 +88,7 @@ foreach_with_prefix sysroot $modes {
 
 	# Test that we can stop inside a library.
 	gdb_breakpoint printf
-	gdb_test "continue" "Breakpoint $decimal.* (__)?printf.*" \
+	gdb_test "continue" "Breakpoint $decimal.* (__|___ieee128_)?printf.*" \
 	    "continue to printf"
     }
 }
