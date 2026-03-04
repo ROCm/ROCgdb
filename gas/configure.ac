@@ -62,6 +62,15 @@ if test x$ac_checking != x ; then
   AC_DEFINE(ENABLE_CHECKING, 1, [Define if you want run-time sanity checks.])
 fi
 
+ac_leak_check=BFD_ASAN
+AC_ARG_ENABLE(leak_check,
+[  --enable-leak-check     enable freeing memory before exit],
+[case "${enableval}" in
+  no)	ac_leak_check=0 ;;
+  *)	ac_leak_check=1 ;;
+esac])dnl
+AC_DEFINE_UNQUOTED(ENABLE_LEAK_CHECK, ${ac_leak_check}, [Define if you want memory to be freed before exit.])
+
 # PR gas/19109
 # Decide the default method for compressing debug sections.
 ac_default_compressed_debug_sections=unset

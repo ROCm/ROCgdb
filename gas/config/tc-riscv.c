@@ -5782,7 +5782,8 @@ riscv_md_finish (void)
 void
 riscv_md_end (void)
 {
-  htab_delete (riscv_pcrel_hi_fixup_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (riscv_pcrel_hi_fixup_hash);
 }
 
 /* Adjust the symbol table.  */

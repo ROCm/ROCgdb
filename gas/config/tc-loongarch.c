@@ -529,7 +529,8 @@ md_begin ()
 void
 loongarch_md_end (void)
 {
-  htab_delete (align_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (align_hash);
 }
 
 unsigned long

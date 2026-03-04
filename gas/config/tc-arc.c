@@ -2722,6 +2722,8 @@ md_begin (void)
 void
 arc_md_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   htab_delete (arc_opcode_hash);
   htab_delete (arc_reg_hash);
   htab_delete (arc_aux_hash);

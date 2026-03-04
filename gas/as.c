@@ -1330,7 +1330,8 @@ gas_early_init (int *argcp, char ***argvp)
     as_fatal (_("libbfd ABI mismatch"));
 
   obstack_begin (&notes, chunksize);
-  xatexit (free_notes);
+  if (ENABLE_LEAK_CHECK)
+    xatexit (free_notes);
 
   myname = **argvp;
   xmalloc_set_program_name (myname);

@@ -304,6 +304,8 @@ read_begin (void)
 void
 read_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   stabs_end ();
   poend ();
   _obstack_free (&cond_obstack, NULL);
@@ -621,7 +623,8 @@ pobegin (void)
 static void
 poend (void)
 {
-  htab_delete (po_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (po_hash);
 }
 
 #define HANDLE_CONDITIONAL_ASSEMBLY(num_read)				\

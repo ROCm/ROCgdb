@@ -47,6 +47,8 @@ subsegs_begin (void)
 void
 subsegs_end (struct obstack **obs)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   for (; *obs; obs++)
     _obstack_free (*obs, NULL);
   _obstack_free (&frchains, NULL);

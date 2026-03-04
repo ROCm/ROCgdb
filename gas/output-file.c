@@ -81,18 +81,23 @@ output_file_close (void)
      which will call xexit() which may call this function again...  */
   stdoutput = NULL;
 
-  /* We can't free obstacks attached to the output bfd sections before
-     closing the output bfd since data in those obstacks may need to
-     be accessed, but we can't access anything in the output bfd after
-     it is closed..  */
-  for (sec = obfd->sections; sec; sec = sec->next)
-    stash_frchain_obs (sec);
-  stash_frchain_obs (reg_section);
-  stash_frchain_obs (expr_section);
-  stash_frchain_obs (bfd_abs_section_ptr);
-  stash_frchain_obs (bfd_und_section_ptr);
-  obstack_ptr_grow (&notes, NULL);
-  obs = obstack_finish (&notes);
+  if (ENABLE_LEAK_CHECK)
+    {
+      /* We can't free obstacks attached to the output bfd sections before
+	 closing the output bfd since data in those obstacks may need to
+	 be accessed, but we can't access anything in the output bfd after
+	 it is closed..  */
+      for (sec = obfd->sections; sec; sec = sec->next)
+	stash_frchain_obs (sec);
+      stash_frchain_obs (reg_section);
+      stash_frchain_obs (expr_section);
+      stash_frchain_obs (bfd_abs_section_ptr);
+      stash_frchain_obs (bfd_und_section_ptr);
+      obstack_ptr_grow (&notes, NULL);
+      obs = obstack_finish (&notes);
+    }
+  else
+    obs = NULL;
 
   /* Close the bfd.  */
   if (!flag_always_generate_output && had_errors ())
