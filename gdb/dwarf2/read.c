@@ -636,6 +636,14 @@ struct fnfieldlist
    in an instance of a field_info structure, as defined below.  */
 struct field_info
 {
+  explicit field_info (die_info *base)
+    : base_die (base)
+  {
+  }
+
+  /* The DIE for the overall structure.  */
+  die_info *base_die;
+
   /* List of data member and baseclasses fields.  */
   std::vector<struct nextfield> fields;
   std::vector<struct nextfield> baseclasses;
@@ -810,9 +818,6 @@ static void get_scope_pc_bounds (struct die_info *,
 
 static void dwarf2_record_block_ranges (struct die_info *, struct block *,
 					struct dwarf2_cu *);
-
-static void dwarf2_add_field (struct field_info *, struct die_info *,
-			      struct dwarf2_cu *);
 
 static void dwarf2_attach_fields_to_type (struct field_info *,
 					  struct type *, struct dwarf2_cu *);
@@ -9485,7 +9490,7 @@ compute_field_location (dwarf2_cu *cu, die_info *die, field *fp)
 
 static void
 dwarf2_add_field (struct field_info *fip, struct die_info *die,
-		  struct dwarf2_cu *cu)
+		  struct dwarf2_cu *cu, bool force_artificial = false)
 {
   struct nextfield *new_field;
   struct attribute *attr;
@@ -9518,6 +9523,9 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
     new_field->field.set_virtual ();
 
   fp = &new_field->field;
+
+  if (force_artificial)
+    fp->set_is_artificial (true);
 
   if ((die->tag == DW_TAG_member || die->tag == DW_TAG_namelist_item)
       && !die_is_declaration (die, cu))
@@ -10559,6 +10567,29 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   return type;
 }
 
+/* Return true if DIE appears to be nested in the structure being
+   defined by FI.  */
+
+static bool
+field_info_encloses_die (field_info *fi, die_info *die)
+{
+  for (; die != nullptr; die = die->parent)
+    {
+      if (die == fi->base_die)
+	return true;
+
+      /* If the current DIE is not a member, then maybe we found a DIE
+	 that is nested in some other object that is itself nested in
+	 the outermost structure.  We do allow nesting in variants
+	 (though it's unclear if this really makes sense).  */
+      if (die->tag != DW_TAG_member && die->tag != DW_TAG_variant
+	  && die->tag != DW_TAG_variant_part)
+	return false;
+    }
+
+  return false;
+}
+
 static void handle_struct_member_die
   (struct die_info *child_die,
    struct type *type,
@@ -10592,11 +10623,6 @@ handle_variant_part (struct die_info *die, struct type *type,
       new_part = &current.variant_parts.emplace_back ();
     }
 
-  /* When we recurse, we want callees to add to this new variant
-     part.  */
-  scoped_restore save_current_variant_part
-    = make_scoped_restore (&fi->current_variant_part, new_part);
-
   struct attribute *discr = dwarf2_attr (die, DW_AT_discr, cu);
   if (discr == NULL)
     {
@@ -10608,6 +10634,15 @@ handle_variant_part (struct die_info *die, struct type *type,
       struct die_info *target_die = follow_die_ref (die, discr, &target_cu);
 
       new_part->discriminant_offset = target_die->sect_off;
+
+      /* In Ada, a discriminant might be inherited from some
+	 superclass.  DWARF does not admit this possibility, so
+	 compilers have adapted in one of two ways: LLVM emits a local
+	 copy of the field (marking it as artificial); but GCC just
+	 references the field DIE in the parent type.  Here we handle
+	 the GCC case by creating an artificial copy of the field.  */
+      if (!field_info_encloses_die (fi, target_die))
+	dwarf2_add_field (fi, target_die, cu, true);
     }
   else
     {
@@ -10617,6 +10652,10 @@ handle_variant_part (struct die_info *die, struct type *type,
 		 objfile_name (cu->per_objfile->objfile));
     }
 
+  /* When we recurse, we want callees to add to this new variant
+     part.  */
+  scoped_restore save_current_variant_part
+    = make_scoped_restore (&fi->current_variant_part, new_part);
   for (die_info *child_die : die->children ())
     handle_struct_member_die (child_die, type, fi, template_args, cu);
 }
@@ -10763,7 +10802,8 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
   bool has_template_parameters = false;
   if (die->child != NULL && ! die_is_declaration (die, cu))
     {
-      struct field_info fi;
+      field_info fi (die);
+
       std::vector<struct symbol *> template_args;
 
       for (die_info *child_die : die->children ())

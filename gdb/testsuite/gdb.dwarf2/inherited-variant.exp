@@ -1,0 +1,149 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test an inherited discriminant.
+#
+# In Ada, you can have a type with variant parts where the
+# discriminant is inherited from a superclass.  For instance this can
+# look like:
+#
+#   type Root_T (Root_Disc : Boolean) is tagged record
+#      Name : String (1 .. 8);
+#      Flag_1 : Boolean;
+#      Flag_2 : Boolean;
+#   end record;
+#   type Child_T (Child_Disc : Boolean) is new Root_T (Root_Disc => Child_Disc) with record
+#      case Child_Disc is
+#         when True =>
+#            Child_Flag : Boolean;
+#         when others => null;
+#      end case;
+#   end record;
+#
+# Here, Child_Disc does not really exist -- it is just an alias for
+# Root_Disc.  So, the DW_TAG_variant_part in Child_T will have a
+# DW_AT_discr referring to... what?
+#
+# Note that DWARF does not consider this problem, so there is no
+# standard solution.  LLVM handles this by emitting a copy of the
+# Root_Disc field, but marked as artificial; this way gdb's Ada
+# code knows not to print it.  GCC takes a different approach,
+# namely having the DW_AT_discr refer to the original Root_Disc
+# DIE, that appears in the Root_T structure.
+#
+# This test checks the latter scenario.  The type is slightly
+# different than the above, just to make it simpler to write this
+# test.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use
+# gas.
+require dwarf2_support
+
+standard_testfile .c .S
+
+# Make some DWARF for the test.
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    upvar cu_lang cu_lang
+
+    declare_labels bool_label root_label root_disc child_label
+
+    cu { addr_size 4 } {
+	compile_unit {
+	    DW_AT_name user.adb
+	    DW_AT_language @DW_LANG_Ada95
+	} {
+	    bool_label: DW_TAG_base_type {
+		DW_AT_byte_size 1 DW_FORM_sdata
+		DW_AT_encoding	@DW_ATE_boolean
+		DW_AT_name bool
+	    }
+
+	    root_label: structure_type {
+		DW_AT_name root
+		DW_AT_byte_size 1 DW_FORM_sdata
+	    } {
+		root_disc: DW_TAG_member {
+		    DW_AT_name root_disc
+		    DW_AT_type :$bool_label
+		    DW_AT_data_member_location 0 data1
+		}
+	    }
+
+	    child_label: DW_TAG_structure_type {
+		DW_AT_name child
+		DW_AT_byte_size 2 DW_FORM_sdata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name _parent
+		    DW_AT_type :$root_label
+		    DW_AT_data_member_location 0 DW_FORM_data1
+		}
+
+		DW_TAG_variant_part {
+		    DW_AT_discr :$root_disc DW_FORM_ref4
+		} {
+		    DW_TAG_variant {
+			DW_AT_discr_value 1 DW_FORM_udata
+		    } {
+			DW_TAG_member {
+			    DW_AT_name child_flag DW_FORM_strp
+			    DW_AT_type :$bool_label
+			    DW_AT_data_member_location 1 DW_FORM_data1
+			}
+		    }
+		}
+	    }
+
+	    DW_TAG_variable {
+		DW_AT_name "withchild"
+		DW_AT_type :$child_label
+		DW_AT_external 1 DW_FORM_flag
+		DW_AT_location {
+		    DW_OP_addr [gdb_target_symbol "bufy"]
+		} SPECIAL_expr
+	    }
+
+	    DW_TAG_variable {
+		DW_AT_name "withoutchild"
+		DW_AT_type :$child_label
+		DW_AT_external 1 DW_FORM_flag
+		DW_AT_location {
+		    DW_OP_addr [gdb_target_symbol "bufn"]
+		} SPECIAL_expr
+	    }
+	}
+    }
+}
+
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list $srcfile $asm_file] debug]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test "set language ada"
+
+gdb_test "print withchild" \
+    [quotemeta {$@DECIMAL = (root_disc => true, child_flag => true)}]
+gdb_test "print withchild.child_flag" \
+    [quotemeta {$@DECIMAL = true}]
+gdb_test "print withoutchild" \
+    [quotemeta {$@DECIMAL = (root_disc => false)}]
