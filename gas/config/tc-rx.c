@@ -1218,11 +1218,6 @@ md_assemble (char * str)
   dwarf2_emit_insn (idx);
 }
 
-void
-rx_md_end (void)
-{
-}
-
 /* Write a value out to the object file, using the appropriate endianness.  */
 
 void

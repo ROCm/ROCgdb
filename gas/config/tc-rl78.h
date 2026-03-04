@@ -46,9 +46,6 @@ extern int target_little_endian;
 /* .-foo gets turned into PC relative relocs.  */
 #define DIFF_EXPR_OK
 
-#define md_end rl78_md_end
-extern void rl78_md_end (void);
-
 #define md_relax_frag rl78_relax_frag
 extern int rl78_relax_frag (segT, fragS *, long);
 

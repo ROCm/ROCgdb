@@ -51,9 +51,6 @@ extern int target_big_endian;
 /* .-foo gets turned into PC relative relocs.  */
 #define DIFF_EXPR_OK
 
-#define md_end rx_md_end
-extern void rx_md_end (void);
-
 /* Note - the definition of MD_RELAX_FRAG here includes a reference to the
    MAX_ITERATIONS variable which is defined locally in write.c:relax_segment()
    but which is not normally passed to target specific relaxing code.  This
