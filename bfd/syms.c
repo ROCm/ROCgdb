@@ -858,7 +858,6 @@ _bfd_generic_read_minisymbols (bfd *abfd,
   return symcount;
 
  error_return:
-  bfd_set_error (bfd_error_no_symbols);
   free (syms);
   return -1;
 }

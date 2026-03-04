@@ -650,7 +650,7 @@ _bfd_ecoff_slurp_symbolic_info (bfd *abfd,
   fraw_src = (char *) debug->external_fdr;
   /* PR 17512: file: 3372-1243-0.004.  */
   if (fraw_src == NULL && internal_symhdr->ifdMax > 0)
-    return false;
+    goto err;
   fraw_end = fraw_src + internal_symhdr->ifdMax * external_fdr_size;
   for (; fraw_src < fraw_end; fraw_src += external_fdr_size, fdr_ptr++)
     (*backend->debug_swap.swap_fdr_in) (abfd, (void *) fraw_src, fdr_ptr);
