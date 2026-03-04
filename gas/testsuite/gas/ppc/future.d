@@ -158,4 +158,25 @@ Disassembly of section \.text:
 .*:	(1f 76 8d ed|ed 8d 76 1f) 	xsrebase3t3uqm vs44,vs45,vs46
 .*:	(00 00 00 05|05 00 00 00) 	xxssumudmcext vs35,vs9,vs11,vs13,1
 .*:	(71 5b 69 88|88 69 5b 71) 
+.*:	(62 c1 8e 7e|7e 8e c1 62) 	dmsha256hash dm5,dm6
+.*:	(62 e1 ae 7e|7e ae e1 62) 	dmsha512hash dm5,dm7
+.*:	(62 61 0e 7d|7d 0e 61 62) 	dmsha256hash dm2,dm3
+.*:	(62 c1 2e 7e|7e 2e c1 62) 	dmsha512hash dm4,dm6
+.*:	(62 01 0f 7d|7d 0f 01 62) 	dmsha3dw dm1
+.*:	(62 61 0f 7f|7f 0f 61 62) 	dmcryshash dm3
+.*:	(62 01 0f 7f|7f 0f 01 62) 	dmsha3dw dm3
+.*:	(62 41 0f 7e|7e 0f 41 62) 	dmsha3hash dm2,8
+.*:	(62 61 0f 7e|7e 0f 61 62) 	dmcryshash dm2
+.*:	(94 26 84 f1|f1 84 26 94) 	dmxxsha3512pad dm3,vs4,1
+.*:	(94 16 85 f1|f1 85 16 94) 	dmxxsha3384pad dm3,vs2,1
+.*:	(94 1e 86 f0|f0 86 1e 94) 	dmxxsha3256pad dm1,vs3,1
+.*:	(96 2e 03 f1|f1 03 2e 96) 	dmxxsha3224pad dm2,vs37,0
+.*:	(96 36 8a f1|f1 8a 36 96) 	dmxxshake256pad dm3,vs38,0
+.*:	(96 3e 0b f2|f2 0b 3e 96) 	dmxxshake128pad dm4,vs39,0
+.*:	(94 46 90 f2|f2 90 46 94) 	dmxxsha384512pad dm5,vs8
+.*:	(96 4e 18 f3|f3 18 4e 96) 	dmxxsha224256pad dm6,vs41
+.*:	(94 1e 80 f3|f3 80 1e 94) 	dmxxsha3512pad dm7,vs3,0
+.*:	(96 46 1e f3|f3 1e 46 96) 	dmxxshapad dm6,vs40,3,1,2
+.*:	(96 4e 8e f3|f3 8e 4e 96) 	dmxxshake256pad dm7,vs41,1
+.*:	(96 56 0b f3|f3 56 0b 96) 	dmxxshake128pad dm6,vs42,0
 #pass
