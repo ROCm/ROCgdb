@@ -567,3 +567,55 @@ proc enable_alu_exception {excp_name} {
 	"p \$$regname |= (1 << $bit_offset)" \
 	"= .*$excp_name.*"
 }
+
+# Read the DW_AT_language of the output binary and return:
+#
+#   "hip"       -- if DW_LANG_HIP   (48, 0x30)
+#   "cpp"       -- if DW_LANG_C++14 (33, 0x21)
+#   "unknown"   -- otherwise
+
+proc compiler_dwarf_language {} {
+    # Use objdump because
+    #
+    # 1. readelf cannot process non-elf binaries such as PE/COFF.
+    # 2. If warnings are emitted, objdump still returns 0, unlike readelf.
+    #
+    # In "objdump ... | grep ..." command, if there's any text printed to
+    # stderr by "objdump", DejaGnu will add them to the final "output".
+    # Moreover, DejaGnu will set the "result" to "1" if it finds anything
+    # is printed to stderr.  Therefore warnings [1], if any, must be
+    # redirected from stderr to stdout.  This redirection also has the
+    # benefit of keeping "output" clean from any unwanted patterns in it
+    # because "grep" will filter them out.  If "objdump" encounters an
+    # error and returns a non-zero result, then that will be reflected in
+    # "result" by holding value "1".
+    #
+    # [1] an example of such warnings
+    # Warning: Unrecognized form: 0x23
+    set objdump_program [gdb_find_objdump]
+    set bin [standard_output_file $::binfile]
+    set cmd [list $objdump_program -Wi $bin 2>&1 | grep "DW_AT_language.*:"]
+    set res [catch {exec {*}$cmd} output]
+    verbose -log "running: $cmd"
+    verbose -log "result: $res"
+    verbose -log "output: $output"
+
+    if {$res != 0} {
+	fail "language detection (objdump execution)"
+	return "unknown"
+    }
+
+    set matches [regexp -inline "DW_AT_language\[ \t\]*:\[ \t\]*($::decimal)\[ \t\]*" $output]
+    set lang [lindex $matches 1]
+
+    # "48" (decimal) represents "HIP".
+    # "33" (decimal) represents "C++14".
+    if {$lang == 48} {
+	return "hip"
+    } elseif {$lang == 33} {
+	return "cpp"
+    } else {
+	fail "language detection (unknown language)"
+	return "unknown"
+    }
+}
