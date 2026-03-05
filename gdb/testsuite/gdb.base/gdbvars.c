@@ -19,5 +19,5 @@ int
 main ()
 {
   p = &p;
-  return 0;
+  return 0; /* last line */
 }

@@ -526,12 +526,12 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 }
 
 /* Specify default address for `x' command.
-   The `info lines' command uses this.  */
+   The `info lines' and `info breakpoints' commands use this.  */
 
 void
 set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+  type *ptr_type = builtin_type (gdbarch)->builtin_func_ptr;
 
   next_gdbarch = gdbarch;
   next_address = addr;

@@ -13111,7 +13111,7 @@ The variable @code{$_} is automatically set by the @code{x} command to
 the last address examined (@pxref{Memory, ,Examining Memory}).  Other
 commands which provide a default address for @code{x} to examine also
 set @code{$_} to that address; these commands include @code{info line}
-and @code{info breakpoint}.  The type of @code{$_} is @code{void *}
+and @code{info breakpoint}.  The type of @code{$_} is @code{void (*)()}
 except when set by the @code{x} command, in which case it is a pointer
 to the type of @code{$__}.
 
