@@ -85,10 +85,6 @@ static CORE_ADDR next_address;
 
 static int branch_delay_insns;
 
-/* Last address examined.  */
-
-static CORE_ADDR last_examine_address;
-
 /* Contents of last address examined.
    This is not valid past the end of the `x' command!  */
 
@@ -1164,9 +1160,6 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	   i--, count--)
 	{
 	  gdb_printf ("\t");
-	  /* Note that print_formatted sets next_address for the next
-	     object.  */
-	  last_examine_address = next_address;
 
 	  /* The value to be displayed is not fetched greedily.
 	     Instead, to avoid the possibility of a fetched value not
@@ -1176,7 +1169,10 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	     the address stored in LAST_EXAMINE_VALUE.  FIXME: Should
 	     the disassembler be modified so that LAST_EXAMINE_VALUE
 	     is left with the byte sequence from the last complete
-	     instruction fetched from memory?  */
+	     instruction fetched from memory?
+
+	     Note that print_formatted sets NEXT_ADDRESS for the next
+	     object.  */
 	  last_examine_value
 	    = release_value (value_at_lazy (val_type, next_address));
 
@@ -1883,6 +1879,7 @@ x_command (const char *exp, int from_tty)
 	 the correct pointer type.  */
       struct type *pointer_type
 	= lookup_pointer_type (last_examine_value->type ());
+      CORE_ADDR last_examine_address = last_examine_value->address ();
       set_internalvar (lookup_internalvar ("_"),
 		       value_from_pointer (pointer_type,
 					   last_examine_address));
