@@ -1825,7 +1825,7 @@ insert_sr (uint64_t insn,
 	   const char **errmsg)
 {
   if (value < 0 || value > 23)
-    *errmsg = _("invalid SR value (must be 0–23)");
+    *errmsg = _("invalid SR value (must be 0-23)");
   return insn | ((value & 0x1f) << 11);
 }
 
