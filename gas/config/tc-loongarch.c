@@ -562,7 +562,7 @@ s_dtprel (int bytes)
 
   p = frag_more (bytes);
   md_number_to_chars (p, 0, bytes);
-  fix_new_exp (frag_now, p - frag_now->fr_literal, bytes, &ex, FALSE,
+  fix_new_exp (frag_now, p - frag_now->fr_literal, bytes, &ex, false,
 	       (bytes == 8
 		? BFD_RELOC_LARCH_TLS_DTPREL64
 		: BFD_RELOC_LARCH_TLS_DTPREL32));
@@ -1256,7 +1256,7 @@ append_fixp_and_insn (struct loongarch_cl_insn *ip)
 
 	      ip->fixp[i] = fix_new_exp (ip->frag, ip->where,
 					 bfd_get_reloc_size (howto),
-					 &reloc_info[i].value, FALSE, r_type);
+					 &reloc_info[i].value, false, r_type);
 	    }
 	  /* Allow LoongArch 64 to use 64-bit addends.  */
 	  if (LARCH_opts.ase_lp64)
@@ -1524,7 +1524,7 @@ md_assemble (char *str)
 const char *
 md_atof (int type, char *litP, int *sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, FALSE);
+  return ieee_md_atof (type, litP, sizeP, false);
 }
 
 void
