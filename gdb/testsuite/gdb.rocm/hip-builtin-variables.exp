@@ -171,19 +171,36 @@ with_rocm_gpu_lock {
 	return -1
     }
 
-    with_test_prefix "before running program" {
-	gdb_test "show language" \
-	    "The current source language is \"auto; currently c\\+\\+\"\." \
-	    "C++ as the auto language on the host side"
-	check_builtin_variables_notfound
+    set dw_lang [compiler_dwarf_language]
+    if {$dw_lang != "hip" && $dw_lang != "cpp"} {
+	return -1
+    }
 
-	# Set the language to HIP and check if the built-in variables are
-	# unavailable.  It also has the desired effect that when setting
-	# the (pending) breakpoint in device code, the conditional
-	# expression will be parsed and evaluated in HIP context.
-	gdb_test "set language hip" \
-	    "Warning: the current language does not match this frame\." \
-	    "change the language to HIP"
+    with_test_prefix "before running program" {
+	if {$dw_lang == "hip"} {
+	    # Check if the language is HIP.  This guarantees that the
+	    # conditions of (pending) breakpoints in the device code
+	    # will be parsed and evaluated in HIP context.
+	    gdb_test "show language" \
+		"The current source language is \"auto; currently hip\"\." \
+		"HIP as the auto language on the host side"
+
+	} elseif {$dw_lang == "cpp"} {
+	    gdb_test "show language" \
+		"The current source language is \"auto; currently c\\+\\+\"\." \
+		"C++ as the auto language on the host side"
+	    check_builtin_variables_notfound
+
+	    # Set the language to HIP.  This guarantees that the
+	    # conditions of (pending) breakpoints in the device code
+	    # will be parsed and evaluated in HIP context.
+	    gdb_test "set language hip" \
+	      "Warning: the current language does not match this frame\." \
+	      "change the language to HIP"
+	}
+
+	# Now that the language is HIP, but we're on CPU side,
+	# the HIP variables must be "unavailable".
 	check_builtin_variables_unavailable
     }
 
