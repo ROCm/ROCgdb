@@ -9990,20 +9990,23 @@ regular expression.
 @kindex search
 @kindex forward-search
 @kindex fo @r{(@code{forward-search})}
+@cindex @code{$_} and commands that search source files
 @item forward-search @var{regexp}
 @itemx search @var{regexp}
 The command @samp{forward-search @var{regexp}} checks each line,
 starting with the one following the last line listed, for a match for
-@var{regexp}.  It lists the line that is found.  You can use the
-synonym @samp{search @var{regexp}} or abbreviate the command name as
-@code{fo}.
+@var{regexp}.  It lists the line that is found and saves it in the
+convenience variable @code{$_} (@pxref{Convenience Vars, ,Convenience
+Variables}).  You can use the synonym @samp{search @var{regexp}}
+or abbreviate the command name as @code{fo}.
 
 @kindex reverse-search
 @item reverse-search @var{regexp}
 The command @samp{reverse-search @var{regexp}} checks each line, starting
 with the one before the last line listed and going backward, for a match
-for @var{regexp}.  It lists the line that is found.  You can abbreviate
-this command as @code{rev}.
+for @var{regexp}.  It lists the line that is found and saves it in the
+convenience variable @code{$_} (@pxref{Convenience Vars, ,Convenience
+Variables}).  You can abbreviate this command as @code{rev}.
 @end table
 
 @node Source Path
@@ -13111,6 +13114,11 @@ set @code{$_} to that address; these commands include @code{info line}
 and @code{info breakpoint}.  The type of @code{$_} is @code{void *}
 except when set by the @code{x} command, in which case it is a pointer
 to the type of @code{$__}.
+
+The @code{forward-search} and @code{reverse-search} commands
+(@pxref{Search, ,Searching Source Files}) set the @code{$_} variable
+to the line number that is found as a result of the search.  In that
+case the type of @code{$_} becomes @code{int}.
 
 @vindex $__@r{, convenience variable}
 @item $__
