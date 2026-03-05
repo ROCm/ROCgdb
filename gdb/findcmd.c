@@ -28,7 +28,7 @@
 /* Copied from bfd_put_bits.  */
 
 static void
-put_bits (uint64_t data, gdb::byte_vector &buf, int bits, bfd_boolean big_p)
+put_bits (uint64_t data, gdb::byte_vector &buf, int bits, bool big_p)
 {
   int i;
   int bytes;
@@ -53,7 +53,7 @@ put_bits (uint64_t data, gdb::byte_vector &buf, int bits, bfd_boolean big_p)
 static gdb::byte_vector
 parse_find_args (const char *args, ULONGEST *max_countp,
 		 CORE_ADDR *start_addrp, ULONGEST *search_space_lenp,
-		 bfd_boolean big_p)
+		 bool big_p)
 {
   /* Default to using the specified type.  */
   char size = '\0';
@@ -210,7 +210,7 @@ static void
 find_command (const char *args, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  bfd_boolean big_p = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG;
+  bool big_p = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG;
   /* Command line parameters.
      These are initialized to avoid uninitialized warnings from -Wall.  */
   ULONGEST max_count = 0;

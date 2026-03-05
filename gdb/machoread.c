@@ -483,7 +483,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
 	  struct macho_sym_hash_entry *ent;
 
 	  ent = (struct macho_sym_hash_entry *)
-	    bfd_hash_lookup (&table, sym->name, TRUE, FALSE);
+	    bfd_hash_lookup (&table, sym->name, true, false);
 	  if (ent->sym != NULL)
 	    complaint (_("Duplicated symbol %s in symbol table"), sym->name);
 	  else
@@ -548,7 +548,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
 		  struct macho_sym_hash_entry *ent;
 
 		  ent = (struct macho_sym_hash_entry *)
-		    bfd_hash_lookup (&table, sym->name, FALSE, FALSE);
+		    bfd_hash_lookup (&table, sym->name, false, false);
 		  if (ent != NULL)
 		    addr = bfd_asymbol_value (ent->sym);
 		}

@@ -601,7 +601,7 @@ elf_rel_plt_read (minimal_symbol_reader &reader,
   if (relplt == NULL)
     return;
 
-  if (! bed->s->slurp_reloc_table (obfd, relplt, dyn_symbol_table, TRUE))
+  if (! bed->s->slurp_reloc_table (obfd, relplt, dyn_symbol_table, true))
     return;
 
   std::string string_buffer;

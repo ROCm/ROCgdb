@@ -212,18 +212,18 @@ arc_linux_is_sigtramp (const frame_info_ptr &this_frame)
   if (!safe_frame_unwind_memory (this_frame, pc, {buf, insns_sz}))
     {
       /* Failed to unwind frame.  */
-      return FALSE;
+      return false;
     }
 
   /* Is that code the sigtramp instruction sequence?  */
   if (memcmp (buf, arc_sigtramp_insns, insns_sz) == 0)
-    return TRUE;
+    return true;
 
   /* No - look one instruction earlier in the code...  */
   if (!safe_frame_unwind_memory (this_frame, pc - 4, {buf, insns_sz}))
     {
       /* Failed to unwind frame.  */
-      return FALSE;
+      return false;
     }
 
   return (memcmp (buf, arc_sigtramp_insns, insns_sz) == 0);
