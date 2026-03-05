@@ -178,5 +178,5 @@ Disassembly of section \.text:
 .*:	(94 1e 80 f3|f3 80 1e 94) 	dmxxsha3512pad dm7,vs3,0
 .*:	(96 46 1e f3|f3 1e 46 96) 	dmxxshapad dm6,vs40,3,1,2
 .*:	(96 4e 8e f3|f3 8e 4e 96) 	dmxxshake256pad dm7,vs41,1
-.*:	(96 56 0b f3|f3 56 0b 96) 	dmxxshake128pad dm6,vs42,0
+.*:	(96 56 0b f3|f3 0b 56 96) 	dmxxshake128pad dm6,vs42,0
 #pass
