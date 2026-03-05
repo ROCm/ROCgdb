@@ -76,20 +76,6 @@ extern "C" {
 #define BFD64
 #endif
 
-/* Boolean type used in bfd.
-   General rule: Functions which are bfd_boolean return TRUE on
-   success and FALSE on failure (unless they're a predicate).  */
-
-#ifdef POISON_BFD_BOOLEAN
-# pragma GCC poison bfd_boolean
-#else
-# define bfd_boolean bool
-# undef FALSE
-# undef TRUE
-# define FALSE 0
-# define TRUE 1
-#endif
-
 /* Silence "applying zero offset to null pointer" UBSAN warnings.  */
 #define PTR_ADD(P,A) ((A) != 0 ? (P) + (A) : (P))
 /* Also prevent non-zero offsets from being applied to a null pointer.  */
