@@ -1124,7 +1124,7 @@ rrrrr,111111,RRRRR + wwww,0011110,mmmm,0:XI:::mac
   unsigned long RdLo;
   unsigned long RdHi;
   int           carry;
-  bfd_boolean sign;
+  bool sign;
 
   op0 = GR[reg1];
   op1 = GR[reg2];
