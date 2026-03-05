@@ -21,8 +21,6 @@ event_throws_error = False
 def gdb_selected_context_handler(event):
     assert isinstance(event, gdb.SelectedContextEvent)
 
-    global event_throws_error
-
     if event_throws_error:
         raise gdb.GdbError("error from gdb_selected_context_handler")
     else:
