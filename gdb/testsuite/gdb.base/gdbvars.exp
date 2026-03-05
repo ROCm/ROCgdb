@@ -61,6 +61,16 @@ proc test_convenience_variables {} {
     gdb_test "print \$_" "= $re_fptr $::hex.*" \
 	"convenience var \$_ is set to an address again"
 
+    # Test $_ after the 'x' command without and with '/i'.
+    gdb_test "x/1xb &main" "$::hex\[^\r\n\]+" \
+	"examine code with x/b"
+    gdb_test "print \$_" "= \\(int8_t \\*\\) $::hex.*" \
+	"convenience var \$_ is set to a byte pointer"
+    gdb_test "x/i &main" "$::hex\[^\r\n\]+" \
+	"examine code with x/i"
+    gdb_test "print \$_" "= $re_fptr $::hex.*" \
+	"convenience var \$_ is set to an address after x/i"
+
     gdb_test "print \$foo + 10"	" = 311" \
 	"use convenience variable in arithmetic expression"
 

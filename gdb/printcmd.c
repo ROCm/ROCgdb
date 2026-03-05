@@ -1013,13 +1013,6 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
   next_gdbarch = gdbarch;
   next_address = addr;
 
-  /* Instruction format implies fetch single bytes
-     regardless of the specified size.
-     The case of strings is handled in decode_format, only explicit
-     size operator are not changed to 'b'.  */
-  if (format == 'i')
-    size = 'b';
-
   if (size == 'a')
     {
       /* Pick the appropriate size for an address.  */
@@ -1063,6 +1056,17 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	  size = 'b';
 	  val_type = builtin_type (next_gdbarch)->builtin_int8;
 	}
+    }
+
+  /* For the instruction format, arbitrarily pick single byte as the
+     SIZE; how much we fetch is determined by the disassembler anyway.
+     Use the builtin function type for the value type, so that the
+     convenience var $_ becomes a code pointer after "x/i".  */
+  if (format == 'i')
+    {
+      size = 'b';
+      val_type
+	= builtin_type (next_gdbarch)->builtin_func_ptr->target_type ();
     }
 
   maxelts = 8;
