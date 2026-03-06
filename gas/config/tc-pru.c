@@ -71,9 +71,13 @@ struct pru_opt_s
   /* -mno-warn-regname-label: do not output a warning that a label name
      matches a register name.  */
   bool warn_regname_label;
+
+  /* -mcore-revision: Select PRU core revision, to determine which
+     opcodes are supported.  */
+  enum pru_core_revision core_rev;
 };
 
-static struct pru_opt_s pru_opt = { true, true };
+static struct pru_opt_s pru_opt = { true, true, REV_V3 };
 
 const char md_shortopts[] = "r";
 
@@ -82,6 +86,7 @@ enum options
   OPTION_LINK_RELAX = OPTION_MD_BASE + 1,
   OPTION_NO_LINK_RELAX,
   OPTION_NO_WARN_REGNAME_LABEL,
+  OPTION_CORE_REVISION,
 };
 
 const struct option md_longopts[] = {
@@ -89,10 +94,24 @@ const struct option md_longopts[] = {
   { "mno-link-relax",  no_argument, NULL, OPTION_NO_LINK_RELAX  },
   { "mno-warn-regname-label",  no_argument, NULL,
     OPTION_NO_WARN_REGNAME_LABEL  },
+  { "mcore-revision",  required_argument, NULL, OPTION_CORE_REVISION  },
   { NULL, no_argument, NULL, 0 }
 };
 
 const size_t md_longopts_size = sizeof (md_longopts);
+
+struct pru_core_rev_str_entry
+{
+  enum pru_core_revision core_rev;
+  const char *str;
+};
+
+static const struct pru_core_rev_str_entry pru_core_rev_table[] = {
+  { REV_V1, "V1" },
+  { REV_V2, "V2" },
+  { REV_V3, "V3" },
+  { REV_V4, "V4" },
+};
 
 typedef struct pru_insn_reloc
 {
@@ -1613,7 +1632,7 @@ output_insn_ldi32 (pru_insn_infoS *insn)
 /* The following functions are called by machine-independent parts of
    the assembler.  */
 int
-md_parse_option (int c, const char *arg ATTRIBUTE_UNUSED)
+md_parse_option (int c, const char *arg)
 {
   switch (c)
     {
@@ -1629,6 +1648,20 @@ md_parse_option (int c, const char *arg ATTRIBUTE_UNUSED)
       break;
     case OPTION_NO_WARN_REGNAME_LABEL:
       pru_opt.warn_regname_label = false;
+      break;
+    case OPTION_CORE_REVISION:
+	{
+	  size_t i;
+	  for (i = 0; i < ARRAY_SIZE (pru_core_rev_table); i++)
+	    {
+	      if (!strcmp (arg, pru_core_rev_table[i].str))
+		break;
+	    }
+	  if (i == ARRAY_SIZE (pru_core_rev_table))
+	    as_bad (_("invalid core revision %s"), arg);
+	  else
+	    pru_opt.core_rev = pru_core_rev_table[i].core_rev;
+	}
       break;
     default:
       return 0;
@@ -1719,6 +1752,18 @@ md_assemble (char *op_str)
 
       /* Set the opcode for the instruction.  */
       insn->insn_code = insn->insn_pru_opcode->match;
+
+      /* Opcodes for older core revisions are not proper subsets of
+	 newer core revisions, as specified by TI.  There are opcodes
+	 in old cores which are not present in newer ones (e.g. SCAN).
+	 But the currently implemented opcodes in assembler are proper
+	 subsets, so we can use a simple "linear" check here.  */
+      if (pru_opt.core_rev < insn->insn_pru_opcode->core_rev)
+	{
+	  as_bad (_("instruction %s is not valid for selected core revision"),
+		  insn->insn_tokens[0]);
+	  return;
+	}
 
       if (pru_mode == PRU_MODE_TEST)
 	{

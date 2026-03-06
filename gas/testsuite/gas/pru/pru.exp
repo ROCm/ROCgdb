@@ -24,4 +24,6 @@ if { [istarget pru-*-*] } {
     run_list_test "illegal" ""
     run_list_test "illegal2" ""
     run_list_test "warn_reglabel" ""
+    run_list_test "core-rev-1" "-mcore-revision=V1"
+    run_list_test "core-rev-2" "-mcore-revision=V2"
 }

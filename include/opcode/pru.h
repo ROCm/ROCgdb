@@ -30,6 +30,15 @@
  * access various opcode fields.
  ****************************************************************************/
 
+/* PRU core revision, as defined by TI.  */
+enum pru_core_revision
+{
+  REV_V1 = 1,
+  REV_V2,
+  REV_V3,
+  REV_V4,
+};
+
 /* Identify different overflow situations for error messages.  */
 enum overflow_type
 {
@@ -115,6 +124,8 @@ enum pru_instr_type
 struct pru_opcode
 {
   const char *name;		/* The name of the instruction.  */
+  enum pru_core_revision core_rev; /* First PRU core revision supporting
+				      this instruction.  */
   enum pru_instr_type type;	/* Instruction type. Used for fast indexing
 				   by the simulator.  */
   const char *args;		/* A string describing the arguments for this

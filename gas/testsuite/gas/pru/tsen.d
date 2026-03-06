@@ -1,5 +1,6 @@
 #objdump: -dr --prefix-addresses --show-raw-insn
 #name: PRU tsen
+#as: -mcore-revision=V4
 
 # Test the TSEN instruction
 
