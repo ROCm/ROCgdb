@@ -68,7 +68,7 @@ repos:
       types_or: [file]
       files: '^gdb/.*\.py(\.in)?$'
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.2
     hooks:
     - id: codespell
       files: '^(gdbsupport|gdbserver|gdb/(dwarf2|tui|target|data-directory|po|system-gdbinit|mi|syscalls|arch|regformats|compile|python|guile|config|unittests|cli|testsuite/gdb.(ctf|dap|debuginfod|gdb|go|guile|mi|modula2|objc|opencl|opt|pascal|perf|replay|reverse|rocm|server|stabs|testsuite|tui|xml)))/'
