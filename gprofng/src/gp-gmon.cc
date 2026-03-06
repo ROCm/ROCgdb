@@ -56,7 +56,8 @@ public:
 private:
   // override methods in base class
   void usage ();
-  int check_mods (int argc, char *argv[], bool check);
+  void usage_and_exit (int exit_code);
+  int check_mods (int argc, char *argv[]);
 
   bool overwrite = false;
   Coll_Ctrl *cc;
@@ -544,7 +545,7 @@ checkflagterm (const char *c)
 {
   if (c[2] != 0)
     {
-      dbe_write (2, GTXT ("collect: unrecognized argument `%s'\n"), c);
+      dbe_write (2, GTXT ("gmon: unrecognized argument `%s'\n"), c);
       return -1;
     }
   return 0;
@@ -598,14 +599,12 @@ er_gmon::start (int argc, char *argv[])
     {
       /* only one argument, -h */
       usage ();
-      exit (0);
     }
   else if (argc == 2 && (strcmp (argv[1], NTXT ("-help")) == 0 ||
 			 strcmp (argv[1], NTXT ("--help")) == 0))
     {
       /* only one argument, -help or --help */
       usage ();
-      exit (0);
     }
   else if ((argc == 2) &&
 	   (strcmp (argv[1], NTXT ("--version")) == 0))
@@ -617,12 +616,10 @@ er_gmon::start (int argc, char *argv[])
       exit (0);
     }
 
-  check_mods (argc, argv, true);
-  int adj = check_mods (argc, argv, false);
+  int adj = check_mods (argc, argv);
   if (adj < 0)
     {
-      usage ();
-      exit (0);
+      usage_and_exit (1);
     }
 
   char *ret = cc->create_exp_dir ();
@@ -651,8 +648,7 @@ er_gmon::start (int argc, char *argv[])
     }
   else if (argc != adj)
     {
-      usage ();
-      exit (0);
+      usage_and_exit (1);
     }
 
   /* Read the elf syms and the gmon file.  */
@@ -676,7 +672,7 @@ er_gmon::start (int argc, char *argv[])
 
 /* Get the args and search for modifiers.  */
 int
-er_gmon::check_mods (int argc, char *argv[], bool check)
+er_gmon::check_mods (int argc, char *argv[])
 {
   char *expName = NULL;
   int i = -1;
@@ -692,8 +688,6 @@ er_gmon::check_mods (int argc, char *argv[], bool check)
 	  overwrite = true;
 	  //FALLTHROU
 	case 'o':
-	  if (check)
-	    return i;
 	  if (checkflagterm (argv[i]) == -1)
 	    return -1;
 	  if (argv[i + 1] == NULL)
@@ -718,8 +712,6 @@ er_gmon::check_mods (int argc, char *argv[], bool check)
 	  return -1;
 	}
     }
-  if (check)
-    return i;
   if (expName)
     {
       char *ccret;
@@ -736,11 +728,17 @@ er_gmon::check_mods (int argc, char *argv[], bool check)
 	  return -1;
 	}
     }
-  return (check ? -1 : i);
+  return i;
 }
 
 void
 er_gmon::usage ()
+{
+  usage_and_exit (0);
+}
+
+void
+er_gmon::usage_and_exit (int exit_code)
 {
   printf ( GTXT (
     "Usage: gprofng display gmon [OPTION(S)] [TARGET-OBJECT [GMON-FILE]]\n"));
@@ -760,7 +758,7 @@ er_gmon::usage ()
     "                    existing experiment directory with the same name.\n"
     "\n"));
 
-    exit (0);
+    exit (exit_code);
 }
 
 er_gmon::~er_gmon ()
