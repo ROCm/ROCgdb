@@ -1181,10 +1181,7 @@ elf_read_minimal_symbols (struct objfile *objfile, int symfile_flags,
     }
 
   /* Install any minimal symbols that have been collected as the current
-     minimal symbols for this objfile.  The debug readers below this point
-     should not generate new minimal symbols; if they do it's their
-     responsibility to install them.  "mdebug" appears to be the only one
-     which will do this.  */
+     minimal symbols for this objfile.  */
 
   reader.install ();
 
