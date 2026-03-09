@@ -2475,7 +2475,7 @@ void
 default_print_registers_info (struct gdbarch *gdbarch,
 			      struct ui_file *file,
 			      const frame_info_ptr &frame,
-			      int regnum, int print_all)
+			      int regnum, bool print_all)
 {
   int i;
   const int numregs = gdbarch_num_cooked_regs (gdbarch);
@@ -2516,7 +2516,7 @@ default_print_registers_info (struct gdbarch *gdbarch,
 }
 
 void
-registers_info (const char *addr_exp, int fpregs)
+registers_info (const char *addr_exp, bool fpregs)
 {
   frame_info_ptr frame;
   struct gdbarch *gdbarch;
@@ -2647,7 +2647,7 @@ print_vector_info (struct ui_file *file,
       if (gdbarch_register_reggroup_p (gdbarch, regnum, vector_reggroup))
 	{
 	  printed_something = true;
-	  gdbarch_print_registers_info (gdbarch, file, frame, regnum, 1);
+	  gdbarch_print_registers_info (gdbarch, file, frame, regnum, true);
 	}
     }
   if (!printed_something)
@@ -3177,7 +3177,7 @@ default_print_float_info (struct gdbarch *gdbarch, struct ui_file *file,
       if (gdbarch_register_reggroup_p (gdbarch, regnum, float_reggroup))
 	{
 	  printed_something = 1;
-	  gdbarch_print_registers_info (gdbarch, file, frame, regnum, 1);
+	  gdbarch_print_registers_info (gdbarch, file, frame, regnum, true);
 	}
     }
   if (!printed_something)

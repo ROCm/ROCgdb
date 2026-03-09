@@ -677,7 +677,7 @@ Method(
         ("struct ui_file *", "file"),
         ("const frame_info_ptr &", "frame"),
         ("int", "regnum"),
-        ("int", "all"),
+        ("bool", "all"),
     ],
     predefault="default_print_registers_info",
     invalid=False,

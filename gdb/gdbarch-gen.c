@@ -2249,7 +2249,7 @@ set_gdbarch_code_of_frame_writable (struct gdbarch *gdbarch,
 }
 
 void
-gdbarch_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, int all)
+gdbarch_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, bool all)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->print_registers_info != nullptr);

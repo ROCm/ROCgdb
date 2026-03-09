@@ -1520,7 +1520,7 @@ static void
 riscv_print_registers_info (struct gdbarch *gdbarch,
 			    struct ui_file *file,
 			    const frame_info_ptr &frame,
-			    int regnum, int print_all)
+			    int regnum, bool print_all)
 {
   if (regnum != -1)
     {

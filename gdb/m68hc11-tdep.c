@@ -1081,7 +1081,8 @@ m68hc11_print_register (struct gdbarch *gdbarch, struct ui_file *file,
 /* Same as 'info reg' but prints the registers in a different way.  */
 static void
 m68hc11_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			      const frame_info_ptr &frame, int regno, int cpregs)
+			      const frame_info_ptr &frame, int regno,
+			      bool cpregs)
 {
   if (regno >= 0)
     {

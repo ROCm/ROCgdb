@@ -351,8 +351,8 @@ using gdbarch_code_of_frame_writable_ftype = bool (struct gdbarch *gdbarch, cons
 bool gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame);
 void set_gdbarch_code_of_frame_writable (struct gdbarch *gdbarch, gdbarch_code_of_frame_writable_ftype *code_of_frame_writable);
 
-using gdbarch_print_registers_info_ftype = void (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, int all);
-void gdbarch_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, int all);
+using gdbarch_print_registers_info_ftype = void (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, bool all);
+void gdbarch_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, int regnum, bool all);
 void set_gdbarch_print_registers_info (struct gdbarch *gdbarch, gdbarch_print_registers_info_ftype *print_registers_info);
 
 using gdbarch_print_float_info_ftype = void (struct gdbarch *gdbarch, struct ui_file *file, const frame_info_ptr &frame, const char *args);

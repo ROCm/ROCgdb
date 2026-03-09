@@ -47,7 +47,7 @@ tui_register_format (const frame_info_ptr &frame, int regnum)
   /* Expand tabs into spaces, since ncurses on MS-Windows doesn't.  */
   string_file stream;
   tab_expansion_file expander (&stream);
-  gdbarch_print_registers_info (gdbarch, &expander, frame, regnum, 1);
+  gdbarch_print_registers_info (gdbarch, &expander, frame, regnum, true);
 
   /* Remove the possible \n.  */
   std::string str = stream.release ();

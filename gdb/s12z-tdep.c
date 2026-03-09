@@ -525,7 +525,7 @@ static void
 s12z_print_registers_info (struct gdbarch *gdbarch,
 			    struct ui_file *file,
 			    const frame_info_ptr &frame,
-			    int regnum, int print_all)
+			    int regnum, bool print_all)
 {
   const int numregs = (gdbarch_num_regs (gdbarch)
 		       + gdbarch_num_pseudo_regs (gdbarch));

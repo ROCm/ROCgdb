@@ -6623,7 +6623,7 @@ print_gp_register_row (struct ui_file *file, const frame_info_ptr &frame,
 
 static void
 mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			   const frame_info_ptr &frame, int regnum, int all)
+			   const frame_info_ptr &frame, int regnum, bool all)
 {
   if (regnum != -1)		/* Do one specified register.  */
     {
