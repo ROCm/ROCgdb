@@ -206,7 +206,13 @@ class DWARFAttribute:
         s += " "
 
         if self.name == "DW_AT_language" and isinstance(self.value, int):
-            s += "@" + LANG_NAME[self.value]
+            if LANG_NAME.get(self.value) is None:
+                if self.value == 0x8001:
+                    s += "@DW_LANG_Mips_Assembler"
+                else:
+                    s += str(self.value) + " DW_FORM_sdata"
+            else:
+                s += "@" + LANG_NAME[self.value]
         elif self.name == "DW_AT_encoding" and isinstance(self.value, int):
             s += "@" + ATE_NAME[self.value]
         else:
