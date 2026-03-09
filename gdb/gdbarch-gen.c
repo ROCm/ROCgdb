@@ -3445,7 +3445,7 @@ set_gdbarch_adjust_dwarf2_addr (struct gdbarch *gdbarch,
 }
 
 CORE_ADDR
-gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, CORE_ADDR addr, int rel)
+gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, CORE_ADDR addr, bool rel)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->adjust_dwarf2_line != nullptr);

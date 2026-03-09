@@ -232,7 +232,7 @@ default_adjust_dwarf2_addr (CORE_ADDR pc)
 /* See arch-utils.h.  */
 
 CORE_ADDR
-default_adjust_dwarf2_line (CORE_ADDR addr, int rel)
+default_adjust_dwarf2_line (CORE_ADDR addr, bool rel)
 {
   return addr;
 }

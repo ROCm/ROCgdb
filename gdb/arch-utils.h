@@ -193,7 +193,7 @@ CORE_ADDR default_adjust_dwarf2_addr (CORE_ADDR pc);
 
 /* Do nothing default implementation of gdbarch_adjust_dwarf2_line.  */
 
-CORE_ADDR default_adjust_dwarf2_line (CORE_ADDR addr, int rel);
+CORE_ADDR default_adjust_dwarf2_line (CORE_ADDR addr, bool rel);
 
 /* Default DWARF vendor CFI handler.  */
 

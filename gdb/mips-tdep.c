@@ -1343,7 +1343,7 @@ mips_adjust_dwarf2_addr (CORE_ADDR pc)
    that sets PC to 0 and ADJ_PC accordingly, usually 0 as well.  */
 
 static CORE_ADDR
-mips_adjust_dwarf2_line (CORE_ADDR addr, int rel)
+mips_adjust_dwarf2_line (CORE_ADDR addr, bool rel)
 {
   static CORE_ADDR adj_pc;
   static CORE_ADDR pc;

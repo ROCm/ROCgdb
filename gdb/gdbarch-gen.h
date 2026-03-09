@@ -883,8 +883,8 @@ void set_gdbarch_adjust_dwarf2_addr (struct gdbarch *gdbarch, gdbarch_adjust_dwa
    in turn ensures breakpoint addresses are correctly matched against the
    stop PC. */
 
-using gdbarch_adjust_dwarf2_line_ftype = CORE_ADDR (CORE_ADDR addr, int rel);
-CORE_ADDR gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, CORE_ADDR addr, int rel);
+using gdbarch_adjust_dwarf2_line_ftype = CORE_ADDR (CORE_ADDR addr, bool rel);
+CORE_ADDR gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, CORE_ADDR addr, bool rel);
 void set_gdbarch_adjust_dwarf2_line (struct gdbarch *gdbarch, gdbarch_adjust_dwarf2_line_ftype *adjust_dwarf2_line);
 
 bool gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch);

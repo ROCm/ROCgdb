@@ -1517,7 +1517,7 @@ stop PC.
 """,
     type="CORE_ADDR",
     name="adjust_dwarf2_line",
-    params=[("CORE_ADDR", "addr"), ("int", "rel")],
+    params=[("CORE_ADDR", "addr"), ("bool", "rel")],
     predefault="default_adjust_dwarf2_line",
     invalid=False,
 )
