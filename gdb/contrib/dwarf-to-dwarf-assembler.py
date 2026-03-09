@@ -173,7 +173,7 @@ class DWARFAttribute:
         elif isinstance(self.value, ListContainer):
             return "0x" + "".join(format(i, "x") for i in self.value)
         else:
-            raise NotImplementedError(f"Unknown data type: {type(self.value)}")
+            return f"Unknown data type: {type(self.value)}: {self.value}"
 
     def format(
         self, offset_die_lookup: dict[int, "DWARFDIE"], indent_count: int = 0
