@@ -120,6 +120,4 @@ extern char **environ;
 
 #include <limits.h>
 
-#define POISON_BFD_BOOLEAN 1
-
 #endif /* _BIN_SYSDEP_H */

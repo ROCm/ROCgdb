@@ -715,6 +715,4 @@ COMMON int flag_sectname_subst;
 #define SEC_OCTETS 0
 #endif
 
-#define POISON_BFD_BOOLEAN 1
-
 #endif /* GAS */
