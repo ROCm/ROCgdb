@@ -48,6 +48,7 @@ from io import BytesIO, IOBase
 from logging import getLogger
 from typing import Annotated, Optional
 
+from elftools.construct.lib.container import ListContainer
 from elftools.dwarf.compileunit import CompileUnit as RawCompileUnit
 from elftools.dwarf.die import DIE as RawDIE
 from elftools.dwarf.die import AttributeValue
@@ -169,6 +170,8 @@ class DWARFAttribute:
             return self._format_str(self.value.decode("ascii"))
         elif isinstance(self.value, str):
             return self._format_str(self.value)
+        elif isinstance(self.value, ListContainer):
+            return "0x" + "".join(format(i, "x") for i in self.value)
         else:
             raise NotImplementedError(f"Unknown data type: {type(self.value)}")
 
