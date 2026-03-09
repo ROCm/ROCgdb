@@ -21,7 +21,6 @@
    see <http://www.gnu.org/licenses/>.  */
 
 #include "as.h"
-#include "config.h"
 #include "subsegs.h"
 #include "safe-ctype.h"
 
