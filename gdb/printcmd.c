@@ -86,10 +86,6 @@ static CORE_ADDR next_address;
 
 static int branch_delay_insns;
 
-/* Last address examined.  */
-
-static CORE_ADDR last_examine_address;
-
 /* Contents of last address examined.
    This is not valid past the end of the `x' command!  */
 
@@ -544,12 +540,12 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 }
 
 /* Specify default address for `x' command.
-   The `info lines' command uses this.  */
+   The `info lines' and `info breakpoints' commands use this.  */
 
 void
 set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+  type *ptr_type = builtin_type (gdbarch)->builtin_func_ptr;
 
   next_gdbarch = gdbarch;
   next_address = addr;
@@ -1033,13 +1029,6 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
   next_gdbarch = gdbarch;
   next_address = addr;
 
-  /* Instruction format implies fetch single bytes
-     regardless of the specified size.
-     The case of strings is handled in decode_format, only explicit
-     size operator are not changed to 'b'.  */
-  if (format == 'i')
-    size = 'b';
-
   if (size == 'a')
     {
       /* Pick the appropriate size for an address.  */
@@ -1083,6 +1072,17 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	  size = 'b';
 	  val_type = builtin_type (next_gdbarch)->builtin_int8;
 	}
+    }
+
+  /* For the instruction format, arbitrarily pick single byte as the
+     SIZE; how much we fetch is determined by the disassembler anyway.
+     Use the builtin function type for the value type, so that the
+     convenience var $_ becomes a code pointer after "x/i".  */
+  if (format == 'i')
+    {
+      size = 'b';
+      val_type
+	= builtin_type (next_gdbarch)->builtin_func_ptr->target_type ();
     }
 
   maxelts = 8;
@@ -1180,9 +1180,6 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	   i--, count--)
 	{
 	  gdb_printf ("\t");
-	  /* Note that print_formatted sets next_address for the next
-	     object.  */
-	  last_examine_address = next_address;
 
 	  /* The value to be displayed is not fetched greedily.
 	     Instead, to avoid the possibility of a fetched value not
@@ -1192,7 +1189,10 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	     the address stored in LAST_EXAMINE_VALUE.  FIXME: Should
 	     the disassembler be modified so that LAST_EXAMINE_VALUE
 	     is left with the byte sequence from the last complete
-	     instruction fetched from memory?  */
+	     instruction fetched from memory?
+
+	     Note that print_formatted sets NEXT_ADDRESS for the next
+	     object.  */
 	  last_examine_value
 	    = release_value (value_at_lazy (val_type, next_address));
 
@@ -1899,6 +1899,7 @@ x_command (const char *exp, int from_tty)
 	 the correct pointer type.  */
       struct type *pointer_type
 	= lookup_pointer_type (last_examine_value->type ());
+      CORE_ADDR last_examine_address = last_examine_value->address ();
       set_internalvar (lookup_internalvar ("_"),
 		       value_from_pointer (pointer_type,
 					   last_examine_address));

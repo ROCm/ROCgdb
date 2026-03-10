@@ -469,10 +469,7 @@ core_target::build_file_mappings ()
 
       gdb_bfd_ref_ptr abfd;
       if (expanded_fname != nullptr && !build_id_mismatch)
-	{
-	  struct bfd *b = bfd_openr (expanded_fname.get (), "binary");
-	  abfd = gdb_bfd_ref_ptr::new_reference (b);
-	}
+	abfd = gdb_bfd_openr (expanded_fname.get (), "binary");
 
       if ((expanded_fname == nullptr
 	   || abfd == nullptr
@@ -492,9 +489,8 @@ core_target::build_file_mappings ()
 		 type.  */
 	      expanded_fname
 		= make_unique_xstrdup (bfd_get_filename (abfd.get ()));
-	      struct bfd *b = bfd_openr (expanded_fname.get (), "binary");
-	      gdb_assert (b != nullptr);
-	      abfd = gdb_bfd_ref_ptr::new_reference (b);
+	      abfd = gdb_bfd_openr (expanded_fname.get (), "binary");
+	      gdb_assert (abfd != nullptr);
 	    }
 	}
 

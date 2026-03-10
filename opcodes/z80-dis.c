@@ -111,13 +111,10 @@ prt (struct buffer *buf, disassemble_info * info, const char *txt)
 static int
 prt_e (struct buffer *buf, disassemble_info * info, const char *txt)
 {
-  char e;
-  int target_addr;
-
   if (fetch_data (buf, info, 1))
     {
-      e = buf->data[1];
-      target_addr = (buf->base + 2 + e) & 0xffff;
+      signed char e = buf->data[1];
+      int target_addr = (buf->base + 2 + e) & 0xffff;
       buf->n_used = buf->n_fetch;
       info->fprintf_func (info->stream, "%s0x%04x", txt, target_addr);
     }

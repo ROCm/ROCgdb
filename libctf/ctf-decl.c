@@ -158,8 +158,7 @@ ctf_decl_push (ctf_decl_t *cd, ctf_dict_t *fp, ctf_id_t type)
      As of gcc-14.2.0, arrays must also be prepended in order to dump with the
      dimensions properly ordered.  */
 
-  if ((is_qual && prec == CTF_PREC_BASE) || ((kind == CTF_K_ARRAY) &&
-    (fp->ctf_openflags & (CTF_F_ARRNELEMS))))
+  if ((is_qual && prec == CTF_PREC_BASE) || (kind == CTF_K_ARRAY))
     ctf_list_prepend (&cd->cd_nodes[prec], cdp);
   else
     ctf_list_append (&cd->cd_nodes[prec], cdp);

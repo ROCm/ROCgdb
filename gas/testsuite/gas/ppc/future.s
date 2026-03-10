@@ -131,4 +131,25 @@ _start:
 	xsrebase3t2uqm 41, 42, 43
 	xsrebase3t3uqm 44, 45, 46
 	xxssumudmcext 35, 9, 11, 13, 1
+	dmsha256hash 5, 6
+	dmsha512hash 5, 7
+	dmsha2hash 2, 3, 0
+	dmsha2hash 4, 6, 1
+	dmsha3dw 1
+	dmcryshash 3
+	dmsha3hash 3, 0
+	dmsha3hash 2, 8
+	dmsha3hash 2, 12
+	dmxxsha3512pad 3, 4, 1
+	dmxxsha3384pad 3, 2, 1
+	dmxxsha3256pad 1, 3, 1
+	dmxxsha3224pad 2, 37, 0
+	dmxxshake256pad 3, 38, 0
+	dmxxshake128pad 4, 39, 0
+	dmxxsha384512pad 5, 8
+	dmxxsha224256pad 6, 41
+	dmxxshapad 7, 3, 0, 0, 0
+	dmxxshapad 6, 40, 3, 1, 2
+	dmxxshapad 7, 41, 1, 1, 2
+	dmxxshapad 6, 42, 1, 0, 3
 

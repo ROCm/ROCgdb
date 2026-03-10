@@ -1640,8 +1640,9 @@ expr_begin (void)
 void
 expr_end (void)
 {
-  for (size_t i = 0; i < ARRAY_SIZE (seen); i++)
-    free (seen[i]);
+  if (ENABLE_LEAK_CHECK)
+    for (size_t i = 0; i < ARRAY_SIZE (seen); i++)
+      free (seen[i]);
 }
 
 /* Return the encoding for the operator at INPUT_LINE_POINTER, and

@@ -2743,17 +2743,36 @@ wont_add_section_p (asection *section,
 
   if (discard)
     {
+      /* /DISCARD/ is seen first and the top-most clause has precedence on the
+	 next ones, thus the section will be dropped.  No need to warn about
+	 potential change in behavior with non-contiguous regions when the
+	 section is already dropped.  */
       if (section->output_section == NULL)
 	{
 	  /* This prevents future calls from assigning this section or
 	     warning about it again.  */
 	  section->output_section = bfd_abs_section_ptr;
 	}
-      else if (bfd_is_abs_section (section->output_section))
-	;
-      else if (link_info.non_contiguous_regions_warnings)
+      /* The /DISCARD/ clause follows clauses that assign the input section to
+	 an output section. Since /DISCARD/ does not have the precedence,
+	 /DISCARD/ is ignored.
+	 1. If the input section can be assigned to an output section,
+	    the link will succeed. The warning below is emitted with
+	    --enable-non-contiguous-regions-warnings so that the user can
+	    notice that /DISCARD/ did not do what he might have expected,
+	    i.e. discarding the input section.
+	 2. If the input section cannot be assigned, the link will fail
+	    with an error. The warning below is emitted with
+	    --enable-non-contiguous-regions-warnings so that the user can
+	    notice that /DISCARD/ was ignored for this input section, then
+	    leading to a link failure caused by not enough space in the output
+	    section for the input section.  */
+      else if (! bfd_is_abs_section (section->output_section)
+	       && link_info.non_contiguous_regions_warnings)
 	einfo (_("%P:%pS: warning: --enable-non-contiguous-regions makes "
-		 "section `%pA' from `%pB' match /DISCARD/ clause.\n"),
+		 "section `%pA' from `%pB' match /DISCARD/ clause.  If the "
+		 "section can be assigned to an output section, it won't be "
+		 "discarded.\n"),
 	       NULL, section, section->owner);
 
       return true;
@@ -5696,7 +5715,7 @@ size_input_section
   lang_input_section_type *is = &((*this_ptr)->input_section);
   asection *i = is->section;
   asection *o = output_section_statement->bfd_section;
-  *removed = 0;
+  *removed = false;
 
   if (link_info.non_contiguous_regions)
     {
@@ -5707,7 +5726,7 @@ size_input_section
 	 have reinitialized its size.  */
       if (i->already_assigned && i->already_assigned != o)
 	{
-	  *removed = 1;
+	  *removed = true;
 	  return dot;
 	}
     }
@@ -5757,10 +5776,12 @@ size_input_section
 
 	      if (dot + TO_ADDR (i->size) > end)
 		{
-		  if (i->flags & SEC_LINKER_CREATED)
-		    fatal (_("%P: Output section `%pA' not large enough for "
-			     "the linker-created stubs section `%pA'.\n"),
-			   i->output_section, i);
+		  if (i->veneer)
+		    fatal (_("%P: Memory region `%s' not large enough for the "
+			     "linker-created stubs section `%pA' associated to "
+			     "output section `%pA'\n"),
+			   output_section_statement->region->name_list.name, i,
+			   i->output_section);
 
 		  if (i->rawsize && i->rawsize != i->size)
 		    fatal (_("%P: Relaxation not supported with "
@@ -5768,7 +5789,7 @@ size_input_section
 			     "would overflow `%pA' after it changed size).\n"),
 			   i, i->output_section);
 
-		  *removed = 1;
+		  *removed = true;
 		  dot = end;
 		  i->output_section = NULL;
 		  return dot;
@@ -8438,9 +8459,14 @@ lang_propagate_lma_regions (void)
     }
 }
 
+/* Checks whether any input section was not allocated to an output section.
+   If such a case is found, emits an error for the corresponding input section
+   and stops the link process.  */
+
 static void
-warn_non_contiguous_discards (void)
+error_non_contiguous_unallocated_sections (void)
 {
+  bool removed_section = false;
   LANG_FOR_EACH_INPUT_STATEMENT (file)
     {
       if ((file->the_bfd->flags & (BFD_LINKER_CREATED | DYNAMIC)) != 0
@@ -8448,12 +8474,17 @@ warn_non_contiguous_discards (void)
 	continue;
 
       for (asection *s = file->the_bfd->sections; s != NULL; s = s->next)
-	if (s->output_section == NULL
-	    && (s->flags & SEC_LINKER_CREATED) == 0)
-	  einfo (_("%P: warning: --enable-non-contiguous-regions "
-		   "discards section `%pA' from `%pB'\n"),
-		 s, file->the_bfd);
+	if (s->output_section == NULL && !s->veneer)
+	  {
+	    einfo (_("%P: error: --enable-non-contiguous-regions was not able "
+		     "to allocate the input section `%pA' (%pB) to an output "
+		     "section\n"),
+		   s, file->the_bfd);
+	    removed_section = true;
+	  }
     }
+  if (removed_section)
+    fatal (_("%P: final link failed\n"));
 }
 
 static void
@@ -8875,9 +8906,8 @@ lang_process (void)
   if (command_line.check_section_addresses)
     lang_check_section_addresses ();
 
-  if (link_info.non_contiguous_regions
-      && link_info.non_contiguous_regions_warnings)
-    warn_non_contiguous_discards ();
+  if (link_info.non_contiguous_regions)
+    error_non_contiguous_unallocated_sections ();
 
   /* Check any required symbols are known.  */
   ldlang_check_require_defined_symbols ();

@@ -922,11 +922,9 @@ recpy_bt_goto (PyObject *self, PyObject *args)
   if (tinfo == NULL || btrace_is_empty (tinfo))
 	return PyErr_Format (gdbpy_gdb_error, _("Empty branch trace."));
 
-  if (!PyArg_ParseTuple (args, "O", &parse_obj))
+  if (!PyArg_ParseTuple (args, "O!", &recpy_insn_type, &parse_obj))
     return NULL;
 
-  if (Py_TYPE (parse_obj) != &recpy_insn_type)
-    return PyErr_Format (PyExc_TypeError, _("Argument must be instruction."));
   obj = (const recpy_element_object *) parse_obj;
 
   try

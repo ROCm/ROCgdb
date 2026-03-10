@@ -390,11 +390,8 @@ solib_bfd_fopen (const char *pathname, int fd)
   gdb_bfd_ref_ptr abfd (gdb_bfd_open (pathname, gnutarget, fd));
 
   if (abfd == NULL)
-    {
-      /* Arrange to free PATHNAME when the error is thrown.  */
-      error (_("Could not open `%s' as an executable file: %s"), pathname,
-	     bfd_errmsg (bfd_get_error ()));
-    }
+    error (_("Could not open `%s' as an executable file: %s"), pathname,
+	   bfd_errmsg (bfd_get_error ()));
 
   return abfd;
 }

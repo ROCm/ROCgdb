@@ -3773,6 +3773,8 @@ i386_print_statistics (FILE *file)
 void
 i386_md_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   htab_delete (op_hash);
   htab_delete (reg_hash);
   GOT_symbol = NULL;

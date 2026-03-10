@@ -64,7 +64,8 @@ enum pru_instr_type
   prui_halt, prui_slp, prui_xin, prui_xout, prui_xchg, prui_sxin,
   prui_sxout, prui_sxchg, prui_loop, prui_iloop, prui_qbgt, prui_qbge,
   prui_qblt, prui_qble, prui_qbeq, prui_qbne, prui_qba, prui_qbbs,
-  prui_qbbc, prui_lbbo, prui_sbbo, prui_lbco, prui_sbco
+  prui_qbbc, prui_lbbo, prui_sbbo, prui_lbco, prui_sbco, prui_tsen,
+  prui_mvib, prui_mviw, prui_mvid
 };
 
 /* This structure holds information for a particular instruction.
@@ -81,11 +82,14 @@ enum pru_instr_type
      j - a 5.3-bit right source register index OR 18-bit PC address
      l - burst length (unsigned 7-bit immediate or r0.b[0-3]) for xLBCO
      n - burst length (unsigned 7-bit immediate or r0.b[0-3]) for XFR
+     m - MVI destination operand
+     M - MVI source operand
      o - a 10-bit signed PC-relative offset
      O - an 8-bit unsigned PC-relative offset for LOOP termination point
      R - a 5-bit destination register index
      s - a 5.3-bit left source register index
      S - a 5-bit left source register index
+     t - task manager mode (0: disabled, 1: enabled)
      w - a single bit for "WakeOnStatus"
      W - a 16-bit unsigned immediate with IO=0 field (LDI)
      x - an 8-bit XFR wide-bus address immediate
@@ -236,14 +240,18 @@ struct pru_reg
 #define SUBOP_LMBD			3u
 #define SUBOP_SCAN			4u
 #define SUBOP_HALT			5u
-#define SUBOP_RSVD_FOR_MVIx		6u
+#define SUBOP_MVIX			6u
 #define SUBOP_XFR			7u
 #define SUBOP_LOOP			8u
+#define SUBOP_TSEN			9u
 #define SUBOP_RSVD_FOR_RFI		14u
 #define SUBOP_SLP			15u
 
 #define OP_SH_WAKEONSTATUS		23
 #define OP_MASK_WAKEONSTATUS		(0x1u << 23)
+
+#define OP_SH_TSKMGR_MODE		23
+#define OP_MASK_TSKMGR_MODE		(0x1u << 23)
 
 /* Format 2 XFR specific fields.  */
 #define OP_SH_SUBOP_XFR			23
@@ -264,6 +272,23 @@ struct pru_reg
 #define OP_MASK_LOOP_INTERRUPTIBLE	(1u << 15)
 #define OP_SH_LOOP_JMPOFFS		0
 #define OP_MASK_LOOP_JMPOFFS		(0xffu << 0)
+
+/* Format 2 MVI specific fields.  */
+#define OP_SH_MVI_RS1_MODE		21
+#define OP_MASK_MVI_RS1_MODE		(3u << 21)
+#define OP_SH_MVI_RD_MODE		23
+#define OP_MASK_MVI_RD_MODE		(3u << 23)
+#define OP_SH_MVI_LEN			16
+#define OP_MASK_MVI_LEN			(3u << 16)
+
+#define MVI_OP_MODE_DIRECT		0u
+#define MVI_OP_MODE_INDIRECT		1u
+#define MVI_OP_MODE_INDIRECT_POSTINC	2u
+#define MVI_OP_MODE_INDIRECT_PREDEC	3u
+
+#define MVI_LEN_BYTE			0u
+#define MVI_LEN_WORD			1u
+#define MVI_LEN_DWORD			2u
 
 /* Format 4 specific fields.  */
 #define OP_SH_BROFF98			25
@@ -331,6 +356,12 @@ struct pru_reg
 #define OP_MATCH_SCAN	(OP_MATCH_FMT2_OP | (SUBOP_SCAN << OP_SH_SUBOP))
 #define OP_MATCH_HALT	(OP_MATCH_FMT2_OP | (SUBOP_HALT << OP_SH_SUBOP))
 #define OP_MATCH_SLP	(OP_MATCH_FMT2_OP | (SUBOP_SLP << OP_SH_SUBOP))
+#define OP_MATCH_MVIB	(OP_MATCH_FMT2_OP | (SUBOP_MVIX << OP_SH_SUBOP) \
+			 | (MVI_LEN_BYTE << OP_SH_MVI_LEN))
+#define OP_MATCH_MVIW	(OP_MATCH_FMT2_OP | (SUBOP_MVIX << OP_SH_SUBOP) \
+			 | (MVI_LEN_WORD << OP_SH_MVI_LEN))
+#define OP_MATCH_MVID	(OP_MATCH_FMT2_OP | (SUBOP_MVIX << OP_SH_SUBOP) \
+			 | (MVI_LEN_DWORD << OP_SH_MVI_LEN))
 #define OP_MATCH_XFR	(OP_MATCH_FMT2_OP | (SUBOP_XFR << OP_SH_SUBOP))
 #define OP_MATCH_SXFR	(OP_MATCH_XFR | OP_MASK_XFR_S)
 #define OP_MATCH_XIN	(OP_MATCH_XFR | (SUBOP_XFR_XIN << OP_SH_SUBOP_XFR))
@@ -342,6 +373,7 @@ struct pru_reg
 #define OP_MATCH_LOOP	(OP_MATCH_FMT2_OP | (SUBOP_LOOP << OP_SH_SUBOP))
 #define OP_MATCH_ILOOP	(OP_MATCH_FMT2_OP | (SUBOP_LOOP << OP_SH_SUBOP) \
 			 | OP_MASK_LOOP_INTERRUPTIBLE)
+#define OP_MATCH_TSEN	(OP_MATCH_FMT2_OP | (SUBOP_TSEN << OP_SH_SUBOP))
 
 #define OP_MATCH_QBGT	(OP_MATCH_FMT4_OP | OP_MASK_GT)
 #define OP_MATCH_QBGE	(OP_MATCH_FMT4_OP | OP_MASK_GT | OP_MASK_EQ)
@@ -393,6 +425,9 @@ struct pru_reg
 
 #define OP_MASK_LOOP_OP		(OP_MASK_FMT2_OP | OP_MASK_SUBOP \
 				 | OP_MASK_LOOP_INTERRUPTIBLE)
+
+#define OP_MASK_MVIX_OP		(OP_MASK_FMT2_OP | OP_MASK_SUBOP \
+				 | OP_MASK_MVI_LEN)
 
 /* These are the data structures we use to hold the instruction information.  */
 extern const struct pru_opcode pru_opcodes[];

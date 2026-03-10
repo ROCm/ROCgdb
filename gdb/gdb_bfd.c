@@ -147,17 +147,6 @@ struct gdb_bfd_data
 
   /* The registry.  */
   registry<bfd> registry_fields;
-
-  /* Most of the locking needed for multi-threaded operation is
-     handled by BFD itself.  However, the current BFD model is that
-     locking is only needed for global operations -- but it turned out
-     that the background DWARF reader could race with the auto-load
-     code reading the .debug_gdb_scripts section from the same BFD.
-
-     This lock is the fix: wrappers for important BFD functions will
-     acquire this lock before performing operations that might modify
-     the state of this BFD.  */
-  gdb::mutex per_bfd_mutex;
 };
 
 registry<bfd> *
@@ -365,7 +354,7 @@ gdb_bfd_open_from_target_memory (CORE_ADDR addr, ULONGEST size,
 
 struct target_fileio_stream : public gdb_bfd_iovec_base
 {
-  target_fileio_stream (bfd *nbfd, int fd)
+  target_fileio_stream (bfd *nbfd, target_fd fd)
     : m_bfd (nbfd),
       m_fd (fd)
   {
@@ -384,7 +373,7 @@ private:
   bfd *m_bfd;
 
   /* The file descriptor.  */
-  int m_fd;
+  target_fd m_fd;
 };
 
 /* Wrapper for target_fileio_open suitable for use as a helper
@@ -394,7 +383,7 @@ static target_fileio_stream *
 gdb_bfd_iovec_fileio_open (struct bfd *abfd, inferior *inf, bool warn_if_slow)
 {
   const char *filename = bfd_get_filename (abfd);
-  int fd;
+  target_fd fd;
   fileio_error target_errno;
 
   gdb_assert (is_target_filename (filename));
@@ -403,7 +392,7 @@ gdb_bfd_iovec_fileio_open (struct bfd *abfd, inferior *inf, bool warn_if_slow)
 			   filename + strlen (TARGET_SYSROOT_PREFIX),
 			   FILEIO_O_RDONLY, 0, warn_if_slow,
 			   &target_errno);
-  if (fd == -1)
+  if (fd == target_fd::INVALID)
     {
       errno = fileio_error_to_host (target_errno);
       bfd_set_error (bfd_error_system_call);
@@ -766,8 +755,7 @@ gdb_bfd_map_section (asection *sectp, bfd_size_type *size)
 
   abfd = sectp->owner;
 
-  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
-  gdb::lock_guard<gdb::mutex> guard (gdata->per_bfd_mutex);
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
 
   descriptor = get_section_descriptor (sectp);
 
@@ -1100,8 +1088,7 @@ bool
 gdb_bfd_get_full_section_contents (bfd *abfd, asection *section,
 				   gdb::byte_vector *contents)
 {
-  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
-  gdb::lock_guard<gdb::mutex> guard (gdata->per_bfd_mutex);
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
 
   bfd_size_type section_size = bfd_get_section_alloc_size (abfd, section);
 
@@ -1116,8 +1103,7 @@ gdb_bfd_get_full_section_contents (bfd *abfd, asection *section,
 int
 gdb_bfd_stat (bfd *abfd, struct stat *sbuf)
 {
-  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
-  gdb::lock_guard<gdb::mutex> guard (gdata->per_bfd_mutex);
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
 
   return bfd_stat (abfd, sbuf);
 }
@@ -1127,8 +1113,7 @@ gdb_bfd_stat (bfd *abfd, struct stat *sbuf)
 long
 gdb_bfd_get_mtime (bfd *abfd)
 {
-  gdb_bfd_data *gdata = (gdb_bfd_data *) bfd_usrdata (abfd);
-  gdb::lock_guard<gdb::mutex> guard (gdata->per_bfd_mutex);
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
 
   return bfd_get_mtime (abfd);
 }

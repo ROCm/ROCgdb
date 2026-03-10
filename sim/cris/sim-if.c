@@ -231,13 +231,13 @@ cris_option_handler (SIM_DESC sd, sim_cpu *cpu ATTRIBUTE_UNUSED, int opt,
    the program headers themeselves are also loaded.  The caller is
    responsible for asserting that ABFD is an ELF file.  */
 
-static bfd_boolean
+static bool
 cris_load_elf_file (SIM_DESC sd, struct bfd *abfd, sim_write_fn do_write)
 {
   Elf_Internal_Phdr *phdr;
   int n_hdrs;
   int i;
-  bfd_boolean verbose = STATE_OPEN_KIND (sd) == SIM_OPEN_DEBUG;
+  bool verbose = STATE_OPEN_KIND (sd) == SIM_OPEN_DEBUG;
 
   phdr = elf_tdata (abfd)->phdr;
   n_hdrs = elf_elfheader (abfd)->e_phnum;
@@ -270,7 +270,7 @@ cris_load_elf_file (SIM_DESC sd, struct bfd *abfd, sim_write_fn do_write)
 			  STATE_MY_NAME (sd), (uint64_t) lma,
 			  (uint64_t) phdr[i].p_filesz);
 	  free (buf);
-	  return FALSE;
+	  return false;
 	}
 
       if (do_write (sd, lma, buf, phdr[i].p_filesz) != phdr[i].p_filesz)
@@ -281,13 +281,13 @@ cris_load_elf_file (SIM_DESC sd, struct bfd *abfd, sim_write_fn do_write)
 			  STATE_MY_NAME (sd), (uint64_t) lma,
 			  (uint64_t) phdr[i].p_filesz);
 	  free (buf);
-	  return FALSE;
+	  return false;
 	}
 
       free (buf);
     }
 
-  return TRUE;
+  return true;
 }
 
 /* Cover function of sim_state_free to free the cpu buffers as well.  */
@@ -494,17 +494,17 @@ cris_write_interp (SIM_DESC sd, uint64_t mem, const void *buf, uint64_t length)
    everything went fine, including an interpreter being absent and
    the program being in a non-ELF format.  */
 
-static bfd_boolean
+static bool
 cris_handle_interpreter (SIM_DESC sd, struct bfd *abfd)
 {
   int i, n_hdrs;
   char *interp = NULL;
   struct bfd *ibfd;
-  bfd_boolean ok = FALSE;
+  bool ok = false;
   Elf_Internal_Phdr *phdr;
 
   if (bfd_get_flavour (abfd) != bfd_target_elf_flavour)
-    return TRUE;
+    return true;
 
   phdr = elf_tdata (abfd)->phdr;
   n_hdrs = aux_ent_phnum (abfd);
@@ -593,10 +593,10 @@ cris_handle_interpreter (SIM_DESC sd, struct bfd *abfd)
 
   /* Register R10 should hold 0 at static start (no finifunc), but
      that's the default, so don't bother.  */
-  return TRUE;
+  return true;
 
  all_done:
-  ok = TRUE;
+  ok = true;
 
  interp_failed:
   bfd_close (ibfd);

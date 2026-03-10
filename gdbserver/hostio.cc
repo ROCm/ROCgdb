@@ -318,8 +318,8 @@ handle_open (char *own_buf)
       || require_comma (&p)
       || require_int (&p, &fileio_mode)
       || require_end (p)
-      || fileio_to_host_openflags (fileio_flags, &flags)
-      || fileio_to_host_mode (fileio_mode, &mode))
+      || fileio_to_host_openflags (fileio_open_flag (fileio_flags), &flags)
+      || fileio_to_host_mode (fileio_mode_flag (fileio_mode), &mode))
     {
       hostio_packet_error (own_buf);
       return;

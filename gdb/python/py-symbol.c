@@ -266,14 +266,8 @@ sympy_value (PyObject *self, PyObject *args)
   frame_info_ptr frame_info = NULL;
   PyObject *frame_obj = NULL;
 
-  if (!PyArg_ParseTuple (args, "|O", &frame_obj))
+  if (!PyArg_ParseTuple (args, "|O!", &frame_object_type, &frame_obj))
     return NULL;
-
-  if (frame_obj != NULL && !PyObject_TypeCheck (frame_obj, &frame_object_type))
-    {
-      PyErr_SetString (PyExc_TypeError, "argument is not a frame");
-      return NULL;
-    }
 
   SYMPY_REQUIRE_VALID (self, symbol);
   if (symbol->loc_class () == LOC_TYPEDEF)
@@ -408,7 +402,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
   const char *name;
   static const char *keywords[] = { "name", "block", "domain", NULL };
   struct symbol *symbol = NULL;
-  PyObject *block_obj = NULL, *bool_obj;
+  PyObject *block_obj = NULL;
   const struct block *block = NULL;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
@@ -456,10 +450,13 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
     }
   else
     sym_obj = gdbpy_ref<>::new_reference (Py_None);
-  PyTuple_SET_ITEM (ret_tuple.get (), 0, sym_obj.release ());
 
-  bool_obj = PyBool_FromLong (is_a_field_of_this.type != NULL);
-  PyTuple_SET_ITEM (ret_tuple.get (), 1, bool_obj);
+  if (PyTuple_SetItem (ret_tuple.get (), 0, sym_obj.release ()) < 0)
+    return nullptr;
+
+  gdbpy_ref<> bool_obj (PyBool_FromLong (is_a_field_of_this.type != NULL));
+  if (PyTuple_SetItem (ret_tuple.get (), 1, bool_obj.release ()) < 0)
+    return nullptr;
 
   return ret_tuple.release ();
 }

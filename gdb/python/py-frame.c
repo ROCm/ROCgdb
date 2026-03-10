@@ -393,7 +393,7 @@ frame_info_to_frame_object (const frame_info_ptr &frame)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  return gdbpy_ref<> (frame_obj.release ());
+  return frame_obj;
 }
 
 /* Implementation of gdb.Frame.older (self) -> gdb.Frame.

@@ -673,6 +673,8 @@ stabs_begin (void)
 void
 stabs_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   free ((char *) current_function_label);
   free (last_asm_file);
   free (prev_line_file);

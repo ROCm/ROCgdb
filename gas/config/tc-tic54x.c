@@ -3061,6 +3061,8 @@ md_begin (void)
 void
 tic54x_md_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   htab_delete (stag_hash);
   htab_delete (subsym_recurse_hash);
   while (macro_level != -1)

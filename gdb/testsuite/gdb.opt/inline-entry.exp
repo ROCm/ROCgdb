@@ -62,6 +62,24 @@ gdb_breakpoint "bar"
 set bp_bar_num [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
 		   "get number of bar breakpoint"]
 
+set ok 0
+gdb_test_multiple "info breakpoints $bp_bar_num" "" {
+    -re -wrap "\r\n2.3 .*" {
+	pass $gdb_test_name
+    }
+    -re -wrap "\r\n2.2 .*" {
+	set ok 1
+	pass $gdb_test_name
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+if {!$ok} {
+    unsupported "incorrect amount of breakpoint locations"
+    return
+}
+
 gdb_breakpoint "foo"
 set bp_foo_num [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
 		   "get number of foo breakpoint"]

@@ -101,7 +101,7 @@ struct adi_stat_t
   int max_version;
 
   /* ADI version tag file.  */
-  int tag_fd = 0;
+  target_fd tag_fd = target_fd::INVALID;
 
   /* ADI availability check has been done.  */
   bool checked_avail = false;
@@ -176,7 +176,7 @@ sparc64_forget_process (pid_t pid)
     {
       if ((*it).pid == pid)
 	{
-	  if ((*it).stat.tag_fd > 0)
+	  if ((*it).stat.tag_fd != target_fd::INVALID)
 	    target_fileio_close ((*it).stat.tag_fd, &target_errno);
 	  adi_proc_list.erase_after (pit);
 	  break;
@@ -275,20 +275,22 @@ adi_convert_byte_count (CORE_ADDR naddr, int nbytes, CORE_ADDR locl)
    K * adi_blksz, encoded as 1 version tag per byte.  The allowed
    version tag values are between 0 and adi_stat.max_version.  */
 
-static int
-adi_tag_fd (void)
+static target_fd
+adi_tag_fd ()
 {
   pid_t pid = inferior_ptid.pid ();
   sparc64_adi_info *proc = get_adi_info_proc (pid);
 
-  if (proc->stat.tag_fd != 0)
+  if (proc->stat.tag_fd != target_fd::INVALID)
     return proc->stat.tag_fd;
 
   char cl_name[MAX_PROC_NAME_SIZE];
   snprintf (cl_name, sizeof(cl_name), "/proc/%ld/adi/tags", (long) pid);
   fileio_error target_errno;
-  proc->stat.tag_fd = target_fileio_open (NULL, cl_name, O_RDWR|O_EXCL,
-					  false, 0, &target_errno);
+  proc->stat.tag_fd = target_fileio_open (NULL, cl_name,
+					  FILEIO_O_RDWR | FILEIO_O_EXCL,
+					  0, false,
+					  &target_errno);
   return proc->stat.tag_fd;
 }
 
@@ -338,8 +340,8 @@ adi_is_addr_mapped (CORE_ADDR vaddr, size_t cnt)
 static int
 adi_read_versions (CORE_ADDR vaddr, size_t size, gdb_byte *tags)
 {
-  int fd = adi_tag_fd ();
-  if (fd == -1)
+  target_fd fd = adi_tag_fd ();
+  if (fd == target_fd::INVALID)
     return -1;
 
   if (!adi_is_addr_mapped (vaddr, size))
@@ -359,8 +361,8 @@ adi_read_versions (CORE_ADDR vaddr, size_t size, gdb_byte *tags)
 static int
 adi_write_versions (CORE_ADDR vaddr, size_t size, unsigned char *tags)
 {
-  int fd = adi_tag_fd ();
-  if (fd == -1)
+  target_fd fd = adi_tag_fd ();
+  if (fd == target_fd::INVALID)
     return -1;
 
   if (!adi_is_addr_mapped (vaddr, size))

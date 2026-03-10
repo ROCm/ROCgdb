@@ -153,11 +153,11 @@ symbol_at_address_func (bfd_vma addr ATTRIBUTE_UNUSED,
   return NULL;
 }
 
-static bfd_boolean
+static bool
 symbol_is_valid (asymbol *sym ATTRIBUTE_UNUSED,
 		 disassemble_info *info ATTRIBUTE_UNUSED)
 {
-  return TRUE;
+  return true;
 }
 
 static void
@@ -4364,7 +4364,7 @@ parse_x86_AVX_instruction (unsigned char *pc)
   dis_info.endian = BFD_ENDIAN_UNKNOWN;
   dis_info.endian_code = dis_info.endian;
   dis_info.octets_per_byte = 1;
-  dis_info.disassembler_needs_relocs = FALSE;
+  dis_info.disassembler_needs_relocs = false;
   dis_info.fprintf_func = fprintf_func;
   dis_info.fprintf_styled_func = fprintf_styled_func;
   dis_info.stream = NULL;

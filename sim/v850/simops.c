@@ -3131,7 +3131,7 @@ v850_div (SIM_DESC sd, unsigned int op0, unsigned int op1, unsigned int *op2p, u
   signed long int remainder;
   signed long int divide_by;
   signed long int divide_this;
-  bfd_boolean     overflow = FALSE;
+  bool overflow = false;
   
   /* Compute the result.  */
   divide_by   = (int32_t)op0;
@@ -3139,7 +3139,7 @@ v850_div (SIM_DESC sd, unsigned int op0, unsigned int op1, unsigned int *op2p, u
 
   if (divide_by == 0 || (divide_by == -1 && divide_this == (1 << 31)))
     {
-      overflow  = TRUE;
+      overflow  = true;
       divide_by = 1;
     }
   
@@ -3164,7 +3164,7 @@ v850_divu (SIM_DESC sd, unsigned int op0, unsigned int op1, unsigned int *op2p, 
   unsigned long int remainder;
   unsigned long int divide_by;
   unsigned long int divide_this;
-  bfd_boolean       overflow = FALSE;
+  bool overflow = false;
   
   /* Compute the result.  */
   
@@ -3173,7 +3173,7 @@ v850_divu (SIM_DESC sd, unsigned int op0, unsigned int op1, unsigned int *op2p, 
   
   if (divide_by == 0)
     {
-      overflow = TRUE;
+      overflow = true;
       divide_by  = 1;
     }
   

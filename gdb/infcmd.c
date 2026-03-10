@@ -2508,11 +2508,12 @@ default_print_registers_info (struct gdbarch *gdbarch,
 
       /* If the register name is empty, it is undefined for this
 	 processor, so don't display anything.  */
-      if (*(gdbarch_register_name (gdbarch, i)) == '\0')
+      const char *regname = gdbarch_register_name (gdbarch, i);
+      if (*regname == '\0')
 	continue;
 
       default_print_one_register_info
-	(file, gdbarch_register_name (gdbarch, i),
+	(file, regname,
 	 value_of_register (i, get_next_frame_sentinel_okay (frame)));
     }
 }

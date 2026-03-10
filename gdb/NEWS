@@ -200,6 +200,23 @@ qExecAndArgs
      contains the gdb.Corefile object if a core file is loaded into
      the inferior, otherwise, this contains None.
 
+  ** New event registry gdb.events.selected_context that emits a
+     SelectedContextEvent event whenever the user changes the inferior
+     context.  The context consists of which inferior, thread, and
+     frame are currently selected.  The event object has 'inferior',
+     'thread' and 'frame' attributes containing gdb.Inferior,
+     gdb.InferiorThread, and gdb.Frame objects respectively.
+
+  ** New method gdb.Symtab.source_lines(start, end, unstyled).  This
+     returns a tuple of strings, each string represents a single
+     source line for the file associated with the symtab.  The 'start'
+     and 'end' are line numbers, and allow for only some lines to be
+     returned, these default to the first and last lines in the file
+     respectively.  If 'unstyled' is true then the returned lines will
+     have no styling applied, otherwise, styling will be applied if
+     the appropriate user setting is enabled, and GDB knows how to
+     style this source file.
+
 * Guile API
 
   ** Procedures 'memory-port-read-buffer-size',

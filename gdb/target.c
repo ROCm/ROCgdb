@@ -3190,8 +3190,8 @@ fileio_handles_invalidate_target (target_ops *targ)
 
 /* Acquire a target fileio file descriptor.  */
 
-static int
-acquire_fileio_fd (target_ops *target, int target_fd)
+static target_fd
+acquire_fileio_fd (target_ops *target, int underlying_fd)
 {
   /* Search for closed handles to reuse.  */
   for (; lowest_closed_fd < fileio_fhandles.size (); lowest_closed_fd++)
@@ -3204,33 +3204,33 @@ acquire_fileio_fd (target_ops *target, int target_fd)
 
   /* Push a new handle if no closed handles were found.  */
   if (lowest_closed_fd == fileio_fhandles.size ())
-    fileio_fhandles.push_back (fileio_fh_t {target, target_fd});
+    fileio_fhandles.push_back (fileio_fh_t {target, underlying_fd});
   else
-    fileio_fhandles[lowest_closed_fd] = {target, target_fd};
+    fileio_fhandles[lowest_closed_fd] = {target, underlying_fd};
 
   /* Should no longer be marked closed.  */
   gdb_assert (!fileio_fhandles[lowest_closed_fd].is_closed ());
 
   /* Return its index, and start the next lookup at
      the next index.  */
-  return lowest_closed_fd++;
+  return target_fd (lowest_closed_fd++);
 }
 
 /* Release a target fileio file descriptor.  */
 
 static void
-release_fileio_fd (int fd, fileio_fh_t *fh)
+release_fileio_fd (target_fd fd, fileio_fh_t *fh)
 {
   fh->target_fd = -1;
-  lowest_closed_fd = std::min (lowest_closed_fd, fd);
+  lowest_closed_fd = std::min (lowest_closed_fd, int (fd));
 }
 
 /* Return a pointer to the fileio_fhandle_t corresponding to FD.  */
 
 static fileio_fh_t *
-fileio_fd_to_fh (int fd)
+fileio_fd_to_fh (target_fd fd)
 {
-  return &fileio_fhandles[fd];
+  return &fileio_fhandles[int (fd)];
 }
 
 
@@ -3241,8 +3241,8 @@ fileio_fd_to_fh (int fd)
 
 int
 target_ops::fileio_open (struct inferior *inf, const char *filename,
-			 int flags, int mode, int warn_if_slow,
-			 fileio_error *target_errno)
+			 fileio_open_flags flags, fileio_mode_flags mode,
+			 bool warn_if_slow, fileio_error *target_errno)
 {
   *target_errno = FILEIO_ENOSYS;
   return -1;
@@ -3304,9 +3304,10 @@ target_ops::fileio_readlink (struct inferior *inf, const char *filename,
 
 /* See target.h.  */
 
-int
+target_fd
 target_fileio_open (struct inferior *inf, const char *filename,
-		    int flags, int mode, bool warn_if_slow, fileio_error *target_errno)
+		    fileio_open_flags flags, fileio_mode_flags mode,
+		    bool warn_if_slow, fileio_error *target_errno)
 {
   for (target_ops *t = default_fileio_target (); t != NULL; t = t->beneath ())
     {
@@ -3316,25 +3317,28 @@ target_fileio_open (struct inferior *inf, const char *filename,
       if (fd == -1 && *target_errno == FILEIO_ENOSYS)
 	continue;
 
+      target_fd result;
       if (fd < 0)
-	fd = -1;
+	result = target_fd::INVALID;
       else
-	fd = acquire_fileio_fd (t, fd);
+	result = acquire_fileio_fd (t, fd);
 
-      target_debug_printf_nofunc ("target_fileio_open (%d,%s,0x%x,0%o,%d) = %d (%d)",
-			   inf == NULL ? 0 : inf->num, filename, flags, mode,
-			   warn_if_slow, fd, fd != -1 ? 0 : *target_errno);
-      return fd;
+      target_debug_printf_nofunc
+	("target_fileio_open (%d,%s,0x%x,0%o,%d) = %d (%d)",
+	 inf == NULL ? 0 : inf->num, filename,
+	 unsigned (flags), unsigned (mode), warn_if_slow, int (result),
+	 result != target_fd::INVALID ? 0 : *target_errno);
+      return result;
     }
 
   *target_errno = FILEIO_ENOSYS;
-  return -1;
+  return target_fd::INVALID;
 }
 
 /* See target.h.  */
 
 int
-target_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
+target_fileio_pwrite (target_fd fd, const gdb_byte *write_buf, int len,
 		      ULONGEST offset, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
@@ -3348,16 +3352,16 @@ target_fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
     ret = fh->target->fileio_pwrite (fh->target_fd, write_buf,
 				     len, offset, target_errno);
 
-  target_debug_printf_nofunc ("target_fileio_pwrite (%d,...,%d,%s) = %d (%d)", fd,
-		       len, pulongest (offset), ret,
-		       ret != -1 ? 0 : *target_errno);
+  target_debug_printf_nofunc ("target_fileio_pwrite (%d,...,%d,%s) = %d (%d)",
+			      int (fd), len, pulongest (offset), ret,
+			      ret != -1 ? 0 : *target_errno);
   return ret;
 }
 
 /* See target.h.  */
 
 int
-target_fileio_pread (int fd, gdb_byte *read_buf, int len,
+target_fileio_pread (target_fd fd, gdb_byte *read_buf, int len,
 		     ULONGEST offset, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
@@ -3371,15 +3375,16 @@ target_fileio_pread (int fd, gdb_byte *read_buf, int len,
     ret = fh->target->fileio_pread (fh->target_fd, read_buf,
 				    len, offset, target_errno);
 
-  target_debug_printf_nofunc ("target_fileio_pread (%d,...,%d,%s) = %d (%d)", fd, len,
-		       pulongest (offset), ret, ret != -1 ? 0 : *target_errno);
+  target_debug_printf_nofunc ("target_fileio_pread (%d,...,%d,%s) = %d (%d)",
+			      int (fd), len, pulongest (offset), ret,
+			      ret != -1 ? 0 : *target_errno);
   return ret;
 }
 
 /* See target.h.  */
 
 int
-target_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
+target_fileio_fstat (target_fd fd, struct stat *sb, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
@@ -3391,8 +3396,8 @@ target_fileio_fstat (int fd, struct stat *sb, fileio_error *target_errno)
   else
     ret = fh->target->fileio_fstat (fh->target_fd, sb, target_errno);
 
-  target_debug_printf_nofunc ("target_fileio_fstat (%d) = %d (%d)", fd, ret,
-		       ret != -1 ? 0 : *target_errno);
+  target_debug_printf_nofunc ("target_fileio_fstat (%d) = %d (%d)",
+			      int (fd), ret, ret != -1 ? 0 : *target_errno);
   return ret;
 }
 
@@ -3422,7 +3427,7 @@ target_fileio_lstat (struct inferior *inf, const char *filename,
 /* See target.h.  */
 
 int
-target_fileio_close (int fd, fileio_error *target_errno)
+target_fileio_close (target_fd fd, fileio_error *target_errno)
 {
   fileio_fh_t *fh = fileio_fd_to_fh (fd);
   int ret = -1;
@@ -3439,8 +3444,8 @@ target_fileio_close (int fd, fileio_error *target_errno)
       release_fileio_fd (fd, fh);
     }
 
-  target_debug_printf_nofunc ("target_fileio_close (%d) = %d (%d)", fd, ret,
-		       ret != -1 ? 0 : *target_errno);
+  target_debug_printf_nofunc ("target_fileio_close (%d) = %d (%d)",
+			      int (fd), ret, ret != -1 ? 0 : *target_errno);
   return ret;
 }
 
@@ -3497,14 +3502,14 @@ target_fileio_readlink (struct inferior *inf, const char *filename,
 class scoped_target_fd
 {
 public:
-  explicit scoped_target_fd (int fd) noexcept
+  explicit scoped_target_fd (target_fd fd) noexcept
     : m_fd (fd)
   {
   }
 
   ~scoped_target_fd ()
   {
-    if (m_fd >= 0)
+    if (m_fd != target_fd::INVALID)
       {
 	fileio_error target_errno;
 
@@ -3514,13 +3519,13 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (scoped_target_fd);
 
-  int get () const noexcept
+  target_fd get () const noexcept
   {
     return m_fd;
   }
 
 private:
-  int m_fd;
+  target_fd m_fd;
 };
 
 /* Read target file FILENAME, in the filesystem as seen by INF.  If
@@ -3541,8 +3546,9 @@ target_fileio_read_alloc_1 (struct inferior *inf, const char *filename,
   fileio_error target_errno;
 
   scoped_target_fd fd (target_fileio_open (inf, filename, FILEIO_O_RDONLY,
-					   0700, false, &target_errno));
-  if (fd.get () == -1)
+					   FILEIO_S_IRWXU, false,
+					   &target_errno));
+  if (fd.get () == target_fd::INVALID)
     return -1;
 
   /* Start by reading up to 4K at a time.  The target will throttle

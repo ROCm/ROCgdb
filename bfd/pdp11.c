@@ -1265,7 +1265,10 @@ static bool
 aout_get_external_symbols (bfd *abfd)
 {
   if (bfd_get_flavour (abfd) != bfd_target_aout_flavour)
-    return false;
+    {
+      bfd_set_error (bfd_error_invalid_operation);
+      return false;
+    }
 
   if (obj_aout_external_syms (abfd) == NULL)
     {

@@ -83,20 +83,6 @@ extern "C" {
 #define BFD64
 #endif
 
-/* Boolean type used in bfd.
-   General rule: Functions which are bfd_boolean return TRUE on
-   success and FALSE on failure (unless they're a predicate).  */
-
-#ifdef POISON_BFD_BOOLEAN
-# pragma GCC poison bfd_boolean
-#else
-# define bfd_boolean bool
-# undef FALSE
-# undef TRUE
-# define FALSE 0
-# define TRUE 1
-#endif
-
 /* Silence "applying zero offset to null pointer" UBSAN warnings.  */
 #define PTR_ADD(P,A) ((A) != 0 ? (P) + (A) : (P))
 /* Also prevent non-zero offsets from being applied to a null pointer.  */
@@ -157,6 +143,22 @@ struct orl;
   ((((bfd_vma) (this) + (boundary) - 1) >= (bfd_vma) (this))		  \
    ? (((bfd_vma) (this) + ((boundary) - 1)) & ~ (bfd_vma) ((boundary)-1)) \
    : ~ (bfd_vma) 0)
+
+/* Detect whether we are compiling with -fsanitize=address.  */
+#ifndef BFD_ASAN
+/* gcc.  */
+# if defined __SANITIZE_ADDRESS__
+#  define BFD_ASAN 1
+/* clang.  */
+# elif defined __has_feature
+#  if __has_feature(address_sanitizer)
+#   define BFD_ASAN 1
+#  endif
+# endif
+# ifndef BFD_ASAN
+#  define BFD_ASAN 0
+# endif
+#endif
 
 /* Return TRUE if the start of STR matches PREFIX, FALSE otherwise.  */
 
@@ -701,6 +703,12 @@ typedef struct bfd_section
 
   /* Nonzero if section contents should not be freed.  */
   unsigned int alloced:1;
+
+  /* Indicate that the section contains branch veneers.  This is used when
+     support for non-contiguous memory regions is enabled.  The veneers have
+     to be allocated to the same memory region as the code they are refered
+     by, i.e. they cannot be moved to a subsequent memory region.  */
+  unsigned int veneer : 1;
 
   /* Bits used by various backends.  The generic code doesn't touch
      these fields.  */

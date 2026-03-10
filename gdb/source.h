@@ -196,8 +196,10 @@ private:
   int m_stopline;
 };
 
-/* Get the number of the last line in the given symtab.  */
-extern int last_symtab_line (struct symtab *s);
+/* Get the number of the last line in the symtab S.  This relies on
+   opening the file associated with S and counting the lines.  If the file
+   cannot be found then an empty optional is returned.  */
+extern std::optional<int> last_symtab_line (struct symtab *s);
 
 /* Check if the line LINE can be found in the symtab S, so that it can be
    printed.  */

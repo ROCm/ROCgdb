@@ -1622,12 +1622,12 @@ md_begin ()
    This is from tc-aarch64.c
 */
 
-static bfd_boolean
+static bool
 signed_overflow (offsetT value, unsigned bits)
 {
   offsetT lim;
   if (bits >= sizeof (offsetT) * 8)
-    return FALSE;
+    return false;
   lim = (offsetT) 1 << (bits - 1);
   return (value < -lim || value >= lim);
 }

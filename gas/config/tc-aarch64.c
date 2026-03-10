@@ -11130,7 +11130,7 @@ aarch64_feature_enable_set (aarch64_feature_set set)
   return set;
 }
 
-static int
+static bool
 aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
 			bool ext_only)
 {
@@ -11143,7 +11143,7 @@ aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
     {
       /* No extensions, so just set the virtual feature bits and return.  */
       *ext_set = aarch64_update_virtual_dependencies (*ext_set);
-      return 1;
+      return true;
     }
 
   /* We insist on extensions being added before being removed.  We achieve
@@ -11163,7 +11163,7 @@ aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
 	  if (*str != '+')
 	    {
 	      as_bad (_("invalid architectural extension"));
-	      return 0;
+	      return false;
 	    }
 
 	  ext = strchr (++str, '+');
@@ -11196,7 +11196,7 @@ aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
       if (optlen == 0)
 	{
 	  as_bad (_("missing architectural extension"));
-	  return 0;
+	  return false;
 	}
 
       gas_assert (adding_value != -1);
@@ -11224,7 +11224,7 @@ aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
       if (opt->name == NULL)
 	{
 	  as_bad (_("unknown architectural extension `%s'"), str);
-	  return 0;
+	  return false;
 	}
 
       str = ext;
@@ -11245,10 +11245,10 @@ aarch64_parse_features (const char *str, const aarch64_feature_set **opt_p,
     AARCH64_MERGE_FEATURE_SETS (*ext_set, *ext_set, sve_sve2);
 
   *ext_set = aarch64_update_virtual_dependencies (*ext_set);
-  return 1;
+  return true;
 }
 
-static int
+static bool
 aarch64_parse_cpu (const char *str)
 {
   const struct aarch64_cpu_option_table *opt;
@@ -11263,7 +11263,7 @@ aarch64_parse_cpu (const char *str)
   if (optlen == 0)
     {
       as_bad (_("missing cpu name `%s'"), str);
-      return 0;
+      return false;
     }
 
   for (opt = aarch64_cpus; opt->name != NULL; opt++)
@@ -11274,10 +11274,10 @@ aarch64_parse_cpu (const char *str)
       }
 
   as_bad (_("unknown cpu `%s'"), str);
-  return 0;
+  return false;
 }
 
-static int
+static bool
 aarch64_parse_arch (const char *str)
 {
   const struct aarch64_arch_option_table *opt;
@@ -11292,7 +11292,7 @@ aarch64_parse_arch (const char *str)
   if (optlen == 0)
     {
       as_bad (_("missing architecture name `%s'"), str);
-      return 0;
+      return false;
     }
 
   for (opt = aarch64_archs; opt->name != NULL; opt++)
@@ -11303,7 +11303,7 @@ aarch64_parse_arch (const char *str)
       }
 
   as_bad (_("unknown architecture `%s'"), str);
-  return 0;
+  return false;
 }
 
 /* ABIs.  */
@@ -11322,7 +11322,7 @@ static const struct aarch64_option_abi_value_table aarch64_abis[] = {
 #endif
 };
 
-static int
+static bool
 aarch64_parse_abi (const char *str)
 {
   unsigned int i;
@@ -11330,25 +11330,25 @@ aarch64_parse_abi (const char *str)
   if (str[0] == '\0')
     {
       as_bad (_("missing abi name `%s'"), str);
-      return 0;
+      return false;
     }
 
   for (i = 0; i < ARRAY_SIZE (aarch64_abis); i++)
     if (strcmp (str, aarch64_abis[i].name) == 0)
       {
 	aarch64_abi = aarch64_abis[i].value;
-	return 1;
+	return true;
       }
 
   as_bad (_("unknown abi `%s'"), str);
-  return 0;
+  return false;
 }
 
 struct aarch64_long_option_table
 {
   const char *option;			/* Substring to match.  */
   const char *help;			/* Help information.  */
-  int (*func) (const char *subopt);	/* Function to decode sub-option.  */
+  bool (*func) (const char *subopt);	/* Function to decode sub-option.  */
   char *deprecated;		/* If non-null, print this message.  */
 };
 

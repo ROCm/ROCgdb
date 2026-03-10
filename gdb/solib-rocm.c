@@ -45,26 +45,26 @@ struct rocm_solib_fd_cache
      Open the file FILENAME if it is not already opened, reuse the existing file
      descriptor otherwise.
 
-     On error -1 is returned, and TARGET_ERRNO is set.  */
-  int open (const std::string &filename, fileio_error *target_errno);
+     On error target_fd::INVALID is returned, and TARGET_ERRNO is set.  */
+  target_fd open (const std::string &filename, fileio_error *target_errno);
 
   /* Decrement the reference count to FD and close FD if the reference count
      reaches 0.
 
      On success, return 0.  On error, return -1 and set TARGET_ERRNO.  */
-  int close (int fd, fileio_error *target_errno);
+  int close (target_fd fd, fileio_error *target_errno);
 
 private:
   struct refcnt_fd
   {
-    refcnt_fd (int fd, int refcnt) : fd (fd), refcnt (refcnt) {}
+    refcnt_fd (target_fd fd, int refcnt) : fd (fd), refcnt (refcnt) {}
 
     DISABLE_COPY_AND_ASSIGN (refcnt_fd);
 
     refcnt_fd (refcnt_fd &&) = default;
     refcnt_fd &operator=(refcnt_fd &&other) = default;
 
-    int fd = -1;
+    target_fd fd = target_fd::INVALID;
     int refcnt = 0;
   };
 
@@ -72,7 +72,7 @@ private:
   gdb::unordered_string_map<refcnt_fd> m_cache;
 };
 
-int
+target_fd
 rocm_solib_fd_cache::open (const std::string &filename,
 			   fileio_error *target_errno)
 {
@@ -81,21 +81,23 @@ rocm_solib_fd_cache::open (const std::string &filename,
     {
       /* Try to locate the file using solib_find which is aware of sysroot
 	 and solib-search path first.  */
-      int fd = -1;
+      target_fd fd = target_fd::INVALID;
       gdb::unique_xmalloc_ptr<char> expanded_fname
 	= solib_find (filename.c_str (), nullptr);
 
       if (expanded_fname != nullptr)
 	fd = target_fileio_open (nullptr, expanded_fname.get (),
-				 FILEIO_O_RDONLY, false, 0, target_errno);
+				 FILEIO_O_RDONLY, fileio_mode_flag {}, false,
+				 target_errno);
 
       /* If the binary was not found on the sysroot, try to open it on the
 	 target.  */
-      if (fd == -1)
+      if (fd == target_fd::INVALID)
 	fd = target_fileio_open (m_inferior, filename.c_str (),
-				 FILEIO_O_RDONLY, false, 0, target_errno);
+				 FILEIO_O_RDONLY, fileio_mode_flag {}, false,
+				 target_errno);
 
-      if (fd != -1)
+      if (fd != target_fd::INVALID)
 	m_cache.emplace (std::piecewise_construct,
 			 std::forward_as_tuple (filename),
 			 std::forward_as_tuple (fd, 1));
@@ -107,13 +109,13 @@ rocm_solib_fd_cache::open (const std::string &filename,
       /* The file is already opened.  Increment the refcnt and return the
 	 already opened FD.  */
       it->second.refcnt++;
-      gdb_assert (it->second.fd != -1);
+      gdb_assert (it->second.fd != target_fd::INVALID);
       return it->second.fd;
     }
 }
 
 int
-rocm_solib_fd_cache::close (int fd, fileio_error *target_errno)
+rocm_solib_fd_cache::close (target_fd fd, fileio_error *target_errno)
 {
   using cache_val = gdb::unordered_string_map<refcnt_fd>::value_type;
   auto it
@@ -363,7 +365,7 @@ struct rocm_code_object_stream_file final : rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_file);
 
-  rocm_code_object_stream_file (inferior *inf, int fd, ULONGEST offset,
+  rocm_code_object_stream_file (inferior *inf, target_fd fd, ULONGEST offset,
 				ULONGEST size);
 
   file_ptr read (bfd *abfd, void *buf, file_ptr size,
@@ -379,7 +381,7 @@ protected:
   inferior *m_inf;
 
   /* The target file descriptor for this stream.  */
-  int m_fd;
+  target_fd m_fd;
 
   /* The offset of the ELF file image in the target file.  */
   ULONGEST m_offset;
@@ -390,7 +392,7 @@ protected:
 };
 
 rocm_code_object_stream_file::rocm_code_object_stream_file
-  (inferior *inf, int fd, ULONGEST offset, ULONGEST size)
+  (inferior *inf, target_fd fd, ULONGEST offset, ULONGEST size)
   : m_inf (inf), m_fd (fd), m_offset (offset), m_size (size)
 {
 }
@@ -605,9 +607,9 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 	{
 	  auto info = get_solib_info (inferior);
 	  fileio_error target_errno;
-	  int fd = info->fd_cache.open (decoded_path, &target_errno);
+	  target_fd fd = info->fd_cache.open (decoded_path, &target_errno);
 
-	  if (fd == -1)
+	  if (fd == target_fd::INVALID)
 	    {
 	      errno = fileio_error_to_host (target_errno);
 	      bfd_set_error (bfd_error_system_call);

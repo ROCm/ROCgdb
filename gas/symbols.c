@@ -3150,7 +3150,8 @@ symbol_begin (void)
 void
 symbol_end (void)
 {
-  htab_delete (sy_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (sy_hash);
 }
 
 void

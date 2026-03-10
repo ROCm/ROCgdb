@@ -67,7 +67,8 @@ macro_init (void)
 void
 macro_end (void)
 {
-  htab_delete (macro_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (macro_hash);
 }
 
 /* Read input lines till we get to a TO string.

@@ -220,7 +220,7 @@ link_callbacks_warning (struct bfd_link_info *link_info, const char *xwarning,
 static void
 link_callbacks_undefined_symbol (struct bfd_link_info *link_info,
 				 const char *name, bfd *abfd, asection *section,
-				 bfd_vma address, bfd_boolean is_fatal)
+				 bfd_vma address, bool is_fatal)
 {
   warning (_("Cannot resolve relocation to \"%s\" "
 	     "from compiled module \"%s\" section \"%s\"."),
@@ -372,7 +372,7 @@ copy_section (bfd *abfd, asection *sect,
 
   sect_data_got = bfd_get_relocated_section_contents (abfd, &link_info,
 						      &link_order,
-						      sect_data.get (), FALSE,
+						      sect_data.get (), false,
 						      symbol_table.data ());
 
   if (sect_data_got == NULL)

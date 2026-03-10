@@ -684,10 +684,10 @@ info_source_command (const char *ignore, int from_tty)
     gdb_printf (_("Compilation directory is %s\n"), s->compunit ()->dirname ());
   if (s->fullname () != nullptr)
     gdb_printf (_("Located in %s\n"), s->fullname ());
-  const std::vector<off_t> *offsets;
-  if (g_source_cache.get_line_charpos (s, &offsets))
-    gdb_printf (_("Contains %d line%s.\n"), (int) offsets->size (),
-		offsets->size () == 1 ? "" : "s");
+  if (std::optional<int> last_lineno = last_symtab_line (s);
+      last_lineno.has_value ())
+    gdb_printf (_("Contains %d line%s.\n"), last_lineno.value (),
+		last_lineno.value () == 1 ? "" : "s");
 
   gdb_printf (_("Source language is %s.\n"),
 	      language_str (s->language ()));
@@ -1342,11 +1342,10 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
   std::string lines;
   if (!g_source_cache.get_source_lines (s, line, stopline - 1, &lines))
     {
-      const std::vector<off_t> *offsets = nullptr;
-      g_source_cache.get_line_charpos (s, &offsets);
+      std::optional<int> last_lineno = last_symtab_line (s);
       error (_("Line number %d out of range; %s has %d lines."),
 	     line, symtab_to_filename_for_display (s),
-	     offsets == nullptr ? 0 : (int) offsets->size ());
+	     !last_lineno.has_value () ? 0 : last_lineno.value ());
     }
 
   const char *iter = lines.c_str ();
@@ -1448,16 +1447,16 @@ print_source_lines (struct symtab *s, source_lines_range line_range,
 
 /* See source.h.  */
 
-int
+std::optional<int>
 last_symtab_line (struct symtab *s)
 {
   const std::vector<off_t> *offsets;
 
   /* Try to get the offsets for the start of each line.  */
   if (!g_source_cache.get_line_charpos (s, &offsets))
-    return false;
+    return {};
   if (offsets == nullptr)
-    return false;
+    return {};
 
   return offsets->size ();
 }

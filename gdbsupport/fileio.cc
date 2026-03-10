@@ -130,26 +130,26 @@ fileio_error_to_host (fileio_error errnum)
 /* See fileio.h.  */
 
 int
-fileio_to_host_openflags (int fileio_open_flags, int *open_flags_p)
+fileio_to_host_openflags (fileio_open_flags fflags, int *open_flags_p)
 {
   int open_flags = 0;
 
-  if (fileio_open_flags & ~FILEIO_O_SUPPORTED)
+  if (fflags & ~FILEIO_O_SUPPORTED)
     return -1;
 
-  if (fileio_open_flags & FILEIO_O_CREAT)
+  if (fflags & FILEIO_O_CREAT)
     open_flags |= O_CREAT;
-  if (fileio_open_flags & FILEIO_O_EXCL)
+  if (fflags & FILEIO_O_EXCL)
     open_flags |= O_EXCL;
-  if (fileio_open_flags & FILEIO_O_TRUNC)
+  if (fflags & FILEIO_O_TRUNC)
     open_flags |= O_TRUNC;
-  if (fileio_open_flags & FILEIO_O_APPEND)
+  if (fflags & FILEIO_O_APPEND)
     open_flags |= O_APPEND;
-  if (fileio_open_flags & FILEIO_O_RDONLY)
+  if (fflags & FILEIO_O_RDONLY)
     open_flags |= O_RDONLY;
-  if (fileio_open_flags & FILEIO_O_WRONLY)
+  if (fflags & FILEIO_O_WRONLY)
     open_flags |= O_WRONLY;
-  if (fileio_open_flags & FILEIO_O_RDWR)
+  if (fflags & FILEIO_O_RDWR)
     open_flags |= O_RDWR;
   /* On systems supporting binary and text mode, always open files
      in binary mode. */
@@ -164,7 +164,7 @@ fileio_to_host_openflags (int fileio_open_flags, int *open_flags_p)
 /* See fileio.h.  */
 
 int
-fileio_to_host_mode (int fileio_mode, mode_t *mode_p)
+fileio_to_host_mode (fileio_mode_flags fileio_mode, mode_t *mode_p)
 {
   mode_t mode = 0;
 

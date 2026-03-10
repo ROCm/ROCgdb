@@ -458,9 +458,13 @@ python_xmethod_worker::do_get_result_type (value *obj,
       return EXT_LANG_RC_ERROR;
     }
 
-  /* PyTuple_SET_ITEM steals the reference of the element, hence the
+  /* PyTuple_SetItem steals the reference of the element, hence the
      release.  */
-  PyTuple_SET_ITEM (py_arg_tuple.get (), 0, py_value_obj.release ());
+  if (PyTuple_SetItem (py_arg_tuple.get (), 0, py_value_obj.release ()) < 0)
+    {
+      gdbpy_print_stack ();
+      return EXT_LANG_RC_ERROR;
+    }
 
   for (i = 0; i < args.size (); i++)
     {
@@ -471,7 +475,12 @@ python_xmethod_worker::do_get_result_type (value *obj,
 	  gdbpy_print_stack ();
 	  return EXT_LANG_RC_ERROR;
 	}
-      PyTuple_SET_ITEM (py_arg_tuple.get (), i + 1, py_value_arg.release ());
+      if (PyTuple_SetItem (py_arg_tuple.get (), i + 1,
+			   py_value_arg.release ()) < 0)
+	{
+	  gdbpy_print_stack ();
+	  return EXT_LANG_RC_ERROR;
+	}
     }
 
   gdbpy_ref<> py_result_type
@@ -543,9 +552,10 @@ python_xmethod_worker::invoke (struct value *obj,
       error (_("Error while executing Python code."));
     }
 
-  /* PyTuple_SET_ITEM steals the reference of the element, hence the
+  /* PyTuple_SetItem steals the reference of the element, hence the
      release.  */
-  PyTuple_SET_ITEM (py_arg_tuple.get (), 0, py_value_obj.release ());
+  if (PyTuple_SetItem (py_arg_tuple.get (), 0, py_value_obj.release ()) < 0)
+    return nullptr;
 
   for (i = 0; i < args.size (); i++)
     {
@@ -557,7 +567,9 @@ python_xmethod_worker::invoke (struct value *obj,
 	  error (_("Error while executing Python code."));
 	}
 
-      PyTuple_SET_ITEM (py_arg_tuple.get (), i + 1, py_value_arg.release ());
+      if (PyTuple_SetItem (py_arg_tuple.get (), i + 1,
+			   py_value_arg.release ()) < 0)
+	return nullptr;
     }
 
   gdbpy_ref<> py_result (PyObject_CallObject (m_py_worker,

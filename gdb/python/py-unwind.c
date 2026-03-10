@@ -899,11 +899,12 @@ frame_unwind_python::sniff (const frame_info_ptr &this_frame,
 
   /* Verify the return value of _execute_unwinders is a tuple of size 2.  */
   gdb_assert (PyTuple_Check (pyo_execute_ret.get ()));
-  gdb_assert (PyTuple_GET_SIZE (pyo_execute_ret.get ()) == 2);
+  gdb_assert (PyTuple_Size (pyo_execute_ret.get ()) == 2);
 
   if (pyuw_debug)
     {
-      PyObject *pyo_unwinder_name = PyTuple_GET_ITEM (pyo_execute_ret.get (), 1);
+      PyObject *pyo_unwinder_name = PyTuple_GetItem (pyo_execute_ret.get (), 1);
+      gdb_assert (pyo_unwinder_name != nullptr);
       gdb::unique_xmalloc_ptr<char> name
 	= python_string_to_host_string (pyo_unwinder_name);
 
@@ -919,7 +920,8 @@ frame_unwind_python::sniff (const frame_info_ptr &this_frame,
     }
 
   /* Received UnwindInfo, cache data.  */
-  PyObject *pyo_unwind_info = PyTuple_GET_ITEM (pyo_execute_ret.get (), 0);
+  PyObject *pyo_unwind_info = PyTuple_GetItem (pyo_execute_ret.get (), 0);
+  gdb_assert (pyo_unwind_info != nullptr);
   if (!PyObject_TypeCheck (pyo_unwind_info, &unwind_info_object_type))
     error (_("an Unwinder should return gdb.UnwindInfo, not %s."),
 	   Py_TYPE (pyo_unwind_info)->tp_name);

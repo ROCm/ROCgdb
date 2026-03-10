@@ -1892,6 +1892,8 @@ md_begin (void)
 void
 ppc_md_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   if (ppc_hash)
     {
       htab_delete (ppc_hash);

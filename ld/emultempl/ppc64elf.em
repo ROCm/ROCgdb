@@ -440,6 +440,8 @@ ppc_add_stub_section (const char *stub_sec_name, asection *input_section)
 						: 5)))
     goto err_ret;
 
+  stub_sec->veneer = 1;
+
   output_section = input_section->output_section;
   os = lang_output_section_get (output_section);
 

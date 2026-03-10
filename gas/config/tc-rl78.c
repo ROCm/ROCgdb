@@ -403,11 +403,6 @@ md_begin (void)
   rl78_abs_sym = symbol_make ("__rl78_abs__");
 }
 
-void
-rl78_md_end (void)
-{
-}
-
 /* Set the ELF specific flags.  */
 void
 rl78_elf_final_processing (void)

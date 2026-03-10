@@ -620,16 +620,9 @@ disasmpy_set_enabled (PyObject *self, PyObject *args, PyObject *kw)
 {
   PyObject *newstate;
   static const char *keywords[] = { "state", nullptr };
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O", keywords,
-					&newstate))
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O!", keywords,
+					&PyBool_Type, &newstate))
     return nullptr;
-
-  if (!PyBool_Check (newstate))
-    {
-      PyErr_SetString (PyExc_TypeError,
-		       _("The value passed to `_set_enabled' must be a boolean."));
-      return nullptr;
-    }
 
   python_print_insn_enabled = newstate == Py_True;
   Py_RETURN_NONE;

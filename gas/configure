@@ -816,6 +816,7 @@ enable_plugins
 enable_largefile
 enable_targets
 enable_checking
+enable_leak_check
 enable_compressed_debug_sections
 enable_default_compressed_debug_sections_algorithm
 enable_x86_tls_check
@@ -1488,6 +1489,7 @@ Optional Features:
   --disable-largefile     omit support for large files
   --enable-targets        alternative target configurations besides the primary
   --enable-checking       enable run-time checks
+  --enable-leak-check     enable freeing memory before exit
   --enable-compressed-debug-sections={all,gas,none}
                           compress debug sections by default
   --enable-default-compressed-debug-sections-algorithm={zlib,zstd}
@@ -11150,7 +11152,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11153 "configure"
+#line 11155 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11256,7 +11258,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11259 "configure"
+#line 11261 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11916,6 +11918,20 @@ if test x$ac_checking != x ; then
 $as_echo "#define ENABLE_CHECKING 1" >>confdefs.h
 
 fi
+
+ac_leak_check=BFD_ASAN
+# Check whether --enable-leak_check was given.
+if test "${enable_leak_check+set}" = set; then :
+  enableval=$enable_leak_check; case "${enableval}" in
+  no)	ac_leak_check=0 ;;
+  *)	ac_leak_check=1 ;;
+esac
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_LEAK_CHECK ${ac_leak_check}
+_ACEOF
+
 
 # PR gas/19109
 # Decide the default method for compressing debug sections.

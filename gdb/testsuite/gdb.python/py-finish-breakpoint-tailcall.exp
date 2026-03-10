@@ -1,0 +1,118 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that FinishBreakpoints are reached when set for a tailcall
+# frame.
+#
+# Frame #0 is never a tailcall frame.  As such, we need to do more
+# than just stop in a tailcall function and create a finish
+# breakpoint.  Instead, we need to stop in a function called from a
+# tail call function, then walk back up the stack and create the
+# finish breakpoint on the tail call frame.
+#
+# At one point, GDB would create the breakpoint in the correct
+# location, but set the frame-id on the breakpoint for the wrong
+# frame, with the result that the breakpoint would never trigger.
+
+load_lib gdb-python.exp
+
+require allow_python_tests
+
+standard_testfile
+
+if {[build_executable "failed to build" $testfile $srcfile \
+	 {debug optimize=-O2}]} {
+    return
+}
+
+# For remote host testing.
+set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+
+# Run to 'normal_function' and then try to create a FinishBreakpoint.
+#
+# When USE_PARENT_FRAME_P is true we use the parent frame, which is
+# for tailcall_function, to create the FinishBreakpoint.
+#
+# When USE_PARENT_FRAME_P is false we use the frame of normal_function
+# to create the FinishBreakpoint.
+#
+# In both cases the finish breakpoint should be placed back in main,
+# which is where the inferior should stop when resumed.
+proc run_test { use_parent_frame_p } {
+    clean_restart $::testfile
+
+    if {![runto normal_function]} {
+	return
+    }
+
+    gdb_test "bt" \
+	[multi_line \
+	     "#0\\s+normal_function\[^\r\n\]+" \
+	     "#1\\s+(?:$::hex in )?tailcall_function\[^\r\n\]+" \
+	     "#2\\s+(?:$::hex in )?main\[^\r\n\]+"] \
+	"check call stack"
+
+    gdb_test "source $::pyfile" "Python script imported" "import python scripts"
+
+    set lineno [gdb_get_line_number "Temporary breakpoint here."]
+
+    if { $use_parent_frame_p } {
+	gdb_test_no_output "python frame=gdb.selected_frame().older()" \
+	    "store a reference to the parent frame"
+    } else {
+	gdb_test_no_output "python frame=gdb.selected_frame()" \
+	    "store a reference to the current frame"
+    }
+
+    gdb_test "python MyFinishBreakpoint(frame)" \
+	"Temporary breakpoint $::decimal at $::hex: file \[^\r\n\]+/$::srcfile, line $lineno\\." \
+	"create finish breakpoint"
+
+    set saw_stopped_message false
+    set saw_breakpoint_line false
+    set saw_source_line false
+    set saw_return_value false
+    gdb_test_multiple "continue" "" {
+	-re "^Stopped at MyFinishBreakpoint\r\n" {
+	    set saw_stopped_message true
+	    exp_continue
+	}
+	-re "^Return value is 43\r\n" {
+	    set saw_return_value true
+	    exp_continue
+	}
+	-re "^Breakpoint $::decimal, main \\(\\) at \[^\r\n\]+/$::srcfile:$lineno\r\n" {
+	    set saw_breakpoint_line true
+	    exp_continue
+	}
+	-re "^$lineno\\s+\[^\r\n\]+\r\n" {
+	    set saw_source_line true
+	    exp_continue
+	}
+	-re "^$::gdb_prompt $" {
+	    gdb_assert { $saw_stopped_message \
+			     && $saw_breakpoint_line \
+			     && $saw_source_line \
+			     && $saw_return_value } $gdb_test_name
+	}
+	-re "^\[^\r\n\]*\r\n" {
+	    exp_continue
+	}
+    }
+}
+
+foreach_with_prefix parent_frame { true false } {
+    run_test $parent_frame
+}

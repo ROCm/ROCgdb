@@ -22,6 +22,7 @@
 #define GDBSUPPORT_FILEIO_H
 
 #include <sys/stat.h>
+#include "enum-flags.h"
 
 /* The following flags are defined to be independent of the host
    as well as the target side implementation of these constants.
@@ -30,42 +31,53 @@
    corresponding implementation dependent constants in one module. */
 
 /* open(2) flags */
-#define FILEIO_O_RDONLY           0x0
-#define FILEIO_O_WRONLY           0x1
-#define FILEIO_O_RDWR             0x2
-#define FILEIO_O_APPEND           0x8
-#define FILEIO_O_CREAT          0x200
-#define FILEIO_O_TRUNC          0x400
-#define FILEIO_O_EXCL           0x800
-#define FILEIO_O_SUPPORTED      (FILEIO_O_RDONLY | FILEIO_O_WRONLY| \
-				 FILEIO_O_RDWR   | FILEIO_O_APPEND| \
-				 FILEIO_O_CREAT  | FILEIO_O_TRUNC| \
-				 FILEIO_O_EXCL)
+enum fileio_open_flag : unsigned
+{
+  FILEIO_O_RDONLY = 0x0,
+  FILEIO_O_WRONLY = 0x1,
+  FILEIO_O_RDWR = 0x2,
+  FILEIO_O_APPEND = 0x8,
+  FILEIO_O_CREAT = 0x200,
+  FILEIO_O_TRUNC = 0x400,
+  FILEIO_O_EXCL = 0x800,
+  FILEIO_O_SUPPORTED = (FILEIO_O_RDONLY | FILEIO_O_WRONLY
+			| FILEIO_O_RDWR | FILEIO_O_APPEND
+			| FILEIO_O_CREAT | FILEIO_O_TRUNC
+			| FILEIO_O_EXCL),
+};
+DEF_ENUM_FLAGS_TYPE (enum fileio_open_flag, fileio_open_flags);
 
 /* mode_t bits */
-#define FILEIO_S_IFREG        0100000
-#define FILEIO_S_IFDIR         040000
-#define FILEIO_S_IFCHR         020000
-#define FILEIO_S_IRUSR           0400
-#define FILEIO_S_IWUSR           0200
-#define FILEIO_S_IXUSR           0100
-#define FILEIO_S_IRWXU           0700
-#define FILEIO_S_IRGRP            040
-#define FILEIO_S_IWGRP            020
-#define FILEIO_S_IXGRP            010
-#define FILEIO_S_IRWXG            070
-#define FILEIO_S_IROTH             04
-#define FILEIO_S_IWOTH             02
-#define FILEIO_S_IXOTH             01
-#define FILEIO_S_IRWXO             07
-#define FILEIO_S_SUPPORTED         (FILEIO_S_IFREG|FILEIO_S_IFDIR|  \
-				    FILEIO_S_IRWXU|FILEIO_S_IRWXG|  \
-				    FILEIO_S_IRWXO)
+enum fileio_mode_flag : unsigned
+{
+  FILEIO_S_IFREG = 0100000,
+  FILEIO_S_IFDIR = 040000,
+  FILEIO_S_IFCHR = 020000,
+  FILEIO_S_IRUSR = 0400,
+  FILEIO_S_IWUSR = 0200,
+  FILEIO_S_IXUSR = 0100,
+  FILEIO_S_IRWXU = 0700,
+  FILEIO_S_IRGRP = 040,
+  FILEIO_S_IWGRP = 020,
+  FILEIO_S_IXGRP = 010,
+  FILEIO_S_IRWXG = 070,
+  FILEIO_S_IROTH = 04,
+  FILEIO_S_IWOTH = 02,
+  FILEIO_S_IXOTH = 01,
+  FILEIO_S_IRWXO = 07,
+  FILEIO_S_SUPPORTED = (FILEIO_S_IFREG | FILEIO_S_IFDIR
+			| FILEIO_S_IRWXU | FILEIO_S_IRWXG
+			| FILEIO_S_IRWXO),
+};
+DEF_ENUM_FLAGS_TYPE (enum fileio_mode_flag, fileio_mode_flags);
 
 /* lseek(2) flags */
-#define FILEIO_SEEK_SET             0
-#define FILEIO_SEEK_CUR             1
-#define FILEIO_SEEK_END             2
+enum
+{
+  FILEIO_SEEK_SET = 0,
+  FILEIO_SEEK_CUR = 1,
+  FILEIO_SEEK_END = 2,
+};
 
 /* errno values */
 enum fileio_error
@@ -145,14 +157,15 @@ extern fileio_error host_to_fileio_error (int error);
 extern int fileio_error_to_host (fileio_error errnum);
 
 /* Convert File-I/O open flags FFLAGS to host format, storing
-   the result in *FLAGS.  Return 0 on success, -1 on error.  */
+   the result in *OPEN_FLAGS_P.  Return 0 on success, -1 on error.  */
 
-extern int fileio_to_host_openflags (int fflags, int *flags);
+extern int fileio_to_host_openflags (fileio_open_flags fflags,
+				     int *open_flags_p);
 
 /* Convert File-I/O mode FMODE to host format, storing
-   the result in *MODE.  Return 0 on success, -1 on error.  */
+   the result in *MODE_P.  Return 0 on success, -1 on error.  */
 
-extern int fileio_to_host_mode (int fmode, mode_t *mode);
+extern int fileio_to_host_mode (fileio_mode_flags fmode, mode_t *mode_p);
 
 /* Return the system error number corresponding to ERRNUM.  */
 

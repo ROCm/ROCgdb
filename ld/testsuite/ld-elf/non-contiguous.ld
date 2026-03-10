@@ -14,17 +14,19 @@ SECTIONS
 {
    /* Ignore this target specific info in output comparison.  */
    /DISCARD/ : {
-             *(.ARM.attributes)
-	     *(.ARC.attributes)
-	     *(.riscv.attributes)
-	     *(.c6xabi.attributes)
-	     *(.trampolines)
-	     *(.reginfo)
-	     *(.note.renesas)
-	     *(.MIPS.abiflags)
-	     *(.MSP430.attributes)
-	     *(.csky.attributes)
-	     *(.gnu.attributes)
+     *(.ARM.attributes)
+     *(.ARC.attributes)
+     *(.riscv.attributes)
+     *(.c6xabi.attributes)
+     *(.trampolines)
+     *(.reginfo)
+     *(.note.renesas)
+     *(.note.spu_name)
+     *(.MIPS.abiflags)
+     *(.MIPS.options)
+     *(.MSP430.attributes)
+     *(.csky.attributes)
+     *(.gnu.attributes)
    }
 
    .raml : /*AT ( ADDR (.text) + SIZEOF (.text) )*/

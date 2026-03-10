@@ -61,7 +61,7 @@ struct ft32_frame_cache
   /* Saved SP in this frame */
   CORE_ADDR saved_sp;
   /* Has the new frame been LINKed.  */
-  bfd_boolean established;
+  bool established;
 };
 
 /* Implement the "frame_align" gdbarch method.  */

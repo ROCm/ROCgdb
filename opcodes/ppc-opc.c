@@ -1815,6 +1815,58 @@ extract_oimm (uint64_t insn,
   return ((insn >> 4) & 0x1f) + 1;
 }
 
+/* The SR field in the SHA3 Hash instruction.
+   Values 0–23 are valid; SR>23 are reserved.  */
+
+static uint64_t
+insert_sr (uint64_t insn,
+	   int64_t value,
+	   ppc_cpu_t dialect ATTRIBUTE_UNUSED,
+	   const char **errmsg)
+{
+  if (value < 0 || value > 23)
+    *errmsg = _("invalid SR value (must be 0-23)");
+  return insn | ((value & 0x1f) << 11);
+}
+
+static int64_t
+extract_sr (uint64_t insn,
+	    ppc_cpu_t dialect ATTRIBUTE_UNUSED,
+	    int *invalid)
+{
+  int64_t value = (insn >> 11) & 0x1f;
+  if (value > 23)
+    *invalid = 1;
+  return value;
+}
+
+/* The 2-bit BL field in the SHA Pad instruction.
+   Invalid combinations: ID=1 with BL=0 or BL=1.  */
+
+static uint64_t
+insert_bl (uint64_t insn,
+	   int64_t value,
+	   ppc_cpu_t dialect ATTRIBUTE_UNUSED,
+	   const char **errmsg)
+{
+  int id = (insn >> 19) & 0x3;
+  if (id == 1 && (value == 0 || value == 1))
+    *errmsg = _("invalid combination: ID=1 with BL=0 or BL=1");
+  return insn | ((value & 0x3) << 16);
+}
+
+static int64_t
+extract_bl (uint64_t insn,
+	    ppc_cpu_t dialect ATTRIBUTE_UNUSED,
+	    int *invalid)
+{
+  int64_t id = (insn >> 19) & 0x3;
+  int64_t bl = (insn >> 16) & 0x3;
+  if (id == 1 && (bl == 0 || bl == 1))
+    *invalid = 1;
+  return bl;
+}
+
 /* The n operand of rotrwi, sets SH = 32 - n.  */
 
 static uint64_t
@@ -2990,9 +3042,14 @@ const struct powerpc_operand powerpc_operands[] =
 #define DMRAB DMR + 1
   { 0x7, 13, NULL, NULL, PPC_OPERAND_DMR },
 
+  /* The field in a SHA3 instruction representing the target
+     DMR pair registers.  */
+#define DMRATp DMRAB + 1
+  { 0x3, 24, NULL, NULL, PPC_OPERAND_DMR },
+
   /* An optional BF field.  This is used for comparison instructions,
      in which an omitted BF field is taken as zero.  */
-#define OBF DMRAB + 1
+#define OBF DMRATp + 1
   { 0x7, 23, NULL, NULL, PPC_OPERAND_CR_REG | PPC_OPERAND_OPTIONAL },
 
   /* The BFA field in an X or XL form instruction.  */
@@ -3170,8 +3227,12 @@ const struct powerpc_operand powerpc_operands[] =
 #define IX UIM8 + 1
   { 0x1, 17, NULL, NULL, 0 },
 
+  /* The 1-bit E field in SHA Pad instruction.  */
+#define PADE IX + 1
+  { 0x1, 18, NULL, NULL, 0 },
+
   /* The PMSK field in GER rank 8 prefix instructions.  */
-#define PMSK8 IX + 1
+#define PMSK8 PADE + 1
   { 0xff, 40, NULL, NULL, 0 },
 
   /* The PMSK field in GER rank 4 prefix instructions.  */
@@ -3289,8 +3350,10 @@ const struct powerpc_operand powerpc_operands[] =
 #define IMM20 FXM4 + 1
   { 0xfffff, PPC_OPSHIFT_INV, insert_li20, extract_li20, PPC_OPERAND_SIGNED},
 
+  /* The 1-bit T field denoting the hash mode in SHA2 instruction.  */
+#define HASHT IMM20 + 1
   /* The L field in a D or X form instruction.  */
-#define L IMM20 + 1
+#define L HASHT
   { 0x1, 21, NULL, NULL, 0 },
 
   /* The optional L field in tlbie and tlbiel instructions.  */
@@ -3569,7 +3632,12 @@ const struct powerpc_operand powerpc_operands[] =
 #define UIM5 SH
   { 0x1f, 11, NULL, NULL, 0 },
 
-#define RRWn SH + 1
+  /* The SR field indicating number of hash computation
+     rounds in SHA3 Hash instruction.  */
+#define HASHSR SH + 1
+  { 0x1f, 11, insert_sr, extract_sr, 0 },
+
+#define RRWn HASHSR + 1
   { 0x1f, 11, insert_rrwn, extract_rrwn, 0 },
 
 #define SLWn RRWn + 1
@@ -3864,6 +3932,8 @@ const struct powerpc_operand powerpc_operands[] =
   { 0x1, 17, NULL, NULL, PPC_OPERAND_OPTIONAL },
 
 #define SP PRS + 1
+  /* The 2-bit ID field in SHA Pad instruction.  */
+#define PADID SP
 #define mi0 SP
   { 0x3, 19, NULL, NULL, 0 },
 
@@ -4010,8 +4080,12 @@ const struct powerpc_operand powerpc_operands[] =
 #define AESM DMEX + 1
   { 0x3, PPC_OPSHIFT_INV, insert_m2, extract_m2, 0 },
 
+  /* The 2-bit BL field in SHA Pad instruction.  */
+#define PADBL AESM + 1
+  { 0x3, 16, insert_bl, extract_bl, 0 },
+
   /* The UIM field in an XX2 form instruction.  */
-#define UIM AESM + 1
+#define UIM PADBL + 1
   /* The 2-bit UIMM field in a VX form instruction.  */
 #define UIMM2 UIM
   /* The 2-bit L field in a darn instruction.  */
@@ -4601,6 +4675,15 @@ const unsigned int num_powerpc_operands = ARRAY_SIZE (powerpc_operands);
 /* A X form instruction for Quad-Precision FP Instructions.  */
 #define XVA(op, xop, vaop) (X(op,xop) | (((vaop) & 0x1f) << 16))
 
+/* An X form instruction for SHA hash.  */
+#define XSHAHASH XVA
+
+/* An X form instruction for SHA3 hash.  */
+#define XSHA3HASH(op, xop, vaop, sr) (XSHAHASH(op, xop, vaop) | ((sr) << 11))
+
+/* An X form instruction for SHA2 hash.  */
+#define XSHA2HASH(op, xop, vaop, t) (XSHAHASH(op, xop, vaop) | ((t) << 21))
+
 /* An EX form instruction.  */
 #define EX(op, xop) (OP (op) | (((uint64_t)(xop)) & 0x7ff))
 
@@ -4609,6 +4692,15 @@ const unsigned int num_powerpc_operands = ARRAY_SIZE (powerpc_operands);
 
 /* An XX2 form instruction.  */
 #define XX2(op, xop) (OP (op) | ((((uint64_t)(xop)) & 0x1ff) << 2))
+
+/* An XX2 form SHA pad instruction.  */
+#define XX2PAD(op, xop, id, bl)                 \
+  (XX2(op, xop)                                 \
+   | (((uint64_t)(id) & 0x3) << 19)             \
+   | (((uint64_t)(bl) & 0x3) << 16))
+
+/* An XX2 form SHA pad instruction with E bit as 0.  */
+#define XX2PADE(op, xop, id, bl)  (XX2PAD(op, xop, id, bl) | (0 << 18))
 
 /* A XX2 form instruction with the VA bits specified.  */
 #define XX2VA(op, xop, vaop) (XX2(op,xop) | (((vaop) & 0x1f) << 16))
@@ -4723,6 +4815,12 @@ const unsigned int num_powerpc_operands = ARRAY_SIZE (powerpc_operands);
 /* An X_MASK with two dense math register.  */
 #define XDMRDMR_MASK (X_MASK | RA_MASK | (3 << 21) | (3 << 11))
 
+/* Masks for X form SHA instructions.  */
+#define XSHAHASH_MASK XVA_MASK
+#define XSHA2HASH_MASK (XSHAHASH_MASK | (1 << 22) | (3 << 11))
+#define XSHA3SR_MASK (XSHAHASH_MASK | (7 << 21))
+#define XSHA3HASH_MASK (XSHA3SR_MASK | RB_MASK)
+
 /* The mask for an XX3 form instruction with the S1, S2, DM or SHW bits
    specified.  */
 #define XX3DM_MASK (XX3 (0x3f, 0x1f) | (1 << 10))
@@ -4735,6 +4833,10 @@ const unsigned int num_powerpc_operands = ARRAY_SIZE (powerpc_operands);
 #define XX3DMR_MASK (XX3ACC_MASK | (1 << 11))
 #define XX2DMR_MASK (XX2ACC_MASK | (0xf << 17))
 #define XX3GERX_MASK (XX3ACC_MASK | (1 << 16))
+
+/* Masks for XX2 form SHA pad instructions.  */
+#define XX2PAD_MASK (XX2ACC_MASK | (3 << 19) | (3 << 16))
+#define XX2PADE_MASK (XX2PAD_MASK | (1 << 18))
 
 /* The masks for XX2 AES instructions with m0, m1 bits.  */
 #define XX2AES_MASK (XX2 (0x3f, 0x1ff) | (0xf << 17) | 1)
@@ -7569,6 +7671,12 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"xxsetaccz",	XVA(31,177,3),	XACC_MASK,   POWER10, 0,		{ACC}},
 {"dmmr",	XVA(31,177,6),	XDMRDMR_MASK,FUTURE,  0,		{DMR, DMRAB}},
 {"dmxor",	XVA(31,177,7),	XDMRDMR_MASK,FUTURE,  0,		{DMR, DMRAB}},
+{"dmsha256hash", XSHA2HASH(31,177,14,0),  XDMRDMR_MASK,   FUTURE, EXT,	{DMR, DMRAB}},
+{"dmsha512hash", XSHA2HASH(31,177,14,1),  XDMRDMR_MASK,   FUTURE, EXT,	{DMR, DMRAB}},
+{"dmsha2hash",   XSHAHASH(31,177,14),     XSHA2HASH_MASK, FUTURE, 0,	{DMR, DMRAB, HASHT}},
+{"dmsha3dw",     XSHA3HASH(31,177,15,0),  XSHA3HASH_MASK, FUTURE, EXT,	{DMRATp}},
+{"dmcryshash",   XSHA3HASH(31,177,15,12), XSHA3HASH_MASK, FUTURE, EXT,	{DMRATp}},
+{"dmsha3hash",   XSHAHASH(31,177,15),     XSHA3SR_MASK,   FUTURE, 0,	{DMRATp, HASHSR}},
 
 {"mtmsrd",	X(31,178),	XRLARB_MASK, PPC64,	0,		{RS, A_L}},
 
@@ -9671,6 +9779,15 @@ const struct powerpc_opcode powerpc_opcodes[] = {
 {"xxaes256genlkp",XX2M(60,420,2),XX2AESM_MASK, PPCVSXF, PPCVLE|EXT,	{XTP, XB5p}},
 {"xxaesgenlkp",   XX2M(60,420,0),XX2AES_MASK,  PPCVSXF, PPCVLE,		{XTP, XB5p, AESM}},
 
+{"dmxxsha3512pad",   XX2PAD(60,421,0,0),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxsha3384pad",   XX2PAD(60,421,0,1),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxsha3256pad",   XX2PAD(60,421,0,2),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxsha3224pad",   XX2PAD(60,421,0,3),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxshake256pad",  XX2PAD(60,421,1,2),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxshake128pad",  XX2PAD(60,421,1,3),  XX2PAD_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6, PADE}},
+{"dmxxsha384512pad", XX2PADE(60,421,2,0), XX2PADE_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6}},
+{"dmxxsha224256pad", XX2PADE(60,421,3,0), XX2PADE_MASK,	FUTURE,	PPCVLE|EXT,	{DMR, XB6}},
+{"dmxxshapad",  XX2(60,421),    XX2ACC_MASK, FUTURE,	PPCVLE,		{DMR, XB6, PADID, PADE, PADBL}},
 {"xvcvuxdsp",	XX2(60,424),	XX2_MASK,    PPCVSX,	PPCVLE,		{XT6, XB6}},
 {"xvnabssp",	XX2(60,425),	XX2_MASK,    PPCVSX,	PPCVLE,		{XT6, XB6}},
 {"xvtstdcsp",	XX2(60,426),  XX2DCMXS_MASK, PPCVSX3,	PPCVLE,		{XT6, XB6, DCMXS}},

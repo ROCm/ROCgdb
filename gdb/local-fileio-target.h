@@ -26,8 +26,8 @@
 /* Generic implementation of target_ops::fileio_open using the local
    filesystem.  */
 extern int local_fileio_open (struct inferior *inf, const char *filename,
-			      int flags, int mode, int warn_if_slow,
-			      fileio_error *target_errno);
+			      fileio_open_flags flags, fileio_mode_flags mode,
+			      bool warn_if_slow, fileio_error *target_errno);
 
 /* Generic implementation of target_ops::fileio_pwrite using the local
    filesystem.  */
@@ -69,8 +69,8 @@ template <typename Target>
 class local_fileio_target : public Target
 {
   int fileio_open (struct inferior *inf, const char *filename,
-		   int flags, int mode, int warn_if_slow,
-		   fileio_error *target_errno) override
+		   fileio_open_flags flags, fileio_mode_flags mode,
+		   bool warn_if_slow, fileio_error *target_errno) override
   {
     return local_fileio_open (inf, filename, flags, mode, warn_if_slow,
 			      target_errno);

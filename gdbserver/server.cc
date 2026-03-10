@@ -3577,6 +3577,7 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
 
       if (startswith (own_buf, "vCont;"))
 	{
+	  require_running_or_return (own_buf);
 	  handle_v_cont (own_buf);
 	  return;
 	}
@@ -5035,6 +5036,7 @@ process_serial_event (void)
       /* Fallthrough.  */
     case 'z':  /* remove_ ... */
       {
+	require_running_or_break (cs.own_buf);
 	char *dataptr;
 	ULONGEST addr;
 	int kind;

@@ -1,0 +1,10 @@
+.*: warning: .* may change behaviour for section .\.code\.1. from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section .\.code\.2. from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section .\.code\.3. from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* may change behaviour for section .\.code\.4. from .* \(assigned to \.raml, but additional match: \.ramu\)
+.*: warning: .* makes section .\.code\.2. from .* match /DISCARD/ clause\.  If the section can be assigned to an output section, it won't be discarded\.
+.*: warning: .* makes section .\.code\.4. from .* match /DISCARD/ clause\.  If the section can be assigned to an output section, it won't be discarded\.
+.*: warning: .* may change behaviour for section .\.code\.1. from .* \(assigned to \.ramu, but additional match: \.ramz\)
+.*: warning: .* may change behaviour for section .\.code\.2. from .* \(assigned to \.ramu, but additional match: \.ramz\)
+.*: warning: .* may change behaviour for section .\.code\.3. from .* \(assigned to \.ramu, but additional match: \.ramz\)
+.*: warning: .* may change behaviour for section .\.code\.4. from .* \(assigned to \.ramu, but additional match: \.ramz\)

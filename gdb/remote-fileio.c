@@ -121,78 +121,6 @@ remote_fileio_close_target_fd (int target_fd)
 }
 
 static int
-remote_fileio_oflags_to_host (long flags)
-{
-  int hflags = 0;
-
-  if (flags & FILEIO_O_CREAT)
-    hflags |= O_CREAT;
-  if (flags & FILEIO_O_EXCL)
-    hflags |= O_EXCL;
-  if (flags & FILEIO_O_TRUNC)
-    hflags |= O_TRUNC;
-  if (flags & FILEIO_O_APPEND)
-    hflags |= O_APPEND;
-  if (flags & FILEIO_O_RDONLY)
-    hflags |= O_RDONLY;
-  if (flags & FILEIO_O_WRONLY)
-    hflags |= O_WRONLY;
-  if (flags & FILEIO_O_RDWR)
-    hflags |= O_RDWR;
-/* On systems supporting binary and text mode, always open files in
-   binary mode.  */
-#ifdef O_BINARY
-  hflags |= O_BINARY;
-#endif
-  return hflags;
-}
-
-static mode_t
-remote_fileio_mode_to_host (long mode, int open_call)
-{
-  mode_t hmode = 0;
-
-  if (!open_call)
-    {
-      if (mode & FILEIO_S_IFREG)
-	hmode |= S_IFREG;
-      if (mode & FILEIO_S_IFDIR)
-	hmode |= S_IFDIR;
-      if (mode & FILEIO_S_IFCHR)
-	hmode |= S_IFCHR;
-    }
-  if (mode & FILEIO_S_IRUSR)
-    hmode |= S_IRUSR;
-  if (mode & FILEIO_S_IWUSR)
-    hmode |= S_IWUSR;
-  if (mode & FILEIO_S_IXUSR)
-    hmode |= S_IXUSR;
-#ifdef S_IRGRP
-  if (mode & FILEIO_S_IRGRP)
-    hmode |= S_IRGRP;
-#endif
-#ifdef S_IWGRP
-  if (mode & FILEIO_S_IWGRP)
-    hmode |= S_IWGRP;
-#endif
-#ifdef S_IXGRP
-  if (mode & FILEIO_S_IXGRP)
-    hmode |= S_IXGRP;
-#endif
-  if (mode & FILEIO_S_IROTH)
-    hmode |= S_IROTH;
-#ifdef S_IWOTH
-  if (mode & FILEIO_S_IWOTH)
-    hmode |= S_IWOTH;
-#endif
-#ifdef S_IXOTH
-  if (mode & FILEIO_S_IXOTH)
-    hmode |= S_IXOTH;
-#endif
-  return hmode;
-}
-
-static int
 remote_fileio_seek_flag_to_host (long num, int *flag)
 {
   if (!flag)
@@ -391,14 +319,23 @@ remote_fileio_func_open (remote_target *remote, char *buf)
       remote_fileio_ioerror (remote);
       return;
     }
-  flags = remote_fileio_oflags_to_host (num);
+  if (fileio_to_host_openflags ((enum fileio_open_flag) num, &flags))
+    {
+      remote_fileio_ioerror (remote);
+      return;
+    }
+
   /* 3. Parameter: open mode */
   if (remote_fileio_extract_int (&buf, &num))
     {
       remote_fileio_ioerror (remote);
       return;
     }
-  mode = remote_fileio_mode_to_host (num, 1);
+  if (fileio_to_host_mode (fileio_mode_flag (num), &mode))
+    {
+      remote_fileio_ioerror (remote);
+      return;
+    }
 
   /* Request pathname.  */
   pathname = (char *) alloca (length);
@@ -1233,8 +1170,10 @@ remote_fileio_to_host_ulong (fio_ulong_t fnum)
 static mode_t
 remote_fileio_to_host_mode (fio_mode_t fnum)
 {
-  return remote_fileio_mode_to_host (remote_fileio_to_host_uint (fnum),
-				     0);
+  mode_t result;
+  ULONGEST conv = remote_fileio_to_host_uint (fnum);
+  fileio_to_host_mode ((fileio_mode_flag) conv, &result);
+  return result;
 }
 
 /* Unpack an fio_time_t.  */

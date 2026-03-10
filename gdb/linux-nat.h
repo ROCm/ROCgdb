@@ -100,8 +100,8 @@ public:
   bool filesystem_is_local () override;
 
   int fileio_open (struct inferior *inf, const char *filename,
-		   int flags, int mode, int warn_if_slow,
-		   fileio_error *target_errno) override;
+		   fileio_open_flags flags, fileio_mode_flags mode,
+		   bool warn_if_slow, fileio_error *target_errno) override;
 
   std::optional<std::string>
     fileio_readlink (struct inferior *inf,

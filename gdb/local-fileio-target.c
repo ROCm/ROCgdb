@@ -26,8 +26,9 @@
 /* See local-fileio-target.h.  */
 
 int
-local_fileio_open (struct inferior *inf, const char *filename, int flags,
-		   int mode, int warn_if_slow, fileio_error *target_errno)
+local_fileio_open (struct inferior *inf, const char *filename,
+		   fileio_open_flags flags, fileio_mode_flags mode,
+		   bool warn_if_slow, fileio_error *target_errno)
 {
   int nat_flags;
   mode_t nat_mode;

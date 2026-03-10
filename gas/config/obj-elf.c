@@ -3005,6 +3005,8 @@ elf_begin (void)
 void
 elf_end (void)
 {
+  if (!ENABLE_LEAK_CHECK)
+    return;
   while (section_stack)
     {
       struct section_stack *top = section_stack;

@@ -1114,7 +1114,8 @@ public:
 
 
   int fileio_open (struct inferior *inf, const char *filename,
-		   int flags, int mode, int warn_if_slow,
+		   fileio_open_flags flags, fileio_mode_flags mode,
+		   bool warn_if_slow,
 		   fileio_error *target_errno) override;
 
   int fileio_pwrite (int fd, const gdb_byte *write_buf, int len,
@@ -1289,8 +1290,8 @@ public: /* Remote specific methods.  */
 				    fileio_error *remote_errno);
   /* We should get rid of this and use fileio_open directly.  */
   int remote_hostio_open (struct inferior *inf, const char *filename,
-			  int flags, int mode, int warn_if_slow,
-			  fileio_error *remote_errno);
+			  fileio_open_flags flags, fileio_mode_flags mode,
+			  bool warn_if_slow, fileio_error *remote_errno);
   int remote_hostio_close (int fd, fileio_error *remote_errno);
 
   int remote_hostio_unlink (inferior *inf, const char *filename,
@@ -13400,7 +13401,9 @@ remote_target::remote_hostio_set_filesystem (struct inferior *inf,
 
 int
 remote_target::remote_hostio_open (inferior *inf, const char *filename,
-				   int flags, int mode, int warn_if_slow,
+				   fileio_open_flags flags,
+				   fileio_mode_flags mode,
+				   bool warn_if_slow,
 				   fileio_error *remote_errno)
 {
   struct remote_state *rs = get_remote_state ();
@@ -13446,8 +13449,8 @@ remote_target::remote_hostio_open (inferior *inf, const char *filename,
 
 int
 remote_target::fileio_open (struct inferior *inf, const char *filename,
-			    int flags, int mode, int warn_if_slow,
-			    fileio_error *remote_errno)
+			    fileio_open_flags flags, fileio_mode_flags mode,
+			    bool warn_if_slow, fileio_error *remote_errno)
 {
   return remote_hostio_open (inf, filename, flags, mode, warn_if_slow,
 			     remote_errno);
@@ -13828,7 +13831,7 @@ remote_target::filesystem_is_local ()
 	     filename is irrelevant, we only care about whether
 	     the stub recognizes the packet or not.  */
 	  fd = remote_hostio_open (NULL, "just probing",
-				   FILEIO_O_RDONLY, 0700, 0,
+				   FILEIO_O_RDONLY, FILEIO_S_IRWXU, 0,
 				   &remote_errno);
 
 	  if (fd >= 0)
@@ -13960,7 +13963,7 @@ remote_target::remote_file_put (const char *local_file, const char *remote_file,
     (this, remote_hostio_open (NULL,
 			       remote_file, (FILEIO_O_WRONLY | FILEIO_O_CREAT
 					     | FILEIO_O_TRUNC),
-			       0700, 0, &remote_errno));
+			       FILEIO_S_IRWXU, 0, &remote_errno));
   if (fd.get () == -1)
     remote_hostio_error (remote_errno);
 

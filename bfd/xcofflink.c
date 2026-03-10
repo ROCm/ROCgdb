@@ -1908,12 +1908,9 @@ xcoff_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 	     follow its appropriate XTY_SD symbol.  The .set pseudo op can
 	     cause the XTY_LD to not follow the XTY_SD symbol. */
 	  {
-	    bool bad;
-
-	    bad = false;
-	    if (aux.x_csect.x_scnlen.u64
-		>= (size_t) (esym - (bfd_byte *) obj_coff_external_syms (abfd)))
-	      bad = true;
+	    bool bad = (aux.x_csect.x_scnlen.u64
+			>= ((esym - (bfd_byte *) obj_coff_external_syms (abfd))
+			    / symesz));
 	    if (! bad)
 	      {
 		section = xcoff_data (abfd)->csects[aux.x_csect.x_scnlen.u64];
@@ -2279,6 +2276,7 @@ xcoff_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 		 functions imported from dynamic objects.  */
 	      if (info->output_bfd->xvec == abfd->xvec
 		  && *rel_csect != bfd_und_section_ptr
+		  && (unsigned long) rel->r_symndx < obj_raw_syment_count (abfd)
 		  && obj_xcoff_sym_hashes (abfd)[rel->r_symndx] != NULL)
 		{
 		  struct xcoff_link_hash_entry *h;

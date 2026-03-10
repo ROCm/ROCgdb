@@ -384,9 +384,10 @@ gdbpy_create_ptid_object (ptid_t ptid)
     return nullptr;
 
   /* Note that these steal references, hence the use of 'release'.  */
-  PyTuple_SET_ITEM (ret.get (), 0, pid_obj.release ());
-  PyTuple_SET_ITEM (ret.get (), 1, lwp_obj.release ());
-  PyTuple_SET_ITEM (ret.get (), 2, tid_obj.release ());
+  if (PyTuple_SetItem (ret.get (), 0, pid_obj.release ()) < 0
+      || PyTuple_SetItem (ret.get (), 1, lwp_obj.release ()) < 0
+      || PyTuple_SetItem (ret.get (), 2, tid_obj.release ()) < 0)
+    return nullptr;
 
   return ret;
 }

@@ -67,7 +67,7 @@ proc do_test {cu_lang gdb_lang} {
 }
 
 proc do_test_with_prefix {cu_lang gdb_lang} {
-    with_test_prefix $gdb_lang {
+    with_test_prefix $cu_lang {
 	do_test $cu_lang $gdb_lang
     }
 }
@@ -77,3 +77,6 @@ proc do_test_with_prefix {cu_lang gdb_lang} {
 # fallback.
 do_test_with_prefix DW_LANG_C "c"
 do_test_with_prefix DW_LANG_C_plus_plus "c\\+\\+"
+
+# Check the HIP language.
+do_test_with_prefix DW_LANG_HIP "hip"

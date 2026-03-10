@@ -2634,8 +2634,8 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 {
   unsigned int vsew_value = 0, vlmul_value = 0;
   unsigned int vta_value = 0, vma_value = 0;
-  bfd_boolean vsew_found = FALSE, vlmul_found = FALSE;
-  bfd_boolean vta_found = FALSE, vma_found = FALSE;
+  bool vsew_found = false, vlmul_found = false;
+  bool vta_found = false, vma_found = false;
 
   if (arg_lookup (&str, riscv_vsew, ARRAY_SIZE (riscv_vsew), &vsew_value))
     {
@@ -2643,7 +2643,7 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vsew_found)
 	as_bad (_("multiple vsew constants"));
-      vsew_found = TRUE;
+      vsew_found = true;
     }
   if (arg_lookup (&str, riscv_vlmul, ARRAY_SIZE (riscv_vlmul), &vlmul_value))
     {
@@ -2651,7 +2651,7 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vlmul_found)
 	as_bad (_("multiple vlmul constants"));
-      vlmul_found = TRUE;
+      vlmul_found = true;
     }
   if (arg_lookup (&str, riscv_vta, ARRAY_SIZE (riscv_vta), &vta_value))
     {
@@ -2659,7 +2659,7 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vta_found)
 	as_bad (_("multiple vta constants"));
-      vta_found = TRUE;
+      vta_found = true;
     }
   if (arg_lookup (&str, riscv_vma, ARRAY_SIZE (riscv_vma), &vma_value))
     {
@@ -2667,7 +2667,7 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vma_found)
 	as_bad (_("multiple vma constants"));
-      vma_found = TRUE;
+      vma_found = true;
     }
 
   if (vsew_found || vlmul_found || vta_found || vma_found)
@@ -2694,7 +2694,7 @@ static void
 my_getThVsetvliExpression (expressionS *ep, char *str)
 {
   unsigned int vsew_value = 0, vlen_value = 0, vediv_value = 0;
-  bfd_boolean vsew_found = FALSE, vlen_found = FALSE, vediv_found = FALSE;
+  bool vsew_found = false, vlen_found = false, vediv_found = false;
 
   if (arg_lookup (&str, riscv_vsew, ARRAY_SIZE (riscv_vsew),
 		  &vsew_value))
@@ -2703,7 +2703,7 @@ my_getThVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vsew_found)
 	as_bad (_("multiple vsew constants"));
-      vsew_found = TRUE;
+      vsew_found = true;
     }
 
   if (arg_lookup (&str, riscv_th_vlen, ARRAY_SIZE (riscv_th_vlen),
@@ -2713,7 +2713,7 @@ my_getThVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vlen_found)
 	as_bad (_("multiple vlen constants"));
-      vlen_found = TRUE;
+      vlen_found = true;
     }
   if (arg_lookup (&str, riscv_th_vediv, ARRAY_SIZE (riscv_th_vediv),
 		  &vediv_value))
@@ -2722,7 +2722,7 @@ my_getThVsetvliExpression (expressionS *ep, char *str)
 	++str;
       if (vediv_found)
 	as_bad (_("multiple vediv constants"));
-      vediv_found = TRUE;
+      vediv_found = true;
     }
 
   if (vlen_found || vediv_found || vsew_found)
@@ -3338,7 +3338,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'b': /* vtypei for vsetivli */
 		  my_getVsetvliExpression (imm_expr, asarg);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (!VALID_RVV_VB_IMM (imm_expr->X_add_number))
 		    as_bad (_("bad value for vsetivli immediate field, "
 			      "value must be 0..1023"));
@@ -3350,7 +3350,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'c': /* vtypei for vsetvli */
 		  my_getVsetvliExpression (imm_expr, asarg);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (!VALID_RVV_VC_IMM (imm_expr->X_add_number))
 		    as_bad (_("bad value for vsetvli immediate field, "
 			      "value must be 0..2047"));
@@ -3362,7 +3362,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'i': /* vector arith signed immediate */
 		  my_getExpression (imm_expr, asarg, force_reloc);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (imm_expr->X_add_number > 15
 		      || imm_expr->X_add_number < -16)
 		    as_bad (_("bad value for vector immediate field, "
@@ -3374,7 +3374,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'j': /* vector arith unsigned immediate */
 		  my_getExpression (imm_expr, asarg, force_reloc);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (imm_expr->X_add_number < 0
 		      || imm_expr->X_add_number >= 32)
 		    as_bad (_("bad value for vector immediate field, "
@@ -3386,7 +3386,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'k': /* vector arith signed immediate, minus 1 */
 		  my_getExpression (imm_expr, asarg, force_reloc);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (imm_expr->X_add_number > 16
 		      || imm_expr->X_add_number < -15)
 		    as_bad (_("bad value for vector immediate field, "
@@ -3398,7 +3398,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		case 'l': /* 6-bit vector arith unsigned immediate */
 		  my_getExpression (imm_expr, asarg, force_reloc);
-		  check_absolute_expr (ip, imm_expr, FALSE);
+		  check_absolute_expr (ip, imm_expr, false);
 		  if (imm_expr->X_add_number < 0
 		      || imm_expr->X_add_number >= 64)
 		    as_bad (_("bad value for vector immediate field, "
@@ -3804,7 +3804,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 	    case 'y': /* bs immediate */
 	      my_getExpression (imm_expr, asarg, force_reloc);
-	      check_absolute_expr (ip, imm_expr, FALSE);
+	      check_absolute_expr (ip, imm_expr, false);
 	      if ((unsigned long)imm_expr->X_add_number > 3)
 		as_bad(_("Improper bs immediate (%lu)"),
 		       (unsigned long)imm_expr->X_add_number);
@@ -3815,7 +3815,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 	    case 'Y': /* rnum immediate */
 	      my_getExpression (imm_expr, asarg, force_reloc);
-	      check_absolute_expr (ip, imm_expr, FALSE);
+	      check_absolute_expr (ip, imm_expr, false);
 	      if ((unsigned long)imm_expr->X_add_number > 10)
 		as_bad(_("Improper rnum immediate (%lu)"),
 		       (unsigned long)imm_expr->X_add_number);
@@ -4006,7 +4006,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  goto unknown_riscv_ip_operand;
 
 			my_getThVsetvliExpression (imm_expr, asarg);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			if (!VALID_RVV_VC_IMM (imm_expr->X_add_number))
 			  as_bad (_("bad value for th.vsetvli immediate field, "
 				  "value must be 0..2047"));
@@ -4065,7 +4065,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    {
 		      case '2':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number<0
 			    || imm_expr->X_add_number>31)
@@ -4075,7 +4075,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  continue;
 		      case '3':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number < 0
 			    || imm_expr->X_add_number > 31)
@@ -4085,7 +4085,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			continue;
 		      case '4':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number < -16
 			    || imm_expr->X_add_number > 15)
@@ -4095,7 +4095,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			continue;
 		      case '5':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number < -32
 			    || imm_expr->X_add_number > 31)
@@ -4105,7 +4105,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			continue;
 		      case '6':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number < 0
 			    || imm_expr->X_add_number > 31)
@@ -4115,7 +4115,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			continue;
 		      case '7':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			if (imm_expr->X_add_number < 0
 			    || imm_expr->X_add_number > 3)
@@ -4125,7 +4125,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			continue;
 		      case '8':
 			my_getExpression (imm_expr, asarg, force_reloc);
-			check_absolute_expr (ip, imm_expr, FALSE);
+			check_absolute_expr (ip, imm_expr, false);
 			asarg = expr_parse_end;
 			++oparg;
 			if (imm_expr->X_add_number < 0
@@ -4206,7 +4206,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    {
 		    case '@': /* hint 0 - 31.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number > 31)
 			as_bad(_("Improper hint amount (%lu)"),
 			       (unsigned long)imm_expr->X_add_number);
@@ -4217,7 +4217,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    case '#': /* immediate 0 - 511.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number > 511)
 			as_bad(_("Improper immediate amount (%lu)"),
 			       (unsigned long)imm_expr->X_add_number);
@@ -4228,7 +4228,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    case '$': /* LDP offset 0 to (1<<7)-8.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number >= (1 << 7)
 			  || ((unsigned long)imm_expr->X_add_number & 0x7) != 0)
 			as_bad(_("Improper LDP offset amount (%lu)"),
@@ -4241,7 +4241,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    case '%': /* LWP offset 0 to (1<<7)-4.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number >= (1 << 7)
 			  || ((unsigned long)imm_expr->X_add_number & 0x3) != 0)
 			as_bad(_("Improper LWP offset amount (%lu)"),
@@ -4254,7 +4254,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    case '^': /* SDP offset 0 to (1<<7)-8.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number >= (1 << 7)
 			  || ((unsigned long)imm_expr->X_add_number & 0x7) != 0)
 			as_bad(_("Improper SDP offset amount (%lu)"),
@@ -4269,7 +4269,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    case '&': /* SWP offset 0 to (1<<7)-4.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, FALSE);
+		      check_absolute_expr (ip, imm_expr, false);
 		      if ((unsigned long)imm_expr->X_add_number >= (1 << 7)
 			  || ((unsigned long)imm_expr->X_add_number & 0x3) != 0)
 			as_bad(_("Improper SWP offset amount (%lu)"),
@@ -5782,7 +5782,8 @@ riscv_md_finish (void)
 void
 riscv_md_end (void)
 {
-  htab_delete (riscv_pcrel_hi_fixup_hash);
+  if (ENABLE_LEAK_CHECK)
+    htab_delete (riscv_pcrel_hi_fixup_hash);
 }
 
 /* Adjust the symbol table.  */

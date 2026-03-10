@@ -249,8 +249,9 @@ make_fielditem (struct type *type, int i, enum gdbpy_iter_kind kind)
 	gdbpy_ref<> item (PyTuple_New (2));
 	if (item == NULL)
 	  return NULL;
-	PyTuple_SET_ITEM (item.get (), 0, key.release ());
-	PyTuple_SET_ITEM (item.get (), 1, value.release ());
+	if (PyTuple_SetItem (item.get (), 0, key.release ()) < 0
+	    || PyTuple_SetItem (item.get (), 1, value.release ()) < 0)
+	  return nullptr;
 	return item;
       }
     case iter_keys:

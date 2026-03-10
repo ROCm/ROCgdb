@@ -174,7 +174,6 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   struct frame_id frame_id;
   PyObject *internal = NULL;
   int internal_bp = 0;
-  std::optional<CORE_ADDR> pc;
 
   if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|OO", keywords,
 					&frame_obj, &internal))
@@ -193,10 +192,19 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	  PyErr_SetString (PyExc_ValueError,
 			   _("Invalid ID for the `frame' object."));
 	}
+      else if (get_frame_type (frame) == INLINE_FRAME)
+	{
+	  PyErr_SetString
+	    (PyExc_ValueError,
+	     _("Unable to create FinishBreakpoint for inline frame."));
+	}
       else
 	{
 	  prev_frame = get_prev_frame (frame);
-	  if (prev_frame == 0)
+	  if (prev_frame != nullptr)
+	    prev_frame = skip_tailcall_frames (prev_frame);
+
+	  if (prev_frame == nullptr)
 	    {
 	      PyErr_SetString (PyExc_ValueError,
 			       _("\"FinishBreakpoint\" not "
@@ -248,9 +256,10 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   try
     {
-      if ((pc = get_frame_pc_if_available (frame)))
+      CORE_ADDR pc;
+      if (get_frame_address_in_block_if_available (frame, &pc))
 	{
-	  struct symbol *function = find_symbol_for_pc (*pc);
+	  struct symbol *function = find_symbol_for_pc (pc);
 	  if (function != nullptr)
 	    {
 	      struct type *ret_type =

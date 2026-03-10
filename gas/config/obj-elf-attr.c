@@ -129,7 +129,8 @@ oav1_attr_info_init (void)
 void
 oav1_attr_info_exit (void)
 {
-  oav1_attr_info_free (recorded_attributes);
+  if (ENABLE_LEAK_CHECK)
+    oav1_attr_info_free (recorded_attributes);
 }
 
 /* Record that we have seen an explicit specification of attribute TAG

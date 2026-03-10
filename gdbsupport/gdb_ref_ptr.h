@@ -48,7 +48,12 @@ namespace gdb
 template<typename T, typename Policy>
 class ref_ptr
 {
- public:
+public:
+
+  /* Befriend all instantiations of this template, so that the
+     templated copy constructors and assignment operators can access
+     the data.  */
+  template<typename X, typename Y> friend class ref_ptr;
 
   /* Create a new NULL instance.  */
   ref_ptr () noexcept
@@ -70,6 +75,15 @@ class ref_ptr
   }
 
   /* Copy another instance.  */
+  template<typename U,
+	   typename = std::is_convertible<U *, T*>>
+  ref_ptr (const ref_ptr<U, Policy> &other)
+    : m_obj (other.m_obj)
+  {
+    if (m_obj != NULL)
+      Policy::incref (m_obj);
+  }
+
   ref_ptr (const ref_ptr &other)
     : m_obj (other.m_obj)
   {
@@ -78,6 +92,14 @@ class ref_ptr
   }
 
   /* Transfer ownership from OTHER.  */
+  template<typename U,
+	   typename = std::is_convertible<U *, T*>>
+  ref_ptr (ref_ptr<U, Policy> &&other) noexcept
+    : m_obj (other.m_obj)
+  {
+    other.m_obj = NULL;
+  }
+
   ref_ptr (ref_ptr &&other) noexcept
     : m_obj (other.m_obj)
   {
@@ -92,6 +114,19 @@ class ref_ptr
   }
 
   /* Copy another instance.  */
+  template<typename U,
+	   typename = std::is_convertible<U *, T*>>
+  ref_ptr &operator= (const ref_ptr<U, Policy> &other)
+  {
+    /* Note that self-assignment is not checked here, as it isn't
+       possible: self-assignments will choose the non-template
+       function.  */
+    reset (other.m_obj);
+    if (m_obj != NULL)
+      Policy::incref (m_obj);
+    return *this;
+  }
+
   ref_ptr &operator= (const ref_ptr &other)
   {
     /* Do nothing on self-assignment.  */
@@ -105,6 +140,18 @@ class ref_ptr
   }
 
   /* Transfer ownership from OTHER.  */
+  template<typename U,
+	   typename = std::is_convertible<U *, T*>>
+  ref_ptr &operator= (ref_ptr<U, Policy> &&other)
+  {
+    /* Note that self-assignment is not checked here, as it isn't
+       possible: self-assignments will choose the non-template
+       function.  */
+    reset (other.m_obj);
+    other.m_obj = NULL;
+    return *this;
+  }
+
   ref_ptr &operator= (ref_ptr &&other)
   {
     /* Do nothing on self-assignment.  */
@@ -161,15 +208,15 @@ class ref_ptr
   T *m_obj;
 };
 
-template<typename T, typename Policy>
+template<typename T, typename U, typename Policy>
 inline bool operator== (const ref_ptr<T, Policy> &lhs,
-			const ref_ptr<T, Policy> &rhs)
+			const ref_ptr<U, Policy> &rhs)
 {
   return lhs.get () == rhs.get ();
 }
 
-template<typename T, typename Policy>
-inline bool operator== (const ref_ptr<T, Policy> &lhs, const T *rhs)
+template<typename T, typename U, typename Policy>
+inline bool operator== (const ref_ptr<T, Policy> &lhs, const U *rhs)
 {
   return lhs.get () == rhs;
 }
@@ -180,8 +227,8 @@ inline bool operator== (const ref_ptr<T, Policy> &lhs, const std::nullptr_t)
   return lhs.get () == nullptr;
 }
 
-template<typename T, typename Policy>
-inline bool operator== (const T *lhs, const ref_ptr<T, Policy> &rhs)
+template<typename T, typename U, typename Policy>
+inline bool operator== (const T *lhs, const ref_ptr<U, Policy> &rhs)
 {
   return lhs == rhs.get ();
 }
@@ -192,15 +239,15 @@ inline bool operator== (const std::nullptr_t, const ref_ptr<T, Policy> &rhs)
   return nullptr == rhs.get ();
 }
 
-template<typename T, typename Policy>
+template<typename T, typename U, typename Policy>
 inline bool operator!= (const ref_ptr<T, Policy> &lhs,
-			const ref_ptr<T, Policy> &rhs)
+			const ref_ptr<U, Policy> &rhs)
 {
   return lhs.get () != rhs.get ();
 }
 
-template<typename T, typename Policy>
-inline bool operator!= (const ref_ptr<T, Policy> &lhs, const T *rhs)
+template<typename T, typename U, typename Policy>
+inline bool operator!= (const ref_ptr<T, Policy> &lhs, const U *rhs)
 {
   return lhs.get () != rhs;
 }
@@ -211,8 +258,8 @@ inline bool operator!= (const ref_ptr<T, Policy> &lhs, const std::nullptr_t)
   return lhs.get () != nullptr;
 }
 
-template<typename T, typename Policy>
-inline bool operator!= (const T *lhs, const ref_ptr<T, Policy> &rhs)
+template<typename T, typename U, typename Policy>
+inline bool operator!= (const T *lhs, const ref_ptr<U, Policy> &rhs)
 {
   return lhs != rhs.get ();
 }

@@ -1,5 +1,4 @@
-.* may change behaviour for section .?\.bss.? from .*
-.* may change behaviour for section .?\.bss\.MY_BUF.? from .*
-.* discards section .?\.bss\.MY_BUF.? from .*
-.* unresolvable R_ARM_ABS32 relocation against symbol .?MY_BUF.?
-.* final link failed
+.*: warning: --enable-non-contiguous-regions may change behaviour for section `\.bss' from `.*non-contiguous-arm7\.o' \(assigned to \.bss, but additional match: \.bss_ram2\)
+.*: warning: --enable-non-contiguous-regions may change behaviour for section `\.bss\.MY_BUF' from `.*non-contiguous-arm7\.o' \(assigned to \.bss, but additional match: \.bss_ram2\)
+.*: error: --enable-non-contiguous-regions was not able to allocate the input section `\.bss\.MY_BUF' \(.*non-contiguous-arm7\.o\) to an output section
+.*: final link failed
