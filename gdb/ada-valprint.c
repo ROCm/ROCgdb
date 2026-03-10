@@ -39,10 +39,9 @@ static int print_field_values (struct value *, struct value *,
 
 /* Assuming TYPE is a simple array type, prints its lower bound on STREAM,
    if non-standard (i.e., other than 1 for numbers, other than lower bound
-   of index type for enumerated type).  Returns 1 if something printed,
-   otherwise 0.  */
+   of index type for enumerated type).  */
 
-static int
+static void
 print_optional_low_bound (struct ui_file *stream, struct type *type,
 			  const struct value_print_options *options)
 {
@@ -51,16 +50,16 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
   LONGEST high_bound;
 
   if (options->print_array_indexes)
-    return 0;
+    return;
 
   if (!get_array_bounds (type, &low_bound, &high_bound))
-    return 0;
+    return;
 
   /* If this is an empty array, then don't print the lower bound.
      That would be confusing, because we would print the lower bound,
      followed by... nothing!  */
   if (low_bound > high_bound)
-    return 0;
+    return;
 
   index_type = type->index_type ();
 
@@ -80,11 +79,11 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
     case TYPE_CODE_BOOL:
     case TYPE_CODE_CHAR:
       if (low_bound == 0)
-	return 0;
+	return;
       break;
     case TYPE_CODE_ENUM:
       if (low_bound == 0)
-	return 0;
+	return;
       low_bound = index_type->field (low_bound).loc_enumval ();
       break;
     case TYPE_CODE_UNDEF:
@@ -92,13 +91,12 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
       [[fallthrough]];
     default:
       if (low_bound == 1)
-	return 0;
+	return;
       break;
     }
 
   ada_print_scalar (index_type, low_bound, stream);
   gdb_printf (stream, " => ");
-  return 1;
 }
 
 /*  Version of val_print_array_elements for GNAT-style packed arrays.
