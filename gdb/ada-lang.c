@@ -6768,18 +6768,18 @@ ada_variant_discrim_name (struct type *type0)
 /* Scan STR for a subtype-encoded number, beginning at position K.
    Put the position of the character just past the number scanned in
    *NEW_K, if NEW_K!=NULL.  Put the scanned number in *R, if R!=NULL.
-   Return 1 if there was a valid number at the given position, and 0
+   Return true if there was a valid number at the given position, and false
    otherwise.  A "subtype-encoded" number consists of the absolute value
    in decimal, followed by the letter 'm' to indicate a negative number.
    Assumes 0m does not occur.  */
 
-int
+bool
 ada_scan_number (const char str[], int k, LONGEST * R, int *new_k)
 {
   ULONGEST RU;
 
   if (!c_isdigit (str[k]))
-    return 0;
+    return false;
 
   /* Do it the hard way so as not to make any assumption about
      the relationship of unsigned long (%lu scan format code) and
@@ -6808,7 +6808,7 @@ ada_scan_number (const char str[], int k, LONGEST * R, int *new_k)
 
   if (new_k != NULL)
     *new_k = k;
-  return 1;
+  return true;
 }
 
 /* Assuming that TYPE is a variant part wrapper type (a VARIANTS field),

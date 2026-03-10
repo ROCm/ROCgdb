@@ -230,7 +230,7 @@ extern block_symbol ada_lookup_encoded_symbol
 
 extern bound_minimal_symbol ada_lookup_simple_minsym (const char *, objfile *);
 
-extern int ada_scan_number (const char *, int, LONGEST *, int *);
+extern bool ada_scan_number (const char *, int, LONGEST *, int *);
 
 extern struct value *ada_value_primitive_field (struct value *arg1,
 						int offset,
