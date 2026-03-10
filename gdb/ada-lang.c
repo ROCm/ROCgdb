@@ -11906,7 +11906,7 @@ ada_exception_support_info_sniffer (void)
    intended to be used as advice as to what frames are uninteresting
    to most users.  */
 
-static int
+static bool
 is_known_support_routine (const frame_info_ptr &frame)
 {
   enum language func_lang;
@@ -11918,7 +11918,7 @@ is_known_support_routine (const frame_info_ptr &frame)
 
   symtab_and_line sal = find_frame_sal (frame);
   if (sal.symtab == NULL)
-    return 1;
+    return true;
 
   /* If there is a symtab, but the associated source file cannot be
      located, then assume this is not user code:  Selecting a frame
@@ -11928,7 +11928,7 @@ is_known_support_routine (const frame_info_ptr &frame)
 
   fullname = symtab_to_fullname (sal.symtab);
   if (access (fullname, R_OK) != 0)
-    return 1;
+    return true;
 
   /* Check the unit filename against the Ada runtime file naming.
      We also check the name of the objfile against the name of some
@@ -11939,10 +11939,10 @@ is_known_support_routine (const frame_info_ptr &frame)
     {
       re_comp (known_runtime_file_name_patterns[i]);
       if (re_exec (lbasename (sal.symtab->filename ())))
-	return 1;
+	return true;
       if (sal.symtab->compunit ()->objfile () != NULL
 	  && re_exec (objfile_name (sal.symtab->compunit ()->objfile ())))
-	return 1;
+	return true;
     }
 
   /* Check whether the function is a GNAT-generated entity.  */
@@ -11950,16 +11950,16 @@ is_known_support_routine (const frame_info_ptr &frame)
   gdb::unique_xmalloc_ptr<char> func_name
     = find_frame_funname (frame, &func_lang, NULL);
   if (func_name == NULL)
-    return 1;
+    return true;
 
   for (i = 0; known_auxiliary_function_name_patterns[i] != NULL; i += 1)
     {
       re_comp (known_auxiliary_function_name_patterns[i]);
       if (re_exec (func_name.get ()))
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Find the first frame that contains debugging information and that is not
