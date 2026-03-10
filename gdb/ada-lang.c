@@ -166,8 +166,8 @@ static struct value *val_atr (struct type *, LONGEST);
 static struct value *ada_search_struct_field (const char *, struct value *, int,
 					      struct type *);
 
-static int find_struct_field (const char *, struct type *, int,
-			      struct type **, int *, int *, int *, LONGEST *);
+static bool find_struct_field (const char *, struct type *, int,
+			       struct type **, int *, int *, int *, LONGEST *);
 
 static int ada_resolve_function (std::vector<struct block_symbol> &,
 				 struct value **, int, const char *,
@@ -6953,9 +6953,9 @@ ada_value_primitive_field (struct value *arg1, int offset, int fieldno,
    guaranty anything, and pick the one that's easiest for us
    to program.
 
-   Returns 1 if found, 0 otherwise.  */
+   Returns true if found, false otherwise.  */
 
-static int
+static bool
 find_struct_field (const char *name, struct type *type, int offset,
 		   struct type **field_type_p,
 		   int *byte_offset_p, int *bit_offset_p, int *bit_size_p,
@@ -7018,14 +7018,14 @@ find_struct_field (const char *name, struct type *type, int offset,
 	    *bit_offset_p = bit_pos % 8;
 	  if (bit_size_p != NULL)
 	    *bit_size_p = bit_size;
-	  return 1;
+	  return true;
 	}
       else if (ada_is_wrapper_field (type, i))
 	{
 	  if (find_struct_field (name, type->field (i).type (), fld_offset,
 				 field_type_p, byte_offset_p, bit_offset_p,
 				 bit_size_p, index_p))
-	    return 1;
+	    return true;
 	}
       else if (ada_is_variant_part (type, i))
 	{
@@ -7042,7 +7042,7 @@ find_struct_field (const char *name, struct type *type, int offset,
 				     + field_type->field (j).loc_bitpos () / 8,
 				     field_type_p, byte_offset_p,
 				     bit_offset_p, bit_size_p, index_p))
-		return 1;
+		return true;
 	    }
 	}
       else if (index_p != NULL)
@@ -7065,10 +7065,10 @@ find_struct_field (const char *name, struct type *type, int offset,
       if (find_struct_field (name, type->field (parent_offset).type (),
 			     fld_offset, field_type_p, byte_offset_p,
 			     bit_offset_p, bit_size_p, index_p))
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Number of user-visible fields in record type TYPE.  */
