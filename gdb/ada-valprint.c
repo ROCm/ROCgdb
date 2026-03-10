@@ -30,10 +30,10 @@
 #include "cli/cli-style.h"
 #include "gdbarch.h"
 
-static int print_field_values (struct value *, struct value *,
-			       struct ui_file *, int,
-			       const struct value_print_options *,
-			       int, const struct language_defn *);
+static bool print_field_values (struct value *, struct value *,
+				struct ui_file *, int,
+				const struct value_print_options *,
+				bool, const struct language_defn *);
 
 
 
@@ -394,12 +394,12 @@ ada_print_scalar (struct type *type, LONGEST val, struct ui_file *stream)
     }
 }
 
-static int
+static bool
 print_variant_part (struct value *value, int field_num,
 		    struct value *outer_value,
 		    struct ui_file *stream, int recurse,
 		    const struct value_print_options *options,
-		    int comma_needed,
+		    bool comma_needed,
 		    const struct language_defn *language)
 {
   struct type *type = value->type ();
@@ -407,7 +407,7 @@ print_variant_part (struct value *value, int field_num,
   int which = ada_which_variant_applies (var_type, outer_value);
 
   if (which < 0)
-    return 0;
+    return false;
 
   struct value *variant_field = value->field (field_num);
   struct value *active_component = variant_field->field (which);
@@ -423,17 +423,17 @@ print_variant_part (struct value *value, int field_num,
    OUTER_VALUE gives the enclosing record (used to get discriminant
    values when printing variant parts).
 
-   COMMA_NEEDED is 1 if fields have been printed at the current recursion
+   COMMA_NEEDED is true if fields have been printed at the current recursion
    level, so that a comma is needed before any field printed by this
    call.
 
-   Returns 1 if COMMA_NEEDED or any fields were printed.  */
+   Returns true if COMMA_NEEDED or any fields were printed.  */
 
-static int
+static bool
 print_field_values (struct value *value, struct value *outer_value,
 		    struct ui_file *stream, int recurse,
 		    const struct value_print_options *options,
-		    int comma_needed,
+		    bool comma_needed,
 		    const struct language_defn *language)
 {
   int i, len;
@@ -466,7 +466,7 @@ print_field_values (struct value *value, struct value *outer_value,
 
       if (comma_needed)
 	gdb_printf (stream, ", ");
-      comma_needed = 1;
+      comma_needed = true;
 
       if (options->prettyformat)
 	{
@@ -719,7 +719,7 @@ ada_val_print_struct_union (struct value *value,
   gdb_printf (stream, "(");
 
   if (print_field_values (value, value, stream, recurse, options,
-			  0, language_def (language_ada)) != 0
+			  false, language_def (language_ada))
       && options->prettyformat)
     {
       gdb_printf (stream, "\n");
