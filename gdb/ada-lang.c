@@ -117,7 +117,7 @@ static bool possible_user_operator_p (enum exp_opcode, struct value **);
 static const char *ada_decoded_op_name (enum exp_opcode);
 
 static struct type *ada_lookup_struct_elt_type (struct type *, const char *,
-						int, int);
+						bool, bool);
 
 static struct type *ada_find_parallel_type_with_name (struct type *,
 						      const char *);
@@ -4522,9 +4522,9 @@ ada_value_struct_elt (struct value *arg, const char *name, int no_err)
 	 The latter should be shown as usual (as a pointer), whereas
 	 a reference should mostly be transparent to the user.  */
 
-      if (ada_is_tagged_type (t1, 0)
+      if (ada_is_tagged_type (t1, false)
 	  || (t1->code () == TYPE_CODE_REF
-	      && ada_is_tagged_type (t1->target_type (), 0)))
+	      && ada_is_tagged_type (t1->target_type (), false)))
 	{
 	  /* We first try to find the searched field in the current type.
 	     If not found then let's look in the fixed type.  */
@@ -6273,7 +6273,7 @@ ada_is_ignored_field (struct type *type, int field_num)
 
   /* If this is the dispatch table of a tagged type or an interface tag,
      then ignore.  */
-  if (ada_is_tagged_type (type, 1)
+  if (ada_is_tagged_type (type, true)
       && (ada_is_dispatch_table_ptr_type (type->field (field_num).type ())
 	  || ada_is_interface_tag (type->field (field_num).type ())))
     return true;
@@ -6285,10 +6285,10 @@ ada_is_ignored_field (struct type *type, int field_num)
 /* True iff TYPE has a tag field.  If REFOK, then TYPE may also be a
    pointer or reference type whose ultimate target has a tag field.  */
 
-int
-ada_is_tagged_type (struct type *type, int refok)
+bool
+ada_is_tagged_type (struct type *type, bool refok)
 {
-  return (ada_lookup_struct_elt_type (type, "_tag", refok, 1) != NULL);
+  return ada_lookup_struct_elt_type (type, "_tag", refok, true) != nullptr;
 }
 
 /* True iff TYPE represents the type of X'Tag */
@@ -6314,7 +6314,7 @@ ada_is_tag_type (struct type *type)
 static struct type *
 ada_tag_type (struct value *val)
 {
-  return ada_lookup_struct_elt_type (val->type (), "_tag", 1, 0);
+  return ada_lookup_struct_elt_type (val->type (), "_tag", true, false);
 }
 
 /* Return 1 if TAG follows the old scheme for Ada tags (used for Ada 95,
@@ -6701,7 +6701,7 @@ ada_variant_discrim_type (struct type *var_type, struct type *outer_type)
 {
   const char *name = ada_variant_discrim_name (var_type);
 
-  return ada_lookup_struct_elt_type (outer_type, name, 1, 1);
+  return ada_lookup_struct_elt_type (outer_type, name, true, true);
 }
 
 /* Assuming that TYPE is the type of a variant wrapper, and FIELD_NUM is a
@@ -7252,12 +7252,12 @@ type_as_string (struct type *type)
    In the case of homonyms in the tagged types, please refer to the
    long explanation in find_struct_field's function documentation.
 
-   If NOERR is nonzero, return NULL if NAME is not suitably defined or
+   If NOERR is true, return NULL if NAME is not suitably defined or
    TYPE is not a type of the right kind.  */
 
 static struct type *
-ada_lookup_struct_elt_type (struct type *type, const char *name, int refok,
-			    int noerr)
+ada_lookup_struct_elt_type (struct type *type, const char *name, bool refok,
+			    bool noerr)
 {
   if (name == NULL)
     goto BadName;
@@ -7312,7 +7312,8 @@ is_unchecked_variant (struct type *var_type, struct type *outer_type)
 {
   const char *discrim_name = ada_variant_discrim_name (var_type);
 
-  return (ada_lookup_struct_elt_type (outer_type, discrim_name, 0, 1) == NULL);
+  return (ada_lookup_struct_elt_type (outer_type, discrim_name, false, true)
+	  == nullptr);
 }
 
 
@@ -7395,7 +7396,7 @@ ada_value_ind (struct value *val0)
 {
   struct value *val = value_ind (val0);
 
-  if (ada_is_tagged_type (val->type (), 0))
+  if (ada_is_tagged_type (val->type (), false))
     val = ada_tag_value_at_base_address (val);
 
   return ada_to_fixed_value (val);
@@ -7413,7 +7414,7 @@ ada_coerce_ref (struct value *val0)
 
       val = coerce_ref (val);
 
-      if (ada_is_tagged_type (val->type (), 0))
+      if (ada_is_tagged_type (val->type (), false))
 	val = ada_tag_value_at_base_address (val);
 
       return ada_to_fixed_value (val);
@@ -8441,7 +8442,8 @@ ada_to_fixed_type_1 (struct type *type, const gdb_byte *valaddr,
 	   and the way the location of _tag is expressed may depend on
 	   them).  */
 
-	if (check_tag && address != 0 && ada_is_tagged_type (static_type, 0))
+	if (check_tag && address != 0 && ada_is_tagged_type (static_type,
+							     false))
 	  {
 	    struct value *tag =
 	      value_tag_from_contents_and_address
@@ -10980,9 +10982,9 @@ ada_var_value_operation::evaluate (struct type *expect_type,
 	 we have to be careful to exclude pointers to tagged types.
 	 The latter should be shown as usual (as a pointer), whereas
 	 a reference should mostly be transparent to the user.  */
-      if (ada_is_tagged_type (type, 0)
+      if (ada_is_tagged_type (type, false)
 	  || (type->code () == TYPE_CODE_REF
-	      && ada_is_tagged_type (type->target_type (), 0)))
+	      && ada_is_tagged_type (type->target_type (), false)))
 	{
 	  /* Tagged types are a little special in the fact that the real
 	     type is dynamic and can only be determined by inspecting the
@@ -11085,9 +11087,9 @@ ada_var_value_operation::do_generate_ax (struct expression *exp,
 	   sym->print_name ());
 
   struct type *type = static_unwrap_type (sym->type ());
-  if (ada_is_tagged_type (type, 0)
+  if (ada_is_tagged_type (type, false)
       || (type->code () == TYPE_CODE_REF
-	  && ada_is_tagged_type (type->target_type (), 0)))
+	  && ada_is_tagged_type (type->target_type (), false)))
     error (_("Tagged types cannot be handled in agent expressions"));
 
   if ((type->code () == TYPE_CODE_STRUCT
@@ -11138,7 +11140,7 @@ ada_unop_ind_operation::evaluate (struct type *expect_type,
 
 	  if ((type->code () == TYPE_CODE_REF
 	       || type->code () == TYPE_CODE_PTR)
-	      && ada_is_tagged_type (type->target_type (), 0))
+	      && ada_is_tagged_type (type->target_type (), false))
 	    {
 	      arg1 = std::get<0> (m_storage)->evaluate (nullptr, exp,
 							EVAL_NORMAL);
@@ -11203,9 +11205,9 @@ ada_structop_operation::evaluate (struct type *expect_type,
       struct type *type;
       struct type *type1 = arg1->type ();
 
-      if (ada_is_tagged_type (type1, 1))
+      if (ada_is_tagged_type (type1, true))
 	{
-	  type = ada_lookup_struct_elt_type (type1, str, 1, 1);
+	  type = ada_lookup_struct_elt_type (type1, str, true, true);
 
 	  /* If the field is not found, check if it exists in the
 	     extension of this object's type. This means that we
@@ -11221,7 +11223,7 @@ ada_structop_operation::evaluate (struct type *expect_type,
 	    }
 	}
       else
-	type = ada_lookup_struct_elt_type (type1, str, 1, 0);
+	type = ada_lookup_struct_elt_type (type1, str, true, false);
 
       return value::zero (ada_aligned_type (type), lval_memory);
     }

@@ -256,7 +256,7 @@ extern bool ada_is_character_type (struct type *);
 
 extern bool ada_is_string_type (struct type *);
 
-extern int ada_is_tagged_type (struct type *, int);
+extern bool ada_is_tagged_type (struct type *, bool);
 
 extern int ada_is_tag_type (struct type *);
 

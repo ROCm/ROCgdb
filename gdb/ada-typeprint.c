@@ -819,7 +819,7 @@ print_record_type (struct type *type0, struct ui_file *stream, int show,
 	parent_name = ada_type_name (parent_type);
       gdb_printf (stream, "new %s with record", parent_name);
     }
-  else if (parent_type == NULL && ada_is_tagged_type (type, 0))
+  else if (parent_type == NULL && ada_is_tagged_type (type, false))
     gdb_printf (stream, "tagged record");
   else
     gdb_printf (stream, "record");
