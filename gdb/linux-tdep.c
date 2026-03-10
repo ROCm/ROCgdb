@@ -270,7 +270,7 @@ linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
 				    linux_siginfo_extra_fields extra_fields)
 {
   struct linux_gdbarch_data *linux_gdbarch_data;
-  struct type *int_type, *uint_type, *long_type, *void_ptr_type, *short_type;
+  struct type *void_ptr_type;
   struct type *uid_type, *pid_type;
   struct type *sigval_type, *clock_type;
   struct type *siginfo_type, *sifields_type;
@@ -282,14 +282,12 @@ linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
 
   type_allocator alloc (gdbarch);
 
-  int_type = init_integer_type (alloc, gdbarch_int_bit (gdbarch),
-				0, "int");
-  uint_type = init_integer_type (alloc, gdbarch_int_bit (gdbarch),
-				 1, "unsigned int");
-  long_type = init_integer_type (alloc, gdbarch_long_bit (gdbarch),
-				 0, "long");
-  short_type = init_integer_type (alloc, gdbarch_long_bit (gdbarch),
-				 0, "short");
+  const struct builtin_type *builtin_types = builtin_type (gdbarch);
+  struct type *int_type = builtin_types->builtin_int;
+  struct type *uint_type = builtin_types->builtin_unsigned_int;
+  struct type *long_type = builtin_types->builtin_long;
+  struct type *short_type = builtin_types->builtin_short;
+
   void_ptr_type = lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
 
   /* sival_t */
@@ -1671,9 +1669,7 @@ linux_make_mappings_corefile_notes (struct gdbarch *gdbarch, bfd *obfd,
 				    gdb::unique_xmalloc_ptr<char> &note_data,
 				    int *note_size)
 {
-  type_allocator alloc (gdbarch);
-  struct type *long_type
-    = init_integer_type (alloc, gdbarch_long_bit (gdbarch), 0, "long");
+  struct type *long_type = builtin_type (gdbarch)->builtin_long;
   gdb_byte buf[sizeof (ULONGEST)];
   auto_obstack data_obstack, filename_obstack;
   ULONGEST file_count = 0;
