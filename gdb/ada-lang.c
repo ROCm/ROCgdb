@@ -11442,10 +11442,10 @@ ada_is_system_address_type (struct type *type)
 /* Scan STR beginning at position K for a discriminant name, and
    return the value of that discriminant field of DVAL in *PX.  If
    PNEW_K is not null, put the position of the character beyond the
-   name scanned in *PNEW_K.  Return 1 if successful; return 0 and do
+   name scanned in *PNEW_K.  Return true if successful; return false and do
    not alter *PX and *PNEW_K if unsuccessful.  */
 
-static int
+static bool
 scan_discrim_bound (const char *str, int k, struct value *dval, LONGEST * px,
 		    int *pnew_k)
 {
@@ -11454,7 +11454,7 @@ scan_discrim_bound (const char *str, int k, struct value *dval, LONGEST * px,
   struct value *bound_val;
 
   if (dval == NULL || str == NULL || str[k] == '\0')
-    return 0;
+    return false;
 
   pstart = str + k;
   pend = strstr (pstart, "__");
@@ -11475,12 +11475,12 @@ scan_discrim_bound (const char *str, int k, struct value *dval, LONGEST * px,
 
   bound_val = ada_search_struct_field (bound, dval, 0, dval->type ());
   if (bound_val == NULL)
-    return 0;
+    return false;
 
   *px = value_as_long (bound_val);
   if (pnew_k != NULL)
     *pnew_k = k;
-  return 1;
+  return true;
 }
 
 /* Value of variable named NAME.  Only exact matches are considered.
