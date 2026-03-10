@@ -306,7 +306,7 @@ extern struct type *ada_find_parallel_type (struct type *,
 
 extern bool get_int_var_value (const char *, LONGEST &value);
 
-extern int ada_prefer_type (struct type *, struct type *);
+extern bool ada_prefer_type (struct type *, struct type *);
 
 extern struct type *ada_get_base_type (struct type *);
 

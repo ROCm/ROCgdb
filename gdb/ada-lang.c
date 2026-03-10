@@ -7493,27 +7493,27 @@ ada_is_renaming_symbol (struct symbol *name_sym)
 
 /* Because of GNAT encoding conventions, several GDB symbols may match a
    given type name.  If the type denoted by TYPE0 is to be preferred to
-   that of TYPE1 for purposes of type printing, return non-zero;
-   otherwise return 0.  */
+   that of TYPE1 for purposes of type printing, return true;
+   otherwise return false.  */
 
-int
+bool
 ada_prefer_type (struct type *type0, struct type *type1)
 {
   if (type1 == NULL)
-    return 1;
+    return true;
   else if (type0 == NULL)
-    return 0;
+    return false;
   else if (type1->code () == TYPE_CODE_VOID)
-    return 1;
+    return true;
   else if (type0->code () == TYPE_CODE_VOID)
-    return 0;
+    return false;
   else if (type1->name () == NULL && type0->name () != NULL)
-    return 1;
+    return true;
   else if (ada_is_constrained_packed_array_type (type0))
-    return 1;
+    return true;
   else if (ada_is_array_descriptor_type (type0)
 	   && !ada_is_array_descriptor_type (type1))
-    return 1;
+    return true;
   else
     {
       const char *type0_name = type0->name ();
@@ -7521,9 +7521,9 @@ ada_prefer_type (struct type *type0, struct type *type1)
 
       if (type0_name != NULL && strstr (type0_name, "___XR") != NULL
 	  && (type1_name == NULL || strstr (type1_name, "___XR") == NULL))
-	return 1;
+	return true;
     }
-  return 0;
+  return false;
 }
 
 /* The name of TYPE, which is its TYPE_NAME.  Null if TYPE is
