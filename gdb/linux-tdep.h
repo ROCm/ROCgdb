@@ -59,11 +59,6 @@ struct type *linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
    memory tagging protection.  */
 bool linux_address_in_memtag_page (CORE_ADDR address);
 
-typedef char *(*linux_collect_thread_registers_ftype) (const struct regcache *,
-						       ptid_t,
-						       bfd *, char *, int *,
-						       enum gdb_signal);
-
 extern enum gdb_signal linux_gdb_signal_from_target (struct gdbarch *gdbarch,
 						     int signal);
 
