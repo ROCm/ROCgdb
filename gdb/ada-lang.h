@@ -239,7 +239,7 @@ extern struct value *ada_value_primitive_field (struct value *arg1,
 
 extern struct type *ada_parent_type (struct type *);
 
-extern int ada_is_ignored_field (struct type *, int);
+extern bool ada_is_ignored_field (struct type *, int);
 
 /* True iff TYPE represents a standard GNAT constrained
    packed-array type.  */
