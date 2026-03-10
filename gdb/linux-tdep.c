@@ -1637,15 +1637,12 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
   for (const struct smaps_data &map : smaps)
     {
       /* Invoke the callback function to create the corefile segment.  */
-      if (should_dump_mapping_p (filterflags, map))
-	{
-	  func (map.start_address, map.end_address - map.start_address,
-		map.offset, map.read, map.write, map.exec,
-		true, /* MODIFIED is true because we want to dump
-		      the mapping.  */
-		map.vmflags.memory_tagging != 0,
-		map.filename, obfd);
-	}
+      if (should_dump_mapping_p (filterflags, map)
+	  && !func (map.start_address, map.end_address - map.start_address,
+		    map.offset, map.read, map.write, map.exec,
+		    /* MODIFIED is true because we want to dump the mapping.  */
+		    true, map.vmflags.memory_tagging != 0, map.filename, obfd))
+	return false;
     }
 
   return true;
