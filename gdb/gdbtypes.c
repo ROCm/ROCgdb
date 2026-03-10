@@ -1982,21 +1982,21 @@ is_dynamic_type_internal (struct type *type, bool top_level)
     case TYPE_CODE_STRUCT:
     case TYPE_CODE_UNION:
       {
-	int i;
-
 	bool is_cplus = HAVE_CPLUS_STRUCT (type);
 
-	for (i = 0; i < type->num_fields (); ++i)
+	for (int i = 0; i < type->num_fields (); ++i)
 	  {
+	    struct field &f = type->field (i);
+
 	    /* Static fields can be ignored here.  */
-	    if (type->field (i).is_static ())
+	    if (f.is_static ())
 	      continue;
 	    /* If the field has dynamic type, then so does TYPE.  */
-	    if (is_dynamic_type_internal (type->field (i).type (), false))
+	    if (is_dynamic_type_internal (f.type (), false))
 	      return true;
 	    /* If the field is at a fixed offset, then it is not
 	       dynamic.  */
-	    if (!type->field (i).loc_is_dwarf_block ())
+	    if (!f.loc_is_dwarf_block ())
 	      continue;
 	    /* Do not consider C++ virtual base types to be dynamic
 	       due to the field's offset being dynamic; these are
