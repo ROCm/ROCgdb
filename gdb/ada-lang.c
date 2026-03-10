@@ -6812,10 +6812,10 @@ ada_scan_number (const char str[], int k, LONGEST * R, int *new_k)
 }
 
 /* Assuming that TYPE is a variant part wrapper type (a VARIANTS field),
-   and FIELD_NUM is a valid field number within it, returns 1 iff VAL is
-   in the range encoded by field FIELD_NUM of TYPE; otherwise 0.  */
+   and FIELD_NUM is a valid field number within it, returns true iff VAL is
+   in the range encoded by field FIELD_NUM of TYPE; otherwise false.  */
 
-static int
+static bool
 ada_in_variant (LONGEST val, struct type *type, int field_num)
 {
   const char *name = type->field (field_num).name ();
@@ -6827,15 +6827,15 @@ ada_in_variant (LONGEST val, struct type *type, int field_num)
       switch (name[p])
 	{
 	case '\0':
-	  return 0;
+	  return false;
 	case 'S':
 	  {
 	    LONGEST W;
 
 	    if (!ada_scan_number (name, p + 1, &W, &p))
-	      return 0;
+	      return false;
 	    if (val == W)
-	      return 1;
+	      return true;
 	    break;
 	  }
 	case 'R':
@@ -6844,15 +6844,15 @@ ada_in_variant (LONGEST val, struct type *type, int field_num)
 
 	    if (!ada_scan_number (name, p + 1, &L, &p)
 		|| name[p] != 'T' || !ada_scan_number (name, p + 1, &U, &p))
-	      return 0;
+	      return false;
 	    if (val >= L && val <= U)
-	      return 1;
+	      return true;
 	    break;
 	  }
 	case 'O':
-	  return 1;
+	  return true;
 	default:
-	  return 0;
+	  return false;
 	}
     }
 }
