@@ -8179,11 +8179,11 @@ to_fixed_variant_branch_type (struct type *var_type0, const gdb_byte *valaddr,
     return var_type->field (which).type ();
 }
 
-/* Assuming RANGE_TYPE is a TYPE_CODE_RANGE, return nonzero if
+/* Assuming RANGE_TYPE is a TYPE_CODE_RANGE, return true if
    ENCODING_TYPE, a type following the GNAT conventions for discrete
    type encodings, only carries redundant information.  */
 
-static int
+static bool
 ada_is_redundant_range_encoding (struct type *range_type,
 				 struct type *encoding_type)
 {
@@ -8201,39 +8201,39 @@ ada_is_redundant_range_encoding (struct type *range_type,
 	 expecting us to get the real base type from the encoding
 	 anyway.  In this situation, the encoding cannot be ignored
 	 as redundant.  */
-      return 0;
+      return false;
     }
 
   if (is_dynamic_type (range_type))
-    return 0;
+    return false;
 
   if (encoding_type->name () == NULL)
-    return 0;
+    return false;
 
   bounds_str = strstr (encoding_type->name (), "___XDLU_");
   if (bounds_str == NULL)
-    return 0;
+    return false;
 
   n = 8; /* Skip "___XDLU_".  */
   if (!ada_scan_number (bounds_str, n, &lo, &n))
-    return 0;
+    return false;
   if (range_type->bounds ()->low.const_val () != lo)
-    return 0;
+    return false;
 
   n += 2; /* Skip the "__" separator between the two bounds.  */
   if (!ada_scan_number (bounds_str, n, &hi, &n))
-    return 0;
+    return false;
   if (range_type->bounds ()->high.const_val () != hi)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
-/* Given the array type ARRAY_TYPE, return nonzero if DESC_TYPE,
+/* Given the array type ARRAY_TYPE, return true if DESC_TYPE,
    a type following the GNAT encoding for describing array type
    indices, only carries redundant information.  */
 
-static int
+static bool
 ada_is_redundant_index_type_desc (struct type *array_type,
 				  struct type *desc_type)
 {
@@ -8243,11 +8243,11 @@ ada_is_redundant_index_type_desc (struct type *array_type,
     {
       if (!ada_is_redundant_range_encoding (this_layer->index_type (),
 					    field.type ()))
-	return 0;
+	return false;
       this_layer = check_typedef (this_layer->target_type ());
     }
 
-  return 1;
+  return true;
 }
 
 /* Assuming that TYPE0 is an array type describing the type of a value
