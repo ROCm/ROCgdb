@@ -6293,13 +6293,13 @@ ada_is_tagged_type (struct type *type, bool refok)
 
 /* True iff TYPE represents the type of X'Tag */
 
-int
+bool
 ada_is_tag_type (struct type *type)
 {
   type = ada_check_typedef (type);
 
   if (type == NULL || type->code () != TYPE_CODE_PTR)
-    return 0;
+    return false;
   else
     {
       const char *name = ada_type_name (type->target_type ());
@@ -6317,10 +6317,10 @@ ada_tag_type (struct value *val)
   return ada_lookup_struct_elt_type (val->type (), "_tag", true, false);
 }
 
-/* Return 1 if TAG follows the old scheme for Ada tags (used for Ada 95,
+/* Return true if TAG follows the old scheme for Ada tags (used for Ada 95,
    retired at Ada 05).  */
 
-static int
+static bool
 is_ada95_tag (struct value *tag)
 {
   return ada_value_struct_elt (tag, "tsd", 1) != NULL;
@@ -6633,7 +6633,7 @@ ada_parent_type (struct type *type)
    parent-type (inherited) fields of a derived type.  Assumes TYPE is
    a structure type with at least FIELD_NUM+1 fields.  */
 
-int
+bool
 ada_is_parent_field (struct type *type, int field_num)
 {
   const char *name = ada_check_typedef (type)->field (field_num).name ();
@@ -6649,7 +6649,7 @@ ada_is_parent_field (struct type *type, int field_num)
    structure type with at least FIELD_NUM+1 fields.  Such fields are always
    structures.  */
 
-int
+bool
 ada_is_wrapper_field (struct type *type, int field_num)
 {
   const char *name = type->field (field_num).name ();
@@ -6662,7 +6662,7 @@ ada_is_wrapper_field (struct type *type, int field_num)
 	 value is in a field called RETVAL, and where the other "out"
 	 or "in out" parameters are fields of that struct.  This is not
 	 a wrapper.  */
-      return 0;
+      return false;
     }
 
   return (name != NULL
@@ -6676,12 +6676,12 @@ ada_is_wrapper_field (struct type *type, int field_num)
    is a variant wrapper.  Assumes TYPE is a structure type with at least
    FIELD_NUM+1 fields.  */
 
-int
+bool
 ada_is_variant_part (struct type *type, int field_num)
 {
   /* Only Ada types are eligible.  */
   if (!ADA_TYPE_P (type))
-    return 0;
+    return false;
 
   struct type *field_type = type->field (field_num).type ();
 
@@ -6705,10 +6705,10 @@ ada_variant_discrim_type (struct type *var_type, struct type *outer_type)
 }
 
 /* Assuming that TYPE is the type of a variant wrapper, and FIELD_NUM is a
-   valid field number within it, returns 1 iff field FIELD_NUM of TYPE
-   represents a 'when others' clause; otherwise 0.  */
+   valid field number within it, returns true iff field FIELD_NUM of TYPE
+   represents a 'when others' clause; otherwise false.  */
 
-static int
+static bool
 ada_is_others_clause (struct type *type, int field_num)
 {
   const char *name = type->field (field_num).name ();
@@ -7307,7 +7307,7 @@ BadName:
    represents an unchecked union (that is, the variant part of a
    record that is named in an Unchecked_Union pragma).  */
 
-static int
+static bool
 is_unchecked_variant (struct type *var_type, struct type *outer_type)
 {
   const char *discrim_name = ada_variant_discrim_name (var_type);
@@ -8914,13 +8914,13 @@ static bool trust_pad_over_xvs = true;
    alignment of a value.  Such types have a single field with a
    distinctive name.  */
 
-int
+bool
 ada_is_aligner_type (struct type *type)
 {
   type = ada_check_typedef (type);
 
   if (!trust_pad_over_xvs && ada_find_parallel_type (type, "___XVS") != NULL)
-    return 0;
+    return false;
 
   return (type->code () == TYPE_CODE_STRUCT
 	  && type->num_fields () == 1
@@ -9146,7 +9146,7 @@ unwrap_value (struct value *val)
 /* Given two array types T1 and T2, return nonzero iff both arrays
    contain the same number of elements.  */
 
-static int
+static bool
 ada_same_array_size_p (struct type *t1, struct type *t2)
 {
   LONGEST lo1, hi1, lo2, hi2;
@@ -9316,7 +9316,7 @@ ada_value_binop (struct value *arg1, struct value *arg2, enum exp_opcode op)
   return value_from_mpz (type1, v);
 }
 
-static int
+static bool
 ada_value_equal (struct value *arg1, struct value *arg2)
 {
   if (ada_is_direct_array_type (arg1->type ())
@@ -11427,9 +11427,9 @@ ada_ternop_slice_operation::resolve (struct expression *exp,
 
 
 
-/* Return non-zero iff TYPE represents a System.Address type.  */
+/* Return true iff TYPE represents a System.Address type.  */
 
-int
+bool
 ada_is_system_address_type (struct type *type)
 {
   return (type->name () && strcmp (type->name (), "system__address") == 0);
@@ -11628,7 +11628,7 @@ to_fixed_range_type (struct type *raw_type, struct value *dval)
 
 /* True iff NAME is the name of a range type.  */
 
-int
+bool
 ada_is_range_type_name (const char *name)
 {
   return (name != NULL && strstr (name, "___XD"));
