@@ -1365,12 +1365,9 @@ linux_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd,
   return len;
 }
 
-typedef bool linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
-					     ULONGEST offset, bool read,
-					     bool write, bool exec,
-					     bool modified, bool memory_tagged,
-					     const std::string &filename,
-					     void *data);
+using linux_find_memory_region_ftype
+  = gdb::function_view<bool (ULONGEST, ULONGEST, ULONGEST, bool, bool, bool,
+			     bool, bool, const std::string &)>;
 
 typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
 					 const smaps_data &map);
@@ -1580,8 +1577,7 @@ linux_address_in_memtag_page (CORE_ADDR address)
 static bool
 linux_find_memory_regions_full (struct gdbarch *gdbarch,
 				linux_dump_mapping_p_ftype *should_dump_mapping_p,
-				linux_find_memory_region_ftype *func,
-				void *obfd)
+				linux_find_memory_region_ftype func)
 {
   pid_t pid;
   /* Default dump behavior of coredump_filter (0x33), according to
@@ -1641,42 +1637,11 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	  && !func (map.start_address, map.end_address - map.start_address,
 		    map.offset, map.read, map.write, map.exec,
 		    /* MODIFIED is true because we want to dump the mapping.  */
-		    true, map.vmflags.memory_tagging != 0, map.filename, obfd))
+		    true, map.vmflags.memory_tagging != 0, map.filename))
 	return false;
     }
 
   return true;
-}
-
-/* A structure for passing information through
-   linux_find_memory_regions_full.  */
-
-struct linux_find_memory_regions_data
-{
-  /* The original callback.  */
-
-  find_memory_region_ftype func;
-
-  /* The original datum.  */
-
-  void *obfd;
-};
-
-/* A callback for linux_find_memory_regions that converts between the
-   "full"-style callback and find_memory_region_ftype.  */
-
-static bool
-linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
-				 ULONGEST offset,
-				 bool read, bool write, bool exec,
-				 bool modified, bool memory_tagged,
-				 const std::string &filename, void *arg)
-{
-  struct linux_find_memory_regions_data *data
-    = (struct linux_find_memory_regions_data *) arg;
-
-  return data->func (vaddr, size, read, write, exec, modified, memory_tagged,
-		     data->obfd);
 }
 
 /* A variant of linux_find_memory_regions_full that is suitable as the
@@ -1684,68 +1649,17 @@ linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 
 static bool
 linux_find_memory_regions (struct gdbarch *gdbarch,
-			   find_memory_region_ftype func, void *obfd)
+			   find_memory_region_ftype func, void *data)
 {
-  struct linux_find_memory_regions_data data;
+  auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
+		 bool write, bool exec, bool modified, bool memory_tagged,
+		 const std::string &filename)
+    {
+      return func (vaddr, size, read, write, exec, modified, memory_tagged,
+		   data);
+    };
 
-  data.func = func;
-  data.obfd = obfd;
-
-  return linux_find_memory_regions_full (gdbarch,
-					 dump_mapping_p,
-					 linux_find_memory_regions_thunk,
-					 &data);
-}
-
-/* This is used to pass information from
-   linux_make_mappings_corefile_notes through
-   linux_find_memory_regions_full.  */
-
-struct linux_make_mappings_data
-{
-  /* Number of files mapped.  */
-  ULONGEST file_count;
-
-  /* The obstack for the main part of the data.  */
-  struct obstack *data_obstack;
-
-  /* The filename obstack.  */
-  struct obstack *filename_obstack;
-
-  /* The architecture's "long" type.  */
-  struct type *long_type;
-};
-
-/* A callback for linux_find_memory_regions_full that updates the
-   mappings data for linux_make_mappings_corefile_notes.
-
-   MEMORY_TAGGED is true if the memory region contains memory tags, false
-   otherwise.  */
-
-static bool
-linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size, ULONGEST offset,
-			      bool read, bool write, bool exec, bool modified,
-			      bool memory_tagged, const std::string &filename,
-			      void *data)
-{
-  struct linux_make_mappings_data *map_data
-    = (struct linux_make_mappings_data *) data;
-  gdb_byte buf[sizeof (ULONGEST)];
-
-  gdb_assert (filename.length () > 0);
-
-  ++map_data->file_count;
-
-  pack_long (buf, map_data->long_type, vaddr);
-  obstack_grow (map_data->data_obstack, buf, map_data->long_type->length ());
-  pack_long (buf, map_data->long_type, vaddr + size);
-  obstack_grow (map_data->data_obstack, buf, map_data->long_type->length ());
-  pack_long (buf, map_data->long_type, offset);
-  obstack_grow (map_data->data_obstack, buf, map_data->long_type->length ());
-
-  obstack_grow_str0 (map_data->filename_obstack, filename.c_str ());
-
-  return true;
+  return linux_find_memory_regions_full (gdbarch, dump_mapping_p, cb);
 }
 
 /* Write the file mapping data to the core file, if possible.  OBFD is
@@ -1757,18 +1671,12 @@ linux_make_mappings_corefile_notes (struct gdbarch *gdbarch, bfd *obfd,
 				    gdb::unique_xmalloc_ptr<char> &note_data,
 				    int *note_size)
 {
-  struct linux_make_mappings_data mapping_data;
   type_allocator alloc (gdbarch);
   struct type *long_type
     = init_integer_type (alloc, gdbarch_long_bit (gdbarch), 0, "long");
   gdb_byte buf[sizeof (ULONGEST)];
-
   auto_obstack data_obstack, filename_obstack;
-
-  mapping_data.file_count = 0;
-  mapping_data.data_obstack = &data_obstack;
-  mapping_data.filename_obstack = &filename_obstack;
-  mapping_data.long_type = long_type;
+  ULONGEST file_count = 0;
 
   /* Reserve space for the count.  */
   obstack_blank (&data_obstack, long_type->length ());
@@ -1777,16 +1685,33 @@ linux_make_mappings_corefile_notes (struct gdbarch *gdbarch, bfd *obfd,
   pack_long (buf, long_type, 1);
   obstack_grow (&data_obstack, buf, long_type->length ());
 
-  linux_find_memory_regions_full (gdbarch,
-				  dump_note_entry_p,
-				  linux_make_mappings_callback,
-				  &mapping_data);
+  auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
+		 bool write, bool exec, bool modified, bool memory_tagged,
+		 const std::string &filename)
+    {
+      gdb_assert (filename.length () > 0);
 
-  if (mapping_data.file_count != 0)
+      ++file_count;
+
+      pack_long (buf, long_type, vaddr);
+      obstack_grow (&data_obstack, buf, long_type->length ());
+      pack_long (buf, long_type, vaddr + size);
+      obstack_grow (&data_obstack, buf, long_type->length ());
+      pack_long (buf, long_type, offset);
+      obstack_grow (&data_obstack, buf, long_type->length ());
+
+      obstack_grow_str0 (&filename_obstack, filename.c_str ());
+
+      return true;
+    };
+
+  linux_find_memory_regions_full (gdbarch, dump_note_entry_p, cb);
+
+  if (file_count != 0)
     {
       /* Write the count to the obstack.  */
-      pack_long ((gdb_byte *) obstack_base (&data_obstack),
-		 long_type, mapping_data.file_count);
+      pack_long ((gdb_byte *) obstack_base (&data_obstack), long_type,
+		 file_count);
 
       /* Copy the filenames to the data obstack.  */
       int size = obstack_object_size (&filename_obstack);
