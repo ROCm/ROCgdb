@@ -12972,7 +12972,7 @@ catch_assert_command (const char *arg_entry, int from_tty,
 
 /* Return non-zero if the symbol SYM is an Ada exception object.  */
 
-static int
+static bool
 ada_is_exception_sym (struct symbol *sym)
 {
   const char *type_name = sym->type ()->name ();
@@ -12988,23 +12988,23 @@ ada_is_exception_sym (struct symbol *sym)
    Ada exception object.  This matches all exceptions except the ones
    defined by the Ada language.  */
 
-static int
+static bool
 ada_is_non_standard_exception_sym (struct symbol *sym)
 {
   if (!ada_is_exception_sym (sym))
-    return 0;
+    return false;
 
   for (const char *name : standard_exc)
     if (strcmp (sym->linkage_name (), name) == 0)
-      return 0;  /* A standard exception.  */
+      return false;  /* A standard exception.  */
 
   /* Numeric_Error is also a standard exception, so exclude it.
      See the STANDARD_EXC description for more details as to why
      this exception is not listed in that array.  */
   if (strcmp (sym->linkage_name (), "numeric_error") == 0)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* A helper function for std::sort, comparing two struct ada_exc_info
