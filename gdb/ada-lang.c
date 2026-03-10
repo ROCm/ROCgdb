@@ -122,7 +122,7 @@ static struct type *ada_lookup_struct_elt_type (struct type *, const char *,
 static struct type *ada_find_parallel_type_with_name (struct type *,
 						      const char *);
 
-static int is_dynamic_field (struct type *, int);
+static bool is_dynamic_field (struct type *, int);
 
 static struct type *to_fixed_variant_branch_type (struct type *,
 						  const gdb_byte *,
@@ -7660,16 +7660,16 @@ dynamic_template_type (struct type *type)
 }
 
 /* Assuming that TEMPL_TYPE is a union or struct type, returns
-   non-zero iff field FIELD_NUM of TEMPL_TYPE has dynamic size.  */
+   true iff field FIELD_NUM of TEMPL_TYPE has dynamic size.  */
 
-static int
+static bool
 is_dynamic_field (struct type *templ_type, int field_num)
 {
   const char *name = templ_type->field (field_num).name ();
 
-  return name != NULL
-    && templ_type->field (field_num).type ()->code () == TYPE_CODE_PTR
-    && strstr (name, "___XVL") != NULL;
+  return (name != nullptr
+	  && templ_type->field (field_num).type ()->code () == TYPE_CODE_PTR
+	  && strstr (name, "___XVL") != nullptr);
 }
 
 /* The index of the variant field of TYPE, or -1 if TYPE does not
