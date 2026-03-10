@@ -38,23 +38,6 @@ struct regcache;
 #define PR_SHADOW_STACK_PUSH (1UL << 2)
 #endif
 
-/* Enum used to define the extra fields of the siginfo type used by an
-   architecture.  */
-enum linux_siginfo_extra_field_values
-{
-  /* Add bound fields into the segmentation fault field.  */
-  LINUX_SIGINFO_FIELD_ADDR_BND = 1
-};
-
-/* Defines a type for the values defined in linux_siginfo_extra_field_values.  */
-DEF_ENUM_FLAGS_TYPE (enum linux_siginfo_extra_field_values,
-		     linux_siginfo_extra_fields);
-
-/* This function is suitable for architectures that
-   extend/override the standard siginfo in a specific way.  */
-struct type *linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
-						 linux_siginfo_extra_fields);
-
 /* Return true if ADDRESS is within the boundaries of a page mapped with
    memory tagging protection.  */
 bool linux_address_in_memtag_page (CORE_ADDR address);

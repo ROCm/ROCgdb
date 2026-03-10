@@ -263,11 +263,10 @@ get_linux_inferior_data (inferior *inf)
   return &linux_inferior_data.try_emplace (inf);
 }
 
-/* See linux-tdep.h.  */
+/* Implementation of gdbarch_get_siginfo_type.  */
 
-struct type *
-linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
-				    linux_siginfo_extra_fields extra_fields)
+static struct type *
+linux_get_siginfo_type (struct gdbarch *gdbarch)
 {
   struct linux_gdbarch_data *linux_gdbarch_data;
   struct type *void_ptr_type;
@@ -286,7 +285,6 @@ linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
   struct type *int_type = builtin_types->builtin_int;
   struct type *uint_type = builtin_types->builtin_unsigned_int;
   struct type *long_type = builtin_types->builtin_long;
-  struct type *short_type = builtin_types->builtin_short;
 
   void_ptr_type = lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
 
@@ -366,18 +364,6 @@ linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
   /* _sigfault */
   type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
   append_composite_type_field (type, "si_addr", void_ptr_type);
-
-  /* Additional bound fields for _sigfault in case they were requested.  */
-  if ((extra_fields & LINUX_SIGINFO_FIELD_ADDR_BND) != 0)
-    {
-      struct type *sigfault_bnd_fields;
-
-      append_composite_type_field (type, "_addr_lsb", short_type);
-      sigfault_bnd_fields = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
-      append_composite_type_field (sigfault_bnd_fields, "_lower", void_ptr_type);
-      append_composite_type_field (sigfault_bnd_fields, "_upper", void_ptr_type);
-      append_composite_type_field (type, "_addr_bnd", sigfault_bnd_fields);
-    }
   append_composite_type_field (sifields_type, "_sigfault", type);
 
   /* _sigpoll */
@@ -406,15 +392,6 @@ linux_get_siginfo_type_with_fields (struct gdbarch *gdbarch,
   linux_gdbarch_data->siginfo_type = siginfo_type;
 
   return siginfo_type;
-}
-
-/* This function is suitable for architectures that don't
-   extend/override the standard siginfo structure.  */
-
-static struct type *
-linux_get_siginfo_type (struct gdbarch *gdbarch)
-{
-  return linux_get_siginfo_type_with_fields (gdbarch, 0);
 }
 
 /* Return true if the target is running on uClinux instead of normal
