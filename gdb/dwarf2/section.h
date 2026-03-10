@@ -122,6 +122,10 @@ using dwarf2_section_info_up = std::unique_ptr<dwarf2_section_info>;
 
 struct section_and_offset
 {
+  friend bool operator== (const section_and_offset &lhs,
+			  const section_and_offset &rhs) noexcept
+  { return lhs.section == rhs.section && lhs.offset == rhs.offset; }
+
   const dwarf2_section_info *section;
   sect_offset offset;
 };
@@ -141,18 +145,9 @@ struct section_and_offset_hash
   }
 };
 
-/* Equality function for section_and_offset.  */
-
-struct section_and_offset_eq
-{
-  bool operator() (const section_and_offset &a,
-		   const section_and_offset &b) const noexcept
-  { return a.section == b.section && a.offset == b.offset; }
-};
-
 template<typename Value>
 using unordered_section_and_offset_map
   = gdb::unordered_map<section_and_offset, Value,
-		       section_and_offset_hash, section_and_offset_eq>;
+		       section_and_offset_hash>;
 
 #endif /* GDB_DWARF2_SECTION_H */
