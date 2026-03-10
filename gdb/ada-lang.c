@@ -11791,7 +11791,7 @@ static const struct exception_support_info exception_support_info_fallback =
    (for instance, if we find the exception support routines, but
    that support is found to be incomplete).  */
 
-static int
+static bool
 ada_has_this_exception_support (const struct exception_support_info *einfo)
 {
   struct symbol *sym;
@@ -11827,7 +11827,7 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
 		 "information.\nCannot insert Ada exception catchpoint "
 		 "in this configuration."));
 
-      return 0;
+      return false;
     }
 
   /* Make sure that the symbol we found corresponds to a function.  */
@@ -11849,7 +11849,7 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
 		 "information.\nCannot insert Ada exception catchpoint "
 		 "in this configuration."));
 
-      return 0;
+      return false;
     }
 
   /* Make sure that the symbol we found corresponds to a function.  */
@@ -11858,7 +11858,7 @@ ada_has_this_exception_support (const struct exception_support_info *einfo)
     error (_("Symbol \"%s\" is not a function (class = %d)"),
 	   sym->linkage_name (), sym->loc_class ());
 
-  return 1;
+  return true;
 }
 
 /* Inspect the Ada runtime and determine which exception info structure
