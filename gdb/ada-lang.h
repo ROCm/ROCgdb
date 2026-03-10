@@ -366,7 +366,7 @@ extern std::vector<ada_exc_info> ada_exceptions_list (const char *regexp);
 
 /* Tasking-related: ada-tasks.c */
 
-extern int valid_task_id (int);
+extern bool valid_task_id (int);
 
 extern struct ada_task_info *ada_get_task_info_from_ptid (ptid_t ptid);
 

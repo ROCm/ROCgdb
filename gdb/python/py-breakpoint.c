@@ -371,7 +371,6 @@ bppy_set_task (PyObject *self, PyObject *newvalue, void *closure)
 {
   gdbpy_breakpoint_object *self_bp = (gdbpy_breakpoint_object *) self;
   long id;
-  int valid_id = 0;
 
   BPPY_SET_REQUIRE_VALID (self_bp);
 
@@ -386,6 +385,7 @@ bppy_set_task (PyObject *self, PyObject *newvalue, void *closure)
       if (! gdb_py_int_as_long (newvalue, &id))
 	return -1;
 
+      bool valid_id = false;
       try
 	{
 	  valid_id = valid_task_id (id);
