@@ -105,7 +105,7 @@ gdb_test "thread 1" \
     [multi_line \
 	 "\\\[Switching to thread 1\\.1\[^\r\n\]*\\\]" \
 	 "#0\\s+\[^\r\n\]+(" \
-	 "$decimal\t\[^\r\n\]+)?" \
+	 "(warning: )?$decimal\t\[^\r\n\]+)?" \
 	 "\[^\r\n\]+: error from gdb_selected_context_handler"] \
     "switch thread, handler raises an error"
 check_thread 1.1 "thread switched despite handler error"
