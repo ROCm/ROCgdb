@@ -8387,12 +8387,15 @@ dwarf_fixup_empty_range (struct dwarf2_cu *cu, dwarf_tag tag)
   return tag == DW_TAG_inlined_subroutine && cu->producer_is_gcc ();
 }
 
-/* Call CALLBACK from DW_AT_ranges attribute value OFFSET
-   reading .debug_rnglists.
+/* Call CALLBACK from DW_AT_ranges attribute value OFFSET reading
+   .debug_rnglists.
+
    Callback's type should be:
-    void (CORE_ADDR range_beginning, CORE_ADDR range_end)
-   Return true if the attributes are present and valid, otherwise,
-   return false.  */
+
+     void (CORE_ADDR range_beginning, CORE_ADDR range_end)
+
+   Return true if the attributes are present and valid, otherwise return
+   false.  */
 
 template <typename Callback>
 static bool
@@ -8599,11 +8602,14 @@ dwarf2_rnglists_process (unsigned offset, struct dwarf2_cu *cu,
 
 /* Call CALLBACK from DW_AT_ranges attribute value OFFSET reading .debug_ranges.
    Callback's type should be:
-    void (unrelocated_addr range_beginning, unrelocated_addr range_end)
-   Return 1 if the attributes are present and valid, otherwise, return 0.  */
+
+     void (unrelocated_addr range_beginning, unrelocated_addr range_end)
+
+   Return true if the attributes are present and valid, otherwise return
+   false.  */
 
 template <typename Callback>
-static int
+static bool
 dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 		       Callback &&callback)
 {
@@ -8628,7 +8634,7 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
     {
       complaint (_("Offset %d out of bounds for DW_AT_ranges attribute"),
 		 offset);
-      return 0;
+      return false;
     }
   buffer = per_objfile->per_bfd->ranges.buffer + offset;
 
@@ -8664,14 +8670,14 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 	  /* We have no valid base address for the ranges
 	     data.  */
 	  complaint (_("Invalid .debug_ranges data (no base address)"));
-	  return 0;
+	  return false;
 	}
 
       if (range_beginning > range_end)
 	{
 	  /* Inverted range entries are invalid.  */
 	  complaint (_("Invalid .debug_ranges data (inverted range)"));
-	  return 0;
+	  return false;
 	}
 
       /* Empty range entries have no effect.  */
@@ -8701,7 +8707,7 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
       callback (range_beginning, range_end);
     }
 
-  return 1;
+  return true;
 }
 
 /* See read.h.  */
@@ -8714,7 +8720,7 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
   int low_set = 0;
   unrelocated_addr low = {};
   unrelocated_addr high = {};
-  int retval;
+  bool retval;
 
   retval = dwarf2_ranges_process (offset, cu, tag,
     [&] (unrelocated_addr range_beginning, unrelocated_addr range_end)
