@@ -892,9 +892,9 @@ static struct type *get_DW_AT_signature_type (struct die_info *,
 static dwarf2_cu *load_full_type_unit (signatured_type *sig_type,
 				       dwarf2_per_objfile *per_objfile);
 
-static int attr_to_dynamic_prop (const struct attribute *attr,
-				 struct die_info *die, struct dwarf2_cu *cu,
-				 struct dynamic_prop *prop, struct type *type);
+static bool attr_to_dynamic_prop (const struct attribute *attr,
+				  struct die_info *die, struct dwarf2_cu *cu,
+				  struct dynamic_prop *prop, struct type *type);
 
 /* memory allocation interface */
 
@@ -11500,12 +11500,12 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   if (attribute *attr = dwarf2_attr (die, DW_AT_byte_stride, cu);
       attr != nullptr)
     {
-      int stride_ok;
       struct type *prop_type = cu->addr_sized_int_type (false);
 
       byte_stride_prop = &stride_storage;
-      stride_ok = attr_to_dynamic_prop (attr, die, cu, byte_stride_prop,
-					prop_type);
+      bool stride_ok
+	= attr_to_dynamic_prop (attr, die, cu, byte_stride_prop, prop_type);
+
       if (!stride_ok)
 	{
 	  complaint (_("unable to read array DW_AT_byte_stride "
@@ -13376,9 +13376,9 @@ var_decl_name (struct die_info *die, struct dwarf2_cu *cu)
 
 /* Parse dwarf attribute if it's a block, reference or constant and put the
    resulting value of the attribute into struct bound_prop.
-   Returns 1 if ATTR could be resolved into PROP, 0 otherwise.  */
+   Returns true if ATTR could be resolved into PROP, false otherwise.  */
 
-static int
+static bool
 attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 		      struct dwarf2_cu *cu, struct dynamic_prop *prop,
 		      struct type *default_type)
@@ -13391,7 +13391,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
   gdb_assert (default_type != NULL);
 
   if (attr == NULL || prop == NULL)
-    return 0;
+    return false;
 
   if (attr->form_is_block ())
     {
@@ -13450,9 +13450,9 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	  if (name != nullptr)
 	    {
 	      prop->set_variable_name (name);
-	      return 1;
+	      return true;
 	    }
-	  return 0;
+	  return false;
 	}
 
       switch (target_attr->name)
@@ -13483,7 +13483,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	      {
 		dwarf2_invalid_attrib_class_complaint ("DW_AT_location",
 						       "dynamic property");
-		return 0;
+		return false;
 	      }
 	    break;
 	  case DW_AT_data_member_location:
@@ -13491,7 +13491,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 	    {
 	      baton = find_field_create_baton (cu, target_die);
 	      if (baton == nullptr)
-		return 0;
+		return false;
 
 	      baton->property_type = read_type_die (target_die->parent,
 						    target_cu);
@@ -13520,12 +13520,12 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
   else
     goto invalid;
 
-  return 1;
+  return true;
 
  invalid:
   dwarf2_invalid_attrib_class_complaint (dwarf_form_name (attr->form),
 					 dwarf2_name (die, cu));
-  return 0;
+  return false;
 }
 
 /* See read.h.  */
