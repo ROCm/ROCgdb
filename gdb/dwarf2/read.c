@@ -11485,8 +11485,13 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *type;
   struct type *element_type, *range_type, *index_type;
   const char *name;
-  struct dynamic_prop *byte_stride_prop = NULL;
   unsigned int bit_stride = 0;
+
+  /* If the stride is seen and used, byte_stride_prop will be
+     non-NULL.  In this case stride_storage will be used to store the
+     data locally.  */
+  dynamic_prop *byte_stride_prop = nullptr;
+  dynamic_prop stride_storage;
 
   element_type = die_type (die, cu);
 
@@ -11501,8 +11506,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       int stride_ok;
       struct type *prop_type = cu->addr_sized_int_type (false);
 
-      byte_stride_prop
-	= (struct dynamic_prop *) alloca (sizeof (struct dynamic_prop));
+      byte_stride_prop = &stride_storage;
       stride_ok = attr_to_dynamic_prop (attr, die, cu, byte_stride_prop,
 					prop_type);
       if (!stride_ok)
