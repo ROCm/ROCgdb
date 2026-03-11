@@ -275,8 +275,12 @@ int dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf,
 				    const gdb_byte *buf_end,
 				    CORE_ADDR *deref_size_return);
 
-int dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
-			      CORE_ADDR *fb_offset_return);
+/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_fbreg(X) fill
+   in FB_OFFSET_RETURN with the X offset and return true.  Otherwise return
+   false.  */
+
+bool dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
+			       CORE_ADDR *fb_offset_return);
 
 /* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_bregSP(X) fill
    in SP_OFFSET_RETURN with the X offset and return true.  Otherwise return

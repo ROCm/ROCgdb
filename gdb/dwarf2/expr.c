@@ -1467,30 +1467,29 @@ dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf, const gdb_byte *buf_end,
   return dwarf_reg;
 }
 
-/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_fbreg(X) fill
-   in FB_OFFSET_RETURN with the X offset and return 1.  Otherwise return 0.  */
+/* See expr.h.  */
 
-int
+bool
 dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
 			  CORE_ADDR *fb_offset_return)
 {
   int64_t fb_offset;
 
   if (buf_end <= buf)
-    return 0;
+    return false;
 
   if (*buf != DW_OP_fbreg)
-    return 0;
+    return false;
+
   buf++;
 
   buf = gdb_read_sleb128 (buf, buf_end, &fb_offset);
   if (buf == NULL)
-    return 0;
-  *fb_offset_return = fb_offset;
-  if (buf != buf_end || fb_offset != (LONGEST) *fb_offset_return)
-    return 0;
+    return false;
 
-  return 1;
+  *fb_offset_return = fb_offset;
+
+  return buf == buf_end && fb_offset == (LONGEST) *fb_offset_return;
 }
 
 /* See expr.h.  */
