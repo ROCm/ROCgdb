@@ -1353,13 +1353,15 @@ dwarf_expr_require_composition (const gdb_byte *op_ptr, const gdb_byte *op_end,
    checks that might reasonably be needed to compare DWARF base
    types.  */
 
-static int
+static bool
 base_types_equal_p (struct type *t1, struct type *t2)
 {
   if (t1->code () != t2->code ())
-    return 0;
+    return false;
+
   if (t1->is_unsigned () != t2->is_unsigned ())
-    return 0;
+    return false;
+
   return t1->length () == t2->length ();
 }
 
@@ -2050,7 +2052,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    first = fetch (0);
 	    pop ();
 
-	    if (! base_types_equal_p (first->type (), second->type ()))
+	    if (!base_types_equal_p (first->type (), second->type ()))
 	      error (_("Incompatible types on DWARF stack"));
 
 	    switch (op)
