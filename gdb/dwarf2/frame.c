@@ -694,14 +694,15 @@ dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
 /* Query the architecture-specific signal frame recognizer for
    THIS_FRAME.  */
 
-static int
+static bool
 dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
 			     const frame_info_ptr &this_frame)
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   if (ops->signal_frame_p == NULL)
-    return 0;
+    return false;
+
   return ops->signal_frame_p (gdbarch, this_frame);
 }
 
