@@ -168,8 +168,6 @@ extern bfd_reloc_status_type _bfd_mips_elf_generic_reloc
   ATTRIBUTE_HIDDEN;
 extern unsigned long _bfd_elf_mips_mach
   (flagword);
-extern bfd_vma _bfd_mips_elf_sign_extend
-  (bfd_vma, int) ATTRIBUTE_HIDDEN;
 extern void _bfd_mips_elf_merge_symbol_attribute
   (struct elf_link_hash_entry *, unsigned int, bool, bool) ATTRIBUTE_HIDDEN;
 extern char *_bfd_mips_elf_get_target_dtag
@@ -224,6 +222,15 @@ static inline bool
 literal_reloc_p (int r_type)
 {
   return r_type == R_MIPS_LITERAL || r_type == R_MICROMIPS_LITERAL;
+}
+
+/* Sign-extend VALUE, which has the indicated number of BITS.  */
+
+static inline bfd_vma
+_bfd_mips_elf_sign_extend (bfd_vma value, int bits)
+{
+  bfd_vma sign = (bfd_vma) 1 << (bits - 1);
+  return (value ^ sign) - sign;
 }
 
 #define elf_backend_common_definition   _bfd_mips_elf_common_definition
