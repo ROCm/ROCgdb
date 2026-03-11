@@ -768,7 +768,7 @@ dwarf2_frame_find_quirks (struct dwarf2_frame_state *fs,
 
 /* See dwarf2/frame.h.  */
 
-int
+bool
 dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 		       dwarf2_per_cu *data, int *regnum_out,
 		       LONGEST *offset_out, CORE_ADDR *text_offset_out,
@@ -815,14 +815,15 @@ dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 	  *offset_out = -fs.regs.cfa_offset;
 	else
 	  *offset_out = fs.regs.cfa_offset;
-	return 1;
+
+	return true;
       }
 
     case CFA_EXP:
       *text_offset_out = per_objfile->objfile->text_section_offset ();
       *cfa_start_out = fs.regs.cfa_exp;
       *cfa_end_out = fs.regs.cfa_exp + fs.regs.cfa_exp_len;
-      return 0;
+      return false;
 
     default:
       internal_error (_("Unknown CFA rule."));

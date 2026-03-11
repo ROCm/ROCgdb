@@ -246,7 +246,7 @@ CORE_ADDR dwarf2_frame_cfa (const frame_info_ptr &this_frame);
 
 /* Find the CFA information for PC.
 
-   Return 1 if a register is used for the CFA, or 0 if another
+   Return true if a register is used for the CFA, or false if another
    expression is used.  Throw an exception on error.
 
    GDBARCH is the architecture to use.
@@ -254,17 +254,17 @@ CORE_ADDR dwarf2_frame_cfa (const frame_info_ptr &this_frame);
 
    REGNUM_OUT is an out parameter that is set to the register number.
    OFFSET_OUT is the offset to use from this register.
-   These are only filled in when 1 is returned.
+   These are only filled in when true is returned.
 
    TEXT_OFFSET_OUT, CFA_START_OUT, and CFA_END_OUT describe the CFA
-   in other cases.  These are only used when 0 is returned.  */
+   in other cases.  These are only used when false is returned.  */
 
-extern int dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
-				  dwarf2_per_cu *data, int *regnum_out,
-				  LONGEST *offset_out,
-				  CORE_ADDR *text_offset_out,
-				  const gdb_byte **cfa_start_out,
-				  const gdb_byte **cfa_end_out);
+extern bool dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
+				   dwarf2_per_cu *data, int *regnum_out,
+				   LONGEST *offset_out,
+				   CORE_ADDR *text_offset_out,
+				   const gdb_byte **cfa_start_out,
+				   const gdb_byte **cfa_end_out);
 
 /* Allocate a new instance of the function unique data.
 
@@ -330,14 +330,14 @@ static inline void *dwarf2_frame_allocate_fn_data
   return nullptr;
 }
 
-static inline int dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
-					 struct dwarf2_per_cu_data *data,
-					 int *regnum_out, LONGEST *offset_out,
-					 CORE_ADDR *text_offset_out,
-					 const gdb_byte **cfa_start_out,
-					 const gdb_byte **cfa_end_out)
+static inline bool
+dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
+		       struct dwarf2_per_cu_data *data, int *regnum_out,
+		       LONGEST *offset_out, CORE_ADDR *text_offset_out,
+		       const gdb_byte **cfa_start_out,
+		       const gdb_byte **cfa_end_out)
 {
-  return 0;
+  return false;
 }
 
 static inline void
