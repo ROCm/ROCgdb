@@ -5239,11 +5239,8 @@ mips_elf_local_relocation_p (bfd *input_bfd,
 bfd_vma
 _bfd_mips_elf_sign_extend (bfd_vma value, int bits)
 {
-  if (value & ((bfd_vma) 1 << (bits - 1)))
-    /* VALUE is negative.  */
-    value |= ((bfd_vma) - 1) << bits;
-
-  return value;
+  bfd_vma sign = (bfd_vma) 1 << (bits - 1);
+  return (value ^ sign) - sign;
 }
 
 /* Return non-zero if the indicated VALUE has overflowed the maximum
