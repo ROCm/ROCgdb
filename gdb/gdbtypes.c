@@ -1899,10 +1899,10 @@ stub_noname_complaint (void)
   complaint (_("stub type has NULL name"));
 }
 
-/* Return nonzero if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
+/* Return true if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
    attached to it, and that property has a non-constant value.  */
 
-static int
+static bool
 array_type_has_dynamic_stride (struct type *type)
 {
   struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
