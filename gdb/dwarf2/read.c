@@ -9891,7 +9891,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 /* Return true if this member function is a constructor, false
    otherwise.  */
 
-static int
+static bool
 dwarf2_is_constructor (struct die_info *die, struct dwarf2_cu *cu)
 {
   const char *fieldname;
@@ -9899,17 +9899,17 @@ dwarf2_is_constructor (struct die_info *die, struct dwarf2_cu *cu)
   int len;
 
   if (die->parent == NULL)
-    return 0;
+    return false;
 
   if (die->parent->tag != DW_TAG_structure_type
       && die->parent->tag != DW_TAG_union_type
       && die->parent->tag != DW_TAG_class_type)
-    return 0;
+    return false;
 
   fieldname = dwarf2_name (die, cu);
   type_name = dwarf2_name (die->parent, cu);
   if (fieldname == NULL || type_name == NULL)
-    return 0;
+    return false;
 
   len = strlen (fieldname);
   return (strncmp (fieldname, type_name, len) == 0
