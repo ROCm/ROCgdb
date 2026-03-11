@@ -10147,18 +10147,16 @@ dwarf2_attach_fn_fields_to_type (struct field_info *fip, struct type *type,
   TYPE_NFN_FIELDS (type) = fip->fnfieldlists.size ();
 }
 
-/* Returns non-zero if NAME is the name of a vtable member in CU's
-   language, zero otherwise.  */
-static int
+/* Returns true if NAME is the name of a vtable member in CU's
+   language, false otherwise.  */
+
+static bool
 is_vtable_name (const char *name, struct dwarf2_cu *cu)
 {
   static const char vptr[] = "_vptr";
 
   /* Look for the C++ form of the vtable.  */
-  if (startswith (name, vptr) && is_cplus_marker (name[sizeof (vptr) - 1]))
-    return 1;
-
-  return 0;
+  return startswith (name, vptr) && is_cplus_marker (name[sizeof (vptr) - 1]);
 }
 
 /* GCC outputs unnamed structures that are really pointers to member
