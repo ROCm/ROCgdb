@@ -727,7 +727,7 @@ static const char *dwarf2_dwo_name (struct die_info *die, struct dwarf2_cu *cu);
 static bool dwarf2_flag_true_p (struct die_info *die, unsigned name,
 				struct dwarf2_cu *cu);
 
-static int die_is_declaration (struct die_info *, struct dwarf2_cu *cu);
+static bool die_is_declaration (struct die_info *, struct dwarf2_cu *cu);
 
 static struct die_info *die_specification (struct die_info *die,
 					   struct dwarf2_cu **);
@@ -15187,7 +15187,7 @@ dwarf2_flag_true_p (struct die_info *die, unsigned name, struct dwarf2_cu *cu)
   return attr != nullptr && attr->as_boolean ();
 }
 
-static int
+static bool
 die_is_declaration (struct die_info *die, struct dwarf2_cu *cu)
 {
   /* A DIE is a declaration if it has a DW_AT_declaration attribute
