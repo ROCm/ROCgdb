@@ -1577,9 +1577,9 @@ dwarf2_evaluate_loc_desc (struct type *type, const frame_info_ptr &frame,
    before evaluation starts.  PUSH_VALUES[0] is pushed first, then
    PUSH_VALUES[1], and so on.
 
-   Returns 1 on success, 0 otherwise.  */
+   Returns true on success, false otherwise.  */
 
-static int
+static bool
 dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   const frame_info_ptr &frame,
 			   const struct property_addr_info *addr_stack,
@@ -1588,7 +1588,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   bool *is_reference)
 {
   if (dlbaton->size == 0)
-    return 0;
+    return false;
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
   dwarf2_per_cu *per_cu = dlbaton->per_cu;
@@ -1610,20 +1610,20 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
     {
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
-	  return 0;
+	  return false;
 	}
       else if (ex.error == NO_ENTRY_VALUE_ERROR)
 	{
 	  if (entry_values_debug)
 	    exception_print (gdb_stdout, ex);
-	  return 0;
+	  return false;
 	}
       else
 	throw;
     }
 
   if (result->optimized_out ())
-    return 0;
+    return false;
 
   if (result->lval () == lval_memory)
     *valp = result->address ();
@@ -1635,7 +1635,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
       *valp = value_as_address (result);
     }
 
-  return 1;
+  return true;
 }
 
 /* See dwarf2/loc.h.  */
