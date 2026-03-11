@@ -853,10 +853,10 @@ struct dwarf2_frame_cache
 
   /* Set if the return address column was marked as unavailable
      (required non-collected memory or registers to compute).  */
-  int unavailable_retaddr;
+  bool unavailable_retaddr;
 
   /* Set if the return address column was marked as undefined.  */
-  int undefined_retaddr;
+  bool undefined_retaddr;
 
   /* Saved registers, indexed by GDB register number, not by DWARF
      register number.  */
@@ -997,7 +997,7 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     {
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
-	  cache->unavailable_retaddr = 1;
+	  cache->unavailable_retaddr = true;
 	  return cache;
 	}
 
@@ -1088,7 +1088,7 @@ incomplete CFI data; unspecified registers (e.g., %s) at %s"),
 
   if (fs.retaddr_column < fs.regs.reg.size ()
       && fs.regs.reg[fs.retaddr_column].how == DWARF2_FRAME_REG_UNDEFINED)
-    cache->undefined_retaddr = 1;
+    cache->undefined_retaddr = true;
 
   dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
 				 (entry_cfa_sp_offset_p
