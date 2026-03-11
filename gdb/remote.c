@@ -3684,31 +3684,17 @@ static char *pack_threadlist_request (char *pkt, int startflag,
 static int remote_newthread_step (threadref *ref, void *context);
 
 
-/* Write a PTID to BUF.  ENDBUF points to one-passed-the-end of the
+/* Write a PTID to BUF.  ENDBUF points to one-past-the-end of the
    buffer we're allowed to write to.  Returns
    BUF+CHARACTERS_WRITTEN.  */
 
 char *
 remote_target::write_ptid (char *buf, const char *endbuf, ptid_t ptid)
 {
-  ptid_t::pid_type pid;
-  ptid_t::lwp_type lwp;
-
-  if (m_features.remote_multi_process_p ())
-    {
-      pid = ptid.pid ();
-      if (pid < 0)
-	buf += xsnprintf (buf, endbuf - buf, "p-%x.", -pid);
-      else
-	buf += xsnprintf (buf, endbuf - buf, "p%x.", pid);
-    }
-  lwp = ptid.lwp ();
-  if (lwp < 0)
-    buf += xsnprintf (buf, endbuf - buf, "-%lx", -lwp);
-  else
-    buf += xsnprintf (buf, endbuf - buf, "%lx", lwp);
-
-  return buf;
+  std::string repr = ptid.to_rsp_string (m_features.remote_multi_process_p ());
+  gdb_assert (repr.length () < endbuf - buf);
+  strcpy (buf, repr.c_str ());
+  return buf + repr.length ();
 }
 
 /* Extract a PTID from BUF.  If non-null, OBUF is set to one past the
@@ -3718,67 +3704,21 @@ remote_target::write_ptid (char *buf, const char *endbuf, ptid_t ptid)
 static ptid_t
 read_ptid (const char *buf, const char **obuf)
 {
-  const char *p = buf;
-  const char *pp;
-  ptid_t::pid_type pid = 0;
-  ptid_t::lwp_type lwp = 0;
-  ULONGEST hex;
-
-  if (*p == 'p')
-    {
-      /* Multi-process ptid.  */
-      pp = unpack_varlen_hex (p + 1, &hex);
-      if ((pp == (p + 1)) || (*pp != '.'))
-	error (_("invalid remote ptid: %s"), buf);
-
-      pid = (ptid_t::pid_type) (LONGEST) hex;
-      if (hex != ((ULONGEST) pid))
-	error (_("invalid remote ptid: %s"), buf);
-
-      p = pp + 1;
-      pp = unpack_varlen_hex (p, &hex);
-      if (pp == p)
-	error (_("invalid remote ptid: %s"), buf);
-
-      lwp = (ptid_t::lwp_type) (LONGEST) hex;
-      if (hex != ((ULONGEST) lwp))
-	error (_("invalid remote ptid: %s"), buf);
-
-      if (obuf)
-	*obuf = pp;
-
-      return ptid_t (pid, lwp);
-    }
-
-  /* No multi-process.  Just a thread id.  */
-  pp = unpack_varlen_hex (p, &hex);
-
-  /* Return null_ptid when no thread id is found.  */
-  if (p == pp)
-    {
-      if (obuf)
-	*obuf = pp;
-      return null_ptid;
-    }
-
-  lwp = (ptid_t::lwp_type) (LONGEST) hex;
-  if (hex != ((ULONGEST) lwp))
-    error (_("invalid remote ptid: %s"), buf);
-
-  /* Since the stub is not sending a process id, default to what's
-     current_inferior, unless it doesn't have a PID yet.  If so,
-     then since there's no way to know the pid of the reported
-     threads, use the magic number.  */
-  inferior *inf = current_inferior ();
-  if (inf->pid == 0)
-    pid = magic_null_ptid.pid ();
-  else
-    pid = inf->pid;
-
-  if (obuf)
-    *obuf = pp;
-
-  return ptid_t (pid, lwp);
+  return ptid_t::parse (buf, obuf, false,
+    [] ()
+      {
+	/* Since the stub is not sending a process id, default to
+	   what's current_inferior, unless it doesn't have a PID yet.
+	   If so, then since there's no way to know the pid of the
+	   reported threads, use the magic number.  */
+	inferior *inf = current_inferior ();
+	ptid_t::pid_type pid;
+	if (inf->pid == 0)
+	  pid = magic_null_ptid.pid ();
+	else
+	  pid = inf->pid;
+	return pid;
+      });
 }
 
 static int
