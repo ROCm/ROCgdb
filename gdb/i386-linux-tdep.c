@@ -250,10 +250,10 @@ i386_linux_sigtramp_p (const frame_info_ptr &this_frame)
 	  || strcmp ("__restore_rt", name) == 0);
 }
 
-/* Return one if the PC of THIS_FRAME is in a signal trampoline which
+/* Return true if the PC of THIS_FRAME is in a signal trampoline which
    may have DWARF-2 CFI.  */
 
-static int
+static bool
 i386_linux_dwarf_signal_frame_p (struct gdbarch *gdbarch,
 				 const frame_info_ptr &this_frame)
 {
@@ -264,11 +264,9 @@ i386_linux_dwarf_signal_frame_p (struct gdbarch *gdbarch,
 
   /* If a vsyscall DSO is in use, the signal trampolines may have these
      names.  */
-  if (name && (strcmp (name, "__kernel_sigreturn") == 0
-	       || strcmp (name, "__kernel_rt_sigreturn") == 0))
-    return 1;
-
-  return 0;
+  return (name != nullptr
+	  && (streq (name, "__kernel_sigreturn")
+	      || streq (name, "__kernel_rt_sigreturn")));
 }
 
 /* Offset to struct sigcontext in ucontext, from <asm/ucontext.h>.  */

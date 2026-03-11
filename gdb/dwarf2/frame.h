@@ -200,7 +200,7 @@ struct dwarf2_frame_state
 
 using init_reg_ftype = void (gdbarch *, int, dwarf2_frame_state_reg *,
 			     const frame_info_ptr &);
-using signal_frame_p_ftype = int (gdbarch *, const frame_info_ptr &);
+using signal_frame_p_ftype = bool (gdbarch *, const frame_info_ptr &);
 using adjust_regnum_ftype = int (gdbarch *, int, int);
 
 /* If DWARF supoprt was requested, create the real prototype for the

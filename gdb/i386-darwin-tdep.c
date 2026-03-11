@@ -97,7 +97,7 @@ i386_darwin_sigcontext_addr (const frame_info_ptr &this_frame)
    Without this function, the frame is recognized as a normal frame which is
    not expected.  */
 
-int
+bool
 darwin_dwarf_signal_frame_p (struct gdbarch *gdbarch,
 			     const frame_info_ptr &this_frame)
 {
