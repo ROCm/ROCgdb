@@ -1110,9 +1110,9 @@ call_site_find_chain (struct gdbarch *gdbarch, CORE_ADDR caller_pc,
   return retval;
 }
 
-/* Return 1 if KIND and KIND_U match PARAMETER.  Return 0 otherwise.  */
+/* Return true if KIND and KIND_U match PARAMETER.  Return false otherwise.  */
 
-static int
+static bool
 call_site_parameter_matches (struct call_site_parameter *parameter,
 			     enum call_site_parameter_kind kind,
 			     union call_site_parameter_u kind_u)
@@ -1129,7 +1129,8 @@ call_site_parameter_matches (struct call_site_parameter *parameter,
       case CALL_SITE_PARAMETER_PARAM_OFFSET:
 	return kind_u.param_cu_off == parameter->u.param_cu_off;
       }
-  return 0;
+
+  return false;
 }
 
 /* See loc.h.  */
