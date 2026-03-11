@@ -8258,7 +8258,7 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 	  if (parameter->u.dwarf_reg != -1)
 	    parameter->kind = CALL_SITE_PARAMETER_DWARF_REG;
 	  else if (dwarf_block_to_sp_offset (gdbarch, block->data,
-				    &block->data[block->size],
+					     &block->data[block->size],
 					     &parameter->u.fb_offset))
 	    parameter->kind = CALL_SITE_PARAMETER_FB_OFFSET;
 	  else

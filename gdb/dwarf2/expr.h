@@ -278,9 +278,13 @@ int dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf,
 int dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
 			      CORE_ADDR *fb_offset_return);
 
-int dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
-			      const gdb_byte *buf_end,
-			      CORE_ADDR *sp_offset_return);
+/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_bregSP(X) fill
+   in SP_OFFSET_RETURN with the X offset and return true.  Otherwise return
+   false.  The matched SP register number depends on GDBARCH.  */
+
+bool dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
+			       const gdb_byte *buf_end,
+			       CORE_ADDR *sp_offset_return);
 
 /* Wrappers around the leb128 reader routines to simplify them for our
    purposes.  */
