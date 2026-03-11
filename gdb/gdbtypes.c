@@ -1172,6 +1172,7 @@ update_static_array_size (struct type *type)
   struct type *range_type = type->index_type ();
 
   if (type->dyn_prop (DYN_PROP_BYTE_STRIDE) == nullptr
+      && type->dyn_prop (DYN_PROP_BIT_STRIDE) == nullptr
       && has_static_range (range_type->bounds ())
       && (!type_not_associated (type)
 	  && !type_not_allocated (type)))
@@ -1233,17 +1234,19 @@ struct type *
 create_array_type_with_stride (type_allocator &alloc,
 			       struct type *element_type,
 			       struct type *range_type,
-			       struct dynamic_prop *byte_stride_prop,
-			       unsigned int bit_stride)
+			       dynamic_prop *stride_prop,
+			       bool is_byte_stride)
 {
-  if (byte_stride_prop != nullptr && byte_stride_prop->is_constant ())
+  unsigned bit_stride = 0;
+
+  if (stride_prop != nullptr && stride_prop->is_constant ())
     {
-      /* The byte stride is actually not dynamic.  Pretend we were
-	 called with bit_stride set instead of byte_stride_prop.
-	 This will give us the same result type, while avoiding
-	 the need to handle this as a special case.  */
-      bit_stride = byte_stride_prop->const_val () * 8;
-      byte_stride_prop = NULL;
+      /* The stride is actually not dynamic, so use the value
+	 directly.  */
+      bit_stride = stride_prop->const_val ();
+      if (is_byte_stride)
+	bit_stride *= 8;
+      stride_prop = nullptr;
     }
 
   struct type *result_type = alloc.new_type ();
@@ -1253,8 +1256,11 @@ create_array_type_with_stride (type_allocator &alloc,
 
   result_type->alloc_fields (1);
   result_type->set_index_type (range_type);
-  if (byte_stride_prop != NULL)
-    result_type->add_dyn_prop (DYN_PROP_BYTE_STRIDE, *byte_stride_prop);
+  if (stride_prop != nullptr)
+    result_type->add_dyn_prop (is_byte_stride
+			       ? DYN_PROP_BYTE_STRIDE
+			       : DYN_PROP_BIT_STRIDE,
+			       *stride_prop);
   else if (bit_stride > 0)
     result_type->field (0).set_bitsize (bit_stride);
 
@@ -1284,7 +1290,7 @@ create_array_type (type_allocator &alloc,
 		   struct type *range_type)
 {
   return create_array_type_with_stride (alloc, element_type,
-					range_type, NULL, 0);
+					range_type, nullptr, false);
 }
 
 struct type *
@@ -1899,15 +1905,19 @@ stub_noname_complaint (void)
   complaint (_("stub type has NULL name"));
 }
 
-/* Return true if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
-   attached to it, and that property has a non-constant value.  */
+/* Return true if TYPE has a dynamic stride property attached to
+   it, and that property has a non-constant value.  */
 
 static bool
 array_type_has_dynamic_stride (struct type *type)
 {
-  struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
-
-  return prop != nullptr && prop->is_constant ();
+  if (dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
+      prop != nullptr && !prop->is_constant ())
+    return true;
+  if (dynamic_prop *prop = type->dyn_prop (DYN_PROP_BIT_STRIDE);
+      prop != nullptr && !prop->is_constant ())
+    return true;
+  return false;
 }
 
 /* Worker for is_dynamic_type/cannot_print_offsets.  */
@@ -2280,15 +2290,22 @@ resolve_dynamic_array_or_string_1 (struct type *type,
   else
     elt_type = type->target_type ();
 
-  prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
-  if (prop != nullptr && type->code () == TYPE_CODE_STRING)
-    prop = nullptr;
-  if (prop != NULL && resolve_p)
+  dynamic_prop_node_kind kind = DYN_PROP_BYTE_STRIDE;
+  prop = type->dyn_prop (kind);
+  if (prop == nullptr)
+    {
+      kind = DYN_PROP_BIT_STRIDE;
+      prop = type->dyn_prop (kind);
+    }
+
+  if (prop != nullptr && type->code () != TYPE_CODE_STRING && resolve_p)
     {
       if (dwarf2_evaluate_property (prop, frame, addr_stack, &value))
 	{
-	  type->remove_dyn_prop (DYN_PROP_BYTE_STRIDE);
-	  bit_stride = (unsigned int) (value * 8);
+	  bit_stride = (unsigned int) value;
+	  if (kind == DYN_PROP_BYTE_STRIDE)
+	    bit_stride *= 8;
+	  type->remove_dyn_prop (kind);
 	}
       else
 	{
@@ -2306,8 +2323,12 @@ resolve_dynamic_array_or_string_1 (struct type *type,
   if (type->code () == TYPE_CODE_STRING)
     return create_string_type (alloc, elt_type, range_type);
   else
-    return create_array_type_with_stride (alloc, elt_type, range_type, NULL,
-					  bit_stride);
+    {
+      dynamic_prop temp_prop;
+      temp_prop.set_const_val (bit_stride);
+      return create_array_type_with_stride (alloc, elt_type, range_type,
+					    &temp_prop, false);
+    }
 }
 
 /* Resolve an array or string type with dynamic properties, return a new

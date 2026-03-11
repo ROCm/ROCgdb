@@ -11483,13 +11483,13 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *type;
   struct type *element_type, *range_type, *index_type;
   const char *name;
-  unsigned int bit_stride = 0;
 
-  /* If the stride is seen and used, byte_stride_prop will be
-     non-NULL.  In this case stride_storage will be used to store the
-     data locally.  */
-  dynamic_prop *byte_stride_prop = nullptr;
+  /* If the stride is seen and used, stride_prop will be non-NULL.  In
+     this case stride_storage will be used to store the data
+     locally.  */
+  dynamic_prop *stride_prop = nullptr;
   dynamic_prop stride_storage;
+  bool is_byte_stride = true;
 
   element_type = die_type (die, cu);
 
@@ -11503,10 +11503,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct type *prop_type = cu->addr_sized_int_type (false);
 
-      byte_stride_prop = &stride_storage;
-      bool stride_ok
-	= attr_to_dynamic_prop (attr, die, cu, byte_stride_prop, prop_type);
-
+      stride_prop = &stride_storage;
+      bool stride_ok = attr_to_dynamic_prop (attr, die, cu, stride_prop,
+					     prop_type);
       if (!stride_ok)
 	{
 	  complaint (_("unable to read array DW_AT_byte_stride "
@@ -11516,13 +11515,30 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 	  /* Ignore this attribute.  We will likely not be able to print
 	     arrays of this type correctly, but there is little we can do
 	     to help if we cannot read the attribute's value.  */
-	  byte_stride_prop = NULL;
+	  stride_prop = nullptr;
 	}
     }
 
   if (attribute *attr = dwarf2_attr (die, DW_AT_bit_stride, cu);
       attr != nullptr)
-    bit_stride = attr->unsigned_constant ().value_or (0);
+    {
+      if (stride_prop != nullptr)
+	complaint (_("Found DW_AT_bit_stride and DW_AT_byte_stride "
+		     "- DIE at %s [in module %s]"),
+		   sect_offset_str (die->sect_off),
+		   objfile_name (cu->per_objfile->objfile));
+      else if (attr_to_dynamic_prop (attr, die, cu, &stride_storage,
+				     cu->addr_sized_int_type (false)))
+	{
+	  stride_prop = &stride_storage;
+	  is_byte_stride = false;
+	}
+      else
+	complaint (_("unable to read array DW_AT_bit_stride "
+		     " - DIE at %s [in module %s]"),
+		   sect_offset_str (die->sect_off),
+		   objfile_name (cu->per_objfile->objfile));
+    }
 
   /* Irix 6.2 native cc creates array types without children for
      arrays with unspecified length.  */
@@ -11532,7 +11548,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       index_type = alloc.copy_type (builtin_type (objfile)->builtin_int);
       range_type = create_static_range_type (alloc, index_type, 0, -1);
       type = create_array_type_with_stride (alloc, element_type, range_type,
-					    byte_stride_prop, bit_stride);
+					    stride_prop, is_byte_stride);
       return set_die_type (die, type, cu);
     }
 
@@ -11574,10 +11590,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       while (i < range_types.size ())
 	{
 	  type = create_array_type_with_stride (alloc, type, range_types[i++],
-						byte_stride_prop, bit_stride);
+						stride_prop, is_byte_stride);
 	  type->set_is_multi_dimensional (true);
-	  bit_stride = 0;
-	  byte_stride_prop = nullptr;
+	  stride_prop = nullptr;
 	}
     }
   else
@@ -11586,10 +11601,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       while (ndim-- > 0)
 	{
 	  type = create_array_type_with_stride (alloc, type, range_types[ndim],
-						byte_stride_prop, bit_stride);
+						stride_prop, is_byte_stride);
 	  type->set_is_multi_dimensional (true);
-	  bit_stride = 0;
-	  byte_stride_prop = nullptr;
+	  stride_prop = nullptr;
 	}
     }
 
