@@ -590,16 +590,14 @@ static void dwarf2_frame_default_init_reg (struct gdbarch *gdbarch,
 struct dwarf2_frame_ops
 {
   /* Pre-initialize the register state REG for register REGNUM.  */
-  void (*init_reg) (struct gdbarch *, int, struct dwarf2_frame_state_reg *,
-		    const frame_info_ptr &)
-    = dwarf2_frame_default_init_reg;
+  init_reg_ftype *init_reg = dwarf2_frame_default_init_reg;
 
   /* Check whether the THIS_FRAME is a signal trampoline.  */
-  int (*signal_frame_p) (struct gdbarch *, const frame_info_ptr &) = nullptr;
+  signal_frame_p_ftype *signal_frame_p = nullptr;
 
   /* Convert .eh_frame register number to DWARF register number, or
      adjust .debug_frame register number.  */
-  int (*adjust_regnum) (struct gdbarch *, int, int) = nullptr;
+  adjust_regnum_ftype *adjust_regnum = nullptr;
 };
 
 /* Per-architecture data key.  */
@@ -656,14 +654,9 @@ dwarf2_frame_default_init_reg (struct gdbarch *gdbarch, int regnum,
    function for GDBARCH to INIT_REG.  */
 
 void
-dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
-			   void (*init_reg) (struct gdbarch *, int,
-					     struct dwarf2_frame_state_reg *,
-					     const frame_info_ptr &))
+dwarf2_frame_set_init_reg (gdbarch *gdbarch, init_reg_ftype *init_reg)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->init_reg = init_reg;
+  get_frame_ops (gdbarch)->init_reg = init_reg;
 }
 
 /* Pre-initialize the register state REG for register REGNUM.  */
@@ -673,22 +666,17 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 		       struct dwarf2_frame_state_reg *reg,
 		       const frame_info_ptr &this_frame)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->init_reg (gdbarch, regnum, reg, this_frame);
+  get_frame_ops (gdbarch)->init_reg (gdbarch, regnum, reg, this_frame);
 }
 
 /* Set the architecture-specific signal trampoline recognition
    function for GDBARCH to SIGNAL_FRAME_P.  */
 
 void
-dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
-				 int (*signal_frame_p) (struct gdbarch *,
-							const frame_info_ptr &))
+dwarf2_frame_set_signal_frame_p (gdbarch *gdbarch,
+				 signal_frame_p_ftype *signal_frame_p)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->signal_frame_p = signal_frame_p;
+  get_frame_ops (gdbarch)->signal_frame_p = signal_frame_p;
 }
 
 /* Query the architecture-specific signal frame recognizer for
@@ -710,13 +698,10 @@ dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
    register numbers.  */
 
 void
-dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
-				int (*adjust_regnum) (struct gdbarch *,
-						      int, int))
+dwarf2_frame_set_adjust_regnum (gdbarch *gdbarch,
+				adjust_regnum_ftype *adjust_regnum)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->adjust_regnum = adjust_regnum;
+  get_frame_ops (gdbarch)->adjust_regnum = adjust_regnum;
 }
 
 /* Translate a .eh_frame register to DWARF register, or adjust a .debug_frame
@@ -730,6 +715,7 @@ dwarf2_frame_adjust_regnum (struct gdbarch *gdbarch,
 
   if (ops->adjust_regnum == NULL)
     return regnum;
+
   return ops->adjust_regnum (gdbarch, regnum, eh_frame_p);
 }
 

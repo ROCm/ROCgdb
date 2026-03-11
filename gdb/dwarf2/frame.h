@@ -198,6 +198,11 @@ struct dwarf2_frame_state
   bool armcc_cfa_offsets_reversed = false;
 };
 
+using init_reg_ftype = void (gdbarch *, int, dwarf2_frame_state_reg *,
+			     const frame_info_ptr &);
+using signal_frame_p_ftype = int (gdbarch *, const frame_info_ptr &);
+using adjust_regnum_ftype = int (gdbarch *, int, int);
+
 /* If DWARF supoprt was requested, create the real prototype for the
    append_unwinders function.  Otherwise, create a fake inline function.
 
@@ -210,25 +215,19 @@ struct dwarf2_frame_state
 /* Set the architecture-specific register state initialization
    function for GDBARCH to INIT_REG.  */
 
-extern void dwarf2_frame_set_init_reg (
-  gdbarch *gdbarch, void (*init_reg) (struct gdbarch *, int,
-				      dwarf2_frame_state_reg *,
-				      const frame_info_ptr &));
+void dwarf2_frame_set_init_reg (gdbarch *gdbarch, init_reg_ftype *init_reg);
 
 /* Set the architecture-specific signal trampoline recognition
    function for GDBARCH to SIGNAL_FRAME_P.  */
 
-extern void dwarf2_frame_set_signal_frame_p
-  (gdbarch *gdbarch, int (*signal_frame_p) (struct gdbarch *,
-			  const frame_info_ptr &));
+void dwarf2_frame_set_signal_frame_p (gdbarch *gdbarch,
+				      signal_frame_p_ftype *signal_frame_p);
 
 /* Set the architecture-specific adjustment of .eh_frame and .debug_frame
    register numbers.  */
 
-extern void
-  dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
-				  int (*adjust_regnum) (struct gdbarch *,
-							int, int));
+void dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
+				     adjust_regnum_ftype *adjust_regnum);
 
 /* Append the DWARF-2 frame unwinders to GDBARCH's list.  */
 
@@ -300,10 +299,10 @@ extern void *dwarf2_frame_get_fn_data (const frame_info_ptr &this_frame,
 
 static inline void dwarf2_append_unwinders (struct gdbarch *gdbarch) { }
 
-static inline void dwarf2_frame_set_init_reg (
-  gdbarch *gdbarch, void (*init_reg) (struct gdbarch *,int,
-				      dwarf2_frame_state_reg *,
-				      const frame_info_ptr &)) { }
+static inline void
+dwarf2_frame_set_init_reg (gdbarch *gdbarch, init_reg_ftype *init_reg)
+{
+}
 
 static inline const struct frame_base *
   dwarf2_frame_base_sniffer (const frame_info_ptr &this_frame)
@@ -312,9 +311,11 @@ static inline const struct frame_base *
   return nullptr;
 }
 
-static inline void dwarf2_frame_set_signal_frame_p
-  (gdbarch *gdbarch, int (*signal_frame_p) (struct gdbarch *,
-			  const frame_info_ptr &)) { }
+static inline void
+dwarf2_frame_set_signal_frame_p (gdbarch *gdbarch,
+				 signal_frame_p_ftype *signal_frame_p)
+{
+}
 
 static inline void *dwarf2_frame_get_fn_data (const frame_info_ptr &this_frame,
 					      void **this_cache,
@@ -341,10 +342,10 @@ dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 }
 
 static inline void
-  dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
-				  int (*adjust_regnum) (struct gdbarch *,
-							int, int))
-{}
+dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
+				adjust_regnum_ftype *adjust_regnum)
+{
+}
 
 #endif /* DWARF_FORMAT_AVAILABLE */
 
