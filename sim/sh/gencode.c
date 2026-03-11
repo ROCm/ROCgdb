@@ -645,16 +645,20 @@ static op tab[] =
   /* sh2e */
   { "", "", "fldi0 <FREG_N>", "1111nnnn10001101",
     {
-      "SET_FR (n, (float) 0.0);",
-      "/* FIXME: check for DP and (n & 1) == 0?  */",
+      "if (FPSCR_PR)",
+      "  RAISE_EXCEPTION (SIGILL);",
+      "else",
+      "  SET_FR (n, (float) 0.0);",
     },
   },
 
   /* sh2e */
   { "", "", "fldi1 <FREG_N>", "1111nnnn10011101",
     {
-      "SET_FR (n, (float) 1.0);",
-      "/* FIXME: check for DP and (n & 1) == 0?  */",
+      "if (FPSCR_PR)",
+      "  RAISE_EXCEPTION (SIGILL);",
+      "else",
+      "  SET_FR (n, (float) 1.0);",
     },
   },
 
