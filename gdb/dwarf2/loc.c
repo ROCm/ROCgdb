@@ -3132,7 +3132,7 @@ locexpr_get_symbol_read_needs (struct symbol *symbol)
 /* Return true if DATA points to the end of a piece.  END is one past
    the last byte in the expression.  */
 
-static int
+static bool
 piece_end_p (const gdb_byte *data, const gdb_byte *end)
 {
   return data == end || data[0] == DW_OP_piece || data[0] == DW_OP_bit_piece;
