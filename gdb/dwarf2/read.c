@@ -4980,11 +4980,9 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
    needs to have the name of the scope prepended to the name listed in the
    die.  */
 
-static int
+static bool
 die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
 {
-  struct attribute *attr;
-
   if (tag_is_type (die->tag) && die->tag != DW_TAG_template_type_param)
     {
       /* Historically GNAT emitted some types in funny scopes.  For
@@ -4997,7 +4995,7 @@ die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
 	  .    DW_AT_name: natural
 
 	  To detect this, we look up the DIE tree for a node that has
-	  a name; and if that name is fully qualified, we return 0
+	  a name; and if that name is fully qualified, we return false
 	  here.  */
       if (cu->lang () == language_ada)
 	{
@@ -5013,7 +5011,7 @@ die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
 		}
 	    }
 	}
-      return 1;
+      return true;
     }
 
   switch (die->tag)
@@ -5024,7 +5022,7 @@ die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
     case DW_TAG_entry_point:
     case DW_TAG_member:
     case DW_TAG_imported_declaration:
-      return 1;
+      return true;
 
     case DW_TAG_module:
       /* We don't need the namespace for Fortran modules, but we do
@@ -5046,22 +5044,21 @@ die_needs_namespace (struct die_info *die, struct dwarf2_cu *cu)
 				      spec_cu);
 	}
 
-      attr = dwarf2_attr (die, DW_AT_external, cu);
-      if (attr == NULL && die->parent->tag != DW_TAG_namespace
+      if (dwarf2_attr (die, DW_AT_external, cu) == nullptr
+	  && die->parent->tag != DW_TAG_namespace
 	  && die->parent->tag != DW_TAG_module)
-	return 0;
+	return false;
+
       /* A variable in a lexical block of some kind does not need a
 	 namespace, even though in C++ such variables may be external
 	 and have a mangled name.  */
-      if (die->parent->tag ==  DW_TAG_lexical_block
-	  || die->parent->tag ==  DW_TAG_try_block
-	  || die->parent->tag ==  DW_TAG_catch_block
-	  || die->parent->tag == DW_TAG_subprogram)
-	return 0;
-      return 1;
+      return (die->parent->tag != DW_TAG_lexical_block
+	      && die->parent->tag != DW_TAG_try_block
+	      && die->parent->tag != DW_TAG_catch_block
+	      && die->parent->tag != DW_TAG_subprogram);
 
     default:
-      return 0;
+      return false;
     }
 }
 
