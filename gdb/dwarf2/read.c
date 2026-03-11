@@ -12477,17 +12477,17 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
   return set_die_type (die, type, cu);
 }
 
-/* Assuming that DIE corresponds to a function, returns nonzero
+/* Assuming that DIE corresponds to a function, returns true
    if the function is prototyped.  */
 
-static int
+static bool
 prototyped_function_p (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct attribute *attr;
 
   attr = dwarf2_attr (die, DW_AT_prototyped, cu);
   if (attr && attr->as_boolean ())
-    return 1;
+    return true;
 
   /* The DWARF standard implies that the DW_AT_prototyped attribute
      is only meaningful for C, but the concept also extends to other
@@ -12497,16 +12497,16 @@ prototyped_function_p (struct die_info *die, struct dwarf2_cu *cu)
   if (cu->lang () != language_c
       && cu->lang () != language_objc
       && cu->lang () != language_opencl)
-    return 1;
+    return true;
 
   /* RealView does not emit DW_AT_prototyped.  We can not distinguish
      prototyped and unprototyped functions; default to prototyped,
      since that is more common in modern code (and RealView warns
      about unprototyped functions).  */
   if (cu->producer_is_realview ())
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 /* Handle DIES due to C code like:
