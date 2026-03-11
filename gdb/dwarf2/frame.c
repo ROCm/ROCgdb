@@ -1005,99 +1005,86 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     }
 
   /* Initialize the register state.  */
-  {
-    int regnum;
-
-    for (regnum = 0; regnum < num_regs; regnum++)
-      dwarf2_frame_init_reg (gdbarch, regnum, &cache->reg[regnum], this_frame);
-  }
+  for (int regnum = 0; regnum < num_regs; regnum++)
+    dwarf2_frame_init_reg (gdbarch, regnum, &cache->reg[regnum], this_frame);
 
   /* Go through the DWARF2 CFI generated table and save its register
      location information in the cache.  Note that we don't skip the
      return address column; it's perfectly all right for it to
      correspond to a real register.  */
-  {
-    int column;		/* CFI speak for "register number".  */
+  for (int column = 0; column < fs.regs.reg.size (); column++)
+    {
+      /* Use the GDB register number as the destination index.  */
+      int regnum = dwarf_reg_to_regnum (gdbarch, column);
 
-    for (column = 0; column < fs.regs.reg.size (); column++)
-      {
-	/* Use the GDB register number as the destination index.  */
-	int regnum = dwarf_reg_to_regnum (gdbarch, column);
+      /* Protect against a target returning a bad register.  */
+      if (regnum < 0 || regnum >= num_regs)
+	continue;
 
-	/* Protect against a target returning a bad register.  */
-	if (regnum < 0 || regnum >= num_regs)
-	  continue;
-
-	/* NOTE: cagney/2003-09-05: CFI should specify the disposition
-	   of all debug info registers.  If it doesn't, complain (but
-	   not too loudly).  It turns out that GCC assumes that an
-	   unspecified register implies "same value" when CFI (draft
-	   7) specifies nothing at all.  Such a register could equally
-	   be interpreted as "undefined".  Also note that this check
-	   isn't sufficient; it only checks that all registers in the
-	   range [0 .. max column] are specified, and won't detect
-	   problems when a debug info register falls outside of the
-	   table.  We need a way of iterating through all the valid
-	   DWARF2 register numbers.  */
-	if (fs.regs.reg[column].how == DWARF2_FRAME_REG_UNSPECIFIED)
-	  {
-	    if (cache->reg[regnum].how == DWARF2_FRAME_REG_UNSPECIFIED)
-	      complaint (_("\
+      /* NOTE: cagney/2003-09-05: CFI should specify the disposition
+	 of all debug info registers.  If it doesn't, complain (but
+	 not too loudly).  It turns out that GCC assumes that an
+	 unspecified register implies "same value" when CFI (draft
+	 7) specifies nothing at all.  Such a register could equally
+	 be interpreted as "undefined".  Also note that this check
+	 isn't sufficient; it only checks that all registers in the
+	 range [0 .. max column] are specified, and won't detect
+	 problems when a debug info register falls outside of the
+	 table.  We need a way of iterating through all the valid
+	 DWARF2 register numbers.  */
+      if (fs.regs.reg[column].how == DWARF2_FRAME_REG_UNSPECIFIED)
+	{
+	  if (cache->reg[regnum].how == DWARF2_FRAME_REG_UNSPECIFIED)
+	    complaint (_("\
 incomplete CFI data; unspecified registers (e.g., %s) at %s"),
-			 gdbarch_register_name (gdbarch, regnum),
-			 paddress (gdbarch, fs.pc));
-	  }
-	else
-	  cache->reg[regnum] = fs.regs.reg[column];
-      }
-  }
+		       gdbarch_register_name (gdbarch, regnum),
+		       paddress (gdbarch, fs.pc));
+	}
+      else
+	cache->reg[regnum] = fs.regs.reg[column];
+    }
 
   /* Eliminate any DWARF2_FRAME_REG_RA rules, and save the information
      we need for evaluating DWARF2_FRAME_REG_RA_OFFSET rules.  */
-  {
-    int regnum;
+  for (int regnum = 0; regnum < num_regs; regnum++)
+    {
+      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA
+	  || cache->reg[regnum].how == DWARF2_FRAME_REG_RA_OFFSET)
+	{
+	  const std::vector<struct dwarf2_frame_state_reg> &regs = fs.regs.reg;
+	  ULONGEST retaddr_column = fs.retaddr_column;
 
-    for (regnum = 0; regnum < num_regs; regnum++)
-      {
-	if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA
-	    || cache->reg[regnum].how == DWARF2_FRAME_REG_RA_OFFSET)
-	  {
-	    const std::vector<struct dwarf2_frame_state_reg> &regs
-	      = fs.regs.reg;
-	    ULONGEST retaddr_column = fs.retaddr_column;
-
-	    /* It seems rather bizarre to specify an "empty" column as
-	       the return address column.  However, this is exactly
-	       what GCC does on some targets.  It turns out that GCC
-	       assumes that the return address can be found in the
-	       register corresponding to the return address column.
-	       Incidentally, that's how we should treat a return
-	       address column specifying "same value" too.  */
-	    if (fs.retaddr_column < fs.regs.reg.size ()
-		&& regs[retaddr_column].how != DWARF2_FRAME_REG_UNSPECIFIED
-		&& regs[retaddr_column].how != DWARF2_FRAME_REG_SAME_VALUE)
-	      {
-		if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
-		  cache->reg[regnum] = regs[retaddr_column];
-		else
-		  cache->retaddr_reg = regs[retaddr_column];
-	      }
-	    else
-	      {
-		if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
-		  {
-		    cache->reg[regnum].loc.reg = fs.retaddr_column;
-		    cache->reg[regnum].how = DWARF2_FRAME_REG_SAVED_REG;
-		  }
-		else
-		  {
-		    cache->retaddr_reg.loc.reg = fs.retaddr_column;
-		    cache->retaddr_reg.how = DWARF2_FRAME_REG_SAVED_REG;
-		  }
-	      }
-	  }
-      }
-  }
+	  /* It seems rather bizarre to specify an "empty" column as
+	     the return address column.  However, this is exactly
+	     what GCC does on some targets.  It turns out that GCC
+	     assumes that the return address can be found in the
+	     register corresponding to the return address column.
+	     Incidentally, that's how we should treat a return
+	     address column specifying "same value" too.  */
+	  if (fs.retaddr_column < fs.regs.reg.size ()
+	      && regs[retaddr_column].how != DWARF2_FRAME_REG_UNSPECIFIED
+	      && regs[retaddr_column].how != DWARF2_FRAME_REG_SAME_VALUE)
+	    {
+	      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
+		cache->reg[regnum] = regs[retaddr_column];
+	      else
+		cache->retaddr_reg = regs[retaddr_column];
+	    }
+	  else
+	    {
+	      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
+		{
+		  cache->reg[regnum].loc.reg = fs.retaddr_column;
+		  cache->reg[regnum].how = DWARF2_FRAME_REG_SAVED_REG;
+		}
+	      else
+		{
+		  cache->retaddr_reg.loc.reg = fs.retaddr_column;
+		  cache->retaddr_reg.how = DWARF2_FRAME_REG_SAVED_REG;
+		}
+	    }
+	}
+    }
 
   if (fs.retaddr_column < fs.regs.reg.size ()
       && fs.regs.reg[fs.retaddr_column].how == DWARF2_FRAME_REG_UNDEFINED)
