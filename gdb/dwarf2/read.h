@@ -1381,14 +1381,14 @@ extern dwarf2_per_cu *dwarf2_find_unit (const section_and_offset &start,
 extern bool decode_locdesc (dwarf_block *blk, dwarf2_cu *cu, CORE_ADDR *result);
 
 /* Get low and high pc attributes from DW_AT_ranges attribute value OFFSET.
-   Return 1 if the attributes are present and valid, otherwise, return 0.
+   Return true if the attributes are present and valid, otherwise, return false.
    TAG is passed to dwarf2_ranges_process.  If MAP is not NULL, then
    ranges in MAP are set, using DATUM as the value.  */
 
-extern int dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
-			       unrelocated_addr *high_return, dwarf2_cu *cu,
-			       addrmap_mutable *map, void *datum,
-			       dwarf_tag tag);
+extern bool dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
+				unrelocated_addr *high_return, dwarf2_cu *cu,
+				addrmap_mutable *map, void *datum,
+				dwarf_tag tag);
 
 extern file_and_directory &find_file_and_directory (die_info *die,
 						    dwarf2_cu *cu);

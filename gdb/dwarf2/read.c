@@ -8712,17 +8712,15 @@ dwarf2_ranges_process (unsigned offset, struct dwarf2_cu *cu, dwarf_tag tag,
 
 /* See read.h.  */
 
-int
+bool
 dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 		    unrelocated_addr *high_return, struct dwarf2_cu *cu,
 		    addrmap_mutable *map, void *datum, dwarf_tag tag)
 {
-  int low_set = 0;
+  bool low_set = false;
   unrelocated_addr low = {};
   unrelocated_addr high = {};
-  bool retval;
-
-  retval = dwarf2_ranges_process (offset, cu, tag,
+  bool retval = dwarf2_ranges_process (offset, cu, tag,
     [&] (unrelocated_addr range_beginning, unrelocated_addr range_end)
     {
       if (map != nullptr)
@@ -8737,33 +8735,39 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 	 segment of consecutive addresses.  We should have a
 	 data structure for discontiguous block ranges
 	 instead.  */
-      if (! low_set)
+      if (!low_set)
 	{
 	  low = range_beginning;
 	  high = range_end;
-	  low_set = 1;
+	  low_set = true;
 	}
       else
 	{
 	  if (range_beginning < low)
 	    low = range_beginning;
+
 	  if (range_end > high)
 	    high = range_end;
 	}
     });
+
   if (!retval)
-    return 0;
+    return false;
 
-  if (! low_set)
-    /* If the first entry is an end-of-list marker, the range
+  if (!low_set)
+    {
+      /* If the first entry is an end-of-list marker, the range
        describes an empty scope, i.e. no instructions.  */
-    return 0;
+      return false;
+    }
 
-  if (low_return)
+  if (low_return != nullptr)
     *low_return = low;
-  if (high_return)
+
+  if (high_return != nullptr)
     *high_return = high;
-  return 1;
+
+  return true;
 }
 
 /* Process ranges and fill in a vector of the low PC values only.  */
