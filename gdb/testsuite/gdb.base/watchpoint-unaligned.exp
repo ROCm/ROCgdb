@@ -219,6 +219,9 @@ foreach_with_prefix fun { write_size8twice read_size8twice } {
     if { $fun == "write_size8twice" } {
 	set cmd "watch"
     } else {
+	if {![allow_hw_watchpoint_access_tests]} {
+	    continue
+	}
 	set cmd "rwatch"
     }
     foreach_with_prefix offset { 0 1 } {
