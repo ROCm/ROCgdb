@@ -792,6 +792,9 @@ proc prune_warnings_extra { text } {
     regsub -all {(^|\n)([^\n]*lto-wrapper: warning: using serial compilation of [0-9]+ LTRANS jobs[^\n]*\n?)+} $text {\1} text
     regsub -all {(^|\n)([^\n]*lto-wrapper: note: [^\n]*\n?)+} $text {\1} text
 
+    # Ignore warnings about linking objects with an old sframe format
+    regsub -all {(^|\n)([^\n]* unexpected SFrame format version [^\n]*\n[^\n]* SFrame section ignored\n?)+} $text {\1} text
+
     return $text
 }
 
