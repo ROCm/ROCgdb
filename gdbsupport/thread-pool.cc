@@ -148,6 +148,17 @@ thread_pool::~thread_pool ()
      case -- see the comment by the definition of g_thread_pool.  */
 }
 
+size_t
+thread_pool::thread_count ()
+{
+#if CXX_STD_THREAD
+  std::lock_guard<std::mutex> guard (m_tasks_mutex);
+  return m_thread_count;
+#else
+  return 0;
+#endif
+}
+
 void
 thread_pool::set_thread_count (size_t num_threads)
 {
@@ -197,21 +208,33 @@ thread_pool::set_thread_count (size_t num_threads)
 void
 thread_pool::do_post_task (std::packaged_task<void ()> &&func)
 {
-  /* This assert is here to check that no tasks are posted to the pool between
-     its initialization and sizing.  */
-  gdb_assert (m_sized_at_least_once);
-  std::packaged_task<void ()> t (std::move (func));
+  /* This is a bit strange but we don't want to hold the lock when
+     calling FUNC in the case where it must be called immediately.
+     Although that seems pathological, there are some weird cases (a
+     moribund worker thread or FUNC itself submitting a task) and it
+     seemed best to be safe.  */
+  bool call_immediately = false;
 
-  if (m_thread_count != 0)
-    {
-      std::lock_guard<std::mutex> guard (m_tasks_mutex);
-      m_tasks.emplace (std::move (t));
-      m_tasks_cv.notify_one ();
-    }
-  else
+  {
+    std::lock_guard<std::mutex> guard (m_tasks_mutex);
+
+    /* This assert is here to check that no tasks are posted to the
+       pool between its initialization and sizing.  */
+    gdb_assert (m_sized_at_least_once);
+
+    if (m_thread_count != 0)
+      {
+	m_tasks.emplace (std::move (func));
+	m_tasks_cv.notify_one ();
+      }
+    else
+      call_immediately = true;
+  }
+
+  if (call_immediately)
     {
       /* Just execute it now.  */
-      t ();
+      func ();
     }
 }
 
