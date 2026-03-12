@@ -1331,7 +1331,7 @@ elfctf_build_symtabs (objfile *objfile)
 #else
 
 void
-elfctf_build_psymtabs (struct objfile *objfile)
+elfctf_build_symtabs (struct objfile *objfile)
 {
   /* Nothing to do if CTF is disabled.  */
 }
