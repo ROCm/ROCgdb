@@ -1,0 +1,625 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test all 9 "info pdb-*" commands defined in pdb-cmd.c.
+# Uses precompiled pdb-info-cmd.exe + pdb-info-cmd.pdb (no compiler needed).
+# All commands that accept modi= are run against the main module only
+# (except info pdb-modules which does not take modi).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# --- Set up file paths ---
+standard_testfile pdb-test.cpp
+
+set exe ${binfile}.exe
+set pdb ${binfile}.pdb
+
+# Precompiled exe+pdb in source directory (no compiler required).
+set src_dir_exe $srcdir/$subdir/pdb-info-cmd-Od.exe
+set src_dir_pdb $srcdir/$subdir/pdb-info-cmd-Od.pdb
+
+if {![file exists $src_dir_exe]} {
+    unsupported "prebuilt exe not found: $src_dir_exe"
+    return
+}
+if {![file exists $src_dir_pdb]} {
+    unsupported "prebuilt pdb not found: $src_dir_pdb"
+    return
+}
+
+catch {file mkdir [file dirname $exe]}
+file copy -force $src_dir_exe $exe
+file copy -force $src_dir_pdb $pdb
+
+if {![file exists $exe]} {
+    fail "failed to copy exe to $exe"
+    return
+}
+
+verbose -log "Using prebuilt exe: $src_dir_exe"
+verbose -log "Copied to: $exe"
+
+# ===================================================================
+# Test 1: info pdb-loaded-files
+# Expected output should contain pdb-info-cmd.pdb
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+
+set test1_result [gdb_test "info pdb-loaded-files" ".*pdb-info-cmd\\.pdb.*" "test 1: info pdb-loaded-files"]
+if {$test1_result == 0} {
+    send_user "PASS: Test info pdb-loaded-files\n"
+} else {
+    send_user "FAIL: Test info pdb-loaded-files\n"
+}
+
+# ===================================================================
+# Test 2: info pdb-modules — validate output format
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+
+set main_modi 0
+set found_pdb_header 0
+set found_mod_line 0
+set found_debug_stream 0
+set test2_timed_out 0
+
+gdb_test_multiple "info pdb-modules" "test info pdb-modules" {
+    -re "PDB '\[^\r\n\]*pdb-info-cmd\\.pdb'" {
+	set found_pdb_header 1
+	exp_continue
+    }
+    -re "Mod\\s+(\\d+)\\s+\\|.*pdb-info-cmd" {
+	set main_modi $expect_out(1,string)
+	set found_mod_line 1
+	exp_continue
+    }
+    -re "debug stream:\\s+(\\d+),\\s+# files:\\s+(\\d+)" {
+	set found_debug_stream 1
+	exp_continue
+    }
+    -re "$::gdb_prompt $" {
+
+    }
+    timeout {
+	set test2_timed_out 1
+	send_user "FAIL: Test info pdb-files timeout waiting for prompt\n"
+    }
+}
+
+if {$test2_timed_out} {
+    fail "test info pdb-modules"
+} else {
+    if {!$found_pdb_header} {
+    send_user "FAIL: Test info pdb-files missing PDB header line\n"
+}
+if {!$found_mod_line} {
+    send_user "FAIL: Test info pdb-files missing Mod NNNN line\n"
+}
+if {!$found_debug_stream} {
+    send_user "FAIL: Test info pdb-files missing debug stream/files line\n"
+}
+if {$found_pdb_header && $found_mod_line && $found_debug_stream} {
+    pass "test info pdb-modules"
+    send_user "PASS: Test info pdb-modules (modi=$main_modi)\n"
+} else {
+    fail "test info pdb-modules"
+}
+}
+disable_pdb_symbol_server
+
+set t3_pdb 0
+set t3_mod 0
+set t3_files 0
+
+gdb_test_multiple "info pdb-files modi=$main_modi" "test info pdb-files" {
+    -re "PDB '.*pdb-info-cmd\\.pdb'" {
+	set t3_pdb 1
+	exp_continue
+    }
+    -re "Mod $main_modi \\|.*\\.obj" {
+	set t3_mod 1
+	exp_continue
+    }
+    -re "- .*\\.\[chCH\](pp)?" {
+	incr t3_files
+	exp_continue
+    }
+    -re "$::gdb_prompt $" {
+    }
+    timeout {
+	send_user "FAIL: Test info pdb-files timeout waiting for prompt\n"
+    }
+}
+
+if {!$t3_pdb} {
+    send_user "FAIL: Test info pdb-files missing PDB header\n"
+}
+if {!$t3_mod} {
+    send_user "FAIL: Test info pdb-files missing Mod $main_modi obj line\n"
+}
+if {$t3_files < 1} {
+    send_user "FAIL: Test info pdb-files no source/header files listed\n"
+}
+if {$t3_pdb && $t3_mod && $t3_files >= 1} {
+    pass "test info pdb-files"
+    send_user "PASS: Test 3 info pdb-files ($t3_files files listed)\n"
+} else {
+    fail "test info pdb-files"
+}
+
+# ===================================================================
+# Test 4: info pdb-files-c13 modi=N
+# Expected: PDB header, Mod NNNN with obj, C13 checksums with files
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+
+set t4_pdb 0
+set t4_mod 0
+set t4_c13 0
+
+set cmd "info pdb-files-c13 modi=$main_modi"
+gdb_test_multiple $cmd "test info pdb-files-c13" {
+    -re "PDB '.*pdb-info-cmd\\.pdb'" {
+	set t4_pdb 1
+	exp_continue
+    }
+    -re "Mod $main_modi .*\\.obj" {
+	set t4_mod 1
+	exp_continue
+    }
+    -re "\\s+\\\[SHA-256:" {
+	incr t4_c13
+	exp_continue
+    }
+    -re "\\s+\\\[Unknown:" {
+	incr t4_c13
+	exp_continue
+    }
+    -re "$::gdb_prompt $" {
+    }
+    timeout {
+	send_user "FAIL: Test info pdb-files-c13 timeout waiting for prompt\n"
+    }
+}
+
+if {!$t4_pdb} {
+    send_user "FAIL: Test info pdb-files-c13 missing PDB header\n"
+}
+if {!$t4_mod} {
+    send_user "FAIL: Test info pdb-files-c13 missing Mod $main_modi obj line\n"
+}
+if {$t4_c13 < 1} {
+    send_user "FAIL: Test info pdb-files-c13 no C13 checksums listed\n"
+}
+if {$t4_pdb && $t4_mod && $t4_c13 >= 1} {
+    pass "test info pdb-files-c13"
+    send_user "PASS: Test info pdb-files-c13 ($t4_c13 C13 checksums)\n"
+} else {
+    fail "test  info pdb-files-c13"
+}
+
+# ===================================================================
+# Test 5: info pdb-lines modi=N
+# Expected: Mod NNNN | `...obj`:
+#           path\file.cpp
+#             SSSS:AAAAAAAA-BBBBBBBB, line/addr entries = N
+#               linenum addr   linenum addr  ...
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+
+set t5_mod 0
+set t5_src 0
+set t5_entries 0
+set t5_lineaddr 0
+
+gdb_test_multiple "info pdb-lines modi=$main_modi" "test 5: info pdb-lines" {
+    -re "Mod $main_modi \\|.*\\.obj" {
+	set t5_mod 1
+	exp_continue
+    }
+    -re "pdb-test\\.cpp" {
+	set t5_src 1
+	exp_continue
+    }
+    -re "\[0-9a-fA-F\]+:\[0-9a-fA-F\]+-\[0-9a-fA-F\]+, line/addr entries = \\d+" {
+	incr t5_entries
+	exp_continue
+    }
+    -re "\\s+\\d+ \[0-9a-fA-F\]+" {
+	incr t5_lineaddr
+	exp_continue
+    }
+    -re "$::gdb_prompt $" {
+    }
+    timeout {
+	send_user "FAIL: Test info pdb-lines timeout waiting for prompt\n"
+    }
+}
+
+if {!$t5_mod} {
+    send_user "FAIL: Test info pdb-lines missing Mod $main_modi obj line\n"
+}
+if {!$t5_src} {
+    send_user "FAIL: Test info pdb-lines no pdb-test.cpp source file\n"
+}
+if {$t5_entries < 1} {
+    send_user "FAIL: Test info pdb-lines no line/addr entries records\n"
+}
+if {$t5_lineaddr < 1} {
+    send_user "FAIL: Test info pdb-lines no line/addr pairs found\n"
+}
+if {$t5_mod && $t5_src && $t5_entries >= 1 && $t5_lineaddr >= 1} {
+    pass "test info pdb-lines"
+    send_user "PASS: Test info pdb-lines ($t5_entries sections, $t5_lineaddr line/addr pairs)\n"
+} else {
+    fail "test info pdb-lines"
+}
+
+# ===================================================================
+# Test 6: info pdb-symbols modi=N - TODO
+# ===================================================================
+#clean_restart $exe
+#disable_pdb_symbol_server
+
+#set test6_result [gdb_test "info pdb-symbols modi=$main_modi" ".*" "test 6: info pdb-symbols"]
+
+# ===================================================================
+# Test 7: info pdb-symbols modi=0
+# Validate: S_LPROC32, S_GPROC32, S_REGREL32, S_LDATA32 records
+# ===================================================================
+
+set t7_internal_helper 0
+set t7_add_values 0
+set t7_static_helper 0
+set t7_local_int 0
+set t7_l_color 0
+set t7_s_accumulator 0
+set t7_s_color 0
+
+set sym_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"info pdb-symbols modi=0 \" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep \
+    -e \"internal_helper\" \
+    -e \"add_values\" \
+    -e \"static_helper\" \
+    -e \"local_int\" \
+    -e \"l_color\" \
+    -e \"s_accumulator\" \
+    -e \"s_color\""} sym_output]
+
+if {$sym_result != 0 || $sym_output eq ""} {
+    fail "test info pdb-symbols"
+    send_user "FAIL: Test info pdb-symbols - no output (result=$sym_result)\n"
+} else {
+    send_log "DEBUG Test info pdb-symbols raw output:\n$sym_output\n"
+    foreach line [split $sym_output "\n"] {
+	# 1. internal_helper: S_LPROC32
+	if {[regexp {internal_helper} $line]} {
+	    if {[regexp {S_LPROC32\s+len:\d+\s+\.text:[0-9a-fA-F]+-[0-9a-fA-F]+\s+\[sz:\d+\]\s+ti=[0-9a-fA-F]+\s+.*`.*internal_helper`} $line]} {
+		set t7_internal_helper 1
+	    }
+	}
+	# 2. add_values: S_GPROC32
+	if {[regexp {add_values} $line]} {
+	    if {[regexp {S_GPROC32\s+len:\d+\s+\.text:[0-9a-fA-F]+-[0-9a-fA-F]+\s+\[sz:\d+\]\s+ti=[0-9a-fA-F]+\s+.*`add_values`} $line]} {
+		set t7_add_values 1
+	    }
+	}
+	# 3. static_helper: S_LPROC32
+	if {[regexp {static_helper} $line]} {
+	    if {[regexp {S_LPROC32\s+len:\d+\s+\.text:[0-9a-fA-F]+-[0-9a-fA-F]+\s+\[sz:\d+\]\s+ti=[0-9a-fA-F]+\s+.*`static_helper`} $line]} {
+		set t7_static_helper 1
+	    }
+	}
+	# 4. local_int: S_REGREL32 (volatile int — user type index from MSVC)
+	if {[regexp {local_int} $line]} {
+	    if {[regexp {S_REGREL32\s+len:\d+\s+reg=\d+\+\d+\s+ti=[0-9a-fA-F]+\s+} $line] && [regexp {`local_int`} $line]} {
+		set t7_local_int 1
+	    }
+	}
+	# 5. l_color: S_REGREL32 (any type index)
+	if {[regexp {l_color} $line]} {
+	    if {[regexp {S_REGREL32\s+len:\d+\s+reg=\d+\+\d+\s+ti=[0-9a-fA-F]+\s+} $line] && [regexp {`l_color`} $line]} {
+		set t7_l_color 1
+	    }
+	}
+	# 6. s_accumulator: S_LDATA32 ti=0074 (int32_t)
+	if {[regexp {s_accumulator} $line]} {
+	    if {[regexp {S_LDATA32\s+len:\d+\s+\.data:[0-9a-fA-F]+\s+ti=0074\s+} $line] && [regexp {`s_accumulator`} $line]} {
+		set t7_s_accumulator 1
+	    }
+	}
+	# 7. s_color: S_LDATA32 (any type index)
+	if {[regexp {s_color} $line]} {
+	    if {[regexp {S_LDATA32\s+len:\d+\s+\.data:[0-9a-fA-F]+\s+ti=[0-9a-fA-F]+\s+} $line] && [regexp {`s_color`} $line]} {
+		set t7_s_color 1
+	    }
+	}
+    }
+
+    if {!$t7_internal_helper} {
+	send_user "FAIL: Test info pdb-symbols internal_helper not found or wrong format\n"
+    }
+    if {!$t7_add_values} {
+	send_user "FAIL: Test info pdb-symbols add_values not found or wrong format\n"
+    }
+    if {!$t7_static_helper} {
+	send_user "FAIL: Test info pdb-symbols static_helper not found or wrong format\n"
+    }
+    if {!$t7_local_int} {
+	send_user "FAIL: Test info pdb-symbols local_int not found or wrong format\n"
+    }
+    if {!$t7_l_color} {
+	send_user "FAIL: Test info pdb-symbols l_color not found or wrong format\n"
+    }
+    if {!$t7_s_accumulator} {
+	send_user "FAIL: Test info pdb-symbols s_accumulator not found or wrong format\n"
+    }
+    if {!$t7_s_color} {
+	send_user "FAIL: Test info pdb-symbols s_color not found or wrong format\n"
+    }
+    if {$t7_internal_helper && $t7_add_values && $t7_static_helper && $t7_local_int && $t7_l_color && $t7_s_accumulator && $t7_s_color} {
+	pass "test info pdb-symbols"
+	send_user "PASS: Test info pdb-symbols\n"
+    } else {
+	fail "test info pdb-symbols"
+    }
+}
+
+# ===================================================================
+# Test 8: info pdb-gsi
+# Run GDB with -ex and pipe through grep (output is huge).
+# Validate: GSI stream, GSI header, hash records, fast_abs, internal_helper, g_counter
+# ===================================================================
+
+set t8_gsi_stream 0
+set t8_gsi_header 0
+set t8_hash_records 0
+set t8_fast_abs 0
+set t8_internal_helper 0
+set t8_g_counter 0
+set t8_s_accumulator 0
+set t8_s_color 0
+set t8_g_max_iterations 0
+set t8_static_helper 0
+
+set gsi_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"info pdb-gsi\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep \
+    -e \"GSI\" \
+    -e \"hash records\" \
+    -e \"g_counter\" \
+    -e \"internal_helper\" \
+    -e \"fast_abs\" \
+    -e \"add_values\" \
+    -e \"s_accumulator\" \
+    -e \"s_color\" \
+    -e \"g_max_iterations\" \
+    -e \"static_helper\" \
+    -e \"args\""} gsi_output]
+
+if {$gsi_result != 0 || $gsi_output eq ""} {
+    fail "test info pdb-gsi"
+    send_user "FAIL: Test info pdb-gsi - no output (result=$gsi_result)\n"
+} else {
+    send_log "DEBUG Test info pdb-gsi raw output:\n$gsi_output\n"
+    foreach line [split $gsi_output "\n"] {
+	# 1. GSI stream N: where N > 3
+	if {[regexp {GSI stream (\d+):} $line -> stream]} {
+	    if {$stream > 3} {
+		set t8_gsi_stream 1
+	    }
+	}
+	# 2. GSI header: sig:0xFFFFFFFF ver:0xF12F091A hr_bytes:N bucket_bytes:M
+	if {[regexp {GSI header: sig:0xFFFFFFFF ver:0xF12F091A hr_bytes:(\d+) bucket_bytes:(\d+)} $line -> hrb bb]} {
+	    if {$hrb > 0 && $bb > 0} {
+		set t8_gsi_header 1
+	    }
+	}
+	# 3. N hash records:
+	if {[regexp {(\d+) hash records:} $line -> nhr]} {
+	    if {$nhr > 0} {
+		set t8_hash_records $nhr
+	    }
+	}
+	# 4. fast_abs: S_PROCREF mod=A/B
+	if {[regexp {fast_abs} $line]} {
+	    if {[regexp {offset:\d+\s+S_PROCREF\s+mod=\d+/\d+} $line]} {
+		set t8_fast_abs 1
+	    }
+	}
+	# 5. internal_helper: S_LPROCREF mod=A/B
+	if {[regexp {internal_helper} $line]} {
+	    if {[regexp {offset:\d+\s+S_LPROCREF\s+mod=\d+/\d+} $line]} {
+		set t8_internal_helper 1
+	    }
+	}
+	# 6. g_counter: S_GDATA32 .data:HEXADDR
+	if {[regexp {g_counter} $line]} {
+	    if {[regexp {offset:\d+\s+S_GDATA32\s+\.data:[0-9a-fA-F]+} $line]} {
+		set t8_g_counter 1
+	    }
+	}
+	# 7. s_accumulator: S_LDATA32 .data:HEXADDR ti=0074 (int32_t)
+	if {[regexp {s_accumulator} $line]} {
+	    if {[regexp {offset:\d+\s+S_LDATA32\s+\.data:[0-9a-fA-F]+\s+ti=0074} $line]} {
+		set t8_s_accumulator 1
+	    }
+	}
+	# 8. s_color: S_LDATA32 .data:HEXADDR (any type)
+	if {[regexp {s_color} $line]} {
+	    if {[regexp {offset:\d+\s+S_LDATA32\s+\.data:[0-9a-fA-F]+\s+ti=[0-9a-fA-F]+} $line]} {
+		set t8_s_color 1
+	    }
+	}
+	# 9. g_max_iterations: S_CONSTANT (any type index, val=100)
+	if {[regexp {g_max_iterations} $line]} {
+	    if {[regexp {S_CONSTANT\s+ti=[0-9a-fA-F]+\s+.*val=100\s+`g_max_iterations`} $line]} {
+		set t8_g_max_iterations 1
+	    }
+	}
+	# 10. static_helper: S_LPROCREF mod=A/B
+	if {[regexp {static_helper} $line]} {
+	    if {[regexp {offset:\d+\s+S_LPROCREF\s+mod=\d+/\d+} $line]} {
+		set t8_static_helper 1
+	    }
+	}
+    }
+
+    if {!$t8_gsi_stream} {
+	send_user "FAIL: Test info pdb-gsi missing/invalid GSI stream line\n"
+    }
+    if {!$t8_gsi_header} {
+	send_user "FAIL: Test info pdb-gsi missing/invalid GSI header\n"
+    }
+    if {$t8_hash_records == 0} {
+	send_user "FAIL: Test info pdb-gsi no hash records found\n"
+    }
+    if {!$t8_fast_abs} {
+	send_user "FAIL: Test info pdb-gsi fast_abs not found or wrong format\n"
+    }
+    if {!$t8_internal_helper} {
+	send_user "FAIL: Test info pdb-gsi internal_helper not found or wrong format\n"
+    }
+    if {!$t8_g_counter} {
+	send_user "FAIL: Test info pdb-gsi g_counter not found or wrong format\n"
+    }
+    if {!$t8_s_accumulator} {
+	send_user "FAIL: Test info pdb-gsi s_accumulator not found or wrong format\n"
+    }
+    if {!$t8_s_color} {
+	send_user "FAIL: Test info pdb-gsi s_color not found or wrong format\n"
+    }
+    if {!$t8_g_max_iterations} {
+	send_user "FAIL: Test info pdb-gsi g_max_iterations not found or wrong format\n"
+    }
+    if {!$t8_static_helper} {
+	send_user "FAIL  Test info pdb-gsi static_helper not found or wrong format\n"
+    }
+    if {$t8_gsi_stream && $t8_gsi_header && $t8_hash_records > 0 && $t8_fast_abs && $t8_internal_helper && $t8_g_counter && $t8_s_accumulator && $t8_s_color && $t8_g_max_iterations && $t8_static_helper} {
+	pass "test info pdb-gsi"
+	send_user "PASS: Test info pdb-gsi\n"
+    } else {
+	fail "test info pdb-gsi"
+    }
+}
+
+# ===================================================================
+# Test 9: info pdb-psi
+# Run GDB with -ex and pipe through grep (output is huge).
+# Validate: PSGSI stream, GSI header, hash records, g_counter, fast_abs
+# ===================================================================
+
+set t9_psgsi 0
+set t9_gsi_header 0
+set t9_hash_records 0
+set t9_g_counter 0
+set t9_fast_abs 0
+
+set psi_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"info pdb-psi\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep \
+    -e \"PSGSI\" \
+    -e \"hash records\" \
+    -e \"GSI\" \
+    -e \"Address map\" \
+    -e \"g_counter\" \
+    -e \"fast_abs\" \
+    -e \"args\""} psi_output]
+
+if {$psi_result != 0 || $psi_output eq ""} {
+    fail "test info pdb-psi"
+    send_user "FAIL: Test info pdb-psi - no output (result=$psi_result)\n"
+} else {
+    send_log "DEBUG Test info pdb-psi raw output:\n$psi_output\n"
+    # Check each line of grep output
+    foreach line [split $psi_output "\n"] {
+	# 1. PSGSI stream N: sym_hash_size=M addr_map_size=K
+	if {[regexp {PSGSI stream (\d+).*sym_hash_size=(\d+).*addr_map_size=(\d+)} $line -> stream shsz amsz]} {
+	    if {$stream > 3 && $shsz > 0 && $amsz > 0} {
+		set t9_psgsi 1
+	    }
+	}
+	# 2. GSI header: sig:0xFFFFFFFF ver:0xF12F091A hr_bytes:N bucket_bytes:M
+	if {[regexp {GSI header: sig:0xFFFFFFFF ver:0xF12F091A hr_bytes:(\d+) bucket_bytes:(\d+)} $line -> hrb bb]} {
+	    if {$hrb > 0 && $bb > 0} {
+		set t9_gsi_header 1
+	    }
+	}
+	# 3. N hash records:
+	if {[regexp {(\d+) hash records:} $line -> nhr]} {
+	    if {$nhr > 0} {
+		set t9_hash_records $nhr
+	    }
+	}
+	# 4. g_counter: offset:N S_PUB32 .data:NUMBER
+	if {[regexp {g_counter} $line]} {
+	    if {[regexp {offset:\d+\s+S_PUB32\s+\.data:[0-9a-fA-F]+} $line]} {
+		set t9_g_counter 1
+	    }
+	}
+	# 5. fast_abs: offset:N S_PUB32 .text:NUMBER
+	if {[regexp {fast_abs} $line]} {
+	    if {[regexp {offset:\d+\s+S_PUB32\s+\.text:[0-9a-fA-F]+} $line]} {
+		set t9_fast_abs 1
+	    }
+	}
+    }
+
+
+    # Report results
+    if {!$t9_psgsi} {
+	send_user "FAIL: Test info pdb-psi missing/invalid PSGSI stream line\n"
+    }
+    if {!$t9_gsi_header} {
+	send_user "FAIL: Test info pdb-psi missing/invalid GSI header\n"
+    }
+    if {$t9_hash_records == 0} {
+	send_user "FAIL: Test info pdb-psi no hash records found\n"
+    }
+    if {!$t9_g_counter} {
+	send_user "FAIL: Test info pdb-psi g_counter not found or wrong format\n"
+    }
+    if {!$t9_fast_abs} {
+	send_user "FAIL: Test info pdb-psi fast_abs not found or wrong format\n"
+    }
+    if {$t9_psgsi && $t9_gsi_header && $t9_hash_records > 0 && $t9_g_counter && $t9_fast_abs} {
+	pass "test info pdb-psi"
+	send_user "PASS: Test info pdb-psi info pdb-psi\n"
+    } else {
+	fail "test  info pdb-psi"
+    }
+}

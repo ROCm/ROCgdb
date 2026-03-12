@@ -1657,6 +1657,9 @@ Optional Features:
   --enable-gdb-dwarf-support
                           Enable support for the dwarf debuginfo format
                           (default 'yes')
+  --enable-gdb-pdb-support
+                          Enable support for the PDB debuginfo format
+                          (default 'yes')
   --enable-tui            enable full-screen terminal user interface (TUI)
   --enable-gdbtk          enable gdbtk graphical user interface (GUI)
   --enable-profiling      enable profiling of GDB
@@ -25187,6 +25190,34 @@ $as_echo "#define DWARF_FORMAT_AVAILABLE 1" >>confdefs.h
 
     CONFIG_SRCS="$CONFIG_SRCS \$(DWARF2_SRCS)"
     CONFIG_OBS="$CONFIG_OBS \$(DWARF2_OBS)"
+fi
+
+# Check whether to support PDB debug information
+# Check whether --enable-gdb-pdb-support was given.
+if test "${enable_gdb_pdb_support+set}" = set; then :
+  enableval=$enable_gdb_pdb_support;
+	   case $enableval in
+	     yes | no)
+	       ;;
+	     *)
+	       as_fn_error $? "bad value $enableval for --enable-gdb-pdb-support" "$LINENO" 5
+	       ;;
+	   esac
+
+else
+  case $host_os in
+  mingw* | cygwin*) enable_gdb_pdb_support=yes ;;
+  *)                enable_gdb_pdb_support=no ;;
+esac
+fi
+
+
+if test "x${enable_gdb_pdb_support}" != "xno"; then
+
+$as_echo "#define PDB_FORMAT_AVAILABLE 1" >>confdefs.h
+
+    CONFIG_SRCS="$CONFIG_SRCS \$(PDB_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(PDB_OBS)"
 fi
 
 # See whether 64-bit bfd lib has been enabled.

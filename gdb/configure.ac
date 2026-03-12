@@ -216,6 +216,22 @@ if test "x${enable_gdb_dwarf_support}" != "xno"; then
     CONFIG_OBS="$CONFIG_OBS \$(DWARF2_OBS)"
 fi
 
+AC_ARG_ENABLE(gdb-pdb-support,
+AS_HELP_STRING([--enable-gdb-pdb-support],
+	       [Enable support for the PDB debuginfo format (default: auto, enabled on mingw/cygwin)]),
+[GDB_CHECK_YES_NO_VAL([$enableval], [--enable-gdb-pdb-support])],
+[case $host_os in
+  mingw* | cygwin*) enable_gdb_pdb_support=yes ;;
+  *)                enable_gdb_pdb_support=no ;;
+esac])
+
+if test "x${enable_gdb_pdb_support}" != "xno"; then
+    AC_DEFINE(PDB_FORMAT_AVAILABLE, 1,
+	      [defined if PDB format was requested.])
+    CONFIG_SRCS="$CONFIG_SRCS \$(PDB_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(PDB_OBS)"
+fi
+
 BFD_64_BIT
 
 # Provide defaults for some variables set by the per-host and per-target

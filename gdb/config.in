@@ -42,6 +42,9 @@
 /* defined if dwarf format was requested. */
 #undef DWARF_FORMAT_AVAILABLE
 
+/* defined if PDB format was requested. */
+#undef PDB_FORMAT_AVAILABLE
+
 /* Handle .ctf type-info sections */
 #undef ENABLE_LIBCTF
 
