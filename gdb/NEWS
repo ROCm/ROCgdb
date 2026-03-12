@@ -98,6 +98,10 @@ set debug gnu-ifunc on|off
 show debug gnu-ifunc
   Turn on or off debug messages related to GNU ifunc resolution.
 
+set debug ctf on|off
+show debug ctf
+  Turn on or off debug messages about CTF reading.
+
 set progress-bars enabled on|off
 show progress-bars enabled
   Allows the progress bars, used when debuginfod is downloading
@@ -128,6 +132,14 @@ New command class for help
   The new command class "essential" has been added, which is a set of
   commands that we, as developers, believe would be close to a minimal
   set of commands for a new user of GDB.
+
+* Removed commands
+
+maint check psymtabs
+maint info psymtabs
+maint print psymbols
+  These commands have been removed, as GDB no longer uses partial
+  symbol tables internally.
 
 * Debugger Adapter Protocol changes
 

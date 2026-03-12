@@ -70,7 +70,7 @@ proc do_test {} {
   set addr [get_valueof "/x" "$kfd_load_address" "0x0" "normalize load address"]
 
   gdb_test "x $kfd_load_address" \
-	   ".*Cannot access memory at address $addr.*" \
+	   "$addr:\[ \t\]*<unavailable>" \
 	   "cannot read from /dev/kfd"
 }
 

@@ -48,6 +48,7 @@ from io import BytesIO, IOBase
 from logging import getLogger
 from typing import Annotated, Optional
 
+from elftools.construct.lib.container import ListContainer
 from elftools.dwarf.compileunit import CompileUnit as RawCompileUnit
 from elftools.dwarf.die import DIE as RawDIE
 from elftools.dwarf.die import AttributeValue
@@ -169,8 +170,10 @@ class DWARFAttribute:
             return self._format_str(self.value.decode("ascii"))
         elif isinstance(self.value, str):
             return self._format_str(self.value)
+        elif isinstance(self.value, ListContainer):
+            return "0x" + "".join(format(i, "x") for i in self.value)
         else:
-            raise NotImplementedError(f"Unknown data type: {type(self.value)}")
+            return f"Unknown data type: {type(self.value)}: {self.value}"
 
     def format(
         self, offset_die_lookup: dict[int, "DWARFDIE"], indent_count: int = 0
@@ -206,7 +209,13 @@ class DWARFAttribute:
         s += " "
 
         if self.name == "DW_AT_language" and isinstance(self.value, int):
-            s += "@" + LANG_NAME[self.value]
+            if LANG_NAME.get(self.value) is None:
+                if self.value == 0x8001:
+                    s += "@DW_LANG_Mips_Assembler"
+                else:
+                    s += str(self.value) + " DW_FORM_sdata"
+            else:
+                s += "@" + LANG_NAME[self.value]
         elif self.name == "DW_AT_encoding" and isinstance(self.value, int):
             s += "@" + ATE_NAME[self.value]
         else:

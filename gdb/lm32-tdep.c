@@ -65,7 +65,7 @@ struct lm32_frame_cache
 
 /* Return whether a given register is in a given group.  */
 
-static int
+static bool
 lm32_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -103,9 +103,9 @@ lm32_register_type (struct gdbarch *gdbarch, int reg_nr)
   return builtin_type (gdbarch)->builtin_int32;
 }
 
-/* Return non-zero if a register can't be written.  */
+/* Return true if a register can't be written.  */
 
-static int
+static bool
 lm32_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == SIM_LM32_R0_REGNUM) || (regno == SIM_LM32_EID_REGNUM);
@@ -524,7 +524,7 @@ lm32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Breakpoints.  */
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, lm32_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, lm32_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Calling functions in the inferior.  */
   set_gdbarch_push_dummy_call (gdbarch, lm32_push_dummy_call);

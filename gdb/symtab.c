@@ -2681,7 +2681,7 @@ lookup_transparent_type_quick (struct objfile *objfile,
   sym = block_find_symbol (block, name, flags, nullptr);
   if (sym == nullptr)
     error_in_psymtab_expansion (block_index, name.c_str (), cust);
-  gdb_assert (!TYPE_IS_OPAQUE (sym->type ()));
+  gdb_assert (!sym->type ()->is_opaque ());
   return sym->type ();
 }
 

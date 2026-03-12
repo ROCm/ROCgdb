@@ -1058,6 +1058,25 @@ struct type
     this->main_type->name = name;
   }
 
+  /* Return the name of this type, or "<unnamed type>" if it has no
+     name.  */
+  const char *safe_name () const
+  {
+    return this->name () != nullptr ? this->name () : _("<unnamed type>");
+  }
+
+  /* Return the name of this type, or "<error type>" if it has no
+     name.  */
+  const char *error_name () const
+  {
+    return this->name () != nullptr ? this->name () : _("<error type>");
+  }
+
+  /* Return true if this type is "opaque", i.e.  a struct or union with
+     no fields, no methods, and either a stub or with unsupported stub
+     information.  */
+  bool is_opaque () const;
+
   /* Note that if thistype is a TYPEDEF type, you have to call check_typedef.
      But check_typedef does set the TYPE_LENGTH of the TYPEDEF type,
      so you only have to call check_typedef once.  Since value::allocate
@@ -1283,7 +1302,7 @@ struct type
   }
 
   /* This debug target supports TYPE_STUB(t).  In the unsupported case
-     we have to rely on NFIELDS to be zero etc., see TYPE_IS_OPAQUE().
+     we have to rely on NFIELDS to be zero etc., see type::is_opaque.
      TYPE_STUB(t) with !TYPE_STUB_SUPPORTED(t) may exist if we only
      guessed the TYPE_STUB(t) value (see dwarfread.c).  */
 
@@ -2035,25 +2054,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
   (TYPE_NESTED_TYPES_FIELD (thistype, n).accessibility \
    == accessibility::PRIVATE)
 
-#define TYPE_IS_OPAQUE(thistype) \
-  ((((thistype)->code () == TYPE_CODE_STRUCT) \
-    || ((thistype)->code () == TYPE_CODE_UNION)) \
-   && ((thistype)->num_fields () == 0) \
-   && (!HAVE_CPLUS_STRUCT (thistype) \
-       || TYPE_NFN_FIELDS (thistype) == 0) \
-   && ((thistype)->is_stub () || !(thistype)->stub_is_supported ()))
-
-/* * A helper macro that returns the name of a type or "unnamed type"
-   if the type has no name.  */
-
-#define TYPE_SAFE_NAME(type) \
-  (type->name () != nullptr ? type->name () : _("<unnamed type>"))
-
-/* * A helper macro that returns the name of an error type.  If the
-   type has a name, it is used; otherwise, a default is used.  */
-
-#define TYPE_ERROR_NAME(type) \
-  (type->name () ? type->name () : _("<error type>"))
 
 /* Given TYPE, return its floatformat.  */
 const struct floatformat *floatformat_from_type (const struct type *type);

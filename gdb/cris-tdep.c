@@ -445,13 +445,13 @@ static const struct frame_unwind_legacy cris_sigtramp_frame_unwind (
   cris_sigtramp_frame_sniffer
 );
 
-static int
+static bool
 crisv32_single_step_through_delay (struct gdbarch *gdbarch,
 				   const frame_info_ptr &this_frame)
 {
   cris_gdbarch_tdep *tdep = gdbarch_tdep<cris_gdbarch_tdep> (gdbarch);
   ULONGEST erp;
-  int ret = 0;
+  bool ret = false;
 
   if (tdep->cris_mode == cris_mode_guru)
     erp = get_frame_register_unsigned (this_frame, NRP_REGNUM);
@@ -463,7 +463,7 @@ crisv32_single_step_through_delay (struct gdbarch *gdbarch,
       /* In delay slot - check if there's a breakpoint at the preceding
 	 instruction.  */
       if (breakpoint_here_p (get_frame_address_space (this_frame), erp & ~0x1))
-	ret = 1;
+	ret = true;
     }
   return ret;
 }
@@ -1464,20 +1464,20 @@ cris_register_size (struct gdbarch *gdbarch, int regno)
   return -1;
 }
 
-/* Nonzero if regno should not be fetched from the target.  This is the case
+/* True if regno should not be fetched from the target.  This is the case
    for unimplemented (size 0) and non-existent registers.  */
 
-static int
+static bool
 cris_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return ((regno < 0 || regno >= gdbarch_num_regs (gdbarch))
 	  || (cris_register_size (gdbarch, regno) == 0));
 }
 
-/* Nonzero if regno should not be written to the target, for various
+/* True if regno should not be written to the target, for various
    reasons.  */
 
-static int
+static bool
 cris_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* There are three kinds of registers we refuse to write to.
@@ -1489,36 +1489,36 @@ cris_cannot_store_register (struct gdbarch *gdbarch, int regno)
       || regno >= gdbarch_num_regs (gdbarch)
       || cris_register_size (gdbarch, regno) == 0)
     /* Not implemented.  */
-    return 1;
+    return true;
 
   else if  (regno == VR_REGNUM)
     /* Read-only.  */
-    return 1;
+    return true;
 
   else if  (regno == P0_REGNUM || regno == P4_REGNUM || regno == P8_REGNUM)
     /* Writing has no effect.  */
-    return 1;
+    return true;
 
   /* IBR, BAR, BRP and IRP are read-only in user mode.  Let the debug
      agent decide whether they are writable.  */
 
-  return 0;
+  return false;
 }
 
-/* Nonzero if regno should not be fetched from the target.  This is the case
+/* True if regno should not be fetched from the target.  This is the case
    for unimplemented (size 0) and non-existent registers.  */
 
-static int
+static bool
 crisv32_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return ((regno < 0 || regno >= gdbarch_num_regs (gdbarch))
 	  || (cris_register_size (gdbarch, regno) == 0));
 }
 
-/* Nonzero if regno should not be written to the target, for various
+/* True if regno should not be written to the target, for various
    reasons.  */
 
-static int
+static bool
 crisv32_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* There are three kinds of registers we refuse to write to.
@@ -1530,20 +1530,20 @@ crisv32_cannot_store_register (struct gdbarch *gdbarch, int regno)
       || regno >= gdbarch_num_regs (gdbarch)
       || cris_register_size (gdbarch, regno) == 0)
     /* Not implemented.  */
-    return 1;
+    return true;
 
   else if  (regno == VR_REGNUM)
     /* Read-only.  */
-    return 1;
+    return true;
 
   else if  (regno == BZ_REGNUM || regno == WZ_REGNUM || regno == DZ_REGNUM)
     /* Writing has no effect.  */
-    return 1;
+    return true;
 
   /* Many special registers are read-only in user mode.  Let the debug
      agent decide whether they are writable.  */
 
-  return 0;
+  return false;
 }
 
 /* Return the GDB type (defined in gdbtypes.c) for the "standard" data type
@@ -4009,7 +4009,7 @@ cris_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_cannot_fetch_register
 	(gdbarch, crisv32_cannot_fetch_register);
 
-      set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+      set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
       set_gdbarch_single_step_through_delay
 	(gdbarch, crisv32_single_step_through_delay);

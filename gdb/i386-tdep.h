@@ -384,9 +384,9 @@ extern void i386_pseudo_register_write (gdbarch *gdbarch,
 					const frame_info_ptr &next_frame, int regnum,
 					gdb::array_view<const gdb_byte> buf);
 
-extern int i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
-					    struct agent_expr *ax,
-					    int regnum);
+extern void i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
+					     struct agent_expr *ax,
+					     int regnum);
 
 /* Segment selectors.  */
 #define I386_SEL_RPL	0x0003  /* Requester's Privilege Level mask.  */
@@ -420,8 +420,8 @@ extern CORE_ADDR i386_thiscall_push_dummy_call (struct gdbarch *gdbarch,
 extern int i386_sigtramp_p (const frame_info_ptr &this_frame);
 
 /* Return non-zero if REGNUM is a member of the specified group.  */
-extern int i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
-				     const struct reggroup *group);
+extern bool i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
+				      const struct reggroup *group);
 
 /* Supply register REGNUM from the general-purpose register set REGSET
    to register cache REGCACHE.  If REGNUM is -1, do this for all
@@ -481,8 +481,8 @@ extern int i386bsd_sc_reg_offset[];
 
 /* SystemTap related functions.  */
 
-extern int i386_stap_is_single_operand (struct gdbarch *gdbarch,
-					const char *s);
+extern bool i386_stap_is_single_operand (struct gdbarch *gdbarch,
+					 const char *s);
 
 extern expr::operation_up i386_stap_parse_special_token
      (struct gdbarch *gdbarch, struct stap_parse_info *p);

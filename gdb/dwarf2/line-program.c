@@ -519,7 +519,7 @@ lnp_state_machine::lnp_state_machine (struct dwarf2_cu *cu, gdbarch *arch)
        chance to adjust it and also record it in case it needs it.
        This is currently used by MIPS code,
        cf. `mips_adjust_dwarf2_line'.  */
-    m_address ((unrelocated_addr) gdbarch_adjust_dwarf2_line (arch, 0, 0)),
+    m_address ((unrelocated_addr) gdbarch_adjust_dwarf2_line (arch, 0, false)),
     m_flags (m_cu->line_header->default_is_stmt
 	     ? LEF_IS_STMT : (linetable_entry_flags) 0),
     m_last_address (m_address)

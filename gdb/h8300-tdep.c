@@ -1068,7 +1068,7 @@ h8300_print_register (struct gdbarch *gdbarch, struct ui_file *file,
 
 static void
 h8300_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			    const frame_info_ptr &frame, int regno, int cpregs)
+			    const frame_info_ptr &frame, int regno, bool cpregs)
 {
   if (regno < 0)
     {
@@ -1346,13 +1346,13 @@ h8300_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				       h8300_breakpoint::bp_from_kind);
   set_gdbarch_push_dummy_call (gdbarch, h8300_push_dummy_call);
 
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
   set_gdbarch_int_bit (gdbarch, 2 * TARGET_CHAR_BIT);
   set_gdbarch_long_bit (gdbarch, 4 * TARGET_CHAR_BIT);
   set_gdbarch_long_long_bit (gdbarch, 8 * TARGET_CHAR_BIT);
 
   set_gdbarch_wchar_bit (gdbarch, 2 * TARGET_CHAR_BIT);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   set_gdbarch_double_bit (gdbarch, 4 * TARGET_CHAR_BIT);
   set_gdbarch_double_format (gdbarch, floatformats_ieee_single);

@@ -21005,14 +21005,10 @@ entered from the keyboard causes symbol information to be loaded.
 @anchor{maint print symbols}
 @kindex maint print symbols
 @cindex symbol dump
-@kindex maint print psymbols
-@cindex partial symbol dump
 @kindex maint print msymbols
 @cindex minimal symbol dump
 @item maint print symbols @r{[}-pc @var{address}@r{]} @r{[}@var{filename}@r{]}
 @itemx maint print symbols @r{[}-objfile @var{objfile}@r{]} @r{[}-source @var{source}@r{]} @r{[}--@r{]} @r{[}@var{filename}@r{]}
-@itemx maint print psymbols @r{[}-objfile @var{objfile}@r{]} @r{[}-pc @var{address}@r{]} @r{[}--@r{]} @r{[}@var{filename}@r{]}
-@itemx maint print psymbols @r{[}-objfile @var{objfile}@r{]} @r{[}-source @var{source}@r{]} @r{[}--@r{]} @r{[}@var{filename}@r{]}
 @itemx maint print msymbols @r{[}-objfile @var{objfile}@r{]} @r{[}--@r{]} @r{[}@var{filename}@r{]}
 Write a dump of debugging symbol data into the file @var{filename} or
 the terminal if @var{filename} is unspecified.
@@ -21029,71 +21025,44 @@ These commands do not modify internal @value{GDBN} state, therefore
 @samp{maint print symbols} will only print symbols for already expanded symbol
 tables.
 You can use the command @code{info sources} to find out which files these are.
-If you use @samp{maint print psymbols} instead, the dump shows information
-about symbols that @value{GDBN} only knows partially---that is, symbols
-defined in files that @value{GDBN} has skimmed, but not yet read completely.
-Finally, @samp{maint print msymbols} just dumps ``minimal symbols'', e.g.,
+@samp{maint print msymbols} dumps ``minimal symbols'', e.g.,
 ``ELF symbols''.
 
 @xref{Files, ,Commands to Specify Files}, for a discussion of how
 @value{GDBN} reads symbols (in the description of @code{symbol-file}).
 
 @kindex maint info symtabs
-@kindex maint info psymtabs
 @cindex listing @value{GDBN}'s internal symbol tables
 @cindex symbol tables, listing @value{GDBN}'s internal
 @cindex full symbol tables, listing @value{GDBN}'s internal
-@cindex partial symbol tables, listing @value{GDBN}'s internal
 @item maint info symtabs @r{[} @var{regexp} @r{]}
-@itemx maint info psymtabs @r{[} @var{regexp} @r{]}
 
-List the @code{struct symtab} or @code{struct partial_symtab}
-structures whose names match @var{regexp}.  If @var{regexp} is not
-given, list them all.  The output includes expressions which you can
-copy into a @value{GDBN} debugging this one to examine a particular
-structure in more detail.  For example:
-
-@smallexample
-(@value{GDBP}) maint info psymtabs dwarf2read
-@{ objfile /home/gnu/build/gdb/gdb
-  ((struct objfile *) 0x82e69d0)
-  @{ psymtab /home/gnu/src/gdb/dwarf2read.c
-    ((struct partial_symtab *) 0x8474b10)
-    readin no
-    fullname (null)
-    text addresses 0x814d3c8 -- 0x8158074
-    globals (* (struct partial_symbol **) 0x8507a08 @@ 9)
-    statics (* (struct partial_symbol **) 0x40e95b78 @@ 2882)
-    dependencies (none)
-  @}
-@}
-(@value{GDBP}) maint info symtabs
-(@value{GDBP})
-@end smallexample
-@noindent
-We see that there is one partial symbol table whose filename contains
-the string @samp{dwarf2read}, belonging to the @samp{gdb} executable;
-and we see that @value{GDBN} has not read in any symtabs yet at all.
-If we set a breakpoint on a function, that will cause @value{GDBN} to
-read the symtab for the compilation unit containing that function:
+List the @code{struct symtab} structures whose names match
+@var{regexp}.  If @var{regexp} is not given, list them all.  The
+output includes expressions which you can copy into a @value{GDBN}
+debugging this one to examine a particular structure in more detail.
+For example:
 
 @smallexample
-(@value{GDBP}) break dwarf2_psymtab_to_symtab
-Breakpoint 1 at 0x814e5da: file /home/gnu/src/gdb/dwarf2read.c,
-line 1574.
 (@value{GDBP}) maint info symtabs
-@{ objfile /home/gnu/build/gdb/gdb
-  ((struct objfile *) 0x82e69d0)
-  @{ symtab /home/gnu/src/gdb/dwarf2read.c
-    ((struct symtab *) 0x86c1f38)
-    dirname (null)
-    fullname (null)
-    blockvector ((struct blockvector *) 0x86c1bd0) (primary)
-    linetable ((struct linetable *) 0x8370fa0)
-    debugformat DWARF 2
+@{ objfile /home/gnu/build/binutils-gdb/gdb/a.out ((struct objfile *) 0x7d48d1c92b80)
+  @{ ((struct compunit_symtab *) 0x7cd8d1be44b0)
+    debugformat DWARF 5
+    producer GNU C23 15.2.1 20260209 -mtune=generic -march=x86-64 -g3 -O0
+    name test.c
+    dirname /home/gnu/build/binutils-gdb/gdb
+    blockvector ((struct blockvector *) 0x7c48d1c1efc0)
+    user ((struct compunit_symtab *) (null))
+        @{ symtab test.c ((struct symtab *) 0x7df8d1d588a0)
+          fullname /home/gnu/build/binutils-gdb/gdb/test.c
+          linetable ((struct linetable *) 0x7df8d1d58cc0)
+        @}
+        @{ symtab /usr/include/stdc-predef.h ((struct symtab *) 0x7df8d1d588e0)
+          fullname (void)
+          linetable ((struct linetable *) 0x0)
+        @}
   @}
 @}
-(@value{GDBP})
 @end smallexample
 
 @kindex maint info line-table
@@ -32012,6 +31981,13 @@ exported symbols.  The default is off.
 @item show debug coff-pe-read
 Displays the current state of displaying debugging messages related to
 reading of COFF/PE exported symbols.
+
+@cindex CTF debug messages
+@item set debug ctf [on | off]
+Turns on or off display of debugging messages related to reading CTF
+debug info.  The default is off.
+@item show debug ctf
+Displays the current state of CTF debug info reading messages.
 
 @item set debug dwarf-die
 @cindex DWARF DIEs
@@ -45345,11 +45321,6 @@ only if non-stop mode is active (@pxref{Non-Stop Mode}) and the target
 architecture supports displaced stepping.
 @end table
 
-@kindex maint check psymtabs
-@item maint check psymtabs
-Check the consistency of currently expanded psymtabs versus symtabs.
-Use this to check, for example, whether a symbol is in one but not the other.
-
 @kindex maint check symtabs
 @item maint check symtabs
 Check the consistency of currently expanded symtabs.
@@ -45845,7 +45816,7 @@ address-spaces}}.
 Print a dump of all known object files.
 If @var{regexp} is specified, only print object files whose names
 match @var{regexp}.  For each object file, this command prints its name,
-address in memory, and all of its psymtabs and symtabs.
+address in memory, and all of its symtabs.
 
 @kindex maint print user-registers
 @cindex user registers
@@ -45874,12 +45845,11 @@ and the full path if known.
 This command prints, for each object file in the program, various data
 about that object file followed by the byte cache (@dfn{bcache})
 statistics for the object file.  The objfile data includes the number
-of minimal, partial, and full, the number of types defined by the
-objfile, the number of as yet unexpanded psym tables, the number of
-line tables and string tables, and the amount of memory used by the
-various tables.  The bcache statistics include the counts, sizes, and
-counts of duplicates of all and unique objects, max, average, and
-median entry size, total memory used and its overhead and savings,
+of minimal symbols, of full symbols, of types defined by the
+objfile, of line tables and of string tables, and the amount of memory
+used by the various tables.  The bcache statistics include the counts,
+sizes, and counts of duplicates of all and unique objects, max, average,
+and median entry size, total memory used and its overhead and savings,
 and various measures of the hash table size and chain lengths.
 
 @kindex maint print target-stack

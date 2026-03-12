@@ -125,16 +125,6 @@ class minimal_symbol_reader
 
   /* Like record_full, but:
      - computes the length of NAME
-     - passes COPY_NAME = true,
-     - and passes a default SECTION, depending on the type
-
-     This variant does not return the new symbol.  */
-
-  void record (const char *name, unrelocated_addr address,
-	       enum minimal_symbol_type ms_type);
-
-  /* Like record_full, but:
-     - computes the length of NAME
      - passes COPY_NAME = true.
 
      This variant does not return the new symbol.  */

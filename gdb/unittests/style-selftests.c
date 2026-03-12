@@ -31,7 +31,7 @@ run_tests ()
 {
   ui_file_style style;
   size_t n_read;
-  uint8_t rgb[3];
+  rgb_color rgb;
 
   SELF_CHECK (style.parse ("\033[m", &n_read));
   SELF_CHECK (n_read == 3);
@@ -94,10 +94,10 @@ run_tests ()
   SELF_CHECK (style.parse ("\033[38;5;112;48;5;249m", &n_read));
   SELF_CHECK (n_read == 20);
   SELF_CHECK (!style.get_foreground ().is_basic ());
-  style.get_foreground ().get_rgb (rgb);
+  rgb = style.get_foreground ().get_rgb ();
   CHECK_RGB (0x87, 0xd7, 0);
   SELF_CHECK (!style.get_background ().is_basic ());
-  style.get_background ().get_rgb (rgb);
+  rgb = style.get_background ().get_rgb ();
   CHECK_RGB (0xb2, 0xb2, 0xb2);
   SELF_CHECK (style.get_intensity () == ui_file_style::NORMAL);
   SELF_CHECK (!style.is_italic ());
@@ -109,10 +109,10 @@ run_tests ()
   SELF_CHECK (style.parse ("\033[38;2;83;84;85;48;2;0;1;254;2;7m", &n_read));
   SELF_CHECK (n_read == 33);
   SELF_CHECK (!style.get_foreground ().is_basic ());
-  style.get_foreground ().get_rgb (rgb);
+  rgb = style.get_foreground ().get_rgb ();
   CHECK_RGB (83, 84, 85);
   SELF_CHECK (!style.get_background ().is_basic ());
-  style.get_background ().get_rgb (rgb);
+  rgb = style.get_background ().get_rgb ();
   CHECK_RGB (0, 1, 254);
   SELF_CHECK (style.get_intensity () == ui_file_style::DIM);
   SELF_CHECK (!style.is_italic ());

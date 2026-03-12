@@ -641,7 +641,7 @@ value_from_register (type *type, int regnum, const frame_info_ptr &frame,
 
   if (gdbarch_convert_register_p (gdbarch, regnum, type1))
     {
-      int optim, unavail, ok;
+      bool optim, unavail;
 
       /* It's not clear what an offset would mean for registers that require
 	 special handling.  Is the offset applied on the raw value
@@ -659,9 +659,9 @@ value_from_register (type *type, int regnum, const frame_info_ptr &frame,
 	 including the location.  */
       v = value::allocate_register (get_next_frame_sentinel_okay (frame),
 				    regnum, type);
-      ok = gdbarch_register_to_value (gdbarch, frame, regnum, type1,
-				      v->contents_raw ().data (), &optim,
-				      &unavail);
+      bool ok = gdbarch_register_to_value (gdbarch, frame, regnum, type1,
+					   v->contents_raw ().data (), &optim,
+					   &unavail);
 
       if (!ok)
 	{

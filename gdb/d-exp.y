@@ -483,7 +483,7 @@ PrimaryExpression:
 			  if (type->code () == TYPE_CODE_MODULE)
 			    {
 			      struct block_symbol sym;
-			      const char *type_name = TYPE_SAFE_NAME (type);
+			      const char *type_name = type->safe_name ();
 			      int type_name_len = strlen (type_name);
 			      std::string name
 				= string_printf ("%.*s.%.*s",
@@ -502,7 +502,7 @@ PrimaryExpression:
 				 of an aggregate or an enum type.  */
 			      if (!type_aggregate_p (type))
 				error (_("`%s' is not defined as an aggregate type."),
-				       TYPE_SAFE_NAME (type));
+				       type->safe_name ());
 
 			      pstate->push_new<scope_operation>
 				(type, copy_name ($3));

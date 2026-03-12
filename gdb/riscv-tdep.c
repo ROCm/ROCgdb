@@ -1049,7 +1049,7 @@ riscv_pseudo_register_write (struct gdbarch *gdbarch,
 /* Implement the cannot_store_register gdbarch method.  The zero register
    (x0) is read-only on RISC-V.  */
 
-static int
+static bool
 riscv_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return regnum == RISCV_ZERO_REGNUM;
@@ -1392,7 +1392,7 @@ riscv_is_unknown_csr (struct gdbarch *gdbarch, int regnum)
 /* Implement the register_reggroup_p gdbarch method.  Is REGNUM a member
    of REGGROUP?  */
 
-static int
+static bool
 riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
 			   const struct reggroup *reggroup)
 {
@@ -1401,7 +1401,7 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   /* Used by 'info registers' and 'info registers <groupname>'.  */
 
   if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
-    return 0;
+    return false;
 
   if (regnum > RISCV_LAST_REGNUM && regnum < gdbarch_num_regs (gdbarch))
     {
@@ -1418,9 +1418,9 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
 	{
 	  if (reggroup == restore_reggroup || reggroup == save_reggroup
 	       || reggroup == general_reggroup)
-	    return 0;
+	    return false;
 	  else if (reggroup == system_reggroup || reggroup == csr_reggroup)
-	    return 1;
+	    return true;
 	}
 
       /* This is some other unknown register from the target description.
@@ -1436,10 +1436,10 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   if (reggroup == all_reggroup)
     {
       if (regnum < RISCV_FIRST_CSR_REGNUM || regnum >= RISCV_PRIV_REGNUM)
-	return 1;
+	return true;
       if (riscv_is_regnum_a_named_csr (regnum))
-	return 1;
-      return 0;
+	return true;
+      return false;
     }
   else if (reggroup == float_reggroup)
     return (riscv_is_fp_regno_p (regnum)
@@ -1461,17 +1461,17 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
   else if (reggroup == system_reggroup || reggroup == csr_reggroup)
     {
       if (regnum == RISCV_PRIV_REGNUM)
-	return 1;
+	return true;
       if (regnum < RISCV_FIRST_CSR_REGNUM || regnum > RISCV_LAST_CSR_REGNUM)
-	return 0;
+	return false;
       if (riscv_is_regnum_a_named_csr (regnum))
-	return 1;
-      return 0;
+	return true;
+      return false;
     }
   else if (reggroup == vector_reggroup)
     return (regnum >= RISCV_V0_REGNUM && regnum <= RISCV_V31_REGNUM);
   else
-    return 0;
+    return false;
 }
 
 /* Return the name for pseudo-register REGNUM for GDBARCH.  */
@@ -1502,10 +1502,10 @@ riscv_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
     gdb_assert_not_reached ("unknown pseudo register number %d", regnum);
 }
 
-/* Return true (non-zero) if pseudo-register REGNUM from GDBARCH is a
-   member of REGGROUP, otherwise return false (zero).  */
+/* Return true if pseudo-register REGNUM from GDBARCH is a
+   member of REGGROUP, otherwise return false.  */
 
-static int
+static bool
 riscv_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				  const struct reggroup *reggroup)
 {
@@ -1520,7 +1520,7 @@ static void
 riscv_print_registers_info (struct gdbarch *gdbarch,
 			    struct ui_file *file,
 			    const frame_info_ptr &frame,
-			    int regnum, int print_all)
+			    int regnum, bool print_all)
 {
   if (regnum != -1)
     {
@@ -3320,7 +3320,7 @@ riscv_print_arg_location (ui_file *stream, struct gdbarch *gdbarch,
 			  CORE_ADDR sp_refs, CORE_ADDR sp_args)
 {
   gdb_printf (stream, "type: '%s', length: 0x%x, alignment: 0x%x",
-	      TYPE_SAFE_NAME (info->type), info->length, info->align);
+	      info->type->safe_name (), info->length, info->align);
   switch (info->argloc[0].loc_type)
     {
     case riscv_arg_info::location::in_reg:
@@ -4178,7 +4178,7 @@ riscv_print_insn (bfd_vma addr, struct disassemble_info *info)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 riscv_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (c_isdigit (*s) /* Literal number.  */
@@ -4313,14 +4313,14 @@ riscv_gdbarch_init (struct gdbarch_info info,
   set_gdbarch_long_double_bit (gdbarch, 128);
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_quad);
   set_gdbarch_ptr_bit (gdbarch, riscv_isa_xlen (gdbarch) * 8);
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
   set_gdbarch_type_align (gdbarch, riscv_type_align);
 
   /* Information about the target architecture.  */
   set_gdbarch_return_value_as_value (gdbarch, riscv_return_value);
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, riscv_breakpoint_kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, riscv_sw_breakpoint_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Functions to analyze frames.  */
   set_gdbarch_skip_prologue (gdbarch, riscv_skip_prologue);

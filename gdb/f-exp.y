@@ -756,7 +756,7 @@ typebase  /* Implements (approximately): (type-qualifier)* type-specifier */
 			{ $$ = parse_f_type (pstate)->builtin_real_s16;
 			  if ($$->code () == TYPE_CODE_ERROR)
 			    error (_("unsupported type %s"),
-				   TYPE_SAFE_NAME ($$));
+				   $$->safe_name ());
 			}
 	|	COMPLEX_KEYWORD
 			{ $$ = parse_f_type (pstate)->builtin_complex; }
@@ -768,7 +768,7 @@ typebase  /* Implements (approximately): (type-qualifier)* type-specifier */
 			{ $$ = parse_f_type (pstate)->builtin_complex_s16;
 			  if ($$->code () == TYPE_CODE_ERROR)
 			    error (_("unsupported type %s"),
-				   TYPE_SAFE_NAME ($$));
+				   $$->safe_name ());
 			}
 	|	SINGLE PRECISION
 			{ $$ = parse_f_type (pstate)->builtin_real;}
@@ -1228,7 +1228,7 @@ convert_to_kind_type (struct type *basetype, int kind)
 
   if (res == nullptr || res->code () == TYPE_CODE_ERROR)
     error (_("unsupported kind %d for type %s"),
-	   kind, TYPE_SAFE_NAME (basetype));
+	   kind, basetype->safe_name ());
 
   return res;
 }

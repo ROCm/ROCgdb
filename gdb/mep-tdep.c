@@ -1029,7 +1029,7 @@ static const reggroup *mep_cr_reggroup;  /* coprocessor general-purpose */
 static const reggroup *mep_ccr_reggroup; /* coprocessor control */
 
 
-static int
+static bool
 mep_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			 const struct reggroup *group)
 {
@@ -1038,7 +1038,7 @@ mep_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     const char *name = mep_register_name (gdbarch, regnum);
 
     if (! name || name[0] == '\0')
-      return 0;
+      return false;
   }
 
   /* We could separate the GPRs and the CSRs.  Toshiba has approved of
@@ -1076,7 +1076,7 @@ mep_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   else if (group == mep_ccr_reggroup)
     return IS_CCR_REGNUM (regnum);
   else
-    return 0;
+    return false;
 }
 
 

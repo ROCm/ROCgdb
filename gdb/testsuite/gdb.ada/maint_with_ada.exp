@@ -34,6 +34,4 @@ gdb_breakpoint "adainit"
 gdb_breakpoint "Var_Arr_Typedef"
 gdb_breakpoint "Do_Nothing"
 
-gdb_test_no_output "maintenance check psymtabs"
-
 gdb_test_no_output "maintenance check symtabs"

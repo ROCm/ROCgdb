@@ -233,20 +233,21 @@ extern const char *pc_prefix (CORE_ADDR);
 
 /* From exec.c */
 
-/* * Process memory area starting at ADDR with length SIZE.  Area is
-   readable iff READ is non-zero, writable if WRITE is non-zero,
-   executable if EXEC is non-zero.  Area is possibly changed against
-   its original file based copy if MODIFIED is non-zero.
+/* Process memory area starting at ADDR with length SIZE.  Area is readable iff
+   READ is true, writable if WRITE is true, executable if EXEC is true.  Area
+   is possibly changed against its original file based copy if MODIFIED is true.
 
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
-   DATA is passed without changes from a caller.  */
+   DATA is passed without changes from a caller.
 
-typedef int (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
-					 bool read, bool write, bool exec,
-					 bool modified, bool memory_tagged,
-					 void *data);
+   Return true on success, false otherwise.  */
+
+typedef bool (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
+					  bool read, bool write, bool exec,
+					  bool modified, bool memory_tagged,
+					  void *data);
 
 /* * Possible lvalue types.  Like enum language, this should be in
    value.h, but needs to be here for the same reason.  */

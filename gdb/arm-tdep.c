@@ -3262,10 +3262,10 @@ arm_epilogue_frame_prev_register (const frame_info_ptr &this_frame,
   return arm_prologue_prev_register (this_frame, this_cache, regnum);
 }
 
-static int arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch,
-					  CORE_ADDR pc);
-static int thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch,
-					  CORE_ADDR pc);
+static bool arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch,
+					   CORE_ADDR pc);
+static bool thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch,
+					   CORE_ADDR pc);
 
 /* Implementation of function hook 'sniffer' in
    'struct frame_uwnind' for epilogue unwinder.  */
@@ -4126,18 +4126,19 @@ arm_dwarf2_prev_register (const frame_info_ptr &this_frame, void **this_cache,
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned int insn, insn2;
-  int found_return = 0, found_stack_adjust = 0;
+  int found_return = 0;
+  bool found_stack_adjust = false;
   CORE_ADDR func_start, func_end;
   CORE_ADDR scan_pc;
   gdb_byte buf[4];
 
   if (!find_pc_partial_function (pc, NULL, &func_start, &func_end))
-    return 0;
+    return false;
 
   /* The epilogue is a sequence of instructions along the following lines:
 
@@ -4204,7 +4205,7 @@ thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
     }
 
   if (!found_return)
-    return 0;
+    return false;
 
   /* Since any instruction in the epilogue sequence, with the possible
      exception of return itself, updates the stack pointer, we need to
@@ -4213,28 +4214,28 @@ thumb_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
      too much about false positives.  */
 
   if (pc - 4 < func_start)
-    return 0;
+    return false;
   if (target_read_memory (pc - 4, buf, 4))
-    return 0;
+    return false;
 
   insn = extract_unsigned_integer (buf, 2, byte_order_for_code);
   insn2 = extract_unsigned_integer (buf + 2, 2, byte_order_for_code);
 
   if (thumb_instruction_restores_sp (insn2))
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if (insn == 0xe8bd)  /* ldm.w sp!, <registers> */
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if (insn == 0xf85d  /* ldr.w <Rt>, [sp], #4 */
 	   && (insn2 & 0x0fff) == 0x0b04)
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
   else if ((insn & 0xffbf) == 0xecbd  /* vldm sp!, <list> */
 	   && (insn2 & 0x0e00) == 0x0a00)
-    found_stack_adjust = 1;
+    found_stack_adjust = true;
 
   return found_stack_adjust;
 }
 
-static int
+static bool
 arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
@@ -4285,7 +4286,7 @@ arm_stack_frame_destroyed_p_1 (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 arm_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   if (arm_pc_is_thumb (gdbarch, pc))
@@ -9299,7 +9300,7 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
 }
 
 
-static int
+static bool
 arm_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -9312,10 +9313,10 @@ arm_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
 			  ARM_INT_REGISTER_SIZE))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, ARM_INT_REGISTER_SIZE, byte_order);
-  return 1;
+  return true;
 }
 /* A call to cmse secure entry function "foo" at "a" is modified by
      GNU ld as "b".
@@ -9954,7 +9955,7 @@ arm_elf_osabi_sniffer (bfd *abfd)
   return osabi;
 }
 
-static int
+static bool
 arm_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			 const struct reggroup *group)
 {
@@ -10021,7 +10022,7 @@ arm_register_g_packet_guesses (struct gdbarch *gdbarch)
 
 /* Implement the code_of_frame_writable gdbarch method.  */
 
-static int
+static bool
 arm_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
@@ -10030,10 +10031,10 @@ arm_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame
     {
       /* M-profile exception frames return to some magic PCs, where
 	 isn't writable at all.  */
-      return 0;
+      return false;
     }
   else
-    return 1;
+    return true;
 }
 
 /* Implement gdbarch_gnu_triplet_regexp.  If the arch name is arm then allow it
@@ -10683,9 +10684,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* wchar_t is unsigned under the AAPCS.  */
   if (tdep->arm_abi == ARM_ABI_AAPCS)
-    set_gdbarch_wchar_signed (gdbarch, 0);
-  else
-    set_gdbarch_wchar_signed (gdbarch, 1);
+    set_gdbarch_wchar_signed (gdbarch, false);
 
   /* Compute type alignment.  */
   set_gdbarch_type_align (gdbarch, arm_type_align);
@@ -10770,7 +10769,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					 arm_adjust_breakpoint_address);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
@@ -10795,7 +10794,7 @@ arm_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     tdep->arm_abi = ARM_ABI_APCS;
 
   /* Watchpoints are not steppable.  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* We used to default to FPA for generic ARM, but almost nobody
      uses that now, and we now provide a way for the user to force

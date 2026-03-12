@@ -162,7 +162,7 @@ private:
     {
       /* Use check_typedef: the hash must agree with equals, and types_equal
 	 strips typedefs.  */
-      return htab_hash_string (TYPE_SAFE_NAME (check_typedef (t)));
+      return htab_hash_string (check_typedef (t)->safe_name ());
     }
 
     std::size_t operator() (const decl_field *f) const noexcept

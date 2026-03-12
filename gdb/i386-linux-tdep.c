@@ -53,9 +53,9 @@
 #include "arch/i386.h"
 #include "target-descriptions.h"
 
-/* Return non-zero, when the register is in the corresponding register
+/* Return true when the register is in the corresponding register
    group.  Put the LINUX_ORIG_EAX register in the system group.  */
-static int
+static bool
 i386_linux_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				const struct reggroup *group)
 {

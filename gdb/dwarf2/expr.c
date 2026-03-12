@@ -128,7 +128,7 @@ ill_formed_expression ()
 static void
 read_from_register (const frame_info_ptr &frame, int regnum,
 		    CORE_ADDR offset, gdb::array_view<gdb_byte> buf,
-		    int *optimized, int *unavailable)
+		    bool *optimized, bool *unavailable)
 {
   gdbarch *arch = get_frame_arch (frame);
   int regsize = register_size (arch, regnum);
@@ -139,8 +139,8 @@ read_from_register (const frame_info_ptr &frame, int regnum,
   if (frame == NULL || !regsize
       || offset + length > regsize || numregs < regnum)
     {
-      *optimized = 0;
-      *unavailable = 1;
+      *optimized = false;
+      *unavailable = true;
       return;
     }
 
@@ -172,7 +172,7 @@ read_from_register (const frame_info_ptr &frame, int regnum,
 static void
 write_to_register (const frame_info_ptr &frame, int regnum,
 		   CORE_ADDR offset, gdb::array_view<gdb_byte> buf,
-		   int *optimized, int *unavailable)
+		   bool *optimized, bool *unavailable)
 {
   gdbarch *arch = get_frame_arch (frame);
   int regsize = register_size (arch, regnum);
@@ -183,8 +183,8 @@ write_to_register (const frame_info_ptr &frame, int regnum,
   if (frame == NULL || !regsize
      || offset + length > regsize || numregs < regnum)
     {
-      *optimized = 0;
-      *unavailable = 1;
+      *optimized = false;
+      *unavailable = true;
       return;
     }
 
@@ -212,9 +212,9 @@ write_to_register (const frame_info_ptr &frame, int regnum,
 static void
 xfer_memory (CORE_ADDR address, gdb_byte *readbuf,
 	     const gdb_byte *writebuf,
-	     size_t length, bool stack, int *unavailable)
+	     size_t length, bool stack, bool *unavailable)
 {
-  *unavailable = 0;
+  *unavailable = false;
 
   target_object object
     = stack ? TARGET_OBJECT_STACK_MEMORY : TARGET_OBJECT_MEMORY;
@@ -244,7 +244,7 @@ xfer_memory (CORE_ADDR address, gdb_byte *readbuf,
 	}
       else if (status == TARGET_XFER_UNAVAILABLE)
 	{
-	  *unavailable = 1;
+	  *unavailable = true;
 	  return;
 	}
       else if (status == TARGET_XFER_EOF)
@@ -264,7 +264,7 @@ xfer_memory (CORE_ADDR address, gdb_byte *readbuf,
 
 static void
 read_from_memory (CORE_ADDR address, gdb_byte *buffer,
-		  size_t length, bool stack, int *unavailable)
+		  size_t length, bool stack, bool *unavailable)
 {
   xfer_memory (address, buffer, nullptr, length, stack, unavailable);
 }
@@ -279,7 +279,7 @@ read_from_memory (CORE_ADDR address, gdb_byte *buffer,
 
 static void
 write_to_memory (CORE_ADDR address, const gdb_byte *buffer,
-		 size_t length, bool stack, int *unavailable)
+		 size_t length, bool stack, bool *unavailable)
 {
   xfer_memory (address, nullptr, buffer, length, stack, unavailable);
 
@@ -537,8 +537,8 @@ public:
   virtual void read (const frame_info_ptr &frame, gdb_byte *buf,
 		     int buf_bit_offset, size_t bit_size,
 		     LONGEST bits_to_skip, size_t location_bit_limit,
-		     bool big_endian, int *optimized,
-		     int *unavailable) const = 0;
+		     bool big_endian, bool *optimized,
+		     bool *unavailable) const = 0;
 
   /* Write contents to a described location.
 
@@ -559,8 +559,8 @@ public:
   virtual void write (const frame_info_ptr &frame, const gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
-		      bool big_endian, int *optimized,
-		      int *unavailable) const = 0;
+		      bool big_endian, bool *optimized,
+		      bool *unavailable) const = 0;
 
   /* Apply dereference operation on the DWARF location description.
      Operation returns a DWARF value of a given TYPE type while FRAME
@@ -701,7 +701,7 @@ dwarf_location::deref (const frame_info_ptr &frame,
      from the type length, we need to zero-extend it.  */
   gdb::byte_vector read_buf (type->length (), 0);
   gdb_byte *buf_ptr = read_buf.data ();
-  int optimized, unavailable;
+  bool optimized, unavailable;
 
   if (big_endian)
     buf_ptr += type->length () - actual_size;
@@ -730,7 +730,7 @@ dwarf_location::read_from_gdb_value (const frame_info_ptr &frame,
 				     LONGEST bits_to_skip, size_t bit_size,
 				     size_t location_bit_limit)
 {
-  int optimized, unavailable;
+  bool optimized, unavailable;
   bool big_endian = type_byte_order (value->type ()) == BFD_ENDIAN_BIG;
 
   this->write (frame, value->contents ().data (), value_bit_offset,
@@ -755,7 +755,7 @@ dwarf_location::write_to_gdb_value (const frame_info_ptr &frame,
 				    LONGEST bits_to_skip, size_t bit_size,
 				    size_t location_bit_limit)
 {
-  int optimized, unavailable;
+  bool optimized, unavailable;
   bool big_endian = type_byte_order (value->type ()) == BFD_ENDIAN_BIG;
 
   this->read (frame, value->contents_raw ().data (), value_bit_offset,
@@ -922,19 +922,21 @@ public:
 
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
-	     bool big_endian, int *optimized, int *unavailable) const override
+	     bool big_endian, bool *optimized,
+	     bool *unavailable) const override
   {
-    *unavailable = 0;
-    *optimized = 1;
+    *unavailable = false;
+    *optimized = true;
   }
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size,
 	      LONGEST bits_to_skip, size_t location_bit_limit,
-	      bool big_endian, int *optimized, int *unavailable) const override
+	      bool big_endian, bool *optimized,
+	      bool *unavailable) const override
   {
-    *unavailable = 0;
-    *optimized = 1;
+    *unavailable = false;
+    *optimized = true;
   }
 
   value *to_gdb_value (const frame_info_ptr &frame, struct type *type,
@@ -994,12 +996,12 @@ public:
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip,
 	     size_t location_bit_limit, bool big_endian,
-	     int *optimized, int *unavailable) const override;
+	     bool *optimized, bool *unavailable) const override;
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
-	      int *optimized, int *unavailable) const override;
+	      bool *optimized, bool *unavailable) const override;
 
   std::shared_ptr<dwarf_value> deref (const frame_info_ptr &frame,
 				      const property_addr_info *addr_info,
@@ -1043,7 +1045,7 @@ void
 dwarf_memory::read (const frame_info_ptr &frame, gdb_byte *buf,
 		    int buf_bit_offset, size_t bit_size,
 		    LONGEST bits_to_skip, size_t location_bit_limit,
-		    bool big_endian, int *optimized, int *unavailable) const
+		    bool big_endian, bool *optimized, bool *unavailable) const
 {
   LONGEST total_bits_to_skip = bits_to_skip;
   CORE_ADDR start_address
@@ -1054,7 +1056,7 @@ dwarf_memory::read (const frame_info_ptr &frame, gdb_byte *buf,
     = gdbarch_segment_address_to_core_address (m_arch, m_address_space,
 					       start_address);
 
-  *optimized = 0;
+  *optimized = false;
   total_bits_to_skip += m_bit_suboffset;
 
   if (total_bits_to_skip % HOST_CHAR_BIT == 0
@@ -1087,7 +1089,7 @@ void
 dwarf_memory::write (const frame_info_ptr &frame, const gdb_byte *buf,
 		     int buf_bit_offset, size_t bit_size,
 		     LONGEST bits_to_skip, size_t location_bit_limit,
-		     bool big_endian, int *optimized, int *unavailable) const
+		     bool big_endian, bool *optimized, bool *unavailable) const
 {
   LONGEST total_bits_to_skip = bits_to_skip;
   CORE_ADDR start_address
@@ -1095,7 +1097,7 @@ dwarf_memory::write (const frame_info_ptr &frame, const gdb_byte *buf,
   gdb::byte_vector temp_buf;
 
   total_bits_to_skip += m_bit_suboffset;
-  *optimized = 0;
+  *optimized = false;
 
   start_address
     = gdbarch_segment_address_to_core_address (m_arch, m_address_space,
@@ -1187,7 +1189,7 @@ dwarf_memory::deref (const frame_info_ptr &frame,
     }
   else
     {
-      int optimized, unavailable;
+      bool optimized, unavailable;
 
       this->read (frame, buf_ptr, 0, size_in_bits, 0, 0,
 		  big_endian, &optimized, &unavailable);
@@ -1258,12 +1260,13 @@ public:
 
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
-	     bool big_endian, int *optimized, int *unavailable) const override;
+	     bool big_endian, bool *optimized,
+	     bool *unavailable) const override;
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
-	      int *optimized, int *unavailable) const override;
+	      bool *optimized, bool *unavailable) const override;
 
   value *to_gdb_value (const frame_info_ptr &frame, struct type *type,
 		       struct type *subobj_type,
@@ -1286,7 +1289,8 @@ void
 dwarf_register::read (const frame_info_ptr &initial_frame, gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
-		      bool big_endian, int *optimized, int *unavailable) const
+		      bool big_endian, bool *optimized,
+		      bool *unavailable) const
 {
   frame_info_ptr frame = initial_frame;
   LONGEST total_bits_to_skip = bits_to_skip;
@@ -1331,7 +1335,8 @@ void
 dwarf_register::write (const frame_info_ptr &initial_frame, const gdb_byte *buf,
 		       int buf_bit_offset, size_t bit_size,
 		       LONGEST bits_to_skip, size_t location_bit_limit,
-		       bool big_endian, int *optimized, int *unavailable) const
+		       bool big_endian, bool *optimized,
+		       bool *unavailable) const
 {
   frame_info_ptr frame = initial_frame;
   LONGEST total_bits_to_skip = bits_to_skip;
@@ -1420,17 +1425,14 @@ dwarf_register::is_optimized_out (const frame_info_ptr &frame, bool big_endian,
 				  LONGEST bits_to_skip, size_t bit_size,
 				  size_t location_bit_limit) const
 {
-  int optimized, unavailable;
+  bool optimized, unavailable;
   gdb::byte_vector temp_buf (bit_size);
 
   this->read (frame, temp_buf.data (), 0, bit_size,
 	      bits_to_skip, location_bit_limit,
 	      big_endian, &optimized, &unavailable);
 
-  if (optimized)
-    return true;
-
-  return false;
+  return optimized;
 }
 
 /* Implicit location description entry.  Describes a location
@@ -1470,15 +1472,17 @@ public:
 
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
-	     bool big_endian, int *optimized, int *unavailable) const override;
+	     bool big_endian, bool *optimized,
+	     bool *unavailable) const override;
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size,
 	      LONGEST bits_to_skip, size_t location_bit_limit,
-	      bool big_endian, int* optimized, int* unavailable) const override
+	      bool big_endian, bool *optimized,
+	      bool *unavailable) const override
   {
-    *optimized = 1;
-    *unavailable = 0;
+    *optimized = true;
+    *unavailable = false;
   }
 
   value *to_gdb_value (const frame_info_ptr &frame, struct type *type,
@@ -1500,14 +1504,15 @@ void
 dwarf_implicit::read (const frame_info_ptr &frame, gdb_byte *buf,
 		      int buf_bit_offset, size_t bit_size,
 		      LONGEST bits_to_skip, size_t location_bit_limit,
-		      bool big_endian, int *optimized, int *unavailable) const
+		      bool big_endian, bool *optimized,
+		      bool *unavailable) const
 {
   ULONGEST implicit_bit_size = HOST_CHAR_BIT * m_size;
   LONGEST total_bits_to_skip = bits_to_skip;
   size_t read_bit_limit = location_bit_limit;
 
-  *optimized = 0;
-  *unavailable = 0;
+  *optimized = false;
+  *unavailable = false;
 
   /* Cut off at the end of the implicit value.  */
   if (m_byte_order == BFD_ENDIAN_BIG)
@@ -1595,15 +1600,15 @@ public:
 
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
-	     bool big_endian, int *optimized, int *unavailable) const override;
+	     bool big_endian, bool *optimized, bool *unavailable) const override;
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
-	      int* optimized, int* unavailable) const override
+	      bool *optimized, bool *unavailable) const override
   {
-    *optimized = 1;
-    *unavailable = 0;
+    *optimized = true;
+    *unavailable = false;
   }
 
   /* Reading from and writing to an implicit pointer is not meaningful,
@@ -1654,8 +1659,8 @@ void
 dwarf_implicit_pointer::read (const frame_info_ptr &frame, gdb_byte *buf,
 			      int buf_bit_offset, size_t bit_size,
 			      LONGEST bits_to_skip, size_t location_bit_limit,
-			      bool big_endian, int *optimized,
-			      int *unavailable) const
+			      bool big_endian, bool *optimized,
+			      bool *unavailable) const
 {
   frame_info_ptr actual_frame = frame;
   LONGEST total_bits_to_skip = bits_to_skip + m_bit_suboffset;
@@ -1768,12 +1773,13 @@ public:
 
   void read (const frame_info_ptr &frame, gdb_byte *buf, int buf_bit_offset,
 	     size_t bit_size, LONGEST bits_to_skip, size_t location_bit_limit,
-	     bool big_endian, int *optimized, int *unavailable) const override;
+	     bool big_endian, bool *optimized,
+	     bool *unavailable) const override;
 
   void write (const frame_info_ptr &frame, const gdb_byte *buf,
 	      int buf_bit_offset, size_t bit_size, LONGEST bits_to_skip,
 	      size_t location_bit_limit, bool big_endian,
-	      int *optimized, int *unavailable) const override;
+	      bool *optimized, bool *unavailable) const override;
 
   void read_from_gdb_value (const frame_info_ptr &frame, struct value *value,
 			    int value_bit_offset,
@@ -1891,7 +1897,8 @@ void
 dwarf_composite::read (const frame_info_ptr &frame, gdb_byte *buf,
 		       int buf_bit_offset, size_t bit_size,
 		       LONGEST bits_to_skip, size_t location_bit_limit,
-		       bool big_endian, int *optimized, int *unavailable) const
+		       bool big_endian, bool *optimized,
+		       bool *unavailable) const
 {
   unsigned int pieces_num = m_pieces.size ();
   LONGEST total_bits_to_skip = bits_to_skip;
@@ -1938,8 +1945,8 @@ void
 dwarf_composite::write (const frame_info_ptr &frame, const gdb_byte *buf,
 			int buf_bit_offset, size_t bit_size,
 			LONGEST bits_to_skip, size_t location_bit_limit,
-			bool big_endian, int *optimized,
-			int *unavailable) const
+			bool big_endian, bool *optimized,
+			bool *unavailable) const
 {
   LONGEST total_bits_to_skip = bits_to_skip;
   unsigned int pieces_num = m_pieces.size ();

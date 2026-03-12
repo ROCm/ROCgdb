@@ -43,10 +43,7 @@ struct program_space *current_program_space;
 address_space_ref_ptr
 maybe_new_address_space ()
 {
-  int shared_aspace
-    = gdbarch_has_shared_address_space (current_inferior ()->arch ());
-
-  if (shared_aspace)
+  if (gdbarch_has_shared_address_space (current_inferior ()->arch ()))
     {
       /* Just return the first in the list.  */
       return program_spaces[0]->aspace;

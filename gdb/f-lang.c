@@ -772,7 +772,7 @@ eval_op_f_abs (struct type *expect_type, struct expression *exp,
 	return value_from_longest (type, l);
       }
     }
-  error (_("ABS of type %s not supported"), TYPE_SAFE_NAME (type));
+  error (_("ABS of type %s not supported"), type->safe_name ());
 }
 
 /* A helper function for BINOP_MOD.  */
@@ -809,7 +809,7 @@ eval_op_f_mod (struct type *expect_type, struct expression *exp,
 	return value_from_longest (arg1->type (), v3);
       }
     }
-  error (_("MOD of type %s not supported"), TYPE_SAFE_NAME (type));
+  error (_("MOD of type %s not supported"), type->safe_name ());
 }
 
 /* A helper function for the different FORTRAN_CEILING overloads.  Calculates
@@ -927,7 +927,7 @@ eval_op_f_modulo (struct type *expect_type, struct expression *exp,
 	return value_from_host_double (type, result);
       }
     }
-  error (_("MODULO of type %s not supported"), TYPE_SAFE_NAME (type));
+  error (_("MODULO of type %s not supported"), type->safe_name ());
 }
 
 /* A helper function for FORTRAN_CMPLX.  */

@@ -2565,7 +2565,7 @@ gnu_nat_target::xfer_partial (enum target_object object,
 
 /* Call FUNC on each memory region in the task.  */
 
-int
+bool
 gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
 				     void *data)
 {
@@ -2575,10 +2575,10 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
   vm_prot_t last_protection;
 
   if (gnu_current_inf == 0 || gnu_current_inf->task == 0)
-    return 0;
+    return true;
   task = gnu_current_inf->task->port;
   if (task == MACH_PORT_NULL)
-    return 0;
+    return true;
 
   region_address = last_region_address = last_region_end = VM_MIN_ADDRESS;
   last_protection = VM_PROT_NONE;
@@ -2606,7 +2606,7 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
       if (err != KERN_SUCCESS)
 	{
 	  warning (_("vm_region failed: %s"), mach_error_string (err));
-	  return -1;
+	  return false;
 	}
 
       if (protection == last_protection && region_address == last_region_end)
@@ -2642,7 +2642,7 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
 	     false, /* No memory tags in the object file.  */
 	     data);
 
-  return 0;
+  return true;
 }
 
 

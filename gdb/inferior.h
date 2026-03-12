@@ -150,7 +150,7 @@ extern void reopen_exec_file (void);
 extern void default_print_registers_info (struct gdbarch *gdbarch,
 					  struct ui_file *file,
 					  const frame_info_ptr &frame,
-					  int regnum, int all);
+					  int regnum, bool all);
 
 /* Default implementation of gdbarch_print_float_info.  Print
    the values of all floating point registers.  */
@@ -223,7 +223,7 @@ extern void post_create_inferior (int from_tty, bool set_pspace_solib_ops);
 
 extern void attach_command (const char *, int);
 
-extern void registers_info (const char *, int);
+extern void registers_info (const char *, bool);
 
 extern void continue_1 (int all_threads);
 

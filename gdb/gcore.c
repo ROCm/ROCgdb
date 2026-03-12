@@ -58,7 +58,7 @@
 
 static const char *default_gcore_target (void);
 static enum bfd_architecture default_gcore_arch (void);
-static int gcore_memory_sections (bfd *);
+static bool gcore_memory_sections (bfd *);
 
 /* create_gcore_bfd -- helper for gcore_command (exported).
    Open a new bfd core file for output, and return the handle.  */
@@ -109,7 +109,7 @@ write_gcore_file_1 (bfd *obfd)
      write the note section.  So there's no need for an ftruncate-like
      call to grow the file to the right size if the last memory
      sections were zeros and we skipped writing them.  */
-  if (gcore_memory_sections (obfd) == 0)
+  if (!gcore_memory_sections (obfd))
     error (_("gcore: failed to get corefile memory sections from target."));
 
   /* Write out the contents of the note section.  */
@@ -421,7 +421,7 @@ make_output_phdrs (bfd *obfd, asection *osec)
 
    DATA is 'bfd *' for the core file GDB is creating.  */
 
-static int
+static bool
 gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
 		       bool write, bool exec, bool modified, bool memory_tagged,
 		       void *data)
@@ -440,7 +440,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
 		    plongest (size), paddress (current_inferior ()->arch (),
 		    vaddr));
 
-      return 0;
+      return true;
     }
 
   if (!write && !modified && !solib_keep_data_in_core (vaddr, size))
@@ -490,7 +490,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
     {
       warning (_("Couldn't make gcore segment: %s"),
 	       bfd_errmsg (bfd_get_error ()));
-      return 1;
+      return false;
     }
 
   if (info_verbose)
@@ -501,17 +501,17 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
   bfd_set_section_size (osec, size);
   bfd_set_section_vma (osec, vaddr);
   bfd_set_section_lma (osec, 0);
-  return 0;
+  return true;
 }
 
-/* gdbarch_find_memory_region callback for creating a memory tag section.
+/* gdbarch_find_memory_regions callback for creating a memory tag section.
 
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
    DATA is 'bfd *' for the core file GDB is creating.  */
 
-static int
+static bool
 gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 				      bool read, bool write, bool exec,
 				      bool modified, bool memory_tagged,
@@ -519,7 +519,7 @@ gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 {
   /* Are there memory tags in this particular memory map entry?  */
   if (!memory_tagged)
-    return 0;
+    return true;
 
   bfd *obfd = (bfd *) data;
 
@@ -534,7 +534,7 @@ gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
     {
       warning (_("Couldn't make gcore memory tag segment: %s"),
 	       bfd_errmsg (bfd_get_error ()));
-      return 1;
+      return false;
     }
 
   if (info_verbose)
@@ -545,10 +545,10 @@ gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 		  paddress (arch, vaddr));
     }
 
-  return 0;
+  return true;
 }
 
-int
+bool
 objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 {
   /* Use objfile data to create memory sections.  */
@@ -568,16 +568,14 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	if ((flags & SEC_ALLOC) || (flags & SEC_LOAD))
 	  {
 	    int size = bfd_section_size (isec);
-	    int ret;
-
-	    ret = (*func) (objsec.addr (), size,
-			   true, /* All sections will be readable.  */
-			   (flags & SEC_READONLY) == 0, /* Writable.  */
-			   (flags & SEC_CODE) != 0, /* Executable.  */
-			   true, /* MODIFIED is unknown, pass it as true.  */
-			   false, /* No memory tags in the object file.  */
-			   obfd);
-	    if (ret != 0)
+	    bool ret = func (objsec.addr (), size,
+			     true, /* All sections will be readable.  */
+			     (flags & SEC_READONLY) == 0, /* Writable.  */
+			     (flags & SEC_CODE) != 0, /* Executable.  */
+			     true, /* MODIFIED is unknown, pass it as true.  */
+			     false, /* No memory tags in the object file.  */
+			     obfd);
+	    if (!ret)
 	      return ret;
 	  }
       }
@@ -603,7 +601,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	     false, /* No memory tags in the object file.  */
 	     obfd);
 
-  return 0;
+  return true;
 }
 
 /* Check if we have a block full of zeros at DATA within the [DATA,
@@ -867,16 +865,16 @@ gcore_copy_memtag_section_callback (bfd *obfd, asection *osec)
     error (_("Failed to fill memory tag section for core file."));
 }
 
-static int
+static bool
 gcore_memory_sections (bfd *obfd)
 {
-  if (target_find_memory_regions (gcore_create_callback, obfd) != 0)
-    return 0;			/* FIXME: error return/msg?  */
+  if (!target_find_memory_regions (gcore_create_callback, obfd))
+    return false;			/* FIXME: error return/msg?  */
 
   /* Take care of dumping memory tags, if there are any.  */
-  if (target_find_memory_regions (gcore_create_memtag_section_callback,
-				  obfd) != 0)
-    return 0;
+  if (!target_find_memory_regions (gcore_create_memtag_section_callback,
+				   obfd))
+    return false;
 
   /* Record phdrs for section-to-segment mapping.  */
   for (asection *sect : gdb_bfd_sections (obfd))
@@ -889,7 +887,7 @@ gcore_memory_sections (bfd *obfd)
       gcore_copy_memtag_section_callback (obfd, sect);
     }
 
-  return 1;
+  return true;
 }
 
 /* See gcore.h.  */

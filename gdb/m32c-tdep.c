@@ -252,7 +252,7 @@ m32c_debug_info_reg_to_regnum (struct gdbarch *gdbarch, int reg_nr)
 }
 
 
-static int
+static bool
 m32c_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -261,22 +261,22 @@ m32c_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   /* The anonymous raw registers aren't in any groups.  */
   if (! reg->name)
-    return 0;
+    return false;
 
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   if (group == general_reggroup
       && reg->general_p)
-    return 1;
+    return true;
 
   if (group == m32c_dma_reggroup
       && reg->dma_p)
-    return 1;
+    return true;
 
   if (group == system_reggroup
       && reg->system_p)
-    return 1;
+    return true;
 
   /* Since the m32c DWARF register numbers refer to cooked registers, not
      raw registers, and frame_pop depends on the save and restore groups
@@ -286,9 +286,9 @@ m32c_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   if ((group == save_reggroup
        || group == restore_reggroup)
       && reg->save_restore_p)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 
@@ -2647,7 +2647,7 @@ m32c_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      In order to verify this, see the definition of
      TARGET_PTRMEMFUNC_VBIT_LOCATION in gcc/defaults.h along with the
      definition of FUNCTION_BOUNDARY in gcc/config/m32c/m32c.h.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   return gdbarch;
 }

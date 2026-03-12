@@ -870,7 +870,7 @@ m32r_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     = gdbarch_alloc (&info, gdbarch_tdep_up (new m32r_gdbarch_tdep));
 
   set_gdbarch_wchar_bit (gdbarch, 16);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   set_gdbarch_num_regs (gdbarch, M32R_NUM_REGS);
   set_gdbarch_pc_regnum (gdbarch, M32R_PC_REGNUM);

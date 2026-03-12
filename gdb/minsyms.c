@@ -1080,38 +1080,6 @@ minimal_symbol_reader::minimal_symbol_reader (struct objfile *obj)
 {
 }
 
-/* See minsyms.h.  */
-
-void
-minimal_symbol_reader::record (const char *name, unrelocated_addr address,
-			       enum minimal_symbol_type ms_type)
-{
-  int section;
-
-  switch (ms_type)
-    {
-    case mst_text:
-    case mst_text_gnu_ifunc:
-    case mst_file_text:
-    case mst_solib_trampoline:
-      section = SECT_OFF_TEXT (m_objfile);
-      break;
-    case mst_data:
-    case mst_data_gnu_ifunc:
-    case mst_file_data:
-      section = SECT_OFF_DATA (m_objfile);
-      break;
-    case mst_bss:
-    case mst_file_bss:
-      section = SECT_OFF_BSS (m_objfile);
-      break;
-    default:
-      section = -1;
-    }
-
-  record_with_info (name, address, ms_type, section);
-}
-
 /* Convert an enumerator of type minimal_symbol_type to its string
    representation.  */
 

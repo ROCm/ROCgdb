@@ -759,7 +759,7 @@ xtensa_coprocessor_register_group (const struct reggroup *group)
 #define SAVE_REST_VALID	(XTENSA_REGISTER_FLAGS_READABLE \
 			| XTENSA_REGISTER_FLAGS_WRITABLE)
 
-static int
+static bool
 xtensa_register_reggroup_p (struct gdbarch *gdbarch,
 			    int regnum,
 			    const struct reggroup *group)
@@ -773,15 +773,15 @@ xtensa_register_reggroup_p (struct gdbarch *gdbarch,
   if (group == save_reggroup)
     /* Every single register should be included into the list of registers
        to be watched for changes while using -data-list-changed-registers.  */
-    return 1;
+    return true;
 
   /* First, skip registers that are not visible to this target
      (unknown and unmapped registers when not using ISS).  */
 
   if (type == xtRegisterTypeUnmapped || type == xtRegisterTypeUnknown)
-    return 0;
+    return false;
   if (group == all_reggroup)
-    return 1;
+    return true;
   if (group == xtensa_ar_reggroup)
     return rg & xtRegisterGroupAddrReg;
   if (group == xtensa_user_reggroup)
@@ -801,7 +801,7 @@ xtensa_register_reggroup_p (struct gdbarch *gdbarch,
   if (cp_number >= 0)
     return rg & (xtRegisterGroupCP0 << cp_number);
   else
-    return 1;
+    return true;
 }
 
 
@@ -3170,7 +3170,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   xtensa_session_once_reported = 0;
 
   set_gdbarch_wchar_bit (gdbarch, 2 * TARGET_CHAR_BIT);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   /* Pseudo-Register read/write.  */
   set_gdbarch_pseudo_register_read (gdbarch, xtensa_pseudo_register_read);
@@ -3226,7 +3226,7 @@ xtensa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   frame_unwind_append_unwinder (gdbarch, &xtensa_unwind);
   dwarf2_append_unwinders (gdbarch);
 
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   xtensa_add_reggroups (gdbarch);
   set_gdbarch_register_reggroup_p (gdbarch, xtensa_register_reggroup_p);

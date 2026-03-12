@@ -99,13 +99,13 @@ static const char * const alpha_register_names[] =
 };
 static_assert (ALPHA_NUM_REGS == ARRAY_SIZE (alpha_register_names));
 
-static int
+static bool
 alpha_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
-  return (strlen (alpha_register_names[regno]) == 0);
+  return strlen (alpha_register_names[regno]) == 0;
 }
 
-static int
+static bool
 alpha_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == ALPHA_ZERO_REGNUM
@@ -114,28 +114,28 @@ alpha_cannot_store_register (struct gdbarch *gdbarch, int regno)
 
 /* Is REGNUM a member of REGGROUP?  */
 
-static int
+static bool
 alpha_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			   const struct reggroup *group)
 {
   /* Filter out any registers eliminated, but whose regnum is
      reserved for backward compatibility, e.g. the vfp.  */
   if (*gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
 
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   /* Zero should not be saved or restored.  Technically it is a general
      register (just as $f31 would be a float if we represented it), but
      there's no point displaying it during "info regs", so leave it out
      of all groups except for "all".  */
   if (regnum == ALPHA_ZERO_REGNUM)
-    return 0;
+    return false;
 
   /* All other registers are saved and restored.  */
   if (group == save_reggroup || group == restore_reggroup)
-    return 1;
+    return true;
 
   /* All other groups are non-overlapping.  */
 
@@ -205,7 +205,7 @@ alpha_sts (struct gdbarch *gdbarch, void *out, const void *in)
    bytes, as the representation of integers in floating point
    registers is different.  */
 
-static int
+static bool
 alpha_convert_register_p (struct gdbarch *gdbarch, int regno,
 			  struct type *type)
 {
@@ -213,10 +213,10 @@ alpha_convert_register_p (struct gdbarch *gdbarch, int regno,
 	  && type->length () == 4);
 }
 
-static int
+static bool
 alpha_register_to_value (const frame_info_ptr &frame, int regnum,
 			 struct type *valtype, gdb_byte *out,
-			int *optimizedp, int *unavailablep)
+			 bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct value *value = get_frame_register_value (frame, regnum);
@@ -228,7 +228,7 @@ alpha_register_to_value (const frame_info_ptr &frame, int regnum,
   if (*optimizedp || *unavailablep)
     {
       release_value (value);
-      return 0;
+      return false;
     }
 
   /* Convert to VALTYPE.  */
@@ -237,7 +237,7 @@ alpha_register_to_value (const frame_info_ptr &frame, int regnum,
   alpha_sts (gdbarch, out, value->contents_all ().data ());
 
   release_value (value);
-  return 1;
+  return true;
 }
 
 static void
@@ -820,7 +820,7 @@ alpha_deal_with_atomic_sequence (struct gdbarch *gdbarch, CORE_ADDR pc)
    which we extract the PC (JB_PC) that we will land at.  The PC is copied
    into the "pc".  This routine returns true on success.  */
 
-static int
+static bool
 alpha_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -833,10 +833,10 @@ alpha_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + (tdep->jb_pc * tdep->jb_elt_size),
 			  raw_buffer, tdep->jb_elt_size))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (raw_buffer, tdep->jb_elt_size, byte_order);
-  return 1;
+  return true;
 }
 
 
@@ -1750,7 +1750,7 @@ alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_bit (gdbarch, 64);
   set_gdbarch_long_long_bit (gdbarch, 64);
   set_gdbarch_wchar_bit (gdbarch, 64);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
   set_gdbarch_float_bit (gdbarch, 32);
   set_gdbarch_double_bit (gdbarch, 64);
   set_gdbarch_long_double_bit (gdbarch, 64);
@@ -1791,7 +1791,7 @@ alpha_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       alpha_breakpoint::bp_from_kind);
   set_gdbarch_decr_pc_after_break (gdbarch, ALPHA_INSN_SIZE);
-  set_gdbarch_cannot_step_breakpoint (gdbarch, 1);
+  set_gdbarch_cannot_step_breakpoint (gdbarch, true);
 
   /* Handles single stepping of atomic sequences.  */
   set_gdbarch_get_next_pcs (gdbarch, alpha_software_single_step);

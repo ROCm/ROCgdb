@@ -109,7 +109,7 @@ process_stratum_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 
 /* See process-stratum-target.h.  */
 
-int
+bool
 process_stratum_target::find_memory_regions (find_memory_region_ftype func,
 					     void *arg)
 {

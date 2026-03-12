@@ -1243,7 +1243,7 @@ amdgpu_register_type (struct gdbarch *gdbarch, int regnum)
   return tdep->register_types[regnum];
 }
 
-static int
+static bool
 amdgpu_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			    const reggroup *group)
 {
@@ -1888,7 +1888,7 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   amdgpu_gdbarch_tdep *tdep = gdbarch_tdep<amdgpu_gdbarch_tdep> (gdbarch);
 
   /* Data types.  */
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
   set_gdbarch_ptr_bit (gdbarch, 64);
   set_gdbarch_addr_bit (gdbarch, 64);
   set_gdbarch_short_bit (gdbarch, 16);

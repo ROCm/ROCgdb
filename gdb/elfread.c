@@ -1292,17 +1292,13 @@ elf_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
 
   /* Read the CTF section only if there is no DWARF info.  */
   if (always_read_ctf && ei.ctfsect)
-    {
-      elfctf_build_psymtabs (objfile);
-    }
+    elfctf_build_symtabs (objfile);
 
   bool has_dwarf2 = elf_symfile_read_dwarf2 (objfile, symfile_flags);
 
   /* Read the CTF section only if there is no DWARF info.  */
   if (!always_read_ctf && !has_dwarf2 && ei.ctfsect)
-    {
-      elfctf_build_psymtabs (objfile);
-    }
+    elfctf_build_symtabs (objfile);
 
   /* Copy relocations are used by some ABIs using the ELF format, so
      set the objfile flag indicating this fact.  */

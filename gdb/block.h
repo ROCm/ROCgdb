@@ -702,7 +702,7 @@ struct best_symbol_tracker
 };
 
 /* Find symbol NAME in BLOCK and in DOMAIN.  This will return a
-   matching symbol whose type is not a "opaque", see TYPE_IS_OPAQUE.
+   matching symbol whose type is not "opaque", see type::is_opaque.
    If STUB is non-NULL, an otherwise matching symbol whose type is a
    opaque will be stored here.  */
 

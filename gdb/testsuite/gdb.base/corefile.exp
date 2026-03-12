@@ -229,7 +229,7 @@ gdb_test "x/8bd buf2" \
     "accessing mmapped data in core file with coremmap.data removed"
 
 gdb_test "x/8bd buf2ro" \
-    "$hex\[^:\]*:\\s+Cannot access memory at address $hex" \
+    "$hex\[^:\]*:(\\s+<unavailable>){8}" \
     "accessing read-only mmapped data in core file with coremmap.data removed"
 
 # Restore the coremmap.data file so later tests don't give warnings

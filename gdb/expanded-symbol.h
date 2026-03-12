@@ -29,6 +29,11 @@
 
 struct expanded_symbols_functions : public quick_symbol_functions
 {
+  explicit expanded_symbols_functions
+    (std::vector<compunit_symtab *> compunit_symtabs)
+    : m_compunit_symtabs (std::move (compunit_symtabs))
+  {}
+
   bool has_symbols (objfile *objfile) override
   {
     return true;
@@ -86,6 +91,9 @@ struct expanded_symbols_functions : public quick_symbol_functions
 			     bool need_fullname) override
   {
   }
+
+private:
+  std::vector<compunit_symtab *> m_compunit_symtabs;
 };
 
 

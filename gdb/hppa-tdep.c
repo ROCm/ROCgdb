@@ -558,7 +558,7 @@ find_unwind_entry (CORE_ADDR pc)
    We do not assume that the epilogue is at the end of a function as we can
    also have return sequences in the middle of a function.  */
 
-static int
+static bool
 hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -568,7 +568,7 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   status = target_read_memory (pc, buf, 4);
   if (status != 0)
-    return 0;
+    return false;
 
   inst = extract_unsigned_integer (buf, 4, byte_order);
 
@@ -576,19 +576,19 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
      We are destroying a stack frame if the offset is negative.  */
   if ((inst & 0xffffc000) == 0x37de0000
       && hppa_extract_14 (inst) < 0)
-    return 1;
+    return true;
 
   /* ldw,mb D(sp),X or ldd,mb D(sp),X */
   if (((inst & 0x0fc010e0) == 0x0fc010e0
        || (inst & 0x0fc010e0) == 0x0fc010e0)
       && hppa_extract_14 (inst) < 0)
-    return 1;
+    return true;
 
   /* bv %r0(%rp) or bv,n %r0(%rp) */
   if (inst == 0xe840c000 || inst == 0xe840c002)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 constexpr gdb_byte hppa_break_insn[] = {0x00, 0x01, 0x00, 0x04};
@@ -2617,10 +2617,10 @@ hppa64_register_type (struct gdbarch *gdbarch, int regnum)
      return builtin_type (gdbarch)->builtin_double;
 }
 
-/* Return non-zero if REGNUM is not a register available to the user
+/* Return true if REGNUM is not a register available to the user
    through ptrace/ttrace.  */
 
-static int
+static bool
 hppa32_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return (regnum == 0
@@ -2629,17 +2629,17 @@ hppa32_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 	  || (regnum > HPPA_IPSW_REGNUM && regnum < HPPA_FP4_REGNUM));
 }
 
-static int
+static bool
 hppa32_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   /* cr26 and cr27 are readable (but not writable) from userspace.  */
   if (regnum == HPPA_CR26_REGNUM || regnum == HPPA_CR27_REGNUM)
-    return 0;
+    return false;
   else
     return hppa32_cannot_store_register (gdbarch, regnum);
 }
 
-static int
+static bool
 hppa64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   return (regnum == 0
@@ -2648,12 +2648,12 @@ hppa64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 	  || (regnum > HPPA_IPSW_REGNUM && regnum < HPPA64_FP4_REGNUM));
 }
 
-static int
+static bool
 hppa64_cannot_fetch_register (struct gdbarch *gdbarch, int regnum)
 {
   /* cr26 and cr27 are readable (but not writable) from userspace.  */
   if (regnum == HPPA_CR26_REGNUM || regnum == HPPA_CR27_REGNUM)
-    return 0;
+    return false;
   else
     return hppa64_cannot_store_register (gdbarch, regnum);
 }
@@ -3089,7 +3089,7 @@ hppa_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      it by removing all eventpoints; stepping past the instruction
      that caused the trigger; reinserting eventpoints; and checking
      whether any watched location changed.  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Inferior function call methods.  */
   switch (tdep->bytes_per_address)

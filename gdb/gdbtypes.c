@@ -3053,7 +3053,7 @@ check_typedef (struct type *type)
     {
       /* Nothing.  */
     }
-  else if (TYPE_IS_OPAQUE (type))
+  else if (type->is_opaque ())
     {
       const char *name = type->name ();
       struct type *newtype;
@@ -5623,6 +5623,24 @@ type::fixed_point_scaling_factor ()
   struct type *type = this->fixed_point_type_base_type ();
 
   return type->fixed_point_info ().scaling_factor;
+}
+
+/* See gdbtypes.h.  */
+
+bool
+type::is_opaque () const
+{
+  if (this->code () != TYPE_CODE_STRUCT
+      && this->code () != TYPE_CODE_UNION)
+    return false;
+
+  if (this->num_fields () > 0)
+    return false;
+
+  if (HAVE_CPLUS_STRUCT (this) && TYPE_NFN_FIELDS (this) != 0)
+    return false;
+
+  return this->is_stub () || !this->stub_is_supported ();
 }
 
 /* See gdbtypes.h.  */

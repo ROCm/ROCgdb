@@ -1081,7 +1081,8 @@ m68hc11_print_register (struct gdbarch *gdbarch, struct ui_file *file,
 /* Same as 'info reg' but prints the registers in a different way.  */
 static void
 m68hc11_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			      const frame_info_ptr &frame, int regno, int cpregs)
+			      const frame_info_ptr &frame, int regno,
+			      bool cpregs)
 {
   if (regno >= 0)
     {
@@ -1358,7 +1359,7 @@ m68hc11_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, m68hc11_soft_reggroup);
 }
 
-static int
+static bool
 m68hc11_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			     const struct reggroup *group)
 {
@@ -1480,7 +1481,7 @@ m68hc11_gdbarch_init (struct gdbarch_info info,
   set_gdbarch_long_long_bit (gdbarch, 64);
 
   /* Characters are unsigned.  */
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
 
   /* Set register info.  */
   set_gdbarch_fp0_regnum (gdbarch, -1);

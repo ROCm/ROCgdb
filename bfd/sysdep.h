@@ -211,6 +211,4 @@ extern int fseeko64 (FILE *stream, off64_t offset, int whence);
 #define getgid() 0
 #endif
 
-#define POISON_BFD_BOOLEAN 1
-
 #endif /* ! defined (BFD_SYSDEP_H) */

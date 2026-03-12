@@ -28,10 +28,10 @@
 symtab *
 expanded_symbols_functions::find_last_source_symtab (objfile *objfile)
 {
-  if (objfile->compunit_symtabs.empty ())
+  if (m_compunit_symtabs.empty ())
     return nullptr;
   else
-    return objfile->compunit_symtabs.back ().primary_filetab ();
+    return m_compunit_symtabs.back ()->primary_filetab ();
 }
 
 /* See expanded-symbol.h.  */
@@ -61,15 +61,15 @@ expanded_symbols_functions::search
   /* This invariant is documented in quick-functions.h.  */
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
 
-  for (compunit_symtab &cu : objfile->compunits ())
+  for (compunit_symtab *cu : m_compunit_symtabs)
     {
-      if (lang_matcher != nullptr && !lang_matcher (cu.language ()))
+      if (lang_matcher != nullptr && !lang_matcher (cu->language ()))
 	continue;
 
       if (file_matcher != nullptr)
 	{
 	  bool matched = false;
-	  for (auto st : cu.filetabs ())
+	  for (auto st : cu->filetabs ())
 	    {
 	      if (file_matcher (st->filename (), false))
 		{
@@ -92,7 +92,7 @@ expanded_symbols_functions::search
 	 consult lookup_name and symbol_matcher (if any).  This should be
 	 okay since i) all symtabs are already expanded and ii) listeners
 	 iterate over matching symbols themselves.  */
-      if (listener != nullptr && !listener (&cu))
+      if (listener != nullptr && !listener (cu))
 	return false;
     }
   return true;
@@ -104,9 +104,9 @@ symbol *
 expanded_symbols_functions::find_symbol_by_address (objfile *objfile,
 						    CORE_ADDR address)
 {
-  for (compunit_symtab &symtab : objfile->compunits ())
+  for (compunit_symtab *symtab : m_compunit_symtabs)
     {
-      symbol *sym = symtab.symbol_at_address (address);
+      symbol *sym = symtab->symbol_at_address (address);
       if (sym != nullptr)
 	return sym;
     }

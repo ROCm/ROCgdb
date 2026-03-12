@@ -212,7 +212,7 @@ nbsd_kinfo_get_vmmap (pid_t pid, size_t *size)
    calling FUNC for each memory region.  OBFD is passed as the last
    argument to FUNC.  */
 
-int
+bool
 nbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
 				      void *data)
 {
@@ -262,7 +262,7 @@ nbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
 	    kve->kve_protection & KVME_PROT_WRITE,
 	    kve->kve_protection & KVME_PROT_EXEC, true, false, data);
     }
-  return 0;
+  return true;
 }
 
 /* Implement the "info_proc" target_ops method.  */

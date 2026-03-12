@@ -422,8 +422,8 @@ linux_get_siginfo_type (struct gdbarch *gdbarch)
 /* Return true if the target is running on uClinux instead of normal
    Linux kernel.  */
 
-int
-linux_is_uclinux (void)
+bool
+linux_is_uclinux ()
 {
   CORE_ADDR dummy;
 
@@ -431,7 +431,7 @@ linux_is_uclinux (void)
 	  && target_auxv_search (AT_PAGESZ, &dummy) == 0);
 }
 
-static int
+static bool
 linux_has_shared_address_space (struct gdbarch *gdbarch)
 {
   return linux_is_uclinux ();
@@ -1365,13 +1365,12 @@ linux_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd,
   return len;
 }
 
-typedef int linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
-					    ULONGEST offset,
-					    bool read, bool write,
-					    bool exec, bool modified,
-					    bool memory_tagged,
-					    const std::string &filename,
-					    void *data);
+typedef bool linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
+					     ULONGEST offset, bool read,
+					     bool write, bool exec,
+					     bool modified, bool memory_tagged,
+					     const std::string &filename,
+					     void *data);
 
 typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
 					 const smaps_data &map);
@@ -1578,7 +1577,7 @@ linux_address_in_memtag_page (CORE_ADDR address)
 
 /* List memory regions in the inferior for a corefile.  */
 
-static int
+static bool
 linux_find_memory_regions_full (struct gdbarch *gdbarch,
 				linux_dump_mapping_p_ftype *should_dump_mapping_p,
 				linux_find_memory_region_ftype *func,
@@ -1595,7 +1594,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
   /* We need to know the real target PID to access /proc.  */
   if (current_inferior ()->fake_pid_p)
-    return 1;
+    return false;
 
   pid = current_inferior ()->pid;
 
@@ -1628,7 +1627,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
       data = target_fileio_read_stralloc (NULL, maps_filename.c_str ());
 
       if (data == nullptr)
-	return 1;
+	return false;
     }
 
   /* Parse the contents of smaps into a vector.  */
@@ -1649,7 +1648,7 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 	}
     }
 
-  return 0;
+  return true;
 }
 
 /* A structure for passing information through
@@ -1669,7 +1668,7 @@ struct linux_find_memory_regions_data
 /* A callback for linux_find_memory_regions that converts between the
    "full"-style callback and find_memory_region_ftype.  */
 
-static int
+static bool
 linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 				 ULONGEST offset,
 				 bool read, bool write, bool exec,
@@ -1686,7 +1685,7 @@ linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 /* A variant of linux_find_memory_regions_full that is suitable as the
    gdbarch find_memory_regions method.  */
 
-static int
+static bool
 linux_find_memory_regions (struct gdbarch *gdbarch,
 			   find_memory_region_ftype func, void *obfd)
 {
@@ -1726,7 +1725,7 @@ linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
   return linux_find_memory_regions_full (gdbarch,
 					 accept_dri_render_nodes,
 					 linux_find_memory_regions_thunk,
-					 &data);
+					 &data) ? 0 : 1;
 }
 
 /* This is used to pass information from
@@ -1754,12 +1753,11 @@ struct linux_make_mappings_data
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.  */
 
-static int
-linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
-			      ULONGEST offset,
+static bool
+linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size, ULONGEST offset,
 			      bool read, bool write, bool exec, bool modified,
-			      bool memory_tagged,
-			      const std::string &filename, void *data)
+			      bool memory_tagged, const std::string &filename,
+			      void *data)
 {
   struct linux_make_mappings_data *map_data
     = (struct linux_make_mappings_data *) data;
@@ -1778,7 +1776,7 @@ linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
 
   obstack_grow_str0 (map_data->filename_obstack, filename.c_str ());
 
-  return 0;
+  return true;
 }
 
 /* Write the file mapping data to the core file, if possible.  OBFD is
@@ -2750,14 +2748,14 @@ linux_gdb_signal_to_target (struct gdbarch *gdbarch,
 /* Helper for linux_vsyscall_range that does the real work of finding
    the vsyscall's address range.  */
 
-static int
+static bool
 linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 {
   char filename[100];
   long pid;
 
   if (target_auxv_search (AT_SYSINFO_EHDR, &range->start) <= 0)
-    return 0;
+    return false;
 
   /* It doesn't make sense to access the host's /proc when debugging a
      core file.  Instead, look for the PT_LOAD segment that matches
@@ -2770,28 +2768,28 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
       bfd *cbfd = get_inferior_core_bfd (current_inferior ());
       phdrs_size = bfd_get_elf_phdr_upper_bound (cbfd);
       if (phdrs_size == -1)
-	return 0;
+	return false;
 
       gdb::unique_xmalloc_ptr<Elf_Internal_Phdr>
 	phdrs ((Elf_Internal_Phdr *) xmalloc (phdrs_size));
       num_phdrs = bfd_get_elf_phdrs (cbfd, phdrs.get ());
       if (num_phdrs == -1)
-	return 0;
+	return false;
 
       for (i = 0; i < num_phdrs; i++)
 	if (phdrs.get ()[i].p_type == PT_LOAD
 	    && phdrs.get ()[i].p_vaddr == range->start)
 	  {
 	    range->length = phdrs.get ()[i].p_memsz;
-	    return 1;
+	    return true;
 	  }
 
-      return 0;
+      return false;
     }
 
   /* We need to know the real target PID to access /proc.  */
   if (current_inferior ()->fake_pid_p)
-    return 0;
+    return false;
 
   pid = current_inferior ()->pid;
 
@@ -2825,20 +2823,20 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 		p++;
 	      endaddr = strtoulst (p, &p, 16);
 	      range->length = endaddr - addr;
-	      return 1;
+	      return true;
 	    }
 	}
     }
   else
     warning (_("unable to open /proc file '%s'"), filename);
 
-  return 0;
+  return false;
 }
 
 /* Implementation of the "vsyscall_range" gdbarch hook.  Handles
    caching, and defers the real work to linux_vsyscall_range_raw.  */
 
-static int
+static bool
 linux_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
   struct linux_info *info = get_linux_inferior_data (current_inferior ());
@@ -2852,10 +2850,10 @@ linux_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
     }
 
   if (info->vsyscall_range_p < 0)
-    return 0;
+    return false;
 
   *range = info->vsyscall_range;
-  return 1;
+  return true;
 }
 
 /* Symbols for linux_infcall_mmap's ARG_FLAGS; their Linux MAP_* system

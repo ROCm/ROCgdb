@@ -239,10 +239,10 @@ mips_fpa0_regnum (struct gdbarch *gdbarch)
   return mips_regnum (gdbarch)->fp0 + 12;
 }
 
-/* Return 1 if REGNUM refers to a floating-point general register, raw
-   or cooked.  Otherwise return 0.  */
+/* Return true if REGNUM refers to a floating-point general register, raw
+   or cooked.  Otherwise return false.  */
 
-static int
+static bool
 mips_float_register_p (struct gdbarch *gdbarch, int regnum)
 {
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
@@ -700,24 +700,21 @@ mips_register_name (struct gdbarch *gdbarch, int regno)
 
 /* Return the groups that a MIPS register can be categorised into.  */
 
-static int
+static bool
 mips_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *reggroup)
 {
-  int vector_p;
-  int float_p;
-  int raw_p;
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
   int pseudo = regnum / gdbarch_num_regs (gdbarch);
   if (reggroup == all_reggroup)
     return pseudo;
-  vector_p = register_type (gdbarch, regnum)->is_vector ();
-  float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
+  bool vector_p = register_type (gdbarch, regnum)->is_vector ();
+  bool float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
   /* FIXME: cagney/2003-04-13: Can't yet use gdbarch_num_regs
      (gdbarch), as not all architectures are multi-arch.  */
-  raw_p = rawnum < gdbarch_num_regs (gdbarch);
+  bool raw_p = rawnum < gdbarch_num_regs (gdbarch);
   if (gdbarch_register_name (gdbarch, regnum)[0] == '\0')
-    return 0;
+    return false;
   if (reggroup == float_reggroup)
     return float_p && pseudo;
   if (reggroup == vector_reggroup)
@@ -732,14 +729,14 @@ mips_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   /* Restore the same pseudo register.  */
   if (reggroup == restore_reggroup)
     return raw_p && pseudo;
-  return 0;
+  return false;
 }
 
 /* Return the groups that a MIPS register can be categorised into.
    This version is only used if we have a target description which
    describes real registers (and their groups).  */
 
-static int
+static bool
 mips_tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				const struct reggroup *reggroup)
 {
@@ -755,7 +752,7 @@ mips_tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
      strange; if we have 64 bits, we should save and restore all
      64 bits.  But this is hard and has little benefit.  */
   if (!pseudo)
-    return 0;
+    return false;
 
   ret = tdesc_register_in_reggroup_p (gdbarch, rawnum, reggroup);
   if (ret != -1)
@@ -831,7 +828,7 @@ mips_pseudo_register_write (struct gdbarch *gdbarch,
     internal_error (_("bad register size"));
 }
 
-static int
+static void
 mips_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int reg)
 {
@@ -840,11 +837,9 @@ mips_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 	      && reg < 2 * gdbarch_num_regs (gdbarch));
 
   ax_reg_mask (ax, rawnum);
-
-  return 0;
 }
 
-static int
+static bool
 mips_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
 				    struct agent_expr *ax, int reg)
 {
@@ -873,7 +868,7 @@ mips_ax_pseudo_register_push_stack (struct gdbarch *gdbarch,
   else
     internal_error (_("bad register size"));
 
-  return 0;
+  return true;
 }
 
 /* Table to translate 3-bit register field to actual register number.  */
@@ -912,7 +907,7 @@ set_mips64_transfers_32bit_regs (const char *args, int from_tty,
    value that is being transferred to or from a pair of floating point
    registers each of which are (or are considered to be) only 4 bytes
    wide.  */
-static int
+static bool
 mips_convert_register_float_case_p (struct gdbarch *gdbarch, int regnum,
 				    struct type *type)
 {
@@ -925,7 +920,7 @@ mips_convert_register_float_case_p (struct gdbarch *gdbarch, int regnum,
 /* This predicate tests for the case of a value of less than 8
    bytes in width that is being transferred to or from an 8 byte
    general purpose register.  */
-static int
+static bool
 mips_convert_register_gpreg_case_p (struct gdbarch *gdbarch, int regnum,
 				    struct type *type)
 {
@@ -936,7 +931,7 @@ mips_convert_register_gpreg_case_p (struct gdbarch *gdbarch, int regnum,
 	  && type->length () < 8);
 }
 
-static int
+static bool
 mips_convert_register_p (struct gdbarch *gdbarch,
 			 int regnum, struct type *type)
 {
@@ -944,10 +939,10 @@ mips_convert_register_p (struct gdbarch *gdbarch,
 	  || mips_convert_register_gpreg_case_p (gdbarch, regnum, type));
 }
 
-static int
+static bool
 mips_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *type, gdb_byte *to,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
@@ -962,13 +957,13 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
 
       if (!get_frame_register_bytes (next_frame, regnum + 0, 0, second_half,
 				     optimizedp, unavailablep))
-	return 0;
+	return false;
 
       if (!get_frame_register_bytes (next_frame, regnum + 1, 0, first_half,
 				     optimizedp, unavailablep))
-	return 0;
-      *optimizedp = *unavailablep = 0;
-      return 1;
+	return false;
+      *optimizedp = *unavailablep = false;
+      return true;
     }
   else if (mips_convert_register_gpreg_case_p (gdbarch, regnum, type))
     {
@@ -978,10 +973,10 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
       offset = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG ? 8 - len : 0;
       if (!get_frame_register_bytes (next_frame, regnum, offset, { to, len },
 				     optimizedp, unavailablep))
-	return 0;
+	return false;
 
-      *optimizedp = *unavailablep = 0;
-      return 1;
+      *optimizedp = *unavailablep = false;
+      return true;
     }
   else
     {
@@ -1349,7 +1344,7 @@ mips_adjust_dwarf2_addr (CORE_ADDR pc)
    that sets PC to 0 and ADJ_PC accordingly, usually 0 as well.  */
 
 static CORE_ADDR
-mips_adjust_dwarf2_line (CORE_ADDR addr, int rel)
+mips_adjust_dwarf2_line (CORE_ADDR addr, bool rel)
 {
   static CORE_ADDR adj_pc;
   static CORE_ADDR pc;
@@ -6629,7 +6624,7 @@ print_gp_register_row (struct ui_file *file, const frame_info_ptr &frame,
 
 static void
 mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
-			   const frame_info_ptr &frame, int regnum, int all)
+			   const frame_info_ptr &frame, int regnum, bool all)
 {
   if (regnum != -1)		/* Do one specified register.  */
     {
@@ -6659,7 +6654,7 @@ mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
     }
 }
 
-static int
+static bool
 mips_single_step_through_delay (struct gdbarch *gdbarch,
 				const frame_info_ptr &frame)
 {
@@ -6674,7 +6669,7 @@ mips_single_step_through_delay (struct gdbarch *gdbarch,
 	  && !micromips_insn_at_pc_has_delay_slot (gdbarch, pc, 0))
       || (mips_pc_is_mips16 (gdbarch, pc)
 	  && !mips16_insn_at_pc_has_delay_slot (gdbarch, pc, 0)))
-    return 0;
+    return false;
 
   isa = mips_pc_isa (gdbarch, pc);
   /* _has_delay_slot above will have validated the read.  */
@@ -6733,7 +6728,7 @@ mips_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 /* Implement the stack_frame_destroyed_p gdbarch method (32-bit version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -6746,7 +6741,7 @@ mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       for (; pc < func_end; pc += MIPS_INSN32_SIZE)
 	{
@@ -6760,19 +6755,19 @@ mips32_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      && high_word != 0x67bd	/* daddiu $sp,$sp,offset */
 	      && inst != 0x03e00008	/* jr $ra */
 	      && inst != 0x00000000)	/* nop */
-	    return 0;
+	    return false;
 	}
 
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method (microMIPS version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0;
@@ -6785,7 +6780,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   int loc;
 
   if (!find_pc_partial_function (pc, NULL, &func_addr, &func_end))
-    return 0;
+    return false;
 
   /* The microMIPS epilogue is max. 12 bytes long.  */
   addr = func_end - 12;
@@ -6793,7 +6788,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   if (addr < func_addr + 2)
     addr = func_addr + 2;
   if (pc < addr)
-    return 0;
+    return false;
 
   for (; pc < func_end; pc += loc)
     {
@@ -6819,10 +6814,10 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 			    /* (D)ADDIU $sp, imm */
 		  && offset >= 0)
 		break;
-	      return 0;
+	      return false;
 
 	    default:
-	      return 0;
+	      return false;
 	    }
 	  break;
 
@@ -6836,7 +6831,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      if (sreg == 0 && dreg == 0)
 				/* MOVE $zero, $zero aka NOP */
 		break;
-	      return 0;
+	      return false;
 
 	    case 0x11: /* POOL16C: bits 010001 */
 	      if (b5s5_op (insn) == 0x18
@@ -6846,7 +6841,7 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 		      && b0s5_reg (insn) == MIPS_RA_REGNUM))
 				/* JRC $ra */
 		break;
-	      return 0;
+	      return false;
 
 	    case 0x13: /* POOL16D: bits 010011 */
 	      offset = micromips_decode_imm9 (b1s9_imm (insn));
@@ -6854,21 +6849,21 @@ micromips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 				/* ADDIUSP: bits 010011 1 */
 		  && offset > 0)
 		break;
-	      return 0;
+	      return false;
 
 	    default:
-	      return 0;
+	      return false;
 	    }
 	}
     }
 
-  return 1;
+  return true;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method (16-bit version).
    This is a helper function for mips_stack_frame_destroyed_p.  */
 
-static int
+static bool
 mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -6881,7 +6876,7 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       for (; pc < func_end; pc += MIPS_INSN16_SIZE)
 	{
@@ -6897,13 +6892,13 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	      && inst != 0xe820		/* jr $ra */
 	      && inst != 0xe8a0		/* jrc $ra */
 	      && inst != 0x6500)	/* nop */
-	    return 0;
+	    return false;
 	}
 
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method.
@@ -6911,7 +6906,7 @@ mips16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
    The epilogue is defined here as the area at the end of a function,
    after an instruction which destroys the function's stack frame.  */
 
-static int
+static bool
 mips_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   if (mips_pc_is_mips16 (gdbarch, pc))
@@ -7766,7 +7761,7 @@ mips_skip_mips16_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
 /* Return non-zero if the PC is inside a return thunk (aka stub or trampoline).
    This implements the IN_SOLIB_RETURN_TRAMPOLINE macro.  */
 
-static int
+static bool
 mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
 {
   CORE_ADDR start_addr;
@@ -7774,7 +7769,7 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
 
   /* Find the starting address of the function containing the PC.  */
   if (find_pc_partial_function (pc, NULL, &start_addr, NULL) == 0)
-    return 0;
+    return false;
 
   /* If the PC is in __mips16_call_stub_{s,d}{f,c}_{0..10} but not at
      the start, i.e. after the JALR instruction, this is effectively
@@ -7785,14 +7780,14 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
       && mips_is_stub_mode (name + prefixlen)
       && name[prefixlen + 2] == '_'
       && mips_is_stub_suffix (name + prefixlen + 3, 1))
-    return 1;
+    return true;
 
   /* If the PC is in __call_stub_fp_* but not at the start, i.e. after
      the JAL or JALR instruction, this is effectively a return stub.  */
   prefixlen = strlen (mips_str_call_fp_stub);
   if (pc != start_addr
       && strncmp (name, mips_str_call_fp_stub, prefixlen) == 0)
-    return 1;
+    return true;
 
   /* Consume the .pic. prefix of any PIC stub, this function must return
      true when the PC is in a PIC stub of a __mips16_ret_{d,s}{f,c} stub
@@ -7807,9 +7802,9 @@ mips_in_return_stub (struct gdbarch *gdbarch, CORE_ADDR pc, const char *name)
   if (strncmp (name, mips_str_mips16_ret_stub, prefixlen) == 0
       && mips_is_stub_mode (name + prefixlen)
       && name[prefixlen + 2] == '\0')
-    return 1;
+    return true;
 
-  return 0;			/* Not a stub.  */
+  return false;			/* Not a stub.  */
 }
 
 /* If the current PC is the start of a non-PIC-to-PIC stub, return the
@@ -8729,7 +8724,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
      being used as guards for target_stopped_by_watchpoint, why not have
      target_stopped_by_watchpoint return the type of watchpoint that the code
      is sitting on?  */
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   set_gdbarch_skip_trampoline_code (gdbarch, mips_skip_trampoline_code);
 
@@ -8747,7 +8742,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					 mips_single_step_through_delay);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   mips_register_g_packet_guesses (gdbarch);
 

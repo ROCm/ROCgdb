@@ -360,7 +360,7 @@ ia64_register_addr (struct gdbarch *gdbarch, int regno)
   return addr;
 }
 
-static int
+static bool
 ia64_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return regno < 0
@@ -368,7 +368,7 @@ ia64_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 	 || u_offsets[regno] == -1;
 }
 
-static int
+static bool
 ia64_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   /* Rationale behind not permitting stores to bspstore...

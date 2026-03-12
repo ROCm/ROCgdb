@@ -1469,24 +1469,24 @@ sh_default_register_type (struct gdbarch *gdbarch, int reg_nr)
    The default code in reggroup.c doesn't identify system registers, some
    float registers or any of the vector registers.
    TODO: sh2a and dsp registers.  */
-static int
+static bool
 sh_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			const struct reggroup *reggroup)
 {
   if (*gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
 
   if (reggroup == float_reggroup
       && (regnum == FPUL_REGNUM
 	  || regnum == FPSCR_REGNUM))
-    return 1;
+    return true;
 
   if (regnum >= FV0_REGNUM && regnum <= FV_LAST_REGNUM)
     {
       if (reggroup == vector_reggroup || reggroup == float_reggroup)
-	return 1;
+	return true;
       if (reggroup == general_reggroup)
-	return 0;
+	return false;
     }
 
   if (regnum == VBR_REGNUM
@@ -1496,9 +1496,9 @@ sh_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
       || regnum == SPC_REGNUM)
     {
       if (reggroup == system_reggroup)
-	return 1;
+	return true;
       if (reggroup == general_reggroup)
-	return 0;
+	return false;
     }
 
   /* The default code can cope with any other registers.  */
@@ -2033,7 +2033,7 @@ static const struct frame_unwind_legacy sh_stub_unwind (
    either on the `ret' instruction itself or after an instruction which
    destroys the function's stack frame.  */
 
-static int
+static bool
 sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -2050,14 +2050,14 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       if (addr < func_addr + 4)
 	addr = func_addr + 4;
       if (pc < addr)
-	return 0;
+	return false;
 
       /* First search forward until hitting an rts.  */
       while (addr < func_end
 	     && !IS_RTS (read_memory_unsigned_integer (addr, 2, byte_order)))
 	addr += 2;
       if (addr >= func_end)
-	return 0;
+	return false;
 
       /* At this point we should find a mov.l @r15+,r14 instruction,
 	 either before or after the rts.  If not, then the function has
@@ -2068,7 +2068,7 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	addr -= 2;
       else if (!IS_RESTORE_FP (read_memory_unsigned_integer (addr + 2, 2,
 							     byte_order)))
-	return 0;
+	return false;
 
       inst = read_memory_unsigned_integer (addr - 2, 2, byte_order);
 
@@ -2112,9 +2112,9 @@ sh_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 	addr -= 4;
 
       if (pc >= addr)
-	return 1;
+	return true;
     }
-  return 0;
+  return false;
 }
 
 
@@ -2207,11 +2207,11 @@ sh_iterate_over_regset_sections (struct gdbarch *gdbarch,
 /* This is the implementation of gdbarch method
    return_in_first_hidden_param_p.  */
 
-static int
+static bool
 sh_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 				     struct type *type)
 {
-  return 0;
+  return false;
 }
 
 
@@ -2235,7 +2235,7 @@ sh_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_long_bit (gdbarch, 8 * TARGET_CHAR_BIT);
 
   set_gdbarch_wchar_bit (gdbarch, 2 * TARGET_CHAR_BIT);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
 
   set_gdbarch_float_bit (gdbarch, 4 * TARGET_CHAR_BIT);
   set_gdbarch_double_bit (gdbarch, 8 * TARGET_CHAR_BIT);

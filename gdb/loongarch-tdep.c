@@ -1970,35 +1970,35 @@ loongarch_find_default_target_description (const struct gdbarch_info info)
   return loongarch_lookup_target_description (features);
 }
 
-static int
+static bool
 loongarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			       const struct reggroup *group)
 {
   if (gdbarch_register_name (gdbarch, regnum) == NULL
       || *gdbarch_register_name (gdbarch, regnum) == '\0')
-    return 0;
+    return false;
 
-  int raw_p = regnum < gdbarch_num_regs (gdbarch);
+  bool raw_p = regnum < gdbarch_num_regs (gdbarch);
 
   if (group == save_reggroup || group == restore_reggroup)
     return raw_p;
 
   if (group == all_reggroup)
-    return 1;
+    return true;
 
   if (0 <= regnum && regnum <= LOONGARCH_BADV_REGNUM)
     return group == general_reggroup;
 
   /* Only ORIG_A0, PC, BADV in general_reggroup */
   if (group == general_reggroup)
-    return 0;
+    return false;
 
   if (LOONGARCH_FIRST_FP_REGNUM <= regnum && regnum <= LOONGARCH_FCSR_REGNUM)
     return group == float_reggroup;
 
   /* Only $fx / $fccx / $fcsr in float_reggroup */
   if (group == float_reggroup)
-    return 0;
+    return false;
 
   if (LOONGARCH_FIRST_LSX_REGNUM <= regnum
      && regnum < LOONGARCH_FIRST_LASX_REGNUM + LOONGARCH_LINUX_NUM_LASXREGSET)
@@ -2006,7 +2006,7 @@ loongarch_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   /* Only $vrx / $xrx in vector_reggroup */
   if (group == vector_reggroup)
-    return 0;
+    return false;
 
   int ret = tdesc_register_in_reggroup_p (gdbarch, regnum, group);
   if (ret != -1)
@@ -2174,7 +2174,6 @@ loongarch_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_bit (gdbarch, 128);
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_quad);
   set_gdbarch_ptr_bit (gdbarch, info.bfd_arch_info->bits_per_address);
-  set_gdbarch_char_signed (gdbarch, 1);
 
   info.target_desc = tdesc;
   info.tdesc_data = tdesc_data.get ();
@@ -2219,7 +2218,7 @@ loongarch_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_get_next_pcs (gdbarch, loongarch_software_single_step);
   set_gdbarch_breakpoint_kind_from_pc (gdbarch, loongarch_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch, loongarch_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Frame unwinders. Use DWARF debug info if available, otherwise use our own unwinder.  */
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, loongarch_dwarf2_reg_to_regnum);

@@ -166,40 +166,40 @@ pspy_dealloc (PyObject *self)
 /* Initialize a pspace_object.
    The result is a boolean indicating success.  */
 
-static int
-pspy_initialize (pspace_object *self)
+static bool
+pspy_initialize (gdbpy_ref<pspace_object> &self)
 {
   self->pspace = NULL;
 
   self->dict = PyDict_New ();
   if (self->dict == NULL)
-    return 0;
+    return false;
 
   self->printers = PyList_New (0);
   if (self->printers == NULL)
-    return 0;
+    return false;
 
   self->frame_filters = PyDict_New ();
   if (self->frame_filters == NULL)
-    return 0;
+    return false;
 
   self->frame_unwinders = PyList_New (0);
   if (self->frame_unwinders == NULL)
-    return 0;
+    return false;
 
   self->type_printers = PyList_New (0);
   if (self->type_printers == NULL)
-    return 0;
+    return false;
 
   self->xmethods = PyList_New (0);
   if (self->xmethods == NULL)
-    return 0;
+    return false;
 
   self->missing_file_handlers = PyList_New (0);
   if (self->missing_file_handlers == nullptr)
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 PyObject *
@@ -591,7 +591,7 @@ pspace_to_pspace_object (struct program_space *pspace)
 	((pspace_object *) PyObject_New (pspace_object, &pspace_object_type));
       if (object == NULL)
 	return NULL;
-      if (!pspy_initialize (object.get ()))
+      if (!pspy_initialize (object))
 	return NULL;
 
       object->pspace = pspace;

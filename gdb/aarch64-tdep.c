@@ -171,7 +171,7 @@ static const char *const aarch64_gcs_linux_register_names[] = {
   "gcs_features_locked",
 };
 
-static int aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
+static bool aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
 
 /* AArch64 prologue cache structure.  */
 struct aarch64_prologue_cache
@@ -2842,7 +2842,7 @@ aarch64_return_value (struct gdbarch *gdbarch, struct value *func_value,
 
 /* Implement the "get_longjmp_target" gdbarch method.  */
 
-static int
+static bool
 aarch64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   CORE_ADDR jb_addr;
@@ -2855,10 +2855,10 @@ aarch64_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
 			  X_REGISTER_SIZE))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, X_REGISTER_SIZE, byte_order);
-  return 1;
+  return true;
 }
 
 /* Implement the "gen_return_address" gdbarch method.  */
@@ -3133,7 +3133,7 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 
 /* Implement the "pseudo_register_reggroup_p" tdesc_arch_data method.  */
 
-static int
+static bool
 aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				    const struct reggroup *group)
 {
@@ -3160,7 +3160,7 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return group == all_reggroup || group == vector_reggroup;
   /* RA_STATE is used for unwinding only.  Do not assign it to any groups.  */
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
-    return 0;
+    return false;
 
   return group == all_reggroup;
 }
@@ -4142,13 +4142,13 @@ aarch64_features_from_target_desc (const struct target_desc *tdesc)
 
 /* Implement the "cannot_store_register" gdbarch method.  */
 
-static int
+static bool
 aarch64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
   if (!tdep->has_pauth ())
-    return 0;
+    return false;
 
   /* Pointer authentication registers are read-only.  */
   return (regnum >= tdep->pauth_reg_base
@@ -4157,25 +4157,25 @@ aarch64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
 
-static int
+static bool
 aarch64_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_start, func_end;
   if (!find_pc_partial_function (pc, NULL, &func_start, &func_end))
-    return 0;
+    return false;
 
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
 
   ULONGEST insn_from_memory;
   if (!safe_read_memory_unsigned_integer (pc, 4, byte_order_for_code,
 					  &insn_from_memory))
-    return 0;
+    return false;
 
   uint32_t insn = insn_from_memory;
 
   aarch64_inst inst;
   if (aarch64_decode_insn (insn, &inst, 1, nullptr) != 0)
-    return 0;
+    return false;
 
   return streq (inst.opcode->name, "ret");
 }
@@ -4783,7 +4783,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				       aarch64_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       aarch64_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
   set_gdbarch_get_next_pcs (gdbarch, aarch64_software_single_step);
 
   /* Information about registers, etc.  */
@@ -4827,7 +4827,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_long_bit (gdbarch, 64);
   set_gdbarch_ptr_bit (gdbarch, 64);
   set_gdbarch_char_signed (gdbarch, 0);
-  set_gdbarch_wchar_signed (gdbarch, 0);
+  set_gdbarch_wchar_signed (gdbarch, false);
   set_gdbarch_float_format (gdbarch, floatformats_ieee_single);
   set_gdbarch_double_format (gdbarch, floatformats_ieee_double);
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_quad);
@@ -4846,7 +4846,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_print_insn (gdbarch, aarch64_gdb_print_insn);
 
   /* Virtual tables.  */
-  set_gdbarch_vbit_in_delta (gdbarch, 1);
+  set_gdbarch_vbit_in_delta (gdbarch, true);
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   info.target_desc = tdesc;

@@ -1366,7 +1366,7 @@ mn10300_gdbarch_init (struct gdbarch_info info,
     }
 
   /* By default, chars are unsigned.  */
-  set_gdbarch_char_signed (gdbarch, 0);
+  set_gdbarch_char_signed (gdbarch, false);
 
   /* Registers.  */
   set_gdbarch_num_regs (gdbarch, num_regs);

@@ -68,7 +68,7 @@
 
 /* Implement cannot_store_register gdbarch method.  */
 
-static int
+static bool
 s390_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   /* The last-break address is read-only.  */

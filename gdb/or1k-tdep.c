@@ -346,7 +346,7 @@ constexpr gdb_byte or1k_break_insn[] = {0x21, 0x00, 0x00, 0x01};
 
 typedef BP_MANIPULATION (or1k_break_insn) or1k_breakpoint;
 
-static int
+static bool
 or1k_delay_slot_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   const CGEN_INSN *insn;
@@ -361,7 +361,7 @@ or1k_delay_slot_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   /* NULL here would mean the last instruction was not understood by cgen.
      This should not usually happen, but if it does it's not a delay slot.  */
   if (insn == NULL)
-    return 0;
+    return false;
 
   /* TODO: we should add a delay slot flag to the CGEN_INSN and remove
      this hard coded test.  */
@@ -375,7 +375,7 @@ or1k_delay_slot_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* Implement the single_step_through_delay gdbarch method.  */
 
-static int
+static bool
 or1k_single_step_through_delay (struct gdbarch *gdbarch,
 				const frame_info_ptr &this_frame)
 {
@@ -392,7 +392,7 @@ or1k_single_step_through_delay (struct gdbarch *gdbarch,
   npc = (CORE_ADDR) val;
 
   if (0x4 != (npc - ppc))
-    return 0;
+    return false;
 
   return or1k_delay_slot_p (gdbarch, ppc);
 }
@@ -1175,7 +1175,6 @@ or1k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
   set_gdbarch_ptr_bit (gdbarch, binfo->bits_per_address);
   set_gdbarch_addr_bit (gdbarch, binfo->bits_per_address);
-  set_gdbarch_char_signed (gdbarch, 1);
 
   /* Information about the target architecture */
   set_gdbarch_return_value (gdbarch, or1k_return_value);
@@ -1183,7 +1182,7 @@ or1k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				       or1k_breakpoint::kind_from_pc);
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       or1k_breakpoint::bp_from_kind);
-  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, 1);
+  set_gdbarch_have_nonsteppable_watchpoint (gdbarch, true);
 
   /* Register architecture */
   set_gdbarch_num_regs (gdbarch, OR1K_NUM_REGS);

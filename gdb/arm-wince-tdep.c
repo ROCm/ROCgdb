@@ -128,9 +128,6 @@ arm_wince_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->jb_pc = ARM_WINCE_JB_PC;
   tdep->jb_elt_size = ARM_WINCE_JB_ELEMENT_SIZE;
 
-  /* On ARM WinCE char defaults to signed.  */
-  set_gdbarch_char_signed (gdbarch, 1);
-
   /* Shared library handling.  */
   set_gdbarch_skip_trampoline_code (gdbarch, arm_pe_skip_trampoline_code);
 

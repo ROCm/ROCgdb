@@ -323,7 +323,7 @@ ia64_ext_type (struct gdbarch *gdbarch)
   return tdep->ia64_ext_type;
 }
 
-static int
+static bool
 ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -331,7 +331,7 @@ ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   int float_p;
   int raw_p;
   if (group == all_reggroup)
-    return 1;
+    return true;
   vector_p = register_type (gdbarch, regnum)->is_vector ();
   float_p = register_type (gdbarch, regnum)->code () == TYPE_CODE_FLT;
   raw_p = regnum < NUM_IA64_RAW_REGS;
@@ -343,7 +343,7 @@ ia64_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return (!vector_p && !float_p);
   if (group == save_reggroup || group == restore_reggroup)
     return raw_p;
-  return 0;
+  return false;
 }
 
 static const char *
@@ -1210,7 +1210,7 @@ ia64_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 /* The ia64 needs to convert between various ieee floating-point formats
    and the special ia64 floating point register format.  */
 
-static int
+static bool
 ia64_convert_register_p (struct gdbarch *gdbarch, int regno, struct type *type)
 {
   return (regno >= IA64_FR0_REGNUM && regno <= IA64_FR127_REGNUM
@@ -1218,10 +1218,10 @@ ia64_convert_register_p (struct gdbarch *gdbarch, int regno, struct type *type)
 	  && type != ia64_ext_type (gdbarch));
 }
 
-static int
+static bool
 ia64_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *valtype, gdb_byte *out,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   gdb_byte in[IA64_FP_REGISTER_SIZE];
@@ -1231,11 +1231,11 @@ ia64_register_to_value (const frame_info_ptr &frame, int regnum,
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, in_view, optimizedp,
 				 unavailablep))
-    return 0;
+    return false;
 
   target_float_convert (in, ia64_ext_type (gdbarch), out, valtype);
-  *optimizedp = *unavailablep = 0;
-  return 1;
+  *optimizedp = *unavailablep = false;
+  return true;
 }
 
 static void
@@ -4005,7 +4005,7 @@ ia64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* The virtual table contains 16-byte descriptors, not pointers to
      descriptors.  */
-  set_gdbarch_vtable_function_descriptors (gdbarch, 1);
+  set_gdbarch_vtable_function_descriptors (gdbarch, true);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);

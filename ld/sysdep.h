@@ -100,6 +100,4 @@ extern char *stpcpy (char *__dest, const char *__src);
 extern unsigned long long strtoull(const char *, char **, int);
 #endif
 
-#define POISON_BFD_BOOLEAN 1
-
 #endif /* ! defined (LD_SYSDEP_H) */

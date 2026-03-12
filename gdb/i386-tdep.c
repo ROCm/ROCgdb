@@ -556,65 +556,65 @@ i386_skip_prefixes (gdb_byte *insn, size_t max_len)
   return NULL;
 }
 
-static int
+static bool
 i386_absolute_jmp_p (const gdb_byte *insn)
 {
   /* jmp far (absolute address in operand).  */
   if (insn[0] == 0xea)
-    return 1;
+    return true;
 
   if (insn[0] == 0xff)
     {
       /* jump near, absolute indirect (/4).  */
       if ((insn[1] & 0x38) == 0x20)
-	return 1;
+	return true;
 
       /* jump far, absolute indirect (/5).  */
       if ((insn[1] & 0x38) == 0x28)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if INSN is a jump, zero otherwise.  */
+/* Return true if INSN is a jump, false otherwise.  */
 
-static int
+static bool
 i386_jmp_p (const gdb_byte *insn)
 {
   /* jump short, relative.  */
   if (insn[0] == 0xeb)
-    return 1;
+    return true;
 
   /* jump near, relative.  */
   if (insn[0] == 0xe9)
-    return 1;
+    return true;
 
   return i386_absolute_jmp_p (insn);
 }
 
-static int
+static bool
 i386_absolute_call_p (const gdb_byte *insn)
 {
   /* call far, absolute.  */
   if (insn[0] == 0x9a)
-    return 1;
+    return true;
 
   if (insn[0] == 0xff)
     {
       /* Call near, absolute indirect (/2).  */
       if ((insn[1] & 0x38) == 0x10)
-	return 1;
+	return true;
 
       /* Call far, absolute indirect (/3).  */
       if ((insn[1] & 0x38) == 0x18)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
-static int
+static bool
 i386_ret_p (const gdb_byte *insn)
 {
   switch (insn[0])
@@ -624,30 +624,30 @@ i386_ret_p (const gdb_byte *insn)
     case 0xca: /* ret far, pop N bytes.  */
     case 0xcb: /* ret far */
     case 0xcf: /* iret */
-      return 1;
+      return true;
 
     default:
-      return 0;
+      return false;
     }
 }
 
-static int
+static bool
 i386_call_p (const gdb_byte *insn)
 {
   if (i386_absolute_call_p (insn))
-    return 1;
+    return true;
 
   /* call near, relative.  */
   if (insn[0] == 0xe8)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
-/* Return non-zero if INSN is a system call, and set *LENGTHP to its
-   length in bytes.  Otherwise, return zero.  */
+/* Return true if INSN is a system call, and set *LENGTHP to its
+   length in bytes.  Otherwise, return false.  */
 
-static int
+static bool
 i386_syscall_p (const gdb_byte *insn, int *lengthp)
 {
   /* Is it 'int $0x80'?  */
@@ -658,15 +658,15 @@ i386_syscall_p (const gdb_byte *insn, int *lengthp)
       || (insn[0] == 0x0f && insn[1] == 0x05))
     {
       *lengthp = 2;
-      return 1;
+      return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* The gdbarch insn_is_call method.  */
 
-static int
+static bool
 i386_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;
@@ -679,7 +679,7 @@ i386_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_ret method.  */
 
-static int
+static bool
 i386_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;
@@ -692,7 +692,7 @@ i386_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 
 /* The gdbarch insn_is_jump method.  */
 
-static int
+static bool
 i386_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   gdb_byte buf[I386_MAX_INSN_LEN], *insn;
@@ -2132,17 +2132,17 @@ static const struct frame_unwind_legacy i386_frame_unwind (
    follow any instruction such as 'leave' or 'pop %ebp' that destroys
    the function's stack frame.  */
 
-static int
+static bool
 i386_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   gdb_byte insn;
   if (target_read_memory (pc, &insn, 1))
-    return 0;	/* Can't read memory at pc.  */
+    return false;	/* Can't read memory at pc.  */
 
   if (insn != 0xc3)	/* 'ret' instruction.  */
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 static int
@@ -2562,10 +2562,10 @@ i386_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 /* Figure out where the longjmp will land.  Slurp the args out of the
    stack.  We expect the first arg to be a pointer to the jmp_buf
    structure from which we extract the address that we will land at.
-   This address is copied into PC.  This routine returns non-zero on
+   This address is copied into PC.  This routine returns true on
    success.  */
 
-static int
+static bool
 i386_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   gdb_byte buf[4];
@@ -2578,19 +2578,19 @@ i386_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   /* If JB_PC_OFFSET is -1, we have no way to find out where the
      longjmp will land.  */
   if (jb_pc_offset == -1)
-    return 0;
+    return false;
 
   get_frame_register (frame, I386_ESP_REGNUM, buf);
   sp = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (sp + 4, buf, 4))
-    return 0;
+    return false;
 
   jb_addr = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (jb_addr + jb_pc_offset, buf, 4))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 4, byte_order);
-  return 1;
+  return true;
 }
 
 
@@ -3415,7 +3415,7 @@ i386_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 
 /* Implement the 'ax_pseudo_register_collect' gdbarch method.  */
 
-int
+void
 i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int regnum)
 {
@@ -3430,7 +3430,6 @@ i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
       ax_reg_mask (ax, I387_FSTAT_REGNUM (tdep));
       for (i = 0; i < 8; i++)
 	ax_reg_mask (ax, I387_ST0_REGNUM (tdep) + i);
-      return 0;
     }
   else if (i386_zmm_regnum_p (gdbarch, regnum))
     {
@@ -3448,39 +3447,33 @@ i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 			   - num_lower_zmm_regs);
 	}
       ax_reg_mask (ax, tdep->zmm0h_regnum + regnum);
-      return 0;
     }
   else if (i386_ymm_regnum_p (gdbarch, regnum))
     {
       regnum -= tdep->ymm0_regnum;
       ax_reg_mask (ax, I387_XMM0_REGNUM (tdep) + regnum);
       ax_reg_mask (ax, tdep->ymm0h_regnum + regnum);
-      return 0;
     }
   else if (i386_ymm_avx512_regnum_p (gdbarch, regnum))
     {
       regnum -= tdep->ymm16_regnum;
       ax_reg_mask (ax, I387_XMM16_REGNUM (tdep) + regnum);
       ax_reg_mask (ax, tdep->ymm16h_regnum + regnum);
-      return 0;
     }
   else if (i386_word_regnum_p (gdbarch, regnum))
     {
       int gpnum = regnum - tdep->ax_regnum;
 
       ax_reg_mask (ax, gpnum);
-      return 0;
     }
   else if (i386_byte_regnum_p (gdbarch, regnum))
     {
       int gpnum = regnum - tdep->al_regnum;
 
       ax_reg_mask (ax, gpnum % 4);
-      return 0;
     }
   else
-    internal_error (_("invalid regnum"));
-  return 1;
+    gdb_assert_not_reached ("invalid regnum");
 }
 
 
@@ -3513,10 +3506,10 @@ i386_next_regnum (int regnum)
   return -1;
 }
 
-/* Return nonzero if a value of type TYPE stored in register REGNUM
+/* Return true if a value of type TYPE stored in register REGNUM
    needs any special handling.  */
 
-static int
+static bool
 i386_convert_register_p (struct gdbarch *gdbarch,
 			 int regnum, struct type *type)
 {
@@ -3538,7 +3531,7 @@ i386_convert_register_p (struct gdbarch *gdbarch,
 	}
 
       if (last_regnum != -1)
-	return 1;
+	return true;
     }
 
   return i387_convert_register_p (gdbarch, regnum, type);
@@ -3547,10 +3540,10 @@ i386_convert_register_p (struct gdbarch *gdbarch,
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and
    return its contents in TO.  */
 
-static int
+static bool
 i386_register_to_value (const frame_info_ptr &frame, int regnum,
 			struct type *type, gdb_byte *to,
-			int *optimizedp, int *unavailablep)
+			bool *optimizedp, bool *unavailablep)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   int len = type->length ();
@@ -3573,15 +3566,15 @@ i386_register_to_value (const frame_info_ptr &frame, int regnum,
       frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
       if (!get_frame_register_bytes (next_frame, regnum, 0, to_view,
 				     optimizedp, unavailablep))
-	return 0;
+	return false;
 
       regnum = i386_next_regnum (regnum);
       len -= 4;
       to += 4;
     }
 
-  *optimizedp = *unavailablep = 0;
-  return 1;
+  *optimizedp = *unavailablep = false;
+  return true;
 }
 
 /* Write the contents FROM of a value of type TYPE into register
@@ -3842,7 +3835,7 @@ i386_svr4_sigcontext_addr (const frame_info_ptr &this_frame)
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-int
+bool
 i386_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == '$' /* Literal number.  */
@@ -4268,7 +4261,7 @@ i386_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, i386_mmx_reggroup);
 }
 
-int
+bool
 i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 			  const struct reggroup *group)
 {
@@ -4281,13 +4274,13 @@ i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   /* Don't include pseudo registers, except for MMX, in any register
      groups.  */
   if (i386_byte_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   if (i386_word_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   if (i386_dword_regnum_p (gdbarch, regnum))
-    return 0;
+    return false;
 
   mmx_regnum_p = i386_mmx_regnum_p (gdbarch, regnum);
   if (group == i386_mmx_reggroup)
@@ -4334,7 +4327,7 @@ i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 	  || ymmh_regnum_p
 	  || ymmh_avx512_regnum_p
 	  || zmmh_regnum_p))
-    return 0;
+    return false;
 
   if (group == general_reggroup)
     return (!fp_regnum_p
@@ -8401,7 +8394,7 @@ static const int i386_record_regmap[] =
    of instruction to replace, and 0 if not, plus an explanatory
    string.  */
 
-static int
+static bool
 i386_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 			       std::string *msg)
 {
@@ -8439,13 +8432,13 @@ i386_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 	*msg = string_printf (_("; instruction is only %d bytes long, "
 				"need at least %d bytes for the jump"),
 			      len, jumplen);
-      return 0;
+      return false;
     }
   else
     {
       if (msg)
 	msg->clear ();
-      return 1;
+      return true;
     }
 }
 

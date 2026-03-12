@@ -206,7 +206,7 @@ ft32_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
   if (start_addr >= end_addr)
     return end_addr;
 
-  cache->established = 0;
+  cache->established = false;
   for (next_addr = start_addr; next_addr < end_addr; next_addr += isize)
     {
       inst = ft32_fetch_instruction (next_addr, &isize, byte_order);
@@ -251,7 +251,7 @@ ft32_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
       inst = ft32_fetch_instruction (next_addr, &isize, byte_order);
       if (FT32_IS_LINK (inst))
 	{
-	  cache->established = 1;
+	  cache->established = true;
 	  for (regnum = FT32_R0_REGNUM; regnum < FT32_PC_REGNUM; regnum++)
 	    {
 	      if (cache->saved_regs[regnum] != REG_UNAVAIL)

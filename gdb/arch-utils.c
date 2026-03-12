@@ -153,24 +153,24 @@ generic_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
   return 0;
 }
 
-int
+bool
 generic_in_solib_return_trampoline (struct gdbarch *gdbarch,
 				    CORE_ADDR pc, const char *name)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 generic_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  return 0;
+  return false;
 }
 
-int
+bool
 default_code_of_frame_writable (struct gdbarch *gdbarch,
 				const frame_info_ptr &frame)
 {
-  return 1;
+  return true;
 }
 
 /* Helper functions for gdbarch_inner_than */
@@ -233,7 +233,7 @@ default_adjust_dwarf2_addr (CORE_ADDR pc)
 /* See arch-utils.h.  */
 
 CORE_ADDR
-default_adjust_dwarf2_line (CORE_ADDR addr, int rel)
+default_adjust_dwarf2_line (CORE_ADDR addr, bool rel)
 {
   return addr;
 }
@@ -247,10 +247,10 @@ default_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdb_byte op,
   return false;
 }
 
-int
+bool
 cannot_register_not (struct gdbarch *gdbarch, int regnum)
 {
-  return 0;
+  return false;
 }
 
 /* Legacy version of target_virtual_frame_pointer().  Assumes that
@@ -318,11 +318,11 @@ default_floatformat_for_type (struct gdbarch *gdbarch,
   return format;
 }
 
-int
+bool
 generic_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			    struct type *type)
 {
-  return 0;
+  return false;
 }
 
 int
@@ -341,10 +341,10 @@ default_remote_register_number (struct gdbarch *gdbarch,
 
 /* See arch-utils.h.  */
 
-int
+bool
 default_vsyscall_range (struct gdbarch *gdbarch, struct mem_range *range)
 {
-  return 0;
+  return false;
 }
 
 
@@ -850,15 +850,15 @@ get_current_arch (void)
     return current_inferior ()->arch ();
 }
 
-int
+bool
 default_has_shared_address_space (struct gdbarch *gdbarch)
 {
   /* Simply say no.  In most unix-like targets each inferior/process
      has its own address space.  */
-  return 0;
+  return false;
 }
 
-int
+bool
 default_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
 				  std::string *msg)
 {
@@ -866,7 +866,7 @@ default_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr,
      tracepoints that doesn't need gdbarch, so always say yes.  */
   if (msg)
     msg->clear ();
-  return 1;
+  return true;
 }
 
 const gdb_byte *
@@ -894,7 +894,7 @@ default_gen_return_address (struct gdbarch *gdbarch,
   error (_("This architecture has no method to collect a return address."));
 }
 
-int
+bool
 default_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 					struct type *type)
 {
@@ -904,19 +904,22 @@ default_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
   return !(language_pass_by_reference (type).trivially_copyable);
 }
 
-int default_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_call (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
-int default_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_ret (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
-int default_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
+bool
+default_insn_is_jump (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
-  return 0;
+  return false;
 }
 
 /*  See arch-utils.h.  */

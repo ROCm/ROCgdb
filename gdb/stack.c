@@ -1731,8 +1731,8 @@ info_frame_command_core (const frame_info_ptr &fi, bool selected_frame_p)
 	  && gdbarch_register_reggroup_p (gdbarch, i, all_reggroup))
 	{
 	  enum lval_type lval;
-	  int optimized;
-	  int unavailable;
+	  bool optimized;
+	  bool unavailable;
 	  CORE_ADDR addr;
 	  int realnum;
 

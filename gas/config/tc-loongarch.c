@@ -27,7 +27,6 @@
 #include "opcode/loongarch.h"
 #include "obj-elf.h"
 #include "bfd/elfxx-loongarch.h"
-#include "config.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

@@ -24,27 +24,20 @@
 #include "cli/cli-utils.h"
 #include <algorithm>
 #include "gdbsupport/byte-vector.h"
+#include "extract-store-integer.h"
 
-/* Copied from bfd_put_bits.  */
+/* Append DATA to BUF, writing only the specified number of bits,
+   using the given endian-ness.  */
 
 static void
-put_bits (uint64_t data, gdb::byte_vector &buf, int bits, bool big_p)
+put_bits (uint64_t data, gdb::byte_vector &buf, int bits,
+	  bfd_endian byte_order)
 {
-  int i;
-  int bytes;
-
   gdb_assert (bits % 8 == 0);
-
-  bytes = bits / 8;
+  int bytes = bits / 8;
   size_t last = buf.size ();
   buf.resize (last + bytes);
-  for (i = 0; i < bytes; i++)
-    {
-      int index = big_p ? bytes - i - 1 : i;
-
-      buf[last + index] = data & 0xff;
-      data >>= 8;
-    }
+  store_unsigned_integer (&buf[last], bytes, byte_order, data);
 }
 
 /* Subroutine of find_command to simplify it.
@@ -53,7 +46,7 @@ put_bits (uint64_t data, gdb::byte_vector &buf, int bits, bool big_p)
 static gdb::byte_vector
 parse_find_args (const char *args, ULONGEST *max_countp,
 		 CORE_ADDR *start_addrp, ULONGEST *search_space_lenp,
-		 bool big_p)
+		 bfd_endian byte_order)
 {
   /* Default to using the specified type.  */
   char size = '\0';
@@ -171,13 +164,13 @@ parse_find_args (const char *args, ULONGEST *max_countp,
 	      pattern_buf.push_back (x);
 	      break;
 	    case 'h':
-	      put_bits (x, pattern_buf, 16, big_p);
+	      put_bits (x, pattern_buf, 16, byte_order);
 	      break;
 	    case 'w':
-	      put_bits (x, pattern_buf, 32, big_p);
+	      put_bits (x, pattern_buf, 32, byte_order);
 	      break;
 	    case 'g':
-	      put_bits (x, pattern_buf, 64, big_p);
+	      put_bits (x, pattern_buf, 64, byte_order);
 	      break;
 	    }
 	}
@@ -210,7 +203,7 @@ static void
 find_command (const char *args, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  bool big_p = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG;
+  bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* Command line parameters.
      These are initialized to avoid uninitialized warnings from -Wall.  */
   ULONGEST max_count = 0;
@@ -223,7 +216,7 @@ find_command (const char *args, int from_tty)
   gdb::byte_vector pattern_buf = parse_find_args (args, &max_count,
 						  &start_addr,
 						  &search_space_len,
-						  big_p);
+						  byte_order);
 
   /* Perform the search.  */
 

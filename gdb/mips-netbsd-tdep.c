@@ -253,7 +253,7 @@ static const unsigned char sigtramp_retcode_mipseb[RETCODE_SIZE] =
 #define NBSD_MIPS_JB_OFFSET(gdbarch)		(NBSD_MIPS_JB_PC * \
 					 NBSD_MIPS_JB_ELEMENT_SIZE (gdbarch))
 
-static int
+static bool
 mipsnbsd_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -267,21 +267,21 @@ mipsnbsd_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 
   if (target_read_memory (jb_addr + NBSD_MIPS_JB_OFFSET (gdbarch), buf,
 			  NBSD_MIPS_JB_ELEMENT_SIZE (gdbarch)))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, NBSD_MIPS_JB_ELEMENT_SIZE (gdbarch),
 				  byte_order);
-  return 1;
+  return true;
 }
 
-static int
+static bool
 mipsnbsd_cannot_fetch_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == MIPS_ZERO_REGNUM
 	  || regno == mips_regnum (gdbarch)->fp_implementation_revision);
 }
 
-static int
+static bool
 mipsnbsd_cannot_store_register (struct gdbarch *gdbarch, int regno)
 {
   return (regno == MIPS_ZERO_REGNUM

@@ -108,11 +108,9 @@ get_attr (PyObject *obj, PyObject *attr_name)
   if (color.is_direct ()
       && !PyUnicode_CompareWithASCIIString (attr_name, "components"))
     {
-      uint8_t rgb[3];
-      color.get_rgb (rgb);
-
-      gdbpy_ref<> rgb_objects[3];
-      for (int i = 0; i < 3; ++i)
+      rgb_color rgb = color.get_rgb ();
+      std::array<gdbpy_ref<>, rgb.size ()> rgb_objects;
+      for (auto i = 0u; i < rgb_objects.size (); ++i)
 	{
 	  rgb_objects[i] = gdb_py_object_from_ulongest (rgb[i]);
 	  if (rgb_objects[i] == nullptr)
@@ -123,7 +121,7 @@ get_attr (PyObject *obj, PyObject *attr_name)
       if (comp == nullptr)
 	return nullptr;
 
-      for (int i = 0; i < 3; ++i)
+      for (auto i = 0u; i < rgb_objects.size (); ++i)
 	if (PyTuple_SetItem (comp.get (), i, rgb_objects[i].release ()) < 0)
 	  return nullptr;
 

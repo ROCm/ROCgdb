@@ -1797,7 +1797,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
 /* Implementation of `gdbarch_stap_is_single_operand', as defined in
    gdbarch.h.  */
 
-static int
+static bool
 aarch64_stap_is_single_operand (struct gdbarch *gdbarch, const char *s)
 {
   return (*s == '#' || c_isdigit (*s) /* Literal number.  */

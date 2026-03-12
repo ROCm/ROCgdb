@@ -53,7 +53,7 @@ static compiled_regex ansi_regex (ansi_regex_text, REG_EXTENDED,
 /* This maps 8-color palette to RGB triples.  The values come from
    plain linux terminal.  */
 
-static const uint8_t palette_8colors[][3] = {
+static const rgb_color palette_8colors[] = {
   { 1, 1, 1 },			/* Black.  */
   { 222, 56, 43 },		/* Red.  */
   { 57, 181, 74 },		/* Green.  */
@@ -66,7 +66,7 @@ static const uint8_t palette_8colors[][3] = {
 
 /* This maps 16-color palette to RGB triples.  The values come from xterm.  */
 
-static const uint8_t palette_16colors[][3] = {
+static const rgb_color palette_16colors[] = {
   { 0, 0, 0 },			/* Black.  */
   { 205, 0, 0 },		/* Red.  */
   { 0, 205, 0 },		/* Green.  */
@@ -166,25 +166,22 @@ ui_file_style::color::to_string () const
 
 /* See ui-style.h.  */
 
-void
-ui_file_style::color::get_rgb (uint8_t *rgb) const
+rgb_color
+ui_file_style::color::get_rgb () const
 {
+  rgb_color rgb;
   if (m_color_space == color_space::RGB_24BIT)
-    {
-      rgb[0] = m_red;
-      rgb[1] = m_green;
-      rgb[2] = m_blue;
-    }
+    rgb = rgb_color (m_red, m_green, m_blue);
   else if (m_color_space == color_space::ANSI_8COLOR
 	   && 0 <= m_value && m_value <= 7)
-    memcpy (rgb, palette_8colors[m_value], 3 * sizeof (uint8_t));
+    rgb = palette_8colors[m_value];
   else if (m_color_space == color_space::AIXTERM_16COLOR
 	   && 0 <= m_value && m_value <= 15)
-    memcpy (rgb, palette_16colors[m_value], 3 * sizeof (uint8_t));
+    rgb = palette_16colors[m_value];
   else if (m_color_space != color_space::XTERM_256COLOR)
     gdb_assert_not_reached ("get_rgb called on invalid color");
   else if (0 <= m_value && m_value <= 15)
-    memcpy (rgb, palette_16colors[m_value], 3 * sizeof (uint8_t));
+    rgb = palette_16colors[m_value];
   else if (m_value >= 16 && m_value <= 231)
     {
       int value = m_value;
@@ -202,12 +199,12 @@ ui_file_style::color::get_rgb (uint8_t *rgb) const
   else if (232 <= m_value && m_value <= 255)
     {
       uint8_t v = (m_value - 232) * 10 + 8;
-      rgb[0] = v;
-      rgb[1] = v;
-      rgb[2] = v;
+      rgb = rgb_color (v, v, v);
     }
   else
     gdb_assert_not_reached ("get_rgb called on invalid color");
+
+  return rgb;
 }
 
 /* See ui-style.h.  */
@@ -226,11 +223,7 @@ ui_file_style::color::approximate (const std::vector<color_space> &spaces) const
       target_space = sp;
 
   if (target_space == color_space::RGB_24BIT)
-    {
-      uint8_t rgb[3];
-      get_rgb (rgb);
-      return color (rgb[0], rgb[1], rgb[2]);
-    }
+    return color (get_rgb ());
 
   int target_size = 0;
   switch (target_space)
@@ -251,14 +244,12 @@ ui_file_style::color::approximate (const std::vector<color_space> &spaces) const
 
   color result = NONE;
   int best_distance = std::numeric_limits<int>::max ();
-  uint8_t rgb[3];
-  get_rgb (rgb);
+  rgb_color rgb = get_rgb ();
 
   for (int i = 0; i < target_size; ++i)
     {
-      uint8_t c_rgb[3];
       color c (target_space, i);
-      c.get_rgb (c_rgb);
+      rgb_color c_rgb = c.get_rgb ();
       int d_red = std::abs (rgb[0] - c_rgb[0]);
       int d_green = std::abs (rgb[1] - c_rgb[1]);
       int d_blue = std::abs (rgb[2] - c_rgb[2]);

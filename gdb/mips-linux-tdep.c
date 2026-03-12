@@ -85,13 +85,13 @@ enum
 /* Figure out where the longjmp will land.
    We expect the first arg to be a pointer to the jmp_buf structure
    from which we extract the pc (MIPS_LINUX_JB_PC) that we will land
-   at.  The pc is copied into PC.  This routine returns 1 on
+   at.  The pc is copied into PC.  This routine returns true on
    success.  */
 
 #define MIPS_LINUX_JB_ELEMENT_SIZE 4
 #define MIPS_LINUX_JB_PC 0
 
-static int
+static bool
 mips_linux_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   CORE_ADDR jb_addr;
@@ -105,13 +105,13 @@ mips_linux_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 			   + MIPS_LINUX_JB_PC * MIPS_LINUX_JB_ELEMENT_SIZE),
 			  buf.data (),
 			  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf.data (),
 				  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT,
 				  byte_order);
 
-  return 1;
+  return true;
 }
 
 /* Transform the bits comprising a 32-bit register to the right size
@@ -245,7 +245,7 @@ mips_fill_gregset_wrapper (const struct regset *regset,
 
 #define MIPS64_LINUX_JB_PC 0
 
-static int
+static bool
 mips64_linux_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   CORE_ADDR jb_addr;
@@ -260,13 +260,13 @@ mips64_linux_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   if (target_read_memory (jb_addr + MIPS64_LINUX_JB_PC * element_size,
 			  buf,
 			  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf,
 				  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT,
 				  byte_order);
 
-  return 1;
+  return true;
 }
 
 /* Register set support functions.  These operate on standard 64-bit

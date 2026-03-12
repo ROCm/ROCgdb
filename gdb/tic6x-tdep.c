@@ -1080,7 +1080,7 @@ tic6x_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
 /* This is the implementation of gdbarch method stack_frame_destroyed_p.  */
 
-static int
+static bool
 tic6x_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   unsigned long inst = tic6x_fetch_instruction (gdbarch, pc);
@@ -1091,15 +1091,15 @@ tic6x_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 						 INST_S_BIT (inst),
 						 INST_X_BIT (inst));
       if (src2 == TIC6X_RA_REGNUM)
-	return 1;
+	return true;
     }
 
-  return 0;
+  return false;
 }
 
 /* This is the implementation of gdbarch method get_longjmp_target.  */
 
-static int
+static bool
 tic6x_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -1113,21 +1113,21 @@ tic6x_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
   /* JMP_BUF contains 13 elements of type int, and return address is stored
      in the last slot.  */
   if (target_read_memory (jb_addr + 12 * 4, buf, 4))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 4, byte_order);
 
-  return 1;
+  return true;
 }
 
 /* This is the implementation of gdbarch method
    return_in_first_hidden_param_p.  */
 
-static int
+static bool
 tic6x_return_in_first_hidden_param_p (struct gdbarch *gdbarch,
 				      struct type *type)
 {
-  return 0;
+  return false;
 }
 
 static struct gdbarch *

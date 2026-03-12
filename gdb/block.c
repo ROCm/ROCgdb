@@ -757,7 +757,7 @@ block_find_symbol (const struct block *block, const lookup_name_info &name,
       if (!sym->matches (domain))
 	continue;
 
-      if (!TYPE_IS_OPAQUE (sym->type ()))
+      if (!sym->type ()->is_opaque ())
 	return sym;
 
       if (stub != nullptr)

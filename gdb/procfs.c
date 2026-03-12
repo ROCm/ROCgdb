@@ -134,7 +134,7 @@ public:
   { return tc_schedlock; }
 
   /* find_memory_regions support method for gcore */
-  int find_memory_regions (find_memory_region_ftype func, void *data)
+  bool find_memory_regions (find_memory_region_ftype func, void *data)
     override;
 
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
@@ -265,11 +265,6 @@ static void destroy_procinfo (procinfo *p);
 static void dead_procinfo (procinfo *p, const char *msg, int killp);
 static int open_procinfo_files (procinfo *p, int which);
 static void close_procinfo_files (procinfo *p);
-
-static int iterate_over_mappings
-  (procinfo *pi, find_memory_region_ftype child_func, void *data,
-   int (*func) (struct prmap *map, find_memory_region_ftype child_func,
-		void *data));
 
 /* The head of the procinfo list: */
 static procinfo *procinfo_list;
@@ -3101,27 +3096,25 @@ procfs_target::region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
 
 /* Call a callback function once for each mapping, passing it the
    mapping, an optional secondary callback function, and some optional
-   opaque data.  Quit and return the first non-zero value returned
-   from the callback.
+   opaque data.  If the callback returns false, stop iterating and return
+   false.  Otherwise, return true.
 
    PI is the procinfo struct for the process to be mapped.  FUNC is
    the callback function to be called by this iterator.  DATA is the
    optional opaque data to be passed to the callback function.
    CHILD_FUNC is the optional secondary function pointer to be passed
-   to the child function.  Returns the first non-zero return value
-   from the callback function, or zero.  */
+   to the child function.  */
 
-static int
+static bool
 iterate_over_mappings (procinfo *pi, find_memory_region_ftype child_func,
 		       void *data,
-		       int (*func) (struct prmap *map,
-				    find_memory_region_ftype child_func,
-				    void *data))
+		       bool (*func) (struct prmap *map,
+				     find_memory_region_ftype child_func,
+				     void *data))
 {
   char pathname[MAX_PROC_NAME_SIZE];
   struct prmap *prmaps;
   struct prmap *prmap;
-  int funcstat;
   int nmap;
   struct stat sbuf;
 
@@ -3146,20 +3139,17 @@ iterate_over_mappings (procinfo *pi, find_memory_region_ftype child_func,
     proc_error (pi, "iterate_over_mappings (read)", __LINE__);
 
   for (prmap = prmaps; nmap > 0; prmap++, nmap--)
-    {
-      funcstat = (*func) (prmap, child_func, data);
-      if (funcstat != 0)
-	return funcstat;
-    }
+    if (!func (prmap, child_func, data))
+      return false;
 
-  return 0;
+  return true;
 }
 
 /* Implements the to_find_memory_regions method.  Calls an external
    function for each memory region.
-   Returns the integer value returned by the callback.  */
+   Returns the value returned by the callback.  */
 
-static int
+static bool
 find_memory_regions_callback (struct prmap *map,
 			      find_memory_region_ftype func, void *data)
 {
@@ -3185,7 +3175,7 @@ find_memory_regions_callback (struct prmap *map,
    Stops iterating and returns the first non-zero value returned by
    the callback.  */
 
-int
+bool
 procfs_target::find_memory_regions (find_memory_region_ftype func, void *data)
 {
   procinfo *pi = find_procinfo_or_die (inferior_ptid.pid (), 0);
@@ -3220,7 +3210,7 @@ mappingflags (long flags)
 /* Callback function, does the actual work for 'info proc
    mappings'.  */
 
-static int
+static bool
 info_mappings_callback (struct prmap *map, find_memory_region_ftype ignore,
 			void *unused)
 {
@@ -3243,7 +3233,7 @@ info_mappings_callback (struct prmap *map, find_memory_region_ftype ignore,
 		pr_off,
 		mappingflags (map->pr_mflags));
 
-  return 0;
+  return true;
 }
 
 /* Implement the "info proc mappings" subcommand.  */

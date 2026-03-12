@@ -754,7 +754,7 @@ tilegx_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
 /* This is the implementation of gdbarch method stack_frame_destroyed_p.  */
 
-static int
+static bool
 tilegx_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   CORE_ADDR func_addr = 0, func_end = 0;
@@ -766,14 +766,14 @@ tilegx_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
       /* FIXME: Find the actual epilogue.  */
       /* HACK: Just assume the final bundle is the "ret" instruction".  */
       if (pc > addr)
-	return 1;
+	return true;
     }
-  return 0;
+  return false;
 }
 
 /* This is the implementation of gdbarch method get_longjmp_target.  */
 
-static int
+static bool
 tilegx_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
@@ -787,11 +787,11 @@ tilegx_get_longjmp_target (const frame_info_ptr &frame, CORE_ADDR *pc)
      has a size of 8 bytes.  The return address is stored in the 25th
      slot.  */
   if (target_read_memory (jb_addr + 25 * 8, buf, 8))
-    return 0;
+    return false;
 
   *pc = extract_unsigned_integer (buf, 8, byte_order);
 
-  return 1;
+  return true;
 }
 
 /* by assigning the 'faultnum' reg in kernel pt_regs with this value,
@@ -920,16 +920,16 @@ static const struct frame_base tilegx_frame_base = {
 
 /* We cannot read/write the "special" registers.  */
 
-static int
+static bool
 tilegx_cannot_reference_register (struct gdbarch *gdbarch, int regno)
 {
   if (regno >= 0 && regno < TILEGX_NUM_EASY_REGS)
-    return 0;
+    return false;
   else if (regno == TILEGX_PC_REGNUM
 	   || regno == TILEGX_FAULTNUM_REGNUM)
-    return 0;
+    return false;
   else
-    return 1;
+    return true;
 }
 
 static struct gdbarch *
