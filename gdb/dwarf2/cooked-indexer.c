@@ -275,8 +275,8 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 		 want to add this value.  */
 	      ranges_offset += reader->cu ()->gnu_ranges_base;
 
-	      unrelocated_addr lowpc, highpc;
-	      dwarf2_ranges_read (ranges_offset, &lowpc, &highpc, reader->cu (),
+	      dwarf2_ranges_read (ranges_offset, nullptr, nullptr,
+				  reader->cu (),
 				  m_index_storage->get_addrmap (),
 				  scanning_per_cu, abbrev->tag);
 	    }
