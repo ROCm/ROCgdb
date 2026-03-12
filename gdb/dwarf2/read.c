@@ -8717,7 +8717,7 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 		    unrelocated_addr *high_return, struct dwarf2_cu *cu,
 		    addrmap_mutable *map, void *datum, dwarf_tag tag)
 {
-  bool low_set = false;
+  bool low_high_set = false;
   unrelocated_addr low = {};
   unrelocated_addr high = {};
   bool retval = dwarf2_ranges_process (offset, cu, tag,
@@ -8735,29 +8735,26 @@ dwarf2_ranges_read (unsigned offset, unrelocated_addr *low_return,
 	 segment of consecutive addresses.  We should have a
 	 data structure for discontiguous block ranges
 	 instead.  */
-      if (!low_set)
+      if (!low_high_set)
 	{
 	  low = range_beginning;
 	  high = range_end;
-	  low_set = true;
+	  low_high_set = true;
 	}
       else
 	{
-	  if (range_beginning < low)
-	    low = range_beginning;
-
-	  if (range_end > high)
-	    high = range_end;
+	  low = std::min (low, range_beginning);
+	  high = std::max (high, range_end);
 	}
     });
 
   if (!retval)
     return false;
 
-  if (!low_set)
+  if (!low_high_set)
     {
       /* If the first entry is an end-of-list marker, the range
-       describes an empty scope, i.e. no instructions.  */
+	 describes an empty scope, i.e. no instructions.  */
       return false;
     }
 
