@@ -68,6 +68,9 @@ foreach t $test_lp64_list {
   run_dump_test_lp64 [file rootname $t]
 }
 
+# Tidy up, to not leave huge intermediate files.
+remote_file host delete tmpdir/bti-far-3a.o tmpdir/bti-far-3b.o tmpdir/bti-far-3c.o
+
 foreach t $test_list {
   # We need to strip the ".d", but can leave the dirname.
   run_dump_test [file rootname $t] \
