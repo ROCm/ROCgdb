@@ -269,6 +269,9 @@ if [is_remote host] {
 
 set got [binutils_run $OBJCOPY "-I binary -i 4 -b 0 --interleave-width 2 ${sequence_file} ${copyfile}"]
 
+file delete sequence_file
+remote_file host delete $sequence_file
+
 if ![string equal "" $got] then {
     fail "objcopy -i --interleave-width"
 } else {
