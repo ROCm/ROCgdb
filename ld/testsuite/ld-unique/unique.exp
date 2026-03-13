@@ -54,7 +54,8 @@ proc check_osabi { binary_file expected_osabi } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --file-header $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --file-header $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc check_osabi: Readelf produced unexpected out processing $binary_file: $got"
@@ -62,7 +63,7 @@ proc check_osabi { binary_file expected_osabi } {
     }
 
     if { ![regexp "\n\[ \]*OS/ABI:\[ \]*(.+)\n\[ \]*ABI" \
-	   [file_contents readelf.out] nil osabi] } {
+	   [file_contents $tmpfile] nil osabi] } {
 	verbose "proc check_osabi: Readelf failed to extract an ELF header from $binary_file"
 	return 0
     }
@@ -82,7 +83,8 @@ proc contains_unique_symbol { binary_file } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --symbols $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --symbols $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc contains_unique_symbol: Readelf produced unexpected out processing $binary_file: $got"
@@ -92,7 +94,7 @@ proc contains_unique_symbol { binary_file } {
     # Look for a line like this:
     #    54: 0000000000400474     4 OBJECT  UNIQUE DEFAULT   13 a
 
-    if { ![regexp ".*\[ \]*OBJECT\[ \]+UNIQUE\[ \]+DEFAULT\[ \]+\[UND0-9\]+\[ \]+\[ab\]_val\n" [file_contents readelf.out]] } {
+    if { ![regexp ".*\[ \]*OBJECT\[ \]+UNIQUE\[ \]+DEFAULT\[ \]+\[UND0-9\]+\[ \]+\[ab\]_val\n" [file_contents $tmpfile]] } {
 	return 0
     }
 

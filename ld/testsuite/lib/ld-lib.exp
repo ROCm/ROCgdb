@@ -1141,8 +1141,10 @@ proc run_cc_link_tests { ldtests } {
 		    if { [regexp_diff "dump.out" "$srcdir/$subdir/$dumpfile"] } then {
 			verbose -log "output is [file_contents "dump.out"]" 2
 			set failed 1
+			file delete "dump.out"
 			break
 		    }
+		    file delete "dump.out"
 		}
 	    }
 	}

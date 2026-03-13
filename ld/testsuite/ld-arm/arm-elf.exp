@@ -244,7 +244,7 @@ set tmp {
     {"Relocation boundaries" "-defsym x=0 -defsym y=0 -defsym _start=0" "" "" {reloc-boundaries.s}
      {{objdump -s reloc-boundaries.d}}
      "reloc-boundaries"}
-    {"Data only mapping symbols" "-T data-only-map.ld -Map map" "" "" {data-only-map.s}
+    {"Data only mapping symbols" "-T data-only-map.ld" "" "" {data-only-map.s}
      {{objdump -dr data-only-map.d}}
      "data-only-map"}
 }
