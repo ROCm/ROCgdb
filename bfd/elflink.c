@@ -12706,11 +12706,14 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
      sections from the link, and set the contents of the output
      section.  */
   sections_removed = false;
+#ifdef OBJ_MAYBE_ELF_ATTRIBUTES
   const char *obj_attrs_section = get_elf_backend_data (abfd)->obj_attrs_section;
+#endif
   for (o = abfd->sections; o != NULL; o = o->next)
     {
       bool remove_section = false;
 
+#ifdef OBJ_MAYBE_ELF_ATTRIBUTES
       if ((obj_attrs_section && strcmp (o->name, obj_attrs_section) == 0)
 	  || strcmp (o->name, ".gnu.attributes") == 0)
 	{
@@ -12739,7 +12742,9 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	  else
 	    remove_section = true;
 	}
-      else if ((o->flags & SEC_GROUP) != 0 && o->size == 0)
+      else
+#endif /* OBJ_MAYBE_ELF_ATTRIBUTES */
+      if ((o->flags & SEC_GROUP) != 0 && o->size == 0)
 	{
 	  /* Remove empty group section from linker output.  */
 	  remove_section = true;
