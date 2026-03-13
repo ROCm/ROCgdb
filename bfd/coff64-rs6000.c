@@ -177,8 +177,7 @@ static bool xcoff64_bad_format_hook
 /* Relocation functions */
 static xcoff_reloc_function xcoff64_reloc_type_br;
 
-xcoff_reloc_function *const
-xcoff64_calculate_relocation[XCOFF_MAX_CALCULATE_RELOCATION] =
+xcoff_reloc_function *const xcoff64_calculate_relocation[] =
 {
   xcoff_reloc_type_pos,  /* R_POS     (0x00) */
   xcoff_reloc_type_neg,  /* R_NEG     (0x01) */
@@ -1439,8 +1438,11 @@ reloc_howto_type xcoff64_howto_table[] =
 void
 xcoff64_rtype2howto (arelent *relent, struct internal_reloc *internal)
 {
-  if (internal->r_type > R_TOCL)
-    abort ();
+  if (internal->r_type >= ARRAY_SIZE (xcoff64_howto_table))
+    {
+      relent->howto = NULL;
+      return;
+    }
 
   /* Default howto layout works most of the time */
   relent->howto = &xcoff64_howto_table[internal->r_type];
@@ -1473,7 +1475,7 @@ xcoff64_rtype2howto (arelent *relent, struct internal_reloc *internal)
   if (relent->howto->dst_mask != 0
       && (relent->howto->bitsize
 	  != ((unsigned int) internal->r_size & 0x3f) + 1))
-    abort ();
+    relent->howto = NULL;
 }
 
 reloc_howto_type *
@@ -1528,9 +1530,7 @@ xcoff64_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 {
   unsigned int i;
 
-  for (i = 0;
-       i < sizeof (xcoff64_howto_table) / sizeof (xcoff64_howto_table[0]);
-       i++)
+  for (i = 0; i < ARRAY_SIZE (xcoff64_howto_table); i++)
     if (xcoff64_howto_table[i].name != NULL
 	&& strcasecmp (xcoff64_howto_table[i].name, r_name) == 0)
       return &xcoff64_howto_table[i];
@@ -1574,6 +1574,14 @@ xcoff64_ppc_relocate_section (bfd *output_bfd,
 	 the csect including the symbol which it references.  */
       if (rel->r_type == R_REF)
 	continue;
+      if (rel->r_type >= ARRAY_SIZE (xcoff64_howto_table))
+	{
+	  /* xgettext:c-format */
+	  _bfd_error_handler (_("%pB: unsupported relocation type %#x"),
+			      input_bfd, rel->r_type);
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
 
       /* Retrieve default value in HOWTO table and fix up according
 	 to r_size field, if it can be different.
@@ -1595,7 +1603,7 @@ xcoff64_ppc_relocate_section (bfd *output_bfd,
 
 	    default:
 	      _bfd_error_handler
-		(_("%pB: relocation (%d) at (0x%" PRIx64 ") has wrong"
+		(_("%pB: relocation (%#x) at (0x%" PRIx64 ") has wrong"
 		   " r_rsize (0x%x)\n"),
 		 input_bfd, rel->r_type, rel->r_vaddr, rel->r_size);
 	      return false;
@@ -1668,10 +1676,9 @@ xcoff64_ppc_relocate_section (bfd *output_bfd,
 	    }
 	}
 
-      if (rel->r_type >= XCOFF_MAX_CALCULATE_RELOCATION
-	  || !((*xcoff64_calculate_relocation[rel->r_type])
-	      (input_bfd, input_section, output_bfd, rel, sym, &howto, val,
-	       addend, &relocation, contents, info)))
+      if (!((*xcoff64_calculate_relocation[rel->r_type])
+	    (input_bfd, input_section, output_bfd, rel, sym, &howto, val,
+	     addend, &relocation, contents, info)))
 	return false;
 
       /* address */
