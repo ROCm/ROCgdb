@@ -633,16 +633,14 @@ static void dwarf2_frame_default_init_reg (struct gdbarch *gdbarch,
 struct dwarf2_frame_ops
 {
   /* Pre-initialize the register state REG for register REGNUM.  */
-  void (*init_reg) (struct gdbarch *, int, struct dwarf2_frame_state_reg *,
-		    const frame_info_ptr &)
-    = dwarf2_frame_default_init_reg;
+  init_reg_ftype *init_reg = dwarf2_frame_default_init_reg;
 
   /* Check whether the THIS_FRAME is a signal trampoline.  */
-  int (*signal_frame_p) (struct gdbarch *, const frame_info_ptr &) = nullptr;
+  signal_frame_p_ftype *signal_frame_p = nullptr;
 
   /* Convert .eh_frame register number to DWARF register number, or
      adjust .debug_frame register number.  */
-  int (*adjust_regnum) (struct gdbarch *, int, int) = nullptr;
+  adjust_regnum_ftype *adjust_regnum = nullptr;
 };
 
 /* Per-architecture data key.  */
@@ -699,14 +697,9 @@ dwarf2_frame_default_init_reg (struct gdbarch *gdbarch, int regnum,
    function for GDBARCH to INIT_REG.  */
 
 void
-dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
-			   void (*init_reg) (struct gdbarch *, int,
-					     struct dwarf2_frame_state_reg *,
-					     const frame_info_ptr &))
+dwarf2_frame_set_init_reg (gdbarch *gdbarch, init_reg_ftype *init_reg)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->init_reg = init_reg;
+  get_frame_ops (gdbarch)->init_reg = init_reg;
 }
 
 /* Pre-initialize the register state REG for register REGNUM.  */
@@ -716,9 +709,7 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 		       struct dwarf2_frame_state_reg *reg,
 		       const frame_info_ptr &this_frame)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->init_reg (gdbarch, regnum, reg, this_frame);
+  get_frame_ops (gdbarch)->init_reg (gdbarch, regnum, reg, this_frame);
   reg->evaluated = false;
 }
 
@@ -726,26 +717,24 @@ dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
    function for GDBARCH to SIGNAL_FRAME_P.  */
 
 void
-dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
-				 int (*signal_frame_p) (struct gdbarch *,
-							const frame_info_ptr &))
+dwarf2_frame_set_signal_frame_p (gdbarch *gdbarch,
+				 signal_frame_p_ftype *signal_frame_p)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->signal_frame_p = signal_frame_p;
+  get_frame_ops (gdbarch)->signal_frame_p = signal_frame_p;
 }
 
 /* Query the architecture-specific signal frame recognizer for
    THIS_FRAME.  */
 
-static int
+static bool
 dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
 			     const frame_info_ptr &this_frame)
 {
   struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
 
   if (ops->signal_frame_p == NULL)
-    return 0;
+    return false;
+
   return ops->signal_frame_p (gdbarch, this_frame);
 }
 
@@ -753,13 +742,10 @@ dwarf2_frame_signal_frame_p (struct gdbarch *gdbarch,
    register numbers.  */
 
 void
-dwarf2_frame_set_adjust_regnum (struct gdbarch *gdbarch,
-				int (*adjust_regnum) (struct gdbarch *,
-						      int, int))
+dwarf2_frame_set_adjust_regnum (gdbarch *gdbarch,
+				adjust_regnum_ftype *adjust_regnum)
 {
-  struct dwarf2_frame_ops *ops = get_frame_ops (gdbarch);
-
-  ops->adjust_regnum = adjust_regnum;
+  get_frame_ops (gdbarch)->adjust_regnum = adjust_regnum;
 }
 
 /* Translate a .eh_frame register to DWARF register, or adjust a .debug_frame
@@ -773,6 +759,7 @@ dwarf2_frame_adjust_regnum (struct gdbarch *gdbarch,
 
   if (ops->adjust_regnum == NULL)
     return regnum;
+
   return ops->adjust_regnum (gdbarch, regnum, eh_frame_p);
 }
 
@@ -812,7 +799,7 @@ dwarf2_frame_find_quirks (struct dwarf2_frame_state *fs,
 
 /* See dwarf2/frame.h.  */
 
-int
+bool
 dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 		       dwarf2_per_cu *data, int *regnum_out,
 		       LONGEST *offset_out, CORE_ADDR *text_offset_out,
@@ -859,14 +846,15 @@ dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 	  *offset_out = -fs.regs.cfa_offset;
 	else
 	  *offset_out = fs.regs.cfa_offset;
-	return 1;
+
+	return true;
       }
 
     case CFA_EXP:
       *text_offset_out = per_objfile->objfile->text_section_offset ();
       *cfa_start_out = fs.regs.cfa_exp;
       *cfa_end_out = fs.regs.cfa_exp + fs.regs.cfa_exp_len;
-      return 0;
+      return false;
 
     default:
       internal_error (_("Unknown CFA rule."));
@@ -897,10 +885,10 @@ struct dwarf2_frame_cache
 
   /* Set if the return address column was marked as unavailable
      (required non-collected memory or registers to compute).  */
-  int unavailable_retaddr;
+  bool unavailable_retaddr;
 
   /* Set if the return address column was marked as undefined.  */
-  int undefined_retaddr;
+  bool undefined_retaddr;
 
   /* Saved registers, indexed by GDB register number, not by DWARF
      register number.  */
@@ -1050,7 +1038,7 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     {
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
-	  cache->unavailable_retaddr = 1;
+	  cache->unavailable_retaddr = true;
 	  return cache;
 	}
 
@@ -1058,103 +1046,90 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
     }
 
   /* Initialize the register state.  */
-  {
-    int regnum;
-
-    for (regnum = 0; regnum < num_regs; regnum++)
-      dwarf2_frame_init_reg (gdbarch, regnum, &cache->reg[regnum], this_frame);
-  }
+  for (int regnum = 0; regnum < num_regs; regnum++)
+    dwarf2_frame_init_reg (gdbarch, regnum, &cache->reg[regnum], this_frame);
 
   /* Go through the DWARF2 CFI generated table and save its register
      location information in the cache.  Note that we don't skip the
      return address column; it's perfectly all right for it to
      correspond to a real register.  */
-  {
-    int column;		/* CFI speak for "register number".  */
+  for (int column = 0; column < fs.regs.reg.size (); column++)
+    {
+      /* Use the GDB register number as the destination index.  */
+      int regnum = dwarf_reg_to_regnum (gdbarch, column);
 
-    for (column = 0; column < fs.regs.reg.size (); column++)
-      {
-	/* Use the GDB register number as the destination index.  */
-	int regnum = dwarf_reg_to_regnum (gdbarch, column);
+      /* Protect against a target returning a bad register.  */
+      if (regnum < 0 || regnum >= num_regs)
+	continue;
 
-	/* Protect against a target returning a bad register.  */
-	if (regnum < 0 || regnum >= num_regs)
-	  continue;
-
-	/* NOTE: cagney/2003-09-05: CFI should specify the disposition
-	   of all debug info registers.  If it doesn't, complain (but
-	   not too loudly).  It turns out that GCC assumes that an
-	   unspecified register implies "same value" when CFI (draft
-	   7) specifies nothing at all.  Such a register could equally
-	   be interpreted as "undefined".  Also note that this check
-	   isn't sufficient; it only checks that all registers in the
-	   range [0 .. max column] are specified, and won't detect
-	   problems when a debug info register falls outside of the
-	   table.  We need a way of iterating through all the valid
-	   DWARF2 register numbers.  */
-	if (fs.regs.reg[column].how == DWARF2_FRAME_REG_UNSPECIFIED)
-	  {
-	    if (cache->reg[regnum].how == DWARF2_FRAME_REG_UNSPECIFIED)
-	      complaint (_("\
+      /* NOTE: cagney/2003-09-05: CFI should specify the disposition
+	 of all debug info registers.  If it doesn't, complain (but
+	 not too loudly).  It turns out that GCC assumes that an
+	 unspecified register implies "same value" when CFI (draft
+	 7) specifies nothing at all.  Such a register could equally
+	 be interpreted as "undefined".  Also note that this check
+	 isn't sufficient; it only checks that all registers in the
+	 range [0 .. max column] are specified, and won't detect
+	 problems when a debug info register falls outside of the
+	 table.  We need a way of iterating through all the valid
+	 DWARF2 register numbers.  */
+      if (fs.regs.reg[column].how == DWARF2_FRAME_REG_UNSPECIFIED)
+	{
+	  if (cache->reg[regnum].how == DWARF2_FRAME_REG_UNSPECIFIED)
+	    complaint (_("\
 incomplete CFI data; unspecified registers (e.g., %s) at %s"),
-			 gdbarch_register_name (gdbarch, regnum),
-			 paddress (gdbarch, fs.pc));
-	  }
-	else
-	  cache->reg[regnum] = fs.regs.reg[column];
-      }
-  }
+		       gdbarch_register_name (gdbarch, regnum),
+		       paddress (gdbarch, fs.pc));
+	}
+      else
+	cache->reg[regnum] = fs.regs.reg[column];
+    }
 
   /* Eliminate any DWARF2_FRAME_REG_RA rules, and save the information
      we need for evaluating DWARF2_FRAME_REG_RA_OFFSET rules.  */
-  {
-    int regnum;
+  for (int regnum = 0; regnum < num_regs; regnum++)
+    {
+      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA
+	  || cache->reg[regnum].how == DWARF2_FRAME_REG_RA_OFFSET)
+	{
+	  const std::vector<struct dwarf2_frame_state_reg> &regs = fs.regs.reg;
+	  ULONGEST retaddr_column = fs.retaddr_column;
 
-    for (regnum = 0; regnum < num_regs; regnum++)
-      {
-	if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA
-	    || cache->reg[regnum].how == DWARF2_FRAME_REG_RA_OFFSET)
-	  {
-	    const std::vector<struct dwarf2_frame_state_reg> &regs
-	      = fs.regs.reg;
-	    ULONGEST retaddr_column = fs.retaddr_column;
-
-	    /* It seems rather bizarre to specify an "empty" column as
-	       the return address column.  However, this is exactly
-	       what GCC does on some targets.  It turns out that GCC
-	       assumes that the return address can be found in the
-	       register corresponding to the return address column.
-	       Incidentally, that's how we should treat a return
-	       address column specifying "same value" too.  */
-	    if (fs.retaddr_column < fs.regs.reg.size ()
-		&& regs[retaddr_column].how != DWARF2_FRAME_REG_UNSPECIFIED
-		&& regs[retaddr_column].how != DWARF2_FRAME_REG_SAME_VALUE)
-	      {
-		if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
-		  cache->reg[regnum] = regs[retaddr_column];
-		else
-		  cache->retaddr_reg = regs[retaddr_column];
-	      }
-	    else
-	      {
-		if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
-		  {
-		    cache->reg[regnum].loc.reg = fs.retaddr_column;
-		    cache->reg[regnum].how = DWARF2_FRAME_REG_SAVED_REG;
-		  }
-		else
-		  {
-		    cache->retaddr_reg.loc.reg = fs.retaddr_column;
-		    cache->retaddr_reg.how = DWARF2_FRAME_REG_SAVED_REG;
-		  }
-	      }
-	  }
-      }
-  }
+	  /* It seems rather bizarre to specify an "empty" column as
+	     the return address column.  However, this is exactly
+	     what GCC does on some targets.  It turns out that GCC
+	     assumes that the return address can be found in the
+	     register corresponding to the return address column.
+	     Incidentally, that's how we should treat a return
+	     address column specifying "same value" too.  */
+	  if (fs.retaddr_column < fs.regs.reg.size ()
+	      && regs[retaddr_column].how != DWARF2_FRAME_REG_UNSPECIFIED
+	      && regs[retaddr_column].how != DWARF2_FRAME_REG_SAME_VALUE)
+	    {
+	      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
+		cache->reg[regnum] = regs[retaddr_column];
+	      else
+		cache->retaddr_reg = regs[retaddr_column];
+	    }
+	  else
+	    {
+	      if (cache->reg[regnum].how == DWARF2_FRAME_REG_RA)
+		{
+		  cache->reg[regnum].loc.reg = fs.retaddr_column;
+		  cache->reg[regnum].how = DWARF2_FRAME_REG_SAVED_REG;
+		}
+	      else
+		{
+		  cache->retaddr_reg.loc.reg = fs.retaddr_column;
+		  cache->retaddr_reg.how = DWARF2_FRAME_REG_SAVED_REG;
+		}
+	    }
+	}
+    }
 
   if (fs.retaddr_column < fs.regs.reg.size ()
       && fs.regs.reg[fs.retaddr_column].how == DWARF2_FRAME_REG_UNDEFINED)
-    cache->undefined_retaddr = 1;
+    cache->undefined_retaddr = true;
   else
     dwarf2_tailcall_sniffer_first (this_frame, &cache->tailcall_cache,
 				   (entry_cfa_sp_offset_p

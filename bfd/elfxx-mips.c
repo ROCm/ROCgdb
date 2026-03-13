@@ -5234,18 +5234,6 @@ mips_elf_local_relocation_p (bfd *input_bfd,
   return false;
 }
 
-/* Sign-extend VALUE, which has the indicated number of BITS.  */
-
-bfd_vma
-_bfd_mips_elf_sign_extend (bfd_vma value, int bits)
-{
-  if (value & ((bfd_vma) 1 << (bits - 1)))
-    /* VALUE is negative.  */
-    value |= ((bfd_vma) - 1) << bits;
-
-  return value;
-}
-
 /* Return non-zero if the indicated VALUE has overflowed the maximum
    range expressible by a signed number with the indicated number of
    BITS.  */

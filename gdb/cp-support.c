@@ -1501,7 +1501,7 @@ add_symbol_overload_list_qualified (const char *func_name,
 		      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 		      SEARCH_FUNCTION_DOMAIN);
 
-	 return 0;
+	 return false;
        }, current_objfile);
 }
 

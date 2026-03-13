@@ -131,10 +131,10 @@ cache_unref (struct tailcall_cache *cache)
     }
 }
 
-/* Return 1 if FI is a non-bottom (not the callee) tail call frame.  Otherwise
-   return 0.  */
+/* Return true if FI is a non-bottom (not the callee) tail call frame.
+   Otherwise return false.  */
 
-static int
+static bool
 frame_is_tailcall (const frame_info_ptr &fi)
 {
   return frame_unwinder_is (fi, &dwarf2_tailcall_frame_unwind);

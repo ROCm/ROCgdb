@@ -1111,9 +1111,9 @@ call_site_find_chain (struct gdbarch *gdbarch, CORE_ADDR caller_pc,
   return retval;
 }
 
-/* Return 1 if KIND and KIND_U match PARAMETER.  Return 0 otherwise.  */
+/* Return true if KIND and KIND_U match PARAMETER.  Return false otherwise.  */
 
-static int
+static bool
 call_site_parameter_matches (struct call_site_parameter *parameter,
 			     enum call_site_parameter_kind kind,
 			     union call_site_parameter_u kind_u)
@@ -1130,7 +1130,8 @@ call_site_parameter_matches (struct call_site_parameter *parameter,
       case CALL_SITE_PARAMETER_PARAM_OFFSET:
 	return kind_u.param_cu_off == parameter->u.param_cu_off;
       }
-  return 0;
+
+  return false;
 }
 
 /* See loc.h.  */
@@ -1578,9 +1579,9 @@ dwarf2_evaluate_loc_desc (struct type *type, const frame_info_ptr &frame,
    before evaluation starts.  PUSH_VALUES[0] is pushed first, then
    PUSH_VALUES[1], and so on.
 
-   Returns 1 on success, 0 otherwise.  */
+   Returns true on success, false otherwise.  */
 
-static int
+static bool
 dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   const frame_info_ptr &frame,
 			   const struct property_addr_info *addr_stack,
@@ -1589,7 +1590,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   bool *is_reference)
 {
   if (dlbaton->size == 0)
-    return 0;
+    return false;
 
   dwarf2_per_objfile *per_objfile = dlbaton->per_objfile;
   dwarf2_per_cu *per_cu = dlbaton->per_cu;
@@ -1619,13 +1620,13 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
     {
       if (ex.error == NOT_AVAILABLE_ERROR)
 	{
-	  return 0;
+	  return false;
 	}
       else if (ex.error == NO_ENTRY_VALUE_ERROR)
 	{
 	  if (entry_values_debug)
 	    exception_print (gdb_stdout, ex);
-	  return 0;
+	  return false;
 	}
       else
 	throw;
@@ -1641,7 +1642,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
       *valp = value_as_address (result);
     }
 
-  return 1;
+  return true;
 }
 
 /* See dwarf2/loc.h.  */
@@ -2678,7 +2679,7 @@ locexpr_read_variable_at_entry (struct symbol *symbol, const frame_info_ptr &fra
 /* Return true if DATA points to the end of a piece.  END is one past
    the last byte in the expression.  */
 
-static int
+static bool
 piece_end_p (const gdb_byte *data, const gdb_byte *end)
 {
   return data == end || data[0] == DW_OP_piece || data[0] == DW_OP_bit_piece;

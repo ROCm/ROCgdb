@@ -201,11 +201,10 @@ objfpy_dealloc (PyObject *o)
 static bool
 objfpy_initialize (gdbpy_ref<objfile_object> &self)
 {
-  self->objfile = NULL;
-
-  self->dict = PyDict_New ();
-  if (self->dict == NULL)
+  if (!self->allocate_dict ())
     return false;
+
+  self->objfile = NULL;
 
   self->printers = PyList_New (0);
   if (self->printers == NULL)
@@ -610,21 +609,21 @@ gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 	 {
 	   /* Don't return separate debug files.  */
 	   if (obj->separate_debug_objfile_backlink != nullptr)
-	     return 0;
+	     return false;
 
 	   bfd *obfd = obj->obfd.get ();
 	   if (obfd == nullptr)
-	     return 0;
+	     return false;
 
 	   const bfd_build_id *obfd_build_id = build_id_bfd_get (obfd);
 	   if (obfd_build_id == nullptr)
-	     return 0;
+	     return false;
 
 	   if (!objfpy_build_id_matches (obfd_build_id, name))
-	     return 0;
+	     return false;
 
 	   objfile = obj;
-	   return 1;
+	   return true;
 	 }, gdbpy_current_objfile);
   else
     current_program_space->iterate_over_objfiles_in_search_order
@@ -632,26 +631,26 @@ gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 	 {
 	   /* Don't return separate debug files.  */
 	   if (obj->separate_debug_objfile_backlink != nullptr)
-	     return 0;
+	     return false;
 
 	   if ((obj->flags & OBJF_NOT_FILENAME) != 0)
-	     return 0;
+	     return false;
 
 	   const char *filename = objfile_filename (obj);
 	   if (filename != NULL
 	       && compare_filenames_for_search (filename, name))
 	     {
 	       objfile = obj;
-	       return 1;
+	       return true;
 	     }
 
 	   if (compare_filenames_for_search (obj->original_name, name))
 	     {
 	       objfile = obj;
-	       return 1;
+	       return true;
 	     }
 
-	   return 0;
+	   return false;
 	 }, gdbpy_current_objfile);
 
   if (objfile != NULL)

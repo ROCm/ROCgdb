@@ -50,6 +50,23 @@ proc check_gp_gmon { a_opt } {
   }
 }
 
+proc check_gp_gmon_fail { cmd err_pat } {
+  global tdir
+  set output [run_native_host_cmd "$cmd"]
+  set out [lindex $output 1]
+  if { [lindex $output 0] == 0 } then {
+    send_log "'$cmd' should fail, but exited with status 0\n"
+    fail $tdir
+    return -code break
+  }
+  if { ![regexp -- $err_pat $out] } then {
+    send_log "'$cmd' failed, but expected pattern '$err_pat' is missing\n"
+    fail $tdir
+    return -code break
+  }
+  return $output
+}
+
 run_native_host_cmd "mkdir -p $tdir"
 
 # Build test, create experiment:
@@ -66,5 +83,18 @@ if { [lindex $output 0] != 0 } then {
 
 
 check_gp_gmon gmontst
+
+# Unknown option should fail once with one diagnostic.
+set output [check_gp_gmon_fail "$gprofng display gmon -z" \
+  {gmon: unrecognized argument `-z'}]
+if { [regexp -all -- {gmon: unrecognized argument `-z'} [lindex $output 1]] != 1 } {
+  send_log "Unexpected duplicate diagnostics for unknown option\n"
+  fail $tdir
+  return
+}
+
+# Missing argument for -o should fail.
+check_gp_gmon_fail "$gprofng display gmon -o" \
+  {Argument -o must be followed by a file name}
 
 pass $tdir

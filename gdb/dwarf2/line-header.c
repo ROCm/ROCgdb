@@ -253,15 +253,16 @@ read_formatted_entries (dwarf2_per_objfile *per_objfile, bfd *abfd,
 /* See line-header.h.  */
 
 line_header_up
-dwarf_decode_line_header (sect_offset sect_off, bool is_dwz,
+dwarf_decode_line_header (section_and_offset sect_and_offset,
 			  dwarf2_per_objfile *per_objfile,
-			  struct dwarf2_section_info *section,
 			  const unit_head *cu_header, const char *comp_dir)
 {
   const gdb_byte *line_ptr;
   unsigned int bytes_read, offset_size;
   int i;
   const char *cur_dir, *cur_file;
+  const dwarf2_section_info *section = sect_and_offset.section;
+  sect_offset sect_off = sect_and_offset.offset;
 
   bfd *abfd = section->get_bfd_owner ();
 
@@ -274,9 +275,6 @@ dwarf_decode_line_header (sect_offset sect_off, bool is_dwz,
     }
 
   line_header_up lh (new line_header (comp_dir));
-
-  lh->sect_off = sect_off;
-  lh->offset_in_dwz = is_dwz;
 
   line_ptr = section->buffer + to_underlying (sect_off);
 

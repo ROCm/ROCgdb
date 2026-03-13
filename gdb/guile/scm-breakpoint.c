@@ -815,13 +815,13 @@ gdbscm_set_breakpoint_task_x (SCM self, SCM newvalue)
   breakpoint_smob *bp_smob
     = bpscm_get_valid_breakpoint_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
   long id;
-  int valid_id = 0;
 
   if (scm_is_signed_integer (newvalue, LONG_MIN, LONG_MAX))
     {
       id = scm_to_long (newvalue);
 
       gdbscm_gdb_exception exc {};
+      bool valid_id = false;
       try
 	{
 	  valid_id = valid_task_id (id);

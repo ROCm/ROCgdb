@@ -31,19 +31,18 @@
 #include "gdbarch.h"
 #include "ui-out.h"
 
-static int print_field_values (struct value *, struct value *,
-			       struct ui_file *, int,
-			       const struct value_print_options *,
-			       int, const struct language_defn *);
+static bool print_field_values (struct value *, struct value *,
+				struct ui_file *, int,
+				const struct value_print_options *,
+				bool, const struct language_defn *);
 
 
 
 /* Assuming TYPE is a simple array type, prints its lower bound on STREAM,
    if non-standard (i.e., other than 1 for numbers, other than lower bound
-   of index type for enumerated type).  Returns 1 if something printed,
-   otherwise 0.  */
+   of index type for enumerated type).  */
 
-static int
+static void
 print_optional_low_bound (struct ui_file *stream, struct type *type,
 			  const struct value_print_options *options)
 {
@@ -52,16 +51,16 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
   LONGEST high_bound;
 
   if (options->print_array_indexes)
-    return 0;
+    return;
 
   if (!get_array_bounds (type, &low_bound, &high_bound))
-    return 0;
+    return;
 
   /* If this is an empty array, then don't print the lower bound.
      That would be confusing, because we would print the lower bound,
      followed by... nothing!  */
   if (low_bound > high_bound)
-    return 0;
+    return;
 
   index_type = type->index_type ();
 
@@ -81,11 +80,11 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
     case TYPE_CODE_BOOL:
     case TYPE_CODE_CHAR:
       if (low_bound == 0)
-	return 0;
+	return;
       break;
     case TYPE_CODE_ENUM:
       if (low_bound == 0)
-	return 0;
+	return;
       low_bound = index_type->field (low_bound).loc_enumval ();
       break;
     case TYPE_CODE_UNDEF:
@@ -93,13 +92,12 @@ print_optional_low_bound (struct ui_file *stream, struct type *type,
       [[fallthrough]];
     default:
       if (low_bound == 1)
-	return 0;
+	return;
       break;
     }
 
   ada_print_scalar (index_type, low_bound, stream);
   gdb_printf (stream, " => ");
-  return 1;
 }
 
 /*  Version of val_print_array_elements for GNAT-style packed arrays.
@@ -397,12 +395,12 @@ ada_print_scalar (struct type *type, LONGEST val, struct ui_file *stream)
     }
 }
 
-static int
+static bool
 print_variant_part (struct value *value, int field_num,
 		    struct value *outer_value,
 		    struct ui_file *stream, int recurse,
 		    const struct value_print_options *options,
-		    int comma_needed,
+		    bool comma_needed,
 		    const struct language_defn *language)
 {
   struct type *type = value->type ();
@@ -410,7 +408,7 @@ print_variant_part (struct value *value, int field_num,
   int which = ada_which_variant_applies (var_type, outer_value);
 
   if (which < 0)
-    return 0;
+    return false;
 
   struct value *variant_field = value->field (field_num);
   struct value *active_component = variant_field->field (which);
@@ -426,17 +424,17 @@ print_variant_part (struct value *value, int field_num,
    OUTER_VALUE gives the enclosing record (used to get discriminant
    values when printing variant parts).
 
-   COMMA_NEEDED is 1 if fields have been printed at the current recursion
+   COMMA_NEEDED is true if fields have been printed at the current recursion
    level, so that a comma is needed before any field printed by this
    call.
 
-   Returns 1 if COMMA_NEEDED or any fields were printed.  */
+   Returns true if COMMA_NEEDED or any fields were printed.  */
 
-static int
+static bool
 print_field_values (struct value *value, struct value *outer_value,
 		    struct ui_file *stream, int recurse,
 		    const struct value_print_options *options,
-		    int comma_needed,
+		    bool comma_needed,
 		    const struct language_defn *language)
 {
   int i, len;
@@ -469,7 +467,7 @@ print_field_values (struct value *value, struct value *outer_value,
 
       if (comma_needed)
 	gdb_printf (stream, ", ");
-      comma_needed = 1;
+      comma_needed = true;
 
       if (options->prettyformat)
 	{
@@ -722,7 +720,7 @@ ada_val_print_struct_union (struct value *value,
   gdb_printf (stream, "(");
 
   if (print_field_values (value, value, stream, recurse, options,
-			  0, language_def (language_ada)) != 0
+			  false, language_def (language_ada))
       && options->prettyformat)
     {
       gdb_printf (stream, "\n");
@@ -799,7 +797,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
   deref_val = coerce_ref_if_computed (original_value);
   if (deref_val)
     {
-      if (ada_is_tagged_type (deref_val->type (), 1))
+      if (ada_is_tagged_type (deref_val->type (), true))
 	deref_val = ada_tag_value_at_base_address (deref_val);
 
       common_val_print (deref_val, stream, recurse + 1, options,
@@ -817,7 +815,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
   deref_val
     = ada_value_ind (value_from_pointer (lookup_pointer_type (elttype),
 					 deref_val_int));
-  if (ada_is_tagged_type (deref_val->type (), 1))
+  if (ada_is_tagged_type (deref_val->type (), true))
     deref_val = ada_tag_value_at_base_address (deref_val);
 
   if (deref_val->lazy ())

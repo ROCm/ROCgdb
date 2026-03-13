@@ -185,6 +185,17 @@ proc start_debuginfod { db debugdir } {
     return $url
 }
 
+# Drain output from debuginfod.
+
+proc drain_debuginfod {} {
+    verbose -log "drain debuginfod output --- start"
+    expect {
+	-i $::debuginfod_spawn_id ".*" {
+	}
+    }
+    verbose -log "drain debuginfod output --- end"
+}
+
 # If the global debuginfod_spawn_id exists, then kill that process and unset
 # the debuginfod_spawn_id global.  This can be used to shutdown the
 # debuginfod server.

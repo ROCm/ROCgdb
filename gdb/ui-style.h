@@ -72,7 +72,6 @@ public:
   constexpr uint8_t g () const noexcept { return m_data[1]; }
   constexpr uint8_t b () const noexcept { return m_data[2]; }
 
-  constexpr operator uint8_t *() noexcept { return m_data.data (); }
   constexpr size_t size () const noexcept { return m_data.size (); }
 
   constexpr uint8_t &operator[] (std::size_t idx) noexcept

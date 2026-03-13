@@ -90,33 +90,33 @@ decoded_type_name (struct type *type)
     }
 }
 
-/* Return nonzero if TYPE is a subrange type, and its bounds
+/* Return true if TYPE is a subrange type, and its bounds
    are identical to the bounds of its subtype.  */
 
-static int
+static bool
 type_is_full_subrange_of_target_type (struct type *type)
 {
   struct type *subtype;
 
   if (type->code () != TYPE_CODE_RANGE)
-    return 0;
+    return false;
 
   subtype = type->target_type ();
   if (subtype == NULL)
-    return 0;
+    return false;
 
   if (is_dynamic_type (type))
-    return 0;
+    return false;
 
   if (ada_discrete_type_low_bound (type)
       != ada_discrete_type_low_bound (subtype))
-    return 0;
+    return false;
 
   if (ada_discrete_type_high_bound (type)
       != ada_discrete_type_high_bound (subtype))
-    return 0;
+    return false;
 
-  return 1;
+  return true;
 }
 
 /* Print TYPE on STREAM, preferably as a range if BOUNDS_PREFERRED_P
@@ -432,12 +432,12 @@ print_array_type (struct type *type, struct ui_file *stream, int show,
 
 /* Print the choices encoded by field FIELD_NUM of variant-part TYPE on
    STREAM, assuming that VAL_TYPE (if non-NULL) is the type of the
-   values.  Return non-zero if the field is an encoding of
-   discriminant values, as in a standard variant record, and 0 if the
+   values.  Return true if the field is an encoding of
+   discriminant values, as in a standard variant record, and false if the
    field is not so encoded (as happens with single-component variants
    in types annotated with pragma Unchecked_Union).  */
 
-static int
+static bool
 print_choices (struct type *type, int field_num, struct ui_file *stream,
 	       struct type *val_type)
 {
@@ -465,7 +465,7 @@ print_choices (struct type *type, int field_num, struct ui_file *stream,
 	case '_':
 	case '\0':
 	  gdb_printf (stream, " =>");
-	  return 1;
+	  return true;
 	case 'S':
 	case 'R':
 	case 'O':
@@ -507,7 +507,7 @@ print_choices (struct type *type, int field_num, struct ui_file *stream,
 
 Huh:
   gdb_printf (stream, "? =>");
-  return 0;
+  return false;
 }
 
 /* A helper for print_variant_clauses that prints the members of
@@ -819,7 +819,7 @@ print_record_type (struct type *type0, struct ui_file *stream, int show,
 	parent_name = ada_type_name (parent_type);
       gdb_printf (stream, "new %s with record", parent_name);
     }
-  else if (parent_type == NULL && ada_is_tagged_type (type, 0))
+  else if (parent_type == NULL && ada_is_tagged_type (type, false))
     gdb_printf (stream, "tagged record");
   else
     gdb_printf (stream, "record");

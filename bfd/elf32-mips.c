@@ -3339,35 +3339,22 @@ gprel32_with_gp (bfd *abfd, asymbol *symbol, arelent *reloc_entry,
    sign extension.  */
 
 static bfd_reloc_status_type
-mips32_64bit_reloc (bfd *abfd, arelent *reloc_entry,
-		    asymbol *symbol ATTRIBUTE_UNUSED,
+mips32_64bit_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol,
 		    void *data, asection *input_section,
 		    bfd *output_bfd, char **error_message)
 {
   bfd_reloc_status_type r;
-  arelent reloc32;
-  unsigned long val;
-  bfd_size_type addr;
 
-  /* Do a normal 32 bit relocation on the lower 32 bits.  */
-  reloc32 = *reloc_entry;
-  if (bfd_big_endian (abfd))
-    reloc32.address += 4;
-  reloc32.howto = &elf_mips_howto_table_rel[R_MIPS_32];
-  r = bfd_perform_relocation (abfd, &reloc32, data, input_section,
-			      output_bfd, error_message);
-
-  /* Sign extend into the upper 32 bits.  */
-  val = bfd_get_32 (abfd, (bfd_byte *) data + reloc32.address);
-  if ((val & 0x80000000) != 0)
-    val = 0xffffffff;
-  else
-    val = 0;
-  addr = reloc_entry->address;
-  if (bfd_little_endian (abfd))
-    addr += 4;
-  bfd_put_32 (abfd, val, (bfd_byte *) data + addr);
-
+  r = _bfd_mips_elf_generic_reloc (abfd, reloc_entry, symbol, data,
+				   input_section, output_bfd, error_message);
+  if (r == bfd_reloc_ok && output_bfd == NULL)
+    {
+      /* When final linking, sign extend low word into the upper word.  */
+      bfd_byte *loc = (bfd_byte *) data + reloc_entry->address;
+      bfd_vma val = bfd_get_64 (abfd, loc);
+      val = ((val & 0xffffffff) ^ 0x80000000) - 0x80000000;
+      bfd_put_64 (abfd, val, loc);
+    }
   return r;
 }
 

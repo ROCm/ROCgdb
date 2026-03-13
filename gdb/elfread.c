@@ -774,11 +774,11 @@ elf_gnu_ifunc_resolve_by_cache (const char *name, CORE_ADDR *addr_p)
 	 elf_gnu_ifunc_cache *cache
 	   = elf_objfile_gnu_ifunc_cache_data.get (objfile);
 	 if (cache == nullptr)
-	   return 0;
+	   return false;
 
 	 auto it = cache->find (name);
 	 if (it == cache->end ())
-	   return 0;
+	   return false;
 
 	 if (addr_p != nullptr)
 	   *addr_p = it->second;
@@ -787,7 +787,7 @@ elf_gnu_ifunc_resolve_by_cache (const char *name, CORE_ADDR *addr_p)
 	   (func, "cache hit for \"%s\" -> %s in objfile %s", name,
 	    paddress (objfile->arch (), it->second), objfile_name (objfile));
 	 found = 1;
-	 return 1;
+	 return true;
        }, nullptr);
 
   if (!found)

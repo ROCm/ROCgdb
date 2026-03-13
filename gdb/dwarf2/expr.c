@@ -3335,13 +3335,15 @@ dwarf_expr_require_composition (const gdb_byte *op_ptr, const gdb_byte *op_end,
    checks that might reasonably be needed to compare DWARF base
    types.  */
 
-static int
+static bool
 base_types_equal_p (struct type *t1, struct type *t2)
 {
   if (t1->code () != t2->code ())
-    return 0;
+    return false;
+
   if (t1->is_unsigned () != t2->is_unsigned ())
-    return 0;
+    return false;
+
   return t1->length () == t2->length ();
 }
 
@@ -3445,32 +3447,32 @@ dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf, const gdb_byte *buf_end,
 
 /* See expr.h.  */
 
-int
+bool
 dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
 			  CORE_ADDR *fb_offset_return)
 {
   int64_t fb_offset;
 
   if (buf_end <= buf)
-    return 0;
+    return false;
 
   if (*buf != DW_OP_fbreg)
-    return 0;
+    return false;
+
   buf++;
 
   buf = gdb_read_sleb128 (buf, buf_end, &fb_offset);
   if (buf == NULL)
-    return 0;
-  *fb_offset_return = fb_offset;
-  if (buf != buf_end || fb_offset != (LONGEST) *fb_offset_return)
-    return 0;
+    return false;
 
-  return 1;
+  *fb_offset_return = fb_offset;
+
+  return buf == buf_end && fb_offset == (LONGEST) *fb_offset_return;
 }
 
 /* See expr.h.  */
 
-int
+bool
 dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
 			  const gdb_byte *buf_end, CORE_ADDR *sp_offset_return)
 {
@@ -3478,7 +3480,8 @@ dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
   int64_t sp_offset;
 
   if (buf_end <= buf)
-    return 0;
+    return false;
+
   if (*buf >= DW_OP_breg0 && *buf <= DW_OP_breg31)
     {
       dwarf_reg = *buf - DW_OP_breg0;
@@ -3487,25 +3490,25 @@ dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
   else
     {
       if (*buf != DW_OP_bregx)
-       return 0;
+       return false;
+
       buf++;
       buf = gdb_read_uleb128 (buf, buf_end, &dwarf_reg);
       if (buf == NULL)
-	return 0;
+	return false;
     }
 
   if (dwarf_reg_to_regnum (gdbarch, dwarf_reg)
       != gdbarch_sp_regnum (gdbarch))
-    return 0;
+    return false;
 
   buf = gdb_read_sleb128 (buf, buf_end, &sp_offset);
   if (buf == NULL)
-    return 0;
-  *sp_offset_return = sp_offset;
-  if (buf != buf_end || sp_offset != (LONGEST) *sp_offset_return)
-    return 0;
+    return false;
 
-  return 1;
+  *sp_offset_return = sp_offset;
+
+  return buf == buf_end && sp_offset == (LONGEST) *sp_offset_return;
 }
 
 const gdb_byte *
@@ -4264,7 +4267,7 @@ dwarf_expr_context::execute_stack_op (const gdb_byte *op_ptr,
 	    auto arg1 = fetch (0)->to_value (address_type);
 	    pop ();
 
-	    if (! base_types_equal_p (arg1->get_type (), arg2->get_type ()))
+	    if (!base_types_equal_p (arg1->get_type (), arg2->get_type ()))
 	      error (_("Incompatible types on DWARF stack"));
 
 	    std::shared_ptr<dwarf_value> op_result;

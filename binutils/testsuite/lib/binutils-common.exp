@@ -768,29 +768,32 @@ proc prune_warnings_extra { text } {
     # as they indicate that the sources need to be updated to recognise
     # the new properties.
     if { "$experimental" == "false" } {
-	# The "\\1" is to try to preserve a "\n" but only if necessary.
-	regsub -all "(^|\n)(\[^\n\]*: warning:\[^\n\]*unsupported GNU_PROPERTY_TYPE\[^\n\]*\n?)+" $text "\\1" text
+	# The {\1} is to preserve a \n when necessary.
+	regsub -all {(^|\n)([^\n]*: warning:[^\n]*unsupported GNU_PROPERTY_TYPE[^\n]*\n?)+} $text {\1} text
     }
 
     # PR binutils/23898: It is OK to have gaps in build notes.
-    regsub -all "(^|\n)(\[^\n\]*: Warning: Gap in build notes detected from\[^\n\]*\n?)+" $text "\\1" text
+    regsub -all {(^|\n)([^\n]*: Warning: Gap in build notes detected from[^\n]*\n?)+} $text {\1} text
 
     # Many tests use assembler source files without a .note.GNU-stack section.
     # So ignore warnings about it being missing.
-    regsub -all "(^|\n)(\[^\n\]*: warning:\[^\n\]*missing \\.note\\.GNU-stack section\[^\n\]*\n?)+" $text "\\1" text
-    regsub -all "(^|\n)(\[^\n\]*: NOTE: This behaviour is deprecated\[^\n\]*\n?)+" $text "\\1" text
+    regsub -all {(^|\n)([^\n]*: warning:[^\n]*missing \.note\.GNU-stack section[^\n]*\n?)+} $text {\1} text
+    regsub -all {(^|\n)([^\n]*: NOTE: This behaviour is deprecated[^\n]*\n?)+} $text {\1} text
 
     # Ignore warnings about RWX segments.
-    regsub -all "(^|\n)(\[^\n\]*: warning:\[^\n\]*has a LOAD segment with RWX permissions\[^\n\]*\n?)+" $text "\\1" text
-    regsub -all "(^|\n)(\[^\n\]*: warning:\[^\n\]*has a TLS segment with execute permission\[^\n\]*\n?)+" $text "\\1" text
+    regsub -all {(^|\n)([^\n]*: warning:[^\n]*has a LOAD segment with RWX permissions[^\n]*\n?)+} $text {\1} text
+    regsub -all {(^|\n)([^\n]*: warning:[^\n]*has a TLS segment with execute permission[^\n]*\n?)+} $text {\1} text
 
     # Configuring with --enable-warn-execstack=yes will generate warnings if
     # -z execstack is used.
-    regsub -all "(^|\n)(\[^\n\]*: warning: enabling an executable stack because of -z execstack command line option\[^\n\]*\n?)+" $text "\\1" text
+    regsub -all {(^|\n)([^\n]*: warning: enabling an executable stack because of -z execstack command line option[^\n]*\n?)+} $text {\1} text
 
     # Ignore LTO warnings triggered by configuring with --enable-pgo-build=lto.
-    regsub -all "(^|\n)(\[^\n\]*lto-wrapper: warning: using serial compilation of \[0-9\]+ LTRANS jobs\[^\n\]*\n?)+" $text "\\1" text
-    regsub -all "(^|\n)(\[^\n\]*lto-wrapper: note: \[^\n\]*\n?)+" $text "\\1" text
+    regsub -all {(^|\n)([^\n]*lto-wrapper: warning: using serial compilation of [0-9]+ LTRANS jobs[^\n]*\n?)+} $text {\1} text
+    regsub -all {(^|\n)([^\n]*lto-wrapper: note: [^\n]*\n?)+} $text {\1} text
+
+    # Ignore warnings about linking objects with an old sframe format
+    regsub -all {(^|\n)([^\n]* unexpected SFrame format version [^\n]*\n[^\n]* SFrame section ignored\n?)+} $text {\1} text
 
     return $text
 }

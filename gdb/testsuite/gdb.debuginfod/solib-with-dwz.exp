@@ -201,6 +201,7 @@ proc run_test { cache db debug_dir use_filename } {
 	unresolved "start debuginfod server"
 	return
     }
+    drain_debuginfod
 
     # Point the client to the server.
     setenv DEBUGINFOD_URLS $url
@@ -225,10 +226,12 @@ proc run_test { cache db debug_dir use_filename } {
 
     # Now GDB is configured, load the executable.
     gdb_load $::binfile
+    drain_debuginfod
 
     if { ![runto_main] } {
 	return
     }
+    drain_debuginfod
 
     # This test relies on reading address zero triggering a SIGSEGV.
     # If address zero is readable then give up now.
@@ -241,6 +244,7 @@ proc run_test { cache db debug_dir use_filename } {
 
     gdb_test "continue" \
 	"\r\n$crash_line_num\\s+[string_to_regexp {*ptr = 0;	/* Crash here.  */}]"
+    drain_debuginfod
 
     set call_line_num [gdb_get_line_number "Call line" $::srcfile3]
 
@@ -250,6 +254,7 @@ proc run_test { cache db debug_dir use_filename } {
     gdb_test "list" \
 	"\r\n$call_line_num\\s+[string_to_regexp {cb ();	/* Call line.  */}]\r\n.*" \
 	"list default location in $::srcfile3"
+    drain_debuginfod
 
     set list_line_num [gdb_get_line_number "Second line to list" $::srcfile3]
 
@@ -304,6 +309,7 @@ proc run_test { cache db debug_dir use_filename } {
 	    exp_continue
 	}
     }
+    drain_debuginfod
 
     # Use 'maint info symtabs' to list all symtabs and find the
     # symtabs that are associated with libbar.so (actually with the

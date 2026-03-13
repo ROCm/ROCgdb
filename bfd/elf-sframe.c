@@ -220,7 +220,7 @@ _bfd_elf_sframe_present (struct bfd_link_info *info)
 
 bool
 _bfd_elf_parse_sframe (bfd *abfd,
-		       struct bfd_link_info *info ATTRIBUTE_UNUSED,
+		       struct bfd_link_info *info,
 		       asection *sec, struct elf_reloc_cookie *cookie)
 {
   bfd_byte *sfbuf = NULL;
@@ -229,8 +229,29 @@ _bfd_elf_parse_sframe (bfd *abfd,
   bfd_size_type sf_size;
   int decerr = 0;
 
+  /* Check if this section was already parsed.  */
+  if (sec->sec_info_type == SEC_INFO_TYPE_SFRAME)
+    return true;
+
   if (info->discard_sframe)
-    sec->flags |= SEC_EXCLUDE;
+    {
+      sec->flags |= SEC_EXCLUDE;
+      return false;
+    }
+
+  if ((sec->flags & SEC_EXCLUDE) != 0
+      || bfd_is_abs_section (sec->output_section))
+    {
+      /* This sections is being discarded from the link, ignore it.  */
+      return false;
+    }
+
+  if (sec->size == 0
+      || (sec->flags & SEC_HAS_CONTENTS) == 0)
+    {
+      /* This section does not contain .sframe information.  */
+      goto fail4;
+    }
 
   /* Prior versions of assembler and ld were generating SFrame sections with
      section type SHT_PROGBITS.  Issue an error for lack of support for such
@@ -239,64 +260,54 @@ _bfd_elf_parse_sframe (bfd *abfd,
   if (elf_section_type (sec) != SHT_GNU_SFRAME)
     {
       _bfd_error_handler
-	(_("error in %pB(%pA); unexpected SFrame section type"),
+	(_("error in %pB(%pA); unexpected SFrame section type; section ignored"),
 	 abfd, sec);
-      return false;
-    }
-
-  if (sec->size == 0
-      || (sec->flags & SEC_HAS_CONTENTS) == 0)
-    {
-      /* This file does not contain .sframe information.  */
-      return false;
-    }
-
-  /* Check if this section was already parsed.  */
-  if (sec->sec_info_type == SEC_INFO_TYPE_SFRAME)
-    return true;
-
-  if (bfd_is_abs_section (sec->output_section))
-    {
-      /* At least one of the sections is being discarded from the
-	 link, so we should just ignore them.  */
-      return false;
+      goto fail4;
     }
 
   /* Read the SFrame stack trace information from abfd.  */
   if (!_bfd_elf_mmap_section_contents (abfd, sec, &sfbuf))
-    goto fail_no_free;
+    goto fail3;
 
   /* Decode the buffer and keep decoded contents for later use.
      Relocations are performed later, but are such that the section's
      size is unaffected.  */
-  sfd_info = bfd_zalloc (abfd, sizeof (*sfd_info));
   sf_size = sec->size;
-
-  sfd_info->sfd_ctx = sframe_decode ((const char*)sfbuf, sf_size, &decerr);
-  sfd_info->sfd_state = SFRAME_SEC_DECODED;
-  sfd_ctx = sfd_info->sfd_ctx;
+  sfd_ctx = sframe_decode ((const char *) sfbuf, sf_size, &decerr);
   if (!sfd_ctx)
-    /* Free'ing up any memory held by decoder context is done by
-       sframe_decode in case of error.  */
-    goto fail_no_free;
+    goto fail2;
+
+  uint8_t dctx_version = sframe_decoder_get_version (sfd_ctx);
+  if (dctx_version != SFRAME_VERSION)
+    {
+      _bfd_error_handler
+	(_("error in %pB(%pA); unexpected SFrame format version %" PRIu8),
+	 abfd, sec, dctx_version);
+      goto fail2;
+    }
+
+  sfd_info = bfd_zalloc (abfd, sizeof (*sfd_info));
+  if (!sfd_info)
+    goto fail1;
+  sfd_info->sfd_ctx = sfd_ctx;
+  sfd_info->sfd_state = SFRAME_SEC_DECODED;
 
   if (!sframe_decoder_init_func_bfdinfo (abfd, sec, sfd_info, cookie))
     {
+    fail1:
       sframe_decoder_free (&sfd_info->sfd_ctx);
-      goto fail_no_free;
+    fail2:
+      _bfd_elf_munmap_section_contents (sec, sfbuf);
+    fail3:
+      _bfd_error_handler (_("error in %pB(%pA); SFrame section ignored"),
+			  abfd, sec);
+    fail4:
+      sec->flags |= SEC_EXCLUDE;
+      return false;
     }
 
   sec->sec_info = sfd_info;
   sec->sec_info_type = SEC_INFO_TYPE_SFRAME;
-
-  goto success;
-
-fail_no_free:
-  _bfd_error_handler
-   (_("error in %pB(%pA); no .sframe will be created"),
-    abfd, sec);
-  return false;
-success:
   _bfd_elf_munmap_section_contents (sec, sfbuf);
   return true;
 }
@@ -384,8 +395,6 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
   uint8_t sfd_ctx_abi_arch;
   int8_t sfd_ctx_fixed_fp_offset;
   int8_t sfd_ctx_fixed_ra_offset;
-  uint8_t dctx_version;
-  uint8_t ectx_version;
   uint8_t dctx_flags;
   uint8_t ectx_flags;
   int encerr = 0;
@@ -469,17 +478,6 @@ _bfd_elf_merge_section_sframe (bfd *abfd,
       _bfd_error_handler
 	(_("error in %pB (%pA); unexpected ABI in SFrame section"),
 	 sec->owner, sec);
-      return false;
-    }
-
-  /* Check that all .sframe sections being linked have the same version.  */
-  dctx_version = sframe_decoder_get_version (sfd_ctx);
-  ectx_version = sframe_encoder_get_version (sfe_ctx);
-  if (dctx_version != SFRAME_VERSION_3 || dctx_version != ectx_version)
-    {
-      _bfd_error_handler
-	(_("error in %pB (%pA); unexpected SFrame format version %" PRIu8),
-	 sec->owner, sec, dctx_version);
       return false;
     }
 

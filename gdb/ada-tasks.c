@@ -355,9 +355,9 @@ get_task_number_from_id (CORE_ADDR task_id, struct inferior *inf)
   return 0;
 }
 
-/* Return non-zero if TASK_NUM is a valid task number.  */
+/* Return true if TASK_NUM is a valid task number.  */
 
-int
+bool
 valid_task_id (int task_num)
 {
   struct ada_tasks_inferior_data *data;

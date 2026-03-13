@@ -217,7 +217,7 @@ ada_varobj_adjust_for_child_access (struct value **value,
   /* If this is a tagged type, we need to transform it a bit in order
      to be able to fetch its full view.  As always with tagged types,
      we can only do that if we have a value.  */
-  if (*value != NULL && ada_is_tagged_type (*type, 1))
+  if (*value != NULL && ada_is_tagged_type (*type, true))
     {
       *value = ada_tag_value_at_base_address (*value);
       *type = (*value)->type ();
@@ -286,7 +286,7 @@ ada_varobj_get_struct_number_of_children (struct value *parent_value,
 
 	  ada_varobj_struct_elt (parent_value, parent_type, i,
 				 &elt_value, &elt_type);
-	  if (ada_is_tagged_type (elt_type, 0))
+	  if (ada_is_tagged_type (elt_type, false))
 	    {
 	      /* We must not use ada_varobj_get_number_of_children
 		 to determine is element's number of children, because
@@ -437,7 +437,7 @@ ada_varobj_describe_struct_child (struct value *parent_value,
 
 	  ada_varobj_struct_elt (parent_value, parent_type, fieldno,
 				 &elt_value, &elt_type);
-	  if (ada_is_tagged_type (elt_type, 0))
+	  if (ada_is_tagged_type (elt_type, false))
 	    {
 	      /* Same as in ada_varobj_get_struct_number_of_children:
 		 For tagged types, we must be careful to not call
@@ -454,7 +454,7 @@ ada_varobj_describe_struct_child (struct value *parent_value,
 	     of this wrapper field?  */
 	  if (child_index - childno < elt_n_children)
 	    {
-	      if (ada_is_tagged_type (elt_type, 0))
+	      if (ada_is_tagged_type (elt_type, false))
 		{
 		  /* Same as in ada_varobj_get_struct_number_of_children:
 		     For tagged types, we must be careful to not call

@@ -1899,10 +1899,10 @@ stub_noname_complaint (void)
   complaint (_("stub type has NULL name"));
 }
 
-/* Return nonzero if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
+/* Return true if TYPE has a DYN_PROP_BYTE_STRIDE dynamic property
    attached to it, and that property has a non-constant value.  */
 
-static int
+static bool
 array_type_has_dynamic_stride (struct type *type)
 {
   struct dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
@@ -1982,21 +1982,21 @@ is_dynamic_type_internal (struct type *type, bool top_level)
     case TYPE_CODE_STRUCT:
     case TYPE_CODE_UNION:
       {
-	int i;
-
 	bool is_cplus = HAVE_CPLUS_STRUCT (type);
 
-	for (i = 0; i < type->num_fields (); ++i)
+	for (int i = 0; i < type->num_fields (); ++i)
 	  {
+	    struct field &f = type->field (i);
+
 	    /* Static fields can be ignored here.  */
-	    if (type->field (i).is_static ())
+	    if (f.is_static ())
 	      continue;
 	    /* If the field has dynamic type, then so does TYPE.  */
-	    if (is_dynamic_type_internal (type->field (i).type (), false))
+	    if (is_dynamic_type_internal (f.type (), false))
 	      return true;
 	    /* If the field is at a fixed offset, then it is not
 	       dynamic.  */
-	    if (!type->field (i).loc_is_dwarf_block ())
+	    if (!f.loc_is_dwarf_block ())
 	      continue;
 	    /* Do not consider C++ virtual base types to be dynamic
 	       due to the field's offset being dynamic; these are
@@ -2252,7 +2252,7 @@ resolve_dynamic_array_or_string_1 (struct type *type,
 	     if the DWARF info is not correct.  Issue a warning,
 	     and assume no byte/bit stride (leave bit_stride = 0).  */
 	  warning (_("cannot determine array stride for type %s"),
-		   type->name () ? type->name () : "<no name>");
+		   type->safe_name ());
 	}
     }
   else
@@ -4963,7 +4963,7 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%*stype node %s\n", spaces, "",
 	      host_address_to_string (type));
   gdb_printf ("%*sname '%s' (%s)\n", spaces, "",
-	      type->name () ? type->name () : "<NULL>",
+	      type->safe_name (),
 	      host_address_to_string (type->name ()));
   gdb_printf ("%*scode 0x%x ", spaces, "", type->code ());
   gdb_printf ("(%s)", type_code_name (type->code ()));

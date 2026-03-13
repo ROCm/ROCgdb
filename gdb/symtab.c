@@ -6428,10 +6428,10 @@ find_main_name (void)
 	 if (symbol_found_p)
 	   {
 	     set_main_name (pspace, "main", lang);
-	     return 1;
+	     return true;
 	   }
 
-	 return 0;
+	 return false;
        }, nullptr);
 
   if (symbol_found_p)
