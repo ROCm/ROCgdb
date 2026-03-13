@@ -1513,10 +1513,15 @@ proc check_as_cfi { } {
     puts $as_fh "\t.cfi_startproc"
     puts $as_fh "\t.cfi_endproc"
     close $as_fh
-    remote_download host $as_file
+    if [is_remote host] {
+        set src [remote_download host $as_file]
+    } else {
+        set src $as_file
+    }
     verbose -log "Checking CFI support:"
-    set success [ld_assemble $as $as_file "/dev/null"]
-    #remote_file host delete $as_file
+    set success [ld_assemble $as $src "/dev/null"]
+    remote_file host delete $src
+    file delete $as_file
     set check_as_cfi_result $success
     return $success
 }
