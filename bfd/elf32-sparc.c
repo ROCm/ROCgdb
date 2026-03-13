@@ -275,6 +275,8 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 
 #include "elf32-target.h"
 
+#ifdef OBJ_MAYBE_ELF_SOLARIS2
+
 /* Solaris 2.  */
 
 #undef	TARGET_BIG_SYM
@@ -314,6 +316,8 @@ elf32_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSE
 #define elf_backend_copy_special_section_fields elf32_sparc_copy_solaris_special_section_fields
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_SOLARIS2 */
 
 /* A final_write_processing hook that does both the SPARC- and VxWorks-
    specific handling.  */

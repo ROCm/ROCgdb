@@ -6435,6 +6435,8 @@ elf_x86_64_special_sections[]=
 
 #include "elf64-target.h"
 
+#ifdef OBJ_MAYBE_ELF_SOLARIS2
+
 /* Solaris 2 support.  */
 
 static bool
@@ -6486,6 +6488,8 @@ elf_x86_64_solaris2_add_symbol_hook (bfd *abfd,
 #define	elf_backend_add_symbol_hook	    elf_x86_64_solaris2_add_symbol_hook
 
 #include "elf64-target.h"
+
+#endif /* OBJ_MAYBE_ELF_SOLARIS2 */
 
 /* Restore defaults.  */
 #undef	ELF_OSABI

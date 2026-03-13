@@ -4651,6 +4651,8 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
 
 #undef elf_backend_init_file_header
 
+#ifdef OBJ_MAYBE_ELF_SOLARIS2
+
 /* Solaris 2.  */
 
 #undef	TARGET_LITTLE_SYM
@@ -4687,6 +4689,8 @@ elf_i386_fbsd_init_file_header (bfd *abfd, struct bfd_link_info *info)
 #define	elf_backend_add_symbol_hook	    elf_solaris2_add_symbol_hook
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_SOLARIS2 */
 
 /* Intel MCU support.  */
 
