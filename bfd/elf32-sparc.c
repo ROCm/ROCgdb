@@ -319,6 +319,8 @@ elf32_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSE
 
 #endif /* OBJ_MAYBE_ELF_SOLARIS2 */
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* A final_write_processing hook that does both the SPARC- and VxWorks-
    specific handling.  */
 
@@ -369,3 +371,5 @@ elf32_sparc_vxworks_final_write_processing (bfd *abfd)
 #define elf32_bed				sparc_elf_vxworks_bed
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_VXWORKS */

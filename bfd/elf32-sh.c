@@ -88,7 +88,7 @@ static reloc_howto_type sh_vxworks_howto_table[] =
 static bool
 vxworks_object_p (bfd *abfd ATTRIBUTE_UNUSED)
 {
-#if !defined SH_TARGET_ALREADY_DEFINED
+#if defined (OBJ_MAYBE_ELF_VXWORKS) && !defined (SH_TARGET_ALREADY_DEFINED)
   extern const bfd_target sh_elf32_vxworks_le_vec;
   extern const bfd_target sh_elf32_vxworks_vec;
 
@@ -2461,11 +2461,13 @@ sh_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 	}
     }
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (htab->root.target_os == is_vxworks)
     {
       if (!elf_vxworks_create_dynamic_sections (abfd, info, &htab->srelplt2))
 	return false;
     }
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   return true;
 }
@@ -6278,9 +6280,11 @@ sh_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	  switch (dyn.d_tag)
 	    {
 	    default:
+#ifdef OBJ_MAYBE_ELF_VXWORKS
 	      if (htab->root.target_os == is_vxworks
 		  && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 		bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 	      break;
 
 	    case DT_PLTGOT:
@@ -6689,6 +6693,8 @@ sh_elf_encode_eh_address (bfd *abfd,
 
 #include "elf32-target.h"
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* VxWorks support.  */
 #undef	TARGET_BIG_SYM
 #define	TARGET_BIG_SYM			sh_elf32_vxworks_vec
@@ -6726,5 +6732,7 @@ sh_elf_encode_eh_address (bfd *abfd,
 #define	ELF_TARGET_OS			is_vxworks
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
 #endif /* not SH_TARGET_ALREADY_DEFINED */

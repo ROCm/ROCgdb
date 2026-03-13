@@ -15838,18 +15838,18 @@ xcoff="xcofflink.lo $coffgen"
 elf32_aarch64="elf32-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf32.lo elf-attrs.lo"
 elf64_aarch64="elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo elf-attrs.lo elf-sframe.lo"
 elf_arc="elf32-arc.lo elf32.lo elf-attrs.lo"
-elf_arm="elf32-arm.lo elf32.lo elf-attrs.lo elf-vxworks.lo"
+elf_arm="elf32-arm.lo elf32.lo elf-attrs.lo"
 elf_csky="elf32-csky.lo elf32.lo elf-attrs.lo"
-elf32_mips="elf32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo elf-attrs.lo"
-elfn32_mips="elfn32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo elf-attrs.lo"
-elf64_mips="elf64-mips.lo elf64.lo elfxx-mips.lo elf-vxworks.lo elf32.lo elf-attrs.lo"
-elf32_powerpc="elf32-ppc.lo elf-vxworks.lo elf32.lo elf-attrs.lo"
+elf32_mips="elf32-mips.lo elfxx-mips.lo elf32.lo elf-attrs.lo"
+elfn32_mips="elfn32-mips.lo elfxx-mips.lo elf32.lo elf-attrs.lo"
+elf64_mips="elf64-mips.lo elf64.lo elfxx-mips.lo elf32.lo elf-attrs.lo"
+elf32_powerpc="elf32-ppc.lo elf32.lo elf-attrs.lo"
 elf64_powerpc="elf64-ppc.lo elf64-gen.lo elf64.lo elf-attrs.lo"
 elf32_riscv="elf32-riscv.lo elfxx-riscv.lo elf-ifunc.lo elf32.lo elf-attrs.lo"
 elf64_riscv="elf64-riscv.lo elf64.lo elfxx-riscv.lo elf-ifunc.lo elf32.lo elf-attrs.lo"
 elf_tic6x="elf32-tic6x.lo elf32.lo elf-attrs.lo"
-elfxx_x86="elfxx-x86.lo elf-ifunc.lo elf-vxworks.lo"
-elfxx_sparc="elfxx-sparc.lo elf-vxworks.lo elf-attrs.lo $elf"
+elfxx_x86="elfxx-x86.lo elf-ifunc.lo"
+elfxx_sparc="elfxx-sparc.lo elf-attrs.lo $elf"
 for vec in $selvecs
 do
     target_size=32
@@ -15881,8 +15881,8 @@ do
     arm_elf32_le_vec)		 tb="$tb $elf_arm $elf" ;;
     arm_elf32_fdpic_be_vec)	 tb="$tb $elf_arm $elf" ;;
     arm_elf32_fdpic_le_vec)	 tb="$tb $elf_arm $elf" ;;
-    arm_elf32_vxworks_be_vec)	 tb="$tb $elf_arm $elf" ;;
-    arm_elf32_vxworks_le_vec)	 tb="$tb $elf_arm $elf" ;;
+    arm_elf32_vxworks_be_vec)	 tb="$tb $elf_arm elf-vxworks.lo $elf" ;;
+    arm_elf32_vxworks_le_vec)	 tb="$tb $elf_arm elf-vxworks.lo $elf" ;;
     arm_pe_be_vec)		 tb="$tb pe-arm.lo peigen.lo $coff" ;;
     arm_pe_le_vec)		 tb="$tb pe-arm.lo peigen.lo $coff" ;;
     arm_pe_wince_be_vec)	 tb="$tb pe-arm-wince.lo pe-arm.lo peigen.lo $coff" ;;
@@ -15933,7 +15933,7 @@ do
     i386_elf32_vec)		 tb="$tb elf32-i386.lo $elfxx_x86 elf32.lo $elf" ;;
     i386_elf32_fbsd_vec)	 tb="$tb elf32-i386.lo $elfxx_x86 elf32.lo $elf" ;;
     i386_elf32_sol2_vec)	 tb="$tb elf32-i386.lo $elfxx_x86 elf-solaris2.lo elf32.lo $elf" ;;
-    i386_elf32_vxworks_vec)	 tb="$tb elf32-i386.lo $elfxx_x86 elf32.lo $elf" ;;
+    i386_elf32_vxworks_vec)	 tb="$tb elf32-i386.lo $elfxx_x86 elf-vxworks.lo elf32.lo $elf" ;;
     i386_mach_o_vec)		 tb="$tb mach-o-i386.lo" ;;
     i386_msdos_vec)		 tb="$tb i386msdos.lo" ;;
     i386_pe_vec)		 tb="$tb pe-i386.lo peigen.lo $coff" ;;
@@ -15994,8 +15994,8 @@ do
     mips_elf32_trad_le_vec)	 tb="$tb $elf32_mips $elf $ecoff" ;;
     mips_elf32_tradfbsd_be_vec)  tb="$tb $elf32_mips $elf $ecoff" ;;
     mips_elf32_tradfbsd_le_vec)  tb="$tb $elf32_mips $elf $ecoff" ;;
-    mips_elf32_vxworks_be_vec)	 tb="$tb $elf32_mips $elf $ecoff" ;;
-    mips_elf32_vxworks_le_vec)	 tb="$tb $elf32_mips $elf $ecoff" ;;
+    mips_elf32_vxworks_be_vec)	 tb="$tb $elf32_mips elf-vxworks.lo $elf $ecoff" ;;
+    mips_elf32_vxworks_le_vec)	 tb="$tb $elf32_mips elf-vxworks.lo $elf $ecoff" ;;
     mips_elf64_be_vec)		 tb="$tb $elf64_mips $elf $ecoff"; target_size=64 ;;
     mips_elf64_le_vec)		 tb="$tb $elf64_mips $elf $ecoff"; target_size=64 ;;
     mips_elf64_trad_be_vec)	 tb="$tb $elf64_mips $elf $ecoff"; target_size=64 ;;
@@ -16029,7 +16029,7 @@ do
     powerpc_elf32_vec)		 tb="$tb $elf32_powerpc $elf" ;;
     powerpc_elf32_le_vec)	 tb="$tb $elf32_powerpc $elf" ;;
     powerpc_elf32_fbsd_vec)	 tb="$tb $elf32_powerpc $elf" ;;
-    powerpc_elf32_vxworks_vec)	 tb="$tb $elf32_powerpc $elf" ;;
+    powerpc_elf32_vxworks_vec)	 tb="$tb $elf32_powerpc elf-vxworks.lo $elf" ;;
     powerpc_elf64_vec)		 tb="$tb $elf64_powerpc $elf"; target_size=64 ;;
     powerpc_elf64_le_vec)	 tb="$tb $elf64_powerpc $elf"; target_size=64 ;;
     powerpc_elf64_fbsd_vec)	 tb="$tb $elf64_powerpc $elf"; target_size=64 ;;
@@ -16057,21 +16057,21 @@ do
     sh_coff_le_vec)		 tb="$tb coff-sh.lo $coff" ;;
     sh_coff_small_vec)		 tb="$tb coff-sh.lo $coff" ;;
     sh_coff_small_le_vec)	 tb="$tb coff-sh.lo $coff" ;;
-    sh_elf32_vec)		 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_le_vec)		 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_fdpic_be_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_fdpic_le_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_linux_vec)		 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_linux_be_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_nbsd_vec)		 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
-    sh_elf32_nbsd_le_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_vec)		 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_le_vec)		 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_fdpic_be_vec)	 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_fdpic_le_vec)	 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_linux_vec)		 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_linux_be_vec)	 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_nbsd_vec)		 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
+    sh_elf32_nbsd_le_vec)	 tb="$tb elf32-sh.lo elf32.lo $elf coff-sh.lo $coff" ;;
     sh_elf32_vxworks_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
     sh_elf32_vxworks_le_vec)	 tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo $coff" ;;
     sh_pe_le_vec)		 tb="$tb pe-sh.lo coff-sh.lo peigen.lo $coff" ;;
     sh_pei_le_vec)		 tb="$tb pei-sh.lo coff-sh.lo peigen.lo $coff" ;;
     sparc_elf32_vec)		 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc" ;;
     sparc_elf32_sol2_vec)	 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc elf-solaris2.lo" ;;
-    sparc_elf32_vxworks_vec)	 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc" ;;
+    sparc_elf32_vxworks_vec)	 tb="$tb elf32-sparc.lo elf32.lo $elfxx_sparc elf-vxworks.lo" ;;
     sparc_elf64_vec)		 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc"; target_size=64 ;;
     sparc_elf64_fbsd_vec)	 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc"; target_size=64 ;;
     sparc_elf64_sol2_vec)	 tb="$tb elf64-sparc.lo elf64.lo $elfxx_sparc elf-solaris2.lo"; target_size=64 ;;
@@ -16192,7 +16192,7 @@ if test x${all_targets} = xtrue ; then
   done
   assocvecs=$f
   TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF -DOBJ_MAYBE_ELF_ATTRIBUTES -DOBJ_MAYBE_ELF_SFRAME"
-  TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_SOLARIS2"
+  TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_SOLARIS2 -DOBJ_MAYBE_ELF_VXWORKS"
 else	# all_targets is true
   # Only set these if they will be nonempty, for the clever echo.
   havevecs=
@@ -16210,6 +16210,7 @@ else	# all_targets is true
     elf-attrs.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_ATTRIBUTES" ;;
     elf-sframe.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_SFRAME" ;;
     elf-solaris2.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_SOLARIS2" ;;
+    elf-vxworks.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_VXWORKS" ;;
     esac
   done
 fi	# all_targets is true

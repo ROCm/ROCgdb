@@ -1212,6 +1212,7 @@ _bfd_sparc_elf_create_dynamic_sections (bfd *dynobj,
   if (!_bfd_elf_create_dynamic_sections (dynobj, info))
     return false;
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (htab->elf.target_os == is_vxworks)
     {
       if (!elf_vxworks_create_dynamic_sections (dynobj, info, &htab->srelplt2))
@@ -1231,6 +1232,7 @@ _bfd_sparc_elf_create_dynamic_sections (bfd *dynobj,
 	    = 4 * ARRAY_SIZE (sparc_vxworks_exec_plt_entry);
 	}
     }
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   if (!htab->elf.splt || !htab->elf.srelplt || !htab->elf.sdynbss
       || (!bfd_link_pic (info) && !htab->elf.srelbss))
@@ -4514,9 +4516,11 @@ sparc_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 	      bed->s->swap_dyn_out (output_bfd, &dyn, dyncon);
 	    }
 	}
+#ifdef OBJ_MAYBE_ELF_VXWORKS
       else if (htab->elf.target_os == is_vxworks
 	       && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 	bed->s->swap_dyn_out (output_bfd, &dyn, dyncon);
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
       else if (abi_64_p && dyn.d_tag == DT_SPARC_REGISTER)
 	{
 	  if (stt_regidx == -1)

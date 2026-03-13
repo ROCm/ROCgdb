@@ -2846,9 +2846,11 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
       switch (dyn.d_tag)
 	{
 	default:
+#ifdef OBJ_MAYBE_ELF_VXWORKS
 	  if (htab->elf.target_os == is_vxworks
 	      && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 	    break;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 	  continue;
 
 	case DT_PLTGOT:
@@ -4690,6 +4692,7 @@ _bfd_x86_elf_link_setup_gnu_properties
       htab->plt.eh_frame_plt = htab->lazy_plt->eh_frame_plt;
     }
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (htab->elf.target_os == is_vxworks
       && !elf_vxworks_create_dynamic_sections (dynobj, info,
 					       &htab->srelplt2))
@@ -4697,6 +4700,7 @@ _bfd_x86_elf_link_setup_gnu_properties
       info->callbacks->fatal (_("%P: failed to create VxWorks dynamic sections\n"));
       return pbfd;
     }
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   /* Since create_dynamic_sections isn't always called, but GOT
      relocations need GOT relocations, create them here so that we

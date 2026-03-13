@@ -4741,6 +4741,8 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 #define ELF_MACHINE_CODE		EM_386
 #undef	elf_backend_object_p
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* VxWorks support.  */
 
 #undef	TARGET_LITTLE_SYM
@@ -4780,3 +4782,5 @@ elf32_iamcu_elf_object_p (bfd *abfd)
 #define elf32_bed				elf32_i386_vxworks_bed
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_VXWORKS */

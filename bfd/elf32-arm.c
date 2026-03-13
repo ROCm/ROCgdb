@@ -3916,6 +3916,7 @@ elf32_arm_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
   if (!_bfd_elf_create_dynamic_sections (dynobj, info))
     return false;
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (htab->root.target_os == is_vxworks)
     {
       if (!elf_vxworks_create_dynamic_sections (dynobj, info, &htab->srelplt2))
@@ -3939,6 +3940,7 @@ elf32_arm_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
 	elf_elfheader (dynobj)->e_ident[EI_CLASS] = ELFCLASS32;
     }
   else
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
     {
       /* PR ld/16017
 	 Test for thumb only architectures.  Note - we cannot just call
@@ -17263,9 +17265,11 @@ elf32_arm_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	  switch (dyn.d_tag)
 	    {
 	    default:
+#ifdef OBJ_MAYBE_ELF_VXWORKS
 	      if (htab->root.target_os == is_vxworks
 		  && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 		bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 	      break;
 
 	    case DT_HASH:
@@ -19757,17 +19761,23 @@ elf32_arm_additional_program_headers (bfd *abfd,
    file.  */
 
 static bool
-elf32_arm_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
-			   Elf_Internal_Sym *sym, const char **namep,
-			   flagword *flagsp, asection **secp, bfd_vma *valp)
+elf32_arm_add_symbol_hook (bfd *abfd ATTRIBUTE_UNUSED,
+			   struct bfd_link_info *info,
+			   Elf_Internal_Sym *sym ATTRIBUTE_UNUSED,
+			   const char **namep ATTRIBUTE_UNUSED,
+			   flagword *flagsp ATTRIBUTE_UNUSED,
+			   asection **secp ATTRIBUTE_UNUSED,
+			   bfd_vma *valp ATTRIBUTE_UNUSED)
 {
   if (elf32_arm_hash_table (info) == NULL)
     return false;
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (elf32_arm_hash_table (info)->root.target_os == is_vxworks
       && !elf_vxworks_add_symbol_hook (abfd, info, sym, namep,
 				       flagsp, secp, valp))
     return false;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   return true;
 }
@@ -20340,6 +20350,8 @@ elf32_arm_fdpic_omit_section_dynsym (bfd *output_bfd ATTRIBUTE_UNUSED,
 #undef ELF_OSABI_EXACT
 #undef elf_backend_omit_section_dynsym
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* VxWorks Targets.  */
 
 #undef	TARGET_LITTLE_SYM
@@ -20401,6 +20413,7 @@ elf32_arm_vxworks_final_write_processing (bfd *abfd)
 
 #include "elf32-target.h"
 
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
 /* Merge backend specific data from an object file to the output
    object file when linking.  */
@@ -20524,10 +20537,13 @@ elf32_arm_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
     }
 
   /* Not sure what needs to be checked for EABI versions >= 1.  */
-  /* VxWorks libraries do not use these flags.  */
-  if (get_elf_backend_data (obfd) != &elf32_arm_vxworks_bed
+  if (EF_ARM_EABI_VERSION (in_flags) == EF_ARM_EABI_UNKNOWN
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+      /* VxWorks libraries do not use these flags.  */
+      && get_elf_backend_data (obfd) != &elf32_arm_vxworks_bed
       && get_elf_backend_data (ibfd) != &elf32_arm_vxworks_bed
-      && EF_ARM_EABI_VERSION (in_flags) == EF_ARM_EABI_UNKNOWN)
+#endif
+      )
     {
       if ((in_flags & EF_ARM_APCS_26) != (out_flags & EF_ARM_APCS_26))
 	{
