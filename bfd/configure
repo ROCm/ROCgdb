@@ -15829,14 +15829,14 @@ selarchs="$f"
 tb=
 
 elf="elf.lo elflink.lo elf-strtab.lo elf-eh-frame.lo elf-properties.lo
-     elf-sframe.lo dwarf1.lo dwarf2.lo"
+     dwarf1.lo dwarf2.lo"
 coffgen="coffgen.lo dwarf2.lo"
 coff="cofflink.lo $coffgen"
 ecoff="ecofflink.lo $coffgen"
 xcoff="xcofflink.lo $coffgen"
 
 elf32_aarch64="elf32-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf32.lo elf-attrs.lo"
-elf64_aarch64="elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo elf-attrs.lo"
+elf64_aarch64="elf64-aarch64.lo elfxx-aarch64.lo elf-ifunc.lo elf64.lo elf-attrs.lo elf-sframe.lo"
 elf_arc="elf32-arc.lo elf32.lo elf-attrs.lo"
 elf_arm="elf32-arm.lo elf32.lo elf-attrs.lo elf-vxworks.lo"
 elf_csky="elf32-csky.lo elf32.lo elf-attrs.lo"
@@ -16050,7 +16050,7 @@ do
     rx_elf32_le_vec)		 tb="$tb elf32-rx.lo elf32.lo $elf" ;;
     rx_elf32_linux_le_vec)	 tb="$tb elf32-rx.lo elf32.lo $elf" ;;
     s390_elf32_vec)		 tb="$tb elf32-s390.lo elf32.lo elf-attrs.lo $elf" ;;
-    s390_elf64_vec)		 tb="$tb elf64-s390.lo elf64.lo elf-attrs.lo $elf"; target_size=64 ;;
+    s390_elf64_vec)		 tb="$tb elf64-s390.lo elf64.lo elf-attrs.lo elf-sframe.lo $elf"; target_size=64 ;;
     score_elf32_be_vec)		 tb="$tb elf32-score.lo elf32-score7.lo elf32.lo elf64.lo $elf"; want64=true; target_size=64 ;;
     score_elf32_le_vec)		 tb="$tb elf32-score.lo elf32-score7.lo elf32.lo elf64.lo $elf"; want64=true; target_size=64 ;;
     sh_coff_vec)		 tb="$tb coff-sh.lo $coff" ;;
@@ -16112,9 +16112,9 @@ do
     wasm32_elf32_vec)            tb="$tb elf32-wasm32.lo elf32.lo $elf" ;;
     x86_64_coff_vec)		 tb="$tb coff-x86_64.lo $coff"; target_size=64 ;;
     x86_64_elf32_vec)		 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo elf32.lo $elf"; target_size=64 ;;
-    x86_64_elf64_vec)		 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
-    x86_64_elf64_fbsd_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
-    x86_64_elf64_sol2_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo $elf"; target_size=64 ;;
+    x86_64_elf64_vec)		 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo elf-sframe.lo $elf"; target_size=64 ;;
+    x86_64_elf64_fbsd_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo elf-sframe.lo $elf"; target_size=64 ;;
+    x86_64_elf64_sol2_vec)	 tb="$tb elf64-x86-64.lo $elfxx_x86 elf64.lo elf-sframe.lo $elf"; target_size=64 ;;
     x86_64_mach_o_vec)		 tb="$tb mach-o-x86-64.lo" ;;
     x86_64_pe_vec)		 tb="$tb pe-x86_64.lo pex64igen.lo $coff"; target_size=64 ;;
     x86_64_pe_big_vec)		 tb="$tb pe-x86_64.lo pex64igen.lo $coff"; target_size=64 ;;
@@ -16191,7 +16191,7 @@ if test x${all_targets} = xtrue ; then
     esac
   done
   assocvecs=$f
-  TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF -DOBJ_MAYBE_ELF_ATTRIBUTES"
+  TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF -DOBJ_MAYBE_ELF_ATTRIBUTES -DOBJ_MAYBE_ELF_SFRAME"
 else	# all_targets is true
   # Only set these if they will be nonempty, for the clever echo.
   havevecs=
@@ -16207,6 +16207,7 @@ else	# all_targets is true
     case "$i" in
     elf.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF" ;;
     elf-attrs.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_ATTRIBUTES" ;;
+    elf-sframe.*) TDEFINES="$TDEFINES -DOBJ_MAYBE_ELF_SFRAME" ;;
     esac
   done
 fi	# all_targets is true

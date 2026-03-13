@@ -2631,6 +2631,8 @@ extern bool _bfd_elf_eh_frame_entry_present
 extern bool _bfd_elf_maybe_strip_eh_frame_hdr
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
+#ifdef OBJ_MAYBE_ELF_SFRAME
+
 extern bool _bfd_elf_sframe_present
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_sframe_present_input_bfds
@@ -2649,6 +2651,41 @@ extern bool _bfd_elf_write_section_sframe
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_set_section_sframe
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+
+#else /* !OBJ_MAYBE_ELF_SFRAME */
+
+static inline bool _bfd_elf_sframe_present
+  (struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_sframe_present_input_bfds
+  (struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_parse_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED,
+   struct elf_reloc_cookie *cookie ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_discard_section_sframe
+  (asection *sec ATTRIBUTE_UNUSED,
+  bool (*reloc_symbol_deleted_p) (bfd_vma, void *) ATTRIBUTE_UNUSED,
+  struct elf_reloc_cookie *cookie ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_merge_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED, bfd_byte *contents ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bfd_vma _bfd_elf_sframe_section_offset
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED, bfd_vma offset)
+{ return offset; }
+static inline bool _bfd_elf_write_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return true; }
+static inline bool _bfd_elf_set_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+
+#endif /* OBJ_MAYBE_ELF_SFRAME */
 
 extern bool _bfd_elf_hash_symbol
   (struct elf_link_hash_entry *) ATTRIBUTE_HIDDEN;
