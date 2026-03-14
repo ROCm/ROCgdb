@@ -33,7 +33,7 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
 
 	    # First check to see if --with-tcl was specified.
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-mingw* | *-*-cygwin*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${with_tclconfig}" != x ; then
@@ -80,6 +80,31 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
 		done
 	    fi
 
+	    # Check where 32-bit vs 64-bit libraries are stored
+	    lib32="/usr/lib"
+	    lib64="/usr/lib"
+            if test -d /usr/lib32 ; then
+		lib32="/usr/lib32"
+	    fi
+	    if test -d /usr/lib64 ; then
+		lib64="/usr/lib64"
+	    fi
+	    case "${CFLAGS}" in
+		 *-m32*) force_32=yes ;;
+		 *) force_32=no ;;
+	    esac
+            case "${host}" in
+                i[3456]*) usrlibdir="${lib32}" ;;
+                x86_64*)
+			if test x"${force_32}" = xyes ; then
+			   usrlibdir="${lib32}"
+			else
+			   usrlibdir="${lib64}"
+			fi
+			;;
+                *) usrlibdir="/usr/lib" ;;
+            esac
+
 	    # check in a few common install locations
 	    if test x"${ac_cv_c_tclconfig}" = x ; then
 		for i in `ls -d ${libdir} 2>/dev/null` \
@@ -87,7 +112,12 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
 			`ls -d ${prefix}/lib 2>/dev/null` \
 			`ls -d /usr/local/lib 2>/dev/null` \
 			`ls -d /usr/contrib/lib 2>/dev/null` \
+			`ls -d ${usrlibdir} 2>/dev/null` \
+			`ls -d ${usrlibdir}/tcl[[8-9]].[[0-9]] 2>/dev/null` \
+			`ls -d ${usrlibdir}/tcl[[8-9]].[[0-9]]* 2>/dev/null` \
 			`ls -d /usr/lib 2>/dev/null` \
+			`ls -d /usr/lib/tcl[[8-9]].[[0-9]] 2>/dev/null` \
+			`ls -d /usr/lib/tcl[[8-9]].[[0-9]]* 2>/dev/null` \
 			; do
 		    if test -f "$i/tclConfig.sh" ; then
 			ac_cv_c_tclconfig=`(cd $i; pwd)`
@@ -165,7 +195,7 @@ AC_DEFUN([SC_PATH_TKCONFIG], [
 
 	    # then check for a private Tk library
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-mingw* | *-*-cygwin*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${ac_cv_c_tkconfig}" = x ; then
@@ -203,6 +233,31 @@ AC_DEFUN([SC_PATH_TKCONFIG], [
 		done
 	    fi
 
+	    # Check where 32-bit vs 64-bit libraries are stored
+	    lib32="/usr/lib"
+	    lib64="/usr/lib"
+            if test -d /usr/lib32 ; then
+		lib32="/usr/lib32"
+	    fi
+	    if test -d /usr/lib64 ; then
+		lib64="/usr/lib64"
+	    fi
+	    case "${CFLAGS}" in
+		 *-m32*) force_32=yes ;;
+		 *) force_32=no ;;
+	    esac
+            case "${host}" in
+                i[3456]*) usrlibdir="${lib32}" ;;
+                x86_64*)
+			if test x"${force_32}" = xyes ; then
+			   usrlibdir="${lib32}"
+			else
+			   usrlibdir="${lib64}"
+			fi
+			;;
+                *) usrlibdir="/usr/lib" ;;
+            esac
+
 	    # check in a few common install locations
 	    if test x"${ac_cv_c_tkconfig}" = x ; then
 		for i in `ls -d ${libdir} 2>/dev/null` \
@@ -210,7 +265,12 @@ AC_DEFUN([SC_PATH_TKCONFIG], [
 			`ls -d ${prefix}/lib 2>/dev/null` \
 			`ls -d /usr/local/lib 2>/dev/null` \
 			`ls -d /usr/contrib/lib 2>/dev/null` \
+			`ls -d ${usrlibdir} 2>/dev/null` \
+			`ls -d ${usrlibdir}/tk[[8-9]].[[0-9]] 2>/dev/null` \
+			`ls -d ${usrlibdir}/tk[[8-9]].[[0-9]]* 2>/dev/null` \
 			`ls -d /usr/lib 2>/dev/null` \
+			`ls -d /usr/lib/tk[[8-9]].[[0-9]] 2>/dev/null` \
+			`ls -d /usr/lib/tk[[8-9]].[[0-9]]* 2>/dev/null` \
 			; do
 		    if test -f "$i/tkConfig.sh" ; then
 			ac_cv_c_tkconfig=`(cd $i; pwd)`
