@@ -85,8 +85,8 @@ typedef const gdb_byte const_gdb_byte;
 #include "tracepoint.h"
 #include "gdbsupport/fileio.h"
 #include "gdbsupport/x86-xstate.h"
-
 #include "gdbsupport/break-common.h"
+#include "find-memory-region.h"
 
 enum strata
   {
@@ -765,7 +765,7 @@ struct target_ops
     virtual bool always_non_stop_p ()
       TARGET_DEFAULT_RETURN (false);
     /* find_memory_regions support method for gcore */
-    virtual bool find_memory_regions (find_memory_region_ftype func, void *data)
+    virtual bool find_memory_regions (find_memory_region_ftype func)
       TARGET_DEFAULT_FUNC (dummy_find_memory_regions);
     /* make_corefile_notes support method for gcore */
     virtual gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *)
@@ -2040,8 +2040,7 @@ extern gdbarch *target_thread_architecture (ptid_t ptid);
    If FUNC ever returns false, stop iterating and return false.  Otherwise,
    return true.  */
 
-extern bool target_find_memory_regions (find_memory_region_ftype func,
-					void *data);
+extern bool target_find_memory_regions (find_memory_region_ftype func);
 
 /*
  * Compose corefile .note section.

@@ -31,6 +31,7 @@
 #include "gdbsupport/gdb-checked-static-cast.h"
 #include "registry.h"
 #include "solib.h"
+#include "find-memory-region.h"
 
 struct floatformat;
 struct ui_file;

@@ -77,7 +77,7 @@ struct exec_target final : public target_ops
 
   bool has_memory () override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
-  bool find_memory_regions (find_memory_region_ftype func, void *data) override;
+  bool find_memory_regions (find_memory_region_ftype func) override;
 };
 
 static exec_target exec_ops;
@@ -1071,9 +1071,9 @@ exec_target::make_corefile_notes (bfd *obfd, int *note_size)
 }
 
 bool
-exec_target::find_memory_regions (find_memory_region_ftype func, void *data)
+exec_target::find_memory_regions (find_memory_region_ftype func)
 {
-  return objfile_find_memory_regions (this, func, data);
+  return objfile_find_memory_regions (this, func);
 }
 
 INIT_GDB_FILE (exec)

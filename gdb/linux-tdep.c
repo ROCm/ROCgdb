@@ -1624,15 +1624,12 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
 static bool
 linux_find_memory_regions (struct gdbarch *gdbarch,
-			   find_memory_region_ftype func, void *data)
+			   find_memory_region_ftype func)
 {
   auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
 		 bool write, bool exec, bool modified, bool memory_tagged,
 		 const std::string &filename)
-    {
-      return func (vaddr, size, read, write, exec, modified, memory_tagged,
-		   data);
-    };
+    { return func (vaddr, size, read, write, exec, modified, memory_tagged); };
 
   return linux_find_memory_regions_full (gdbarch, dump_mapping_p, cb);
 }

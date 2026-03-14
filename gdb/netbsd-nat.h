@@ -36,7 +36,7 @@ struct nbsd_nat_target : public inf_ptrace_target
   void update_thread_list () override;
   std::string pid_to_str (ptid_t ptid) override;
 
-  bool find_memory_regions (find_memory_region_ftype func, void *data) override;
+  bool find_memory_regions (find_memory_region_ftype func) override;
   bool info_proc (const char *, enum info_proc_what) override;
 
   void resume (ptid_t, int, enum gdb_signal) override;

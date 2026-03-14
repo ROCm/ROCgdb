@@ -1455,6 +1455,7 @@ HFILES_NO_SRCDIR = \
 	f-exp.h \
 	filename-seen-cache.h \
 	filesystem.h \
+	find-memory-region.h \
 	finish-thread-state.h \
 	f-lang.h \
 	frame-base.h \

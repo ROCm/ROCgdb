@@ -2566,8 +2566,7 @@ gnu_nat_target::xfer_partial (enum target_object object,
 /* Call FUNC on each memory region in the task.  */
 
 bool
-gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
-				     void *data)
+gnu_nat_target::find_memory_regions (find_memory_region_ftype func)
 {
   kern_return_t err;
   task_t task;
@@ -2624,8 +2623,7 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
 		     last_protection & VM_PROT_WRITE,
 		     last_protection & VM_PROT_EXECUTE,
 		     true, /* MODIFIED is unknown, pass it as true.  */
-		     false, /* No memory tags in the object file.  */
-		     data);
+		     false /* No memory tags in the object file.  */);
 	  last_region_address = region_address;
 	  last_region_end = region_address += region_length;
 	  last_protection = protection;
@@ -2634,13 +2632,12 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func,
 
   /* Report the final region.  */
   if (last_region_end > last_region_address && last_protection != VM_PROT_NONE)
-    (*func) (last_region_address, last_region_end - last_region_address,
-	     last_protection & VM_PROT_READ,
-	     last_protection & VM_PROT_WRITE,
-	     last_protection & VM_PROT_EXECUTE,
-	     1, /* MODIFIED is unknown, pass it as true.  */
-	     false, /* No memory tags in the object file.  */
-	     data);
+    func (last_region_address, last_region_end - last_region_address,
+	  last_protection & VM_PROT_READ,
+	  last_protection & VM_PROT_WRITE,
+	  last_protection & VM_PROT_EXECUTE,
+	  true, /* MODIFIED is unknown, pass it as true.  */
+	  false /* No memory tags in the object file.  */);
 
   return true;
 }

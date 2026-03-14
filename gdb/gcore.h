@@ -20,6 +20,7 @@
 #ifndef GDB_GCORE_H
 #define GDB_GCORE_H
 
+#include "find-memory-region.h"
 #include "gdb_bfd.h"
 
 struct thread_info;
@@ -27,8 +28,7 @@ struct thread_info;
 extern gdb_bfd_ref_ptr create_gcore_bfd (const char *filename);
 extern void write_gcore_file (bfd *obfd);
 extern bool objfile_find_memory_regions (struct target_ops *self,
-					 find_memory_region_ftype func,
-					 void *obfd);
+					 find_memory_region_ftype func);
 
 /* Find the signalled thread.  In case there's more than one signalled
    thread, prefer the current thread, if it is signalled.  If no thread was
