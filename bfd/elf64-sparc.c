@@ -1005,6 +1005,8 @@ static const struct elf_size_info elf64_sparc_size_info =
 
 #include "elf64-target.h"
 
+#ifdef OBJ_MAYBE_ELF_SOLARIS2
+
 /* Solaris 2.  */
 
 static bool
@@ -1059,3 +1061,5 @@ elf64_sparc_copy_solaris_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSE
 #define elf_backend_copy_special_section_fields elf64_sparc_copy_solaris_special_section_fields
 
 #include "elf64-target.h"
+
+#endif /* OBJ_MAYBE_ELF_SOLARIS2 */

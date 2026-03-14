@@ -21,14 +21,76 @@ load_lib dwarf.exp
 # This test can only be run on targets which support DWARF-2 and use gas.
 require dwarf2_support
 
-standard_testfile .S
-set executable ${testfile}
+standard_testfile main.c -debug.S
 
-if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {}] != "" } {
-    return -1
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    global srcdir subdir srcfile
+    declare_labels opaque_struct_t int pointer_type
+
+    cu {version 2 addr_size 4} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C89
+	    DW_AT_producer {Intel(R) C Intel(R) 64 Compiler XE for applications running on Intel(R) 64, Version 12.0.4.191 Build 20110427} DW_FORM_string
+	} {
+	    DW_TAG_variable {
+		DW_AT_accessibility 1 DW_FORM_data1
+		DW_AT_name p_struct DW_FORM_string
+		DW_AT_type :$pointer_type
+		DW_AT_location { DW_OP_addr 8 } SPECIAL_expr
+		DW_AT_external 1 DW_FORM_flag
+	    }
+	    pointer_type: DW_TAG_pointer_type {
+		DW_AT_type :$opaque_struct_t
+	    }
+	    opaque_struct_t: DW_TAG_structure_type {
+		DW_AT_accessibility 1 DW_FORM_data1
+		DW_AT_byte_size 0 DW_FORM_data1
+		DW_AT_name opaque_struct_t DW_FORM_string
+	    }
+	}
+    }
+    cu {version 2 addr_size 4} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C89
+	    DW_AT_producer {Intel(R) C Intel(R) 64 Compiler XE for applications running on Intel(R) 64, Version 12.0.4.191 Build 20110427} DW_FORM_string
+	} {
+	    DW_TAG_structure_type {
+		DW_AT_accessibility 1 DW_FORM_data1
+		DW_AT_byte_size 4 DW_FORM_data1
+		DW_AT_name opaque_struct_t DW_FORM_string
+	    } {
+		DW_TAG_member {
+		    DW_AT_data_member_location 0 DW_FORM_data1
+		    DW_AT_name wrapped_value DW_FORM_string
+		    DW_AT_type :$int
+		}
+	    }
+	    int: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_data1
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_name int DW_FORM_string
+	    }
+	}
+    }
+    cu {version 2 addr_size 4} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C89
+	    DW_AT_producer {Intel(R) C Intel(R) 64 Compiler XE for applications running on Intel(R) 64, Version 12.0.4.191 Build 20110427} DW_FORM_string
+	} {
+	    DW_TAG_structure_type {
+		DW_AT_accessibility 1 DW_FORM_data1
+		DW_AT_byte_size 0 DW_FORM_data1
+		DW_AT_name opaque_struct_t DW_FORM_string
+	    }
+	}
+    }
 }
 
-clean_restart $executable
+if { [prepare_for_testing "failed to prepare" ${testfile} \
+	  [list $srcfile $asm_file] {nodebug}] } {
+    return
+}
 
 # Before PR 13277 was fixed, this would output:
 # type = struct opaque_struct_t {

@@ -3286,26 +3286,26 @@ find_oload_champ (gdb::array_view<value *> args,
       if (overload_debug)
 	{
 	  if (methods != NULL)
-	    gdb_printf (gdb_stderr,
+	    gdb_printf (gdb_stdlog,
 			"Overloaded method instance %s, # of parms %d\n",
 			methods[ix].physname, (int) parm_types.size ());
 	  else if (xmethods != NULL)
-	    gdb_printf (gdb_stderr,
+	    gdb_printf (gdb_stdlog,
 			"Xmethod worker, # of parms %d\n",
 			(int) parm_types.size ());
 	  else
-	    gdb_printf (gdb_stderr,
+	    gdb_printf (gdb_stdlog,
 			"Overloaded function instance "
 			"%s # of parms %d\n",
 			functions[ix]->demangled_name (),
 			(int) parm_types.size ());
 
-	  gdb_printf (gdb_stderr,
+	  gdb_printf (gdb_stdlog,
 		      "...Badness of length : {%d, %d}\n",
 		      bv[0].rank, bv[0].subrank);
 
 	  for (jj = 1; jj < bv.size (); jj++)
-	    gdb_printf (gdb_stderr,
+	    gdb_printf (gdb_stdlog,
 			"...Badness of arg %d : {%d, %d}\n",
 			jj, bv[jj].rank, bv[jj].subrank);
 	}
@@ -3335,7 +3335,7 @@ find_oload_champ (gdb::array_view<value *> args,
 	    break;
 	  }
       if (overload_debug)
-	gdb_printf (gdb_stderr, "Overload resolution "
+	gdb_printf (gdb_stdlog, "Overload resolution "
 		    "champion is %d, ambiguous? %d\n",
 		    oload_champ, oload_ambiguous);
     }

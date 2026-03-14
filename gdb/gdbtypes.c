@@ -4716,7 +4716,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
   if (overload_debug)
     {
       /* Debugging only.  */
-      gdb_printf (gdb_stderr,
+      gdb_printf (gdb_stdlog,
 		  "------ Arg is %s [%d], parm is %s [%d]\n",
 		  arg->name (), arg->code (),
 		  parm->name (), parm->code ());
@@ -5063,10 +5063,6 @@ recursive_dump_type (struct type *type, int spaces)
   if (type->is_fixed_instance ())
     {
       gdb_puts (" TYPE_FIXED_INSTANCE");
-    }
-  if (type->stub_is_supported ())
-    {
-      gdb_puts (" TYPE_STUB_SUPPORTED");
     }
   if (TYPE_NOTTEXT (type))
     {
@@ -5640,7 +5636,7 @@ type::is_opaque () const
   if (HAVE_CPLUS_STRUCT (this) && TYPE_NFN_FIELDS (this) != 0)
     return false;
 
-  return this->is_stub () || !this->stub_is_supported ();
+  return this->is_stub ();
 }
 
 /* See gdbtypes.h.  */

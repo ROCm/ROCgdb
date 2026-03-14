@@ -20,6 +20,8 @@
 
 extern const char *const elf_solaris2_global_syms[];
 
+#ifdef OBJ_MAYBE_ELF_SOLARIS2
+
 extern bool elf_solaris2_add_symbol_hook
   (bfd *, struct bfd_link_info *, Elf_Internal_Sym *, const char **,
    flagword *, asection **, bfd_vma *) ATTRIBUTE_HIDDEN;
@@ -32,3 +34,19 @@ is_solaris2_abi_global_sym (const char *name)
       return true;
   return false;
 }
+
+#else /* !OBJ_MAYBE_ELF_SOLARIS2 */
+
+static inline bool
+elf_solaris2_add_symbol_hook (bfd *abfd ATTRIBUTE_UNUSED,
+			      struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			      Elf_Internal_Sym *isym ATTRIBUTE_UNUSED,
+			      const char **name ATTRIBUTE_UNUSED,
+			      flagword *flags ATTRIBUTE_UNUSED,
+			      asection **sec ATTRIBUTE_UNUSED,
+			      bfd_vma *value ATTRIBUTE_UNUSED)
+{
+  return true;
+}
+
+#endif /* OBJ_MAYBE_ELF_SOLARIS2 */

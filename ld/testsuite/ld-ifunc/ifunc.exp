@@ -86,7 +86,8 @@ proc check_osabi { binary_file expected_osabi } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --file-header $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --file-header $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc check_osabi: Readelf produced unexpected out processing $binary_file: $got"
@@ -94,7 +95,7 @@ proc check_osabi { binary_file expected_osabi } {
     }
 
     if { ![regexp "\n\[ \]*OS/ABI:\[ \]*(.+)\n\[ \]*ABI" \
-	   [file_contents readelf.out] nil osabi] } {
+	   [file_contents $tmpfile] nil osabi] } {
 	verbose "proc check_osabi: Readelf failed to extract an ELF header from $binary_file"
 	return 0
     }
@@ -114,7 +115,8 @@ proc contains_ifunc_symbol { binary_file } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --symbols $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --symbols $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc contains_ifunc_symbol: Readelf produced unexpected out processing $binary_file: $got"
@@ -125,7 +127,7 @@ proc contains_ifunc_symbol { binary_file } {
     #    58: 0000000000400600    30 IFUNC   GLOBAL DEFAULT   12 library_func2
     # with perhaps some other info between the visibility and section
 
-    if { ![regexp ".*\[ \]*IFUNC\[ \]+GLOBAL\[ \]+DEFAULT .* \[UND0-9\]+\[ \]+library_func2\n" [file_contents readelf.out]] } {
+    if { ![regexp ".*\[ \]*IFUNC\[ \]+GLOBAL\[ \]+DEFAULT .* \[UND0-9\]+\[ \]+library_func2\n" [file_contents $tmpfile]] } {
 	return 0
     }
 
@@ -140,7 +142,8 @@ proc contains_irelative_reloc { binary_file } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --relocs --wide $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --relocs --wide $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc contains_irelative_reloc: Readelf produced unexpected out processing $binary_file: $got"
@@ -152,7 +155,7 @@ proc contains_irelative_reloc { binary_file } {
     #    080496f4  0000002a R_386_IRELATIVE
 
 
-    if { ![regexp "\[0-9a-f\]+\[ \]+\[0-9a-f\]+\[ \]+R_(\[_0-9A-Z\]+_IREL(|ATIVE)|PARISC_IPLT).*\n" [file_contents readelf.out]] } {
+    if { ![regexp "\[0-9a-f\]+\[ \]+\[0-9a-f\]+\[ \]+R_(\[_0-9A-Z\]+_IREL(|ATIVE)|PARISC_IPLT).*\n" [file_contents $tmpfile]] } {
 	return 0
     }
 
@@ -165,19 +168,20 @@ proc contains_ifunc_reloc { binary_file } {
     global READELF
     global READELFFLAGS
 
-    catch "exec $READELF $READELFFLAGS --relocs $binary_file > readelf.out" got
+    set tmpfile [file dirname $binary_file]/readelf.out
+    catch "exec $READELF $READELFFLAGS --relocs $binary_file > $tmpfile" got
 
     if ![string match "" $got] then {
 	verbose "proc contains_ifunc_reloc: Readelf produced unexpected out processing $binary_file: $got"
 	return -1
     }
 
-    if [string match "" [file_contents readelf.out]] then {
+    if [string match "" [file_contents $tmpfile]] then {
 	verbose "No relocs found in $binary_file"
 	return 0
     }
 
-    if { ![regexp "\\(\\)" [file_contents readelf.out]] } {
+    if { ![regexp "\\(\\)" [file_contents $tmpfile]] } {
 	return 0
     }
 

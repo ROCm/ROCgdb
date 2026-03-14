@@ -14225,3 +14225,11 @@ _bfd_elf_link_munmap_section_contents (asection *sec ATTRIBUTE_UNUSED)
     }
 #endif
 }
+
+#ifndef OBJ_MAYBE_ELF_ATTRIBUTES
+
+bfd *_bfd_elf_link_setup_object_attributes
+  (struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return NULL; }
+
+#endif /* !OBJ_MAYBE_ELF_ATTRIBUTES */

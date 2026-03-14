@@ -83,6 +83,9 @@ run_dump_test "emit-relocs-90"
 run_dump_test "emit-relocs-90-overflow"
 run_dump_test "emit-relocs-92"
 
+# Tidy up, to not leave large intermediate files.
+remote_file host delete tmpdir/emit-relocs-90-overflow.o
+
 run_dump_test "emit-relocs-112"
 run_dump_test "emit-relocs-112-overflow"
 run_dump_test "emit-relocs-113"
@@ -208,6 +211,9 @@ run_dump_test_lp64 "emit-relocs-558-overflow"
 run_dump_test_lp64 "emit-relocs-559"
 run_dump_test_lp64 "emit-relocs-560"
 
+# Tidy up, to not leave large intermediate files.
+remote_file host delete tmpdir/emit-relocs-528-overflow.o
+
 run_dump_test "reloc-overflow-bad"
 
 # test addend correctness when --emit-relocs specified for non-relocatable obj.
@@ -235,6 +241,10 @@ run_dump_test "farcall-bl-none-function"
 run_dump_test "farcall-b-section"
 run_dump_test "farcall-bl-section"
 run_dump_test "farcall-group"
+
+# Tidy up, to not leave huge intermediate files.
+remote_file host delete tmpdir/farcall-b-gsym.o tmpdir/farcall-group.o
+remote_file host delete tmpdir/farcall-b-plt.o tmpdir/farcall-bl-plt.o
 
 run_dump_test "tls-relax-all"
 run_dump_test "tls-relax-all-ilp32"

@@ -2631,6 +2631,8 @@ extern bool _bfd_elf_eh_frame_entry_present
 extern bool _bfd_elf_maybe_strip_eh_frame_hdr
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
+#ifdef OBJ_MAYBE_ELF_SFRAME
+
 extern bool _bfd_elf_sframe_present
   (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_sframe_present_input_bfds
@@ -2649,6 +2651,41 @@ extern bool _bfd_elf_write_section_sframe
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_set_section_sframe
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+
+#else /* !OBJ_MAYBE_ELF_SFRAME */
+
+static inline bool _bfd_elf_sframe_present
+  (struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_sframe_present_input_bfds
+  (struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_parse_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED,
+   struct elf_reloc_cookie *cookie ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_discard_section_sframe
+  (asection *sec ATTRIBUTE_UNUSED,
+  bool (*reloc_symbol_deleted_p) (bfd_vma, void *) ATTRIBUTE_UNUSED,
+  struct elf_reloc_cookie *cookie ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bool _bfd_elf_merge_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED, bfd_byte *contents ATTRIBUTE_UNUSED)
+{ return false; }
+static inline bfd_vma _bfd_elf_sframe_section_offset
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED,
+   asection *sec ATTRIBUTE_UNUSED, bfd_vma offset)
+{ return offset; }
+static inline bool _bfd_elf_write_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return true; }
+static inline bool _bfd_elf_set_section_sframe
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return false; }
+
+#endif /* OBJ_MAYBE_ELF_SFRAME */
 
 extern bool _bfd_elf_hash_symbol
   (struct elf_link_hash_entry *) ATTRIBUTE_HIDDEN;
@@ -3174,10 +3211,6 @@ extern bfd *_bfd_elf64_bfd_from_remote_memory
    int (*target_read_memory) (bfd_vma, bfd_byte *, bfd_size_type))
   ATTRIBUTE_HIDDEN;
 
-extern obj_attr_version_t _bfd_obj_attrs_version_dec (uint8_t)
-  ATTRIBUTE_HIDDEN;
-extern uint8_t _bfd_obj_attrs_version_enc (obj_attr_version_t)
-  ATTRIBUTE_HIDDEN;
 extern bfd_vma bfd_elf_obj_attr_size (bfd *);
 extern void bfd_elf_set_obj_attr_contents (bfd *, bfd_byte *, bfd_vma);
 extern obj_attribute *
@@ -3196,27 +3229,51 @@ extern obj_attribute *bfd_elf_add_obj_attr_int_string
 #define bfd_elf_add_proc_attr_int_string(BFD, TAG, INTVAL, STRVAL) \
   bfd_elf_add_obj_attr_int_string ((BFD), OBJ_ATTR_PROC, (TAG), \
 				   (INTVAL), (STRVAL))
+extern int bfd_elf_obj_attrs_arg_type
+  (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
+extern bfd *_bfd_elf_link_setup_object_attributes
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
+#ifdef OBJ_MAYBE_ELF_ATTRIBUTES
+
+extern obj_attr_version_t _bfd_obj_attrs_version_dec (uint8_t)
+  ATTRIBUTE_HIDDEN;
+extern uint8_t _bfd_obj_attrs_version_enc (obj_attr_version_t)
+  ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_write_section_object_attributes
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern char *_bfd_elf_attr_strdup
   (bfd *, const char *) ATTRIBUTE_HIDDEN;
 extern void _bfd_elf_copy_obj_attributes
   (bfd *, bfd *) ATTRIBUTE_HIDDEN;
-extern int bfd_elf_obj_attrs_arg_type
-  (bfd *, obj_attr_vendor_t, obj_attr_tag_t);
 extern void _bfd_elf_parse_attributes
   (bfd *, Elf_Internal_Shdr *) ATTRIBUTE_HIDDEN;
 extern void _bfd_elf_cleanup_object_attributes
   (bfd *) ATTRIBUTE_HIDDEN;
-extern bfd *_bfd_elf_link_setup_object_attributes
-  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_object_attributes
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_unknown_attribute_low
   (bfd *, bfd *, int) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_merge_unknown_attribute_list
   (bfd *, bfd *) ATTRIBUTE_HIDDEN;
+
+#else /* !OBJ_MAYBE_ELF_ATTRIBUTES */
+
+static inline bool _bfd_elf_write_section_object_attributes
+  (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *info ATTRIBUTE_UNUSED)
+{ return true; }
+static inline void _bfd_elf_copy_obj_attributes
+  (bfd *ibfd ATTRIBUTE_UNUSED, bfd *obfd ATTRIBUTE_UNUSED)
+{}
+static inline void _bfd_elf_parse_attributes
+  (bfd *abfd ATTRIBUTE_UNUSED, Elf_Internal_Shdr *hdr ATTRIBUTE_UNUSED)
+{}
+static inline void _bfd_elf_cleanup_object_attributes
+  (bfd *abfd ATTRIBUTE_UNUSED)
+{}
+
+#endif /* OBJ_MAYBE_ELF_ATTRIBUTES */
+
 extern Elf_Internal_Shdr *_bfd_elf_single_rel_hdr
   (asection *sec);
 extern bool _bfd_elf_read_notes

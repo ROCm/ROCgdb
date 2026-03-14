@@ -10552,8 +10552,6 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
 	 incomplete types, but gives them a size of zero.  */
       type->set_is_stub (true);
     }
-  else
-    type->set_stub_is_supported (true);
 
   if (die_is_declaration (die, cu))
     type->set_is_stub (true);

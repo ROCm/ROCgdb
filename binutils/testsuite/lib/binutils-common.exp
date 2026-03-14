@@ -492,10 +492,14 @@ proc gas_sframe_check {} {
     puts $as_fh "\t.cfi_startproc"
     puts $as_fh "\t.cfi_endproc"
     close $as_fh
-    remote_download host $as_file
+    if [is_remote host] {
+        set src [remote_download host $as_file]
+    } else {
+        set src $as_file
+    }
     verbose -log "Checking SFrame support in AS:"
 
-    set status [remote_exec host "$AS $ASFLAGS --gsframe $as_file"]
+    set status [remote_exec host "$AS $ASFLAGS --gsframe -o /dev/null $src"]
 
     if { [lindex $status 0] != 0 } then {
 	verbose -log "SFrame not supported in AS"
@@ -504,6 +508,10 @@ proc gas_sframe_check {} {
 	verbose -log "SFrame supported in AS"
 	set check_as_sframe_result 1
     }
+
+    remote_file host delete $src
+    file delete $as_file
+
     return $check_as_sframe_result
 }
 

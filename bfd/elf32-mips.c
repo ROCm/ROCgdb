@@ -3598,7 +3598,7 @@ mips_elf32_reloc_type_lookup_rel (bfd *abfd, bfd_reloc_code_real_type code)
 
 /* Given a BFD reloc type, return a howto structure; RELA wrapper.  */
 
-static reloc_howto_type *
+static ATTRIBUTE_UNUSED reloc_howto_type *
 mips_elf32_reloc_type_lookup_rela (bfd *abfd, bfd_reloc_code_real_type code)
 {
   return mips_elf32_reloc_type_lookup (abfd, code,
@@ -3671,7 +3671,7 @@ mips_elf32_reloc_name_lookup_rel (bfd *abfd ATTRIBUTE_UNUSED,
 
 /* Given an ELF reloc name, return a howto structure; RELA wrapper.  */
 
-static reloc_howto_type *
+static ATTRIBUTE_UNUSED reloc_howto_type *
 mips_elf32_reloc_name_lookup_rela (bfd *abfd ATTRIBUTE_UNUSED,
 				   const char *r_name)
 {
@@ -4163,6 +4163,9 @@ static const struct ecoff_debug_swap mips_elf32_ecoff_debug_swap = {
 #undef elf_backend_write_core_note
 
 #include "elf32-target.h"
+
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* Implement elf_backend_final_write_processing for VxWorks.  */
 
 static bool
@@ -4244,3 +4247,5 @@ mips_vxworks_final_write_processing (bfd *abfd)
 #undef bfd_elf32_get_synthetic_symtab
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_VXWORKS */

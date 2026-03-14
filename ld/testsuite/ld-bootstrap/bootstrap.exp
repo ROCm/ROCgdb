@@ -50,6 +50,7 @@ if [info exists plugins] then {
 } else {
     set plugins "no"
 }
+remote_file host delete plugin-support
 
 # LD can have plugin support even if BFD does not.
 if [check_plugin_api_available] {

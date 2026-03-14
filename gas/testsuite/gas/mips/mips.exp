@@ -1590,6 +1590,8 @@ if { [istarget mips*-*-vxworks*] } {
 
     run_dump_test "noreorder"
     run_dump_test "align"
+    # Tidy up, to not leave huge files.
+    remote_file host delete tmpdir/align.o
     run_dump_test "align2"
     run_dump_test "align2-el"
     run_dump_test "align3"

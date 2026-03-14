@@ -122,6 +122,8 @@ if {[regexp_diff \
     pass $testname
 }
 
+remote_file host delete fred
+
 if { [is_elf_format] } {
     set testname "map with locals"
 

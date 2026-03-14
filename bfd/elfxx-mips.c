@@ -8247,10 +8247,12 @@ _bfd_mips_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   if (!_bfd_elf_create_dynamic_sections (abfd, info))
     return false;
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   /* Do the usual VxWorks handling.  */
   if (htab->root.target_os == is_vxworks
       && !elf_vxworks_create_dynamic_sections (abfd, info, &htab->srelplt2))
     return false;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   return true;
 }
@@ -10396,9 +10398,11 @@ _bfd_mips_elf_late_size_sections (bfd *output_bfd,
 	  if (! MIPS_ELF_ADD_DYNAMIC_ENTRY (info, DT_MIPS_PLTGOT, 0))
 	    return false;
 	}
+#ifdef OBJ_MAYBE_ELF_VXWORKS
       if (htab->root.target_os == is_vxworks
 	  && !elf_vxworks_add_dynamic_entries (output_bfd, info))
 	return false;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
     }
 
   return true;
@@ -12173,9 +12177,11 @@ _bfd_mips_elf_finish_dynamic_sections (bfd *output_bfd,
 
 	    default:
 	      swap_out_p = false;
+#ifdef OBJ_MAYBE_ELF_VXWORKS
 	      if (htab->root.target_os == is_vxworks
 		  && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 		swap_out_p = true;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 	      break;
 	    }
 

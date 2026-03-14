@@ -910,7 +910,6 @@ struct main_type
   unsigned int m_flag_prototyped : 1;
   unsigned int m_flag_varargs : 1;
   unsigned int m_flag_vector : 1;
-  unsigned int m_flag_stub_supported : 1;
   unsigned int m_flag_gnu_ifunc : 1;
   unsigned int m_flag_fixed_instance : 1;
   unsigned int m_flag_objfile_owned : 1;
@@ -1072,9 +1071,8 @@ struct type
     return this->name () != nullptr ? this->name () : _("<error type>");
   }
 
-  /* Return true if this type is "opaque", i.e.  a struct or union with
-     no fields, no methods, and either a stub or with unsupported stub
-     information.  */
+  /* Return true if this type is "opaque", i.e.  a struct or union
+     that is a stub with no fields and no methods.  */
   bool is_opaque () const;
 
   /* Note that if thistype is a TYPEDEF type, you have to call check_typedef.
@@ -1299,21 +1297,6 @@ struct type
   void set_is_vector (bool is_vector)
   {
     this->main_type->m_flag_vector = is_vector;
-  }
-
-  /* This debug target supports TYPE_STUB(t).  In the unsupported case
-     we have to rely on NFIELDS to be zero etc., see type::is_opaque.
-     TYPE_STUB(t) with !TYPE_STUB_SUPPORTED(t) may exist if we only
-     guessed the TYPE_STUB(t) value (see dwarfread.c).  */
-
-  bool stub_is_supported () const
-  {
-    return this->main_type->m_flag_stub_supported;
-  }
-
-  void set_stub_is_supported (bool stub_is_supported)
-  {
-    this->main_type->m_flag_stub_supported = stub_is_supported;
   }
 
   /* Used only for TYPE_CODE_FUNC where it specifies the real function
@@ -2053,7 +2036,6 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 #define TYPE_NESTED_TYPES_FIELD_PRIVATE(thistype, n)	\
   (TYPE_NESTED_TYPES_FIELD (thistype, n).accessibility \
    == accessibility::PRIVATE)
-
 
 /* Given TYPE, return its floatformat.  */
 const struct floatformat *floatformat_from_type (const struct type *type);

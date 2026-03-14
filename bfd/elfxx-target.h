@@ -554,12 +554,17 @@
 #ifndef elf_backend_default_obj_attr_version
 #define elf_backend_default_obj_attr_version	OBJ_ATTR_V1
 #endif
+#ifdef OBJ_MAYBE_ELF_ATTRIBUTES
 #ifndef elf_backend_obj_attrs_version_dec
 #define elf_backend_obj_attrs_version_dec	_bfd_obj_attrs_version_dec
 #endif
 #ifndef elf_backend_obj_attrs_version_enc
 #define elf_backend_obj_attrs_version_enc	_bfd_obj_attrs_version_enc
 #endif
+#else /* OBJ_MAYBE_ELF_ATTRIBUTES */
+#define elf_backend_obj_attrs_version_dec	NULL
+#define elf_backend_obj_attrs_version_enc	NULL
+#endif /* OBJ_MAYBE_ELF_ATTRIBUTES */
 #ifndef elf_backend_obj_attr_v2_known_subsections
 #define elf_backend_obj_attr_v2_known_subsections	NULL
 #endif

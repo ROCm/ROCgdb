@@ -2476,9 +2476,11 @@ ppc_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 	return false;
     }
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
   if (htab->elf.target_os == is_vxworks
       && !elf_vxworks_create_dynamic_sections (abfd, info, &htab->srelplt2))
     return false;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 
   s = htab->elf.splt;
   flags = SEC_ALLOC | SEC_CODE | SEC_LINKER_CREATED;
@@ -9991,9 +9993,11 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
 	      continue;
 
 	    default:
+#ifdef OBJ_MAYBE_ELF_VXWORKS
 	      if (htab->elf.target_os == is_vxworks
 		  && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
 		break;
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
 	      continue;
 	    }
 
@@ -10441,6 +10445,8 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
 
 #include "elf32-target.h"
 
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+
 /* VxWorks Target */
 
 #undef TARGET_LITTLE_SYM
@@ -10556,3 +10562,5 @@ ppc_elf_vxworks_final_write_processing (bfd *abfd)
 #define elf32_bed				ppc_elf_vxworks_bed
 
 #include "elf32-target.h"
+
+#endif /* OBJ_MAYBE_ELF_VXWORKS */

@@ -1895,11 +1895,12 @@ subsegs_finish (void)
     subsegs_finish_section (s);
 }
 
-#ifdef OBJ_ELF
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
 
 static void
 create_obj_attrs_section (void)
 {
+#ifdef TC_OBJ_ATTR
   offsetT size = bfd_elf_obj_attr_size (stdoutput);
   if (size == 0)
     return;
@@ -1922,6 +1923,7 @@ create_obj_attrs_section (void)
   subsegs_finish_section (s);
   relax_segment (seg_info (s)->frchainP->frch_root, s, 0);
   size_seg (stdoutput, s, NULL);
+#endif /* TC_OBJ_ATTR */
 }
 
 /* Create a relocation against an entry in a GNU Build attribute section.  */
@@ -2203,7 +2205,7 @@ write_object_file (void)
   md_post_relax_hook;
 #endif
 
-#ifdef OBJ_ELF
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   if (IS_ELF)
     create_obj_attrs_section ();
 #endif
@@ -2321,7 +2323,7 @@ write_object_file (void)
 
   evaluate_deferred_diags ();
 
-#ifdef OBJ_ELF
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   if (IS_ELF)
     maybe_generate_build_notes ();
 #endif

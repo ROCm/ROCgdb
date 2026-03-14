@@ -69,3 +69,8 @@ if { ![istarget "kvx*-linux-*"] } {
     run_dump_test "farcall-call-section" $extra_32bits
     run_dump_test "pcrel-reloc" [list [list as -m32] [list ld -melf32kvx] [list dump pcrel-reloc-32bits.d]]
 }
+
+# Tidy up, to not leave huge intermediate files.
+remote_file host delete tmpdir/farcall-call-plt.o
+remote_file host delete tmpdir/farcall-goto-gsym.o
+remote_file host delete tmpdir/farcall-goto-plt.o
