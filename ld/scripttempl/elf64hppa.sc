@@ -428,6 +428,15 @@ cat <<EOF
   ${CREATE_SHLIB+${RELOCATING+. = ${SHLIB_DATA_ADDR-${DATA_SEGMENT_ALIGN}};}}
   ${CREATE_PIE+${RELOCATING+. = ${SHLIB_DATA_ADDR-${DATA_SEGMENT_ALIGN}};}}
 
+  /* Put .data at start of segment.  */
+  .data         ${RELOCATING-0} :
+  {
+    ${RELOCATING+${DATA_START_SYMBOLS}}
+    *(.data${RELOCATING+ .data.* .gnu.linkonce.d.*})
+    ${CONSTRUCTING+SORT(CONSTRUCTORS)}
+  }
+  .data1        ${RELOCATING-0} : { *(.data1) }
+
   /* Exception handling  */
   .eh_frame     ${RELOCATING-0} : ONLY_IF_RW { KEEP (*(.eh_frame)) }
   .gcc_except_table ${RELOCATING-0} : ONLY_IF_RW { *(.gcc_except_table${RELOCATING+ .gcc_except_table.*}) }
@@ -459,13 +468,6 @@ cat <<EOF
 
   ${DATA_PLT+${PLT_BEFORE_GOT-${PLT}}}
 
-  .data         ${RELOCATING-0} :
-  {
-    ${RELOCATING+${DATA_START_SYMBOLS}}
-    *(.data${RELOCATING+ .data.* .gnu.linkonce.d.*})
-    ${CONSTRUCTING+SORT(CONSTRUCTORS)}
-  }
-  .data1        ${RELOCATING-0} : { *(.data1) }
   ${WRITABLE_RODATA+${RODATA}}
   ${OTHER_READWRITE_SECTIONS}
   ${SMALL_DATA_CTOR+${RELOCATING+${CTOR}}}
