@@ -229,7 +229,7 @@ type_allocator::new_type ()
 
   /* Initialize the fields that might not be zero.  */
   type->set_code (TYPE_CODE_UNDEF);
-  TYPE_CHAIN (type) = type;	/* Chain back to itself.  */
+  type->chain = type;	/* Chain back to itself.  */
 
   return type;
 }
@@ -331,7 +331,7 @@ alloc_type_instance (struct type *oldtype)
 
   type->main_type = oldtype->main_type;
 
-  TYPE_CHAIN (type) = type;	/* Chain back to itself for now.  */
+  type->chain = type;	/* Chain back to itself for now.  */
 
   return type;
 }
@@ -355,7 +355,7 @@ smash_type (struct type *type)
     type->set_owner (arch);
 
   /* For now, delete the rings.  */
-  TYPE_CHAIN (type) = type;
+  type->chain = type;
 
   /* For now, leave the pointer/reference types alone.  */
 }
@@ -388,11 +388,11 @@ make_pointer_type (type *type)
   ntype->set_is_unsigned (true);
 
   /* Update the length of all the other variants of this type.  */
-  chain = TYPE_CHAIN (ntype);
+  chain = ntype->chain;
   while (chain != ntype)
     {
       chain->set_length (ntype->length ());
-      chain = TYPE_CHAIN (chain);
+      chain = chain->chain;
     }
 
   return ntype;
@@ -441,11 +441,11 @@ make_reference_type (type *type, type_code refcode)
   *reftype = ntype;
 
   /* Update the length of all the other variants of this type.  */
-  chain = TYPE_CHAIN (ntype);
+  chain = ntype->chain;
   while (chain != ntype)
     {
       chain->set_length (ntype->length ());
-      chain = TYPE_CHAIN (chain);
+      chain = chain->chain;
     }
 
   return ntype;
@@ -592,7 +592,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
     {
       if (ntype->instance_flags () == new_flags)
 	return ntype;
-      ntype = TYPE_CHAIN (ntype);
+      ntype = ntype->chain;
     }
   while (ntype != type);
 
@@ -609,7 +609,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
 
       ntype = storage;
       ntype->main_type = type->main_type;
-      TYPE_CHAIN (ntype) = ntype;
+      ntype->chain = ntype;
     }
 
   /* Pointers or references to the original type are not relevant to
@@ -618,8 +618,8 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
   ntype->reference_type = nullptr;
 
   /* Chain the new qualified type to the old type.  */
-  TYPE_CHAIN (ntype) = TYPE_CHAIN (type);
-  TYPE_CHAIN (type) = ntype;
+  ntype->chain = type->chain;
+  type->chain = ntype;
 
   /* Now set the instance flags and return the new type.  */
   ntype->set_instance_flags (new_flags);
@@ -742,7 +742,7 @@ replace_type (struct type *ntype, struct type *type)
       gdb_assert (TYPE_ADDRESS_CLASS_ALL (chain) == 0);
 
       chain->set_length (type->length ());
-      chain = TYPE_CHAIN (chain);
+      chain = chain->chain;
     }
   while (ntype != chain);
 
@@ -4989,7 +4989,7 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%*sreference_type %s\n", spaces, "",
 	      host_address_to_string (type->reference_type));
   gdb_printf ("%*stype_chain %s\n", spaces, "",
-	      host_address_to_string (TYPE_CHAIN (type)));
+	      host_address_to_string (type->chain));
   gdb_printf ("%*sinstance_flags 0x%x", spaces, "",
 	      (unsigned) type->instance_flags ());
   if (TYPE_CONST (type))
