@@ -5793,9 +5793,8 @@ decode_line_header_for_cu (struct die_info *die, struct dwarf2_cu *cu,
 
   if (per_objfile->line_headers.has_value ())
     {
-      auto [_, inserted_]
-	= per_objfile->line_headers->try_emplace (sao, cu->line_header);
-      inserted = inserted_;
+      inserted
+	= per_objfile->line_headers->try_emplace (sao, cu->line_header).second;
 
       if (inserted)
 	{
