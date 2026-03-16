@@ -8567,8 +8567,7 @@ ada_to_fixed_type (struct type *type, const gdb_byte *valaddr,
       because we call check_typedef/ada_check_typedef pretty much everywhere.
       */
   if (type->code () == TYPE_CODE_TYPEDEF
-      && (TYPE_MAIN_TYPE (ada_typedef_target_type (type))
-	  == TYPE_MAIN_TYPE (fixed_type)))
+      && (ada_typedef_target_type (type)->main_type == fixed_type->main_type))
     return type;
 
   return fixed_type;

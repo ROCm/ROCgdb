@@ -216,8 +216,8 @@ type_allocator::new_type ()
 
   /* Alloc the structure and start off with all fields zeroed.  */
   struct type *type = OBSTACK_ZALLOC (obstack, struct type);
-  TYPE_MAIN_TYPE (type) = OBSTACK_ZALLOC (obstack, struct main_type);
-  TYPE_MAIN_TYPE (type)->m_lang = m_lang;
+  type->main_type = OBSTACK_ZALLOC (obstack, struct main_type);
+  type->main_type->m_lang = m_lang;
 
   if (m_is_objfile)
     {
@@ -329,7 +329,7 @@ alloc_type_instance (struct type *oldtype)
     type = OBSTACK_ZALLOC (&oldtype->objfile_owner ()->objfile_obstack,
 			   struct type);
 
-  TYPE_MAIN_TYPE (type) = TYPE_MAIN_TYPE (oldtype);
+  type->main_type = oldtype->main_type;
 
   TYPE_CHAIN (type) = type;	/* Chain back to itself for now.  */
 
@@ -346,7 +346,7 @@ smash_type (struct type *type)
   objfile *objfile = type->objfile_owner ();
   gdbarch *arch = type->arch_owner ();
 
-  memset (TYPE_MAIN_TYPE (type), 0, sizeof (struct main_type));
+  memset (type->main_type, 0, sizeof (struct main_type));
 
   /* Restore owner information.  */
   if (objfile_owned)
@@ -608,7 +608,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
       gdb_assert (type->objfile_owner () == storage->objfile_owner ());
 
       ntype = storage;
-      TYPE_MAIN_TYPE (ntype) = TYPE_MAIN_TYPE (type);
+      ntype->main_type = type->main_type;
       TYPE_CHAIN (ntype) = ntype;
     }
 
@@ -726,7 +726,7 @@ replace_type (struct type *ntype, struct type *type)
      lists; etc.) allocated on an objfile other than its own.  */
   gdb_assert (ntype->objfile_owner () == type->objfile_owner ());
 
-  *TYPE_MAIN_TYPE (ntype) = *TYPE_MAIN_TYPE (type);
+  *ntype->main_type = *type->main_type;
 
   /* The type length is not a part of the main type.  Update it for
      each type on the variant chain.  */
@@ -1407,12 +1407,12 @@ internal_type_self_type (struct type *type)
       if (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE)
 	return NULL;
       gdb_assert (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_SELF_TYPE);
-      return TYPE_MAIN_TYPE (type)->type_specific.self_type;
+      return type->main_type->type_specific.self_type;
     case TYPE_CODE_METHOD:
       if (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE)
 	return NULL;
       gdb_assert (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_FUNC);
-      return TYPE_MAIN_TYPE (type)->type_specific.func_stuff->self_type;
+      return type->main_type->type_specific.func_stuff->self_type;
     default:
       gdb_assert_not_reached ("bad type");
     }
@@ -1433,13 +1433,13 @@ set_type_self_type (struct type *type, struct type *self_type)
       if (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE)
 	TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_SELF_TYPE;
       gdb_assert (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_SELF_TYPE);
-      TYPE_MAIN_TYPE (type)->type_specific.self_type = self_type;
+      type->main_type->type_specific.self_type = self_type;
       break;
     case TYPE_CODE_METHOD:
       if (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE)
 	INIT_FUNC_SPECIFIC (type);
       gdb_assert (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_FUNC);
-      TYPE_MAIN_TYPE (type)->type_specific.func_stuff->self_type = self_type;
+      type->main_type->type_specific.func_stuff->self_type = self_type;
       break;
     default:
       gdb_assert_not_reached ("bad type");
@@ -2301,12 +2301,12 @@ resolve_dynamic_array_or_string (struct type *type,
 	  struct type *dynamic_array_type = type;
 	  type = copy_type (dynamic_array_type->target_type ());
 	  struct dynamic_prop_list *prop_list
-	    = TYPE_MAIN_TYPE (dynamic_array_type)->dyn_prop_list;
+	    = dynamic_array_type->main_type->dyn_prop_list;
 	  if (prop_list != nullptr)
 	    {
 	      struct obstack *obstack
 		= &type->objfile_owner ()->objfile_obstack;
-	      TYPE_MAIN_TYPE (type)->dyn_prop_list
+	      type->main_type->dyn_prop_list
 		= copy_dynamic_prop_list (obstack, prop_list);
 	    }
 	  return type;
@@ -3220,8 +3220,8 @@ init_integer_type (type_allocator &alloc,
     t->set_is_unsigned (true);
 
   TYPE_SPECIFIC_FIELD (t) = TYPE_SPECIFIC_INT;
-  TYPE_MAIN_TYPE (t)->type_specific.int_stuff.bit_size = bit;
-  TYPE_MAIN_TYPE (t)->type_specific.int_stuff.bit_offset = 0;
+  t->main_type->type_specific.int_stuff.bit_size = bit;
+  t->main_type->type_specific.int_stuff.bit_offset = 0;
 
   return t;
 }
@@ -3254,8 +3254,8 @@ init_boolean_type (type_allocator &alloc,
     t->set_is_unsigned (true);
 
   TYPE_SPECIFIC_FIELD (t) = TYPE_SPECIFIC_INT;
-  TYPE_MAIN_TYPE (t)->type_specific.int_stuff.bit_size = bit;
-  TYPE_MAIN_TYPE (t)->type_specific.int_stuff.bit_offset = 0;
+  t->main_type->type_specific.int_stuff.bit_size = bit;
+  t->main_type->type_specific.int_stuff.bit_offset = 0;
 
   return t;
 }
@@ -3310,7 +3310,7 @@ init_complex_type (const char *name, struct type *target_type)
 
   gdb_assert (can_create_complex_type (target_type));
 
-  if (TYPE_MAIN_TYPE (target_type)->flds_bnds.complex_type == nullptr)
+  if (target_type->main_type->flds_bnds.complex_type == nullptr)
     {
       if (name == nullptr && target_type->name () != nullptr)
 	{
@@ -3331,10 +3331,10 @@ init_complex_type (const char *name, struct type *target_type)
       t->set_name (name);
 
       t->set_target_type (target_type);
-      TYPE_MAIN_TYPE (target_type)->flds_bnds.complex_type = t;
+      target_type->main_type->flds_bnds.complex_type = t;
     }
 
-  return TYPE_MAIN_TYPE (target_type)->flds_bnds.complex_type;
+  return target_type->main_type->flds_bnds.complex_type;
 }
 
 /* See gdbtypes.h.  */
@@ -3615,7 +3615,7 @@ class_or_union_p (const struct type *t)
 int
 class_types_same_p (const struct type *a, const struct type *b)
 {
-  return (TYPE_MAIN_TYPE (a) == TYPE_MAIN_TYPE (b)
+  return (a->main_type == b->main_type
 	  || (a->name () != nullptr
 	      && b->name () != nullptr
 	      && streq (a->name (), b->name ())));
@@ -5236,7 +5236,7 @@ copy_type_recursive (struct type *type, copied_types_hash_t &copied_types)
 
   /* Copy the common fields of types.  For the main type, we simply
      copy the entire thing and then update specific fields as needed.  */
-  *TYPE_MAIN_TYPE (new_type) = *TYPE_MAIN_TYPE (type);
+  *new_type->main_type = *type->main_type;
 
   new_type->set_owner (type->arch ());
 
@@ -5355,8 +5355,8 @@ copy_type_recursive (struct type *type, copied_types_hash_t &copied_types)
       break;
     case TYPE_SPECIFIC_INT:
       TYPE_SPECIFIC_FIELD (new_type) = TYPE_SPECIFIC_INT;
-      TYPE_MAIN_TYPE (new_type)->type_specific.int_stuff
-	= TYPE_MAIN_TYPE (type)->type_specific.int_stuff;
+      new_type->main_type->type_specific.int_stuff
+	= type->main_type->type_specific.int_stuff;
       break;
 
     default:
@@ -5374,7 +5374,7 @@ type_allocator::copy_type (const struct type *type)
   struct type *new_type = this->new_type ();
   new_type->set_instance_flags (type->instance_flags ());
   new_type->set_length (type->length ());
-  memcpy (TYPE_MAIN_TYPE (new_type), TYPE_MAIN_TYPE (type),
+  memcpy (new_type->main_type, type->main_type,
 	  sizeof (struct main_type));
 
   /* This might have been overwritten by the memcpy.  */

@@ -455,7 +455,7 @@ fake_method::fake_method (type_instance_flags flags,
 {
   struct type *type = &m_type;
 
-  TYPE_MAIN_TYPE (type) = &m_main_type;
+  type->main_type = &m_main_type;
   type->set_length (1);
   type->set_code (TYPE_CODE_METHOD);
   TYPE_CHAIN (type) = type;

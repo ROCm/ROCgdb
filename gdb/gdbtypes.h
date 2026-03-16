@@ -1886,9 +1886,9 @@ extern void allocate_gnat_aux_type (struct type *);
 
 #define INIT_FUNC_SPECIFIC(type)					       \
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FUNC,			       \
-   TYPE_MAIN_TYPE (type)->type_specific.func_stuff = (struct func_type *)      \
+   (type)->main_type->type_specific.func_stuff = (struct func_type *)	       \
      TYPE_ZALLOC (type,							       \
-		  sizeof (*TYPE_MAIN_TYPE (type)->type_specific.func_stuff)))
+		  sizeof (*(type)->main_type->type_specific.func_stuff)))
 
 /* "struct fixed_point_type_info" has a field that has a destructor.
    See allocate_fixed_point_type_info to understand how this is
@@ -1897,7 +1897,6 @@ extern void allocate_gnat_aux_type (struct type *);
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FIXED_POINT, \
    allocate_fixed_point_type_info (type))
 
-#define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
 #define TYPE_POINTER_TYPE(thistype) (thistype)->pointer_type
 #define TYPE_REFERENCE_TYPE(thistype) (thistype)->reference_type
 #define TYPE_RVALUE_REFERENCE_TYPE(thistype) (thistype)->rvalue_reference_type
@@ -1938,7 +1937,7 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
 
 #define TYPE_NFN_FIELDS(thistype) TYPE_CPLUS_SPECIFIC(thistype)->nfn_fields
 #define TYPE_SPECIFIC_FIELD(thistype) \
-  TYPE_MAIN_TYPE(thistype)->type_specific_field
+  (thistype)->main_type->type_specific_field
 /* We need this tap-dance with the TYPE_RAW_SPECIFIC because of the case
    where we're trying to print an Ada array using the C language.
    In that case, there is no "cplus_stuff", but the C language assumes
@@ -1948,15 +1947,15 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
    (!HAVE_CPLUS_STRUCT(thistype) \
     ? (struct cplus_struct_type*)&cplus_struct_default \
     : TYPE_RAW_CPLUS_SPECIFIC(thistype))
-#define TYPE_RAW_CPLUS_SPECIFIC(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.cplus_stuff
+#define TYPE_RAW_CPLUS_SPECIFIC(thistype) (thistype)->main_type->type_specific.cplus_stuff
 #define TYPE_CPLUS_CALLING_CONVENTION(thistype) \
-  TYPE_MAIN_TYPE(thistype)->type_specific.cplus_stuff->calling_convention
-#define TYPE_FLOATFORMAT(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.floatformat
-#define TYPE_GNAT_SPECIFIC(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.gnat_stuff
+  (thistype)->main_type->type_specific.cplus_stuff->calling_convention
+#define TYPE_FLOATFORMAT(thistype) (thistype)->main_type->type_specific.floatformat
+#define TYPE_GNAT_SPECIFIC(thistype) (thistype)->main_type->type_specific.gnat_stuff
 #define TYPE_DESCRIPTIVE_TYPE(thistype) TYPE_GNAT_SPECIFIC(thistype)->descriptive_type
-#define TYPE_CALLING_CONVENTION(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->calling_convention
-#define TYPE_NO_RETURN(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->is_noreturn
-#define TYPE_TAIL_CALL_LIST(thistype) TYPE_MAIN_TYPE(thistype)->type_specific.func_stuff->tail_call_list
+#define TYPE_CALLING_CONVENTION(thistype) (thistype)->main_type->type_specific.func_stuff->calling_convention
+#define TYPE_NO_RETURN(thistype) (thistype)->main_type->type_specific.func_stuff->is_noreturn
+#define TYPE_TAIL_CALL_LIST(thistype) (thistype)->main_type->type_specific.func_stuff->tail_call_list
 #define TYPE_BASECLASS(thistype,index) ((thistype)->field (index).type ())
 #define TYPE_N_BASECLASSES(thistype) TYPE_CPLUS_SPECIFIC(thistype)->n_baseclasses
 #define TYPE_BASECLASS_NAME(thistype,index) (thistype->field (index).name ())

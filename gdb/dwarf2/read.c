@@ -13348,8 +13348,8 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
       /* Only use the attributes if they make sense together.  */
       if (*bit_size + offset <= 8 * type->length ())
 	{
-	  TYPE_MAIN_TYPE (type)->type_specific.int_stuff.bit_size = *bit_size;
-	  TYPE_MAIN_TYPE (type)->type_specific.int_stuff.bit_offset = offset;
+	  type->main_type->type_specific.int_stuff.bit_size = *bit_size;
+	  type->main_type->type_specific.int_stuff.bit_offset = offset;
 	}
     }
 
