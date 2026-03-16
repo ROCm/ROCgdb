@@ -118,8 +118,7 @@ set_demangling_command (const char *ignore,
        dem->demangling_style != unknown_demangling;
        dem++)
     {
-      if (strcmp (current_demangling_style_string,
-		  dem->demangling_style_name) == 0)
+      if (streq (current_demangling_style_string, dem->demangling_style_name))
 	{
 	  current_demangling_style = dem->demangling_style;
 	  current_demangling_style_string = demangling_style_names[i];
@@ -227,7 +226,7 @@ INIT_GDB_FILE (gdb_demangle)
 	= xstrdup (libiberty_demanglers[i].demangling_style_name);
 
       if (current_demangling_style_string == NULL
-	  && strcmp (DEFAULT_DEMANGLING_STYLE, demangling_style_names[i]) == 0)
+	  && streq (DEFAULT_DEMANGLING_STYLE, demangling_style_names[i]))
 	current_demangling_style_string = demangling_style_names[i];
     }
 

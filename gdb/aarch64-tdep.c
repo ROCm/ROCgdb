@@ -355,8 +355,7 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 	break;
 
       if (inst.opcode->iclass == addsub_imm
-	  && (inst.opcode->op == OP_ADD
-	      || strcmp ("sub", inst.opcode->name) == 0))
+	  && (inst.opcode->op == OP_ADD || streq ("sub", inst.opcode->name)))
 	{
 	  unsigned rd = inst.operands[0].reg.regno;
 	  unsigned rn = inst.operands[1].reg.regno;
@@ -382,7 +381,7 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 	    seen_stack_set = true;
 	}
       else if (inst.opcode->iclass == addsub_ext
-	       && strcmp ("sub", inst.opcode->name) == 0)
+	       && streq ("sub", inst.opcode->name))
 	{
 	  unsigned rd = inst.operands[0].reg.regno;
 	  unsigned rn = inst.operands[1].reg.regno;
@@ -433,7 +432,7 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 				  << inst.operands[1].shifter.amount);
 	}
       else if (inst.opcode->iclass == log_shift
-	       && strcmp (inst.opcode->name, "orr") == 0)
+	       && streq (inst.opcode->name, "orr"))
 	{
 	  unsigned rd = inst.operands[0].reg.regno;
 	  unsigned rn = inst.operands[1].reg.regno;
@@ -477,7 +476,7 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
       else if ((inst.opcode->iclass == ldstpair_off
 		|| (inst.opcode->iclass == ldstpair_indexed
 		    && inst.operands[2].addr.preind))
-	       && strcmp ("stp", inst.opcode->name) == 0)
+	       && streq ("stp", inst.opcode->name))
 	{
 	  /* STP with addressing mode Pre-indexed and Base register.  */
 	  unsigned rt1;
@@ -526,7 +525,7 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 		    && (inst.opcode->op == OP_STR_POS
 			|| inst.opcode->op == OP_STRF_POS)))
 	       && inst.operands[1].addr.base_regno == AARCH64_SP_REGNUM
-	       && strcmp ("str", inst.opcode->name) == 0)
+	       && streq ("str", inst.opcode->name))
 	{
 	  /* STR (immediate) */
 	  unsigned int rt = inst.operands[0].reg.regno;

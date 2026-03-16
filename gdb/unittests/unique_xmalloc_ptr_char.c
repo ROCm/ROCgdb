@@ -30,8 +30,8 @@ unique_xmalloc_ptr_char ()
   gdb::unique_xmalloc_ptr<char> a = make_unique_xstrdup ("abc");
   gdb::unique_xmalloc_ptr<char> b = make_unique_xstrndup ("defghi", 3);
 
-  SELF_CHECK (strcmp (a.get (), "abc") == 0);
-  SELF_CHECK (strcmp (b.get (), "def") == 0);
+  SELF_CHECK (streq (a.get (), "abc"));
+  SELF_CHECK (streq (b.get (), "def"));
 
   std::string str = "xxx";
 

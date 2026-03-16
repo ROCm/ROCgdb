@@ -1141,9 +1141,9 @@ go32_sysinfo (const char *arg, int from_tty)
       char cpu_string[80];
       char cpu_brand[20];
       unsigned brand_idx;
-      int intel_p = strcmp (cpuid_vendor, "GenuineIntel") == 0;
-      int amd_p = strcmp (cpuid_vendor, "AuthenticAMD") == 0;
-      int hygon_p = strcmp (cpuid_vendor, "HygonGenuine") == 0;
+      int intel_p = streq (cpuid_vendor, "GenuineIntel");
+      int amd_p = streq (cpuid_vendor, "AuthenticAMD");
+      int hygon_p = streq (cpuid_vendor, "HygonGenuine");
       unsigned cpu_family, cpu_model;
 
 #if 0

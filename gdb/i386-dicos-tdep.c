@@ -33,8 +33,7 @@ i386_dicos_osabi_sniffer (bfd *abfd)
   const char *target_name = bfd_get_target (abfd);
 
   /* On x86-DICOS, the Load Module's "header" section is 36 bytes.  */
-  if (strcmp (target_name, "elf32-i386") == 0
-      && dicos_load_module_p (abfd, 36))
+  if (streq (target_name, "elf32-i386") && dicos_load_module_p (abfd, 36))
     return GDB_OSABI_DICOS;
 
   return GDB_OSABI_UNKNOWN;

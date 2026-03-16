@@ -230,7 +230,7 @@ struct bfd_cache_eq
 	    && gdata->size == s.size
 	    && gdata->inode == s.inode
 	    && gdata->device_id == s.device_id
-	    && strcmp (bfd_get_filename (abfd), s.filename) == 0);
+	    && streq (bfd_get_filename (abfd), s.filename));
   }
 };
 

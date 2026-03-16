@@ -135,28 +135,27 @@ stylepy_style_from_name (const char *name, bool *has_intensity_ptr = nullptr,
       if (!sub->var.has_value ())
 	continue;
 
-      if (strcmp (sub->name, "foreground") == 0)
+      if (streq (sub->name, "foreground"))
 	{
 	  const ui_file_style::color &color
 	    = sub->var->get<ui_file_style::color> ();
 	  style.set_fg (color);
 	  has_fg = true;
 	}
-      else if (strcmp (sub->name, "background") == 0)
+      else if (streq (sub->name, "background"))
 	{
 	  const ui_file_style::color &color
 	    = sub->var->get<ui_file_style::color> ();
 	  style.set_bg (color);
 	  has_bg = true;
 	}
-      else if (strcmp (sub->name, "intensity") == 0
-	       && sub->var->type () == var_enum)
+      else if (streq (sub->name, "intensity") && sub->var->type () == var_enum)
 	{
 	  const char *intensity_str = sub->var->get<const char *> ();
 	  ui_file_style::intensity intensity = ui_file_style::NORMAL;
-	  if (strcmp (intensity_str, "bold") == 0)
+	  if (streq (intensity_str, "bold"))
 	    intensity = ui_file_style::BOLD;
-	  else if (strcmp (intensity_str, "dim") == 0)
+	  else if (streq (intensity_str, "dim"))
 	    intensity = ui_file_style::DIM;
 	  style.set_intensity (intensity);
 	  has_intensity = true;

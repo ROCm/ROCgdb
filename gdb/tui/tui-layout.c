@@ -253,7 +253,7 @@ tui_remove_some_windows ()
 {
   tui_win_info *focus = tui_win_with_focus ();
 
-  if (strcmp (focus->name (), CMD_NAME) == 0)
+  if (streq (focus->name (), CMD_NAME))
     {
       /* Try leaving the source or disassembly window.  If neither
 	 exists, just do nothing.  */
@@ -506,7 +506,7 @@ tui_layout_window::specification (ui_file *output, int depth)
 std::string
 tui_layout_window::layout_fingerprint () const
 {
-  if (strcmp (get_name (), "cmd") == 0)
+  if (streq (get_name (), "cmd"))
     return "C";
   else
     return "";
@@ -824,7 +824,7 @@ tui_layout_split::apply (int x_, int y_, int width_, int height_,
       if (preserve_cmd_win_size_p
 	  && cmd_win_already_exists
 	  && m_splits[i].layout->get_name () != nullptr
-	  && strcmp (m_splits[i].layout->get_name (), "cmd") == 0)
+	  && streq (m_splits[i].layout->get_name (), "cmd"))
 	{
 	  /* Save the old cmd window information, in case we need to
 	     restore it later.  */
@@ -1042,9 +1042,9 @@ tui_layout_split::remove_windows (const char *name)
       const char *this_name = m_splits[i].layout->get_name ();
       if (this_name == nullptr)
 	m_splits[i].layout->remove_windows (name);
-      else if (strcmp (this_name, name) == 0
-	       || strcmp (this_name, CMD_NAME) == 0
-	       || strcmp (this_name, STATUS_NAME) == 0)
+      else if (streq (this_name, name)
+	       || streq (this_name, CMD_NAME)
+	       || streq (this_name, STATUS_NAME))
 	{
 	  /* Keep.  */
 	}

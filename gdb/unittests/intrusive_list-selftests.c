@@ -95,7 +95,7 @@ verify_items (const ListType &list,
       SELF_CHECK (&item == expected[i]);
 
       /* Access the item, to make sure the object is still alive.  */
-      SELF_CHECK (strcmp (item.name, expected[i]->name) == 0);
+      SELF_CHECK (streq (item.name, expected[i]->name));
 
       ++i;
     }
@@ -113,7 +113,7 @@ verify_items (const ListType &list,
       SELF_CHECK (&item == expected[i]);
 
       /* Access the item, to make sure the object is still alive.  */
-      SELF_CHECK (strcmp (item.name, expected[i]->name) == 0);
+      SELF_CHECK (streq (item.name, expected[i]->name));
     }
 
   SELF_CHECK (i == 0);

@@ -657,7 +657,7 @@ find_definition (const char *name,
 	     We just want to search within a given name's definitions.  */
 	  struct macro_key *found = (struct macro_key *) pred->key;
 
-	  if (strcmp (found->name, name) == 0)
+	  if (streq (found->name, name))
 	    n = pred;
 	}
     }
@@ -707,7 +707,7 @@ check_for_redefinition (macro_source_file *source, int line, const char *name,
 	 definition changes).  */
       if (kind != found_def->kind)
 	same = 0;
-      else if (strcmp (replacement, found_def->replacement))
+      else if (!streq (replacement, found_def->replacement))
 	same = 0;
       else if (kind == macro_function_like)
 	{

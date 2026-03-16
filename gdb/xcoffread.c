@@ -262,20 +262,17 @@ xcoff_symfile_offsets (objfile *objfile, const section_addr_info &addrs)
   const char *first_section_name
     = bfd_section_name (objfile->sections_start[0].the_bfd_section);
 
-  if (objfile->sect_index_text == 0
-      && strcmp (first_section_name, ".text") != 0)
+  if (objfile->sect_index_text == 0 && !streq (first_section_name, ".text"))
     objfile->sect_index_text = -1;
 
-  if (objfile->sect_index_data == 0
-      && strcmp (first_section_name, ".data") != 0)
+  if (objfile->sect_index_data == 0 && !streq (first_section_name, ".data"))
     objfile->sect_index_data = -1;
 
-  if (objfile->sect_index_bss == 0
-      && strcmp (first_section_name, ".bss") != 0)
+  if (objfile->sect_index_bss == 0 && !streq (first_section_name, ".bss"))
     objfile->sect_index_bss = -1;
 
   if (objfile->sect_index_rodata == 0
-      && strcmp (first_section_name, ".rodata") != 0)
+      && !streq (first_section_name, ".rodata"))
     objfile->sect_index_rodata = -1;
 }
 

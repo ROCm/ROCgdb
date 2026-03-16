@@ -1072,7 +1072,7 @@ do_remote_fileio_request (remote_target *remote, char *buf)
   else
     c = strchr (buf, '\0');
   for (idx = 0; remote_fio_func_map[idx].name; ++idx)
-    if (!strcmp (remote_fio_func_map[idx].name, buf))
+    if (streq (remote_fio_func_map[idx].name, buf))
       break;
   if (!remote_fio_func_map[idx].name)
     remote_fileio_reply (remote, -1, FILEIO_ENOSYS);

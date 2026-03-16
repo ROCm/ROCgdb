@@ -212,10 +212,10 @@ value_cast_structs (struct type *type, struct value *v2)
 	       || t2->code () == TYPE_CODE_UNION)
 	      && !!"Precondition is that value is of STRUCT or UNION kind");
 
-  if (t1->name () != NULL
-      && t2->name () != NULL
-      && !strcmp (t1->name (), t2->name ()))
-    return NULL;
+  if (t1->name () != nullptr
+      && t2->name () != nullptr
+      && streq (t1->name (), t2->name ()))
+    return nullptr;
 
   /* Upcasting: look in the type of the source to see if it contains the
      type of the target as a superclass.  If so, we'll need to
@@ -248,7 +248,7 @@ value_cast_structs (struct type *type, struct value *v2)
 	  /* We might be trying to cast to the outermost enclosing
 	     type, in which case search_struct_field won't work.  */
 	  if (real_type->name () != NULL
-	      && !strcmp (real_type->name (), t1->name ()))
+	      && streq (real_type->name (), t1->name ()))
 	    return v;
 
 	  v = search_struct_field (t2->name (), v, real_type, 1);
@@ -2877,7 +2877,7 @@ find_overload_match (gdb::array_view<value *> args,
 		 probably a C-style function.  */
 	      if (temp_func != nullptr)
 		{
-		  if (strcmp (temp_func.get (), qualified_name) == 0)
+		  if (streq (temp_func.get (), qualified_name))
 		    func_name = NULL;
 		  else
 		    func_name = temp_func.get ();
@@ -3402,7 +3402,7 @@ enum_constant_from_type (struct type *type, const char *name)
       if (len + 2 >= name_len
 	  && fname[len - name_len - 2] == ':'
 	  && fname[len - name_len - 1] == ':'
-	  && strcmp (&fname[len - name_len], name) == 0)
+	  && streq (&fname[len - name_len], name))
 	return value_from_longest (type, type->field (i).loc_enumval ());
     }
 
@@ -3562,7 +3562,7 @@ value_struct_elt_for_reference (struct type *domain, int offset,
     {
       const char *t_field_name = t->field (i).name ();
 
-      if (t_field_name && strcmp (t_field_name, name) == 0)
+      if (t_field_name && streq (t_field_name, name))
 	{
 	  if (t->field (i).is_static ())
 	    {
@@ -3639,7 +3639,7 @@ value_struct_elt_for_reference (struct type *domain, int offset,
     {
       const char *t_field_name = TYPE_FN_FIELDLIST_NAME (t, i);
 
-      if (t_field_name && strcmp (t_field_name, name) == 0)
+      if (t_field_name && streq (t_field_name, name))
 	{
 	  int j;
 	  int len = TYPE_FN_FIELDLIST_LENGTH (t, i);

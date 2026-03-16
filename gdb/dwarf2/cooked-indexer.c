@@ -554,7 +554,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
 
       if (abbrev->tag == DW_TAG_namespace
 	  && m_language == language_cplus
-	  && strcmp (name, "::") == 0)
+	  && streq (name, "::"))
 	{
 	  /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they
 	     generated bogus DW_TAG_namespace DIEs with a name of "::"

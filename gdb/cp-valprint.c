@@ -66,7 +66,7 @@ cp_is_vtbl_ptr_type (struct type *type)
 {
   const char *type_name = type->name ();
 
-  return (type_name != NULL && !strcmp (type_name, vtbl_ptr_name));
+  return (type_name != NULL && streq (type_name, vtbl_ptr_name));
 }
 
 /* Return truth value for the assertion that TYPE is of the type
@@ -247,7 +247,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 
 	  /* Do not print leading '=' in case of anonymous
 	     unions.  */
-	  if (strcmp (type->field (i).name (), ""))
+	  if (!streq (type->field (i).name (), ""))
 	    gdb_puts (" = ", stream);
 	  else
 	    {

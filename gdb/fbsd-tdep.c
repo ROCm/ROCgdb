@@ -573,7 +573,7 @@ fbsd_core_thread_name (struct gdbarch *gdbarch, bfd &cbfd,
 		 as its thread name instead of an empty name if a name
 		 has not been set explicitly.  Return a NULL name in
 		 that case.  */
-	      if (strcmp (buf, elf_tdata (&cbfd)->core->program) != 0)
+	      if (!streq (buf, elf_tdata (&cbfd)->core->program))
 		return buf;
 	    }
 	}

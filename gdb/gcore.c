@@ -336,7 +336,7 @@ derive_heap_segment (bfd *abfd, bfd_vma *bottom, bfd_vma *top)
   for (sec = abfd->sections; sec; sec = sec->next)
     {
       if (bfd_section_flags (sec) & SEC_DATA
-	  || strcmp (".bss", bfd_section_name (sec)) == 0)
+	  || streq (".bss", bfd_section_name (sec)))
 	{
 	  sec_vaddr = bfd_section_vma (sec);
 	  sec_size = bfd_section_size (sec);

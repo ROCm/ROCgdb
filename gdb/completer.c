@@ -90,7 +90,7 @@ public:
   /* Return true of the name in this hash entry is STR.  */
   bool is_name_eq (const char *str) const
   {
-    return strcmp (m_name.get (), str) == 0;
+    return streq (m_name.get (), str);
   }
 
   /* Return the hash value based on the name of the entry.  */
@@ -2200,7 +2200,7 @@ signal_completer (struct cmd_list_element *ignore,
       signame = gdb_signal_to_name ((enum gdb_signal) signum);
 
       /* Ignore the unknown signal case.  */
-      if (!signame || strcmp (signame, "?") == 0)
+      if (!signame || streq (signame, "?"))
 	continue;
 
       if (strncasecmp (signame, word, len) == 0)

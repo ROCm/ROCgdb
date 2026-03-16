@@ -145,11 +145,11 @@ mi_cmd_disassemble (const char *command, const char *const *argv, int argc)
 	  break;
 	case OPCODES_OPT:
 	  opcodes_seen = true;
-	  if (strcmp (oarg, "none") == 0)
+	  if (streq (oarg, "none"))
 	    opcodes_mode = OPCODES_NONE;
-	  else if (strcmp (oarg, "display") == 0)
+	  else if (streq (oarg, "display"))
 	    opcodes_mode = OPCODES_DISPLAY;
-	  else if (strcmp (oarg, "bytes") == 0)
+	  else if (streq (oarg, "bytes"))
 	    opcodes_mode = OPCODES_BYTES;
 	  else
 	    error (_("-data-disassemble: unknown value for -opcodes argument"));

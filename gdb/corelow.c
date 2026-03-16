@@ -1345,13 +1345,13 @@ get_core_registers_cb (const char *sect_name, int supply_size, int collect_size,
   if (!variable_size_section)
     gdb_assert (supply_size == collect_size);
 
-  if (strcmp (sect_name, ".reg") == 0)
+  if (streq (sect_name, ".reg"))
     {
       required = true;
       if (human_name == NULL)
 	human_name = "general-purpose";
     }
-  else if (strcmp (sect_name, ".reg2") == 0)
+  else if (streq (sect_name, ".reg2"))
     {
       if (human_name == NULL)
 	human_name = "floating-point";

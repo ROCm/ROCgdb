@@ -103,20 +103,20 @@ record_start (const char *method, const char *format, int from_tty)
       else
 	error (_("Invalid format."));
     }
-  else if (strcmp (method, "full") == 0)
+  else if (streq (method, "full"))
     {
       if (format == NULL)
 	execute_command_to_string ("record full", from_tty, false);
       else
 	error (_("Invalid format."));
     }
-  else if (strcmp (method, "btrace") == 0)
+  else if (streq (method, "btrace"))
     {
       if (format == NULL)
 	execute_command_to_string ("record btrace", from_tty, false);
-      else if (strcmp (format, "bts") == 0)
+      else if (streq (format, "bts"))
 	execute_command_to_string ("record btrace bts", from_tty, false);
-      else if (strcmp (format, "pt") == 0)
+      else if (streq (format, "pt"))
 	execute_command_to_string ("record btrace pt", from_tty, false);
       else
 	error (_("Invalid format."));
@@ -561,9 +561,9 @@ cmd_record_insn_history (const char *arg, int from_tty)
 
   int size = command_size_to_target_size (record_insn_history_size);
 
-  if (arg == NULL || *arg == 0 || strcmp (arg, "+") == 0)
+  if (arg == NULL || *arg == 0 || streq (arg, "+"))
     target_insn_history (size, flags);
-  else if (strcmp (arg, "-") == 0)
+  else if (streq (arg, "-"))
     target_insn_history (-size, flags);
   else
     {
@@ -678,9 +678,9 @@ cmd_record_call_history (const char *arg, int from_tty)
 
   int size = command_size_to_target_size (record_call_history_size);
 
-  if (arg == NULL || *arg == 0 || strcmp (arg, "+") == 0)
+  if (arg == NULL || *arg == 0 || streq (arg, "+"))
     target_call_history (size, flags);
-  else if (strcmp (arg, "-") == 0)
+  else if (streq (arg, "-"))
     target_call_history (-size, flags);
   else
     {

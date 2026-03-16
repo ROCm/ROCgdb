@@ -80,7 +80,7 @@ dicos_load_module_p (bfd *abfd, int header_size)
     {
       if (sym->name != NULL
 	  && symname[0] == sym->name[0]
-	  && strcmp (symname + 1, sym->name + 1) == 0)
+	  && streq (symname + 1, sym->name + 1))
 	{
 	  ret = 1;
 	  break;

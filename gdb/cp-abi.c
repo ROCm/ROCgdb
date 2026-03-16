@@ -284,7 +284,7 @@ set_cp_abi_as_auto_default (const char *short_name)
   /* Since we copy the current ABI into current_cp_abi instead of
      using a pointer, if auto is currently the default, we need to
      reset it.  */
-  if (strcmp (current_cp_abi.shortname, "auto") == 0)
+  if (streq (current_cp_abi.shortname, "auto"))
     switch_to_cp_abi ("auto");
 }
 
@@ -296,7 +296,7 @@ find_cp_abi (const char *short_name)
   int i;
 
   for (i = 0; i < num_cp_abis; i++)
-    if (strcmp (cp_abis[i]->shortname, short_name) == 0)
+    if (streq (cp_abis[i]->shortname, short_name))
       return cp_abis[i];
 
   return NULL;

@@ -103,7 +103,7 @@ arm_wince_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
       if (s.minsym != NULL
 	  && s.minsym->linkage_name () != NULL
-	  && strcmp (s.minsym->linkage_name (), "__gccmain") == 0)
+	  && streq (s.minsym->linkage_name (), "__gccmain"))
 	pc += 4;
     }
 
@@ -143,7 +143,7 @@ arm_wince_osabi_sniffer (bfd *abfd)
 {
   const char *target_name = bfd_get_target (abfd);
 
-  if (strcmp (target_name, "pei-arm-wince-little") == 0)
+  if (streq (target_name, "pei-arm-wince-little"))
     return GDB_OSABI_WINCE;
 
   return GDB_OSABI_UNKNOWN;

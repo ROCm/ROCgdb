@@ -51,7 +51,7 @@ struct reg
 
   bool operator== (const reg &other) const
   {
-    return (strcmp (name, other.name) == 0
+    return (streq (name, other.name)
 	    && offset == other.offset
 	    && size == other.size);
   }

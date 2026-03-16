@@ -1114,8 +1114,8 @@ riscv_register_type (struct gdbarch *gdbarch, int regnum)
       if (flen == 8
 	  && type->code () == TYPE_CODE_FLT
 	  && type->length () == flen
-	  && (strcmp (type->name (), "builtin_type_ieee_double") == 0
-	      || strcmp (type->name (), "double") == 0))
+	  && (streq (type->name (), "builtin_type_ieee_double")
+	      || streq (type->name (), "double")))
 	type = riscv_fpreg_d_type (gdbarch);
     }
 
@@ -4103,16 +4103,16 @@ riscv_tdesc_unknown_reg (struct gdbarch *gdbarch, tdesc_feature *feature,
      number that GDB has assigned them.  Then in riscv_register_name we will
      return no name for the three duplicates, this hides the duplicates from
      the user.  */
-  if (strcmp (tdesc_feature_name (feature), riscv_freg_feature.name ()) == 0)
+  if (streq (tdesc_feature_name (feature), riscv_freg_feature.name ()))
     {
       riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
       int *regnum_ptr = nullptr;
 
-      if (strcmp (reg_name, "fflags") == 0)
+      if (streq (reg_name, "fflags"))
 	regnum_ptr = &tdep->duplicate_fflags_regnum;
-      else if (strcmp (reg_name, "frm") == 0)
+      else if (streq (reg_name, "frm"))
 	regnum_ptr = &tdep->duplicate_frm_regnum;
-      else if (strcmp (reg_name, "fcsr") == 0)
+      else if (streq (reg_name, "fcsr"))
 	regnum_ptr = &tdep->duplicate_fcsr_regnum;
 
       if (regnum_ptr != nullptr)
@@ -4134,7 +4134,7 @@ riscv_tdesc_unknown_reg (struct gdbarch *gdbarch, tdesc_feature *feature,
   /* Any unknown registers in the CSR feature are recorded within a single
      block so we can easily identify these registers when making choices
      about register groups in riscv_register_reggroup_p.  */
-  if (strcmp (tdesc_feature_name (feature), riscv_csr_feature.name ()) == 0)
+  if (streq (tdesc_feature_name (feature), riscv_csr_feature.name ()))
     {
       riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
       if (tdep->unknown_csrs_first_regnum == -1)

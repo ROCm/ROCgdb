@@ -543,7 +543,7 @@ read_base_type (struct ctf_context *ccp, ctf_id_t tid)
       type = alloc.new_type (TYPE_CODE_ERROR, cet.cte_bits, name);
     }
 
-  if (name != nullptr && strcmp (name, "char") == 0)
+  if (name != nullptr && streq (name, "char"))
     type->set_has_no_signedness (true);
 
   return set_tid_type (ccp, tid, type);
@@ -1139,7 +1139,7 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
   if (kind == CTF_K_FUNCTION)
     {
       sym->set_domain (FUNCTION_DOMAIN);
-      if (name != nullptr && strcmp (name, "main") == 0)
+      if (name != nullptr && streq (name, "main"))
 	set_objfile_main_name (objfile, name, language_c);
     }
   else
@@ -1233,12 +1233,12 @@ build_ctf_archive_member (ctf_dict_t *dict, const char *name, void *arg)
   auto *iter_data = static_cast<ctf_archive_iter_data *> (arg);
   ctf_per_objfile &per_objfile = iter_data->per_objfile;
 
-  if (strcmp (name, ".ctf") != 0)
+  if (!streq (name, ".ctf"))
     ctf_import (dict, per_objfile.parent_dict.get ());
 
   objfile *objfile = per_objfile.objfile;
 
-  if (strcmp (name, ".ctf") == 0)
+  if (streq (name, ".ctf"))
     {
       name = bfd_get_filename (objfile->obfd.get ());
       ctf_debug_printf ("is parent, using name='%s'", name);

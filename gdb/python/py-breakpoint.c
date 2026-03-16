@@ -1410,7 +1410,7 @@ local_setattro (PyObject *self, PyObject *name, PyObject *v)
   /* If the attribute trying to be set is the "stop" method,
      but we already have a condition set in the CLI or other extension
      language, disallow this operation.  */
-  if (strcmp (attr.get (), stop_func) == 0)
+  if (streq (attr.get (), stop_func))
     {
       const struct extension_language_defn *extlang = NULL;
 

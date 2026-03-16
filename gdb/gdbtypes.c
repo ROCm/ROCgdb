@@ -545,9 +545,9 @@ address_space_name_to_type_instance_flags (struct gdbarch *gdbarch,
   type_instance_flags type_flags;
 
   /* Check for known address space delimiters.  */
-  if (!strcmp (space_identifier, "code"))
+  if (streq (space_identifier, "code"))
     return TYPE_INSTANCE_FLAG_CODE_SPACE;
-  else if (!strcmp (space_identifier, "data"))
+  else if (streq (space_identifier, "data"))
     return TYPE_INSTANCE_FLAG_DATA_SPACE;
   else if (gdbarch_address_class_name_to_type_flags_p (gdbarch)
 	   && gdbarch_address_class_name_to_type_flags (gdbarch,
@@ -3616,8 +3616,9 @@ int
 class_types_same_p (const struct type *a, const struct type *b)
 {
   return (TYPE_MAIN_TYPE (a) == TYPE_MAIN_TYPE (b)
-	  || (a->name () && b->name ()
-	      && !strcmp (a->name (), b->name ())));
+	  || (a->name () != nullptr
+	      && b->name () != nullptr
+	      && streq (a->name (), b->name ())));
 }
 
 /* If BASE is an ancestor of DCLASS return the distance between them.
@@ -4008,8 +4009,9 @@ types_equal (struct type *a, struct type *b)
      stubs.  The types won't point to the same address, but they
      really are the same.  */
 
-  if (a->name () && b->name ()
-      && strcmp (a->name (), b->name ()) == 0)
+  if (a->name () != nullptr
+      && b->name () != nullptr
+      && streq (a->name (), b->name ()))
     return true;
 
   /* Two function types are equal if their argument and return types
@@ -4070,7 +4072,7 @@ compare_maybe_null_strings (const char *s, const char *t)
 {
   if (s == NULL || t == NULL)
     return s == t;
-  return strcmp (s, t) == 0;
+  return streq (s, t);
 }
 
 /* A helper function for check_types_worklist that checks two types for

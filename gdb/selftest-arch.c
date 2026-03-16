@@ -27,13 +27,13 @@ namespace selftests {
 
 static bool skip_arch (const char *arch)
 {
-  if (strcmp ("powerpc:EC603e", arch) == 0
-      || strcmp ("powerpc:e500mc", arch) == 0
-      || strcmp ("powerpc:e500mc64", arch) == 0
-      || strcmp ("powerpc:titan", arch) == 0
-      || strcmp ("powerpc:vle", arch) == 0
-      || strcmp ("powerpc:e5500", arch) == 0
-      || strcmp ("powerpc:e6500", arch) == 0)
+  if (streq ("powerpc:EC603e", arch)
+      || streq ("powerpc:e500mc", arch)
+      || streq ("powerpc:e500mc64", arch)
+      || streq ("powerpc:titan", arch)
+      || streq ("powerpc:vle", arch)
+      || streq ("powerpc:e5500", arch)
+      || streq ("powerpc:e6500", arch))
     {
       /* PR 19797 */
       return true;
@@ -122,9 +122,9 @@ selftest_skip_warning_arch (struct gdbarch *gdbarch)
        Stack backtrace will not work.
      We could instead capture the output and then filter out the warning, but
      that seems more trouble than it's worth.  */
-  return (strcmp (name, "m68hc11") == 0
-	  || strcmp (name, "m68hc12") == 0
-	  || strcmp (name, "m68hc12:HCS12") == 0);
+  return (streq (name, "m68hc11")
+	  || streq (name, "m68hc12")
+	  || streq (name, "m68hc12:HCS12"));
 }
 
 } /* namespace selftests */

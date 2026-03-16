@@ -835,7 +835,7 @@ macho_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
 	       asect && dsect;
 	       asect = asect->next, dsect = dsect->next)
 	    {
-	      if (strcmp (asect->name, dsect->name) != 0)
+	      if (!streq (asect->name, dsect->name))
 		break;
 	      bfd_set_section_size (dsect, bfd_section_size (asect));
 	    }
@@ -912,8 +912,8 @@ macho_symfile_offsets (struct objfile *objfile,
 
       if (startswith (bfd_sect_name, "LC_SEGMENT."))
 	bfd_sect_name += 11;
-      if (strcmp (bfd_sect_name, "__TEXT") == 0
-	  || strcmp (bfd_sect_name, "__TEXT.__text") == 0)
+      if (streq (bfd_sect_name, "__TEXT")
+	  || streq (bfd_sect_name, "__TEXT.__text"))
 	objfile->sect_index_text = sect_index;
     }
 }

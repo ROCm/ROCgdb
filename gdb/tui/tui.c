@@ -428,7 +428,7 @@ tui_enable (void)
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
       interp = top_level_interpreter ()->name ();
-      if (strcmp (interp, INTERP_TUI) != 0)
+      if (!streq (interp, INTERP_TUI))
 	error (_("Cannot enable the TUI when the interpreter is '%s'"), interp);
 
       /* Don't try to setup curses (and print funny control

@@ -1345,7 +1345,7 @@ gen_struct_ref_recursive (struct agent_expr *ax, struct axs_value *value,
 
       if (this_name)
 	{
-	  if (strcmp (field, this_name) == 0)
+	  if (streq (field, this_name))
 	    {
 	      /* Note that bytecodes for the struct's base (aka
 		 "this") will have been generated already, which will
@@ -1486,7 +1486,7 @@ gen_struct_elt_for_reference (struct agent_expr *ax, struct axs_value *value,
     {
       const char *t_field_name = t->field (i).name ();
 
-      if (t_field_name && strcmp (t_field_name, fieldname) == 0)
+      if (t_field_name && streq (t_field_name, fieldname))
 	{
 	  if (t->field (i).is_static ())
 	    {
@@ -2478,7 +2478,7 @@ agent_eval_command_one (const char *exp, int eval, CORE_ADDR pc)
   agent_expr_up agent;
 
   arg = exp;
-  if (!eval && strcmp (arg, "$_ret") == 0)
+  if (!eval && streq (arg, "$_ret"))
     {
       agent = gen_trace_for_return_address (pc, get_current_arch (),
 					    trace_string);

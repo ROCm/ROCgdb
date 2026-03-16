@@ -38,9 +38,9 @@
 static int
 textual_name (const char *name)
 {
-  return (!strcmp (name, "wchar_t")
-	  || !strcmp (name, "char16_t")
-	  || !strcmp (name, "char32_t"));
+  return (streq (name, "wchar_t")
+	  || streq (name, "char16_t")
+	  || streq (name, "char32_t"));
 }
 
 /* Apply a heuristic to decide whether an array of TYPE or a pointer
@@ -500,8 +500,7 @@ c_value_print (struct value *val, struct ui_file *stream,
       if (original_type->code () == TYPE_CODE_PTR
 	  && original_type->name () == NULL
 	  && original_type->target_type ()->name () != NULL
-	  && (strcmp (original_type->target_type ()->name (),
-		      "char") == 0
+	  && (streq (original_type->target_type ()->name (), "char")
 	      || textual_name (original_type->target_type ()->name ())))
 	{
 	  /* Print nothing.  */

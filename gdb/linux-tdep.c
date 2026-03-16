@@ -498,17 +498,17 @@ decode_vmflags (char *p, struct smaps_vmflags *v)
        s != NULL;
        s = strtok_r (NULL, " ", &saveptr))
     {
-      if (strcmp (s, "io") == 0)
+      if (streq (s, "io"))
 	v->io_page = 1;
-      else if (strcmp (s, "ht") == 0)
+      else if (streq (s, "ht"))
 	v->uses_huge_tlb = 1;
-      else if (strcmp (s, "dd") == 0)
+      else if (streq (s, "dd"))
 	v->exclude_coredump = 1;
-      else if (strcmp (s, "sh") == 0)
+      else if (streq (s, "sh"))
 	v->shared_mapping = 1;
-      else if (strcmp (s, "mt") == 0)
+      else if (streq (s, "mt"))
 	v->memory_tagging = 1;
-      else if (strcmp (s, "ss") == 0)
+      else if (streq (s, "ss"))
 	v->shadow_stack_memory = 1;
     }
 }
@@ -591,7 +591,7 @@ mapping_is_anonymous_p (const char *filename)
 	 If we managed to find it, then we assume the mapping is
 	 anonymous.  */
       return (filename_len >= del_len
-	      && strcmp (filename + filename_len - del_len, deleted) == 0);
+	      && streq (filename + filename_len - del_len, deleted));
     }
 
   if (*filename == '\0'
@@ -1420,17 +1420,17 @@ parse_smaps_data (const char *data,
 	      break;
 	    }
 
-	  if (strcmp (keyword, "Anonymous:") == 0)
+	  if (streq (keyword, "Anonymous:"))
 	    {
 	      /* Older Linux kernels did not support the
 		 "Anonymous:" counter.  Check it here.  */
 	      has_anonymous = 1;
 	    }
-	  else if (strcmp (keyword, "VmFlags:") == 0)
+	  else if (streq (keyword, "VmFlags:"))
 	    decode_vmflags (line, &v);
 
-	  if (strcmp (keyword, "AnonHugePages:") == 0
-	      || strcmp (keyword, "Anonymous:") == 0)
+	  if (streq (keyword, "AnonHugePages:")
+	      || streq (keyword, "Anonymous:"))
 	    {
 	      unsigned long number;
 

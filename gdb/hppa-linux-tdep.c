@@ -363,7 +363,7 @@ hppa_linux_find_global_pointer (struct gdbarch *gdbarch,
     {
       for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (strcmp (osect.the_bfd_section->name, ".dynamic") == 0)
+	  if (streq (osect.the_bfd_section->name, ".dynamic"))
 	    {
 	      CORE_ADDR addr, endaddr;
 

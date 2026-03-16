@@ -141,7 +141,7 @@ set_objfile_main_name (struct objfile *objfile,
 		       const char *name, enum language lang)
 {
   if (objfile->per_bfd->name_of_main == NULL
-      || strcmp (objfile->per_bfd->name_of_main, name) != 0)
+      || !streq (objfile->per_bfd->name_of_main, name))
     objfile->per_bfd->name_of_main
       = obstack_strdup (&objfile->per_bfd->storage_obstack, name);
   objfile->per_bfd->language_of_main = lang;
@@ -982,7 +982,7 @@ pc_in_section (CORE_ADDR pc, const char *name)
   struct obj_section *s = find_pc_section (pc);
   return (s != nullptr
 	  && s->the_bfd_section->name != nullptr
-	  && strcmp (s->the_bfd_section->name, name) == 0);
+	  && streq (s->the_bfd_section->name, name));
 }
 
 /* See objfiles.h.  */

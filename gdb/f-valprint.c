@@ -634,8 +634,9 @@ info_common_command_for_block (const struct block *block, const char *comname,
 
 	gdb_assert (sym->loc_class () == LOC_COMMON_BLOCK);
 
-	if (comname && (!sym->linkage_name ()
-			|| strcmp (comname, sym->linkage_name ()) != 0))
+	if (comname != nullptr
+	    && (sym->linkage_name () == nullptr
+		|| !streq (comname, sym->linkage_name ())))
 	  continue;
 
 	if (*any_printed)

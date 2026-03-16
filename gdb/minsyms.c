@@ -557,7 +557,7 @@ lookup_minimal_symbol_linkage (const char *name, struct objfile *objf,
 	   msymbol != NULL;
 	   msymbol = msymbol->hash_next)
 	{
-	  if (strcmp (msymbol->linkage_name (), name) == 0
+	  if (streq (msymbol->linkage_name (), name)
 	      && (msymbol->type () == mst_data
 		  || msymbol->type () == mst_bss
 		  || (match_static_type
@@ -611,10 +611,10 @@ lookup_minimal_symbol_text (program_space *pspace, const char *name,
 	 msymbol != NULL && found_symbol.minsym == NULL;
 	 msymbol = msymbol->hash_next)
       {
-	if (strcmp (msymbol->linkage_name (), name) == 0 &&
-	    (msymbol->type () == mst_text
-	     || msymbol->type () == mst_text_gnu_ifunc
-	     || msymbol->type () == mst_file_text))
+	if (streq (msymbol->linkage_name (), name)
+	    && (msymbol->type () == mst_text
+		|| msymbol->type () == mst_text_gnu_ifunc
+		|| msymbol->type () == mst_file_text))
 	  {
 	    switch (msymbol->type ())
 	      {
@@ -678,7 +678,7 @@ lookup_minimal_symbol_by_pc_name (CORE_ADDR pc, const char *name,
 	       msymbol = msymbol->hash_next)
 	    {
 	      if (msymbol->value_address (&objfile) == pc
-		  && strcmp (msymbol->linkage_name (), name) == 0)
+		  && streq (msymbol->linkage_name (), name))
 		return msymbol;
 	    }
 	}
@@ -1229,12 +1229,12 @@ compact_minimal_symbols (struct minimal_symbol *msymbol, int mcount,
       copyfrom = copyto = msymbol;
       while (copyfrom < msymbol + mcount - 1)
 	{
-	  if (copyfrom->unrelocated_address ()
-	      == (copyfrom + 1)->unrelocated_address ()
+	  if ((copyfrom->unrelocated_address ()
+	       == (copyfrom + 1)->unrelocated_address ())
 	      && (copyfrom->section_index ()
 		  == (copyfrom + 1)->section_index ())
-	      && strcmp (copyfrom->linkage_name (),
-			 (copyfrom + 1)->linkage_name ()) == 0)
+	      && streq (copyfrom->linkage_name (),
+			(copyfrom + 1)->linkage_name ()))
 	    {
 	      if ((copyfrom + 1)->type () == mst_unknown)
 		(copyfrom + 1)->set_type (copyfrom->type ());
@@ -1498,8 +1498,8 @@ find_solib_trampoline_target (const frame_info_ptr &frame, CORE_ADDR pc)
 		   || msymbol->type () == mst_text_gnu_ifunc
 		   || msymbol->type () == mst_data
 		   || msymbol->type () == mst_data_gnu_ifunc)
-		  && strcmp (msymbol->linkage_name (),
-			     tsymbol->linkage_name ()) == 0)
+		  && streq (msymbol->linkage_name (),
+			    tsymbol->linkage_name ()))
 		{
 		  CORE_ADDR func;
 

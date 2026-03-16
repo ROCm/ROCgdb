@@ -1240,9 +1240,7 @@ captured_main_1 (struct captured_main_args *context)
   save_auto_load = global_auto_load;
   global_auto_load = 0;
 
-  if (execarg != NULL
-      && symarg != NULL
-      && strcmp (execarg, symarg) == 0)
+  if (execarg != nullptr && symarg != nullptr && streq (execarg, symarg))
     {
       /* The exec file and the symbol-file are the same.  If we can't
 	 open it, better only print one error message.

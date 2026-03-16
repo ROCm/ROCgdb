@@ -454,12 +454,11 @@ field_name_match (const char *field_name, const char *target)
 {
   int len = strlen (target);
 
-  return
-    (strncmp (field_name, target, len) == 0
-     && (field_name[len] == '\0'
-	 || (startswith (field_name + len, "___")
-	     && strcmp (field_name + strlen (field_name) - 6,
-			"___XVN") != 0)));
+  return (strncmp (field_name, target, len) == 0
+	  && (field_name[len] == '\0'
+	      || (startswith (field_name + len, "___")
+		  && !streq (field_name + strlen (field_name) - 6,
+			     "___XVN"))));
 }
 
 
@@ -519,7 +518,7 @@ is_suffix (const char *str, const char *suffix)
     return false;
   len1 = strlen (str);
   len2 = strlen (suffix);
-  return len1 >= len2 && strcmp (str + len1 - len2, suffix) == 0;
+  return len1 >= len2 && streq (str + len1 - len2, suffix);
 }
 
 /* The contents of value VAL, treated as a value of type TYPE.  The
@@ -1699,8 +1698,8 @@ ada_fixup_array_indexes_type (struct type *index_desc_type)
      the field type should be a meaningless integer type whose name
      is not equal to the field name.  */
   if (index_desc_type->field (0).type ()->name () != NULL
-      && strcmp (index_desc_type->field (0).type ()->name (),
-		 index_desc_type->field (0).name ()) == 0)
+      && streq (index_desc_type->field (0).type ()->name (),
+		index_desc_type->field (0).name ()))
     return;
 
   /* Fixup each field of INDEX_DESC_TYPE.  */
@@ -3850,7 +3849,7 @@ ada_resolve_enum (std::vector<struct block_symbol> &syms,
       /* We let an anonymous enum type match a non-anonymous one.  */
       if (type1->name () != nullptr
 	  && type2->name () != nullptr
-	  && strcmp (type1->name (), type2->name ()) != 0)
+	  && !streq (type1->name (), type2->name ()))
 	continue;
       if (ada_identical_enum_types_p (type1, type2))
 	return i;
@@ -4847,10 +4846,9 @@ equiv_types (struct type *type0, struct type *type1)
   if (type0 == NULL || type1 == NULL
       || type0->code () != type1->code ())
     return false;
-  if ((type0->code () == TYPE_CODE_STRUCT
-       || type0->code () == TYPE_CODE_ENUM)
+  if ((type0->code () == TYPE_CODE_STRUCT || type0->code () == TYPE_CODE_ENUM)
       && ada_type_name (type0) != NULL && ada_type_name (type1) != NULL
-      && strcmp (ada_type_name (type0), ada_type_name (type1)) == 0)
+      && streq (ada_type_name (type0), ada_type_name (type1)))
     return true;
 
   return false;
@@ -4894,7 +4892,7 @@ lesseq_defined_than (struct symbol *sym0, struct symbol *sym1)
       {
 	const char *name0 = sym0->linkage_name ();
 	const char *name1 = sym1->linkage_name ();
-	return (strcmp (name0, name1) == 0
+	return (streq (name0, name1)
 		&& sym0->value_address () == sym1->value_address ());
       }
 
@@ -4983,7 +4981,7 @@ is_nondebugging_type (struct type *type)
 {
   const char *name = ada_type_name (type);
 
-  return (name != NULL && strcmp (name, "<variable, no debug info>") == 0);
+  return (name != NULL && streq (name, "<variable, no debug info>"));
 }
 
 /* Return true if TYPE1 and TYPE2 are two enumeration types
@@ -5112,8 +5110,8 @@ remove_extra_symbols (std::vector<struct block_symbol> &syms)
 	      if (j != i
 		  && !syms[j].symbol->type ()->is_stub ()
 		  && syms[j].symbol->linkage_name () != NULL
-		  && strcmp (syms[i].symbol->linkage_name (),
-			     syms[j].symbol->linkage_name ()) == 0)
+		  && streq (syms[i].symbol->linkage_name (),
+			    syms[j].symbol->linkage_name ()))
 		remove_p = true;
 	    }
 	}
@@ -5129,12 +5127,12 @@ remove_extra_symbols (std::vector<struct block_symbol> &syms)
 	    {
 	      if (i != j
 		  && syms[j].symbol->linkage_name () != NULL
-		  && strcmp (syms[i].symbol->linkage_name (),
-			     syms[j].symbol->linkage_name ()) == 0
+		  && streq (syms[i].symbol->linkage_name (),
+			    syms[j].symbol->linkage_name ())
 		  && (syms[i].symbol->loc_class ()
 		      == syms[j].symbol->loc_class ())
-		  && syms[i].symbol->value_address ()
-		  == syms[j].symbol->value_address ())
+		  && (syms[i].symbol->value_address ()
+		      == syms[j].symbol->value_address ()))
 		remove_p = true;
 	    }
 	}
@@ -5820,7 +5818,7 @@ is_name_suffix (const char *str)
 
   /* "TKB" suffixes are used for subprograms implementing task bodies.  */
 
-  if (strcmp (str, "TKB") == 0)
+  if (streq (str, "TKB"))
     return true;
 
 #if 0
@@ -5876,14 +5874,14 @@ is_name_suffix (const char *str)
 	return false;
       if (str[2] == '_')
 	{
-	  if (strcmp (str + 3, "JM") == 0)
+	  if (streq (str + 3, "JM"))
 	    return true;
 	  /* FIXME: brobecker/2004-09-30: GNAT will soon stop using
 	     the LJM suffix in favor of the JM one.  But we will
 	     still accept LJM as a valid suffix for a reasonable
 	     amount of time, just to allow ourselves to debug programs
 	     compiled using an older version of GNAT.  */
-	  if (strcmp (str + 3, "LJM") == 0)
+	  if (streq (str + 3, "LJM"))
 	    return true;
 	  if (str[3] != 'X')
 	    return false;
@@ -6211,7 +6209,7 @@ ada_is_dispatch_table_ptr_type (struct type *type)
   if (name == NULL)
     return false;
 
-  return (strcmp (name, "ada__tags__dispatch_table") == 0);
+  return (streq (name, "ada__tags__dispatch_table"));
 }
 
 /* Return true if TYPE is an interface tag.  */
@@ -6224,7 +6222,7 @@ ada_is_interface_tag (struct type *type)
   if (name == nullptr)
     return false;
 
-  return (strcmp (name, "ada__tags__interface_tag") == 0);
+  return (streq (name, "ada__tags__interface_tag"));
 }
 
 /* True if field number FIELD_NUM in struct or union type TYPE is supposed
@@ -6304,8 +6302,7 @@ ada_is_tag_type (struct type *type)
     {
       const char *name = ada_type_name (type->target_type ());
 
-      return (name != NULL
-	      && strcmp (name, "ada__tags__dispatch_table") == 0);
+      return name != nullptr && streq (name, "ada__tags__dispatch_table");
     }
 }
 
@@ -6654,7 +6651,7 @@ ada_is_wrapper_field (struct type *type, int field_num)
 {
   const char *name = type->field (field_num).name ();
 
-  if (name != NULL && strcmp (name, "RETVAL") == 0)
+  if (name != NULL && streq (name, "RETVAL"))
     {
       /* This happens in functions with "out" or "in out" parameters
 	 which are passed by copy.  For such functions, GNAT describes
@@ -6667,7 +6664,7 @@ ada_is_wrapper_field (struct type *type, int field_num)
 
   return (name != NULL
 	  && (startswith (name, "PARENT")
-	      || strcmp (name, "REP") == 0
+	      || streq (name, "REP")
 	      || startswith (name, "_parent")
 	      || name[0] == 'S' || name[0] == 'R' || name[0] == 'O'));
 }
@@ -7565,7 +7562,7 @@ find_parallel_type_by_descriptive_type (struct type *type, const char *name)
 	}
 
       /* If the names match, stop.  */
-      if (strcmp (result_name, name) == 0)
+      if (streq (result_name, name))
 	break;
 
       /* Otherwise, look at the next item on the list, if any.  */
@@ -7652,7 +7649,7 @@ dynamic_template_type (struct type *type)
     {
       int len = strlen (ada_type_name (type));
 
-      if (len > 6 && strcmp (ada_type_name (type) + len - 6, "___XVE") == 0)
+      if (len > 6 && streq (ada_type_name (type) + len - 6, "___XVE"))
 	return type;
       else
 	return ada_find_parallel_type (type, "___XVE");
@@ -8873,10 +8870,10 @@ ada_is_character_type (struct type *type)
   return (name != NULL
 	  && (type->code () == TYPE_CODE_INT
 	      || type->code () == TYPE_CODE_RANGE)
-	  && (strcmp (name, "character") == 0
-	      || strcmp (name, "wide_character") == 0
-	      || strcmp (name, "wide_wide_character") == 0
-	      || strcmp (name, "unsigned char") == 0));
+	  && (streq (name, "character")
+	      || streq (name, "wide_character")
+	      || streq (name, "wide_wide_character")
+	      || streq (name, "unsigned char")));
 }
 
 /* True if TYPE appears to be an Ada string type.  */
@@ -8924,7 +8921,7 @@ ada_is_aligner_type (struct type *type)
 
   return (type->code () == TYPE_CODE_STRUCT
 	  && type->num_fields () == 1
-	  && strcmp (type->field (0).name (), "F") == 0);
+	  && streq (type->field (0).name (), "F"));
 }
 
 /* If there is an ___XVS-convention type parallel to SUBTYPE, return
@@ -10646,7 +10643,7 @@ convert_char_literal (struct type *type, LONGEST val)
       const char *ename = field.name ();
       size_t elen = strlen (ename);
 
-      if (elen >= len && strcmp (name, ename + elen - len) == 0)
+      if (elen >= len && streq (name, ename + elen - len))
 	return field.loc_enumval ();
     }
   return val;
@@ -11432,7 +11429,7 @@ ada_ternop_slice_operation::resolve (struct expression *exp,
 bool
 ada_is_system_address_type (struct type *type)
 {
-  return (type->name () && strcmp (type->name (), "system__address") == 0);
+  return (type->name () && streq (type->name (), "system__address"));
 }
 
 
@@ -12020,8 +12017,8 @@ ada_unhandled_exception_name_addr_from_raise (void)
 	= find_frame_funname (fi, &func_lang, NULL);
       if (func_name != NULL)
 	{
-	  if (strcmp (func_name.get (),
-		      data->exception_info->catch_exception_sym) == 0)
+	  if (streq (func_name.get (),
+		     data->exception_info->catch_exception_sym))
 	    break; /* We found the frame we were looking for...  */
 	}
       fi = get_prev_frame (fi);
@@ -12773,7 +12770,7 @@ ada_exception_catchpoint_cond_string (const char *excep_string,
 
   for (const char *name : standard_exc)
     {
-      if (strcmp (name, excep_string) == 0)
+      if (streq (name, excep_string))
 	{
 	  is_standard_exc = true;
 	  break;
@@ -12981,7 +12978,7 @@ ada_is_exception_sym (struct symbol *sym)
 	  && sym->loc_class () != LOC_BLOCK
 	  && sym->loc_class () != LOC_CONST
 	  && sym->loc_class () != LOC_UNRESOLVED
-	  && type_name != NULL && strcmp (type_name, "exception") == 0);
+	  && type_name != nullptr && streq (type_name, "exception"));
 }
 
 /* Given a global symbol SYM, return non-zero iff SYM is a non-standard
@@ -12995,13 +12992,13 @@ ada_is_non_standard_exception_sym (struct symbol *sym)
     return false;
 
   for (const char *name : standard_exc)
-    if (strcmp (sym->linkage_name (), name) == 0)
+    if (streq (sym->linkage_name (), name))
       return false;  /* A standard exception.  */
 
   /* Numeric_Error is also a standard exception, so exclude it.
      See the STANDARD_EXC description for more details as to why
      this exception is not listed in that array.  */
-  if (strcmp (sym->linkage_name (), "numeric_error") == 0)
+  if (streq (sym->linkage_name (), "numeric_error"))
     return false;
 
   return true;
@@ -13029,7 +13026,7 @@ ada_exc_info::operator< (const ada_exc_info &other) const
 bool
 ada_exc_info::operator== (const ada_exc_info &other) const
 {
-  return addr == other.addr && strcmp (name, other.name) == 0;
+  return addr == other.addr && streq (name, other.name);
 }
 
 /* Sort EXCEPTIONS using compare_ada_exception_info as the comparison
@@ -13373,7 +13370,7 @@ do_exact_match (const char *symbol_search_name,
 		const lookup_name_info &lookup_name,
 		completion_match_result *comp_match_res)
 {
-  return strcmp (symbol_search_name, ada_lookup_name (lookup_name)) == 0;
+  return streq (symbol_search_name, ada_lookup_name (lookup_name));
 }
 
 /* Build the Ada lookup name for LOOKUP_NAME.  */

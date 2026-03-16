@@ -2173,7 +2173,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 
 	  tmp = find_pc_misc_function (pc);
 	  if (tmp >= 0
-	      && strcmp (misc_function_vector[tmp].name, main_name ()) == 0)
+	      && streq (misc_function_vector[tmp].name, main_name ()))
 	    return pc + 8;
 	}
     }
@@ -2250,10 +2250,10 @@ rs6000_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       /* We check for ___eabi (three leading underscores) in addition
 	 to __eabi in case the GCC option "-fleading-underscore" was
 	 used to compile the program.  */
-      if (s.minsym != NULL
-	  && s.minsym->linkage_name () != NULL
-	  && (strcmp (s.minsym->linkage_name (), "__eabi") == 0
-	      || strcmp (s.minsym->linkage_name (), "___eabi") == 0))
+      if (s.minsym != nullptr
+	  && s.minsym->linkage_name () != nullptr
+	  && (streq (s.minsym->linkage_name (), "__eabi")
+	      || streq (s.minsym->linkage_name (), "___eabi")))
 	pc += 4;
     }
   return pc;
@@ -4098,8 +4098,7 @@ bfd_uses_spe_extensions (bfd *abfd)
       ptr += 12;
 
       /* The name must be "APUinfo\0".  */
-      if (name_len != 8
-	  && strcmp ((const char *) ptr, "APUinfo") != 0)
+      if (name_len != 8 && !streq ((const char *) ptr, "APUinfo"))
 	break;
       ptr += name_len;
 
@@ -8549,8 +8548,7 @@ powerpc_set_vector_abi (const char *args, int from_tty,
   for (vector_abi = POWERPC_VEC_AUTO;
        vector_abi != POWERPC_VEC_LAST;
        vector_abi++)
-    if (strcmp (powerpc_vector_abi_string,
-		powerpc_vector_strings[vector_abi]) == 0)
+    if (streq (powerpc_vector_abi_string, powerpc_vector_strings[vector_abi]))
       {
 	powerpc_vector_abi_global = (enum powerpc_vector_abi) vector_abi;
 	break;

@@ -79,9 +79,9 @@ gccgo_string_p (struct type *type)
       type1 = check_typedef (type1);
 
       if (type0->code () == TYPE_CODE_PTR
-	  && strcmp (type->field (0).name (), "__data") == 0
+	  && streq (type->field (0).name (), "__data")
 	  && type1->code () == TYPE_CODE_INT
-	  && strcmp (type->field (1).name (), "__length") == 0)
+	  && streq (type->field (1).name (), "__length"))
 	{
 	  struct type *target_type = type0->target_type ();
 
@@ -89,7 +89,7 @@ gccgo_string_p (struct type *type)
 
 	  if (target_type->code () == TYPE_CODE_INT
 	      && target_type->length () == 1
-	      && strcmp (target_type->name (), "uint8") == 0)
+	      && streq (target_type->name (), "uint8"))
 	    return 1;
 	}
     }
@@ -103,12 +103,9 @@ gccgo_string_p (struct type *type)
 static int
 sixg_string_p (struct type *type)
 {
-  if (type->num_fields () == 2
-      && type->name () != NULL
-      && strcmp (type->name (), "string") == 0)
-    return 1;
-
-  return 0;
+  return (type->num_fields () == 2
+	  && type->name () != nullptr
+	  && streq (type->name (), "string"));
 }
 
 /* Classify the kind of Go object that TYPE is.
@@ -201,7 +198,7 @@ unpack_mangled_go_symbol (const char *mangled_name,
   *method_type_is_pointerp = 0;
 
   /* main.init is mangled specially.  */
-  if (strcmp (mangled_name, "__go_init_main") == 0)
+  if (streq (mangled_name, "__go_init_main"))
     {
       gdb::unique_xmalloc_ptr<char> package
 	= make_unique_xstrdup ("main");
@@ -212,7 +209,7 @@ unpack_mangled_go_symbol (const char *mangled_name,
     }
 
   /* main.main is mangled specially (missing prefix).  */
-  if (strcmp (mangled_name, "main.main") == 0)
+  if (streq (mangled_name, "main.main"))
     {
       gdb::unique_xmalloc_ptr<char> package
 	= make_unique_xstrdup ("main");

@@ -179,7 +179,7 @@ struct gdb_exception
 
     return (reason == other.reason
 	    && error == other.error
-	    && strcmp (msg1, msg2) == 0);
+	    && streq (msg1, msg2));
   }
 
   /* Compare two exceptions.  */

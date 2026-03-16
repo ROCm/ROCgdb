@@ -87,7 +87,7 @@ signal_to_name_or_int (enum gdb_signal sig)
 {
   const char *result = gdb_signal_to_name (sig);
 
-  if (strcmp (result, "?") == 0)
+  if (streq (result, "?"))
     result = plongest (sig);
 
   return result;

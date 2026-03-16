@@ -1662,7 +1662,7 @@ commands_equal (const command_line *a, const command_line *b)
 	}
 
       /* Check lines are identical.  */
-      if (a->line != nullptr && strcmp (a->line, b->line) != 0)
+      if (a->line != nullptr && !streq (a->line, b->line))
 	return false;
 
       /* Check body_list_0.  */

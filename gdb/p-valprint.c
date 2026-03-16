@@ -426,9 +426,9 @@ pascal_language::value_print (struct value *val, struct ui_file *stream,
       /* Hack:  remove (char *) for char strings.  Their
 	 type is indicated by the quoted string anyway.  */
       if (type->code () == TYPE_CODE_PTR
-	  && type->name () == NULL
-	  && type->target_type ()->name () != NULL
-	  && strcmp (type->target_type ()->name (), "char") == 0)
+	  && type->name () == nullptr
+	  && type->target_type ()->name () != nullptr
+	  && streq (type->target_type ()->name (), "char"))
 	{
 	  /* Print nothing.  */
 	}
@@ -474,8 +474,7 @@ pascal_object_is_vtbl_ptr_type (struct type *type)
 {
   const char *type_name = type->name ();
 
-  return (type_name != NULL
-	  && strcmp (type_name, pascal_vtbl_ptr_name) == 0);
+  return type_name != nullptr && streq (type_name, pascal_vtbl_ptr_name);
 }
 
 /* Return truth value for the assertion that TYPE is of the type

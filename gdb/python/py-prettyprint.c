@@ -323,7 +323,7 @@ print_string_repr (PyObject *printer, const char *hint,
 	      length = PyBytes_Size (string.get ());
 	      type = builtin_type (gdbarch)->builtin_char;
 
-	      if (hint && !strcmp (hint, "string"))
+	      if (hint && streq (hint, "string"))
 		language->printstr (stream, type, (gdb_byte *) output,
 				    length, NULL, 0, options);
 	      else
@@ -370,8 +370,8 @@ print_children (PyObject *printer, const char *hint,
 
   /* If we are printing a map or an array, we want some special
      formatting.  */
-  is_map = hint && ! strcmp (hint, "map");
-  is_array = hint && ! strcmp (hint, "array");
+  is_map = hint && streq (hint, "map");
+  is_array = hint && streq (hint, "array");
 
   gdbpy_ref<> children (PyObject_CallMethodObjArgs (printer, gdbpy_children_cst,
 						    NULL));

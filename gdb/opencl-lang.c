@@ -346,28 +346,28 @@ opencl_component_ref (struct expression *exp, struct value *val,
       && src_len != 16)
     error (_("Invalid OpenCL vector size"));
 
-  if (strcmp (comps, "lo") == 0 )
+  if (streq (comps, "lo"))
     {
       dst_len = (src_len == 3) ? 2 : src_len / 2;
 
       for (i = 0; i < dst_len; i++)
 	indices[i] = i;
     }
-  else if (strcmp (comps, "hi") == 0)
+  else if (streq (comps, "hi"))
     {
       dst_len = (src_len == 3) ? 2 : src_len / 2;
 
       for (i = 0; i < dst_len; i++)
 	indices[i] = dst_len + i;
     }
-  else if (strcmp (comps, "even") == 0)
+  else if (streq (comps, "even"))
     {
       dst_len = (src_len == 3) ? 2 : src_len / 2;
 
       for (i = 0; i < dst_len; i++)
 	indices[i] = i*2;
     }
-  else if (strcmp (comps, "odd") == 0)
+  else if (streq (comps, "odd"))
     {
       dst_len = (src_len == 3) ? 2 : src_len / 2;
 

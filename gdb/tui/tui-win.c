@@ -220,7 +220,7 @@ translate (const char *name, struct tui_translate *table)
 {
   while (table->name)
     {
-      if (name && strcmp (table->name, name) == 0)
+      if (name && streq (table->name, name))
 	return table->value;
       table++;
     }
@@ -235,7 +235,7 @@ translate_acs (const char *name, struct tui_translate *table, int acs_char)
 {
   /* The ACS characters are determined at run time by curses terminal
      management.  */
-  if (strcmp (name, "acs") == 0)
+  if (streq (name, "acs"))
     return acs_char;
 
   return translate (name, table);

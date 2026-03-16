@@ -221,7 +221,7 @@ find_regno_no_throw (const struct target_desc *tdesc, const char *name)
 {
   for (int i = 0; i < tdesc->reg_defs.size (); ++i)
     {
-      if (strcmp (name, find_register_by_number (tdesc, i).name) == 0)
+      if (streq (name, find_register_by_number (tdesc, i).name))
 	return i;
     }
   return {};

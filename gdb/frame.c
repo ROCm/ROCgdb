@@ -2439,7 +2439,7 @@ get_prev_frame_always_1 (const frame_info_ptr &this_frame)
       morestack_msym = lookup_minimal_symbol_by_pc (this_pc_in_block).minsym;
       if (morestack_msym)
 	morestack_name = morestack_msym->linkage_name ();
-      if (!morestack_name || strcmp (morestack_name, "__morestack") != 0)
+      if (!morestack_name || !streq (morestack_name, "__morestack"))
 	{
 	  frame_debug_printf ("  -> nullptr // this frame ID is inner");
 	  this_frame->stop_reason = UNWIND_INNER_ID;

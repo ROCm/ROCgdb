@@ -2432,11 +2432,9 @@ set_memory_packet_size (const char *args, struct memory_packet_config *config,
 
   if (args == NULL)
     error (_("Argument required (integer, \"fixed\" or \"limit\")."));
-  else if (strcmp (args, "hard") == 0
-      || strcmp (args, "fixed") == 0)
+  else if (streq (args, "hard") || streq (args, "fixed"))
     fixed_p = 1;
-  else if (strcmp (args, "soft") == 0
-	   || strcmp (args, "limit") == 0)
+  else if (streq (args, "soft") || streq (args, "limit"))
     fixed_p = 0;
   else
     {
@@ -3053,7 +3051,7 @@ remote_target::remote_query_attached (int pid)
   switch (result.status ())
     {
     case PACKET_OK:
-      if (strcmp (rs->buf.data (), "1") == 0)
+      if (streq (rs->buf.data (), "1"))
 	return 1;
       break;
     case PACKET_ERROR:
@@ -3351,7 +3349,7 @@ remote_target::pass_signals (gdb::array_view<const unsigned char> pass_signals)
 	    }
 	}
       *p = 0;
-      if (!rs->last_pass_packet || strcmp (rs->last_pass_packet, pass_packet))
+      if (!rs->last_pass_packet || !streq (rs->last_pass_packet, pass_packet))
 	{
 	  putpkt (pass_packet);
 	  getpkt (&rs->buf);
@@ -3471,7 +3469,7 @@ remote_target::program_signals (gdb::array_view<const unsigned char> signals)
 	}
       *p = 0;
       if (!rs->last_program_signals_packet
-	  || strcmp (rs->last_program_signals_packet, packet) != 0)
+	  || !streq (rs->last_program_signals_packet, packet))
 	{
 	  putpkt (packet);
 	  getpkt (&rs->buf);
@@ -5531,12 +5529,12 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 
     putpkt (v_mustreplyempty);
     getpkt (&rs->buf);
-    if (strcmp (rs->buf.data (), "OK") == 0)
+    if (streq (rs->buf.data (), "OK"))
       {
 	m_features.m_protocol_packets[PACKET_vFile_setfs].support
 	  = PACKET_DISABLE;
       }
-    else if (strcmp (rs->buf.data (), "") != 0)
+    else if (!streq (rs->buf.data (), ""))
       error (_("Remote replied unexpectedly to '%s': %s"), v_mustreplyempty,
 	     rs->buf.data ());
   }
@@ -5631,7 +5629,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
       putpkt ("QNonStop:1");
       getpkt (&rs->buf);
 
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Remote refused setting non-stop mode with: %s"),
 	       rs->buf.data ());
 
@@ -5648,7 +5646,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
       putpkt ("QNonStop:0");
       getpkt (&rs->buf);
 
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Remote refused setting all-stop mode with: %s"),
 	       rs->buf.data ());
     }
@@ -5775,7 +5773,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
 	 reply.  In the latter case, there may be more than one thread
 	 stopped --- we pull them all out using the vStopped
 	 mechanism.  */
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	{
 	  const notif_client *notif = &notif_client_stop;
 
@@ -6015,7 +6013,7 @@ remote_target::set_permissions ()
 
   /* If the target didn't like the packet, warn the user.  Do not try
      to undo the user's settings, that would just be maddening.  */
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     warning (_("Remote refused setting permissions with: %s"),
 	     rs->buf.data ());
 }
@@ -6284,7 +6282,7 @@ register_remote_support_xml (const char *xml)
 
       do
 	{
-	  if (strcmp (p, xml) == 0)
+	  if (streq (p, xml))
 	    {
 	      /* already there */
 	      xfree (copy);
@@ -6473,7 +6471,7 @@ remote_target::remote_query_supported ()
 	}
 
       for (i = 0; i < ARRAY_SIZE (remote_protocol_features); i++)
-	if (strcmp (remote_protocol_features[i].name, p) == 0)
+	if (streq (remote_protocol_features[i].name, p))
 	  {
 	    const struct protocol_feature *feature;
 
@@ -7086,7 +7084,7 @@ extended_remote_target::attach (const char *args, int from_tty)
 	  wait_status = (char *) alloca (strlen (rs->buf.data ()) + 1);
 	  strcpy (wait_status, rs->buf.data ());
 	}
-      else if (strcmp (rs->buf.data (), "OK") != 0)
+      else if (!streq (rs->buf.data (), "OK"))
 	error (_("Attaching to %s failed with: %s"),
 	       target_pid_to_str (ptid_t (pid)).c_str (),
 	       rs->buf.data ());
@@ -7457,7 +7455,7 @@ remote_target::remote_resume_with_vcont (ptid_t scope_ptid, int step,
 	 reply will be reported asynchronously by means of a `%Stop'
 	 notification.  */
       getpkt (&rs->buf);
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Unexpected vCont reply in non-stop mode: %s"),
 	       rs->buf.data ());
     }
@@ -7609,7 +7607,7 @@ vcont_builder::flush ()
   rs = m_remote->get_remote_state ();
   m_remote->putpkt (rs->buf);
   m_remote->getpkt (&rs->buf);
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Unexpected vCont reply in non-stop mode: %s"), rs->buf.data ());
 }
 
@@ -7973,7 +7971,7 @@ remote_target::remote_stop_ns (ptid_t ptid)
      come in asynchronously by notification.  */
   putpkt (rs->buf);
   getpkt (&rs->buf);
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Stopping %s failed: %s"), target_pid_to_str (ptid).c_str (),
 	   rs->buf.data ());
 }
@@ -8841,7 +8839,7 @@ remote_target::remote_notif_get_pending_events (const notif_client *nc)
       while (1)
 	{
 	  getpkt (&rs->buf);
-	  if (strcmp (rs->buf.data (), "OK") == 0)
+	  if (streq (rs->buf.data (), "OK"))
 	    break;
 	  else
 	    remote_notif_ack (this, nc, rs->buf.data ());
@@ -11237,7 +11235,7 @@ remote_target::extended_remote_disable_randomization (int val)
   reply = remote_get_noisy_reply ();
   if (*reply == '\0')
     error (_("Target does not support QDisableRandomization."));
-  if (strcmp (reply, "OK") != 0)
+  if (!streq (reply, "OK"))
     error (_("Bogus QDisableRandomization reply from target: %s"), reply);
 }
 
@@ -11332,7 +11330,7 @@ remote_target::send_environment_packet (const char *action,
 
   putpkt (rs->buf);
   getpkt (&rs->buf);
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     warning (_("Unable to %s environment variable '%s' on remote."),
 	     action, value);
 }
@@ -11348,7 +11346,7 @@ remote_target::extended_remote_environment_support ()
     {
       putpkt ("QEnvironmentReset");
       getpkt (&rs->buf);
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	warning (_("Unable to reset environment on remote."));
     }
 
@@ -11525,7 +11523,7 @@ extended_remote_target::create_inferior (const char *exec_file,
 		 "QStartupWithShell:%d", startup_with_shell ? 1 : 0);
       putpkt (rs->buf);
       getpkt (&rs->buf);
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("\
 Remote replied unexpectedly while setting startup-with-shell: %s"),
 	       rs->buf.data ());
@@ -12083,7 +12081,7 @@ compare_sections_command (const char *args, int from_tty)
   if (!current_program_space->exec_bfd ())
     error (_("command cannot be used without an exec file"));
 
-  if (args != NULL && strcmp (args, "-r") == 0)
+  if (args != NULL && streq (args, "-r"))
     {
       read_only = 1;
       args = NULL;
@@ -12102,7 +12100,7 @@ compare_sections_command (const char *args, int from_tty)
 	continue;		/* Skip zero-length section.  */
 
       sectname = bfd_section_name (s);
-      if (args && strcmp (args, sectname) != 0)
+      if (args && !streq (args, sectname))
 	continue;		/* Not the section selected by user.  */
 
       matched = 1;		/* Do this section.  */
@@ -12203,8 +12201,8 @@ remote_target::remote_read_qxfer (const char *object_name,
      this request.  */
   if (rs->finished_object)
     {
-      if (strcmp (object_name, rs->finished_object) == 0
-	  && strcmp (annex ? annex : "", rs->finished_annex) == 0
+      if (streq (object_name, rs->finished_object)
+	  && streq (annex ? annex : "", rs->finished_annex)
 	  && offset == rs->finished_offset)
 	return TARGET_XFER_EOF;
 
@@ -12633,7 +12631,7 @@ remote_target::rcmd (const char *command, struct ui_file *outbuf)
 	  break;
 	}
 
-      if (strcmp (buf, "OK") != 0)
+      if (!streq (buf, "OK"))
 	{
 	  for (p = buf; p[0] != '\0' && p[1] != '\0'; p += 2)
 	    {
@@ -14241,7 +14239,7 @@ remote_target::trace_init ()
 
   putpkt ("QTinit");
   remote_get_noisy_reply ();
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Target does not support this command."));
 }
 
@@ -14264,7 +14262,7 @@ remote_target::remote_download_command_source (int num, ULONGEST addr,
 			    rs->buf.size () - strlen (rs->buf.data ()));
       putpkt (rs->buf);
       remote_get_noisy_reply ();
-      if (strcmp (rs->buf.data (), "OK"))
+      if (!streq (rs->buf.data (), "OK"))
 	warning (_("Target does not support source download."));
 
       if (cmd->control_type == while_control
@@ -14279,7 +14277,7 @@ remote_target::remote_download_command_source (int num, ULONGEST addr,
 				rs->buf.size () - strlen (rs->buf.data ()));
 	  putpkt (rs->buf);
 	  remote_get_noisy_reply ();
-	  if (strcmp (rs->buf.data (), "OK"))
+	  if (!streq (rs->buf.data (), "OK"))
 	    warning (_("Target does not support source download."));
 	}
     }
@@ -14426,7 +14424,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
 
   putpkt (buf.data ());
   remote_get_noisy_reply ();
-  if (strcmp (rs->buf.data (), "OK"))
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Target does not support tracepoints."));
 
   /* do_single_steps (t); */
@@ -14448,7 +14446,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
 
       putpkt (buf.data ());
       remote_get_noisy_reply ();
-      if (strcmp (rs->buf.data (), "OK"))
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Error on target while setting tracepoints."));
     }
 
@@ -14471,7 +14469,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
 
       putpkt (buf.data ());
       remote_get_noisy_reply ();
-      if (strcmp (rs->buf.data (), "OK"))
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Error on target while setting tracepoints."));
     }
 
@@ -14490,7 +14488,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
 				buf.size () - strlen (buf.data ()));
 	  putpkt (buf.data ());
 	  remote_get_noisy_reply ();
-	  if (strcmp (rs->buf.data (), "OK"))
+	  if (!streq (rs->buf.data (), "OK"))
 	    warning (_("Target does not support source download."));
 	}
       if (b->cond_string)
@@ -14506,7 +14504,7 @@ remote_target::download_tracepoint (struct bp_location *loc)
 				buf.size () - strlen (buf.data ()));
 	  putpkt (buf.data ());
 	  remote_get_noisy_reply ();
-	  if (strcmp (rs->buf.data (), "OK"))
+	  if (!streq (rs->buf.data (), "OK"))
 	    warning (_("Target does not support source download."));
 	}
       remote_download_command_source (b->number, loc->address,
@@ -14561,7 +14559,7 @@ remote_target::download_trace_state_variable (const trace_state_variable &tsv)
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
     error (_("Target does not support this command."));
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Error on target while downloading trace state variable."));
 }
 
@@ -14577,7 +14575,7 @@ remote_target::enable_tracepoint (struct bp_location *location)
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
     error (_("Target does not support enabling tracepoints while a trace run is ongoing."));
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Error on target while enabling tracepoint."));
 }
 
@@ -14593,7 +14591,7 @@ remote_target::disable_tracepoint (struct bp_location *location)
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
     error (_("Target does not support disabling tracepoints while a trace run is ongoing."));
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Error on target while disabling tracepoint."));
 }
 
@@ -14658,7 +14656,7 @@ remote_target::trace_start ()
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
     error (_("Target does not support this command."));
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Bogus reply from target: %s"), rs->buf.data ());
 }
 
@@ -14770,7 +14768,7 @@ remote_target::trace_stop ()
   remote_get_noisy_reply ();
   if (rs->buf[0] == '\0')
     error (_("Target does not support this command."));
-  if (strcmp (rs->buf.data (), "OK") != 0)
+  if (!streq (rs->buf.data (), "OK"))
     error (_("Bogus reply from target: %s"), rs->buf.data ());
 }
 
@@ -14898,7 +14896,7 @@ remote_target::save_trace_data (const char *filename)
   reply = remote_get_noisy_reply ();
   if (*reply == '\0')
     error (_("Target does not support this command."));
-  if (strcmp (reply, "OK") != 0)
+  if (!streq (reply, "OK"))
     error (_("Bogus reply from target: %s"), reply);
   return 0;
 }
@@ -14962,7 +14960,7 @@ remote_target::set_disconnected_tracing (int val)
       reply = remote_get_noisy_reply ();
       if (*reply == '\0')
 	error (_("Target does not support this command."));
-      if (strcmp (reply, "OK") != 0)
+      if (!streq (reply, "OK"))
 	error (_("Bogus reply from target: %s"), reply);
     }
   else if (val)
@@ -14992,7 +14990,7 @@ remote_target::set_circular_trace_buffer (int val)
   reply = remote_get_noisy_reply ();
   if (*reply == '\0')
     error (_("Target does not support this command."));
-  if (strcmp (reply, "OK") != 0)
+  if (!streq (reply, "OK"))
     error (_("Bogus reply from target: %s"), reply);
 }
 
@@ -15117,7 +15115,7 @@ remote_target::set_trace_notes (const char *user, const char *notes,
   if (*reply == '\0')
     return false;
 
-  if (strcmp (reply, "OK") != 0)
+  if (!streq (reply, "OK"))
     error (_("Bogus reply from target: %s"), reply);
 
   return true;
@@ -15135,7 +15133,7 @@ remote_target::use_agent (bool use)
       putpkt (rs->buf);
       getpkt (&rs->buf);
 
-      if (strcmp (rs->buf.data (), "OK") == 0)
+      if (streq (rs->buf.data (), "OK"))
 	{
 	  ::use_agent = use;
 	  return true;
@@ -15164,7 +15162,7 @@ check_xml_btrace_version (struct gdb_xml_parser *parser,
   const char *version
     = (const char *) xml_find_attribute (attributes, "version")->value.get ();
 
-  if (strcmp (version, "1.0") != 0)
+  if (!streq (version, "1.0"))
     gdb_xml_error (parser, _("Unsupported btrace version: \"%s\""), version);
 }
 
@@ -15260,7 +15258,7 @@ parse_xml_btrace_pt_config_cpu (struct gdb_xml_parser *parser,
 
   btrace = (struct btrace_data *) user_data;
 
-  if (strcmp (vendor, "GenuineIntel") == 0)
+  if (streq (vendor, "GenuineIntel"))
     btrace->variant.pt.config.cpu.vendor = CV_INTEL;
 
   btrace->variant.pt.config.cpu.family = *family;
@@ -16017,7 +16015,7 @@ remote_target::thread_events (bool enable)
   switch (result.status ())
     {
     case PACKET_OK:
-      if (strcmp (rs->buf.data (), "OK") != 0)
+      if (!streq (rs->buf.data (), "OK"))
 	error (_("Remote refused setting thread events: %s"), rs->buf.data ());
       rs->last_thread_events = enable;
       break;
@@ -16073,7 +16071,7 @@ remote_target::commit_requested_thread_options ()
       switch (result.status ())
 	{
 	case PACKET_OK:
-	  if (strcmp (rs->buf.data (), "OK") != 0)
+	  if (!streq (rs->buf.data (), "OK"))
 	    error (_("Remote refused setting thread options: %s"), rs->buf.data ());
 	  break;
 	case PACKET_ERROR:
@@ -16150,7 +16148,7 @@ show_remote_cmd (const char *args, int from_tty)
   ui_out_emit_tuple tuple_emitter (uiout, "showlist");
   const ui_file_style cmd_style = command_style.style ();
   for (; list != NULL; list = list->next)
-    if (strcmp (list->name, "Z-packet") == 0)
+    if (streq (list->name, "Z-packet"))
       continue;
     else if (list->type == not_set_cmd)
       /* Alias commands are exactly like the original, except they
@@ -16562,11 +16560,11 @@ test_memory_tagging_functions ()
 
   expected = "qMemTags:0,0:0";
   create_fetch_memtags_request (packet, 0x0, 0x0, 0);
-  SELF_CHECK (strcmp (packet.data (), expected.c_str ()) == 0);
+  SELF_CHECK (streq (packet.data (), expected.c_str ()));
 
   expected = "qMemTags:deadbeef,10:1";
   create_fetch_memtags_request (packet, 0xdeadbeef, 16, 1);
-  SELF_CHECK (strcmp (packet.data (), expected.c_str ()) == 0);
+  SELF_CHECK (streq (packet.data (), expected.c_str ()));
 
   /* Test parsing a qMemTags reply.  */
 
@@ -16614,7 +16612,7 @@ test_memory_tagging_functions ()
   /* Test creating a qIsAddressTagged request.  */
   expected = "qIsAddressTagged:deadbeef";
   create_is_address_tagged_request (gdbarch, packet, 0xdeadbeef);
-  SELF_CHECK (strcmp (packet.data (), expected.c_str ()) == 0);
+  SELF_CHECK (streq (packet.data (), expected.c_str ()));
 
   /* Test error reply on qIsAddressTagged request.  */
   reply = "E00";
@@ -16684,11 +16682,11 @@ test_packet_check_result ()
   packet_result result = packet_check_result (buf.data ());
 
   SELF_CHECK (result.status () == PACKET_ERROR);
-  SELF_CHECK (strcmp(result.err_msg (), "msg") == 0);
+  SELF_CHECK (streq (result.err_msg (), "msg"));
 
   result = packet_check_result ("E01");
   SELF_CHECK (result.status () == PACKET_ERROR);
-  SELF_CHECK (strcmp(result.err_msg (), "01") == 0);
+  SELF_CHECK (streq (result.err_msg (), "01"));
 
   SELF_CHECK (packet_check_result ("E1").status () == PACKET_OK);
 
@@ -16696,7 +16694,7 @@ test_packet_check_result ()
 
   result = packet_check_result ("E.");
   SELF_CHECK (result.status () == PACKET_ERROR);
-  SELF_CHECK (strcmp(result.err_msg (), "no error provided") == 0);
+  SELF_CHECK (streq (result.err_msg (), "no error provided"));
 
   SELF_CHECK (packet_check_result ("some response").status () == PACKET_OK);
 

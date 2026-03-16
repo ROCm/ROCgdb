@@ -193,7 +193,7 @@ dump_memory_to_file (const char *cmd, const char *mode, const char *file_format)
   read_memory (lo, buf.data (), count);
 
   /* Have everything.  Open/write the data.  */
-  if (file_format == NULL || strcmp (file_format, "binary") == 0)
+  if (file_format == NULL || streq (file_format, "binary"))
     dump_binary_file (filename.get (), mode, buf.data (), count);
   else
     dump_bfd_file (filename.get (), mode, file_format, lo, buf.data (), count);
@@ -221,7 +221,7 @@ dump_value_to_file (const char *cmd, const char *mode, const char *file_format)
     error (_("Invalid expression."));
 
   /* Have everything.  Open/write the data.  */
-  if (file_format == NULL || strcmp (file_format, "binary") == 0)
+  if (file_format == NULL || streq (file_format, "binary"))
     dump_binary_file (filename.get (), mode, val->contents ().data (),
 		      val->type ()->length ());
   else

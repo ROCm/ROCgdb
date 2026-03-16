@@ -696,7 +696,7 @@ thread_db_load_search (void)
 	     where libpthread lives.  We *could* fetch the info, but we don't
 	     do that yet.  Ignore it.  */
 	}
-      else if (strcmp (this_dir, "$sdir") == 0)
+      else if (streq (this_dir, "$sdir"))
 	{
 	  if (try_thread_db_load_from_sdir ())
 	    {

@@ -104,7 +104,7 @@ libbacktrace_print (void *data, uintptr_t pc, const char *filename,
     }
   sig_write ("\n");
 
-  return function != nullptr && strcmp (function, "main") == 0;
+  return function != nullptr && streq (function, "main");
 }
 
 /* Write a backtrace to GDB's stderr in an async safe manner.  This is a

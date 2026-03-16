@@ -349,7 +349,7 @@ mi_parse::mi_parse (const char *cmd, std::string *token)
 	  chp += as;
 	}
       /* See if --all is the last token in the input.  */
-      if (strcmp (chp, "--all") == 0)
+      if (streq (chp, "--all"))
 	{
 	  this->all = 1;
 	  chp += strlen (chp);
@@ -429,32 +429,32 @@ mi_parse::mi_parse (gdb::unique_xmalloc_ptr<char> command,
       const char *chp = args[i].get ();
 
       /* See if --all is the last token in the input.  */
-      if (strcmp (chp, "--all") == 0)
+      if (streq (chp, "--all"))
 	{
 	  this->all = 1;
 	}
-      else if (strcmp (chp, "--thread-group") == 0)
+      else if (streq (chp, "--thread-group"))
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--thread-group'");
 	  this->set_thread_group (args[i].get (), nullptr);
 	}
-      else if (strcmp (chp, "--thread") == 0)
+      else if (streq (chp, "--thread"))
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--thread'");
 	  this->set_thread (args[i].get (), nullptr);
 	}
-      else if (strcmp (chp, "--frame") == 0)
+      else if (streq (chp, "--frame"))
 	{
 	  ++i;
 	  if (i == args.size ())
 	    error ("No argument to '--frame'");
 	  this->set_frame (args[i].get (), nullptr);
 	}
-      else if (strcmp (chp, "--language") == 0)
+      else if (streq (chp, "--language"))
 	{
 	  ++i;
 	  if (i == args.size ())
@@ -472,17 +472,14 @@ mi_parse::mi_parse (gdb::unique_xmalloc_ptr<char> command,
 enum print_values
 mi_parse_print_values (const char *name)
 {
-   if (strcmp (name, "0") == 0
-       || strcmp (name, mi_no_values) == 0)
-     return PRINT_NO_VALUES;
-   else if (strcmp (name, "1") == 0
-	    || strcmp (name, mi_all_values) == 0)
-     return PRINT_ALL_VALUES;
-   else if (strcmp (name, "2") == 0
-	    || strcmp (name, mi_simple_values) == 0)
-     return PRINT_SIMPLE_VALUES;
-   else
-     error (_("Unknown value for PRINT_VALUES: must be: \
+  if (streq (name, "0") || streq (name, mi_no_values))
+    return PRINT_NO_VALUES;
+  else if (streq (name, "1") || streq (name, mi_all_values))
+    return PRINT_ALL_VALUES;
+  else if (streq (name, "2") || streq (name, mi_simple_values))
+    return PRINT_SIMPLE_VALUES;
+  else
+    error (_("Unknown value for PRINT_VALUES: must be: \
 0 or \"%s\", 1 or \"%s\", 2 or \"%s\""),
-	    mi_no_values, mi_all_values, mi_simple_values);
+	   mi_no_values, mi_all_values, mi_simple_values);
 }

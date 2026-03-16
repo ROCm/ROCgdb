@@ -142,7 +142,7 @@ static const struct serial_ops *
 serial_interface_lookup (const char *name)
 {
   for (const serial_ops *ops : serial_ops_list)
-    if (strcmp (name, ops->name) == 0)
+    if (streq (name, ops->name))
       return ops;
 
   return NULL;

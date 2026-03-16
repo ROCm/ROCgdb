@@ -1374,29 +1374,29 @@ yylex (void)
   switch (namelen)
     {
     case 6:
-      if (strcmp (uptokstart, "OBJECT") == 0)
+      if (streq (uptokstart, "OBJECT"))
 	{
 	  free (uptokstart);
 	  return CLASS;
 	}
-      if (strcmp (uptokstart, "RECORD") == 0)
+      if (streq (uptokstart, "RECORD"))
 	{
 	  free (uptokstart);
 	  return STRUCT;
 	}
-      if (strcmp (uptokstart, "SIZEOF") == 0)
+      if (streq (uptokstart, "SIZEOF"))
 	{
 	  free (uptokstart);
 	  return SIZEOF;
 	}
       break;
     case 5:
-      if (strcmp (uptokstart, "CLASS") == 0)
+      if (streq (uptokstart, "CLASS"))
 	{
 	  free (uptokstart);
 	  return CLASS;
 	}
-      if (strcmp (uptokstart, "FALSE") == 0)
+      if (streq (uptokstart, "FALSE"))
 	{
 	  yylval.lval = 0;
 	  free (uptokstart);
@@ -1404,13 +1404,13 @@ yylex (void)
 	}
       break;
     case 4:
-      if (strcmp (uptokstart, "TRUE") == 0)
+      if (streq (uptokstart, "TRUE"))
 	{
 	  yylval.lval = 1;
 	  free (uptokstart);
 	  return TRUEKEYWORD;
 	}
-      if (strcmp (uptokstart, "SELF") == 0)
+      if (streq (uptokstart, "SELF"))
 	{
 	  /* Here we search for 'this' like
 	     inserted in FPC stabs debug info.  */

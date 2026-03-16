@@ -123,7 +123,7 @@ get_task_from_args (const char *args)
 
       return priv->task;
     }
-  if (strcmp (args, "gdb") == 0)
+  if (streq (args, "gdb"))
     return mach_task_self ();
   task = strtoul (args, &eptr, 0);
   if (*eptr)
@@ -799,7 +799,7 @@ info_mach_exceptions_command (const char *args, int from_tty)
 
   if (args != NULL)
     {
-      if (strcmp (args, "saved") == 0)
+      if (streq (args, "saved"))
 	{
 	  if (inferior_ptid == null_ptid)
 	    gdb_printf (_("No inferior running\n"));
@@ -809,7 +809,7 @@ info_mach_exceptions_command (const char *args, int from_tty)
 	  disp_exception (&priv->exception_info);
 	  return;
 	}
-      else if (strcmp (args, "host") == 0)
+      else if (streq (args, "host"))
 	{
 	  /* FIXME: This needs a privileged host port!  */
 	  kret = host_get_exception_ports

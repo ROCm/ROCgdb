@@ -246,8 +246,7 @@ i386_linux_sigtramp_p (const frame_info_ptr &this_frame)
     return (i386_linux_sigtramp_start (this_frame) != 0
 	    || i386_linux_rt_sigtramp_start (this_frame) != 0);
 
-  return (strcmp ("__restore", name) == 0
-	  || strcmp ("__restore_rt", name) == 0);
+  return streq ("__restore", name) || streq ("__restore_rt", name);
 }
 
 /* Return true if the PC of THIS_FRAME is in a signal trampoline which

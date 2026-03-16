@@ -2708,9 +2708,9 @@ static int
 _parse_bool_arg (const char *args, const char *t_val, const char *f_val,
 		 const char *cmd_prefix)
 {
-  if (!args || strcmp (args, t_val) == 0)
+  if (!args || streq (args, t_val))
     return 1;
-  else if (strcmp (args, f_val) == 0)
+  else if (streq (args, f_val))
     return 0;
   else
     error (_("Illegal argument for \"%s\" command, "
@@ -2925,11 +2925,11 @@ set_sig_thread_cmd (const char *args, int from_tty)
 {
   struct inf *inf = cur_inf ();
 
-  if (!args || (!c_isdigit (*args) && strcmp (args, "none") != 0))
+  if (!args || (!c_isdigit (*args) && !streq (args, "none")))
     error (_("Illegal argument to \"set signal-thread\" command.\n"
 	     "Should be a thread ID, or \"none\"."));
 
-  if (strcmp (args, "none") == 0)
+  if (streq (args, "none"))
     inf->signal_thread = 0;
   else
     {

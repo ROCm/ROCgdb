@@ -1311,7 +1311,7 @@ set_disassembler_options (const char *prospective_options)
 	    if (valid_options->arg[i]->values == NULL)
 	      break;
 	    for (j = 0; valid_options->arg[i]->values[j] != NULL; j++)
-	      if (strcmp (arg, valid_options->arg[i]->values[j]) == 0)
+	      if (streq (arg, valid_options->arg[i]->values[j]))
 		{
 		  found = true;
 		  break;
@@ -1319,7 +1319,7 @@ set_disassembler_options (const char *prospective_options)
 	    if (found)
 	      break;
 	  }
-	else if (strcmp (opt, valid_options->name[i]) == 0)
+	else if (streq (opt, valid_options->name[i]))
 	  break;
       if (valid_options->name[i] == NULL)
 	{

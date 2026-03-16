@@ -433,7 +433,7 @@ dwo_file_eq::operator() (const dwo_file_search &search,
   if (search.comp_dir == nullptr || dwo_file->comp_dir == nullptr)
     return search.comp_dir == dwo_file->comp_dir;
 
-  return std::strcmp (search.comp_dir, dwo_file->comp_dir) == 0;
+  return streq (search.comp_dir, dwo_file->comp_dir);
 }
 
 /* See dwarf2/read.h.  */
@@ -4114,7 +4114,7 @@ fixup_go_packaging (struct dwarf2_cu *cu)
 	  {
 	    objfile *objfile = cu->per_objfile->objfile;
 
-	    if (strcmp (package_name.get (), this_package_name.get ()) != 0)
+	    if (!streq (package_name.get (), this_package_name.get ()))
 	      complaint (_("Symtab %s has objects from two different Go "
 			   "packages: %s and %s"),
 			 (sym->symtab () != NULL
@@ -4361,8 +4361,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 	      /* Could be data-less variant, so keep going.  */
 	      disr_type = nullptr;
 	    }
-	  else if (strcmp (disr_type->field (0).name (),
-			   "RUST$ENUM$DISR") != 0)
+	  else if (!streq (disr_type->field (0).name (), "RUST$ENUM$DISR"))
 	    {
 	      /* Not a Rust enum.  */
 	      return;
@@ -5418,7 +5417,7 @@ dwarf2_physname (const char *name, struct die_info *die, struct dwarf2_cu *cu)
     {
       const char *physname = dwarf2_compute_name (name, die, cu, 1);
 
-      if (canon != NULL && strcmp (physname, canon) != 0)
+      if (canon != NULL && !streq (physname, canon))
 	{
 	  /* It may not mean a bug in GDB.  The compiler could also
 	     compute DW_AT_linkage_name incorrectly.  But in such case
@@ -7219,8 +7218,8 @@ open_and_init_dwp_file (dwarf2_per_objfile *per_objfile)
   dwp_name += ".dwp";
 
   gdb_bfd_ref_ptr dbfd (open_dwp_file (per_bfd, dwp_name.c_str ()));
-  if (dbfd == NULL
-      && strcmp (objfile->original_name, objfile_name (objfile)) != 0)
+  if (dbfd == nullptr
+      && !streq (objfile->original_name, objfile_name (objfile)))
     {
       /* Try to find .dwp for the binary file after gdb_realpath resolving.  */
       dwp_name = objfile_name (objfile);
@@ -9947,7 +9946,7 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   /* Look up member function name in fieldlist.  */
   for (i = 0; i < fip->fnfieldlists.size (); i++)
     {
-      if (strcmp (fip->fnfieldlists[i].name, fieldname) == 0)
+      if (streq (fip->fnfieldlists[i].name, fieldname))
 	{
 	  flp = &fip->fnfieldlists[i];
 	  break;
@@ -10183,9 +10182,9 @@ quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
 
   /* Check for __pfn and __delta members.  */
   if (type->field (0).name () == NULL
-      || strcmp (type->field (0).name (), "__pfn") != 0
+      || !streq (type->field (0).name (), "__pfn")
       || type->field (1).name () == NULL
-      || strcmp (type->field (1).name (), "__delta") != 0)
+      || !streq (type->field (1).name (), "__delta"))
     return;
 
   /* Find the type of the method.  */
@@ -10271,9 +10270,9 @@ quirk_ada_thick_pointer_struct (struct die_info *die, struct dwarf2_cu *cu,
 
   /* Check for P_ARRAY and P_BOUNDS members.  */
   if (type->field (0).name () == NULL
-      || strcmp (type->field (0).name (), "P_ARRAY") != 0
+      || !streq (type->field (0).name (), "P_ARRAY")
       || type->field (1).name () == NULL
-      || strcmp (type->field (1).name (), "P_BOUNDS") != 0)
+      || !streq (type->field (1).name (), "P_BOUNDS"))
     return;
 
   /* Make sure we're looking at a pointer to an array.  */
@@ -10843,7 +10842,7 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
 		   i >= TYPE_N_BASECLASSES (type);
 		   --i)
 		{
-		  if (strcmp (type->field (i).name (), "__vfp") == 0)
+		  if (streq (type->field (i).name (), "__vfp"))
 		    {
 		      set_type_vptr_fieldno (type, i);
 		      set_type_vptr_basetype (type, type);
@@ -12653,7 +12652,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		      if (follow_die_ref (die, attr, &arg_cu) == child_die)
 			is_this = 1;
 		    }
-		  else if (name && strcmp (name, "this") == 0)
+		  else if (name && streq (name, "this"))
 		    /* Function definitions will have the argument names.  */
 		    is_this = 1;
 		  else if (name == NULL && iparams == 0)
@@ -13038,7 +13037,7 @@ dwarf2_init_integer_type (struct dwarf2_cu *cu, int bits, int unsigned_p,
      at least versions 14, 17, and 18.  */
   type_allocator alloc (objfile, cu->lang ());
   if (bits == 0 && cu->producer_is_icc () && name != nullptr
-      && strcmp (name, "void") == 0)
+      && streq (name, "void"))
     type = alloc.copy_type (builtin_type (objfile)->builtin_void);
   else
     type = init_integer_type (alloc, bits, unsigned_p, name);
@@ -13329,7 +13328,7 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 
   if (type->code () == TYPE_CODE_INT
       && name != nullptr
-      && strcmp (name, "char") == 0)
+      && streq (name, "char"))
     type->set_has_no_signedness (true);
 
   maybe_set_alignment (cu, die, type);
@@ -16375,7 +16374,7 @@ guess_full_die_structure_name (struct die_info *die, struct dwarf2_cu *cu)
 		  const char *die_name = dwarf2_name (die, cu);
 
 		  if (die_name != NULL
-		      && strcmp (die_name, actual_name.get ()) != 0)
+		      && !streq (die_name, actual_name.get ()))
 		    {
 		      /* Strip off the class name from the full name.
 			 We want the prefix.  */
@@ -16554,7 +16553,7 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	   DW_TAG_namespace DIEs with a name of "::" for the global namespace.
 	   Work around this problem here.  */
 	if (cu->lang () == language_cplus
-	    && strcmp (parent_type->name (), "::") == 0)
+	    && streq (parent_type->name (), "::"))
 	  return "";
 	/* We give a name to even anonymous namespaces.  */
 	return parent_type->name ();
@@ -16638,7 +16637,7 @@ typename_concat (const char *prefix, const char *suffix, int physname,
     {
       /* For D, the 'main' function could be defined in any module, but it
 	 should never be prefixed.  */
-      if (strcmp (suffix, "D main") == 0)
+      if (streq (suffix, "D main"))
 	{
 	  prefix = "";
 	  sep = "";
@@ -18179,7 +18178,7 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
   if (attr != nullptr
       && cu->producer_is_gcc ()
       && attr->as_string () != nullptr
-      && strcmp (attr->as_string (), "<artificial>") == 0)
+      && streq (attr->as_string (), "<artificial>"))
     cu->per_cu->lto_artificial = true;
 
   switch (m_top_level_die->tag)

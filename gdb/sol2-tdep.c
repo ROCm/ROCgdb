@@ -43,9 +43,10 @@
 static int
 sol2_pc_in_sigtramp (CORE_ADDR pc, const char *name)
 {
-  return (name && (strcmp (name, "sigacthandler") == 0
-		   || strcmp (name, "ucbsigvechandler") == 0
-		   || strcmp (name, "__sighndlr") == 0));
+  return (name != nullptr
+	  && (streq (name, "sigacthandler")
+	      || streq (name, "ucbsigvechandler")
+	      || streq (name, "__sighndlr")));
 }
 
 /* Return whether THIS_FRAME corresponds to a Solaris sigtramp routine.  */

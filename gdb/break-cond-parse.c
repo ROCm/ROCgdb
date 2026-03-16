@@ -588,9 +588,9 @@ test (const char *input, const char *condition, int thread = -1,
 
   if ((condition == nullptr) != (extracted_condition.get () == nullptr)
       || (condition != nullptr
-	  && strcmp (condition, extracted_condition.get ()) != 0)
+	  && !streq (condition, extracted_condition.get ()))
       || (rest == nullptr) != (extracted_rest.get () == nullptr)
-      || (rest != nullptr && strcmp (rest, extracted_rest.get ()) != 0)
+      || (rest != nullptr && !streq (rest, extracted_rest.get ()))
       || thread != extracted_thread
       || inferior != extracted_inferior
       || task != extracted_task

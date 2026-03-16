@@ -110,9 +110,9 @@ cp_already_canonical (const char *string)
   /* These are the only two identifiers which canonicalize to other
      than themselves or an error: unsigned -> unsigned int and
      signed -> int.  */
-  if (string[0] == 'u' && strcmp (&string[1], "nsigned") == 0)
+  if (string[0] == 'u' && streq (&string[1], "nsigned"))
     return 0;
-  else if (string[0] == 's' && strcmp (&string[1], "igned") == 0)
+  else if (string[0] == 's' && streq (&string[1], "igned"))
     return 0;
 
   /* Identifier character [a-zA-Z0-9_].  */
@@ -165,7 +165,7 @@ inspect_type (struct demangle_parse_info *info,
 	{
 	  const char *new_name = (*finder) (otype, data);
 
-	  if (new_name != nullptr && strcmp (new_name, name) != 0)
+	  if (new_name != nullptr && !streq (new_name, name))
 	    {
 	      ret_comp->u.s_name.s = new_name;
 	      ret_comp->u.s_name.len = strlen (new_name);
@@ -200,8 +200,7 @@ inspect_type (struct demangle_parse_info *info,
 
 	     If the symbol is typedef and its type name is the same
 	     as the symbol's name, e.g., "typedef struct foo foo;".  */
-	  if (type->name () != nullptr
-	      && strcmp (type->name (), name) == 0)
+	  if (type->name () != nullptr && streq (type->name (), name))
 	    return 0;
 
 	  is_anon = (type->name () == NULL
@@ -617,7 +616,7 @@ cp_canonicalize_string_full (const char *string,
 
       /* Finally, compare the original string with the computed
 	 name, returning NULL if they are the same.  */
-      if (strcmp (us.get (), string) == 0)
+      if (streq (us.get (), string))
 	return nullptr;
 
       return us;
@@ -666,7 +665,7 @@ cp_canonicalize_string (const char *string)
   if (info->added_parens)
     maybe_strip_parens (us.get ());
 
-  if (strcmp (us.get (), string) == 0)
+  if (streq (us.get (), string))
     return nullptr;
 
   return us;
@@ -1239,7 +1238,7 @@ overload_list_add_symbol (struct symbol *sym,
 
   /* skip any symbols that we've already considered.  */
   for (symbol *listed_sym : *overload_list)
-    if (strcmp (sym->linkage_name (), listed_sym->linkage_name ()) == 0)
+    if (streq (sym->linkage_name (), listed_sym->linkage_name ()))
       return;
 
   /* Get the demangled name without parameters */
@@ -1249,7 +1248,7 @@ overload_list_add_symbol (struct symbol *sym,
     return;
 
   /* skip symbols that cannot match */
-  if (strcmp (sym_name.get (), oload_name) != 0)
+  if (!streq (sym_name.get (), oload_name))
     return;
 
   overload_list->push_back (sym);
@@ -1429,7 +1428,7 @@ add_symbol_overload_list_using (const char *func_name,
 	if (current->alias != NULL || current->declaration != NULL)
 	  continue;
 
-	if (strcmp (the_namespace, current->import_dest) == 0)
+	if (streq (the_namespace, current->import_dest))
 	  {
 	    /* Mark this import as searched so that the recursive call
 	       does not search it again.  */
@@ -2206,9 +2205,8 @@ check_remove_params (const char *file, int line,
   gdb::unique_xmalloc_ptr<char> result
     = cp_remove_params_if_any (name, completion_mode);
 
-  if ((expected == NULL) != (result == NULL)
-      || (expected != NULL
-	  && strcmp (result.get (), expected) != 0))
+  if ((expected == nullptr) != (result == nullptr)
+      || (expected != nullptr && !streq (result.get (), expected)))
     {
       error (_("%s:%d: make-paramless self-test failed: (completion=%d) "
 	       "\"%s\" -> %s, expected %s"),

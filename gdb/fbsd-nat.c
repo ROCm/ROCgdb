@@ -897,7 +897,7 @@ fbsd_nat_target::thread_name (struct thread_info *thr)
     return nullptr;
   if (ptrace (PT_LWPINFO, lwp, (caddr_t) &pl, sizeof pl) == -1)
     return nullptr;
-  if (strcmp (kp.ki_comm, pl.pl_tdname) == 0)
+  if (streq (kp.ki_comm, pl.pl_tdname))
     return NULL;
   xsnprintf (buf, sizeof buf, "%s", pl.pl_tdname);
   return buf;

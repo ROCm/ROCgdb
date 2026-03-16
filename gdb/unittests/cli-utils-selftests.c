@@ -33,7 +33,7 @@ test_number_or_range_parser ()
     SELF_CHECK (!one.finished ());
     SELF_CHECK (one.get_number () == 1);
     SELF_CHECK (one.finished ());
-    SELF_CHECK (strcmp (one.cur_tok (), "") == 0);
+    SELF_CHECK (streq (one.cur_tok (), ""));
   }
 
   /* Test parsing an integer followed by a non integer.  */
@@ -43,7 +43,7 @@ test_number_or_range_parser ()
     SELF_CHECK (!one_after.finished ());
     SELF_CHECK (one_after.get_number () == 1);
     SELF_CHECK (one_after.finished ());
-    SELF_CHECK (strcmp (one_after.cur_tok (), "after") == 0);
+    SELF_CHECK (streq (one_after.cur_tok (), "after"));
   }
 
   /* Test parsing a range.  */
@@ -56,7 +56,7 @@ test_number_or_range_parser ()
 	SELF_CHECK (one_three.get_number () == i);
       }
     SELF_CHECK (one_three.finished ());
-    SELF_CHECK (strcmp (one_three.cur_tok (), "") == 0);
+    SELF_CHECK (streq (one_three.cur_tok (), ""));
   }
 
   /* Test parsing a range followed by a non-integer.  */
@@ -69,7 +69,7 @@ test_number_or_range_parser ()
 	SELF_CHECK (one_three_after.get_number () == i);
       }
     SELF_CHECK (one_three_after.finished ());
-    SELF_CHECK (strcmp (one_three_after.cur_tok (), "after") == 0);
+    SELF_CHECK (streq (one_three_after.cur_tok (), "after"));
   }
 
   /* Test a negative integer gives an error.  */
@@ -86,8 +86,8 @@ test_number_or_range_parser ()
       {
 	SELF_CHECK (ex.reason == RETURN_ERROR);
 	SELF_CHECK (ex.error == GENERIC_ERROR);
-	SELF_CHECK (strcmp (ex.what (), "negative value") == 0);
-	SELF_CHECK (strcmp (minus_one.cur_tok (), "-1") == 0);
+	SELF_CHECK (streq (ex.what (), "negative value"));
+	SELF_CHECK (streq (minus_one.cur_tok (), "-1"));
       }
   }
 
@@ -96,7 +96,7 @@ test_number_or_range_parser ()
     number_or_range_parser nan ("-whatever");
 
     SELF_CHECK (nan.finished ());
-    SELF_CHECK (strcmp (nan.cur_tok (), "-whatever") == 0);
+    SELF_CHECK (streq (nan.cur_tok (), "-whatever"));
   }
 }
 

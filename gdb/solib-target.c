@@ -161,7 +161,7 @@ library_list_start_list (struct gdb_xml_parser *parser,
     {
       const char *string = (const char *) version->value.get ();
 
-      if (strcmp (string, "1.0") != 0)
+      if (!streq (string, "1.0"))
 	gdb_xml_error (parser,
 		       _("Library list has unsupported version \"%s\""),
 		       string);

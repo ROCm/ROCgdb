@@ -210,7 +210,7 @@ i386_cygwin_core_osabi_sniffer (bfd *abfd)
 
   /* Cygwin uses elf core dumps.  Do not claim all ELF executables,
      check whether there is a .reg section of proper size.  */
-  if (strcmp (target_name, "elf32-i386") == 0)
+  if (streq (target_name, "elf32-i386"))
     {
       asection *section = bfd_get_section_by_name (abfd, ".reg");
       if (section != nullptr

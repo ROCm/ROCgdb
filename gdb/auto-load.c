@@ -279,7 +279,7 @@ auto_load_safe_path_vec_update (void)
 
       if (debug_auto_load)
 	{
-	  if (strcmp (in_vec.get (), original.get ()) == 0)
+	  if (streq (in_vec.get (), original.get ()))
 	    auto_load_debug_printf ("Using directory \"%s\".",
 				    in_vec.get ());
 	  else
@@ -288,7 +288,7 @@ auto_load_safe_path_vec_update (void)
 	}
 
       /* If gdb_realpath returns a different content, append it.  */
-      if (strcmp (real_path.get (), in_vec.get ()) != 0)
+      if (!streq (real_path.get (), in_vec.get ()))
 	{
 	  auto_load_debug_printf ("And canonicalized as \"%s\".",
 				  real_path.get ());
@@ -468,12 +468,12 @@ filename_is_in_auto_load_safe_path_vec (const char *filename,
       if (*filename_realp == NULL)
 	{
 	  *filename_realp = gdb_realpath (filename);
-	  if (debug_auto_load && strcmp (filename_realp->get (), filename) != 0)
+	  if (debug_auto_load && !streq (filename_realp->get (), filename))
 	    auto_load_debug_printf ("Resolved file \"%s\" as \"%s\".",
 				    filename, filename_realp->get ());
 	}
 
-      if (strcmp (filename_realp->get (), filename) != 0)
+      if (!streq (filename_realp->get (), filename))
 	for (const gdb::unique_xmalloc_ptr<char> &p : auto_load_safe_path_vec)
 	  if (filename_is_in_pattern (filename_realp->get (), p.get ()))
 	    {
@@ -629,7 +629,7 @@ eq_loaded_script_entry (const void *a, const void *b)
   const struct loaded_script *ea = (const struct loaded_script *) a;
   const struct loaded_script *eb = (const struct loaded_script *) b;
 
-  return strcmp (ea->name, eb->name) == 0 && ea->language == eb->language;
+  return streq (ea->name, eb->name) && ea->language == eb->language;
 }
 
 /* Initialize the table to track loaded scripts.
@@ -915,7 +915,7 @@ auto_load_objfile_script (struct objfile *objfile,
 	(bfd_get_debug_link_info (parent->obfd.get (), &crc32));
 
       if (debuglink.get () != nullptr
-	  && strcmp (debuglink.get (), lbasename (realname.get ())) != 0)
+	  && !streq (debuglink.get (), lbasename (realname.get ())))
 	{
 	  /* Replace the last component of the parent's path with the
 	     debuglink name.  */
@@ -1261,8 +1261,7 @@ print_script (struct loaded_script *script)
   uiout->text ("\n");
 
   /* If the name isn't the full path, print it too.  */
-  if (script->full_path != NULL
-      && strcmp (script->name, script->full_path) != 0)
+  if (script->full_path != NULL && !streq (script->name, script->full_path))
     {
       uiout->text ("\tfull name: ");
       uiout->field_string ("full_path", script->full_path);

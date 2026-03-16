@@ -128,7 +128,7 @@ c_print_type_1 (struct type *type,
 		  || code == TYPE_CODE_METHODPTR
 		  || TYPE_IS_REFERENCE (type))))
 	gdb_puts (" ", stream);
-      need_post_space = (varstring != NULL && strcmp (varstring, "") != 0);
+      need_post_space = (varstring != NULL && !streq (varstring, ""));
       c_type_print_varspec_prefix (type, stream, show, 0, need_post_space,
 				   language, flags, podata);
     }
@@ -181,8 +181,7 @@ c_print_typedef (struct type *type,
   gdb_printf (stream, "typedef ");
   type_print (type, "", stream, -1);
   if ((new_symbol->type ())->name () == 0
-      || strcmp ((new_symbol->type ())->name (),
-		 new_symbol->linkage_name ()) != 0
+      || !streq ((new_symbol->type ())->name (), new_symbol->linkage_name ())
       || new_symbol->type ()->code () == TYPE_CODE_TYPEDEF)
     gdb_printf (stream, " %s", new_symbol->print_name ());
   gdb_printf (stream, ";");
@@ -1100,8 +1099,7 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 	  int j, len2 = TYPE_FN_FIELDLIST_LENGTH (type, i);
 	  const char *method_name = TYPE_FN_FIELDLIST_NAME (type, i);
 	  const char *name = type->name ();
-	  int is_constructor = name && strcmp (method_name,
-					       name) == 0;
+	  int is_constructor = name != nullptr && streq (method_name, name);
 
 	  for (j = 0; j < len2; j++)
 	    {

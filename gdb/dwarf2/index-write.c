@@ -284,8 +284,7 @@ mapped_symtab::find_slot (const char *name)
 
   for (;;)
     {
-      if (m_data[index].name == NULL
-	  || strcmp (name, m_data[index].name) == 0)
+      if (m_data[index].name == nullptr || streq (name, m_data[index].name))
 	return m_data[index];
       index = (index + step) & (m_data.size () - 1);
     }
@@ -443,7 +442,7 @@ public:
 
   bool operator== (const c_str_view &other) const
   {
-    return strcmp (m_cstr, other.m_cstr) == 0;
+    return streq (m_cstr, other.m_cstr);
   }
 
   bool operator< (const c_str_view &other) const

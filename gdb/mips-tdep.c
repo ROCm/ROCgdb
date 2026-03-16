@@ -7964,17 +7964,17 @@ mips_find_abi_from_sections (bfd *abfd)
       if (!startswith (name, ".mdebug."))
 	continue;
 
-      if (strcmp (name, ".mdebug.abi32") == 0)
+      if (streq (name, ".mdebug.abi32"))
 	return MIPS_ABI_O32;
-      else if (strcmp (name, ".mdebug.abiN32") == 0)
+      else if (streq (name, ".mdebug.abiN32"))
 	return MIPS_ABI_N32;
-      else if (strcmp (name, ".mdebug.abi64") == 0)
+      else if (streq (name, ".mdebug.abi64"))
 	return MIPS_ABI_N64;
-      else if (strcmp (name, ".mdebug.abiO64") == 0)
+      else if (streq (name, ".mdebug.abiO64"))
 	return MIPS_ABI_O64;
-      else if (strcmp (name, ".mdebug.eabi32") == 0)
+      else if (streq (name, ".mdebug.eabi32"))
 	return MIPS_ABI_EABI32;
-      else if (strcmp (name, ".mdebug.eabi64") == 0)
+      else if (streq (name, ".mdebug.eabi64"))
 	return MIPS_ABI_EABI64;
       else
 	warning (_("unsupported ABI %s."), name + 8);

@@ -635,8 +635,9 @@ read_frame_arg (const frame_print_options &fp_opts,
 	  /* Try to remove possibly duplicate error message for ENTRYARGP even
 	     in MI mode.  */
 
-	  if (val_error && entryval_error
-	      && strcmp (val_error, entryval_error) == 0)
+	  if (val_error != nullptr
+	      && entryval_error != nullptr
+	      && streq (val_error, entryval_error))
 	    {
 	      entryval_error = NULL;
 

@@ -403,25 +403,25 @@ maintenance_print_symbols (const char *args, int from_tty)
 
   for (i = 0; argv != NULL && argv[i] != NULL; ++i)
     {
-      if (strcmp (argv[i], "-pc") == 0)
+      if (streq (argv[i], "-pc"))
 	{
 	  if (argv[i + 1] == NULL)
 	    error (_("Missing pc value"));
 	  address_arg = argv[++i];
 	}
-      else if (strcmp (argv[i], "-source") == 0)
+      else if (streq (argv[i], "-source"))
 	{
 	  if (argv[i + 1] == NULL)
 	    error (_("Missing source file"));
 	  source_arg = argv[++i];
 	}
-      else if (strcmp (argv[i], "-objfile") == 0)
+      else if (streq (argv[i], "-objfile"))
 	{
 	  if (argv[i + 1] == NULL)
 	    error (_("Missing objfile name"));
 	  objfile_arg = argv[++i];
 	}
-      else if (strcmp (argv[i], "--") == 0)
+      else if (streq (argv[i], "--"))
 	{
 	  /* End of options.  */
 	  ++i;
@@ -683,13 +683,13 @@ maintenance_print_msymbols (const char *args, int from_tty)
 
   for (i = 0; argv != NULL && argv[i] != NULL; ++i)
     {
-      if (strcmp (argv[i], "-objfile") == 0)
+      if (streq (argv[i], "-objfile"))
 	{
 	  if (argv[i + 1] == NULL)
 	    error (_("Missing objfile name"));
 	  objfile_arg = argv[++i];
 	}
-      else if (strcmp (argv[i], "--") == 0)
+      else if (streq (argv[i], "--"))
 	{
 	  /* End of options.  */
 	  ++i;

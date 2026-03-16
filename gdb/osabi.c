@@ -353,7 +353,7 @@ check_note (bfd *abfd, asection *sect, char *note, unsigned int *sectsize,
 
   /* Check the note name.  */
   if (bfd_h_get_32 (abfd, note) != (strlen (name) + 1)
-      || strcmp (note + 12, name) != 0)
+      || !streq (note + 12, name))
     return 0;
 
   /* Check the descriptor size.  */
@@ -391,7 +391,7 @@ generic_elf_osabi_sniff_abi_tag_sections (bfd *abfd, asection *sect,
   char note[MAX_NOTESZ];
 
   /* .note.ABI-tag notes, used by GNU/Linux and FreeBSD.  */
-  if (strcmp (name, ".note.ABI-tag") == 0)
+  if (streq (name, ".note.ABI-tag"))
     {
       /* GNU.  */
       if (check_note (abfd, sect, note, &sectsize, "GNU", 16, NT_GNU_ABI_TAG))
@@ -440,7 +440,7 @@ generic_elf_osabi_sniff_abi_tag_sections (bfd *abfd, asection *sect,
     }
 
   /* .note.netbsd.ident notes, used by NetBSD.  */
-  if (strcmp (name, ".note.netbsd.ident") == 0
+  if (streq (name, ".note.netbsd.ident")
       && check_note (abfd, sect, note, &sectsize, "NetBSD", 4, NT_NETBSD_IDENT))
     {
       /* There is no need to check the version yet.  */
@@ -449,7 +449,7 @@ generic_elf_osabi_sniff_abi_tag_sections (bfd *abfd, asection *sect,
     }
 
   /* .note.openbsd.ident notes, used by OpenBSD.  */
-  if (strcmp (name, ".note.openbsd.ident") == 0
+  if (streq (name, ".note.openbsd.ident")
       && check_note (abfd, sect, note, &sectsize, "OpenBSD", 4,
 		     NT_OPENBSD_IDENT))
     {
@@ -459,7 +459,7 @@ generic_elf_osabi_sniff_abi_tag_sections (bfd *abfd, asection *sect,
     }
 
   /* .note.netbsdcore.procinfo notes, used by NetBSD.  */
-  if (strcmp (name, ".note.netbsdcore.procinfo") == 0)
+  if (streq (name, ".note.netbsdcore.procinfo"))
     {
       *osabi = GDB_OSABI_NETBSD;
       return;
@@ -557,9 +557,9 @@ gdbarch_osabi_enum_name (enum gdb_osabi osabi)
 static void
 set_osabi (const char *args, int from_tty, struct cmd_list_element *c)
 {
-  if (strcmp (set_osabi_string, "auto") == 0)
+  if (streq (set_osabi_string, "auto"))
     user_osabi_state = osabi_auto;
-  else if (strcmp (set_osabi_string, "default") == 0)
+  else if (streq (set_osabi_string, "default"))
     {
       user_selected_osabi = GDB_OSABI_DEFAULT;
       user_osabi_state = osabi_user;
@@ -572,7 +572,7 @@ set_osabi (const char *args, int from_tty, struct cmd_list_element *c)
 	{
 	  enum gdb_osabi osabi = (enum gdb_osabi) i;
 
-	  if (strcmp (set_osabi_string, gdbarch_osabi_name (osabi)) == 0)
+	  if (streq (set_osabi_string, gdbarch_osabi_name (osabi)))
 	    {
 	      user_selected_osabi = osabi;
 	      user_osabi_state = osabi_user;
@@ -619,7 +619,7 @@ INIT_GDB_FILE (gdb_osabi)
   /* Register the "set osabi" command.  */
   user_osabi_state = osabi_auto;
   set_osabi_string = gdb_osabi_available_names[0];
-  gdb_assert (strcmp (set_osabi_string, "auto") == 0);
+  gdb_assert (streq (set_osabi_string, "auto"));
   add_setshow_enum_cmd ("osabi", class_support, gdb_osabi_available_names,
 			&set_osabi_string,
 			_("Set OS ABI of target."),

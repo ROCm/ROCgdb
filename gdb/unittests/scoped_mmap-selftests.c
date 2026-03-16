@@ -102,7 +102,7 @@ test_normal ()
 
     SELF_CHECK (m.get () != MAP_FAILED);
     SELF_CHECK (m.size () == 7);
-    SELF_CHECK (0 == strcmp ((char *) m.get (), "Hello!"));
+    SELF_CHECK (streq ((char *) m.get (), "Hello!"));
   }
 }
 

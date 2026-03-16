@@ -99,9 +99,9 @@ pascal_is_string_type (struct type *type,int *length_pos, int *length_size,
       /* Two fields: length and st.  */
       if (type->num_fields () == 2
 	  && type->field (0).name ()
-	  && strcmp (type->field (0).name (), "length") == 0
+	  && streq (type->field (0).name (), "length")
 	  && type->field (1).name ()
-	  && strcmp (type->field (1).name (), "st") == 0)
+	  && streq (type->field (1).name (), "st"))
 	{
 	  if (length_pos)
 	    *length_pos = type->field (0).loc_bitpos () / TARGET_CHAR_BIT;
@@ -119,9 +119,9 @@ pascal_is_string_type (struct type *type,int *length_pos, int *length_size,
       /* Three fields: Capacity, length and schema$ or _p_schema.  */
       if (type->num_fields () == 3
 	  && type->field (0).name ()
-	  && strcmp (type->field (0).name (), "Capacity") == 0
+	  && streq (type->field (0).name (), "Capacity")
 	  && type->field (1).name ()
-	  && strcmp (type->field (1).name (), "length") == 0)
+	  && streq (type->field (1).name (), "length"))
 	{
 	  if (length_pos)
 	    *length_pos = type->field (1).loc_bitpos () / TARGET_CHAR_BIT;

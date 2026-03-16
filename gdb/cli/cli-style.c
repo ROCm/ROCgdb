@@ -89,13 +89,13 @@ terminal_supports_styling ()
   /* Windows doesn't by default define $TERM, but can support styles
      regardless.  */
 #ifndef _WIN32
-  if (term == nullptr || strcmp (term, "dumb") == 0)
+  if (term == nullptr || streq (term, "dumb"))
     return false;
 #else
   /* But if they do define $TERM, let us behave the same as on Posix
      platforms, for the benefit of programs which invoke GDB as their
      back-end.  */
-  if (term != nullptr && strcmp (term, "dumb") == 0)
+  if (term != nullptr && streq (term, "dumb"))
     return false;
 #endif
 
@@ -438,7 +438,7 @@ emojis_ok ()
     return false;
   if (emoji_styling == AUTO_BOOLEAN_TRUE)
     return true;
-  return strcmp (host_charset (), "UTF-8") == 0;
+  return streq (host_charset (), "UTF-8");
 }
 
 /* See cli-style.h.  */

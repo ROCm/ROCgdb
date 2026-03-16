@@ -4836,7 +4836,7 @@ breakpoint_about_to_proceed (void)
 static bool
 command_line_is_silent (struct command_line *cmd)
 {
-  return cmd && (strcmp ("silent", cmd->line) == 0);
+  return cmd && (streq ("silent", cmd->line));
 }
 
 /* Sets the $_hit_bpnum and $_hit_locno to bpnum and locno.
@@ -6325,7 +6325,7 @@ wrap_indent_at_field (struct ui_out *uiout, const char *col_name)
   total_width = 0;
   for (i = 1; uiout->query_table_field (i, &width, &align, &text); i++)
     {
-      if (strcmp (text, col_name) == 0)
+      if (streq (text, col_name))
 	return total_width;
 
       total_width += width + 1;
@@ -8723,9 +8723,9 @@ update_dprintf_command_list (struct breakpoint *b)
   if (*dprintf_args != '"')
     error (_("Bad format string, missing '\"'."));
 
-  if (strcmp (dprintf_style, dprintf_style_gdb) == 0)
+  if (streq (dprintf_style, dprintf_style_gdb))
     printf_line = xstrprintf ("printf %s", dprintf_args);
-  else if (strcmp (dprintf_style, dprintf_style_call) == 0)
+  else if (streq (dprintf_style, dprintf_style_call))
     {
       if (dprintf_function.empty ())
 	error (_("No function supplied for dprintf call"));
@@ -8740,7 +8740,7 @@ update_dprintf_command_list (struct breakpoint *b)
 				  dprintf_function.c_str (),
 				  dprintf_args);
     }
-  else if (strcmp (dprintf_style, dprintf_style_agent) == 0)
+  else if (streq (dprintf_style, dprintf_style_agent))
     {
       if (target_can_run_breakpoint_commands ())
 	printf_line = xstrprintf ("agent-printf %s", dprintf_args);
@@ -13102,8 +13102,7 @@ update_breakpoint_locations (code_breakpoint *b,
 	{
 	  for (bp_location &l : b->locations ())
 	    if (l.function_name
-		&& strcmp (e.function_name.get (),
-			   l.function_name.get ()) == 0)
+		&& streq (e.function_name.get (), l.function_name.get ()))
 	      {
 		l.enabled = e.enabled;
 		break;

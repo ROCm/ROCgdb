@@ -409,9 +409,9 @@ relative_addr_info_to_section_offsets (std::vector<CORE_ADDR> &section_offsets,
 static const char *
 addr_section_name (const char *s)
 {
-  if (strcmp (s, ".dynbss") == 0)
+  if (streq (s, ".dynbss"))
     return ".bss";
-  if (strcmp (s, ".sdynbss") == 0)
+  if (streq (s, ".sdynbss"))
     return ".sbss";
 
   return s;
@@ -511,8 +511,8 @@ addr_info_make_relative (section_addr_info *addrs, bfd *abfd)
 	abfd_sorted_iter++;
 
       if (abfd_sorted_iter != abfd_addrs_sorted.end ()
-	  && strcmp (addr_section_name ((*abfd_sorted_iter)->name.c_str ()),
-		     sect_name) == 0)
+	  && streq (addr_section_name ((*abfd_sorted_iter)->name.c_str ()),
+		    sect_name))
 	{
 	  int index_in_addrs;
 
@@ -1574,11 +1574,11 @@ symbol_file_command (const char *args, int from_tty)
 	      else
 		error (_("Unrecognized argument \"%s\""), arg);
 	    }
-	  else if (strcmp (arg, "-readnow") == 0)
+	  else if (streq (arg, "-readnow"))
 	    flags |= OBJF_READNOW;
-	  else if (strcmp (arg, "-readnever") == 0)
+	  else if (streq (arg, "-readnever"))
 	    flags |= OBJF_READNEVER;
-	  else if (strcmp (arg, "-o") == 0)
+	  else if (streq (arg, "-o"))
 	    {
 	      arg = built_argv[++idx];
 	      if (arg == NULL)
@@ -1586,7 +1586,7 @@ symbol_file_command (const char *args, int from_tty)
 
 	      offset = parse_and_eval_address (arg);
 	    }
-	  else if (strcmp (arg, "--") == 0)
+	  else if (streq (arg, "--"))
 	    stop_processing_options = true;
 	  else
 	    error (_("Unrecognized argument \"%s\""), arg);
@@ -2214,11 +2214,11 @@ add_symbol_file_command (const char *args, int from_tty)
 	  else
 	    error (_("Unrecognized argument \"%s\""), arg);
 	}
-      else if (strcmp (arg, "-readnow") == 0)
+      else if (streq (arg, "-readnow"))
 	flags |= OBJF_READNOW;
-      else if (strcmp (arg, "-readnever") == 0)
+      else if (streq (arg, "-readnever"))
 	flags |= OBJF_READNEVER;
-      else if (strcmp (arg, "-s") == 0)
+      else if (streq (arg, "-s"))
 	{
 	  if (argv[argcnt + 1] == NULL)
 	    error (_("Missing section name after \"-s\""));
@@ -2230,7 +2230,7 @@ add_symbol_file_command (const char *args, int from_tty)
 	  sect_opts.push_back (sect);
 	  argcnt += 2;
 	}
-      else if (strcmp (arg, "-o") == 0)
+      else if (streq (arg, "-o"))
 	{
 	  arg = argv[++argcnt];
 	  if (arg == NULL)
@@ -2239,7 +2239,7 @@ add_symbol_file_command (const char *args, int from_tty)
 	  offset = parse_and_eval_address (arg);
 	  seen_offset = true;
 	}
-      else if (strcmp (arg, "--") == 0)
+      else if (streq (arg, "--"))
 	stop_processing_options = true;
       else
 	error (_("Unrecognized argument \"%s\""), arg);
@@ -3217,7 +3217,7 @@ map_overlay_command (const char *args, int from_tty)
   /* First, find a section matching the user supplied argument.  */
   for (objfile &obj_file : current_program_space->objfiles ())
     for (obj_section &sec : obj_file.sections ())
-      if (!strcmp (bfd_section_name (sec.the_bfd_section), args))
+      if (streq (bfd_section_name (sec.the_bfd_section), args))
 	{
 	  /* Now, check to see if the section is an overlay.  */
 	  if (!section_is_overlay (&sec))
@@ -3261,7 +3261,7 @@ unmap_overlay_command (const char *args, int from_tty)
   /* First, find a section matching the user supplied argument.  */
   for (objfile &objfile : current_program_space->objfiles ())
     for (obj_section &sec : objfile.sections ())
-      if (!strcmp (bfd_section_name (sec.the_bfd_section), args))
+      if (streq (bfd_section_name (sec.the_bfd_section), args))
 	{
 	  if (!sec.ovly_mapped)
 	    error (_("Section %s is not mapped"), args);

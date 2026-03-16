@@ -244,13 +244,13 @@ syscall_start_syscall (struct gdb_xml_parser *parser,
 
   for (const gdb_xml_value &attr : attributes)
     {
-      if (strcmp (attr.name, "name") == 0)
+      if (streq (attr.name, "name"))
 	name = (char *) attr.value.get ();
-      else if (strcmp (attr.name, "number") == 0)
+      else if (streq (attr.name, "number"))
 	number = * (ULONGEST *) attr.value.get ();
-      else if (strcmp (attr.name, "alias") == 0)
+      else if (streq (attr.name, "alias"))
 	alias = (char *) attr.value.get ();
-      else if (strcmp (attr.name, "groups") == 0)
+      else if (streq (attr.name, "groups"))
 	groups = (char *) attr.value.get ();
       else
 	internal_error (_("Unknown attribute name '%s'."), attr.name);

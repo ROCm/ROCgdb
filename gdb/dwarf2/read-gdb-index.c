@@ -315,7 +315,7 @@ mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
 	    flags |= IS_STATIC;
 	  if (main_name != nullptr
 	      && tag == DW_TAG_subprogram
-	      && strcmp (name, main_name) == 0)
+	      && streq (name, main_name))
 	    {
 	      flags |= IS_MAIN;
 	      this_lang = main_lang;

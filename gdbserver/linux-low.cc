@@ -6146,9 +6146,9 @@ linux_process_target::read_loadmap (const char *annex, CORE_ADDR offset,
   struct target_loadmap *data = NULL;
   unsigned int actual_length, copy_length;
 
-  if (strcmp (annex, "exec") == 0)
+  if (streq (annex, "exec"))
     addr = (int) LINUX_LOADMAP_EXEC;
-  else if (strcmp (annex, "interp") == 0)
+  else if (streq (annex, "interp"))
     addr = (int) LINUX_LOADMAP_INTERP;
   else
     return -1;

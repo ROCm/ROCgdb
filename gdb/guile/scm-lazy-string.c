@@ -119,7 +119,7 @@ lsscm_make_lazy_string_smob (CORE_ADDR address, int length,
 
   ls_smob->address = address;
   ls_smob->length = length;
-  if (encoding == NULL || strcmp (encoding, "") == 0)
+  if (encoding == NULL || streq (encoding, ""))
     ls_smob->encoding = NULL;
   else
     ls_smob->encoding = xstrdup (encoding);

@@ -2211,7 +2211,7 @@ rust_lex_exception_test (rust_parser *parser, const char *input,
     }
   catch (const gdb_exception_error &except)
     {
-      SELF_CHECK (strcmp (except.what (), err) == 0);
+      SELF_CHECK (streq (except.what (), err));
     }
 }
 

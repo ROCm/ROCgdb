@@ -563,7 +563,7 @@ exp1	:	exp
 
 primary :	primary DOT_ID
 			{
-			  if (strcmp ($2.ptr, "all") == 0)
+			  if (streq ($2.ptr, "all"))
 			    ada_wrap<ada_unop_ind_operation> ();
 			  else
 			    {
@@ -1553,7 +1553,7 @@ find_primitive_type (struct parser_state *par_state, const char *name)
   type = language_lookup_primitive_type (par_state->language (),
 					 par_state->gdbarch (),
 					 name);
-  if (type == NULL && strcmp ("system__address", name) == 0)
+  if (type == NULL && streq ("system__address", name))
     type = type_system_address (par_state);
 
   if (type != NULL)

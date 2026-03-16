@@ -185,8 +185,7 @@ m32r_linux_pc_in_sigtramp (CORE_ADDR pc, const char *name,
     return (m32r_linux_sigtramp_start (pc, this_frame) != 0
 	    || m32r_linux_rt_sigtramp_start (pc, this_frame) != 0);
 
-  return (strcmp ("__restore", name) == 0
-	  || strcmp ("__restore_rt", name) == 0);
+  return streq ("__restore", name) || streq ("__restore_rt", name);
 }
 
 /* From <asm/sigcontext.h>.  */

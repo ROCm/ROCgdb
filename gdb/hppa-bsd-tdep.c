@@ -56,7 +56,7 @@ hppabsd_find_global_pointer (struct gdbarch *gdbarch, struct value *function)
     {
       for (struct obj_section &sec : faddr_sec->objfile->sections ())
 	{
-	  if (strcmp (sec.the_bfd_section->name, ".dynamic") == 0)
+	  if (streq (sec.the_bfd_section->name, ".dynamic"))
 	    {
 	      CORE_ADDR addr = sec.addr ();
 	      CORE_ADDR endaddr = sec.endaddr ();

@@ -71,17 +71,17 @@ struct read_pe_section_data
 static int
 read_pe_section_index (const char *section_name)
 {
-  if (strcmp (section_name, ".text") == 0)
+  if (streq (section_name, ".text"))
     {
       return PE_SECTION_INDEX_TEXT;
     }
 
-  else if (strcmp (section_name, ".data") == 0)
+  else if (streq (section_name, ".data"))
     {
       return PE_SECTION_INDEX_DATA;
     }
 
-  else if (strcmp (section_name, ".bss") == 0)
+  else if (streq (section_name, ".bss"))
     {
       return PE_SECTION_INDEX_BSS;
     }
@@ -336,15 +336,15 @@ read_pe_exported_syms (minimal_symbol_reader &reader,
   section_data[PE_SECTION_INDEX_BSS].ms_type = mst_bss;
   section_data[PE_SECTION_INDEX_BSS].section_name = ".bss";
 
-  is_pe64 = (strcmp (target, "pe-x86-64") == 0
-	     || strcmp (target, "pei-x86-64") == 0
-	     || strcmp (target, "pe-aarch64") == 0
-	     || strcmp (target, "pei-aarch64") == 0
-	     || strcmp (target, "pei-aarch64-little") == 0);
-  is_pe32 = (strcmp (target, "pe-i386") == 0
-	     || strcmp (target, "pei-i386") == 0
-	     || strcmp (target, "pe-arm-wince-little") == 0
-	     || strcmp (target, "pei-arm-wince-little") == 0);
+  is_pe64 = (streq (target, "pe-x86-64")
+	     || streq (target, "pei-x86-64")
+	     || streq (target, "pe-aarch64")
+	     || streq (target, "pei-aarch64")
+	     || streq (target, "pei-aarch64-little"));
+  is_pe32 = (streq (target, "pe-i386")
+	     || streq (target, "pei-i386")
+	     || streq (target, "pe-arm-wince-little")
+	     || streq (target, "pei-arm-wince-little"));
 
   /* Possibly print a debug message about DLL not having a valid format.  */
   auto maybe_print_debug_msg = [&] () -> void {
@@ -406,10 +406,10 @@ read_pe_exported_syms (minimal_symbol_reader &reader,
 	  || bfd_read (sname, sizeof (sname), dll) != sizeof (sname))
 	return maybe_print_debug_msg ();
 
-      if ((strcmp (sname, ".edata") == 0)
+      if (streq (sname, ".edata")
 	  || (vaddr <= export_opthdrrva && export_opthdrrva < vaddr + vsize))
 	{
-	  if (strcmp (sname, ".edata") != 0)
+	  if (!streq (sname, ".edata"))
 	    {
 	      if (debug_coff_pe_read)
 		gdb_printf (gdb_stdlog, _("Export RVA for dll "
@@ -636,15 +636,15 @@ pe_text_section_offset (struct bfd *abfd)
 
   target = bfd_get_target (abfd);
 
-  is_pe64 = (strcmp (target, "pe-x86-64") == 0
-	     || strcmp (target, "pei-x86-64") == 0
-	     || strcmp (target, "pe-aarch64") == 0
-	     || strcmp (target, "pei-aarch64") == 0
-	     || strcmp (target, "pei-aarch64-little") == 0);
-  is_pe32 = (strcmp (target, "pe-i386") == 0
-	     || strcmp (target, "pei-i386") == 0
-	     || strcmp (target, "pe-arm-wince-little") == 0
-	     || strcmp (target, "pei-arm-wince-little") == 0);
+  is_pe64 = (streq (target, "pe-x86-64")
+	     || streq (target, "pei-x86-64")
+	     || streq (target, "pe-aarch64")
+	     || streq (target, "pei-aarch64")
+	     || streq (target, "pei-aarch64-little"));
+  is_pe32 = (streq (target, "pe-i386")
+	     || streq (target, "pei-i386")
+	     || streq (target, "pe-arm-wince-little")
+	     || streq (target, "pei-arm-wince-little"));
 
   if (!is_pe32 && !is_pe64)
     {
@@ -677,7 +677,7 @@ pe_text_section_offset (struct bfd *abfd)
 	  || bfd_read (sname, SCNNMLEN, abfd) != SCNNMLEN)
 	return DEFAULT_COFF_PE_TEXT_SECTION_OFFSET;
       sname[SCNNMLEN] = '\0';
-      if (strcmp (sname, ".text") == 0)
+      if (streq (sname, ".text"))
 	return vaddr;
     }
 

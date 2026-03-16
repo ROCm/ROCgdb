@@ -31,7 +31,7 @@ child_path_check (const char *parent, const char *child, const char *expected)
   const char *result = ::child_path (parent, child);
   if (result == NULL || expected == NULL)
     return result == expected;
-  return strcmp (result, expected) == 0;
+  return streq (result, expected);
 }
 
 /* Test child_path.  */
