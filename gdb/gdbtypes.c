@@ -368,14 +368,14 @@ make_pointer_type (type *type)
   struct type *ntype;	/* New type */
   struct type *chain;
 
-  ntype = TYPE_POINTER_TYPE (type);
+  ntype = type->pointer_type;
 
   if (ntype)
     return ntype;
 
   ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
-  TYPE_POINTER_TYPE (type) = ntype;
+  type->pointer_type = ntype;
 
   /* FIXME!  Assumes the machine has only one representation for pointers!  */
 
@@ -614,7 +614,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
 
   /* Pointers or references to the original type are not relevant to
      the new type.  */
-  TYPE_POINTER_TYPE (ntype) = (struct type *) 0;
+  ntype->pointer_type = (struct type *) 0;
   TYPE_REFERENCE_TYPE (ntype) = (struct type *) 0;
 
   /* Chain the new qualified type to the old type.  */
@@ -4985,7 +4985,7 @@ recursive_dump_type (struct type *type, int spaces)
       recursive_dump_type (type->target_type (), spaces + 2);
     }
   gdb_printf ("%*spointer_type %s\n", spaces, "",
-	      host_address_to_string (TYPE_POINTER_TYPE (type)));
+	      host_address_to_string (type->pointer_type));
   gdb_printf ("%*sreference_type %s\n", spaces, "",
 	      host_address_to_string (TYPE_REFERENCE_TYPE (type)));
   gdb_printf ("%*stype_chain %s\n", spaces, "",

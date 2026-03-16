@@ -222,7 +222,7 @@ exp	:	exp '^'   %prec UNARY
 exp	:	'@' exp    %prec UNARY
 			{ pstate->wrap<unop_addr_operation> ();
 			  if (current_type)
-			    current_type = TYPE_POINTER_TYPE (current_type); }
+			    current_type = current_type->pointer_type; }
 	;
 
 exp	:	'-' exp    %prec UNARY
