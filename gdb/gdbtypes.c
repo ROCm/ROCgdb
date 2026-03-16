@@ -418,7 +418,7 @@ make_reference_type (type *type, type_code refcode)
 
   gdb_assert (refcode == TYPE_CODE_REF || refcode == TYPE_CODE_RVALUE_REF);
 
-  ntype = (refcode == TYPE_CODE_REF ? TYPE_REFERENCE_TYPE (type)
+  ntype = (refcode == TYPE_CODE_REF ? type->reference_type
 	   : TYPE_RVALUE_REFERENCE_TYPE (type));
 
   if (ntype)
@@ -426,7 +426,7 @@ make_reference_type (type *type, type_code refcode)
 
   ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
-  reftype = (refcode == TYPE_CODE_REF ? &TYPE_REFERENCE_TYPE (type)
+  reftype = (refcode == TYPE_CODE_REF ? &type->reference_type
 	     : &TYPE_RVALUE_REFERENCE_TYPE (type));
 
   *reftype = ntype;
@@ -615,7 +615,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
   /* Pointers or references to the original type are not relevant to
      the new type.  */
   ntype->pointer_type = (struct type *) 0;
-  TYPE_REFERENCE_TYPE (ntype) = (struct type *) 0;
+  ntype->reference_type = nullptr;
 
   /* Chain the new qualified type to the old type.  */
   TYPE_CHAIN (ntype) = TYPE_CHAIN (type);
@@ -4987,7 +4987,7 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%*spointer_type %s\n", spaces, "",
 	      host_address_to_string (type->pointer_type));
   gdb_printf ("%*sreference_type %s\n", spaces, "",
-	      host_address_to_string (TYPE_REFERENCE_TYPE (type)));
+	      host_address_to_string (type->reference_type));
   gdb_printf ("%*stype_chain %s\n", spaces, "",
 	      host_address_to_string (TYPE_CHAIN (type)));
   gdb_printf ("%*sinstance_flags 0x%x", spaces, "",
