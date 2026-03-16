@@ -1897,7 +1897,6 @@ extern void allocate_gnat_aux_type (struct type *);
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FIXED_POINT, \
    allocate_fixed_point_type_info (type))
 
-#define TYPE_RVALUE_REFERENCE_TYPE(thistype) (thistype)->rvalue_reference_type
 #define TYPE_CHAIN(thistype) (thistype)->chain
 
 /* * Return the alignment of the type in target addressable memory

@@ -419,7 +419,7 @@ make_reference_type (type *type, type_code refcode)
   gdb_assert (refcode == TYPE_CODE_REF || refcode == TYPE_CODE_RVALUE_REF);
 
   ntype = (refcode == TYPE_CODE_REF ? type->reference_type
-	   : TYPE_RVALUE_REFERENCE_TYPE (type));
+	   : type->rvalue_reference_type);
 
   if (ntype)
     return ntype;
@@ -427,7 +427,7 @@ make_reference_type (type *type, type_code refcode)
   ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
   reftype = (refcode == TYPE_CODE_REF ? &type->reference_type
-	     : &TYPE_RVALUE_REFERENCE_TYPE (type));
+	     : &type->rvalue_reference_type);
 
   *reftype = ntype;
 
