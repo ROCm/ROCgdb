@@ -1865,10 +1865,6 @@ extern void allocate_cplus_struct_type (struct type *);
   (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_CPLUS_STUFF \
    && TYPE_RAW_CPLUS_SPECIFIC (type) !=  &cplus_struct_default)
 
-#define INIT_NONE_SPECIFIC(type) \
-  (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_NONE, \
-   TYPE_MAIN_TYPE (type)->type_specific = {})
-
 extern const struct gnat_aux_type gnat_aux_default;
 
 extern void allocate_gnat_aux_type (struct type *);

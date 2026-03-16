@@ -7696,7 +7696,6 @@ empty_record (struct type *templ)
   struct type *type = type_allocator (templ).new_type ();
 
   type->set_code (TYPE_CODE_STRUCT);
-  INIT_NONE_SPECIFIC (type);
   type->set_name ("<empty>");
   type->set_length (0);
   return type;
@@ -7751,7 +7750,6 @@ ada_template_to_fixed_record_type_1 (struct type *type,
 
   rtype = type_allocator (type).new_type ();
   rtype->set_code (TYPE_CODE_STRUCT);
-  INIT_NONE_SPECIFIC (rtype);
   rtype->alloc_fields (nfields);
   rtype->set_name (ada_type_name (type));
   rtype->set_is_fixed_instance (true);
@@ -8003,8 +8001,6 @@ template_to_static_fixed_type (struct type *type0)
 	      type = type_allocator (type0).new_type ();
 	      type0->set_target_type (type);
 	      type->set_code (type0->code ());
-	      INIT_NONE_SPECIFIC (type);
-
 	      type->copy_fields (type0);
 
 	      type->set_name (ada_type_name (type0));
@@ -8050,7 +8046,6 @@ to_record_with_fixed_variant_part (struct type *type, const gdb_byte *valaddr,
 
   rtype = type_allocator (type).new_type ();
   rtype->set_code (TYPE_CODE_STRUCT);
-  INIT_NONE_SPECIFIC (rtype);
   rtype->copy_fields (type);
 
   rtype->set_name (ada_type_name (type));
