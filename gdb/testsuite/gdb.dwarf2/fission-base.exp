@@ -46,6 +46,11 @@ if ![runto_main] {
 gdb_test "ptype main" "type = int \\(\\)"
 gdb_test "ptype func" "type = int \\(int\\)"
 
+# If test is compiled with clang, GDB would display absolute path.
+# This command keeps output consistent across toolchains.
+
+gdb_test_no_output "set filename-display basename"
+
 gdb_test "frame" "#0 *main \\(\\) at $testfile\\.c:$decimal.*" \
     "frame in main"
 
