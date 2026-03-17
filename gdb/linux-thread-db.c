@@ -1269,7 +1269,7 @@ check_for_thread_db (void)
 /* This function is called via the new_objfile observer.  */
 
 static void
-thread_db_new_objfile (struct objfile *objfile)
+thread_db_new_objfile (struct objfile &objfile)
 {
   /* This observer must always be called with inferior_ptid set
      correctly.  */
@@ -1279,7 +1279,7 @@ thread_db_new_objfile (struct objfile *objfile)
 	 the time gdb::observers::new_objfile.notify is called for the library itself.
 	 Static executables have their separate debug info loaded already
 	 before the inferior has started.  */
-      objfile->separate_debug_objfile_backlink == NULL
+      objfile.separate_debug_objfile_backlink == NULL
       /* Only check for thread_db if we loaded libpthread,
 	 or if this is the main symbol file.
 	 We need to check OBJF_MAINLINE to handle the case of debugging
@@ -1288,8 +1288,8 @@ thread_db_new_objfile (struct objfile *objfile)
 	 For dynamically linked executables, libpthread can be near the end
 	 of the list of shared libraries to load, and in an app of several
 	 thousand shared libraries, this can otherwise be painful.  */
-      && ((objfile->flags & OBJF_MAINLINE) != 0
-	  || libpthread_objfile_p (objfile)))
+      && ((objfile.flags & OBJF_MAINLINE) != 0
+	  || libpthread_objfile_p (&objfile)))
     check_for_thread_db ();
 }
 

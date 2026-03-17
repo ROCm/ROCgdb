@@ -1011,7 +1011,7 @@ pd_disable (inferior *inf)
    for thread debugging.  */
 
 static void
-new_objfile (struct objfile *objfile)
+new_objfile (struct objfile &objfile)
 {
   pd_enable (current_inferior ());
 }

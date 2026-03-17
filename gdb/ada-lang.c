@@ -14042,9 +14042,9 @@ static struct cmd_list_element *show_ada_list;
 /* This module's 'new_objfile' observer.  */
 
 static void
-ada_new_objfile_observer (struct objfile *objfile)
+ada_new_objfile_observer (struct objfile &objfile)
 {
-  ada_clear_symbol_cache (objfile->pspace ());
+  ada_clear_symbol_cache (objfile.pspace ());
 }
 
 /* This module's 'free_objfile' observer.  */

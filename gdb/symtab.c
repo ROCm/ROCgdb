@@ -1698,9 +1698,9 @@ maintenance_print_symbol_cache_statistics (const char *args, int from_tty)
 /* This module's 'new_objfile' observer.  */
 
 static void
-symtab_new_objfile_observer (struct objfile *objfile)
+symtab_new_objfile_observer (struct objfile &objfile)
 {
-  symbol_cache_flush (objfile->pspace ());
+  symbol_cache_flush (objfile.pspace ());
 }
 
 /* This module's 'all_objfiles_removed' observer.  */
