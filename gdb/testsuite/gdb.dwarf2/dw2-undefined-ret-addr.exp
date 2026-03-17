@@ -30,6 +30,11 @@ if ![runto "stop_frame"] {
     return -1
 }
 
+# If test is compiled with clang, GDB would display absolute path.
+# This command keeps output consistent across toolchains.
+
+gdb_test_no_output "set filename-display basename"
+
 # stop_frame should be the outermost frame.
 
 # Check that backtrace shows only frame #0.
