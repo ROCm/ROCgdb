@@ -51,9 +51,11 @@
 #include "record-full.h"
 #include "linux-record.h"
 
+#include "arch/aarch64-fpmr-linux.h"
 #include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
+#include "arch/aarch64-pauth-linux.h"
 #include "arch/aarch64-scalable-linux.h"
 
 #include "arch-utils.h"
@@ -1734,8 +1736,9 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 	  gcs_regmap, regcache_supply_regset, regcache_collect_regset
 	};
 
-      cb (".reg-aarch-gcs", sizeof (user_gcs), sizeof (user_gcs),
-	  &aarch64_linux_gcs_regset, "GCS registers", cb_data);
+      cb (".reg-aarch-gcs", AARCH64_LINUX_SIZEOF_GCS_REGSET,
+	  AARCH64_LINUX_SIZEOF_GCS_REGSET, &aarch64_linux_gcs_regset,
+	  "GCS registers", cb_data);
     }
 }
 
@@ -1761,9 +1764,9 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
      length.  */
   features.vq = aarch64_linux_core_read_vq_from_sections (gdbarch, abfd);
   features.pauth = hwcap & AARCH64_HWCAP_PACA;
-  features.gcs = features.gcs_linux = hwcap & HWCAP_GCS;
-  features.mte = hwcap2 & HWCAP2_MTE;
-  features.fpmr = hwcap2 & HWCAP2_FPMR;
+  features.gcs = features.gcs_linux = hwcap & AARCH64_HWCAP_GCS;
+  features.mte = hwcap2 & AARCH64_HWCAP2_MTE;
+  features.fpmr = hwcap2 & AARCH64_HWCAP2_FPMR;
 
   /* Handle the TLS section.  */
   asection *tls = bfd_get_section_by_name (abfd, ".reg-aarch-tls");
@@ -2610,7 +2613,7 @@ aarch64_linux_get_shadow_stack_pointer (gdbarch *gdbarch, regcache *regcache,
   if (status != REG_VALID)
     error (_("Can't read $gcspr."));
 
-  shadow_stack_enabled = features_enabled & PR_SHADOW_STACK_ENABLE;
+  shadow_stack_enabled = features_enabled & AARCH64_PR_SHADOW_STACK_ENABLE;
   return gcspr;
 }
 
@@ -2696,9 +2699,9 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 
   const char *meaning;
 
-  if (si_code == SEGV_MTEAERR || si_code == SEGV_MTESERR)
+  if (si_code == AARCH64_SEGV_MTEAERR || si_code == AARCH64_SEGV_MTESERR)
     meaning = _("Memory tag violation");
-  else if (si_code == SEGV_CPERR && si_errno == 0)
+  else if (si_code == AARCH64_SEGV_CPERR && si_errno == 0)
     meaning = _("Guarded Control Stack error");
   else
     return;
@@ -2708,7 +2711,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
   uiout->field_string ("sigcode-meaning", meaning);
 
   /* For synchronous faults, show additional information.  */
-  if (si_code == SEGV_MTESERR)
+  if (si_code == AARCH64_SEGV_MTESERR)
     {
       uiout->text (_(" while accessing address "));
       uiout->field_core_addr ("fault-addr", gdbarch, fault_addr);
@@ -2731,7 +2734,7 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	  uiout->field_string ("logical-tag", hex_string (ltag));
 	}
     }
-  else if (si_code != SEGV_CPERR)
+  else if (si_code != AARCH64_SEGV_CPERR)
     {
       uiout->text ("\n");
       uiout->text (_("Fault address unavailable"));

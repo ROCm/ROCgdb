@@ -1543,7 +1543,7 @@ memory_xfer_partial_1 (struct target_ops *ops, enum target_object object,
 
 	  auto match_cb = [=] (const struct target_section *s)
 	    {
-	      return (strcmp (section_name, s->the_bfd_section->name) == 0);
+	      return streq (section_name, s->the_bfd_section->name);
 	    };
 
 	  return section_table_xfer_memory_partial (readbuf, writebuf,

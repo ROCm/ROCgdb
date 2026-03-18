@@ -193,15 +193,15 @@ elf_symfile_segments (bfd *abfd)
 static void
 elf_locate_sections (asection *sectp, struct elfinfo *ei)
 {
-  if (strcmp (sectp->name, ".stab") == 0)
+  if (streq (sectp->name, ".stab"))
     {
       ei->stabsect = sectp;
     }
-  else if (strcmp (sectp->name, ".mdebug") == 0)
+  else if (streq (sectp->name, ".mdebug"))
     {
       ei->mdebugsect = sectp;
     }
-  else if (strcmp (sectp->name, ".ctf") == 0)
+  else if (streq (sectp->name, ".ctf"))
     {
       ei->ctfsect = sectp;
     }
@@ -512,7 +512,7 @@ elf_symtab_read (minimal_symbol_reader &reader,
 	    {
 	      const char *atsign = strchr (sym->name, '@');
 	      bool is_at_symbol = atsign != nullptr && atsign > sym->name;
-	      bool is_plt = is_at_symbol && strcmp (atsign, "@plt") == 0;
+	      bool is_plt = is_at_symbol && streq (atsign, "@plt");
 	      int len = is_at_symbol ? atsign - sym->name : 0;
 
 	      if (is_at_symbol
@@ -712,14 +712,14 @@ elf_gnu_ifunc_record_cache (const char *name, CORE_ADDR addr)
   /* Note we check the symbol's name instead of checking whether the
      symbol is in the .plt section because some systems have @plt
      symbols in the .text section.  */
-  if (len > 4 && strcmp (target_name + len - 4, "@plt") == 0)
+  if (len > 4 && streq (target_name + len - 4, "@plt"))
     {
       gnu_ifunc_debug_printf ("target \"%s\" is a PLT stub, not caching",
 			      target_name);
       return 0;
     }
 
-  if (strcmp (target_name, "_PROCEDURE_LINKAGE_TABLE_") == 0)
+  if (streq (target_name, "_PROCEDURE_LINKAGE_TABLE_"))
     {
       gnu_ifunc_debug_printf ("target is _PROCEDURE_LINKAGE_TABLE_, "
 			      "not caching");

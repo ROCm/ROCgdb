@@ -1154,7 +1154,7 @@ thread_db_load_search (void)
 	  if (rc)
 	    break;
 	}
-      else if (strcmp (this_dir, "$sdir") == 0)
+      else if (streq (this_dir, "$sdir"))
 	{
 	  if (try_thread_db_load_from_sdir ())
 	    {
@@ -1905,7 +1905,7 @@ info_auto_load_libthread_db (const char *args, int from_tty)
       for (this_pid_len = 0; pid != 0; pid /= 10)
 	this_pid_len++;
 
-      if (i == 0 || strcmp (array[i - 1]->filename, array[i]->filename) != 0)
+      if (i == 0 || !streq (array[i - 1]->filename, array[i]->filename))
 	{
 	  unique_filenames++;
 	  max_filename_len = std::max (max_filename_len,
@@ -1943,8 +1943,7 @@ info_auto_load_libthread_db (const char *args, int from_tty)
 			     file_name_style.style ());
 
 	std::string pids;
-	while (i < array.size () && strcmp (info->filename,
-					    array[i]->filename) == 0)
+	while (i < array.size () && streq (info->filename, array[i]->filename))
 	  {
 	    if (!pids.empty ())
 	      pids += ", ";

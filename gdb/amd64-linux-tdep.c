@@ -206,7 +206,7 @@ amd64_linux_sigtramp_p (const frame_info_ptr &this_frame)
   if (name == NULL || strstr (name, "sigaction") != NULL)
     return (amd64_linux_sigtramp_start (this_frame) != 0);
 
-  return (strcmp ("__restore_rt", name) == 0);
+  return (streq ("__restore_rt", name));
 }
 
 /* Offset to struct sigcontext in ucontext, from <asm/ucontext.h>.  */

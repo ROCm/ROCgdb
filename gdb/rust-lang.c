@@ -138,7 +138,7 @@ rust_underscore_fields (struct type *type)
 	  const char *field_name = field.name ();
 	  if (startswith (field_name, "__"))
 	    field_name += 2;
-	  if (strcmp (buf, field_name) != 0)
+	  if (!streq (buf, field_name))
 	    return false;
 	  field_number++;
 	}
@@ -192,7 +192,7 @@ rust_range_type_p (struct type *type)
     return true;
 
   int field_num = 0;
-  if (strcmp (type->field (0).name (), "start") == 0)
+  if (streq (type->field (0).name (), "start"))
     {
       if (type->num_fields () == 1)
 	return true;
@@ -204,7 +204,7 @@ rust_range_type_p (struct type *type)
       return false;
     }
 
-  return strcmp (type->field (field_num).name (), "end") == 0;
+  return streq (type->field (field_num).name (), "end");
 }
 
 /* Return true if TYPE is an inclusive range type, otherwise false.
@@ -254,9 +254,9 @@ rust_get_trait_object_pointer (struct value *value)
   int vtable_field = 0;
   for (int i = 0; i < 2; ++i)
     {
-      if (strcmp (type->field (i).name (), "vtable") == 0)
+      if (streq (type->field (i).name (), "vtable"))
 	vtable_field = i;
-      else if (strcmp (type->field (i).name (), "pointer") != 0)
+      else if (!streq (type->field (i).name (), "pointer"))
 	return NULL;
     }
 
@@ -379,7 +379,7 @@ rust_array_like_element_type (struct type *type)
   gdb_assert (rust_slice_type_p (type));
   for (const auto &field : type->fields ())
     {
-      if (strcmp (field.name (), "data_ptr") == 0)
+      if (streq (field.name (), "data_ptr"))
 	{
 	  struct type *base_type = field.type ()->target_type ();
 	  if (rewrite_slice_type (base_type, nullptr, 0, nullptr))
@@ -527,8 +527,7 @@ rust_language::val_print_slice
 
   /* &str is handled here; but for all other slice types it is fine to
      simply print the contents.  */
-  if (orig_type->name () != nullptr
-      && strcmp (orig_type->name (), "&str") == 0)
+  if (orig_type->name () != nullptr && streq (orig_type->name (), "&str"))
     {
       LONGEST low_bound, high_bound;
       if (get_array_bounds (type, &low_bound, &high_bound))
@@ -760,8 +759,10 @@ rust_language::value_print_inner
 
     case TYPE_CODE_INT:
       /* Recognize the unit type.  */
-      if (type->is_unsigned () && type->length () == 0
-	  && type->name () != NULL && strcmp (type->name (), "()") == 0)
+      if (type->is_unsigned ()
+	  && type->length () == 0
+	  && type->name () != nullptr
+	  && streq (type->name (), "()"))
 	{
 	  gdb_puts ("()", stream);
 	  break;
@@ -1323,14 +1324,13 @@ rust_compute_range (struct type *type, struct value *range,
     return;
 
   i = 0;
-  if (strcmp (type->field (0).name (), "start") == 0)
+  if (streq (type->field (0).name (), "start"))
     {
       *kind = RANGE_HIGH_BOUND_DEFAULT;
       *low = value_as_long (range->field (0));
       ++i;
     }
-  if (type->num_fields () > i
-      && strcmp (type->field (i).name (), "end") == 0)
+  if (type->num_fields () > i && streq (type->field (i).name (), "end"))
     {
       *kind = (*kind == (RANGE_LOW_BOUND_DEFAULT | RANGE_HIGH_BOUND_DEFAULT)
 	       ? RANGE_LOW_BOUND_DEFAULT : RANGE_STANDARD);
@@ -1874,7 +1874,7 @@ rust_language::is_string_type_p (struct type *type) const
 	  || (type->code () == TYPE_CODE_STRUCT
 	      && !rust_enum_p (type)
 	      && rust_slice_type_p (type)
-	      && strcmp (type->name (), "&str") == 0));
+	      && streq (type->name (), "&str")));
 }
 
 /* See language.h.  */

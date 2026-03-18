@@ -3433,7 +3433,7 @@ ia64_find_global_pointer_from_dynamic_section (struct gdbarch *gdbarch,
     {
       for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (strcmp (osect.the_bfd_section->name, ".dynamic") == 0)
+	  if (streq (osect.the_bfd_section->name, ".dynamic"))
 	    {
 	      CORE_ADDR addr = osect.addr ();
 	      CORE_ADDR endaddr = osect.endaddr ();
@@ -3507,14 +3507,14 @@ find_extant_func_descr (struct gdbarch *gdbarch, CORE_ADDR faddr)
 
   /* Return early if faddr is already a function descriptor.  */
   faddr_sect = find_pc_section (faddr);
-  if (faddr_sect && strcmp (faddr_sect->the_bfd_section->name, ".opd") == 0)
+  if (faddr_sect && streq (faddr_sect->the_bfd_section->name, ".opd"))
     return faddr;
 
   if (faddr_sect != NULL)
     {
       for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (strcmp (osect.the_bfd_section->name, ".opd") == 0)
+	  if (streq (osect.the_bfd_section->name, ".opd"))
 	    {
 	      CORE_ADDR addr = osect.addr ();
 	      CORE_ADDR endaddr = osect.endaddr ();
@@ -3593,7 +3593,7 @@ ia64_convert_from_func_ptr_addr (struct gdbarch *gdbarch, CORE_ADDR addr,
   s = find_pc_section (addr);
 
   /* check if ADDR points to a function descriptor.  */
-  if (s && strcmp (s->the_bfd_section->name, ".opd") == 0)
+  if (s && streq (s->the_bfd_section->name, ".opd"))
     return read_memory_unsigned_integer (addr, 8, byte_order);
 
   /* Normally, functions live inside a section that is executable.

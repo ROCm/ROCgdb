@@ -35,8 +35,8 @@ struct dwarf2_section_names {
   /* Return true if NAME matches either of this section's names.  */
   bool matches (const char *name) const
   {
-    return ((normal != nullptr && strcmp (name, normal) == 0)
-	    || (compressed != nullptr && strcmp (name, compressed) == 0));
+    return ((normal != nullptr && streq (name, normal))
+	    || (compressed != nullptr && streq (name, compressed)));
   }
 };
 

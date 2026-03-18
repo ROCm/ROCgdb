@@ -369,8 +369,8 @@ read_unwind_info (struct objfile *objfile)
        unwind_sec;
        unwind_sec = unwind_sec->next)
     {
-      if (strcmp (unwind_sec->name, "$UNWIND_START$") == 0
-	  || strcmp (unwind_sec->name, ".PARISC.unwind") == 0)
+      if (streq (unwind_sec->name, "$UNWIND_START$")
+	  || streq (unwind_sec->name, ".PARISC.unwind"))
 	{
 	  unwind_size = bfd_section_size (unwind_sec);
 	  unwind_entries = unwind_size / UNWIND_ENTRY_SIZE;
@@ -411,8 +411,8 @@ read_unwind_info (struct objfile *objfile)
        unwind_sec;
        unwind_sec = unwind_sec->next)
     {
-      if (strcmp (unwind_sec->name, "$UNWIND_START$") == 0
-	  || strcmp (unwind_sec->name, ".PARISC.unwind") == 0)
+      if (streq (unwind_sec->name, "$UNWIND_START$")
+	  || streq (unwind_sec->name, ".PARISC.unwind"))
 	{
 	  unwind_size = bfd_section_size (unwind_sec);
 	  unwind_entries = unwind_size / UNWIND_ENTRY_SIZE;
@@ -925,7 +925,7 @@ hppa64_convert_code_addr_to_fptr (struct gdbarch *gdbarch, CORE_ADDR code)
 
   for (obj_section &opd : sec->objfile->sections ())
     {
-      if (strcmp (opd.the_bfd_section->name, ".opd") == 0)
+      if (streq (opd.the_bfd_section->name, ".opd"))
 	{
 	  for (CORE_ADDR addr = opd.addr ();
 	       addr < opd.endaddr ();

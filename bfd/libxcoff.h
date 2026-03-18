@@ -217,9 +217,6 @@ struct xcoff_backend_data_rec
 #define bfd_xcoff_text_align_power(a) ((xcoff_data (a)->text_align_power))
 #define bfd_xcoff_data_align_power(a) ((xcoff_data (a)->data_align_power))
 
-/* xcoff*_ppc_relocate_section macros  */
-#define XCOFF_MAX_CALCULATE_RELOCATION (0x32)
-#define XCOFF_MAX_COMPLAIN_OVERFLOW (4)
 /* N_ONES produces N one bits, without overflowing machine arithmetic.  */
 #ifdef N_ONES
 #undef N_ONES

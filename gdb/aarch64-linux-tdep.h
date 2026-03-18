@@ -33,16 +33,7 @@
    alignment.  */
 #define AARCH64_LINUX_SIZEOF_FPREGSET (33 * V_REGISTER_SIZE)
 
-/* The pauth regset consists of 2 X sized registers.  */
-#define AARCH64_LINUX_SIZEOF_PAUTH (2 * X_REGISTER_SIZE)
-
-/* The MTE regset consists of a 64-bit register.  */
-#define AARCH64_LINUX_SIZEOF_MTE_REGSET (8)
-
 extern const struct regset aarch64_linux_gregset;
 extern const struct regset aarch64_linux_fpregset;
-
-/* Matches HWCAP_PACA in kernel header arch/arm64/include/uapi/asm/hwcap.h.  */
-#define AARCH64_HWCAP_PACA (1 << 30)
 
 #endif /* GDB_AARCH64_LINUX_TDEP_H */

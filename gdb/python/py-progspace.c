@@ -751,8 +751,7 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_pspace);
 
 static gdb_PyGetSetDef pspace_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict_getter, NULL,
-    "The __dict__ for this progspace.", NULL },
+  gdbpy_dict_wrapper_cfg_dict_getter ("progspace"),
   { "filename", pspy_get_filename, NULL,
     "The filename of the progspace's main symbol file, or None.", nullptr },
   { "symbol_file", pspy_get_symbol_file, nullptr,
@@ -814,8 +813,7 @@ PyTypeObject pspace_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  gdb_py_generic_getattro,	  /*tp_getattro*/
-  gdb_py_generic_setattro,	  /*tp_setattro*/
+  gdbpy_dict_wrapper_getsetattro,
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB progspace object",	  /* tp_doc */

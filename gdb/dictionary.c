@@ -791,7 +791,7 @@ language_defn::search_name_hash (const char *string0) const
 	     ignore the "TKB" suffix because searches for this task body
 	     subprogram are going to be performed using `pck__t' (the encoded
 	     version of the natural name `pck.t').  */
-	  if (strcmp (string, "TKB") == 0)
+	  if (streq (string, "TKB"))
 	    return hash;
 	  break;
 	}

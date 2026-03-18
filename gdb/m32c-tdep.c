@@ -2327,8 +2327,7 @@ m32c_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR stop_pc)
   if (find_pc_partial_function (stop_pc, &name, &start, &end))
     {
       /* Are we stopped at the beginning of the trampoline function?  */
-      if (strcmp (name, "m32c_jsri16") == 0
-	  && stop_pc == start)
+      if (streq (name, "m32c_jsri16") && stop_pc == start)
 	{
 	  /* Get the stack pointer.  The return address is at the top,
 	     and the target function's address is just below that.  We
@@ -2508,8 +2507,7 @@ m32c_m16c_pointer_to_address (struct gdbarch *gdbarch,
 	  const char *ptr_msym_name = ptr_msym.minsym->linkage_name ();
 	  int len = strlen (ptr_msym_name);
 
-	  if (len > 4
-	      && strcmp (ptr_msym_name + len - 4, ".plt") == 0)
+	  if (len > 4 && streq (ptr_msym_name + len - 4, ".plt"))
 	    {
 	      /* We have a .plt symbol; try to find the symbol for the
 		 corresponding function.

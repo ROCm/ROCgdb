@@ -1639,7 +1639,7 @@ s390_address_class_name_to_type_flags (struct gdbarch *gdbarch,
 				       const char *name,
 				       type_instance_flags *type_flags_ptr)
 {
-  if (strcmp (name, "mode32") == 0)
+  if (streq (name, "mode32"))
     {
       *type_flags_ptr = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
       return true;

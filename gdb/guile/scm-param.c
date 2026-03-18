@@ -795,7 +795,7 @@ pascm_set_param_value_x (param_smob *p_smob,
 	  gdbscm_throw (exception);
 	for (i = 0; enumeration[i]; ++i)
 	  {
-	    if (strcmp (enumeration[i], str.get ()) == 0)
+	    if (streq (enumeration[i], str.get ()))
 	      break;
 	  }
 	if (enumeration[i] == nullptr)

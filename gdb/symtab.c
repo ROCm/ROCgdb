@@ -379,7 +379,7 @@ search_symbol_list (const char *name, int num, struct symbol **syms)
 {
   for (int i = 0; i < num; ++i)
     {
-      if (strcmp (name, syms[i]->natural_name ()) == 0)
+      if (streq (name, syms[i]->natural_name ()))
 	return syms[i];
     }
   return nullptr;
@@ -739,8 +739,8 @@ gdb_mangle_name (struct type *type, int method_id, int signature_id)
 
   is_full_physname_constructor = is_constructor_name (physname);
 
-  is_constructor = is_full_physname_constructor
-    || (newname && strcmp (field_name, newname) == 0);
+  is_constructor = (is_full_physname_constructor
+		    || (newname != nullptr && streq (field_name, newname)));
 
   if (!is_destructor)
     is_destructor = (startswith (physname, "__dt"));
@@ -1190,9 +1190,9 @@ matching_obj_sections (struct obj_section *obj_first,
       != bfd_section_vma (second) - bfd_get_start_address (second->owner))
     return false;
 
-  if (bfd_section_name (first) == NULL
-      || bfd_section_name (second) == NULL
-      || strcmp (bfd_section_name (first), bfd_section_name (second)) != 0)
+  if (bfd_section_name (first) == nullptr
+      || bfd_section_name (second) == nullptr
+      || !streq (bfd_section_name (first), bfd_section_name (second)))
     return false;
 
   /* Otherwise check that they are in corresponding objfiles.  */
@@ -1277,7 +1277,7 @@ eq_symbol_entry (const struct symbol_cache_slot *slot,
 
       if (slot->state == SYMBOL_SLOT_NOT_FOUND)
 	{
-	  if (strcmp (slot_name, name) != 0)
+	  if (!streq (slot_name, name))
 	    return 0;
 	}
       else

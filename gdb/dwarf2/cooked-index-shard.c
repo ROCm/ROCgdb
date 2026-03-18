@@ -104,7 +104,7 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 	   && parent_entry.resolved == nullptr
 	   && m_main == nullptr
 	   && language_may_use_plain_main (lang)
-	   && strcmp (name, "main") == 0)
+	   && streq (name, "main"))
     m_main = result;
 
   return result;

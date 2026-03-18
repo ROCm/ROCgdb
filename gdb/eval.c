@@ -455,10 +455,10 @@ fake_method::fake_method (type_instance_flags flags,
 {
   struct type *type = &m_type;
 
-  TYPE_MAIN_TYPE (type) = &m_main_type;
+  type->main_type = &m_main_type;
   type->set_length (1);
   type->set_code (TYPE_CODE_METHOD);
-  TYPE_CHAIN (type) = type;
+  type->chain = type;
   type->set_instance_flags (flags);
   if (num_types > 0)
     {
@@ -1015,7 +1015,7 @@ add_struct_fields (struct type *type, completion_list &output,
 	      computed_type_name = 1;
 	    }
 	  /* Omit constructors from the completion list.  */
-	  if (!type_name || strcmp (type_name, name))
+	  if (!type_name || !streq (type_name, name))
 	    output.emplace_back (concat (prefix, name, nullptr));
 	}
     }

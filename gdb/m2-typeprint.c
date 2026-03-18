@@ -162,8 +162,7 @@ m2_language::print_typedef (struct type *type, struct symbol *new_symbol,
   type = check_typedef (type);
   gdb_printf (stream, "TYPE ");
   if (!new_symbol->type ()->name ()
-      || strcmp ((new_symbol->type ())->name (),
-		 new_symbol->linkage_name ()) != 0)
+      || !streq ((new_symbol->type ())->name (), new_symbol->linkage_name ()))
     gdb_printf (stream, "%s = ", new_symbol->print_name ());
   else
     gdb_printf (stream, "<builtin> = ");
@@ -352,7 +351,7 @@ m2_is_long_set (struct type *type)
 	  if (type->field (i).type ()->code () != TYPE_CODE_SET)
 	    return 0;
 	  if (type->field (i).name () != NULL
-	      && (strcmp (type->field (i).name (), "") != 0))
+	      && (!streq (type->field (i).name (), "")))
 	    return 0;
 	  range = type->field (i).type ()->index_type ();
 	  if ((i > TYPE_N_BASECLASSES (type))
@@ -490,9 +489,9 @@ m2_is_unbounded_array (struct type *type)
        */
       if (type->num_fields () != 2)
 	return 0;
-      if (strcmp (type->field (0).name (), "_m2_contents") != 0)
+      if (!streq (type->field (0).name (), "_m2_contents"))
 	return 0;
-      if (strcmp (type->field (1).name (), "_m2_high") != 0)
+      if (!streq (type->field (1).name (), "_m2_high"))
 	return 0;
       if (type->field (0).type ()->code () != TYPE_CODE_PTR)
 	return 0;

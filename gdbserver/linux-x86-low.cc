@@ -1084,7 +1084,7 @@ x86_target::process_qsupported (gdb::array_view<const char * const> features)
 	       p != NULL;
 	       p = strtok_r (NULL, ",", &saveptr))
 	    {
-	      if (strcmp (p, "i386") == 0)
+	      if (streq (p, "i386"))
 		{
 		  use_xml = 1;
 		  break;

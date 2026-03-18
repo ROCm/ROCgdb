@@ -171,7 +171,7 @@ reggroup_find (struct gdbarch *gdbarch, const char *name)
 {
   for (const struct reggroup *group : gdbarch_reggroups (gdbarch))
     {
-      if (strcmp (name, group->name ()) == 0)
+      if (streq (name, group->name ()))
 	return group;
     }
   return NULL;

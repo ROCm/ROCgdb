@@ -396,10 +396,9 @@ amd64obsd_trapframe_sniffer (const struct frame_unwind *self,
     return 0;
 
   find_pc_partial_function (get_frame_pc (this_frame), &name, NULL, NULL);
-  return (name && ((strcmp (name, "calltrap") == 0)
-		   || (strcmp (name, "osyscall1") == 0)
-		   || (strcmp (name, "Xsyscall") == 0)
-		   || (startswith (name, "Xintr"))));
+  return (name != nullptr
+	  && (streq (name, "calltrap") || streq (name, "osyscall1")
+	      || streq (name, "Xsyscall") || startswith (name, "Xintr")));
 }
 
 static const struct frame_unwind_legacy amd64obsd_trapframe_unwind (

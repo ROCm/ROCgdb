@@ -38,7 +38,7 @@ check_make_paramless (const char *file, int line,
 				completion_mode, true /* ignore_parameters */);
   const char *result = lookup_name.language_lookup_name (lang);
 
-  if (strcmp (result, expected) != 0)
+  if (!streq (result, expected))
     {
       error (_("%s:%d: make-paramless self-test failed: (completion=%d, lang=%d) "
 	       "\"%s\" -> \"%s\", expected \"%s\""),

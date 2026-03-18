@@ -1378,10 +1378,10 @@ cygwin_sigwrapper_frame_unwind::sniff (const frame_info_ptr &this_frame,
   if (name == nullptr)
     return 0;
 
-  if (strcmp (name, "_sigbe") != 0
-      && strcmp (name, "__sigbe") != 0
-      && strcmp (name, "sigdelayed") != 0
-      && strcmp (name, "_sigdelayed") != 0)
+  if (!streq (name, "_sigbe")
+      && !streq (name, "__sigbe")
+      && !streq (name, "sigdelayed")
+      && !streq (name, "_sigdelayed"))
     return 0;
 
   frame_debug_printf ("name=%s, start=%s, end=%s",

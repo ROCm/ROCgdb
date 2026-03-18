@@ -155,8 +155,7 @@ static xcoff_complain_function xcoff_complain_overflow_bitfield_func;
 static xcoff_complain_function xcoff_complain_overflow_signed_func;
 static xcoff_complain_function xcoff_complain_overflow_unsigned_func;
 
-xcoff_reloc_function *const
-xcoff_calculate_relocation[XCOFF_MAX_CALCULATE_RELOCATION] =
+xcoff_reloc_function *const xcoff_calculate_relocation[] =
 {
   xcoff_reloc_type_pos,  /* R_POS   (0x00) */
   xcoff_reloc_type_neg,  /* R_NEG   (0x01) */
@@ -210,8 +209,7 @@ xcoff_calculate_relocation[XCOFF_MAX_CALCULATE_RELOCATION] =
   xcoff_reloc_type_toc,  /* R_TOCL    (0x31) */
 };
 
-xcoff_complain_function *const
-xcoff_complain_overflow[XCOFF_MAX_COMPLAIN_OVERFLOW] =
+xcoff_complain_function *const xcoff_complain_overflow[] =
 {
   xcoff_complain_overflow_dont_func,
   xcoff_complain_overflow_bitfield_func,
@@ -1158,8 +1156,11 @@ reloc_howto_type xcoff_howto_table[] =
 void
 xcoff_rtype2howto (arelent *relent, struct internal_reloc *internal)
 {
-  if (internal->r_type > R_TOCL)
-    abort ();
+  if (internal->r_type >= ARRAY_SIZE (xcoff_howto_table))
+    {
+      relent->howto = NULL;
+      return;
+    }
 
   /* Default howto layout works most of the time */
   relent->howto = &xcoff_howto_table[internal->r_type];
@@ -1183,7 +1184,7 @@ xcoff_rtype2howto (arelent *relent, struct internal_reloc *internal)
   if (relent->howto->dst_mask != 0
       && (relent->howto->bitsize
 	  != ((unsigned int) internal->r_size & 0x1f) + 1))
-    abort ();
+    relent->howto = NULL;
 }
 
 reloc_howto_type *
@@ -1236,9 +1237,7 @@ _bfd_xcoff_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 {
   unsigned int i;
 
-  for (i = 0;
-       i < sizeof (xcoff_howto_table) / sizeof (xcoff_howto_table[0]);
-       i++)
+  for (i = 0; i < ARRAY_SIZE (xcoff_howto_table); i++)
     if (xcoff_howto_table[i].name != NULL
 	&& strcasecmp (xcoff_howto_table[i].name, r_name) == 0)
       return &xcoff_howto_table[i];
@@ -3768,6 +3767,14 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 	 the csect including the symbol which it references.  */
       if (rel->r_type == R_REF)
 	continue;
+      if (rel->r_type >= ARRAY_SIZE (xcoff_howto_table))
+	{
+	  /* xgettext:c-format */
+	  _bfd_error_handler (_("%pB: unsupported relocation type %#x"),
+			      input_bfd, rel->r_type);
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
 
       /* Retrieve default value in HOWTO table and fix up according
 	 to r_size field, if it can be different.
@@ -3787,7 +3794,7 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 
 	    default:
 	      _bfd_error_handler
-		(_("%pB: relocation (%d) at 0x%" PRIx64 " has wrong r_rsize (0x%x)\n"),
+		(_("%pB: relocation (%#x) at 0x%" PRIx64 " has wrong r_rsize (0x%x)\n"),
 		 input_bfd, rel->r_type, (uint64_t) rel->r_vaddr, rel->r_size);
 	      return false;
 	    }
@@ -3863,10 +3870,9 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 	    }
 	}
 
-      if (rel->r_type >= XCOFF_MAX_CALCULATE_RELOCATION
-	  || !((*xcoff_calculate_relocation[rel->r_type])
-	       (input_bfd, input_section, output_bfd, rel, sym, &howto, val,
-		addend, &relocation, contents, info)))
+      if (!((*xcoff_calculate_relocation[rel->r_type])
+	    (input_bfd, input_section, output_bfd, rel, sym, &howto, val,
+	     addend, &relocation, contents, info)))
 	return false;
 
       /* address */

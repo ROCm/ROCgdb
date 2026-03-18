@@ -433,7 +433,7 @@ cp_lookup_symbol_via_imports (const char *scope,
 			    && (len == 0
 				|| scope[len] == ':'
 				|| scope[len] == '\0'))
-			 : strcmp (scope, current->import_dest) == 0);
+			 : streq (scope, current->import_dest));
 
       /* If the import destination is the current scope or one of its
 	 ancestors then it is applicable.  */
@@ -449,9 +449,10 @@ cp_lookup_symbol_via_imports (const char *scope,
 	     with the sought out name.  If there is a match pass
 	     current->import_src as NAMESPACE to direct the search
 	     towards the imported namespace.  */
-	  if (current->declaration
-	      && strcmp (name, current->alias
-			 ? current->alias : current->declaration) == 0)
+	  if (current->declaration != nullptr
+	      && streq (name, (current->alias != nullptr
+			       ? current->alias
+			       : current->declaration)))
 	    sym = cp_lookup_symbol_in_namespace (current->import_src,
 						 current->declaration,
 						 block, domain, 1);
@@ -469,13 +470,12 @@ cp_lookup_symbol_via_imports (const char *scope,
 
 	  /* Do not follow CURRENT if NAME matches its EXCLUDES.  */
 	  for (excludep = current->excludes; *excludep; excludep++)
-	    if (strcmp (name, *excludep) == 0)
+	    if (streq (name, *excludep))
 	      break;
 	  if (*excludep)
 	    continue;
 
-	  if (current->alias != NULL
-	      && strcmp (name, current->alias) == 0)
+	  if (current->alias != nullptr && streq (name, current->alias))
 	    /* If the import is creating an alias and the alias matches
 	       the sought name.  Pass current->import_src as the NAME to
 	       direct the search towards the aliased namespace.  */

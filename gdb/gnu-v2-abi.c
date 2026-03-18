@@ -316,12 +316,9 @@ vb_match (struct type *type, int index, struct type *basetype)
   if (fieldtype->target_type () == basetype)
     return 1;
 
-  if (basetype->name () != NULL
-      && fieldtype->target_type ()->name () != NULL
-      && strcmp (basetype->name (),
-		 fieldtype->target_type ()->name ()) == 0)
-    return 1;
-  return 0;
+  return (basetype->name () != nullptr
+	  && fieldtype->target_type ()->name () != nullptr
+	  && streq (basetype->name (), fieldtype->target_type ()->name ()));
 }
 
 /* Compute the offset of the baseclass which is the INDEXth baseclass

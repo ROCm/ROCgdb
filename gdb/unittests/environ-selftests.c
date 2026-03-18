@@ -63,7 +63,7 @@ test_init_from_host_environ ()
 
   /* Our test environment variable should be present at the
      vector.  */
-  SELF_CHECK (strcmp (env.get (gdb_selftest_env_var), "1") == 0);
+  SELF_CHECK (streq (env.get (gdb_selftest_env_var), "1"));
 }
 
 /* Test reinitialization using the host's environ.  */
@@ -80,7 +80,7 @@ test_reinit_from_host_environ ()
   int num_found = 0;
 
   for (size_t i = 0; envp[i] != NULL; ++i)
-    if (strcmp (envp[i], "GDB_SELFTEST_ENVIRON=1") == 0)
+    if (streq (envp[i], "GDB_SELFTEST_ENVIRON=1"))
       ++num_found;
   SELF_CHECK (num_found == 1);
 }
@@ -95,18 +95,18 @@ test_set_A_unset_B_unset_A_cannot_find_A_can_find_B ()
   gdb_environ env;
 
   env.set ("GDB_SELFTEST_ENVIRON_1", "aaa");
-  SELF_CHECK (strcmp (env.get ("GDB_SELFTEST_ENVIRON_1"), "aaa") == 0);
+  SELF_CHECK (streq (env.get ("GDB_SELFTEST_ENVIRON_1"), "aaa"));
   /* User-set environ var list must contain one element.  */
   SELF_CHECK (env.user_set_env ().size () == 1);
   SELF_CHECK (set_contains (env.user_set_env (),
 			    std::string ("GDB_SELFTEST_ENVIRON_1=aaa")));
 
   env.set ("GDB_SELFTEST_ENVIRON_2", "bbb");
-  SELF_CHECK (strcmp (env.get ("GDB_SELFTEST_ENVIRON_2"), "bbb") == 0);
+  SELF_CHECK (streq (env.get ("GDB_SELFTEST_ENVIRON_2"), "bbb"));
 
   env.unset ("GDB_SELFTEST_ENVIRON_1");
   SELF_CHECK (env.get ("GDB_SELFTEST_ENVIRON_1") == NULL);
-  SELF_CHECK (strcmp (env.get ("GDB_SELFTEST_ENVIRON_2"), "bbb") == 0);
+  SELF_CHECK (streq (env.get ("GDB_SELFTEST_ENVIRON_2"), "bbb"));
 
   /* The user-set environ var list must contain only one element
      now.  */
@@ -123,7 +123,7 @@ test_unset_set_empty_vector ()
   gdb_environ env;
 
   env.set ("PWD", "test");
-  SELF_CHECK (strcmp (env.get ("PWD"), "test") == 0);
+  SELF_CHECK (streq (env.get ("PWD"), "test"));
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("PWD=test")));
   SELF_CHECK (env.user_unset_env ().size () == 0);
   /* The second element must be NULL.  */
@@ -164,19 +164,19 @@ test_std_move ()
   gdb_environ env2;
 
   env.set ("A", "1");
-  SELF_CHECK (strcmp (env.get ("A"), "1") == 0);
+  SELF_CHECK (streq (env.get ("A"), "1"));
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("A=1")));
   SELF_CHECK (env.user_set_env ().size () == 1);
 
   env2 = std::move (env);
   SELF_CHECK (env.envp ()[0] == NULL);
-  SELF_CHECK (strcmp (env2.get ("A"), "1") == 0);
+  SELF_CHECK (streq (env2.get ("A"), "1"));
   SELF_CHECK (env2.envp ()[1] == NULL);
   SELF_CHECK (env.user_set_env ().size () == 0);
   SELF_CHECK (set_contains (env2.user_set_env (), std::string ("A=1")));
   SELF_CHECK (env2.user_set_env ().size () == 1);
   env.set ("B", "2");
-  SELF_CHECK (strcmp (env.get ("B"), "2") == 0);
+  SELF_CHECK (streq (env.get ("B"), "2"));
   SELF_CHECK (env.envp ()[1] == NULL);
 }
 
@@ -189,19 +189,19 @@ test_move_constructor ()
   gdb_environ env;
 
   env.set ("A", "1");
-  SELF_CHECK (strcmp (env.get ("A"), "1") == 0);
+  SELF_CHECK (streq (env.get ("A"), "1"));
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("A=1")));
 
   gdb_environ env2 = std::move (env);
   SELF_CHECK (env.envp ()[0] == NULL);
   SELF_CHECK (env.user_set_env ().size () == 0);
-  SELF_CHECK (strcmp (env2.get ("A"), "1") == 0);
+  SELF_CHECK (streq (env2.get ("A"), "1"));
   SELF_CHECK (env2.envp ()[1] == NULL);
   SELF_CHECK (set_contains (env2.user_set_env (), std::string ("A=1")));
   SELF_CHECK (env2.user_set_env ().size () == 1);
 
   env.set ("B", "2");
-  SELF_CHECK (strcmp (env.get ("B"), "2") == 0);
+  SELF_CHECK (streq (env.get ("B"), "2"));
   SELF_CHECK (env.envp ()[1] == NULL);
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("B=2")));
   SELF_CHECK (env.user_set_env ().size () == 1);
@@ -216,7 +216,7 @@ test_self_move ()
 
   /* Test self-move.  */
   env.set ("A", "1");
-  SELF_CHECK (strcmp (env.get ("A"), "1") == 0);
+  SELF_CHECK (streq (env.get ("A"), "1"));
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("A=1")));
   SELF_CHECK (env.user_set_env ().size () == 1);
 
@@ -227,8 +227,8 @@ test_self_move ()
   env = std::move (env);
   DIAGNOSTIC_POP
 
-  SELF_CHECK (strcmp (env.get ("A"), "1") == 0);
-  SELF_CHECK (strcmp (env.envp ()[0], "A=1") == 0);
+  SELF_CHECK (streq (env.get ("A"), "1"));
+  SELF_CHECK (streq (env.envp ()[0], "A=1"));
   SELF_CHECK (env.envp ()[1] == NULL);
   SELF_CHECK (set_contains (env.user_set_env (), std::string ("A=1")));
   SELF_CHECK (env.user_set_env ().size () == 1);
@@ -246,7 +246,7 @@ test_set_unset_reset ()
 
   /* Set our test variable to another value.  */
   env.set ("GDB_SELFTEST_ENVIRON", "test");
-  SELF_CHECK (strcmp (env.get ("GDB_SELFTEST_ENVIRON"), "test") == 0);
+  SELF_CHECK (streq (env.get ("GDB_SELFTEST_ENVIRON"), "test"));
   SELF_CHECK (env.user_set_env ().size () == 1);
   SELF_CHECK (env.user_unset_env ().size () == 0);
 
@@ -261,7 +261,7 @@ test_set_unset_reset ()
 
   /* Re-set the test variable.  */
   env.set ("GDB_SELFTEST_ENVIRON", "1");
-  SELF_CHECK (strcmp (env.get ("GDB_SELFTEST_ENVIRON"), "1") == 0);
+  SELF_CHECK (streq (env.get ("GDB_SELFTEST_ENVIRON"), "1"));
 }
 
 static void

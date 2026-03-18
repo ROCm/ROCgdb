@@ -896,7 +896,7 @@ tfile_xfer_partial_features (const char *annex,
 			     ULONGEST offset, ULONGEST len,
 			     ULONGEST *xfered_len)
 {
-  if (strcmp (annex, "target.xml"))
+  if (!streq (annex, "target.xml"))
     return TARGET_XFER_E_IO;
 
   if (readbuf == NULL)

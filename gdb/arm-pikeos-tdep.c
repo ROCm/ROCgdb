@@ -58,12 +58,10 @@ arm_pikeos_osabi_sniffer (bfd *abfd)
     {
       const char *name = bfd_asymbol_name (sym);
 
-      if (strcmp (name, "_vm_stack") == 0
-	  || strcmp (name, "__p4_stack") == 0)
+      if (streq (name, "_vm_stack") || streq (name, "__p4_stack"))
 	pikeos_stack_found = 1;
 
-      if (strcmp (name, "_vm_stack_size") == 0
-	  || strcmp (name, "__p4_stack_end") == 0)
+      if (streq (name, "_vm_stack_size") || streq (name, "__p4_stack_end"))
 	pikeos_stack_size_found = 1;
     }
 

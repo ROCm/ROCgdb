@@ -378,7 +378,7 @@ d_lookup_symbol_imports (const char *scope, const char *name,
       const char **excludep;
 
       /* If the import destination is the current scope then search it.  */
-      if (!current->searched && strcmp (scope, current->import_dest) == 0)
+      if (!current->searched && streq (scope, current->import_dest))
 	{
 	  /* Mark this import as searched so that the recursive call
 	     does not search it again.  */
@@ -390,9 +390,10 @@ d_lookup_symbol_imports (const char *scope, const char *name,
 	     with the sought out name.  If there is a match pass
 	     current->import_src as MODULE to direct the search towards
 	     the imported module.  */
-	  if (current->declaration
-	      && strcmp (name, current->alias
-			 ? current->alias : current->declaration) == 0)
+	  if (current->declaration != nullptr
+	      && streq (name, (current->alias != nullptr
+			       ? current->alias
+			       : current->declaration)))
 	    sym = d_lookup_symbol_in_module (current->import_src,
 					     current->declaration,
 					     block, domain, 1);
@@ -409,7 +410,7 @@ d_lookup_symbol_imports (const char *scope, const char *name,
 
 	  /* Do not follow CURRENT if NAME matches its EXCLUDES.  */
 	  for (excludep = current->excludes; *excludep; excludep++)
-	    if (strcmp (name, *excludep) == 0)
+	    if (streq (name, *excludep))
 	      break;
 	  if (*excludep)
 	    continue;
@@ -417,7 +418,7 @@ d_lookup_symbol_imports (const char *scope, const char *name,
 	  /* If the import statement is creating an alias.  */
 	  if (current->alias != NULL)
 	    {
-	      if (strcmp (name, current->alias) == 0)
+	      if (streq (name, current->alias))
 		{
 		  /* If the alias matches the sought name.  Pass
 		     current->import_src as the NAME to direct the

@@ -110,7 +110,7 @@ mi_cmd_var_create (const char *command, const char *const *argv, int argc)
 
   const char *name = argv[0];
   std::string gen_name;
-  if (strcmp (name, "-") == 0)
+  if (streq (name, "-"))
     {
       gen_name = varobj_gen_name ();
       name = gen_name.c_str ();
@@ -118,9 +118,9 @@ mi_cmd_var_create (const char *command, const char *const *argv, int argc)
   else if (!c_isalpha (name[0]))
     error (_("-var-create: name of object must begin with a letter"));
 
-  if (strcmp (frame, "*") == 0)
+  if (streq (frame, "*"))
     var_type = USE_CURRENT_FRAME;
-  else if (strcmp (frame, "@") == 0)
+  else if (streq (frame, "@"))
     var_type = USE_SELECTED_FRAME;
   else
     {
@@ -161,7 +161,7 @@ mi_cmd_var_delete (const char *command, const char *const *argv, int argc)
      starting with '-'.  */
   if (argc == 1)
     {
-      if (strcmp (name, "-c") == 0)
+      if (streq (name, "-c"))
 	error (_("-var-delete: Missing required "
 		 "argument after '-c': variable object name"));
       if (*name == '-')
@@ -172,7 +172,7 @@ mi_cmd_var_delete (const char *command, const char *const *argv, int argc)
      which would be the variable name.  */
   if (argc == 2)
     {
-      if (strcmp (name, "-c") != 0)
+      if (!streq (name, "-c"))
 	error (_("-var-delete: Invalid option."));
       children_only_p = 1;
       name = argv[1];
@@ -271,9 +271,9 @@ mi_cmd_var_set_frozen (const char *command, const char *const *argv, int argc)
 
   var = varobj_get_handle (argv[0]);
 
-  if (strcmp (argv[1], "0") == 0)
+  if (streq (argv[1], "0"))
     frozen = false;
-  else if (strcmp (argv[1], "1") == 0)
+  else if (streq (argv[1], "1"))
     frozen = true;
   else
     error (_("Invalid flag value"));

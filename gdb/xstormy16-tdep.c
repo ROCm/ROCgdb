@@ -515,7 +515,7 @@ xstormy16_resolve_jmp_table_entry (struct gdbarch *gdbarch, CORE_ADDR faddr)
       gdb_byte buf[2 * xstormy16_inst_size];
 
       /* Return faddr if it's not pointing into the jump table.  */
-      if (strcmp (faddr_sect->the_bfd_section->name, ".plt"))
+      if (!streq (faddr_sect->the_bfd_section->name, ".plt"))
 	return faddr;
 
       if (!target_read_memory (faddr, buf, sizeof buf))
@@ -543,12 +543,12 @@ xstormy16_find_jmp_table_entry (struct gdbarch *gdbarch, CORE_ADDR faddr)
   if (faddr_sect)
     {
       /* Return faddr if it's already a pointer to a jump table entry.  */
-      if (!strcmp (faddr_sect->the_bfd_section->name, ".plt"))
+      if (streq (faddr_sect->the_bfd_section->name, ".plt"))
 	return faddr;
 
       for (obj_section &osect : faddr_sect->objfile->sections ())
 	{
-	  if (!strcmp (osect.the_bfd_section->name, ".plt"))
+	  if (streq (osect.the_bfd_section->name, ".plt"))
 	    {
 	      CORE_ADDR addr, endaddr;
 

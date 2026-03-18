@@ -2092,7 +2092,7 @@ should_be_the_same (const char *one, const char *two)
   if (cptwo != nullptr)
     two = cptwo.get ();
 
-  SELF_CHECK (strcmp (one, two) == 0);
+  SELF_CHECK (streq (one, two));
 }
 
 static void

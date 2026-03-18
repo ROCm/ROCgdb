@@ -462,7 +462,7 @@ filter_args (char **argv)
   for (destv = argv; *argv != NULL; argv++)
     {
       /* -fpreprocessed may get in commonly from ccache.  */
-      if (strcmp (*argv, "-fpreprocessed") == 0)
+      if (streq (*argv, "-fpreprocessed"))
 	{
 	  xfree (*argv);
 	  continue;
@@ -767,7 +767,7 @@ compile_register_name_demangle (struct gdbarch *gdbarch,
   regname += 2;
 
   for (regnum = 0; regnum < gdbarch_num_regs (gdbarch); regnum++)
-    if (strcmp (regname, gdbarch_register_name (gdbarch, regnum)) == 0)
+    if (streq (regname, gdbarch_register_name (gdbarch, regnum)))
       return regnum;
 
   error (_("Cannot find gdbarch register \"%s\"."), regname);

@@ -94,19 +94,19 @@ classify_type (struct type *elttype, struct gdbarch *gdbarch,
 	  goto done;
 	}
 
-      if (!strcmp (name, "wchar_t"))
+      if (streq (name, "wchar_t"))
 	{
 	  result = C_WIDE_CHAR;
 	  goto done;
 	}
 
-      if (!strcmp (name, "char16_t"))
+      if (streq (name, "char16_t"))
 	{
 	  result = C_CHAR_16;
 	  goto done;
 	}
 
-      if (!strcmp (name, "char32_t"))
+      if (streq (name, "char32_t"))
 	{
 	  result = C_CHAR_32;
 	  goto done;

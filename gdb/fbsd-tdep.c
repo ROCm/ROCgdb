@@ -573,7 +573,7 @@ fbsd_core_thread_name (struct gdbarch *gdbarch, bfd &cbfd,
 		 as its thread name instead of an empty name if a name
 		 has not been set explicitly.  Return a NULL name in
 		 that case.  */
-	      if (strcmp (buf, elf_tdata (&cbfd)->core->program) != 0)
+	      if (!streq (buf, elf_tdata (&cbfd)->core->program))
 		return buf;
 	    }
 	}
@@ -1582,12 +1582,11 @@ fbsd_get_siginfo_type (struct gdbarch *gdbarch)
     return fbsd_gdbarch_data->siginfo_type;
 
   type_allocator alloc (gdbarch);
-  int_type = init_integer_type (alloc, gdbarch_int_bit (gdbarch),
-				0, "int");
-  int32_type = init_integer_type (alloc, 32, 0, "int32_t");
-  uint32_type = init_integer_type (alloc, 32, 1, "uint32_t");
-  long_type = init_integer_type (alloc, gdbarch_long_bit (gdbarch),
-				 0, "long");
+  const struct builtin_type *builtin_types = builtin_type (gdbarch);
+  int_type = builtin_types->builtin_int;
+  int32_type = builtin_types->builtin_int32;
+  uint32_type = builtin_types->builtin_uint32;
+  long_type = builtin_types->builtin_long;
   void_ptr_type = lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
 
   /* union sigval */

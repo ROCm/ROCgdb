@@ -444,7 +444,7 @@ amd64_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	  bound_minimal_symbol s = lookup_minimal_symbol_by_pc (call_dest);
 	  if (s.minsym != NULL
 	      && s.minsym->linkage_name () != NULL
-	      && strcmp (s.minsym->linkage_name (), "__main") == 0)
+	      && streq (s.minsym->linkage_name (), "__main"))
 	    pc += 5;
 	}
     }
@@ -1379,7 +1379,7 @@ amd64_cygwin_core_osabi_sniffer (bfd *abfd)
 
   /* Cygwin uses elf core dumps.  Do not claim all ELF executables,
      check whether there is a .reg section of proper size.  */
-  if (strcmp (target_name, "elf64-x86-64") == 0)
+  if (streq (target_name, "elf64-x86-64"))
     {
       asection *section = bfd_get_section_by_name (abfd, ".reg");
       if (section != nullptr

@@ -729,7 +729,7 @@ ignore_probes_command (const char *arg, int from_tty)
       const char *idx = arg;
       std::string s = extract_arg (&idx);
 
-      if (strcmp (s.c_str (), "-reset") == 0)
+      if (streq (s.c_str (), "-reset"))
 	{
 	  if (*idx != '\0')
 	    error (_("-reset: no arguments allowed"));
@@ -739,8 +739,7 @@ ignore_probes_command (const char *arg, int from_tty)
 	  return;
 	}
 
-      if (strcmp (s.c_str (), "-verbose") == 0
-	  || strcmp (s.c_str (), "-v") == 0)
+      if (streq (s.c_str (), "-verbose") || streq (s.c_str (), "-v"))
 	{
 	  verbose_p = true;
 	  arg = idx;

@@ -231,7 +231,7 @@ gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 
   str_obj->address = address;
   str_obj->length = length;
-  if (encoding == NULL || !strcmp (encoding, ""))
+  if (encoding == NULL || streq (encoding, ""))
     str_obj->encoding = NULL;
   else
     str_obj->encoding = xstrdup (encoding);

@@ -1361,7 +1361,7 @@ maintenance_info_screen (const char *args, int from_tty)
     = rl_variable_value ("horizontal-scroll-mode");
   bool force_horizontal_scroll_mode
     = (horizontal_scroll_mode_value != nullptr
-       && strcmp (horizontal_scroll_mode_value, "on") == 0);
+       && streq (horizontal_scroll_mode_value, "on"));
 
   const char *mode = nullptr;
   const char *reason = nullptr;
@@ -3362,7 +3362,7 @@ gdb_realpath_check_trailer (const char *input, const char *trailer)
   size_t trail_len = strlen (trailer);
 
   SELF_CHECK (len >= trail_len
-	      && strcmp (result.get () + len - trail_len, trailer) == 0);
+	      && streq (result.get () + len - trail_len, trailer));
 }
 
 static void
@@ -3404,9 +3404,9 @@ gdb_argv_as_array_view_test ()
     gdb::array_view<char *> view = argv.as_array_view ();
 
     SELF_CHECK (view.size () == 3);
-    SELF_CHECK (strcmp (view[0], "une") == 0);
-    SELF_CHECK (strcmp (view[1], "bonne") == 0);
-    SELF_CHECK (strcmp (view[2], "50") == 0);
+    SELF_CHECK (streq (view[0], "une"));
+    SELF_CHECK (streq (view[1], "bonne"));
+    SELF_CHECK (streq (view[2], "50"));
   }
 }
 

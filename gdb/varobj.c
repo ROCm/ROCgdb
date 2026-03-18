@@ -2242,7 +2242,7 @@ varobj_value_get_print_value (struct value *value,
 			    = gdbpy_get_display_hint (value_formatter);
 			  if (hint)
 			    {
-			      if (!strcmp (hint.get (), "string"))
+			      if (streq (hint.get (), "string"))
 				string_print = true;
 			    }
 

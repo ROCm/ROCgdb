@@ -178,7 +178,7 @@ dwarf2_cu::get_builder ()
 void
 dwarf2_cu::set_producer (const char *producer)
 {
-  gdb_assert (m_producer == nullptr || strcmp (producer, m_producer) == 0);
+  gdb_assert (m_producer == nullptr || streq (producer, m_producer));
   m_producer = producer;
 
   int major, minor;

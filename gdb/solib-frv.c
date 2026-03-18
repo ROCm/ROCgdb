@@ -595,7 +595,7 @@ enable_break2 (void)
 	      (tmp_bfd.get (),
 	       [] (const asymbol *sym)
 	       {
-		 return strcmp (sym->name, "_dl_debug_addr") == 0;
+		 return streq (sym->name, "_dl_debug_addr");
 	       }));
 
       if (addr == 0)
@@ -1015,7 +1015,7 @@ find_canonical_descriptor_in_load_object
 	 address according to the link map and then dereferencing
 	 this address (which is a GOT entry) to obtain a descriptor
 	 address.  */
-      if ((name == 0 || strcmp (name, (*rel->sym_ptr_ptr)->name) == 0)
+      if ((name == 0 || streq (name, (*rel->sym_ptr_ptr)->name))
 	  && rel->howto->type == R_FRV_FUNCDESC)
 	{
 	  gdb_byte buf [FRV_PTR_SIZE];

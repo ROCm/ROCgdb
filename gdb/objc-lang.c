@@ -1070,15 +1070,15 @@ find_methods (char type, const char *theclass, const char *category,
 	    continue;
 
 	  if ((theclass != NULL)
-	      && ((nclass == NULL) || (strcmp (theclass, nclass) != 0)))
+	      && ((nclass == NULL) || (!streq (theclass, nclass))))
 	    continue;
 
-	  if ((category != NULL) &&
-	      ((ncategory == NULL) || (strcmp (category, ncategory) != 0)))
+	  if (category != nullptr
+	      && ((ncategory == nullptr) || !streq (category, ncategory)))
 	    continue;
 
-	  if ((selector != NULL) &&
-	      ((nselector == NULL) || (strcmp (selector, nselector) != 0)))
+	  if (selector != nullptr
+	      && (nselector == nullptr || !streq (selector, nselector)))
 	    continue;
 
 	  symbol_names->push_back (symname);

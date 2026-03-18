@@ -257,7 +257,7 @@ mem_command (const char *args, int from_tty)
     error_no_arg (_("No mem"));
 
   /* For "mem auto", switch back to using a target provided list.  */
-  if (strcmp (args, "auto") == 0)
+  if (streq (args, "auto"))
     {
       if (mem_use_target ())
 	return;

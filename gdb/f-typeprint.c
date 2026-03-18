@@ -378,7 +378,7 @@ f_language::f_type_print_base (struct type *type, struct ui_file *stream,
 	 through as TYPE_CODE_INT since dbxstclass.h is so
 	 C-oriented, we must change these to "character" from "char".  */
 
-      if (strcmp (type->name (), "char") == 0)
+      if (streq (type->name (), "char"))
 	gdb_printf (stream, "%*scharacter", level, "");
       else
 	goto default_case;

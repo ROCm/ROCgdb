@@ -286,8 +286,8 @@ cooked_indexer::scan_attributes (dwarf2_per_cu *scanning_per_cu,
 		 want to add this value.  */
 	      ranges_offset += reader->cu ()->gnu_ranges_base;
 
-	      unrelocated_addr lowpc, highpc;
-	      dwarf2_ranges_read (ranges_offset, &lowpc, &highpc, reader->cu (),
+	      dwarf2_ranges_read (ranges_offset, nullptr, nullptr,
+				  reader->cu (),
 				  m_index_storage->get_addrmap (),
 				  scanning_per_cu, abbrev->tag);
 	    }
@@ -565,7 +565,7 @@ cooked_indexer::index_dies (cutu_reader *reader,
 
       if (abbrev->tag == DW_TAG_namespace
 	  && is_cplus_dialect (m_language)
-	  && strcmp (name, "::") == 0)
+	  && streq (name, "::"))
 	{
 	  /* GCC 4.0 and 4.1 had a bug (PR c++/28460) where they
 	     generated bogus DW_TAG_namespace DIEs with a name of "::"

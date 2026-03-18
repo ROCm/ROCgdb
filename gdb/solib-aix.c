@@ -167,7 +167,7 @@ library_list_start_list (struct gdb_xml_parser *parser,
   char *version
     = (char *) xml_find_attribute (attributes, "version")->value.get ();
 
-  if (strcmp (version, "1.0") != 0)
+  if (!streq (version, "1.0"))
     gdb_xml_error (parser,
 		   _("Library list has unsupported version \"%s\""),
 		   version);
@@ -329,7 +329,7 @@ aix_solib_ops::relocate_section_addresses (solib &so,
   const char *section_name = bfd_section_name (bfd_sect);
   auto *info = gdb::checked_static_cast<lm_info_aix *> (so.lm_info.get ());
 
-  if (strcmp (section_name, ".text") == 0)
+  if (streq (section_name, ".text"))
     {
       sec->addr = info->text_addr;
       sec->endaddr = sec->addr + info->text_size;
@@ -338,12 +338,12 @@ aix_solib_ops::relocate_section_addresses (solib &so,
 	 XCOFF headers, so we need to adjust by this much.  */
       sec->addr += bfd_sect->filepos;
     }
-  else if (strcmp (section_name, ".data") == 0)
+  else if (streq (section_name, ".data"))
     {
       sec->addr = info->data_addr;
       sec->endaddr = sec->addr + info->data_size;
     }
-  else if (strcmp (section_name, ".bss") == 0)
+  else if (streq (section_name, ".bss"))
     {
       /* The information provided by the loader does not include
 	 the address of the .bss section, but we know that it gets
@@ -615,7 +615,7 @@ static struct obj_section *
 data_obj_section_from_objfile (struct objfile *objfile)
 {
   for (obj_section &osect : objfile->sections ())
-    if (strcmp (bfd_section_name (osect.the_bfd_section), ".data") == 0)
+    if (streq (bfd_section_name (osect.the_bfd_section), ".data"))
       return &osect;
 
   return NULL;

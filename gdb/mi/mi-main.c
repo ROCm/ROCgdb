@@ -162,7 +162,7 @@ void
 mi_cmd_exec_next (const char *command, const char *const *argv, int argc)
 {
   /* FIXME: Should call a libgdb function, not a cli wrapper.  */
-  if (argc > 0 && strcmp(argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     mi_execute_async_cli_command ("reverse-next", argv + 1, argc - 1);
   else
     mi_execute_async_cli_command ("next", argv, argc);
@@ -173,7 +173,7 @@ mi_cmd_exec_next_instruction (const char *command, const char *const *argv,
 			      int argc)
 {
   /* FIXME: Should call a libgdb function, not a cli wrapper.  */
-  if (argc > 0 && strcmp(argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     mi_execute_async_cli_command ("reverse-nexti", argv + 1, argc - 1);
   else
     mi_execute_async_cli_command ("nexti", argv, argc);
@@ -183,7 +183,7 @@ void
 mi_cmd_exec_step (const char *command, const char *const *argv, int argc)
 {
   /* FIXME: Should call a libgdb function, not a cli wrapper.  */
-  if (argc > 0 && strcmp(argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     mi_execute_async_cli_command ("reverse-step", argv + 1, argc - 1);
   else
     mi_execute_async_cli_command ("step", argv, argc);
@@ -194,7 +194,7 @@ mi_cmd_exec_step_instruction (const char *command, const char *const *argv,
 			      int argc)
 {
   /* FIXME: Should call a libgdb function, not a cli wrapper.  */
-  if (argc > 0 && strcmp(argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     mi_execute_async_cli_command ("reverse-stepi", argv + 1, argc - 1);
   else
     mi_execute_async_cli_command ("stepi", argv, argc);
@@ -204,7 +204,7 @@ void
 mi_cmd_exec_finish (const char *command, const char *const *argv, int argc)
 {
   /* FIXME: Should call a libgdb function, not a cli wrapper.  */
-  if (argc > 0 && strcmp(argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     mi_execute_async_cli_command ("reverse-finish", argv + 1, argc - 1);
   else
     mi_execute_async_cli_command ("finish", argv, argc);
@@ -330,7 +330,7 @@ exec_reverse_continue (const char *const *argv, int argc)
 void
 mi_cmd_exec_continue (const char *command, const char *const *argv, int argc)
 {
-  if (argc > 0 && strcmp (argv[0], "--reverse") == 0)
+  if (argc > 0 && streq (argv[0], "--reverse"))
     exec_reverse_continue (argv + 1, argc - 1);
   else
     exec_continue (argv, argc);
@@ -806,9 +806,9 @@ mi_cmd_list_thread_groups (const char *command, const char *const *argv,
 	  available = 1;
 	  break;
 	case RECURSE_OPT:
-	  if (strcmp (oarg, "0") == 0)
+	  if (streq (oarg, "0"))
 	    ;
-	  else if (strcmp (oarg, "1") == 0)
+	  else if (streq (oarg, "1"))
 	    recurse = 1;
 	  else
 	    error (_("only '0' and '1' are valid values "
@@ -1639,9 +1639,9 @@ mi_cmd_enable_timings (const char *command, const char *const *argv, int argc)
     do_timings = 1;
   else if (argc == 1)
     {
-      if (strcmp (argv[0], "yes") == 0)
+      if (streq (argv[0], "yes"))
 	do_timings = 1;
-      else if (strcmp (argv[0], "no") == 0)
+      else if (streq (argv[0], "no"))
 	do_timings = 0;
       else
 	goto usage_error;
@@ -1845,8 +1845,10 @@ captured_mi_execute_command (struct mi_interp *mi, struct ui_out *uiout,
 	  gdb_puts (context->token.c_str (), mi->raw_stdout);
 	  /* There's no particularly good reason why target-connect results
 	     in not ^done.  Should kill ^connected for MI3.  */
-	  gdb_puts (strcmp (context->command.get (), "target-select") == 0
-		    ? "^connected" : "^done", mi->raw_stdout);
+	  gdb_puts ((streq (context->command.get (), "target-select")
+		     ? "^connected"
+		     : "^done"),
+		    mi->raw_stdout);
 	  mi_out_put (uiout, mi->raw_stdout);
 	  mi_out_rewind (uiout);
 	  mi_print_timing_maybe (mi->raw_stdout);
@@ -2214,7 +2216,6 @@ mi_load_progress (const char *section_name,
   using namespace std::chrono;
   static steady_clock::time_point last_update;
   static char *previous_sect_name = NULL;
-  int new_section;
   struct mi_interp *mi = as_mi_interp (current_interpreter ());
 
   /* If the current interpreter is not an MI interpreter, then just
@@ -2233,9 +2234,8 @@ mi_load_progress (const char *section_name,
   scoped_restore save_uiout
     = make_scoped_restore (&current_uiout, uiout.get ());
 
-  new_section = (previous_sect_name ?
-		 strcmp (previous_sect_name, section_name) : 1);
-  if (new_section)
+  if (previous_sect_name == nullptr
+      || !streq (previous_sect_name, section_name))
     {
       xfree (previous_sect_name);
       previous_sect_name = xstrdup (section_name);
@@ -2365,7 +2365,7 @@ mi_cmd_trace_find (const char *command, const char *const *argv, int argc)
 
   mode = argv[0];
 
-  if (strcmp (mode, "none") == 0)
+  if (streq (mode, "none"))
     {
       tfind_1 (tfind_number, -1, 0, 0, 0);
       return;
@@ -2373,39 +2373,39 @@ mi_cmd_trace_find (const char *command, const char *const *argv, int argc)
 
   check_trace_running (current_trace_status ());
 
-  if (strcmp (mode, "frame-number") == 0)
+  if (streq (mode, "frame-number"))
     {
       if (argc != 2)
 	error (_("frame number is required"));
       tfind_1 (tfind_number, atoi (argv[1]), 0, 0, 0);
     }
-  else if (strcmp (mode, "tracepoint-number") == 0)
+  else if (streq (mode, "tracepoint-number"))
     {
       if (argc != 2)
 	error (_("tracepoint number is required"));
       tfind_1 (tfind_tp, atoi (argv[1]), 0, 0, 0);
     }
-  else if (strcmp (mode, "pc") == 0)
+  else if (streq (mode, "pc"))
     {
       if (argc != 2)
 	error (_("PC is required"));
       tfind_1 (tfind_pc, 0, parse_and_eval_address (argv[1]), 0, 0);
     }
-  else if (strcmp (mode, "pc-inside-range") == 0)
+  else if (streq (mode, "pc-inside-range"))
     {
       if (argc != 3)
 	error (_("Start and end PC are required"));
       tfind_1 (tfind_range, 0, parse_and_eval_address (argv[1]),
 	       parse_and_eval_address (argv[2]), 0);
     }
-  else if (strcmp (mode, "pc-outside-range") == 0)
+  else if (streq (mode, "pc-outside-range"))
     {
       if (argc != 3)
 	error (_("Start and end PC are required"));
       tfind_1 (tfind_outside, 0, parse_and_eval_address (argv[1]),
 	       parse_and_eval_address (argv[2]), 0);
     }
-  else if (strcmp (mode, "line") == 0)
+  else if (streq (mode, "line"))
     {
       if (argc != 2)
 	error (_("Line is required"));

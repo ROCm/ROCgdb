@@ -1746,8 +1746,7 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
 	for (pinfo = addr_stack; pinfo != NULL; pinfo = pinfo->next)
 	  {
 	    /* This approach lets us avoid checking the qualifiers.  */
-	    if (TYPE_MAIN_TYPE (pinfo->type)
-		== TYPE_MAIN_TYPE (baton->property_type))
+	    if (pinfo->type->main_type == baton->property_type->main_type)
 	      break;
 	  }
 	if (pinfo == NULL)

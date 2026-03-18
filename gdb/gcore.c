@@ -360,7 +360,7 @@ derive_heap_segment (bfd *abfd, bfd_vma *bottom, bfd_vma *top)
   for (sec = abfd->sections; sec; sec = sec->next)
     {
       if (bfd_section_flags (sec) & SEC_DATA
-	  || strcmp (".bss", bfd_section_name (sec)) == 0)
+	  || streq (".bss", bfd_section_name (sec)))
 	{
 	  sec_vaddr = bfd_section_vma (sec);
 	  sec_size = bfd_section_size (sec);
@@ -581,25 +581,27 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
       }
 
   /* Make a stack segment.  */
-  if (derive_stack_segment (&temp_bottom, &temp_top))
-    (*func) (temp_bottom, temp_top - temp_bottom,
-	     true, /* Stack section will be readable.  */
-	     true, /* Stack section will be writable.  */
-	     false, /* Stack section will not be executable.  */
-	     true, /* Stack section will be modified.  */
-	     false, /* No memory tags in the object file.  */
-	     obfd);
+  if (derive_stack_segment (&temp_bottom, &temp_top)
+      && !func (temp_bottom, temp_top - temp_bottom,
+		true,  /* Stack section will be readable.  */
+		true,  /* Stack section will be writable.  */
+		false, /* Stack section will not be executable.  */
+		true,  /* Stack section will be modified.  */
+		false, /* No memory tags in the object file.  */
+		obfd))
+    return false;
 
   /* Make a heap segment.  */
   if (derive_heap_segment (current_program_space->exec_bfd (), &temp_bottom,
-			   &temp_top))
-    (*func) (temp_bottom, temp_top - temp_bottom,
-	     true, /* Heap section will be readable.  */
-	     true, /* Heap section will be writable.  */
-	     false, /* Heap section will not be executable.  */
-	     true, /* Heap section will be modified.  */
-	     false, /* No memory tags in the object file.  */
-	     obfd);
+			   &temp_top)
+      && !func (temp_bottom, temp_top - temp_bottom,
+		true,  /* Heap section will be readable.  */
+		true,  /* Heap section will be writable.  */
+		false, /* Heap section will not be executable.  */
+		true,  /* Heap section will be modified.  */
+		false, /* No memory tags in the object file.  */
+		obfd))
+    return false;
 
   return true;
 }

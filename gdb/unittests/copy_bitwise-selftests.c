@@ -82,7 +82,7 @@ check_copy_bitwise (const gdb_byte *dest, unsigned int dest_offset,
 
   /* Compare the resulting strings.  */
   expected[len] = actual[len] = '\0';
-  if (strcmp (expected, actual) != 0)
+  if (!streq (expected, actual))
     error (_("copy_bitwise %s != %s (%u+%u -> %u)"),
 	   expected, actual, source_offset, nbits, dest_offset);
 }

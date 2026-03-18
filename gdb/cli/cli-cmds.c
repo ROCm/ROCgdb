@@ -498,7 +498,7 @@ pwd_command (const char *args, int from_tty)
     error (_("Error finding name of working directory: %s"),
 	   safe_strerror (errno));
 
-  if (strcmp (cwd.get (), current_directory) != 0)
+  if (!streq (cwd.get (), current_directory))
     gdb_printf (_("Working directory %ps\n (canonically %ps).\n"),
 		styled_string (file_name_style.style (),
 			       current_directory),
@@ -2203,13 +2203,12 @@ alias_command (const char *args, int from_tty)
 
 	if (alias_cmd != nullptr
 	    && alias_cmd->prefix == prefix_cmd
-	    && strcmp (alias_name, alias_cmd->name) == 0)
+	    && streq (alias_name, alias_cmd->name))
 	  error (_("Alias already exists: %s"), alias);
 
 	/* Check ALIAS differs from the found CMD.  */
 
-	if (cmd->prefix == prefix_cmd
-	    && strcmp (alias_name, cmd->name) == 0)
+	if (cmd->prefix == prefix_cmd && streq (alias_name, cmd->name))
 	  error (_("Alias %s is the name of an existing command"), alias);
       }
   }

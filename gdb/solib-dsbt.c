@@ -756,7 +756,7 @@ enable_break (void)
 	      (tmp_bfd.get (),
 	       [] (const asymbol *sym)
 	       {
-		 return strcmp (sym->name, "_dl_debug_state") == 0;
+		 return streq (sym->name, "_dl_debug_state");
 	       }));
 
       if (addr != 0)

@@ -1190,7 +1190,7 @@ gdb_add_history (const char *command)
 	  if (temp == NULL)
 	    break;
 
-	  if (strcmp (temp->line, command) == 0)
+	  if (streq (temp->line, command))
 	    {
 	      HIST_ENTRY *prev = remove_history (where_history ());
 	      command_count--;
@@ -1413,7 +1413,7 @@ There is NO WARRANTY, to the extent permitted by law.",
   /* After the required info we print the configuration information.  */
 
   gdb_printf (stream, "This GDB was configured as \"");
-  if (strcmp (host_name, target_name) != 0)
+  if (!streq (host_name, target_name))
     {
       gdb_printf (stream, "--host=%s --target=%s",
 		  host_name, target_name);

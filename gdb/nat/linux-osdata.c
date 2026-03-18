@@ -586,7 +586,7 @@ linux_xfer_osdata_cpus ()
 
 	      value[i] = '\0';
 
-	      if (strcmp (key, "processor") == 0)
+	      if (streq (key, "processor"))
 		{
 		  if (first_item)
 		    buffer += "<item>";
@@ -1392,7 +1392,7 @@ linux_common_xfer_osdata (const char *annex, gdb_byte *readbuf,
 
       for (i = 0; osdata_table[i].type; ++i)
 	{
-	  if (strcmp (annex, osdata_table[i].type) == 0)
+	  if (streq (annex, osdata_table[i].type))
 	    return common_getter (&osdata_table[i],
 				  readbuf, offset, len);
 	}

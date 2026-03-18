@@ -221,7 +221,7 @@ remote_prepare (const char *name)
   socklen_t tmp;
 
   remote_is_stdio = 0;
-  if (strcmp (name, STDIO_CONNECTION_NAME) == 0)
+  if (streq (name, STDIO_CONNECTION_NAME))
     {
       /* We need to record fact that we're using stdio sooner than the
 	 call to remote_open so start_inferior knows the connection is
@@ -322,7 +322,7 @@ remote_open (const char *name)
     error ("Only HOST:PORT is supported on this platform.");
 #endif
 
-  if (strcmp (name, STDIO_CONNECTION_NAME) == 0)
+  if (streq (name, STDIO_CONNECTION_NAME))
     {
       fprintf (stderr, "Remote debugging using stdio\n");
 
@@ -1508,7 +1508,7 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
 
   /* Check the cache first.  */
   for (sym = proc->symbol_cache; sym; sym = sym->next)
-    if (strcmp (name, sym->name) == 0)
+    if (streq (name, sym->name))
       {
 	*addrp = sym->addr;
 	return 1;

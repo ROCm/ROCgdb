@@ -98,8 +98,7 @@ gdb_signal_from_name (const char *name)
   for (sig = GDB_SIGNAL_HUP;
        sig < GDB_SIGNAL_LAST;
        sig = (enum gdb_signal) ((int) sig + 1))
-    if (signals[sig].name != NULL
-	&& strcmp (name, signals[sig].name) == 0)
+    if (signals[sig].name != nullptr && streq (name, signals[sig].name))
       return sig;
   return GDB_SIGNAL_UNKNOWN;
 }

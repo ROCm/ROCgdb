@@ -1087,8 +1087,7 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_inferior);
 
 static gdb_PyGetSetDef inferior_object_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict_getter, nullptr,
-    "The __dict__ for this inferior.", nullptr },
+  gdbpy_dict_wrapper_cfg_dict_getter ("inferior"),
   { "arguments", infpy_get_args, infpy_set_args,
     "Arguments to this program.", nullptr },
   { "num", infpy_get_num, NULL, "ID of inferior, as assigned by GDB.", NULL },
@@ -1170,8 +1169,7 @@ PyTypeObject inferior_object_type =
   0,				  /* tp_hash  */
   0,				  /* tp_call */
   0,				  /* tp_str */
-  gdb_py_generic_getattro,	  /* tp_getattro */
-  gdb_py_generic_setattro,	  /* tp_setattro */
+  gdbpy_dict_wrapper_getsetattro,
   0,				  /* tp_as_buffer */
   Py_TPFLAGS_DEFAULT,		  /* tp_flags */
   "GDB inferior object",	  /* tp_doc */

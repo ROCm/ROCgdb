@@ -1740,8 +1740,7 @@ linespec_parse_basic (linespec_parser *parser)
 	 completions, advance the stream past the colon token and make
 	 it part of the function name/token.  */
 
-      if (!parser->completion_quote_char
-	  && strcmp (parser->lexer.stream, ":") == 0)
+      if (!parser->completion_quote_char && streq (parser->lexer.stream, ":"))
 	{
 	  completion_tracker tmp_tracker (false);
 	  const char *source_filename
@@ -4215,8 +4214,8 @@ search_minsyms_for_name (struct collect_info *info,
 	      if (msymbol_type_is_static (item2.minsym->type ()))
 		continue;
 
-	      if (strcmp (item.minsym->linkage_name (),
-			  item2.minsym->linkage_name ()) != 0)
+	      if (!streq (item.minsym->linkage_name (),
+			  item2.minsym->linkage_name ()))
 		continue;
 
 	      /* Found a global minsym with the same name as the

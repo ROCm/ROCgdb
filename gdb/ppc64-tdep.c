@@ -752,7 +752,7 @@ ppc64_convert_from_func_ptr_addr (struct gdbarch *gdbarch,
   const struct target_section *s = target_section_by_addr (targ, addr);
 
   /* Check if ADDR points to a function descriptor.  */
-  if (s && strcmp (s->the_bfd_section->name, ".opd") == 0)
+  if (s && streq (s->the_bfd_section->name, ".opd"))
     {
       /* There may be relocations that need to be applied to the .opd
 	 section.  Unfortunately, this function may be called at a time

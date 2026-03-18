@@ -1071,9 +1071,9 @@ frv_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       call_dest = pc + 4 * displ;
       bound_minimal_symbol s = lookup_minimal_symbol_by_pc (call_dest);
 
-      if (s.minsym != NULL
-	  && s.minsym->linkage_name () != NULL
-	  && strcmp (s.minsym->linkage_name (), "__main") == 0)
+      if (s.minsym != nullptr
+	  && s.minsym->linkage_name () != nullptr
+	  && streq (s.minsym->linkage_name (), "__main"))
 	{
 	  pc += 4;
 	  return pc;

@@ -721,7 +721,7 @@ static int
 currently_rescanning (struct macro_name_list *list, const char *name)
 {
   for (; list; list = list->next)
-    if (strcmp (name, list->name) == 0)
+    if (streq (name, list->name))
       return 1;
 
   return 0;
@@ -1231,7 +1231,7 @@ expand (const char *id,
 
       if (def->argc >= 1)
 	{
-	  if (strcmp (def->argv[def->argc - 1], "...") == 0)
+	  if (streq (def->argv[def->argc - 1], "..."))
 	    {
 	      /* In C99-style varargs, substitution is done using
 		 __VA_ARGS__.  */
@@ -1242,8 +1242,7 @@ expand (const char *id,
 	    {
 	      int len = strlen (def->argv[def->argc - 1]);
 
-	      if (len > 3
-		  && strcmp (def->argv[def->argc - 1] + len - 3, "...") == 0)
+	      if (len > 3 && streq (def->argv[def->argc - 1] + len - 3, "..."))
 		{
 		  /* In GNU-style varargs, the name of the
 		     substitution parameter is the name of the formal

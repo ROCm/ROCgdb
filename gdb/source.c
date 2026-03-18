@@ -341,8 +341,8 @@ select_source_symtab ()
 	      const char *name = symtab->filename ();
 	      int len = strlen (name);
 
-	      if (!(len > 2 && (strcmp (&name[len - 2], ".h") == 0
-				|| strcmp (name, "<<C++-namespaces>>") == 0)))
+	      if (!(len > 2 && (streq (&name[len - 2], ".h")
+				|| streq (name, "<<C++-namespaces>>"))))
 		new_symtab = symtab;
 	    }
 	}
@@ -836,7 +836,7 @@ openp (const char *path, openp_flags opts, const char *string,
       char *dir = dir_up.get ();
       int reg_file_errno;
 
-      if (strcmp (dir, "$cwd") == 0)
+      if (streq (dir, "$cwd"))
 	{
 	  /* Name is $cwd -- insert current directory name instead.  */
 	  filename = cwd;
@@ -855,7 +855,7 @@ openp (const char *path, openp_flags opts, const char *string,
 	     contexts.  If the user really has '$cdir' one can use './$cdir'.
 	     We can get $cdir when loading scripts.  When loading source files
 	     $cdir must have already been expanded to the correct value.  */
-	  if (strcmp (dir, "$cdir") == 0)
+	  if (streq (dir, "$cdir"))
 	    continue;
 
 	  /* Normal file name in path -- just use it.  */

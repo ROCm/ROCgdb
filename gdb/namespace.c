@@ -53,25 +53,25 @@ add_using_directive (struct using_direct **using_directives,
     {
       int ix;
 
-      if (strcmp (current->import_src, src) != 0)
+      if (!streq (current->import_src, src))
 	continue;
-      if (strcmp (current->import_dest, dest) != 0)
+      if (!streq (current->import_dest, dest))
 	continue;
       if ((alias == NULL && current->alias != NULL)
 	  || (alias != NULL && current->alias == NULL)
 	  || (alias != NULL && current->alias != NULL
-	      && strcmp (alias, current->alias) != 0))
+	      && !streq (alias, current->alias)))
 	continue;
       if ((declaration == NULL && current->declaration != NULL)
 	  || (declaration != NULL && current->declaration == NULL)
 	  || (declaration != NULL && current->declaration != NULL
-	      && strcmp (declaration, current->declaration) != 0))
+	      && !streq (declaration, current->declaration)))
 	continue;
 
       /* Compare the contents of EXCLUDES.  */
       for (ix = 0; ix < excludes.size (); ++ix)
 	if (current->excludes[ix] == NULL
-	    || strcmp (excludes[ix], current->excludes[ix]) != 0)
+	    || !streq (excludes[ix], current->excludes[ix]))
 	  break;
       if (ix < excludes.size () || current->excludes[ix] != NULL)
 	continue;

@@ -109,7 +109,7 @@ static void
 remote_open (const char *name)
 {
 #ifndef USE_WIN32API
-  if (strcmp (name, "-") == 0)
+  if (streq (name, "-"))
     {
       remote_desc_in = 0;
       remote_desc_out = 1;

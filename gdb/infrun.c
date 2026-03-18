@@ -10613,9 +10613,9 @@ set_exec_direction_func (const char *args, int from_tty,
 {
   if (target_can_execute_reverse ())
     {
-      if (!strcmp (exec_direction, exec_forward))
+      if (streq (exec_direction, exec_forward))
 	execution_direction = EXEC_FORWARD;
-      else if (!strcmp (exec_direction, exec_reverse))
+      else if (streq (exec_direction, exec_reverse))
 	execution_direction = EXEC_REVERSE;
     }
   else

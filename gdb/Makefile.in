@@ -1303,11 +1303,13 @@ HFILES_NO_SRCDIR = \
 	amdgpu-tdep.h \
 	annotate.h \
 	arch/aarch32.h \
+	arch/aarch64-fpmr-linux.h \
 	arch/aarch64-gcs-linux.h \
 	arch/aarch64.h \
 	arch/aarch64-insn.h \
 	arch/aarch64-mte.h \
 	arch/aarch64-mte-linux.h \
+	arch/aarch64-pauth-linux.h \
 	arch/aarch64-scalable-linux.h \
 	arch/amd64.h \
 	arch/amd64-linux-tdesc.h \
@@ -1548,10 +1550,13 @@ HFILES_NO_SRCDIR = \
 	mn10300-tdep.h \
 	moxie-tdep.h \
 	namespace.h \
+	nat/aarch64-fpmr-linux.h \
+	nat/aarch64-gcs-linux.h \
 	nat/aarch64-hw-point.h \
 	nat/aarch64-linux.h \
 	nat/aarch64-linux-hw-point.h \
 	nat/aarch64-mte-linux-ptrace.h \
+	nat/aarch64-pauth-linux.h \
 	nat/aarch64-scalable-linux-ptrace.h \
 	nat/aarch64-scalable-linux-sigcontext.h \
 	nat/amd64-linux.h \

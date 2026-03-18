@@ -174,7 +174,7 @@ lookup_symbol_from_bfd (bfd *abfd, const char *symname)
 
   for (const asymbol *sym : symbol_table)
     {
-      if (strcmp (sym->name, symname) == 0
+      if (streq (sym->name, symname)
 	  && (sym->section->flags & (SEC_CODE | SEC_DATA)) != 0)
 	{
 	  /* BFD symbols are section relative.  */

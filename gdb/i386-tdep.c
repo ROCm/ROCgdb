@@ -1869,9 +1869,9 @@ i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	  call_dest = pc + 5 + extract_signed_integer (buf, 4, byte_order);
 	  call_dest = call_dest & 0xffffffffU;
 	  bound_minimal_symbol s = lookup_minimal_symbol_by_pc (call_dest);
-	  if (s.minsym != NULL
-	      && s.minsym->linkage_name () != NULL
-	      && strcmp (s.minsym->linkage_name (), "__main") == 0)
+	  if (s.minsym != nullptr
+	      && s.minsym->linkage_name () != nullptr
+	      && streq (s.minsym->linkage_name (), "__main"))
 	    pc += 5;
 	}
     }
@@ -3772,7 +3772,7 @@ i386_sigtramp_p (const frame_info_ptr &this_frame)
   const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
-  return (name && strcmp ("_sigtramp", name) == 0);
+  return (name && streq ("_sigtramp", name));
 }
 
 
@@ -3809,8 +3809,9 @@ i386_svr4_sigtramp_p (const frame_info_ptr &this_frame)
 
   /* The origin of these symbols is currently unknown.  */
   find_pc_partial_function (pc, &name, NULL, NULL);
-  return (name && (strcmp ("_sigreturn", name) == 0
-		   || strcmp ("sigvechandler", name) == 0));
+  return (name != nullptr
+	  && (streq ("_sigreturn", name)
+	      || streq ("sigvechandler", name)));
 }
 
 /* Assuming THIS_FRAME is for a SVR4 sigtramp routine, return the
@@ -8450,19 +8451,19 @@ static const struct floatformat **
 i386_floatformat_for_type (struct gdbarch *gdbarch,
 			   const char *name, int len)
 {
-  if (len == 128 && name)
-    if (strcmp (name, "__float128") == 0
-	|| strcmp (name, "_Float128") == 0
-	|| strcmp (name, "complex _Float128") == 0
-	|| strcmp (name, "complex(kind=16)") == 0
-	|| strcmp (name, "COMPLEX(16)") == 0
-	|| strcmp (name, "complex*32") == 0
-	|| strcmp (name, "COMPLEX*32") == 0
-	|| strcmp (name, "quad complex") == 0
-	|| strcmp (name, "real(kind=16)") == 0
-	|| strcmp (name, "real*16") == 0
-	|| strcmp (name, "REAL*16") == 0
-	|| strcmp (name, "REAL(16)") == 0)
+  if (len == 128 && name != nullptr)
+    if (streq (name, "__float128")
+	|| streq (name, "_Float128")
+	|| streq (name, "complex _Float128")
+	|| streq (name, "complex(kind=16)")
+	|| streq (name, "COMPLEX(16)")
+	|| streq (name, "complex*32")
+	|| streq (name, "COMPLEX*32")
+	|| streq (name, "quad complex")
+	|| streq (name, "real(kind=16)")
+	|| streq (name, "real*16")
+	|| streq (name, "REAL*16")
+	|| streq (name, "REAL(16)"))
       return floatformats_ieee_quad;
 
   return default_floatformat_for_type (gdbarch, name, len);

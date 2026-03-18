@@ -197,7 +197,7 @@ solib_find_1 (const char *in_pathname, int *fd, bool is_solib)
 	There's no need to check for drive spec explicitly, as we only
 	get here if IN_PATHNAME is considered an absolute path.  */
       need_dir_separator = !(IS_DIR_SEPARATOR (in_pathname[0])
-			     || strcmp (TARGET_SYSROOT_PREFIX, sysroot) == 0);
+			     || streq (TARGET_SYSROOT_PREFIX, sysroot));
 
       /* Cat the prefixed pathname together.  */
       temp_pathname.reset (concat (sysroot,
@@ -551,7 +551,7 @@ solib_map_sections (solib &so)
 	 range of the shared object, assume we want the location of
 	 the .text section.  */
       if (so.addr_low == 0 && so.addr_high == 0
-	  && strcmp (p.the_bfd_section->name, ".text") == 0)
+	  && streq (p.the_bfd_section->name, ".text"))
 	{
 	  so.addr_low = p.addr;
 	  so.addr_high = p.endaddr;

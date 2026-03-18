@@ -85,7 +85,7 @@ gcore_elf_collect_regset_section_cb (const char *sect_name,
 			  collect_size);
 
   /* PRSTATUS still needs to be treated specially.  */
-  if (strcmp (sect_name, ".reg") == 0)
+  if (streq (sect_name, ".reg"))
     data->note_data->reset (elfcore_write_prstatus
 			    (data->obfd, data->note_data->release (),
 			     data->note_size, data->lwp,

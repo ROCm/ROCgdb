@@ -210,7 +210,7 @@ info_macro_command (const char *args, int from_tty)
 					 macro_source_file *source,
 					 int line)
       {
-	if (strcmp (name, macro_name) == 0)
+	if (streq (name, macro_name))
 	  print_macro_definition (name, macro, source, line);
       });
   else

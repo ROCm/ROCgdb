@@ -113,7 +113,7 @@ set_exec_file_mismatch_command (const char *ignore,
        ;
        mode = static_cast<enum exec_file_mismatch_mode>(1 + (int) mode))
     {
-      if (strcmp (exec_file_mismatch, exec_file_mismatch_names[mode]) == 0)
+      if (streq (exec_file_mismatch, exec_file_mismatch_names[mode]))
 	{
 	  exec_file_mismatch_mode = mode;
 	  return;
@@ -511,8 +511,8 @@ exec_file_attach (const char *filename, int from_tty)
   bfd *curr_bfd = current_program_space->exec_bfd ();
   bool reload_p = (((prev_bfd != nullptr) == (curr_bfd != nullptr))
 		   && (prev_bfd == nullptr
-		       || (strcmp (bfd_get_filename (prev_bfd),
-				   bfd_get_filename (curr_bfd)) == 0)));
+		       || (streq (bfd_get_filename (prev_bfd),
+				  bfd_get_filename (curr_bfd)))));
 
   gdb::observers::executable_changed.notify (current_program_space, reload_p);
 }

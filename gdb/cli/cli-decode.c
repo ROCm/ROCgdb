@@ -1528,7 +1528,7 @@ delete_cmd (const char *name, struct cmd_list_element **list,
 
   for (iter = *previous_chain_ptr; iter; iter = *previous_chain_ptr)
     {
-      if (strcmp (iter->name, name) == 0)
+      if (streq (iter->name, name))
 	{
 	  if (iter->destroyer)
 	    iter->destroyer (iter, iter->context ());
@@ -1638,8 +1638,7 @@ user_documented_alias (const cmd_list_element &alias)
   gdb_assert (alias.is_alias ());
   /* Alias is user documented if it has an allocated documentation
      that differs from the aliased command.  */
-  return (alias.doc_allocated
-	  && strcmp (alias.doc, alias.alias_target->doc) != 0);
+  return alias.doc_allocated && !streq (alias.doc, alias.alias_target->doc);
 }
 
 /* Print the definition of alias C using title style for alias
@@ -1838,7 +1837,7 @@ help_cmd (const char *command, struct ui_file *stream)
       return;
     }
 
-  if (strcmp (command, "all") == 0)
+  if (streq (command, "all"))
     {
       help_all (stream);
       return;
@@ -2502,7 +2501,7 @@ lookup_cmd_exact (const char *name,
   const char *tem = name;
   struct cmd_list_element *cmd = lookup_cmd (&tem, list, "", NULL, -1,
 					     ignore_help_classes);
-  if (cmd != nullptr && strcmp (name, cmd->name) != 0)
+  if (cmd != nullptr && !streq (name, cmd->name))
     cmd = nullptr;
   return cmd;
 }

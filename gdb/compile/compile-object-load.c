@@ -561,7 +561,7 @@ store_regs (struct type *regs_type, CORE_ADDR regs_base)
       struct value *regval;
       CORE_ADDR inferior_addr;
 
-      if (strcmp (reg_name, COMPILE_I_SIMPLE_REGISTER_DUMMY) == 0)
+      if (streq (reg_name, COMPILE_I_SIMPLE_REGISTER_DUMMY))
 	continue;
 
       if ((reg_bitpos % 8) != 0 || reg_bitsize != 0)
@@ -694,7 +694,7 @@ compile_object_load (const compile_file_names &file_names,
 	continue;
       sym->flags = BSF_GLOBAL;
       sym->section = bfd_abs_section_ptr;
-      if (strcmp (sym->name, "_GLOBAL_OFFSET_TABLE_") == 0)
+      if (streq (sym->name, "_GLOBAL_OFFSET_TABLE_"))
 	{
 	  if (compile_debug)
 	    gdb_printf (gdb_stdlog,
@@ -707,7 +707,7 @@ compile_object_load (const compile_file_names &file_names,
 	  sym->value = 0;
 	  continue;
 	}
-      if (strcmp (sym->name, ".TOC.") == 0)
+      if (streq (sym->name, ".TOC."))
 	{
 	  /* Handle the .TOC. symbol as the linker would do.  Set the .TOC.
 	     sections value to 0x8000 (see bfd/elf64-ppc.c TOC_BASE_OFF);

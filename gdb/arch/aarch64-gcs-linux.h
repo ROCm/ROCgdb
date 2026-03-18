@@ -20,25 +20,17 @@
 #ifndef GDB_ARCH_AARCH64_GCS_LINUX_H
 #define GDB_ARCH_AARCH64_GCS_LINUX_H
 
-#include <stdint.h>
-
 /* Feature check for Guarded Control Stack.  */
-#ifndef HWCAP_GCS
-#define HWCAP_GCS (1ULL << 32)
-#endif
+#define AARCH64_HWCAP_GCS (1ULL << 32)
 
-/* Make sure we only define these if the kernel header doesn't.  */
-#ifndef GCS_MAGIC
+#define AARCH64_SEGV_CPERR 10 /* Control protection error.  */
 
-/* GCS state (NT_ARM_GCS).  */
+/* Flag which enables shadow stack in PR_SET_SHADOW_STACK_STATUS prctl.  */
+#define AARCH64_PR_SHADOW_STACK_ENABLE (1UL << 0)
+#define AARCH64_PR_SHADOW_STACK_WRITE (1UL << 1)
+#define AARCH64_PR_SHADOW_STACK_PUSH (1UL << 2)
 
-struct user_gcs
-{
-  uint64_t features_enabled;
-  uint64_t features_locked;
-  uint64_t gcspr_el0;
-};
-
-#endif /* GCS_MAGIC */
+/* The GCS regset consists of 3 64-bit registers.  */
+#define AARCH64_LINUX_SIZEOF_GCS_REGSET (3 * 8)
 
 #endif /* GDB_ARCH_AARCH64_GCS_LINUX_H */

@@ -1414,7 +1414,7 @@ avr_address_class_name_to_type_flags (struct gdbarch *gdbarch,
 				      const char* name,
 				      type_instance_flags *type_flags_ptr)
 {
-  if (strcmp (name, "flash") == 0)
+  if (streq (name, "flash"))
     {
       *type_flags_ptr = AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH;
       return true;

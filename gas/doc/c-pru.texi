@@ -43,6 +43,16 @@ Do not warn if a label name matches a register name. Usually assembler
 programmers will want this warning to be emitted. C compilers may want
 to turn this off.
 
+@cindex @code{mcore-revision=} command-line option, PRU
+@item -mcore-revision=@var{revision}
+This option specifies the PRU core revision to assemble for.
+The following revisions are recognized:
+@code{V1},
+@code{V2},
+@code{V3} and
+@code{V4}.
+The assembler defaults to @code{V3}.
+
 @end table
 @c man end
 
@@ -139,7 +149,8 @@ to passing the @code{-mno-warn-regname-label} command-line option.
 @cindex PRU opcodes
 @cindex opcodes for PRU
 @code{@value{AS}} implements all the standard PRU core V3 opcodes in the
-original pasm assembler.  Older cores are not supported by @code{@value{AS}}.
+original pasm assembler.  Opcodes unique to older cores are not
+supported by @code{@value{AS}}.
 
 GAS also implements the LDI32 pseudo instruction for loading a 32-bit
 immediate value into a register.

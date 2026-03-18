@@ -197,7 +197,7 @@ cooked_index::get_main () const
 		 exception.  */
 	      if ((entry->lang != language_ada
 		   && !is_cplus_dialect (entry->lang))
-		  || strcmp (entry->name, "main") == 0)
+		  || streq (entry->name, "main"))
 		{
 		  /* There won't be one better than this.  */
 		  return entry;

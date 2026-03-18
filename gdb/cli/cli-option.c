@@ -588,12 +588,12 @@ complete_options (completion_tracker &tracker,
 	  *args = skip_spaces (*args);
 	  completion_info.word = *args;
 
-	  if (strcmp (*args, "-") == 0)
+	  if (streq (*args, "-"))
 	    {
 	      complete_on_options (options_group, tracker, *args + 1,
 				   completion_info.word);
 	    }
-	  else if (strcmp (*args, "--") == 0)
+	  else if (streq (*args, "--"))
 	    {
 	      tracker.add_completion (make_unique_xstrdup (*args));
 	    }

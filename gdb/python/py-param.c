@@ -242,7 +242,7 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 	if (str == NULL)
 	  return -1;
 	for (i = 0; self->enumeration[i]; ++i)
-	  if (! strcmp (self->enumeration[i], str.get ()))
+	  if (streq (self->enumeration[i], str.get ()))
 	    break;
 	if (! self->enumeration[i])
 	  {
@@ -328,8 +328,8 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 		  buffer += ", ";
 		buffer = buffer + "'" + l->literal + "'";
 		if (allowed == TRIBOOL_UNKNOWN
-		    && ((value == Py_None && !strcmp ("unlimited", l->literal))
-			|| (s != nullptr && !strcmp (s, l->literal))))
+		    && ((value == Py_None && streq ("unlimited", l->literal))
+			|| (s != nullptr && streq (s, l->literal))))
 		  {
 		    val = l->use;
 		    allowed = TRIBOOL_TRUE;

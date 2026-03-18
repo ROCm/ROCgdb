@@ -1635,7 +1635,8 @@ get_stap_base_address (bfd *obfd, bfd_vma *base)
 
   for (asection *sect : gdb_bfd_sections (obfd))
     if ((sect->flags & (SEC_DATA | SEC_ALLOC | SEC_HAS_CONTENTS))
-	&& sect->name && !strcmp (sect->name, STAP_BASE_SECTION_NAME))
+	&& sect->name != nullptr
+	&& streq (sect->name, STAP_BASE_SECTION_NAME))
       ret = sect;
 
   if (ret == NULL)

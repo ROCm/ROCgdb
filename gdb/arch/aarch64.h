@@ -178,9 +178,6 @@ enum aarch64_regnum
 #define AARCH64_PAUTH_DMASK_HIGH_REGNUM(pauth_reg_base) (pauth_reg_base + 2)
 #define AARCH64_PAUTH_CMASK_HIGH_REGNUM(pauth_reg_base) (pauth_reg_base + 3)
 
-/* This size is only meant for Linux, not bare metal.  QEMU exposes 4 masks.  */
-#define AARCH64_PAUTH_REGS_SIZE (16)
-
 #define AARCH64_X_REGS_NUM 31
 #define AARCH64_V_REGS_NUM 32
 #define AARCH64_SVE_Z_REGS_NUM AARCH64_V_REGS_NUM
@@ -245,10 +242,5 @@ enum aarch64_regnum
 
 /* Size of the SME2 ZT0 register in bytes.  */
 #define AARCH64_SME2_ZT0_SIZE 64
-
-/* Feature check for Floating Point Mode Register.  */
-#ifndef HWCAP2_FPMR
-#define HWCAP2_FPMR (1ULL << 48)
-#endif /* HWCAP2_FPMR */
 
 #endif /* GDB_ARCH_AARCH64_H */

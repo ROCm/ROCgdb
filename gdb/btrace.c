@@ -196,7 +196,7 @@ ftrace_function_switched (const struct btrace_function *bfun,
 
   /* If the minimal symbol changed, we certainly switched functions.  */
   if (mfun != NULL && msym != NULL
-      && strcmp (mfun->linkage_name (), msym->linkage_name ()) != 0)
+      && !streq (mfun->linkage_name (), msym->linkage_name ()))
     return 1;
 
   /* If the symbol changed, we certainly switched functions.  */
@@ -205,7 +205,7 @@ ftrace_function_switched (const struct btrace_function *bfun,
       const char *bfname, *fname;
 
       /* Check the function name.  */
-      if (strcmp (fun->linkage_name (), sym->linkage_name ()) != 0)
+      if (!streq (fun->linkage_name (), sym->linkage_name ()))
 	return 1;
 
       /* Check the location of those functions, as well.  */
@@ -604,7 +604,7 @@ ftrace_update_function (struct btrace_thread_info *btinfo,
 	       create a stack back trace with the same function names but
 	       different frame id's.  This will confuse stepping.  */
 	    fname = ftrace_print_function_name (bfun);
-	    if (strcmp (fname, "_dl_runtime_resolve") == 0)
+	    if (streq (fname, "_dl_runtime_resolve"))
 	      return ftrace_new_tailcall (btinfo, mfun, fun);
 
 	    return ftrace_new_return (btinfo, mfun, fun);
@@ -3316,7 +3316,7 @@ maint_btrace_packet_history_cmd (const char *arg, int from_tty)
       return;
     }
 
-  if (arg == NULL || *arg == 0 || strcmp (arg, "+") == 0)
+  if (arg == NULL || *arg == 0 || streq (arg, "+"))
     {
       from = to;
 
@@ -3324,7 +3324,7 @@ maint_btrace_packet_history_cmd (const char *arg, int from_tty)
 	size = end - from;
       to = from + size;
     }
-  else if (strcmp (arg, "-") == 0)
+  else if (streq (arg, "-"))
     {
       to = from;
 

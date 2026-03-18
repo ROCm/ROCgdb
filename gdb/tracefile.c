@@ -333,9 +333,9 @@ tsave_command (const char *args, int from_tty)
 
   for (; *argv; ++argv)
     {
-      if (strcmp (*argv, "-r") == 0)
+      if (streq (*argv, "-r"))
 	target_does_save = 1;
-      else if (strcmp (*argv, "-ctf") == 0)
+      else if (streq (*argv, "-ctf"))
 	generate_ctf = 1;
       else if (**argv == '-')
 	error (_("unknown option `%s'"), *argv);

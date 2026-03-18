@@ -51,7 +51,7 @@ x86_is_thunk_register_name (const char *name, const char * const *names,
 {
   int reg;
   for (reg = lo; reg < hi; ++reg)
-    if (strcmp (name, names[reg]) == 0)
+    if (streq (name, names[reg]))
       return true;
 
   return false;
@@ -72,7 +72,7 @@ x86_in_indirect_branch_thunk (CORE_ADDR pc, const char * const *register_names,
     return false;
 
   /* Check the indirect return thunk first.  */
-  if (strcmp (name, "__x86_return_thunk") == 0)
+  if (streq (name, "__x86_return_thunk"))
     return true;
 
   /* Then check a family of indirect call/jump thunks.  */

@@ -144,8 +144,7 @@ struct mi_command_py : public mi_command
        than changing the value of mi_command::m_name (which is not accessible
        from here) to point to the name owned by the new object, swap the names
        of the two objects, since we know they are identical strings.  */
-    gdb_assert (strcmp (new_pyobj->mi_command_name,
-			m_pyobj->mi_command_name) == 0);
+    gdb_assert (streq (new_pyobj->mi_command_name, m_pyobj->mi_command_name));
     std::swap (new_pyobj->mi_command_name, m_pyobj->mi_command_name);
 
     /* Take a reference to the new object, drop the reference to the current
@@ -385,7 +384,7 @@ micmdpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
 	 So, for now at least, we don't allow this.  This doesn't seem like
 	 an excessive restriction.  */
-      if (strcmp (cmd->mi_command_name, name) != 0)
+      if (!streq (cmd->mi_command_name, name))
 	{
 	  PyErr_SetString
 	    (PyExc_ValueError,

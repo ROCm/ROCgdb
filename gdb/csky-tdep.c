@@ -2455,14 +2455,11 @@ csky_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int dw_reg)
 static int
 csky_essential_reg_check (const struct csky_supported_tdesc_register *reg)
 {
-  if ((strcmp (reg->name , "pc") == 0)
-      && (reg->num == CSKY_PC_REGNUM))
+  if (streq (reg->name, "pc") && reg->num == CSKY_PC_REGNUM)
     return CSKY_TDESC_REGS_PC_NUMBERED;
-  else if ((strcmp (reg->name , "r14") == 0)
-      && (reg->num == CSKY_SP_REGNUM))
+  else if (streq (reg->name, "r14") && reg->num == CSKY_SP_REGNUM)
     return CSKY_TDESC_REGS_SP_NUMBERED;
-  else if ((strcmp (reg->name , "r15") == 0)
-      && (reg->num == CSKY_LR_REGNUM))
+  else if (streq (reg->name, "r15") && reg->num == CSKY_LR_REGNUM)
     return CSKY_TDESC_REGS_LR_NUMBERED;
   else
     return 0;
@@ -2474,11 +2471,9 @@ static int
 csky_fr0_fr15_reg_check (const struct csky_supported_tdesc_register *reg) {
   int i = 0;
   for (i = 0; i < 16; i++)
-    {
-      if ((strcmp (reg->name, csky_supported_fpu_regs[i].name) == 0)
-	  && (csky_supported_fpu_regs[i].num == reg->num))
-	return (1 << i);
-    }
+    if (streq (reg->name, csky_supported_fpu_regs[i].name)
+	&& csky_supported_fpu_regs[i].num == reg->num)
+      return 1 << i;
 
   return 0;
 };
@@ -2489,11 +2484,9 @@ static int
 csky_fr16_fr31_reg_check (const struct csky_supported_tdesc_register *reg) {
   int i = 0;
   for (i = 0; i < 16; i++)
-    {
-      if ((strcmp (reg->name, csky_supported_fpu_regs[i + 16].name) == 0)
-	  && (csky_supported_fpu_regs[i + 16].num == reg->num))
-	return (1 << i);
-    }
+    if (streq (reg->name, csky_supported_fpu_regs[i + 16].name)
+	&& csky_supported_fpu_regs[i + 16].num == reg->num)
+      return (1 << i);
 
   return 0;
 };
@@ -2504,11 +2497,9 @@ static int
 csky_vr0_vr15_reg_check (const struct csky_supported_tdesc_register *reg) {
   int i = 0;
   for (i = 0; i < 16; i++)
-    {
-      if ((strcmp (reg->name, csky_supported_fpu_regs[i + 32].name) == 0)
-	  && (csky_supported_fpu_regs[i + 32].num == reg->num))
-	return (1 << i);
-    }
+    if (streq (reg->name, csky_supported_fpu_regs[i + 32].name)
+	&& csky_supported_fpu_regs[i + 32].num == reg->num)
+      return (1 << i);
 
   return 0;
 };

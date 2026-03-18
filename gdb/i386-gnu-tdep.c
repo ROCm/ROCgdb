@@ -84,7 +84,7 @@ i386_gnu_sigtramp_p (const frame_info_ptr &this_frame)
   find_pc_partial_function (pc, &name, NULL, NULL);
 
   /* If we have a NAME, we can check for the trampoline function */
-  if (name != NULL && strcmp (name, "trampoline") == 0)
+  if (name != NULL && streq (name, "trampoline"))
     return 1;
 
   return i386_gnu_sigtramp_start (this_frame) != 0;

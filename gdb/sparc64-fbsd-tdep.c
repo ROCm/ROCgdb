@@ -84,7 +84,7 @@ sparc64fbsd_collect_fpregset (const struct regset *regset,
 static int
 sparc64fbsd_pc_in_sigtramp (CORE_ADDR pc, const char *name)
 {
-  return (name && strcmp (name, "__sigtramp") == 0);
+  return (name && streq (name, "__sigtramp"));
 }
 
 static struct sparc_frame_cache *

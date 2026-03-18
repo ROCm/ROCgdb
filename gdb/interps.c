@@ -85,7 +85,7 @@ interp_factory_register (const char *name, interp_factory_func func)
 {
   /* Assert that no factory for NAME is already registered.  */
   for (const interp_factory &f : interpreter_factories)
-    if (strcmp (f.name, name) == 0)
+    if (streq (f.name, name))
       {
 	internal_error (_("interpreter factory already registered: \"%s\"\n"),
 			name);
@@ -157,7 +157,7 @@ static struct interp *
 interp_lookup_existing (struct ui *ui, const char *name)
 {
   for (interp &interp : ui->interp_list)
-    if (strcmp (interp.name (), name) == 0)
+    if (streq (interp.name (), name))
       return &interp;
 
   return nullptr;
@@ -177,7 +177,7 @@ interp_lookup (struct ui *ui, const char *name)
     return interp;
 
   for (const interp_factory &factory : interpreter_factories)
-    if (strcmp (factory.name, name) == 0)
+    if (streq (factory.name, name))
       {
 	interp = factory.func (factory.name);
 	interp_add (ui, interp);
@@ -224,7 +224,7 @@ current_interp_named_p (const char *interp_name)
   interp *interp = current_ui->current_interpreter;
 
   if (interp != NULL)
-    return (strcmp (interp->name (), interp_name) == 0);
+    return (streq (interp->name (), interp_name));
 
   return 0;
 }

@@ -299,7 +299,7 @@ is_reg_name_available_p (const struct target_desc *tdesc,
 			 const char *name)
 {
   for (const gdb::reg &reg : tdesc->reg_defs)
-    if (strcmp (name, reg.name) == 0)
+    if (streq (name, reg.name))
       return true;
   return false;
 }

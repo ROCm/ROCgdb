@@ -296,7 +296,7 @@ default_floatformat_for_type (struct gdbarch *gdbarch,
   /* Check if this is a bfloat16 type.  It has the same size as the
      IEEE half float type, so we use the base type name to tell them
      apart.  */
-  if (name != nullptr && strcmp (name, "__bf16") == 0
+  if (name != nullptr && streq (name, "__bf16")
       && len == gdbarch_bfloat16_bit (gdbarch))
     format = gdbarch_bfloat16_format (gdbarch);
   else if (len == gdbarch_half_bit (gdbarch))
@@ -554,7 +554,7 @@ set_architecture (const char *ignore_args,
 {
   struct gdbarch_info info;
 
-  if (strcmp (set_architecture_string, "auto") == 0)
+  if (streq (set_architecture_string, "auto"))
     {
       target_architecture_user = NULL;
       if (!gdbarch_update_p (current_inferior (), info))

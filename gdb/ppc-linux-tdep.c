@@ -341,8 +341,8 @@ ppc_linux_ilp32_svr4_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
   if (sym.minsym == nullptr)
     return false;
 
-  return (strcmp (sym.minsym->linkage_name (), "__glink") == 0
-	  || strcmp (sym.minsym->linkage_name (), "__glink_PLTresolve") == 0);
+  return (streq (sym.minsym->linkage_name (), "__glink")
+	  || streq (sym.minsym->linkage_name (), "__glink_PLTresolve"));
 }
 
 /* Follow PLT stub to actual routine.
@@ -2009,14 +2009,14 @@ ppc_floatformat_for_type (struct gdbarch *gdbarch,
 {
   if (len == 128 && name)
     {
-      if (strcmp (name, "__float128") == 0
-	  || strcmp (name, "_Float128") == 0
-	  || strcmp (name, "_Float64x") == 0
-	  || strcmp (name, "complex _Float128") == 0
-	  || strcmp (name, "complex _Float64x") == 0)
+      if (streq (name, "__float128")
+	  || streq (name, "_Float128")
+	  || streq (name, "_Float64x")
+	  || streq (name, "complex _Float128")
+	  || streq (name, "complex _Float64x"))
 	return floatformats_ieee_quad;
 
-      if (strcmp (name, "__ibm128") == 0)
+      if (streq (name, "__ibm128"))
 	return floatformats_ibm_long_double;
     }
 
@@ -2033,8 +2033,8 @@ linux_dwarf2_omit_typedef_p (struct type *target_type,
     {
       if ((target_type->code () == TYPE_CODE_FLT
 	   || target_type->code () == TYPE_CODE_COMPLEX)
-	  && (strcmp (name, "long double") == 0
-	      || strcmp (name, "complex long double") == 0))
+	  && (streq (name, "long double")
+	      || streq (name, "complex long double")))
 	{
 	  /* IEEE 128-bit floating point and IBM long double are two
 	     encodings for 128-bit values.  The DWARF debug data can't

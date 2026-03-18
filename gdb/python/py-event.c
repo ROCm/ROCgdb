@@ -100,8 +100,7 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_event);
 
 static gdb_PyGetSetDef event_object_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict_getter, NULL,
-    "The __dict__ for this event.", NULL },
+  gdbpy_dict_wrapper_cfg_dict_getter ("event"),
   { NULL }
 };
 
@@ -123,8 +122,7 @@ PyTypeObject event_object_type =
   0,                                          /* tp_hash  */
   0,                                          /* tp_call */
   0,                                          /* tp_str */
-  gdb_py_generic_getattro,                    /* tp_getattro */
-  gdb_py_generic_setattro,                    /* tp_setattro */
+  gdbpy_dict_wrapper_getsetattro,
   0,                                          /* tp_as_buffer */
   Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   /* tp_flags */
   "GDB event object",                         /* tp_doc */

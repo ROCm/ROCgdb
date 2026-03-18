@@ -2073,8 +2073,9 @@ DESCRIPTION
 */
 
 bool
-bfd_thread_init (bfd_lock_unlock_fn_type lock, bfd_lock_unlock_fn_type unlock,
-		 void *data)
+bfd_thread_init (bfd_lock_unlock_fn_type lock ATTRIBUTE_UNUSED,
+		 bfd_lock_unlock_fn_type unlock ATTRIBUTE_UNUSED,
+		 void *data ATTRIBUTE_UNUSED)
 {
 #ifdef TLS
   /* Both functions must be set, and this cannot have been called

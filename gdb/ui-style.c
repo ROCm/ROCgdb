@@ -602,8 +602,8 @@ colorsupport ()
       const char *colorterm = getenv ("COLORTERM");
       if (colors >= 16777216
 	  || (colorterm != nullptr
-	      && (!strcmp (colorterm, "truecolor")
-		  || !strcmp (colorterm, "24bit"))))
+	      && (streq (colorterm, "truecolor")
+		  || streq (colorterm, "24bit"))))
 	result.push_back (color_space::RGB_24BIT);
 
       return result;

@@ -147,7 +147,7 @@ tdesc_start_target (struct gdb_xml_parser *parser,
   char *version
     = (char *) xml_find_attribute (attributes, "version")->value.get ();
 
-  if (strcmp (version, "1.0") != 0)
+  if (!streq (version, "1.0"))
     gdb_xml_error (parser,
 		   _("Target description has unsupported version \"%s\""),
 		   version);
@@ -185,28 +185,27 @@ tdesc_start_reg (struct gdb_xml_parser *parser,
   name = (char *) attributes[ix++].value.get ();
   bitsize = * (ULONGEST *) attributes[ix++].value.get ();
 
-  if (ix < length && strcmp (attributes[ix].name, "regnum") == 0)
+  if (ix < length && streq (attributes[ix].name, "regnum"))
     regnum = * (ULONGEST *) attributes[ix++].value.get ();
   else
     regnum = data->next_regnum;
 
-  if (ix < length && strcmp (attributes[ix].name, "type") == 0)
+  if (ix < length && streq (attributes[ix].name, "type"))
     type = (char *) attributes[ix++].value.get ();
   else
     type = "int";
 
-  if (ix < length && strcmp (attributes[ix].name, "group") == 0)
+  if (ix < length && streq (attributes[ix].name, "group"))
     group = (char *) attributes[ix++].value.get ();
   else
     group = NULL;
 
-  if (ix < length && strcmp (attributes[ix].name, "save-restore") == 0)
+  if (ix < length && streq (attributes[ix].name, "save-restore"))
     save_restore = * (ULONGEST *) attributes[ix++].value.get ();
   else
     save_restore = 1;
 
-  if (strcmp (type, "int") != 0
-      && strcmp (type, "float") != 0
+  if (!streq (type, "int") && !streq (type, "float")
       && tdesc_named_type (data->current_feature, type) == NULL)
     gdb_xml_error (parser, _("Register \"%s\" has unknown type \"%s\""),
 		   name, type);
@@ -381,8 +380,8 @@ tdesc_start_field (struct gdb_xml_parser *parser,
 	gdb_xml_error (parser,
 		       _("Bitfields must live in explicitly sized types"));
 
-      if (field_type_id != NULL
-	  && strcmp (field_type_id, "bool") == 0
+      if (field_type_id != nullptr
+	  && streq (field_type_id, "bool")
 	  && start != end)
 	{
 	  gdb_xml_error (parser,

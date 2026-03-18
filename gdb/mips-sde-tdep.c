@@ -153,9 +153,8 @@ mips_sde_frame_sniffer (const struct frame_unwind *self,
   const char *name;
 
   find_pc_partial_function (pc, &name, NULL, NULL);
-  return (name
-	  && (strcmp (name, "_xcptcall") == 0
-	      || strcmp (name, "_sigtramp") == 0));
+  return (name != nullptr
+	  && (streq (name, "_xcptcall") || streq (name, "_sigtramp")));
 }
 
 /* Data structure for the SDE frame unwinder.  */

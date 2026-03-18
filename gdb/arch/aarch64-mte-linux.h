@@ -20,29 +20,14 @@
 #ifndef GDB_ARCH_AARCH64_MTE_LINUX_H
 #define GDB_ARCH_AARCH64_MTE_LINUX_H
 
-
-/* Feature check for Memory Tagging Extension.  */
-#ifndef HWCAP2_MTE
-#define HWCAP2_MTE  (1 << 18)
-#endif
+#define AARCH64_HWCAP2_MTE  (1 << 18)
 
 /* The MTE regset consists of a single 64-bit register.  */
-#define AARCH64_LINUX_SIZEOF_MTE 8
+#define AARCH64_LINUX_SIZEOF_MTE_REGSET 8
 
 /* Memory tagging definitions.  */
-#ifndef SEGV_MTEAERR
-# define SEGV_MTEAERR 8
-# define SEGV_MTESERR 9
-#endif
-
-/* Memory tag types for AArch64.  */
-enum class aarch64_memtag_type
-{
-  /* MTE logical tag contained in pointers.  */
-  mte_logical = 0,
-  /* MTE allocation tag stored in memory tag granules.  */
-  mte_allocation
-};
+#define AARCH64_SEGV_MTEAERR 8
+#define AARCH64_SEGV_MTESERR 9
 
 /* Given a TAGS vector containing 1 MTE tag per byte, pack the data as
    2 tags per byte and resize the vector.  */

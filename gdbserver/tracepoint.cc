@@ -2497,7 +2497,7 @@ cmd_qtdp (char *own_buf)
 	  if (tpoint->type == trap_tracepoint || tp == NULL)
 	    {
 	      install_tracepoint (tpoint, own_buf);
-	      if (strcmp (own_buf, "OK") != 0)
+	      if (!streq (own_buf, "OK"))
 		remove_tracepoint (tpoint);
 	    }
 	  else
@@ -2685,7 +2685,7 @@ cmd_qtv (char *own_buf)
   /* Only make tsv's be undefined before the first trace run.  After a
      trace run is over, the user might want to see the last value of
      the tsv, and it might not be available in a traceframe.  */
-  else if (!tracing && strcmp (tracing_stop_reason, "tnotrun") == 0)
+  else if (!tracing && streq (tracing_stop_reason, "tnotrun"))
     {
       strcpy (own_buf, "U");
       return;
@@ -3438,7 +3438,7 @@ cmd_qtstatus (char *packet)
     }
 
   /* If this was a forced stop, include any stop note that was supplied.  */
-  if (strcmp (stop_reason_rsp, "tstop") == 0)
+  if (streq (stop_reason_rsp, "tstop"))
     {
       stop_reason_rsp = (char *) alloca (strlen ("tstop:") + strlen (buf3) + 1);
       strcpy (stop_reason_rsp, "tstop:");
@@ -3803,7 +3803,7 @@ cmd_bigqtbuffer_size (char *own_buf)
   packet += strlen ("QTBuffer:size:");
 
   /* -1 is sent as literal "-1".  */
-  if (strcmp (packet, "-1") == 0)
+  if (streq (packet, "-1"))
     sval = DEFAULT_TRACE_BUFFER_SIZE;
   else
     {
@@ -3880,7 +3880,7 @@ cmd_qtnotes (char *own_buf)
 int
 handle_tracepoint_general_set (char *packet)
 {
-  if (strcmp ("QTinit", packet) == 0)
+  if (streq ("QTinit", packet))
     {
       cmd_qtinit (packet);
       return 1;
@@ -3915,12 +3915,12 @@ handle_tracepoint_general_set (char *packet)
       cmd_qtro (packet);
       return 1;
     }
-  else if (strcmp ("QTStart", packet) == 0)
+  else if (streq ("QTStart", packet))
     {
       cmd_qtstart (packet);
       return 1;
     }
-  else if (strcmp ("QTStop", packet) == 0)
+  else if (streq ("QTStop", packet))
     {
       cmd_qtstop (packet);
       return 1;
@@ -3957,7 +3957,7 @@ handle_tracepoint_general_set (char *packet)
 int
 handle_tracepoint_query (char *packet)
 {
-  if (strcmp ("qTStatus", packet) == 0)
+  if (streq ("qTStatus", packet))
     {
       cmd_qtstatus (packet);
       return 1;
@@ -3967,22 +3967,22 @@ handle_tracepoint_query (char *packet)
       cmd_qtp (packet);
       return 1;
     }
-  else if (strcmp ("qTfP", packet) == 0)
+  else if (streq ("qTfP", packet))
     {
       cmd_qtfp (packet);
       return 1;
     }
-  else if (strcmp ("qTsP", packet) == 0)
+  else if (streq ("qTsP", packet))
     {
       cmd_qtsp (packet);
       return 1;
     }
-  else if (strcmp ("qTfV", packet) == 0)
+  else if (streq ("qTfV", packet))
     {
       cmd_qtfv (packet);
       return 1;
     }
-  else if (strcmp ("qTsV", packet) == 0)
+  else if (streq ("qTsV", packet))
     {
       cmd_qtsv (packet);
       return 1;
@@ -3997,7 +3997,7 @@ handle_tracepoint_query (char *packet)
       cmd_qtbuffer (packet);
       return 1;
     }
-  else if (strcmp ("qTMinFTPILen", packet) == 0)
+  else if (streq ("qTMinFTPILen", packet))
     {
       cmd_qtminftpilen (packet);
       return 1;

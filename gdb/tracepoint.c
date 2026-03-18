@@ -2231,7 +2231,7 @@ tfind_command_1 (const char *args, int from_tty)
       else
 	frameno = traceframe_number + 1;
     }
-  else if (0 == strcmp (args, "-"))
+  else if (streq (args, "-"))
     {
       if (traceframe_number == -1)
 	error (_("not debugging trace buffer"));
@@ -2241,7 +2241,7 @@ tfind_command_1 (const char *args, int from_tty)
       frameno = traceframe_number - 1;
       }
   /* A hack to work around eval's need for fp to have been collected.  */
-  else if (0 == strcmp (args, "-1"))
+  else if (streq (args, "-1"))
     frameno = -1;
   else
     frameno = parse_and_eval_long (args);
@@ -3006,7 +3006,7 @@ cond_string_is_same (char *str1, char *str2)
   if (str1 == NULL || str2 == NULL)
     return (str1 == str2);
 
-  return (strcmp (str1, str2) == 0);
+  return (streq (str1, str2));
 }
 
 /* Look for an existing tracepoint that seems similar enough to the

@@ -734,9 +734,9 @@ arm_pc_is_thumb (struct gdbarch *gdbarch, CORE_ADDR memaddr)
     return 1;
 
   /* If the user wants to override the symbol table, let him.  */
-  if (strcmp (arm_force_mode_string, "arm") == 0)
+  if (streq (arm_force_mode_string, "arm"))
     return 0;
-  if (strcmp (arm_force_mode_string, "thumb") == 0)
+  if (streq (arm_force_mode_string, "thumb"))
     return 1;
 
   /* ARM v6-M and v7-M are always in Thumb mode.  */
@@ -754,9 +754,9 @@ arm_pc_is_thumb (struct gdbarch *gdbarch, CORE_ADDR memaddr)
     return (MSYMBOL_IS_SPECIAL (sym.minsym));
 
   /* If the user wants to override the fallback mode, let them.  */
-  if (strcmp (arm_fallback_mode_string, "arm") == 0)
+  if (streq (arm_fallback_mode_string, "arm"))
     return 0;
-  if (strcmp (arm_fallback_mode_string, "thumb") == 0)
+  if (streq (arm_fallback_mode_string, "thumb"))
     return 1;
 
   /* If we couldn't find any symbol, but we're talking to a running
@@ -9408,7 +9408,7 @@ arm_skip_stub (const frame_info_ptr &frame, CORE_ADDR pc)
       int offset = strlen (name) - 2;
 
       for (regno = 0; regno <= 14; regno++)
-	if (strcmp (&name[offset], table[regno]) == 0)
+	if (streq (&name[offset], table[regno]))
 	  return get_frame_register_unsigned (frame, regno);
     }
 
@@ -9476,7 +9476,7 @@ set_fp_model_sfunc (const char *args, int from_tty,
   int fp_model;
 
   for (fp_model = ARM_FLOAT_AUTO; fp_model != ARM_FLOAT_LAST; fp_model++)
-    if (strcmp (current_fp_model, fp_model_strings[fp_model]) == 0)
+    if (streq (current_fp_model, fp_model_strings[fp_model]))
       {
 	arm_fp_model = (enum arm_float_model) fp_model;
 	break;
@@ -9516,7 +9516,7 @@ arm_set_abi (const char *args, int from_tty,
   int arm_abi;
 
   for (arm_abi = ARM_ABI_AUTO; arm_abi != ARM_ABI_LAST; arm_abi++)
-    if (strcmp (arm_abi_string, arm_abi_strings[arm_abi]) == 0)
+    if (streq (arm_abi_string, arm_abi_strings[arm_abi]))
       {
 	arm_abi_global = (enum arm_abi_kind) arm_abi;
 	break;
@@ -10043,7 +10043,7 @@ arm_code_of_frame_writable (struct gdbarch *gdbarch, const frame_info_ptr &frame
 static const char *
 arm_gnu_triplet_regexp (struct gdbarch *gdbarch)
 {
-  if (strcmp (gdbarch_bfd_arch_info (gdbarch)->arch_name, "arm") == 0)
+  if (streq (gdbarch_bfd_arch_info (gdbarch)->arch_name, "arm"))
     return "arm(v[^- ]*)?";
   return gdbarch_bfd_arch_info (gdbarch)->arch_name;
 }
@@ -11010,7 +11010,7 @@ INIT_GDB_FILE (arm_tdep)
 	size_t offset = strlen ("reg-names-");
 	const char *style = disasm_options->name[i];
 	valid_disassembly_styles[j++] = &style[offset];
-	if (strcmp (&style[offset], "std") == 0)
+	if (streq (&style[offset], "std"))
 	  disassembly_style = &style[offset];
 	length = snprintf (rdptr, rest, "%s - %s\n", &style[offset],
 			   disasm_options->description[i]);

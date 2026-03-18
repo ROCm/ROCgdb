@@ -913,7 +913,7 @@ ctf_open_dir (const char *dirname)
 
   bt_ctf_get_event_decl_list (handle_id, ctx, &list, &count);
   for (i = 0; i < count; i++)
-    if (strcmp ("register", bt_ctf_get_decl_event_name (list[i])) == 0)
+    if (streq ("register", bt_ctf_get_decl_event_name (list[i])))
       {
 	const struct bt_ctf_field_decl * const *field_list;
 	const struct bt_declaration *decl;
@@ -922,8 +922,8 @@ ctf_open_dir (const char *dirname)
 				&count);
 
 	gdb_assert (count == 1);
-	gdb_assert (0 == strcmp ("contents",
-				 bt_ctf_get_decl_field_name (field_list[0])));
+	gdb_assert (streq ("contents",
+			   bt_ctf_get_decl_field_name (field_list[0])));
 	decl = bt_ctf_get_decl_from_field_decl (field_list[0]);
 	trace_regblock_size = bt_ctf_get_array_len (decl);
 
@@ -1231,9 +1231,9 @@ ctf_target::fetch_registers (struct regcache *regcache, int regno)
 
       name = bt_ctf_event_name (event1);
 
-      if (name == NULL || strcmp (name, "frame") == 0)
+      if (name == NULL || streq (name, "frame"))
 	break;
-      else if (strcmp (name, "register") == 0)
+      else if (streq (name, "register"))
 	{
 	  event = event1;
 	  break;
@@ -1329,9 +1329,9 @@ ctf_target::xfer_partial (enum target_object object,
 	    = bt_ctf_iter_read_event (ctf_iter);
 	  const char *name = bt_ctf_event_name (event);
 
-	  if (name == NULL || strcmp (name, "frame") == 0)
+	  if (name == NULL || streq (name, "frame"))
 	    break;
-	  else if (strcmp (name, "memory") != 0)
+	  else if (!streq (name, "memory"))
 	    {
 	      if (bt_iter_next (bt_ctf_get_iter (ctf_iter)) < 0)
 		break;
@@ -1445,9 +1445,9 @@ ctf_target::get_trace_state_variable_value (int tsvnum, LONGEST *val)
 	= bt_ctf_iter_read_event (ctf_iter);
       const char *name = bt_ctf_event_name (event);
 
-      if (name == NULL || strcmp (name, "frame") == 0)
+      if (name == NULL || streq (name, "frame"))
 	break;
-      else if (strcmp (name, "tsv") == 0)
+      else if (streq (name, "tsv"))
 	{
 	  const struct bt_definition *scope;
 	  const struct bt_definition *def;
@@ -1513,7 +1513,7 @@ ctf_get_traceframe_address (void)
 
       if (name == NULL)
 	break;
-      else if (strcmp (name, "frame") == 0)
+      else if (streq (name, "frame"))
 	{
 	  event = event1;
 	  break;
@@ -1573,7 +1573,7 @@ ctf_target::trace_find (enum trace_find_type type, int num,
       if (event == NULL || name == NULL)
 	break;
 
-      if (strcmp (name, "frame") == 0)
+      if (streq (name, "frame"))
 	{
 	  CORE_ADDR tfaddr;
 
@@ -1664,10 +1664,9 @@ ctf_target::traceframe_info ()
 
       name = bt_ctf_event_name (event);
 
-      if (name == NULL || strcmp (name, "register") == 0
-	  || strcmp (name, "frame") == 0)
+      if (name == nullptr || streq (name, "register") || streq (name, "frame"))
 	;
-      else if (strcmp (name, "memory") == 0)
+      else if (streq (name, "memory"))
 	{
 	  const struct bt_definition *scope
 	    = bt_ctf_get_top_level_scope (event,
@@ -1682,7 +1681,7 @@ ctf_target::traceframe_info ()
 
 	  info->memory.emplace_back (start, length);
 	}
-      else if (strcmp (name, "tsv") == 0)
+      else if (streq (name, "tsv"))
 	{
 	  int vnum;
 	  const struct bt_definition *scope
@@ -1704,7 +1703,7 @@ ctf_target::traceframe_info ()
       if (bt_iter_next (bt_ctf_get_iter (ctf_iter)) < 0)
 	break;
     }
-  while (name != NULL && strcmp (name, "frame") != 0);
+  while (name != NULL && !streq (name, "frame"));
 
   /* Restore the position.  */
   bt_iter_set_pos (bt_ctf_get_iter (ctf_iter), pos);

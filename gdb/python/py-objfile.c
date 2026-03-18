@@ -725,8 +725,7 @@ Look up a static-linkage global symbol in this objfile and return it." },
 
 static gdb_PyGetSetDef objfile_getset[] =
 {
-  { "__dict__", gdb_py_generic_dict_getter, NULL,
-    "The __dict__ for this objfile.", NULL },
+  gdbpy_dict_wrapper_cfg_dict_getter ("objfile"),
   { "filename", objfpy_get_filename, NULL,
     "The objfile's filename, or None.", NULL },
   { "username", objfpy_get_username, NULL,
@@ -771,8 +770,7 @@ PyTypeObject objfile_object_type =
   0,				  /*tp_hash */
   0,				  /*tp_call*/
   0,				  /*tp_str*/
-  gdb_py_generic_getattro,	  /*tp_getattro*/
-  gdb_py_generic_setattro,	  /*tp_setattro*/
+  gdbpy_dict_wrapper_getsetattro,
   0,				  /*tp_as_buffer*/
   Py_TPFLAGS_DEFAULT,		  /*tp_flags*/
   "GDB objfile object",		  /* tp_doc */

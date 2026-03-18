@@ -552,7 +552,7 @@ gdbpy_parameter_value (const setting &var)
 	       l++)
 	    if (value == l->use)
 	      {
-		if (strcmp (l->literal, "unlimited") == 0)
+		if (streq (l->literal, "unlimited"))
 		  {
 		    /* Compatibility hack for API brokenness.  */
 		    if (var.type () == var_pinteger

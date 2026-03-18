@@ -210,7 +210,7 @@ linux_determine_kernel_start (void)
       if (match != 2)
 	continue;
 
-      if (strcmp (symbol, "_text") == 0)
+      if (streq (symbol, "_text"))
 	{
 	  kernel_start = addr;
 	  break;

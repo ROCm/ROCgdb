@@ -22,6 +22,7 @@
 #include "linux-low.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
+#include "nat/aarch64-pauth-linux.h"
 #include "arch/aarch64-insn.h"
 #include "linux-aarch32-low.h"
 #include "elf/common.h"
@@ -39,11 +40,12 @@
 
 #include "gdb_proc_service.h"
 #include "arch/aarch64.h"
-#include "arch/aarch64-gcs-linux.h"
 #include "arch/aarch64-mte-linux.h"
-#include "arch/aarch64-scalable-linux.h"
+#include "arch/aarch64-pauth-linux.h"
 #include "linux-aarch32-tdesc.h"
 #include "linux-aarch64-tdesc.h"
+#include "nat/aarch64-fpmr-linux.h"
+#include "nat/aarch64-gcs-linux.h"
 #include "nat/aarch64-mte-linux-ptrace.h"
 #include "nat/aarch64-scalable-linux-ptrace.h"
 #include "tdesc.h"
@@ -952,11 +954,11 @@ aarch64_adjust_register_sets (const struct aarch64_features &features)
 	  break;
 	case NT_ARM_PAC_MASK:
 	  if (features.pauth)
-	    regset->size = AARCH64_PAUTH_REGS_SIZE;
+	    regset->size = AARCH64_LINUX_SIZEOF_PAUTH;
 	  break;
 	case NT_ARM_TAGGED_ADDR_CTRL:
 	  if (features.mte)
-	    regset->size = AARCH64_LINUX_SIZEOF_MTE;
+	    regset->size = AARCH64_LINUX_SIZEOF_MTE_REGSET;
 	  break;
 	case NT_ARM_TLS:
 	  if (features.tls > 0)
@@ -984,9 +986,6 @@ aarch64_adjust_register_sets (const struct aarch64_features &features)
     }
 }
 
-/* Matches HWCAP_PACA in kernel header arch/arm64/include/uapi/asm/hwcap.h.  */
-#define AARCH64_HWCAP_PACA (1 << 30)
-
 /* Implementation of linux target ops method "low_arch_setup".  */
 
 void
@@ -1005,7 +1004,7 @@ aarch64_target::low_arch_setup ()
 
       features.vq = aarch64_sve_get_vq (tid);
       /* A-profile PAC is 64-bit only.  */
-      features.pauth = linux_get_hwcap (pid, 8) & AARCH64_HWCAP_PACA;
+      features.pauth = linux_get_hwcap (pid, 8) & HWCAP_PACA;
       /* A-profile MTE is 64-bit only.  */
       features.mte = linux_get_hwcap2 (pid, 8) & HWCAP2_MTE;
       features.tls = aarch64_tls_register_count (tid);
