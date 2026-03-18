@@ -602,6 +602,10 @@ namespace eval Dwarf {
     variable _loc_addr_size
     variable _loc_offset_size
 
+    # Variables used when generating a .debug_frame section.
+    variable _frame_addr_size
+    variable _frame_offset_size
+
     proc _process_one_constant {name value} {
 	variable _constants
 	variable _FORM
@@ -618,7 +622,6 @@ namespace eval Dwarf {
 	}
 
 	# We only try to shorten some very common things.
-	# FIXME: CFA?
 	switch -exact -- $prefix {
 	    TAG {
 		# Create two procedures for the tag.  These call
@@ -665,6 +668,37 @@ namespace eval Dwarf {
 		    _op .byte $_constants(%s) %s
 		    %s {*}$args
 		} $name $name $handler]
+	    }
+
+	    CFA {
+		# Create procs for DW_CFA_* instructions, used in
+		# .debug_frame CIE/FDE bodies.
+
+		# DW_CFA_advance_loc, DW_CFA_offset and
+		# DW_CFA_restore encode the operand in the low 6
+		# bits of the opcode byte.  They need special
+		# handling and are predefined below.
+		switch -exact -- $name {
+		    DW_CFA_advance_loc -
+		    DW_CFA_offset -
+		    DW_CFA_restore {
+		    }
+
+		    default {
+			# Standard CFA instruction: emit opcode
+			# byte then delegate to handler.
+			set handler _handle_default_CFA
+			if {[llength [info procs _handle_$name]] > 0} {
+			    set handler _handle_$name
+			}
+
+			# tclint-disable-next-line command-args
+			proc $name {args} [format {
+			    _op .byte $Dwarf::_constants(%s) %s
+			    %s {*}$args
+			} $name $name $handler]
+		    }
+		}
 	    }
 
 	    default {
@@ -1454,6 +1488,146 @@ namespace eval Dwarf {
     proc _handle_default_OP {} {
 	# Do nothing; if arguments are passed, Tcl will cause an
 	# error.
+    }
+
+    # DW_CFA_advance_loc, DW_CFA_offset and DW_CFA_restore encode the
+    # operand in the low 6 bits of the opcode byte.  They need special
+    # handling, so they are defined here rather than generated.
+    proc DW_CFA_advance_loc {delta} {
+	_op .byte \
+	    "$Dwarf::_constants(DW_CFA_advance_loc) + $delta" DW_CFA_advance_loc
+    }
+
+    proc DW_CFA_offset {register offset} {
+	_op .byte \
+	    "$Dwarf::_constants(DW_CFA_offset) + $register" DW_CFA_offset
+	_op .uleb128 $offset "offset"
+    }
+
+    proc DW_CFA_restore {register} {
+	_op .byte \
+	    "$Dwarf::_constants(DW_CFA_restore) + $register" DW_CFA_restore
+    }
+
+    # Helper to emit a DWARF expression block (ULEB128 length followed
+    # by the expression bytes) inside a .debug_frame CIE or FDE body.
+    # BODY is a Tcl code containing DW_OP_* calls.
+    proc _emit_cfa_expression {body} {
+	set start [new_label "cfa_expr_start"]
+	set end [new_label "cfa_expr_end"]
+	_op .uleb128 "$end - $start" "expression length"
+	define_label $start
+
+	# Pass 5 as the DWARF version, since we need to pass something, but it
+	# doesn't matter.  The DWARF version is checked only for DW_OP_* ops
+	# that don't make sense in CFI.
+	_location $body 5 $Dwarf::_frame_addr_size $Dwarf::_frame_offset_size
+	define_label $end
+    }
+
+    #
+    # Handlers for DW_CFA_* instructions.
+    #
+    # A handler is only needed if the instruction requires operands.
+    # Generic code handles emitting the opcode byte itself, so a
+    # handler should not do this.
+    #
+    # Handlers are found by name when processing the .def file.  If a
+    # handler isn't found, the default (_handle_default_CFA) is used.
+    #
+
+    proc _handle_default_CFA {} {
+	# Do nothing; if arguments are passed, Tcl will cause an
+	# error.
+    }
+
+    proc _handle_DW_CFA_set_loc {address} {
+	_op .${Dwarf::_frame_addr_size}byte $address "address"
+    }
+
+    proc _handle_DW_CFA_advance_loc1 {delta} {
+	_op .byte $delta "delta"
+    }
+
+    proc _handle_DW_CFA_advance_loc2 {delta} {
+	_op .2byte $delta "delta"
+    }
+
+    proc _handle_DW_CFA_advance_loc4 {delta} {
+	_op .4byte $delta "delta"
+    }
+
+    proc _handle_DW_CFA_offset_extended {register offset} {
+	_op .uleb128 $register "register"
+	_op .uleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_restore_extended {register} {
+	_op .uleb128 $register "register"
+    }
+
+    proc _handle_DW_CFA_undefined {register} {
+	_op .uleb128 $register "register"
+    }
+
+    proc _handle_DW_CFA_same_value {register} {
+	_op .uleb128 $register "register"
+    }
+
+    proc _handle_DW_CFA_register {register1 register2} {
+	_op .uleb128 $register1 "register"
+	_op .uleb128 $register2 "register"
+    }
+
+    proc _handle_DW_CFA_def_cfa {register offset} {
+	_op .uleb128 $register "register"
+	_op .uleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_def_cfa_register {register} {
+	_op .uleb128 $register "register"
+    }
+
+    proc _handle_DW_CFA_def_cfa_offset {offset} {
+	_op .uleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_def_cfa_expression {body} {
+	_emit_cfa_expression $body
+    }
+
+    proc _handle_DW_CFA_expression {register body} {
+	_op .uleb128 $register "register"
+	_emit_cfa_expression $body
+    }
+
+    proc _handle_DW_CFA_offset_extended_sf {register offset} {
+	_op .uleb128 $register "register"
+	_op .sleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_def_cfa_sf {register offset} {
+	_op .uleb128 $register "register"
+	_op .sleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_def_cfa_offset_sf {offset} {
+	_op .sleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_val_offset {register offset} {
+	_op .uleb128 $register "register"
+	_op .uleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_val_offset_sf {register offset} {
+	_op .uleb128 $register "register"
+	_op .sleb128 $offset "offset"
+    }
+
+    proc _handle_DW_CFA_val_expression {register body} {
+	_op .uleb128 $register "register"
+	_emit_cfa_expression $body
     }
 
     # This is a miniature assembler for location expressions.  It is
@@ -3554,6 +3728,223 @@ namespace eval Dwarf {
 	    incr num
 	}
 	debug_str_offsets_end:
+    }
+
+    # Emit a DWARF .debug_frame section.
+    #
+    # BODY is Tcl code that emits the CIEs and FDEs which make up the
+    # section.  It is evaluated in the caller's context.
+    #
+    # Within BODY, the following commands are available:
+    #
+    #   CIE options body
+    #     -- emit a Common Information Entry.  See _frame_CIE for details.
+    #
+    #   FDE cie_label initial_location address_range body
+    #     -- emit a Frame Description Entry.  See _frame_FDE for details.
+    proc frame { body } {
+	_section .debug_frame
+
+	with_override Dwarf::CIE Dwarf::_frame_CIE {
+	    with_override Dwarf::FDE Dwarf::_frame_FDE {
+		uplevel $Dwarf::_level $body
+	    }
+	}
+    }
+
+    # Available as proc CIE when in the body of proc debug_frame.
+    #
+    # OPTIONS is a list of option-name/option-value pairs.  Supported
+    # options are (default values are shown in parentheses):
+    #
+    #   is_64 (false)
+    #     -- if true, emit a 64-bit CIE.
+    #
+    #   cie_id (default)
+    #     -- the CIE id value.  When "default", uses 0xffffffff for
+    #        32-bit and 0xffffffffffffffff for 64-bit.  Should typically not be
+    #        used unless trying to craft an invalid CIE.
+    #
+    #   version (4)
+    #     -- the CIE version number.  Note that this is version independent
+    #        from the DWARF version.  DWARF 4 and 5 both use .debug_frame
+    #        version 4.
+    #
+    #   augmentation ("")
+    #     -- the augmentation string.
+    #
+    #   addr_size (default)
+    #     -- the address size in bytes.  When "default", use 8 for 64-bit
+    #        targets and 4 for 32-bit targets.
+    #
+    #   segment_selector_size (0)
+    #     -- the segment selector size in bytes.
+    #
+    #   code_alignment_factor (1)
+    #     -- the code alignment factor.
+    #
+    #   data_alignment_factor (1)
+    #     -- the data alignment factor.
+    #
+    #   return_address_register (0)
+    #     -- the number of the "column" containing the return address.
+    #
+    # BODY is Tcl code that emits the CIE's initial instructions using
+    # DW_CFA_* operations.  It is evaluated in the caller's context.
+    proc _frame_CIE {options body} {
+	parse_options {
+	    { is_64 false }
+	    { cie_id default }
+	    { version 4 }
+	    { augmentation "" }
+	    { addr_size default }
+	    { segment_selector_size 0 }
+	    { code_alignment_factor 1 }
+	    { data_alignment_factor 1 }
+	    { return_address_register 0 }
+	}
+
+	if { $is_64 } {
+	    set Dwarf::_frame_offset_size 8
+	} else {
+	    set Dwarf::_frame_offset_size 4
+	}
+
+	if { $cie_id == "default" } {
+	    if { $is_64 } {
+		set cie_id 0xffffffffffffffff
+	    } else {
+		set cie_id 0xffffffff
+	    }
+	}
+
+	if {$addr_size == "default"} {
+	    if {[is_64_target]} {
+		set Dwarf::_frame_addr_size 8
+	    } else {
+		set Dwarf::_frame_addr_size 4
+	    }
+	} else {
+	    set Dwarf::_frame_addr_size $addr_size
+	}
+
+	declare_labels cie_post_length cie_end
+
+	# Length.
+	if { $is_64 } {
+	    _op .4byte 0xffffffff "length 1/2"
+	    _op .8byte "$cie_end - $cie_post_length" "length 2/2"
+	} else {
+	    _op .4byte "$cie_end - $cie_post_length" "length"
+	}
+
+	define_label $cie_post_length
+
+	# CIE_id
+	_op .${Dwarf::_frame_offset_size}byte $cie_id "CIE_id"
+
+	# Version.
+	_op .byte $version "version"
+
+	# Augmentation string.
+	_op .ascii [_quote $augmentation] "augmentation"
+
+	# Address size.
+	_op .byte $Dwarf::_frame_addr_size "address_size"
+
+	# Segment selector size.
+	_op .byte 0 "segment_size"
+
+	# Code alignment factor.
+	_op .uleb128 $code_alignment_factor "code_alignment_factor"
+
+	# Data alignment factor.
+	_op .sleb128 $data_alignment_factor "data_alignment_factor"
+
+	# Return address register.
+	_op .uleb128 $return_address_register "return_address_register"
+
+	# Initial instructions.
+	uplevel $Dwarf::_level $body
+
+	# Padding up to the address size.  Fill with DW_CFA_nop (zeroes).
+	_op .align $Dwarf::_frame_addr_size "padding"
+
+	define_label $cie_end
+    }
+
+    # Available as proc FDE when in the body of proc debug_frame.
+    #
+    # CIE_LABEL is the label of the CIE this FDE refers to.
+    #
+    # INITIAL_LOCATION is the address of the first instruction covered
+    # by this FDE.
+    #
+    # ADDRESS_RANGE is the number of bytes of instructions covered by
+    # this FDE.
+    #
+    # OPTIONS is a list of option-name/option-value pairs.  Supported
+    # options are (default values are shown in parentheses):
+    #
+    #   is_64 (false)
+    #     -- if true, emit a 64-bit CIE.
+    #
+    #   addr_size (default)
+    #     -- the address size in bytes.  When "default", use 8 for 64-bit
+    #        targets and 4 for 32-bit targets.
+    #
+    # BODY is Tcl code that emits the FDE's call frame instructions using
+    # DW_CFA_* operations.  It is evaluated in the caller's context.
+    proc _frame_FDE { cie_label initial_location address_range options
+		      body } {
+	parse_options {
+	    { is_64 false }
+	    { addr_size default }
+	}
+
+	if { $is_64 } {
+	    set Dwarf::_frame_offset_size 8
+	} else {
+	    set Dwarf::_frame_offset_size 4
+	}
+
+	if {$addr_size == "default"} {
+	    if {[is_64_target]} {
+		set Dwarf::_frame_addr_size 8
+	    } else {
+		set Dwarf::_frame_addr_size 4
+	    }
+	} else {
+	    set Dwarf::_frame_addr_size $addr_size
+	}
+
+	declare_labels fde_post_length fde_end
+
+	# Length.
+	if { $is_64 } {
+	    _op .4byte 0xffffffff "length 1/2"
+	    _op .8byte "$fde_end - $fde_post_length" "length 2/2"
+	} else {
+	    _op .4byte "$fde_end - $fde_post_length" "length"
+	}
+	define_label $fde_post_length
+
+	# CIE pointer, offset of the CIE into the .debug_frame section.
+	_op .${Dwarf::_frame_offset_size}byte $cie_label "CIE pointer"
+
+	# Initial location.
+	_op .${Dwarf::_frame_addr_size}byte $initial_location "initial_location"
+
+	# Address range.
+	_op .${Dwarf::_frame_addr_size}byte $address_range "address_range"
+
+	# Instructions.
+	uplevel $Dwarf::_level $body
+
+	# Padding up to the address size.  Fill with DW_CFA_nop (zeroes).
+	_op .align $Dwarf::_frame_addr_size "padding"
+
+	define_label $fde_end
     }
 
     # The top-level interface to the DWARF assembler.
