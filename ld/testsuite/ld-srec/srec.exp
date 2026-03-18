@@ -348,7 +348,7 @@ set test2 "S-records with constructors"
 # See whether the default linker script uses SIZEOF_HEADERS.
 set exec_output [run_host_cmd "$ld" "--verbose"]
 set sizeof_headers [string match "*SIZEOF_HEADERS*" $exec_output]
-set extra_flags " $NO_MEMORY_SEAL_LDFLAGS"
+set extra_flags " $NO_MEMORY_SEAL_LDFLAGS $NO_ROSEGMENT_LDFLAGS"
 
 # First test linking a C program.  We don't require any libraries.  We
 # link it normally, and objcopy to the S-record format, and then link

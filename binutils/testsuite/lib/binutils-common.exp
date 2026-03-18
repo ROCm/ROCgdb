@@ -430,6 +430,23 @@ proc check_memory_seal_support { } {
     return $memory_seal_available_saved
 }
 
+proc check_rosegment_support { } {
+    global rosegment_available_saved
+    global ld
+
+    if {![info exists rosegment_available_saved]} {
+	set ld_output [remote_exec host $ld "--no-rosegment"]
+	if { [string first "not supported" $ld_output] >= 0
+	     || [string first "unrecognized option" $ld_output] >= 0
+	     || [string first "--no-rosegment ignored" $ld_output] >= 0 } {
+	    set rosegment_available_saved 0
+	} else {
+	    set rosegment_available_saved 1
+	}
+    }
+    return $rosegment_available_saved
+}
+
 # Check for support of the .noinit section, used for data that is not
 # initialized at load, or during the application's initialization sequence.
 proc supports_noinit_section {} {
@@ -1042,6 +1059,7 @@ proc run_dump_test { name {extra_options {}} } {
     global SIZE SIZEFLAGS
     global copyfile env runtests srcdir subdir verbose base_dir
     global DT_RELR_LDFLAGS NO_DT_RELR_LDFLAGS
+    global NO_ROSEGMENT_LDFLAGS
 
     if [string match "*/*" $name] {
 	set file $name

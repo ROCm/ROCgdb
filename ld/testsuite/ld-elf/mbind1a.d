@@ -1,5 +1,5 @@
 #source: mbind1.s
-#ld: -z common-page-size=0x1000 -z max-page-size=0x200000
+#ld: -z common-page-size=0x1000 -z max-page-size=0x200000 $NO_ROSEGMENT_LDFLAGS
 #readelf: -S -l --wide
 #target: *-*-linux* *-*-gnu* arm*-*-uclinuxfdpiceabi
 
