@@ -1024,6 +1024,10 @@ dwarf2_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
       /* Calculate the CFA.  */
       switch (fs.regs.cfa_how)
 	{
+	case CFA_UNSET:
+	  cache->undefined_retaddr = true;
+	  return cache;
+
 	case CFA_REG_OFFSET:
 	  cache->cfa = read_addr_from_reg (this_frame, fs.regs.cfa_reg);
 	  if (fs.armcc_cfa_offsets_reversed)
