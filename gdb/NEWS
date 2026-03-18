@@ -242,6 +242,12 @@ qExecAndArgs
      deprecated since GDB 10.  Users who need to control the size of a
      memory port's internal buffer can use the 'setvbuf' procedure.
 
+* Removed targets and native configurations 
+
+  GDB no longer supports AIX 7.1.  The minimum supported
+  AIX version is now AIX 7.2 TL5.  GDB will only support
+  DWARF debugging in AIX, going forward.
+
 *** Changes in GDB 17
 
 * Debugging Linux programs that use x86-64 or x86-64 with 32-bit pointer
