@@ -35,6 +35,7 @@ OTHER_PLT_SECTIONS="
 "
 OTHER_GOT_RELOC_SECTIONS="
   .rela.tls	${RELOCATING-0} : { *(.rela.tls) }"
+ALL_TEXT_AFTER_RO=yes
 
 if [ "x${host}" = "x${target}" ]; then
   case " $EMULATION_LIBPATH " in
