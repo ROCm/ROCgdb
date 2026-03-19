@@ -115,14 +115,44 @@ proc run_read_test { filename var_type rwatch_var rwatch_first watch_vars } {
 	set wp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*"]
     }
 
+    set re_too_many \
+	[multi_line \
+	     [quotemeta "Could not insert hardware watchpoint @DECIMAL."] \
+	     "Could not insert hardware breakpoints:" \
+	     [string_to_regexp \
+		  "You may have requested too many hardware breakpoints/watchpoints."] \
+	     ""]
+
+    set unsupported 0
     foreach v $watch_vars {
-	gdb_test "watch obj.$v" \
-	    "Hardware watchpoint $::decimal: obj.$v"
+	gdb_test_multiple "watch obj.$v" "" {
+	    -re -wrap "Hardware watchpoint $::decimal: obj.$v" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap $re_too_many {
+		unsupported $gdb_test_name
+		set unsupported 1
+	    }
+	}
+    }
+    if {$unsupported} {
+	return
     }
 
     if { !$rwatch_first } {
-	gdb_test "rwatch obj.${rwatch_var}" \
-	    "Hardware read watchpoint $::decimal: obj.$rwatch_var"
+	gdb_test_multiple "rwatch obj.${rwatch_var}" "" {
+	    -re -wrap "Hardware read watchpoint $::decimal: obj.$rwatch_var" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap $re_too_many {
+		unsupported $gdb_test_name
+		set unsupported 1
+	    }
+	}
+	if {$unsupported} {
+	    return
+	}
+
 	set wp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*"]
     }
 
