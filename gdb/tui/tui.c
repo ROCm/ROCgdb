@@ -111,7 +111,7 @@ static Keymap tui_readline_standard_keymap;
 /* TUI readline command.
    Switch the output mode between TUI/standard gdb.  */
 static int
-tui_rl_switch_mode (int notused1, int notused2)
+tui_rl_switch_mode (int notused1 = 0, int notused2 = 0)
 {
 
   /* Don't let exceptions escape.  We're in the middle of a readline
@@ -186,7 +186,7 @@ static int
 tui_rl_change_windows (int notused1, int notused2)
 {
   if (!tui_active)
-    tui_rl_switch_mode (0 /* notused */, 0 /* notused */);
+    tui_rl_switch_mode ();
 
   if (tui_active)
     tui_next_layout ();
@@ -200,7 +200,7 @@ static int
 tui_rl_delete_other_windows (int notused1, int notused2)
 {
   if (!tui_active)
-    tui_rl_switch_mode (0 /* notused */, 0 /* notused */);
+    tui_rl_switch_mode ();
 
   if (tui_active)
     tui_remove_some_windows ();
@@ -214,7 +214,7 @@ static int
 tui_rl_other_window (int count, int key)
 {
   if (!tui_active)
-    tui_rl_switch_mode (0 /* notused */, 0 /* notused */);
+    tui_rl_switch_mode ();
 
   tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
 
@@ -267,7 +267,7 @@ static int
 tui_rl_next_keymap (int notused1, int notused2)
 {
   if (!tui_active)
-    tui_rl_switch_mode (0 /* notused */, 0 /* notused */);
+    tui_rl_switch_mode ();
 
   if (rl_end)
     {
