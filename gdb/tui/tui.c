@@ -178,6 +178,18 @@ tui_rl_switch_mode (int notused1 = 0, int notused2 = 0)
   return 0;
 }
 
+/* Try to switch into TUI mode, if not already active.  Return if TUI mode
+   is active.  */
+
+static bool
+tui_try_activate ()
+{
+  if (!tui_active)
+    tui_rl_switch_mode ();
+
+  return tui_active;
+}
+
 /* TUI readline command.
    Change the TUI layout to show a next layout.
    This function is bound to CTRL-X 2.  It is intended to provide
@@ -185,10 +197,7 @@ tui_rl_switch_mode (int notused1 = 0, int notused2 = 0)
 static int
 tui_rl_change_windows (int notused1, int notused2)
 {
-  if (!tui_active)
-    tui_rl_switch_mode ();
-
-  if (tui_active)
+  if (tui_try_activate ())
     tui_next_layout ();
 
   return 0;
@@ -199,10 +208,7 @@ tui_rl_change_windows (int notused1, int notused2)
 static int
 tui_rl_delete_other_windows (int notused1, int notused2)
 {
-  if (!tui_active)
-    tui_rl_switch_mode ();
-
-  if (tui_active)
+  if (tui_try_activate ())
     tui_remove_some_windows ();
 
   return 0;
@@ -213,8 +219,7 @@ tui_rl_delete_other_windows (int notused1, int notused2)
 static int
 tui_rl_other_window (int count, int key)
 {
-  if (!tui_active)
-    tui_rl_switch_mode ();
+  tui_try_activate ();
 
   tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
 
@@ -266,8 +271,7 @@ tui_rl_command_mode (int count, int key)
 static int
 tui_rl_next_keymap (int notused1, int notused2)
 {
-  if (!tui_active)
-    tui_rl_switch_mode ();
+  tui_try_activate ();
 
   if (rl_end)
     {
