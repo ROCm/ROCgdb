@@ -183,7 +183,7 @@ if {! [info exists env(CCC_OVERRIDE_OPTIONS)]} {
 # installed, but to the O32 ABI in the build tree, because of some
 # specs-file hacks.  Make sure we use an ABI that is compatible with
 # the one we expect.
-if {[istarget mips64*-*-linux*] &&
+if {[istarget mips64*-*-linux*] && ![istarget *abi64] &&
     (![board_info [target_info name] exists multilib_flags] ||
      ![string match "*-mabi" [board_info [target_info name] multilib_flags]])
    } {
