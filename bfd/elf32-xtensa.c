@@ -2178,7 +2178,7 @@ bfd_elf_xtensa_reloc (bfd *abfd,
     }
 
   /* Is the address of the relocation really within the section?  */
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (howto, abfd, input_section, octets))
     return bfd_reloc_outofrange;
 
   /* Work out which section the relocation is targeted at and the

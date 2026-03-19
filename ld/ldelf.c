@@ -2242,14 +2242,17 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
 	   lang_insert_orphan to create a new output section.  */
 	constraint = SPECIAL;
 
-	/* Check to see if we already have an output section statement
-	   with this name, and its bfd section has compatible flags.
-	   If the section already exists but does not have any flags
-	   set, then it has been created by the linker, possibly as a
-	   result of a --section-start command line switch.  */
+	/* Check to see if we already have an output section statement with
+	   this name, and it was either present in the script with a special
+	   type (knowing that lang_insert_orphan only creates normal_section
+	   output sections) or its BFD section has compatible flags.  If the
+	   section already exists but does not have any flags set, then it has
+	   been created by the linker, possibly as a result of --section-start
+	   command line switch.  */
 	if (os->bfd_section != NULL
 	    && !bfd_is_abs_section (os->bfd_section)
-	    && (os->bfd_section->flags == 0
+	    && (os->sectype >= noload_section
+		|| os->bfd_section->flags == 0
 		|| (((s->flags ^ os->bfd_section->flags)
 		     & (SEC_LOAD | SEC_ALLOC)) == 0
 		    && (!elfinput
