@@ -213,14 +213,11 @@ tui_rl_delete_other_windows (int notused1, int notused2)
 static int
 tui_rl_other_window (int count, int key)
 {
-  struct tui_win_info *win_info;
-
   if (!tui_active)
     tui_rl_switch_mode (0 /* notused */, 0 /* notused */);
 
-  win_info = tui_next_win (tui_win_with_focus ());
-  if (win_info)
-    tui_set_win_focus_to (win_info);
+  tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
+
   return 0;
 }
 
