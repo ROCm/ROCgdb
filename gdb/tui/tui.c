@@ -219,9 +219,8 @@ tui_rl_delete_other_windows (int notused1, int notused2)
 static int
 tui_rl_other_window (int count, int key)
 {
-  tui_try_activate ();
-
-  tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
+  if (tui_try_activate ())
+    tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
 
   return 0;
 }
@@ -271,7 +270,8 @@ tui_rl_command_mode (int count, int key)
 static int
 tui_rl_next_keymap (int notused1, int notused2)
 {
-  tui_try_activate ();
+  if (!tui_try_activate ())
+    return 0;
 
   if (rl_end)
     {
