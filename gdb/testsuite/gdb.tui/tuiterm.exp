@@ -802,6 +802,25 @@ proc test_attrs {} {
     gdb_assert { [string equal $line "<reverse:1>a<reverse:0>a  "] }
 }
 
+proc_with_prefix test_with_term {} {
+    with_test_prefix pre {
+	gdb_assert {$Term::_TERM == ""}
+    }
+
+    set pre_env $::env(TERM)
+    Term::with_term foo {
+	Term::with_tuiterm 24 80 {
+	    gdb_assert {$::env(TERM) == "foo"}
+	    gdb_assert {$Term::_TERM == "foo"}
+	}
+    }
+
+    with_test_prefix post {
+	gdb_assert {$::env(TERM) == $pre_env}
+	gdb_assert {$Term::_TERM == ""}
+    }
+}
+
 # Run proc TEST_PROC_NAME with a "small" terminal.
 
 proc run_one_test_small { test_proc_name } {
@@ -856,3 +875,5 @@ foreach_with_prefix test {
 }
 
 test_attrs
+
+test_with_term
