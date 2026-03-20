@@ -142,12 +142,10 @@ fbsd_nat_target::pid_to_exec_file (int pid)
 }
 
 /* Iterate over all the memory regions in the current inferior,
-   calling FUNC for each memory region.  DATA is passed as the last
-   argument to FUNC.  */
+   calling FUNC for each memory region.  */
 
 bool
-fbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
-				      void *data)
+fbsd_nat_target::find_memory_regions (find_memory_region_ftype func)
 {
   pid_t pid = inferior_ptid.pid ();
   struct kinfo_vmentry *kve;
@@ -188,7 +186,7 @@ fbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
 	 Pass MODIFIED as true, we do not know the real modification state.  */
       func (kve->kve_start, size, kve->kve_protection & KVME_PROT_READ,
 	    kve->kve_protection & KVME_PROT_WRITE,
-	    kve->kve_protection & KVME_PROT_EXEC, true, false, data);
+	    kve->kve_protection & KVME_PROT_EXEC, true, false);
     }
   return true;
 }

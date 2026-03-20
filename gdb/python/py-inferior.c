@@ -163,19 +163,18 @@ python_inferior_exit (struct inferior *inf)
     gdbpy_print_stack ();
 }
 
-/* Callback used to notify Python listeners about new objfiles loaded in the
-   inferior.  OBJFILE may be NULL which means that the objfile list has been
-   cleared (emptied).  */
+/* Callback used to notify Python listeners that OBJFILE has been loaded in
+   to the current inferior.  */
 
 static void
-python_new_objfile (struct objfile *objfile)
+python_new_objfile (struct objfile &objfile)
 {
   if (!gdb_python_initialized)
     return;
 
-  gdbpy_enter enter_py (objfile->arch ());
+  gdbpy_enter enter_py (objfile.arch ());
 
-  if (emit_new_objfile_event (objfile) < 0)
+  if (emit_new_objfile_event (&objfile) < 0)
     gdbpy_print_stack ();
 }
 

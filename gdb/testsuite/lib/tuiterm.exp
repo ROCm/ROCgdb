@@ -103,9 +103,10 @@ proc Term::_ctl_0x07 {} {
 
 # Return 1 if tuiterm has the bw/auto_left_margin enabled.
 proc Term::_have_bw {} {
+    variable _TERM
     return [expr \
-		{ [string equal $Term::_TERM "ansiw"] \
-		      || [string equal $Term::_TERM "ansis"] }]
+		{ [string equal $_TERM "ansiw"] \
+		      || [string equal $_TERM "ansis"] }]
 }
 
 # Backspace.
@@ -1236,8 +1237,9 @@ proc Term::wait_for_line { regexp {pos ""} } {
 # In BODY, when using Term::with_tuiterm, use TERM instead of the default.
 
 proc Term::with_term { term body } {
-    save_vars { Term::_TERM } {
-	set Term::_TERM $term
+    variable _TERM
+    save_vars { _TERM } {
+	set _TERM $term
 	uplevel $body
     }
 }
@@ -1247,16 +1249,16 @@ proc Term::with_term { term body } {
 proc Term::with_tuiterm {rows cols body} {
     global env stty_init
     variable _TERM
-    save_vars {env(TERM) env(NO_COLOR) stty_init} {
-	if { $Term::_TERM != "" } {
-	    setenv TERM $Term::_TERM
+    save_vars {env(TERM) _TERM env(NO_COLOR) stty_init} {
+	if { $_TERM != "" } {
+	    setenv TERM $_TERM
 	} elseif { [ishost *-*-*bsd*] } {
 	    setenv TERM ansiw
 	} else {
 	    setenv TERM ansi
 	}
 	# Save active TERM variable.
-	set Term::_TERM $env(TERM)
+	set _TERM $env(TERM)
 
 	setenv NO_COLOR ""
 	_setup $rows $cols

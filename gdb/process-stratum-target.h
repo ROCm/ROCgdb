@@ -80,7 +80,7 @@ public:
 		    bool detach_on_fork) override;
 
   /* Default implementation for find_memory_regions.  */
-  bool find_memory_regions (find_memory_region_ftype func, void *arg) override;
+  bool find_memory_regions (find_memory_region_ftype func) override;
 
   /* Default implementation for make_corefile_notes.  */
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *obfd,

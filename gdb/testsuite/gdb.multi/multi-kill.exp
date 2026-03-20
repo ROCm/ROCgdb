@@ -41,6 +41,8 @@ save_vars { GDBFLAGS } {
 
 # Wrap the entire test in a namespace to avoid contaminating other tests.
 namespace eval $testfile {
+    upvar #0 ::gdb_prompt gdb_prompt
+    upvar #0 ::decimal decimal
 
 # Start inferior NUM and record its PID in the TESTPID array.
 

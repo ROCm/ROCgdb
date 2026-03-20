@@ -32,6 +32,9 @@ if {[prepare_for_testing "failed to prepare" $exefile \
 
 # Wrap the entire test in a namespace to avoid contaminating other tests.
 namespace eval $testfile {
+    upvar #0 ::srcfile srcfile
+    upvar #0 ::gdb_prompt gdb_prompt
+    upvar #0 ::exefile exefile
 
     # Test the given (explicit) LINESPEC which should cause gdb to break
     # at LOCATION.
@@ -232,7 +235,7 @@ namespace eval $testfile {
 	}
 
 	with_test_prefix "complete unique file name" {
-	    foreach qc $completion::maybe_quoted_list {
+	    foreach qc $::completion::maybe_quoted_list {
 		set cmd "break -source ${qc}3explicit.c${qc}"
 		test_gdb_complete_unique \
 		    "break -source ${qc}3ex" \
@@ -342,7 +345,7 @@ namespace eval $testfile {
 	}
 
 	with_test_prefix "complete unique label name" {
-	    foreach qc $completion::maybe_quoted_list {
+	    foreach qc $::completion::maybe_quoted_list {
 		test_gdb_complete_unique \
 		    "break -function myfunction -label ${qc}to" \
 		    "break -function myfunction -label ${qc}top${qc}"

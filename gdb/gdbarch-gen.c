@@ -3932,13 +3932,13 @@ gdbarch_find_memory_regions_p (struct gdbarch *gdbarch)
 }
 
 bool
-gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data)
+gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->find_memory_regions != nullptr);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_find_memory_regions called\n");
-  return gdbarch->find_memory_regions (gdbarch, func, data);
+  return gdbarch->find_memory_regions (gdbarch, func);
 }
 
 void
@@ -3955,14 +3955,14 @@ gdbarch_rocm_find_memory_regions_p (struct gdbarch *gdbarch)
   return gdbarch->rocm_find_memory_regions != nullptr;
 }
 
-int
-gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data)
+bool
+gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->rocm_find_memory_regions != nullptr);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_rocm_find_memory_regions called\n");
-  return gdbarch->rocm_find_memory_regions (gdbarch, func, data);
+  return gdbarch->rocm_find_memory_regions (gdbarch, func);
 }
 
 void

@@ -1467,9 +1467,9 @@ ada_tasks_clear_pspace_data (program_space *pspace)
 /* Called when a new objfile was added.  */
 
 static void
-ada_tasks_new_objfile_observer (objfile *objfile)
+ada_tasks_new_objfile_observer (objfile &objfile)
 {
-  ada_tasks_clear_pspace_data (objfile->pspace ());
+  ada_tasks_clear_pspace_data (objfile.pspace ());
 }
 
 /* The qcs command line flags for the "task apply" commands.  Keep

@@ -419,14 +419,13 @@ make_output_phdrs (bfd *obfd, asection *osec)
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
-   DATA is 'bfd *' for the core file GDB is creating.  */
+   OBFD is the core file GDB is creating.  */
 
 static bool
 gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
-		       bool write, bool exec, bool modified, bool memory_tagged,
-		       void *data)
+		       bool write, bool exec, bool modified,
+		       bool memory_tagged, bfd *obfd)
 {
-  bfd *obfd = (bfd *) data;
   asection *osec;
   flagword flags = SEC_ALLOC | SEC_HAS_CONTENTS | SEC_LOAD;
 
@@ -509,19 +508,17 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
-   DATA is 'bfd *' for the core file GDB is creating.  */
+   OBFD is the core file GDB is creating.  */
 
 static bool
 gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 				      bool read, bool write, bool exec,
 				      bool modified, bool memory_tagged,
-				      void *data)
+				      bfd *obfd)
 {
   /* Are there memory tags in this particular memory map entry?  */
   if (!memory_tagged)
     return true;
-
-  bfd *obfd = (bfd *) data;
 
   /* Ask the architecture to create a memory tag section for this particular
      memory map entry.  It will be populated with contents later, as we can't
@@ -549,7 +546,8 @@ gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 }
 
 bool
-objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
+objfile_find_memory_regions (struct target_ops *self,
+			     find_memory_region_ftype func)
 {
   /* Use objfile data to create memory sections.  */
   bfd_vma temp_bottom = 0, temp_top = 0;
@@ -573,8 +571,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 			     (flags & SEC_READONLY) == 0, /* Writable.  */
 			     (flags & SEC_CODE) != 0, /* Executable.  */
 			     true, /* MODIFIED is unknown, pass it as true.  */
-			     false, /* No memory tags in the object file.  */
-			     obfd);
+			     false /* No memory tags in the object file.  */);
 	    if (!ret)
 	      return ret;
 	  }
@@ -587,8 +584,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 		true,  /* Stack section will be writable.  */
 		false, /* Stack section will not be executable.  */
 		true,  /* Stack section will be modified.  */
-		false, /* No memory tags in the object file.  */
-		obfd))
+		false  /* No memory tags in the object file.  */))
     return false;
 
   /* Make a heap segment.  */
@@ -599,8 +595,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 		true,  /* Heap section will be writable.  */
 		false, /* Heap section will not be executable.  */
 		true,  /* Heap section will be modified.  */
-		false, /* No memory tags in the object file.  */
-		obfd))
+		false  /* No memory tags in the object file.  */))
     return false;
 
   return true;
@@ -870,12 +865,27 @@ gcore_copy_memtag_section_callback (bfd *obfd, asection *osec)
 static bool
 gcore_memory_sections (bfd *obfd)
 {
-  if (!target_find_memory_regions (gcore_create_callback, obfd))
+  auto cb = [obfd] (CORE_ADDR vaddr, unsigned long size, bool read, bool write,
+		    bool exec, bool modified, bool memory_tagged)
+    {
+      return gcore_create_callback (vaddr, size, read, write, exec, modified,
+				    memory_tagged, obfd);
+    };
+
+  if (!target_find_memory_regions (cb))
     return false;			/* FIXME: error return/msg?  */
 
+  auto cb_memtag = [obfd] (CORE_ADDR vaddr, unsigned long size, bool read,
+			   bool write, bool exec, bool modified,
+			   bool memory_tagged)
+    {
+      return gcore_create_memtag_section_callback (vaddr, size, read, write,
+						   exec, modified,
+						   memory_tagged, obfd);
+    };
+
   /* Take care of dumping memory tags, if there are any.  */
-  if (!target_find_memory_regions (gcore_create_memtag_section_callback,
-				   obfd))
+  if (!target_find_memory_regions (cb_memtag))
     return false;
 
   /* Record phdrs for section-to-segment mapping.  */

@@ -1775,7 +1775,7 @@ Find core file memory regions
 """,
     type="bool",
     name="find_memory_regions",
-    params=[("find_memory_region_ftype", "func"), ("void *", "data")],
+    params=[("find_memory_region_ftype", "func")],
     predicate=True,
 )
 
@@ -1783,9 +1783,9 @@ Method(
     comment="""
 Find core file memory regions for the ROCm platform
 """,
-    type="int",
+    type="bool",
     name="rocm_find_memory_regions",
-    params=[("find_memory_region_ftype", "func"), ("void *", "data")],
+    params=[("find_memory_region_ftype", "func")],
     predicate=True,
 )
 

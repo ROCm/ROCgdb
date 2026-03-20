@@ -417,9 +417,9 @@ target_thread_architecture (ptid_t ptid)
 /* See target.h.  */
 
 bool
-target_find_memory_regions (find_memory_region_ftype func, void *data)
+target_find_memory_regions (find_memory_region_ftype func)
 {
-  return current_inferior ()->top_target ()->find_memory_regions (func, data);
+  return current_inferior ()->top_target ()->find_memory_regions (func);
 }
 
 /* See target.h.  */
@@ -3775,8 +3775,7 @@ default_lane_workgroup_pos_str (struct target_ops *ops, thread_info *thr, int la
 
 /* Error-catcher for target_find_memory_regions.  */
 static bool
-dummy_find_memory_regions (struct target_ops *self,
-			   find_memory_region_ftype ignore1, void *ignore2)
+dummy_find_memory_regions (target_ops *self, find_memory_region_ftype ignore1)
 {
   error (_("Command not implemented for this target."));
 }

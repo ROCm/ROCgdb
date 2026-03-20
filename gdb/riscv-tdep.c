@@ -1178,16 +1178,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
   print_raw_format = (val->entirely_available ()
 		      && !val->optimized_out ());
 
-  if (regtype->code () == TYPE_CODE_FLT
-      || (regtype->code () == TYPE_CODE_UNION
-	  && regtype->num_fields () == 2
-	  && regtype->field (0).type ()->code () == TYPE_CODE_FLT
-	  && regtype->field (1).type ()->code () == TYPE_CODE_FLT)
-      || (regtype->code () == TYPE_CODE_UNION
-	  && regtype->num_fields () == 3
-	  && regtype->field (0).type ()->code () == TYPE_CODE_FLT
-	  && regtype->field (1).type ()->code () == TYPE_CODE_FLT
-	  && regtype->field (2).type ()->code () == TYPE_CODE_FLT))
+  if (riscv_is_fp_regno_p (regnum))
     {
       struct value_print_options opts;
       const gdb_byte *valaddr = val->contents_for_printing ().data ();

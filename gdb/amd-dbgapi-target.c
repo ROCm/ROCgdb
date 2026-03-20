@@ -390,7 +390,7 @@ struct amd_dbgapi_target final : public target_ops
   gdb::unique_xmalloc_ptr<char>
   make_corefile_notes (bfd *obfd, int *note_size) override;
 
-  bool find_memory_regions (find_memory_region_ftype fun, void *arg) override;
+  bool find_memory_regions (find_memory_region_ftype func) override;
 
   void prepare_to_generate_core () override;
   void done_generating_core () override;
@@ -3505,10 +3505,9 @@ amd_dbgapi_target::close ()
 }
 
 bool
-amd_dbgapi_target::find_memory_regions (find_memory_region_ftype fun,
-					void *arg)
+amd_dbgapi_target::find_memory_regions (find_memory_region_ftype func)
 {
-  if (!beneath ()->find_memory_regions (fun, arg))
+  if (!beneath ()->find_memory_regions (func))
     return false;
 
   /* On Linux, all the GPU memory is mapped in the host process's address
@@ -3526,7 +3525,7 @@ amd_dbgapi_target::find_memory_regions (find_memory_region_ftype fun,
      it.  */
   gdbarch *arch = current_inferior ()->arch ();
   if (gdbarch_rocm_find_memory_regions_p (arch))
-    return gdbarch_rocm_find_memory_regions (arch, fun, arg) == 0;
+    return gdbarch_rocm_find_memory_regions (arch, func);
 
   return true;
 }

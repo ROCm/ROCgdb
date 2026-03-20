@@ -27,6 +27,8 @@ if {[prepare_for_testing "failed to prepare" $exefile $srcfile \
 
 # Wrap this whole test in a namespace to avoid contaminating other tests.
 namespace eval $testfile {
+    upvar #0 ::srcfile srcfile
+
     # Test the given (explicit) LINESPEC which should cause gdb to break
     # at LOCATION.
     proc test_breakpoint {linespec location} {

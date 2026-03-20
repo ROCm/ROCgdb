@@ -1044,16 +1044,16 @@ void set_gdbarch_make_corefile_notes (struct gdbarch *gdbarch, gdbarch_make_core
 
 bool gdbarch_find_memory_regions_p (struct gdbarch *gdbarch);
 
-using gdbarch_find_memory_regions_ftype = bool (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
-bool gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+using gdbarch_find_memory_regions_ftype = bool (struct gdbarch *gdbarch, find_memory_region_ftype func);
+bool gdbarch_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func);
 void set_gdbarch_find_memory_regions (struct gdbarch *gdbarch, gdbarch_find_memory_regions_ftype *find_memory_regions);
 
 /* Find core file memory regions for the ROCm platform */
 
 bool gdbarch_rocm_find_memory_regions_p (struct gdbarch *gdbarch);
 
-using gdbarch_rocm_find_memory_regions_ftype = int (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
-int gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func, void *data);
+using gdbarch_rocm_find_memory_regions_ftype = bool (struct gdbarch *gdbarch, find_memory_region_ftype func);
+bool gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, find_memory_region_ftype func);
 void set_gdbarch_rocm_find_memory_regions (struct gdbarch *gdbarch, gdbarch_rocm_find_memory_regions_ftype *rocm_find_memory_regions);
 
 /* Given a bfd OBFD, segment ADDRESS and SIZE, create a memory tag section to be dumped to a core file */

@@ -1624,28 +1624,25 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 
 static bool
 linux_find_memory_regions (struct gdbarch *gdbarch,
-			   find_memory_region_ftype func, void *data)
+			   find_memory_region_ftype func)
 {
   auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
 		 bool write, bool exec, bool modified, bool memory_tagged,
 		 const std::string &filename)
-    {
-      return func (vaddr, size, read, write, exec, modified, memory_tagged,
-		   data);
-    };
+    { return func (vaddr, size, read, write, exec, modified, memory_tagged); };
 
   return linux_find_memory_regions_full (gdbarch, dump_mapping_p, cb);
 }
 
-/* Implement the rocm_find_memory_region gdbarch coolback for linux.
+/* Implement the rocm_find_memory_region gdbarch callback for linux.
 
    For a ROCm process on Linux, GPU memory is mapped in the process address
    space via /proc/dri/renderDXXX nodes.  Make sure to include those mappings
    when generating a ROCm core dump so we include GPU memory.  */
 
-static int
+static bool
 linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
-				find_memory_region_ftype func, void *data)
+				find_memory_region_ftype func)
 {
   auto accept_dri_render_nodes
     = [] (filter_flags filterflags, const smaps_data &map) -> bool
@@ -1658,12 +1655,11 @@ linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
 		 bool write, bool exec, bool modified, bool memory_tagged,
 		 const std::string &filename)
     {
-      return func (vaddr, size, read, write, exec, modified, memory_tagged,
-		   data);
+      return func (vaddr, size, read, write, exec, modified, memory_tagged);
     };
 
   return linux_find_memory_regions_full (gdbarch,
-					 accept_dri_render_nodes, cb) ? 0 : 1;
+					 accept_dri_render_nodes, cb);
 }
 
 /* Write the file mapping data to the core file, if possible.  OBFD is

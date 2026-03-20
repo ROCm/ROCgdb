@@ -16224,9 +16224,9 @@ remote_objfile_changed_check_symbols (program_space *pspace)
 /* Function to be called whenever a new objfile (shlib) is detected.  */
 
 static void
-remote_new_objfile (struct objfile *objfile)
+remote_new_objfile (struct objfile &objfile)
 {
-  remote_objfile_changed_check_symbols (objfile->pspace ());
+  remote_objfile_changed_check_symbols (objfile.pspace ());
 }
 
 /* Pull all the tracepoints defined on the target and create local

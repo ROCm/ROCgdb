@@ -34,6 +34,7 @@
 #include "gdbtypes.h"
 #include "expression.h"
 #include "solib.h"
+#include "find-memory-region.h"
 
 struct floatformat;
 struct ui_file;

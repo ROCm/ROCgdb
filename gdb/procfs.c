@@ -134,8 +134,7 @@ public:
   { return tc_schedlock; }
 
   /* find_memory_regions support method for gcore */
-  bool find_memory_regions (find_memory_region_ftype func, void *data)
-    override;
+  bool find_memory_regions (find_memory_region_ftype func) override;
 
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
 
@@ -3107,10 +3106,8 @@ procfs_target::region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
 
 static bool
 iterate_over_mappings (procinfo *pi, find_memory_region_ftype child_func,
-		       void *data,
 		       bool (*func) (struct prmap *map,
-				     find_memory_region_ftype child_func,
-				     void *data))
+				     find_memory_region_ftype child_func))
 {
   char pathname[MAX_PROC_NAME_SIZE];
   struct prmap *prmaps;
@@ -3139,7 +3136,7 @@ iterate_over_mappings (procinfo *pi, find_memory_region_ftype child_func,
     proc_error (pi, "iterate_over_mappings (read)", __LINE__);
 
   for (prmap = prmaps; nmap > 0; prmap++, nmap--)
-    if (!func (prmap, child_func, data))
+    if (!func (prmap, child_func))
       return false;
 
   return true;
@@ -3150,17 +3147,15 @@ iterate_over_mappings (procinfo *pi, find_memory_region_ftype child_func,
    Returns the value returned by the callback.  */
 
 static bool
-find_memory_regions_callback (struct prmap *map,
-			      find_memory_region_ftype func, void *data)
+find_memory_regions_callback (struct prmap *map, find_memory_region_ftype func)
 {
-  return (*func) ((CORE_ADDR) map->pr_vaddr,
-		  map->pr_size,
-		  (map->pr_mflags & MA_READ) != 0,
-		  (map->pr_mflags & MA_WRITE) != 0,
-		  (map->pr_mflags & MA_EXEC) != 0,
-		  true, /* MODIFIED is unknown, pass it as true.  */
-		  false,
-		  data);
+  return func ((CORE_ADDR) map->pr_vaddr,
+	       map->pr_size,
+	       (map->pr_mflags & MA_READ) != 0,
+	       (map->pr_mflags & MA_WRITE) != 0,
+	       (map->pr_mflags & MA_EXEC) != 0,
+	       true, /* MODIFIED is unknown, pass it as true.  */
+	       false);
 }
 
 /* External interface.  Calls a callback function once for each
@@ -3176,12 +3171,11 @@ find_memory_regions_callback (struct prmap *map,
    the callback.  */
 
 bool
-procfs_target::find_memory_regions (find_memory_region_ftype func, void *data)
+procfs_target::find_memory_regions (find_memory_region_ftype func)
 {
   procinfo *pi = find_procinfo_or_die (inferior_ptid.pid (), 0);
 
-  return iterate_over_mappings (pi, func, data,
-				find_memory_regions_callback);
+  return iterate_over_mappings (pi, func, find_memory_regions_callback);
 }
 
 /* Returns an ascii representation of a memory mapping's flags.  */

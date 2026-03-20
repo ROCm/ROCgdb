@@ -2530,7 +2530,7 @@ arm_obj_section_from_vma (struct objfile *objfile, bfd_vma vma)
    retrieval by the arm_find_exidx_entry routine.  */
 
 static void
-arm_exidx_new_objfile (struct objfile *objfile)
+arm_exidx_new_objfile (struct objfile &objfile)
 {
   struct arm_exidx_data *data;
   asection *exidx, *extab;
@@ -2538,11 +2538,11 @@ arm_exidx_new_objfile (struct objfile *objfile)
   LONGEST i;
 
   /* If we've already touched this file, do nothing.  */
-  if (arm_exidx_data_key.get (objfile->obfd.get ()) != nullptr)
+  if (arm_exidx_data_key.get (objfile.obfd.get ()) != nullptr)
     return;
 
   /* Read contents of exception table and index.  */
-  exidx = bfd_get_section_by_name (objfile->obfd.get (),
+  exidx = bfd_get_section_by_name (objfile.obfd.get (),
 				   ELF_STRING_ARM_unwind);
   gdb::byte_vector exidx_data;
   if (exidx)
@@ -2550,35 +2550,35 @@ arm_exidx_new_objfile (struct objfile *objfile)
       exidx_vma = bfd_section_vma (exidx);
       exidx_data.resize (bfd_section_size (exidx));
 
-      if (!bfd_get_section_contents (objfile->obfd.get (), exidx,
+      if (!bfd_get_section_contents (objfile.obfd.get (), exidx,
 				     exidx_data.data (), 0,
 				     exidx_data.size ()))
 	return;
     }
 
-  extab = bfd_get_section_by_name (objfile->obfd.get (), ".ARM.extab");
+  extab = bfd_get_section_by_name (objfile.obfd.get (), ".ARM.extab");
   gdb::byte_vector extab_data;
   if (extab)
     {
       extab_vma = bfd_section_vma (extab);
       extab_data.resize (bfd_section_size (extab));
 
-      if (!bfd_get_section_contents (objfile->obfd.get (), extab,
+      if (!bfd_get_section_contents (objfile.obfd.get (), extab,
 				     extab_data.data (), 0,
 				     extab_data.size ()))
 	return;
     }
 
   /* Allocate exception table data structure.  */
-  data = &arm_exidx_data_key.emplace (objfile->obfd.get ());
-  data->section_maps.resize (objfile->obfd->section_count);
+  data = &arm_exidx_data_key.emplace (objfile.obfd.get ());
+  data->section_maps.resize (objfile.obfd->section_count);
 
   /* Fill in exception table.  */
   for (i = 0; i < exidx_data.size () / 8; i++)
     {
       struct arm_exidx_entry new_exidx_entry;
-      bfd_vma idx = bfd_h_get_32 (objfile->obfd, exidx_data.data () + i * 8);
-      bfd_vma val = bfd_h_get_32 (objfile->obfd,
+      bfd_vma idx = bfd_h_get_32 (objfile.obfd, exidx_data.data () + i * 8);
+      bfd_vma val = bfd_h_get_32 (objfile.obfd,
 				  exidx_data.data () + i * 8 + 4);
       bfd_vma addr = 0, word = 0;
       int n_bytes = 0, n_words = 0;
@@ -2590,7 +2590,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
       idx += exidx_vma + i * 8;
 
       /* Find section containing function and compute section offset.  */
-      sec = arm_obj_section_from_vma (objfile, idx);
+      sec = arm_obj_section_from_vma (&objfile, idx);
       if (sec == NULL)
 	continue;
       idx -= bfd_section_vma (sec->the_bfd_section);
@@ -2615,7 +2615,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 
 	  if (addr >= extab_vma && addr + 4 <= extab_vma + extab_data.size ())
 	    {
-	      word = bfd_h_get_32 (objfile->obfd,
+	      word = bfd_h_get_32 (objfile.obfd,
 				   extab_data.data () + addr - extab_vma);
 	      addr += 4;
 
@@ -2643,7 +2643,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 
 		  /* Check whether we've got one of the variants of the
 		     GNU personality routines.  */
-		  pers_sec = arm_obj_section_from_vma (objfile, pers);
+		  pers_sec = arm_obj_section_from_vma (&objfile, pers);
 		  if (pers_sec)
 		    {
 		      static const char *personality[] =
@@ -2660,7 +2660,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 
 		      for (k = 0; personality[k]; k++)
 			if (lookup_minimal_symbol_by_pc_name
-			      (pc, personality[k], objfile))
+			      (pc, personality[k], &objfile))
 			  {
 			    gnu_personality = 1;
 			    break;
@@ -2673,7 +2673,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 		  if (gnu_personality
 		      && addr + 4 <= extab_vma + extab_data.size ())
 		    {
-		      word = bfd_h_get_32 (objfile->obfd,
+		      word = bfd_h_get_32 (objfile.obfd,
 					   (extab_data.data ()
 					    + addr - extab_vma));
 		      addr += 4;
@@ -2696,7 +2696,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
       if (n_bytes || n_words)
 	{
 	  gdb_byte *p = entry
-	    = (gdb_byte *) obstack_alloc (&objfile->per_bfd->storage_obstack,
+	    = (gdb_byte *) obstack_alloc (&objfile.per_bfd->storage_obstack,
 					  n_bytes + n_words * 4 + 1);
 
 	  while (n_bytes--)
@@ -2704,7 +2704,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
 
 	  while (n_words--)
 	    {
-	      word = bfd_h_get_32 (objfile->obfd,
+	      word = bfd_h_get_32 (objfile.obfd,
 				   extab_data.data () + addr - extab_vma);
 	      addr += 4;
 

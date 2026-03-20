@@ -38,7 +38,7 @@
 #include "tui/tui-wingeneral.h"
 
 static void
-tui_new_objfile_hook (struct objfile* objfile)
+tui_new_objfile_hook (struct objfile &objfile)
 {
   if (tui_active)
     tui_display_main ();

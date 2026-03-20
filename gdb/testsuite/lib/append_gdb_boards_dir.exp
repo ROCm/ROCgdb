@@ -45,4 +45,4 @@ proc append_gdb_boards_dir { name1 name2 op } {
     }
     lappend boards_dir "${gdb_boards_dir}"
 }
-trace variable "boards_dir" w append_gdb_boards_dir
+trace add variable "boards_dir" {write} append_gdb_boards_dir

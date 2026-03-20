@@ -261,13 +261,13 @@ proc cp_test_ptype_class { in_exp in_testname in_key in_tag in_class_table
 
     global cp_class_table_history
     if {$in_class_table == "ibid"} {
-	if {![info exists cp_class_table_history("$in_key,$in_tag")]} {
+	if {![info exists cp_class_table_history($in_key,$in_tag)]} {
 	    fail "$in_testname // bad ibid"
 	    return false
 	}
-	set in_class_table $cp_class_table_history("$in_key,$in_tag")
+	set in_class_table $cp_class_table_history($in_key,$in_tag)
     } else {
-	set cp_class_table_history("$in_key,$in_tag") $in_class_table
+	set cp_class_table_history($in_key,$in_tag) $in_class_table
     }
 
     # Split the class table into separate tables.

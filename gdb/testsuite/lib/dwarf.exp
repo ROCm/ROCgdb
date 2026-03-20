@@ -2763,7 +2763,8 @@ namespace eval Dwarf {
 	    variable _line_include_dirs
 	    lappend _line_include_dirs $dirname
 
-	    if { $Dwarf::_line_unit_version >= 5 } {
+	    variable _line_unit_version
+	    if { $_line_unit_version >= 5 } {
 		return [expr {[llength $_line_include_dirs] - 1}]
 	    } else {
 		return [llength $_line_include_dirs]
@@ -2778,7 +2779,8 @@ namespace eval Dwarf {
 	    lappend _line_file_names $filename $diridx
 
 	    set nr_filenames [expr {[llength $_line_file_names] / 2}]
-	    if { $Dwarf::_line_unit_version >= 5 } {
+	    variable _line_unit_version
+	    if { $_line_unit_version >= 5 } {
 		return [expr {$nr_filenames - 1}]
 	    } else {
 		return $nr_filenames

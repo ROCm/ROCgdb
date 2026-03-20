@@ -1102,7 +1102,7 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
   if (objfile->sf != nullptr)
     finish_new_objfile (objfile, add_flags);
 
-  gdb::observers::new_objfile.notify (objfile);
+  gdb::observers::new_objfile.notify (*objfile);
 
   return objfile;
 }
@@ -2662,11 +2662,11 @@ reread_symbols (int from_tty)
     {
       clear_symtab_users (0);
 
-      /* The registry for each objfile was cleared and
-	 gdb::observers::new_objfile.notify (NULL) has been called by
+      /* The registry for each objfile was cleared and the
+	 all_objfiles_removed observer was notified by the call to
 	 clear_symtab_users above.  Notify the new files now.  */
       for (auto iter : new_objfiles)
-	gdb::observers::new_objfile.notify (iter);
+	gdb::observers::new_objfile.notify (*iter);
     }
 }
 

@@ -1199,23 +1199,23 @@ auto_load_section_scripts (struct objfile *objfile, const char *section_name)
    2) from .debug_gdb_scripts section  */
 
 void
-load_auto_scripts_for_objfile (struct objfile *objfile)
+load_auto_scripts_for_objfile (struct objfile &objfile)
 {
   /* Return immediately if auto-loading has been globally disabled.
      This is to handle sequencing of operations during gdb startup.
      Also return immediately if OBJFILE was not created from a file
      on the local filesystem.  */
   if (!global_auto_load
-      || (objfile->flags & OBJF_NOT_FILENAME) != 0
-      || is_target_filename (objfile->original_name))
+      || (objfile.flags & OBJF_NOT_FILENAME) != 0
+      || is_target_filename (objfile.original_name))
     return;
 
   /* Load any extension language scripts for this objfile.
      E.g., foo-gdb.gdb, foo-gdb.py.  */
-  auto_load_ext_lang_scripts_for_objfile (objfile);
+  auto_load_ext_lang_scripts_for_objfile (&objfile);
 
   /* Load any scripts mentioned in AUTO_SECTION_NAME (.debug_gdb_scripts).  */
-  auto_load_section_scripts (objfile, AUTO_SECTION_NAME);
+  auto_load_section_scripts (&objfile, AUTO_SECTION_NAME);
 }
 
 /* Collect scripts to be printed in a vec.  */

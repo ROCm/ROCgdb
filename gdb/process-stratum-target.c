@@ -110,14 +110,13 @@ process_stratum_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
 /* See process-stratum-target.h.  */
 
 bool
-process_stratum_target::find_memory_regions (find_memory_region_ftype func,
-					     void *arg)
+process_stratum_target::find_memory_regions (find_memory_region_ftype func)
 {
   gdbarch *arch = current_inferior ()->arch ();
   if (gdbarch_find_memory_regions_p (arch))
-    return gdbarch_find_memory_regions (arch, func, arg);
+    return gdbarch_find_memory_regions (arch, func);
 
-  return objfile_find_memory_regions (func, arg);
+  return objfile_find_memory_regions (this, func);
 }
 
 /* See process-stratum-target.h.  */

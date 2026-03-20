@@ -666,7 +666,7 @@ check_for_thread_db (void)
    the library gets mapped and the symbol table is read in.  */
 
 static void
-sol_thread_new_objfile (struct objfile *objfile)
+sol_thread_new_objfile (struct objfile &objfile)
 {
   check_for_thread_db ();
 }

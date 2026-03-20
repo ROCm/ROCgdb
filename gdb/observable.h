@@ -113,7 +113,7 @@ extern observable<program_space *, const solib &/* solib */,
 		  bool /* still_in_use */, bool /* silent */> solib_unloaded;
 
 /* The symbol file specified by OBJFILE has been loaded.  */
-extern observable<struct objfile */* objfile */> new_objfile;
+extern observable<struct objfile &/* objfile */> new_objfile;
 
 /*  All objfiles from PSPACE were removed.  */
 extern observable<program_space */* pspace */> all_objfiles_removed;

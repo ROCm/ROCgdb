@@ -62,7 +62,7 @@ set_can_use_agent (const char *args, int from_tty, struct cmd_list_element *c)
 }
 
 static void
-agent_new_objfile (struct objfile *objfile)
+agent_new_objfile (struct objfile &objfile)
 {
   if (agent_loaded_p ())
     return;
@@ -70,7 +70,7 @@ agent_new_objfile (struct objfile *objfile)
   if (can_use_agent == can_use_agent_off)
     return;
 
-  agent_look_up_symbols (objfile);
+  agent_look_up_symbols (&objfile);
 }
 
 INIT_GDB_FILE (agent)

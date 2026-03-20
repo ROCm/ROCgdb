@@ -63,7 +63,7 @@ proc test_1 { name dwarf_version offset_size addr_size ref_addr_size two_cu } {
 		}
 
 		pointer_label: pointer_type {
-		     DW_AT_byte_size $Dwarf::_cu_addr_size sdata
+		     DW_AT_byte_size $::Dwarf::_cu_addr_size sdata
 		     DW_AT_type	 :$struct_label
 		}
 
