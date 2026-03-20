@@ -821,6 +821,25 @@ proc_with_prefix test_with_term {} {
     }
 }
 
+proc_with_prefix test_with_tuiterm {} {
+    with_test_prefix pre {
+	gdb_assert {$Term::_TERM == ""}
+    }
+
+    save_vars ::env(TERM) {
+	setenv TERM foo
+	Term::with_tuiterm 24 80 {
+	    gdb_assert {$::env(TERM) != "foo"}
+	    gdb_assert {$Term::_TERM != "foo"}
+	}
+	gdb_assert {$::env(TERM) == "foo"}
+    }
+
+    with_test_prefix post {
+	gdb_assert {$Term::_TERM == ""}
+    }
+}
+
 # Run proc TEST_PROC_NAME with a "small" terminal.
 
 proc run_one_test_small { test_proc_name } {
@@ -877,3 +896,4 @@ foreach_with_prefix test {
 test_attrs
 
 test_with_term
+test_with_tuiterm

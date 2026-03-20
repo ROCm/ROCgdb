@@ -1247,7 +1247,7 @@ proc Term::with_term { term body } {
 proc Term::with_tuiterm {rows cols body} {
     global env stty_init
     variable _TERM
-    save_vars {env(TERM) env(NO_COLOR) stty_init} {
+    save_vars {env(TERM) _TERM env(NO_COLOR) stty_init} {
 	if { $Term::_TERM != "" } {
 	    setenv TERM $Term::_TERM
 	} elseif { [ishost *-*-*bsd*] } {
