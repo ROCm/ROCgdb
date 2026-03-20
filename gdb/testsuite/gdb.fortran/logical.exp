@@ -50,7 +50,7 @@ foreach_with_prefix var { l l1 l2 l4 l8 } {
 		"set contents of byte at offset $i"
 	    gdb_test "p l" " = \\.TRUE\\."
 	    incr addr
-	    set addr [format "0x%x" $addr]
+	    set addr [format "0x%lx" $addr]
 	}
     }
 }
