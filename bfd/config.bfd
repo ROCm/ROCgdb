@@ -628,7 +628,7 @@ case "${targ}" in
     targ_defvec=i386_elf32_vec
     targ_selvecs="i386_coff_lynx_vec i386_aout_lynx_vec"
     ;;
-  i[3-7]86-*-aros* | i[3-7]86-*-gnu* | i[3-7]86-*-openbsd*)
+  i[3-7]86-*-aros* | i[3-7]86-*-gnu* | i[3-7]86-*-openbsd* | i[3-6]86-*-phoenix*)
     targ_defvec=i386_elf32_vec
     ;;
   i[3-7]86-*-msdos*)

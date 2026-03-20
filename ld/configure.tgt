@@ -375,7 +375,8 @@ i[3-7]86-*-solaris*)
 i[3-7]86-*-netbsd* | \
 i[3-7]86-*-netbsd*-gnu* | \
 i[3-7]86-*-knetbsd*-gnu | \
-i[3-7]86-*-openbsd*)
+i[3-7]86-*-openbsd* | \
+i[3-6]86-*-phoenix*)
 			targ_emul=elf_i386
 			;;
 i[3-7]86-*-elfiamcu)	targ_emul=elf_iamcu
