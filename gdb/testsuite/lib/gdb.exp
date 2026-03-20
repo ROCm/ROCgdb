@@ -8564,6 +8564,10 @@ proc gdb_get_line_number { text { file "" } } {
 	error "$message"
     }
 
+    if {[tcl_version_at_least 9 0 0]} {
+	fconfigure $fd -encoding utf-8 -profile replace
+    }
+
     set found -1
     for { set line 1 } { 1 } { incr line } {
 	if {[catch { set nchar [gets "$fd" body] } message]} {
@@ -11509,6 +11513,9 @@ proc auto_lappend_include_files_1 {flags source {visited {}}} {
 
     if {[catch {open $source r} fh err]} {
 	error "Failed to open file '$source': $err"
+    }
+    if {[tcl_version_at_least 9 0 0]} {
+	fconfigure $fh -encoding utf-8 -profile replace
     }
     set contents [read $fh]
     close $fh
