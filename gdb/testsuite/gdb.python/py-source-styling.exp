@@ -149,6 +149,12 @@ proc_with_prefix test_source_cache_style_tracking {} {
 	    false
     }
 
+    # With Tcl 9.0, something (dejagnu/expect/gdb testsuite infrastructure)
+    # has problems with gdb IO containing non-utf-8 chars.  Work around this by
+    # requiring Tcl 8.6 for the following tests.  PR testsuite/33987 is open to
+    # come up with a better solution.
+    require {expr {$::tcl_version == 8.6}}
+
     # The same again, but this time the output is sent directly to
     # stdout.
     check_source_listing_styling \
