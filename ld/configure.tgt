@@ -195,7 +195,9 @@ arm-*-netbsd*)	targ_emul=armelf_nbsd;
 			;;
 arm-*-nto*)		targ_emul=armnto
 			;;
-arm-*-phoenix*)		targ_emul=armelf
+arm-*-phoenix*)		targ_emul=armelf_phoenix
+			targ_extra_emuls="armelf"
+			targ_extra_libpath=$targ_extra_emuls
 			;;
 armeb-*-elf | armeb-*-eabi*)
 			targ_emul=armelfb
