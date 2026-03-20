@@ -584,9 +584,8 @@ case "${targ}" in
     ;;
   i[3-7]86-*-solaris2*)
     targ_defvec=i386_elf32_sol2_vec
-    targ_selvecs=i386_elf32_vec
-    targ64_selvecs="x86_64_elf64_sol2_vec x86_64_elf64_vec"
     # Include 64-bit support to match GCC.
+    targ_selvecs="i386_elf32_vec x86_64_elf64_sol2_vec x86_64_elf64_vec"
     want64=true
     ;;
   i[3-7]86-*-solaris*)
@@ -1176,7 +1175,7 @@ case "${targ}" in
 
   s390-*-linux*)
     targ_defvec=s390_elf32_vec
-    targ64_selvecs=s390_elf64_vec
+    targ_selvecs=s390_elf64_vec
     want64=true
     ;;
 #ifdef BFD64
@@ -1263,9 +1262,8 @@ case "${targ}" in
     ;;
   sparc-*-solaris2*)
     targ_defvec=sparc_elf32_sol2_vec
-    targ_selvecs=sparc_elf32_vec
-    targ64_selvecs="sparc_elf64_sol2_vec sparc_elf64_vec"
     # Include 64-bit support to match GCC.
+    targ_selvecs="sparc_elf32_vec sparc_elf64_sol2_vec sparc_elf64_vec"
     want64=true
     ;;
 #ifdef BFD64
