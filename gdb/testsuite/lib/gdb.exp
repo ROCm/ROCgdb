@@ -17,8 +17,6 @@
 
 # tclint-disable redefined-builtin
 
-package require Tcl 8.6.2
-
 # Generic gdb subroutines that should work for any target.  If these
 # need to be modified for any target, it can be done with a variable
 # or by passing arguments.
@@ -11802,6 +11800,8 @@ proc dwz_version { } {
 proc dwz_version_at_least { ver } {
     return [version_compare [split $ver .] <= [dwz_version]]
 }
+
+require {tcl_version_at_least 8 6 2}
 
 # Always load compatibility stuff.
 load_lib future.exp
