@@ -196,7 +196,7 @@ foreach type $all_types {
 
 		# Create an inverse mapping of the actual type to
 		# the synthetic type.
-		set type_map("$types($type)") $type
+		set type_map($types($type)) $type
 		pass "detect $type"
 	    }
     }
@@ -237,7 +237,7 @@ set method "foo::overload1arg"
 for {set idx 0} {$idx < [llength $overloads]} {incr idx} {
     set type [lindex $overloads $idx]
     set_bp_overloaded $method $menu_overload1arg \
-	[expr {$idx + 2}] [incr bpnum] $line($type_map("$type"))
+	[expr {$idx + 2}] [incr bpnum] $line($type_map($type))
 }
 
 # Verify the breakpoints.
@@ -246,7 +246,7 @@ append bptable "${::decimal}\[\t \]+breakpoint\[\t \]+keep\[\t \]y\[\t \]+$hex\[
 append bptable "\[\t \]+breakpoint already hit 1 time"
 foreach ovld $overloads {
     append bptable [format "\r\n${::decimal}\[\t \]+breakpoint\[\t \]+keep y\[\t \]+$hex\[\t \]+in foo::overload1arg\\(%s\\) at.*$srcfile:%d" $ovld \
-			$line($type_map("$ovld"))]
+			$line($type_map($ovld))]
 }
 gdb_test "info break" $bptable "breakpoint info, after setting one-by-one"
 
@@ -298,7 +298,7 @@ with_test_prefix "multiple breakpoints" {
     set expected_lines {}
     for {set i 0} {$i < 2} {incr i} {
 	set type [lindex $overloads $i]
-	lappend expected_lines $line($type_map("$type"))
+	lappend expected_lines $line($type_map($type))
     }
     set_bp_overloaded $method $menu_overload1arg \
 	"2-3" [incr bpnum] $expected_lines
