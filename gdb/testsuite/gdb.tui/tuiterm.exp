@@ -55,8 +55,13 @@ proc check { test expected_contents expected_cur_col expected_cur_row } {
 }
 
 proc setup_terminal { cols rows } {
-    setenv TERM ansi
-    Term::_setup $rows $cols
+    # Proc Term::_setup sets variable stty_init.  The stty_init variable is
+    # used by Expect to configure the pty of processes started using Expect
+    # command spawn.  This test doesn't use the spawn command, so revert to
+    # the original setting ASAP.
+    save_vars { ::stty_init } {
+	Term::_setup $rows $cols
+    }
 }
 
 # Most tests are fine with a small terminal.  This proc initializes the terminal
@@ -843,19 +848,15 @@ proc_with_prefix test_with_tuiterm {} {
 # Run proc TEST_PROC_NAME with a "small" terminal.
 
 proc run_one_test_small { test_proc_name } {
-    save_vars { env(TERM) stty_init } {
-	setup_small
-	$test_proc_name
-    }
+    setup_small
+    $test_proc_name
 }
 
 # Run proc TEST_PROC_NAME with a "large" terminal.
 
 proc run_one_test_large { test_proc_name } {
-    save_vars { env(TERM) stty_init } {
-	setup_large
-	$test_proc_name
-    }
+    setup_large
+    $test_proc_name
 }
 
 foreach_with_prefix test {
