@@ -3169,7 +3169,7 @@ _bfd_XX_get_symbol_info (bfd * abfd, asymbol *symbol, symbol_info *ret)
 
 #if !defined(COFF_WITH_pep) && (defined(COFF_WITH_pex64) || defined(COFF_WITH_peAArch64) || defined(COFF_WITH_peLoongArch64) || defined (COFF_WITH_peRiscV64))
 static int
-sort_x64_pdata (const void *l, const void *r)
+sort_pdata (const void *l, const void *r)
 {
   const char *lp = (const char *) l;
   const char *rp = (const char *) r;
@@ -4724,9 +4724,21 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
 
 	if (bfd_malloc_and_get_section (abfd, sec, &tmp_data))
 	  {
+	    /* The size of a .pdata entry that describes a function that is used
+	       for exception handling.  */
+	    unsigned function_table_entry_size;
+#if defined (COFF_WITH_peAArch64)
+	    /* https://learn.microsoft.com/en-us/cpp/build/arm64-exception-handling#pdata-records.  */
+	    function_table_entry_size = 8;
+#else
+	    /* https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#the-pdata-section.  */
+	    function_table_entry_size = 12;
+#endif
+	    /* .pdata entries should be sorted by the function start
+	       address.  */
 	    qsort (tmp_data,
-		   (size_t) (x / 12),
-		   12, sort_x64_pdata);
+		   (size_t) (x / function_table_entry_size),
+		   function_table_entry_size, sort_pdata);
 	    bfd_set_section_contents (pfinfo->output_bfd, sec,
 				      tmp_data, 0, x);
 	    free (tmp_data);
