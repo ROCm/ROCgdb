@@ -32,20 +32,39 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable $flags] != ""} {
     return
 }
 
+set remote_cmd_file [gdb_remote_download host $srcdir/$subdir/non-ascii-latin-3.gdb]
+
 # Restart without an executable so that we can set the encoding early.
 clean_restart
+
+gdb_test_no_output "source $remote_cmd_file" "load cmd file"
 
 gdb_test_no_output "set ada source-charset ISO-8859-3"
 
 gdb_load ${binfile}
 
 set bp_location [gdb_get_line_number "BREAK" ${testdir}/prog.adb]
-runto "prog.adb:$bp_location"
 
-gdb_test "print VAR_Ż" " = 23"
-gdb_test "print var_ż" " = 23"
+# With Tcl 9.0, something (dejagnu/expect/gdb testsuite infrastructure)
+# has problems with gdb IO containing non-UTF-8 chars.  Work around this by:
+# - avoiding to show the source line, which contains non-UTF-8 chars, using
+#   "set print frame-info location", and
+# - avoiding to use commands containing non-UTF-8 chars, using user-defined
+#   commands defined in remote_cmd_file.
 
-gdb_breakpoint "FUNC_Ż" message
-gdb_breakpoint "func_ż" message
+with_set "print frame-info" "location" {
+    runto "prog.adb:$bp_location"
+}
 
-gdb_test "print var_𝕯" "warning: charset conversion failure.*"
+gdb_test print_1 " = 23" \
+    "print VAR_Ż"
+gdb_test print_2 " = 23" \
+    "print var_ż"
+
+gdb_test break_1 "Breakpoint $decimal .*" \
+    "gdb_breakpoint: set breakpoint at FUNC_Ż"
+gdb_test break_2 "Breakpoint $decimal .*" \
+    "gdb_breakpoint: set breakpoint at func_ż"
+
+gdb_test print_3 "warning: charset conversion failure.*" \
+     "print var_𝕯"
