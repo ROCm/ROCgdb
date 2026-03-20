@@ -117,7 +117,7 @@ with_override Term::accept_gdb_output test_accept_gdb_output {
 			Term::_move_cursor 0 0
 
 			Term::_insert "${::border}(gdb) "
-			set pos $Term::_cur_col
+			set pos $::Term::_cur_col
 
 			Term::_insert "foo"
 
@@ -130,7 +130,7 @@ with_override Term::accept_gdb_output test_accept_gdb_output {
 			Term::_move_cursor 0 1
 
 			Term::_insert "${::border}(gdb) "
-			set pos $Term::_cur_col
+			set pos $::Term::_cur_col
 
 			Term::_move_cursor 19 1
 			Term::_insert "$::border"

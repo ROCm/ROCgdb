@@ -74,7 +74,7 @@ gdb_assert {[dict exists [lindex $breakpoints 0] instructionReference]} \
 # tclint-disable-next-line command-args
 set list_form [namespace eval ton::2list $last_ton]
 set ref [namespace eval ton::2list {
-    get $list_form body breakpoints 0 instructionReference
+    get $::list_form body breakpoints 0 instructionReference
 }]
 gdb_assert {[regexp "^$hex\$" $ref]} \
     "instructionReference is a hex string"
