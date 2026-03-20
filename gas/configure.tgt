@@ -407,6 +407,7 @@ case ${generic_target} in
     esac ;;
   sparc-*-freebsd*)			fmt=elf em=freebsd ;;
   sparc-*-*bsd*)			fmt=elf em=nbsd ;;
+  sparc-*-phoenix*)			fmt=elf ;;
 
   spu-*-elf)				fmt=elf ;;
 
