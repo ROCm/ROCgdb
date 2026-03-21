@@ -423,7 +423,7 @@ core_target::build_file_mappings ()
 	 there is no sysroot, an equivalent (possibly more
 	 canonical) pathname will be provided.  */
       gdb::unique_xmalloc_ptr<char> expanded_fname
-	= exec_file_find (file_data.filename.c_str (), nullptr);
+	= exec_file_find (file_data.filename.c_str ());
 
       /* Only open regular files.  Opening non-regular files (like char or
 	 block device) might end-up having unexpected side effects.  For

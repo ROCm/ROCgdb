@@ -283,7 +283,10 @@ proc iamcu_tests {} {
     run_dump_test "iamcu-4"
 }
 
-iamcu_tests
+set status [catch "exec $LD -V -melf_iamcu" got]
+if { $status == 0 } {
+    iamcu_tests
+}
 
 run_ld_link_tests $i386tests
 

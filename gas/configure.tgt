@@ -138,6 +138,7 @@ case ${generic_target} in
   aarch64*-*-netbsd*)			fmt=elf em=nbsd;;
   aarch64*-*-nto*)			fmt=elf;;
   aarch64*-*-openbsd*)			fmt=elf;;
+  aarch64*-*-phoenix*)			fmt=elf;;
   aarch64*-*-pe* | aarch64*-*-mingw*)	fmt=coff em=pepaarch64 ;;
   alpha-*-*vms*)			fmt=evax ;;
   alpha-*-osf*)				fmt=ecoff ;;
@@ -266,6 +267,7 @@ case ${generic_target} in
   i386-*-*nt*)				fmt=coff em=pe ;;
   i386-*-rdos*)				fmt=elf ;;
   i386-*-darwin*)			fmt=macho ;;
+  i386-*-phoenix*)			fmt=elf ;;
 
   ia16-*-elf*)				fmt=elf ;;
 
@@ -406,6 +408,7 @@ case ${generic_target} in
     esac ;;
   sparc-*-freebsd*)			fmt=elf em=freebsd ;;
   sparc-*-*bsd*)			fmt=elf em=nbsd ;;
+  sparc-*-phoenix*)			fmt=elf ;;
 
   spu-*-elf)				fmt=elf ;;
 

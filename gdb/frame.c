@@ -1921,21 +1921,41 @@ lookup_selected_frame (struct frame_id a_frame_id, int frame_level)
       return;
     }
 
-  /* Nothing else to do, the frame layout really changed.  Select the
-     innermost stack frame.  */
-  select_frame (get_current_frame ());
+  /* We are unable to restore the required frame, so instead we'll select
+     the current (innermost) frame.  We print the warning first as
+     print_stack_frame can make calls into extension language hooks, which
+     could invalidate the frame cache, which will clear the selected frame.
 
-  /* Warn the user.  */
+     We only warn the user if we're trying to select something other
+     than frame #0 though, as the fallback is to just select the
+     current frame #0, even if it's different to the frame #0 we tried
+     to find (e.g. the frame-id changed).  */
   if (frame_level > 0 && !current_uiout->is_mi_like_p ())
     {
-      warning (_("Couldn't restore frame #%d in "
-		 "current thread.  Bottom (innermost) frame selected:"),
+      warning (_("Couldn't restore frame #%d in current thread.  "
+		 "Innermost frame selected:"),
 	       frame_level);
       /* For MI, we should probably have a notification about current
 	 frame change.  But this error is not very likely, so don't
 	 bother for now.  */
-      print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+      print_stack_frame (get_current_frame (), 1, SRC_AND_LOC, 1);
     }
+
+  /* We couldn't find the frame we were looking for, so just restore
+     the innermost frame instead.
+
+     We call get_current_frame() twice, once for printing (above) and again
+     for selection (below).  In theory, an extension language hook,
+     triggered from print_stack_frame (above), could change the inferior
+     state such that the frame selected (below) is different than the frame
+     printed.  In both cases it will be frame #0 that is selected though.
+     This might be confusing, but should not be fatal.  The complexity of
+     fixing this doesn't seem worth the effort; if this does ever happen
+     then it would be an edge case within an edge case.
+
+     The critical thing is that we must leave this function with a frame
+     selected.  */
+  select_frame (get_current_frame ());
 }
 
 bool

@@ -1,0 +1,186 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB handles failed frame restoration correctly.
+#
+# When a scoped_restore_selected_frame saves a frame at level > 0 and the
+# stack changes within the scope, lookup_selected_frame cannot find the
+# saved frame and falls back to selecting the innermost frame with a
+# warning.  This test exercises that warning path.
+#
+# Additionally, the warning path calls print_stack_frame to display the
+# fallback frame, which can invoke Python pretty printers on the frame's
+# arguments.  If a pretty printer calls gdb.invalidate_cached_frames
+# during this print, it resets selected_frame to NULL, which can cause an
+# assertion failure in get_selected_frame.  This test validates that this
+# bug has been fixed.
+
+load_lib gdb-python.exp
+
+require allow_python_tests
+
+standard_testfile
+
+if {[build_executable "failed to build" $testfile $srcfile]} {
+    return
+}
+
+set remote_python_file [gdb_remote_download host \
+			    ${srcdir}/${subdir}/${testfile}.py]
+
+# Run global TESTFILE until we have a stack with 5 frames.  Select a
+# frame other than #0 and then use 'thread apply' and the 'return'
+# command to pop frames from the stack.  When POP_SELECTED is true the
+# previously selected frame is popped, otherwise, all frames up to,
+# but not including, the selected frame are popped.
+#
+# When the 'thread apply' completes it should try to restore the
+# previously selected frame.  If that frame has now been destroyed
+# (popped from the stack), GDB should give a warning and select frame
+# #0 instead.  If the frame was not popped (POP_SELECTED was false)
+# then GDB should still find, and restore the previously selected
+# frame.
+#
+# When WITH_PRETTY_PRINTER is true, load a pretty printer which
+# triggers when the fallback frame #0 is selected.  This pretty
+# printer invalidates the frame cache which used to trigger an
+# assertion within GDB.  Setting WITH_PRETTY_PRINTER to true and
+# POP_SELECTED to false isn't wrong, but isn't going to test anything
+# interesting.
+proc run_test { with_pretty_printer pop_selected } {
+    # The pretty printer is only needed if we are planning to pop the
+    # selected frame and GDB should fall back to selecting func_a,
+    # which uses the pretty printer.
+    if { $with_pretty_printer && !$pop_selected } {
+	perror "invalid argument combination to run_test"
+    }
+
+    clean_restart $::testfile
+
+    if { $with_pretty_printer } {
+	gdb_test_no_output "source ${::remote_python_file}" \
+	    "source ${::testfile}.py"
+	set obj_re "a=<1> b=<2>"
+    } else {
+	set obj_re "\\.\\.\\."
+    }
+
+    # Run to the breakpoint in func_d.  At this point the stack is:
+    #
+    #   #0  func_d ()
+    #   #1  func_c ()
+    #   #2  func_b ()
+    #   #3  func_a (obj=???)
+    #   #4  main
+    #
+    # Notice that 'func_a' has an argument 'obj', this is of type
+    # 'struct foo'.  When WITH_PRETTY_PRINTER is true this will be
+    # printed using a pretty printer, otherwise, as this is a struct,
+    # the representation of obj will be replaced with '...'.
+    if { ![runto func_d] } {
+	return
+    }
+
+    # Validate the stack is as expected.
+    gdb_test "bt" \
+	[multi_line \
+	     "#0 \[^\r\n\]*func_d \\(\\) \[^\r\n\]*" \
+	     "#1 \[^\r\n\]*func_c \\(\\) \[^\r\n\]*" \
+	     "#2 \[^\r\n\]*func_b \\(\\) \[^\r\n\]*" \
+	     "#3 \[^\r\n\]*func_a \\(obj=${obj_re}\\) \[^\r\n\]*" \
+	     "#4 \[^\r\n\]*main \[^\r\n\]*"] \
+	"backtrace at func_d"
+
+    # Select a frame other than frame #0.  The frame we select here
+    # will be popped from the call stack by all the 'return' calls
+    # below.
+    gdb_test "frame 2" "#2 .*func_b.*" "select frame 2"
+
+    if { $with_pretty_printer } {
+	# Set this Python flag so that the next time the pretty printer
+	# prints a 'struct foo' it will call gdb.invalidate_cached_frames.
+	#
+	# If this flag didn't exist, and the pretty printer always
+	# invalidated the frame cache, then printing the backtrace above
+	# would fail as the frame cache would become invalid while walking
+	# the stack.
+	#
+	# Set this flag as late as possible just before we do the 'thread
+	# apply' and 'return' trick below.
+	gdb_test_no_output "python invalidate = True"
+	set frame_regexp "#0 \[^\r\n\]*func_a \\(obj=<invalidate-frame>\[^\r\n\]*\\).*"
+    } elseif { $pop_selected } {
+	set frame_regexp "#0 \[^\r\n\]*func_a.*"
+    }
+
+    if { $pop_selected } {
+	# Using "thread apply 1" creates a scoped_restore_current_thread
+	# within GDB, which saves and later restores the current thread and
+	# frame.  The saved frame state is (level=2, frame-id=func_b).
+	#
+	# Inside the scope, switch_to_thread calls reinit_frame_cache which
+	# resets selected_frame_level to -1.  Each "return" therefore returns
+	# from frame 0 (the innermost frame), popping one frame per call:
+	#
+	#   return 1: pops func_d  -> stack: main, func_a, func_b, func_c
+	#   return 2: pops func_c  -> stack: main, func_a, func_b
+	#   return 3: pops func_b  -> stack: main, func_a
+	#
+	# When scoped_restore_current_thread's destructor runs, it tries to
+	# restore the previously selected frame, which was level 2, func_b.
+	# Due to the 'return' calls there is no level 2 frame, nor can we find
+	# a frame with the correct frame-id that matches the previous func_b
+	# frame.
+	#
+	# And so GDB will give a warning indicating that it failed to restore
+	# the previously selected frame, and then selects (and prints) the
+	# innermost frame.
+	#
+	# When the pretty printer is in use, printing the innermost frame,
+	# which is for func_a, will call the pretty printer, which will then
+	# invalidate the frame cache.  Doing this sets the currently selected
+	# frame back to NULL.  If GDB selects the innermost frame before
+	# printing the frame, then, after the pretty printer has run, there
+	# will no longer be a selected frame.  This can trigger an assertion.
+	#
+	# The fix, which is now in GDB, is that we select the frame only after
+	# printing the frame.  This ensures that lookup_selected_frame always
+	# leaves a frame selected.
+	gdb_test "thread apply 1 python for i in range(3): gdb.execute('return')" \
+	    [multi_line \
+		 "warning: Couldn't restore frame #2 in current thread\\.  Innermost frame selected:" \
+		 $frame_regexp] \
+	    "pop three frames via thread apply"
+    } else {
+	gdb_test "thread apply 1 python for i in range(2): gdb.execute('return')" \
+	    [multi_line \
+		 "" \
+		 "Thread 1\[^\r\n\]*"] \
+	    "pop two frames via thread apply"
+
+	gdb_test "bt" \
+	    [multi_line \
+		 "#0 \[^\r\n\]*func_b \\(\\) \[^\r\n\]*" \
+		 "#1 \[^\r\n\]*func_a \\(obj=${obj_re}\\) \[^\r\n\]*" \
+		 "#2 \[^\r\n\]*main \[^\r\n\]*"] \
+	    "backtrace at func_b after popping frames"
+    }
+}
+
+foreach_with_prefix with_pp { false true } {
+    run_test $with_pp true
+}
+
+run_test false false

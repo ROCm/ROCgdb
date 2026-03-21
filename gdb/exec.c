@@ -334,7 +334,7 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
     }
 
   gdb::unique_xmalloc_ptr<char> exec_file_host
-    = exec_file_find (exec_file_target, NULL);
+    = exec_file_find (exec_file_target);
   if (exec_file_host == nullptr)
     {
       warning (_("No executable has been specified, and target executable "
