@@ -979,6 +979,7 @@ getpkt (char *buf)
 	    return -1;
 	}
 
+      bool fits_in_buf = true;
       bp = buf;
       while (1)
 	{
@@ -987,7 +988,11 @@ getpkt (char *buf)
 	    return -1;
 	  if (c == '#')
 	    break;
-	  *bp++ = c;
+	  /* The buffer is always allocated as 'PBUFSIZ + 1' so we know
+	     that this write will always be within the buffer.  */
+	  *bp = c;
+	  fits_in_buf = bp - buf < PBUFSIZ;
+	  bp += (fits_in_buf ? 1: 0);
 	  csum += c;
 	}
       *bp = 0;
@@ -995,22 +1000,30 @@ getpkt (char *buf)
       c1 = fromhex (readchar ());
       c2 = fromhex (readchar ());
 
-      if (csum == (c1 << 4) + c2)
+      unsigned char sentsum = (c1 << 4) + c2;
+      bool csum_ok = csum == sentsum;
+      if (csum_ok && fits_in_buf)
 	break;
 
+      if (!csum_ok)
+	fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
+		 sentsum, csum, buf);
+      if (!fits_in_buf)
+	fprintf (stderr, "Packet too long\n");
       if (cs.noack_mode)
 	{
-	  fprintf (stderr,
-		   "Bad checksum, sentsum=0x%x, csum=0x%x, "
-		   "buf=%s [no-ack-mode, Bad medium?]\n",
-		   (c1 << 4) + c2, csum, buf);
-	  /* Not much we can do, GDB wasn't expecting an ack/nac.  */
-	  break;
+	  fprintf (stderr, "[no-ack-mode, Bad medium?]\n");
+	  /* Not much we can do, GDB wasn't expecting an ack/nak, just
+	     return an error to indicate the packet was bad.  */
+	  return -1;
 	}
 
-      fprintf (stderr, "Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
-	       (c1 << 4) + c2, csum, buf);
-      if (!write_prim ("-", 1))
+      /* Send '-' (NAK) back to GDB.  If that fails, or if the incoming
+	 packet was too long, then return an error.  For the packet too
+	 long case there's no point repeating the loop, all GDB can do is
+	 resend the original packet, which will be too long again, and
+	 we'll be stuck in this loop forever.  */
+      if (!write_prim ("-", 1) || !fits_in_buf)
 	return -1;
     }
 
@@ -1526,7 +1539,6 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
   if (putpkt (cs.own_buf) < 0)
     return -1;
 
-  /* FIXME:  Eventually add buffer overflow checking (to getpkt?)  */
   len = getpkt (cs.own_buf);
   if (len < 0)
     return -1;
@@ -1656,7 +1668,6 @@ relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc)
   if (putpkt (cs.own_buf) < 0)
     return -1;
 
-  /* FIXME:  Eventually add buffer overflow checking (to getpkt?)  */
   len = getpkt (cs.own_buf);
   if (len < 0)
     return -1;
