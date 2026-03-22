@@ -44,7 +44,6 @@
 
 /* Standard headers.  */
 #include <algorithm>
-#include <sstream>
 
 /* The frame unwind cache for ARC.  */
 
@@ -2100,16 +2099,16 @@ arc_check_tdesc_feature (struct tdesc_arch_data *tdesc_data,
 
       if (!found && reg.required_p)
 	{
-	  std::ostringstream reg_names;
+	  std::string reg_names;
 	  for (std::size_t i = 0; i < reg.names.size(); ++i)
 	    {
 	      if (i == 0)
-		reg_names << "'" << reg.names[0] << "'";
+		string_appendf (reg_names, "'%s'", reg.names[0]);
 	      else
-		reg_names << " or '" << reg.names[0] << "'";
+		string_appendf (reg_names, " or '%s'", reg.names[i]);
 	    }
 	  arc_print (_("Error: Cannot find required register(s) %s "
-		       "in feature '%s'.\n"), reg_names.str ().c_str (),
+		       "in feature '%s'.\n"), reg_names.c_str (),
 		       feature->name.c_str ());
 	  return false;
 	}
