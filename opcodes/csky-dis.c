@@ -201,19 +201,15 @@ csky_find_inst_info (struct csky_opcode_info const **pinfo,
 }
 
 static bool
-is_extern_symbol (struct disassemble_info *info, int addr)
+is_extern_symbol (struct disassemble_info *info, bfd_vma addr)
 {
-  unsigned int rel_count = 0;
-
-  if (info->section == NULL)
-    return 0;
-  if ((info->section->flags & SEC_RELOC) != 0)	/* Fit .o file.  */
+  if (info->section != NULL && info->section->relocation != NULL)
     {
+      unsigned int rel_count = 0;
       struct reloc_cache_entry *pt = info->section->relocation;
       for (; rel_count < info->section->reloc_count; rel_count++, pt++)
-	if ((long unsigned int)addr == pt->address)
+	if (addr == pt->address)
 	  return true;
-      return false;
     }
   return false;
 }
