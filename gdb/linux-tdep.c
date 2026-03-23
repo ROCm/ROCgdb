@@ -117,6 +117,9 @@ struct smaps_data
 
   ULONGEST inode;
   ULONGEST offset;
+
+  ULONGEST rss;
+  ULONGEST swap;
 };
 
 /* Whether to take the /proc/PID/coredump_filter into account when
@@ -1318,6 +1321,7 @@ typedef int linux_find_memory_region_ftype (ULONGEST vaddr, ULONGEST size,
 					    int read, int write,
 					    int exec, int modified,
 					    bool memory_tagged,
+					    bool hole,
 					    const char *filename,
 					    void *data);
 
@@ -1329,6 +1333,32 @@ typedef int linux_dump_mapping_p_ftype (filter_flags filterflags,
 					const char *filename,
 					ULONGEST addr,
 					ULONGEST offset);
+
+/* Parse a KEY value out of a /proc/pid/smaps line.  KEYWORD is the
+   keyword that was extracted out of the LINE we're considering.
+   MAPS_FILENAME is the /proc/pid/smaps filename.  The result is
+   written to *VALUE.  Returns true if LINE is a line for KEY, false
+   otherwise.  */
+
+static bool
+parse_smaps_key_value (const char *keyword, const char *line,
+		       const char *key,
+		       const std::string &maps_filename,
+		       ULONGEST *value)
+{
+  if (!streq (keyword, key))
+    return false;
+
+  const char *startptr = skip_spaces (line + strlen (key));
+  const char *endptr;
+  *value = strtoulst (startptr, &endptr, 0);
+  if (endptr == startptr)
+    {
+      warning (_("Error parsing {s,}maps file '%s' number"),
+	       maps_filename.c_str ());
+    }
+  return true;
+}
 
 /* Helper function to parse the contents of /proc/<pid>/smaps into a data
    structure, for easy access.
@@ -1355,6 +1385,8 @@ parse_smaps_data (const char *data,
       int has_anonymous = 0;
       int mapping_anon_p;
       int mapping_file_p;
+      ULONGEST rss = -1;
+      ULONGEST swap = -1;
 
       memset (&v, 0, sizeof (v));
       struct mapping m = read_mapping (line);
@@ -1412,6 +1444,16 @@ parse_smaps_data (const char *data,
 	  else if (strcmp (keyword, "VmFlags:") == 0)
 	    decode_vmflags (line, &v);
 
+	  if (parse_smaps_key_value (keyword, line, "Rss:",
+				     maps_filename,
+				     &rss))
+	    continue;
+
+	  if (parse_smaps_key_value (keyword, line, "Swap:",
+				     maps_filename,
+				     &swap))
+	    continue;
+
 	  if (strcmp (keyword, "AnonHugePages:") == 0
 	      || strcmp (keyword, "Anonymous:") == 0)
 	    {
@@ -1461,6 +1503,8 @@ parse_smaps_data (const char *data,
 	map.mapping_file_p = mapping_file_p? true : false;
 	map.offset = m.offset;
 	map.inode = m.inode;
+	map.rss = rss;
+	map.swap = swap;
 
 	smaps.emplace_back (map);
     }
@@ -1613,11 +1657,18 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
       /* Invoke the callback function to create the corefile segment.  */
       if (should_dump_p)
 	{
+	  /* If this is an anonymous PROT_NONE private mapping, check
+	     if the mapping has any physical memory backing.  If not,
+	     then we know that reading it would just yield zeroes, so
+	     we can later skip reading it.  */
+	  bool hole = (map.mapping_anon_p && map.priv
+		       && !map.read && !map.write && !map.exec
+		       && map.rss == 0 && map.swap == 0);
 	  func (map.start_address, map.end_address - map.start_address,
 		map.offset, map.inode, map.read, map.write, map.exec,
 		1, /* MODIFIED is true because we want to dump
 		      the mapping.  */
-		map.vmflags.memory_tagging != 0,
+		map.vmflags.memory_tagging != 0, hole,
 		map.filename.c_str (), obfd);
 	}
     }
@@ -1646,14 +1697,14 @@ static int
 linux_find_memory_regions_thunk (ULONGEST vaddr, ULONGEST size,
 				 ULONGEST offset, ULONGEST inode,
 				 int read, int write, int exec, int modified,
-				 bool memory_tagged,
+				 bool memory_tagged, bool hole,
 				 const char *filename, void *arg)
 {
   struct linux_find_memory_regions_data *data
     = (struct linux_find_memory_regions_data *) arg;
 
   return data->func (vaddr, size, read, write, exec, modified, memory_tagged,
-		     data->obfd);
+		     hole, data->obfd);
 }
 
 /* A variant of linux_find_memory_regions_full that is suitable as the
@@ -1737,7 +1788,7 @@ static int
 linux_make_mappings_callback (ULONGEST vaddr, ULONGEST size,
 			      ULONGEST offset, ULONGEST inode,
 			      int read, int write, int exec, int modified,
-			      bool memory_tagged,
+			      bool memory_tagged, bool hole,
 			      const char *filename, void *data)
 {
   struct linux_make_mappings_data *map_data

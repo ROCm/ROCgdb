@@ -243,12 +243,15 @@ extern const char *pc_prefix (CORE_ADDR);
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
+   HOLE is true if the memory region is known to be all zeroes, false
+   otherwise.
+
    DATA is passed without changes from a caller.  */
 
 typedef int (*find_memory_region_ftype) (CORE_ADDR addr, unsigned long size,
 					 int read, int write, int exec,
 					 int modified, bool memory_tagged,
-					 void *data);
+					 bool hole, void *data);
 
 /* * Possible lvalue types.  Like enum language, this should be in
    value.h, but needs to be here for the same reason.  */
