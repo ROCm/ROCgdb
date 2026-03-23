@@ -124,18 +124,21 @@ archpy_name (PyObject *self, PyObject *args)
 static PyObject *
 archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
 {
-  static const char *keywords[] = { "start_pc", "end_pc", "count", NULL };
+  static const char *keywords[] = {
+    "start_pc", "end_pc", "count", "styling", nullptr
+  };
   CORE_ADDR start = 0, end = 0;
   CORE_ADDR pc;
   long count = 0, i;
   PyObject *start_obj = nullptr, *end_obj = nullptr, *count_obj = nullptr;
   struct gdbarch *gdbarch = NULL;
+  int styling_p = 0;
 
   ARCHPY_REQUIRE_VALID (self, gdbarch);
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O|OO",
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O|OOp",
 					keywords, &start_obj, &end_obj,
-					&count_obj))
+					&count_obj, &styling_p))
     return NULL;
 
   if (get_addr_from_python (start_obj, &start) < 0)
@@ -190,7 +193,7 @@ archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
       if (PyList_Append (result_list.get (), insn_dict.get ()))
 	return NULL;  /* PyList_Append Sets the exception.  */
 
-      string_file stb;
+      string_file stb (styling_p);
 
       try
 	{

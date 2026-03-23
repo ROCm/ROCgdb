@@ -229,6 +229,11 @@ qExecAndArgs
      the appropriate user setting is enabled, and GDB knows how to
      style this source file.
 
+  ** The Architecture.disassemble method accepts a new 'styling'
+     argument, which defaults to False.  When set to True the 'asm'
+     strings in the disassembler output can contain ANSI escape
+     sequences to indicate styling.
+
 * Guile API
 
   ** Procedures 'memory-port-read-buffer-size',

@@ -305,9 +305,52 @@ struct m32r_hi16
   bfd_vma addend;
 };
 
-/* FIXME: This should not be a static variable.  */
+struct _m32r_elf_section_data
+{
+  struct bfd_elf_section_data elf;
+  struct m32r_hi16 *m32r_hi16_list;
+};
 
-static struct m32r_hi16 *m32r_hi16_list;
+#define m32r_elf_section_data(sec) \
+  ((struct _m32r_elf_section_data *) elf_section_data (sec))
+
+static bool
+m32r_elf_new_section_hook (bfd *abfd, asection *sec)
+{
+  struct _m32r_elf_section_data *sdata;
+
+  sdata = bfd_zalloc (abfd, sizeof (*sdata));
+  if (sdata == NULL)
+    return false;
+  sec->used_by_bfd = sdata;
+
+  return _bfd_elf_new_section_hook (abfd, sec);
+}
+
+static void
+m32r_elf_free_hi16_list (asection *sec)
+{
+  struct _m32r_elf_section_data *sdata = m32r_elf_section_data (sec);
+  while (sdata->m32r_hi16_list != NULL)
+    {
+      struct m32r_hi16 *hi = sdata->m32r_hi16_list;
+      sdata->m32r_hi16_list = hi->next;
+      free (hi);
+    }
+}
+
+static bool
+m32r_elf_free_cached_info (bfd *abfd)
+{
+  if (bfd_get_format (abfd) == bfd_object
+      || bfd_get_format (abfd) == bfd_core)
+    {
+      for (asection *sec = abfd->sections; sec; sec = sec->next)
+	m32r_elf_free_hi16_list (sec);
+    }
+  return _bfd_elf_free_cached_info (abfd);
+}
+
 
 static bfd_reloc_status_type
 m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
@@ -321,6 +364,7 @@ m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
   bfd_reloc_status_type ret;
   bfd_vma relocation;
   struct m32r_hi16 *n;
+  struct _m32r_elf_section_data *sdata;
 
   /* This part is from bfd_elf_generic_reloc.
      If we're relocating, and this an external symbol, we don't want
@@ -352,13 +396,14 @@ m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
   relocation += reloc_entry->addend;
 
   /* Save the information, and let LO16 do the actual relocation.  */
-  n = bfd_malloc ((bfd_size_type) sizeof *n);
+  n = bfd_malloc (sizeof (*n));
   if (n == NULL)
     return bfd_reloc_outofrange;
+  sdata = m32r_elf_section_data (input_section);
   n->addr = (bfd_byte *) data + reloc_entry->address;
   n->addend = relocation;
-  n->next = m32r_hi16_list;
-  m32r_hi16_list = n;
+  n->next = sdata->m32r_hi16_list;
+  sdata->m32r_hi16_list = n;
 
   if (output_bfd != NULL)
     reloc_entry->address += input_section->output_offset;
@@ -412,6 +457,8 @@ m32r_elf_lo16_reloc (bfd *input_bfd,
 		     bfd *output_bfd,
 		     char **error_message)
 {
+  struct _m32r_elf_section_data *sdata;
+
   /* This part is from bfd_elf_generic_reloc.
      If we're relocating, and this an external symbol, we don't want
      to change anything.  */
@@ -423,11 +470,12 @@ m32r_elf_lo16_reloc (bfd *input_bfd,
       return bfd_reloc_ok;
     }
 
-  if (m32r_hi16_list != NULL)
+  sdata = m32r_elf_section_data (input_section);
+  if (sdata->m32r_hi16_list != NULL)
     {
       struct m32r_hi16 *l;
 
-      l = m32r_hi16_list;
+      l = sdata->m32r_hi16_list;
       while (l != NULL)
 	{
 	  unsigned long insn;
@@ -456,7 +504,7 @@ m32r_elf_lo16_reloc (bfd *input_bfd,
 	  l = next;
 	}
 
-      m32r_hi16_list = NULL;
+      sdata->m32r_hi16_list = NULL;
     }
 
   /* Now do the LO16 reloc in the usual way.
@@ -3687,6 +3735,8 @@ m32r_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
 #endif
 
 #define elf_backend_object_p			m32r_elf_object_p
+#define bfd_elf32_new_section_hook		m32r_elf_new_section_hook
+#define bfd_elf32_bfd_free_cached_info		m32r_elf_free_cached_info
 #define elf_backend_final_write_processing	m32r_elf_final_write_processing
 #define bfd_elf32_bfd_merge_private_bfd_data	m32r_elf_merge_private_bfd_data
 #define bfd_elf32_bfd_set_private_flags		m32r_elf_set_private_flags

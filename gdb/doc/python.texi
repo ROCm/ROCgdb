@@ -7632,7 +7632,7 @@ A @code{gdb.Architecture} class has the following methods:
 Return the name (string value) of the architecture.
 @end defun
 
-@defun Architecture.disassemble (start_pc @r{[}, end_pc @r{[}, count@r{]]})
+@defun Architecture.disassemble (start_pc @r{[}, end_pc @r{[}, count@r{]]} @w{@r{[}, styling = @code{False}@r{]}})
 Return a list of disassembled instructions starting from the memory
 address @var{start_pc}.  The optional arguments @var{end_pc} and
 @var{count} determine the number of instructions in the returned list.
@@ -7660,6 +7660,11 @@ The value corresponding to this key is a string value which represents
 the instruction with assembly language mnemonics.  The assembly
 language flavor used is the same as that specified by the current CLI
 variable @code{disassembly-flavor}.  @xref{Machine Code}.
+
+When the optional argument @var{styling} is @code{True} the @samp{asm}
+string can contain ANSI terminal escape sequences if styling is
+enabled (@pxref{Output Styling}).  When @var{styling} is @code{False},
+which is the default, then no styling will be applied to @samp{asm}.
 
 @item length
 The value corresponding to this key is the length (integer value) of the

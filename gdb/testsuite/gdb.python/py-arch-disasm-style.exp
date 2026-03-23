@@ -1,0 +1,119 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test styling for the Architecture.disassemble method.
+
+load_lib gdb-python.exp
+require allow_python_tests
+
+standard_testfile
+
+if { [build_executable "failed to build" ${testfile} ${srcfile}] } {
+    return
+}
+
+with_ansi_styling_terminal {
+    clean_restart $testfile
+}
+
+if {![runto_main]} {
+   return
+}
+
+# A new command 'py-disasm' which takes an address and disassembles 10
+# instructions starting from that address.  The disassembly will
+# include styling.
+gdb_test_multiline "python disasm command" \
+    "python" "" \
+    "class py_disasm_cmd(gdb.Command):" "" \
+    "  def __init__(self):" "" \
+    "    super().__init__(\"py-disasm\", gdb.COMMAND_OBSCURE)" "" \
+    "  def invoke(self, args, from_tty):" "" \
+    "    argv = gdb.string_to_argv(args)" "" \
+    "    inf = gdb.selected_inferior ()" "" \
+    "    arch = inf.architecture ()" "" \
+    "    addr = gdb.parse_and_eval(argv\[0\])" "" \
+    "    insn = arch.disassemble(addr.address, count = 10, styling = True)" "" \
+    "    for i in insn:" "" \
+    "      formatted_addr = gdb.format_address(i\['addr'\])" "" \
+    "      print(\"0x%x: \t %s\" % (i\['addr'\], i\['asm'\]))" "" \
+    "py_disasm_cmd()" "" \
+    "end" ""
+
+# Run CMD which will disassemble 10 instructions.  Capture those
+# instructions into a list where each list item is itself a list of
+# the form [ADDRESS, STRING], where STRING is the disassembled
+# instruction.
+#
+# Returns the list of disassembled instructions, which should be 10
+# elements long if this worked.
+#
+# This proc emits a pass/fail on whether 10 instructions were captured
+# using TESTNAME.
+proc disassemble_and_gather_insn { cmd testname } {
+    set insn {}
+    gdb_test_multiple $cmd $testname {
+	-re "^[string_to_regexp $cmd]\r\n" {
+	    exp_continue
+	}
+
+	-re "^\[^:\r\n]*($::hex)\[^:\r\n\]*:\\s+(\[^\r\n\]+)\r\n" {
+	    set addr $expect_out(1,string)
+	    set asm $expect_out(2,string)
+	    lappend insn [list $addr $asm]
+	    exp_continue
+	}
+
+	-re "^$::gdb_prompt $" {
+	    gdb_assert {[llength $insn] == 10} $gdb_test_name
+	}
+    }
+
+    return $insn
+}
+
+# Capture the instructions, with styling, using GDB's CLI
+# disassembler.
+set expected_insn [disassemble_and_gather_insn "x/10i *main" \
+		       "disassemble some instructions"]
+
+# Now disassemble using our Python disassemble command.  Capture these
+# instructions.
+set py_insn [disassemble_and_gather_insn "py-disasm *main" \
+		 "disassemble instructions via python"]
+
+# Check we got the same disassembled output, including styling, in
+# both cases.
+gdb_assert { $expected_insn eq $py_insn } \
+    "instructions, with styling, are the same"
+
+# Disable styling.
+gdb_test_no_output "set style enabled off"
+
+# Run the Python disassembled again.  Now that styling is disabled
+# there should be no escape sequences in the disassembler output.
+set py_insn [disassemble_and_gather_insn "py-disasm *main" \
+		 "disassemble instructions via python, no styling"]
+
+# Check for escape sequences.  There should be none.
+set found_escape false
+foreach insn $py_insn {
+    set asm [lindex $insn 1]
+    if {[string first "\033" $asm] != -1} {
+	set found_escape true
+    }
+}
+gdb_assert { !$found_escape } \
+    "no escape sequences in unstyled disassembler output"
