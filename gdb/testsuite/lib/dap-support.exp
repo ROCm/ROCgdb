@@ -370,6 +370,22 @@ proc dap_attach {pid {prog ""}} {
 }
 
 # Start gdb, send a DAP initialize request, and then an attach request
+# specifying COREFILE as the core file to attach to.  Returns the
+# empty string on failure, or the attach request sequence ID.
+proc dap_corefile {corefile {prog ""}} {
+    if {[dap_initialize "startup - initialize"] == ""} {
+	return ""
+    }
+
+    set args [format {o coreFile [s "%s"]} $corefile]
+    if {$prog != ""} {
+	append args [format { program [s "%s"]} $prog]
+    }
+
+    return [dap_send_request attach $args]
+}
+
+# Start gdb, send a DAP initialize request, and then an attach request
 # specifying TARGET as the remote target.  Returns the empty string on
 # failure, or the attach request sequence ID.
 proc dap_target_remote {target} {
@@ -379,26 +395,33 @@ proc dap_target_remote {target} {
     return [dap_send_request attach [format {o target [s %s]} $target]]
 }
 
-# Read the most recent DAP log file and check it for exceptions.
-proc dap_check_log_file {} {
+# Read the most recent DAP log file and check it for exceptions.  We
+# expect to see exactly EXPECTED_EXCEPTION_COUNT exceptions in the log.
+proc dap_check_log_file { {expected_exception_count 0} } {
     set fd [open [current_dap_log_file]]
     set contents [read $fd]
     close $fd
 
-    set ok 1
+    set exception_count 0
     foreach line [split $contents "\n"] {
 	if {[regexp "^Traceback" $line]} {
-	    set ok 0
-	    break
+	    incr exception_count
+	    if { $exception_count > $expected_exception_count} {
+		break
+	    }
 	}
     }
 
-    if {$ok} {
+    if {$exception_count == $expected_exception_count} {
 	pass "exceptions in log file"
     } else {
 	verbose -log --  "--- DAP LOG START ---"
 	verbose -log -- $contents
 	verbose -log --  "--- DAP LOG END ---"
+	if { $expected_exception_count > 0 } {
+	    verbose -log -- [join [list "Expected $expected_exception_count" \
+					"exception(s), saw $exception_count"]]
+	}
 	fail "exceptions in log file"
     }
 }
@@ -414,8 +437,9 @@ proc dap_check_log_file_re { re } {
 }
 
 # Cleanly shut down gdb.  TERMINATE is passed as the terminateDebuggee
-# parameter to the request.
-proc dap_shutdown {{terminate false}} {
+# parameter to the request.  The EXPECTED_EXCEPTION_COUNT is the
+# number of exceptions that we expect to see in the latest DAP log.
+proc dap_shutdown {{terminate false} {expected_exception_count 0}} {
     dap_check_request_and_response "shutdown" disconnect \
 	[format {o terminateDebuggee [l %s]} $terminate]
 
@@ -427,7 +451,7 @@ proc dap_shutdown {{terminate false}} {
 
     clear_gdb_spawn_id
 
-    dap_check_log_file
+    dap_check_log_file $expected_exception_count
 }
 
 # Search the event list EVENTS for an output event matching the regexp

@@ -1,0 +1,199 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test using "attach" in DAP for opening a core file.
+
+require allow_dap_tests
+
+load_lib dap-support.exp
+
+standard_testfile
+
+if {[build_executable ${testfile}.exp $testfile] == -1} {
+    return
+}
+
+set corefile [core_find $binfile {}]
+if {$corefile == ""} {
+    untested "unable to create or find corefile"
+    return
+}
+
+set other_corefile [standard_output_file "${testfile} with spaces.core"]
+remote_exec build "cp \"$corefile\" \"$other_corefile\""
+
+# Test that attaching to a core file works at all.
+set attach_id [dap_corefile $corefile $binfile]
+
+dap_check_request_and_response "configurationDone" configurationDone
+
+dap_check_response "attach response" attach $attach_id
+
+dap_wait_for_event_and_check "stopped" stopped \
+    "body reason" attach
+
+# Try 'continue', this should fail.
+set obj [dap_request_and_response continue \
+	     {o threadId [i 1]}]
+set response [lindex $obj 0]
+gdb_assert { [dict get $response success] == "false" } \
+    "continue with core file target"
+
+# Get a backtrace from the core file.
+set bt [lindex [dap_check_request_and_response "backtrace" stackTrace \
+		    {o threadId [i 1]}] 0]
+set frame_id [dict get [lindex [dict get $bt body stackFrames] 0] id]
+
+# Get all scopes for frame 0.  Search through scopes to find the
+# register scope.
+set scopes [dap_check_request_and_response "get scopes" scopes \
+		[format {o frameId [i %d]} $frame_id]]
+set scopes [dict get [lindex $scopes 0] body scopes]
+set reg_scope ""
+foreach s $scopes {
+    if {[dict get $s name] == "Registers"} {
+	set reg_scope $s
+    }
+}
+gdb_assert { $reg_scope ne "" } "found register scope"
+
+# Read all the registers from the register scope.
+set num [dict get $reg_scope variablesReference]
+set reply [lindex [dap_check_request_and_response "fetch all registers" \
+		      "variables" \
+		      [format {o variablesReference [i %d] count [i %d]} $num\
+			   [dict get $reg_scope namedVariables]]] 0]
+
+# Find the name and value of a register, we'll use this to try setting
+# a register below.
+set regs [dict get $reply body variables]
+gdb_assert {[llength $regs] > 0} "got at least one register"
+set reg_name [dict get [lindex $regs 0] name]
+set reg_value [dict get [lindex $regs 0] value]
+
+set obj [dap_request_and_response setExpression \
+	     {o expression [s global_var] value [s 23]}]
+set response [lindex $obj 0]
+gdb_assert { [dict get $response success] == "false" } \
+    "set global variable fails"
+set expected_exception_count 1
+
+# Try setting a register, this should fail as registers are not
+# writable for a core file target.  We need to write back a different
+# register value, so we add one to the current value.  This means we
+# can only run the test if the current register value is an integer.
+if {[string is integer -strict $reg_value]} {
+    set new_value [expr {$reg_value + 1}]
+    set obj [dap_request_and_response setExpression \
+		 {o expression [s \$$reg_name] value [s $new_value]}]
+    set response [lindex $obj 0]
+    gdb_assert { [dict get $response success] == "false" } \
+	"set register fails"
+    incr expected_exception_count
+}
+
+dap_shutdown false $expected_exception_count
+
+# Reconnect to the core file.  This time when we shutdown we will
+# request that the target be terminated, GDB should still just
+# disconnect though as core file targets cannot be killed.
+with_test_prefix "reattach" {
+    set attach_id [dap_corefile $corefile $binfile]
+
+    dap_check_request_and_response "configurationDone" configurationDone
+
+    dap_check_response "attach response" attach $attach_id
+
+    dap_wait_for_event_and_check "stopped" stopped \
+	"body reason" attach
+
+    # Request the target be terminated.  This doesn't make sense for
+    # core file targets (which cannot be killed), but GDB should
+    # handle this gracefully and just disconnect.
+    dap_shutdown true
+}
+
+# Test loading a core file with spaces in its name.
+with_test_prefix "core file with spaces" {
+    gdb_exit
+
+    # Test that attaching to a core file works at all.
+    set attach_id [dap_corefile $other_corefile]
+
+    dap_check_request_and_response "configurationDone" configurationDone
+
+    dap_check_response "attach response" attach $attach_id
+
+    dap_wait_for_event_and_check "stopped" stopped \
+	"body reason" attach
+
+    # Use the repl to issue an 'info inferiors' command.
+    set obj [dap_check_request_and_response "command repl" \
+		 evaluate {o expression [s "info inferiors"] context [s repl]}]
+    set response [lindex $obj 0]
+    set result [dict get $response body result]
+    set result [string map {\\n \n \\t \t} $result]
+    verbose -log "Info Inferiors Output:\n$result\n\n"
+
+    # Check that the output contains the header line, the executable
+    # name, and the core file name.  We didn't pass the executable
+    # name when loading the core file, but GDB should have been able
+    # to find the executable from the core file.
+    gdb_assert { [regexp "Num\\s+Description\\s+Connection\\s+Executable" $result] } \
+	"info inferiors column headers found"
+
+    gdb_assert { [regexp "[string_to_regexp $binfile]\\s*\n" $result] } \
+	"executable name was set during core file load"
+
+    gdb_assert { [regexp "core file [string_to_regexp $other_corefile]\\s*$" $result] } \
+	"core file name displayed in info inferiors output"
+
+    dap_shutdown
+}
+
+# Test loading a core file via the repl.
+with_test_prefix "load core file via repl" {
+    gdb_exit
+
+    if {[dap_initialize] == ""} {
+	return
+    }
+
+    # Use the repl to issue a 'core-file' command.
+    set obj [dap_check_request_and_response "command repl" \
+		 evaluate [format {o expression [s "core-file %s"] context [s repl]} $corefile]]
+    set response [lindex $obj 0]
+    set result [dict get $response body result]
+    set result [string map {\\n \n \\t \t} $result]
+    verbose -log "Core-File Command Output:\n$result\n\n"
+
+    # By the time we got the response from the 'core-file' command,
+    # the stopped event, sent when we attach to a core file, should
+    # already have been seen, check for it now.
+    set ok false
+    foreach d [lindex $obj 1] {
+	if {[dict get $d type] != "event"
+	    || [dict get $d event] != "stopped"} {
+	    continue
+	}
+	if {[dict get $d body reason] == "attach"} {
+	    set ok true
+	    break
+	}
+    }
+    gdb_assert { $ok } "saw stopped event"
+
+    dap_shutdown
+}

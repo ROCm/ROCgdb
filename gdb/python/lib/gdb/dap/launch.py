@@ -59,12 +59,16 @@ class _LaunchOrAttachDeferredRequest(DeferredRequest):
         super().reschedule()
 
 
+# Handle whitespace, quotes, and backslashes here.  Exactly what
+# to quote depends on libiberty's buildargv and safe-ctype.
+def escape_filename(filename):
+    return re.sub("[ \t\n\r\f\v\\\\'\"]", "\\\\\\g<0>", filename)
+
+
 # A wrapper for the 'file' command that correctly quotes its argument.
 @in_gdb_thread
 def file_command(program):
-    # Handle whitespace, quotes, and backslashes here.  Exactly what
-    # to quote depends on libiberty's buildargv and safe-ctype.
-    program = re.sub("[ \t\n\r\f\v\\\\'\"]", "\\\\\\g<0>", program)
+    program = escape_filename(program)
     exec_and_log("file " + program)
 
 
@@ -136,6 +140,7 @@ def attach(
     pid: Optional[int] = None,
     target: Optional[str] = None,
     adaSourceCharset: Optional[str] = None,
+    coreFile: Optional[str] = None,
     **args,
 ):
     # The actual attach is handled by this function.
@@ -149,11 +154,14 @@ def attach(
             cmd = "attach " + str(pid)
         elif target is not None:
             cmd = "target remote " + target
+        elif coreFile is not None:
+            cmd = "core-file " + escape_filename(coreFile)
         else:
-            raise DAPException("attach requires either 'pid' or 'target'")
+            raise DAPException("attach requires either 'pid', 'target', or 'coreFile'")
         expect_process("attach")
         expect_stop("attach")
         exec_and_log(cmd)
+
         # Attach response does not have a body.
         return None
 

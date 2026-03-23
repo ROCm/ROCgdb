@@ -629,7 +629,10 @@ def _disconnect_or_kill(terminate: Optional[bool]):
         # The default depends on whether the inferior was attached or
         # launched.
         terminate = not inf.was_attached
-    if terminate:
+
+    if inf.corefile is not None:
+        exec_and_log("core-file")
+    elif terminate:
         exec_and_log("kill")
     elif inf.was_attached:
         exec_and_log("detach")
