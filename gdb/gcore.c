@@ -413,21 +413,24 @@ make_output_phdrs (bfd *obfd, asection *osec)
   bfd_record_phdr (obfd, p_type, 1, p_flags, 0, 0, 0, 0, 1, &osec);
 }
 
-/* find_memory_region_ftype implementation.
+/* Helper for gcore_memory_sections's gdbarch_find_memory_regions
+   find_memory_region_ftype callback.
 
-   MEMORY_TAGGED is true if the memory region contains memory tags, false
-   otherwise.
+   Extra arguments compared to find_memory_region_ftype:
 
    DATA is 'bfd *' for the core file GDB is creating.  */
 
 static int
 gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
 		       int write, int exec, int modified, bool memory_tagged,
-		       void *data)
+		       bool hole, void *data)
 {
   bfd *obfd = (bfd *) data;
   asection *osec;
-  flagword flags = SEC_ALLOC | SEC_HAS_CONTENTS | SEC_LOAD;
+  flagword flags = SEC_ALLOC;
+
+  if (!hole)
+    flags |= SEC_HAS_CONTENTS | SEC_LOAD;
 
   /* If the memory segment has no permissions set, ignore it, otherwise
      when we later try to access it for read/write, we'll get an error
@@ -442,7 +445,8 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
       return 0;
     }
 
-  if (write == 0 && modified == 0 && !solib_keep_data_in_core (vaddr, size))
+  if (!hole && write == 0 && modified == 0
+      && !solib_keep_data_in_core (vaddr, size))
     {
       /* See if this region of memory lies inside a known file on disk.
 	 If so, we can avoid copying its contents by clearing SEC_LOAD.  */
@@ -505,8 +509,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, int read,
 
 /* gdbarch_find_memory_region callback for creating a memory tag section.
 
-   MEMORY_TAGGED is true if the memory region contains memory tags, false
-   otherwise.
+   Extra arguments compared to find_memory_region_ftype:
 
    DATA is 'bfd *' for the core file GDB is creating.  */
 
@@ -514,7 +517,7 @@ static int
 gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 				      int read, int write, int exec,
 				      int modified, bool memory_tagged,
-				      void *data)
+				      bool hole, void *data)
 {
   /* Are there memory tags in this particular memory map entry?  */
   if (!memory_tagged)
@@ -575,6 +578,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 			   (flags & SEC_CODE) != 0, /* Executable.  */
 			   1, /* MODIFIED is unknown, pass it as true.  */
 			   false, /* No memory tags in the object file.  */
+			   false, /* Not known to be an all-zeroes hole.  */
 			   obfd);
 	    if (ret != 0)
 	      return ret;
@@ -589,6 +593,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	     0, /* Stack section will not be executable.  */
 	     1, /* Stack section will be modified.  */
 	     false, /* No memory tags in the object file.  */
+	     false, /* Not known to be an all-zeroes hole.  */
 	     obfd);
 
   /* Make a heap segment.  */
@@ -600,6 +605,7 @@ objfile_find_memory_regions (find_memory_region_ftype func, void *obfd)
 	     0, /* Heap section will not be executable.  */
 	     1, /* Heap section will be modified.  */
 	     false, /* No memory tags in the object file.  */
+	     false, /* Not known to be an all-zeroes hole.  */
 	     obfd);
 
   return 0;
