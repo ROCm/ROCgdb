@@ -27,11 +27,14 @@
    MEMORY_TAGGED is true if the memory region contains memory tags, false
    otherwise.
 
+   HOLE is true if the memory region is known to be all zeroes, false
+   otherwise.
+
    Return true on success, false otherwise.  */
 
 using find_memory_region_ftype
   = gdb::function_view<bool (CORE_ADDR addr, unsigned long size, bool read,
 			     bool write, bool exec, bool modified,
-			     bool memory_tagged)>;
+			     bool memory_tagged, bool hole)>;
 
 #endif /* GDB_FIND_MEMORY_REGION_H */

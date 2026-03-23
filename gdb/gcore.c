@@ -393,20 +393,23 @@ make_output_phdrs (bfd *obfd, asection *osec)
   bfd_record_phdr (obfd, p_type, 1, p_flags, 0, 0, 0, 0, 1, &osec);
 }
 
-/* find_memory_region_ftype implementation.
+/* Helper for gcore_memory_sections's gdbarch_find_memory_regions
+   find_memory_region_ftype callback.
 
-   MEMORY_TAGGED is true if the memory region contains memory tags, false
-   otherwise.
+   Extra arguments compared to find_memory_region_ftype:
 
    OBFD is the core file GDB is creating.  */
 
 static bool
 gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
 		       bool write, bool exec, bool modified,
-		       bool memory_tagged, bfd *obfd)
+		       bool memory_tagged, bool hole, bfd *obfd)
 {
   asection *osec;
-  flagword flags = SEC_ALLOC | SEC_HAS_CONTENTS | SEC_LOAD;
+  flagword flags = SEC_ALLOC;
+
+  if (!hole)
+    flags |= SEC_HAS_CONTENTS | SEC_LOAD;
 
   /* If the memory segment has no permissions set, ignore it, otherwise
      when we later try to access it for read/write, we'll get an error
@@ -421,7 +424,7 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
       return true;
     }
 
-  if (!write && !modified && !solib_keep_data_in_core (vaddr, size))
+  if (!hole && !write && !modified && !solib_keep_data_in_core (vaddr, size))
     {
       /* See if this region of memory lies inside a known file on disk.
 	 If so, we can avoid copying its contents by clearing SEC_LOAD.  */
@@ -482,10 +485,11 @@ gcore_create_callback (CORE_ADDR vaddr, unsigned long size, bool read,
   return true;
 }
 
-/* gdbarch_find_memory_regions callback for creating a memory tag section.
+/* Helper for gcore_memory_sections's gdbarch_find_memory_regions
+   find_memory_region_ftype callback, for creating a memory tag
+   section.
 
-   MEMORY_TAGGED is true if the memory region contains memory tags, false
-   otherwise.
+   Extra arguments compared to find_memory_region_ftype:
 
    OBFD is the core file GDB is creating.  */
 
@@ -493,7 +497,7 @@ static bool
 gcore_create_memtag_section_callback (CORE_ADDR vaddr, unsigned long size,
 				      bool read, bool write, bool exec,
 				      bool modified, bool memory_tagged,
-				      bfd *obfd)
+				      bool hole, bfd *obfd)
 {
   /* Are there memory tags in this particular memory map entry?  */
   if (!memory_tagged)
@@ -550,7 +554,8 @@ objfile_find_memory_regions (struct target_ops *self,
 			     (flags & SEC_READONLY) == 0, /* Writable.  */
 			     (flags & SEC_CODE) != 0, /* Executable.  */
 			     true, /* MODIFIED is unknown, pass it as true.  */
-			     false /* No memory tags in the object file.  */);
+			     false, /* No memory tags in the object file.  */
+			     false  /* Not known to be an all-zeroes hole.  */);
 	    if (!ret)
 	      return ret;
 	  }
@@ -563,7 +568,8 @@ objfile_find_memory_regions (struct target_ops *self,
 		true,  /* Stack section will be writable.  */
 		false, /* Stack section will not be executable.  */
 		true,  /* Stack section will be modified.  */
-		false  /* No memory tags in the object file.  */))
+		false, /* No memory tags in the object file.  */
+		false  /* Not known to be an all-zeroes hole.  */))
     return false;
 
   /* Make a heap segment.  */
@@ -574,7 +580,8 @@ objfile_find_memory_regions (struct target_ops *self,
 		true,  /* Heap section will be writable.  */
 		false, /* Heap section will not be executable.  */
 		true,  /* Heap section will be modified.  */
-		false  /* No memory tags in the object file.  */))
+		false, /* No memory tags in the object file.  */
+		false  /* Not known to be an all-zeroes hole.  */))
     return false;
 
   return true;
@@ -845,10 +852,10 @@ static bool
 gcore_memory_sections (bfd *obfd)
 {
   auto cb = [obfd] (CORE_ADDR vaddr, unsigned long size, bool read, bool write,
-		    bool exec, bool modified, bool memory_tagged)
+		    bool exec, bool modified, bool memory_tagged, bool hole)
     {
       return gcore_create_callback (vaddr, size, read, write, exec, modified,
-				    memory_tagged, obfd);
+				    memory_tagged, hole, obfd);
     };
 
   /* Try gdbarch method first, then fall back to target method.  */
@@ -862,11 +869,11 @@ gcore_memory_sections (bfd *obfd)
 
   auto cb_memtag = [obfd] (CORE_ADDR vaddr, unsigned long size, bool read,
 			   bool write, bool exec, bool modified,
-			   bool memory_tagged)
+			   bool memory_tagged, bool hole)
     {
       return gcore_create_memtag_section_callback (vaddr, size, read, write,
 						   exec, modified,
-						   memory_tagged, obfd);
+						   memory_tagged, hole, obfd);
     };
 
   /* Take care of dumping memory tags, if there are any.  */
