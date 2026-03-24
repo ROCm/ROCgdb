@@ -76,9 +76,9 @@ static int last_count;
 
 static bool last_print_tags = false;
 
-/* Default address to examine next, and associated architecture.  */
+/* Default address to examine next, and associated type.  */
 
-static struct gdbarch *next_gdbarch;
+static type *next_type;
 static CORE_ADDR next_address;
 
 /* Number of delay instructions following current disassembled insn.  */
@@ -529,7 +529,7 @@ set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   type *ptr_type = builtin_type (gdbarch)->builtin_func_ptr;
 
-  next_gdbarch = gdbarch;
+  next_type = ptr_type;
   next_address = addr;
 
   /* Make address available to the user as $_.  */
@@ -1064,8 +1064,8 @@ static void
 do_examine_next_address (struct format_data fmt)
 {
   char format = fmt.format;
-  type *val_type = format_to_type (fmt, next_gdbarch);
-  gdbarch *gdbarch = next_gdbarch;
+  type *val_type = next_type;
+  gdbarch *gdbarch = next_type->arch ();
 
   char size;
   switch (val_type->length ())
@@ -1884,10 +1884,10 @@ x_command (const char *exp, int from_tty)
       else
 	next_address = value_as_address (val);
 
-      next_gdbarch = expr->gdbarch;
+      next_type = format_to_type (fmt, expr->gdbarch);
     }
 
-  if (!next_gdbarch)
+  if (next_type == nullptr)
     error_no_arg (_("starting display address"));
 
   do_examine_next_address (fmt);
@@ -2167,7 +2167,7 @@ do_one_display (struct display *d)
 	  if (d->format.format == 'i')
 	    addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
 
-	  next_gdbarch = d->exp->gdbarch;
+	  next_type = format_to_type (d->format, d->exp->gdbarch);
 	  next_address = addr;
 	  do_examine_next_address (d->format);
 	}
