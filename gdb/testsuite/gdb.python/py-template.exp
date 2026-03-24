@@ -36,9 +36,6 @@ proc test_template_arg {exefile type} {
 	return -1
     }
     gdb_load ${exefile}
-    if {![runto_main]} {
-	return
-    }
     # There is no executable code in main(), so we are where we want to be
     gdb_test "print (foo)" ".*" \
 	"print (foo) in template test of $type"

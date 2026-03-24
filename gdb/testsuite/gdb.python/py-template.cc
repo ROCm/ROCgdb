@@ -23,8 +23,9 @@ struct Foo {
 #define TYPE int
 #endif
 
+Foo<TYPE> foo;
+
 int main()
 {
-  Foo<TYPE> foo;
   return 0; // break here
 }
