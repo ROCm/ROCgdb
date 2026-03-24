@@ -616,7 +616,9 @@ class gdbpy_initialize_file
 
      There is no error return in this case.  This function is only called
      when GDB is already shutting down.  The function should make a best
-     effort to clean up, and then return.  */
+     effort to clean up, and then return.
+
+     The GIL will be held while calling the finalizers.  */
 
   using gdbpy_finalize_file_ftype = void (*) (void);
 
