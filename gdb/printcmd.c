@@ -988,10 +988,11 @@ find_string_backward (struct gdbarch *gdbarch,
 }
 
 /* Given format FMT and architecture GDBARCH, return the corresponding
-   value type.  */
+   value type.  Annotate the resulting type with FLAGS as the type
+   instance flags.  */
 
 static type *
-format_to_type (format_data fmt, gdbarch *gdbarch)
+format_to_type (format_data fmt, gdbarch *gdbarch, type_instance_flags flags)
 {
   char format = fmt.format;
   char size = fmt.size;
@@ -1054,6 +1055,8 @@ format_to_type (format_data fmt, gdbarch *gdbarch)
     }
 
   gdb_assert (val_type != nullptr);
+  val_type = make_type_with_address_space (val_type, flags);
+
   return val_type;
 }
 
@@ -1884,7 +1887,11 @@ x_command (const char *exp, int from_tty)
       else
 	next_address = value_as_address (val);
 
-      next_type = format_to_type (fmt, expr->gdbarch);
+      type_instance_flags flags = 0;
+      if (val->type ()->is_pointer_or_reference ())
+	flags = val->type ()->target_type ()->instance_flags ();
+
+      next_type = format_to_type (fmt, expr->gdbarch, flags);
     }
 
   if (next_type == nullptr)
@@ -2167,7 +2174,11 @@ do_one_display (struct display *d)
 	  if (d->format.format == 'i')
 	    addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
 
-	  next_type = format_to_type (d->format, d->exp->gdbarch);
+	  type_instance_flags flags = 0;
+	  if (val->type ()->is_pointer_or_reference ())
+	    flags = val->type ()->target_type ()->instance_flags ();
+
+	  next_type = format_to_type (d->format, d->exp->gdbarch, flags);
 	  next_address = addr;
 	  do_examine_next_address (d->format);
 	}
