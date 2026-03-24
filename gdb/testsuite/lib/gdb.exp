@@ -10868,7 +10868,7 @@ gdb_caching_proc have_fvar_tracking {} {
 # Return 1 if linker supports -Ttext-segment, otherwise return 0.
 gdb_caching_proc linker_supports_Ttext_segment_flag {} {
     set me "linker_supports_Ttext_segment_flag"
-    set flags ldflags="-Wl,-Ttext-segment=0x7000000"
+    set flags ldflags=[quote_for_host -Wl,-Ttext-segment=0x7000000]
     set src { int main() { return 0; } }
     return [gdb_simple_compile $me $src executable $flags]
 }
@@ -10876,7 +10876,7 @@ gdb_caching_proc linker_supports_Ttext_segment_flag {} {
 # Return 1 if linker supports -Ttext, otherwise return 0.
 gdb_caching_proc linker_supports_Ttext_flag {} {
     set me "linker_supports_Ttext_flag"
-    set flags ldflags="-Wl,-Ttext=0x7000000"
+    set flags ldflags=[quote_for_host -Wl,-Ttext=0x7000000]
     set src { int main() { return 0; } }
     return [gdb_simple_compile $me $src executable $flags]
 }
@@ -10884,7 +10884,7 @@ gdb_caching_proc linker_supports_Ttext_flag {} {
 # Return 1 if linker supports --image-base, otherwise 0.
 gdb_caching_proc linker_supports_image_base_flag {} {
     set me "linker_supports_image_base_flag"
-    set flags ldflags="-Wl,--image-base=0x7000000"
+    set flags ldflags=[quote_for_host -Wl,--image-base=0x7000000]
     set src { int main() { return 0; } }
     return [gdb_simple_compile $me $src executable $flags]
 }

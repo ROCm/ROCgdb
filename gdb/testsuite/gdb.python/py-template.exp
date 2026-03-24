@@ -29,9 +29,12 @@ clean_restart
 
 proc test_template_arg {exefile type} {
     global testfile srcdir subdir srcfile
+    set opts {}
+    lappend opts debug
+    lappend opts c++
+    lappend opts additional_flags=[quote_for_host -DTYPE=$type]
     if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${exefile}" \
-		executable \
-		[list debug c++ additional_flags="-DTYPE=$type"]] != "" } {
+	      executable $opts] != "" } {
 	untested $type
 	return -1
     }

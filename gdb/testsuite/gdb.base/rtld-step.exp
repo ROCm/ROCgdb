@@ -100,7 +100,10 @@ if { ![gdb_can_simple_compile static-pie-static-libc \
 set main_basename ${::gdb_test_file_name}-main
 set srcfile_main ${srcdir}/${subdir}/${main_basename}.c
 set binfile_main [standard_output_file ${main_basename}]
-set main_flags [list debug additional_flags="-Wl,--dynamic-linker=${binfile_rtld}"]
+set main_flags {}
+lappend main_flags debug
+lappend main_flags \
+    additional_flags=[quote_for_host -Wl,--dynamic-linker=$binfile_rtld]
 
 # Compile pretend RTLD:
 if { [gdb_compile ${srcfile_rtld} ${binfile_rtld} executable $rtld_flags] != "" } {

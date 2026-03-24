@@ -35,7 +35,10 @@ if { [gdb_compile_shlib $srcdir/$subdir/$srcfile2 $shlib_path {debug}] != "" } {
 
 set shlib_path_target [gdb_download_shlib $::shlib_path]
 
-set opts [list shlib_load additional_flags=-DSHLIB_PATH="${shlib_path_target}"]
+set opts {}
+lappend opts shlib_load
+lappend opts additional_flags=-DSHLIB_PATH=[quote_for_host $shlib_path_target]
+
 if { [build_executable "failed to prepare" ${testfile} ${srcfile} $opts] } {
     return
 }
