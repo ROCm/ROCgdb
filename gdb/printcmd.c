@@ -993,20 +993,9 @@ find_string_backward (struct gdbarch *gdbarch,
 static void
 do_examine_next_address (struct format_data fmt)
 {
-  char format = 0;
-  char size;
-  int count = 1;
-  struct type *val_type = NULL;
-  int i;
-  int maxelts;
-  struct value_print_options opts;
-  int need_to_update_next_address = 0;
-  CORE_ADDR addr_rewound = 0;
-
-  format = fmt.format;
-  size = fmt.size;
-  count = fmt.count;
-
+  char format = fmt.format;
+  char size = fmt.size;
+  type *val_type = nullptr;
   gdbarch *gdbarch = next_gdbarch;
 
   if (size == 'a')
@@ -1065,7 +1054,7 @@ do_examine_next_address (struct format_data fmt)
 	= builtin_type (gdbarch)->builtin_func_ptr->target_type ();
     }
 
-  maxelts = 8;
+  int maxelts = 8;
   if (size == 'w')
     maxelts = 4;
   if (size == 'g')
@@ -1073,8 +1062,13 @@ do_examine_next_address (struct format_data fmt)
   if (format == 's' || format == 'i')
     maxelts = 1;
 
+  value_print_options opts;
   get_formatted_print_options (&opts, format);
 
+  bool need_to_update_next_address = false;
+  CORE_ADDR addr_rewound = 0;
+
+  int count = fmt.count;
   if (count < 0)
     {
       /* This is the negative repeat count case.
@@ -1105,7 +1099,7 @@ do_examine_next_address (struct format_data fmt)
       addr_rewound = (format == 's'
 		      ? next_address - val_type->length ()
 		      : next_address);
-      need_to_update_next_address = 1;
+      need_to_update_next_address = true;
     }
 
   /* Whether we need to print the memory tag information for the current
@@ -1156,7 +1150,7 @@ do_examine_next_address (struct format_data fmt)
 	gdb_puts (pc_prefix (next_address));
       print_address (gdbarch, next_address, gdb_stdout);
       gdb_printf (":");
-      for (i = maxelts;
+      for (int i = maxelts;
 	   i > 0 && count > 0;
 	   i--, count--)
 	{
