@@ -22,6 +22,7 @@
 #include "ui-out.h"
 #include "cli/cli-script.h"
 #include "cli/cli-cmds.h"
+#include "exceptions.h"
 #include "progspace.h"
 #include "objfiles.h"
 #include "value.h"
@@ -2215,6 +2216,94 @@ static bool python_dont_write_bytecode_at_python_initialization;
    to passing `-E' to the python program.  */
 static bool python_ignore_environment = false;
 
+#if PY_VERSION_HEX >= 0x030e0000
+
+namespace {
+
+/* A class wrapper around the new configuration functions introduced by
+   PEP 741 in Python 3.14.  */
+class gdb_PyInitializer
+{
+public:
+  gdb_PyInitializer ();
+  ~gdb_PyInitializer ();
+
+  void set_opt (const char *opt_name, bool value);
+  void set_opt (const char *opt_name, const char *value);
+
+  /* Initialize Python with the current config.
+     Note: this function should be called before the object goes out of scope
+     or an assertion will be triggered in the destructor at runtime.  Setting
+     options value after this call does not have any effect.  */
+  void initialize ();
+
+private:
+  [[noreturn]] void handle_error ();
+
+  PyInitConfig *m_config;
+  bool m_err = false;
+  bool m_py_initialized = false;
+};
+
+gdb_PyInitializer::gdb_PyInitializer ()
+  : m_config (PyInitConfig_Create ())
+{
+  if (m_config == nullptr)
+    error (_("Python initialization failed: memory allocation failed"));
+}
+
+gdb_PyInitializer::~gdb_PyInitializer ()
+{
+  /* If the condition below is false, the calling context probably forgot to
+     call initialize().  */
+  gdb_assert (m_err || m_py_initialized);
+
+  if (m_config)
+    PyInitConfig_Free (m_config);
+}
+
+[[noreturn]] void
+gdb_PyInitializer::handle_error ()
+{
+  m_err = true;
+
+  const char *err_msg;
+  if (PyInitConfig_GetError (m_config, &err_msg) == 1)
+    error (_("Python initialization failed: %s"), err_msg);
+
+  int exit_code;
+  if (PyInitConfig_GetExitCode (m_config, &exit_code) != 0)
+    error (_("Python initialization failed with exit status: %d"), exit_code);
+  else
+    error (_("Python initialization failed"));
+}
+
+void
+gdb_PyInitializer::set_opt (const char *opt_name, bool value)
+{
+  if (PyInitConfig_SetInt (m_config, opt_name, value) < 0)
+    handle_error ();
+}
+
+void
+gdb_PyInitializer::set_opt (const char *opt_name, const char *value)
+{
+  if (PyInitConfig_SetStr (m_config, opt_name, value) < 0)
+    handle_error ();
+}
+
+void
+gdb_PyInitializer::initialize ()
+{
+  if (!m_py_initialized && Py_InitializeFromInitConfig (m_config) < 0)
+    handle_error ();
+  m_py_initialized = true;
+}
+
+} /* namespace anonymous */
+
+#endif /* PY_VERSION_HEX >= 0x030e0000 */
+
 /* Implement 'show python ignore-environment'.  */
 
 static void
@@ -2548,7 +2637,8 @@ py_initialize ()
   Py_IgnoreEnvironmentFlag
     = python_ignore_environment_at_python_initialization ? 1 : 0;
   return py_initialize_catch_abort ();
-#else
+
+#elif PY_VERSION_HEX < 0x030e0000
   PyConfig config;
 
   PyConfig_InitPythonConfig (&config);
@@ -2584,6 +2674,37 @@ init_done:
 
   py_isinitialized = true;
   return true;
+
+#else
+  try
+    {
+      gdb_PyInitializer py_config;
+
+      py_config.set_opt ("program_name", progname.get ());
+      py_config.set_opt ("write_bytecode",
+			 !python_dont_write_bytecode_at_python_initialization);
+      py_config.set_opt ("isolated", false);
+      py_config.set_opt ("configure_locale", true);
+      py_config.set_opt ("pathconfig_warnings", true);
+      py_config.set_opt ("parse_argv", true);
+      py_config.set_opt ("safe_path", false);
+      py_config.set_opt ("configure_c_stdio", true);
+      py_config.set_opt ("stdio_encoding", "utf-8");
+      py_config.set_opt ("stdio_errors", "strict");
+      py_config.set_opt ("install_signal_handlers", true);
+      py_config.set_opt ("use_environment",
+			 !python_ignore_environment_at_python_initialization);
+      py_config.set_opt ("user_site_directory", true);
+
+      py_config.initialize ();
+      py_isinitialized = true;
+    }
+  catch (const gdb_exception_error &exc)
+    {
+      exception_print (gdb_stderr, exc);
+      py_isinitialized = false;
+    }
+  return py_isinitialized;
 #endif
 }
 
