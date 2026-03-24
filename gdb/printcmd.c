@@ -987,16 +987,15 @@ find_string_backward (struct gdbarch *gdbarch,
   return string_start_addr;
 }
 
-/* Examine data at address NEXT_ADDRESS in format FMT.
-   Fetch it from memory and print on gdb_stdout.  */
+/* Given format FMT and architecture GDBARCH, return the corresponding
+   value type.  */
 
-static void
-do_examine_next_address (struct format_data fmt)
+static type *
+format_to_type (format_data fmt, gdbarch *gdbarch)
 {
   char format = fmt.format;
   char size = fmt.size;
   type *val_type = nullptr;
-  gdbarch *gdbarch = next_gdbarch;
 
   if (size == 'a')
     {
@@ -1052,6 +1051,43 @@ do_examine_next_address (struct format_data fmt)
       size = 'b';
       val_type
 	= builtin_type (gdbarch)->builtin_func_ptr->target_type ();
+    }
+
+  gdb_assert (val_type != nullptr);
+  return val_type;
+}
+
+/* Examine data at address NEXT_ADDRESS in format FMT.
+   Fetch it from memory and print on gdb_stdout.  */
+
+static void
+do_examine_next_address (struct format_data fmt)
+{
+  char format = fmt.format;
+  type *val_type = format_to_type (fmt, next_gdbarch);
+  gdbarch *gdbarch = next_gdbarch;
+
+  char size;
+  switch (val_type->length ())
+    {
+    case 1:
+      size = 'b';
+      break;
+
+    case 2:
+      size = 'h';
+      break;
+
+    case 4:
+      size = 'w';
+      break;
+
+    case 8:
+      size = 'g';
+      break;
+
+    default:
+      gdb_assert_not_reached ("unexpected type length for next_address");
     }
 
   int maxelts = 8;
