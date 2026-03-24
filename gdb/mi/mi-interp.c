@@ -248,7 +248,7 @@ mi_interp::pre_command_loop ()
 
   /* Turn off 8 bit strings in quoted output.  Any character with the
      high bit set is printed using C's octal format.  */
-  sevenbit_strings = 1;
+  sevenbit_strings = true;
 
   /* Tell the world that we're alive.  */
   display_mi_prompt (mi);

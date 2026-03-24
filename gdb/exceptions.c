@@ -66,6 +66,12 @@ print_flush (void)
 static void
 print_exception (struct ui_file *file, const struct gdb_exception &e)
 {
+  /* Exceptions are always created using styling.  If styling is not
+     desired, then it has to be removed here.  */
+  no_terminal_escape_file<wrapped_file<ui_file *>> strip_escapes (file);
+  if (!file->can_emit_style_escape ())
+    file = &strip_escapes;
+
   /* KLUDGE: cagney/2005-01-13: Write the string out one line at a time
      as that way the MI's behavior is preserved.  */
   const char *start;

@@ -338,12 +338,13 @@ public:
    an incomplete but potentially recognizable escape sequence is
    started.  */
 
-class escape_buffering_file : public stdio_file
+template<typename T>
+class escape_buffering_file : public T
 {
 public:
-  using stdio_file::stdio_file;
+  using T::T;
 
-  /* Like the stdio_file methods but these forward to do_write and
+  /* Like the superclass methods but these forward to do_write and
      do_puts, respectively.  */
   void write (const char *buf, long length_buf) override final;
   void puts (const char *linebuffer) override final;
@@ -370,12 +371,11 @@ private:
 /* A ui_file implementation that filters out terminal escape
    sequences.  */
 
-class no_terminal_escape_file : public escape_buffering_file
+template<typename T>
+class no_terminal_escape_file : public escape_buffering_file<T>
 {
 public:
-  no_terminal_escape_file ()
-  {
-  }
+  using escape_buffering_file<T>::escape_buffering_file;
 
   void emit_style_escape (const ui_file_style &style) override
   {
@@ -395,6 +395,11 @@ template<typename T>
 class wrapped_file : public ui_file
 {
 public:
+
+  explicit wrapped_file (T stream)
+    : m_stream (std::move (stream))
+  {
+  }
 
   bool isatty () override
   { return m_stream->isatty (); }
@@ -420,6 +425,9 @@ public:
   void puts_unfiltered (const char *str) override
   { m_stream->puts_unfiltered (str); }
 
+  void write (const char *buf, long length_buf) override
+  { return m_stream->write (buf, length_buf); }
+
   void write_async_safe (const char *buf, long length_buf) override
   { return m_stream->write_async_safe (buf, length_buf); }
 
@@ -429,11 +437,6 @@ public:
   }
 
 protected:
-
-  explicit wrapped_file (T stream)
-    : m_stream (std::move (stream))
-  {
-  }
 
   /* The underlying stream.  */
   T m_stream;

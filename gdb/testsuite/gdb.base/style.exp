@@ -1080,6 +1080,10 @@ proc test_logging_styling {} {
     gdb_test "set logging enabled off" \
 	"Done logging to [style $filename file]\\." \
 	"filename styled when logging disabled"
+
+    # Test that error messages are styled.
+    gdb_test "list" \
+	"No symbol table is loaded\\.  Use the \"[style file command]\" command\\."
 }
 
 # Check to see if the Python styling of disassembler output is
