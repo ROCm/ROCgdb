@@ -987,11 +987,11 @@ find_string_backward (struct gdbarch *gdbarch,
   return string_start_addr;
 }
 
-/* Examine data at address ADDR in format FMT.
+/* Examine data at address NEXT_ADDRESS in format FMT.
    Fetch it from memory and print on gdb_stdout.  */
 
 static void
-do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
+do_examine_next_address (struct format_data fmt)
 {
   char format = 0;
   char size;
@@ -1006,17 +1006,17 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
   format = fmt.format;
   size = fmt.size;
   count = fmt.count;
-  next_gdbarch = gdbarch;
-  next_address = addr;
+
+  gdbarch *gdbarch = next_gdbarch;
 
   if (size == 'a')
     {
       /* Pick the appropriate size for an address.  */
-      if (gdbarch_ptr_bit (next_gdbarch) == 64)
+      if (gdbarch_ptr_bit (gdbarch) == 64)
 	size = 'g';
-      else if (gdbarch_ptr_bit (next_gdbarch) == 32)
+      else if (gdbarch_ptr_bit (gdbarch) == 32)
 	size = 'w';
-      else if (gdbarch_ptr_bit (next_gdbarch) == 16)
+      else if (gdbarch_ptr_bit (gdbarch) == 16)
 	size = 'h';
       else
 	/* Bad value for gdbarch_ptr_bit.  */
@@ -1024,13 +1024,13 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
     }
 
   if (size == 'b')
-    val_type = builtin_type (next_gdbarch)->builtin_int8;
+    val_type = builtin_type (gdbarch)->builtin_int8;
   else if (size == 'h')
-    val_type = builtin_type (next_gdbarch)->builtin_int16;
+    val_type = builtin_type (gdbarch)->builtin_int16;
   else if (size == 'w')
-    val_type = builtin_type (next_gdbarch)->builtin_int32;
+    val_type = builtin_type (gdbarch)->builtin_int32;
   else if (size == 'g')
-    val_type = builtin_type (next_gdbarch)->builtin_int64;
+    val_type = builtin_type (gdbarch)->builtin_int64;
 
   if (format == 's')
     {
@@ -1039,9 +1039,9 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
       /* Search for "char16_t"  or "char32_t" types or fall back to 8-bit char
 	 if type is not found.  */
       if (size == 'h')
-	char_type = builtin_type (next_gdbarch)->builtin_char16;
+	char_type = builtin_type (gdbarch)->builtin_char16;
       else if (size == 'w')
-	char_type = builtin_type (next_gdbarch)->builtin_char32;
+	char_type = builtin_type (gdbarch)->builtin_char32;
       if (char_type)
 	val_type = char_type;
       else
@@ -1050,7 +1050,7 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	    warning (_("Unable to display strings with "
 		       "size '%c', using 'b' instead."), size);
 	  size = 'b';
-	  val_type = builtin_type (next_gdbarch)->builtin_int8;
+	  val_type = builtin_type (gdbarch)->builtin_int8;
 	}
     }
 
@@ -1062,7 +1062,7 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
     {
       size = 'b';
       val_type
-	= builtin_type (next_gdbarch)->builtin_func_ptr->target_type ();
+	= builtin_type (gdbarch)->builtin_func_ptr->target_type ();
     }
 
   maxelts = 8;
@@ -1084,18 +1084,19 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
       count = -count;
       if (format == 'i')
 	{
-	  next_address = find_instruction_backward (gdbarch, addr, count,
-						    &count);
+	  next_address = find_instruction_backward (gdbarch,
+						    next_address,
+						    count, &count);
 	}
       else if (format == 's')
 	{
-	  next_address = find_string_backward (gdbarch, addr, count,
-					       val_type->length (),
+	  next_address = find_string_backward (gdbarch, next_address,
+					       count, val_type->length (),
 					       &opts, &count);
 	}
       else
 	{
-	  next_address = addr - count * val_type->length ();
+	  next_address = next_address - count * val_type->length ();
 	}
 
       /* The following call to print_formatted updates next_address in every
@@ -1128,15 +1129,15 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 	  tag_laddr = align_down (next_address, gsize);
 	  tag_haddr = align_down (next_address + gsize, gsize);
 
-	  struct value *v_addr
-	    = value_from_ulongest (builtin_type (gdbarch)->builtin_data_ptr,
-				   tag_laddr);
+	  type *data_ptr = builtin_type (gdbarch)->builtin_data_ptr;
+	  struct value *v_addr = value_from_ulongest (data_ptr, tag_laddr);
 
 	  if (target_is_address_tagged (gdbarch, value_as_address (v_addr)))
 	    {
 	      /* Fetch the allocation tag.  */
 	      struct value *tag
-		= gdbarch_get_memtag (gdbarch, v_addr, memtag_type::allocation);
+		= gdbarch_get_memtag (gdbarch, v_addr,
+				      memtag_type::allocation);
 	      std::string atag
 		= gdbarch_memtag_to_string (gdbarch, tag);
 
@@ -1153,7 +1154,7 @@ do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 
       if (format == 'i')
 	gdb_puts (pc_prefix (next_address));
-      print_address (next_gdbarch, next_address, gdb_stdout);
+      print_address (gdbarch, next_address, gdb_stdout);
       gdb_printf (":");
       for (i = maxelts;
 	   i > 0 && count > 0;
@@ -1859,7 +1860,7 @@ x_command (const char *exp, int from_tty)
   if (!next_gdbarch)
     error_no_arg (_("starting display address"));
 
-  do_examine (fmt, next_gdbarch, next_address);
+  do_examine_next_address (fmt);
 
   /* If the examine succeeds, we remember its size and format for next
      time.  Set last_size to 'b' for strings.  */
@@ -2135,7 +2136,10 @@ do_one_display (struct display *d)
 	  addr = value_as_address (val);
 	  if (d->format.format == 'i')
 	    addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
-	  do_examine (d->format, d->exp->gdbarch, addr);
+
+	  next_gdbarch = d->exp->gdbarch;
+	  next_address = addr;
+	  do_examine_next_address (d->format);
 	}
       catch (const gdb_exception_error &ex)
 	{
