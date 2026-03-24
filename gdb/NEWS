@@ -36,6 +36,12 @@
   subsequent runs of the inferior will use the same arguments as the
   first run.
 
+* GDB now supports arbitrary (non-standard) baud rates for serial
+  connections to remote targets on systems where the host libc accepts
+  them via cfsetispeed/cfsetospeed, such as glibc 2.42 and later and
+  GNU Hurd.  On other systems, existing platform-specific mechanisms
+  are used.
+
 * Support for stabs debug information has been removed.
 
 * Support for mdebug debug information has been removed.

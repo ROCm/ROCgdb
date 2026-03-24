@@ -110,6 +110,9 @@
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
+/* Define if cfsetispeed/cfsetospeed accept arbitrary baud rates. */
+#undef HAVE_CFSETSPEED_ARBITRARY
+
 /* Define to 1 if you have the `clearenv' function. */
 #undef HAVE_CLEARENV
 
