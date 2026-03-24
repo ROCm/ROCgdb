@@ -55,7 +55,9 @@
 
 #include "gdbsupport/scoped_ignore_sigttou.h"
 
-#if defined(HAVE_SYS_IOCTL_H) && (defined(BOTHER) || defined(IOSSIOSPEED))
+#if (defined(HAVE_SYS_IOCTL_H) \
+     && ((defined(BOTHER) && defined(HAVE_STRUCT_TERMIOS_C_OSPEED)) \
+	  || defined(IOSSIOSPEED)))
 #  define HAVE_CUSTOM_BAUDRATE_SUPPORT 1
 #endif
 

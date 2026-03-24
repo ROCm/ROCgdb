@@ -725,6 +725,9 @@ AC_CONFIG_FILES([jit-reader.h:jit-reader.in])
 
 AC_SEARCH_LIBS(dlopen, dl)
 
+# Check for members required by the legacy Linux custom baud rate path.
+AC_CHECK_MEMBERS([struct termios.c_ospeed], [], [], [[#include <termios.h>]])
+
 GDB_AC_WITH_DIR([JIT_READER_DIR], [jit-reader-dir],
 		[directory to load the JIT readers from],
 		[${libdir}/gdb])

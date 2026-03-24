@@ -27730,6 +27730,19 @@ if test "$ac_res" != no; then :
 fi
 
 
+# Check for members required by the legacy Linux custom baud rate path.
+ac_fn_c_check_member "$LINENO" "struct termios" "c_ospeed" "ac_cv_member_struct_termios_c_ospeed" "#include <termios.h>
+"
+if test "x$ac_cv_member_struct_termios_c_ospeed" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_TERMIOS_C_OSPEED 1
+_ACEOF
+
+
+fi
+
+
 
 
 # Check whether --with-jit-reader-dir was given.
