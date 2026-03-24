@@ -23,6 +23,8 @@ ignore = ["line-length"]
 
 extensions = ["exp", "tcl"]
 
+commands=["expect", "testsuite/tclint-plugin.py"]
+
 [tool.tclint.style]
 # Used by tclfmt.
 indent = "mixed,4,8"

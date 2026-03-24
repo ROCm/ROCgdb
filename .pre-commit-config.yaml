@@ -113,9 +113,9 @@ repos:
       always_run: true
       require_serial: true
   - repo: https://github.com/nmoroze/tclint
-    rev: v0.7.0
+    rev: v0.8.0
     hooks:
     - id: tclint
-      args: [--commands, gdb/testsuite/tclint-plugin.py]
+      args: [--trust-plugins]
       types_or: [file]
       files: '^gdb/testsuite/.*\.(exp|tcl)$'
