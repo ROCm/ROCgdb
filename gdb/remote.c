@@ -10509,14 +10509,20 @@ remote_target::remote_serial_send_break ()
 }
 
 /* Return a string representing an escaped version of BUF, of len N.
-   E.g. \n is converted to \\n, \t to \\t, etc.  */
+   E.g. '\n' is converted to R"(\012)", '\t' to R"(\011)", etc.  */
 
 static std::string
 escape_buffer (const char *buf, int n)
 {
   string_file stb;
 
+  /* Temporarily set sevenbit_strings to true to make sure that we print
+     chars >= 0x80 as octal escape \ooo, independent of the current
+     sevenbit_strings setting.  This conservative choice is appropriate for
+     debug logs.  */
+  scoped_restore reset = make_scoped_restore (&sevenbit_strings, true);
   stb.putstrn (buf, n, '\\');
+
   return stb.release ();
 }
 
