@@ -72,6 +72,11 @@ set all_kernels_info {
     {templ_type                                   templ_type       {templ_type<int, long> (args=1, args=2)}}
 }
 
+# By default, the runtime allows 4 hardware queues max, which limits
+# us to 4 concurrent streams/kernels.  Launching all kernels at the
+# same time needs more than that, so when testing "all", bump it up.
+set inferior_env "GPU_MAX_HW_QUEUES=32"
+
 # KERNEL is the kernel to launch.  It is either the name of a kernel
 # as listed in ALL_KERNELS_INFO, or "all", to launch all.
 
@@ -85,10 +90,7 @@ proc do_test {kernel} {
     gdb_test "set args $kernel"
 
     if {$kernel == "all"} {
-	# By default, the runtime allows 4 hardware queues max, which
-	# limits us to 4 concurrent streams/kernels.  Launching all
-	# kernels at the same time needs than that, so bump it up.
-	gdb_test_no_output "set environment GPU_MAX_HW_QUEUES=32"
+	gdb_test_no_output "set environment $::inferior_env"
     }
 
     with_rocm_gpu_lock {
@@ -208,5 +210,11 @@ foreach entry $all_kernels_info {
     do_test_prefix $func
 }
 
-# Test running and debugging all kernels at once.
+# Test running all kernels at once outside the debugger first, to make
+# sure the runtime respects GPU_MAX_HW_QUEUES properly.
+set result [remote_exec target "env $inferior_env $binfile all"]
+set status [lindex $result 0]
+gdb_assert {$status == 0} "runs correctly outside debugger"
+
+# Now inside the debugger.
 do_test_prefix "all"
