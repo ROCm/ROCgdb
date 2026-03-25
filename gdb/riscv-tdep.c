@@ -5199,26 +5199,14 @@ class riscv_recorded_insn final
   }
 
   /* Returns true if instruction is successfully recorded.  The length of
-     the instruction must be equal to 4 bytes.  */
+     the instruction must be equal to 4 bytes.  Helper function for
+     record_insn_len4.  */
   bool
-  record_insn_len4 (ULONGEST ival) noexcept
+  record_insn_len4_1 (ULONGEST ival) noexcept
   {
     mem_len len = 0;
-    ULONGEST reg_val = 0;
 
-    if (is_ecall_insn (ival))
-      {
-	/* We are in baremetal mode.  */
-	if (m_in_baremetal_mode)
-	  {
-	    warning (_("Syscall record is not supported"));
-	    return false;
-	  }
-
-	/* We are in linux mode.  */
-	return (read_reg (RISCV_A7_REGNUM, reg_val)
-		&& m_gdbarch->riscv_syscall_record (m_regcache, reg_val) == 0);
-      }
+    gdb_assert (!is_ecall_insn (ival));
 
     if (is_ebreak_insn (ival))
       return true;
@@ -5254,6 +5242,32 @@ class riscv_recorded_insn final
     warning (_("Currently this instruction with len 4(%s) is unsupported"),
 	     hex_string (ival));
     return false;
+  }
+
+  /* Returns RECORD_SUCCESS if instruction is successfully recorded.  The
+     length of the instruction must be equal to 4 bytes.  */
+  int
+  record_insn_len4 (ULONGEST ival) noexcept
+  {
+    ULONGEST reg_val = 0;
+
+    if (is_ecall_insn (ival))
+      {
+	/* We are in baremetal mode.  */
+	if (m_in_baremetal_mode)
+	  {
+	    warning (_("Syscall record is not supported"));
+	    return RECORD_FAILURE;
+	  }
+
+	/* We are in linux mode.  */
+	if (!read_reg (RISCV_A7_REGNUM, reg_val))
+	  return RECORD_FAILURE;
+
+	return m_gdbarch->riscv_syscall_record (m_regcache, reg_val);
+      }
+
+    return record_insn_len4_1 (ival) ? RECORD_SUCCESS : RECORD_FAILURE;
   }
 
   /* Returns true if instruction is successfully recorded.  The length of
@@ -5388,8 +5402,9 @@ class riscv_recorded_insn final
   }
 
 public:
-  /* Record instruction at address addr.  Returns false if error happened.  */
-  bool
+  /* Record instruction at address addr.  Return RECORD_FAILURE if error
+     happened.  */
+  int
   record (gdbarch *gdbarch, struct regcache *regcache, CORE_ADDR addr) noexcept
   {
     gdb_assert (gdbarch != nullptr);
@@ -5412,14 +5427,14 @@ public:
     catch (const gdb_exception_error &ex)
       {
 	warning ("%s", ex.what ());
-	return false;
+	return RECORD_FAILURE;
       }
 
     if (!save_reg (RISCV_PC_REGNUM))
-      return false;
+      return RECORD_FAILURE;
 
     if (insn_length == 2)
-      return record_insn_len2 (ival);
+      return record_insn_len2 (ival) ? RECORD_SUCCESS : RECORD_FAILURE;
 
     if (insn_length == 4)
       return record_insn_len4 (ival);
@@ -5431,7 +5446,7 @@ public:
 
     warning (_("Can not record unknown instruction (opcode = %s)"),
 	     hex_string (ival));
-    return false;
+    return RECORD_FAILURE;
   }
 };
 
@@ -5447,8 +5462,9 @@ riscv_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
   gdb_assert (regcache != nullptr);
 
   riscv_recorded_insn insn;
-  if (!insn.record (gdbarch, regcache, addr))
-    return -1;
+  int res = insn.record (gdbarch, regcache, addr);
+  if (res != RECORD_SUCCESS)
+    return res;
 
   if (record_full_arch_list_add_end ())
     return -1;
