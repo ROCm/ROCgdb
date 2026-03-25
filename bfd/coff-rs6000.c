@@ -2868,7 +2868,17 @@ _bfd_xcoff_sizeof_headers (bfd *abfd,
 
   return size;
 }
-
+
+bool
+_bfd_xcoff_bfd_free_cached_info (bfd *abfd)
+{
+  /* xcoff bfd_core does not have a coff_tdata.  */
+  if (bfd_get_format (abfd) == bfd_object)
+    return _bfd_coff_free_cached_info (abfd);
+
+  return _bfd_generic_bfd_free_cached_info (abfd);
+}
+
 /* Routines to swap information in the XCOFF .loader section.  If we
    ever need to write an XCOFF loader, this stuff will need to be
    moved to another file shared by the linker (which XCOFF calls the
@@ -4462,7 +4472,6 @@ const struct xcoff_dwsect_name xcoff_dwsect_names[] = {
 
 /* For generic entry points.  */
 #define _bfd_xcoff_close_and_cleanup coff_close_and_cleanup
-#define _bfd_xcoff_bfd_free_cached_info coff_bfd_free_cached_info
 #define _bfd_xcoff_new_section_hook coff_new_section_hook
 #define _bfd_xcoff_get_section_contents _bfd_generic_get_section_contents
 
