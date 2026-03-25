@@ -183,4 +183,48 @@ foreach_with_prefix variant {plain compressed} {
 	gdb_test "info auto-load python-scripts no-script-matches-this" \
 	    "No auto-load scripts matching no-script-matches-this."
     }
+
+    # Unlike eu-strip, objcopy moves the .debug_gdb_scripts into the .debug
+    # file, removing it from the executable.  GDB should still load the
+    # script though, just when it loads the symbol file, not the main
+    # executable.
+    with_test_prefix "sepdebug from objcopy" {
+	clean_restart
+
+	set objcopy_testfile ${the_testfile}-objcopy
+	set objcopy_binfile [standard_output_file $objcopy_testfile]
+	file copy -force $the_binfile $objcopy_binfile
+
+	if { [gdb_gnu_strip_debug $objcopy_binfile] != 0 } {
+	    fail "strip $objcopy_testfile debuginfo"
+	    return
+	}
+
+	# Add the directory containing OBJCOPY_BINFILE because the scripts
+	# section will be auto-loaded from the separate .debug file (not the
+	# main executable), which resides alongside it.
+	set_auto_load_safe_path $remote_python_file \
+	    [file dirname ${objcopy_binfile}]
+	gdb_load $objcopy_binfile
+
+	# Verify gdb loaded each script and they appear once in the list.
+	gdb_test_multiple "info auto-load python-scripts" "verify scripts loaded" {
+	    -re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "${testfile}.py.*${testfile}.py.*" {
+		fail $gdb_test_name
+	    }
+	    -re -wrap "inlined-script.*inlined-script.*" {
+		fail $gdb_test_name
+	    }
+	}
+
+	# Again, with a regexp this time.
+	gdb_test "info auto-load python-scripts ${testfile}" "Yes.*${testfile}.py.*"
+
+	# Again, with a regexp that matches no scripts.
+	gdb_test "info auto-load python-scripts no-script-matches-this" \
+	    "No auto-load scripts matching no-script-matches-this."
+    }
 }
