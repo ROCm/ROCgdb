@@ -296,6 +296,18 @@ proc visibility_run {visibility} {
 	unsupported "visibility ($visibility) (non PIC)"
 	unsupported "visibility ($visibility)"
     } else {
+	# Non-PIC shared libraries are not supported on s390 64-bit (s390x).
+	# When compiling without -fpic or -fPIC, GCC will assume quite
+	# reasonably that it is not compiling for a shared library.  It
+	# can then make optimisations that result in shared library
+	# functions and variables not being overridable or reachable.
+	# N.B.: Skipping the non-PIC shared library tests (non-PIC main)
+	#       here will also cause skipping of likewise tests (PIC main)
+	#       further down below.
+	if { [istarget s390x-*-linux*] } {
+	    unsupported "visibility ($visibility) (non PIC)"
+	    unsupported "visibility ($visibility) (non PIC, load offset)"
+	} else {
 	# The shared library is composed of two files.  First compile them
 	# without using -fpic.  That should work on an ELF system,
 	# although it will be less efficient because the dynamic linker
@@ -405,7 +417,7 @@ proc visibility_run {visibility} {
 		    mainnp.o sh1np.o sh2np.o $datfile \
 		    "-Wl,-T,$srcdir/$subdir/elf-offset.ld,--hash-style=sysv" $NOPIE_LDFLAGS
 	    }
-	}
+	}}
 
 	# Now compile the code using -fpic.
 
