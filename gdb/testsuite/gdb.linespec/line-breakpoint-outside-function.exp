@@ -26,7 +26,14 @@ if {[build_executable "build shlib" $shlib_path $srcfile {debug shlib}]} {
     return
 }
 
-set opts [list debug shlib_load additional_flags=-DTHE_LIB_PATH="${shlib_path}"]
+set remote_shlib_path [gdb_download_shlib $shlib_path]
+
+set opts {}
+lappend opts debug
+lappend opts shlib_load
+lappend opts \
+    additional_flags=-DTHE_LIB_PATH=[quote_for_host ${remote_shlib_path}]
+
 if {[build_executable "failed to prepare" ${testfile} ${srcfile} $opts]} {
     return
 }

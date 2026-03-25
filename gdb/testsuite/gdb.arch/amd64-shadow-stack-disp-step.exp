@@ -25,7 +25,7 @@ save_vars { ::env(GLIBC_TUNABLES) } {
     append_environment GLIBC_TUNABLES "glibc.cpu.hwcaps" "SHSTK"
 
     if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
-	  additional_flags="-fcf-protection=return"] } {
+	  additional_flags=-fcf-protection=return] } {
 	return
     }
 

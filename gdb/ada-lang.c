@@ -1561,7 +1561,7 @@ ada_decode (const char *encoded, bool wrap, bool translate)
 	  at_start_name = 1;
 	  i += 2;
 	}
-      else if (isupper (encoded[i]) || encoded[i] == ' ')
+      else if (c_isupper (encoded[i]) || encoded[i] == ' ')
 	{
 	  /* Decoded names should never contain any uppercase
 	     character.  */

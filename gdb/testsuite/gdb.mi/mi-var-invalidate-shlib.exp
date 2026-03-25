@@ -32,7 +32,11 @@ if { [gdb_compile_shlib $srcdir/$subdir/$srcfile2 $shlib_path {debug}] != "" } {
 
 set shlib_path_target [gdb_download_shlib $shlib_path]
 
-set opts [list shlib_load debug additional_flags=-DSHLIB_PATH="${shlib_path_target}"]
+set opts {}
+lappend opts shlib_load
+lappend opts debug
+lappend opts additional_flags=-DSHLIB_PATH=[quote_for_host $shlib_path_target]
+
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable $opts] != "" } {
     untested "failed to compile"
     return -1

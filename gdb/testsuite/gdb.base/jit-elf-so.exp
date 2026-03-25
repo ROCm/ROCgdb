@@ -47,7 +47,7 @@ set jit_solib_srcfile ${srcdir}/${subdir}/${jit_solib_basename}.c
 proc compile_jit_dlmain {options} {
     global main_loader_srcfile main_loader_binfile main_loader_basename
     set options [concat $options debug \
-	additional_flags=-DJIT_DESCRIPTOR_LINKAGE="static"]
+	additional_flags=-DJIT_DESCRIPTOR_LINKAGE=static]
 
     if { [gdb_compile ${main_loader_srcfile} ${main_loader_binfile} \
 	    executable $options] != "" } {
