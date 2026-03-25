@@ -35,21 +35,14 @@
 	}                                                                    \
     } while (0)
 
-/* All kernels call this.  */
-
-__device__ static void
-wait_forever ()
-{
-  while (1)
-    __builtin_amdgcn_s_sleep (1);
-}
+__device__ static void wait_all_kernels ();
 
 /* A kernel with a name longer than GDB's longest possible name.  */
 
 __global__ void
 long_kernel_name_abcdefghijklmnopqrstuvwxyz ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* A kernel with a name longer than GDB's longest possible name.  */
@@ -57,7 +50,7 @@ long_kernel_name_abcdefghijklmnopqrstuvwxyz ()
 __global__ void
 long_kernel_name_0123456789 ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* A kernel with a normal, short name.  */
@@ -65,7 +58,7 @@ long_kernel_name_0123456789 ()
 __global__ void
 kern ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* Same, but with some parameters.  */
@@ -73,7 +66,7 @@ kern ()
 __global__ void
 kern (int)
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* A kernel with extern "C" linkage, which doesn't include an argument
@@ -82,7 +75,7 @@ kern (int)
 extern "C" __global__ void
 c_kern ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* A kernel in a namespace.  */
@@ -92,7 +85,7 @@ namespace NS {
 __global__ void
 kern_ns ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 }
@@ -104,7 +97,7 @@ namespace {
 __global__ void
 anonymous ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 }
@@ -120,14 +113,14 @@ template<E val>
 __global__ void
 templ_non_type ()
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 template<typename... Args>
 __global__ void
 templ_type (Args... args)
 {
-  wait_forever ();
+  wait_all_kernels ();
 }
 
 /* List of kernel names and a callback that launches the named
@@ -205,6 +198,36 @@ static struct
   },
 };
 
+/* Number of kernels seen so far by wait_all_kernels.  */
+__device__ static int kernels_seen = 0;
+
+/* Number of kernels expected to be seen by wait_all_kernels.  */
+__device__ static int number_kernels = 0;
+
+/* Wait until every kernel has reached here, so that they are all
+   running concurrently before any of them exits.  */
+
+__device__ static void
+wait_all_kernels ()
+{
+  atomicAdd (&kernels_seen, 1);
+  while (atomicAdd (&kernels_seen, 0) < number_kernels)
+    {
+      /* Sleep a bit to avoid hogging the GPU.  */
+      __builtin_amdgcn_s_sleep (64);
+    }
+}
+
+/* True if we want to run the kernel named KERNEL.  ARG is the
+   argument passed to the program.  Either a kernel name, or
+   "all".  */
+
+static bool
+should_run_kernel (const char *arg, const char *kernel)
+{
+  return strcmp (arg, "all") == 0 || strcmp (arg, kernel) == 0;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -218,13 +241,22 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
+  int h_number_kernels = 0;
+  for (auto &k : kernels)
+    {
+      if (should_run_kernel (argv[1], k.kernel))
+	h_number_kernels++;
+    }
+  CHECK (hipMemcpyToSymbol (HIP_SYMBOL (number_kernels), &h_number_kernels,
+			    sizeof (int)));
+
   /* Launch each kernel on its own stream, so they can all run
      concurrently.  */
   std::vector<hipStream_t> streams;
 
   for (auto &k : kernels)
     {
-      if (strcmp (argv[1], "all") == 0 || strcmp (argv[1], k.kernel) == 0)
+      if (should_run_kernel (argv[1], k.kernel))
 	{
 	  hipStream_t st;
 	  CHECK (hipStreamCreate (&st));
