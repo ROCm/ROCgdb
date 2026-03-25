@@ -234,6 +234,10 @@ qExecAndArgs
      strings in the disassembler output can contain ANSI escape
      sequences to indicate styling.
 
+  ** New gdb.Block.ranges attribute.  This read only attribute contains
+     a tuple of pairs each representing a single range.  Contiguous blocks
+     have only one range.
+
 * Guile API
 
   ** Procedures 'memory-port-read-buffer-size',
