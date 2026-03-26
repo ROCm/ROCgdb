@@ -117,6 +117,43 @@ blpy_get_end (PyObject *self, void *closure)
   return gdb_py_object_from_ulongest (block->end ()).release ();
 }
 
+/* Implementation of gdb.Block.ranges.  */
+
+static PyObject *
+blpy_get_ranges (PyObject *self, void *closure)
+{
+  const struct block *block = nullptr;
+
+  BLPY_REQUIRE_VALID (self, block);
+
+  auto ranges = block->ranges ();
+
+  if (ranges.size () == 0)
+    return Py_BuildValue ("((" GDB_PY_LLU_ARG GDB_PY_LLU_ARG "))",
+			  (gdb_py_ulongest) block->start (),
+			  (gdb_py_ulongest) block->end ());
+  else
+    {
+      gdbpy_ref<> ranges_obj (PyTuple_New (ranges.size ()));
+      if (ranges_obj == nullptr)
+	return nullptr;
+
+      for (int i = 0; i < ranges.size (); i++)
+	{
+	  gdbpy_ref<> range_obj
+	    (Py_BuildValue ("(" GDB_PY_LLU_ARG GDB_PY_LLU_ARG ")",
+			    (gdb_py_ulongest) ranges[i].start (),
+			    (gdb_py_ulongest) ranges[i].end ()));
+	  if (range_obj == nullptr)
+	    return nullptr;
+
+	  PyTuple_SetItem (ranges_obj.get (), i, range_obj.release ());
+	}
+
+      return ranges_obj.release ();
+    }
+}
+
 static PyObject *
 blpy_get_function (PyObject *self, void *closure)
 {
@@ -564,6 +601,8 @@ static gdb_PyGetSetDef block_object_getset[] = {
     "Whether this block is a global block.", NULL },
   { "subblocks", blpy_get_subblocks, nullptr,
     "List of blocks contained in this block.", nullptr },
+  { "ranges", blpy_get_ranges, nullptr,
+    "List of address ranges for this block.", nullptr },
   { NULL }  /* Sentinel */
 };
 

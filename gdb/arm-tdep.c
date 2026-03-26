@@ -11195,10 +11195,30 @@ sbo_sbz (uint32_t insn, uint32_t bit_num, uint32_t len, uint32_t sbo)
   return 1;
 }
 
+/* The record infrastructure supports the following result values:
+   1. res  < 0: Process record: failed to record execution log.
+   2. res == 0: No failure.
+   3. res  > 0: Process record: inferior program stopped.
+
+   For aarch64, we have two distinct failure values:
+   - AARCH64_RECORD_FAILURE:
+     Process record: failed to record execution log.
+   - AARCH64_RECORD_UNSUPPORTED:
+     Process record does not support instruction $hex at address $hex.
+     Process record: failed to record execution log.
+
+   For some reason for arm we don't have an UNSUPPORTED enum value, and
+   instead treat ARM_RECORD_FAILURE like an UNSUPPORTED enum value.  */
+
 enum arm_record_result
 {
+  /* Process record does not support instruction $hex at address $hex.
+     Process record: failed to record execution log.  */
+  ARM_RECORD_FAILURE = -1,
+  /* No failure.  */
   ARM_RECORD_SUCCESS = 0,
-  ARM_RECORD_FAILURE = 1
+  /* Process record: inferior program stopped.  */
+  ARM_RECORD_UNKNOWN = 1,
 };
 
 enum arm_record_strx_t
@@ -14576,11 +14596,8 @@ decode_insn (abstract_instruction_reader &reader,
 	     then we need not decode it anymore.  */
 	  ret = arm_handle_insn[insn_id] (arm_record);
 	}
-      if (ret != ARM_RECORD_SUCCESS)
-	{
-	  arm_record_unsupported_insn (arm_record);
-	  ret = -1;
-	}
+      if (ret == ARM_RECORD_FAILURE)
+	arm_record_unsupported_insn (arm_record);
     }
   else if (THUMB_RECORD == record_type)
     {
@@ -14588,11 +14605,8 @@ decode_insn (abstract_instruction_reader &reader,
       arm_record->cond = -1;
       insn_id = bits (arm_record->arm_insn, 13, 15);
       ret = thumb_handle_insn[insn_id] (arm_record);
-      if (ret != ARM_RECORD_SUCCESS)
-	{
-	  arm_record_unsupported_insn (arm_record);
-	  ret = -1;
-	}
+      if (ret == ARM_RECORD_FAILURE)
+	arm_record_unsupported_insn (arm_record);
     }
   else if (THUMB2_RECORD == record_type)
     {
@@ -14605,11 +14619,8 @@ decode_insn (abstract_instruction_reader &reader,
 
       ret = thumb2_record_decode_insn_handler (arm_record);
 
-      if (ret != ARM_RECORD_SUCCESS)
-	{
-	  arm_record_unsupported_insn (arm_record);
-	  ret = -1;
-	}
+      if (ret == ARM_RECORD_FAILURE)
+	arm_record_unsupported_insn (arm_record);
     }
   else
     {

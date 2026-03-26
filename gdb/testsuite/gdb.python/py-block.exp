@@ -43,6 +43,9 @@ gdb_test "python print (block)" "<gdb.Block <anonymous> \{i, f, b\}>" \
 gdb_test "python print (block.function)" "None" "first anonymous block"
 gdb_test "python print (block.start)" "${decimal}" "check start not None"
 gdb_test "python print (block.end)" "${decimal}" "check end not None"
+gdb_test "python print (block.ranges)" \
+	 "\\(\\(${decimal}, ${decimal}\\)(,|(, (\\(${decimal}, ${decimal}\\))+))\\)" \
+	 "check ranges contains tuple of tuples"
 gdb_test "python print (block\['f'\].name == 'f')" "True" "check variable access"
 gdb_test "python print (block\['nonexistent'\])" ".*KeyError.*: 'nonexistent'.*" \
 	 "check nonexistent variable"

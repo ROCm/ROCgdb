@@ -6342,6 +6342,14 @@ One past the last address that appears in the block.  This attribute
 is not writable.
 @end defvar
 
+@defvar Block.ranges
+A tuple representing address ranges of the block.  Each range is represented
+as a pair (two-element tuple) where the first element is the start of the
+range and the second element is one past the last address that appears in
+the range. The order of ranges is unspecified.  Contiguous blocks have only
+one range.  This attribute is not writable.
+@end defvar
+
 @defvar Block.function
 The name of the block represented as a @code{gdb.Symbol}.  If the
 block is not named, then this attribute holds @code{None}.  This

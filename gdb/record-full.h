@@ -24,6 +24,21 @@
 
 extern bool record_full_memory_query;
 
+/* Type to be used to return values in the gdbarch_process_record hook.  */
+
+enum record_result
+{
+  /* Process record does not support instruction $hex at address $hex.
+     Process record: failed to record execution log.  */
+  RECORD_UNSUPPORTED = -2,
+  /* Process record: failed to record execution log.  */
+  RECORD_FAILURE = -1,
+  /* No failure.  */
+  RECORD_SUCCESS = 0,
+  /* Process record: inferior program stopped.  */
+  RECORD_UNKNOWN = 1
+};
+
 extern int record_full_arch_list_add_reg (struct regcache *regcache, int num);
 extern int record_full_arch_list_add_mem (CORE_ADDR addr, int len);
 extern int record_full_arch_list_add_end (void);

@@ -80,6 +80,13 @@ struct reggroup_object : public PyObject
 
 extern PyTypeObject reggroup_object_type;
 
+/* Map from GDB's internal reggroup objects to the Python
+   representation.  GDB's reggroups are global, and are never deleted,
+   so using a map like this is safe.  Note it is explicitly cleaned at
+   Python shutdown, see gdbpy_finalize_registers.  */
+static gdb::unordered_map<const struct reggroup *,gdbpy_ref<>>
+    gdbpy_reggroup_object_map;
+
 /* Return a gdb.RegisterGroup object wrapping REGGROUP.  The register
    group objects are cached, and the same Python object will always be
    returned for the same REGGROUP pointer.  */
@@ -87,12 +94,6 @@ extern PyTypeObject reggroup_object_type;
 static gdbpy_ref<>
 gdbpy_get_reggroup (const reggroup *reggroup)
 {
-  /* Map from GDB's internal reggroup objects to the Python representation.
-     GDB's reggroups are global, and are never deleted, so using a map like
-     this is safe.  */
-  static gdb::unordered_map<const struct reggroup *,gdbpy_ref<>>
-    gdbpy_reggroup_object_map;
-
   /* If there is not already a suitable Python object in the map then
      create a new one, and add it to the map.  */
   if (gdbpy_reggroup_object_map[reggroup] == nullptr)
@@ -433,7 +434,15 @@ gdbpy_initialize_registers ()
   return 0;
 }
 
-GDBPY_INITIALIZE_FILE (gdbpy_initialize_registers);
+static void
+gdbpy_finalize_registers ()
+{
+  /* Have to hold the GIL while clearing the global map; this is
+     guaranteed for finalizers.  */
+  gdbpy_reggroup_object_map.clear ();
+}
+
+GDBPY_INITIALIZE_FILE (gdbpy_initialize_registers, gdbpy_finalize_registers);
 
 
 
