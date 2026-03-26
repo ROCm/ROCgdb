@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: "ROCm/TheRock"
-          ref: ff46daa79b4c826c4f4676893d0d6586de567dfa
+          ref: c9529ebdedc2e52c7b4dc26d209725a31f616ac7
 
       - name: Run setup test environment workflow
         uses: './.github/actions/setup_test_environment'
@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: "ROCm/TheRock"
-          ref: ff46daa79b4c826c4f4676893d0d6586de567dfa
+          ref: c9529ebdedc2e52c7b4dc26d209725a31f616ac7
 
       - name: Run setup test environment workflow
         uses: './.github/actions/setup_test_environment'
