@@ -116,7 +116,7 @@ jobs:
     name: "Test single-node"
     if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
     needs: [therock-build-linux]
-    uses: ./.github/workflows/therock-test-packages-single-node.yml
+    uses: ./.github/workflows/therock-test-packages.yml
     with:
       amdgpu_families: ${{ inputs.amdgpu_families }}
       artifact_group: ${{ inputs.artifact_group }}
