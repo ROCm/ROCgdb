@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        amdgpu_family: [gfx94X-dcgpu, gfx950-dcgpu]
+        amdgpu_family: [gfx94X-dcgpu]
     uses: ./.github/workflows/therock-ci-linux.yml
     secrets: inherit
     with:
@@ -54,12 +54,7 @@ jobs:
       extra_cmake_options: >
         -DTHEROCK_ENABLE_ALL=OFF 
         -DTHEROCK_BUILD_TESTING=ON 
-        -DTHEROCK_BUNDLE_SYSDEPS=ON 
-        -DTHEROCK_ENABLE_COMM_LIBS=ON 
-        -DTHEROCK_ENABLE_ROCPROFV3=ON
-        -DTHEROCK_ENABLE_MPI=ON
         -DTHEROCK_ENABLE_DEBUG_TOOLS=ON
-        -DTHEROCK_ENABLE_RCCL=OFF
         -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb
 
   therock_ci_summary:

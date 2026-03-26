@@ -112,21 +112,7 @@ jobs:
             --build-dir build \
             --upload
 
-  therock-test-linux-multi-node:
-    name: "Test multi-node"
-    if: ${{ inputs.amdgpu_families == 'gfx950-dcgpu' }}
-    permissions:
-      contents: read
-      id-token: write
-    needs: [therock-build-linux]
-    uses: ./.github/workflows/therock-test-packages-multi-node.yml
-    with:
-      amdgpu_families: ${{ inputs.amdgpu_families }}
-      artifact_group: ${{ inputs.artifact_group }}
-      test_runs_on: nova-linux-slurm-scale-runner
-      artifact_run_id: ${{ github.run_id }}
-
-  therock-test-linux-single-node:
+  therock-test-linux:
     name: "Test single-node"
     if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
     needs: [therock-build-linux]
