@@ -364,8 +364,8 @@ tui_ensure_readline_initialized ()
   rl_bind_key_in_map ('a', tui_rl_switch_mode, tui_ctlx_keymap);
   rl_bind_key_in_map ('A', tui_rl_switch_mode, emacs_ctlx_keymap);
   rl_bind_key_in_map ('A', tui_rl_switch_mode, tui_ctlx_keymap);
-  rl_bind_key_in_map (CTRL ('A'), tui_rl_switch_mode, emacs_ctlx_keymap);
-  rl_bind_key_in_map (CTRL ('A'), tui_rl_switch_mode, tui_ctlx_keymap);
+  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_switch_mode, emacs_ctlx_keymap);
+  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_switch_mode, tui_ctlx_keymap);
   rl_bind_key_in_map ('1', tui_rl_delete_other_windows, emacs_ctlx_keymap);
   rl_bind_key_in_map ('1', tui_rl_delete_other_windows, tui_ctlx_keymap);
   rl_bind_key_in_map ('2', tui_rl_change_windows, emacs_ctlx_keymap);

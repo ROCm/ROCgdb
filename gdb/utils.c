@@ -3733,6 +3733,85 @@ extract_single_filename_arg (const char *args)
   return filename;
 }
 
+/* See utils.h.  */
+
+unsigned char
+c_unctrl (unsigned char c)
+{
+  if (!c_iscntrl (c))
+    return c;
+
+  unsigned char res = c;
+  if (res >= 0x40)
+    {
+      /* Map 0x7f (^?) to 0x3f (?).  */
+      res -= 0x40;
+    }
+  else
+    {
+      /* Map 0x03 (^C) to 0x43 (C).  */
+      res += 0x40;
+    }
+
+  return res;
+}
+
+/* See utils.h.  */
+
+unsigned char
+c_ctrl (unsigned char c)
+{
+  unsigned char res = c;
+  if (res < 0x40)
+    {
+      /* Map 0x3f (?) to 0x7f (^?).  */
+      res += 0x40;
+    }
+  else
+    {
+      res = c_toupper (res);
+
+      /* Map 0x43 (C) to 0x03 (^C).  */
+      res -= 0x40;
+    }
+
+  return c_iscntrl (res) ? res : c;
+}
+
+#if GDB_SELF_TEST
+static void
+test_c_ctrl_unctrl ()
+{
+  /* Basic check.  */
+  SELF_CHECK (c_ctrl ('C') == 0x03);
+  SELF_CHECK (c_ctrl ('c') == 0x03);
+  SELF_CHECK (c_unctrl (0x03) == 'C');
+
+  /* Function c_iscntrl considers ^? to be a control character, but for some
+     reason, readline's CTRL_CHAR doesn't, so CTRL/UNCTRL don't handle it.
+     Check that c_ctrl/c_unctrl do handle it.  */
+  SELF_CHECK (c_ctrl ('?') == 0x7f);
+  SELF_CHECK (c_unctrl (0x7f) == '?');
+
+  /* Consistency check.  */
+  for (unsigned int i = 0; i < 0x100; i++)
+    {
+      unsigned char ch = i;
+      unsigned char unctrl_ch = c_unctrl (ch);
+      if (!c_iscntrl (ch))
+	{
+	  SELF_CHECK (unctrl_ch == ch);
+	  continue;
+	}
+
+      SELF_CHECK (!c_iscntrl (unctrl_ch));
+      SELF_CHECK (!c_islower (unctrl_ch));
+      SELF_CHECK (c_ctrl (unctrl_ch) == ch);
+      SELF_CHECK (c_ctrl (c_tolower (unctrl_ch)) == ch);
+    }
+}
+#endif
+
 #if GDB_SELF_TEST
 static void
 test_assign_set_return_if_changed ()
@@ -3834,5 +3913,6 @@ When set, debugging messages will be marked with seconds and microseconds."),
   selftests::register_test ("pager", test_pager);
   selftests::register_test ("assign_set_return_if_changed",
 			    test_assign_set_return_if_changed);
+  selftests::register_test ("c_ctrl_unctrl", test_c_ctrl_unctrl);
 #endif
 }
