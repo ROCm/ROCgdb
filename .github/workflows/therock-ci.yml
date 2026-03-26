@@ -1,0 +1,83 @@
+name: TheRock CI for rocgdb
+
+on:
+  push:
+    branches:
+      - amd-staging
+      - amd-staging-rocgdb-*
+  pull_request:
+    branches:
+      - amd-staging
+      - amd-staging-rocgdb-*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    env:
+      BASE_REF: HEAD^
+    outputs:
+      enable_therock_ci: ${{ steps.configure.outputs.enable_therock_ci }}
+    steps:
+      - name: "Checking out repository"
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 2
+
+      - name: "Configuring CI options"
+        id: configure
+        run: python .github/scripts/therock_configure_ci.py
+
+  therock-ci-linux:
+    name: TheRock CI Linux
+    needs: setup
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family: [gfx94X-dcgpu, gfx950-dcgpu]
+    uses: ./.github/workflows/therock-ci-linux.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: ${{ matrix.amdgpu_family }}
+      extra_cmake_options: >
+        -DTHEROCK_ENABLE_ALL=OFF 
+        -DTHEROCK_BUILD_TESTING=ON 
+        -DTHEROCK_BUNDLE_SYSDEPS=ON 
+        -DTHEROCK_ENABLE_COMM_LIBS=ON 
+        -DTHEROCK_ENABLE_ROCPROFV3=ON
+        -DTHEROCK_ENABLE_MPI=ON
+        -DTHEROCK_ENABLE_DEBUG_TOOLS=ON
+        -DTHEROCK_ENABLE_RCCL=OFF
+        -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb
+
+  therock_ci_summary:
+    name: TheRock CI Summary
+    if: always()
+    needs:
+      - setup
+      - therock-ci-linux
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output failed jobs
+        run: |
+          echo '${{ toJson(needs) }}'
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output \
+            'map_values(select(.result!="success" and .result!="skipped")) | keys | join(",")' \
+          )"
+          if [[ "${FAILED_JOBS}" != "" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          fi
