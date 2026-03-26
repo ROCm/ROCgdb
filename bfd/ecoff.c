@@ -114,8 +114,7 @@ _bfd_ecoff_bfd_free_cached_info (bfd *abfd)
 {
   struct ecoff_tdata *tdata;
 
-  if ((bfd_get_format (abfd) == bfd_object
-       || bfd_get_format (abfd) == bfd_core)
+  if (bfd_get_format (abfd) == bfd_object
       && (tdata = ecoff_data (abfd)) != NULL)
     {
       while (tdata->mips_refhi_list != NULL)

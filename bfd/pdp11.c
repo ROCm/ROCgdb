@@ -2524,19 +2524,19 @@ NAME (aout, sizeof_headers) (bfd *abfd,
 bool
 NAME (aout, bfd_free_cached_info) (bfd *abfd)
 {
-  if ((bfd_get_format (abfd) == bfd_object
-       || bfd_get_format (abfd) == bfd_core)
+#define BFCI_FREE(x) do { free (x); x = NULL; } while (0)
+  if (bfd_get_format (abfd) == bfd_object
       && abfd->tdata.aout_data != NULL)
     {
-#define BFCI_FREE(x) do { free (x); x = NULL; } while (0)
       BFCI_FREE (adata (abfd).line_buf);
       BFCI_FREE (obj_aout_symbols (abfd));
       BFCI_FREE (obj_aout_external_syms (abfd));
       BFCI_FREE (obj_aout_external_strings (abfd));
-      for (asection *o = abfd->sections; o != NULL; o = o->next)
-	BFCI_FREE (o->relocation);
-#undef BFCI_FREE
     }
+
+  for (asection *o = abfd->sections; o != NULL; o = o->next)
+    BFCI_FREE (o->relocation);
+#undef BFCI_FREE
 
   return _bfd_generic_bfd_free_cached_info (abfd);
 }
