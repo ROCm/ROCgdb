@@ -1863,3 +1863,28 @@ run_ld_link_tests [list \
 	"pr23658-2" \
     ] \
 ]
+
+# PR 29655
+run_cc_link_tests [list \
+    [list \
+	"Build pr29655.so" \
+	"-shared" \
+	"-fPIC" \
+	{ pr29655a.c } \
+	{} \
+	"pr29655.so" \
+    ] \
+]
+# PR 29655 (cont.): Check that in PIC code linked as PDE taking the address
+# of a function defined in a DSO results in the function address (from GOT)
+# and not the "canonical PLT" address from the PDE.
+run_cc_link_tests [list \
+    [list \
+	"Build pr29655" \
+	"$NOPIE_LDFLAGS -Wl,--no-as-needed,-rpath,tmpdir tmpdir/pr29655.so" \
+	"-fPIC" \
+	{ pr29655b.c } \
+	{{readelf {--dyn-syms --wide} pr29655.rd}} \
+	"pr29655" \
+    ] \
+]

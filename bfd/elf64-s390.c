@@ -852,6 +852,7 @@ elf_s390_copy_indirect_symbol (struct bfd_link_info *info,
       dir->ref_regular |= ind->ref_regular;
       dir->ref_regular_nonweak |= ind->ref_regular_nonweak;
       dir->needs_plt |= ind->needs_plt;
+      dir->pointer_equality_needed |= ind->pointer_equality_needed;
     }
   else
     _bfd_elf_link_hash_copy_indirect (info, dir, ind);
@@ -1037,6 +1038,7 @@ elf_s390_check_relocs (bfd *abfd,
 		 referenced.  */
 	      h->ref_regular = 1;
 	      h->needs_plt = 1;
+	      h->pointer_equality_needed = 1;
 	    }
 	}
 
@@ -1078,6 +1080,38 @@ elf_s390_check_relocs (bfd *abfd,
 	    {
 	      h->needs_plt = 1;
 	      h->plt.refcount += 1;
+
+	      /* GCC 12-14 unconditionally suffix non-local symbols
+		 with @PLT, regardless of whether they are used in
+		 function call instructions (i.e. brasl) or address
+		 taking instructions (i.e. larl).  Treat PLT32DBL
+		 relocation for "larl rX,<sym>@PLT" instruction as
+		 address taking and require pointer equality.  */
+	      if (bfd_link_executable (info)
+		  && r_type == R_390_PLT32DBL
+		  && rel->r_offset >= 2)
+		{
+		  bfd_byte *contents;
+		  void *insn_start;
+		  uint16_t op;
+
+		  if (elf_section_data (sec)->this_hdr.contents != NULL)
+		    contents = elf_section_data (sec)->this_hdr.contents;
+		  else if (!_bfd_elf_mmap_section_contents (abfd, sec, &contents))
+		    return false;
+
+		  insn_start = contents + rel->r_offset - 2;
+		  op = bfd_get_16 (abfd, insn_start) & 0xff0f;
+
+		  if (op == 0xc000)
+		    {
+		      /* larl rX,<sym>@PLT  */
+		      h->pointer_equality_needed = 1;
+		    }
+
+		  if (elf_section_data (sec)->this_hdr.contents != contents)
+		    _bfd_elf_munmap_section_contents (sec, contents);
+		}
 	    }
 	  break;
 
@@ -1227,6 +1261,12 @@ elf_s390_check_relocs (bfd *abfd,
 		     refers to is in a shared lib.  */
 		  h->plt.refcount += 1;
 		}
+
+	      /* Require pointer equality in PDE for above PC-relative
+		 relocations, that are likely in address taken context,
+		 and direct relocations, that are likely in function
+		 reference context.  */
+	      h->pointer_equality_needed = 1;
 	    }
 
 	  /* If we are creating a shared library, and this is a reloc
@@ -3692,11 +3732,16 @@ elf_s390_finish_dynamic_symbol (bfd *output_bfd,
 	  if (!h->def_regular)
 	    {
 	      /* Mark the symbol as undefined, rather than as defined in
-		 the .plt section.  Leave the value alone.  This is a clue
+		 the .plt section.  Leave the value if there were any
+		 relocations where pointer equality matters (this is a clue
 		 for the dynamic linker, to make function pointer
 		 comparisons work between an application and shared
-		 library.  */
+		 library), otherwise set it to zero.  If a function is only
+		 called from a binary, there is no need to slow down
+		 shared libraries because of that.  */
 	      sym->st_shndx = SHN_UNDEF;
+	      if (!h->pointer_equality_needed)
+		sym->st_value = 0;
 	    }
 	}
     }
@@ -3730,6 +3775,9 @@ elf_s390_finish_dynamic_symbol (bfd *output_bfd,
 	    }
 	  else
 	    {
+	      if (!h->pointer_equality_needed)
+		abort ();
+
 	      /* For non-shared objects explicit GOT slots must be
 		 filled with the PLT slot address for pointer
 		 equality reasons.  */
@@ -4344,6 +4392,19 @@ elf_s390_create_dynamic_sections (bfd *dynobj,
   return true;
 }
 
+/* Return TRUE if symbol should be hashed in the `.gnu.hash' section.  */
+
+static bool
+elf_s390_hash_symbol (struct elf_link_hash_entry *h)
+{
+  if (h->plt.offset != (bfd_vma) -1
+      && !h->def_regular
+      && !h->pointer_equality_needed)
+    return false;
+
+  return _bfd_elf_hash_symbol (h);
+}
+
 /* Why was the hash table entry size definition changed from
    ARCH_SIZE/8 to 4? This breaks the 64 bit dynamic linker and
    this is the only reason for the s390_elf64_size_info structure.  */
@@ -4424,6 +4485,7 @@ static const struct elf_size_info s390_elf64_size_info =
 #define elf_backend_sort_relocs_p	      elf_s390_elf_sort_relocs_p
 #define elf_backend_additional_program_headers elf_s390_additional_program_headers
 #define elf_backend_modify_segment_map	      elf_s390_modify_segment_map
+#define elf_backend_hash_symbol		      elf_s390_hash_symbol
 
 #define bfd_elf64_mkobject		elf_s390_mkobject
 #define elf_backend_object_p		elf_s390_object_p
