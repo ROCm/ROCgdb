@@ -319,8 +319,8 @@ resolving build issues.  The Target/Architecture maintainer works with
 the native maintainer when resolving ABI issues.
 
 	aarch64		--target=aarch64-elf
-			Alan Hayward		alan.hayward@arm.com
 			Luis Machado		luis.machado.foss@gmail.com
+			Thiago Jung Bauermann   thiago.bauermann@linaro.org
 
 	alpha		--target=alpha-elf
 
@@ -331,8 +331,8 @@ the native maintainer when resolving ABI issues.
 			Shahab Vahedi		list@vahedi.org
 
 	arm		--target=arm-elf
-			Alan Hayward		alan.hayward@arm.com
 			Luis Machado		luis.machado.foss@gmail.com
+			Thiago Jung Bauermann   thiago.bauermann@linaro.org
 
 	avr		--target=avr
 
@@ -872,6 +872,7 @@ Joel Brobecker (Global, Ada)			brobecker@adacore.com
 Doug Evans (Global)				dje@google.com
 Yao Qi (Global)					qiyao@sourceware.org
 Felix Willgerodt (amd64, i386)			felix.willgerodt@gmail.com
+Alan Hayward (AArch64, arm)			alan.hayward@arm.com
 
 
 Folks that have been caught up in a paper trail:
