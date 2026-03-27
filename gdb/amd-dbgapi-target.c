@@ -54,6 +54,8 @@
 
 static bool debug_amd_dbgapi = false;
 
+typo!!
+
 /* Make a copy of S styled in green.  */
 
 static std::string
