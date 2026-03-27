@@ -3866,14 +3866,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_MN10300_TLS_DTPOFF,
   BFD_RELOC_MN10300_TLS_TPOFF,
 
-  /* This is a 32bit pcrel reloc for the mn10300, offset by two bytes in
-     the instruction.  */
-  BFD_RELOC_MN10300_32_PCREL,
-
-  /* This is a 16bit pcrel reloc for the mn10300, offset by two bytes in
-     the instruction.  */
-  BFD_RELOC_MN10300_16_PCREL,
-
   /* i386/elf relocations.  */
   BFD_RELOC_386_GOT32,
   BFD_RELOC_386_PLT32,

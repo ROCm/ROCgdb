@@ -2316,16 +2316,6 @@ ENUMX
   BFD_RELOC_MN10300_TLS_TPOFF
 ENUMDOC
   Various TLS-related relocations.
-ENUM
-  BFD_RELOC_MN10300_32_PCREL
-ENUMDOC
-  This is a 32bit pcrel reloc for the mn10300, offset by two bytes in
-  the instruction.
-ENUM
-  BFD_RELOC_MN10300_16_PCREL
-ENUMDOC
-  This is a 16bit pcrel reloc for the mn10300, offset by two bytes in
-  the instruction.
 
 ENUM
   BFD_RELOC_386_GOT32
