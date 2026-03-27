@@ -2623,7 +2623,7 @@ const bfd_target rs6000_xcoff64_vec =
 
     /* Generic */
     coff_close_and_cleanup,
-    coff_bfd_free_cached_info,
+    _bfd_xcoff_bfd_free_cached_info,
     coff_new_section_hook,
     _bfd_generic_get_section_contents,
 
@@ -2893,7 +2893,7 @@ const bfd_target rs6000_xcoff64_aix_vec =
 
     /* Generic */
     coff_close_and_cleanup,
-    coff_bfd_free_cached_info,
+    _bfd_xcoff_bfd_free_cached_info,
     coff_new_section_hook,
     _bfd_generic_get_section_contents,
 

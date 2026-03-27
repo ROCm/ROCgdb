@@ -631,10 +631,10 @@ tui_redisplay_readline (void)
 	break;
 
       c = (unsigned char) rl_line_buffer[in];
-      if (CTRL_CHAR (c) || c == RUBOUT)
+      if (c_iscntrl (c))
 	{
 	  waddch (w, '^');
-	  waddch (w, CTRL_CHAR (c) ? UNCTRL (c) : '?');
+	  waddch (w, c_unctrl (c));
 	}
       else if (c == '\t')
 	{
