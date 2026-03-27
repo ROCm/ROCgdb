@@ -286,7 +286,7 @@ public:
 private: /* per-core data */
 
   /* Get rid of the core inferior.  */
-  void clear_core ();
+  void exit_core_file_inferior ();
 
   /* The core's section table.  Note that these target sections are
      *not* mapped in the current address spaces' set of target
@@ -615,24 +615,23 @@ core_target::build_file_mappings ()
 /* An arbitrary identifier for the core inferior.  */
 #define CORELOW_PID 1
 
+/* See class declaration above.  */
+
 void
-core_target::clear_core ()
+core_target::exit_core_file_inferior ()
 {
-  if (this->core_bfd () != nullptr)
-    {
-      switch_to_no_thread ();    /* Avoid confusion from thread
-				    stuff.  */
-      exit_inferior (current_inferior ());
+  /* Opening a core file ensures that some thread, even if it's just a
+     "fake" thread, will have been selected.  */
+  gdb_assert (inferior_ptid != null_ptid);
 
-      /* Clear out solib state while the bfd is still open.  See
-	 comments in clear_solib in solib.c.  */
-      clear_solib (current_program_space);
+  /* Avoid confusion from thread stuff.  */
+  switch_to_no_thread ();
 
-      m_core_bfd.reset (nullptr);
+  exit_inferior (current_inferior ());
 
-      /* Notify that the core file has changed.  */
-      gdb::observers::core_file_changed.notify (current_inferior ());
-    }
+  /* Clear out solib state while the bfd is still open.  See
+     comments in clear_solib in solib.c.  */
+  clear_solib (current_program_space);
 }
 
 /* Close the core target.  */
@@ -640,11 +639,38 @@ core_target::clear_core ()
 void
 core_target::close ()
 {
-  clear_core ();
+  /* The core BFD is set when the core_target is created and attached to
+     the inferior.  It is never explicitly cleared, instead m_core_bfd will
+     have its reference count reduced when the core_target is deleted.  */
+  gdb_assert (this->core_bfd () != nullptr);
+
+  /* If we called ::detach before calling ::close then the inferior will
+     have already been exited.  This will happen if the user clears the
+     core file with the 'core-file' or 'detach' commands.
+
+     However, if the user just causes the core_target to be unpushed, by
+     pushing an alternative target, e.g. 'target remote ....', then we will
+     not call ::detach before calling ::close.
+
+     In the former case we don't want to exit the inferior twice; this is
+     mostly harmless except it causes two 'exited' events to be emitted in
+     the Python API, which isn't ideal.
+
+     As opening a core_target always ensures that some thread is selected,
+     then we can tell if exit_core_file_inferior has already been called by
+     checking if no thread is now selected.  */
+  if (inferior_ptid != null_ptid)
+    exit_core_file_inferior ();
 
   /* Core targets are heap-allocated (see core_target_open), so here
      we delete ourselves.  */
   delete this;
+
+  /* Notify that the core file has changed.  This is intentionally done
+     after the core_target is deleted as nothing in here depends on the
+     core_target itself, the core_target has already been removed from the
+     inferior's target stack by this point.  */
+  gdb::observers::core_file_changed.notify (current_inferior ());
 }
 
 /* Look for sections whose names start with `.reg/' so that we can
@@ -1242,17 +1268,18 @@ void
 core_target::detach (inferior *inf, int from_tty)
 {
   /* The core BFD is set when the core_target is created and attached to
-     the inferior.  It is only cleared during detach or close.  After
-     detaching the core target will be closed and deleted, so detach can
-     never be called twice.  What this means is that detach will never be
-     called without the core BFD being set.  */
+     the inferior.  It is never explicitly cleared, instead m_core_bfd will
+     have its reference count reduced when the core_target is deleted.  */
   gdb_assert (this->core_bfd () != nullptr);
 
-  /* Get rid of the core.  Don't rely on core_target::close doing it,
-     because target_detach may be called with core_target's refcount > 1,
-     meaning core_target::close may not be called yet by the
-     unpush_target call below.  */
-  clear_core ();
+  /* Similarly, the inferior and thread are created when the core_target is
+     opened, and are only exited when this function, or ::close are called.
+     As calling ::close deletes the core_target, then when this function is
+     called, the inferior will still be live.  */
+  gdb_assert (inferior_ptid != null_ptid);
+
+  /* Get rid of the core inferior.  */
+  exit_core_file_inferior ();
 
   /* This detach method should only be called from target_detach, which
      holds a reference to this core_target.  As such, this core_target will
