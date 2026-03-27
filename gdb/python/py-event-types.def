@@ -150,3 +150,8 @@ GDB_PY_DEFINE_EVENT_TYPE (selected_context,
 			  "SelectedContextEvent",
 			  "GDB user selected context event object",
 			  event_object_type);
+
+GDB_PY_DEFINE_EVENT_TYPE (corefile_changed,
+			  "CorefileChangedEvent",
+			  "GDB corefile changed event",
+			  event_object_type);

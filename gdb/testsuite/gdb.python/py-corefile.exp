@@ -17,6 +17,7 @@
 # support in Python.
 
 require isnative
+require {!is_remote host}
 
 load_lib gdb-python.exp
 
@@ -28,17 +29,108 @@ if {[build_executable "build executable" $testfile $srcfile] == -1} {
     return
 }
 
+set remote_python_file \
+    [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+
 set corefile [core_find $binfile]
 if {$corefile == ""} {
     unsupported "couldn't create or find corefile"
     return
 }
 
+# Helper proc to run the 'core-file' command.  Takes optional arguments:
+#
+#   -corefile FILENAME : Load FILENAME as the new core file.  If this
+#                        argument is not given then the current core
+#                        file will be unloaded.
+#
+#   -inferior NUM : The inferior in which the corefile is being changed.
+#                   This is used to match the corefile_changed events
+#                   that will be emitted.
+#
+#   -prefix STRING : A test prefix, to make test names unique.
+#
+#   -replacement : There's already a core file loaded when this command
+#                  is being run.
+proc core_file_cmd { args } {
+    parse_some_args {
+	{corefile ""}
+	{inferior 1}
+	{prefix ""}
+	{replacement}
+    }
+
+    if { $prefix eq "" } {
+	if { $corefile eq "" } {
+	    set prefix "unload corefile"
+	} else {
+	    set prefix "load corefile"
+	}
+    }
+
+    with_test_prefix $prefix {
+	gdb_test "events corefile_changed check" \
+	    "^No corefile_changed event has been seen\\." \
+	    "no corefile event has been seen"
+
+	gdb_test "events exited check" \
+	    "^No exited event has been seen\\." \
+	    "no exited event has been seen"
+
+	if { $corefile eq "" } {
+	    gdb_test "core-file" "^No core file now\\." "unload current core file"
+
+	    gdb_test "events corefile_changed check" \
+		"Event 1/1, Inferior $inferior, Corefile None" \
+		"expected corefile event has been seen"
+
+	    gdb_test "events exited check" \
+		"Event 1/1, Inferior $inferior, Exit Code None" \
+		"expected exited event has been seen"
+	} else {
+	    gdb_test "core-file $corefile" ".*" "load core file"
+
+	    if { $replacement } {
+		gdb_test "events corefile_changed check" \
+		    [multi_line \
+			 "Event 1/2, Inferior $inferior, Corefile None" \
+			 "Event 2/2, Inferior $inferior, Corefile [string_to_regexp $corefile]"] \
+		    "expected corefile event has been seen"
+
+		gdb_test "events exited check" \
+		    "Event 1/1, Inferior $inferior, Exit Code None" \
+		    "expected exited event has been seen"
+	    } else {
+		gdb_test "events corefile_changed check" \
+		    "Event 1/1, Inferior $inferior, Corefile [string_to_regexp $corefile]" \
+		    "expected corefile event has been seen"
+
+		gdb_test "events exited check" \
+		    "^No exited event has been seen\\." \
+		    "no exited event was emitted"
+	    }
+	}
+    }
+
+    gdb_test_no_output -nopass "events corefile_changed reset"
+    gdb_test_no_output -nopass "events exited reset"
+}
+
+# A helper proc runs clean_restart passing through ARGS, and then loads the
+# test's Python script.
+proc clean_restart_and_load_py_script { args } {
+    clean_restart {*}$args
+
+    # Load the Python script into GDB.
+    gdb_test "source $::remote_python_file" "^Success" \
+	"source python script"
+}
+
 # Create a copy of the corefile.
 set other_corefile [standard_output_file ${testfile}-other.core]
 remote_exec build "cp $corefile $other_corefile"
 
-clean_restart
+clean_restart_and_load_py_script
 
 gdb_test_no_output "python inf = gdb.selected_inferior()" \
     "capture current inferior"
@@ -46,8 +138,7 @@ gdb_test_no_output "python inf = gdb.selected_inferior()" \
 gdb_test "python print(inf.corefile)" "^None" \
     "Inferior.corefile is None before loading a core file"
 
-gdb_test "core-file $corefile" ".*" \
-    "load core file"
+core_file_cmd -corefile $corefile
 
 set file_re [string_to_regexp $corefile]
 gdb_test "python print(inf.corefile)" "^<gdb\\.Corefile inferior=1 filename='$file_re'>" \
@@ -73,7 +164,7 @@ gdb_test "python print(core1.filename)" "^$file_re" \
 gdb_test "python print(core1.is_valid())" "^True" \
     "Corefile.is_valid() is True while corefile is loaded"
 
-gdb_test "core-file" "^No core file now\\." "unload current core file"
+core_file_cmd
 
 gdb_test "python print(core1.is_valid())" "^False" \
     "Corefile.is_valid() is False after corefile is unloaded"
@@ -101,8 +192,7 @@ gdb_test "add-inferior"
 gdb_test "inferior 2"
 
 with_test_prefix "in second inferior" {
-    gdb_test "core-file $corefile" ".*" \
-	"load core file"
+    core_file_cmd -corefile $corefile -inferior 2
 
     gdb_test "python print(inf.corefile)" "^None" \
 	"first inferior still has no core file"
@@ -128,8 +218,8 @@ gdb_test "python print(core2.filename)" "^$file_re" \
     "Corefile.filename attribute works from different progspace"
 
 # Load the other corefile into the first inferior.
-gdb_test "core $other_corefile" ".*" \
-    "load other corefile into inferior 1"
+core_file_cmd -corefile $other_corefile \
+    -prefix "load other corefile into inferior 1"
 
 # Delete the second inferior.  We need to switch to the second
 # inferior and unload its corefile before we can do that.  Then,
@@ -152,7 +242,7 @@ with_test_prefix "remove second inferior" {
 	"AttributeError.*: 'gdb\\.Corefile' object has no attribute '_my_attribute'" \
 	"try to read attribute that doesn't exist"
 
-    gdb_test "core-file"
+    core_file_cmd -inferior 2
 
     gdb_test "python print(core2.filename)" \
 	[multi_line \
@@ -182,18 +272,10 @@ with_test_prefix "remove second inferior" {
 # mapped_files API.  The output from the built-in command, and the
 # Python command should be identical.
 with_test_prefix "test mapped files data" {
-    clean_restart
-
-    set remote_python_file \
-	[gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
-
-    # Load the Python script into GDB.
-    gdb_test "source $remote_python_file" "^Success" \
-	"source python script"
+    clean_restart_and_load_py_script
 
     # Load the core file.
-    gdb_test "core-file $corefile" ".*" \
-	"load core file"
+    core_file_cmd -corefile $corefile
 
     # Two files to write the output to.
     set out_1 [standard_output_file ${gdb_test_file_name}-out-1.txt]
@@ -278,4 +360,53 @@ with_test_prefix "test mapped files data" {
 	"^<class 'tuple'>"
     gdb_test "python regions\[0\] = None" \
 	"'tuple' object does not support item assignment"
+}
+
+# Load a core file.  GDB should figure out which file is being debugged.
+# Then use 'start' to run this executable, this will replace the core file
+# target.  At least on Linux, this replacement is done without calling
+# target_detach.  This test checks that the expected core file changed and
+# inferior exited events are still seen.
+with_test_prefix "start from corefile" {
+    if { [gdb_protocol_is_native] } {
+	clean_restart_and_load_py_script
+
+	# Load the core file.
+	core_file_cmd -corefile $corefile
+
+	# Check GDB figured out the executable.
+	gdb_test "info inferiors 1" \
+	    [multi_line \
+		 "\[^\r\n\]+[string_to_regexp $binfile]\\s*" \
+		 "\[^\r\n\]+[string_to_regexp $corefile]\\s*"] \
+	    "check executable was detected correctly"
+
+	gdb_test "start" \
+	    "Temporary breakpoint $::decimal, main \\(\\).*" \
+
+	gdb_test "events corefile_changed check" \
+	    "Event 1/1, Inferior 1, Corefile None" \
+	    "expected corefile event has been seen"
+
+	gdb_test "events exited check" \
+	    "Event 1/1, Inferior 1, Exit Code None" \
+	    "expected exited event has been seen"
+
+	gdb_test_no_output -nopass "events corefile_changed reset"
+	gdb_test_no_output -nopass "events exited reset"
+    }
+}
+
+# Load a core file, then load a different core file to replace it.
+# Check that the events that are emitted are as expected.
+with_test_prefix "load one core file over another" {
+    clean_restart_and_load_py_script
+
+    # Load the core file.
+    core_file_cmd -corefile $corefile \
+	-prefix "load first corefile"
+
+    core_file_cmd -corefile $other_corefile \
+	-prefix "load second corefile" \
+	-replacement
 }

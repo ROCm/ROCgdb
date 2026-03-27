@@ -196,4 +196,121 @@ class CheckMainExec(gdb.Command):
 CheckMainExec()
 
 
+# An 'events' prefix command.
+class events_cmd(gdb.Command):
+    """Information about recent Python events."""
+
+    def __init__(self):
+        gdb.Command.__init__(self, "events", gdb.COMMAND_USER, prefix=True)
+
+
+# An 'events corefile_changed' sub-command.
+class events_corefile_changed_cmd(gdb.Command):
+    """Check recent corefile_changed events.
+
+    Requires a single argument either 'check' or 'reset'.  With
+    'check', print details of every recent corefile_changed event.
+    With 'reset' clear the list of recent corefile_changed events."""
+
+    def __init__(self):
+        gdb.Command.__init__(self, "events corefile_changed", gdb.COMMAND_USER)
+        self._events = []
+        gdb.events.corefile_changed.connect(lambda e: self._corefile_changed_handler(e))
+
+    def _corefile_changed_handler(self, event):
+        assert isinstance(event, gdb.CorefileChangedEvent)
+        inf = event.inferior
+        assert isinstance(inf, gdb.Inferior)
+
+        corefile = inf.corefile
+        if corefile is not None:
+            assert corefile.is_valid()
+            corefile = corefile.filename
+
+        obj = {"inferior": inf.num, "corefile": corefile}
+        self._events.append(obj)
+
+    def invoke(self, args, from_tty):
+        if args == "check":
+            if len(self._events) == 0:
+                print("No corefile_changed event has been seen.")
+            else:
+                total = len(self._events)
+                for idx, obj in enumerate(self._events, start=1):
+                    inf_num = obj["inferior"]
+                    corefile = obj["corefile"]
+
+                    if corefile is None:
+                        msg = "None"
+                    else:
+                        msg = corefile
+
+                    print(
+                        "Event {}/{}, Inferior {}, Corefile {}".format(
+                            idx, total, inf_num, msg
+                        )
+                    )
+        elif args == "reset":
+            self._events = []
+        else:
+            raise gdb.GdbError("Unknown command args: {}".format(args))
+
+
+# An 'events exited' sub-command.
+class events_exited_cmd(gdb.Command):
+    """Check recent exited events.
+
+    Requires a single argument either 'check' or 'reset'.  With
+    'check', print details of every recent exited event.  With 'reset'
+    clear the list of recent exited events."""
+
+    def __init__(self):
+        gdb.Command.__init__(self, "events exited", gdb.COMMAND_USER)
+        self._events = []
+        gdb.events.exited.connect(lambda e: self._exited_handler(e))
+
+    def _exited_handler(self, event):
+        assert isinstance(event, gdb.ExitedEvent)
+        inf = event.inferior
+        assert isinstance(inf, gdb.Inferior)
+
+        if hasattr(event, "exit_code"):
+            assert isinstance(event.exit_code, int)
+            exit_code = event.exit_code
+        else:
+            exit_code = None
+
+        obj = {"inferior": inf.num, "exit_code": exit_code}
+        self._events.append(obj)
+
+    def invoke(self, args, from_tty):
+        if args == "check":
+            if len(self._events) == 0:
+                print("No exited event has been seen.")
+            else:
+                total = len(self._events)
+                for idx, obj in enumerate(self._events, start=1):
+                    inf_num = obj["inferior"]
+                    exit_code = obj["exit_code"]
+
+                    if exit_code is None:
+                        msg = "None"
+                    else:
+                        msg = exit_code
+
+                    print(
+                        "Event {}/{}, Inferior {}, Exit Code {}".format(
+                            idx, total, inf_num, msg
+                        )
+                    )
+        elif args == "reset":
+            self._events = []
+        else:
+            raise gdb.GdbError("Unknown command args: {}".format(args))
+
+
+events_cmd()
+events_corefile_changed_cmd()
+events_exited_cmd()
+
 print("Success")

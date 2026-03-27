@@ -244,6 +244,11 @@ qExecAndArgs
      a tuple of pairs each representing a single range.  Contiguous blocks
      have only one range.
 
+  ** New event registry gdb.events.corefile_changed, which emits a
+     CorefileChangedEvent whenever the core file associated with an
+     inferior changes.  The event has an 'inferior' attribute which is
+     the gdb.Inferior in which the core file has changed.
+
 * Guile API
 
   ** Procedures 'memory-port-read-buffer-size',
