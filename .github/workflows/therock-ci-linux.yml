@@ -113,12 +113,12 @@ jobs:
             --upload
 
   therock-test-linux:
-    name: "Test single-node"
+    name: "Run Tests"
     if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
     needs: [therock-build-linux]
     uses: ./.github/workflows/therock-test-packages.yml
     with:
       amdgpu_families: ${{ inputs.amdgpu_families }}
       artifact_group: ${{ inputs.artifact_group }}
-      test_runs_on: linux-mi325-4gpu-ossci-rocm
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
       artifact_run_id: ${{ github.run_id }}
