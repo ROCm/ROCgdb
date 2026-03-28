@@ -951,7 +951,7 @@ gdb_test "stepi" "The program is not being run."
 #test signal
 gdb_test "signal" "The program is not being run."
 #test source
-gdb_test "source" "source command requires file name of file to source..*|No such file or directory.*"
+gdb_test "source" "\"source\" command requires file name of file to source..*|No such file or directory.*"
 #test step "s" abbreviation
 gdb_test "s" "The program is not being run." "step \"s\" abbreviation #2"
 #test step

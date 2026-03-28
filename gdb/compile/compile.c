@@ -22,6 +22,7 @@
 #include "ui-out.h"
 #include "command.h"
 #include "cli/cli-script.h"
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 #include "cli/cli-option.h"
 #include "completer.h"
@@ -630,8 +631,9 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
   if (!compile_gcc.empty ())
     {
       if (compiler->version () < GCC_FE_VERSION_1)
-	error (_("Command 'set compile-gcc' requires GCC version 6 or higher "
-		 "(libcc1 interface version 1 or higher)"));
+	error (_("Command \"%ps\" requires GCC version 6 or higher "
+		 "(libcc1 interface version 1 or higher)"),
+	       styled_string (command_style.style (), "set compile-gcc"));
 
       compiler->set_driver_filename (compile_gcc.c_str ());
     }

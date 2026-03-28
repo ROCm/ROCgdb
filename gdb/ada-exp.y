@@ -44,6 +44,7 @@
 #include "frame.h"
 #include "block.h"
 #include "ada-exp.h"
+#include "cli/cli-style.h"
 
 #define parse_type(ps) builtin_type (ps->gdbarch ())
 
@@ -1873,7 +1874,8 @@ write_var_or_type (struct parser_state *par_state,
       if (!current_program_space->has_full_symbols ()
 	  && !current_program_space->has_partial_symbols ()
 	  && block == NULL)
-	error (_("No symbol table is loaded.  Use the \"file\" command."));
+	error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+	       styled_string (command_style.style (), "file"));
       if (block == par_state->expression_context_block)
 	error (_("No definition of \"%s\" in current context."), name0.ptr);
       else

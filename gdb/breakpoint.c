@@ -1363,8 +1363,9 @@ check_no_tracepoint_commands (struct command_line *commands)
   for (c = commands; c; c = c->next)
     {
       if (c->control_type == while_stepping_control)
-	error (_("The 'while-stepping' command can "
-		 "only be used for tracepoints"));
+	error (_("The \"%ps\" command can "
+		 "only be used for tracepoints"),
+	       styled_string (command_style.style (), "while-stepping"));
 
       check_no_tracepoint_commands (c->body_list_0.get ());
       check_no_tracepoint_commands (c->body_list_1.get ());
@@ -1373,10 +1374,12 @@ check_no_tracepoint_commands (struct command_line *commands)
 	 lines and also empty lines.  So, we only need to check for
 	 command directly.  */
       if (strstr (c->line, "collect ") == c->line)
-	error (_("The 'collect' command can only be used for tracepoints"));
+	error (_("The \"%ps\" command can only be used for tracepoints"),
+	       styled_string (command_style.style (), "collect"));
 
       if (strstr (c->line, "teval ") == c->line)
-	error (_("The 'teval' command can only be used for tracepoints"));
+	error (_("The \"%ps\" command can only be used for tracepoints"),
+	       styled_string (command_style.style (), "teval"));
     }
 }
 
@@ -1482,16 +1485,22 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 	  if (c->control_type == while_stepping_control)
 	    {
 	      if (b->type == bp_fast_tracepoint)
-		error (_("The 'while-stepping' command "
-			 "cannot be used for fast tracepoint"));
+		error (_("The \"%ps\" command "
+			 "cannot be used for fast tracepoint"),
+		       styled_string (command_style.style (),
+				      "while-stepping"));
 	      else if (b->type == bp_static_tracepoint
 		       || b->type == bp_static_marker_tracepoint)
-		error (_("The 'while-stepping' command "
-			 "cannot be used for static tracepoint"));
+		error (_("The \"%ps\" command "
+			 "cannot be used for static tracepoint"),
+		       styled_string (command_style.style (),
+				      "while-stepping"));
 
 	      if (while_stepping)
-		error (_("The 'while-stepping' command "
-			 "can be used only once"));
+		error (_("The \"%ps\" command "
+			 "can be used only once"),
+		       styled_string (command_style.style (),
+				      "while-stepping"));
 	      else
 		while_stepping = c;
 	    }
@@ -1507,7 +1516,9 @@ validate_commands_for_breakpoint (struct breakpoint *b,
 	  for (; c2; c2 = c2->next)
 	    {
 	      if (c2->control_type == while_stepping_control)
-		error (_("The 'while-stepping' command cannot be nested"));
+		error (_("The \"%ps\" command cannot be nested"),
+		       styled_string (command_style.style (),
+				      "while-stepping"));
 	    }
 	}
     }
@@ -14365,8 +14376,9 @@ trace_pass_command (const char *args, int from_tty)
   ULONGEST count;
 
   if (args == 0 || *args == 0)
-    error (_("passcount command requires an "
-	     "argument (count + optional TP num)"));
+    error (_("\"%ps\" command requires an "
+	     "argument (count + optional TP num)"),
+	   styled_string (command_style.style (), "passcount"));
 
   count = strtoulst (args, &args, 10);	/* Count comes first, then TP num.  */
 

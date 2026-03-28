@@ -22,6 +22,7 @@
 #include "event-top.h"
 #include "extract-store-integer.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "remote.h"
 #include "gdbsupport/gdb_wait.h"
 #include <sys/stat.h>
@@ -1226,15 +1227,19 @@ set_system_call_allowed (const char *args, int from_tty)
 	  return;
 	}
     }
-  error (_("Illegal argument for \"set remote system-call-allowed\" command"));
+  error (_("Illegal argument for \"%ps\" command"),
+	 styled_string (command_style.style (),
+			"set remote system-call-allowed"));
 }
 
 static void
 show_system_call_allowed (const char *args, int from_tty)
 {
   if (args)
-    error (_("Garbage after \"show remote "
-	     "system-call-allowed\" command: `%s'"), args);
+    error (_("Garbage after \"%ps\" command: `%s'"),
+	   styled_string (command_style.style (),
+			  "show remote system-call-allowed"),
+	   args);
   gdb_printf ("Calling host system(3) call from target is %sallowed\n",
 	      remote_fio_system_call_allowed ? "" : "not ");
 }

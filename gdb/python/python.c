@@ -452,7 +452,8 @@ gdbpy_eval_from_control_command (const struct extension_language_defn *extlang,
 				 struct command_line *cmd)
 {
   if (cmd->body_list_1 != nullptr)
-    error (_("Invalid \"python\" block structure."));
+    error (_("Invalid \"%ps\" block structure."),
+	   styled_string (command_style.style (), "python"));
 
   gdbpy_enter enter_py;
 

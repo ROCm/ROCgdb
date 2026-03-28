@@ -245,7 +245,8 @@ with_command_1 (const char *set_cmd_prefix,
   gdb_assert (set_cmd != nullptr);
 
   if (!set_cmd->var.has_value ())
-    error (_("Cannot use this setting with the \"with\" command"));
+    error (_("Cannot use this setting with the \"%ps\" command"),
+	   styled_string (command_style.style (), "with"));
 
   std::string temp_value
     = (delim == nullptr ? args : std::string (args, delim - args));
@@ -489,7 +490,9 @@ static void
 pwd_command (const char *args, int from_tty)
 {
   if (args)
-    error (_("The \"pwd\" command does not take an argument: %s"), args);
+    error (_("The \"%ps\" command does not take an argument: %s"),
+	   styled_string (command_style.style (), "pwd"),
+	   args);
 
   gdb::unique_xmalloc_ptr<char> cwd (getcwd (NULL, 0));
 
@@ -718,7 +721,8 @@ source_script_with_search (const char *file, int from_tty, int search_path)
 {
 
   if (file == NULL || *file == 0)
-    error (_("source command requires file name of file to source."));
+    error (_("\"%ps\" command requires file name of file to source."),
+	   styled_string (command_style.style (), "source"));
 
   std::optional<open_script> opened = find_and_open_script (file, search_path);
   if (!opened)
@@ -1276,8 +1280,9 @@ list_command (const char *arg, int from_tty)
 	    print_source_lines (cursal.symtab,
 				source_lines_range (cursal.line), 0);
 	  else
-	    error (_("End of the file was already reached, use \"list .\" to"
-		     " list the current location again"));
+	    error (_("End of the file was already reached, use \"%ps\" to"
+		     " list the current location again"),
+		   styled_string (command_style.style (), "list ."));
 	}
 
       /* "l -" lists previous ten lines, the ones before the ten just
@@ -1354,7 +1359,8 @@ list_command (const char *arg, int from_tty)
 
   if (!current_program_space->has_full_symbols ()
       && !current_program_space->has_partial_symbols ())
-    error (_("No symbol table is loaded.  Use the \"file\" command."));
+    error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+	   styled_string (command_style.style (), "file"));
 
   std::vector<symtab_and_line> sals;
   symtab_and_line sal, sal_end;
@@ -1535,7 +1541,8 @@ list_command (const char *arg, int from_tty)
     set_repeat_arguments ("");
 
   if (dummy_beg && sal_end.symtab == nullptr)
-    error (_("No default source file yet.  Do \"help list\"."));
+    error (_("No default source file yet.  Do \"%ps\"."),
+	   styled_string (command_style.style (), "help list"));
   if (dummy_beg)
     {
       source_lines_range range (sal_end.line + 1,
@@ -1543,7 +1550,8 @@ list_command (const char *arg, int from_tty)
       print_source_lines (sal_end.symtab, range, 0);
     }
   else if (sal.symtab == nullptr)
-    error (_("No default source file yet.  Do \"help list\"."));
+    error (_("No default source file yet.  Do \"%ps\"."),
+	   styled_string (command_style.style (), "help list"));
   else if (no_end)
     {
       for (const symtab_and_line &s : sals)
@@ -2101,7 +2109,8 @@ validate_aliased_command (const char *command)
     = lookup_cmd_1 (& command, cmdlist, NULL, &default_args, 1);
 
   if (c == NULL || c == (struct cmd_list_element *) -1)
-    error (_("Invalid command to alias to: %s"), command);
+    error (_("Invalid command to alias to: %ps"),
+	   styled_string (command_style.style (), command));
 
   if (!default_args.empty ())
     error (_("Cannot define an alias of an alias that has default args"));
@@ -2199,7 +2208,8 @@ alias_command (const char *args, int from_tty)
 	/* Check ALIAS differs from the found CMD.  */
 
 	if (cmd->prefix == prefix_cmd && streq (alias_name, cmd->name))
-	  error (_("Alias %s is the name of an existing command"), alias);
+	  error (_("Alias \"%ps\" is the name of an existing command"),
+		 styled_string (command_style.style (), alias));
       }
   }
 

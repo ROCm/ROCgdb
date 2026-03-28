@@ -52,6 +52,7 @@
 #include "target-float.h"
 #include "c-exp.h"
 #include "macroexp.h"
+#include "cli/cli-style.h"
 
 #define parse_type(ps) builtin_type (ps->gdbarch ())
 
@@ -1203,7 +1204,9 @@ variable:	name_not_typename
 				{
 				  if (!current_program_space->has_full_symbols ()
 				      && !current_program_space->has_partial_symbols ())
-				    error (_("No symbol table is loaded.  Use the \"file\" command."));
+				    error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+					   styled_string (command_style.style (),
+							  "file"));
 				  else
 				    error (_("No symbol \"%s\" in current context."),
 					   arg.c_str ());

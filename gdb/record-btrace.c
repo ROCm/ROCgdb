@@ -3035,7 +3035,9 @@ cmd_set_record_btrace_cpu (const char *args, int from_tty)
       stepping = 0;
     }
   else
-    error (_("Bad format.  See \"help set record btrace cpu\"."));
+    error (_("Bad format.  See \"%ps\"."),
+	   styled_string (command_style.style (),
+			  "help set record btrace cpu"));
 
   if (USHRT_MAX < family)
     error (_("Cpu family too big."));

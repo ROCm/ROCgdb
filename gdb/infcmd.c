@@ -1950,11 +1950,13 @@ finish_command (const char *arg, int from_tty)
   prepare_execution_command (current_inferior ()->top_target (), async_exec);
 
   if (arg)
-    error (_("The \"finish\" command does not take any arguments."));
+    error (_("The \"%ps\" command does not take any arguments."),
+	   styled_string (command_style.style (), "finish"));
 
   frame = get_prev_frame (get_selected_frame (_("No selected frame.")));
   if (frame == 0)
-    error (_("\"finish\" not meaningful in the outermost frame."));
+    error (_("\"%ps\" not meaningful in the outermost frame."),
+	   styled_string (command_style.style (), "finish"));
 
   clear_proceed_status (0);
 

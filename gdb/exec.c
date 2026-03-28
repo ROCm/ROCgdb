@@ -524,7 +524,9 @@ void
 no_executable_specified_error ()
 {
   error (_("No executable file specified.\n\
-Use the \"file\" or \"exec-file\" command."));
+Use the \"%ps\" or \"%ps\" command."),
+	 styled_string (command_style.style (), "file"),
+	 styled_string (command_style.style (), "exec-file"));
 }
 
 /*  Process the first arg in ARGS as the new exec file.

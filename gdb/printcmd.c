@@ -1232,13 +1232,14 @@ static void
 validate_format (struct format_data fmt, const char *cmdname)
 {
   if (fmt.size != 0)
-    error (_("Size letters are meaningless in \"%s\" command."), cmdname);
+    error (_("Size letters are meaningless in \"%ps\" command."),
+	   styled_string (command_style.style (), cmdname));
   if (fmt.count != 1)
-    error (_("Item count other than 1 is meaningless in \"%s\" command."),
-	   cmdname);
+    error (_("Item count other than 1 is meaningless in \"%ps\" command."),
+	   styled_string (command_style.style (), cmdname));
   if (fmt.format == 'i')
-    error (_("Format letter \"%c\" is meaningless in \"%s\" command."),
-	   fmt.format, cmdname);
+    error (_("Format letter \"%c\" is meaningless in \"%ps\" command."),
+	   fmt.format, styled_string (command_style.style (), cmdname));
 }
 
 /* Parse print command format string into *OPTS and update *EXPP.

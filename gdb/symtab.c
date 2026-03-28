@@ -4541,7 +4541,8 @@ info_sources_command (const char *args, int from_tty)
 {
   if (!current_program_space->has_full_symbols ()
       && !current_program_space->has_partial_symbols ())
-    error (_("No symbol table is loaded.  Use the \"file\" command."));
+    error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+	   styled_string (command_style.style (), "file"));
 
   filename_partial_match_opts match_opts;
   auto group = make_info_sources_options_def_group (&match_opts);

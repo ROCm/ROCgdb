@@ -2899,7 +2899,9 @@ find_default_run_target (const char *do_mesg)
     return the_native_target;
 
   if (do_mesg != NULL)
-    error (_("Don't know how to %s.  Try \"help target\"."), do_mesg);
+    error (_("Don't know how to %s.  Try \"%ps\"."),
+	   do_mesg,
+	   styled_string (command_style.style (), "help target"));
   return NULL;
 }
 
@@ -4245,7 +4247,8 @@ static void
 default_rcmd (struct target_ops *self, const char *command,
 	      struct ui_file *output)
 {
-  error (_("\"monitor\" command not supported by this target."));
+  error (_("\"%ps\" command not supported by this target."),
+	 styled_string (command_style.style (), "monitor"));
 }
 
 static void

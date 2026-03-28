@@ -39,6 +39,7 @@
 #include "language.h"
 #include "parser-defs.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "symfile.h"
 #include "inferior.h"
 #include "target-float.h"
@@ -150,7 +151,8 @@ parser_state::push_symbol (const char *name, block_symbol sym)
 	push_new<expr::var_msym_value_operation> (msymbol);
       else if (!current_program_space->has_full_symbols ()
 	       && !current_program_space->has_partial_symbols ())
-	error (_("No symbol table is loaded.  Use the \"file\" command."));
+	error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+	       styled_string (command_style.style (), "file"));
       else
 	error (_("No symbol \"%s\" in current context."), name);
     }
