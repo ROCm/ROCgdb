@@ -234,27 +234,33 @@ proc match_target { target } {
 # testcases will generally need to exclude tic6x or use a -m option.)
 #
 proc supports_gnu_osabi {} {
-    if { [istarget *-*-gnu*]
-	 || [istarget *-*-linux*]
-	 || ( [istarget *-*-*bsd*] && ![istarget arm*-*-netbsd*] )
-	 || [istarget *-*-lynxos]
-	 || ( [istarget *-*-nto*] && ![istarget arm*-*-*] )
-	 || [istarget *-*-irix*]
-	 || [istarget *-*-*eabi*]
+    if { [istarget *-*-*eabi*]
+	 || ([istarget *-*-freebsd*] && ![istarget {*-*-freebsd[89].*}])
+	 || [istarget *-*-genode*]
 	 || [istarget *-*-rtems*] } {
 	return 1
     }
-    if { [istarget "wasm32*-*-*"] } {
-	return 1
-    }
-    if { ![istarget "*-*-elf*"] } {
+    if { [istarget arm*-*-*] } {
 	return 0
     }
-    if { [istarget "arm*-*-*"]
-	 || [istarget "msp430-*-*"]
-	 || [istarget "hppa-unknown-elf"]
-	 || [istarget "kvx*-*-*"]
-	 || [istarget "visium-*-*"] } {
+    if { [istarget *-*-*bsd*]
+	 || [istarget *-*-gnu*]
+	 || [istarget *-*-irix*]
+	 || [istarget *-*-linux*]
+	 || [istarget *-*-lynxos]
+	 || [istarget *-*-nto*] } {
+	return 1
+    }
+    if { [istarget wasm32*-*-*] } {
+	return 1
+    }
+    if { ![istarget *-*-elf*] } {
+	return 0
+    }
+    if { [istarget hppa-*-*]
+	 || [istarget kvx*-*-*]
+	 || [istarget msp430-*-*]
+	 || [istarget visium-*-*] } {
 	return 0
     }
     return 1
