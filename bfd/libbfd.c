@@ -1385,37 +1385,6 @@ bfd_generic_is_local_label_name (bfd *abfd, const char *name)
   return name[0] == locals_prefix;
 }
 
-/* Helper function for reading uleb128 encoded data.  */
-
-bfd_vma
-_bfd_read_unsigned_leb128 (bfd *abfd ATTRIBUTE_UNUSED,
-			   bfd_byte *buf,
-			   unsigned int *bytes_read_ptr)
-{
-  bfd_vma result;
-  unsigned int num_read;
-  unsigned int shift;
-  bfd_byte byte;
-
-  result = 0;
-  shift = 0;
-  num_read = 0;
-  do
-    {
-      byte = bfd_get_8 (abfd, buf);
-      buf++;
-      num_read++;
-      if (shift < 8 * sizeof (result))
-	{
-	  result |= (((bfd_vma) byte & 0x7f) << shift);
-	  shift += 7;
-	}
-    }
-  while (byte & 0x80);
-  *bytes_read_ptr = num_read;
-  return result;
-}
-
 /* Read in a LEB128 encoded value from ABFD starting at *PTR.
    If SIGN is true, return a signed LEB128 value.
    *PTR is incremented by the number of bytes read.
@@ -1450,39 +1419,6 @@ _bfd_safe_read_leb128 (bfd *abfd ATTRIBUTE_UNUSED,
   if (sign && (shift < 8 * sizeof (result)) && (byte & 0x40))
     result |= -((bfd_vma) 1 << shift);
 
-  return result;
-}
-
-/* Helper function for reading sleb128 encoded data.  */
-
-bfd_signed_vma
-_bfd_read_signed_leb128 (bfd *abfd ATTRIBUTE_UNUSED,
-			 bfd_byte *buf,
-			 unsigned int *bytes_read_ptr)
-{
-  bfd_vma result;
-  unsigned int shift;
-  unsigned int num_read;
-  bfd_byte byte;
-
-  result = 0;
-  shift = 0;
-  num_read = 0;
-  do
-    {
-      byte = bfd_get_8 (abfd, buf);
-      buf ++;
-      num_read ++;
-      if (shift < 8 * sizeof (result))
-	{
-	  result |= (((bfd_vma) byte & 0x7f) << shift);
-	  shift += 7;
-	}
-    }
-  while (byte & 0x80);
-  if (shift < 8 * sizeof (result) && (byte & 0x40))
-    result |= (((bfd_vma) -1) << shift);
-  *bytes_read_ptr = num_read;
   return result;
 }
 

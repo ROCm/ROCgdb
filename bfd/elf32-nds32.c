@@ -9322,13 +9322,13 @@ nds32_elf_relax_delete_blanks (bfd *abfd, asection *sec,
 	  else if (ELF32_R_TYPE (irel->r_info) == R_NDS32_DIFF_ULEB128
 	      && isym[ELF32_R_SYM (irel->r_info)].st_shndx == sec_shndx)
 	    {
-	      bfd_vma val = 0;
-	      unsigned int len = 0;
+	      bfd_vma val;
 	      unsigned long before, between;
 	      bfd_byte *endp, *p;
 
-	      val = _bfd_read_unsigned_leb128 (abfd, contents + irel->r_offset,
-					       &len);
+	      p = contents + irel->r_offset;
+	      endp = contents + sec->size;
+	      val = _bfd_safe_read_leb128 (abfd, &p, false, endp);
 
 	      before = get_nds32_elf_blank_total (&blank_t, irel->r_addend, 0);
 	      between = get_nds32_elf_blank_total (&blank_t,
@@ -9336,10 +9336,10 @@ nds32_elf_relax_delete_blanks (bfd *abfd, asection *sec,
 	      if (between == before)
 		goto done_adjust_diff;
 
+	      endp = p - 1;
 	      p = contents + irel->r_offset;
-	      endp = p + len -1;
-	      memset (p, 0x80, len);
-	      *(endp) = 0;
+	      memset (p, 0x80, endp - p);
+	      *endp = 0;
 	      p = write_uleb128 (p, val - (between - before)) - 1;
 	      if (p < endp)
 		*p |= 0x80;

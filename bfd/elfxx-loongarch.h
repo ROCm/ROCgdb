@@ -43,8 +43,7 @@ void
 bfd_elf64_loongarch_set_data_segment_info (struct bfd_link_info *, int *);
 
 bfd_byte *
-loongarch_write_unsigned_leb128 (bfd_byte *p, unsigned int len, bfd_vma value)
-  ATTRIBUTE_HIDDEN;
+loongarch_write_unsigned_leb128 (bfd_byte *, size_t, bfd_vma) ATTRIBUTE_HIDDEN;
 
 /* TRUE if this is a PLT reference to a local IFUNC.  */
 #define PLT_LOCAL_IFUNC_P(INFO, H) \

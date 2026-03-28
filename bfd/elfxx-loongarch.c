@@ -2409,9 +2409,13 @@ loongarch_elf_add_sub_reloc_uleb128 (bfd *abfd,
 				  input_section, octets))
     return bfd_reloc_outofrange;
 
-  unsigned int len = 0;
-  bfd_byte *p = data + reloc_entry->address;
-  bfd_vma old_value = _bfd_read_unsigned_leb128 (abfd, p, &len);
+  bfd_byte *contents = data;
+  bfd_byte *p = contents + octets;
+  bfd_byte *endp = contents + input_section->size;
+  bfd_vma old_value = _bfd_safe_read_leb128 (abfd, &p, false, endp);
+  endp = p;
+  p = contents + octets;
+  size_t len = endp - p;
 
   switch (howto->type)
     {
@@ -2437,7 +2441,7 @@ loongarch_elf_add_sub_reloc_uleb128 (bfd *abfd,
    LEN is the uleb128 value length.
    Return a pointer to the byte following the last byte that was written.  */
 bfd_byte *
-loongarch_write_unsigned_leb128 (bfd_byte *p, unsigned int len, bfd_vma value)
+loongarch_write_unsigned_leb128 (bfd_byte *p, size_t len, bfd_vma value)
 {
   bfd_byte c;
   do

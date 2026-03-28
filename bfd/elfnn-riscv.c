@@ -2069,20 +2069,22 @@ perform_relocation (const reloc_howto_type *howto,
     /* R_RISCV_SET_ULEB128 won't go into here.  */
     case R_RISCV_SUB_ULEB128:
       {
-	unsigned int len = 0;
-	_bfd_read_unsigned_leb128 (input_bfd, contents + rel->r_offset, &len);
+	bfd_byte *p = contents + rel->r_offset;
+	bfd_byte *endp = contents + input_section->size;
+	_bfd_safe_read_leb128 (input_bfd, &p, false, endp);
 
 	/* Clean the contents value to zero (0x80), but keep the original
 	   length.  */
-	bfd_byte *p = contents + rel->r_offset;
-	bfd_byte *endp = p + len - 1;
+	endp = p - 1;
+	p = contents + rel->r_offset;
+	size_t len = endp + 1 - p;
 	memset (p, 0x80, len - 1);
-	*(endp) = 0;
+	*endp = 0;
 
-	/* Make sure the length of the new uleb128 value within the
+	/* Make sure the length of the new uleb128 value fits within the
 	   original (available) length.  */
-	unsigned int new_len = 0;
-	unsigned int val_t = value;
+	size_t new_len = 0;
+	bfd_vma val_t = value;
 	do
 	  {
 	    new_len++;
