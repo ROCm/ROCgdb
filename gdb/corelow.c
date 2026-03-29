@@ -1241,20 +1241,28 @@ core_target_open (const char *arg, int from_tty)
 void
 core_target::detach (inferior *inf, int from_tty)
 {
+  /* The core BFD is set when the core_target is created and attached to
+     the inferior.  It is only cleared during detach or close.  After
+     detaching the core target will be closed and deleted, so detach can
+     never be called twice.  What this means is that detach will never be
+     called without the core BFD being set.  */
+  gdb_assert (this->core_bfd () != nullptr);
+
   /* Get rid of the core.  Don't rely on core_target::close doing it,
      because target_detach may be called with core_target's refcount > 1,
      meaning core_target::close may not be called yet by the
      unpush_target call below.  */
   clear_core ();
 
-  /* Note that 'this' may be dangling after this call.  unpush_target
-     closes the target if the refcount reaches 0, and our close
-     implementation deletes 'this'.  */
+  /* This detach method should only be called from target_detach, which
+     holds a reference to this core_target.  As such, this core_target will
+     not be deleted when it is unpushed from INF's target stack.  Instead
+     this core_target will be deleted when target_detach returns, at which
+     point the reference count on this core_target will reach 0, and our
+     close method will delete 'this'.  */
   inf->unpush_target (this);
 
-  /* Clear the register cache and the frame cache.  */
-  registers_changed ();
-  reinit_frame_cache ();
+  /* Inform the user.  */
   maybe_say_no_core_file_now (from_tty);
 }
 
