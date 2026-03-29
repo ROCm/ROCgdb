@@ -2729,10 +2729,10 @@ nds32_elf_do_9_pcrel_reloc (bfd *               abfd,
 /* Handle the R_NDS32_HI20_[SU]LO relocs.
    HI20_SLO is for the add3 and load/store with displacement instructions.
    HI20 is for the or3 instruction.
-   For R_NDS32_HI20_SLO, the lower 16 bits are sign extended when added to
-   the high 16 bytes so if the lower 16 bits are negative (bit 15 == 1) then
-   we must add one to the high 16 bytes (which will get subtracted off when
-   the low 16 bits are added).
+   For R_NDS32_HI20_SLO, the lower 12 bits are sign extended when added to
+   the high 20 bits so if the lower 12 bits are negative (bit 11 set) then
+   we must add one to the high 20 bits (which will get subtracted off when
+   the low 12 bits are added).
    These relocs have to be done in combination with an R_NDS32_LO12 reloc
    because there is a carry from the LO12 to the HI20.  Here we just save
    the information we need; we do the actual relocation when we see the LO12.
@@ -2749,7 +2749,51 @@ struct nds32_hi20
   bfd_vma addend;
 };
 
-static struct nds32_hi20 *nds32_hi20_list;
+struct _nds32_elf_section_data
+{
+  struct bfd_elf_section_data elf;
+  struct nds32_hi20 *nds32_hi20_list;
+};
+
+#define nds32_elf_section_data(sec) \
+  ((struct _nds32_elf_section_data *) elf_section_data (sec))
+
+static bool
+nds32_elf_new_section_hook (bfd *abfd, asection *sec)
+{
+  struct _nds32_elf_section_data *sdata;
+
+  sdata = bfd_zalloc (abfd, sizeof (*sdata));
+  if (sdata == NULL)
+    return false;
+  sec->used_by_bfd = sdata;
+
+  return _bfd_elf_new_section_hook (abfd, sec);
+}
+
+static void
+nds32_elf_free_hi20_list (asection *sec)
+{
+  struct _nds32_elf_section_data *sdata = nds32_elf_section_data (sec);
+  while (sdata->nds32_hi20_list != NULL)
+    {
+      struct nds32_hi20 *hi = sdata->nds32_hi20_list;
+      sdata->nds32_hi20_list = hi->next;
+      free (hi);
+    }
+}
+
+static bool
+nds32_elf_free_cached_info (bfd *abfd)
+{
+  if (bfd_get_format (abfd) == bfd_object
+      || bfd_get_format (abfd) == bfd_core)
+    {
+      for (asection *sec = abfd->sections; sec; sec = sec->next)
+	nds32_elf_free_hi20_list (sec);
+    }
+  return _bfd_elf_free_cached_info (abfd);
+}
 
 static bfd_reloc_status_type
 nds32_elf_hi20_reloc (bfd *abfd,
@@ -2763,6 +2807,7 @@ nds32_elf_hi20_reloc (bfd *abfd,
   bfd_reloc_status_type ret;
   bfd_vma relocation;
   struct nds32_hi20 *n;
+  struct _nds32_elf_section_data *sdata;
 
   /* This part is from bfd_elf_generic_reloc.
      If we're relocating, and this an external symbol, we don't want
@@ -2795,14 +2840,15 @@ nds32_elf_hi20_reloc (bfd *abfd,
   relocation += reloc_entry->addend;
 
   /* Save the information, and let LO12 do the actual relocation.  */
-  n = (struct nds32_hi20 *) bfd_malloc ((bfd_size_type) sizeof *n);
+  n = bfd_malloc (sizeof (*n));
   if (n == NULL)
     return bfd_reloc_outofrange;
+  sdata = nds32_elf_section_data (input_section);
 
   n->addr = (bfd_byte *) data + reloc_entry->address;
   n->addend = relocation;
-  n->next = nds32_hi20_list;
-  nds32_hi20_list = n;
+  n->next = sdata->nds32_hi20_list;
+  sdata->nds32_hi20_list = n;
 
   if (output_bfd != (bfd *) NULL)
     reloc_entry->address += input_section->output_offset;
@@ -2843,6 +2889,8 @@ nds32_elf_lo12_reloc (bfd *input_bfd, arelent *reloc_entry, asymbol *symbol,
 		      void *data, asection *input_section, bfd *output_bfd,
 		      char **error_message)
 {
+  struct _nds32_elf_section_data *sdata;
+
   /* This part is from bfd_elf_generic_reloc.
      If we're relocating, and this an external symbol, we don't want
      to change anything.  */
@@ -2853,11 +2901,12 @@ nds32_elf_lo12_reloc (bfd *input_bfd, arelent *reloc_entry, asymbol *symbol,
       return bfd_reloc_ok;
     }
 
-  if (nds32_hi20_list != NULL)
+  sdata = nds32_elf_section_data (input_section);
+  if (sdata->nds32_hi20_list != NULL)
     {
       struct nds32_hi20 *l;
 
-      l = nds32_hi20_list;
+      l = sdata->nds32_hi20_list;
       while (l != NULL)
 	{
 	  unsigned long insn;
@@ -2901,7 +2950,7 @@ nds32_elf_lo12_reloc (bfd *input_bfd, arelent *reloc_entry, asymbol *symbol,
 	  l = next;
 	}
 
-      nds32_hi20_list = NULL;
+      sdata->nds32_hi20_list = NULL;
     }
 
   /* Now do the LO12 reloc in the usual way.
@@ -13949,6 +13998,8 @@ nds32_elf_unify_tls_model (bfd *inbfd, asection *insec, bfd_byte *incontents,
 #define bfd_elf32_bfd_set_private_flags		nds32_elf_set_private_flags
 
 #define bfd_elf32_mkobject			nds32_elf_mkobject
+#define bfd_elf32_new_section_hook		nds32_elf_new_section_hook
+#define bfd_elf32_bfd_free_cached_info		nds32_elf_free_cached_info
 #define elf_backend_action_discarded		nds32_elf_action_discarded
 #define elf_backend_add_symbol_hook		nds32_elf_add_symbol_hook
 #define elf_backend_check_relocs		nds32_elf_check_relocs
