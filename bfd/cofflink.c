@@ -2409,8 +2409,8 @@ _bfd_coff_link_input_bfd (struct coff_final_link_info *flaginfo, bfd *input_bfd)
 	    {
 	      struct coff_link_hash_entry *h;
 	      asection *ps = NULL;
-	      long symndx = irel->r_symndx;
-	      if (symndx < 0)
+	      unsigned long symndx = irel->r_symndx;
+	      if (symndx >= obj_raw_syment_count (input_bfd))
 		continue;
 	      h = obj_coff_sym_hashes (input_bfd)[symndx];
 	      if (h == NULL)
@@ -2463,7 +2463,8 @@ _bfd_coff_link_input_bfd (struct coff_final_link_info *flaginfo, bfd *input_bfd)
 		  /* Adjust the reloc address and symbol index.  */
 		  irel->r_vaddr += offset;
 
-		  if (irel->r_symndx == -1)
+		  if ((unsigned long) irel->r_symndx
+		      >= obj_raw_syment_count (input_bfd))
 		    continue;
 
 		  if (adjust_symndx)
@@ -2971,8 +2972,7 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
 	  h = NULL;
 	  sym = NULL;
 	}
-      else if (symndx < 0
-	       || (unsigned long) symndx >= obj_raw_syment_count (input_bfd))
+      else if ((unsigned long) symndx >= obj_raw_syment_count (input_bfd))
 	{
 	  _bfd_error_handler
 	    /* xgettext: c-format */
@@ -3065,9 +3065,10 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
 		     will resolve a weak external only if a normal
 		     external causes the library member to be linked.
 		     See also linker.c: generic_link_check_archive_element. */
-		  struct coff_link_hash_entry *h2 =
-		    h->auxbfd->tdata.coff_obj_data->sym_hashes
-		    [h->aux->x_sym.x_tagndx.u32];
+		  struct coff_link_hash_entry *h2 = NULL;
+		  unsigned long symndx2 = h->aux->x_sym.x_tagndx.u32;
+		  if (symndx2 < obj_raw_syment_count (h->auxbfd))
+		    h2 = obj_coff_sym_hashes (h->auxbfd)[symndx2];
 
 		  if (!h2 || h2->root.type == bfd_link_hash_undefined)
 		    {
