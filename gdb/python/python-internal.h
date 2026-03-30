@@ -57,6 +57,9 @@
    double quotes.  On case-insensitive filesystems, this prevents us
    from including our python/python.h header file.  */
 #include <Python.h>
+#ifdef Py_LIMITED_API
+#include "python-limited-api-missing.h"
+#endif
 #include <frameobject.h>
 #include "py-ref.h"
 #include "py-obj-type.h"
