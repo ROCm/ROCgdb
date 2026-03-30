@@ -1347,8 +1347,8 @@ protected:
   gdb::unordered_map<val_type *, obj_type *> m_objects;
 };
 
-extern int eval_python_command (const char *command, int start_symbol,
-				const char *filename = nullptr);
+extern gdbpy_ref<> eval_python_command
+  (const char *command, int start_symbol, const char *filename = nullptr);
 
 /* The following four functions are refcount-safe wrappers around
    Py_RETURN_{NONE,TRUE,FALSE,NOTIMPLEMENTED}.  */
