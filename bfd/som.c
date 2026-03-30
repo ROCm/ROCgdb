@@ -6719,24 +6719,23 @@ som_write_armap (bfd *abfd,
 static bool
 som_bfd_free_cached_info (bfd *abfd)
 {
-  if (bfd_get_format (abfd) == bfd_object
-      || bfd_get_format (abfd) == bfd_core)
-    {
-      asection *o;
-
 #define FREE(x) do { free (x); x = NULL; } while (0)
+  if (bfd_get_format (abfd) == bfd_object
+      && abfd->tdata.som_data != NULL)
+    {
       /* Free the native string and symbol tables.  */
       FREE (obj_som_symtab (abfd));
       FREE (obj_som_stringtab (abfd));
-      for (o = abfd->sections; o != NULL; o = o->next)
-	{
-	  /* Free the native relocations.  */
-	  o->reloc_count = (unsigned) -1;
-	  FREE (som_section_data (o)->reloc_stream);
-	  /* Do not free the generic relocations as they are objalloc'ed.  */
-	}
-#undef FREE
     }
+
+  for (asection *o = abfd->sections; o != NULL; o = o->next)
+    {
+      /* Free the native relocations.  */
+      o->reloc_count = (unsigned) -1;
+      FREE (som_section_data (o)->reloc_stream);
+      /* Do not free the generic relocations as they are objalloc'ed.  */
+    }
+#undef FREE
 
   /* Do not call _bfd_generic_bfd_free_cached_info here.
      som_write_armap needs to access the bfd objalloc memory.  */

@@ -2725,13 +2725,13 @@ set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch,
 }
 
 location_scope
-gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address)
+gdbarch_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->address_scope != nullptr);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_address_scope called\n");
-  return gdbarch->address_scope (gdbarch, address);
+  return gdbarch->address_scope (gdbarch, ptid, address);
 }
 
 void

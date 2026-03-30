@@ -540,4 +540,12 @@ private:
   std::vector<string_file> m_warnings;
 };
 
+/* Re-implementation of readline's CTRL/UNCTRL (compatible with readline's
+   CTRL_CHAR), designed to be compatible with gnulib's c_iscntrl.
+   While gnulib's c-ctype.h still uses int for character parameters and
+   results, we use unsigned char here for maximum clarity.  */
+
+extern unsigned char c_ctrl (unsigned char c);
+extern unsigned char c_unctrl (unsigned char c);
+
 #endif /* GDB_UTILS_H */

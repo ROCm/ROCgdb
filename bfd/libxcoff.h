@@ -315,4 +315,5 @@ extern enum xcoff_stub_type bfd_xcoff_type_of_stub
 extern struct xcoff_stub_hash_entry *bfd_xcoff_get_stub_entry
   (asection *, struct xcoff_link_hash_entry *, struct bfd_link_info *);
 
+extern bool _bfd_xcoff_bfd_free_cached_info (bfd *) ATTRIBUTE_HIDDEN;
 #endif /* LIBXCOFF_H */

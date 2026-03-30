@@ -884,7 +884,11 @@ pd_update (pid_t pid)
   if (status != PTHDB_SUCCESS)
     return ptid_t (pid);
 
-  sync_threadlists (pid);
+  /* Attempt to sync_threadlists () only when debugging object files
+     and not core files since list of threads never change for core
+     files.  */
+  if (target_has_execution ())
+    sync_threadlists (pid);
 
   /* Define "current thread" as one that just received a trap signal.  */
 

@@ -491,8 +491,8 @@ void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarc
 
 /* Return the address's scope. */
 
-using gdbarch_address_scope_ftype = location_scope (struct gdbarch *gdbarch, CORE_ADDR address);
-location_scope gdbarch_address_scope (struct gdbarch *gdbarch, CORE_ADDR address);
+using gdbarch_address_scope_ftype = location_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address);
+location_scope gdbarch_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address);
 void set_gdbarch_address_scope (struct gdbarch *gdbarch, gdbarch_address_scope_ftype *address_scope);
 
 /* Return preferred watchpoint locations for the given to-be-watched

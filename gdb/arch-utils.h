@@ -443,7 +443,7 @@ extern CORE_ADDR default_segment_address_to_core_address
 
 /* Return the address's scope.  */
 extern location_scope default_address_scope (struct gdbarch *gdbarch,
-					     CORE_ADDR address);
+					     ptid_t ptid, CORE_ADDR address);
 
 extern int default_supported_lanes_count (struct gdbarch *gdbarch,
 					  thread_info *tp);

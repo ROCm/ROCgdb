@@ -3044,7 +3044,7 @@ gdb_fnwidth (const char *string)
   width = pos = 0;
   while (string[pos])
     {
-      if (CTRL_CHAR (string[pos]) || string[pos] == RUBOUT)
+      if (c_iscntrl (string[pos]))
 	{
 	  width += 2;
 	  pos++;
@@ -3118,20 +3118,10 @@ gdb_fnprint (const char *to_print, int prefix_bytes,
   s = to_print + prefix_bytes;
   while (*s)
     {
-      if (CTRL_CHAR (*s))
+      if (c_iscntrl (*s))
 	{
 	  displayer->putch (displayer, '^');
-	  displayer->putch (displayer, UNCTRL (*s));
-	  printed_len += 2;
-	  s++;
-#if defined (HANDLE_MULTIBYTE)
-	  memset (&ps, 0, sizeof (mbstate_t));
-#endif
-	}
-      else if (*s == RUBOUT)
-	{
-	  displayer->putch (displayer, '^');
-	  displayer->putch (displayer, '?');
+	  displayer->putch (displayer, c_unctrl (*s));
 	  printed_len += 2;
 	  s++;
 #if defined (HANDLE_MULTIBYTE)
