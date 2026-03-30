@@ -1857,12 +1857,26 @@ _bfd_coff_link_input_bfd (struct coff_final_link_info *flaginfo, bfd *input_bfd)
 	      /* Compute new symbol location.  */
 	    if (isym.n_scnum > 0)
 	      {
-		isym.n_scnum = (*secpp)->output_section->target_index;
-		isym.n_value += (*secpp)->output_offset;
+		const asection *s = *secpp;
+
+		/* Relocate section symbols for sections that are not going to
+		   be emitted because they are duplicate of another one.  */
+		if (bfd_link_relocatable (flaginfo->info)
+		    && isym.n_sclass == C_STAT
+		    && isym.n_type == T_NULL
+		    && isym.n_numaux > 0
+		    && (s->output_section == bfd_abs_section_ptr
+			|| bfd_section_removed_from_list
+			   (output_bfd, s->output_section))
+		    && s->kept_section)
+		  s = s->kept_section;
+
+		isym.n_scnum = s->output_section->target_index;
+		isym.n_value += s->output_offset;
 		if (! obj_pe (input_bfd))
-		  isym.n_value -= (*secpp)->vma;
+		  isym.n_value -= s->vma;
 		if (! obj_pe (flaginfo->output_bfd))
-		  isym.n_value += (*secpp)->output_section->vma;
+		  isym.n_value += s->output_section->vma;
 	      }
 	    break;
 
