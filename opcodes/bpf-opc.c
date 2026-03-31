@@ -208,11 +208,11 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_LD|BPF_SIZE_W|BPF_MODE_ABS},
 
   /* Generic load instructions (to register.)  */
-  {BPF_INSN_LDXB, "ldxb%W%dr , [ %sr %o16 ]", "%dr = * ( u8 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXB, "ldxb%W%dr , [ %sr %o16 ]", "%dR = * ( u8 * ) ( %sr %o16 )",
    BPF_V1, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_B|BPF_MODE_MEM},
-  {BPF_INSN_LDXH, "ldxh%W%dr , [ %sr %o16 ]", "%dr = * ( u16 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXH, "ldxh%W%dr , [ %sr %o16 ]", "%dR = * ( u16 * ) ( %sr %o16 )",
    BPF_V1, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_H|BPF_MODE_MEM},
-  {BPF_INSN_LDXW, "ldxw%W%dr , [ %sr %o16 ]", "%dr = * ( u32 * ) ( %sr %o16 )",
+  {BPF_INSN_LDXW, "ldxw%W%dr , [ %sr %o16 ]", "%dR = * ( u32 * ) ( %sr %o16 )",
    BPF_V1, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_W|BPF_MODE_MEM},
   {BPF_INSN_LDXDW, "ldxdw%W%dr , [ %sr %o16 ]","%dr = * ( u64 * ) ( %sr %o16 )",
    BPF_V1, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_DW|BPF_MODE_MEM},
@@ -228,11 +228,11 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V4, BPF_CODE, BPF_CLASS_LDX|BPF_SIZE_DW|BPF_MODE_SMEM},
 
   /* Generic store instructions (from register.)  */
-  {BPF_INSN_STXBR, "stxb%W[ %dr %o16 ] , %sr", "* ( u8 * ) ( %dr %o16 ) = %sr",
+  {BPF_INSN_STXBR, "stxb%W[ %dr %o16 ] , %sr", "* ( u8 * ) ( %dr %o16 ) = %sR",
    BPF_V1, BPF_CODE, BPF_CLASS_STX|BPF_SIZE_B|BPF_MODE_MEM},
-  {BPF_INSN_STXHR, "stxh%W[ %dr %o16 ] , %sr", "* ( u16 * ) ( %dr %o16 ) = %sr",
+  {BPF_INSN_STXHR, "stxh%W[ %dr %o16 ] , %sr", "* ( u16 * ) ( %dr %o16 ) = %sR",
    BPF_V1, BPF_CODE, BPF_CLASS_STX|BPF_SIZE_H|BPF_MODE_MEM},
-  {BPF_INSN_STXWR, "stxw%W[ %dr %o16 ], %sr", "* ( u32 * ) ( %dr %o16 ) = %sr",
+  {BPF_INSN_STXWR, "stxw%W[ %dr %o16 ], %sr", "* ( u32 * ) ( %dr %o16 ) = %sR",
    BPF_V1, BPF_CODE, BPF_CLASS_STX|BPF_SIZE_W|BPF_MODE_MEM},
   {BPF_INSN_STXDWR, "stxdw%W[ %dr %o16 ] , %sr", "* ( u64 * ) ( %dr %o16 ) = %sr",
    BPF_V1, BPF_CODE, BPF_CLASS_STX|BPF_SIZE_DW|BPF_MODE_MEM},
