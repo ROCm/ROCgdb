@@ -1525,12 +1525,16 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                   p += 2;
                 }
               else if (strncmp (p, "%dr", 3) == 0
-                       || strncmp (p, "%dw", 3) == 0)
+                       || strncmp (p, "%dw", 3) == 0
+                       || strncmp (p, "%dR", 3) == 0)
                 {
                   char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, rw, &regno);
+                  char *news = parse_bpf_register (s, rw == 'R' ? 'r' : rw,
+                                                   &regno);
 
+                  if (rw == 'R' && news == NULL)
+                    news = parse_bpf_register (s, 'w', &regno);
                   if (news == NULL || (insn.has_dst && regno != insn.dst))
                     {
                       if (news != NULL)
@@ -1546,12 +1550,16 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                   p += 3;
                 }
               else if (strncmp (p, "%sr", 3) == 0
-                       || strncmp (p, "%sw", 3) == 0)
+                       || strncmp (p, "%sw", 3) == 0
+                       || strncmp (p, "%sR", 3) == 0)
                 {
                   char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, rw, &regno);
+                  char *news = parse_bpf_register (s, rw == 'R' ? 'r' : rw,
+                                                   &regno);
 
+                  if (rw == 'R' && news == NULL)
+                    news = parse_bpf_register (s, 'w', &regno);
                   if (news == NULL || (insn.has_src && regno != insn.src))
                     {
                       if (news != NULL)

@@ -215,13 +215,15 @@ print_insn_bpf (bfd_vma pc, disassemble_info *info)
                   p += 2;
                 }
               else if (strncmp (p, "%dr", 3) == 0
-                       || strncmp (p, "%dw", 3) == 0)
+                       || strncmp (p, "%dw", 3) == 0
+                       || strncmp (p, "%dR", 3) == 0)
                 {
                   print_register (info, p, bpf_extract_dst (word, endian));
                   p += 3;
                 }
               else if (strncmp (p, "%sr", 3) == 0
-                       || strncmp (p, "%sw", 3) == 0)
+                       || strncmp (p, "%sw", 3) == 0
+                       || strncmp (p, "%sR", 3) == 0)
                 {
                   print_register (info, p, bpf_extract_src (word, endian));
                   p += 3;
