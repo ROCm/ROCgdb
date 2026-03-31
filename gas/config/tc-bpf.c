@@ -1524,10 +1524,12 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                     s += 1;
                   p += 2;
                 }
-              else if (strncmp (p, "%dr", 3) == 0)
+              else if (strncmp (p, "%dr", 3) == 0
+                       || strncmp (p, "%dw", 3) == 0)
                 {
+                  char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, 'r', &regno);
+                  char *news = parse_bpf_register (s, rw, &regno);
 
                   if (news == NULL || (insn.has_dst && regno != insn.dst))
                     {
@@ -1543,48 +1545,12 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                   insn.has_dst = 1;
                   p += 3;
                 }
-              else if (strncmp (p, "%sr", 3) == 0)
+              else if (strncmp (p, "%sr", 3) == 0
+                       || strncmp (p, "%sw", 3) == 0)
                 {
+                  char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, 'r', &regno);
-
-                  if (news == NULL || (insn.has_src && regno != insn.src))
-                    {
-                      if (news != NULL)
-                        PARSE_ERROR ("expected register r%d, got r%d",
-                                     insn.dst, regno);
-                      else
-                        PARSE_ERROR ("expected register name, got '%s'", s);
-                      break;
-                    }
-                  s = news;
-                  insn.src = regno;
-                  insn.has_src = 1;
-                  p += 3;
-                }
-              else if (strncmp (p, "%dw", 3) == 0)
-                {
-                  uint8_t regno;
-                  char *news = parse_bpf_register (s, 'w', &regno);
-
-                  if (news == NULL || (insn.has_dst && regno != insn.dst))
-                    {
-                      if (news != NULL)
-                        PARSE_ERROR ("expected register r%d, got r%d",
-                                     insn.dst, regno);
-                      else
-                        PARSE_ERROR ("expected register name, got '%s'", s);
-                      break;
-                    }
-                  s = news;
-                  insn.dst = regno;
-                  insn.has_dst = 1;
-                  p += 3;
-                }
-              else if (strncmp (p, "%sw", 3) == 0)
-                {
-                  uint8_t regno;
-                  char *news = parse_bpf_register (s, 'w', &regno);
+                  char *news = parse_bpf_register (s, rw, &regno);
 
                   if (news == NULL || (insn.has_src && regno != insn.src))
                     {

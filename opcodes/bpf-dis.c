@@ -214,22 +214,14 @@ print_insn_bpf (bfd_vma pc, disassemble_info *info)
                   (*info->fprintf_styled_func) (info->stream, dis_style_text, " ");
                   p += 2;
                 }
-              else if (strncmp (p, "%dr", 3) == 0)
+              else if (strncmp (p, "%dr", 3) == 0
+                       || strncmp (p, "%dw", 3) == 0)
                 {
                   print_register (info, p, bpf_extract_dst (word, endian));
                   p += 3;
                 }
-              else if (strncmp (p, "%sr", 3) == 0)
-                {
-                  print_register (info, p, bpf_extract_src (word, endian));
-                  p += 3;
-                }
-              else if (strncmp (p, "%dw", 3) == 0)
-                {
-                  print_register (info, p, bpf_extract_dst (word, endian));
-                  p += 3;
-                }
-              else if (strncmp (p, "%sw", 3) == 0)
+              else if (strncmp (p, "%sr", 3) == 0
+                       || strncmp (p, "%sw", 3) == 0)
                 {
                   print_register (info, p, bpf_extract_src (word, endian));
                   p += 3;
