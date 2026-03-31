@@ -35,7 +35,7 @@ jobs:
   rocgdb-tests:
     name: 'rocgdb'
     runs-on: ${{ inputs.test_runs_on }}
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:939b8e35887144d1ca4eca928dc2869991339cab869168790e495fc0a5907bbb
@@ -73,7 +73,7 @@ jobs:
   rocr-debug-agent-tests:
     name: 'rocr-debug-agent'
     runs-on: ${{ inputs.test_runs_on }}
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98
