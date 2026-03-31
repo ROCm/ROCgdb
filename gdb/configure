@@ -32581,7 +32581,7 @@ else
 
 	    # First check to see if --with-tcl was specified.
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-mingw* | *-*-cygwin*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${with_tclconfig}" != x ; then
@@ -32628,6 +32628,31 @@ else
 		done
 	    fi
 
+	    # Check where 32-bit vs 64-bit libraries are stored
+	    lib32="/usr/lib"
+	    lib64="/usr/lib"
+	    if test -d /usr/lib32 ; then
+		lib32="/usr/lib32"
+	    fi
+	    if test -d /usr/lib64 ; then
+		lib64="/usr/lib64"
+	    fi
+	    case "${CFLAGS}" in
+		 *-m32*) force_32=yes ;;
+		 *) force_32=no ;;
+	    esac
+	    case "${host}" in
+		i[3456]*) usrlibdir="${lib32}" ;;
+		x86_64*)
+		    if test x"${force_32}" = xyes ; then
+			usrlibdir="${lib32}"
+		    else
+			usrlibdir="${lib64}"
+		    fi
+		    ;;
+		*) usrlibdir="/usr/lib" ;;
+	    esac
+
 	    # check in a few common install locations
 	    if test x"${ac_cv_c_tclconfig}" = x ; then
 		for i in `ls -d ${libdir} 2>/dev/null` \
@@ -32635,7 +32660,12 @@ else
 			`ls -d ${prefix}/lib 2>/dev/null` \
 			`ls -d /usr/local/lib 2>/dev/null` \
 			`ls -d /usr/contrib/lib 2>/dev/null` \
+			`ls -d ${usrlibdir} 2>/dev/null` \
+			`ls -d ${usrlibdir}/tcl[8-9].[0-9] 2>/dev/null` \
+			`ls -d ${usrlibdir}/tcl[8-9].[0-9]* 2>/dev/null` \
 			`ls -d /usr/lib 2>/dev/null` \
+			`ls -d /usr/lib/tcl[8-9].[0-9] 2>/dev/null` \
+			`ls -d /usr/lib/tcl[8-9].[0-9]* 2>/dev/null` \
 			; do
 		    if test -f "$i/tclConfig.sh" ; then
 			ac_cv_c_tclconfig=`(cd $i; pwd)`
@@ -32710,7 +32740,7 @@ else
 
 	    # then check for a private Tk library
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-mingw* | *-*-cygwin*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${ac_cv_c_tkconfig}" = x ; then
@@ -32748,6 +32778,31 @@ else
 		done
 	    fi
 
+	    # Check where 32-bit vs 64-bit libraries are stored
+	    lib32="/usr/lib"
+	    lib64="/usr/lib"
+	    if test -d /usr/lib32 ; then
+		lib32="/usr/lib32"
+	    fi
+	    if test -d /usr/lib64 ; then
+		lib64="/usr/lib64"
+	    fi
+	    case "${CFLAGS}" in
+		 *-m32*) force_32=yes ;;
+		 *) force_32=no ;;
+	    esac
+	    case "${host}" in
+		i[3456]*) usrlibdir="${lib32}" ;;
+		x86_64*)
+		    if test x"${force_32}" = xyes ; then
+			usrlibdir="${lib32}"
+		    else
+			usrlibdir="${lib64}"
+		    fi
+		    ;;
+		*) usrlibdir="/usr/lib" ;;
+	    esac
+
 	    # check in a few common install locations
 	    if test x"${ac_cv_c_tkconfig}" = x ; then
 		for i in `ls -d ${libdir} 2>/dev/null` \
@@ -32755,7 +32810,12 @@ else
 			`ls -d ${prefix}/lib 2>/dev/null` \
 			`ls -d /usr/local/lib 2>/dev/null` \
 			`ls -d /usr/contrib/lib 2>/dev/null` \
+			`ls -d ${usrlibdir} 2>/dev/null` \
+			`ls -d ${usrlibdir}/tk[8-9].[0-9] 2>/dev/null` \
+			`ls -d ${usrlibdir}/tk[8-9].[0-9]* 2>/dev/null` \
 			`ls -d /usr/lib 2>/dev/null` \
+			`ls -d /usr/lib/tk[8-9].[0-9] 2>/dev/null` \
+			`ls -d /usr/lib/tk[8-9].[0-9]* 2>/dev/null` \
 			; do
 		    if test -f "$i/tkConfig.sh" ; then
 			ac_cv_c_tkconfig=`(cd $i; pwd)`
@@ -32799,11 +32859,11 @@ $as_echo "found ${TK_BIN_DIR}/tkConfig.sh" >&6; }
 $as_echo_n "checking for existence of ${TCL_BIN_DIR}/tclConfig.sh... " >&6; }
 
     if test -f "${TCL_BIN_DIR}/tclConfig.sh" ; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: loading" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: loading" >&5
 $as_echo "loading" >&6; }
 	. ${TCL_BIN_DIR}/tclConfig.sh
     else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: could not find ${TCL_BIN_DIR}/tclConfig.sh" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: could not find ${TCL_BIN_DIR}/tclConfig.sh" >&5
 $as_echo "could not find ${TCL_BIN_DIR}/tclConfig.sh" >&6; }
     fi
 
@@ -32818,9 +32878,9 @@ $as_echo "could not find ${TCL_BIN_DIR}/tclConfig.sh" >&6; }
     # instead of TCL_BUILD_LIB_SPEC since it will work with both an
     # installed and uninstalled version of Tcl.
     if test -f "${TCL_BIN_DIR}/Makefile" ; then
-        TCL_LIB_SPEC=${TCL_BUILD_LIB_SPEC}
-        TCL_STUB_LIB_SPEC=${TCL_BUILD_STUB_LIB_SPEC}
-        TCL_STUB_LIB_PATH=${TCL_BUILD_STUB_LIB_PATH}
+	TCL_LIB_SPEC=${TCL_BUILD_LIB_SPEC}
+	TCL_STUB_LIB_SPEC=${TCL_BUILD_STUB_LIB_SPEC}
+	TCL_STUB_LIB_PATH=${TCL_BUILD_STUB_LIB_PATH}
     elif test "`uname -s`" = "Darwin"; then
 	# If Tcl was built as a framework, attempt to use the libraries
 	# from the framework at the given location so that linking works
@@ -32914,11 +32974,11 @@ $as_echo "${private_dir}" >&6; }
 $as_echo_n "checking for existence of ${TK_BIN_DIR}/tkConfig.sh... " >&6; }
 
     if test -f "${TK_BIN_DIR}/tkConfig.sh" ; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: loading" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: loading" >&5
 $as_echo "loading" >&6; }
 	. ${TK_BIN_DIR}/tkConfig.sh
     else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: could not find ${TK_BIN_DIR}/tkConfig.sh" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: could not find ${TK_BIN_DIR}/tkConfig.sh" >&5
 $as_echo "could not find ${TK_BIN_DIR}/tkConfig.sh" >&6; }
     fi
 
@@ -32933,9 +32993,9 @@ $as_echo "could not find ${TK_BIN_DIR}/tkConfig.sh" >&6; }
     # instead of TK_BUILD_LIB_SPEC since it will work with both an
     # installed and uninstalled version of Tcl.
     if test -f "${TK_BIN_DIR}/Makefile" ; then
-        TK_LIB_SPEC=${TK_BUILD_LIB_SPEC}
-        TK_STUB_LIB_SPEC=${TK_BUILD_STUB_LIB_SPEC}
-        TK_STUB_LIB_PATH=${TK_BUILD_STUB_LIB_PATH}
+	TK_LIB_SPEC=${TK_BUILD_LIB_SPEC}
+	TK_STUB_LIB_SPEC=${TK_BUILD_STUB_LIB_SPEC}
+	TK_STUB_LIB_PATH=${TK_BUILD_STUB_LIB_PATH}
     elif test "`uname -s`" = "Darwin"; then
 	# If Tk was built as a framework, attempt to use the libraries
 	# from the framework at the given location so that linking works
